@@ -1,9 +1,9 @@
 // Copyright (c) 2004-2012 Sergey Lyubka
-// This file is a part of mongoose project, http://github.com/valenok/mongoose
+// This file is a part of civetweb project, http://github.com/valenok/civetweb
 
 #include <stdio.h>
 #include <string.h>
-#include "mongoose.h"
+#include "civetweb.h"
 
 static void websocket_ready_handler(struct mg_connection *conn) {
   static const char *message = "server ready";

@@ -1,5 +1,5 @@
 // Copyright (c) 2004-2012 Sergey Lyubka
-// This file is a part of mongoose project, http://github.com/valenok/mongoose
+// This file is a part of civetweb project, http://github.com/valenok/civetweb
 
 #include <stdio.h>
 #include <string.h>
@@ -15,7 +15,7 @@ typedef __int64 int64_t;
 #include <unistd.h>
 #endif // !_WIN32
 
-#include "mongoose.h"
+#include "civetweb.h"
 
 static int begin_request_handler(struct mg_connection *conn) {
   if (!strcmp(mg_get_request_info(conn)->uri, "/handle_post_request")) {

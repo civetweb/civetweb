@@ -1,4 +1,4 @@
-// This file is part of the Mongoose project, http://code.google.com/p/mongoose
+// This file is part of the Civetweb project, http://code.google.com/p/civetweb
 // It implements an online chat server. For more details,
 // see the documentation on the project web site.
 // To test the application,
@@ -13,7 +13,7 @@
 #include <stdarg.h>
 #include <pthread.h>
 
-#include "mongoose.h"
+#include "civetweb.h"
 
 #define MAX_USER_LEN  20
 #define MAX_MESSAGE_LEN  100
@@ -341,7 +341,7 @@ static int begin_request_handler(struct mg_connection *conn) {
   } else if (strcmp(request_info->uri, "/ajax/send_message") == 0) {
     ajax_send_message(conn, request_info);
   } else {
-    // No suitable handler found, mark as not processed. Mongoose will
+    // No suitable handler found, mark as not processed. Civetweb will
     // try to serve the request.
     processed = 0;
   }
@@ -364,7 +364,7 @@ int main(void) {
   // the session identifier creation.
   srand((unsigned) time(0));
 
-  // Setup and start Mongoose
+  // Setup and start Civetweb
   memset(&callbacks, 0, sizeof(callbacks));
   callbacks.begin_request = begin_request_handler;
   if ((ctx = mg_start(&callbacks, NULL, options)) == NULL) {

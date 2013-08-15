@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// Unit test for the mongoose web server. Tests embedded API.
+// Unit test for the civetweb web server. Tests embedded API.
 
 
 #include <stdlib.h>
@@ -28,7 +28,7 @@
 #include <unistd.h>
 #endif
 
-#include "mongoose.h"
+#include "civetweb.h"
 
 #if !defined(LISTENING_PORT)
 #define LISTENING_PORT "23456"

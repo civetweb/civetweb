@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# This script is used to test Mongoose web server
+# This script is used to test Civetweb web server
 # $Id: test.pl 516 2010-05-03 12:54:37Z valenok $
 
 use IO::Socket;
@@ -19,9 +19,9 @@ my $copy_cmd = on_windows() ? 'copy' : 'cp';
 my $test_dir_uri = "test_dir";
 my $root = 'test';
 my $test_dir = $root . $dir_separator. $test_dir_uri;
-my $config = 'mongoose.conf';
+my $config = 'civetweb.conf';
 my $exe_ext = on_windows() ? '.exe' : '';
-my $mongoose_exe = '.' . $dir_separator . 'mongoose' . $exe_ext;
+my $civetweb_exe = '.' . $dir_separator . 'civetweb' . $exe_ext;
 my $embed_exe = '.' . $dir_separator . 'embed' . $exe_ext;
 my $unit_test_exe = '.' . $dir_separator . 'unit_test' . $exe_ext;
 my $exit_code = 0;
@@ -141,7 +141,7 @@ $SIG{ALRM} = sub { die "timeout\n" };
 # Make sure we export only symbols that start with "mg_", and keep local
 # symbols static.
 if ($^O =~ /darwin|bsd|linux/) {
-  my $out = `(cc -c mongoose.c && nm mongoose.o) | grep ' T '`;
+  my $out = `(cc -c civetweb.c && nm civetweb.o) | grep ' T '`;
   foreach (split /\n/, $out) {
     /T\s+_?mg_.+/ or fail("Exported symbol $_")
   }
@@ -156,13 +156,13 @@ if (scalar(@ARGV) > 0 and $ARGV[0] eq 'unit') {
 # Command line options override config files settings
 write_file($config, "access_log_file access.log\n" .
            "listening_ports 127.0.0.1:12345\n");
-spawn("$mongoose_exe -listening_ports 127.0.0.1:$port");
+spawn("$civetweb_exe -listening_ports 127.0.0.1:$port");
 o("GET /test/hello.txt HTTP/1.0\n\n", 'HTTP/1.1 200 OK', 'Loading config file');
 unlink $config;
 kill_spawned_child();
 
 # Spawn the server on port $port
-my $cmd = "$mongoose_exe ".
+my $cmd = "$civetweb_exe ".
   "-listening_ports 127.0.0.1:$port ".
   "-access_log_file access.log ".
   "-error_log_file debug.log ".
@@ -415,9 +415,9 @@ unless (scalar(@ARGV) > 0 and $ARGV[0] eq "basic_tests") {
   # Manipulate the passwords file
   my $path = 'test_htpasswd';
   unlink $path;
-  system("$mongoose_exe -A $path a b c") == 0
+  system("$civetweb_exe -A $path a b c") == 0
     or fail("Cannot add user in a passwd file");
-  system("$mongoose_exe -A $path a b c2") == 0
+  system("$civetweb_exe -A $path a b c2") == 0
     or fail("Cannot edit user in a passwd file");
   my $content = read_file($path);
   $content =~ /^b:a:\w+$/gs or fail("Bad content of the passwd file");
@@ -429,7 +429,7 @@ unless (scalar(@ARGV) > 0 and $ARGV[0] eq "basic_tests") {
 }
 
 sub do_PUT_test {
-  # This only works because mongoose currently doesn't look at the nonce.
+  # This only works because civetweb currently doesn't look at the nonce.
   # It should really be rejected...
   my $auth_header = "Authorization: Digest  username=guest, ".
   "realm=mydomain.com, nonce=1145872809, uri=/put.txt, ".

@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef MONGOOSE_HEADER_INCLUDED
-#define  MONGOOSE_HEADER_INCLUDED
+#ifndef CIVETWEB_HEADER_INCLUDED
+#define  CIVETWEB_HEADER_INCLUDED
 
 #include <stdio.h>
 #include <stddef.h>
@@ -53,30 +53,30 @@ struct mg_request_info {
 };
 
 
-// This structure needs to be passed to mg_start(), to let mongoose know
+// This structure needs to be passed to mg_start(), to let civetweb know
 // which callbacks to invoke. For detailed description, see
-// https://github.com/valenok/mongoose/blob/master/UserManual.md
+// https://github.com/valenok/civetweb/blob/master/UserManual.md
 struct mg_callbacks {
-  // Called when mongoose has received new HTTP request.
+  // Called when civetweb has received new HTTP request.
   // If callback returns non-zero,
   // callback must process the request by sending valid HTTP headers and body,
-  // and mongoose will not do any further processing.
-  // If callback returns 0, mongoose processes the request itself. In this case,
+  // and civetweb will not do any further processing.
+  // If callback returns 0, civetweb processes the request itself. In this case,
   // callback must not send any data to the client.
   int  (*begin_request)(struct mg_connection *);
 
-  // Called when mongoose has finished processing request.
+  // Called when civetweb has finished processing request.
   void (*end_request)(const struct mg_connection *, int reply_status_code);
 
-  // Called when mongoose is about to log a message. If callback returns
-  // non-zero, mongoose does not log anything.
+  // Called when civetweb is about to log a message. If callback returns
+  // non-zero, civetweb does not log anything.
   int  (*log_message)(const struct mg_connection *, const char *message);
 
-  // Called when mongoose initializes SSL library.
+  // Called when civetweb initializes SSL library.
   int  (*init_ssl)(void *ssl_context, void *user_data);
 
   // Called when websocket request is received, before websocket handshake.
-  // If callback returns 0, mongoose proceeds with handshake, otherwise
+  // If callback returns 0, civetweb proceeds with handshake, otherwise
   // cinnection is closed immediately.
   int (*websocket_connect)(const struct mg_connection *);
 
@@ -95,7 +95,7 @@ struct mg_callbacks {
   int  (*websocket_data)(struct mg_connection *, int bits,
                          char *data, size_t data_len);
 
-  // Called when mongoose tries to open a file. Used to intercept file open
+  // Called when civetweb tries to open a file. Used to intercept file open
   // calls, and serve file data from memory instead.
   // Parameters:
   //    path:     Full path to the file to open.
@@ -107,19 +107,19 @@ struct mg_callbacks {
   const char * (*open_file)(const struct mg_connection *,
                              const char *path, size_t *data_len);
 
-  // Called when mongoose is about to serve Lua server page (.lp file), if
+  // Called when civetweb is about to serve Lua server page (.lp file), if
   // Lua support is enabled.
   // Parameters:
   //   lua_context: "lua_State *" pointer.
   void (*init_lua)(struct mg_connection *, void *lua_context);
 
-  // Called when mongoose has uploaded a file to a temporary directory as a
+  // Called when civetweb has uploaded a file to a temporary directory as a
   // result of mg_upload() call.
   // Parameters:
   //    file_file: full path name to the uploaded file.
   void (*upload)(struct mg_connection *, const char *file_name);
 
-  // Called when mongoose is about to send HTTP error to the client.
+  // Called when civetweb is about to send HTTP error to the client.
   // Implementing this callback allows to create custom error pages.
   // Parameters:
   //   status: HTTP error status code.
@@ -131,7 +131,7 @@ struct mg_callbacks {
 // Parameters:
 //   callbacks: mg_callbacks structure with user-defined callbacks.
 //   options: NULL terminated list of option_name, option_value pairs that
-//            specify Mongoose configuration parameters.
+//            specify Civetweb configuration parameters.
 //
 // Side-effects: on UNIX, ignores SIGCHLD and SIGPIPE signals. If custom
 //    processing is required for these, signal handlers must be set up
@@ -146,7 +146,7 @@ struct mg_callbacks {
 //   };
 //   struct mg_context *ctx = mg_start(&my_func, NULL, options);
 //
-// Refer to https://github.com/valenok/mongoose/blob/master/UserManual.md
+// Refer to https://github.com/valenok/civetweb/blob/master/UserManual.md
 // for the list of valid option and their possible values.
 //
 // Return:
@@ -159,13 +159,13 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 // Stop the web server.
 //
 // Must be called last, when an application wants to stop the web server and
-// release all associated resources. This function blocks until all Mongoose
+// release all associated resources. This function blocks until all Civetweb
 // threads are stopped. Context pointer becomes invalid.
 void mg_stop(struct mg_context *);
 
 
 // Get the value of particular configuration parameter.
-// The value returned is read-only. Mongoose does not allow changing
+// The value returned is read-only. Civetweb does not allow changing
 // configuration at run time.
 // If given parameter name is not valid, NULL is returned. For valid
 // names, return value is guaranteed to be non-NULL. If parameter is not
@@ -212,7 +212,7 @@ int mg_write(struct mg_connection *, const void *buf, size_t len);
 
 // Send data to a websocket client wrapped in a websocket frame.
 // It is unsafe to read/write to this connection from another thread.
-// This function is available when mongoose is compiled with -DUSE_WEBSOCKET
+// This function is available when civetweb is compiled with -DUSE_WEBSOCKET
 //
 // Return:
 //  0   when the connection has been closed
@@ -358,7 +358,7 @@ int mg_start_thread(mg_thread_func_t f, void *p);
 const char *mg_get_builtin_mime_type(const char *file_name);
 
 
-// Return Mongoose version.
+// Return Civetweb version.
 const char *mg_version(void);
 
 // URL-decode input buffer into destination buffer.
@@ -383,4 +383,4 @@ char *mg_md5(char buf[33], ...);
 }
 #endif // __cplusplus
 
-#endif // MONGOOSE_HEADER_INCLUDED
+#endif // CIVETWEB_HEADER_INCLUDED

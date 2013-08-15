@@ -1,4 +1,4 @@
-// This file is part of Mongoose project, http://code.google.com/p/mongoose
+// This file is part of Civetweb project, http://code.google.com/p/civetweb
 
 var chat = {
   // Backend URL, string.
