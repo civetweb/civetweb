@@ -269,7 +269,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L) {
   reg_function(L, "cry", lsp_cry, conn);
   reg_function(L, "include", lsp_include, conn);
   reg_function(L, "redirect", lsp_redirect, conn);
-  reg_string(L, "version", MONGOOSE_VERSION);
+  reg_string(L, "version", CIVETWEB_VERSION);
 
   // Export request_info
   lua_pushstring(L, "request_info");

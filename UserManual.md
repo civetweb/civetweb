@@ -1,68 +1,68 @@
 # Overview
 
-Mongoose is small and easy to use web server. It is self-contained, and does
+Civetweb is small and easy to use web server. It is self-contained, and does
 not require any external software to run.
 
-On Windows, mongoose iconifies itself to the system tray icon when started.
+On Windows, civetweb iconifies itself to the system tray icon when started.
 Right-click on the icon pops up a menu, where it is possible to stop
-mongoose, or configure it, or install it as Windows service. The easiest way
-to share a folder on Windows is to copy `mongoose.exe` to a folder,
+civetweb, or configure it, or install it as Windows service. The easiest way
+to share a folder on Windows is to copy `civetweb.exe` to a folder,
 double-click the exe, and launch a browser at
 [http://localhost:8080](http://localhost:8080). Note that 'localhost' should
 be changed to a machine's name if a folder is accessed from other computer.
 
-On UNIX and Mac, mongoose is a command line utility. Running `mongoose` in
+On UNIX and Mac, civetweb is a command line utility. Running `civetweb` in
 terminal, optionally followed by configuration parameters
-(`mongoose [OPTIONS]`) or configuration file name
-(`mongoose [config_file_name]`) starts the
-web server. Mongoose does not detach from terminal. Pressing `Ctrl-C` keys
+(`civetweb [OPTIONS]`) or configuration file name
+(`civetweb [config_file_name]`) starts the
+web server. Civetweb does not detach from terminal. Pressing `Ctrl-C` keys
 would stop the server.
 
-When started, mongoose first searches for the configuration file.
+When started, civetweb first searches for the configuration file.
 If configuration file is specified explicitly in the command line, i.e.
-`mongoose path_to_config_file`, then specified configuration file is used.
-Otherwise, mongoose would search for file `mongoose.conf` in the same directory
+`civetweb path_to_config_file`, then specified configuration file is used.
+Otherwise, civetweb would search for file `civetweb.conf` in the same directory
 where binary is located, and use it. Configuration file can be absent.
 
 
 Configuration file is a sequence of lines, each line containing
 command line argument name and it's value. Empty lines, and lines beginning
-with `#`, are ignored. Here is the example of `mongoose.conf` file:
+with `#`, are ignored. Here is the example of `civetweb.conf` file:
 
     document_root c:\www
     listening_ports 8080,8043s
-    ssl_certificate c:\mongoose\ssl_cert.pem
+    ssl_certificate c:\civetweb\ssl_cert.pem
 
-When configuration file is processed, mongoose process command line arguments,
+When configuration file is processed, civetweb process command line arguments,
 if they are specified. Command line arguments therefore can override
 configuration file settings. Command line arguments must start with `-`.
-For example, if `mongoose.conf` has line
-`document_root /var/www`, and mongoose has been started as
-`mongoose -document_root /etc`, then `/etc` directory will be served as
+For example, if `civetweb.conf` has line
+`document_root /var/www`, and civetweb has been started as
+`civetweb -document_root /etc`, then `/etc` directory will be served as
 document root, because command line options take priority over
 configuration file. Configuration options section below provide a good
-overview of Mongoose features.
+overview of Civetweb features.
 
 Note that configuration options on the command line must start with `-`,
 but their names are the same as in the config file. All option names are
 listed in the next section. Thus, the following two setups are equivalent:
 
     # Using command line arguments
-    $ mongoose -listening_ports 1234 -document_root /var/www
+    $ civetweb -listening_ports 1234 -document_root /var/www
 
     # Using config file
-    $ cat mongoose.conf
+    $ cat civetweb.conf
     listening_ports 1234
     document_root /var/www
-    $ mongoose
+    $ civetweb
 
-Mongoose can also be used to modify `.htpasswd` passwords file:
+Civetweb can also be used to modify `.htpasswd` passwords file:
 
-    mongoose -A <htpasswd_file> <realm> <user> <passwd>
+    civetweb -A <htpasswd_file> <realm> <user> <passwd>
 
-Unlike other web servers, mongoose does not require CGI scripts be located in
+Unlike other web servers, civetweb does not require CGI scripts be located in
 a special directory. CGI scripts can be anywhere. CGI (and SSI) files are
-recognized by the file name pattern. Mongoose uses shell-like glob
+recognized by the file name pattern. Civetweb uses shell-like glob
 patterns. Pattern match starts at the beginning of the string, so essentially
 patterns are prefix patterns. Syntax is as follows:
 
@@ -80,7 +80,7 @@ All other characters in the pattern match themselves. Examples:
 
 # Configuration Options
 
-Below is a list of configuration options Mongoose understands. Every option
+Below is a list of configuration options Civetweb understands. Every option
 is followed by it's default value. If default value is not present, then
 it is empty.
 
@@ -102,15 +102,15 @@ will fail.
 ### cgi_interpreter
 Path to an executable to use as CGI interpreter for __all__ CGI scripts
 regardless script extension. If this option is not set (which is a default),
-Mongoose looks at first line of a CGI script,
+Civetweb looks at first line of a CGI script,
 [shebang line](http://en.wikipedia.org/wiki/Shebang_(Unix\)), for an interpreter.
 
 For example, if both PHP and perl CGIs are used, then
 `#!/path/to/php-cgi.exe` and `#!/path/to/perl.exe` must be first lines of the
 respective CGI scripts. Note that paths should be either full file paths,
-or file paths relative to the current working directory of mongoose server.
-If mongoose is started by mouse double-click on Windows, current working
-directory is a directory where mongoose executable is located.
+or file paths relative to the current working directory of civetweb server.
+If civetweb is started by mouse double-click on Windows, current working
+directory is a directory where civetweb executable is located.
 
 If all CGIs use the same interpreter, for example they are all PHP, then
 `cgi_interpreter` can be set to the path to `php-cgi.exe` executable and
@@ -137,7 +137,7 @@ In order for a webpage to recognize an SSI-enabled HTML file, the filename
 should end with a special extension, by default the extension should be
 either `.shtml` or `.shtm`.
 
-Unknown SSI directives are silently ignored by mongoose. Currently, two SSI
+Unknown SSI directives are silently ignored by civetweb. Currently, two SSI
 directives are supported, `<!--#include ...>` and
 `<!--#exec "command">`. Note that `<!--#include ...>` directive supports
 three path specifications:
@@ -216,7 +216,7 @@ files.
 
 ### access\_control\_list
 An Access Control List (ACL) allows restrictions to be put on the list of IP
-addresses which have access to the web server. In the case of the Mongoose
+addresses which have access to the web server. In the case of the Civetweb
 web server, the ACL is a comma separated list of IP subnets, where each
 subnet is prepended by either a `-` or a `+` sign. A plus sign means allow,
 where a minus sign means deny. If a subnet mask is omitted, such as `-1.2.3.4`,
@@ -258,20 +258,20 @@ directory is commonly referenced as dot (`.`).
 Path to SSL certificate file. This option is only required when at least one
 of the `listening_ports` is SSL. The file must be in PEM format,
 and it must have both private key and certificate, see for example
-[ssl_cert.pem](https://github.com/valenok/mongoose/blob/master/build/ssl_cert.pem)
+[ssl_cert.pem](https://github.com/valenok/civetweb/blob/master/build/ssl_cert.pem)
 
 ### num_threads `50`
-Number of worker threads. Mongoose handles each incoming connection in a
+Number of worker threads. Civetweb handles each incoming connection in a
 separate thread. Therefore, the value of this option is effectively a number
-of concurrent HTTP connections Mongoose can handle.
+of concurrent HTTP connections Civetweb can handle.
 
 ### run\_as\_user
 Switch to given user credentials after startup. Usually, this option is
-required when mongoose needs to bind on privileged port on UNIX. To do
-that, mongoose needs to be started as root. But running as root is a bad idea,
+required when civetweb needs to bind on privileged port on UNIX. To do
+that, civetweb needs to be started as root. But running as root is a bad idea,
 therefore this option can be used to drop privileges. Example:
 
-    mongoose -listening_ports 80 -run_as_user nobody
+    civetweb -listening_ports 80 -run_as_user nobody
 
 ### request\_timeout\_ms `30000`
 Timeout for network read and network write operations, in milliseconds.
@@ -281,36 +281,36 @@ or use keep-alive messages.
 
 ### url\_rewrite\_patterns
 Comma-separated list of URL rewrites in the form of
-`uri_pattern=file_or_directory_path`. When Mongoose receives the request,
+`uri_pattern=file_or_directory_path`. When Civetweb receives the request,
 it constructs the file name to show by combining `document_root` and the URI.
 However, if the rewrite option is used and `uri_pattern` matches the
 requested URI, then `document_root` is ignored. Insted,
 `file_or_directory_path` is used, which should be a full path name or
 a path relative to the web server's current working directory. Note that
-`uri_pattern`, as all mongoose patterns, is a prefix pattern.
+`uri_pattern`, as all civetweb patterns, is a prefix pattern.
 
 This makes it possible to serve many directories outside from `document_root`,
 redirect all requests to scripts, and do other tricky things. For example,
 to redirect all accesses to `.doc` files to a special script, do:
 
-    mongoose -url_rewrite_patterns **.doc$=/path/to/cgi-bin/handle_doc.cgi
+    civetweb -url_rewrite_patterns **.doc$=/path/to/cgi-bin/handle_doc.cgi
 
 Or, to imitate user home directories support, do:
 
-    mongoose -url_rewrite_patterns /~joe/=/home/joe/,/~bill=/home/bill/
+    civetweb -url_rewrite_patterns /~joe/=/home/joe/,/~bill=/home/bill/
 
 ### hide\_files\_patterns
 A pattern for the files to hide. Files that match the pattern will not
 show up in directory listing and return `404 Not Found` if requested. Pattern
 must be for a file name only, not including directory name. Example:
 
-    mongoose -hide_files_patterns secret.txt|even_more_secret.txt
+    civetweb -hide_files_patterns secret.txt|even_more_secret.txt
 
 # Lua Server Pages
-Pre-built Windows and Mac mongoose binaries have built-in Lua Server Pages
-support. That means it is possible to write PHP-like scripts with mongoose,
+Pre-built Windows and Mac civetweb binaries have built-in Lua Server Pages
+support. That means it is possible to write PHP-like scripts with civetweb,
 using Lua programming language instead of PHP. Lua is known
-for it's speed and small size. Mongoose uses Lua version 5.2.1, the
+for it's speed and small size. Civetweb uses Lua version 5.2.1, the
 documentation for it can be found at
 [Lua 5.2 reference manual](http://www.lua.org/manual/5.2/).
 
@@ -332,20 +332,20 @@ are accessible from the Lua code (please check reference manual for details),
 and also information about the request is available in `mg.request_info` object,
 like request method, all headers, etcetera. Please refer to
 `struct mg_request_info` definition in
-[mongoose.h](https://github.com/valenok/mongoose/blob/master/mongoose.h)
+[civetweb.h](https://github.com/valenok/civetweb/blob/master/civetweb.h)
 to see what kind of information is present in `mg.request_info` object. Also,
-[page.lp](https://github.com/valenok/mongoose/blob/master/test/page.lp) and
-[prime_numbers.lp](https://github.com/valenok/mongoose/blob/master/examples/lua/prime_numbers.lp)
+[page.lp](https://github.com/valenok/civetweb/blob/master/test/page.lp) and
+[prime_numbers.lp](https://github.com/valenok/civetweb/blob/master/examples/lua/prime_numbers.lp)
 contains some example code that uses `request_info` and other functions(form submitting for example).
 
-Mongoose exports the following to the Lua server page:
+Civetweb exports the following to the Lua server page:
 
     mg.read()         -- reads a chunk from POST data, returns it as a string
     mg.write(str)     -- writes string to the client
     mg.include(path)  -- sources another Lua file
     mg.redirect(uri)  -- internal redirect to a given URI
     mg.onerror(msg)   -- error handler, can be overridden
-    mg.version        -- a string that holds Mongoose version
+    mg.version        -- a string that holds Civetweb version
     mg.request_info   -- a table with request information
 
     -- Connect to the remote TCP server. This function is an implementation
@@ -358,22 +358,22 @@ Mongoose exports the following to the Lua server page:
     local host = 'code.google.com'  -- IP address or domain name
     local ok, sock = pcall(connect, host, 80, 1)
     if ok then
-      sock:send('GET /p/mongoose/ HTTP/1.0\r\n' ..
+      sock:send('GET /p/civetweb/ HTTP/1.0\r\n' ..
                 'Host: ' .. host .. '\r\n\r\n')
       local reply = sock:recv()
       sock:close()
-      -- reply now contains the web page https://code.google.com/p/mongoose
+      -- reply now contains the web page https://code.google.com/p/civetweb
     end
 
 
-**IMPORTANT: Mongoose does not send HTTP headers for Lua pages. Therefore,
+**IMPORTANT: Civetweb does not send HTTP headers for Lua pages. Therefore,
 every Lua Page must begin with HTTP reply line and headers**, like this:
 
     <? print('HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n') ?>
     <html><body>
       ... the rest of the web page ...
 
-To serve Lua Page, mongoose creates Lua context. That context is used for
+To serve Lua Page, civetweb creates Lua context. That context is used for
 all Lua blocks within the page. That means, all Lua blocks on the same page
 share the same context. If one block defines a variable, for example, that
 variable is visible in the block that follows.
@@ -383,39 +383,39 @@ variable is visible in the block that follows.
   reason for that is wrong paths to the interpreter. Remember that with PHP,
   correct interpreter is `php-cgi.exe` (`php-cgi` on UNIX). Solution: specify
   full path to the PHP interpreter, e.g.:
-    `mongoose -cgi_interpreter /full/path/to/php-cgi`
+    `civetweb -cgi_interpreter /full/path/to/php-cgi`
 
-- Mongoose fails to start. If Mongoose exits immediately when run, this
+- Civetweb fails to start. If Civetweb exits immediately when run, this
   usually indicates a syntax error in the configuration file
-  (named `mongoose.conf` by default) or the command-line arguments.
-  Syntax checking is omitted from Mongoose to keep its size low. However,
+  (named `civetweb.conf` by default) or the command-line arguments.
+  Syntax checking is omitted from Civetweb to keep its size low. However,
   the Manual should be of help. Note: the syntax changes from time to time,
   so updating the config file might be necessary after executable update.
 
 - Embedding with OpenSSL on Windows might fail because of calling convention.
-  To force Mongoose to use `__stdcall` convention, add `/Gz` compilation
+  To force Civetweb to use `__stdcall` convention, add `/Gz` compilation
   flag in Visual Studio compiler.
 
 # Embedding
-Embedding Mongoose is easy. Copy
-[mongoose.c](https://github.com/valenok/mongoose/blob/master/mongoose.c) and
-[mongoose.h](https://github.com/valenok/mongoose/blob/master/mongoose.h)
+Embedding Civetweb is easy. Copy
+[civetweb.c](https://github.com/valenok/civetweb/blob/master/civetweb.c) and
+[civetweb.h](https://github.com/valenok/civetweb/blob/master/civetweb.h)
 to your application's source tree and include them in the build. For
 example, your application's code lives in C file `my_app.c`, then on UNIX
-this command embeds Mongoose:
+this command embeds Civetweb:
 
     $ ls
-    my_app.c mongoose.c mongoose.h
-    $ gcc my_app.c mongoose.c -o my_app -ldl -pthread
+    my_app.c civetweb.c civetweb.h
+    $ gcc my_app.c civetweb.c -o my_app -ldl -pthread
 
 Somewhere in the application code, call `mg_start()` to start the server.
 Pass configuration options and event handlers to `mg_start()`.
-Mongoose then calls handlers when certain events happen.
-For example, when new request arrives, Mongoose calls `begin_request`
+Civetweb then calls handlers when certain events happen.
+For example, when new request arrives, Civetweb calls `begin_request`
 handler function to let user handle the request. In the handler, user code
 can get all information about the request -- parsed headers, etcetera.
 
-Mongoose API is logically divided in three categories: server setup/shutdown
+Civetweb API is logically divided in three categories: server setup/shutdown
 functions, functions to be used by user-written event handlers, and
 convenience utility functions.
 
@@ -423,9 +423,9 @@ convenience utility functions.
 To start the embedded web server, call `mg_start()`. To stop it, call
 `mg_stop()`.
 
-    // This structure needs to be passed to mg_start(), to let mongoose know
+    // This structure needs to be passed to mg_start(), to let civetweb know
     // which callbacks to invoke. For detailed description, see
-    // https://github.com/valenok/mongoose/blob/master/UserManual.md
+    // https://github.com/valenok/civetweb/blob/master/UserManual.md
     struct mg_callbacks {
       int  (*begin_request)(struct mg_connection *);
       void (*end_request)(const struct mg_connection *, int reply_status_code);
@@ -441,7 +441,7 @@ To start the embedded web server, call `mg_start()`. To stop it, call
       int  (*http_error)(struct mg_connection *, int status);
     };
 
-[hello.c](https://github.com/valenok/mongoose/blob/master/examples/hello.c)
+[hello.c](https://github.com/valenok/civetweb/blob/master/examples/hello.c)
 provides a minimalistic example.
 
 Common pattern is to implement `begin_request` callback, and serve static files
@@ -453,18 +453,18 @@ encrypted database or encryption dongles would be a better choice.
 
 # Build on Android
 
-This is a small guide to help you run mongoose on Android. Currently it is
+This is a small guide to help you run civetweb on Android. Currently it is
 tested on the HTC Wildfire. If you have managed to run it on other devices
 as well, please comment or drop an email in the mailing list.
-Note : You dont need root access to run mongoose on Android.
+Note : You dont need root access to run civetweb on Android.
 
 - Download the source from the Downloads page.
 - Download the Android NDK from [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)
-- Run `/path-to-ndk/ndk-build -C /path-to-mongoose/build`
-  That should generate mongoose/lib/armeabi/mongoose
+- Run `/path-to-ndk/ndk-build -C /path-to-civetweb/build`
+  That should generate civetweb/lib/armeabi/civetweb
 - Using the adb tool (you need to have Android SDK installed for that),
-  push the generated mongoose binary to `/data/local` folder on device.
-- From adb shell, navigate to `/data/local` and execute `./mongoose`.
+  push the generated civetweb binary to `/data/local` folder on device.
+- From adb shell, navigate to `/data/local` and execute `./civetweb`.
 - To test if the server is running fine, visit your web-browser and
   navigate to `http://127.0.0.1:8080` You should see the `Index of /` page.
 
@@ -474,18 +474,18 @@ Note : You dont need root access to run mongoose on Android.
 Notes:
 
 - `jni` stands for Java Native Interface. Read up on Android NDK if you want
-  to know how to interact with the native C functions of mongoose in Android
+  to know how to interact with the native C functions of civetweb in Android
   Java applications.
 - TODO: A Java application that interacts with the native binary or a
   shared library.
 
-# Mongoose internals
+# Civetweb internals
 
-Mongoose is multithreaded web server. `mg_start()` function allocates
+Civetweb is multithreaded web server. `mg_start()` function allocates
 web server context (`struct mg_context`), which holds all information
 about web server instance:
 
-- configuration options. Note that mongoose makes internal copies of
+- configuration options. Note that civetweb makes internal copies of
   passed options.
 - SSL context, if any
 - user-defined callbacks
@@ -498,11 +498,11 @@ When `mg_start()` returns, all initialization is quaranteed to be complete
 two threads: a master thread, that accepts new connections, and several
 worker threads, that process accepted connections. The number of worker threads
 is configurable via `num_threads` configuration option. That number puts a
-limit on number of simultaneous requests that can be handled by mongoose.
+limit on number of simultaneous requests that can be handled by civetweb.
 
 When master thread accepts new connection, a new accepted socket (described by
 `struct socket`) it placed into the accepted sockets queue,
-which has size of 20 (see [code](https://github.com/valenok/mongoose/blob/3892e0199e6ca9613b160535d9d107ede09daa43/mongoose.c#L486)). Any idle worker thread
+which has size of 20 (see [code](https://github.com/valenok/civetweb/blob/3892e0199e6ca9613b160535d9d107ede09daa43/civetweb.c#L486)). Any idle worker thread
 can grab accepted sockets from that queue. If all worker threads are busy,
 master thread can accept and queue up to 20 more TCP connections,
 filling up the queue.
@@ -510,7 +510,7 @@ In the attempt to queue next accepted connection, master thread blocks
 until there is space in a queue. When master thread is blocked on a
 full queue, TCP layer in OS can also queue incoming connection.
 The number is limited by the `listen()` call parameter on listening socket,
-which is `SOMAXCONN` in case of Mongoose, and depends on a platform.
+which is `SOMAXCONN` in case of Civetweb, and depends on a platform.
 
 Worker threads are running in an infinite loop, which in simplified form
 looks something like this:
@@ -521,7 +521,7 @@ looks something like this:
       }
     }
 
-Function `consume_socket()` gets new accepted socket from the mongoose socket
+Function `consume_socket()` gets new accepted socket from the civetweb socket
 queue, atomically removing it from the queue. If the queue is empty,
 `consume_socket()` blocks and waits until new sockets are placed in a queue
 by the master thread. `process_new_connection()` actually processes the
@@ -534,7 +534,7 @@ listening sockets. `poll()` is used to avoid `FD_SETSIZE` limitation of
 to use hi-performance alternatives like `epoll()` or `kqueue()`. Worker
 threads use blocking IO on accepted sockets for reading and writing data.
 All accepted sockets have `SO_RCVTIMEO` and `SO_SNDTIMEO` socket options set
-(controlled by `request_timeout_ms` mongoose option, 30 seconds default) which
+(controlled by `request_timeout_ms` civetweb option, 30 seconds default) which
 specify read/write timeout on client connection.
 
 # Other Resources
@@ -544,4 +544,4 @@ specify read/write timeout on client connection.
   ([pdf](http://mind.be/content/110206_Web-ui.pdf) |
    [odp](http://mind.be/content/110206_Web-ui.odp))
 - Linux Journal article by Michel J.Hammel, 2010-04-01, called
-  [Mongoose: an Embeddable Web Server in C](http://www.linuxjournal.com/article/10680)
+  [Civetweb: an Embeddable Web Server in C](http://www.linuxjournal.com/article/10680)

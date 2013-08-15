@@ -247,9 +247,9 @@ typedef int SOCKET;
 
 #endif // End of Windows and UNIX specific includes
 
-#include "mongoose.h"
+#include "civetweb.h"
 
-#define MONGOOSE_VERSION "3.9"
+#define CIVETWEB_VERSION "1.0"
 #define PASSWORDS_FILE_NAME ".htpasswd"
 #define CGI_ENVIRONMENT_SIZE 4096
 #define MAX_CGI_ENVIR_VARS 64
@@ -488,7 +488,7 @@ static const char *config_options[] = {
 struct mg_context {
   volatile int stop_flag;         // Should we stop event loop
   SSL_CTX *ssl_ctx;               // SSL context
-  char *config[NUM_OPTIONS];      // Mongoose configuration parameters
+  char *config[NUM_OPTIONS];      // Civetweb configuration parameters
   struct mg_callbacks callbacks;  // User-defined callback function
   void *user_data;                // User-defined data
 
@@ -666,7 +666,7 @@ static struct mg_connection *fc(struct mg_context *ctx) {
 }
 
 const char *mg_version(void) {
-  return MONGOOSE_VERSION;
+  return CIVETWEB_VERSION;
 }
 
 struct mg_request_info *mg_get_request_info(struct mg_connection *conn) {
@@ -2732,7 +2732,7 @@ static int scan_directory(struct mg_connection *conn, const char *dir,
       // garbage and strftime() will segfault later on in
       // print_dir_entry(). memset is required only if mg_stat()
       // fails. For more details, see
-      // http://code.google.com/p/mongoose/issues/detail?id=79
+      // http://code.google.com/p/civetweb/issues/detail?id=79
       memset(&de.file, 0, sizeof(de.file));
       mg_stat(conn, path, &de.file);
 
@@ -2768,7 +2768,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir) {
       // garbage and strftime() will segfault later on in
       // print_dir_entry(). memset is required only if mg_stat()
       // fails. For more details, see
-      // http://code.google.com/p/mongoose/issues/detail?id=79
+      // http://code.google.com/p/civetweb/issues/detail?id=79
       memset(&de.file, 0, sizeof(de.file));
       mg_stat(conn, path, &de.file);
       if(de.file.modification_time) {
@@ -3287,7 +3287,7 @@ static void prepare_cgi_environment(struct mg_connection *conn,
   addenv(blk, "SERVER_NAME=%s", conn->ctx->config[AUTHENTICATION_DOMAIN]);
   addenv(blk, "SERVER_ROOT=%s", conn->ctx->config[DOCUMENT_ROOT]);
   addenv(blk, "DOCUMENT_ROOT=%s", conn->ctx->config[DOCUMENT_ROOT]);
-  addenv(blk, "SERVER_SOFTWARE=%s/%s", "Mongoose", mg_version());
+  addenv(blk, "SERVER_SOFTWARE=%s/%s", "Civetweb", mg_version());
 
   // Prepare the environment block
   addenv(blk, "%s", "GATEWAY_INTERFACE=CGI/1.1");
@@ -4416,9 +4416,9 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index) {
                               lsa.sin.sin_port), conn->request_info.uri);
 }
 
-// This is the heart of the Mongoose's logic.
+// This is the heart of the Civetweb's logic.
 // This function is called when the request is read, parsed and validated,
-// and Mongoose must decide what action to take: serve a file, or
+// and Civetweb must decide what action to take: serve a file, or
 // a directory, or call embedded function, etcetera.
 static void handle_request(struct mg_connection *conn) {
   struct mg_request_info *ri = &conn->request_info;

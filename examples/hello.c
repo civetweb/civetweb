@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <string.h>
-#include "mongoose.h"
+#include "civetweb.h"
 
-// This function will be called by mongoose on every new request.
+// This function will be called by civetweb on every new request.
 static int begin_request_handler(struct mg_connection *conn) {
   const struct mg_request_info *request_info = mg_get_request_info(conn);
   char content[100];
 
   // Prepare the message we're going to send
   int content_length = snprintf(content, sizeof(content),
-                                "Hello from mongoose! Remote port: %d",
+                                "Hello from civetweb! Remote port: %d",
                                 request_info->remote_port);
 
   // Send HTTP reply to the client
@@ -21,8 +21,8 @@ static int begin_request_handler(struct mg_connection *conn) {
             "%s",
             content_length, content);
 
-  // Returning non-zero tells mongoose that our function has replied to
-  // the client, and mongoose should not send client any more data.
+  // Returning non-zero tells civetweb that our function has replied to
+  // the client, and civetweb should not send client any more data.
   return 1;
 }
 

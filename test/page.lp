@@ -5,8 +5,8 @@ Content-Type: text/html
 
 
 <p>This is an example Lua server page served by
-<a href="http://code.google.com/p/mongoose">Mongoose web server</a>.
-Mongoose has Lua, Sqlite, and other functionality built in the binary.
+<a href="http://code.google.com/p/civetweb">Civetweb web server</a>.
+Civetweb has Lua, Sqlite, and other functionality built in the binary.
 This example page stores the request in the Sqlite database, and shows
 all requests done previously.</p>
 <p> Today is <? mg.write(os.date("%A")) ?>
