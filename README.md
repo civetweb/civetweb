@@ -1,6 +1,6 @@
 # Project Mission
 
-Project mission is to provide easy to use, powerful, embeddable web server.
+Project mission is to provide easy to use, powerful, embeddable web server with an MIT license.
 
 # Overview
 
@@ -36,7 +36,7 @@ this is very easy to install and use.
 
 # Contributions
 
-Contributions are welcome provided all contributions cairry the MIT license.
+Contributions are welcome provided all contributions carry the MIT license.
 
 DO NOT APPLY fixes copied from Mongoose to this project to prevent GPL tainting.
 
@@ -44,16 +44,16 @@ DO NOT APPLY fixes copied from Mongoose to this project to prevent GPL tainting.
 
 The original Author was Sergey Lyubka.  He still controls the original
 Mongoose project.  However, he has changed or said he would 
-change licences after writing and distributing the original code this
+change licenses after writing and distributing the original code this
 project is based on.
 
-Using this project ensures the the MIT liences terms are applied and
+Using this project ensures the MIT licenses terms are applied and
 GPL cannot be imposed on any of this code as long as it is sourced from
 here.
 
 For the latest and greatest code and features, please use the Mongoose
-code from Sergey Lyubka.  However, doing so will require adherance to
+code from Sergey Lyubka.  However, doing so will require adherence to
 the new licenses.
 
 This project ensures that GPL license cannot be applied to this code.
-This code will remain free with the MIT license forever.
+This code will remain free with the MIT license protection.
