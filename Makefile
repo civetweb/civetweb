@@ -65,7 +65,9 @@ YASSL_SOURCES = \
   $(YASSL)/ctaocrypt/src/ecc.c $(YASSL)/src/ocsp.c $(YASSL)/src/crl.c \
   $(YASSL)/ctaocrypt/src/hc128.c $(YASSL)/ctaocrypt/src/memory.c
 
-ALL_SOURCES = main.c civetweb.c build/sqlite3.c build/lsqlite3.c \
+LIB_SOURCES = civetweb.c build/md5.c 
+
+ALL_SOURCES = main.c $(LIB_SOURCES) build/sqlite3.c build/lsqlite3.c \
               $(LUA_SOURCES) $(YASSL_SOURCES)
 ALL_OBJECTS = $(ALL_SOURCES:%.c=%.o)
 ALL_WINOBJS = $(ALL_SOURCES:%.c=%.obj)
@@ -109,17 +111,17 @@ civetweb.o: mod_lua.c
 # "-Wl,--as-needed" turned on by default  in cc command.
 # Also, this is turned in many other distros in static linkage builds.
 linux:
-	$(CC) civetweb.c main.c -o $(PROG) -ldl $(CFLAGS)
+	$(CC) $(LIB_SOURCES) main.c -o $(PROG) -ldl $(CFLAGS)
 
 mac: bsd
 bsd:
-	$(CC) civetweb.c main.c -o $(PROG) $(CFLAGS)
+	$(CC) $(LIB_SOURCES) main.c -o $(PROG) $(CFLAGS)
 
 bsd_lua: $(ALL_OBJECTS)
 	$(CC) $(ALL_OBJECTS) -o $@
 
 solaris:
-	$(CC) civetweb.c main.c -lnsl -lsocket -o $(PROG) $(CFLAGS)
+	$(CC) $(LIB_SOURCES) main.c -lnsl -lsocket -o $(PROG) $(CFLAGS)
 
 lib$(PROG).a: $(ALL_OBJECTS)
 	ar cr $@ $(ALL_OBJECTS)
@@ -130,14 +132,14 @@ $(PROG).lib: $(ALL_WINOBJS)
 # For codesign to work in non-interactive mode, unlock login keychain:
 # security unlock ~/Library/Keychains/login.keychain
 # See e.g. http://lists.apple.com/archives/apple-cdsa/2008/Jan/msg00027.html
-Civetweb: civetweb.c main.c
-	$(CC) civetweb.c main.c build/lsqlite3.c build/sqlite3.c \
+Civetweb: $(LIB_SOURCES) main.c
+	$(CC) $(LIB_SOURCES) main.c build/lsqlite3.c build/sqlite3.c \
           -DUSE_COCOA $(CFLAGS) $(FLAGS) -mmacosx-version-min=10.4 \
           $(YASSL_SOURCES) $(LUA_SOURCES) \
           -framework Cocoa -ObjC -arch i386 -arch x86_64 -o Civetweb
 
 cocoa: Civetweb
-	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' civetweb.c`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 build/civetweb_*.png $$DIR/Contents/Resources/ && install -m 644 build/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
+	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 build/civetweb_*.png $$DIR/Contents/Resources/ && install -m 644 build/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
 
 un:
 	$(CC) test/unit_test.c -o unit_test -I. -I$(LUA) $(LUA_SOURCES) \
@@ -160,9 +162,9 @@ MINGWDBG= -DNDEBUG -Os
 MINGWOPT=  -W -Wall -mthreads -Wl,--subsystem,console $(MINGWDBG) -DHAVE_STDINT $(GCC_WARNINGS) $(COPT)
 mingw:
 	windres build\res.rc build\res.o
-	$(CC) $(MINGWOPT) civetweb.c -lws2_32 \
+	$(CC) $(MINGWOPT) $(LIB_SOURCES) -lws2_32 \
 		-shared -Wl,--out-implib=$(PROG).lib -o $(PROG).dll
-	$(CC) $(MINGWOPT) civetweb.c main.c build\res.o \
+	$(CC) $(MINGWOPT) $(LIB_SOURCES) main.c build\res.o \
 	-lws2_32 -ladvapi32 -lcomdlg32 -o $(PROG).exe
 
 # Build for Windows under Cygwin
@@ -171,20 +173,20 @@ CYGWINDBG= -DNDEBUG -Os
 CYGWINOPT=  -W -Wall -mthreads -Wl,--subsystem,console $(CYGWINDBG) -DHAVE_STDINT $(GCC_WARNINGS) $(COPT)
 cygwin:
 	windres ./build/res.rc ./build/res.o
-	$(CC) $(CYGWINOPT) civetweb.c -lws2_32 \
+	$(CC) $(CYGWINOPT) $(LIB_SOURCES) -lws2_32 \
 		-shared -Wl,--out-implib=$(PROG).lib -o $(PROG).dll
-	$(CC) $(CYGWINOPT) -Ibuild civetweb.c main.c ./build/res.o \
+	$(CC) $(CYGWINOPT) -Ibuild $(LIB_SOURCES) main.c ./build/res.o \
 	-lws2_32 -ladvapi32 -o $(PROG).exe
 
 tests:
 	perl test/test.pl $(TEST)
 
 tarball: clean
-	F=civetweb-`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' civetweb.c`.tgz ; cd .. && tar -czf x civetweb/{LICENSE,Makefile,examples,test,build,*.[ch],*.md} && mv x civetweb/$$F
+	F=civetweb-`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`.tgz ; cd .. && tar -czf x civetweb/{LICENSE,Makefile,examples,test,build,*.[ch],*.md} && mv x civetweb/$$F
 
 release: tarball cocoa
 	wine make windows
-	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' civetweb.c`; upx civetweb.exe; cp civetweb.exe civetweb-$$V.exe; cp civetweb.exe civetweb_php_bundle/; zip -r civetweb_php_bundle_$$V.zip civetweb_php_bundle/
+	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; upx civetweb.exe; cp civetweb.exe civetweb-$$V.exe; cp civetweb.exe civetweb_php_bundle/; zip -r civetweb_php_bundle_$$V.zip civetweb_php_bundle/
 
 clean:
 	cd examples && $(MAKE) clean
