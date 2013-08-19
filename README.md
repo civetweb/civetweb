@@ -2,6 +2,20 @@
 
 Project mission is to provide easy to use, powerful, embeddable web server with an MIT license.
 
+# Where to find the official version?
+
+End users can download Civetweb at SourceForge
+https://sourceforge.net/projects/civetweb/
+
+Developers can contribute to CivetWeb via GitHub
+https://github.com/sunsetbrew/civetweb
+
+Trouble tickets should be filed on SourceForge
+https://sourceforge.net/p/civetweb/tickets/
+
+Discussion group is at Google Groups
+https://groups.google.com/d/forum/civetweb
+
 # Overview
 
 Civetweb keeps the balance between functionality and
