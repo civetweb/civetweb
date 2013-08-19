@@ -1,0 +1,41 @@
+# An example PKGBUILD script for Civetweb upstream, git version
+# Rename to PKGBUILD to build via makepkg
+_pkgname=civetweb
+pkgname=$_pkgname-git
+pkgver=20130819
+pkgrel=3
+pkgdesc="Small and quick-to-use web server; https/php/cgi support; MIT license - git development version"
+arch=('i686' 'x86_64')
+url="http://sourceforge.net/p/civetweb/"
+license=('MIT')
+groups=()
+depends=()
+makedepends=('git')
+optdepends=('php-cgi: for php support')
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+backup=("etc/$_pkgname/$_pkgname.conf")
+source=("$_pkgname::git+git://git.code.sf.net/p/civetweb/code" "$_pkgname.conf" "$_pkgname.service")
+md5sums=('SKIP'
+         'b713489175c282f2c2a298ca21c789dd'
+         '04882a60dcd33a2b4b254abb090b8c13')
+
+#pkgver() {
+#  cd "$srcdir/$_pkgname"
+#  echo "0.$(git rev-list --count HEAD).$(git describe --always)"
+#}
+
+build() {
+  cd "$srcdir/$_pkgname"
+  COPT="-DUSE_IPV6" make linux
+}
+
+package() {
+  install -Dm755 "$srcdir/$_pkgname/$_pkgname" "$pkgdir/usr/bin/$_pkgname"
+  install -Dm644 "$srcdir/$_pkgname/dist/arch/$_pkgname.conf" "$pkgdir/etc/$_pkgname/$_pkgname.conf"
+  install -Dm644 "$srcdir/$_pkgname/dist/arch/$_pkgname.service" "$pkgdir/usr/lib/systemd/system/$_pkgname.service"
+  install -d "$pkgdir/usr/share/$_pkgname"
+  install -m644 "$srcdir/$_pkgname/UserManual.md" "$srcdir/$_pkgname/README.md" "$pkgdir/usr/share/$_pkgname"
+}
+
+# vim:set ts=2 sw=2 et:
