@@ -1638,7 +1638,7 @@ static int alloc_vprintf2(char **buf, const char *fmt, va_list ap) {
   *buf = NULL;
   while (len == -1) {
     if (*buf) free(*buf);
-    *buf = malloc(size *= 4);
+    *buf = (char *)malloc(size *= 4);
     if (!*buf) break;
     va_copy(ap_copy, ap);
     len = vsnprintf(*buf, size, fmt, ap_copy);
@@ -3674,6 +3674,14 @@ static void handle_propfind(struct mg_connection *conn, const char *path,
   conn->num_bytes_sent += mg_printf(conn, "%s\n", "</d:multistatus>");
 }
 
+void mg_lock(struct mg_connection* conn) {
+  (void) pthread_mutex_lock(&conn->mutex); 
+}
+
+void mg_unlock(struct mg_connection* conn) {
+  (void) pthread_mutex_unlock(&conn->mutex);
+}
+
 #if defined(USE_WEBSOCKET)
 
 // START OF SHA-1 code
@@ -3849,14 +3857,6 @@ static void send_websocket_handshake(struct mg_connection *conn) {
             "Upgrade: websocket\r\n"
             "Connection: Upgrade\r\n"
             "Sec-WebSocket-Accept: ", b64_sha, "\r\n\r\n");
-}
-
-void mg_lock(struct mg_connection* conn) {
-  (void) pthread_mutex_lock(&conn->mutex); 
-}
-
-void mg_unlock(struct mg_connection* conn) {
-  (void) pthread_mutex_unlock(&conn->mutex);
 }
 
 static void read_websocket(struct mg_connection *conn) {
