@@ -4,7 +4,7 @@
 #
 
 CFLAGS=	-W -Wall -Wno-unused-parameter -I.. -I. -g
-LIB_SOURCES = CivetServer.cpp ../civetweb.c ../build/md5.c
+LIB_SOURCES = CivetServer.cpp ../civetweb.c ../md5.c
 LIBS = -lpthread 
 
 all:
