@@ -65,7 +65,7 @@ YASSL_SOURCES = \
   $(YASSL)/ctaocrypt/src/ecc.c $(YASSL)/src/ocsp.c $(YASSL)/src/crl.c \
   $(YASSL)/ctaocrypt/src/hc128.c $(YASSL)/ctaocrypt/src/memory.c
 
-LIB_SOURCES = civetweb.c build/md5.c 
+LIB_SOURCES = civetweb.c md5.c 
 
 ALL_SOURCES = main.c $(LIB_SOURCES) build/sqlite3.c build/lsqlite3.c \
               $(LUA_SOURCES) $(YASSL_SOURCES)

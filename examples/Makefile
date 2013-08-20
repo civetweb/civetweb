@@ -1,13 +1,13 @@
 CFLAGS=	-W -Wall -I.. -pthread -g
-
+LIB_SOURCE =  ../civetweb.c  ../md5.c 
 all:
 	OS=`uname`; \
 	  test "$$OS" = Linux && LIBS="-ldl" ; \
-	  $(CC) $(CFLAGS) hello.c ../civetweb.c  $$LIBS $(ADD) -o hello;
-	  $(CC) $(CFLAGS) upload.c ../civetweb.c  $$LIBS $(ADD) -o upload;
-	  $(CC) $(CFLAGS) post.c ../civetweb.c  $$LIBS $(ADD) -o post;
-	  $(CC) $(CFLAGS) -DUSE_WEBSOCKET websocket.c ../civetweb.c  $$LIBS $(ADD) -o websocket;
-	  $(CC) $(CFLAGS) chat.c ../civetweb.c  $$LIBS $(ADD) -o chat
+	  $(CC) $(CFLAGS) hello.c $(LIB_SOURCE) $$LIBS $(ADD) -o hello;
+	  $(CC) $(CFLAGS) upload.c $(LIB_SOURCE) $$LIBS $(ADD) -o upload;
+	  $(CC) $(CFLAGS) post.c $(LIB_SOURCE) $$LIBS $(ADD) -o post;
+	  $(CC) $(CFLAGS) -DUSE_WEBSOCKET websocket.c $(LIB_SOURCE) $$LIBS $(ADD) -o websocket;
+	  $(CC) $(CFLAGS) chat.c $(LIB_SOURCE) $$LIBS $(ADD) -o chat
 
 
 MSVC    = e:/vc6
@@ -17,11 +17,11 @@ CLFLAGS = /MD /TC /nologo $(DBG) /W3 /DNO_SSL \
         /link /incremental:no /libpath:$(MSVC)/lib /machine:IX86
 
 windows:
-	$(CL) upload.c ../civetweb.c $(CLFLAGS)
-	$(CL) hello.c ../civetweb.c $(CLFLAGS)
-	$(CL) upload.c ../civetweb.c $(CLFLAGS)
-	$(CL) post.c ../civetweb.c $(CLFLAGS)
-	$(CL) post.c ../civetweb.c $(CLFLAGS)
+	$(CL) upload.c $(LIB_SOURCE) $(CLFLAGS)
+	$(CL) hello.c $(LIB_SOURCE) $(CLFLAGS)
+	$(CL) upload.c $(LIB_SOURCE) $(CLFLAGS)
+	$(CL) post.c $(LIB_SOURCE) $(CLFLAGS)
+	$(CL) post.c $(LIB_SOURCE) $(CLFLAGS)
 	$(CL) /DUSE_WEBSOCKET websocket.c ../civetweb.c $(CLFLAGS)
 
 clean:

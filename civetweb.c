@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "build/md5.h"
+#include "md5.h"
 
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
