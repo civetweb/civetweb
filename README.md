@@ -10,8 +10,8 @@ https://sourceforge.net/projects/civetweb/
 Developers can contribute to CivetWeb via GitHub
 https://github.com/sunsetbrew/civetweb
 
-Trouble tickets should be filed on SourceForge
-https://sourceforge.net/p/civetweb/tickets/
+Trouble tickets should be filed on GitHub
+https://github.com/sunsetbrew/civetweb/issues
 
 Discussion group is at Google Groups
 https://groups.google.com/d/forum/civetweb
