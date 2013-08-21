@@ -40,7 +40,20 @@ ifneq ($(OS), Windows_NT)
   LUA_FLAGS += -DLUA_USE_DLOPEN
 endif
 
-# Stock windows binary builds with Lua and YASSL library.
+LIB_SOURCES = civetweb.c md5.c 
+
+ALL_SOURCES = main.c $(LIB_SOURCES) build/sqlite3.c build/lsqlite3.c \
+              $(LUA_SOURCES) $(YASSL_SOURCES)
+
+SQLITE_FLAGS = -DTHREADSAFE=1 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
+CIVETWEB_FLAGS = -DUSE_LUA -DUSE_LUA_SQLITE3 $(COPT)
+FLAGS = $(CIVETWEB_FLAGS) $(SQLITE_FLAGS) $(LUA_FLAGS)
+
+
+# Stock windows binary builds with Lua. 
+# Yassl has a GPL license, so we will leave it out by default.
+
+ifeq ($(WITH_YASSL), 1)
 YASSL       = ../cyassl-2.4.6
 YASSL_FLAGS = -I $(YASSL) -I $(YASSL)/cyassl \
               -D _LIB -D OPENSSL_EXTRA -D HAVE_ERRNO_H \
@@ -64,18 +77,19 @@ YASSL_SOURCES = \
   $(YASSL)/ctaocrypt/src/tfm.c $(YASSL)/ctaocrypt/src/integer.c \
   $(YASSL)/ctaocrypt/src/ecc.c $(YASSL)/src/ocsp.c $(YASSL)/src/crl.c \
   $(YASSL)/ctaocrypt/src/hc128.c $(YASSL)/ctaocrypt/src/memory.c
+  
+  ALL_SOURCES += $(YASSL_SOURCES)
+  FLAGS += $(YASSL_FLAGS) -DNO_SSL_DL
+  CIVETWEB_FLAGS += -DNO_SSL_DL 
 
-LIB_SOURCES = civetweb.c md5.c 
+else
+#  FLAGS += -DNO_SSL
+#  CIVETWEB_FLAGS += -DNO_SSL 
+endif
 
-ALL_SOURCES = main.c $(LIB_SOURCES) build/sqlite3.c build/lsqlite3.c \
-              $(LUA_SOURCES) $(YASSL_SOURCES)
 ALL_OBJECTS = $(ALL_SOURCES:%.c=%.o)
 ALL_WINOBJS = $(ALL_SOURCES:%.c=%.obj)
 
-SQLITE_FLAGS = -DTHREADSAFE=1 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
-CIVETWEB_FLAGS = -DNO_SSL_DL -DUSE_LUA -DUSE_LUA_SQLITE3 $(COPT)
-
-FLAGS = $(CIVETWEB_FLAGS) $(SQLITE_FLAGS) $(YASSL_FLAGS) $(LUA_FLAGS)
 
 # Using Visual Studio 6.0. To build Civetweb:
 #  Set MSVC variable below to where VS 6.0 is installed on your system
@@ -139,7 +153,7 @@ Civetweb: $(LIB_SOURCES) main.c
           -framework Cocoa -ObjC -arch i386 -arch x86_64 -o Civetweb
 
 cocoa: Civetweb
-	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 build/civetweb_*.png $$DIR/Contents/Resources/ && install -m 644 build/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
+	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 build/civetweb_*.png build/civetweb.icns $$DIR/Contents/Resources/ && install -m 644 build/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
 
 un:
 	$(CC) test/unit_test.c -o unit_test -I. -I$(LUA) $(LUA_SOURCES) \
