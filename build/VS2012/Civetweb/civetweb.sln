@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "civetweb", "civetweb\civetweb.vcxproj", "{E23B0040-F485-43D6-AA24-B34F9FED8484}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_websocket", "ex_websocket\ex_websocket.vcxproj", "{58B93E94-7766-435E-93AE-42A2FB5D99B1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_embed_cpp", "ex_embed_cpp\ex_embed_cpp.vcxproj", "{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Debug|Win32.Build.0 = Debug|Win32
+		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Release|Win32.ActiveCfg = Release|Win32
+		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Release|Win32.Build.0 = Release|Win32
+		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Debug|Win32.Build.0 = Debug|Win32
+		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|Win32.ActiveCfg = Release|Win32
+		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|Win32.Build.0 = Release|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Win32.Build.0 = Debug|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Win32.ActiveCfg = Release|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
