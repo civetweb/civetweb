@@ -30,7 +30,7 @@ There is no library, it is just a small set of files to compile in to the applic
 Quick Start
 ------
 
-By default, the server will automatically serve up files liek a normal HTTP server.  An embedded server is most likely going to overload this functionality.
+By default, the server will automatically serve up files like a normal HTTP server.  An embedded server is most likely going to overload this functionality.
 
 ### C
   - Use mg_start() to start the server.
