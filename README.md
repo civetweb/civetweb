@@ -24,7 +24,7 @@ simplicity by carefully selected list of features:
 - Liberal, commercial-friendly
   [MIT license](http://en.wikipedia.org/wiki/MIT_License)
 - NO GPL!!!
-- Base on [Mongoose](https://code.google.com/p/mongoose/)
+- Based on [Mongoose](https://code.google.com/p/mongoose/)
 - Works on Windows, Mac, UNIX, iPhone, Android, and many other platforms
 - Scripting and database support (Lua Server Pages + Sqlite
   which provides ready to go, powerful web development platform in
@@ -37,11 +37,11 @@ simplicity by carefully selected list of features:
   to make things easy. Embedding examples included.
 - HTTP client capable of sending arbitrary HTTP/HTTPS requests
 
-Note that Windows and MacOS binaries have following 3rd party software
-compiled in:
-  <a href="http://wolfssl.com">WolfSSL lightweight SSL library</a>,
-  <a href="http://sqlite.org">SQLite embedded database</a>,
-  <a href="http://lua.org">Lua embedded scripting engine</a>.
+
+### Other included software
+
+  - <a href="http://sqlite.org">SQLite embedded database</a>
+  - <a href="http://lua.org">Lua embedded scripting engine</a>
 
 # Support
 
