@@ -5,6 +5,7 @@
   <key>CFBundleExecutable</key> <string>Civetweb</string>
   <key>CFBundlePackageType</key> <string>APPL</string>
   <key>CFBundleTypeRole</key> <string>None</string>
+  <key>CFBundleIconFile</key> <string>civetweb</string>
   <key>CFBundleIconFiles</key> <array>
     <string>civetweb_16x16.png</string>
     <string>civetweb_22x22.png</string>
@@ -13,7 +14,7 @@
   </array>
   <key>LSUIElement</key> <true/>
   <key>RunAtLoad</key> <true/>
-  <key>Label</key> <string>com.kolkin.civetweb</string>
+  <key>Label</key> <string>com.nofacepress.civetweb</string>
   <key>ProgramArguments</key> <array> </array>
   <key>KeepAlive</key> <true/>
 </dict>
