@@ -11,9 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E23B0040-F485-43D6-AA24-B34F9FED8484}</ProjectGuid>
+    <ProjectGuid>{9BE9C008-E851-42B1-A034-BD4630AE4CD6}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>civetweb</RootNamespace>
+    <RootNamespace>civetweb_lua</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -51,8 +51,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;$(ProjectDir)..\..\..\..\lua-5.2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -67,8 +67,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;$(ProjectDir)..\..\..\..\lua-5.2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -78,19 +78,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\civetweb.h" />
+    <ClInclude Include="..\..\..\..\lua-5.2.1\src\lauxlib.h" />
+    <ClInclude Include="..\..\..\..\lua-5.2.1\src\lua.h" />
+    <ClInclude Include="..\..\..\..\md5.h" />
+    <ClInclude Include="Resource.h" />
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="..\..\..\..\civetweb.c" />
     <ClCompile Include="..\..\..\..\main.c" />
     <ClCompile Include="..\..\..\..\md5.c" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\systray.ico" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="..\..\..\res.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\civetweb.h" />
-    <ClInclude Include="..\..\..\..\md5.h" />
+    <Image Include="..\..\..\systray.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\lua_lib\lua_lib.vcxproj">
+      <Project>{8f5e5d77-d269-4665-9e27-1045da6cf0d8}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

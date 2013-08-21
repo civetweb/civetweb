@@ -7,6 +7,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_websocket", "ex_websocke
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_embed_cpp", "ex_embed_cpp\ex_embed_cpp.vcxproj", "{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "civetweb_lua", "civetweb_lua\civetweb_lua.vcxproj", "{9BE9C008-E851-42B1-A034-BD4630AE4CD6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_lib", "lua_lib\lua_lib.vcxproj", "{8F5E5D77-D269-4665-9E27-1045DA6CF0D8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -25,6 +29,14 @@ Global
 		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Win32.Build.0 = Debug|Win32
 		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Win32.ActiveCfg = Release|Win32
 		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Win32.Build.0 = Release|Win32
+		{9BE9C008-E851-42B1-A034-BD4630AE4CD6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9BE9C008-E851-42B1-A034-BD4630AE4CD6}.Debug|Win32.Build.0 = Debug|Win32
+		{9BE9C008-E851-42B1-A034-BD4630AE4CD6}.Release|Win32.ActiveCfg = Release|Win32
+		{9BE9C008-E851-42B1-A034-BD4630AE4CD6}.Release|Win32.Build.0 = Release|Win32
+		{8F5E5D77-D269-4665-9E27-1045DA6CF0D8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8F5E5D77-D269-4665-9E27-1045DA6CF0D8}.Debug|Win32.Build.0 = Debug|Win32
+		{8F5E5D77-D269-4665-9E27-1045DA6CF0D8}.Release|Win32.ActiveCfg = Release|Win32
+		{8F5E5D77-D269-4665-9E27-1045DA6CF0D8}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

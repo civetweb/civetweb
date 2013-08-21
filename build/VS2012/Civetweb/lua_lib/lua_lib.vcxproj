@@ -11,19 +11,19 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E23B0040-F485-43D6-AA24-B34F9FED8484}</ProjectGuid>
+    <ProjectGuid>{8F5E5D77-D269-4665-9E27-1045DA6CF0D8}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>civetweb</RootNamespace>
+    <RootNamespace>lua_lib</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v110</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v110</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -39,20 +39,15 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
+  <PropertyGroup />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>LUA_COMPAT_ALL;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\lua-5.2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -67,8 +62,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>LUA_COMPAT_ALL;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\lua-5.2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -78,19 +73,46 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\civetweb.c" />
-    <ClCompile Include="..\..\..\..\main.c" />
-    <ClCompile Include="..\..\..\..\md5.c" />
+    <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\systray.ico" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lapi.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lauxlib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lbaselib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lbitlib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lcode.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lcorolib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lctype.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\ldblib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\ldebug.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\ldo.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\ldump.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lfunc.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lgc.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\linit.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\liolib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\llex.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lmathlib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lmem.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\loadlib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lobject.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lopcodes.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\loslib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lparser.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lstate.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lstring.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lstrlib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\ltable.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\ltablib.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\ltm.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lundump.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lvm.c" />
+    <ClCompile Include="..\..\..\..\lua-5.2.1\src\lzio.c" />
+    <ClCompile Include="..\..\..\lsqlite3.c" />
+    <ClCompile Include="..\..\..\sqlite3.c" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\..\res.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\..\..\civetweb.h" />
-    <ClInclude Include="..\..\..\..\md5.h" />
+    <ClInclude Include="..\..\..\sqlite3.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
