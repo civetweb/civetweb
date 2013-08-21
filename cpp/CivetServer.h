@@ -7,7 +7,7 @@
 #define _CIVETWEB_SERVER_H_
 #ifdef __cplusplus
 
-#include <civetweb.h>
+#include "civetweb.h"
 #include <vector>
 #include <string>
 

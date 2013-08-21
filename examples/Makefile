@@ -19,10 +19,8 @@ CLFLAGS = /MD /TC /nologo $(DBG) /W3 /DNO_SSL \
 windows:
 	$(CL) upload.c $(LIB_SOURCE) $(CLFLAGS)
 	$(CL) hello.c $(LIB_SOURCE) $(CLFLAGS)
-	$(CL) upload.c $(LIB_SOURCE) $(CLFLAGS)
 	$(CL) post.c $(LIB_SOURCE) $(CLFLAGS)
-	$(CL) post.c $(LIB_SOURCE) $(CLFLAGS)
-	$(CL) /DUSE_WEBSOCKET websocket.c ../civetweb.c $(CLFLAGS)
+	$(CL) /DUSE_WEBSOCKET websocket.c $(LIB_SOURCE) $(CLFLAGS)
 
 clean:
 	rm -rf hello upload post websocket chat *.exe *.dSYM *.obj

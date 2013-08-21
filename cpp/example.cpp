@@ -7,6 +7,10 @@
 
 #include "CivetServer.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 #define DOCUMENT_ROOT "."
 #define PORT "8888"
 #define EXAMPLE_URI "/example"
@@ -51,7 +55,11 @@ int main(int argc, char *argv[]) {
 	printf("Exit at http://localhost:%s%s\n", PORT, EXIT_URI);
 
 	while (!exitNow) {
+#ifdef _WIN32
+		Sleep(1000);
+#else
 		sleep(1);
+#endif
 	}
 
 	printf("Bye!\n");

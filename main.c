@@ -121,7 +121,7 @@ static void show_usage_and_exit(void) {
 static const char *config_file_top_comment =
 "# Civetweb web server configuration file.\n"
 "# For detailed description of every option, visit\n"
-"# https://github.com/valenok/civetweb/blob/master/UserManual.md\n"
+"# https://github.com/sunsetbrew/civetweb/blob/master/UserManual.md\n"
 "# Lines starting with '#' and empty lines are ignored.\n"
 "# To make a change, remove leading '#', modify option's value,\n"
 "# save this file and then restart Civetweb.\n\n";
