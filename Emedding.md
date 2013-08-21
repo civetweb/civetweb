@@ -42,7 +42,6 @@ By default, the server will automatically serve up files liek a normal HTTP serv
   - Create CivetHandlers for each URI.
   - Register the handlers with CivertServer::addHandler()
   - CivetServer starts on contruction and stops on destruction.
-  - Use mg_stop() to stop the server.
   - Use contructor options to select the port and document root among other things.
   - Use constructor callbacks to add your own hooks.
 
