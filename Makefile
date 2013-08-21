@@ -1,209 +1,114 @@
-# This Makefile is part of Civetweb web server project,
-# https://github.com/valenok/civetweb
+# 
+# Copyright (c) 2013 No Face Press, LLC
+# License http://opensource.org/licenses/mit-license.php MIT License
 #
-# Example custom build:
-# COPT="-g -O0 -DNO_SSL_DL -DUSE_LUA -llua -lcrypto -lssl" make linux
-#
-# Flags are:
-# -DHAVE_MD5              - use system md5 library (-2kb)
-# -DNDEBUG                - strip off all debug code (-5kb)
-# -DDEBUG                 - build debug version (very noisy) (+7kb)
-# -DNO_CGI                - disable CGI support (-5kb)
-# -DNO_SSL                - disable SSL functionality (-2kb)
-# -DNO_SSL_DL             - link against system libssl library (-1kb)
-# -DCONFIG_FILE=\"file\"  - use `file' as the default config file
-# -DSSL_LIB=\"libssl.so.<version>\"   - use system versioned SSL shared object
-# -DCRYPTO_LIB=\"libcrypto.so.<version>\" - use system versioned CRYPTO so
-# -DUSE_LUA               - embed Lua in Civetweb (+100kb)
 
-PROG        = civetweb
-CFLAGS      = -std=c99 -O2 -W -Wall -pedantic -pthread -pipe $(COPT)
+include build/Makefile.in-os
 
-# To build with Lua, download and unzip Lua 5.2.1 source code into the
-# civetweb directory, and then add $(LUA_SOURCES) to CFLAGS
-LUA         = lua-5.2.1/src
-LUA_FLAGS   = -I$(LUA) -DLUA_COMPAT_ALL
-LUA_SOURCES = $(LUA)/lapi.c $(LUA)/lcode.c $(LUA)/lctype.c \
-              $(LUA)/ldebug.c $(LUA)/ldo.c $(LUA)/ldump.c \
-              $(LUA)/lfunc.c $(LUA)/lgc.c $(LUA)/llex.c \
-              $(LUA)/lmem.c $(LUA)/lobject.c $(LUA)/lopcodes.c \
-              $(LUA)/lparser.c $(LUA)/lstate.c $(LUA)/lstring.c \
-              $(LUA)/ltable.c $(LUA)/ltm.c $(LUA)/lundump.c \
-              $(LUA)/lvm.c $(LUA)/lzio.c $(LUA)/lauxlib.c \
-              $(LUA)/lbaselib.c $(LUA)/lbitlib.c $(LUA)/lcorolib.c \
-              $(LUA)/ldblib.c $(LUA)/liolib.c $(LUA)/lmathlib.c \
-              $(LUA)/loslib.c $(LUA)/lstrlib.c $(LUA)/ltablib.c \
-              $(LUA)/loadlib.c $(LUA)/linit.c
-LUA_WINOBJS = $(LUA_SOURCES:%.c=%.obj)
+CPROG = civetweb
+#CXXPROG = civetweb
 
-ifneq ($(OS), Windows_NT)
-  LUA_FLAGS += -DLUA_USE_DLOPEN
-endif
+BUILD_DIR = out
+INSTALL_DIR = /
+
+BUILD_DIRS += $(BUILD_DIR)
 
 LIB_SOURCES = civetweb.c md5.c 
+APP_SOURCES = main.c
+SOURCE_DIRS =
 
-ALL_SOURCES = main.c $(LIB_SOURCES) build/sqlite3.c build/lsqlite3.c \
-              $(LUA_SOURCES) $(YASSL_SOURCES)
+OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o)
 
-SQLITE_FLAGS = -DTHREADSAFE=1 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
-CIVETWEB_FLAGS = -DUSE_LUA -DUSE_LUA_SQLITE3 $(COPT)
-FLAGS = $(CIVETWEB_FLAGS) $(SQLITE_FLAGS) $(LUA_FLAGS)
+# only set main compile options if none were chosen
+CFLAGS += -W -Wall -O2 -D$(TARGET_OS) $(COPT)
 
-
-# Stock windows binary builds with Lua. 
-# Yassl has a GPL license, so we will leave it out by default.
-
-ifeq ($(WITH_YASSL), 1)
-YASSL       = ../cyassl-2.4.6
-YASSL_FLAGS = -I $(YASSL) -I $(YASSL)/cyassl \
-              -D _LIB -D OPENSSL_EXTRA -D HAVE_ERRNO_H \
-              -D HAVE_GETHOSTBYNAME -D HAVE_INET_NTOA -D HAVE_LIMITS_H \
-              -D HAVE_MEMSET -D HAVE_SOCKET -D HAVE_STDDEF_H -D HAVE_STDLIB_H \
-              -D HAVE_STRING_H -D HAVE_SYS_STAT_H -D HAVE_SYS_TYPES_H
-YASSL_SOURCES = \
-  $(YASSL)/src/internal.c $(YASSL)/src/io.c $(YASSL)/src/keys.c \
-  $(YASSL)/src/ssl.c $(YASSL)/src/tls.c $(YASSL)/ctaocrypt/src/hmac.c \
-  $(YASSL)/ctaocrypt/src/random.c $(YASSL)/ctaocrypt/src/sha.c \
-  $(YASSL)/ctaocrypt/src/sha256.c $(YASSL)/ctaocrypt/src/logging.c \
-  $(YASSL)/ctaocrypt/src/error.c $(YASSL)/ctaocrypt/src/rsa.c \
-  $(YASSL)/ctaocrypt/src/des3.c $(YASSL)/ctaocrypt/src/asn.c \
-  $(YASSL)/ctaocrypt/src/coding.c $(YASSL)/ctaocrypt/src/arc4.c \
-  $(YASSL)/ctaocrypt/src/md4.c $(YASSL)/ctaocrypt/src/md5.c \
-  $(YASSL)/ctaocrypt/src/dh.c $(YASSL)/ctaocrypt/src/dsa.c \
-  $(YASSL)/ctaocrypt/src/pwdbased.c $(YASSL)/ctaocrypt/src/aes.c \
-  $(YASSL)/ctaocrypt/src/md2.c $(YASSL)/ctaocrypt/src/ripemd.c \
-  $(YASSL)/ctaocrypt/src/sha512.c $(YASSL)/src/sniffer.c \
-  $(YASSL)/ctaocrypt/src/rabbit.c $(YASSL)/ctaocrypt/src/misc.c \
-  $(YASSL)/ctaocrypt/src/tfm.c $(YASSL)/ctaocrypt/src/integer.c \
-  $(YASSL)/ctaocrypt/src/ecc.c $(YASSL)/src/ocsp.c $(YASSL)/src/crl.c \
-  $(YASSL)/ctaocrypt/src/hc128.c $(YASSL)/ctaocrypt/src/memory.c
-  
-  ALL_SOURCES += $(YASSL_SOURCES)
-  FLAGS += $(YASSL_FLAGS) -DNO_SSL_DL
-  CIVETWEB_FLAGS += -DNO_SSL_DL 
-
-else
-#  FLAGS += -DNO_SSL
-#  CIVETWEB_FLAGS += -DNO_SSL 
+ifdef WITH_DEBUG
+  CFLAGS += -g -DDEBUG_ENABLED
 endif
 
-ALL_OBJECTS = $(ALL_SOURCES:%.c=%.o)
-ALL_WINOBJS = $(ALL_SOURCES:%.c=%.obj)
+ifdef WITH_LUA
+ include build/Makefile.in-lua
+endif
 
+ifdef WITH_IPV6
+  CFLAGS += -DDSE_IPV6
+endif
 
-# Using Visual Studio 6.0. To build Civetweb:
-#  Set MSVC variable below to where VS 6.0 is installed on your system
-#  Run "PATH_TO_VC6\bin\nmake windows"
-MSVC = ../vc6
-#DBG = /Zi /Od
-DBG  = /DNDEBUG /O1
-CL   = $(MSVC)/bin/cl /MD /TC /nologo $(DBG) /W3 /GA /I$(MSVC)/include
-LINK = $(MSVC)/bin/link /incremental:no /libpath:$(MSVC)/lib /machine:IX86 \
-       user32.lib shell32.lib comdlg32.lib ws2_32.lib advapi32.lib
+ifdef WITH_WEBSOCKET
+  CFLAGS += -DUSE_WEBSOCKET
+endif
 
-all:
-	@echo "make (linux|bsd|solaris|mac|windows|mingw|cygwin)"
+BUILD_DIRS += $(addprefix $(BUILD_DIR)/, $(SOURCE_DIRS))
+BUILD_OBJECTS = $(addprefix $(BUILD_DIR)/, $(OBJECTS))
 
-%.obj: %.c
-	$(CL) /c $(FLAGS) /Fo$@ $<
+LIBS = -lpthread -lm
 
-%.o: %.c
-	$(CC) -o $@ $< -c $(FLAGS) $(CFLAGS)
+ifeq ($(TARGET_OS),LINUX) 
+	LIBS += -ldl
+endif
 
-# Lua library for Windows
-lua.lib: $(LUA_WINOBJS)
-	$(MSVC)/bin/lib /out:$@ $(LUA_WINOBJS)
+all: help
 
-# To build with lua, make sure you have Lua unpacked into lua-5.2.1 directory
-linux_lua: $(ALL_OBJECTS)
-	$(CC) $(ALL_OBJECTS) -o $(PROG) -ldl
+help:
+	@echo "make help         show this message"
+	@echo "make build        compile"
+	@echo "make install      install on the system"
+	@echo "make clean        clean up the mess"
+	@echo ""
+	@echo "Make Options"
+	@echo "   WITH_LUA=1         build with LUA support"
+	@echo "   WITH_DEBUG=1       build with GDB debug support"
+	@echo "   WITH_IPV6=1        with IPV6 support"
+	@echo "   WITH_WEBSOCKET=1   build with web socket support"
+	@echo "   COPT=\"-DNO_SSL\"    method to insert additional options"
+	@echo "   INSTALL_DIR=/      sets the install directory"
+	@echo ""
+	@echo "Compile Flags"
+	@echo "   NDEBUG                strip off all debug code"
+	@echo "   DEBUG                 build debug version (very noisy)"
+	@echo "   NO_CGI                disable CGI support"
+	@echo "   NO_SSL                disable SSL functionality"
+	@echo "   NO_SSL_DL             link against system libssl library"
+	@echo "   CONFIG_FILE=\"file\"  use 'file' as the config file"
+	@echo "   SSL_LIB=\"libssl.so.<version>\"   use system versioned SSL shared object"
+	@echo "   CRYPTO_LIB=\"libcrypto.so.<version>\" use system versioned CRYPTO so"
+	@echo ""
+	@echo "Variables"
+	@echo "   TARGET_OS='$(TARGET_OS)'"
+	@echo "   CFLAGS='$(CFLAGS)'"
+	@echo "   CXXFLAGS='$(CXXFLAGS)'"
+	@echo "   LDFLAGS='$(LDFLAGS)'"
+	@echo "   CC='$(CC)'"
+	@echo "   CXX='$(CXX)'"
 
-civetweb.o: mod_lua.c
+build: $(CPROG) $(CXXPROG)
 
-# Make sure that the compiler flags come last in the compilation string.
-# If not so, this can break some on some Linux distros which use
-# "-Wl,--as-needed" turned on by default  in cc command.
-# Also, this is turned in many other distros in static linkage builds.
-linux:
-	$(CC) $(LIB_SOURCES) main.c -o $(PROG) -ldl $(CFLAGS)
+install: build
+ifeq ($(TARGET_OS),LINUX)
+	install -Dm755 "$(CPROG)" "$(INSTALL_DIR)/usr/bin/$(CPROG)"
+	install -Dm644 "distribution/arch/$(CPROG).conf" "$(INSTALL_DIR)/etc/$(CPROG)/$(CPROG).conf"
+	install -Dm644 "distribution/arch/$(CPROG).service" "$(INSTALL_DIR)/usr/lib/systemd/system/$(CPROG).service"
+	install -d "$(INSTALL_DIR)/usr/share/$(CPROG)"
+	install -m644 "UserManual.md" "README.md" "$(INSTALL_DIR)/usr/share/$(CPROG)"
+endif
 
-mac: bsd
-bsd:
-	$(CC) $(LIB_SOURCES) main.c -o $(PROG) $(CFLAGS)
-
-bsd_lua: $(ALL_OBJECTS)
-	$(CC) $(ALL_OBJECTS) -o $@
-
-solaris:
-	$(CC) $(LIB_SOURCES) main.c -lnsl -lsocket -o $(PROG) $(CFLAGS)
-
-lib$(PROG).a: $(ALL_OBJECTS)
-	ar cr $@ $(ALL_OBJECTS)
-
-$(PROG).lib: $(ALL_WINOBJS)
-	$(MSVC)/bin/lib /out:$@ $(ALL_WINOBJS)
-
-# For codesign to work in non-interactive mode, unlock login keychain:
-# security unlock ~/Library/Keychains/login.keychain
-# See e.g. http://lists.apple.com/archives/apple-cdsa/2008/Jan/msg00027.html
-Civetweb: $(LIB_SOURCES) main.c
-	$(CC) $(LIB_SOURCES) main.c build/lsqlite3.c build/sqlite3.c \
-          -DUSE_COCOA $(CFLAGS) $(FLAGS) -mmacosx-version-min=10.4 \
-          $(YASSL_SOURCES) $(LUA_SOURCES) \
-          -framework Cocoa -ObjC -arch i386 -arch x86_64 -o Civetweb
-
-cocoa: Civetweb
-	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 build/civetweb_*.png build/civetweb.icns $$DIR/Contents/Resources/ && install -m 644 build/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
-
-un:
-	$(CC) test/unit_test.c -o unit_test -I. -I$(LUA) $(LUA_SOURCES) \
-          $(CFLAGS) -g -O0
-	./unit_test
-
-wi:
-	$(CL) test/unit_test.c $(LUA_SOURCES) $(LUA_FLAGS) \
-          $(YASSL_SOURCES) $(YASSL_FLAGS) /I. /DNO_SSL_DL \
-          /link /libpath:$(MSVC)/lib advapi32.lib /out:unit_test.exe
-	./unit_test.exe
-
-windows: $(ALL_WINOBJS)
-	$(MSVC)/bin/rc build/res.rc
-	$(LINK) /nologo $(ALL_WINOBJS) build/res.res /out:$(PROG).exe
-
-# Build for Windows under MinGW
-#MINGWDBG= -DDEBUG -O0 -ggdb
-MINGWDBG= -DNDEBUG -Os
-MINGWOPT=  -W -Wall -mthreads -Wl,--subsystem,console $(MINGWDBG) -DHAVE_STDINT $(GCC_WARNINGS) $(COPT)
-mingw:
-	windres build\res.rc build\res.o
-	$(CC) $(MINGWOPT) $(LIB_SOURCES) -lws2_32 \
-		-shared -Wl,--out-implib=$(PROG).lib -o $(PROG).dll
-	$(CC) $(MINGWOPT) $(LIB_SOURCES) main.c build\res.o \
-	-lws2_32 -ladvapi32 -lcomdlg32 -o $(PROG).exe
-
-# Build for Windows under Cygwin
-#CYGWINDBG= -DDEBUG -O0 -ggdb
-CYGWINDBG= -DNDEBUG -Os
-CYGWINOPT=  -W -Wall -mthreads -Wl,--subsystem,console $(CYGWINDBG) -DHAVE_STDINT $(GCC_WARNINGS) $(COPT)
-cygwin:
-	windres ./build/res.rc ./build/res.o
-	$(CC) $(CYGWINOPT) $(LIB_SOURCES) -lws2_32 \
-		-shared -Wl,--out-implib=$(PROG).lib -o $(PROG).dll
-	$(CC) $(CYGWINOPT) -Ibuild $(LIB_SOURCES) main.c ./build/res.o \
-	-lws2_32 -ladvapi32 -o $(PROG).exe
-
-tests:
-	perl test/test.pl $(TEST)
-
-tarball: clean
-	F=civetweb-`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`.tgz ; cd .. && tar -czf x civetweb/{LICENSE,Makefile,examples,test,build,*.[ch],*.md} && mv x civetweb/$$F
-
-release: tarball cocoa
-	wine make windows
-	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; upx civetweb.exe; cp civetweb.exe civetweb-$$V.exe; cp civetweb.exe civetweb_php_bundle/; zip -r civetweb_php_bundle_$$V.zip civetweb_php_bundle/
 
 clean:
-	cd examples && $(MAKE) clean
-	rm -rf *.o *.core $(PROG) *.obj *.so $(PROG).txt *.dSYM *.tgz \
-	$(PROG).exe *.dll *.lib build/res.o build/res.RES *.dSYM *.zip *.pdb \
-	*.exe *.dmg $(ALL_OBJECTS) $(ALL_WINOBJS)
+	rm -rf $(BUILD_DIR)
+
+$(CPROG): $(BUILD_DIRS) $(BUILD_OBJECTS)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)
+
+$(CXXPROG): $(BUILD_DIRS) $(BUILD_OBJECTS)
+	$(CXX) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)
+
+$(BUILD_DIRS):
+	-@mkdir -p $@
+
+$(BUILD_DIR)/%.o : %.cpp
+	$(CXX) -c $(CFLAGS) $(CXXFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o : %.c
+	$(CC) -c $(CFLAGS) $< -o $@
+
+.PHONY: all help build install clean

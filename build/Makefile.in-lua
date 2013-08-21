@@ -1,0 +1,54 @@
+# 
+# Copyright (c) 2013 No Face Press, LLC
+# License http://opensource.org/licenses/mit-license.php MIT License
+#
+
+LUA_DIR = lua-5.2.1/src
+
+LUA_SOURCE_FILES = lapi.c  \
+    lauxlib.c \
+    lbaselib.c  \
+    lbitlib.c  \
+    lcode.c  \
+    lcorolib.c \
+    lctype.c \
+    ldblib.c  \
+    ldebug.c  \
+    ldo.c  \
+    ldump.c \
+    lfunc.c  \
+    lgc.c  \
+    linit.c \
+    liolib.c  \
+    llex.c \
+    lmathlib.c \
+    lmem.c  \
+    loadlib.c  \
+    lobject.c  \
+    lopcodes.c \
+    loslib.c  \
+    lparser.c  \
+    lstate.c  \
+    lstring.c \
+    lstrlib.c  \
+    ltable.c  \
+    ltablib.c \
+    ltm.c  \
+    lundump.c \
+    lvm.c  \
+    lzio.c
+
+LUA_SOURCES = $(addprefix $(LUA_DIR)/, $(LUA_SOURCE_FILES))
+LUA_OBJECTS = $(LUA_SOURCES:.c=.o)
+LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL
+
+SQLITE_DIR = build
+SQLITE_SOURCE_FILES = sqlite3.c lsqlite3.c
+SQLITE_SOURCES = $(addprefix $(SQLITE_DIR)/, $(SQLITE_SOURCE_FILES))
+SQLITE_OBJECTS = $(SQLITE_SOURCES:.c=.o)
+SQLITE_CFLAGS = -I$(SQLITE_DIR) -DTHREADSAFE=1 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
+
+OBJECTS += $(LUA_OBJECTS) $(SQLITE_OBJECTS)
+CFLAGS += $(LUA_CFLAGS) $(SQLITE_CFLAGS) -DUSE_LUA -DUSE_LUA_SQLITE3
+SOURCE_DIRS = $(LUA_DIR) $(SQLITE_DIR) 
+

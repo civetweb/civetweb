@@ -1,0 +1,37 @@
+# 
+# Copyright (c) 2013 No Face Press, LLC
+# License http://opensource.org/licenses/mit-license.php MIT License
+#
+
+# For codesign to work in non-interactive mode, unlock login keychain:
+# security unlock ~/Library/Keychains/login.keychain
+# See e.g. http://lists.apple.com/archives/apple-cdsa/2008/Jan/msg00027.html
+
+PACKAGE = Civetweb
+BUILD_DIR = out
+
+INSTALL = install
+
+CFLAGS += -DUSE_COCOA -mmacosx-version-min=10.4 -ObjC -arch i386 -arch x86_64
+LDFLAGS += -framework Cocoa
+
+DMG_DIR = $(BUILD_DIR)/dmg
+CONTENTS_DIR = $(DMG_DIR)/$(PACKAGE).app/Contents
+RESOURCES_DIR = $(CONTENTS_DIR)/Resources
+OSXBIN_DIR = $(CONTENTS_DIR)/MacOS
+
+CIVETWEB_VERSION = $(shell perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' civetweb.c)
+
+include Makefile
+
+package: build
+	@rm -rf $(DMG_DIR)
+	install -d -m 755 $(CONTENTS_DIR) $(RESOURCES_DIR) $(OSXBIN_DIR)
+	install -m 644 build/Info.plist $(CONTENTS_DIR)/
+	install -m 644 build/civetweb_*.png build/civetweb.icns $(RESOURCES_DIR)/
+	install -m 755 $(CPROG) $(OSXBIN_DIR)/$(PACKAGE)
+	ln -fs /Applications $(DMG_DIR)/
+	hdiutil create $(PACKAGE)_$(CIVETWEB_VERSION).dmg -volname "$(PACKAGE) $(CIVETWEB_VERSION)" -srcfolder $(DMG_DIR) -ov
+#	@rm -rf $(DMG_DIR)
+
+#	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 build/civetweb_*.png build/civetweb.icns $$DIR/Contents/Resources/ && install -m 644 build/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
