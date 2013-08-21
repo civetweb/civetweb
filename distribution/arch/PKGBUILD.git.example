@@ -25,7 +25,7 @@ md5sums=('SKIP')
 
 build() {
   cd "$srcdir/$_pkgname"
-  COPT="-DUSE_IPV6" make linux
+  make build WITH_IPV6=1
 }
 
 package() {
