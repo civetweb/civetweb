@@ -33,7 +33,7 @@ package() {
   install -Dm644 "$srcdir/$_pkgname/distribution/arch/$_pkgname.conf" "$pkgdir/etc/$_pkgname/$_pkgname.conf"
   install -Dm644 "$srcdir/$_pkgname/distribution/arch/$_pkgname.service" "$pkgdir/usr/lib/systemd/system/$_pkgname.service"
   install -d "$pkgdir/usr/share/$_pkgname"
-  install -m644 "$srcdir/$_pkgname/UserManual.md" "$srcdir/$_pkgname/README.md" "$pkgdir/usr/share/$_pkgname"
+  install -m644 "$srcdir/$_pkgname/docs/UserManual.md" "$srcdir/$_pkgname/README.md" "$pkgdir/usr/share/$_pkgname"
 }
 
 # vim:set ts=2 sw=2 et:

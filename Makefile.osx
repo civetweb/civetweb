@@ -32,6 +32,6 @@ package: build
 	install -m 755 $(CPROG) $(OSXBIN_DIR)/$(PACKAGE)
 	ln -fs /Applications $(DMG_DIR)/
 	hdiutil create $(PACKAGE)_$(CIVETWEB_VERSION).dmg -volname "$(PACKAGE) $(CIVETWEB_VERSION)" -srcfolder $(DMG_DIR) -ov
-#	@rm -rf $(DMG_DIR)
+	@rm -rf $(DMG_DIR)
 
 #	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 build/civetweb_*.png build/civetweb.icns $$DIR/Contents/Resources/ && install -m 644 build/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg

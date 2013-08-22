@@ -398,7 +398,7 @@ variable is visible in the block that follows.
 
 # Embedding
 
-See [Embedding.md](https://github.com/sunsetbrew/civetweb/blob/master/Embedding.md) for more information.
+See [Embedding.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Embedding.md) for more information.
 
 # Build on Android
 
