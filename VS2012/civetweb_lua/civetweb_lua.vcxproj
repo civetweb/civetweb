@@ -52,7 +52,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;$(ProjectDir)..\..\..\..\lua-5.2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..;$(ProjectDir)..\..\lua-5.2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -68,7 +68,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;$(ProjectDir)..\..\..\..\lua-5.2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..;$(ProjectDir)..\..\lua-5.2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -81,22 +81,22 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\civetweb.h" />
-    <ClInclude Include="..\..\..\..\lua-5.2.1\src\lauxlib.h" />
-    <ClInclude Include="..\..\..\..\lua-5.2.1\src\lua.h" />
-    <ClInclude Include="..\..\..\..\md5.h" />
+    <ClInclude Include="..\..\civetweb.h" />
+    <ClInclude Include="..\..\lua-5.2.1\src\lauxlib.h" />
+    <ClInclude Include="..\..\lua-5.2.1\src\lua.h" />
+    <ClInclude Include="..\..\md5.h" />
     <ClInclude Include="Resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\civetweb.c" />
-    <ClCompile Include="..\..\..\..\main.c" />
-    <ClCompile Include="..\..\..\..\md5.c" />
+    <ClCompile Include="..\..\civetweb.c" />
+    <ClCompile Include="..\..\main.c" />
+    <ClCompile Include="..\..\md5.c" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\..\res.rc" />
+    <ResourceCompile Include="..\..\build\res.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\systray.ico" />
+    <Image Include="..\..\build\systray.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\lua_lib\lua_lib.vcxproj">
