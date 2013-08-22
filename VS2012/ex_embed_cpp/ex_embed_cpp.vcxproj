@@ -11,9 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{58B93E94-7766-435E-93AE-42A2FB5D99B1}</ProjectGuid>
+    <ProjectGuid>{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ex_websocket</RootNamespace>
+    <RootNamespace>ex_embed_cpp</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -51,8 +51,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>USE_WEBSOCKET;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -67,8 +67,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>USE_WEBSOCKET;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -78,13 +78,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\civetweb.h" />
-    <ClInclude Include="..\..\..\..\md5.h" />
+    <ClInclude Include="..\..\civetweb.h" />
+    <ClInclude Include="..\..\cpp\CivetServer.h" />
+    <ClInclude Include="..\..\md5.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\civetweb.c" />
-    <ClCompile Include="..\..\..\..\examples\websocket.c" />
-    <ClCompile Include="..\..\..\..\md5.c" />
+    <ClCompile Include="..\..\civetweb.c" />
+    <ClCompile Include="..\..\cpp\CivetServer.cpp" />
+    <ClCompile Include="..\..\cpp\example.cpp" />
+    <ClCompile Include="..\..\md5.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

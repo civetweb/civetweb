@@ -11,7 +11,7 @@ https://github.com/sunsetbrew/civetweb
 Building for Windows
 ---------
 
-Open the *build/VS2012/civetweb/civetweb.sln* in Visual Studio.
+Open the *VS2012/civetweb.sln* in Visual Studio.
 
 
 Building for Linux, BSD, and OSX
