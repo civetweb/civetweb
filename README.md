@@ -18,7 +18,7 @@ https://groups.google.com/d/forum/civetweb
 
 # Quick start documentation
 
-- [docs/UserGuide.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/UserGuide.md) - End User Guide
+- [docs/UserManual.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/UserManual.md) - End User Guide
 - [docs/Building.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Building.md) - Buildiing the Server Quick Start
 - [docs/Embedding.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Embedding.md) - Embedding Quick Start
 - [LICENSE](https://github.com/sunsetbrew/civetweb/blob/master/LICENSE) - Copyright License
