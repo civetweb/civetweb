@@ -12,6 +12,8 @@ Building for Windows
 ---------
 
 Open the *VS2012/civetweb.sln* in Visual Studio.
+To include SSL support, you may have to use yaSSL.  However, it is GPL licensed.
+See [yaSSL.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/yaSSL.md) for more information.
 
 
 Building for Linux, BSD, and OSX
