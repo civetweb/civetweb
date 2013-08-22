@@ -13,7 +13,7 @@ CPROG = civetweb
 #CXXPROG = civetweb
 
 BUILD_DIR = out
-INSTALL_DIR = /
+PREFIX = /usr/local
 
 BUILD_DIRS += $(BUILD_DIR)
 
@@ -84,7 +84,7 @@ help:
 	@echo "   CONFIG_FILE2=file     use 'file' as the backup config file"
 	@echo "   SSL_LIB=libssl.so.0   use versioned SSL library"
 	@echo "   CRYPTO_LIB=libcrypto.so.0 system versioned CRYPTO library"
-	@echo "   INSTALL_DIR=/         sets the install directory"
+	@echo "   PREFIX=/usr/local     sets the install directory"
 	@echo "   COPT='-DNO_SSL'       method to insert compile flags"
 	@echo ""
 	@echo " Compile Flags"
@@ -106,10 +106,10 @@ build: $(CPROG) $(CXXPROG)
 
 install: build
 ifeq ($(TARGET_OS),LINUX)
-	install -Dm755 "$(CPROG)" "$(INSTALL_DIR)/usr/bin/$(CPROG)"
-	install -Dm644 "distribution/arch/$(CPROG).conf" "$(INSTALL_DIR)/etc/$(CPROG)/$(CPROG).conf"
-	install -d "$(INSTALL_DIR)/usr/share/$(CPROG)"
-	install -m644 "docs/UserManual.md" "README.md" "$(INSTALL_DIR)/usr/share/$(CPROG)"
+	install -Dm755 "$(CPROG)" "$(PREFIX)/usr/bin/$(CPROG)"
+	install -Dm644 "distribution/arch/$(CPROG).conf" "$(PREFIX)/etc/$(CPROG)/$(CPROG).conf"
+	install -d "$(PREFIX)/usr/share/$(CPROG)"
+	install -m644 "docs/UserManual.md" "README.md" "$(PREFIX)/usr/share/$(CPROG)"
 endif
 
 

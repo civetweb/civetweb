@@ -57,7 +57,7 @@ make build WITH_LUA=1
 | CONFIG_FILE2=file         | use 'file' as the backup config file |
 | SSL_LIB=libssl.so.0       | use versioned SSL library            |
 | CRYPTO_LIB=libcrypto.so.0 | system versioned CRYPTO library      |
-| INSTALL_DIR=/             | sets the install directory           |
+| PREFIX=/usr/local         | sets the install directory           |
 | COPT='-DNO_SSL'           | method to insert compile flags       |
 
 ## Setting compile flags
