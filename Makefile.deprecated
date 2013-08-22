@@ -196,7 +196,7 @@ tests:
 	perl test/test.pl $(TEST)
 
 tarball: clean
-	F=civetweb-`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`.tgz ; cd .. && tar -czf x civetweb/{LICENSE,Makefile,examples,test,build,*.[ch],*.md} && mv x civetweb/$$F
+	F=civetweb-`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`.tgz ; cd .. && tar -czf x civetweb/{LICENSE.md,Makefile,examples,test,build,*.[ch],*.md} && mv x civetweb/$$F
 
 release: tarball cocoa
 	wine make windows
