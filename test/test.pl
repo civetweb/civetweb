@@ -1,6 +1,5 @@
 #!/usr/bin/env perl
 # This script is used to test Civetweb web server
-# $Id: test.pl 516 2010-05-03 12:54:37Z valenok $
 
 use IO::Socket;
 use File::Path;

@@ -372,7 +372,6 @@ static void start_civetweb(int argc, char *argv[]) {
   process_command_line_arguments(argv, options);
 
   // Make sure we have absolute paths for files and directories
-  // https://github.com/valenok/civetweb/issues/181
   set_absolute_path(options, "document_root", argv[0]);
   set_absolute_path(options, "put_delete_auth_file", argv[0]);
   set_absolute_path(options, "cgi_interpreter", argv[0]);

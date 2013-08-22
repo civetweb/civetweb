@@ -1,5 +1,5 @@
 // Copyright (c) 2004-2012 Sergey Lyubka
-// This file is a part of civetweb project, http://github.com/valenok/civetweb
+// This file is a part of civetweb project, http://github.com/sunsetbrew/civetweb
 
 #include <stdio.h>
 #include <string.h>
