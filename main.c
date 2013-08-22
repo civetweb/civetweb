@@ -76,6 +76,11 @@ static struct mg_context *ctx;      // Set by start_civetweb()
 #define CONFIG_FILE "civetweb.conf"
 #endif /* !CONFIG_FILE */
 
+// backup config file
+#if !defined(CONFIG_FILE2) && defined(LINUX)
+#define CONFIG_FILE2 "/etc/civetweb/civetweb.conf"
+#endif
+
 static void WINCDECL signal_handler(int sig_num) {
   exit_flag = sig_num;
 }
@@ -216,6 +221,16 @@ static void process_command_line_arguments(char *argv[], char **options) {
   if (cmd_line_opts_start == 2 && fp == NULL) {
     die("Cannot open config file %s: %s", config_file, strerror(errno));
   }
+
+#ifdef CONFIG_FILE2
+  // try alternate config file
+  if (fp == NULL) {
+    fp = fopen(CONFIG_FILE2, "r");
+    if (fp != NULL) {
+	strcpy(config_file, CONFIG_FILE2);
+    }
+  }
+#endif
 
   // Load config file settings first
   if (fp != NULL) {
