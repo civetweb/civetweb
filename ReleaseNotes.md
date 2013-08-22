@@ -1,8 +1,7 @@
-
 Release Notes v1.1 
 ===
 ### Objectives: *Build, Documentation, License Improvements*
-The objective of this release is to establish a maintable code base, ensure MIT license rights and improve usability and documention.
+The objective of this release is to establish a maintable code base, ensure MIT license rights and improve usability and documentation.
 
 Changes
 -------
