@@ -109,7 +109,7 @@ ifeq ($(TARGET_OS),LINUX)
 	install -Dm755 "$(CPROG)" "$(INSTALL_DIR)/usr/bin/$(CPROG)"
 	install -Dm644 "distribution/arch/$(CPROG).conf" "$(INSTALL_DIR)/etc/$(CPROG)/$(CPROG).conf"
 	install -d "$(INSTALL_DIR)/usr/share/$(CPROG)"
-	install -m644 "UserManual.md" "README.md" "$(INSTALL_DIR)/usr/share/$(CPROG)"
+	install -m644 "docs/UserManual.md" "README.md" "$(INSTALL_DIR)/usr/share/$(CPROG)"
 endif
 
 
