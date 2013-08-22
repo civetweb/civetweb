@@ -75,12 +75,16 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | NO_SSL                    | disable SSL functionality            |
 | NO_SSL_DL                 | link against system libssl library   |
 
-## Advanced Cross Compiling
+## Cross Compiling
 
-Take total control with *CC* and *CFLAGS* as make options.
+Take total control with *CC*, *COPTS* and *TARGET_OS* as make options.
+TARGET_OS is used to determine some compile details as will as code function.
+TARGET_OS values should be be one found in *build/Makefile.in-os*.
+
 ```
-make build CC="mycc" CFLAGS="-gprof -DNDEBUG -DNO_CGI"
+make CC=arm-none-linux-gnueabi-gcc COPT="-march=armv7-a  -mfpu=vfp -mfloat-abi=softfp" TARGET_OS=FROG
 ```
+
 
 ## Cocoa DMG Packaging (OSX Only)
 
