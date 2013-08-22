@@ -4,8 +4,8 @@ Adding CyaSSL Support
 ### Only required for Windows!
 
 In order to support SSL *HTTPS* connections in Civetweb on Windows,
-your will have to use the GPLv2 licensed CyaSSL library.  By using this
-library, the resulting binary will have to have the same license unless
+you will have to use the GPLv2 licensed CyaSSL library.  By using this
+library, the resulting binary may have to have the GPL license unless
 you buy a commercial license from [wolfSSL](http://www.yassl.com/).
 
 Getting Started
