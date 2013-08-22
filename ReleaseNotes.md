@@ -1,9 +1,11 @@
 
-
-Release Notes v1.1 (Build, Documentation, License Improvements)
+Release Notes v1.1 
 ===
-
+### Objectives: *Build, Documentation, License Improvements*
 The objective of this release is to establish a maintable code base, ensure MIT license rights and improve usability and documention.
+
+Changes
+-------
 
 - Added fallback configuration file path for Linux systems.
     + Good for having a system wide default configuration /etc/civetweb/civetweb.conf
@@ -38,9 +40,10 @@ Known Issues
 - Build changes may impact current users.
     + As with any change of this type, changes may impact some users.
 
-Release Notes v1.0 (Rebranding)
+Release Notes v1.0
 ===
 
+### Objectives: *MIT License Preservation, Rebranding*
 The objective of this release is to establish a version of the Mongoose software distribution thate still retains the MIT license.
 
 Changes
