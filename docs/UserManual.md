@@ -310,7 +310,7 @@ must be for a file name only, not including directory name. Example:
 Pre-built Windows and Mac civetweb binaries have built-in Lua Server Pages
 support. That means it is possible to write PHP-like scripts with civetweb,
 using Lua programming language instead of PHP. Lua is known
-for it's speed and small size. Civetweb uses Lua version 5.2.1, the
+for it's speed and small size. Civetweb uses Lua version 5.2.2, the
 documentation for it can be found at
 [Lua 5.2 reference manual](http://www.lua.org/manual/5.2/).
 

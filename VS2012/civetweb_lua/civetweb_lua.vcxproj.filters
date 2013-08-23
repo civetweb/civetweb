@@ -24,10 +24,10 @@
     <ClInclude Include="..\..\civetweb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\lua-5.2.1\src\lua.h">
+    <ClInclude Include="..\..\lua-5.2.2\src\lua.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\lua-5.2.1\src\lauxlib.h">
+    <ClInclude Include="..\..\lua-5.2.2\src\lauxlib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

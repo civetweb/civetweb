@@ -6,7 +6,8 @@ Civetweb is primarily designed so applications can easily add HTTP server functi
 Files
 ------
 
-There is no library, it is just a small set of files to compile in to the application.
+There is just a small set of files to compile in to the application,
+but if a library is desired, see [Building.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Building.md)
 
 #### Regarding the INL file extension
 The *INL* file extension represents code that is statically included inline in a source file.  Slightly different from C++ where it means "inline" code which is technically not the same as static code. Civetweb overloads this extension for the sake of clearity as opossed to having .c extensions on files that should not be directly compiled.
@@ -61,7 +62,7 @@ LUA is a server side include functionality.  Files ending in .la will be process
 ##### Add the following sources
 
   - mod_lua.inl
-  - lua-5.2.1/src
+  - lua-5.2.2/src
      + lapi.c
      + lauxlib.c
      + lbaselib.c

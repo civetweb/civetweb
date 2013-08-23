@@ -37,6 +37,14 @@ make install
 Install on the system, Linux only.
 
 ```
+make lib WITH_CPP=1 WITH_IPV6=1
+make slib WITH_CPP=1 WITH_LUA=1 WITH_WEBSOCKET=1
+```
+Build the static and shared libraries.
+The *WITH_CPP* make option is to include the CivetServer class.
+The additional make options configure the library just as it would the application.
+
+```
 make clean
 ```
 Clean up the mess
@@ -55,6 +63,7 @@ make build WITH_LUA=1
 | WITH_DEBUG=1              | build with GDB debug support         |
 | WITH_IPV6=1               | with IPV6 support                    |
 | WITH_WEBSOCKET=1          | build with web socket support        |
+| WITH_CPP=1                | build libraries with c++ classes     |
 | CONFIG_FILE=file          | use 'file' as the config file        |
 | CONFIG_FILE2=file         | use 'file' as the backup config file |
 | SSL_LIB=libssl.so.0       | use versioned SSL library            |
