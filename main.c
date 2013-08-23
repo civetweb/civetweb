@@ -78,7 +78,7 @@ static struct mg_context *ctx;      // Set by start_civetweb()
 
 // backup config file
 #if !defined(CONFIG_FILE2) && defined(LINUX)
-#define CONFIG_FILE2 "/etc/civetweb/civetweb.conf"
+#define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
 static void WINCDECL signal_handler(int sig_num) {
