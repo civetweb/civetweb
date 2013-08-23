@@ -73,9 +73,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="..\..\lua-5.2.1\src\lapi.c" />
     <ClCompile Include="..\..\lua-5.2.1\src\lauxlib.c" />
     <ClCompile Include="..\..\lua-5.2.1\src\lbaselib.c" />

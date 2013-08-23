@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "md5.h"
-
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS // Disable deprecation warning in VS2005
@@ -265,6 +263,9 @@ static pthread_t pthread_self(void) {
   return GetCurrentThreadId();
 }
 #endif // _WIN32
+
+#define MD5_STATIC static
+#include "md5.inl"
 
 #ifdef DEBUG_TRACE
 #undef DEBUG_TRACE
@@ -4100,7 +4101,7 @@ static uint32_t get_remote_ip(const struct mg_connection *conn) {
 }
 
 #ifdef USE_LUA
-#include "mod_lua.c"
+#include "mod_lua.inl"
 #endif // USE_LUA
 
 int mg_upload(struct mg_connection *conn, const char *destination_dir) {

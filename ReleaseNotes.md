@@ -14,7 +14,7 @@ Changes
 - Created new documentation on Embeddeding, Building and yaSSL (see docs/).
 - Updated License file to include all licenses.
 - Replaced MD5 implementation due to questionable license.
-     + This requires two new source files md5.c, md5.h
+     + This requires new source file md5.c
 - Changed UNIX/OSX build to conform to common practices.
      + Supports build, install and clean rules.
      + Supports cross compiling

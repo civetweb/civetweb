@@ -80,7 +80,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\civetweb.c" />
     <ClCompile Include="..\..\main.c" />
-    <ClCompile Include="..\..\md5.c" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\build\systray.ico" />
@@ -90,7 +89,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\civetweb.h" />
-    <ClInclude Include="..\..\md5.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\md5.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

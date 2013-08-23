@@ -18,9 +18,6 @@
     <ClInclude Include="..\..\civetweb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\md5.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\examples\websocket.c">
@@ -29,8 +26,10 @@
     <ClCompile Include="..\..\civetweb.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\md5.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\md5.inl">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
