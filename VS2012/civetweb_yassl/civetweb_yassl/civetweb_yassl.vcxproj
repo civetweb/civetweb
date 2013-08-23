@@ -52,7 +52,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>USE_YASSL;NO_SSL_DL;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\cyassl-2.7.0\;$(ProjectDir)..\..\..\..\cyassl-2.7.0\cyassl\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include;$(ProjectDir)..\..\..\..\cyassl-2.7.0\;$(ProjectDir)..\..\..\..\cyassl-2.7.0\cyassl\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -68,7 +68,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>USE_YASSL;NO_SSL_DL;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\cyassl-2.7.0\;$(ProjectDir)..\..\..\..\cyassl-2.7.0\cyassl\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include;$(ProjectDir)..\..\..\..\cyassl-2.7.0\;$(ProjectDir)..\..\..\..\cyassl-2.7.0\cyassl\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -78,25 +78,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\civetweb.h" />
+    <ClInclude Include="..\..\..\include\civetweb.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\civetweb.c" />
-    <ClCompile Include="..\..\..\main.c" />
+    <ClCompile Include="..\..\..\src\civetweb.c" />
+    <ClCompile Include="..\..\..\src\main.c" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\..\build\res.rc" />
+    <ResourceCompile Include="..\..\..\resources\res.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\build\systray.ico" />
+    <Image Include="..\..\..\resources\systray.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\yassl_lib\yassl_lib.vcxproj">
       <Project>{8c0c878b-bbd6-4241-bca6-61753ffcc7f1}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\..\md5.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

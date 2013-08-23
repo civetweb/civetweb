@@ -38,11 +38,15 @@ Install on the system, Linux only.
 
 ```
 make lib WITH_CPP=1 WITH_IPV6=1
-make slib WITH_CPP=1 WITH_LUA=1 WITH_WEBSOCKET=1
+make clean slib WITH_CPP=1 WITH_LUA=1 WITH_WEBSOCKET=1
 ```
 Build the static and shared libraries.
 The *WITH_CPP* make option is to include the CivetServer class.
 The additional make options configure the library just as it would the application.
+
+The *slib* option should be done on a separate clean build as position
+independent code (PIC) is required for it.  Trying to run it after
+building the static library or the server will result in a link error.
 
 ```
 make clean
@@ -90,7 +94,7 @@ make build COPT="-DNDEBUG -DNO_CGI"
 
 Take total control with *CC*, *COPTS* and *TARGET_OS* as make options.
 TARGET_OS is used to determine some compile details as will as code function.
-TARGET_OS values should be be one found in *build/Makefile.in-os*.
+TARGET_OS values should be be one found in *resources/Makefile.in-os*.
 
 ```
 make CC=arm-none-linux-gnueabi-gcc COPT="-march=armv7-a  -mfpu=vfp -mfloat-abi=softfp" TARGET_OS=FROG
@@ -119,7 +123,7 @@ Note : You dont need root access to run civetweb on Android.
 
 - Download the source from the Downloads page.
 - Download the Android NDK from [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)
-- Run `/path-to-ndk/ndk-build -C /path-to-civetweb/build`
+- Run `/path-to-ndk/ndk-build -C /path-to-civetweb/resources`
   That should generate civetweb/lib/armeabi/civetweb
 - Using the adb tool (you need to have Android SDK installed for that),
   push the generated civetweb binary to `/data/local` folder on device.

@@ -18,7 +18,7 @@ https://groups.google.com/d/forum/civetweb
 
 # Quick start documentation
 
-- [ReleaseNotes.md](https://github.com/sunsetbrew/civetweb/blob/master/ReleaseNotes.md) - Release Notes
+- [RELEASE_NOTES.md](https://github.com/sunsetbrew/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
 - [docs/UserManual.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/UserManual.md) - End User Guide
 - [docs/Building.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Building.md) - Buildiing the Server Quick Start
 - [docs/Embedding.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Embedding.md) - Embedding Quick Start

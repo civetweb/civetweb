@@ -28,9 +28,9 @@
 #define USE_IPV6
 #endif
 
-// USE_* definitions must be made before #include "civetweb.c" !
+// USE_* definitions must be made before #include "src/civetweb.c" !
 
-#include "civetweb.c"
+#include "src/civetweb.c"
 
 static int s_total_tests = 0;
 static int s_failed_tests = 0;
@@ -223,7 +223,7 @@ static void upload_cb(struct mg_connection *conn, const char *path) {
 
   if (atoi(ri->query_string) == 1) {
     ASSERT(!strcmp(path, "./upload_test.txt"));
-    ASSERT((p1 = read_file("civetweb.c", &len1)) != NULL);
+    ASSERT((p1 = read_file("src/civetweb.c", &len1)) != NULL);
     ASSERT((p2 = read_file(path, &len2)) != NULL);
     ASSERT(len1 == len2);
     ASSERT(memcmp(p1, p2, len1) == 0);
@@ -231,7 +231,7 @@ static void upload_cb(struct mg_connection *conn, const char *path) {
     remove(upload_filename);
   } else if (atoi(ri->query_string) == 2) {
     if (!strcmp(path, "./upload_test.txt")) {
-      ASSERT((p1 = read_file("civetweb.h", &len1)) != NULL);
+      ASSERT((p1 = read_file("include/civetweb.h", &len1)) != NULL);
       ASSERT((p2 = read_file(path, &len2)) != NULL);
       ASSERT(len1 == len2);
       ASSERT(memcmp(p1, p2, len1) == 0);
@@ -289,7 +289,7 @@ static const char *OPTIONS[] = {
   "document_root", ".",
   "listening_ports", LISTENING_ADDR,
   "enable_keep_alive", "yes",
-  "ssl_certificate", "build/ssl_cert.pem",
+  "ssl_certificate", "resources/ssl_cert.pem",
   NULL,
 };
 
@@ -330,10 +330,10 @@ static void test_mg_download(void) {
 
   // Fetch civetweb.c, should succeed
   ASSERT((conn = mg_download("localhost", port, 1, ebuf, sizeof(ebuf), "%s",
-                             "GET /civetweb.c HTTP/1.0\r\n\r\n")) != NULL);
+                             "GET /src/civetweb.c HTTP/1.0\r\n\r\n")) != NULL);
   ASSERT(!strcmp(conn->request_info.uri, "200"));
   ASSERT((p1 = read_conn(conn, &len1)) != NULL);
-  ASSERT((p2 = read_file("civetweb.c", &len2)) != NULL);
+  ASSERT((p2 = read_file("src/civetweb.c", &len2)) != NULL);
   ASSERT(len1 == len2);
   ASSERT(memcmp(p1, p2, len1) == 0);
   free(p1), free(p2);
@@ -395,7 +395,7 @@ static void test_mg_upload(void) {
   ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
 
   // Upload one file
-  ASSERT((file_data = read_file("civetweb.c", &file_len)) != NULL);
+  ASSERT((file_data = read_file("src/civetweb.c", &file_len)) != NULL);
   post_data = NULL;
   post_data_len = alloc_printf(&post_data, 0,
                                        "--%s\r\n"
@@ -421,7 +421,7 @@ static void test_mg_upload(void) {
   mg_close_connection(conn);
 
   // Upload two files
-  ASSERT((file_data = read_file("civetweb.h", &file_len)) != NULL);
+  ASSERT((file_data = read_file("include/civetweb.h", &file_len)) != NULL);
   ASSERT((file2_data = read_file("README.md", &file2_len)) != NULL);
   post_data = NULL;
   post_data_len = alloc_printf(&post_data, 0,

@@ -190,7 +190,7 @@ const char **mg_get_valid_option_names(void);
 // This function allows an application to manipulate .htpasswd files on the
 // fly by adding, deleting and changing user records. This is one of the
 // several ways of implementing authentication on the server side. For another,
-// cookie-based way please refer to the examples/chat.c in the source tree.
+// cookie-based way please refer to the examples/chat in the source tree.
 //
 // If password is not NULL, entry is added (or modified if already exists).
 // If password is NULL, entry is deleted.

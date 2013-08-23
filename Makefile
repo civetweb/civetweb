@@ -7,7 +7,7 @@
 # For help try, "make help"
 #
 
-include build/Makefile.in-os
+include resources/Makefile.in-os
 
 CPROG = civetweb
 #CXXPROG = civetweb
@@ -23,32 +23,30 @@ DATAROOTDIR = $(PREFIX)/share
 DOCDIR = $(DATAROOTDIR)/doc/$(CPROG)
 SYSCONFDIR = $(PREFIX)/etc
 
-BUILD_DIRS += $(BUILD_DIR)
+BUILD_DIRS += $(BUILD_DIR) $(BUILD_DIR)/src
 
-LIB_SOURCES = civetweb.c
-APP_SOURCES = main.c
+LIB_SOURCES = src/civetweb.c
+APP_SOURCES = src/main.c
 SOURCE_DIRS =
 
 OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o)
 
 # only set main compile options if none were chosen
-CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -I. $(COPT)
+CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT)
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG_ENABLED
 endif
 
 ifdef WITH_CPP
-  OBJECTS += cpp/CivetServer.o
-  BUILD_DIRS += $(BUILD_DIR)/cpp
-  CFLAGS += -Icpp
+  OBJECTS += src/CivetServer.o
   LCC = $(CXX)
 else
   LCC = $(CC)
 endif
 
 ifdef WITH_LUA
- include build/Makefile.in-lua
+ include resources/Makefile.in-lua
 endif
 
 ifdef WITH_IPV6
@@ -142,12 +140,18 @@ slib: lib$(CPROG).so
 clean:
 	rm -rf $(BUILD_DIR)
 
+distclean: clean
+	@rm -rf VS2012/Debug VS2012/*/Debug  VS2012/*/*/Debug
+	@rm -rf VS2012/Release VS2012/*/Release  VS2012/*/*/Release
+	rm -f $(CPROG) lib$(CPROG).so lib$(CPROG).a *.dmg 
+
 lib$(CPROG).a: $(BUILD_DIRS) $(LIB_OBJECTS)
 	@rm -f $@ 
 	ar cq $@ $(LIB_OBJECTS)
 
+lib$(CPROG).so: CFLAGS += -fPIC
 lib$(CPROG).so: $(BUILD_DIRS) $(LIB_OBJECTS)
-	$(LCC) -fPIC -shared -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS)
+	$(LCC) -shared -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS)
 
 $(CPROG): $(BUILD_DIRS) $(BUILD_OBJECTS)
 	$(LCC) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)

@@ -52,7 +52,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -68,7 +68,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -78,20 +78,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\civetweb.c" />
-    <ClCompile Include="..\..\main.c" />
+    <ClCompile Include="..\..\src\civetweb.c" />
+    <ClCompile Include="..\..\src\main.c" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\build\systray.ico" />
+    <Image Include="..\..\resources\systray.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\build\res.rc" />
+    <ResourceCompile Include="..\..\resources\res.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\civetweb.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\md5.inl" />
+    <ClInclude Include="..\..\include\civetweb.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

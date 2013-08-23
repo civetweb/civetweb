@@ -17,11 +17,11 @@
 # -DUSE_LUA               - embed Lua in Civetweb (+100kb)
 
 PROG        = civetweb
-CFLAGS      = -std=c99 -O2 -W -Wall -pedantic -pthread -pipe $(COPT)
+CFLAGS      = -std=c99 -O2 -W -Wall -pedantic -pthread -pipe -Iinclude $(COPT)
 
-# To build with Lua, download and unzip Lua 5.2.1 source code into the
+# To build with Lua, download and unzip Lua 5.2.2 source code into the
 # civetweb directory, and then add $(LUA_SOURCES) to CFLAGS
-LUA         = lua-5.2.1/src
+LUA         = src/third_party/lua-5.2.2/src
 LUA_FLAGS   = -I$(LUA) -DLUA_COMPAT_ALL
 LUA_SOURCES = $(LUA)/lapi.c $(LUA)/lcode.c $(LUA)/lctype.c \
               $(LUA)/ldebug.c $(LUA)/ldo.c $(LUA)/ldump.c \
@@ -40,9 +40,9 @@ ifneq ($(OS), Windows_NT)
   LUA_FLAGS += -DLUA_USE_DLOPEN
 endif
 
-LIB_SOURCES = civetweb.c md5.c 
+LIB_SOURCES = src/civetweb.c
 
-ALL_SOURCES = main.c $(LIB_SOURCES) build/sqlite3.c build/lsqlite3.c \
+ALL_SOURCES = src/main.c $(LIB_SOURCES) src/third_party/sqlite3.c src/third_party/lsqlite3.c \
               $(LUA_SOURCES) $(YASSL_SOURCES)
 
 SQLITE_FLAGS = -DTHREADSAFE=1 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
@@ -114,28 +114,28 @@ all:
 lua.lib: $(LUA_WINOBJS)
 	$(MSVC)/bin/lib /out:$@ $(LUA_WINOBJS)
 
-# To build with lua, make sure you have Lua unpacked into lua-5.2.1 directory
+# To build with lua, make sure you have Lua unpacked into src/third_party/lua-5.2.1 directory
 linux_lua: $(ALL_OBJECTS)
 	$(CC) $(ALL_OBJECTS) -o $(PROG) -ldl
 
-civetweb.o: mod_lua.inl
+civetweb.o: src/mod_lua.inl
 
 # Make sure that the compiler flags come last in the compilation string.
 # If not so, this can break some on some Linux distros which use
 # "-Wl,--as-needed" turned on by default  in cc command.
 # Also, this is turned in many other distros in static linkage builds.
 linux:
-	$(CC) $(LIB_SOURCES) main.c -o $(PROG) -ldl $(CFLAGS)
+	$(CC) $(LIB_SOURCES) src/main.c -o $(PROG) -ldl $(CFLAGS)
 
 mac: bsd
 bsd:
-	$(CC) $(LIB_SOURCES) main.c -o $(PROG) $(CFLAGS)
+	$(CC) $(LIB_SOURCES) src/main.c -o $(PROG) $(CFLAGS)
 
 bsd_lua: $(ALL_OBJECTS)
 	$(CC) $(ALL_OBJECTS) -o $@
 
 solaris:
-	$(CC) $(LIB_SOURCES) main.c -lnsl -lsocket -o $(PROG) $(CFLAGS)
+	$(CC) $(LIB_SOURCES) src/main.c -lnsl -lsocket -o $(PROG) $(CFLAGS)
 
 lib$(PROG).a: $(ALL_OBJECTS)
 	ar cr $@ $(ALL_OBJECTS)
@@ -146,14 +146,14 @@ $(PROG).lib: $(ALL_WINOBJS)
 # For codesign to work in non-interactive mode, unlock login keychain:
 # security unlock ~/Library/Keychains/login.keychain
 # See e.g. http://lists.apple.com/archives/apple-cdsa/2008/Jan/msg00027.html
-Civetweb: $(LIB_SOURCES) main.c
-	$(CC) $(LIB_SOURCES) main.c build/lsqlite3.c build/sqlite3.c \
+Civetweb: $(LIB_SOURCES) src/main.c
+	$(CC) $(LIB_SOURCES) src/main.c src/third_party/lsqlite3.c src/third_party/sqlite3.c \
           -DUSE_COCOA $(CFLAGS) $(FLAGS) -mmacosx-version-min=10.4 \
           $(YASSL_SOURCES) $(LUA_SOURCES) \
           -framework Cocoa -ObjC -arch i386 -arch x86_64 -o Civetweb
 
 cocoa: Civetweb
-	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 build/civetweb_*.png build/civetweb.icns $$DIR/Contents/Resources/ && install -m 644 build/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
+	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 resources/civetweb_*.png resources/civetweb.icns $$DIR/Contents/Resources/ && install -m 644 resources/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
 
 un:
 	$(CC) test/unit_test.c -o unit_test -I. -I$(LUA) $(LUA_SOURCES) \
@@ -167,18 +167,18 @@ wi:
 	./unit_test.exe
 
 windows: $(ALL_WINOBJS)
-	$(MSVC)/bin/rc build/res.rc
-	$(LINK) /nologo $(ALL_WINOBJS) build/res.res /out:$(PROG).exe
+	$(MSVC)/bin/rc resources/res.rc
+	$(LINK) /nologo $(ALL_WINOBJS) resources/res.res /out:$(PROG).exe
 
 # Build for Windows under MinGW
 #MINGWDBG= -DDEBUG -O0 -ggdb
 MINGWDBG= -DNDEBUG -Os
 MINGWOPT=  -W -Wall -mthreads -Wl,--subsystem,console $(MINGWDBG) -DHAVE_STDINT $(GCC_WARNINGS) $(COPT)
 mingw:
-	windres build\res.rc build\res.o
+	windres resources\res.rc resources\res.o
 	$(CC) $(MINGWOPT) $(LIB_SOURCES) -lws2_32 \
 		-shared -Wl,--out-implib=$(PROG).lib -o $(PROG).dll
-	$(CC) $(MINGWOPT) $(LIB_SOURCES) main.c build\res.o \
+	$(CC) $(MINGWOPT) $(LIB_SOURCES) src/main.c resources\res.o \
 	-lws2_32 -ladvapi32 -lcomdlg32 -o $(PROG).exe
 
 # Build for Windows under Cygwin
@@ -186,24 +186,23 @@ mingw:
 CYGWINDBG= -DNDEBUG -Os
 CYGWINOPT=  -W -Wall -mthreads -Wl,--subsystem,console $(CYGWINDBG) -DHAVE_STDINT $(GCC_WARNINGS) $(COPT)
 cygwin:
-	windres ./build/res.rc ./build/res.o
+	windres ./resources/res.rc ./resources/res.o
 	$(CC) $(CYGWINOPT) $(LIB_SOURCES) -lws2_32 \
 		-shared -Wl,--out-implib=$(PROG).lib -o $(PROG).dll
-	$(CC) $(CYGWINOPT) -Ibuild $(LIB_SOURCES) main.c ./build/res.o \
+	$(CC) $(CYGWINOPT) -Iinclude $(LIB_SOURCES) src/main.c ./resources/res.o \
 	-lws2_32 -ladvapi32 -o $(PROG).exe
 
 tests:
 	perl test/test.pl $(TEST)
 
 tarball: clean
-	F=civetweb-`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`.tgz ; cd .. && tar -czf x civetweb/{LICENSE.md,Makefile,examples,test,build,*.[ch],*.md} && mv x civetweb/$$F
+	F=civetweb-`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`.tgz ; cd .. && tar -czf x civetweb/{LICENSE.md,Makefile,examples,test,resources,*.[ch],*.md} && mv x civetweb/$$F
 
 release: tarball cocoa
 	wine make windows
 	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; upx civetweb.exe; cp civetweb.exe civetweb-$$V.exe; cp civetweb.exe civetweb_php_bundle/; zip -r civetweb_php_bundle_$$V.zip civetweb_php_bundle/
 
 clean:
-	cd examples && $(MAKE) clean
 	rm -rf *.o *.core $(PROG) *.obj *.so $(PROG).txt *.dSYM *.tgz \
-	$(PROG).exe *.dll *.lib build/res.o build/res.RES *.dSYM *.zip *.pdb \
+	$(PROG).exe *.dll *.lib resources/res.o resources/res.RES *.dSYM *.zip *.pdb \
 	*.exe *.dmg $(ALL_OBJECTS) $(ALL_WINOBJS)

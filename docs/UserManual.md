@@ -258,7 +258,7 @@ directory is commonly referenced as dot (`.`).
 Path to SSL certificate file. This option is only required when at least one
 of the `listening_ports` is SSL. The file must be in PEM format,
 and it must have both private key and certificate, see for example
-[ssl_cert.pem](https://github.com/sunsetbrew/civetweb/blob/master/build/ssl_cert.pem)
+[ssl_cert.pem](https://github.com/sunsetbrew/civetweb/blob/master/resources/ssl_cert.pem)
 
 ### num_threads `50`
 Number of worker threads. Civetweb handles each incoming connection in a
@@ -332,10 +332,10 @@ are accessible from the Lua code (please check reference manual for details),
 and also information about the request is available in `mg.request_info` object,
 like request method, all headers, etcetera. Please refer to
 `struct mg_request_info` definition in
-[civetweb.h](https://github.com/sunsetbrew/civetweb/blob/master/civetweb.h)
+[civetweb.h](https://github.com/sunsetbrew/civetweb/blob/master/include/civetweb.h)
 to see what kind of information is present in `mg.request_info` object. Also,
 [page.lp](https://github.com/sunsetbrew/civetweb/blob/master/test/page.lp) and
-[prime_numbers.lp](https://github.com/sunsetbrew/civetweb/blob/master/examples/lua/prime_numbers.lp)
+[prime_numbers.lp](https://github.com/sunsetbrew/civetweb/blob/master/examples/docroot/prime_numbers.lp)
 contains some example code that uses `request_info` and other functions(form submitting for example).
 
 Civetweb exports the following to the Lua server page:

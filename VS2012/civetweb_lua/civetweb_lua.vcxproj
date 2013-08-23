@@ -52,7 +52,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..;$(ProjectDir)..\..\lua-5.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party\lua-5.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -68,7 +68,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..;$(ProjectDir)..\..\lua-5.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party\lua-5.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -81,28 +81,24 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\civetweb.h" />
-    <ClInclude Include="..\..\lua-5.2.2\src\lauxlib.h" />
-    <ClInclude Include="..\..\lua-5.2.2\src\lua.h" />
-    <ClInclude Include="Resource.h" />
+    <ClInclude Include="..\..\include\civetweb.h" />
+    <ClInclude Include="..\..\src\third_party\lua-5.2.2\src\lauxlib.h" />
+    <ClInclude Include="..\..\src\third_party\lua-5.2.2\src\lua.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\civetweb.c" />
-    <ClCompile Include="..\..\main.c" />
+    <ClCompile Include="..\..\src\civetweb.c" />
+    <ClCompile Include="..\..\src\main.c" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\build\res.rc" />
+    <ResourceCompile Include="..\..\resources\res.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\build\systray.ico" />
+    <Image Include="..\..\resources\systray.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\lua_lib\lua_lib.vcxproj">
       <Project>{8f5e5d77-d269-4665-9e27-1045da6cf0d8}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\md5.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

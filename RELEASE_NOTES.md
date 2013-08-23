@@ -6,11 +6,12 @@ The objective of this release is to establish a maintable code base, ensure MIT 
 Changes
 -------
 
+- Reorangized build directories to make them more intuitive
 - Added new build rules for lib and slib with option to include C++ class
 - Upgraded LUA from 5.2.1 to 5.2.2
 - Added fallback configuration file path for Linux systems.
-    + Good for having a system wide default configuration /etc/civetweb/civetweb.conf
-- Added new C++ abstraction class cpp/CivetServer
+    + Good for having a system wide default configuration /usr/local/etc/civetweb.conf
+- Added new C++ abstraction class CivetServer
 - Added thread safety for and fixed websocket defects (Morgan McGuire)
 - Created PKGBUILD to use Arch distribution (Daniel Oaks)
 - Created new documentation on Embeddeding, Building and yaSSL (see docs/).
