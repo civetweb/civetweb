@@ -24,10 +24,19 @@ SOURCE_DIRS =
 OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o)
 
 # only set main compile options if none were chosen
-CFLAGS += -W -Wall -O2 -D$(TARGET_OS) $(COPT)
+CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -I. $(COPT)
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG_ENABLED
+endif
+
+ifdef WITH_CPP
+  OBJECTS += cpp/CivetServer.o
+  BUILD_DIRS += $(BUILD_DIR)/cpp
+  CFLAGS += -Icpp
+  LCC = $(CXX)
+else
+  LCC = $(CC)
 endif
 
 ifdef WITH_LUA
@@ -60,6 +69,9 @@ endif
 
 BUILD_DIRS += $(addprefix $(BUILD_DIR)/, $(SOURCE_DIRS))
 BUILD_OBJECTS = $(addprefix $(BUILD_DIR)/, $(OBJECTS))
+MAIN_OBJECTS = $(addprefix $(BUILD_DIR)/, $(APP_SOURCES:.c=.o))
+LIB_OBJECTS = $(filter-out $(MAIN_OBJECTS), $(BUILD_OBJECTS))
+
 
 LIBS = -lpthread -lm
 
@@ -74,12 +86,15 @@ help:
 	@echo "make build               compile"
 	@echo "make install             install on the system"
 	@echo "make clean               clean up the mess"
+	@echo "make lib                 build a static library"
+	@echo "make slib                build a shared library"
 	@echo ""
 	@echo " Make Options"
 	@echo "   WITH_LUA=1            build with LUA support"
 	@echo "   WITH_DEBUG=1          build with GDB debug support"
 	@echo "   WITH_IPV6=1           with IPV6 support"
 	@echo "   WITH_WEBSOCKET=1      build with web socket support"
+	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   CONFIG_FILE=file      use 'file' as the config file"
 	@echo "   CONFIG_FILE2=file     use 'file' as the backup config file"
 	@echo "   SSL_LIB=libssl.so.0   use versioned SSL library"
@@ -112,12 +127,22 @@ ifeq ($(TARGET_OS),LINUX)
 	install -m644 "docs/UserManual.md" "README.md" "$(PREFIX)/usr/share/$(CPROG)"
 endif
 
+lib: lib$(CPROG).a
+
+slib: lib$(CPROG).so
 
 clean:
 	rm -rf $(BUILD_DIR)
 
+lib$(CPROG).a: $(BUILD_DIRS) $(LIB_OBJECTS)
+	@rm -f $@ 
+	ar cq $@ $(LIB_OBJECTS)
+
+lib$(CPROG).so: $(BUILD_DIRS) $(LIB_OBJECTS)
+	$(LCC) -fPIC -shared -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS)
+
 $(CPROG): $(BUILD_DIRS) $(BUILD_OBJECTS)
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)
+	$(LCC) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)
 
 $(CXXPROG): $(BUILD_DIRS) $(BUILD_OBJECTS)
 	$(CXX) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)
@@ -131,4 +156,4 @@ $(BUILD_DIR)/%.o : %.cpp
 $(BUILD_DIR)/%.o : %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
-.PHONY: all help build install clean
+.PHONY: all help build install clean lib so

@@ -6,6 +6,8 @@ The objective of this release is to establish a maintable code base, ensure MIT 
 Changes
 -------
 
+- Added new build rules for lib and slib with option to include C++ class
+- Upgraded LUA from 5.2.1 to 5.2.2
 - Added fallback configuration file path for Linux systems.
     + Good for having a system wide default configuration /etc/civetweb/civetweb.conf
 - Added new C++ abstraction class cpp/CivetServer
