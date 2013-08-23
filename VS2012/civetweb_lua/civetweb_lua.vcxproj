@@ -84,13 +84,11 @@
     <ClInclude Include="..\..\civetweb.h" />
     <ClInclude Include="..\..\lua-5.2.1\src\lauxlib.h" />
     <ClInclude Include="..\..\lua-5.2.1\src\lua.h" />
-    <ClInclude Include="..\..\md5.h" />
     <ClInclude Include="Resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\civetweb.c" />
     <ClCompile Include="..\..\main.c" />
-    <ClCompile Include="..\..\md5.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\build\res.rc" />
@@ -102,6 +100,9 @@
     <ProjectReference Include="..\lua_lib\lua_lib.vcxproj">
       <Project>{8f5e5d77-d269-4665-9e27-1045da6cf0d8}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\md5.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

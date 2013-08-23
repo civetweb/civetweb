@@ -14,8 +14,7 @@ There is no library, it is just a small set of files to compile in to the applic
     - civetweb.c
     - civetweb.h
   2. MD5 API
-    - md5.h
-    - md5.c
+    - md5.inl
   3. C++ Wrapper (Optional)
     - cpp/CivetServer.cpp
     - cpp/CivetServer.h
@@ -58,7 +57,7 @@ LUA is a server side include functionality.  Files ending in .la will be process
 
 ##### Add the following sources
 
-  - mod_lua.c
+  - mod_lua.inl
   - lua-5.2.1/src
      + lapi.c
      + lauxlib.c

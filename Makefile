@@ -17,7 +17,7 @@ PREFIX = /usr/local
 
 BUILD_DIRS += $(BUILD_DIR)
 
-LIB_SOURCES = civetweb.c md5.c 
+LIB_SOURCES = civetweb.c
 APP_SOURCES = main.c
 SOURCE_DIRS =
 

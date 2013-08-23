@@ -1,5 +1,5 @@
 CFLAGS=	-W -Wall -I.. -pthread -g
-LIB_SOURCE =  ../civetweb.c  ../md5.c 
+LIB_SOURCE =  ../civetweb.c
 all:
 	OS=`uname`; \
 	  test "$$OS" = Linux && LIBS="-ldl" ; \

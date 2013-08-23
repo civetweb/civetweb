@@ -118,7 +118,7 @@ lua.lib: $(LUA_WINOBJS)
 linux_lua: $(ALL_OBJECTS)
 	$(CC) $(ALL_OBJECTS) -o $(PROG) -ldl
 
-civetweb.o: mod_lua.c
+civetweb.o: mod_lua.inl
 
 # Make sure that the compiler flags come last in the compilation string.
 # If not so, this can break some on some Linux distros which use

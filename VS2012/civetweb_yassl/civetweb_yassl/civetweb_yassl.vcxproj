@@ -79,12 +79,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\civetweb.h" />
-    <ClInclude Include="..\..\..\md5.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\civetweb.c" />
     <ClCompile Include="..\..\..\main.c" />
-    <ClCompile Include="..\..\..\md5.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\..\build\res.rc" />
@@ -96,6 +94,9 @@
     <ProjectReference Include="..\yassl_lib\yassl_lib.vcxproj">
       <Project>{8c0c878b-bbd6-4241-bca6-61753ffcc7f1}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\md5.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
