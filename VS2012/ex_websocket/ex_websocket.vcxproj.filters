@@ -15,21 +15,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\civetweb.h">
+    <ClInclude Include="..\..\include\civetweb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\examples\websocket.c">
+    <ClCompile Include="..\..\examples\websocket\websocket.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\civetweb.c">
+    <ClCompile Include="..\..\src\civetweb.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\md5.inl">
-      <Filter>Header Files</Filter>
-    </None>
   </ItemGroup>
 </Project>

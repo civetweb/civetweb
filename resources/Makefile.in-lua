@@ -3,7 +3,7 @@
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
 
-LUA_DIR = lua-5.2.2/src
+LUA_DIR = src/third_party/lua-5.2.2/src
 
 LUA_SOURCE_FILES = lapi.c  \
     lauxlib.c \
@@ -42,7 +42,7 @@ LUA_SOURCES = $(addprefix $(LUA_DIR)/, $(LUA_SOURCE_FILES))
 LUA_OBJECTS = $(LUA_SOURCES:.c=.o)
 LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL
 
-SQLITE_DIR = build
+SQLITE_DIR = src/third_party
 SQLITE_SOURCE_FILES = sqlite3.c lsqlite3.c
 SQLITE_SOURCES = $(addprefix $(SQLITE_DIR)/, $(SQLITE_SOURCE_FILES))
 SQLITE_OBJECTS = $(SQLITE_SOURCES:.c=.o)

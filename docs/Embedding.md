@@ -15,20 +15,20 @@ The *INL* file extension represents code that is statically included inline in a
 #### Required Files
 
   1. HTTP Server API
-    - civetweb.c
-    - civetweb.h
+    - src/civetweb.c
+    - include/civetweb.h
   2. MD5 API
-    - md5.inl
+    - src/md5.inl
   3. C++ Wrapper (Optional)
-    - cpp/CivetServer.cpp
-    - cpp/CivetServer.h
+    - src/CivetServer.cpp
+    - include/CivetServer.h
 
 #### Other Files
 
   1. Reference C Server
-    - main.c
+    - src/main.c
   2. Reference C++ Server
-    - cpp/example.cpp
+    - examples/embedded_cpp/embedded_cpp.cpp
 
 Quick Start
 ------
@@ -61,8 +61,8 @@ LUA is a server side include functionality.  Files ending in .la will be process
 
 ##### Add the following sources
 
-  - mod_lua.inl
-  - lua-5.2.2/src
+  - src/mod_lua.inl
+  - src/third_party/lua-5.2.2/src
      + lapi.c
      + lauxlib.c
      + lbaselib.c
@@ -95,9 +95,9 @@ LUA is a server side include functionality.  Files ending in .la will be process
      + lundump.c
      + lvm.c
      + lzio.c
-  - build/sqlite3.c
-  - build/sqlite3.h
-  - build/lsqlite3.c
+  - src/third_party/sqlite3.c
+  - src/third_party/sqlite3.h
+  - src/third_party/lsqlite3.c
 
 
 Civetweb internals

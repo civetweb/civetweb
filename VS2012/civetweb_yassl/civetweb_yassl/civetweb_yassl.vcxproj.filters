@@ -15,31 +15,26 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\civetweb.h">
+    <ClInclude Include="..\..\..\include\civetweb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\civetweb.c">
+    <ClCompile Include="..\..\..\src\civetweb.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\main.c">
+    <ClCompile Include="..\..\..\src\main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\..\build\res.rc">
+    <ResourceCompile Include="..\..\..\resources\res.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\build\systray.ico">
+    <Image Include="..\..\..\resources\systray.ico">
       <Filter>Resource Files</Filter>
     </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\..\md5.inl">
-      <Filter>Header Files</Filter>
-    </None>
   </ItemGroup>
 </Project>

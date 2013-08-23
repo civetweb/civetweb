@@ -18,15 +18,15 @@ CONTENTS_DIR = $(DMG_DIR)/$(PACKAGE).app/Contents
 RESOURCES_DIR = $(CONTENTS_DIR)/Resources
 OSXBIN_DIR = $(CONTENTS_DIR)/MacOS
 
-CIVETWEB_VERSION = $(shell perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' civetweb.c)
+CIVETWEB_VERSION = $(shell perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' src/civetweb.c)
 
 include Makefile
 
 package: build
 	@rm -rf $(DMG_DIR)
 	install -d -m 755 $(CONTENTS_DIR) $(RESOURCES_DIR) $(OSXBIN_DIR)
-	install -m 644 build/Info.plist $(CONTENTS_DIR)/
-	install -m 644 build/civetweb_*.png build/civetweb.icns $(RESOURCES_DIR)/
+	install -m 644 resources/Info.plist $(CONTENTS_DIR)/
+	install -m 644 resources/civetweb_*.png resources/civetweb.icns $(RESOURCES_DIR)/
 	install -m 755 $(CPROG) $(OSXBIN_DIR)/$(PACKAGE)
 	ln -fs /Applications $(DMG_DIR)/
 	hdiutil create $(PACKAGE)_$(CIVETWEB_VERSION).dmg -volname "$(PACKAGE) $(CIVETWEB_VERSION)" -srcfolder $(DMG_DIR) -ov

@@ -140,7 +140,7 @@ $SIG{ALRM} = sub { die "timeout\n" };
 # Make sure we export only symbols that start with "mg_", and keep local
 # symbols static.
 if ($^O =~ /darwin|bsd|linux/) {
-  my $out = `(cc -c civetweb.c && nm civetweb.o) | grep ' T '`;
+  my $out = `(cc -c src/civetweb.c && nm src/civetweb.o) | grep ' T '`;
   foreach (split /\n/, $out) {
     /T\s+_?mg_.+/ or fail("Exported symbol $_")
   }

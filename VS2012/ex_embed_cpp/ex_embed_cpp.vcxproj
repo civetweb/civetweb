@@ -52,7 +52,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -68,7 +68,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -78,16 +78,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\civetweb.h" />
-    <ClInclude Include="..\..\cpp\CivetServer.h" />
+    <ClInclude Include="..\..\include\civetweb.h" />
+    <ClInclude Include="..\..\include\CivetServer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\civetweb.c" />
-    <ClCompile Include="..\..\cpp\CivetServer.cpp" />
-    <ClCompile Include="..\..\cpp\example.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\md5.inl" />
+    <ClCompile Include="..\..\src\civetweb.c" />
+    <ClCompile Include="..\..\src\CivetServer.cpp" />
+    <ClCompile Include="..\..\examples\embedded_cpp\embedded_cpp.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
