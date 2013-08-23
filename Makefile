@@ -13,7 +13,15 @@ CPROG = civetweb
 #CXXPROG = civetweb
 
 BUILD_DIR = out
+
+# Installation directories by convention
+# http://www.gnu.org/prep/standards/html_node/Directory-Variables.html
 PREFIX = /usr/local
+EXEC_PREFIX = $(PREFIX)
+BINDIR = $(EXEC_PREFIX)/bin
+DATAROOTDIR = $(PREFIX)/share
+DOCDIR = $(DATAROOTDIR)/doc/$(CPROG)
+SYSCONFDIR = $(PREFIX)/etc
 
 BUILD_DIRS += $(BUILD_DIR)
 
@@ -121,10 +129,10 @@ build: $(CPROG) $(CXXPROG)
 
 install: build
 ifeq ($(TARGET_OS),LINUX)
-	install -Dm755 "$(CPROG)" "$(PREFIX)/usr/bin/$(CPROG)"
-	install -Dm644 "distribution/arch/$(CPROG).conf" "$(PREFIX)/etc/$(CPROG)/$(CPROG).conf"
-	install -d "$(PREFIX)/usr/share/$(CPROG)"
-	install -m644 "docs/UserManual.md" "README.md" "$(PREFIX)/usr/share/$(CPROG)"
+	install -d "$(BINDIR)" "$(DOCDIR)" "$(SYSCONFDIR)"
+	install -m 755 $(CPROG) "$(BINDIR)/"
+	install -m 644 distribution/arch/$(CPROG).conf  "$(SYSCONFDIR)/"
+	install -m 644 *.md "$(DOCDIR)"
 endif
 
 lib: lib$(CPROG).a
