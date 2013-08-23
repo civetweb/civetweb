@@ -1,3 +1,10 @@
+
+civetweb
+libcivetweb.a
+libcivetweb.so
+out
+*.dmg
+
 #################
 ## Eclipse
 #################
