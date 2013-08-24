@@ -145,22 +145,24 @@ distclean: clean
 	@rm -rf VS2012/Release VS2012/*/Release  VS2012/*/*/Release
 	rm -f $(CPROG) lib$(CPROG).so lib$(CPROG).a *.dmg 
 
-lib$(CPROG).a: $(BUILD_DIRS) $(LIB_OBJECTS)
+lib$(CPROG).a: $(LIB_OBJECTS)
 	@rm -f $@ 
 	ar cq $@ $(LIB_OBJECTS)
 
 lib$(CPROG).so: CFLAGS += -fPIC
-lib$(CPROG).so: $(BUILD_DIRS) $(LIB_OBJECTS)
+lib$(CPROG).so: $(LIB_OBJECTS)
 	$(LCC) -shared -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS)
 
-$(CPROG): $(BUILD_DIRS) $(BUILD_OBJECTS)
+$(CPROG): $(BUILD_OBJECTS)
 	$(LCC) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)
 
-$(CXXPROG): $(BUILD_DIRS) $(BUILD_OBJECTS)
+$(CXXPROG): $(BUILD_OBJECTS)
 	$(CXX) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)
 
+$(BUILD_OBJECTS): $(BUILD_DIRS)
+
 $(BUILD_DIRS):
-	-@mkdir -p $@
+	-@mkdir -p "$@"
 
 $(BUILD_DIR)/%.o : %.cpp
 	$(CXX) -c $(CFLAGS) $(CXXFLAGS) $< -o $@
