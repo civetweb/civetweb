@@ -1,14 +1,12 @@
-### Some Windows users may be the install the 
-[Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
-
 Release Notes v1.2 
 ===
-### Objectives: *Instalation Improvements, buildroot, cross compile support*
+### Objectives: *Installation Improvements, buildroot, cross compile support*
 The objective of this release is to make installation seemless.
 
 Changes
 -------
 
+- Create an installation guide
 - Created both 32 and 64 bit windows installations
 - Added install for windows distribution
 - Added 64 bit build profiles for VS 2012.
@@ -18,6 +16,11 @@ Changes
 - Updated Linux Install
 - Updated OS X Package
 - Improved install scheme with welcome web page
+
+Known Issues
+-----
+
+- The prebuilt Window's version requires [Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
 
 Release Notes v1.1 
 ===

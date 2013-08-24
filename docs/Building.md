@@ -102,7 +102,6 @@ TARGET_OS values should be be one found in *resources/Makefile.in-os*.
 make CC=arm-none-linux-gnueabi-gcc COPT="-march=armv7-a  -mfpu=vfp -mfloat-abi=softfp" TARGET_OS=FROG
 ```
 
-
 ## Cocoa DMG Packaging (OSX Only)
 
 Use the alternate *Makefile.osx* to do the build.  The entire build has
@@ -113,6 +112,21 @@ one additional *package* rule.
 ```
 make -f Makefile.osx package
 ```
+
+Building with Buildroot
+---------
+
+[Buildroot](http://buildroot.uclibc.org/) is a tool for creating cross compiled file systems.  Including Civetweb in buildroot is fairly easy.  There is even support for various build options.
+
+1. First, check if it already there.
+  - In buildroot, make menuconfig
+     - Package Selection for the target --->
+     - Networking applications  --->
+     - civetweb
+2. If not there, just add it
+  - copy *Config.in* and *civetweb.mk* from Civetweb's *contrib/buildroot/* to Buildroot's *package/civetweb/* directory.
+  - In Buildroot's *package/Config.in, insert the following line in were you will know how to find it in the menu.
+    > ``` source "package/civetweb/Config.in" ```
 
 
 Building on Android
