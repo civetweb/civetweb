@@ -22,6 +22,7 @@ BINDIR = $(EXEC_PREFIX)/bin
 DATAROOTDIR = $(PREFIX)/share
 DOCDIR = $(DATAROOTDIR)/doc/$(CPROG)
 SYSCONFDIR = $(PREFIX)/etc
+DOCUMENTROOT = $(DOCDIR)
 
 BUILD_DIRS += $(BUILD_DIR) $(BUILD_DIR)/src
 
@@ -127,10 +128,13 @@ build: $(CPROG) $(CXXPROG)
 
 install: build
 ifeq ($(TARGET_OS),LINUX)
-	install -d "$(BINDIR)" "$(DOCDIR)" "$(SYSCONFDIR)"
+	install -d "$(BINDIR)" "$(DOCDIR)" "$(SYSCONFDIR)" "$(DOCUMENTROOT)"
 	install -m 755 $(CPROG) "$(BINDIR)/"
-	install -m 644 distribution/arch/$(CPROG).conf  "$(SYSCONFDIR)/"
+	install -m 644 resources/civetweb.conf  "$(SYSCONFDIR)/"
+	install -m 644 resources/itworks.html $(DOCUMENTROOT)/index.html
+	install -m 644 resources/civetweb_64x64.png $(DOCUMENTROOT)/
 	install -m 644 *.md "$(DOCDIR)"
+	@sed -i 's#^document_root.*$$#document_root $(DOCUMENTROOT)#' "$(SYSCONFDIR)/$(CPROG).conf"
 endif
 
 lib: lib$(CPROG).a
