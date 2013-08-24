@@ -22,7 +22,14 @@ BINDIR = $(EXEC_PREFIX)/bin
 DATAROOTDIR = $(PREFIX)/share
 DOCDIR = $(DATAROOTDIR)/doc/$(CPROG)
 SYSCONFDIR = $(PREFIX)/etc
-DOCUMENTROOT = $(DOCDIR)
+
+# desired configuration of the document root
+# never assume that the document_root actually
+# exists on the build machine.  When building
+# a chroot, PREFIX if just a directory which
+# later becomes /.
+DOCUMENT_ROOT = $(DOCDIR)
+PORTS = 8080
 
 BUILD_DIRS += $(BUILD_DIR) $(BUILD_DIR)/src
 
@@ -104,6 +111,8 @@ help:
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   CONFIG_FILE=file      use 'file' as the config file"
 	@echo "   CONFIG_FILE2=file     use 'file' as the backup config file"
+	@echo "   DOCUMENT_ROOT=/path   document root override when installing"
+	@echo "   PORTS=8080            listening ports override when installing"
 	@echo "   SSL_LIB=libssl.so.0   use versioned SSL library"
 	@echo "   CRYPTO_LIB=libcrypto.so.0 system versioned CRYPTO library"
 	@echo "   PREFIX=/usr/local     sets the install directory"
@@ -128,13 +137,16 @@ build: $(CPROG) $(CXXPROG)
 
 install: build
 ifeq ($(TARGET_OS),LINUX)
-	install -d "$(BINDIR)" "$(DOCDIR)" "$(SYSCONFDIR)" "$(DOCUMENTROOT)"
+	install -d -m 755 "$(BINDIR)"
+	install -d -m 755  "$(DOCDIR)"
+	install -d -m 755  "$(SYSCONFDIR)"
 	install -m 755 $(CPROG) "$(BINDIR)/"
 	install -m 644 resources/civetweb.conf  "$(SYSCONFDIR)/"
-	install -m 644 resources/itworks.html $(DOCUMENTROOT)/index.html
-	install -m 644 resources/civetweb_64x64.png $(DOCUMENTROOT)/
+	@sed -i 's#^document_root.*$$#document_root $(DOCUMENT_ROOT)#' "$(SYSCONFDIR)/civetweb.conf"
+	@sed -i 's#^listening_ports.*$$#listening_ports $(PORTS)#' "$(SYSCONFDIR)/civetweb.conf"
+	install -m 644 resources/itworks.html $(DOCDIR)/index.html
+	install -m 644 resources/civetweb_64x64.png $(DOCDIR)/
 	install -m 644 *.md "$(DOCDIR)"
-	@sed -i 's#^document_root.*$$#document_root $(DOCUMENTROOT)#' "$(SYSCONFDIR)/$(CPROG).conf"
 endif
 
 lib: lib$(CPROG).a

@@ -61,19 +61,21 @@ make build WITH_LUA=1
 ```
 
 
-| Make Options              | Description                          |
-| ------------------------- | ------------------------------------ |
-| WITH_LUA=1                | build with LUA support               |
-| WITH_DEBUG=1              | build with GDB debug support         |
-| WITH_IPV6=1               | with IPV6 support                    |
-| WITH_WEBSOCKET=1          | build with web socket support        |
-| WITH_CPP=1                | build libraries with c++ classes     |
-| CONFIG_FILE=file          | use 'file' as the config file        |
-| CONFIG_FILE2=file         | use 'file' as the backup config file |
-| SSL_LIB=libssl.so.0       | use versioned SSL library            |
-| CRYPTO_LIB=libcrypto.so.0 | system versioned CRYPTO library      |
-| PREFIX=/usr/local         | sets the install directory           |
-| COPT='-DNO_SSL'           | method to insert compile flags       |
+| Make Options              | Description                              |
+| ------------------------- | ---------------------------------------- |
+| WITH_LUA=1                | build with LUA support                   |
+| WITH_DEBUG=1              | build with GDB debug support             |
+| WITH_IPV6=1               | with IPV6 support                        |
+| WITH_WEBSOCKET=1          | build with web socket support            |
+| WITH_CPP=1                | build libraries with c++ classes         |
+| CONFIG_FILE=file          | use 'file' as the config file            |
+| CONFIG_FILE2=file         | use 'file' as the backup config file     |
+| DOCUMENT_ROOT=/path       | document root override when installing   |
+| PORTS=8080                | listening ports override when installing |
+| SSL_LIB=libssl.so.0       | use versioned SSL library                |
+| CRYPTO_LIB=libcrypto.so.0 | system versioned CRYPTO library          |
+| PREFIX=/usr/local         | sets the install directory               |
+| COPT='-DNO_SSL'           | method to insert compile flags           |
 
 ## Setting compile flags
 
