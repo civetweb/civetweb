@@ -106,7 +106,7 @@ static void show_usage_and_exit(void) {
   const char **names;
   int i;
 
-  fprintf(stderr, "Civetweb version %s (c) Sergey Lyubka, built on %s\n",
+  fprintf(stderr, "Civetweb v%s, built on %s\n",
           mg_version(), __DATE__);
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "  civetweb -A <htpasswd_file> <realm> <user> <passwd>\n");
@@ -273,7 +273,7 @@ static void process_command_line_arguments(char *argv[], char **options) {
 }
 
 static void init_server_name(void) {
-  snprintf(server_name, sizeof(server_name), "Civetweb web server v.%s",
+  snprintf(server_name, sizeof(server_name), "Civetweb v%s",
            mg_version());
 }
 
