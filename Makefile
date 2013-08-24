@@ -159,7 +159,7 @@ clean:
 distclean: clean
 	@rm -rf VS2012/Debug VS2012/*/Debug  VS2012/*/*/Debug
 	@rm -rf VS2012/Release VS2012/*/Release  VS2012/*/*/Release
-	rm -f $(CPROG) lib$(CPROG).so lib$(CPROG).a *.dmg 
+	rm -f $(CPROG) lib$(CPROG).so lib$(CPROG).a *.dmg *.msi
 
 lib$(CPROG).a: $(LIB_OBJECTS)
 	@rm -f $@ 
