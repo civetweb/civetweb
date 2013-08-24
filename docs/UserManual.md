@@ -1,7 +1,15 @@
-# Overview
+
+Overview
+=====
 
 Civetweb is small and easy to use web server. It is self-contained, and does
 not require any external software to run.
+
+Installatation
+----
+
+### Some Windows users may be the install the 
+[Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
 
 On Windows, civetweb iconifies itself to the system tray icon when started.
 Right-click on the icon pops up a menu, where it is possible to stop
