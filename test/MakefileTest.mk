@@ -13,7 +13,7 @@ include $(TOP)/resources/Makefile.in-os
 all: test
 
 test: buildoptions buildlibs buildinstall
-test: buildexamples
+test: buildexamples threaded
 
 ifeq ($(TARGET_OS),OSX)
 test: dmg
@@ -45,6 +45,9 @@ buildoptions:
 	$(MAKE) -C $(TOP) clean build WITH_WEBSOCKET=1
 	$(MAKE) -C $(TOP) clean build WITH_LUA=1
 	$(MAKE) -C $(TOP) clean build WITH_LUA=1 WITH_IPV6=1 WITH_WEBSOCKET=1
+
+threaded:
+	$(MAKE) -j 8 -C $(TOP) clean build WITH_LUA=1
 
 buildinstall:
 	$(MAKE) -C $(TOP) clean install PREFIX=$(TEST_OUT)

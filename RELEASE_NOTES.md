@@ -1,4 +1,4 @@
-### Windows users may be the install the 
+### Some Windows users may be the install the 
 [Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
 
 Release Notes v1.2 

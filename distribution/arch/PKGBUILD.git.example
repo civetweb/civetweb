@@ -25,15 +25,13 @@ md5sums=('SKIP')
 
 build() {
   cd "$srcdir/$_pkgname"
-  make build WITH_IPV6=1
+  make build WITH_IPV6=1 WITH_LUA=1
 }
 
 package() {
-  install -Dm755 "$srcdir/$_pkgname/$_pkgname" "$pkgdir/usr/bin/$_pkgname"
-  install -Dm644 "$srcdir/$_pkgname/distribution/arch/$_pkgname.conf" "$pkgdir/etc/$_pkgname/$_pkgname.conf"
-  install -Dm644 "$srcdir/$_pkgname/distribution/arch/$_pkgname.service" "$pkgdir/usr/lib/systemd/system/$_pkgname.service"
-  install -d "$pkgdir/usr/share/$_pkgname"
-  install -m644 "$srcdir/$_pkgname/docs/UserManual.md" "$srcdir/$_pkgname/README.md" "$pkgdir/usr/share/$_pkgname"
+  make install "PREFIX=$pkgdir" TARGET_OS=LINUX
+  install -d -m 755 "$pkgdir/usr/lib/systemd/system"
+  install -m 644 "$srcdir/$_pkgname/distribution/arch/$_pkgname.service" "$pkgdir/usr/lib/systemd/system/$_pkgname.service"
 }
 
 # vim:set ts=2 sw=2 et:
