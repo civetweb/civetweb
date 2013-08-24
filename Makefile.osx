@@ -27,9 +27,11 @@ package: build
 	install -d -m 755 $(CONTENTS_DIR) $(RESOURCES_DIR) $(OSXBIN_DIR)
 	install -m 644 resources/Info.plist $(CONTENTS_DIR)/
 	install -m 644 resources/civetweb_*.png resources/civetweb.icns $(RESOURCES_DIR)/
+	install -m 644 resources/itworks.html $(OSXBIN_DIR)/index.html
+	install -m 644 resources/civetweb_64x64.png $(OSXBIN_DIR)/
 	install -m 755 $(CPROG) $(OSXBIN_DIR)/$(PACKAGE)
 	ln -fs /Applications $(DMG_DIR)/
 	hdiutil create $(PACKAGE)-$(CIVETWEB_VERSION).dmg -volname "$(PACKAGE) $(CIVETWEB_VERSION)" -srcfolder $(DMG_DIR) -ov
-	@rm -rf $(DMG_DIR)
+#	@rm -rf $(DMG_DIR)
 
 .PHONY: package
