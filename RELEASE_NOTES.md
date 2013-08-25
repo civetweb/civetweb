@@ -70,7 +70,7 @@ Release Notes v1.0
 ===
 
 ### Objectives: *MIT License Preservation, Rebranding*
-The objective of this release is to establish a version of the Mongoose software distribution thate still retains the MIT license.
+The objective of this release is to establish a version of the Mongoose software distribution that still retains the MIT license.
 
 Changes
 -------
