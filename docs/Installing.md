@@ -6,7 +6,7 @@ This guide covers the distributions for CivetWeb.  The latest source code is ava
 Windows
 ---
 
-This pre-built version comes pre-built wit LUA support.  There is no SSL support included due to licensing restrictions; however, users and build Civetwab SSL themselves.
+This pre-built version comes pre-built wit LUA support.  There is no SSL support included due to licensing restrictions; however, users can build Civetwab SSL themselves.
  
 1. Install the [Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
 2. Download latest *civetweb64_setup.msi* (64 bit) or *civetweb32_setup.msi* (32 bit) from [SourceForge](https://sourceforge.net/projects/civetweb/files/)
