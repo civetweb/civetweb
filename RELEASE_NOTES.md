@@ -1,7 +1,7 @@
 Release Notes v1.2 
 ===
 ### Objectives: *Installation Improvements, buildroot, cross compile support*
-The objective of this release is to make installation seemless.
+The objective of this release is to make installation seamless.
 
 Changes
 -------
