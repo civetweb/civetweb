@@ -1,6 +1,6 @@
 config BR2_PACKAGE_CIVETWEB
 	bool "civetweb"
-	depends on BR2_TOOLCHAIN_BUILDROOT_UCLIBC && !BR2_PTHREADS_NONE
+	depends on BR2_TOOLCHAIN_HAS_THREADS
 	help
 	  Full featured embedded web server with LUA support.
 	  
@@ -8,27 +8,14 @@ config BR2_PACKAGE_CIVETWEB
 
 if BR2_PACKAGE_CIVETWEB
 
-	config BR2_CIVETWEB_WITH_IPV6
-		bool "enable IPV6 support"
-		depends on BR2_INET_IPV6
+config BR2_CIVETWEB_WITH_LUA
+	bool "enable LUA support"
+	help
+	  Enable Lua support in Civetweb. Note that this will use a
+	  version of Lua and Sqlite bundled within the Civetweb
+	  sources, and not the packages from Buildroot.
 
-	config BR2_CIVETWEB_WITH_LUA
-		bool "enable LUA support"
-		depends on BR2_LARGEFILE # util-linux
-
-	config BR2_CIVETWEB_WITH_SSL
-		bool "enable SSL support"
-		depends on BR2_PACKAGE_OPENSSL
-
-	comment "civetweb IPV6 support requires IPV6"
-		depends on !BR2_INET_IPV6
-
-	comment "civetweb LUA support requires large file support"
-		depends on !BR2_LARGEFILE
-
-	comment "civetweb SSL support requires OpenSSL"
-		depends on !BR2_PACKAGE_OPENSSL
 endif
 
 comment "civetweb requires a toolchain with PTHREAD support"
-	depends on !BR2_TOOLCHAIN_BUILDROOT_UCLIBC || BR2_PTHREADS_NONE
+	depends on !BR2_TOOLCHAIN_HAS_THREADS

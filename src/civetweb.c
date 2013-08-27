@@ -249,7 +249,7 @@ typedef int SOCKET;
 
 #include "civetweb.h"
 
-#define CIVETWEB_VERSION "1.2"
+#define CIVETWEB_VERSION "1.3"
 #define PASSWORDS_FILE_NAME ".htpasswd"
 #define CGI_ENVIRONMENT_SIZE 4096
 #define MAX_CGI_ENVIR_VARS 64

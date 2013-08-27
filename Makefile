@@ -22,13 +22,14 @@ BINDIR = $(EXEC_PREFIX)/bin
 DATAROOTDIR = $(PREFIX)/share
 DOCDIR = $(DATAROOTDIR)/doc/$(CPROG)
 SYSCONFDIR = $(PREFIX)/etc
+HTMLDIR = $(DOCDIR)
 
 # desired configuration of the document root
 # never assume that the document_root actually
 # exists on the build machine.  When building
 # a chroot, PREFIX if just a directory which
 # later becomes /.
-DOCUMENT_ROOT = $(DOCDIR)
+DOCUMENT_ROOT = $(HTMLDIR)
 PORTS = 8080
 
 BUILD_DIRS += $(BUILD_DIR) $(BUILD_DIR)/src
@@ -140,12 +141,13 @@ ifeq ($(TARGET_OS),LINUX)
 	install -d -m 755 "$(BINDIR)"
 	install -d -m 755  "$(DOCDIR)"
 	install -d -m 755  "$(SYSCONFDIR)"
+	install -d -m 755  "$(HTMLDIR)"
 	install -m 755 $(CPROG) "$(BINDIR)/"
 	install -m 644 resources/civetweb.conf  "$(SYSCONFDIR)/"
 	@sed -i 's#^document_root.*$$#document_root $(DOCUMENT_ROOT)#' "$(SYSCONFDIR)/civetweb.conf"
 	@sed -i 's#^listening_ports.*$$#listening_ports $(PORTS)#' "$(SYSCONFDIR)/civetweb.conf"
-	install -m 644 resources/itworks.html $(DOCDIR)/index.html
-	install -m 644 resources/civetweb_64x64.png $(DOCDIR)/
+	install -m 644 resources/itworks.html $(HTMLDIR)/index.html
+	install -m 644 resources/civetweb_64x64.png $(HTMLDIR)/
 	install -m 644 *.md "$(DOCDIR)"
 endif
 
