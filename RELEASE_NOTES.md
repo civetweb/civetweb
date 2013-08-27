@@ -1,3 +1,15 @@
+Release Notes v1.3 
+===
+### Objectives: *Buildroot Integration
+
+Changes
+-------
+
+- Made option to put initial HTMLDIR in a different place
+- Validated build without SQLITE3 large file support
+- Updated documentation
+- Updated Buildroot config example
+
 Release Notes v1.2 
 ===
 ### Objectives: *Installation Improvements, buildroot, cross compile support*

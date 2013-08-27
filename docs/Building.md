@@ -70,7 +70,9 @@ make build WITH_LUA=1
 | WITH_CPP=1                | build libraries with c++ classes         |
 | CONFIG_FILE=file          | use 'file' as the config file            |
 | CONFIG_FILE2=file         | use 'file' as the backup config file     |
-| DOCUMENT_ROOT=/path       | document root override when installing   |
+| HTMLDIR=/path             | place to install initial web pages       |
+| DOCUMENT_ROOT=/path       | HTMLDIR override, config option, install |
+|                           | nothing is installed here.               |
 | PORTS=8080                | listening ports override when installing |
 | SSL_LIB=libssl.so.0       | use versioned SSL library                |
 | CRYPTO_LIB=libcrypto.so.0 | system versioned CRYPTO library          |
@@ -91,6 +93,7 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | NO_CGI                    | disable CGI support                  |
 | NO_SSL                    | disable SSL functionality            |
 | NO_SSL_DL                 | link against system libssl library   |
+| SQLITE_DISABLE_LFS        | disables large files (LUA only)      |
 
 ## Cross Compiling
 
