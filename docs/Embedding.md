@@ -48,10 +48,10 @@ By default, the server will automatically serve up files like a normal HTTP serv
   - Use contructor options to select the port and document root among other things.
   - Use constructor callbacks to add your own hooks.
 
-LUA Support
+Lua Support
 ------
 
-LUA is a server side include functionality.  Files ending in .la will be processed with LUA.
+Lua is a server side include functionality.  Files ending in .la will be processed with Lua.
 
 ##### Add the following CFLAGS
 

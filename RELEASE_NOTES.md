@@ -44,7 +44,7 @@ Changes
 
 - Reorangized build directories to make them more intuitive
 - Added new build rules for lib and slib with option to include C++ class
-- Upgraded LUA from 5.2.1 to 5.2.2
+- Upgraded Lua from 5.2.1 to 5.2.2
 - Added fallback configuration file path for Linux systems.
     + Good for having a system wide default configuration /usr/local/etc/civetweb.conf
 - Added new C++ abstraction class CivetServer
@@ -63,7 +63,7 @@ Changes
      + Removed yaSSL from the OSX build, not needed.
 - Added new Visual Studio projects for Windows builds.
      + Removed Windows support from Makefiles
-     + Provided additional, examples with LUA, and another with yaSSL. 
+     + Provided additional, examples with Lua, and another with yaSSL. 
 - Changed Zombie Reaping policy to not ignore SIGCHLD.
      + The previous method caused trouble in applciations that spawn children.
 

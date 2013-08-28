@@ -105,7 +105,7 @@ help:
 	@echo "make slib                build a shared library"
 	@echo ""
 	@echo " Make Options"
-	@echo "   WITH_LUA=1            build with LUA support"
+	@echo "   WITH_LUA=1            build with Lua support"
 	@echo "   WITH_DEBUG=1          build with GDB debug support"
 	@echo "   WITH_IPV6=1           with IPV6 support"
 	@echo "   WITH_WEBSOCKET=1      build with web socket support"
