@@ -63,7 +63,7 @@ make build WITH_LUA=1
 
 | Make Options              | Description                              |
 | ------------------------- | ---------------------------------------- |
-| WITH_LUA=1                | build with LUA support                   |
+| WITH_LUA=1                | build with Lua support                   |
 | WITH_DEBUG=1              | build with GDB debug support             |
 | WITH_IPV6=1               | with IPV6 support                        |
 | WITH_WEBSOCKET=1          | build with web socket support            |
@@ -93,7 +93,7 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | NO_CGI                    | disable CGI support                  |
 | NO_SSL                    | disable SSL functionality            |
 | NO_SSL_DL                 | link against system libssl library   |
-| SQLITE_DISABLE_LFS        | disables large files (LUA only)      |
+| SQLITE_DISABLE_LFS        | disables large files (Lua only)      |
 
 ## Cross Compiling
 

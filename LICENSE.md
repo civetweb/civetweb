@@ -31,10 +31,10 @@ Civetweb License
 > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 > THE SOFTWARE.
 
-LUA License
+Lua License
 ------
 
-### Included only if built with LUA support.
+### Included only if built with Lua support.
 
 http://www.lua.org/license.html
 
@@ -49,7 +49,7 @@ http://www.lua.org/license.html
 SQLite3 License
 ------
 
-### Included only if built with LUA support.
+### Included only if built with Lua support.
 
 http://www.sqlite.org/copyright.html
 
@@ -65,7 +65,7 @@ http://www.sqlite.org/copyright.html
 lsqlite3 License
 ------
 
-### Included only if built with LUA support.
+### Included only if built with Lua support.
 
 > lsqlite3                                                              
 > Copyright (C) 2002-2007 Tiago Dionizio, Doug Currie                   
