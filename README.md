@@ -34,7 +34,7 @@ simplicity by carefully selected list of features:
   [MIT license](http://en.wikipedia.org/wiki/MIT_License)
 - Free from copy-left licenses, like GPL, because you should innovate without restrictions.
 - Based on [Mongoose](https://code.google.com/p/mongoose/)
-- Works on Windows, Mac, UNIX, iPhone, Android, and many other platforms
+- Works on Windows, Mac, UNIX, iPhone, Android, Buildroot, and many other platforms
 - Scripting and database support (Lua Server Pages + Sqlite
   which provides ready to go, powerful web development platform in
   one single-click executable with **no dependencies**: forget LAMP!
