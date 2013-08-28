@@ -94,6 +94,10 @@ ifeq ($(TARGET_OS),LINUX)
 	LIBS += -ldl
 endif
 
+ifeq ($(TARGET_OS),LINUX)
+	CAN_INSTALL = 1
+endif
+
 all: build
 
 help:
@@ -136,19 +140,33 @@ help:
 
 build: $(CPROG) $(CXXPROG)
 
-install: build
-ifeq ($(TARGET_OS),LINUX)
-	install -d -m 755 "$(BINDIR)"
+ifeq ($(CAN_INSTALL),1)
+install: $(HTMLDIR)/index.html $(SYSCONFDIR)/civetweb.conf
 	install -d -m 755  "$(DOCDIR)"
-	install -d -m 755  "$(SYSCONFDIR)"
-	install -d -m 755  "$(HTMLDIR)"
+	install -m 644 *.md "$(DOCDIR)"
+	install -d -m 755 "$(BINDIR)"
 	install -m 755 $(CPROG) "$(BINDIR)/"
+
+# Install target we do not want to overwrite
+# as it may be an upgrade
+$(HTMLDIR)/index.html:
+	install -d -m 755  "$(HTMLDIR)"
+	install -m 644 resources/itworks.html $(HTMLDIR)/index.html
+	install -m 644 resources/civetweb_64x64.png $(HTMLDIR)/
+
+# Install target we do not want to overwrite
+# as it may be an upgrade
+$(SYSCONFDIR)/civetweb.conf:
+	install -d -m 755  "$(SYSCONFDIR)"
 	install -m 644 resources/civetweb.conf  "$(SYSCONFDIR)/"
 	@sed -i 's#^document_root.*$$#document_root $(DOCUMENT_ROOT)#' "$(SYSCONFDIR)/civetweb.conf"
 	@sed -i 's#^listening_ports.*$$#listening_ports $(PORTS)#' "$(SYSCONFDIR)/civetweb.conf"
-	install -m 644 resources/itworks.html $(HTMLDIR)/index.html
-	install -m 644 resources/civetweb_64x64.png $(HTMLDIR)/
-	install -m 644 *.md "$(DOCDIR)"
+
+else
+install:
+	@echo "Target not flagged for installation.  Use CAN_INSTALL=1 to force"
+	@echo "As a precaution only LINUX targets are set as installable."
+	@echo "If the target is linux-like, use CAN_INSTALL=1 option."
 endif
 
 lib: lib$(CPROG).a
