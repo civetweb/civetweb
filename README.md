@@ -4,7 +4,7 @@
 Project Mission
 -----------------
 
-Project mission is to provide easy to use, powerful, embeddable web server with an MIT license.
+Project mission is to provide easy to use, powerful, C/C++ embeddable web server with optional CGI, SSL and Lua support and an MIT license.
 
 Where to find the official version?
 -----------------------------------
