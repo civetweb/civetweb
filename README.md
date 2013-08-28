@@ -47,10 +47,14 @@ simplicity by carefully selected list of features:
 - HTTP client capable of sending arbitrary HTTP/HTTPS requests
 
 
-### Other included software
+### Other optionally included software
 
-  - <a href="http://sqlite.org">SQLite embedded database</a>
-  - <a href="http://lua.org">Lua embedded scripting engine</a>
+<a href="http://lua.org">
+![Lua](https://raw.github.com/sunsetbrew/civetweb/master/resources/lua-logo.jpg "Lua Logo")
+</a>
+<a href="http://sqlite.org">
+![Sqlite3](https://raw.github.com/sunsetbrew/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")
+</a>
 
 # Support
 
