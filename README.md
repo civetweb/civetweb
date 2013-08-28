@@ -1,8 +1,13 @@
-# Project Mission
+![Civetweb](https://raw.github.com/sunsetbrew/civetweb/master/resources/civetweb_64x64.png "Civetweb") Civetweb
+=======
+
+Project Mission
+-----------------
 
 Project mission is to provide easy to use, powerful, embeddable web server with an MIT license.
 
-# Where to find the official version?
+Where to find the official version?
+-----------------------------------
 
 End users can download Civetweb at SourceForge
 https://sourceforge.net/projects/civetweb/
@@ -16,7 +21,8 @@ https://github.com/sunsetbrew/civetweb/issues
 Discussion group is at Google Groups
 https://groups.google.com/d/forum/civetweb
 
-# Quick start documentation
+Quick start documentation
+--------------------------
 
 - [docs/Installing.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Installing.md) - Install Guide
 - [docs/UserManual.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/UserManual.md) - End User Guide
@@ -25,7 +31,8 @@ https://groups.google.com/d/forum/civetweb
 - [RELEASE_NOTES.md](https://github.com/sunsetbrew/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
 - [LICENSE.md](https://github.com/sunsetbrew/civetweb/blob/master/LICENSE.md) - Copyright License
 
-# Overview
+Overview
+--------
 
 Civetweb keeps the balance between functionality and
 simplicity by carefully selected list of features:
@@ -56,18 +63,20 @@ simplicity by carefully selected list of features:
 ![Sqlite3](https://raw.github.com/sunsetbrew/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")
 </a>
 
-# Support
+Support
+-------
 
 The original Mongoose project is recommended if support is needed.  However,
 this is very easy to install and use. 
 
-# Contributions
+Contributions
+---------------
 
 Contributions are welcome provided all contributions carry the MIT license.
 
 DO NOT APPLY fixes copied from Mongoose to this project to prevent GPL tainting.
 
-# Author
+### Author
 
 The original Author was Sergey Lyubka.  He still controls the original
 Mongoose project.  However, he has changed or said he would 
