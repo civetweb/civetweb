@@ -153,3 +153,13 @@ void CivetServer::close() {
     uris.clear();
 
 }
+
+int CivetServer::getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)
+{
+	//Maximum cookie length as per microsoft is 4096. http://msdn.microsoft.com/en-us/library/ms178194.aspx
+	char _cookieValue[4096];
+	const char *cookie = mg_get_header(conn, "Cookie");
+	int lRead = mg_get_cookie(cookie, cookieName.c_str(), _cookieValue, sizeof(_cookieValue));
+	cookieValue = std::string(_cookieValue);
+	return lRead;
+}
