@@ -1,3 +1,17 @@
+Release Notes v1.4 (UNDER DEVELOPMENT) 
+===
+### Objectives: *???*
+
+- Added CivetServer::getCookie method (Hariprasad Kamath)
+
+Changes
+-------
+
+- Made option to put initial HTMLDIR in a different place
+- Validated build without SQLITE3 large file support
+- Updated documentation
+- Updated Buildroot config example
+
 Release Notes v1.3 
 ===
 ### Objectives: *Buildroot Integration
