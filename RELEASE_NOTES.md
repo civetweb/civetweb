@@ -15,7 +15,7 @@ Changes
 
 Release Notes v1.3 
 ===
-### Objectives: *Buildroot Integration
+### Objectives: *Buildroot Integration*
 
 Changes
 -------
