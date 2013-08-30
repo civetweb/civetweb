@@ -153,7 +153,7 @@ public:
     CivetHandler *getHandler(const char *uri, unsigned urilen) const;
 	
 	/**
-	 * getCookie(const std::string &cookieName, std::string &cookieValue)
+	 * getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)
 	 * @param conn - the connection information 
 	 * @param cookieName - cookie name to get the value from
 	 * @param cookieValue - cookie value is returned using thiis reference
@@ -162,6 +162,13 @@ public:
 	*/
 	int getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue);
 
+	/**
+	 * getHeader(struct mg_connection *conn, const std::string &headerName)
+	 * @param conn - the connection information 
+	 * @param headerName - header name to get the value from
+	 * @returns a char array whcih contains the header value as string
+	*/
+	const char* getHeader(struct mg_connection *conn, const std::string &headerName);
 protected:
 
     /**
