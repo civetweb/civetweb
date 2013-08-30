@@ -160,6 +160,12 @@ int CivetServer::getCookie(struct mg_connection *conn, const std::string &cookie
 	char _cookieValue[4096];
 	const char *cookie = mg_get_header(conn, "Cookie");
 	int lRead = mg_get_cookie(cookie, cookieName.c_str(), _cookieValue, sizeof(_cookieValue));
-	cookieValue = std::string(_cookieValue);
+	cookieValue.clear();
+	cookieValue.append(_cookieValue);
 	return lRead;
+}
+
+const char* CivetServer::getHeader(struct mg_connection *conn, const std::string &headerName)
+{
+	return mg_get_header(conn, headerName.c_str());
 }
