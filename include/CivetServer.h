@@ -153,10 +153,10 @@ public:
     CivetHandler *getHandler(const char *uri, unsigned urilen) const;
 	
 	/**
-	 * getCookie(const std::string &_cookieName, std::string &_cookieValue)
-	 * @param conn - the 
-	 * @param _cookieName - cookie name to h=get the value from
-	 * @param _cookieValue - cookie value is returned using thiis reference
+	 * getCookie(const std::string &cookieName, std::string &cookieValue)
+	 * @param conn - the connection information 
+	 * @param cookieName - cookie name to get the value from
+	 * @param cookieValue - cookie value is returned using thiis reference
 	 * @puts the cookie value string that matches the cookie name in the _cookieValue string.
 	 * @returns the size of the cookie value string read.
 	*/
