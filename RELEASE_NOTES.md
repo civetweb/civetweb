@@ -3,6 +3,7 @@ Release Notes v1.4 (UNDER DEVELOPMENT)
 ### Objectives: *???*
 
 - Added CivetServer::getCookie method (Hariprasad Kamath)
+- Added CivetServer::getHeader method (Hariprasad Kamath)
 
 Changes
 -------
