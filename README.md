@@ -4,7 +4,8 @@
 Project Mission
 -----------------
 
-Project mission is to provide easy to use, powerful, C/C++ embeddable web server with optional CGI, SSL and Lua support and an MIT license.
+Project mission is to provide easy to use, powerful, C/C++ embeddable web server with optional CGI, SSL and Lua support.
+Civetweb has a MIT license so you can innovate without restrictions.
 
 Where to find the official version?
 -----------------------------------
