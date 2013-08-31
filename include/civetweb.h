@@ -428,6 +428,9 @@ char *mg_md5(char buf[33], ...);
 void mg_cry(struct mg_connection *conn,
                 PRINTF_FORMAT_STRING(const char *fmt), ...) PRINTF_ARGS(2, 3);
 
+// utility method to compare two buffers, case incensitive.
+int mg_strncasecmp(const char *s1, const char *s2, size_t len);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

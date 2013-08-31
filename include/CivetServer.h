@@ -140,7 +140,7 @@ public:
      * @returns the handler that matches the requested URI or 0 if none were found.
      */
     CivetHandler *getHandler(const std::string &uri) const {
-        return getHandler(uri.data(), uri.length());
+        return getHandler(uri.data(), (unsigned int)uri.length());
     }
 
     /**
@@ -151,24 +151,104 @@ public:
      * @returns the handler that matches the requested URI or 0 if none were found.
      */
     CivetHandler *getHandler(const char *uri, unsigned urilen) const;
-	
-	/**
-	 * getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)
-	 * @param conn - the connection information 
-	 * @param cookieName - cookie name to get the value from
-	 * @param cookieValue - cookie value is returned using thiis reference
-	 * @puts the cookie value string that matches the cookie name in the _cookieValue string.
-	 * @returns the size of the cookie value string read.
-	*/
-	int getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue);
+    
+    /**
+     * getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)
+     * @param conn - the connection information 
+     * @param cookieName - cookie name to get the value from
+     * @param cookieValue - cookie value is returned using thiis reference
+     * @puts the cookie value string that matches the cookie name in the _cookieValue string.
+     * @returns the size of the cookie value string read.
+    */
+    static int getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue);
 
-	/**
-	 * getHeader(struct mg_connection *conn, const std::string &headerName)
-	 * @param conn - the connection information 
-	 * @param headerName - header name to get the value from
-	 * @returns a char array whcih contains the header value as string
-	*/
-	const char* getHeader(struct mg_connection *conn, const std::string &headerName);
+    /**
+     * getHeader(struct mg_connection *conn, const std::string &headerName)
+     * @param conn - the connection information 
+     * @param headerName - header name to get the value from
+     * @returns a char array whcih contains the header value as string
+    */
+    static const char* getHeader(struct mg_connection *conn, const std::string &headerName);
+
+    /**
+     * getParam(struct mg_connection *conn, const char *, std::string &, size_t)
+     *
+     * Returns a query paramter contained in the supplied buffer.  The
+     * occurance value is a zero-based index of a particular key name.  This
+     * should nto be confused with the index over all of the keys.
+     *
+     * @param data the query string
+     * @param name the key to search for
+     * @param the destination string
+     * @param occurrence the occurrence of the selected name in the query (0 based).
+     * @return true of key was found
+     */
+    static bool getParam(struct mg_connection *conn, const char *name,
+               std::string &dst, size_t occurrence=0);
+
+    /**
+     * getParam(const std::string &, const char *, std::string &, size_t)
+     *
+     * Returns a query paramter contained in the supplied buffer.  The
+     * occurance value is a zero-based index of a particular key name.  This
+     * should nto be confused with the index over all of the keys.
+     *
+     * @param data the query string
+     * @param name the key to search for
+     * @param the destination string
+     * @param occurrence the occurrence of the selected name in the query (0 based).
+     * @return true of key was found
+     */
+    static bool getParam(const std::string &data, const char *name,
+               std::string &dst, size_t occurrence=0) {
+        return getParam(data.c_str(), data.length(), name, dst, occurrence);
+    }
+
+    /**
+     * getParam(const char *, size_t, const char *, std::string &, size_t)
+     *
+     * Returns a query paramter contained in the supplied buffer.  The
+     * occurance value is a zero-based index of a particular key name.  This
+     * should nto be confused with the index over all of the keys.
+     *
+     * @param data the query string
+     * @param length length of the query string
+     * @param name the key to search for
+     * @param the destination string
+     * @param occurrence the occurrence of the selected name in the query (0 based).
+     * @return true of key was found
+     */
+    static bool getParam(const char *data, size_t data_len, const char *name,
+               std::string &dst, size_t occurrence=0);
+
+
+    /**
+     * urlDecode(const char *, int, std::string &, bool)
+     *
+     * @param src string to be decoded
+     * @param dst destination string
+     * @is_form_url_encoded true if form url encoded
+     *       form-url-encoded data differs from URI encoding in a way that it
+     *       uses '+' as character for space, see RFC 1866 section 8.2.1
+     *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
+     */
+    static void urlDecode(const std::string &src, std::string &dst, bool is_form_url_encoded=true) {
+        urlDecode(src.c_str(), src.length(), dst, is_form_url_encoded);
+    }
+
+    /**
+     * urlDecode(const char *, int, std::string &, bool)
+     *
+     * @param src buffer to be decoded
+     * @param src_len length of buffer to be decoded
+     * @param dst destination string
+     * @is_form_url_encoded true if form url encoded
+     *       form-url-encoded data differs from URI encoding in a way that it
+     *       uses '+' as character for space, see RFC 1866 section 8.2.1
+     *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
+     */
+    static void urlDecode(const char *src, size_t src_len, std::string &dst, bool is_form_url_encoded=true);
+
 protected:
 
     /**
