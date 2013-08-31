@@ -409,6 +409,11 @@ const char *mg_version(void);
 int mg_url_decode(const char *src, int src_len, char *dst,
                   int dst_len, int is_form_url_encoded);
 
+// URL-encode input buffer into destination buffer.
+// returns the length of the resulting buffer or -1
+// is the buffer is too small.
+int mg_url_encode(const char *src, char *dst, size_t dst_len);
+
 // MD5 hash given strings.
 // Buffer 'buf' must be 33 bytes long. Varargs is a NULL terminated list of
 // ASCIIz strings. When function returns, buf will contain human-readable

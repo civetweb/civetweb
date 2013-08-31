@@ -2435,26 +2435,28 @@ static SOCKET conn2(const char *host, int port, int use_ssl,
   return sock;
 }
 
-
-
-void mg_url_encode(const char *src, char *dst, size_t dst_len) {
+int mg_url_encode(const char *src, char *dst, size_t dst_len) {
   static const char *dont_escape = "._-$,;~()";
   static const char *hex = "0123456789abcdef";
+  char *pos = dst;
   const char *end = dst + dst_len - 1;
 
-  for (; *src != '\0' && dst < end; src++, dst++) {
+  for (; *src != '\0' && pos < end; src++, pos++) {
     if (isalnum(*(const unsigned char *) src) ||
         strchr(dont_escape, * (const unsigned char *) src) != NULL) {
-      *dst = *src;
-    } else if (dst + 2 < end) {
-      dst[0] = '%';
-      dst[1] = hex[(* (const unsigned char *) src) >> 4];
-      dst[2] = hex[(* (const unsigned char *) src) & 0xf];
-      dst += 2;
-    }
+      *pos = *src;
+    } else if (pos + 2 < end) {
+      pos[0] = '%';
+      pos[1] = hex[(* (const unsigned char *) src) >> 4];
+      pos[2] = hex[(* (const unsigned char *) src) & 0xf];
+      pos += 2;
+	} else {
+		return -1;
+	}
   }
 
-  *dst = '\0';
+  *pos = '\0';
+  return (*src == '\0') ? (int)(pos - dst) : -1;
 }
 
 static void print_dir_entry(struct de *de) {
