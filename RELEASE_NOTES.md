@@ -4,6 +4,7 @@ Release Notes v1.4 (UNDER DEVELOPMENT)
 
 - Added CivetServer::getParam methods
 - Added CivetServer::urlDecode methods
+- Added CivetServer::urlEncode methods
 - Dealt with compiler warnings and some static analysis hits.
 - Added mg_get_var2() to parse repeated query variables
 - Externalized logging function cry() as mg_cry()

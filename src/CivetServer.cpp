@@ -172,6 +172,11 @@ const char* CivetServer::getHeader(struct mg_connection *conn, const std::string
 }
 
 void
+CivetServer::urlDecode(const char *src, std::string &dst, bool is_form_url_encoded) {
+    urlDecode(src, strlen(src), dst, is_form_url_encoded);
+}
+
+void
 CivetServer::urlDecode(const char *src, size_t src_len, std::string &dst, bool is_form_url_encoded) {
   int i, j, a, b;
 #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
@@ -236,3 +241,27 @@ CivetServer::getParam(const char *data, size_t data_len, const char *name,
   return false;
 }
 
+void
+CivetServer::urlEncode(const char *src, std::string &dst, bool append) {
+    urlEncode(src, strlen(src), dst, append);
+}
+
+void
+CivetServer::urlEncode(const char *src, size_t src_len, std::string &dst, bool append) {
+  static const char *dont_escape = "._-$,;~()";
+  static const char *hex = "0123456789abcdef";
+
+  if (!append)
+      dst.clear();
+
+  for (; src_len > 0; src_len--) {
+    if (isalnum(*(const unsigned char *) src) ||
+        strchr(dont_escape, * (const unsigned char *) src) != NULL) {
+      dst.push_back(*src);
+    } else {
+      dst.push_back('%');
+      dst.push_back(hex[(* (const unsigned char *) src) >> 4]);
+      dst.push_back(hex[(* (const unsigned char *) src) & 0xf]);
+    }
+  }
+}
