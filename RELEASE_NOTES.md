@@ -2,6 +2,7 @@ Release Notes v1.4 (UNDER DEVELOPMENT)
 ===
 ### Objectives: *???*
 
+- Added mg_get_var2() to parse repeated query variables
 - Externalized logging function cry() as mg_cry()
 - Added CivetServer::getCookie method (Hariprasad Kamath)
 - Added CivetServer::getHeader method (Hariprasad Kamath)

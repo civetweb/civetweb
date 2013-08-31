@@ -314,6 +314,31 @@ const char *mg_get_header(const struct mg_connection *, const char *name);
 int mg_get_var(const char *data, size_t data_len,
                const char *var_name, char *dst, size_t dst_len);
 
+// Get a value of particular form variable.
+//
+// Parameters:
+//   data: pointer to form-uri-encoded buffer. This could be either POST data,
+//         or request_info.query_string.
+//   data_len: length of the encoded data.
+//   var_name: variable name to decode from the buffer
+//   dst: destination buffer for the decoded variable
+//   dst_len: length of the destination buffer
+//   occurrence: which occurrence of the variable, 0 is the first, 1 the second...
+//              this makes it possible to parse a query like
+//              b=x&a=y&a=z which will have occurrence values b:0, a:0 and a:1
+//
+// Return:
+//   On success, length of the decoded variable.
+//   On error:
+//      -1 (variable not found).
+//      -2 (destination buffer is NULL, zero length or too small to hold the
+//          decoded variable).
+//
+// Destination buffer is guaranteed to be '\0' - terminated if it is not
+// NULL or zero length.
+int mg_get_var2(const char *data, size_t data_len,
+               const char *var_name, char *dst, size_t dst_len, size_t occurrence);
+
 // Fetch value of certain cookie variable into the destination buffer.
 //
 // Destination buffer is guaranteed to be '\0' - terminated. In case of

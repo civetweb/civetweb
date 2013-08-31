@@ -1724,6 +1724,11 @@ int mg_url_decode(const char *src, int src_len, char *dst,
 
 int mg_get_var(const char *data, size_t data_len, const char *name,
                char *dst, size_t dst_len) {
+   return mg_get_var2(data,data_len,name,dst,dst_len,0);
+}
+
+int mg_get_var2(const char *data, size_t data_len, const char *name,
+               char *dst, size_t dst_len, size_t occurrence) {
   const char *p, *e, *s;
   size_t name_len;
   int len;
@@ -1742,7 +1747,7 @@ int mg_get_var(const char *data, size_t data_len, const char *name,
     // data is "var1=val1&var2=val2...". Find variable first
     for (p = data; p + name_len < e; p++) {
       if ((p == data || p[-1] == '&') && p[name_len] == '=' &&
-          !mg_strncasecmp(name, p, name_len)) {
+          !mg_strncasecmp(name, p, name_len) && 0 == occurrence--) {
 
         // Point p to variable value
         p += name_len + 1;
