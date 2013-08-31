@@ -50,6 +50,10 @@
 #define PATH_MAX FILENAME_MAX
 #endif // __SYMBIAN32__
 
+#ifndef IGNORE_UNUSED_RESULT
+#define IGNORE_UNUSED_RESULT(a) (void)((a) && 1)
+#endif
+
 #ifndef _WIN32_WCE // Some ANSI #includes are not available on Windows CE
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -254,7 +258,9 @@ typedef int SOCKET;
 #define CGI_ENVIRONMENT_SIZE 4096
 #define MAX_CGI_ENVIR_VARS 64
 #define MG_BUF_LEN 8192
+#ifndef MAX_REQUEST_SIZE
 #define MAX_REQUEST_SIZE 16384
+#endif
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 #ifdef _WIN32
@@ -721,7 +727,7 @@ static char * mg_strdup(const char *str) {
 }
 
 static const char *mg_strcasestr(const char *big_str, const char *small_str) {
-  int i, big_len = strlen(big_str), small_len = strlen(small_str);
+  int i, big_len = (int)strlen(big_str), small_len = (int)strlen(small_str);
 
   for (i = 0; i <= big_len - small_len; i++) {
     if (mg_strncasecmp(big_str + i, small_str, small_len) == 0) {
@@ -888,9 +894,9 @@ static int match_prefix(const char *pattern, int pattern_len, const char *str) {
   int i, j, len, res;
 
   if ((or_str = (const char *) memchr(pattern, '|', pattern_len)) != NULL) {
-    res = match_prefix(pattern, or_str - pattern, str);
+    res = match_prefix(pattern, (int)(or_str - pattern), str);
     return res > 0 ? res :
-        match_prefix(or_str + 1, (pattern + pattern_len) - (or_str + 1), str);
+        match_prefix(or_str + 1, (int)((pattern + pattern_len) - (or_str + 1)), str);
   }
 
   i = j = 0;
@@ -1256,7 +1262,7 @@ static int poll(struct pollfd *pfd, int n, int milliseconds) {
     }
   }
 
-  if ((result = select(maxfd + 1, &set, NULL, NULL, &tv)) > 0) {
+  if ((result = select((int)maxfd + 1, &set, NULL, NULL, &tv)) > 0) {
     for (i = 0; i < n; i++) {
       if (FD_ISSET(pfd[i].fd, &set)) {
         pfd[i].revents = POLLIN;
@@ -1364,7 +1370,8 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
 
   (void) CloseHandle(si.hStdOutput);
   (void) CloseHandle(si.hStdInput);
-  (void) CloseHandle(pi.hThread);
+  if (pi.hThread != NULL)
+    (void) CloseHandle(pi.hThread);
 
   return (pid_t) pi.hProcess;
 }
@@ -1570,7 +1577,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len) {
 
     // Return buffered data
     body = conn->buf + conn->request_len + conn->consumed_content;
-    buffered_len = &conn->buf[conn->data_len] - body;
+    buffered_len = (int)(&conn->buf[conn->data_len] - body);
     if (buffered_len > 0) {
       if (len < (size_t) buffered_len) {
         buffered_len = (int) len;
@@ -1760,7 +1767,7 @@ int mg_get_var2(const char *data, size_t data_len, const char *name,
         assert(s >= p);
 
         // Decode variable into destination buffer
-        len = mg_url_decode(p, (size_t)(s - p), dst, dst_len, 1);
+        len = mg_url_decode(p, (int)(s - p), dst, (int)dst_len, 1);
 
         // Redirect error code from -1 to -2 (destination buffer too small).
         if (len == -1) {
@@ -1801,7 +1808,7 @@ int mg_get_cookie(const char *cookie_header, const char *var_name,
           p--;
         }
         if ((size_t) (p - s) < dst_size) {
-          len = p - s;
+          len = (int)(p - s);
           mg_strlcpy(dst, s, (size_t) len + 1);
         } else {
           len = -3;
@@ -1832,7 +1839,7 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
 
   rewrite = conn->ctx->config[REWRITE];
   while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
-    if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
+    if ((match_len = match_prefix(a.ptr, (int) a.len, uri)) > 0) {
       mg_snprintf(conn, buf, buf_len - 1, "%.*s%s", (int) b.len, b.ptr,
                   uri + match_len);
       break;
@@ -1862,7 +1869,7 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     if (*p == '/') {
       *p = '\0';
       if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-                       strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0 &&
+                       (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0 &&
           mg_stat(conn, buf, filep)) {
         // Shift PATH_INFO block one character right, e.g.
         //  "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
@@ -2247,7 +2254,7 @@ static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p) {
     *p += len;
     return len ? eof : NULL;
   } else if (filep->fp != NULL) {
-    return fgets(buf, size, filep->fp);
+    return fgets(buf, (int)size, filep->fp);
   } else {
     return NULL;
   }
@@ -2256,7 +2263,7 @@ static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p) {
 // Authorize against the opened passwords file. Return 1 if authorized.
 static int authorize(struct mg_connection *conn, struct file *filep) {
   struct ah ah;
-  char line[256], f_user[256], ha1[256], f_domain[256], buf[MG_BUF_LEN], *p;
+  char line[256], f_user[256] = "", ha1[256] = "", f_domain[256] = "", buf[MG_BUF_LEN], *p;
 
   if (!parse_auth_header(conn, buf, sizeof(buf), &ah)) {
     return 0;
@@ -2337,7 +2344,7 @@ static int is_authorized_for_put(struct mg_connection *conn) {
 int mg_modify_passwords_file(const char *fname, const char *domain,
                              const char *user, const char *pass) {
   int found;
-  char line[512], u[512], d[512], ha1[33], tmp[PATH_MAX];
+  char line[512], u[512] = "", d[512] ="", ha1[33], tmp[PATH_MAX+1];
   FILE *fp, *fp2;
 
   found = 0;
@@ -2348,7 +2355,8 @@ int mg_modify_passwords_file(const char *fname, const char *domain,
     pass = NULL;
   }
 
-  (void) snprintf(tmp, sizeof(tmp), "%s.tmp", fname);
+  (void) snprintf(tmp, sizeof(tmp) - 1, "%s.tmp", fname);
+  tmp[sizeof(tmp) - 1] = 0;
 
   // Create the file if does not exist
   if ((fp = fopen(fname, "a+")) != NULL) {
@@ -2392,7 +2400,7 @@ int mg_modify_passwords_file(const char *fname, const char *domain,
 
   // Put the temp file in place of real file
   remove(fname);
-  rename(tmp, fname);
+  IGNORE_UNUSED_RESULT(rename(tmp, fname));
 
   return 1;
 }
@@ -2513,8 +2521,8 @@ static int WINCDECL compare_dir_entries(const void *p1, const void *p2) {
 static int must_hide_file(struct mg_connection *conn, const char *path) {
   const char *pw_pattern = "**" PASSWORDS_FILE_NAME "$";
   const char *pattern = conn->ctx->config[HIDE_FILES];
-  return match_prefix(pw_pattern, strlen(pw_pattern), path) > 0 ||
-    (pattern != NULL && match_prefix(pattern, strlen(pattern), path) > 0);
+  return match_prefix(pw_pattern, (int)strlen(pw_pattern), path) > 0 ||
+    (pattern != NULL && match_prefix(pattern, (int)strlen(pattern), path) > 0);
 }
 
 static int scan_directory(struct mg_connection *conn, const char *dir,
@@ -2593,7 +2601,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir) {
     }
     (void) closedir(dirp);
 
-    rmdir(dir);
+    IGNORE_UNUSED_RESULT(rmdir(dir));
   }
 
   return 1;
@@ -2707,7 +2715,7 @@ static void send_file_data(struct mg_connection *conn, struct file *filep,
       }
 
       // Read from file, exit the loop on error
-      if ((num_read = fread(buf, 1, (size_t) to_read, filep->fp)) <= 0) {
+      if ((num_read = (int) fread(buf, 1, (size_t) to_read, filep->fp)) <= 0) {
         break;
       }
 
@@ -2991,7 +2999,7 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
     }
 
     body = conn->buf + conn->request_len + conn->consumed_content;
-    buffered_len = &conn->buf[conn->data_len] - body;
+    buffered_len = (int)(&conn->buf[conn->data_len] - body);
     assert(buffered_len >= 0);
     assert(conn->consumed_content == 0);
 
@@ -3199,9 +3207,9 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 }
 
 static void handle_cgi_request(struct mg_connection *conn, const char *prog) {
-  int headers_len, data_len, i, fdin[2], fdout[2];
+  int headers_len, data_len, i, fdin[2] = { 0, 0 }, fdout[2] = { 0, 0 };
   const char *status, *status_text;
-  char buf[16384], *pbuf, dir[PATH_MAX], *p;
+  char buf[MAX_REQUEST_SIZE], *pbuf, dir[PATH_MAX], *p;
   struct mg_request_info ri;
   struct cgi_env_block blk;
   FILE *in = NULL, *out = NULL;
@@ -3363,7 +3371,7 @@ static int put_dir(struct mg_connection *conn, const char *path) {
   int len, res = 1;
 
   for (s = p = path + 2; (p = strchr(s, '/')) != NULL; s = ++p) {
-    len = p - path;
+    len = (int)(p - path);
     if (len >= (int) sizeof(buf)) {
       res = -1;
       break;
@@ -3499,7 +3507,7 @@ static void do_ssi_include(struct mg_connection *conn, const char *ssi,
   } else {
     fclose_on_exec(&file);
     if (match_prefix(conn->ctx->config[SSI_EXTENSIONS],
-                     strlen(conn->ctx->config[SSI_EXTENSIONS]), path) > 0) {
+                     (int)strlen(conn->ctx->config[SSI_EXTENSIONS]), path) > 0) {
       send_ssi_file(conn, path, &file, include_level + 1);
     } else {
       send_file_data(conn, &file, 0, INT64_MAX);
@@ -3510,7 +3518,7 @@ static void do_ssi_include(struct mg_connection *conn, const char *ssi,
 
 #if !defined(NO_POPEN)
 static void do_ssi_exec(struct mg_connection *conn, char *tag) {
-  char cmd[MG_BUF_LEN];
+  char cmd[MG_BUF_LEN] = "";
   struct file file = STRUCT_FILE_INITIALIZER;
 
   if (sscanf(tag, " \"%[^\"]\"", cmd) != 1) {
@@ -3858,7 +3866,7 @@ static void send_websocket_handshake(struct mg_connection *conn) {
   mg_snprintf(conn, buf, sizeof(buf), "%s%s",
               mg_get_header(conn, "Sec-WebSocket-Key"), magic);
   SHA1Init(&sha_ctx);
-  SHA1Update(&sha_ctx, (unsigned char *) buf, strlen(buf));
+  SHA1Update(&sha_ctx, (unsigned char *) buf, (uint32_t)strlen(buf));
   SHA1Final((unsigned char *) sha, &sha_ctx);
   base64_encode((unsigned char *) sha, sizeof(sha), b64_sha);
   mg_printf(conn, "%s%s%s",
@@ -3887,7 +3895,8 @@ static void read_websocket(struct mg_connection *conn) {
   // data points to the place where the message is stored when passed to the websocket_data
   // callback.  This is either mem on the stack, or a dynamically allocated buffer if it is
   // too large.
-  char mem[4 * 1024], *data;
+  char mem[4096];
+  char *data = mem;
 
   // Loop continuously, reading messages from the socket, invoking the callback,
   // and waiting repeatedly until an error occurs.
@@ -3913,12 +3922,15 @@ static void read_websocket(struct mg_connection *conn) {
     if (header_len > 0) {
       // Allocate space to hold websocket payload
       data = mem;
-      if (data_len > sizeof(mem) && (data = malloc(data_len)) == NULL) {
-        // Allocation failed, exit the loop and then close the connection
-        // TODO: notify user about the failure
-        break;
-      }
-
+	  if (data_len > sizeof(mem)) {
+		  data = (char *)malloc(data_len);
+          if (data == NULL) {
+            // Allocation failed, exit the loop and then close the connection
+            // TODO: notify user about the failure
+            break;
+          }
+	  }
+ 
       // Copy the mask before we shift the queue and destroy it
       if (mask_len > 0) {
         *(uint32_t*)mask = *(uint32_t*)(buf + header_len - mask_len);
@@ -3934,7 +3946,7 @@ static void read_websocket(struct mg_connection *conn) {
         len = body_len - header_len;
         memcpy(data, buf + header_len, len);
         // TODO: handle pull error
-        pull(NULL, conn, data + len, data_len - len);
+        pull(NULL, conn, data + len, (int)(data_len - len));
         conn->data_len = 0;
       } else {
         // Length of the message being read at the front of the queue
@@ -3947,7 +3959,7 @@ static void read_websocket(struct mg_connection *conn) {
         memmove(buf, buf + len, body_len - len);
 
         // Mark the queue as advanced
-        conn->data_len -= len;
+        conn->data_len -= (int)len;
       }
 
       // Apply mask if necessary
@@ -3992,12 +4004,12 @@ int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data,
     // Frame format: http://tools.ietf.org/html/rfc6455#section-5.2
     if (dataLen < 126) {
         // inline 7-bit length field
-        header[1] = dataLen;
+        header[1] = (unsigned char)dataLen;
         headerLen = 2;
     } else if (dataLen <= 0xFFFF) {
         // 16-bit length field
         header[1] = 126;
-        *(uint16_t*)(header + 2) = htons(dataLen);
+        *(uint16_t*)(header + 2) = htons((uint16_t)dataLen);
         headerLen = 4;
     } else {
         // 64-bit length field
@@ -4090,7 +4102,7 @@ static int set_throttle(const char *spec, uint32_t remote_ip, const char *uri) {
       if ((remote_ip & mask) == net) {
         throttle = (int) v;
       }
-    } else if (match_prefix(vec.ptr, vec.len, uri) > 0) {
+    } else if (match_prefix(vec.ptr, (int)vec.len, uri) > 0) {
       throttle = (int) v;
     }
   }
@@ -4138,7 +4150,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir) {
     return num_uploaded_files;
   }
 
-  boundary_len = strlen(boundary);
+  boundary_len = (int)strlen(boundary);
   bl = boundary_len + 4;  // \r\n--<boundary>
   for (;;) {
     // Pull in headers
@@ -4157,8 +4169,8 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir) {
         buf[i] = buf[i + 1] = '\0';
         // TODO(lsm): don't expect filename to be the 3rd field,
         // parse the header properly instead.
-        sscanf(&buf[j], "Content-Disposition: %*s %*s filename=\"%1023[^\"]",
-               fname);
+        IGNORE_UNUSED_RESULT(sscanf(&buf[j], "Content-Disposition: %*s %*s filename=\"%1023[^\"]",
+               fname));
         j = i + 2;
       }
     }
@@ -4342,7 +4354,7 @@ static void handle_request(struct mg_connection *conn) {
 #endif
 #if !defined(NO_CGI)
   } else if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-                          strlen(conn->ctx->config[CGI_EXTENSIONS]),
+                          (int)strlen(conn->ctx->config[CGI_EXTENSIONS]),
                           path) > 0) {
     if (strcmp(ri->request_method, "POST") &&
         strcmp(ri->request_method, "HEAD") &&
@@ -4354,7 +4366,7 @@ static void handle_request(struct mg_connection *conn) {
     }
 #endif // !NO_CGI
   } else if (match_prefix(conn->ctx->config[SSI_EXTENSIONS],
-                          strlen(conn->ctx->config[SSI_EXTENSIONS]),
+                          (int)strlen(conn->ctx->config[SSI_EXTENSIONS]),
                           path) > 0) {
     handle_ssi_file_request(conn, path);
   } else if (is_not_modified(conn, &file)) {
@@ -5168,11 +5180,16 @@ static void *master_thread(void *thread_func_param) {
 
 static void free_context(struct mg_context *ctx) {
   int i;
+  if (ctx == NULL) 
+	  return;
 
   // Deallocate config parameters
   for (i = 0; i < NUM_OPTIONS; i++) {
-    if (ctx->config[i] != NULL)
-      free(ctx->config[i]);
+	if (ctx->config[i] != NULL)
+#ifdef WIN32
+ #pragma warning(suppress: 6001)
+#endif
+	  free(ctx->config[i]);
   }
 
 #ifndef NO_SSL
@@ -5214,6 +5231,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
   WSADATA data;
   WSAStartup(MAKEWORD(2,2), &data);
+#pragma warning(suppress: 28125)
   InitializeCriticalSection(&global_log_file_lock);
 #endif // _WIN32
 
