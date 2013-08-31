@@ -393,6 +393,16 @@ int mg_url_decode(const char *src, int src_len, char *dst,
 char *mg_md5(char buf[33], ...);
 
 
+// Print error message to the opened error log stream.
+// This utilizes the provided logging configuration.
+//   conn: connection
+//   fmt: format string without the line return
+//   ...: variable argument list
+// Example:
+//   mg_cry(conn,"i like %s", "logging");
+void mg_cry(struct mg_connection *conn,
+                PRINTF_FORMAT_STRING(const char *fmt), ...) PRINTF_ARGS(2, 3);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
