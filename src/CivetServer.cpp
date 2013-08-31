@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #ifndef UNUSED_PARAMETER
  #define UNUSED_PARAMETER(x) (void)(x)
@@ -146,7 +147,7 @@ void CivetServer::close() {
         mg_stop (context);
         context = 0;
     }
-    for (int i = handlers.size() - 1; i >= 0; i--) {
+    for (int i = (int) handlers.size() - 1; i >= 0; i--) {
         delete handlers[i];
     }
     handlers.clear();
@@ -156,16 +157,82 @@ void CivetServer::close() {
 
 int CivetServer::getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)
 {
-	//Maximum cookie length as per microsoft is 4096. http://msdn.microsoft.com/en-us/library/ms178194.aspx
-	char _cookieValue[4096];
-	const char *cookie = mg_get_header(conn, "Cookie");
-	int lRead = mg_get_cookie(cookie, cookieName.c_str(), _cookieValue, sizeof(_cookieValue));
-	cookieValue.clear();
-	cookieValue.append(_cookieValue);
-	return lRead;
+    //Maximum cookie length as per microsoft is 4096. http://msdn.microsoft.com/en-us/library/ms178194.aspx
+    char _cookieValue[4096];
+    const char *cookie = mg_get_header(conn, "Cookie");
+    int lRead = mg_get_cookie(cookie, cookieName.c_str(), _cookieValue, sizeof(_cookieValue));
+    cookieValue.clear();
+    cookieValue.append(_cookieValue);
+    return lRead;
 }
 
 const char* CivetServer::getHeader(struct mg_connection *conn, const std::string &headerName)
 {
-	return mg_get_header(conn, headerName.c_str());
+    return mg_get_header(conn, headerName.c_str());
 }
+
+void
+CivetServer::urlDecode(const char *src, size_t src_len, std::string &dst, bool is_form_url_encoded) {
+  int i, j, a, b;
+#define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
+
+  dst.clear();
+  for (i = j = 0; i < (int)src_len; i++, j++) {
+    if (src[i] == '%' && i < (int)src_len - 2 &&
+        isxdigit(* (const unsigned char *) (src + i + 1)) &&
+        isxdigit(* (const unsigned char *) (src + i + 2))) {
+      a = tolower(* (const unsigned char *) (src + i + 1));
+      b = tolower(* (const unsigned char *) (src + i + 2));
+      dst.push_back((char) ((HEXTOI(a) << 4) | HEXTOI(b)));
+      i += 2;
+    } else if (is_form_url_encoded && src[i] == '+') {
+      dst.push_back(' ');
+    } else {
+      dst.push_back(src[i]);
+    }
+  }
+}
+
+bool
+CivetServer::getParam(struct mg_connection *conn, const char *name,
+               std::string &dst, size_t occurrence) {
+        const char *query = mg_get_request_info(conn)->query_string;
+        return getParam(query, strlen(query), name, dst, occurrence);
+}
+
+bool
+CivetServer::getParam(const char *data, size_t data_len, const char *name,
+               std::string &dst, size_t occurrence) {
+  const char *p, *e, *s;
+  size_t name_len;
+
+  dst.clear();
+  if (data == NULL || name == NULL || data_len == 0) {
+      return false;
+  }
+  name_len = strlen(name);
+  e = data + data_len;
+
+  // data is "var1=val1&var2=val2...". Find variable first
+  for (p = data; p + name_len < e; p++) {
+    if ((p == data || p[-1] == '&') && p[name_len] == '=' &&
+        !mg_strncasecmp(name, p, name_len) && 0 == occurrence--) {
+
+      // Point p to variable value
+      p += name_len + 1;
+
+      // Point s to the end of the value
+      s = (const char *) memchr(p, '&', (size_t)(e - p));
+      if (s == NULL) {
+        s = e;
+      }
+      assert(s >= p);
+
+      // Decode variable into destination buffer
+      urlDecode(p, (int)(s - p), dst, true);
+      return true;
+    }
+  }
+  return false;
+}
+

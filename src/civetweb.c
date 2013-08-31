@@ -691,7 +691,7 @@ static int lowercase(const char *s) {
   return tolower(* (const unsigned char *) s);
 }
 
-static int mg_strncasecmp(const char *s1, const char *s2, size_t len) {
+int mg_strncasecmp(const char *s1, const char *s2, size_t len) {
   int diff = 0;
 
   if (len > 0)
