@@ -40,6 +40,28 @@ public:
 	}
 };
 
+class AHandler: public CivetHandler {
+public:
+	bool handleGet(CivetServer *server, struct mg_connection *conn) {
+		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+		mg_printf(conn, "<html><body>");
+		mg_printf(conn, "<h2>This is the A handler!!!</h2>");
+		mg_printf(conn, "</body></html>\n");
+		return true;
+	}
+};
+
+class ABHandler: public CivetHandler {
+public:
+	bool handleGet(CivetServer *server, struct mg_connection *conn) {
+		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+		mg_printf(conn, "<html><body>");
+		mg_printf(conn, "<h2>This is the AB handler!!!</h2>");
+		mg_printf(conn, "</body></html>\n");
+		return true;
+	}
+};
+
 int main(int argc, char *argv[]) {
 
 	const char * options[] = { "document_root", DOCUMENT_ROOT,
@@ -49,6 +71,8 @@ int main(int argc, char *argv[]) {
 
 	server.addHandler(EXAMPLE_URI, new ExampleHandler());
 	server.addHandler(EXIT_URI, new ExitHandler());
+	server.addHandler("/a", new AHandler());
+	server.addHandler("/a/b", new ABHandler());  // going out of order with this to see if it will work.
 
 	printf("Browse files at http://localhost:%s/\n", PORT);
 	printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
