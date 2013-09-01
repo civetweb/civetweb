@@ -26,6 +26,10 @@ dmg:
 	$(MAKE) -C $(TOP) -f Makefile.osx clean package
 
 buildexamples:
+	$(MAKE) -C $(TOP)/examples/embedded_c clean all
+	$(MAKE) -C $(TOP)/examples/embedded_c clean
+	$(MAKE) -C $(TOP)/examples/embedded_cpp clean all
+	$(MAKE) -C $(TOP)/examples/embedded_cpp clean
 	$(MAKE) -C $(TOP)/examples/chat clean all
 	$(MAKE) -C $(TOP)/examples/chat clean
 	$(MAKE) -C $(TOP)/examples/hello clean all
@@ -36,8 +40,6 @@ buildexamples:
 	$(MAKE) -C $(TOP)/examples/upload clean
 	$(MAKE) -C $(TOP)/examples/websocket clean all
 	$(MAKE) -C $(TOP)/examples/websocket clean
-	$(MAKE) -C $(TOP)/examples/embedded_cpp clean all
-	$(MAKE) -C $(TOP)/examples/embedded_cpp clean
 
 buildoptions:
 	$(MAKE) -C $(TOP) clean build

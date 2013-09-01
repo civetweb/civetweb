@@ -19,6 +19,7 @@ Changes
 - Externalized logging function cry() as mg_cry()
 - Added CivetServer::getCookie method (Hariprasad Kamath)
 - Added CivetServer::getHeader method (Hariprasad Kamath)
+- Added new basic C embedding example
 
 Release Notes v1.3 
 ===
