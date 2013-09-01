@@ -20,6 +20,7 @@ Changes
 - Added CivetServer::getCookie method (Hariprasad Kamath)
 - Added CivetServer::getHeader method (Hariprasad Kamath)
 - Added new basic C embedding example
+- Conformed source files to UNIX line endings for consistency.
 
 Release Notes v1.3 
 ===
