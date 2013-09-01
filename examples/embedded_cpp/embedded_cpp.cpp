@@ -78,30 +78,6 @@ int main(int argc, char *argv[]) {
     printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
     printf("Exit at http://localhost:%s%s\n", PORT, EXIT_URI);
 
-#define TEST1 "a=1 1&b=2%202&a=3+3"
-    std::string rtn;
-        std::string back;
-    bool ok;
-    ok = CivetServer::getParam(TEST1,strlen(TEST1),"a",rtn,0); 
-    printf("TEST 1 %s,%d => %s    ok=%d\n", "a", 0, rtn.c_str(), ok?1:0);
-    ok = CivetServer::getParam(TEST1,strlen(TEST1),"a",rtn,1); 
-    printf("TEST 1 %s,%d => %s    ok=%d\n", "a", 1, rtn.c_str(), ok?1:0);
-    ok = CivetServer::getParam(TEST1,strlen(TEST1),"a",rtn,2); 
-    printf("TEST 1 %s,%d => %s    ok=%d\n", "a", 2, rtn.c_str(), ok?1:0);
-    ok = CivetServer::getParam(TEST1,strlen(TEST1),"x",rtn,0); 
-    printf("TEST 1 %s,%d => %s    ok=%d\n", "x", 0, rtn.c_str(), ok?1:0);
-    ok = CivetServer::getParam(TEST1,strlen(TEST1),"b",rtn,0); 
-    printf("TEST 1 %s,%d => %s    ok=%d\n", "b", 0, rtn.c_str(), ok?1:0);
-
-    CivetServer::urlEncode(TEST1,strlen(TEST1),rtn); 
-    CivetServer::urlDecode(rtn,back); 
-    printf("[%s]\n[%s]\n[%s]\n", TEST1, rtn.c_str(), back.c_str());
-
-    char b1[256], b2[256];
-    mg_url_encode(TEST1, b1, 256);
-    mg_url_decode(b1, 256, b2,256,1);
-    printf("[%s]\n[%s]\n[%s]\n", TEST1, b1, b2);
-
     while (!exitNow) {
 #ifdef _WIN32
         Sleep(1000);
