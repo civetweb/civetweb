@@ -4323,6 +4323,10 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
 	}
 
 	tmp_rh = (struct mg_request_handler_info *)malloc(sizeof(struct mg_request_handler_info));
+	if (tmp_rh == NULL) {
+		mg_cry(fc(ctx), "%s", "Cannot create new request handler struct, OOM");
+		return;
+	}
 	tmp_rh->uri = mg_strdup(uri);
 	tmp_rh->uri_len = strlen(uri);
 	tmp_rh->handler = handler;
