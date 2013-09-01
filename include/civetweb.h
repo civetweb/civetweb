@@ -185,10 +185,17 @@ typedef int (* mg_request_handler)(struct mg_connection *conn, void *cbdata);
 //
 // Sets or removes a URI mapping for a request handler.
 //
-// URI's are ordered and partcial URI's are supported. For example,
-// consider two URIs in order: /a/b and /a; /a matches
-// /a, /a/b matches /a/b, /a/c matches /a.  Reversing the order to
-// /a and /a/b; /a matches /a/b, /a/b matches /a. /a/c matches /a.
+// URI's are ordered and prefixed URI's are supported. For example,
+// consider two URIs in order: 
+//     /a/b then /a
+//         /a   matches /a 
+//         /a/b matches /a/b
+//         /a/c matches /a  
+//   Reversing the order:
+//     /a then /a/b
+//         /a   matches /a
+//         /a/b matches /a
+//         /a/c matches /a
 //
 // Parameters:
 //    ctx: server context
