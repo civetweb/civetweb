@@ -1,7 +1,12 @@
 Release Notes v1.4 (UNDER DEVELOPMENT) 
 ===
 ### Objectives: *???*
+The ma
 
+- Added mg_set_request_handler() which provides a URI mapping for callbacks.
+   This is a new alternative to overriding callbacks.begin_request.
+- Externalized mg_url_encode()
+- Externalized mg_strncasecmp() for utiliy
 - Added CivetServer::getParam methods
 - Added CivetServer::urlDecode methods
 - Added CivetServer::urlEncode methods
