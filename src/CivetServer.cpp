@@ -190,7 +190,7 @@ CivetServer::urlEncode(const char *src, size_t src_len, std::string &dst, bool a
   if (!append)
       dst.clear();
 
-  for (; src_len > 0; src_len--) {
+  for (; src_len > 0; src++, src_len--) {
     if (isalnum(*(const unsigned char *) src) ||
         strchr(dont_escape, * (const unsigned char *) src) != NULL) {
       dst.push_back(*src);
