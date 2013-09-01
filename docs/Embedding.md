@@ -36,16 +36,16 @@ Quick Start
 By default, the server will automatically serve up files like a normal HTTP server.  An embedded server is most likely going to overload this functionality.
 
 ### C
-  - Use mg_start() to start the server.
-  - Use mg_stop() to stop the server.
-  - Use mg_set_request_handler() to easily add your own request handlers.
-  - Use mg_start() *options* to select the port and document root among other things.
-  - Use mg_start() *callbacks* to add your own hooks.  The *begin_request* callback is almost always what is needed.
+  - Use ```mg_start()``` to start the server.
+      - Use *options* to select the port and document root among other things.
+      - Use *callbacks* to add your own hooks.
+  - Use ```mg_set_request_handler()``` to easily add your own request handlers.
+  - Use ```mg_stop()``` to stop the server.
 
 ### C++
   - Create CivetHandlers for each URI.
-  - Register the handlers with CivertServer::addHandler()
-  - CivetServer starts on contruction and stops on destruction.
+  - Register the handlers with ```CivertServer::addHandler()```
+  - ```CivetServer``` starts on contruction and stops on destruction.
   - Use contructor *options* to select the port and document root among other things.
   - Use constructor *callbacks* to add your own hooks.
 
