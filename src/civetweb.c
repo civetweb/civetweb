@@ -4279,30 +4279,42 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index) {
 
 void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata) {
 	struct mg_request_handler_info *tmp_rh, *lastref = 0;
+	size_t urilen = strlen(uri);
 
 	// first see it the uri exists
 	for (tmp_rh = ctx->request_handlers; 
 		tmp_rh != NULL && strcmp(uri, tmp_rh->uri); 
 		lastref = tmp_rh, tmp_rh = tmp_rh->next)
-		;
+	{
+		// first try for an exact match
+		if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
+			// already there...
 
-    if (tmp_rh != NULL) {
-		// already there...
-
-		if (handler != NULL) {
-			// change this entry
-			tmp_rh->handler = handler;
-			tmp_rh->cbdata = cbdata;
-		} else {
-			// remove this entry
-			if (lastref != NULL)
-				lastref->next = tmp_rh->next;
-			else
-				ctx->request_handlers = tmp_rh->next;
-			free(tmp_rh->uri);
-			free(tmp_rh);
+			if (handler != NULL) {
+				// change this entry
+				tmp_rh->handler = handler;
+				tmp_rh->cbdata = cbdata;
+			} else {
+				// remove this entry
+				if (lastref != NULL)
+					lastref->next = tmp_rh->next;
+				else
+					ctx->request_handlers = tmp_rh->next;
+				free(tmp_rh->uri);
+				free(tmp_rh);
+			}
+			return;
 		}
-		return;
+
+		// next try for a partial match, we will accept uri/something
+		if (tmp_rh->uri_len < urilen
+				&& uri[tmp_rh->uri_len] == '/'
+				&& memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0) {
+				// if there is a partical match this new entry MUST go BEFORE
+				// the current position otherwise it will never be matched.
+				break;
+		}
+
 	}
 
 	if (handler == NULL) {
@@ -4315,12 +4327,14 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
 	tmp_rh->uri_len = strlen(uri);
 	tmp_rh->handler = handler;
 	tmp_rh->cbdata = cbdata;
-	tmp_rh->next = NULL;
 
-	if (lastref == NULL)
+	if (lastref == NULL) {
+		tmp_rh->next = ctx->request_handlers;
 		ctx->request_handlers = tmp_rh;
-	else
+	} else {
+		tmp_rh->next = lastref->next;
 		lastref->next = tmp_rh;
+	}
 
 }
 
