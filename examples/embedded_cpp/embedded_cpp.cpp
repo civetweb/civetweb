@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     server.addHandler(EXAMPLE_URI, new ExampleHandler());
     server.addHandler(EXIT_URI, new ExitHandler());
     server.addHandler("/a", new AHandler());
-    server.addHandler("/a/b", new ABHandler());  // going out of order with this to see if it will work.
+    server.addHandler("/a/b", new ABHandler());
 
     printf("Browse files at http://localhost:%s/\n", PORT);
     printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);

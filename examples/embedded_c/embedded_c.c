@@ -3,7 +3,7 @@
 * License http://opensource.org/licenses/mit-license.php MIT License
 */
 
-// Simple example program on how to use Embedded C++ interface.
+// Simple example program on how to use Embedded C interface.
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     mg_set_request_handler(ctx,EXAMPLE_URI, ExampleHandler,0);
     mg_set_request_handler(ctx,EXIT_URI, ExitHandler,0);
     mg_set_request_handler(ctx,"/a", AHandler,0);
-    mg_set_request_handler(ctx,"/a/b", ABHandler,0);  // going out of order with this to see if it will work.
+    mg_set_request_handler(ctx,"/a/b", ABHandler,0);
 
     printf("Browse files at http://localhost:%s/\n", PORT);
     printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
