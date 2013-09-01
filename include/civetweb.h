@@ -171,11 +171,11 @@ void mg_stop(struct mg_context *);
 // mg_request_handler
 //
 // Called when a new request comes in.  This callback is URI based
-// and configured with mg_sethandler().
+// and configured with mg_set_request_handler().
 //
 // Parameters:
 //    conn: current connection information.
-//    cbdata: the callback data configured with mg_sethandler().
+//    cbdata: the callback data configured with mg_set_request_handler().
 // Returns:
 //    0: the handler could not handle the request, so fall through.
 //    1: the handler processed the request.
