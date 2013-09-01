@@ -10,34 +10,39 @@
 #include <assert.h>
 
 #ifndef UNUSED_PARAMETER
- #define UNUSED_PARAMETER(x) (void)(x)
+#define UNUSED_PARAMETER(x) (void)(x)
 #endif
 
-bool CivetHandler::handleGet(CivetServer *server, struct mg_connection *conn) {
+bool CivetHandler::handleGet(CivetServer *server, struct mg_connection *conn)
+{
     UNUSED_PARAMETER(server);
     UNUSED_PARAMETER(conn);
     return false;
 }
 
-bool CivetHandler::handlePost(CivetServer *server, struct mg_connection *conn) {
+bool CivetHandler::handlePost(CivetServer *server, struct mg_connection *conn)
+{
     UNUSED_PARAMETER(server);
     UNUSED_PARAMETER(conn);
     return false;
 }
 
-bool CivetHandler::handlePut(CivetServer *server, struct mg_connection *conn) {
+bool CivetHandler::handlePut(CivetServer *server, struct mg_connection *conn)
+{
     UNUSED_PARAMETER(server);
     UNUSED_PARAMETER(conn);
     return false;
 }
 
-bool CivetHandler::handleDelete(CivetServer *server, struct mg_connection *conn) {
+bool CivetHandler::handleDelete(CivetServer *server, struct mg_connection *conn)
+{
     UNUSED_PARAMETER(server);
     UNUSED_PARAMETER(conn);
     return false;
 }
 
-int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata) {
+int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
+{
     struct mg_request_info *request_info = mg_get_request_info(conn);
     CivetServer *me = (CivetServer*) (request_info->user_data);
     CivetHandler *handler = (CivetHandler *)cbdata;
@@ -59,8 +64,9 @@ int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata) {
 }
 
 CivetServer::CivetServer(const char **options,
-        const struct mg_callbacks *_callbacks) :
-        context(0) {
+                         const struct mg_callbacks *_callbacks) :
+    context(0)
+{
 
 
     if (_callbacks) {
@@ -72,19 +78,23 @@ CivetServer::CivetServer(const char **options,
     }
 }
 
-CivetServer::~CivetServer() {
+CivetServer::~CivetServer()
+{
     close();
 }
 
-void CivetServer::addHandler(const std::string &uri, CivetHandler *handler) {
+void CivetServer::addHandler(const std::string &uri, CivetHandler *handler)
+{
     mg_set_request_handler(context, uri.c_str(), requestHandler, handler);
 }
 
-void CivetServer::removeHandler(const std::string &uri) {
+void CivetServer::removeHandler(const std::string &uri)
+{
     mg_set_request_handler(context, uri.c_str(), NULL, NULL);
 }
 
-void CivetServer::close() {
+void CivetServer::close()
+{
     if (context) {
         mg_stop (context);
         context = 0;
@@ -108,96 +118,102 @@ const char* CivetServer::getHeader(struct mg_connection *conn, const std::string
 }
 
 void
-CivetServer::urlDecode(const char *src, std::string &dst, bool is_form_url_encoded) {
+CivetServer::urlDecode(const char *src, std::string &dst, bool is_form_url_encoded)
+{
     urlDecode(src, strlen(src), dst, is_form_url_encoded);
 }
 
 void
-CivetServer::urlDecode(const char *src, size_t src_len, std::string &dst, bool is_form_url_encoded) {
-  int i, j, a, b;
+CivetServer::urlDecode(const char *src, size_t src_len, std::string &dst, bool is_form_url_encoded)
+{
+    int i, j, a, b;
 #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
 
-  dst.clear();
-  for (i = j = 0; i < (int)src_len; i++, j++) {
-    if (src[i] == '%' && i < (int)src_len - 2 &&
-        isxdigit(* (const unsigned char *) (src + i + 1)) &&
-        isxdigit(* (const unsigned char *) (src + i + 2))) {
-      a = tolower(* (const unsigned char *) (src + i + 1));
-      b = tolower(* (const unsigned char *) (src + i + 2));
-      dst.push_back((char) ((HEXTOI(a) << 4) | HEXTOI(b)));
-      i += 2;
-    } else if (is_form_url_encoded && src[i] == '+') {
-      dst.push_back(' ');
-    } else {
-      dst.push_back(src[i]);
+    dst.clear();
+    for (i = j = 0; i < (int)src_len; i++, j++) {
+        if (src[i] == '%' && i < (int)src_len - 2 &&
+            isxdigit(* (const unsigned char *) (src + i + 1)) &&
+            isxdigit(* (const unsigned char *) (src + i + 2))) {
+            a = tolower(* (const unsigned char *) (src + i + 1));
+            b = tolower(* (const unsigned char *) (src + i + 2));
+            dst.push_back((char) ((HEXTOI(a) << 4) | HEXTOI(b)));
+            i += 2;
+        } else if (is_form_url_encoded && src[i] == '+') {
+            dst.push_back(' ');
+        } else {
+            dst.push_back(src[i]);
+        }
     }
-  }
 }
 
 bool
 CivetServer::getParam(struct mg_connection *conn, const char *name,
-               std::string &dst, size_t occurrence) {
-        const char *query = mg_get_request_info(conn)->query_string;
-        return getParam(query, strlen(query), name, dst, occurrence);
+                      std::string &dst, size_t occurrence)
+{
+    const char *query = mg_get_request_info(conn)->query_string;
+    return getParam(query, strlen(query), name, dst, occurrence);
 }
 
 bool
 CivetServer::getParam(const char *data, size_t data_len, const char *name,
-               std::string &dst, size_t occurrence) {
-  const char *p, *e, *s;
-  size_t name_len;
+                      std::string &dst, size_t occurrence)
+{
+    const char *p, *e, *s;
+    size_t name_len;
 
-  dst.clear();
-  if (data == NULL || name == NULL || data_len == 0) {
-      return false;
-  }
-  name_len = strlen(name);
-  e = data + data_len;
-
-  // data is "var1=val1&var2=val2...". Find variable first
-  for (p = data; p + name_len < e; p++) {
-    if ((p == data || p[-1] == '&') && p[name_len] == '=' &&
-        !mg_strncasecmp(name, p, name_len) && 0 == occurrence--) {
-
-      // Point p to variable value
-      p += name_len + 1;
-
-      // Point s to the end of the value
-      s = (const char *) memchr(p, '&', (size_t)(e - p));
-      if (s == NULL) {
-        s = e;
-      }
-      assert(s >= p);
-
-      // Decode variable into destination buffer
-      urlDecode(p, (int)(s - p), dst, true);
-      return true;
+    dst.clear();
+    if (data == NULL || name == NULL || data_len == 0) {
+        return false;
     }
-  }
-  return false;
+    name_len = strlen(name);
+    e = data + data_len;
+
+    // data is "var1=val1&var2=val2...". Find variable first
+    for (p = data; p + name_len < e; p++) {
+        if ((p == data || p[-1] == '&') && p[name_len] == '=' &&
+            !mg_strncasecmp(name, p, name_len) && 0 == occurrence--) {
+
+            // Point p to variable value
+            p += name_len + 1;
+
+            // Point s to the end of the value
+            s = (const char *) memchr(p, '&', (size_t)(e - p));
+            if (s == NULL) {
+                s = e;
+            }
+            assert(s >= p);
+
+            // Decode variable into destination buffer
+            urlDecode(p, (int)(s - p), dst, true);
+            return true;
+        }
+    }
+    return false;
 }
 
 void
-CivetServer::urlEncode(const char *src, std::string &dst, bool append) {
+CivetServer::urlEncode(const char *src, std::string &dst, bool append)
+{
     urlEncode(src, strlen(src), dst, append);
 }
 
 void
-CivetServer::urlEncode(const char *src, size_t src_len, std::string &dst, bool append) {
-  static const char *dont_escape = "._-$,;~()";
-  static const char *hex = "0123456789abcdef";
+CivetServer::urlEncode(const char *src, size_t src_len, std::string &dst, bool append)
+{
+    static const char *dont_escape = "._-$,;~()";
+    static const char *hex = "0123456789abcdef";
 
-  if (!append)
-      dst.clear();
+    if (!append)
+        dst.clear();
 
-  for (; src_len > 0; src++, src_len--) {
-    if (isalnum(*(const unsigned char *) src) ||
-        strchr(dont_escape, * (const unsigned char *) src) != NULL) {
-      dst.push_back(*src);
-    } else {
-      dst.push_back('%');
-      dst.push_back(hex[(* (const unsigned char *) src) >> 4]);
-      dst.push_back(hex[(* (const unsigned char *) src) & 0xf]);
+    for (; src_len > 0; src++, src_len--) {
+        if (isalnum(*(const unsigned char *) src) ||
+            strchr(dont_escape, * (const unsigned char *) src) != NULL) {
+            dst.push_back(*src);
+        } else {
+            dst.push_back('%');
+            dst.push_back(hex[(* (const unsigned char *) src) >> 4]);
+            dst.push_back(hex[(* (const unsigned char *) src) & 0xf]);
+        }
     }
-  }
 }

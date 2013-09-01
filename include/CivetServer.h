@@ -17,7 +17,8 @@ class CivetServer; // forward declaration
  * Basic interface for a URI request handler.  Handlers implementations
  * must be reentrant.
  */
-class CivetHandler {
+class CivetHandler
+{
 public:
 
     /**
@@ -69,7 +70,8 @@ public:
  *
  * Basic class for embedded web server.  This has a URL mapping built-in.
  */
-class CivetServer {
+class CivetServer
+{
 public:
 
     /**
@@ -133,7 +135,7 @@ public:
 
     /**
      * getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)
-     * @param conn - the connection information 
+     * @param conn - the connection information
      * @param cookieName - cookie name to get the value from
      * @param cookieValue - cookie value is returned using thiis reference
      * @puts the cookie value string that matches the cookie name in the _cookieValue string.
@@ -143,7 +145,7 @@ public:
 
     /**
      * getHeader(struct mg_connection *conn, const std::string &headerName)
-     * @param conn - the connection information 
+     * @param conn - the connection information
      * @param headerName - header name to get the value from
      * @returns a char array whcih contains the header value as string
     */
@@ -163,7 +165,7 @@ public:
      * @return true of key was found
      */
     static bool getParam(struct mg_connection *conn, const char *name,
-               std::string &dst, size_t occurrence=0);
+                         std::string &dst, size_t occurrence=0);
 
     /**
      * getParam(const std::string &, const char *, std::string &, size_t)
@@ -179,7 +181,7 @@ public:
      * @return true of key was found
      */
     static bool getParam(const std::string &data, const char *name,
-               std::string &dst, size_t occurrence=0) {
+                         std::string &dst, size_t occurrence=0) {
         return getParam(data.c_str(), data.length(), name, dst, occurrence);
     }
 
@@ -198,7 +200,7 @@ public:
      * @return true of key was found
      */
     static bool getParam(const char *data, size_t data_len, const char *name,
-               std::string &dst, size_t occurrence=0);
+                         std::string &dst, size_t occurrence=0);
 
 
     /**
