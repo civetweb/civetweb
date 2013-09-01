@@ -7,10 +7,10 @@
     <ROW Property="ARPPRODUCTICON" Value="systray.exe" Type="8"/>
     <ROW Property="ARPURLINFOABOUT" Value="https://sourceforge.net/projects/civetweb/"/>
     <ROW Property="Manufacturer" Value="No Face Press, LLC"/>
-    <ROW Property="ProductCode" Value="1033:{64943D6D-EA29-4E81-B21B-2818B8EC08BA} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{8BEB0659-799F-4A07-BBAB-1FDB59664D78} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="Civetweb"/>
-    <ROW Property="ProductVersion" Value="1.2.0" Type="32"/>
+    <ROW Property="ProductVersion" Value="1.5.0" Type="32"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{2899A100-4182-4BF0-814A-2FBA957BE3B1}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME#x64_Release:Windows 9x/ME" ValueLocId="-"/>
