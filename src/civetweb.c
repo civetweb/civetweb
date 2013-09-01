@@ -494,6 +494,14 @@ static const char *config_options[] = {
   NULL
 };
 
+struct mg_request_handler_info {
+	char *uri;
+	size_t uri_len;
+	mg_request_handler handler;
+	void *cbdata;
+	struct mg_request_handler_info *next;
+};
+
 struct mg_context {
   volatile int stop_flag;         // Should we stop event loop
   SSL_CTX *ssl_ctx;               // SSL context
@@ -513,6 +521,9 @@ struct mg_context {
   volatile int sq_tail;      // Tail of the socket queue
   pthread_cond_t sq_full;    // Signaled when socket is produced
   pthread_cond_t sq_empty;   // Signaled when socket is consumed
+
+  // linked list of uri handlers
+  struct mg_request_handler_info *request_handlers;
 };
 
 struct mg_connection {
@@ -4265,6 +4276,81 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index) {
                               lsa.sin.sin_port), conn->request_info.uri);
 }
 
+
+void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata) {
+	struct mg_request_handler_info *tmp_rh, *lastref = 0;
+
+	// first see it the uri exists
+	for (tmp_rh = ctx->request_handlers; 
+		tmp_rh != NULL && strcmp(uri, tmp_rh->uri); 
+		lastref = tmp_rh, tmp_rh = tmp_rh->next)
+		;
+
+    if (tmp_rh != NULL) {
+		// already there...
+
+		if (handler != NULL) {
+			// change this entry
+			tmp_rh->handler = handler;
+			tmp_rh->cbdata = cbdata;
+		} else {
+			// remove this entry
+			if (lastref != NULL)
+				lastref->next = tmp_rh->next;
+			else
+				ctx->request_handlers = tmp_rh->next;
+			free(tmp_rh->uri);
+			free(tmp_rh);
+		}
+		return;
+	}
+
+	if (handler == NULL) {
+		// no handler to set, this was a remove request
+		return;
+	}
+
+	tmp_rh = (struct mg_request_handler_info *)malloc(sizeof(struct mg_request_handler_info));
+	tmp_rh->uri = mg_strdup(uri);
+	tmp_rh->uri_len = strlen(uri);
+	tmp_rh->handler = handler;
+	tmp_rh->cbdata = cbdata;
+	tmp_rh->next = NULL;
+
+	if (lastref == NULL)
+		ctx->request_handlers = tmp_rh;
+	else
+		lastref->next = tmp_rh;
+
+}
+
+static int use_request_handler(struct mg_connection *conn) {
+	struct mg_request_info *request_info = mg_get_request_info(conn);
+	const char *uri = request_info->uri;
+	size_t urilen = strlen(uri);
+	struct mg_request_handler_info *tmp_rh = conn->ctx->request_handlers;
+
+    for (; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
+
+		// first try for an exact match
+		if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
+			return tmp_rh->handler(conn, tmp_rh->cbdata);
+		}
+
+		// next try for a partial match
+		// we will accept uri/something
+		if (tmp_rh->uri_len < urilen
+				&& uri[tmp_rh->uri_len] == '/'
+				&& memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0) {
+
+			return tmp_rh->handler(conn, tmp_rh->cbdata);
+		}
+
+    }
+
+    return 0; // none found
+}
+
 // This is the heart of the Civetweb's logic.
 // This function is called when the request is read, parsed and validated,
 // and Civetweb must decide what action to take: serve a file, or
@@ -4296,6 +4382,9 @@ static void handle_request(struct mg_connection *conn) {
     send_authorization_request(conn);
   } else if (conn->ctx->callbacks.begin_request != NULL &&
       conn->ctx->callbacks.begin_request(conn)) {
+    // Do nothing, callback has served the request
+  } else if (conn->ctx->request_handlers != NULL &&
+      use_request_handler(conn)) {
     // Do nothing, callback has served the request
 #if defined(USE_WEBSOCKET)
   } else if (is_websocket_request(conn)) {
@@ -5182,6 +5271,8 @@ static void *master_thread(void *thread_func_param) {
 
 static void free_context(struct mg_context *ctx) {
   int i;
+  struct mg_request_handler_info *tmp_rh;
+
   if (ctx == NULL) 
 	  return;
 
@@ -5192,6 +5283,14 @@ static void free_context(struct mg_context *ctx) {
  #pragma warning(suppress: 6001)
 #endif
 	  free(ctx->config[i]);
+  }
+
+  // Deallocate request handlers
+  while (ctx->request_handlers) {
+    tmp_rh = ctx->request_handlers;
+	ctx->request_handlers = tmp_rh->next;
+	free(tmp_rh->uri);
+	free(tmp_rh);
   }
 
 #ifndef NO_SSL
@@ -5244,6 +5343,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
   }
   ctx->callbacks = *callbacks;
   ctx->user_data = user_data;
+  ctx->request_handlers = 0;
 
   while (options && (name = *options++) != NULL) {
     if ((i = get_option_index(name)) == -1) {

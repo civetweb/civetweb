@@ -168,6 +168,36 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 // threads are stopped. Context pointer becomes invalid.
 void mg_stop(struct mg_context *);
 
+// mg_request_handler
+//
+// Called when a new request comes in.  This callback is URI based
+// and configured with mg_sethandler().
+//
+// Parameters:
+//    conn: current connection information.
+//    cbdata: the callback data configured with mg_sethandler().
+// Returns:
+//    0: the handler could not handle the request, so fall through.
+//    1: the handler processed the request.
+typedef int (* mg_request_handler)(struct mg_connection *conn, void *cbdata);
+
+// mg_set_request_handler
+//
+// Sets or removes a URI mapping for a request handler.
+//
+// URI's are ordered and partcial URI's are supported. For example,
+// consider two URIs in order: /a/b and /a; /a matches
+// /a, /a/b matches /a/b, /a/c matches /a.  Reversing the order to
+// /a and /a/b; /a matches /a/b, /a/b matches /a. /a/c matches /a.
+//
+// Parameters:
+//    ctx: server context
+//    uri: the URI to configure
+//    handler: the callback handler to use when the URI is requested.
+//             If NULL, the URI will be removed.
+//    cbdata: the callback data to give to the handler when it s requested.
+void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata);
+
 
 // Get the value of particular configuration parameter.
 // The value returned is read-only. Civetweb does not allow changing

@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 	server.addHandler(EXIT_URI, new ExitHandler());
 
 	printf("Browse files at http://localhost:%s/\n", PORT);
-	printf("Run example at http://localhost:%s%s\n", PORT, EXIT_URI);
+	printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
 	printf("Exit at http://localhost:%s%s\n", PORT, EXIT_URI);
 
 	while (!exitNow) {

@@ -37,109 +37,51 @@ bool CivetHandler::handleDelete(CivetServer *server, struct mg_connection *conn)
     return false;
 }
 
-int CivetServer::begin_request_callback(struct mg_connection *conn) {
+int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata) {
     struct mg_request_info *request_info = mg_get_request_info(conn);
-
-    if (!request_info->user_data)
-        return 0;
-
     CivetServer *me = (CivetServer*) (request_info->user_data);
+    CivetHandler *handler = (CivetHandler *)cbdata;
 
-    if (me->handleRequest(conn)) {
-        return 1; // Mark as processed
-    }
-
-    return 0;
-}
-
-bool CivetServer::handleRequest(struct mg_connection *conn) {
-    struct mg_request_info *request_info = mg_get_request_info(conn);
-
-    CivetHandler *handler = getHandler(request_info->uri);
     if (handler) {
         if (strcmp(request_info->request_method, "GET") == 0) {
-            return handler->handleGet(this, conn);
+            return handler->handleGet(me, conn) ? 1 : 0;
         } else if (strcmp(request_info->request_method, "POST") == 0) {
-            return handler->handlePost(this, conn);
+            return handler->handlePost(me, conn) ? 1 : 0;
         } else if (strcmp(request_info->request_method, "PUT") == 0) {
-            return !handler->handlePost(this, conn);
+            return !handler->handlePut(me, conn) ? 1 : 0;
         } else if (strcmp(request_info->request_method, "DELETE") == 0) {
-            return !handler->handlePost(this, conn);
+            return !handler->handleDelete(me, conn) ? 1 : 0;
         }
     }
 
-    return false; // No handler found
+    return 0; // No handler found
+
 }
 
 CivetServer::CivetServer(const char **options,
         const struct mg_callbacks *_callbacks) :
         context(0) {
 
-    struct mg_callbacks callbacks;
 
     if (_callbacks) {
-        memcpy(&callbacks, _callbacks, sizeof(callbacks));
+        context = mg_start(_callbacks, this, options);
     } else {
+        struct mg_callbacks callbacks;
         memset(&callbacks, 0, sizeof(callbacks));
+        context = mg_start(&callbacks, this, options);
     }
-    callbacks.begin_request = &begin_request_callback;
-
-    context = mg_start(&callbacks, this, options);
 }
 
 CivetServer::~CivetServer() {
     close();
 }
 
-CivetHandler *CivetServer::getHandler(const char *uri, unsigned urilen) const {
-
-    for (unsigned index = 0; index < uris.size(); index++) {
-        const std::string &handlerURI = uris[index];
-
-        // first try for an exact match
-        if (handlerURI == uri) {
-            return handlers[index];
-        }
-
-        // next try for a partial match
-        // we will accept uri/something
-        if (handlerURI.length() < urilen
-                && uri[handlerURI.length()] == '/'
-                && handlerURI.compare(0, handlerURI.length(), uri, handlerURI.length()) == 0) {
-
-            return handlers[index];
-        }
-    }
-
-    return 0; // none found
-
-}
-
 void CivetServer::addHandler(const std::string &uri, CivetHandler *handler) {
-    int index = getIndex(uri);
-    if (index < 0) {
-        uris.push_back(uri);
-        handlers.push_back(handler);
-    } else if (handlers[index] != handler) {
-        delete handlers[index];
-        handlers[index] = handler;
-    }
+    mg_set_request_handler(context, uri.c_str(), requestHandler, handler);
 }
 
 void CivetServer::removeHandler(const std::string &uri) {
-    int index = getIndex(uri);
-    if (index >= 0) {
-        uris.erase(uris.begin() + index, uris.begin() + index + 1);
-        handlers.erase(handlers.begin() + index, handlers.begin() + index + 1);
-    }
-}
-
-int CivetServer::getIndex(const std::string &uri) const {
-    for (unsigned index = 0; index < uris.size(); index++) {
-        if (uris[index].compare(uri) == 0)
-            return index;
-    }
-    return -1;
+    mg_set_request_handler(context, uri.c_str(), NULL, NULL);
 }
 
 void CivetServer::close() {
@@ -147,12 +89,6 @@ void CivetServer::close() {
         mg_stop (context);
         context = 0;
     }
-    for (int i = (int) handlers.size() - 1; i >= 0; i--) {
-        delete handlers[i];
-    }
-    handlers.clear();
-    uris.clear();
-
 }
 
 int CivetServer::getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)
