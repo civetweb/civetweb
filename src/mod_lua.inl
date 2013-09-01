@@ -244,7 +244,7 @@ static int lsp_include(lua_State *L)
 static int lsp_cry(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
-    cry(conn, "%s", lua_tostring(L, -1));
+    mg_cry(conn, "%s", lua_tostring(L, -1));
     return 0;
 }
 
