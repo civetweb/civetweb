@@ -1,4 +1,4 @@
-Release Notes v1.4 (UNDER DEVELOPMENT) 
+Release Notes v1.4
 ===
 ### Objectives: *New URI handler interface, feature enhancements, C++ extensions*
 The main idea behind this release is to bring about API consistency. All changes
