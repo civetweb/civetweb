@@ -38,15 +38,16 @@ By default, the server will automatically serve up files like a normal HTTP serv
 ### C
   - Use mg_start() to start the server.
   - Use mg_stop() to stop the server.
-  - Use mg_start() options to select the port and document root among other things.
-  - Use mg_start() callbacks to add your own hooks.  The *begin_request* callback is almost always what is needed.
+  - Use mg_set_request_handler() to easily add your own request handlers.
+  - Use mg_start() *options* to select the port and document root among other things.
+  - Use mg_start() *callbacks* to add your own hooks.  The *begin_request* callback is almost always what is needed.
 
 ### C++
   - Create CivetHandlers for each URI.
   - Register the handlers with CivertServer::addHandler()
   - CivetServer starts on contruction and stops on destruction.
-  - Use contructor options to select the port and document root among other things.
-  - Use constructor callbacks to add your own hooks.
+  - Use contructor *options* to select the port and document root among other things.
+  - Use constructor *callbacks* to add your own hooks.
 
 Lua Support
 ------
