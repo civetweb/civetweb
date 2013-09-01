@@ -21,6 +21,7 @@ Changes
 - Added CivetServer::getHeader method (Hariprasad Kamath)
 - Added new basic C embedding example
 - Conformed source files to UNIX line endings for consistency.
+- Unified the coding style to improve reability.
 
 Release Notes v1.3 
 ===

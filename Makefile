@@ -207,4 +207,10 @@ $(BUILD_DIR)/%.o : %.cpp
 $(BUILD_DIR)/%.o : %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
+# This rules is used to keep the code formatted in a reasonable manor
+# For this to work astyle must be installed and in the path
+# http://sourceforge.net/projects/astyle
+indent:
+	astyle --suffix=none --style=linux --indent=spaces=4 --lineend=linux  include/*.h src/*.c src/*.cpp src/*.inl examples/*/*.c  examples/*/*.cpp
+
 .PHONY: all help build install clean lib so

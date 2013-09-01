@@ -21,24 +21,27 @@
 #define EXIT_URI "/exit"
 int exitNow = 0;
 
-int ExampleHandler(struct mg_connection *conn, void *cbdata) {
+int ExampleHandler(struct mg_connection *conn, void *cbdata)
+{
     mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
     mg_printf(conn, "<html><body>");
     mg_printf(conn, "<h2>This is example text!!!</h2>");
     mg_printf(conn, "<p>To exit <a href=\"%s\">click here</a></p>",
-        EXIT_URI);
+              EXIT_URI);
     mg_printf(conn, "</body></html>\n");
     return 1;
 }
 
-int ExitHandler(struct mg_connection *conn, void *cbdata) {
+int ExitHandler(struct mg_connection *conn, void *cbdata)
+{
     mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
     mg_printf(conn, "Bye!\n");
     exitNow = 1;
     return 1;
 }
 
-int AHandler(struct mg_connection *conn, void *cbdata) {
+int AHandler(struct mg_connection *conn, void *cbdata)
+{
     mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
     mg_printf(conn, "<html><body>");
     mg_printf(conn, "<h2>This is the A handler!!!</h2>");
@@ -46,7 +49,8 @@ int AHandler(struct mg_connection *conn, void *cbdata) {
     return 1;
 }
 
-int ABHandler(struct mg_connection *conn, void *cbdata) {
+int ABHandler(struct mg_connection *conn, void *cbdata)
+{
     mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
     mg_printf(conn, "<html><body>");
     mg_printf(conn, "<h2>This is the AB handler!!!</h2>");
@@ -55,10 +59,12 @@ int ABHandler(struct mg_connection *conn, void *cbdata) {
 }
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 
     const char * options[] = { "document_root", DOCUMENT_ROOT,
-        "listening_ports", PORT, 0 };
+                               "listening_ports", PORT, 0
+                             };
     struct mg_callbacks callbacks;
     struct mg_context *ctx;
 
