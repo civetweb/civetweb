@@ -1,3 +1,13 @@
+Release Notes v1.5 (UNDER DEVELOPMENT)
+===
+### Objectives: *TBD*
+In planning.
+
+Changes
+-------
+
+- Updated version numbers.
+
 Release Notes v1.4
 ===
 ### Objectives: *New URI handler interface, feature enhancements, C++ extensions*
