@@ -1,7 +1,11 @@
 Release Notes v1.4 (UNDER DEVELOPMENT) 
 ===
-### Objectives: *???*
-The ma
+### Objectives: *New URI handler interface, feature enhancements, C++ extensions*
+The main idea behind this release is to bring about API consistency. All changes
+are backward compatible and have been kept to a minimum.
+
+Changes
+-------
 
 - Added mg_set_request_handler() which provides a URI mapping for callbacks.
    This is a new alternative to overriding callbacks.begin_request.
@@ -15,14 +19,6 @@ The ma
 - Externalized logging function cry() as mg_cry()
 - Added CivetServer::getCookie method (Hariprasad Kamath)
 - Added CivetServer::getHeader method (Hariprasad Kamath)
-
-Changes
--------
-
-- Made option to put initial HTMLDIR in a different place
-- Validated build without SQLITE3 large file support
-- Updated documentation
-- Updated Buildroot config example
 
 Release Notes v1.3 
 ===
