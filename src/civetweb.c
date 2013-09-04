@@ -1346,7 +1346,7 @@ static int poll(struct pollfd *pfd, int n, int milliseconds)
 }
 #endif // HAVE_POLL
 
-static void set_close_on_exec(SOCKET sock, struct mg_connection *conn)
+static void set_close_on_exec(SOCKET sock, struct mg_connection *conn /* may be null */)
 {
     (void) conn; /* Unused. */
     (void) SetHandleInformation((HANDLE) sock, HANDLE_FLAG_INHERIT, 0);
@@ -1536,11 +1536,12 @@ static int mg_stat(struct mg_connection *conn, const char *path,
     return filep->membuf != NULL || filep->modification_time != (time_t) 0;
 }
 
-static void set_close_on_exec(int fd, struct mg_connection *conn)
+static void set_close_on_exec(int fd, struct mg_connection *conn /* may be null */)
 {
     if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0) {
-        mg_cry(conn, "%s: fcntl(F_SETFD FD_CLOEXEC) failed: %s",
-               __func__, strerror(ERRNO));
+        if (conn)
+            mg_cry(conn, "%s: fcntl(F_SETFD FD_CLOEXEC) failed: %s",
+                   __func__, strerror(ERRNO));
     }
 }
 
@@ -2632,7 +2633,7 @@ int mg_modify_passwords_file(const char *fname, const char *domain,
     return 1;
 }
 
-static SOCKET conn2(struct mg_context *ctx, const char *host, int port,
+static SOCKET conn2(struct mg_context *ctx  /* may be null */, const char *host, int port,
                     int use_ssl, char *ebuf, size_t ebuf_len)
 {
     struct sockaddr_in sain;

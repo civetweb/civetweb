@@ -115,7 +115,7 @@ static int lsp_connect(lua_State *L)
     SOCKET sock;
 
     if (lua_isstring(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
-        sock = conn2(lua_tostring(L, -3), (int) lua_tonumber(L, -2),
+        sock = conn2(NULL, lua_tostring(L, -3), (int) lua_tonumber(L, -2),
                      (int) lua_tonumber(L, -1), ebuf, sizeof(ebuf));
         if (sock == INVALID_SOCKET) {
             return luaL_error(L, ebuf);

@@ -113,7 +113,7 @@ public:
      * Adds a URI handler.  If there is existing URI handler, it will
      * be replaced with this one.
      *
-     * URI's are ordered and prefix (REST) URI's are supported. 
+     * URI's are ordered and prefix (REST) URI's are supported.
      *
      *  @param uri - URI to match.
      *  @param handler - handler instance to use.  This will be free'ed
