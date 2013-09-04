@@ -6,6 +6,7 @@ In planning.
 Changes
 -------
 
+- Replaced Windows AdvancedInstaller with Inno Setup to solve install problems.
 - Fixed support URL's in civetweb.c (Daniel Oaks)
 - Allow port number to be zero to use a random free port (F-Secure Corporation)
 - Wait for threads to finish when stopping for a clean shutdown (F-Secure Corporation)
