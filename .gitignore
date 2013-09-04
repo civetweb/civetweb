@@ -2,8 +2,12 @@
 civetweb
 libcivetweb.a
 libcivetweb.so
+*-cache
 out
 *.dmg
+*.msi
+*.exe
+Output
 
 #################
 ## Eclipse
