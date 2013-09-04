@@ -92,7 +92,7 @@ static void die(const char *fmt, ...)
     char msg[200];
 
     va_start(ap, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, ap);
+    (void) vsnprintf(msg, sizeof(msg), fmt, ap);
     va_end(ap);
 
 #if defined(_WIN32)
@@ -176,9 +176,12 @@ static void create_config_file(const char *path)
 
 static char *sdup(const char *str)
 {
+    size_t len;
     char *p;
-    if ((p = (char *) malloc(strlen(str) + 1)) != NULL) {
-        strcpy(p, str);
+
+    len = strlen(str) + 1;
+    if ((p = (char *) malloc(len)) != NULL) {
+        memcpy(p, str, len);
     }
     return p;
 }
