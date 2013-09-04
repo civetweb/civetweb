@@ -6,6 +6,7 @@ In planning.
 Changes
 -------
 
+- Fixed support URL's in civetweb.c (Daniel Oaks)
 - Allow port number to be zero to use a random free port (F-Secure Corporation)
 - Wait for threads to finish when stopping for a clean shutdown (F-Secure Corporation)
 - More static analysis fixes against Coverity tool (F-Secure Corporation)
