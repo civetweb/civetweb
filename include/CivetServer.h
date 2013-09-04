@@ -113,10 +113,7 @@ public:
      * Adds a URI handler.  If there is existing URI handler, it will
      * be replaced with this one.
      *
-     * URI's are ordered and partcial URI's are supported. For example,
-     * consider two URIs in order: /a/b and /a; /a matches
-     *  /a, /a/b matches /a/b, /a/c matches /a.  Reversing the order to
-     *  /a and /a/b; /a matches /a/b, /a/b matches /a. /a/c matches /a.
+     * URI's are ordered and prefix (REST) URI's are supported. 
      *
      *  @param uri - URI to match.
      *  @param handler - handler instance to use.  This will be free'ed
