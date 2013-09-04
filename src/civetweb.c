@@ -2800,7 +2800,7 @@ static int scan_directory(struct mg_connection *conn, const char *dir,
             // garbage and strftime() will segfault later on in
             // print_dir_entry(). memset is required only if mg_stat()
             // fails. For more details, see
-            // http://code.google.com/p/civetweb/issues/detail?id=79
+            // http://code.google.com/p/mongoose/issues/detail?id=79
             memset(&de.file, 0, sizeof(de.file));
             if (!mg_stat(conn, path, &de.file)) {
                 mg_cry(conn, "%s: mg_stat(%s) failed: %s",
@@ -2840,7 +2840,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
             // garbage and strftime() will segfault later on in
             // print_dir_entry(). memset is required only if mg_stat()
             // fails. For more details, see
-            // http://code.google.com/p/civetweb/issues/detail?id=79
+            // http://code.google.com/p/mongoose/issues/detail?id=79
             memset(&de.file, 0, sizeof(de.file));
             if (!mg_stat(conn, path, &de.file)) {
                 mg_cry(conn, "%s: mg_stat(%s) failed: %s",
