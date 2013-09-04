@@ -3590,7 +3590,7 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
                         (unsigned int) buflen);
         goto done;
     }
-    headers_len = read_request(out, conn, buf, buflen, &data_len);
+    headers_len = read_request(out, conn, buf, (int) buflen, &data_len);
     if (headers_len <= 0) {
         send_http_error(conn, 500, http_500_error,
                         "CGI program sent malformed or too big (>%u bytes) "

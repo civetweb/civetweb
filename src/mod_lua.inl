@@ -90,7 +90,7 @@ static int lsp_sock_send(lua_State *L)
         lua_getfield(L, -2, "sock");
         sock = (int) lua_tonumber(L, -1);
         while (sent < len) {
-            if ((n = send(sock, buf + sent, len - sent, 0)) <= 0) {
+            if ((n = send(sock, buf + sent, (int)(len - sent), 0)) <= 0) {
                 break;
             }
             sent += n;
@@ -121,7 +121,7 @@ static int lsp_connect(lua_State *L)
             return luaL_error(L, ebuf);
         } else {
             lua_newtable(L);
-            reg_int(L, "sock", sock);
+            reg_int(L, "sock", (int) sock);
             reg_string(L, "host", lua_tostring(L, -4));
             luaL_getmetatable(L, LUASOCKET);
             lua_setmetatable(L, -2);
