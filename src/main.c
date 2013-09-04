@@ -24,6 +24,10 @@
 #define _XOPEN_SOURCE 600  // For PATH_MAX on linux
 #endif
 
+#ifndef IGNORE_UNUSED_RESULT
+#define IGNORE_UNUSED_RESULT(a) (void)((a) && 1)
+#endif
+
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +45,9 @@
 #include <windows.h>
 #include <winsvc.h>
 #include <shlobj.h>
+
+#define getcwd(a,b) _getcwd(a,b)
+extern char *_getcwd(char *buf, size_t size);
 
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -69,7 +76,7 @@
 
 static int exit_flag;
 static char server_name[40];        // Set by init_server_name()
-static char config_file[PATH_MAX];  // Set by process_command_line_arguments()
+static char config_file[PATH_MAX] = "";  // Set by process_command_line_arguments()
 static struct mg_context *ctx;      // Set by start_civetweb()
 
 #if !defined(CONFIG_FILE)
@@ -89,10 +96,11 @@ static void WINCDECL signal_handler(int sig_num)
 static void die(const char *fmt, ...)
 {
     va_list ap;
-    char msg[200];
+    char msg[200] = "";
 
     va_start(ap, fmt);
-    (void) vsnprintf(msg, sizeof(msg), fmt, ap);
+    (void) vsnprintf(msg, sizeof(msg) -1, fmt, ap);
+    msg[sizeof(msg)-1] = 0;
     va_end(ap);
 
 #if defined(_WIN32)
@@ -220,10 +228,12 @@ static void process_command_line_arguments(char *argv[], char **options)
         cmd_line_opts_start = 2;
     } else if ((p = strrchr(argv[0], DIRSEP)) == NULL) {
         // No command line flags specified. Look where binary lives
-        snprintf(config_file, sizeof(config_file), "%s", CONFIG_FILE);
+        snprintf(config_file, sizeof(config_file)-1, "%s", CONFIG_FILE);
+        config_file[sizeof(config_file)-1] = 0;
     } else {
-        snprintf(config_file, sizeof(config_file), "%.*s%c%s",
+        snprintf(config_file, sizeof(config_file)-1, "%.*s%c%s",
                  (int) (p - argv[0]), argv[0], DIRSEP, CONFIG_FILE);
+        config_file[sizeof(config_file)-1] = 0;
     }
 
     fp = fopen(config_file, "r");
@@ -335,7 +345,7 @@ static void verify_existence(char **options, const char *option_name,
 static void set_absolute_path(char *options[], const char *option_name,
                               const char *path_to_civetweb_exe)
 {
-    char path[PATH_MAX], abs[PATH_MAX], *option_value;
+    char path[PATH_MAX] = "", abs[PATH_MAX] = "", *option_value;
     const char *p;
 
     // Check whether option is already set
@@ -350,15 +360,16 @@ static void set_absolute_path(char *options[], const char *option_name,
         if ((p = strrchr(path_to_civetweb_exe, DIRSEP)) == NULL) {
             getcwd(path, sizeof(path));
         } else {
-            snprintf(path, sizeof(path), "%.*s", (int) (p - path_to_civetweb_exe),
+            snprintf(path, sizeof(path)-1, "%.*s", (int) (p - path_to_civetweb_exe),
                      path_to_civetweb_exe);
+            path[sizeof(path)-1] = 0;
         }
 
         strncat(path, "/", sizeof(path) - 1);
         strncat(path, option_value, sizeof(path) - 1);
 
         // Absolutize the path, and set the option
-        abs_path(path, abs, sizeof(abs));
+        IGNORE_UNUSED_RESULT(abs_path(path, abs, sizeof(abs)));
         set_option(options, option_name, abs);
     }
 }
@@ -516,7 +527,7 @@ static int is_numeric_options(const char *option_name)
 
 static void save_config(HWND hDlg, FILE *fp)
 {
-    char value[2000];
+    char value[2000] = "";
     const char **options, *name, *default_value;
     int i, id;
 
@@ -526,8 +537,9 @@ static void save_config(HWND hDlg, FILE *fp)
         name = options[i * 2];
         id = ID_CONTROLS + i;
         if (is_boolean_option(name)) {
-            snprintf(value, sizeof(value), "%s",
+            snprintf(value, sizeof(value)-1, "%s",
                      IsDlgButtonChecked(hDlg, id) ? "yes" : "no");
+            value[sizeof(value)-1] = 0;
         } else {
             GetDlgItemText(hDlg, id, value, sizeof(value));
         }
@@ -763,7 +775,7 @@ static int manage_service(int action)
     static const char *service_name = "Civetweb";
     SC_HANDLE hSCM = NULL, hService = NULL;
     SERVICE_DESCRIPTION descr = {server_name};
-    char path[PATH_MAX + 20];  // Path to executable plus magic argument
+    char path[PATH_MAX + 20] = "";  // Path to executable plus magic argument
     int success = 1;
 
     if ((hSCM = OpenSCManager(NULL, NULL, action == ID_INSTALL_SERVICE ?
@@ -771,9 +783,10 @@ static int manage_service(int action)
         success = 0;
         show_error();
     } else if (action == ID_INSTALL_SERVICE) {
-        GetModuleFileName(NULL, path, sizeof(path));
-        strncat(path, " ", sizeof(path));
-        strncat(path, service_magic_argument, sizeof(path));
+        path[sizeof(path)-1] = 0;
+        GetModuleFileName(NULL, path, sizeof(path)-1);
+        strncat(path, " ", sizeof(path)-1);
+        strncat(path, service_magic_argument, sizeof(path)-1);
         hService = CreateService(hSCM, service_name, service_name,
                                  SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
                                  SERVICE_AUTO_START, SERVICE_ERROR_NORMAL,
@@ -793,8 +806,10 @@ static int manage_service(int action)
         success = 0;
     }
 
-    CloseServiceHandle(hService);
-    CloseServiceHandle(hSCM);
+    if (hService)
+        CloseServiceHandle(hService);
+    if (hSCM)
+        CloseServiceHandle(hSCM);
 
     return success;
 }
@@ -854,8 +869,9 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
             AppendMenu(hMenu, MF_STRING | MF_GRAYED, ID_SEPARATOR, server_name);
             AppendMenu(hMenu, MF_SEPARATOR, ID_SEPARATOR, "");
             service_installed = manage_service(0);
-            snprintf(buf, sizeof(buf), "NT service: %s installed",
+            snprintf(buf, sizeof(buf)-1, "NT service: %s installed",
                      service_installed ? "" : "not");
+            buf[sizeof(buf)-1] = 0;
             AppendMenu(hMenu, MF_STRING | MF_GRAYED, ID_SEPARATOR, buf);
             AppendMenu(hMenu, MF_STRING | (service_installed ? MF_GRAYED : 0),
                        ID_INSTALL_SERVICE, "Install service");
@@ -921,7 +937,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
     }
 
     // Return the WM_QUIT value.
-    return msg.wParam;
+    return (int) msg.wParam;
 }
 #elif defined(USE_COCOA)
 #import <Cocoa/Cocoa.h>
