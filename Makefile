@@ -45,6 +45,8 @@ CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT)
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG_ENABLED
+else
+  CFLAGS += -DNDEBUG
 endif
 
 ifdef WITH_CPP
