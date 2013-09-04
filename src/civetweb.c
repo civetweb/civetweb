@@ -2364,7 +2364,9 @@ static void open_auth_file(struct mg_connection *conn, const char *path,
     if (gpass != NULL) {
         // Use global passwords file
         if (!mg_fopen(conn, gpass, "r", filep)) {
+#ifdef DEBUG
             mg_cry(conn, "fopen(%s): %s", gpass, strerror(ERRNO));
+#endif
         }
         // Important: using local struct file to test path for is_directory flag.
         // If filep is used, mg_stat() makes it appear as if auth file was opened.
@@ -2372,7 +2374,9 @@ static void open_auth_file(struct mg_connection *conn, const char *path,
         mg_snprintf(conn, name, sizeof(name), "%s%c%s",
                     path, '/', PASSWORDS_FILE_NAME);
         if (!mg_fopen(conn, name, "r", filep)) {
+#ifdef DEBUG
             mg_cry(conn, "fopen(%s): %s", name, strerror(ERRNO));
+#endif
         }
     } else {
         // Try to find .htpasswd in requested directory.
@@ -2382,7 +2386,9 @@ static void open_auth_file(struct mg_connection *conn, const char *path,
         mg_snprintf(conn, name, sizeof(name), "%.*s%c%s",
                     (int) (e - p), p, '/', PASSWORDS_FILE_NAME);
         if (!mg_fopen(conn, name, "r", filep)) {
+#ifdef DEBUG
             mg_cry(conn, "fopen(%s): %s", name, strerror(ERRNO));
+#endif
         }
     }
 }
@@ -2796,7 +2802,7 @@ static int scan_directory(struct mg_connection *conn, const char *dir,
             // fails. For more details, see
             // http://code.google.com/p/civetweb/issues/detail?id=79
             memset(&de.file, 0, sizeof(de.file));
-            if (mg_stat(conn, path, &de.file) != 0) {
+            if (!mg_stat(conn, path, &de.file)) {
                 mg_cry(conn, "%s: mg_stat(%s) failed: %s",
                        __func__, path, strerror(ERRNO));
             }
@@ -2836,7 +2842,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
             // fails. For more details, see
             // http://code.google.com/p/civetweb/issues/detail?id=79
             memset(&de.file, 0, sizeof(de.file));
-            if (mg_stat(conn, path, &de.file) != 0) {
+            if (!mg_stat(conn, path, &de.file)) {
                 mg_cry(conn, "%s: mg_stat(%s) failed: %s",
                        __func__, path, strerror(ERRNO));
             }
@@ -2962,7 +2968,7 @@ static void send_file_data(struct mg_connection *conn, struct file *filep,
         }
         mg_write(conn, filep->membuf + offset, (size_t) len);
     } else if (len > 0 && filep->fp != NULL) {
-        if (fseeko(filep->fp, offset, SEEK_SET) != 0) {
+        if (offset > 0 && fseeko(filep->fp, offset, SEEK_SET) != 0) {
             mg_cry(conn, "%s: fseeko() failed: %s",
                    __func__, strerror(ERRNO));
         }
@@ -3704,7 +3710,7 @@ static void mkcol(struct mg_connection *conn, const char *path)
     int rc, body_len;
     struct de de;
     memset(&de.file, 0, sizeof(de.file));
-    if (mg_stat(conn, path, &de.file) != 0) {
+    if (!mg_stat(conn, path, &de.file)) {
         mg_cry(conn, "%s: mg_stat(%s) failed: %s",
                __func__, path, strerror(ERRNO));
     }
