@@ -83,7 +83,7 @@ static int lsp_sock_send(lua_State *L)
 {
     const char *buf;
     size_t len, sent = 0;
-    int n, sock;
+    int n = 0, sock;
 
     if (lua_gettop(L) > 1 && lua_istable(L, -2) && lua_isstring(L, -1)) {
         buf = lua_tolstring(L, -1, &len);
@@ -312,8 +312,8 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L)
     lua_setglobal(L, "mg");
 
     // Register default mg.onerror function
-    luaL_dostring(L, "mg.onerror = function(e) mg.write('\\nLua error:\\n', "
-                  "debug.traceback(e, 1)) end");
+    IGNORE_UNUSED_RESULT(luaL_dostring(L, "mg.onerror = function(e) mg.write('\\nLua error:\\n', "
+                                       "debug.traceback(e, 1)) end"));
 }
 
 static int lua_error_handler(lua_State *L)
@@ -326,10 +326,10 @@ static int lua_error_handler(lua_State *L)
         lua_pushstring(L, error_msg);
         lua_pushliteral(L, "\n");
         lua_call(L, 2, 0);
-        luaL_dostring(L, "mg.write(debug.traceback(), '\\n')");
+        IGNORE_UNUSED_RESULT(luaL_dostring(L, "mg.write(debug.traceback(), '\\n')"));
     } else {
         printf("Lua error: [%s]\n", error_msg);
-        luaL_dostring(L, "print(debug.traceback(), '\\n')");
+        IGNORE_UNUSED_RESULT(luaL_dostring(L, "print(debug.traceback(), '\\n')"));
     }
     // TODO(lsm): leave the stack balanced
 
