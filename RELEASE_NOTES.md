@@ -6,6 +6,10 @@ In planning.
 Changes
 -------
 
+- Allow port number to be zero to use a random free port (F-Secure Corporation)
+- Wait for threads to finish when stopping for a clean shutdown (F-Secure Corporation)
+- More static analysis fixes against Coverity tool (F-Secure Corporation)
+- Travis automated build testing support added (Daniel Oaks)
 - Updated version numbers.
 
 Release Notes v1.4
