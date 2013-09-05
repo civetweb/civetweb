@@ -358,7 +358,7 @@ static void set_absolute_path(char *options[], const char *option_name,
         // be the relative directory for everything.
         // Extract civetweb executable directory into path.
         if ((p = strrchr(path_to_civetweb_exe, DIRSEP)) == NULL) {
-            getcwd(path, sizeof(path));
+            IGNORE_UNUSED_RESULT(getcwd(path, sizeof(path)));
         } else {
             snprintf(path, sizeof(path)-1, "%.*s", (int) (p - path_to_civetweb_exe),
                      path_to_civetweb_exe);
