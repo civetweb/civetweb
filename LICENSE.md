@@ -11,8 +11,11 @@ Civetweb License
 ### Included with all features.
 
 > Copyright (c) 2004-2013 Sergey Lyubka
+>
 > Copyright (c) 2013 No Face Press, LLC (Thomas Davis)
-> 
+>
+> Copyright (c) 2013 F-Secure Corporation
+>
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
 > in the Software without restriction, including without limitation the rights
