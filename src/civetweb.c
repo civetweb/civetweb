@@ -5327,6 +5327,11 @@ static void close_socket_gracefully(struct mg_connection *conn)
 static void close_connection(struct mg_connection *conn)
 {
     mg_lock(conn);
+
+    // call the connection_close callback if assigned
+    if (conn->ctx->callbacks.connection_close != NULL)
+        conn->ctx->callbacks.connection_close(conn);
+
     conn->must_close = 1;
 
 #ifndef NO_SSL
