@@ -61,7 +61,7 @@ ifdef WITH_LUA
 endif
 
 ifdef WITH_IPV6
-  CFLAGS += -DDSE_IPV6
+  CFLAGS += -DUSE_IPV6
 endif
 
 ifdef WITH_WEBSOCKET
