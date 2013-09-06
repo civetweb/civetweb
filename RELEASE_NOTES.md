@@ -6,6 +6,8 @@ In planning.
 Changes
 -------
 
+- Fixed the getcwd() warning (William Greathouse)
+- Implemented the connection_close() callback (William Greathouse)
 - Replaced Windows AdvancedInstaller with Inno Setup to solve install problems.
 - Fixed support URL's in civetweb.c (Daniel Oaks)
 - Allow port number to be zero to use a random free port (F-Secure Corporation)
