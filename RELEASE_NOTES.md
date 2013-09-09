@@ -6,7 +6,7 @@ In planning.
 Changes
 -------
 
-- Simple WebSocket example using asynchronous server messages (William Greathouse)
+- Added WebSocket example using asynchronous server messages (William Greathouse)
 - Fixed the getcwd() warning (William Greathouse)
 - Implemented the connection_close() callback (William Greathouse)
 - Replaced Windows AdvancedInstaller with Inno Setup to solve install problems.
