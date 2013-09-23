@@ -1,6 +1,3 @@
-Contributor Credits
------------
-
 # Civitweb Contributors
 
 Daniel Oaks
