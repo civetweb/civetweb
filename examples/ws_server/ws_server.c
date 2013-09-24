@@ -54,30 +54,25 @@ static void *ws_server_thread(void *parm)
     fprintf(stderr, "ws_server_thread %d\n", wsd);
 
     /* Send initial meter updates */
-    for (i=0; meter[i].period != 0; i++)
-    {
+    for (i=0; meter[i].period != 0; i++) {
         if (meter[i].value >= meter[i].limit)
             meter[i].value = 0;
         if (meter[i].value >= meter[i].limit)
             meter[i].value = meter[i].limit;
-        sprintf(tstr, "meter%d:%d,%d", i+1, 
+        sprintf(tstr, "meter%d:%d,%d", i+1,
                 meter[i].value, meter[i].limit);
         mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, tstr, strlen(tstr));
     }
 
     /* While the connection is open, send periodic updates */
-    while(!ws_conn[wsd].closing)
-    {
+    while(!ws_conn[wsd].closing) {
         usleep(100000); /* 0.1 second */
         timer++;
 
         /* Send meter updates */
-        if (ws_conn[wsd].update)
-        {
-            for (i=0; meter[i].period != 0; i++)
-            {
-                if (timer%meter[i].period == 0)
-                {
+        if (ws_conn[wsd].update) {
+            for (i=0; meter[i].period != 0; i++) {
+                if (timer%meter[i].period == 0) {
                     if (meter[i].value >= meter[i].limit)
                         meter[i].value = 0;
                     else
@@ -85,9 +80,8 @@ static void *ws_server_thread(void *parm)
                     if (meter[i].value >= meter[i].limit)
                         meter[i].value = meter[i].limit;
                     // if we are closing, server should not send new data
-                    if (!ws_conn[wsd].closing)
-                    {
-                        sprintf(tstr, "meter%d:%d,%d", i+1, 
+                    if (!ws_conn[wsd].closing) {
+                        sprintf(tstr, "meter%d:%d,%d", i+1,
                                 meter[i].value, meter[i].limit);
                         mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, tstr, strlen(tstr));
                     }
@@ -114,15 +108,14 @@ static void *ws_server_thread(void *parm)
 // On new client connection, find next available server connection and store
 // new connection information. If no more server connections are available
 // tell civetweb to not accept the client request.
-static int websocket_connect_handler(const struct mg_connection *conn) {
+static int websocket_connect_handler(const struct mg_connection *conn)
+{
     int i;
 
     fprintf(stderr, "connect handler\n");
 
-    for(i=0; i < CONNECTIONS; ++i)
-    {
-        if (ws_conn[i].conn == NULL)
-        {
+    for(i=0; i < CONNECTIONS; ++i) {
+        if (ws_conn[i].conn == NULL) {
             fprintf(stderr, "...prep for server %d\n", i);
             ws_conn[i].conn = (struct mg_connection *)conn;
             ws_conn[i].closing = 0;
@@ -130,8 +123,7 @@ static int websocket_connect_handler(const struct mg_connection *conn) {
             break;
         }
     }
-    if (i >= CONNECTIONS)
-    {
+    if (i >= CONNECTIONS) {
         fprintf(stderr, "Refused connection: Max connections exceeded\n");
         return 1;
     }
@@ -141,15 +133,14 @@ static int websocket_connect_handler(const struct mg_connection *conn) {
 
 // websocket_ready_handler()
 // Once websocket negotiation is complete, start a server for the connection
-static void websocket_ready_handler(struct mg_connection *conn) {
+static void websocket_ready_handler(struct mg_connection *conn)
+{
     int i;
 
     fprintf(stderr, "ready handler\n");
 
-    for(i=0; i < CONNECTIONS; ++i)
-    {
-        if (ws_conn[i].conn == conn)
-        {
+    for(i=0; i < CONNECTIONS; ++i) {
+        if (ws_conn[i].conn == conn) {
             fprintf(stderr, "...start server %d\n", i);
             mg_start_thread(ws_server_thread, (void *)(long)i);
             break;
@@ -159,15 +150,14 @@ static void websocket_ready_handler(struct mg_connection *conn) {
 
 // websocket_close_handler()
 // When websocket is closed, tell the associated server to shut down
-static void websocket_close_handler(struct mg_connection *conn) {
+static void websocket_close_handler(struct mg_connection *conn)
+{
     int i;
 
     //fprintf(stderr, "close handler\n");   /* called for every close, not just websockets */
 
-    for(i=0; i < CONNECTIONS; ++i)
-    {
-        if (ws_conn[i].conn == conn)
-        {
+    for(i=0; i < CONNECTIONS; ++i) {
+        if (ws_conn[i].conn == conn) {
             fprintf(stderr, "...close server %d\n", i);
             ws_conn[i].closing = 1;
         }
@@ -179,74 +169,66 @@ static void websocket_close_handler(struct mg_connection *conn) {
 //          http://tools.ietf.org/html/rfc6455, section 5.2
 //   data, data_len: payload data. Mask, if any, is already applied.
 static int websocket_data_handler(struct mg_connection *conn, int flags,
-                                  char *data, size_t data_len) {
+                                  char *data, size_t data_len)
+{
     int i;
     int wsd;
 
-    for(i=0; i < CONNECTIONS; ++i)
-    {
-        if (ws_conn[i].conn == conn)
-        {
+    for(i=0; i < CONNECTIONS; ++i) {
+        if (ws_conn[i].conn == conn) {
             wsd = i;
             break;
         }
     }
-    if (i >= CONNECTIONS)
-    {
+    if (i >= CONNECTIONS) {
         fprintf(stderr, "Received websocket data from unknown connection\n");
         return 1;
     }
 
-    if (flags & 0x80)
-    {
-      flags &= 0x7f;
-      switch (flags)
-      {
-          case WEBSOCKET_OPCODE_CONTINUATION:
-              fprintf(stderr, "CONTINUATION...\n");
-              break;
-          case WEBSOCKET_OPCODE_TEXT:
-              fprintf(stderr, "TEXT: %-.*s\n", (int)data_len, data);
-              /*** interpret data as commands here ***/
-              if (strncmp("update on", data, data_len)== 0)
-              {
-                  /* turn on updates */
-                  ws_conn[wsd].update = 1;
-                  /* echo back */
-                  mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
-              }
-              else if (strncmp("update off", data, data_len)== 0)
-              {
-                  /* turn off updates */
-                  ws_conn[wsd].update = 0;
-                  /* echo back */
-                  mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
-              }
-              break;
-          case WEBSOCKET_OPCODE_BINARY:
-              fprintf(stderr, "BINARY...\n");
-              break;
-          case WEBSOCKET_OPCODE_CONNECTION_CLOSE:
-              fprintf(stderr, "CLOSE...\n");
-              /* If client initiated close, respond with close message in acknowlegement */
-              if (!ws_conn[wsd].closing)
-              {
-                  mg_websocket_write(conn, WEBSOCKET_OPCODE_CONNECTION_CLOSE, data, data_len);
-                  ws_conn[wsd].closing = 1; /* we should not send addional messages when close requested/acknowledged */
-              }
-              return 0; /* time to close the connection */
-              break;
-          case WEBSOCKET_OPCODE_PING:
-              /* client sent PING, respond with PONG */
-              mg_websocket_write(conn, WEBSOCKET_OPCODE_PONG, data, data_len);
-              break;
-          case WEBSOCKET_OPCODE_PONG:
-              /* received PONG to our PING, no action */
-              break;
-          default:
-              fprintf(stderr, "Unknown flags: %02x\n", flags);
-              break;
-      }
+    if (flags & 0x80) {
+        flags &= 0x7f;
+        switch (flags) {
+        case WEBSOCKET_OPCODE_CONTINUATION:
+            fprintf(stderr, "CONTINUATION...\n");
+            break;
+        case WEBSOCKET_OPCODE_TEXT:
+            fprintf(stderr, "TEXT: %-.*s\n", (int)data_len, data);
+            /*** interpret data as commands here ***/
+            if (strncmp("update on", data, data_len)== 0) {
+                /* turn on updates */
+                ws_conn[wsd].update = 1;
+                /* echo back */
+                mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
+            } else if (strncmp("update off", data, data_len)== 0) {
+                /* turn off updates */
+                ws_conn[wsd].update = 0;
+                /* echo back */
+                mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
+            }
+            break;
+        case WEBSOCKET_OPCODE_BINARY:
+            fprintf(stderr, "BINARY...\n");
+            break;
+        case WEBSOCKET_OPCODE_CONNECTION_CLOSE:
+            fprintf(stderr, "CLOSE...\n");
+            /* If client initiated close, respond with close message in acknowlegement */
+            if (!ws_conn[wsd].closing) {
+                mg_websocket_write(conn, WEBSOCKET_OPCODE_CONNECTION_CLOSE, data, data_len);
+                ws_conn[wsd].closing = 1; /* we should not send addional messages when close requested/acknowledged */
+            }
+            return 0; /* time to close the connection */
+            break;
+        case WEBSOCKET_OPCODE_PING:
+            /* client sent PING, respond with PONG */
+            mg_websocket_write(conn, WEBSOCKET_OPCODE_PONG, data, data_len);
+            break;
+        case WEBSOCKET_OPCODE_PONG:
+            /* received PONG to our PING, no action */
+            break;
+        default:
+            fprintf(stderr, "Unknown flags: %02x\n", flags);
+            break;
+        }
     }
 
     return 1;   /* keep connection open */
@@ -265,9 +247,9 @@ int main(void)
     };
 
     /* get simple greeting for the web server */
-    snprintf(server_name, sizeof(server_name), 
-            "Civetweb websocket server v. %s",
-            mg_version());
+    snprintf(server_name, sizeof(server_name),
+             "Civetweb websocket server v. %s",
+             mg_version());
 
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.websocket_connect = websocket_connect_handler;
@@ -279,8 +261,8 @@ int main(void)
 
     /* show the greeting and some basic information */
     printf("%s started on port(s) %s with web root [%s]\n",
-            server_name, mg_get_option(ctx, "listening_ports"),
-            mg_get_option(ctx, "document_root"));
+           server_name, mg_get_option(ctx, "listening_ports"),
+           mg_get_option(ctx, "document_root"));
 
     getchar();  // Wait until user hits "enter"
     mg_stop(ctx);
