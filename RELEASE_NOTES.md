@@ -6,6 +6,7 @@ In planning.
 Changes
 -------
 
+- Fixed potential dead lock in connection_close() (Morgan McGuire)
 - Added WebSocket example using asynchronous server messages (William Greathouse)
 - Fixed the getcwd() warning (William Greathouse)
 - Implemented the connection_close() callback (William Greathouse)
