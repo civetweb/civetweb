@@ -46,7 +46,7 @@
 #undef WIN32_LEAN_AND_MEAN
 #endif
 
-#ifdef USE_IPV6
+#ifdef USE_IPV6 && defined(_MSC_VER)
 #include <ws2tcpip.h>
 #endif
 
