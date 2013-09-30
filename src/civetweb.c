@@ -32,6 +32,8 @@
 #endif
 
 #if defined (_MSC_VER)
+// 'type cast' : conversion from 'int' to 'HANDLE' of greater size
+#pragma warning (disable : 4306 )
 // conditional expression is constant: introduced by FD_SET(..)
 #pragma warning (disable : 4127)
 // non-constant aggregate initializer: issued due to missing C99 support
@@ -42,6 +44,10 @@
 // This makes windows.h always include winsock2.h
 #ifdef WIN32_LEAN_AND_MEAN
 #undef WIN32_LEAN_AND_MEAN
+#endif
+
+#ifdef USE_IPV6
+#include <ws2tcpip.h>
 #endif
 
 #if defined(__SYMBIAN32__)
@@ -73,8 +79,10 @@
 #include <stdio.h>
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) // Windows specific
+#if defined(_MSC_VER) && _MSC_VER <= 1400
 #undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0400 // To make it link in VS2005
+#endif
 #include <windows.h>
 
 #ifndef PATH_MAX
@@ -194,6 +202,7 @@ typedef struct DIR {
     struct dirent  result;
 } DIR;
 
+#ifndef USE_IPV6 && defined(_WIN32)
 #ifndef HAVE_POLL
 struct pollfd {
     SOCKET fd;
@@ -202,7 +211,7 @@ struct pollfd {
 };
 #define POLLIN 1
 #endif
-
+#endif
 
 // Mark required libraries
 #ifdef _MSC_VER
