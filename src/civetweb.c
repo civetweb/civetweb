@@ -42,11 +42,11 @@
 
 // Disable WIN32_LEAN_AND_MEAN.
 // This makes windows.h always include winsock2.h
-#ifdef WIN32_LEAN_AND_MEAN
+#if defined(WIN32_LEAN_AND_MEAN) && (_MSC_VER <= 1400)
 #undef WIN32_LEAN_AND_MEAN
 #endif
 
-#ifdef USE_IPV6 && defined(_MSC_VER)
+#if defined USE_IPV6 && defined(_WIN32)
 #include <ws2tcpip.h>
 #endif
 
