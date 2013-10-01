@@ -2,6 +2,7 @@
 
 * Daniel Oaks
 * F-Secure Corporation
+* grenclave
 * HariKamath Kamath
 * Kimmo Mustonen
 * Morgan McGuire
