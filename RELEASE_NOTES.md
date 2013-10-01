@@ -6,6 +6,7 @@ In planning.
 Changes
 -------
 
+- Fixed IPV6 defines under Windowe (grenclave)
 - Fixed potential dead lock in connection_close() (Morgan McGuire)
 - Added WebSocket example using asynchronous server messages (William Greathouse)
 - Fixed the getcwd() warning (William Greathouse)
