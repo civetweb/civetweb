@@ -5730,12 +5730,17 @@ static void master_thread_run(void *thread_func_param)
     // Increase priority of the master thread
 #if defined(_WIN32)
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
-#endif
-
-#if defined(ISSUE_317)
-    struct sched_param sched_param;
-    sched_param.sched_priority = sched_get_priority_max(SCHED_RR);
-    pthread_setschedparam(pthread_self(), SCHED_RR, &sched_param);
+#elif defined(USE_MASTER_THREAD_PRIORITY)
+    int min_prio = sched_get_priority_min(SCHED_RR);
+    int max_prio = sched_get_priority_max(SCHED_RR);
+    if ((min_prio >=0) && (max_prio >= 0) &&
+        ((USE_MASTER_THREAD_PRIORITY) <= max_prio) &&
+        ((USE_MASTER_THREAD_PRIORITY) >= min_prio)
+        ) {
+            struct sched_param sched_param = {0};
+            sched_param.sched_priority = (USE_MASTER_THREAD_PRIORITY);
+            pthread_setschedparam(pthread_self(), SCHED_RR, &sched_param);
+    }
 #endif
 
     pfd = (struct pollfd *) calloc(ctx->num_listening_sockets, sizeof(pfd[0]));
