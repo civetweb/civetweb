@@ -414,5 +414,6 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path,
     if (L != NULL && ls == NULL) lua_close(L);
     if (p != NULL) munmap(p, filep->size);
     mg_fclose(filep);
+    conn->must_close=1;
     return error;
 }
