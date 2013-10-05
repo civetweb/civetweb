@@ -2235,7 +2235,7 @@ static const struct {
     {".tiff",    5, "image/tiff"},
 
     // model
-    {".wrl"      4, "model/vrml"},
+    {".wrl",     4, "model/vrml"},
 
     // text
     {".css",     4, "text/css"},
