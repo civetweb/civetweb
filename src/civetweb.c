@@ -202,7 +202,7 @@ typedef struct DIR {
     struct dirent  result;
 } DIR;
 
-#ifndef USE_IPV6 && defined(_WIN32)
+#if !defined(USE_IPV6) && defined(_WIN32)
 #ifndef HAVE_POLL
 struct pollfd {
     SOCKET fd;
@@ -3514,7 +3514,7 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
     char *buf;
     size_t buflen;
     int headers_len, data_len, i, fdin[2] = { 0, 0 }, fdout[2] = { 0, 0 };
-    const char *status, *status_text;
+    const char *status, *status_text, *connection_state;
     char *pbuf, dir[PATH_MAX], *p;
     struct mg_request_info ri;
     struct cgi_env_block blk;
@@ -3624,8 +3624,9 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
     } else {
         conn->status_code = 200;
     }
-    if (get_header(&ri, "Connection") != NULL &&
-        !mg_strcasecmp(get_header(&ri, "Connection"), "keep-alive")) {
+    connection_state = get_header(&ri, "Connection");
+    if (connection_state == NULL ||
+        mg_strcasecmp(connection_state, "keep-alive")) {
         conn->must_close = 1;
     }
     (void) mg_printf(conn, "HTTP/1.1 %d %s\r\n", conn->status_code,
