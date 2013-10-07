@@ -6,6 +6,7 @@ In planning.
 Changes
 -------
 
+- Added Lua File System support (bel2125)
 - Added mongoose history back in repository thanks to (Paul Sokolovsky)
 - Fixed keep alive (bel2125)
 - Updated of MIME types (bel2125)
