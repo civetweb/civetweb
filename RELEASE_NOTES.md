@@ -7,6 +7,10 @@ Changes
 -------
 
 - Added mongoose history back in repository thanks to (Paul Sokolovsky)
+- Fixed keep alive (bel2125)
+- Updated of MIME types (bel2125)
+- Updated lsqlite (bel2125)
+- Fixed master thread priority (bel2125)
 - Fixed IPV6 defines under Windowe (grenclave)
 - Fixed potential dead lock in connection_close() (Morgan McGuire)
 - Added WebSocket example using asynchronous server messages (William Greathouse)
