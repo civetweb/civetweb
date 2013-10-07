@@ -117,9 +117,15 @@
     <ClCompile Include="..\..\src\third_party\sqlite3.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\third_party\lfs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\third_party\sqlite3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\third_party\lfs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

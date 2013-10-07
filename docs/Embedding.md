@@ -59,6 +59,7 @@ Lua is a server side include functionality.  Files ending in .la will be process
   - -DLUA_COMPAT_ALL
   - -DUSE_LUA
   - -DUSE_LUA_SQLITE3
+  - -DUSE_LUA_FILE_SYSTEM
 
 ##### Add the following sources
 
@@ -99,6 +100,8 @@ Lua is a server side include functionality.  Files ending in .la will be process
   - src/third_party/sqlite3.c
   - src/third_party/sqlite3.h
   - src/third_party/lsqlite3.c
+  - src/third_party/lfs.c
+  - src/third_party/lfs.h
 
 
 Civetweb internals
