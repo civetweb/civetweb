@@ -27,7 +27,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -39,7 +38,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -143,6 +141,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\third_party\lfs.c" />
     <ClCompile Include="..\..\src\third_party\lua-5.2.2\src\lapi.c" />
     <ClCompile Include="..\..\src\third_party\lua-5.2.2\src\lauxlib.c" />
     <ClCompile Include="..\..\src\third_party\lua-5.2.2\src\lbaselib.c" />
@@ -179,6 +178,7 @@
     <ClCompile Include="..\..\src\third_party\sqlite3.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\third_party\lfs.h" />
     <ClInclude Include="..\..\src\third_party\sqlite3.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

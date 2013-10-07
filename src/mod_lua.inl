@@ -271,6 +271,12 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L)
         luaopen_lsqlite3(L);
     }
 #endif
+#ifdef USE_LUA_FILE_SYSTEM
+    {
+        extern int luaopen_lfs(lua_State *);
+        luaopen_lfs(L);
+    }
+#endif
 
     luaL_newmetatable(L, LUASOCKET);
     lua_pushliteral(L, "__index");
