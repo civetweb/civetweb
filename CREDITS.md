@@ -1,5 +1,6 @@
 # Civitweb Contributors
 
+* bel2125
 * Daniel Oaks
 * F-Secure Corporation
 * grenclave
@@ -7,6 +8,7 @@
 * Kimmo Mustonen
 * Morgan McGuire
 * No Face Press
+* Paul Sokolovsky
 * Thomas Davis
 * William Greathouse
 
