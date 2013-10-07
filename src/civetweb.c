@@ -5769,10 +5769,10 @@ static void master_thread_run(void *thread_func_param)
     if ((min_prio >=0) && (max_prio >= 0) &&
         ((USE_MASTER_THREAD_PRIORITY) <= max_prio) &&
         ((USE_MASTER_THREAD_PRIORITY) >= min_prio)
-        ) {
-            struct sched_param sched_param = {0};
-            sched_param.sched_priority = (USE_MASTER_THREAD_PRIORITY);
-            pthread_setschedparam(pthread_self(), SCHED_RR, &sched_param);
+       ) {
+        struct sched_param sched_param = {0};
+        sched_param.sched_priority = (USE_MASTER_THREAD_PRIORITY);
+        pthread_setschedparam(pthread_self(), SCHED_RR, &sched_param);
     }
 #endif
 
