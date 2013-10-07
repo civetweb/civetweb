@@ -6,7 +6,7 @@ In planning.
 Changes
 -------
 
-- Added mongoose history back in repository
+- Added mongoose history back in repository thanks to (Paul Sokolovsky)
 - Fixed IPV6 defines under Windowe (grenclave)
 - Fixed potential dead lock in connection_close() (Morgan McGuire)
 - Added WebSocket example using asynchronous server messages (William Greathouse)
