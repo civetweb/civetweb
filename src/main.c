@@ -259,17 +259,24 @@ static void process_command_line_arguments(char *argv[], char **options)
 
         // Loop over the lines in config file
         while (fgets(line, sizeof(line), fp) != NULL) {
+
+            if (!line_no && !memcmp(line,"\xEF\xBB\xBF",3)) {
+                // strip UTF-8 BOM
+                p = line+3;
+            } else {
+                p = line;
+            }
             line_no++;
 
             // Ignore empty lines and comments
             for (i = 0; isspace(* (unsigned char *) &line[i]); ) i++;
-            if (line[i] == '#' || line[i] == '\0') {
+            if (p[i] == '#' || p[i] == '\0') {
                 continue;
             }
 
-            if (sscanf(line, "%s %[^\r\n#]", opt, val) != 2) {
+            if (sscanf(p, "%s %[^\r\n#]", opt, val) != 2) {
                 printf("%s: line %d is invalid, ignoring it:\n %s",
-                       config_file, (int) line_no, line);
+                       config_file, (int) line_no, p);
             } else {
                 set_option(options, opt, val);
             }
@@ -333,6 +340,20 @@ static void verify_existence(char **options, const char *option_name,
 {
     struct stat st;
     const char *path = get_option(options, option_name);
+
+    #ifdef _WIN32
+    wchar_t wbuf[1024];
+    char mbbuf[1024];
+    int len;
+
+    if (path) {
+        memset(wbuf, 0, sizeof(wbuf));
+        memset(mbbuf, 0, sizeof(mbbuf));
+        len = MultiByteToWideChar(CP_UTF8, 0, path, -1, wbuf, (int) sizeof(wbuf)/sizeof(wbuf[0])-1);
+        wcstombs(mbbuf, wbuf, sizeof(mbbuf)-1);
+        path = mbbuf;
+    }
+    #endif
 
     if (path != NULL && (stat(path, &st) != 0 ||
                          ((S_ISDIR(st.st_mode) ? 1 : 0) != must_be_dir))) {
