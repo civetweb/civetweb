@@ -15,6 +15,7 @@
     var pendingCount = 0;
     var errorCount = 0;
     var pushCount = 0;
+    var allErrorCount = 0;
 
 
     function runTest(method, isAsync) {
@@ -45,7 +46,7 @@
         async: isAsync,
         url: 'echo.cgi?id=' + id,
         type: method,
-        timeout: 10000,
+        timeout: 2000,
         data: { 'id' : id ,
                 'longText1' : "adfsdfasdklkjlgasfdfjkhq345sdafbmkanq3trsdghkjqw4etrjlkabsdfkabvauiregtlkjasdbvabl4btrjawebbfjsdhbjk342r5bjksdbfkljbhasdfbhj234qjhasdg76k11234jhv900adfasddsfmzasdfhjgajsvhgkjhasdf77aefcae4fkjzasdfgukeaf7dkkegasdfigjcvxgui",
                 'longText2' : "bsdfsdfasdklkjlgasdfjkhq345sdafbmkanq3trsdghkjqw4etrjlkabsdfkabvauiregtlkjasdbvabl4btrjawebbfjsdhbjk342r5bjksdbfkljbhasdfbhj234qjhasdg76k11234jhv900adfasddsfmzasdfhjgajsvhgkjhasdf77aefcae4fkjzasdfgukeaf7dkkegasdfigjcvxgui",
@@ -71,6 +72,8 @@
           if (pendingCount == 0) {
             document.getElementById('resTotal').innerHTML = 'done';
             console.log('complete, error count: ' + errorCount);
+            allErrorCount = allErrorCount + errorCount;
+            document.getElementById('resSAll').innerHTML = 'total errors: ' + allErrorCount + "/" + (pushCount*totalCount);
           }
         }
       });
@@ -135,6 +138,7 @@
         <tr><td>10</td><td><div id="res10">not started</div></td></tr>
       </table>
       <div id="resTotal">Push [Test] to start.</div>
+      <div id="resSAll"></div>
     </p>
   </body>
 </html>
