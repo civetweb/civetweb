@@ -344,7 +344,7 @@ static void verify_existence(char **options, const char *option_name,
     struct stat st;
     const char *path = get_option(options, option_name);
 
-    #ifdef _WIN32
+#ifdef _WIN32
     wchar_t wbuf[1024];
     char mbbuf[1024];
     int len;
@@ -356,7 +356,7 @@ static void verify_existence(char **options, const char *option_name,
         wcstombs(mbbuf, wbuf, sizeof(mbbuf)-1);
         path = mbbuf;
     }
-    #endif
+#endif
 
     if (path != NULL && (stat(path, &st) != 0 ||
                          ((S_ISDIR(st.st_mode) ? 1 : 0) != must_be_dir))) {
