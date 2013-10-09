@@ -6,6 +6,7 @@ In planning.
 Changes
 -------
 
+- Allow directories with non ASCII characters in Windows in UTF-8 encoded (bel2125)
 - Added Lua File System support (bel2125)
 - Added mongoose history back in repository thanks to (Paul Sokolovsky)
 - Fixed keep alive (bel2125)
