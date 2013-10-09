@@ -1,27 +1,28 @@
-// Copyright (c) 2004-2013 Sergey Lyubka
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+/* Copyright (c) 2004-2013 Sergey Lyubka
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+*/
 
 #if defined(_WIN32)
-#define _CRT_SECURE_NO_WARNINGS  // Disable deprecation warning in VS2005
+#define _CRT_SECURE_NO_WARNINGS  /* Disable deprecation warning in VS2005 */
 #else
-#define _XOPEN_SOURCE 600  // For PATH_MAX on linux
+#define _XOPEN_SOURCE 600  /* For PATH_MAX on linux */
 #endif
 
 #ifndef IGNORE_UNUSED_RESULT
@@ -69,21 +70,22 @@ extern char *_getcwd(char *buf, size_t size);
 #define DIRSEP '/'
 #define WINCDECL
 #define abs_path(rel, abs, abs_size) realpath((rel), (abs))
-#endif // _WIN32
+#endif /* _WIN32 */
 
 #define MAX_OPTIONS 100
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
 static int exit_flag;
-static char server_name[40];        // Set by init_server_name()
-static char config_file[PATH_MAX] = "";  // Set by process_command_line_arguments()
-static struct mg_context *ctx;      // Set by start_civetweb()
+static char server_name[40];        /* Set by init_server_name() */
+static char config_file[PATH_MAX] = ""; /* Set by
+                                           process_command_line_arguments() */
+static struct mg_context *ctx;      /* Set by start_civetweb() */
 
 #if !defined(CONFIG_FILE)
 #define CONFIG_FILE "civetweb.conf"
 #endif /* !CONFIG_FILE */
 
-// backup config file
+/* backup config file */
 #if !defined(CONFIG_FILE2) && defined(LINUX)
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
@@ -167,7 +169,7 @@ static void create_config_file(const char *path)
     FILE *fp;
     int i;
 
-    // Create config file if it is not present yet
+    /* Create config file if it is not present yet */
     if ((fp = fopen(path, "r")) != NULL) {
         fclose(fp);
     } else if ((fp = fopen(path, "a+")) != NULL) {
@@ -222,12 +224,12 @@ static void process_command_line_arguments(char *argv[], char **options)
     FILE *fp = NULL;
     size_t i, cmd_line_opts_start = 1, line_no = 0;
 
-    // Should we use a config file ?
+    /* Should we use a config file ? */
     if (argv[1] != NULL && argv[1][0] != '-') {
         snprintf(config_file, sizeof(config_file), "%s", argv[1]);
         cmd_line_opts_start = 2;
     } else if ((p = strrchr(argv[0], DIRSEP)) == NULL) {
-        // No command line flags specified. Look where binary lives
+        /* No command line flags specified. Look where binary lives */
         snprintf(config_file, sizeof(config_file)-1, "%s", CONFIG_FILE);
         config_file[sizeof(config_file)-1] = 0;
     } else {
@@ -238,13 +240,13 @@ static void process_command_line_arguments(char *argv[], char **options)
 
     fp = fopen(config_file, "r");
 
-    // If config file was set in command line and open failed, die
+    /* If config file was set in command line and open failed, die */
     if (cmd_line_opts_start == 2 && fp == NULL) {
         die("Cannot open config file %s: %s", config_file, strerror(errno));
     }
 
 #ifdef CONFIG_FILE2
-    // try alternate config file
+    /* try alternate config file */
     if (fp == NULL) {
         fp = fopen(CONFIG_FILE2, "r");
         if (fp != NULL) {
@@ -253,22 +255,22 @@ static void process_command_line_arguments(char *argv[], char **options)
     }
 #endif
 
-    // Load config file settings first
+    /* Load config file settings first */
     if (fp != NULL) {
         fprintf(stderr, "Loading config file %s\n", config_file);
 
-        // Loop over the lines in config file
+        /* Loop over the lines in config file */
         while (fgets(line, sizeof(line), fp) != NULL) {
 
             if (!line_no && !memcmp(line,"\xEF\xBB\xBF",3)) {
-                // strip UTF-8 BOM
+                /* strip UTF-8 BOM */
                 p = line+3;
             } else {
                 p = line;
             }
             line_no++;
 
-            // Ignore empty lines and comments
+            /* Ignore empty lines and comments */
             for (i = 0; isspace(* (unsigned char *) &line[i]); ) i++;
             if (p[i] == '#' || p[i] == '\0') {
                 continue;
@@ -285,12 +287,12 @@ static void process_command_line_arguments(char *argv[], char **options)
         (void) fclose(fp);
     }
 
-    // If we're under MacOS and started by launchd, then the second
-    // argument is process serial number, -psn_.....
-    // In this case, don't process arguments at all.
+    /* If we're under MacOS and started by launchd, then the second
+       argument is process serial number, -psn_.....
+       In this case, don't process arguments at all. */
     if (argv[1] == NULL || memcmp(argv[1], "-psn_", 5) != 0) {
-        // Handle command line flags.
-        // They override config file and default settings.
+        /* Handle command line flags.
+           They override config file and default settings. */
         for (i = cmd_line_opts_start; argv[i] != NULL; i += 2) {
             if (argv[i][0] != '-' || argv[i + 1] == NULL) {
                 show_usage_and_exit();
@@ -317,8 +319,9 @@ static int is_path_absolute(const char *path)
 {
 #ifdef _WIN32
     return path != NULL &&
-           ((path[0] == '\\' && path[1] == '\\') ||  // UNC path, e.g. \\server\dir
-            (isalpha(path[0]) && path[1] == ':' && path[2] == '\\'));  // E.g. X:\dir
+           ((path[0] == '\\' && path[1] == '\\') ||  /* UNC path, e.g.
+                                                        \\server\dir */
+            (isalpha(path[0]) && path[1] == ':' && path[2] == '\\'));  /* E.g. X:\dir */
 #else
     return path != NULL && path[0] == '/';
 #endif
@@ -369,15 +372,15 @@ static void set_absolute_path(char *options[], const char *option_name,
     char path[PATH_MAX] = "", abs[PATH_MAX] = "", *option_value;
     const char *p;
 
-    // Check whether option is already set
+    /* Check whether option is already set */
     option_value = get_option(options, option_name);
 
-    // If option is already set and it is an absolute path,
-    // leave it as it is -- it's already absolute.
+    /* If option is already set and it is an absolute path,
+       leave it as it is -- it's already absolute. */
     if (option_value != NULL && !is_path_absolute(option_value)) {
-        // Not absolute. Use the directory where civetweb executable lives
-        // be the relative directory for everything.
-        // Extract civetweb executable directory into path.
+        /* Not absolute. Use the directory where civetweb executable lives
+           be the relative directory for everything.
+           Extract civetweb executable directory into path. */
         if ((p = strrchr(path_to_civetweb_exe, DIRSEP)) == NULL) {
             IGNORE_UNUSED_RESULT(getcwd(path, sizeof(path)));
         } else {
@@ -389,7 +392,7 @@ static void set_absolute_path(char *options[], const char *option_name,
         strncat(path, "/", sizeof(path) - 1);
         strncat(path, option_value, sizeof(path) - 1);
 
-        // Absolutize the path, and set the option
+        /* Absolutize the path, and set the option */
         IGNORE_UNUSED_RESULT(abs_path(path, abs, sizeof(abs)));
         set_option(options, option_name, abs);
     }
@@ -401,7 +404,7 @@ static void start_civetweb(int argc, char *argv[])
     char *options[MAX_OPTIONS];
     int i;
 
-    // Edit passwords file if -A option is specified
+    /* Edit passwords file if -A option is specified */
     if (argc > 1 && !strcmp(argv[1], "-A")) {
         if (argc != 6) {
             show_usage_and_exit();
@@ -410,7 +413,7 @@ static void start_civetweb(int argc, char *argv[])
              EXIT_SUCCESS : EXIT_FAILURE);
     }
 
-    // Show usage if -h or --help options are specified
+    /* Show usage if -h or --help options are specified */
     if (argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
         show_usage_and_exit();
     }
@@ -418,10 +421,10 @@ static void start_civetweb(int argc, char *argv[])
     options[0] = NULL;
     set_option(options, "document_root", ".");
 
-    // Update config based on command line arguments
+    /* Update config based on command line arguments */
     process_command_line_arguments(argv, options);
 
-    // Make sure we have absolute paths for files and directories
+    /* Make sure we have absolute paths for files and directories */
     set_absolute_path(options, "document_root", argv[0]);
     set_absolute_path(options, "put_delete_auth_file", argv[0]);
     set_absolute_path(options, "cgi_interpreter", argv[0]);
@@ -430,16 +433,16 @@ static void start_civetweb(int argc, char *argv[])
     set_absolute_path(options, "global_auth_file", argv[0]);
     set_absolute_path(options, "ssl_certificate", argv[0]);
 
-    // Make extra verification for certain options
+    /* Make extra verification for certain options */
     verify_existence(options, "document_root", 1);
     verify_existence(options, "cgi_interpreter", 0);
     verify_existence(options, "ssl_certificate", 0);
 
-    // Setup signal handler: quit on Ctrl-C
+    /* Setup signal handler: quit on Ctrl-C */
     signal(SIGTERM, signal_handler);
     signal(SIGINT, signal_handler);
 
-    // Start Civetweb
+    /* Start Civetweb */
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.log_message = &log_message;
     ctx = mg_start(&callbacks, NULL, (const char **) options);
@@ -458,13 +461,13 @@ enum {
     ID_REMOVE_SERVICE, ID_STATIC, ID_GROUP, ID_SAVE, ID_RESET_DEFAULTS,
     ID_STATUS, ID_CONNECT,
 
-    // All dynamically created text boxes for options have IDs starting from
-    // ID_CONTROLS, incremented by one.
+    /* All dynamically created text boxes for options have IDs starting from
+       ID_CONTROLS, incremented by one. */
     ID_CONTROLS = 200,
 
-    // Text boxes for files have "..." buttons to open file browser. These
-    // buttons have IDs that are ID_FILE_BUTTONS_DELTA higher than associated
-    // text box ID.
+    /* Text boxes for files have "..." buttons to open file browser. These
+       buttons have IDs that are ID_FILE_BUTTONS_DELTA higher than associated
+       text box ID. */
     ID_FILE_BUTTONS_DELTA = 1000
 };
 static HICON hIcon;
@@ -565,7 +568,7 @@ static void save_config(HWND hDlg, FILE *fp)
             GetDlgItemText(hDlg, id, value, sizeof(value));
         }
         default_value = options[i * 2 + 1] == NULL ? "" : options[i * 2 + 1];
-        // If value is the same as default, skip it
+        /* If value is the same as default, skip it */
         if (strcmp(value, default_value) != 0) {
             fprintf(fp, "%s %s\n", name, value);
         }
@@ -715,7 +718,7 @@ static void show_settings_dialog()
     static int guard;
 
     static struct {
-        DLGTEMPLATE template; // 18 bytes
+        DLGTEMPLATE template; /* 18 bytes */
         WORD menu, class;
         wchar_t caption[1];
         WORD fontsiz;
@@ -796,7 +799,7 @@ static int manage_service(int action)
     static const char *service_name = "Civetweb";
     SC_HANDLE hSCM = NULL, hService = NULL;
     SERVICE_DESCRIPTION descr = {server_name};
-    char path[PATH_MAX + 20] = "";  // Path to executable plus magic argument
+    char path[PATH_MAX + 20] = "";/* Path to executable plus magic argument */
     int success = 1;
 
     if ((hSCM = OpenSCManager(NULL, NULL, action == ID_INSTALL_SERVICE ?
@@ -846,7 +849,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
     char buf[200], *service_argv[] = {__argv[0], NULL};
     POINT pt;
     HMENU hMenu;
-    static UINT s_uTaskbarRestart; // for taskbar creation
+    static UINT s_uTaskbarRestart; /* for taskbar creation */
 
     switch (msg) {
     case WM_CREATE:
@@ -915,7 +918,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
         mg_stop(ctx);
         Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
         PostQuitMessage(0);
-        return 0;  // We've just sent our own quit message, with proper hwnd.
+        return 0;/* We've just sent our own quit message, with proper hwnd. */
     default:
         if (msg==s_uTaskbarRestart)
             Shell_NotifyIcon(NIM_ADD, &TrayIcon);
@@ -957,7 +960,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
         DispatchMessage(&msg);
     }
 
-    // Return the WM_QUIT value.
+    /* Return the WM_QUIT value. */
     return (int) msg.wParam;
 }
 #elif defined(USE_COCOA)
@@ -994,50 +997,50 @@ int main(int argc, char *argv[])
     [NSAutoreleasePool new];
     [NSApplication sharedApplication];
 
-    // Add delegate to process menu item actions
+    /* Add delegate to process menu item actions */
     Civetweb *myDelegate = [[Civetweb alloc] autorelease];
 [NSApp setDelegate: myDelegate];
 
-    // Run this app as agent
+    /* Run this app as agent */
     ProcessSerialNumber psn = { 0, kCurrentProcess };
     TransformProcessType(&psn, kProcessTransformToBackgroundApplication);
     SetFrontProcess(&psn);
 
-    // Add status bar menu
+    /* Add status bar menu */
     id menu = [[NSMenu new] autorelease];
 
-    // Add version menu item
+    /* Add version menu item */
 [menu addItem:[[[NSMenuItem alloc]
-                    //initWithTitle:[NSString stringWithFormat:@"%s", server_name]
+                    /*initWithTitle:[NSString stringWithFormat:@"%s", server_name]*/
                 initWithTitle:[NSString stringWithUTF8String:server_name]
                 action:@selector(noexist) keyEquivalent:@""] autorelease]];
 
-    // Add configuration menu item
+    /* Add configuration menu item */
 [menu addItem:[[[NSMenuItem alloc]
                 initWithTitle:@"Edit configuration"
                 action:@selector(editConfig) keyEquivalent:@""] autorelease]];
 
-    // Add connect menu item
+    /* Add connect menu item */
 [menu addItem:[[[NSMenuItem alloc]
                 initWithTitle:@"Open web root in a browser"
                 action:@selector(openBrowser) keyEquivalent:@""] autorelease]];
 
-    // Separator
+    /* Separator */
 [menu addItem:[NSMenuItem separatorItem]];
 
-    // Add quit menu item
+    /* Add quit menu item */
 [menu addItem:[[[NSMenuItem alloc]
                 initWithTitle:@"Quit"
                 action:@selector(shutDown) keyEquivalent:@"q"] autorelease]];
 
-    // Attach menu to the status bar
+    /* Attach menu to the status bar */
     id item = [[[NSStatusBar systemStatusBar]
             statusItemWithLength:NSVariableStatusItemLength] retain];
 [item setHighlightMode:YES];
 [item setImage:[NSImage imageNamed:@"civetweb_22x22.png"]];
 [item setMenu:menu];
 
-    // Run the app
+    /* Run the app */
 [NSApp activateIgnoringOtherApps:YES];
     [NSApp run];
 
