@@ -161,10 +161,10 @@ static int lsp(struct mg_connection *conn, const char *path,
 
     for (i = 0; i < len; i++) {
         if (p[i] == '\n') lines++;
-        if (p[i] == '<' && p[i + 1] == '?') {
+        if ((i + 1) < len && p[i] == '<' && p[i + 1] == '?') {
             for (j = i + 1; j < len ; j++) {
                 if (p[j] == '\n') lualines++;
-                if (p[j] == '?' && p[j + 1] == '>') {
+                if ((j + 1) < len && p[j] == '?' && p[j + 1] == '>') {
                     mg_write(conn, p + pos, i - pos);
 
                     snprintf(chunkname, sizeof(chunkname), "@%s+%i", path, lines);
