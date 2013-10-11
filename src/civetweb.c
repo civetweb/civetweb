@@ -1363,7 +1363,12 @@ static void set_close_on_exec(SOCKET sock, struct mg_connection *conn /* may be 
 
 int mg_start_thread(mg_thread_func_t f, void *p)
 {
+#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+    // Compile-time option to control stack size, e.g. -DUSE_STACK_SIZE=16384
+    return (long)_beginthread((void (__cdecl *)(void *)) f, USE_STACK_SIZE, p) == -1L ? -1 : 0;
+#else
     return (long)_beginthread((void (__cdecl *)(void *)) f, 0, p) == -1L ? -1 : 0;
+#endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
 }
 
 /* Start a thread storing the thread context. */
@@ -1563,10 +1568,10 @@ int mg_start_thread(mg_thread_func_t func, void *param)
     (void) pthread_attr_init(&attr);
     (void) pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-#if defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1
+#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
     // Compile-time option to control stack size, e.g. -DUSE_STACK_SIZE=16384
     (void) pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
-#endif /* defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1 */
+#endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
 
     result = pthread_create(&thread_id, &attr, func, param);
     pthread_attr_destroy(&attr);
@@ -1585,7 +1590,7 @@ static int mg_start_thread_with_id(mg_thread_func_t func, void *param,
 
     (void) pthread_attr_init(&attr);
 
-#if defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1
+#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
     // Compile-time option to control stack size, e.g. -DUSE_STACK_SIZE=16384
     (void) pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
 #endif /* defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1 */
