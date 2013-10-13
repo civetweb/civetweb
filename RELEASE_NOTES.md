@@ -1,11 +1,11 @@
-Release Notes v1.5 (UNDER DEVELOPMENT)
+Release Notes v1.5
 ===
-### Objectives: *TBD*
-In planning.
+### Objectives: *Bug fixes and updates, repository restoration*
 
 Changes
 -------
 
+- Corrected bad mask flag/opcode passing to websocket callback (William Greathouse)
 - Moved CEVITWEB_VERSION define into civetweb.h
 - Added new simple zip deployment build for Windows. 
 - Removed windows install package build.
@@ -23,7 +23,6 @@ Changes
 - Added WebSocket example using asynchronous server messages (William Greathouse)
 - Fixed the getcwd() warning (William Greathouse)
 - Implemented the connection_close() callback (William Greathouse)
-- Replaced Windows AdvancedInstaller with Inno Setup to solve install problems.
 - Fixed support URL's in civetweb.c (Daniel Oaks)
 - Allow port number to be zero to use a random free port (F-Secure Corporation)
 - Wait for threads to finish when stopping for a clean shutdown (F-Secure Corporation)
