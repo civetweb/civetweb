@@ -42,19 +42,11 @@ endif
 
 LIB_SOURCES = src/civetweb.c
 
-<<<<<<< HEAD
-ALL_SOURCES = src/main.c $(LIB_SOURCES) src/third_party/sqlite3.c src/third_party/lsqlite3.c \
-              $(LUA_SOURCES) $(YASSL_SOURCES)
-
-SQLITE_FLAGS = -DTHREADSAFE=1 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
-CIVETWEB_FLAGS = -DUSE_LUA -DUSE_LUA_SQLITE3 $(COPT)
-=======
 ALL_SOURCES = src/main.c $(LIB_SOURCES) src/third_party/sqlite3.c src/third_party/lsqlite3.c src/third_party/lfs.c \
               $(LUA_SOURCES) $(YASSL_SOURCES)
 
 SQLITE_FLAGS = -DTHREADSAFE=1 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
 CIVETWEB_FLAGS = -DUSE_LUA -DUSE_LUA_SQLITE3 -DUSE_LUA_FILE_SYSTEM $(COPT)
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 FLAGS = $(CIVETWEB_FLAGS) $(SQLITE_FLAGS) $(LUA_FLAGS)
 
 
@@ -155,11 +147,7 @@ $(PROG).lib: $(ALL_WINOBJS)
 # security unlock ~/Library/Keychains/login.keychain
 # See e.g. http://lists.apple.com/archives/apple-cdsa/2008/Jan/msg00027.html
 Civetweb: $(LIB_SOURCES) src/main.c
-<<<<<<< HEAD
-	$(CC) $(LIB_SOURCES) src/main.c src/third_party/lsqlite3.c src/third_party/sqlite3.c \
-=======
 	$(CC) $(LIB_SOURCES) src/main.c src/third_party/lsqlite3.c src/third_party/sqlite3.c src/third_party/lfs.c \
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
           -DUSE_COCOA $(CFLAGS) $(FLAGS) -mmacosx-version-min=10.4 \
           $(YASSL_SOURCES) $(LUA_SOURCES) \
           -framework Cocoa -ObjC -arch i386 -arch x86_64 -o Civetweb

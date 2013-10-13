@@ -27,10 +27,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-<<<<<<< HEAD
-    <PlatformToolset>v110</PlatformToolset>
-=======
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -42,10 +38,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-<<<<<<< HEAD
-    <PlatformToolset>v110</PlatformToolset>
-=======
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -149,10 +141,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-<<<<<<< HEAD
-=======
     <ClCompile Include="..\..\src\third_party\lfs.c" />
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
     <ClCompile Include="..\..\src\third_party\lua-5.2.2\src\lapi.c" />
     <ClCompile Include="..\..\src\third_party\lua-5.2.2\src\lauxlib.c" />
     <ClCompile Include="..\..\src\third_party\lua-5.2.2\src\lbaselib.c" />
@@ -189,10 +178,7 @@
     <ClCompile Include="..\..\src\third_party\sqlite3.c" />
   </ItemGroup>
   <ItemGroup>
-<<<<<<< HEAD
-=======
     <ClInclude Include="..\..\src\third_party\lfs.h" />
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
     <ClInclude Include="..\..\src\third_party\sqlite3.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

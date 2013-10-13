@@ -161,17 +161,10 @@ static int lsp(struct mg_connection *conn, const char *path,
 
     for (i = 0; i < len; i++) {
         if (p[i] == '\n') lines++;
-<<<<<<< HEAD
-        if (p[i] == '<' && p[i + 1] == '?') {
-            for (j = i + 1; j < len ; j++) {
-                if (p[j] == '\n') lualines++;
-                if (p[j] == '?' && p[j + 1] == '>') {
-=======
         if ((i + 1) < len && p[i] == '<' && p[i + 1] == '?') {
             for (j = i + 1; j < len ; j++) {
                 if (p[j] == '\n') lualines++;
                 if ((j + 1) < len && p[j] == '?' && p[j + 1] == '>') {
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
                     mg_write(conn, p + pos, i - pos);
 
                     snprintf(chunkname, sizeof(chunkname), "@%s+%i", path, lines);
@@ -278,15 +271,12 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L)
         luaopen_lsqlite3(L);
     }
 #endif
-<<<<<<< HEAD
-=======
 #ifdef USE_LUA_FILE_SYSTEM
     {
         extern int luaopen_lfs(lua_State *);
         luaopen_lfs(L);
     }
 #endif
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 
     luaL_newmetatable(L, LUASOCKET);
     lua_pushliteral(L, "__index");
@@ -430,9 +420,6 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path,
     if (L != NULL && ls == NULL) lua_close(L);
     if (p != NULL) munmap(p, filep->size);
     mg_fclose(filep);
-<<<<<<< HEAD
-=======
     conn->must_close=1;
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
     return error;
 }

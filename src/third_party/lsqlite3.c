@@ -1,10 +1,6 @@
 /************************************************************************
 * lsqlite3                                                              *
-<<<<<<< HEAD
-* Copyright (C) 2002-2007 Tiago Dionizio, Doug Currie                   *
-=======
 * Copyright (C) 2002-2013 Tiago Dionizio, Doug Currie                   *
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 * All rights reserved.                                                  *
 * Author    : Tiago Dionizio <tiago.dionizio@ist.utl.pt>                *
 * Author    : Doug Currie <doug.currie@alum.mit.edu>                    *
@@ -38,8 +34,6 @@
 #include "lua.h"
 #include "lauxlib.h"
 
-<<<<<<< HEAD
-=======
 #if LUA_VERSION_NUM > 501
 //
 // Lua 5.2
@@ -53,19 +47,15 @@
 #define luaL_openlib(L,name,reg,nup) luaL_setfuncs(L,reg,nup)
 #endif
 
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 #include "sqlite3.h"
 
 /* compile time features */
 #if !defined(SQLITE_OMIT_PROGRESS_CALLBACK)
     #define SQLITE_OMIT_PROGRESS_CALLBACK 0
 #endif
-<<<<<<< HEAD
-=======
 #if !defined(LSQLITE_OMIT_UPDATE_HOOK)
     #define LSQLITE_OMIT_UPDATE_HOOK 0
 #endif
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 
 typedef struct sdb sdb;
 typedef struct sdb_vm sdb_vm;
@@ -103,8 +93,6 @@ struct sdb {
 
     int trace_cb;       /* trace callback */
     int trace_udata;
-<<<<<<< HEAD
-=======
 
 #if !defined(LSQLITE_OMIT_UPDATE_HOOK) || !LSQLITE_OMIT_UPDATE_HOOK
 
@@ -118,7 +106,6 @@ struct sdb {
     int rollback_hook_udata;
 
 #endif
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 };
 
 static const char *sqlite_meta      = ":sqlite3";
@@ -621,9 +608,6 @@ static sdb *newdb (lua_State *L) {
     db->progress_cb =
     db->progress_udata =
     db->trace_cb =
-<<<<<<< HEAD
-    db->trace_udata = LUA_NOREF;
-=======
     db->trace_udata = 
 #if !defined(LSQLITE_OMIT_UPDATE_HOOK) || !LSQLITE_OMIT_UPDATE_HOOK
     db->update_hook_cb =
@@ -634,7 +618,6 @@ static sdb *newdb (lua_State *L) {
     db->rollback_hook_udata =
 #endif
      LUA_NOREF;
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 
     luaL_getmetatable(L, sqlite_meta);
     lua_setmetatable(L, -2);        /* set metatable */
@@ -682,8 +665,6 @@ static int cleanupdb(lua_State *L, sdb *db) {
     luaL_unref(L, LUA_REGISTRYINDEX, db->progress_udata);
     luaL_unref(L, LUA_REGISTRYINDEX, db->trace_cb);
     luaL_unref(L, LUA_REGISTRYINDEX, db->trace_udata);
-<<<<<<< HEAD
-=======
 #if !defined(LSQLITE_OMIT_UPDATE_HOOK) || !LSQLITE_OMIT_UPDATE_HOOK
     luaL_unref(L, LUA_REGISTRYINDEX, db->update_hook_cb);
     luaL_unref(L, LUA_REGISTRYINDEX, db->update_hook_udata);
@@ -692,7 +673,6 @@ static int cleanupdb(lua_State *L, sdb *db) {
     luaL_unref(L, LUA_REGISTRYINDEX, db->rollback_hook_cb);
     luaL_unref(L, LUA_REGISTRYINDEX, db->rollback_hook_udata);
 #endif
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 
     /* close database */
     result = sqlite3_close(db->db);
@@ -714,11 +694,7 @@ static int cleanupdb(lua_State *L, sdb *db) {
 
 static sdb *lsqlite_getdb(lua_State *L, int index) {
     sdb *db = (sdb*)luaL_checkudata(L, index, sqlite_meta);
-<<<<<<< HEAD
-    // TODO lsm if (db == NULL) luaL_typerror(L, index, "sqlite database");
-=======
     if (db == NULL) luaL_typerror(L, index, "sqlite database");
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
     return db;
 }
 
@@ -750,11 +726,7 @@ static lcontext *lsqlite_make_context(lua_State *L) {
 
 static lcontext *lsqlite_getcontext(lua_State *L, int index) {
     lcontext *ctx = (lcontext*)luaL_checkudata(L, index, sqlite_ctx_meta);
-<<<<<<< HEAD
-    // TODO lsm if (ctx == NULL) luaL_typerror(L, index, "sqlite context");
-=======
     if (ctx == NULL) luaL_typerror(L, index, "sqlite context");
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
     return ctx;
 }
 
@@ -1254,11 +1226,7 @@ static int db_trace(lua_State *L) {
         db->trace_cb =
         db->trace_udata = LUA_NOREF;
 
-<<<<<<< HEAD
-        /* clear busy handler */
-=======
         /* clear trace handler */
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
         sqlite3_trace(db->db, NULL, NULL);
     }
     else {
@@ -1273,19 +1241,13 @@ static int db_trace(lua_State *L) {
         db->trace_udata = luaL_ref(L, LUA_REGISTRYINDEX);
         db->trace_cb = luaL_ref(L, LUA_REGISTRYINDEX);
 
-<<<<<<< HEAD
-        /* set busy handler */
-=======
         /* set trace handler */
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
         sqlite3_trace(db->db, db_trace_callback, db);
     }
 
     return 0;
 }
 
-<<<<<<< HEAD
-=======
 #if !defined(LSQLITE_OMIT_UPDATE_HOOK) || !LSQLITE_OMIT_UPDATE_HOOK
 
 /*
@@ -1468,7 +1430,6 @@ static int db_rollback_hook(lua_State *L) {
 }
 
 #endif /* #if !defined(LSQLITE_OMIT_UPDATE_HOOK) || !LSQLITE_OMIT_UPDATE_HOOK */
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 
 #if !defined(SQLITE_OMIT_PROGRESS_CALLBACK) || !SQLITE_OMIT_PROGRESS_CALLBACK
 
@@ -1988,8 +1949,6 @@ static const struct {
     SC(INTEGER)     SC(FLOAT)       SC(TEXT)        SC(BLOB)
     SC(NULL)
 
-<<<<<<< HEAD
-=======
     /* Authorizer Action Codes */
     SC(CREATE_INDEX       )
     SC(CREATE_TABLE       )
@@ -2024,7 +1983,6 @@ static const struct {
     SC(FUNCTION           )
     SC(SAVEPOINT          )
 
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
     /* terminator */
     { NULL, 0 }
 };
@@ -2050,14 +2008,11 @@ static const luaL_Reg dblib[] = {
     {"progress_handler",    db_progress_handler     },
     {"busy_timeout",        db_busy_timeout         },
     {"busy_handler",        db_busy_handler         },
-<<<<<<< HEAD
-=======
 #if !defined(LSQLITE_OMIT_UPDATE_HOOK) || !LSQLITE_OMIT_UPDATE_HOOK
     {"update_hook",         db_update_hook          },
     {"commit_hook",         db_commit_hook          },
     {"rollback_hook",       db_rollback_hook        },
 #endif
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 
     {"prepare",             db_prepare              },
     {"rows",                db_rows                 },
@@ -2167,8 +2122,6 @@ static void create_meta(lua_State *L, const char *name, const luaL_Reg *lib) {
     lua_pop(L, 1);
 }
 
-<<<<<<< HEAD
-=======
 
 static int luaopen_sqlitelib (lua_State *L) {
     luaL_newlibtable(L, sqlitelib);
@@ -2177,7 +2130,6 @@ static int luaopen_sqlitelib (lua_State *L) {
 }
 
 
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 LUALIB_API int luaopen_lsqlite3(lua_State *L) {
     create_meta(L, sqlite_meta, dblib);
     create_meta(L, sqlite_vm_meta, vmlib);
@@ -2187,11 +2139,7 @@ LUALIB_API int luaopen_lsqlite3(lua_State *L) {
     sqlite_ctx_meta_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
     /* register (local) sqlite metatable */
-<<<<<<< HEAD
-    luaL_register(L, "sqlite3", sqlitelib);
-=======
     luaL_requiref(L, "sqlite3", luaopen_sqlitelib, 1);
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 
     {
         int i = 0;

@@ -1,10 +1,7 @@
 # Civitweb Contributors
 
-<<<<<<< HEAD
-=======
 * apkbox
 * bel2125
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 * Daniel Oaks
 * F-Secure Corporation
 * grenclave
@@ -12,10 +9,7 @@
 * Kimmo Mustonen
 * Morgan McGuire
 * No Face Press
-<<<<<<< HEAD
-=======
 * Paul Sokolovsky
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 * Thomas Davis
 * William Greathouse
 

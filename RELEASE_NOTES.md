@@ -6,8 +6,6 @@ In planning.
 Changes
 -------
 
-<<<<<<< HEAD
-=======
 - Fixes page violation in mod_lua.inl (apkbox)
 - Use C style comments to enable compiling most of civetweb with -ansi. (F-Secure Corporation)
 - Allow directories with non ASCII characters in Windows in UTF-8 encoded (bel2125)
@@ -17,7 +15,6 @@ Changes
 - Updated of MIME types (bel2125)
 - Updated lsqlite (bel2125)
 - Fixed master thread priority (bel2125)
->>>>>>> b393b8d2410737a01a0d18987b5dfc185b3c0ef3
 - Fixed IPV6 defines under Windowe (grenclave)
 - Fixed potential dead lock in connection_close() (Morgan McGuire)
 - Added WebSocket example using asynchronous server messages (William Greathouse)
