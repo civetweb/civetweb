@@ -4366,7 +4366,7 @@ static void read_websocket(struct mg_connection *conn)
        dynamically allocated buffer if it is too large. */
     char mem[4096];
     char *data = mem;
-    unsigned char mop;  /* mask and opcode */
+    unsigned char mop;  /* mask flag and opcode */
 
     /* Loop continuously, reading messages from the socket, invoking the
        callback, and waiting repeatedly until an error occurs. */
