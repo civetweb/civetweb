@@ -223,7 +223,6 @@
 
 <script language="javascript" type="text/javascript">
     var connection; // websocket connection
-    var count=1;
 
     function writeToScreen (message) {
         var div = document.createElement('div');
@@ -231,14 +230,6 @@
         div.innerHTML = message;
         output.appendChild(div);
         output.scrollTop = output.scrollHeight;
-    }
-
-    function send_counter() {
-        if (connection.bufferedAmount == 0)
-        {
-            connection.send('counter ' + count);
-            count = count+1;
-        }
     }
 
     function ws_connect() {
@@ -261,7 +252,6 @@
             };
 
             connection.onclose = function(ev) {
-                clearInterval(counterid);
                 document.getElementById("update").disabled=true;
                 document.getElementById("update").innerHTML = "Enable Update";
                 document.getElementById("connection").innerHTML = "WebSocket Connect";
@@ -278,17 +268,12 @@
                     meter.style.width = percent+"%";
                 }
                 else
-                {
                     writeToScreen('RECEIVED: ' + ev.data);
-                }
-                send_counter();
             };
 
             connection.onerror = function(ev) {
                 alert("WebSocket error");
             };
-
-            counterid = setInterval(send_counter, 10);
 
         } else {
             alert("WebSocket is not available!!!\n" +

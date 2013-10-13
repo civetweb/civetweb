@@ -15,7 +15,6 @@ struct ws_connection {
     struct mg_connection    *conn;
     int     update;
     int     closing;
-    long    counter;
 };
 
 // time base and structure periodic updates to client for demo
@@ -30,28 +29,6 @@ struct progress {
 // up to 16 independent client connections
 #define CONNECTIONS 16
 static struct ws_connection ws_conn[CONNECTIONS];
-
-#define PING_ACTIVE
-
-#define PING_THREAD
-
-#if defined(PING_ACTIVE) && defined(PING_THREAD)
-// ws_ping_thread()
-// Send periodic PING to assure websocket remains connected, except if we are closing
-static void *ws_ping_thread(void *parm)
-{
-    int wsd = (long)parm;
-    struct mg_connection    *conn = ws_conn[wsd].conn;
-
-    while(!ws_conn[wsd].closing)
-    {
-        usleep(8000);   /* 8 ms */
-        if (!ws_conn[wsd].closing)
-            mg_websocket_write(conn, WEBSOCKET_OPCODE_PING, NULL, 0);
-    }
-    fprintf(stderr, "ws_ping_thread %d exiting\n", wsd);
-}
-#endif
 
 
 // ws_server_thread()
@@ -87,13 +64,9 @@ static void *ws_server_thread(void *parm)
         mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, tstr, strlen(tstr));
     }
 
-#if defined(PING_ACTIVE) && defined(PING_THREAD)
-    mg_start_thread(ws_ping_thread, (void *)(long)wsd);
-#endif
-
     /* While the connection is open, send periodic updates */
     while(!ws_conn[wsd].closing) {
-        usleep(10000); /* 0.01 second */
+        usleep(100000); /* 0.1 second */
         timer++;
 
         /* Send meter updates */
@@ -116,11 +89,9 @@ static void *ws_server_thread(void *parm)
             }
         }
 
-#if defined(PING_ACTIVE) && !defined(PING_THREAD)
         /* Send periodic PING to assure websocket remains connected, except if we are closing */
         if (timer%100 == 0 && !ws_conn[wsd].closing)
             mg_websocket_write(conn, WEBSOCKET_OPCODE_PING, NULL, 0);
-#endif
     }
 
     fprintf(stderr, "ws_server_thread %d exiting\n", wsd);
@@ -149,7 +120,6 @@ static int websocket_connect_handler(const struct mg_connection *conn)
             ws_conn[i].conn = (struct mg_connection *)conn;
             ws_conn[i].closing = 0;
             ws_conn[i].update = 0;
-            ws_conn[i].counter = -1;
             break;
         }
     }
@@ -222,40 +192,19 @@ static int websocket_data_handler(struct mg_connection *conn, int flags,
             fprintf(stderr, "CONTINUATION...\n");
             break;
         case WEBSOCKET_OPCODE_TEXT:
-            //fprintf(stderr, "TEXT: %-.*s\n", (int)data_len, data);
+            fprintf(stderr, "TEXT: %-.*s\n", (int)data_len, data);
             /*** interpret data as commands here ***/
             if (strncmp("update on", data, data_len)== 0) {
-                fprintf(stderr, "TEXT: %-.*s\n", (int)data_len, data);
                 /* turn on updates */
                 ws_conn[wsd].update = 1;
                 /* echo back */
                 mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
             } else if (strncmp("update off", data, data_len)== 0) {
-                fprintf(stderr, "TEXT: %-.*s\n", (int)data_len, data);
                 /* turn off updates */
                 ws_conn[wsd].update = 0;
                 /* echo back */
                 mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
-            } else if (strncmp("counter ", data, 8)== 0) {
-                char buffer[16];
-                long newval;
-                strncpy(buffer, &data[8], data_len-8);
-                buffer[data_len-8] = '\0';
-                newval = strtol(buffer, NULL, 0);
-                if (ws_conn[wsd].counter == -1)
-                    ws_conn[wsd].counter = newval;
-                else
-                    ws_conn[wsd].counter++;
-                if (ws_conn[wsd].counter != newval)
-                {
-                    fprintf(stderr, "Counter: %ld, received %ld\n", ws_conn[wsd].counter, newval);
-                    ws_conn[wsd].counter = newval;
-                }
-                if (ws_conn[wsd].counter % 3000 == 0)
-                    fprintf(stderr, "Counter: %ld\n", ws_conn[wsd].counter);
             }
-            else
-                fprintf(stderr, "TEXT: %-.*s\n", (int)data_len, data);
             break;
         case WEBSOCKET_OPCODE_BINARY:
             fprintf(stderr, "BINARY...\n");
