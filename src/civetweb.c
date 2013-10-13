@@ -4365,6 +4365,7 @@ static void read_websocket(struct mg_connection *conn)
        dynamically allocated buffer if it is too large. */
     char mem[4096];
     char *data = mem;
+    unsigned char mop;  /* mask flag and opcode */
 
     /* Loop continuously, reading messages from the socket, invoking the
        callback, and waiting repeatedly until an error occurs. */
@@ -4411,6 +4412,7 @@ static void read_websocket(struct mg_connection *conn)
                data and advance the queue by moving the memory in place. */
             assert(body_len >= header_len);
             if (data_len + header_len > body_len) {
+                mop = buf[0];   /* current mask and opcode */
                 /* Overflow case */
                 len = body_len - header_len;
                 memcpy(data, buf + header_len, len);
@@ -4418,6 +4420,7 @@ static void read_websocket(struct mg_connection *conn)
                 pull(NULL, conn, data + len, (int)(data_len - len));
                 conn->data_len = 0;
             } else {
+                mop = buf[0];   /* current mask and opcode, overwritten by memmove() */
                 /* Length of the message being read at the front of the
                    queue */
                 len = data_len + header_len;
@@ -4443,7 +4446,7 @@ static void read_websocket(struct mg_connection *conn)
             /* Exit the loop if callback signalled to exit,
                or "connection close" opcode received. */
             if ((conn->ctx->callbacks.websocket_data != NULL &&
-                 !conn->ctx->callbacks.websocket_data(conn, buf[0], data, data_len)) ||
+                 !conn->ctx->callbacks.websocket_data(conn, mop, data, data_len)) ||
                 (buf[0] & 0xf) == WEBSOCKET_OPCODE_CONNECTION_CLOSE) {  /* Opcode == 8, connection close */
                 break;
             }
