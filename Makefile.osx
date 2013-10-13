@@ -18,7 +18,7 @@ CONTENTS_DIR = $(DMG_DIR)/$(PACKAGE).app/Contents
 RESOURCES_DIR = $(CONTENTS_DIR)/Resources
 OSXBIN_DIR = $(CONTENTS_DIR)/MacOS
 
-CIVETWEB_VERSION = $(shell perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' src/civetweb.c)
+CIVETWEB_VERSION = $(shell perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' include/civetweb.h)
 
 include Makefile
 

@@ -153,7 +153,7 @@ Civetweb: $(LIB_SOURCES) src/main.c
           -framework Cocoa -ObjC -arch i386 -arch x86_64 -o Civetweb
 
 cocoa: Civetweb
-	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 resources/civetweb_*.png resources/civetweb.icns $$DIR/Contents/Resources/ && install -m 644 resources/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
+	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' include/civetweb.h`; DIR=dmg/Civetweb.app && rm -rf $$DIR && mkdir -p $$DIR/Contents/{MacOS,Resources} && install -m 644 resources/civetweb_*.png resources/civetweb.icns $$DIR/Contents/Resources/ && install -m 644 resources/Info.plist $$DIR/Contents/ && install -m 755 Civetweb $$DIR/Contents/MacOS/ && ln -fs /Applications dmg/ ; hdiutil create Civetweb_$$V.dmg -volname "Civetweb $$V" -srcfolder dmg -ov #; rm -rf dmg
 
 un:
 	$(CC) test/unit_test.c -o unit_test -I. -I$(LUA) $(LUA_SOURCES) \
@@ -196,11 +196,11 @@ tests:
 	perl test/test.pl $(TEST)
 
 tarball: clean
-	F=civetweb-`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`.tgz ; cd .. && tar -czf x civetweb/{LICENSE.md,Makefile,examples,test,resources,*.[ch],*.md} && mv x civetweb/$$F
+	F=civetweb-`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' include/civetweb.h`.tgz ; cd .. && tar -czf x civetweb/{LICENSE.md,Makefile,examples,test,resources,*.[ch],*.md} && mv x civetweb/$$F
 
 release: tarball cocoa
 	wine make windows
-	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' $(LIB_SOURCES)`; upx civetweb.exe; cp civetweb.exe civetweb-$$V.exe; cp civetweb.exe civetweb_php_bundle/; zip -r civetweb_php_bundle_$$V.zip civetweb_php_bundle/
+	V=`perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' include/civetweb.h`; upx civetweb.exe; cp civetweb.exe civetweb-$$V.exe; cp civetweb.exe civetweb_php_bundle/; zip -r civetweb_php_bundle_$$V.zip civetweb_php_bundle/
 
 clean:
 	rm -rf *.o *.core $(PROG) *.obj *.so $(PROG).txt *.dSYM *.tgz \

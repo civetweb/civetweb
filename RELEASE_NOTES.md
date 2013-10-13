@@ -6,6 +6,9 @@ In planning.
 Changes
 -------
 
+- Moved CEVITWEB_VERSION define into civetweb.h
+- Added new simple zip deployment build for Windows. 
+- Removed windows install package build.
 - Fixes page violation in mod_lua.inl (apkbox)
 - Use C style comments to enable compiling most of civetweb with -ansi. (F-Secure Corporation)
 - Allow directories with non ASCII characters in Windows in UTF-8 encoded (bel2125)

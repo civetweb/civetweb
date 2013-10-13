@@ -22,6 +22,10 @@
 #ifndef CIVETWEB_HEADER_INCLUDED
 #define CIVETWEB_HEADER_INCLUDED
 
+#ifndef CIVETWEB_VERSION
+#define CIVETWEB_VERSION "1.5"
+#endif
+
 #include <stdio.h>
 #include <stddef.h>
 
