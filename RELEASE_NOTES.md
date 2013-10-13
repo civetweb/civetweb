@@ -1,3 +1,12 @@
+Release Notes v1.6 (Under Development)
+===
+### Objectives: *???*
+
+Changes
+-------
+
+- Updated version number
+
 Release Notes v1.5
 ===
 ### Objectives: *Bug fixes and updates, repository restoration*
