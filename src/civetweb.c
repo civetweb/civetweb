@@ -78,6 +78,8 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#define MAX_WORKER_THREADS 1024
+
 #if defined(_WIN32) && !defined(__SYMBIAN32__) // Windows specific
 #if defined(_MSC_VER) && _MSC_VER <= 1400
 #undef _WIN32_WINNT
@@ -169,10 +171,13 @@ typedef long off_t;
 #endif // !fileno MINGW #defines fileno
 
 typedef HANDLE pthread_mutex_t;
-typedef struct {
-    HANDLE signal, broadcast;
-} pthread_cond_t;
 typedef HANDLE pthread_t;
+typedef struct {
+    CRITICAL_SECTION threadIdSec;
+    int waitingthreadcount;     // The amount of worker threads.
+    pthread_t *waitingthreadids;// The worker thread IDs.
+} pthread_cond_t;
+
 #define pid_t HANDLE // MINGW typedefs pid_t to int. Using #define here.
 
 static int pthread_mutex_lock(pthread_mutex_t *);
@@ -1067,34 +1072,71 @@ static int pthread_mutex_unlock(pthread_mutex_t *mutex)
 static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
 {
     (void) unused;
-    cv->signal = CreateEvent(NULL, FALSE, FALSE, NULL);
-    cv->broadcast = CreateEvent(NULL, TRUE, FALSE, NULL);
-    return cv->signal != NULL && cv->broadcast != NULL ? 0 : -1;
+    InitializeCriticalSection(&cv->threadIdSec);
+    cv->waitingthreadcount = 0;
+    cv->waitingthreadids = calloc(MAX_WORKER_THREADS, sizeof(pthread_t));
+    return (cv->waitingthreadids!=NULL) ? 0 : -1;
 }
 
 static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
 {
-    HANDLE handles[] = {cv->signal, cv->broadcast};
-    ReleaseMutex(*mutex);
-    WaitForMultipleObjects(2, handles, FALSE, INFINITE);
-    return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0? 0 : -1;
+    EnterCriticalSection(&cv->threadIdSec);
+    assert(cv->waitingthreadcount < MAX_WORKER_THREADS);
+    cv->waitingthreadids[cv->waitingthreadcount] = OpenThread(THREAD_SUSPEND_RESUME, FALSE, GetCurrentThreadId());
+    cv->waitingthreadcount++;
+    LeaveCriticalSection(&cv->threadIdSec);
+
+    pthread_mutex_unlock(mutex); /* if the thread is preempted here, ResumeThread will return 0 */
+    SuspendThread(GetCurrentThread()); /* if the thread reached this point, ResuleThread will return 1 */
+    pthread_mutex_lock(mutex);
+
+    return 0;
 }
 
 static int pthread_cond_signal(pthread_cond_t *cv)
 {
-    return SetEvent(cv->signal) == 0 ? -1 : 0;
+    int i,j;
+    DWORD susCnt;
+    HANDLE wkup = NULL;
+
+    EnterCriticalSection(&cv->threadIdSec);
+    for (j=0; j<cv->waitingthreadcount; j++) {
+      wkup = cv->waitingthreadids[j];
+      susCnt = ResumeThread(wkup);
+      assert(susCnt<2);
+      if (susCnt==1) {
+          CloseHandle(wkup);
+          for (i=1;i<cv->waitingthreadcount;i++) {
+              cv->waitingthreadids[i-1] = cv->waitingthreadids[i];
+          }
+          cv->waitingthreadcount--;
+          break;
+      }
+    }
+    LeaveCriticalSection(&cv->threadIdSec);
+
+    return 0;
 }
 
 static int pthread_cond_broadcast(pthread_cond_t *cv)
 {
-    // Implementation with PulseEvent() has race condition, see
-    // http://www.cs.wustl.edu/~schmidt/win32-cv-1.html
-    return PulseEvent(cv->broadcast) == 0 ? -1 : 0;
+    /* The only usecase here is after a call to mg_exit. */
+    /* This will work here, for WinCE (realtime) one could switch the thread priority of the master thread to below normal when exit is performed. */
+    EnterCriticalSection(&cv->threadIdSec);
+    while (cv->waitingthreadcount) {
+        pthread_cond_signal(cv);
+    }
+    LeaveCriticalSection(&cv->threadIdSec);
+
+    return 0;
 }
 
 static int pthread_cond_destroy(pthread_cond_t *cv)
 {
-    return CloseHandle(cv->signal) && CloseHandle(cv->broadcast) ? 0 : -1;
+    assert(cv->waitingthreadcount==0);
+    free(cv->waitingthreadids);
+
+    return 0;
 }
 
 // For Windows, change all slashes to backslashes in path names.
@@ -5994,6 +6036,13 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     (void) pthread_cond_init(&ctx->sq_full, NULL);
 
     workerthreadcount = atoi(ctx->config[NUM_THREADS]);
+
+    if (workerthreadcount > MAX_WORKER_THREADS) {
+        mg_cry(fc(ctx), "Too many worker threads");
+        free_context(ctx);
+        return NULL;
+    }
+
     if (workerthreadcount > 0) {
         ctx->workerthreadcount = workerthreadcount;
         ctx->workerthreadids = calloc(workerthreadcount, sizeof(pthread_t));

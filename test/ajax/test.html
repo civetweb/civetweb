@@ -36,6 +36,11 @@
         fetch(i,  method, isAsync);
       }
     }
+    
+    function runAutoTest() {
+       runTest("POST", true)
+       setTimeout("runAutoTest()", 250)
+    }
 
 
     function fetch(id, method, isAsync) {
@@ -107,6 +112,12 @@
             <input id="testButton4" type="button" onclick="javascript:runTest('POST', true)" value="async POST"></input>
           </td>
         </tr>
+        <tr>
+          <td>
+            <input id="testButton5" type="button" onclick="javascript:runAutoTest()" value="automatic test"></input>
+          </td>        
+        </tr>
+        
         <tr>
           <td>
             <input id="testButtonReset" type="button" onclick="javascript:location.reload(true)" value="reset"></input>
