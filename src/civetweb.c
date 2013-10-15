@@ -1087,7 +1087,7 @@ static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
     LeaveCriticalSection(&cv->threadIdSec);
 
     pthread_mutex_unlock(mutex); /* if the thread is preempted here, ResumeThread will return 0 */
-    SuspendThread(GetCurrentThread()); /* if the thread reached this point, ResuleThread will return 1 */
+    SuspendThread(GetCurrentThread()); /* if the thread reached this point, ResumeThread will return 1 */
     pthread_mutex_lock(mutex);
 
     return 0;
@@ -1133,8 +1133,12 @@ static int pthread_cond_broadcast(pthread_cond_t *cv)
 
 static int pthread_cond_destroy(pthread_cond_t *cv)
 {
+    EnterCriticalSection(&cv->threadIdSec);
     assert(cv->waitingthreadcount==0);
+    cv->waitingthreadids = 0;
     free(cv->waitingthreadids);
+    LeaveCriticalSection(&cv->threadIdSec);
+    DeleteCriticalSection(&cv->threadIdSec);
 
     return 0;
 }
