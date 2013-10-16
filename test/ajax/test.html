@@ -16,7 +16,7 @@
     var errorCount = 0;
     var pushCount = 0;
     var allErrorCount = 0;
-
+    var autoTest = false;
 
     function runTest(method, isAsync) {
 
@@ -38,8 +38,10 @@
     }
     
     function runAutoTest() {
-       runTest("POST", true)
-       setTimeout("runAutoTest()", 250)
+      if (autoTest) {
+        runTest("POST", true)
+        setTimeout("runAutoTest()", 250)
+      }
     }
 
 
@@ -114,13 +116,13 @@
         </tr>
         <tr>
           <td>
-            <input id="testButton5" type="button" onclick="javascript:runAutoTest()" value="automatic test"></input>
+            <input id="testButton5" type="button" onclick="autoTest=!autoTest; javascript:runAutoTest()" value="automatic test"></input>
           </td>        
         </tr>
         
         <tr>
           <td>
-            <input id="testButtonReset" type="button" onclick="javascript:location.reload(true)" value="reset"></input>
+            <input id="testButtonReset" type="button" onclick="autoTest=false; javascript:location.reload(true)" value="reset"></input>
           </td>
           <td>
           </td>

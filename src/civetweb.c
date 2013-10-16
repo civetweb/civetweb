@@ -1100,18 +1100,28 @@ static int pthread_cond_signal(pthread_cond_t *cv)
     HANDLE wkup = NULL;
 
     EnterCriticalSection(&cv->threadIdSec);
-    for (j=0; j<cv->waitingthreadcount; j++) {
-      wkup = cv->waitingthreadids[j];
-      susCnt = ResumeThread(wkup);
-      assert(susCnt<2);
-      if (susCnt==1) {
-          CloseHandle(wkup);
-          for (i=1;i<cv->waitingthreadcount;i++) {
-              cv->waitingthreadids[i-1] = cv->waitingthreadids[i];
-          }
-          cv->waitingthreadcount--;
-          break;
-      }
+    if (cv->waitingthreadcount) {
+        for (;;) {
+            for (j=0; j<cv->waitingthreadcount; j++) {
+                wkup = cv->waitingthreadids[j];
+                susCnt = ResumeThread(wkup);
+                assert(susCnt<2);
+                if (susCnt==1) {
+                    CloseHandle(wkup);
+                    for (i=1;i<cv->waitingthreadcount;i++) {
+                        cv->waitingthreadids[i-1] = cv->waitingthreadids[i];
+                    }
+                    cv->waitingthreadcount--;
+                    break;
+                }
+            }
+            if (wkup) {
+                break;
+            } else {
+                /* All theads between enqueue and suspend */
+                Sleep(1);
+            }
+        }
     }
     LeaveCriticalSection(&cv->threadIdSec);
 
@@ -1120,8 +1130,6 @@ static int pthread_cond_signal(pthread_cond_t *cv)
 
 static int pthread_cond_broadcast(pthread_cond_t *cv)
 {
-    /* The only usecase here is after a call to mg_exit. */
-    /* This will work here, for WinCE (realtime) one could switch the thread priority of the master thread to below normal when exit is performed. */
     EnterCriticalSection(&cv->threadIdSec);
     while (cv->waitingthreadcount) {
         pthread_cond_signal(cv);
