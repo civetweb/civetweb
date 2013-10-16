@@ -174,8 +174,8 @@ typedef HANDLE pthread_mutex_t;
 typedef HANDLE pthread_t;
 typedef struct {
     CRITICAL_SECTION threadIdSec;
-    int waitingthreadcount;     // The amount of worker threads.
-    pthread_t *waitingthreadids;// The worker thread IDs.
+    int waitingthreadcount;        /* The number of threads queued. */
+    pthread_t *waitingthreadhdls;  /* The thread handles. */
 } pthread_cond_t;
 
 #define pid_t HANDLE // MINGW typedefs pid_t to int. Using #define here.
@@ -1074,19 +1074,19 @@ static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
     (void) unused;
     InitializeCriticalSection(&cv->threadIdSec);
     cv->waitingthreadcount = 0;
-    cv->waitingthreadids = calloc(MAX_WORKER_THREADS, sizeof(pthread_t));
-    return (cv->waitingthreadids!=NULL) ? 0 : -1;
+    cv->waitingthreadhdls = calloc(MAX_WORKER_THREADS, sizeof(pthread_t));
+    return (cv->waitingthreadhdls!=NULL) ? 0 : -1;
 }
 
 static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
 {
     EnterCriticalSection(&cv->threadIdSec);
     assert(cv->waitingthreadcount < MAX_WORKER_THREADS);
-    cv->waitingthreadids[cv->waitingthreadcount] = OpenThread(THREAD_SUSPEND_RESUME, FALSE, GetCurrentThreadId());
+    cv->waitingthreadhdls[cv->waitingthreadcount] = OpenThread(THREAD_SUSPEND_RESUME, FALSE, GetCurrentThreadId());
     cv->waitingthreadcount++;
     LeaveCriticalSection(&cv->threadIdSec);
 
-    pthread_mutex_unlock(mutex); /* if the thread is preempted here, ResumeThread will return 0 */
+    pthread_mutex_unlock(mutex);       /* if the thread is preempted before SuspentThread, ResumeThread will return 0 */
     SuspendThread(GetCurrentThread()); /* if the thread reached this point, ResumeThread will return 1 */
     pthread_mutex_lock(mutex);
 
@@ -1103,13 +1103,13 @@ static int pthread_cond_signal(pthread_cond_t *cv)
     if (cv->waitingthreadcount) {
         for (;;) {
             for (j=0; j<cv->waitingthreadcount; j++) {
-                wkup = cv->waitingthreadids[j];
+                wkup = cv->waitingthreadhdls[j];
                 susCnt = ResumeThread(wkup);
                 assert(susCnt<2);
                 if (susCnt==1) {
                     CloseHandle(wkup);
                     for (i=1;i<cv->waitingthreadcount;i++) {
-                        cv->waitingthreadids[i-1] = cv->waitingthreadids[i];
+                        cv->waitingthreadhdls[i-1] = cv->waitingthreadhdls[i];
                     }
                     cv->waitingthreadcount--;
                     break;
@@ -1119,7 +1119,7 @@ static int pthread_cond_signal(pthread_cond_t *cv)
                 break;
             } else {
                 /* All theads between enqueue and suspend */
-                Sleep(1);
+                SwitchToThread();
             }
         }
     }
@@ -1143,8 +1143,8 @@ static int pthread_cond_destroy(pthread_cond_t *cv)
 {
     EnterCriticalSection(&cv->threadIdSec);
     assert(cv->waitingthreadcount==0);
-    cv->waitingthreadids = 0;
-    free(cv->waitingthreadids);
+    cv->waitingthreadhdls = 0;
+    free(cv->waitingthreadhdls);
     LeaveCriticalSection(&cv->threadIdSec);
     DeleteCriticalSection(&cv->threadIdSec);
 
