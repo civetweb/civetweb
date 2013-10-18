@@ -560,7 +560,6 @@ struct mg_context {
     volatile int num_threads;  // Number of threads
     pthread_mutex_t mutex;     // Protects (max|num)_threads
     pthread_cond_t  cond;      // Condvar for tracking workers terminations
-    pthread_key_t pthreadTLS;  /* Thread local storage index */
 
     struct socket queue[MGSQLEN];   // Accepted sockets
     volatile int sq_head;      // Head of the socket queue
@@ -597,6 +596,9 @@ struct mg_connection {
     int64_t last_throttle_bytes;// Bytes sent this second
     pthread_mutex_t mutex;      // Used by mg_lock/mg_unlock to ensure atomic transmissions for websockets
 };
+
+static pthread_key_t sTlsKey;  /* Thread local storage index */
+static int sTlsInit = 0;
 
 struct mg_workerTLS {
     int threadIndex;
@@ -1114,52 +1116,43 @@ static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
 
 static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
 {
+    struct mg_workerTLS * tls = (struct mg_workerTLS *)TlsGetValue(sTlsKey);
+    int ok;
+
     EnterCriticalSection(&cv->threadIdSec);
     assert(cv->waitingthreadcount < MAX_WORKER_THREADS);
-    cv->waitingthreadhdls[cv->waitingthreadcount] = OpenThread(THREAD_SUSPEND_RESUME, FALSE, GetCurrentThreadId());
+    cv->waitingthreadhdls[cv->waitingthreadcount] = tls->pthread_cond_helper_mutex;
     cv->waitingthreadcount++;
     LeaveCriticalSection(&cv->threadIdSec);
 
-    pthread_mutex_unlock(mutex);       /* if the thread is preempted before SuspentThread, ResumeThread will return 0 */
-    SuspendThread(GetCurrentThread()); /* if the thread reached this point, ResumeThread will return 1 */
+    pthread_mutex_unlock(mutex);
+    ok = (WAIT_OBJECT_0 == WaitForSingleObject(tls->pthread_cond_helper_mutex, INFINITE));
     pthread_mutex_lock(mutex);
 
-    return 0;
+    return ok ? 0 : -1;
 }
 
 static int pthread_cond_signal(pthread_cond_t *cv)
 {
-    int i,j;
-    DWORD susCnt;
+    int i;
     HANDLE wkup = NULL;
+    BOOL ok = FALSE;
 
     EnterCriticalSection(&cv->threadIdSec);
     if (cv->waitingthreadcount) {
-        for (;;) {
-            for (j=0; j<cv->waitingthreadcount; j++) {
-                wkup = cv->waitingthreadhdls[j];
-                susCnt = ResumeThread(wkup);
-                assert(susCnt<2);
-                if (susCnt==1) {
-                    CloseHandle(wkup);
-                    for (i=1;i<cv->waitingthreadcount;i++) {
-                        cv->waitingthreadhdls[i-1] = cv->waitingthreadhdls[i];
-                    }
-                    cv->waitingthreadcount--;
-                    break;
-                }
-            }
-            if (wkup) {
-                break;
-            } else {
-                /* All theads between enqueue and suspend */
-                SwitchToThread();
-            }
+        wkup = cv->waitingthreadhdls[0];
+        ok = SetEvent(wkup);
+
+        for (i=1;i<cv->waitingthreadcount;i++) {
+            cv->waitingthreadhdls[i-1] = cv->waitingthreadhdls[i];
         }
+        cv->waitingthreadcount--;
+
+        assert(ok);
     }
     LeaveCriticalSection(&cv->threadIdSec);
 
-    return 0;
+    return ok ? 0 : 1;
 }
 
 static int pthread_cond_broadcast(pthread_cond_t *cv)
@@ -5711,9 +5704,9 @@ static void *worker_thread_run(void *thread_func_param)
         mg_cry(fc(ctx), "%s", "Cannot create new connection struct, OOM");
     } else {
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-        tls->pthread_cond_helper_mutex = CreateMutex(NULL, FALSE, NULL);
+        tls->pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
 #endif
-        pthread_setspecific(ctx->pthreadTLS, tls);
+        pthread_setspecific(sTlsKey, tls);
         conn->buf_size = MAX_REQUEST_SIZE;
         conn->buf = (char *) (conn + 1);
         conn->ctx = ctx;
@@ -5756,7 +5749,7 @@ static void *worker_thread_run(void *thread_func_param)
     assert(ctx->num_threads >= 0);
     (void) pthread_mutex_unlock(&ctx->mutex);
 
-    pthread_setspecific(ctx->pthreadTLS, 0);
+    pthread_setspecific(sTlsKey, 0);
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     CloseHandle(tls->pthread_cond_helper_mutex);
 #endif
@@ -5996,7 +5989,11 @@ static void free_context(struct mg_context *ctx)
         free(ctx->workerthreadids);
     }
 
-    pthread_key_delete(ctx->pthreadTLS);
+    /* Deallocate the tls variable */
+    sTlsInit--;
+    if (sTlsInit==0) {
+        pthread_key_delete(sTlsKey);
+    }
 
     // Deallocate context itself
     free(ctx);
@@ -6040,11 +6037,14 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         return NULL;
     }
 
-    if (0 != pthread_key_create(&ctx->pthreadTLS, NULL)) {
-        mg_cry(fc(ctx), "Cannot initialize thread local storage");
-        free(ctx); /* use free only here, and free_context afterwards */
-        return NULL;
+    if (sTlsInit==0) {
+        if (0 != pthread_key_create(&sTlsKey, NULL)) {
+            mg_cry(fc(ctx), "Cannot initialize thread local storage");
+            return NULL;
+        }
+        sTlsInit++;
     }
+
     ctx->callbacks = *callbacks;
     ctx->user_data = user_data;
     ctx->request_handlers = 0;
