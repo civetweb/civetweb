@@ -1119,6 +1119,8 @@ static int clock_gettime(clockid_t clk_id, struct timespec *tp)
     FILETIME ft;
     ULARGE_INTEGER li;
     BOOL ok = FALSE;
+    double d;
+    static double perfcnt_per_sec = 0.0;
 
     if (tp) {
         if (clk_id == CLOCK_REALTIME) {
@@ -1128,7 +1130,20 @@ static int clock_gettime(clockid_t clk_id, struct timespec *tp)
             li.QuadPart -= 116444736000000000; /* 1.1.1970 in filedate */
             tp->tv_sec = (time_t)(li.QuadPart / 10000000);
             tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
+            ok = TRUE;
         } else if (clk_id == CLOCK_MONOTONIC) {
+            if (perfcnt_per_sec==0) {
+                QueryPerformanceFrequency((LARGE_INTEGER *) &li);
+                perfcnt_per_sec = 1.0 / li.QuadPart;
+            }
+            if (perfcnt_per_sec!=0) {
+                QueryPerformanceCounter((LARGE_INTEGER *) &li);
+                d = li.QuadPart * perfcnt_per_sec;
+                tp->tv_sec = (time_t)d;
+                d -= tp->tv_sec;
+                tp->tv_nsec = (long)(d*1.0E9);
+                ok = TRUE;
+            }
         }
     }
 
