@@ -171,6 +171,7 @@ typedef long off_t;
 #endif // !fileno MINGW #defines fileno
 
 typedef HANDLE pthread_mutex_t;
+typedef DWORD pthread_key_t;
 typedef HANDLE pthread_t;
 typedef struct {
     CRITICAL_SECTION threadIdSec;
@@ -284,6 +285,31 @@ static CRITICAL_SECTION global_log_file_lock;
 static DWORD pthread_self(void)
 {
     return GetCurrentThreadId();
+}
+
+int pthread_key_create(pthread_key_t *key, void (*_must_be_zero)(void*) /* destructor function not supported for windows */)
+{
+    assert(_must_be_zero == NULL);
+    if ((key!=0) && (_must_be_zero == NULL)) {
+        *key = TlsAlloc();
+        return (*key != TLS_OUT_OF_INDEXES) ? 0 : -1;
+    }
+    return -2;
+}
+
+int pthread_key_delete(pthread_key_t key)
+{
+    return TlsFree(key) ? 0 : 1;
+}
+
+int pthread_setspecific(pthread_key_t key, void * value)
+{
+    return TlsSetValue(key, value) ? 0 : 1;
+}
+
+void *pthread_getspecific(pthread_key_t key)
+{
+    return TlsGetValue(key);
 }
 #endif // _WIN32
 
@@ -534,6 +560,7 @@ struct mg_context {
     volatile int num_threads;  // Number of threads
     pthread_mutex_t mutex;     // Protects (max|num)_threads
     pthread_cond_t  cond;      // Condvar for tracking workers terminations
+    pthread_key_t pthreadTLS;  /* Thread local storage index */
 
     struct socket queue[MGSQLEN];   // Accepted sockets
     volatile int sq_head;      // Head of the socket queue
@@ -569,6 +596,13 @@ struct mg_connection {
     time_t last_throttle_time;  // Last time throttled data was sent
     int64_t last_throttle_bytes;// Bytes sent this second
     pthread_mutex_t mutex;      // Used by mg_lock/mg_unlock to ensure atomic transmissions for websockets
+};
+
+struct mg_workerTLS {
+    int threadIndex;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    HANDLE pthread_cond_helper_mutex;
+#endif
 };
 
 // Directory entry
@@ -5669,11 +5703,17 @@ static void *worker_thread_run(void *thread_func_param)
 {
     struct mg_context *ctx = (struct mg_context *) thread_func_param;
     struct mg_connection *conn;
+    struct mg_workerTLS *tls;
 
+    tls = (struct mg_workerTLS *) calloc(1, sizeof(*tls));
     conn = (struct mg_connection *) calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE);
-    if (conn == NULL) {
+    if ((conn == NULL) || (tls == NULL)) {
         mg_cry(fc(ctx), "%s", "Cannot create new connection struct, OOM");
     } else {
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+        tls->pthread_cond_helper_mutex = CreateMutex(NULL, FALSE, NULL);
+#endif
+        pthread_setspecific(ctx->pthreadTLS, tls);
         conn->buf_size = MAX_REQUEST_SIZE;
         conn->buf = (char *) (conn + 1);
         conn->ctx = ctx;
@@ -5707,7 +5747,6 @@ static void *worker_thread_run(void *thread_func_param)
 
             close_connection(conn);
         }
-        free(conn);
     }
 
     // Signal master that we're done with connection and exiting
@@ -5716,6 +5755,13 @@ static void *worker_thread_run(void *thread_func_param)
     (void) pthread_cond_signal(&ctx->cond);
     assert(ctx->num_threads >= 0);
     (void) pthread_mutex_unlock(&ctx->mutex);
+
+    pthread_setspecific(ctx->pthreadTLS, 0);
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    CloseHandle(tls->pthread_cond_helper_mutex);
+#endif
+    free(tls);
+    free(conn);
 
     DEBUG_TRACE(("exiting"));
     return NULL;
@@ -5950,6 +5996,8 @@ static void free_context(struct mg_context *ctx)
         free(ctx->workerthreadids);
     }
 
+    pthread_key_delete(ctx->pthreadTLS);
+
     // Deallocate context itself
     free(ctx);
 }
@@ -5989,6 +6037,12 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     // Allocate context and initialize reasonable general case defaults.
     // TODO(lsm): do proper error handling here.
     if ((ctx = (struct mg_context *) calloc(1, sizeof(*ctx))) == NULL) {
+        return NULL;
+    }
+
+    if (0 != pthread_key_create(&ctx->pthreadTLS, NULL)) {
+        mg_cry(fc(ctx), "Cannot initialize thread local storage");
+        free(ctx); /* use free only here, and free_context afterwards */
         return NULL;
     }
     ctx->callbacks = *callbacks;
