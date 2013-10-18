@@ -179,6 +179,15 @@ typedef struct {
     pthread_t *waitingthreadhdls;  /* The thread handles. */
 } pthread_cond_t;
 
+typedef DWORD clockid_t;
+#define CLOCK_MONOTONIC (1)
+#define CLOCK_REALTIME  (2)
+
+struct timespec {
+    time_t   tv_sec;        /* seconds */
+    long     tv_nsec;       /* nanoseconds */
+};
+
 #define pid_t HANDLE // MINGW typedefs pid_t to int. Using #define here.
 
 static int pthread_mutex_lock(pthread_mutex_t *);
@@ -1103,6 +1112,27 @@ static int pthread_mutex_lock(pthread_mutex_t *mutex)
 static int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
     return ReleaseMutex(*mutex) == 0 ? -1 : 0;
+}
+
+static int clock_gettime(clockid_t clk_id, struct timespec *tp)
+{
+    FILETIME ft;
+    ULARGE_INTEGER li;
+    BOOL ok = FALSE;
+
+    if (tp) {
+        if (clk_id == CLOCK_REALTIME) {
+            GetSystemTimeAsFileTime(&ft);
+            li.LowPart = ft.dwLowDateTime;
+            li.HighPart = ft.dwHighDateTime;
+            li.QuadPart -= 116444736000000000; /* 1.1.1970 in filedate */
+            tp->tv_sec = (time_t)(li.QuadPart / 10000000);
+            tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
+        } else if (clk_id == CLOCK_MONOTONIC) {
+        }
+    }
+
+    return ok ? 0 : -1;
 }
 
 static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
