@@ -1159,10 +1159,13 @@ static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
     return (cv->waitingthreadhdls!=NULL) ? 0 : -1;
 }
 
-static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
+static int pthread_cond_timedwait(pthread_cond_t *cv, pthread_mutex_t *mutex, const struct timespec * abstime)
 {
     struct mg_workerTLS * tls = (struct mg_workerTLS *)TlsGetValue(sTlsKey);
     int ok;
+    struct timespec tsnow;
+    int64_t nsnow, nswaitabs, nswaitrel;
+    DWORD mswaitrel;
 
     EnterCriticalSection(&cv->threadIdSec);
     assert(cv->waitingthreadcount < MAX_WORKER_THREADS);
@@ -1170,11 +1173,27 @@ static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
     cv->waitingthreadcount++;
     LeaveCriticalSection(&cv->threadIdSec);
 
+    if (abstime) {
+        clock_gettime(CLOCK_REALTIME, &tsnow);
+        nsnow = (((uint64_t)tsnow.tv_sec)<<32) + tsnow.tv_nsec;
+        nswaitabs = (((uint64_t)abstime->tv_sec)<<32) + abstime->tv_nsec;
+        nswaitrel = nswaitabs - nsnow;
+        if (nswaitrel<0) nswaitrel=0;
+        mswaitrel = (DWORD)(nswaitrel / 1000000);
+    } else {
+        mswaitrel = INFINITE;
+    }
+
     pthread_mutex_unlock(mutex);
-    ok = (WAIT_OBJECT_0 == WaitForSingleObject(tls->pthread_cond_helper_mutex, INFINITE));
+    ok = (WAIT_OBJECT_0 == WaitForSingleObject(tls->pthread_cond_helper_mutex, mswaitrel));
     pthread_mutex_lock(mutex);
 
     return ok ? 0 : -1;
+}
+
+static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
+{
+    return pthread_cond_timedwait(cv, mutex, NULL);
 }
 
 static int pthread_cond_signal(pthread_cond_t *cv)
