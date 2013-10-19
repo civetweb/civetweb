@@ -610,7 +610,7 @@ static pthread_key_t sTlsKey;  /* Thread local storage index */
 static int sTlsInit = 0;
 
 struct mg_workerTLS {
-    int threadIndex;
+    int is_master;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     HANDLE pthread_cond_helper_mutex;
 #endif
@@ -5760,17 +5760,18 @@ static void *worker_thread_run(void *thread_func_param)
 {
     struct mg_context *ctx = (struct mg_context *) thread_func_param;
     struct mg_connection *conn;
-    struct mg_workerTLS *tls;
+    struct mg_workerTLS tls;
 
-    tls = (struct mg_workerTLS *) calloc(1, sizeof(*tls));
+    tls.is_master = 0;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
+#endif
+
     conn = (struct mg_connection *) calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE);
-    if ((conn == NULL) || (tls == NULL)) {
+    if (conn == NULL) {
         mg_cry(fc(ctx), "%s", "Cannot create new connection struct, OOM");
     } else {
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
-        tls->pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
-#endif
-        pthread_setspecific(sTlsKey, tls);
+        pthread_setspecific(sTlsKey, &tls);
         conn->buf_size = MAX_REQUEST_SIZE;
         conn->buf = (char *) (conn + 1);
         conn->ctx = ctx;
@@ -5815,9 +5816,8 @@ static void *worker_thread_run(void *thread_func_param)
 
     pthread_setspecific(sTlsKey, 0);
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-    CloseHandle(tls->pthread_cond_helper_mutex);
+    CloseHandle(tls.pthread_cond_helper_mutex);
 #endif
-    free(tls);
     free(conn);
 
     DEBUG_TRACE(("exiting"));
@@ -5918,6 +5918,7 @@ static void accept_new_connection(const struct socket *listener,
 static void master_thread_run(void *thread_func_param)
 {
     struct mg_context *ctx = (struct mg_context *) thread_func_param;
+    struct mg_workerTLS tls;
     struct pollfd *pfd;
     int i;
     int workerthreadcount;
@@ -5937,6 +5938,12 @@ static void master_thread_run(void *thread_func_param)
         pthread_setschedparam(pthread_self(), SCHED_RR, &sched_param);
     }
 #endif
+
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
+#endif
+    tls.is_master = 1;
+    pthread_setspecific(sTlsKey, &tls);
 
     pfd = (struct pollfd *) calloc(ctx->num_listening_sockets, sizeof(pfd[0]));
     while (pfd != NULL && ctx->stop_flag == 0) {
@@ -5989,6 +5996,11 @@ static void master_thread_run(void *thread_func_param)
     uninitialize_ssl(ctx);
 #endif
     DEBUG_TRACE(("exiting"));
+
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    CloseHandle(tls.pthread_cond_helper_mutex);
+#endif
+    pthread_setspecific(sTlsKey, 0);
 
     // Signal mg_stop() that we're done.
     // WARNING: This must be the very last thing this
