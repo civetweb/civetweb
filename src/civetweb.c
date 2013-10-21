@@ -79,6 +79,8 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#define MAX_WORKER_THREADS 1024
+
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
 #if defined(_MSC_VER) && _MSC_VER <= 1400
 #undef _WIN32_WINNT
@@ -170,10 +172,23 @@ typedef long off_t;
 #endif /* !fileno MINGW #defines fileno */
 
 typedef HANDLE pthread_mutex_t;
-typedef struct {
-    HANDLE signal, broadcast;
-} pthread_cond_t;
+typedef DWORD pthread_key_t;
 typedef HANDLE pthread_t;
+typedef struct {
+    CRITICAL_SECTION threadIdSec;
+    int waitingthreadcount;        /* The number of threads queued. */
+    pthread_t *waitingthreadhdls;  /* The thread handles. */
+} pthread_cond_t;
+
+typedef DWORD clockid_t;
+#define CLOCK_MONOTONIC (1)
+#define CLOCK_REALTIME  (2)
+
+struct timespec {
+    time_t   tv_sec;        /* seconds */
+    long     tv_nsec;       /* nanoseconds */
+};
+
 #define pid_t HANDLE /* MINGW typedefs pid_t to int. Using #define here. */
 
 static int pthread_mutex_lock(pthread_mutex_t *);
@@ -279,6 +294,31 @@ static CRITICAL_SECTION global_log_file_lock;
 static DWORD pthread_self(void)
 {
     return GetCurrentThreadId();
+}
+
+int pthread_key_create(pthread_key_t *key, void (*_must_be_zero)(void*) /* destructor function not supported for windows */)
+{
+    assert(_must_be_zero == NULL);
+    if ((key!=0) && (_must_be_zero == NULL)) {
+        *key = TlsAlloc();
+        return (*key != TLS_OUT_OF_INDEXES) ? 0 : -1;
+    }
+    return -2;
+}
+
+int pthread_key_delete(pthread_key_t key)
+{
+    return TlsFree(key) ? 0 : 1;
+}
+
+int pthread_setspecific(pthread_key_t key, void * value)
+{
+    return TlsSetValue(key, value) ? 0 : 1;
+}
+
+void *pthread_getspecific(pthread_key_t key)
+{
+    return TlsGetValue(key);
 }
 #endif /* _WIN32 */
 
@@ -570,6 +610,16 @@ struct mg_connection {
     int64_t last_throttle_bytes;/* Bytes sent this second */
     pthread_mutex_t mutex;      /* Used by mg_lock/mg_unlock to ensure atomic
                                    transmissions for websockets */
+};
+
+static pthread_key_t sTlsKey;  /* Thread local storage index */
+static int sTlsInit = 0;
+
+struct mg_workerTLS {
+    int is_master;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    HANDLE pthread_cond_helper_mutex;
+#endif
 };
 
 /* Directory entry */
@@ -1070,37 +1120,132 @@ static int pthread_mutex_unlock(pthread_mutex_t *mutex)
     return ReleaseMutex(*mutex) == 0 ? -1 : 0;
 }
 
+static int clock_gettime(clockid_t clk_id, struct timespec *tp)
+{
+    FILETIME ft;
+    ULARGE_INTEGER li;
+    BOOL ok = FALSE;
+    double d;
+    static double perfcnt_per_sec = 0.0;
+
+    if (tp) {
+        if (clk_id == CLOCK_REALTIME) {
+            GetSystemTimeAsFileTime(&ft);
+            li.LowPart = ft.dwLowDateTime;
+            li.HighPart = ft.dwHighDateTime;
+            li.QuadPart -= 116444736000000000; /* 1.1.1970 in filedate */
+            tp->tv_sec = (time_t)(li.QuadPart / 10000000);
+            tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
+            ok = TRUE;
+        } else if (clk_id == CLOCK_MONOTONIC) {
+            if (perfcnt_per_sec==0) {
+                QueryPerformanceFrequency((LARGE_INTEGER *) &li);
+                perfcnt_per_sec = 1.0 / li.QuadPart;
+            }
+            if (perfcnt_per_sec!=0) {
+                QueryPerformanceCounter((LARGE_INTEGER *) &li);
+                d = li.QuadPart * perfcnt_per_sec;
+                tp->tv_sec = (time_t)d;
+                d -= tp->tv_sec;
+                tp->tv_nsec = (long)(d*1.0E9);
+                ok = TRUE;
+            }
+        }
+    }
+
+    return ok ? 0 : -1;
+}
+
 static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
 {
     (void) unused;
-    cv->signal = CreateEvent(NULL, FALSE, FALSE, NULL);
-    cv->broadcast = CreateEvent(NULL, TRUE, FALSE, NULL);
-    return cv->signal != NULL && cv->broadcast != NULL ? 0 : -1;
+    InitializeCriticalSection(&cv->threadIdSec);
+    cv->waitingthreadcount = 0;
+    cv->waitingthreadhdls = calloc(MAX_WORKER_THREADS, sizeof(pthread_t));
+    return (cv->waitingthreadhdls!=NULL) ? 0 : -1;
+}
+
+static int pthread_cond_timedwait(pthread_cond_t *cv, pthread_mutex_t *mutex, const struct timespec * abstime)
+{
+    struct mg_workerTLS * tls = (struct mg_workerTLS *)TlsGetValue(sTlsKey);
+    int ok;
+    struct timespec tsnow;
+    int64_t nsnow, nswaitabs, nswaitrel;
+    DWORD mswaitrel;
+
+    EnterCriticalSection(&cv->threadIdSec);
+    assert(cv->waitingthreadcount < MAX_WORKER_THREADS);
+    cv->waitingthreadhdls[cv->waitingthreadcount] = tls->pthread_cond_helper_mutex;
+    cv->waitingthreadcount++;
+    LeaveCriticalSection(&cv->threadIdSec);
+
+    if (abstime) {
+        clock_gettime(CLOCK_REALTIME, &tsnow);
+        nsnow = (((uint64_t)tsnow.tv_sec)<<32) + tsnow.tv_nsec;
+        nswaitabs = (((uint64_t)abstime->tv_sec)<<32) + abstime->tv_nsec;
+        nswaitrel = nswaitabs - nsnow;
+        if (nswaitrel<0) nswaitrel=0;
+        mswaitrel = (DWORD)(nswaitrel / 1000000);
+    } else {
+        mswaitrel = INFINITE;
+    }
+
+    pthread_mutex_unlock(mutex);
+    ok = (WAIT_OBJECT_0 == WaitForSingleObject(tls->pthread_cond_helper_mutex, mswaitrel));
+    pthread_mutex_lock(mutex);
+
+    return ok ? 0 : -1;
 }
 
 static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
 {
-    HANDLE handles[] = {cv->signal, cv->broadcast};
-    ReleaseMutex(*mutex);
-    WaitForMultipleObjects(2, handles, FALSE, INFINITE);
-    return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0? 0 : -1;
+    return pthread_cond_timedwait(cv, mutex, NULL);
 }
 
 static int pthread_cond_signal(pthread_cond_t *cv)
 {
-    return SetEvent(cv->signal) == 0 ? -1 : 0;
+    int i;
+    HANDLE wkup = NULL;
+    BOOL ok = FALSE;
+
+    EnterCriticalSection(&cv->threadIdSec);
+    if (cv->waitingthreadcount) {
+        wkup = cv->waitingthreadhdls[0];
+        ok = SetEvent(wkup);
+
+        for (i=1; i<cv->waitingthreadcount; i++) {
+            cv->waitingthreadhdls[i-1] = cv->waitingthreadhdls[i];
+        }
+        cv->waitingthreadcount--;
+
+        assert(ok);
+    }
+    LeaveCriticalSection(&cv->threadIdSec);
+
+    return ok ? 0 : 1;
 }
 
 static int pthread_cond_broadcast(pthread_cond_t *cv)
 {
-    /* Implementation with PulseEvent() has race condition, see
-       http://www.cs.wustl.edu/~schmidt/win32-cv-1.html */
-    return PulseEvent(cv->broadcast) == 0 ? -1 : 0;
+    EnterCriticalSection(&cv->threadIdSec);
+    while (cv->waitingthreadcount) {
+        pthread_cond_signal(cv);
+    }
+    LeaveCriticalSection(&cv->threadIdSec);
+
+    return 0;
 }
 
 static int pthread_cond_destroy(pthread_cond_t *cv)
 {
-    return CloseHandle(cv->signal) && CloseHandle(cv->broadcast) ? 0 : -1;
+    EnterCriticalSection(&cv->threadIdSec);
+    assert(cv->waitingthreadcount==0);
+    cv->waitingthreadhdls = 0;
+    free(cv->waitingthreadhdls);
+    LeaveCriticalSection(&cv->threadIdSec);
+    DeleteCriticalSection(&cv->threadIdSec);
+
+    return 0;
 }
 
 /* For Windows, change all slashes to backslashes in path names. */
@@ -1370,7 +1515,12 @@ static void set_close_on_exec(SOCKET sock, struct mg_connection *conn /* may be 
 
 int mg_start_thread(mg_thread_func_t f, void *p)
 {
+#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+    /* Compile-time option to control stack size, e.g. -DUSE_STACK_SIZE=16384 */
+    return (long)_beginthread((void (__cdecl *)(void *)) f, USE_STACK_SIZE, p) == -1L ? -1 : 0;
+#else
     return (long)_beginthread((void (__cdecl *)(void *)) f, 0, p) == -1L ? -1 : 0;
+#endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
 }
 
 /* Start a thread storing the thread context. */
@@ -1570,11 +1720,11 @@ int mg_start_thread(mg_thread_func_t func, void *param)
     (void) pthread_attr_init(&attr);
     (void) pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-#if defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1
+#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
     /* Compile-time option to control stack size,
        e.g. -DUSE_STACK_SIZE=16384 */
     (void) pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
-#endif /* defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1 */
+#endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
 
     result = pthread_create(&thread_id, &attr, func, param);
     pthread_attr_destroy(&attr);
@@ -1593,7 +1743,7 @@ static int mg_start_thread_with_id(mg_thread_func_t func, void *param,
 
     (void) pthread_attr_init(&attr);
 
-#if defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1
+#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
     /* Compile-time option to control stack size,
        e.g. -DUSE_STACK_SIZE=16384 */
     (void) pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
@@ -5653,11 +5803,18 @@ static void *worker_thread_run(void *thread_func_param)
 {
     struct mg_context *ctx = (struct mg_context *) thread_func_param;
     struct mg_connection *conn;
+    struct mg_workerTLS tls;
+
+    tls.is_master = 0;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
+#endif
 
     conn = (struct mg_connection *) calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE);
     if (conn == NULL) {
         mg_cry(fc(ctx), "%s", "Cannot create new connection struct, OOM");
     } else {
+        pthread_setspecific(sTlsKey, &tls);
         conn->buf_size = MAX_REQUEST_SIZE;
         conn->buf = (char *) (conn + 1);
         conn->ctx = ctx;
@@ -5692,7 +5849,6 @@ static void *worker_thread_run(void *thread_func_param)
 
             close_connection(conn);
         }
-        free(conn);
     }
 
     /* Signal master that we're done with connection and exiting */
@@ -5701,6 +5857,12 @@ static void *worker_thread_run(void *thread_func_param)
     (void) pthread_cond_signal(&ctx->cond);
     assert(ctx->num_threads >= 0);
     (void) pthread_mutex_unlock(&ctx->mutex);
+
+    pthread_setspecific(sTlsKey, 0);
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    CloseHandle(tls.pthread_cond_helper_mutex);
+#endif
+    free(conn);
 
     DEBUG_TRACE(("exiting"));
     return NULL;
@@ -5800,6 +5962,7 @@ static void accept_new_connection(const struct socket *listener,
 static void master_thread_run(void *thread_func_param)
 {
     struct mg_context *ctx = (struct mg_context *) thread_func_param;
+    struct mg_workerTLS tls;
     struct pollfd *pfd;
     int i;
     int workerthreadcount;
@@ -5819,6 +5982,12 @@ static void master_thread_run(void *thread_func_param)
         pthread_setschedparam(pthread_self(), SCHED_RR, &sched_param);
     }
 #endif
+
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
+#endif
+    tls.is_master = 1;
+    pthread_setspecific(sTlsKey, &tls);
 
     pfd = (struct pollfd *) calloc(ctx->num_listening_sockets, sizeof(pfd[0]));
     while (pfd != NULL && ctx->stop_flag == 0) {
@@ -5872,6 +6041,11 @@ static void master_thread_run(void *thread_func_param)
     uninitialize_ssl(ctx);
 #endif
     DEBUG_TRACE(("exiting"));
+
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    CloseHandle(tls.pthread_cond_helper_mutex);
+#endif
+    pthread_setspecific(sTlsKey, 0);
 
     /* Signal mg_stop() that we're done.
        WARNING: This must be the very last thing this
@@ -5936,6 +6110,12 @@ static void free_context(struct mg_context *ctx)
         free(ctx->workerthreadids);
     }
 
+    /* Deallocate the tls variable */
+    sTlsInit--;
+    if (sTlsInit==0) {
+        pthread_key_delete(sTlsKey);
+    }
+
     /* Deallocate context itself */
     free(ctx);
 }
@@ -5977,6 +6157,15 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     if ((ctx = (struct mg_context *) calloc(1, sizeof(*ctx))) == NULL) {
         return NULL;
     }
+
+    if (sTlsInit==0) {
+        if (0 != pthread_key_create(&sTlsKey, NULL)) {
+            mg_cry(fc(ctx), "Cannot initialize thread local storage");
+            return NULL;
+        }
+        sTlsInit++;
+    }
+
     ctx->callbacks = *callbacks;
     ctx->user_data = user_data;
     ctx->request_handlers = 0;
@@ -6034,6 +6223,13 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     (void) pthread_cond_init(&ctx->sq_full, NULL);
 
     workerthreadcount = atoi(ctx->config[NUM_THREADS]);
+
+    if (workerthreadcount > MAX_WORKER_THREADS) {
+        mg_cry(fc(ctx), "Too many worker threads");
+        free_context(ctx);
+        return NULL;
+    }
+
     if (workerthreadcount > 0) {
         ctx->workerthreadcount = workerthreadcount;
         ctx->workerthreadids = calloc(workerthreadcount, sizeof(pthread_t));

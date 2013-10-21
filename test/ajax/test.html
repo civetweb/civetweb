@@ -15,7 +15,9 @@
     var pendingCount = 0;
     var errorCount = 0;
     var pushCount = 0;
-
+    var allErrorCount = 0;
+    var autoTest = false;
+    var testType = "cgi";
 
     function runTest(method, isAsync) {
 
@@ -35,6 +37,13 @@
         fetch(i,  method, isAsync);
       }
     }
+    
+    function runAutoTest() {
+      if (autoTest) {
+        runTest("POST", true)
+        setTimeout("runAutoTest()", 250)
+      }
+    }
 
 
     function fetch(id, method, isAsync) {
@@ -43,9 +52,9 @@
 
       $.ajax({
         async: isAsync,
-        url: 'echo.cgi?id=' + id,
+        url: 'echo.' + testType + '?id=' + id,
         type: method,
-        timeout: 10000,
+        timeout: 2000,
         data: { 'id' : id ,
                 'longText1' : "adfsdfasdklkjlgasfdfjkhq345sdafbmkanq3trsdghkjqw4etrjlkabsdfkabvauiregtlkjasdbvabl4btrjawebbfjsdhbjk342r5bjksdbfkljbhasdfbhj234qjhasdg76k11234jhv900adfasddsfmzasdfhjgajsvhgkjhasdf77aefcae4fkjzasdfgukeaf7dkkegasdfigjcvxgui",
                 'longText2' : "bsdfsdfasdklkjlgasdfjkhq345sdafbmkanq3trsdghkjqw4etrjlkabsdfkabvauiregtlkjasdbvabl4btrjawebbfjsdhbjk342r5bjksdbfkljbhasdfbhj234qjhasdg76k11234jhv900adfasddsfmzasdfhjgajsvhgkjhasdf77aefcae4fkjzasdfgukeaf7dkkegasdfigjcvxgui",
@@ -71,6 +80,8 @@
           if (pendingCount == 0) {
             document.getElementById('resTotal').innerHTML = 'done';
             console.log('complete, error count: ' + errorCount);
+            allErrorCount = allErrorCount + errorCount;
+            document.getElementById('resSAll').innerHTML = 'total errors: ' + allErrorCount + "/" + (pushCount*totalCount);
           }
         }
       });
@@ -106,7 +117,16 @@
         </tr>
         <tr>
           <td>
-            <input id="testButtonReset" type="button" onclick="javascript:location.reload(true)" value="reset"></input>
+            <input id="testButton5" type="button" onclick="autoTest=!autoTest; javascript:runAutoTest()" value="automatic test"></input>
+          </td>        
+          <td>
+            <input id="testButton6" type="button" onclick="testType = (testType=='cgi') ? 'lp' : 'cgi'; this.value=testType" value='cgi'></input>
+          </td>        
+        </tr>
+        
+        <tr>
+          <td>
+            <input id="testButtonReset" type="button" onclick="autoTest=false; javascript:location.reload(true)" value="reset"></input>
           </td>
           <td>
           </td>
@@ -135,6 +155,7 @@
         <tr><td>10</td><td><div id="res10">not started</div></td></tr>
       </table>
       <div id="resTotal">Push [Test] to start.</div>
+      <div id="resSAll"></div>
     </p>
   </body>
 </html>
