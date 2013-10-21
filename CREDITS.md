@@ -4,7 +4,7 @@
 * bel2125
 * Daniel Oaks
 * F-Secure Corporation
-* grenclave
+* Brian Spratke
 * HariKamath Kamath
 * Kimmo Mustonen
 * Morgan McGuire
