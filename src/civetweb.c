@@ -3429,7 +3429,7 @@ static int read_request(FILE *fp, struct mg_connection *conn,
 }
 
 /* For given directory path, substitute it to valid index file.
-   Return 0 if index file has been found, -1 if not found.
+   Return 1 if index file has been found, 0 if not found.
    If the file is found, it's stats is returned in stp. */
 static int substitute_index_file(struct mg_connection *conn, char *path,
                                  size_t path_len, struct file *filep)
