@@ -4522,6 +4522,7 @@ static void read_websocket(struct mg_connection *conn)
     assert(conn->content_len == 0);
     for (;;) {
         header_len = 0;
+        assert(conn->data_len >= conn->request_len);
         if ((body_len = conn->data_len - conn->request_len) >= 2) {
             len = buf[1] & 127;
             mask_len = buf[1] & 128 ? 4 : 0;
@@ -4546,7 +4547,7 @@ static void read_websocket(struct mg_connection *conn)
                 if (data == NULL) {
                     /* Allocation failed, exit the loop and then close the
                        connection */
-                    /* TODO: notify user about the failure */
+                    mg_cry(conn, "websocket malloc() failed; closing connection");
                     break;
                 }
             }
@@ -4566,9 +4567,20 @@ static void read_websocket(struct mg_connection *conn)
                 /* Overflow case */
                 len = body_len - header_len;
                 memcpy(data, buf + header_len, len);
-                /* TODO: handle pull error */
-                pull(NULL, conn, data + len, (int)(data_len - len));
-                conn->data_len = 0;
+                int error = 0;
+                while (len < data_len) {
+                    int n = pull(NULL, conn, data + len, (int)(data_len - len));
+                    if (n < 0) {
+                        error = 1;
+                        break;
+                    }
+                    len += n;
+                }
+                if (error) {
+                    mg_cry(conn, "Websocket pull failed; closing connection");
+                    break;
+                }
+                conn->data_len = conn->request_len;
             } else {
                 mop = buf[0];   /* current mask and opcode, overwritten by memmove() */
                 /* Length of the message being read at the front of the
