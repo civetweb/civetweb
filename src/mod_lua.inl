@@ -11,7 +11,12 @@ static void *mmap(void *addr, int64_t len, int prot, int flags, int fd,
     CloseHandle(mh);
     return p;
 }
-#define munmap(x, y)  UnmapViewOfFile(x)
+
+static void munmap(void *addr, int64_t length)
+{
+    UnmapViewOfFile(addr);
+}
+
 #define MAP_FAILED NULL
 #define MAP_PRIVATE 0
 #define PROT_READ 0
@@ -423,4 +428,113 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path,
     mg_fclose(filep);
     conn->must_close=1;
     return error;
+}
+
+static void * new_lua_websocket(const char * script, struct mg_connection *conn)
+{
+    lua_State *L = NULL;
+    int ok = 0;
+    int err;
+
+    assert(conn->lua_websocket_state == NULL);
+    L = luaL_newstate();
+    if (L) {
+        prepare_lua_environment(conn, L);
+        if (conn->ctx->callbacks.init_lua != NULL) {
+            conn->ctx->callbacks.init_lua(conn, L);
+        }
+        err = luaL_loadfile(L, script);
+        switch (err) {
+            case 0:
+                {
+                    err = lua_pcall(L, 0, LUA_MULTRET, 0);
+                    switch (err) {
+                        case 0:
+                            /* return nothing or true to continue, false to stop */
+                            ok = !lua_isboolean(L, -1) || lua_toboolean(L, -1);
+                            break;
+                        case LUA_ERRMEM:
+                            mg_cry(conn, "%s: lua_pcall failed: out of memory", __func__);
+                            break;
+                        case LUA_ERRRUN:
+                            mg_cry(conn, "%s: lua_pcall failed: runtime error: %s", __func__, lua_tostring(L, -1));
+                            break;
+                        case LUA_ERRERR:
+                            mg_cry(conn, "%s: lua_pcall failed: double fault: %s", __func__, lua_tostring(L, -1));
+                            break;
+                        default:
+                            mg_cry(conn, "%s: lua_pcall failed: error %i", __func__, err);
+                            break;
+                    }
+                }
+                break;
+            case LUA_ERRMEM:
+                mg_cry(conn, "%s: luaL_loadfile failed: out of memory", __func__);
+                break;
+            case LUA_ERRFILE:
+                mg_cry(conn, "%s: luaL_loadfile failed: file %s not found", __func__, script);
+                break;
+            case LUA_ERRSYNTAX:
+                mg_cry(conn, "%s: luaL_loadfile failed: syntax error: %s", __func__, lua_tostring(L, -1));
+                break;
+            default:
+                mg_cry(conn, "%s: luaL_loadfile failed: error %i", __func__, err);
+                break;
+        }
+        if (!ok) {
+            lua_close(L);
+            L = NULL;
+        }
+    } else {
+        mg_cry(conn, "%s: luaL_newstate failed", __func__);
+    }
+
+    return L;
+}
+
+static void lua_websocket_ready(struct mg_connection *conn)
+{
+    lua_State *L = (lua_State*)(conn->lua_websocket_state);
+
+    assert(L != NULL);
+
+    lua_getglobal(L, "ready");
+    if (lua_pcall(L, 0, 0, 0) != 0) {
+        mg_cry(conn, "%s: error running function `ready': %s", lua_tostring(L, -1));
+    }
+}
+
+static int lua_websocket_data(struct mg_connection *conn, int bits, char *data, size_t data_len)
+{
+    lua_State *L = (lua_State*)(conn->lua_websocket_state);
+    int ok = 0;
+
+    assert(L != NULL);
+
+    lua_getglobal(L, "data");
+    lua_pushinteger(L, bits);
+    lua_pushlstring(L, data, data_len);
+    if (lua_pcall(L, 2, 1, 0) != 0) {
+        mg_cry(conn, "%s: error running function `data': %s", lua_tostring(L, -1));
+    } else {
+        ok = lua_isboolean(L, -1) && lua_toboolean(L, -1);
+    }
+
+    return ok;
+}
+
+
+static void lua_websocket_close(struct mg_connection *conn)
+{
+    lua_State *L = (lua_State*)(conn->lua_websocket_state);
+
+    assert(L != NULL);
+
+    lua_getglobal(L, "close");
+    if (lua_pcall(L, 0, 0, 0) != 0) {
+        mg_cry(conn, "%s: error running function `close': %s", lua_tostring(L, -1));
+    }
+
+    lua_close(L);
+    conn->lua_websocket_state = NULL;
 }

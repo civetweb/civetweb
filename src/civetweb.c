@@ -518,6 +518,11 @@ enum {
     GLOBAL_PASSWORDS_FILE, INDEX_FILES, ENABLE_KEEP_ALIVE, ACCESS_CONTROL_LIST,
     EXTRA_MIME_TYPES, LISTENING_PORTS, DOCUMENT_ROOT, SSL_CERTIFICATE,
     NUM_THREADS, RUN_AS_USER, REWRITE, HIDE_FILES, REQUEST_TIMEOUT,
+
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    LUA_WEBSOCKET_SCRIPT,
+#endif
+
     NUM_OPTIONS
 };
 
@@ -547,6 +552,11 @@ static const char *config_options[] = {
     "url_rewrite_patterns", NULL,
     "hide_files_patterns", NULL,
     "request_timeout_ms", "30000",
+
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    "lua_websocket_script", NULL,
+#endif
+
     NULL
 };
 
@@ -610,6 +620,9 @@ struct mg_connection {
     int64_t last_throttle_bytes;/* Bytes sent this second */
     pthread_mutex_t mutex;      /* Used by mg_lock/mg_unlock to ensure atomic
                                    transmissions for websockets */
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    void * lua_websocket_state; /* Lua_State for a websocket connection */
+#endif
 };
 
 static pthread_key_t sTlsKey;  /* Thread local storage index */
@@ -4244,6 +4257,10 @@ void mg_unlock(struct mg_connection* conn)
     (void) pthread_mutex_unlock(&conn->mutex);
 }
 
+#ifdef USE_LUA
+#include "mod_lua.inl"
+#endif /* USE_LUA */
+
 #if defined(USE_WEBSOCKET)
 
 /* START OF SHA-1 code
@@ -4597,6 +4614,10 @@ static void read_websocket(struct mg_connection *conn)
                or "connection close" opcode received. */
             if ((conn->ctx->callbacks.websocket_data != NULL &&
                  !conn->ctx->callbacks.websocket_data(conn, mop, data, data_len)) ||
+#ifdef USE_LUA
+                (conn->lua_websocket_state &&
+                 !lua_websocket_data(conn, mop, data, data_len)) ||
+#endif
                 (buf[0] & 0xf) == WEBSOCKET_OPCODE_CONNECTION_CLOSE) {  /* Opcode == 8, connection close */
                 break;
             }
@@ -4660,18 +4681,34 @@ int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data,
 
 static void handle_websocket_request(struct mg_connection *conn)
 {
+    const char *ws_page = NULL;
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
     if (version == NULL || strcmp(version, "13") != 0) {
         send_http_error(conn, 426, "Upgrade Required", "%s", "Upgrade Required");
     } else if (conn->ctx->callbacks.websocket_connect != NULL &&
                conn->ctx->callbacks.websocket_connect(conn) != 0) {
-        /* Callback has returned non-zero, do not proceed with handshake */
+        /* C callback has returned non-zero, do not proceed with handshake. */
+        /* The C callback is called before Lua and may prevent Lua from handling the websocket. */
     } else {
-        send_websocket_handshake(conn);
-        if (conn->ctx->callbacks.websocket_ready != NULL) {
-            conn->ctx->callbacks.websocket_ready(conn);
+#ifdef USE_LUA
+        ws_page = conn->ctx->config[LUA_WEBSOCKET_SCRIPT];
+        if (ws_page) {
+            conn->lua_websocket_state = new_lua_websocket(ws_page, conn);
+            if (conn->lua_websocket_state) {
+                send_websocket_handshake(conn);
+                lua_websocket_ready(conn);
+                read_websocket(conn);
+            }
+        } else
+#endif
+        {
+            /* No Lua websock script specified. */
+            send_websocket_handshake(conn);
+            if (conn->ctx->callbacks.websocket_ready != NULL) {
+                conn->ctx->callbacks.websocket_ready(conn);
+            }
+            read_websocket(conn);
         }
-        read_websocket(conn);
     }
 }
 
@@ -4746,10 +4783,6 @@ static uint32_t get_remote_ip(const struct mg_connection *conn)
 {
     return ntohl(* (uint32_t *) &conn->client.rsa.sin.sin_addr);
 }
-
-#ifdef USE_LUA
-#include "mod_lua.inl"
-#endif /* USE_LUA */
 
 int mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
@@ -5560,6 +5593,12 @@ static void close_socket_gracefully(struct mg_connection *conn)
 
 static void close_connection(struct mg_connection *conn)
 {
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    if (conn->lua_websocket_state) {
+        lua_websocket_close(conn);
+    }
+#endif
+
     /* call the connection_close callback if assigned */
     if (conn->ctx->callbacks.connection_close != NULL)
         conn->ctx->callbacks.connection_close(conn);
