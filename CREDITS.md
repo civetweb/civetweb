@@ -1,6 +1,6 @@
 # Civitweb Contributors
 
-* apkbox
+* Alex Kozlov
 * bel2125
 * Daniel Oaks
 * F-Secure Corporation
