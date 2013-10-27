@@ -5,6 +5,8 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Fix websocket long pull (celeron55)
+- Updated API documentation (Alex Kozlov)
 - Fixed Posix locking functions for Windows (bel2125)
 - Updated version number
 
