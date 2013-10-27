@@ -2,6 +2,7 @@
 
 * Alex Kozlov
 * bel2125
+* celeron55
 * Daniel Oaks
 * F-Secure Corporation
 * Brian Spratke
