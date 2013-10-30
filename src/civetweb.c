@@ -707,7 +707,7 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name)
     }
 }
 
-void mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
+size_t mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
 {
     size_t i;
     for (i = 0; i < size && i < (size_t)ctx->num_listening_sockets; i++)
@@ -715,6 +715,7 @@ void mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ss
         ssl[i] = ctx->listening_sockets[i].is_ssl;
         ports[i] = ctx->listening_ports[i];
     }
+    return i;
 }
 
 static void sockaddr_to_string(char *buf, size_t len,
