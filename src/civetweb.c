@@ -709,7 +709,7 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name)
 
 void mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
 {
-    int i;
+    size_t i;
     for (i = 0; i < size && i < ctx->num_listening_sockets; i++)
     {
         ssl[i] = ctx->listening_sockets[i].is_ssl;
