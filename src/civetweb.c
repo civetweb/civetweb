@@ -4613,6 +4613,9 @@ static void read_websocket(struct mg_connection *conn)
             /* Exit the loop if callback signalled to exit,
                or "connection close" opcode received. */
             if ((conn->ctx->callbacks.websocket_data != NULL &&
+#ifdef USE_LUA
+                 (conn->lua_websocket_state == NULL) &&
+#endif
                  !conn->ctx->callbacks.websocket_data(conn, mop, data, data_len)) ||
 #ifdef USE_LUA
                 (conn->lua_websocket_state &&
