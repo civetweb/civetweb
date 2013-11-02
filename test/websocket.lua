@@ -20,11 +20,11 @@ end
 local function logDB(method)
   -- Add entry about this request
   local r;
-  --repeat
+  repeat
     r = db:exec([[INSERT INTO requests VALUES(NULL, datetime("now"), "]] .. method .. [[", "]] .. mg.request_info.uri .. [[", "]] .. mg.request_info.remote_port .. [[");]]);
-  --until r~=5;
+  until r~=5;
 
-  ---[[
+  --[[
   -- alternative logging (to a file)
   local f = io.open("R:\\log.txt", "a");
   f:write(os.date() .. " - " .. method .. " - " .. mg.request_info.uri .. " - " .. mg.request_info.remote_port .. " <" .. r .. ">\n")
