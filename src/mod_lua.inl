@@ -33,25 +33,40 @@ static int handle_lsp_request(struct mg_connection *, const char *,
 
 static void reg_string(struct lua_State *L, const char *name, const char *val)
 {
-    lua_pushstring(L, name);
-    lua_pushstring(L, val);
-    lua_rawset(L, -3);
+    if (name!=NULL && val!=NULL) {
+        lua_pushstring(L, name);
+        lua_pushstring(L, val);
+        lua_rawset(L, -3);
+    }
 }
 
 static void reg_int(struct lua_State *L, const char *name, int val)
 {
-    lua_pushstring(L, name);
-    lua_pushinteger(L, val);
-    lua_rawset(L, -3);
+    if (name!=NULL) {
+        lua_pushstring(L, name);
+        lua_pushinteger(L, val);
+        lua_rawset(L, -3);
+    }
+}
+
+static void reg_boolean(struct lua_State *L, const char *name, int val)
+{
+    if (name!=NULL) {
+        lua_pushstring(L, name);
+        lua_pushboolean(L, val != 0);
+        lua_rawset(L, -3);
+    }
 }
 
 static void reg_function(struct lua_State *L, const char *name,
                          lua_CFunction func, struct mg_connection *conn)
 {
-    lua_pushstring(L, name);
-    lua_pushlightuserdata(L, conn);
-    lua_pushcclosure(L, func, 1);
-    lua_rawset(L, -3);
+    if (name!=NULL && func!=NULL) {
+        lua_pushstring(L, name);
+        lua_pushlightuserdata(L, conn);
+        lua_pushcclosure(L, func, 1);
+        lua_rawset(L, -3);
+    }
 }
 
 static int lsp_sock_close(lua_State *L)
@@ -263,7 +278,7 @@ static int lsp_redirect(lua_State *L)
     return 0;
 }
 
-static void prepare_lua_environment(struct mg_connection *conn, lua_State *L)
+static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, const char *script_name)
 {
     const struct mg_request_info *ri = mg_get_request_info(conn);
     extern void luaL_openlibs(lua_State *);
@@ -302,6 +317,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L)
     reg_function(L, "redirect", lsp_redirect, conn);
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
+    reg_string(L, "auth_domain", conn->ctx->config[AUTHENTICATION_DOMAIN]);
 
     // Export request_info
     lua_pushstring(L, "request_info");
@@ -313,14 +329,24 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L)
     reg_int(L, "remote_ip", ri->remote_ip);
     reg_int(L, "remote_port", ri->remote_port);
     reg_int(L, "num_headers", ri->num_headers);
+    reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
+
+    if (conn->request_info.remote_user != NULL) {
+        reg_string(L, "remote_user", conn->request_info.remote_user);
+        reg_string(L, "auth_type", "Digest");
+    }
+
     lua_pushstring(L, "http_headers");
     lua_newtable(L);
     for (i = 0; i < ri->num_headers; i++) {
         reg_string(L, ri->http_headers[i].name, ri->http_headers[i].value);
     }
     lua_rawset(L, -3);
-    lua_rawset(L, -3);
 
+    reg_boolean(L, "https", conn->ssl != NULL);
+    reg_string(L, "script_name", script_name);
+
+    lua_rawset(L, -3);
     lua_setglobal(L, "mg");
 
     // Register default mg.onerror function
@@ -355,7 +381,7 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
     lua_State *L;
 
     if (path != NULL && (L = luaL_newstate()) != NULL) {
-        prepare_lua_environment(conn, L);
+        prepare_lua_environment(conn, L, path);
         lua_pushcclosure(L, &lua_error_handler, 0);
 
         lua_pushglobaltable(L);
@@ -414,7 +440,7 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path,
     } else {
         // We're not sending HTTP headers here, Lua page must do it.
         if (ls == NULL) {
-            prepare_lua_environment(conn, L);
+            prepare_lua_environment(conn, L, path);
             if (conn->ctx->callbacks.init_lua != NULL) {
                 conn->ctx->callbacks.init_lua(conn, L);
             }
@@ -439,7 +465,7 @@ static void * new_lua_websocket(const char * script, struct mg_connection *conn)
     assert(conn->lua_websocket_state == NULL);
     L = luaL_newstate();
     if (L) {
-        prepare_lua_environment(conn, L);
+        prepare_lua_environment(conn, L, script);
         if (conn->ctx->callbacks.init_lua != NULL) {
             conn->ctx->callbacks.init_lua(conn, L);
         }
