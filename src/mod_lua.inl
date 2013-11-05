@@ -384,8 +384,8 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
         prepare_lua_environment(conn, L, path);
         lua_pushcclosure(L, &lua_error_handler, 0);
 
-        lua_pushglobaltable(L);
         if (exports != NULL) {
+            lua_pushglobaltable(L);
             for (i = 0; exports[i] != NULL && exports[i + 1] != NULL; i += 2) {
                 lua_pushstring(L, exports[i]);
                 lua_pushcclosure(L, (lua_CFunction) exports[i + 1], 0);
@@ -399,6 +399,7 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
         lua_pcall(L, 0, 0, -2);
         lua_close(L);
     }
+    conn->must_close=1;
 }
 
 static void lsp_send_err(struct mg_connection *conn, struct lua_State *L,

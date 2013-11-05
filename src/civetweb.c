@@ -5135,6 +5135,8 @@ static void handle_request(struct mg_connection *conn)
                             "Directory listing denied");
         }
 #ifdef USE_LUA
+    } else if (match_prefix("**.lsp$", 6, path) > 0) {
+        mg_exec_lua_script(conn, path, NULL);
     } else if (match_prefix("**.lp$", 6, path) > 0) {
         handle_lsp_request(conn, path, &file, NULL);
 #endif
