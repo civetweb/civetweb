@@ -281,8 +281,12 @@ static int lsp_redirect(lua_State *L)
 static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, const char *script_name)
 {
     const struct mg_request_info *ri = mg_get_request_info(conn);
-    extern void luaL_openlibs(lua_State *);
+    char src_addr[IP_ADDR_STR_LEN];
     int i;
+
+    extern void luaL_openlibs(lua_State *);
+
+    sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
 
     luaL_openlibs(L);
 #ifdef USE_LUA_SQLITE3
@@ -326,7 +330,8 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_string(L, "uri", ri->uri);
     reg_string(L, "http_version", ri->http_version);
     reg_string(L, "query_string", ri->query_string);
-    reg_int(L, "remote_ip", ri->remote_ip);
+    reg_int(L, "remote_ip", ri->remote_ip); /* remote_ip is deprecated, use remote_addr instead */
+    reg_string(L, "remote_addr", src_addr);
     reg_int(L, "remote_port", ri->remote_port);
     reg_int(L, "num_headers", ri->num_headers);
     reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
