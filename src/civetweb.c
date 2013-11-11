@@ -2266,8 +2266,10 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     for (p = buf + strlen(buf); p > buf + 1; p--) {
         if (*p == '/') {
             *p = '\0';
-            if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-                             (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0 &&
+            if ((match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+                              (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0 ||
+                 match_prefix("**.lsp$",
+                              (int)strlen("**.lsp$"), buf) > 0) &&
                 mg_stat(conn, buf, filep)) {
                 /* Shift PATH_INFO block one character right, e.g.
                     "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
@@ -5226,6 +5228,8 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
         so->lsa.sin6.sin6_addr.u.Word[0] = h;
         so->lsa.sin6.sin6_family = AF_INET6;
         so->lsa.sin6.sin6_port = htons((uint16_t) port);
+        so->lsa.sin6.sin6_scope_id = 0;
+        so->lsa.sin6.sin6_flowinfo = 0;
 #endif
     } else if (sscanf(vec->ptr, "%u%n", &port, &len) == 1) {
         /* If only port is specified, bind to IPv4, INADDR_ANY */
