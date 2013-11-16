@@ -2218,7 +2218,8 @@ int mg_get_cookie(const char *cookie_header, const char *var_name,
 }
 
 static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
-                                     size_t buf_len, struct file *filep)
+                                     size_t buf_len, struct file *filep, 
+                                     int * is_script_ressource)
 {
     struct vec a, b;
     const char *rewrite, *uri = conn->request_info.uri,
@@ -2227,6 +2228,8 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     int match_len;
     char gz_path[PATH_MAX];
     char const* accept_encoding;
+
+    *is_script_ressource = 0;
 
     /* Using buf_len - 1 because memmove() for PATH_INFO may shift part
        of the path one byte on the right.
@@ -2280,6 +2283,7 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
                 memmove(p + 2, p + 1, strlen(p + 1) + 1);  /* +1 is for
                                                               trailing \0 */
                 p[1] = '/';
+                *is_script_ressource = 1;
                 break;
             } else {
                 *p = '/';
@@ -5060,7 +5064,7 @@ static void handle_request(struct mg_connection *conn)
 {
     struct mg_request_info *ri = &conn->request_info;
     char path[PATH_MAX];
-    int uri_len, ssl_index;
+    int uri_len, ssl_index, is_script_resource;
     struct file file = STRUCT_FILE_INITIALIZER;
 
     if ((conn->request_info.query_string = strchr(ri->uri, '?')) != NULL) {
@@ -5070,7 +5074,7 @@ static void handle_request(struct mg_connection *conn)
     mg_url_decode(ri->uri, uri_len, (char *) ri->uri, uri_len + 1, 0);
     remove_double_dots_and_double_slashes((char *) ri->uri);
     path[0] = '\0';
-    convert_uri_to_file_name(conn, path, sizeof(path), &file);
+    convert_uri_to_file_name(conn, path, sizeof(path), &file, &is_script_resource);
     conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
                                   get_remote_ip(conn), ri->uri);
 
@@ -5081,7 +5085,7 @@ static void handle_request(struct mg_connection *conn)
     if (!conn->client.is_ssl && conn->client.ssl_redir &&
         (ssl_index = get_first_ssl_listener_index(conn->ctx)) > -1) {
         redirect_to_https_port(conn, ssl_index);
-    } else if (!is_put_or_delete_request(conn) &&
+    } else if (!is_script_resource && !is_put_or_delete_request(conn) &&
                !check_authorization(conn, path)) {
         send_authorization_request(conn);
     } else if (conn->ctx->callbacks.begin_request != NULL &&
@@ -5094,18 +5098,18 @@ static void handle_request(struct mg_connection *conn)
     } else if (is_websocket_request(conn)) {
         handle_websocket_request(conn);
 #endif
-    } else if (!strcmp(ri->request_method, "OPTIONS")) {
+    } else if (!is_script_resource && !strcmp(ri->request_method, "OPTIONS")) {
         send_options(conn);
     } else if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
         send_http_error(conn, 404, "Not Found", "Not Found");
-    } else if (is_put_or_delete_request(conn) &&
+    } else if (!is_script_resource && is_put_or_delete_request(conn) &&
                (is_authorized_for_put(conn) != 1)) {
         send_authorization_request(conn);
-    } else if (!strcmp(ri->request_method, "PUT")) {
+    } else if (!is_script_resource && !strcmp(ri->request_method, "PUT")) {
         put_file(conn, path);
-    } else if (!strcmp(ri->request_method, "MKCOL")) {
+    } else if (!is_script_resource && !strcmp(ri->request_method, "MKCOL")) {
         mkcol(conn, path);
-    } else if (!strcmp(ri->request_method, "DELETE")) {
+    } else if (!is_script_resource && !strcmp(ri->request_method, "DELETE")) {
         struct de de;
         memset(&de.file, 0, sizeof(de.file));
         if(!mg_stat(conn, path, &de.file)) {
@@ -5132,7 +5136,7 @@ static void handle_request(struct mg_connection *conn)
     } else if (file.is_directory && ri->uri[uri_len - 1] != '/') {
         mg_printf(conn, "HTTP/1.1 301 Moved Permanently\r\n"
                   "Location: %s/\r\n\r\n", ri->uri);
-    } else if (!strcmp(ri->request_method, "PROPFIND")) {
+    } else if (!is_script_resource && !strcmp(ri->request_method, "PROPFIND")) {
         handle_propfind(conn, path, &file);
     } else if (file.is_directory &&
                !substitute_index_file(conn, path, sizeof(path), &file)) {
@@ -5152,6 +5156,7 @@ static void handle_request(struct mg_connection *conn)
     } else if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
                             (int)strlen(conn->ctx->config[CGI_EXTENSIONS]),
                             path) > 0) {
+        /* TODO: check unsupported methods -> 501 
         if (strcmp(ri->request_method, "POST") &&
             strcmp(ri->request_method, "HEAD") &&
             strcmp(ri->request_method, "GET")) {
@@ -5159,7 +5164,8 @@ static void handle_request(struct mg_connection *conn)
                             "Method %s is not implemented", ri->request_method);
         } else {
             handle_cgi_request(conn, path);
-        }
+        } */
+        handle_cgi_request(conn, path);
 #endif /* !NO_CGI */
     } else if (match_prefix(conn->ctx->config[SSI_EXTENSIONS],
                             (int)strlen(conn->ctx->config[SSI_EXTENSIONS]),
