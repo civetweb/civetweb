@@ -26,7 +26,7 @@ static void munmap(void *addr, int64_t length)
 
 static const char *LUASOCKET = "luasocket";
 
-// Forward declarations
+/* Forward declarations */
 static void handle_request(struct mg_connection *);
 static int handle_lsp_request(struct mg_connection *, const char *,
                               struct file *, struct lua_State *);
@@ -161,7 +161,7 @@ static int lsp_error(lua_State *L)
     return 0;
 }
 
-// Silently stop processing chunks.
+/* Silently stop processing chunks. */
 static void lsp_abort(lua_State *L)
 {
     int top = lua_gettop(L);
@@ -191,10 +191,10 @@ static int lsp(struct mg_connection *conn, const char *path,
                     lua_pushlightuserdata(L, conn);
                     lua_pushcclosure(L, lsp_error, 1);
                     if (luaL_loadbuffer(L, p + (i + 2), j - (i + 2), chunkname)) {
-                        // Syntax error or OOM. Error message is pushed on stack.
+                        /* Syntax error or OOM. Error message is pushed on stack. */
                         lua_pcall(L, 1, 0, 0);
                     } else {
-                        // Success loading chunk. Call it.
+                        /* Success loading chunk. Call it. */
                         lua_pcall(L, 0, 0, 1);
                     }
 
@@ -247,20 +247,20 @@ static int lsp_read(lua_State *L)
     return 1;
 }
 
-// mg.include: Include another .lp file
+/* mg.include: Include another .lp file */
 static int lsp_include(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
     struct file file = STRUCT_FILE_INITIALIZER;
     if (handle_lsp_request(conn, lua_tostring(L, -1), &file, L)) {
-        // handle_lsp_request returned an error code, meaning an error occured in
-        // the included page and mg.onerror returned non-zero. Stop processing.
+        /* handle_lsp_request returned an error code, meaning an error occured in
+           the included page and mg.onerror returned non-zero. Stop processing. */
         lsp_abort(L);
     }
     return 0;
 }
 
-// mg.cry: Log an error. Default value for mg.onerror.
+/* mg.cry: Log an error. Default value for mg.onerror. */
 static int lsp_cry(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
@@ -268,7 +268,7 @@ static int lsp_cry(lua_State *L)
     return 0;
 }
 
-// mg.redirect: Redirect the request (internally).
+/* mg.redirect: Redirect the request (internally). */
 static int lsp_redirect(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
@@ -311,7 +311,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
 
     if (conn == NULL) return;
 
-    // Register mg module
+    /* Register mg module */
     lua_newtable(L);
 
     reg_function(L, "read", lsp_read, conn);
@@ -323,7 +323,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
     reg_string(L, "auth_domain", conn->ctx->config[AUTHENTICATION_DOMAIN]);
 
-    // Export request_info
+    /* Export request_info */
     lua_pushstring(L, "request_info");
     lua_newtable(L);
     reg_string(L, "request_method", ri->request_method);
@@ -332,6 +332,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_string(L, "query_string", ri->query_string);
     reg_int(L, "remote_ip", ri->remote_ip); /* remote_ip is deprecated, use remote_addr instead */
     reg_string(L, "remote_addr", src_addr);
+    /* TODO: ip version */
     reg_int(L, "remote_port", ri->remote_port);
     reg_int(L, "num_headers", ri->num_headers);
     reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
@@ -354,7 +355,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     lua_rawset(L, -3);
     lua_setglobal(L, "mg");
 
-    // Register default mg.onerror function
+    /* Register default mg.onerror function */
     IGNORE_UNUSED_RESULT(luaL_dostring(L, "mg.onerror = function(e) mg.write('\\nLua error:\\n', "
                                        "debug.traceback(e, 1)) end"));
 }
@@ -365,7 +366,7 @@ static int lua_error_handler(lua_State *L)
 
     lua_getglobal(L, "mg");
     if (!lua_isnil(L, -1)) {
-        lua_getfield(L, -1, "write");   // call mg.write()
+        lua_getfield(L, -1, "write");   /* call mg.write() */
         lua_pushstring(L, error_msg);
         lua_pushliteral(L, "\n");
         lua_call(L, 2, 0);
@@ -374,7 +375,7 @@ static int lua_error_handler(lua_State *L)
         printf("Lua error: [%s]\n", error_msg);
         IGNORE_UNUSED_RESULT(luaL_dostring(L, "print(debug.traceback(), '\\n')"));
     }
-    // TODO(lsm): leave the stack balanced
+    /* TODO(lsm): leave the stack balanced */
 
     return 0;
 }
@@ -433,7 +434,7 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path,
     lua_State *L = NULL;
     int error = 1;
 
-    // We need both mg_stat to get file size, and mg_fopen to get fd
+    /* We need both mg_stat to get file size, and mg_fopen to get fd */
     if (!mg_stat(conn, path, filep) || !mg_fopen(conn, path, "r", filep)) {
         lsp_send_err(conn, ls, "File [%s] not found", path);
     } else if (filep->membuf == NULL &&
@@ -444,7 +445,7 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path,
     } else if ((L = ls != NULL ? ls : luaL_newstate()) == NULL) {
         send_http_error(conn, 500, http_500_error, "%s", "luaL_newstate failed");
     } else {
-        // We're not sending HTTP headers here, Lua page must do it.
+        /* We're not sending HTTP headers here, Lua page must do it. */
         if (ls == NULL) {
             prepare_lua_environment(conn, L, path);
             if (conn->ctx->callbacks.init_lua != NULL) {
