@@ -519,8 +519,13 @@ enum {
     EXTRA_MIME_TYPES, LISTENING_PORTS, DOCUMENT_ROOT, SSL_CERTIFICATE,
     NUM_THREADS, RUN_AS_USER, REWRITE, HIDE_FILES, REQUEST_TIMEOUT,
 
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#if defined(USE_LUA)
+    LUA_SCRIPT_EXTENSIONS, LUA_SERVER_PAGE_EXTENSIONS,
+
+#if defined(USE_WEBSOCKET)
     LUA_WEBSOCKET_SCRIPT,
+#endif
+
 #endif
 
     NUM_OPTIONS
@@ -540,7 +545,11 @@ static const char *config_options[] = {
     "error_log_file", NULL,
     "global_auth_file", NULL,
     "index_files",
-    "index.html,index.htm,index.cgi,index.shtml,index.php,index.lp",
+#ifdef USE_LUA
+    "index.html,index.htm,index.lp,index.lsp,index.lua,index.cgi,index.shtml,index.php",
+#else
+    "index.html,index.htm,index.cgi,index.shtml,index.php",
+#endif
     "enable_keep_alive", "no",
     "access_control_list", NULL,
     "extra_mime_types", NULL,
@@ -553,8 +562,13 @@ static const char *config_options[] = {
     "hide_files_patterns", NULL,
     "request_timeout_ms", "30000",
 
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#if defined(USE_LUA)
+    "lua_script_pattern", "**.lua$",
+    "lua_server_page_pattern", "**.lp$|**.lsp$",
+
+#if defined(USE_WEBSOCKET)
     "lua_websocket_script", NULL,
+#endif
 #endif
 
     NULL
@@ -2270,10 +2284,13 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
         if (*p == '/') {
             *p = '\0';
             if ((match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-                              (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0 ||
-                 match_prefix("**.lsp$",
-                              (int)strlen("**.lsp$"), buf) > 0) &&
-                mg_stat(conn, buf, filep)) {
+                              (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0
+#ifdef USE_LUA
+                 ||
+                 match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+                              (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), buf) > 0
+#endif
+                ) && mg_stat(conn, buf, filep)) {
                 /* Shift PATH_INFO block one character right, e.g.
                     "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
                    conn->path_info is pointing to the local variable "path"
@@ -5147,10 +5164,16 @@ static void handle_request(struct mg_connection *conn)
                             "Directory listing denied");
         }
 #ifdef USE_LUA
-    } else if (match_prefix("**.lsp$", 6, path) > 0) {
-        mg_exec_lua_script(conn, path, NULL);
-    } else if (match_prefix("**.lp$", 6, path) > 0) {
+    } else if (match_prefix(conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS],
+                            (int)strlen(conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
+                            path) > 0) {
+        /* Lua server page: an SSI like page containing mostly plain html code plus some tags with server generated contents. */
         handle_lsp_request(conn, path, &file, NULL);
+    } else if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+                            (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+                            path) > 0) {
+        /* Lua in-server module script: a CGI like script used to generate the entire reply. */
+        mg_exec_lua_script(conn, path, NULL);
 #endif
 #if !defined(NO_CGI)
     } else if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
@@ -6226,6 +6249,10 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #pragma warning(suppress: 28125)
     InitializeCriticalSection(&global_log_file_lock);
 #endif /* _WIN32 && !__SYMBIAN32__ */
+
+    /* Check if the config_options and the corresponding enum have compatible sizes. */
+    /* Could use static_assert, once it is verified that all compilers support this. */
+    assert(sizeof(config_options)/sizeof(config_options[0]) == NUM_OPTIONS*2+1);
 
     /* Allocate context and initialize reasonable general case defaults.
        TODO(lsm): do proper error handling here. */
