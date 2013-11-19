@@ -3990,6 +3990,9 @@ static void mkcol(struct mg_connection *conn, const char *path)
 {
     int rc, body_len;
     struct de de;
+    char date[64];
+    time_t curtime = time(NULL);
+
     memset(&de.file, 0, sizeof(de.file));
     if (!mg_stat(conn, path, &de.file)) {
         mg_cry(conn, "%s: mg_stat(%s) failed: %s",
@@ -4013,7 +4016,9 @@ static void mkcol(struct mg_connection *conn, const char *path)
 
     if (rc == 0) {
         conn->status_code = 201;
-        mg_printf(conn, "HTTP/1.1 %d Created\r\n\r\n", conn->status_code);
+        gmt_time_string(date, sizeof(date), &curtime);
+        mg_printf(conn, "HTTP/1.1 %d Created\r\nDate: %s\r\nContent-Length: 0\r\nConnection: %s\r\n\r\n",
+                  conn->status_code, date, suggest_connection_header(conn));
     } else if (rc == -1) {
         if(errno == EEXIST)
             send_http_error(conn, 405, "Method Not Allowed",
@@ -4036,11 +4041,15 @@ static void put_file(struct mg_connection *conn, const char *path)
     const char *range;
     int64_t r1, r2;
     int rc;
+    char date[64];
+    time_t curtime = time(NULL);
 
     conn->status_code = mg_stat(conn, path, &file) ? 200 : 201;
 
     if ((rc = put_dir(conn, path)) == 0) {
-        mg_printf(conn, "HTTP/1.1 %d OK\r\n\r\n", conn->status_code);
+        gmt_time_string(date, sizeof(date), &curtime);
+        mg_printf(conn, "HTTP/1.1 %d OK\r\nDate: %s\r\nContent-Length: 0\r\nConnection: %s\r\n\r\n",
+                  conn->status_code, date, suggest_connection_header(conn));
     } else if (rc == -1) {
         send_http_error(conn, 500, http_500_error,
                         "put_dir(%s): %s", path, strerror(ERRNO));
@@ -4059,8 +4068,9 @@ static void put_file(struct mg_connection *conn, const char *path)
         if (!forward_body_data(conn, file.fp, INVALID_SOCKET, NULL)) {
             conn->status_code = 500;
         }
-        mg_printf(conn, "HTTP/1.1 %d OK\r\nContent-Length: 0\r\n\r\n",
-                  conn->status_code);
+        gmt_time_string(date, sizeof(date), &curtime);
+        mg_printf(conn, "HTTP/1.1 %d OK\r\nDate: %s\r\nContent-Length: 0\r\nConnection: %s\r\n\r\n",
+                  conn->status_code, date, suggest_connection_header(conn));
         mg_fclose(&file);
     }
 }
