@@ -5133,6 +5133,8 @@ static void handle_request(struct mg_connection *conn)
     char path[PATH_MAX];
     int uri_len, ssl_index, is_script_resource;
     struct file file = STRUCT_FILE_INITIALIZER;
+    char date[64];
+    time_t curtime = time(NULL);
 
     if ((conn->request_info.query_string = strchr(ri->uri, '?')) != NULL) {
         * ((char *) conn->request_info.query_string++) = '\0';
@@ -5201,8 +5203,13 @@ static void handle_request(struct mg_connection *conn)
                must_hide_file(conn, path)) {
         send_http_error(conn, 404, "Not Found", "%s", "File not found");
     } else if (file.is_directory && ri->uri[uri_len - 1] != '/') {
+        gmt_time_string(date, sizeof(date), &curtime);
         mg_printf(conn, "HTTP/1.1 301 Moved Permanently\r\n"
-                  "Location: %s/\r\n\r\n", ri->uri);
+                        "Location: %s/\r\n"
+                        "Date: %s\r\n"
+                        "Content-Length: 0\r\n"
+                        "Connection: %s\r\n\r\n",
+                        ri->uri, date, suggest_connection_header(conn));
     } else if (!is_script_resource && !strcmp(ri->request_method, "PROPFIND")) {
         handle_propfind(conn, path, &file);
     } else if (file.is_directory &&
