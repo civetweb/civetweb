@@ -749,6 +749,20 @@ static void sockaddr_to_string(char *buf, size_t len,
 #endif
 }
 
+/* Convert time_t to a string. According to RFC2616, Sec 14.18, this must be included in all responses other than 100, 101, 5xx. */
+static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
+{
+    struct tm *tm;
+
+    tm = gmtime(t);
+    if (tm != NULL) {
+        strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S GMT", tm);
+    } else {
+        strncpy(buf, "Thu, 01 Jan 1970 00:00:00 GMT", buf_len);
+        buf[buf_len - 1] = '\0';
+    }
+}
+
 /* Print error message to the opened error log stream. */
 void mg_cry(struct mg_connection *conn, const char *fmt, ...)
 {
@@ -2232,7 +2246,7 @@ int mg_get_cookie(const char *cookie_header, const char *var_name,
 }
 
 static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
-                                     size_t buf_len, struct file *filep, 
+                                     size_t buf_len, struct file *filep,
                                      int * is_script_ressource)
 {
     struct vec a, b;
@@ -3163,6 +3177,8 @@ static void handle_directory_request(struct mg_connection *conn,
 {
     int i, sort_direction;
     struct dir_scan_data data = { NULL, 0, 128 };
+    char date[64];
+    time_t curtime = time(NULL);
 
     if (!scan_directory(conn, dir, &data, dir_scan_callback)) {
         send_http_error(conn, 500, "Cannot open directory",
@@ -3170,14 +3186,17 @@ static void handle_directory_request(struct mg_connection *conn,
         return;
     }
 
+    gmt_time_string(date, sizeof(date), &curtime);
+
     sort_direction = conn->request_info.query_string != NULL &&
                      conn->request_info.query_string[1] == 'd' ? 'a' : 'd';
 
     conn->must_close = 1;
-    mg_printf(conn, "%s",
-              "HTTP/1.1 200 OK\r\n"
-              "Connection: close\r\n"
-              "Content-Type: text/html; charset=utf-8\r\n\r\n");
+    mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                    "Date: %s\r\n"
+                    "Connection: close\r\n"
+                    "Content-Type: text/html; charset=utf-8\r\n\r\n",
+                    date);
 
     conn->num_bytes_sent += mg_printf(conn,
                                       "<html><head><title>Index of %s</title>"
@@ -3258,19 +3277,6 @@ static void send_file_data(struct mg_connection *conn, struct file *filep,
 static int parse_range_header(const char *header, int64_t *a, int64_t *b)
 {
     return sscanf(header, "bytes=%" INT64_FMT "-%" INT64_FMT, a, b);
-}
-
-static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
-{
-    struct tm *tm;
-
-    tm = gmtime(t);
-    if (tm != NULL) {
-        strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S GMT", tm);
-    } else {
-        strncpy(buf, "Thu, 01 Jan 1970 00:00:00 GMT", buf_len);
-        buf[buf_len - 1] = '\0';
-    }
 }
 
 static void construct_etag(char *buf, size_t buf_len,
@@ -4189,16 +4195,21 @@ static void handle_ssi_file_request(struct mg_connection *conn,
                                     const char *path)
 {
     struct file file = STRUCT_FILE_INITIALIZER;
+    char date[64];
+    time_t curtime = time(NULL);
 
     if (!mg_fopen(conn, path, "rb", &file)) {
         send_http_error(conn, 500, http_500_error, "fopen(%s): %s", path,
                         strerror(ERRNO));
     } else {
         conn->must_close = 1;
+        gmt_time_string(date, sizeof(date), &curtime);
         fclose_on_exec(&file, conn);
         mg_printf(conn, "HTTP/1.1 200 OK\r\n"
-                  "Content-Type: text/html\r\nConnection: %s\r\n\r\n",
-                  suggest_connection_header(conn));
+                        "Date: %s\r\n"
+                        "Content-Type: text/html\r\n"
+                        "Connection: %s\r\n\r\n",
+                  date, suggest_connection_header(conn));
         send_ssi_file(conn, path, &file, 0);
         mg_fclose(&file);
     }
@@ -5179,7 +5190,7 @@ static void handle_request(struct mg_connection *conn)
     } else if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
                             (int)strlen(conn->ctx->config[CGI_EXTENSIONS]),
                             path) > 0) {
-        /* TODO: check unsupported methods -> 501 
+        /* TODO: check unsupported methods -> 501
         if (strcmp(ri->request_method, "POST") &&
             strcmp(ri->request_method, "HEAD") &&
             strcmp(ri->request_method, "GET")) {
