@@ -1119,11 +1119,15 @@ static void send_http_error(struct mg_connection *conn, int status,
     char buf[MG_BUF_LEN];
     va_list ap;
     int len = 0;
+    char date[64];
+    time_t curtime = time(NULL);
 
     conn->status_code = status;
     if (conn->ctx->callbacks.http_error == NULL ||
         conn->ctx->callbacks.http_error(conn, status)) {
         buf[0] = '\0';
+
+        gmt_time_string(date, sizeof(date), &curtime);
 
         /* Errors 1xx, 204 and 304 MUST NOT send a body */
         if (status > 199 && status != 204 && status != 304) {
@@ -1137,9 +1141,11 @@ static void send_http_error(struct mg_connection *conn, int status,
         DEBUG_TRACE(("[%s]", buf));
 
         mg_printf(conn, "HTTP/1.1 %d %s\r\n"
-                  "Content-Length: %d\r\n"
-                  "Connection: %s\r\n\r\n", status, reason, len,
-                  suggest_connection_header(conn));
+                        "Content-Length: %d\r\n"
+                        "Date: %s\r\n"
+                        "Connection: %s\r\n\r\n",
+                        status, reason, len, date,
+                        suggest_connection_header(conn));
         conn->num_bytes_sent += mg_printf(conn, "%s", buf);
     }
 }
@@ -2822,12 +2828,21 @@ static int check_authorization(struct mg_connection *conn, const char *path)
 
 static void send_authorization_request(struct mg_connection *conn)
 {
+    char date[64];
+    time_t curtime = time(NULL);
+
     conn->status_code = 401;
+    conn->must_close = 1;
+
+    gmt_time_string(date, sizeof(date), &curtime);
+
     mg_printf(conn,
               "HTTP/1.1 401 Unauthorized\r\n"
+              "Date: %s\r\n"
+              "Connection: %s\r\n"
               "Content-Length: 0\r\n"
-              "WWW-Authenticate: Digest qop=\"auth\", "
-              "realm=\"%s\", nonce=\"%lu\"\r\n\r\n",
+              "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", nonce=\"%lu\"\r\n\r\n",
+              date, suggest_connection_header(conn),
               conn->ctx->config[AUTHENTICATION_DOMAIN],
               (unsigned long) time(NULL));
 }
@@ -4217,11 +4232,19 @@ static void handle_ssi_file_request(struct mg_connection *conn,
 
 static void send_options(struct mg_connection *conn)
 {
-    conn->status_code = 200;
+    char date[64];
+    time_t curtime = time(NULL);
 
-    mg_printf(conn, "%s", "HTTP/1.1 200 OK\r\n"
-              "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, PROPFIND, MKCOL\r\n"
-              "DAV: 1\r\n\r\n");
+    conn->status_code = 200;
+    conn->must_close = 1;
+    gmt_time_string(date, sizeof(date), &curtime);
+
+    mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                    "Date: %s\r\n"
+                    "Connection: %s\r\n"
+                    "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, PROPFIND, MKCOL\r\n"
+                    "DAV: 1\r\n\r\n",
+                    date, suggest_connection_header(conn));
 }
 
 /* Writes PROPFIND properties for a collection element */
@@ -4263,12 +4286,18 @@ static void handle_propfind(struct mg_connection *conn, const char *path,
                             struct file *filep)
 {
     const char *depth = mg_get_header(conn, "Depth");
+    char date[64];
+    time_t curtime = time(NULL);
+
+    gmt_time_string(date, sizeof(date), &curtime);
 
     conn->must_close = 1;
     conn->status_code = 207;
     mg_printf(conn, "HTTP/1.1 207 Multi-Status\r\n"
-              "Connection: close\r\n"
-              "Content-Type: text/xml; charset=utf-8\r\n\r\n");
+                    "Date: %s\r\n"
+                    "Connection: %s\r\n"
+                    "Content-Type: text/xml; charset=utf-8\r\n\r\n",
+                    date, suggest_connection_header(conn));
 
     conn->num_bytes_sent += mg_printf(conn,
                                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
