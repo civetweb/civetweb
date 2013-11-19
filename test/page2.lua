@@ -1,14 +1,14 @@
-<? mg.write("HTTP/1.0 200 OK") ?>
-<? mg.write("Content-Type: text/html") ?>
-
-<html><body>
+mg.write("HTTP/1.0 200 OK\r\n")
+mg.write("Content-Type: text/html\r\n")
+mg.write("\r\n")
+mg.write([[<html><body>
 
 <p>This is another example of a Lua server page, served by
 <a href="http://code.google.com/p/civetweb">Civetweb web server</a>.
 </p><p>
 The following features are available:
 <ul>
-<?
+]])
   -- function in one Lua tag should still be available in the next one
   function test(tab, name)
     if tab then
@@ -27,10 +27,9 @@ The following features are available:
     end
     mg.write("</ul>\n")
   end
-?>
-<?
+
   mg.write("<li>" .. _VERSION .. " with the following standard libraries</li>\n")
-  mg.write("<ul>")
+  mg.write("<ul>\n")
   libs = {"string", "math", "table", "io", "os", "bit32", "package", "coroutine", "debug"};
   for _,n in ipairs(libs) do
     test(_G[n], n);
@@ -42,15 +41,13 @@ The following features are available:
   libname = "mg"
   test(_G[libname], libname .. " library")
   recurse(_G[libname])
-?>
-</ul></p>
-<p> Today is <? mg.write(os.date("%A")) ?>
 
-<p>
-<?
-  -- for k,v in pairs(_G) do mg.write(k, '\n') end  
+  mg.write("</ul></p>\n");
+  mg.write("<p> Today is " .. os.date("%A") .. "</p>\n");
 
-  if lfs then    
+ mg.write("<p>\n");
+ 
+ if lfs then    
     mg.write("Files in " .. lfs.currentdir())
     mg.write("\n<ul>\n")
     for f in lfs.dir(".") do
@@ -60,6 +57,8 @@ The following features are available:
     end
     mg.write("</ul>\n")
   end
-?>
+
+mg.write([[
 </p>
 </body></html>
+]])
