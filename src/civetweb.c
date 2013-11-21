@@ -521,11 +521,9 @@ enum {
 
 #if defined(USE_LUA)
     LUA_SCRIPT_EXTENSIONS, LUA_SERVER_PAGE_EXTENSIONS,
-
-#if defined(USE_WEBSOCKET)
-    LUA_WEBSOCKET_SCRIPT,
 #endif
-
+#if defined(USE_WEBSOCKET)
+    WEBSOCKET_ROOT,
 #endif
 
     NUM_OPTIONS
@@ -565,10 +563,9 @@ static const char *config_options[] = {
 #if defined(USE_LUA)
     "lua_script_pattern", "**.lua$",
     "lua_server_page_pattern", "**.lp$|**.lsp$",
-
-#if defined(USE_WEBSOCKET)
-    "lua_websocket_script", NULL,
 #endif
+#if defined(USE_WEBSOCKET)
+    "lua_websocket_root", NULL,
 #endif
 
     NULL
@@ -655,6 +652,10 @@ struct de {
     char *file_name;
     struct file file;
 };
+
+#if defined(USE_WEBSOCKET)
+static int is_websocket_request(const struct mg_connection *conn);
+#endif
 
 const char **mg_get_valid_option_names(void)
 {
@@ -2264,6 +2265,12 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     char const* accept_encoding;
 
     *is_script_ressource = 0;
+
+#if defined(USE_WEBSOCKET)
+    if (is_websocket_request(conn) && conn->ctx->config[WEBSOCKET_ROOT]) {
+        root = conn->ctx->config[WEBSOCKET_ROOT];
+    }
+#endif
 
     /* Using buf_len - 1 because memmove() for PATH_INFO may shift part
        of the path one byte on the right.
@@ -4761,9 +4768,8 @@ int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data,
     return retval;
 }
 
-static void handle_websocket_request(struct mg_connection *conn)
+static void handle_websocket_request(struct mg_connection *conn, const char *path, int is_script_resource)
 {
-    const char *ws_page = NULL;
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
     if (version == NULL || strcmp(version, "13") != 0) {
         send_http_error(conn, 426, "Upgrade Required", "%s", "Upgrade Required");
@@ -4772,10 +4778,9 @@ static void handle_websocket_request(struct mg_connection *conn)
         /* C callback has returned non-zero, do not proceed with handshake. */
         /* The C callback is called before Lua and may prevent Lua from handling the websocket. */
     } else {
-#ifdef USE_LUA
-        ws_page = conn->ctx->config[LUA_WEBSOCKET_SCRIPT];
-        if (ws_page) {
-            conn->lua_websocket_state = new_lua_websocket(ws_page, conn);
+#ifdef USE_LUA        
+        if (is_script_resource) {        
+            conn->lua_websocket_state = new_lua_websocket(path, conn);
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);
                 lua_websocket_ready(conn);
@@ -5165,7 +5170,7 @@ static void handle_request(struct mg_connection *conn)
         /* Do nothing, callback has served the request */
 #if defined(USE_WEBSOCKET)
     } else if (is_websocket_request(conn)) {
-        handle_websocket_request(conn);
+        handle_websocket_request(conn, path, is_script_resource);
 #endif
     } else if (!is_script_resource && !strcmp(ri->request_method, "OPTIONS")) {
         send_options(conn);
