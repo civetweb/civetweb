@@ -1,0 +1,67 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8"></meta>
+  <title>Websocket test</title>
+  <style type="text/css" media="screen">
+    body { background:#eee; margin:0 }
+    .main {
+      display:block; border:1px solid #ccc; position:absolute;
+      top:5%; left:5%; width:90%; height:90%; background:#fff;
+    }
+  </style>
+</head>
+<body>
+
+  <script type="text/javascript"><![CDATA[
+
+    var connection;
+    var websock_text_field;
+
+    function webSockKeepAlive() {
+      if (keepAlive) {
+        connection.send('client still alive');
+        setTimeout("webSockKeepAlive()", 10000);
+      }
+    }
+
+    function load() {
+      connection = new WebSocket("ws://" + window.location.host + "/websocket.lua");
+      websock_text_field = document.getElementById('websock_text_field');
+
+      connection.onopen = function () {
+        keepAlive = true;
+        webSockKeepAlive();
+      };
+
+      // Log errors
+      connection.onerror = function (error) {
+        keepAlive = false;
+        alert("WebSocket error");
+        connection.close();
+      };
+
+      // Log messages from the server
+      connection.onmessage = function (e) {        
+        websock_text_field.textContent = e.data;
+      };
+    }
+
+  ]]></script>
+
+<svg class="main"
+  xmlns="http://www.w3.org/2000/svg"
+  xmlns:svg="http://www.w3.org/2000/svg"
+  version="1.1"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  viewBox="0 0 1600 1200" preserveAspectRatio="xMinYMin meet"
+  onload="load()"
+  >
+
+  <circle id="line_a" cx="800" cy="600" r="500" style="stroke:rgb(255,0,0); stroke-width:5; fill:rgb(200,200,200)"/>
+  <text id="websock_text_field" x="800" y="600" text-anchor="middle" font-size="50px" fill="red">No websocket connection yet</text>
+
+</svg>
+
+</body>
+</html>
