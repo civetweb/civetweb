@@ -565,7 +565,7 @@ static const char *config_options[] = {
     "lua_server_page_pattern", "**.lp$|**.lsp$",
 #endif
 #if defined(USE_WEBSOCKET)
-    "lua_websocket_root", NULL,
+    "websocket_root", NULL,
 #endif
 
     NULL
@@ -4778,8 +4778,10 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
         /* C callback has returned non-zero, do not proceed with handshake. */
         /* The C callback is called before Lua and may prevent Lua from handling the websocket. */
     } else {
-#ifdef USE_LUA        
-        if (is_script_resource) {        
+#ifdef USE_LUA
+        if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+                         (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+                         path)) {
             conn->lua_websocket_state = new_lua_websocket(path, conn);
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);

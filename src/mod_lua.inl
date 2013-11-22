@@ -278,7 +278,46 @@ static int lsp_redirect(lua_State *L)
     return 0;
 }
 
-static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, const char *script_name)
+static int lwebsock_write(lua_State *L)
+{
+    int num_args = lua_gettop(L);
+    struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
+    const char *str;
+    size_t size;
+    int opcode = -1;
+
+    if (num_args == 1) {
+        if (lua_isstring(L, 1)) {
+            str = lua_tolstring(L, 1, &size);
+            mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, str, size);
+        }
+    } else if (num_args == 2) {
+        if (lua_isnumber(L, 1)) {
+            opcode = (int)lua_tointeger(L, 1);
+        } else if (lua_isstring(L,1)) {
+            str = lua_tostring(L, 1);
+            if (!mg_strncasecmp(str, "text", 4)) opcode = WEBSOCKET_OPCODE_TEXT;
+            else if (!mg_strncasecmp(str, "bin", 3)) opcode = WEBSOCKET_OPCODE_BINARY;
+            else if (!mg_strncasecmp(str, "close", 5)) opcode = WEBSOCKET_OPCODE_CONNECTION_CLOSE;
+            else if (!mg_strncasecmp(str, "ping", 4)) opcode = WEBSOCKET_OPCODE_PING;
+            else if (!mg_strncasecmp(str, "pong", 4)) opcode = WEBSOCKET_OPCODE_PONG;
+            else if (!mg_strncasecmp(str, "cont", 4)) opcode = WEBSOCKET_OPCODE_CONTINUATION;
+        }
+        if (opcode>=0 && opcode<16 && lua_isstring(L, 2)) {
+            str = lua_tolstring(L, 2, &size);
+            mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, str, size);
+        }
+    }
+    return 0;
+}
+
+enum {
+    LUA_ENV_TYPE_LUA_SERVER_PAGE = 0,
+    LUA_ENV_TYPE_PLAIN_LUA_PAGE = 1,
+    LUA_ENV_TYPE_LUA_WEBSOCKET = 2,
+};
+
+static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, const char *script_name, int lua_env_type)
 {
     const struct mg_request_info *ri = mg_get_request_info(conn);
     char src_addr[IP_ADDR_STR_LEN];
@@ -314,11 +353,22 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     /* Register mg module */
     lua_newtable(L);
 
-    reg_function(L, "read", lsp_read, conn);
-    reg_function(L, "write", lsp_write, conn);
     reg_function(L, "cry", lsp_cry, conn);
-    reg_function(L, "include", lsp_include, conn);
-    reg_function(L, "redirect", lsp_redirect, conn);
+
+    if (lua_env_type==LUA_ENV_TYPE_LUA_SERVER_PAGE || lua_env_type==LUA_ENV_TYPE_PLAIN_LUA_PAGE) {
+        reg_function(L, "read", lsp_read, conn);
+        reg_function(L, "write", lsp_write, conn);
+    }
+
+    if (lua_env_type==LUA_ENV_TYPE_LUA_SERVER_PAGE) {
+        reg_function(L, "include", lsp_include, conn);
+        reg_function(L, "redirect", lsp_redirect, conn);
+    }
+
+    if (lua_env_type==LUA_ENV_TYPE_LUA_WEBSOCKET) {
+        reg_function(L, "write", lwebsock_write, conn);
+    }
+
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
     reg_string(L, "auth_domain", conn->ctx->config[AUTHENTICATION_DOMAIN]);
@@ -387,7 +437,7 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
     lua_State *L;
 
     if (path != NULL && (L = luaL_newstate()) != NULL) {
-        prepare_lua_environment(conn, L, path);
+        prepare_lua_environment(conn, L, path, LUA_ENV_TYPE_PLAIN_LUA_PAGE);
         lua_pushcclosure(L, &lua_error_handler, 0);
 
         if (exports != NULL) {
@@ -447,7 +497,7 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path,
     } else {
         /* We're not sending HTTP headers here, Lua page must do it. */
         if (ls == NULL) {
-            prepare_lua_environment(conn, L, path);
+            prepare_lua_environment(conn, L, path, LUA_ENV_TYPE_LUA_SERVER_PAGE);
             if (conn->ctx->callbacks.init_lua != NULL) {
                 conn->ctx->callbacks.init_lua(conn, L);
             }
@@ -472,7 +522,7 @@ static void * new_lua_websocket(const char * script, struct mg_connection *conn)
     assert(conn->lua_websocket_state == NULL);
     L = luaL_newstate();
     if (L) {
-        prepare_lua_environment(conn, L, script);
+        prepare_lua_environment(conn, L, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
         if (conn->ctx->callbacks.init_lua != NULL) {
             conn->ctx->callbacks.init_lua(conn, L);
         }

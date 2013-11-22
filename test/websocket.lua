@@ -1,5 +1,5 @@
 -- Open database
-local db = sqlite3.open('requests.db')
+local db = sqlite3.open('r:\\websockLog.db')
 
 if db then
   db:busy_timeout(200);
@@ -16,31 +16,25 @@ if db then
 end
 
 
-
 local function logDB(method)
   -- Add entry about this request
   local r;
   repeat
     r = db:exec([[INSERT INTO requests VALUES(NULL, datetime("now"), "]] .. method .. [[", "]] .. mg.request_info.uri .. [[", "]] .. mg.request_info.remote_port .. [[");]]);
   until r~=5;
-
-  --[[
-  -- alternative logging (to a file)
-  local f = io.open("R:\\log.txt", "a");
-  f:write(os.date() .. " - " .. method .. " - " .. mg.request_info.uri .. " - " .. mg.request_info.remote_port .. " <" .. r .. ">\n")
-  f:close()
-  --]]
 end
 
 
 -- Callback for "Websocket ready"
 function ready()
   logDB("WEBSOCKET READY")
+  mg.write("text", "Websocket ready")
 end
 
 -- Callback for "Websocket received data"
 function data(bits, content)
     logDB(string.format("WEBSOCKET DATA (%x)", bits))
+    mg.write("text", os.date())
     return true;
 end
 
