@@ -280,6 +280,7 @@ static int lsp_redirect(lua_State *L)
 
 static int lwebsock_write(lua_State *L)
 {
+#ifdef USE_WEBSOCKET
     int num_args = lua_gettop(L);
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
     const char *str;
@@ -308,6 +309,7 @@ static int lwebsock_write(lua_State *L)
             mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, str, size);
         }
     }
+#endif    
     return 0;
 }
 
@@ -575,6 +577,7 @@ static void * new_lua_websocket(const char * script, struct mg_connection *conn)
     return L;
 }
 
+#ifdef USE_WEBSOCKET
 static void lua_websocket_ready(struct mg_connection *conn)
 {
     lua_State *L = (lua_State*)(conn->lua_websocket_state);
@@ -621,3 +624,4 @@ static void lua_websocket_close(struct mg_connection *conn)
     lua_close(L);
     conn->lua_websocket_state = NULL;
 }
+#endif
