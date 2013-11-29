@@ -46,5 +46,17 @@ function close()
 end
 
 
+-- Websocket with coroutines
 logDB("WEBSOCKET PREPARE")
-return true; -- could return false to reject the connection before the websocket handshake
+
+coroutine.yield(true); -- first yield returns (true) or (false) to accept or reject the connection
+ready()
+repeat
+    local cont, bits, content = coroutine.yield(true, 1.0)
+    if bits and content then
+        data(bits, content)
+    end
+until not cont;
+
+mg.write("text", "end")
+close()

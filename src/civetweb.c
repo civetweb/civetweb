@@ -4785,8 +4785,9 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
             conn->lua_websocket_state = new_lua_websocket(path, conn);
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);
-                lua_websocket_ready(conn);
-                read_websocket(conn);
+                if (lua_websocket_ready(conn)) {
+                    read_websocket(conn);
+                }
             }
         } else
 #endif
