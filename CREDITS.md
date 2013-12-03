@@ -1,4 +1,4 @@
-# Civitweb Contributors
+# Civetweb Contributors
 
 * Alex Kozlov
 * bel2125
