@@ -518,6 +518,14 @@ enum {
     GLOBAL_PASSWORDS_FILE, INDEX_FILES, ENABLE_KEEP_ALIVE, ACCESS_CONTROL_LIST,
     EXTRA_MIME_TYPES, LISTENING_PORTS, DOCUMENT_ROOT, SSL_CERTIFICATE,
     NUM_THREADS, RUN_AS_USER, REWRITE, HIDE_FILES, REQUEST_TIMEOUT,
+
+#if defined(USE_LUA)
+    LUA_SCRIPT_EXTENSIONS, LUA_SERVER_PAGE_EXTENSIONS,
+#endif
+#if defined(USE_WEBSOCKET)
+    WEBSOCKET_ROOT,
+#endif
+
     NUM_OPTIONS
 };
 
@@ -535,7 +543,11 @@ static const char *config_options[] = {
     "error_log_file", NULL,
     "global_auth_file", NULL,
     "index_files",
-    "index.html,index.htm,index.cgi,index.shtml,index.php,index.lp",
+#ifdef USE_LUA
+    "index.html,index.htm,index.lp,index.lsp,index.lua,index.cgi,index.shtml,index.php",
+#else
+    "index.html,index.htm,index.cgi,index.shtml,index.php",
+#endif
     "enable_keep_alive", "no",
     "access_control_list", NULL,
     "extra_mime_types", NULL,
@@ -547,6 +559,15 @@ static const char *config_options[] = {
     "url_rewrite_patterns", NULL,
     "hide_files_patterns", NULL,
     "request_timeout_ms", "30000",
+
+#if defined(USE_LUA)
+    "lua_script_pattern", "**.lua$",
+    "lua_server_page_pattern", "**.lp$|**.lsp$",
+#endif
+#if defined(USE_WEBSOCKET)
+    "websocket_root", NULL,
+#endif
+
     NULL
 };
 
@@ -610,6 +631,9 @@ struct mg_connection {
     int64_t last_throttle_bytes;/* Bytes sent this second */
     pthread_mutex_t mutex;      /* Used by mg_lock/mg_unlock to ensure atomic
                                    transmissions for websockets */
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    void * lua_websocket_state; /* Lua_State for a websocket connection */
+#endif
 };
 
 static pthread_key_t sTlsKey;  /* Thread local storage index */
@@ -628,6 +652,10 @@ struct de {
     char *file_name;
     struct file file;
 };
+
+#if defined(USE_WEBSOCKET)
+static int is_websocket_request(const struct mg_connection *conn);
+#endif
 
 const char **mg_get_valid_option_names(void)
 {
@@ -709,11 +737,25 @@ static void sockaddr_to_string(char *buf, size_t len,
               (void *) &usa->sin.sin_addr :
               (void *) &usa->sin6.sin6_addr, buf, len);
 #elif defined(_WIN32)
-    /* Only Windoze Vista (and newer) have inet_ntop() */
+    /* Only Windows Vista (and newer) have inet_ntop() */
     strncpy(buf, inet_ntoa(usa->sin.sin_addr), len);
 #else
     inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, len);
 #endif
+}
+
+/* Convert time_t to a string. According to RFC2616, Sec 14.18, this must be included in all responses other than 100, 101, 5xx. */
+static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
+{
+    struct tm *tm;
+
+    tm = gmtime(t);
+    if (tm != NULL) {
+        strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S GMT", tm);
+    } else {
+        strncpy(buf, "Thu, 01 Jan 1970 00:00:00 GMT", buf_len);
+        buf[buf_len - 1] = '\0';
+    }
 }
 
 /* Print error message to the opened error log stream. */
@@ -1072,11 +1114,15 @@ static void send_http_error(struct mg_connection *conn, int status,
     char buf[MG_BUF_LEN];
     va_list ap;
     int len = 0;
+    char date[64];
+    time_t curtime = time(NULL);
 
     conn->status_code = status;
     if (conn->ctx->callbacks.http_error == NULL ||
         conn->ctx->callbacks.http_error(conn, status)) {
         buf[0] = '\0';
+
+        gmt_time_string(date, sizeof(date), &curtime);
 
         /* Errors 1xx, 204 and 304 MUST NOT send a body */
         if (status > 199 && status != 204 && status != 304) {
@@ -1090,9 +1136,11 @@ static void send_http_error(struct mg_connection *conn, int status,
         DEBUG_TRACE(("[%s]", buf));
 
         mg_printf(conn, "HTTP/1.1 %d %s\r\n"
-                  "Content-Length: %d\r\n"
-                  "Connection: %s\r\n\r\n", status, reason, len,
-                  suggest_connection_header(conn));
+                        "Content-Length: %d\r\n"
+                        "Date: %s\r\n"
+                        "Connection: %s\r\n\r\n",
+                        status, reason, len, date,
+                        suggest_connection_header(conn));
         conn->num_bytes_sent += mg_printf(conn, "%s", buf);
     }
 }
@@ -2199,7 +2247,8 @@ int mg_get_cookie(const char *cookie_header, const char *var_name,
 }
 
 static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
-                                     size_t buf_len, struct file *filep)
+                                     size_t buf_len, struct file *filep,
+                                     int * is_script_ressource)
 {
     struct vec a, b;
     const char *rewrite, *uri = conn->request_info.uri,
@@ -2208,6 +2257,14 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     int match_len;
     char gz_path[PATH_MAX];
     char const* accept_encoding;
+
+    *is_script_ressource = 0;
+
+#if defined(USE_WEBSOCKET)
+    if (is_websocket_request(conn) && conn->ctx->config[WEBSOCKET_ROOT]) {
+        root = conn->ctx->config[WEBSOCKET_ROOT];
+    }
+#endif
 
     /* Using buf_len - 1 because memmove() for PATH_INFO may shift part
        of the path one byte on the right.
@@ -2247,9 +2304,14 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     for (p = buf + strlen(buf); p > buf + 1; p--) {
         if (*p == '/') {
             *p = '\0';
-            if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-                             (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0 &&
-                mg_stat(conn, buf, filep)) {
+            if ((match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+                              (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0
+#ifdef USE_LUA
+                 ||
+                 match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+                              (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), buf) > 0
+#endif
+                ) && mg_stat(conn, buf, filep)) {
                 /* Shift PATH_INFO block one character right, e.g.
                     "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
                    conn->path_info is pointing to the local variable "path"
@@ -2259,6 +2321,7 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
                 memmove(p + 2, p + 1, strlen(p + 1) + 1);  /* +1 is for
                                                               trailing \0 */
                 p[1] = '/';
+                *is_script_ressource = 1;
                 break;
             } else {
                 *p = '/';
@@ -2766,12 +2829,21 @@ static int check_authorization(struct mg_connection *conn, const char *path)
 
 static void send_authorization_request(struct mg_connection *conn)
 {
+    char date[64];
+    time_t curtime = time(NULL);
+
     conn->status_code = 401;
+    conn->must_close = 1;
+
+    gmt_time_string(date, sizeof(date), &curtime);
+
     mg_printf(conn,
               "HTTP/1.1 401 Unauthorized\r\n"
+              "Date: %s\r\n"
+              "Connection: %s\r\n"
               "Content-Length: 0\r\n"
-              "WWW-Authenticate: Digest qop=\"auth\", "
-              "realm=\"%s\", nonce=\"%lu\"\r\n\r\n",
+              "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", nonce=\"%lu\"\r\n\r\n",
+              date, suggest_connection_header(conn),
               conn->ctx->config[AUTHENTICATION_DOMAIN],
               (unsigned long) time(NULL));
 }
@@ -3121,6 +3193,8 @@ static void handle_directory_request(struct mg_connection *conn,
 {
     int i, sort_direction;
     struct dir_scan_data data = { NULL, 0, 128 };
+    char date[64];
+    time_t curtime = time(NULL);
 
     if (!scan_directory(conn, dir, &data, dir_scan_callback)) {
         send_http_error(conn, 500, "Cannot open directory",
@@ -3128,14 +3202,17 @@ static void handle_directory_request(struct mg_connection *conn,
         return;
     }
 
+    gmt_time_string(date, sizeof(date), &curtime);
+
     sort_direction = conn->request_info.query_string != NULL &&
                      conn->request_info.query_string[1] == 'd' ? 'a' : 'd';
 
     conn->must_close = 1;
-    mg_printf(conn, "%s",
-              "HTTP/1.1 200 OK\r\n"
-              "Connection: close\r\n"
-              "Content-Type: text/html; charset=utf-8\r\n\r\n");
+    mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                    "Date: %s\r\n"
+                    "Connection: close\r\n"
+                    "Content-Type: text/html; charset=utf-8\r\n\r\n",
+                    date);
 
     conn->num_bytes_sent += mg_printf(conn,
                                       "<html><head><title>Index of %s</title>"
@@ -3216,19 +3293,6 @@ static void send_file_data(struct mg_connection *conn, struct file *filep,
 static int parse_range_header(const char *header, int64_t *a, int64_t *b)
 {
     return sscanf(header, "bytes=%" INT64_FMT "-%" INT64_FMT, a, b);
-}
-
-static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
-{
-    struct tm *tm;
-
-    tm = gmtime(t);
-    if (tm != NULL) {
-        strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S GMT", tm);
-    } else {
-        strncpy(buf, "Thu, 01 Jan 1970 00:00:00 GMT", buf_len);
-        buf[buf_len - 1] = '\0';
-    }
 }
 
 static void construct_etag(char *buf, size_t buf_len,
@@ -3927,6 +3991,9 @@ static void mkcol(struct mg_connection *conn, const char *path)
 {
     int rc, body_len;
     struct de de;
+    char date[64];
+    time_t curtime = time(NULL);
+
     memset(&de.file, 0, sizeof(de.file));
     if (!mg_stat(conn, path, &de.file)) {
         mg_cry(conn, "%s: mg_stat(%s) failed: %s",
@@ -3950,7 +4017,9 @@ static void mkcol(struct mg_connection *conn, const char *path)
 
     if (rc == 0) {
         conn->status_code = 201;
-        mg_printf(conn, "HTTP/1.1 %d Created\r\n\r\n", conn->status_code);
+        gmt_time_string(date, sizeof(date), &curtime);
+        mg_printf(conn, "HTTP/1.1 %d Created\r\nDate: %s\r\nContent-Length: 0\r\nConnection: %s\r\n\r\n",
+                  conn->status_code, date, suggest_connection_header(conn));
     } else if (rc == -1) {
         if(errno == EEXIST)
             send_http_error(conn, 405, "Method Not Allowed",
@@ -3973,11 +4042,15 @@ static void put_file(struct mg_connection *conn, const char *path)
     const char *range;
     int64_t r1, r2;
     int rc;
+    char date[64];
+    time_t curtime = time(NULL);
 
     conn->status_code = mg_stat(conn, path, &file) ? 200 : 201;
 
     if ((rc = put_dir(conn, path)) == 0) {
-        mg_printf(conn, "HTTP/1.1 %d OK\r\n\r\n", conn->status_code);
+        gmt_time_string(date, sizeof(date), &curtime);
+        mg_printf(conn, "HTTP/1.1 %d OK\r\nDate: %s\r\nContent-Length: 0\r\nConnection: %s\r\n\r\n",
+                  conn->status_code, date, suggest_connection_header(conn));
     } else if (rc == -1) {
         send_http_error(conn, 500, http_500_error,
                         "put_dir(%s): %s", path, strerror(ERRNO));
@@ -3996,8 +4069,9 @@ static void put_file(struct mg_connection *conn, const char *path)
         if (!forward_body_data(conn, file.fp, INVALID_SOCKET, NULL)) {
             conn->status_code = 500;
         }
-        mg_printf(conn, "HTTP/1.1 %d OK\r\nContent-Length: 0\r\n\r\n",
-                  conn->status_code);
+        gmt_time_string(date, sizeof(date), &curtime);
+        mg_printf(conn, "HTTP/1.1 %d OK\r\nDate: %s\r\nContent-Length: 0\r\nConnection: %s\r\n\r\n",
+                  conn->status_code, date, suggest_connection_header(conn));
         mg_fclose(&file);
     }
 }
@@ -4147,16 +4221,21 @@ static void handle_ssi_file_request(struct mg_connection *conn,
                                     const char *path)
 {
     struct file file = STRUCT_FILE_INITIALIZER;
+    char date[64];
+    time_t curtime = time(NULL);
 
     if (!mg_fopen(conn, path, "rb", &file)) {
         send_http_error(conn, 500, http_500_error, "fopen(%s): %s", path,
                         strerror(ERRNO));
     } else {
         conn->must_close = 1;
+        gmt_time_string(date, sizeof(date), &curtime);
         fclose_on_exec(&file, conn);
         mg_printf(conn, "HTTP/1.1 200 OK\r\n"
-                  "Content-Type: text/html\r\nConnection: %s\r\n\r\n",
-                  suggest_connection_header(conn));
+                        "Date: %s\r\n"
+                        "Content-Type: text/html\r\n"
+                        "Connection: %s\r\n\r\n",
+                  date, suggest_connection_header(conn));
         send_ssi_file(conn, path, &file, 0);
         mg_fclose(&file);
     }
@@ -4164,11 +4243,19 @@ static void handle_ssi_file_request(struct mg_connection *conn,
 
 static void send_options(struct mg_connection *conn)
 {
-    conn->status_code = 200;
+    char date[64];
+    time_t curtime = time(NULL);
 
-    mg_printf(conn, "%s", "HTTP/1.1 200 OK\r\n"
-              "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, PROPFIND, MKCOL\r\n"
-              "DAV: 1\r\n\r\n");
+    conn->status_code = 200;
+    conn->must_close = 1;
+    gmt_time_string(date, sizeof(date), &curtime);
+
+    mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                    "Date: %s\r\n"
+                    "Connection: %s\r\n"
+                    "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, PROPFIND, MKCOL\r\n"
+                    "DAV: 1\r\n\r\n",
+                    date, suggest_connection_header(conn));
 }
 
 /* Writes PROPFIND properties for a collection element */
@@ -4210,12 +4297,18 @@ static void handle_propfind(struct mg_connection *conn, const char *path,
                             struct file *filep)
 {
     const char *depth = mg_get_header(conn, "Depth");
+    char date[64];
+    time_t curtime = time(NULL);
+
+    gmt_time_string(date, sizeof(date), &curtime);
 
     conn->must_close = 1;
     conn->status_code = 207;
     mg_printf(conn, "HTTP/1.1 207 Multi-Status\r\n"
-              "Connection: close\r\n"
-              "Content-Type: text/xml; charset=utf-8\r\n\r\n");
+                    "Date: %s\r\n"
+                    "Connection: %s\r\n"
+                    "Content-Type: text/xml; charset=utf-8\r\n\r\n",
+                    date, suggest_connection_header(conn));
 
     conn->num_bytes_sent += mg_printf(conn,
                                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -4243,6 +4336,10 @@ void mg_unlock(struct mg_connection* conn)
 {
     (void) pthread_mutex_unlock(&conn->mutex);
 }
+
+#ifdef USE_LUA
+#include "mod_lua.inl"
+#endif /* USE_LUA */
 
 #if defined(USE_WEBSOCKET)
 
@@ -4608,7 +4705,14 @@ static void read_websocket(struct mg_connection *conn)
             /* Exit the loop if callback signalled to exit,
                or "connection close" opcode received. */
             if ((conn->ctx->callbacks.websocket_data != NULL &&
+#ifdef USE_LUA
+                 (conn->lua_websocket_state == NULL) &&
+#endif
                  !conn->ctx->callbacks.websocket_data(conn, mop, data, data_len)) ||
+#ifdef USE_LUA
+                (conn->lua_websocket_state &&
+                 !lua_websocket_data(conn, mop, data, data_len)) ||
+#endif
                 (buf[0] & 0xf) == WEBSOCKET_OPCODE_CONNECTION_CLOSE) {  /* Opcode == 8, connection close */
                 break;
             }
@@ -4670,20 +4774,37 @@ int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data,
     return retval;
 }
 
-static void handle_websocket_request(struct mg_connection *conn)
+static void handle_websocket_request(struct mg_connection *conn, const char *path, int is_script_resource)
 {
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
     if (version == NULL || strcmp(version, "13") != 0) {
         send_http_error(conn, 426, "Upgrade Required", "%s", "Upgrade Required");
     } else if (conn->ctx->callbacks.websocket_connect != NULL &&
                conn->ctx->callbacks.websocket_connect(conn) != 0) {
-        /* Callback has returned non-zero, do not proceed with handshake */
+        /* C callback has returned non-zero, do not proceed with handshake. */
+        /* The C callback is called before Lua and may prevent Lua from handling the websocket. */
     } else {
-        send_websocket_handshake(conn);
-        if (conn->ctx->callbacks.websocket_ready != NULL) {
-            conn->ctx->callbacks.websocket_ready(conn);
+#ifdef USE_LUA
+        if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+                         (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+                         path)) {
+            conn->lua_websocket_state = new_lua_websocket(path, conn);
+            if (conn->lua_websocket_state) {
+                send_websocket_handshake(conn);
+                if (lua_websocket_ready(conn)) {
+                    read_websocket(conn);
+                }
+            }
+        } else
+#endif
+        {
+            /* No Lua websock script specified. */
+            send_websocket_handshake(conn);
+            if (conn->ctx->callbacks.websocket_ready != NULL) {
+                conn->ctx->callbacks.websocket_ready(conn);
+            }
+            read_websocket(conn);
         }
-        read_websocket(conn);
     }
 }
 
@@ -4758,10 +4879,6 @@ static uint32_t get_remote_ip(const struct mg_connection *conn)
 {
     return ntohl(* (uint32_t *) &conn->client.rsa.sin.sin_addr);
 }
-
-#ifdef USE_LUA
-#include "mod_lua.inl"
-#endif /* USE_LUA */
 
 int mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
@@ -5028,8 +5145,10 @@ static void handle_request(struct mg_connection *conn)
 {
     struct mg_request_info *ri = &conn->request_info;
     char path[PATH_MAX];
-    int uri_len, ssl_index;
+    int uri_len, ssl_index, is_script_resource;
     struct file file = STRUCT_FILE_INITIALIZER;
+    char date[64];
+    time_t curtime = time(NULL);
 
     if ((conn->request_info.query_string = strchr(ri->uri, '?')) != NULL) {
         * ((char *) conn->request_info.query_string++) = '\0';
@@ -5038,7 +5157,7 @@ static void handle_request(struct mg_connection *conn)
     mg_url_decode(ri->uri, uri_len, (char *) ri->uri, uri_len + 1, 0);
     remove_double_dots_and_double_slashes((char *) ri->uri);
     path[0] = '\0';
-    convert_uri_to_file_name(conn, path, sizeof(path), &file);
+    convert_uri_to_file_name(conn, path, sizeof(path), &file, &is_script_resource);
     conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
                                   get_remote_ip(conn), ri->uri);
 
@@ -5049,7 +5168,7 @@ static void handle_request(struct mg_connection *conn)
     if (!conn->client.is_ssl && conn->client.ssl_redir &&
         (ssl_index = get_first_ssl_listener_index(conn->ctx)) > -1) {
         redirect_to_https_port(conn, ssl_index);
-    } else if (!is_put_or_delete_request(conn) &&
+    } else if (!is_script_resource && !is_put_or_delete_request(conn) &&
                !check_authorization(conn, path)) {
         send_authorization_request(conn);
     } else if (conn->ctx->callbacks.begin_request != NULL &&
@@ -5060,20 +5179,20 @@ static void handle_request(struct mg_connection *conn)
         /* Do nothing, callback has served the request */
 #if defined(USE_WEBSOCKET)
     } else if (is_websocket_request(conn)) {
-        handle_websocket_request(conn);
+        handle_websocket_request(conn, path, is_script_resource);
 #endif
-    } else if (!strcmp(ri->request_method, "OPTIONS")) {
+    } else if (!is_script_resource && !strcmp(ri->request_method, "OPTIONS")) {
         send_options(conn);
     } else if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
         send_http_error(conn, 404, "Not Found", "Not Found");
-    } else if (is_put_or_delete_request(conn) &&
+    } else if (!is_script_resource && is_put_or_delete_request(conn) &&
                (is_authorized_for_put(conn) != 1)) {
         send_authorization_request(conn);
-    } else if (!strcmp(ri->request_method, "PUT")) {
+    } else if (!is_script_resource && !strcmp(ri->request_method, "PUT")) {
         put_file(conn, path);
-    } else if (!strcmp(ri->request_method, "MKCOL")) {
+    } else if (!is_script_resource && !strcmp(ri->request_method, "MKCOL")) {
         mkcol(conn, path);
-    } else if (!strcmp(ri->request_method, "DELETE")) {
+    } else if (!is_script_resource && !strcmp(ri->request_method, "DELETE")) {
         struct de de;
         memset(&de.file, 0, sizeof(de.file));
         if(!mg_stat(conn, path, &de.file)) {
@@ -5098,9 +5217,14 @@ static void handle_request(struct mg_connection *conn)
                must_hide_file(conn, path)) {
         send_http_error(conn, 404, "Not Found", "%s", "File not found");
     } else if (file.is_directory && ri->uri[uri_len - 1] != '/') {
+        gmt_time_string(date, sizeof(date), &curtime);
         mg_printf(conn, "HTTP/1.1 301 Moved Permanently\r\n"
-                  "Location: %s/\r\n\r\n", ri->uri);
-    } else if (!strcmp(ri->request_method, "PROPFIND")) {
+                        "Location: %s/\r\n"
+                        "Date: %s\r\n"
+                        "Content-Length: 0\r\n"
+                        "Connection: %s\r\n\r\n",
+                        ri->uri, date, suggest_connection_header(conn));
+    } else if (!is_script_resource && !strcmp(ri->request_method, "PROPFIND")) {
         handle_propfind(conn, path, &file);
     } else if (file.is_directory &&
                !substitute_index_file(conn, path, sizeof(path), &file)) {
@@ -5111,13 +5235,22 @@ static void handle_request(struct mg_connection *conn)
                             "Directory listing denied");
         }
 #ifdef USE_LUA
-    } else if (match_prefix("**.lp$", 6, path) > 0) {
+    } else if (match_prefix(conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS],
+                            (int)strlen(conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
+                            path) > 0) {
+        /* Lua server page: an SSI like page containing mostly plain html code plus some tags with server generated contents. */
         handle_lsp_request(conn, path, &file, NULL);
+    } else if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+                            (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+                            path) > 0) {
+        /* Lua in-server module script: a CGI like script used to generate the entire reply. */
+        mg_exec_lua_script(conn, path, NULL);
 #endif
 #if !defined(NO_CGI)
     } else if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
                             (int)strlen(conn->ctx->config[CGI_EXTENSIONS]),
                             path) > 0) {
+        /* TODO: check unsupported methods -> 501
         if (strcmp(ri->request_method, "POST") &&
             strcmp(ri->request_method, "HEAD") &&
             strcmp(ri->request_method, "GET")) {
@@ -5125,7 +5258,8 @@ static void handle_request(struct mg_connection *conn)
                             "Method %s is not implemented", ri->request_method);
         } else {
             handle_cgi_request(conn, path);
-        }
+        } */
+        handle_cgi_request(conn, path);
 #endif /* !NO_CGI */
     } else if (match_prefix(conn->ctx->config[SSI_EXTENSIONS],
                             (int)strlen(conn->ctx->config[SSI_EXTENSIONS]),
@@ -5572,6 +5706,12 @@ static void close_socket_gracefully(struct mg_connection *conn)
 
 static void close_connection(struct mg_connection *conn)
 {
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    if (conn->lua_websocket_state) {
+        lua_websocket_close(conn);
+    }
+#endif
+
     /* call the connection_close callback if assigned */
     if (conn->ctx->callbacks.connection_close != NULL)
         conn->ctx->callbacks.connection_close(conn);
@@ -6163,6 +6303,10 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #pragma warning(suppress: 28125)
     InitializeCriticalSection(&global_log_file_lock);
 #endif /* _WIN32 && !__SYMBIAN32__ */
+
+    /* Check if the config_options and the corresponding enum have compatible sizes. */
+    /* Could use static_assert, once it is verified that all compilers support this. */
+    assert(sizeof(config_options)/sizeof(config_options[0]) == NUM_OPTIONS*2+1);
 
     /* Allocate context and initialize reasonable general case defaults.
        TODO(lsm): do proper error handling here. */

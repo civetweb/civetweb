@@ -12,30 +12,30 @@ The following features are available:
   -- function in one Lua tag should still be available in the next one
   function test(tab, name)
     if tab then
-      mg.write("<li>" .. name .. "</li>")
+      mg.write("<li>" .. name .. "</li>\n")
     end
   end
   function recurse(tab)
-    mg.write("<ul>")
+    mg.write("<ul>\n")
     for k,v in pairs(tab) do      
       if type(v) == "table" then
-        mg.write("<li>" .. tostring(k) .. ":</li>")
+        mg.write("<li>" .. tostring(k) .. ":</li>\n")
         recurse(v)
       else
-        mg.write("<li>" .. tostring(k) .. " = " .. tostring(v) .. "</li>")        
+        mg.write("<li>" .. tostring(k) .. " = " .. tostring(v) .. "</li>\n")        
       end
     end
-    mg.write("</ul>")
+    mg.write("</ul>\n")
   end
 ?>
 <?
-  mg.write("<li>" .. _VERSION .. " with the following standard libraries</li>")
+  mg.write("<li>" .. _VERSION .. " with the following standard libraries</li>\n")
   mg.write("<ul>")
   libs = {"string", "math", "table", "io", "os", "bit32", "package", "coroutine", "debug"};
   for _,n in ipairs(libs) do
     test(_G[n], n);
   end
-  mg.write("</ul>")
+  mg.write("</ul>\n")
   test(sqlite3, "sqlite3 binding")
   test(lfs,"lua file system")
   
@@ -52,13 +52,13 @@ The following features are available:
 
   if lfs then    
     mg.write("Files in " .. lfs.currentdir())
-    mg.write("<ul>")
+    mg.write("\n<ul>\n")
     for f in lfs.dir(".") do
-      mg.write("<li>" .. f .. "</li>")
+      mg.write("<li>" .. f .. "</li>\n")
       local at = lfs.attributes(f);
       recurse(at)
     end
-    mg.write("</ul>")
+    mg.write("</ul>\n")
   end
 ?>
 </p>

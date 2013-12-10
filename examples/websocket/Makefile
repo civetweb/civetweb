@@ -7,7 +7,7 @@
 
 
 PROG = websocket
-SRC = websocket.c
+SRC = WebSockCallbacks.c websocket.c
 
 TOP = ../..
 CIVETWEB_LIB = libcivetweb.a

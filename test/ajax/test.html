@@ -19,6 +19,12 @@
     var autoTest = false;
     var testType = "cgi";
 
+    function NextTestType() {
+      if (testType == "cgi") testType = "lp";
+      else if (testType == "lp") testType = "lua";
+      else testType = "cgi";
+    }
+
     function runTest(method, isAsync) {
 
       ++pushCount;
@@ -120,7 +126,7 @@
             <input id="testButton5" type="button" onclick="autoTest=!autoTest; javascript:runAutoTest()" value="automatic test"></input>
           </td>        
           <td>
-            <input id="testButton6" type="button" onclick="testType = (testType=='cgi') ? 'lp' : 'cgi'; this.value=testType" value='cgi'></input>
+            <input id="testButton6" type="button" onclick="NextTestType(); this.value=testType" value='cgi'></input>
           </td>        
         </tr>
         
