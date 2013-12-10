@@ -732,21 +732,15 @@ static void sockaddr_to_string(char *buf, size_t len,
                                const union usa *usa)
 {
     buf[0] = '\0';
-#if defined(_WIN32)
-    /* Only Windoze Vista (and newer) have inet_ntop() */
-    if (usa->sa.sa_family == AF_INET) {
-        strncpy(buf, inet_ntoa(usa->sin.sin_addr), len);
-    } else {
 #if defined(USE_IPV6)
-        snprintf(buf, len, "%x:%x:%x:%x:%x:%x:%x:%x",
-                 usa->sin6.sin6_addr.u.Word[0], usa->sin6.sin6_addr.u.Word[1], usa->sin6.sin6_addr.u.Word[2], usa->sin6.sin6_addr.u.Word[3],
-                 usa->sin6.sin6_addr.u.Word[4], usa->sin6.sin6_addr.u.Word[5], usa->sin6.sin6_addr.u.Word[6], usa->sin6.sin6_addr.u.Word[7]);
-#endif
-    }
-#else
     inet_ntop(usa->sa.sa_family, usa->sa.sa_family == AF_INET ?
               (void *) &usa->sin.sin_addr :
               (void *) &usa->sin6.sin6_addr, buf, len);
+#elif defined(_WIN32)
+    /* Only Windows Vista (and newer) have inet_ntop() */
+    strncpy(buf, inet_ntoa(usa->sin.sin_addr), len);
+#else
+    inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, len);
 #endif
 }
 
@@ -5287,11 +5281,7 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 {
     unsigned int a, b, c, d, ch, len, port;
 #if defined(USE_IPV6)
-#if defined(_WIN32)
-    unsigned int e, f, g, h;
-#else
     char buf[100];
-#endif
 #endif
 
     /* MacOS needs that. If we do not zero it, subsequent bind() will fail.
@@ -5305,25 +5295,12 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
         so->lsa.sin.sin_addr.s_addr = htonl((a << 24) | (b << 16) | (c << 8) | d);
         so->lsa.sin.sin_port = htons((uint16_t) port);
 #if defined(USE_IPV6)
-#if defined(_WIN32)
-    } else if (sscanf(vec->ptr, "[%x:%x:%x:%x:%x:%x:%x:%x]:%d%n", &a, &b, &c, &d, &e, &f, &g, &h, &port, &len) == 9) {
-#else
+
     } else if (sscanf(vec->ptr, "[%49[^]]]:%d%n", buf, &port, &len) == 2 &&
                inet_pton(AF_INET6, buf, &so->lsa.sin6.sin6_addr)) {
-#endif
         /* IPv6 address, e.g. [3ffe:2a00:100:7031::1]:8080 */
-        so->lsa.sin6.sin6_addr.u.Word[0] = a;
-        so->lsa.sin6.sin6_addr.u.Word[0] = b;
-        so->lsa.sin6.sin6_addr.u.Word[0] = c;
-        so->lsa.sin6.sin6_addr.u.Word[0] = d;
-        so->lsa.sin6.sin6_addr.u.Word[0] = e;
-        so->lsa.sin6.sin6_addr.u.Word[0] = f;
-        so->lsa.sin6.sin6_addr.u.Word[0] = g;
-        so->lsa.sin6.sin6_addr.u.Word[0] = h;
         so->lsa.sin6.sin6_family = AF_INET6;
         so->lsa.sin6.sin6_port = htons((uint16_t) port);
-        so->lsa.sin6.sin6_scope_id = 0;
-        so->lsa.sin6.sin6_flowinfo = 0;
 #endif
     } else if (sscanf(vec->ptr, "%u%n", &port, &len) == 1) {
         /* If only port is specified, bind to IPv4, INADDR_ANY */
