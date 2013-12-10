@@ -5,6 +5,12 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Fixes for Lua Server Pages, as described within the google groups thread. (bel)
+- Added support for plain Lua Scripts, and an example script. (bel)
+- A completely new, and more illustrative websocket example for C. (bel)
+- An implementation of "Websocket for Lua", which allows to configure an optional websocket_root directory, incl. URL rewriting. Added an example. The Lua interface may change if the threading model changes.  (bel)
+- Update of SQLite3 to 3.8.1. (bel)
+- Add "date" header field to replies, according to the requirements of RFC 2616 (the HTTP standard), Section 14.18 (bel)
 - Fix websocket long pull (celeron55)
 - Updated API documentation (Alex Kozlov)
 - Fixed Posix locking functions for Windows (bel2125)
