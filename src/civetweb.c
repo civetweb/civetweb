@@ -4595,7 +4595,7 @@ static void read_websocket(struct mg_connection *conn)
        The original websocket upgrade request is never removed, so the queue
        begins after it. */
     unsigned char *buf = (unsigned char *) conn->buf + conn->request_len;
-    int n;
+    int n, error;
 
     /* body_len is the length of the entire queue in bytes
        len is the length of the current message
@@ -4664,7 +4664,7 @@ static void read_websocket(struct mg_connection *conn)
                 /* Overflow case */
                 len = body_len - header_len;
                 memcpy(data, buf + header_len, len);
-                int error = 0;
+                error = 0;
                 while (len < data_len) {
                     int n = pull(NULL, conn, data + len, (int)(data_len - len));
                     if (n < 0) {
