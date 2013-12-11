@@ -92,6 +92,12 @@
 #define PATH_MAX MAX_PATH
 #endif
 
+#ifndef _IN_PORT_T
+#ifndef in_port_t
+#define in_port_t u_short
+#endif
+#endif
+
 #ifndef _WIN32_WCE
 #include <process.h>
 #include <direct.h>
@@ -589,6 +595,7 @@ struct mg_context {
     void *user_data;                /* User-defined data */
 
     struct socket *listening_sockets;
+    in_port_t *listening_ports;
     int num_listening_sockets;
 
     volatile int num_threads;  /* Number of threads */
@@ -726,6 +733,17 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name)
     } else {
         return ctx->config[i];
     }
+}
+
+size_t mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
+{
+    size_t i;
+    for (i = 0; i < size && i < (size_t)ctx->num_listening_sockets; i++)
+    {
+        ssl[i] = ctx->listening_sockets[i].is_ssl;
+        ports[i] = ctx->listening_ports[i];
+    }
+    return i;
 }
 
 static void sockaddr_to_string(char *buf, size_t len,
@@ -5340,6 +5358,13 @@ static int set_ports_option(struct mg_context *ctx)
     struct vec vec;
     struct socket so, *ptr;
 
+    in_port_t *portPtr;
+    struct sockaddr_in sin;
+    socklen_t len;
+
+    memset(&sin, 0, sizeof(sin));
+    len = sizeof(sin);
+
     while (success && (list = next_option(list, &vec, NULL)) != NULL) {
         if (!parse_port_string(&vec, &so)) {
             mg_cry(fc(ctx), "%s: %.*s: invalid port spec. Expecting list of: %s",
@@ -5361,7 +5386,8 @@ static int set_ports_option(struct mg_context *ctx)
 #endif
                    bind(so.sock, &so.lsa.sa, so.lsa.sa.sa_family == AF_INET ?
                         sizeof(so.lsa.sin) : sizeof(so.lsa)) != 0 ||
-                   listen(so.sock, SOMAXCONN) != 0) {
+                   listen(so.sock, SOMAXCONN) != 0 ||
+                   getsockname(so.sock, (struct sockaddr *)&sin, &len) != 0) {
             mg_cry(fc(ctx), "%s: cannot bind to %.*s: %d (%s)", __func__,
                    (int) vec.len, vec.ptr, ERRNO, strerror(errno));
             if (so.sock != INVALID_SOCKET) {
@@ -5373,10 +5399,18 @@ static int set_ports_option(struct mg_context *ctx)
                           sizeof(ctx->listening_sockets[0]))) == NULL) {
             closesocket(so.sock);
             success = 0;
-        } else {
+        } else if ((portPtr = (in_port_t*) realloc(ctx->listening_ports,
+                          (ctx->num_listening_sockets + 1) *
+                          sizeof(ctx->listening_ports[0]))) == NULL) {
+            closesocket(so.sock);
+            success = 0;
+        }
+        else {
             set_close_on_exec(so.sock, fc(ctx));
             ctx->listening_sockets = ptr;
             ctx->listening_sockets[ctx->num_listening_sockets] = so;
+            ctx->listening_ports = portPtr;
+            ctx->listening_ports[ctx->num_listening_sockets] = ntohs(sin.sin_port);
             ctx->num_listening_sockets++;
         }
     }

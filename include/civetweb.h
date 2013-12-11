@@ -224,6 +224,14 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name);
    Array is NULL terminated. */
 const char **mg_get_valid_option_names(void);
 
+/* Get the list of ports that civetweb is listening on.
+   size is the size of the ports int array and ssl int array to fill.
+   It is the caller's responsibility to make sure ports and ssl each
+   contain at least size int elements worth of memory to write into.
+   Return value is the number of ports and ssl information filled in.
+   The value returned is read-only. Civetweb does not allow changing
+   configuration at run time. */
+size_t mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl);
 
 /* Add, edit or delete the entry in the passwords file.
 
