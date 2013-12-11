@@ -5174,13 +5174,13 @@ static void handle_request(struct mg_connection *conn)
     } else if (conn->ctx->callbacks.begin_request != NULL &&
                conn->ctx->callbacks.begin_request(conn)) {
         /* Do nothing, callback has served the request */
-    } else if (conn->ctx->request_handlers != NULL &&
-               use_request_handler(conn)) {
-        /* Do nothing, callback has served the request */
 #if defined(USE_WEBSOCKET)
     } else if (is_websocket_request(conn)) {
         handle_websocket_request(conn, path, is_script_resource);
 #endif
+    } else if (conn->ctx->request_handlers != NULL &&
+               use_request_handler(conn)) {
+        /* Do nothing, callback has served the request */
     } else if (!is_script_resource && !strcmp(ri->request_method, "OPTIONS")) {
         send_options(conn);
     } else if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
