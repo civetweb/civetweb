@@ -31,10 +31,21 @@ coroutine.yield(true); -- first yield returns (true) or (false) to accept or rej
 
 ready()
 
+local lasthand = ""
+
 repeat
     local cont, bits, content = coroutine.yield(true, 1.0)
 
-    mg.write("text", os.date());
+    local date = os.date('*t');
+    local hand = (date.hour%12)*60+date.min;
+
+    mg.write("text", string.format("%u:%02u:%02u", date.hour, date.min, date.sec));
+
+    if (hand ~= lasthand) then
+        mg.write("text", string.format("-->h %u", hand*360/(12*60)));
+        mg.write("text", string.format("-->m %u", date.min*360/60));
+        lasthand = hand;
+    end
 
     if bits and content then
         data(bits, content)
