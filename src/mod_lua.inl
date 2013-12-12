@@ -634,7 +634,7 @@ static int lua_websocket_data(struct mg_connection *conn, int bits, char *data, 
 
                 tv.tv_sec = (unsigned long)delay;
                 tv.tv_usec = (unsigned long)(((double)delay - (double)((unsigned long)delay))*1000000.0);
-                retry = (0==select(1, &rfds, NULL, NULL, &tv));
+                retry = (0==select(conn->client.sock+1, &rfds, NULL, NULL, &tv));
             }
         }
     } while (retry);
