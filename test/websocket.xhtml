@@ -17,6 +17,8 @@
 
     var connection;
     var websock_text_field;
+    var hand_hour;
+    var hand_min;
 
     function webSockKeepAlive() {
       if (keepAlive) {
@@ -28,6 +30,8 @@
     function load() {
       connection = new WebSocket("ws://" + window.location.host + "/websocket.lua");
       websock_text_field = document.getElementById('websock_text_field');
+      hand_min = document.getElementById('hand_min');
+      hand_hour = document.getElementById('hand_hour');
 
       connection.onopen = function () {
         keepAlive = true;
@@ -42,8 +46,20 @@
       };
 
       // Log messages from the server
-      connection.onmessage = function (e) {        
-        websock_text_field.textContent = e.data;
+      connection.onmessage = function (e) {
+        var lCmd = e.data.substring(0,3);
+        if (lCmd == "-->") {
+          //console.log(e.data);
+          var lDirection = Number(e.data.substring(5));
+          if (e.data[3] == 'h') {
+            hand_hour.setAttribute("transform", "rotate(" + lDirection + " 800 600)");
+          }
+          if (e.data[3] == 'm') {
+            hand_min.setAttribute("transform", "rotate(" + lDirection + " 800 600)");
+          }
+        } else {
+          websock_text_field.textContent = e.data;
+        }
       };
     }
 
@@ -59,6 +75,8 @@
   >
 
   <circle id="line_a" cx="800" cy="600" r="500" style="stroke:rgb(255,0,0); stroke-width:5; fill:rgb(200,200,200)"/>
+  <polygon points="800,200 900,300 850,300 850,600 750,600 750,300 700,300" style="fill:rgb(100,0,0)" transform="rotate(0,800,600)" id="hand_hour"/>
+  <polygon points="800,100 840,200 820,200 820,600 780,600 780,200 760,200" style="fill:rgb(0,100,0)" transform="rotate(0,800,600)" id="hand_min"/>
   <text id="websock_text_field" x="800" y="600" text-anchor="middle" font-size="50px" fill="red">No websocket connection yet</text>
 
 </svg>
