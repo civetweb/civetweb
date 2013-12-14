@@ -38,16 +38,23 @@ One can use the following steps in Windows (in Linux replace "copy" by "cp"
 and "type" by "cat"):
 
   openssl genrsa -des3 -out server.key 1024
+  
   openssl req -new -key server.key -out server.csr
+  
   copy server.key server.key.orig
+  
   openssl rsa -in server.key.orig -out server.key
+  
   openssl x509 -req -days 3650 -in server.csr -signkey server.key -out server.crt
+  
   copy server.crt server.pem
+  
   type server.key >> server.pem
 
 
 The server.pem should look like this (x represents BASE64 encoded data):
 
+<pre>
 -----BEGIN CERTIFICATE-----
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -78,3 +85,4 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 -----END RSA PRIVATE KEY-----
+</pre>
