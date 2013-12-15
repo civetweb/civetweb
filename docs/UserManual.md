@@ -8,7 +8,7 @@ not require any external software to run.
 Installatation
 ----
 
-### Some Windows users may be the install the 
+### Some Windows users may be the install the
 [Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
 
 On Windows, civetweb iconifies itself to the system tray icon when started.
@@ -189,22 +189,12 @@ last matching rule wins. Examples:
 Path to a file for access logs. Either full path, or relative to current
 working directory. If absent (default), then accesses are not logged.
 
-### error\_log\_file
-Path to a file for error logs. Either full path, or relative to current
-working directory. If absent (default), then errors are not logged.
-
 ### enable\_directory\_listing `yes`
 Enable directory listing, either `yes` or `no`.
 
-### enable\_keep\_alive `no`
-Enable connection keep alive, either `yes` or `no`.
-
-Experimental feature. Allows clients to reuse TCP connection for
-subsequent HTTP requests, which improves performance.
-For this to work when using request handlers it's important to add the correct
-Content-Length HTTP header for each request. If this is forgotten the client
-will time out.
-
+### error\_log\_file
+Path to a file for error logs. Either full path, or relative to current
+working directory. If absent (default), then errors are not logged.
 
 ### global\_auth\_file
 Path to a global passwords file, either full path or relative to the current
@@ -221,6 +211,18 @@ The file has to include the realm set through `authentication_domain` and the pa
 ### index_files `index.html,index.htm,index.cgi,index.shtml,index.php`
 Comma-separated list of files to be treated as directory index
 files.
+
+In case built-in Lua support has been enabled, `index.lp,index.lsp,index.lua`
+are additional default files.
+
+### enable\_keep\_alive `no`
+Enable connection keep alive, either `yes` or `no`.
+
+Experimental feature. Allows clients to reuse TCP connection for
+subsequent HTTP requests, which improves performance.
+For this to work when using request handlers it's important to add the correct
+Content-Length HTTP header for each request. If this is forgotten the client
+will time out.
 
 ### access\_control\_list
 An Access Control List (ACL) allows restrictions to be put on the list of IP
@@ -267,6 +269,7 @@ Path to SSL certificate file. This option is only required when at least one
 of the `listening_ports` is SSL. The file must be in PEM format,
 and it must have both private key and certificate, see for example
 [ssl_cert.pem](https://github.com/sunsetbrew/civetweb/blob/master/resources/ssl_cert.pem)
+A description how to create a certificate can be found in doc/OpenSSL.md
 
 ### num_threads `50`
 Number of worker threads. Civetweb handles each incoming connection in a
@@ -280,12 +283,6 @@ that, civetweb needs to be started as root. But running as root is a bad idea,
 therefore this option can be used to drop privileges. Example:
 
     civetweb -listening_ports 80 -run_as_user nobody
-
-### request\_timeout\_ms `30000`
-Timeout for network read and network write operations, in milliseconds.
-If client intends to keep long-running connection, either increase this value
-or use keep-alive messages.
-
 
 ### url\_rewrite\_patterns
 Comma-separated list of URL rewrites in the form of
@@ -313,6 +310,33 @@ show up in directory listing and return `404 Not Found` if requested. Pattern
 must be for a file name only, not including directory name. Example:
 
     civetweb -hide_files_patterns secret.txt|even_more_secret.txt
+
+### request\_timeout\_ms `30000`
+Timeout for network read and network write operations, in milliseconds.
+If client intends to keep long-running connection, either increase this value
+or use keep-alive messages.
+
+### lua_script_pattern `"**.lua$`
+A pattern for files that are interpreted as Lua scripts by the server.
+In contrast to Lua server pages, Lua scripts use plain Lua syntax.
+An example can be found in the test directory.
+
+### lua_server_page_pattern `**.lp$|**.lsp$`
+Files matching this pattern are treated as Lua server pages.
+In contrast to Lua scripts, the content of a Lua server pages is delivered
+directly to the client. Lua script parts are delimited from the standard
+content by including them between <? and ?> tags.
+
+### lua_server_page_pattern `**.lp$|**.lsp$`
+Files matching this pattern are treated as Lua server pages.
+
+### websocket_root
+In case civetweb is built with Lua and Websocket support, Lua scripts may
+be used for websockets as well. Since websockets use a different url scheme
+(ws, wss) than other http pages (http, https), the Lua scripts used for
+websockets may also be served from a different directory. By default,
+the document_root is used as websocket_root as well.
+
 
 # Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua Server Pages
@@ -344,7 +368,8 @@ like request method, all headers, etcetera. Please refer to
 to see what kind of information is present in `mg.request_info` object. Also,
 [page.lp](https://github.com/sunsetbrew/civetweb/blob/master/test/page.lp) and
 [prime_numbers.lp](https://github.com/sunsetbrew/civetweb/blob/master/examples/docroot/prime_numbers.lp)
-contains some example code that uses `request_info` and other functions(form submitting for example).
+contains some example code that uses `request_info` and other functions (form
+submitting for example).
 
 Civetweb exports the following to the Lua server page:
 
