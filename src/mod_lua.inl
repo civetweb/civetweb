@@ -358,6 +358,18 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
 
     reg_function(L, "cry", lsp_cry, conn);
 
+    switch (lua_env_type) {
+        case LUA_ENV_TYPE_LUA_SERVER_PAGE:
+            reg_string(L, "lua_type", "page");
+            break;
+        case LUA_ENV_TYPE_PLAIN_LUA_PAGE:
+            reg_string(L, "lua_type", "script");
+            break;
+        case LUA_ENV_TYPE_LUA_WEBSOCKET:
+            reg_string(L, "lua_type", "websocket");
+            break;
+    }
+
     if (lua_env_type==LUA_ENV_TYPE_LUA_SERVER_PAGE || lua_env_type==LUA_ENV_TYPE_PLAIN_LUA_PAGE) {
         reg_function(L, "read", lsp_read, conn);
         reg_function(L, "write", lsp_write, conn);
@@ -375,6 +387,9 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
     reg_string(L, "auth_domain", conn->ctx->config[AUTHENTICATION_DOMAIN]);
+#if defined(USE_WEBSOCKET)
+    reg_string(L, "websocket_root", conn->ctx->config[WEBSOCKET_ROOT]);
+#endif
 
     /* Export request_info */
     lua_pushstring(L, "request_info");
