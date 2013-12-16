@@ -5,6 +5,7 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Solved, tested and documented SSL support for Windows (bel)
 - Fixed: select for Linux needs the nfds parameter set correctly  (bel) 
 - Add methods for returning the ports civetweb is listening on (keithel)
 - Fixes for Lua Server Pages, as described within the google groups thread. (bel)
