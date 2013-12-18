@@ -381,11 +381,13 @@ content. Please refer to `struct mg_request_info` definition in
 [civetweb.h](https://github.com/sunsetbrew/civetweb/blob/master/include/civetweb.h)
 to see additional information on the elements of the `mg.request_info` object.
 
-Civetweb also provides SQlite3 access through Lua. An example is given in
+Civetweb also provides access to the [SQlite3 database](http://www.sqlite.org/)
+through the [LuaSQLite3 interface](http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki)
+in Lua. An example is given in
 [page.lp](https://github.com/sunsetbrew/civetweb/blob/master/test/page.lp).
 
 
-Civetweb exports the following to the Lua server page:
+Civetweb exports the following functions to Lua:
 
     mg.read()         -- reads a chunk from POST data, returns it as a string
     mg.write(str)     -- writes string to the client
