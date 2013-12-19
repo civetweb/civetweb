@@ -174,16 +174,57 @@ static void lsp_abort(lua_State *L)
     lua_error(L);
 }
 
+struct lsp_var_reader_data
+{
+    const char * begin;
+    unsigned len;
+    unsigned state;
+};
+
+static const char * lsp_var_reader(lua_State *L, void *ud, size_t *sz)
+{
+    struct lsp_var_reader_data * reader = (struct lsp_var_reader_data *)ud;
+    const char * ret;
+
+    switch (reader->state) {
+        case 0:
+            ret = "mg.write(";
+            *sz = strlen(ret);
+            break;
+        case 1:
+            ret = reader->begin;
+            *sz = reader->len;
+            break;
+        case 2:
+            ret = ")";
+            *sz = strlen(ret);
+            break;
+        default:
+            ret = 0;
+            *sz = 0;
+    }
+
+    reader->state++;
+    return ret;
+}
+
 static int lsp(struct mg_connection *conn, const char *path,
     const char *p, int64_t len, lua_State *L)
 {
-    int i, j, pos = 0, lines = 1, lualines = 0;
+    int i, j, pos = 0, lines = 1, lualines = 0, is_var, lua_ok;
     char chunkname[MG_BUF_LEN];
+    struct lsp_var_reader_data data;
 
     for (i = 0; i < len; i++) {
         if (p[i] == '\n') lines++;
         if ((i + 1) < len && p[i] == '<' && p[i + 1] == '?') {
-            for (j = i + 1; j < len ; j++) {
+
+            is_var = ((i + 2) < len && p[i + 2] == '=');
+
+            if (is_var) j = i + 2;
+            else j = i + 1;
+
+            while (j < len) {
                 if (p[j] == '\n') lualines++;
                 if ((j + 1) < len && p[j] == '?' && p[j + 1] == '>') {
                     mg_write(conn, p + pos, i - pos);
@@ -191,7 +232,17 @@ static int lsp(struct mg_connection *conn, const char *path,
                     snprintf(chunkname, sizeof(chunkname), "@%s+%i", path, lines);
                     lua_pushlightuserdata(L, conn);
                     lua_pushcclosure(L, lsp_error, 1);
-                    if (luaL_loadbuffer(L, p + (i + 2), j - (i + 2), chunkname)) {
+
+                    if (is_var) {
+                        data.begin = p + (i + 3);
+                        data.len = j - (i + 3);
+                        data.state = 0;
+                        lua_ok = lua_load(L, lsp_var_reader, &data, chunkname, NULL);
+                    } else {
+                        lua_ok = luaL_loadbuffer(L, p + (i + 2), j - (i + 2), chunkname);
+                    }
+
+                    if (lua_ok) {
                         /* Syntax error or OOM. Error message is pushed on stack. */
                         lua_pcall(L, 1, 0, 0);
                     } else {
@@ -203,7 +254,9 @@ static int lsp(struct mg_connection *conn, const char *path,
                     i = pos - 1;
                     break;
                 }
+                j++;
             }
+
             if (lualines > 0) {
                 lines += lualines;
                 lualines = 0;

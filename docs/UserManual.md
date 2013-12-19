@@ -338,40 +338,56 @@ websockets may also be served from a different directory. By default,
 the document_root is used as websocket_root as well.
 
 
-# Lua Server Pages
-Pre-built Windows and Mac civetweb binaries have built-in Lua Server Pages
-support. That means it is possible to write PHP-like scripts with civetweb,
-using Lua programming language instead of PHP. Lua is known
-for it's speed and small size. Civetweb uses Lua version 5.2.2, the
-documentation for it can be found at
-[Lua 5.2 reference manual](http://www.lua.org/manual/5.2/).
+# Lua Scripts and Lua Server Pages
+Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
+support as well as support for Lua Server Pages.
 
-To create a Lua Page, make sure a file has `.lp` extension. For example,
-let's say it is going to be `my_page.lp`. The contents of the file, just like
-with PHP, is HTML with embedded Lua code. Lua code must be enclosed in
-`<?  ?>` blocks, and can appear anywhere on the page. For example, to
-print current weekday name, one can write:
+Lua scripts (default extension: *.lua) use plain Lua syntax.
+The body of the script file is not sent directly to the client,
+the Lua script must send header and content of the web page by calling
+the function mg.write(text).
+
+Lua Server Pages (default extensions: *.lsp, *.lp) are html pages containing
+script elements similar to PHP, using the Lua programming language instead of
+PHP. Lua script elements must be enclosed in `<?  ?>` blocks, and can appear
+anywhere on the page. For example, to print current weekday name, one can
+write:
 
     <p>
       <span>Today is:</span>
       <? mg.write(os.date("%A")) ?>
     </p>
 
+Lua is known for it's speed and small size. Civetweb uses Lua version 5.2.2,
+the documentation for it can be found at
+[Lua 5.2 reference manual](http://www.lua.org/manual/5.2/).
+
+
 Note that this example uses function `mg.write()`, which prints data to the
 web page. Using function `mg.write()` is the way to generate web content from
 inside Lua code. In addition to `mg.write()`, all standard library functions
 are accessible from the Lua code (please check reference manual for details),
-and also information about the request is available in `mg.request_info` object,
-like request method, all headers, etcetera. Please refer to
-`struct mg_request_info` definition in
-[civetweb.h](https://github.com/sunsetbrew/civetweb/blob/master/include/civetweb.h)
-to see what kind of information is present in `mg.request_info` object. Also,
-[page.lp](https://github.com/sunsetbrew/civetweb/blob/master/test/page.lp) and
-[prime_numbers.lp](https://github.com/sunsetbrew/civetweb/blob/master/examples/docroot/prime_numbers.lp)
-contains some example code that uses `request_info` and other functions (form
-submitting for example).
+and also information about the request is available in `mg.request_info`
+object, like request method, all headers, etcetera.
 
-Civetweb exports the following to the Lua server page:
+[page2.lua](https://github.com/sunsetbrew/civetweb/blob/master/test/page2.lua)
+is an example for a plain Lua script.
+
+[page2.lp](https://github.com/sunsetbrew/civetweb/blob/master/test/page2.lp)
+is an example for a Lua Server Page.
+
+Both examples show the content of the `mg.request_info` object as the page
+content. Please refer to `struct mg_request_info` definition in
+[civetweb.h](https://github.com/sunsetbrew/civetweb/blob/master/include/civetweb.h)
+to see additional information on the elements of the `mg.request_info` object.
+
+Civetweb also provides access to the [SQlite3 database](http://www.sqlite.org/)
+through the [LuaSQLite3 interface](http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki)
+in Lua. An example is given in
+[page.lp](https://github.com/sunsetbrew/civetweb/blob/master/test/page.lp).
+
+
+Civetweb exports the following functions to Lua:
 
     mg.read()         -- reads a chunk from POST data, returns it as a string
     mg.write(str)     -- writes string to the client
