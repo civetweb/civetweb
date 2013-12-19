@@ -4,17 +4,28 @@ Content-Type: text/html
 <html><body>
 
 
-<p>This is an example Lua server page served by
+<p>This is another example of a Lua server page, served by
 <a href="http://code.google.com/p/civetweb">Civetweb web server</a>.
-Civetweb has Lua, Sqlite, and other functionality built in the binary.
-This example page stores the request in the Sqlite database, and shows
-all requests done previously.</p>
-<p> Today is <? mg.write(os.date("%A")) ?>
+</p><p>
+The following features are available:
+<ul>
+<?
+  mg.write("<li>" .. _VERSION .. " server pages</li>")
+  if sqlite3 then
+    mg.write("<li>sqlite3 binding</li>")
+  end
+  if lfs then
+    mg.write("<li>lua file system</li>")
+  end
+?>
+</ul></p>
+<p> Today is <? mg.write(os.date("%A")) ?></p>
+<p> URI is <? mg.write(mg.request_info.uri) ?></p>
+<p> URI is <?=mg.request_info.uri?></p>
 
+<p>Database example:
 <pre>
 <?
-  -- for k,v in pairs(_G) do mg.write(k, '\n') end
-
   -- Open database
   local db = sqlite3.open('requests.db')
 
@@ -31,7 +42,6 @@ all requests done previously.</p>
       addr
     );
   ]])
-
 
   -- Add entry about this request
   local stmt = db:prepare(
@@ -54,4 +64,6 @@ all requests done previously.</p>
   -- Close database
   db:close()
 ?>
-</pre></body></html>
+</pre></p>
+
+</body></html>
