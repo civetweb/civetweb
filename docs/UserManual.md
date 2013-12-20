@@ -350,12 +350,17 @@ the function mg.write(text).
 Lua Server Pages (default extensions: *.lsp, *.lp) are html pages containing
 script elements similar to PHP, using the Lua programming language instead of
 PHP. Lua script elements must be enclosed in `<?  ?>` blocks, and can appear
-anywhere on the page. For example, to print current weekday name, one can
-write:
-
+anywhere on the page. Furthermore, Lua Server Pages offer the opportunity to
+insert the content of a variable by enclosing the Lua variable name in
+`<?=  ?>` blocks, similar to PHP.
+For example, to print current weekday name and the URI of the current page,
+one can write:
     <p>
       <span>Today is:</span>
       <? mg.write(os.date("%A")) ?>
+    </p>
+    <p>
+      URI is <?=mg.request_info.uri?>
     </p>
 
 Lua is known for it's speed and small size. Civetweb uses Lua version 5.2.2,
