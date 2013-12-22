@@ -5,7 +5,7 @@ Overview
 Civetweb is small and easy to use web server. It is self-contained, and does
 not require any external software to run.
 
-Installatation
+Installation
 ----
 
 ### Some Windows users may be the install the
@@ -183,7 +183,7 @@ last matching rule wins. Examples:
                         unlimited speed
 
     /downloads/=5k      limit accesses to all URIs in `/downloads/` to
-                        5 kilobytes per secods. All other accesses are unlimited
+                        5 kilobytes per second. All other accesses are unlimited
 
 ### access\_log\_file
 Path to a file for access logs. Either full path, or relative to current
@@ -199,7 +199,7 @@ working directory. If absent (default), then errors are not logged.
 ### global\_auth\_file
 Path to a global passwords file, either full path or relative to the current
 working directory. If set, per-directory `.htpasswd` files are ignored,
-and all requests are authorised against that file.
+and all requests are authorized against that file.
 
 The file has to include the realm set through `authentication_domain` and the password in digest format:
 
@@ -228,7 +228,7 @@ will time out.
 An Access Control List (ACL) allows restrictions to be put on the list of IP
 addresses which have access to the web server. In the case of the Civetweb
 web server, the ACL is a comma separated list of IP subnets, where each
-subnet is prepended by either a `-` or a `+` sign. A plus sign means allow,
+subnet is pre-pended by either a `-` or a `+` sign. A plus sign means allow,
 where a minus sign means deny. If a subnet mask is omitted, such as `-1.2.3.4`,
 this means to deny only that single IP address.
 
@@ -236,7 +236,7 @@ Subnet masks may vary from 0 to 32, inclusive. The default setting is to allow
 all accesses. On each request the full list is traversed, and
 the last match wins. Examples:
 
-    -0.0.0.0/0,+192.168/16    deny all acccesses, only allow 192.168/16 subnet
+    -0.0.0.0/0,+192.168/16    deny all accesses, only allow 192.168/16 subnet
 
 To learn more about subnet masks, see the
 [Wikipedia page on Subnetwork](http://en.wikipedia.org/wiki/Subnetwork)
@@ -248,7 +248,7 @@ sion2=type2,...`. Extension must include dot.  Example:
 
 ### listening_ports `8080`
 Comma-separated list of ports to listen on. If the port is SSL, a
-letter `s` must be appeneded, for example, `80,443s` will open
+letter `s` must be appended, for example, `80,443s` will open
 port 80 and port 443, and connections on port 443 will be SSL-ed.
 For non-SSL ports, it is allowed to append letter `r`, meaning 'redirect'.
 Redirect ports will redirect all their traffic to the first configured
@@ -256,12 +256,12 @@ SSL port. For example, if `listening_ports` is `80r,443s`, then all
 HTTP traffic coming at port 80 will be redirected to HTTPS port 443.
 
 It is possible to specify an IP address to bind to. In this case,
-an IP address and a colon must be prepended to the port number.
+an IP address and a colon must be pre-pended to the port number.
 For example, to bind to a loopback interface on port 80 and to
 all interfaces on HTTPS port 443, use `127.0.0.1:80,443s`.
 
 ### document_root `.`
-A directory to serve. By default, currect directory is served. Current
+A directory to serve. By default, current directory is served. Current
 directory is commonly referenced as dot (`.`).
 
 ### ssl_certificate
@@ -289,7 +289,7 @@ Comma-separated list of URL rewrites in the form of
 `uri_pattern=file_or_directory_path`. When Civetweb receives the request,
 it constructs the file name to show by combining `document_root` and the URI.
 However, if the rewrite option is used and `uri_pattern` matches the
-requested URI, then `document_root` is ignored. Insted,
+requested URI, then `document_root` is ignored. Instead,
 `file_or_directory_path` is used, which should be a full path name or
 a path relative to the web server's current working directory. Note that
 `uri_pattern`, as all civetweb patterns, is a prefix pattern.
@@ -326,13 +326,11 @@ Files matching this pattern are treated as Lua server pages.
 In contrast to Lua scripts, the content of a Lua server pages is delivered
 directly to the client. Lua script parts are delimited from the standard
 content by including them between <? and ?> tags.
-
-### lua_server_page_pattern `**.lp$|**.lsp$`
-Files matching this pattern are treated as Lua server pages.
+An example can be found in the test directory.
 
 ### websocket_root
-In case civetweb is built with Lua and Websocket support, Lua scripts may
-be used for websockets as well. Since websockets use a different url scheme
+In case civetweb is built with Lua and websocket support, Lua scripts may
+be used for websockets as well. Since websockets use a different URL scheme
 (ws, wss) than other http pages (http, https), the Lua scripts used for
 websockets may also be served from a different directory. By default,
 the document_root is used as websocket_root as well.
@@ -350,12 +348,17 @@ the function mg.write(text).
 Lua Server Pages (default extensions: *.lsp, *.lp) are html pages containing
 script elements similar to PHP, using the Lua programming language instead of
 PHP. Lua script elements must be enclosed in `<?  ?>` blocks, and can appear
-anywhere on the page. For example, to print current weekday name, one can
-write:
-
+anywhere on the page. Furthermore, Lua Server Pages offer the opportunity to
+insert the content of a variable by enclosing the Lua variable name in
+`<?=  ?>` blocks, similar to PHP.
+For example, to print current weekday name and the URI of the current page,
+one can write:
     <p>
       <span>Today is:</span>
       <? mg.write(os.date("%A")) ?>
+    </p>
+    <p>
+      URI is <?=mg.request_info.uri?>
     </p>
 
 Lua is known for it's speed and small size. Civetweb uses Lua version 5.2.2,
