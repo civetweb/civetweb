@@ -187,21 +187,21 @@ static const char * lsp_var_reader(lua_State *L, void *ud, size_t *sz)
     const char * ret;
 
     switch (reader->state) {
-        case 0:
-            ret = "mg.write(";
-            *sz = strlen(ret);
-            break;
-        case 1:
-            ret = reader->begin;
-            *sz = reader->len;
-            break;
-        case 2:
-            ret = ")";
-            *sz = strlen(ret);
-            break;
-        default:
-            ret = 0;
-            *sz = 0;
+    case 0:
+        ret = "mg.write(";
+        *sz = strlen(ret);
+        break;
+    case 1:
+        ret = reader->begin;
+        *sz = reader->len;
+        break;
+    case 2:
+        ret = ")";
+        *sz = strlen(ret);
+        break;
+    default:
+        ret = 0;
+        *sz = 0;
     }
 
     reader->state++;
@@ -219,6 +219,7 @@ static int lsp(struct mg_connection *conn, const char *path,
         if (p[i] == '\n') lines++;
         if ((i + 1) < len && p[i] == '<' && p[i + 1] == '?') {
 
+            /* <?= ?> means a variable is enclosed and its value should be printed */
             is_var = ((i + 2) < len && p[i + 2] == '=');
 
             if (is_var) j = i + 2;
@@ -404,7 +405,10 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     lua_pop(L, 1);
     lua_register(L, "connect", lsp_connect);
 
-    if (conn == NULL) return;
+    if (conn == NULL) {
+        /* Do not register any connection specific functions or variables */
+        return;
+    }
 
     /* Register mg module */
     lua_newtable(L);
@@ -593,27 +597,27 @@ struct lua_websock_data {
 static void websock_cry(struct mg_connection *conn, int err, lua_State * L, const char * ws_operation, const char * lua_operation)
 {
     switch (err) {
-    case LUA_OK:
-    case LUA_YIELD:
-        break;
-    case LUA_ERRRUN:
-        mg_cry(conn, "%s: %s failed: runtime error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
-        break;
-    case LUA_ERRSYNTAX:
-        mg_cry(conn, "%s: %s failed: syntax error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
-        break;
-    case LUA_ERRMEM:
-        mg_cry(conn, "%s: %s failed: out of memory", ws_operation, lua_operation);
-        break;
-    case LUA_ERRGCMM:
-        mg_cry(conn, "%s: %s failed: error during garbage collection", ws_operation, lua_operation);
-        break;
-    case LUA_ERRERR:
-        mg_cry(conn, "%s: %s failed: error in error handling: %s", ws_operation, lua_operation, lua_tostring(L, -1));
-        break;
-    default:
-        mg_cry(conn, "%s: %s failed: error %i", ws_operation, lua_operation, err);
-        break;
+        case LUA_OK:
+        case LUA_YIELD:
+            break;
+        case LUA_ERRRUN:
+            mg_cry(conn, "%s: %s failed: runtime error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
+            break;
+        case LUA_ERRSYNTAX:
+            mg_cry(conn, "%s: %s failed: syntax error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
+            break;
+        case LUA_ERRMEM:
+            mg_cry(conn, "%s: %s failed: out of memory", ws_operation, lua_operation);
+            break;
+        case LUA_ERRGCMM:
+            mg_cry(conn, "%s: %s failed: error during garbage collection", ws_operation, lua_operation);
+            break;
+        case LUA_ERRERR:
+            mg_cry(conn, "%s: %s failed: error in error handling: %s", ws_operation, lua_operation, lua_tostring(L, -1));
+            break;
+        default:
+            mg_cry(conn, "%s: %s failed: error %i", ws_operation, lua_operation, err);
+            break;
     }
 }
 
@@ -657,6 +661,8 @@ static void * new_lua_websocket(const char * script, struct mg_connection *conn)
             free(lws_data);
             lws_data=0;
         }
+    } else {
+        mg_cry(conn, "%s: out of memory", __func__);
     }
 
     return lws_data;
@@ -674,8 +680,11 @@ static int lua_websocket_data(struct mg_connection *conn, int bits, char *data, 
 
     do {
         retry=0;
+
+        /* Push the data to Lua, then resume the Lua state. */
+        /* The data will be available to Lua as the result of the coroutine.yield function. */
         lua_pushboolean(lws_data->thread, 1);
-        if (bits > 0) {
+        if (bits >= 0) {
             lua_pushinteger(lws_data->thread, bits);
             if (data) {
                 lua_pushlstring(lws_data->thread, data, data_len);
@@ -687,6 +696,7 @@ static int lua_websocket_data(struct mg_connection *conn, int bits, char *data, 
             err = lua_resume(lws_data->thread, NULL, 1);
         }
 
+        /* Check if Lua returned by a call to the coroutine.yield function. */
         if (err!=LUA_YIELD) {
             websock_cry(conn, err, lws_data->thread, __func__, "lua_resume");
         } else {
