@@ -333,6 +333,16 @@ static int lsp_redirect(lua_State *L)
     return 0;
 }
 
+/* mg.send_file */
+static int lsp_send_file(lua_State *L)
+{
+    struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
+    const char * filename = lua_tostring(L, -1);
+    mg_send_file(conn, filename);
+    return 0;
+}
+
+/* mg.write for websockets */
 static int lwebsock_write(lua_State *L)
 {
 #ifdef USE_WEBSOCKET
@@ -440,6 +450,8 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     if (lua_env_type==LUA_ENV_TYPE_LUA_WEBSOCKET) {
         reg_function(L, "write", lwebsock_write, conn);
     }
+
+    reg_function(L, "send_file", lsp_send_file, conn);
 
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
