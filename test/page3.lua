@@ -17,6 +17,16 @@ elseif mg.request_info.query_string:match("/") or mg.request_info.query_string:m
     mg.write("<html><head><title>Civetweb Lua script test page 3</title></head>\r\n")
     mg.write("<body>No access!</body></html>\r\n")
 else
-    filename = mg.document_root .. "/" .. mg.request_info.query_string
-    mg.send_file(filename)
+    file = mg.get_var(mg.request_info.query_string, "file");
+    if not file then
+        mg.write("HTTP/1.0 400 Bad Request\r\n")
+        mg.write("Connection: close\r\n")
+        mg.write("Content-Type: text/html; charset=utf-8\r\n")
+        mg.write("\r\n")
+        mg.write("<html><head><title>Civetweb Lua script test page 3</title></head>\r\n")
+        mg.write("<body>Query string does not contain a 'file' variable.<br>Try 'file=page3.lua&somevar=something'</body></html>\r\n")
+    else
+        filename = mg.document_root .. "/" .. file
+        mg.send_file(filename)
+    end
 end

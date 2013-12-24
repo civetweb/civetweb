@@ -342,6 +342,37 @@ static int lsp_send_file(lua_State *L)
     return 0;
 }
 
+/* mg.get_var */
+static int lsp_get_var(lua_State *L)
+{
+    struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
+    int params = lua_gettop(L);
+    const char *data, *var_name;
+    size_t data_len, occurrence;
+    int ret;
+    char dst[512];
+
+    data = lua_tolstring(L, 1, &data_len);
+    var_name = lua_tostring(L, 2);
+    occurrence = (params>2) ? (long)lua_tonumber(L, 3) : 0;
+
+    ret = mg_get_var2(data, data_len, var_name, dst, sizeof(dst), occurrence);
+    if (ret>=0) {
+        lua_pushstring(L, dst);
+    } else {
+        lua_pushnil(L);
+    }
+    return 1;
+}
+
+/* TODO: Other functions in civetweb.h that should be available to Lua too:
+mg_get_cookie
+mg_get_builtin_mime_type
+mg_url_decode
+mg_url_encode
+mg_md5
+*/
+
 /* mg.write for websockets */
 static int lwebsock_write(lua_State *L)
 {
@@ -452,6 +483,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     }
 
     reg_function(L, "send_file", lsp_send_file, conn);
+    reg_function(L, "get_var", lsp_get_var, conn);
 
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
