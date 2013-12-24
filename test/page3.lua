@@ -23,8 +23,10 @@ else
         mg.write("Connection: close\r\n")
         mg.write("Content-Type: text/html; charset=utf-8\r\n")
         mg.write("\r\n")
-        mg.write("<html><head><title>Civetweb Lua script test page 3</title></head>\r\n")
-        mg.write("<body>Query string does not contain a 'file' variable.<br>Try 'file=page3.lua&somevar=something'</body></html>\r\n")
+        mg.write("<html>\r\n<head><title>Civetweb Lua script test page 3</title></head>\r\n")
+        mg.write("<body>\r\nQuery string does not contain a 'file' variable.<br>\r\n")
+        mg.write("Try <a href=\"?file=page3.lua&somevar=something\">?file=page3.lua&somevar=something</a>\r\n")
+        mg.write("</body>\r\n</html>\r\n")
     else
         filename = mg.document_root .. "/" .. file
         mg.send_file(filename)

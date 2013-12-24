@@ -352,15 +352,22 @@ static int lsp_get_var(lua_State *L)
     int ret;
     char dst[512];
 
-    data = lua_tolstring(L, 1, &data_len);
-    var_name = lua_tostring(L, 2);
-    occurrence = (params>2) ? (long)lua_tonumber(L, 3) : 0;
+    if (params>=2 && params<=3) {
+        data = lua_tolstring(L, 1, &data_len);
+        var_name = lua_tostring(L, 2);
+        occurrence = (params>2) ? (long)lua_tonumber(L, 3) : 0;
 
-    ret = mg_get_var2(data, data_len, var_name, dst, sizeof(dst), occurrence);
-    if (ret>=0) {
-        lua_pushstring(L, dst);
+        ret = mg_get_var2(data, data_len, var_name, dst, sizeof(dst), occurrence);
+        if (ret>=0) {
+            /* Variable found: return value to Lua */
+            lua_pushstring(L, dst);
+        } else {
+            /* Variable not found (TODO: may be string too long) */
+            lua_pushnil(L);
+        }
     } else {
-        lua_pushnil(L);
+        /* Syntax error */
+        return luaL_error(L, "invalid get_var() call");
     }
     return 1;
 }
