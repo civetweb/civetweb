@@ -49,12 +49,13 @@ if method=="GET" then
     if lfs.attributes(file) then
         mg.send_file(file)
     else
+        mime = mg.get_mime_type(file)
         mg.write("HTTP/1.0 404 Not Found\r\n")
         mg.write("Connection: close\r\n")
         mg.write("Content-Type: text/html; charset=utf-8\r\n")
         mg.write("\r\n")
         mg.write("<html><head><title>Civetweb Lua script resource handling test</title></head>\r\n")
-        mg.write("<body>Resource not found.</body></html>\r\n")
+        mg.write("<body>Resource of type \"" .. mime .. "\" not found.</body></html>\r\n")
     end
     return
 end
