@@ -22,7 +22,7 @@ if (not mg.request_info.uri:find(scriptUri)) or (not resourcedir) or (not attr) 
     mg.write("</body>\r\n</html>\r\n")
     return
 end
-subresource = mg.request_info.uri:match(scriptUri .. "(.*)")
+subresource = mg.request_info.uri:match(scriptUri .. "/(.*)")
 
 if not subresource then
     if method=="GET" then
