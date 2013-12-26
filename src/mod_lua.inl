@@ -72,7 +72,8 @@ static void reg_function(struct lua_State *L, const char *name,
 
 static int lsp_sock_close(lua_State *L)
 {
-    if (lua_gettop(L) > 0 && lua_istable(L, -1)) {
+    int num_args = lua_gettop(L);
+    if ((num_args == 1) && lua_istable(L, -1)) {
         lua_getfield(L, -1, "sock");
         closesocket((SOCKET) lua_tonumber(L, -1));
     } else {
@@ -83,10 +84,11 @@ static int lsp_sock_close(lua_State *L)
 
 static int lsp_sock_recv(lua_State *L)
 {
+    int num_args = lua_gettop(L);
     char buf[2000];
     int n;
 
-    if (lua_gettop(L) > 0 && lua_istable(L, -1)) {
+    if ((num_args == 1) && lua_istable(L, -1)) {
         lua_getfield(L, -1, "sock");
         n = recv((SOCKET) lua_tonumber(L, -1), buf, sizeof(buf), 0);
         if (n <= 0) {
@@ -102,11 +104,12 @@ static int lsp_sock_recv(lua_State *L)
 
 static int lsp_sock_send(lua_State *L)
 {
+    int num_args = lua_gettop(L);
     const char *buf;
     size_t len, sent = 0;
     int n = 0, sock;
 
-    if (lua_gettop(L) > 1 && lua_istable(L, -2) && lua_isstring(L, -1)) {
+    if ((num_args == 2) && lua_istable(L, -2) && lua_isstring(L, -1)) {
         buf = lua_tolstring(L, -1, &len);
         lua_getfield(L, -2, "sock");
         sock = (int) lua_tonumber(L, -1);
@@ -132,10 +135,11 @@ static const struct luaL_Reg luasocket_methods[] = {
 
 static int lsp_connect(lua_State *L)
 {
+    int num_args = lua_gettop(L);
     char ebuf[100];
     SOCKET sock;
 
-    if (lua_isstring(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
+    if ((num_args == 3) && lua_isstring(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
         sock = conn2(NULL, lua_tostring(L, -3), (int) lua_tonumber(L, -2),
             (int) lua_tonumber(L, -1), ebuf, sizeof(ebuf));
         if (sock == INVALID_SOCKET) {
@@ -272,14 +276,15 @@ static int lsp(struct mg_connection *conn, const char *path,
     return 0;
 }
 
+/* mg.write: Send data to the client */
 static int lsp_write(lua_State *L)
 {
-    int i, num_args;
+    struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
+    int num_args = lua_gettop(L);
     const char *str;
     size_t size;
-    struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
+    int i;
 
-    num_args = lua_gettop(L);
     for (i = 1; i <= num_args; i++) {
         if (lua_isstring(L, i)) {
             str = lua_tolstring(L, i, &size);
@@ -290,6 +295,7 @@ static int lsp_write(lua_State *L)
     return 0;
 }
 
+/* mg.read: Read data from the client (e.g., from a POST request) */
 static int lsp_read(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
@@ -306,11 +312,19 @@ static int lsp_read(lua_State *L)
 static int lsp_include(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
+    int num_args = lua_gettop(L);
     struct file file = STRUCT_FILE_INITIALIZER;
-    if (handle_lsp_request(conn, lua_tostring(L, -1), &file, L)) {
-        /* handle_lsp_request returned an error code, meaning an error occured in
-        the included page and mg.onerror returned non-zero. Stop processing. */
-        lsp_abort(L);
+    const char * filename = (num_args == 1) ? lua_tostring(L, 1) : NULL;
+
+    if (filename) {
+        if (handle_lsp_request(conn, filename, &file, L)) {
+            /* handle_lsp_request returned an error code, meaning an error occured in
+            the included page and mg.onerror returned non-zero. Stop processing. */
+            lsp_abort(L);
+        }
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid include() call");
     }
     return 0;
 }
@@ -319,7 +333,15 @@ static int lsp_include(lua_State *L)
 static int lsp_cry(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
-    mg_cry(conn, "%s", lua_tostring(L, -1));
+    int num_args = lua_gettop(L);
+    const char * text = (num_args == 1) ? lua_tostring(L, 1) : NULL;
+
+    if (text) {
+        mg_cry(conn, "%s", lua_tostring(L, -1));
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid cry() call");
+    }
     return 0;
 }
 
@@ -327,9 +349,17 @@ static int lsp_cry(lua_State *L)
 static int lsp_redirect(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
-    conn->request_info.uri = lua_tostring(L, -1);
-    handle_request(conn);
-    lsp_abort(L);
+    int num_args = lua_gettop(L);
+    const char * target = (num_args == 1) ? lua_tostring(L, 1) : NULL;
+
+    if (target) {
+        conn->request_info.uri = target;
+        handle_request(conn);
+        lsp_abort(L);
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid redirect() call");
+    }
     return 0;
 }
 
@@ -337,8 +367,15 @@ static int lsp_redirect(lua_State *L)
 static int lsp_send_file(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
-    const char * filename = lua_tostring(L, -1);
-    mg_send_file(conn, filename);
+    int num_args = lua_gettop(L);
+    const char * filename = (num_args == 1) ? lua_tostring(L, 1) : NULL;
+
+    if (filename) {
+        mg_send_file(conn, filename);
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid send_file() call");
+    }
     return 0;
 }
 
@@ -346,16 +383,16 @@ static int lsp_send_file(lua_State *L)
 static int lsp_get_var(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
-    int params = lua_gettop(L);
+    int num_args = lua_gettop(L);
     const char *data, *var_name;
     size_t data_len, occurrence;
     int ret;
     char dst[512];
 
-    if (params>=2 && params<=3) {
+    if (num_args>=2 && num_args<=3) {
         data = lua_tolstring(L, 1, &data_len);
         var_name = lua_tostring(L, 2);
-        occurrence = (params>2) ? (long)lua_tonumber(L, 3) : 0;
+        occurrence = (num_args>2) ? (long)lua_tonumber(L, 3) : 0;
 
         ret = mg_get_var2(data, data_len, var_name, dst, sizeof(dst), occurrence);
         if (ret>=0) {
@@ -376,11 +413,11 @@ static int lsp_get_var(lua_State *L)
 static int lsp_get_mime_type(lua_State *L)
 {
     struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
-    int params = lua_gettop(L);
+    int num_args = lua_gettop(L);
     struct vec mime_type = {0};
     const char *text;
 
-    if (params==1) {
+    if (num_args==1) {
         text = lua_tostring(L, 1);
         if (text) {
             get_mime_type(conn->ctx, text, &mime_type);
