@@ -432,6 +432,38 @@ static int lsp_get_mime_type(lua_State *L)
     return 1;
 }
 
+/* mg.get_cookie */
+static int lsp_get_cookie(lua_State *L)
+{
+    int num_args = lua_gettop(L);
+    struct vec mime_type = {0};
+    const char *cookie;
+    const char *var_name;
+    int ret;
+    char dst[512];
+
+    if (num_args==2) {
+        cookie = lua_tostring(L, 1);
+        var_name = lua_tostring(L, 2);
+        if (cookie!=NULL && var_name!=NULL) {
+            ret = mg_get_cookie(cookie, var_name, dst, sizeof(dst));
+        } else {
+            ret = -1;
+        }
+
+        if (ret>=0) {
+            lua_pushlstring(L, dst, ret);
+        } else {
+            lua_pushnil(L);
+        }
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid get_cookie() call");
+    }
+    return 1;
+}
+
+
 /* TODO: Other functions in civetweb.h that should be available to Lua too:
 mg_get_cookie
 mg_url_decode
@@ -551,6 +583,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_function(L, "send_file", lsp_send_file, conn);
     reg_function(L, "get_var", lsp_get_var, conn);
     reg_function(L, "get_mime_type", lsp_get_mime_type, conn);
+    reg_function(L, "get_cookie", lsp_get_cookie, conn);
 
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
