@@ -223,3 +223,10 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+
+##########################
+## Files created by tests
+##########################
+requests.db
+
