@@ -463,12 +463,38 @@ static int lsp_get_cookie(lua_State *L)
     return 1;
 }
 
+/* mg.md5 */
+static int lsp_md5(lua_State *L)
+{
+    int num_args = lua_gettop(L);
+    const char *text;
+    md5_byte_t hash[16];
+    md5_state_t ctx;
+    size_t text_len;
+    char buf[40];
+
+    if (num_args==1) {
+        text = lua_tolstring(L, 1, &text_len);
+        if (text) {
+            md5_init(&ctx);
+            md5_append(&ctx, (const md5_byte_t *) text, text_len);
+            md5_finish(&ctx, hash);
+            bin2str(buf, hash, sizeof(hash));
+            lua_pushstring(L, buf);
+        } else {
+            lua_pushnil(L);
+        }
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid get_mime_type() call");
+    }
+    return 1;
+}
+
 
 /* TODO: Other functions in civetweb.h that should be available to Lua too:
-mg_get_cookie
 mg_url_decode
 mg_url_encode
-mg_md5
 */
 
 /* mg.write for websockets */
@@ -584,6 +610,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_function(L, "get_var", lsp_get_var, conn);
     reg_function(L, "get_mime_type", lsp_get_mime_type, conn);
     reg_function(L, "get_cookie", lsp_get_cookie, conn);
+    reg_function(L, "md5", lsp_md5, conn);
 
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
