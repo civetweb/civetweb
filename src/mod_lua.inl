@@ -486,7 +486,7 @@ static int lsp_md5(lua_State *L)
         }
     } else {
         /* Syntax error */
-        return luaL_error(L, "invalid get_mime_type() call");
+        return luaL_error(L, "invalid md5() call");
     }
     return 1;
 }
@@ -509,15 +509,35 @@ static int lsp_url_encode(lua_State *L)
         }
     } else {
         /* Syntax error */
-        return luaL_error(L, "invalid get_mime_type() call");
+        return luaL_error(L, "invalid url_encode() call");
     }
     return 1;
 }
 
-/* TODO: Other functions in civetweb.h that should be available to Lua too:
-mg_url_decode
-mg_url_encode
-*/
+/* mg.url_decode */
+static int lsp_url_decode(lua_State *L)
+{
+    int num_args = lua_gettop(L);
+    const char *text;
+    size_t text_len;
+    int is_form;
+    char dst[512];
+
+    if (num_args==1 || (num_args==2 && lua_isboolean(L, 2))) {
+        text = lua_tolstring(L, 1, &text_len);
+        is_form = (num_args==2) ? lua_isboolean(L, 2) : 0;
+        if (text) {
+            mg_url_decode(text, text_len, dst, sizeof(dst), is_form);
+            lua_pushstring(L, dst);
+        } else {
+            lua_pushnil(L);
+        }
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid url_decode() call");
+    }
+    return 1;
+}
 
 /* mg.write for websockets */
 static int lwebsock_write(lua_State *L)
@@ -634,6 +654,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_function(L, "get_cookie", lsp_get_cookie, conn);
     reg_function(L, "md5", lsp_md5, conn);
     reg_function(L, "url_encode", lsp_url_encode, conn);
+    reg_function(L, "url_decode", lsp_url_decode, conn);
 
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
