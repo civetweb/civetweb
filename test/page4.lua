@@ -1,18 +1,30 @@
 -- This test checks the Lua functions:
 -- get_var, get_cookie, md5, url_encode
 
+now = os.time()
+cookie_name = "civetweb-test-page4"
+
+if mg.request_info.http_headers.Cookie then
+   cookie_value = tonumber(mg.get_cookie(mg.request_info.http_headers.Cookie, cookie_name))
+end
+
 mg.write("HTTP/1.0 200 OK\r\n")
 mg.write("Connection: close\r\n")
 mg.write("Content-Type: text/html; charset=utf-8\r\n")
+if not cookie_value then
+    mg.write("Set-Cookie: " .. cookie_name .. "=" .. tostring(now) .. "\r\n")
+end
 mg.write("\r\n")
 
-mg.write("<html>\r\n<head><title>Civetweb Lua script test page 4</title></head>\r\n<body><pre>\r\n")
+mg.write("<html>\r\n<head><title>Civetweb Lua script test page 4</title></head>\r\n<body>\r\n")
+mg.write("<p>Test of Civetweb Lua Functions:</p>\r\n");
+mg.write("<pre>\r\n");
 
--- get_var of query_string 
-if not mg.request_info.query_string then    
-    mg.write("No query string!\r\n")
+-- get_var of query_string
+mg.write("get_var test (check query string):\r\n")
+if not mg.request_info.query_string then
+    mg.write("  No query string. You may try <a href='?a=a1&amp;junk&amp;b=b2&amp;cc=cNotSet&amp;d=a, b and d should be set&amp;z=z'>this example</a>.\r\n")
 else
-    mg.write("Variables within query string:\r\n")
     for _,var in ipairs({'a','b','c','d'}) do
        value = mg.get_var(mg.request_info.query_string, var);
        if value then
@@ -25,7 +37,7 @@ end
 mg.write("\r\n")
 
 -- md5
-mg.write("MD5:\r\n")
+mg.write("MD5 test:\r\n")
 test_string = "abcd\0efgh"
 mg.write("  String with embedded 0, length " .. string.len(test_string))
 test_md5 = mg.md5(test_string)
@@ -43,11 +55,17 @@ end
 mg.write("\r\n")
 
 -- get_cookie
-mg.write("TODO: Test get_cookie\r\n")
+mg.write("Cookie test:\r\n")
+if not cookie_value then
+    mg.write("  Cookie not set yet. Please reload the page.\r\n")
+else
+    mg.write("  Cookie set to " .. cookie_value .. "\r\n")
+    mg.write("  You visited this page " .. os.difftime(now, cookie_value) .. " seconds before.\r\n")
+end
 mg.write("\r\n")
 
 -- url_encode
-mg.write("URL:\r\n")
+mg.write("URL encode/decode test:\r\n")
 if mg.url_encode("") == "" then
     mg.write("  url_encode of empty string OK\r\n")
 else
@@ -75,4 +93,4 @@ mg.write("\r\n")
 
 
 -- end of page
-mg.write("</pre></body>\r\n</html>\r\n")
+mg.write("</pre>\r\n</body>\r\n</html>\r\n")
