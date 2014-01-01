@@ -64,6 +64,29 @@ else
 end
 mg.write("\r\n")
 
+-- test 'require' of other Lua scripts
+mg.write("require test\r\n")
+script_path = mg.request_info.script_name:match("(.*)page%d*.lua")
+if type(script_path)=='string' then
+    package.path = script_path .. "?.lua;" .. package.path
+    mg.write("  Lua search path: " .. package.path .. "\r\n")
+    require "html_esc"
+    if htmlEscape then
+      for i=0,15 do
+        mg.write("  ")
+        for j=0,15 do
+            mg.write(tostring(htmlEscape[16*i+j]))
+        end
+        mg.write("\r\n")
+      end
+    else
+      mg.write("  'require' test failed\r\n")
+    end
+else
+    mg.write("  name match failed\r\n")
+end
+mg.write("\r\n")
+
 -- url_encode
 mg.write("URL encode/decode test:\r\n")
 if mg.url_encode("") == "" then
@@ -72,25 +95,24 @@ else
     mg.write("  Error: url_encode of empty string NOT OK\r\n")
 end
 raw_string = [[ !"#$%&'()*+,-./0123456789:;<=>?@]]
-mg.write("  original string: " .. raw_string .. "\r\n")
+mg.write("  original string: " .. htmlEscape(raw_string) .. "\r\n")
 url_string = mg.url_encode(raw_string):upper()
 ref_string = "%20!%22%23%24%25%26'()*%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40" -- from http://www.w3schools.com/tags/ref_urlencode.asp
-mg.write("  mg-url:        " .. url_string .. "\r\n")
-mg.write("  reference url: " .. ref_string .. "\r\n")
+mg.write("  mg-url:        " .. htmlEscape(url_string) .. "\r\n")
+mg.write("  reference url: " .. htmlEscape(ref_string) .. "\r\n")
 dec_url_string = mg.url_decode(url_string)
 dec_ref_string = mg.url_decode(ref_string)
-mg.write("  decoded mg-url:        " .. dec_url_string .. "\r\n")
-mg.write("  decoded reference url: " .. dec_ref_string .. "\r\n")
+mg.write("  decoded mg-url:        " .. htmlEscape(dec_url_string) .. "\r\n")
+mg.write("  decoded reference url: " .. htmlEscape(dec_ref_string) .. "\r\n")
 dec_url_string = mg.url_decode(url_string, false)
 dec_ref_string = mg.url_decode(ref_string, false)
-mg.write("  decoded mg-url:        " .. dec_url_string .. "\r\n")
-mg.write("  decoded reference url: " .. dec_ref_string .. "\r\n")
+mg.write("  decoded mg-url:        " .. htmlEscape(dec_url_string) .. "\r\n")
+mg.write("  decoded reference url: " .. htmlEscape(dec_ref_string) .. "\r\n")
 dec_url_string = mg.url_decode(url_string, true)
 dec_ref_string = mg.url_decode(ref_string, true)
-mg.write("  decoded mg-url:        " .. dec_url_string .. "\r\n")
-mg.write("  decoded reference url: " .. dec_ref_string .. "\r\n")
+mg.write("  decoded mg-url:        " .. htmlEscape(dec_url_string) .. "\r\n")
+mg.write("  decoded reference url: " .. htmlEscape(dec_ref_string) .. "\r\n")
 mg.write("\r\n")
-
 
 -- end of page
 mg.write("</pre>\r\n</body>\r\n</html>\r\n")
