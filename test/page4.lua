@@ -70,7 +70,7 @@ script_path = mg.request_info.script_name:match("(.*)page%d*.lua")
 if type(script_path)=='string' then
     package.path = script_path .. "?.lua;" .. package.path
     mg.write("  Lua search path: " .. package.path .. "\r\n")
-    --require "html_esc"
+    require "html_esc"
     require "require_test"
     if htmlEscape then
       for i=0,15 do
@@ -81,7 +81,16 @@ if type(script_path)=='string' then
         mg.write("\r\n")
       end
     else
-      mg.write("  'require' test failed\r\n")
+      mg.write("  'require' test failed (htmlEscape)\r\n")
+    end
+    if HugeText then
+      mg.write("\r\n")
+      local ht = HugeText(os.date("%a %b. %d"))
+      for i=1,#ht do
+        mg.write("  " .. ht[i] .. "\r\n")
+      end
+    else
+      mg.write("  'require' test failed (HugeText)\r\n")
     end
 else
     mg.write("  name match failed\r\n")
