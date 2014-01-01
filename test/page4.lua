@@ -70,7 +70,8 @@ script_path = mg.request_info.script_name:match("(.*)page%d*.lua")
 if type(script_path)=='string' then
     package.path = script_path .. "?.lua;" .. package.path
     mg.write("  Lua search path: " .. package.path .. "\r\n")
-    require "html_esc"
+    --require "html_esc"
+    require "require_test"
     if htmlEscape then
       for i=0,15 do
         mg.write("  ")
