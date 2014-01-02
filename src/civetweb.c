@@ -4784,7 +4784,9 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
 {
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
 #ifdef USE_LUA
-    int lua_websock, shared_lua_websock = 0;
+    int lua_websock, shared_lua_websock = 0; 
+    /* TODO: A websocket script may be shared between several clients, allowing them to communicate
+             directly instead of writing to a data base and polling the data base. */
 #endif
 
     if (version == NULL || strcmp(version, "13") != 0) {
