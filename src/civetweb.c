@@ -525,6 +525,9 @@ enum {
 #if defined(USE_WEBSOCKET)
     WEBSOCKET_ROOT,
 #endif
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    LUA_WEBSOCKET_EXTENSIONS,
+#endif
 
     NUM_OPTIONS
 };
@@ -566,6 +569,9 @@ static const char *config_options[] = {
 #endif
 #if defined(USE_WEBSOCKET)
     "websocket_root", NULL,
+#endif
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    "lua_websocket_pattern", "**.lua$",
 #endif
 
     NULL
@@ -4777,6 +4783,10 @@ int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data,
 static void handle_websocket_request(struct mg_connection *conn, const char *path, int is_script_resource)
 {
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
+#ifdef USE_LUA
+    int lua_websock, shared_lua_websock = 0;
+#endif
+
     if (version == NULL || strcmp(version, "13") != 0) {
         send_http_error(conn, 426, "Upgrade Required", "%s", "Upgrade Required");
     } else if (conn->ctx->callbacks.websocket_connect != NULL &&
@@ -4785,10 +4795,13 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
         /* The C callback is called before Lua and may prevent Lua from handling the websocket. */
     } else {
 #ifdef USE_LUA
-        if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-                         (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
-                         path)) {
-            conn->lua_websocket_state = new_lua_websocket(path, conn);
+        lua_websock = conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS] ?
+                          match_prefix(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS],
+                                       (int)strlen(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]),
+                                       path) : 0;
+
+        if (lua_websock || shared_lua_websock) {
+            conn->lua_websocket_state = lua_websocket_new(path, conn, !!shared_lua_websock);
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);
                 if (lua_websocket_ready(conn)) {

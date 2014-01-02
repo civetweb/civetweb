@@ -807,6 +807,7 @@ struct file *filep, struct lua_State *ls)
 struct lua_websock_data {
     lua_State *main;
     lua_State *thread;
+    struct mg_connection *conn;
 };
 
 static void websock_cry(struct mg_connection *conn, int err, lua_State * L, const char * ws_operation, const char * lua_operation)
@@ -836,7 +837,7 @@ static void websock_cry(struct mg_connection *conn, int err, lua_State * L, cons
     }
 }
 
-static void * new_lua_websocket(const char * script, struct mg_connection *conn)
+static void * lua_websocket_new(const char * script, struct mg_connection *conn, int is_shared)
 {
     struct lua_websock_data *lws_data;
     int ok = 0;
@@ -846,6 +847,14 @@ static void * new_lua_websocket(const char * script, struct mg_connection *conn)
     lws_data = (struct lua_websock_data *) malloc(sizeof(*lws_data));
 
     if (lws_data) {
+        lws_data->conn = conn;
+
+        if (is_shared) {
+            (void)pthread_mutex_lock(&conn->ctx->mutex);
+            // TODO: add_to_websocket_list(lws_data);
+            (void)pthread_mutex_unlock(&conn->ctx->mutex);
+        }
+
         lws_data->main = luaL_newstate();
         if (lws_data->main) {
             prepare_lua_environment(conn, lws_data->main, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
