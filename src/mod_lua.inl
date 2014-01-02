@@ -308,6 +308,26 @@ static int lsp_read(lua_State *L)
     return 1;
 }
 
+/* mg.keep_alive: Allow Lua pages to use the http keep-alive mechanism */
+static int lsp_keep_alive(lua_State *L)
+{
+    struct mg_connection *conn = lua_touserdata(L, lua_upvalueindex(1));
+    int num_args = lua_gettop(L);
+
+    /* This function may be called with one parameter (boolean) to set the keep_alive state.
+       Or without a parameter to just query the current keep_alive state. */
+    if ((num_args==1) && lua_isboolean(L, 1)) {
+        conn->must_close = !lua_toboolean(L, 1);
+    } else if (num_args != 0) {
+        /* Syntax error */
+        return luaL_error(L, "invalid keep_alive() call");
+    }
+
+    /* Return the current "keep_alive" state. This may be false, even it keep_alive(true) has been called. */
+    lua_pushboolean(L, should_keep_alive(conn));
+    return 1;
+}
+
 /* mg.include: Include another .lp file */
 static int lsp_include(lua_State *L)
 {
@@ -637,6 +657,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     if (lua_env_type==LUA_ENV_TYPE_LUA_SERVER_PAGE || lua_env_type==LUA_ENV_TYPE_PLAIN_LUA_PAGE) {
         reg_function(L, "read", lsp_read, conn);
         reg_function(L, "write", lsp_write, conn);
+        reg_function(L, "keep_alive", lsp_keep_alive, conn);
     }
 
     if (lua_env_type==LUA_ENV_TYPE_LUA_SERVER_PAGE) {
@@ -726,6 +747,10 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
     int i;
     lua_State *L;
 
+    /* Assume the script does not support keep_alive. The script may change this by calling mg.keep_alive(true). */
+    conn->must_close=1;
+
+    /* Execute a plain Lua script. */
     if (path != NULL && (L = luaL_newstate()) != NULL) {
         prepare_lua_environment(conn, L, path, LUA_ENV_TYPE_PLAIN_LUA_PAGE);
         lua_pushcclosure(L, &lua_error_handler, 0);
@@ -745,7 +770,6 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
         lua_pcall(L, 0, 0, -2);
         lua_close(L);
     }
-    conn->must_close=1;
 }
 
 static void lsp_send_err(struct mg_connection *conn, struct lua_State *L,
@@ -774,6 +798,9 @@ struct file *filep, struct lua_State *ls)
     lua_State *L = NULL;
     int error = 1;
 
+    /* Assume the script does not support keep_alive. The script may change this by calling mg.keep_alive(true). */
+    conn->must_close=1;
+
     /* We need both mg_stat to get file size, and mg_fopen to get fd */
     if (!mg_stat(conn, path, filep) || !mg_fopen(conn, path, "r", filep)) {
         lsp_send_err(conn, ls, "File [%s] not found", path);
@@ -799,7 +826,6 @@ struct file *filep, struct lua_State *ls)
     if (L != NULL && ls == NULL) lua_close(L);
     if (p != NULL) munmap(p, filep->size);
     mg_fclose(filep);
-    conn->must_close=1;
     return error;
 }
 
