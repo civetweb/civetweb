@@ -40,9 +40,25 @@ end
 -- send the chunks
 send("<html>")
 send("<head><title>Civetweb Lua script chunked transfer test page</title></head>")
-send("<body><pre>")
-send("1234567890")
-send("</pre></body>")
+send("<body>\n")
+
+fileCnt = 0
+if lfs then
+    send("Files in " .. lfs.currentdir())
+    send('\n<table border="1">\n')
+    send('<tr><th>name</th><th>type</th><th>size</th></tr>\n')
+    for f in lfs.dir(".") do
+        local at = lfs.attributes(f);
+        if at then
+          send('<tr><td>' .. f .. '</td><td>' .. at.mode .. '</td><td>' .. at.size .. '</td></tr>\n')
+        end
+        fileCnt = fileCnt + 1
+    end
+    send("</table>\n")
+end
+
+send(fileCnt .. " entries (" .. now .. " GMT)\n")
+send("</body>")
 send("</html>")
 
 -- end
