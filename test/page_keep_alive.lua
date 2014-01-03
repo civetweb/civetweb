@@ -14,7 +14,7 @@ else
 end
 
 -- First send the http headers
-mg.write("HTTP/1.0 200 OK\r\n")
+mg.write("HTTP/1.1 200 OK\r\n")
 mg.write("Content-Type: text/html\r\n")
 mg.write("Date: " .. os.date("!%a, %d %b %Y %H:%M:%S") .. " GMT\r\n")
 
