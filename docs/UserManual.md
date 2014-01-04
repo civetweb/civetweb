@@ -392,13 +392,21 @@ in Lua. An example is given in
 
 Civetweb exports the following functions to Lua:
 
-    mg.read()         -- reads a chunk from POST data, returns it as a string
-    mg.write(str)     -- writes string to the client
-    mg.include(path)  -- sources another Lua file
-    mg.redirect(uri)  -- internal redirect to a given URI
-    mg.onerror(msg)   -- error handler, can be overridden
-    mg.version        -- a string that holds Civetweb version
-    mg.request_info   -- a table with request information
+    mg.read()                  -- reads a chunk from POST data, returns it as a string
+    mg.write(str)              -- writes string to the client
+    mg.include(path)           -- sources another Lua file
+    mg.redirect(uri)           -- internal redirect to a given URI
+    mg.onerror(msg)            -- error handler, can be overridden
+    mg.version                 -- a string that holds Civetweb version
+    mg.request_info            -- a table with request information
+    mg.get_var(str, varname)   -- extract variable from (query) string
+    mg.get_cookie(str, cookie) -- extract cookie from a string
+    mg.get_mime_type(filename) -- get MIME type of a file
+    mg.send_file(filename)     -- send a file, including MIME type
+    mg.url_encode(str)         -- URL encode a string
+    mg.url_decode(str)         -- URL decode a string
+    mg.md5(str)                -- return the MD5 hash of a string
+    mg.keep_alive(bool)        -- allow/forbid to use http keep-alive for this request
 
     -- Connect to the remote TCP server. This function is an implementation
     -- of simple socket interface. It returns a socket object with three
