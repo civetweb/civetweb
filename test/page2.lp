@@ -9,48 +9,55 @@
 The following features are available:
 <ul>
 <?
-  -- function in one Lua tag should still be available in the next one
-  function test(tab, name)
+  -- functions defubed in one Lua tag should still be available in the next one
+  function print_if_available(tab, name)
     if tab then
       mg.write("<li>" .. name .. "</li>\n")
     end
   end
+
   function recurse(tab)
     mg.write("<ul>\n")
-    for k,v in pairs(tab) do      
+    for k,v in pairs(tab) do
       if type(v) == "table" then
         mg.write("<li>" .. tostring(k) .. ":</li>\n")
         recurse(v)
       else
-        mg.write("<li>" .. tostring(k) .. " = " .. tostring(v) .. "</li>\n")        
+        mg.write("<li>" .. tostring(k) .. " = " .. tostring(v) .. "</li>\n")
       end
     end
     mg.write("</ul>\n")
   end
 ?>
 <?
+  -- Print Lua version and available libraries
   mg.write("<li>" .. _VERSION .. " with the following standard libraries</li>\n")
   mg.write("<ul>")
   libs = {"string", "math", "table", "io", "os", "bit32", "package", "coroutine", "debug"};
   for _,n in ipairs(libs) do
-    test(_G[n], n);
+    print_if_available(_G[n], n);
   end
   mg.write("</ul>\n")
-  test(sqlite3, "sqlite3 binding")
-  test(lfs,"lua file system")
-  
+  print_if_available(sqlite3, "sqlite3 binding")
+  print_if_available(lfs,"lua file system")
+
+  -- Print mg library
   libname = "mg"
-  test(_G[libname], libname .. " library")
+  print_if_available(_G[libname], libname .. " library")
   recurse(_G[libname])
+
+  -- Print connect function
+  print_if_available(connect, "connect function")
+
 ?>
 </ul></p>
 <p> Today is <? mg.write(os.date("%A")) ?>
 
 <p>
 <?
-  -- for k,v in pairs(_G) do mg.write(k, '\n') end  
+  -- for k,v in pairs(_G) do mg.write(k, '\n') end
 
-  if lfs then    
+  if lfs then
     mg.write("Files in " .. lfs.currentdir())
     mg.write("\n<ul>\n")
     for f in lfs.dir(".") do
