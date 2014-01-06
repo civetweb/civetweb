@@ -392,14 +392,36 @@ in Lua. An example is given in
 
 Civetweb exports the following functions to Lua:
 
-    mg.read()         -- reads a chunk from POST data, returns it as a string
-    mg.write(str)     -- writes string to the client
-    mg.include(path)  -- sources another Lua file
-    mg.redirect(uri)  -- internal redirect to a given URI
-    mg.onerror(msg)   -- error handler, can be overridden
-    mg.version        -- a string that holds Civetweb version
-    mg.request_info   -- a table with request information
+mg (table):
+    mg.read()                  -- reads a chunk from POST data, returns it as a string
+    mg.write(str)              -- writes string to the client
+    mg.include(path)           -- sources another Lua file
+    mg.redirect(uri)           -- internal redirect to a given URI
+    mg.onerror(msg)            -- error handler, can be overridden
+    mg.version                 -- a string that holds Civetweb version
+    mg.document_root           -- a string that holds the document root directory
+    mg.auth_domain             -- a string that holds the HTTP authentication domain
+    mg.get_var(str, varname)   -- extract variable from (query) string
+    mg.get_cookie(str, cookie) -- extract cookie from a string    
+    mg.get_mime_type(filename) -- get MIME type of a file
+    mg.send_file(filename)     -- send a file, including MIME type
+    mg.url_encode(str)         -- URL encode a string
+    mg.url_decode(str)         -- URL decode a string
+    mg.md5(str)                -- return the MD5 hash of a string
+    mg.keep_alive(bool)        -- allow/forbid to use http keep-alive for this request
+    mg.request_info            -- a table with the following request information
+         .remote_addr          -- IP address of the client as string
+         .remote_port          -- remote port number
+         .server_port          -- server port number
+         .request_method       -- HTTP method (e.g.: GET, POST)
+         .http_version         -- HTTP protocol version (e.g.: 1.1)
+         .uri                  -- resource name
+         .query_string         -- query string if present, nil otherwise
+         .script_name          -- name of the Lua script
+         .https                -- true if accessed by https://, false otherwise
+         .remote_user          -- user name if authenticated, nil otherwise 
 
+connect (function):
     -- Connect to the remote TCP server. This function is an implementation
     -- of simple socket interface. It returns a socket object with three
     -- methods: send, recv, close, which are synchronous (blocking).
