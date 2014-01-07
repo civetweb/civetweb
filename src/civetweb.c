@@ -5147,6 +5147,11 @@ static int use_request_handler(struct mg_connection *conn)
             return tmp_rh->handler(conn, tmp_rh->cbdata);
         }
 
+        /* try for pattern match */
+        if (match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0) {
+           return tmp_rh->handler(conn, tmp_rh->cbdata);
+        }
+
     }
 
     return 0; /* none found */
