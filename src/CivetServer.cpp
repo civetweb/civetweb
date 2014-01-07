@@ -53,9 +53,9 @@ int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
         } else if (strcmp(request_info->request_method, "POST") == 0) {
             return handler->handlePost(me, conn) ? 1 : 0;
         } else if (strcmp(request_info->request_method, "PUT") == 0) {
-            return !handler->handlePut(me, conn) ? 1 : 0;
+            return handler->handlePut(me, conn) ? 1 : 0;
         } else if (strcmp(request_info->request_method, "DELETE") == 0) {
-            return !handler->handleDelete(me, conn) ? 1 : 0;
+            return handler->handleDelete(me, conn) ? 1 : 0;
         }
     }
 
