@@ -58,6 +58,15 @@ int ABHandler(struct mg_connection *conn, void *cbdata)
     return 1;
 }
 
+int FooHandler(struct mg_connection *conn, void *cbdata)
+{
+    mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+    mg_printf(conn, "<html><body>");
+    mg_printf(conn, "<h2>This is the Foo handler!!!</h2>");
+    mg_printf(conn, "</body></html>\n");
+    return 1;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -75,6 +84,7 @@ int main(int argc, char *argv[])
     mg_set_request_handler(ctx,EXIT_URI, ExitHandler,0);
     mg_set_request_handler(ctx,"/a", AHandler,0);
     mg_set_request_handler(ctx,"/a/b", ABHandler,0);
+    mg_set_request_handler( ctx, "**.foo$", FooHandler,0);
 
     printf("Browse files at http://localhost:%s/\n", PORT);
     printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);

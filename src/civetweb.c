@@ -4802,7 +4802,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
 {
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
 #ifdef USE_LUA
-    int lua_websock, shared_lua_websock = 0; 
+    int lua_websock, shared_lua_websock = 0;
     /* TODO: A websocket script may be shared between several clients, allowing them to communicate
              directly instead of writing to a data base and polling the data base. */
 #endif
@@ -5163,6 +5163,11 @@ static int use_request_handler(struct mg_connection *conn)
             && memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0) {
 
             return tmp_rh->handler(conn, tmp_rh->cbdata);
+        }
+
+        /* try for pattern match */
+        if (match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0) {
+           return tmp_rh->handler(conn, tmp_rh->cbdata);
         }
 
     }
@@ -6366,6 +6371,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     if (sTlsInit==0) {
         if (0 != pthread_key_create(&sTlsKey, NULL)) {
             mg_cry(fc(ctx), "Cannot initialize thread local storage");
+            free(ctx);
             return NULL;
         }
         sTlsInit++;
