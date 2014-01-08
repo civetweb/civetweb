@@ -5,6 +5,8 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Added Lua extensions: send_file, get_var, get_mime_type, get_cookie, url_decode, url_encode (bel)
+- mg_set_request_handler() mod to use pattern (bel, Patch from Toni Wilk)
 - Solved, tested and documented SSL support for Windows (bel)
 - Fixed: select for Linux needs the nfds parameter set correctly  (bel) 
 - Add methods for returning the ports civetweb is listening on (keithel)
