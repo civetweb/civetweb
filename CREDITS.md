@@ -12,6 +12,7 @@
 * No Face Press
 * Paul Sokolovsky
 * Thomas Davis
+* Toni Wilk
 * William Greathouse
 
 # Mongoose Contributors
