@@ -26,6 +26,9 @@ int ExampleHandler(struct mg_connection *conn, void *cbdata)
     mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
     mg_printf(conn, "<html><body>");
     mg_printf(conn, "<h2>This is example text!!!</h2>");
+    mg_printf(conn, "<p>To see a page from the A handler <a href=\"A\">click here</a></p>");
+    mg_printf(conn, "<p>To see a page from the A/B handler <a href=\"A/B\">click here</a></p>");
+    mg_printf(conn, "<p>To see a page from the *.foo handler <a href=\"xy.foo\">click here</a></p>");
     mg_printf(conn, "<p>To exit <a href=\"%s\">click here</a></p>",
               EXIT_URI);
     mg_printf(conn, "</body></html>\n");
@@ -60,9 +63,14 @@ int ABHandler(struct mg_connection *conn, void *cbdata)
 
 int FooHandler(struct mg_connection *conn, void *cbdata)
 {
+    /* Handler may access the request info using mg_get_request_info */
+    struct mg_request_info * req_info = mg_get_request_info(conn);
+
     mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
     mg_printf(conn, "<html><body>");
     mg_printf(conn, "<h2>This is the Foo handler!!!</h2>");
+    mg_printf(conn, "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>",
+              req_info->request_method, req_info->uri, req_info->http_version);
     mg_printf(conn, "</body></html>\n");
     return 1;
 }
