@@ -218,25 +218,12 @@ static void set_option(char **options, const char *name, const char *value)
     }
 }
 
-static void process_command_line_arguments(char *argv[], char **options)
+
+static void read_config_file(const char *config_file, char **options)
 {
     char line[MAX_CONF_FILE_LINE_SIZE], opt[sizeof(line)], val[sizeof(line)], *p;
     FILE *fp = NULL;
     size_t i, cmd_line_opts_start = 1, line_no = 0;
-
-    /* Should we use a config file ? */
-    if (argv[1] != NULL && argv[1][0] != '-') {
-        snprintf(config_file, sizeof(config_file), "%s", argv[1]);
-        cmd_line_opts_start = 2;
-    } else if ((p = strrchr(argv[0], DIRSEP)) == NULL) {
-        /* No command line flags specified. Look where binary lives */
-        snprintf(config_file, sizeof(config_file)-1, "%s", CONFIG_FILE);
-        config_file[sizeof(config_file)-1] = 0;
-    } else {
-        snprintf(config_file, sizeof(config_file)-1, "%.*s%c%s",
-                 (int) (p - argv[0]), argv[0], DIRSEP, CONFIG_FILE);
-        config_file[sizeof(config_file)-1] = 0;
-    }
 
     fp = fopen(config_file, "r");
 
@@ -244,16 +231,6 @@ static void process_command_line_arguments(char *argv[], char **options)
     if (cmd_line_opts_start == 2 && fp == NULL) {
         die("Cannot open config file %s: %s", config_file, strerror(errno));
     }
-
-#ifdef CONFIG_FILE2
-    /* try alternate config file */
-    if (fp == NULL) {
-        fp = fopen(CONFIG_FILE2, "r");
-        if (fp != NULL) {
-            strcpy(config_file, CONFIG_FILE2);
-        }
-    }
-#endif
 
     /* Load config file settings first */
     if (fp != NULL) {
@@ -286,6 +263,46 @@ static void process_command_line_arguments(char *argv[], char **options)
 
         (void) fclose(fp);
     }
+}
+
+
+static void process_command_line_arguments(char *argv[], char **options)
+{
+    char *p;
+    FILE *fp = NULL;
+    size_t i, cmd_line_opts_start = 1, line_no = 0;
+
+    /* Should we use a config file ? */
+    if (argv[1] != NULL && argv[1][0] != '-') {
+        snprintf(config_file, sizeof(config_file), "%s", argv[1]);
+        cmd_line_opts_start = 2;
+    } else if ((p = strrchr(argv[0], DIRSEP)) == NULL) {
+        /* No command line flags specified. Look where binary lives */
+        snprintf(config_file, sizeof(config_file)-1, "%s", CONFIG_FILE);
+        config_file[sizeof(config_file)-1] = 0;
+    } else {
+        snprintf(config_file, sizeof(config_file)-1, "%.*s%c%s",
+                 (int) (p - argv[0]), argv[0], DIRSEP, CONFIG_FILE);
+        config_file[sizeof(config_file)-1] = 0;
+    }
+
+#ifdef CONFIG_FILE2
+    fp = fopen(config_file, "r");
+
+    /* try alternate config file */
+    if (fp == NULL) {
+        fp = fopen(CONFIG_FILE2, "r");
+        if (fp != NULL) {
+            strcpy(config_file, CONFIG_FILE2);
+        }
+    }
+    if (fp != NULL) {
+        fclose(fp);
+    }
+#endif
+
+    /* read all configurations from a config file */
+    (void)read_config_file(config_file, options);
 
     /* If we're under MacOS and started by launchd, then the second
        argument is process serial number, -psn_.....
@@ -458,7 +475,8 @@ static void start_civetweb(int argc, char *argv[])
 #ifdef _WIN32
 enum {
     ID_ICON = 100, ID_QUIT, ID_SETTINGS, ID_SEPARATOR, ID_INSTALL_SERVICE,
-    ID_REMOVE_SERVICE, ID_STATIC, ID_GROUP, ID_SAVE, ID_RESET_DEFAULTS,
+    ID_REMOVE_SERVICE, ID_STATIC, ID_GROUP,
+    ID_SAVE, ID_RESET_DEFAULTS, ID_RESET_FILE, ID_RESET_ACTIVE,
     ID_STATUS, ID_CONNECT,
 
     /* All dynamically created text boxes for options have IDs starting from
@@ -578,8 +596,10 @@ static void save_config(HWND hDlg, FILE *fp)
 static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
     FILE *fp;
-    int i;
-    const char *name, *value, **options = mg_get_valid_option_names();
+    int i, j;
+    const char *name, *value;
+    const char **default_options = mg_get_valid_option_names();
+    char *file_options[MAX_OPTIONS] = {0};
 
     switch (msg) {
     case WM_CLOSE:
@@ -599,9 +619,44 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             EnableWindow(GetDlgItem(hDlg, ID_SAVE), TRUE);
             break;
         case ID_RESET_DEFAULTS:
-            for (i = 0; options[i * 2] != NULL; i++) {
-                name = options[i * 2];
-                value = options[i * 2 + 1] == NULL ? "" : options[i * 2 + 1];
+            for (i = 0; default_options[i * 2] != NULL; i++) {
+                name = default_options[i * 2];
+                value = default_options[i * 2 + 1] == NULL ? "" : default_options[i * 2 + 1];
+                if (is_boolean_option(name)) {
+                    CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
+                                   BST_CHECKED : BST_UNCHECKED);
+                } else {
+                    SetWindowText(GetDlgItem(hDlg, ID_CONTROLS + i), value);
+                }
+            }
+            break;
+        case ID_RESET_FILE:
+            read_config_file(config_file, file_options);
+            for (i = 0; default_options[i * 2] != NULL; i++) {
+                name = default_options[i * 2];
+                value = default_options[i * 2 + 1];
+                for (j = 0; file_options[j * 2] != NULL; j++) {
+                    if (!strcmp(name, file_options[j * 2])) {
+                        value = file_options[j * 2 + 1];
+                    }
+                }
+                if (value == NULL) {
+                    value = "";
+                }
+                if (is_boolean_option(name)) {
+                    CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ? BST_CHECKED : BST_UNCHECKED);
+                } else {
+                    SetWindowText(GetDlgItem(hDlg, ID_CONTROLS + i), value);
+                }
+            }
+            for (i = 0; i<MAX_OPTIONS; i++) {
+                free(file_options[i]);
+            }
+            break;
+        case ID_RESET_ACTIVE:
+            for (i = 0; default_options[i * 2] != NULL; i++) {
+                name = default_options[i * 2];
+                value = mg_get_option(ctx, name);
                 if (is_boolean_option(name)) {
                     CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
                                    BST_CHECKED : BST_UNCHECKED);
@@ -612,8 +667,8 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             break;
         }
 
-        for (i = 0; options[i * 2] != NULL; i++) {
-            name = options[i * 2];
+        for (i = 0; default_options[i * 2] != NULL; i++) {
+            name = default_options[i * 2];
             if ((is_filename_option(name) || is_directory_option(name)) &&
                 LOWORD(wParam) == ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA) {
                 OPENFILENAME of;
@@ -652,8 +707,8 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
         SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_BIG, (LPARAM) hIcon);
         SetWindowText(hDlg, "Civetweb settings");
         SetFocus(GetDlgItem(hDlg, ID_SAVE));
-        for (i = 0; options[i * 2] != NULL; i++) {
-            name = options[i * 2];
+        for (i = 0; default_options[i * 2] != NULL; i++) {
+            name = default_options[i * 2];
             value = mg_get_option(ctx, name);
             if (is_boolean_option(name)) {
                 CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
@@ -785,9 +840,15 @@ static void show_settings_dialog()
     add_control(&p, dia, 0x80, ID_RESET_DEFAULTS,
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
                 WIDTH - 140, y, 65, 12, "Reset to defaults");
+    add_control(&p, dia, 0x80, ID_RESET_FILE,
+                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+                WIDTH - 210, y, 65, 12, "Reload from file");
+    add_control(&p, dia, 0x80, ID_RESET_ACTIVE,
+                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+                WIDTH - 280, y, 65, 12, "Reload active");
     add_control(&p, dia, 0x82, ID_STATIC,
                 WS_CHILD | WS_VISIBLE | WS_DISABLED,
-                5, y, 180, 12, server_name);
+                5, y, 100, 12, server_name);
 
     dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
     DialogBoxIndirectParam(NULL, dia, NULL, DlgProc, (LPARAM) NULL);
