@@ -16,7 +16,7 @@ int main(void)
         "document_root",     "../../examples/websocket",
 
         /* port: use http standard to match websocket url in websock.htm: ws://127.0.0.1/MyWebSock  */
-        /*       if the port is changed here, it needs to be changed in websock.htm as wenn         */
+        /*       if the port is changed here, it needs to be changed in websock.htm as well         */
         "listening_ports",   "80",
 
         NULL

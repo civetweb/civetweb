@@ -73,6 +73,7 @@ void websocket_ready_handler(struct mg_connection *conn) {
             break;
         }
     }
+    printf("\nNew websocket attached: %08x:%u\n", rq->remote_ip, rq->remote_port);
     pthread_mutex_unlock(&sMutex);
 }
 
@@ -87,6 +88,7 @@ static void websocket_done(tWebSockInfo * wsock) {
                 break;
             }
         }
+        printf("\nClose websocket attached: %08x:%u\n", mg_get_request_info(wsock->conn)->remote_ip, mg_get_request_info(wsock->conn)->remote_port);
         free(wsock);
     }
 }
@@ -185,8 +187,8 @@ void websock_send_broadcast(const char * data, int data_len) {
     if (data_len<=256) {
         strcpy(buffer, "msg ");
         memcpy(buffer+4, data, data_len);
-        
-        pthread_mutex_lock(&sMutex);        
+
+        pthread_mutex_lock(&sMutex);
         send_to_all_websockets(buffer, data_len+4);
         pthread_mutex_unlock(&sMutex);
     }
