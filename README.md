@@ -1,5 +1,11 @@
-![Civetweb](https://raw.github.com/sunsetbrew/civetweb/master/resources/civetweb_64x64.png "Civetweb") Civetweb
+![Civetweb](https://raw.github.com/bel2125/civetweb/master/resources/civetweb_64x64.png "Civetweb") Civetweb
 =======
+
+There is a new home!!!
+-----------------
+https://github.com/bel2125/civetweb
+Bel has been taking the lead on Civetweb, so teh official repositiory 
+is being moved under his control for ease of maintanence.
 
 Project Mission
 -----------------
@@ -14,10 +20,10 @@ End users can download Civetweb at SourceForge
 https://sourceforge.net/projects/civetweb/
 
 Developers can contribute to CivetWeb via GitHub
-https://github.com/sunsetbrew/civetweb
+https://github.com/bel2125/civetweb
 
 Trouble tickets should be filed on GitHub
-https://github.com/sunsetbrew/civetweb/issues
+https://github.com/bel2125/civetweb/issues
 
 Discussion group is at Google Groups
 https://groups.google.com/d/forum/civetweb
@@ -25,12 +31,12 @@ https://groups.google.com/d/forum/civetweb
 Quick start documentation
 --------------------------
 
-- [docs/Installing.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Installing.md) - Install Guide
-- [docs/UserManual.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/UserManual.md) - End User Guide
-- [docs/Building.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Building.md) - Buildiing the Server Quick Start
-- [docs/Embedding.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Embedding.md) - Embedding Quick Start
-- [RELEASE_NOTES.md](https://github.com/sunsetbrew/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
-- [LICENSE.md](https://github.com/sunsetbrew/civetweb/blob/master/LICENSE.md) - Copyright License
+- [docs/Installing.md](https://github.com/bel2125/civetweb/blob/master/docs/Installing.md) - Install Guide
+- [docs/UserManual.md](https://github.com/bel2125/civetweb/blob/master/docs/UserManual.md) - End User Guide
+- [docs/Building.md](https://github.com/bel2125/civetweb/blob/master/docs/Building.md) - Buildiing the Server Quick Start
+- [docs/Embedding.md](https://github.com/bel2125/civetweb/blob/master/docs/Embedding.md) - Embedding Quick Start
+- [RELEASE_NOTES.md](https://github.com/bel2125/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
+- [LICENSE.md](https://github.com/bel2125/civetweb/blob/master/LICENSE.md) - Copyright License
 
 Overview
 --------
@@ -58,10 +64,10 @@ simplicity by carefully selected list of features:
 ### Other optionally included software
 
 <a href="http://lua.org">
-![Lua](https://raw.github.com/sunsetbrew/civetweb/master/resources/lua-logo.jpg "Lua Logo")
+![Lua](https://raw.github.com/bel2125/civetweb/master/resources/lua-logo.jpg "Lua Logo")
 </a>
 <a href="http://sqlite.org">
-![Sqlite3](https://raw.github.com/sunsetbrew/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")
+![Sqlite3](https://raw.github.com/bel2125/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")
 </a>
 
 Support
