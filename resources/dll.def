@@ -7,9 +7,26 @@ EXPORTS
 	mg_printf
 	mg_get_header
 	mg_get_var
+	mg_get_var2
 	mg_get_cookie
 	mg_get_option
 	mg_get_valid_option_names
 	mg_version
 	mg_modify_passwords_file
 	mg_md5
+	mg_set_request_handler
+	mg_get_ports
+	mg_get_request_info
+	mg_websocket_write
+	mg_lock
+	mg_unlock
+	mg_send_file
+	mg_download
+	mg_close_connection
+	mg_upload
+	mg_start_thread
+	mg_get_builtin_mime_type
+	mg_url_decode
+	mg_url_encode
+	mg_cry
+	mg_strncasecmp
