@@ -764,8 +764,8 @@ static void add_control(unsigned char **mem, DLGTEMPLATE *dia, WORD type,
 static void show_settings_dialog()
 {
 #define HEIGHT 15
-#define WIDTH 400
-#define LABEL_WIDTH 80
+#define WIDTH 450
+#define LABEL_WIDTH 85
 
     unsigned char mem[4096], *p;
     const char **option_names, *long_option_name;
