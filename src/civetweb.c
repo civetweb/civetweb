@@ -2704,6 +2704,7 @@ static int parse_auth_header(struct mg_connection *conn, char *buf,
 {
     char *name, *value, *s;
     const char *auth_header;
+    unsigned long nonce;
 
     (void) memset(ah, 0, sizeof(*ah));
     if ((auth_header = mg_get_header(conn, "Authorization")) == NULL ||
@@ -2752,6 +2753,12 @@ static int parse_auth_header(struct mg_connection *conn, char *buf,
         } else if (!strcmp(name, "nonce")) {
             ah->nonce = value;
         }
+    }
+
+    /* Convert the nonce from the client to a number and check it */
+    nonce = strtoul(ah->nonce, &s, 10);
+    if ((s == NULL) || (*s != 0)) {
+        return 0;
     }
 
     /* CGI needs it as REMOTE_USER */
@@ -2855,6 +2862,7 @@ static void send_authorization_request(struct mg_connection *conn)
 {
     char date[64];
     time_t curtime = time(NULL);
+    unsigned long nonce = (unsigned long)curtime ^ (unsigned long)conn;
 
     conn->status_code = 401;
     conn->must_close = 1;
@@ -2869,7 +2877,7 @@ static void send_authorization_request(struct mg_connection *conn)
               "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", nonce=\"%lu\"\r\n\r\n",
               date, suggest_connection_header(conn),
               conn->ctx->config[AUTHENTICATION_DOMAIN],
-              (unsigned long) time(NULL));
+              nonce);
 }
 
 static int is_authorized_for_put(struct mg_connection *conn)
