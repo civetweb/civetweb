@@ -218,7 +218,6 @@ static void set_option(char **options, const char *name, const char *value)
     }
 }
 
-
 static void read_config_file(const char *config_file, char **options)
 {
     char line[MAX_CONF_FILE_LINE_SIZE], opt[sizeof(line)], val[sizeof(line)], *p;
@@ -264,7 +263,6 @@ static void read_config_file(const char *config_file, char **options)
         (void) fclose(fp);
     }
 }
-
 
 static void process_command_line_arguments(char *argv[], char **options)
 {
@@ -608,6 +606,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
+
         case ID_SAVE:
             EnableWindow(GetDlgItem(hDlg, ID_SAVE), FALSE);
             if ((fp = fopen(config_file, "w+")) != NULL) {
@@ -618,6 +617,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             }
             EnableWindow(GetDlgItem(hDlg, ID_SAVE), TRUE);
             break;
+
         case ID_RESET_DEFAULTS:
             for (i = 0; default_options[i * 2] != NULL; i++) {
                 name = default_options[i * 2];
@@ -630,6 +630,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
                 }
             }
             break;
+
         case ID_RESET_FILE:
             read_config_file(config_file, file_options);
             for (i = 0; default_options[i * 2] != NULL; i++) {
@@ -653,6 +654,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
                 free(file_options[i]);
             }
             break;
+
         case ID_RESET_ACTIVE:
             for (i = 0; default_options[i * 2] != NULL; i++) {
                 name = default_options[i * 2];
@@ -681,7 +683,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
                 of.lpstrFile = path;
                 of.nMaxFile = sizeof(path);
                 of.lpstrInitialDir = mg_get_option(ctx, "document_root");
-                of.Flags = OFN_CREATEPROMPT | OFN_NOCHANGEDIR;
+                of.Flags = OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
 
                 memset(&bi, 0, sizeof(bi));
                 bi.hwndOwner = (HWND) hDlg;
@@ -699,7 +701,6 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
                 }
             }
         }
-
         break;
 
     case WM_INITDIALOG:
@@ -718,6 +719,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             }
         }
         break;
+
     default:
         break;
     }
@@ -770,7 +772,7 @@ static void show_settings_dialog()
     DWORD style;
     DLGTEMPLATE *dia = (DLGTEMPLATE *) mem;
     WORD i, cl, x, y, width, nelems = 0;
-    static int guard;
+    static int guard = 0; /* test if dialog is already open */
 
     static struct {
         DLGTEMPLATE template; /* 18 bytes */
