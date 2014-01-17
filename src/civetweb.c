@@ -617,6 +617,9 @@ struct mg_context {
     int workerthreadcount;     /* The amount of worker threads. */
     pthread_t *workerthreadids;/* The worker thread IDs. */
 
+    unsigned long start_time;  /* Server start time, used for authentication */
+    unsigned long nonce_count; /* Used nonces, used for authentication */
+
     /* linked list of uri handlers */
     struct mg_request_handler_info *request_handlers;
 };
@@ -2760,6 +2763,14 @@ static int parse_auth_header(struct mg_connection *conn, char *buf,
     if ((s == NULL) || (*s != 0)) {
         return 0;
     }
+    nonce ^= (unsigned long)(conn->ctx);
+    if (nonce<conn->ctx->start_time) {
+        /* nonce is from a previous start of the server and no longer valid (replay attack?) */
+        return 0;
+    }
+    if (nonce>=conn->ctx->start_time+conn->ctx->nonce_count) {
+        return 0;
+    }
 
     /* CGI needs it as REMOTE_USER */
     if (ah->user != NULL) {
@@ -2862,8 +2873,14 @@ static void send_authorization_request(struct mg_connection *conn)
 {
     char date[64];
     time_t curtime = time(NULL);
-    unsigned long nonce = (unsigned long)curtime ^ (unsigned long)conn;
+    unsigned long nonce = (unsigned long)(conn->ctx->start_time);
 
+    (void)pthread_mutex_lock(&conn->ctx->mutex);
+    nonce += conn->ctx->nonce_count;
+    ++conn->ctx->nonce_count;
+    (void)pthread_mutex_unlock(&conn->ctx->mutex);
+
+    nonce ^= (unsigned long)(conn->ctx);
     conn->status_code = 401;
     conn->must_close = 1;
 
@@ -6197,12 +6214,17 @@ static void master_thread_run(void *thread_func_param)
     }
 #endif
 
+    /* Initialize thread local storage */
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
 #endif
     tls.is_master = 1;
     pthread_setspecific(sTlsKey, &tls);
 
+    /* Server starts *now* */
+    ctx->start_time = (unsigned long)time(NULL);
+
+    /* Allocate memory for the listening sockets, and start the server */
     pfd = (struct pollfd *) calloc(ctx->num_listening_sockets, sizeof(pfd[0]));
     while (pfd != NULL && ctx->stop_flag == 0) {
         for (i = 0; i < ctx->num_listening_sockets; i++) {
