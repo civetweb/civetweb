@@ -316,6 +316,13 @@ Timeout for network read and network write operations, in milliseconds.
 If client intends to keep long-running connection, either increase this value
 or use keep-alive messages.
 
+### lua_preload_file
+This configuration option can be used to specify a Lua script file, which
+is executed before the actual web page script (Lua script, Lua server page
+or Lua websocket). It can be used to modify the Lua environment of all web
+page scripts, e.g., by loading additional libraries required by all scripts
+or to achieve backward compatibility by defining obsolete functions.
+
 ### lua_script_pattern `"**.lua$`
 A pattern for files that are interpreted as Lua scripts by the server.
 In contrast to Lua server pages, Lua scripts use plain Lua syntax.
