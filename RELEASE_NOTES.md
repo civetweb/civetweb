@@ -5,6 +5,9 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Server should check the nonce for http digest access authentication (bel)
+- Hide read-only flag in file dialogs opened by the Edit Settings dialog for the Windows executable (bel)
+- Add all functions to dll.def, that are in the header (bel)
 - Added Lua extensions: send_file, get_var, get_mime_type, get_cookie, url_decode, url_encode (bel)
 - mg_set_request_handler() mod to use pattern (bel, Patch from Toni Wilk)
 - Solved, tested and documented SSL support for Windows (bel)
