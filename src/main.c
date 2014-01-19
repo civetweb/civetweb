@@ -446,6 +446,9 @@ static void start_civetweb(int argc, char *argv[])
     set_absolute_path(options, "access_log_file", argv[0]);
     set_absolute_path(options, "error_log_file", argv[0]);
     set_absolute_path(options, "global_auth_file", argv[0]);
+#ifdef USE_LUA
+    set_absolute_path(options, "lua_preload_file", argv[0]);
+#endif
     set_absolute_path(options, "ssl_certificate", argv[0]);
 
     /* Make extra verification for certain options */
