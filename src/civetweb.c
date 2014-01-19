@@ -2758,7 +2758,10 @@ static int parse_auth_header(struct mg_connection *conn, char *buf,
         }
     }
 
-    /* Convert the nonce from the client to a number and check it */
+#ifndef NO_NONCE_CHECK
+    /* Convert the nonce from the client to a number and check it. */
+    /* Server side nonce check is valuable in all situations but one: if the server restarts frequently, 
+       but the client should not see that, so the server should accept nonces from previous starts. */
     nonce = strtoul(ah->nonce, &s, 10);
     if ((s == NULL) || (*s != 0)) {
         return 0;
@@ -2771,6 +2774,7 @@ static int parse_auth_header(struct mg_connection *conn, char *buf,
     if (nonce>=conn->ctx->start_time+conn->ctx->nonce_count) {
         return 0;
     }
+#endif
 
     /* CGI needs it as REMOTE_USER */
     if (ah->user != NULL) {
