@@ -455,6 +455,9 @@ static void start_civetweb(int argc, char *argv[])
     verify_existence(options, "document_root", 1);
     verify_existence(options, "cgi_interpreter", 0);
     verify_existence(options, "ssl_certificate", 0);
+#ifdef USE_LUA
+    verify_existence(options, "lua_preload_file", 0);
+#endif
 
     /* Setup signal handler: quit on Ctrl-C */
     signal(SIGTERM, signal_handler);
@@ -563,12 +566,17 @@ static int is_filename_option(const char *option_name)
 
 static int is_directory_option(const char *option_name)
 {
-    return !strcmp(option_name, "document_root");
+    return !strcmp(option_name, "document_root") ||
+#if defined(USE_WEBSOCKET)
+           !strcmp(option_name, "websocket_root") ||
+#endif
+           0;
 }
 
 static int is_numeric_options(const char *option_name)
 {
-    return !strcmp(option_name, "num_threads");
+    return !strcmp(option_name, "num_threads") ||
+           !strcmp(option_name, "request_timeout_ms");
 }
 
 static void save_config(HWND hDlg, FILE *fp)
