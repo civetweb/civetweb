@@ -605,6 +605,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
 {
     const struct mg_request_info *ri = mg_get_request_info(conn);
     char src_addr[IP_ADDR_STR_LEN];
+    const char * preload_file = conn->ctx->config[LUA_PRELOAD_FILE];
     int i;
 
     extern void luaL_openlibs(lua_State *);
@@ -719,6 +720,11 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     /* Register default mg.onerror function */
     IGNORE_UNUSED_RESULT(luaL_dostring(L, "mg.onerror = function(e) mg.write('\\nLua error:\\n', "
         "debug.traceback(e, 1)) end"));
+
+    /* Preload */
+    if ((preload_file != NULL) && (*preload_file != 0)) {
+        IGNORE_UNUSED_RESULT(luaL_dofile(L, preload_file));
+    }    
 }
 
 static int lua_error_handler(lua_State *L)

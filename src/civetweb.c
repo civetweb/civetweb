@@ -526,7 +526,7 @@ enum {
     NUM_THREADS, RUN_AS_USER, REWRITE, HIDE_FILES, REQUEST_TIMEOUT,
 
 #if defined(USE_LUA)
-    LUA_SCRIPT_EXTENSIONS, LUA_SERVER_PAGE_EXTENSIONS,
+    LUA_PRELOAD_FILE, LUA_SCRIPT_EXTENSIONS, LUA_SERVER_PAGE_EXTENSIONS,
 #endif
 #if defined(USE_WEBSOCKET)
     WEBSOCKET_ROOT,
@@ -570,6 +570,7 @@ static const char *config_options[] = {
     "request_timeout_ms", "30000",
 
 #if defined(USE_LUA)
+    "lua_preload_file", NULL,
     "lua_script_pattern", "**.lua$",
     "lua_server_page_pattern", "**.lp$|**.lsp$",
 #endif

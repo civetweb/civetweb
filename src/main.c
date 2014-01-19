@@ -552,6 +552,9 @@ static int is_filename_option(const char *option_name)
            !strcmp(option_name, "put_delete_auth_file") ||
            !strcmp(option_name, "access_log_file") ||
            !strcmp(option_name, "error_log_file") ||
+#ifdef USE_LUA
+           !strcmp(option_name, "lua_preload_file") ||
+#endif
            !strcmp(option_name, "ssl_certificate");
 }
 
