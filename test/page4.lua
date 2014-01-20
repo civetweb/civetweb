@@ -124,5 +124,15 @@ mg.write("  decoded mg-url:        " .. htmlEscape(dec_url_string) .. "\r\n")
 mg.write("  decoded reference url: " .. htmlEscape(dec_ref_string) .. "\r\n")
 mg.write("\r\n")
 
+-- base64_encode
+mg.write("BASE64 encode/decode test:\r\n")
+raw_string = [[ !"#$%&'()*+,-./0123456789:;<=>?@]]
+mg.write("  original string:  " .. htmlEscape(raw_string) .. "\r\n")
+url_string = mg.base64_encode(raw_string)
+ref_string = "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A" -- from http://www.base64encode.org/
+mg.write("  mg-base64:        " .. htmlEscape(url_string) .. "\r\n")
+mg.write("  reference base64: " .. htmlEscape(ref_string) .. "\r\n")
+
+
 -- end of page
 mg.write("</pre>\r\n</body>\r\n</html>\r\n")
