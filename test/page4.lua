@@ -11,6 +11,7 @@ end
 mg.write("HTTP/1.0 200 OK\r\n")
 mg.write("Connection: close\r\n")
 mg.write("Content-Type: text/html; charset=utf-8\r\n")
+mg.write("Cache-Control: max-age=0, must-revalidate\r\n")
 if not cookie_value then
     mg.write("Set-Cookie: " .. cookie_name .. "=" .. tostring(now) .. "\r\n")
 end
@@ -106,21 +107,21 @@ else
 end
 raw_string = [[ !"#$%&'()*+,-./0123456789:;<=>?@]]
 mg.write("  original string: " .. htmlEscape(raw_string) .. "\r\n")
-url_string = mg.url_encode(raw_string):upper()
+mg_string = mg.url_encode(raw_string):upper()
 ref_string = "%20!%22%23%24%25%26'()*%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40" -- from http://www.w3schools.com/tags/ref_urlencode.asp
-mg.write("  mg-url:        " .. htmlEscape(url_string) .. "\r\n")
+mg.write("  mg-url:        " .. htmlEscape(mg_string) .. "\r\n")
 mg.write("  reference url: " .. htmlEscape(ref_string) .. "\r\n")
-dec_url_string = mg.url_decode(url_string)
+dec_mg_string = mg.url_decode(mg_string)
 dec_ref_string = mg.url_decode(ref_string)
-mg.write("  decoded mg-url:        " .. htmlEscape(dec_url_string) .. "\r\n")
+mg.write("  decoded mg-url:        " .. htmlEscape(dec_mg_string) .. "\r\n")
 mg.write("  decoded reference url: " .. htmlEscape(dec_ref_string) .. "\r\n")
-dec_url_string = mg.url_decode(url_string, false)
+dec_mg_string = mg.url_decode(mg_string, false)
 dec_ref_string = mg.url_decode(ref_string, false)
-mg.write("  decoded mg-url:        " .. htmlEscape(dec_url_string) .. "\r\n")
+mg.write("  decoded mg-url:        " .. htmlEscape(dec_mg_string) .. "\r\n")
 mg.write("  decoded reference url: " .. htmlEscape(dec_ref_string) .. "\r\n")
-dec_url_string = mg.url_decode(url_string, true)
+dec_mg_string = mg.url_decode(mg_string, true)
 dec_ref_string = mg.url_decode(ref_string, true)
-mg.write("  decoded mg-url:        " .. htmlEscape(dec_url_string) .. "\r\n")
+mg.write("  decoded mg-url:        " .. htmlEscape(dec_mg_string) .. "\r\n")
 mg.write("  decoded reference url: " .. htmlEscape(dec_ref_string) .. "\r\n")
 mg.write("\r\n")
 
@@ -128,11 +129,25 @@ mg.write("\r\n")
 mg.write("BASE64 encode/decode test:\r\n")
 raw_string = [[ !"#$%&'()*+,-./0123456789:;<=>?@]]
 mg.write("  original string:  " .. htmlEscape(raw_string) .. "\r\n")
-url_string = mg.base64_encode(raw_string)
+mg_string = mg.base64_encode(raw_string)
 ref_string = "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A" -- from http://www.base64encode.org/
-mg.write("  mg-base64:        " .. htmlEscape(url_string) .. "\r\n")
+mg.write("  mg-base64:        " .. htmlEscape(mg_string) .. "\r\n")
 mg.write("  reference base64: " .. htmlEscape(ref_string) .. "\r\n")
-
+dec_mg_string = mg.base64_decode(mg_string)
+dec_ref_string = mg.base64_decode(ref_string)
+mg.write("  decoded mg-base64:        " .. htmlEscape(dec_mg_string) .. "\r\n")
+mg.write("  decoded reference base64: " .. htmlEscape(dec_ref_string) .. "\r\n")
+mg.write("\r\n")
+raw_string = [[<?> -?-]]
+mg.write("  original string:  " .. htmlEscape(raw_string) .. "\r\n")
+mg_string = mg.base64_encode(raw_string)
+ref_string = "PD8+IC0/LQ==" -- from http://www.base64encode.org/
+mg.write("  mg-base64:        " .. htmlEscape(mg_string) .. "\r\n")
+mg.write("  reference base64: " .. htmlEscape(ref_string) .. "\r\n")
+dec_mg_string = mg.base64_decode(mg_string)
+dec_ref_string = mg.base64_decode(ref_string)
+mg.write("  decoded mg-base64:        " .. htmlEscape(dec_mg_string) .. "\r\n")
+mg.write("  decoded reference base64: " .. htmlEscape(dec_ref_string) .. "\r\n")
 
 -- end of page
 mg.write("</pre>\r\n</body>\r\n</html>\r\n")
