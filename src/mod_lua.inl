@@ -559,6 +559,35 @@ static int lsp_url_decode(lua_State *L)
     return 1;
 }
 
+/* mg.base64_encode */
+static int lsp_base64_encode(lua_State *L)
+{
+    int num_args = lua_gettop(L);
+    const char *text;
+    size_t text_len;
+    char *dst;
+
+    if (num_args==1) {
+        text = lua_tolstring(L, 1, &text_len);
+        if (text) {
+            dst = malloc(text_len*8/6+4);
+            if (dst) {
+                base64_encode(text, text_len, dst);
+                lua_pushstring(L, dst);
+                free(dst);
+            } else {
+                return luaL_error(L, "out of memory in base64_encode() call");
+            }
+        } else {
+            lua_pushnil(L);
+        }
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid base64_encode() call");
+    }
+    return 1;
+}
+
 /* mg.write for websockets */
 static int lwebsock_write(lua_State *L)
 {
@@ -677,6 +706,8 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_function(L, "md5", lsp_md5, conn);
     reg_function(L, "url_encode", lsp_url_encode, conn);
     reg_function(L, "url_decode", lsp_url_decode, conn);
+    reg_function(L, "base64_encode", lsp_base64_encode, conn);
+    //reg_function(L, "base64_decode", lsp_base64_decode, conn);
 
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
