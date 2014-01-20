@@ -2300,6 +2300,47 @@ static void base64_encode(const unsigned char *src, int src_len, char *dst)
     }
     dst[j++] = '\0';
 }
+
+static unsigned char b64reverse(char letter) {
+    if (letter>='A' && letter<='Z') return letter-'A';
+    if (letter>='a' && letter<='z') return letter-'a'+26;
+    if (letter>='0' && letter<='9') return letter-'0'+52;
+    if (letter=='+') return 62;
+    if (letter=='/') return 63;
+    if (letter=='=') return 255; /* normal end */
+    return 254; /* error */
+}
+
+static int base64_decode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
+{
+    int i;
+    unsigned char a, b, c, d;
+
+    *dst_len = 0;
+
+    for (i = 0; i < src_len; i += 4) {
+        a = b64reverse(src[i]);
+        if (a>=254) return i;
+
+        b = b64reverse(i + 1 >= src_len ? 0 : src[i + 1]);
+        if (b>=254) return i+1;
+
+        c = b64reverse(i + 2 >= src_len ? 0 : src[i + 2]);
+        if (c==254) return i+2;
+
+        d = b64reverse(i + 3 >= src_len ? 0 : src[i + 3]);
+        if (c==254) return i+3;
+
+        dst[(*dst_len)++] = (a << 2) + (b >> 4);
+        if (c!=255) {
+            dst[(*dst_len)++] = (b << 4) + (c >> 2);
+            if (d!=255) {
+                dst[(*dst_len)++] = (c << 6) + d;
+            }
+        }
+    }
+    return -1;
+}
 #endif
 
 static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
@@ -2789,7 +2830,7 @@ static int parse_auth_header(struct mg_connection *conn, char *buf,
 
 #ifndef NO_NONCE_CHECK
     /* Convert the nonce from the client to a number and check it. */
-    /* Server side nonce check is valuable in all situations but one: if the server restarts frequently, 
+    /* Server side nonce check is valuable in all situations but one: if the server restarts frequently,
        but the client should not see that, so the server should accept nonces from previous starts. */
     nonce = strtoul(ah->nonce, &s, 10);
     if ((s == NULL) || (*s != 0)) {
