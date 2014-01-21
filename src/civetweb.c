@@ -27,7 +27,8 @@
 #ifdef __linux__
 #define _XOPEN_SOURCE 600     /* For flockfile() on Linux */
 #endif
-#define _LARGEFILE_SOURCE     /* Enable 64-bit file offsets */
+#define _LARGEFILE_SOURCE     /* For fseeko(), ftello() */
+#define _FILE_OFFSET_BITS 64  /* Use 64-bit file offsets by default */
 #define __STDC_FORMAT_MACROS  /* <inttypes.h> wants this for C++ */
 #define __STDC_LIMIT_MACROS   /* C++ wants that for INT64_MAX */
 #endif
