@@ -6,6 +6,8 @@ Changes
 -------
 
 - Win32: Replace dll.def file by export macros in civetweb.h (CSTAJ)
+- Base64 encode and decode functions for Lua (bel)
+- Support pre-loaded files for the Lua environment (bel)
 - Server should check the nonce for http digest access authentication (bel)
 - Hide read-only flag in file dialogs opened by the Edit Settings dialog for the Windows executable (bel)
 - Add all functions to dll.def, that are in the header (bel)
