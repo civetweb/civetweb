@@ -5,6 +5,7 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Win32: Replace dll.def file by export macros in civetweb.h (CSTAJ)
 - Server should check the nonce for http digest access authentication (bel)
 - Hide read-only flag in file dialogs opened by the Edit Settings dialog for the Windows executable (bel)
 - Add all functions to dll.def, that are in the header (bel)
