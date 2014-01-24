@@ -256,6 +256,7 @@ struct pollfd {
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <sys/utsname.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <netdb.h>
@@ -629,6 +630,8 @@ struct mg_context {
 
     unsigned long start_time;  /* Server start time, used for authentication */
     unsigned long nonce_count; /* Used nonces, used for authentication */
+
+    char *systemName;          /* What operating system is running */
 
     /* linked list of uri handlers */
     struct mg_request_handler_info *request_handlers;
@@ -6411,6 +6414,9 @@ static void free_context(struct mg_context *ctx)
         pthread_key_delete(sTlsKey);
     }
 
+    /* deallocate system name string */
+    free(ctx->systemName);
+
     /* Deallocate context itself */
     free(ctx);
 }
@@ -6429,6 +6435,35 @@ void mg_stop(struct mg_context *ctx)
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     (void) WSACleanup();
 #endif /* _WIN32 && !__SYMBIAN32__ */
+}
+
+void get_system_name(char **sysName)
+{
+#if defined(_WIN32)
+#if !defined(__SYMBIAN32__)
+    char name[128];
+    DWORD dwVersion = 0;
+    DWORD dwMajorVersion = 0;
+    DWORD dwMinorVersion = 0;
+    DWORD dwBuild = 0;
+
+    dwVersion = GetVersion();
+
+    dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
+    dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
+    dwBuild = ((dwVersion < 0x80000000) ? (DWORD)(HIWORD(dwVersion)) : 0);
+
+    sprintf(name, "Windows %d.%d", dwMajorVersion, dwMinorVersion);
+    *sysName = mg_strdup(name);
+#else
+    *sysName = mg_strdup("Symbian");
+#endif
+#else
+    struct utsname name;
+    memset(&name, 0, sizeof(name));
+    uname(&name);
+    *sysName = mg_strdup(name.sysname);
+#endif
 }
 
 struct mg_context *mg_start(const struct mg_callbacks *callbacks,
@@ -6495,6 +6530,8 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
             ctx->config[i] = mg_strdup(default_value);
         }
     }
+
+    get_system_name(&ctx->systemName);
 
     /* NOTE(lsm): order is important here. SSL certificates must
        be initialized before listening ports. UID must be set last. */

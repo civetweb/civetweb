@@ -751,6 +751,10 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_string(L, "websocket_root", conn->ctx->config[WEBSOCKET_ROOT]);
 #endif
 
+    if (conn->ctx->systemName) {
+        reg_string(L, "system", conn->ctx->systemName);
+    }
+
     /* Export request_info */
     lua_pushstring(L, "request_info");
     lua_newtable(L);
