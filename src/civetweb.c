@@ -187,14 +187,22 @@ typedef struct {
     pthread_t *waitingthreadhdls;  /* The thread handles. */
 } pthread_cond_t;
 
+#ifndef __clockid_t_defined
 typedef DWORD clockid_t;
+#endif
+#ifndef CLOCK_MONOTONIC
 #define CLOCK_MONOTONIC (1)
+#endif
+#ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME  (2)
+#endif
 
+#ifndef _TIMESPEC_DEFINED
 struct timespec {
     time_t   tv_sec;        /* seconds */
     long     tv_nsec;       /* nanoseconds */
 };
+#endif
 
 #define pid_t HANDLE /* MINGW typedefs pid_t to int. Using #define here. */
 
@@ -1197,6 +1205,7 @@ static int pthread_mutex_unlock(pthread_mutex_t *mutex)
     return ReleaseMutex(*mutex) == 0 ? -1 : 0;
 }
 
+#ifndef WIN_PTHREADS_TIME_H
 static int clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
     FILETIME ft;
@@ -1232,6 +1241,7 @@ static int clock_gettime(clockid_t clk_id, struct timespec *tp)
 
     return ok ? 0 : -1;
 }
+#endif
 
 static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
 {
