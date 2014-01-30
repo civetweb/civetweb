@@ -44,7 +44,7 @@
 
 /* Disable WIN32_LEAN_AND_MEAN.
    This makes windows.h always include winsock2.h */
-#if defined(WIN32_LEAN_AND_MEAN) && (_MSC_VER <= 1400)
+#if defined(WIN32_LEAN_AND_MEAN)
 #undef WIN32_LEAN_AND_MEAN
 #endif
 
