@@ -261,6 +261,10 @@ struct pollfd {
 #include <inttypes.h>
 #include <netdb.h>
 
+#if defined(ANDROID)
+typedef unsigned short int in_port_t;
+#endif
+
 #include <pwd.h>
 #include <unistd.h>
 #include <dirent.h>
