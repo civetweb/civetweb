@@ -27,10 +27,18 @@
 #ifdef __linux__
 #define _XOPEN_SOURCE 600     /* For flockfile() on Linux */
 #endif
+#ifndef _LARGEFILE_SOURCE
 #define _LARGEFILE_SOURCE     /* For fseeko(), ftello() */
+#endif
+#ifndef _FILE_OFFSET_BITS
 #define _FILE_OFFSET_BITS 64  /* Use 64-bit file offsets by default */
+#endif
+#ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS  /* <inttypes.h> wants this for C++ */
+#endif
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS   /* C++ wants that for INT64_MAX */
+#endif
 #endif
 
 #if defined (_MSC_VER)
@@ -80,7 +88,9 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#ifndef MAX_WORKER_THREADS
 #define MAX_WORKER_THREADS 1024
+#endif
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
 #if defined(_MSC_VER) && _MSC_VER <= 1400
