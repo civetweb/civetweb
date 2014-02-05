@@ -1987,7 +1987,12 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
         nread = SSL_read(conn->ssl, buf, len);
 #endif
     } else {
+      int error = 0;
+      do
+      {
         nread = recv(conn->client.sock, buf, (size_t) len, 0);
+        error = ERRNO;
+      }while(nread == -1 && error == WSAETIMEDOUT && !conn->ctx->stop_flag);
     }
 
     return conn->ctx->stop_flag ? -1 : nread;
@@ -4899,6 +4904,7 @@ int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data,
     return retval;
 }
 
+static int set_sock_timeout(SOCKET sock, int milliseconds);
 static void handle_websocket_request(struct mg_connection *conn, const char *path, int is_script_resource)
 {
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
@@ -4907,7 +4913,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
     /* TODO: A websocket script may be shared between several clients, allowing them to communicate
              directly instead of writing to a data base and polling the data base. */
 #endif
-
+    set_sock_timeout(conn->client.sock, 1000); //set the websocket timeout to 1000 ms
     if (version == NULL || strcmp(version, "13") != 0) {
         send_http_error(conn, 426, "Upgrade Required", "%s", "Upgrade Required");
     } else if (conn->ctx->callbacks.websocket_connect != NULL &&
