@@ -5480,11 +5480,11 @@ static int set_ports_option(struct mg_context *ctx)
     struct socket so, *ptr;
 
     in_port_t *portPtr;
-    struct sockaddr_in sin;
+    union usa usa;
     socklen_t len;
 
-    memset(&sin, 0, sizeof(sin));
-    len = sizeof(sin);
+    memset(&usa, 0, sizeof(usa));
+    len = sizeof(usa);
 
     while (success && (list = next_option(list, &vec, NULL)) != NULL) {
         if (!parse_port_string(&vec, &so)) {
@@ -5508,7 +5508,7 @@ static int set_ports_option(struct mg_context *ctx)
                    bind(so.sock, &so.lsa.sa, so.lsa.sa.sa_family == AF_INET ?
                         sizeof(so.lsa.sin) : sizeof(so.lsa)) != 0 ||
                    listen(so.sock, SOMAXCONN) != 0 ||
-                   getsockname(so.sock, (struct sockaddr *)&sin, &len) != 0) {
+                   getsockname(so.sock, &(usa.sa), &len) != 0) {
             mg_cry(fc(ctx), "%s: cannot bind to %.*s: %d (%s)", __func__,
                    (int) vec.len, vec.ptr, ERRNO, strerror(errno));
             if (so.sock != INVALID_SOCKET) {
@@ -5531,7 +5531,7 @@ static int set_ports_option(struct mg_context *ctx)
             ctx->listening_sockets = ptr;
             ctx->listening_sockets[ctx->num_listening_sockets] = so;
             ctx->listening_ports = portPtr;
-            ctx->listening_ports[ctx->num_listening_sockets] = ntohs(sin.sin_port);
+            ctx->listening_ports[ctx->num_listening_sockets] = ntohs(usa.sin.sin_port);
             ctx->num_listening_sockets++;
         }
     }
