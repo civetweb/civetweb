@@ -1344,8 +1344,8 @@ static int pthread_cond_destroy(pthread_cond_t *cv)
 {
     EnterCriticalSection(&cv->threadIdSec);
     assert(cv->waitingthreadcount==0);
-    cv->waitingthreadhdls = 0;
     free(cv->waitingthreadhdls);
+    cv->waitingthreadhdls = 0;
     LeaveCriticalSection(&cv->threadIdSec);
     DeleteCriticalSection(&cv->threadIdSec);
 
