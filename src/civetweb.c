@@ -3477,7 +3477,8 @@ static void handle_file_request(struct mg_connection *conn, const char *path,
     struct vec mime_vec;
     int n;
     char gz_path[PATH_MAX];
-    char const* encoding = "";
+    const char *encoding = "";
+    const char *cors1, *cors2, *cors3;
 
     get_mime_type(conn->ctx, path, &mime_vec);
     cl = filep->size;
@@ -3514,13 +3515,22 @@ static void handle_file_request(struct mg_connection *conn, const char *path,
             return;
         }
         conn->status_code = 206;
-cl = n == 2 ? (r2 > cl ? cl : r2) - r1 + 1: cl - r1;
+        cl = n == 2 ? (r2 > cl ? cl : r2) - r1 + 1: cl - r1;
         mg_snprintf(conn, range, sizeof(range),
                     "Content-Range: bytes "
                     "%" INT64_FMT "-%"
                     INT64_FMT "/%" INT64_FMT "\r\n",
                     r1, r1 + cl - 1, filep->size);
         msg = "Partial Content";
+    }
+
+    hdr = mg_get_header(conn, "Origin");
+    if (hdr) {
+        cors1 = "Access-Control-Allow-Origin: ";
+        cors2 = "*";
+        cors3 = "\r\n";
+    } else {
+        cors1 = cors2 = cors3 = "";
     }
 
     /* Prepare Etag, Date, Last-Modified headers. Must be in UTC, according to
@@ -3531,6 +3541,7 @@ cl = n == 2 ? (r2 > cl ? cl : r2) - r1 + 1: cl - r1;
 
     (void) mg_printf(conn,
                      "HTTP/1.1 %d %s\r\n"
+                     "%s%s%s"
                      "Date: %s\r\n"
                      "Last-Modified: %s\r\n"
                      "Etag: %s\r\n"
@@ -3539,7 +3550,9 @@ cl = n == 2 ? (r2 > cl ? cl : r2) - r1 + 1: cl - r1;
                      "Connection: %s\r\n"
                      "Accept-Ranges: bytes\r\n"
                      "%s%s\r\n",
-                     conn->status_code, msg, date, lm, etag, (int) mime_vec.len,
+                     conn->status_code, msg,
+                     cors1, cors2, cors3,
+                     date, lm, etag, (int) mime_vec.len,
                      mime_vec.ptr, cl, suggest_connection_header(conn), range, encoding);
 
     if (strcmp(conn->request_info.request_method, "HEAD") != 0) {
