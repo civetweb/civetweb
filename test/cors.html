@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CORS test</title>
+<style>
+ html,body{font:normal 1em arial,helvetica;}
+</style>
+
+<script> // http://www.html5rocks.com/en/tutorials/cors/
+
+// Create the XHR object.
+function createCORSRequest(method, url) {
+  var xhr = new XMLHttpRequest();
+  if ("withCredentials" in xhr) {
+    // XHR for Chrome/Firefox/Opera/Safari.
+    xhr.open(method, url, true);
+  } else if (typeof XDomainRequest != "undefined") {
+    // XDomainRequest for IE.
+    xhr = new XDomainRequest();
+    xhr.open(method, url);
+  } else {
+    // CORS not supported.
+    xhr = null;
+  }
+  return xhr;
+}
+
+// Helper method to parse the title tag from the response.
+function getTitle(text) {
+  return text.match('<title>(.*)?</title>')[1];
+}
+
+// Make the actual CORS request.
+function makeCorsRequest() {
+  var url = "http://localhost/cors.reply.html"; 
+  var xhr = createCORSRequest('GET', url);
+  if (!xhr) {
+    alert('CORS not supported');
+    return;
+  }
+
+  // Response handlers.
+  xhr.onload = function() {
+    var text = xhr.responseText;
+    var title = getTitle(text);
+    alert('Response from CORS request to ' + url + ': ' + title);
+  };
+
+  xhr.onerror = function() {
+    alert('Woops, there was an error making the request.');
+  };
+
+  xhr.send();
+}
+
+function start() {}
+
+</script>
+
+</head>
+<body onload="start()">
+ <h1>Cross-origin resource sharing test</h1>
+ <button onclick="makeCorsRequest()">Run CORS request</button>
+ <p>More information on CORS: See <a href="http://enable-cors.org/">enable-cors.org</a> and <a href="http://www.html5rocks.com/en/tutorials/cors/">html5rocks.com</a>.</p>
+</body>
+</html>
