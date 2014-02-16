@@ -196,7 +196,7 @@ static char *sdup(const char *str)
     return p;
 }
 
-static void set_option(char **options, const char *name, const char *value)
+static int set_option(char **options, const char *name, const char *value)
 {
     int i;
 
@@ -216,13 +216,16 @@ static void set_option(char **options, const char *name, const char *value)
     if (i == MAX_OPTIONS - 3) {
         die("%s", "Too many options specified");
     }
+
+    /* TODO: check if this option is defined */
+    return 1;
 }
 
 static void read_config_file(const char *config_file, char **options)
 {
-    char line[MAX_CONF_FILE_LINE_SIZE], opt[sizeof(line)], val[sizeof(line)], *p;
+    char line[MAX_CONF_FILE_LINE_SIZE], *p;
     FILE *fp = NULL;
-    size_t i, cmd_line_opts_start = 1, line_no = 0;
+    size_t i, j, cmd_line_opts_start = 1, line_no = 0;
 
     fp = fopen(config_file, "r");
 
@@ -252,11 +255,23 @@ static void read_config_file(const char *config_file, char **options)
                 continue;
             }
 
-            if (sscanf(p, "%s %[^\r\n#]", opt, val) != 2) {
+            /* Skip spaces, \r and \n at the end of the line */
+            for (j = strlen(line)-1; isspace(* (unsigned char *) &line[j]) || iscntrl(* (unsigned char *) &line[j]); ) line[j--]=0;
+
+            /* Find the space character between option name and value */
+            for (j=i; !isspace(* (unsigned char *) &line[j]) && (line[j]!=0); ) j++;
+
+            /* Terminate the string - then the string at (line+i) contains the option name */
+            line[j] = 0;
+            j++;
+
+            /* Trim additional spaces between option name and value - then (line+j) contains the option value */
+            while (isspace(line[j])) j++;
+
+            /* Set option */
+            if (!set_option(options, line+i, line+j)) {
                 printf("%s: line %d is invalid, ignoring it:\n %s",
                        config_file, (int) line_no, p);
-            } else {
-                set_option(options, opt, val);
             }
         }
 
