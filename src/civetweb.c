@@ -558,6 +558,7 @@ enum {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     LUA_WEBSOCKET_EXTENSIONS,
 #endif
+    ACCESS_CONTROL_ALLOW_ORIGIN,
 
     NUM_OPTIONS
 };
@@ -604,6 +605,7 @@ static const char *config_options[] = {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     "lua_websocket_pattern", "**.lua$",
 #endif
+    "access_control_allow_origin", "*",
 
     NULL
 };
@@ -3526,8 +3528,10 @@ static void handle_file_request(struct mg_connection *conn, const char *path,
 
     hdr = mg_get_header(conn, "Origin");
     if (hdr) {
+        /* Cross-origin resource sharing (CORS), see http://www.html5rocks.com/en/tutorials/cors/,
+           http://www.html5rocks.com/static/images/cors_server_flowchart.png - preflight is not supported for files. */
         cors1 = "Access-Control-Allow-Origin: ";
-        cors2 = "*";
+        cors2 = conn->ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
         cors3 = "\r\n";
     } else {
         cors1 = cors2 = cors3 = "";
