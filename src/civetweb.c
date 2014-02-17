@@ -5338,6 +5338,8 @@ static void handle_request(struct mg_connection *conn)
                use_request_handler(conn)) {
         /* Do nothing, callback has served the request */
     } else if (!is_script_resource && !strcmp(ri->request_method, "OPTIONS")) {
+        /* Scripts should support the OPTIONS method themselves, to allow a maximum flexibility.
+           Lua and CGI scripts may fully support CORS this way (including preflights). */
         send_options(conn);
     } else if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
         send_http_error(conn, 404, "Not Found", "Not Found");
