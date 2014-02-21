@@ -561,6 +561,7 @@ static void *align(void *ptr, DWORD alig)
     return ((void *) ul);
 }
 
+/*
 static int is_boolean_option(const char *option_name)
 {
     return !strcmp(option_name, "enable_directory_listing") ||
@@ -594,6 +595,7 @@ static int is_numeric_options(const char *option_name)
     return !strcmp(option_name, "num_threads") ||
            !strcmp(option_name, "request_timeout_ms");
 }
+*/
 
 static void save_config(HWND hDlg, FILE *fp)
 {
@@ -606,7 +608,7 @@ static void save_config(HWND hDlg, FILE *fp)
     options = mg_get_valid_options();
     for (i = 0; options[i].name != NULL; i++) {
         id = ID_CONTROLS + i;
-        if (is_boolean_option(options[i].name)) {
+        if (options[i].type == CONFIG_TYPE_BOOLEAN) {
             snprintf(value, sizeof(value)-1, "%s",
                      IsDlgButtonChecked(hDlg, id) ? "yes" : "no");
             value[sizeof(value)-1] = 0;
@@ -652,7 +654,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             for (i = 0; default_options[i].name != NULL; i++) {
                 name = default_options[i].name;
                 value = default_options[i].default_value == NULL ? "" : default_options[i].default_value;
-                if (is_boolean_option(name)) {
+                if (default_options[i].type == CONFIG_TYPE_BOOLEAN) {
                     CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
                                    BST_CHECKED : BST_UNCHECKED);
                 } else {
@@ -674,7 +676,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
                 if (value == NULL) {
                     value = "";
                 }
-                if (is_boolean_option(name)) {
+                if (default_options[i].type == CONFIG_TYPE_BOOLEAN) {
                     CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ? BST_CHECKED : BST_UNCHECKED);
                 } else {
                     SetWindowText(GetDlgItem(hDlg, ID_CONTROLS + i), value);
@@ -689,7 +691,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             for (i = 0; default_options[i].name != NULL; i++) {
                 name = default_options[i].name;
                 value = mg_get_option(ctx, name);
-                if (is_boolean_option(name)) {
+                if (default_options[i].type == CONFIG_TYPE_BOOLEAN) {
                     CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
                                    BST_CHECKED : BST_UNCHECKED);
                 } else {
@@ -741,7 +743,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
         for (i = 0; default_options[i].name != NULL; i++) {
             name = default_options[i].name;
             value = mg_get_option(ctx, name);
-            if (is_boolean_option(name)) {
+            if (default_options[i].type == CONFIG_TYPE_BOOLEAN) {
                 CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
                                BST_CHECKED : BST_UNCHECKED);
             } else {
@@ -837,7 +839,7 @@ static void show_settings_dialog()
             style |= ES_NUMBER;
             cl = 0x81;
             style |= WS_BORDER | ES_AUTOHSCROLL;
-        } else if (is_boolean_option(options[i].name)) {
+        } else if (options[i].type == CONFIG_TYPE_BOOLEAN) {
             cl = 0x80;
             style |= BS_AUTOCHECKBOX;
         } else if (is_filename_option(options[i].name) ||
