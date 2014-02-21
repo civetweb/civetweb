@@ -232,11 +232,14 @@ CIVETWEB_API void mg_set_request_handler(struct mg_context *ctx, const char *uri
 CIVETWEB_API const char *mg_get_option(const struct mg_context *ctx, const char *name);
 
 
+#if defined(MG_LEGACY_INTERFACE)
 /* Return array of strings that represent valid configuration options.
    For each option, option name and default value is returned, i.e. the
    number of entries in the array equals to number_of_options x 2.
    Array is NULL terminated. */
+/* Deprecated: Use mg_get_valid_options instead. */
 CIVETWEB_API const char **mg_get_valid_option_names(void);
+#endif
 
 
 struct mg_option {
@@ -254,6 +257,10 @@ enum {
     CONFIG_TYPE_BOOLEAN = 0x5,
     CONFIG_TYPE_EXT_PATTERN = 0x6
 };
+
+CIVETWEB_API const struct mg_option *mg_get_valid_options(void);
+
+
 
 /* Get the list of ports that civetweb is listening on.
    size is the size of the ports int array and ssl int array to fill.

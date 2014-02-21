@@ -702,12 +702,12 @@ struct de {
 static int is_websocket_request(const struct mg_connection *conn);
 #endif
 
-/*#if defined(MG_LEGACY_INTERFACE)*/
+#if defined(MG_LEGACY_INTERFACE)
 const char **mg_get_valid_option_names(void)
 {
     static const char * data[2 * sizeof(config_options) / sizeof(config_options[0])] = {0};
     int i;
-    
+
     for (i=0; config_options[i].name != NULL; i++) {
         data[i * 2] = config_options[i].name;
         data[i * 2 + 1] = config_options[i].default_value;
@@ -715,7 +715,13 @@ const char **mg_get_valid_option_names(void)
 
     return data;
 }
-/*#endif*/
+#endif
+
+const struct mg_option *mg_get_valid_options(void)
+{
+    return config_options;
+}
+
 
 static int is_file_in_memory(struct mg_connection *conn, const char *path,
                              struct file *filep)

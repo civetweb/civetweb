@@ -116,7 +116,7 @@ static void die(const char *fmt, ...)
 
 static void show_usage_and_exit(void)
 {
-    const char **names;
+    const struct mg_option *options;
     int i;
 
     fprintf(stderr, "Civetweb v%s, built on %s\n",
@@ -127,10 +127,10 @@ static void show_usage_and_exit(void)
     fprintf(stderr, "  civetweb [-option value ...]\n");
     fprintf(stderr, "\nOPTIONS:\n");
 
-    names = mg_get_valid_option_names();
-    for (i = 0; names[i] != NULL; i += 2) {
+    options = mg_get_valid_options();
+    for (i = 0; options[i].name != NULL; i++) {
         fprintf(stderr, "  -%s %s\n",
-                names[i], names[i + 1] == NULL ? "<empty>" : names[i + 1]);
+                options[i].name[i], options[i].default_value == NULL ? "<empty>" : options[i].default_value);
     }
     exit(EXIT_FAILURE);
 }
@@ -165,7 +165,8 @@ static const char *get_url_to_first_open_port(const struct mg_context *ctx)
 
 static void create_config_file(const char *path)
 {
-    const char **names, *value;
+    const struct mg_option *options;
+    const char *value;
     FILE *fp;
     int i;
 
@@ -174,10 +175,10 @@ static void create_config_file(const char *path)
         fclose(fp);
     } else if ((fp = fopen(path, "a+")) != NULL) {
         fprintf(fp, "%s", config_file_top_comment);
-        names = mg_get_valid_option_names();
-        for (i = 0; names[i * 2] != NULL; i++) {
-            value = mg_get_option(ctx, names[i * 2]);
-            fprintf(fp, "# %s %s\n", names[i * 2], value ? value : "<value>");
+        options = mg_get_valid_options();
+        for (i = 0; options[i].name != NULL; i++) {
+            value = mg_get_option(ctx, options[i].name);
+            fprintf(fp, "# %s %s\n", options[i].name, value ? value : "<value>");
         }
         fclose(fp);
     }
@@ -597,25 +598,25 @@ static int is_numeric_options(const char *option_name)
 static void save_config(HWND hDlg, FILE *fp)
 {
     char value[2000] = "";
-    const char **options, *name, *default_value;
+    const char *default_value;
+    const struct mg_option *options;
     int i, id;
 
     fprintf(fp, "%s", config_file_top_comment);
-    options = mg_get_valid_option_names();
-    for (i = 0; options[i * 2] != NULL; i++) {
-        name = options[i * 2];
+    options = mg_get_valid_options();
+    for (i = 0; options[i].name != NULL; i++) {
         id = ID_CONTROLS + i;
-        if (is_boolean_option(name)) {
+        if (is_boolean_option(options[i].name)) {
             snprintf(value, sizeof(value)-1, "%s",
                      IsDlgButtonChecked(hDlg, id) ? "yes" : "no");
             value[sizeof(value)-1] = 0;
         } else {
             GetDlgItemText(hDlg, id, value, sizeof(value));
         }
-        default_value = options[i * 2 + 1] == NULL ? "" : options[i * 2 + 1];
+        default_value = options[i].default_value == NULL ? "" : options[i].default_value;
         /* If value is the same as default, skip it */
         if (strcmp(value, default_value) != 0) {
-            fprintf(fp, "%s %s\n", name, value);
+            fprintf(fp, "%s %s\n", options[i].name, value);
         }
     }
 }
@@ -625,7 +626,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
     FILE *fp;
     int i, j;
     const char *name, *value;
-    const char **default_options = mg_get_valid_option_names();
+    const struct mg_option *default_options = mg_get_valid_options();
     char *file_options[MAX_OPTIONS] = {0};
 
     switch (msg) {
@@ -648,9 +649,9 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             break;
 
         case ID_RESET_DEFAULTS:
-            for (i = 0; default_options[i * 2] != NULL; i++) {
-                name = default_options[i * 2];
-                value = default_options[i * 2 + 1] == NULL ? "" : default_options[i * 2 + 1];
+            for (i = 0; default_options[i].name != NULL; i++) {
+                name = default_options[i].name;
+                value = default_options[i].default_value == NULL ? "" : default_options[i].default_value;
                 if (is_boolean_option(name)) {
                     CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
                                    BST_CHECKED : BST_UNCHECKED);
@@ -662,9 +663,9 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 
         case ID_RESET_FILE:
             read_config_file(config_file, file_options);
-            for (i = 0; default_options[i * 2] != NULL; i++) {
-                name = default_options[i * 2];
-                value = default_options[i * 2 + 1];
+            for (i = 0; default_options[i].name != NULL; i++) {
+                name = default_options[i].name;
+                value = default_options[i].default_value;
                 for (j = 0; file_options[j * 2] != NULL; j++) {
                     if (!strcmp(name, file_options[j * 2])) {
                         value = file_options[j * 2 + 1];
@@ -685,8 +686,8 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             break;
 
         case ID_RESET_ACTIVE:
-            for (i = 0; default_options[i * 2] != NULL; i++) {
-                name = default_options[i * 2];
+            for (i = 0; default_options[i].name != NULL; i++) {
+                name = default_options[i].name;
                 value = mg_get_option(ctx, name);
                 if (is_boolean_option(name)) {
                     CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
@@ -698,8 +699,8 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             break;
         }
 
-        for (i = 0; default_options[i * 2] != NULL; i++) {
-            name = default_options[i * 2];
+        for (i = 0; default_options[i].name != NULL; i++) {
+            name = default_options[i].name;
             if ((is_filename_option(name) || is_directory_option(name)) &&
                 LOWORD(wParam) == ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA) {
                 OPENFILENAME of;
@@ -737,8 +738,8 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
         SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_BIG, (LPARAM) hIcon);
         SetWindowText(hDlg, "Civetweb settings");
         SetFocus(GetDlgItem(hDlg, ID_SAVE));
-        for (i = 0; default_options[i * 2] != NULL; i++) {
-            name = default_options[i * 2];
+        for (i = 0; default_options[i].name != NULL; i++) {
+            name = default_options[i].name;
             value = mg_get_option(ctx, name);
             if (is_boolean_option(name)) {
                 CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
@@ -793,11 +794,11 @@ static void add_control(unsigned char **mem, DLGTEMPLATE *dia, WORD type,
 static void show_settings_dialog()
 {
 #define HEIGHT 15
-#define WIDTH 450
-#define LABEL_WIDTH 85
+#define WIDTH 460
+#define LABEL_WIDTH 90
 
     unsigned char mem[4096], *p;
-    const char **option_names, *long_option_name;
+    const struct mg_option *options;
     DWORD style;
     DLGTEMPLATE *dia = (DLGTEMPLATE *) mem;
     WORD i, cl, x, y, width, nelems = 0;
@@ -826,22 +827,21 @@ static void show_settings_dialog()
     (void) memcpy(mem, &dialog_header, sizeof(dialog_header));
     p = mem + sizeof(dialog_header);
 
-    option_names = mg_get_valid_option_names();
-    for (i = 0; option_names[i * 2] != NULL; i++) {
-        long_option_name = option_names[i * 2];
+    options = mg_get_valid_options();
+    for (i = 0; options[i].name != NULL; i++) {
         style = WS_CHILD | WS_VISIBLE | WS_TABSTOP;
         x = 10 + (WIDTH / 2) * (nelems % 2);
         y = (nelems/2 + 1) * HEIGHT + 5;
         width = WIDTH / 2 - 20 - LABEL_WIDTH;
-        if (is_numeric_options(long_option_name)) {
+        if (is_numeric_options(options[i].name)) {
             style |= ES_NUMBER;
             cl = 0x81;
             style |= WS_BORDER | ES_AUTOHSCROLL;
-        } else if (is_boolean_option(long_option_name)) {
+        } else if (is_boolean_option(options[i].name)) {
             cl = 0x80;
             style |= BS_AUTOCHECKBOX;
-        } else if (is_filename_option(long_option_name) ||
-                   is_directory_option(long_option_name)) {
+        } else if (is_filename_option(options[i].name) ||
+                   is_directory_option(options[i].name)) {
             style |= WS_BORDER | ES_AUTOHSCROLL;
             width -= 20;
             cl = 0x81;
@@ -855,7 +855,7 @@ static void show_settings_dialog()
             style |= WS_BORDER | ES_AUTOHSCROLL;
         }
         add_control(&p, dia, 0x82, ID_STATIC, WS_VISIBLE | WS_CHILD,
-                    x, y, LABEL_WIDTH, HEIGHT, long_option_name);
+                    x, y, LABEL_WIDTH, HEIGHT, options[i].name);
         add_control(&p, dia, cl, ID_CONTROLS + i, style,
                     (WORD) (x + LABEL_WIDTH), y, width, 12, "");
         nelems++;
