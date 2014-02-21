@@ -835,7 +835,7 @@ static void show_settings_dialog()
         x = 10 + (WIDTH / 2) * (nelems % 2);
         y = (nelems/2 + 1) * HEIGHT + 5;
         width = WIDTH / 2 - 20 - LABEL_WIDTH;
-        if (is_numeric_options(options[i].name)) {
+        if (options[i].type == CONFIG_TYPE_NUMBER) {
             style |= ES_NUMBER;
             cl = 0x81;
             style |= WS_BORDER | ES_AUTOHSCROLL;
