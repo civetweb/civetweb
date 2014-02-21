@@ -703,7 +703,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 
         for (i = 0; default_options[i].name != NULL; i++) {
             name = default_options[i].name;
-            if ((is_filename_option(name) || (default_options[i].type == CONFIG_TYPE_DIRECTORY)) &&
+            if (((default_options[i].type == CONFIG_TYPE_FILE) || (default_options[i].type == CONFIG_TYPE_DIRECTORY)) &&
                 LOWORD(wParam) == ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA) {
                 OPENFILENAME of;
                 BROWSEINFO bi;
@@ -842,7 +842,7 @@ static void show_settings_dialog()
         } else if (options[i].type == CONFIG_TYPE_BOOLEAN) {
             cl = 0x80;
             style |= BS_AUTOCHECKBOX;
-        } else if (is_filename_option(options[i].name) ||
+        } else if ((options[i].type == CONFIG_TYPE_FILE) ||
                    (options[i].type == CONFIG_TYPE_DIRECTORY)) {
             style |= WS_BORDER | ES_AUTOHSCROLL;
             width -= 20;
