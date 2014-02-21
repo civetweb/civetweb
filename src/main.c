@@ -703,7 +703,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 
         for (i = 0; default_options[i].name != NULL; i++) {
             name = default_options[i].name;
-            if ((is_filename_option(name) || is_directory_option(name)) &&
+            if ((is_filename_option(name) || (default_options[i].type == CONFIG_TYPE_DIRECTORY)) &&
                 LOWORD(wParam) == ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA) {
                 OPENFILENAME of;
                 BROWSEINFO bi;
@@ -722,7 +722,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
                 bi.lpszTitle = "Choose WWW root directory:";
                 bi.ulFlags = BIF_RETURNONLYFSDIRS;
 
-                if (is_directory_option(name)) {
+                if (default_options[i].type == CONFIG_TYPE_DIRECTORY) {
                     SHGetPathFromIDList(SHBrowseForFolder(&bi), path);
                 } else {
                     GetOpenFileName(&of);
@@ -843,7 +843,7 @@ static void show_settings_dialog()
             cl = 0x80;
             style |= BS_AUTOCHECKBOX;
         } else if (is_filename_option(options[i].name) ||
-                   is_directory_option(options[i].name)) {
+                   (options[i].type == CONFIG_TYPE_DIRECTORY)) {
             style |= WS_BORDER | ES_AUTOHSCROLL;
             width -= 20;
             cl = 0x81;
