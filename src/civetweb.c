@@ -563,51 +563,51 @@ enum {
     NUM_OPTIONS
 };
 
-static const char *config_options[] = {
-    "cgi_pattern", "**.cgi$|**.pl$|**.php$",
-    "cgi_environment", NULL,
-    "put_delete_auth_file", NULL,
-    "cgi_interpreter", NULL,
-    "protect_uri", NULL,
-    "authentication_domain", "mydomain.com",
-    "ssi_pattern", "**.shtml$|**.shtm$",
-    "throttle", NULL,
-    "access_log_file", NULL,
-    "enable_directory_listing", "yes",
-    "error_log_file", NULL,
-    "global_auth_file", NULL,
-    "index_files",
+static struct mg_option config_options[] = {
+    {"cgi_pattern",                 CONFIG_TYPE_EXT_PATTERN,   "**.cgi$|**.pl$|**.php$"},
+    {"cgi_environment",             CONFIG_TYPE_STRING,        NULL},
+    {"put_delete_auth_file",        CONFIG_TYPE_FILE,          NULL},
+    {"cgi_interpreter",             CONFIG_TYPE_FILE,          NULL},
+    {"protect_uri",                 12345,                     NULL},
+    {"authentication_domain",       CONFIG_TYPE_STRING,        "mydomain.com"},
+    {"ssi_pattern",                 CONFIG_TYPE_EXT_PATTERN,   "**.shtml$|**.shtm$"},
+    {"throttle",                    12345,                     NULL},
+    {"access_log_file",             CONFIG_TYPE_FILE,          NULL},
+    {"enable_directory_listing",    CONFIG_TYPE_BOOLEAN,       "yes"},
+    {"error_log_file",              CONFIG_TYPE_FILE,          NULL},
+    {"global_auth_file",            CONFIG_TYPE_FILE,          NULL},
+    {"index_files",                 12345,
 #ifdef USE_LUA
-    "index.html,index.htm,index.lp,index.lsp,index.lua,index.cgi,index.shtml,index.php",
+    "index.html,index.htm,index.lp,index.lsp,index.lua,index.cgi,index.shtml,index.php"},
 #else
-    "index.html,index.htm,index.cgi,index.shtml,index.php",
+    "index.html,index.htm,index.cgi,index.shtml,index.php"},
 #endif
-    "enable_keep_alive", "no",
-    "access_control_list", NULL,
-    "extra_mime_types", NULL,
-    "listening_ports", "8080",
-    "document_root",  NULL,
-    "ssl_certificate", NULL,
-    "num_threads", "50",
-    "run_as_user", NULL,
-    "url_rewrite_patterns", NULL,
-    "hide_files_patterns", NULL,
-    "request_timeout_ms", "30000",
+    {"enable_keep_alive",           CONFIG_TYPE_BOOLEAN,       "no"},
+    {"access_control_list",         12345,                     NULL},
+    {"extra_mime_types",            12345,                     NULL},
+    {"listening_ports",             12345,                     "8080"},
+    {"document_root",               CONFIG_TYPE_DIRECTORY,     NULL},
+    {"ssl_certificate",             CONFIG_TYPE_FILE,          NULL},
+    {"num_threads",                 CONFIG_TYPE_NUMBER,        "50"},
+    {"run_as_user",                 12345,                     NULL},
+    {"url_rewrite_patterns",        12345,                     NULL},
+    {"hide_files_patterns",         12345,                     NULL},
+    {"request_timeout_ms",          CONFIG_TYPE_NUMBER,        "30000"},
 
 #if defined(USE_LUA)
-    "lua_preload_file", NULL,
-    "lua_script_pattern", "**.lua$",
-    "lua_server_page_pattern", "**.lp$|**.lsp$",
+    {"lua_preload_file",            CONFIG_TYPE_FILE,          NULL},
+    {"lua_script_pattern",          CONFIG_TYPE_EXT_PATTERN,   "**.lua$"},
+    {"lua_server_page_pattern",     CONFIG_TYPE_EXT_PATTERN,   "**.lp$|**.lsp$"},
 #endif
 #if defined(USE_WEBSOCKET)
-    "websocket_root", NULL,
+    {"websocket_root",              CONFIG_TYPE_DIRECTORY,     NULL},
 #endif
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
-    "lua_websocket_pattern", "**.lua$",
+    {"lua_websocket_pattern",       CONFIG_TYPE_EXT_PATTERN,   "**.lua$"},
 #endif
-    "access_control_allow_origin", "*",
+    {"access_control_allow_origin", CONFIG_TYPE_STRING,        "*"},
 
-    NULL
+    {NULL, CONFIG_TYPE_UNKNOWN, NULL}
 };
 
 struct mg_request_handler_info {
@@ -702,10 +702,20 @@ struct de {
 static int is_websocket_request(const struct mg_connection *conn);
 #endif
 
+/*#if defined(MG_LEGACY_INTERFACE)*/
 const char **mg_get_valid_option_names(void)
 {
-    return config_options;
+    static const char * data[2 * sizeof(config_options) / sizeof(config_options[0])] = {0};
+    int i;
+    
+    for (i=0; config_options[i].name != NULL; i++) {
+        data[i * 2] = config_options[i].name;
+        data[i * 2 + 1] = config_options[i].default_value;
+    }
+
+    return data;
 }
+/*#endif*/
 
 static int is_file_in_memory(struct mg_connection *conn, const char *path,
                              struct file *filep)
@@ -753,8 +763,8 @@ static int get_option_index(const char *name)
 {
     int i;
 
-    for (i = 0; config_options[i * 2] != NULL; i++) {
-        if (strcmp(config_options[i * 2], name) == 0) {
+    for (i = 0; config_options[i].name != NULL; i++) {
+        if (strcmp(config_options[i].name, name) == 0) {
             return i;
         }
     }
@@ -6517,7 +6527,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     /* Check if the config_options and the corresponding enum have compatible sizes. */
     /* Could use static_assert, once it is verified that all compilers support this. */
-    assert(sizeof(config_options)/sizeof(config_options[0]) == NUM_OPTIONS*2+1);
+    assert(sizeof(config_options)/sizeof(config_options[0]) == NUM_OPTIONS+1);
 
     /* Allocate context and initialize reasonable general case defaults.
        TODO(lsm): do proper error handling here. */
@@ -6557,8 +6567,8 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     }
 
     /* Set default value if needed */
-    for (i = 0; config_options[i * 2] != NULL; i++) {
-        default_value = config_options[i * 2 + 1];
+    for (i = 0; config_options[i].name != NULL; i++) {
+        default_value = config_options[i].default_value;
         if (ctx->config[i] == NULL && default_value != NULL) {
             ctx->config[i] = mg_strdup(default_value);
         }

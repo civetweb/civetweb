@@ -238,6 +238,23 @@ CIVETWEB_API const char *mg_get_option(const struct mg_context *ctx, const char 
    Array is NULL terminated. */
 CIVETWEB_API const char **mg_get_valid_option_names(void);
 
+
+struct mg_option {
+    const char * name;
+    int type;
+    const char * default_value;
+};
+
+enum {
+    CONFIG_TYPE_UNKNOWN = 0x0,
+    CONFIG_TYPE_NUMBER = 0x1,
+    CONFIG_TYPE_STRING = 0x2,
+    CONFIG_TYPE_FILE = 0x3,
+    CONFIG_TYPE_DIRECTORY = 0x4,
+    CONFIG_TYPE_BOOLEAN = 0x5,
+    CONFIG_TYPE_EXT_PATTERN = 0x6
+};
+
 /* Get the list of ports that civetweb is listening on.
    size is the size of the ports int array and ssl int array to fill.
    It is the caller's responsibility to make sure ports and ssl each

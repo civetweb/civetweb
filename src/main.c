@@ -217,7 +217,7 @@ static int set_option(char **options, const char *name, const char *value)
         die("%s", "Too many options specified");
     }
 
-    /* TODO: check if this option is defined */
+    /* TODO: check if this option is defined and the correct data type, return 1 (OK) or 0 (false) */
     return 1;
 }
 
