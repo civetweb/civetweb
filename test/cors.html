@@ -66,7 +66,9 @@ function start() {
 <body onload="start()">
  <h1>Cross-origin resource sharing test</h1>
  <p id="from">*** Error: Javascript is not activated. This test will not work. ***</p>
- <button onclick="makeCorsRequest('GET', 'html')">Run CORS GET request</button>
+ <button onclick="makeCorsRequest('GET', 'html')">Run CORS GET request (static resource)</button>
+ <button onclick="makeCorsRequest('GET', 'lua/getit')">Run CORS GET request (dynamic resource)</button>
+ <button onclick="makeCorsRequest('PUT', 'lua/putit')">Run CORS PUT request (dynamic resource)</button>
  <p>More information on CORS: See <a href="http://enable-cors.org/">enable-cors.org</a> and <a href="http://www.html5rocks.com/en/tutorials/cors/">html5rocks.com</a>.</p>
 </body>
 </html>
