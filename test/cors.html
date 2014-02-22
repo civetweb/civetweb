@@ -31,11 +31,11 @@ function getTitle(text) {
 }
 
 // Make the actual CORS request.
-function makeCorsRequest() {
-  var url = "http://localhost/cors.reply.html";
-  var xhr = createCORSRequest('GET', url);
+function makeCorsRequest(method, resource) {
+  var url = "http://localhost/cors.reply." + resource;
+  var xhr = createCORSRequest(method, url);
   if (!xhr) {
-    alert('CORS not supported');
+    alert('ERROR: CORS not supported');
     return;
   }
 
@@ -43,11 +43,11 @@ function makeCorsRequest() {
   xhr.onload = function() {
     var text = xhr.responseText;
     var title = getTitle(text);
-    alert('Response from CORS request to ' + url + ': ' + title);
+    alert('Response from CORS request to ' + url + ':\n' + title);
   };
 
   xhr.onerror = function() {
-    alert('Woops, there was an error making the request.');
+    alert('ERROR: the request failed.');
   };
 
   xhr.send();
@@ -66,7 +66,7 @@ function start() {
 <body onload="start()">
  <h1>Cross-origin resource sharing test</h1>
  <p id="from">*** Error: Javascript is not activated. This test will not work. ***</p>
- <button onclick="makeCorsRequest()">Run CORS GET request</button>
+ <button onclick="makeCorsRequest('GET', 'html')">Run CORS GET request</button>
  <p>More information on CORS: See <a href="http://enable-cors.org/">enable-cors.org</a> and <a href="http://www.html5rocks.com/en/tutorials/cors/">html5rocks.com</a>.</p>
 </body>
 </html>
