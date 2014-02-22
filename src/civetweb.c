@@ -4837,7 +4837,7 @@ static void read_websocket(struct mg_connection *conn)
                 error = 0;
                 while (len < data_len) {
                     int n = pull(NULL, conn, data + len, (int)(data_len - len));
-                    if (n < 0) {
+                    if (n <= 0) {
                         error = 1;
                         break;
                     }
