@@ -199,7 +199,19 @@ static char *sdup(const char *str)
 
 static int set_option(char **options, const char *name, const char *value)
 {
-    int i;
+    int i, found;
+    const struct mg_option *default_options = mg_get_valid_options();
+
+    found = 0;
+    for (i = 0; default_options[i].name != 0; i++) {
+        if (!strcmp(default_options[i].name, name)) {
+            found = 1;
+        }
+    }
+    if (!found) {
+        /* unknown option */
+        return 0;
+    }
 
     for (i = 0; i < MAX_OPTIONS - 3; i++) {
         if (options[i] == NULL) {
@@ -560,42 +572,6 @@ static void *align(void *ptr, DWORD alig)
     ul &= ~alig;
     return ((void *) ul);
 }
-
-/*
-static int is_boolean_option(const char *option_name)
-{
-    return !strcmp(option_name, "enable_directory_listing") ||
-           !strcmp(option_name, "enable_keep_alive");
-}
-
-static int is_filename_option(const char *option_name)
-{
-    return !strcmp(option_name, "cgi_interpreter") ||
-           !strcmp(option_name, "global_auth_file") ||
-           !strcmp(option_name, "put_delete_auth_file") ||
-           !strcmp(option_name, "access_log_file") ||
-           !strcmp(option_name, "error_log_file") ||
-#ifdef USE_LUA
-           !strcmp(option_name, "lua_preload_file") ||
-#endif
-           !strcmp(option_name, "ssl_certificate");
-}
-
-static int is_directory_option(const char *option_name)
-{
-    return !strcmp(option_name, "document_root") ||
-#if defined(USE_WEBSOCKET)
-           !strcmp(option_name, "websocket_root") ||
-#endif
-           0;
-}
-
-static int is_numeric_options(const char *option_name)
-{
-    return !strcmp(option_name, "num_threads") ||
-           !strcmp(option_name, "request_timeout_ms");
-}
-*/
 
 static void save_config(HWND hDlg, FILE *fp)
 {
