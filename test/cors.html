@@ -32,7 +32,7 @@ function getTitle(text) {
 
 // Make the actual CORS request.
 function makeCorsRequest() {
-  var url = "http://localhost/cors.reply.html"; 
+  var url = "http://localhost/cors.reply.html";
   var xhr = createCORSRequest('GET', url);
   if (!xhr) {
     alert('CORS not supported');
@@ -53,14 +53,20 @@ function makeCorsRequest() {
   xhr.send();
 }
 
-function start() {}
-
+function start() {
+  var el = document.getElementById("from");
+  el.innerHTML = "Test CORS from " + document.URL + " to http://localhost/cors.reply.*";
+  if ((document.URL.indexOf("localhost") >= 0) || (document.URL.indexOf("127.0.0.1") >= 0)) {
+    alert("This CORS test is only meaningful, if you open this site with a different url than \'localhost\' (127.0.0.1).\nYou may use a different IP of the same machine.");
+  }
+}
 </script>
 
 </head>
 <body onload="start()">
  <h1>Cross-origin resource sharing test</h1>
- <button onclick="makeCorsRequest()">Run CORS request</button>
+ <p id="from">*** Error: Javascript is not activated. This test will not work. ***</p>
+ <button onclick="makeCorsRequest()">Run CORS GET request</button>
  <p>More information on CORS: See <a href="http://enable-cors.org/">enable-cors.org</a> and <a href="http://www.html5rocks.com/en/tutorials/cors/">html5rocks.com</a>.</p>
 </body>
 </html>
