@@ -4407,6 +4407,16 @@ static void handle_ssi_file_request(struct mg_connection *conn,
     struct file file = STRUCT_FILE_INITIALIZER;
     char date[64];
     time_t curtime = time(NULL);
+    const char *cors1, *cors2, *cors3;
+
+    if (mg_get_header(conn, "Origin")) {
+        /* Cross-origin resource sharing (CORS). */
+        cors1 = "Access-Control-Allow-Origin: ";
+        cors2 = conn->ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
+        cors3 = "\r\n";
+    } else {
+        cors1 = cors2 = cors3 = "";
+    }
 
     if (!mg_fopen(conn, path, "rb", &file)) {
         send_http_error(conn, 500, http_500_error, "fopen(%s): %s", path,
@@ -4416,10 +4426,12 @@ static void handle_ssi_file_request(struct mg_connection *conn,
         gmt_time_string(date, sizeof(date), &curtime);
         fclose_on_exec(&file, conn);
         mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                        "%s%s%s"
                         "Date: %s\r\n"
                         "Content-Type: text/html\r\n"
                         "Connection: %s\r\n\r\n",
-                  date, suggest_connection_header(conn));
+                        cors1, cors2, cors3,
+                        date, suggest_connection_header(conn));
         send_ssi_file(conn, path, &file, 0);
         mg_fclose(&file);
     }
