@@ -199,18 +199,31 @@ static char *sdup(const char *str)
 
 static int set_option(char **options, const char *name, const char *value)
 {
-    int i, found;
+    int i, type;
     const struct mg_option *default_options = mg_get_valid_options();
 
-    found = 0;
+    type = CONFIG_TYPE_UNKNOWN;
     for (i = 0; default_options[i].name != 0; i++) {
         if (!strcmp(default_options[i].name, name)) {
-            found = 1;
+            type = default_options[i].type;
         }
     }
-    if (!found) {
-        /* unknown option */
-        return 0;
+    switch (type) {
+        case CONFIG_TYPE_UNKNOWN:
+            /* unknown option */
+            return 0;
+        case CONFIG_TYPE_NUMBER:
+            if (atol(value)<1) {
+                /* invalid number */
+                return 0;
+            }
+            break;
+        case CONFIG_TYPE_BOOLEAN:
+            if ((0!=strcmp(value,"yes")) && (0!=strcmp(value,"no"))) {
+                /* invalid boolean */
+                return 0;
+            }
+            break;
     }
 
     for (i = 0; i < MAX_OPTIONS - 3; i++) {
