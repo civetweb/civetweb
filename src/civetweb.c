@@ -319,6 +319,27 @@ typedef int SOCKET;
 #endif
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
+void * mg_malloc(size_t size) {
+    return malloc(size);
+}
+
+void * mg_calloc(size_t count, size_t size) {
+    return calloc(count, size);
+}
+
+void * mg_realloc(void * memory, size_t newsize) {
+    return realloc(memory, newsize);
+}
+
+void mg_free(void * memory) {
+    free(memory);
+}
+
+#define malloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
+#define calloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
+#define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
+#define free    DO_NOT_USE_THIS_FUNCTION__USE_mg_free
+
 #ifdef _WIN32
 static CRITICAL_SECTION global_log_file_lock;
 static DWORD pthread_self(void)
@@ -935,7 +956,7 @@ static char * mg_strndup(const char *ptr, size_t len)
 {
     char *p;
 
-    if ((p = (char *) malloc(len + 1)) != NULL) {
+    if ((p = (char *) mg_malloc(len + 1)) != NULL) {
         mg_strlcpy(p, ptr, len + 1);
     }
 
@@ -1288,7 +1309,7 @@ static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
     (void) unused;
     InitializeCriticalSection(&cv->threadIdSec);
     cv->waitingthreadcount = 0;
-    cv->waitingthreadhdls = calloc(MAX_WORKER_THREADS, sizeof(pthread_t));
+    cv->waitingthreadhdls = mg_calloc(MAX_WORKER_THREADS, sizeof(pthread_t));
     return (cv->waitingthreadhdls!=NULL) ? 0 : -1;
 }
 
@@ -1367,7 +1388,7 @@ static int pthread_cond_destroy(pthread_cond_t *cv)
 {
     EnterCriticalSection(&cv->threadIdSec);
     assert(cv->waitingthreadcount==0);
-    free(cv->waitingthreadhdls);
+    mg_free(cv->waitingthreadhdls);
     cv->waitingthreadhdls = 0;
     LeaveCriticalSection(&cv->threadIdSec);
     DeleteCriticalSection(&cv->threadIdSec);
@@ -1539,7 +1560,7 @@ static DIR * opendir(const char *name)
 
     if (name == NULL) {
         SetLastError(ERROR_BAD_ARGUMENTS);
-    } else if ((dir = (DIR *) malloc(sizeof(*dir))) == NULL) {
+    } else if ((dir = (DIR *) mg_malloc(sizeof(*dir))) == NULL) {
         SetLastError(ERROR_NOT_ENOUGH_MEMORY);
     } else {
         to_unicode(name, wpath, ARRAY_SIZE(wpath));
@@ -1550,7 +1571,7 @@ static DIR * opendir(const char *name)
             dir->handle = FindFirstFileW(wpath, &dir->info);
             dir->result.d_name[0] = '\0';
         } else {
-            free(dir);
+            mg_free(dir);
             dir = NULL;
         }
     }
@@ -1566,7 +1587,7 @@ static int closedir(DIR *dir)
         if (dir->handle != INVALID_HANDLE_VALUE)
             result = FindClose(dir->handle) ? 0 : -1;
 
-        free(dir);
+        mg_free(dir);
     } else {
         result = -1;
         SetLastError(ERROR_BAD_ARGUMENTS);
@@ -2126,8 +2147,8 @@ static int alloc_vprintf2(char **buf, const char *fmt, va_list ap)
 
     *buf = NULL;
     while (len == -1) {
-        if (*buf) free(*buf);
-        *buf = (char *)malloc(size *= 4);
+        if (*buf) mg_free(*buf);
+        *buf = (char *)mg_malloc(size *= 4);
         if (!*buf) break;
         va_copy(ap_copy, ap);
         len = vsnprintf(*buf, size, fmt, ap_copy);
@@ -2164,7 +2185,7 @@ static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
         va_end(ap_copy);
     } else if (len > (int) size &&
                (size = len + 1) > 0 &&
-               (*buf = (char *) malloc(size)) == NULL) {
+               (*buf = (char *) mg_malloc(size)) == NULL) {
         len = -1;  /* Allocation failed, mark failure */
     } else {
         va_copy(ap_copy, ap);
@@ -2186,7 +2207,7 @@ int mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
         len = mg_write(conn, buf, (size_t) len);
     }
     if (buf != mem && buf != NULL) {
-        free(buf);
+        mg_free(buf);
     }
 
     return len;
@@ -3335,9 +3356,9 @@ struct dir_scan_data {
 /* Behaves like realloc(), but frees original pointer on failure */
 static void *realloc2(void *ptr, size_t size)
 {
-    void *new_ptr = realloc(ptr, size);
+    void *new_ptr = mg_realloc(ptr, size);
     if (new_ptr == NULL) {
-        free(ptr);
+        mg_free(ptr);
     }
     return new_ptr;
 }
@@ -3411,9 +3432,9 @@ static void handle_directory_request(struct mg_connection *conn,
               sizeof(data.entries[0]), compare_dir_entries);
         for (i = 0; i < data.num_entries; i++) {
             print_dir_entry(&data.entries[i]);
-            free(data.entries[i].file_name);
+            mg_free(data.entries[i].file_name);
         }
-        free(data.entries);
+        mg_free(data.entries);
     }
 
     conn->num_bytes_sent += mg_printf(conn, "%s", "</table></body></html>");
@@ -4053,7 +4074,7 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
        Do not send anything back to client, until we buffer in all
        HTTP headers. */
     data_len = 0;
-    buf = malloc(buflen);
+    buf = mg_malloc(buflen);
     if (buf == NULL) {
         send_http_error(conn, 500, http_500_error,
                         "Not enough memory for buffer (%u bytes)",
@@ -4136,7 +4157,7 @@ done:
         close(fdout[0]);
     }
     if (buf != NULL) {
-        free(buf);
+        mg_free(buf);
     }
 }
 #endif /* !NO_CGI */
@@ -4815,11 +4836,11 @@ static void read_websocket(struct mg_connection *conn)
             /* Allocate space to hold websocket payload */
             data = mem;
             if (data_len > sizeof(mem)) {
-                data = (char *)malloc(data_len);
+                data = (char *)mg_malloc(data_len);
                 if (data == NULL) {
                     /* Allocation failed, exit the loop and then close the
                        connection */
-                    mg_cry(conn, "websocket malloc() failed; closing connection");
+                    mg_cry(conn, "websocket out of memory; closing connection");
                     break;
                 }
             }
@@ -4893,7 +4914,7 @@ static void read_websocket(struct mg_connection *conn)
             }
 
             if (data != mem) {
-                free(data);
+                mg_free(data);
             }
             /* Not breaking the loop, process next websocket frame. */
         } else {
@@ -4972,7 +4993,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
                                        path) : 0;
 
         if (lua_websock || shared_lua_websock) {
-            /* TODO */ shared_lua_websock=1;
+            /* TODO */ shared_lua_websock = 1;
             conn->lua_websocket_state = lua_websocket_new(path, conn, !!shared_lua_websock);
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);
@@ -5252,8 +5273,8 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
                     lastref->next = tmp_rh->next;
                 else
                     ctx->request_handlers = tmp_rh->next;
-                free(tmp_rh->uri);
-                free(tmp_rh);
+                mg_free(tmp_rh->uri);
+                mg_free(tmp_rh);
             }
             return;
         }
@@ -5274,7 +5295,7 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
         return;
     }
 
-    tmp_rh = (struct mg_request_handler_info *)malloc(sizeof(struct mg_request_handler_info));
+    tmp_rh = (struct mg_request_handler_info *)mg_malloc(sizeof(struct mg_request_handler_info));
     if (tmp_rh == NULL) {
         mg_cry(fc(ctx), "%s", "Cannot create new request handler struct, OOM");
         return;
@@ -5470,7 +5491,7 @@ static void close_all_listening_sockets(struct mg_context *ctx)
     for (i = 0; i < ctx->num_listening_sockets; i++) {
         closesocket(ctx->listening_sockets[i].sock);
     }
-    free(ctx->listening_sockets);
+    mg_free(ctx->listening_sockets);
 }
 
 static int is_valid_port(unsigned int port)
@@ -5568,12 +5589,12 @@ static int set_ports_option(struct mg_context *ctx)
                 closesocket(so.sock);
             }
             success = 0;
-        } else if ((ptr = (struct socket *) realloc(ctx->listening_sockets,
+        } else if ((ptr = (struct socket *) mg_realloc(ctx->listening_sockets,
                           (ctx->num_listening_sockets + 1) *
                           sizeof(ctx->listening_sockets[0]))) == NULL) {
             closesocket(so.sock);
             success = 0;
-        } else if ((portPtr = (in_port_t*) realloc(ctx->listening_ports,
+        } else if ((portPtr = (in_port_t*) mg_realloc(ctx->listening_ports,
                           (ctx->num_listening_sockets + 1) *
                           sizeof(ctx->listening_ports[0]))) == NULL) {
             closesocket(so.sock);
@@ -5822,7 +5843,7 @@ static int set_ssl_option(struct mg_context *ctx)
     /* Initialize locking callbacks, needed for thread safety.
        http://www.openssl.org/support/faq.html#PROG1 */
     size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
-    if ((ssl_mutexes = (pthread_mutex_t *) malloc((size_t)size)) == NULL) {
+    if ((ssl_mutexes = (pthread_mutex_t *) mg_malloc((size_t)size)) == NULL) {
         mg_cry(fc(ctx), "%s: cannot allocate mutexes: %s", __func__, ssl_error());
         return 0;
     }
@@ -5953,7 +5974,7 @@ void mg_close_connection(struct mg_connection *conn)
 #endif
     close_connection(conn);
     (void) pthread_mutex_destroy(&conn->mutex);
-    free(conn);
+    mg_free(conn);
 }
 
 struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
@@ -5966,7 +5987,7 @@ struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
     if ((sock = conn2(&fake_ctx, host, port, use_ssl, ebuf,
                       ebuf_len)) == INVALID_SOCKET) {
     } else if ((conn = (struct mg_connection *)
-                       calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
+                       mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
         snprintf(ebuf, ebuf_len, "calloc(): %s", strerror(ERRNO));
         closesocket(sock);
 #ifndef NO_SSL
@@ -5974,7 +5995,7 @@ struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
                                SSL_CTX_new(SSLv23_client_method())) == NULL) {
         snprintf(ebuf, ebuf_len, "SSL_CTX_new error");
         closesocket(sock);
-        free(conn);
+        mg_free(conn);
         conn = NULL;
 #endif /* NO_SSL */
     } else {
@@ -6100,7 +6121,7 @@ static void process_new_connection(struct mg_connection *conn)
             log_access(conn);
         }
         if (ri->remote_user != NULL) {
-            free((void *) ri->remote_user);
+            mg_free((void *) ri->remote_user);
             /* Important! When having connections with and without auth
                would cause double free and then crash */
             ri->remote_user = NULL;
@@ -6167,7 +6188,7 @@ static void *worker_thread_run(void *thread_func_param)
     tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
 #endif
 
-    conn = (struct mg_connection *) calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE);
+    conn = (struct mg_connection *) mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE);
     if (conn == NULL) {
         mg_cry(fc(ctx), "%s", "Cannot create new connection struct, OOM");
     } else {
@@ -6219,7 +6240,7 @@ static void *worker_thread_run(void *thread_func_param)
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     CloseHandle(tls.pthread_cond_helper_mutex);
 #endif
-    free(conn);
+    mg_free(conn);
 
     DEBUG_TRACE(("exiting"));
     return NULL;
@@ -6351,7 +6372,7 @@ static void master_thread_run(void *thread_func_param)
     ctx->start_time = (unsigned long)time(NULL);
 
     /* Allocate memory for the listening sockets, and start the server */
-    pfd = (struct pollfd *) calloc(ctx->num_listening_sockets, sizeof(pfd[0]));
+    pfd = (struct pollfd *) mg_calloc(ctx->num_listening_sockets, sizeof(pfd[0]));
     while (pfd != NULL && ctx->stop_flag == 0) {
         for (i = 0; i < ctx->num_listening_sockets; i++) {
             pfd[i].fd = ctx->listening_sockets[i].sock;
@@ -6371,7 +6392,7 @@ static void master_thread_run(void *thread_func_param)
             }
         }
     }
-    free(pfd);
+    mg_free(pfd);
     DEBUG_TRACE(("stopping workers"));
 
     /* Stop signal received: somebody called mg_stop. Quit. */
@@ -6445,15 +6466,15 @@ static void free_context(struct mg_context *ctx)
 #ifdef WIN32
 #pragma warning(suppress: 6001)
 #endif
-            free(ctx->config[i]);
+            mg_free(ctx->config[i]);
     }
 
     /* Deallocate request handlers */
     while (ctx->request_handlers) {
         tmp_rh = ctx->request_handlers;
         ctx->request_handlers = tmp_rh->next;
-        free(tmp_rh->uri);
-        free(tmp_rh);
+        mg_free(tmp_rh->uri);
+        mg_free(tmp_rh);
     }
 
 #ifndef NO_SSL
@@ -6462,14 +6483,14 @@ static void free_context(struct mg_context *ctx)
         SSL_CTX_free(ctx->ssl_ctx);
     }
     if (ssl_mutexes != NULL) {
-        free(ssl_mutexes);
+        mg_free(ssl_mutexes);
         ssl_mutexes = NULL;
     }
 #endif /* !NO_SSL */
 
     /* Deallocate worker thread ID array */
     if (ctx->workerthreadids != NULL) {
-        free(ctx->workerthreadids);
+        mg_free(ctx->workerthreadids);
     }
 
     /* Deallocate the tls variable */
@@ -6479,10 +6500,10 @@ static void free_context(struct mg_context *ctx)
     }
 
     /* deallocate system name string */
-    free(ctx->systemName);
+    mg_free(ctx->systemName);
 
     /* Deallocate context itself */
-    free(ctx);
+    mg_free(ctx);
 }
 
 void mg_stop(struct mg_context *ctx)
@@ -6552,14 +6573,14 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     /* Allocate context and initialize reasonable general case defaults.
        TODO(lsm): do proper error handling here. */
-    if ((ctx = (struct mg_context *) calloc(1, sizeof(*ctx))) == NULL) {
+    if ((ctx = (struct mg_context *) mg_calloc(1, sizeof(*ctx))) == NULL) {
         return NULL;
     }
 
     if (sTlsInit==0) {
         if (0 != pthread_key_create(&sTlsKey, NULL)) {
             mg_cry(fc(ctx), "Cannot initialize thread local storage");
-            free(ctx);
+            mg_free(ctx);
             return NULL;
         }
         sTlsInit++;
@@ -6585,7 +6606,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         }
         if (ctx->config[i] != NULL) {
             mg_cry(fc(ctx), "warning: %s: duplicate option", name);
-            free(ctx->config[i]);
+            mg_free(ctx->config[i]);
         }
         ctx->config[i] = mg_strdup(value);
         DEBUG_TRACE(("[%s] -> [%s]", name, value));
@@ -6637,7 +6658,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     if (workerthreadcount > 0) {
         ctx->workerthreadcount = workerthreadcount;
-        ctx->workerthreadids = calloc(workerthreadcount, sizeof(pthread_t));
+        ctx->workerthreadids = mg_calloc(workerthreadcount, sizeof(pthread_t));
         if (ctx->workerthreadids == NULL) {
             mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
             free_context(ctx);
