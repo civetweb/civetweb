@@ -320,19 +320,47 @@ typedef int SOCKET;
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 void * mg_malloc(size_t size) {
+    void * data = malloc(size);
+    
+    char mallocStr[256];
+    sprintf(mallocStr, "malloc(%u) -> %p\n", size, data);
+    OutputDebugStringA(mallocStr);
+
     return malloc(size);
 }
 
 void * mg_calloc(size_t count, size_t size) {
-    return calloc(count, size);
-}
 
-void * mg_realloc(void * memory, size_t newsize) {
-    return realloc(memory, newsize);
+    void * data = mg_malloc(size);
+    if (data) memset(data, 0, size);
+
+    return data;
 }
 
 void mg_free(void * memory) {
+
+    char mallocStr[256];
+    sprintf(mallocStr, "free(%p)\n", memory);
+    OutputDebugStringA(mallocStr);
+
     free(memory);
+}
+
+void * mg_realloc(void * memory, size_t newsize) {
+
+    void * data;
+    if (newsize) {
+        data = mg_malloc(newsize);
+        if ((data!=NULL) && (memory!=NULL)) {
+            memcpy(data, memory, newsize);
+            mg_free(memory);
+        }
+    } else {
+        data = 0;
+        mg_free(memory);
+    }
+
+    return data;
 }
 
 #define malloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
