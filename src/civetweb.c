@@ -651,6 +651,11 @@ struct mg_context {
 
     /* linked list of uri handlers */
     struct mg_request_handler_info *request_handlers;
+
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    /* linked list of shared lua websockets */
+    struct mg_shared_lua_websocket *shared_lua_websockets;
+#endif
 };
 
 struct mg_connection {
@@ -4967,6 +4972,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
                                        path) : 0;
 
         if (lua_websock || shared_lua_websock) {
+            /* TODO */ shared_lua_websock=1;
             conn->lua_websocket_state = lua_websocket_new(path, conn, !!shared_lua_websock);
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);
@@ -5951,9 +5957,6 @@ void mg_close_connection(struct mg_connection *conn)
 }
 
 struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
-                                 char *ebuf, size_t ebuf_len);
-
-struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
                                  char *ebuf, size_t ebuf_len)
 {
     static struct mg_context fake_ctx;
@@ -6565,6 +6568,10 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     ctx->callbacks = *callbacks;
     ctx->user_data = user_data;
     ctx->request_handlers = 0;
+
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+    ctx->shared_lua_websockets = 0;
+#endif
 
     while (options && (name = *options++) != NULL) {
         if ((i = get_option_index(name)) == -1) {
