@@ -335,7 +335,7 @@ static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
         blockCount++;
         memory = (void *)(((char*)data)+sizeof(size_t));
     }
-    sprintf(mallocStr, "MEM: %p %5u alloc %7u %4u --- %s:%u\n", memory, size, totalMemUsed, blockCount, file, line);
+    sprintf(mallocStr, "MEM: %p %5u alloc   %7u %4u --- %s:%u\n", memory, size, totalMemUsed, blockCount, file, line);
     OutputDebugStringA(mallocStr);
 
     return memory;
@@ -359,7 +359,7 @@ static void mg_free_ex(void * memory, const char * file, unsigned line) {
         size = *(size_t*)data;
         totalMemUsed -= size;
         blockCount--;
-        sprintf(mallocStr, "MEM: %p %5u free  %7u %4u --- %s:%u\n", memory, size, totalMemUsed, blockCount, file, line);
+        sprintf(mallocStr, "MEM: %p %5u free    %7u %4u --- %s:%u\n", memory, size, totalMemUsed, blockCount, file, line);
         OutputDebugStringA(mallocStr);
 
         free(data);
@@ -368,12 +368,29 @@ static void mg_free_ex(void * memory, const char * file, unsigned line) {
 
 static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, unsigned line) {
 
+    char mallocStr[256];
     void * data;
+    size_t oldsize;
+
     if (newsize) {
-        data = mg_malloc_ex(newsize, file, line);
-        if ((data!=NULL) && (memory!=NULL)) {
-            memcpy(data, memory, newsize);
-            mg_free_ex(memory, file, line);
+        if (memory) {
+            data = (void *)(((char*)memory)-sizeof(size_t));
+            oldsize = *(size_t*)data;
+            data = realloc(data, newsize+sizeof(size_t));
+            if (data) {
+                totalMemUsed -= oldsize;
+                sprintf(mallocStr, "MEM: %p %5u r-free  %7u %4u --- %s:%u\n", memory, oldsize, totalMemUsed, blockCount, file, line);                
+                OutputDebugStringA(mallocStr);
+                totalMemUsed += newsize;
+                sprintf(mallocStr, "MEM: %p %5u r-alloc %7u %4u --- %s:%u\n", memory, newsize, totalMemUsed, blockCount, file, line);
+                OutputDebugStringA(mallocStr);
+                *(size_t*)data = newsize;
+                data = (void *)(((char*)data)+sizeof(size_t));
+            } else {
+                OutputDebugStringA("MEM: realloc failed\n");
+            }
+        } else {
+            data = mg_malloc_ex(newsize, file, line);
         }
     } else {
         data = 0;
