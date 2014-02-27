@@ -319,45 +319,60 @@ typedef int SOCKET;
 #endif
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
-void * mg_malloc(size_t size) {
-    void * data = malloc(size);
-    
+static unsigned long totalMemUsed = 0;
+
+static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
+
+    void * data = malloc(size + sizeof(size_t));
+    void * memory = 0;
     char mallocStr[256];
-    sprintf(mallocStr, "malloc(%u) -> %p\n", size, data);
+
+    if (data) {
+        *(size_t*)data = size;
+        totalMemUsed += size;
+        memory = (void *)(((char*)data)+sizeof(size_t));
+    }
+    sprintf(mallocStr, "malloc(%u) -> %p (%u)  --- %s:%u\n", size, memory, totalMemUsed, file, line);
     OutputDebugStringA(mallocStr);
 
-    return malloc(size);
+    return memory;
 }
 
-void * mg_calloc(size_t count, size_t size) {
+static void * mg_calloc_ex(size_t count, size_t size, const char * file, unsigned line) {
 
-    void * data = mg_malloc(size);
+    void * data = mg_malloc_ex(size*count, file, line);
     if (data) memset(data, 0, size);
 
     return data;
 }
 
-void mg_free(void * memory) {
+static void mg_free_ex(void * memory, const char * file, unsigned line) {
 
     char mallocStr[256];
-    sprintf(mallocStr, "free(%p)\n", memory);
-    OutputDebugStringA(mallocStr);
+    void * data = (void *)(((char*)memory)-sizeof(size_t));
+    size_t size = *(size_t*)data;
 
-    free(memory);
+    if (memory) {
+        totalMemUsed -= size;
+        sprintf(mallocStr, "free(%p) (%u, %u)  --- %s:%u\n", memory, size, totalMemUsed, file, line);
+        OutputDebugStringA(mallocStr);
+
+        free(data);
+    }
 }
 
-void * mg_realloc(void * memory, size_t newsize) {
+static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, unsigned line) {
 
     void * data;
     if (newsize) {
-        data = mg_malloc(newsize);
+        data = mg_malloc_ex(newsize, file, line);
         if ((data!=NULL) && (memory!=NULL)) {
             memcpy(data, memory, newsize);
-            mg_free(memory);
+            mg_free_ex(memory, file, line);
         }
     } else {
         data = 0;
-        mg_free(memory);
+        mg_free_ex(memory, file, line);
     }
 
     return data;
@@ -367,6 +382,11 @@ void * mg_realloc(void * memory, size_t newsize) {
 #define calloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free    DO_NOT_USE_THIS_FUNCTION__USE_mg_free
+
+#define mg_malloc(a)      mg_malloc_ex(a, __FILE__, __LINE__)
+#define mg_calloc(a,b)    mg_calloc_ex(a, b, __FILE__, __LINE__)
+#define mg_realloc(a, b)  mg_realloc_ex(a, b, __FILE__, __LINE__)
+#define mg_free(a)        mg_free_ex(a, __FILE__, __LINE__)
 
 #ifdef _WIN32
 static CRITICAL_SECTION global_log_file_lock;
