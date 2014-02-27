@@ -319,6 +319,7 @@ typedef int SOCKET;
 #endif
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
+#if defined(MEMORY_DEBUGGING) || 0
 static unsigned long totalMemUsed = 0;
 
 static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
@@ -332,7 +333,7 @@ static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
         totalMemUsed += size;
         memory = (void *)(((char*)data)+sizeof(size_t));
     }
-    sprintf(mallocStr, "malloc(%u) -> %p (%u)  --- %s:%u\n", size, memory, totalMemUsed, file, line);
+    sprintf(mallocStr, "MEM: %p %5u alloc %7u  --- %s:%u\n", memory, size, totalMemUsed, file, line);
     OutputDebugStringA(mallocStr);
 
     return memory;
@@ -354,7 +355,7 @@ static void mg_free_ex(void * memory, const char * file, unsigned line) {
 
     if (memory) {
         totalMemUsed -= size;
-        sprintf(mallocStr, "free(%p) (%u, %u)  --- %s:%u\n", memory, size, totalMemUsed, file, line);
+        sprintf(mallocStr, "MEM: %p %5u free  %7u  --- %s:%u\n", memory, size, totalMemUsed, file, line);
         OutputDebugStringA(mallocStr);
 
         free(data);
@@ -378,15 +379,22 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
     return data;
 }
 
-#define malloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
-#define calloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
-#define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
-#define free    DO_NOT_USE_THIS_FUNCTION__USE_mg_free
-
 #define mg_malloc(a)      mg_malloc_ex(a, __FILE__, __LINE__)
 #define mg_calloc(a,b)    mg_calloc_ex(a, b, __FILE__, __LINE__)
 #define mg_realloc(a, b)  mg_realloc_ex(a, b, __FILE__, __LINE__)
 #define mg_free(a)        mg_free_ex(a, __FILE__, __LINE__)
+
+#else
+__inline void * mg_malloc(size_t a)             {return malloc(a);}
+__inline void * mg_calloc(size_t a, size_t b)   {return calloc(a, b);}
+__inline void * mg_realloc(void * a, size_t b)  {return realloc(a, b);}
+__inline void   mg_free(void * a)               {free(a);}
+#endif
+
+#define malloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
+#define calloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
+#define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
+#define free    DO_NOT_USE_THIS_FUNCTION__USE_mg_free
 
 #ifdef _WIN32
 static CRITICAL_SECTION global_log_file_lock;
