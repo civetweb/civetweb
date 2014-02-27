@@ -1031,6 +1031,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn,
 
         if (!ok) {
             if (lws_data->main) lua_close(lws_data->main);
+            mg_free(lws_data->script);
             mg_free(lws_data);
             lws_data=0;
         }
@@ -1134,6 +1135,7 @@ static void lua_websocket_close(struct mg_connection *conn)
         (void)pthread_mutex_unlock(&conn->ctx->mutex);
     } else {
         lua_close(lws_data->main);
+        mg_free(lws_data->script);
         mg_free(lws_data);
     }
     conn->lua_websocket_state = NULL;
