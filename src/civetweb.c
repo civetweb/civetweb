@@ -319,7 +319,7 @@ typedef int SOCKET;
 #endif
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
-#if defined(MEMORY_DEBUGGING) || 0
+#if defined(MEMORY_DEBUGGING)
 static unsigned long totalMemUsed = 0;
 
 static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
@@ -5548,6 +5548,9 @@ static void close_all_listening_sockets(struct mg_context *ctx)
         closesocket(ctx->listening_sockets[i].sock);
     }
     mg_free(ctx->listening_sockets);
+    ctx->listening_sockets=0;
+    mg_free(ctx->listening_ports);
+    ctx->listening_ports=0;
 }
 
 static int is_valid_port(unsigned int port)
