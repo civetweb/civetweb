@@ -320,6 +320,7 @@ typedef int SOCKET;
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 #if defined(MEMORY_DEBUGGING)
+static unsigned long blockCount = 0;
 static unsigned long totalMemUsed = 0;
 
 static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
@@ -331,9 +332,10 @@ static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
     if (data) {
         *(size_t*)data = size;
         totalMemUsed += size;
+        blockCount++;
         memory = (void *)(((char*)data)+sizeof(size_t));
     }
-    sprintf(mallocStr, "MEM: %p %5u alloc %7u  --- %s:%u\n", memory, size, totalMemUsed, file, line);
+    sprintf(mallocStr, "MEM: %p %5u alloc %7u %4u --- %s:%u\n", memory, size, totalMemUsed, blockCount, file, line);
     OutputDebugStringA(mallocStr);
 
     return memory;
@@ -351,11 +353,13 @@ static void mg_free_ex(void * memory, const char * file, unsigned line) {
 
     char mallocStr[256];
     void * data = (void *)(((char*)memory)-sizeof(size_t));
-    size_t size = *(size_t*)data;
+    size_t size;
 
     if (memory) {
+        size = *(size_t*)data;
         totalMemUsed -= size;
-        sprintf(mallocStr, "MEM: %p %5u free  %7u  --- %s:%u\n", memory, size, totalMemUsed, file, line);
+        blockCount--;
+        sprintf(mallocStr, "MEM: %p %5u free  %7u %4u --- %s:%u\n", memory, size, totalMemUsed, blockCount, file, line);
         OutputDebugStringA(mallocStr);
 
         free(data);
