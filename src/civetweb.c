@@ -1,4 +1,5 @@
-/* Copyright (c) 2004-2013 Sergey Lyubka
+/* Copyright (c) 2013-2014 the civetweb developers
+ * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -379,7 +380,7 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
             data = realloc(data, newsize+sizeof(size_t));
             if (data) {
                 totalMemUsed -= oldsize;
-                sprintf(mallocStr, "MEM: %p %5u r-free  %7u %4u --- %s:%u\n", memory, oldsize, totalMemUsed, blockCount, file, line);                
+                sprintf(mallocStr, "MEM: %p %5u r-free  %7u %4u --- %s:%u\n", memory, oldsize, totalMemUsed, blockCount, file, line);
                 OutputDebugStringA(mallocStr);
                 totalMemUsed += newsize;
                 sprintf(mallocStr, "MEM: %p %5u r-alloc %7u %4u --- %s:%u\n", memory, newsize, totalMemUsed, blockCount, file, line);
@@ -5070,7 +5071,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
                                        path) : 0;
 
         if (lua_websock || shared_lua_websock) {
-            /* TODO */ shared_lua_websock = 1;
+            /* TODO */ shared_lua_websock = 0;
             conn->lua_websocket_state = lua_websocket_new(path, conn, !!shared_lua_websock);
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);

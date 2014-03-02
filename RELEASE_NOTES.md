@@ -1,10 +1,12 @@
 Release Notes v1.6 (Under Development)
 ===
-### Objectives: *???*
+### Objectives: *Enhance Lua support, bug fixes and updates"
 
 Changes
 -------
 
+- Fix minor memory leaks (bel)
+- Redirect all memory allocation/deallocation through mg functions which may be overwritten (bel)
 - Support Cross-Origin Resource Sharing (CORS) for static files and scripts (bel)
 - Win32: Replace dll.def file by export macros in civetweb.h (CSTAJ)
 - Base64 encode and decode functions for Lua (bel)
