@@ -320,6 +320,26 @@ typedef int SOCKET;
 #endif
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
+#ifdef DEBUG_TRACE
+#undef DEBUG_TRACE
+#define DEBUG_TRACE(x)
+#else
+#if defined(DEBUG)
+#define DEBUG_TRACE(x) do { \
+  flockfile(stdout); \
+  printf("*** %lu.%p.%s.%d: ", \
+         (unsigned long) time(NULL), (void *) pthread_self(), \
+         __func__, __LINE__); \
+  printf x; \
+  putchar('\n'); \
+  fflush(stdout); \
+  funlockfile(stdout); \
+} while (0)
+#else
+#define DEBUG_TRACE(x)
+#endif /* DEBUG */
+#endif /* DEBUG_TRACE */
+
 #if defined(MEMORY_DEBUGGING)
 static unsigned long blockCount = 0;
 static unsigned long totalMemUsed = 0;
@@ -474,26 +494,6 @@ void *pthread_getspecific(pthread_key_t key)
 
 #define MD5_STATIC static
 #include "md5.inl"
-
-#ifdef DEBUG_TRACE
-#undef DEBUG_TRACE
-#define DEBUG_TRACE(x)
-#else
-#if defined(DEBUG)
-#define DEBUG_TRACE(x) do { \
-  flockfile(stdout); \
-  printf("*** %lu.%p.%s.%d: ", \
-         (unsigned long) time(NULL), (void *) pthread_self(), \
-         __func__, __LINE__); \
-  printf x; \
-  putchar('\n'); \
-  fflush(stdout); \
-  funlockfile(stdout); \
-} while (0)
-#else
-#define DEBUG_TRACE(x)
-#endif /* DEBUG */
-#endif /* DEBUG_TRACE */
 
 /* Darwin prior to 7.0 and Win32 do not have socklen_t */
 #ifdef NO_SOCKLEN_T
