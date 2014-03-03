@@ -361,7 +361,7 @@ static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
 #if defined(_WIN32)
     OutputDebugStringA(mallocStr);
 #else
-    puts(mallocStr);
+    DEBUG_TRACE("%s", mallocStr);
 #endif
 
     return memory;
@@ -389,7 +389,7 @@ static void mg_free_ex(void * memory, const char * file, unsigned line) {
 #if defined(_WIN32)
         OutputDebugStringA(mallocStr);
 #else
-        puts(mallocStr);
+        DEBUG_TRACE("%s", mallocStr);
 #endif
 
         free(data);
@@ -413,14 +413,14 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
 #if defined(_WIN32)
                 OutputDebugStringA(mallocStr);
 #else
-                puts(mallocStr);
+                DEBUG_TRACE("%s", mallocStr);
 #endif
                 totalMemUsed += newsize;
                 sprintf(mallocStr, "MEM: %p %5u r-alloc %7u %4u --- %s:%u\n", memory, newsize, totalMemUsed, blockCount, file, line);
 #if defined(_WIN32)
                 OutputDebugStringA(mallocStr);
 #else
-                puts(mallocStr);
+                DEBUG_TRACE("%s", mallocStr);
 #endif
                 *(size_t*)data = newsize;
                 data = (void *)(((char*)data)+sizeof(size_t));
@@ -428,7 +428,7 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
 #if defined(_WIN32)
                 OutputDebugStringA("MEM: realloc failed\n");
 #else
-                puts("MEM: realloc failed\n");
+                DEBUG_TRACE("MEM: realloc failed\n");
 #endif
             }
         } else {
