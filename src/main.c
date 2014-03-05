@@ -270,7 +270,7 @@ static void process_command_line_arguments(char *argv[], char **options)
 {
     char *p;
     FILE *fp = NULL;
-    size_t i, cmd_line_opts_start = 1, line_no = 0;
+    size_t i, cmd_line_opts_start = 1;
 
     /* Should we use a config file ? */
     if (argv[1] != NULL && argv[1][0] != '-') {
