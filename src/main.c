@@ -39,6 +39,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include "civetweb.h"
 
@@ -76,10 +77,10 @@ extern char *_getcwd(char *buf, size_t size);
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
 static int exit_flag;
-static char server_name[40];        /* Set by init_server_name() */
-static char config_file[PATH_MAX] = ""; /* Set by
-                                           process_command_line_arguments() */
-static struct mg_context *ctx;      /* Set by start_civetweb() */
+static char server_base_name[40];       /* Set by init_server_name() */
+static char *server_name;               /* Set by init_server_name() */
+static char config_file[PATH_MAX] = ""; /* Set by process_command_line_arguments() */
+static struct mg_context *ctx;          /* Set by start_civetweb() */
 
 #if !defined(CONFIG_FILE)
 #define CONFIG_FILE "civetweb.conf"
@@ -360,8 +361,10 @@ static void process_command_line_arguments(char *argv[], char **options)
 
 static void init_server_name(void)
 {
-    snprintf(server_name, sizeof(server_name), "Civetweb v%s",
+    assert((strlen(mg_version())+12)<sizeof(server_base_name));
+    snprintf(server_base_name, sizeof(server_base_name), "Civetweb V%s",
              mg_version());
+    server_name = server_base_name;
 }
 
 static int log_message(const struct mg_connection *conn, const char *message)
@@ -619,6 +622,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
     const char *name, *value;
     const struct mg_option *default_options = mg_get_valid_options();
     char *file_options[MAX_OPTIONS] = {0};
+    char *title;
 
     switch (msg) {
     case WM_CLOSE:
@@ -727,7 +731,13 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
     case WM_INITDIALOG:
         SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_SMALL, (LPARAM) hIcon);
         SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_BIG, (LPARAM) hIcon);
-        SetWindowText(hDlg, "Civetweb settings");
+        title = malloc(strlen(server_name)+16);
+        if (title) {
+            strcpy(title, server_name);
+            strcat(title, " settings");
+            SetWindowText(hDlg, title);
+            free(title);
+        }
         SetFocus(GetDlgItem(hDlg, ID_SAVE));
         for (i = 0; default_options[i].name != NULL; i++) {
             name = default_options[i].name;
@@ -850,6 +860,8 @@ static void show_settings_dialog()
         add_control(&p, dia, cl, ID_CONTROLS + i, style,
                     (WORD) (x + LABEL_WIDTH), y, width, 12, "");
         nelems++;
+
+        assert((int)p - (int)mem < sizeof(mem));
     }
 
     y = (WORD) (((nelems + 1) / 2 + 1) * HEIGHT + 5);
@@ -870,7 +882,9 @@ static void show_settings_dialog()
                 WIDTH - 280, y, 65, 12, "Reload active");
     add_control(&p, dia, 0x82, ID_STATIC,
                 WS_CHILD | WS_VISIBLE | WS_DISABLED,
-                5, y, 100, 12, server_name);
+                5, y, 100, 12, server_base_name);
+
+    assert((int)p - (int)mem < sizeof(mem));
 
     dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
     DialogBoxIndirectParam(NULL, dia, NULL, DlgProc, (LPARAM) NULL);
@@ -879,7 +893,7 @@ static void show_settings_dialog()
 
 static int manage_service(int action)
 {
-    static const char *service_name = "Civetweb";
+    static const char *service_name = "Civetweb"; /* TODO: check using server_name instead of service_name */
     SC_HANDLE hSCM = NULL, hService = NULL;
     SERVICE_DESCRIPTION descr = {server_name};
     char path[PATH_MAX + 20] = "";/* Path to executable plus magic argument */
@@ -924,15 +938,15 @@ static int manage_service(int action)
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
                                    LPARAM lParam)
 {
-    static SERVICE_TABLE_ENTRY service_table[] = {
-        {server_name, (LPSERVICE_MAIN_FUNCTION) ServiceMain},
-        {NULL, NULL}
-    };
+    static SERVICE_TABLE_ENTRY service_table[2] = {0};
     int service_installed;
     char buf[200], *service_argv[] = {__argv[0], NULL};
     POINT pt;
     HMENU hMenu;
     static UINT s_uTaskbarRestart; /* for taskbar creation */
+
+    service_table[0].lpServiceName = server_name;
+    service_table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)ServiceMain;
 
     switch (msg) {
     case WM_CREATE:
