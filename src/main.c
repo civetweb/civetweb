@@ -203,6 +203,11 @@ static int set_option(char **options, const char *name, const char *value)
     int i, type;
     const struct mg_option *default_options = mg_get_valid_options();
 
+    if (0==strcmp(name, "title")) {
+        /* This option is evaluated by main.c, not civetweb.c - just skip it and return OK */
+        return 1;
+    }
+
     type = CONFIG_TYPE_UNKNOWN;
     for (i = 0; default_options[i].name != 0; i++) {
         if (!strcmp(default_options[i].name, name)) {
@@ -359,12 +364,19 @@ static void process_command_line_arguments(char *argv[], char **options)
     }
 }
 
-static void init_server_name(void)
+static void init_server_name(int argc, const char *argv[])
 {
+    int i;
     assert((strlen(mg_version())+12)<sizeof(server_base_name));
     snprintf(server_base_name, sizeof(server_base_name), "Civetweb V%s",
              mg_version());
+
     server_name = server_base_name;
+    for (i=0; i<argc-1; i++) {
+        if (0==strcmp(argv[i], "-title")) {
+            server_name = (char*)(argv[i+1]);
+        }
+    }
 }
 
 static int log_message(const struct mg_connection *conn, const char *message)
@@ -1030,11 +1042,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
     HWND hWnd;
     MSG msg;
 
-    init_server_name();
+    init_server_name(__argc, __argv);
     memset(&cls, 0, sizeof(cls));
     cls.lpfnWndProc = (WNDPROC) WindowProc;
     cls.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    cls.lpszClassName = server_name;
+    cls.lpszClassName = server_base_name;
 
     RegisterClass(&cls);
     hWnd = CreateWindow(cls.lpszClassName, server_name, WS_OVERLAPPEDWINDOW,
@@ -1088,7 +1100,7 @@ withApplication:@"TextEdit"];
 
 int main(int argc, char *argv[])
 {
-    init_server_name();
+    init_server_name(argc, argv);
     start_civetweb(argc, argv);
 
     [NSAutoreleasePool new];
@@ -1148,7 +1160,7 @@ int main(int argc, char *argv[])
 #else
 int main(int argc, char *argv[])
 {
-    init_server_name();
+    init_server_name(argc, argv);
     start_civetweb(argc, argv);
     printf("%s started on port(s) %s with web root [%s]\n",
            server_name, mg_get_option(ctx, "listening_ports"),
