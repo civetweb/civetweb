@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014 the civetweb developers
+/* Copyright (c) 2013-2014 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -683,6 +683,7 @@ enum {
     NUM_OPTIONS
 };
 
+/* TODO: replace 12345 by proper config types */
 static struct mg_option config_options[] = {
     {"cgi_pattern",                 CONFIG_TYPE_EXT_PATTERN,   "**.cgi$|**.pl$|**.php$"},
     {"cgi_environment",             CONFIG_TYPE_STRING,        NULL},
@@ -709,7 +710,7 @@ static struct mg_option config_options[] = {
     {"document_root",               CONFIG_TYPE_DIRECTORY,     NULL},
     {"ssl_certificate",             CONFIG_TYPE_FILE,          NULL},
     {"num_threads",                 CONFIG_TYPE_NUMBER,        "50"},
-    {"run_as_user",                 12345,                     NULL},
+    {"run_as_user",                 CONFIG_TYPE_STRING,        NULL},
     {"url_rewrite_patterns",        12345,                     NULL},
     {"hide_files_patterns",         12345,                     NULL},
     {"request_timeout_ms",          CONFIG_TYPE_NUMBER,        "30000"},

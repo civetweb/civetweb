@@ -1,4 +1,5 @@
-/* Copyright (c) 2004-2013 Sergey Lyubka
+/* Copyright (c) 2013-2014 the Civetweb developers
+ * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -142,9 +143,14 @@ static void show_usage_and_exit(void)
 
     options = mg_get_valid_options();
     for (i = 0; options[i].name != NULL; i++) {
-        fprintf(stderr, "  -%s %s\n",
-                options[i].name[i], options[i].default_value == NULL ? "<empty>" : options[i].default_value);
+        fprintf(stderr, "  -%s %s\n", options[i].name, ((options[i].default_value == NULL) ? "<empty>" : options[i].default_value));
     }
+
+    options = main_config_options;
+    for (i = 0; options[i].name != NULL; i++) {
+        fprintf(stderr, "  -%s %s\n", options[i].name, ((options[i].default_value == NULL) ? "<empty>" : options[i].default_value));
+    }
+
     exit(EXIT_FAILURE);
 }
 
@@ -373,7 +379,10 @@ static void process_command_line_arguments(char *argv[], char **options)
             if (argv[i][0] != '-' || argv[i + 1] == NULL) {
                 show_usage_and_exit();
             }
-            set_option(options, &argv[i][1], argv[i + 1]);
+            if (!set_option(options, &argv[i][1], argv[i + 1])) {
+                printf("command line option is invalid, ignoring it:\n %s %s\n",
+                       argv[i], argv[i + 1]);
+            }
         }
     }
 }
