@@ -986,7 +986,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
                        ID_REMOVE_SERVICE, "Deinstall service");
             AppendMenu(hMenu, MF_SEPARATOR, ID_SEPARATOR, "");
             AppendMenu(hMenu, MF_STRING, ID_CONNECT, "Start browser");
-            AppendMenu(hMenu, MF_STRING, ID_SETTINGS, "Edit Settings");
+            AppendMenu(hMenu, MF_STRING, ID_SETTINGS, "Edit settings");
             AppendMenu(hMenu, MF_SEPARATOR, ID_SEPARATOR, "");
             AppendMenu(hMenu, MF_STRING, ID_QUIT, "Exit");
             GetCursorPos(&pt);
