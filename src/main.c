@@ -91,6 +91,18 @@ static struct mg_context *ctx;          /* Set by start_civetweb() */
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
+enum {
+    OPTION_TITLE,
+    OPTION_ICON,
+    NUM_MAIN_OPTIONS
+};
+
+static struct mg_option main_config_options[] = {
+    {"title",                       CONFIG_TYPE_STRING,        NULL},
+    {"icon",                        CONFIG_TYPE_STRING,        NULL},
+    {NULL, CONFIG_TYPE_UNKNOWN, NULL}
+};
+
 static void WINCDECL signal_handler(int sig_num)
 {
     exit_flag = sig_num;
@@ -203,9 +215,11 @@ static int set_option(char **options, const char *name, const char *value)
     int i, type;
     const struct mg_option *default_options = mg_get_valid_options();
 
-    if (0==strcmp(name, "title")) {
-        /* This option is evaluated by main.c, not civetweb.c - just skip it and return OK */
-        return 1;
+    for (i = 0; main_config_options[i].name != 0; i++) {
+        if (0==strcmp(name, main_config_options[OPTION_TITLE].name)) {
+            /* This option is evaluated by main.c, not civetweb.c - just skip it and return OK */
+            return 1;
+        }
     }
 
     type = CONFIG_TYPE_UNKNOWN;
@@ -367,13 +381,14 @@ static void process_command_line_arguments(char *argv[], char **options)
 static void init_server_name(int argc, const char *argv[])
 {
     int i;
+    assert(sizeof(main_config_options)/sizeof(main_config_options[0]) == NUM_MAIN_OPTIONS+1);
     assert((strlen(mg_version())+12)<sizeof(server_base_name));
     snprintf(server_base_name, sizeof(server_base_name), "Civetweb V%s",
              mg_version());
 
     server_name = server_base_name;
     for (i=0; i<argc-1; i++) {
-        if (0==strcmp(argv[i], "-title")) {
+        if ((argv[i][0]=='-') && (0==strcmp(argv[i]+1, main_config_options[OPTION_TITLE].name))) {
             server_name = (char*)(argv[i+1]);
         }
     }
