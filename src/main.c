@@ -80,6 +80,7 @@ extern char *_getcwd(char *buf, size_t size);
 static int exit_flag;
 static char server_base_name[40];       /* Set by init_server_name() */
 static char *server_name;               /* Set by init_server_name() */
+static char *icon_name;                 /* Set by init_server_name() */
 static char config_file[PATH_MAX] = ""; /* Set by process_command_line_arguments() */
 static struct mg_context *ctx;          /* Set by start_civetweb() */
 
@@ -222,7 +223,7 @@ static int set_option(char **options, const char *name, const char *value)
     const struct mg_option *default_options = mg_get_valid_options();
 
     for (i = 0; main_config_options[i].name != 0; i++) {
-        if (0==strcmp(name, main_config_options[OPTION_TITLE].name)) {
+        if (0==strcmp(name, main_config_options[i].name)) {
             /* This option is evaluated by main.c, not civetweb.c - just skip it and return OK */
             return 1;
         }
@@ -399,6 +400,12 @@ static void init_server_name(int argc, const char *argv[])
     for (i=0; i<argc-1; i++) {
         if ((argv[i][0]=='-') && (0==strcmp(argv[i]+1, main_config_options[OPTION_TITLE].name))) {
             server_name = (char*)(argv[i+1]);
+        }
+    }
+    icon_name = 0;
+    for (i=0; i<argc-1; i++) {
+        if ((argv[i][0]=='-') && (0==strcmp(argv[i]+1, main_config_options[OPTION_ICON].name))) {
+            icon_name = (char*)(argv[i+1]);
         }
     }
 }
@@ -1077,12 +1084,16 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
                         0, 0, 0, 0, NULL, NULL, NULL, NULL);
     ShowWindow(hWnd, SW_HIDE);
 
+    if (icon_name) {
+        hIcon = LoadImage(NULL, icon_name, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
+    } else {
+        hIcon = LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(ID_ICON), IMAGE_ICON, 16, 16, 0);
+    }
+
     TrayIcon.cbSize = sizeof(TrayIcon);
     TrayIcon.uID = ID_ICON;
     TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-    TrayIcon.hIcon = hIcon = LoadImage(GetModuleHandle(NULL),
-                                       MAKEINTRESOURCE(ID_ICON),
-                                       IMAGE_ICON, 16, 16, 0);
+    TrayIcon.hIcon = hIcon;
     TrayIcon.hWnd = hWnd;
     snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", server_name);
     TrayIcon.uCallbackMessage = WM_USER;

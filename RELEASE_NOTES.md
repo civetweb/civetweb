@@ -5,6 +5,7 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Allow to specify title and tray icon for the Windows standalone server (bel)
 - Fix minor memory leaks (bel)
 - Redirect all memory allocation/deallocation through mg functions which may be overwritten (bel)
 - Support Cross-Origin Resource Sharing (CORS) for static files and scripts (bel)
