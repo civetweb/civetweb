@@ -5563,15 +5563,7 @@ static void handle_request(struct mg_connection *conn)
     } else if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
                             (int)strlen(conn->ctx->config[CGI_EXTENSIONS]),
                             path) > 0) {
-        /* TODO: check unsupported methods -> 501
-        if (strcmp(ri->request_method, "POST") &&
-            strcmp(ri->request_method, "HEAD") &&
-            strcmp(ri->request_method, "GET")) {
-            send_http_error(conn, 501, "Not Implemented",
-                            "Method %s is not implemented", ri->request_method);
-        } else {
-            handle_cgi_request(conn, path);
-        } */
+        /* CGI scripts may support all HTTP methods */
         handle_cgi_request(conn, path);
 #endif /* !NO_CGI */
     } else if (match_prefix(conn->ctx->config[SSI_EXTENSIONS],
