@@ -1,4 +1,4 @@
-# 
+#
 # Copyright (c) 2013 No Face Press, LLC
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
@@ -23,6 +23,8 @@ DATAROOTDIR = $(PREFIX)/share
 DOCDIR = $(DATAROOTDIR)/doc/$(CPROG)
 SYSCONFDIR = $(PREFIX)/etc
 HTMLDIR = $(DOCDIR)
+
+UNAME := $(shell uname)
 
 # desired configuration of the document root
 # never assume that the document_root actually
@@ -92,12 +94,19 @@ LIB_OBJECTS = $(filter-out $(MAIN_OBJECTS), $(BUILD_OBJECTS))
 
 LIBS = -lpthread -lm
 
-ifeq ($(TARGET_OS),LINUX) 
+ifeq ($(TARGET_OS),LINUX)
 	LIBS += -ldl
 endif
 
 ifeq ($(TARGET_OS),LINUX)
 	CAN_INSTALL = 1
+endif
+
+ifneq (, $(findstring MINGW32, $(UNAME)))
+   LIBS += -lws2_32 -lcomdlg32
+   SHARED_LIB=dll
+else
+   SHARED_LIB=so
 endif
 
 all: build
@@ -174,7 +183,7 @@ endif
 
 lib: lib$(CPROG).a
 
-slib: lib$(CPROG).so
+slib: lib$(CPROG).$(SHARED_LIB)
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -182,15 +191,19 @@ clean:
 distclean: clean
 	@rm -rf VS2012/Debug VS2012/*/Debug  VS2012/*/*/Debug
 	@rm -rf VS2012/Release VS2012/*/Release  VS2012/*/*/Release
-	rm -f $(CPROG) lib$(CPROG).so lib$(CPROG).a *.dmg *.msi *.exe
+    rm -f $(CPROG) lib$(CPROG).so lib$(CPROG).a *.dmg *.msi *.exe lib$(CPROG).dll lib$(CPROG).dll.a
 
 lib$(CPROG).a: $(LIB_OBJECTS)
-	@rm -f $@ 
+	@rm -f $@
 	ar cq $@ $(LIB_OBJECTS)
 
 lib$(CPROG).so: CFLAGS += -fPIC
 lib$(CPROG).so: $(LIB_OBJECTS)
 	$(LCC) -shared -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS)
+
+lib$(CPROG).dll: CFLAGS += -fPIC
+lib$(CPROG).dll: $(LIB_OBJECTS)
+    $(LCC) -shared -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS) $(LIBS) -Wl,--out-implib,lib$(CPROG).dll.a
 
 $(CPROG): $(BUILD_OBJECTS)
 	$(LCC) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)
