@@ -1765,9 +1765,9 @@ int mg_start_thread(mg_thread_func_t f, void *p)
 {
 #if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
     /* Compile-time option to control stack size, e.g. -DUSE_STACK_SIZE=16384 */
-    return (long)_beginthread((void (__cdecl *)(void *)) f, USE_STACK_SIZE, p) == -1L ? -1 : 0;
+    return ((_beginthread((void (__cdecl *)(void *)) f, USE_STACK_SIZE, p) == ((uintptr_t)(-1L))) ? -1 : 0);
 #else
-    return (long)_beginthread((void (__cdecl *)(void *)) f, 0, p) == -1L ? -1 : 0;
+    return ((_beginthread((void (__cdecl *)(void *)) f, 0, p) == ((uintptr_t)(-1L))) ? -1 : 0);
 #endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
 }
 
@@ -1778,15 +1778,15 @@ static int mg_start_thread_with_id(unsigned (__stdcall *f)(void *), void *p,
 {
     uintptr_t uip;
     HANDLE threadhandle;
-    int result;
+    int result = 0;
 
     uip = _beginthreadex(NULL, 0, (unsigned (__stdcall *)(void *)) f, p, 0,
                          NULL);
     threadhandle = (HANDLE) uip;
-    if (threadidptr != NULL) {
+    if ((uip != (uintptr_t)(-1L)) && (threadidptr != NULL)) {
         *threadidptr = threadhandle;
+        result = 1;
     }
-    result = (threadhandle == NULL) ? -1 : 0;
 
     return result;
 }
