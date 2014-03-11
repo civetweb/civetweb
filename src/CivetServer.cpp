@@ -151,7 +151,10 @@ CivetServer::getParam(struct mg_connection *conn, const char *name,
                       std::string &dst, size_t occurrence)
 {
     const char *query = mg_get_request_info(conn)->query_string;
-    return getParam(query, strlen(query), name, dst, occurrence);
+    if (query) {
+        return getParam(query, strlen(query), name, dst, occurrence);
+    }
+    return false;
 }
 
 bool
