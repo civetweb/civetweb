@@ -5093,7 +5093,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
                                        path) : 0;
 
         if (lua_websock || shared_lua_websock) {
-            /* TODO */ shared_lua_websock = 1;
+            /* TODO */ shared_lua_websock = 0;
             conn->lua_websocket_state = lua_websocket_new(path, conn, !!shared_lua_websock);
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);

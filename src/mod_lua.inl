@@ -818,7 +818,7 @@ static int lua_error_handler(lua_State *L)
 }
 
 static void * lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
-  
+
     (void)ud; (void)osize; /* not used */
 
     if (nsize == 0) {
@@ -967,6 +967,15 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn,
 
     assert(conn->lua_websocket_state == NULL);
 
+    /*
+    lock
+    check if in list
+    yes: inc rec counter
+    no: create state, add to list
+    call add
+    unlock
+    */
+
     if (is_shared) {
         (void)pthread_mutex_lock(&conn->ctx->mutex);
         while (*shared_websock_list) {
@@ -1052,6 +1061,12 @@ static int lua_websocket_data(struct mg_connection *conn, int bits, char *data, 
     assert(lws_data->main != NULL);
     assert(lws_data->thread != NULL);
 
+    /*
+    lock
+    call data
+    unlock
+    */
+
     do {
         retry=0;
 
@@ -1108,6 +1123,15 @@ static void lua_websocket_close(struct mg_connection *conn)
     assert(lws_data != NULL);
     assert(lws_data->main != NULL);
     assert(lws_data->thread != NULL);
+
+    /*
+    lock
+    call remove
+    dec ref counter
+    if ref counter == 0 close state and remove from list
+    unlock
+    */
+
 
     lua_pushboolean(lws_data->thread, 0);
     err = lua_resume(lws_data->thread, NULL, 1);
