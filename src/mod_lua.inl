@@ -923,6 +923,7 @@ struct lua_websock_data {
     char * script;
     unsigned shared;
     struct mg_connection *conn;
+    pthread_mutex_t mutex;
 };
 
 struct mg_shared_lua_websocket {
@@ -968,12 +969,14 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn,
     assert(conn->lua_websocket_state == NULL);
 
     /*
-    lock
+    lock list (mg_context global)
     check if in list
     yes: inc rec counter
     no: create state, add to list
+    lock list element
+    unlock list (mg_context global)
     call add
-    unlock
+    unlock list element
     */
 
     if (is_shared) {
@@ -1062,9 +1065,9 @@ static int lua_websocket_data(struct mg_connection *conn, int bits, char *data, 
     assert(lws_data->thread != NULL);
 
     /*
-    lock
+    lock list element
     call data
-    unlock
+    unlock list element
     */
 
     do {
@@ -1125,11 +1128,13 @@ static void lua_websocket_close(struct mg_connection *conn)
     assert(lws_data->thread != NULL);
 
     /*
-    lock
-    call remove
+    lock list element
+    lock list (mg_context global)
+    call remove    
     dec ref counter
     if ref counter == 0 close state and remove from list
-    unlock
+    unlock list element
+    unlock list (mg_context global)
     */
 
 
