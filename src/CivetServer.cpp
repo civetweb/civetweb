@@ -150,10 +150,18 @@ bool
 CivetServer::getParam(struct mg_connection *conn, const char *name,
                       std::string &dst, size_t occurrence)
 {
-    const char *query = mg_get_request_info(conn)->query_string;
-    if (query) {
-        return getParam(query, strlen(query), name, dst, occurrence);
+    const char *formParams = NULL;
+    mg_request_info * ri = mg_get_request_info(conn);
+
+    if (ri) {
+        // get requests do store html <form> field values in the http query_string
+        formParams = ri->query_string;
     }
+
+    if (formParams) {
+        return getParam(formParams, strlen(formParams), name, dst, occurrence);
+    }
+
     return false;
 }
 
