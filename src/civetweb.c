@@ -448,10 +448,10 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
 #define mg_free(a)        mg_free_ex(a, __FILE__, __LINE__)
 
 #else
-__inline void * mg_malloc(size_t a)             {return malloc(a);}
-__inline void * mg_calloc(size_t a, size_t b)   {return calloc(a, b);}
-__inline void * mg_realloc(void * a, size_t b)  {return realloc(a, b);}
-__inline void   mg_free(void * a)               {free(a);}
+static __inline void * mg_malloc(size_t a)             {return malloc(a);}
+static __inline void * mg_calloc(size_t a, size_t b)   {return calloc(a, b);}
+static __inline void * mg_realloc(void * a, size_t b)  {return realloc(a, b);}
+static __inline void   mg_free(void * a)               {free(a);}
 #endif
 
 #define malloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
