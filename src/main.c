@@ -134,6 +134,15 @@ static void show_usage_and_exit(void)
     const struct mg_option *options;
     int i;
 
+#ifdef WIN32
+    if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+        AllocConsole();
+        AttachConsole(GetCurrentProcessId());
+    }
+    freopen("CON", "a", stdout);
+    freopen("CON", "a", stderr);
+#endif
+
     fprintf(stderr, "Civetweb v%s, built on %s\n",
             mg_version(), __DATE__);
     fprintf(stderr, "Usage:\n");
