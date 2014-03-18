@@ -191,7 +191,7 @@ clean:
 distclean: clean
 	@rm -rf VS2012/Debug VS2012/*/Debug  VS2012/*/*/Debug
 	@rm -rf VS2012/Release VS2012/*/Release  VS2012/*/*/Release
-    rm -f $(CPROG) lib$(CPROG).so lib$(CPROG).a *.dmg *.msi *.exe lib$(CPROG).dll lib$(CPROG).dll.a
+	rm -f $(CPROG) lib$(CPROG).so lib$(CPROG).a *.dmg *.msi *.exe lib$(CPROG).dll lib$(CPROG).dll.a
 
 lib$(CPROG).a: $(LIB_OBJECTS)
 	@rm -f $@
@@ -203,7 +203,7 @@ lib$(CPROG).so: $(LIB_OBJECTS)
 
 lib$(CPROG).dll: CFLAGS += -fPIC
 lib$(CPROG).dll: $(LIB_OBJECTS)
-    $(LCC) -shared -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS) $(LIBS) -Wl,--out-implib,lib$(CPROG).dll.a
+	$(LCC) -shared -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS) $(LIBS) -Wl,--out-implib,lib$(CPROG).dll.a
 
 $(CPROG): $(BUILD_OBJECTS)
 	$(LCC) -o $@ $(CFLAGS) $(LDFLAGS) $(BUILD_OBJECTS) $(LIBS)
