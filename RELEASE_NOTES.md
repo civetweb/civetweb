@@ -1,14 +1,24 @@
 Release Notes v1.6 (Under Development)
 ===
-### Objectives: *???*
+### Objectives: *Enhance Lua support, bug fixes and updates"
 
 Changes
 -------
 
+- Allow to specify title and tray icon for the Windows standalone server (bel)
+- Fix minor memory leaks (bel)
+- Redirect all memory allocation/deallocation through mg functions which may be overwritten (bel)
+- Support Cross-Origin Resource Sharing (CORS) for static files and scripts (bel)
+- Win32: Replace dll.def file by export macros in civetweb.h (CSTAJ)
+- Base64 encode and decode functions for Lua (bel)
+- Support pre-loaded files for the Lua environment (bel)
+- Server should check the nonce for http digest access authentication (bel)
+- Hide read-only flag in file dialogs opened by the Edit Settings dialog for the Windows executable (bel)
+- Add all functions to dll.def, that are in the header (bel)
 - Added Lua extensions: send_file, get_var, get_mime_type, get_cookie, url_decode, url_encode (bel)
 - mg_set_request_handler() mod to use pattern (bel, Patch from Toni Wilk)
 - Solved, tested and documented SSL support for Windows (bel)
-- Fixed: select for Linux needs the nfds parameter set correctly  (bel) 
+- Fixed: select for Linux needs the nfds parameter set correctly (bel)
 - Add methods for returning the ports civetweb is listening on (keithel)
 - Fixes for Lua Server Pages, as described within the google groups thread. (bel)
 - Added support for plain Lua Scripts, and an example script. (bel)
@@ -30,7 +40,7 @@ Changes
 
 - Corrected bad mask flag/opcode passing to websocket callback (William Greathouse)
 - Moved CEVITWEB_VERSION define into civetweb.h
-- Added new simple zip deployment build for Windows. 
+- Added new simple zip deployment build for Windows.
 - Removed windows install package build.
 - Fixes page violation in mod_lua.inl (apkbox)
 - Use C style comments to enable compiling most of civetweb with -ansi. (F-Secure Corporation)
@@ -79,7 +89,7 @@ Changes
 - Conformed source files to UNIX line endings for consistency.
 - Unified the coding style to improve reability.
 
-Release Notes v1.3 
+Release Notes v1.3
 ===
 ### Objectives: *Buildroot Integration*
 
@@ -91,7 +101,7 @@ Changes
 - Updated documentation
 - Updated Buildroot config example
 
-Release Notes v1.2 
+Release Notes v1.2
 ===
 ### Objectives: *Installation Improvements, buildroot, cross compile support*
 The objective of this release is to make installation seamless.
@@ -115,7 +125,7 @@ Known Issues
 
 - The prebuilt Window's version requires [Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
 
-Release Notes v1.1 
+Release Notes v1.1
 ===
 ### Objectives: *Build, Documentation, License Improvements*
 The objective of this release is to establish a maintable code base, ensure MIT license rights and improve usability and documentation.
@@ -144,7 +154,7 @@ Changes
      + Removed yaSSL from the OSX build, not needed.
 - Added new Visual Studio projects for Windows builds.
      + Removed Windows support from Makefiles
-     + Provided additional, examples with Lua, and another with yaSSL. 
+     + Provided additional, examples with Lua, and another with yaSSL.
 - Changed Zombie Reaping policy to not ignore SIGCHLD.
      + The previous method caused trouble in applciations that spawn children.
 
@@ -154,7 +164,7 @@ Known Issues
 - Build support for VS6 and some other has been deprecated.
     + This does not impact embedded programs, just the stand-alone build.
     + The old Makefile was renamed to Makefile.deprecated.
-    + This is partcially do to lack fo testing. 
+    + This is partcially do to lack fo testing.
     + Need to find out what is actually in demand.
 - Build changes may impact current users.
     + As with any change of this type, changes may impact some users.

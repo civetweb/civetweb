@@ -3,6 +3,10 @@
 #include <time.h>
 #include "WebSockCallbacks.h"
 
+#ifdef __APPLE__
+#include <string.h>
+#endif
+
 #ifdef _WIN32
 #include <Windows.h>
 typedef HANDLE pthread_mutex_t;
@@ -73,7 +77,7 @@ void websocket_ready_handler(struct mg_connection *conn) {
             break;
         }
     }
-    printf("\nNew websocket attached: %08x:%u\n", rq->remote_ip, rq->remote_port);
+    printf("\nNew websocket attached: %08lx:%u\n", rq->remote_ip, rq->remote_port);
     pthread_mutex_unlock(&sMutex);
 }
 
@@ -88,7 +92,7 @@ static void websocket_done(tWebSockInfo * wsock) {
                 break;
             }
         }
-        printf("\nClose websocket attached: %08x:%u\n", mg_get_request_info(wsock->conn)->remote_ip, mg_get_request_info(wsock->conn)->remote_port);
+        printf("\nClose websocket attached: %08lx:%u\n", mg_get_request_info(wsock->conn)->remote_ip, mg_get_request_info(wsock->conn)->remote_port);
         free(wsock);
     }
 }
@@ -107,7 +111,7 @@ int websocket_data_handler(struct mg_connection *conn, int flags, char *data, si
         pthread_mutex_unlock(&sMutex);
         return 1;
     }
-    if ((data_len>=5) && (data_len<100) && (flags==129) || (flags==130)) {
+    if (((data_len>=5) && (data_len<100) && (flags==129)) || (flags==130)) {
 
         // init command
         if ((wsock->webSockState==1) && (!memcmp(data,"init ",5))) {
