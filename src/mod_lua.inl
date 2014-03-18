@@ -559,6 +559,70 @@ static int lsp_url_decode(lua_State *L)
     return 1;
 }
 
+/* mg.base64_encode */
+static int lsp_base64_encode(lua_State *L)
+{
+    int num_args = lua_gettop(L);
+    const char *text;
+    size_t text_len;
+    char *dst;
+
+    if (num_args==1) {
+        text = lua_tolstring(L, 1, &text_len);
+        if (text) {
+            dst = mg_malloc(text_len*8/6+4);
+            if (dst) {
+                base64_encode(text, text_len, dst);
+                lua_pushstring(L, dst);
+                mg_free(dst);
+            } else {
+                return luaL_error(L, "out of memory in base64_encode() call");
+            }
+        } else {
+            lua_pushnil(L);
+        }
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid base64_encode() call");
+    }
+    return 1;
+}
+
+/* mg.base64_encode */
+static int lsp_base64_decode(lua_State *L)
+{
+    int num_args = lua_gettop(L);
+    const char *text;
+    size_t text_len, dst_len;
+    int ret;
+    char *dst;
+
+    if (num_args==1) {
+        text = lua_tolstring(L, 1, &text_len);
+        if (text) {
+            dst = mg_malloc(text_len);
+            if (dst) {
+                ret = base64_decode(text, text_len, dst, &dst_len);
+                if (ret != -1) {
+                    mg_free(dst);
+                    return luaL_error(L, "illegal character in lsp_base64_decode() call");
+                } else {
+                    lua_pushlstring(L, dst, dst_len);
+                    mg_free(dst);
+                }
+            } else {
+                return luaL_error(L, "out of memory in lsp_base64_decode() call");
+            }
+        } else {
+            lua_pushnil(L);
+        }
+    } else {
+        /* Syntax error */
+        return luaL_error(L, "invalid lsp_base64_decode() call");
+    }
+    return 1;
+}
+
 /* mg.write for websockets */
 static int lwebsock_write(lua_State *L)
 {
@@ -605,6 +669,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
 {
     const struct mg_request_info *ri = mg_get_request_info(conn);
     char src_addr[IP_ADDR_STR_LEN];
+    const char * preload_file = conn->ctx->config[LUA_PRELOAD_FILE];
     int i;
 
     extern void luaL_openlibs(lua_State *);
@@ -676,6 +741,8 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_function(L, "md5", lsp_md5, conn);
     reg_function(L, "url_encode", lsp_url_encode, conn);
     reg_function(L, "url_decode", lsp_url_decode, conn);
+    reg_function(L, "base64_encode", lsp_base64_encode, conn);
+    reg_function(L, "base64_decode", lsp_base64_decode, conn);
 
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", conn->ctx->config[DOCUMENT_ROOT]);
@@ -683,6 +750,10 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
 #if defined(USE_WEBSOCKET)
     reg_string(L, "websocket_root", conn->ctx->config[WEBSOCKET_ROOT]);
 #endif
+
+    if (conn->ctx->systemName) {
+        reg_string(L, "system", conn->ctx->systemName);
+    }
 
     /* Export request_info */
     lua_pushstring(L, "request_info");
@@ -719,6 +790,11 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     /* Register default mg.onerror function */
     IGNORE_UNUSED_RESULT(luaL_dostring(L, "mg.onerror = function(e) mg.write('\\nLua error:\\n', "
         "debug.traceback(e, 1)) end"));
+
+    /* Preload */
+    if ((preload_file != NULL) && (*preload_file != 0)) {
+        IGNORE_UNUSED_RESULT(luaL_dofile(L, preload_file));
+    }
 }
 
 static int lua_error_handler(lua_State *L)
@@ -741,6 +817,17 @@ static int lua_error_handler(lua_State *L)
     return 0;
 }
 
+static void * lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
+
+    (void)ud; (void)osize; /* not used */
+
+    if (nsize == 0) {
+        mg_free(ptr);
+        return NULL;
+    }
+    return mg_realloc(ptr, nsize);
+}
+
 void mg_exec_lua_script(struct mg_connection *conn, const char *path,
     const void **exports)
 {
@@ -751,7 +838,7 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
     conn->must_close=1;
 
     /* Execute a plain Lua script. */
-    if (path != NULL && (L = luaL_newstate()) != NULL) {
+    if (path != NULL && (L = lua_newstate(lua_allocator, NULL)) != NULL) {
         prepare_lua_environment(conn, L, path, LUA_ENV_TYPE_PLAIN_LUA_PAGE);
         lua_pushcclosure(L, &lua_error_handler, 0);
 
@@ -809,7 +896,7 @@ struct file *filep, struct lua_State *ls)
         fileno(filep->fp), 0)) == MAP_FAILED) {
             lsp_send_err(conn, ls, "mmap(%s, %zu, %d): %s", path, (size_t) filep->size,
                 fileno(filep->fp), strerror(errno));
-    } else if ((L = ls != NULL ? ls : luaL_newstate()) == NULL) {
+    } else if ((L = ls != NULL ? ls : lua_newstate(lua_allocator, NULL)) == NULL) {
         send_http_error(conn, 500, http_500_error, "%s", "luaL_newstate failed");
     } else {
         /* We're not sending HTTP headers here, Lua page must do it. */
@@ -833,7 +920,15 @@ struct file *filep, struct lua_State *ls)
 struct lua_websock_data {
     lua_State *main;
     lua_State *thread;
+    char * script;
+    unsigned shared;
     struct mg_connection *conn;
+    pthread_mutex_t mutex;
+};
+
+struct mg_shared_lua_websocket {
+    struct lua_websock_data *sock;
+    struct mg_shared_lua_websocket *next;
 };
 
 static void websock_cry(struct mg_connection *conn, int err, lua_State * L, const char * ws_operation, const char * lua_operation)
@@ -866,22 +961,62 @@ static void websock_cry(struct mg_connection *conn, int err, lua_State * L, cons
 static void * lua_websocket_new(const char * script, struct mg_connection *conn, int is_shared)
 {
     struct lua_websock_data *lws_data;
+    struct mg_shared_lua_websocket **shared_websock_list = &(conn->ctx->shared_lua_websockets);
     int ok = 0;
+    int found = 0;
     int err, nargs;
 
     assert(conn->lua_websocket_state == NULL);
-    lws_data = (struct lua_websock_data *) malloc(sizeof(*lws_data));
+
+    /*
+    lock list (mg_context global)
+    check if in list
+    yes: inc rec counter
+    no: create state, add to list
+    lock list element
+    unlock list (mg_context global)
+    call add
+    unlock list element
+    */
+
+    if (is_shared) {
+        (void)pthread_mutex_lock(&conn->ctx->mutex);
+        while (*shared_websock_list) {
+            if (!strcmp((*shared_websock_list)->sock->script, script)) {
+                lws_data = (*shared_websock_list)->sock;
+                lws_data->shared++;
+                found = 1;
+            }
+            shared_websock_list = &((*shared_websock_list)->next);
+        }
+        (void)pthread_mutex_unlock(&conn->ctx->mutex);
+    }
+
+    if (!found) {
+        lws_data = (struct lua_websock_data *) mg_malloc(sizeof(*lws_data));
+    }
 
     if (lws_data) {
-        lws_data->conn = conn;
-
-        if (is_shared) {
-            (void)pthread_mutex_lock(&conn->ctx->mutex);
-            // TODO: add_to_websocket_list(lws_data);
-            (void)pthread_mutex_unlock(&conn->ctx->mutex);
+        if (!found) {
+            lws_data->shared = is_shared;
+            lws_data->conn = conn;
+            lws_data->script = mg_strdup(script);
+            lws_data->main = lua_newstate(lua_allocator, NULL);
+            if (is_shared) {
+                (void)pthread_mutex_lock(&conn->ctx->mutex);
+                shared_websock_list = &(conn->ctx->shared_lua_websockets);
+                while (*shared_websock_list) {
+                    shared_websock_list = &((*shared_websock_list)->next);
+                }
+                *shared_websock_list = (struct mg_shared_lua_websocket *)mg_malloc(sizeof(struct mg_shared_lua_websocket));
+                if (*shared_websock_list) {
+                    (*shared_websock_list)->sock = lws_data;
+                    (*shared_websock_list)->next = 0;
+                }
+                (void)pthread_mutex_unlock(&conn->ctx->mutex);
+            }
         }
 
-        lws_data->main = luaL_newstate();
         if (lws_data->main) {
             prepare_lua_environment(conn, lws_data->main, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
             if (conn->ctx->callbacks.init_lua != NULL) {
@@ -908,7 +1043,8 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn,
 
         if (!ok) {
             if (lws_data->main) lua_close(lws_data->main);
-            free(lws_data);
+            mg_free(lws_data->script);
+            mg_free(lws_data);
             lws_data=0;
         }
     } else {
@@ -927,6 +1063,12 @@ static int lua_websocket_data(struct mg_connection *conn, int bits, char *data, 
     assert(lws_data != NULL);
     assert(lws_data->main != NULL);
     assert(lws_data->thread != NULL);
+
+    /*
+    lock list element
+    call data
+    unlock list element
+    */
 
     do {
         retry=0;
@@ -978,17 +1120,53 @@ static int lua_websocket_ready(struct mg_connection *conn)
 static void lua_websocket_close(struct mg_connection *conn)
 {
     struct lua_websock_data *lws_data = (struct lua_websock_data *)(conn->lua_websocket_state);
+    struct mg_shared_lua_websocket **shared_websock_list;
     int err;
 
     assert(lws_data != NULL);
     assert(lws_data->main != NULL);
     assert(lws_data->thread != NULL);
 
+    /*
+    lock list element
+    lock list (mg_context global)
+    call remove    
+    dec ref counter
+    if ref counter == 0 close state and remove from list
+    unlock list element
+    unlock list (mg_context global)
+    */
+
+
     lua_pushboolean(lws_data->thread, 0);
     err = lua_resume(lws_data->thread, NULL, 1);
 
-    lua_close(lws_data->main);
-    free(lws_data);
+    if (lws_data->shared) {
+        (void)pthread_mutex_lock(&conn->ctx->mutex);
+        lws_data->shared--;
+        if (lws_data->shared==0) {
+        /*
+            shared_websock_list = &(conn->ctx->shared_lua_websockets);
+            while (*shared_websock_list) {
+                if ((*shared_websock_list)->sock == lws_data) {
+                    *shared_websock_list = (*shared_websock_list)->next;
+                } else {
+                    shared_websock_list = &((*shared_websock_list)->next);
+                }
+            }
+
+            lua_close(lws_data->main);
+            mg_free(lws_data->script);
+            lws_data->script=0;
+            mg_free(lws_data);
+         */
+        }
+        (void)pthread_mutex_unlock(&conn->ctx->mutex);
+    } else {
+        lua_close(lws_data->main);
+        mg_free(lws_data->script);
+        mg_free(lws_data);
+    }
     conn->lua_websocket_state = NULL;
 }
 #endif

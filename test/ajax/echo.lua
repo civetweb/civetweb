@@ -24,12 +24,12 @@ resp = resp .. "}";
 
 
 
-mg.write("HTTP/1.1 200 OK\n")
-mg.write("Connection: close\n")
-mg.write("Content-Type: text/html\n")
-mg.write("Cache-Control: no-cache\n")
+mg.write("HTTP/1.1 200 OK\r\n")
+mg.write("Connection: close\r\n")
+mg.write("Content-Type: text/html\r\n")
+mg.write("Cache-Control: no-cache\r\n")
 --mg.write("Content-Length: " .. resp:len() .. "\n")
-mg.write("\n")
+mg.write("\r\n")
 
 mg.write(resp)
 

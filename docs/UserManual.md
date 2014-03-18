@@ -316,6 +316,13 @@ Timeout for network read and network write operations, in milliseconds.
 If client intends to keep long-running connection, either increase this value
 or use keep-alive messages.
 
+### lua_preload_file
+This configuration option can be used to specify a Lua script file, which
+is executed before the actual web page script (Lua script, Lua server page
+or Lua websocket). It can be used to modify the Lua environment of all web
+page scripts, e.g., by loading additional libraries required by all scripts
+or to achieve backward compatibility by defining obsolete functions.
+
 ### lua_script_pattern `"**.lua$`
 A pattern for files that are interpreted as Lua scripts by the server.
 In contrast to Lua server pages, Lua scripts use plain Lua syntax.
@@ -402,11 +409,13 @@ mg (table):
     mg.document_root           -- a string that holds the document root directory
     mg.auth_domain             -- a string that holds the HTTP authentication domain
     mg.get_var(str, varname)   -- extract variable from (query) string
-    mg.get_cookie(str, cookie) -- extract cookie from a string    
+    mg.get_cookie(str, cookie) -- extract cookie from a string
     mg.get_mime_type(filename) -- get MIME type of a file
     mg.send_file(filename)     -- send a file, including MIME type
     mg.url_encode(str)         -- URL encode a string
     mg.url_decode(str)         -- URL decode a string
+    mg.base64_encode(str)      -- BASE64 encode a string
+    mg.base64_decode(str)      -- BASE64 decode a string
     mg.md5(str)                -- return the MD5 hash of a string
     mg.keep_alive(bool)        -- allow/forbid to use http keep-alive for this request
     mg.request_info            -- a table with the following request information
@@ -419,7 +428,7 @@ mg (table):
          .query_string         -- query string if present, nil otherwise
          .script_name          -- name of the Lua script
          .https                -- true if accessed by https://, false otherwise
-         .remote_user          -- user name if authenticated, nil otherwise 
+         .remote_user          -- user name if authenticated, nil otherwise
 
 connect (function):
     -- Connect to the remote TCP server. This function is an implementation
