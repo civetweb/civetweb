@@ -2160,7 +2160,7 @@ static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 
 int mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
-    int n, buffered_len, nread;
+    int64_t n, buffered_len, nread;
     const char *body;
 
     /* If Content-Length is not set, read until socket is closed */
@@ -2179,10 +2179,10 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 
         /* Return buffered data */
         body = conn->buf + conn->request_len + conn->consumed_content;
-        buffered_len = (int)(&conn->buf[conn->data_len] - body);
+        buffered_len = (int64_t)(&conn->buf[conn->data_len] - body);
         if (buffered_len > 0) {
             if (len < (size_t) buffered_len) {
-                buffered_len = (int) len;
+                buffered_len = (int64_t) len;
             }
             memcpy(buf, body, (size_t) buffered_len);
             len -= buffered_len;
@@ -2193,7 +2193,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 
         /* We have returned all buffered data. Read new data from the remote
            socket. */
-        n = pull_all(NULL, conn, (char *) buf, (int) len);
+        n = pull_all(NULL, conn, (char *) buf, (int64_t) len);
         nread = n >= 0 ? nread + n : n;
     }
     return nread;
