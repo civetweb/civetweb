@@ -35,7 +35,7 @@ UNAME := $(shell uname)
 DOCUMENT_ROOT = $(HTMLDIR)
 PORTS = 8080
 
-BUILD_DIRS += $(BUILD_DIR) $(BUILD_DIR)/src $(BUILD_DIR)/test
+BUILD_DIRS += $(BUILD_DIR) $(BUILD_DIR)/src
 
 LIB_SOURCES = src/civetweb.c
 LIB_INLINE  = src/mod_lua.inl src/md5.inl
@@ -51,6 +51,7 @@ OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o)
 # to this variable so we can run lua-specific unit tests.
 ifeq ($(MAKECMDGOALS), unit_test)
 OBJECTS =
+BUILD_DIRS += $(BUILD_DIR)/test
 endif
 
 # only set main compile options if none were chosen
