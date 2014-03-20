@@ -21,16 +21,17 @@
 // Unit test for the civetweb web server. Tests embedded API.
 
 #define USE_WEBSOCKET
-#define USE_LUA
 
 #ifndef _WIN32
 #define __cdecl
 #define USE_IPV6
 #endif
 
-// USE_* definitions must be made before #include "src/civetweb.c" !
+// USE_* definitions must be made before #include "civetweb.c" !
+// We include the source file so that our object file will have visibility to
+// all the static functions.
 
-#include "src/civetweb.c"
+#include "civetweb.c"
 
 static int s_total_tests = 0;
 static int s_failed_tests = 0;
@@ -193,7 +194,7 @@ static char *read_file(const char *path, int *size) {
   char *data = NULL;
   if ((fp = fopen(path, "rb")) != NULL && !fstat(fileno(fp), &st)) {
     *size = (int) st.st_size;
-    ASSERT((data = malloc(*size)) != NULL);
+    ASSERT((data = mg_malloc(*size)) != NULL);
     ASSERT(fread(data, 1, *size, fp) == (size_t) *size);
     fclose(fp);
   }
@@ -227,7 +228,7 @@ static void upload_cb(struct mg_connection *conn, const char *path) {
     ASSERT((p2 = read_file(path, &len2)) != NULL);
     ASSERT(len1 == len2);
     ASSERT(memcmp(p1, p2, len1) == 0);
-    free(p1), free(p2);
+    mg_free(p1), mg_free(p2);
     remove(upload_filename);
   } else if (atoi(ri->query_string) == 2) {
     if (!strcmp(path, "./upload_test.txt")) {
@@ -235,14 +236,14 @@ static void upload_cb(struct mg_connection *conn, const char *path) {
       ASSERT((p2 = read_file(path, &len2)) != NULL);
       ASSERT(len1 == len2);
       ASSERT(memcmp(p1, p2, len1) == 0);
-      free(p1), free(p2);
+      mg_free(p1), mg_free(p2);
       remove(upload_filename);
     } else if (!strcmp(path, "./upload_test2.txt")) {
       ASSERT((p1 = read_file("README.md", &len1)) != NULL);
       ASSERT((p2 = read_file(path, &len2)) != NULL);
       ASSERT(len1 == len2);
       ASSERT(memcmp(p1, p2, len1) == 0);
-      free(p1), free(p2);
+      mg_free(p1), mg_free(p2);
       remove(upload_filename);
     } else {
       ASSERT(0);
@@ -280,8 +281,24 @@ static int log_message_cb(const struct mg_connection *conn, const char *msg) {
   return 0;
 }
 
+
+    int  (*begin_request)(struct mg_connection *);
+    void (*end_request)(const struct mg_connection *, int reply_status_code);
+    int  (*log_message)(const struct mg_connection *, const char *message);
+    int  (*init_ssl)(void *ssl_context, void *user_data);
+    int (*websocket_connect)(const struct mg_connection *);
+    void (*websocket_ready)(struct mg_connection *);
+    int  (*websocket_data)(struct mg_connection *, int bits,
+                           char *data, size_t data_len);
+    void (*connection_close)(struct mg_connection *);
+    const char * (*open_file)(const struct mg_connection *,
+                              const char *path, size_t *data_len);
+    void (*init_lua)(struct mg_connection *, void *lua_context);
+    void (*upload)(struct mg_connection *, const char *file_name);
+    int  (*http_error)(struct mg_connection *, int status);
+
 static const struct mg_callbacks CALLBACKS = {
-  &begin_request_handler_cb, NULL, &log_message_cb, NULL, NULL, NULL, NULL,
+  &begin_request_handler_cb, NULL, &log_message_cb, NULL, NULL, NULL, NULL, NULL,
   &open_file_cb, NULL, &upload_cb, NULL
 };
 
@@ -299,7 +316,7 @@ static char *read_conn(struct mg_connection *conn, int *size) {
   *size = 0;
   while ((len = mg_read(conn, buf, sizeof(buf))) > 0) {
     *size += len;
-    ASSERT((data = realloc(data, *size)) != NULL);
+    ASSERT((data = mg_realloc(data, *size)) != NULL);
     memcpy(data + *size - len, buf, len);
   }
   return data;
@@ -336,7 +353,7 @@ static void test_mg_download(void) {
   ASSERT((p2 = read_file("src/civetweb.c", &len2)) != NULL);
   ASSERT(len1 == len2);
   ASSERT(memcmp(p1, p2, len1) == 0);
-  free(p1), free(p2);
+  mg_free(p1), mg_free(p2);
   mg_close_connection(conn);
 
 
@@ -346,7 +363,7 @@ static void test_mg_download(void) {
   ASSERT((p1 = read_conn(conn, &len1)) != NULL);
   ASSERT(len1 == (int) strlen(inmemory_file_data));
   ASSERT(memcmp(p1, inmemory_file_data, len1) == 0);
-  free(p1);
+  mg_free(p1);
   mg_close_connection(conn);
 
   // Fetch in-memory data with no Content-Length, should succeed.
@@ -355,7 +372,7 @@ static void test_mg_download(void) {
   ASSERT((p1 = read_conn(conn, &len1)) != NULL);
   ASSERT(len1 == (int) strlen(fetch_data));
   ASSERT(memcmp(p1, fetch_data, len1) == 0);
-  free(p1);
+  mg_free(p1);
   mg_close_connection(conn);
 
   // Test SSL redirect, IP address
@@ -415,7 +432,7 @@ static void test_mg_upload(void) {
                              "boundary=%s\r\n\r\n"
                              "%.*s", post_data_len, boundary,
                              post_data_len, post_data)) != NULL);
-  free(file_data), free(post_data);
+  mg_free(file_data), mg_free(post_data);
   ASSERT(mg_read(conn, buf, sizeof(buf)) == (int) strlen(upload_ok_message));
   ASSERT(memcmp(buf, upload_ok_message, strlen(upload_ok_message)) == 0);
   mg_close_connection(conn);
@@ -455,7 +472,7 @@ static void test_mg_upload(void) {
                              "boundary=%s\r\n\r\n"
                              "%.*s", post_data_len, boundary,
                              post_data_len, post_data)) != NULL);
-  free(file_data), free(file2_data), free(post_data);
+  mg_free(file_data), mg_free(file2_data), mg_free(post_data);
   ASSERT(mg_read(conn, buf, sizeof(buf)) == (int) strlen(upload_ok_message));
   ASSERT(memcmp(buf, upload_ok_message, strlen(upload_ok_message)) == 0);
   mg_close_connection(conn);
@@ -529,7 +546,7 @@ static void test_next_option(void) {
   }
 }
 
-#ifdef USE_LUA
+#if defined(USE_LUA)
 static void check_lua_expr(lua_State *L, const char *expr, const char *value) {
   const char *v, *var_name = "myVar";
   char buf[100];
@@ -558,8 +575,8 @@ static void test_lua(void) {
                                         &conn.request_info);
   conn.content_len = conn.data_len - conn.request_len;
 
-  prepare_lua_environment(&conn, L);
-  ASSERT(lua_gettop(L) == 0);
+  prepare_lua_environment(&conn, L, "unit_test", LUA_ENV_TYPE_PLAIN_LUA_PAGE);
+  ASSERT(lua_gettop(L) == 4);
 
   check_lua_expr(L, "'hi'", "hi");
   check_lua_expr(L, "mg.request_info.request_method", "POST");
@@ -610,7 +627,7 @@ static void test_alloc_vprintf(void) {
   // Pass small buffer, make sure alloc_printf allocates
   ASSERT(alloc_printf(&p, 1, "%s", "hello") == 5);
   ASSERT(p != buf);
-  free(p);
+  mg_free(p);
 }
 
 static void test_request_replies(void) {
@@ -729,14 +746,14 @@ static void test_strtoll(void) {
 
 static void test_parse_port_string(void) {
   static const char *valid[] = {
-    "1", "1s", "1r", "1.2.3.4:1", "1.2.3.4:1s", "1.2.3.4:1r",
+    "0", "1", "1s", "1r", "1.2.3.4:1", "1.2.3.4:1s", "1.2.3.4:1r",
 #if defined(USE_IPV6)
     "[::1]:123", "[3ffe:2a00:100:7031::1]:900",
 #endif
     NULL
   };
   static const char *invalid[] = {
-    "0", "99999", "1k", "1.2.3", "1.2.3.4:", "1.2.3.4:2p",
+    "99999", "1k", "1.2.3", "1.2.3.4:", "1.2.3.4:2p",
     NULL
   };
   struct socket so;
@@ -777,7 +794,7 @@ int __cdecl main(void) {
   test_url_decode();
   test_mg_get_cookie();
   test_strtoll();
-#ifdef USE_LUA
+#if defined(USE_LUA)
   test_lua();
 #endif
 
