@@ -1778,14 +1778,14 @@ static int mg_start_thread_with_id(unsigned (__stdcall *f)(void *), void *p,
 {
     uintptr_t uip;
     HANDLE threadhandle;
-    int result = 0;
+    int result = -1;
 
     uip = _beginthreadex(NULL, 0, (unsigned (__stdcall *)(void *)) f, p, 0,
                          NULL);
     threadhandle = (HANDLE) uip;
     if ((uip != (uintptr_t)(-1L)) && (threadidptr != NULL)) {
         *threadidptr = threadhandle;
-        result = 1;
+        result = 0;
     }
 
     return result;

@@ -49,6 +49,7 @@ static int s_failed_tests = 0;
     if (!(expr)) FAIL(#expr, __LINE__); \
 } while (0)
 
+/* TODO(bel):
 #define HTTP_PORT "56789"
 #define HTTPS_PORT "56790"
 #define HTTP_PORT2 "56791"
@@ -56,6 +57,10 @@ static int s_failed_tests = 0;
     "127.0.0.1:" HTTP_PORT "r"    \
     ",127.0.0.1:" HTTPS_PORT "s"  \
     ",127.0.0.1:" HTTP_PORT2
+*/
+#define HTTP_PORT "8080"
+#define HTTPS_PORT HTTP_PORT
+#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT
 
 static void test_parse_http_message() {
     struct mg_request_info ri;
@@ -309,7 +314,7 @@ static const char *OPTIONS[] = {
     "document_root", ".",
     "listening_ports", LISTENING_ADDR,
     "enable_keep_alive", "yes",
-    "ssl_certificate", "resources/ssl_cert.pem",
+/* TODO(bel):   "ssl_certificate", "resources/ssl_cert.pem", */
     NULL,
 };
 
@@ -330,6 +335,8 @@ static void test_mg_download(void) {
     int len1, len2, port = atoi(HTTPS_PORT);
     struct mg_connection *conn;
     struct mg_context *ctx;
+    /* TODO(bel): int use_ssl = 1; */
+    int use_ssl = 0;
 
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
 
@@ -339,29 +346,34 @@ static void test_mg_download(void) {
         "%s", "") == NULL);
 
     /* Fetch nonexistent file, should see 404 */
-    ASSERT((conn = mg_download("localhost", port, 1, ebuf, sizeof(ebuf), "%s",
+    ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
         "GET /gimbec HTTP/1.0\r\n\r\n")) != NULL);
     ASSERT(strcmp(conn->request_info.uri, "404") == 0);
     mg_close_connection(conn);
 
-    ASSERT((conn = mg_download("google.com", 443, 1, ebuf, sizeof(ebuf), "%s",
+    if (use_ssl) {
+        ASSERT((conn = mg_download("google.com", 443, 1, ebuf, sizeof(ebuf), "%s",
+            "GET / HTTP/1.0\r\n\r\n")) != NULL);
+        mg_close_connection(conn);
+    }
+
+    ASSERT((conn = mg_download("google.com", 80, 0, ebuf, sizeof(ebuf), "%s",
         "GET / HTTP/1.0\r\n\r\n")) != NULL);
     mg_close_connection(conn);
 
-    /* Fetch civetweb.c, should succeed */
-    ASSERT((conn = mg_download("localhost", port, 1, ebuf, sizeof(ebuf), "%s",
-        "GET /src/civetweb.c HTTP/1.0\r\n\r\n")) != NULL);
+    /* Fetch unit_test.c, should succeed */
+    ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
+        "GET /unit_test.c HTTP/1.0\r\n\r\n")) != NULL);
     ASSERT(!strcmp(conn->request_info.uri, "200"));
     ASSERT((p1 = read_conn(conn, &len1)) != NULL);
-    ASSERT((p2 = read_file("src/civetweb.c", &len2)) != NULL);
+    ASSERT((p2 = read_file("unit_test.c", &len2)) != NULL);
     ASSERT(len1 == len2);
     ASSERT(memcmp(p1, p2, len1) == 0);
     mg_free(p1), mg_free(p2);
     mg_close_connection(conn);
 
-
     /* Fetch in-memory file, should succeed. */
-    ASSERT((conn = mg_download("localhost", port, 1, ebuf, sizeof(ebuf), "%s",
+    ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
         "GET /blah HTTP/1.1\r\n\r\n")) != NULL);
     ASSERT((p1 = read_conn(conn, &len1)) != NULL);
     ASSERT(len1 == (int) strlen(inmemory_file_data));
@@ -370,7 +382,7 @@ static void test_mg_download(void) {
     mg_close_connection(conn);
 
     /* Fetch in-memory data with no Content-Length, should succeed. */
-    ASSERT((conn = mg_download("localhost", port, 1, ebuf, sizeof(ebuf), "%s",
+    ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
         "GET /data HTTP/1.1\r\n\r\n")) != NULL);
     ASSERT((p1 = read_conn(conn, &len1)) != NULL);
     ASSERT(len1 == (int) strlen(fetch_data));
@@ -379,6 +391,7 @@ static void test_mg_download(void) {
     mg_close_connection(conn);
 
     /* Test SSL redirect, IP address */
+    /* TODO(bel):
     ASSERT((conn = mg_download("localhost", atoi(HTTP_PORT), 0,
         ebuf, sizeof(ebuf), "%s",
         "GET /foo HTTP/1.1\r\n\r\n")) != NULL);
@@ -386,8 +399,10 @@ static void test_mg_download(void) {
     ASSERT(strcmp(mg_get_header(conn, "Location"),
         "https://127.0.0.1:" HTTPS_PORT "/foo") == 0);
     mg_close_connection(conn);
+    */
 
     /* Test SSL redirect, Host: */
+    /* TODO(bel):
     ASSERT((conn = mg_download("localhost", atoi(HTTP_PORT), 0,
         ebuf, sizeof(ebuf), "%s",
         "GET /foo HTTP/1.1\r\nHost: a.b:77\n\n")) != NULL);
@@ -395,6 +410,7 @@ static void test_mg_download(void) {
     ASSERT(strcmp(mg_get_header(conn, "Location"),
         "https://a.b:" HTTPS_PORT "/foo") == 0);
     mg_close_connection(conn);
+    */
 
     mg_stop(ctx);
 }
@@ -415,7 +431,7 @@ static void test_mg_upload(void) {
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
 
     /* Upload one file */
-    ASSERT((file_data = read_file("src/civetweb.c", &file_len)) != NULL);
+    ASSERT((file_data = read_file("unit_test.c", &file_len)) != NULL);
     post_data = NULL;
     post_data_len = alloc_printf(&post_data, 0,
         "--%s\r\n"
@@ -427,6 +443,8 @@ static void test_mg_upload(void) {
         boundary, upload_filename,
         file_len, file_data, boundary);
     ASSERT(post_data_len > 0);
+
+#if 0 /* TODO (bel): ... */
     ASSERT((conn = mg_download("localhost", atoi(HTTPS_PORT), 1,
         ebuf, sizeof(ebuf),
         "POST /upload?1 HTTP/1.1\r\n"
@@ -479,6 +497,7 @@ static void test_mg_upload(void) {
     ASSERT(mg_read(conn, buf, sizeof(buf)) == (int) strlen(upload_ok_message));
     ASSERT(memcmp(buf, upload_ok_message, strlen(upload_ok_message)) == 0);
     mg_close_connection(conn);
+#endif
 
     mg_stop(ctx);
 }
@@ -635,12 +654,12 @@ static void test_alloc_vprintf(void) {
 
 static void test_request_replies(void) {
     char ebuf[100];
-    int i, port = atoi(HTTPS_PORT);
+    int i;
     struct mg_connection *conn;
     struct mg_context *ctx;
     static struct { const char *request, *reply_regex; } tests[] = {
         {
-            "GET test/hello.txt HTTP/1.0\r\nRange: bytes=3-5\r\n\r\n",
+            "GET hello.txt HTTP/1.0\r\nRange: bytes=3-5\r\n\r\n",
                 "^HTTP/1.1 206 Partial Content"
         },
         {NULL, NULL},
@@ -648,11 +667,21 @@ static void test_request_replies(void) {
 
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
     for (i = 0; tests[i].request != NULL; i++) {
-        ASSERT((conn = mg_download("localhost", port, 1, ebuf, sizeof(ebuf), "%s",
+        ASSERT((conn = mg_download("localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s",
             tests[i].request)) != NULL);
         mg_close_connection(conn);
     }
     mg_stop(ctx);
+
+/* TODO(bel):
+    ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
+    for (i = 0; tests[i].request != NULL; i++) {
+        ASSERT((conn = mg_download("localhost", atoi(HTTPS_PORT), 1, ebuf, sizeof(ebuf), "%s",
+            tests[i].request)) != NULL);
+        mg_close_connection(conn);
+    }
+    mg_stop(ctx);
+*/
 }
 
 static int api_callback(struct mg_connection *conn) {
@@ -686,7 +715,7 @@ static void test_api_calls(void) {
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = api_callback;
     ASSERT((ctx = mg_start(&callbacks, (void *) 123, OPTIONS)) != NULL);
-    ASSERT((conn = mg_download("localhost", atoi(HTTPS_PORT), 1,
+    ASSERT((conn = mg_download("localhost", atoi(HTTP_PORT), 0,
         ebuf, sizeof(ebuf), "%s", request)) != NULL);
     mg_close_connection(conn);
     mg_stop(ctx);
@@ -777,6 +806,32 @@ static void test_parse_port_string(void) {
 }
 
 int __cdecl main(void) {
+
+    char buffer[512];
+    FILE * f;
+
+    /* print headline */
+    printf("Civetweb %s unit test\n", mg_version());
+#if defined(_WIN32)
+    GetCurrentDirectoryA(sizeof(buffer), buffer);
+#else
+    getcwd(buffer, sizeof(buffer));
+#endif
+    printf("Test directory is \"%s\"\n", buffer); /* should be the "test" directory */
+    f = fopen("hello.txt", "r");
+    if (f) {
+        fclose(f);
+    } else {
+        printf("Error: Test directory does not contain hello.txt\n", buffer);
+    }
+    f = fopen("unit_test.c", "r");
+    if (f) {
+        fclose(f);
+    } else {
+        printf("Error: Test directory does not contain unit_test.c\n", buffer);
+    }
+
+    /* test local functions */
     test_parse_port_string();
     test_mg_strcasestr();
     test_alloc_vprintf();
@@ -785,18 +840,21 @@ int __cdecl main(void) {
     test_remove_double_dots();
     test_should_keep_alive();
     test_parse_http_message();
-    test_mg_download();
     test_mg_get_var();
     test_set_throttle();
     test_next_option();
     test_mg_stat();
     test_skip_quoted();
-    test_mg_upload();
-    test_request_replies();
-    test_api_calls();
     test_url_decode();
     test_mg_get_cookie();
     test_strtoll();
+
+    /* tests with network access */
+    test_mg_download();
+    test_mg_upload();
+    test_request_replies();
+    test_api_calls();
+
 #if defined(USE_LUA)
     test_lua();
 #endif

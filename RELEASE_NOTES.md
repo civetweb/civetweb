@@ -5,7 +5,7 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
-- Re-Add unit tests (jmc-)
+- Re-Add unit tests for Linux and Windows (jmc-, bel)
 - Allow to specify title and tray icon for the Windows standalone server (bel)
 - Fix minor memory leaks (bel)
 - Redirect all memory allocation/deallocation through mg functions which may be overwritten (bel)
