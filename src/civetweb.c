@@ -1290,7 +1290,7 @@ static int should_keep_alive(const struct mg_connection *conn)
         conn->status_code == 401 ||
         mg_strcasecmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes") != 0 ||
         (header != NULL && mg_strcasecmp(header, "keep-alive") != 0) ||
-        (header == NULL && http_version && strcmp(http_version, "1.1"))) {
+        (header == NULL && http_version && 0!=strcmp(http_version, "1.1"))) {
         return 0;
     }
     return 1;
@@ -1385,11 +1385,11 @@ static int clock_gettime(clockid_t clk_id, struct timespec *tp)
             tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
             ok = TRUE;
         } else if (clk_id == CLOCK_MONOTONIC) {
-            if (perfcnt_per_sec==0) {
+            if (perfcnt_per_sec == 0.0) {
                 QueryPerformanceFrequency((LARGE_INTEGER *) &li);
                 perfcnt_per_sec = 1.0 / li.QuadPart;
             }
-            if (perfcnt_per_sec!=0) {
+            if (perfcnt_per_sec != 0.0) {
                 QueryPerformanceCounter((LARGE_INTEGER *) &li);
                 d = li.QuadPart * perfcnt_per_sec;
                 tp->tv_sec = (time_t)d;
@@ -2160,7 +2160,7 @@ static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 
 int mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
-    int n, buffered_len, nread;
+    int64_t n, buffered_len, nread;
     const char *body;
 
     /* If Content-Length is not set, read until socket is closed */
@@ -2179,10 +2179,10 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 
         /* Return buffered data */
         body = conn->buf + conn->request_len + conn->consumed_content;
-        buffered_len = (int)(&conn->buf[conn->data_len] - body);
+        buffered_len = (int64_t)(&conn->buf[conn->data_len] - body);
         if (buffered_len > 0) {
             if (len < (size_t) buffered_len) {
-                buffered_len = (int) len;
+                buffered_len = (int64_t) len;
             }
             memcpy(buf, body, (size_t) buffered_len);
             len -= buffered_len;
@@ -2193,7 +2193,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 
         /* We have returned all buffered data. Read new data from the remote
            socket. */
-        n = pull_all(NULL, conn, (char *) buf, (int) len);
+        n = pull_all(NULL, conn, (char *) buf, (int64_t) len);
         nread = n >= 0 ? nread + n : n;
     }
     return nread;
@@ -2653,21 +2653,23 @@ static time_t parse_date_string(const char *datetime)
     int second, minute, hour, day, month, year, leap_days, days;
     time_t result = (time_t) 0;
 
-    if (((sscanf(datetime, "%d/%3s/%d %d:%d:%d",
-                 &day, month_str, &year, &hour, &minute, &second) == 6) ||
-         (sscanf(datetime, "%d %3s %d %d:%d:%d",
-                 &day, month_str, &year, &hour, &minute, &second) == 6) ||
-         (sscanf(datetime, "%*3s, %d %3s %d %d:%d:%d",
-                 &day, month_str, &year, &hour, &minute, &second) == 6) ||
-         (sscanf(datetime, "%d-%3s-%d %d:%d:%d",
-                 &day, month_str, &year, &hour, &minute, &second) == 6)) &&
-        year > 1970 &&
-        (month = get_month_index(month_str)) != -1) {
-        leap_days = num_leap_years(year) - num_leap_years(1970);
-        year -= 1970;
-        days = year * 365 + days_before_month[month] + (day - 1) + leap_days;
-        result = (time_t) days * 24 * 3600 + (time_t) hour * 3600 +
-                 minute * 60 + second;
+    if ((sscanf(datetime, "%d/%3s/%d %d:%d:%d",
+                &day, month_str, &year, &hour, &minute, &second) == 6) ||
+        (sscanf(datetime, "%d %3s %d %d:%d:%d",
+                &day, month_str, &year, &hour, &minute, &second) == 6) ||
+        (sscanf(datetime, "%*3s, %d %3s %d %d:%d:%d",
+                &day, month_str, &year, &hour, &minute, &second) == 6) ||
+        (sscanf(datetime, "%d-%3s-%d %d:%d:%d",
+                &day, month_str, &year, &hour, &minute, &second) == 6)) {
+
+        month = get_month_index(month_str);
+        if ((month >= 0) && (year > 1970)) {
+            leap_days = num_leap_years(year) - num_leap_years(1970);
+            year -= 1970;
+            days = year * 365 + days_before_month[month] + (day - 1) + leap_days;
+            result = (time_t) days * 24 * 3600 + (time_t) hour * 3600 +
+                     minute * 60 + second;
+        }
     }
 
     return result;
@@ -4394,6 +4396,7 @@ static void do_ssi_include(struct mg_connection *conn, const char *ssi,
 {
     char file_name[MG_BUF_LEN], path[PATH_MAX], *p;
     struct file file = STRUCT_FILE_INITIALIZER;
+    size_t len;
 
     /* sscanf() is safe here, since send_ssi_file() also uses buffer
        of size MG_BUF_LEN to get the tag. So strlen(tag) is
@@ -4413,8 +4416,8 @@ static void do_ssi_include(struct mg_connection *conn, const char *ssi,
         if ((p = strrchr(path, '/')) != NULL) {
             p[1] = '\0';
         }
-        (void) mg_snprintf(conn, path + strlen(path),
-                           sizeof(path) - strlen(path), "%s", file_name);
+        len = strlen(path);
+        (void) mg_snprintf(conn, path + len, sizeof(path) - len, "%s", file_name);
     } else {
         mg_cry(conn, "Bad SSI #include: [%s]", tag);
         return;
@@ -5357,7 +5360,7 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
 
     /* first see it the uri exists */
     for (tmp_rh = ctx->request_handlers;
-         tmp_rh != NULL && strcmp(uri, tmp_rh->uri);
+         tmp_rh != NULL && 0!=strcmp(uri, tmp_rh->uri);
          lastref = tmp_rh, tmp_rh = tmp_rh->next) {
         /* first try for an exact match */
         if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
@@ -5401,7 +5404,7 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
         return;
     }
     tmp_rh->uri = mg_strdup(uri);
-    tmp_rh->uri_len = strlen(uri);
+    tmp_rh->uri_len = urilen;
     tmp_rh->handler = handler;
     tmp_rh->cbdata = cbdata;
 

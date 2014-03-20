@@ -35,3 +35,26 @@ htmlEscape[0] = "&middot;" -- in this table, we use a 8 bit character set, where
 
 -- the conversion table should work as a convertion function for strings as well
 setmetatable(htmlEscape, {__call = function (tab,str) return string.gsub(str, ".", function (c) return tab[c:byte()] end) end})
+
+
+function htmlEsc(txt)
+    s = txt:gsub("%&", "&amp;")
+    s = s:gsub("%<", "&lt;")
+    return s:gsub("%>", "&gt;")
+end
+
+
+function iso8859_1_to_utf8(txt)
+    local s = txt:gsub(".",
+      function (c)
+        local b = c:byte()
+        if b < 128 then
+          return c
+        elseif b < 192 then
+          return string.char(194, b)
+        else
+          return string.char(195, b-64)
+        end
+      end)
+    return s
+end
