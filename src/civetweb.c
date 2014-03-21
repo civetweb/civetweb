@@ -2163,8 +2163,8 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
     int64_t n, buffered_len, nread;
     const char *body;
 
-    /* If Content-Length is not set, read until socket is closed */
-    if (conn->consumed_content == 0 && conn->content_len == 0) {
+    /* If Content-Length is not set for a PUT or POST request, read until socket is closed */
+    if (conn->consumed_content == 0 && conn->content_len == -1) {
         conn->content_len = INT64_MAX;
         conn->must_close = 1;
     }
