@@ -6690,7 +6690,9 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         sTlsInit++;
     }
 
-    ctx->callbacks = *callbacks;
+    if (callbacks) {
+        ctx->callbacks = *callbacks;
+    }
     ctx->user_data = user_data;
     ctx->request_handlers = 0;
 

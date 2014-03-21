@@ -59,8 +59,13 @@ static int s_failed_tests = 0;
     ",127.0.0.1:" HTTP_PORT2
 */
 #define HTTP_PORT "8080"
+#ifdef NO_SSL
 #define HTTPS_PORT HTTP_PORT
 #define LISTENING_ADDR "127.0.0.1:" HTTP_PORT
+#else
+#define HTTPS_PORT "443"
+#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT ",127.0.0.1:" HTTPS_PORT "s"
+#endif
 
 static void test_parse_http_message() {
     struct mg_request_info ri;
@@ -314,7 +319,9 @@ static const char *OPTIONS[] = {
     "document_root", ".",
     "listening_ports", LISTENING_ADDR,
     "enable_keep_alive", "yes",
-/* TODO(bel):   "ssl_certificate", "resources/ssl_cert.pem", */
+#ifndef NO_SSL
+    "ssl_certificate", "../resources/ssl_cert.pem",
+#endif
     NULL,
 };
 
@@ -330,20 +337,18 @@ static char *read_conn(struct mg_connection *conn, int *size) {
     return data;
 }
 
-static void test_mg_download(void) {
+static void test_mg_download(int use_ssl) {
     char *p1, *p2, ebuf[100];
-    int len1, len2, port = atoi(HTTPS_PORT);
+    int len1, len2, port;
     struct mg_connection *conn;
     struct mg_context *ctx;
-    /* TODO(bel): int use_ssl = 1; */
-    int use_ssl = 0;
+    if (use_ssl) port = atoi(HTTPS_PORT); else port = atoi(HTTP_PORT);
 
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
 
-    ASSERT(mg_download(NULL, port, 0, ebuf, sizeof(ebuf), "%s", "") == NULL);
-    ASSERT(mg_download("localhost", 0, 0, ebuf, sizeof(ebuf), "%s", "") == NULL);
-    ASSERT(mg_download("localhost", port, 1, ebuf, sizeof(ebuf),
-        "%s", "") == NULL);
+    ASSERT(mg_download(NULL, port, use_ssl, ebuf, sizeof(ebuf), "%s", "") == NULL);
+    ASSERT(mg_download("localhost", 0, use_ssl, ebuf, sizeof(ebuf), "%s", "") == NULL);
+    ASSERT(mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s", "") == NULL);
 
     /* Fetch nonexistent file, should see 404 */
     ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
@@ -355,11 +360,11 @@ static void test_mg_download(void) {
         ASSERT((conn = mg_download("google.com", 443, 1, ebuf, sizeof(ebuf), "%s",
             "GET / HTTP/1.0\r\n\r\n")) != NULL);
         mg_close_connection(conn);
+    } else {
+        ASSERT((conn = mg_download("google.com", 80, 0, ebuf, sizeof(ebuf), "%s",
+            "GET / HTTP/1.0\r\n\r\n")) != NULL);
+        mg_close_connection(conn);
     }
-
-    ASSERT((conn = mg_download("google.com", 80, 0, ebuf, sizeof(ebuf), "%s",
-        "GET / HTTP/1.0\r\n\r\n")) != NULL);
-    mg_close_connection(conn);
 
     /* Fetch unit_test.c, should succeed */
     ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
@@ -561,9 +566,7 @@ static void test_next_option(void) {
     ASSERT(next_option(NULL, &a, &b) == NULL);
     for (i = 0, p = list; (p = next_option(p, &a, &b)) != NULL; i++) {
         ASSERT(i != 0 || (a.ptr == list && a.len == 3 && b.len == 0));
-        ASSERT(i != 1 || (a.ptr == list + 4 && a.len == 4 && b.ptr == list + 9 &&
-            b.len == 4));
-
+        ASSERT(i != 1 || (a.ptr == list + 4 && a.len == 4 && b.ptr == list + 9 && b.len == 4));
         ASSERT(i != 2 || (a.ptr == list + 14 && a.len == 1 && b.len == 0));
     }
 }
@@ -577,8 +580,7 @@ static void check_lua_expr(lua_State *L, const char *expr, const char *value) {
     (void) luaL_dostring(L, buf);
     lua_getglobal(L, var_name);
     v = lua_tostring(L, -1);
-    ASSERT((value == NULL && v == NULL) ||
-        (value != NULL && v != NULL && !strcmp(value, v)));
+    ASSERT((value == NULL && v == NULL) || (value != NULL && v != NULL && !strcmp(value, v)));
 }
 
 static void test_lua(void) {
@@ -593,8 +595,7 @@ static void test_lua(void) {
     conn.ctx = &ctx;
     conn.buf = http_request;
     conn.buf_size = conn.data_len = strlen(http_request);
-    conn.request_len = parse_http_message(conn.buf, conn.data_len,
-        &conn.request_info);
+    conn.request_len = parse_http_message(conn.buf, conn.data_len, &conn.request_info);
     conn.content_len = conn.data_len - conn.request_len;
 
     prepare_lua_environment(&conn, L, "unit_test", LUA_ENV_TYPE_PLAIN_LUA_PAGE);
@@ -809,6 +810,7 @@ int __cdecl main(void) {
 
     char buffer[512];
     FILE * f;
+    struct mg_context *ctx;
 
     /* print headline */
     printf("Civetweb %s unit test\n", mg_version());
@@ -849,8 +851,17 @@ int __cdecl main(void) {
     test_mg_get_cookie();
     test_strtoll();
 
+    /* start stop server */
+    ctx = mg_start(NULL, NULL, OPTIONS);
+    ASSERT(ctx != NULL);
+    mg_sleep(1000);
+    mg_stop(ctx);
+
     /* tests with network access */
-    test_mg_download();
+    test_mg_download(0);
+#ifndef NO_SSL
+    test_mg_download(1);
+#endif
     test_mg_upload();
     test_request_replies();
     test_api_calls();
