@@ -6148,13 +6148,19 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
                                   &conn->request_info) <= 0) {
         snprintf(ebuf, ebuf_len, "Bad request: [%.*s]", conn->data_len, conn->buf);
     } else {
-        /* Request is valid */
+        /* Message is a valid request or response */
         if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
+            /* Request/response has content length set */
             conn->content_len = strtoll(cl, NULL, 10);
         } else if (!mg_strcasecmp(conn->request_info.request_method, "POST") ||
                    !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
+            /* POST or PUT request without content length set */
+            conn->content_len = -1;
+        } else if (!mg_strncasecmp(conn->request_info.request_method, "HTTP/", 5)) {
+            /* Response without content length set */
             conn->content_len = -1;
         } else {
+            /* Other request */
             conn->content_len = 0;
         }
         conn->birth_time = time(NULL);
