@@ -1,4 +1,4 @@
-/*
+/* Copyright (c) 2013-2014 the Civetweb developers
  * Copyright (c) 2013 No Face Press, LLC
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
@@ -12,7 +12,7 @@
 #endif
 
 #define DOCUMENT_ROOT "."
-#define PORT "8888"
+#define PORT "8081"
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
 bool exitNow = false;
@@ -47,13 +47,26 @@ public:
 
 class AHandler: public CivetHandler
 {
-public:
-    bool handleGet(CivetServer *server, struct mg_connection *conn) {
+private:
+    bool handleAll(const char * method, CivetServer *server, struct mg_connection *conn) {
+        std::string s = "";
         mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
         mg_printf(conn, "<html><body>");
-        mg_printf(conn, "<h2>This is the A handler!!!</h2>");
+        mg_printf(conn, "<h2>This is the A handler for \"%s\" !</h2>", method);
+        if (CivetServer::getParam(conn, "param", s)) {
+            mg_printf(conn, "<p>param set to %s</p>", s.c_str());
+        } else {
+            mg_printf(conn, "<p>param not set</p>");
+        }
         mg_printf(conn, "</body></html>\n");
         return true;
+    }
+public:
+    bool handleGet(CivetServer *server, struct mg_connection *conn) {
+        return handleAll("GET", server, conn);
+    }
+    bool handlePost(CivetServer *server, struct mg_connection *conn) {
+        return handleAll("POST", server, conn);
     }
 };
 

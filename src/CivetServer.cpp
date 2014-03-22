@@ -1,5 +1,6 @@
-/*
+/* Copyright (c) 2013-2014 the Civetweb developers
  * Copyright (c) 2013 No Face Press, LLC
+ *
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
 
@@ -44,7 +45,10 @@ bool CivetHandler::handleDelete(CivetServer *server, struct mg_connection *conn)
 int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 {
     struct mg_request_info *request_info = mg_get_request_info(conn);
+    assert(request_info != NULL);
     CivetServer *me = (CivetServer*) (request_info->user_data);
+    assert(me != NULL);
+
     CivetHandler *handler = (CivetHandler *)cbdata;
 
     if (handler) {
@@ -60,27 +64,42 @@ int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
     }
 
     return 0; // No handler found
-
 }
 
 CivetServer::CivetServer(const char **options,
                          const struct mg_callbacks *_callbacks) :
-    context(0)
+    context(0), postData(0)
 {
-
-
+    struct mg_callbacks callbacks;
+    memset(&callbacks, 0, sizeof(callbacks));
     if (_callbacks) {
-        context = mg_start(_callbacks, this, options);
+        callbacks = *_callbacks;
+        userCloseHandler = _callbacks->connection_close;
     } else {
-        struct mg_callbacks callbacks;
-        memset(&callbacks, 0, sizeof(callbacks));
-        context = mg_start(&callbacks, this, options);
+        userCloseHandler = NULL;
     }
+    callbacks.connection_close = closeHandler;
+
+    context = mg_start(&callbacks, this, options);
 }
 
 CivetServer::~CivetServer()
 {
     close();
+}
+
+void CivetServer::closeHandler(struct mg_connection *conn)
+{
+    struct mg_request_info *request_info = mg_get_request_info(conn);
+    assert(request_info != NULL);
+    CivetServer *me = (CivetServer*) (request_info->user_data);
+    assert(me != NULL);
+
+    if (me->userCloseHandler) me->userCloseHandler(conn);
+    if (me->postData) {
+        delete [] (me->postData);
+        me->postData = 0;
+    }
 }
 
 void CivetServer::addHandler(const std::string &uri, CivetHandler *handler)
@@ -151,14 +170,33 @@ CivetServer::getParam(struct mg_connection *conn, const char *name,
                       std::string &dst, size_t occurrence)
 {
     const char *formParams = NULL;
-    mg_request_info * ri = mg_get_request_info(conn);
+    struct mg_request_info *ri = mg_get_request_info(conn);
+    assert(ri != NULL);
+    CivetServer *me = (CivetServer*) (ri->user_data);
+    assert(me != NULL);
 
-    if (ri) {
+    if (me->postData != NULL) {
+        formParams = me->postData;
+    } else {
+        const char * con_len_str = mg_get_header(conn, "Content-Length");
+        if (con_len_str) {
+            unsigned long con_len = atoi(con_len_str);
+            if (con_len>0) {
+                me->postData = new char[con_len];
+                if (me->postData != NULL) {
+                    /* NULL check is not required according to current C++ standard */
+                    mg_read(conn, me->postData, con_len);
+                    formParams = me->postData;
+                }
+            }
+        }
+    }
+    if (formParams == NULL) {
         // get requests do store html <form> field values in the http query_string
         formParams = ri->query_string;
     }
 
-    if (formParams) {
+    if (formParams != NULL) {
         return getParam(formParams, strlen(formParams), name, dst, occurrence);
     }
 

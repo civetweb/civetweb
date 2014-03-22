@@ -1,5 +1,6 @@
-/*
+/* Copyright (c) 2013-2014 the Civetweb developers
  * Copyright (c) 2013 No Face Press, LLC
+ *
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
 
@@ -272,6 +273,7 @@ public:
 protected:
 
     struct mg_context *context;
+    char * postData;
 
 private:
     /**
@@ -284,6 +286,20 @@ private:
      * @returns 0 if implemented, false otherwise
      */
     static int requestHandler(struct mg_connection *conn, void *cbdata);
+
+    /**
+     * closeHandler(struct mg_connection *)
+     *
+     * Handles closing a request (internal handler)
+     *
+     * @param conn - the connection information
+     */
+    static void closeHandler(struct mg_connection *conn);
+
+    /**
+     * Stores the user provided close handler
+     */
+    void (*userCloseHandler)(struct mg_connection *conn);
 
 };
 
