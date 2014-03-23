@@ -441,14 +441,16 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
 
     char mallocStr[256];
     void * data;
+    void * _realloc;
     size_t oldsize;
 
     if (newsize) {
         if (memory) {
             data = (void *)(((char*)memory)-sizeof(size_t));
             oldsize = *(size_t*)data;
-            data = realloc(data, newsize+sizeof(size_t));
-            if (data) {
+            _realloc = realloc(data, newsize+sizeof(size_t));
+            if (_realloc) {
+                data = _realloc;
                 totalMemUsed -= oldsize;
                 sprintf(mallocStr, "MEM: %p %5u r-free  %7u %4u --- %s:%u\n", memory, oldsize, totalMemUsed, blockCount, file, line);
 #if defined(_WIN32)
@@ -471,6 +473,7 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
 #else
                 DEBUG_TRACE("MEM: realloc failed\n");
 #endif
+                return _realloc;
             }
         } else {
             data = mg_malloc_ex(newsize, file, line);
