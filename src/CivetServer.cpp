@@ -97,7 +97,7 @@ void CivetServer::closeHandler(struct mg_connection *conn)
 
     if (me->userCloseHandler) me->userCloseHandler(conn);
     if (me->postData) {
-        delete [] (me->postData);
+        free(me->postData);
         me->postData = 0;
     }
 }
@@ -182,9 +182,9 @@ CivetServer::getParam(struct mg_connection *conn, const char *name,
         if (con_len_str) {
             unsigned long con_len = atoi(con_len_str);
             if (con_len>0) {
-                me->postData = new char[con_len];
+                me->postData = (char*)malloc(con_len);
                 if (me->postData != NULL) {
-                    /* NULL check is not required according to current C++ standard */
+                    /* malloc may fail for huge requests */
                     mg_read(conn, me->postData, con_len);
                     formParams = me->postData;
                 }
