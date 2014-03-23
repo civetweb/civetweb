@@ -2392,7 +2392,7 @@ int mg_url_decode(const char *src, int src_len, char *dst,
 #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
 
     for (i = j = 0; i < src_len && j < dst_len - 1; i++, j++) {
-        if (src[i] == '%' && i < src_len - 2 &&
+        if (i < src_len - 2 && src[i] == '%' &&
             isxdigit(* (const unsigned char *) (src + i + 1)) &&
             isxdigit(* (const unsigned char *) (src + i + 2))) {
             a = tolower(* (const unsigned char *) (src + i + 1));
