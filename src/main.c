@@ -1516,7 +1516,7 @@ withApplication:@"TextEdit"];
 
 int main(int argc, char *argv[])
 {
-    init_server_name(argc, argv);
+    init_server_name(argc, (const char **)argv);
     start_civetweb(argc, argv);
 
     [NSAutoreleasePool new];
@@ -1576,7 +1576,7 @@ int main(int argc, char *argv[])
 #else
 int main(int argc, char *argv[])
 {
-    init_server_name(argc, argv);
+    init_server_name(argc, (const char **)argv);
     start_civetweb(argc, argv);
     printf("%s started on port(s) %s with web root [%s]\n",
            server_name, mg_get_option(ctx, "listening_ports"),
