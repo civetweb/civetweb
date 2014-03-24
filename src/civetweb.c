@@ -1778,14 +1778,14 @@ static int mg_start_thread_with_id(unsigned (__stdcall *f)(void *), void *p,
 {
     uintptr_t uip;
     HANDLE threadhandle;
-    int result = 0;
+    int result = -1;
 
     uip = _beginthreadex(NULL, 0, (unsigned (__stdcall *)(void *)) f, p, 0,
                          NULL);
     threadhandle = (HANDLE) uip;
     if ((uip != (uintptr_t)(-1L)) && (threadidptr != NULL)) {
         *threadidptr = threadhandle;
-        result = 1;
+        result = 0;
     }
 
     return result;
@@ -2163,8 +2163,8 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
     int64_t n, buffered_len, nread;
     const char *body;
 
-    /* If Content-Length is not set, read until socket is closed */
-    if (conn->consumed_content == 0 && conn->content_len == 0) {
+    /* If Content-Length is not set for a PUT or POST request, read until socket is closed */
+    if (conn->consumed_content == 0 && conn->content_len == -1) {
         conn->content_len = INT64_MAX;
         conn->must_close = 1;
     }
@@ -6148,13 +6148,19 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
                                   &conn->request_info) <= 0) {
         snprintf(ebuf, ebuf_len, "Bad request: [%.*s]", conn->data_len, conn->buf);
     } else {
-        /* Request is valid */
+        /* Message is a valid request or response */
         if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
+            /* Request/response has content length set */
             conn->content_len = strtoll(cl, NULL, 10);
         } else if (!mg_strcasecmp(conn->request_info.request_method, "POST") ||
                    !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
+            /* POST or PUT request without content length set */
+            conn->content_len = -1;
+        } else if (!mg_strncasecmp(conn->request_info.request_method, "HTTP/", 5)) {
+            /* Response without content length set */
             conn->content_len = -1;
         } else {
+            /* Other request */
             conn->content_len = 0;
         }
         conn->birth_time = time(NULL);
@@ -6684,7 +6690,9 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         sTlsInit++;
     }
 
-    ctx->callbacks = *callbacks;
+    if (callbacks) {
+        ctx->callbacks = *callbacks;
+    }
     ctx->user_data = user_data;
     ctx->request_handlers = 0;
 
