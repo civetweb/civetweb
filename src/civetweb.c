@@ -6521,12 +6521,6 @@ static void master_thread_run(void *thread_func_param)
         mg_join_thread(ctx->workerthreadids[i]);
     }
 
-    /* All threads exited, no sync is needed. Destroy mutex and condvars */
-    (void) pthread_mutex_destroy(&ctx->mutex);
-    (void) pthread_cond_destroy(&ctx->cond);
-    (void) pthread_cond_destroy(&ctx->sq_empty);
-    (void) pthread_cond_destroy(&ctx->sq_full);
-
 #if !defined(NO_SSL)
     uninitialize_ssl(ctx);
 #endif
@@ -6566,6 +6560,12 @@ static void free_context(struct mg_context *ctx)
 
     if (ctx == NULL)
         return;
+
+    /* All threads exited, no sync is needed. Destroy mutex and condvars */
+    (void) pthread_mutex_destroy(&ctx->mutex);
+    (void) pthread_cond_destroy(&ctx->cond);
+    (void) pthread_cond_destroy(&ctx->sq_empty);
+    (void) pthread_cond_destroy(&ctx->sq_full);
 
     /* Deallocate config parameters */
     for (i = 0; i < NUM_OPTIONS; i++) {
