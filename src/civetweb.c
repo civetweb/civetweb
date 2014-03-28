@@ -891,131 +891,6 @@ static void mg_fclose(struct file *filep)
     }
 }
 
-static int get_option_index(const char *name)
-{
-    int i;
-
-    for (i = 0; config_options[i].name != NULL; i++) {
-        if (strcmp(config_options[i].name, name) == 0) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-const char *mg_get_option(const struct mg_context *ctx, const char *name)
-{
-    int i;
-    if ((i = get_option_index(name)) == -1) {
-        return NULL;
-    } else if (ctx->config[i] == NULL) {
-        return "";
-    } else {
-        return ctx->config[i];
-    }
-}
-
-size_t mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
-{
-    size_t i;
-    for (i = 0; i < size && i < (size_t)ctx->num_listening_sockets; i++)
-    {
-        ssl[i] = ctx->listening_sockets[i].is_ssl;
-        ports[i] = ctx->listening_ports[i];
-    }
-    return i;
-}
-
-static void sockaddr_to_string(char *buf, size_t len,
-                               const union usa *usa)
-{
-    buf[0] = '\0';
-#if defined(USE_IPV6)
-    inet_ntop(usa->sa.sa_family, usa->sa.sa_family == AF_INET ?
-              (void *) &usa->sin.sin_addr :
-              (void *) &usa->sin6.sin6_addr, buf, len);
-#elif defined(_WIN32)
-    /* Only Windows Vista (and newer) have inet_ntop() */
-    strncpy(buf, inet_ntoa(usa->sin.sin_addr), len);
-#else
-    inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, len);
-#endif
-}
-
-/* Convert time_t to a string. According to RFC2616, Sec 14.18, this must be included in all responses other than 100, 101, 5xx. */
-static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
-{
-    struct tm *tm;
-
-    tm = gmtime(t);
-    if (tm != NULL) {
-        strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S GMT", tm);
-    } else {
-        strncpy(buf, "Thu, 01 Jan 1970 00:00:00 GMT", buf_len);
-        buf[buf_len - 1] = '\0';
-    }
-}
-
-/* Print error message to the opened error log stream. */
-void mg_cry(struct mg_connection *conn, const char *fmt, ...)
-{
-    char buf[MG_BUF_LEN], src_addr[IP_ADDR_STR_LEN];
-    va_list ap;
-    FILE *fp;
-    time_t timestamp;
-
-    va_start(ap, fmt);
-    IGNORE_UNUSED_RESULT(vsnprintf(buf, sizeof(buf), fmt, ap));
-    va_end(ap);
-
-    /* Do not lock when getting the callback value, here and below.
-       I suppose this is fine, since function cannot disappear in the
-       same way string option can. */
-    if (conn->ctx->callbacks.log_message == NULL ||
-        conn->ctx->callbacks.log_message(conn, buf) == 0) {
-        fp = conn->ctx->config[ERROR_LOG_FILE] == NULL ? NULL :
-             fopen(conn->ctx->config[ERROR_LOG_FILE], "a+");
-
-        if (fp != NULL) {
-            flockfile(fp);
-            timestamp = time(NULL);
-
-            sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
-            fprintf(fp, "[%010lu] [error] [client %s] ", (unsigned long) timestamp,
-                    src_addr);
-
-            if (conn->request_info.request_method != NULL) {
-                fprintf(fp, "%s %s: ", conn->request_info.request_method,
-                        conn->request_info.uri);
-            }
-
-            fprintf(fp, "%s", buf);
-            fputc('\n', fp);
-            funlockfile(fp);
-            fclose(fp);
-        }
-    }
-}
-
-/* Return fake connection structure. Used for logging, if connection
-   is not applicable at the moment of logging. */
-static struct mg_connection *fc(struct mg_context *ctx)
-{
-    static struct mg_connection fake_connection;
-    fake_connection.ctx = ctx;
-    return &fake_connection;
-}
-
-const char *mg_version(void)
-{
-    return CIVETWEB_VERSION;
-}
-
-struct mg_request_info *mg_get_request_info(struct mg_connection *conn)
-{
-    return &conn->request_info;
-}
-
 static void mg_strlcpy(register char *dst, register const char *src, size_t n)
 {
     for (; *src != '\0' && n > 1; n--) {
@@ -1123,6 +998,131 @@ static int mg_snprintf(struct mg_connection *conn, char *buf, size_t buflen,
     va_end(ap);
 
     return n;
+}
+
+static int get_option_index(const char *name)
+{
+    int i;
+
+    for (i = 0; config_options[i].name != NULL; i++) {
+        if (strcmp(config_options[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+const char *mg_get_option(const struct mg_context *ctx, const char *name)
+{
+    int i;
+    if ((i = get_option_index(name)) == -1) {
+        return NULL;
+    } else if (ctx->config[i] == NULL) {
+        return "";
+    } else {
+        return ctx->config[i];
+    }
+}
+
+size_t mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
+{
+    size_t i;
+    for (i = 0; i < size && i < (size_t)ctx->num_listening_sockets; i++)
+    {
+        ssl[i] = ctx->listening_sockets[i].is_ssl;
+        ports[i] = ctx->listening_ports[i];
+    }
+    return i;
+}
+
+static void sockaddr_to_string(char *buf, size_t len,
+                               const union usa *usa)
+{
+    buf[0] = '\0';
+#if defined(USE_IPV6)
+    inet_ntop(usa->sa.sa_family, usa->sa.sa_family == AF_INET ?
+              (void *) &usa->sin.sin_addr :
+              (void *) &usa->sin6.sin6_addr, buf, len);
+#elif defined(_WIN32)
+    /* Only Windows Vista (and newer) have inet_ntop() */
+    mg_strlcpy(buf, inet_ntoa(usa->sin.sin_addr), len);
+#else
+    inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, len);
+#endif
+}
+
+/* Convert time_t to a string. According to RFC2616, Sec 14.18, this must be included in all responses other than 100, 101, 5xx. */
+static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
+{
+    struct tm *tm;
+
+    tm = gmtime(t);
+    if (tm != NULL) {
+        strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S GMT", tm);
+    } else {
+        mg_strlcpy(buf, "Thu, 01 Jan 1970 00:00:00 GMT", buf_len);
+        buf[buf_len - 1] = '\0';
+    }
+}
+
+/* Print error message to the opened error log stream. */
+void mg_cry(struct mg_connection *conn, const char *fmt, ...)
+{
+    char buf[MG_BUF_LEN], src_addr[IP_ADDR_STR_LEN];
+    va_list ap;
+    FILE *fp;
+    time_t timestamp;
+
+    va_start(ap, fmt);
+    IGNORE_UNUSED_RESULT(vsnprintf(buf, sizeof(buf), fmt, ap));
+    va_end(ap);
+
+    /* Do not lock when getting the callback value, here and below.
+       I suppose this is fine, since function cannot disappear in the
+       same way string option can. */
+    if (conn->ctx->callbacks.log_message == NULL ||
+        conn->ctx->callbacks.log_message(conn, buf) == 0) {
+        fp = conn->ctx->config[ERROR_LOG_FILE] == NULL ? NULL :
+             fopen(conn->ctx->config[ERROR_LOG_FILE], "a+");
+
+        if (fp != NULL) {
+            flockfile(fp);
+            timestamp = time(NULL);
+
+            sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
+            fprintf(fp, "[%010lu] [error] [client %s] ", (unsigned long) timestamp,
+                    src_addr);
+
+            if (conn->request_info.request_method != NULL) {
+                fprintf(fp, "%s %s: ", conn->request_info.request_method,
+                        conn->request_info.uri);
+            }
+
+            fprintf(fp, "%s", buf);
+            fputc('\n', fp);
+            funlockfile(fp);
+            fclose(fp);
+        }
+    }
+}
+
+/* Return fake connection structure. Used for logging, if connection
+   is not applicable at the moment of logging. */
+static struct mg_connection *fc(struct mg_context *ctx)
+{
+    static struct mg_connection fake_connection;
+    fake_connection.ctx = ctx;
+    return &fake_connection;
+}
+
+const char *mg_version(void)
+{
+    return CIVETWEB_VERSION;
+}
+
+struct mg_request_info *mg_get_request_info(struct mg_connection *conn)
+{
+    return &conn->request_info;
 }
 
 /* Skip the characters until one of the delimiters characters found.
@@ -3006,7 +3006,7 @@ static int parse_auth_header(struct mg_connection *conn, char *buf,
     /* Convert the nonce from the client to a number and check it. */
     /* Server side nonce check is valuable in all situations but one: if the server restarts frequently,
        but the client should not see that, so the server should accept nonces from previous starts. */
-    íf (ah->nonce == NULL) {
+    if (ah->nonce == NULL) {
         return 0;
     }
     nonce = strtoul(ah->nonce, &s, 10);
@@ -3311,7 +3311,7 @@ static void print_dir_entry(struct de *de)
     if (tm != NULL) {
         strftime(mod, sizeof(mod), "%d-%b-%Y %H:%M", tm);
     } else {
-        strncpy(mod, "01-Jan-1970 00:00", sizeof(mod));
+        mg_strlcpy(mod, "01-Jan-1970 00:00", sizeof(mod));
         mod[sizeof(mod) - 1] = '\0';
     }
     mg_url_encode(de->file_name, href, sizeof(href));
@@ -5338,7 +5338,7 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
     if (host_header != NULL) {
         char *pos;
 
-        strncpy(host, host_header, hostlen);
+        mg_strlcpy(host, host_header, hostlen);
         host[hostlen - 1] = '\0';
         pos = strchr(host, ':');
         if (pos != NULL) {
@@ -5747,7 +5747,7 @@ static void log_access(const struct mg_connection *conn)
     if (tm != NULL) {
         strftime(date, sizeof(date), "%d/%b/%Y:%H:%M:%S %z", tm);
     } else {
-        strncpy(date, "01/Jan/1970:00:00:00 +0000", sizeof(date));
+        mg_strlcpy(date, "01/Jan/1970:00:00:00 +0000", sizeof(date));
         date[sizeof(date) - 1] = '\0';
     }
 
