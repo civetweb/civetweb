@@ -5605,7 +5605,8 @@ static int is_valid_port(unsigned int port)
    TODO(lsm): add parsing of the IPv6 address */
 static int parse_port_string(const struct vec *vec, struct socket *so)
 {
-    unsigned int a, b, c, d, ch, len, port;
+    unsigned int a, b, c, d, port;
+    int  ch, len;
 #if defined(USE_IPV6)
     char buf[100];
 #endif
