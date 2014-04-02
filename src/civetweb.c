@@ -3074,7 +3074,7 @@ static int authorize(struct mg_connection *conn, struct file *filep)
     /* Loop over passwords file */
     p = (char *) filep->membuf;
     while (mg_fgets(line, sizeof(line), filep, &p) != NULL) {
-        if (sscanf(line, "%[^:]:%[^:]:%s", f_user, f_domain, ha1) != 3) {
+        if (sscanf(line, "%[^:]:%[^:]:%255s", f_user, f_domain, ha1) != 3) {
             continue;
         }
 
@@ -5588,6 +5588,7 @@ static void close_all_listening_sockets(struct mg_context *ctx)
     int i;
     for (i = 0; i < ctx->num_listening_sockets; i++) {
         closesocket(ctx->listening_sockets[i].sock);
+        ctx->listening_sockets[i].sock = INVALID_SOCKET;
     }
     mg_free(ctx->listening_sockets);
     ctx->listening_sockets=0;
@@ -5636,6 +5637,7 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
         port = len = 0;   /* Parsing failure. Make port invalid. */
     }
 
+    assert((len>=0) && (len<=vec->len)); /* sscanf and the option splitting code ensure this condition */
     ch = vec->ptr[len];  /* Next character after the port number */
     so->is_ssl = ch == 's';
     so->ssl_redir = ch == 'r';
@@ -5689,17 +5691,20 @@ static int set_ports_option(struct mg_context *ctx)
                    (int) vec.len, vec.ptr, ERRNO, strerror(errno));
             if (so.sock != INVALID_SOCKET) {
                 closesocket(so.sock);
+                so.sock = INVALID_SOCKET;
             }
             success = 0;
         } else if ((ptr = (struct socket *) mg_realloc(ctx->listening_sockets,
                           (ctx->num_listening_sockets + 1) *
                           sizeof(ctx->listening_sockets[0]))) == NULL) {
             closesocket(so.sock);
+            so.sock = INVALID_SOCKET;
             success = 0;
         } else if ((portPtr = (in_port_t*) mg_realloc(ctx->listening_ports,
                           (ctx->num_listening_sockets + 1) *
                           sizeof(ctx->listening_ports[0]))) == NULL) {
             closesocket(so.sock);
+            so.sock = INVALID_SOCKET;
             success = 0;
         }
         else {
@@ -6033,6 +6038,7 @@ static void close_socket_gracefully(struct mg_connection *conn)
 
     /* Now we know that our FIN is ACK-ed, safe to close */
     closesocket(conn->client.sock);
+    conn->client.sock = INVALID_SOCKET;
 }
 
 static void close_connection(struct mg_connection *conn)
@@ -6092,11 +6098,13 @@ struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
                        mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
         snprintf(ebuf, ebuf_len, "calloc(): %s", strerror(ERRNO));
         closesocket(sock);
+        sock = INVALID_SOCKET;
 #ifndef NO_SSL
     } else if (use_ssl && (conn->client_ssl_ctx =
                                SSL_CTX_new(SSLv23_client_method())) == NULL) {
         snprintf(ebuf, ebuf_len, "SSL_CTX_new error");
         closesocket(sock);
+        sock = INVALID_SOCKET;
         mg_free(conn);
         conn = NULL;
 #endif /* NO_SSL */
@@ -6418,6 +6426,7 @@ static void accept_new_connection(const struct socket *listener,
         sockaddr_to_string(src_addr, sizeof(src_addr), &so.rsa);
         mg_cry(fc(ctx), "%s: %s is not allowed to connect", __func__, src_addr);
         closesocket(so.sock);
+        so.sock = INVALID_SOCKET;
     } else {
         /* Put so socket structure into the queue */
         DEBUG_TRACE(("Accepted socket %d", (int) so.sock));
