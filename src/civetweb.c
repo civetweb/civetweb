@@ -4938,8 +4938,6 @@ static void read_websocket(struct mg_connection *conn)
             }
         }
 
-        // TODO: check this !!!
-        // if (header_len > 0) {
         if (header_len > 0 && body_len >= header_len) {
             /* Allocate space to hold websocket payload */
             data = mem;
