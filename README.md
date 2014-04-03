@@ -4,8 +4,8 @@
 There is a new home!!!
 -----------------
 https://github.com/bel2125/civetweb
-Bel has been taking the lead on Civetweb, so teh official repositiory 
-is being moved under his control for ease of maintanence.
+Bel has been taking the lead on Civetweb, so the official repository
+is being moved under his control for ease of maintenance.
 
 Project Mission
 -----------------
