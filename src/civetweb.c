@@ -2649,7 +2649,7 @@ static time_t parse_date_string(const char *datetime)
     static const unsigned short days_before_month[] = {
         0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
     };
-    char month_str[32];
+    char month_str[32]={0};
     int second, minute, hour, day, month, year, leap_days, days;
     time_t result = (time_t) 0;
 
@@ -3077,6 +3077,9 @@ static int authorize(struct mg_connection *conn, struct file *filep)
         if (sscanf(line, "%255[^:]:%255[^:]:%255s", f_user, f_domain, ha1) != 3) {
             continue;
         }
+        f_user[255]=0;
+        f_domain[255]=0;
+        ha1[255]=0;
 
         if (!strcmp(ah.user, f_user) &&
             !strcmp(conn->ctx->config[AUTHENTICATION_DOMAIN], f_domain))
@@ -3198,6 +3201,8 @@ int mg_modify_passwords_file(const char *fname, const char *domain,
         if (sscanf(line, "%255[^:]:%255[^:]:%*s", u, d) != 2) {
             continue;
         }
+        u[255]=0;
+        d[255]=0;
 
         if (!strcmp(u, user) && !strcmp(d, domain)) {
             found++;
@@ -4406,15 +4411,18 @@ static void do_ssi_include(struct mg_connection *conn, const char *ssi,
        always < MG_BUF_LEN. */
     if (sscanf(tag, " virtual=\"%511[^\"]\"", file_name) == 1) {
         /* File name is relative to the webserver root */
+        file_name[511]=0;
         (void) mg_snprintf(conn, path, sizeof(path), "%s%c%s",
                            conn->ctx->config[DOCUMENT_ROOT], '/', file_name);
     } else if (sscanf(tag, " abspath=\"%511[^\"]\"", file_name) == 1) {
         /* File name is relative to the webserver working directory
            or it is absolute system path */
+        file_name[511]=0;
         (void) mg_snprintf(conn, path, sizeof(path), "%s", file_name);
     } else if (sscanf(tag, " file=\"%511[^\"]\"", file_name) == 1 ||
                sscanf(tag, " \"%511[^\"]\"", file_name) == 1) {
         /* File name is relative to the currect document */
+        file_name[511]=0;
         (void) mg_snprintf(conn, path, sizeof(path), "%s", ssi);
         if ((p = strrchr(path, '/')) != NULL) {
             p[1] = '\0';
@@ -4449,11 +4457,14 @@ static void do_ssi_exec(struct mg_connection *conn, char *tag)
 
     if (sscanf(tag, " \"%1023[^\"]\"", cmd) != 1) {
         mg_cry(conn, "Bad SSI #exec: [%s]", tag);
-    } else if ((file.fp = popen(cmd, "r")) == NULL) {
-        mg_cry(conn, "Cannot SSI #exec: [%s]: %s", cmd, strerror(ERRNO));
     } else {
-        send_file_data(conn, &file, 0, INT64_MAX);
-        pclose(file.fp);
+        cmd[1023]=0;
+        if ((file.fp = popen(cmd, "r")) == NULL) {
+            mg_cry(conn, "Cannot SSI #exec: [%s]: %s", cmd, strerror(ERRNO));
+        } else {
+            send_file_data(conn, &file, 0, INT64_MAX);
+            pclose(file.fp);
+        }
     }
 }
 #endif /* !NO_POPEN */
@@ -5225,6 +5236,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
         return num_uploaded_files;
     }
 
+    boundary[99]=0;
     boundary_len = (int)strlen(boundary);
     bl = boundary_len + 4;  /* \r\n--<boundary> */
     for (;;) {
@@ -5246,6 +5258,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
                    parse the header properly instead. */
                 IGNORE_UNUSED_RESULT(sscanf(&buf[j], "Content-Disposition: %*s %*s filename=\"%1023[^\"]",
                                             fname));
+                fname[1023]=0;
                 j = i + 2;
             }
         }
@@ -5609,7 +5622,7 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
     unsigned int a, b, c, d, port;
     int  ch, len;
 #if defined(USE_IPV6)
-    char buf[100];
+    char buf[100]={0};
 #endif
 
     /* MacOS needs that. If we do not zero it, subsequent bind() will fail.
