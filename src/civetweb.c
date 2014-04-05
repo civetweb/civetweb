@@ -792,6 +792,7 @@ struct mg_connection {
     char *buf;                  /* Buffer for received data */
     char *path_info;            /* PATH_INFO part of the URL */
     int must_close;             /* 1 if connection must be closed */
+    int in_error_handler;       /* 1 if in handler for user defined error pages */
     int buf_size;               /* Buffer size */
     int request_len;            /* Size of the request + headers in a buffer */
     int data_len;               /* Total size of data in a buffer */
@@ -1301,6 +1302,8 @@ static const char *suggest_connection_header(const struct mg_connection *conn)
     return should_keep_alive(conn) ? "keep-alive" : "close";
 }
 
+static void handle_file_based_request(struct mg_connection *conn, const char *path, struct file *filep);
+
 static void send_http_error(struct mg_connection *, int, const char *,
                             PRINTF_FORMAT_STRING(const char *fmt), ...)
 PRINTF_ARGS(4, 5);
@@ -1314,18 +1317,33 @@ static void send_http_error(struct mg_connection *conn, int status,
     int len = 0;
     char date[64];
     time_t curtime = time(NULL);
+    const char * error_handler = NULL;
+    struct file error_page_file = STRUCT_FILE_INITIALIZER;
 
     conn->status_code = status;
-    if (conn->ctx->callbacks.http_error == NULL ||
+    if (conn->in_error_handler ||
+        conn->ctx->callbacks.http_error == NULL ||
         conn->ctx->callbacks.http_error(conn, status)) {
-        buf[0] = '\0';
 
+        if (!conn->in_error_handler) {
+            /* TODO: allow user defined error page */
+            if ((error_handler!=NULL) && mg_stat(conn, error_handler, &error_page_file)) {
+                conn->in_error_handler = 1;
+                handle_file_based_request(conn, error_handler, &error_page_file);
+                conn->in_error_handler = 0;
+                return;
+            }
+        }
+
+        buf[0] = '\0';
         gmt_time_string(date, sizeof(date), &curtime);
 
         /* Errors 1xx, 204 and 304 MUST NOT send a body */
         if (status > 199 && status != 204 && status != 304) {
-            len = mg_snprintf(conn, buf, sizeof(buf), "Error %d: %s", status, reason);
-            buf[len++] = '\n';
+            len = mg_snprintf(conn, buf, sizeof(buf)-1, "Error %d: %s", status, reason);
+            buf[len] = '\n';
+            len++;
+            buf[len] = 0;
 
             va_start(ap, fmt);
             len += mg_vsnprintf(conn, buf + len, sizeof(buf) - len, fmt, ap);
@@ -3621,8 +3639,7 @@ static void fclose_on_exec(struct file *filep, struct mg_connection *conn)
     }
 }
 
-static void handle_file_request(struct mg_connection *conn, const char *path,
-                                struct file *filep)
+static void handle_static_file_request(struct mg_connection *conn, const char *path, struct file *filep)
 {
     char date[64], lm[64], etag[64], range[64];
     const char *msg = "OK", *hdr;
@@ -3721,7 +3738,7 @@ void mg_send_file(struct mg_connection *conn, const char *path)
 {
     struct file file = STRUCT_FILE_INITIALIZER;
     if (mg_stat(conn, path, &file)) {
-        handle_file_request(conn, path, &file);
+        handle_static_file_request(conn, path, &file);
     } else {
         send_http_error(conn, 404, "Not Found", "%s", "File not found");
     }
@@ -5566,6 +5583,14 @@ static void handle_request(struct mg_connection *conn)
             send_http_error(conn, 403, "Directory Listing Denied",
                             "Directory listing denied");
         }
+    } else {
+        handle_file_based_request(conn, path, &file);
+    }
+}
+
+static void handle_file_based_request(struct mg_connection *conn, const char *path, struct file *file)
+{
+    if (0) {
 #ifdef USE_LUA
     } else if (match_prefix(conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS],
                             (int)strlen(conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
@@ -5589,10 +5614,10 @@ static void handle_request(struct mg_connection *conn)
                             (int)strlen(conn->ctx->config[SSI_EXTENSIONS]),
                             path) > 0) {
         handle_ssi_file_request(conn, path);
-    } else if (is_not_modified(conn, &file)) {
+    } else if ((!conn->in_error_handler) && is_not_modified(conn, file)) {
         send_http_error(conn, 304, "Not Modified", "%s", "");
     } else {
-        handle_file_request(conn, path, &file);
+        handle_static_file_request(conn, path, file);
     }
 }
 
