@@ -208,12 +208,13 @@ The file has to include the realm set through `authentication_domain` and the pa
 
 (e.g. use [this generator](http://www.askapache.com/online-tools/htpasswd-generator))
 
-### index_files `index.html,index.htm,index.cgi,index.shtml,index.php`
-Comma-separated list of files to be treated as directory index
-files.
+### index_files `index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php`
+Comma-separated list of files to be treated as directory index files.
+If more than one matching file is present in a directory, the one listed to the left
+is used as a directory index.
 
 In case built-in Lua support has been enabled, `index.lp,index.lsp,index.lua`
-are additional default files.
+are additional default index files, ordered before `index.cgi`.
 
 ### enable\_keep\_alive `no`
 Enable connection keep alive, either `yes` or `no`.
