@@ -678,7 +678,7 @@ enum {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     LUA_WEBSOCKET_EXTENSIONS,
 #endif
-    ACCESS_CONTROL_ALLOW_ORIGIN,
+    ACCESS_CONTROL_ALLOW_ORIGIN, ERROR_PAGES,
 
     NUM_OPTIONS
 };
@@ -699,9 +699,9 @@ static struct mg_option config_options[] = {
     {"global_auth_file",            CONFIG_TYPE_FILE,          NULL},
     {"index_files",                 12345,
 #ifdef USE_LUA
-    "index.html,index.htm,index.lp,index.lsp,index.lua,index.cgi,index.shtml,index.php"},
+    "index.xhtml,index.html,index.htm,index.lp,index.lsp,index.lua,index.cgi,index.shtml,index.php"},
 #else
-    "index.html,index.htm,index.cgi,index.shtml,index.php"},
+    "index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php"},
 #endif
     {"enable_keep_alive",           CONFIG_TYPE_BOOLEAN,       "no"},
     {"access_control_list",         12345,                     NULL},
@@ -727,6 +727,7 @@ static struct mg_option config_options[] = {
     {"lua_websocket_pattern",       CONFIG_TYPE_EXT_PATTERN,   "**.lua$"},
 #endif
     {"access_control_allow_origin", CONFIG_TYPE_STRING,        "*"},
+    {"error_pages",                 CONFIG_TYPE_DIRECTORY,     NULL},
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}
 };
@@ -1303,6 +1304,7 @@ static const char *suggest_connection_header(const struct mg_connection *conn)
 }
 
 static void handle_file_based_request(struct mg_connection *conn, const char *path, struct file *filep);
+static int mg_stat(struct mg_connection *conn, const char *path, struct file *filep);
 
 static void send_http_error(struct mg_connection *, int, const char *,
                             PRINTF_FORMAT_STRING(const char *fmt), ...)
@@ -1314,11 +1316,12 @@ static void send_http_error(struct mg_connection *conn, int status,
 {
     char buf[MG_BUF_LEN];
     va_list ap;
-    int len = 0;
+    int len = 0, i, page_handler_found, scope;
     char date[64];
     time_t curtime = time(NULL);
-    const char * error_handler = NULL;
+    const char *error_handler = NULL;
     struct file error_page_file = STRUCT_FILE_INITIALIZER;
+    const char *error_page_file_ext, *tstr;
 
     conn->status_code = status;
     if (conn->in_error_handler ||
@@ -1326,10 +1329,39 @@ static void send_http_error(struct mg_connection *conn, int status,
         conn->ctx->callbacks.http_error(conn, status)) {
 
         if (!conn->in_error_handler) {
-            /* TODO: allow user defined error page */
-            if ((error_handler!=NULL) && mg_stat(conn, error_handler, &error_page_file)) {
+            /* Send user defined error pages, if defined */
+            error_handler = conn->ctx->config[ERROR_PAGES];
+            error_page_file_ext = conn->ctx->config[INDEX_FILES];
+            page_handler_found = 0;
+            if (error_handler != NULL) {
+                for (scope=1; (scope<=3) && !page_handler_found; scope++) {
+                    switch (scope) {
+                    case 1:
+                        len = mg_snprintf(conn, buf, sizeof(buf)-32, "%serror%03u.", error_handler, status);
+                        break;
+                    case 2:
+                        len = mg_snprintf(conn, buf, sizeof(buf)-32, "%serror%01uxx.", error_handler, status/100);
+                        break;
+                    default:
+                        len = mg_snprintf(conn, buf, sizeof(buf)-32, "%serror.", error_handler);
+                        break;
+                    }
+                    tstr = strchr(error_page_file_ext, '.');
+                    while (tstr) {
+                        for (i=1; i<32 && tstr[i]!=0 && tstr[i]!=','; i++) buf[len+i-1]=tstr[i];
+                        buf[len+i-1]=0;
+                        if (mg_stat(conn, buf, &error_page_file)) {
+                            page_handler_found = 1;
+                            break;
+                        }
+                        tstr = strchr(tstr+i, '.');
+                    }
+                }
+            }
+
+            if (page_handler_found) {
                 conn->in_error_handler = 1;
-                handle_file_based_request(conn, error_handler, &error_page_file);
+                handle_file_based_request(conn, buf, &error_page_file);
                 conn->in_error_handler = 0;
                 return;
             }
@@ -1621,8 +1653,7 @@ static int path_cannot_disclose_cgi(const char *path)
     return isalnum(last) || strchr(allowed_last_characters, last) != NULL;
 }
 
-static int mg_stat(struct mg_connection *conn, const char *path,
-                   struct file *filep)
+static int mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 {
     wchar_t wbuf[PATH_MAX];
     WIN32_FILE_ATTRIBUTE_DATA info;
