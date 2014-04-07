@@ -343,11 +343,11 @@ be used for websockets as well. Since websockets use a different URL scheme
 websockets may also be served from a different directory. By default,
 the document_root is used as websocket_root as well.
 
-## access_control_allow_origin
+### access_control_allow_origin
 Access-Control-Allow-Origin header field used for cross-origin resource 
 sharing (CORS).
 
-## error_pages
+### error_pages
 This option may be used to specify a directory for user defined error pages.
 The error pages may be specified for an individual http status code (e.g.,
 404 - page requested by the client not found), a group of http status codes 
