@@ -2,54 +2,62 @@
 Overview
 =====
 
-Civetweb is small and easy to use web server. It is self-contained, and does
-not require any external software to run.
+Civetweb is small and easy to use web server.
+It may be embedded into C/C++ host applications or used as a stand-alone
+server. See `Embedding.md` for information on embedding civetweb into
+host applications.
+
+The stand-alone server is self-contained, and does not require any external
+software to run. Some Windows users may need to install the
+[Visual C++ Redistributable](http://www.microsoft.com/en-us/download/details.aspx?id=30679).
 
 Installation
 ----
 
-### Some Windows users may be the install the
-[Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
+On Windows, UNIX and Mac, the civetweb stand-alone executable may be started 
+from the command line.
+Running `civetweb` in a terminal, optionally followed by configuration parameters
+(`civetweb [OPTIONS]`) or a configuration file name (`civetweb [config_file_name]`),
+starts the web server.
+
+For UNIX and Mac, civetweb does not detach from the terminal.
+Pressing `Ctrl-C` keys will stop the server.
 
 On Windows, civetweb iconifies itself to the system tray icon when started.
 Right-click on the icon pops up a menu, where it is possible to stop
-civetweb, or configure it, or install it as Windows service. The easiest way
-to share a folder on Windows is to copy `civetweb.exe` to a folder,
-double-click the exe, and launch a browser at
+civetweb, or configure it, or install it as Windows service.
+
+When started without options, the server exposes the local directory at
+[http](http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol) port 8080.
+Thus, the easiest way to share a folder on Windows is to copy `civetweb.exe`
+to this folder, double-click the exe, and launch a browser at
 [http://localhost:8080](http://localhost:8080). Note that 'localhost' should
 be changed to a machine's name if a folder is accessed from other computer.
-
-On UNIX and Mac, civetweb is a command line utility. Running `civetweb` in
-terminal, optionally followed by configuration parameters
-(`civetweb [OPTIONS]`) or configuration file name
-(`civetweb [config_file_name]`) starts the
-web server. Civetweb does not detach from terminal. Pressing `Ctrl-C` keys
-would stop the server.
 
 When started, civetweb first searches for the configuration file.
 If configuration file is specified explicitly in the command line, i.e.
 `civetweb path_to_config_file`, then specified configuration file is used.
 Otherwise, civetweb would search for file `civetweb.conf` in the same directory
-where binary is located, and use it. Configuration file can be absent.
+the executable is located, and use it. This configuration file is optional.
 
-
-Configuration file is a sequence of lines, each line containing
-command line argument name and it's value. Empty lines, and lines beginning
-with `#`, are ignored. Here is the example of `civetweb.conf` file:
+The configuration file is a sequence of lines, each line containing one
+command line argument name and the corresponding value. 
+Empty lines, and lines beginning with `#`, are ignored. 
+Here is the example of `civetweb.conf` file:
 
     document_root c:\www
-    listening_ports 8080,8043s
+    listening_ports 80,443s
     ssl_certificate c:\civetweb\ssl_cert.pem
 
-When configuration file is processed, civetweb process command line arguments,
-if they are specified. Command line arguments therefore can override
-configuration file settings. Command line arguments must start with `-`.
-For example, if `civetweb.conf` has line
-`document_root /var/www`, and civetweb has been started as
-`civetweb -document_root /etc`, then `/etc` directory will be served as
-document root, because command line options take priority over
-configuration file. Configuration options section below provide a good
-overview of Civetweb features.
+When a configuration file is used, additional command line arguments may
+override the configuration file settings. 
+All command line arguments must start with `-`.
+
+For example: The above `civetweb.conf` file is used, and civetweb started as
+`civetweb -document_root D:\web`. Then the `D:\web` directory will be served
+as document root, because command line options take priority over the
+configuration file. The configuration options section below provides a good
+overview of the Civetweb features.
 
 Note that configuration options on the command line must start with `-`,
 but their names are the same as in the config file. All option names are
