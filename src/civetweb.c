@@ -3090,9 +3090,7 @@ static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p)
 
     if (filep->membuf != NULL && *p != NULL) {
         memend = (char *) &filep->membuf[filep->size];
-        eof = (char *) memchr(*p, '\n', memend - *p); /* Search for \n from p
-                                                         till the end of
-                                                         stream */
+        eof = (char *) memchr(*p, '\n', memend - *p); /* Search for \n from p till the end of stream */
         if (eof != NULL) {
             eof += 1; /* Include \n */
         } else {
@@ -4090,6 +4088,11 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 
     if (conn->path_info != NULL) {
         addenv(blk, "PATH_INFO=%s", conn->path_info);
+    }
+
+    if (conn->status_code > 0) {
+        /* CGI error handler should show the status code */
+        addenv(blk, "STATUS=%d", conn->status_code);
     }
 
 #if defined(_WIN32)
@@ -5692,7 +5695,6 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
         so->lsa.sin.sin_addr.s_addr = htonl((a << 24) | (b << 16) | (c << 8) | d);
         so->lsa.sin.sin_port = htons((uint16_t) port);
 #if defined(USE_IPV6)
-
     } else if (sscanf(vec->ptr, "[%49[^]]]:%d%n", buf, &port, &len) == 2 &&
                inet_pton(AF_INET6, buf, &so->lsa.sin6.sin6_addr)) {
         /* IPv6 address, e.g. [3ffe:2a00:100:7031::1]:8080 */
