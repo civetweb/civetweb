@@ -72,12 +72,12 @@ listed in the next section. Thus, the following two setups are equivalent:
     document_root /var/www
     $ civetweb
 
-Civetweb can also be used to modify `.htpasswd` passwords file:
+Civetweb can also be used to modify `.htpasswd` passwords files:
 
     civetweb -A <htpasswd_file> <realm> <user> <passwd>
 
-Unlike other web servers, civetweb does not require CGI scripts be located in
-a special directory. CGI scripts can be anywhere. CGI (and SSI) files are
+Unlike other web servers, civetweb does not require CGI scripts to be located
+in a special directory. CGI scripts can be anywhere. CGI (and SSI) files are
 recognized by the file name pattern. Civetweb uses shell-like glob
 patterns. Pattern match starts at the beginning of the string, so essentially
 patterns are prefix patterns. Syntax is as follows:
@@ -96,14 +96,14 @@ All other characters in the pattern match themselves. Examples:
 
 # Configuration Options
 
-Below is a list of configuration options Civetweb understands. Every option
-is followed by it's default value. If default value is not present, then
-it is empty.
+Below is a list of configuration options understood by Civetweb.
+Every option is followed by it's default value. If a default value is not
+present, then the default is empty.
 
 ### cgi_pattern `**.cgi$|**.pl$|**.php$`
 All files that match `cgi_pattern` are treated as CGI files. Default pattern
 allows CGI files be anywhere. To restrict CGIs to a certain directory,
-use `/path/to/cgi-bin/**.cgi` as pattern. Note that full file path is
+use `/path/to/cgi-bin/**.cgi` as pattern. Note that the full file path is
 matched against the pattern, not the URI.
 
 ### cgi_environment
