@@ -14,7 +14,7 @@ software to run. Some Windows users may need to install the
 Installation
 ----
 
-On Windows, UNIX and Mac, the civetweb stand-alone executable may be started 
+On Windows, UNIX and Mac, the civetweb stand-alone executable may be started
 from the command line.
 Running `civetweb` in a terminal, optionally followed by configuration parameters
 (`civetweb [OPTIONS]`) or a configuration file name (`civetweb [config_file_name]`),
@@ -41,8 +41,8 @@ Otherwise, civetweb would search for file `civetweb.conf` in the same directory
 the executable is located, and use it. This configuration file is optional.
 
 The configuration file is a sequence of lines, each line containing one
-command line argument name and the corresponding value. 
-Empty lines, and lines beginning with `#`, are ignored. 
+command line argument name and the corresponding value.
+Empty lines, and lines beginning with `#`, are ignored.
 Here is the example of `civetweb.conf` file:
 
     document_root c:\www
@@ -50,7 +50,7 @@ Here is the example of `civetweb.conf` file:
     ssl_certificate c:\civetweb\ssl_cert.pem
 
 When a configuration file is used, additional command line arguments may
-override the configuration file settings. 
+override the configuration file settings.
 All command line arguments must start with `-`.
 
 For example: The above `civetweb.conf` file is used, and civetweb started as
@@ -100,62 +100,67 @@ Below is a list of configuration options understood by Civetweb.
 Every option is followed by it's default value. If a default value is not
 present, then the default is empty.
 
-### cgi_pattern `**.cgi$|**.pl$|**.php$`
+### cgi\_pattern `**.cgi$|**.pl$|**.php$`
 All files that match `cgi_pattern` are treated as CGI files. Default pattern
 allows CGI files be anywhere. To restrict CGIs to a certain directory,
 use `/path/to/cgi-bin/**.cgi` as pattern. Note that the full file path is
 matched against the pattern, not the URI.
 
-### cgi_environment
+### cgi\_environment
 Extra environment variables to be passed to the CGI script in
 addition to standard ones. The list must be comma-separated list
 of name=value pairs, like this: `VARIABLE1=VALUE1,VARIABLE2=VALUE2`.
 
 ### put\_delete\_auth\_file
-Passwords file for PUT and DELETE requests. Without it, PUT and DELETE requests
-will fail.
+Passwords file for PUT and DELETE requests. Without password file, it will not
+be possible to, PUT new files to the server or DELETE existing ones. PUT and
+DELETE requests might still be handled by Lua scripts and CGI paged.
 
-### cgi_interpreter
+### cgi\_interpreter
 Path to an executable to use as CGI interpreter for __all__ CGI scripts
-regardless script extension. If this option is not set (which is a default),
-Civetweb looks at first line of a CGI script,
-[shebang line](http://en.wikipedia.org/wiki/Shebang_(Unix\)), for an interpreter.
+regardless of the script file extension. If this option is not set (which is
+the default), Civetweb looks at first line of a CGI script,
+[shebang line](http://en.wikipedia.org/wiki/Shebang_(Unix\)), for an
+interpreter (not only on Linux and Mac but also for Windows).
 
-For example, if both PHP and perl CGIs are used, then
+For example, if both PHP and Perl CGIs are used, then
 `#!/path/to/php-cgi.exe` and `#!/path/to/perl.exe` must be first lines of the
 respective CGI scripts. Note that paths should be either full file paths,
-or file paths relative to the current working directory of civetweb server.
-If civetweb is started by mouse double-click on Windows, current working
-directory is a directory where civetweb executable is located.
+or file paths relative to the current working directory of the civetweb
+server. If civetweb is started by mouse double-click on Windows, the current
+working directory is the directory where the civetweb executable is located.
 
-If all CGIs use the same interpreter, for example they are all PHP, then
-`cgi_interpreter` can be set to the path to `php-cgi.exe` executable and
-shebang line in the CGI scripts can be omitted.
-Note that PHP scripts must use `php-cgi.exe` executable, not `php.exe`.
+If all CGIs use the same interpreter, for example they are all PHP, it is
+more efficient to set `cgi_interpreter` to the path to `php-cgi.exe`.
+The  shebang line in the CGI scripts can be omitted in this case.
+Note that PHP scripts must use `php-cgi.exe` as executable, not `php.exe`.
 
-### protect_uri
+### protect\_uri
 Comma separated list of URI=PATH pairs, specifying that given
-URIs must be protected with respected password files. Paths must be full
-file paths.
+URIs must be protected with password files specified by PATH.
+All Paths must be full file paths.
 
 ### authentication_domain `mydomain.com`
-Authorization realm used in `.htpasswd` authorization.
+Authorization realm used for HTTP digest authentication. This domain is
+used in the encoding of the `.htpasswd` authorization files as well.
+Changing the domain retroactively will render the existing passwords useless.
 
-### ssi_pattern `**.shtml$|**.shtm$`
-All files that match `ssi_pattern` are treated as SSI.
+### ssi\_pattern `**.shtml$|**.shtm$`
+All files that match `ssi_pattern` are treated as Server Side Includes (SSI).
 
-Server Side Includes (SSI) is a simple interpreted server-side scripting
-language which is most commonly used to include the contents of a file into
-a web page. It can be useful when it is desirable to include a common piece
+SSI is a simple interpreted server-side scripting language which is most
+commonly used to include the contents of another file into a web page. 
+It can be useful when it is desirable to include a common piece
 of code throughout a website, for example, headers and footers.
 
 In order for a webpage to recognize an SSI-enabled HTML file, the filename
 should end with a special extension, by default the extension should be
-either `.shtml` or `.shtm`.
+either `.shtml` or `.shtm`. These extentions may be changed using the
+`ssi_pattern` option.
 
 Unknown SSI directives are silently ignored by civetweb. Currently, two SSI
 directives are supported, `<!--#include ...>` and
-`<!--#exec "command">`. Note that `<!--#include ...>` directive supports
+`<!--#exec "command">`. Note that the `<!--#include ...>` directive supports
 three path specifications:
 
     <!--#include virtual="path">  Path is relative to web server root
@@ -166,7 +171,8 @@ three path specifications:
 
 The `include` directive may be used to include the contents of a file or the
 result of running a CGI script. The `exec` directive is used to execute a
-command on a server, and show command's output. Example:
+command on a server, and show the output that would have been printed to
+stdout (the terminal window) otherwise. Example:
 
     <!--#exec "ls -l" -->
 
@@ -187,21 +193,21 @@ megabytes respectively. A limit of 0 means unlimited rate. The
 last matching rule wins. Examples:
 
     *=1k,10.0.0.0/8=0   limit all accesses to 1 kilobyte per second,
-                        but give connections from 10.0.0.0/8 subnet
+                        but give connections the from 10.0.0.0/8 subnet
                         unlimited speed
 
     /downloads/=5k      limit accesses to all URIs in `/downloads/` to
                         5 kilobytes per second. All other accesses are unlimited
 
 ### access\_log\_file
-Path to a file for access logs. Either full path, or relative to current
+Path to a file for access logs. Either full path, or relative to the current
 working directory. If absent (default), then accesses are not logged.
 
 ### enable\_directory\_listing `yes`
 Enable directory listing, either `yes` or `no`.
 
 ### error\_log\_file
-Path to a file for error logs. Either full path, or relative to current
+Path to a file for error logs. Either full path, or relative to the current
 working directory. If absent (default), then errors are not logged.
 
 ### global\_auth\_file
@@ -209,14 +215,16 @@ Path to a global passwords file, either full path or relative to the current
 working directory. If set, per-directory `.htpasswd` files are ignored,
 and all requests are authorized against that file.
 
-The file has to include the realm set through `authentication_domain` and the password in digest format:
+The file has to include the realm set through `authentication_domain` and the
+password in digest format:
 
     user:realm:digest
     test:test.com:ce0220efc2dd2fad6185e1f1af5a4327
 
-(e.g. use [this generator](http://www.askapache.com/online-tools/htpasswd-generator))
+Password files may be generated using `civetweb -A` as explained above, or
+online tools e.g. [this generator](http://www.askapache.com/online-tools/htpasswd-generator).
 
-### index_files `index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php`
+### index\_files `index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php`
 Comma-separated list of files to be treated as directory index files.
 If more than one matching file is present in a directory, the one listed to the left
 is used as a directory index.
@@ -227,11 +235,11 @@ are additional default index files, ordered before `index.cgi`.
 ### enable\_keep\_alive `no`
 Enable connection keep alive, either `yes` or `no`.
 
-Experimental feature. Allows clients to reuse TCP connection for
-subsequent HTTP requests, which improves performance.
-For this to work when using request handlers it's important to add the correct
-Content-Length HTTP header for each request. If this is forgotten the client
-will time out.
+Experimental feature. Allows clients to reuse TCP connection for subsequent
+HTTP requests, which improves performance.
+For this to work when using request handlers it is important to add the
+correct Content-Length HTTP header for each request. If this is forgotten the
+client will time out.
 
 ### access\_control\_list
 An Access Control List (ACL) allows restrictions to be put on the list of IP
@@ -248,14 +256,15 @@ the last match wins. Examples:
     -0.0.0.0/0,+192.168/16    deny all accesses, only allow 192.168/16 subnet
 
 To learn more about subnet masks, see the
-[Wikipedia page on Subnetwork](http://en.wikipedia.org/wiki/Subnetwork)
+[Wikipedia page on Subnetwork](http://en.wikipedia.org/wiki/Subnetwork).
 
 ### extra\_mime\_types
-Extra mime types to recognize, in form `extension1=type1,exten-
-sion2=type2,...`. Extension must include dot.  Example:
+Extra mime types, in tha form `extension1=type1,exten-sion2=type2,...`.
+See the [Wikipedia page on Internet media types](http://en.wikipedia.org/wiki/Internet_media_type).
+Extension must include a leading dot. Example:
 `.cpp=plain/text,.java=plain/text`
 
-### listening_ports `8080`
+### listening\_ports `8080`
 Comma-separated list of ports to listen on. If the port is SSL, a
 letter `s` must be appended, for example, `80,443s` will open
 port 80 and port 443, and connections on port 443 will be SSL-ed.
@@ -269,20 +278,20 @@ an IP address and a colon must be pre-pended to the port number.
 For example, to bind to a loopback interface on port 80 and to
 all interfaces on HTTPS port 443, use `127.0.0.1:80,443s`.
 
-### document_root `.`
-A directory to serve. By default, current directory is served. Current
-directory is commonly referenced as dot (`.`).
+### document\_root `.`
+A directory to serve. By default, the current workubg directory is served. 
+The current directory is commonly referenced as dot (`.`).
 
-### ssl_certificate
-Path to SSL certificate file. This option is only required when at least one
-of the `listening_ports` is SSL. The file must be in PEM format,
-and it must have both private key and certificate, see for example
+### ssl\_certificate
+Path to the SSL certificate file. This option is only required when at least
+one of the `listening\_ports` is SSL. The file must be in PEM format,
+and it must have both, private key and certificate, see for example
 [ssl_cert.pem](https://github.com/sunsetbrew/civetweb/blob/master/resources/ssl_cert.pem)
 A description how to create a certificate can be found in doc/OpenSSL.md
 
-### num_threads `50`
+### num\_threads `50`
 Number of worker threads. Civetweb handles each incoming connection in a
-separate thread. Therefore, the value of this option is effectively a number
+separate thread. Therefore, the value of this option is effectively the number
 of concurrent HTTP connections Civetweb can handle.
 
 ### run\_as\_user
@@ -352,14 +361,14 @@ websockets may also be served from a different directory. By default,
 the document_root is used as websocket_root as well.
 
 ### access_control_allow_origin
-Access-Control-Allow-Origin header field used for cross-origin resource 
+Access-Control-Allow-Origin header field used for cross-origin resource
 sharing (CORS).
 
 ### error_pages
 This option may be used to specify a directory for user defined error pages.
 The error pages may be specified for an individual http status code (e.g.,
-404 - page requested by the client not found), a group of http status codes 
-(e.g., 4xx - all client errors) or all errors. The corresponding error pages 
+404 - page requested by the client not found), a group of http status codes
+(e.g., 4xx - all client errors) or all errors. The corresponding error pages
 must be called error404.ext, error4xx.ext or error.ext, whereas the file
 extention may be one of the extentions specified for the index_files option.
 
