@@ -394,6 +394,7 @@ insert the content of a variable by enclosing the Lua variable name in
 `<?=  ?>` blocks, similar to PHP.
 For example, to print the current weekday name and the URI of the current
 page, one can write:
+
     <p>
       <span>Today is:</span>
       <? mg.write(os.date("%A")) ?>
@@ -435,6 +436,7 @@ in Lua. Examples are given in
 Civetweb exports the following functions to Lua:
 
 mg (table):
+
     mg.read()                  -- reads a chunk from POST data, returns it as a string
     mg.write(str)              -- writes string to the client
     mg.include(path)           -- sources another Lua file
@@ -466,6 +468,7 @@ mg (table):
          .remote_user          -- user name if authenticated, nil otherwise
 
 connect (function):
+
     -- Connect to the remote TCP server. This function is an implementation
     -- of simple socket interface. It returns a socket object with three
     -- methods: send, recv, close, which are synchronous (blocking).
