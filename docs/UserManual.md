@@ -149,7 +149,7 @@ Changing the domain retroactively will render the existing passwords useless.
 All files that match `ssi_pattern` are treated as Server Side Includes (SSI).
 
 SSI is a simple interpreted server-side scripting language which is most
-commonly used to include the contents of another file into a web page. 
+commonly used to include the contents of another file into a web page.
 It can be useful when it is desirable to include a common piece
 of code throughout a website, for example, headers and footers.
 
@@ -279,7 +279,7 @@ For example, to bind to a loopback interface on port 80 and to
 all interfaces on HTTPS port 443, use `127.0.0.1:80,443s`.
 
 ### document\_root `.`
-A directory to serve. By default, the current workubg directory is served. 
+A directory to serve. By default, the current workubg directory is served.
 The current directory is commonly referenced as dot (`.`).
 
 ### ssl\_certificate
@@ -296,15 +296,16 @@ of concurrent HTTP connections Civetweb can handle.
 
 ### run\_as\_user
 Switch to given user credentials after startup. Usually, this option is
-required when civetweb needs to bind on privileged port on UNIX. To do
-that, civetweb needs to be started as root. But running as root is a bad idea,
-therefore this option can be used to drop privileges. Example:
+required when civetweb needs to bind on privileged ports on UNIX. To do
+that, civetweb needs to be started as root. From a security point of view,
+running as root is not advisable, therefore this option can be used to drop
+privileges. Example:
 
-    civetweb -listening_ports 80 -run_as_user nobody
+    civetweb -listening_ports 80 -run_as_user webserver
 
 ### url\_rewrite\_patterns
 Comma-separated list of URL rewrites in the form of
-`uri_pattern=file_or_directory_path`. When Civetweb receives the request,
+`uri_pattern=file_or_directory_path`. When Civetweb receives any request,
 it constructs the file name to show by combining `document_root` and the URI.
 However, if the rewrite option is used and `uri_pattern` matches the
 requested URI, then `document_root` is ignored. Instead,
@@ -318,60 +319,63 @@ to redirect all accesses to `.doc` files to a special script, do:
 
     civetweb -url_rewrite_patterns **.doc$=/path/to/cgi-bin/handle_doc.cgi
 
-Or, to imitate user home directories support, do:
+Or, to imitate support for user home directories, do:
 
     civetweb -url_rewrite_patterns /~joe/=/home/joe/,/~bill=/home/bill/
 
 ### hide\_files\_patterns
 A pattern for the files to hide. Files that match the pattern will not
 show up in directory listing and return `404 Not Found` if requested. Pattern
-must be for a file name only, not including directory name. Example:
+must be for a file name only, not including directory names. Example:
 
-    civetweb -hide_files_patterns secret.txt|even_more_secret.txt
+    civetweb -hide_files_patterns secret.txt|*.hide
 
 ### request\_timeout\_ms `30000`
 Timeout for network read and network write operations, in milliseconds.
-If client intends to keep long-running connection, either increase this value
-or use keep-alive messages.
+If a client intends to keep long-running connection, either increase this
+value or (better) use keep-alive messages.
 
-### lua_preload_file
+### lua\_preload\_file
 This configuration option can be used to specify a Lua script file, which
 is executed before the actual web page script (Lua script, Lua server page
 or Lua websocket). It can be used to modify the Lua environment of all web
-page scripts, e.g., by loading additional libraries required by all scripts
-or to achieve backward compatibility by defining obsolete functions.
+page scripts, e.g., by loading additional libraries or defining functions
+required by all scripts.
+It may be used to achieve backward compatibility by defining obsolete
+functions as well.
 
-### lua_script_pattern `"**.lua$`
+### lua\_script\_pattern `"**.lua$`
 A pattern for files that are interpreted as Lua scripts by the server.
 In contrast to Lua server pages, Lua scripts use plain Lua syntax.
 An example can be found in the test directory.
 
-### lua_server_page_pattern `**.lp$|**.lsp$`
+### lua\_server\_page\_pattern `**.lp$|**.lsp$`
 Files matching this pattern are treated as Lua server pages.
 In contrast to Lua scripts, the content of a Lua server pages is delivered
 directly to the client. Lua script parts are delimited from the standard
 content by including them between <? and ?> tags.
 An example can be found in the test directory.
 
-### websocket_root
+### websocket\_root
 In case civetweb is built with Lua and websocket support, Lua scripts may
 be used for websockets as well. Since websockets use a different URL scheme
 (ws, wss) than other http pages (http, https), the Lua scripts used for
 websockets may also be served from a different directory. By default,
 the document_root is used as websocket_root as well.
 
-### access_control_allow_origin
-Access-Control-Allow-Origin header field used for cross-origin resource
+### access\_control\_allow\_origin
+Access-Control-Allow-Origin header field, used for cross-origin resource
 sharing (CORS).
+See the [Wikipedia page on CORS](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
 
-### error_pages
+### error\_pages
 This option may be used to specify a directory for user defined error pages.
 The error pages may be specified for an individual http status code (e.g.,
 404 - page requested by the client not found), a group of http status codes
 (e.g., 4xx - all client errors) or all errors. The corresponding error pages
 must be called error404.ext, error4xx.ext or error.ext, whereas the file
 extention may be one of the extentions specified for the index_files option.
-
+See the [Wikipedia page on HTTP status codes](http://en.wikipedia.org/wiki/HTTP_status_code).
 
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
@@ -388,8 +392,8 @@ PHP. Lua script elements must be enclosed in `<?  ?>` blocks, and can appear
 anywhere on the page. Furthermore, Lua Server Pages offer the opportunity to
 insert the content of a variable by enclosing the Lua variable name in
 `<?=  ?>` blocks, similar to PHP.
-For example, to print current weekday name and the URI of the current page,
-one can write:
+For example, to print the current weekday name and the URI of the current
+page, one can write:
     <p>
       <span>Today is:</span>
       <? mg.write(os.date("%A")) ?>
@@ -398,17 +402,17 @@ one can write:
       URI is <?=mg.request_info.uri?>
     </p>
 
-Lua is known for it's speed and small size. Civetweb uses Lua version 5.2.2,
-the documentation for it can be found at
+Lua is known for it's speed and small size. Civetweb currently uses Lua
+version 5.2.2. The documentation for it can be found in the
 [Lua 5.2 reference manual](http://www.lua.org/manual/5.2/).
 
 
-Note that this example uses function `mg.write()`, which prints data to the
-web page. Using function `mg.write()` is the way to generate web content from
-inside Lua code. In addition to `mg.write()`, all standard library functions
-are accessible from the Lua code (please check reference manual for details),
-and also information about the request is available in `mg.request_info`
-object, like request method, all headers, etcetera.
+Note that this example uses function `mg.write()`, which sends data to the
+web client. Using `mg.write()` is the way to generate web content from inside
+Lua code. In addition to `mg.write()`, all standard Lua library functions
+are accessible from the Lua code (please check the reference manual for
+details). Information on the request is available in the `mg.request_info`
+object, like the request method, all HTTP headers, etcetera.
 
 [page2.lua](https://github.com/sunsetbrew/civetweb/blob/master/test/page2.lua)
 is an example for a plain Lua script.
@@ -423,7 +427,8 @@ to see additional information on the elements of the `mg.request_info` object.
 
 Civetweb also provides access to the [SQlite3 database](http://www.sqlite.org/)
 through the [LuaSQLite3 interface](http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki)
-in Lua. An example is given in
+in Lua. Examples are given in
+[page.lua](https://github.com/bel2125/civetweb/blob/master/test/page.lua) and
 [page.lp](https://github.com/sunsetbrew/civetweb/blob/master/test/page.lp).
 
 
@@ -480,25 +485,25 @@ connect (function):
 
 
 **IMPORTANT: Civetweb does not send HTTP headers for Lua pages. Therefore,
-every Lua Page must begin with HTTP reply line and headers**, like this:
+every Lua Page must begin with a HTTP reply line and headers**, like this:
 
     <? print('HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n') ?>
     <html><body>
       ... the rest of the web page ...
 
-To serve Lua Page, civetweb creates Lua context. That context is used for
+To serve a Lua Page, civetweb creates a Lua context. That context is used for
 all Lua blocks within the page. That means, all Lua blocks on the same page
 share the same context. If one block defines a variable, for example, that
-variable is visible in the block that follows.
+variable is visible in all block that follow.
 
 # Common Problems
 - PHP doesn't work - getting empty page, or 'File not found' error. The
   reason for that is wrong paths to the interpreter. Remember that with PHP,
-  correct interpreter is `php-cgi.exe` (`php-cgi` on UNIX). Solution: specify
-  full path to the PHP interpreter, e.g.:
+  the correct interpreter is `php-cgi.exe` (`php-cgi` on UNIX).
+  Solution: specify the full path to the PHP interpreter, e.g.:
     `civetweb -cgi_interpreter /full/path/to/php-cgi`
 
-- Civetweb fails to start. If Civetweb exits immediately when run, this
+- Civetweb fails to start. If Civetweb exits immediately when started, this
   usually indicates a syntax error in the configuration file
   (named `civetweb.conf` by default) or the command-line arguments.
   Syntax checking is omitted from Civetweb to keep its size low. However,
