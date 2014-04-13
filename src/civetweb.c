@@ -3215,8 +3215,8 @@ static int is_authorized_for_put(struct mg_connection *conn)
 int mg_modify_passwords_file(const char *fname, const char *domain,
                              const char *user, const char *pass)
 {
-    int found;
-    char line[512], u[512] = "", d[512] ="", ha1[33], tmp[PATH_MAX+1];
+    int found, i;
+    char line[512], u[512] = "", d[512] ="", ha1[33], tmp[PATH_MAX+8];
     FILE *fp, *fp2;
 
     found = 0;
@@ -3227,6 +3227,25 @@ int mg_modify_passwords_file(const char *fname, const char *domain,
         pass = NULL;
     }
 
+    /* Other arguments must not be empty */
+    if (fname == NULL || domain == NULL || user == NULL) return 0;
+
+    /* Using the given file format, user name and domain must not contain ':' */
+    if (strchr(user, ':') != NULL) return 0;
+    if (strchr(domain, ':') != NULL) return 0;
+
+    /* Do not allow control characters like newline in user name and domain.
+       Do not allow excessively long names either. */
+    for (i=0; user[i]!=0 && i<255; i++) {
+        if (iscntrl(user[i])) return 0;
+    }
+    if (user[i]) return 0;
+    for (i=0; domain[i]!=0 && i<255; i++) {
+        if (iscntrl(domain[i])) return 0;
+    }
+    if (domain[i]) return 0;
+
+    /* Create a temporary file name */
     (void) snprintf(tmp, sizeof(tmp) - 1, "%s.tmp", fname);
     tmp[sizeof(tmp) - 1] = 0;
 
