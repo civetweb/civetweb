@@ -583,6 +583,7 @@ enum {
     ID_REMOVE_SERVICE, ID_STATIC, ID_GROUP, ID_PASSWORD,
     ID_SAVE, ID_RESET_DEFAULTS, ID_RESET_FILE, ID_RESET_ACTIVE,
     ID_STATUS, ID_CONNECT, ID_ADD_USER, ID_ADD_USER_NAME, ID_ADD_USER_REALM,
+    ID_INPUT_LINE,
 
     /* All dynamically created text boxes for options have IDs starting from
        ID_CONTROLS, incremented by one. */
@@ -670,7 +671,6 @@ static void save_config(HWND hDlg, FILE *fp)
         }
     }
 }
-
 
 static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
@@ -786,8 +786,8 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
         break;
 
     case WM_INITDIALOG:
-        SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_SMALL, (LPARAM) hIcon);
-        SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_BIG, (LPARAM) hIcon);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_SMALL, (LPARAM) hIcon);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_BIG, (LPARAM) hIcon);
         title = malloc(strlen(server_name)+16);
         if (title) {
             strcpy(title, server_name);
@@ -809,11 +809,176 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
     return FALSE;
 }
 
-static void GetPassword(char * password, unsigned maxlen)
+struct tstring_input_buf {
+    unsigned buflen;
+    char * buffer;
+};
+
+static BOOL CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
-    assert(maxlen>=255);
-    /* TODO: replace by a proper dialog */
-    strcpy(password, "12345");
+    static struct tstring_input_buf *inBuf = 0;
+    WORD ctrlId;
+
+    switch (msg) {
+    case WM_CLOSE:
+        inBuf = 0;
+        DestroyWindow(hDlg);
+        break;
+
+    case WM_COMMAND:
+        ctrlId = LOWORD(wParam);
+        if (ctrlId == IDOK) {
+            /* Add user */
+            GetWindowText(GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer, inBuf->buflen);
+            if (strlen(inBuf->buffer)>0) {
+                EndDialog(hDlg, IDOK);
+            }
+        } else if (ctrlId == IDCANCEL) {
+            EndDialog(hDlg, IDCANCEL);
+        }
+        break;
+
+    case WM_INITDIALOG:
+        inBuf = (struct tstring_input_buf *) lP;
+        assert(inBuf != NULL);
+        assert((inBuf->buffer != NULL) && (inBuf->buflen != 0));
+        assert(strlen(inBuf->buffer) < inBuf->buflen);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_SMALL, (LPARAM) hIcon);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_BIG, (LPARAM) hIcon);
+        SendDlgItemMessage(hDlg, ID_INPUT_LINE, EM_LIMITTEXT, inBuf->buflen-1, 0);
+        SetWindowText(GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer);
+        SetWindowText(hDlg, "Modify password");
+        SetFocus(GetDlgItem(hDlg, ID_INPUT_LINE));
+        break;
+
+    default:
+        break;
+    }
+
+    return FALSE;
+}
+
+void base64_encode(const unsigned char *src, int src_len, char *dst)
+{
+    static const char *b64 =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    int i, j, a, b, c;
+
+    for (i = j = 0; i < src_len; i += 3) {
+        a = src[i];
+        b = i + 1 >= src_len ? 0 : src[i + 1];
+        c = i + 2 >= src_len ? 0 : src[i + 2];
+
+        dst[j++] = b64[a >> 2];
+        dst[j++] = b64[((a & 3) << 4) | (b >> 4)];
+        if (i + 1 < src_len) {
+            dst[j++] = b64[(b & 15) << 2 | (c >> 6)];
+        }
+        if (i + 2 < src_len) {
+            dst[j++] = b64[c & 63];
+        }
+    }
+    while (j % 4 != 0) {
+        dst[j++] = '=';
+    }
+    dst[j++] = '\0';
+}
+
+static void add_control(unsigned char **mem, DLGTEMPLATE *dia, WORD type,
+                        DWORD id, DWORD style, WORD x, WORD y,
+                        WORD cx, WORD cy, const char *caption);
+
+static int get_password(const char * user, const char * realm, char * passwd, unsigned passwd_len)
+{
+#define HEIGHT 15
+#define WIDTH 280
+#define LABEL_WIDTH 90
+
+    HWND hDlg = NULL;
+    unsigned char mem[4096], *p;
+    DLGTEMPLATE *dia = (DLGTEMPLATE *) mem;
+    int ok, y;
+    struct tstring_input_buf dlgprms = {passwd_len, passwd};
+
+    static struct {
+        DLGTEMPLATE template; /* 18 bytes */
+        WORD menu, class;
+        wchar_t caption[1];
+        WORD fontsiz;
+        wchar_t fontface[7];
+    } dialog_header = {{
+        WS_CAPTION | WS_POPUP | WS_SYSMENU | WS_VISIBLE |
+            DS_SETFONT | WS_DLGFRAME, WS_EX_TOOLWINDOW, 0, 200, 200, WIDTH, 0
+    },
+    0, 0, L"", 8, L"Tahoma"
+    };
+
+    assert((user!=NULL) && (realm!=NULL) && (passwd!=NULL));
+
+    if (guard < 100) {
+        guard += 100;
+    } else {
+        return 0;
+    }
+
+    /* Create a password suggestion */
+    memset(passwd, 0, passwd_len);
+    GetSystemTimeAsFileTime((LPFILETIME)mem);
+    *((DWORD*)mem) |= GetCurrentProcessId();
+    base64_encode(mem, 6, passwd);
+    p = mem+100;
+    for (y=32;y<127;y++) {
+        if (ispunct(y)) {*p=(char)y; p++;}
+    }
+    passwd[8] = mem[(GetTickCount()/30)%(p-(mem+100))+100];
+
+    /* Create the dialog */
+    (void) memset(mem, 0, sizeof(mem));
+    (void) memcpy(mem, &dialog_header, sizeof(dialog_header));
+    p = mem + sizeof(dialog_header);
+
+    y = HEIGHT;
+    add_control(&p, dia, 0x82, ID_STATIC, WS_VISIBLE | WS_CHILD,
+        10, y, LABEL_WIDTH, HEIGHT, "User:");
+    add_control(&p, dia, 0x81, ID_CONTROLS + 1,
+        WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_DISABLED,
+        15+LABEL_WIDTH, y, WIDTH - LABEL_WIDTH - 25, HEIGHT, user);
+
+    y += HEIGHT;
+    add_control(&p, dia, 0x82, ID_STATIC, WS_VISIBLE | WS_CHILD,
+        10, y, LABEL_WIDTH, HEIGHT, "Realm:");
+    add_control(&p, dia, 0x81, ID_CONTROLS + 2,
+        WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_DISABLED,
+        15+LABEL_WIDTH, y, WIDTH - LABEL_WIDTH - 25, HEIGHT, realm);
+
+    y += HEIGHT;
+    add_control(&p, dia, 0x82, ID_STATIC, WS_VISIBLE | WS_CHILD,
+        10, y, LABEL_WIDTH, HEIGHT, "Password:");
+    add_control(&p, dia, 0x81, ID_INPUT_LINE,
+        WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP,
+        15+LABEL_WIDTH, y, WIDTH - LABEL_WIDTH - 25, HEIGHT, "");
+
+    y += (WORD)(HEIGHT * 2);
+    add_control(&p, dia, 0x80, IDOK,
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+        80, y, 55, 12, "Ok");
+    add_control(&p, dia, 0x80, IDCANCEL,
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+        140, y, 55, 12, "Cancel");
+
+    assert((int)p - (int)mem < sizeof(mem));
+
+    dia->cy = y + (WORD)(HEIGHT * 1.5);
+
+    ok = (IDOK == DialogBoxIndirectParam(NULL, dia, NULL, InputDlgProc, (LPARAM) &dlgprms));
+
+    guard -= 100;
+
+    return ok;
+
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
 }
 
 static BOOL CALLBACK PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
@@ -834,17 +999,19 @@ static BOOL CALLBACK PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
             /* Add user */
             GetWindowText(GetDlgItem(hDlg, ID_ADD_USER_NAME), user, sizeof(user));
             GetWindowText(GetDlgItem(hDlg, ID_ADD_USER_REALM), domain, sizeof(domain));
-            GetPassword(password, sizeof(password));
-            mg_modify_passwords_file(passfile, domain, user, password);
-            EndDialog(hDlg, IDOK);
+            if (get_password(user, domain, password, sizeof(password))) {
+                mg_modify_passwords_file(passfile, domain, user, password);
+                EndDialog(hDlg, IDOK);
+            }
         } else if ((ctrlId>=(ID_CONTROLS + ID_FILE_BUTTONS_DELTA * 3)) &&
                    (ctrlId<(ID_CONTROLS + ID_FILE_BUTTONS_DELTA * 4))) {
             /* Modify password */
             GetWindowText(GetDlgItem(hDlg, ctrlId - ID_FILE_BUTTONS_DELTA * 3), user, sizeof(user));
             GetWindowText(GetDlgItem(hDlg, ctrlId - ID_FILE_BUTTONS_DELTA * 2), domain, sizeof(domain));
-            GetPassword(password, sizeof(password));
-            mg_modify_passwords_file(passfile, domain, user, password);
-            EndDialog(hDlg, IDOK);
+            if (get_password(user, domain, password, sizeof(password))) {
+                mg_modify_passwords_file(passfile, domain, user, password);
+                EndDialog(hDlg, IDOK);
+            }
         } else if ((ctrlId>=(ID_CONTROLS + ID_FILE_BUTTONS_DELTA * 2)) &&
                    (ctrlId<(ID_CONTROLS + ID_FILE_BUTTONS_DELTA * 3))) {
             /* Remove user */
@@ -857,8 +1024,8 @@ static BOOL CALLBACK PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 
     case WM_INITDIALOG:
         passfile = (const char *)lP;
-        SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_SMALL, (LPARAM) hIcon);
-        SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_BIG, (LPARAM) hIcon);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_SMALL, (LPARAM) hIcon);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_BIG, (LPARAM) hIcon);
         SetWindowText(hDlg, passfile);
         SetFocus(GetDlgItem(hDlg, ID_ADD_USER_NAME));
         break;
@@ -1105,12 +1272,12 @@ static void change_password_file()
         add_control(&p, dia, 0x80, ID_ADD_USER,
             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
             80, y, 55, 12, "Add user");
-        add_control(&p, dia, 0x81, ID_ADD_USER_REALM,
-            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-            245, y, 60, 12, domain);
         add_control(&p, dia, 0x81, ID_ADD_USER_NAME,
-            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP,
             140, y, 100, 12, "");
+        add_control(&p, dia, 0x81, ID_ADD_USER_REALM,
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP,
+            245, y, 60, 12, domain);
 
         y = (WORD) ((nelems + 2) * HEIGHT + 10);
         add_control(&p, dia, 0x80, ID_GROUP, WS_CHILD | WS_VISIBLE |
