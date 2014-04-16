@@ -169,6 +169,10 @@
       <Project>{8f5e5d77-d269-4665-9e27-1045da6cf0d8}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\src\md5.inl" />
+    <None Include="..\..\src\mod_lua.inl" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
