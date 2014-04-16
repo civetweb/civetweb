@@ -77,7 +77,7 @@ extern char *_getcwd(char *buf, size_t size);
 #define MAX_OPTIONS 100
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
-static int exit_flag;
+static int exit_flag = 0;               /* Main loop should exit */
 static char server_base_name[40];       /* Set by init_server_name() */
 static char *server_name;               /* Set by init_server_name() */
 static char *icon_name;                 /* Set by init_server_name() */
@@ -858,30 +858,26 @@ static BOOL CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
     return FALSE;
 }
 
-void base64_encode(const unsigned char *src, int src_len, char *dst)
+void suggest_passwd(char *passwd)
 {
-    static const char *b64 =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    int i, j, a, b, c;
+    unsigned u;
+    char * p;
+    union {
+        FILETIME ft;
+        LARGE_INTEGER li;
+    } num;
 
-    for (i = j = 0; i < src_len; i += 3) {
-        a = src[i];
-        b = i + 1 >= src_len ? 0 : src[i + 1];
-        c = i + 2 >= src_len ? 0 : src[i + 2];
-
-        dst[j++] = b64[a >> 2];
-        dst[j++] = b64[((a & 3) << 4) | (b >> 4)];
-        if (i + 1 < src_len) {
-            dst[j++] = b64[(b & 15) << 2 | (c >> 6)];
-        }
-        if (i + 2 < src_len) {
-            dst[j++] = b64[c & 63];
-        }
+    /* valid characters are 32 to 126 */
+    GetSystemTimeAsFileTime(&num.ft);
+    num.li.HighPart |= GetCurrentProcessId();
+    p = passwd;
+    while (num.li.QuadPart) {
+        u = (unsigned)(num.li.QuadPart % 95);
+        num.li.QuadPart -= u;
+        num.li.QuadPart /= 95;
+        *p = (char)(u+32);
+        p++;
     }
-    while (j % 4 != 0) {
-        dst[j++] = '=';
-    }
-    dst[j++] = '\0';
 }
 
 static void add_control(unsigned char **mem, DLGTEMPLATE *dia, WORD type,
@@ -923,14 +919,7 @@ static int get_password(const char * user, const char * realm, char * passwd, un
 
     /* Create a password suggestion */
     memset(passwd, 0, passwd_len);
-    GetSystemTimeAsFileTime((LPFILETIME)mem);
-    *((DWORD*)mem) |= GetCurrentProcessId();
-    base64_encode(mem, 6, passwd);
-    p = mem+100;
-    for (y=32;y<127;y++) {
-        if (ispunct(y)) {*p=(char)y; p++;}
-    }
-    passwd[8] = mem[(GetTickCount()/30)%(p-(mem+100))+100];
+    suggest_passwd(passwd);
 
     /* Create the dialog */
     (void) memset(mem, 0, sizeof(mem));
@@ -1291,7 +1280,7 @@ static void change_password_file()
         assert((int)p - (int)mem < sizeof(mem));
 
         dia->cy = y + 20;
-    } while (IDOK == DialogBoxIndirectParam(NULL, dia, NULL, PasswordDlgProc, (LPARAM) path));
+    } while ((IDOK == DialogBoxIndirectParam(NULL, dia, NULL, PasswordDlgProc, (LPARAM) path)) && (!exit_flag));
 
     guard--;
 
@@ -1374,6 +1363,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
         case ID_QUIT:
             mg_stop(ctx);
             Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+            exit_flag = 1;
             PostQuitMessage(0);
             return 0;
         case ID_SETTINGS:
@@ -1427,6 +1417,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
     case WM_CLOSE:
         mg_stop(ctx);
         Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+        exit_flag = 1;
         PostQuitMessage(0);
         return 0;/* We've just sent our own quit message, with proper hwnd. */
     default:
