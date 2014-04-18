@@ -309,6 +309,40 @@ typedef int SOCKET;
 
 #endif /* End of Windows and UNIX specific includes */
 
+#ifdef _WIN32
+static CRITICAL_SECTION global_log_file_lock;
+static DWORD pthread_self(void)
+{
+    return GetCurrentThreadId();
+}
+
+int pthread_key_create(pthread_key_t *key, void (*_must_be_zero)(void*) /* destructor function not supported for windows */)
+{
+    assert(_must_be_zero == NULL);
+    if ((key!=0) && (_must_be_zero == NULL)) {
+        *key = TlsAlloc();
+        return (*key != TLS_OUT_OF_INDEXES) ? 0 : -1;
+    }
+    return -2;
+}
+
+int pthread_key_delete(pthread_key_t key)
+{
+    return TlsFree(key) ? 0 : 1;
+}
+
+int pthread_setspecific(pthread_key_t key, void * value)
+{
+    return TlsSetValue(key, value) ? 0 : 1;
+}
+
+void *pthread_getspecific(pthread_key_t key)
+{
+    return TlsGetValue(key);
+}
+#endif /* _WIN32 */
+
+
 #include "civetweb.h"
 
 #define PASSWORDS_FILE_NAME ".htpasswd"
@@ -320,23 +354,30 @@ typedef int SOCKET;
 #endif
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
-#ifdef DEBUG_TRACE
-#undef DEBUG_TRACE
-#define DEBUG_TRACE(x)
-#else
+#if !defined(DEBUG_TRACE)
 #if defined(DEBUG)
-#define DEBUG_TRACE(x) do { \
-  flockfile(stdout); \
-  printf("*** %lu.%p.%s.%d: ", \
-         (unsigned long) time(NULL), (void *) pthread_self(), \
-         __func__, __LINE__); \
-  printf x; \
-  putchar('\n'); \
-  fflush(stdout); \
-  funlockfile(stdout); \
-} while (0)
+
+static void DEBUG_TRACE_FUNC(const char *func, unsigned line, PRINTF_FORMAT_STRING(const char *fmt), ...) PRINTF_ARGS(3, 4);
+
+static void DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...) {
+
+  va_list args;
+  flockfile(stdout);
+  printf("*** %lu.%p.%s.%d: ",
+         (unsigned long) time(NULL), (void *) pthread_self(),
+         func, line);
+  va_start(args, fmt);
+  vprintf(fmt, args);
+  va_end(args);
+  putchar('\n');
+  fflush(stdout);
+  funlockfile(stdout);
+}
+
+#define DEBUG_TRACE(fmt, ...) DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
+
 #else
-#define DEBUG_TRACE(x)
+#define DEBUG_TRACE(fmt, ...)
 #endif /* DEBUG */
 #endif /* DEBUG_TRACE */
 
@@ -458,39 +499,6 @@ static __inline void   mg_free(void * a)               {free(a);}
 #define calloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free    DO_NOT_USE_THIS_FUNCTION__USE_mg_free
-
-#ifdef _WIN32
-static CRITICAL_SECTION global_log_file_lock;
-static DWORD pthread_self(void)
-{
-    return GetCurrentThreadId();
-}
-
-int pthread_key_create(pthread_key_t *key, void (*_must_be_zero)(void*) /* destructor function not supported for windows */)
-{
-    assert(_must_be_zero == NULL);
-    if ((key!=0) && (_must_be_zero == NULL)) {
-        *key = TlsAlloc();
-        return (*key != TLS_OUT_OF_INDEXES) ? 0 : -1;
-    }
-    return -2;
-}
-
-int pthread_key_delete(pthread_key_t key)
-{
-    return TlsFree(key) ? 0 : 1;
-}
-
-int pthread_setspecific(pthread_key_t key, void * value)
-{
-    return TlsSetValue(key, value) ? 0 : 1;
-}
-
-void *pthread_getspecific(pthread_key_t key)
-{
-    return TlsGetValue(key);
-}
-#endif /* _WIN32 */
 
 #define MD5_STATIC static
 #include "md5.inl"
@@ -1381,7 +1389,7 @@ static void send_http_error(struct mg_connection *conn, int status,
             len += mg_vsnprintf(conn, buf + len, sizeof(buf) - len, fmt, ap);
             va_end(ap);
         }
-        DEBUG_TRACE(("[%s]", buf));
+        DEBUG_TRACE("[%s]", buf);
 
         mg_printf(conn, "HTTP/1.1 %d %s\r\n"
                         "Content-Length: %d\r\n"
@@ -1853,7 +1861,7 @@ static int mg_join_thread(pthread_t threadid)
         int err;
 
         err = GetLastError();
-        DEBUG_TRACE(("WaitForSingleObject() failed, error %d", err));
+        DEBUG_TRACE("WaitForSingleObject() failed, error %d", err);
     } else {
         if (dwevent == WAIT_OBJECT_0) {
             CloseHandle(threadid);
@@ -1959,7 +1967,7 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
     mg_snprintf(conn, cmdline, sizeof(cmdline), "%s%s\"%s\\%s\"",
                 interp, interp[0] == '\0' ? "" : " ", full_dir, prog);
 
-    DEBUG_TRACE(("Running [%s]", cmdline));
+    DEBUG_TRACE("Running [%s]", cmdline);
     if (CreateProcessA(NULL, cmdline, NULL, NULL, TRUE,
                        CREATE_NEW_PROCESS_GROUP, envblk, NULL, &si, &pi) == 0) {
         mg_cry(conn, "%s: CreateProcess(%s): %ld",
@@ -4362,7 +4370,7 @@ static int put_dir(struct mg_connection *conn, const char *path)
         buf[len] = '\0';
 
         /* Try to create intermediate directory */
-        DEBUG_TRACE(("mkdir(%s)", buf));
+        DEBUG_TRACE("mkdir(%s)", buf);
         if (!mg_stat(conn, buf, &file) && mg_mkdir(buf, 0755) != 0) {
             res = -1;
             break;
@@ -5561,7 +5569,7 @@ static void handle_request(struct mg_connection *conn)
     conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
                                   get_remote_ip(conn), ri->uri);
 
-    DEBUG_TRACE(("%s", ri->uri));
+    DEBUG_TRACE("%s", ri->uri);
     /* Perform redirect and auth checks before calling begin_request() handler.
        Otherwise, begin_request() would need to perform auth checks and
        redirects. */
@@ -5649,7 +5657,7 @@ static void handle_file_based_request(struct mg_connection *conn, const char *pa
                             (int)strlen(conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
                             path) > 0) {
         /* Lua server page: an SSI like page containing mostly plain html code plus some tags with server generated contents. */
-        handle_lsp_request(conn, path, &file, NULL);
+        handle_lsp_request(conn, path, file, NULL);
     } else if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
                             (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
                             path) > 0) {
@@ -6356,7 +6364,7 @@ static void process_new_connection(struct mg_connection *conn)
 static int consume_socket(struct mg_context *ctx, struct socket *sp)
 {
     (void) pthread_mutex_lock(&ctx->mutex);
-    DEBUG_TRACE(("going idle"));
+    DEBUG_TRACE("going idle");
 
     /* If the queue is empty, wait. We're idle at this point. */
     while (ctx->sq_head == ctx->sq_tail && ctx->stop_flag == 0) {
@@ -6368,7 +6376,7 @@ static int consume_socket(struct mg_context *ctx, struct socket *sp)
         /* Copy socket from the queue and increment tail */
         *sp = ctx->queue[ctx->sq_tail % ARRAY_SIZE(ctx->queue)];
         ctx->sq_tail++;
-        DEBUG_TRACE(("grabbed socket %d, going busy", sp->sock));
+        DEBUG_TRACE("grabbed socket %d, going busy", sp->sock);
 
         /* Wrap pointers if needed */
         while (ctx->sq_tail > (int) ARRAY_SIZE(ctx->queue)) {
@@ -6448,7 +6456,7 @@ static void *worker_thread_run(void *thread_func_param)
 #endif
     mg_free(conn);
 
-    DEBUG_TRACE(("exiting"));
+    DEBUG_TRACE("exiting");
     return NULL;
 }
 
@@ -6483,7 +6491,7 @@ static void produce_socket(struct mg_context *ctx, const struct socket *sp)
         /* Copy socket to the queue and increment head */
         ctx->queue[ctx->sq_head % ARRAY_SIZE(ctx->queue)] = *sp;
         ctx->sq_head++;
-        DEBUG_TRACE(("queued socket %d", sp->sock));
+        DEBUG_TRACE("queued socket %d", sp->sock);
     }
 
     (void) pthread_cond_signal(&ctx->sq_full);
@@ -6519,7 +6527,7 @@ static void accept_new_connection(const struct socket *listener,
         so.sock = INVALID_SOCKET;
     } else {
         /* Put so socket structure into the queue */
-        DEBUG_TRACE(("Accepted socket %d", (int) so.sock));
+        DEBUG_TRACE("Accepted socket %d", (int) so.sock);
         set_close_on_exec(so.sock, fc(ctx));
         so.is_ssl = listener->is_ssl;
         so.ssl_redir = listener->ssl_redir;
@@ -6600,7 +6608,7 @@ static void master_thread_run(void *thread_func_param)
         }
     }
     mg_free(pfd);
-    DEBUG_TRACE(("stopping workers"));
+    DEBUG_TRACE("stopping workers");
 
     /* Stop signal received: somebody called mg_stop. Quit. */
     close_all_listening_sockets(ctx);
@@ -6624,7 +6632,7 @@ static void master_thread_run(void *thread_func_param)
 #if !defined(NO_SSL)
     uninitialize_ssl(ctx);
 #endif
-    DEBUG_TRACE(("exiting"));
+    DEBUG_TRACE("exiting");
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     CloseHandle(tls.pthread_cond_helper_mutex);
@@ -6818,7 +6826,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
             mg_free(ctx->config[i]);
         }
         ctx->config[i] = mg_strdup(value);
-        DEBUG_TRACE(("[%s] -> [%s]", name, value));
+        DEBUG_TRACE("[%s] -> [%s]", name, value);
     }
 
     /* Set default value if needed */
