@@ -134,18 +134,17 @@ static void die(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
+#ifdef WIN32
+static int MakeConsole();
+#endif
+
 static void show_usage_and_exit(void)
 {
     const struct mg_option *options;
     int i;
 
 #ifdef WIN32
-    if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
-        AllocConsole();
-        AttachConsole(GetCurrentProcessId());
-    }
-    freopen("CON", "a", stdout);
-    freopen("CON", "a", stderr);
+    MakeConsole();
 #endif
 
     fprintf(stderr, "Civetweb v%s, built on %s\n",
@@ -1426,6 +1425,27 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
     }
 
     return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+static int MakeConsole() {
+    DWORD err;
+    int ok = (GetConsoleWindow() != NULL);
+    if (!ok) {
+        if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+            FreeConsole();
+            if (!AllocConsole()) {
+                err = GetLastError();
+                if (err==ERROR_ACCESS_DENIED) {
+                    MessageBox(NULL, "Insufficient rights to create a console window", "Error", MB_ICONERROR);
+                }
+            }
+            AttachConsole(GetCurrentProcessId());
+        }
+        freopen("CON", "a", stdout);
+        freopen("CON", "a", stderr);
+        ok = (GetConsoleWindow() != NULL);
+    }
+    return ok;
 }
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
