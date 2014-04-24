@@ -3247,11 +3247,11 @@ int mg_modify_passwords_file(const char *fname, const char *domain,
 
     /* Do not allow control characters like newline in user name and domain.
        Do not allow excessively long names either. */
-    for (i=0; user[i]!=0 && i<255; i++) {
+    for (i=0; i<255 && user[i]!=0; i++) {
         if (iscntrl(user[i])) return 0;
     }
     if (user[i]) return 0;
-    for (i=0; domain[i]!=0 && i<255; i++) {
+    for (i=0; i<255 && domain[i]!=0; i++) {
         if (iscntrl(domain[i])) return 0;
     }
     if (domain[i]) return 0;
