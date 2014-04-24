@@ -5452,7 +5452,7 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 
 void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata)
 {
-    struct mg_request_handler_info *tmp_rh, *lastref = 0;
+    struct mg_request_handler_info *tmp_rh, *lastref = NULL;
     size_t urilen = strlen(uri);
 
     /* first see it the uri exists */
@@ -5693,9 +5693,9 @@ static void close_all_listening_sockets(struct mg_context *ctx)
         ctx->listening_sockets[i].sock = INVALID_SOCKET;
     }
     mg_free(ctx->listening_sockets);
-    ctx->listening_sockets=0;
+    ctx->listening_sockets = NULL;
     mg_free(ctx->listening_ports);
-    ctx->listening_ports=0;
+    ctx->listening_ports = NULL;
 }
 
 static int is_valid_port(unsigned int port)
@@ -6453,7 +6453,7 @@ static void *worker_thread_run(void *thread_func_param)
     assert(ctx->num_threads >= 0);
     (void) pthread_mutex_unlock(&ctx->mutex);
 
-    pthread_setspecific(sTlsKey, 0);
+    pthread_setspecific(sTlsKey, NULL);
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     CloseHandle(tls.pthread_cond_helper_mutex);
 #endif
@@ -6640,7 +6640,7 @@ static void master_thread_run(void *thread_func_param)
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     CloseHandle(tls.pthread_cond_helper_mutex);
 #endif
-    pthread_setspecific(sTlsKey, 0);
+    pthread_setspecific(sTlsKey, NULL);
 
     /* Signal mg_stop() that we're done.
        WARNING: This must be the very last thing this
@@ -6808,7 +6808,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         ctx->callbacks = *callbacks;
     }
     ctx->user_data = user_data;
-    ctx->request_handlers = 0;
+    ctx->request_handlers = NULL;
 
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     ctx->shared_lua_websockets = 0;
