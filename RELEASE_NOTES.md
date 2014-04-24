@@ -5,6 +5,7 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Support user defined error pages (bel)
 - Method to get POST request parameters via C++ interface (bel)
 - Re-Add unit tests for Linux and Windows (jmc-, bel)
 - Allow to specify title and tray icon for the Windows standalone server (bel)

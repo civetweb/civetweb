@@ -77,16 +77,21 @@ extern char *_getcwd(char *buf, size_t size);
 #define MAX_OPTIONS 100
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
-static int exit_flag;
+static int exit_flag = 0;               /* Main loop should exit */
 static char server_base_name[40];       /* Set by init_server_name() */
 static char *server_name;               /* Set by init_server_name() */
 static char *icon_name;                 /* Set by init_server_name() */
 static char config_file[PATH_MAX] = ""; /* Set by process_command_line_arguments() */
 static struct mg_context *ctx;          /* Set by start_civetweb() */
+static int guard = 0;                   /* test if any dialog is already open */
 
 #if !defined(CONFIG_FILE)
 #define CONFIG_FILE "civetweb.conf"
 #endif /* !CONFIG_FILE */
+
+#if !defined(PASSWORDS_FILE_NAME)
+#define PASSWORDS_FILE_NAME ".htpasswd"
+#endif
 
 /* backup config file */
 #if !defined(CONFIG_FILE2) && defined(LINUX)
@@ -129,18 +134,17 @@ static void die(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
+#ifdef WIN32
+static int MakeConsole();
+#endif
+
 static void show_usage_and_exit(void)
 {
     const struct mg_option *options;
     int i;
 
 #ifdef WIN32
-    if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
-        AllocConsole();
-        AttachConsole(GetCurrentProcessId());
-    }
-    freopen("CON", "a", stdout);
-    freopen("CON", "a", stderr);
+    MakeConsole();
 #endif
 
     fprintf(stderr, "Civetweb v%s, built on %s\n",
@@ -168,7 +172,7 @@ static void show_usage_and_exit(void)
 static const char *config_file_top_comment =
     "# Civetweb web server configuration file.\n"
     "# For detailed description of every option, visit\n"
-    "# https://github.com/sunsetbrew/civetweb/blob/master/docs/UserManual.md\n"
+    "# https://github.com/bel2125/civetweb/blob/master/docs/UserManual.md\n"
     "# Lines starting with '#' and empty lines are ignored.\n"
     "# To make a change, remove leading '#', modify option's value,\n"
     "# save this file and then restart Civetweb.\n\n";
@@ -575,9 +579,10 @@ static void start_civetweb(int argc, char *argv[])
 #ifdef _WIN32
 enum {
     ID_ICON = 100, ID_QUIT, ID_SETTINGS, ID_SEPARATOR, ID_INSTALL_SERVICE,
-    ID_REMOVE_SERVICE, ID_STATIC, ID_GROUP,
+    ID_REMOVE_SERVICE, ID_STATIC, ID_GROUP, ID_PASSWORD,
     ID_SAVE, ID_RESET_DEFAULTS, ID_RESET_FILE, ID_RESET_ACTIVE,
-    ID_STATUS, ID_CONNECT,
+    ID_STATUS, ID_CONNECT, ID_ADD_USER, ID_ADD_USER_NAME, ID_ADD_USER_REALM,
+    ID_INPUT_LINE,
 
     /* All dynamically created text boxes for options have IDs starting from
        ID_CONTROLS, incremented by one. */
@@ -621,7 +626,6 @@ static void WINAPI ServiceMain(void)
     ss.dwWin32ExitCode = (DWORD) -1;
     SetServiceStatus(hStatus, &ss);
 }
-
 
 static void show_error(void)
 {
@@ -667,7 +671,7 @@ static void save_config(HWND hDlg, FILE *fp)
     }
 }
 
-static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
     FILE *fp;
     int i, j;
@@ -740,7 +744,7 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
                     CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
                                    BST_CHECKED : BST_UNCHECKED);
                 } else {
-                    SetWindowText(GetDlgItem(hDlg, ID_CONTROLS + i), value);
+                    SetDlgItemText(hDlg, ID_CONTROLS + i, value == NULL ? "" : value);
                 }
             }
             break;
@@ -781,8 +785,8 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
         break;
 
     case WM_INITDIALOG:
-        SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_SMALL, (LPARAM) hIcon);
-        SendMessage(hDlg, WM_SETICON,(WPARAM) ICON_BIG, (LPARAM) hIcon);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_SMALL, (LPARAM) hIcon);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_BIG, (LPARAM) hIcon);
         title = malloc(strlen(server_name)+16);
         if (title) {
             strcpy(title, server_name);
@@ -791,16 +795,227 @@ static BOOL CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
             free(title);
         }
         SetFocus(GetDlgItem(hDlg, ID_SAVE));
-        for (i = 0; default_options[i].name != NULL; i++) {
-            name = default_options[i].name;
-            value = mg_get_option(ctx, name);
-            if (default_options[i].type == CONFIG_TYPE_BOOLEAN) {
-                CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
-                               BST_CHECKED : BST_UNCHECKED);
-            } else {
-                SetDlgItemText(hDlg, ID_CONTROLS + i, value == NULL ? "" : value);
+
+        /* Init dialog with active settings */
+        SendMessage(hDlg, WM_COMMAND, ID_RESET_ACTIVE, 0);
+        /* alternative: SendMessage(hDlg, WM_COMMAND, ID_RESET_FILE, 0); */
+        break;
+
+    default:
+        break;
+    }
+
+    return FALSE;
+}
+
+struct tstring_input_buf {
+    unsigned buflen;
+    char * buffer;
+};
+
+static BOOL CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+{
+    static struct tstring_input_buf *inBuf = 0;
+    WORD ctrlId;
+
+    switch (msg) {
+    case WM_CLOSE:
+        inBuf = 0;
+        DestroyWindow(hDlg);
+        break;
+
+    case WM_COMMAND:
+        ctrlId = LOWORD(wParam);
+        if (ctrlId == IDOK) {
+            /* Add user */
+            GetWindowText(GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer, inBuf->buflen);
+            if (strlen(inBuf->buffer)>0) {
+                EndDialog(hDlg, IDOK);
             }
+        } else if (ctrlId == IDCANCEL) {
+            EndDialog(hDlg, IDCANCEL);
         }
+        break;
+
+    case WM_INITDIALOG:
+        inBuf = (struct tstring_input_buf *) lP;
+        assert(inBuf != NULL);
+        assert((inBuf->buffer != NULL) && (inBuf->buflen != 0));
+        assert(strlen(inBuf->buffer) < inBuf->buflen);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_SMALL, (LPARAM) hIcon);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_BIG, (LPARAM) hIcon);
+        SendDlgItemMessage(hDlg, ID_INPUT_LINE, EM_LIMITTEXT, inBuf->buflen-1, 0);
+        SetWindowText(GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer);
+        SetWindowText(hDlg, "Modify password");
+        SetFocus(GetDlgItem(hDlg, ID_INPUT_LINE));
+        break;
+
+    default:
+        break;
+    }
+
+    return FALSE;
+}
+
+void suggest_passwd(char *passwd)
+{
+    unsigned u;
+    char * p;
+    union {
+        FILETIME ft;
+        LARGE_INTEGER li;
+    } num;
+
+    /* valid characters are 32 to 126 */
+    GetSystemTimeAsFileTime(&num.ft);
+    num.li.HighPart |= GetCurrentProcessId();
+    p = passwd;
+    while (num.li.QuadPart) {
+        u = (unsigned)(num.li.QuadPart % 95);
+        num.li.QuadPart -= u;
+        num.li.QuadPart /= 95;
+        *p = (char)(u+32);
+        p++;
+    }
+}
+
+static void add_control(unsigned char **mem, DLGTEMPLATE *dia, WORD type,
+                        DWORD id, DWORD style, WORD x, WORD y,
+                        WORD cx, WORD cy, const char *caption);
+
+static int get_password(const char * user, const char * realm, char * passwd, unsigned passwd_len)
+{
+#define HEIGHT 15
+#define WIDTH 280
+#define LABEL_WIDTH 90
+
+    HWND hDlg = NULL;
+    unsigned char mem[4096], *p;
+    DLGTEMPLATE *dia = (DLGTEMPLATE *) mem;
+    int ok, y;
+    struct tstring_input_buf dlgprms = {passwd_len, passwd};
+
+    static struct {
+        DLGTEMPLATE template; /* 18 bytes */
+        WORD menu, class;
+        wchar_t caption[1];
+        WORD fontsiz;
+        wchar_t fontface[7];
+    } dialog_header = {{
+        WS_CAPTION | WS_POPUP | WS_SYSMENU | WS_VISIBLE |
+            DS_SETFONT | WS_DLGFRAME, WS_EX_TOOLWINDOW, 0, 200, 200, WIDTH, 0
+    },
+    0, 0, L"", 8, L"Tahoma"
+    };
+
+    assert((user!=NULL) && (realm!=NULL) && (passwd!=NULL));
+
+    if (guard < 100) {
+        guard += 100;
+    } else {
+        return 0;
+    }
+
+    /* Create a password suggestion */
+    memset(passwd, 0, passwd_len);
+    suggest_passwd(passwd);
+
+    /* Create the dialog */
+    (void) memset(mem, 0, sizeof(mem));
+    (void) memcpy(mem, &dialog_header, sizeof(dialog_header));
+    p = mem + sizeof(dialog_header);
+
+    y = HEIGHT;
+    add_control(&p, dia, 0x82, ID_STATIC, WS_VISIBLE | WS_CHILD,
+        10, y, LABEL_WIDTH, HEIGHT, "User:");
+    add_control(&p, dia, 0x81, ID_CONTROLS + 1,
+        WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_DISABLED,
+        15+LABEL_WIDTH, y, WIDTH - LABEL_WIDTH - 25, HEIGHT, user);
+
+    y += HEIGHT;
+    add_control(&p, dia, 0x82, ID_STATIC, WS_VISIBLE | WS_CHILD,
+        10, y, LABEL_WIDTH, HEIGHT, "Realm:");
+    add_control(&p, dia, 0x81, ID_CONTROLS + 2,
+        WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_DISABLED,
+        15+LABEL_WIDTH, y, WIDTH - LABEL_WIDTH - 25, HEIGHT, realm);
+
+    y += HEIGHT;
+    add_control(&p, dia, 0x82, ID_STATIC, WS_VISIBLE | WS_CHILD,
+        10, y, LABEL_WIDTH, HEIGHT, "Password:");
+    add_control(&p, dia, 0x81, ID_INPUT_LINE,
+        WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP,
+        15+LABEL_WIDTH, y, WIDTH - LABEL_WIDTH - 25, HEIGHT, "");
+
+    y += (WORD)(HEIGHT * 2);
+    add_control(&p, dia, 0x80, IDOK,
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+        80, y, 55, 12, "Ok");
+    add_control(&p, dia, 0x80, IDCANCEL,
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+        140, y, 55, 12, "Cancel");
+
+    assert((int)p - (int)mem < sizeof(mem));
+
+    dia->cy = y + (WORD)(HEIGHT * 1.5);
+
+    ok = (IDOK == DialogBoxIndirectParam(NULL, dia, NULL, InputDlgProc, (LPARAM) &dlgprms));
+
+    guard -= 100;
+
+    return ok;
+
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
+}
+
+static BOOL CALLBACK PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+{
+    static const char *passfile = 0;
+    char domain[256], user[256], password[256];
+    WORD ctrlId;
+
+    switch (msg) {
+    case WM_CLOSE:
+        passfile = 0;
+        DestroyWindow(hDlg);
+        break;
+
+    case WM_COMMAND:
+        ctrlId = LOWORD(wParam);
+        if (ctrlId == ID_ADD_USER) {
+            /* Add user */
+            GetWindowText(GetDlgItem(hDlg, ID_ADD_USER_NAME), user, sizeof(user));
+            GetWindowText(GetDlgItem(hDlg, ID_ADD_USER_REALM), domain, sizeof(domain));
+            if (get_password(user, domain, password, sizeof(password))) {
+                mg_modify_passwords_file(passfile, domain, user, password);
+                EndDialog(hDlg, IDOK);
+            }
+        } else if ((ctrlId>=(ID_CONTROLS + ID_FILE_BUTTONS_DELTA * 3)) &&
+                   (ctrlId<(ID_CONTROLS + ID_FILE_BUTTONS_DELTA * 4))) {
+            /* Modify password */
+            GetWindowText(GetDlgItem(hDlg, ctrlId - ID_FILE_BUTTONS_DELTA * 3), user, sizeof(user));
+            GetWindowText(GetDlgItem(hDlg, ctrlId - ID_FILE_BUTTONS_DELTA * 2), domain, sizeof(domain));
+            if (get_password(user, domain, password, sizeof(password))) {
+                mg_modify_passwords_file(passfile, domain, user, password);
+                EndDialog(hDlg, IDOK);
+            }
+        } else if ((ctrlId>=(ID_CONTROLS + ID_FILE_BUTTONS_DELTA * 2)) &&
+                   (ctrlId<(ID_CONTROLS + ID_FILE_BUTTONS_DELTA * 3))) {
+            /* Remove user */
+            GetWindowText(GetDlgItem(hDlg, ctrlId - ID_FILE_BUTTONS_DELTA * 2), user, sizeof(user));
+            GetWindowText(GetDlgItem(hDlg, ctrlId - ID_FILE_BUTTONS_DELTA), domain, sizeof(domain));
+            mg_modify_passwords_file(passfile, domain, user, NULL);
+            EndDialog(hDlg, IDOK);
+        }
+        break;
+
+    case WM_INITDIALOG:
+        passfile = (const char *)lP;
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_SMALL, (LPARAM) hIcon);
+        SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_BIG, (LPARAM) hIcon);
+        SetWindowText(hDlg, passfile);
+        SetFocus(GetDlgItem(hDlg, ID_ADD_USER_NAME));
         break;
 
     default:
@@ -855,7 +1070,6 @@ static void show_settings_dialog()
     DWORD style;
     DLGTEMPLATE *dia = (DLGTEMPLATE *) mem;
     WORD i, cl, x, y, width, nelems = 0;
-    static int guard = 0; /* test if dialog is already open */
 
     static struct {
         DLGTEMPLATE template; /* 18 bytes */
@@ -939,8 +1153,139 @@ static void show_settings_dialog()
     assert((int)p - (int)mem < sizeof(mem));
 
     dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
-    DialogBoxIndirectParam(NULL, dia, NULL, DlgProc, (LPARAM) NULL);
+    DialogBoxIndirectParam(NULL, dia, NULL, SettingsDlgProc, (LPARAM) NULL);
     guard--;
+
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
+}
+
+static void change_password_file()
+{
+#define HEIGHT 15
+#define WIDTH 320
+#define LABEL_WIDTH 90
+
+    OPENFILENAME of;
+    char path[PATH_MAX] = PASSWORDS_FILE_NAME;
+    char strbuf[256], u[256], d[256];
+    HWND hDlg = NULL;
+    FILE * f;
+    int y, nelems;
+    unsigned char mem[4096], *p;
+    DLGTEMPLATE *dia = (DLGTEMPLATE *) mem;
+    const char * domain = mg_get_option(ctx, "authentication_domain");
+
+    static struct {
+        DLGTEMPLATE template; /* 18 bytes */
+        WORD menu, class;
+        wchar_t caption[1];
+        WORD fontsiz;
+        wchar_t fontface[7];
+    } dialog_header = {{
+            WS_CAPTION | WS_POPUP | WS_SYSMENU | WS_VISIBLE |
+            DS_SETFONT | WS_DLGFRAME, WS_EX_TOOLWINDOW, 0, 200, 200, WIDTH, 0
+        },
+        0, 0, L"", 8, L"Tahoma"
+    };
+
+    if (guard == 0) {
+        guard++;
+    } else {
+        return;
+    }
+
+    memset(&of, 0, sizeof(of));
+    of.lStructSize = sizeof(of);
+    of.hwndOwner = (HWND) hDlg;
+    of.lpstrFile = path;
+    of.nMaxFile = sizeof(path);
+    of.lpstrInitialDir = mg_get_option(ctx, "document_root");
+    of.Flags = OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
+
+    if (IDOK != GetSaveFileName(&of)) {
+        guard--;
+        return;
+    }
+
+    f = fopen(path, "a+");
+    if (f) {
+        fclose(f);
+    } else {
+        MessageBox(NULL, path, "Can not open file", MB_ICONERROR);
+        guard--;
+        return;
+    }
+
+    do {
+        (void) memset(mem, 0, sizeof(mem));
+        (void) memcpy(mem, &dialog_header, sizeof(dialog_header));
+        p = mem + sizeof(dialog_header);
+
+        f = fopen(path, "r+");
+        if (!f) {
+            MessageBox(NULL, path, "Can not open file", MB_ICONERROR);
+            guard--;
+            return;
+        }
+
+        nelems = 0;
+        while (fgets(strbuf, sizeof(strbuf), f)) {
+            if (sscanf(strbuf, "%255[^:]:%255[^:]:%*s", u, d) != 2) {
+                continue;
+            }
+            u[255]=0;
+            d[255]=0;
+            y = (nelems + 1) * HEIGHT + 5;
+            add_control(&p, dia, 0x80, ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA * 3,
+                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+                10, y, 65, 12, "Modify password");
+            add_control(&p, dia, 0x80, ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA * 2,
+                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+                80, y, 55, 12, "Remove user");
+            add_control(&p, dia, 0x81, ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA,
+                WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_DISABLED,
+                245, y, 60, 12, d);
+            add_control(&p, dia, 0x81, ID_CONTROLS + nelems,
+                WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_DISABLED,
+                140, y, 100, 12, u);
+
+            nelems++;
+            assert((int)p - (int)mem < sizeof(mem));
+        }
+        fclose(f);
+
+        y = (WORD) ((nelems + 1) * HEIGHT + 10);
+        add_control(&p, dia, 0x80, ID_ADD_USER,
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+            80, y, 55, 12, "Add user");
+        add_control(&p, dia, 0x81, ID_ADD_USER_NAME,
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP,
+            140, y, 100, 12, "");
+        add_control(&p, dia, 0x81, ID_ADD_USER_REALM,
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP,
+            245, y, 60, 12, domain);
+
+        y = (WORD) ((nelems + 2) * HEIGHT + 10);
+        add_control(&p, dia, 0x80, ID_GROUP, WS_CHILD | WS_VISIBLE |
+            BS_GROUPBOX, 5, 5, WIDTH - 10, y, " Users ");
+
+        y += HEIGHT;
+        add_control(&p, dia, 0x82, ID_STATIC,
+            WS_CHILD | WS_VISIBLE | WS_DISABLED,
+            5, y, 100, 12, server_base_name);
+
+        assert((int)p - (int)mem < sizeof(mem));
+
+        dia->cy = y + 20;
+    } while ((IDOK == DialogBoxIndirectParam(NULL, dia, NULL, PasswordDlgProc, (LPARAM) path)) && (!exit_flag));
+
+    guard--;
+
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
 }
 
 static int manage_service(int action)
@@ -1017,10 +1362,14 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
         case ID_QUIT:
             mg_stop(ctx);
             Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+            exit_flag = 1;
             PostQuitMessage(0);
             return 0;
         case ID_SETTINGS:
             show_settings_dialog();
+            break;
+        case ID_PASSWORD:
+            change_password_file();
             break;
         case ID_INSTALL_SERVICE:
         case ID_REMOVE_SERVICE:
@@ -1053,6 +1402,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
             AppendMenu(hMenu, MF_SEPARATOR, ID_SEPARATOR, "");
             AppendMenu(hMenu, MF_STRING, ID_CONNECT, "Start browser");
             AppendMenu(hMenu, MF_STRING, ID_SETTINGS, "Edit settings");
+            AppendMenu(hMenu, MF_STRING, ID_PASSWORD, "Modify password file");
             AppendMenu(hMenu, MF_SEPARATOR, ID_SEPARATOR, "");
             AppendMenu(hMenu, MF_STRING, ID_QUIT, "Exit");
             GetCursorPos(&pt);
@@ -1066,6 +1416,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
     case WM_CLOSE:
         mg_stop(ctx);
         Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+        exit_flag = 1;
         PostQuitMessage(0);
         return 0;/* We've just sent our own quit message, with proper hwnd. */
     default:
@@ -1074,6 +1425,27 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
     }
 
     return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+static int MakeConsole() {
+    DWORD err;
+    int ok = (GetConsoleWindow() != NULL);
+    if (!ok) {
+        if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+            FreeConsole();
+            if (!AllocConsole()) {
+                err = GetLastError();
+                if (err==ERROR_ACCESS_DENIED) {
+                    MessageBox(NULL, "Insufficient rights to create a console window", "Error", MB_ICONERROR);
+                }
+            }
+            AttachConsole(GetCurrentProcessId());
+        }
+        freopen("CON", "a", stdout);
+        freopen("CON", "a", stderr);
+        ok = (GetConsoleWindow() != NULL);
+    }
+    return ok;
 }
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)

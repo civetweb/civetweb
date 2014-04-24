@@ -806,6 +806,47 @@ static void test_parse_port_string(void) {
     }
 }
 
+static void test_md5(void) {
+
+    md5_state_t md5_state;
+    unsigned char md5_val[16+1];
+    char md5_str[32+1];
+    const char *test_str = "The quick brown fox jumps over the lazy dog";
+
+    md5_val[16]=0;
+    md5_init(&md5_state);
+    md5_finish(&md5_state, md5_val);
+    ASSERT(strcmp(md5_val, "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e")==0);
+    sprintf(md5_str, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+        md5_val[0], md5_val[1], md5_val[2], md5_val[3],
+        md5_val[4], md5_val[5], md5_val[6], md5_val[7],
+        md5_val[8], md5_val[9], md5_val[10], md5_val[11],
+        md5_val[12], md5_val[13], md5_val[14], md5_val[15]);
+    ASSERT(strcmp(md5_str, "d41d8cd98f00b204e9800998ecf8427e")==0);
+
+    mg_md5(md5_str, "", NULL);
+    ASSERT(strcmp(md5_str, "d41d8cd98f00b204e9800998ecf8427e")==0);
+
+    md5_init(&md5_state);
+    md5_append(&md5_state, test_str, strlen(test_str));
+    md5_finish(&md5_state, md5_val);
+    sprintf(md5_str, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+        md5_val[0], md5_val[1], md5_val[2], md5_val[3],
+        md5_val[4], md5_val[5], md5_val[6], md5_val[7],
+        md5_val[8], md5_val[9], md5_val[10], md5_val[11],
+        md5_val[12], md5_val[13], md5_val[14], md5_val[15]);
+    ASSERT(strcmp(md5_str, "9e107d9d372bb6826bd81d3542a419d6")==0);
+
+    mg_md5(md5_str, test_str, NULL);
+    ASSERT(strcmp(md5_str, "9e107d9d372bb6826bd81d3542a419d6")==0);
+
+    mg_md5(md5_str, "The", " ", "quick brown fox", "", " jumps ", "over the lazy dog", "", "", NULL);
+    ASSERT(strcmp(md5_str, "9e107d9d372bb6826bd81d3542a419d6")==0);
+
+    mg_md5(md5_str, "civetweb", NULL);
+    ASSERT(strcmp(md5_str, "95c098bd85b619b24a83d9cea5e8ba54")==0);
+}
+
 int __cdecl main(void) {
 
     char buffer[512];
@@ -850,6 +891,7 @@ int __cdecl main(void) {
     test_url_decode();
     test_mg_get_cookie();
     test_strtoll();
+    test_md5();
 
     /* start stop server */
     ctx = mg_start(NULL, NULL, OPTIONS);

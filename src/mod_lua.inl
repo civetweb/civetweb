@@ -784,6 +784,11 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_boolean(L, "https", conn->ssl != NULL);
     reg_string(L, "script_name", script_name);
 
+    if (conn->status_code > 0) {
+        /* Lua error handler should show the status code */
+        reg_int(L, "status", conn->status_code);
+    }
+
     lua_rawset(L, -3);
     lua_setglobal(L, "mg");
 
