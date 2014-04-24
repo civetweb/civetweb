@@ -6186,7 +6186,7 @@ void mg_close_connection(struct mg_connection *conn)
     mg_free(conn);
 }
 
-struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
+static struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
                                  char *ebuf, size_t ebuf_len)
 {
     static struct mg_context fake_ctx;
@@ -6740,7 +6740,7 @@ void mg_stop(struct mg_context *ctx)
 #endif /* _WIN32 && !__SYMBIAN32__ */
 }
 
-void get_system_name(char **sysName)
+static void get_system_name(char **sysName)
 {
 #if defined(_WIN32)
 #if !defined(__SYMBIAN32__)
