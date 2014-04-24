@@ -2984,9 +2984,11 @@ static void open_auth_file(struct mg_connection *conn, const char *path,
         }
     } else {
         /* Try to find .htpasswd in requested directory. */
-        for (p = path, e = p + strlen(p) - 1; e > p; e--)
-            if (e[0] == '/')
+        for (p = path, e = p + strlen(p) - 1; e > p; e--) {
+            if (e[0] == '/') {
                 break;
+            }
+        }
         mg_snprintf(conn, name, sizeof(name), "%.*s%c%s",
                     (int) (e - p), p, '/', PASSWORDS_FILE_NAME);
         if (!mg_fopen(conn, name, "r", filep)) {
@@ -3129,7 +3131,19 @@ static int authorize(struct mg_connection *conn, struct file *filep)
     /* Loop over passwords file */
     p = (char *) filep->membuf;
     while (mg_fgets(line, sizeof(line), filep, &p) != NULL) {
+        if (line[0]==':') {
+            /* user names may not contain a ':' and may not be empty,
+               so lines starting with ':' may be used for a special purpose */
+            if (line[1]=='#') {
+                /* :# is a comment */
+                continue;
+            }
+            /* everything is invalid for the moment (might change in the future) */
+            mg_cry(conn, "%s: syntax error in authorization file: %s", __func__, line);
+            continue;
+        }
         if (sscanf(line, "%255[^:]:%255[^:]:%255s", f_user, f_domain, ha1) != 3) {
+            mg_cry(conn, "%s: syntax error in authorization file: %s", __func__, line);
             continue;
         }
         f_user[255]=0;
