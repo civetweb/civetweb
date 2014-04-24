@@ -363,7 +363,7 @@ static void DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, .
 
   va_list args;
   flockfile(stdout);
-  printf("*** %lu.%p.%s.%d: ",
+  printf("*** %lu.%p.%s.%u: ",
          (unsigned long) time(NULL), (void *) pthread_self(),
          func, line);
   va_start(args, fmt);
