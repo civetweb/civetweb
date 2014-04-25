@@ -83,7 +83,6 @@ static char *server_name;               /* Set by init_server_name() */
 static char *icon_name;                 /* Set by init_server_name() */
 static char config_file[PATH_MAX] = ""; /* Set by process_command_line_arguments() */
 static struct mg_context *ctx;          /* Set by start_civetweb() */
-static int guard = 0;                   /* test if any dialog is already open */
 
 #if !defined(CONFIG_FILE)
 #define CONFIG_FILE "civetweb.conf"
@@ -1514,9 +1513,9 @@ withApplication:@"TextEdit"];
 }
 @end
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
-    init_server_name(argc, argv);
+    init_server_name(argc, (const char **) argv);
     start_civetweb(argc, argv);
 
     [NSAutoreleasePool new];
@@ -1554,6 +1553,7 @@ int main(int argc, char *argv[])
 [menu addItem:[NSMenuItem separatorItem]];
 
     /* Add quit menu item */
+
 [menu addItem:[[[NSMenuItem alloc]
                 initWithTitle:@"Quit"
                 action:@selector(shutDown) keyEquivalent:@"q"] autorelease]];
@@ -1576,7 +1576,7 @@ int main(int argc, char *argv[])
 #else
 int main(int argc, char *argv[])
 {
-    init_server_name(argc, argv);
+    init_server_name(argc, (const char **) argv);
     start_civetweb(argc, argv);
     printf("%s started on port(s) %s with web root [%s]\n",
            server_name, mg_get_option(ctx, "listening_ports"),
