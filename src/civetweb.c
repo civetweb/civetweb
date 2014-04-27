@@ -5325,6 +5325,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
         assert(len >= 0 && len <= (int) sizeof(buf));
         while ((n = mg_read(conn, buf + len, sizeof(buf) - len)) > 0) {
             len += n;
+            assert(len <= (int) sizeof(buf));
         }
         if ((headers_len = get_request_len(buf, len)) <= 0) {
             break;
