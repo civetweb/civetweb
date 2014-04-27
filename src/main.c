@@ -51,6 +51,7 @@
 
 #define getcwd(a,b) _getcwd(a,b)
 extern char *_getcwd(char *buf, size_t size);
+static int guard = 0;                   /* test if any dialog is already open */
 
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -83,7 +84,6 @@ static char *server_name;               /* Set by init_server_name() */
 static char *icon_name;                 /* Set by init_server_name() */
 static char config_file[PATH_MAX] = ""; /* Set by process_command_line_arguments() */
 static struct mg_context *ctx;          /* Set by start_civetweb() */
-static int guard = 0;                   /* test if any dialog is already open */
 
 #if !defined(CONFIG_FILE)
 #define CONFIG_FILE "civetweb.conf"
