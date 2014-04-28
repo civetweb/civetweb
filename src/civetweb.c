@@ -363,7 +363,7 @@ static void DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, .
 
   va_list args;
   flockfile(stdout);
-  printf("*** %lu.%p.%s.%d: ",
+  printf("*** %lu.%p.%s.%u: ",
          (unsigned long) time(NULL), (void *) pthread_self(),
          func, line);
   va_start(args, fmt);
@@ -398,7 +398,7 @@ static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
         memory = (void *)(((char*)data)+sizeof(size_t));
     }
 
-    sprintf(mallocStr, "MEM: %p %5u alloc   %7u %4u --- %s:%u\n", memory, size, totalMemUsed, blockCount, file, line);
+    sprintf(mallocStr, "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n", memory, (unsigned long)size, totalMemUsed, blockCount, file, line);
 #if defined(_WIN32)
     OutputDebugStringA(mallocStr);
 #else
@@ -426,7 +426,7 @@ static void mg_free_ex(void * memory, const char * file, unsigned line) {
         size = *(size_t*)data;
         totalMemUsed -= size;
         blockCount--;
-        sprintf(mallocStr, "MEM: %p %5u free    %7u %4u --- %s:%u\n", memory, size, totalMemUsed, blockCount, file, line);
+        sprintf(mallocStr, "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n", memory, (unsigned long)size, totalMemUsed, blockCount, file, line);
 #if defined(_WIN32)
         OutputDebugStringA(mallocStr);
 #else
@@ -441,23 +441,25 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
 
     char mallocStr[256];
     void * data;
+    void * _realloc;
     size_t oldsize;
 
     if (newsize) {
         if (memory) {
             data = (void *)(((char*)memory)-sizeof(size_t));
             oldsize = *(size_t*)data;
-            data = realloc(data, newsize+sizeof(size_t));
-            if (data) {
+            _realloc = realloc(data, newsize+sizeof(size_t));
+            if (_realloc) {
+                data = _realloc;
                 totalMemUsed -= oldsize;
-                sprintf(mallocStr, "MEM: %p %5u r-free  %7u %4u --- %s:%u\n", memory, oldsize, totalMemUsed, blockCount, file, line);
+                sprintf(mallocStr, "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n", memory, (unsigned long)oldsize, totalMemUsed, blockCount, file, line);
 #if defined(_WIN32)
                 OutputDebugStringA(mallocStr);
 #else
                 DEBUG_TRACE("%s", mallocStr);
 #endif
                 totalMemUsed += newsize;
-                sprintf(mallocStr, "MEM: %p %5u r-alloc %7u %4u --- %s:%u\n", memory, newsize, totalMemUsed, blockCount, file, line);
+                sprintf(mallocStr, "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n", memory, (unsigned long)newsize, totalMemUsed, blockCount, file, line);
 #if defined(_WIN32)
                 OutputDebugStringA(mallocStr);
 #else
@@ -471,6 +473,7 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
 #else
                 DEBUG_TRACE("MEM: realloc failed\n");
 #endif
+                return _realloc;
             }
         } else {
             data = mg_malloc_ex(newsize, file, line);
@@ -2389,7 +2392,7 @@ int mg_url_decode(const char *src, int src_len, char *dst,
 #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
 
     for (i = j = 0; i < src_len && j < dst_len - 1; i++, j++) {
-        if (src[i] == '%' && i < src_len - 2 &&
+        if (i < src_len - 2 && src[i] == '%' &&
             isxdigit(* (const unsigned char *) (src + i + 1)) &&
             isxdigit(* (const unsigned char *) (src + i + 2))) {
             a = tolower(* (const unsigned char *) (src + i + 1));
@@ -3308,11 +3311,11 @@ int mg_modify_passwords_file(const char *fname, const char *domain,
 
     /* Do not allow control characters like newline in user name and domain.
        Do not allow excessively long names either. */
-    for (i=0; user[i]!=0 && i<255; i++) {
+    for (i=0; i<255 && user[i]!=0; i++) {
         if (iscntrl(user[i])) return 0;
     }
     if (user[i]) return 0;
-    for (i=0; domain[i]!=0 && i<255; i++) {
+    for (i=0; i<255 && domain[i]!=0; i++) {
         if (iscntrl(domain[i])) return 0;
     }
     if (domain[i]) return 0;
@@ -5386,6 +5389,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
         assert(len >= 0 && len <= (int) sizeof(buf));
         while ((n = mg_read(conn, buf + len, sizeof(buf) - len)) > 0) {
             len += n;
+            assert(len <= (int) sizeof(buf));
         }
         if ((headers_len = get_request_len(buf, len)) <= 0) {
             break;
@@ -5513,7 +5517,7 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 
 void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata)
 {
-    struct mg_request_handler_info *tmp_rh, *lastref = 0;
+    struct mg_request_handler_info *tmp_rh, *lastref = NULL;
     size_t urilen = strlen(uri);
 
     /* first see it the uri exists */
@@ -5754,9 +5758,9 @@ static void close_all_listening_sockets(struct mg_context *ctx)
         ctx->listening_sockets[i].sock = INVALID_SOCKET;
     }
     mg_free(ctx->listening_sockets);
-    ctx->listening_sockets=0;
+    ctx->listening_sockets = NULL;
     mg_free(ctx->listening_ports);
-    ctx->listening_ports=0;
+    ctx->listening_ports = NULL;
 }
 
 static int is_valid_port(unsigned int port)
@@ -5786,7 +5790,7 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
         so->lsa.sin.sin_addr.s_addr = htonl((a << 24) | (b << 16) | (c << 8) | d);
         so->lsa.sin.sin_port = htons((uint16_t) port);
 #if defined(USE_IPV6)
-    } else if (sscanf(vec->ptr, "[%49[^]]]:%d%n", buf, &port, &len) == 2 &&
+    } else if (sscanf(vec->ptr, "[%49[^]]]:%u%n", buf, &port, &len) == 2 &&
                inet_pton(AF_INET6, buf, &so->lsa.sin6.sin6_addr)) {
         /* IPv6 address, e.g. [3ffe:2a00:100:7031::1]:8080 */
         so->lsa.sin6.sin6_family = AF_INET6;
@@ -6247,7 +6251,7 @@ void mg_close_connection(struct mg_connection *conn)
     mg_free(conn);
 }
 
-struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
+static struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
                                  char *ebuf, size_t ebuf_len)
 {
     static struct mg_context fake_ctx;
@@ -6514,7 +6518,7 @@ static void *worker_thread_run(void *thread_func_param)
     assert(ctx->num_threads >= 0);
     (void) pthread_mutex_unlock(&ctx->mutex);
 
-    pthread_setspecific(sTlsKey, 0);
+    pthread_setspecific(sTlsKey, NULL);
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     CloseHandle(tls.pthread_cond_helper_mutex);
 #endif
@@ -6701,7 +6705,7 @@ static void master_thread_run(void *thread_func_param)
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     CloseHandle(tls.pthread_cond_helper_mutex);
 #endif
-    pthread_setspecific(sTlsKey, 0);
+    pthread_setspecific(sTlsKey, NULL);
 
     /* Signal mg_stop() that we're done.
        WARNING: This must be the very last thing this
@@ -6801,7 +6805,7 @@ void mg_stop(struct mg_context *ctx)
 #endif /* _WIN32 && !__SYMBIAN32__ */
 }
 
-void get_system_name(char **sysName)
+static void get_system_name(char **sysName)
 {
 #if defined(_WIN32)
 #if !defined(__SYMBIAN32__)
@@ -6869,7 +6873,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         ctx->callbacks = *callbacks;
     }
     ctx->user_data = user_data;
-    ctx->request_handlers = 0;
+    ctx->request_handlers = NULL;
 
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     ctx->shared_lua_websockets = 0;

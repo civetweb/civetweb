@@ -901,7 +901,7 @@ struct file *filep, struct lua_State *ls)
         fileno(filep->fp), 0)) == MAP_FAILED) {
             lsp_send_err(conn, ls, "mmap(%s, %zu, %d): %s", path, (size_t) filep->size,
                 fileno(filep->fp), strerror(errno));
-    } else if ((L = ls != NULL ? ls : lua_newstate(lua_allocator, NULL)) == NULL) {
+    } else if ((L = (ls != NULL ? ls : lua_newstate(lua_allocator, NULL))) == NULL) {
         send_http_error(conn, 500, http_500_error, "%s", "luaL_newstate failed");
     } else {
         /* We're not sending HTTP headers here, Lua page must do it. */

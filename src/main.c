@@ -51,6 +51,7 @@
 
 #define getcwd(a,b) _getcwd(a,b)
 extern char *_getcwd(char *buf, size_t size);
+static int guard = 0;                   /* test if any dialog is already open */
 
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -83,7 +84,6 @@ static char *server_name;               /* Set by init_server_name() */
 static char *icon_name;                 /* Set by init_server_name() */
 static char config_file[PATH_MAX] = ""; /* Set by process_command_line_arguments() */
 static struct mg_context *ctx;          /* Set by start_civetweb() */
-static int guard = 0;                   /* test if any dialog is already open */
 
 #if !defined(CONFIG_FILE)
 #define CONFIG_FILE "civetweb.conf"
@@ -235,7 +235,7 @@ static int set_option(char **options, const char *name, const char *value)
     int i, type;
     const struct mg_option *default_options = mg_get_valid_options();
 
-    for (i = 0; main_config_options[i].name != 0; i++) {
+    for (i = 0; main_config_options[i].name != NULL; i++) {
         if (0==strcmp(name, main_config_options[i].name)) {
             /* This option is evaluated by main.c, not civetweb.c - just skip it and return OK */
             return 1;
@@ -243,7 +243,7 @@ static int set_option(char **options, const char *name, const char *value)
     }
 
     type = CONFIG_TYPE_UNKNOWN;
-    for (i = 0; default_options[i].name != 0; i++) {
+    for (i = 0; default_options[i].name != NULL; i++) {
         if (!strcmp(default_options[i].name, name)) {
             type = default_options[i].type;
         }
@@ -415,7 +415,7 @@ static void init_server_name(int argc, const char *argv[])
             server_name = (char*)(argv[i+1]);
         }
     }
-    icon_name = 0;
+    icon_name = NULL;
     for (i=0; i<argc-1; i++) {
         if ((argv[i][0]=='-') && (0==strcmp(argv[i]+1, main_config_options[OPTION_ICON].name))) {
             icon_name = (char*)(argv[i+1]);
@@ -1516,7 +1516,7 @@ withApplication:@"TextEdit"];
 
 int main(int argc, char *argv[])
 {
-    init_server_name(argc, argv);
+    init_server_name(argc, (const char **)argv);
     start_civetweb(argc, argv);
 
     [NSAutoreleasePool new];
@@ -1576,7 +1576,7 @@ int main(int argc, char *argv[])
 #else
 int main(int argc, char *argv[])
 {
-    init_server_name(argc, argv);
+    init_server_name(argc, (const char **)argv);
     start_civetweb(argc, argv);
     printf("%s started on port(s) %s with web root [%s]\n",
            server_name, mg_get_option(ctx, "listening_ports"),

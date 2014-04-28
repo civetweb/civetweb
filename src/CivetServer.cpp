@@ -150,7 +150,7 @@ CivetServer::urlDecode(const char *src, size_t src_len, std::string &dst, bool i
 
     dst.clear();
     for (i = j = 0; i < (int)src_len; i++, j++) {
-        if (src[i] == '%' && i < (int)src_len - 2 &&
+        if (i < (int)src_len - 2 && src[i] == '%' &&
             isxdigit(* (const unsigned char *) (src + i + 1)) &&
             isxdigit(* (const unsigned char *) (src + i + 2))) {
             a = tolower(* (const unsigned char *) (src + i + 1));

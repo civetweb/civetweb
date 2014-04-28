@@ -865,13 +865,13 @@ int __cdecl main(void) {
     if (f) {
         fclose(f);
     } else {
-        printf("Error: Test directory does not contain hello.txt\n", buffer);
+        printf("Error: Test directory does not contain hello.txt\n");
     }
     f = fopen("unit_test.c", "r");
     if (f) {
         fclose(f);
     } else {
-        printf("Error: Test directory does not contain unit_test.c\n", buffer);
+        printf("Error: Test directory does not contain unit_test.c\n");
     }
 
     /* test local functions */
