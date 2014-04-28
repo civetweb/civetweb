@@ -3118,45 +3118,95 @@ static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p)
     }
 }
 
-/* Authorize against the opened passwords file. Return 1 if authorized. */
-static int authorize(struct mg_connection *conn, struct file *filep)
-{
+struct read_auth_file_struct {
+    struct mg_connection *conn;
     struct ah ah;
-    char line[256], f_user[256] = "", ha1[256] = "", f_domain[256] = "", buf[MG_BUF_LEN], *p;
+    char *domain;
+    char buf[256+256+40];
+    char *f_user;
+    char *f_domain;
+    char *f_ha1;
+};
 
-    if (!parse_auth_header(conn, buf, sizeof(buf), &ah)) {
-        return 0;
-    }
+static int read_auth_file(struct file *filep, struct read_auth_file_struct * workdata)
+{
+    char *p;
+    int is_authorized = 0;
+    struct file fp;
+    int l;
 
     /* Loop over passwords file */
     p = (char *) filep->membuf;
-    while (mg_fgets(line, sizeof(line), filep, &p) != NULL) {
-        if (line[0]==':') {
+    while (mg_fgets(workdata->buf, sizeof(workdata->buf), filep, &p) != NULL) {
+
+        l = strlen(workdata->buf);
+        while (l>0) {
+            if (isspace(workdata->buf[l-1]) || iscntrl(workdata->buf[l-1])) {
+                l--;
+                workdata->buf[l] = 0;
+            } else break;
+        }
+        if (l<1) continue;
+
+        workdata->f_user = workdata->buf;
+
+        if (workdata->f_user[0]==':') {
             /* user names may not contain a ':' and may not be empty,
                so lines starting with ':' may be used for a special purpose */
-            if (line[1]=='#') {
+            if (workdata->f_user[1]=='#') {
                 /* :# is a comment */
+                continue;
+            } else if (!strncmp(workdata->f_user+1,"include=",8)) {
+                if (mg_fopen(workdata->conn, workdata->f_user+9, "r", &fp)) {
+                    is_authorized = read_auth_file(&fp, workdata);
+                    mg_fclose(&fp);
+                } else {
+                    mg_cry(workdata->conn, "%s: cannot open authorization file: %s", __func__, workdata->buf);
+                }
                 continue;
             }
             /* everything is invalid for the moment (might change in the future) */
-            mg_cry(conn, "%s: syntax error in authorization file: %s", __func__, line);
+            mg_cry(workdata->conn, "%s: syntax error in authorization file: %s", __func__, workdata->buf);
             continue;
         }
-        if (sscanf(line, "%255[^:]:%255[^:]:%255s", f_user, f_domain, ha1) != 3) {
-            mg_cry(conn, "%s: syntax error in authorization file: %s", __func__, line);
-            continue;
-        }
-        f_user[255]=0;
-        f_domain[255]=0;
-        ha1[255]=0;
 
-        if (!strcmp(ah.user, f_user) &&
-            !strcmp(conn->ctx->config[AUTHENTICATION_DOMAIN], f_domain))
-            return check_password(conn->request_info.request_method, ha1, ah.uri,
-                                  ah.nonce, ah.nc, ah.cnonce, ah.qop, ah.response);
+        workdata->f_domain = strchr(workdata->f_user, ':');
+        if (workdata->f_domain == NULL) {
+            mg_cry(workdata->conn, "%s: syntax error in authorization file: %s", __func__, workdata->buf);
+            continue;
+        }
+        *(workdata->f_domain) = 0;
+        (workdata->f_domain)++;
+
+        workdata->f_ha1 = strchr(workdata->f_domain, ':');
+        if (workdata->f_ha1 == NULL) {
+            mg_cry(workdata->conn, "%s: syntax error in authorization file: %s", __func__, workdata->buf);
+            continue;
+        }
+        *(workdata->f_ha1) = 0;
+        (workdata->f_ha1)++;
+
+        if (!strcmp(workdata->ah.user, workdata->f_user) && !strcmp(workdata->domain, workdata->f_domain)) {
+            return check_password(workdata->conn->request_info.request_method, workdata->f_ha1, workdata->ah.uri,
+                                  workdata->ah.nonce, workdata->ah.nc, workdata->ah.cnonce, workdata->ah.qop, workdata->ah.response);
+        }
     }
 
-    return 0;
+    return is_authorized;
+}
+
+/* Authorize against the opened passwords file. Return 1 if authorized. */
+static int authorize(struct mg_connection *conn, struct file *filep)
+{
+    struct read_auth_file_struct workdata = {conn};
+    char buf[MG_BUF_LEN];
+
+    if (!parse_auth_header(conn, buf, sizeof(buf), &workdata.ah)) {
+        return 0;
+    }
+    workdata.domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
+
+    return read_auth_file(filep, &workdata);
 }
 
 /* Return 1 if request is authorised, 0 otherwise. */
