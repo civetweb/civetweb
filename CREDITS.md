@@ -4,6 +4,7 @@
 * bel2125
 * celeron55
 * Daniel Oaks
+* Danny Al-Gaaf
 * F-Secure Corporation
 * Brian Spratke
 * HariKamath Kamath

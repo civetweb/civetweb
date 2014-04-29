@@ -5,6 +5,11 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Add dialog to change htpasswd files for the Windows standalone server (bel)
+- Fix compiler warnings and warnings from static code analysis (Danny Al-Gaaf, jmc-, Thomas, bel, ...)
+- Add new unit tests (bel)
+- Support includes in htpasswd files (bel)
+- Add a basic option check for the standalone executable (bel)
 - Support user defined error pages (bel)
 - Method to get POST request parameters via C++ interface (bel)
 - Re-Add unit tests for Linux and Windows (jmc-, bel)
