@@ -1,3 +1,8 @@
+function trace(text)
+    local f = io.open("R:\\websocket.trace", "a")
+    f:write(os.date() .. " - " .. text .. "\n")
+    f:close()
+end
 
 function iswebsocket()
   return pcall(function()
@@ -6,36 +11,44 @@ function iswebsocket()
 end
 
 if not iswebsocket() then
+  trace("no websocket")
   mg.write("HTTP/1.0 403 Forbidden\r\n")
   mg.write("Connection: close\r\n")
   mg.write("\r\n")
+  mg.write("forbidden")
   return
 end
 
 
+-- Callback to reject a connection
+function open()
+  trace("open")
+  return true
+end
+
 -- Callback for "Websocket ready"
 function ready()
+  trace("ready")
   mg.write("text", "Websocket ready")
+  senddata()
+  return true
 end
 
 -- Callback for "Websocket received data"
 function data(bits, content)
+    trace("data(" .. bits .. "): " .. content)
+    senddata()
+    return true
 end
 
 -- Callback for "Websocket is closing"
 function close()
+    trace("close")
+    mg.write("text", "end")
 end
 
-
-coroutine.yield(true); -- first yield returns (true) or (false) to accept or reject the connection
-
-ready()
-
-local lasthand = ""
-
-repeat
-    local cont, bits, content = coroutine.yield(true, 1.0)
-
+function senddata()
+    trace("senddata")
     local date = os.date('*t');
     local hand = (date.hour%12)*60+date.min;
 
@@ -50,7 +63,6 @@ repeat
     if bits and content then
         data(bits, content)
     end
-until not cont;
+end
 
-mg.write("text", "end")
-close()
+trace("defined")

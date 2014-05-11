@@ -800,6 +800,10 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     if ((preload_file != NULL) && (*preload_file != 0)) {
         IGNORE_UNUSED_RESULT(luaL_dofile(L, preload_file));
     }
+
+    if (conn->ctx->callbacks.init_lua != NULL) {
+        conn->ctx->callbacks.init_lua(conn, L);
+    }
 }
 
 static int lua_error_handler(lua_State *L)
@@ -907,9 +911,6 @@ struct file *filep, struct lua_State *ls)
         /* We're not sending HTTP headers here, Lua page must do it. */
         if (ls == NULL) {
             prepare_lua_environment(conn, L, path, LUA_ENV_TYPE_LUA_SERVER_PAGE);
-            if (conn->ctx->callbacks.init_lua != NULL) {
-                conn->ctx->callbacks.init_lua(conn, L);
-            }
         }
         error = lsp(conn, path, filep->membuf == NULL ? p : filep->membuf,
             filep->size, L);
@@ -923,17 +924,16 @@ struct file *filep, struct lua_State *ls)
 
 #ifdef USE_WEBSOCKET
 struct lua_websock_data {
-    lua_State *main;
-    lua_State *thread;
+    lua_State *state;
     char * script;
-    unsigned shared;
+    unsigned references;
     struct mg_connection *conn;
-    pthread_mutex_t mutex;
+    pthread_mutex_t ws_mutex;
 };
 
-struct mg_shared_lua_websocket {
-    struct lua_websock_data *sock;
-    struct mg_shared_lua_websocket *next;
+struct mg_shared_lua_websocket_list {
+    struct lua_websock_data ws;
+    struct mg_shared_lua_websocket_list *next;
 };
 
 static void websock_cry(struct mg_connection *conn, int err, lua_State * L, const char * ws_operation, const char * lua_operation)
@@ -963,215 +963,141 @@ static void websock_cry(struct mg_connection *conn, int err, lua_State * L, cons
     }
 }
 
-static void * lua_websocket_new(const char * script, struct mg_connection *conn, int is_shared)
+static void * lua_websocket_new(const char * script, struct mg_connection *conn)
 {
-    struct lua_websock_data *lws_data;
-    struct mg_shared_lua_websocket **shared_websock_list = &(conn->ctx->shared_lua_websockets);
-    int ok = 0;
-    int found = 0;
-    int err, nargs;
+    struct mg_shared_lua_websocket_list **shared_websock_list = &(conn->ctx->shared_lua_websockets);
+    int err, ok = 0;
 
     assert(conn->lua_websocket_state == NULL);
 
-    /*
-    lock list (mg_context global)
-    check if in list
-    yes: inc rec counter
-    no: create state, add to list
-    lock list element
-    unlock list (mg_context global)
-    call add
-    unlock list element
-    */
-
-    if (is_shared) {
-        (void)pthread_mutex_lock(&conn->ctx->mutex);
-        while (*shared_websock_list) {
-            if (!strcmp((*shared_websock_list)->sock->script, script)) {
-                lws_data = (*shared_websock_list)->sock;
-                lws_data->shared++;
-                found = 1;
-            }
-            shared_websock_list = &((*shared_websock_list)->next);
+    /* lock list (mg_context global) */
+    (void)pthread_mutex_lock(&conn->ctx->nonce_mutex);
+    while (*shared_websock_list) {
+        /* check if ws already in list */
+        if (0==strcmp(script,(*shared_websock_list)->ws.script)) {
+            break;
         }
-        (void)pthread_mutex_unlock(&conn->ctx->mutex);
+        shared_websock_list = &((*shared_websock_list)->next);
     }
-
-    if (!found) {
-        lws_data = (struct lua_websock_data *) mg_malloc(sizeof(*lws_data));
-    }
-
-    if (lws_data) {
-        if (!found) {
-            lws_data->shared = is_shared;
-            lws_data->conn = conn;
-            lws_data->script = mg_strdup(script);
-            lws_data->main = lua_newstate(lua_allocator, NULL);
-            if (is_shared) {
-                (void)pthread_mutex_lock(&conn->ctx->mutex);
-                shared_websock_list = &(conn->ctx->shared_lua_websockets);
-                while (*shared_websock_list) {
-                    shared_websock_list = &((*shared_websock_list)->next);
-                }
-                *shared_websock_list = (struct mg_shared_lua_websocket *)mg_malloc(sizeof(struct mg_shared_lua_websocket));
-                if (*shared_websock_list) {
-                    (*shared_websock_list)->sock = lws_data;
-                    (*shared_websock_list)->next = 0;
-                }
-                (void)pthread_mutex_unlock(&conn->ctx->mutex);
-            }
+    if (*shared_websock_list == NULL) {
+        /* add ws to list */
+        *shared_websock_list = mg_calloc(sizeof(struct mg_shared_lua_websocket_list), 1);
+        if (*shared_websock_list == NULL) {
+            (void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
+            mg_cry(conn, "Cannot create shared websocket struct, OOM");
+            return NULL;
         }
-
-        if (lws_data->main) {
-            prepare_lua_environment(conn, lws_data->main, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
-            if (conn->ctx->callbacks.init_lua != NULL) {
-                conn->ctx->callbacks.init_lua(conn, lws_data->main);
-            }
-            lws_data->thread = lua_newthread(lws_data->main);
-            err = luaL_loadfile(lws_data->thread, script);
-            if (err==LUA_OK) {
-                /* Activate the Lua script. */
-                err = lua_resume(lws_data->thread, NULL, 0);
-                if (err!=LUA_YIELD) {
-                    websock_cry(conn, err, lws_data->thread, __func__, "lua_resume");
-                } else {
-                    nargs = lua_gettop(lws_data->thread);
-                    ok = (nargs==1) && lua_isboolean(lws_data->thread, 1) && lua_toboolean(lws_data->thread, 1);
-                }
-            } else {
-                websock_cry(conn, err, lws_data->thread, __func__, "lua_loadfile");
-            }
-
-        } else {
-            mg_cry(conn, "%s: luaL_newstate failed", __func__);
+        /* init ws list element */
+        (*shared_websock_list)->ws.conn = conn;
+        (*shared_websock_list)->ws.script = mg_strdup(script); /* TODO: handle OOM */
+        pthread_mutex_init(&((*shared_websock_list)->ws.ws_mutex), NULL);
+        (*shared_websock_list)->ws.state = lua_newstate(lua_allocator, NULL);
+        (*shared_websock_list)->ws.references = 1;
+        (void)pthread_mutex_lock(&((*shared_websock_list)->ws.ws_mutex));
+        prepare_lua_environment(conn, (*shared_websock_list)->ws.state, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
+        err = luaL_loadfile((*shared_websock_list)->ws.state, script);
+        if (err != 0) {
+            mg_cry(conn, "Lua websocket: Error %i loading %s: %s", err, script,
+                lua_tostring((*shared_websock_list)->ws.state, -1));
         }
-
-        if (!ok) {
-            if (lws_data->main) lua_close(lws_data->main);
-            mg_free(lws_data->script);
-            mg_free(lws_data);
-            lws_data=0;
+        err = lua_pcall((*shared_websock_list)->ws.state, 0, 0, 0);
+        if (err != 0) {
+            mg_cry(conn, "Lua websocket: Error %i initializing %s: %s", err, script,
+                lua_tostring((*shared_websock_list)->ws.state, -1));
         }
     } else {
-        mg_cry(conn, "%s: out of memory", __func__);
+        /* inc ref count */
+        (void)pthread_mutex_lock(&((*shared_websock_list)->ws.ws_mutex));
+        ((*shared_websock_list)->ws.references)++;
+    }
+    (void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
+
+    /* call add */
+    lua_getglobal((*shared_websock_list)->ws.state, "open");
+    err = lua_pcall((*shared_websock_list)->ws.state, 0, 1, 0);
+    if (err != 0) {
+        mg_cry(conn, "Lua websocket: Error %i calling open handler of %s: %s", err, script,
+            lua_tostring((*shared_websock_list)->ws.state, -1));
+    } else {
+        if (lua_isboolean((*shared_websock_list)->ws.state, -1)) {
+            ok = lua_toboolean((*shared_websock_list)->ws.state, -1);
+        }
+        lua_pop((*shared_websock_list)->ws.state, 1);
+    }
+    if (!ok) {
+        /* TODO */
     }
 
-    return lws_data;
+    (void)pthread_mutex_unlock(&((*shared_websock_list)->ws.ws_mutex));
+
+    return (void*)&((*shared_websock_list)->ws);
 }
 
-static int lua_websocket_data(struct mg_connection *conn, int bits, char *data, size_t data_len)
+static int lua_websocket_data(void *ws_arg, int bits, char *data, size_t data_len)
 {
-    struct lua_websock_data *lws_data = (struct lua_websock_data *)(conn->lua_websocket_state);
-    int err, nargs, ok=0, retry;
-    lua_Number delay;
+    struct lua_websock_data *ws = (struct lua_websock_data *)(ws_arg);
+    int err, ok = 0;
 
-    assert(lws_data != NULL);
-    assert(lws_data->main != NULL);
-    assert(lws_data->thread != NULL);
+    assert(ws != NULL);
+    assert(ws->state != NULL);
 
-    /*
-    lock list element
-    call data
-    unlock list element
-    */
-
-    do {
-        retry=0;
-
-        /* Push the data to Lua, then resume the Lua state. */
-        /* The data will be available to Lua as the result of the coroutine.yield function. */
-        lua_pushboolean(lws_data->thread, 1);
-        if (bits >= 0) {
-            lua_pushinteger(lws_data->thread, bits);
-            if (data) {
-                lua_pushlstring(lws_data->thread, data, data_len);
-                err = lua_resume(lws_data->thread, NULL, 3);
-            } else {
-                err = lua_resume(lws_data->thread, NULL, 2);
-            }
-        } else {
-            err = lua_resume(lws_data->thread, NULL, 1);
+    (void)pthread_mutex_lock(&ws->ws_mutex);
+    lua_getglobal(ws->state, "data");
+    lua_pushnumber(ws->state, bits);
+    lua_pushlstring(ws->state, data, data_len);
+    err = lua_pcall(ws->state, 2, 1, 0);
+    if (err != 0) {
+        mg_cry(ws->conn, "Lua websocket: Error %i calling data handler of %s", err, ws->script);
+    } else {
+        if (lua_isboolean(ws->state, -1)) {
+            ok = lua_toboolean(ws->state, -1);
         }
-
-        /* Check if Lua returned by a call to the coroutine.yield function. */
-        if (err!=LUA_YIELD) {
-            websock_cry(conn, err, lws_data->thread, __func__, "lua_resume");
-        } else {
-            nargs = lua_gettop(lws_data->thread);
-            ok = (nargs>=1) && lua_isboolean(lws_data->thread, 1) && lua_toboolean(lws_data->thread, 1);
-            delay = (nargs>=2) && lua_isnumber(lws_data->thread, 2) ? lua_tonumber(lws_data->thread, 2) : -1.0;
-            if (ok && delay>0) {
-                fd_set rfds;
-                struct timeval tv;
-
-                FD_ZERO(&rfds);
-                FD_SET(conn->client.sock, &rfds);
-
-                tv.tv_sec = (unsigned long)delay;
-                tv.tv_usec = (unsigned long)(((double)delay - (double)((unsigned long)delay))*1000000.0);
-                retry = (0==select(conn->client.sock+1, &rfds, NULL, NULL, &tv));
-            }
-        }
-    } while (retry);
+        lua_pop(ws->state, 1);
+    }
+    (void)pthread_mutex_unlock(&ws->ws_mutex);
 
     return ok;
 }
 
-static int lua_websocket_ready(struct mg_connection *conn)
+static int lua_websocket_ready(void * ws_arg)
 {
-    return lua_websocket_data(conn, -1, NULL, 0);
+    return lua_websocket_data(ws_arg, -1, NULL, 0);
 }
 
-static void lua_websocket_close(struct mg_connection *conn)
+static void lua_websocket_close(void * ws_arg)
 {
-    struct lua_websock_data *lws_data = (struct lua_websock_data *)(conn->lua_websocket_state);
-    struct mg_shared_lua_websocket **shared_websock_list;
-    int err;
+    struct lua_websock_data *ws = (struct lua_websock_data *)(ws_arg);
+    struct mg_shared_lua_websocket_list **shared_websock_list = &(ws->conn->ctx->shared_lua_websockets);
+    int err = 0;
 
-    assert(lws_data != NULL);
-    assert(lws_data->main != NULL);
-    assert(lws_data->thread != NULL);
+    assert(ws != NULL);
+    assert(ws->state != NULL);
 
-    /*
-    lock list element
-    lock list (mg_context global)
-    call remove    
-    dec ref counter
-    if ref counter == 0 close state and remove from list
-    unlock list element
-    unlock list (mg_context global)
-    */
-
-
-    lua_pushboolean(lws_data->thread, 0);
-    err = lua_resume(lws_data->thread, NULL, 1);
-
-    if (lws_data->shared) {
-        (void)pthread_mutex_lock(&conn->ctx->mutex);
-        lws_data->shared--;
-        if (lws_data->shared==0) {
-        /*
-            shared_websock_list = &(conn->ctx->shared_lua_websockets);
-            while (*shared_websock_list) {
-                if ((*shared_websock_list)->sock == lws_data) {
-                    *shared_websock_list = (*shared_websock_list)->next;
-                } else {
-                    shared_websock_list = &((*shared_websock_list)->next);
-                }
-            }
-
-            lua_close(lws_data->main);
-            mg_free(lws_data->script);
-            lws_data->script=0;
-            mg_free(lws_data);
-         */
-        }
-        (void)pthread_mutex_unlock(&conn->ctx->mutex);
-    } else {
-        lua_close(lws_data->main);
-        mg_free(lws_data->script);
-        mg_free(lws_data);
+    (void)pthread_mutex_lock(&ws->ws_mutex);
+    lua_getglobal(ws->state, "close");
+    err = lua_pcall(ws->state, 0, 0, 0);
+    if (err != 0) {
+        mg_cry(ws->conn, "Lua websocket: Error %i calling close handler of %s", err, ws->script);
     }
-    conn->lua_websocket_state = NULL;
+    ws->references--;
+    if (ws->references==0) {
+        (void)pthread_mutex_lock(&ws->conn->ctx->nonce_mutex);
+        (void)pthread_mutex_unlock(&ws->ws_mutex);
+
+        while (*shared_websock_list) {
+            if (0==strcmp(ws->script,(*shared_websock_list)->ws.script)) {
+                break;
+            }
+            shared_websock_list = &((*shared_websock_list)->next);
+        }
+        assert(*shared_websock_list != NULL);
+        (void)pthread_mutex_unlock(&ws->conn->ctx->nonce_mutex);
+        lua_close(ws->state);
+        mg_free(ws->script);
+        *shared_websock_list = (*shared_websock_list)->next;
+        mg_free(ws);
+    } else {
+        (void)pthread_mutex_unlock(&ws->ws_mutex);
+    }
 }
 #endif

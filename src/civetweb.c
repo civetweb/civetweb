@@ -764,30 +764,31 @@ struct mg_context {
     in_port_t *listening_ports;
     int num_listening_sockets;
 
-    volatile int num_threads;  /* Number of threads */
-    pthread_mutex_t mutex;     /* Protects (max|num)_threads */
-    pthread_cond_t  cond;      /* Condvar for tracking workers terminations */
+    volatile int num_threads;       /* Number of threads */
+    pthread_mutex_t thread_mutex;   /* Protects (max|num)_threads */
+    pthread_cond_t thread_cond;     /* Condvar for tracking workers terminations */
 
     struct socket queue[MGSQLEN];   /* Accepted sockets */
-    volatile int sq_head;      /* Head of the socket queue */
-    volatile int sq_tail;      /* Tail of the socket queue */
-    pthread_cond_t sq_full;    /* Signaled when socket is produced */
-    pthread_cond_t sq_empty;   /* Signaled when socket is consumed */
-    pthread_t masterthreadid;  /* The master thread ID. */
-    int workerthreadcount;     /* The amount of worker threads. */
-    pthread_t *workerthreadids;/* The worker thread IDs. */
+    volatile int sq_head;           /* Head of the socket queue */
+    volatile int sq_tail;           /* Tail of the socket queue */
+    pthread_cond_t sq_full;         /* Signaled when socket is produced */
+    pthread_cond_t sq_empty;        /* Signaled when socket is consumed */
+    pthread_t masterthreadid;       /* The master thread ID. */
+    int workerthreadcount;          /* The amount of worker threads. */
+    pthread_t *workerthreadids;     /* The worker thread IDs. */
 
-    unsigned long start_time;  /* Server start time, used for authentication */
-    unsigned long nonce_count; /* Used nonces, used for authentication */
+    unsigned long start_time;       /* Server start time, used for authentication */
+    pthread_mutex_t nonce_mutex;    /* Protects nonce_count */
+    unsigned long nonce_count;      /* Used nonces, used for authentication */
 
-    char *systemName;          /* What operating system is running */
+    char *systemName;               /* What operating system is running */
 
     /* linked list of uri handlers */
     struct mg_request_handler_info *request_handlers;
 
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     /* linked list of shared lua websockets */
-    struct mg_shared_lua_websocket *shared_lua_websockets;
+    struct mg_shared_lua_websocket_list *shared_lua_websockets;
 #endif
 };
 
@@ -3251,10 +3252,10 @@ static void send_authorization_request(struct mg_connection *conn)
     time_t curtime = time(NULL);
     unsigned long nonce = (unsigned long)(conn->ctx->start_time);
 
-    (void)pthread_mutex_lock(&conn->ctx->mutex);
+    (void)pthread_mutex_lock(&conn->ctx->nonce_mutex);
     nonce += conn->ctx->nonce_count;
     ++conn->ctx->nonce_count;
-    (void)pthread_mutex_unlock(&conn->ctx->mutex);
+    (void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
 
     nonce ^= (unsigned long)(conn->ctx);
     conn->status_code = 401;
@@ -5169,7 +5170,7 @@ static void read_websocket(struct mg_connection *conn)
                  !conn->ctx->callbacks.websocket_data(conn, mop, data, data_len)) ||
 #ifdef USE_LUA
                 (conn->lua_websocket_state &&
-                 !lua_websocket_data(conn, mop, data, data_len)) ||
+                 !lua_websocket_data(conn->lua_websocket_state, mop, data, data_len)) ||
 #endif
                 (buf[0] & 0xf) == WEBSOCKET_OPCODE_CONNECTION_CLOSE) {  /* Opcode == 8, connection close */
                 break;
@@ -5236,7 +5237,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
 {
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
 #ifdef USE_LUA
-    int lua_websock, shared_lua_websock = 0;
+    int lua_websock = 0;
     /* TODO: A websocket script may be shared between several clients, allowing them to communicate
              directly instead of writing to a data base and polling the data base. */
 #endif
@@ -5249,17 +5250,17 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
         /* The C callback is called before Lua and may prevent Lua from handling the websocket. */
     } else {
 #ifdef USE_LUA
-        lua_websock = conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS] ?
-                          match_prefix(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS],
+        if (conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]) {
+            lua_websock = match_prefix(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS],
                                        (int)strlen(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]),
-                                       path) : 0;
+                                       path);
+        }
 
-        if (lua_websock || shared_lua_websock) {
-            /* TODO */ shared_lua_websock = 0;
-            conn->lua_websocket_state = lua_websocket_new(path, conn, !!shared_lua_websock);
+        if (lua_websock) {
+            conn->lua_websocket_state = lua_websocket_new(path, conn);
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);
-                if (lua_websocket_ready(conn)) {
+                if (lua_websocket_ready(conn->lua_websocket_state)) {
                     read_websocket(conn);
                 }
             }
@@ -6211,7 +6212,8 @@ static void close_connection(struct mg_connection *conn)
 {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     if (conn->lua_websocket_state) {
-        lua_websocket_close(conn);
+        lua_websocket_close(conn->lua_websocket_state);
+        conn->lua_websocket_state = NULL;
     }
 #endif
 
@@ -6431,12 +6433,12 @@ static void process_new_connection(struct mg_connection *conn)
 /* Worker threads take accepted socket from the queue */
 static int consume_socket(struct mg_context *ctx, struct socket *sp)
 {
-    (void) pthread_mutex_lock(&ctx->mutex);
+    (void) pthread_mutex_lock(&ctx->thread_mutex);
     DEBUG_TRACE("going idle");
 
     /* If the queue is empty, wait. We're idle at this point. */
     while (ctx->sq_head == ctx->sq_tail && ctx->stop_flag == 0) {
-        pthread_cond_wait(&ctx->sq_full, &ctx->mutex);
+        pthread_cond_wait(&ctx->sq_full, &ctx->thread_mutex);
     }
 
     /* If we're stopping, sq_head may be equal to sq_tail. */
@@ -6454,7 +6456,7 @@ static int consume_socket(struct mg_context *ctx, struct socket *sp)
     }
 
     (void) pthread_cond_signal(&ctx->sq_empty);
-    (void) pthread_mutex_unlock(&ctx->mutex);
+    (void) pthread_mutex_unlock(&ctx->thread_mutex);
 
     return !ctx->stop_flag;
 }
@@ -6512,11 +6514,11 @@ static void *worker_thread_run(void *thread_func_param)
     }
 
     /* Signal master that we're done with connection and exiting */
-    (void) pthread_mutex_lock(&ctx->mutex);
+    (void) pthread_mutex_lock(&ctx->thread_mutex);
     ctx->num_threads--;
-    (void) pthread_cond_signal(&ctx->cond);
+    (void) pthread_cond_signal(&ctx->thread_cond);
     assert(ctx->num_threads >= 0);
-    (void) pthread_mutex_unlock(&ctx->mutex);
+    (void) pthread_mutex_unlock(&ctx->thread_mutex);
 
     pthread_setspecific(sTlsKey, NULL);
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -6547,12 +6549,12 @@ static void *worker_thread(void *thread_func_param)
 /* Master thread adds accepted socket to a queue */
 static void produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
-    (void) pthread_mutex_lock(&ctx->mutex);
+    (void) pthread_mutex_lock(&ctx->thread_mutex);
 
     /* If the queue is full, wait */
     while (ctx->stop_flag == 0 &&
            ctx->sq_head - ctx->sq_tail >= (int) ARRAY_SIZE(ctx->queue)) {
-        (void) pthread_cond_wait(&ctx->sq_empty, &ctx->mutex);
+        (void) pthread_cond_wait(&ctx->sq_empty, &ctx->thread_mutex);
     }
 
     if (ctx->sq_head - ctx->sq_tail < (int) ARRAY_SIZE(ctx->queue)) {
@@ -6563,7 +6565,7 @@ static void produce_socket(struct mg_context *ctx, const struct socket *sp)
     }
 
     (void) pthread_cond_signal(&ctx->sq_full);
-    (void) pthread_mutex_unlock(&ctx->mutex);
+    (void) pthread_mutex_unlock(&ctx->thread_mutex);
 }
 
 static int set_sock_timeout(SOCKET sock, int milliseconds)
@@ -6685,11 +6687,11 @@ static void master_thread_run(void *thread_func_param)
     pthread_cond_broadcast(&ctx->sq_full);
 
     /* Wait until all threads finish */
-    (void) pthread_mutex_lock(&ctx->mutex);
+    (void) pthread_mutex_lock(&ctx->thread_mutex);
     while (ctx->num_threads > 0) {
-        (void) pthread_cond_wait(&ctx->cond, &ctx->mutex);
+        (void) pthread_cond_wait(&ctx->thread_cond, &ctx->thread_mutex);
     }
-    (void) pthread_mutex_unlock(&ctx->mutex);
+    (void) pthread_mutex_unlock(&ctx->thread_mutex);
 
     /* Join all worker threads to avoid leaking threads. */
     workerthreadcount = ctx->workerthreadcount;
@@ -6737,11 +6739,14 @@ static void free_context(struct mg_context *ctx)
     if (ctx == NULL)
         return;
 
-    /* All threads exited, no sync is needed. Destroy mutex and condvars */
-    (void) pthread_mutex_destroy(&ctx->mutex);
-    (void) pthread_cond_destroy(&ctx->cond);
+    /* All threads exited, no sync is needed. Destroy thread mutex and condvars */
+    (void) pthread_mutex_destroy(&ctx->thread_mutex);
+    (void) pthread_cond_destroy(&ctx->thread_cond);
     (void) pthread_cond_destroy(&ctx->sq_empty);
     (void) pthread_cond_destroy(&ctx->sq_full);
+
+    /* Destroy other context global data structures mutex */
+    (void) pthread_mutex_destroy(&ctx->nonce_mutex);
 
     /* Deallocate config parameters */
     for (i = 0; i < NUM_OPTIONS; i++) {
@@ -6928,10 +6933,12 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     (void) signal(SIGPIPE, SIG_IGN);
 #endif /* !_WIN32 && !__SYMBIAN32__ */
 
-    (void) pthread_mutex_init(&ctx->mutex, NULL);
-    (void) pthread_cond_init(&ctx->cond, NULL);
+    (void) pthread_mutex_init(&ctx->thread_mutex, NULL);
+    (void) pthread_cond_init(&ctx->thread_cond, NULL);
     (void) pthread_cond_init(&ctx->sq_empty, NULL);
     (void) pthread_cond_init(&ctx->sq_full, NULL);
+
+    (void) pthread_mutex_init(&ctx->nonce_mutex, NULL);
 
     workerthreadcount = atoi(ctx->config[NUM_THREADS]);
 
@@ -6956,14 +6963,14 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     /* Start worker threads */
     for (i = 0; i < workerthreadcount; i++) {
-        (void) pthread_mutex_lock(&ctx->mutex);
+        (void) pthread_mutex_lock(&ctx->thread_mutex);
         ctx->num_threads++;
-        (void) pthread_mutex_unlock(&ctx->mutex);
+        (void) pthread_mutex_unlock(&ctx->thread_mutex);
         if (mg_start_thread_with_id(worker_thread, ctx,
                                     &ctx->workerthreadids[i]) != 0) {
-            (void) pthread_mutex_lock(&ctx->mutex);
+            (void) pthread_mutex_lock(&ctx->thread_mutex);
             ctx->num_threads--;
-            (void) pthread_mutex_unlock(&ctx->mutex);
+            (void) pthread_mutex_unlock(&ctx->thread_mutex);
             mg_cry(fc(ctx), "Cannot start worker thread: %ld", (long) ERRNO);
         }
     }

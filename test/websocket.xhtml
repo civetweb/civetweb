@@ -1,4 +1,4 @@
-<!DOCTYPE HTML>
+﻿<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="UTF-8"></meta>
@@ -23,6 +23,7 @@
     function webSockKeepAlive() {
       if (keepAlive) {
         connection.send('client still alive');
+        console.log('send keep alive')
         setTimeout("webSockKeepAlive()", 10000);
       }
     }
@@ -49,7 +50,7 @@
       connection.onmessage = function (e) {
         var lCmd = e.data.substring(0,3);
         if (lCmd == "-->") {
-          //console.log(e.data);
+          console.log(e.data);
           var lDirection = Number(e.data.substring(5));
           if (e.data[3] == 'h') {
             hand_hour.setAttribute("transform", "rotate(" + lDirection + " 800 600)");
@@ -61,6 +62,8 @@
           websock_text_field.textContent = e.data;
         }
       };
+
+      console.log("load");
     }
 
   ]]></script>
