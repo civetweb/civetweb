@@ -975,7 +975,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
     while (*shared_websock_list) {
         /* check if ws already in list */
         if (0==strcmp(script,(*shared_websock_list)->ws.script)) {
-            break;
+            /* break; -- TODO: shared websocket does not work yet, disable it by removing this "break" statement */
         }
         shared_websock_list = &((*shared_websock_list)->next);
     }
