@@ -1265,7 +1265,6 @@ static int match_prefix(const char *pattern, int pattern_len, const char *str)
     }
 
     i = j = 0;
-    res = -1;
     for (; i < pattern_len; i++, j++) {
         if (pattern[i] == '?' && str[j] != '\0') {
             continue;
