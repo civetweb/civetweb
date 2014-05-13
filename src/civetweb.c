@@ -1265,7 +1265,6 @@ static int match_prefix(const char *pattern, int pattern_len, const char *str)
     }
 
     i = j = 0;
-    res = -1;
     for (; i < pattern_len; i++, j++) {
         if (pattern[i] == '?' && str[j] != '\0') {
             continue;
@@ -5872,6 +5871,7 @@ static int set_ports_option(struct mg_context *ctx)
                           sizeof(ctx->listening_ports[0]))) == NULL) {
             closesocket(so.sock);
             so.sock = INVALID_SOCKET;
+            mg_free(ptr);
             success = 0;
         }
         else {
@@ -6266,13 +6266,11 @@ static struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
                        mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
         snprintf(ebuf, ebuf_len, "calloc(): %s", strerror(ERRNO));
         closesocket(sock);
-        sock = INVALID_SOCKET;
 #ifndef NO_SSL
     } else if (use_ssl && (conn->client_ssl_ctx =
                                SSL_CTX_new(SSLv23_client_method())) == NULL) {
         snprintf(ebuf, ebuf_len, "SSL_CTX_new error");
         closesocket(sock);
-        sock = INVALID_SOCKET;
         mg_free(conn);
         conn = NULL;
 #endif /* NO_SSL */
@@ -6379,7 +6377,6 @@ static void process_new_connection(struct mg_connection *conn)
     char ebuf[100];
 
     keep_alive_enabled = !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
-    keep_alive = 0;
 
     /* Important: on new connection, reset the receiving buffer. Credit goes
        to crule42. */
