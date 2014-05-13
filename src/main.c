@@ -504,7 +504,7 @@ static void set_absolute_path(char *options[], const char *option_name,
             path[sizeof(path)-1] = 0;
         }
 
-        strncat(path, "/", sizeof(path) - 1);
+        strncat(path, "/", sizeof(path) - strlen(path) - 1);
         strncat(path, option_value, sizeof(path) - strlen(path) - 1);
 
         /* Absolutize the path, and set the option */
