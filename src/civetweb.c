@@ -5871,6 +5871,7 @@ static int set_ports_option(struct mg_context *ctx)
                           sizeof(ctx->listening_ports[0]))) == NULL) {
             closesocket(so.sock);
             so.sock = INVALID_SOCKET;
+            mg_free(ptr);
             success = 0;
         }
         else {
