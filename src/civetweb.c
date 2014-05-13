@@ -6378,7 +6378,6 @@ static void process_new_connection(struct mg_connection *conn)
     char ebuf[100];
 
     keep_alive_enabled = !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
-    keep_alive = 0;
 
     /* Important: on new connection, reset the receiving buffer. Credit goes
        to crule42. */
