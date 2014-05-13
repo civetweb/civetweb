@@ -6265,13 +6265,11 @@ static struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
                        mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
         snprintf(ebuf, ebuf_len, "calloc(): %s", strerror(ERRNO));
         closesocket(sock);
-        sock = INVALID_SOCKET;
 #ifndef NO_SSL
     } else if (use_ssl && (conn->client_ssl_ctx =
                                SSL_CTX_new(SSLv23_client_method())) == NULL) {
         snprintf(ebuf, ebuf_len, "SSL_CTX_new error");
         closesocket(sock);
-        sock = INVALID_SOCKET;
         mg_free(conn);
         conn = NULL;
 #endif /* NO_SSL */
