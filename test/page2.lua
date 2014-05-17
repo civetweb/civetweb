@@ -57,7 +57,8 @@ mg.write("<p>\n");
   mg.write("Files in " .. lfs.currentdir())
   mg.write("\n<ul>\n")
   for f in lfs.dir(".") do
-    mg.write("<li>" .. f .. "</li>\n")
+    local mime = mg.get_mime_type(f)
+    mg.write("<li>" .. f .. " (" .. mime .. ")</li>\n")
     local at = lfs.attributes(f);
     recurse(at)
   end
