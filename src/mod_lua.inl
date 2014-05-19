@@ -62,7 +62,7 @@ static void reg_boolean(struct lua_State *L, const char *name, int val)
 static void reg_conn_function(struct lua_State *L, const char *name,
     lua_CFunction func, struct mg_connection *conn)
 {
-    if (name!=NULL && func!=NULL) {
+    if (name!=NULL && func!=NULL && conn!=NULL) {
         lua_pushstring(L, name);
         lua_pushlightuserdata(L, conn);
         lua_pushcclosure(L, func, 1);
@@ -679,14 +679,16 @@ enum {
 
 static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, const char *script_name, int lua_env_type)
 {
-    const struct mg_request_info *ri = mg_get_request_info(conn);
-    char src_addr[IP_ADDR_STR_LEN];
-    const char * preload_file = conn->ctx->config[LUA_PRELOAD_FILE];
+    const struct mg_request_info *ri = ((conn != NULL) ? mg_get_request_info(conn) : NULL);
+    const char * preload_file = ((conn != NULL) ? conn->ctx->config[LUA_PRELOAD_FILE] : NULL);
+    char src_addr[IP_ADDR_STR_LEN] = "";
     int i;
 
     extern void luaL_openlibs(lua_State *);
 
-    sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
+    if (conn != NULL) {
+        sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
+    }
 
     luaL_openlibs(L);
 #ifdef USE_LUA_SQLITE3
@@ -709,20 +711,15 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     lua_pop(L, 1);
     lua_register(L, "connect", lsp_connect);
 
-    if (conn == NULL) {
-        /* Do not register any connection specific functions or variables */
-        return;
-    }
-
     /* Store context in the registry */
-    lua_pushlightuserdata(L, (void *)&LUASOCKET);
-    lua_pushlightuserdata(L, (void *)&(conn->ctx));
-    lua_settable(L, LUA_REGISTRYINDEX);
+    if (conn) {
+        lua_pushlightuserdata(L, (void *)&LUASOCKET);
+        lua_pushlightuserdata(L, (void *)&(conn->ctx));
+        lua_settable(L, LUA_REGISTRYINDEX);
+    }
 
     /* Register mg module */
     lua_newtable(L);
-
-    reg_conn_function(L, "cry", lsp_cry, conn);
 
     switch (lua_env_type) {
         case LUA_ENV_TYPE_LUA_SERVER_PAGE:
@@ -737,6 +734,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     }
 
     if (lua_env_type==LUA_ENV_TYPE_LUA_SERVER_PAGE || lua_env_type==LUA_ENV_TYPE_PLAIN_LUA_PAGE) {
+        reg_conn_function(L, "cry", lsp_cry, conn);
         reg_conn_function(L, "read", lsp_read, conn);
         reg_conn_function(L, "write", lsp_write, conn);
         reg_conn_function(L, "keep_alive", lsp_keep_alive, conn);
@@ -749,6 +747,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     }
 
     if (lua_env_type==LUA_ENV_TYPE_LUA_WEBSOCKET) {
+        // reg_function(L, "write", lwebsock_write, (lua_websock_data*)(conn->lua_websocket_state));
         reg_conn_function(L, "write", lwebsock_write, conn);
         /* reg_conn_function(L, "send_file", lsp_send_file, conn); */
     }
@@ -769,7 +768,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_string(L, "websocket_root", conn->ctx->config[WEBSOCKET_ROOT]);
 #endif
 
-    if (conn->ctx->systemName) {
+    if (conn != NULL && conn->ctx->systemName) {
         reg_string(L, "system", conn->ctx->systemName);
     }
 
@@ -788,7 +787,7 @@ static void prepare_lua_environment(struct mg_connection *conn, lua_State *L, co
     reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
 
     if (conn->request_info.remote_user != NULL) {
-        reg_string(L, "remote_user", conn->request_info.remote_user);
+        reg_string(L, "remote_user", ri->remote_user);
         reg_string(L, "auth_type", "Digest");
     }
 
