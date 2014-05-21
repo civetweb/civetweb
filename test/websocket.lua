@@ -5,10 +5,13 @@ function trace(text)
 end
 
 function iswebsocket()
-  return pcall(function()
-    if (string.upper(mg.request_info.http_headers.Upgrade)~="WEBSOCKET") then error("") end
-  end)
+  return mg.lua_type == "websocket"
+  --return pcall(function()
+  --  if (string.upper(mg.request_info.http_headers.Upgrade)~="WEBSOCKET") then error("") end
+  --end)
 end
+
+trace("called with Lua type " .. tostring(mg.lua_type))
 
 if not iswebsocket() then
   trace("no websocket")
@@ -65,4 +68,3 @@ function senddata()
     end
 end
 
-trace("defined")

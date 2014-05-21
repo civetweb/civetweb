@@ -740,12 +740,12 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
     /* Store context in the registry */
     if (ctx) {
         lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
-        lua_pushlightuserdata(L, (void *)&(ctx));
+        lua_pushlightuserdata(L, (void *)ctx);
         lua_settable(L, LUA_REGISTRYINDEX);
     }
     if (conn_list) {
         lua_pushlightuserdata(L, (void *)&lua_regkey_connlist);
-        lua_pushlightuserdata(L, (void *)&(conn_list));
+        lua_pushlightuserdata(L, (void *)conn_list);
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
@@ -838,9 +838,10 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
             reg_string(L, conn->request_info.http_headers[i].name, conn->request_info.http_headers[i].value);
         }
         lua_rawset(L, -3);
+
+        lua_rawset(L, -3);
     }
 
-    lua_rawset(L, -3);
     lua_setglobal(L, "mg");
 
     /* Register default mg.onerror function */
@@ -1017,7 +1018,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
     while (*shared_websock_list) {
         /* check if ws already in list */
         if (0==strcmp(script,(*shared_websock_list)->ws.script)) {
-            break; /* -- TODO: shared websocket does not work yet, disable it by removing this "break" statement */
+            break;
         }
         shared_websock_list = &((*shared_websock_list)->next);
     }
