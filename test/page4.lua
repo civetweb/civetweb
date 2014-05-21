@@ -67,7 +67,7 @@ mg.write("\r\n")
 
 -- test 'require' of other Lua scripts
 mg.write("require test\r\n")
-script_path = mg.request_info.script_name:match("(.*)page%d*.lua")
+script_path = mg.script_name:match("(.*)page%d*.lua")
 if type(script_path)=='string' then
     package.path = script_path .. "?.lua;" .. package.path
     mg.write("  Lua search path: " .. package.path .. "\r\n")
