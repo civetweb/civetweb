@@ -23,6 +23,25 @@ if not iswebsocket() then
 end
 
 
+-- Serialize table to string
+function ser(val)
+  local t
+  if type(val) == "table" then
+    for k,v in pairs(val) do
+      if t then 
+        t = t .. ", " .. ser(k) .. "=" .. ser(v)
+      else
+        t = "{" .. ser(k) .. "=" .. ser(v)
+      end
+    end
+    t = t .. "}"
+  else
+    t = tostring(val)
+  end
+  return t
+end
+
+
 -- Callback to reject a connection
 function open()
   trace("open")
@@ -30,8 +49,8 @@ function open()
 end
 
 -- Callback for "Websocket ready"
-function ready()
-  trace("ready")
+function ready(tab)
+  trace("ready: " .. ser(tab))
   mg.write("text", "Websocket ready")
   senddata()
   return true

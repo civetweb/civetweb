@@ -704,17 +704,54 @@ enum {
     LUA_ENV_TYPE_LUA_WEBSOCKET = 2,
 };
 
-static void prepare_lua_environment(struct mg_context * ctx, struct mg_connection *conn, struct lua_websock_data *conn_list, lua_State *L, const char *script_name, int lua_env_type)
+static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 {
-    const char * preload_file = ((conn != NULL) ? conn->ctx->config[LUA_PRELOAD_FILE] : NULL);
     char src_addr[IP_ADDR_STR_LEN] = "";
     int i;
 
-    extern void luaL_openlibs(lua_State *);
+    sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
 
-    if (conn != NULL) {
-        sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
+    /* Export mg.request_info */
+    lua_pushstring(L, "request_info");
+    lua_newtable(L);
+    reg_string(L, "request_method", conn->request_info.request_method);
+    reg_string(L, "uri", conn->request_info.uri);
+    reg_string(L, "http_version", conn->request_info.http_version);
+    reg_string(L, "query_string", conn->request_info.query_string);
+    reg_int(L, "remote_ip", conn->request_info.remote_ip); /* remote_ip is deprecated, use remote_addr instead */
+    reg_string(L, "remote_addr", src_addr);
+    /* TODO: ip version */
+    reg_int(L, "remote_port", conn->request_info.remote_port);
+    reg_int(L, "num_headers", conn->request_info.num_headers);
+    reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
+
+    if (conn->request_info.remote_user != NULL) {
+        reg_string(L, "remote_user", conn->request_info.remote_user);
+        reg_string(L, "auth_type", "Digest");
     }
+
+    reg_boolean(L, "https", conn->ssl != NULL);
+
+    if (conn->status_code > 0) {
+        /* Lua error handler should show the status code */
+        reg_int(L, "status", conn->status_code);
+    }
+
+    lua_pushstring(L, "http_headers");
+    lua_newtable(L);
+    for (i = 0; i < conn->request_info.num_headers; i++) {
+        reg_string(L, conn->request_info.http_headers[i].name, conn->request_info.http_headers[i].value);
+    }
+    lua_rawset(L, -3);
+
+    lua_rawset(L, -3);
+}
+
+static void prepare_lua_environment(struct mg_context * ctx, struct mg_connection *conn, struct lua_websock_data *conn_list, lua_State *L, const char *script_name, int lua_env_type)
+{
+    const char * preload_file = ((conn != NULL) ? conn->ctx->config[LUA_PRELOAD_FILE] : NULL);
+
+    extern void luaL_openlibs(lua_State *);
 
     luaL_openlibs(L);
 #ifdef USE_LUA_SQLITE3
@@ -806,40 +843,7 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
 
     /* Export connection specific info */
     if (conn!=NULL) {
-        /* Export mg.request_info */
-        lua_pushstring(L, "request_info");
-        lua_newtable(L);
-        reg_string(L, "request_method", conn->request_info.request_method);
-        reg_string(L, "uri", conn->request_info.uri);
-        reg_string(L, "http_version", conn->request_info.http_version);
-        reg_string(L, "query_string", conn->request_info.query_string);
-        reg_int(L, "remote_ip", conn->request_info.remote_ip); /* remote_ip is deprecated, use remote_addr instead */
-        reg_string(L, "remote_addr", src_addr);
-        /* TODO: ip version */
-        reg_int(L, "remote_port", conn->request_info.remote_port);
-        reg_int(L, "num_headers", conn->request_info.num_headers);
-        reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
-
-        if (conn->request_info.remote_user != NULL) {
-            reg_string(L, "remote_user", conn->request_info.remote_user);
-            reg_string(L, "auth_type", "Digest");
-        }
-
-        reg_boolean(L, "https", conn->ssl != NULL);
-
-        if (conn->status_code > 0) {
-            /* Lua error handler should show the status code */
-            reg_int(L, "status", conn->status_code);
-        }
-
-        lua_pushstring(L, "http_headers");
-        lua_newtable(L);
-        for (i = 0; i < conn->request_info.num_headers; i++) {
-            reg_string(L, conn->request_info.http_headers[i].name, conn->request_info.http_headers[i].value);
-        }
-        lua_rawset(L, -3);
-
-        lua_rawset(L, -3);
+        prepare_lua_request_info(conn, L);
     }
 
     lua_setglobal(L, "mg");
@@ -1040,13 +1044,11 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
         prepare_lua_environment(conn->ctx, NULL, &((*shared_websock_list)->ws), (*shared_websock_list)->ws.state, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
         err = luaL_loadfile((*shared_websock_list)->ws.state, script);
         if (err != 0) {
-            mg_cry(conn, "Lua websocket: Error %i loading %s: %s", err, script,
-                lua_tostring((*shared_websock_list)->ws.state, -1));
+            websock_cry(conn, err, (*shared_websock_list)->ws.state, script, "load");
         }
         err = lua_pcall((*shared_websock_list)->ws.state, 0, 0, 0);
         if (err != 0) {
-            mg_cry(conn, "Lua websocket: Error %i initializing %s: %s", err, script,
-                lua_tostring((*shared_websock_list)->ws.state, -1));
+            websock_cry(conn, err, (*shared_websock_list)->ws.state, script, "init");
         }
     } else {
         /* inc ref count */
@@ -1059,8 +1061,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
     lua_getglobal((*shared_websock_list)->ws.state, "open");
     err = lua_pcall((*shared_websock_list)->ws.state, 0, 1, 0);
     if (err != 0) {
-        mg_cry(conn, "Lua websocket: Error %i calling open handler of %s: %s", err, script,
-            lua_tostring((*shared_websock_list)->ws.state, -1));
+        websock_cry(conn, err, (*shared_websock_list)->ws.state, script, "open handler");
     } else {
         if (lua_isboolean((*shared_websock_list)->ws.state, -1)) {
             ok = lua_toboolean((*shared_websock_list)->ws.state, -1);
@@ -1090,7 +1091,7 @@ static int lua_websocket_data(struct mg_connection * conn, void *ws_arg, int bit
     lua_pushlstring(ws->state, data, data_len);
     err = lua_pcall(ws->state, 2, 1, 0);
     if (err != 0) {
-        mg_cry(conn, "Lua websocket: Error %i calling data handler of %s", err, ws->script);
+        websock_cry(conn, err, ws->state, ws->script, "open handler");
     } else {
         if (lua_isboolean(ws->state, -1)) {
             ok = lua_toboolean(ws->state, -1);
@@ -1104,7 +1105,28 @@ static int lua_websocket_data(struct mg_connection * conn, void *ws_arg, int bit
 
 static int lua_websocket_ready(struct mg_connection * conn, void * ws_arg)
 {
-    return lua_websocket_data(conn, ws_arg, -1, NULL, 0);
+    struct lua_websock_data *ws = (struct lua_websock_data *)(ws_arg);
+    int err, ok = 0;
+
+    assert(ws != NULL);
+    assert(ws->state != NULL);
+
+    (void)pthread_mutex_lock(&ws->ws_mutex);
+    lua_getglobal(ws->state, "ready");
+    lua_newtable(ws->state);
+    prepare_lua_request_info(conn, ws->state);
+    err = lua_pcall(ws->state, 1, 1, 0);
+    if (err != 0) {
+        websock_cry(conn, err, ws->state, ws->script, "ready handler");
+    } else {
+        if (lua_isboolean(ws->state, -1)) {
+            ok = lua_toboolean(ws->state, -1);
+        }
+        lua_pop(ws->state, 1);
+    }
+    (void)pthread_mutex_unlock(&ws->ws_mutex);
+
+    return ok;
 }
 
 static void lua_websocket_close(struct mg_connection * conn, void * ws_arg)
@@ -1121,7 +1143,7 @@ static void lua_websocket_close(struct mg_connection * conn, void * ws_arg)
     lua_getglobal(ws->state, "close");
     err = lua_pcall(ws->state, 0, 0, 0);
     if (err != 0) {
-        mg_cry(conn, "Lua websocket: Error %i calling close handler of %s", err, ws->script);
+        websock_cry(conn, err, ws->state, ws->script, "close handler");
     }
     for (i=0;i<ws->references;i++) {
         if (ws->conn[i]==conn) {
