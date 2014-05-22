@@ -28,7 +28,7 @@ function ser(val)
   local t
   if type(val) == "table" then
     for k,v in pairs(val) do
-      if t then 
+      if t then
         t = t .. ", " .. ser(k) .. "=" .. ser(v)
       else
         t = "{" .. ser(k) .. "=" .. ser(v)
@@ -57,15 +57,15 @@ function ready(tab)
 end
 
 -- Callback for "Websocket received data"
-function data(bits, content)
-    trace("data(" .. bits .. "): " .. content)
+function data(tab)
+    trace("data: " .. ser(tab))
     senddata()
     return true
 end
 
 -- Callback for "Websocket is closing"
-function close()
-    trace("close")
+function close(tab)
+    trace("close: " .. ser(tab))
     mg.write("text", "end")
 end
 

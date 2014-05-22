@@ -1086,12 +1086,22 @@ static int lua_websocket_data(struct mg_connection * conn, void *ws_arg, int bit
     assert(ws->state != NULL);
 
     (void)pthread_mutex_lock(&ws->ws_mutex);
+
     lua_getglobal(ws->state, "data");
+    lua_newtable(ws->state);
+    lua_pushstring(ws->state, "client");
+    lua_pushlightuserdata(ws->state, (void *)conn);
+    lua_rawset(ws->state, -3);
+    lua_pushstring(ws->state, "bits"); /* TODO: dont use "bits" but fields with a meaning according to http://tools.ietf.org/html/rfc6455, section 5.2 */
     lua_pushnumber(ws->state, bits);
+    lua_rawset(ws->state, -3);
+    lua_pushstring(ws->state, "data");
     lua_pushlstring(ws->state, data, data_len);
-    err = lua_pcall(ws->state, 2, 1, 0);
+    lua_rawset(ws->state, -3);
+
+    err = lua_pcall(ws->state, 1, 1, 0);
     if (err != 0) {
-        websock_cry(conn, err, ws->state, ws->script, "open handler");
+        websock_cry(conn, err, ws->state, ws->script, "data handler");
     } else {
         if (lua_isboolean(ws->state, -1)) {
             ok = lua_toboolean(ws->state, -1);
@@ -1112,9 +1122,14 @@ static int lua_websocket_ready(struct mg_connection * conn, void * ws_arg)
     assert(ws->state != NULL);
 
     (void)pthread_mutex_lock(&ws->ws_mutex);
+
     lua_getglobal(ws->state, "ready");
     lua_newtable(ws->state);
     prepare_lua_request_info(conn, ws->state);
+    lua_pushstring(ws->state, "client");
+    lua_pushlightuserdata(ws->state, (void *)conn);
+    lua_rawset(ws->state, -3);
+
     err = lua_pcall(ws->state, 1, 1, 0);
     if (err != 0) {
         websock_cry(conn, err, ws->state, ws->script, "ready handler");
@@ -1124,6 +1139,7 @@ static int lua_websocket_ready(struct mg_connection * conn, void * ws_arg)
         }
         lua_pop(ws->state, 1);
     }
+
     (void)pthread_mutex_unlock(&ws->ws_mutex);
 
     return ok;
@@ -1140,8 +1156,14 @@ static void lua_websocket_close(struct mg_connection * conn, void * ws_arg)
     assert(ws->state != NULL);
 
     (void)pthread_mutex_lock(&ws->ws_mutex);
+
     lua_getglobal(ws->state, "close");
-    err = lua_pcall(ws->state, 0, 0, 0);
+    lua_newtable(ws->state);
+    lua_pushstring(ws->state, "client");
+    lua_pushlightuserdata(ws->state, (void *)conn);
+    lua_rawset(ws->state, -3);
+
+    err = lua_pcall(ws->state, 1, 0, 0);
     if (err != 0) {
         websock_cry(conn, err, ws->state, ws->script, "close handler");
     }
