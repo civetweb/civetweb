@@ -1013,6 +1013,7 @@ static void websock_cry(struct mg_connection *conn, int err, lua_State * L, cons
 static void * lua_websocket_new(const char * script, struct mg_connection *conn)
 {
     struct mg_shared_lua_websocket_list **shared_websock_list = &(conn->ctx->shared_lua_websockets);
+    struct lua_websock_data *ws;
     int err, ok = 0;
 
     assert(conn->lua_websocket_state == NULL);
@@ -1035,46 +1036,54 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
             return NULL;
         }
         /* init ws list element */
-        (*shared_websock_list)->ws.script = mg_strdup(script); /* TODO: handle OOM */
-        pthread_mutex_init(&((*shared_websock_list)->ws.ws_mutex), NULL);
-        (*shared_websock_list)->ws.state = lua_newstate(lua_allocator, NULL);
-        (*shared_websock_list)->ws.conn[0] = conn;
-        (*shared_websock_list)->ws.references = 1;
-        (void)pthread_mutex_lock(&((*shared_websock_list)->ws.ws_mutex));
-        prepare_lua_environment(conn->ctx, NULL, &((*shared_websock_list)->ws), (*shared_websock_list)->ws.state, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
-        err = luaL_loadfile((*shared_websock_list)->ws.state, script);
+        ws = &(*shared_websock_list)->ws;
+        ws->script = mg_strdup(script); /* TODO: handle OOM */
+        pthread_mutex_init(&(ws->ws_mutex), NULL);
+        ws->state = lua_newstate(lua_allocator, NULL);
+        ws->conn[0] = conn;
+        ws->references = 1;
+        (void)pthread_mutex_lock(&(ws->ws_mutex));
+        prepare_lua_environment(conn->ctx, NULL, ws, ws->state, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
+        err = luaL_loadfile(ws->state, script);
         if (err != 0) {
-            websock_cry(conn, err, (*shared_websock_list)->ws.state, script, "load");
+            websock_cry(conn, err, ws->state, script, "load");
         }
-        err = lua_pcall((*shared_websock_list)->ws.state, 0, 0, 0);
+        err = lua_pcall(ws->state, 0, 0, 0);
         if (err != 0) {
-            websock_cry(conn, err, (*shared_websock_list)->ws.state, script, "init");
+            websock_cry(conn, err, ws->state, script, "init");
         }
     } else {
         /* inc ref count */
-        (void)pthread_mutex_lock(&((*shared_websock_list)->ws.ws_mutex));
-        (*shared_websock_list)->ws.conn[((*shared_websock_list)->ws.references)++] = conn;
+        ws = &(*shared_websock_list)->ws;
+        (void)pthread_mutex_lock(&(ws->ws_mutex));
+        (*shared_websock_list)->ws.conn[(ws->references)++] = conn;
     }
     (void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
 
     /* call add */
-    lua_getglobal((*shared_websock_list)->ws.state, "open");
-    err = lua_pcall((*shared_websock_list)->ws.state, 0, 1, 0);
+    lua_getglobal(ws->state, "open");
+    lua_newtable(ws->state);
+    prepare_lua_request_info(conn, ws->state);
+    lua_pushstring(ws->state, "client");
+    lua_pushlightuserdata(ws->state, (void *)conn);
+    lua_rawset(ws->state, -3);
+
+    err = lua_pcall(ws->state, 1, 1, 0);
     if (err != 0) {
-        websock_cry(conn, err, (*shared_websock_list)->ws.state, script, "open handler");
+        websock_cry(conn, err, ws->state, script, "open handler");
     } else {
-        if (lua_isboolean((*shared_websock_list)->ws.state, -1)) {
-            ok = lua_toboolean((*shared_websock_list)->ws.state, -1);
+        if (lua_isboolean(ws->state, -1)) {
+            ok = lua_toboolean(ws->state, -1);
         }
-        lua_pop((*shared_websock_list)->ws.state, 1);
+        lua_pop(ws->state, 1);
     }
     if (!ok) {
         /* TODO */
     }
 
-    (void)pthread_mutex_unlock(&((*shared_websock_list)->ws.ws_mutex));
+    (void)pthread_mutex_unlock(&(ws->ws_mutex));
 
-    return (void*)&((*shared_websock_list)->ws);
+    return (void*)ws;
 }
 
 static int lua_websocket_data(struct mg_connection * conn, void *ws_arg, int bits, char *data, size_t data_len)
@@ -1125,7 +1134,6 @@ static int lua_websocket_ready(struct mg_connection * conn, void * ws_arg)
 
     lua_getglobal(ws->state, "ready");
     lua_newtable(ws->state);
-    prepare_lua_request_info(conn, ws->state);
     lua_pushstring(ws->state, "client");
     lua_pushlightuserdata(ws->state, (void *)conn);
     lua_rawset(ws->state, -3);

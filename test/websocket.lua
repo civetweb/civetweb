@@ -41,16 +41,25 @@ function ser(val)
   return t
 end
 
+-- table of all active connection
+allConnections = {}
+
+-- function to get a client identification string
+function who(tab)
+  local ri = allConnections[tab.client]
+  return ri.remote_addr .. ":" .. ri.remote_port
+end
 
 -- Callback to reject a connection
-function open()
-  trace("open")
+function open(tab)
+  allConnections[tab.client] = tab.request_info
+  trace("open[" .. who(tab) .. "]: " .. ser(tab))
   return true
 end
 
 -- Callback for "Websocket ready"
 function ready(tab)
-  trace("ready: " .. ser(tab))
+  trace("ready[" .. who(tab) .. "]: " .. ser(tab))
   mg.write("text", "Websocket ready")
   senddata()
   return true
@@ -58,15 +67,16 @@ end
 
 -- Callback for "Websocket received data"
 function data(tab)
-    trace("data: " .. ser(tab))
+    trace("data[" .. who(tab) .. "]: " .. ser(tab))
     senddata()
     return true
 end
 
 -- Callback for "Websocket is closing"
 function close(tab)
-    trace("close: " .. ser(tab))
+    trace("close[" .. who(tab) .. "]: " .. ser(tab))
     mg.write("text", "end")
+    allConnections[tab.client] = nil
 end
 
 function senddata()
