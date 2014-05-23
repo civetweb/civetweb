@@ -326,7 +326,7 @@ static int lsp_keep_alive(lua_State *L)
     int num_args = lua_gettop(L);
 
     /* This function may be called with one parameter (boolean) to set the keep_alive state.
-       Or without a parameter to just query the current keep_alive state. */
+    Or without a parameter to just query the current keep_alive state. */
     if ((num_args==1) && lua_isboolean(L, 1)) {
         conn->must_close = !lua_toboolean(L, 1);
     } else if (num_args != 0) {
@@ -663,22 +663,23 @@ static int lwebsock_write(lua_State *L)
     size_t size;
     int opcode = -1;
     unsigned i;
+    struct mg_connection * client = NULL;
 
     lua_pushlightuserdata(L, (void *)&lua_regkey_connlist);
     lua_gettable(L, LUA_REGISTRYINDEX);
     ws = (struct lua_websock_data *)lua_touserdata(L, -1);
 
     if (num_args == 1) {
+        /* just one text: send it to all client */
         if (lua_isstring(L, 1)) {
-            str = lua_tolstring(L, 1, &size);
-            for (i=0; i<ws->references; i++) {
-                mg_websocket_write(ws->conn[i], WEBSOCKET_OPCODE_TEXT, str, size);
-            }
+            opcode = WEBSOCKET_OPCODE_TEXT;
         }
     } else if (num_args == 2) {
         if (lua_isnumber(L, 1)) {
+            /* opcode number and message text */
             opcode = (int)lua_tointeger(L, 1);
         } else if (lua_isstring(L,1)) {
+            /* opcode string and message text */
             str = lua_tostring(L, 1);
             if (!mg_strncasecmp(str, "text", 4)) opcode = WEBSOCKET_OPCODE_TEXT;
             else if (!mg_strncasecmp(str, "bin", 3)) opcode = WEBSOCKET_OPCODE_BINARY;
@@ -686,14 +687,47 @@ static int lwebsock_write(lua_State *L)
             else if (!mg_strncasecmp(str, "ping", 4)) opcode = WEBSOCKET_OPCODE_PING;
             else if (!mg_strncasecmp(str, "pong", 4)) opcode = WEBSOCKET_OPCODE_PONG;
             else if (!mg_strncasecmp(str, "cont", 4)) opcode = WEBSOCKET_OPCODE_CONTINUATION;
+        } else if (lua_isuserdata(L, 1)) {
+            /* client id and message text */
+            client = (struct mg_connection *) lua_touserdata(L, 1);
+            opcode = WEBSOCKET_OPCODE_TEXT;
         }
-        if (opcode>=0 && opcode<16 && lua_isstring(L, 2)) {
-            str = lua_tolstring(L, 2, &size);
-            for (i=0; i<ws->references; i++) {
-                mg_websocket_write(ws->conn[i], WEBSOCKET_OPCODE_TEXT, str, size);
+    } else if (num_args == 3) {
+        if (lua_isuserdata(L, 1)) {
+            client = (struct mg_connection *) lua_touserdata(L, 1);
+            if (lua_isnumber(L, 2)) {
+                /* client id, opcode number and message text */
+                opcode = (int)lua_tointeger(L, 2);
+            } else if (lua_isstring(L,2)) {
+                /* client id, opcode string and message text */
+                str = lua_tostring(L, 2);
+                if (!mg_strncasecmp(str, "text", 4)) opcode = WEBSOCKET_OPCODE_TEXT;
+                else if (!mg_strncasecmp(str, "bin", 3)) opcode = WEBSOCKET_OPCODE_BINARY;
+                else if (!mg_strncasecmp(str, "close", 5)) opcode = WEBSOCKET_OPCODE_CONNECTION_CLOSE;
+                else if (!mg_strncasecmp(str, "ping", 4)) opcode = WEBSOCKET_OPCODE_PING;
+                else if (!mg_strncasecmp(str, "pong", 4)) opcode = WEBSOCKET_OPCODE_PONG;
+                else if (!mg_strncasecmp(str, "cont", 4)) opcode = WEBSOCKET_OPCODE_CONTINUATION;
             }
         }
     }
+
+    if (opcode>=0 && opcode<16 && lua_isstring(L, num_args)) {
+        str = lua_tolstring(L, num_args, &size);
+        if (client) {
+            for (i=0; i<ws->references; i++) {
+                if (client == ws->conn[i]) {
+                    mg_websocket_write(ws->conn[i], opcode, str, size);
+                }
+            }
+        } else {
+            for (i=0; i<ws->references; i++) {
+                mg_websocket_write(ws->conn[i], opcode, str, size);
+            }
+        }
+    } else {
+        return luaL_error(L, "invalid websocket write() call");
+    }
+
 #endif
     return 0;
 }
@@ -790,15 +824,15 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
     lua_newtable(L);
 
     switch (lua_env_type) {
-        case LUA_ENV_TYPE_LUA_SERVER_PAGE:
-            reg_string(L, "lua_type", "page");
-            break;
-        case LUA_ENV_TYPE_PLAIN_LUA_PAGE:
-            reg_string(L, "lua_type", "script");
-            break;
-        case LUA_ENV_TYPE_LUA_WEBSOCKET:
-            reg_string(L, "lua_type", "websocket");
-            break;
+    case LUA_ENV_TYPE_LUA_SERVER_PAGE:
+        reg_string(L, "lua_type", "page");
+        break;
+    case LUA_ENV_TYPE_PLAIN_LUA_PAGE:
+        reg_string(L, "lua_type", "script");
+        break;
+    case LUA_ENV_TYPE_LUA_WEBSOCKET:
+        reg_string(L, "lua_type", "websocket");
+        break;
     }
 
     if (lua_env_type==LUA_ENV_TYPE_LUA_SERVER_PAGE || lua_env_type==LUA_ENV_TYPE_PLAIN_LUA_PAGE) {
@@ -986,27 +1020,27 @@ struct mg_shared_lua_websocket_list {
 static void websock_cry(struct mg_connection *conn, int err, lua_State * L, const char * ws_operation, const char * lua_operation)
 {
     switch (err) {
-        case LUA_OK:
-        case LUA_YIELD:
-            break;
-        case LUA_ERRRUN:
-            mg_cry(conn, "%s: %s failed: runtime error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
-            break;
-        case LUA_ERRSYNTAX:
-            mg_cry(conn, "%s: %s failed: syntax error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
-            break;
-        case LUA_ERRMEM:
-            mg_cry(conn, "%s: %s failed: out of memory", ws_operation, lua_operation);
-            break;
-        case LUA_ERRGCMM:
-            mg_cry(conn, "%s: %s failed: error during garbage collection", ws_operation, lua_operation);
-            break;
-        case LUA_ERRERR:
-            mg_cry(conn, "%s: %s failed: error in error handling: %s", ws_operation, lua_operation, lua_tostring(L, -1));
-            break;
-        default:
-            mg_cry(conn, "%s: %s failed: error %i", ws_operation, lua_operation, err);
-            break;
+    case LUA_OK:
+    case LUA_YIELD:
+        break;
+    case LUA_ERRRUN:
+        mg_cry(conn, "%s: %s failed: runtime error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
+        break;
+    case LUA_ERRSYNTAX:
+        mg_cry(conn, "%s: %s failed: syntax error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
+        break;
+    case LUA_ERRMEM:
+        mg_cry(conn, "%s: %s failed: out of memory", ws_operation, lua_operation);
+        break;
+    case LUA_ERRGCMM:
+        mg_cry(conn, "%s: %s failed: error during garbage collection", ws_operation, lua_operation);
+        break;
+    case LUA_ERRERR:
+        mg_cry(conn, "%s: %s failed: error in error handling: %s", ws_operation, lua_operation, lua_tostring(L, -1));
+        break;
+    default:
+        mg_cry(conn, "%s: %s failed: error %i", ws_operation, lua_operation, err);
+        break;
     }
 }
 

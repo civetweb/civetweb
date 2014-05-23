@@ -46,13 +46,13 @@ allConnections = {}
 
 -- function to get a client identification string
 function who(tab)
-  local ri = allConnections[tab.client]
+  local ri = allConnections[tab.client].request_info
   return ri.remote_addr .. ":" .. ri.remote_port
 end
 
 -- Callback to reject a connection
 function open(tab)
-  allConnections[tab.client] = tab.request_info
+  allConnections[tab.client] = tab
   trace("open[" .. who(tab) .. "]: " .. ser(tab))
   return true
 end
@@ -60,7 +60,9 @@ end
 -- Callback for "Websocket ready"
 function ready(tab)
   trace("ready[" .. who(tab) .. "]: " .. ser(tab))
-  mg.write("text", "Websocket ready")
+  mg.write(tab.client, "text", "Websocket ready")
+  mg.write(tab.client, 1, "-->h 180");
+  mg.write(tab.client, "-->m 180");
   senddata()
   return true
 end
@@ -87,8 +89,8 @@ function senddata()
     mg.write("text", string.format("%u:%02u:%02u", date.hour, date.min, date.sec));
 
     if (hand ~= lasthand) then
-        mg.write("text", string.format("-->h %u", hand*360/(12*60)));
-        mg.write("text", string.format("-->m %u", date.min*360/60));
+        mg.write(1, string.format("-->h %u", hand*360/(12*60)));
+        mg.write(   string.format("-->m %u", date.min*360/60));
         lasthand = hand;
     end
 
