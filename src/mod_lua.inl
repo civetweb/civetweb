@@ -732,6 +732,54 @@ static int lwebsock_write(lua_State *L)
     return 0;
 }
 
+static int lwebsocket_set_timer(lua_State *L, int is_periodic)
+{
+#ifdef USE_WEBSOCKET
+    int num_args = lua_gettop(L);
+    struct lua_websock_data *ws;
+    lua_Number timediff;
+    int type;
+    struct timespec ts_now;
+    double now;
+
+    lua_pushlightuserdata(L, (void *)&lua_regkey_connlist);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    ws = (struct lua_websock_data *)lua_touserdata(L, -1);
+
+    if (num_args < 2) {
+        return luaL_error(L, "not enough arguments for set_timer/interval() call");
+    }
+
+    type = lua_type(L, 1);
+    if ((type!=LUA_TSTRING && type!=LUA_TFUNCTION) || (type==LUA_TSTRING && num_args!=2)) {
+        return luaL_error(L, "invalid arguments for set_timer/interval() call");
+    }
+
+    if (!lua_isnumber(L, 2) || ((timediff = lua_tonumber(L, 2))<0)) {
+        return luaL_error(L, "invalid timer interval");
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &ts_now);
+    now = (double)ts_now.tv_sec + ((double)ts_now.tv_nsec * 1.0E6);
+
+    /* TODO: next timer call: now + timediff */
+
+#endif
+    return 0;
+}
+
+/* mg.set_timeout for websockets */
+static int lwebsocket_set_timeout(lua_State *L)
+{
+    return lwebsocket_set_timer(L, 0);
+}
+
+/* mg.set_interval for websockets */
+static int lwebsocket_set_interval(lua_State *L)
+{
+    return lwebsocket_set_timer(L, 1);
+}
+
 enum {
     LUA_ENV_TYPE_LUA_SERVER_PAGE = 0,
     LUA_ENV_TYPE_PLAIN_LUA_PAGE = 1,
@@ -849,8 +897,9 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
     }
 
     if (lua_env_type==LUA_ENV_TYPE_LUA_WEBSOCKET) {
-        // reg_function(L, "write", lwebsock_write, (lua_websock_data*)(conn->lua_websocket_state));
         reg_function(L, "write", lwebsock_write);
+        reg_function(L, "set_timeout", lwebsocket_set_timeout);
+        reg_function(L, "set_interval", lwebsocket_set_interval);
         /* reg_conn_function(L, "send_file", lsp_send_file, conn); */
     }
 
