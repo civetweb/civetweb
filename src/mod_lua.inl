@@ -741,6 +741,11 @@ static int lwebsocket_set_timer(lua_State *L, int is_periodic)
     int type;
     struct timespec ts_now;
     double now;
+    struct mg_context *ctx;
+
+    lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    ctx = (struct mg_context *)lua_touserdata(L, -1);
 
     lua_pushlightuserdata(L, (void *)&lua_regkey_connlist);
     lua_gettable(L, LUA_REGISTRYINDEX);
@@ -762,10 +767,16 @@ static int lwebsocket_set_timer(lua_State *L, int is_periodic)
     clock_gettime(CLOCK_MONOTONIC, &ts_now);
     now = (double)ts_now.tv_sec + ((double)ts_now.tv_nsec * 1.0E6);
 
+    pthread_mutex_lock(&ctx->timer_mutex);
     /* TODO: next timer call: now + timediff */
+    pthread_mutex_unlock(&ctx->timer_mutex);
 
-#endif
+    lua_pushboolean(L, 1);
+    return 1;
+
+#else
     return 0;
+#endif
 }
 
 /* mg.set_timeout for websockets */
