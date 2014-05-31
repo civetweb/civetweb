@@ -734,7 +734,7 @@ static int lwebsock_write(lua_State *L)
 
 static int lwebsocket_set_timer(lua_State *L, int is_periodic)
 {
-#ifdef USE_WEBSOCKET
+#ifdef USE_TIMERS
     int num_args = lua_gettop(L);
     struct lua_websock_data *ws;
     lua_Number timediff;
@@ -909,8 +909,10 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
 
     if (lua_env_type==LUA_ENV_TYPE_LUA_WEBSOCKET) {
         reg_function(L, "write", lwebsock_write);
+#ifdef USE_TIMERS
         reg_function(L, "set_timeout", lwebsocket_set_timeout);
         reg_function(L, "set_interval", lwebsocket_set_interval);
+#endif
         /* reg_conn_function(L, "send_file", lsp_send_file, conn); */
     }
 

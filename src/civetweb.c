@@ -181,6 +181,10 @@ typedef long off_t;
 #define sleep(x) Sleep((x) * 1000)
 #define rmdir(x) _rmdir(x)
 
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#define USE_TIMERS
+#endif
+
 #if !defined(va_copy)
 #define va_copy(x, y) x = y
 #endif /* !va_copy MINGW #defines va_copy */
@@ -789,8 +793,12 @@ struct mg_context {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     /* linked list of shared lua websockets */
     struct mg_shared_lua_websocket_list *shared_lua_websockets;
+#endif
+
+#ifdef USE_TIMERS
     pthread_t timerthreadid;        /* Time thread ID */
     pthread_mutex_t timer_mutex;    /* Protects timer lists */
+    struct timer_list *timers;      /* List of timers */
 #endif
 };
 
@@ -6739,7 +6747,7 @@ static void *master_thread(void *thread_func_param)
 }
 #endif /* _WIN32 */
 
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#if defined(USE_TIMERS)
 void timer_thread_run(void *thread_func_param)
 {
     struct mg_context *ctx = (struct mg_context *) thread_func_param;
@@ -6764,7 +6772,7 @@ static void *timer_thread(void *thread_func_param)
     return NULL;
 }
 #endif /* _WIN32 */
-#endif /* USE_LUA && USE_WEBSOCKET */
+#endif /* USE_TIMERS */
 
 static void free_context(struct mg_context *ctx)
 {
@@ -6783,7 +6791,7 @@ static void free_context(struct mg_context *ctx)
     /* Destroy other context global data structures mutex */
     (void) pthread_mutex_destroy(&ctx->nonce_mutex);
 
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#if defined(USE_TIMERS)
     (void) pthread_mutex_destroy(&ctx->timer_mutex);
 #endif
 
@@ -6979,7 +6987,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     (void) pthread_mutex_init(&ctx->nonce_mutex, NULL);
 
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#if defined(USE_TIMERS)
     (void) pthread_mutex_init(&ctx->timer_mutex, NULL);
 #endif
 
@@ -7001,7 +7009,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         }
     }
 
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#if defined(USE_TIMERS)
     /* Start timer thread */
     mg_start_thread_with_id(timer_thread, ctx, &ctx->timerthreadid);
 #endif
