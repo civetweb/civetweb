@@ -2032,9 +2032,9 @@ static int mg_stat(struct mg_connection *conn, const char *path,
 static void set_close_on_exec(int fd, struct mg_connection *conn /* may be null */)
 {
     if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0) {
-        if (conn)
-            mg_cry(conn, "%s: fcntl(F_SETFD FD_CLOEXEC) failed: %s",
-                   __func__, strerror(ERRNO));
+        if (conn) {
+            mg_cry(conn, "%s: fcntl(F_SETFD FD_CLOEXEC) failed: %s", __func__, strerror(ERRNO));
+        }
     }
 }
 
@@ -2061,8 +2061,7 @@ int mg_start_thread(mg_thread_func_t func, void *param)
 
 /* Start a thread storing the thread context. */
 
-static int mg_start_thread_with_id(mg_thread_func_t func, void *param,
-                                   pthread_t *threadidptr)
+static int mg_start_thread_with_id(mg_thread_func_t func, void *param, pthread_t *threadidptr)
 {
     pthread_t thread_id;
     pthread_attr_t attr;
@@ -2158,8 +2157,7 @@ static int set_non_blocking_mode(SOCKET sock)
 
 /* Write data to the IO channel - opened file descriptor, socket or SSL
    descriptor. Return number of bytes written. */
-static int64_t push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf,
-                    int64_t len)
+static int64_t push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf, int64_t len)
 {
     int64_t sent;
     int n, k;
@@ -6732,7 +6730,6 @@ static void master_thread_run(void *thread_func_param)
 }
 
 /* Threads have different return types on Windows and Unix. */
-
 #ifdef _WIN32
 static unsigned __stdcall master_thread(void *thread_func_param)
 {
@@ -6748,30 +6745,7 @@ static void *master_thread(void *thread_func_param)
 #endif /* _WIN32 */
 
 #if defined(USE_TIMERS)
-void timer_thread_run(void *thread_func_param)
-{
-    struct mg_context *ctx = (struct mg_context *) thread_func_param;
-    while (ctx->stop_flag == 0) {
-        pthread_mutex_lock(&ctx->timer_mutex);
-        /* TODO: something useful */
-        pthread_mutex_unlock(&ctx->timer_mutex);
-        mg_sleep(1);
-    }
-}
-
-#ifdef _WIN32
-static unsigned __stdcall timer_thread(void *thread_func_param)
-{
-    timer_thread_run(thread_func_param);
-    return 0;
-}
-#else
-static void *timer_thread(void *thread_func_param)
-{
-    timer_thread_run(thread_func_param);
-    return NULL;
-}
-#endif /* _WIN32 */
+#include "timer.inl"
 #endif /* USE_TIMERS */
 
 static void free_context(struct mg_context *ctx)
@@ -6792,7 +6766,7 @@ static void free_context(struct mg_context *ctx)
     (void) pthread_mutex_destroy(&ctx->nonce_mutex);
 
 #if defined(USE_TIMERS)
-    (void) pthread_mutex_destroy(&ctx->timer_mutex);
+    timers_exit(ctx);
 #endif
 
     /* Deallocate config parameters */
@@ -6987,10 +6961,6 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     (void) pthread_mutex_init(&ctx->nonce_mutex, NULL);
 
-#if defined(USE_TIMERS)
-    (void) pthread_mutex_init(&ctx->timer_mutex, NULL);
-#endif
-
     workerthreadcount = atoi(ctx->config[NUM_THREADS]);
 
     if (workerthreadcount > MAX_WORKER_THREADS) {
@@ -7010,8 +6980,11 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     }
 
 #if defined(USE_TIMERS)
-    /* Start timer thread */
-    mg_start_thread_with_id(timer_thread, ctx, &ctx->timerthreadid);
+    if (timers_init(ctx) != 0) {
+        mg_cry(fc(ctx), "Error creating timers");
+        free_context(ctx);
+        return NULL;
+    }
 #endif
 
     /* Start master (listening) thread */

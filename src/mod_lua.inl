@@ -736,11 +736,9 @@ static int lwebsocket_set_timer(lua_State *L, int is_periodic)
 {
 #ifdef USE_TIMERS
     int num_args = lua_gettop(L);
-    struct lua_websock_data *ws;
-    lua_Number timediff;
-    int type;
-    struct timespec ts_now;
-    double now;
+    struct lua_websock_data *ws;    
+    int type1,type2, ok = 0;    
+    double timediff;
     struct mg_context *ctx;
 
     lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
@@ -755,23 +753,20 @@ static int lwebsocket_set_timer(lua_State *L, int is_periodic)
         return luaL_error(L, "not enough arguments for set_timer/interval() call");
     }
 
-    type = lua_type(L, 1);
-    if ((type!=LUA_TSTRING && type!=LUA_TFUNCTION) || (type==LUA_TSTRING && num_args!=2)) {
+    type1 = lua_type(L, 1);
+    type2 = lua_type(L, 2);
+    
+    if (type1==LUA_TSTRING && type2==LUA_TNUMBER && num_args==2) {
+        timediff = (double)lua_tonumber(L, 2);
+        ok = (0==timer_add(ctx, timediff, is_periodic, lua_tostring(L, 1)));
+    } else if (type1==LUA_TFUNCTION && type2==LUA_TNUMBER)  {
+        /* TODO: not implemented yet */
+        return luaL_error(L, "invalid arguments for set_timer/interval() call");
+    } else {
         return luaL_error(L, "invalid arguments for set_timer/interval() call");
     }
 
-    if (!lua_isnumber(L, 2) || ((timediff = lua_tonumber(L, 2))<0)) {
-        return luaL_error(L, "invalid timer interval");
-    }
-
-    clock_gettime(CLOCK_MONOTONIC, &ts_now);
-    now = (double)ts_now.tv_sec + ((double)ts_now.tv_nsec * 1.0E6);
-
-    pthread_mutex_lock(&ctx->timer_mutex);
-    /* TODO: next timer call: now + timediff */
-    pthread_mutex_unlock(&ctx->timer_mutex);
-
-    lua_pushboolean(L, 1);
+    lua_pushboolean(L, ok);
     return 1;
 
 #else

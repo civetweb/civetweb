@@ -56,5 +56,8 @@
     <None Include="..\..\src\mod_lua.inl">
       <Filter>inl files</Filter>
     </None>
+    <None Include="..\..\src\timer.inl">
+      <Filter>inl files</Filter>
+    </None>
   </ItemGroup>
 </Project>
