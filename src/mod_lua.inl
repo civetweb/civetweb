@@ -732,14 +732,31 @@ static int lwebsock_write(lua_State *L)
     return 0;
 }
 
+struct laction_arg {
+    lua_State *state;
+    pthread_mutex_t *pmutex;
+    char txt[1];
+};
+
+static void lua_action(struct laction_arg *arg)
+{
+    (void)pthread_mutex_lock(arg->pmutex);
+    luaL_dostring(arg->state, arg->txt);
+    (void)pthread_mutex_unlock(arg->pmutex);
+    mg_free(arg);
+}
+
 static int lwebsocket_set_timer(lua_State *L, int is_periodic)
 {
 #ifdef USE_TIMERS
     int num_args = lua_gettop(L);
-    struct lua_websock_data *ws;    
-    int type1,type2, ok = 0;    
+    struct lua_websock_data *ws;
+    int type1,type2, ok = 0;
     double timediff;
     struct mg_context *ctx;
+    struct laction_arg *arg;
+    const char *txt;
+    size_t txt_len;
 
     lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
     lua_gettable(L, LUA_REGISTRYINDEX);
@@ -755,10 +772,17 @@ static int lwebsocket_set_timer(lua_State *L, int is_periodic)
 
     type1 = lua_type(L, 1);
     type2 = lua_type(L, 2);
-    
+
     if (type1==LUA_TSTRING && type2==LUA_TNUMBER && num_args==2) {
         timediff = (double)lua_tonumber(L, 2);
-        ok = (0==timer_add(ctx, timediff, is_periodic, lua_tostring(L, 1)));
+        txt = lua_tostring(L, 1);
+        txt_len = strlen(txt);
+        arg = mg_malloc(sizeof(struct laction_arg) + txt_len);
+        arg->state = L;
+        arg->pmutex = &(ws->ws_mutex);
+        memcpy(arg->txt, txt, txt_len);
+        arg->txt[txt_len] = 0;
+        ok = (0==timer_add(ctx, timediff, is_periodic, 1, lua_action, (void*)arg));
     } else if (type1==LUA_TFUNCTION && type2==LUA_TNUMBER)  {
         /* TODO: not implemented yet */
         return luaL_error(L, "invalid arguments for set_timer/interval() call");
@@ -1272,6 +1296,7 @@ static void lua_websocket_close(struct mg_connection * conn, void * ws_arg)
             ws->conn[i] = ws->conn[ws->references];
         }
     }
+/*
     if (ws->references==0) {
         (void)pthread_mutex_lock(&conn->ctx->nonce_mutex);
         (void)pthread_mutex_unlock(&ws->ws_mutex);
@@ -1288,7 +1313,7 @@ static void lua_websocket_close(struct mg_connection * conn, void * ws_arg)
         mg_free(ws->script);
         *shared_websock_list = (*shared_websock_list)->next;
         mg_free(ws);
-    } else {
+    } else */ {
         (void)pthread_mutex_unlock(&ws->ws_mutex);
     }
 }

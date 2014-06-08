@@ -796,9 +796,7 @@ struct mg_context {
 #endif
 
 #ifdef USE_TIMERS
-    pthread_t timerthreadid;        /* Time thread ID */
-    pthread_mutex_t timer_mutex;    /* Protects timer lists */
-    struct timer_list *timers;      /* List of timers */
+    struct timers * timers;
 #endif
 };
 
@@ -4838,6 +4836,10 @@ void mg_unlock(struct mg_connection* conn)
     (void) pthread_mutex_unlock(&conn->mutex);
 }
 
+#if defined(USE_TIMERS)
+#include "timer.inl"
+#endif /* USE_TIMERS */
+
 #ifdef USE_LUA
 #include "mod_lua.inl"
 #endif /* USE_LUA */
@@ -6743,10 +6745,6 @@ static void *master_thread(void *thread_func_param)
     return NULL;
 }
 #endif /* _WIN32 */
-
-#if defined(USE_TIMERS)
-#include "timer.inl"
-#endif /* USE_TIMERS */
 
 static void free_context(struct mg_context *ctx)
 {

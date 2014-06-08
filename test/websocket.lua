@@ -64,6 +64,7 @@ function ready(tab)
   mg.write(tab.client, 1, "-->h 180");
   mg.write(tab.client, "-->m 180");
   senddata()
+  mg.set_timeout("timer()", 1)
   return true
 end
 
@@ -82,7 +83,6 @@ function close(tab)
 end
 
 function senddata()
-    trace("senddata")
     local date = os.date('*t');
     local hand = (date.hour%12)*60+date.min;
 
@@ -97,5 +97,11 @@ function senddata()
     if bits and content then
         data(bits, content)
     end
+end
+
+function timer()
+    trace("timer")
+    senddata()
+    mg.set_timeout("timer()", 1)
 end
 
