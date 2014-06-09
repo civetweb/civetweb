@@ -1,3 +1,6 @@
+timerID = "timeout"
+--timerID = "interval"
+
 function trace(text)
     local f = io.open("R:\\websocket.trace", "a")
     f:write(os.date() .. " - " .. text .. "\n")
@@ -64,7 +67,11 @@ function ready(tab)
   mg.write(tab.client, 1, "-->h 180");
   mg.write(tab.client, "-->m 180");
   senddata()
-  mg.set_timeout("timer()", 1)
+  if timerID == "timeout" then
+    mg.set_timeout("timer()", 1)
+  elseif timerID == "interval" then
+    mg.set_interval("timer()", 1)
+  end
   return true
 end
 
@@ -102,6 +109,8 @@ end
 function timer()
     trace("timer")
     senddata()
-    mg.set_timeout("timer()", 1)
+    if timerID == "timeout" then
+        mg.set_timeout("timer()", 1)
+    end
 end
 

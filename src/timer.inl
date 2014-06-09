@@ -19,6 +19,40 @@ struct timers {
     unsigned timer_count;             /* Current size of timer list */
 };
 
+static int timer_add(struct mg_context * ctx, double next_time, double period, int is_relative, taction action, void * arg)
+{
+    unsigned u, v;
+    int error = 0;
+    struct timespec now;
+
+    if (is_relative) {
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        next_time += now.tv_sec;
+        next_time += now.tv_nsec * 1.0E-9;
+    }
+
+    pthread_mutex_lock(&ctx->timers->mutex);
+    if (ctx->timers->timer_count == MAX_TIMERS) {
+        error = 1;
+    } else {
+        for (u=0; u<ctx->timers->timer_count; u++) {
+            if (ctx->timers->timers[u].time < next_time) {
+                for (v=ctx->timers->timer_count; v>u; v--) {
+                    ctx->timers->timers[v] = ctx->timers->timers[v-1];
+                }
+                break;
+            }
+        }
+        ctx->timers->timers[u].time = next_time;
+        ctx->timers->timers[u].period = period;
+        ctx->timers->timers[u].action = action;
+        ctx->timers->timers[u].arg = arg;
+        ctx->timers->timer_count++;
+    }
+    pthread_mutex_unlock(&ctx->timers->mutex);
+    return error;
+}
+
 static void timer_thread_run(void *thread_func_param)
 {
     struct mg_context *ctx = (struct mg_context *) thread_func_param;
@@ -43,6 +77,9 @@ static void timer_thread_run(void *thread_func_param)
                 ctx->timers->timer_count--;
                 pthread_mutex_unlock(&ctx->timers->mutex);
                 t.action(t.arg);
+                if (t.period>0) {
+                    timer_add(ctx, t.time+t.period, t.period, 0, t.action, t.arg);
+                }
                 continue;
             } else {
                 pthread_mutex_unlock(&ctx->timers->mutex);
@@ -53,41 +90,6 @@ static void timer_thread_run(void *thread_func_param)
         }
 #endif
     }
-}
-
-static int timer_add(struct mg_context * ctx, double time, int is_periodic, int is_relative, taction action, void * arg)
-{
-    double t = time;
-    unsigned u, v;
-    int error = 0;
-    struct timespec now;
-
-    if (is_relative) {
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        t += now.tv_sec;
-        t += now.tv_nsec * 1.0E-9;
-    }
-
-    pthread_mutex_lock(&ctx->timers->mutex);
-    if (ctx->timers->timer_count == MAX_TIMERS) {
-        error = 1;
-    } else {
-        for (u=0; u<ctx->timers->timer_count; u++) {
-            if (ctx->timers->timers[u].time < time) {
-                for (v=ctx->timers->timer_count; v>u; v--) {
-                    ctx->timers->timers[v] = ctx->timers->timers[v-1];
-                }
-                break;
-            }
-        }
-        ctx->timers->timers[u].time = t;
-        ctx->timers->timers[u].period = is_periodic ? time : 0.0;
-        ctx->timers->timers[u].action = action;
-        ctx->timers->timers[u].arg = arg;
-        ctx->timers->timer_count++;
-    }
-    pthread_mutex_unlock(&ctx->timers->mutex);
-    return error;
 }
 
 #ifdef _WIN32

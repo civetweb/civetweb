@@ -743,6 +743,11 @@ static void lua_action(struct laction_arg *arg)
     (void)pthread_mutex_lock(arg->pmutex);
     luaL_dostring(arg->state, arg->txt);
     (void)pthread_mutex_unlock(arg->pmutex);
+}
+
+static void lua_action_free(struct laction_arg *arg)
+{
+    lua_action(arg);
     mg_free(arg);
 }
 
@@ -782,7 +787,7 @@ static int lwebsocket_set_timer(lua_State *L, int is_periodic)
         arg->pmutex = &(ws->ws_mutex);
         memcpy(arg->txt, txt, txt_len);
         arg->txt[txt_len] = 0;
-        ok = (0==timer_add(ctx, timediff, is_periodic, 1, lua_action, (void*)arg));
+        ok = (0==timer_add(ctx, timediff, is_periodic, 1, is_periodic ? lua_action : lua_action_free, (void*)arg));
     } else if (type1==LUA_TFUNCTION && type2==LUA_TNUMBER)  {
         /* TODO: not implemented yet */
         return luaL_error(L, "invalid arguments for set_timer/interval() call");
@@ -1297,24 +1302,8 @@ static void lua_websocket_close(struct mg_connection * conn, void * ws_arg)
         }
     }
 /*
-    if (ws->references==0) {
-        (void)pthread_mutex_lock(&conn->ctx->nonce_mutex);
-        (void)pthread_mutex_unlock(&ws->ws_mutex);
-
-        while (*shared_websock_list) {
-            if (0==strcmp(ws->script,(*shared_websock_list)->ws.script)) {
-                break;
-            }
-            shared_websock_list = &((*shared_websock_list)->next);
-        }
-        assert(*shared_websock_list != NULL);
-        (void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
-        lua_close(ws->state);
-        mg_free(ws->script);
-        *shared_websock_list = (*shared_websock_list)->next;
-        mg_free(ws);
-    } else */ {
-        (void)pthread_mutex_unlock(&ws->ws_mutex);
-    }
+    TODO
+*/
+    (void)pthread_mutex_unlock(&ws->ws_mutex);
 }
 #endif
