@@ -1198,7 +1198,10 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
         lua_pop(ws->state, 1);
     }
     if (!ok) {
-        /* TODO */
+        /* Remove from ws connection list. */
+        /* TODO: Check if list entry and Lua state needs to be deleted (see websocket_close). */
+        (*shared_websock_list)->ws.conn[--(ws->references)] = 0;
+        ws = NULL;
     }
 
     (void)pthread_mutex_unlock(&(ws->ws_mutex));
@@ -1301,9 +1304,9 @@ static void lua_websocket_close(struct mg_connection * conn, void * ws_arg)
             ws->conn[i] = ws->conn[ws->references];
         }
     }
-/*
-    TODO
-*/
+    /* TODO: Delete lua_websock_data and remove it from the websocket list.
+       This must only be done, when all connections are closed, and all
+       asynchronous operations and timers are completed/expired. */
     (void)pthread_mutex_unlock(&ws->ws_mutex);
 }
 #endif
