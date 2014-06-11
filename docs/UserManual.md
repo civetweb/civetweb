@@ -286,7 +286,7 @@ The current directory is commonly referenced as dot (`.`).
 Path to the SSL certificate file. This option is only required when at least
 one of the `listening\_ports` is SSL. The file must be in PEM format,
 and it must have both, private key and certificate, see for example
-[ssl_cert.pem](https://github.com/sunsetbrew/civetweb/blob/master/resources/ssl_cert.pem)
+[ssl_cert.pem](https://github.com/bel2125/civetweb/blob/master/resources/ssl_cert.pem)
 A description how to create a certificate can be found in doc/OpenSSL.md
 
 ### num\_threads `50`
@@ -415,22 +415,22 @@ are accessible from the Lua code (please check the reference manual for
 details). Information on the request is available in the `mg.request_info`
 object, like the request method, all HTTP headers, etcetera.
 
-[page2.lua](https://github.com/sunsetbrew/civetweb/blob/master/test/page2.lua)
+[page2.lua](https://github.com/bel2125/civetweb/blob/master/test/page2.lua)
 is an example for a plain Lua script.
 
-[page2.lp](https://github.com/sunsetbrew/civetweb/blob/master/test/page2.lp)
+[page2.lp](https://github.com/bel2125/civetweb/blob/master/test/page2.lp)
 is an example for a Lua Server Page.
 
 Both examples show the content of the `mg.request_info` object as the page
 content. Please refer to `struct mg_request_info` definition in
-[civetweb.h](https://github.com/sunsetbrew/civetweb/blob/master/include/civetweb.h)
+[civetweb.h](https://github.com/bel2125/civetweb/blob/master/include/civetweb.h)
 to see additional information on the elements of the `mg.request_info` object.
 
 Civetweb also provides access to the [SQlite3 database](http://www.sqlite.org/)
 through the [LuaSQLite3 interface](http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki)
 in Lua. Examples are given in
 [page.lua](https://github.com/bel2125/civetweb/blob/master/test/page.lua) and
-[page.lp](https://github.com/sunsetbrew/civetweb/blob/master/test/page.lp).
+[page.lp](https://github.com/bel2125/civetweb/blob/master/test/page.lp).
 
 
 Civetweb exports the following functions to Lua:
@@ -498,6 +498,27 @@ To serve a Lua Page, civetweb creates a Lua context. That context is used for
 all Lua blocks within the page. That means, all Lua blocks on the same page
 share the same context. If one block defines a variable, for example, that
 variable is visible in all block that follow.
+
+## Websockets for Lua
+Civetweb offers support for websockets in Lua as well. In contrast to plain
+Lua scripts and Lua server pages, Lua websocket scripts are shared by all clients.
+
+Lua websocket scripts must define a few functions:
+    open(arg)    -- callback to accept or reject a connection
+    ready(arg)   -- called after a connection has been established
+    data(arg)    -- called when the server receives data from the client
+    close(arg)   -- called when a websocket connection is closed
+All function are called with one argument of type table with at least one field
+"client" to identify the client. When "open" is called, the argument table additionally
+contains the "request_info" table as defined above. For the "data" handler, an
+additional field "data" is available. The functions "open", "ready" and "data"
+must return true in order to keep the connetion open.
+
+Lua websocket pages do support single shot (timeout) and interval timers.
+
+An example is shown in
+[websocket.lua](https://github.com/bel2125/civetweb/blob/master/test/websocket.lua).
+
 
 # Common Problems
 - PHP doesn't work - getting empty page, or 'File not found' error. The

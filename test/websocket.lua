@@ -53,7 +53,7 @@ function who(tab)
   return ri.remote_addr .. ":" .. ri.remote_port
 end
 
--- Callback to reject a connection
+-- Callback to accept or reject a connection
 function open(tab)
   allConnections[tab.client] = tab
   trace("open[" .. who(tab) .. "]: " .. ser(tab))
