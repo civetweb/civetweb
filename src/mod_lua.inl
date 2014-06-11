@@ -81,6 +81,33 @@ static void reg_function(struct lua_State *L, const char *name, lua_CFunction fu
     }
 }
 
+static void lua_cry(struct mg_connection *conn, int err, lua_State * L, const char * lua_title, const char * lua_operation)
+{
+    switch (err) {
+    case LUA_OK:
+    case LUA_YIELD:
+        break;
+    case LUA_ERRRUN:
+        mg_cry(conn, "%s: %s failed: runtime error: %s", lua_title, lua_operation, lua_tostring(L, -1));
+        break;
+    case LUA_ERRSYNTAX:
+        mg_cry(conn, "%s: %s failed: syntax error: %s", lua_title, lua_operation, lua_tostring(L, -1));
+        break;
+    case LUA_ERRMEM:
+        mg_cry(conn, "%s: %s failed: out of memory", lua_title, lua_operation);
+        break;
+    case LUA_ERRGCMM:
+        mg_cry(conn, "%s: %s failed: error during garbage collection", lua_title, lua_operation);
+        break;
+    case LUA_ERRERR:
+        mg_cry(conn, "%s: %s failed: error in error handling: %s", lua_title, lua_operation, lua_tostring(L, -1));
+        break;
+    default:
+        mg_cry(conn, "%s: %s failed: error %i", lua_title, lua_operation, err);
+        break;
+    }
+}
+
 static int lsp_sock_close(lua_State *L)
 {
     int num_args = lua_gettop(L);
@@ -734,21 +761,59 @@ static int lwebsock_write(lua_State *L)
 
 struct laction_arg {
     lua_State *state;
+    const char *script;
     pthread_mutex_t *pmutex;
     char txt[1];
 };
 
-static void lua_action(struct laction_arg *arg)
+static int lua_action(struct laction_arg *arg)
 {
+    int err, ok;
+    struct mg_context *ctx;
+
     (void)pthread_mutex_lock(arg->pmutex);
-    luaL_dostring(arg->state, arg->txt);
+
+    lua_pushlightuserdata(arg->state, (void *)&lua_regkey_ctx);
+    lua_gettable(arg->state, LUA_REGISTRYINDEX);
+    ctx = (struct mg_context *)lua_touserdata(arg->state, -1);
+
+    err = luaL_loadstring(arg->state, arg->txt);
+    if (err != 0) {
+        lua_cry(fc(ctx), err, arg->state, arg->script, "timer");
+        (void)pthread_mutex_unlock(arg->pmutex);
+        mg_free(arg);
+        return 0;
+    }
+    err = lua_pcall(arg->state, 0, 1, 0);
+    if (err != 0) {
+        lua_cry(fc(ctx), err, arg->state, arg->script, "timer");
+        (void)pthread_mutex_unlock(arg->pmutex);
+        mg_free(arg);
+        return 0;
+    }
+
+    ok = lua_type(arg->state, -1);
+    if (lua_isboolean(arg->state, -1)) {
+       ok = lua_toboolean(arg->state, -1);
+    } else {
+       ok = 0;
+    }
+    lua_pop(arg->state, 1);
+
     (void)pthread_mutex_unlock(arg->pmutex);
+
+    if (!ok) {
+        mg_free(arg);
+    }
+    return ok;
 }
 
-static void lua_action_free(struct laction_arg *arg)
+static int lua_action_free(struct laction_arg *arg)
 {
-    lua_action(arg);
-    mg_free(arg);
+    if (lua_action(arg)) {
+        mg_free(arg);
+    }
+    return 0;
 }
 
 static int lwebsocket_set_timer(lua_State *L, int is_periodic)
@@ -782,11 +847,14 @@ static int lwebsocket_set_timer(lua_State *L, int is_periodic)
         timediff = (double)lua_tonumber(L, 2);
         txt = lua_tostring(L, 1);
         txt_len = strlen(txt);
-        arg = mg_malloc(sizeof(struct laction_arg) + txt_len);
+        arg = mg_malloc(sizeof(struct laction_arg) + txt_len + 10);
         arg->state = L;
+        arg->script = ws->script;
         arg->pmutex = &(ws->ws_mutex);
-        memcpy(arg->txt, txt, txt_len);
-        arg->txt[txt_len] = 0;
+        memcpy(arg->txt, "return(", 7);
+        memcpy(arg->txt+7, txt, txt_len);
+        arg->txt[txt_len+7] = ')';
+        arg->txt[txt_len+8] = 0;
         ok = (0==timer_add(ctx, timediff, is_periodic, 1, is_periodic ? lua_action : lua_action_free, (void*)arg));
     } else if (type1==LUA_TFUNCTION && type2==LUA_TNUMBER)  {
         /* TODO: not implemented yet */
@@ -1103,33 +1171,6 @@ struct mg_shared_lua_websocket_list {
     struct mg_shared_lua_websocket_list *next;
 };
 
-static void websock_cry(struct mg_connection *conn, int err, lua_State * L, const char * ws_operation, const char * lua_operation)
-{
-    switch (err) {
-    case LUA_OK:
-    case LUA_YIELD:
-        break;
-    case LUA_ERRRUN:
-        mg_cry(conn, "%s: %s failed: runtime error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
-        break;
-    case LUA_ERRSYNTAX:
-        mg_cry(conn, "%s: %s failed: syntax error: %s", ws_operation, lua_operation, lua_tostring(L, -1));
-        break;
-    case LUA_ERRMEM:
-        mg_cry(conn, "%s: %s failed: out of memory", ws_operation, lua_operation);
-        break;
-    case LUA_ERRGCMM:
-        mg_cry(conn, "%s: %s failed: error during garbage collection", ws_operation, lua_operation);
-        break;
-    case LUA_ERRERR:
-        mg_cry(conn, "%s: %s failed: error in error handling: %s", ws_operation, lua_operation, lua_tostring(L, -1));
-        break;
-    default:
-        mg_cry(conn, "%s: %s failed: error %i", ws_operation, lua_operation, err);
-        break;
-    }
-}
-
 static void * lua_websocket_new(const char * script, struct mg_connection *conn)
 {
     struct mg_shared_lua_websocket_list **shared_websock_list = &(conn->ctx->shared_lua_websockets);
@@ -1166,11 +1207,11 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
         prepare_lua_environment(conn->ctx, NULL, ws, ws->state, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
         err = luaL_loadfile(ws->state, script);
         if (err != 0) {
-            websock_cry(conn, err, ws->state, script, "load");
+            lua_cry(conn, err, ws->state, script, "load");
         }
         err = lua_pcall(ws->state, 0, 0, 0);
         if (err != 0) {
-            websock_cry(conn, err, ws->state, script, "init");
+            lua_cry(conn, err, ws->state, script, "init");
         }
     } else {
         /* inc ref count */
@@ -1190,7 +1231,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
 
     err = lua_pcall(ws->state, 1, 1, 0);
     if (err != 0) {
-        websock_cry(conn, err, ws->state, script, "open handler");
+        lua_cry(conn, err, ws->state, script, "open handler");
     } else {
         if (lua_isboolean(ws->state, -1)) {
             ok = lua_toboolean(ws->state, -1);
@@ -1233,7 +1274,7 @@ static int lua_websocket_data(struct mg_connection * conn, void *ws_arg, int bit
 
     err = lua_pcall(ws->state, 1, 1, 0);
     if (err != 0) {
-        websock_cry(conn, err, ws->state, ws->script, "data handler");
+        lua_cry(conn, err, ws->state, ws->script, "data handler");
     } else {
         if (lua_isboolean(ws->state, -1)) {
             ok = lua_toboolean(ws->state, -1);
@@ -1263,7 +1304,7 @@ static int lua_websocket_ready(struct mg_connection * conn, void * ws_arg)
 
     err = lua_pcall(ws->state, 1, 1, 0);
     if (err != 0) {
-        websock_cry(conn, err, ws->state, ws->script, "ready handler");
+        lua_cry(conn, err, ws->state, ws->script, "ready handler");
     } else {
         if (lua_isboolean(ws->state, -1)) {
             ok = lua_toboolean(ws->state, -1);
@@ -1296,7 +1337,7 @@ static void lua_websocket_close(struct mg_connection * conn, void * ws_arg)
 
     err = lua_pcall(ws->state, 1, 0, 0);
     if (err != 0) {
-        websock_cry(conn, err, ws->state, ws->script, "close handler");
+        lua_cry(conn, err, ws->state, ws->script, "close handler");
     }
     for (i=0;i<ws->references;i++) {
         if (ws->conn[i]==conn) {

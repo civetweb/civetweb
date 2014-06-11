@@ -3,7 +3,7 @@
 #define MAX_TIMERS MAX_WORKER_THREADS
 #endif
 
-typedef void (*taction)(void *arg);
+typedef int (*taction)(void *arg);
 
 struct timer {
     double time;
@@ -59,6 +59,7 @@ static void timer_thread_run(void *thread_func_param)
     struct timespec now;
     double d;
     unsigned u;
+    int re_schedule;
     struct timer t;
 
     while (ctx->stop_flag == 0) {
@@ -76,8 +77,8 @@ static void timer_thread_run(void *thread_func_param)
                 }
                 ctx->timers->timer_count--;
                 pthread_mutex_unlock(&ctx->timers->mutex);
-                t.action(t.arg);
-                if (t.period>0) {
+                re_schedule = t.action(t.arg);
+                if (re_schedule && (t.period>0)) {
                     timer_add(ctx, t.time+t.period, t.period, 0, t.action, t.arg);
                 }
                 continue;

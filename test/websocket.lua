@@ -57,7 +57,7 @@ end
 function open(tab)
   allConnections[tab.client] = tab
   trace("open[" .. who(tab) .. "]: " .. ser(tab))
-  return true
+  return true -- return true to accept the connection
 end
 
 -- Callback for "Websocket ready"
@@ -72,14 +72,14 @@ function ready(tab)
   elseif timerID == "interval" then
     mg.set_interval("timer()", 1)
   end
-  return true
+  return true -- return true to keep the connection open
 end
 
 -- Callback for "Websocket received data"
 function data(tab)
     trace("data[" .. who(tab) .. "]: " .. ser(tab))
     senddata()
-    return true
+    return true -- return true to keep the connection open
 end
 
 -- Callback for "Websocket is closing"
@@ -111,6 +111,8 @@ function timer()
     senddata()
     if timerID == "timeout" then
         mg.set_timeout("timer()", 1)
+    else
+        return true -- return true to keep an interval timer running
     end
 end
 
