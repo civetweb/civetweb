@@ -274,6 +274,7 @@ protected:
 
     struct mg_context *context;
     char * postData;
+    unsigned long postDataLen;
 
 private:
     /**

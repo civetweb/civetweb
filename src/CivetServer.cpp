@@ -70,8 +70,9 @@ CivetServer::CivetServer(const char **options,
                          const struct mg_callbacks *_callbacks) :
     context(0), postData(0)
 {
-    struct mg_callbacks callbacks;
+    struct mg_callbacks callbacks;    
     memset(&callbacks, 0, sizeof(callbacks));
+    
     if (_callbacks) {
         callbacks = *_callbacks;
         userCloseHandler = _callbacks->connection_close;
@@ -79,7 +80,7 @@ CivetServer::CivetServer(const char **options,
         userCloseHandler = NULL;
     }
     callbacks.connection_close = closeHandler;
-
+    me->postDataLen = 0;
     context = mg_start(&callbacks, this, options);
 }
 
@@ -100,6 +101,7 @@ void CivetServer::closeHandler(struct mg_connection *conn)
         free(me->postData);
         me->postData = 0;
     }
+    me->postDataLen = 0;
 }
 
 void CivetServer::addHandler(const std::string &uri, CivetHandler *handler)
@@ -182,11 +184,14 @@ CivetServer::getParam(struct mg_connection *conn, const char *name,
         if (con_len_str) {
             unsigned long con_len = atoi(con_len_str);
             if (con_len>0) {
-                me->postData = (char*)malloc(con_len);
+                // Add one extra character for 0-termination of strings
+                me->postData = (char*)malloc(con_len + 1);
                 if (me->postData != NULL) {
-                    /* malloc may fail for huge requests */
+                    // malloc may fail for huge requests
                     mg_read(conn, me->postData, con_len);
+                    me->postData[con_len] = 0;
                     formParams = me->postData;
+                    me->postDataLen = con_len;
                 }
             }
         }
