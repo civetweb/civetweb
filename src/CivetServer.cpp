@@ -80,7 +80,7 @@ CivetServer::CivetServer(const char **options,
         userCloseHandler = NULL;
     }
     callbacks.connection_close = closeHandler;
-    me->postDataLen = 0;
+    postDataLen = 0;
     context = mg_start(&callbacks, this, options);
 }
 
