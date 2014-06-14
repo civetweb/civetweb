@@ -5,6 +5,7 @@ Release Notes v1.6 (Under Development)
 Changes
 -------
 
+- Add examples of Lua pages, scripts and websockets to the test directory (bel)
 - Add dialog to change htpasswd files for the Windows standalone server (bel)
 - Fix compiler warnings and warnings from static code analysis (Danny Al-Gaaf, jmc-, Thomas, bel, ...)
 - Add new unit tests (bel)
@@ -31,7 +32,8 @@ Changes
 - Fixes for Lua Server Pages, as described within the google groups thread. (bel)
 - Added support for plain Lua Scripts, and an example script. (bel)
 - A completely new, and more illustrative websocket example for C. (bel)
-- An implementation of "Websocket for Lua", which allows to configure an optional websocket_root directory, incl. URL rewriting. Added an example. The Lua interface may change if the threading model changes.  (bel)
+- Websocket for Lua (bel)
+- An optional websocket_root directory, including URL rewriting (bel)
 - Update of SQLite3 to 3.8.1. (bel)
 - Add "date" header field to replies, according to the requirements of RFC 2616 (the HTTP standard), Section 14.18 (bel)
 - Fix websocket long pull (celeron55)
