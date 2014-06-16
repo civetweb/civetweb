@@ -9,10 +9,11 @@
 #ifdef __cplusplus
 
 #include "civetweb.h"
-#include <vector>
+#include <map>
 #include <string>
 
-class CivetServer; // forward declaration
+// forward declaration
+class CivetServer;
 
 /**
  * Basic interface for a URI request handler.  Handlers implementations
@@ -271,10 +272,23 @@ public:
     static void urlEncode(const char *src, size_t src_len, std::string &dst, bool append=false);
 
 protected:
+    class CivetConnection {
+    public:
+        char * postData;
+        unsigned long postDataLen;
+
+        CivetConnection() {
+            postData = NULL;
+            postDataLen = 0;
+        }
+
+        ~CivetConnection() {
+            free(postData);
+        }
+    };
 
     struct mg_context *context;
-    char * postData;
-    unsigned long postDataLen;
+    std::map<struct mg_connection *, class CivetConnection> connections;
 
 private:
     /**

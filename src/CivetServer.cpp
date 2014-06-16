@@ -48,6 +48,7 @@ int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
     assert(request_info != NULL);
     CivetServer *me = (CivetServer*) (request_info->user_data);
     assert(me != NULL);
+    me->connections[conn] = CivetConnection();
 
     CivetHandler *handler = (CivetHandler *)cbdata;
 
@@ -68,11 +69,11 @@ int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 
 CivetServer::CivetServer(const char **options,
                          const struct mg_callbacks *_callbacks) :
-    context(0), postData(0)
+    context(0)
 {
-    struct mg_callbacks callbacks;    
+    struct mg_callbacks callbacks;
     memset(&callbacks, 0, sizeof(callbacks));
-    
+
     if (_callbacks) {
         callbacks = *_callbacks;
         userCloseHandler = _callbacks->connection_close;
@@ -80,7 +81,6 @@ CivetServer::CivetServer(const char **options,
         userCloseHandler = NULL;
     }
     callbacks.connection_close = closeHandler;
-    postDataLen = 0;
     context = mg_start(&callbacks, this, options);
 }
 
@@ -97,11 +97,7 @@ void CivetServer::closeHandler(struct mg_connection *conn)
     assert(me != NULL);
 
     if (me->userCloseHandler) me->userCloseHandler(conn);
-    if (me->postData) {
-        free(me->postData);
-        me->postData = 0;
-    }
-    me->postDataLen = 0;
+    me->connections.erase(conn);
 }
 
 void CivetServer::addHandler(const std::string &uri, CivetHandler *handler)
@@ -176,22 +172,23 @@ CivetServer::getParam(struct mg_connection *conn, const char *name,
     assert(ri != NULL);
     CivetServer *me = (CivetServer*) (ri->user_data);
     assert(me != NULL);
+    CivetConnection &conobj = me->connections[conn];
 
-    if (me->postData != NULL) {
-        formParams = me->postData;
+    if (conobj.postData != NULL) {
+        formParams = conobj.postData;
     } else {
         const char * con_len_str = mg_get_header(conn, "Content-Length");
         if (con_len_str) {
             unsigned long con_len = atoi(con_len_str);
             if (con_len>0) {
                 // Add one extra character for 0-termination of strings
-                me->postData = (char*)malloc(con_len + 1);
-                if (me->postData != NULL) {
+                conobj.postData = (char*)malloc(con_len + 1);
+                if (conobj.postData != NULL) {
                     // malloc may fail for huge requests
-                    mg_read(conn, me->postData, con_len);
-                    me->postData[con_len] = 0;
-                    formParams = me->postData;
-                    me->postDataLen = con_len;
+                    mg_read(conn, conobj.postData, con_len);
+                    conobj.postData[con_len] = 0;
+                    formParams = conobj.postData;
+                    conobj.postDataLen = con_len;
                 }
             }
         }
