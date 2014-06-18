@@ -6864,7 +6864,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 {
     struct mg_context *ctx;
     const char *name, *value, *default_value;
-    int i;
+    int i, ok;
     int workerthreadcount;
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -6886,11 +6886,24 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     if (sTlsInit==0) {
         if (0 != pthread_key_create(&sTlsKey, NULL)) {
+            /* Fatal error - abort start. However, this situation should never occur in practice. */
             mg_cry(fc(ctx), "Cannot initialize thread local storage");
             mg_free(ctx);
             return NULL;
         }
         sTlsInit++;
+    }
+
+    ok =  0==pthread_mutex_init(&ctx->thread_mutex, NULL);
+    ok &= 0==pthread_cond_init(&ctx->thread_cond, NULL);
+    ok &= 0==pthread_cond_init(&ctx->sq_empty, NULL);
+    ok &= 0==pthread_cond_init(&ctx->sq_full, NULL);
+    ok &= 0==pthread_mutex_init(&ctx->nonce_mutex, NULL);
+    if (!ok) {
+        /* Fatal error - abort start. However, this situation should never occur in practice. */
+        mg_cry(fc(ctx), "Cannot initialize thread synchronization objects");
+        mg_free(ctx);
+        return NULL;
     }
 
     if (callbacks) {
@@ -6951,13 +6964,6 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
        won't kill the whole process. */
     (void) signal(SIGPIPE, SIG_IGN);
 #endif /* !_WIN32 && !__SYMBIAN32__ */
-
-    (void) pthread_mutex_init(&ctx->thread_mutex, NULL);
-    (void) pthread_cond_init(&ctx->thread_cond, NULL);
-    (void) pthread_cond_init(&ctx->sq_empty, NULL);
-    (void) pthread_cond_init(&ctx->sq_full, NULL);
-
-    (void) pthread_mutex_init(&ctx->nonce_mutex, NULL);
 
     workerthreadcount = atoi(ctx->config[NUM_THREADS]);
 
