@@ -181,7 +181,8 @@ CivetServer::getParam(struct mg_connection *conn, const char *name,
         if (con_len_str) {
             unsigned long con_len = atoi(con_len_str);
             if (con_len>0) {
-                // Add one extra character for 0-termination of strings
+                // Add one extra character: in case the post-data is a text, it is required as 0-termination.
+                // Do not increment con_len, since the 0 terminating is not part of the content (text or binary).
                 conobj.postData = (char*)malloc(con_len + 1);
                 if (conobj.postData != NULL) {
                     // malloc may fail for huge requests
