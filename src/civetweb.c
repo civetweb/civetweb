@@ -502,10 +502,24 @@ static __inline void * mg_realloc(void * a, size_t b)  {return realloc(a, b);}
 static __inline void   mg_free(void * a)               {free(a);}
 #endif
 
+/* This following lines are just meant as a reminder to use the mg-functions for memory management */
+#ifdef malloc
+    #undef malloc 
+#endif
+#ifdef calloc
+    #undef calloc 
+#endif
+#ifdef realloc
+    #undef realloc 
+#endif
+#ifdef free
+    #undef free 
+#endif
 #define malloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
 #define calloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free    DO_NOT_USE_THIS_FUNCTION__USE_mg_free
+
 
 #define MD5_STATIC static
 #include "md5.inl"
