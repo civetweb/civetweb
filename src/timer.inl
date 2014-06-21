@@ -66,35 +66,35 @@ static void timer_thread_run(void *thread_func_param)
     int re_schedule;
     struct timer t;
 
-    while (ctx->stop_flag == 0) {
 #if defined(HAVE_CLOCK_NANOSLEEP) /* Linux with librt */
-        while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &request, &request)==EINTR) {/*nop*/;}
+    /* TODO */
+    while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &request, &request)==EINTR) {/*nop*/;}
 #else
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    d = (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
+    while (ctx->stop_flag == 0) {
+        pthread_mutex_lock(&ctx->timers->mutex);
+        if (ctx->timers->timer_count > 0 && d >= ctx->timers->timers[0].time) {
+            t = ctx->timers->timers[0];
+            for (u=1; u<ctx->timers->timer_count; u++) {
+                ctx->timers->timers[u-1] = ctx->timers->timers[u];
+            }
+            ctx->timers->timer_count--;
+            pthread_mutex_unlock(&ctx->timers->mutex);
+            re_schedule = t.action(t.arg);
+            if (re_schedule && (t.period>0)) {
+                timer_add(ctx, t.time+t.period, t.period, 0, t.action, t.arg);
+            }
+            continue;
+        } else {
+            pthread_mutex_unlock(&ctx->timers->mutex);
+        }
+        mg_sleep(1);
         clock_gettime(CLOCK_MONOTONIC, &now);
         d = (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
-        for (;;) {
-            pthread_mutex_lock(&ctx->timers->mutex);
-            if (ctx->timers->timer_count > 0 && d >= ctx->timers->timers[0].time) {
-                t = ctx->timers->timers[0];
-                for (u=1; u<ctx->timers->timer_count; u++) {
-                    ctx->timers->timers[u-1] = ctx->timers->timers[u];
-                }
-                ctx->timers->timer_count--;
-                pthread_mutex_unlock(&ctx->timers->mutex);
-                re_schedule = t.action(t.arg);
-                if (re_schedule && (t.period>0)) {
-                    timer_add(ctx, t.time+t.period, t.period, 0, t.action, t.arg);
-                }
-                continue;
-            } else {
-                pthread_mutex_unlock(&ctx->timers->mutex);
-            }
-            mg_sleep(1);
-            clock_gettime(CLOCK_MONOTONIC, &now);
-            d = (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
-        }
-#endif
     }
+#endif
+
 }
 
 #ifdef _WIN32
