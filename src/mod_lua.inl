@@ -1180,7 +1180,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
     assert(conn->lua_websocket_state == NULL);
 
     /* lock list (mg_context global) */
-    (void)pthread_mutex_lock(&conn->ctx->nonce_mutex);
+    mg_lock_context(conn->ctx);
     while (*shared_websock_list) {
         /* check if ws already in list */
         if (0==strcmp(script,(*shared_websock_list)->ws.script)) {
@@ -1192,7 +1192,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
         /* add ws to list */
         *shared_websock_list = mg_calloc(sizeof(struct mg_shared_lua_websocket_list), 1);
         if (*shared_websock_list == NULL) {
-            (void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
+            mg_unlock_context(conn->ctx);
             mg_cry(conn, "Cannot create shared websocket struct, OOM");
             return NULL;
         }
@@ -1219,7 +1219,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
         (void)pthread_mutex_lock(&(ws->ws_mutex));
         (*shared_websock_list)->ws.conn[(ws->references)++] = conn;
     }
-    (void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
+    mg_unlock_context(conn->ctx);
 
     /* call add */
     lua_getglobal(ws->state, "open");

@@ -504,16 +504,16 @@ static __inline void   mg_free(void * a)               {free(a);}
 
 /* This following lines are just meant as a reminder to use the mg-functions for memory management */
 #ifdef malloc
-    #undef malloc 
+    #undef malloc
 #endif
 #ifdef calloc
-    #undef calloc 
+    #undef calloc
 #endif
 #ifdef realloc
-    #undef realloc 
+    #undef realloc
 #endif
 #ifdef free
-    #undef free 
+    #undef free
 #endif
 #define malloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
 #define calloc  DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
@@ -835,7 +835,7 @@ struct mg_connection {
     int throttle;                   /* Throttling, bytes/sec. <= 0 means no throttle */
     time_t last_throttle_time;      /* Last time throttled data was sent */
     int64_t last_throttle_bytes;    /* Bytes sent this second */
-    pthread_mutex_t mutex;          /* Used by mg_lock/mg_unlock to ensure atomic transmissions for websockets */
+    pthread_mutex_t mutex;          /* Used by mg_lock_connection/mg_unlock_connection to ensure atomic transmissions for websockets */
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     void * lua_websocket_state;     /* Lua_State for a websocket connection */
 #endif
@@ -4840,14 +4840,24 @@ static void handle_propfind(struct mg_connection *conn, const char *path,
     conn->num_bytes_sent += mg_printf(conn, "%s\n", "</d:multistatus>");
 }
 
-void mg_lock(struct mg_connection* conn)
+void mg_lock_connection(struct mg_connection* conn)
 {
     (void) pthread_mutex_lock(&conn->mutex);
 }
 
-void mg_unlock(struct mg_connection* conn)
+void mg_unlock_connection(struct mg_connection* conn)
 {
     (void) pthread_mutex_unlock(&conn->mutex);
+}
+
+void mg_lock_context(struct mg_context* ctx)
+{
+    (void) pthread_mutex_lock(&ctx->nonce_mutex);
+}
+
+void mg_unlock_context(struct mg_context* ctx)
+{
+    (void) pthread_mutex_unlock(&ctx->nonce_mutex);
 }
 
 #if defined(USE_TIMERS)
@@ -5257,10 +5267,10 @@ int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data,
        but mongoose's mg_printf/mg_write is not (because of the loop in
        push(), although that is only a problem if the packet is large or
        outgoing buffer is full). */
-    (void) mg_lock(conn);
+    (void) mg_lock_connection(conn);
     retval = mg_write(conn, header, headerLen);
     retval = mg_write(conn, data, dataLen);
-    mg_unlock(conn);
+    mg_unlock_connection(conn);
 
     return retval;
 }
@@ -6254,7 +6264,7 @@ static void close_connection(struct mg_connection *conn)
     if (conn->ctx->callbacks.connection_close != NULL)
         conn->ctx->callbacks.connection_close(conn);
 
-    mg_lock(conn);
+    mg_lock_connection(conn);
 
     conn->must_close = 1;
 
@@ -6271,7 +6281,7 @@ static void close_connection(struct mg_connection *conn)
         conn->client.sock = INVALID_SOCKET;
     }
 
-    mg_unlock(conn);
+    mg_unlock_connection(conn);
 }
 
 void mg_close_connection(struct mg_connection *conn)
