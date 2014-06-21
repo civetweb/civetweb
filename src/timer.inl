@@ -25,6 +25,10 @@ static int timer_add(struct mg_context * ctx, double next_time, double period, i
     int error = 0;
     struct timespec now;
 
+    if (ctx->stop_flag) {
+        return 0;
+    }
+
     if (is_relative) {
         clock_gettime(CLOCK_MONOTONIC, &now);
         next_time += now.tv_sec;
