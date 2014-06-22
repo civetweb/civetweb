@@ -48,7 +48,9 @@ int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
     assert(request_info != NULL);
     CivetServer *me = (CivetServer*) (request_info->user_data);
     assert(me != NULL);
+    mg_lock_context(me->context);
     me->connections[conn] = CivetConnection();
+    mg_unlock_context(me->context);
 
     CivetHandler *handler = (CivetHandler *)cbdata;
 
@@ -97,7 +99,9 @@ void CivetServer::closeHandler(struct mg_connection *conn)
     assert(me != NULL);
 
     if (me->userCloseHandler) me->userCloseHandler(conn);
+    mg_lock_context(me->context);
     me->connections.erase(conn);
+    mg_unlock_context(me->context);
 }
 
 void CivetServer::addHandler(const std::string &uri, CivetHandler *handler)
@@ -172,7 +176,10 @@ CivetServer::getParam(struct mg_connection *conn, const char *name,
     assert(ri != NULL);
     CivetServer *me = (CivetServer*) (ri->user_data);
     assert(me != NULL);
+    mg_lock_context(me->context);
     CivetConnection &conobj = me->connections[conn];
+    mg_lock_connection(conn);
+    mg_unlock_context(me->context);
 
     if (conobj.postData != NULL) {
         formParams = conobj.postData;
@@ -198,6 +205,7 @@ CivetServer::getParam(struct mg_connection *conn, const char *name,
         // get requests do store html <form> field values in the http query_string
         formParams = ri->query_string;
     }
+    mg_unlock_connection(conn);
 
     if (formParams != NULL) {
         return getParam(formParams, strlen(formParams), name, dst, occurrence);
