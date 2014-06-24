@@ -277,3 +277,12 @@ CivetServer::urlEncode(const char *src, size_t src_len, std::string &dst, bool a
         }
     }
 }
+
+CivetServer::CivetConnection::CivetConnection() {
+    postData = NULL;
+    postDataLen = 0;
+}
+
+CivetServer::CivetConnection::~CivetConnection() {
+    free(postData);
+}

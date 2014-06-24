@@ -281,14 +281,8 @@ protected:
         char * postData;
         unsigned long postDataLen;
 
-        CivetConnection() {
-            postData = NULL;
-            postDataLen = 0;
-        }
-
-        ~CivetConnection() {
-            free(postData);
-        }
+        CivetConnection();
+        ~CivetConnection();
     };
 
     struct mg_context *context;
