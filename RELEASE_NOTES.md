@@ -190,6 +190,6 @@ Changes
 
 - Renamed Mongoose to Civetweb in the code and documentation.
 - Replaced copyrighted images with new images
-- Created a new code respository at https://github.com/sunsetbrew/civetweb
+- Created a new code respository at https://github.com/bel2125/civetweb
 - Created a distribution site at https://sourceforge.net/projects/civetweb/
 - Basic build testing

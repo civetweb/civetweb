@@ -2,10 +2,10 @@ Building Civetweb
 =========
 
 This guide covers the build instructions for stand-alone web server.  
-See [Embedding.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Embedding.md) for information on extending an application.
+See [Embedding.md](https://github.com/bel2125/civetweb/blob/master/docs/Embedding.md) for information on extending an application.
 
 #### Where to get the source code?
-https://github.com/sunsetbrew/civetweb
+https://github.com/bel2125/civetweb
 
 
 Building for Windows
@@ -13,7 +13,7 @@ Building for Windows
 
 Open the *VS2012/civetweb.sln* in Visual Studio.
 To include SSL support, you may have to use yaSSL.  However, it is GPL licensed.
-See [yaSSL.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/yaSSL.md) for more information.
+See [yaSSL.md](https://github.com/bel2125/civetweb/blob/master/docs/yaSSL.md) for more information.
 
 
 Building for Linux, BSD, and OSX
