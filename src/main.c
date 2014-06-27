@@ -348,8 +348,10 @@ static void read_config_file(const char *config_file, char **options)
 static void process_command_line_arguments(char *argv[], char **options)
 {
     char *p;
-    FILE *fp = NULL;
     size_t i, cmd_line_opts_start = 1;
+#ifdef CONFIG_FILE2
+    FILE *fp = NULL;
+#endif
 
     /* Should we use a config file ? */
     if (argv[1] != NULL && argv[1][0] != '-') {

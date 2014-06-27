@@ -3230,8 +3230,11 @@ static int read_auth_file(struct file *filep, struct read_auth_file_struct * wor
 /* Authorize against the opened passwords file. Return 1 if authorized. */
 static int authorize(struct mg_connection *conn, struct file *filep)
 {
-    struct read_auth_file_struct workdata = {conn};
+    struct read_auth_file_struct workdata;
     char buf[MG_BUF_LEN];
+
+    memset(&workdata,0,sizeof(workdata));
+    workdata.conn = conn;
 
     if (!parse_auth_header(conn, buf, sizeof(buf), &workdata.ah)) {
         return 0;
