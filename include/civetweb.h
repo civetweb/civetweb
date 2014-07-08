@@ -24,7 +24,7 @@
 #define CIVETWEB_HEADER_INCLUDED
 
 #ifndef CIVETWEB_VERSION
-#define CIVETWEB_VERSION "1.6"
+#define CIVETWEB_VERSION "1.7"
 #endif
 
 #ifndef CIVETWEB_API

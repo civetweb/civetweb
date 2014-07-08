@@ -1,6 +1,15 @@
+Release Notes v1.7 (Under Development)
+===
+### Objectives: *???*
+
+Changes
+-------
+
+- Updated version number
+
 Release Notes v1.6
 ===
-### Objectives: *Enhance Lua support, configuration dialog for windows, new examples, bug fixes and updates"
+### Objectives: *Enhance Lua support, configuration dialog for windows, new examples, bug fixes and updates*
 
 Changes
 -------
