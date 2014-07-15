@@ -4361,7 +4361,7 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
        Do not send anything back to client, until we buffer in all
        HTTP headers. */
     data_len = 0;
-    buf = mg_malloc(buflen);
+    buf = (char *)mg_malloc(buflen);
     if (buf == NULL) {
         send_http_error(conn, 500, http_500_error,
                         "Not enough memory for buffer (%u bytes)",
@@ -7002,7 +7002,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     if (workerthreadcount > 0) {
         ctx->workerthreadcount = workerthreadcount;
-        ctx->workerthreadids = mg_calloc(workerthreadcount, sizeof(pthread_t));
+        ctx->workerthreadids = (pthread_t *)mg_calloc(workerthreadcount, sizeof(pthread_t));
         if (ctx->workerthreadids == NULL) {
             mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
             free_context(ctx);
