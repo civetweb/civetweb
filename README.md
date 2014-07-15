@@ -42,26 +42,25 @@ Overview
 --------
 
 Civetweb keeps the balance between functionality and
-simplicity by carefully selected list of features:
+simplicity by a carefully selected list of features:
 
 - Liberal, commercial-friendly, permissive,
   [MIT license](http://en.wikipedia.org/wiki/MIT_License)
 - Free from copy-left licenses, like GPL, because you should innovate without restrictions.
 - Based on [Mongoose](https://code.google.com/p/mongoose/)
 - Works on Windows, Mac, UNIX, iPhone, Android, Buildroot, and many other platforms
-- Scripting and database support (Lua Server Pages + Sqlite
-  which provides ready to go, powerful web development platform in
-  one single-click executable with **no dependencies**: forget LAMP!
-- Support for CGI, SSL, SSI, Digest (MD5) authorization, Websocket, WEbDAV
+- Scripting and database support (Lua scipts, Lua Server Pages, CGI + SQLite database).
+  This provides a ready to go, powerful web development platform in a
+  one single-click executable with **no dependencies**.
+- Support for CGI, HTTPS/SSL, SSI, HTTP digest (MD5) authorization, Websocket, WEbDAV
 - Resumed download, URL rewrite, file blacklist, IP-based ACL, Windows service
 - Download speed limit based on client subnet or URI pattern
-- Simple and clean embedding API,
-  The source is in single file
-  to make things easy. Embedding examples included.
+- Simple and clean embedding API.
+  The source is in single file to make things easy. Embedding examples included.
 - HTTP client capable of sending arbitrary HTTP/HTTPS requests
 
 
-### Other optionally included software
+### Optionally included software
 
 <a href="http://lua.org">
 ![Lua](https://raw.github.com/bel2125/civetweb/master/resources/lua-logo.jpg "Lua Logo")
@@ -69,12 +68,20 @@ simplicity by carefully selected list of features:
 <a href="http://sqlite.org">
 ![Sqlite3](https://raw.github.com/bel2125/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")
 </a>
+<a href=http://keplerproject.github.io/luafilesystem/">
+![LuaFileSystem](https://raw.github.com/bel2125/civetweb/master/resources/luafilesystem-logo.jpg "LuaFileSystem Logo")
+</a>
+<a href=http://lua.sqlite.org/index.cgi/index">
+![LuaSQLite3](https://raw.github.com/bel2125/civetweb/master/resources/luasqlite-logo.jpg "LuaSQLite3 Logo")
+</a>
+
 
 Support
 -------
 
-The original Mongoose project is recommended if support is needed.  However,
-this is very easy to install and use. 
+This project is very easy to install and use. Please read the [documentation](https://github.com/bel2125/civetweb/blob/master/docs/).
+More information may be found on the [mailing list](https://groups.google.com/d/forum/civetweb).
+
 
 Contributions
 ---------------
@@ -85,18 +92,14 @@ DO NOT APPLY fixes copied from Mongoose to this project to prevent GPL tainting.
 
 ### Author
 
-The original Author was Sergey Lyubka.  He still controls the original
-Mongoose project.  However, he has changed or said he would 
+Civetweb is based on the Mongoose project - the original Author was Sergey Lyubka.  He still
+controls the original Mongoose project.  However, he has changed or said he would
 change licenses after writing and distributing the original code this
 project is based on.
 
 Using this project ensures the MIT licenses terms are applied and
 GPL cannot be imposed on any of this code as long as it is sourced from
-here.
+here. This code will remain free with the MIT license protection.
 
-For the latest and greatest code and features, please use the Mongoose
-code from Sergey Lyubka.  However, doing so will require adherence to
-the new licenses.
+A list of authors can be found in [CREDITS.md](https://github.com/bel2125/civetweb/blob/master/CREDITS.md)
 
-This project ensures that GPL license cannot be applied to this code.
-This code will remain free with the MIT license protection.
