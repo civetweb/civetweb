@@ -16,12 +16,19 @@ function print_if_available(tab, name)
   end
 end
 
-function recurse(tab)
+function recurse(tab, excl)
+  excl = excl or {}
   mg.write("<ul>\n")
   for k,v in pairs(tab) do
     if type(v) == "table" then
       mg.write("<li>" .. tostring(k) .. ":</li>\n")
-      recurse(v)
+      if excl[v] then
+        -- cyclic
+      else
+        excl[v] = true
+        recurse(v, excl)
+        excl[v] = false
+      end
     else
       mg.write("<li>" .. tostring(k) .. " = " .. tostring(v) .. "</li>\n")
     end
@@ -39,6 +46,8 @@ end
 mg.write("</ul>\n")
 print_if_available(sqlite3, "sqlite3 binding")
 print_if_available(lfs, "lua file system")
+
+--recurse(_G)
 
 -- Print mg library
 libname = "mg"
