@@ -74,12 +74,15 @@ simplicity by a carefully selected list of features:
 <a href=http://lua.sqlite.org/index.cgi/index">
 ![LuaSQLite3](https://raw.github.com/bel2125/civetweb/master/resources/luasqlite-logo.jpg "LuaSQLite3 Logo")
 </a>
-
+<a href=http://viremo.eludi.net/LuaXML/index.html">
+![LuaXML](https://raw.github.com/bel2125/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")
+</a>
 
 Support
 -------
 
-This project is very easy to install and use. Please read the [documentation](https://github.com/bel2125/civetweb/blob/master/docs/).
+This project is very easy to install and use. Please read the [documentation](https://github.com/bel2125/civetweb/blob/master/docs/)
+and have a look at the [examples] (https://github.com/bel2125/civetweb/blob/master/examples/).
 More information may be found on the [mailing list](https://groups.google.com/d/forum/civetweb).
 
 

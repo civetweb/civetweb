@@ -937,12 +937,18 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
     const char * preload_file = ((conn != NULL) ? conn->ctx->config[LUA_PRELOAD_FILE] : NULL);
 
     extern void luaL_openlibs(lua_State *);
-
     luaL_openlibs(L);
+
 #ifdef USE_LUA_SQLITE3
     {
         extern int luaopen_lsqlite3(lua_State *);
         luaopen_lsqlite3(L);
+    }
+#endif
+#ifdef USE_LUA_SQLITE3
+    {
+        extern int luaopen_LuaXML(lua_State *);
+        luaopen_LuaXML(L);
     }
 #endif
 #ifdef USE_LUA_FILE_SYSTEM

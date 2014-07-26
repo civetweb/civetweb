@@ -120,6 +120,9 @@
     <ClCompile Include="..\..\src\third_party\lfs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\third_party\LuaXML_lib.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\third_party\sqlite3.h">
