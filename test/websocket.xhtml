@@ -29,7 +29,8 @@
     }
 
     function load() {
-      connection = new WebSocket("ws://" + window.location.host + "/websocket.lua");
+      var wsproto = (location.protocol === 'https:') ? "wss:" : "ws:";
+      connection = new WebSocket(wsproto + "//" + window.location.host + "/websocket.lua");
       websock_text_field = document.getElementById('websock_text_field');
       hand_min = document.getElementById('hand_min');
       hand_hour = document.getElementById('hand_hour');

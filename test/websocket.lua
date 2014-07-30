@@ -2,7 +2,7 @@ timerID = "timeout"
 --timerID = "interval"
 
 function trace(text)
-    local f = io.open("R:\\websocket.trace", "a")
+    local f = io.open("websocket.trace", "a")
     f:write(os.date() .. " - " .. text .. "\n")
     f:close()
 end
