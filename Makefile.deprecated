@@ -19,9 +19,9 @@
 PROG        = civetweb
 CFLAGS      = -std=c99 -O2 -W -Wall -pedantic -pthread -pipe -Iinclude $(COPT)
 
-# To build with Lua, download and unzip Lua 5.2.2 source code into the
+# To build with Lua, download and unzip Lua 5.2.3 source code into the
 # civetweb directory, and then add $(LUA_SOURCES) to CFLAGS
-LUA         = src/third_party/lua-5.2.2/src
+LUA         = src/third_party/lua-5.2.3/src
 LUA_FLAGS   = -I$(LUA) -DLUA_COMPAT_ALL
 LUA_SOURCES = $(LUA)/lapi.c $(LUA)/lcode.c $(LUA)/lctype.c \
               $(LUA)/ldebug.c $(LUA)/ldo.c $(LUA)/ldump.c \
@@ -114,7 +114,7 @@ all:
 lua.lib: $(LUA_WINOBJS)
 	$(MSVC)/bin/lib /out:$@ $(LUA_WINOBJS)
 
-# To build with Lua, make sure you have Lua unpacked into src/third_party/lua-5.2.2 directory
+# To build with Lua, make sure you have Lua unpacked into src/third_party/lua-5.2.3 directory
 linux_lua: $(ALL_OBJECTS)
 	$(CC) $(ALL_OBJECTS) -o $(PROG) -ldl
 

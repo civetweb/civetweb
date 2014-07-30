@@ -64,7 +64,7 @@ Lua is a server side include functionality.  Files ending in .la will be process
 ##### Add the following sources
 
   - src/mod_lua.inl
-  - src/third_party/lua-5.2.2/src
+  - src/third_party/lua-5.2.3/src
      + lapi.c
      + lauxlib.c
      + lbaselib.c

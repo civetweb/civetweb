@@ -227,6 +227,7 @@ static const char * lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 {
     struct lsp_var_reader_data * reader = (struct lsp_var_reader_data *)ud;
     const char * ret;
+	(void)(L); /* unused */
 
     switch (reader->state) {
     case 0:
@@ -470,7 +471,7 @@ static int lsp_get_var(lua_State *L)
 static int lsp_get_mime_type(lua_State *L)
 {
     int num_args = lua_gettop(L);
-    struct vec mime_type = {0};
+    struct vec mime_type = {0, 0};
     struct mg_context *ctx;
     const char *text;
 
@@ -503,7 +504,6 @@ static int lsp_get_mime_type(lua_State *L)
 static int lsp_get_cookie(lua_State *L)
 {
     int num_args = lua_gettop(L);
-    struct vec mime_type = {0};
     const char *cookie;
     const char *var_name;
     int ret;
@@ -619,7 +619,7 @@ static int lsp_base64_encode(lua_State *L)
         if (text) {
             dst = mg_malloc(text_len*8/6+4);
             if (dst) {
-                base64_encode(text, text_len, dst);
+                base64_encode((const unsigned char *)text, text_len, dst);
                 lua_pushstring(L, dst);
                 mg_free(dst);
             } else {
@@ -649,7 +649,7 @@ static int lsp_base64_decode(lua_State *L)
         if (text) {
             dst = mg_malloc(text_len);
             if (dst) {
-                ret = base64_decode(text, text_len, dst, &dst_len);
+                ret = base64_decode((const unsigned char *)text, text_len, dst, &dst_len);
                 if (ret != -1) {
                     mg_free(dst);
                     return luaL_error(L, "illegal character in lsp_base64_decode() call");
@@ -855,7 +855,7 @@ static int lwebsocket_set_timer(lua_State *L, int is_periodic)
         memcpy(arg->txt+7, txt, txt_len);
         arg->txt[txt_len+7] = ')';
         arg->txt[txt_len+8] = 0;
-        ok = (0==timer_add(ctx, timediff, is_periodic, 1, is_periodic ? lua_action : lua_action_free, (void*)arg));
+        ok = (0==timer_add(ctx, timediff, is_periodic, 1, (taction)(is_periodic ? lua_action : lua_action_free), (void*)arg));
     } else if (type1==LUA_TFUNCTION && type2==LUA_TNUMBER)  {
         /* TODO: not implemented yet */
         return luaL_error(L, "invalid arguments for set_timer/interval() call");

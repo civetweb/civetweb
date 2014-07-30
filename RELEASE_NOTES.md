@@ -5,6 +5,9 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Upgraded Lua from 5.2.2 to 5.2.3
+- Integrate LuaXML
+- Fix compiler warnings
 - Updated version number
 
 Release Notes v1.6
