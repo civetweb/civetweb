@@ -5155,9 +5155,9 @@ static void read_websocket(struct mg_connection *conn)
 
             /* Copy the mask before we shift the queue and destroy it */
             if (mask_len > 0) {
-                *(uint32_t*)mask = *(uint32_t*)(buf + header_len - mask_len);
+                memcpy(mask, buf + header_len - mask_len, sizeof(mask));
             } else {
-                *(uint32_t*)mask = 0;
+                memset(mask, 0, sizeof(mask));
             }
 
             /* Read frame payload from the first message in the queue into
