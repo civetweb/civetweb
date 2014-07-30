@@ -124,6 +124,8 @@ static int timers_init(struct mg_context * ctx)
 
 static void timers_exit(struct mg_context * ctx)
 {
-    (void) pthread_mutex_destroy(&ctx->timers->mutex);
-    mg_free(ctx->timers);
+    if (ctx->timers) {
+        (void) pthread_mutex_destroy(&ctx->timers->mutex);
+        mg_free(ctx->timers);
+    }
 }
