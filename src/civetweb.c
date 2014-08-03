@@ -697,6 +697,7 @@ enum {
     GLOBAL_PASSWORDS_FILE, INDEX_FILES, ENABLE_KEEP_ALIVE, ACCESS_CONTROL_LIST,
     EXTRA_MIME_TYPES, LISTENING_PORTS, DOCUMENT_ROOT, SSL_CERTIFICATE,
     NUM_THREADS, RUN_AS_USER, REWRITE, HIDE_FILES, REQUEST_TIMEOUT,
+    DECODE_URL,
 
 #if defined(USE_LUA)
     LUA_PRELOAD_FILE, LUA_SCRIPT_EXTENSIONS, LUA_SERVER_PAGE_EXTENSIONS,
@@ -743,6 +744,7 @@ static struct mg_option config_options[] = {
     {"url_rewrite_patterns",        12345,                     NULL},
     {"hide_files_patterns",         12345,                     NULL},
     {"request_timeout_ms",          CONFIG_TYPE_NUMBER,        "30000"},
+    {"decode_url",                  CONFIG_TYPE_BOOLEAN,       "yes"},
 
 #if defined(USE_LUA)
     {"lua_preload_file",            CONFIG_TYPE_FILE,          NULL},
@@ -1327,6 +1329,11 @@ static int should_keep_alive(const struct mg_connection *conn)
         return 0;
     }
     return 1;
+}
+
+static int should_decode_url(const struct mg_connection *conn)
+{
+    return (mg_strcasecmp(conn->ctx->config[DECODE_URL], "yes") == 0);
 }
 
 static const char *suggest_connection_header(const struct mg_connection *conn)
@@ -5676,7 +5683,10 @@ static void handle_request(struct mg_connection *conn)
         * ((char *) conn->request_info.query_string++) = '\0';
     }
     uri_len = (int) strlen(ri->uri);
-    mg_url_decode(ri->uri, uri_len, (char *) ri->uri, uri_len + 1, 0);
+
+    if (should_decode_url(conn)) {
+      mg_url_decode(ri->uri, uri_len, (char *) ri->uri, uri_len + 1, 0);
+    }
     remove_double_dots_and_double_slashes((char *) ri->uri);
     path[0] = '\0';
     convert_uri_to_file_name(conn, path, sizeof(path), &file, &is_script_resource);
