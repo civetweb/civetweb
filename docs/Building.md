@@ -1,7 +1,7 @@
 Building Civetweb
 =========
 
-This guide covers the build instructions for stand-alone web server.  
+This guide covers the build instructions for stand-alone web server.
 See [Embedding.md](https://github.com/bel2125/civetweb/blob/master/docs/Embedding.md) for information on extending an application.
 
 #### Where to get the source code?
@@ -79,6 +79,9 @@ make build WITH_LUA=1
 | PREFIX=/usr/local         | sets the install directory               |
 | COPT='-DNO_SSL'           | method to insert compile flags           |
 
+Note that the WITH_* options used for *make* are not identical to the
+preprocessor defines in the source code - usually USE_* is used there.
+
 ## Setting compile flags
 
 Compile flags can be set using the *COPT* make option like so.
@@ -97,7 +100,7 @@ make build COPT="-DNDEBUG -DNO_CGI"
 
 ## Cross Compiling
 
-Take total control with *CC*, *COPTS* and *TARGET_OS* as make options.
+Take total control with *CC*, *COPT* and *TARGET_OS* as make options.
 TARGET_OS is used to determine some compile details as will as code function.
 TARGET_OS values should be be one found in *resources/Makefile.in-os*.
 
