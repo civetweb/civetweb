@@ -1065,6 +1065,11 @@ struct mg_context *mg_get_context(struct mg_connection * conn)
     return (conn == NULL) ? (struct mg_context *)NULL : &(conn->ctx);
 }
 
+void *mg_get_user_data(struct mg_context *ctx) 
+{
+    return (ctx == NULL) ? NULL : ctx->user_data;
+}
+
 size_t mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
 {
     size_t i;

@@ -251,6 +251,10 @@ CIVETWEB_API const char *mg_get_option(const struct mg_context *ctx, const char 
 CIVETWEB_API struct mg_context *mg_get_context(struct mg_connection *conn);
 
 
+/* Get user data passed to mg_start from context. */
+CIVETWEB_API void *mg_get_user_data(struct mg_context *ctx);
+
+
 #if defined(MG_LEGACY_INTERFACE)
 /* Return array of strings that represent valid configuration options.
    For each option, option name and default value is returned, i.e. the
