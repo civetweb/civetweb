@@ -1062,7 +1062,7 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name)
 
 struct mg_context *mg_get_context(struct mg_connection * conn)
 {
-    return (conn == NULL) ? (struct mg_context *)NULL : &(conn->ctx);
+    return (conn == NULL) ? (struct mg_context *)NULL : (conn->ctx);
 }
 
 void *mg_get_user_data(struct mg_context *ctx) 
