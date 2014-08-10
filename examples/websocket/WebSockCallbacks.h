@@ -16,6 +16,7 @@ typedef struct tWebSockInfo {
 
 #define MAX_NUM_OF_WEBSOCKS (256)
 typedef struct tWebSockContext {
+    int runLoop;
     void * thread_id;
     tWebSockInfo *socketList[MAX_NUM_OF_WEBSOCKS];
 } tWebSockContext;

@@ -138,15 +138,14 @@ void connection_close_handler(struct mg_connection *conn) {
 }
 
 
-static int runLoop = 0;
-
 static void * eventMain(void * arg) {
 
     char msg[256];
     struct mg_context *ctx = (struct mg_context *)arg;
+    tWebSockContext *ws_ctx = (tWebSockContext*) mg_get_user_data(ctx);
 
-    runLoop = 1;
-    while (runLoop) {
+    ws_ctx->runLoop = 1;
+    while (ws_ctx->runLoop) {
         time_t t = time(0);
         struct tm * timestr = localtime(&t);
         sprintf(msg,"title %s",asctime(timestr));
@@ -174,14 +173,15 @@ void websock_send_broadcast(struct mg_context *ctx, const char * data, int data_
 void websock_init_lib(struct mg_context *ctx) {
 
     tWebSockContext *ws_ctx = (tWebSockContext*) mg_get_user_data(ctx);
-    memset(ws_ctx->socketList,0,sizeof(ws_ctx->socketList));
+    memset(ws_ctx,0,sizeof(*ws_ctx));
     /* todo: use mg_start_thread_id instead of mg_start_thread */
     mg_start_thread(eventMain, ctx);
 }
 
 void websock_exit_lib(struct mg_context *ctx) {
 
-    runLoop = 0;
+    tWebSockContext *ws_ctx = (tWebSockContext*) mg_get_user_data(ctx);
+    ws_ctx->runLoop = 0;
     /* todo: wait for the thread instead of a timeout */
     mg_sleep(2000);
 }
