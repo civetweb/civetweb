@@ -14,25 +14,15 @@
 #endif
 
 
-typedef struct tWebSockInfo {
-    int webSockState;
-    unsigned long initId;
-    struct mg_connection *conn;
-} tWebSockInfo;
-
-
-#define MAX_NUM_OF_WEBSOCKS (256)
-static tWebSockInfo *socketList[MAX_NUM_OF_WEBSOCKS];
-
-
 static void send_to_all_websockets(struct mg_context *ctx, const char * data, int data_len) {
 
     int i;
+    tWebSockContext *ws_ctx = (tWebSockContext*) mg_get_user_data(ctx);
 
     mg_lock_context(ctx);
     for (i=0;i<MAX_NUM_OF_WEBSOCKS;i++) {
-        if (socketList[i] && (socketList[i]->webSockState==2)) {
-            mg_websocket_write(socketList[i]->conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
+        if (ws_ctx->socketList[i] && (ws_ctx->socketList[i]->webSockState==2)) {
+            mg_websocket_write(ws_ctx->socketList[i]->conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
         }
     }
     mg_unlock_context(ctx);
@@ -44,6 +34,7 @@ void websocket_ready_handler(struct mg_connection *conn) {
     int i;
     struct mg_request_info * rq = mg_get_request_info(conn);
     struct mg_context * ctx = mg_get_context(conn);
+    tWebSockContext *ws_ctx = (tWebSockContext*) mg_get_user_data(ctx);
     tWebSockInfo * wsock = malloc(sizeof(tWebSockInfo));
     assert(wsock);
     wsock->webSockState = 0;
@@ -51,8 +42,8 @@ void websocket_ready_handler(struct mg_connection *conn) {
 
     mg_lock_context(ctx);
     for (i=0;i<MAX_NUM_OF_WEBSOCKS;i++) {
-        if (0==socketList[i]) {
-            socketList[i] = wsock;
+        if (0==ws_ctx->socketList[i]) {
+            ws_ctx->socketList[i] = wsock;
             wsock->conn = conn;
             wsock->webSockState = 1;
             break;
@@ -63,14 +54,15 @@ void websocket_ready_handler(struct mg_connection *conn) {
 }
 
 
-static void websocket_done(tWebSockInfo * wsock) {
+static void websocket_done(tWebSockContext *ws_ctx, tWebSockInfo * wsock) {
 
     int i;
+
     if (wsock) {
         wsock->webSockState = 99;
         for (i=0;i<MAX_NUM_OF_WEBSOCKS;i++) {
-            if (wsock==socketList[i]) {
-                socketList[i] = 0;
+            if (wsock==ws_ctx->socketList[i]) {
+                ws_ctx->socketList[i] = 0;
                 break;
             }
         }
@@ -83,14 +75,15 @@ static void websocket_done(tWebSockInfo * wsock) {
 int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len) {
 
     struct mg_request_info * rq = mg_get_request_info(conn);
-    struct mg_context * ctx = mg_get_context(conn);
     tWebSockInfo * wsock = (tWebSockInfo*)rq->conn_data;
+    struct mg_context * ctx = mg_get_context(conn);
+    tWebSockContext *ws_ctx = (tWebSockContext*) mg_get_user_data(ctx);
     char msg[128];
 
     mg_lock_context(ctx);
     if (flags==136) {
         // close websock
-        websocket_done(wsock);
+        websocket_done(ws_ctx, wsock);
         rq->conn_data = 0;
         mg_unlock_context(ctx);
         return 1;
@@ -134,11 +127,12 @@ int websocket_data_handler(struct mg_connection *conn, int flags, char *data, si
 void connection_close_handler(struct mg_connection *conn) {
 
     struct mg_request_info * rq = mg_get_request_info(conn);
-    struct mg_context * ctx = mg_get_context(conn);
     tWebSockInfo * wsock = (tWebSockInfo*)rq->conn_data;
+    struct mg_context * ctx = mg_get_context(conn);
+    tWebSockContext *ws_ctx = (tWebSockContext*) mg_get_user_data(ctx);
 
     mg_lock_context(ctx);
-    websocket_done(wsock);
+    websocket_done(ws_ctx, wsock);
     rq->conn_data = 0;
     mg_unlock_context(ctx);
 }
@@ -179,8 +173,9 @@ void websock_send_broadcast(struct mg_context *ctx, const char * data, int data_
 
 void websock_init_lib(struct mg_context *ctx) {
 
-    /* todo: use variable in the ctx instead of static ones */
-    memset(socketList,0,sizeof(socketList));
+    tWebSockContext *ws_ctx = (tWebSockContext*) mg_get_user_data(ctx);
+    memset(ws_ctx->socketList,0,sizeof(ws_ctx->socketList));
+    /* todo: use mg_start_thread_id instead of mg_start_thread */
     mg_start_thread(eventMain, ctx);
 }
 

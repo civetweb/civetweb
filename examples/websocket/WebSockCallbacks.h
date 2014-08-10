@@ -8,6 +8,19 @@
 extern "C" {
 #endif
 
+typedef struct tWebSockInfo {
+    int webSockState;
+    unsigned long initId;
+    struct mg_connection *conn;
+} tWebSockInfo;
+
+#define MAX_NUM_OF_WEBSOCKS (256)
+typedef struct tWebSockContext {
+    void * thread_id;
+    tWebSockInfo *socketList[MAX_NUM_OF_WEBSOCKS];
+} tWebSockContext;
+
+
 void websock_init_lib(struct mg_context *ctx);
 void websock_exit_lib(struct mg_context *ctx);
 
