@@ -1060,6 +1060,11 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name)
     }
 }
 
+struct mg_context *mg_get_context(struct mg_connection * conn)
+{
+    return (conn == NULL) ? (struct mg_context *)NULL : &(conn->ctx);
+}
+
 size_t mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
 {
     size_t i;
@@ -6791,6 +6796,10 @@ static void free_context(struct mg_context *ctx)
     if (ctx == NULL)
         return;
 
+    if (ctx->callbacks.exit_context) {
+        ctx->callbacks.exit_context(ctx);
+    }
+
     /* All threads exited, no sync is needed. Destroy thread mutex and condvars */
     (void) pthread_mutex_destroy(&ctx->thread_mutex);
     (void) pthread_cond_destroy(&ctx->thread_cond);
@@ -6903,6 +6912,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     const char *name, *value, *default_value;
     int i, ok;
     int workerthreadcount;
+    void (*exit_callback)(struct mg_context * ctx) = 0;
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     WSADATA data;
@@ -6945,6 +6955,8 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     if (callbacks) {
         ctx->callbacks = *callbacks;
+        exit_callback = callbacks->exit_context;
+        ctx->callbacks.exit_context = 0;
     }
     ctx->user_data = user_data;
     ctx->request_handlers = NULL;
@@ -7027,6 +7039,12 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         return NULL;
     }
 #endif
+
+    /* Context has been created - init user libraries */
+    if (ctx->callbacks.init_context) {
+        ctx->callbacks.init_context(ctx);
+    }
+    ctx->callbacks.exit_context = exit_callback;
 
     /* Start master (listening) thread */
     mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid);

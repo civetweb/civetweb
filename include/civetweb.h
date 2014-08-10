@@ -153,6 +153,17 @@ struct mg_callbacks {
        Parameters:
          status: HTTP error status code. */
     int  (*http_error)(struct mg_connection *, int status);
+
+    /* Called after civetweb context has been created, before requests
+       are processed.
+       Parameters:
+         ctx: context handle */
+    void (*init_context)(struct mg_context * ctx);
+
+    /* Called when civetweb context is deleted.
+       Parameters:
+         ctx: context handle */
+    void (*exit_context)(struct mg_context * ctx);
 };
 
 
@@ -234,6 +245,10 @@ CIVETWEB_API void mg_set_request_handler(struct mg_context *ctx, const char *uri
    names, return value is guaranteed to be non-NULL. If parameter is not
    set, zero-length string is returned. */
 CIVETWEB_API const char *mg_get_option(const struct mg_context *ctx, const char *name);
+
+
+/* Get context from connection. */
+CIVETWEB_API struct mg_context *mg_get_context(struct mg_connection *conn);
 
 
 #if defined(MG_LEGACY_INTERFACE)
