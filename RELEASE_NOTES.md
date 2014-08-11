@@ -5,10 +5,12 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Update websocket example
+- New API functions: access context, callback for create/delete, access user data
 - Upgraded Lua from 5.2.2 to 5.2.3
 - Integrate LuaXML
 - Fix compiler warnings
-- Updated version number
+- Updated version number 
 
 Release Notes v1.6
 ===
