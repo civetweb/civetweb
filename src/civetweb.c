@@ -713,36 +713,36 @@ enum {
     NUM_OPTIONS
 };
 
-/* TODO: replace 12345 by proper config types */
+/* Config option name, config types, default value */
 static struct mg_option config_options[] = {
     {"cgi_pattern",                 CONFIG_TYPE_EXT_PATTERN,   "**.cgi$|**.pl$|**.php$"},
     {"cgi_environment",             CONFIG_TYPE_STRING,        NULL},
     {"put_delete_auth_file",        CONFIG_TYPE_FILE,          NULL},
     {"cgi_interpreter",             CONFIG_TYPE_FILE,          NULL},
-    {"protect_uri",                 12345,                     NULL},
+    {"protect_uri",                 CONFIG_TYPE_STRING,        NULL},
     {"authentication_domain",       CONFIG_TYPE_STRING,        "mydomain.com"},
     {"ssi_pattern",                 CONFIG_TYPE_EXT_PATTERN,   "**.shtml$|**.shtm$"},
-    {"throttle",                    12345,                     NULL},
+    {"throttle",                    CONFIG_TYPE_STRING,        NULL},
     {"access_log_file",             CONFIG_TYPE_FILE,          NULL},
     {"enable_directory_listing",    CONFIG_TYPE_BOOLEAN,       "yes"},
     {"error_log_file",              CONFIG_TYPE_FILE,          NULL},
     {"global_auth_file",            CONFIG_TYPE_FILE,          NULL},
-    {"index_files",                 12345,
+    {"index_files",                 CONFIG_TYPE_STRING,
 #ifdef USE_LUA
     "index.xhtml,index.html,index.htm,index.lp,index.lsp,index.lua,index.cgi,index.shtml,index.php"},
 #else
     "index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php"},
 #endif
     {"enable_keep_alive",           CONFIG_TYPE_BOOLEAN,       "no"},
-    {"access_control_list",         12345,                     NULL},
-    {"extra_mime_types",            12345,                     NULL},
-    {"listening_ports",             12345,                     "8080"},
+    {"access_control_list",         CONFIG_TYPE_STRING,        NULL},
+    {"extra_mime_types",            CONFIG_TYPE_STRING,        NULL},
+    {"listening_ports",             CONFIG_TYPE_STRING,        "8080"},
     {"document_root",               CONFIG_TYPE_DIRECTORY,     NULL},
     {"ssl_certificate",             CONFIG_TYPE_FILE,          NULL},
     {"num_threads",                 CONFIG_TYPE_NUMBER,        "50"},
     {"run_as_user",                 CONFIG_TYPE_STRING,        NULL},
-    {"url_rewrite_patterns",        12345,                     NULL},
-    {"hide_files_patterns",         12345,                     NULL},
+    {"url_rewrite_patterns",        CONFIG_TYPE_STRING,        NULL},
+    {"hide_files_patterns",         CONFIG_TYPE_EXT_PATTERN,   NULL},
     {"request_timeout_ms",          CONFIG_TYPE_NUMBER,        "30000"},
     {"decode_url",                  CONFIG_TYPE_BOOLEAN,       "yes"},
 
@@ -1065,7 +1065,7 @@ struct mg_context *mg_get_context(struct mg_connection * conn)
     return (conn == NULL) ? (struct mg_context *)NULL : (conn->ctx);
 }
 
-void *mg_get_user_data(struct mg_context *ctx) 
+void *mg_get_user_data(struct mg_context *ctx)
 {
     return (ctx == NULL) ? NULL : ctx->user_data;
 }
@@ -5300,8 +5300,6 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
 #ifdef USE_LUA
     int lua_websock = 0;
-    /* TODO: A websocket script may be shared between several clients, allowing them to communicate
-             directly instead of writing to a data base and polling the data base. */
 #endif
 
     if (version == NULL || strcmp(version, "13") != 0) {
