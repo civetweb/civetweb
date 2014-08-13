@@ -75,7 +75,7 @@ static int guard = 0;                   /* test if any dialog is already open */
 #define abs_path(rel, abs, abs_size) realpath((rel), (abs))
 #endif /* _WIN32 */
 
-#define MAX_OPTIONS 100
+#define MAX_OPTIONS 50
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
 static int exit_flag = 0;               /* Main loop should exit */
@@ -230,6 +230,26 @@ static char *sdup(const char *str)
     return p;
 }
 
+static const char *get_option(char **options, const char *option_name)
+{
+    int i = 0;
+    const char *opt_value = NULL;
+
+    /* TODO: options should be an array of key-value-pairs, like
+       struct {const char * key, const char * value} options[]
+       but it currently is an array with
+       options[2*i] = key, options[2*i + 1] = value
+    */
+    while (options[2*i] != NULL) {
+        if (strcmp(options[2*i], option_name) == 0) {
+            opt_value = options[2*i + 1];
+            break;
+        }
+        i++;
+    }
+    return opt_value;
+}
+
 static int set_option(char **options, const char *name, const char *value)
 {
     int i, type;
@@ -266,20 +286,20 @@ static int set_option(char **options, const char *name, const char *value)
             break;
     }
 
-    for (i = 0; i < MAX_OPTIONS - 3; i++) {
-        if (options[i] == NULL) {
-            options[i] = sdup(name);
-            options[i + 1] = sdup(value);
-            options[i + 2] = NULL;
+    for (i = 0; i < MAX_OPTIONS; i++) {
+        if (options[2*i] == NULL) {
+            options[2*i] = sdup(name);
+            options[2*i + 1] = sdup(value);
+            options[2*i + 2] = NULL;
             break;
-        } else if (!strcmp(options[i], name)) {
-            free(options[i + 1]);
-            options[i + 1] = sdup(value);
+        } else if (!strcmp(options[2*i], name)) {
+            free(options[2*i + 1]);
+            options[2*i + 1] = sdup(value);
             break;
         }
     }
 
-    if (i == MAX_OPTIONS - 3) {
+    if (i == MAX_OPTIONS) {
         die("%s", "Too many options specified");
     }
 
@@ -444,17 +464,6 @@ static int is_path_absolute(const char *path)
 #endif
 }
 
-static char *get_option(char **options, const char *option_name)
-{
-    int i;
-
-    for (i = 0; options[i] != NULL; i++)
-        if (!strcmp(options[i], option_name))
-            return options[i + 1];
-
-    return NULL;
-}
-
 static void verify_existence(char **options, const char *option_name,
                              int must_be_dir)
 {
@@ -518,7 +527,7 @@ static void set_absolute_path(char *options[], const char *option_name,
 static void start_civetweb(int argc, char *argv[])
 {
     struct mg_callbacks callbacks;
-    char *options[MAX_OPTIONS];
+    char *options[2*MAX_OPTIONS+1];
     int i;
 
     /* Edit passwords file if -A option is specified */
@@ -679,7 +688,7 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
     int i, j;
     const char *name, *value;
     const struct mg_option *default_options = mg_get_valid_options();
-    char *file_options[MAX_OPTIONS] = {0};
+    char *file_options[MAX_OPTIONS*2+1] = {0};
     char *title;
 
     switch (msg) {
@@ -734,7 +743,8 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
                 }
             }
             for (i = 0; i<MAX_OPTIONS; i++) {
-                free(file_options[i]);
+                free(file_options[2*i]);
+                free(file_options[2*i+1]);
             }
             break;
 
