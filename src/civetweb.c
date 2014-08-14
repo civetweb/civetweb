@@ -5234,7 +5234,7 @@ static void read_websocket(struct mg_connection *conn)
                 (conn->lua_websocket_state &&
                  !lua_websocket_data(conn, conn->lua_websocket_state, mop, data, data_len)) ||
 #endif
-                (buf[0] & 0xf) == WEBSOCKET_OPCODE_CONNECTION_CLOSE) {  /* Opcode == 8, connection close */
+                (mop & 0xf) == WEBSOCKET_OPCODE_CONNECTION_CLOSE) {  /* Opcode == 8, connection close */
                 break;
             }
 
