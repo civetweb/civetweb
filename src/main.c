@@ -273,16 +273,31 @@ static int set_option(char **options, const char *name, const char *value)
             /* unknown option */
             return 0;
         case CONFIG_TYPE_NUMBER:
+            /* integer number > 0, e.g. number of threads */
             if (atol(value)<1) {
                 /* invalid number */
                 return 0;
             }
             break;
+        case CONFIG_TYPE_STRING:
+            /* any text */
+            break;
         case CONFIG_TYPE_BOOLEAN:
+            /* boolean value, yes or no */
             if ((0!=strcmp(value,"yes")) && (0!=strcmp(value,"no"))) {
                 /* invalid boolean */
                 return 0;
             }
+            break;
+        case CONFIG_TYPE_FILE:
+        case CONFIG_TYPE_DIRECTORY:
+            /* TODO: check this option when it is set, instead of calling verify_existence later */
+            break;
+        case CONFIG_TYPE_EXT_PATTERN:
+            /* list of file extentions */
+            break;
+        default:
+            die("Unknown option type - option %s", name);
             break;
     }
 
@@ -300,10 +315,14 @@ static int set_option(char **options, const char *name, const char *value)
     }
 
     if (i == MAX_OPTIONS) {
-        die("%s", "Too many options specified");
+        die("Too many options specified");
     }
 
-    /* TODO: check if this option is defined and the correct data type, return 1 (OK) or 0 (false) */
+    if (options[2*i] == NULL || options[2*i + 1] == NULL) {
+        die("Out of memory");
+    }
+
+    /* option set correctly */
     return 1;
 }
 
