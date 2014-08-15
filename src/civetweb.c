@@ -7039,11 +7039,15 @@ static int is_valid_uri(const char *uri)
     return uri[0] == '/' || (uri[0] == '*' && uri[1] == '\0');
 }
 
-static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout)
+static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout, int *err)
 {
     const char *cl;
     struct pollfd pfd;
 
+    if (ebuf_len > 0) {
+      ebuf[0] = '\0';
+    }
+    *err = 0;
     reset_per_request_attributes(conn);
     if (timeout >= 0) {
         pfd.fd = conn->client.sock;
@@ -7064,11 +7068,16 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int t
 
     if (conn->request_len == 0 && conn->data_len == conn->buf_size) {
         snprintf(ebuf, ebuf_len, "%s", "Request Too Large");
+	*err = 400;
+	return 0;
     } else if (conn->request_len <= 0) {
         snprintf(ebuf, ebuf_len, "%s", "Client sent malformed request");
+	return 0;
     } else if (parse_http_message(conn->buf, conn->buf_size,
                                   &conn->request_info) <= 0) {
         snprintf(ebuf, ebuf_len, "Bad request: [%.*s]", conn->data_len, conn->buf);
+	*err = 400;
+	return 0;
     } else {
         /* Message is a valid request or response */
         if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
@@ -7089,7 +7098,7 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int t
         }
         conn->birth_time = time(NULL);
     }
-    return ebuf[0] == '\0';
+    return 1;
 }
 
 int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout)
@@ -7097,7 +7106,8 @@ int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int
     /* Implementation of API function for HTTP clients */
     /* TODO: Define proper return values - maybe return length?
              For the first test use <0 for error and >0 for OK */
-    return (getreq(conn, ebuf, ebuf_len, timeout) == 0) ? -1 : +1;
+    int err;
+    return (getreq(conn, ebuf, ebuf_len, timeout, &err) == 0) ? -1 : +1;
 }
 
 struct mg_connection *mg_download(const char *host, int port, int use_ssl,
@@ -7119,7 +7129,8 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
         if (i <= 0) {
             snprintf(ebuf, ebuf_len, "%s", "Error sending request");
         } else {
-            getreq(conn, ebuf, ebuf_len, TIMEOUT_INFINITE);
+	    int err;
+            getreq(conn, ebuf, ebuf_len, TIMEOUT_INFINITE, &err);
         }
     }
 
@@ -7245,11 +7256,14 @@ static void process_new_connection(struct mg_connection *conn)
        to crule42. */
     conn->data_len = 0;
     do {
-        if (!getreq(conn, ebuf, sizeof(ebuf), TIMEOUT_INFINITE)) {
+	int err;
+        if (!getreq(conn, ebuf, sizeof(ebuf), TIMEOUT_INFINITE, &err)) {
             /* The request sent by the client could not be understood by the server,
                or it was incomplete or a timeout. Send an error message and close
                the connection. */
-            send_http_error(conn, 400, "%s", ebuf);
+            if (err > 0) {
+                send_http_error(conn, 400, "%s", ebuf);
+	    }
             conn->must_close = 1;
         } else if (!is_valid_uri(conn->request_info.uri)) {
             snprintf(ebuf, sizeof(ebuf), "Invalid URI: [%s]", ri->uri);
