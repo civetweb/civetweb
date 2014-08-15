@@ -7082,7 +7082,13 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int t
         /* Message is a valid request or response */
         if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
             /* Request/response has content length set */
-            conn->content_len = strtoll(cl, NULL, 10);
+            char *endptr;
+            conn->content_len = strtoll(cl, &endptr, 10);
+            if (endptr == cl) {
+                snprintf(ebuf, ebuf_len, "%s", "Bad Request");
+                *err = 400;
+                return 0;
+            }
             /* Publish the content length back to the request info. */
             conn->request_info.content_length = conn->content_len;
         } else if (!mg_strcasecmp(conn->request_info.request_method, "POST") ||
