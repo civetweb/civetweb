@@ -6232,6 +6232,7 @@ static void reset_per_request_attributes(struct mg_connection *conn)
     conn->num_bytes_sent = conn->consumed_content = 0;
     conn->status_code = -1;
     conn->must_close = conn->request_len = conn->throttle = 0;
+    conn->request_info.content_length = -1;
 }
 
 static void close_socket_gracefully(struct mg_connection *conn)
@@ -6394,6 +6395,8 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
         if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
             /* Request/response has content length set */
             conn->content_len = strtoll(cl, NULL, 10);
+            /* Publish the content length back to the request info. */
+            conn->request_info.content_length = conn->content_len;
         } else if (!mg_strcasecmp(conn->request_info.request_method, "POST") ||
                    !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
             /* POST or PUT request without content length set */

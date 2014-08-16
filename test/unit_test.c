@@ -63,8 +63,8 @@ static int s_failed_tests = 0;
 #define HTTPS_PORT HTTP_PORT
 #define LISTENING_ADDR "127.0.0.1:" HTTP_PORT
 #else
-#define HTTPS_PORT "443"
-#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT ",127.0.0.1:" HTTPS_PORT "s"
+#define HTTPS_PORT "8443"
+#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT ",127.0.0.1:" HTTPS_PORT
 #endif
 
 static void test_parse_http_message() {
@@ -280,6 +280,15 @@ static int begin_request_handler_cb(struct mg_connection *conn) {
         return 1;
     }
 
+    if (!strcmp(ri->uri, "/content_length")) {
+        mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+            "X-Content-Length: %d\r\n"
+            "Content-Type: text/plain\r\n\r\n"
+            "%s", ri->content_length, fetch_data);
+        close_connection(conn);
+        return 1;
+    }
+
     if (!strcmp(ri->uri, "/upload")) {
         ASSERT(ri->query_string != NULL);
         ASSERT(mg_upload(conn, ".") == atoi(ri->query_string));
@@ -338,7 +347,7 @@ static char *read_conn(struct mg_connection *conn, int *size) {
 }
 
 static void test_mg_download(int use_ssl) {
-    char *p1, *p2, ebuf[100];
+    char *p1, *p2, *h, ebuf[100];
     int len1, len2, port;
     struct mg_connection *conn;
     struct mg_context *ctx;
@@ -389,6 +398,28 @@ static void test_mg_download(int use_ssl) {
     /* Fetch in-memory data with no Content-Length, should succeed. */
     ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
         "GET /data HTTP/1.1\r\n\r\n")) != NULL);
+    ASSERT((p1 = read_conn(conn, &len1)) != NULL);
+    ASSERT(len1 == (int) strlen(fetch_data));
+    ASSERT(memcmp(p1, fetch_data, len1) == 0);
+    mg_free(p1);
+    mg_close_connection(conn);
+
+    /* Fetch in-memory data with Content-Length, should succeed and return the defined length. */
+    ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
+        "GET /content_length HTTP/1.1\r\nContent-Length: 10\r\n\r\n0123456789")) != NULL);
+    ASSERT((h = mg_get_header(conn, "X-Content-Length")) != NULL);
+    ASSERT(strcmp(h, "10") == 0);
+    ASSERT((p1 = read_conn(conn, &len1)) != NULL);
+    ASSERT(len1 == (int) strlen(fetch_data));
+    ASSERT(memcmp(p1, fetch_data, len1) == 0);
+    mg_free(p1);
+    mg_close_connection(conn);
+
+    /* Fetch in-memory data without Content-Length, should succeed and return an undefined length. */
+    ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
+        "GET /content_length HTTP/1.1\r\n\r\n0123456789")) != NULL);
+    ASSERT((h = mg_get_header(conn, "X-Content-Length")) != NULL);
+    ASSERT(strcmp(h, "-1") == 0);
     ASSERT((p1 = read_conn(conn, &len1)) != NULL);
     ASSERT(len1 == (int) strlen(fetch_data));
     ASSERT(memcmp(p1, fetch_data, len1) == 0);
