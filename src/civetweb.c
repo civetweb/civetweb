@@ -2299,8 +2299,11 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 
         /* We have returned all buffered data. Read new data from the remote
            socket. */
-        n = pull_all(NULL, conn, (char *) buf, (int64_t) len);
-        nread = n >= 0 ? nread + n : n;
+        if ((n = pull_all(NULL, conn, (char *) buf, (int64_t) len)) >= 0) {
+            nread += n;
+        } else {
+            nread = (nread > 0 ? nread : n);
+        }
     }
     return nread;
 }
