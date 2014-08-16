@@ -64,7 +64,7 @@ static int s_failed_tests = 0;
 #define LISTENING_ADDR "127.0.0.1:" HTTP_PORT
 #else
 #define HTTPS_PORT "8443"
-#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT ",127.0.0.1:" HTTPS_PORT
+#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT ",127.0.0.1:" HTTPS_PORT "s"
 #endif
 
 static void test_parse_http_message() {
@@ -972,7 +972,7 @@ int __cdecl main(void) {
     /* tests with network access */
     test_mg_download(0);
 #ifndef NO_SSL
-    /* TODO: check why mg_download does not work with SSL: test_mg_download(1); */
+    test_mg_download(1);
 #endif
     test_mg_upload();
     test_request_replies();
