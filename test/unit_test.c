@@ -49,15 +49,6 @@ static int s_failed_tests = 0;
     if (!(expr)) FAIL(#expr, __LINE__); \
 } while (0)
 
-/* TODO(bel):
-#define HTTP_PORT "56789"
-#define HTTPS_PORT "56790"
-#define HTTP_PORT2 "56791"
-#define LISTENING_ADDR          \
-    "127.0.0.1:" HTTP_PORT "r"    \
-    ",127.0.0.1:" HTTPS_PORT "s"  \
-    ",127.0.0.1:" HTTP_PORT2
-*/
 #define HTTP_PORT "8080"
 #ifdef NO_SSL
 #define HTTPS_PORT HTTP_PORT
@@ -788,7 +779,7 @@ static void test_request_replies(void) {
     }
     mg_stop(ctx);
 
-/* TODO(bel):
+#ifndef NO_SSL
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
     for (i = 0; tests[i].request != NULL; i++) {
         ASSERT((conn = mg_download("localhost", atoi(HTTPS_PORT), 1, ebuf, sizeof(ebuf), "%s",
@@ -796,7 +787,7 @@ static void test_request_replies(void) {
         mg_close_connection(conn);
     }
     mg_stop(ctx);
-*/
+#endif
 }
 
 static int api_callback(struct mg_connection *conn) {
