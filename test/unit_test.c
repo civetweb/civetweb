@@ -63,8 +63,9 @@ static int s_failed_tests = 0;
 #define HTTPS_PORT HTTP_PORT
 #define LISTENING_ADDR "127.0.0.1:" HTTP_PORT
 #else
+#define HTTP_REDIRECT_PORT "8088"
 #define HTTPS_PORT "8443"
-#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT ",127.0.0.1:" HTTPS_PORT "s"
+#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT ",127.0.0.1:" HTTP_REDIRECT_PORT "r" ",127.0.0.1:" HTTPS_PORT "s"
 #endif
 
 static void test_parse_http_message() {
@@ -510,24 +511,25 @@ static void test_mg_download(int use_ssl) {
     mg_close_connection(conn);
 
     /* Test non existent */
-    ASSERT((conn = mg_download("localhost", atoi(HTTP_PORT), 0,
+    ASSERT((conn = mg_download("localhost", port, use_ssl,
         ebuf, sizeof(ebuf), "%s",
-        "GET /redirect HTTP/1.1\r\n\r\n")) != NULL);
+        "GET /non_exist HTTP/1.1\r\n\r\n")) != NULL);
     ASSERT(strcmp(conn->request_info.request_method, "HTTP/1.1") == 0);
     ASSERT(strcmp(conn->request_info.uri, "404") == 0);
     ASSERT(strcmp(conn->request_info.http_version, "Not Found") == 0);
     mg_close_connection(conn);
 
-    /* Test SSL redirect */
-    /* TODO(bel):
-    ASSERT((conn = mg_download("localhost", atoi(HTTP_PORT), 0,
-        ebuf, sizeof(ebuf), "%s",
-        "GET /redirect HTTP/1.1\r\n\r\n")) != NULL);
-    ASSERT(strcmp(conn->request_info.uri, "302") == 0);
-    ASSERT(strcmp(mg_get_header(conn, "Location"),
-        "https://127.0.0.1:" HTTPS_PORT "/redirect") == 0);
-    mg_close_connection(conn);
-    */
+    if (use_ssl) {
+        /* Test SSL redirect */
+        ASSERT((conn = mg_download("localhost", atoi(HTTP_REDIRECT_PORT), 0,
+            ebuf, sizeof(ebuf), "%s",
+            "GET /data/4711 HTTP/1.1\r\n\r\n")) != NULL);
+        ASSERT(strcmp(conn->request_info.uri, "302") == 0);
+        h = mg_get_header(conn, "Location");
+        ASSERT(h != NULL);
+        ASSERT(strcmp(h, "https://127.0.0.1:" HTTPS_PORT "/data/4711") == 0);
+        mg_close_connection(conn);
+    }
 
     mg_stop(ctx);
 }
