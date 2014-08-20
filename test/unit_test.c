@@ -727,7 +727,7 @@ static void test_mg_stat(void) {
 }
 
 static void test_skip_quoted(void) {
-    char x[] = "a=1, b=2  c='hi \' there'", *s = x, *p;
+    char x[] = "a=1, b=2, c='hi \' there', d='here\\, there'", *s = x, *p;
 
     p = skip_quoted(&s, ", ", ", ", 0);
     ASSERT(p != NULL && !strcmp(p, "a=1"));
@@ -735,13 +735,12 @@ static void test_skip_quoted(void) {
     p = skip_quoted(&s, ", ", ", ", 0);
     ASSERT(p != NULL && !strcmp(p, "b=2"));
 
-    /* TODO(lsm): fix this */
-#if 0
-    p = skip_quoted(&s, "'", ", ", '\\');
-    p = skip_quoted(&s, "'", ", ", '\\');
-    printf("[%s]\n", p);
-    ASSERT(p != NULL && !strcmp(p, "hi ' there"));
-#endif
+    p = skip_quoted(&s, ",", " ", 0);
+    ASSERT(p != NULL && !strcmp(p, "c='hi \' there'"));
+
+    p = skip_quoted(&s, ",", " ", '\\');
+    ASSERT(p != NULL && !strcmp(p, "d='here, there'"));
+    ASSERT(*s == 0);
 }
 
 static void test_alloc_vprintf(void) {

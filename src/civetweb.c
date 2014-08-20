@@ -1187,6 +1187,9 @@ static char *skip_quoted(char **buf, const char *delimiters,
     if (end_word > begin_word) {
         p = end_word - 1;
         while (*p == quotechar) {
+            /* TODO (bel): it seems this code is never reached, so quotechar is actually
+               not needed - check if this code may be droped */
+
             /* If there is anything beyond end_word, copy it */
             if (*end_word == '\0') {
                 *p = '\0';
