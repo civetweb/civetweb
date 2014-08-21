@@ -6615,9 +6615,10 @@ struct mg_connection *mg_client_websocket_connect(const char *host, int port, in
                              "\r\n", path, host, magic, origin);
 
     //Connection object will be null if something goes wrong
-    if(conn == NULL)
+    if(conn == NULL || (strcmp(conn->request_info.uri, "101") != 0))
     {
         DEBUG_TRACE("Websocket client connect error: %s\r\n", error_buffer);
+        if(conn != NULL) { mg_free(conn); conn = NULL; }
         return conn;
     }
 

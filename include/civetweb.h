@@ -573,7 +573,20 @@ CIVETWEB_API void mg_cry(struct mg_connection *conn,
 /* utility method to compare two buffers, case incensitive. */
 CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
 
-/* Connect to a websocket as a client */
+/* Connect to a websocket as a client 
+   Parameters:
+     host: host to connect to, i.e. "echo.websocket.org" or "192.168.1.1" or "localhost"
+     port: server port
+     use_ssl: make a secure connection to server
+     error_buffer, error_buffer_size: error message placeholder.
+     path: server path you are trying to connect to, i.e. if connection to localhost/app, path should be "/app"
+     origin: value of the Origin HTTP header
+     data_func: callback that should be used when data is received from the server
+
+   Return:
+     On success, valid mg_connection object.
+     On error, NULL. */
+     
 typedef int  (*websocket_data_func)(struct mg_connection *, int bits,
                            char *data, size_t data_len);
 CIVETWEB_API struct mg_connection *mg_client_websocket_connect(const char *host, int port, int use_ssl,

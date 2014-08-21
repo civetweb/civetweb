@@ -525,6 +525,57 @@ static void test_mg_download(int use_ssl) {
     mg_stop(ctx);
 }
 
+static int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
+{
+    return 1;
+}
+
+static void test_mg_client_websocket_connect(int use_ssl) {
+    struct mg_connection* conn;
+    char ebuf[100];
+    int port = HTTP_PORT;
+
+    if(use_ssl) { port = HTTPS_PORT; }
+
+    //Try to connect to our own server
+    //TODO: These do not work right now
+
+    //Invalid port test
+    /*conn = mg_client_websocket_connect("localhost", 0, use_ssl,
+                             ebuf, sizeof(ebuf),
+                             "/", "http://localhost",websocket_data_handler);
+    ASSERT(conn == NULL);
+
+    //Should succeed, the default civetweb sever should complete the handshake
+    conn = mg_client_websocket_connect("localhost", port, use_ssl,
+                             ebuf, sizeof(ebuf),
+                             "/", "http://localhost",websocket_data_handler);
+    ASSERT(conn != NULL);*/
+
+
+    //Try an external server test
+    port = 80;
+    if(use_ssl) { port = 443; }
+
+    //Not a websocket server path
+    conn = mg_client_websocket_connect("websocket.org", port, use_ssl,
+                             ebuf, sizeof(ebuf),
+                             "/", "http://websocket.org",websocket_data_handler);
+    ASSERT(conn == NULL);
+
+    //Invalid port test
+    conn = mg_client_websocket_connect("echo.websocket.org", 0, use_ssl,
+                             ebuf, sizeof(ebuf),
+                             "/", "http://websocket.org",websocket_data_handler);
+    ASSERT(conn == NULL);
+
+    //Should succeed, echo.websocket.org echos the data back
+    conn = mg_client_websocket_connect("echo.websocket.org", port, use_ssl,
+                             ebuf, sizeof(ebuf),
+                             "/", "http://websocket.org",websocket_data_handler);
+    ASSERT(conn != NULL);
+}
+
 static int alloc_printf(char **buf, size_t size, char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -1016,6 +1067,12 @@ int __cdecl main(void) {
 #ifndef NO_SSL
     test_mg_download(1);
 #endif
+
+    test_mg_client_websocket_connect(0);
+#ifndef NO_SSL
+    test_mg_client_websocket_connect(1);
+#endif
+
     test_mg_upload();
     test_request_replies();
     test_api_calls();

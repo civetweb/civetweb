@@ -17,7 +17,7 @@
 #define PORT "8888"
 #define SSL_CERT "./ssl/server.pem"
 
-int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
+static int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
 {
     printf("From server: %s\r\n", data);
 
