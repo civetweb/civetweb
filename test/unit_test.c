@@ -49,22 +49,14 @@ static int s_failed_tests = 0;
     if (!(expr)) FAIL(#expr, __LINE__); \
 } while (0)
 
-/* TODO(bel):
-#define HTTP_PORT "56789"
-#define HTTPS_PORT "56790"
-#define HTTP_PORT2 "56791"
-#define LISTENING_ADDR          \
-    "127.0.0.1:" HTTP_PORT "r"    \
-    ",127.0.0.1:" HTTPS_PORT "s"  \
-    ",127.0.0.1:" HTTP_PORT2
-*/
 #define HTTP_PORT "8080"
 #ifdef NO_SSL
 #define HTTPS_PORT HTTP_PORT
 #define LISTENING_ADDR "127.0.0.1:" HTTP_PORT
 #else
-#define HTTPS_PORT "443"
-#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT ",127.0.0.1:" HTTPS_PORT "s"
+#define HTTP_REDIRECT_PORT "8088"
+#define HTTPS_PORT "8443"
+#define LISTENING_ADDR "127.0.0.1:" HTTP_PORT ",127.0.0.1:" HTTP_REDIRECT_PORT "r" ",127.0.0.1:" HTTPS_PORT "s"
 #endif
 
 static void test_parse_http_message() {
@@ -214,7 +206,8 @@ static char *read_file(const char *path, int *size) {
     return data;
 }
 
-static const char *fetch_data = "hello world!\n";
+static long fetch_data_size = 1024*1024;
+static char *fetch_data;
 static const char *inmemory_file_data = "hi there";
 static const char *upload_filename = "upload_test.txt";
 static const char *upload_filename2 = "upload_test2.txt";
@@ -270,12 +263,65 @@ static void upload_cb(struct mg_connection *conn, const char *path) {
 }
 
 static int begin_request_handler_cb(struct mg_connection *conn) {
-    const struct mg_request_info *ri = mg_get_request_info(conn);
 
-    if (!strcmp(ri->uri, "/data")) {
+    const struct mg_request_info *ri = mg_get_request_info(conn);
+    int req_len = (int)(ri->content_length);
+    const char * s_req_len = mg_get_header(conn, "Content-Length");
+    char *data;
+    long to_write, write_now;
+    int bytes_read, bytes_written;
+
+    ASSERT( ((req_len == -1) && (s_req_len==NULL)) || ((s_req_len != NULL) && (req_len = atol(s_req_len))) );
+
+    if (!strncmp(ri->uri, "/data/", 6)) {
+        if (!strcmp(ri->uri+6, "all")) {
+            to_write = fetch_data_size;
+        } else {
+            to_write = atol(ri->uri+6);
+        }
         mg_printf(conn, "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/plain\r\n\r\n"
-            "%s", fetch_data);
+            "Connection: close\r\n"
+            "Content-Length: %li\r\n"
+            "Content-Type: text/plain\r\n\r\n",
+            to_write);
+        while (to_write>0) {
+            write_now = to_write > fetch_data_size ? fetch_data_size : to_write;
+            bytes_written = mg_write(conn, fetch_data, write_now);
+            ASSERT(bytes_written == write_now);
+            to_write -= bytes_written;
+        }
+        close_connection(conn);
+        return 1;
+    }
+
+    if (!strcmp(ri->uri, "/content_length")) {
+        if (req_len>0) {
+            data = mg_malloc(req_len);
+            assert(data != NULL);
+            bytes_read = mg_read(conn, data, req_len);
+            ASSERT(bytes_read == req_len);
+
+            mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                "Connection: close\r\n"
+                "Content-Length: %d\r\n"   /* The official definition */
+                "Content-Type: text/plain\r\n\r\n",
+                bytes_read);
+            mg_write(conn, data, bytes_read);
+
+            mg_free(data);
+        } else {
+            data = mg_malloc(1024);
+            assert(data != NULL);
+            bytes_read = mg_read(conn, data, 1024);
+
+            mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                "Connection: close\r\n"
+                "Content-Type: text/plain\r\n\r\n"
+                );
+            mg_write(conn, data, bytes_read);
+
+            mg_free(data);
+        }
         close_connection(conn);
         return 1;
     }
@@ -338,8 +384,12 @@ static char *read_conn(struct mg_connection *conn, int *size) {
 }
 
 static void test_mg_download(int use_ssl) {
+
+    const char *test_data = "123456789A123456789B";
+
     char *p1, *p2, ebuf[100];
-    int len1, len2, port;
+    const char *h;
+    int i, len1, len2, port;
     struct mg_connection *conn;
     struct mg_context *ctx;
     if (use_ssl) port = atoi(HTTPS_PORT); else port = atoi(HTTP_PORT);
@@ -369,6 +419,7 @@ static void test_mg_download(int use_ssl) {
     /* Fetch unit_test.c, should succeed */
     ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
         "GET /unit_test.c HTTP/1.0\r\n\r\n")) != NULL);
+    ASSERT(&conn->request_info == mg_get_request_info(conn));
     ASSERT(!strcmp(conn->request_info.uri, "200"));
     ASSERT((p1 = read_conn(conn, &len1)) != NULL);
     ASSERT((p2 = read_file("unit_test.c", &len2)) != NULL);
@@ -388,34 +439,88 @@ static void test_mg_download(int use_ssl) {
 
     /* Fetch in-memory data with no Content-Length, should succeed. */
     ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf), "%s",
-        "GET /data HTTP/1.1\r\n\r\n")) != NULL);
+        "GET /data/all HTTP/1.1\r\n\r\n")) != NULL);
+    ASSERT(conn->request_info.content_length == fetch_data_size);
     ASSERT((p1 = read_conn(conn, &len1)) != NULL);
-    ASSERT(len1 == (int) strlen(fetch_data));
+    ASSERT(len1 == (int) fetch_data_size);
     ASSERT(memcmp(p1, fetch_data, len1) == 0);
     mg_free(p1);
     mg_close_connection(conn);
 
-    /* Test SSL redirect, IP address */
-    /* TODO(bel):
-    ASSERT((conn = mg_download("localhost", atoi(HTTP_PORT), 0,
-        ebuf, sizeof(ebuf), "%s",
-        "GET /foo HTTP/1.1\r\n\r\n")) != NULL);
-    ASSERT(strcmp(conn->request_info.uri, "302") == 0);
-    ASSERT(strcmp(mg_get_header(conn, "Location"),
-        "https://127.0.0.1:" HTTPS_PORT "/foo") == 0);
-    mg_close_connection(conn);
-    */
+    /* Fetch in-memory data with no Content-Length, should succeed. */
+    for (i=0; i<=1024*1024*8; i += (i<2 ? 1 : i)) {
+        ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf),
+            "GET /data/%i HTTP/1.1\r\n\r\n", i)) != NULL);
+        ASSERT(conn->request_info.content_length == i);
+        len1 = -1;
+        p1 = read_conn(conn, &len1);
+        if (i==0) {
+            ASSERT(len1 == 0);
+            ASSERT(p1 == 0);
+        } else if (i<=fetch_data_size) {
+            ASSERT(p1 != NULL);
+            ASSERT(len1 == i);
+            ASSERT(memcmp(p1, fetch_data, len1) == 0);
+        } else {
+            ASSERT(p1 != NULL);
+            ASSERT(len1 == i);
+            ASSERT(memcmp(p1, fetch_data, fetch_data_size) == 0);
+        }
 
-    /* Test SSL redirect, Host: */
-    /* TODO(bel):
-    ASSERT((conn = mg_download("localhost", atoi(HTTP_PORT), 0,
-        ebuf, sizeof(ebuf), "%s",
-        "GET /foo HTTP/1.1\r\nHost: a.b:77\n\n")) != NULL);
-    ASSERT(strcmp(conn->request_info.uri, "302") == 0);
-    ASSERT(strcmp(mg_get_header(conn, "Location"),
-        "https://a.b:" HTTPS_PORT "/foo") == 0);
+        mg_free(p1);
+        mg_close_connection(conn);
+    }
+
+    /* Fetch data with Content-Length, should succeed and return the defined length. */
+    ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf),
+        "POST /content_length HTTP/1.1\r\nContent-Length: %u\r\n\r\n%s",
+        strlen(test_data), test_data)) != NULL);
+    h = mg_get_header(conn, "Content-Length");
+    ASSERT((h != NULL) && (atoi(h)==strlen(test_data)));
+    ASSERT((p1 = read_conn(conn, &len1)) != NULL);
+    ASSERT(len1 == (int) strlen(test_data));
+    ASSERT(conn->request_info.content_length == strlen(test_data));
+    ASSERT(memcmp(p1, test_data, len1) == 0);
+    ASSERT(strcmp(conn->request_info.request_method, "HTTP/1.1") == 0);
+    ASSERT(strcmp(conn->request_info.uri, "200") == 0);
+    ASSERT(strcmp(conn->request_info.http_version, "OK") == 0);
+    mg_free(p1);
     mg_close_connection(conn);
-    */
+
+    /* Fetch data without Content-Length, should succeed. It has no content-length header field,
+       but still returns the correct amount of data. It is much slower, since it needs to wait
+       for the connection shutdown. */
+    ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf),
+        "POST /content_length HTTP/1.1\r\n\r\n%s", test_data)) != NULL);
+    h = mg_get_header(conn, "Content-Length");
+    ASSERT(h == NULL);
+    ASSERT(conn->request_info.content_length == -1);
+    ASSERT((p1 = read_conn(conn, &len1)) != NULL);
+    ASSERT(len1 == (int) strlen(test_data));
+    ASSERT(memcmp(p1, test_data, len1) == 0);
+    mg_free(p1);
+    mg_close_connection(conn);
+
+    /* Test non existent */
+    ASSERT((conn = mg_download("localhost", port, use_ssl,
+        ebuf, sizeof(ebuf), "%s",
+        "GET /non_exist HTTP/1.1\r\n\r\n")) != NULL);
+    ASSERT(strcmp(conn->request_info.request_method, "HTTP/1.1") == 0);
+    ASSERT(strcmp(conn->request_info.uri, "404") == 0);
+    ASSERT(strcmp(conn->request_info.http_version, "Not Found") == 0);
+    mg_close_connection(conn);
+
+    if (use_ssl) {
+        /* Test SSL redirect */
+        ASSERT((conn = mg_download("localhost", atoi(HTTP_REDIRECT_PORT), 0,
+            ebuf, sizeof(ebuf), "%s",
+            "GET /data/4711 HTTP/1.1\r\n\r\n")) != NULL);
+        ASSERT(strcmp(conn->request_info.uri, "302") == 0);
+        h = mg_get_header(conn, "Location");
+        ASSERT(h != NULL);
+        ASSERT(strcmp(h, "https://127.0.0.1:" HTTPS_PORT "/data/4711") == 0);
+        mg_close_connection(conn);
+    }
 
     mg_stop(ctx);
 }
@@ -674,7 +779,7 @@ static void test_request_replies(void) {
     }
     mg_stop(ctx);
 
-/* TODO(bel):
+#ifndef NO_SSL
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
     for (i = 0; tests[i].request != NULL; i++) {
         ASSERT((conn = mg_download("localhost", atoi(HTTPS_PORT), 1, ebuf, sizeof(ebuf), "%s",
@@ -682,7 +787,7 @@ static void test_request_replies(void) {
         mg_close_connection(conn);
     }
     mg_stop(ctx);
-*/
+#endif
 }
 
 static int api_callback(struct mg_connection *conn) {
@@ -852,6 +957,7 @@ int __cdecl main(void) {
     char buffer[512];
     FILE * f;
     struct mg_context *ctx;
+    int i;
 
     /* print headline */
     printf("Civetweb %s unit test\n", mg_version());
@@ -899,6 +1005,12 @@ int __cdecl main(void) {
     mg_sleep(1000);
     mg_stop(ctx);
 
+    /* create test data */
+    fetch_data = (char *) mg_malloc(fetch_data_size);
+    for (i=0; i<fetch_data_size; i++) {
+        fetch_data[i] = 'a' + i%10;
+    }
+
     /* tests with network access */
     test_mg_download(0);
 #ifndef NO_SSL
@@ -912,7 +1024,9 @@ int __cdecl main(void) {
     test_lua();
 #endif
 
-    printf("TOTAL TESTS: %d, FAILED: %d\n", s_total_tests, s_failed_tests);
+    /* test completed */
+    mg_free(fetch_data);
 
+    printf("TOTAL TESTS: %d, FAILED: %d\n", s_total_tests, s_failed_tests);
     return s_failed_tests == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
