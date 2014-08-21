@@ -6608,8 +6608,8 @@ static void log_access(const struct mg_connection *conn)
             conn->status_code, conn->num_bytes_sent,
 	    referer, user_agent);
 
-    if (conn->ctx->callbacks.log_message) {
-        conn->ctx->callbacks.log_message(conn, buf);
+    if (conn->ctx->callbacks.log_access) {
+        conn->ctx->callbacks.log_access(conn, buf);
     }
 
     if (fp) {
