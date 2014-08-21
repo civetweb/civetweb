@@ -892,6 +892,7 @@ enum {
 static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 {
     char src_addr[IP_ADDR_STR_LEN] = "";
+    const char *s;
     int i;
 
     sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
@@ -909,6 +910,16 @@ static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
     reg_int(L, "remote_port", conn->request_info.remote_port);
     reg_int(L, "num_headers", conn->request_info.num_headers);
     reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
+    
+    if (conn->request_info.content_length >= 0) {
+        /* reg_int64: content_length */
+        lua_pushstring(L, "content_length");
+        lua_pushnumber(L, conn->request_info.content_length);
+        lua_rawset(L, -3);
+    }
+    if ((s = mg_get_header(conn, "Content-Type")) != NULL) {
+        reg_string(L, "content_type", s);
+    }
 
     if (conn->request_info.remote_user != NULL) {
         reg_string(L, "remote_user", conn->request_info.remote_user);

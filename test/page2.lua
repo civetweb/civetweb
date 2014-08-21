@@ -60,7 +60,7 @@ print_if_available(connect, "connect function")
 mg.write("</ul></p>\n");
 mg.write("<p> Today is " .. os.date("%A") .. "</p>\n");
 
-l = mg.request_info.http_headers["Content-Length"]
+l = mg.request_info.content_length
 if l then
   mg.write("<p>Content-Length = "..l..":<br>\n<pre>\n")
   mg.write(mg.read())
