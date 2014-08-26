@@ -2270,6 +2270,7 @@ static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 int mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
     int64_t n, buffered_len, nread;
+    int64_t len64 = (int64_t)(len > INT_MAX ? INT_MAX : len); /* since the return value is int, we may not read more bytes */
     const char *body;
 
     /* If Content-Length is not set for a PUT or POST request, read until socket is closed */
@@ -2282,7 +2283,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
     if (conn->consumed_content < conn->content_len) {
         /* Adjust number of bytes to read. */
         int64_t to_read = conn->content_len - conn->consumed_content;
-        if (to_read < (int64_t) len) {
+        if (to_read < len64) {
             len = (size_t) to_read;
         }
 
@@ -2290,11 +2291,11 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
         body = conn->buf + conn->request_len + conn->consumed_content;
         buffered_len = (int64_t)(&conn->buf[conn->data_len] - body);
         if (buffered_len > 0) {
-            if (len < (size_t) buffered_len) {
-                buffered_len = (int64_t) len;
+            if (len64 < (size_t) buffered_len) {
+                buffered_len = len64;
             }
             memcpy(buf, body, (size_t) buffered_len);
-            len -= buffered_len;
+            len64 -= buffered_len;
             conn->consumed_content += buffered_len;
             nread += buffered_len;
             buf = (char *) buf + buffered_len;
@@ -2302,13 +2303,13 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 
         /* We have returned all buffered data. Read new data from the remote
            socket. */
-        if ((n = pull_all(NULL, conn, (char *) buf, (int64_t) len)) >= 0) {
+        if ((n = pull_all(NULL, conn, (char *) buf, (int)len64)) >= 0) {
             nread += n;
         } else {
             nread = (nread > 0 ? nread : n);
         }
     }
-    return nread;
+    return (int)nread;
 }
 
 int mg_write(struct mg_connection *conn, const void *buf, size_t len)

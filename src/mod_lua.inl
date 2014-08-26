@@ -910,11 +910,11 @@ static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
     reg_int(L, "remote_port", conn->request_info.remote_port);
     reg_int(L, "num_headers", conn->request_info.num_headers);
     reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
-    
+
     if (conn->request_info.content_length >= 0) {
         /* reg_int64: content_length */
         lua_pushstring(L, "content_length");
-        lua_pushnumber(L, conn->request_info.content_length);
+        lua_pushnumber(L, (lua_Number)conn->request_info.content_length); /* lua_Number may be used as 52 bit integer */
         lua_rawset(L, -3);
     }
     if ((s = mg_get_header(conn, "Content-Type")) != NULL) {
