@@ -1,5 +1,6 @@
 # 
-# Copyright (c) 2013 No Face Press, LLC
+# Copyright (c) 2014 Jordan Shelley
+# https://github.com/jshelley
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
 

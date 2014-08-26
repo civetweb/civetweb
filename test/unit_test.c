@@ -530,7 +530,7 @@ static int websocket_data_handler(struct mg_connection *conn, int flags, char *d
     return 1;
 }
 
-static void test_mg_client_websocket_connect(int use_ssl) {
+static void test_mg_websocket_client_connect(int use_ssl) {
     struct mg_connection* conn;
     char ebuf[100];
     int port = HTTP_PORT;
@@ -558,19 +558,19 @@ static void test_mg_client_websocket_connect(int use_ssl) {
     if(use_ssl) { port = 443; }
 
     //Not a websocket server path
-    conn = mg_client_websocket_connect("websocket.org", port, use_ssl,
+    conn = mg_websocket_client_connect("websocket.org", port, use_ssl,
                              ebuf, sizeof(ebuf),
                              "/", "http://websocket.org",websocket_data_handler);
     ASSERT(conn == NULL);
 
     //Invalid port test
-    conn = mg_client_websocket_connect("echo.websocket.org", 0, use_ssl,
+    conn = mg_websocket_client_connect("echo.websocket.org", 0, use_ssl,
                              ebuf, sizeof(ebuf),
                              "/", "http://websocket.org",websocket_data_handler);
     ASSERT(conn == NULL);
 
     //Should succeed, echo.websocket.org echos the data back
-    conn = mg_client_websocket_connect("echo.websocket.org", port, use_ssl,
+    conn = mg_websocket_client_connect("echo.websocket.org", port, use_ssl,
                              ebuf, sizeof(ebuf),
                              "/", "http://websocket.org",websocket_data_handler);
     ASSERT(conn != NULL);
@@ -1068,9 +1068,9 @@ int __cdecl main(void) {
     test_mg_download(1);
 #endif
 
-    test_mg_client_websocket_connect(0);
+    test_mg_websocket_client_connect(0);
 #ifndef NO_SSL
-    test_mg_client_websocket_connect(1);
+    test_mg_websocket_client_connect(1);
 #endif
 
     test_mg_upload();

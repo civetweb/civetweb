@@ -6596,7 +6596,7 @@ static void* websocket_client_thread(void *data)
     return NULL;
 }
 
-struct mg_connection *mg_client_websocket_connect(const char *host, int port, int use_ssl,
+struct mg_connection *mg_websocket_client_connect(const char *host, int port, int use_ssl,
                                                char *error_buffer, size_t error_buffer_size,
                                                const char *path, const char *origin, websocket_data_func data_func)
 {

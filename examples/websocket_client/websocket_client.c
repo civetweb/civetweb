@@ -1,9 +1,10 @@
 /*
-* Copyright (c) 2013 No Face Press, LLC
+* Copyright (c) 2014 Jordan Shelley
+* https://github.com/jshelley
 * License http://opensource.org/licenses/mit-license.php MIT License
 */
 
-// Simple example program on how to use Embedded C interface.
+// Simple example program on how to use websocket client embedded C interface.
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -38,7 +39,7 @@ int main(int argc, char *argv[])
     ctx = mg_start(&callbacks, 0, options);
 
     char ebuf[100];
-    struct mg_connection* newconn = mg_client_websocket_connect("echo.websocket.org", 443, 1,
+    struct mg_connection* newconn = mg_websocket_client_connect("echo.websocket.org", 443, 1,
                              ebuf, sizeof(ebuf),
                              "/", "http://websocket.org",websocket_data_handler);
 

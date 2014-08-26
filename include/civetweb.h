@@ -589,7 +589,7 @@ CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
      
 typedef int  (*websocket_data_func)(struct mg_connection *, int bits,
                            char *data, size_t data_len);
-CIVETWEB_API struct mg_connection *mg_client_websocket_connect(const char *host, int port, int use_ssl,
+CIVETWEB_API struct mg_connection *mg_websocket_client_connect(const char *host, int port, int use_ssl,
                                                char *error_buffer, size_t error_buffer_size,
                                                const char *path, const char *origin, websocket_data_func data_func);
 
