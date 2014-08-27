@@ -533,25 +533,25 @@ static int websocket_data_handler(struct mg_connection *conn, int flags, char *d
 static void test_mg_websocket_client_connect(int use_ssl) {
     struct mg_connection* conn;
     char ebuf[100];
-    int port = HTTP_PORT;
+    int port;
+    struct mg_context *ctx;
 
-    if (use_ssl) { port = HTTPS_PORT; }
+    if (use_ssl) port = atoi(HTTPS_PORT); else port = atoi(HTTP_PORT);
+    ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
 
     /* Try to connect to our own server */
-    
-    #if 0 /* TODO: These do not work right now */
-    /* Invalid port test */    
-    conn = mg_client_websocket_connect("localhost", 0, use_ssl,
+    /* Invalid port test */
+    conn = mg_websocket_client_connect("localhost", 0, use_ssl,
                              ebuf, sizeof(ebuf),
                              "/", "http://localhost",websocket_data_handler);
     ASSERT(conn == NULL);
-        
+
     /* Should succeed, the default civetweb sever should complete the handshake */
-    conn = mg_client_websocket_connect("localhost", port, use_ssl,
+    conn = mg_websocket_client_connect("localhost", port, use_ssl,
                              ebuf, sizeof(ebuf),
                              "/", "http://localhost",websocket_data_handler);
     ASSERT(conn != NULL);
-    #endif
+
 
     /* Try an external server test */
     port = 80;
@@ -574,6 +574,8 @@ static void test_mg_websocket_client_connect(int use_ssl) {
                              ebuf, sizeof(ebuf),
                              "/", "http://websocket.org",websocket_data_handler);
     ASSERT(conn != NULL);
+
+    mg_stop(ctx);
 }
 
 static int alloc_printf(char **buf, size_t size, char *fmt, ...) {
