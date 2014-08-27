@@ -6445,6 +6445,7 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
     return conn;
 }
 
+#if defined(USE_WEBSOCKET)
 static void* websocket_client_thread(void *data)
 {
     struct mg_connection* conn = (struct mg_connection*)data;
@@ -6454,13 +6455,17 @@ static void* websocket_client_thread(void *data)
 
     return NULL;
 }
+#endif
 
 struct mg_connection *mg_websocket_client_connect(const char *host, int port, int use_ssl,
                                                char *error_buffer, size_t error_buffer_size,
                                                const char *path, const char *origin, websocket_data_func data_func)
 {
+    struct mg_connection* conn = NULL;
+
+#if defined(USE_WEBSOCKET)
     static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
-    static const char *handshake_req;
+    static const char *handshake_req;    
 
     if(origin != NULL)
     {
@@ -6485,7 +6490,7 @@ struct mg_connection *mg_websocket_client_connect(const char *host, int port, in
     }
 
     /* Establish the client connection and request upgrade */
-    struct mg_connection* conn = mg_download(host, port, use_ssl,
+    conn = mg_download(host, port, use_ssl,
                              error_buffer, error_buffer_size,
                              handshake_req, path, host, magic, origin);
 
@@ -6510,6 +6515,7 @@ struct mg_connection *mg_websocket_client_connect(const char *host, int port, in
         conn = NULL;
         DEBUG_TRACE("Websocket client connect thread could not be started\r\n");
     }
+#endif
 
     return conn;
 }
