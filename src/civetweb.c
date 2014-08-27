@@ -5144,7 +5144,8 @@ static void read_websocket(struct mg_connection *conn)
 
     /* Loop continuously, reading messages from the socket, invoking the
        callback, and waiting repeatedly until an error occurs. */
-    assert(conn->content_len == 0);
+    /* TODO: Investigate if this next line is needed
+    assert(conn->content_len == 0); */
     for (;;) {
         header_len = 0;
         assert(conn->data_len >= conn->request_len);
@@ -6440,6 +6441,75 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
         conn = NULL;
     }
     va_end(ap);
+
+    return conn;
+}
+
+static void* websocket_client_thread(void *data)
+{
+    struct mg_connection* conn = (struct mg_connection*)data;
+    read_websocket(conn);
+
+    DEBUG_TRACE("Websocket client thread exited\n");
+
+    return NULL;
+}
+
+struct mg_connection *mg_websocket_client_connect(const char *host, int port, int use_ssl,
+                                               char *error_buffer, size_t error_buffer_size,
+                                               const char *path, const char *origin, websocket_data_func data_func)
+{
+    static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
+    static const char *handshake_req;
+
+    if(origin != NULL)
+    {
+        handshake_req = "GET %s HTTP/1.1\r\n"
+                            "Host: %s\r\n"
+                            "Upgrade: websocket\r\n"
+                            "Connection: Upgrade\r\n"
+                            "Sec-WebSocket-Key: %s\r\n"
+                            "Sec-WebSocket-Version: 13\r\n"
+                            "Origin: %s\r\n"
+                             "\r\n";
+    }
+    else
+    {
+        handshake_req = "GET %s HTTP/1.1\r\n"
+                            "Host: %s\r\n"
+                            "Upgrade: websocket\r\n"
+                            "Connection: Upgrade\r\n"
+                            "Sec-WebSocket-Key: %s\r\n"
+                            "Sec-WebSocket-Version: 13\r\n"
+                             "\r\n";
+    }
+
+    /* Establish the client connection and request upgrade */
+    struct mg_connection* conn = mg_download(host, port, use_ssl,
+                             error_buffer, error_buffer_size,
+                             handshake_req, path, host, magic, origin);
+
+    /* Connection object will be null if something goes wrong */
+    if(conn == NULL || (strcmp(conn->request_info.uri, "101") != 0))
+    {
+        DEBUG_TRACE("Websocket client connect error: %s\r\n", error_buffer);
+        if(conn != NULL) { mg_free(conn); conn = NULL; }
+        return conn;
+    }
+
+    /* For client connections, mg_context is fake. Set the callback for websocket 
+     data manually here so that read_websocket will automatically call it */
+    conn->ctx->callbacks.websocket_data = data_func;
+
+    /* Start a thread to read the websocket client connection
+    This thread will automatically stop when mg_disconnect is 
+    called on the client connection */
+    if(mg_start_thread(websocket_client_thread, (void*)conn) != 0)
+    {
+        mg_free((void*)conn);
+        conn = NULL;
+        DEBUG_TRACE("Websocket client connect thread could not be started\r\n");
+    }
 
     return conn;
 }
