@@ -7,6 +7,7 @@
 // Simple example program on how to use websocket client embedded C interface.
 #ifdef _WIN32
 #include <Windows.h>
+#define sleep(x) Sleep(1000*(x))
 #else
 #include <unistd.h>
 #endif
@@ -20,7 +21,9 @@
 
 static int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
 {
-    printf("From server: %s\r\n", data);
+    printf("From server: ");
+    fwrite(data, 1, data_len, stdout);
+    printf("\r\n");
 
     return 1;
 }
@@ -34,16 +37,17 @@ int main(int argc, char *argv[])
                              };
     struct mg_callbacks callbacks;
     struct mg_context *ctx;
+    struct mg_connection* newconn;
+    char ebuf[100];
 
     memset(&callbacks, 0, sizeof(callbacks));
     ctx = mg_start(&callbacks, 0, options);
 
-    char ebuf[100];
-    struct mg_connection* newconn = mg_websocket_client_connect("echo.websocket.org", 443, 1,
+    newconn = mg_websocket_client_connect("echo.websocket.org", 443, 1,
                              ebuf, sizeof(ebuf),
                              "/", "http://websocket.org",websocket_data_handler);
 
-    if(newconn == NULL)
+    if (newconn == NULL)
     {
         printf("Error: %s", ebuf);
         return 1;
