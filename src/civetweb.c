@@ -6292,8 +6292,9 @@ static void close_connection(struct mg_connection *conn)
 #endif
 
     /* call the connection_close callback if assigned */
-    if (conn->ctx->callbacks.connection_close != NULL)
+    if ((conn->ctx->callbacks.connection_close != NULL) && (conn->ctx->context_type == 1)) {
         conn->ctx->callbacks.connection_close(conn);
+    }
 
     mg_lock_connection(conn);
 
@@ -6475,6 +6476,10 @@ static void* websocket_client_thread(void *data)
 
     DEBUG_TRACE("Websocket client thread exited\n");
 
+    if (conn->ctx->callbacks.connection_close != NULL) {
+        conn->ctx->callbacks.connection_close(conn);
+    }
+
 #ifdef _WIN32
     return 0;
 #else
@@ -6483,9 +6488,11 @@ static void* websocket_client_thread(void *data)
 }
 #endif
 
-struct mg_connection *mg_websocket_client_connect(const char *host, int port, int use_ssl,
+struct mg_connection *mg_connect_websocket_client(const char *host, int port, int use_ssl,
                                                char *error_buffer, size_t error_buffer_size,
-                                               const char *path, const char *origin, websocket_data_func data_func, void * user_data)
+                                               const char *path, const char *origin,
+                                               websocket_data_func data_func, websocket_close_func close_func,
+                                               void * user_data)
 {
     struct mg_connection* conn = NULL;
     struct mg_context * newctx = NULL;
@@ -6534,6 +6541,7 @@ struct mg_connection *mg_websocket_client_connect(const char *host, int port, in
     newctx = (struct mg_context *) mg_malloc(sizeof(struct mg_context));
     memcpy(newctx, conn->ctx, sizeof(struct mg_context));
     newctx->callbacks.websocket_data = data_func; /* read_websocket will automatically call it */
+    newctx->callbacks.connection_close = close_func;
     newctx->user_data = user_data;
     newctx->context_type = 2; /* client context type */
     newctx->workerthreadcount = 1; /* one worker thread will be created */

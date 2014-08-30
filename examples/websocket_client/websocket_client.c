@@ -78,7 +78,9 @@ struct mg_context * start_websocket_server()
 {
     const char * options[] = { "document_root", DOCUMENT_ROOT,
         "ssl_certificate", SSL_CERT,
-        "listening_ports", PORT, 0
+        "listening_ports", PORT,
+        "request_timeout_ms", "5000",
+        0
     };
     struct mg_callbacks callbacks;
     struct mg_context *ctx;
@@ -100,6 +102,7 @@ struct mg_context * start_websocket_server()
 struct tclient_data {
     void * data;
     size_t len;
+    int closed;
 };
 
 static int websocket_client_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
@@ -107,7 +110,7 @@ static int websocket_client_data_handler(struct mg_connection *conn, int flags, 
     struct mg_context *ctx = mg_get_context(conn);
     struct tclient_data *pclient_data = (struct tclient_data *) mg_get_user_data(ctx);
 
-    printf("From server: ");
+    printf("Client received data from server: ");
     fwrite(data, 1, data_len, stdout);
     printf("\n");
 
@@ -119,14 +122,25 @@ static int websocket_client_data_handler(struct mg_connection *conn, int flags, 
     return 1;
 }
 
+static void websocket_client_close_handler(struct mg_connection *conn)
+{
+    struct mg_context *ctx = mg_get_context(conn);
+    struct tclient_data *pclient_data = (struct tclient_data *) mg_get_user_data(ctx);
+
+    printf("Client: Close handler\n");
+    pclient_data->closed++;
+}
+
 
 int main(int argc, char *argv[])
 {
     struct mg_context *ctx = NULL;
-    struct tclient_data client1_data = {NULL, 0};
-    struct tclient_data client2_data = {NULL, 0};
+    struct tclient_data client1_data = {NULL, 0, 0};
+    struct tclient_data client2_data = {NULL, 0, 0};
+    struct tclient_data client3_data = {NULL, 0, 0};
     struct mg_connection* newconn1 = NULL;
     struct mg_connection* newconn2 = NULL;
+    struct mg_connection* newconn3 = NULL;
     char ebuf[100] = {0};
 
     assert(websocket_welcome_msg_len == strlen(websocket_welcome_msg));
@@ -136,9 +150,10 @@ int main(int argc, char *argv[])
     assert(ctx != NULL);
     printf("Server init\n\n");
 
-    /* Then connect a client */
-    newconn1 = mg_websocket_client_connect("localhost", atoi(PORT), 0, ebuf, sizeof(ebuf),
-        "/websocket", NULL, websocket_client_data_handler, &client1_data);
+    /* Then connect a first client */
+    newconn1 = mg_connect_websocket_client("localhost", atoi(PORT), 0, ebuf, sizeof(ebuf),
+        "/websocket", NULL, websocket_client_data_handler, websocket_client_close_handler,
+        &client1_data);
 
     if (newconn1 == NULL)
     {
@@ -147,6 +162,8 @@ int main(int argc, char *argv[])
     }
 
     sleep(1); /* Should get the websocket welcome message */
+    assert(client1_data.closed == 0);
+    assert(client2_data.closed == 0);
     assert(client2_data.data == NULL);
     assert(client2_data.len == 0);
     assert(client1_data.data != NULL);
@@ -159,6 +176,8 @@ int main(int argc, char *argv[])
     mg_websocket_write(newconn1, WEBSOCKET_OPCODE_TEXT, "data1", 5);
 
     sleep(1); /* Should get the acknowledge message */
+    assert(client1_data.closed == 0);
+    assert(client2_data.closed == 0);
     assert(client2_data.data == NULL);
     assert(client2_data.len == 0);
     assert(client1_data.data != NULL);
@@ -168,9 +187,10 @@ int main(int argc, char *argv[])
     client1_data.data = NULL;
     client1_data.len = 0;
 
-    /* Then connect a client */
-    newconn2 = mg_websocket_client_connect("localhost", atoi(PORT), 0, ebuf, sizeof(ebuf),
-        "/websocket", NULL, websocket_client_data_handler, &client2_data);
+    /* Now connect a second client */
+    newconn2 = mg_connect_websocket_client("localhost", atoi(PORT), 0, ebuf, sizeof(ebuf),
+        "/websocket", NULL, websocket_client_data_handler, websocket_client_close_handler,
+        &client2_data);
 
     if (newconn2 == NULL)
     {
@@ -179,6 +199,8 @@ int main(int argc, char *argv[])
     }
 
     sleep(1); /* Client 2 should get the websocket welcome message */
+    assert(client1_data.closed == 0);
+    assert(client2_data.closed == 0);
     assert(client1_data.data == NULL);
     assert(client1_data.len == 0);
     assert(client2_data.data != NULL);
@@ -191,6 +213,8 @@ int main(int argc, char *argv[])
     mg_websocket_write(newconn1, WEBSOCKET_OPCODE_TEXT, "data2", 5);
 
     sleep(1); /* Should get the acknowledge message */
+    assert(client1_data.closed == 0);
+    assert(client2_data.closed == 0);
     assert(client2_data.data == NULL);
     assert(client2_data.len == 0);
     assert(client1_data.data != NULL);
@@ -203,6 +227,8 @@ int main(int argc, char *argv[])
     mg_websocket_write(newconn1, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
     sleep(1); /* Should get the goodbye message */
+    assert(client1_data.closed == 0);
+    assert(client2_data.closed == 0);
     assert(client2_data.data == NULL);
     assert(client2_data.len == 0);
     assert(client1_data.data != NULL);
@@ -215,6 +241,8 @@ int main(int argc, char *argv[])
     mg_close_connection(newconn1);
 
     sleep(1); /* Won't get any message */
+    assert(client1_data.closed == 1);
+    assert(client2_data.closed == 0);
     assert(client1_data.data == NULL);
     assert(client1_data.len == 0);
     assert(client2_data.data == NULL);
@@ -223,6 +251,8 @@ int main(int argc, char *argv[])
     mg_websocket_write(newconn2, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
     sleep(1); /* Should get the goodbye message */
+    assert(client1_data.closed == 1);
+    assert(client2_data.closed == 0);
     assert(client1_data.data == NULL);
     assert(client1_data.len == 0);
     assert(client2_data.data != NULL);
@@ -235,15 +265,39 @@ int main(int argc, char *argv[])
     mg_close_connection(newconn2);
 
     sleep(1); /* Won't get any message */
+    assert(client1_data.closed == 1);
+    assert(client2_data.closed == 1);
     assert(client1_data.data == NULL);
     assert(client1_data.len == 0);
     assert(client2_data.data == NULL);
     assert(client2_data.len == 0);
 
+    /* Connect client 3 */
+    newconn3 = mg_connect_websocket_client("localhost", atoi(PORT), 0, ebuf, sizeof(ebuf),
+        "/websocket", NULL, websocket_client_data_handler, websocket_client_close_handler,
+        &client3_data);
+
+    sleep(1); /* Client 3 should get the websocket welcome message */
+    assert(client1_data.closed == 1);
+    assert(client2_data.closed == 1);
+    assert(client3_data.closed == 0);
+    assert(client1_data.data == NULL);
+    assert(client1_data.len == 0);
+    assert(client2_data.data == NULL);
+    assert(client2_data.len == 0);
+    assert(client3_data.data != NULL);
+    assert(client3_data.len == websocket_welcome_msg_len);
+    assert(!memcmp(client3_data.data, websocket_welcome_msg, websocket_welcome_msg_len));
+    free(client3_data.data);
+    client3_data.data = NULL;
+    client3_data.len = 0;
+
     mg_stop(ctx);
     printf("Server shutdown\n");
 
     sleep(10);
+
+    assert(client3_data.closed == 1);
 
     return 0;
 }

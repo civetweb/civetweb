@@ -582,6 +582,7 @@ CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
      path: server path you are trying to connect to, i.e. if connection to localhost/app, path should be "/app"
      origin: value of the Origin HTTP header
      data_func: callback that should be used when data is received from the server
+     user_data: user supplied argument
 
    Return:
      On success, valid mg_connection object.
@@ -589,11 +590,14 @@ CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
 
 typedef int  (*websocket_data_func)(struct mg_connection *, int bits,
                            char *data, size_t data_len);
-CIVETWEB_API struct mg_connection *mg_websocket_client_connect(const char *host, int port, int use_ssl,
+
+typedef void (*websocket_close_func)(struct mg_connection *);
+
+CIVETWEB_API struct mg_connection *mg_connect_websocket_client(const char *host, int port, int use_ssl,
                                                char *error_buffer, size_t error_buffer_size,
                                                const char *path, const char *origin,
-                                               websocket_data_func data_func, void * user_data);
-
+                                               websocket_data_func data_func, websocket_close_func close_func,
+                                               void * user_data);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

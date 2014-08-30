@@ -541,15 +541,15 @@ static void test_mg_websocket_client_connect(int use_ssl) {
 
     /* Try to connect to our own server */
     /* Invalid port test */
-    conn = mg_websocket_client_connect("localhost", 0, use_ssl,
+    conn = mg_connect_websocket_client("localhost", 0, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://localhost", websocket_data_handler, NULL);
+                             "/", "http://localhost", websocket_data_handler, NULL, NULL);
     ASSERT(conn == NULL);
 
     /* Should succeed, the default civetweb sever should complete the handshake */
-    conn = mg_websocket_client_connect("localhost", port, use_ssl,
+    conn = mg_connect_websocket_client("localhost", port, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://localhost", websocket_data_handler, NULL);
+                             "/", "http://localhost", websocket_data_handler, NULL, NULL);
     ASSERT(conn != NULL);
 
     /* Try an external server test */
@@ -557,21 +557,21 @@ static void test_mg_websocket_client_connect(int use_ssl) {
     if (use_ssl) { port = 443; }
 
     /* Not a websocket server path */
-    conn = mg_websocket_client_connect("websocket.org", port, use_ssl,
+    conn = mg_connect_websocket_client("websocket.org", port, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://websocket.org", websocket_data_handler, NULL);
+                             "/", "http://websocket.org", websocket_data_handler, NULL, NULL);
     ASSERT(conn == NULL);
 
     /* Invalid port test */
-    conn = mg_websocket_client_connect("echo.websocket.org", 0, use_ssl,
+    conn = mg_connect_websocket_client("echo.websocket.org", 0, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://websocket.org", websocket_data_handler, NULL);
+                             "/", "http://websocket.org", websocket_data_handler, NULL, NULL);
     ASSERT(conn == NULL);
 
     /* Should succeed, echo.websocket.org echos the data back */
-    conn = mg_websocket_client_connect("echo.websocket.org", port, use_ssl,
+    conn = mg_connect_websocket_client("echo.websocket.org", port, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://websocket.org", websocket_data_handler, NULL);
+                             "/", "http://websocket.org", websocket_data_handler, NULL, NULL);
     ASSERT(conn != NULL);
 
     mg_stop(ctx);
