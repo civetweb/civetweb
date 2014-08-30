@@ -779,6 +779,7 @@ struct mg_context {
     char *config[NUM_OPTIONS];      /* Civetweb configuration parameters */
     struct mg_callbacks callbacks;  /* User-defined callback function */
     void *user_data;                /* User-defined data */
+    int context_type;               /* 1 = server context, 2 = client context */
 
     struct socket *listening_sockets;
     in_port_t *listening_ports;
@@ -5146,7 +5147,7 @@ static void read_websocket(struct mg_connection *conn)
        callback, and waiting repeatedly until an error occurs. */
     /* TODO: Investigate if this next line is needed
     assert(conn->content_len == 0); */
-    for (;;) {
+    while (!conn->ctx->stop_flag) {
         header_len = 0;
         assert(conn->data_len >= conn->request_len);
         if ((body_len = conn->data_len - conn->request_len) >= 2) {
@@ -6316,12 +6317,29 @@ static void close_connection(struct mg_connection *conn)
 
 void mg_close_connection(struct mg_connection *conn)
 {
+    struct mg_context * client_ctx = NULL;
+    int i;
+
+    if (conn->ctx->context_type == 2) {
+        client_ctx = conn->ctx;
+        /* client context: loops must end */
+        conn->ctx->stop_flag = 1;
+    }
+
 #ifndef NO_SSL
     if (conn->client_ssl_ctx != NULL) {
         SSL_CTX_free((SSL_CTX *) conn->client_ssl_ctx);
     }
 #endif
     close_connection(conn);
+    if (client_ctx != NULL) {
+        /* join worker thread and free context */
+        for (i = 0; i < client_ctx->workerthreadcount; i++) {
+            mg_join_thread(client_ctx->workerthreadids[i]);
+        }
+        mg_free(client_ctx->workerthreadids);
+        mg_free(client_ctx);
+    }
     (void) pthread_mutex_destroy(&conn->mutex);
     mg_free(conn);
 }
@@ -6446,26 +6464,35 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
 }
 
 #if defined(USE_WEBSOCKET)
+#ifdef _WIN32
+static unsigned __stdcall websocket_client_thread(void *data)
+#else
 static void* websocket_client_thread(void *data)
+#endif
 {
     struct mg_connection* conn = (struct mg_connection*)data;
     read_websocket(conn);
 
     DEBUG_TRACE("Websocket client thread exited\n");
 
+#ifdef _WIN32
+    return 0;
+#else
     return NULL;
+#endif
 }
 #endif
 
 struct mg_connection *mg_websocket_client_connect(const char *host, int port, int use_ssl,
                                                char *error_buffer, size_t error_buffer_size,
-                                               const char *path, const char *origin, websocket_data_func data_func)
+                                               const char *path, const char *origin, websocket_data_func data_func, void * user_data)
 {
     struct mg_connection* conn = NULL;
+    struct mg_context * newctx = NULL;
 
 #if defined(USE_WEBSOCKET)
     static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
-    static const char *handshake_req;    
+    static const char *handshake_req;
 
     if(origin != NULL)
     {
@@ -6502,15 +6529,24 @@ struct mg_connection *mg_websocket_client_connect(const char *host, int port, in
         return conn;
     }
 
-    /* For client connections, mg_context is fake. Set the callback for websocket 
-     data manually here so that read_websocket will automatically call it */
-    conn->ctx->callbacks.websocket_data = data_func;
+    /* For client connections, mg_context is fake. Since we need to set a callback
+       function, we need to create a copy and modify it. */
+    newctx = (struct mg_context *) mg_malloc(sizeof(struct mg_context));
+    memcpy(newctx, conn->ctx, sizeof(struct mg_context));
+    newctx->callbacks.websocket_data = data_func; /* read_websocket will automatically call it */
+    newctx->user_data = user_data;
+    newctx->context_type = 2; /* client context type */
+    newctx->workerthreadcount = 1; /* one worker thread will be created */
+    newctx->workerthreadids = (pthread_t*) mg_calloc(newctx->workerthreadcount, sizeof(pthread_t));
+    conn->ctx = newctx;
 
     /* Start a thread to read the websocket client connection
-    This thread will automatically stop when mg_disconnect is 
+    This thread will automatically stop when mg_disconnect is
     called on the client connection */
-    if(mg_start_thread(websocket_client_thread, (void*)conn) != 0)
+    if (mg_start_thread_with_id(websocket_client_thread, (void*)conn, newctx->workerthreadids) != 0)
     {
+        mg_free((void*)newctx->workerthreadids);
+        mg_free((void*)newctx);
         mg_free((void*)conn);
         conn = NULL;
         DEBUG_TRACE("Websocket client connect thread could not be started\r\n");
@@ -7134,6 +7170,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         ctx->callbacks.init_context(ctx);
     }
     ctx->callbacks.exit_context = exit_callback;
+    ctx->context_type = 1; /* server context */
 
     /* Start master (listening) thread */
     mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid);

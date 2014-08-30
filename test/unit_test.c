@@ -543,15 +543,14 @@ static void test_mg_websocket_client_connect(int use_ssl) {
     /* Invalid port test */
     conn = mg_websocket_client_connect("localhost", 0, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://localhost",websocket_data_handler);
+                             "/", "http://localhost", websocket_data_handler, NULL);
     ASSERT(conn == NULL);
 
     /* Should succeed, the default civetweb sever should complete the handshake */
     conn = mg_websocket_client_connect("localhost", port, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://localhost",websocket_data_handler);
+                             "/", "http://localhost", websocket_data_handler, NULL);
     ASSERT(conn != NULL);
-
 
     /* Try an external server test */
     port = 80;
@@ -560,19 +559,19 @@ static void test_mg_websocket_client_connect(int use_ssl) {
     /* Not a websocket server path */
     conn = mg_websocket_client_connect("websocket.org", port, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://websocket.org",websocket_data_handler);
+                             "/", "http://websocket.org", websocket_data_handler, NULL);
     ASSERT(conn == NULL);
 
     /* Invalid port test */
     conn = mg_websocket_client_connect("echo.websocket.org", 0, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://websocket.org",websocket_data_handler);
+                             "/", "http://websocket.org", websocket_data_handler, NULL);
     ASSERT(conn == NULL);
 
     /* Should succeed, echo.websocket.org echos the data back */
     conn = mg_websocket_client_connect("echo.websocket.org", port, use_ssl,
                              ebuf, sizeof(ebuf),
-                             "/", "http://websocket.org",websocket_data_handler);
+                             "/", "http://websocket.org", websocket_data_handler, NULL);
     ASSERT(conn != NULL);
 
     mg_stop(ctx);
