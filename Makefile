@@ -55,7 +55,7 @@ BUILD_DIRS += $(BUILD_DIR)/test
 endif
 
 # only set main compile options if none were chosen
-CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT)
+CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400 -DUSE_TIMERS
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG_ENABLED
@@ -104,7 +104,7 @@ MAIN_OBJECTS = $(addprefix $(BUILD_DIR)/, $(APP_SOURCES:.c=.o))
 LIB_OBJECTS = $(filter-out $(MAIN_OBJECTS), $(BUILD_OBJECTS))
 
 
-LIBS = -lpthread -lm
+LIBS = -lpthread -lm -llua5.2 -ldl -lrt
 
 ifeq ($(TARGET_OS),LINUX)
 	LIBS += -ldl
