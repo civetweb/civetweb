@@ -9,10 +9,11 @@
 #ifdef __cplusplus
 
 #include "civetweb.h"
-#include <vector>
+#include <map>
 #include <string>
 
-class CivetServer; // forward declaration
+// forward declaration
+class CivetServer;
 
 /**
  * Basic interface for a URI request handler.  Handlers implementations
@@ -69,7 +70,7 @@ public:
 /**
  * CivetServer
  *
- * Basic class for embedded web server.  This has a URL mapping built-in.
+ * Basic class for embedded web server.  This has an URL mapping built-in.
  */
 class CivetServer
 {
@@ -127,16 +128,18 @@ public:
      *
      * Removes a handler.
      *
-     * @param - the exact URL used in addHandler().
+     * @param uri - the exact URL used in addHandler().
      */
     void removeHandler(const std::string &uri);
 
     /**
      * getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)
+     *
+     * Puts the cookie value string that matches the cookie name in the cookieValue destinaton string.
+     *
      * @param conn - the connection information
      * @param cookieName - cookie name to get the value from
      * @param cookieValue - cookie value is returned using thiis reference
-     * @puts the cookie value string that matches the cookie name in the _cookieValue string.
      * @returns the size of the cookie value string read.
     */
     static int getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue);
@@ -154,13 +157,18 @@ public:
      *
      * Returns a query paramter contained in the supplied buffer.  The
      * occurance value is a zero-based index of a particular key name.  This
-     * should nto be confused with the index over all of the keys.
+     * should not be confused with the index over all of the keys.  Note that this
+     * function assumes that parameters are sent as text in http query string
+     * format, which is the default for web forms. This function will work for
+     * html forms with method="GET" and method="POST" attributes. In other cases,
+     * you may use a getParam version that directly takes the data instead of the
+     * connection as a first argument.
      *
-     * @param data the query string
-     * @param name the key to search for
-     * @param the destination string
-     * @param occurrence the occurrence of the selected name in the query (0 based).
-     * @return true of key was found
+     * @param conn - parameters are read from the data sent through this connection
+     * @param name - the key to search for
+     * @param dst - the destination string
+     * @param occurrence - the occurrence of the selected name in the query (0 based).
+     * @return true if key was found
      */
     static bool getParam(struct mg_connection *conn, const char *name,
                          std::string &dst, size_t occurrence=0);
@@ -170,13 +178,13 @@ public:
      *
      * Returns a query paramter contained in the supplied buffer.  The
      * occurance value is a zero-based index of a particular key name.  This
-     * should nto be confused with the index over all of the keys.
+     * should not be confused with the index over all of the keys.
      *
-     * @param data the query string
-     * @param name the key to search for
-     * @param the destination string
-     * @param occurrence the occurrence of the selected name in the query (0 based).
-     * @return true of key was found
+     * @param data - the query string (text)
+     * @param name - the key to search for
+     * @param dst - the destination string
+     * @param occurrence - the occurrence of the selected name in the query (0 based).
+     * @return true if key was found
      */
     static bool getParam(const std::string &data, const char *name,
                          std::string &dst, size_t occurrence=0) {
@@ -188,14 +196,14 @@ public:
      *
      * Returns a query paramter contained in the supplied buffer.  The
      * occurance value is a zero-based index of a particular key name.  This
-     * should nto be confused with the index over all of the keys.
+     * should not be confused with the index over all of the keys.
      *
-     * @param data the query string
-     * @param length length of the query string
-     * @param name the key to search for
-     * @param the destination string
-     * @param occurrence the occurrence of the selected name in the query (0 based).
-     * @return true of key was found
+     * @param data the - query string (text)
+     * @param data_len - length of the query string
+     * @param name - the key to search for
+     * @param dst - the destination string
+     * @param occurrence - the occurrence of the selected name in the query (0 based).
+     * @return true if key was found
      */
     static bool getParam(const char *data, size_t data_len, const char *name,
                          std::string &dst, size_t occurrence=0);
@@ -204,9 +212,9 @@ public:
     /**
      * urlDecode(const std::string &, std::string &, bool)
      *
-     * @param src string to be decoded
-     * @param dst destination string
-     * @is_form_url_encoded true if form url encoded
+     * @param src - string to be decoded
+     * @param dst - destination string
+     * @param is_form_url_encoded - true if form url encoded
      *       form-url-encoded data differs from URI encoding in a way that it
      *       uses '+' as character for space, see RFC 1866 section 8.2.1
      *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
@@ -218,10 +226,10 @@ public:
     /**
      * urlDecode(const char *, size_t, std::string &, bool)
      *
-     * @param src buffer to be decoded
-     * @param src_len length of buffer to be decoded
-     * @param dst destination string
-     * @is_form_url_encoded true if form url encoded
+     * @param src - buffer to be decoded
+     * @param src_len - length of buffer to be decoded
+     * @param dst - destination string
+     * @param is_form_url_encoded - true if form url encoded
      *       form-url-encoded data differs from URI encoding in a way that it
      *       uses '+' as character for space, see RFC 1866 section 8.2.1
      *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
@@ -231,9 +239,9 @@ public:
     /**
      * urlDecode(const char *, std::string &, bool)
      *
-     * @param src buffer to be decoded (0 terminated)
-     * @param dst destination string
-     * @is_form_url_encoded true if form url encoded
+     * @param src - buffer to be decoded (0 terminated)
+     * @param dst - destination string
+     * @param is_form_url_encoded true - if form url encoded
      *       form-url-encoded data differs from URI encoding in a way that it
      *       uses '+' as character for space, see RFC 1866 section 8.2.1
      *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
@@ -243,9 +251,9 @@ public:
     /**
      * urlEncode(const std::string &, std::string &, bool)
      *
-     * @param src buffer to be encoded
-     * @param dst destination string
-     * @append true if string should not be cleared before encoding.
+     * @param src - buffer to be encoded
+     * @param dst - destination string
+     * @param append - true if string should not be cleared before encoding.
      */
     static void urlEncode(const std::string &src, std::string &dst, bool append=false) {
         urlEncode(src.c_str(), src.length(), dst, append);
@@ -254,26 +262,34 @@ public:
     /**
      * urlEncode(const char *, size_t, std::string &, bool)
      *
-     * @param src buffer to be encoded (0 terminated)
-     * @param dst destination string
-     * @append true if string should not be cleared before encoding.
+     * @param src - buffer to be encoded (0 terminated)
+     * @param dst - destination string
+     * @param append - true if string should not be cleared before encoding.
      */
     static void urlEncode(const char *src, std::string &dst, bool append=false);
 
     /**
      * urlEncode(const char *, size_t, std::string &, bool)
      *
-     * @param src buffer to be encoded
-     * @param src_len length of buffer to be decoded
-     * @param dst destination string
-     * @append true if string should not be cleared before encoding.
+     * @param src - buffer to be encoded
+     * @param src_len - length of buffer to be decoded
+     * @param dst - destination string
+     * @param append - true if string should not be cleared before encoding.
      */
     static void urlEncode(const char *src, size_t src_len, std::string &dst, bool append=false);
 
 protected:
+    class CivetConnection {
+    public:
+        char * postData;
+        unsigned long postDataLen;
+
+        CivetConnection();
+        ~CivetConnection();
+    };
 
     struct mg_context *context;
-    char * postData;
+    std::map<struct mg_connection *, class CivetConnection> connections;
 
 private:
     /**

@@ -9,6 +9,8 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#else
+#include <unistd.h>
 #endif
 
 #define DOCUMENT_ROOT "."
@@ -22,14 +24,14 @@ class ExampleHandler: public CivetHandler
 public:
     bool handleGet(CivetServer *server, struct mg_connection *conn) {
         mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
-        mg_printf(conn, "<html><body>");
-        mg_printf(conn, "<h2>This is an example text from a C++ handler</h2>");
-        mg_printf(conn, "<p>To see a page from the A handler <a href=\"A\">click here</a></p>");
-        mg_printf(conn, "<p>To see a page from the A/B handler <a href=\"A/B\">click here</a></p>");
-        mg_printf(conn, "<p>To see a page from the *.foo handler <a href=\"xy.foo\">click here</a></p>");
-        mg_printf(conn, "<p>To exit <a href=\"%s\">click here</a></p>",
-                  EXIT_URI);
-        mg_printf(conn, "</body></html>\n");
+        mg_printf(conn, "<html><body>\r\n");
+        mg_printf(conn, "<h2>This is an example text from a C++ handler</h2>\r\n");
+        mg_printf(conn, "<p>To see a page from the A handler <a href=\"A\">click here</a></p>\r\n");
+        mg_printf(conn, "<p>To see a page from the A handler with a parameter <a href=\"A?param=1\">click here</a></p>\r\n");
+        mg_printf(conn, "<p>To see a page from the A/B handler <a href=\"A/B\">click here</a></p>\r\n");
+        mg_printf(conn, "<p>To see a page from the *.foo handler <a href=\"xy.foo\">click here</a></p>\r\n");
+        mg_printf(conn, "<p>To exit <a href=\"%s\">click here</a></p>\r\n", EXIT_URI);
+        mg_printf(conn, "</body></html>\r\n");
         return true;
     }
 };

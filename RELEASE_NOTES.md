@@ -1,10 +1,33 @@
-Release Notes v1.6 (Under Development)
+Release Notes v1.7 (Under Development)
 ===
-### Objectives: *Enhance Lua support, bug fixes and updates"
+### Objectives: *???*
 
 Changes
 -------
 
+- Add a websocket client example
+- Add a websocket client API
+- Update websocket example
+- New API functions: access context, callback for create/delete, access user data
+- Upgraded Lua from 5.2.2 to 5.2.3
+- Integrate LuaXML
+- Fix compiler warnings
+- Updated version number
+
+Release Notes v1.6
+===
+### Objectives: *Enhance Lua support, configuration dialog for windows, new examples, bug fixes and updates*
+
+Changes
+-------
+
+- Add examples of Lua pages, scripts and websockets to the test directory (bel)
+- Add dialog to change htpasswd files for the Windows standalone server (bel)
+- Fix compiler warnings and warnings from static code analysis (Danny Al-Gaaf, jmc-, Thomas, bel, ...)
+- Add new unit tests (bel)
+- Support includes in htpasswd files (bel)
+- Add a basic option check for the standalone executable (bel)
+- Support user defined error pages (bel)
 - Method to get POST request parameters via C++ interface (bel)
 - Re-Add unit tests for Linux and Windows (jmc-, bel)
 - Allow to specify title and tray icon for the Windows standalone server (bel)
@@ -25,7 +48,8 @@ Changes
 - Fixes for Lua Server Pages, as described within the google groups thread. (bel)
 - Added support for plain Lua Scripts, and an example script. (bel)
 - A completely new, and more illustrative websocket example for C. (bel)
-- An implementation of "Websocket for Lua", which allows to configure an optional websocket_root directory, incl. URL rewriting. Added an example. The Lua interface may change if the threading model changes.  (bel)
+- Websocket for Lua (bel)
+- An optional websocket_root directory, including URL rewriting (bel)
 - Update of SQLite3 to 3.8.1. (bel)
 - Add "date" header field to replies, according to the requirements of RFC 2616 (the HTTP standard), Section 14.18 (bel)
 - Fix websocket long pull (celeron55)
@@ -182,6 +206,6 @@ Changes
 
 - Renamed Mongoose to Civetweb in the code and documentation.
 - Replaced copyrighted images with new images
-- Created a new code respository at https://github.com/sunsetbrew/civetweb
+- Created a new code respository at https://github.com/bel2125/civetweb
 - Created a distribution site at https://sourceforge.net/projects/civetweb/
 - Basic build testing

@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-CIVETWEB_VERSION = 1.6
-CIVETWEB_SITE = http://github.com/sunsetbrew/civetweb/tarball/v$(CIVETWEB_VERSION)
+CIVETWEB_VERSION = 1.7
+CIVETWEB_SITE = http://github.com/bel2125/civetweb/tarball/v$(CIVETWEB_VERSION)
 CIVETWEB_LICENSE = MIT
 CIVETWEB_LICENSE_FILES = LICENSE.md
 

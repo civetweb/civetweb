@@ -9,6 +9,7 @@ int main(void)
 {
     struct mg_context *ctx = 0;
     struct mg_callbacks callback_funcs = {0};
+    tWebSockContext ws_ctx;
     char inbuf[4];
 
     const char *server_options[] = {
@@ -22,12 +23,14 @@ int main(void)
         NULL
     };
 
-    websock_init_lib();
-
+    callback_funcs.init_context = websock_init_lib;
+    callback_funcs.exit_context = websock_exit_lib;
     callback_funcs.websocket_ready = websocket_ready_handler;
     callback_funcs.websocket_data = websocket_data_handler;
     callback_funcs.connection_close = connection_close_handler;
-    ctx = mg_start(&callback_funcs, NULL, server_options);
+
+    ctx = mg_start(&callback_funcs, &ws_ctx, server_options);
+    printf("Connect to localhost:%s/websock.htm\n", mg_get_option(ctx, "listening_ports"));
 
     puts("Enter an (ASCII) character or * to exit:");
     for (;;) {
@@ -37,11 +40,10 @@ int main(void)
            break;
         }
         inbuf[0] = toupper(inbuf[0]);
-        websock_send_broadcast(inbuf, 1);
+        websock_send_broadcast(ctx, inbuf, 1);
     }
 
     mg_stop(ctx);
-    websock_exit_lib();
 
     return 0;
 }

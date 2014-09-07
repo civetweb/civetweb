@@ -3,7 +3,7 @@
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
 
-LUA_DIR = src/third_party/lua-5.2.2/src
+LUA_DIR = src/third_party/lua-5.2.3/src
 
 LUA_SOURCE_FILES = lapi.c  \
     lauxlib.c \

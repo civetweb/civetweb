@@ -105,7 +105,7 @@ static char *messages_to_json(long last_id)
         // messages (it may be too small if the ringbuffer is full and all
         // messages are large. in this case asserts will trigger).
         len += snprintf(buf + len, sizeof(buf) - len,
-                        "{user: '%s', text: '%s', timestamp: %lu, id: %lu},",
+                        "{user: '%s', text: '%s', timestamp: %lu, id: %ld},",
                         message->user, message->text, message->timestamp, message->id);
         assert(len > 0);
         assert((size_t) len < sizeof(buf));

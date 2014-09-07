@@ -7,7 +7,7 @@ Files
 ------
 
 There is just a small set of files to compile in to the application,
-but if a library is desired, see [Building.md](https://github.com/sunsetbrew/civetweb/blob/master/docs/Building.md)
+but if a library is desired, see [Building.md](https://github.com/bel2125/civetweb/blob/master/docs/Building.md)
 
 #### Regarding the INL file extension
 The *INL* file extension represents code that is statically included inline in a source file.  Slightly different from C++ where it means "inline" code which is technically not the same as static code. Civetweb overloads this extension for the sake of clearity as opossed to having .c extensions on files that should not be directly compiled.
@@ -64,7 +64,7 @@ Lua is a server side include functionality.  Files ending in .la will be process
 ##### Add the following sources
 
   - src/mod_lua.inl
-  - src/third_party/lua-5.2.2/src
+  - src/third_party/lua-5.2.3/src
      + lapi.c
      + lauxlib.c
      + lbaselib.c
@@ -128,7 +128,7 @@ limit on number of simultaneous requests that can be handled by civetweb.
 
 When master thread accepts new connection, a new accepted socket (described by
 `struct socket`) it placed into the accepted sockets queue,
-which has size of 20 (see [code](https://github.com/sunsetbrew/civetweb/blob/3892e0199e6ca9613b160535d9d107ede09daa43/civetweb.c#L486)). Any idle worker thread
+which has size of 20 (see [code](https://github.com/bel2125/civetweb/blob/3892e0199e6ca9613b160535d9d107ede09daa43/civetweb.c#L486)). Any idle worker thread
 can grab accepted sockets from that queue. If all worker threads are busy,
 master thread can accept and queue up to 20 more TCP connections,
 filling up the queue.

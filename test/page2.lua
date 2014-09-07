@@ -16,12 +16,19 @@ function print_if_available(tab, name)
   end
 end
 
-function recurse(tab)
+function recurse(tab, excl)
+  excl = excl or {}
   mg.write("<ul>\n")
   for k,v in pairs(tab) do
     if type(v) == "table" then
       mg.write("<li>" .. tostring(k) .. ":</li>\n")
-      recurse(v)
+      if excl[v] then
+        -- cyclic
+      else
+        excl[v] = true
+        recurse(v, excl)
+        excl[v] = false
+      end
     else
       mg.write("<li>" .. tostring(k) .. " = " .. tostring(v) .. "</li>\n")
     end
@@ -40,6 +47,8 @@ mg.write("</ul>\n")
 print_if_available(sqlite3, "sqlite3 binding")
 print_if_available(lfs, "lua file system")
 
+--recurse(_G)
+
 -- Print mg library
 libname = "mg"
 print_if_available(_G[libname], libname .. " library")
@@ -51,13 +60,21 @@ print_if_available(connect, "connect function")
 mg.write("</ul></p>\n");
 mg.write("<p> Today is " .. os.date("%A") .. "</p>\n");
 
+l = mg.request_info.content_length
+if l then
+  mg.write("<p>Content-Length = "..l..":<br>\n<pre>\n")
+  mg.write(mg.read())
+  mg.write("\n</pre>\n</p>\n")
+end
+
 mg.write("<p>\n");
 
  if lfs then
   mg.write("Files in " .. lfs.currentdir())
   mg.write("\n<ul>\n")
   for f in lfs.dir(".") do
-    mg.write("<li>" .. f .. "</li>\n")
+    local mime = mg.get_mime_type(f)
+    mg.write("<li>" .. f .. " (" .. mime .. ")</li>\n")
     local at = lfs.attributes(f);
     recurse(at)
   end

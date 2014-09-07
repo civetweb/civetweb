@@ -1,16 +1,17 @@
 Civetweb Install Guide
 ====
 
-This guide covers the distributions for CivetWeb.  The latest source code is available at [https://github.com/sunsetbrew/civetweb](https://github.com/sunsetbrew/civetweb).
+This guide covers the distributions for CivetWeb.  The latest source code is available at [https://github.com/bel2125/civetweb](https://github.com/bel2125/civetweb).
 
 Windows
 ---
 
 This pre-built version comes pre-built wit Lua support. Libraries for SSL support are not included due to licensing restrictions;
 however, users may add an SSL library themselves.
-Instructions for adding SSL support can be found in [https://github.com/sunsetbrew/civetweb/tree/master/docs](https://github.com/sunsetbrew/civetweb/tree/master/docs)
+Instructions for adding SSL support can be found in [https://github.com/bel2125/civetweb/tree/master/docs](https://github.com/bel2125/civetweb/tree/master/docs)
 
-1. Install the [Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
+1a. 32 Bit: Install the [Visual C++ Redistributable for Visual Studio 2010](http://www.microsoft.com/en-us/download/details.aspx?id=8328)
+1b. 64 Bit: Install the [Visual C++ Redistributable for Visual Studio 2013](http://www.microsoft.com/en-us/download/details.aspx?id=40784)
 2. Download latest *civetweb-win.zip* from [SourceForge](https://sourceforge.net/projects/civetweb/files/)
 3. When started, Civetweb puts itself into the tray.
 
