@@ -55,7 +55,9 @@ BUILD_DIRS += $(BUILD_DIR)/test
 endif
 
 # only set main compile options if none were chosen
-CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400 -DUSE_TIMERS
+CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400
+
+LIBS = -lpthread -lm
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG_ENABLED
@@ -70,8 +72,12 @@ else
   LCC = $(CC)
 endif
 
+ifdef WITH_LUA_SHARED
+  WITH_LUA = 1
+endif
+
 ifdef WITH_LUA
- include resources/Makefile.in-lua
+  include resources/Makefile.in-lua
 endif
 
 ifdef WITH_IPV6
@@ -80,6 +86,10 @@ endif
 
 ifdef WITH_WEBSOCKET
   CFLAGS += -DUSE_WEBSOCKET
+  ifdef WITH_LUA
+    CFLAGS += -DUSE_TIMERS
+	LIBS += -lrt
+  endif
 endif
 
 ifdef CONFIG_FILE
@@ -103,22 +113,23 @@ BUILD_OBJECTS = $(addprefix $(BUILD_DIR)/, $(OBJECTS))
 MAIN_OBJECTS = $(addprefix $(BUILD_DIR)/, $(APP_SOURCES:.c=.o))
 LIB_OBJECTS = $(filter-out $(MAIN_OBJECTS), $(BUILD_OBJECTS))
 
-
-LIBS = -lpthread -lm -llua5.2 -ldl -lrt
-
 ifeq ($(TARGET_OS),LINUX)
-	LIBS += -ldl
+  LIBS += -ldl
 endif
 
 ifeq ($(TARGET_OS),LINUX)
-	CAN_INSTALL = 1
+  CAN_INSTALL = 1
+endif
+
+ifdef WITH_LUA_SHARED
+  LIBS += -llua5.2
 endif
 
 ifneq (, $(findstring MINGW32, $(UNAME)))
-   LIBS += -lws2_32 -lcomdlg32
-   SHARED_LIB=dll
+  LIBS += -lws2_32 -lcomdlg32
+  SHARED_LIB=dll
 else
-   SHARED_LIB=so
+  SHARED_LIB=so
 endif
 
 all: build
