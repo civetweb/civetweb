@@ -514,7 +514,8 @@ static void verify_existence(char **options, const char *option_name,
 static void set_absolute_path(char *options[], const char *option_name,
                               const char *path_to_civetweb_exe)
 {
-    char path[PATH_MAX] = "", abs[PATH_MAX] = "", *option_value;
+    char path[PATH_MAX] = "", abs[PATH_MAX] = "";
+    const char *option_value;
     const char *p;
 
     /* Check whether option is already set */
@@ -543,19 +544,40 @@ static void set_absolute_path(char *options[], const char *option_name,
     }
 }
 
+
+#ifdef USE_LUA
+#define main luatest_main
+#define luaL_openlibs lua_civet_openlibs
+extern void lua_civet_openlibs(struct lua_State *L);
+#include "../src/third_party/lua-5.2.3/src/lua.c"
+#undef main
+#endif
+
+
 static void start_civetweb(int argc, char *argv[])
 {
     struct mg_callbacks callbacks;
     char *options[2*MAX_OPTIONS+1];
     int i;
 
-    /* Edit passwords file if -A option is specified */
+    /* Edit passwords file, if -A option is specified */
     if (argc > 1 && !strcmp(argv[1], "-A")) {
         if (argc != 6) {
             show_usage_and_exit();
         }
         exit(mg_modify_passwords_file(argv[2], argv[3], argv[4], argv[5]) ?
              EXIT_SUCCESS : EXIT_FAILURE);
+    }
+
+    /* Call Lua with additional Civetweb specific Lua functions, if -L option is specified */
+    if (argc > 1 && !strcmp(argv[1], "-L")) {
+#ifdef WIN32
+        MakeConsole();
+#endif
+#ifdef USE_LUA
+        exit(luatest_main(argc-1, &argv[1]));
+#endif
+        exit(EXIT_FAILURE);
     }
 
     /* Show usage if -h or --help options are specified */
@@ -1458,6 +1480,9 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+#include <fcntl.h>
+#include <io.h>
+
 static int MakeConsole() {
     DWORD err;
     int ok = (GetConsoleWindow() != NULL);
@@ -1472,9 +1497,22 @@ static int MakeConsole() {
             }
             AttachConsole(GetCurrentProcessId());
         }
-        freopen("CON", "a", stdout);
-        freopen("CON", "a", stderr);
+
         ok = (GetConsoleWindow() != NULL);
+        if (ok) {
+            freopen("CON", "a", stdin);
+            freopen("CON", "a", stdout);
+            freopen("CON", "a", stderr);
+        }
+    }
+    if (ok) {
+        CONSOLE_SCREEN_BUFFER_INFO coninfo;
+
+        SetConsoleTitle(server_name);
+
+        GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &coninfo);
+        if (coninfo.dwSize.Y<500) coninfo.dwSize.Y = 500;
+        SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), coninfo.dwSize);
     }
     return ok;
 }
@@ -1519,6 +1557,14 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
     /* Return the WM_QUIT value. */
     return (int) msg.wParam;
 }
+
+#if defined(CONSOLE)
+void main(void)
+{
+    WinMain(0, 0, 0, 0);
+}
+#endif
+
 #elif defined(USE_COCOA)
 #import <Cocoa/Cocoa.h>
 
