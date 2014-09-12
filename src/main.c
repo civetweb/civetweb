@@ -1500,20 +1500,16 @@ static int MakeConsole() {
 
         ok = (GetConsoleWindow() != NULL);
         if (ok) {
-            freopen("CON", "a", stdin);
-            freopen("CON", "a", stdout);
-            freopen("CON", "a", stderr);
+            freopen("CONIN$", "r", stdin); 
+            freopen("CONOUT$", "w", stdout); 
+            freopen("CONOUT$", "w", stderr); 
         }
     }
+
     if (ok) {
-        CONSOLE_SCREEN_BUFFER_INFO coninfo;
-
         SetConsoleTitle(server_name);
-
-        GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &coninfo);
-        if (coninfo.dwSize.Y<500) coninfo.dwSize.Y = 500;
-        SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), coninfo.dwSize);
     }
+
     return ok;
 }
 
