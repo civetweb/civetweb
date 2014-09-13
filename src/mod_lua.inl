@@ -948,10 +948,10 @@ static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 
 static void prepare_lua_environment(struct mg_context * ctx, struct mg_connection *conn, struct lua_websock_data *conn_list, lua_State *L, const char *script_name, int lua_env_type)
 {
-    const char * preload_file = ((conn != NULL) ? conn->ctx->config[LUA_PRELOAD_FILE] : NULL);
-
     extern void luaL_openlibs(lua_State *);
     luaL_openlibs(L);
+
+    assert(ctx);
 
 #ifdef USE_LUA_SQLITE3
     {
@@ -1061,13 +1061,19 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
         "debug.traceback(e, 1)) end"));
 
     /* Preload */
-    if ((preload_file != NULL) && (*preload_file != 0)) {
-        IGNORE_UNUSED_RESULT(luaL_dofile(L, preload_file));
+    if (ctx->config[LUA_PRELOAD_FILE] != NULL) {
+        IGNORE_UNUSED_RESULT(luaL_dofile(L, ctx->config[LUA_PRELOAD_FILE]));
     }
 
     if (ctx->callbacks.init_lua != NULL) {
         ctx->callbacks.init_lua(conn, L);
     }
+}
+
+void lua_civet_openlibs(lua_State *L)
+{
+    static struct mg_context fake_ctx;
+    prepare_lua_environment(&fake_ctx, NULL, NULL, L, NULL, 0);
 }
 
 static int lua_error_handler(lua_State *L)
