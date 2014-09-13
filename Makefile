@@ -88,7 +88,7 @@ ifdef WITH_WEBSOCKET
   CFLAGS += -DUSE_WEBSOCKET
   ifdef WITH_LUA
     CFLAGS += -DUSE_TIMERS
-	LIBS += -lrt
+    LIBS += -lrt
   endif
 endif
 
@@ -144,7 +144,8 @@ help:
 	@echo "make unit_test           build unit tests executable"
 	@echo ""
 	@echo " Make Options"
-	@echo "   WITH_LUA=1            build with Lua support"
+	@echo "   WITH_LUA=1            build with Lua support; include Lua as static library"
+	@echo "   WITH_LUA_SHARED=1     build with Lua support; use dynamic linking to liblua5.2.so"
 	@echo "   WITH_DEBUG=1          build with GDB debug support"
 	@echo "   WITH_IPV6=1           with IPV6 support"
 	@echo "   WITH_WEBSOCKET=1      build with web socket support"

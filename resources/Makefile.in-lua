@@ -1,4 +1,4 @@
-# 
+#
 # Copyright (c) 2013 No Face Press, LLC
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
@@ -53,9 +53,9 @@ LUA_SOURCE_FILES = lapi.c  \
     lzio.c
 
 $(info Lua linked static)
-	
+
 endif
-	
+
 LUA_SOURCES = $(addprefix $(LUA_DIR)/, $(LUA_SOURCE_FILES))
 LUA_OBJECTS = $(LUA_SOURCES:.c=.o)
 
