@@ -894,11 +894,8 @@ enum {
 
 static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 {
-    char src_addr[IP_ADDR_STR_LEN] = "";
     const char *s;
     int i;
-
-    sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
 
     /* Export mg.request_info */
     lua_pushstring(L, "request_info");
@@ -907,8 +904,10 @@ static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
     reg_string(L, "uri", conn->request_info.uri);
     reg_string(L, "http_version", conn->request_info.http_version);
     reg_string(L, "query_string", conn->request_info.query_string);
+#if defined(MG_LEGACY_INTERFACE)
     reg_int(L, "remote_ip", conn->request_info.remote_ip); /* remote_ip is deprecated, use remote_addr instead */
-    reg_string(L, "remote_addr", src_addr);
+#endif
+    reg_string(L, "remote_addr", conn->request_info.remote_addr);
     /* TODO: ip version */
     reg_int(L, "remote_port", conn->request_info.remote_port);
     reg_int(L, "num_headers", conn->request_info.num_headers);

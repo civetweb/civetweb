@@ -3957,7 +3957,7 @@ static int parse_http_message(char *buf, int len, struct mg_request_info *ri)
 {
     int is_request, request_length = get_request_len(buf, len);
     if (request_length > 0) {
-        /* Reset attributes. DO NOT TOUCH is_ssl, remote_ip, remote_port */
+        /* Reset attributes. DO NOT TOUCH is_ssl, remote_ip, remote_addr, remote_port */
         ri->remote_user = ri->request_method = ri->uri = ri->http_version = NULL;
         ri->num_headers = 0;
 
@@ -6687,9 +6687,12 @@ static void *worker_thread_run(void *thread_func_param)
                Thanks to Johannes Winkelmann for the patch.
                TODO(lsm): Fix IPv6 case */
             conn->request_info.remote_port = ntohs(conn->client.rsa.sin.sin_port);
+            sockaddr_to_string(conn->request_info.remote_addr, sizeof(conn->request_info.remote_addr), &conn->client.rsa);
+/* TODO: #if defined(MG_LEGACY_INTERFACE) */
             memcpy(&conn->request_info.remote_ip,
                    &conn->client.rsa.sin.sin_addr.s_addr, 4);
             conn->request_info.remote_ip = ntohl(conn->request_info.remote_ip);
+/* #endif */
             conn->request_info.is_ssl = conn->client.is_ssl;
 
             if (!conn->client.is_ssl

@@ -851,7 +851,7 @@ static int api_callback(struct mg_connection *conn) {
     ASSERT(mg_read(conn, post_data, sizeof(post_data)) == 3);
     ASSERT(memcmp(post_data, "b=1", 3) == 0);
     ASSERT(ri->query_string != NULL);
-    ASSERT(ri->remote_ip > 0);
+    ASSERT(ri->remote_addr[0] != 0);
     ASSERT(ri->remote_port > 0);
     ASSERT(strcmp(ri->http_version, "1.0") == 0);
 
