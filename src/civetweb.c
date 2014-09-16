@@ -2292,7 +2292,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
         body = conn->buf + conn->request_len + conn->consumed_content;
         buffered_len = (int64_t)(&conn->buf[conn->data_len] - body);
         if (buffered_len > 0) {
-            if (len64 < (size_t) buffered_len) {
+            if (len64 < buffered_len) {
                 buffered_len = len64;
             }
             memcpy(buf, body, (size_t) buffered_len);
