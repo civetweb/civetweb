@@ -865,6 +865,32 @@ struct de {
 static int is_websocket_request(const struct mg_connection *conn);
 #endif
 
+int mg_atomic_inc(volatile int * addr)
+{
+    int ret;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    ret = InterlockedIncrement(addr);
+#elif defined(__GNUC__)
+    ret = __sync_add_and_fetch(addr, 1);
+#else    
+    ret = (++(*addr));
+#endif
+    return ret;
+}
+
+int mg_atomic_dec(volatile int * addr)
+{
+    int ret;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    ret = InterlockedDecrement(addr);
+#elif defined(__GNUC__)
+    ret = __sync_sub_and_fetch(addr, 1);
+#else
+    ret = (--(*addr));
+#endif
+    return ret;
+}
+
 #if defined(MG_LEGACY_INTERFACE)
 const char **mg_get_valid_option_names(void)
 {
@@ -6983,8 +7009,7 @@ static void free_context(struct mg_context *ctx)
     }
 
     /* Deallocate the tls variable */
-    sTlsInit--;
-    if (sTlsInit==0) {
+    if (mg_atomic_dec(&sTlsInit)==0) {
         pthread_key_delete(sTlsKey);
     }
 
@@ -7066,15 +7091,18 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     if ((ctx = (struct mg_context *) mg_calloc(1, sizeof(*ctx))) == NULL) {
         return NULL;
     }
-
-    if (sTlsInit==0) {
-        if (0 != pthread_key_create(&sTlsKey, NULL)) {
+    
+    if (mg_atomic_inc(&sTlsInit)==1) {
+        if (0 != pthread_key_create(&sTlsKey, NULL)) {            
             /* Fatal error - abort start. However, this situation should never occur in practice. */
+            mg_atomic_dec(&sTlsInit);
             mg_cry(fc(ctx), "Cannot initialize thread local storage");
-            mg_free(ctx);
+            mg_free(ctx);            
             return NULL;
-        }
-        sTlsInit++;
+        }        
+    } else {
+       /* TODO: check if sTlsKey is already initialized */
+       mg_sleep(1);
     }
 
     ok =  0==pthread_mutex_init(&ctx->thread_mutex, NULL);
