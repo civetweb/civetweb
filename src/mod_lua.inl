@@ -1266,13 +1266,12 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
     if (!ok) {
         /* Remove from ws connection list. */
         /* TODO: Check if list entry and Lua state needs to be deleted (see websocket_close). */
-        (*shared_websock_list)->ws.conn[--(ws->references)] = 0;
-        ws = NULL;
+        (*shared_websock_list)->ws.conn[--(ws->references)] = 0;    
     }
 
     (void)pthread_mutex_unlock(&(ws->ws_mutex));
 
-    return (void*)ws;
+    return ok ? (void*)ws : NULL;
 }
 
 static int lua_websocket_data(struct mg_connection * conn, void *ws_arg, int bits, char *data, size_t data_len)
