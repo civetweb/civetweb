@@ -601,6 +601,8 @@ struct ssl_func {
   (* (void (*)(unsigned long (*)(void))) crypto_sw[2].ptr)
 #define ERR_get_error (* (unsigned long (*)(void)) crypto_sw[3].ptr)
 #define ERR_error_string (* (char * (*)(unsigned long,char *)) crypto_sw[4].ptr)
+#define CRYPTO_get_id_callback \
+  (* (unsigned long (*(*)(void))(void)) crypto_sw[5].ptr)
 
 /* set_ssl_option() function updates this array.
    It loads SSL library dynamically and changes NULLs to the actual addresses
@@ -640,6 +642,7 @@ static struct ssl_func crypto_sw[] = {
     {"CRYPTO_set_id_callback", NULL},
     {"ERR_get_error",  NULL},
     {"ERR_error_string", NULL},
+    {"CRYPTO_get_id_callback", NULL},
     {NULL,    NULL}
 };
 #endif /* NO_SSL */
@@ -6095,7 +6098,8 @@ static int set_uid_option(struct mg_context *ctx)
 #endif /* !_WIN32 */
 
 #if !defined(NO_SSL)
-static pthread_mutex_t *ssl_mutexes;
+static pthread_mutex_t ssl_mutexes_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t *ssl_mutexes = NULL;
 
 static int sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 {
@@ -6213,28 +6217,34 @@ static int set_ssl_option(struct mg_context *ctx)
         (void) SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem);
     }
 
-    /* Initialize locking callbacks, needed for thread safety.
-       http://www.openssl.org/support/faq.html#PROG1 */
-    size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
-    if ((ssl_mutexes = (pthread_mutex_t *) mg_malloc((size_t)size)) == NULL) {
-        mg_cry(fc(ctx), "%s: cannot allocate mutexes: %s", __func__, ssl_error());
-        return 0;
+    pthread_mutex_lock(&ssl_mutexes_mutex);
+    
+    if (0 == CRYPTO_get_id_callback()) {
+        /* Initialize locking callbacks, needed for thread safety.
+           http://www.openssl.org/support/faq.html#PROG1 */
+        size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
+        if ((ssl_mutexes = (pthread_mutex_t *) mg_malloc((size_t)size)) == NULL) {
+            mg_cry(fc(ctx), "%s: cannot allocate mutexes: %s", __func__, ssl_error());
+            return 0;
+        }
+
+        for (i = 0; i < CRYPTO_num_locks(); i++) {
+            pthread_mutex_init(&ssl_mutexes[i], NULL);
+        }
+
+        CRYPTO_set_locking_callback(&ssl_locking_callback);
+        CRYPTO_set_id_callback(&ssl_id_callback);
     }
 
-    for (i = 0; i < CRYPTO_num_locks(); i++) {
-        pthread_mutex_init(&ssl_mutexes[i], NULL);
-    }
-
-    CRYPTO_set_locking_callback(&ssl_locking_callback);
-    CRYPTO_set_id_callback(&ssl_id_callback);
+    pthread_mutex_unlock(&ssl_mutexes_mutex);
 
     return 1;
 }
 
-static void uninitialize_ssl(struct mg_context *ctx)
+static void uninitialize_ssl()
 {
     int i;
-    if (ctx->ssl_ctx != NULL) {
+    if (NULL != ssl_mutexes) {
         CRYPTO_set_locking_callback(NULL);
         for (i = 0; i < CRYPTO_num_locks(); i++) {
             pthread_mutex_destroy(&ssl_mutexes[i]);
@@ -6919,9 +6929,6 @@ static void master_thread_run(void *thread_func_param)
         mg_join_thread(ctx->workerthreadids[i]);
     }
 
-#if !defined(NO_SSL)
-    uninitialize_ssl(ctx);
-#endif
     DEBUG_TRACE("exiting");
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -7229,4 +7236,12 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     }
 
     return ctx;
+}
+
+void mg_cleanup(void)
+{
+#if !defined(NO_SSL)
+    uninitialize_ssl();
+#endif
+    return;
 }

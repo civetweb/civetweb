@@ -575,6 +575,9 @@ CIVETWEB_API void mg_cry(struct mg_connection *conn,
 /* utility method to compare two buffers, case incensitive. */
 CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
 
+/* function to cleanup global structures */
+CIVETWEB_API void mg_cleanup(void);
+
 /* Connect to a websocket as a client
    Parameters:
      host: host to connect to, i.e. "echo.websocket.org" or "192.168.1.1" or "localhost"
