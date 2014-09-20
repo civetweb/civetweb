@@ -7095,7 +7095,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     WSADATA data;
     WSAStartup(MAKEWORD(2,2), &data);
 #pragma warning(suppress: 28125)
-    InitializeCriticalSection(&global_log_file_lock);
+    if (!sTlsInit) InitializeCriticalSection(&global_log_file_lock);
 #endif /* _WIN32 && !__SYMBIAN32__ */
 
     /* Check if the config_options and the corresponding enum have compatible sizes. */
