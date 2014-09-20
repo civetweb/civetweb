@@ -872,7 +872,7 @@ int mg_atomic_inc(volatile int * addr)
     ret = InterlockedIncrement(addr);
 #elif defined(__GNUC__)
     ret = __sync_add_and_fetch(addr, 1);
-#else    
+#else
     ret = (++(*addr));
 #endif
     return ret;
@@ -6104,7 +6104,7 @@ static int sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
            func(conn->ssl) == 1;
 }
 
-/* Return OpenSSL error message */
+/* Return OpenSSL error message (from CRYPTO lib) */
 static const char *ssl_error(void)
 {
     unsigned long err;
@@ -6169,10 +6169,38 @@ static void *load_dll(struct mg_context *ctx, const char *dll_name,
 }
 #endif /* NO_SSL_DL */
 
+static int initialize_ssl(struct mg_context *ctx)
+{
+    int i, size;
+
+#if !defined(NO_SSL_DL)
+    ctx->cryptolib_dll_handle = load_dll(ctx, CRYPTO_LIB, crypto_sw);
+    if (!ctx->cryptolib_dll_handle) {
+        return 0;
+    }
+#endif /* NO_SSL_DL */
+
+    /* Initialize locking callbacks, needed for thread safety.
+       http://www.openssl.org/support/faq.html#PROG1 */
+    size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
+    if ((ssl_mutexes = (pthread_mutex_t *) mg_malloc((size_t)size)) == NULL) {
+        mg_cry(fc(ctx), "%s: cannot allocate mutexes: %s", __func__, ssl_error());
+        return 0;
+    }
+
+    for (i = 0; i < CRYPTO_num_locks(); i++) {
+        pthread_mutex_init(&ssl_mutexes[i], NULL);
+    }
+
+    CRYPTO_set_locking_callback(&ssl_locking_callback);
+    CRYPTO_set_id_callback(&ssl_id_callback);
+
+    return 1;
+}
+
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
 static int set_ssl_option(struct mg_context *ctx)
 {
-    int i, size;
     const char *pem;
 
     /* If PEM file is not specified and the init_ssl callback
@@ -6182,10 +6210,13 @@ static int set_ssl_option(struct mg_context *ctx)
         return 1;
     }
 
+    if (!initialize_ssl(ctx)) {
+        return 0;
+    }
+
 #if !defined(NO_SSL_DL)
     ctx->ssllib_dll_handle = load_dll(ctx, SSL_LIB, ssl_sw);
-    ctx->cryptolib_dll_handle = load_dll(ctx, CRYPTO_LIB, crypto_sw);
-    if (!ctx->ssllib_dll_handle || !ctx->cryptolib_dll_handle) {
+    if (!ctx->ssllib_dll_handle) {
         return 0;
     }
 #endif /* NO_SSL_DL */
@@ -6212,21 +6243,6 @@ static int set_ssl_option(struct mg_context *ctx)
     if (pem != NULL) {
         (void) SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem);
     }
-
-    /* Initialize locking callbacks, needed for thread safety.
-       http://www.openssl.org/support/faq.html#PROG1 */
-    size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
-    if ((ssl_mutexes = (pthread_mutex_t *) mg_malloc((size_t)size)) == NULL) {
-        mg_cry(fc(ctx), "%s: cannot allocate mutexes: %s", __func__, ssl_error());
-        return 0;
-    }
-
-    for (i = 0; i < CRYPTO_num_locks(); i++) {
-        pthread_mutex_init(&ssl_mutexes[i], NULL);
-    }
-
-    CRYPTO_set_locking_callback(&ssl_locking_callback);
-    CRYPTO_set_id_callback(&ssl_id_callback);
 
     return 1;
 }
@@ -7091,15 +7107,15 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     if ((ctx = (struct mg_context *) mg_calloc(1, sizeof(*ctx))) == NULL) {
         return NULL;
     }
-    
+
     if (mg_atomic_inc(&sTlsInit)==1) {
-        if (0 != pthread_key_create(&sTlsKey, NULL)) {            
+        if (0 != pthread_key_create(&sTlsKey, NULL)) {
             /* Fatal error - abort start. However, this situation should never occur in practice. */
             mg_atomic_dec(&sTlsInit);
             mg_cry(fc(ctx), "Cannot initialize thread local storage");
-            mg_free(ctx);            
+            mg_free(ctx);
             return NULL;
-        }        
+        }
     } else {
        /* TODO: check if sTlsKey is already initialized */
        mg_sleep(1);
