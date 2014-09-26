@@ -6168,9 +6168,10 @@ static void *load_dll(struct mg_context *ctx, const char *dll_name,
 
 static void *ssllib_dll_handle;        /* Store the ssl library handle. */
 static void *cryptolib_dll_handle;     /* Store the crypto library handle. */
-static int cryptolib_users = 0;        /* Refecence counter for crypto library. */
 
 #endif /* NO_SSL_DL */
+
+static int cryptolib_users = 0;        /* Refecence counter for crypto library. */
 
 static int initialize_ssl(struct mg_context *ctx)
 {
