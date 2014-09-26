@@ -773,8 +773,6 @@ struct mg_request_handler_info {
 
 struct mg_context {
     volatile int stop_flag;         /* Should we stop event loop */
-    void *ssllib_dll_handle;        /* Store the ssl library handle. */
-    void *cryptolib_dll_handle;     /* Store the crypto library handle. */
     SSL_CTX *ssl_ctx;               /* SSL context */
     char *config[NUM_OPTIONS];      /* Civetweb configuration parameters */
     struct mg_callbacks callbacks;  /* User-defined callback function */
@@ -6167,6 +6165,11 @@ static void *load_dll(struct mg_context *ctx, const char *dll_name,
 
     return dll_handle;
 }
+
+static void *ssllib_dll_handle;        /* Store the ssl library handle. */
+static void *cryptolib_dll_handle;     /* Store the crypto library handle. */
+static int cryptolib_users = 0;        /* Refecence counter for crypto library. */
+
 #endif /* NO_SSL_DL */
 
 static int initialize_ssl(struct mg_context *ctx)
@@ -6174,11 +6177,15 @@ static int initialize_ssl(struct mg_context *ctx)
     int i, size;
 
 #if !defined(NO_SSL_DL)
-    ctx->cryptolib_dll_handle = load_dll(ctx, CRYPTO_LIB, crypto_sw);
-    if (!ctx->cryptolib_dll_handle) {
-        return 0;
+    if (!cryptolib_dll_handle) {
+        cryptolib_dll_handle = load_dll(ctx, CRYPTO_LIB, crypto_sw);
+        if (!cryptolib_dll_handle) {
+            return 0;
+        }
     }
 #endif /* NO_SSL_DL */
+
+    if (mg_atomic_inc(&cryptolib_users)>1) return 1;
 
     /* Initialize locking callbacks, needed for thread safety.
        http://www.openssl.org/support/faq.html#PROG1 */
@@ -6215,9 +6222,11 @@ static int set_ssl_option(struct mg_context *ctx)
     }
 
 #if !defined(NO_SSL_DL)
-    ctx->ssllib_dll_handle = load_dll(ctx, SSL_LIB, ssl_sw);
-    if (!ctx->ssllib_dll_handle) {
-        return 0;
+    if (!ssllib_dll_handle) {
+        ssllib_dll_handle = load_dll(ctx, SSL_LIB, ssl_sw);
+        if (!ssllib_dll_handle) {
+            return 0;
+        }
     }
 #endif /* NO_SSL_DL */
 
@@ -6250,7 +6259,9 @@ static int set_ssl_option(struct mg_context *ctx)
 static void uninitialize_ssl(struct mg_context *ctx)
 {
     int i;
-    if (ctx->ssl_ctx != NULL) {
+    (void)ctx;
+
+    if (mg_atomic_dec(&cryptolib_users)==0) {
         CRYPTO_set_locking_callback(NULL);
         for (i = 0; i < CRYPTO_num_locks(); i++) {
             pthread_mutex_destroy(&ssl_mutexes[i]);
@@ -6936,7 +6947,9 @@ static void master_thread_run(void *thread_func_param)
     }
 
 #if !defined(NO_SSL)
-    uninitialize_ssl(ctx);
+    if (ctx->ssl_ctx != NULL) {
+        uninitialize_ssl(ctx);
+    }
 #endif
     DEBUG_TRACE("exiting");
 
