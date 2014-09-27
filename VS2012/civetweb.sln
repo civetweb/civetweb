@@ -17,6 +17,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit_test", "unit_test\unit
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_websocket_client", "ex_websocket_client\ex_websocket_client.vcxproj", "{58B93E94-7766-435E-93AE-42A2FB5D99B2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "upload", "upload\upload.vcxproj", "{882EC43C-2EEE-434B-A711-C845678D29C6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -119,6 +121,16 @@ Global
 		{58B93E94-7766-435E-93AE-42A2FB5D99B2}.Release|Win32.ActiveCfg = Release|Win32
 		{58B93E94-7766-435E-93AE-42A2FB5D99B2}.Release|Win32.Build.0 = Release|Win32
 		{58B93E94-7766-435E-93AE-42A2FB5D99B2}.Release|x64.ActiveCfg = Release|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Debug|Win32.Build.0 = Debug|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Debug|x64.ActiveCfg = Debug|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Release|Win32.ActiveCfg = Release|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Release|Win32.Build.0 = Release|Win32
+		{882EC43C-2EEE-434B-A711-C845678D29C6}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
