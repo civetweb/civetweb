@@ -2307,9 +2307,10 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
     nread = 0;
     if (conn->consumed_content < conn->content_len) {
         /* Adjust number of bytes to read. */
-        int64_t to_read = conn->content_len - conn->consumed_content;
-        if (to_read < len64) {
-            len = (size_t) to_read;
+        int64_t left_to_read = conn->content_len - conn->consumed_content;
+        if (left_to_read < len64) {
+            /* Do not reade more than the total content length of the request. */
+            len64 = left_to_read;
         }
 
         /* Return buffered data */
