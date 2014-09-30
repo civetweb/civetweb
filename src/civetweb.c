@@ -6550,9 +6550,9 @@ struct mg_connection *mg_connect_websocket_client(const char *host, int port, in
                                                void * user_data)
 {
     struct mg_connection* conn = NULL;
-    struct mg_context * newctx = NULL;
 
 #if defined(USE_WEBSOCKET)
+    struct mg_context * newctx = NULL;
     static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
     static const char *handshake_req;
 
