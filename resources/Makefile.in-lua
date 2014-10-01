@@ -7,19 +7,19 @@ ifndef WITH_LUA
   $(error WITH_LUA is not defined)
 endif
 
-LUA_DIR = src/third_party/lua-5.2.2/src
+LUA_DIR = src/third_party/lua-5.2.3/src
 LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA
 
 ifdef WITH_LUA_SHARED
 
-LUA_CFLAGS += -DLUA_USE_POSIX -DLUA_USE_DLOPEN
-LUA_SOURCE_FILES =
+  LUA_CFLAGS += -DLUA_USE_POSIX -DLUA_USE_DLOPEN
+  LUA_SOURCE_FILES =
 
-$(info Lua linked dynamic)
+  $(info Lua: using dynamic linking)
 
 else
 
-LUA_SOURCE_FILES = lapi.c  \
+  LUA_SOURCE_FILES = lapi.c  \
     lauxlib.c \
     lbaselib.c  \
     lbitlib.c  \
@@ -52,7 +52,7 @@ LUA_SOURCE_FILES = lapi.c  \
     lvm.c  \
     lzio.c
 
-$(info Lua linked static)
+  $(info Lua: using static library)
 
 endif
 
