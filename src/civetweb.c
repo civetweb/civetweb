@@ -3215,7 +3215,7 @@ static int read_auth_file(struct file *filep, struct read_auth_file_struct * wor
     char *p;
     int is_authorized = 0;
     struct file fp;
-    int l;
+    size_t l;
 
     /* Loop over passwords file */
     p = (char *) filep->membuf;
@@ -5699,7 +5699,7 @@ static int use_request_handler(struct mg_connection *conn)
         }
 
         /* try for pattern match */
-        if (match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0) {
+        if (match_prefix(tmp_rh->uri, (int)tmp_rh->uri_len, uri) > 0) {
            return tmp_rh->handler(conn, tmp_rh->cbdata);
         }
 
