@@ -2314,12 +2314,12 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
         }
 
         /* Return buffered data */
-        body = conn->buf + conn->request_len + conn->consumed_content;
-        buffered_len = (int64_t)(&conn->buf[conn->data_len] - body);
+        buffered_len = (int64_t)(conn->data_len) - (int64_t)conn->request_len - conn->consumed_content;
         if (buffered_len > 0) {
             if (len64 < buffered_len) {
                 buffered_len = len64;
             }
+            body = conn->buf + conn->request_len + conn->consumed_content;
             memcpy(buf, body, (size_t) buffered_len);
             len64 -= buffered_len;
             conn->consumed_content += buffered_len;
