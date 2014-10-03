@@ -1,11 +1,25 @@
-# 
+#
 # Copyright (c) 2013 No Face Press, LLC
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
 
-LUA_DIR = src/third_party/lua-5.2.3/src
+ifndef WITH_LUA
+  $(error WITH_LUA is not defined)
+endif
 
-LUA_SOURCE_FILES = lapi.c  \
+LUA_DIR = src/third_party/lua-5.2.3/src
+LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA
+
+ifdef WITH_LUA_SHARED
+
+  LUA_CFLAGS += -DLUA_USE_POSIX -DLUA_USE_DLOPEN
+  LUA_SOURCE_FILES =
+
+  $(info Lua: using dynamic linking)
+
+else
+
+  LUA_SOURCE_FILES = lapi.c  \
     lauxlib.c \
     lbaselib.c  \
     lbitlib.c  \
@@ -38,9 +52,12 @@ LUA_SOURCE_FILES = lapi.c  \
     lvm.c  \
     lzio.c
 
+  $(info Lua: using static library)
+
+endif
+
 LUA_SOURCES = $(addprefix $(LUA_DIR)/, $(LUA_SOURCE_FILES))
 LUA_OBJECTS = $(LUA_SOURCES:.c=.o)
-LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL
 
 SQLITE_DIR = src/third_party
 SQLITE_SOURCE_FILES = sqlite3.c lsqlite3.c
@@ -54,8 +71,7 @@ LFS_SOURCES = $(addprefix $(LFS_DIR)/, $(LFS_SOURCE_FILES))
 LFS_OBJECTS = $(LFS_SOURCES:.c=.o)
 LFS_CFLAGS = -I$(LFS_DIR)
 
-
 OBJECTS += $(LUA_OBJECTS) $(SQLITE_OBJECTS) $(LFS_OBJECTS)
-CFLAGS += $(LUA_CFLAGS) $(SQLITE_CFLAGS) $(LFS_CFLAGS) -DUSE_LUA -DUSE_LUA_SQLITE3 -DUSE_LUA_FILE_SYSTEM
+CFLAGS += $(LUA_CFLAGS) $(SQLITE_CFLAGS) $(LFS_CFLAGS) -DUSE_LUA_SQLITE3 -DUSE_LUA_FILE_SYSTEM
 SOURCE_DIRS = $(LUA_DIR) $(SQLITE_DIR) %(LFS_DIR)
 
