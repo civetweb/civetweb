@@ -4099,7 +4099,8 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
 {
     const char *expect, *body;
     char buf[MG_BUF_LEN];
-    int to_read, nread, buffered_len, success = 0;
+    int to_read, nread, success = 0;
+    int64_t buffered_len;
 
     expect = mg_get_header(conn, "Expect");
     assert(fp != NULL);
@@ -4113,8 +4114,7 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
             (void) mg_printf(conn, "%s", "HTTP/1.1 100 Continue\r\n\r\n");
         }
 
-        body = conn->buf + conn->request_len + conn->consumed_content;
-        buffered_len = (int)(&conn->buf[conn->data_len] - body);
+        buffered_len = (int64_t)(conn->data_len) - (int64_t)conn->request_len - conn->consumed_content;
         assert(buffered_len >= 0);
         assert(conn->consumed_content == 0);
 
@@ -4122,6 +4122,7 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
             if ((int64_t) buffered_len > conn->content_len) {
                 buffered_len = (int) conn->content_len;
             }
+            body = conn->buf + conn->request_len + conn->consumed_content;
             push(fp, sock, ssl, body, (int64_t) buffered_len);
             conn->consumed_content += buffered_len;
         }
