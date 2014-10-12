@@ -2657,9 +2657,18 @@ static int base64_decode(const unsigned char *src, int src_len, char *dst, size_
 }
 #endif
 
+static int is_put_or_delete_method(const struct mg_connection *conn)
+{
+    const char *s = conn->request_info.request_method;
+    return s != NULL && (!strcmp(s, "PUT") ||
+                         !strcmp(s, "DELETE") ||
+                         !strcmp(s, "MKCOL"));
+}
+
 static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
                                      size_t buf_len, struct file *filep,
-                                     int * is_script_ressource, int * is_websocket_request)
+                                     int * is_script_ressource, int * is_websocket_request,
+                                     int * is_put_or_delete_request)
 {
     struct vec a, b;
     const char *rewrite, *uri = conn->request_info.uri,
@@ -2670,12 +2679,15 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     char const* accept_encoding;
 
     *is_script_ressource = 0;
-    *is_websocket_request = is_websocket_protocol(conn);
+    *is_put_or_delete_request = is_put_or_delete_method(conn);
 
 #if defined(USE_WEBSOCKET)
+    *is_websocket_request = is_websocket_protocol(conn);
     if (*is_websocket_request && conn->ctx->config[WEBSOCKET_ROOT]) {
         root = conn->ctx->config[WEBSOCKET_ROOT];
     }
+#else
+    *is_websocket_request = 0;
 #endif
 
     /* Using buf_len - 1 because memmove() for PATH_INFO may shift part
@@ -5573,14 +5585,6 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
     return num_uploaded_files;
 }
 
-static int is_put_or_delete_request(const struct mg_connection *conn)
-{
-    const char *s = conn->request_info.request_method;
-    return s != NULL && (!strcmp(s, "PUT") ||
-                         !strcmp(s, "DELETE") ||
-                         !strcmp(s, "MKCOL"));
-}
-
 static int get_first_ssl_listener_index(const struct mg_context *ctx)
 {
     int i, idx = -1;
@@ -5725,7 +5729,7 @@ static void handle_request(struct mg_connection *conn)
 {
     struct mg_request_info *ri = &conn->request_info;
     char path[PATH_MAX];
-    int uri_len, ssl_index, is_script_resource, is_websocket_request;
+    int uri_len, ssl_index, is_script_resource, is_websocket_request, is_put_or_delete_request;
     struct file file = STRUCT_FILE_INITIALIZER;
     char date[64];
     time_t curtime = time(NULL);
@@ -5740,7 +5744,7 @@ static void handle_request(struct mg_connection *conn)
     }
     remove_double_dots_and_double_slashes((char *) ri->uri);
     path[0] = '\0';
-    convert_uri_to_file_name(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request);
+    convert_uri_to_file_name(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
     conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
                                   get_remote_ip(conn), ri->uri);
 
@@ -5751,7 +5755,7 @@ static void handle_request(struct mg_connection *conn)
     if (!conn->client.is_ssl && conn->client.ssl_redir &&
         (ssl_index = get_first_ssl_listener_index(conn->ctx)) > -1) {
         redirect_to_https_port(conn, ssl_index);
-    } else if (!is_script_resource && !is_put_or_delete_request(conn) &&
+    } else if (!is_script_resource && !is_put_or_delete_request &&
                !check_authorization(conn, path)) {
         send_authorization_request(conn);
     } else if (conn->ctx->callbacks.begin_request != NULL &&
@@ -5770,7 +5774,7 @@ static void handle_request(struct mg_connection *conn)
         send_options(conn);
     } else if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
         send_http_error(conn, 404, "Not Found", "Not Found");
-    } else if (!is_script_resource && is_put_or_delete_request(conn) &&
+    } else if (!is_script_resource && is_put_or_delete_request &&
                (is_authorized_for_put(conn) != 1)) {
         send_authorization_request(conn);
     } else if (!is_script_resource && !strcmp(ri->request_method, "PUT")) {
