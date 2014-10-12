@@ -767,6 +767,7 @@ struct mg_request_handler_info {
     char *uri;
     size_t uri_len;
     mg_request_handler handler;
+
     void *cbdata;
     struct mg_request_handler_info *next;
 };
@@ -5376,16 +5377,20 @@ static int is_websocket_request(const struct mg_connection *conn)
 {
     const char *host, *upgrade, *connection, *version, *key;
 
-    host = mg_get_header(conn, "Host");
     upgrade = mg_get_header(conn, "Upgrade");
+    if (upgrade == NULL) return 0; /* fail early, don't waste time checking other header fields */
+    if (!mg_strcasestr(upgrade, "websocket")) return 0;
+
     connection = mg_get_header(conn, "Connection");
+    if (connection == NULL) return 0;
+    if (!mg_strcasestr(connection, "upgrade")) return 0;
+
+    host = mg_get_header(conn, "Host");
     key = mg_get_header(conn, "Sec-WebSocket-Key");
     version = mg_get_header(conn, "Sec-WebSocket-Version");
 
-    return host != NULL && upgrade != NULL && connection != NULL &&
-           key != NULL && version != NULL &&
-           mg_strcasestr(upgrade, "websocket") != NULL &&
-           mg_strcasestr(connection, "Upgrade") != NULL;
+    return host != NULL &&
+           key != NULL && version != NULL;
 }
 #endif /* !USE_WEBSOCKET */
 
