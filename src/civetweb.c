@@ -861,7 +861,9 @@ struct de {
 };
 
 #if defined(USE_WEBSOCKET)
-static int is_websocket_request(const struct mg_connection *conn);
+static int is_websocket_protocol(const struct mg_connection *conn);
+#else
+#define is_websocket_protocol(conn) (0)
 #endif
 
 int mg_atomic_inc(volatile int * addr)
@@ -2657,7 +2659,7 @@ static int base64_decode(const unsigned char *src, int src_len, char *dst, size_
 
 static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
                                      size_t buf_len, struct file *filep,
-                                     int * is_script_ressource)
+                                     int * is_script_ressource, int * is_websocket_request)
 {
     struct vec a, b;
     const char *rewrite, *uri = conn->request_info.uri,
@@ -2668,9 +2670,10 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     char const* accept_encoding;
 
     *is_script_ressource = 0;
+    *is_websocket_request = is_websocket_protocol(conn);
 
 #if defined(USE_WEBSOCKET)
-    if (is_websocket_request(conn) && conn->ctx->config[WEBSOCKET_ROOT]) {
+    if (*is_websocket_request && conn->ctx->config[WEBSOCKET_ROOT]) {
         root = conn->ctx->config[WEBSOCKET_ROOT];
     }
 #endif
@@ -5373,7 +5376,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
     }
 }
 
-static int is_websocket_request(const struct mg_connection *conn)
+static int is_websocket_protocol(const struct mg_connection *conn)
 {
     const char *host, *upgrade, *connection, *version, *key;
 
@@ -5722,7 +5725,7 @@ static void handle_request(struct mg_connection *conn)
 {
     struct mg_request_info *ri = &conn->request_info;
     char path[PATH_MAX];
-    int uri_len, ssl_index, is_script_resource;
+    int uri_len, ssl_index, is_script_resource, is_websocket_request;
     struct file file = STRUCT_FILE_INITIALIZER;
     char date[64];
     time_t curtime = time(NULL);
@@ -5737,7 +5740,7 @@ static void handle_request(struct mg_connection *conn)
     }
     remove_double_dots_and_double_slashes((char *) ri->uri);
     path[0] = '\0';
-    convert_uri_to_file_name(conn, path, sizeof(path), &file, &is_script_resource);
+    convert_uri_to_file_name(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request);
     conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
                                   get_remote_ip(conn), ri->uri);
 
@@ -5755,7 +5758,7 @@ static void handle_request(struct mg_connection *conn)
                conn->ctx->callbacks.begin_request(conn)) {
         /* Do nothing, callback has served the request */
 #if defined(USE_WEBSOCKET)
-    } else if (is_websocket_request(conn)) {
+    } else if (is_websocket_request) {
         handle_websocket_request(conn, path, is_script_resource);
 #endif
     } else if (conn->ctx->request_handlers != NULL &&
