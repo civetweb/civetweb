@@ -2665,10 +2665,14 @@ static int is_put_or_delete_method(const struct mg_connection *conn)
                          !strcmp(s, "MKCOL"));
 }
 
-static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
-                                     size_t buf_len, struct file *filep,
-                                     int * is_script_ressource, int * is_websocket_request,
-                                     int * is_put_or_delete_request)
+static void interpret_uri(struct mg_connection *conn,    /* in: request */
+                          char *filename,                /* out: filename */
+                          size_t filename_buf_len,       /* in: size of filename buffer */
+                          struct file *filep,            /* out: file structure */
+                          int * is_script_ressource,     /* out: handled by a script? */
+                          int * is_websocket_request,    /* out: websocket connetion? */
+                          int * is_put_or_delete_request /* out: put/delete a file? */
+                          )
 {
     struct vec a, b;
     const char *rewrite, *uri = conn->request_info.uri,
@@ -2693,20 +2697,20 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     /* Using buf_len - 1 because memmove() for PATH_INFO may shift part
        of the path one byte on the right.
        If document_root is NULL, leave the file empty. */
-    mg_snprintf(conn, buf, buf_len - 1, "%s%s",
+    mg_snprintf(conn, filename, filename_buf_len - 1, "%s%s",
                 root == NULL ? "" : root,
                 root == NULL ? "" : uri);
 
     rewrite = conn->ctx->config[REWRITE];
     while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
         if ((match_len = match_prefix(a.ptr, (int) a.len, uri)) > 0) {
-            mg_snprintf(conn, buf, buf_len - 1, "%.*s%s", (int) b.len, b.ptr,
+            mg_snprintf(conn, filename, filename_buf_len - 1, "%.*s%s", (int) b.len, b.ptr,
                         uri + match_len);
             break;
         }
     }
 
-    if (mg_stat(conn, buf, filep)) return;
+    if (mg_stat(conn, filename, filep)) return;
 
     /* if we can't find the actual file, look for the file
        with the same name but a .gz extension. If we find it,
@@ -2716,7 +2720,7 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
        we can only do this if the browser declares support */
     if ((accept_encoding = mg_get_header(conn, "Accept-Encoding")) != NULL) {
         if (strstr(accept_encoding,"gzip") != NULL) {
-            snprintf(gz_path, sizeof(gz_path), "%s.gz", buf);
+            snprintf(gz_path, sizeof(gz_path), "%s.gz", filename);
             if (mg_stat(conn, gz_path, filep)) {
                 filep->gzipped = 1;
                 return;
@@ -2725,17 +2729,17 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     }
 
     /* Support PATH_INFO for CGI scripts. */
-    for (p = buf + strlen(buf); p > buf + 1; p--) {
+    for (p = filename + strlen(filename); p > filename + 1; p--) {
         if (*p == '/') {
             *p = '\0';
             if ((match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-                              (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0
+                              (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), filename) > 0
 #ifdef USE_LUA
                  ||
                  match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-                              (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), buf) > 0
+                              (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), filename) > 0
 #endif
-                ) && mg_stat(conn, buf, filep)) {
+                ) && mg_stat(conn, filename, filep)) {
                 /* Shift PATH_INFO block one character right, e.g.
                     "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
                    conn->path_info is pointing to the local variable "path"
@@ -5744,7 +5748,7 @@ static void handle_request(struct mg_connection *conn)
     }
     remove_double_dots_and_double_slashes((char *) ri->uri);
     path[0] = '\0';
-    convert_uri_to_file_name(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
+    interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
     conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
                                   get_remote_ip(conn), ri->uri);
 
