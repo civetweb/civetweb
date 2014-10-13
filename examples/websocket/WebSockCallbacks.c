@@ -49,7 +49,7 @@ void websocket_ready_handler(struct mg_connection *conn) {
             break;
         }
     }
-    printf("\nNew websocket attached: %08lx:%u\n", rq->remote_ip, rq->remote_port);
+    printf("\nNew websocket attached: %s:%u\n", rq->remote_addr, rq->remote_port);
     mg_unlock_context(ctx);
 }
 
@@ -66,7 +66,7 @@ static void websocket_done(tWebSockContext *ws_ctx, tWebSockInfo * wsock) {
                 break;
             }
         }
-        printf("\nClose websocket attached: %08lx:%u\n", mg_get_request_info(wsock->conn)->remote_ip, mg_get_request_info(wsock->conn)->remote_port);
+        printf("\nClose websocket attached: %s:%u\n", mg_get_request_info(wsock->conn)->remote_addr, mg_get_request_info(wsock->conn)->remote_port);
         free(wsock);
     }
 }

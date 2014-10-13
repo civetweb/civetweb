@@ -767,14 +767,13 @@ struct mg_request_handler_info {
     char *uri;
     size_t uri_len;
     mg_request_handler handler;
+
     void *cbdata;
     struct mg_request_handler_info *next;
 };
 
 struct mg_context {
     volatile int stop_flag;         /* Should we stop event loop */
-    void *ssllib_dll_handle;        /* Store the ssl library handle. */
-    void *cryptolib_dll_handle;     /* Store the crypto library handle. */
     SSL_CTX *ssl_ctx;               /* SSL context */
     char *config[NUM_OPTIONS];      /* Civetweb configuration parameters */
     struct mg_callbacks callbacks;  /* User-defined callback function */
@@ -862,8 +861,36 @@ struct de {
 };
 
 #if defined(USE_WEBSOCKET)
-static int is_websocket_request(const struct mg_connection *conn);
+static int is_websocket_protocol(const struct mg_connection *conn);
+#else
+#define is_websocket_protocol(conn) (0)
 #endif
+
+int mg_atomic_inc(volatile int * addr)
+{
+    int ret;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    ret = InterlockedIncrement(addr);
+#elif defined(__GNUC__)
+    ret = __sync_add_and_fetch(addr, 1);
+#else
+    ret = (++(*addr));
+#endif
+    return ret;
+}
+
+int mg_atomic_dec(volatile int * addr)
+{
+    int ret;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+    ret = InterlockedDecrement(addr);
+#elif defined(__GNUC__)
+    ret = __sync_sub_and_fetch(addr, 1);
+#else
+    ret = (--(*addr));
+#endif
+    return ret;
+}
 
 #if defined(MG_LEGACY_INTERFACE)
 const char **mg_get_valid_option_names(void)
@@ -2283,18 +2310,19 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
     nread = 0;
     if (conn->consumed_content < conn->content_len) {
         /* Adjust number of bytes to read. */
-        int64_t to_read = conn->content_len - conn->consumed_content;
-        if (to_read < len64) {
-            len = (size_t) to_read;
+        int64_t left_to_read = conn->content_len - conn->consumed_content;
+        if (left_to_read < len64) {
+            /* Do not reade more than the total content length of the request. */
+            len64 = left_to_read;
         }
 
         /* Return buffered data */
-        body = conn->buf + conn->request_len + conn->consumed_content;
-        buffered_len = (int64_t)(&conn->buf[conn->data_len] - body);
+        buffered_len = (int64_t)(conn->data_len) - (int64_t)conn->request_len - conn->consumed_content;
         if (buffered_len > 0) {
-            if (len64 < (size_t) buffered_len) {
+            if (len64 < buffered_len) {
                 buffered_len = len64;
             }
+            body = conn->buf + conn->request_len + conn->consumed_content;
             memcpy(buf, body, (size_t) buffered_len);
             len64 -= buffered_len;
             conn->consumed_content += buffered_len;
@@ -2629,9 +2657,22 @@ static int base64_decode(const unsigned char *src, int src_len, char *dst, size_
 }
 #endif
 
-static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
-                                     size_t buf_len, struct file *filep,
-                                     int * is_script_ressource)
+static int is_put_or_delete_method(const struct mg_connection *conn)
+{
+    const char *s = conn->request_info.request_method;
+    return s != NULL && (!strcmp(s, "PUT") ||
+                         !strcmp(s, "DELETE") ||
+                         !strcmp(s, "MKCOL"));
+}
+
+static void interpret_uri(struct mg_connection *conn,    /* in: request */
+                          char *filename,                /* out: filename */
+                          size_t filename_buf_len,       /* in: size of filename buffer */
+                          struct file *filep,            /* out: file structure */
+                          int * is_script_ressource,     /* out: handled by a script? */
+                          int * is_websocket_request,    /* out: websocket connetion? */
+                          int * is_put_or_delete_request /* out: put/delete a file? */
+                          )
 {
     struct vec a, b;
     const char *rewrite, *uri = conn->request_info.uri,
@@ -2642,30 +2683,34 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     char const* accept_encoding;
 
     *is_script_ressource = 0;
+    *is_put_or_delete_request = is_put_or_delete_method(conn);
 
 #if defined(USE_WEBSOCKET)
-    if (is_websocket_request(conn) && conn->ctx->config[WEBSOCKET_ROOT]) {
+    *is_websocket_request = is_websocket_protocol(conn);
+    if (*is_websocket_request && conn->ctx->config[WEBSOCKET_ROOT]) {
         root = conn->ctx->config[WEBSOCKET_ROOT];
     }
+#else
+    *is_websocket_request = 0;
 #endif
 
     /* Using buf_len - 1 because memmove() for PATH_INFO may shift part
        of the path one byte on the right.
        If document_root is NULL, leave the file empty. */
-    mg_snprintf(conn, buf, buf_len - 1, "%s%s",
+    mg_snprintf(conn, filename, filename_buf_len - 1, "%s%s",
                 root == NULL ? "" : root,
                 root == NULL ? "" : uri);
 
     rewrite = conn->ctx->config[REWRITE];
     while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
         if ((match_len = match_prefix(a.ptr, (int) a.len, uri)) > 0) {
-            mg_snprintf(conn, buf, buf_len - 1, "%.*s%s", (int) b.len, b.ptr,
+            mg_snprintf(conn, filename, filename_buf_len - 1, "%.*s%s", (int) b.len, b.ptr,
                         uri + match_len);
             break;
         }
     }
 
-    if (mg_stat(conn, buf, filep)) return;
+    if (mg_stat(conn, filename, filep)) return;
 
     /* if we can't find the actual file, look for the file
        with the same name but a .gz extension. If we find it,
@@ -2675,7 +2720,7 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
        we can only do this if the browser declares support */
     if ((accept_encoding = mg_get_header(conn, "Accept-Encoding")) != NULL) {
         if (strstr(accept_encoding,"gzip") != NULL) {
-            snprintf(gz_path, sizeof(gz_path), "%s.gz", buf);
+            snprintf(gz_path, sizeof(gz_path), "%s.gz", filename);
             if (mg_stat(conn, gz_path, filep)) {
                 filep->gzipped = 1;
                 return;
@@ -2684,17 +2729,17 @@ static void convert_uri_to_file_name(struct mg_connection *conn, char *buf,
     }
 
     /* Support PATH_INFO for CGI scripts. */
-    for (p = buf + strlen(buf); p > buf + 1; p--) {
+    for (p = filename + strlen(filename); p > filename + 1; p--) {
         if (*p == '/') {
             *p = '\0';
             if ((match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-                              (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), buf) > 0
+                              (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), filename) > 0
 #ifdef USE_LUA
                  ||
                  match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-                              (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), buf) > 0
+                              (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), filename) > 0
 #endif
-                ) && mg_stat(conn, buf, filep)) {
+                ) && mg_stat(conn, filename, filep)) {
                 /* Shift PATH_INFO block one character right, e.g.
                     "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
                    conn->path_info is pointing to the local variable "path"
@@ -3190,7 +3235,7 @@ static int read_auth_file(struct file *filep, struct read_auth_file_struct * wor
     char *p;
     int is_authorized = 0;
     struct file fp;
-    int l;
+    size_t l;
 
     /* Loop over passwords file */
     p = (char *) filep->membuf;
@@ -3957,7 +4002,7 @@ static int parse_http_message(char *buf, int len, struct mg_request_info *ri)
 {
     int is_request, request_length = get_request_len(buf, len);
     if (request_length > 0) {
-        /* Reset attributes. DO NOT TOUCH is_ssl, remote_ip, remote_port */
+        /* Reset attributes. DO NOT TOUCH is_ssl, remote_ip, remote_addr, remote_port */
         ri->remote_user = ri->request_method = ri->uri = ri->http_version = NULL;
         ri->num_headers = 0;
 
@@ -4074,7 +4119,8 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
 {
     const char *expect, *body;
     char buf[MG_BUF_LEN];
-    int to_read, nread, buffered_len, success = 0;
+    int to_read, nread, success = 0;
+    int64_t buffered_len;
 
     expect = mg_get_header(conn, "Expect");
     assert(fp != NULL);
@@ -4088,8 +4134,7 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
             (void) mg_printf(conn, "%s", "HTTP/1.1 100 Continue\r\n\r\n");
         }
 
-        body = conn->buf + conn->request_len + conn->consumed_content;
-        buffered_len = (int)(&conn->buf[conn->data_len] - body);
+        buffered_len = (int64_t)(conn->data_len) - (int64_t)conn->request_len - conn->consumed_content;
         assert(buffered_len >= 0);
         assert(conn->consumed_content == 0);
 
@@ -4097,6 +4142,7 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
             if ((int64_t) buffered_len > conn->content_len) {
                 buffered_len = (int) conn->content_len;
             }
+            body = conn->buf + conn->request_len + conn->consumed_content;
             push(fp, sock, ssl, body, (int64_t) buffered_len);
             conn->consumed_content += buffered_len;
         }
@@ -5346,20 +5392,24 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
     }
 }
 
-static int is_websocket_request(const struct mg_connection *conn)
+static int is_websocket_protocol(const struct mg_connection *conn)
 {
     const char *host, *upgrade, *connection, *version, *key;
 
-    host = mg_get_header(conn, "Host");
     upgrade = mg_get_header(conn, "Upgrade");
+    if (upgrade == NULL) return 0; /* fail early, don't waste time checking other header fields */
+    if (!mg_strcasestr(upgrade, "websocket")) return 0;
+
     connection = mg_get_header(conn, "Connection");
+    if (connection == NULL) return 0;
+    if (!mg_strcasestr(connection, "upgrade")) return 0;
+
+    host = mg_get_header(conn, "Host");
     key = mg_get_header(conn, "Sec-WebSocket-Key");
     version = mg_get_header(conn, "Sec-WebSocket-Version");
 
-    return host != NULL && upgrade != NULL && connection != NULL &&
-           key != NULL && version != NULL &&
-           mg_strcasestr(upgrade, "websocket") != NULL &&
-           mg_strcasestr(connection, "Upgrade") != NULL;
+    return host != NULL &&
+           key != NULL && version != NULL;
 }
 #endif /* !USE_WEBSOCKET */
 
@@ -5539,14 +5589,6 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
     return num_uploaded_files;
 }
 
-static int is_put_or_delete_request(const struct mg_connection *conn)
-{
-    const char *s = conn->request_info.request_method;
-    return s != NULL && (!strcmp(s, "PUT") ||
-                         !strcmp(s, "DELETE") ||
-                         !strcmp(s, "MKCOL"));
-}
-
 static int get_first_ssl_listener_index(const struct mg_context *ctx)
 {
     int i, idx = -1;
@@ -5674,7 +5716,7 @@ static int use_request_handler(struct mg_connection *conn)
         }
 
         /* try for pattern match */
-        if (match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0) {
+        if (match_prefix(tmp_rh->uri, (int)tmp_rh->uri_len, uri) > 0) {
            return tmp_rh->handler(conn, tmp_rh->cbdata);
         }
 
@@ -5691,7 +5733,7 @@ static void handle_request(struct mg_connection *conn)
 {
     struct mg_request_info *ri = &conn->request_info;
     char path[PATH_MAX];
-    int uri_len, ssl_index, is_script_resource;
+    int uri_len, ssl_index, is_script_resource, is_websocket_request, is_put_or_delete_request;
     struct file file = STRUCT_FILE_INITIALIZER;
     char date[64];
     time_t curtime = time(NULL);
@@ -5706,7 +5748,7 @@ static void handle_request(struct mg_connection *conn)
     }
     remove_double_dots_and_double_slashes((char *) ri->uri);
     path[0] = '\0';
-    convert_uri_to_file_name(conn, path, sizeof(path), &file, &is_script_resource);
+    interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
     conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
                                   get_remote_ip(conn), ri->uri);
 
@@ -5717,14 +5759,14 @@ static void handle_request(struct mg_connection *conn)
     if (!conn->client.is_ssl && conn->client.ssl_redir &&
         (ssl_index = get_first_ssl_listener_index(conn->ctx)) > -1) {
         redirect_to_https_port(conn, ssl_index);
-    } else if (!is_script_resource && !is_put_or_delete_request(conn) &&
+    } else if (!is_script_resource && !is_put_or_delete_request &&
                !check_authorization(conn, path)) {
         send_authorization_request(conn);
     } else if (conn->ctx->callbacks.begin_request != NULL &&
                conn->ctx->callbacks.begin_request(conn)) {
         /* Do nothing, callback has served the request */
 #if defined(USE_WEBSOCKET)
-    } else if (is_websocket_request(conn)) {
+    } else if (is_websocket_request) {
         handle_websocket_request(conn, path, is_script_resource);
 #endif
     } else if (conn->ctx->request_handlers != NULL &&
@@ -5736,7 +5778,7 @@ static void handle_request(struct mg_connection *conn)
         send_options(conn);
     } else if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
         send_http_error(conn, 404, "Not Found", "Not Found");
-    } else if (!is_script_resource && is_put_or_delete_request(conn) &&
+    } else if (!is_script_resource && is_put_or_delete_request &&
                (is_authorized_for_put(conn) != 1)) {
         send_authorization_request(conn);
     } else if (!is_script_resource && !strcmp(ri->request_method, "PUT")) {
@@ -6078,7 +6120,7 @@ static int sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
            func(conn->ssl) == 1;
 }
 
-/* Return OpenSSL error message */
+/* Return OpenSSL error message (from CRYPTO lib) */
 static const char *ssl_error(void)
 {
     unsigned long err;
@@ -6141,12 +6183,50 @@ static void *load_dll(struct mg_context *ctx, const char *dll_name,
 
     return dll_handle;
 }
+
+static void *ssllib_dll_handle;        /* Store the ssl library handle. */
+static void *cryptolib_dll_handle;     /* Store the crypto library handle. */
+
 #endif /* NO_SSL_DL */
+
+static int cryptolib_users = 0;        /* Refecence counter for crypto library. */
+
+static int initialize_ssl(struct mg_context *ctx)
+{
+    int i, size;
+
+#if !defined(NO_SSL_DL)
+    if (!cryptolib_dll_handle) {
+        cryptolib_dll_handle = load_dll(ctx, CRYPTO_LIB, crypto_sw);
+        if (!cryptolib_dll_handle) {
+            return 0;
+        }
+    }
+#endif /* NO_SSL_DL */
+
+    if (mg_atomic_inc(&cryptolib_users)>1) return 1;
+
+    /* Initialize locking callbacks, needed for thread safety.
+       http://www.openssl.org/support/faq.html#PROG1 */
+    size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
+    if ((ssl_mutexes = (pthread_mutex_t *) mg_malloc((size_t)size)) == NULL) {
+        mg_cry(fc(ctx), "%s: cannot allocate mutexes: %s", __func__, ssl_error());
+        return 0;
+    }
+
+    for (i = 0; i < CRYPTO_num_locks(); i++) {
+        pthread_mutex_init(&ssl_mutexes[i], NULL);
+    }
+
+    CRYPTO_set_locking_callback(&ssl_locking_callback);
+    CRYPTO_set_id_callback(&ssl_id_callback);
+
+    return 1;
+}
 
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
 static int set_ssl_option(struct mg_context *ctx)
 {
-    int i, size;
     const char *pem;
 
     /* If PEM file is not specified and the init_ssl callback
@@ -6156,11 +6236,16 @@ static int set_ssl_option(struct mg_context *ctx)
         return 1;
     }
 
-#if !defined(NO_SSL_DL)
-    ctx->ssllib_dll_handle = load_dll(ctx, SSL_LIB, ssl_sw);
-    ctx->cryptolib_dll_handle = load_dll(ctx, CRYPTO_LIB, crypto_sw);
-    if (!ctx->ssllib_dll_handle || !ctx->cryptolib_dll_handle) {
+    if (!initialize_ssl(ctx)) {
         return 0;
+    }
+
+#if !defined(NO_SSL_DL)
+    if (!ssllib_dll_handle) {
+        ssllib_dll_handle = load_dll(ctx, SSL_LIB, ssl_sw);
+        if (!ssllib_dll_handle) {
+            return 0;
+        }
     }
 #endif /* NO_SSL_DL */
 
@@ -6187,28 +6272,15 @@ static int set_ssl_option(struct mg_context *ctx)
         (void) SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem);
     }
 
-    /* Initialize locking callbacks, needed for thread safety.
-       http://www.openssl.org/support/faq.html#PROG1 */
-    size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
-    if ((ssl_mutexes = (pthread_mutex_t *) mg_malloc((size_t)size)) == NULL) {
-        mg_cry(fc(ctx), "%s: cannot allocate mutexes: %s", __func__, ssl_error());
-        return 0;
-    }
-
-    for (i = 0; i < CRYPTO_num_locks(); i++) {
-        pthread_mutex_init(&ssl_mutexes[i], NULL);
-    }
-
-    CRYPTO_set_locking_callback(&ssl_locking_callback);
-    CRYPTO_set_id_callback(&ssl_id_callback);
-
     return 1;
 }
 
 static void uninitialize_ssl(struct mg_context *ctx)
 {
     int i;
-    if (ctx->ssl_ctx != NULL) {
+    (void)ctx;
+
+    if (mg_atomic_dec(&cryptolib_users)==0) {
         CRYPTO_set_locking_callback(NULL);
         for (i = 0; i < CRYPTO_num_locks(); i++) {
             pthread_mutex_destroy(&ssl_mutexes[i]);
@@ -6495,9 +6567,9 @@ struct mg_connection *mg_connect_websocket_client(const char *host, int port, in
                                                void * user_data)
 {
     struct mg_connection* conn = NULL;
-    struct mg_context * newctx = NULL;
 
 #if defined(USE_WEBSOCKET)
+    struct mg_context * newctx = NULL;
     static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
     static const char *handshake_req;
 
@@ -6687,9 +6759,12 @@ static void *worker_thread_run(void *thread_func_param)
                Thanks to Johannes Winkelmann for the patch.
                TODO(lsm): Fix IPv6 case */
             conn->request_info.remote_port = ntohs(conn->client.rsa.sin.sin_port);
+            sockaddr_to_string(conn->request_info.remote_addr, sizeof(conn->request_info.remote_addr), &conn->client.rsa);
+/* TODO: #if defined(MG_LEGACY_INTERFACE) */
             memcpy(&conn->request_info.remote_ip,
                    &conn->client.rsa.sin.sin_addr.s_addr, 4);
             conn->request_info.remote_ip = ntohl(conn->request_info.remote_ip);
+/* #endif */
             conn->request_info.is_ssl = conn->client.is_ssl;
 
             if (!conn->client.is_ssl
@@ -6891,7 +6966,9 @@ static void master_thread_run(void *thread_func_param)
     }
 
 #if !defined(NO_SSL)
-    uninitialize_ssl(ctx);
+    if (ctx->ssl_ctx != NULL) {
+        uninitialize_ssl(ctx);
+    }
 #endif
     DEBUG_TRACE("exiting");
 
@@ -6980,8 +7057,7 @@ static void free_context(struct mg_context *ctx)
     }
 
     /* Deallocate the tls variable */
-    sTlsInit--;
-    if (sTlsInit==0) {
+    if (mg_atomic_dec(&sTlsInit)==0) {
         pthread_key_delete(sTlsKey);
     }
 
@@ -7051,7 +7127,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     WSADATA data;
     WSAStartup(MAKEWORD(2,2), &data);
 #pragma warning(suppress: 28125)
-    InitializeCriticalSection(&global_log_file_lock);
+    if (!sTlsInit) InitializeCriticalSection(&global_log_file_lock);
 #endif /* _WIN32 && !__SYMBIAN32__ */
 
     /* Check if the config_options and the corresponding enum have compatible sizes. */
@@ -7064,14 +7140,17 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
         return NULL;
     }
 
-    if (sTlsInit==0) {
+    if (mg_atomic_inc(&sTlsInit)==1) {
         if (0 != pthread_key_create(&sTlsKey, NULL)) {
             /* Fatal error - abort start. However, this situation should never occur in practice. */
+            mg_atomic_dec(&sTlsInit);
             mg_cry(fc(ctx), "Cannot initialize thread local storage");
             mg_free(ctx);
             return NULL;
         }
-        sTlsInit++;
+    } else {
+       /* TODO: check if sTlsKey is already initialized */
+       mg_sleep(1);
     }
 
     ok =  0==pthread_mutex_init(&ctx->thread_mutex, NULL);

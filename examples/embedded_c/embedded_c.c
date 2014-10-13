@@ -106,6 +106,7 @@ int main(int argc, char *argv[])
 #endif
     }
 
+    mg_stop(ctx);
     printf("Bye!\n");
 
     return 0;
