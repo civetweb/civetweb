@@ -601,8 +601,6 @@ CIVETWEB_API struct mg_connection *mg_connect_websocket_client(const char *host,
                                                websocket_data_func data_func, websocket_close_func close_func,
                                                void * user_data);
 
-CIVETWEB_API int mg_printf(struct mg_connection *conn, const char *fmt, ...);
-
 CIVETWEB_API struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
                                  char *ebuf, size_t ebuf_len);
 
