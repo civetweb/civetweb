@@ -580,7 +580,7 @@ CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
      host: host to connect to, i.e. "echo.websocket.org" or "192.168.1.1" or "localhost"
      port: server port
      use_ssl: make a secure connection to server
-     error_buffer, error_buffer_size: error message placeholder.
+     error_buffer, error_buffer_size: buffer for an error message
      path: server path you are trying to connect to, i.e. if connection to localhost/app, path should be "/app"
      origin: value of the Origin HTTP header
      data_func: callback that should be used when data is received from the server
@@ -588,7 +588,8 @@ CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
 
    Return:
      On success, valid mg_connection object.
-     On error, NULL. */
+     On error, NULL. Se error_buffer for details.
+*/
 
 typedef int  (*websocket_data_func)(struct mg_connection *, int bits,
                            char *data, size_t data_len);
@@ -601,10 +602,22 @@ CIVETWEB_API struct mg_connection *mg_connect_websocket_client(const char *host,
                                                websocket_data_func data_func, websocket_close_func close_func,
                                                void * user_data);
 
-CIVETWEB_API struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
-                                 char *ebuf, size_t ebuf_len);
+/* Connect to a TCP server as a client (can be used to connect to a HTTP server)
+   Parameters:
+     host: host to connect to, i.e. "www.wikipedia.org" or "192.168.1.1" or "localhost"
+     port: server port
+     use_ssl: make a secure connection to server
+     error_buffer, error_buffer_size: buffer for an error message
 
-CIVETWEB_API int mg_getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len);
+   Return:
+     On success, valid mg_connection object.
+     On error, NULL. Se error_buffer for details.
+*/
+CIVETWEB_API struct mg_connection *mg_connect_client(const char *host, int port, int use_ssl,
+                                               char *error_buffer, size_t error_buffer_size);
+
+/* TODO: */
+/* CIVETWEB_API int mg_getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len); */
 
 #ifdef __cplusplus
 }
