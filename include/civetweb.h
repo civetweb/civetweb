@@ -617,7 +617,7 @@ CIVETWEB_API struct mg_connection *mg_connect_client(const char *host, int port,
                                                char *error_buffer, size_t error_buffer_size);
 
 /* TODO: */
-/* CIVETWEB_API int mg_getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len); */
+/* CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len); */
 
 #ifdef __cplusplus
 }

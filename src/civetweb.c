@@ -6470,7 +6470,7 @@ static int is_valid_uri(const char *uri)
     return uri[0] == '/' || (uri[0] == '*' && uri[1] == '\0');
 }
 
-int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
+static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
 {
     const char *cl;
 
@@ -6508,6 +6508,12 @@ int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
         conn->birth_time = time(NULL);
     }
     return ebuf[0] == '\0';
+}
+
+int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
+{
+    /* Implementation of API function for HTTP clients */
+    return getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len);
 }
 
 struct mg_connection *mg_download(const char *host, int port, int use_ssl,
