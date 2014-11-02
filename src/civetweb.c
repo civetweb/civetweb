@@ -6415,7 +6415,7 @@ void mg_close_connection(struct mg_connection *conn)
     mg_free(conn);
 }
 
-struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
+struct mg_connection *mg_connect_client(const char *host, int port, int use_ssl,
                                  char *ebuf, size_t ebuf_len)
 {
     static struct mg_context fake_ctx;
@@ -6470,7 +6470,7 @@ static int is_valid_uri(const char *uri)
     return uri[0] == '/' || (uri[0] == '*' && uri[1] == '\0');
 }
 
-int mg_getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
+int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
 {
     const char *cl;
 
@@ -6519,11 +6519,11 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
 
     va_start(ap, fmt);
     ebuf[0] = '\0';
-    if ((conn = mg_connect(host, port, use_ssl, ebuf, ebuf_len)) == NULL) {
+    if ((conn = mg_connect_client(host, port, use_ssl, ebuf, ebuf_len)) == NULL) {
     } else if (mg_vprintf(conn, fmt, ap) <= 0) {
         snprintf(ebuf, ebuf_len, "%s", "Error sending request");
     } else {
-        mg_getreq(conn, ebuf, ebuf_len);
+        getreq(conn, ebuf, ebuf_len);
     }
     if (ebuf[0] != '\0' && conn != NULL) {
         mg_close_connection(conn);
@@ -6646,7 +6646,7 @@ static void process_new_connection(struct mg_connection *conn)
        to crule42. */
     conn->data_len = 0;
     do {
-        if (!mg_getreq(conn, ebuf, sizeof(ebuf))) {
+        if (!getreq(conn, ebuf, sizeof(ebuf))) {
             send_http_error(conn, 500, "Server Error", "%s", ebuf);
             conn->must_close = 1;
         } else if (!is_valid_uri(conn->request_info.uri)) {
