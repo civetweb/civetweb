@@ -5,6 +5,8 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Use temporary file name for partially uploaded files
+- Some new API functions for C and C++
 - Add a websocket client example
 - Add a websocket client API
 - Update websocket example
