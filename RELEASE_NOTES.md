@@ -5,11 +5,18 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- New API functions for TCP/HTTP clients
+- Fix upload of huge files
+- Allow multiple SSL instances within one application
+- Improve API and user docu
+- Allow to chose betwen static and dynamic Lua library
+- Improve unit test
 - Use temporary file name for partially uploaded files
-- Some new API functions for C and C++
+- Addtional API functions exported to C++
 - Add a websocket client example
 - Add a websocket client API
 - Update websocket example
+- Make content length available in request_info
 - New API functions: access context, callback for create/delete, access user data
 - Upgraded Lua from 5.2.2 to 5.2.3
 - Integrate LuaXML
