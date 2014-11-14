@@ -6462,6 +6462,16 @@ struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
     return conn;
 }
 
+struct mg_connection *mg_connect_non_block(const char *host, int port, int use_ssl,
+                                 char *ebuf, size_t ebuf_len)
+{
+	struct mg_connection *conn = mg_connect(host, port, use_ssl, ebuf, ebuf_len);
+	if (conn) {
+	    set_non_blocking_mode(conn->client.sock);
+	}
+	return conn;
+}
+
 static int is_valid_uri(const char *uri)
 {
     /* Conform to
@@ -6508,6 +6518,20 @@ int mg_getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
         conn->birth_time = time(NULL);
     }
     return ebuf[0] == '\0';
+}
+
+int mg_getreq_timeout(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int milliseconds)
+{
+    int result;
+    struct pollfd pfd;
+    
+    pfd.fd = conn->client.sock;
+    result = poll(&pfd, 1, milliseconds);
+    if (result > 0) {
+        return mg_getreq(conn, ebuf, ebuf_len);
+    } else {
+        return result;
+    }
 }
 
 struct mg_connection *mg_download(const char *host, int port, int use_ssl,
