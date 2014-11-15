@@ -99,6 +99,7 @@
 #define _WIN32_WINNT 0x0400 /* To make it link in VS2005 */
 #endif
 #include <windows.h>
+typedef const char * SOCK_OPT_TYPE;
 
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -275,6 +276,7 @@ struct pollfd {
 #include <stdint.h>
 #include <inttypes.h>
 #include <netdb.h>
+typedef const void * SOCK_OPT_TYPE;
 
 #if defined(ANDROID)
 typedef unsigned short int in_port_t;
@@ -870,7 +872,7 @@ int mg_atomic_inc(volatile int * addr)
 {
     int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-    ret = InterlockedIncrement(addr);
+    ret = InterlockedIncrement((volatile unsigned int *) addr);
 #elif defined(__GNUC__)
     ret = __sync_add_and_fetch(addr, 1);
 #else
@@ -883,7 +885,7 @@ int mg_atomic_dec(volatile int * addr)
 {
     int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-    ret = InterlockedDecrement(addr);
+    ret = InterlockedDecrement((volatile unsigned int *) addr);
 #elif defined(__GNUC__)
     ret = __sync_sub_and_fetch(addr, 1);
 #else
@@ -1549,7 +1551,7 @@ static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
     (void) unused;
     InitializeCriticalSection(&cv->threadIdSec);
     cv->waitingthreadcount = 0;
-    cv->waitingthreadhdls = mg_calloc(MAX_WORKER_THREADS, sizeof(pthread_t));
+    cv->waitingthreadhdls = (pthread_t *) mg_calloc(MAX_WORKER_THREADS, sizeof(pthread_t));
     return (cv->waitingthreadhdls!=NULL) ? 0 : -1;
 }
 
@@ -1966,7 +1968,7 @@ static int dlclose(void *handle)
 {
     int result;
 
-    if (FreeLibrary(handle) != 0) {
+    if (FreeLibrary((HMODULE) handle) != 0) {
         result = 0;
     } else {
         result = -1;
@@ -5961,8 +5963,7 @@ static int set_ports_option(struct mg_context *ctx)
                    INVALID_SOCKET ||
                    /* On Windows, SO_REUSEADDR is recommended only for
                       broadcast UDP sockets */
-                   setsockopt(so.sock, SOL_SOCKET, SO_REUSEADDR,
-                              (void *) &on, sizeof(on)) != 0 ||
+                   setsockopt(so.sock, SOL_SOCKET, SO_REUSEADDR, (SOCK_OPT_TYPE) &on, sizeof(on)) != 0 ||
 #if defined(USE_IPV6)
                    (so.lsa.sa.sa_family == AF_INET6 &&
                     setsockopt(so.sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *) &off,
@@ -6853,8 +6854,8 @@ static int set_sock_timeout(SOCKET sock, int milliseconds)
     t.tv_sec = milliseconds / 1000;
     t.tv_usec = (milliseconds * 1000) % 1000000;
 #endif
-    return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (void *) &t, sizeof(t)) ||
-           setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (void *) &t, sizeof(t));
+    return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t)) ||
+           setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
 }
 
 static void accept_new_connection(const struct socket *listener,
@@ -6887,8 +6888,7 @@ static void accept_new_connection(const struct socket *listener,
            keep-alive, next keep-alive handshake will figure out that the
            client is down and will close the server end.
            Thanks to Igor Klopov who suggested the patch. */
-        if (setsockopt(so.sock, SOL_SOCKET, SO_KEEPALIVE, (void *) &on,
-                       sizeof(on)) != 0) {
+        if (setsockopt(so.sock, SOL_SOCKET, SO_KEEPALIVE, (SOCK_OPT_TYPE) &on, sizeof(on)) != 0) {
             mg_cry(fc(ctx),
                    "%s: setsockopt(SOL_SOCKET SO_KEEPALIVE) failed: %s",
                    __func__, strerror(ERRNO));
