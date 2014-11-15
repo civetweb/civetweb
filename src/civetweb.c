@@ -814,7 +814,7 @@ struct mg_context {
 #endif
 
 #ifdef USE_TIMERS
-    struct timers * timers;
+    struct ttimers * timers;
 #endif
 };
 
