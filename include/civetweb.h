@@ -606,12 +606,16 @@ CIVETWEB_API int mg_printf(struct mg_connection *conn, const char *fmt, ...);
 CIVETWEB_API struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
                                  char *ebuf, size_t ebuf_len);
 
-CIVETWEB_API struct mg_connection *mg_connect_non_block(const char *host, int port, int use_ssl,
-                                 char *ebuf, size_t ebuf_len);
+/* Wait for a response from the server
+   Parameters:
+     conn: connection
+     ebuf, ebuf_len: error message placeholder.
+     milliseconds: time to wait for a response (if zero then wait forever)
 
-CIVETWEB_API int mg_getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len);
-
-CIVETWEB_API int mg_getreq_timeout(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int milliseconds);
+   Return:
+     On success, 1
+     On error/timeout, 0 */
+CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, const unsigned int milliseconds);
 
 
 #ifdef __cplusplus

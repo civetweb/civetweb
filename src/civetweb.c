@@ -6462,16 +6462,6 @@ struct mg_connection *mg_connect(const char *host, int port, int use_ssl,
     return conn;
 }
 
-struct mg_connection *mg_connect_non_block(const char *host, int port, int use_ssl,
-                                 char *ebuf, size_t ebuf_len)
-{
-	struct mg_connection *conn = mg_connect(host, port, use_ssl, ebuf, ebuf_len);
-	if (conn) {
-	    set_non_blocking_mode(conn->client.sock);
-	}
-	return conn;
-}
-
 static int is_valid_uri(const char *uri)
 {
     /* Conform to
@@ -6480,9 +6470,22 @@ static int is_valid_uri(const char *uri)
     return uri[0] == '/' || (uri[0] == '*' && uri[1] == '\0');
 }
 
-int mg_getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
+int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, const unsigned int milliseconds)
 {
     const char *cl;
+    struct pollfd pfd;
+
+    if (milliseconds > 0) {    
+        pfd.fd = conn->client.sock;
+    	switch (poll(&pfd, 1, milliseconds)) {
+    	    case 0:
+                snprintf(ebuf, ebuf_len, "%s", "Timed-out");
+                return 0;
+            case -1:
+                snprintf(ebuf, ebuf_len, "%s", "Interrupted");
+                return 0;
+        }
+    }
 
     ebuf[0] = '\0';
     reset_per_request_attributes(conn);
@@ -6520,20 +6523,6 @@ int mg_getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
     return ebuf[0] == '\0';
 }
 
-int mg_getreq_timeout(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int milliseconds)
-{
-    int result;
-    struct pollfd pfd;
-    
-    pfd.fd = conn->client.sock;
-    result = poll(&pfd, 1, milliseconds);
-    if (result > 0) {
-        return mg_getreq(conn, ebuf, ebuf_len);
-    } else {
-        return result;
-    }
-}
-
 struct mg_connection *mg_download(const char *host, int port, int use_ssl,
                                   char *ebuf, size_t ebuf_len,
                                   const char *fmt, ...)
@@ -6547,7 +6536,7 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
     } else if (mg_vprintf(conn, fmt, ap) <= 0) {
         snprintf(ebuf, ebuf_len, "%s", "Error sending request");
     } else {
-        mg_getreq(conn, ebuf, ebuf_len);
+        mg_get_response(conn, ebuf, ebuf_len, 0);
     }
     if (ebuf[0] != '\0' && conn != NULL) {
         mg_close_connection(conn);
@@ -6670,7 +6659,7 @@ static void process_new_connection(struct mg_connection *conn)
        to crule42. */
     conn->data_len = 0;
     do {
-        if (!mg_getreq(conn, ebuf, sizeof(ebuf))) {
+        if (!mg_get_response(conn, ebuf, sizeof(ebuf), 0)) {
             send_http_error(conn, 500, "Server Error", "%s", ebuf);
             conn->must_close = 1;
         } else if (!is_valid_uri(conn->request_info.uri)) {
