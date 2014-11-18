@@ -477,7 +477,7 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
 #if defined(_WIN32)
                 OutputDebugStringA("MEM: realloc failed\n");
 #else
-                DEBUG_TRACE("MEM: realloc failed\n");
+                DEBUG_TRACE("%s", "MEM: realloc failed\n");
 #endif
                 return _realloc;
             }
@@ -6265,12 +6265,13 @@ static int set_ssl_option(struct mg_context *ctx)
 
     /* If user callback returned non-NULL, that means that user callback has
        set up certificate itself. In this case, skip sertificate setting. */
-    if ((ctx->callbacks.init_ssl == NULL ||
-         !ctx->callbacks.init_ssl(ctx->ssl_ctx, ctx->user_data)) &&
-        (SSL_CTX_use_certificate_file(ctx->ssl_ctx, pem, 1) == 0 ||
-         SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, pem, 1) == 0)) {
-        mg_cry(fc(ctx), "%s: cannot open %s: %s", __func__, pem, ssl_error());
-        return 0;
+    if ((ctx->callbacks.init_ssl == NULL) || (!ctx->callbacks.init_ssl(ctx->ssl_ctx, ctx->user_data))) {
+        if (pem != NULL) {
+            if ((SSL_CTX_use_certificate_file(ctx->ssl_ctx, pem, 1) == 0) || (SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, pem, 1) == 0)) {
+                mg_cry(fc(ctx), "%s: cannot open %s: %s", __func__, pem, ssl_error());
+                return 0;
+            }
+        }
     }
 
     if (pem != NULL) {
@@ -6558,7 +6559,7 @@ static void* websocket_client_thread(void *data)
     struct mg_connection* conn = (struct mg_connection*)data;
     read_websocket(conn);
 
-    DEBUG_TRACE("Websocket client thread exited\n");
+    DEBUG_TRACE("%s", "Websocket client thread exited\n");
 
     if (conn->ctx->callbacks.connection_close != NULL) {
         conn->ctx->callbacks.connection_close(conn);
@@ -6641,7 +6642,7 @@ struct mg_connection *mg_connect_websocket_client(const char *host, int port, in
         mg_free((void*)newctx);
         mg_free((void*)conn);
         conn = NULL;
-        DEBUG_TRACE("Websocket client connect thread could not be started\r\n");
+        DEBUG_TRACE("%s", "Websocket client connect thread could not be started\r\n");
     }
 #endif
 
@@ -6709,7 +6710,7 @@ static void process_new_connection(struct mg_connection *conn)
 static int consume_socket(struct mg_context *ctx, struct socket *sp)
 {
     (void) pthread_mutex_lock(&ctx->thread_mutex);
-    DEBUG_TRACE("going idle");
+    DEBUG_TRACE("%s", "going idle");
 
     /* If the queue is empty, wait. We're idle at this point. */
     while (ctx->sq_head == ctx->sq_tail && ctx->stop_flag == 0) {
@@ -6804,7 +6805,7 @@ static void *worker_thread_run(void *thread_func_param)
 #endif
     mg_free(conn);
 
-    DEBUG_TRACE("exiting");
+    DEBUG_TRACE("%s", "exiting");
     return NULL;
 }
 
@@ -6955,7 +6956,7 @@ static void master_thread_run(void *thread_func_param)
         }
     }
     mg_free(pfd);
-    DEBUG_TRACE("stopping workers");
+    DEBUG_TRACE("%s", "stopping workers");
 
     /* Stop signal received: somebody called mg_stop. Quit. */
     close_all_listening_sockets(ctx);
@@ -6981,7 +6982,7 @@ static void master_thread_run(void *thread_func_param)
         uninitialize_ssl(ctx);
     }
 #endif
-    DEBUG_TRACE("exiting");
+    DEBUG_TRACE("%s", "exiting");
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     CloseHandle(tls.pthread_cond_helper_mutex);
