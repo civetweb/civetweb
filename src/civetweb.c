@@ -6312,6 +6312,7 @@ static void reset_per_request_attributes(struct mg_connection *conn)
     conn->status_code = -1;
     conn->must_close = conn->request_len = conn->throttle = 0;
     conn->request_info.content_length = -1;
+    conn->data_len = 0;
 }
 
 static void close_socket_gracefully(struct mg_connection *conn)
