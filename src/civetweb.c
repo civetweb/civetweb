@@ -6479,9 +6479,22 @@ static int is_valid_uri(const char *uri)
     return uri[0] == '/' || (uri[0] == '*' && uri[1] == '\0');
 }
 
-static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
+static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout)
 {
     const char *cl;
+    struct pollfd pfd;
+
+    if (timeout >= 0) {
+        pfd.fd = conn->client.sock;
+        switch (poll(&pfd, 1, timeout)) {
+        case 0:
+            snprintf(ebuf, ebuf_len, "%s", "Timed out");
+            return 0;
+        case -1:
+            snprintf(ebuf, ebuf_len, "%s", "Interrupted");
+            return 0;
+        }
+    }
 
     ebuf[0] = '\0';
     reset_per_request_attributes(conn);
@@ -6519,10 +6532,12 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
     return ebuf[0] == '\0';
 }
 
-int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len)
+int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout)
 {
     /* Implementation of API function for HTTP clients */
-    return getreq(conn, ebuf, ebuf_len);
+    /* TODO: Define proper return values - maybe return length?
+             For the first test use <0 for error and >0 for OK */
+    return (getreq(conn, ebuf, ebuf_len, timeout) == 0) ? -1 : +1;
 }
 
 struct mg_connection *mg_download(const char *host, int port, int use_ssl,
@@ -6538,7 +6553,7 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
     } else if (mg_vprintf(conn, fmt, ap) <= 0) {
         snprintf(ebuf, ebuf_len, "%s", "Error sending request");
     } else {
-        getreq(conn, ebuf, ebuf_len);
+        getreq(conn, ebuf, ebuf_len, TIMEOUT_INFINITE);
     }
     if (ebuf[0] != '\0' && conn != NULL) {
         mg_close_connection(conn);
@@ -6661,7 +6676,7 @@ static void process_new_connection(struct mg_connection *conn)
        to crule42. */
     conn->data_len = 0;
     do {
-        if (!getreq(conn, ebuf, sizeof(ebuf))) {
+        if (!getreq(conn, ebuf, sizeof(ebuf), TIMEOUT_INFINITE)) {
             send_http_error(conn, 500, "Server Error", "%s", ebuf);
             conn->must_close = 1;
         } else if (!is_valid_uri(conn->request_info.uri)) {

@@ -616,8 +616,23 @@ CIVETWEB_API struct mg_connection *mg_connect_websocket_client(const char *host,
 CIVETWEB_API struct mg_connection *mg_connect_client(const char *host, int port, int use_ssl,
                                                char *error_buffer, size_t error_buffer_size);
 
-/* TODO: */
-/* CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len); */
+
+enum {
+    TIMEOUT_INFINITE = -1
+};
+
+/* Wait for a response from the server
+   Parameters:
+     conn: connection
+     ebuf, ebuf_len: error message placeholder.
+     timeout: time to wait for a response in milliseconds (if < 0 then wait forever)
+
+   Return:
+     On success, >= 0
+     On error/timeout, < 0
+*/
+CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout);
+
 
 #ifdef __cplusplus
 }
