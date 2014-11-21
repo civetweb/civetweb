@@ -2139,7 +2139,7 @@ static int mg_start_thread_with_id(mg_thread_func_t func, void *param, pthread_t
 
     result = pthread_create(&thread_id, &attr, func, param);
     pthread_attr_destroy(&attr);
-    if (threadidptr != NULL) {
+    if ((result == 0) && (threadidptr != NULL)) {
         *threadidptr = thread_id;
     }
     return result;
@@ -7300,6 +7300,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
             ctx->num_threads--;
             (void) pthread_mutex_unlock(&ctx->thread_mutex);
             mg_cry(fc(ctx), "Cannot start worker thread: %ld", (long) ERRNO);
+            break;
         }
     }
 
