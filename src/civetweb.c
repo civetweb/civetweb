@@ -6484,6 +6484,7 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int t
     const char *cl;
     struct pollfd pfd;
 
+    reset_per_request_attributes(conn);
     if (timeout >= 0) {
         pfd.fd = conn->client.sock;
         switch (poll(&pfd, 1, timeout)) {
@@ -6497,7 +6498,6 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int t
     }
 
     ebuf[0] = '\0';
-    reset_per_request_attributes(conn);
     conn->request_len = read_request(NULL, conn, conn->buf, conn->buf_size,
                                      &conn->data_len);
     assert(conn->request_len < 0 || conn->data_len >= conn->request_len);
