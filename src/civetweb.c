@@ -2675,8 +2675,9 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
                           )
 {
     struct vec a, b;
-    const char *rewrite, *uri = conn->request_info.uri,
-                          *root = conn->ctx->config[DOCUMENT_ROOT];
+    const char *rewrite,
+               *uri = conn->request_info.uri,
+               *root = conn->ctx->config[DOCUMENT_ROOT];
     char *p;
     int match_len;
     char gz_path[PATH_MAX];
@@ -4041,14 +4042,18 @@ static int read_request(FILE *fp, struct mg_connection *conn,
                         char *buf, int bufsiz, int *nread)
 {
     int request_len, n = 0;
+    time_t last_action_time = 0;
+    double request_timout = atof(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 
     request_len = get_request_len(buf, *nread);
     while (conn->ctx->stop_flag == 0 &&
            *nread < bufsiz && request_len == 0 &&
+           difftime(last_action_time, conn->birth_time) <= request_timout &&
            (n = pull(fp, conn, buf + *nread, bufsiz - *nread)) > 0) {
         *nread += n;
         assert(*nread <= bufsiz);
         request_len = get_request_len(buf, *nread);
+        last_action_time = (request_timout > 0.0) ? time(NULL) : 0;
     }
 
     return request_len <= 0 && n <= 0 ? -1 : request_len;
@@ -6505,7 +6510,7 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int t
     if (conn->request_len == 0 && conn->data_len == conn->buf_size) {
         snprintf(ebuf, ebuf_len, "%s", "Request Too Large");
     } else if (conn->request_len <= 0) {
-        snprintf(ebuf, ebuf_len, "%s", "Client closed connection");
+        snprintf(ebuf, ebuf_len, "%s", "Client sent malformed request");
     } else if (parse_http_message(conn->buf, conn->buf_size,
                                   &conn->request_info) <= 0) {
         snprintf(ebuf, ebuf_len, "Bad request: [%.*s]", conn->data_len, conn->buf);
