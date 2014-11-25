@@ -5553,6 +5553,8 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
         if ((s = strrchr(fname, '/')) == NULL &&
             (s = strrchr(fname, '\\')) == NULL) {
             s = fname;
+        } else {
+            s++;
         }
 
         /* Open file in binary mode. TODO: set an exclusive lock. */
