@@ -90,7 +90,7 @@
 #include <stdio.h>
 
 #ifndef MAX_WORKER_THREADS
-#define MAX_WORKER_THREADS 1024
+#define MAX_WORKER_THREADS (1024*64)
 #endif
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
