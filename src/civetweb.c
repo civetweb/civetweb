@@ -7306,7 +7306,13 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
             (void) pthread_mutex_lock(&ctx->thread_mutex);
             ctx->num_threads--;
             (void) pthread_mutex_unlock(&ctx->thread_mutex);
-            mg_cry(fc(ctx), "Cannot start worker thread: %ld", (long) ERRNO);
+            if (i>0) {
+                mg_cry(fc(ctx), "Cannot start worker thread %i: error %ld", i+1, (long) ERRNO);
+            } else {
+                mg_cry(fc(ctx), "Cannot create threads: error %ld", (long) ERRNO);
+                free_context(ctx);
+                return NULL;
+            }
             break;
         }
     }
