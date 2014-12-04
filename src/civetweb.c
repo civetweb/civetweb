@@ -5475,11 +5475,13 @@ static uint32_t get_remote_ip(const struct mg_connection *conn)
 
 int mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
-    const char *content_type_header, *boundary_start;
-    char buf[MG_BUF_LEN], path[PATH_MAX], tmp_path[PATH_MAX], fname[1024], boundary[100], *s;
+    const char *content_type_header, *boundary_start, *sc;
+    char *s;
+    char buf[MG_BUF_LEN], path[PATH_MAX], tmp_path[PATH_MAX], fname[1024], boundary[100];
     FILE *fp;
-    int bl, n, i, j, headers_len, boundary_len, eof,
+    int bl, n, i, headers_len, boundary_len, eof,
         len = 0, num_uploaded_files = 0;
+    struct mg_request_info part_request_info;
 
     /* Request looks like this:
 
@@ -5520,19 +5522,29 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
             break;
         }
 
+        /* Get headers for this part of the multipart message */
+        buf[headers_len-1]=0;
+        s = &buf[bl];
+        memset(&part_request_info, 0, sizeof(part_request_info));
+        parse_http_headers(&s, &part_request_info);
+        assert(&buf[headers_len-1] == s);
+
         /* Fetch file name. */
-        fname[0] = '\0';
-        for (i = j = 0; i < headers_len; i++) {
-            if (buf[i] == '\r' && buf[i + 1] == '\n') {
-                buf[i] = buf[i + 1] = '\0';
-                /* TODO(lsm): don't expect filename to be the 3rd field,
-                   parse the header properly instead. */
-                IGNORE_UNUSED_RESULT(sscanf(&buf[j], "Content-Disposition: %*s %*s filename=\"%1023[^\"]",
-                                            fname));
-                fname[1023]=0;
-                j = i + 2;
-            }
+        sc = get_header(&part_request_info, "Content-Disposition");
+        if (!sc) {
+           /* invalid part of a multipart message */
+           break;
         }
+
+        sc = strstr(sc, "filename");
+        if (!sc) {
+            /* no filename set */
+            break;
+        }
+        sc += 8; /* skip "filename" */
+        fname[0] = '\0';
+        IGNORE_UNUSED_RESULT(sscanf(sc, " = \"%1023[^\"]", fname));
+        fname[1023]=0;
 
         /* Give up if the headers are not what we expect */
         if (fname[0] == '\0') {
@@ -5557,7 +5569,9 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
             s++;
         }
 
-        /* Open file in binary mode. TODO: set an exclusive lock. */
+        /* Open file in binary mode. */
+        /* There data is written to a temporary file first. */
+        /* Different users should use a different destination_dir. */
         snprintf(path, sizeof(path)-1, "%s/%s", destination_dir, s);
         strcpy(tmp_path, path);
         strcat(tmp_path, "~");
