@@ -138,7 +138,7 @@ static void die(const char *fmt, ...)
 static int MakeConsole();
 #endif
 
-static void show_usage_and_exit(void)
+static void show_usage_and_exit(const char *exeName)
 {
     const struct mg_option *options;
     int i;
@@ -147,12 +147,20 @@ static void show_usage_and_exit(void)
     MakeConsole();
 #endif
 
+    if (exeName==0 || *exeName==0) {
+        exeName = "civetweb";
+    }
+
     fprintf(stderr, "Civetweb v%s, built on %s\n",
             mg_version(), __DATE__);
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  civetweb -A <htpasswd_file> <realm> <user> <passwd>\n");
-    fprintf(stderr, "  civetweb [config_file]\n");
-    fprintf(stderr, "  civetweb [-option value ...]\n");
+    fprintf(stderr, "  Start server with a set of options:\n");
+    fprintf(stderr, "    %s [config_file]\n", exeName);
+    fprintf(stderr, "    %s [-option value ...]\n", exeName);
+    fprintf(stderr, "  Add user/change password:\n");
+    fprintf(stderr, "    %s -A <htpasswd_file> <realm> <user> <passwd>\n", exeName);
+    fprintf(stderr, "  Remove user:\n");
+    fprintf(stderr, "    %s -R <htpasswd_file> <realm> <user>\n", exeName);
     fprintf(stderr, "\nOPTIONS:\n");
 
     options = mg_get_valid_options();
@@ -432,7 +440,7 @@ static void process_command_line_arguments(char *argv[], char **options)
            They override config file and default settings. */
         for (i = cmd_line_opts_start; argv[i] != NULL; i += 2) {
             if (argv[i][0] != '-' || argv[i + 1] == NULL) {
-                show_usage_and_exit();
+                show_usage_and_exit(argv[0]);
             }
             if (!set_option(options, &argv[i][1], argv[i + 1])) {
                 printf("command line option is invalid, ignoring it:\n %s %s\n",
@@ -561,12 +569,21 @@ static void start_civetweb(int argc, char *argv[])
     char *options[2*MAX_OPTIONS+1];
     int i;
 
-    /* Edit passwords file, if -A option is specified */
+    /* Edit passwords file: Add user or change password, if -A option is specified */
     if (argc > 1 && !strcmp(argv[1], "-A")) {
         if (argc != 6) {
-            show_usage_and_exit();
+            show_usage_and_exit(argv[0]);
         }
         exit(mg_modify_passwords_file(argv[2], argv[3], argv[4], argv[5]) ?
+             EXIT_SUCCESS : EXIT_FAILURE);
+    }
+
+    /* Edit passwords file: Remove user, if -R option is specified */
+    if (argc > 1 && !strcmp(argv[1], "-R")) {
+        if (argc != 5) {
+            show_usage_and_exit(argv[0]);
+        }
+        exit(mg_modify_passwords_file(argv[2], argv[3], argv[4], NULL) ?
              EXIT_SUCCESS : EXIT_FAILURE);
     }
 
@@ -582,8 +599,8 @@ static void start_civetweb(int argc, char *argv[])
     }
 
     /* Show usage if -h or --help options are specified */
-    if (argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
-        show_usage_and_exit();
+    if (argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "-H") || !strcmp(argv[1], "--help"))) {
+        show_usage_and_exit(argv[0]);
     }
 
     options[0] = NULL;
@@ -1501,9 +1518,9 @@ static int MakeConsole() {
 
         ok = (GetConsoleWindow() != NULL);
         if (ok) {
-            freopen("CONIN$", "r", stdin); 
-            freopen("CONOUT$", "w", stdout); 
-            freopen("CONOUT$", "w", stderr); 
+            freopen("CONIN$", "r", stdin);
+            freopen("CONOUT$", "w", stdout);
+            freopen("CONOUT$", "w", stderr);
         }
     }
 
