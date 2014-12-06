@@ -3964,7 +3964,16 @@ void mg_send_file(struct mg_connection *conn, const char *path)
 {
     struct file file = STRUCT_FILE_INITIALIZER;
     if (mg_stat(conn, path, &file)) {
-        handle_static_file_request(conn, path, &file);
+        if (file.is_directory) {
+            if (!mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING], "yes")) {
+                handle_directory_request(conn, path);
+            } else {
+                send_http_error(conn, 403, "Directory Listing Denied",
+                    "Directory listing denied");
+            }
+        } else {
+            handle_static_file_request(conn, path, &file);
+        }
     } else {
         send_http_error(conn, 404, "Not Found", "%s", "File not found");
     }
