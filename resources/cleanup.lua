@@ -56,7 +56,7 @@ print("Tabs converted to spaces: " .. tostring(tabspace))
 print("Invalid characters:       " .. tostring(invalid))
 
 if changed then
-    local f = io.open(clean, "w")
+    local f = io.open(clean, "wb")
     for i=1,#newfile do
         f:write(newfile[i])
         f:write("\n")
