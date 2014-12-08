@@ -5560,15 +5560,6 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
             break;
         }
 
-        /* Move data to the beginning of the buffer */
-        assert(len >= headers_len);
-        memmove(buf, &buf[headers_len], len - headers_len);
-        len -= headers_len;
-
-        /* We open the file with exclusive lock held. This guarantee us
-           there is no other thread can save into the same file
-           simultaneously. */
-        fp = NULL;
         /* Construct destination file name. Do not allow paths to have
            slashes. */
         if ((s = strrchr(fname, '/')) == NULL &&
@@ -5578,15 +5569,26 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
             s++;
         }
 
-        /* Open file in binary mode. */
         /* There data is written to a temporary file first. */
         /* Different users should use a different destination_dir. */
         snprintf(path, sizeof(path)-1, "%s/%s", destination_dir, s);
         strcpy(tmp_path, path);
         strcat(tmp_path, "~");
+
+        /* We open the file with exclusive lock held. This guarantee us
+           there is no other thread can save into the same file
+           simultaneously. */
+        fp = NULL;
+        /* Open file in binary mode. */
         if ((fp = fopen(tmp_path, "wb")) == NULL) {
             break;
         }
+
+        /* Move data to the beginning of the buffer */
+        /* part_request_info is no longer valid after this operation */
+        assert(len >= headers_len);
+        memmove(buf, &buf[headers_len], len - headers_len);
+        len -= headers_len;
 
         /* Read POST data, write into file until boundary is found. */
         eof = n = 0;
@@ -5978,6 +5980,7 @@ static int set_ports_option(struct mg_context *ctx)
     union usa usa;
     socklen_t len;
 
+    memset(&so, 0, sizeof(so));
     memset(&usa, 0, sizeof(usa));
     len = sizeof(usa);
 
