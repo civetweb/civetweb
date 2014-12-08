@@ -4,7 +4,7 @@ mg.write("\r\n")
 mg.write([[<html><body>
 
 <p>This is another example of a Lua server page, served by
-<a href="http://code.google.com/p/civetweb">Civetweb web server</a>.
+<a href="http://sourceforge.net/projects/civetweb/">Civetweb web server</a>.
 </p><p>
 The following features are available:
 <ul>
