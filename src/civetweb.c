@@ -3962,7 +3962,6 @@ static void handle_static_file_request(struct mg_connection *conn, const char *p
 
 void mg_send_file2(struct mg_connection *conn, const char *path, int timeout)
 {
-timeout???
     struct file file = STRUCT_FILE_INITIALIZER;
     if (mg_stat(conn, path, &file)) {
         if (file.is_directory) {
@@ -5489,6 +5488,7 @@ static uint32_t get_remote_ip(const struct mg_connection *conn)
 
 int mg_upload2(struct mg_connection *conn, const char *destination_dir, int timeout)
 {
+    /* TODO: set a timeout */
     const char *content_type_header, *boundary_start, *sc;
     char *s;
     char buf[MG_BUF_LEN], path[PATH_MAX], tmp_path[PATH_MAX], fname[1024], boundary[100];
@@ -5634,7 +5634,7 @@ int mg_upload2(struct mg_connection *conn, const char *destination_dir, int time
 
 int mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
-    return mg_upload2(conn, destination_dir, TIMEOUT_INFINITE, NULL);
+    return mg_upload2(conn, destination_dir, TIMEOUT_INFINITE);
 }
 
 static int get_first_ssl_listener_index(const struct mg_context *ctx)
