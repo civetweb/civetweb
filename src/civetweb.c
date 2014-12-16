@@ -894,26 +894,29 @@ int mg_atomic_dec(volatile int * addr)
     return ret;
 }
 
-// Set the thread name for debugging purposes in Visual Studio
-// http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
-
-#if defined(_WIN32)
-const DWORD MS_VC_EXCEPTION = 0x406D1388;
-
+#if !defined(NO_THREAD_NAME)
+#if defined(_WIN32) && defined(_MSC_VER)
+/* Set the thread name for debugging purposes in Visual Studio
+   http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
+*/
 #pragma pack(push,8)
 typedef struct tagTHREADNAME_INFO
 {
-   DWORD dwType;     // Must be 0x1000.
-   LPCSTR szName;    // Pointer to name (in user addr space).
-   DWORD dwThreadID; // Thread ID (-1=caller thread).
-   DWORD dwFlags;    // Reserved for future use, must be zero.
+   DWORD dwType;     /* Must be 0x1000. */
+   LPCSTR szName;    /* Pointer to name (in user addr space). */
+   DWORD dwThreadID; /* Thread ID (-1=caller thread). */
+   DWORD dwFlags;    /* Reserved for future use, must be zero. */
 } THREADNAME_INFO;
 #pragma pack(pop)
+#elif defined(__linux__)
+#include <sys/prctl.h>
 #endif
 
 void mg_set_thread_name(const char* threadName)
 {
 #if defined(_WIN32)
+#if defined(_MSC_VER)
+   /* Windows and Visual Studio Compiler */
    THREADNAME_INFO info;
    info.dwType     = 0x1000;
    info.szName     = threadName;
@@ -922,13 +925,31 @@ void mg_set_thread_name(const char* threadName)
 
    __try
    {
-      RaiseException(MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+      RaiseException(0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info);
    }
    __except(EXCEPTION_EXECUTE_HANDLER)
    {
    }
+#elif defined(__MINGW32__)
+   /* No option known to set thread name for MinGW */
+#endif
+#elif defined(__linux__)
+   /* Not Windows */
+   (void)prctl(PR_SET_NAME,threadName,0,0,0);
+#elif defined(__APPLE__) || defined(__MACH__)
+   /* OS X */
+   (void)pthread_setname_np(threadName);
+#elif defined(BSD) || defined(__FreeBSD__) || defined(__OpenBSD__)
+   /* BSD */
+   pthread_set_name_np(pthread_self(), threadName);
+#else
+   /* POSIX */
+   (void)pthread_setname_np(pthread_self(), threadName);
 #endif
 }
+#else /* !defined(NO_THREAD_NAME) */
+void mg_set_thread_name(const char* threadName) {}
+#endif
 
 #if defined(MG_LEGACY_INTERFACE)
 const char **mg_get_valid_option_names(void)
