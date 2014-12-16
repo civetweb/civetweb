@@ -912,38 +912,43 @@ typedef struct tagTHREADNAME_INFO
 #include <sys/prctl.h>
 #endif
 
-void mg_set_thread_name(const char* threadName)
+void mg_set_thread_name(const char* name)
 {
+    char threadName[16]; /* Max. thread length in Linux/OSX/.. */
+
+    if (snprintf(threadName, sizeof(threadName), "civetweb-%s", name)<0) return;
+    threadName[sizeof(threadName)-1] = 0;
+
 #if defined(_WIN32)
 #if defined(_MSC_VER)
-   /* Windows and Visual Studio Compiler */
-   THREADNAME_INFO info;
-   info.dwType     = 0x1000;
-   info.szName     = threadName;
-   info.dwThreadID = -1;
-   info.dwFlags    = 0;
+    /* Windows and Visual Studio Compiler */
+    __try
+    {
+        THREADNAME_INFO info;
+        info.dwType     = 0x1000;
+        info.szName     = threadName;
+        info.dwThreadID = -1;
+        info.dwFlags    = 0;
 
-   __try
-   {
-      RaiseException(0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info);
-   }
-   __except(EXCEPTION_EXECUTE_HANDLER)
-   {
-   }
+        RaiseException(0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER)
+    {
+    }
 #elif defined(__MINGW32__)
    /* No option known to set thread name for MinGW */
 #endif
 #elif defined(__linux__)
-   /* Not Windows */
+   /* Linux (TODO: test) */
    (void)prctl(PR_SET_NAME,threadName,0,0,0);
 #elif defined(__APPLE__) || defined(__MACH__)
-   /* OS X */
+   /* OS X (TODO: test) */
    (void)pthread_setname_np(threadName);
 #elif defined(BSD) || defined(__FreeBSD__) || defined(__OpenBSD__)
-   /* BSD */
+   /* BSD (TODO: test) */
    pthread_set_name_np(pthread_self(), threadName);
 #else
-   /* POSIX */
+   /* POSIX (TODO: test) */
    (void)pthread_setname_np(pthread_self(), threadName);
 #endif
 }
@@ -5264,7 +5269,7 @@ static void read_websocket(struct mg_connection *conn)
     char *data = mem;
     unsigned char mop;  /* mask flag and opcode */
 
-    mg_set_thread_name("Civetweb Websocket");
+    mg_set_thread_name("wsock");
 
     /* Loop continuously, reading messages from the socket, invoking the
        callback, and waiting repeatedly until an error occurs. */
@@ -5385,6 +5390,8 @@ static void read_websocket(struct mg_connection *conn)
             conn->data_len += n;
         }
     }
+
+    mg_set_thread_name("worker");
 }
 
 int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data, size_t dataLen)
@@ -6860,7 +6867,7 @@ static void *worker_thread_run(void *thread_func_param)
     struct mg_connection *conn;
     struct mg_workerTLS tls;
 
-    mg_set_thread_name("Civetweb Worker");
+    mg_set_thread_name("worker");
 
     tls.is_master = 0;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -7027,7 +7034,7 @@ static void master_thread_run(void *thread_func_param)
     int i;
     int workerthreadcount;
 
-    mg_set_thread_name("Civetweb Master");
+    mg_set_thread_name("master");
 
     /* Increase priority of the master thread */
 #if defined(_WIN32)
