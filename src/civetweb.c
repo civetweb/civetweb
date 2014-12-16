@@ -894,6 +894,42 @@ int mg_atomic_dec(volatile int * addr)
     return ret;
 }
 
+// Set the thread name for debugging purposes in Visual Studio
+// http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
+
+#if defined(_WIN32)
+const DWORD MS_VC_EXCEPTION = 0x406D1388;
+
+#pragma pack(push,8)
+typedef struct tagTHREADNAME_INFO
+{
+   DWORD dwType;     // Must be 0x1000.
+   LPCSTR szName;    // Pointer to name (in user addr space).
+   DWORD dwThreadID; // Thread ID (-1=caller thread).
+   DWORD dwFlags;    // Reserved for future use, must be zero.
+} THREADNAME_INFO;
+#pragma pack(pop)
+#endif
+
+void mg_set_thread_name(const char* threadName)
+{
+#if defined(_WIN32)
+   THREADNAME_INFO info;
+   info.dwType     = 0x1000;
+   info.szName     = threadName;
+   info.dwThreadID = -1;
+   info.dwFlags    = 0;
+
+   __try
+   {
+      RaiseException(MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+   }
+   __except(EXCEPTION_EXECUTE_HANDLER)
+   {
+   }
+#endif
+}
+
 #if defined(MG_LEGACY_INTERFACE)
 const char **mg_get_valid_option_names(void)
 {
@@ -5207,6 +5243,8 @@ static void read_websocket(struct mg_connection *conn)
     char *data = mem;
     unsigned char mop;  /* mask flag and opcode */
 
+    mg_set_thread_name("Civetweb Websocket");
+
     /* Loop continuously, reading messages from the socket, invoking the
        callback, and waiting repeatedly until an error occurs. */
     /* TODO: Investigate if this next line is needed
@@ -6801,6 +6839,8 @@ static void *worker_thread_run(void *thread_func_param)
     struct mg_connection *conn;
     struct mg_workerTLS tls;
 
+    mg_set_thread_name("Civetweb Worker");
+
     tls.is_master = 0;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -6965,6 +7005,8 @@ static void master_thread_run(void *thread_func_param)
     struct pollfd *pfd;
     int i;
     int workerthreadcount;
+
+    mg_set_thread_name("Civetweb Master");
 
     /* Increase priority of the master thread */
 #if defined(_WIN32)
