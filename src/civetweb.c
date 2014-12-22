@@ -5735,9 +5735,14 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
         sockaddr_to_string(host, hostlen, &conn->client.lsa);
     }
 
-    mg_printf(conn, "HTTP/1.1 302 Found\r\nLocation: https://%s:%d%s\r\n\r\n",
-              host, (int) ntohs(conn->ctx->listening_sockets[ssl_index].
-                                lsa.sin.sin_port), conn->request_info.uri);
+    /* Send host, port, uri and (if it exists) ?query_string */
+    mg_printf(conn, "HTTP/1.1 302 Found\r\nLocation: https://%s:%d%s%s%s\r\n\r\n",
+              host,
+              (int) ntohs(conn->ctx->listening_sockets[ssl_index].lsa.sin.sin_port),
+              conn->request_info.uri,
+              (conn->request_info.query_string == NULL) ? "" : "?",
+              (conn->request_info.query_string == NULL) ? "" : conn->request_info.query_string
+              );
 }
 
 
