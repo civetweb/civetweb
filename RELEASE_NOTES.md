@@ -5,6 +5,7 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Set names for all threads (unless NO_THREAD_NAME is defined)
 - New API functions for TCP/HTTP clients
 - Fix upload of huge files
 - Allow multiple SSL instances within one application
