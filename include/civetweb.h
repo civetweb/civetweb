@@ -80,15 +80,18 @@ struct mg_request_info {
 
 
 /* This structure needs to be passed to mg_start(), to let civetweb know
-   which callbacks to invoke. For detailed description, see
+   which callbacks to invoke. For a detailed description, see
    https://github.com/bel2125/civetweb/blob/master/docs/UserManual.md */
 struct mg_callbacks {
     /* Called when civetweb has received new HTTP request.
        If callback returns non-zero,
        callback must process the request by sending valid HTTP headers and
        body, and civetweb will not do any further processing.
-       If callback returns 0, civetweb processes the request itself. In this
-       case, callback must not send any data to the client. */
+       Return value:
+         0: civetweb will process the request itself. In this case,
+            the callback must not send any data to the client.
+         1: callback already processed the request. Civetweb will
+            not send any data after the callback returned. */
     int  (*begin_request)(struct mg_connection *);
 
     /* Called when civetweb has finished processing request. */
@@ -98,12 +101,19 @@ struct mg_callbacks {
        non-zero, civetweb does not log anything. */
     int  (*log_message)(const struct mg_connection *, const char *message);
 
-    /* Called when civetweb initializes SSL library. */
+    /* Called when civetweb initializes SSL library.
+       Parameters:
+         user_data: parameter user_data passed when starting the server.
+       Return value:
+         0: civetweb will set up the SSL certificate.
+         1: civetweb assumes the callback already set up the certificate.
+        -1: initializing ssl fails. */
     int  (*init_ssl)(void *ssl_context, void *user_data);
 
     /* Called when websocket request is received, before websocket handshake.
-       If callback returns 0, civetweb proceeds with handshake, otherwise
-       cinnection is closed immediately. */
+       Return value:
+         0: civetweb proceeds with websocket handshake.
+         1: connection is closed immediately. */
     int (*websocket_connect)(const struct mg_connection *);
 
     /* Called when websocket handshake is successfully completed, and
@@ -112,12 +122,12 @@ struct mg_callbacks {
 
     /* Called when data frame has been received from the client.
        Parameters:
-          bits: first byte of the websocket frame, see websocket RFC at
-                http://tools.ietf.org/html/rfc6455, section 5.2
-          data, data_len: payload, with mask (if any) already applied.
+         bits: first byte of the websocket frame, see websocket RFC at
+               http://tools.ietf.org/html/rfc6455, section 5.2
+         data, data_len: payload, with mask (if any) already applied.
        Return value:
-          non-0: keep this websocket connection opened.
-          0:     close this websocket connection. */
+         1: keep this websocket connection open.
+         0: close this websocket connection. */
     int  (*websocket_data)(struct mg_connection *, int bits,
                            char *data, size_t data_len);
 
@@ -134,13 +144,13 @@ struct mg_callbacks {
           data_len: Placeholder for the file size, if file is served from
                     memory.
        Return value:
-          NULL: do not serve file from memory, proceed with normal file open.
-          non-NULL: pointer to the file contents in memory. data_len must be
-          initilized with the size of the memory block. */
+         NULL: do not serve file from memory, proceed with normal file open.
+         non-NULL: pointer to the file contents in memory. data_len must be
+           initilized with the size of the memory block. */
     const char * (*open_file)(const struct mg_connection *,
                               const char *path, size_t *data_len);
 
-    /* Called when civetweb is about to serve Lua server page (.lp file), if
+    /* Called when civetweb is about to serve Lua server page, if
        Lua support is enabled.
        Parameters:
          lua_context: "lua_State *" pointer. */
@@ -149,13 +159,16 @@ struct mg_callbacks {
     /* Called when civetweb has uploaded a file to a temporary directory as a
        result of mg_upload() call.
        Parameters:
-          file_file: full path name to the uploaded file. */
+         file_name: full path name to the uploaded file. */
     void (*upload)(struct mg_connection *, const char *file_name);
 
     /* Called when civetweb is about to send HTTP error to the client.
        Implementing this callback allows to create custom error pages.
        Parameters:
-         status: HTTP error status code. */
+         status: HTTP error status code.
+       Return value:
+         1: run civetweb error handler.
+         0: callback already handled the error. */
     int  (*http_error)(struct mg_connection *, int status);
 
     /* Called after civetweb context has been created, before requests

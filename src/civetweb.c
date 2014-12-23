@@ -6347,6 +6347,7 @@ static int initialize_ssl(struct mg_context *ctx)
 static int set_ssl_option(struct mg_context *ctx)
 {
     const char *pem;
+    int callback_ret;
 
     /* If PEM file is not specified and the init_ssl callback
        is not specified, skip SSL initialization. */
@@ -6377,9 +6378,17 @@ static int set_ssl_option(struct mg_context *ctx)
         return 0;
     }
 
-    /* If user callback returned non-NULL, that means that user callback has
-       set up certificate itself. In this case, skip sertificate setting. */
-    if ((ctx->callbacks.init_ssl == NULL) || (!ctx->callbacks.init_ssl(ctx->ssl_ctx, ctx->user_data))) {
+    /* If a callback has been specified, call it. */
+    callback_ret = (ctx->callbacks.init_ssl == NULL) ? 0 : (ctx->callbacks.init_ssl(ctx->ssl_ctx, ctx->user_data));
+
+    /* If callback returns 0, civetweb sets up the SSL certificate.
+       If it returns 1, civetweb assumes the calback already did this.
+       If it returns -1, initializing ssl fails. */
+    if (callback_ret < 0) {
+        mg_cry(fc(ctx), "SSL callback returned error: %i", callback_ret);
+        return 0;
+    }
+    if (callback_ret == 0) {
         if (pem != NULL) {
             if ((SSL_CTX_use_certificate_file(ctx->ssl_ctx, pem, 1) == 0) || (SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, pem, 1) == 0)) {
                 mg_cry(fc(ctx), "%s: cannot open %s: %s", __func__, pem, ssl_error());

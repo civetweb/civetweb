@@ -5,6 +5,7 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Specify in detail and document return values of callback functions
 - Set names for all threads (unless NO_THREAD_NAME is defined)
 - New API functions for TCP/HTTP clients
 - Fix upload of huge files
