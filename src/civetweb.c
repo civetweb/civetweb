@@ -2757,6 +2757,10 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
     *is_websocket_request = 0;
 #endif
 
+    /* Note that root == NULL is a regular use case here. This occurs,
+       if all requests are handled by callbacks, so the WEBSOCKET_ROOT
+       config is not required. */
+
     /* Using buf_len - 1 because memmove() for PATH_INFO may shift part
        of the path one byte on the right.
        If document_root is NULL, leave the file empty. */
@@ -4118,7 +4122,12 @@ static int read_request(FILE *fp, struct mg_connection *conn,
 {
     int request_len, n = 0;
     time_t last_action_time = 0;
-    double request_timout = atof(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+    double request_timout = 0.0;
+
+    if (conn->ctx->config[REQUEST_TIMEOUT]) {
+        /* value of request_timout is in seconds, config in milliseconds */
+        request_timout = atof(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+    }
 
     request_len = get_request_len(buf, *nread);
     while (conn->ctx->stop_flag == 0 &&
@@ -4648,14 +4657,14 @@ static void mkcol(struct mg_connection *conn, const char *path)
                __func__, path, strerror(ERRNO));
     }
 
-    if(de.file.modification_time) {
+    if (de.file.modification_time) {
         send_http_error(conn, 405, "Method Not Allowed",
                         "mkcol(%s): %s", path, strerror(ERRNO));
         return;
     }
 
     body_len = conn->data_len - conn->request_len;
-    if(body_len > 0) {
+    if (body_len > 0) {
         send_http_error(conn, 415, "Unsupported media type",
                         "mkcol(%s): %s", path, strerror(ERRNO));
         return;
@@ -4669,10 +4678,10 @@ static void mkcol(struct mg_connection *conn, const char *path)
         mg_printf(conn, "HTTP/1.1 %d Created\r\nDate: %s\r\nContent-Length: 0\r\nConnection: %s\r\n\r\n",
                   conn->status_code, date, suggest_connection_header(conn));
     } else if (rc == -1) {
-        if(errno == EEXIST)
+        if (errno == EEXIST)
             send_http_error(conn, 405, "Method Not Allowed",
                             "mkcol(%s): %s", path, strerror(ERRNO));
-        else if(errno == EACCES)
+        else if (errno == EACCES)
             send_http_error(conn, 403, "Forbidden",
                             "mkcol(%s): %s", path, strerror(ERRNO));
         else if(errno == ENOENT)
@@ -4721,6 +4730,30 @@ static void put_file(struct mg_connection *conn, const char *path)
         mg_printf(conn, "HTTP/1.1 %d OK\r\nDate: %s\r\nContent-Length: 0\r\nConnection: %s\r\n\r\n",
                   conn->status_code, date, suggest_connection_header(conn));
         mg_fclose(&file);
+    }
+}
+
+static void delete_file(struct mg_connection *conn, const char *path)
+{
+    struct de de;
+    memset(&de.file, 0, sizeof(de.file));
+    if(!mg_stat(conn, path, &de.file)) {
+        send_http_error(conn, 404, "Not Found", "%s", "File not found");
+    } else {
+        if(de.file.modification_time) {
+            if(de.file.is_directory) {
+                remove_directory(conn, path);
+                send_http_error(conn, 204, "No Content", "%s", "");
+            } else if (mg_remove(path) == 0) {
+                send_http_error(conn, 204, "No Content", "%s", "");
+            } else {
+                send_http_error(conn, 423, "Locked", "remove(%s): %s", path,
+                    strerror(ERRNO));
+            }
+        } else {
+            send_http_error(conn, 500, http_500_error, "remove(%s): %s", path,
+                strerror(ERRNO));
+        }
     }
 }
 
@@ -5783,7 +5816,6 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
                the current position otherwise it will never be matched. */
             break;
         }
-
     }
 
     if (handler == NULL) {
@@ -5808,7 +5840,6 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
         tmp_rh->next = lastref->next;
         lastref->next = tmp_rh;
     }
-
 }
 
 static int use_request_handler(struct mg_connection *conn)
@@ -5853,82 +5884,166 @@ static void handle_request(struct mg_connection *conn)
     struct mg_request_info *ri = &conn->request_info;
     char path[PATH_MAX];
     int uri_len, ssl_index, is_script_resource, is_websocket_request, is_put_or_delete_request;
+    int i;
     struct file file = STRUCT_FILE_INITIALIZER;
-    char date[64];
     time_t curtime = time(NULL);
+#if !defined(NO_FILES)
+    char date[64];
+#endif
 
+    /* 1. get the request url */
+    /* 1.1. split into url and query string */
     if ((conn->request_info.query_string = strchr(ri->uri, '?')) != NULL) {
         * ((char *) conn->request_info.query_string++) = '\0';
     }
     uri_len = (int) strlen(ri->uri);
 
+    /* 1.2. decode url (if config says so) */
     if (should_decode_url(conn)) {
       mg_url_decode(ri->uri, uri_len, (char *) ri->uri, uri_len + 1, 0);
     }
+
+    /* 1.3. clean URIs, so a path like allowed_dir/../forbidden_file is not possible */
     remove_double_dots_and_double_slashes((char *) ri->uri);
-    path[0] = '\0';
-    interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
+
+    /* step 1. completed, the url is known now */
+    DEBUG_TRACE("URL: %s", ri->uri);
+
+    /* 2. do a https redirect, if required */
+    if (!conn->client.is_ssl && conn->client.ssl_redir) {
+        ssl_index = get_first_ssl_listener_index(conn->ctx);
+        if (ssl_index >= 0) {
+            redirect_to_https_port(conn, ssl_index);
+        } else {
+            send_http_error(conn, 500, "Internal Server Error", "%s", "SSL forward not configured properly");
+            mg_cry(conn, "Can not redirect to SSL, no SSL port available");
+        }
+        return;
+    }
+
+    /* 3. if this ip has limited speed, set it for this connection */
     conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
                                   get_remote_ip(conn), ri->uri);
 
-    DEBUG_TRACE("%s", ri->uri);
-    /* Perform redirect and auth checks before calling begin_request() handler.
-       Otherwise, begin_request() would need to perform auth checks and
-       redirects. */
-    if (!conn->client.is_ssl && conn->client.ssl_redir &&
-        (ssl_index = get_first_ssl_listener_index(conn->ctx)) > -1) {
-        redirect_to_https_port(conn, ssl_index);
-    } else if (!is_script_resource && !is_put_or_delete_request &&
-               !check_authorization(conn, path)) {
-        send_authorization_request(conn);
-    } else if (conn->ctx->callbacks.begin_request != NULL &&
-               conn->ctx->callbacks.begin_request(conn)) {
-        /* Do nothing, callback has served the request */
-#if defined(USE_WEBSOCKET)
-    } else if (is_websocket_request) {
-        handle_websocket_request(conn, path, is_script_resource);
-#endif
-    } else if (conn->ctx->request_handlers != NULL &&
-               use_request_handler(conn)) {
-        /* Do nothing, callback has served the request */
-    } else if (!is_script_resource && !strcmp(ri->request_method, "OPTIONS")) {
-        /* Scripts should support the OPTIONS method themselves, to allow a maximum flexibility.
-           Lua and CGI scripts may fully support CORS this way (including preflights). */
-        send_options(conn);
-    } else if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
-        send_http_error(conn, 404, "Not Found", "Not Found");
-    } else if (!is_script_resource && is_put_or_delete_request &&
-               (is_authorized_for_put(conn) != 1)) {
-        send_authorization_request(conn);
-    } else if (!is_script_resource && !strcmp(ri->request_method, "PUT")) {
-        put_file(conn, path);
-    } else if (!is_script_resource && !strcmp(ri->request_method, "MKCOL")) {
-        mkcol(conn, path);
-    } else if (!is_script_resource && !strcmp(ri->request_method, "DELETE")) {
-        struct de de;
-        memset(&de.file, 0, sizeof(de.file));
-        if(!mg_stat(conn, path, &de.file)) {
-            send_http_error(conn, 404, "Not Found", "%s", "File not found");
-        } else {
-            if(de.file.modification_time) {
-                if(de.file.is_directory) {
-                    remove_directory(conn, path);
-                    send_http_error(conn, 204, "No Content", "%s", "");
-                } else if (mg_remove(path) == 0) {
-                    send_http_error(conn, 204, "No Content", "%s", "");
-                } else {
-                    send_http_error(conn, 423, "Locked", "remove(%s): %s", path,
-                                    strerror(ERRNO));
-                }
-            } else {
-                send_http_error(conn, 500, http_500_error, "remove(%s): %s", path,
-                                strerror(ERRNO));
-            }
+    /* 4. call a "handle everything" callback, if registered */
+    if (conn->ctx->callbacks.begin_request != NULL) {
+        i = conn->ctx->callbacks.begin_request(conn);
+        switch (i) {
+        case 1:
+            /* callback already processed the request */
+            return;
+        case 0:
+            /* civetweb should process the request */
+            break;
+        default:
+            /* unspecified - may change with the next version */
+            return;
         }
-    } else if ((file.membuf == NULL && file.modification_time == (time_t) 0) ||
-               must_hide_file(conn, path)) {
+    }
+
+    /* request not yet handled by a handler or redirect, so the request
+       is processed here */
+
+    /* 5. interpret the url to find out how the request must be handled */
+    path[0] = '\0';
+    interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
+
+    /* 6. authorization check */
+    if (is_put_or_delete_request && !is_script_resource) {
+        /* 6.1. this request is a PUT/DELETE to a real file */
+        /* 6.1.1. thus, the server must have real files */
+#if defined(NO_FILES)
+        if (1) {
+#else
+        if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
+#endif
+            /* no real files -> no PUT/DELETE */
+            send_http_error(conn, 405, "Method Not Allowed", "%s", "Method Not Allowed");
+            return;
+        }
+
+        /* 6.1.2. Check if put authorization for static files is available. */
+        if (!is_authorized_for_put(conn)) {
+            send_authorization_request(conn);
+            return;
+        }
+
+    } else {
+        /* 6.2. This is either a OPTIONS, GET, HEAD or POST request,
+           or it is a PUT or DELETE request to a resource that does not
+           correspond to a file. Check authorization. */
+        if (!check_authorization(conn, path)) {
+            send_authorization_request(conn);
+            return;
+        }
+    }
+
+    /* request is authorized or does not need authorization */
+
+    /* 7. handle websocket requests */
+#if defined(USE_WEBSOCKET)
+    if (is_websocket_request) {
+        handle_websocket_request(conn, path, is_script_resource);
+        return;
+    }
+#endif
+
+    /* 8. check if there are request handlers for this path */
+    if (conn->ctx->request_handlers != NULL && use_request_handler(conn)) {
+        /* Do nothing, callback has served the request */
+        return;
+    }
+
+#if defined(NO_FILES)
+    /* 9a. In case the server uses only callbacks, this uri is unknown.
+       Then, all request handling ends here. */
+    send_http_error(conn, 404, "Not Found", "Not Found");
+
+#else
+    /* 9b. This request is either for a static file or resource handled
+       by a script file. Thus, a DOCUMENT_ROOT must exist. */
+    if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
+        send_http_error(conn, 404, "Not Found", "Not Found");
+        return;
+    }
+
+    /* 10. File is handled by a script. */
+    if (is_script_resource) {
+        handle_file_based_request(conn, path, &file);
+        return;
+    }
+
+    /* 11. Handle put/delete/mkcol requests */
+    if (is_put_or_delete_request) {
+        /* 11.1. PUT method */
+        if (!strcmp(ri->request_method, "PUT")) {
+            put_file(conn, path);
+            return;
+        }
+        /* 11.2. DELETE method */
+        if (!strcmp(ri->request_method, "DELETE")) {
+            delete_file(conn, path);
+            return;
+        }
+        /* 11.3. MKCOL method */
+        if (!strcmp(ri->request_method, "MKCOL")) {
+            mkcol(conn, path);
+            return;
+        }
+        /* 11.4. should never reach this point */
+        send_http_error(conn, 405, "Method Not Allowed", "%s", "Method Not Allowed");
+        return;
+    }
+
+    /* 11. File does not exist, or it was configured that it should be hidden */
+    if (((file.membuf == NULL) && (file.modification_time == (time_t) 0)) ||
+        (must_hide_file(conn, path))) {
         send_http_error(conn, 404, "Not Found", "%s", "File not found");
-    } else if (file.is_directory && ri->uri[uri_len - 1] != '/') {
+        return;
+    }
+
+    /* 12. Directories uris should end with a slash */
+    if (file.is_directory && ri->uri[uri_len - 1] != '/') {
         gmt_time_string(date, sizeof(date), &curtime);
         mg_printf(conn, "HTTP/1.1 301 Moved Permanently\r\n"
                         "Location: %s/\r\n"
@@ -5936,19 +6051,56 @@ static void handle_request(struct mg_connection *conn)
                         "Content-Length: 0\r\n"
                         "Connection: %s\r\n\r\n",
                         ri->uri, date, suggest_connection_header(conn));
-    } else if (!is_script_resource && !strcmp(ri->request_method, "PROPFIND")) {
-        handle_propfind(conn, path, &file);
-    } else if (file.is_directory &&
-               !substitute_index_file(conn, path, sizeof(path), &file)) {
-        if (!mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING], "yes")) {
-            handle_directory_request(conn, path);
-        } else {
-            send_http_error(conn, 403, "Directory Listing Denied",
-                            "Directory listing denied");
-        }
-    } else {
-        handle_file_based_request(conn, path, &file);
+        return;
     }
+
+    /* 13. Handle other methods than GET/HEAD
+    /* 13.1. Handle PROPFIND */
+    if (!strcmp(ri->request_method, "PROPFIND")) {
+        handle_propfind(conn, path, &file);
+        return;
+    }
+    /* 13.2. Handle OPTIONS for files */
+    if (!strcmp(ri->request_method, "OPTIONS")) {
+        /* This standard handler is only used for real files.
+           Scripts should support the OPTIONS method themselves, to allow a maximum flexibility.
+           Lua and CGI scripts may fully support CORS this way (including preflights). */
+        send_options(conn);
+        return;
+    }
+    /* 13.3. everything but GET and HEAD (e.g. POST) */
+    if (!strcmp(ri->request_method, "GET") &&
+        !strcmp(ri->request_method, "HEAD")) {
+        send_http_error(conn, 405, "Method Not Allowed", "%s", "Method Not Allowed");
+        return;
+    }
+
+    /* 14. directories */
+    if (file.is_directory) {
+        if (substitute_index_file(conn, path, sizeof(path), &file)) {
+            /* 14.1. use a substitute file */
+            /* TODO: substitute index may be a script resource.
+                     define what should be possible in this case. */
+        } else {
+            /* 14.2. no substitute file */
+            if (!mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING], "yes")) {
+                handle_directory_request(conn, path);
+            } else {
+                send_http_error(conn, 403, "Directory Listing Denied",
+                                "%s", "Directory listing denied");
+            }
+            return;
+        }
+    }
+
+    handle_file_based_request(conn, path, &file);
+#endif /* !defined(NO_FILES) */
+
+#if 0
+    /* Perform redirect and auth checks before calling begin_request() handler.
+       Otherwise, begin_request() would need to perform auth checks and
+       redirects. */
+#endif
 }
 
 static void handle_file_based_request(struct mg_connection *conn, const char *path, struct file *file)
@@ -6039,8 +6191,8 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 
     assert((len>=0) && ((unsigned)len<=(unsigned)vec->len)); /* sscanf and the option splitting code ensure this condition */
     ch = vec->ptr[len];  /* Next character after the port number */
-    so->is_ssl = ch == 's';
-    so->ssl_redir = ch == 'r';
+    so->is_ssl = (ch == 's');
+    so->ssl_redir = (ch == 'r');
 
     /* Make sure the port is valid and vector ends with 's', 'r' or ',' */
     return is_valid_port(port) &&
@@ -6669,21 +6821,30 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
 {
     struct mg_connection *conn;
     va_list ap;
+    int i;
 
     va_start(ap, fmt);
     ebuf[0] = '\0';
-    if ((conn = mg_connect_client(host, port, use_ssl, ebuf, ebuf_len)) == NULL) {
-    } else if (mg_vprintf(conn, fmt, ap) <= 0) {
-        snprintf(ebuf, ebuf_len, "%s", "Error sending request");
-    } else {
-        getreq(conn, ebuf, ebuf_len, TIMEOUT_INFINITE);
+
+    /* open a connection */
+    conn = mg_connect_client(host, port, use_ssl, ebuf, ebuf_len);
+
+    if (conn != NULL) {
+        i = mg_vprintf(conn, fmt, ap);
+        if (i <= 0) {
+            snprintf(ebuf, ebuf_len, "%s", "Error sending request");
+        } else {
+            getreq(conn, ebuf, ebuf_len, TIMEOUT_INFINITE);
+        }
     }
+
+    /* if an error occured, close the connection */
     if (ebuf[0] != '\0' && conn != NULL) {
         mg_close_connection(conn);
         conn = NULL;
     }
-    va_end(ap);
 
+    va_end(ap);
     return conn;
 }
 
@@ -7356,6 +7517,14 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
             ctx->config[i] = mg_strdup(default_value);
         }
     }
+
+#if defined(NO_FILES)
+    if (ctx->config[DOCUMENT_ROOT] != NULL) {
+        mg_cry(fc(ctx), "%s", "Document root must not be set");
+        free_context(ctx);
+        return NULL;
+    }
+#endif
 
     get_system_name(&ctx->systemName);
 
