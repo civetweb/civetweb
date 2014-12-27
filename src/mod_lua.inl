@@ -1149,7 +1149,7 @@ static void lsp_send_err(struct mg_connection *conn, struct lua_State *L,
     va_end(ap);
 
     if (L == NULL) {
-        send_http_error(conn, 500, http_500_error, "%s", buf);
+        send_http_error(conn, 500, NULL, "%s", buf);
     } else {
         lua_pushstring(L, buf);
         lua_error(L);
@@ -1174,7 +1174,7 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path, stru
             lsp_send_err(conn, ls, "mmap(%s, %zu, %d): %s", path, (size_t) filep->size,
                 fileno(filep->fp), strerror(errno));
     } else if ((L = (ls != NULL ? ls : lua_newstate(lua_allocator, NULL))) == NULL) {
-        send_http_error(conn, 500, http_500_error, "%s", "luaL_newstate failed");
+        send_http_error(conn, 500, NULL, "%s", "luaL_newstate failed");
     } else {
         /* We're not sending HTTP headers here, Lua page must do it. */
         if (ls == NULL) {
