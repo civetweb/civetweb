@@ -96,6 +96,7 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | NO_CGI                    | disable CGI support                  |
 | NO_SSL                    | disable SSL functionality            |
 | NO_SSL_DL                 | link against system libssl library   |
+| NO_FILES                  | do not serve files from a directory  |
 | SQLITE_DISABLE_LFS        | disables large files (Lua only)      |
 
 ## Cross Compiling

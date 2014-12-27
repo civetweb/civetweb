@@ -5,16 +5,17 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Rewrite and comment request handling function
 - Specify in detail and document return values of callback functions
 - Set names for all threads (unless NO_THREAD_NAME is defined)
 - New API functions for TCP/HTTP clients
 - Fix upload of huge files
 - Allow multiple SSL instances within one application
-- Improve API and user docu
-- Allow to chose betwen static and dynamic Lua library
+- Improve API and user documentation
+- Allow to chose between static and dynamic Lua library
 - Improve unit test
 - Use temporary file name for partially uploaded files
-- Addtional API functions exported to C++
+- Additional API functions exported to C++
 - Add a websocket client example
 - Add a websocket client API
 - Update websocket example

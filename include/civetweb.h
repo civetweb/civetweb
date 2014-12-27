@@ -84,9 +84,12 @@ struct mg_request_info {
    https://github.com/bel2125/civetweb/blob/master/docs/UserManual.md */
 struct mg_callbacks {
     /* Called when civetweb has received new HTTP request.
-       If callback returns non-zero,
-       callback must process the request by sending valid HTTP headers and
-       body, and civetweb will not do any further processing.
+       If the callback returns one, it must process the request
+       by sending valid HTTP headers and a body. Civetweb will not do
+       any further processing. Otherwise it must return zero.
+       Note that since V1.7 the "begin_request" function is called
+       before an authorization check. If an authorization check is
+       required, use a request_handler instead.
        Return value:
          0: civetweb will process the request itself. In this case,
             the callback must not send any data to the client.

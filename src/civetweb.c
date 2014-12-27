@@ -5927,6 +5927,9 @@ static void handle_request(struct mg_connection *conn)
 
     /* 4. call a "handle everything" callback, if registered */
     if (conn->ctx->callbacks.begin_request != NULL) {
+        /* Note that since V1.7 the "begin_request" function is called
+           before an authorization check. If an authorization check is
+           required, use a request_handler instead. */
         i = conn->ctx->callbacks.begin_request(conn);
         switch (i) {
         case 1:
