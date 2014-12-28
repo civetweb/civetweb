@@ -227,7 +227,7 @@ static const char * lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 {
     struct lsp_var_reader_data * reader = (struct lsp_var_reader_data *)ud;
     const char * ret;
-	(void)(L); /* unused */
+    (void)(L); /* unused */
 
     switch (reader->state) {
     case 0:
@@ -670,6 +670,29 @@ static int lsp_base64_decode(lua_State *L)
     return 1;
 }
 
+/* mg.get_response_code_text */
+static int lsp_get_response_code_text(lua_State *L) {
+    int num_args = lua_gettop(L);
+    int type1;
+    double code;
+    const char *text;
+
+    if (num_args==1) {
+        type1 = lua_type(L, 1);
+        if (type1 == LUA_TNUMBER) {
+            /* If the first argument is a number,
+               convert it to the corresponding text. */
+            code = lua_tonumber(L, 1);
+            text = mg_get_response_code_text((int)code, NULL);
+            if (text) lua_pushstring(L, text);
+            return text ? 1 : 0;
+        }
+    }
+
+    /* Syntax error */
+    return luaL_error(L, "invalid get_response_code_text() call");
+}
+
 #ifdef USE_WEBSOCKET
 struct lua_websock_data {
     lua_State *state;
@@ -755,7 +778,7 @@ static int lwebsock_write(lua_State *L)
         return luaL_error(L, "invalid websocket write() call");
     }
 #else
-	(void)(L); /* unused */
+    (void)(L); /* unused */
 #endif
     return 0;
 }
@@ -1035,6 +1058,7 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
     reg_function(L, "url_decode", lsp_url_decode);
     reg_function(L, "base64_encode", lsp_base64_encode);
     reg_function(L, "base64_decode", lsp_base64_decode);
+    reg_function(L, "get_response_code_text", lsp_get_response_code_text);
 
     reg_string(L, "version", CIVETWEB_VERSION);
     reg_string(L, "document_root", ctx->config[DOCUMENT_ROOT]);
@@ -1266,7 +1290,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
     if (!ok) {
         /* Remove from ws connection list. */
         /* TODO: Check if list entry and Lua state needs to be deleted (see websocket_close). */
-        (*shared_websock_list)->ws.conn[--(ws->references)] = 0;    
+        (*shared_websock_list)->ws.conn[--(ws->references)] = 0;
     }
 
     (void)pthread_mutex_unlock(&(ws->ws_mutex));
