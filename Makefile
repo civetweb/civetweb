@@ -165,7 +165,7 @@ help:
 	@echo "   NO_CGI                disable CGI support"
 	@echo "   NO_SSL                disable SSL functionality"
 	@echo "   NO_SSL_DL             link against system libssl library"
-    @echo "   NO_FILES              do not serve files from a directory"
+	@echo "   NO_FILES              do not serve files from a directory"
 	@echo "   MAX_REQUEST_SIZE      maximum header size, default 16384"
 	@echo ""
 	@echo " Variables"
