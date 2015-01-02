@@ -1161,25 +1161,6 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
     }
 }
 
-static void lsp_send_err(struct mg_connection *conn, struct lua_State *L,
-    const char *fmt, ...)
-{
-    char buf[MG_BUF_LEN];
-    va_list ap;
-    int len;
-
-    va_start(ap, fmt);
-    len = vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-
-    if (L == NULL) {
-        send_http_error(conn, 500, NULL, "%s", buf);
-    } else {
-        lua_pushstring(L, buf);
-        lua_error(L);
-    }
-}
-
 static int handle_lsp_request(struct mg_connection *conn, const char *path, struct file *filep, struct lua_State *ls)
 {
     void *p = NULL;
@@ -1191,14 +1172,27 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path, stru
 
     /* We need both mg_stat to get file size, and mg_fopen to get fd */
     if (!mg_stat(conn, path, filep) || !mg_fopen(conn, path, "r", filep)) {
-        lsp_send_err(conn, ls, "File [%s] not found", path);
+        /* File not found or not accessible */
+        if (ls == NULL) {
+            send_http_error(conn, 500, NULL,
+                "Error: Cannot open script\nFile %s can not be read", path);
+        } else {
+            luaL_error(ls, "File [%s] not found", path);
+        }
     } else if (filep->membuf == NULL &&
         (p = mmap(NULL, (size_t) filep->size, PROT_READ, MAP_PRIVATE,
         fileno(filep->fp), 0)) == MAP_FAILED) {
-            lsp_send_err(conn, ls, "mmap(%s, %zu, %d): %s", path, (size_t) filep->size,
+        /* mmap failed */
+        if (ls == NULL) {
+            send_http_error(conn, 500, NULL,
+                "Error: Cannot open script\nFile %s can not be mapped", path);
+        } else {
+            luaL_error(ls, "mmap(%s, %zu, %d): %s", path, (size_t) filep->size,
                 fileno(filep->fp), strerror(errno));
+        }
     } else if ((L = (ls != NULL ? ls : lua_newstate(lua_allocator, NULL))) == NULL) {
-        send_http_error(conn, 500, NULL, "%s", "luaL_newstate failed");
+        send_http_error(conn, 500, NULL, "%s",
+            "Error: Cannot execute script\nlua_newstate failed");
     } else {
         /* We're not sending HTTP headers here, Lua page must do it. */
         if (ls == NULL) {
