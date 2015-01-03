@@ -151,6 +151,7 @@ typedef long off_t;
 #define SSL_LIB   "ssleay32.dll"
 #define CRYPTO_LIB  "libeay32.dll"
 #define O_NONBLOCK  0
+#define W_OK (2) /* http://msdn.microsoft.com/en-us/library/1w06ktdy.aspx */
 #if !defined(EWOULDBLOCK)
 #define EWOULDBLOCK  WSAEWOULDBLOCK
 #endif /* !EWOULDBLOCK */
@@ -161,6 +162,7 @@ typedef long off_t;
 #define SHUT_WR 1
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
+#define access _access
 #define mg_sleep(x) Sleep(x)
 
 #define pipe(x) _pipe(x, MG_BUF_LEN, _O_BINARY)
@@ -4845,17 +4847,57 @@ static void put_file(struct mg_connection *conn, const char *path)
     char date[64];
     time_t curtime = time(NULL);
 
-    conn->status_code = mg_stat(conn, path, &file) ? 200 : 201;
-    rc = put_dir(conn, path);
+    if (mg_stat(conn, path, &file)) {
+        /* File already exists */
+        conn->status_code = 200;
+
+        if (file.is_directory) {
+            /* This is an already existing directory,
+            so there is nothing to do for the server. */
+            rc = 0;
+
+        } else {
+            /* File exists and is not a directory. */
+            /* Can it be replaced? */
+
+            if (file.modification_time == 0) {
+                /* This is an "in-memory" file, that can not be replaced */
+                send_http_error(conn, 405, NULL,
+                    "Error: Put not possible\nReplacing %s is not supported", path);
+                return;
+            }
+
+            /* Check if the server may write this file */
+            if (access(path, W_OK) == 0) {
+                /* Access granted */
+                conn->status_code = 200;
+                rc = 1;
+            } else {
+                send_http_error(conn, 403, NULL,
+                    "Error: Put not possible\nReplacing %s is not allowed", path);
+                return;
+            }
+        }
+    } else {
+        /* File should be created */
+        conn->status_code = 201;
+        rc = put_dir(conn, path);
+    }
 
     if (rc == 0) {
         /* put_dir returns 0 if path is a directory */
         gmt_time_string(date, sizeof(date), &curtime);
-        mg_printf(conn, "HTTP/1.1 %d OK\r\nDate: %s\r\nContent-Length: 0\r\nConnection: %s\r\n\r\n",
-                  conn->status_code, date, suggest_connection_header(conn));
+        mg_printf(conn, "HTTP/1.1 %d %s\r\n"
+            "Date: %s\r\n"
+            "Content-Length: 0\r\n"
+            "Connection: %s\r\n\r\n",
+            conn->status_code, mg_get_response_code_text(conn->status_code, NULL),
+            date,
+            suggest_connection_header(conn)
+            );
 
         /* Request to create a directory has been fulfilled successfully.
-           No need to put a file. */
+        No need to put a file. */
         return;
     }
 
@@ -4872,8 +4914,6 @@ static void put_file(struct mg_connection *conn, const char *path)
             "Error: Can not create directory\nput_dir(%s): %s", path, strerror(ERRNO));
         return;
     }
-
-    /* TODO: If the file exists and is read only, return 403 or 405 */
 
     /* A file should be created or overwritten. */
     if (!mg_fopen(conn, path, "wb+", &file) || file.fp == NULL) {
@@ -4893,20 +4933,21 @@ static void put_file(struct mg_connection *conn, const char *path)
 
     if (!forward_body_data(conn, file.fp, INVALID_SOCKET, NULL)) {
         /* forward_body_data failed.
-           The error code has already been sent to the client,
-           and conn->status_code is already set. */
+        The error code has already been sent to the client,
+        and conn->status_code is already set. */
         return;
     }
 
     gmt_time_string(date, sizeof(date), &curtime);
     mg_printf(conn, "HTTP/1.1 %d %s\r\n"
-                    "Date: %s\r\n"
-                    "Content-Length: 0\r\n"
-                    "Connection: %s\r\n\r\n",
-              conn->status_code, mg_get_response_code_text(conn->status_code, NULL),
-              date,
-              suggest_connection_header(conn)
-              );
+        "Date: %s\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: %s\r\n\r\n",
+        conn->status_code, mg_get_response_code_text(conn->status_code, NULL),
+        date,
+        suggest_connection_header(conn)
+        );
+
     mg_fclose(&file);
 }
 
@@ -4918,29 +4959,43 @@ static void delete_file(struct mg_connection *conn, const char *path)
         /* mg_stat returns 0 if the file does not exist */
         send_http_error(conn, 404, NULL,
             "Error: Cannot delete file\nFile %s not found", path);
-    } else {
-        if (de.file.modification_time) {
-            if(de.file.is_directory) {
-                remove_directory(conn, path);
-                /* Delete successful. (Do not send content for 204) */
-                send_http_error(conn, 204, NULL, "%s", "");
-            } else if (mg_remove(path) == 0) {
-                /* Delete successful. (Do not send content for 204) */
-                send_http_error(conn, 204, NULL, "%s", "");
-            } else {
-                /* Delete not successful (file locked). */
-                send_http_error(conn, 423, NULL,
-                    "Error: Cannot delete file\nremove(%s): %s", path, strerror(ERRNO));
-            }
-        } else {
-            /* mg_stat returns != 0 and modification_time == 0
-               if the file is in memory */
-            send_http_error(conn, 405, NULL,
-                "Error: Delete not possible\nDeleting %s is not supported", path);
-        }
+        return;
     }
 
-    /* TODO: put and delete should value the read only flag of files and return 403 */
+    if (file.modification_time == 0) {
+        /* mg_stat returns != 0 and modification_time == 0
+        if the file is cached in memory */
+        send_http_error(conn, 405, NULL,
+            "Error: Delete not possible\nDeleting %s is not supported", path);
+        return;
+    }
+
+    if (de.file.is_directory) {
+        remove_directory(conn, path);
+        /* TODO: remove_dir does not return success of the operation */
+        /* Assume delete is successful: Return 204 without content. */
+        send_http_error(conn, 204, NULL, "%s", "");
+        return;
+    }
+
+    /* This is an existing file (not a directory).
+    Check if write permission is given. */
+    if (access(path, W_OK) != 0) {
+        /* File is read only */
+        send_http_error(conn, 403, NULL,
+            "Error: Delete not possible\nDeleting %s is not allowed", path);
+        return;
+    }
+
+    /* Try to delete it. */
+    if (mg_remove(path) == 0) {
+        /* Delete was successful: Return 204 without content. */
+        send_http_error(conn, 204, NULL, "%s", "");
+    } else {
+        /* Delete not successful (file locked). */
+        send_http_error(conn, 423, NULL,
+            "Error: Cannot delete file\nremove(%s): %s", path, strerror(ERRNO));
+    }
 }
 
 static void send_ssi_file(struct mg_connection *, const char *,
