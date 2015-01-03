@@ -4962,7 +4962,7 @@ static void delete_file(struct mg_connection *conn, const char *path)
         return;
     }
 
-    if (file.modification_time == 0) {
+    if (de.file.modification_time == 0) {
         /* mg_stat returns != 0 and modification_time == 0
         if the file is cached in memory */
         send_http_error(conn, 405, NULL,
@@ -4979,7 +4979,7 @@ static void delete_file(struct mg_connection *conn, const char *path)
     }
 
     /* This is an existing file (not a directory).
-    Check if write permission is given. */
+       Check if write permission is granted. */
     if (access(path, W_OK) != 0) {
         /* File is read only */
         send_http_error(conn, 403, NULL,
