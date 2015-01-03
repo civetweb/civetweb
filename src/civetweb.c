@@ -6320,8 +6320,8 @@ static void handle_request(struct mg_connection *conn)
         return;
     }
     /* 13.3. everything but GET and HEAD (e.g. POST) */
-    if (!strcmp(ri->request_method, "GET") &&
-        !strcmp(ri->request_method, "HEAD")) {
+    if (0!=strcmp(ri->request_method, "GET") &&
+        0!=strcmp(ri->request_method, "HEAD")) {
         send_http_error(conn, 405, NULL,
             "%s method not allowed", conn->request_info.request_method);
         return;

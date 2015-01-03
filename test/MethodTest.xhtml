@@ -25,9 +25,13 @@
 
     function load() {
         var params = getParams();
-        method = params["method"];
+        var method = params["method"];
         if (!method) {
           method = "GET";
+        }
+        var path = params["path"];
+        if (!path) {
+          path = "";
         }
 
         var elem = document.getElementById('h1');
@@ -36,7 +40,7 @@
         document.getElementById("proto_http").checked = (window.location.protocol != "https:");
         document.getElementById("proto_https").checked = (window.location.protocol == "https:");
         document.getElementById("server").value = location.host;
-        document.getElementById("resource").value = "path";
+        document.getElementById("resource").value = path;
 
         document.getElementById("method_get").checked = true;
         document.getElementById("body_none").checked = true;
@@ -82,7 +86,10 @@
         {
             var laddr = addr
             var lmeth = meth
-            var blen = "\nWith " + body.length + " bytes body data"
+            var blen = ""
+            if (body) {
+              blen = "\nWith " + body.length + " bytes body data"
+            }
             
             if (xmlhttp.readyState == 4)
             {
@@ -133,8 +140,8 @@ TODO: Description how to use this page.
 <input id="method_inv" type="radio" name="method" value="INVALID" />*INVALID*
 
 <h3>Body data</h3>
-<input id="body_none" type="radio" name="body" value="*" />*none* <br />
-<input id="body_10" type="radio" name="body" value="1234567890" />1234567890 <br />
+<input id="body_none" type="radio" name="body" value="*" />0 Bytes <br />
+<input id="body_10" type="radio" name="body" value="1234567890" />10 Bytes ("1234567890") <br />
 
 
 <h3>Submit</h3>
