@@ -6,22 +6,18 @@
 static int begin_request_handler(struct mg_connection *conn)
 {
     const struct mg_request_info *request_info = mg_get_request_info(conn);
-    char content[100];
 
     // Prepare the message we're going to send
-    int content_length = snprintf(content, sizeof(content),
-                                  "Hello from civetweb! Remote port: %d",
-                                  request_info->remote_port);
 
     // Send HTTP reply to the client
     mg_printf(conn,
               "HTTP/1.1 200 OK\r\n"
               "Content-Type: text/plain\r\n"
-              "Content-Length: %d\r\n"        // Always set Content-Length
-              "\r\n"
-              "%s",
-              content_length, content);
+              "transfer-encoding: chunked\r\n"
+              "\r\n");
 
+     mg_printf(conn, "Hello from civetweb! Remote port: %d", request_info->remote_port);
+                                
     // Returning non-zero tells civetweb that our function has replied to
     // the client, and civetweb should not send client any more data.
     return 1;
