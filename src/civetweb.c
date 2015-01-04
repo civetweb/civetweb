@@ -6305,7 +6305,7 @@ static void handle_request(struct mg_connection *conn)
         return;
     }
 
-    /* 13. Handle other methods than GET/HEAD
+    /* 13. Handle other methods than GET/HEAD */
     /* 13.1. Handle PROPFIND */
     if (!strcmp(ri->request_method, "PROPFIND")) {
         handle_propfind(conn, path, &file);
