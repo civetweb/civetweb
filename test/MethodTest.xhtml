@@ -7,6 +7,7 @@
     body {background:#eee; margin:0%; padding:0%; padding-top:0%; padding-left:1%}
     .cform {margin:0%; padding:0%; padding-top:0%; padding-left:2%;}
     h3 {margin:0%; padding:0%; padding-top:0%; padding-left:0%;}
+    td {vertical-align:top; text-align:left;}
   </style>
   <script type="text/javascript"><![CDATA[
 
@@ -97,13 +98,13 @@
         body = null;
       } else {
         if (body == '**') {
-            var body_bytes = document.getElementById("body_bytes").value;
-            body_bytes = parseInt(Number(body_bytes) || 0) || 0;
-            body = "";
-            for (var i=0; i<body_bytes; i++) {
-              var ascii = Math.floor((Math.random() * 94) + 32);
-              body = body + String.fromCharCode(ascii);
-            }
+          var body_bytes = document.getElementById("body_bytes").value;
+          body_bytes = parseInt(Number(body_bytes) || 0) || 0;
+          body = "";
+          for (var i=0; i<body_bytes; i++) {
+            var ascii = Math.floor((Math.random() * 94) + 32);
+            body = body + String.fromCharCode(ascii);
+          }
         }
         xmlhttp.setRequestHeader("Content-Length", body.length);
       }
@@ -148,18 +149,43 @@
 <input id="resource" type="text" name="resource" value="" />
 
 <h3>Method</h3>
+<!-- http://www.restpatterns.org/HTTP_Methods -->
 <!-- http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html -->
+<table style="border-spacing:15px 0px;">
+  <tr>
+    <td><a href="http://tools.ietf.org/html/rfc7231#section-4.2.1">Save Methods</a></td>
+    <td>"Unsave" <a href="http://tools.ietf.org/html/rfc7231#section-4.2.2">Idempotent Methods</a></td>
+    <td>Non-Idempotent Methods</td>
+    <td>Special</td>
+  </tr>
+  <tr>
+    <td>
 <input id="method_opt" type="radio" name="method" value="OPTIONS" onclick="noBody()" /> OPTIONS <br />
 <input id="method_get" type="radio" name="method" value="GET" onclick="noBody()" /> GET <br />
 <input id="method_hea" type="radio" name="method" value="HEAD" onclick="noBody()" /> HEAD <br />
-<input id="method_pos" type="radio" name="method" value="POST" /> POST <br />
+<input id="method_tra" type="radio" name="method" value="TRACE" /> TRACE <br />
+<input id="method_pro" type="radio" name="method" value="PROPFIND" /> PROPFIND <br />
+    </td>
+    <td>
 <input id="method_put" type="radio" name="method" value="PUT" /> PUT <br />
 <input id="method_del" type="radio" name="method" value="DELETE" /> DELETE <br />
-<input id="method_tra" type="radio" name="method" value="TRACE" /> TRACE <br />
-<input id="method_con" type="radio" name="method" value="CONNECT" /> CONNECT <br />
+<input id="method_cop" type="radio" name="method" value="COPY" /> COPY <br />
+<input id="method_cop" type="radio" name="method" value="MOVE" /> MOVE <br />
+<input id="method_ppa" type="radio" name="method" value="PROPPATCH" /> PROPPATCH <br />
+<input id="method_unl" type="radio" name="method" value="UNLOCK" /> UNLOCK <br />
+    </td>
+    <td>
+<input id="method_pos" type="radio" name="method" value="POST" /> POST <br />
+<input id="method_pat" type="radio" name="method" value="PATCH" /> PATCH <br />
 <input id="method_mkc" type="radio" name="method" value="MKCOL" /> MKCOL <br />
-<input id="method_pro" type="radio" name="method" value="PROPFIND" /> PROPFIND <br />
-<input id="method_inv" type="radio" name="method" value="INVALID" /> *INVALID*
+<input id="method_loc" type="radio" name="method" value="LOCK" /> LOCK <br />
+    </td>
+    <td>
+<input id="method_con" type="radio" name="method" value="CONNECT" /> CONNECT <br />
+<input id="method_userdef" type="radio" name="method" value="INVALID" /> <input id="method_name" type="text" name="method_name" value="INVALID" oninput="var elem = document.getElementById('method_userdef'); elem.checked = true; elem.value=value" /> <br />
+    </td>
+  </tr>
+</table>
 
 <h3>Body data</h3>
 <input id="body_none" type="radio" name="body" value="*" /> No body data <br />
