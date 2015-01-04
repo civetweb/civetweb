@@ -23,6 +23,10 @@
       return result;
     }
 
+    function noBody() {
+      document.getElementById("body_none").checked = true;
+    }
+
     function load() {
         var params = getParams();
         var method = params["method"];
@@ -42,8 +46,21 @@
         document.getElementById("server").value = location.host;
         document.getElementById("resource").value = path;
 
-        document.getElementById("method_get").checked = true;
-        document.getElementById("body_none").checked = true;
+        setRadioValue("method", method);
+        noBody();
+    }
+
+    function setRadioValue(elmname, value) {
+
+      var elms = document.getElementsByName(elmname);
+      var len = elms.length;
+      var ret = false;
+
+      for (var i=0; i<len; i++) {
+        elms[i].checked = (elms[i].value == value);
+        ret |= elms[i].checked;
+      }
+      return ret;
     }
 
     function getRadioValue(elmname) {
@@ -90,7 +107,7 @@
             if (body) {
               blen = "\nWith " + body.length + " bytes body data"
             }
-            
+
             if (xmlhttp.readyState == 4)
             {
                 alert(lmeth + " " + laddr + blen + "\n\nResponse: " + xmlhttp.status + "\n\n" + xmlhttp.responseText);
@@ -142,7 +159,6 @@ TODO: Description how to use this page.
 <h3>Body data</h3>
 <input id="body_none" type="radio" name="body" value="*" />0 Bytes <br />
 <input id="body_10" type="radio" name="body" value="1234567890" />10 Bytes ("1234567890") <br />
-
 
 <h3>Submit</h3>
 <input id="send" type="button" onclick="sendreq()" value="Send request" />
