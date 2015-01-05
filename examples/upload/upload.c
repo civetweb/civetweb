@@ -36,6 +36,7 @@ static int begin_request_handler(struct mg_connection *conn)
             "<form method=\"POST\" action=\"/handle_post_request\" "
             "  enctype=\"multipart/form-data\">"
             "<input type=\"file\" name=\"file\" /> <br/>"
+            "<input type=\"file\" name=\"file2\" /> <br/>"
             "<input type=\"submit\" value=\"Upload\" />"
             "</form>"
             ""

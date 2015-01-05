@@ -5877,9 +5877,17 @@ int mg_upload2(struct mg_connection *conn, const char *destination_dir, int time
             break;
         }
 
-        /* Get headers for this part of the multipart message */
+        /* terminate header */
         buf[headers_len-1]=0;
-        s = &buf[bl];
+
+        /* Scan for the boundary string and skip it */
+        if (buf[0]=='-' && buf[1]=='-' && !memcmp(buf+2, boundary, boundary_len)) {
+            s = &buf[bl];
+        } else {
+            s = &buf[2];
+        }
+
+        /* Get headers for this part of the multipart message */
         memset(&part_request_info, 0, sizeof(part_request_info));
         parse_http_headers(&s, &part_request_info);
         assert(&buf[headers_len-1] == s);
