@@ -26,6 +26,8 @@ mg.write("<p>Database example:\r\n<pre>\r\n")
 
   -- Open database
   local db = sqlite3.open('requests.db')
+  -- Note that the data base is located in the current working directory
+  -- of the process if no other path is given here.
 
   -- Setup a trace callback, to show SQL statements we'll be executing.
   -- db:trace(function(data, sql) mg.write('Executing: ', sql: '\n') end, nil)
