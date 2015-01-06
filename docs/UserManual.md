@@ -279,7 +279,7 @@ For example, to bind to a loopback interface on port 80 and to
 all interfaces on HTTPS port 443, use `127.0.0.1:80,443s`.
 
 ### document\_root `.`
-A directory to serve. By default, the current workubg directory is served.
+A directory to serve. By default, the current working directory is served.
 The current directory is commonly referenced as dot (`.`).
 
 ### ssl\_certificate
