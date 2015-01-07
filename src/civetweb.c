@@ -6721,7 +6721,11 @@ static void *cryptolib_dll_handle;     /* Store the crypto library handle. */
 
 #endif /* NO_SSL_DL */
 
-static int cryptolib_users = 0;        /* Refecence counter for crypto library. */
+#if defined(SSL_ALREADY_INITIALIZED)
+static int cryptolib_users = 1;        /* Reference counter for crypto library. */
+#else
+static int cryptolib_users = 0;        /* Reference counter for crypto library. */
+#endif
 
 static int initialize_ssl(struct mg_context *ctx)
 {
