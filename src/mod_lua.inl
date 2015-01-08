@@ -983,8 +983,8 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
 #endif
 #ifdef USE_LUA_LUAXML
     {
-        extern int luaopen_LuaXML(lua_State *);
-        luaopen_LuaXML(L);
+        extern int luaopen_LuaXML_lib(lua_State *);
+        luaopen_LuaXML_lib(L);
     }
 #endif
 #ifdef USE_LUA_FILE_SYSTEM
