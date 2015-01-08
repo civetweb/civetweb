@@ -1,4 +1,3 @@
-local xml = require("LuaXML_lib")
 local base = _G
 
 -- symbolic name for tag index, this allows accessing the tag by var[xml.TAG]
@@ -8,9 +7,9 @@ xml.TAG = 0
 function xml.tag(var,tag)
 	if base.type(var)~="table" then return end
 	if base.type(tag)=="nil" then 
-		return var[TAG]
+		return var[xml.TAG]
 	end
-	var[TAG] = tag
+	var[xml.TAG] = tag
 end
 
 -- creates a new LuaXML object either by setting the metatable of an existing Lua table or by setting its tag
@@ -21,7 +20,7 @@ function xml.new(arg)
 	end
 	local var={}
 	base.setmetatable(var,{__index=xml, __tostring=xml.str})
-	if base.type(arg)=="string" then var[TAG]=arg end
+	if base.type(arg)=="string" then var[xml.TAG]=arg end
 	return var
 end
 
@@ -115,4 +114,3 @@ function xml.find(var, tag, attributeKey,attributeValue)
 	end
 end
 
-return xml
