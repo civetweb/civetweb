@@ -7879,8 +7879,6 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
 /***FXML***/
 /*v2*/
-
-#include "fxml.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7934,7 +7932,7 @@ el c(el parent, const char * elementName)
 }
 void sa(el elem, const char * attr, const char * value)
 {
-	attribute newatr=(attribute)malloc(sizeof(struct attribute_t));
+	attribute newatr=(attribute)mg_malloc(sizeof(struct attribute_t));
 	newatr->name=attr;
 	newatr->value=value;
 	newatr->nextAttribute=NULL;
@@ -7951,7 +7949,7 @@ void sa(el elem, const char * attr, const char * value)
 
 void t(el parent, const char * text)
 {
-	el newel=(el)malloc(sizeof(struct element_t));
+	el newel=(el)mg_malloc(sizeof(struct element_t));
 	newel->firstChild=NULL;
 	newel->lastChild=NULL;
 	newel->firstAttribute=NULL;
@@ -8076,5 +8074,3 @@ void fxml_Delete(el elem)
 	
 	return;
 }
-
-
