@@ -7878,12 +7878,15 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 }
 
 /***FXML***/
+/*v2*/
+
+#include "fxml.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 void fxml_ToString_internal(el elem, char ** buffer, int * size);
-void fxml_ToSTring_printf(char ** buffer, int * size, const char * str);
+void fxml_ToString_printf(char ** buffer, int * size, const char * str);
 
 typedef struct attribute_t * attribute;
 struct attribute_t
@@ -7931,7 +7934,7 @@ el c(el parent, const char * elementName)
 }
 void sa(el elem, const char * attr, const char * value)
 {
-	attribute newatr=(attribute)mg_malloc(sizeof(struct attribute_t));
+	attribute newatr=(attribute)malloc(sizeof(struct attribute_t));
 	newatr->name=attr;
 	newatr->value=value;
 	newatr->nextAttribute=NULL;
@@ -7948,7 +7951,7 @@ void sa(el elem, const char * attr, const char * value)
 
 void t(el parent, const char * text)
 {
-	el newel=(el)mg_malloc(sizeof(struct element_t));
+	el newel=(el)malloc(sizeof(struct element_t));
 	newel->firstChild=NULL;
 	newel->lastChild=NULL;
 	newel->firstAttribute=NULL;
@@ -7979,7 +7982,7 @@ int fxml_ToString(el elem, char * buffer)
 }
 
 
-void fxml_ToSTring_printf(char ** buffer, int * size, const char * str)
+void fxml_ToString_printf(char ** buffer, int * size, const char * str)
 {
 	int deltaSize;
 	deltaSize=strlen(str);
@@ -7994,13 +7997,13 @@ void fxml_ToString_internal(el elem, char ** buffer, int * size)
 	
 	if (elem->name==NULL) /*Text node*/
 	{
-		fxml_ToSTring_printf(buffer,size,elem->firstAttribute->value);
+		fxml_ToString_printf(buffer,size,elem->firstAttribute->value);
 		return;
 	}
 	
 	/*printf("<%s",elem->name);*/
-	fxml_ToSTring_printf(buffer,size,"<");
-	fxml_ToSTring_printf(buffer,size,elem->name);
+	fxml_ToString_printf(buffer,size,"<");
+	fxml_ToString_printf(buffer,size,elem->name);
 	
 	if (elem->firstAttribute!=NULL)
 	{
@@ -8008,11 +8011,11 @@ void fxml_ToString_internal(el elem, char ** buffer, int * size)
 		do
 		{
 			/*printf(" %s=\"%s\"",currentAttribute->name,currentAttribute->value);*/
-			fxml_ToSTring_printf(buffer,size," ");
-			fxml_ToSTring_printf(buffer,size,currentAttribute->name);
-			fxml_ToSTring_printf(buffer,size,"=\"");
-			fxml_ToSTring_printf(buffer,size,currentAttribute->value);
-			fxml_ToSTring_printf(buffer,size,"\"");
+			fxml_ToString_printf(buffer,size," ");
+			fxml_ToString_printf(buffer,size,currentAttribute->name);
+			fxml_ToString_printf(buffer,size,"=\"");
+			fxml_ToString_printf(buffer,size,currentAttribute->value);
+			fxml_ToString_printf(buffer,size,"\"");
 			
 			currentAttribute=currentAttribute->nextAttribute;
 		}
@@ -8022,11 +8025,11 @@ void fxml_ToString_internal(el elem, char ** buffer, int * size)
 	
 	if (elem->firstChild==NULL)
 	{
-		fxml_ToSTring_printf(buffer,size," />");
+		fxml_ToString_printf(buffer,size," />");
 	}
 	else
 	{
-		fxml_ToSTring_printf(buffer,size,">");
+		fxml_ToString_printf(buffer,size,">");
 		
 		currentChild=elem->firstChild;
 		while (currentChild!=NULL)
@@ -8036,9 +8039,9 @@ void fxml_ToString_internal(el elem, char ** buffer, int * size)
 		}
 	
 		/*printf("</%s>",elem->name);*/
-		fxml_ToSTring_printf(buffer,size,"</");
-		fxml_ToSTring_printf(buffer,size,elem->name);
-		fxml_ToSTring_printf(buffer,size,">");
+		fxml_ToString_printf(buffer,size,"</");
+		fxml_ToString_printf(buffer,size,elem->name);
+		fxml_ToString_printf(buffer,size,">");
 	}
 	
 	return;
@@ -8047,12 +8050,6 @@ void fxml_ToString_internal(el elem, char ** buffer, int * size)
 void fxml_Delete(el elem)
 {
 	el currentChild,nextChild;
-	
-	if (elem->name==NULL) /*Text node*/
-	{
-		/*TODO*/
-		return;
-	}
 	
 	
 	if (elem->firstAttribute!=NULL)
@@ -8076,7 +8073,8 @@ void fxml_Delete(el elem)
 		fxml_Delete(currentChild);
 		currentChild=nextChild->nextBrother;
 	}
-	mg_free(elem);
+	
 	return;
 }
+
 

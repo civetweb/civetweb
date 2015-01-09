@@ -26,14 +26,15 @@ static int generate_content(struct mg_connection *conn)
 		sa(table,"border","1");
 			tr=c(table,"tr");
 					td=c(tr,"td");
-						t(td,"A third cell!");
+						t(td,"Cell 1");
 					td=c(tr,"td");
-						t(td,"A fourth cell!");
+						t(td,"Cell 2");
 			tr=c(table,"tr");
 					td=c(tr,"td");
-						t(td,"A cell!");
+						t(td,"Cell 3");
 					td=c(tr,"td");
-						t(td,"A second cell!");
+						t(td,"Cell 4");
+			
 			
 
 	size=fxml_ToString(html,output)+15; /*+15 is for <!DOCTYPE html>*/

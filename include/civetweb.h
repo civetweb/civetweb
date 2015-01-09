@@ -650,7 +650,7 @@ enum {
 CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout);
 
 
-/***FXML v1***/
+/***FXML***/
 /*Feather XML is a very small XML generator.
 For a standalone version: https://github.com/wiseoldman95/FeatherXML*/
 
