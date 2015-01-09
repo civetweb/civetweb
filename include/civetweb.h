@@ -650,6 +650,60 @@ enum {
 CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout);
 
 
+/***FXML***/
+/*el represents an xml element*/
+typedef struct element_t * el;
+
+/*
+ * Note that const chars are never internally copied
+ */
+
+/* Create an element.
+ *  -Parent: The element's parent, the root Element should have
+ *    a NULL parent.
+ * 
+ * Returns the element (heap allocated)
+ * You are expected to use fxml_Delete on the root Element to free the
+ * entire tree.
+ */
+el c(el parent, const char * elementName);
+
+
+
+/* Set an element's attribute.
+ *  -elem: The element.
+ *  -attr: The attribute.
+ *  -value: The attribute value.
+ */
+void sa(el elem, const char * attr, const char * value);
+
+
+
+/* Create a text node.
+ *  -parent: The parent, must not be NULL.
+ *  -text: The text. a null-terminated string, the string will not be
+ *   internally copied.
+ */
+void t(el parent,const char * text);
+
+
+
+/* Converts the XML tree into a string, the output is stored at "buffer"
+ *  -elem: The top element you'd like to print, typically this is the 
+ *   root element.
+ */
+int fxml_ToString(el elem, char * buffer);
+
+
+
+/* Frees the element and its children recursively.
+ *  -elem: The element to free recursively, typically this is the root
+ *   element.
+ * */
+void fxml_Delete(el elem);
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -7876,3 +7876,207 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
     return ctx;
 }
+
+/***FXML***/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+void fxml_ToString_internal(el elem, char ** buffer, int * size);
+void fxml_ToSTring_printf(char ** buffer, int * size, const char * str);
+
+typedef struct attribute_t * attribute;
+struct attribute_t
+{
+	const char * name;
+	const char * value; /*Also used as the content of a text node*/
+	attribute nextAttribute;
+};
+
+
+struct element_t
+{
+	const char * name;
+	attribute firstAttribute;
+	attribute lastAttribute;
+	el firstChild;
+	el lastChild;
+	el nextBrother;
+};
+
+
+
+el c(el parent, const char * elementName)
+{
+	el newel=(el)mg_malloc(sizeof(struct element_t));
+	newel->firstChild=NULL;
+	newel->lastChild=NULL;
+	newel->firstAttribute=NULL;
+	newel->name=elementName;
+	
+	if (parent==NULL) return newel;
+	newel->nextBrother=NULL;
+	
+	if (parent->firstChild==NULL)
+	{
+		parent->firstChild=newel;
+		parent->lastChild=newel;
+		return newel;
+	}
+	
+	parent->lastChild->nextBrother=newel;
+	parent->lastChild=newel;
+	
+	return newel;
+}
+void sa(el elem, const char * attr, const char * value)
+{
+	attribute newatr=(attribute)mg_malloc(sizeof(struct attribute_t));
+	newatr->name=attr;
+	newatr->value=value;
+	newatr->nextAttribute=NULL;
+	
+	if (elem->firstAttribute==NULL)
+	{
+		elem->firstAttribute=newatr;
+		elem->lastAttribute=newatr;
+		return;
+	}
+	elem->lastAttribute->nextAttribute=newatr;
+	elem->lastAttribute=newatr;
+}
+
+void t(el parent, const char * text)
+{
+	el newel=(el)mg_malloc(sizeof(struct element_t));
+	newel->firstChild=NULL;
+	newel->lastChild=NULL;
+	newel->firstAttribute=NULL;
+	newel->name=NULL;
+	sa(newel,"",text);
+	
+	newel->nextBrother=NULL;
+	if (parent->firstChild==NULL)
+	{
+		parent->firstChild=newel;
+		parent->lastChild=newel;
+		return;
+	}
+	
+	parent->lastChild->nextBrother=newel;
+	parent->lastChild=newel;
+	
+	return;
+}
+
+int fxml_ToString(el elem, char * buffer)
+{
+	int size=0;
+	char * buff=buffer;
+	fxml_ToString_internal(elem,&buff,&size);
+	*buff='\0';
+	return size;
+}
+
+
+void fxml_ToSTring_printf(char ** buffer, int * size, const char * str)
+{
+	int deltaSize;
+	deltaSize=strlen(str);
+	memcpy(*buffer,str,deltaSize);
+	(*size)+=deltaSize;
+	(*buffer)+=deltaSize;
+}
+
+void fxml_ToString_internal(el elem, char ** buffer, int * size)
+{
+	el currentChild;
+	
+	if (elem->name==NULL) /*Text node*/
+	{
+		fxml_ToSTring_printf(buffer,size,elem->firstAttribute->value);
+		return;
+	}
+	
+	/*printf("<%s",elem->name);*/
+	fxml_ToSTring_printf(buffer,size,"<");
+	fxml_ToSTring_printf(buffer,size,elem->name);
+	
+	if (elem->firstAttribute!=NULL)
+	{
+		attribute currentAttribute=elem->firstAttribute;
+		do
+		{
+			/*printf(" %s=\"%s\"",currentAttribute->name,currentAttribute->value);*/
+			fxml_ToSTring_printf(buffer,size," ");
+			fxml_ToSTring_printf(buffer,size,currentAttribute->name);
+			fxml_ToSTring_printf(buffer,size,"=\"");
+			fxml_ToSTring_printf(buffer,size,currentAttribute->value);
+			fxml_ToSTring_printf(buffer,size,"\"");
+			
+			currentAttribute=currentAttribute->nextAttribute;
+		}
+		while (currentAttribute!=NULL);
+		
+	}
+	
+	if (elem->firstChild==NULL)
+	{
+		fxml_ToSTring_printf(buffer,size," />");
+	}
+	else
+	{
+		fxml_ToSTring_printf(buffer,size,">");
+		
+		currentChild=elem->firstChild;
+		while (currentChild!=NULL)
+		{
+			fxml_ToString_internal(currentChild,buffer,size);
+			currentChild=currentChild->nextBrother;
+		}
+	
+		/*printf("</%s>",elem->name);*/
+		fxml_ToSTring_printf(buffer,size,"</");
+		fxml_ToSTring_printf(buffer,size,elem->name);
+		fxml_ToSTring_printf(buffer,size,">");
+	}
+	
+	return;
+}
+
+void fxml_Delete(el elem)
+{
+	el currentChild,nextChild;
+	
+	if (elem->name==NULL) /*Text node*/
+	{
+		/*TODO*/
+		return;
+	}
+	
+	
+	if (elem->firstAttribute!=NULL)
+	{
+		attribute nextAttribute;
+		attribute currentAttribute=elem->firstAttribute;
+		do
+		{
+			nextAttribute=currentAttribute->nextAttribute;
+			mg_free(currentAttribute);
+			currentAttribute=nextAttribute;
+		}
+		while (currentAttribute!=NULL);
+		
+	}
+		
+	currentChild=elem->firstChild;
+	while (currentChild!=NULL)
+	{
+		nextChild=currentChild;
+		fxml_Delete(currentChild);
+		currentChild=nextChild->nextBrother;
+	}
+	mg_free(elem);
+	return;
+}
+
