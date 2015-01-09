@@ -7878,6 +7878,8 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 }
 
 /***FXML***/
+/*FeatherXML. A Super super super small XML generator 
+standalone version: https://github.com/wiseoldman95/FeatherXML*/
 /*v3*/
 #include <stdio.h>
 #include <stdlib.h>
