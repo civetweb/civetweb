@@ -651,9 +651,6 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t 
 
 
 /***FXML***/
-/*Feather XML is a very small XML generator.
-For a standalone version: https://github.com/wiseoldman95/FeatherXML*/
-
 /*el represents an xml element*/
 typedef struct element_t * el;
 
@@ -661,6 +658,10 @@ typedef struct element_t * el;
  * Note that const chars are never internally copied
  */
 
+/*
+ * Not that currently, no HTML encoding/escaping is done. 
+ */
+ 
 /* Create an element.
  *  -Parent: The element's parent, the root Element should have
  *    a NULL parent.
@@ -704,6 +705,8 @@ int fxml_ToString(el elem, char * buffer);
  *   element.
  * */
 void fxml_Delete(el elem);
+
+
 
 
 

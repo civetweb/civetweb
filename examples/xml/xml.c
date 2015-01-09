@@ -20,7 +20,7 @@ static int generate_content(struct mg_connection *conn)
 			meta=c(head,"meta");
 			sa(meta,"charset","utf-8");
 		body=c(html,"body");
-			t(body,"Hello world! You requested:");
+			t(body,"Hello world!");
 			c(body,"br");
 		table=c(body,"table");
 		sa(table,"border","1");
