@@ -7879,7 +7879,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
 /*** FXML Implementation ***/
 /* FXML is a Super super super small XML generator
- * Version 201501101330
+ * Version 20150110-1630
  * https://github.com/wiseoldman95/FeatherXML
  */
  
@@ -7888,6 +7888,7 @@ void fxml_internal_toString(el elem, char ** buffer, int * size);
 void fxml_internal_toString_printf(char ** buffer, int * size, const char * str);
 void fxml_internal_docSize(el elem, int * size);
 void fxml_internal_docSize_printf(int * size, const char * str);
+void fxml_internal_delete(el elem);
 
 typedef struct attribute_t * attribute;
 struct attribute_t
@@ -7996,7 +7997,13 @@ void fxml_toString(el elem, char ** buffer, int * size)
 	return;
 }
 
-void fxml_Delete(el elem)
+void fxml_delete(el elem, char ** buffer)
+{
+	if (buffer!=NULL) mg_free(*buffer);
+	fxml_internal_delete(elem);
+}
+
+void fxml_internal_delete(el elem)
 {
 	el currentChild,nextChild;
 	
@@ -8019,7 +8026,7 @@ void fxml_Delete(el elem)
 	while (currentChild!=NULL)
 	{
 		nextChild=currentChild;
-		fxml_Delete(currentChild);
+		fxml_internal_delete(currentChild);
 		currentChild=nextChild->nextBrother;
 	}
 	
@@ -8155,3 +8162,4 @@ void fxml_internal_docSize(el elem, int * size)
 	return;
 }
 /*** FXML - Implementation End ***/
+

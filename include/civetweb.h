@@ -651,7 +651,7 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t 
 
 /***FXML - Header And Documentation***/
 /* FXML is a Super super super small XML generator
- * Version 201501101330
+ * Version 20150110-1630
  * https://github.com/wiseoldman95/FeatherXML
  */
 
@@ -694,7 +694,7 @@ void sa(el elem, const char * attr, const char * value);
 /* Create a text node.
  *  -parent: The parent, must not be NULL.
  *  -text: The text. a null-terminated string, the string will not be
- *   internally copied.
+ *    internally copied.
  */
 void t(el parent,const char * text);
 
@@ -702,16 +702,19 @@ void t(el parent,const char * text);
 
 /* Converts the XML tree into a string, the output is stored at "buffer"
  *  -elem: The top element you'd like to print, typically this is the 
- *   root element.
+ *    root element.
  */
 void fxml_toString(el elem, char ** buffer, int * size);
 
 
 /* Frees the element and its children recursively.
  *  -elem: The element to free recursively, typically this is the root
- *   element.
+ *    element.
+ *  -buffer: a NULL or a dynamically allocated buffer you want to clear.
+ *    Typically, you pass &output, where &output is what you passed to
+ *    fxml_toString's buffer argument.
  */
-void fxml_Delete(el elem);
+void fxml_delete(el elem, char ** buffer);
 #endif
 /***FXML - Header End***/
 

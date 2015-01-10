@@ -43,16 +43,17 @@ static int generate_content(struct mg_connection *conn)
 	}
 	size+=15; /*+15 is for <!DOCTYPE html>*/
 	
-	printf(
+	mg_printf(conn,
 	"HTTP/1.1 200 OK\r\n"
 	"Content-Type: text/html\r\n"
 	"Content-Length: %d\r\n"
 	"\r\n"
 	"<!DOCTYPE html>%s",size, output);
 	
-	fxml_Delete(html);
-	mg_free(output); 
-	
+	/* This will free the memory. Pass NULL instead of output if
+	 * you want to manually free it later.
+	 */
+	fxml_delete(html,&output); 
 	return 1;
 }
 
