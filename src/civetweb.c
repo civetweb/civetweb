@@ -7877,16 +7877,17 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     return ctx;
 }
 
-/***FXML***/
-/*FeatherXML. A Super super super small XML generator 
-standalone version: https://github.com/wiseoldman95/FeatherXML*/
-/*v3*/
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-void fxml_ToString_internal(el elem, char ** buffer, int * size);
-void fxml_ToString_printf(char ** buffer, int * size, const char * str);
+/*** FXML Implementation ***/
+/* FXML is a Super super super small XML generator
+ * Version 201501101330
+ * https://github.com/wiseoldman95/FeatherXML
+ */
+ 
+/* These internal functions should not be used by the user */
+void fxml_internal_toString(el elem, char ** buffer, int * size);
+void fxml_internal_toString_printf(char ** buffer, int * size, const char * str);
+void fxml_internal_docSize(el elem, int * size);
+void fxml_internal_docSize_printf(int * size, const char * str);
 
 typedef struct attribute_t * attribute;
 struct attribute_t
@@ -7972,78 +7973,26 @@ void t(el parent, const char * text)
 	return;
 }
 
-int fxml_ToString(el elem, char * buffer)
+void fxml_toString(el elem, char ** buffer, int * size)
 {
-	int size=0;
-	char * buff=buffer;
-	fxml_ToString_internal(elem,&buff,&size);
-	*buff='\0';
-	return size;
-}
-
-
-void fxml_ToString_printf(char ** buffer, int * size, const char * str)
-{
-	int deltaSize;
-	deltaSize=strlen(str);
-	memcpy(*buffer,str,deltaSize);
-	(*size)+=deltaSize;
-	(*buffer)+=deltaSize;
-}
-
-void fxml_ToString_internal(el elem, char ** buffer, int * size)
-{
-	el currentChild;
+	char * movingBuffer;
 	
-	if (elem->name==NULL) /*Text node*/
+	*size=0;
+	fxml_internal_docSize(elem,size); /*Modifies size*/
+	*buffer=mg_malloc(*size);
+	
+	if (!(*buffer)) /*Malloc failed*/
 	{
-		fxml_ToString_printf(buffer,size,elem->firstAttribute->value);
+		*size=-1;
+		*buffer=NULL;
 		return;
 	}
 	
-	/*printf("<%s",elem->name);*/
-	fxml_ToString_printf(buffer,size,"<");
-	fxml_ToString_printf(buffer,size,elem->name);
-	
-	if (elem->firstAttribute!=NULL)
-	{
-		attribute currentAttribute=elem->firstAttribute;
-		do
-		{
-			/*printf(" %s=\"%s\"",currentAttribute->name,currentAttribute->value);*/
-			fxml_ToString_printf(buffer,size," ");
-			fxml_ToString_printf(buffer,size,currentAttribute->name);
-			fxml_ToString_printf(buffer,size,"=\"");
-			fxml_ToString_printf(buffer,size,currentAttribute->value);
-			fxml_ToString_printf(buffer,size,"\"");
-			
-			currentAttribute=currentAttribute->nextAttribute;
-		}
-		while (currentAttribute!=NULL);
-		
-	}
-	
-	if (elem->firstChild==NULL)
-	{
-		fxml_ToString_printf(buffer,size," />");
-	}
-	else
-	{
-		fxml_ToString_printf(buffer,size,">");
-		
-		currentChild=elem->firstChild;
-		while (currentChild!=NULL)
-		{
-			fxml_ToString_internal(currentChild,buffer,size);
-			currentChild=currentChild->nextBrother;
-		}
-	
-		/*printf("</%s>",elem->name);*/
-		fxml_ToString_printf(buffer,size,"</");
-		fxml_ToString_printf(buffer,size,elem->name);
-		fxml_ToString_printf(buffer,size,">");
-	}
-	
+	movingBuffer=*buffer;
+	*size=0; /*Size needs to be reset before fxml_internal_toString*/
+	/*After the function is finished sized will be correct again*/
+	fxml_internal_toString(elem,&movingBuffer,size);
+	(*movingBuffer)='\0'; /*Add the terminating character*/
 	return;
 }
 
@@ -8076,3 +8025,133 @@ void fxml_Delete(el elem)
 	
 	return;
 }
+
+/*Internal functions*/
+void fxml_internal_toString_printf(char ** buffer, int * size, const char * str)
+{
+	int deltaSize;
+	deltaSize=strlen(str);
+	memcpy(*buffer,str,deltaSize);
+	(*size)+=deltaSize;
+	(*buffer)+=deltaSize;
+}
+
+void fxml_internal_toString(el elem, char ** buffer, int * size)
+{
+	el currentChild;
+	
+	if (elem->name==NULL) /*Text node*/
+	{
+		fxml_internal_toString_printf(buffer,size,elem->firstAttribute->value);
+		return;
+	}
+	
+	/*printf("<%s",elem->name);*/
+	fxml_internal_toString_printf(buffer,size,"<");
+	fxml_internal_toString_printf(buffer,size,elem->name);
+	
+	if (elem->firstAttribute!=NULL)
+	{
+		attribute currentAttribute=elem->firstAttribute;
+		do
+		{
+			/*printf(" %s=\"%s\"",currentAttribute->name,currentAttribute->value);*/
+			fxml_internal_toString_printf(buffer,size," ");
+			fxml_internal_toString_printf(buffer,size,currentAttribute->name);
+			fxml_internal_toString_printf(buffer,size,"=\"");
+			fxml_internal_toString_printf(buffer,size,currentAttribute->value);
+			fxml_internal_toString_printf(buffer,size,"\"");
+			
+			currentAttribute=currentAttribute->nextAttribute;
+		}
+		while (currentAttribute!=NULL);
+		
+	}
+	
+	if (elem->firstChild==NULL)
+	{
+		fxml_internal_toString_printf(buffer,size," />");
+	}
+	else
+	{
+		fxml_internal_toString_printf(buffer,size,">");
+		
+		currentChild=elem->firstChild;
+		while (currentChild!=NULL)
+		{
+			fxml_internal_toString(currentChild,buffer,size);
+			currentChild=currentChild->nextBrother;
+		}
+	
+		/*printf("</%s>",elem->name);*/
+		fxml_internal_toString_printf(buffer,size,"</");
+		fxml_internal_toString_printf(buffer,size,elem->name);
+		fxml_internal_toString_printf(buffer,size,">");
+	}
+	
+	return;
+}
+
+void fxml_internal_docSize_printf(int * size, const char * str)
+{
+	int deltaSize;
+	deltaSize=strlen(str);
+	(*size)+=deltaSize;
+}
+
+void fxml_internal_docSize(el elem, int * size)
+{
+	el currentChild;
+	
+	if (elem->name==NULL) /*Text node*/
+	{
+		fxml_internal_docSize_printf(size,elem->firstAttribute->value);
+		return;
+	}
+	
+	/*printf("<%s",elem->name);*/
+	fxml_internal_docSize_printf(size,"<");
+	fxml_internal_docSize_printf(size,elem->name);
+	
+	if (elem->firstAttribute!=NULL)
+	{
+		attribute currentAttribute=elem->firstAttribute;
+		do
+		{
+			/*printf(" %s=\"%s\"",currentAttribute->name,currentAttribute->value);*/
+			fxml_internal_docSize_printf(size," ");
+			fxml_internal_docSize_printf(size,currentAttribute->name);
+			fxml_internal_docSize_printf(size,"=\"");
+			fxml_internal_docSize_printf(size,currentAttribute->value);
+			fxml_internal_docSize_printf(size,"\"");
+			
+			currentAttribute=currentAttribute->nextAttribute;
+		}
+		while (currentAttribute!=NULL);
+		
+	}
+	
+	if (elem->firstChild==NULL)
+	{
+		fxml_internal_docSize_printf(size," />");
+	}
+	else
+	{
+		fxml_internal_docSize_printf(size,">");
+		
+		currentChild=elem->firstChild;
+		while (currentChild!=NULL)
+		{
+			fxml_internal_docSize(currentChild,size);
+			currentChild=currentChild->nextBrother;
+		}
+	
+		/*printf("</%s>",elem->name);*/
+		fxml_internal_docSize_printf(size,"</");
+		fxml_internal_docSize_printf(size,elem->name);
+		fxml_internal_docSize_printf(size,">");
+	}
+	
+	return;
+}
+/*** FXML - Implementation End ***/

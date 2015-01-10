@@ -11,9 +11,8 @@
 static int generate_content(struct mg_connection *conn)
 {
 	el html,head,body,table,td,tr,meta;
-	
 	int size;
-	char output[5000];
+	char * output;
 	
 	html=c(NULL,"html");
 		head=c(html,"head");
@@ -35,10 +34,16 @@ static int generate_content(struct mg_connection *conn)
 					td=c(tr,"td");
 						t(td,"Cell 4");
 			
-			
 
-	size=fxml_ToString(html,output)+15; /*+15 is for <!DOCTYPE html>*/
-	mg_printf(conn,
+	fxml_toString(html,&output,&size); 
+	if (size==-1)
+	{
+		printf("Malloc failed!\n");
+		return -1;
+	}
+	size+=15; /*+15 is for <!DOCTYPE html>*/
+	
+	printf(
 	"HTTP/1.1 200 OK\r\n"
 	"Content-Type: text/html\r\n"
 	"Content-Length: %d\r\n"
@@ -46,9 +51,9 @@ static int generate_content(struct mg_connection *conn)
 	"<!DOCTYPE html>%s",size, output);
 	
 	fxml_Delete(html);
-
-    // Mark request as processed
-    return 1;
+	mg_free(output); 
+	
+	return 1;
 }
 
 /* Main program: Set callbacks and start the server.  */
