@@ -651,7 +651,7 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t 
 
 /***FXML - Header And Documentation***/
 /* FXML is a Super super super small XML generator
- * Version 20150110-1630
+ * Version 2015-0112-0641
  * https://github.com/wiseoldman95/FeatherXML
  */
 
@@ -678,7 +678,7 @@ typedef struct element_t * el;
  * You are expected to use fxml_Delete on the root Element to free the
  * entire tree.
  */
-el c(el parent, const char * elementName);
+el fxml_createElement(el parent, const char * elementName);
 
 
 
@@ -687,7 +687,7 @@ el c(el parent, const char * elementName);
  *  -attr: The attribute.
  *  -value: The attribute value.
  */
-void sa(el elem, const char * attr, const char * value);
+void fxml_setAttribute(el elem, const char * attr, const char * value);
 
 
 
@@ -696,7 +696,7 @@ void sa(el elem, const char * attr, const char * value);
  *  -text: The text. a null-terminated string, the string will not be
  *    internally copied.
  */
-void t(el parent,const char * text);
+void fxml_createTextNode(el parent,const char * text);
 
 
 
@@ -707,6 +707,7 @@ void t(el parent,const char * text);
 void fxml_toString(el elem, char ** buffer, int * size);
 
 
+
 /* Frees the element and its children recursively.
  *  -elem: The element to free recursively, typically this is the root
  *    element.
@@ -715,6 +716,7 @@ void fxml_toString(el elem, char ** buffer, int * size);
  *    fxml_toString's buffer argument.
  */
 void fxml_delete(el elem, char ** buffer);
+
 #endif
 /***FXML - Header End***/
 

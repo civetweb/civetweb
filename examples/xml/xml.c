@@ -8,6 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* This makes out code a little shorter*/
+#define c  fxml_createElement
+#define t  fxml_createTextNode
+#define sa fxml_setAttribute
+
 static int generate_content(struct mg_connection *conn)
 {
 	el html,head,body,table,td,tr,meta;

@@ -7879,7 +7879,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
 /*** FXML Implementation ***/
 /* FXML is a Super super super small XML generator
- * Version 20150110-1630
+ * Version 2015-0112-0641
  * https://github.com/wiseoldman95/FeatherXML
  */
  
@@ -7911,7 +7911,7 @@ struct element_t
 
 
 
-el c(el parent, const char * elementName)
+el fxml_createElement(el parent, const char * elementName)
 {
 	el newel=(el)mg_malloc(sizeof(struct element_t));
 	newel->firstChild=NULL;
@@ -7934,7 +7934,7 @@ el c(el parent, const char * elementName)
 	
 	return newel;
 }
-void sa(el elem, const char * attr, const char * value)
+void fxml_setAttribute(el elem, const char * attr, const char * value)
 {
 	attribute newatr=(attribute)mg_malloc(sizeof(struct attribute_t));
 	newatr->name=attr;
@@ -7951,14 +7951,14 @@ void sa(el elem, const char * attr, const char * value)
 	elem->lastAttribute=newatr;
 }
 
-void t(el parent, const char * text)
+void fxml_createTextNode(el parent, const char * text)
 {
 	el newel=(el)mg_malloc(sizeof(struct element_t));
 	newel->firstChild=NULL;
 	newel->lastChild=NULL;
 	newel->firstAttribute=NULL;
 	newel->name=NULL;
-	sa(newel,"",text);
+	fxml_setAttribute(newel,"",text);
 	
 	newel->nextBrother=NULL;
 	if (parent->firstChild==NULL)
@@ -7991,7 +7991,7 @@ void fxml_toString(el elem, char ** buffer, int * size)
 	
 	movingBuffer=*buffer;
 	*size=0; /*Size needs to be reset before fxml_internal_toString*/
-	/*After the function is finished sized will be correct again*/
+	/*After the function is finished size will be correct again*/
 	fxml_internal_toString(elem,&movingBuffer,size);
 	(*movingBuffer)='\0'; /*Add the terminating character*/
 	return;
