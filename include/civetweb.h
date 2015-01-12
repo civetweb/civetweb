@@ -649,6 +649,76 @@ enum {
 */
 CIVETWEB_API int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout);
 
+/***FXML - Header And Documentation***/
+/* FXML is a Super super super small XML generator
+ * Version 2015-0112-0641
+ * https://github.com/wiseoldman95/FeatherXML
+ */
+
+#ifndef FXML_INCL_GUARD
+#define FXML_INCL_GUARD
+#include <stdlib.h>
+
+/* el represents an xml element */
+typedef struct element_t * el;
+
+/*
+ * Note that const chars are never internally copied
+ */
+
+/*
+ * Not that currently, no HTML encoding/escaping is done. 
+ */
+ 
+/* Create an element.
+ *  -Parent: The element's parent, the root Element should have
+ *    a NULL parent.
+ * 
+ * Returns the element (heap allocated)
+ * You are expected to use fxml_Delete on the root Element to free the
+ * entire tree.
+ */
+el fxml_createElement(el parent, const char * elementName);
+
+
+
+/* Set an element's attribute.
+ *  -elem: The element.
+ *  -attr: The attribute.
+ *  -value: The attribute value.
+ */
+void fxml_setAttribute(el elem, const char * attr, const char * value);
+
+
+
+/* Create a text node.
+ *  -parent: The parent, must not be NULL.
+ *  -text: The text. a null-terminated string, the string will not be
+ *    internally copied.
+ */
+void fxml_createTextNode(el parent,const char * text);
+
+
+
+/* Converts the XML tree into a string, the output is stored at "buffer"
+ *  -elem: The top element you'd like to print, typically this is the 
+ *    root element.
+ */
+void fxml_toString(el elem, char ** buffer, int * size);
+
+
+
+/* Frees the element and its children recursively.
+ *  -elem: The element to free recursively, typically this is the root
+ *    element.
+ *  -buffer: a NULL or a dynamically allocated buffer you want to clear.
+ *    Typically, you pass &output, where &output is what you passed to
+ *    fxml_toString's buffer argument.
+ */
+void fxml_delete(el elem, char ** buffer);
+
+#endif
+/***FXML - Header End***/
 
 #ifdef __cplusplus
 }
