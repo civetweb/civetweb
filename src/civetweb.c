@@ -939,7 +939,7 @@ void mg_set_thread_name(const char* name)
    /* No option known to set thread name for MinGW */
 #endif
 #elif defined(__linux__)
-   /* Linux (TODO: test) */
+   /* Linux */
    (void)prctl(PR_SET_NAME,threadName,0,0,0);
 #elif defined(__APPLE__) || defined(__MACH__)
    /* OS X (TODO: test) */
@@ -948,7 +948,7 @@ void mg_set_thread_name(const char* name)
    /* BSD (TODO: test) */
    pthread_set_name_np(pthread_self(), threadName);
 #else
-   /* POSIX (TODO: test) */
+   /* POSIX */
    (void)pthread_setname_np(pthread_self(), threadName);
 #endif
 }
@@ -1513,6 +1513,9 @@ static const char *mg_get_response_code_text(int response_code, struct mg_connec
     case 507: return "Insufficient Storage"; /* RFC2518 Section 10.6, , RFC4918 Section 11.5 */
     case 511: return "Network Authentication Required"; /* RFC 6585, Section 6 */
 
+    /* Other RFCs */
+    case 426: return "Upgrade Required"; /* RFC 2817 */
+
     /* Return codes from non normative RFCs: */
     /* Informative and experimental RFCs, "de facto" standards due to common use, ... */
     case 208: return "Already Reported"; /* RFC5842 Section 7.1 */
@@ -1524,15 +1527,6 @@ static const char *mg_get_response_code_text(int response_code, struct mg_connec
     case 506: return "Variant Also Negotiates"; /* RFC 2295, Section 8.1 */
     case 508: return "Loop Detected"; /* RFC5842 Section 7.1 */
     case 510: return "Not Extended"; /* RFC 2774, Section 7 */
-
-    /* according to hearsay (TODO: verify or delete) */
-    case 420: return "Method Failure";
-    case 425: return "Node code";
-    case 426: return "Upgrade Required";
-    case 440: return "Login Timeout";
-    case 444: return "No Response";
-    case 449: return "Retry With";
-    case 450: return "Blocked by Parental Controls";
 
     default:
         /* This error code is unknown. This should not happen. */
