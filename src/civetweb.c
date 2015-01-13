@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014 the Civetweb developers
+/* Copyright (c) 2013-2015 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1756,8 +1756,8 @@ static int pthread_cond_timedwait(pthread_cond_t *cv, pthread_mutex_t *mutex, co
 
     if (abstime) {
         clock_gettime(CLOCK_REALTIME, &tsnow);
-        nsnow = (((uint64_t)tsnow.tv_sec)<<32) + tsnow.tv_nsec;
-        nswaitabs = (((uint64_t)abstime->tv_sec)<<32) + abstime->tv_nsec;
+        nsnow = (((uint64_t)tsnow.tv_sec)*1000000000) + tsnow.tv_nsec;
+        nswaitabs = (((uint64_t)abstime->tv_sec)*1000000000) + abstime->tv_nsec;
         nswaitrel = nswaitabs - nsnow;
         if (nswaitrel<0) nswaitrel=0;
         mswaitrel = (DWORD)(nswaitrel / 1000000);
