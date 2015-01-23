@@ -2895,19 +2895,39 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
         }
     }
 
-    if (mg_stat(conn, filename, filep)) return;
+    /* Local file path and name, corresponding to requested URI
+       is now stored in "filename" variable. */
+    if (mg_stat(conn, filename, filep)) {
+        /* File exists. Check if it is a script type. */
+        if (0
+#if !defined(NO_CGI)
+            ||
+            match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+                         (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), filename) > 0
+#endif
+#if defined(USE_LUA)
+            ||
+            match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+                         (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), filename) > 0
+#endif
+           ) {
+               *is_script_ressource = 1;
+        }
+        return;
+    }
 
-    /* if we can't find the actual file, look for the file
+    /* If we can't find the actual file, look for the file
        with the same name but a .gz extension. If we find it,
        use that and set the gzipped flag in the file struct
        to indicate that the response need to have the content-
-       encoding: gzip header
-       we can only do this if the browser declares support */
+       encoding: gzip header.
+       We can only do this if the browser declares support. */
     if ((accept_encoding = mg_get_header(conn, "Accept-Encoding")) != NULL) {
         if (strstr(accept_encoding,"gzip") != NULL) {
             snprintf(gz_path, sizeof(gz_path), "%s.gz", filename);
             if (mg_stat(conn, gz_path, filep)) {
                 filep->gzipped = 1;
+                /* Currently gz files can not be scripts. */
                 return;
             }
         }
@@ -2917,9 +2937,13 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
     for (p = filename + strlen(filename); p > filename + 1; p--) {
         if (*p == '/') {
             *p = '\0';
-            if ((match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+            if ((0
+#if !defined(NO_CGI)
+                 ||
+                 match_prefix(conn->ctx->config[CGI_EXTENSIONS],
                               (int)strlen(conn->ctx->config[CGI_EXTENSIONS]), filename) > 0
-#ifdef USE_LUA
+#endif
+#if defined(USE_LUA)
                  ||
                  match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
                               (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), filename) > 0
