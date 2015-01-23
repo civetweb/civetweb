@@ -2911,7 +2911,7 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
                          (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), filename) > 0
 #endif
            ) {
-               *is_script_ressource = 1;
+               *is_script_ressource = !is_put_or_delete_request;
         }
         return;
     }
