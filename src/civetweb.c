@@ -2911,7 +2911,14 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
                          (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]), filename) > 0
 #endif
            ) {
-               *is_script_ressource = !is_put_or_delete_request;
+                /* The request addresses a CGI script or a Lua script. The URI corresponds
+                   to the script itself (like /path/script.cgi), and there is no additional
+                   resource path (like /path/script.cgi/something).
+                   Requests that modify (replace or delete) a resource, like PUT and DELETE
+                   requests, should replace/delete the script file.
+                   Requests that read or write from/to a resource, like GET and POST requests,
+                   should call the script and return the generated response. */
+                *is_script_ressource = !is_put_or_delete_request;
         }
         return;
     }
