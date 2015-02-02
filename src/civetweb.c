@@ -159,7 +159,9 @@ typedef long off_t;
 #define INT64_FMT  "I64d"
 
 #define WINCDECL __cdecl
+#define SHUT_RD 0
 #define SHUT_WR 1
+#define SHUT_BOTH 2
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #define access _access

@@ -50,7 +50,9 @@
 #include <shlobj.h>
 
 #define getcwd(a,b) _getcwd(a,b)
+#if !defined(__MINGW32__)
 extern char *_getcwd(char *buf, size_t size);
+#endif
 static int guard = 0;                   /* test if any dialog is already open */
 
 #ifndef PATH_MAX
