@@ -94,10 +94,6 @@
 #endif
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
-#if defined(_MSC_VER) && _MSC_VER <= 1400
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0400 /* To make it link in VS2005 */
-#endif
 #include <windows.h>
 typedef const char * SOCK_OPT_TYPE;
 
@@ -253,14 +249,14 @@ typedef struct DIR {
     struct dirent  result;
 } DIR;
 
-#if !defined(USE_IPV6) && defined(_WIN32)
+#if defined(_WIN32) && !defined(POLLIN)
 #ifndef HAVE_POLL
 struct pollfd {
     SOCKET fd;
     short events;
     short revents;
 };
-#define POLLIN 1
+#define POLLIN 0x0300
 #endif
 #endif
 
