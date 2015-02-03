@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014 the Civetweb developers
+/* Copyright (c) 2013-2015 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -591,6 +591,7 @@ CIVETWEB_API void mg_cry(struct mg_connection *conn,
 /* utility method to compare two buffers, case incensitive. */
 CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
 
+
 /* Connect to a websocket as a client
    Parameters:
      host: host to connect to, i.e. "echo.websocket.org" or "192.168.1.1" or "localhost"
@@ -618,6 +619,7 @@ CIVETWEB_API struct mg_connection *mg_connect_websocket_client(const char *host,
                                                websocket_data_func data_func, websocket_close_func close_func,
                                                void * user_data);
 
+
 /* Connect to a TCP server as a client (can be used to connect to a HTTP server)
    Parameters:
      host: host to connect to, i.e. "www.wikipedia.org" or "192.168.1.1" or "localhost"
@@ -636,6 +638,7 @@ CIVETWEB_API struct mg_connection *mg_connect_client(const char *host, int port,
 enum {
     TIMEOUT_INFINITE = -1
 };
+
 
 /* Wait for a response from the server
    Parameters:

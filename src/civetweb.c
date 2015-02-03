@@ -1572,6 +1572,7 @@ PRINTF_ARGS(4, 5);
 static void send_http_error(struct mg_connection *conn, int status,
                             const char *reason, const char *fmt, ...)
 {
+    /* TODO: remove "reason" argument, since it is always NULL */
     char buf[MG_BUF_LEN];
     va_list ap;
     int len = 0, i, page_handler_found, scope;
