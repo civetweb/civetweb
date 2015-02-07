@@ -1174,7 +1174,7 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path, stru
     if (!mg_stat(conn, path, filep) || !mg_fopen(conn, path, "r", filep)) {
         /* File not found or not accessible */
         if (ls == NULL) {
-            send_http_error(conn, 500, NULL,
+            send_http_error(conn, 500,
                 "Error: Cannot open script\nFile %s can not be read", path);
         } else {
             luaL_error(ls, "File [%s] not found", path);
@@ -1184,14 +1184,14 @@ static int handle_lsp_request(struct mg_connection *conn, const char *path, stru
         fileno(filep->fp), 0)) == MAP_FAILED) {
         /* mmap failed */
         if (ls == NULL) {
-            send_http_error(conn, 500, NULL,
+            send_http_error(conn, 500,
                 "Error: Cannot open script\nFile %s can not be mapped", path);
         } else {
             luaL_error(ls, "mmap(%s, %zu, %d): %s", path, (size_t) filep->size,
                 fileno(filep->fp), strerror(errno));
         }
     } else if ((L = (ls != NULL ? ls : lua_newstate(lua_allocator, NULL))) == NULL) {
-        send_http_error(conn, 500, NULL, "%s",
+        send_http_error(conn, 500, "%s",
             "Error: Cannot execute script\nlua_newstate failed");
     } else {
         /* We're not sending HTTP headers here, Lua page must do it. */

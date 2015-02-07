@@ -1560,15 +1560,13 @@ static const char *mg_get_response_code_text(int response_code, struct mg_connec
 }
 
 
-static void send_http_error(struct mg_connection *, int, const char *,
+static void send_http_error(struct mg_connection *, int,
                             PRINTF_FORMAT_STRING(const char *fmt), ...)
 PRINTF_ARGS(4, 5);
 
 
-static void send_http_error(struct mg_connection *conn, int status,
-                            const char *_unused_, const char *fmt, ...)
+static void send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 {
-    /* TODO: remove "reason" argument, since it is always NULL */
     char buf[MG_BUF_LEN];
     va_list ap;
     int len = 0, i, page_handler_found, scope;
@@ -1579,7 +1577,6 @@ static void send_http_error(struct mg_connection *conn, int status,
     const char *error_page_file_ext, *tstr;
 
     const char *status_text = mg_get_response_code_text(status, conn);
-    assert(_unused_==NULL);
 
     conn->status_code = status;
     if (conn->in_error_handler ||
@@ -2344,7 +2341,7 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
 
     if ((pid = fork()) == -1) {
         /* Parent */
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: Creating CGI process\nfork(): %s", strerror(ERRNO));
     } else if (pid == 0) {
         /* Child */
@@ -3959,7 +3956,7 @@ static void handle_directory_request(struct mg_connection *conn,
     time_t curtime = time(NULL);
 
     if (!scan_directory(conn, dir, &data, dir_scan_callback)) {
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: Cannot open directory\nopendir(%s): %s",
             dir, strerror(ERRNO));
         return;
@@ -4106,7 +4103,7 @@ static void handle_static_file_request(struct mg_connection *conn, const char *p
     }
 
     if (!mg_fopen(conn, path, "rb", filep)) {
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: Cannot open file\nfopen(%s): %s",
             path, strerror(ERRNO));
         return;
@@ -4122,7 +4119,7 @@ static void handle_static_file_request(struct mg_connection *conn, const char *p
         /* actually, range requests don't play well with a pre-gzipped
            file (since the range is specified in the uncompressed space) */
         if (filep->gzipped) {
-            send_http_error(conn, 501, NULL, "%s",
+            send_http_error(conn, 501, "%s",
                 "Error: Range requests in gzipped files are not supported");
             mg_fclose(filep);
             return;
@@ -4184,14 +4181,14 @@ void mg_send_file2(struct mg_connection *conn, const char *path, int timeout)
             if (!mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING], "yes")) {
                 handle_directory_request(conn, path);
             } else {
-                send_http_error(conn, 403, NULL, "%s",
+                send_http_error(conn, 403, "%s",
                     "Error: Directory listing denied");
             }
         } else {
             handle_static_file_request(conn, path, &file);
         }
     } else {
-        send_http_error(conn, 404, NULL, "%s",
+        send_http_error(conn, 404, "%s",
             "Error: File not found");
     }
 }
@@ -4367,11 +4364,11 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
 
     if (conn->content_len == -1) {
         /* Content length is not specified by the client. */
-        send_http_error(conn, 411, NULL, "%s",
+        send_http_error(conn, 411, "%s",
             "Error: Client did not specify content length");
     } else if ((expect != NULL) && (mg_strcasecmp(expect, "100-continue") != 0)) {
         /* Client sent an "Expect: xyz" header and xyz is not 100-continue. */
-        send_http_error(conn, 417, NULL,
+        send_http_error(conn, 417,
             "Error: Can not fulfill expectation %s", expect);
     } else {
         if (expect != NULL) {
@@ -4414,7 +4411,7 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
         /* Each error code path in this function must send an error */
         if (!success) {
             /* TODO: Maybe some data has already been sent. */
-            send_http_error(conn, 500, NULL, "%s", "");
+            send_http_error(conn, 500, "%s", "");
         }
     }
 
@@ -4626,14 +4623,14 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
     }
 
     if (pipe(fdin) != 0 || pipe(fdout) != 0) {
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: Cannot create CGI pipe: %s", strerror(ERRNO));
         goto done;
     }
 
     pid = spawn_process(conn, p, blk.buf, blk.vars, fdin[0], fdout[1], dir);
     if (pid == (pid_t) -1) {
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: Cannot spawn CGI process [%s]: %s", prog, strerror(ERRNO));
         goto done;
     }
@@ -4653,12 +4650,12 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
     fdin[0] = fdout[1] = -1;
 
     if ((in = fdopen(fdin[1], "wb")) == NULL) {
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: CGI can not open fdin\nfopen: %s", strerror(ERRNO));
         goto done;
     }
     if ((out = fdopen(fdout[0], "rb")) == NULL) {
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: CGI can not open fdout\nfopen: %s", strerror(ERRNO));
         goto done;
     }
@@ -4685,14 +4682,14 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
     data_len = 0;
     buf = (char *)mg_malloc(buflen);
     if (buf == NULL) {
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: Not enough memory for CGI buffer (%u bytes)",
             (unsigned int) buflen);
         goto done;
     }
     headers_len = read_request(out, conn, buf, (int) buflen, &data_len);
     if (headers_len <= 0) {
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: CGI program sent malformed or too big (>%u bytes) HTTP headers: [%.*s]",
             (unsigned) buflen, data_len, buf);
         goto done;
@@ -4826,14 +4823,14 @@ static void mkcol(struct mg_connection *conn, const char *path)
     }
 
     if (de.file.modification_time) {
-        send_http_error(conn, 405, NULL,
+        send_http_error(conn, 405,
                         "Error: mkcol(%s): %s", path, strerror(ERRNO));
         return;
     }
 
     body_len = conn->data_len - conn->request_len;
     if (body_len > 0) {
-        send_http_error(conn, 415, NULL,
+        send_http_error(conn, 415,
                         "Error: mkcol(%s): %s", path, strerror(ERRNO));
         return;
     }
@@ -4847,16 +4844,16 @@ static void mkcol(struct mg_connection *conn, const char *path)
                   conn->status_code, date, suggest_connection_header(conn));
     } else if (rc == -1) {
         if (errno == EEXIST)
-            send_http_error(conn, 405, NULL,
+            send_http_error(conn, 405,
                             "Error:mkcol(%s): %s", path, strerror(ERRNO));
         else if (errno == EACCES)
-            send_http_error(conn, 403, NULL,
+            send_http_error(conn, 403,
                             "Error: mkcol(%s): %s", path, strerror(ERRNO));
         else if(errno == ENOENT)
-            send_http_error(conn, 409, NULL,
+            send_http_error(conn, 409,
                             "Error: mkcol(%s): %s", path, strerror(ERRNO));
         else
-            send_http_error(conn, 500, NULL,
+            send_http_error(conn, 500,
                             "fopen(%s): %s", path, strerror(ERRNO));
     }
 }
@@ -4885,7 +4882,7 @@ static void put_file(struct mg_connection *conn, const char *path)
 
             if (file.modification_time == 0) {
                 /* This is an "in-memory" file, that can not be replaced */
-                send_http_error(conn, 405, NULL,
+                send_http_error(conn, 405,
                     "Error: Put not possible\nReplacing %s is not supported", path);
                 return;
             }
@@ -4896,7 +4893,7 @@ static void put_file(struct mg_connection *conn, const char *path)
                 conn->status_code = 200;
                 rc = 1;
             } else {
-                send_http_error(conn, 403, NULL,
+                send_http_error(conn, 403,
                     "Error: Put not possible\nReplacing %s is not allowed", path);
                 return;
             }
@@ -4926,14 +4923,14 @@ static void put_file(struct mg_connection *conn, const char *path)
 
     if (rc == -1) {
         /* put_dir returns -1 if the path is too long */
-        send_http_error(conn, 414, NULL,
+        send_http_error(conn, 414,
             "Error: Path too long\nput_dir(%s): %s", path, strerror(ERRNO));
         return;
     }
 
     if (rc == -2) {
         /* put_dir returns -2 if the directory can not be created */
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: Can not create directory\nput_dir(%s): %s", path, strerror(ERRNO));
         return;
     }
@@ -4941,7 +4938,7 @@ static void put_file(struct mg_connection *conn, const char *path)
     /* A file should be created or overwritten. */
     if (!mg_fopen(conn, path, "wb+", &file) || file.fp == NULL) {
         mg_fclose(&file);
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: Can not create file\nfopen(%s): %s", path, strerror(ERRNO));
         return;
     }
@@ -4980,7 +4977,7 @@ static void delete_file(struct mg_connection *conn, const char *path)
     memset(&de.file, 0, sizeof(de.file));
     if (!mg_stat(conn, path, &de.file)) {
         /* mg_stat returns 0 if the file does not exist */
-        send_http_error(conn, 404, NULL,
+        send_http_error(conn, 404,
             "Error: Cannot delete file\nFile %s not found", path);
         return;
     }
@@ -4988,7 +4985,7 @@ static void delete_file(struct mg_connection *conn, const char *path)
     if (de.file.modification_time == 0) {
         /* mg_stat returns != 0 and modification_time == 0
         if the file is cached in memory */
-        send_http_error(conn, 405, NULL,
+        send_http_error(conn, 405,
             "Error: Delete not possible\nDeleting %s is not supported", path);
         return;
     }
@@ -4997,7 +4994,7 @@ static void delete_file(struct mg_connection *conn, const char *path)
         remove_directory(conn, path);
         /* TODO: remove_dir does not return success of the operation */
         /* Assume delete is successful: Return 204 without content. */
-        send_http_error(conn, 204, NULL, "%s", "");
+        send_http_error(conn, 204, "%s", "");
         return;
     }
 
@@ -5005,7 +5002,7 @@ static void delete_file(struct mg_connection *conn, const char *path)
        Check if write permission is granted. */
     if (access(path, W_OK) != 0) {
         /* File is read only */
-        send_http_error(conn, 403, NULL,
+        send_http_error(conn, 403,
             "Error: Delete not possible\nDeleting %s is not allowed", path);
         return;
     }
@@ -5013,10 +5010,10 @@ static void delete_file(struct mg_connection *conn, const char *path)
     /* Try to delete it. */
     if (mg_remove(path) == 0) {
         /* Delete was successful: Return 204 without content. */
-        send_http_error(conn, 204, NULL, "%s", "");
+        send_http_error(conn, 204, "%s", "");
     } else {
         /* Delete not successful (file locked). */
-        send_http_error(conn, 423, NULL,
+        send_http_error(conn, 423,
             "Error: Cannot delete file\nremove(%s): %s", path, strerror(ERRNO));
     }
 }
@@ -5188,7 +5185,7 @@ static void handle_ssi_file_request(struct mg_connection *conn,
     if (!mg_fopen(conn, path, "rb", filep)) {
         /* File exists (precondition for calling this function),
            but can not be opened by the server. */
-        send_http_error(conn, 500, NULL,
+        send_http_error(conn, 500,
             "Error: Cannot read file\nfopen(%s): %s", path, strerror(ERRNO));
     } else {
         conn->must_close = 1;
@@ -5740,7 +5737,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
 #endif
 
     if (version == NULL || strcmp(version, "13") != 0) {
-        send_http_error(conn, 426, NULL, "%s", "Protocol upgrade required");
+        send_http_error(conn, 426, "%s", "Protocol upgrade required");
     } else if (conn->ctx->callbacks.websocket_connect != NULL &&
                conn->ctx->callbacks.websocket_connect(conn) != 0) {
         /* C callback has returned non-zero, do not proceed with handshake. */
@@ -6190,7 +6187,7 @@ static void handle_request(struct mg_connection *conn)
         } else {
             /* A http to https forward port has been specified,
                but no https port to forward to. */
-            send_http_error(conn, 503, NULL, "%s",
+            send_http_error(conn, 503, "%s",
                 "Error: SSL forward not configured properly");
             mg_cry(conn, "Can not redirect to SSL, no SSL port available");
         }
@@ -6238,7 +6235,7 @@ static void handle_request(struct mg_connection *conn)
 #endif
             /* This server does not have any real files, thus the
                PUT/DELETE methods are not valid. */
-            send_http_error(conn, 405, NULL,
+            send_http_error(conn, 405,
                 "%s method not allowed", conn->request_info.request_method);
             return;
         }
@@ -6278,13 +6275,13 @@ static void handle_request(struct mg_connection *conn)
 #if defined(NO_FILES)
     /* 9a. In case the server uses only callbacks, this uri is unknown.
        Then, all request handling ends here. */
-    send_http_error(conn, 404, NULL, "%s", "Not Found");
+    send_http_error(conn, 404, "%s", "Not Found");
 
 #else
     /* 9b. This request is either for a static file or resource handled
        by a script file. Thus, a DOCUMENT_ROOT must exist. */
     if (conn->ctx->config[DOCUMENT_ROOT] == NULL) {
-        send_http_error(conn, 404, NULL, "%s", "Not Found");
+        send_http_error(conn, 404, "%s", "Not Found");
         return;
     }
 
@@ -6312,7 +6309,7 @@ static void handle_request(struct mg_connection *conn)
             return;
         }
         /* 11.4. should never reach this point */
-        send_http_error(conn, 405, NULL,
+        send_http_error(conn, 405,
             "%s method not allowed", conn->request_info.request_method);
         return;
     }
@@ -6320,7 +6317,7 @@ static void handle_request(struct mg_connection *conn)
     /* 11. File does not exist, or it was configured that it should be hidden */
     if (((file.membuf == NULL) && (file.modification_time == (time_t) 0)) ||
         (must_hide_file(conn, path))) {
-        send_http_error(conn, 404, NULL, "%s", "Not found");
+        send_http_error(conn, 404, "%s", "Not found");
         return;
     }
 
@@ -6353,7 +6350,7 @@ static void handle_request(struct mg_connection *conn)
     /* 13.3. everything but GET and HEAD (e.g. POST) */
     if (0!=strcmp(ri->request_method, "GET") &&
         0!=strcmp(ri->request_method, "HEAD")) {
-        send_http_error(conn, 405, NULL,
+        send_http_error(conn, 405,
             "%s method not allowed", conn->request_info.request_method);
         return;
     }
@@ -6369,7 +6366,7 @@ static void handle_request(struct mg_connection *conn)
             if (!mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING], "yes")) {
                 handle_directory_request(conn, path);
             } else {
-                send_http_error(conn, 403, NULL, "%s",
+                send_http_error(conn, 403, "%s",
                     "Error: Directory listing denied");
             }
             return;
@@ -6414,7 +6411,7 @@ static void handle_file_based_request(struct mg_connection *conn, const char *pa
         handle_ssi_file_request(conn, path, file);
     } else if ((!conn->in_error_handler) && is_not_modified(conn, file)) {
         /* Send 304 "Not Modified" - this must not send any body data */
-        send_http_error(conn, 304, NULL, "%s", "");
+        send_http_error(conn, 304, "%s", "");
     } else {
         handle_static_file_request(conn, path, file);
     }
@@ -7252,15 +7249,15 @@ static void process_new_connection(struct mg_connection *conn)
             /* The request sent by the client could not be understood by the server,
                or it was incomplete or a timeout. Send an error message and close
                the connection. */
-            send_http_error(conn, 400, NULL, "%s", ebuf);
+            send_http_error(conn, 400, "%s", ebuf);
             conn->must_close = 1;
         } else if (!is_valid_uri(conn->request_info.uri)) {
             snprintf(ebuf, sizeof(ebuf), "Invalid URI: [%s]", ri->uri);
-            send_http_error(conn, 400, NULL, "%s", ebuf);
+            send_http_error(conn, 400, "%s", ebuf);
         } else if (strcmp(ri->http_version, "1.0") &&
                    strcmp(ri->http_version, "1.1")) {
             snprintf(ebuf, sizeof(ebuf), "Bad HTTP version: [%s]", ri->http_version);
-            send_http_error(conn, 505, NULL, "%s", ebuf);
+            send_http_error(conn, 505, "%s", ebuf);
         }
 
         if (ebuf[0] == '\0') {
