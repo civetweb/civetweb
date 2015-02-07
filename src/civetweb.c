@@ -1566,7 +1566,7 @@ PRINTF_ARGS(4, 5);
 
 
 static void send_http_error(struct mg_connection *conn, int status,
-                            const char *reason, const char *fmt, ...)
+                            const char *_unused_, const char *fmt, ...)
 {
     /* TODO: remove "reason" argument, since it is always NULL */
     char buf[MG_BUF_LEN];
@@ -1578,9 +1578,8 @@ static void send_http_error(struct mg_connection *conn, int status,
     struct file error_page_file = STRUCT_FILE_INITIALIZER;
     const char *error_page_file_ext, *tstr;
 
-    if (!reason) {
-        reason = mg_get_response_code_text(status, conn);
-    }
+    const char *status_text = mg_get_response_code_text(status, conn);
+    assert(_unused_==NULL);
 
     conn->status_code = status;
     if (conn->in_error_handler ||
@@ -1631,7 +1630,7 @@ static void send_http_error(struct mg_connection *conn, int status,
 
         /* Errors 1xx, 204 and 304 MUST NOT send a body */
         if (status > 199 && status != 204 && status != 304) {
-            len = mg_snprintf(conn, buf, sizeof(buf)-1, "Error %d: %s", status, reason);
+            len = mg_snprintf(conn, buf, sizeof(buf)-1, "Error %d: %s", status, status_text);
             buf[len] = '\n';
             len++;
             buf[len] = 0;
@@ -1646,7 +1645,7 @@ static void send_http_error(struct mg_connection *conn, int status,
                         "Content-Length: %d\r\n"
                         "Date: %s\r\n"
                         "Connection: %s\r\n\r\n",
-                        status, reason, len, date,
+                        status, status_text, len, date,
                         suggest_connection_header(conn));
         conn->num_bytes_sent += mg_printf(conn, "%s", buf);
     }
