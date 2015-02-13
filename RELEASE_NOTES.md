@@ -5,6 +5,8 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Return more differentiated HTTP error codes
+- Add log_access callback
 - Rewrite and comment request handling function
 - Specify in detail and document return values of callback functions
 - Set names for all threads (unless NO_THREAD_NAME is defined)
