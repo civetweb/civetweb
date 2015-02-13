@@ -6558,15 +6558,14 @@ static int set_ports_option(struct mg_context *ctx)
     return success;
 }
 
-static void log_header(const struct mg_connection *conn, const char *header,
-                       FILE *fp)
+static const char* header_val(const struct mg_connection *conn, const char *header)
 {
     const char *header_value;
 
     if ((header_value = mg_get_header(conn, header)) == NULL) {
-        (void) fprintf(fp, "%s", " -");
+        return "-";
     } else {
-        (void) fprintf(fp, " \"%s\"", header_value);
+        return header_value;
     }
 }
 
@@ -6577,10 +6576,15 @@ static void log_access(const struct mg_connection *conn)
     char date[64], src_addr[IP_ADDR_STR_LEN];
     struct tm *tm;
 
+    const char *referer;
+    const char *user_agent;
+
+    char buf[4096];
+
     fp = conn->ctx->config[ACCESS_LOG_FILE] == NULL ?  NULL :
          fopen(conn->ctx->config[ACCESS_LOG_FILE], "a+");
 
-    if (fp == NULL)
+    if (fp == NULL && conn->ctx->callbacks.log_message == NULL)
         return;
 
     tm = localtime(&conn->birth_time);
@@ -6592,21 +6596,30 @@ static void log_access(const struct mg_connection *conn)
     }
 
     ri = &conn->request_info;
-    flockfile(fp);
 
     sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
-    fprintf(fp, "%s - %s [%s] \"%s %s HTTP/%s\" %d %" INT64_FMT,
+    referer = header_val(conn, "Referer");
+    user_agent = header_val(conn, "User-Agent");
+
+    snprintf(buf, sizeof(buf), "%s - %s [%s] \"%s %s HTTP/%s\" %d %" INT64_FMT " %s %s",
             src_addr, ri->remote_user == NULL ? "-" : ri->remote_user, date,
             ri->request_method ? ri->request_method : "-",
             ri->uri ? ri->uri : "-", ri->http_version,
-            conn->status_code, conn->num_bytes_sent);
-    log_header(conn, "Referer", fp);
-    log_header(conn, "User-Agent", fp);
-    fputc('\n', fp);
-    fflush(fp);
+            conn->status_code, conn->num_bytes_sent,
+	    referer, user_agent);
 
-    funlockfile(fp);
-    fclose(fp);
+    if (conn->ctx->callbacks.log_access) {
+        conn->ctx->callbacks.log_access(conn, buf);
+    }
+
+    if (fp) {
+        flockfile(fp);
+        fprintf(fp, "%s", buf);
+        fputc('\n', fp);
+        fflush(fp);
+        funlockfile(fp);
+        fclose(fp);
+    }
 }
 
 /* Verify given socket address against the ACL.

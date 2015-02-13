@@ -104,6 +104,10 @@ struct mg_callbacks {
        non-zero, civetweb does not log anything. */
     int  (*log_message)(const struct mg_connection *, const char *message);
 
+    /* Called when civetweb is about to log access. If callback returns
+       non-zero, civetweb does not log anything. */
+    int  (*log_access)(const struct mg_connection *, const char *message);
+
     /* Called when civetweb initializes SSL library.
        Parameters:
          user_data: parameter user_data passed when starting the server.
