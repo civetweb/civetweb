@@ -1562,7 +1562,7 @@ static const char *mg_get_response_code_text(int response_code, struct mg_connec
 
 static void send_http_error(struct mg_connection *, int,
                             PRINTF_FORMAT_STRING(const char *fmt), ...)
-PRINTF_ARGS(4, 5);
+PRINTF_ARGS(3, 4);
 
 
 static void send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
