@@ -7288,7 +7288,6 @@ static void process_new_connection(struct mg_connection *conn)
             if (reqerr > 0) {
                 send_http_error(conn, reqerr, "%s", ebuf);
             }
-            conn->must_close = 1;
         } else if (!is_valid_uri(conn->request_info.uri)) {
             snprintf(ebuf, sizeof(ebuf), "Invalid URI: [%s]", ri->uri);
             send_http_error(conn, 400, "%s", ebuf);
@@ -7304,7 +7303,10 @@ static void process_new_connection(struct mg_connection *conn)
                 conn->ctx->callbacks.end_request(conn, conn->status_code);
             }
             log_access(conn);
+        } else {
+            conn->must_close = 1;
         }
+
         if (ri->remote_user != NULL) {
             mg_free((void *) ri->remote_user);
             /* Important! When having connections with and without auth
@@ -7328,6 +7330,7 @@ static void process_new_connection(struct mg_connection *conn)
         conn->data_len -= discard_len;
         assert(conn->data_len >= 0);
         assert(conn->data_len <= conn->buf_size);
+
     } while (keep_alive);
 }
 
