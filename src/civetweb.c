@@ -7282,6 +7282,7 @@ static void process_new_connection(struct mg_connection *conn)
     conn->data_len = 0;
     do {
         if (!getreq(conn, ebuf, sizeof(ebuf), TIMEOUT_INFINITE, &reqerr)) {
+            assert(ebuf[0] != '\0');
             /* The request sent by the client could not be understood by the server,
                or it was incomplete or a timeout. Send an error message and close
                the connection. */
