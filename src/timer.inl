@@ -5,17 +5,17 @@
 
 typedef int (*taction)(void *arg);
 
-struct timer {
+struct ttimer {
     double time;
     double period;
     taction action;
     void * arg;
 };
 
-struct timers {
+struct ttimers {
     pthread_t threadid;               /* Timer thread ID */
     pthread_mutex_t mutex;            /* Protects timer lists */
-    struct timer timers[MAX_TIMERS];  /* List of timers */
+    struct ttimer timers[MAX_TIMERS];  /* List of timers */
     unsigned timer_count;             /* Current size of timer list */
 };
 
@@ -64,7 +64,7 @@ static void timer_thread_run(void *thread_func_param)
     double d;
     unsigned u;
     int re_schedule;
-    struct timer t;
+    struct ttimer t;
 
 #if defined(HAVE_CLOCK_NANOSLEEP) /* Linux with librt */
     /* TODO */
@@ -113,7 +113,7 @@ static void *timer_thread(void *thread_func_param)
 
 static int timers_init(struct mg_context * ctx)
 {
-    ctx->timers = (struct timers*) mg_calloc(sizeof(struct timers), 1);
+    ctx->timers = (struct ttimers*) mg_calloc(sizeof(struct ttimers), 1);
     (void) pthread_mutex_init(&ctx->timers->mutex, NULL);
 
     /* Start timer thread */

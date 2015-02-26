@@ -2,20 +2,22 @@
 
 * Alex Kozlov
 * bel2125
+* Brian Spratke
 * celeron55
 * Daniel Oaks
 * Danny Al-Gaaf
 * F-Secure Corporation
-* Brian Spratke
 * HariKamath Kamath
+* Jordan Shelley
 * Kimmo Mustonen
 * Morgan McGuire
 * No Face Press
 * Paul Sokolovsky
+* Richard Screene
 * Thomas Davis
 * Toni Wilk
 * William Greathouse
-* Jordan Shelley
+* Yehuda Sadeh
 
 # Mongoose Contributors
 Civetweb is based on the Mongoose code.  The following users contributed to the original Mongoose release between 2010 and 2013.  This list was generated from the Mongoose GIT logs.  There is no record for contributors prior to 2010.

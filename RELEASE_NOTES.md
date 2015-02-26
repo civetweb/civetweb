@@ -5,9 +5,23 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Return more differentiated HTTP error codes
+- Add log_access callback
+- Rewrite and comment request handling function
+- Specify in detail and document return values of callback functions
+- Set names for all threads (unless NO_THREAD_NAME is defined)
+- New API functions for TCP/HTTP clients
+- Fix upload of huge files
+- Allow multiple SSL instances within one application
+- Improve API and user documentation
+- Allow to chose between static and dynamic Lua library
+- Improve unit test
+- Use temporary file name for partially uploaded files
+- Additional API functions exported to C++
 - Add a websocket client example
 - Add a websocket client API
 - Update websocket example
+- Make content length available in request_info
 - New API functions: access context, callback for create/delete, access user data
 - Upgraded Lua from 5.2.2 to 5.2.3
 - Integrate LuaXML

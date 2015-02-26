@@ -3,7 +3,7 @@ mg.write("HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n")
 mg.write([[
 <html><body>
 <p>This is another example of a Lua script, creating a web page served by the
-<a href="http://code.google.com/p/civetweb">Civetweb web server</a>.
+<a href="http://sourceforge.net/projects/civetweb/">Civetweb web server</a>.
 </p><p>
 The following features are available:
 <ul>
@@ -26,6 +26,8 @@ mg.write("<p>Database example:\r\n<pre>\r\n")
 
   -- Open database
   local db = sqlite3.open('requests.db')
+  -- Note that the data base is located in the current working directory
+  -- of the process if no other path is given here.
 
   -- Setup a trace callback, to show SQL statements we'll be executing.
   -- db:trace(function(data, sql) mg.write('Executing: ', sql: '\n') end, nil)

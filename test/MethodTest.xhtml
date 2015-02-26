@@ -1,0 +1,200 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <title>HTTP method test</title>
+  <style type="text/css" media="screen">
+    body {background:#eee; margin:0%; padding:0%; padding-top:0%; padding-left:1%}
+    .cform {margin:0%; padding:0%; padding-top:0%; padding-left:2%;}
+    h3 {margin:0%; padding:0%; padding-top:0%; padding-left:0%;}
+    td {vertical-align:top; text-align:left;}
+  </style>
+  <script type="text/javascript"><![CDATA[
+
+    function getParams() {
+      var result = {};
+      var kvPairs = location.search.slice(1).split('&');
+
+      kvPairs.forEach(
+        function(kvPair) {
+          kvPair = kvPair.split('=');
+          result[kvPair[0]] = kvPair[1] || '';
+        }
+      );
+
+      return result;
+    }
+
+    function noBody() {
+      document.getElementById("body_none").checked = true;
+    }
+
+    function load() {
+      var params = getParams();
+      var method = params["method"];
+      if (!method) {
+        method = "GET";
+      }
+      var path = params["path"];
+      if (!path) {
+        path = "";
+      }
+
+      var elem = document.getElementById('h1');
+      elem.innerHTML = "HTTP method test page";
+
+      document.getElementById("proto_http").checked = (window.location.protocol != "https:");
+      document.getElementById("proto_https").checked = (window.location.protocol == "https:");
+      document.getElementById("server").value = location.host;
+      document.getElementById("resource").value = path;
+
+      setRadioValue("method", method);
+      noBody();
+    }
+
+    function setRadioValue(elmname, value) {
+      var elms = document.getElementsByName(elmname);
+      var len = elms.length;
+      var ret = false;
+
+      for (var i=0; i<len; i++) {
+        elms[i].checked = (elms[i].value == value);
+        ret |= elms[i].checked;
+      }
+      return ret;
+    }
+
+    function getRadioValue(elmname) {
+
+      var elms = document.getElementsByName(elmname);
+      var len = elms.length;
+      var ret = "";
+
+      for (var i=0; i<len; i++) {
+        if (elms[i].checked) {
+          ret = elms[i].value;
+        }
+      }
+      return ret;
+    }
+
+    function sendreq() {
+      var proto = getRadioValue("protocol");
+      var host = document.getElementById("server").value;
+      var res = document.getElementById("resource").value;
+      var addr = proto + "://" + host + "/" + res;
+      var meth = getRadioValue("method");
+      var body = getRadioValue("body");
+
+      xmlhttp = new XMLHttpRequest();
+      if (!xmlhttp) {
+        alert("XMLHttpRequest not available");
+        window.history.back();
+      }
+
+      xmlhttp.open(meth,addr,true);
+
+      if (body == '*') {
+        body = null;
+      } else {
+        if (body == '**') {
+          var body_bytes = document.getElementById("body_bytes").value;
+          body_bytes = parseInt(Number(body_bytes) || 0) || 0;
+          body = "";
+          for (var i=0; i<body_bytes; i++) {
+            var ascii = Math.floor((Math.random() * 94) + 32);
+            body = body + String.fromCharCode(ascii);
+          }
+        }
+        xmlhttp.setRequestHeader("Content-Length", body.length);
+      }
+
+      xmlhttp.onreadystatechange = function()
+      {
+          var laddr = addr;
+          var lmeth = meth;
+          var blen = "";
+          if (body) {
+            blen = "\nWith " + body.length + " bytes body data";
+          }
+
+          if (xmlhttp.readyState == 4)
+          {
+              alert(lmeth + " " + laddr + blen + "\n\nResponse: " + xmlhttp.status + "\n\n" + xmlhttp.responseText);
+          }
+      }
+
+      xmlhttp.send(body);
+
+    }
+
+  ]]></script>
+
+</head>
+<body onload="load()">
+
+<h1 id='h1'>Fatal error: Javascript not available!</h1>
+
+<h2>Test parameters</h2>
+<form lass="cform">
+
+<h3>Protocol</h3>
+<input id="proto_http" type="radio" name="protocol" value="http" /> http <br />
+<input id="proto_https" type="radio" name="protocol" value="https" /> https
+
+<h3>Server/Host</h3>
+<input id="server" type="text" name="server" value="" />
+
+<h3>Resource</h3>
+<input id="resource" type="text" name="resource" value="" />
+
+<h3>Method</h3>
+<!-- http://www.restpatterns.org/HTTP_Methods -->
+<!-- http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html -->
+<table style="border-spacing:15px 0px;">
+  <tr>
+    <td><a href="http://tools.ietf.org/html/rfc7231#section-4.2.1">Save Methods</a></td>
+    <td>"Unsave" <a href="http://tools.ietf.org/html/rfc7231#section-4.2.2">Idempotent Methods</a></td>
+    <td>Non-Idempotent Methods</td>
+    <td>Special</td>
+  </tr>
+  <tr>
+    <td>
+<input id="method_opt" type="radio" name="method" value="OPTIONS" onclick="noBody()" /> OPTIONS <br />
+<input id="method_get" type="radio" name="method" value="GET" onclick="noBody()" /> GET <br />
+<input id="method_hea" type="radio" name="method" value="HEAD" onclick="noBody()" /> HEAD <br />
+<input id="method_tra" type="radio" name="method" value="TRACE" /> TRACE <br />
+<input id="method_pro" type="radio" name="method" value="PROPFIND" /> PROPFIND <br />
+    </td>
+    <td>
+<input id="method_put" type="radio" name="method" value="PUT" /> PUT <br />
+<input id="method_del" type="radio" name="method" value="DELETE" /> DELETE <br />
+<input id="method_cop" type="radio" name="method" value="COPY" /> COPY <br />
+<input id="method_cop" type="radio" name="method" value="MOVE" /> MOVE <br />
+<input id="method_ppa" type="radio" name="method" value="PROPPATCH" /> PROPPATCH <br />
+<input id="method_unl" type="radio" name="method" value="UNLOCK" /> UNLOCK <br />
+    </td>
+    <td>
+<input id="method_pos" type="radio" name="method" value="POST" /> POST <br />
+<input id="method_pat" type="radio" name="method" value="PATCH" /> PATCH <br />
+<input id="method_mkc" type="radio" name="method" value="MKCOL" /> MKCOL <br />
+<input id="method_loc" type="radio" name="method" value="LOCK" /> LOCK <br />
+    </td>
+    <td>
+<input id="method_con" type="radio" name="method" value="CONNECT" /> CONNECT <br />
+<input id="method_userdef" type="radio" name="method" value="INVALID" /> <input id="method_name" type="text" name="method_name" value="INVALID" oninput="var elem = document.getElementById('method_userdef'); elem.checked = true; elem.value=value" /> <br />
+    </td>
+  </tr>
+</table>
+
+<h3>Body data</h3>
+<input id="body_none" type="radio" name="body" value="*" /> No body data <br />
+<input id="body_10" type="radio" name="body" value="1234567890" /> 10 Bytes ("1234567890") <br />
+<input id="body_rnd" type="radio" name="body" value="**" /> <input id="body_bytes" type="number" name="body_bytes" value="100" min="0" step="0" max="999999999" oninput="document.getElementById('body_rnd').checked = true" /> Bytes random data <br />
+
+<h3>Submit</h3>
+<input id="send" type="button" onclick="sendreq()" value="Send request" />
+
+</form>
+
+</body></html>

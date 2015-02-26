@@ -1,4 +1,5 @@
-// This file is part of Civetweb project, http://code.google.com/p/civetweb
+// This file is part of Civetweb project,
+// http://sourceforge.net/projects/civetweb/
 
 var chat = {
   // Backend URL, string.

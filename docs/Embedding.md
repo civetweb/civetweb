@@ -125,6 +125,10 @@ two threads: a master thread, that accepts new connections, and several
 worker threads, that process accepted connections. The number of worker threads
 is configurable via `num_threads` configuration option. That number puts a
 limit on number of simultaneous requests that can be handled by civetweb.
+If you embed civetweb into a program that uses SSL outside civetweb as well,
+you may need to initialize SSL before calling `mg_start()`, and set the pre-
+processor define SSL_ALREADY_INITIALIZED. This is not required if SSL is used
+only within civetweb.
 
 When master thread accepts new connection, a new accepted socket (described by
 `struct socket`) it placed into the accepted sockets queue,

@@ -98,6 +98,20 @@ else
 end
 mg.write("\r\n")
 
+-- test get_response_code_text
+mg.write("HTTP helper methods test:\r\n")
+if (htmlEscape("<a b & c d>") == "&lt;a b &amp; c d&gt;") then
+    mg.write("  htmlEscape test OK\r\n")
+else
+    mg.write("  Error: htmlEscape test NOT OK\r\n")
+end
+if (mg.get_response_code_text(200) == "OK") then
+    mg.write("  get_response_code_text test OK\r\n")
+else
+    mg.write("  Error: get_response_code_text test NOT OK\r\n")
+end
+mg.write("\r\n")
+
 -- url_encode
 mg.write("URL encode/decode test:\r\n")
 if mg.url_encode("") == "" then
