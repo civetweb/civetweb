@@ -438,6 +438,20 @@ static int lsp_send_file(lua_State *L)
     return 0;
 }
 
+/* mg.get_time */
+static int lsp_get_time(lua_State *L)
+{
+    int num_args = lua_gettop(L);
+    int monotonic = (num_args > 0) ? lua_toboolean(L, 1) : 0;
+    struct timespec ts;
+    double d;
+
+    clock_gettime(monotonic ? CLOCK_MONOTONIC : CLOCK_REALTIME, &ts);
+    d = (double)ts.tv_sec + ((double)ts.tv_nsec * 1.0E-9);
+    lua_pushnumber(L, d);
+    return 1;
+}
+
 /* mg.get_var */
 static int lsp_get_var(lua_State *L)
 {
@@ -1050,6 +1064,7 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
         /* reg_conn_function(L, "send_file", lsp_send_file, conn); */
     }
 
+    reg_function(L, "time", lsp_get_time);
     reg_function(L, "get_var", lsp_get_var);
     reg_function(L, "get_mime_type", lsp_get_mime_type);
     reg_function(L, "get_cookie", lsp_get_cookie);
