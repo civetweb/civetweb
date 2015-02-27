@@ -57,7 +57,7 @@ int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
     assert(me != NULL);
 
     // Happens when a request hits the server before the context is saved
-    if (me->context == NULL) return;
+    if (me->context == NULL) return 0;
 
     mg_lock_context(me->context);
     me->connections[conn] = CivetConnection();
