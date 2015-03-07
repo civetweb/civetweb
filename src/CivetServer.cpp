@@ -55,6 +55,10 @@ int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
     assert(request_info != NULL);
     CivetServer *me = (CivetServer*) (request_info->user_data);
     assert(me != NULL);
+
+    // Happens when a request hits the server before the context is saved
+    if (me->context == NULL) return 0;
+
     mg_lock_context(me->context);
     me->connections[conn] = CivetConnection();
     mg_unlock_context(me->context);
@@ -106,6 +110,9 @@ void CivetServer::closeHandler(struct mg_connection *conn)
     assert(request_info != NULL);
     CivetServer *me = (CivetServer*) (request_info->user_data);
     assert(me != NULL);
+
+    // Happens when a request hits the server before the context is saved
+    if (me->context == NULL) return;
 
     if (me->userCloseHandler) me->userCloseHandler(conn);
     mg_lock_context(me->context);
