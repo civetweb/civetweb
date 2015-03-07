@@ -2472,7 +2472,7 @@ static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
     return nread;
 }
 
-static void fast_forward_request(struct mg_connection *conn)
+static void discard_unread_request_data(struct mg_connection *conn)
 {
     char buf[MG_BUF_LEN];
     int to_read, nread;
@@ -6287,7 +6287,7 @@ static void handle_request(struct mg_connection *conn)
     /* 8. check if there are request handlers for this path */
     if (conn->ctx->request_handlers != NULL && use_request_handler(conn)) {
         /* Do nothing, callback has served the request */
-	fast_forward_request(conn);
+	    discard_unread_request_data(conn);
         return;
     }
 
