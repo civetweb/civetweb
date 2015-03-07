@@ -2931,7 +2931,7 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
                    requests, should replace/delete the script file.
                    Requests that read or write from/to a resource, like GET and POST requests,
                    should call the script and return the generated response. */
-                *is_script_ressource = !is_put_or_delete_request;
+                *is_script_ressource = !*is_put_or_delete_request;
         }
         return;
     }
