@@ -2483,7 +2483,7 @@ static void discard_unread_request_data(struct mg_connection *conn)
             to_read = (int) (conn->content_len - conn->consumed_content);
         }
 
-	nread = mg_read(conn, buf, to_read);
+        nread = mg_read(conn, buf, to_read);
         if (nread <= 0) {
             break;
         }
@@ -6287,7 +6287,7 @@ static void handle_request(struct mg_connection *conn)
     /* 8. check if there are request handlers for this path */
     if (conn->ctx->request_handlers != NULL && use_request_handler(conn)) {
         /* Do nothing, callback has served the request */
-	    discard_unread_request_data(conn);
+        discard_unread_request_data(conn);
         return;
     }
 
