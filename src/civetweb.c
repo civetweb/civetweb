@@ -526,7 +526,6 @@ static __inline void   mg_free(void * a)               {free(a);}
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free    DO_NOT_USE_THIS_FUNCTION__USE_mg_free
 
-
 #define MD5_STATIC static
 #include "md5.inl"
 
@@ -863,6 +862,9 @@ struct de {
     char *file_name;
     struct file file;
 };
+
+/* Forward declaration */
+static int mg_alloc_vprintf(char **buf, const char *fmt, ...);
 
 #if defined(USE_WEBSOCKET)
 static int is_websocket_protocol(const struct mg_connection *conn);
@@ -2549,6 +2551,124 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
     return (int)nread;
 }
 
+static int calculate_response_msg_size(const char *http_version, const char *status_msg, struct mg_response_header *headers,
+                          size_t len)
+{
+    //fomat: HTTP/1.1 200 OK/r/n
+    size_t response_size = strlen("HTTP/") + strlen(http_version) + 1 + 3 + 1 + strlen(status_msg) + 2;
+    struct mg_response_header *h = headers;
+    while (h)
+    {
+        //format: NAME: VALUE/r/n
+        response_size += (strlen(h->name) + 2 + strlen(h->value) + 2);
+        h = h->next;
+    }
+
+    //final /r/n before data
+    response_size += (2 + len);
+
+    return response_size;
+}
+
+struct mg_response_header *mg_construct_response_headers(const char **headers)
+{
+    struct mg_response_header *cur_header = NULL;
+    struct mg_response_header *prev = cur_header;
+    struct mg_response_header *start = cur_header;
+    const char *name, *value;
+
+    while (headers && (name = *headers++) && (value = *headers++) != NULL)
+    {
+        cur_header = (struct mg_response_header*)mg_malloc(sizeof(struct mg_response_header));
+        //update the next pointer for the last created element (if one)
+        if (prev)
+        {
+            prev->next = cur_header;
+        }
+        //set the start pointer if not set
+        if (!start)
+        {
+            start = cur_header;
+        }
+        cur_header->name = (char*)mg_malloc(sizeof(char) * strlen(name));
+        strcpy(cur_header->name, name);
+        cur_header->value = (char*)mg_malloc(sizeof(char) * strlen(value));
+        strcpy(cur_header->value, value);
+        prev = cur_header;
+        cur_header = cur_header->next = NULL;
+   }
+
+   return start;
+}
+
+void mg_free_response_headers(struct mg_response_header **headers)
+{
+    struct mg_response_header *cur_header = *headers;
+    //free each element in header link list
+    while (cur_header)
+    {
+        mg_free((char*)cur_header->name);
+        mg_free((char*)cur_header->value);
+        struct mg_response_header *next = cur_header->next;
+        mg_free(cur_header);
+        cur_header = next;
+    }
+
+    *headers = NULL;
+}
+
+void *mg_construct_response_msg(struct mg_connection *conn, const char *http_version, int status_code, const char *status_msg,
+                              struct mg_response_header *headers, const void *buf, size_t len, size_t *len_out)
+{
+    mg_lock_connection(conn);
+
+    // HTTP version, status etc
+    const char * version_fmt = "HTTP/%s %d %s\r\n";
+    char * header_version = NULL;
+
+    size_t size = calculate_response_msg_size(http_version, status_msg, headers, len);
+    if (len_out) {
+        *len_out = size;
+    }
+    char *dst = (char*)mg_malloc(size);
+    char *start = dst;
+
+    size_t header_version_len = mg_alloc_vprintf(&header_version, version_fmt, http_version, status_code, status_msg);
+    if (header_version_len <= 0) {
+        mg_cry(conn, "%s: Failed to allocate buffer for header version", __func__);
+        return NULL;
+    }
+
+    dst = stpncpy(dst, (const char *)header_version, strlen(header_version));
+    mg_free(header_version);
+
+    while (headers && headers->name && headers->value) {
+        char * header_val = NULL;
+        const char * const header_fmt = "%s: %s\r\n";
+        size_t header_len = mg_alloc_vprintf(&header_val, header_fmt, headers->name, headers->value);
+        if (header_len <= 0) {
+            mg_cry(conn, "%s: Failed to allocate buffer for header", __func__);
+            return NULL;
+        }
+        dst = stpncpy(dst, header_val, strlen(header_val));
+        mg_free(header_val);
+        headers = headers->next;
+    }
+
+    dst = stpncpy(dst, "\r\n", 2);
+    memcpy(dst, buf, len);
+    dst += len;
+    dst = stpncpy(dst, "\0", 1);
+
+    mg_unlock_connection(conn);
+
+    return (void*)start;
+}
+
+void mg_free_response_msg(void **dst) {
+    mg_free(*dst);
+}
+
 int mg_write(struct mg_connection *conn, const void *buf, size_t len)
 {
     time_t now;
@@ -2644,6 +2764,18 @@ static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
     }
 
     return len;
+}
+
+static int mg_alloc_vprintf(char **buf, const char *fmt, ...)
+{
+    va_list ap;
+    int result;
+
+    va_start(ap, fmt);
+    result = alloc_vprintf2(buf, fmt, ap);
+    va_end(ap);
+
+    return result;
 }
 
 int mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
