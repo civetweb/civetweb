@@ -11,9 +11,19 @@
 #include "civetweb.h"
 #include <map>
 #include <string>
+#include <vector>
 
 // forward declaration
 class CivetServer;
+
+/**
+ * Exception class for thrown exceptions within the CivetHandler object.
+ */
+class CivetException : public std::runtime_error
+{
+    public:
+    CivetException(const std::string& msg) : std::runtime_error(msg) {}
+};
 
 /**
  * Basic interface for a URI request handler.  Handlers implementations
@@ -93,6 +103,8 @@ public:
      *
      * @param options - the web server options.
      * @param callbacks - optional web server callback methods.
+     *
+     * @throws CivetException
      */
     CivetServer(const char **options, const struct mg_callbacks *callbacks = 0);
 
@@ -139,6 +151,16 @@ public:
      * @param uri - the exact URL used in addHandler().
      */
     void removeHandler(const std::string &uri);
+
+    /**
+     * getListeningPorts()
+     *
+     * Returns a list of ports that are listening
+     *
+     * @return A vector of ports
+     */
+    
+    std::vector<int> getListeningPorts();
 
     /**
      * getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)

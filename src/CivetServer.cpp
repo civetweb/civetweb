@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdexcept>
 
 #ifndef UNUSED_PARAMETER
 #define UNUSED_PARAMETER(x) (void)(x)
@@ -97,6 +98,7 @@ CivetServer::CivetServer(const char **options,
     }
     callbacks.connection_close = closeHandler;
     context = mg_start(&callbacks, this, options);
+    if (context == nullptr) throw CivetException::("null context when constructing CivetServer. Possible problem binding to port.");
 }
 
 CivetServer::~CivetServer()
@@ -293,6 +295,18 @@ CivetServer::urlEncode(const char *src, size_t src_len, std::string &dst, bool a
         }
     }
 }
+
+std::vector<int>
+CivetServer::getListeningPorts()
+{
+    std::vector<int> ports(10);
+    std::vector<int> ssl(10);
+    size_t size = mg_get_ports(context, ports.size(), &ports[0], &ssl[0]);
+    ports.resize(size);
+    ssl.resize(size);
+    return ports;
+}
+
 
 CivetServer::CivetConnection::CivetConnection() {
     postData = NULL;
