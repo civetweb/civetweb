@@ -1638,11 +1638,14 @@ static void send_http_error(struct mg_connection *conn, int status, const char *
         }
         DEBUG_TRACE("[%s]", buf);
 
-        mg_printf(conn, "HTTP/1.1 %d %s\r\n"
-                        "Content-Length: %d\r\n"
+        mg_printf(conn, "HTTP/1.1 %d %s\r\n", status, status_text);
+        if (len>0) {
+            mg_printf(conn, "Content-Type: text/plain\r\n");
+        }
+        mg_printf(conn, "Content-Length: %d\r\n"
                         "Date: %s\r\n"
                         "Connection: %s\r\n\r\n",
-                        status, status_text, len, date,
+                        len, date,
                         suggest_connection_header(conn));
         conn->num_bytes_sent += mg_printf(conn, "%s", buf);
     }
@@ -1818,13 +1821,19 @@ static void change_slashes_to_backslashes(char *path)
     int i;
 
     for (i = 0; path[i] != '\0'; i++) {
-        if (path[i] == '/')
+
+        if (path[i] == '/') {
             path[i] = '\\';
-        /* i > 0 check is to preserve UNC paths, like \\server\file.txt */
-        if (path[i] == '\\' && i > 0)
-            while (path[i + 1] == '\\' || path[i + 1] == '/')
+        }
+
+        /* remove double backslash (check i > 0 to preserve UNC paths, like \\server\file.txt) */
+        if ((path[i] == '\\') && (i > 0)) {
+
+            while (path[i + 1] == '\\' || path[i + 1] == '/') {
                 (void) memmove(path + i + 1,
                                path + i + 2, strlen(path + i + 1));
+            }
+        }
     }
 }
 
@@ -7499,15 +7508,32 @@ static void produce_socket(struct mg_context *ctx, const struct socket *sp)
 
 static int set_sock_timeout(SOCKET sock, int milliseconds)
 {
+    int r1, r2;
 #ifdef _WIN32
     DWORD t = milliseconds;
 #else
+    unsigned int uto = (unsigned int)milliseconds;
     struct timeval t;
     t.tv_sec = milliseconds / 1000;
     t.tv_usec = (milliseconds * 1000) % 1000000;
+
+    /* TCP_USER_TIMEOUT/RFC5482 (http://tools.ietf.org/html/rfc5482):
+       max. time waiting for the acknowledged of TCP data before the connection
+       will be forcefully closed and ETIMEDOUT is returned to the application.
+       If this option is not set, the default timeout of 20-30 minutes is used.
+    */
+    /* #define TCP_USER_TIMEOUT (18) */
+
+#if defined(TCP_USER_TIMEOUT)
+    setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
 #endif
-    return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t)) ||
-           setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
+
+#endif
+
+    r1 = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
+    r2 = setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
+
+    return r1 || r2;
 }
 
 static void accept_new_connection(const struct socket *listener,
