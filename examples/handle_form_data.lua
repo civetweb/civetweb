@@ -1,64 +1,114 @@
+function add_data(data)
+  local additional_data = mg.read()
+  if additional_data then
+    return data .. additional_data, true
+  end
+  return data, false
+end
+
+function parse_multipart_form(got_field)
+
+    local data, ok = add_data("")
+    if not ok then
+      return "Can not read data"
+    end
+
+    --[[
+    local b = mg.request_info.content_type:upper():find("BOUNDARY=");
+    if b then
+      b = mg.request_info.content_type:sub(b+9)
+    end
+    if not b or #b<16 or #b>1024 then
+      return false, "Boundary string not reasonable"
+    end
+    ]]
+    local b = "--" .. mg.request_info.content_type:upper():match("BOUNDARY=(.*)");
+    
+    --b = "--" .. b
+    if data:sub(1, #b) ~= b then
+      return false, "Multipart body does not start properly"
+    end
+    data = data:sub(#b)
+    b = "\r\n" .. b
+
+    -- while there are unread parts
+    while #data>0 and data~="--\r\n" do
+
+      local name = nil
+      local value = nil
+      local file_name = nil
+      local file_type = nil
+
+      -- isolate the header of the new part
+      local part_header_end
+      repeat
+        part_header_end = data:find("\r\n\r\n", 1, true)
+        if not part_header_end then
+          data, ok = add_data(data)
+          if not ok then
+            return false, "protocol violation: header does not end properly"
+          end
+        end
+      until part_header_end
+
+      -- parse the header of the new part
+      local header = {}
+      for k,v in data:sub(1,part_header_end+2):gmatch("([^%:\r\n]*)%s*%:%s*([^\r\n]*)\r\n") do
+        header[k] = v
+        local kupper = k:upper()
+        if (kupper=="CONTENT-DISPOSITION") then
+          name = v:match('name=%"([^%"]*)%"')
+          file_name = v:match('filename=%"([^%"]*)%"')
+        elseif (kupper=="CONTENT-TYPE") then
+          file_type = v
+        end
+      end
+
+      -- isolate the body of the new part
+      local part_body_end
+      data = data:sub(part_header_end+4)
+      repeat
+        part_body_end = data:find(b, 1, true)
+        if not part_body_end then
+          data, ok = add_data(data)
+          if not ok then
+            return false, "protocol violation: body does not end properly"
+          end
+        end
+      until part_body_end
+      local value = data:sub(1,part_body_end-1)
+      data = data:sub(part_body_end+#b)
+      data = add_data(data)
+
+      -- send the result to the caller
+      got_field(name, value, file_name, file_type)
+
+    end
+
+    return true, ""
+  end
+
+
+
+
 mg.write("HTTP/1.0 200 OK\r\n")
 mg.write("Connection: close\r\n")
 mg.write("Content-Type: text/plain; charset=utf-8\r\n")
 mg.write("Cache-Control: max-age=0, must-revalidate\r\n")
 mg.write("\r\n")
 
--- Read the entire body data (POST content) into "bdata" variable.
-bdata = ""
-repeat
-  local add_data = mg.read()
-  if add_data then
-    bdata = bdata .. add_data
-  end
-until (add_data == nil);
 
--- Get the boundary string.
-bs = "--" .. ((mg.request_info.content_type):upper():match("BOUNDARY=(.*)"));
+mg.write("Parse request:\r\n")
 
--- The POST data has to start with the boundary string.
--- Check this and remove the starting boundary.
-if bdata:sub(1, #bs) ~= bs then
-  error "invalid format of POST data"
+function fetch(k, v, fn, ft)
+    mg.write(k .. " = " .. v .. "\r\n")
 end
-bdata = bdata:sub(#bs)
 
--- The boundary now starts with CR LF.
-bs = "\r\n" .. bs
+ok, errtxt = parse_multipart_form(fetch)
 
--- Now loop through all the parts
-while #bdata>4 do
-   -- Find the header of new part.
-   part_header_end = bdata:find("\r\n\r\n", 1, true)
-
-   -- Parse the header.
-   h = bdata:sub(1, part_header_end+2)
-   for key,val in h:gmatch("([^%:\r\n]*)%s*%:%s*([^\r\n]*)\r\n") do
-      if key:upper() == "CONTENT-DISPOSITION" then
-          form_field_name = val:match('name=%"([^%"]*)%"')
-          file_name = val:match('filename=%"([^%"]*)%"')
-      end
-   end
-
-   -- Remove the header from "bdata".
-   bdata = bdata:sub(part_header_end+4)
-
-   -- Find the end of the body by locating the boundary string.
-   part_body_end = bdata:find(bs, 1, true)
-
-   -- Isolate the content, and drop it from "bdata".
-   form_field_value = bdata:sub(1,part_body_end-1)
-   bdata = bdata:sub(part_body_end+#bs)
-
-   -- Now the data (file content or field value) is isolated: We know form_field_name and form_field_value.
-   -- Here the script should do something useful with the data. This example just sends it back to the client.
-   mg.write("Field name: " .. form_field_name .. "\r\n")
-   local len = #form_field_value
-   if len<50 then
-     mg.write("Field value: " .. form_field_value .. "\r\n")
-   else
-     mg.write("Field value: " .. form_field_value:sub(1, 40) .. " .. (" .. len .. " bytes)\r\n")
-   end
-   mg.write("\r\n")
-
+if not ok then
+    mg.write("Error: " .. errtxt .. "\r\n")
+else
+    mg.write("Parsing OK\r\n")
 end
+
