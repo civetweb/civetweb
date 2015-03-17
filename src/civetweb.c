@@ -4532,15 +4532,17 @@ static void prepare_cgi_environment(struct mg_connection *conn,
     addenv(blk, "REQUEST_URI=%s", conn->request_info.uri);
 
     /* SCRIPT_NAME */
-    assert(conn->request_info.uri[0] == '/');
-    slash = strrchr(conn->request_info.uri, '/');
-    if ((s = strrchr(prog, '/')) == NULL)
-        s = prog;
-    addenv(blk, "SCRIPT_NAME=%.*s%s", (int) (slash - conn->request_info.uri),
-           conn->request_info.uri, s);
+    addenv(blk, "SCRIPT_NAME=%.*s",
+           strlen(conn->request_info.uri) - ((conn->path_info == NULL) ? 0 : strlen(conn->path_info)),
+           conn->request_info.uri);
 
     addenv(blk, "SCRIPT_FILENAME=%s", prog);
-    addenv(blk, "PATH_TRANSLATED=%s", prog);
+    if (conn->path_info == NULL) {
+        addenv(blk, "PATH_TRANSLATED=%s", conn->ctx->config[DOCUMENT_ROOT]);
+    } else {
+        addenv(blk, "PATH_TRANSLATED=%s%s", conn->ctx->config[DOCUMENT_ROOT], conn->path_info);
+    }
+
     addenv(blk, "HTTPS=%s", conn->ssl == NULL ? "off" : "on");
 
     if ((s = mg_get_header(conn, "Content-Type")) != NULL)
