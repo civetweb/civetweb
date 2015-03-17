@@ -557,9 +557,9 @@ static void set_absolute_path(char *options[], const char *option_name,
 
 #ifdef USE_LUA
 #define main luatest_main
-#define luaL_openlibs lua_civet_openlibs
+#define luaL_openlibs lua_civet_open_all_libs
 struct lua_State;
-extern void lua_civet_openlibs(struct lua_State *L);
+extern void lua_civet_open_all_libs(struct lua_State *L);
 #include "../src/third_party/lua-5.2.3/src/lua.c"
 #undef main
 #endif

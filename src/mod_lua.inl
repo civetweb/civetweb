@@ -982,12 +982,12 @@ static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
     lua_rawset(L, -3);
 }
 
-static void prepare_lua_environment(struct mg_context * ctx, struct mg_connection *conn, struct lua_websock_data *conn_list, lua_State *L, const char *script_name, int lua_env_type)
+void lua_civet_open_all_libs(lua_State *L)
 {
-    extern void luaL_openlibs(lua_State *);
-    luaL_openlibs(L);
-
-    assert(ctx);
+    {
+        extern void luaL_openlibs(lua_State *);
+        luaL_openlibs(L);
+    }
 
 #ifdef USE_LUA_SQLITE3
     {
@@ -1007,6 +1007,11 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
         luaopen_lfs(L);
     }
 #endif
+}
+
+static void prepare_lua_environment(struct mg_context * ctx, struct mg_connection *conn, struct lua_websock_data *conn_list, lua_State *L, const char *script_name, int lua_env_type)
+{
+    lua_civet_open_all_libs(L);
 
     luaL_newmetatable(L, LUASOCKET);
     lua_pushliteral(L, "__index");
@@ -1106,12 +1111,6 @@ static void prepare_lua_environment(struct mg_context * ctx, struct mg_connectio
     if (ctx->callbacks.init_lua != NULL) {
         ctx->callbacks.init_lua(conn, L);
     }
-}
-
-void lua_civet_openlibs(lua_State *L)
-{
-    static struct mg_context fake_ctx;
-    prepare_lua_environment(&fake_ctx, NULL, NULL, L, NULL, 0);
 }
 
 static int lua_error_handler(lua_State *L)
