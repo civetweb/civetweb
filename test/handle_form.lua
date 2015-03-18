@@ -1,8 +1,27 @@
+-- Some basic checks
+if mg.request_info.request_method ~= "POST" or mg.request_info.content_type:lower():sub(1,19) ~= 'multipart/form-data' then
+  mg.write("HTTP/1.0 400 OK\r\n")
+  mg.write("Connection: close\r\n")
+  mg.write("Content-Type: text/plain; charset=utf-8\r\n")
+  mg.write("Cache-Control: max-age=0, must-revalidate\r\n")
+  mg.write("\r\n")
+  mg.write("Bad request\r\n\r\n")
+  return
+end
+
+-- HTTP headers
 mg.write("HTTP/1.0 200 OK\r\n")
 mg.write("Connection: close\r\n")
 mg.write("Content-Type: text/plain; charset=utf-8\r\n")
 mg.write("Cache-Control: max-age=0, must-revalidate\r\n")
 mg.write("\r\n")
+
+-- Which form sent the data?
+mg.write("Read POST data from " .. mg.request_info.http_headers.Referer .. ":\r\n\r\n")
+
+-- Count some data fields
+local fields = 0
+local datasize = 0
 
 -- Read the entire body data (POST content) into "bdata" variable.
 -- Use a string builder pattern for performance reasons
@@ -70,5 +89,9 @@ while #bdata>4 do
      mg.write("Field value: " .. form_field_value:sub(1, 40) .. " .. (" .. len .. " bytes)\r\n")
    end
    mg.write("\r\n")
+   fields = fields + 1
+   datasize = datasize + len
 
 end
+
+mg.write("Got " .. fields .. " input fields with " .. datasize .. " bytes total\r\n");
