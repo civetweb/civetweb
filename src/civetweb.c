@@ -3762,7 +3762,7 @@ int mg_url_encode(const char *src, char *dst, size_t dst_len)
             pos[2] = hex[(* (const unsigned char *) src) & 0xf];
             pos += 2;
         } else {
-            return -1;
+            break;
         }
     }
 
@@ -4504,7 +4504,7 @@ static void prepare_cgi_environment(struct mg_connection *conn,
                                     const char *prog,
                                     struct cgi_env_block *blk)
 {
-    const char *s, *slash;
+    const char *s;
     struct vec var_vec;
     char *p, src_addr[IP_ADDR_STR_LEN];
     int  i;
