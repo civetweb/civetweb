@@ -45,9 +45,13 @@
 #include "civetweb.h"
 
 #ifdef _WIN32
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501 /* Target Windows XP or higher */
+#endif
 #include <windows.h>
 #include <winsvc.h>
 #include <shlobj.h>
+#include <io.h>
 
 #define getcwd(a,b) _getcwd(a,b)
 #if !defined(__MINGW32__)
@@ -1499,9 +1503,6 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
 
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
-
-#include <fcntl.h>
-#include <io.h>
 
 static int MakeConsole() {
     DWORD err;
