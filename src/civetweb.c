@@ -25,6 +25,9 @@
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
 #endif
 #else
+#if defined(__GNUC__) && !defined(_GNU_SOURCE)
+# define _GNU_SOURCE          /* for setgroups() */
+#endif
 #ifdef __linux__
 #define _XOPEN_SOURCE 600     /* For flockfile() on Linux */
 #endif
@@ -284,6 +287,7 @@ typedef unsigned short int in_port_t;
 
 #include <pwd.h>
 #include <unistd.h>
+#include <grp.h> 
 #include <dirent.h>
 #if !defined(NO_SSL_DL) && !defined(NO_SSL)
 #include <dlfcn.h>
@@ -4533,7 +4537,7 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 
     /* SCRIPT_NAME */
     addenv(blk, "SCRIPT_NAME=%.*s",
-           strlen(conn->request_info.uri) - ((conn->path_info == NULL) ? 0 : strlen(conn->path_info)),
+           (int)strlen(conn->request_info.uri) - ((conn->path_info == NULL) ? 0 : (int)strlen(conn->path_info)),
            conn->request_info.uri);
 
     addenv(blk, "SCRIPT_FILENAME=%s", prog);
@@ -7514,7 +7518,9 @@ static int set_sock_timeout(SOCKET sock, int milliseconds)
 #ifdef _WIN32
     DWORD t = milliseconds;
 #else
+#if defined(TCP_USER_TIMEOUT)
     unsigned int uto = (unsigned int)milliseconds;
+#endif
     struct timeval t;
     t.tv_sec = milliseconds / 1000;
     t.tv_usec = (milliseconds * 1000) % 1000000;
