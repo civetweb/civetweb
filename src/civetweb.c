@@ -4533,7 +4533,7 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 
     /* SCRIPT_NAME */
     addenv(blk, "SCRIPT_NAME=%.*s",
-           strlen(conn->request_info.uri) - ((conn->path_info == NULL) ? 0 : strlen(conn->path_info)),
+           (int)strlen(conn->request_info.uri) - ((conn->path_info == NULL) ? 0 : (int)strlen(conn->path_info)),
            conn->request_info.uri);
 
     addenv(blk, "SCRIPT_FILENAME=%s", prog);
