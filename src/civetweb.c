@@ -25,6 +25,9 @@
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
 #endif
 #else
+#if defined(__GNUC__) && !defined(_GNU_SOURCE)
+# define _GNU_SOURCE          /* for setgroups() */
+#endif
 #ifdef __linux__
 #define _XOPEN_SOURCE 600     /* For flockfile() on Linux */
 #endif
@@ -284,6 +287,7 @@ typedef unsigned short int in_port_t;
 
 #include <pwd.h>
 #include <unistd.h>
+#include <grp.h> 
 #include <dirent.h>
 #if !defined(NO_SSL_DL) && !defined(NO_SSL)
 #include <dlfcn.h>
