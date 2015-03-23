@@ -589,9 +589,13 @@ static int alloc_printf(char **buf, size_t size, char *fmt, ...) {
 static void test_mg_upload(void) {
     static const char *boundary = "OOO___MY_BOUNDARY___OOO";
     struct mg_context *ctx;
+#if 0
     struct mg_connection *conn;
-    char ebuf[100], buf[20], *file_data, *file2_data, *post_data;
-    int file_len, file2_len, post_data_len;
+    char ebuf[100], buf[20], *file2_data;
+    int file2_len;
+#endif
+    char *file_data, *post_data;
+    int file_len post_data_len;
 
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
 
