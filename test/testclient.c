@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
             if (result[j]==i) cnt++;
         }
         if (cnt>0) {
-            printf("%5i\t%7u\n", i, cnt);
+            printf("%5i\t%7i\n", i, cnt);
         }
     }
 

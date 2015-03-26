@@ -6,6 +6,7 @@
 * celeron55
 * Daniel Oaks
 * Danny Al-Gaaf
+* Dialga
 * F-Secure Corporation
 * HariKamath Kamath
 * Jordan Shelley

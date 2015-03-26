@@ -1,0 +1,83 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Example page for HTML form handling</title>
+</head>
+
+<body>
+  <form action="/handle_form.lua" method="POST" enctype="multipart/form-data">
+    See <a href="http://www.w3schools.com/html/html_form_input_types.asp">HTML form tutorial</a>.<br />
+
+    <fieldset>
+      <legend>Text inputs:</legend>
+      A text: <input type="text" name="textin"><br />
+      A password: <input type="password" name="passwordin"><br />
+    </fieldset>
+
+    <fieldset>
+      <legend>Radio set 1:</legend>
+      <input type="radio" name="radio1" value="val1" checked>val1<br />
+      <input type="radio" name="radio1" value="val2">val2<br />
+      <input type="radio" name="radio1" value="val3">val3<br />
+    </fieldset>
+
+    <fieldset>
+      <legend>Radio set 2:</legend>
+      <input type="radio" name="radio2" value="val1" checked>val1<br />
+      <input type="radio" name="radio2" value="val2">val2<br />
+      <input type="radio" name="radio2" value="val3">val3<br />
+    </fieldset>
+
+    <fieldset>
+      <legend>Checkboxes:</legend>
+      <input type="checkbox" name="check1" value="val1" checked>val1<br />
+      <input type="checkbox" name="check2" value="val2">val2<br />
+      <input type="checkbox" name="check3" value="val3">val3<br />
+    </fieldset>
+
+    <fieldset>
+      <legend>HTML5 inputs:</legend>
+      A number: <input type="number" name="numberin" min="1" max="5"><br />
+      A date: <input type="date" name="datein"><br />
+      A color: <input type="color" name="colorin"><br />
+      A range: <input type="range" name="rangein" min="1" max="5"><br />
+      A month: <input type="month" name="monthin"><br />
+      A week: <input type="week" name="weekin"><br />
+      A time: <input type="time" name="timein"><br />
+      A datetime: <input type="datetime" name="datetimen"><br />
+      A datetime-local: <input type="datetime-local" name="datetimelocalin"><br />
+      An email: <input type="email" name="emailin"><br />
+      A search: <input type="search" name="searchin"><br />
+      A tel: <input type="tel" name="telin"><br />
+      An url: <input type="url" name="urlin"><br />
+    </fieldset>
+
+    <fieldset>
+      <legend>Files:</legend>
+      A file: <input type="file" name="filein"><br />
+      Multiple files: <input type="file" name="filesin" multiple><br>
+    </fieldset>
+
+    <fieldset>
+      <legend>Dropdown:</legend>
+      <select name="selectin">
+        <option value="opt1">opt1</option>
+        <option value="opt2">opt2</option>
+        <option value="opt3">opt3</option>
+      </select>
+    </fieldset>
+
+    <fieldset>
+      <legend>Text area:</legend>
+      <textarea name="message" rows="10" cols="30">Text area default text.</textarea>
+    </fieldset>
+
+    <input type="submit" value="Submit">
+
+  </form>
+</body>
+
+</html>

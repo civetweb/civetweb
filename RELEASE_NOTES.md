@@ -5,6 +5,11 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Fix build for MinGW-x64 and TDM-GCC
+- Update SQLite to 3.8.8.3
+- Fix CGI variables SCRIPT_NAME and PATH_TRANSLATED
+- Set TCP_USER_TIMEOUT to deal faster with broken connections
+- Add a Lua form handling example
 - Return more differentiated HTTP error codes
 - Add log_access callback
 - Rewrite and comment request handling function

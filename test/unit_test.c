@@ -579,16 +579,23 @@ static void test_mg_websocket_client_connect(int use_ssl) {
 
 static int alloc_printf(char **buf, size_t size, char *fmt, ...) {
     va_list ap;
+    int ret = 0;
     va_start(ap, fmt);
-    return alloc_vprintf(buf, size, fmt, ap);
+    ret = alloc_vprintf(buf, size, fmt, ap);
+    va_end(ap);
+    return ret:
 }
 
 static void test_mg_upload(void) {
     static const char *boundary = "OOO___MY_BOUNDARY___OOO";
     struct mg_context *ctx;
+#if 0
     struct mg_connection *conn;
-    char ebuf[100], buf[20], *file_data, *file2_data, *post_data;
-    int file_len, file2_len, post_data_len;
+    char ebuf[100], buf[20], *file2_data;
+    int file2_len;
+#endif
+    char *file_data, *post_data;
+    int file_len post_data_len;
 
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
 

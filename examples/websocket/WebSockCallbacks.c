@@ -148,8 +148,7 @@ static void * eventMain(void * arg) {
     while (ws_ctx->runLoop) {
         time_t t = time(0);
         struct tm * timestr = localtime(&t);
-        sprintf(msg,"title %s",asctime(timestr));
-
+        strftime(msg, sizeof(msg), "title %c", timestr);
         send_to_all_websockets(ctx, msg, strlen(msg));
 
         mg_sleep(1000);

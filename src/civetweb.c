@@ -25,6 +25,9 @@
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
 #endif
 #else
+#if defined(__GNUC__) && !defined(_GNU_SOURCE)
+# define _GNU_SOURCE          /* for setgroups() */
+#endif
 #ifdef __linux__
 #define _XOPEN_SOURCE 600     /* For flockfile() on Linux */
 #endif
@@ -284,6 +287,7 @@ typedef unsigned short int in_port_t;
 
 #include <pwd.h>
 #include <unistd.h>
+#include <grp.h> 
 #include <dirent.h>
 #if !defined(NO_SSL_DL) && !defined(NO_SSL)
 #include <dlfcn.h>
@@ -1638,11 +1642,14 @@ static void send_http_error(struct mg_connection *conn, int status, const char *
         }
         DEBUG_TRACE("[%s]", buf);
 
-        mg_printf(conn, "HTTP/1.1 %d %s\r\n"
-                        "Content-Length: %d\r\n"
+        mg_printf(conn, "HTTP/1.1 %d %s\r\n", status, status_text);
+        if (len>0) {
+            mg_printf(conn, "Content-Type: text/plain\r\n");
+        }
+        mg_printf(conn, "Content-Length: %d\r\n"
                         "Date: %s\r\n"
                         "Connection: %s\r\n\r\n",
-                        status, status_text, len, date,
+                        len, date,
                         suggest_connection_header(conn));
         conn->num_bytes_sent += mg_printf(conn, "%s", buf);
     }
@@ -1818,13 +1825,19 @@ static void change_slashes_to_backslashes(char *path)
     int i;
 
     for (i = 0; path[i] != '\0'; i++) {
-        if (path[i] == '/')
+
+        if (path[i] == '/') {
             path[i] = '\\';
-        /* i > 0 check is to preserve UNC paths, like \\server\file.txt */
-        if (path[i] == '\\' && i > 0)
-            while (path[i + 1] == '\\' || path[i + 1] == '/')
+        }
+
+        /* remove double backslash (check i > 0 to preserve UNC paths, like \\server\file.txt) */
+        if ((path[i] == '\\') && (i > 0)) {
+
+            while (path[i + 1] == '\\' || path[i + 1] == '/') {
                 (void) memmove(path + i + 1,
                                path + i + 2, strlen(path + i + 1));
+            }
+        }
     }
 }
 
@@ -3753,7 +3766,7 @@ int mg_url_encode(const char *src, char *dst, size_t dst_len)
             pos[2] = hex[(* (const unsigned char *) src) & 0xf];
             pos += 2;
         } else {
-            return -1;
+            break;
         }
     }
 
@@ -4495,7 +4508,7 @@ static void prepare_cgi_environment(struct mg_connection *conn,
                                     const char *prog,
                                     struct cgi_env_block *blk)
 {
-    const char *s, *slash;
+    const char *s;
     struct vec var_vec;
     char *p, src_addr[IP_ADDR_STR_LEN];
     int  i;
@@ -4523,15 +4536,17 @@ static void prepare_cgi_environment(struct mg_connection *conn,
     addenv(blk, "REQUEST_URI=%s", conn->request_info.uri);
 
     /* SCRIPT_NAME */
-    assert(conn->request_info.uri[0] == '/');
-    slash = strrchr(conn->request_info.uri, '/');
-    if ((s = strrchr(prog, '/')) == NULL)
-        s = prog;
-    addenv(blk, "SCRIPT_NAME=%.*s%s", (int) (slash - conn->request_info.uri),
-           conn->request_info.uri, s);
+    addenv(blk, "SCRIPT_NAME=%.*s",
+           (int)strlen(conn->request_info.uri) - ((conn->path_info == NULL) ? 0 : (int)strlen(conn->path_info)),
+           conn->request_info.uri);
 
     addenv(blk, "SCRIPT_FILENAME=%s", prog);
-    addenv(blk, "PATH_TRANSLATED=%s", prog);
+    if (conn->path_info == NULL) {
+        addenv(blk, "PATH_TRANSLATED=%s", conn->ctx->config[DOCUMENT_ROOT]);
+    } else {
+        addenv(blk, "PATH_TRANSLATED=%s%s", conn->ctx->config[DOCUMENT_ROOT], conn->path_info);
+    }
+
     addenv(blk, "HTTPS=%s", conn->ssl == NULL ? "off" : "on");
 
     if ((s = mg_get_header(conn, "Content-Type")) != NULL)
@@ -7499,15 +7514,34 @@ static void produce_socket(struct mg_context *ctx, const struct socket *sp)
 
 static int set_sock_timeout(SOCKET sock, int milliseconds)
 {
+    int r1, r2;
 #ifdef _WIN32
     DWORD t = milliseconds;
 #else
+#if defined(TCP_USER_TIMEOUT)
+    unsigned int uto = (unsigned int)milliseconds;
+#endif
     struct timeval t;
     t.tv_sec = milliseconds / 1000;
     t.tv_usec = (milliseconds * 1000) % 1000000;
+
+    /* TCP_USER_TIMEOUT/RFC5482 (http://tools.ietf.org/html/rfc5482):
+       max. time waiting for the acknowledged of TCP data before the connection
+       will be forcefully closed and ETIMEDOUT is returned to the application.
+       If this option is not set, the default timeout of 20-30 minutes is used.
+    */
+    /* #define TCP_USER_TIMEOUT (18) */
+
+#if defined(TCP_USER_TIMEOUT)
+    setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
 #endif
-    return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t)) ||
-           setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
+
+#endif
+
+    r1 = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
+    r2 = setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
+
+    return r1 || r2;
 }
 
 static void accept_new_connection(const struct socket *listener,
