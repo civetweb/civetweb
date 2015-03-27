@@ -7091,28 +7091,31 @@ static int is_valid_uri(const char *uri)
 static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout, int *err)
 {
     const char *cl;
-    struct pollfd pfd;
+    struct pollfd pfd = {0};
 
     if (ebuf_len > 0) {
       ebuf[0] = '\0';
     }
     *err = 0;
-    reset_per_request_attributes(conn);
-    if (timeout >= 0) {
-        pfd.fd = conn->client.sock;
-        switch (poll(&pfd, 1, timeout)) {
-        case 0:
-            snprintf(ebuf, ebuf_len, "%s", "Timed out");
-            *err = 408;
-            return 0;
-        case -1:
-            snprintf(ebuf, ebuf_len, "%s", "Interrupted");
-            *err = 500;
-            return 0;
-        }
-    }
 
-    ebuf[0] = '\0';
+    reset_per_request_attributes(conn);
+
+    /*
+    pfd.fd = conn->client.sock;
+    pfd.events = POLLIN;
+
+    switch (poll(&pfd, 1, timeout)) {
+    case 0:
+        snprintf(ebuf, ebuf_len, "%s", "Timed out");
+        *err = 408;
+        return 0;
+    case -1:
+        snprintf(ebuf, ebuf_len, "%s", "Interrupted");
+        *err = 500;
+        return 0;
+    }
+    */
+
     conn->request_len = read_request(NULL, conn, conn->buf, conn->buf_size,
                                      &conn->data_len);
     assert(conn->request_len < 0 || conn->data_len >= conn->request_len);
