@@ -287,7 +287,7 @@ typedef unsigned short int in_port_t;
 
 #include <pwd.h>
 #include <unistd.h>
-#include <grp.h> 
+#include <grp.h>
 #include <dirent.h>
 #if !defined(NO_SSL_DL) && !defined(NO_SSL)
 #include <dlfcn.h>
@@ -7088,10 +7088,9 @@ static int is_valid_uri(const char *uri)
     return uri[0] == '/' || (uri[0] == '*' && uri[1] == '\0');
 }
 
-static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout, int *err)
+static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
     const char *cl;
-    struct pollfd pfd = {0};
 
     if (ebuf_len > 0) {
       ebuf[0] = '\0';
@@ -7099,22 +7098,6 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int t
     *err = 0;
 
     reset_per_request_attributes(conn);
-
-    /*
-    pfd.fd = conn->client.sock;
-    pfd.events = POLLIN;
-
-    switch (poll(&pfd, 1, timeout)) {
-    case 0:
-        snprintf(ebuf, ebuf_len, "%s", "Timed out");
-        *err = 408;
-        return 0;
-    case -1:
-        snprintf(ebuf, ebuf_len, "%s", "Interrupted");
-        *err = 500;
-        return 0;
-    }
-    */
 
     conn->request_len = read_request(NULL, conn, conn->buf, conn->buf_size,
                                      &conn->data_len);
@@ -7168,7 +7151,7 @@ int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int
     /* TODO: Define proper return values - maybe return length?
              For the first test use <0 for error and >0 for OK */
     int err;
-    return (getreq(conn, ebuf, ebuf_len, timeout, &err) == 0) ? -1 : +1;
+    return (getreq(conn, ebuf, ebuf_len, &err) == 0) ? -1 : +1;
 }
 
 struct mg_connection *mg_download(const char *host, int port, int use_ssl,
@@ -7191,7 +7174,7 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
         if (i <= 0) {
             snprintf(ebuf, ebuf_len, "%s", "Error sending request");
         } else {
-            getreq(conn, ebuf, ebuf_len, TIMEOUT_INFINITE, &reqerr);
+            getreq(conn, ebuf, ebuf_len, &reqerr);
         }
     }
 
@@ -7318,7 +7301,7 @@ static void process_new_connection(struct mg_connection *conn)
        to crule42. */
     conn->data_len = 0;
     do {
-        if (!getreq(conn, ebuf, sizeof(ebuf), TIMEOUT_INFINITE, &reqerr)) {
+        if (!getreq(conn, ebuf, sizeof(ebuf), &reqerr)) {
             assert(ebuf[0] != '\0');
             /* The request sent by the client could not be understood by the server,
                or it was incomplete or a timeout. Send an error message and close
