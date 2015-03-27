@@ -397,6 +397,8 @@ static void test_mg_download(int use_ssl) {
     int i, len1, len2, port;
     struct mg_connection *conn;
     struct mg_context *ctx;
+    struct mg_request_info *ri;
+
     if (use_ssl) port = atoi(HTTPS_PORT); else port = atoi(HTTP_PORT);
 
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
@@ -527,6 +529,30 @@ static void test_mg_download(int use_ssl) {
         mg_close_connection(conn);
     }
 
+    /* Test new API */
+    ebuf[0] = 1;
+    conn = mg_connect_client("localhost", port, use_ssl, ebuf, sizeof(ebuf));
+    ASSERT(conn != NULL);
+    ASSERT(ebuf[0] == 0);
+    ri = mg_get_request_info(conn);
+    ASSERT(ri->content_length == 0);
+    i = mg_get_response(conn, ebuf, sizeof(ebuf), 1000);
+    ASSERT(ebuf[0] != 0);
+    ri = mg_get_request_info(conn);
+    ASSERT(ri->content_length == -1);
+    mg_printf(conn, "GET /index.html HTTP/1.1\r\n");
+    mg_printf(conn, "Host: www.example.com\r\n");
+    mg_printf(conn, "\r\n");
+    i = mg_get_response(conn, ebuf, sizeof(ebuf), 1000);
+    ASSERT(ebuf[0] == 0);
+    ri = mg_get_request_info(conn);
+    ASSERT(ri->content_length > 0);
+    mg_read(conn, ebuf, sizeof(ebuf));
+    ASSERT(!strncmp(ebuf, "Error 404", 9));
+
+    mg_close_connection(conn);
+
+    /* Stop the test server */
     mg_stop(ctx);
 }
 

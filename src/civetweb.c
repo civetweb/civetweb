@@ -3724,6 +3724,10 @@ static SOCKET conn2(struct mg_context *ctx  /* may be null */, const char *host,
     struct hostent *he;
     SOCKET sock = INVALID_SOCKET;
 
+    if (ebuf_len>0) {
+        *ebuf = 0;
+    }
+
     if (host == NULL) {
         snprintf(ebuf, ebuf_len, "%s", "NULL host");
     } else if (use_ssl && SSLv23_client_method == NULL) {
@@ -4296,18 +4300,22 @@ static int read_request(FILE *fp, struct mg_connection *conn,
 {
     int request_len, n = 0;
     time_t last_action_time = 0;
-    double request_timout = 0.0;
+    double request_timout;
 
     if (conn->ctx->config[REQUEST_TIMEOUT]) {
         /* value of request_timout is in seconds, config in milliseconds */
         request_timout = atof(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+    } else {
+        request_timout = -1.0;
     }
 
     request_len = get_request_len(buf, *nread);
-    while (conn->ctx->stop_flag == 0 &&
-           *nread < bufsiz && request_len == 0 &&
-           difftime(last_action_time, conn->birth_time) <= request_timout &&
-           (n = pull(fp, conn, buf + *nread, bufsiz - *nread)) > 0) {
+    while ((conn->ctx->stop_flag == 0) &&
+           (*nread < bufsiz) &&
+           (request_len == 0) &&
+           ((difftime(last_action_time, conn->birth_time) <= request_timout) || (request_timout < 0)) &&
+           ((n = pull(fp, conn, buf + *nread, bufsiz - *nread)) > 0)
+          ) {
         *nread += n;
         assert(*nread <= bufsiz);
         request_len = get_request_len(buf, *nread);
@@ -6924,6 +6932,40 @@ static void reset_per_request_attributes(struct mg_connection *conn)
     conn->data_len = 0;
 }
 
+
+static int set_sock_timeout(SOCKET sock, int milliseconds)
+{
+    int r1, r2;
+#ifdef _WIN32
+    DWORD t = milliseconds;
+#else
+#if defined(TCP_USER_TIMEOUT)
+    unsigned int uto = (unsigned int)milliseconds;
+#endif
+    struct timeval t;
+    t.tv_sec = milliseconds / 1000;
+    t.tv_usec = (milliseconds * 1000) % 1000000;
+
+    /* TCP_USER_TIMEOUT/RFC5482 (http://tools.ietf.org/html/rfc5482):
+       max. time waiting for the acknowledged of TCP data before the connection
+       will be forcefully closed and ETIMEDOUT is returned to the application.
+       If this option is not set, the default timeout of 20-30 minutes is used.
+    */
+    /* #define TCP_USER_TIMEOUT (18) */
+
+#if defined(TCP_USER_TIMEOUT)
+    setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
+#endif
+
+#endif
+
+    r1 = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
+    r2 = setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
+
+    return r1 || r2;
+}
+
+
 static void close_socket_gracefully(struct mg_connection *conn)
 {
 #if defined(_WIN32)
@@ -7140,10 +7182,26 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *
 int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int timeout)
 {
     /* Implementation of API function for HTTP clients */
+    int err, ret;
+    struct mg_context *octx = conn->ctx;
+    struct mg_context rctx = *(conn->ctx);
+    char txt[32];
+
+    if (timeout >= 0) {
+        snprintf(txt, sizeof(txt), "%i", timeout);
+        rctx.config[REQUEST_TIMEOUT] = txt;
+        set_sock_timeout(conn->client.sock, timeout);
+    } else {
+        rctx.config[REQUEST_TIMEOUT] = NULL;
+    }
+
+    conn->ctx = &rctx;
+    ret = getreq(conn, ebuf, ebuf_len, &err);
+    conn->ctx = octx;
+
     /* TODO: Define proper return values - maybe return length?
              For the first test use <0 for error and >0 for OK */
-    int err;
-    return (getreq(conn, ebuf, ebuf_len, &err) == 0) ? -1 : +1;
+    return (ret == 0) ? -1 : +1;
 }
 
 struct mg_connection *mg_download(const char *host, int port, int use_ssl,
@@ -7490,37 +7548,6 @@ static void produce_socket(struct mg_context *ctx, const struct socket *sp)
     (void) pthread_mutex_unlock(&ctx->thread_mutex);
 }
 
-static int set_sock_timeout(SOCKET sock, int milliseconds)
-{
-    int r1, r2;
-#ifdef _WIN32
-    DWORD t = milliseconds;
-#else
-#if defined(TCP_USER_TIMEOUT)
-    unsigned int uto = (unsigned int)milliseconds;
-#endif
-    struct timeval t;
-    t.tv_sec = milliseconds / 1000;
-    t.tv_usec = (milliseconds * 1000) % 1000000;
-
-    /* TCP_USER_TIMEOUT/RFC5482 (http://tools.ietf.org/html/rfc5482):
-       max. time waiting for the acknowledged of TCP data before the connection
-       will be forcefully closed and ETIMEDOUT is returned to the application.
-       If this option is not set, the default timeout of 20-30 minutes is used.
-    */
-    /* #define TCP_USER_TIMEOUT (18) */
-
-#if defined(TCP_USER_TIMEOUT)
-    setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
-#endif
-
-#endif
-
-    r1 = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
-    r2 = setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE) &t, sizeof(t));
-
-    return r1 || r2;
-}
 
 static void accept_new_connection(const struct socket *listener,
                                   struct mg_context *ctx)
@@ -7529,6 +7556,7 @@ static void accept_new_connection(const struct socket *listener,
     char src_addr[IP_ADDR_STR_LEN];
     socklen_t len = sizeof(so.rsa);
     int on = 1;
+    int timeout;
 
     if ((so.sock = accept(listener->sock, &so.rsa.sa, &len)) == INVALID_SOCKET) {
     } else if (!check_acl(ctx, ntohl(* (uint32_t *) &so.rsa.sin.sin_addr))) {
@@ -7546,6 +7574,7 @@ static void accept_new_connection(const struct socket *listener,
             mg_cry(fc(ctx), "%s: getsockname() failed: %s",
                    __func__, strerror(ERRNO));
         }
+
         /* Set TCP keep-alive. This is needed because if HTTP-level keep-alive
            is enabled, and client resets the connection, server won't get
            TCP FIN or RST and will keep the connection open forever. With TCP
@@ -7557,7 +7586,17 @@ static void accept_new_connection(const struct socket *listener,
                    "%s: setsockopt(SOL_SOCKET SO_KEEPALIVE) failed: %s",
                    __func__, strerror(ERRNO));
         }
-        set_sock_timeout(so.sock, atoi(ctx->config[REQUEST_TIMEOUT]));
+
+        if (ctx->config[REQUEST_TIMEOUT]) {
+            timeout = atoi(ctx->config[REQUEST_TIMEOUT]);
+        } else {
+            timeout = -1;
+        }
+
+        if (timeout>0) {
+            set_sock_timeout(so.sock, atoi(ctx->config[REQUEST_TIMEOUT]));
+        }
+
         produce_socket(ctx, &so);
     }
 }
