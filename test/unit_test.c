@@ -356,9 +356,14 @@ void (*init_lua)(struct mg_connection *, void *lua_context);
 void (*upload)(struct mg_connection *, const char *file_name);
 int  (*http_error)(struct mg_connection *, int status);
 
-static const struct mg_callbacks CALLBACKS = {
-    &begin_request_handler_cb, NULL, &log_message_cb, NULL, NULL, NULL, NULL, NULL,
-    &open_file_cb, NULL, &upload_cb, NULL
+static struct mg_callbacks CALLBACKS = {0};
+
+static void init_CALLBACKS() {
+    memset(&CALLBACKS, 0, sizeof(CALLBACKS));
+    CALLBACKS.begin_request = begin_request_handler_cb;
+    CALLBACKS.log_message = log_message_cb;
+    CALLBACKS.open_file = open_file_cb;
+    CALLBACKS.upload = upload_cb;
 };
 
 static const char *OPTIONS[] = {
@@ -583,7 +588,7 @@ static int alloc_printf(char **buf, size_t size, char *fmt, ...) {
     va_start(ap, fmt);
     ret = alloc_vprintf(buf, size, fmt, ap);
     va_end(ap);
-    return ret:
+    return ret;
 }
 
 static void test_mg_upload(void) {
@@ -595,7 +600,7 @@ static void test_mg_upload(void) {
     int file2_len;
 #endif
     char *file_data, *post_data;
-    int file_len post_data_len;
+    int file_len, post_data_len;
 
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
 
@@ -1070,6 +1075,7 @@ int __cdecl main(void) {
     }
 
     /* tests with network access */
+    init_CALLBACKS();
     test_mg_download(0);
 #ifndef NO_SSL
     test_mg_download(1);
