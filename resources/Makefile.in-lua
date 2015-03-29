@@ -1,5 +1,7 @@
 #
 # Copyright (c) 2013 No Face Press, LLC
+# Copyright (c) 2014-2015 the Civetweb developers
+#
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
 
@@ -7,7 +9,7 @@ ifndef WITH_LUA
   $(error WITH_LUA is not defined)
 endif
 
-LUA_DIR = src/third_party/lua-5.2.3/src
+LUA_DIR = src/third_party/lua-5.2.4/src
 LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA
 
 ifdef WITH_LUA_SHARED

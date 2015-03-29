@@ -408,7 +408,7 @@ page, one can write:
     </p>
 
 Lua is known for it's speed and small size. Civetweb currently uses Lua
-version 5.2.3. The documentation for it can be found in the
+version 5.2.4. The documentation for it can be found in the
 [Lua 5.2 reference manual](http://www.lua.org/manual/5.2/).
 
 
