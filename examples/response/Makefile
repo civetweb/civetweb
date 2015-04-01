@@ -1,9 +1,9 @@
 # 
-# Copyright (c) 2013 No Face Press, LLC
+# Copyright (c) 2015 the Civetweb developers
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
 
-#This makefile is used to test the other Makefiles
+#Build the response example demonstrating use of response helper functions
 
 
 PROG = response

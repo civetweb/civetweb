@@ -1,3 +1,6 @@
+//Copyright (c) 2013-2015 the Civetweb developers
+//This example demonstrates the use of the response functions
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
