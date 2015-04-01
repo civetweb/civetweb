@@ -73,6 +73,7 @@ endif
 ifdef WITH_CPP
   OBJECTS += src/CivetServer.o
   LCC = $(CXX)
+  CFLAGS += -std=c++11
 else
   LCC = $(CC)
 endif
