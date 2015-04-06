@@ -826,7 +826,8 @@ struct mg_connection {
     SSL *ssl;                       /* SSL descriptor */
     SSL_CTX *client_ssl_ctx;        /* SSL context for client connections */
     struct socket client;           /* Connected client */
-    time_t birth_time;              /* Time when request was received */
+    time_t birth_time;              /* Time (wall clock) when connection was established */
+    struct timespec req_begin;      /* Time (since system start) when the request was received */
     int64_t num_bytes_sent;         /* Total bytes sent to client */
     int64_t content_len;            /* Content-Length header value */
     int64_t consumed_content;       /* How many bytes of content have been read */
@@ -4299,7 +4300,7 @@ static int read_request(FILE *fp, struct mg_connection *conn,
                         char *buf, int bufsiz, int *nread)
 {
     int request_len, n = 0;
-    time_t last_action_time = 0;
+    struct timespec last_action_time = {0};
     double request_timout;
 
     if (conn->ctx->config[REQUEST_TIMEOUT]) {
@@ -4313,13 +4314,15 @@ static int read_request(FILE *fp, struct mg_connection *conn,
     while ((conn->ctx->stop_flag == 0) &&
            (*nread < bufsiz) &&
            (request_len == 0) &&
-           ((difftime(last_action_time, conn->birth_time) <= request_timout) || (request_timout < 0)) &&
+           ((difftime(last_action_time.tv_sec, conn->birth_time) <= request_timout) || (request_timout < 0)) &&
            ((n = pull(fp, conn, buf + *nread, bufsiz - *nread)) > 0)
           ) {
         *nread += n;
         assert(*nread <= bufsiz);
         request_len = get_request_len(buf, *nread);
-        last_action_time = (request_timout > 0.0) ? time(NULL) : 0;
+        if (request_timout > 0.0) {
+            clock_gettime(CLOCK_MONOTONIC, &last_action_time);
+        }
     }
 
     return request_len <= 0 && n <= 0 ? -1 : request_len;
@@ -7174,7 +7177,9 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *
             /* Other request */
             conn->content_len = 0;
         }
-        conn->birth_time = time(NULL);
+
+        /* Here we do not set the socket_birth time but the request begin */
+        clock_gettime(CLOCK_MONOTONIC, &(conn->req_begin));
     }
     return 1;
 }
@@ -7593,8 +7598,14 @@ static void accept_new_connection(const struct socket *listener,
             timeout = -1;
         }
 
-        if (timeout>0) {
-            set_sock_timeout(so.sock, atoi(ctx->config[REQUEST_TIMEOUT]));
+        /* Set socket timeout to the given value, but not more than 10 seconds,
+           so the server can exit after 10 seconds if required. */
+        /* TODO: Currently values > 10 s are round up to the next 10 s. 
+                 For values like 24 s a socket timeout of 8 or 12 s would be better. */
+        if ((timeout>0) && (timeout<10000)) {
+            set_sock_timeout(so.sock, timeout);
+        } else {
+            set_sock_timeout(so.sock, 10000);
         }
 
         produce_socket(ctx, &so);

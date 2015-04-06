@@ -12,7 +12,6 @@
   </style>
 </head>
 <body>
-
   <script type="text/javascript"><![CDATA[
 
     var connection;
@@ -58,14 +57,14 @@
 
       var ka = queryStringElem("keepAlive");
       if (ka) {
-        use_keepAlive = (ka.toLowerCase()!="false") && (ka.toLowerCase()!=0);
+        ka = ka.toLowerCase();
+        use_keepAlive = (ka!="false") && (ka!="f") && (ka!="no") && (ka!="n") && (ka!=0);
       } else {
         use_keepAlive = true;
       }
 
       connection.onopen = function () {
         keepAlive = use_keepAlive;
-        alert(keepAlive);
         webSockKeepAlive();
       };
 
