@@ -1251,7 +1251,7 @@ static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
     }
 }
 
-/* difftime for timespec */
+/* difftime for struct timespec. Return value is in seconds. */
 static double mg_difftimespec(const struct timespec *ts_now, const struct timespec *ts_before)
 {
     return (double)(ts_now->tv_nsec - ts_before->tv_nsec)*1.0E-9 + (double)(ts_now->tv_sec - ts_before->tv_sec);
@@ -2533,7 +2533,8 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
         }
     } while ((timeout<=0) || (mg_difftimespec(&now,&start)<=timeout));
 
-    return conn->ctx->stop_flag ? -1 : nread;
+    /* Timeout occured. Return the amount of data received up to now. */
+    return nread;
 }
 
 static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
@@ -7207,6 +7208,9 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *
 
     reset_per_request_attributes(conn);
 
+    /* Set the time the request was received. This value should be used for timeouts. */
+    clock_gettime(CLOCK_MONOTONIC, &(conn->req_time));
+
     conn->request_len = read_request(NULL, conn, conn->buf, conn->buf_size,
                                      &conn->data_len);
     assert(conn->request_len < 0 || conn->data_len >= conn->request_len);
@@ -7248,9 +7252,6 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *
             /* Other request */
             conn->content_len = 0;
         }
-
-        /* Set the time the request was received. This value should be used for timeouts. */
-        clock_gettime(CLOCK_MONOTONIC, &(conn->req_time));
     }
     return 1;
 }
