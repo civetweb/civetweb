@@ -356,9 +356,14 @@ void (*init_lua)(struct mg_connection *, void *lua_context);
 void (*upload)(struct mg_connection *, const char *file_name);
 int  (*http_error)(struct mg_connection *, int status);
 
-static const struct mg_callbacks CALLBACKS = {
-    &begin_request_handler_cb, NULL, &log_message_cb, NULL, NULL, NULL, NULL, NULL,
-    &open_file_cb, NULL, &upload_cb, NULL
+static struct mg_callbacks CALLBACKS = {0};
+
+static void init_CALLBACKS() {
+    memset(&CALLBACKS, 0, sizeof(CALLBACKS));
+    CALLBACKS.begin_request = begin_request_handler_cb;
+    CALLBACKS.log_message = log_message_cb;
+    CALLBACKS.open_file = open_file_cb;
+    CALLBACKS.upload = upload_cb;
 };
 
 static const char *OPTIONS[] = {
@@ -392,6 +397,8 @@ static void test_mg_download(int use_ssl) {
     int i, len1, len2, port;
     struct mg_connection *conn;
     struct mg_context *ctx;
+    struct mg_request_info *ri;
+
     if (use_ssl) port = atoi(HTTPS_PORT); else port = atoi(HTTP_PORT);
 
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
@@ -522,6 +529,30 @@ static void test_mg_download(int use_ssl) {
         mg_close_connection(conn);
     }
 
+    /* Test new API */
+    ebuf[0] = 1;
+    conn = mg_connect_client("localhost", port, use_ssl, ebuf, sizeof(ebuf));
+    ASSERT(conn != NULL);
+    ASSERT(ebuf[0] == 0);
+    ri = mg_get_request_info(conn);
+    ASSERT(ri->content_length == 0);
+    i = mg_get_response(conn, ebuf, sizeof(ebuf), 1000);
+    ASSERT(ebuf[0] != 0);
+    ri = mg_get_request_info(conn);
+    ASSERT(ri->content_length == -1);
+    mg_printf(conn, "GET /index.html HTTP/1.1\r\n");
+    mg_printf(conn, "Host: www.example.com\r\n");
+    mg_printf(conn, "\r\n");
+    i = mg_get_response(conn, ebuf, sizeof(ebuf), 1000);
+    ASSERT(ebuf[0] == 0);
+    ri = mg_get_request_info(conn);
+    ASSERT(ri->content_length > 0);
+    mg_read(conn, ebuf, sizeof(ebuf));
+    ASSERT(!strncmp(ebuf, "Error 404", 9));
+
+    mg_close_connection(conn);
+
+    /* Stop the test server */
     mg_stop(ctx);
 }
 
@@ -583,7 +614,7 @@ static int alloc_printf(char **buf, size_t size, char *fmt, ...) {
     va_start(ap, fmt);
     ret = alloc_vprintf(buf, size, fmt, ap);
     va_end(ap);
-    return ret:
+    return ret;
 }
 
 static void test_mg_upload(void) {
@@ -595,7 +626,7 @@ static void test_mg_upload(void) {
     int file2_len;
 #endif
     char *file_data, *post_data;
-    int file_len post_data_len;
+    int file_len, post_data_len;
 
     ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
 
@@ -1070,6 +1101,7 @@ int __cdecl main(void) {
     }
 
     /* tests with network access */
+    init_CALLBACKS();
     test_mg_download(0);
 #ifndef NO_SSL
     test_mg_download(1);

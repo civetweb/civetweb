@@ -12,13 +12,33 @@
   </style>
 </head>
 <body>
-
   <script type="text/javascript"><![CDATA[
 
     var connection;
     var websock_text_field;
     var hand_hour;
     var hand_min;
+
+    function queryStringElem(name, idx) {
+      if (typeof(queryStringElem_Table) != "object") {
+        queryStringElem_Table = {};
+        window.location.search.slice(1).split('&').forEach(
+          function(keyValuePair) {
+            keyValuePair = keyValuePair.split('=');
+            if (typeof(queryStringElem_Table[keyValuePair[0]]) != "object") {
+              queryStringElem_Table[keyValuePair[0]] = [];
+            }
+            var idx = queryStringElem_Table[keyValuePair[0]].length+1;
+            queryStringElem_Table[keyValuePair[0]][idx] = keyValuePair[1] || '';
+          }
+        );
+      }
+      idx = idx || 1;
+      if (queryStringElem_Table[name]) {
+        return queryStringElem_Table[name][idx];
+      }
+      return null;
+    }
 
     function webSockKeepAlive() {
       if (keepAlive) {
@@ -35,8 +55,16 @@
       hand_min = document.getElementById('hand_min');
       hand_hour = document.getElementById('hand_hour');
 
+      var ka = queryStringElem("keepAlive");
+      if (ka) {
+        ka = ka.toLowerCase();
+        use_keepAlive = (ka!="false") && (ka!="f") && (ka!="no") && (ka!="n") && (ka!=0);
+      } else {
+        use_keepAlive = true;
+      }
+
       connection.onopen = function () {
-        keepAlive = true;
+        keepAlive = use_keepAlive;
         webSockKeepAlive();
       };
 

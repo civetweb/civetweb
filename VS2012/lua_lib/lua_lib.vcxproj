@@ -85,7 +85,7 @@
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>LUA_COMPAT_ALL;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.3\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -99,7 +99,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>LUA_COMPAT_ALL;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.3\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -115,7 +115,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>LUA_COMPAT_ALL;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.3\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -133,7 +133,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>LUA_COMPAT_ALL;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.3\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -144,38 +144,38 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\third_party\lfs.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lapi.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lauxlib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lbaselib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lbitlib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lcode.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lcorolib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lctype.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\ldblib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\ldebug.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\ldo.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\ldump.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lfunc.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lgc.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\linit.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\liolib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\llex.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lmathlib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lmem.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\loadlib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lobject.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lopcodes.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\loslib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lparser.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lstate.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lstring.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lstrlib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\ltable.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\ltablib.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\ltm.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lundump.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lvm.c" />
-    <ClCompile Include="..\..\src\third_party\lua-5.2.3\src\lzio.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lapi.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lauxlib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lbaselib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lbitlib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lcode.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lcorolib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lctype.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\ldblib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\ldebug.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\ldo.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\ldump.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lfunc.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lgc.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\linit.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\liolib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\llex.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lmathlib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lmem.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\loadlib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lobject.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lopcodes.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\loslib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lparser.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lstate.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lstring.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lstrlib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\ltable.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\ltablib.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\ltm.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lundump.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lvm.c" />
+    <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lzio.c" />
     <ClCompile Include="..\..\src\third_party\lsqlite3.c" />
     <ClCompile Include="..\..\src\third_party\LuaXML_lib.c" />
     <ClCompile Include="..\..\src\third_party\sqlite3.c" />

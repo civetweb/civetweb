@@ -62,7 +62,7 @@ endif
 # only set main compile options if none were chosen
 CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400
 
-LIBS = -lpthread -lm
+LIBS = -lpthread -lm -lrt
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG_ENABLED

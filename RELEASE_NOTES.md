@@ -5,6 +5,7 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- Update Lua to 5.2.4
 - Fix build for MinGW-x64 and TDM-GCC
 - Update SQLite to 3.8.8.3
 - Fix CGI variables SCRIPT_NAME and PATH_TRANSLATED
