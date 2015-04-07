@@ -1251,6 +1251,12 @@ static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
     }
 }
 
+/* difftime for timespec */
+static double mg_difftimespec(const struct timespec *ts_now, const struct timespec *ts_before)
+{
+    return (double)(ts_now->tv_nsec - ts_before->tv_nsec)*1.0E-9 + (double)(ts_now->tv_sec - ts_before->tv_sec);
+}
+
 /* Print error message to the opened error log stream. */
 void mg_cry(struct mg_connection *conn, const char *fmt, ...)
 {
@@ -2525,7 +2531,7 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
         if (timeout>0) {
             clock_gettime(CLOCK_MONOTONIC, &now);
         }
-    } while ((timeout<=0) || (difftime(now.tv_sec,start.tv_sec)<=timeout));
+    } while ((timeout<=0) || (mg_difftimespec(&now,&start)<=timeout));
 
     return conn->ctx->stop_flag ? -1 : nread;
 }
@@ -4379,7 +4385,7 @@ static int read_request(FILE *fp, struct mg_connection *conn,
     while ((conn->ctx->stop_flag == 0) &&
            (*nread < bufsiz) &&
            (request_len == 0) &&
-           ((difftime(last_action_time.tv_sec, conn->req_time.tv_sec) <= request_timout) || (request_timout < 0)) &&
+           ((mg_difftimespec(&last_action_time, &(conn->req_time)) <= request_timout) || (request_timout < 0)) &&
            ((n = pull(fp, conn, buf + *nread, bufsiz - *nread)) > 0)
           ) {
         *nread += n;
