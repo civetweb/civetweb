@@ -78,6 +78,12 @@ struct mg_request_info {
     } http_headers[64];         /* Maximum 64 headers */
 };
 
+/* Linked-List response header */
+struct mg_response_header {
+   char *name;
+   char *value;
+   struct mg_response_header *next;
+};
 
 /* This structure needs to be passed to mg_start(), to let civetweb know
    which callbacks to invoke. For a detailed description, see
@@ -343,6 +349,22 @@ CIVETWEB_API int mg_modify_passwords_file(const char *passwords_file_name,
 /* Return information associated with the request. */
 CIVETWEB_API struct mg_request_info *mg_get_request_info(struct mg_connection *);
 
+/* Returns list of headers */
+CIVETWEB_API struct mg_response_header *mg_construct_response_headers(const char **headers);
+
+/* frees memory allocated in mg_construct_headers*/
+CIVETWEB_API void mg_free_response_headers(struct mg_response_header **headers);
+
+/* Constructs a HTTP Response, return param must be free'd by mg_free_response_msg
+ *
+   Return:
+     NULL if failed to construct response otherwise a pointer to a c string containing
+     the formatted response */
+CIVETWEB_API void *mg_construct_response_msg(struct mg_connection * conn, const char *http_version, int status_code,
+                          const char *status_msg, struct mg_response_header *, const void *buf, size_t len, size_t *len_out);
+
+/* Free buffer allocated by mg_construct_response_msg */
+CIVETWEB_API void mg_free_response_msg(void **dst);
 
 /* Send data to the client.
    Return:
