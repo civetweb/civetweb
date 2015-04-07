@@ -2953,15 +2953,20 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
                           int * is_put_or_delete_request /* out: put/delete a file? */
                           )
 {
+    const char *uri = conn->request_info.uri;
+    const char *root = conn->ctx->config[DOCUMENT_ROOT];
+
+#if !defined(NO_FILES)
+    const char *rewrite;
     struct vec a, b;
-    const char *rewrite,
-               *uri = conn->request_info.uri,
-               *root = conn->ctx->config[DOCUMENT_ROOT];
     char *p;
     int match_len;
     char gz_path[PATH_MAX];
     char const* accept_encoding;
+#endif
 
+    memset(filep, 0, sizeof(*filep));
+    *filename = 0;
     *is_script_ressource = 0;
     *is_put_or_delete_request = is_put_or_delete_method(conn);
 
@@ -2974,16 +2979,20 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
     *is_websocket_request = 0;
 #endif
 
+#if !defined(NO_FILES)
     /* Note that root == NULL is a regular use case here. This occurs,
        if all requests are handled by callbacks, so the WEBSOCKET_ROOT
        config is not required. */
+    if (root == NULL) {
+        /* all file related outputs have already been set to 0, just return */
+        return;
+    }
 
     /* Using buf_len - 1 because memmove() for PATH_INFO may shift part
        of the path one byte on the right.
        If document_root is NULL, leave the file empty. */
     mg_snprintf(conn, filename, filename_buf_len - 1, "%s%s",
-                root == NULL ? "" : root,
-                root == NULL ? "" : uri);
+                root, uri);
 
     rewrite = conn->ctx->config[REWRITE];
     while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
@@ -3071,6 +3080,7 @@ static void interpret_uri(struct mg_connection *conn,    /* in: request */
             }
         }
     }
+#endif
 }
 
 /* Check whether full request is buffered. Return:
