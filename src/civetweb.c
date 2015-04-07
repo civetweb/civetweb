@@ -6220,34 +6220,41 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
     }
 }
 
-static int use_request_handler(struct mg_connection *conn)
+static int get_request_handler(struct mg_connection *conn, mg_request_handler *handler, void **cbdata)
 {
     struct mg_request_info *request_info = mg_get_request_info(conn);
     const char *uri = request_info->uri;
     size_t urilen = strlen(uri);
-    struct mg_request_handler_info *tmp_rh = conn->ctx->request_handlers;
+    struct mg_request_handler_info *tmp_rh;
 
-    for (; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
-
-        /* first try for an exact match */
+    /* first try for an exact match */
+    for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
         if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
-            return tmp_rh->handler(conn, tmp_rh->cbdata);
+            *handler = tmp_rh->handler;
+            *cbdata = tmp_rh->cbdata;
+            return 1;
         }
+    }
 
-        /* next try for a partial match */
-        /* we will accept uri/something */
+    /* next try for a partial match, we will accept uri/something */
+    for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
         if (tmp_rh->uri_len < urilen
             && uri[tmp_rh->uri_len] == '/'
             && memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0) {
 
-            return tmp_rh->handler(conn, tmp_rh->cbdata);
+            *handler = tmp_rh->handler;
+            *cbdata = tmp_rh->cbdata;
+            return 1;
         }
+    }
 
-        /* try for pattern match */
+    /* finally try for pattern match */
+    for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
         if (match_prefix(tmp_rh->uri, (int)tmp_rh->uri_len, uri) > 0) {
-           return tmp_rh->handler(conn, tmp_rh->cbdata);
+            *handler = tmp_rh->handler;
+            *cbdata = tmp_rh->cbdata;
+            return 1;
         }
-
     }
 
     return 0; /* none found */
@@ -6265,6 +6272,8 @@ static void handle_request(struct mg_connection *conn)
     int i;
     struct file file = STRUCT_FILE_INITIALIZER;
     time_t curtime = time(NULL);
+    mg_request_handler callback_handler = NULL;
+    void * callback_data = NULL;
 #if !defined(NO_FILES)
     char date[64];
 #endif
@@ -6329,8 +6338,16 @@ static void handle_request(struct mg_connection *conn)
        is processed here */
 
     /* 5. interpret the url to find out how the request must be handled */
+    /* 5.1. file system based requests */
     path[0] = '\0';
     interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
+
+    if (!is_websocket_request) {
+        /* 5.2. url handler based requests */
+        if (get_request_handler(conn, &callback_handler, &callback_data)) {
+            is_script_resource = 1;
+        }
+    }
 
     /* 6. authorization check */
     if (is_put_or_delete_request && !is_script_resource) {
@@ -6375,7 +6392,7 @@ static void handle_request(struct mg_connection *conn)
 #endif
 
     /* 8. check if there are request handlers for this path */
-    if (conn->ctx->request_handlers != NULL && use_request_handler(conn)) {
+    if (callback_handler != NULL && callback_handler(conn, callback_data)) {
         /* Do nothing, callback has served the request */
         discard_unread_request_data(conn);
         return;
