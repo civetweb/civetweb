@@ -6185,7 +6185,7 @@ static void mg_set_request_handler_type(struct mg_context *ctx, const char *uri,
                 /* change this entry */
                 tmp_rh->handler = handler;
                 tmp_rh->cbdata = cbdata;
-                tmp_rh->is_websocket_handler = is_websocket_handler;                
+                tmp_rh->is_websocket_handler = is_websocket_handler;
             } else {
                 /* remove this entry */
                 if (lastref != NULL)
@@ -6244,7 +6244,7 @@ static int get_request_handler(struct mg_connection *conn, int is_websocket_requ
     const char *uri = request_info->uri;
     size_t urilen = strlen(uri);
     struct mg_request_handler_info *tmp_rh;
-    
+
     /* first try for an exact match */
     for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
         if (tmp_rh->is_websocket_handler == is_websocket_request) {
@@ -6364,18 +6364,18 @@ static void handle_request(struct mg_connection *conn)
        is processed here */
 
     /* 5. interpret the url to find out how the request must be handled */
-    /* 5.1. first test, if the request targets the regular http(s):// protocol namespace 
+    /* 5.1. first test, if the request targets the regular http(s):// protocol namespace
             or the websocket ws(s):// protocol namespace. */
     is_websocket_request = is_websocket_protocol(conn);
 
     /* 5.2. check if the request will be handled by a callback */
     if (get_request_handler(conn, is_websocket_request, &callback_handler, &callback_data)) {
-        /* 5.2.1. A callback will handle this request. All requests handled by a callback 
+        /* 5.2.1. A callback will handle this request. All requests handled by a callback
                   have to be considered as requests to a script resource. */
         is_script_resource = 1;
         is_put_or_delete_request = is_put_or_delete_method(conn);
     } else {
-        /* 5.2.2. No callback is responsible for this request. The URI addresses a file 
+        /* 5.2.2. No callback is responsible for this request. The URI addresses a file
                   based resource (static content or Lua/cgi scripts in the file system). */
         interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
     }
