@@ -6381,6 +6381,7 @@ static void handle_request(struct mg_connection *conn)
     }
 
     /* 6. authorization check */
+    auth_check:
     if (is_put_or_delete_request && !is_script_resource) {
         /* 6.1. this request is a PUT/DELETE to a real file */
         /* 6.1.1. thus, the server must have real files */
@@ -6425,6 +6426,12 @@ static void handle_request(struct mg_connection *conn)
             /* The last version did handle this as a file request, but
                since a file request is not always a script resource,
                the authorization check might be different */
+            interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
+            callback_handler = NULL;
+
+            /* TODO: for the moment, a goto is simpler than some curious loop. */
+            /* The situation "callback does not handle the request" needs to be reconsidered anyway. */
+            goto auth_check;
         }
     }
 
