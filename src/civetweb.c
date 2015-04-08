@@ -6414,19 +6414,28 @@ static void handle_request(struct mg_connection *conn)
 
     /* request is authorized or does not need authorization */
 
-    /* 7. handle websocket requests */
+    /* 7. check if there are request handlers for this uri */
+    if (callback_handler != NULL) {
+        if (callback_handler(conn, callback_data)) {
+            /* Do nothing, callback has served the request */
+            discard_unread_request_data(conn);
+            return;
+        } else {
+            /* TODO: what if the handler did NOT handle the request */
+            /* The last version did handle this as a file request, but
+               since a file request is not always a script resource,
+               the authorization check might be different */
+        }
+    }
+
+    /* 8. handle websocket requests */
 #if defined(USE_WEBSOCKET)
     if (is_websocket_request) {
         handle_websocket_request(conn, path, is_script_resource);
         return;
-    }
+    } else
 #endif
-
-    /* 8. check if there are request handlers for this path */
-    if (callback_handler != NULL && callback_handler(conn, callback_data)) {
-        /* Do nothing, callback has served the request */
-        discard_unread_request_data(conn);
-        return;
+    {
     }
 
 #if defined(NO_FILES)
