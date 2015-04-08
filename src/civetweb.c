@@ -7484,7 +7484,7 @@ struct mg_connection *mg_connect_websocket_client(const char *host, int port, in
         DEBUG_TRACE("%s", "Websocket client connect thread could not be started\r\n");
     }
 #else
-    // Appease "unused parameter" warnings
+    /* Appease "unused parameter" warnings */
     (void)host;
     (void)port;
     (void)use_ssl;
