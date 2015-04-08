@@ -1239,7 +1239,7 @@ static void sockaddr_to_string(char *buf, size_t len,
     /* Only Windows Vista (and newer) have inet_ntop() */
     mg_strlcpy(buf, inet_ntoa(usa->sin.sin_addr), len);
 #else
-    inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, len);
+    inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, (socklen_t)len);
 #endif
 }
 
@@ -2487,7 +2487,7 @@ static int64_t push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf, int64_t le
                 if (ferror(fp))
                     n = -1;
             } else {
-                n = send(sock, buf + sent, (size_t) k, MSG_NOSIGNAL);
+                n = (int)send(sock, buf + sent, (size_t) k, MSG_NOSIGNAL);
             }
 
         if (n <= 0)
@@ -2520,13 +2520,13 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
             CGI pipe, fread() may block until IO buffer is filled up. We cannot
             afford to block and must pass all read bytes immediately to the
             client. */
-            nread = read(fileno(fp), buf, (size_t) len);
+            nread = (int)read(fileno(fp), buf, (size_t) len);
 #ifndef NO_SSL
         } else if (conn->ssl != NULL) {
             nread = SSL_read(conn->ssl, buf, len);
 #endif
         } else {
-            nread = recv(conn->client.sock, buf, (size_t) len, 0);
+            nread = (int)recv(conn->client.sock, buf, (size_t) len, 0);
         }
         if (conn->ctx->stop_flag) {
             return -1;
