@@ -90,6 +90,8 @@
 #include <sys/time.h>
 #include <mach/clock.h>
 #include <mach/mach.h>
+#include <mach/mach_time.h>
+#include <assert.h>
 
 //clock_gettime is not implemented on OSX
 int clock_gettime(int clk_id, struct timespec* t) {
@@ -106,13 +108,17 @@ int clock_gettime(int clk_id, struct timespec* t) {
     } else if (clk_id == CLOCK_MONOTONIC) {
 
         static uint64_t start_time = 0;
-        static mach_timebase_info_data_t timebase_ifo = {0};
+        static mach_timebase_info_data_t timebase_ifo = {0, 0};
 
         uint64_t now = mach_absolute_time();
 
         if (start_time == 0) {
             kern_return_t mach_status = mach_timebase_info(&timebase_ifo);
+#if defined(DEBUG)
             assert(mach_status == KERN_SUCCESS);
+#else
+            (void)mach_status; // appease "unused variable" warning for release builds
+#endif
             start_time = now;
         }
 
@@ -1234,7 +1240,7 @@ static void sockaddr_to_string(char *buf, size_t len,
     /* Only Windows Vista (and newer) have inet_ntop() */
     mg_strlcpy(buf, inet_ntoa(usa->sin.sin_addr), len);
 #else
-    inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, len);
+    inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, (socklen_t)len);
 #endif
 }
 
@@ -2482,7 +2488,7 @@ static int64_t push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf, int64_t le
                 if (ferror(fp))
                     n = -1;
             } else {
-                n = send(sock, buf + sent, (size_t) k, MSG_NOSIGNAL);
+                n = (int)send(sock, buf + sent, (size_t) k, MSG_NOSIGNAL);
             }
 
         if (n <= 0)
@@ -2502,6 +2508,9 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
     double timeout = -1;
     struct timespec start, now;
 
+    memset(&start, 0, sizeof(start));
+    memset(&now, 0, sizeof(now));
+
     if (conn->ctx->config[REQUEST_TIMEOUT]) {
         timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
     }
@@ -2515,13 +2524,13 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
             CGI pipe, fread() may block until IO buffer is filled up. We cannot
             afford to block and must pass all read bytes immediately to the
             client. */
-            nread = read(fileno(fp), buf, (size_t) len);
+            nread = (int)read(fileno(fp), buf, (size_t) len);
 #ifndef NO_SSL
         } else if (conn->ssl != NULL) {
             nread = SSL_read(conn->ssl, buf, len);
 #endif
         } else {
-            nread = recv(conn->client.sock, buf, (size_t) len, 0);
+            nread = (int)recv(conn->client.sock, buf, (size_t) len, 0);
         }
         if (conn->ctx->stop_flag) {
             return -1;
@@ -4383,7 +4392,7 @@ static int read_request(FILE *fp, struct mg_connection *conn,
                         char *buf, int bufsiz, int *nread)
 {
     int request_len, n = 0;
-    struct timespec last_action_time = {0};
+    struct timespec last_action_time = {0, 0};
     double request_timout;
 
     if (conn->ctx->config[REQUEST_TIMEOUT]) {
@@ -7474,6 +7483,18 @@ struct mg_connection *mg_connect_websocket_client(const char *host, int port, in
         conn = NULL;
         DEBUG_TRACE("%s", "Websocket client connect thread could not be started\r\n");
     }
+#else
+    // Appease "unused parameter" warnings
+    (void)host;
+    (void)port;
+    (void)use_ssl;
+    (void)error_buffer;
+    (void)error_buffer_size;
+    (void)path;
+    (void)origin;
+    (void)user_data;
+    (void)data_func;
+    (void)close_func;
 #endif
 
     return conn;
