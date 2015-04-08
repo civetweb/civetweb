@@ -114,7 +114,11 @@ int clock_gettime(int clk_id, struct timespec* t) {
 
         if (start_time == 0) {
             kern_return_t mach_status = mach_timebase_info(&timebase_ifo);
+#if defined(DEBUG)
             assert(mach_status == KERN_SUCCESS);
+#else
+            (void)mach_status; // appease "unused variable" warning for release builds
+#endif
             start_time = now;
         }
 
