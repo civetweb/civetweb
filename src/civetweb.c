@@ -2507,6 +2507,9 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
     double timeout = -1;
     struct timespec start, now;
 
+    memset(&start, 0, sizeof(start));
+    memset(&now, 0, sizeof(now));
+
     if (conn->ctx->config[REQUEST_TIMEOUT]) {
         timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
     }
