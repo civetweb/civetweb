@@ -816,6 +816,7 @@ struct mg_request_handler_info {
     char *uri;
     size_t uri_len;
     mg_request_handler handler;
+    int is_websocket_handler;
 
     void *cbdata;
     struct mg_request_handler_info *next;
@@ -2533,8 +2534,8 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
         }
     } while ((timeout<=0) || (mg_difftimespec(&now,&start)<=timeout));
 
-    /* Timeout occured. Return the amount of data received up to now. */
-    return nread;
+    /* Timeout occured, but no data available. */
+    return -1;
 }
 
 static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
@@ -6167,7 +6168,7 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 }
 
 
-void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata)
+static void mg_set_request_handler_type(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata, int is_websocket_handler)
 {
     struct mg_request_handler_info *tmp_rh, *lastref = NULL;
     size_t urilen = strlen(uri);
@@ -6184,6 +6185,7 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
                 /* change this entry */
                 tmp_rh->handler = handler;
                 tmp_rh->cbdata = cbdata;
+                tmp_rh->is_websocket_handler = is_websocket_handler;                
             } else {
                 /* remove this entry */
                 if (lastref != NULL)
@@ -6220,6 +6222,7 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
     tmp_rh->uri_len = urilen;
     tmp_rh->handler = handler;
     tmp_rh->cbdata = cbdata;
+    tmp_rh->is_websocket_handler = is_websocket_handler;
 
     if (lastref == NULL) {
         tmp_rh->next = ctx->request_handlers;
@@ -6230,40 +6233,51 @@ void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_
     }
 }
 
-static int get_request_handler(struct mg_connection *conn, mg_request_handler *handler, void **cbdata)
+void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata)
+{
+    mg_set_request_handler_type(ctx, uri, handler, cbdata, 0);
+}
+
+static int get_request_handler(struct mg_connection *conn, int is_websocket_request, mg_request_handler *handler, void **cbdata)
 {
     struct mg_request_info *request_info = mg_get_request_info(conn);
     const char *uri = request_info->uri;
     size_t urilen = strlen(uri);
     struct mg_request_handler_info *tmp_rh;
-
+    
     /* first try for an exact match */
     for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
-        if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
-            *handler = tmp_rh->handler;
-            *cbdata = tmp_rh->cbdata;
-            return 1;
+        if (tmp_rh->is_websocket_handler == is_websocket_request) {
+            if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
+                *handler = tmp_rh->handler;
+                *cbdata = tmp_rh->cbdata;
+                return 1;
+            }
         }
     }
 
     /* next try for a partial match, we will accept uri/something */
     for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
-        if (tmp_rh->uri_len < urilen
-            && uri[tmp_rh->uri_len] == '/'
-            && memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0) {
+        if (tmp_rh->is_websocket_handler == is_websocket_request) {
+            if (tmp_rh->uri_len < urilen
+                && uri[tmp_rh->uri_len] == '/'
+                && memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0) {
 
-            *handler = tmp_rh->handler;
-            *cbdata = tmp_rh->cbdata;
-            return 1;
+                *handler = tmp_rh->handler;
+                *cbdata = tmp_rh->cbdata;
+                return 1;
+            }
         }
     }
 
     /* finally try for pattern match */
     for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
-        if (match_prefix(tmp_rh->uri, (int)tmp_rh->uri_len, uri) > 0) {
-            *handler = tmp_rh->handler;
-            *cbdata = tmp_rh->cbdata;
-            return 1;
+        if (tmp_rh->is_websocket_handler == is_websocket_request) {
+            if (match_prefix(tmp_rh->uri, (int)tmp_rh->uri_len, uri) > 0) {
+                *handler = tmp_rh->handler;
+                *cbdata = tmp_rh->cbdata;
+                return 1;
+            }
         }
     }
 
@@ -6287,6 +6301,8 @@ static void handle_request(struct mg_connection *conn)
 #if !defined(NO_FILES)
     char date[64];
 #endif
+
+    path[0] = 0;
 
     /* 1. get the request url */
     /* 1.1. split into url and query string */
@@ -6348,15 +6364,20 @@ static void handle_request(struct mg_connection *conn)
        is processed here */
 
     /* 5. interpret the url to find out how the request must be handled */
-    /* 5.1. file system based requests */
-    path[0] = '\0';
-    interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
+    /* 5.1. first test, if the request targets the regular http(s):// protocol namespace 
+            or the websocket ws(s):// protocol namespace. */
+    is_websocket_request = is_websocket_protocol(conn);
 
-    if (!is_websocket_request) {
-        /* 5.2. url handler based requests */
-        if (get_request_handler(conn, &callback_handler, &callback_data)) {
-            is_script_resource = 1;
-        }
+    /* 5.2. check if the request will be handled by a callback */
+    if (get_request_handler(conn, is_websocket_request, &callback_handler, &callback_data)) {
+        /* 5.2.1. A callback will handle this request. All requests handled by a callback 
+                  have to be considered as requests to a script resource. */
+        is_script_resource = 1;
+        is_put_or_delete_request = is_put_or_delete_method(conn);
+    } else {
+        /* 5.2.2. No callback is responsible for this request. The URI addresses a file 
+                  based resource (static content or Lua/cgi scripts in the file system). */
+        interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
     }
 
     /* 6. authorization check */
