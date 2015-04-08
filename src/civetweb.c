@@ -108,7 +108,7 @@ int clock_gettime(int clk_id, struct timespec* t) {
     } else if (clk_id == CLOCK_MONOTONIC) {
 
         static uint64_t start_time = 0;
-        static mach_timebase_info_data_t timebase_ifo = {0};
+        static mach_timebase_info_data_t timebase_ifo = {0, 0};
 
         uint64_t now = mach_absolute_time();
 
@@ -4388,7 +4388,7 @@ static int read_request(FILE *fp, struct mg_connection *conn,
                         char *buf, int bufsiz, int *nread)
 {
     int request_len, n = 0;
-    struct timespec last_action_time = {0};
+    struct timespec last_action_time = {0, 0};
     double request_timout;
 
     if (conn->ctx->config[REQUEST_TIMEOUT]) {
