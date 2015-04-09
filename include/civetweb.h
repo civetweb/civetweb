@@ -246,6 +246,7 @@ typedef int (* mg_request_handler)(struct mg_connection *conn, void *cbdata);
 /* mg_set_request_handler
 
    Sets or removes a URI mapping for a request handler.
+   This function uses mg_lock_context internally.
 
    URI's are ordered and prefixed URI's are supported. For example,
    consider two URIs: /a/b and /a
@@ -255,10 +256,12 @@ typedef int (* mg_request_handler)(struct mg_connection *conn, void *cbdata);
 
    Parameters:
       ctx: server context
-      uri: the URI to configure
+      uri: the URI (exact or pattern) for the handler
       handler: the callback handler to use when the URI is requested.
-               If NULL, the URI will be removed.
-      cbdata: the callback data to give to the handler when it s requested. */
+               If NULL, an already registered handler for this URI will be removed.
+               The URI used to remove a handler must match exactly the one used to
+               register it (not only a pattern match).
+      cbdata: the callback data to give to the handler when it is called. */
 CIVETWEB_API void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata);
 
 
@@ -352,10 +355,10 @@ CIVETWEB_API struct mg_request_info *mg_get_request_info(struct mg_connection *)
 CIVETWEB_API int mg_write(struct mg_connection *, const void *buf, size_t len);
 
 
-/* Send data to a websocket client wrapped in a websocket frame.  Uses mg_lock
-   to ensure that the transmission is not interrupted, i.e., when the
-   application is proactively communicating and responding to a request
-   simultaneously.
+/* Send data to a websocket client wrapped in a websocket frame.  Uses
+   mg_lock_connection to ensure that the transmission is not interrupted,
+   i.e., when the application is proactively communicating and responding to
+   a request simultaneously.
 
    Send data to a websocket client wrapped in a websocket frame.
    This function is available when civetweb is compiled with -DUSE_WEBSOCKET
@@ -381,7 +384,7 @@ CIVETWEB_API void mg_unlock_connection(struct mg_connection* conn);
 #define mg_unlock mg_unlock_connection
 #endif
 
-/* Lock server context.  This lock may be used to protect ressources
+/* Lock server context.  This lock may be used to protect resources
    that are shared between different connection/worker threads. */
 CIVETWEB_API void mg_lock_context(struct mg_context* ctx);
 CIVETWEB_API void mg_unlock_context(struct mg_context* ctx);
