@@ -6179,67 +6179,60 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 
 static void mg_set_request_handler_type(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata, int is_websocket_handler)
 {
-    struct mg_request_handler_info *tmp_rh, *lastref = NULL;
+    struct mg_request_handler_info *tmp_rh, **lastref;
     size_t urilen = strlen(uri);
 
-    /* first see it the uri exists */
-    for (tmp_rh = ctx->request_handlers;
-         tmp_rh != NULL && 0!=strcmp(uri, tmp_rh->uri);
-         lastref = tmp_rh, tmp_rh = tmp_rh->next) {
-        /* first try for an exact match */
-        if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
-            /* already there... */
+    mg_lock_context(ctx);
 
-            if (handler != NULL) {
-                /* change this entry */
-                tmp_rh->handler = handler;
-                tmp_rh->cbdata = cbdata;
-                tmp_rh->is_websocket_handler = is_websocket_handler;
-            } else {
-                /* remove this entry */
-                if (lastref != NULL)
-                    lastref->next = tmp_rh->next;
-                else
-                    ctx->request_handlers = tmp_rh->next;
-                mg_free(tmp_rh->uri);
-                mg_free(tmp_rh);
+    /* first try to find an existing handler */
+    lastref = &(ctx->request_handlers);
+    for (tmp_rh = ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
+        if (tmp_rh->is_websocket_handler == is_websocket_handler) {
+            if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
+                if (handler != NULL) {
+                    /* update existing handler */
+                    tmp_rh->handler = handler;
+                    tmp_rh->cbdata = cbdata;
+                } else {
+                    /* remove existing handler */
+                    *lastref = tmp_rh->next;
+                    mg_free(tmp_rh->uri);
+                    mg_free(tmp_rh);
+                }
+                mg_unlock_context(ctx);
+                return;
             }
-            return;
         }
-
-        /* next try for a partial match, we will accept uri/something */
-        if (tmp_rh->uri_len < urilen
-            && uri[tmp_rh->uri_len] == '/'
-            && memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0) {
-            /* if there is a partical match this new entry MUST go BEFORE
-               the current position otherwise it will never be matched. */
-            break;
-        }
+        lastref = &(tmp_rh->next);
     }
 
     if (handler == NULL) {
-        /* no handler to set, this was a remove request */
+        /* no handler to set, this was a remove request to a non-existing handler */
+        mg_unlock_context(ctx);
         return;
     }
 
     tmp_rh = (struct mg_request_handler_info *)mg_malloc(sizeof(struct mg_request_handler_info));
     if (tmp_rh == NULL) {
+        mg_unlock_context(ctx);
         mg_cry(fc(ctx), "%s", "Cannot create new request handler struct, OOM");
         return;
     }
     tmp_rh->uri = mg_strdup(uri);
+    if (!tmp_rh->uri) {
+        mg_unlock_context(ctx);
+        mg_free(tmp_rh);
+        mg_cry(fc(ctx), "%s", "Cannot create new request handler struct, OOM");
+        return;
+    }
     tmp_rh->uri_len = urilen;
     tmp_rh->handler = handler;
     tmp_rh->cbdata = cbdata;
     tmp_rh->is_websocket_handler = is_websocket_handler;
+    tmp_rh->next = NULL;
 
-    if (lastref == NULL) {
-        tmp_rh->next = ctx->request_handlers;
-        ctx->request_handlers = tmp_rh;
-    } else {
-        tmp_rh->next = lastref->next;
-        lastref->next = tmp_rh;
-    }
+    *lastref = tmp_rh;
+    mg_unlock_context(ctx);
 }
 
 void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata)
@@ -6254,12 +6247,15 @@ static int get_request_handler(struct mg_connection *conn, int is_websocket_requ
     size_t urilen = strlen(uri);
     struct mg_request_handler_info *tmp_rh;
 
+    mg_lock_context(conn->ctx);
+
     /* first try for an exact match */
     for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
         if (tmp_rh->is_websocket_handler == is_websocket_request) {
             if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
                 *handler = tmp_rh->handler;
                 *cbdata = tmp_rh->cbdata;
+                mg_unlock_context(conn->ctx);
                 return 1;
             }
         }
@@ -6274,6 +6270,7 @@ static int get_request_handler(struct mg_connection *conn, int is_websocket_requ
 
                 *handler = tmp_rh->handler;
                 *cbdata = tmp_rh->cbdata;
+                mg_unlock_context(conn->ctx);
                 return 1;
             }
         }
@@ -6285,11 +6282,13 @@ static int get_request_handler(struct mg_connection *conn, int is_websocket_requ
             if (match_prefix(tmp_rh->uri, (int)tmp_rh->uri_len, uri) > 0) {
                 *handler = tmp_rh->handler;
                 *cbdata = tmp_rh->cbdata;
+                mg_unlock_context(conn->ctx);
                 return 1;
             }
         }
     }
 
+    mg_unlock_context(conn->ctx);
     return 0; /* none found */
 }
 
