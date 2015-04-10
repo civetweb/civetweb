@@ -2648,6 +2648,11 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
     if (conn->is_chunked)
     {
+        int i = 0;
+        char buf[64];
+        char *end = 0;
+        long chunkSize = strtol(buf,&end,16);
+
         if (conn->content_len <= 0)
         {
             conn->content_len = 0;
@@ -2657,8 +2662,6 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
             return mg_read_inner(conn, buf,len);
         }
 
-        int i = 0;
-        char buf[64];
         while (1)
         {
             int c = mg_getc(conn);
@@ -2681,8 +2684,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
                 break;
             }
         }
-        char *end = 0;
-        long chunkSize = strtol(buf,&end,16);
+
         if (end != buf+(i-1))
         {
             return -1;
