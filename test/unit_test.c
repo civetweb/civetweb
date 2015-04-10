@@ -881,25 +881,48 @@ static void test_request_replies(void) {
 
 static int request_test_handler(struct mg_connection *conn, void *cbdata)
 {
-    ASSERT(0);
+    ASSERT(cbdata == (void*)7);
+    return 1;
 }
 
 
 static void test_request_handlers(void) {
-
-    /* TODO */
+    char ebuf[100];
     struct mg_context *ctx;
+    struct mg_connection *conn;
     char uri[64];
     int i;
+    const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
     
     ctx = mg_start(NULL, NULL, OPTIONS);
     ASSERT(ctx != NULL);
 
     for (i=0;i<1000;i++) {
-        sprintf(uri, "U%u", i);
+        sprintf(uri, "/U%u", i);
         mg_set_request_handler(ctx, uri, request_test_handler, NULL);
     }
-
+    for (i=500;i<800;i++) {
+        sprintf(uri, "/U%u", i);
+        mg_set_request_handler(ctx, uri, NULL, (void*)1);
+    }
+    for (i=600;i>=0;i--) {
+        sprintf(uri, "/U%u", i);
+        mg_set_request_handler(ctx, uri, NULL, (void*)2);
+    }
+    for (i=750;i<=1000;i++) {
+        sprintf(uri, "/U%u", i);
+        mg_set_request_handler(ctx, uri, NULL, (void*)3);
+    }
+    for (i=5;i<9;i++) {
+        sprintf(uri, "/U%u", i);
+        mg_set_request_handler(ctx, uri, request_test_handler, (void*)i);
+    }
+    
+    conn = mg_download("localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
+    ASSERT((conn) != NULL);
+    mg_sleep(1000);
+    mg_close_connection(conn);
+    
     mg_stop(ctx);
 
 }

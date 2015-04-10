@@ -7257,6 +7257,8 @@ void mg_close_connection(struct mg_connection *conn)
     struct mg_context * client_ctx = NULL;
     int i;
 
+    if (conn==NULL) return;
+
     if (conn->ctx->context_type == 2) {
         client_ctx = conn->ctx;
         /* client context: loops must end */
