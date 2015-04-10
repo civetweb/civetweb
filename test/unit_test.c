@@ -879,6 +879,31 @@ static void test_request_replies(void) {
 #endif
 }
 
+static int request_test_handler(struct mg_connection *conn, void *cbdata)
+{
+    ASSERT(0);
+}
+
+
+static void test_request_handlers(void) {
+
+    /* TODO */
+    struct mg_context *ctx;
+    char uri[64];
+    int i;
+    
+    ctx = mg_start(NULL, NULL, OPTIONS);
+    ASSERT(ctx != NULL);
+
+    for (i=0;i<1000;i++) {
+        sprintf(uri, "U%u", i);
+        mg_set_request_handler(ctx, uri, request_test_handler, NULL);
+    }
+
+    mg_stop(ctx);
+
+}
+
 static int api_callback(struct mg_connection *conn) {
     struct mg_request_info *ri = mg_get_request_info(conn);
     char post_data[100] = "";
@@ -1115,6 +1140,7 @@ int __cdecl main(void) {
     test_mg_upload();
     test_request_replies();
     test_api_calls();
+    test_request_handlers();
 
 #if defined(USE_LUA)
     test_lua();
