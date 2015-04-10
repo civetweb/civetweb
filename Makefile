@@ -62,7 +62,7 @@ endif
 # only set main compile options if none were chosen
 CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400
 
-LIBS = -lpthread -lm -lrt
+LIBS = -lpthread -lm
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG_ENABLED
@@ -119,7 +119,7 @@ MAIN_OBJECTS = $(addprefix $(BUILD_DIR)/, $(APP_SOURCES:.c=.o))
 LIB_OBJECTS = $(filter-out $(MAIN_OBJECTS), $(BUILD_OBJECTS))
 
 ifeq ($(TARGET_OS),LINUX)
-  LIBS += -ldl
+  LIBS += -lrt -ldl
   CAN_INSTALL = 1
 endif
 
