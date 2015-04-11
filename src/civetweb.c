@@ -883,6 +883,7 @@ struct mg_connection {
     int64_t num_bytes_sent;         /* Total bytes sent to client */
     int64_t content_len;            /* Content-Length header value */
     int64_t consumed_content;       /* How many bytes of content have been read */
+    int is_chunked;                 /* Transfer-encoding is chunked */
     char *buf;                      /* Buffer for received data */
     char *path_info;                /* PATH_INFO part of the URL */
     int must_close;                 /* 1 if connection must be closed */
@@ -2586,7 +2587,7 @@ static void discard_unread_request_data(struct mg_connection *conn)
     }
 }
 
-int mg_read(struct mg_connection *conn, void *buf, size_t len)
+int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 {
     int64_t n, buffered_len, nread;
     int64_t len64 = (int64_t)(len > INT_MAX ? INT_MAX : len); /* since the return value is int, we may not read more bytes */
@@ -2630,6 +2631,71 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
         }
     }
     return (int)nread;
+}
+
+static int mg_getc(struct mg_connection *conn)
+{
+  char c;
+  conn->content_len++;
+  if (mg_read_inner(conn, &c, 1) <= 0)
+  {
+      return EOF;
+  }
+  return (int)c;
+}
+
+int mg_read(struct mg_connection *conn, void *buf, size_t len)
+{
+    if (conn->is_chunked)
+    {
+        int i = 0;
+        char buf[64];
+        char *end = 0;
+        long chunkSize = strtol(buf,&end,16);
+
+        if (conn->content_len <= 0)
+        {
+            conn->content_len = 0;
+        }
+        if (conn->consumed_content < conn->content_len)
+        {
+            return mg_read_inner(conn, buf,len);
+        }
+
+        while (1)
+        {
+            int c = mg_getc(conn);
+            if (!(c == '\n' || c == '\r'))
+            {
+                buf[i++] = c;
+                break;
+            }
+        }
+        for (; i < (int)sizeof(buf); i++)
+        {
+            int c = mg_getc(conn);
+            if ( c == EOF )
+            {
+                return -1;
+            }
+            buf[i] = (char) c;
+            if (buf[i] == '\n' && buf[i-1] == '\r')
+            {
+                break;
+            }
+        }
+
+        if (end != buf+(i-1))
+        {
+            return -1;
+        }
+        if (chunkSize == 0)
+        {
+            return 0;
+        }
+        conn->content_len += chunkSize;
+    }
+    return mg_read_inner(conn,buf,len);
 }
 
 int mg_write(struct mg_connection *conn, const void *buf, size_t len)
@@ -4491,7 +4557,7 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp,
     expect = mg_get_header(conn, "Expect");
     assert(fp != NULL);
 
-    if (conn->content_len == -1) {
+    if (conn->content_len == -1 && !conn->is_chunked) {
         /* Content length is not specified by the client. */
         send_http_error(conn, 411, "%s",
             "Error: Client did not specify content length");
@@ -7074,6 +7140,7 @@ static void reset_per_request_attributes(struct mg_connection *conn)
     conn->path_info = NULL;
     conn->num_bytes_sent = conn->consumed_content = 0;
     conn->status_code = -1;
+    conn->is_chunked = 0;
     conn->must_close = conn->request_len = conn->throttle = 0;
     conn->request_info.content_length = -1;
     conn->data_len = 0;
@@ -7313,10 +7380,13 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *
             }
             /* Publish the content length back to the request info. */
             conn->request_info.content_length = conn->content_len;
+        } else if (( cl = get_header(&conn->request_info, "Transfer-encoding")) != NULL && strcmp(cl,"chunked") == 0) {
+            conn->is_chunked = 1;
         } else if (!mg_strcasecmp(conn->request_info.request_method, "POST") ||
                    !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
             /* POST or PUT request without content length set */
             conn->content_len = -1;
+            conn->content_len = 0;
         } else if (!mg_strncasecmp(conn->request_info.request_method, "HTTP/", 5)) {
             /* Response without content length set */
             conn->content_len = -1;
