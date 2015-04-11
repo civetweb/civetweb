@@ -1,10 +1,12 @@
 Release Notes v1.7 (Under Development)
 ===
-### Objectives: *Examples, documentation, additional API functions, rewritten handle_request method, bug fixes and updates*
+### Objectives: *Examples, documentation, additional API functions, chunked transfer support, rewritten handle_request method, bug fixes and updates*
 
 Changes
 -------
 
+- Add chunked transfer support
+- Update LuaFileSystem
 - Update Lua to 5.2.4
 - Fix build for MinGW-x64, TDM-GCC and clang
 - Update SQLite to 3.8.8.3

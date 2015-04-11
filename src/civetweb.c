@@ -2622,8 +2622,7 @@ int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
             buf = (char *) buf + buffered_len;
         }
 
-        /* We have returned all buffered data. Read new data from the remote
-           socket. */
+        /* We have returned all buffered data. Read new data from the remote socket. */
         if ((n = pull_all(NULL, conn, (char *) buf, (int)len64)) >= 0) {
             nread += n;
         } else {
@@ -2635,13 +2634,13 @@ int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 
 static int mg_getc(struct mg_connection *conn)
 {
-  char c;
-  conn->content_len++;
-  if (mg_read_inner(conn, &c, 1) <= 0)
-  {
-      return EOF;
-  }
-  return (int)c;
+    char c;
+    conn->content_len++;
+    if (mg_read_inner(conn, &c, 1) <= 0)
+    {
+        return EOF;
+    }
+    return (int)c;
 }
 
 int mg_read(struct mg_connection *conn, void *buf, size_t len)

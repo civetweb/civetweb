@@ -10,6 +10,7 @@
 * F-Secure Corporation
 * HariKamath Kamath
 * Jordan Shelley
+* Keith Kyzivat
 * Kimmo Mustonen
 * Morgan McGuire
 * No Face Press
