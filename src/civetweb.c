@@ -7387,7 +7387,6 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *
                    !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
             /* POST or PUT request without content length set */
             conn->content_len = -1;
-            conn->content_len = 0;
         } else if (!mg_strncasecmp(conn->request_info.request_method, "HTTP/", 5)) {
             /* Response without content length set */
             conn->content_len = -1;
