@@ -4,13 +4,11 @@
 #include <time.h>
 
 char * HOST = "127.0.0.1";
-unsigned short PORT = 80;
+unsigned short PORT = 8080;
 static const char * RESOURCELIST[] = {
-  "/ajax/echo.cgi",
+  "/hello.txt",
   "/imagetest/00.png",
-  "/args.cgi",
-  "/_stat",
-  "/_echo"
+  "/"
 };
 static const char * METHODLIST[] = {
   "GET",
@@ -55,6 +53,7 @@ static unsigned bad = 0;
 unsigned long postSize = 0;
 unsigned long extraHeadSize = 0;
 unsigned long queryStringSize = 0;
+unsigned long keep_alive = 1;
 
 
 int WINAPI ClientMain(void * clientNo) {
@@ -116,7 +115,7 @@ int WINAPI ClientMain(void * clientNo) {
     return 4;
   }
 
-
+for (i=0; i<((keep_alive>0)?keep_alive:1); i++) {
   // HTTP request
   if (queryStringSize>0) {
     sockprintf(soc, "%s %s?", method, resource);
@@ -124,10 +123,15 @@ int WINAPI ClientMain(void * clientNo) {
     for (i=0;i<(queryStringSize/10);i++) {sockprintf(soc, "1234567890");} 
     for (i=0;i<(queryStringSize%10);i++) {sockprintf(soc, "_");}
 
-    sockprintf(soc, " HTTP/1.1\r\nHost: %s\r\nConnection: Close\r\n", HOST);
+    sockprintf(soc, " HTTP/1.1\r\nHost: %s\r\n", HOST);
   } else {
     sockprintf(soc, "%s %s HTTP/1.1\r\nHost: %s\r\nConnection: Close\r\n", method, resource, HOST);
   }  
+  if (keep_alive) {
+    sockprintf(soc, "Connection: Keep-Alive\r\n");
+  } else {
+    sockprintf(soc, "Connection: Close\r\n");
+  }
 
   for (i=0;i<(extraHeadSize/25);i++) {sockprintf(soc, "Comment%04u: 1234567890\r\n", i % 10000);} /* omit (extraHeadSize%25) */
 
@@ -143,9 +147,14 @@ int WINAPI ClientMain(void * clientNo) {
     timeOut += postSize/10000;
   }
 
-  shutdown(soc, SD_SEND);
+  if (!keep_alive) {
+    shutdown(soc, SD_SEND);
+  } else {
+    timeOut = 2;
+  }
 
   // wait for response from the server
+  totalData = 0;
   lastData = time(0);
   for (;;) {
     char buf[2048];
@@ -183,6 +192,11 @@ int WINAPI ClientMain(void * clientNo) {
     }
   }  
 
+  if (keep_alive) {
+    Sleep(1000);
+  }
+ 
+}
   shutdown(soc, SD_BOTH);
 
   closesocket(soc);
