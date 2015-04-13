@@ -7142,6 +7142,11 @@ static void reset_per_request_attributes(struct mg_connection *conn)
     conn->is_chunked = 0;
     conn->must_close = conn->request_len = conn->throttle = 0;
     conn->request_info.content_length = -1;
+    conn->request_info.remote_user = NULL;
+    conn->request_info.request_method = NULL;
+    conn->request_info.uri = NULL;
+    conn->request_info.http_version = NULL;
+    conn->request_info.num_headers = 0;
     conn->data_len = 0;
 }
 
@@ -7366,6 +7371,7 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *
         } else {
             /* Server did not send anything -> just close the connection */
             conn->must_close = 1;
+            snprintf(ebuf, ebuf_len, "%s", "Client did not send a request");
             *err = 0;
         }
         return 0;
@@ -7589,11 +7595,11 @@ static void process_new_connection(struct mg_connection *conn)
     conn->data_len = 0;
     do {
         if (!getreq(conn, ebuf, sizeof(ebuf), &reqerr)) {
-            assert(ebuf[0] != '\0');
             /* The request sent by the client could not be understood by the server,
                or it was incomplete or a timeout. Send an error message and close
                the connection. */
             if (reqerr > 0) {
+                assert(ebuf[0] != '\0');
                 send_http_error(conn, reqerr, "%s", ebuf);
             }
         } else if (!is_valid_uri(conn->request_info.uri)) {
