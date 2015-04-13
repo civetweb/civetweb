@@ -7360,8 +7360,14 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *
         *err = 413;
         return 0;
     } else if (conn->request_len <= 0) {
-        snprintf(ebuf, ebuf_len, "%s", "Client sent malformed request");
-        *err = 400;
+        if (conn->data_len>0) {
+            snprintf(ebuf, ebuf_len, "%s", "Client sent malformed request");
+            *err = 400;
+        } else {
+            /* Server did not send anything -> just close the connection */
+            conn->must_close = 1;
+            *err = 0;
+        }
         return 0;
     } else if (parse_http_message(conn->buf, conn->buf_size,
                                   &conn->request_info) <= 0) {
