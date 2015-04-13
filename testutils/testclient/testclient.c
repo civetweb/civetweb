@@ -16,7 +16,7 @@ static const char * METHODLIST[] = {
 };
 
 
-static int CLIENTCOUNT = 20;
+static int CLIENTCOUNT = 0; // 20;
 static int TESTCYCLES = 50;
 static int RESOURCEINDEX = 0;
 static int METHODINDEX = 0;
@@ -53,7 +53,7 @@ static unsigned bad = 0;
 unsigned long postSize = 0;
 unsigned long extraHeadSize = 0;
 unsigned long queryStringSize = 0;
-unsigned long keep_alive = 1;
+unsigned long keep_alive = 10;
 
 
 int WINAPI ClientMain(void * clientNo) {
@@ -61,13 +61,14 @@ int WINAPI ClientMain(void * clientNo) {
     SOCKET soc;
     time_t lastData;
     size_t totalData = 0;
+    size_t bodyData = 0;
     int isBody = 0;
     int isTest = (clientNo == 0);
-    int cpu = ((int)clientNo) % 1000;
+    int cpu = ((int)clientNo) % 100;
     int timeOut = 10;
     const char * resource = 0;
     const char * method = 0;
-    unsigned long i;
+    unsigned long i, j;
 
     // Method: PUT or GET
     if (METHODINDEX < sizeof(METHODLIST)/sizeof(METHODLIST[0])) {
@@ -115,7 +116,8 @@ int WINAPI ClientMain(void * clientNo) {
         return 4;
     }
 
-    for (i=0; i<((keep_alive>0)?keep_alive:1); i++) {
+    for (j=0; j<((keep_alive>0)?keep_alive:1); j++) {
+
         // HTTP request
         if (queryStringSize>0) {
             sockprintf(soc, "%s %s?", method, resource);
@@ -125,7 +127,7 @@ int WINAPI ClientMain(void * clientNo) {
 
             sockprintf(soc, " HTTP/1.1\r\nHost: %s\r\n", HOST);
         } else {
-            sockprintf(soc, "%s %s HTTP/1.1\r\nHost: %s\r\nConnection: Close\r\n", method, resource, HOST);
+            sockprintf(soc, "%s %s HTTP/1.1\r\nHost: %s\r\n", method, resource, HOST);
         }
         if (keep_alive) {
             sockprintf(soc, "Connection: Keep-Alive\r\n");
@@ -154,10 +156,11 @@ int WINAPI ClientMain(void * clientNo) {
         }
 
         // wait for response from the server
-        totalData = 0;
+        bodyData = totalData = 0;
+        isBody = 0;
         lastData = time(0);
         for (;;) {
-            char buf[2048];
+            char buf[20480];
             int chunkSize = 0;
             unsigned long dataReady = 0;
 
@@ -165,7 +168,7 @@ int WINAPI ClientMain(void * clientNo) {
 
             if (ioctlsocket(soc, FIONREAD, &dataReady) < 0) break;
             if (dataReady) {
-                chunkSize = recv(soc, buf, sizeof(buf), 0);
+                chunkSize = recv(soc, buf+totalData, sizeof(buf)-totalData, 0);
                 if (chunkSize<0) {
                     printf("Error: recv failed for client %i\r\n", (int)clientNo);
                     break;
@@ -175,42 +178,45 @@ int WINAPI ClientMain(void * clientNo) {
                         headEnd+=4;
                         chunkSize -= ((int)headEnd - (int)buf);
                         if (chunkSize>0) {
-                            totalData += chunkSize;
-                            lastData = time(0);
                             //fwrite(headEnd,1,got,STORE);
+                            bodyData += chunkSize;
                         }
                         isBody=1;
                     }
                 } else {
-                    totalData += chunkSize;
-                    lastData = time(0);
                     //fwrite(buf,1,got,STORE);
+                    bodyData += chunkSize;
                 }
+                lastData = time(0);
+                totalData += chunkSize;
             } else {
                 time_t current = time(0);
-                if (difftime(current, lastData) > timeOut) break;
+                if (difftime(current, lastData) > timeOut) {
+                    break;
+                }
+                Sleep(10);
             }
         }
 
-        if (keep_alive) {
-            Sleep(1000);
+
+        EnterCriticalSection(&cs);
+        if (isTest) {
+            expectedData = totalData;
+        } else if (totalData != expectedData) {
+            printf("Error: Client %u got %u bytes instead of %u\r\n", (int)clientNo, totalData, expectedData);
+            bad++;
+        } else {
+            good++;
         }
+        LeaveCriticalSection(&cs);
 
+        if (keep_alive) {
+            Sleep(10);
+        }
     }
+
     shutdown(soc, SD_BOTH);
-
     closesocket(soc);
-
-    EnterCriticalSection(&cs);
-    if (isTest) {
-        expectedData = totalData;
-    } else if (totalData != expectedData) {
-        printf("Error: Client %u got %u bytes instead of %u\r\n", (int)clientNo, totalData, expectedData);
-        bad++;
-    } else {
-        good++;
-    }
-    LeaveCriticalSection(&cs);
 
     return 0;
 }
@@ -298,7 +304,7 @@ int SingleClientTestAutomatic(unsigned long initialPostSize) {
     for (cycle=0;;cycle++) {
         good=bad=0;
         for (i=0;i<1000;i++) {
-            expectedData=3;
+            expectedData=17;
             ClientMain((void*)1);
         }
         log = fopen("testclient.log", "at");
