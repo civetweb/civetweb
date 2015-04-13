@@ -4458,26 +4458,26 @@ static int read_request(FILE *fp, struct mg_connection *conn,
 {
     int request_len, n = 0;
     struct timespec last_action_time = {0, 0};
-    double request_timout;
+    double request_timeout;
 
     if (conn->ctx->config[REQUEST_TIMEOUT]) {
-        /* value of request_timout is in seconds, config in milliseconds */
-        request_timout = atof(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+        /* value of request_timeout is in seconds, config in milliseconds */
+        request_timeout = atof(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
     } else {
-        request_timout = -1.0;
+        request_timeout = -1.0;
     }
 
     request_len = get_request_len(buf, *nread);
     while ((conn->ctx->stop_flag == 0) &&
            (*nread < bufsiz) &&
            (request_len == 0) &&
-           ((mg_difftimespec(&last_action_time, &(conn->req_time)) <= request_timout) || (request_timout < 0)) &&
+           ((mg_difftimespec(&last_action_time, &(conn->req_time)) <= request_timeout) || (request_timeout < 0)) &&
            ((n = pull(fp, conn, buf + *nread, bufsiz - *nread)) > 0)
           ) {
         *nread += n;
         assert(*nread <= bufsiz);
         request_len = get_request_len(buf, *nread);
-        if (request_timout > 0.0) {
+        if (request_timeout > 0.0) {
             clock_gettime(CLOCK_MONOTONIC, &last_action_time);
         }
     }
