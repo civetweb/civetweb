@@ -49,6 +49,14 @@ static int s_failed_tests = 0;
     if (!(expr)) FAIL(#expr, __LINE__); \
 } while (0)
 
+#define REQUIRE(expr) do { \
+    s_total_tests++; \
+    if (!(expr)) { \
+        FAIL(#expr, __LINE__); \
+        exit(EXIT_FAILURE); \
+    } \
+} while (0)
+
 #define HTTP_PORT "8080"
 #ifdef NO_SSL
 #define HTTPS_PORT HTTP_PORT
@@ -1147,7 +1155,7 @@ int __cdecl main(void) {
 
     /* start stop server */
     ctx = mg_start(NULL, NULL, OPTIONS);
-    ASSERT(ctx != NULL);
+    REQUIRE(ctx != NULL);
     mg_sleep(1000);
     mg_stop(ctx);
 
