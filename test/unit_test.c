@@ -358,7 +358,7 @@ void (*init_lua)(struct mg_connection *, void *lua_context);
 void (*upload)(struct mg_connection *, const char *file_name);
 int  (*http_error)(struct mg_connection *, int status);
 
-static struct mg_callbacks CALLBACKS = {0};
+static struct mg_callbacks CALLBACKS;
 
 static void init_CALLBACKS() {
     memset(&CALLBACKS, 0, sizeof(CALLBACKS));
