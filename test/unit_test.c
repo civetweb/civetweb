@@ -1067,7 +1067,7 @@ static void test_md5(void) {
     md5_val[16]=0;
     md5_init(&md5_state);
     md5_finish(&md5_state, md5_val);
-    ASSERT(strcmp(md5_val, "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e")==0);
+    ASSERT(strcmp((const char*)md5_val, "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e")==0);
     sprintf(md5_str, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
         md5_val[0], md5_val[1], md5_val[2], md5_val[3],
         md5_val[4], md5_val[5], md5_val[6], md5_val[7],
@@ -1079,7 +1079,7 @@ static void test_md5(void) {
     ASSERT(strcmp(md5_str, "d41d8cd98f00b204e9800998ecf8427e")==0);
 
     md5_init(&md5_state);
-    md5_append(&md5_state, test_str, strlen(test_str));
+    md5_append(&md5_state, (const md5_byte_t*)test_str, strlen(test_str));
     md5_finish(&md5_state, md5_val);
     sprintf(md5_str, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
         md5_val[0], md5_val[1], md5_val[2], md5_val[3],
