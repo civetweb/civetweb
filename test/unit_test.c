@@ -485,10 +485,10 @@ static void test_mg_download(int use_ssl) {
         "POST /content_length HTTP/1.1\r\nContent-Length: %u\r\n\r\n%s",
         strlen(test_data), test_data)) != NULL);
     h = mg_get_header(conn, "Content-Length");
-    ASSERT((h != NULL) && (atoi(h)==strlen(test_data)));
+    ASSERT((h != NULL) && (atoi(h)==(int)strlen(test_data)));
     ASSERT((p1 = read_conn(conn, &len1)) != NULL);
     ASSERT(len1 == (int) strlen(test_data));
-    ASSERT(conn->request_info.content_length == strlen(test_data));
+    ASSERT(conn->request_info.content_length == (int)strlen(test_data));
     ASSERT(memcmp(p1, test_data, len1) == 0);
     ASSERT(strcmp(conn->request_info.request_method, "HTTP/1.1") == 0);
     ASSERT(strcmp(conn->request_info.uri, "200") == 0);
