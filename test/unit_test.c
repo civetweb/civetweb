@@ -483,7 +483,7 @@ static void test_mg_download(int use_ssl) {
     /* Fetch data with Content-Length, should succeed and return the defined length. */
     ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf),
         "POST /content_length HTTP/1.1\r\nContent-Length: %u\r\n\r\n%s",
-        strlen(test_data), test_data)) != NULL);
+        (unsigned)strlen(test_data), test_data)) != NULL);
     h = mg_get_header(conn, "Content-Length");
     ASSERT((h != NULL) && (atoi(h)==(int)strlen(test_data)));
     ASSERT((p1 = read_conn(conn, &len1)) != NULL);
