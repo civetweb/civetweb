@@ -44,7 +44,7 @@ By default, the server will automatically serve up files like a normal HTTP serv
 
 ### C++
   - Create CivetHandlers for each URI.
-  - Register the handlers with ```CivertServer::addHandler()```
+  - Register the handlers with ```CivetServer::addHandler()```
   - ```CivetServer``` starts on contruction and stops on destruction.
   - Use contructor *options* to select the port and document root among other things.
   - Use constructor *callbacks* to add your own hooks.
