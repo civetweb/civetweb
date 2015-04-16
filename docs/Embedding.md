@@ -10,7 +10,7 @@ There is just a small set of files to compile in to the application,
 but if a library is desired, see [Building.md](https://github.com/bel2125/civetweb/blob/master/docs/Building.md)
 
 #### Regarding the INL file extension
-The *INL* file extension represents code that is statically included inline in a source file.  Slightly different from C++ where it means "inline" code which is technically not the same as static code. Civetweb overloads this extension for the sake of clearity as opossed to having .c extensions on files that should not be directly compiled.
+The *INL* file extension represents code that is statically included inline in a source file.  Slightly different from C++ where it means "inline" code which is technically not the same as static code. Civetweb overloads this extension for the sake of clarity as opposed to having .c extensions on files that should not be directly compiled.
 
 #### Required Files
 
