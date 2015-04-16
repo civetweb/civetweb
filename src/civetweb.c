@@ -5931,6 +5931,11 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
 #ifdef USE_LUA
     int lua_websock = 0;
 #endif
+    
+#ifndef USE_LUA
+    (void)path;
+    (void)is_script_resource;
+#endif
 
     if (version == NULL || strcmp(version, "13") != 0) {
         send_http_error(conn, 426, "%s", "Protocol upgrade required");

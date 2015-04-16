@@ -210,7 +210,9 @@ static long fetch_data_size = 1024*1024;
 static char *fetch_data;
 static const char *inmemory_file_data = "hi there";
 static const char *upload_filename = "upload_test.txt";
+#if 0
 static const char *upload_filename2 = "upload_test2.txt";
+#endif
 static const char *upload_ok_message = "upload successful";
 
 static const char *open_file_cb(const struct mg_connection *conn,
@@ -356,7 +358,7 @@ void (*init_lua)(struct mg_connection *, void *lua_context);
 void (*upload)(struct mg_connection *, const char *file_name);
 int  (*http_error)(struct mg_connection *, int status);
 
-static struct mg_callbacks CALLBACKS = {0};
+static struct mg_callbacks CALLBACKS;
 
 static void init_CALLBACKS() {
     memset(&CALLBACKS, 0, sizeof(CALLBACKS));
@@ -481,12 +483,12 @@ static void test_mg_download(int use_ssl) {
     /* Fetch data with Content-Length, should succeed and return the defined length. */
     ASSERT((conn = mg_download("localhost", port, use_ssl, ebuf, sizeof(ebuf),
         "POST /content_length HTTP/1.1\r\nContent-Length: %u\r\n\r\n%s",
-        strlen(test_data), test_data)) != NULL);
+        (unsigned)strlen(test_data), test_data)) != NULL);
     h = mg_get_header(conn, "Content-Length");
-    ASSERT((h != NULL) && (atoi(h)==strlen(test_data)));
+    ASSERT((h != NULL) && (atoi(h)==(int)strlen(test_data)));
     ASSERT((p1 = read_conn(conn, &len1)) != NULL);
     ASSERT(len1 == (int) strlen(test_data));
-    ASSERT(conn->request_info.content_length == strlen(test_data));
+    ASSERT(conn->request_info.content_length == (int)strlen(test_data));
     ASSERT(memcmp(p1, test_data, len1) == 0);
     ASSERT(strcmp(conn->request_info.request_method, "HTTP/1.1") == 0);
     ASSERT(strcmp(conn->request_info.uri, "200") == 0);
@@ -518,6 +520,7 @@ static void test_mg_download(int use_ssl) {
     mg_close_connection(conn);
 
     if (use_ssl) {
+#ifndef NO_SSL
         /* Test SSL redirect */
         ASSERT((conn = mg_download("localhost", atoi(HTTP_REDIRECT_PORT), 0,
             ebuf, sizeof(ebuf), "%s",
@@ -527,6 +530,7 @@ static void test_mg_download(int use_ssl) {
         ASSERT(h != NULL);
         ASSERT(strcmp(h, "https://127.0.0.1:" HTTPS_PORT "/data/4711") == 0);
         mg_close_connection(conn);
+#endif
     }
 
     /* Test new API */
@@ -558,6 +562,10 @@ static void test_mg_download(int use_ssl) {
 
 static int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
 {
+    (void)conn;
+    (void)flags;
+    (void)data;
+    (void)data_len;
     return 1;
 }
 
@@ -882,6 +890,7 @@ static void test_request_replies(void) {
 static int request_test_handler(struct mg_connection *conn, void *cbdata)
 {
     ASSERT(cbdata == (void*)7);
+    (void)conn;
     return 1;
 }
 
@@ -1058,7 +1067,7 @@ static void test_md5(void) {
     md5_val[16]=0;
     md5_init(&md5_state);
     md5_finish(&md5_state, md5_val);
-    ASSERT(strcmp(md5_val, "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e")==0);
+    ASSERT(strcmp((const char*)md5_val, "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e")==0);
     sprintf(md5_str, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
         md5_val[0], md5_val[1], md5_val[2], md5_val[3],
         md5_val[4], md5_val[5], md5_val[6], md5_val[7],
@@ -1070,7 +1079,7 @@ static void test_md5(void) {
     ASSERT(strcmp(md5_str, "d41d8cd98f00b204e9800998ecf8427e")==0);
 
     md5_init(&md5_state);
-    md5_append(&md5_state, test_str, strlen(test_str));
+    md5_append(&md5_state, (const md5_byte_t*)test_str, strlen(test_str));
     md5_finish(&md5_state, md5_val);
     sprintf(md5_str, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
         md5_val[0], md5_val[1], md5_val[2], md5_val[3],
