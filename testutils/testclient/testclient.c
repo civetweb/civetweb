@@ -8,18 +8,20 @@ unsigned short PORT = 8080;
 static const char * RESOURCELIST[] = {
     "/hello.txt",
     "/imagetest/00.png",
+    "/resource_script_demo.lua/r1.txt",
     "/"
 };
 static const char * METHODLIST[] = {
     "GET",
-    "POST"
+    "POST",
+    "PUT"
 };
 
 
 static int CLIENTCOUNT = 0; // 20;
-static int TESTCYCLES = 50;
-static int RESOURCEINDEX = 0;
-static int METHODINDEX = 0;
+static int TESTCYCLES = 1;
+static int RESOURCEINDEX = 2;
+static int METHODINDEX = 2;
 
 
 int sockvprintf(SOCKET soc, const char * fmt, va_list vl) {
@@ -53,7 +55,8 @@ static unsigned bad = 0;
 unsigned long postSize = 0;
 unsigned long extraHeadSize = 0;
 unsigned long queryStringSize = 0;
-unsigned long keep_alive = 10;
+unsigned long keep_alive = 0;
+int chunked = 1;
 
 
 int WINAPI ClientMain(void * clientNo) {
@@ -139,6 +142,17 @@ int WINAPI ClientMain(void * clientNo) {
 
         if (!strcmp(method,"GET")) {
             sockprintf(soc, "\r\n");
+        } else if (chunked) {
+
+            sockprintf(soc, "Transfer-Encoding: chunked\r\n\r\n", postSize);
+
+            for (i=0;i<(postSize/10);i++) {sockprintf(soc, "A\r\n1234567890\r\n");}
+            if ((postSize%10)>0) {
+                sockprintf(soc, "%x\r\n", postSize%10);
+                for (i=0;i<(postSize%10);i++) {sockprintf(soc, "_");}
+                sockprintf(soc, "\r\n");
+            }
+
         } else {
             // not GET
             sockprintf(soc, "Content-Length: %u\r\n\r\n", postSize);
@@ -301,9 +315,9 @@ int SingleClientTestAutomatic(unsigned long initialPostSize) {
     int           i;
 
     postSize = initialPostSize;
-    for (cycle=0;;cycle++) {
+    for (cycle=1;cycle<=TESTCYCLES;cycle++) {
         good=bad=0;
-        for (i=0;i<1000;i++) {
+        for (i=0;i<1 /* 000 */;i++) {
             expectedData=17;
             ClientMain((void*)1);
         }
