@@ -2968,7 +2968,9 @@ static void base64_encode(const unsigned char *src, int src_len, char *dst)
     }
     dst[j++] = '\0';
 }
+#endif
 
+#if defined(USE_LUA)
 static unsigned char b64reverse(char letter) {
     if (letter>='A' && letter<='Z') return letter-'A';
     if (letter>='a' && letter<='z') return letter-'a'+26;
