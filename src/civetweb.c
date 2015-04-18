@@ -832,7 +832,7 @@ struct mg_request_handler_info {
             mg_websocket_connect_handler connect_handler;
             mg_websocket_ready_handler ready_handler;
             mg_websocket_data_handler data_handler;
-            mg_connection_close_handler close_handler;
+            mg_websocket_close_handler close_handler;
         };
     };
 
@@ -5748,7 +5748,7 @@ static void send_websocket_handshake(struct mg_connection *conn)
               "Sec-WebSocket-Accept: ", b64_sha, "\r\n\r\n");
 }
 
-static void read_websocket(struct mg_connection *conn)
+static void read_websocket(struct mg_connection *conn, mg_websocket_data_handler ws_data_handler, void *callback_data)
 {
     /* Pointer to the beginning of the portion of the incoming websocket
        message queue.
@@ -5867,11 +5867,11 @@ static void read_websocket(struct mg_connection *conn)
 
             /* Exit the loop if callback signalled to exit,
                or "connection close" opcode received. */
-            if ((conn->ctx->callbacks.websocket_data != NULL &&
+            if ((ws_data_handler != NULL &&
 #ifdef USE_LUA
                  (conn->lua_websocket_state == NULL) &&
 #endif
-                 !conn->ctx->callbacks.websocket_data(conn, mop, data, data_len)) ||
+                 !ws_data_handler(conn, mop, data, data_len, callback_data)) ||
 #ifdef USE_LUA
                 (conn->lua_websocket_state &&
                  !lua_websocket_data(conn, conn->lua_websocket_state, mop, data, data_len)) ||
@@ -5939,7 +5939,15 @@ int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data,
     return retval;
 }
 
-static void handle_websocket_request(struct mg_connection *conn, const char *path, int is_script_resource)
+static void handle_websocket_request(struct mg_connection *conn,
+                                     const char *path,
+                                     int is_script_resource,
+                                     mg_websocket_connect_handler ws_connect_handler,
+                                     mg_websocket_ready_handler ws_ready_handler,
+                                     mg_websocket_data_handler ws_data_handler,
+                                     mg_websocket_close_handler ws_close_handler,
+                                     void *cbData
+                                     )
 {
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
 #ifdef USE_LUA
@@ -5953,8 +5961,8 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
 
     if (version == NULL || strcmp(version, "13") != 0) {
         send_http_error(conn, 426, "%s", "Protocol upgrade required");
-    } else if (conn->ctx->callbacks.websocket_connect != NULL &&
-               conn->ctx->callbacks.websocket_connect(conn) != 0) {
+    } else if (ws_connect_handler != NULL &&
+               ws_connect_handler(conn, cbData) != 0) {
         /* C callback has returned non-zero, do not proceed with handshake. */
         /* The C callback is called before Lua and may prevent Lua from handling the websocket. */
     } else {
@@ -5978,10 +5986,14 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
         {
             /* No Lua websock script specified. */
             send_websocket_handshake(conn);
-            if (conn->ctx->callbacks.websocket_ready != NULL) {
-                conn->ctx->callbacks.websocket_ready(conn);
+            if (ws_ready_handler != NULL) {
+                ws_ready_handler(conn, cbData);
             }
-            read_websocket(conn);
+            read_websocket(conn, ws_data_handler, cbData);
+        }
+
+        if (ws_close_handler) {
+            ws_close_handler(conn, cbData);
         }
     }
 }
@@ -6269,7 +6281,7 @@ static void mg_set_request_handler_type(struct mg_context *ctx,
                                         mg_websocket_connect_handler connect_handler,
                                         mg_websocket_ready_handler ready_handler,
                                         mg_websocket_data_handler data_handler,
-                                        mg_connection_close_handler close_handler,
+                                        mg_websocket_close_handler close_handler,
                                         void *cbdata)
 {
     struct mg_request_handler_info *tmp_rh, **lastref;
@@ -6360,15 +6372,23 @@ void mg_set_websocket_handler(struct mg_context *ctx,
                               mg_websocket_connect_handler connect_handler,
                               mg_websocket_ready_handler ready_handler,
                               mg_websocket_data_handler data_handler,
-                              mg_connection_close_handler close_handler,
+                              mg_websocket_close_handler close_handler,
                               void *cbdata
                               )
 {
-    int is_delete_request = (connect_handler!=NULL) || (ready_handler!=NULL) || (data_handler!=NULL) || (close_handler!=NULL);
+    int is_delete_request = (connect_handler==NULL) && (ready_handler==NULL) && (data_handler==NULL) && (close_handler==NULL);
     mg_set_request_handler_type(ctx, uri, 1, is_delete_request, NULL, connect_handler, ready_handler, data_handler, close_handler, cbdata);
 }
 
-static int get_request_handler(struct mg_connection *conn, int is_websocket_request, mg_request_handler *handler, void **cbdata)
+static int get_request_handler(struct mg_connection *conn,
+                               int is_websocket_request,
+                               mg_request_handler *handler,
+                               mg_websocket_connect_handler *connect_handler,
+                               mg_websocket_ready_handler *ready_handler,
+                               mg_websocket_data_handler *data_handler,
+                               mg_websocket_close_handler *close_handler,
+                               void **cbdata
+                               )
 {
     struct mg_request_info *request_info = mg_get_request_info(conn);
     const char *uri = request_info->uri;
@@ -6381,7 +6401,15 @@ static int get_request_handler(struct mg_connection *conn, int is_websocket_requ
     for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
         if (tmp_rh->is_websocket_handler == is_websocket_request) {
             if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
-                *handler = tmp_rh->handler;
+
+                if (is_websocket_request) {
+                    *connect_handler = tmp_rh->connect_handler;
+                    *ready_handler = tmp_rh->ready_handler;
+                    *data_handler = tmp_rh->data_handler;
+                    *close_handler = tmp_rh->close_handler;
+                } else {
+                    *handler = tmp_rh->handler;
+                }
                 *cbdata = tmp_rh->cbdata;
                 mg_unlock_context(conn->ctx);
                 return 1;
@@ -6396,7 +6424,14 @@ static int get_request_handler(struct mg_connection *conn, int is_websocket_requ
                 && uri[tmp_rh->uri_len] == '/'
                 && memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0) {
 
-                *handler = tmp_rh->handler;
+                if (is_websocket_request) {
+                    *connect_handler = tmp_rh->connect_handler;
+                    *ready_handler = tmp_rh->ready_handler;
+                    *data_handler = tmp_rh->data_handler;
+                    *close_handler = tmp_rh->close_handler;
+                } else {
+                    *handler = tmp_rh->handler;
+                }
                 *cbdata = tmp_rh->cbdata;
                 mg_unlock_context(conn->ctx);
                 return 1;
@@ -6408,7 +6443,15 @@ static int get_request_handler(struct mg_connection *conn, int is_websocket_requ
     for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
         if (tmp_rh->is_websocket_handler == is_websocket_request) {
             if (match_prefix(tmp_rh->uri, (int)tmp_rh->uri_len, uri) > 0) {
-                *handler = tmp_rh->handler;
+
+                if (is_websocket_request) {
+                    *connect_handler = tmp_rh->connect_handler;
+                    *ready_handler = tmp_rh->ready_handler;
+                    *data_handler = tmp_rh->data_handler;
+                    *close_handler = tmp_rh->close_handler;
+                } else {
+                    *handler = tmp_rh->handler;
+                }
                 *cbdata = tmp_rh->cbdata;
                 mg_unlock_context(conn->ctx);
                 return 1;
@@ -6420,6 +6463,33 @@ static int get_request_handler(struct mg_connection *conn, int is_websocket_requ
     return 0; /* none found */
 }
 
+
+static int deprecated_websocket_connect_wrapper(const struct mg_connection * conn, void *cbdata)
+{
+    struct mg_callbacks *pcallbacks = (struct mg_callbacks*)cbdata;
+    if (pcallbacks->websocket_connect) {
+        return pcallbacks->websocket_connect(conn);
+    }
+    return 1;
+}
+
+static void deprecated_websocket_ready_wrapper(const struct mg_connection * conn, void *cbdata)
+{
+    struct mg_callbacks *pcallbacks = (struct mg_callbacks*)cbdata;
+    if (pcallbacks->websocket_ready) {
+        pcallbacks->websocket_ready((struct mg_connection *)conn);
+    }
+}
+
+static int deprecated_websocket_data_wrapper(const struct mg_connection * conn, int bits, char * data, size_t len, void *cbdata)
+{
+    struct mg_callbacks *pcallbacks = (struct mg_callbacks*)cbdata;
+    if (pcallbacks->websocket_data) {
+        return pcallbacks->websocket_data((struct mg_connection *)conn, bits, data, len);
+    }
+    return 0;
+}
+
 /* This is the heart of the Civetweb's logic.
    This function is called when the request is read, parsed and validated,
    and Civetweb must decide what action to take: serve a file, or
@@ -6428,11 +6498,15 @@ static void handle_request(struct mg_connection *conn)
 {
     struct mg_request_info *ri = &conn->request_info;
     char path[PATH_MAX];
-    int uri_len, ssl_index, is_script_resource, is_websocket_request, is_put_or_delete_request;
+    int uri_len, ssl_index, is_script_resource, is_websocket_request, is_put_or_delete_request, is_callback_resource;
     int i;
     struct file file = STRUCT_FILE_INITIALIZER;
     time_t curtime = time(NULL);
     mg_request_handler callback_handler = NULL;
+    mg_websocket_connect_handler ws_connect_handler = NULL;
+    mg_websocket_ready_handler ws_ready_handler = NULL;
+    mg_websocket_data_handler ws_data_handler = NULL;
+    mg_websocket_close_handler ws_close_handler = NULL;
     void * callback_data = NULL;
 #if !defined(NO_FILES)
     char date[64];
@@ -6505,14 +6579,19 @@ static void handle_request(struct mg_connection *conn)
     is_websocket_request = is_websocket_protocol(conn);
 
     /* 5.2. check if the request will be handled by a callback */
-    if (get_request_handler(conn, is_websocket_request, &callback_handler, &callback_data)) {
+    if (get_request_handler(conn, is_websocket_request,
+                            &callback_handler,
+                            &ws_connect_handler, &ws_ready_handler, &ws_data_handler, &ws_close_handler,
+                            &callback_data)) {
         /* 5.2.1. A callback will handle this request. All requests handled by a callback
                   have to be considered as requests to a script resource. */
+        is_callback_resource = 1;
         is_script_resource = 1;
         is_put_or_delete_request = is_put_or_delete_method(conn);
     } else {
         /* 5.2.2. No callback is responsible for this request. The URI addresses a file
                   based resource (static content or Lua/cgi scripts in the file system). */
+        is_callback_resource = 0;
         interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
     }
 
@@ -6552,34 +6631,44 @@ static void handle_request(struct mg_connection *conn)
     /* request is authorized or does not need authorization */
 
     /* 7. check if there are request handlers for this uri */
-    if (callback_handler != NULL) {
-        if (callback_handler(conn, callback_data)) {
-            /* Do nothing, callback has served the request */
-            discard_unread_request_data(conn);
-            return;
-        } else {
-            /* TODO: what if the handler did NOT handle the request */
-            /* The last version did handle this as a file request, but
-               since a file request is not always a script resource,
-               the authorization check might be different */
-            interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
-            callback_handler = NULL;
+    if (is_callback_resource) {
+        if (!is_websocket_request) {
+            if (callback_handler(conn, callback_data)) {
+                /* Do nothing, callback has served the request */
+                discard_unread_request_data(conn);
+            } else {
+                /* TODO: what if the handler did NOT handle the request */
+                /* The last version did handle this as a file request, but
+                since a file request is not always a script resource,
+                the authorization check might be different */
+                interpret_uri(conn, path, sizeof(path), &file, &is_script_resource, &is_websocket_request, &is_put_or_delete_request);
+                callback_handler = NULL;
 
-            /* TODO: for the moment, a goto is simpler than some curious loop. */
-            /* The situation "callback does not handle the request" needs to be reconsidered anyway. */
-            goto auth_check;
+                /* TODO: for the moment, a goto is simpler than some curious loop. */
+                /* The situation "callback does not handle the request" needs to be reconsidered anyway. */
+                goto auth_check;
+            }
+        } else {
+#if defined(USE_WEBSOCKET)
+            handle_websocket_request(conn, path, is_script_resource, ws_connect_handler, ws_ready_handler, ws_data_handler, ws_close_handler, callback_data);
+#endif
         }
+        return;
     }
 
     /* 8. handle websocket requests */
 #if defined(USE_WEBSOCKET)
     if (is_websocket_request) {
-        handle_websocket_request(conn, path, is_script_resource);
+        handle_websocket_request(conn, path, is_script_resource,
+                                 deprecated_websocket_connect_wrapper,
+                                 deprecated_websocket_ready_wrapper,
+                                 deprecated_websocket_data_wrapper,
+                                 NULL,
+                                 &conn->ctx->callbacks
+                                 );
         return;
     } else
 #endif
-    {
-    }
 
 #if defined(NO_FILES)
     /* 9a. In case the server uses only callbacks, this uri is unknown.
@@ -7532,6 +7621,13 @@ struct mg_connection *mg_download(const char *host, int port, int use_ssl,
     return conn;
 }
 
+struct websocket_client_thread_data {
+    struct mg_connection* conn;
+    mg_websocket_data_handler data_handler;
+    mg_websocket_close_handler close_handler;
+    void *callback_data;
+};
+
 #if defined(USE_WEBSOCKET)
 #ifdef _WIN32
 static unsigned __stdcall websocket_client_thread(void *data)
@@ -7539,14 +7635,16 @@ static unsigned __stdcall websocket_client_thread(void *data)
 static void* websocket_client_thread(void *data)
 #endif
 {
-    struct mg_connection* conn = (struct mg_connection*)data;
-    read_websocket(conn);
+    struct websocket_client_thread_data* cdata = (struct websocket_client_thread_data*)data;
+    read_websocket(cdata->conn, cdata->data_handler, cdata->callback_data);
 
     DEBUG_TRACE("%s", "Websocket client thread exited\n");
 
-    if (conn->ctx->callbacks.connection_close != NULL) {
-        conn->ctx->callbacks.connection_close(conn);
+    if (cdata->close_handler != NULL) {
+        cdata->close_handler(cdata->conn, cdata->callback_data);
     }
+
+    mg_free((void*)cdata);
 
 #ifdef _WIN32
     return 0;
@@ -7559,13 +7657,14 @@ static void* websocket_client_thread(void *data)
 struct mg_connection *mg_connect_websocket_client(const char *host, int port, int use_ssl,
                                                char *error_buffer, size_t error_buffer_size,
                                                const char *path, const char *origin,
-                                               websocket_data_func data_func, websocket_close_func close_func,
+                                               mg_websocket_data_handler data_func, mg_websocket_close_handler close_func,
                                                void * user_data)
 {
     struct mg_connection* conn = NULL;
 
 #if defined(USE_WEBSOCKET)
     struct mg_context * newctx = NULL;
+    struct websocket_client_thread_data *thread_data;
     static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
     static const char *handshake_req;
 
@@ -7597,7 +7696,7 @@ struct mg_connection *mg_connect_websocket_client(const char *host, int port, in
                              handshake_req, path, host, magic, origin);
 
     /* Connection object will be null if something goes wrong */
-    if(conn == NULL || (strcmp(conn->request_info.uri, "101") != 0))
+    if (conn == NULL || (strcmp(conn->request_info.uri, "101") != 0))
     {
         DEBUG_TRACE("Websocket client connect error: %s\r\n", error_buffer);
         if(conn != NULL) { mg_free(conn); conn = NULL; }
@@ -7608,19 +7707,23 @@ struct mg_connection *mg_connect_websocket_client(const char *host, int port, in
        function, we need to create a copy and modify it. */
     newctx = (struct mg_context *) mg_malloc(sizeof(struct mg_context));
     memcpy(newctx, conn->ctx, sizeof(struct mg_context));
-    newctx->callbacks.websocket_data = data_func; /* read_websocket will automatically call it */
-    newctx->callbacks.connection_close = close_func;
     newctx->user_data = user_data;
     newctx->context_type = 2; /* client context type */
     newctx->workerthreadcount = 1; /* one worker thread will be created */
     newctx->workerthreadids = (pthread_t*) mg_calloc(newctx->workerthreadcount, sizeof(pthread_t));
     conn->ctx = newctx;
+    thread_data = (struct websocket_client_thread_data*) mg_calloc(sizeof(struct websocket_client_thread_data), 1);
+    thread_data->conn = conn;
+    thread_data->data_handler = data_func;
+    thread_data->close_handler = close_func;
+    thread_data->callback_data = NULL;
 
     /* Start a thread to read the websocket client connection
     This thread will automatically stop when mg_disconnect is
     called on the client connection */
-    if (mg_start_thread_with_id(websocket_client_thread, (void*)conn, newctx->workerthreadids) != 0)
+    if (mg_start_thread_with_id(websocket_client_thread, (void*)thread_data, newctx->workerthreadids) != 0)
     {
+        mg_free((void*)thread_data);
         mg_free((void*)newctx->workerthreadids);
         mg_free((void*)newctx);
         mg_free((void*)conn);

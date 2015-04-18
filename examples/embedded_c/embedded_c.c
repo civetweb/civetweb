@@ -96,10 +96,10 @@ int WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
     mg_printf(conn,
     "function load() {\n"
     "  var wsproto = (location.protocol === 'https:') ? 'wss:' : 'ws:';\n"
-    "  connection = new WebSocket(wsproto + '//' + window.location.host + '/websocket.lua');\n"
+    "  connection = new WebSocket(wsproto + '//' + window.location.host + '/websocket');\n"
     "  websock_text_field = document.getElementById('websock_text_field');\n"
     "  connection.onmessage = function (e) {\n"
-    "    websock_text_field.innerHtml=e.data;\n"
+    "    websock_text_field.innerHTML=e.data;\n"
     "  }\n"
     "  connection.onerror = function (error) {\n"
     "    alert('WebSocket error');\n"
@@ -121,26 +121,59 @@ int WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 
 
 #ifdef USE_WEBSOCKET
+static struct mg_connection * ws_client;
+static unsigned long cnt;
+
 int WebSocketConnectHandler(const struct mg_connection * conn, void *cbdata)
 {
-    return 0;
+    int reject = 0;
+    fprintf(stdout, "Websocket client %s\r\n\r\n", reject ? "rejected" : "accepted");
+    return reject;
 }
 
 void WebSocketReadyHandler(const struct mg_connection * conn, void *cbdata)
 {
+    struct mg_context *ctx = mg_get_context((struct mg_connection *) /* TODO: check const_casts */ conn);
+
     const char * text = "Hello from the websocket ready handler";
-    mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+    /* TODO: check "const struct mg_connection *" vs "struct mg_connection *" everywhere */
+    mg_websocket_write((struct mg_connection *)conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+    fprintf(stdout, "Client added to the set of webserver connections\r\n\r\n");
+    mg_lock_context(ctx);
+    ws_client = conn;
+    mg_unlock_context(ctx);
 }
 
 int WebsocketDataHandler(const struct mg_connection * conn, int bits, char * data, size_t len, void *cbdata)
 {
+    fprintf(stdout, "Websocket got data:\r\n");
+    fwrite(data, len, 1, stdout);
+    fprintf(stdout, "\r\n\r\n");
+
     return 1;
 }
 
 void WebSocketCloseHandler(const struct mg_connection * conn, void *cbdata)
 {
+    struct mg_context *ctx = mg_get_context((struct mg_connection *) /* TODO: check const_casts */ conn);
+
+    mg_lock_context(ctx);
+    ws_client = NULL;
+    mg_unlock_context(ctx);
+    fprintf(stdout, "Client droped from the set of webserver connections\r\n\r\n");
 }
 
+void InformWebsockets(struct mg_context *ctx)
+{
+    char text[32];
+
+    mg_lock_context(ctx);
+    if (ws_client) {
+        sprintf(text, "%lu", ++cnt);
+        mg_websocket_write(ws_client, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+    }
+    mg_unlock_context(ctx);
+}
 #endif
 
 
@@ -172,6 +205,9 @@ int main(int argc, char *argv[])
         Sleep(1000);
 #else
         sleep(1);
+#endif
+#ifdef USE_WEBSOCKET
+        InformWebsockets(ctx);
 #endif
     }
 

@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
     printf("Server init\n\n");
 
     /* Then connect a first client */
+    /* TODO: parameters changed -> fix them */ xxx
     newconn1 = mg_connect_websocket_client("localhost", atoi(PORT), 0, ebuf, sizeof(ebuf),
         "/websocket", NULL, websocket_client_data_handler, websocket_client_close_handler,
         &client1_data);

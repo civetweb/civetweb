@@ -568,12 +568,13 @@ static void test_mg_download(int use_ssl) {
     mg_stop(ctx);
 }
 
-static int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
+static int websocket_data_handler(const struct mg_connection *conn, int flags, char *data, size_t data_len, void *cbdata)
 {
     (void)conn;
     (void)flags;
     (void)data;
     (void)data_len;
+    (void)cbdata;
     return 1;
 }
 
