@@ -34,6 +34,7 @@ const char * METHOD = "PUT";
 
 unsigned postSize = 1024;
 unsigned extraHeadSize = 0;
+unsigned queryStringSize = 0;
 int keep_alive = 0;
 int chunked = 0;
 
@@ -72,10 +73,8 @@ int TestClient(unsigned clientNo) {
     size_t totalData = 0;
     size_t bodyData = 0;
     int isBody = 0;
-    int isTest = (clientNo == 0);
-    int cpu = ((int)clientNo) % 100;
     int timeOut = 10;
-    unsigned long i, j;
+    unsigned long i;
 
     // TCP
     soc = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -93,7 +92,13 @@ int TestClient(unsigned clientNo) {
     }
 
     sockprintf(soc, "%s %s", METHOD, RESOURCE);
-    // could send query string here
+
+    if (queryStringSize>0) {
+        sockprintf(soc, "?", METHOD, RESOURCE);
+        for (i=0;i<(queryStringSize/10);i++) {sockprintf(soc, "1234567890");}
+        for (i=0;i<(queryStringSize%10);i++) {sockprintf(soc, "_");}
+    }
+
     sockprintf(soc, " HTTP/1.1\r\nHost: %s\r\n", HOST);
 
     if (keep_alive) {
