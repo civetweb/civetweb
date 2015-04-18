@@ -264,6 +264,20 @@ typedef int (* mg_request_handler)(struct mg_connection *conn, void *cbdata);
       cbdata: the callback data to give to the handler when it is called. */
 CIVETWEB_API void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata);
 
+typedef int  (*mg_websocket_connect_handler)(const struct mg_connection *, void *);
+typedef void (*mg_websocket_ready_handler)(struct mg_connection *, void *);
+typedef int  (*mg_websocket_data_handler)(struct mg_connection *, int, char *, size_t, void *);
+typedef void (*mg_connection_close_handler)(struct mg_connection *, void *);
+
+
+CIVETWEB_API void mg_set_websocket_handler(struct mg_context *ctx,
+                                           const char *uri,
+                                           mg_websocket_connect_handler connect_handler,
+                                           mg_websocket_ready_handler ready_handler,
+                                           mg_websocket_data_handler data_handler,
+                                           mg_connection_close_handler close_handler,
+                                           void *cbdata
+                                           );
 
 /* Get the value of particular configuration parameter.
    The value returned is read-only. Civetweb does not allow changing

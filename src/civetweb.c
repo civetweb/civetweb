@@ -821,8 +821,20 @@ static struct mg_option config_options[] = {
 struct mg_request_handler_info {
     char *uri;
     size_t uri_len;
-    mg_request_handler handler;
+
     int is_websocket_handler;
+
+    union {
+        struct {
+            mg_request_handler handler;
+        };
+        struct {
+            mg_websocket_connect_handler connect_handler;
+            mg_websocket_ready_handler ready_handler;
+            mg_websocket_data_handler data_handler;
+            mg_connection_close_handler close_handler;
+        };
+    };
 
     void *cbdata;
     struct mg_request_handler_info *next;
@@ -5933,7 +5945,7 @@ static void handle_websocket_request(struct mg_connection *conn, const char *pat
 #ifdef USE_LUA
     int lua_websock = 0;
 #endif
-    
+
 #ifndef USE_LUA
     (void)path;
     (void)is_script_resource;
@@ -6249,10 +6261,27 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 }
 
 
-static void mg_set_request_handler_type(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata, int is_websocket_handler)
+static void mg_set_request_handler_type(struct mg_context *ctx,
+                                        const char *uri,
+                                        int is_websocket_handler,
+                                        int is_delete_request,
+                                        mg_request_handler handler,
+                                        mg_websocket_connect_handler connect_handler,
+                                        mg_websocket_ready_handler ready_handler,
+                                        mg_websocket_data_handler data_handler,
+                                        mg_connection_close_handler close_handler,
+                                        void *cbdata)
 {
     struct mg_request_handler_info *tmp_rh, **lastref;
     size_t urilen = strlen(uri);
+
+    if (is_websocket_handler) {
+        assert(handler == NULL);
+        assert(is_delete_request || connect_handler!=NULL || ready_handler!=NULL || data_handler!=NULL || close_handler!=NULL);
+    } else {
+        assert(connect_handler==NULL && ready_handler==NULL && data_handler==NULL && close_handler==NULL);
+        assert(is_delete_request || (handler!=NULL));
+    }
 
     mg_lock_context(ctx);
 
@@ -6261,9 +6290,16 @@ static void mg_set_request_handler_type(struct mg_context *ctx, const char *uri,
     for (tmp_rh = ctx->request_handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
         if (tmp_rh->is_websocket_handler == is_websocket_handler) {
             if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri,uri)) {
-                if (handler != NULL) {
+                if (!is_delete_request) {
                     /* update existing handler */
-                    tmp_rh->handler = handler;
+                    if (!is_websocket_handler) {
+                        tmp_rh->handler = handler;
+                    } else {
+                        tmp_rh->connect_handler = connect_handler;
+                        tmp_rh->ready_handler = ready_handler;
+                        tmp_rh->data_handler = data_handler;
+                        tmp_rh->close_handler = close_handler;
+                    }
                     tmp_rh->cbdata = cbdata;
                 } else {
                     /* remove existing handler */
@@ -6278,7 +6314,7 @@ static void mg_set_request_handler_type(struct mg_context *ctx, const char *uri,
         lastref = &(tmp_rh->next);
     }
 
-    if (handler == NULL) {
+    if (is_delete_request) {
         /* no handler to set, this was a remove request to a non-existing handler */
         mg_unlock_context(ctx);
         return;
@@ -6298,7 +6334,14 @@ static void mg_set_request_handler_type(struct mg_context *ctx, const char *uri,
         return;
     }
     tmp_rh->uri_len = urilen;
-    tmp_rh->handler = handler;
+    if (!is_websocket_handler) {
+        tmp_rh->handler = handler;
+    } else {
+        tmp_rh->connect_handler = connect_handler;
+        tmp_rh->ready_handler = ready_handler;
+        tmp_rh->data_handler = data_handler;
+        tmp_rh->close_handler = close_handler;
+    }
     tmp_rh->cbdata = cbdata;
     tmp_rh->is_websocket_handler = is_websocket_handler;
     tmp_rh->next = NULL;
@@ -6309,7 +6352,20 @@ static void mg_set_request_handler_type(struct mg_context *ctx, const char *uri,
 
 void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata)
 {
-    mg_set_request_handler_type(ctx, uri, handler, cbdata, 0);
+    mg_set_request_handler_type(ctx, uri, 0, handler==NULL, handler, NULL, NULL, NULL, NULL, cbdata);
+}
+
+void mg_set_websocket_handler(struct mg_context *ctx,
+                              const char *uri,
+                              mg_websocket_connect_handler connect_handler,
+                              mg_websocket_ready_handler ready_handler,
+                              mg_websocket_data_handler data_handler,
+                              mg_connection_close_handler close_handler,
+                              void *cbdata
+                              )
+{
+    int is_delete_request = (connect_handler!=NULL) || (ready_handler!=NULL) || (data_handler!=NULL) || (close_handler!=NULL);
+    mg_set_request_handler_type(ctx, uri, 1, is_delete_request, NULL, connect_handler, ready_handler, data_handler, close_handler, cbdata);
 }
 
 static int get_request_handler(struct mg_connection *conn, int is_websocket_request, mg_request_handler *handler, void **cbdata)
