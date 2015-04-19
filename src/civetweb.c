@@ -5941,7 +5941,7 @@ int mg_websocket_write(struct mg_connection* conn, int opcode, const char* data,
 
 static void handle_websocket_request(struct mg_connection *conn,
                                      const char *path,
-                                     int is_script_resource,
+                                     int is_callback_resource,
                                      mg_websocket_connect_handler ws_connect_handler,
                                      mg_websocket_ready_handler ws_ready_handler,
                                      mg_websocket_data_handler ws_data_handler,
@@ -5950,23 +5950,34 @@ static void handle_websocket_request(struct mg_connection *conn,
                                      )
 {
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
-#ifdef USE_LUA
     int lua_websock = 0;
-#endif
 
 #ifndef USE_LUA
     (void)path;
-    (void)is_script_resource;
+    (void)is_callback_resource;
 #endif
 
+    /* Step 1: Check websocket protocol version. */
     if (version == NULL || strcmp(version, "13") != 0) {
+        /* Reject wrong versions */
         send_http_error(conn, 426, "%s", "Protocol upgrade required");
-    } else if (ws_connect_handler != NULL &&
-               ws_connect_handler(conn, cbData) != 0) {
-        /* C callback has returned non-zero, do not proceed with handshake. */
-        /* The C callback is called before Lua and may prevent Lua from handling the websocket. */
-    } else {
+        return;
+    }
+
+    /* Step 2: If a callback is responsible, call it. */
+    if (is_callback_resource) {
+        if (ws_connect_handler != NULL && ws_connect_handler(conn, cbData) != 0) {
+            /* C callback has returned non-zero, do not proceed with handshake. */
+            /* Note that C callbacks are no longer called when Lua is responsible,
+               so C can no longer filter callbacks for Lua. */
+            return;
+        }
+    }
+
 #ifdef USE_LUA
+    /* Step 3: No callback. Check if Lua is responsible. */
+    else {
+        /* Step 3.1: Check if Lua is responsible. */
         if (conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]) {
             lua_websock = match_prefix(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS],
                                        (int)strlen(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]),
@@ -5974,27 +5985,49 @@ static void handle_websocket_request(struct mg_connection *conn,
         }
 
         if (lua_websock) {
+            /* Step 3.2: Lua is responsible: call it. */
             conn->lua_websocket_state = lua_websocket_new(path, conn);
-            if (conn->lua_websocket_state) {
-                send_websocket_handshake(conn);
-                if (lua_websocket_ready(conn, conn->lua_websocket_state)) {
-                    read_websocket(conn, NULL, NULL);
-                }
+            if (!conn->lua_websocket_state) {
+                /* Lua rejected the new client */
+                return;
             }
-        } else
+        }
+    }
 #endif
-        {
-            /* No Lua websock script specified. */
-            send_websocket_handshake(conn);
-            if (ws_ready_handler != NULL) {
-                ws_ready_handler(conn, cbData);
-            }
-            read_websocket(conn, ws_data_handler, cbData);
-        }
 
-        if (ws_close_handler) {
-            ws_close_handler(conn, cbData);
+    /* Step 4: Check if there is a responsible websocket handler. */
+    if (!is_callback_resource && !lua_websock) {
+        /* There is no callback, an Lua is not responsible either. */
+        /* Reply with a 404 Not Found or with nothing at all? TODO: check if this is correct for websockets */
+        send_http_error(conn, 404, "%s", "Not found");
+        return;
+    }
+
+    /* Step 5: The websocket connection has been accepted */
+    send_websocket_handshake(conn);
+
+    /* Step 6: Call the ready handler */
+    if (is_callback_resource) {
+        if (ws_ready_handler != NULL) {
+            ws_ready_handler(conn, cbData);
         }
+    } else if (lua_websock) {
+        if (!lua_websocket_ready(conn, conn->lua_websocket_state)) {
+            /* the ready handler returned false */
+            return;
+        }
+    }
+
+    /* Step 7: Enter the read loop */
+    if (is_callback_resource) {
+        read_websocket(conn, ws_data_handler, cbData);
+    } else if (lua_websock) {
+        read_websocket(conn, NULL, NULL);
+    }
+
+    /* Step 8: Call the close handler */
+    if (ws_close_handler) {
+        ws_close_handler(conn, cbData);
     }
 }
 
@@ -6649,10 +6682,10 @@ static void handle_request(struct mg_connection *conn)
                 goto auth_check;
             }
         } else {
-#if defined(USE_WEBSOCKET)            
-            handle_websocket_request(conn, path, 
-                                     0 /* do not use is_script_resource here */, 
-                                     ws_connect_handler, ws_ready_handler, ws_data_handler, ws_close_handler, 
+#if defined(USE_WEBSOCKET)
+            handle_websocket_request(conn, path,
+                                     is_callback_resource,
+                                     ws_connect_handler, ws_ready_handler, ws_data_handler, ws_close_handler,
                                      callback_data
                                      );
 #endif
@@ -6663,7 +6696,7 @@ static void handle_request(struct mg_connection *conn)
     /* 8. handle websocket requests */
 #if defined(USE_WEBSOCKET)
     if (is_websocket_request) {
-        handle_websocket_request(conn, path, is_script_resource,
+        handle_websocket_request(conn, path, is_callback_resource,
                                  deprecated_websocket_connect_wrapper,
                                  deprecated_websocket_ready_wrapper,
                                  deprecated_websocket_data_wrapper,
