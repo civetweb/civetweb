@@ -132,14 +132,13 @@ int WebSocketConnectHandler(const struct mg_connection * conn, void *cbdata)
     return reject;
 }
 
-void WebSocketReadyHandler(const struct mg_connection * conn, void *cbdata)
+void WebSocketReadyHandler(struct mg_connection * conn, void *cbdata)
 {
-    struct mg_context *ctx = mg_get_context((struct mg_connection *) /* TODO: check const_casts */ conn);
+    struct mg_context *ctx = mg_get_context(conn);
     int i;
 
     const char * text = "Hello from the websocket ready handler";
-    /* TODO: check "const struct mg_connection *" vs "struct mg_connection *" everywhere */
-    mg_websocket_write((struct mg_connection *)conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+    mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
     fprintf(stdout, "Client added to the set of webserver connections\r\n\r\n");
     mg_lock_context(ctx);
     for (i=0; i<MAX_WS_CLIENTS; i++) {
@@ -151,7 +150,7 @@ void WebSocketReadyHandler(const struct mg_connection * conn, void *cbdata)
     mg_unlock_context(ctx);
 }
 
-int WebsocketDataHandler(const struct mg_connection * conn, int bits, char * data, size_t len, void *cbdata)
+int WebsocketDataHandler(struct mg_connection * conn, int bits, char * data, size_t len, void *cbdata)
 {
     fprintf(stdout, "Websocket got data:\r\n");
     fwrite(data, len, 1, stdout);

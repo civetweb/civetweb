@@ -105,9 +105,9 @@ struct tclient_data {
     int closed;
 };
 
-static int websocket_client_data_handler(const struct mg_connection *conn, int flags, char *data, size_t data_len, void * user_data)
+static int websocket_client_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len, void * user_data)
 {
-    struct mg_context *ctx = mg_get_context(conn); /* TODO: const qualifier */
+    struct mg_context *ctx = mg_get_context(conn);
     struct tclient_data *pclient_data = (struct tclient_data *) mg_get_user_data(ctx);
 
     printf("Client received data from server: ");
@@ -124,7 +124,7 @@ static int websocket_client_data_handler(const struct mg_connection *conn, int f
 
 static void websocket_client_close_handler(const struct mg_connection *conn, void * user_data)
 {
-    struct mg_context *ctx = mg_get_context(conn); /* TODO: const qualifier */
+    struct mg_context *ctx = mg_get_context(conn);
     struct tclient_data *pclient_data = (struct tclient_data *) mg_get_user_data(ctx);
 
     printf("Client: Close handler\n");

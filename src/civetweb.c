@@ -1220,7 +1220,7 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name)
     }
 }
 
-struct mg_context *mg_get_context(struct mg_connection * conn)
+struct mg_context *mg_get_context(const struct mg_connection * conn)
 {
     return (conn == NULL) ? (struct mg_context *)NULL : (conn->ctx);
 }
@@ -5755,7 +5755,7 @@ static void read_websocket(struct mg_connection *conn, mg_websocket_data_handler
        The original websocket upgrade request is never removed, so the queue
        begins after it. */
     unsigned char *buf = (unsigned char *) conn->buf + conn->request_len;
-    int n, error;
+    int n, error, exit_by_callback;
 
     /* body_len is the length of the entire queue in bytes
        len is the length of the current message
@@ -5867,6 +5867,7 @@ static void read_websocket(struct mg_connection *conn, mg_websocket_data_handler
 
             /* Exit the loop if callback signalled to exit,
                or "connection close" opcode received. */
+            exit_by_callback = 0;
             if ((ws_data_handler != NULL &&
 #ifdef USE_LUA
                  (conn->lua_websocket_state == NULL) &&
@@ -5876,13 +5877,19 @@ static void read_websocket(struct mg_connection *conn, mg_websocket_data_handler
                 (conn->lua_websocket_state &&
                  !lua_websocket_data(conn, conn->lua_websocket_state, mop, data, data_len)) ||
 #endif
-                (mop & 0xf) == WEBSOCKET_OPCODE_CONNECTION_CLOSE) {  /* Opcode == 8, connection close */
-                break;
+                0) {
+                exit_by_callback = 1;
             }
 
             if (data != mem) {
                 mg_free(data);
             }
+
+            if (exit_by_callback || ((mop & 0xf) == WEBSOCKET_OPCODE_CONNECTION_CLOSE)) {
+                /* Opcode == 8, connection close */
+                break;
+            }
+
             /* Not breaking the loop, process next websocket frame. */
         } else {
             /* Read from the socket into the next available location in the
@@ -5952,9 +5959,8 @@ static void handle_websocket_request(struct mg_connection *conn,
     const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
     int lua_websock = 0;
 
-#ifndef USE_LUA
+#if !defined(USE_LUA)
     (void)path;
-    (void)is_callback_resource;
 #endif
 
     /* Step 1: Check websocket protocol version. */
@@ -5974,7 +5980,7 @@ static void handle_websocket_request(struct mg_connection *conn,
         }
     }
 
-#ifdef USE_LUA
+#if defined(USE_LUA)
     /* Step 3: No callback. Check if Lua is responsible. */
     else {
         /* Step 3.1: Check if Lua is responsible. */
@@ -6011,11 +6017,13 @@ static void handle_websocket_request(struct mg_connection *conn,
         if (ws_ready_handler != NULL) {
             ws_ready_handler(conn, cbData);
         }
+#if defined(USE_LUA)
     } else if (lua_websock) {
         if (!lua_websocket_ready(conn, conn->lua_websocket_state)) {
             /* the ready handler returned false */
             return;
         }
+#endif
     }
 
     /* Step 7: Enter the read loop */

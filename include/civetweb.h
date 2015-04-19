@@ -293,8 +293,8 @@ CIVETWEB_API void mg_set_request_handler(struct mg_context *ctx, const char *uri
    mg_connection_close_handler
        Is called, when the connection is closed.*/
 typedef int  (*mg_websocket_connect_handler)(const struct mg_connection *, void *);
-typedef void (*mg_websocket_ready_handler)(const struct mg_connection *, void *);
-typedef int  (*mg_websocket_data_handler)(const struct mg_connection *, int, char *, size_t, void *);
+typedef void (*mg_websocket_ready_handler)(struct mg_connection *, void *);
+typedef int  (*mg_websocket_data_handler)(struct mg_connection *, int, char *, size_t, void *);
 typedef void (*mg_websocket_close_handler)(const struct mg_connection *, void *);
 
 /* mg_set_websocket_handler
@@ -320,7 +320,7 @@ CIVETWEB_API const char *mg_get_option(const struct mg_context *ctx, const char 
 
 
 /* Get context from connection. */
-CIVETWEB_API struct mg_context *mg_get_context(struct mg_connection *conn);
+CIVETWEB_API struct mg_context *mg_get_context(const struct mg_connection *conn);
 
 
 /* Get user data passed to mg_start from context. */
