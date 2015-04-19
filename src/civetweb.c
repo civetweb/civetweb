@@ -5978,7 +5978,7 @@ static void handle_websocket_request(struct mg_connection *conn,
             if (conn->lua_websocket_state) {
                 send_websocket_handshake(conn);
                 if (lua_websocket_ready(conn, conn->lua_websocket_state)) {
-                    read_websocket(conn);
+                    read_websocket(conn, NULL, NULL);
                 }
             }
         } else
@@ -6649,8 +6649,12 @@ static void handle_request(struct mg_connection *conn)
                 goto auth_check;
             }
         } else {
-#if defined(USE_WEBSOCKET)
-            handle_websocket_request(conn, path, is_script_resource, ws_connect_handler, ws_ready_handler, ws_data_handler, ws_close_handler, callback_data);
+#if defined(USE_WEBSOCKET)            
+            handle_websocket_request(conn, path, 
+                                     0 /* do not use is_script_resource here */, 
+                                     ws_connect_handler, ws_ready_handler, ws_data_handler, ws_close_handler, 
+                                     callback_data
+                                     );
 #endif
         }
         return;

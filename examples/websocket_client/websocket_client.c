@@ -105,9 +105,9 @@ struct tclient_data {
     int closed;
 };
 
-static int websocket_client_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
+static int websocket_client_data_handler(const struct mg_connection *conn, int flags, char *data, size_t data_len, void * user_data)
 {
-    struct mg_context *ctx = mg_get_context(conn);
+    struct mg_context *ctx = mg_get_context(conn); /* TODO: const qualifier */
     struct tclient_data *pclient_data = (struct tclient_data *) mg_get_user_data(ctx);
 
     printf("Client received data from server: ");
@@ -122,9 +122,9 @@ static int websocket_client_data_handler(struct mg_connection *conn, int flags, 
     return 1;
 }
 
-static void websocket_client_close_handler(struct mg_connection *conn)
+static void websocket_client_close_handler(const struct mg_connection *conn, void * user_data)
 {
-    struct mg_context *ctx = mg_get_context(conn);
+    struct mg_context *ctx = mg_get_context(conn); /* TODO: const qualifier */
     struct tclient_data *pclient_data = (struct tclient_data *) mg_get_user_data(ctx);
 
     printf("Client: Close handler\n");
@@ -151,7 +151,6 @@ int main(int argc, char *argv[])
     printf("Server init\n\n");
 
     /* Then connect a first client */
-    /* TODO: parameters changed -> fix them */ xxx
     newconn1 = mg_connect_websocket_client("localhost", atoi(PORT), 0, ebuf, sizeof(ebuf),
         "/websocket", NULL, websocket_client_data_handler, websocket_client_close_handler,
         &client1_data);
