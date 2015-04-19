@@ -52,7 +52,7 @@ By default, the server will automatically serve up files like a normal HTTP serv
 Lua Support
 ------
 
-Lua is a server side include functionality.  Files ending in .la will be processed with Lua.
+Lua is a server side include functionality.  Files ending in .lua will be processed with Lua.
 
 ##### Add the following CFLAGS
 

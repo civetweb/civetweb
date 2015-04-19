@@ -5,6 +5,7 @@ Release Notes v1.7 (Under Development)
 Changes
 -------
 
+- URI specific callbacks for websockets
 - Add chunked transfer support
 - Update LuaFileSystem
 - Update Lua to 5.2.4

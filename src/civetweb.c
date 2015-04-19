@@ -5865,19 +5865,11 @@ static void read_websocket(struct mg_connection *conn, mg_websocket_data_handler
                 }
             }
 
-            /* Exit the loop if callback signalled to exit,
-               or "connection close" opcode received. */
+            /* Exit the loop if callback signals to exit (server side),
+               or "connection close" opcode received (client side). */
             exit_by_callback = 0;
-            if ((ws_data_handler != NULL &&
-#ifdef USE_LUA
-                 (conn->lua_websocket_state == NULL) &&
-#endif
-                 !ws_data_handler(conn, mop, data, data_len, callback_data)) ||
-#ifdef USE_LUA
-                (conn->lua_websocket_state &&
-                 !lua_websocket_data(conn, conn->lua_websocket_state, mop, data, data_len)) ||
-#endif
-                0) {
+            if ((ws_data_handler != NULL) &&
+                 !ws_data_handler(conn, mop, data, data_len, callback_data)) {
                 exit_by_callback = 1;
             }
 
@@ -6029,8 +6021,10 @@ static void handle_websocket_request(struct mg_connection *conn,
     /* Step 7: Enter the read loop */
     if (is_callback_resource) {
         read_websocket(conn, ws_data_handler, cbData);
+#if defined(USE_LUA)
     } else if (lua_websock) {
-        read_websocket(conn, NULL, NULL);
+        read_websocket(conn, lua_websocket_data, conn->lua_websocket_state);
+#endif
     }
 
     /* Step 8: Call the close handler */
@@ -6704,7 +6698,8 @@ static void handle_request(struct mg_connection *conn)
     /* 8. handle websocket requests */
 #if defined(USE_WEBSOCKET)
     if (is_websocket_request) {
-        handle_websocket_request(conn, path, is_callback_resource,
+        handle_websocket_request(conn, path,
+                                 !is_script_resource /* could be deprecated global callback */,
                                  deprecated_websocket_connect_wrapper,
                                  deprecated_websocket_ready_wrapper,
                                  deprecated_websocket_data_wrapper,
@@ -7739,12 +7734,16 @@ struct mg_connection *mg_connect_websocket_client(const char *host, int port, in
     conn = mg_download(host, port, use_ssl,
                              error_buffer, error_buffer_size,
                              handshake_req, path, host, magic, origin);
-
+                             ä
     /* Connection object will be null if something goes wrong */
     if (conn == NULL || (strcmp(conn->request_info.uri, "101") != 0))
     {
+        if (!*error_buffer) {
+            /* if there is a connection, but it did not return 101, error_buffer is not yet set */
+            mg_snprintf(conn, error_buffer, error_buffer_size, "Unexpected server reply");
+        }
         DEBUG_TRACE("Websocket client connect error: %s\r\n", error_buffer);
-        if(conn != NULL) { mg_free(conn); conn = NULL; }
+        if (conn != NULL) { mg_free(conn); conn = NULL; }
         return conn;
     }
 

@@ -1,3 +1,8 @@
+/* This example uses deprecated interfaces: global websocket callbacks.
+   They have been superseeded by URI specific callbacks.
+   See examples/embedded_c for an up to date example.
+   */
+
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>

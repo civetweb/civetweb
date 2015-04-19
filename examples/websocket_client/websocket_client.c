@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 the Civetweb developers
+* Copyright (c) 2014-2015 the Civetweb developers
 * Copyright (c) 2014 Jordan Shelley
 * https://github.com/jshelley
 * License http://opensource.org/licenses/mit-license.php MIT License

@@ -1306,7 +1306,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
     return ok ? (void*)ws : NULL;
 }
 
-static int lua_websocket_data(struct mg_connection * conn, void *ws_arg, int bits, char *data, size_t data_len)
+static int lua_websocket_data(struct mg_connection * conn, int bits, char *data, size_t data_len, void *ws_arg)
 {
     struct lua_websock_data *ws = (struct lua_websock_data *)(ws_arg);
     int err, ok = 0;
