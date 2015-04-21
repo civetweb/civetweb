@@ -2659,6 +2659,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
     if (conn->is_chunked)
     {
+        /* TODO: chunked transfer encoding (#95) is currently not working. See #98. */
         int i = 0;
         char buf[64];
         char *end = 0;
