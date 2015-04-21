@@ -4496,7 +4496,7 @@ static int read_request(FILE *fp, struct mg_connection *conn,
         }
     }
 
-    return request_len <= 0 && n <= 0 ? -1 : request_len;
+    return (request_len <= 0 && n <= 0) ? -1 : request_len;
 }
 
 /* For given directory path, substitute it to valid index file.
@@ -6505,7 +6505,8 @@ static int deprecated_websocket_connect_wrapper(const struct mg_connection * con
     if (pcallbacks->websocket_connect) {
         return pcallbacks->websocket_connect(conn);
     }
-    return 1;
+    /* No handler set - assume "OK" */
+    return 0;
 }
 
 static void deprecated_websocket_ready_wrapper(const struct mg_connection * conn, void *cbdata)
@@ -6522,7 +6523,8 @@ static int deprecated_websocket_data_wrapper(const struct mg_connection * conn, 
     if (pcallbacks->websocket_data) {
         return pcallbacks->websocket_data((struct mg_connection *)conn, bits, data, len);
     }
-    return 0;
+    /* No handler set - assume "OK" */
+    return 1;
 }
 
 /* This is the heart of the Civetweb's logic.
@@ -7734,7 +7736,7 @@ struct mg_connection *mg_connect_websocket_client(const char *host, int port, in
     conn = mg_download(host, port, use_ssl,
                              error_buffer, error_buffer_size,
                              handshake_req, path, host, magic, origin);
-                             ä
+
     /* Connection object will be null if something goes wrong */
     if (conn == NULL || (strcmp(conn->request_info.uri, "101") != 0))
     {
