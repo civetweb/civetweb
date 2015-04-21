@@ -911,7 +911,7 @@ static void test_request_handlers(void) {
     char uri[64];
     int i;
     const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
-    
+
     ctx = mg_start(NULL, NULL, OPTIONS);
     ASSERT(ctx != NULL);
 
@@ -935,12 +935,12 @@ static void test_request_handlers(void) {
         sprintf(uri, "/U%u", i);
         mg_set_request_handler(ctx, uri, request_test_handler, (void*)i);
     }
-    
+
     conn = mg_download("localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
     ASSERT((conn) != NULL);
     mg_sleep(1000);
     mg_close_connection(conn);
-    
+
     mg_stop(ctx);
 
 }
@@ -1189,6 +1189,15 @@ int __cdecl main(void) {
 
     /* test completed */
     mg_free(fetch_data);
+
+#ifdef MEMORY_DEBUGGING
+    {
+    extern unsigned long mg_memory_debug_blockCount;
+    extern unsigned long mg_memory_debug_totalMemUsed;
+
+    printf("MEMORY DEBUGGING: %u %u\n", mg_memory_debug_blockCount, mg_memory_debug_totalMemUsed);
+    }
+#endif
 
     printf("TOTAL TESTS: %d, FAILED: %d\n", s_total_tests, s_failed_tests);
     return s_failed_tests == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

@@ -443,8 +443,8 @@ static void DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, .
 #endif /* DEBUG_TRACE */
 
 #if defined(MEMORY_DEBUGGING)
-static unsigned long blockCount = 0;
-static unsigned long totalMemUsed = 0;
+unsigned long mg_memory_debug_blockCount = 0;
+unsigned long mg_memory_debug_totalMemUsed = 0;
 
 static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
 
@@ -454,12 +454,12 @@ static void * mg_malloc_ex(size_t size, const char * file, unsigned line) {
 
     if (data) {
         *(size_t*)data = size;
-        totalMemUsed += size;
-        blockCount++;
+        mg_memory_debug_totalMemUsed += size;
+        mg_memory_debug_blockCount++;
         memory = (void *)(((char*)data)+sizeof(size_t));
     }
 
-    sprintf(mallocStr, "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n", memory, (unsigned long)size, totalMemUsed, blockCount, file, line);
+    sprintf(mallocStr, "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n", memory, (unsigned long)size, mg_memory_debug_totalMemUsed, mg_memory_debug_blockCount, file, line);
 #if defined(_WIN32)
     OutputDebugStringA(mallocStr);
 #else
@@ -485,9 +485,9 @@ static void mg_free_ex(void * memory, const char * file, unsigned line) {
 
     if (memory) {
         size = *(size_t*)data;
-        totalMemUsed -= size;
-        blockCount--;
-        sprintf(mallocStr, "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n", memory, (unsigned long)size, totalMemUsed, blockCount, file, line);
+        mg_memory_debug_totalMemUsed -= size;
+        mg_memory_debug_blockCount--;
+        sprintf(mallocStr, "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n", memory, (unsigned long)size, mg_memory_debug_totalMemUsed, mg_memory_debug_blockCount, file, line);
 #if defined(_WIN32)
         OutputDebugStringA(mallocStr);
 #else
@@ -512,15 +512,15 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
             _realloc = realloc(data, newsize+sizeof(size_t));
             if (_realloc) {
                 data = _realloc;
-                totalMemUsed -= oldsize;
-                sprintf(mallocStr, "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n", memory, (unsigned long)oldsize, totalMemUsed, blockCount, file, line);
+                mg_memory_debug_totalMemUsed -= oldsize;
+                sprintf(mallocStr, "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n", memory, (unsigned long)oldsize, mg_memory_debug_totalMemUsed, mg_memory_debug_blockCount, file, line);
 #if defined(_WIN32)
                 OutputDebugStringA(mallocStr);
 #else
                 DEBUG_TRACE("%s", mallocStr);
 #endif
-                totalMemUsed += newsize;
-                sprintf(mallocStr, "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n", memory, (unsigned long)newsize, totalMemUsed, blockCount, file, line);
+                mg_memory_debug_totalMemUsed += newsize;
+                sprintf(mallocStr, "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n", memory, (unsigned long)newsize, mg_memory_debug_totalMemUsed, mg_memory_debug_blockCount, file, line);
 #if defined(_WIN32)
                 OutputDebugStringA(mallocStr);
 #else
