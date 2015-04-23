@@ -19,7 +19,7 @@ out
 #################
 /CMakeCache.txt
 /CMakeFiles
-/mingw
+/mingw-builds
 
 #################
 ## Eclipse
@@ -256,4 +256,3 @@ tags
 ## Travis Build Dir
 ##########################
 ci/lua
-
