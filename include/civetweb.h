@@ -34,6 +34,8 @@
 #else
 #define CIVETWEB_API
 #endif
+#elif __GNUC__ >= 4
+#define CIVETWEB_API __attribute__((visibility ("default")))
 #else
 #define CIVETWEB_API
 #endif
