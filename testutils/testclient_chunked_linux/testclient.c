@@ -32,11 +32,11 @@ unsigned short PORT = 8080;
 const char * RESOURCE = "/resource_script_demo.lua/r1.txt";
 const char * METHOD = "PUT";
 
-unsigned postSize = 1024;
+unsigned postSize = 987;
 unsigned extraHeadSize = 0;
 unsigned queryStringSize = 0;
 int keep_alive = 0;
-int chunked = 0;
+int chunked = 1;
 
 
 int sockvprintf(SOCKET soc, const char * fmt, va_list vl) {
@@ -116,14 +116,21 @@ int TestClient(unsigned clientNo) {
 
     } else if (chunked) {
 
+        unsigned remaining_postSize = postSize;
         sockprintf(soc, "Transfer-Encoding: chunked\r\n\r\n", postSize);
 
-        for (i=0;i<(postSize/10);i++) {sockprintf(soc, "A\r\n1234567890\r\n");}
-        if ((postSize%10)>0) {
-            sockprintf(soc, "%x\r\n", postSize%10);
-            for (i=0;i<(postSize%10);i++) {sockprintf(soc, "_");}
+        while (remaining_postSize > 0) {
+            unsigned chunk = rand()%200 + 1;
+            if (chunk>remaining_postSize) chunk = remaining_postSize;
+
+            sockprintf(soc, "%x\r\n", chunk);
+            for (i=0;i<chunk;i++) {sockprintf(soc, "_");}
             sockprintf(soc, "\r\n");
+
+            remaining_postSize -= chunk;
         }
+        sockprintf(soc, "0\r\n\r\n", postSize%10);
+
 
     } else {
 
@@ -204,6 +211,8 @@ int main(int argc, char * argv[]) {
         return 1;
     }
 #endif
+
+    srand((unsigned int)time(NULL));
 
     lpHost = gethostbyname(HOST);
     if (lpHost == NULL) {

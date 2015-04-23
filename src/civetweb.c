@@ -896,6 +896,7 @@ struct mg_connection {
     int64_t content_len;            /* Content-Length header value */
     int64_t consumed_content;       /* How many bytes of content have been read */
     int is_chunked;                 /* Transfer-encoding is chunked */
+    size_t chunk_remainder;         /* Unread data from the last chunk */
     char *buf;                      /* Buffer for received data */
     char *path_info;                /* PATH_INFO part of the URL */
     int must_close;                 /* 1 if connection must be closed */
@@ -2644,27 +2645,81 @@ int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
     return (int)nread;
 }
 
-static int mg_getc(struct mg_connection *conn)
+static char mg_getc(struct mg_connection *conn)
 {
     char c;
     conn->content_len++;
     if (mg_read_inner(conn, &c, 1) <= 0)
     {
-        return EOF;
+        return (char)0;
     }
-    return (int)c;
+    return c;
 }
 
 int mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
     if (conn->is_chunked)
     {
-        /* TODO: chunked transfer encoding (#95) is currently not working. See #98. */
-        int i = 0;
-        char buf[64];
-        char *end = 0;
-        long chunkSize = strtol(buf,&end,16);
+        size_t all_read = 0;
+        while (len>0) {
 
+            if (conn->chunk_remainder) {
+                /* copy from the remainder of the last received chunk */
+                int read_ret;
+                int read_now = ((conn->chunk_remainder>len) ? (len) : (conn->chunk_remainder));
+
+                conn->content_len += read_now;
+                read_ret = mg_read_inner(conn, (char*)buf+all_read, read_now);
+                all_read += read_ret;
+
+                conn->chunk_remainder -= read_now;
+                len -= read_now;
+
+                if (conn->chunk_remainder == 0) {
+                    /* the rest of the data in the current chunk has been read */
+                    if ((mg_getc(conn) != '\r') || (mg_getc(conn) != '\n')) {
+                        /* Protocol violation */
+                        return -1;
+                    }
+                }
+
+            } else {
+                /* fetch a new chunk */
+                int i = 0;
+                char lenbuf[64];
+                char *end = 0;
+                unsigned long chunkSize = 0;
+
+                for (i=0; i<sizeof(lenbuf)-1; i++) {
+                    lenbuf[i] = mg_getc(conn);
+                    if (i>0 && lenbuf[i] == '\r' && lenbuf[i-1] != '\r') continue;
+                    if (i>1 && lenbuf[i] == '\n' && lenbuf[i-1] == '\r') {
+                        lenbuf[i+1] = 0;
+                        chunkSize = strtoul(lenbuf, &end, 16);
+                        break;
+                    }
+                    if (!isalnum(lenbuf[i])) {
+                        /* illegal character for chunk length */
+                        return -1;
+                    }
+                }
+                if ((end==NULL) || (*end!='\r')) {
+                    /* chunksize not set correctly */
+                    return -1;
+                }
+
+                conn->chunk_remainder = chunkSize;
+                if (chunkSize == 0) {
+                    /* regular end of content */
+                    break;
+                }
+            }
+        }
+
+        return all_read;
+
+        /* TODO: chunked transfer encoding (#95) is currently not working. See #98. */
+        /*
         if (conn->content_len <= 0)
         {
             conn->content_len = 0;
@@ -2706,6 +2761,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
             return 0;
         }
         conn->content_len += chunkSize;
+        */
     }
     return mg_read_inner(conn,buf,len);
 }
@@ -7343,6 +7399,7 @@ static void reset_per_request_attributes(struct mg_connection *conn)
     conn->request_info.http_version = NULL;
     conn->request_info.num_headers = 0;
     conn->data_len = 0;
+    conn->chunk_remainder = 0;
 }
 
 
