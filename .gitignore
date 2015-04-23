@@ -9,9 +9,17 @@ out
 *.msi
 *.exe
 *.zip
-Output
+[oO]utput
+[tT]esting
 
 *.o
+
+#################
+## CMake
+#################
+/CMakeCache.txt
+/CMakeFiles
+/mingw
 
 #################
 ## Eclipse
