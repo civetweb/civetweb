@@ -32,7 +32,7 @@ unsigned short PORT = 8080;
 const char * RESOURCE = "/resource_script_demo.lua/r1.txt";
 const char * METHOD = "PUT";
 
-unsigned postSize = 987;
+unsigned postSize = 9876;
 unsigned extraHeadSize = 0;
 unsigned queryStringSize = 0;
 int keep_alive = 0;

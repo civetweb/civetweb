@@ -72,7 +72,14 @@ if method=="PUT" then
         mg.write("<body>Resource of type \"" .. mime .. "\" already exists.</body></html>\r\n")
     else
         local f = io.open(file, "w")
-        f:write(mg.read())
+
+        local data = {}
+        repeat
+            local l = mg.read();
+            data[#data+1] = l;
+        until ((l == "") or (l == nil));
+
+        f:write(table.concat(data, ""))
         f:close()
         mg.write("HTTP/1.0 200 OK\r\n")
         mg.write("Connection: close\r\n")
