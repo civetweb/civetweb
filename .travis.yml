@@ -1,5 +1,4 @@
 language: c
 compiler:
   - gcc
-  - clang
 script: make WITH_LUA=1 WITH_DEBUG=1 WITH_IPV6=1 WITH_WEBSOCKET=1
