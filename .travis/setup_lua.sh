@@ -24,6 +24,7 @@ make local
 LUA_DIR=$BUILD_DIR/lua
 rm -rf $LUA_DIR
 mv install/ $LUA_DIR
+export PATH=$LUA_DIR/bin:$PATH
 
 cd $BUILD_DIR
 
