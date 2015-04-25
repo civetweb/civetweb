@@ -201,7 +201,9 @@ typedef long off_t;
 #define SSL_LIB   "ssleay32.dll"
 #define CRYPTO_LIB  "libeay32.dll"
 #define O_NONBLOCK  0
+#ifndef W_OK
 #define W_OK (2) /* http://msdn.microsoft.com/en-us/library/1w06ktdy.aspx */
+#endif
 #if !defined(EWOULDBLOCK)
 #define EWOULDBLOCK  WSAEWOULDBLOCK
 #endif /* !EWOULDBLOCK */
@@ -941,6 +943,8 @@ int mg_atomic_inc(volatile int * addr)
 {
     int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
+    /* Depending on the SDK, this is either (volatile unsigned int *) or (volatile LONG *),
+       whatever you use, the other SDK is likely to raise a warning. */
     ret = InterlockedIncrement((volatile unsigned int *) addr);
 #elif defined(__GNUC__)
     ret = __sync_add_and_fetch(addr, 1);
@@ -954,6 +958,8 @@ int mg_atomic_dec(volatile int * addr)
 {
     int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
+    /* Depending on the SDK, this is either (volatile unsigned int *) or (volatile LONG *),
+       whatever you use, the other SDK is likely to raise a warning. */
     ret = InterlockedDecrement((volatile unsigned int *) addr);
 #elif defined(__GNUC__)
     ret = __sync_sub_and_fetch(addr, 1);
@@ -2202,9 +2208,8 @@ static int mg_join_thread(pthread_t threadid)
     result = -1;
     dwevent = WaitForSingleObject(threadid, INFINITE);
     if (dwevent == WAIT_FAILED) {
-        int err;
-
-        err = GetLastError();
+        int err = GetLastError();
+        (void)err;
         DEBUG_TRACE("WaitForSingleObject() failed, error %d", err);
     } else {
         if (dwevent == WAIT_OBJECT_0) {
@@ -2690,7 +2695,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
                 char *end = 0;
                 unsigned long chunkSize = 0;
 
-                for (i=0; i<sizeof(lenbuf)-1; i++) {
+                for (i=0; i<((int)sizeof(lenbuf)-1); i++) {
                     lenbuf[i] = mg_getc(conn);
                     if (i>0 && lenbuf[i] == '\r' && lenbuf[i-1] != '\r') continue;
                     if (i>1 && lenbuf[i] == '\n' && lenbuf[i-1] == '\r') {
@@ -7018,7 +7023,7 @@ static int set_ports_option(struct mg_context *ctx)
                    listen(so.sock, SOMAXCONN) != 0 ||
                    getsockname(so.sock, &(usa.sa), &len) != 0) {
             mg_cry(fc(ctx), "%s: cannot bind to %.*s: %d (%s)", __func__,
-                   (int) vec.len, vec.ptr, ERRNO, strerror(errno));
+                   (int) vec.len, vec.ptr, (int)ERRNO, strerror(errno));
             if (so.sock != INVALID_SOCKET) {
                 closesocket(so.sock);
                 so.sock = INVALID_SOCKET;
@@ -8260,7 +8265,7 @@ static void free_context(struct mg_context *ctx)
     /* Deallocate config parameters */
     for (i = 0; i < NUM_OPTIONS; i++) {
         if (ctx->config[i] != NULL)
-#ifdef WIN32
+#ifdef _MSC_VER
 #pragma warning(suppress: 6001)
 #endif
             mg_free(ctx->config[i]);
@@ -8334,7 +8339,7 @@ static void get_system_name(char **sysName)
     dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
     dwBuild = ((dwVersion < 0x80000000) ? (DWORD)(HIWORD(dwVersion)) : 0);
 
-    sprintf(name, "Windows %d.%d", dwMajorVersion, dwMinorVersion);
+    sprintf(name, "Windows %u.%u", (unsigned)dwMajorVersion, (unsigned)dwMinorVersion);
     *sysName = mg_strdup(name);
 #else
     *sysName = mg_strdup("Symbian");
