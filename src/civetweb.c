@@ -897,7 +897,7 @@ struct mg_connection {
     int64_t num_bytes_sent;         /* Total bytes sent to client */
     int64_t content_len;            /* Content-Length header value */
     int64_t consumed_content;       /* How many bytes of content have been read */
-    int is_chunked;                 /* Transfer-encoding is chunked */
+    int is_chunked;                 /* Transfer-encoding is chunked: 0=no, 1=yes: data available, 2: all data read */
     size_t chunk_remainder;         /* Unread data from the last chunk */
     char *buf;                      /* Buffer for received data */
     char *path_info;                /* PATH_INFO part of the URL */
@@ -2587,23 +2587,41 @@ static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
     return nread;
 }
 
+
 static void discard_unread_request_data(struct mg_connection *conn)
 {
     char buf[MG_BUF_LEN];
     int to_read, nread;
 
-    while (conn->consumed_content < conn->content_len) {
-        to_read = sizeof(buf);
-        if ((int64_t) to_read > conn->content_len - conn->consumed_content) {
-            to_read = (int) (conn->content_len - conn->consumed_content);
+    to_read = sizeof(buf);
+
+    if (conn->is_chunked) {
+
+        /* Chunked encoding: 1=chunk not read completely, 2=chunk read completely */
+        while (conn->is_chunked == 1) {
+            nread = mg_read(conn, buf, to_read);
+            if (nread <= 0) {
+                break;
+            }
         }
 
-        nread = mg_read(conn, buf, to_read);
-        if (nread <= 0) {
-            break;
+    } else {
+
+        /* Not chunked: content length is known */
+        while (conn->consumed_content < conn->content_len) {
+
+            if ((int64_t) to_read > (conn->content_len - conn->consumed_content)) {
+                to_read = (int) (conn->content_len - conn->consumed_content);
+            }
+
+            nread = mg_read(conn, buf, to_read);
+            if (nread <= 0) {
+                break;
+            }
         }
     }
 }
+
 
 int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 {
@@ -2650,6 +2668,7 @@ int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
     return (int)nread;
 }
 
+
 static char mg_getc(struct mg_connection *conn)
 {
     char c;
@@ -2661,8 +2680,11 @@ static char mg_getc(struct mg_connection *conn)
     return c;
 }
 
+
 int mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
+    if (len>INT_MAX) len=INT_MAX;
+
     if (conn->is_chunked)
     {
         size_t all_read = 0;
@@ -2670,8 +2692,8 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 
             if (conn->chunk_remainder) {
                 /* copy from the remainder of the last received chunk */
-                int read_ret;
-                int read_now = ((conn->chunk_remainder>len) ? (len) : (conn->chunk_remainder));
+                long read_ret;
+                int read_now = (int)((conn->chunk_remainder>len) ? (len) : (conn->chunk_remainder));
 
                 conn->content_len += read_now;
                 read_ret = mg_read_inner(conn, (char*)buf+all_read, read_now);
@@ -2716,57 +2738,13 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
                 conn->chunk_remainder = chunkSize;
                 if (chunkSize == 0) {
                     /* regular end of content */
+                    conn->is_chunked = 2;
                     break;
                 }
             }
         }
 
-        return all_read;
-
-        /* TODO: chunked transfer encoding (#95) is currently not working. See #98. */
-        /*
-        if (conn->content_len <= 0)
-        {
-            conn->content_len = 0;
-        }
-        if (conn->consumed_content < conn->content_len)
-        {
-            return mg_read_inner(conn, buf,len);
-        }
-
-        while (1)
-        {
-            int c = mg_getc(conn);
-            if (!(c == '\n' || c == '\r'))
-            {
-                buf[i++] = c;
-                break;
-            }
-        }
-        for (; i < (int)sizeof(buf); i++)
-        {
-            int c = mg_getc(conn);
-            if ( c == EOF )
-            {
-                return -1;
-            }
-            buf[i] = (char) c;
-            if (buf[i] == '\n' && buf[i-1] == '\r')
-            {
-                break;
-            }
-        }
-
-        if (end != buf+(i-1))
-        {
-            return -1;
-        }
-        if (chunkSize == 0)
-        {
-            return 0;
-        }
-        conn->content_len += chunkSize;
-        */
+        return (int)all_read;
     }
     return mg_read_inner(conn,buf,len);
 }
@@ -6560,7 +6538,7 @@ static int get_request_handler(struct mg_connection *conn,
     return 0; /* none found */
 }
 
-
+#if defined(USE_WEBSOCKET)
 static int deprecated_websocket_connect_wrapper(const struct mg_connection * conn, void *cbdata)
 {
     struct mg_callbacks *pcallbacks = (struct mg_callbacks*)cbdata;
@@ -6588,6 +6566,7 @@ static int deprecated_websocket_data_wrapper(const struct mg_connection * conn, 
     /* No handler set - assume "OK" */
     return 1;
 }
+#endif
 
 /* This is the heart of the Civetweb's logic.
    This function is called when the request is read, parsed and validated,
@@ -8338,6 +8317,7 @@ static void get_system_name(char **sysName)
     dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
     dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
     dwBuild = ((dwVersion < 0x80000000) ? (DWORD)(HIWORD(dwVersion)) : 0);
+    (void)dwBuild;
 
     sprintf(name, "Windows %u.%u", (unsigned)dwMajorVersion, (unsigned)dwMinorVersion);
     *sysName = mg_strdup(name);
@@ -8365,7 +8345,9 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     WSADATA data;
     WSAStartup(MAKEWORD(2,2), &data);
+#ifdef _MSC_VER
 #pragma warning(suppress: 28125)
+#endif
     if (!sTlsInit) InitializeCriticalSection(&global_log_file_lock);
 #endif /* _WIN32 && !__SYMBIAN32__ */
 
