@@ -1,4 +1,14 @@
 language: c
+sudo: false
+
 compiler:
   - gcc
+  - clang
+
 script: make WITH_LUA=1 WITH_DEBUG=1 WITH_IPV6=1 WITH_WEBSOCKET=1
+
+before_install:
+  - sudo apt-get update
+  - bash .travis/setup_lua.sh
+  - sudo luarocks install lunitx
+  - sudo luarocks install lua-curl
