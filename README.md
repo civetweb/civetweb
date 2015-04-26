@@ -4,13 +4,15 @@
 There is a new home!!!
 -----------------
 https://github.com/bel2125/civetweb
-Bel has been taking the lead on Civetweb, so the official repository
-is being moved under his control for ease of maintenance.
+
+Bel has been taking the lead on Civetweb, so the official repository is being
+moved under his control for ease of maintenance.
 
 Project Mission
 -----------------
 
-Project mission is to provide easy to use, powerful, C/C++ embeddable web server with optional CGI, SSL and Lua support.
+Project mission is to provide easy to use, powerful, C/C++ embeddable web
+server with optional CGI, SSL and Lua support.
 Civetweb has a MIT license so you can innovate without restrictions.
 
 Where to find the official version?
@@ -25,7 +27,7 @@ https://github.com/bel2125/civetweb
 Trouble tickets should be filed on GitHub
 https://github.com/bel2125/civetweb/issues
 
-Discussion group is at Google Groups
+Discussion/support group and announcements are at Google Groups
 https://groups.google.com/d/forum/civetweb
 
 Quick start documentation
@@ -46,18 +48,26 @@ simplicity by a carefully selected list of features:
 
 - Liberal, commercial-friendly, permissive,
   [MIT license](http://en.wikipedia.org/wiki/MIT_License)
-- Free from copy-left licenses, like GPL, because you should innovate without restrictions.
-- Based on [Mongoose](https://code.google.com/p/mongoose/)
-- Works on Windows, Mac, UNIX, iPhone, Android, Buildroot, and many other platforms
-- Scripting and database support (Lua scipts, Lua Server Pages, CGI + SQLite database).
-  This provides a ready to go, powerful web development platform in a
-  one single-click executable with **no dependencies**.
-- Support for CGI, HTTPS/SSL, SSI, HTTP digest (MD5) authorization, Websocket, WEbDAV
-- Resumed download, URL rewrite, file blacklist, IP-based ACL, Windows service
-- Download speed limit based on client subnet or URI pattern
+- Free from copy-left licenses, like GPL, because you should innovate without
+  restrictions.
+- Forked from [Mongoose](https://code.google.com/p/mongoose/) in 2013, before
+  it changed the licence from MIT to commercial + GPL. A lot of enchancements
+  have been added since that time, see
+  [RELEASE_NOTES.md](https://github.com/bel2125/civetweb/blob/master/RELEASE_NOTES.md).
+- Works on Windows, Mac, Linux, UNIX, iPhone, Android, Buildroot, and many
+  other platforms.
+- Scripting and database support (Lua scipts, Lua Server Pages, CGI + SQLite
+  database).
+  This provides a ready to go, powerful web development platform in a one
+  single-click executable with **no dependencies**.
+- Support for CGI, HTTPS/SSL, SSI, HTTP digest (MD5) authorization, Websocket,
+  WEbDAV.
+- Resumed download, URL rewrite, file blacklist, IP-based ACL, Windows service.
+- Download speed limit based on client subnet or URI pattern.
 - Simple and clean embedding API.
-  The source is in single file to make things easy. Embedding examples included.
-- HTTP client capable of sending arbitrary HTTP/HTTPS requests
+- The source is in single file to make things easy.
+- Embedding examples included.
+- HTTP client capable of sending arbitrary HTTP/HTTPS requests.
 
 
 ### Optionally included software
