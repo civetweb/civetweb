@@ -1,8 +1,5 @@
 #!/bin/bash
 
-export LUAROCKS=.travis/lua/bin/luarocks
-export PATH=$($LUAROCKS path --bin):$PATH
-export LUA_PATH=$($LUAROCKS path --lr-path)
-export LUA_CPATH=$($LUAROCKS path --lr-cpath)
-
+LUAROCKS=.travis/lua/bin/luarocks
+eval $($LUAROCKS path --bin)
 
