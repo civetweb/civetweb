@@ -1,5 +1,4 @@
 #!/bin/bash
-set -ev
 
 export LUAROCKS=.travis/lua/bin/luarocks
 export PATH=$($LUAROCKS path --bin):$PATH

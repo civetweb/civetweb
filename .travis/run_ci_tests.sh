@@ -12,6 +12,7 @@ do
   for SCRIPT in $SCRIPTS
   do
     echo starting test script $SCRIPT
+    lunit.sh $SCRIPT
     #lua $SCRIPT
   done
 done
