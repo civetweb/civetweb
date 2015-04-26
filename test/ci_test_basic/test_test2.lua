@@ -7,8 +7,4 @@ function test_success_again()
   assert_true (true, 'more tests work')
 end
 
-function test_fail() 
-  assert_true ("not something true", 'fail test')
-end
-
 
