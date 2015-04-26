@@ -246,4 +246,5 @@ tags
 ##########################
 ## Travis Build Dir
 ##########################
-.travis/build
+.travis/lua
+

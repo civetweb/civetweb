@@ -1,13 +1,14 @@
 #!/bin/bash
+set -ev
 
-set -e
+source .travis/lua_env.sh
 
-LUAROCKS=$TRAVIS_BUILD_DIR/build/lua/bin/luarocks
-PATH=$($LUAROCKS path --bin):$PATH
-LUA_PATH=$($LUAROCKS path --lr-path)
-LUA_CPATH=$($LUAROCKS path --lr-cpath)
+# add any rocks required for ci_tests to this list
+# lua-curl depends on a libcurl development package (i.e. libcurl4-openssl-dev)
+ROCKS=(lunitx lua-curl)
 
-$LUAROCKS install lunitx
-$LUAROCKS install lua-curl
-
+for ROCK in ${ROCKS[*]}
+do
+  $LUAROCKS install $ROCK
+done
 
