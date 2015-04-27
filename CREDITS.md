@@ -16,6 +16,7 @@
 * Kimmo Mustonen
 * Matt Clarkson
 * Morgan McGuire
+* nihildeb
 * No Face Press
 * Paul Sokolovsky
 * Richard Screene
