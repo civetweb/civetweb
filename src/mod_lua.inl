@@ -1162,7 +1162,9 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
             lua_pushglobaltable(L);
             for (i = 0; exports[i] != NULL && exports[i + 1] != NULL; i += 2) {
                 lua_pushstring(L, (const char *)(exports[i]));
-                lua_pushcclosure(L, (lua_CFunction) exports[i + 1], 0);
+                lua_CFunction func;
+                *(const void**)(&func) = exports[i + 1];
+                lua_pushcclosure(L, func, 0);
                 lua_rawset(L, -3);
             }
         }
