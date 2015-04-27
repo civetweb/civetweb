@@ -21,7 +21,12 @@
 */
 
 #if defined(_WIN32)
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS  /* Disable deprecation warning in VS2005 */
+#endif
+#ifndef _CRT_SECURE_NO_DEPRECATE
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
 #else
 #define _XOPEN_SOURCE 600  /* For PATH_MAX on linux */
 #endif
@@ -512,7 +517,7 @@ static void verify_existence(char **options, const char *option_name,
     if (path) {
         memset(wbuf, 0, sizeof(wbuf));
         memset(mbbuf, 0, sizeof(mbbuf));
-        len = MultiByteToWideChar(CP_UTF8, 0, path, -1, wbuf, (int) sizeof(wbuf)/sizeof(wbuf[0])-1);        
+        len = MultiByteToWideChar(CP_UTF8, 0, path, -1, wbuf, (int) sizeof(wbuf)/sizeof(wbuf[0])-1);
         wcstombs(mbbuf, wbuf, sizeof(mbbuf)-1);
         path = mbbuf;
         (void)len;
