@@ -1,7 +1,10 @@
+socket = require "socket"
 
 local civet = {}
 
 civet.port=12345
+civet.max_retry=100
+civet.start_delay=0.1
 
 function civet.start(docroot)
   -- TODO: use a property
@@ -11,25 +14,27 @@ function civet.start(docroot)
   .. " -document_root " .. docroot
   .. " > /dev/null 2>&1 &"
   ))
-  -- wait until the server is listening (TODO: Linux only)
-  while true do
-    local f = assert(io.popen('netstat -an | grep '
-      .. civet.port .. ' | grep -i listen'))
-    local out = f:read('*all')
-    if string.match(out, civet.port) then break end
-    f:close()
+  -- wait until the server answers
+  for i=1,civet.max_retry do
+    local s = socket.connect('127.0.0.1', civet.port)
+    if s then
+      s:close()
+      break
+    end
+    socket.select(nil, nil, civet.start_delay) -- sleep
   end
 end
 
 function civet.stop()
   os.execute('killall civetweb')
-  -- wait until the server is listening (TODO: Linux only)
-  while true do
-    local f = assert(io.popen('netstat -an | grep '
-      .. civet.port .. ' | grep -i listen'))
-    local out = f:read('*all')
-    if not string.match(out, civet.port) then break end
-    f:close()
+  -- wait until the server port closes
+  for i=1,civet.max_retry do
+    local s = socket.connect('127.0.0.1', civet.port)
+    if not s then
+      break
+    end
+    s:close()
+    socket.select(nil, nil, civet.start_delay) -- sleep
   end
 end
 

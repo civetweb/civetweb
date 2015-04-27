@@ -1,5 +1,5 @@
 civet = require "test/ci_tests/civet"
-curl = require "cURL"
+local curl = require "cURL"
 
 describe("civetweb basic", function()
 
@@ -19,11 +19,13 @@ describe("civetweb basic", function()
       out = out .. str
     end
 
-    curl.easy()
+    local c = curl.easy()
       :setopt_url('http://localhost:' .. civet.port .. "/")
       :setopt_writefunction(capture)
       :perform()
     :close()
+
+    --print('rescode:' .. c.getinfo(curl.INFO_RESPONSE_CODE))
 
     assert.are.equal('Index of', string.match(out, 'Index of'))
     assert.are.equal('01_basic_test_dir', string.match(out, '01_basic_test_dir'))
