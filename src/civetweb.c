@@ -821,24 +821,27 @@ static struct mg_option config_options[] = {
 };
 
 struct mg_request_handler_info {
+
+    /* Name/Pattern of the URI. */
     char *uri;
     size_t uri_len;
 
+    /* URI type: ws/wss (websocket) or http/https (web page). */
     int is_websocket_handler;
 
-    union {
-        struct {
-            mg_request_handler handler;
-        };
-        struct {
-            mg_websocket_connect_handler connect_handler;
-            mg_websocket_ready_handler ready_handler;
-            mg_websocket_data_handler data_handler;
-            mg_websocket_close_handler close_handler;
-        };
-    };
+    /* Handler for http/https requests. */
+    mg_request_handler handler;
 
+    /* Handler for ws/wss (websocket) requests. */
+    mg_websocket_connect_handler connect_handler;
+    mg_websocket_ready_handler ready_handler;
+    mg_websocket_data_handler data_handler;
+    mg_websocket_close_handler close_handler;
+
+    /* User supplied argument for the handler function. */
     void *cbdata;
+
+    /* next request handler in a linked list */
     struct mg_request_handler_info *next;
 };
 
@@ -6407,7 +6410,7 @@ static void mg_set_request_handler_type(struct mg_context *ctx,
         return;
     }
 
-    tmp_rh = (struct mg_request_handler_info *)mg_malloc(sizeof(struct mg_request_handler_info));
+    tmp_rh = (struct mg_request_handler_info *)mg_calloc(sizeof(struct mg_request_handler_info), 1);
     if (tmp_rh == NULL) {
         mg_unlock_context(ctx);
         mg_cry(fc(ctx), "%s", "Cannot create new request handler struct, OOM");
