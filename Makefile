@@ -62,7 +62,7 @@ endif
 # only set main compile options if none were chosen
 CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400
 
-LIBS = -lpthread -lm -lrt
+LIBS = -lpthread -lm
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG_ENABLED
@@ -119,7 +119,7 @@ MAIN_OBJECTS = $(addprefix $(BUILD_DIR)/, $(APP_SOURCES:.c=.o))
 LIB_OBJECTS = $(filter-out $(MAIN_OBJECTS), $(BUILD_OBJECTS))
 
 ifeq ($(TARGET_OS),LINUX)
-  LIBS += -ldl
+  LIBS += -lrt -ldl
   CAN_INSTALL = 1
 endif
 
@@ -224,6 +224,11 @@ slib: lib$(CPROG).$(SHARED_LIB)
 
 clean:
 	$(RMRF) $(BUILD_DIR)
+	$(eval version=$(shell grep "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
+	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
+	$(RMRF) lib$(CPROG).so
+	$(RMRF) lib$(CPROG).so.$(major)
+	$(RMRF) lib$(CPROG).so.$(version).0
 
 distclean: clean
 	@$(RMRF) VS2012/Debug VS2012/*/Debug  VS2012/*/*/Debug
@@ -237,7 +242,11 @@ lib$(CPROG).a: $(LIB_OBJECTS)
 
 lib$(CPROG).so: CFLAGS += -fPIC
 lib$(CPROG).so: $(LIB_OBJECTS)
-	$(LCC) -shared -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS)
+	$(eval version=$(shell grep "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
+	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
+	$(LCC) -shared -Wl,-soname,$@.$(major) -o $@.$(version).0 $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS)
+	ln -s -f $@.$(major) $@
+	ln -s -f $@.$(version).0 $@.$(major)
 
 lib$(CPROG).dll: CFLAGS += -fPIC
 lib$(CPROG).dll: $(LIB_OBJECTS)

@@ -48,6 +48,7 @@
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0501 /* Target Windows XP or higher */
 #endif
+#undef UNICODE
 #include <windows.h>
 #include <winsvc.h>
 #include <shlobj.h>
@@ -511,9 +512,10 @@ static void verify_existence(char **options, const char *option_name,
     if (path) {
         memset(wbuf, 0, sizeof(wbuf));
         memset(mbbuf, 0, sizeof(mbbuf));
-        len = MultiByteToWideChar(CP_UTF8, 0, path, -1, wbuf, (int) sizeof(wbuf)/sizeof(wbuf[0])-1);
+        len = MultiByteToWideChar(CP_UTF8, 0, path, -1, wbuf, (int) sizeof(wbuf)/sizeof(wbuf[0])-1);        
         wcstombs(mbbuf, wbuf, sizeof(mbbuf)-1);
         path = mbbuf;
+        (void)len;
     }
 #endif
 
@@ -747,7 +749,7 @@ static void save_config(HWND hDlg, FILE *fp)
     }
 }
 
-static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     FILE *fp;
     int i, j;
@@ -755,6 +757,7 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
     const struct mg_option *default_options = mg_get_valid_options();
     char *file_options[MAX_OPTIONS*2+1] = {0};
     char *title;
+    (void)lParam;
 
     switch (msg) {
     case WM_CLOSE:
@@ -966,7 +969,6 @@ static int get_password(const char * user, const char * realm, char * passwd, un
 #define WIDTH 280
 #define LABEL_WIDTH 90
 
-    HWND hDlg = NULL;
     unsigned char mem[4096], *p;
     DLGTEMPLATE *dia = (DLGTEMPLATE *) mem;
     int ok, y;
@@ -1031,7 +1033,7 @@ static int get_password(const char * user, const char * realm, char * passwd, un
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
         140, y, 55, 12, "Cancel");
 
-    assert((int)p - (int)mem < sizeof(mem));
+    assert((int)p - (int)mem < (int)sizeof(mem));
 
     dia->cy = y + (WORD)(HEIGHT * 1.5);
 
@@ -1204,7 +1206,7 @@ static void show_settings_dialog()
                     (WORD) (x + LABEL_WIDTH), y, width, 12, "");
         nelems++;
 
-        assert((int)p - (int)mem < sizeof(mem));
+        assert(((int)p - (int)mem) < (int)sizeof(mem));
     }
 
     y = (WORD) (((nelems + 1) / 2 + 1) * HEIGHT + 5);
@@ -1227,7 +1229,7 @@ static void show_settings_dialog()
                 WS_CHILD | WS_VISIBLE | WS_DISABLED,
                 5, y, 100, 12, server_base_name);
 
-    assert((int)p - (int)mem < sizeof(mem));
+    assert(((int)p - (int)mem) < (int)sizeof(mem));
 
     dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
     DialogBoxIndirectParam(NULL, dia, NULL, SettingsDlgProc, (LPARAM) NULL);
@@ -1329,7 +1331,7 @@ static void change_password_file()
                 140, y, 100, 12, u);
 
             nelems++;
-            assert((int)p - (int)mem < sizeof(mem));
+            assert(((int)p - (int)mem) < (int)sizeof(mem));
         }
         fclose(f);
 
@@ -1353,7 +1355,7 @@ static void change_password_file()
             WS_CHILD | WS_VISIBLE | WS_DISABLED,
             5, y, 100, 12, server_base_name);
 
-        assert((int)p - (int)mem < sizeof(mem));
+        assert(((int)p - (int)mem) < (int)sizeof(mem));
 
         dia->cy = y + 20;
     } while ((IDOK == DialogBoxIndirectParam(NULL, dia, NULL, PasswordDlgProc, (LPARAM) path)) && (!exit_flag));
@@ -1412,13 +1414,14 @@ static int manage_service(int action)
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
                                    LPARAM lParam)
 {
-    static SERVICE_TABLE_ENTRY service_table[2] = {0};
+    static SERVICE_TABLE_ENTRY service_table[2];
     int service_installed;
     char buf[200], *service_argv[] = {__argv[0], NULL};
     POINT pt;
     HMENU hMenu;
     static UINT s_uTaskbarRestart; /* for taskbar creation */
 
+    memset(service_table, 0, sizeof(service_table));
     service_table[0].lpServiceName = server_name;
     service_table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)ServiceMain;
 
@@ -1539,6 +1542,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
     WNDCLASS cls;
     HWND hWnd;
     MSG msg;
+
+    (void)hInst;
+    (void)hPrev;
+    (void)cmdline;
+    (void)show;
 
     init_server_name(__argc, __argv);
     memset(&cls, 0, sizeof(cls));

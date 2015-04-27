@@ -12,6 +12,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 // forward declaration
 class CivetServer;
@@ -138,10 +139,13 @@ public:
      * URI's are ordered and prefix (REST) URI's are supported.
      *
      *  @param uri - URI to match.
-     *  @param handler - handler instance to use.  This will be free'ed
-     *      when the server closes and instances cannot be reused.
+     *  @param handler - handler instance to use.
      */
     void addHandler(const std::string &uri, CivetHandler *handler);
+
+    void addHandler(const std::string &uri, CivetHandler &handler) {
+        addHandler(uri, &handler);
+    }
 
     /**
      * removeHandler(const std::string &)
@@ -159,7 +163,7 @@ public:
      *
      * @return A vector of ports
      */
-    
+
     std::vector<int> getListeningPorts();
 
     /**

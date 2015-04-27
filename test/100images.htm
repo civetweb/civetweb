@@ -1,0 +1,160 @@
+<html>
+
+  <!-- Test case description:                              -->
+  <!-- This test contains 100 small images in a table.     -->
+  <!-- Once a browser opens the html file, it will request -->
+  <!-- all these images from the server very quickly.      -->
+  <!-- Depending on the "keep-alive" settings, it will     -->
+  <!-- either open/close 100 connections quite rapidly     -->
+  <!-- if keep-alive=no, or otherwise establish only a few -->
+  <!-- connections, typically one or two, and reuse them.  -->
+  <!-- If the test succeeds, all 100 images are displayed. -->
+
+  <!-- Bug: I saw cases where more than 40 were missing.   -->
+
+  <head>
+    <title>100 images</title>
+  </head>
+  <body>
+    <h1>A gallery of small images:</h1>
+    <p>
+      <table>
+        <tr>
+          <td><img src="imagetest/00.png"></td>
+          <td><img src="imagetest/01.png"></td>
+          <td><img src="imagetest/02.png"></td>
+          <td><img src="imagetest/03.png"></td>
+          <td><img src="imagetest/04.png"></td>
+          <td><img src="imagetest/05.png"></td>
+          <td><img src="imagetest/06.png"></td>
+          <td><img src="imagetest/07.png"></td>
+          <td><img src="imagetest/08.png"></td>
+          <td><img src="imagetest/09.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/10.png"></td>
+          <td><img src="imagetest/11.png"></td>
+          <td><img src="imagetest/12.png"></td>
+          <td><img src="imagetest/13.png"></td>
+          <td><img src="imagetest/14.png"></td>
+          <td><img src="imagetest/15.png"></td>
+          <td><img src="imagetest/16.png"></td>
+          <td><img src="imagetest/17.png"></td>
+          <td><img src="imagetest/18.png"></td>
+          <td><img src="imagetest/19.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/20.png"></td>
+          <td><img src="imagetest/21.png"></td>
+          <td><img src="imagetest/22.png"></td>
+          <td><img src="imagetest/23.png"></td>
+          <td><img src="imagetest/24.png"></td>
+          <td><img src="imagetest/25.png"></td>
+          <td><img src="imagetest/26.png"></td>
+          <td><img src="imagetest/27.png"></td>
+          <td><img src="imagetest/28.png"></td>
+          <td><img src="imagetest/29.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/20.png"></td>
+          <td><img src="imagetest/21.png"></td>
+          <td><img src="imagetest/22.png"></td>
+          <td><img src="imagetest/23.png"></td>
+          <td><img src="imagetest/24.png"></td>
+          <td><img src="imagetest/25.png"></td>
+          <td><img src="imagetest/26.png"></td>
+          <td><img src="imagetest/27.png"></td>
+          <td><img src="imagetest/28.png"></td>
+          <td><img src="imagetest/29.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/30.png"></td>
+          <td><img src="imagetest/31.png"></td>
+          <td><img src="imagetest/32.png"></td>
+          <td><img src="imagetest/33.png"></td>
+          <td><img src="imagetest/34.png"></td>
+          <td><img src="imagetest/35.png"></td>
+          <td><img src="imagetest/36.png"></td>
+          <td><img src="imagetest/37.png"></td>
+          <td><img src="imagetest/38.png"></td>
+          <td><img src="imagetest/39.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/40.png"></td>
+          <td><img src="imagetest/41.png"></td>
+          <td><img src="imagetest/42.png"></td>
+          <td><img src="imagetest/43.png"></td>
+          <td><img src="imagetest/44.png"></td>
+          <td><img src="imagetest/45.png"></td>
+          <td><img src="imagetest/46.png"></td>
+          <td><img src="imagetest/47.png"></td>
+          <td><img src="imagetest/48.png"></td>
+          <td><img src="imagetest/49.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/50.png"></td>
+          <td><img src="imagetest/51.png"></td>
+          <td><img src="imagetest/52.png"></td>
+          <td><img src="imagetest/53.png"></td>
+          <td><img src="imagetest/54.png"></td>
+          <td><img src="imagetest/55.png"></td>
+          <td><img src="imagetest/56.png"></td>
+          <td><img src="imagetest/57.png"></td>
+          <td><img src="imagetest/58.png"></td>
+          <td><img src="imagetest/59.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/60.png"></td>
+          <td><img src="imagetest/61.png"></td>
+          <td><img src="imagetest/62.png"></td>
+          <td><img src="imagetest/63.png"></td>
+          <td><img src="imagetest/64.png"></td>
+          <td><img src="imagetest/65.png"></td>
+          <td><img src="imagetest/66.png"></td>
+          <td><img src="imagetest/67.png"></td>
+          <td><img src="imagetest/68.png"></td>
+          <td><img src="imagetest/69.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/70.png"></td>
+          <td><img src="imagetest/71.png"></td>
+          <td><img src="imagetest/72.png"></td>
+          <td><img src="imagetest/73.png"></td>
+          <td><img src="imagetest/74.png"></td>
+          <td><img src="imagetest/75.png"></td>
+          <td><img src="imagetest/76.png"></td>
+          <td><img src="imagetest/77.png"></td>
+          <td><img src="imagetest/78.png"></td>
+          <td><img src="imagetest/79.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/80.png"></td>
+          <td><img src="imagetest/81.png"></td>
+          <td><img src="imagetest/82.png"></td>
+          <td><img src="imagetest/83.png"></td>
+          <td><img src="imagetest/84.png"></td>
+          <td><img src="imagetest/85.png"></td>
+          <td><img src="imagetest/86.png"></td>
+          <td><img src="imagetest/87.png"></td>
+          <td><img src="imagetest/88.png"></td>
+          <td><img src="imagetest/89.png"></td>
+        </tr>
+        <tr>
+          <td><img src="imagetest/90.png"></td>
+          <td><img src="imagetest/91.png"></td>
+          <td><img src="imagetest/92.png"></td>
+          <td><img src="imagetest/93.png"></td>
+          <td><img src="imagetest/94.png"></td>
+          <td><img src="imagetest/95.png"></td>
+          <td><img src="imagetest/96.png"></td>
+          <td><img src="imagetest/97.png"></td>
+          <td><img src="imagetest/98.png"></td>
+          <td><img src="imagetest/99.png"></td>
+        </tr>
+      </table>
+    </p>
+    <p>
+      Test case: all images are displayed.
+    </p>    
+  </body>
+</html>
