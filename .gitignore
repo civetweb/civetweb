@@ -1,5 +1,6 @@
 
 civetweb
+civetweb_test
 libcivetweb.a
 libcivetweb.so
 *-cache
