@@ -1161,8 +1161,8 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
         if (exports != NULL) {
             lua_pushglobaltable(L);
             for (i = 0; exports[i] != NULL && exports[i + 1] != NULL; i += 2) {
-                lua_pushstring(L, (const char *)(exports[i]));
                 lua_CFunction func;
+                lua_pushstring(L, (const char *)(exports[i]));
                 *(const void**)(&func) = exports[i + 1];
                 lua_pushcclosure(L, func, 0);
                 lua_rawset(L, -3);
