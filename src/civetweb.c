@@ -1218,7 +1218,7 @@ static int get_option_index(const char *name)
     return -1;
 }
 
-const char *mg_get_option(const struct mg_context *ctx, const char *name)
+const char * mg_get_option(const struct mg_context *ctx, const char *name)
 {
     int i;
     if ((i = get_option_index(name)) == -1) {
@@ -1230,15 +1230,35 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name)
     }
 }
 
-struct mg_context *mg_get_context(const struct mg_connection * conn)
+
+struct mg_context * mg_get_context(const struct mg_connection * conn)
 {
     return (conn == NULL) ? (struct mg_context *)NULL : (conn->ctx);
 }
 
-void *mg_get_user_data(struct mg_context *ctx)
+
+void * mg_get_user_data(const struct mg_context *ctx)
 {
     return (ctx == NULL) ? NULL : ctx->user_data;
 }
+
+
+void mg_set_user_connection_data(const struct mg_connection *conn, void *data)
+{
+    if (conn != NULL) {
+        ((struct mg_connection *)conn)->request_info.conn_data = data;
+    }
+}
+
+
+void * mg_get_user_connection_data(const struct mg_connection *conn)
+{
+    if (conn != NULL) {
+        return conn->request_info.conn_data;
+    }
+    return NULL;
+}
+
 
 size_t mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
 {
@@ -1288,7 +1308,7 @@ static double mg_difftimespec(const struct timespec *ts_now, const struct timesp
 }
 
 /* Print error message to the opened error log stream. */
-void mg_cry(struct mg_connection *conn, const char *fmt, ...)
+void mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 {
     char buf[MG_BUF_LEN], src_addr[IP_ADDR_STR_LEN];
     va_list ap;
@@ -1342,7 +1362,7 @@ const char *mg_version(void)
     return CIVETWEB_VERSION;
 }
 
-struct mg_request_info *mg_get_request_info(struct mg_connection *conn)
+const struct mg_request_info *mg_get_request_info(const struct mg_connection *conn)
 {
     return &conn->request_info;
 }
@@ -6468,7 +6488,7 @@ static int get_request_handler(struct mg_connection *conn,
                                void **cbdata
                                )
 {
-    struct mg_request_info *request_info = mg_get_request_info(conn);
+    const struct mg_request_info *request_info = mg_get_request_info(conn);
     const char *uri = request_info->uri;
     size_t urilen = strlen(uri);
     struct mg_request_handler_info *tmp_rh;
@@ -8343,7 +8363,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
     const char *name, *value, *default_value;
     int i, ok;
     int workerthreadcount;
-    void (*exit_callback)(struct mg_context * ctx) = 0;
+    void (*exit_callback)(const struct mg_context * ctx) = 0;
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
     WSADATA data;

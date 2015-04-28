@@ -344,12 +344,12 @@ private:
      *
      * @param conn - the connection information
      */
-    static void closeHandler(struct mg_connection *conn);
+    static void closeHandler(const struct mg_connection *conn);
 
     /**
      * Stores the user provided close handler
      */
-    void (*userCloseHandler)(struct mg_connection *conn);
+    void (*userCloseHandler)(const struct mg_connection *conn);
 
 };
 

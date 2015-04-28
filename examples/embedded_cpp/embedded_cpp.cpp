@@ -89,7 +89,7 @@ class FooHandler: public CivetHandler
 public:
     bool handleGet(CivetServer *server, struct mg_connection *conn) {
         /* Handler may access the request info using mg_get_request_info */
-        struct mg_request_info * req_info = mg_get_request_info(conn);
+        const struct mg_request_info * req_info = mg_get_request_info(conn);
 
         mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
         mg_printf(conn, "<html><body>");

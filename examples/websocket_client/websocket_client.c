@@ -67,7 +67,7 @@ int websocket_server_data(struct mg_connection * conn, int bits, char *data, siz
     return 1; /* return 1 to keep the connetion open */
 }
 
-void websocket_server_connection_close(struct mg_connection * conn)
+void websocket_server_connection_close(const struct mg_connection * conn)
 {
     printf("Server: Close connection\n");
 

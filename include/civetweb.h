@@ -145,7 +145,7 @@ struct mg_callbacks {
        list of clients.
        Using this callback for websocket connections is deprecated, use
        mg_set_websocket_handler instead. */
-    void (*connection_close)(struct mg_connection *);
+    void (*connection_close)(const struct mg_connection *);
 
     /* Called when civetweb tries to open a file. Used to intercept file open
        calls, and serve file data from memory instead.
@@ -164,7 +164,7 @@ struct mg_callbacks {
        Lua support is enabled.
        Parameters:
          lua_context: "lua_State *" pointer. */
-    void (*init_lua)(struct mg_connection *, void *lua_context);
+    void (*init_lua)(const struct mg_connection *, void *lua_context);
 
     /* Called when civetweb has uploaded a file to a temporary directory as a
        result of mg_upload() call.
@@ -185,12 +185,12 @@ struct mg_callbacks {
        are processed.
        Parameters:
          ctx: context handle */
-    void (*init_context)(struct mg_context * ctx);
+    void (*init_context)(const struct mg_context * ctx);
 
     /* Called when civetweb context is deleted.
        Parameters:
          ctx: context handle */
-    void (*exit_context)(struct mg_context * ctx);
+    void (*exit_context)(const struct mg_context * ctx);
 };
 
 
@@ -324,7 +324,15 @@ CIVETWEB_API struct mg_context *mg_get_context(const struct mg_connection *conn)
 
 
 /* Get user data passed to mg_start from context. */
-CIVETWEB_API void *mg_get_user_data(struct mg_context *ctx);
+CIVETWEB_API void *mg_get_user_data(const struct mg_context *ctx);
+
+
+/* Set user data for the current connection. */
+CIVETWEB_API void mg_set_user_connection_data(const struct mg_connection *conn, void *data);
+
+
+/* Get user data set for the current connection. */
+CIVETWEB_API void *mg_get_user_connection_data(const struct mg_connection *conn);
 
 
 #if defined(MG_LEGACY_INTERFACE)
@@ -389,7 +397,7 @@ CIVETWEB_API int mg_modify_passwords_file(const char *passwords_file_name,
 
 
 /* Return information associated with the request. */
-CIVETWEB_API struct mg_request_info *mg_get_request_info(struct mg_connection *);
+CIVETWEB_API const struct mg_request_info *mg_get_request_info(const struct mg_connection *);
 
 
 /* Send data to the client.
@@ -636,7 +644,7 @@ CIVETWEB_API char *mg_md5(char buf[33], ...);
      ...: variable argument list
    Example:
      mg_cry(conn,"i like %s", "logging"); */
-CIVETWEB_API void mg_cry(struct mg_connection *conn,
+CIVETWEB_API void mg_cry(const struct mg_connection *conn,
                          PRINTF_FORMAT_STRING(const char *fmt), ...) PRINTF_ARGS(2, 3);
 
 

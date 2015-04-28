@@ -407,7 +407,7 @@ static void test_mg_download(int use_ssl) {
     int i, len1, len2, port;
     struct mg_connection *conn;
     struct mg_context *ctx;
-    struct mg_request_info *ri;
+    const struct mg_request_info *ri;
 
     if (use_ssl) port = atoi(HTTPS_PORT); else port = atoi(HTTP_PORT);
 
@@ -946,7 +946,7 @@ static void test_request_handlers(void) {
 }
 
 static int api_callback(struct mg_connection *conn) {
-    struct mg_request_info *ri = mg_get_request_info(conn);
+    const struct mg_request_info *ri = mg_get_request_info(conn);
     char post_data[100] = "";
 
     ASSERT(ri->user_data == (void *) 123);
