@@ -20,7 +20,7 @@ class CivetServer;
 /**
  * Exception class for thrown exceptions within the CivetHandler object.
  */
-class CivetException : public std::runtime_error
+class CIVETWEB_API CivetException : public std::runtime_error
 {
     public:
     CivetException(const std::string& msg) : std::runtime_error(msg) {}
@@ -30,7 +30,7 @@ class CivetException : public std::runtime_error
  * Basic interface for a URI request handler.  Handlers implementations
  * must be reentrant.
  */
-class CivetHandler
+class CIVETWEB_API CivetHandler
 {
 public:
 
@@ -91,7 +91,7 @@ public:
  *
  * Basic class for embedded web server.  This has an URL mapping built-in.
  */
-class CivetServer
+class CIVETWEB_API CivetServer
 {
 public:
 
