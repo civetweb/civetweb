@@ -426,7 +426,7 @@ static void process_command_line_arguments(char *argv[], char **options)
     g_config_file[sizeof(g_config_file)-1] = 0;
 
 #ifdef CONFIG_FILE2
-    fp = fopen(config_file, "r");
+    fp = fopen(g_config_file, "r");
 
     /* try alternate config file */
     if (fp == NULL) {
@@ -1685,7 +1685,7 @@ int main(int argc, char *argv[])
     init_server_name(argc, (const char **)argv);
     start_civetweb(argc, argv);
     printf("%s started on port(s) %s with web root [%s]\n",
-           server_name, mg_get_option(ctx, "listening_ports"),
+           g_server_name, mg_get_option(ctx, "listening_ports"),
            mg_get_option(ctx, "document_root"));
     while (exit_flag == 0) {
         sleep(1);
