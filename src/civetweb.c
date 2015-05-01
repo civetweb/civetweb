@@ -738,12 +738,12 @@ struct file {
 /* Describes listening socket, or socket which was accept()-ed by the master
    thread and queued for future handling by the worker thread. */
 struct socket {
-    SOCKET sock;          /* Listening socket */
-    union usa lsa;        /* Local socket address */
-    union usa rsa;        /* Remote socket address */
-    unsigned is_ssl:1;    /* Is port SSL-ed */
-    unsigned ssl_redir:1; /* Is port supposed to redirect everything to SSL
-                             port */
+    SOCKET sock;              /* Listening socket */
+    union usa lsa;            /* Local socket address */
+    union usa rsa;            /* Remote socket address */
+    unsigned char is_ssl;     /* Is port SSL-ed */
+    unsigned char ssl_redir;  /* Is port supposed to redirect everything to SSL
+                                 port */
 };
 
 /* NOTE(lsm): this enum shoulds be in sync with the config_options below. */
@@ -1174,7 +1174,17 @@ static int mg_vsnprintf(struct mg_connection *conn, char *buf, size_t buflen,
     if (buflen == 0)
         return 0;
 
+    #ifdef __clang__
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "Wformat-nonliteral"
+    /* Using fmt as a non-literal is intended here, since it is mostly called indirectly by mg_snprintf */
+    #endif
+
     n = vsnprintf(buf, buflen, fmt, ap);
+
+    #ifdef __clang__
+    #pragma clang diagnostic pop
+    #endif
 
     if (n < 0) {
         mg_cry(conn, "vsnprintf error");
