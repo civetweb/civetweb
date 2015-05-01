@@ -90,12 +90,12 @@ static int guard = 0;                   /* test if any dialog is already open */
 #define MAX_OPTIONS 50
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
-static int exit_flag = 0;               /* Main loop should exit */
-static char server_base_name[40];       /* Set by init_server_name() */
-static char *server_name;               /* Set by init_server_name() */
-static char *icon_name;                 /* Set by init_server_name() */
-static char config_file[PATH_MAX] = ""; /* Set by process_command_line_arguments() */
-static struct mg_context *ctx;          /* Set by start_civetweb() */
+static int g_exit_flag = 0;               /* Main loop should exit */
+static char g_server_base_name[40];       /* Set by init_server_name() */
+static char *g_server_name;               /* Set by init_server_name() */
+static char *g_icon_name;                 /* Set by init_server_name() */
+static char g_config_file[PATH_MAX] = ""; /* Set by process_command_line_arguments() */
+static struct mg_context *g_ctx;          /* Set by start_civetweb() */
 
 #if !defined(CONFIG_FILE)
 #define CONFIG_FILE "civetweb.conf"
@@ -124,7 +124,7 @@ static struct mg_option main_config_options[] = {
 
 static void WINCDECL signal_handler(int sig_num)
 {
-    exit_flag = sig_num;
+    g_exit_flag = sig_num;
 }
 
 static void die(const char *fmt, ...)
@@ -216,7 +216,7 @@ static const char *get_url_to_first_open_port(const struct mg_context *ctx)
     return url;
 }
 
-static void create_config_file(const char *path)
+static void create_config_file(const struct mg_context *ctx, const char *path)
 {
     const struct mg_option *options;
     const char *value;
@@ -414,17 +414,16 @@ static void process_command_line_arguments(char *argv[], char **options)
 
     /* Should we use a config file ? */
     if (argv[1] != NULL && argv[1][0] != '-') {
-        snprintf(config_file, sizeof(config_file), "%s", argv[1]);
+        snprintf(g_config_file, sizeof(g_config_file)-1, "%s", argv[1]);
         cmd_line_opts_start = 2;
     } else if ((p = strrchr(argv[0], DIRSEP)) == NULL) {
         /* No command line flags specified. Look where binary lives */
-        snprintf(config_file, sizeof(config_file)-1, "%s", CONFIG_FILE);
-        config_file[sizeof(config_file)-1] = 0;
+        snprintf(g_config_file, sizeof(g_config_file)-1, "%s", CONFIG_FILE);
     } else {
-        snprintf(config_file, sizeof(config_file)-1, "%.*s%c%s",
+        snprintf(g_config_file, sizeof(g_config_file)-1, "%.*s%c%s",
                  (int) (p - argv[0]), argv[0], DIRSEP, CONFIG_FILE);
-        config_file[sizeof(config_file)-1] = 0;
     }
+    g_config_file[sizeof(g_config_file)-1] = 0;
 
 #ifdef CONFIG_FILE2
     fp = fopen(config_file, "r");
@@ -442,7 +441,7 @@ static void process_command_line_arguments(char *argv[], char **options)
 #endif
 
     /* read all configurations from a config file */
-    (void)read_config_file(config_file, options);
+    (void)read_config_file(g_config_file, options);
 
     /* If we're under MacOS and started by launchd, then the second
        argument is process serial number, -psn_.....
@@ -466,20 +465,20 @@ static void init_server_name(int argc, const char *argv[])
 {
     int i;
     assert(sizeof(main_config_options)/sizeof(main_config_options[0]) == NUM_MAIN_OPTIONS+1);
-    assert((strlen(mg_version())+12)<sizeof(server_base_name));
-    snprintf(server_base_name, sizeof(server_base_name), "Civetweb V%s",
+    assert((strlen(mg_version())+12)<sizeof(g_server_base_name));
+    snprintf(g_server_base_name, sizeof(g_server_base_name), "Civetweb V%s",
              mg_version());
 
-    server_name = server_base_name;
+    g_server_name = g_server_base_name;
     for (i=0; i<argc-1; i++) {
         if ((argv[i][0]=='-') && (0==strcmp(argv[i]+1, main_config_options[OPTION_TITLE].name))) {
-            server_name = (char*)(argv[i+1]);
+            g_server_name = (char*)(argv[i+1]);
         }
     }
-    icon_name = NULL;
+    g_icon_name = NULL;
     for (i=0; i<argc-1; i++) {
         if ((argv[i][0]=='-') && (0==strcmp(argv[i]+1, main_config_options[OPTION_ICON].name))) {
-            icon_name = (char*)(argv[i+1]);
+            g_icon_name = (char*)(argv[i+1]);
         }
     }
 }
@@ -649,12 +648,12 @@ static void start_civetweb(int argc, char *argv[])
     /* Start Civetweb */
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.log_message = &log_message;
-    ctx = mg_start(&callbacks, NULL, (const char **) options);
+    g_ctx = mg_start(&callbacks, NULL, (const char **) options);
     for (i = 0; options[i] != NULL; i++) {
         free(options[i]);
     }
 
-    if (ctx == NULL) {
+    if (g_ctx == NULL) {
         die("%s", "Failed to start Civetweb.");
     }
 }
@@ -697,13 +696,13 @@ static void WINAPI ServiceMain(void)
     ss.dwCurrentState = SERVICE_RUNNING;
     ss.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
 
-    hStatus = RegisterServiceCtrlHandler(server_name, ControlHandler);
+    hStatus = RegisterServiceCtrlHandler(g_server_name, ControlHandler);
     SetServiceStatus(hStatus, &ss);
 
     while (ss.dwCurrentState == SERVICE_RUNNING) {
         Sleep(1000);
     }
-    mg_stop(ctx);
+    mg_stop(g_ctx);
 
     ss.dwCurrentState = SERVICE_STOPPED;
     ss.dwWin32ExitCode = (DWORD) -1;
@@ -774,10 +773,10 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 
         case ID_SAVE:
             EnableWindow(GetDlgItem(hDlg, ID_SAVE), FALSE);
-            if ((fp = fopen(config_file, "w+")) != NULL) {
+            if ((fp = fopen(g_config_file, "w+")) != NULL) {
                 save_config(hDlg, fp);
                 fclose(fp);
-                mg_stop(ctx);
+                mg_stop(g_ctx);
                 start_civetweb(__argc, __argv);
             }
             EnableWindow(GetDlgItem(hDlg, ID_SAVE), TRUE);
@@ -797,7 +796,7 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
             break;
 
         case ID_RESET_FILE:
-            read_config_file(config_file, file_options);
+            read_config_file(g_config_file, file_options);
             for (i = 0; default_options[i].name != NULL; i++) {
                 name = default_options[i].name;
                 value = default_options[i].default_value;
@@ -824,7 +823,7 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
         case ID_RESET_ACTIVE:
             for (i = 0; default_options[i].name != NULL; i++) {
                 name = default_options[i].name;
-                value = mg_get_option(ctx, name);
+                value = mg_get_option(g_ctx, name);
                 if (default_options[i].type == CONFIG_TYPE_BOOLEAN) {
                     CheckDlgButton(hDlg, ID_CONTROLS + i, !strcmp(value, "yes") ?
                                    BST_CHECKED : BST_UNCHECKED);
@@ -848,7 +847,7 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
                 of.hwndOwner = (HWND) hDlg;
                 of.lpstrFile = path;
                 of.nMaxFile = sizeof(path);
-                of.lpstrInitialDir = mg_get_option(ctx, "document_root");
+                of.lpstrInitialDir = mg_get_option(g_ctx, "document_root");
                 of.Flags = OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
 
                 memset(&bi, 0, sizeof(bi));
@@ -872,9 +871,9 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
     case WM_INITDIALOG:
         SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_SMALL, (LPARAM) hIcon);
         SendMessage(hDlg, WM_SETICON, (WPARAM) ICON_BIG, (LPARAM) hIcon);
-        title = malloc(strlen(server_name)+16);
+        title = malloc(strlen(g_server_name)+16);
         if (title) {
-            strcpy(title, server_name);
+            strcpy(title, g_server_name);
             strcat(title, " settings");
             SetWindowText(hDlg, title);
             free(title);
@@ -1232,7 +1231,7 @@ static void show_settings_dialog()
                 WIDTH - 280, y, 65, 12, "Reload active");
     add_control(&p, dia, 0x82, ID_STATIC,
                 WS_CHILD | WS_VISIBLE | WS_DISABLED,
-                5, y, 100, 12, server_base_name);
+                5, y, 100, 12, g_server_base_name);
 
     assert(((int)p - (int)mem) < (int)sizeof(mem));
 
@@ -1259,7 +1258,7 @@ static void change_password_file()
     int y, nelems;
     unsigned char mem[4096], *p;
     DLGTEMPLATE *dia = (DLGTEMPLATE *) mem;
-    const char * domain = mg_get_option(ctx, "authentication_domain");
+    const char * domain = mg_get_option(g_ctx, "authentication_domain");
 
     static struct {
         DLGTEMPLATE template; /* 18 bytes */
@@ -1285,7 +1284,7 @@ static void change_password_file()
     of.hwndOwner = (HWND) hDlg;
     of.lpstrFile = path;
     of.nMaxFile = sizeof(path);
-    of.lpstrInitialDir = mg_get_option(ctx, "document_root");
+    of.lpstrInitialDir = mg_get_option(g_ctx, "document_root");
     of.Flags = OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
 
     if (IDOK != GetSaveFileName(&of)) {
@@ -1358,12 +1357,12 @@ static void change_password_file()
         y += HEIGHT;
         add_control(&p, dia, 0x82, ID_STATIC,
             WS_CHILD | WS_VISIBLE | WS_DISABLED,
-            5, y, 100, 12, server_base_name);
+            5, y, 100, 12, g_server_base_name);
 
         assert(((int)p - (int)mem) < (int)sizeof(mem));
 
         dia->cy = y + 20;
-    } while ((IDOK == DialogBoxIndirectParam(NULL, dia, NULL, PasswordDlgProc, (LPARAM) path)) && (!exit_flag));
+    } while ((IDOK == DialogBoxIndirectParam(NULL, dia, NULL, PasswordDlgProc, (LPARAM) path)) && (!g_exit_flag));
 
     guard--;
 
@@ -1376,7 +1375,7 @@ static int manage_service(int action)
 {
     static const char *service_name = "Civetweb"; /* TODO: check using server_name instead of service_name */
     SC_HANDLE hSCM = NULL, hService = NULL;
-    SERVICE_DESCRIPTION descr = {server_name};
+    SERVICE_DESCRIPTION descr = {g_server_name};
     char path[PATH_MAX + 20] = "";/* Path to executable plus magic argument */
     int success = 1;
 
@@ -1427,7 +1426,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
     static UINT s_uTaskbarRestart; /* for taskbar creation */
 
     memset(service_table, 0, sizeof(service_table));
-    service_table[0].lpServiceName = server_name;
+    service_table[0].lpServiceName = g_server_name;
     service_table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)ServiceMain;
 
     switch (msg) {
@@ -1445,9 +1444,9 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
         case ID_QUIT:
-            mg_stop(ctx);
+            mg_stop(g_ctx);
             Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
-            exit_flag = 1;
+            g_exit_flag = 1;
             PostQuitMessage(0);
             return 0;
         case ID_SETTINGS:
@@ -1461,8 +1460,8 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
             manage_service(LOWORD(wParam));
             break;
         case ID_CONNECT:
-            printf("[%s]\n", get_url_to_first_open_port(ctx));
-            ShellExecute(NULL, "open", get_url_to_first_open_port(ctx),
+            printf("[%s]\n", get_url_to_first_open_port(g_ctx));
+            ShellExecute(NULL, "open", get_url_to_first_open_port(g_ctx),
                          NULL, NULL, SW_SHOW);
             break;
         }
@@ -1473,7 +1472,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
         case WM_LBUTTONUP:
         case WM_LBUTTONDBLCLK:
             hMenu = CreatePopupMenu();
-            AppendMenu(hMenu, MF_STRING | MF_GRAYED, ID_SEPARATOR, server_name);
+            AppendMenu(hMenu, MF_STRING | MF_GRAYED, ID_SEPARATOR, g_server_name);
             AppendMenu(hMenu, MF_SEPARATOR, ID_SEPARATOR, "");
             service_installed = manage_service(0);
             snprintf(buf, sizeof(buf)-1, "NT service: %s installed",
@@ -1499,9 +1498,9 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
         }
         break;
     case WM_CLOSE:
-        mg_stop(ctx);
+        mg_stop(g_ctx);
         Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
-        exit_flag = 1;
+        g_exit_flag = 1;
         PostQuitMessage(0);
         return 0;/* We've just sent our own quit message, with proper hwnd. */
     default:
@@ -1536,7 +1535,7 @@ static int MakeConsole() {
     }
 
     if (ok) {
-        SetConsoleTitle(server_name);
+        SetConsoleTitle(g_server_name);
     }
 
     return ok;
@@ -1553,19 +1552,19 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
     (void)cmdline;
     (void)show;
 
-    init_server_name(__argc, __argv);
+    init_server_name((int)__argc, (const char **)__argv);
     memset(&cls, 0, sizeof(cls));
     cls.lpfnWndProc = (WNDPROC) WindowProc;
     cls.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    cls.lpszClassName = server_base_name;
+    cls.lpszClassName = g_server_base_name;
 
     RegisterClass(&cls);
-    hWnd = CreateWindow(cls.lpszClassName, server_name, WS_OVERLAPPEDWINDOW,
+    hWnd = CreateWindow(cls.lpszClassName, g_server_name, WS_OVERLAPPEDWINDOW,
                         0, 0, 0, 0, NULL, NULL, NULL, NULL);
     ShowWindow(hWnd, SW_HIDE);
 
-    if (icon_name) {
-        hIcon = LoadImage(NULL, icon_name, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
+    if (g_icon_name) {
+        hIcon = LoadImage(NULL, g_icon_name, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
     } else {
         hIcon = LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(ID_ICON), IMAGE_ICON, 16, 16, 0);
     }
@@ -1575,7 +1574,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
     TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     TrayIcon.hIcon = hIcon;
     TrayIcon.hWnd = hWnd;
-    snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", server_name);
+    snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", g_server_name);
     TrayIcon.uCallbackMessage = WM_USER;
     Shell_NotifyIcon(NIM_ADD, &TrayIcon);
 
@@ -1608,12 +1607,12 @@ NSObject<NSApplicationDelegate>
 - (void) openBrowser {
     [[NSWorkspace sharedWorkspace]
 openURL:[NSURL URLWithString:
-[NSString stringWithUTF8String:get_url_to_first_open_port(ctx)]]];
+[NSString stringWithUTF8String:get_url_to_first_open_port(g_ctx)]]];
 }
 - (void) editConfig {
-    create_config_file(config_file);
+    create_config_file(g_ctx, g_config_file);
     [[NSWorkspace sharedWorkspace]
-openFile:[NSString stringWithUTF8String:config_file]
+openFile:[NSString stringWithUTF8String:g_config_file]
 withApplication:@"TextEdit"];
 }
 - (void)shutDown {
@@ -1644,7 +1643,7 @@ int main(int argc, char *argv[])
     /* Add version menu item */
 [menu addItem:[[[NSMenuItem alloc]
                     /*initWithTitle:[NSString stringWithFormat:@"%s", server_name]*/
-                initWithTitle:[NSString stringWithUTF8String:server_name]
+                initWithTitle:[NSString stringWithUTF8String:g_server_name]
                 action:@selector(noexist) keyEquivalent:@""] autorelease]];
 
     /* Add configuration menu item */
@@ -1676,7 +1675,7 @@ int main(int argc, char *argv[])
 [NSApp activateIgnoringOtherApps:YES];
     [NSApp run];
 
-    mg_stop(ctx);
+    mg_stop(g_ctx);
 
     return EXIT_SUCCESS;
 }
