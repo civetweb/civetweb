@@ -432,7 +432,7 @@ static void process_command_line_arguments(char *argv[], char **options)
     if (fp == NULL) {
         fp = fopen(CONFIG_FILE2, "r");
         if (fp != NULL) {
-            strcpy(config_file, CONFIG_FILE2);
+            strcpy(g_config_file, CONFIG_FILE2);
         }
     }
     if (fp != NULL) {
@@ -1686,14 +1686,14 @@ int main(int argc, char *argv[])
     start_civetweb(argc, argv);
     printf("%s started on port(s) %s with web root [%s]\n",
            g_server_name, mg_get_option(ctx, "listening_ports"),
-           mg_get_option(ctx, "document_root"));
-    while (exit_flag == 0) {
+           mg_get_option(g_ctx, "document_root"));
+    while (g_exit_flag == 0) {
         sleep(1);
     }
     printf("Exiting on signal %d, waiting for all threads to finish...",
-           exit_flag);
+           g_exit_flag);
     fflush(stdout);
-    mg_stop(ctx);
+    mg_stop(g_ctx);
     printf("%s", " done.\n");
 
     return EXIT_SUCCESS;
