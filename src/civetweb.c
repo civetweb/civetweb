@@ -4493,9 +4493,8 @@ static int is_valid_http_method(const char *method)
     return !strcmp(method, "GET") || !strcmp(method, "POST") ||
            !strcmp(method, "HEAD") || !strcmp(method, "CONNECT") ||
            !strcmp(method, "PUT") || !strcmp(method, "DELETE") ||
-           !strcmp(method, "OPTIONS") || !strcmp(method, "PROPFIND")
-           || !strcmp(method, "MKCOL")
-           ;
+           !strcmp(method, "OPTIONS") || !strcmp(method, "PROPFIND") ||
+           !strcmp(method, "MKCOL");
 }
 
 /* Parse HTTP request, fill in mg_request_info structure.
@@ -4947,10 +4946,14 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
     setbuf(out, NULL);
     fout.fp = out;
 
-    /* Send POST data to the CGI process if needed */
-    if (!strcmp(conn->request_info.request_method, "POST") &&
-        !forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
-        goto done;
+    /* Send POST or PUT data to the CGI process if needed */
+    if (!mg_strcasecmp(conn->request_info.request_method, "POST") ||
+        !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
+        /* This is a POST/PUT request */
+        if (!forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
+            /* Error sending the body data */
+            goto done;
+        }
     }
 
     /* Close so child gets an EOF. */
