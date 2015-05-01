@@ -1,4 +1,4 @@
-civet = require "test/ci_tests/civet"
+civet = require "ci/test/civet"
 local curl = require "cURL"
 
 describe("civetweb basic", function()

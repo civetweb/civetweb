@@ -8,7 +8,7 @@ set -ev
 # After this script is finished, you can configure your environment to
 # use it by sourcing lua_env.sh
 
-source .travis/platform.sh
+source ci/travis/platform.sh
 
 # The current versions when this script was written
 LUA_VERSION=5.2.4
@@ -18,7 +18,7 @@ LUAROCKS_VERSION=2.2.2
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # civetweb base dir
-PROJECT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )"/.. && pwd )
+PROJECT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )"/../.. && pwd )
 
 # fetch and unpack lua src
 cd $SCRIPT_DIR
@@ -32,7 +32,7 @@ make $PLATFORM
 make local
 
 # mv built lua install to target Lua dir
-LUA_DIR=$SCRIPT_DIR/lua
+LUA_DIR=$PROJECT_DIR/ci/lua
 rm -rf $LUA_DIR
 mv $SCRIPT_DIR/$LUA_BASE/install $LUA_DIR
 
