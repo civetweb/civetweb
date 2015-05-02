@@ -6585,19 +6585,19 @@ static int deprecated_websocket_connect_wrapper(const struct mg_connection * con
     return 0;
 }
 
-static void deprecated_websocket_ready_wrapper(const struct mg_connection * conn, void *cbdata)
+static void deprecated_websocket_ready_wrapper(struct mg_connection * conn, void *cbdata)
 {
     struct mg_callbacks *pcallbacks = (struct mg_callbacks*)cbdata;
     if (pcallbacks->websocket_ready) {
-        pcallbacks->websocket_ready((struct mg_connection *)conn);
+        pcallbacks->websocket_ready(conn);
     }
 }
 
-static int deprecated_websocket_data_wrapper(const struct mg_connection * conn, int bits, char * data, size_t len, void *cbdata)
+static int deprecated_websocket_data_wrapper(struct mg_connection * conn, int bits, char * data, size_t len, void *cbdata)
 {
     struct mg_callbacks *pcallbacks = (struct mg_callbacks*)cbdata;
     if (pcallbacks->websocket_data) {
-        return pcallbacks->websocket_data((struct mg_connection *)conn, bits, data, len);
+        return pcallbacks->websocket_data(conn, bits, data, len);
     }
     /* No handler set - assume "OK" */
     return 1;
