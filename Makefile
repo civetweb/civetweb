@@ -60,7 +60,7 @@ BUILD_DIRS += $(BUILD_DIR)/test
 endif
 
 # only set main compile options if none were chosen
-CFLAGS += -W -Wall -O2 -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400
+CFLAGS += -Wall -Wextra -O2 -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400
 
 LIBS = -lpthread -lm
 
@@ -231,6 +231,7 @@ clean:
 	$(RMRF) lib$(CPROG).so
 	$(RMRF) lib$(CPROG).so.$(major)
 	$(RMRF) lib$(CPROG).so.$(version).0
+	$(RMRF) $(CPROG)
 
 distclean: clean
 	@$(RMRF) VS2012/Debug VS2012/*/Debug  VS2012/*/*/Debug
