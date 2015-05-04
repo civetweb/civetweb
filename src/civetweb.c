@@ -1176,7 +1176,7 @@ static int mg_vsnprintf(struct mg_connection *conn, char *buf, size_t buflen,
 
     #ifdef __clang__
     #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "Wformat-nonliteral"
+    #pragma clang diagnostic ignored "-Wformat-nonliteral"
     /* Using fmt as a non-literal is intended here, since it is mostly called indirectly by mg_snprintf */
     #endif
 
