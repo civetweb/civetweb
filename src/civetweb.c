@@ -738,12 +738,12 @@ struct file {
 /* Describes listening socket, or socket which was accept()-ed by the master
    thread and queued for future handling by the worker thread. */
 struct socket {
-    SOCKET sock;          /* Listening socket */
-    union usa lsa;        /* Local socket address */
-    union usa rsa;        /* Remote socket address */
-    unsigned is_ssl:1;    /* Is port SSL-ed */
-    unsigned ssl_redir:1; /* Is port supposed to redirect everything to SSL
-                             port */
+    SOCKET sock;              /* Listening socket */
+    union usa lsa;            /* Local socket address */
+    union usa rsa;            /* Remote socket address */
+    unsigned char is_ssl;     /* Is port SSL-ed */
+    unsigned char ssl_redir;  /* Is port supposed to redirect everything to SSL
+                                 port */
 };
 
 /* NOTE(lsm): this enum shoulds be in sync with the config_options below. */
@@ -1174,7 +1174,17 @@ static int mg_vsnprintf(struct mg_connection *conn, char *buf, size_t buflen,
     if (buflen == 0)
         return 0;
 
+    #ifdef __clang__
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wformat-nonliteral"
+    /* Using fmt as a non-literal is intended here, since it is mostly called indirectly by mg_snprintf */
+    #endif
+
     n = vsnprintf(buf, buflen, fmt, ap);
+
+    #ifdef __clang__
+    #pragma clang diagnostic pop
+    #endif
 
     if (n < 0) {
         mg_cry(conn, "vsnprintf error");
@@ -4483,9 +4493,8 @@ static int is_valid_http_method(const char *method)
     return !strcmp(method, "GET") || !strcmp(method, "POST") ||
            !strcmp(method, "HEAD") || !strcmp(method, "CONNECT") ||
            !strcmp(method, "PUT") || !strcmp(method, "DELETE") ||
-           !strcmp(method, "OPTIONS") || !strcmp(method, "PROPFIND")
-           || !strcmp(method, "MKCOL")
-           ;
+           !strcmp(method, "OPTIONS") || !strcmp(method, "PROPFIND") ||
+           !strcmp(method, "MKCOL");
 }
 
 /* Parse HTTP request, fill in mg_request_info structure.
@@ -4937,10 +4946,14 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
     setbuf(out, NULL);
     fout.fp = out;
 
-    /* Send POST data to the CGI process if needed */
-    if (!strcmp(conn->request_info.request_method, "POST") &&
-        !forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
-        goto done;
+    /* Send POST or PUT data to the CGI process if needed */
+    if (!mg_strcasecmp(conn->request_info.request_method, "POST") ||
+        !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
+        /* This is a POST/PUT request */
+        if (!forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
+            /* Error sending the body data */
+            goto done;
+        }
     }
 
     /* Close so child gets an EOF. */
@@ -6572,19 +6585,19 @@ static int deprecated_websocket_connect_wrapper(const struct mg_connection * con
     return 0;
 }
 
-static void deprecated_websocket_ready_wrapper(const struct mg_connection * conn, void *cbdata)
+static void deprecated_websocket_ready_wrapper(struct mg_connection * conn, void *cbdata)
 {
     struct mg_callbacks *pcallbacks = (struct mg_callbacks*)cbdata;
     if (pcallbacks->websocket_ready) {
-        pcallbacks->websocket_ready((struct mg_connection *)conn);
+        pcallbacks->websocket_ready(conn);
     }
 }
 
-static int deprecated_websocket_data_wrapper(const struct mg_connection * conn, int bits, char * data, size_t len, void *cbdata)
+static int deprecated_websocket_data_wrapper(struct mg_connection * conn, int bits, char * data, size_t len, void *cbdata)
 {
     struct mg_callbacks *pcallbacks = (struct mg_callbacks*)cbdata;
     if (pcallbacks->websocket_data) {
-        return pcallbacks->websocket_data((struct mg_connection *)conn, bits, data, len);
+        return pcallbacks->websocket_data(conn, bits, data, len);
     }
     /* No handler set - assume "OK" */
     return 1;

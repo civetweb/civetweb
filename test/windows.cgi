@@ -1,0 +1,2 @@
+#!windows.cgi.cmd
+

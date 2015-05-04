@@ -1,5 +1,5 @@
 #!/bin/bash
 
-LUAROCKS=.travis/lua/bin/luarocks
+LUAROCKS=ci/lua/bin/luarocks
 eval $($LUAROCKS path --bin)
 

@@ -2,13 +2,14 @@ socket = require "socket"
 
 local civet = {}
 
+-- default params
 civet.port=12345
 civet.max_retry=100
 civet.start_delay=0.1
 
 function civet.start(docroot)
   -- TODO: use a property
-  docroot = docroot or 'test/ci_tests/01_basic/docroot'
+  docroot = docroot or 'ci/test/01_basic/docroot'
   assert(io.popen('./civetweb'
   .. " -listening_ports " .. civet.port
   .. " -document_root " .. docroot

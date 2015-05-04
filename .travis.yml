@@ -8,8 +8,8 @@ compiler:
 install: make WITH_LUA=1 WITH_DEBUG=1 WITH_IPV6=1 WITH_WEBSOCKET=1
 
 before_script:
-  - .travis/setup_lua.sh
-  - .travis/install_rocks.sh
+  - ci/travis/setup_lua.sh
+  - ci/travis/install_rocks.sh
 
 script:
-  - .travis/run_ci_tests.sh
+  - ci/travis/run_ci_tests.sh

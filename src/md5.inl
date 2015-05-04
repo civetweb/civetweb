@@ -14,7 +14,7 @@
 
   This code implements the MD5 Algorithm defined in RFC 1321, whose
   text is available at
-	http://www.ietf.org/rfc/rfc1321.txt
+    http://www.ietf.org/rfc/rfc1321.txt
   The code is derived from the text of the RFC, including the test suite
   (section A.5) but excluding the rest of Appendix A.  It does not include
   any code or documentation that is identified in the RFC as being
@@ -25,12 +25,12 @@
   that follows (in reverse chronological order):
 
   2002-04-13 lpd Removed support for non-ANSI compilers; removed
-	references to Ghostscript; clarified derivation from RFC 1321;
-	now handles byte order either statically or dynamically.
+    references to Ghostscript; clarified derivation from RFC 1321;
+    now handles byte order either statically or dynamically.
   1999-11-04 lpd Edited comments slightly for automatic TOC extraction.
   1999-10-18 lpd Fixed typo in header comment (ansi2knr rather than md5);
-	added conditionalization for C++ compilation from Martin
-	Purschke <purschke@bnl.gov>.
+    added conditionalization for C++ compilation from Martin
+    Purschke <purschke@bnl.gov>.
   1999-05-03 lpd Original version.
  */
 
@@ -52,9 +52,9 @@ typedef unsigned int md5_word_t; /* 32-bit word */
 
 /* Define the state of the MD5 Algorithm. */
 typedef struct md5_state_s {
-    md5_word_t count[2];	/* message length in bits, lsw first */
-    md5_word_t abcd[4];		/* digest buffer */
-    md5_byte_t buf[64];		/* accumulate block */
+    md5_word_t count[2];    /* message length in bits, lsw first */
+    md5_word_t abcd[4];        /* digest buffer */
+    md5_byte_t buf[64];        /* accumulate block */
 } md5_state_t;
 
 #ifdef __cplusplus
@@ -106,7 +106,7 @@ MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
 
   This code implements the MD5 Algorithm defined in RFC 1321, whose
   text is available at
-	http://www.ietf.org/rfc/rfc1321.txt
+    http://www.ietf.org/rfc/rfc1321.txt
   The code is derived from the text of the RFC, including the test suite
   (section A.5) but excluding the rest of Appendix A.  It does not include
   any code or documentation that is identified in the RFC as being
@@ -117,14 +117,14 @@ MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
   that follows (in reverse chronological order):
 
   2002-04-13 lpd Clarified derivation from RFC 1321; now handles byte order
-	either statically or dynamically; added missing #include <string.h>
-	in library.
+    either statically or dynamically; added missing #include <string.h>
+    in library.
   2002-03-11 lpd Corrected argument list for main(), and added int return
-	type, in test program and T value program.
+    type, in test program and T value program.
   2002-02-21 lpd Added missing #include <stdio.h> in test program.
   2000-07-03 lpd Patched to eliminate warnings about "constant is
-	unsigned in ANSI C, signed in traditional"; made test program
-	self-checking.
+    unsigned in ANSI C, signed in traditional"; made test program
+    self-checking.
   1999-11-04 lpd Edited comments slightly for automatic TOC extraction.
   1999-10-18 lpd Fixed typo in header comment (ansi2knr rather than md5).
   1999-05-03 lpd Original version.
@@ -134,7 +134,7 @@ MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
 #include <string.h>
 #endif
 
-#undef BYTE_ORDER	/* 1 = big-endian, -1 = little-endian, 0 = unknown */
+#undef BYTE_ORDER    /* 1 = big-endian, -1 = little-endian, 0 = unknown */
 #ifdef ARCH_IS_BIG_ENDIAN
 #  define BYTE_ORDER (ARCH_IS_BIG_ENDIAN ? 1 : -1)
 #else
@@ -235,15 +235,17 @@ md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
 
         if (*((const md5_byte_t *)&w)) /* dynamic little-endian */
 #endif
-#if BYTE_ORDER <= 0		/* little-endian */
+#if BYTE_ORDER <= 0        /* little-endian */
         {
             /*
              * On little-endian machines, we can process properly aligned
              * data without copying it.
              */
             if (!((data - (const md5_byte_t *)0) & 3)) {
-                /* data are properly aligned */
-                X = (const md5_word_t *)data;
+                /* data are properly aligned, a direct assignment is possible */
+                /* cast through a (void *) should avoid a compiler warning,
+                   see https://github.com/bel2125/civetweb/issues/94#issuecomment-98112861 */
+                X = (const md5_word_t *)(void *)data;
             } else {
                 /* not aligned */
                 memcpy(xbuf, data, 64);
@@ -252,9 +254,9 @@ md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
         }
 #endif
 #if BYTE_ORDER == 0
-        else			/* dynamic big-endian */
+        else            /* dynamic big-endian */
 #endif
-#if BYTE_ORDER >= 0		/* big-endian */
+#if BYTE_ORDER >= 0        /* big-endian */
         {
             /*
              * On big-endian machines, we must arrange the bytes in the
@@ -264,9 +266,9 @@ md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
             int i;
 
 #  if BYTE_ORDER == 0
-            X = xbuf;		/* (dynamic only) */
+            X = xbuf;        /* (dynamic only) */
 #  else
-#    define xbuf X		/* (static only) */
+#    define xbuf X        /* (static only) */
 #  endif
             for (i = 0; i < 16; ++i, xp += 4)
                 xbuf[i] = xp[0] + (xp[1] << 8) + (xp[2] << 16) + (xp[3] << 24);
