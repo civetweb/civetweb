@@ -54,10 +54,9 @@
 #pragma warning (disable : 4204)
 #endif
 
-/* Disable WIN32_LEAN_AND_MEAN.
-   This makes windows.h always include winsock2.h */
-#if defined(WIN32_LEAN_AND_MEAN)
-#undef WIN32_LEAN_AND_MEAN
+/* DTL -- including winsock2.h works better if lean and mean */
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #endif
 
 #if defined USE_IPV6 && defined(_WIN32)
@@ -149,6 +148,8 @@ int clock_gettime(int clk_id, struct timespec* t) {
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
 #include <windows.h>
+#include <winsock2.h>	/* DTL add for SO_EXCLUSIVE */
+
 typedef const char * SOCK_OPT_TYPE;
 
 #ifndef PATH_MAX
@@ -7025,9 +7026,14 @@ static int set_ports_option(struct mg_context *ctx)
             success = 0;
         } else if ((so.sock = socket(so.lsa.sa.sa_family, SOCK_STREAM, 6)) ==
                    INVALID_SOCKET ||
-                   /* On Windows, SO_REUSEADDR is recommended only for
-                      broadcast UDP sockets */
+#ifdef _WIN32
+                   /* Windows SO_REUSEADDR lets many procs binds to a
+                      socket, SO_EXCLUSIVEADDRUSE makes the bind fail
+                      if someone already has the socket -- DTL */
+                   setsockopt(so.sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (SOCK_OPT_TYPE) &on, sizeof(on)) != 0 ||
+#else
                    setsockopt(so.sock, SOL_SOCKET, SO_REUSEADDR, (SOCK_OPT_TYPE) &on, sizeof(on)) != 0 ||
+#endif
 #if defined(USE_IPV6)
                    (so.lsa.sa.sa_family == AF_INET6 &&
                     setsockopt(so.sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *) &off,
