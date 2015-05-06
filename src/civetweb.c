@@ -243,10 +243,6 @@ typedef long off_t;
 #define USE_TIMERS
 #endif
 
-#if !defined(va_copy)
-#define va_copy(x, y) x = y
-#endif /* !va_copy MINGW #defines va_copy */
-
 #if !defined(fileno)
 #define fileno(x) _fileno(x)
 #endif /* !fileno MINGW #defines fileno */
@@ -371,7 +367,29 @@ typedef unsigned short int in_port_t;
 typedef int SOCKET;
 #define WINCDECL
 
+#if defined(__hpux)
+/* HPUX 11 does not have monotonic, fall back to realtime */
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC CLOCK_REALTIME
+#endif
+
+/* HPUX defines socklen_t incorrectly as size_t which is 64bit on
+ * Itanium.  Without defining _XOPEN_SOURCE or _XOPEN_SOURCE_EXTENDED
+ * the prototypes use int* rather than socklen_t* which matches the
+ * actual library expectation.  When called with the wrong size arg
+ * accept() returns a zero client inet addr and check_acl() always
+ * fails.  Since socklen_t is widely used below, just force replace
+ * their typedef with int. - DTL
+ */
+#define socklen_t int
+#endif /* hpux */
+
 #endif /* End of Windows and UNIX specific includes */
+
+/* va_copy should always be a macro, C99 and C++11 - DTL */
+#ifndef va_copy
+#define va_copy(x, y) x = y
+#endif
 
 #ifdef _WIN32
 static CRITICAL_SECTION global_log_file_lock;
@@ -1026,6 +1044,8 @@ void mg_set_thread_name(const char* name)
 #elif defined(BSD) || defined(__FreeBSD__) || defined(__OpenBSD__)
    /* BSD (TODO: test) */
    pthread_set_name_np(pthread_self(), threadName);
+#elif defined(_AIX) ||  defined(__hpux)
+   /* no name function */
 #else
    /* POSIX */
    (void)pthread_setname_np(pthread_self(), threadName);
