@@ -43,6 +43,10 @@
 #ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS   /* C++ wants that for INT64_MAX */
 #endif
+#ifdef __sun
+#define __EXTENSIONS__	/* to expose flockfile and friends in stdio.h */ 
+#define __inline inline	/* not recognized on older compiler versions */
+#endif
 #endif
 
 #if defined (_MSC_VER)
@@ -1044,7 +1048,7 @@ void mg_set_thread_name(const char* name)
 #elif defined(BSD) || defined(__FreeBSD__) || defined(__OpenBSD__)
    /* BSD (TODO: test) */
    pthread_set_name_np(pthread_self(), threadName);
-#elif defined(_AIX) ||  defined(__hpux)
+#elif defined(_AIX) || defined(__hpux) || defined(__sun)
    /* no name function */
 #else
    /* POSIX */
