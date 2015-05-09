@@ -578,17 +578,12 @@ static void * mg_realloc_ex(void * memory, size_t newsize, const char * file, un
 #define mg_free(a)        mg_free_ex(a, __FILE__, __LINE__)
 
 #else
-#ifdef __sun
-static inline void * mg_malloc(size_t a)             {return malloc(a);}
-static inline void * mg_calloc(size_t a, size_t b)   {return calloc(a, b);}
-static inline void * mg_realloc(void * a, size_t b)  {return realloc(a, b);}
-static inline void   mg_free(void * a)               {free(a); a = NULL;}
-#else
+
 static __inline void * mg_malloc(size_t a)             {return malloc(a);}
 static __inline void * mg_calloc(size_t a, size_t b)   {return calloc(a, b);}
 static __inline void * mg_realloc(void * a, size_t b)  {return realloc(a, b);}
 static __inline void   mg_free(void * a)               {free(a); a = NULL;}
-#endif
+
 #endif
 
 /* This following lines are just meant as a reminder to use the mg-functions for memory management */
