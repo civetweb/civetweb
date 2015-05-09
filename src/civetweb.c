@@ -43,6 +43,10 @@
 #ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS   /* C++ wants that for INT64_MAX */
 #endif
+#ifdef __sun
+#define __EXTENSIONS__	/* to expose flockfile and friends in stdio.h */ 
+#define __inline inline	/* not recognized on older compiler versions */
+#endif
 #endif
 
 #if defined (_MSC_VER)
@@ -54,10 +58,9 @@
 #pragma warning (disable : 4204)
 #endif
 
-/* Disable WIN32_LEAN_AND_MEAN.
-   This makes windows.h always include winsock2.h */
-#if defined(WIN32_LEAN_AND_MEAN)
-#undef WIN32_LEAN_AND_MEAN
+/* DTL -- including winsock2.h works better if lean and mean */
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #endif
 
 #if defined USE_IPV6 && defined(_WIN32)
@@ -149,6 +152,8 @@ int clock_gettime(int clk_id, struct timespec* t) {
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
 #include <windows.h>
+#include <winsock2.h>	/* DTL add for SO_EXCLUSIVE */
+
 typedef const char * SOCK_OPT_TYPE;
 
 #ifndef PATH_MAX
@@ -241,10 +246,6 @@ typedef long off_t;
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 #define USE_TIMERS
 #endif
-
-#if !defined(va_copy)
-#define va_copy(x, y) x = y
-#endif /* !va_copy MINGW #defines va_copy */
 
 #if !defined(fileno)
 #define fileno(x) _fileno(x)
@@ -370,11 +371,29 @@ typedef unsigned short int in_port_t;
 typedef int SOCKET;
 #define WINCDECL
 
-#if defined(__AIX__)
-#define va_copy(x, y) x = y
-#endif /* !va_copy AIX #defines va_copy */
+#if defined(__hpux)
+/* HPUX 11 does not have monotonic, fall back to realtime */
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC CLOCK_REALTIME
+#endif
+
+/* HPUX defines socklen_t incorrectly as size_t which is 64bit on
+ * Itanium.  Without defining _XOPEN_SOURCE or _XOPEN_SOURCE_EXTENDED
+ * the prototypes use int* rather than socklen_t* which matches the
+ * actual library expectation.  When called with the wrong size arg
+ * accept() returns a zero client inet addr and check_acl() always
+ * fails.  Since socklen_t is widely used below, just force replace
+ * their typedef with int. - DTL
+ */
+#define socklen_t int
+#endif /* hpux */
 
 #endif /* End of Windows and UNIX specific includes */
+
+/* va_copy should always be a macro, C99 and C++11 - DTL */
+#ifndef va_copy
+#define va_copy(x, y) x = y
+#endif
 
 #ifdef _WIN32
 static CRITICAL_SECTION global_log_file_lock;
@@ -1036,8 +1055,8 @@ void mg_set_thread_name(const char* name)
 #elif defined(BSD) || defined(__FreeBSD__) || defined(__OpenBSD__)
    /* BSD (TODO: test) */
    pthread_set_name_np(pthread_self(), threadName);
-#elif defined(__AIX__)
-	/* pthread_set_name_np seems to be missing on AIX*/
+#elif defined(_AIX) || defined(__hpux) || defined(__sun)
+   /* no name function */
 #else
    /* POSIX */
    (void)pthread_setname_np(pthread_self(), threadName);
@@ -7269,9 +7288,14 @@ static int set_ports_option(struct mg_context *ctx)
             success = 0;
         } else if ((so.sock = socket(so.lsa.sa.sa_family, SOCK_STREAM, 6)) ==
                    INVALID_SOCKET ||
-                   /* On Windows, SO_REUSEADDR is recommended only for
-                      broadcast UDP sockets */
+#ifdef _WIN32
+                   /* Windows SO_REUSEADDR lets many procs binds to a
+                      socket, SO_EXCLUSIVEADDRUSE makes the bind fail
+                      if someone already has the socket -- DTL */
+                   setsockopt(so.sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (SOCK_OPT_TYPE) &on, sizeof(on)) != 0 ||
+#else
                    setsockopt(so.sock, SOL_SOCKET, SO_REUSEADDR, (SOCK_OPT_TYPE) &on, sizeof(on)) != 0 ||
+#endif
 #if defined(USE_IPV6)
                    (so.lsa.sa.sa_family == AF_INET6 &&
                     setsockopt(so.sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *) &off,
