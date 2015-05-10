@@ -44,8 +44,8 @@
 #define __STDC_LIMIT_MACROS   /* C++ wants that for INT64_MAX */
 #endif
 #ifdef __sun
-#define __EXTENSIONS__	/* to expose flockfile and friends in stdio.h */ 
-#define __inline inline	/* not recognized on older compiler versions */
+#define __EXTENSIONS__    /* to expose flockfile and friends in stdio.h */
+#define __inline inline    /* not recognized on older compiler versions */
 #endif
 #endif
 
@@ -63,7 +63,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#if defined USE_IPV6 && defined(_WIN32)
+#if defined(_WIN32)
 #include <ws2tcpip.h>
 #endif
 
@@ -152,7 +152,7 @@ int clock_gettime(int clk_id, struct timespec* t) {
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
 #include <windows.h>
-#include <winsock2.h>	/* DTL add for SO_EXCLUSIVE */
+#include <winsock2.h>    /* DTL add for SO_EXCLUSIVE */
 
 typedef const char * SOCK_OPT_TYPE;
 
@@ -1310,8 +1310,24 @@ static void sockaddr_to_string(char *buf, size_t len,
                                const union usa *usa)
 {
     buf[0] = '\0';
+
+    if (usa->sa.sa_family == AF_INET)
+    {
+        getnameinfo(&usa->sa, sizeof(usa->sin), buf, len, NULL, 0, NI_NUMERICHOST);
+    }
 #if defined(USE_IPV6)
-    inet_ntop(usa->sa.sa_family, usa->sa.sa_family == AF_INET ?
+    else if (usa->sa.sa_family == AF_INET6)
+    {
+        getnameinfo(&usa->sa, sizeof(usa->sin6), buf, len, NULL, 0, NI_NUMERICHOST);
+    }
+#endif
+
+
+#if 0
+   // TODO: test alternative code, remove old code
+
+#if defined(USE_IPV6)
+    mg_inet_ntop(usa->sa.sa_family, usa->sa.sa_family == AF_INET ?
               (void *) &usa->sin.sin_addr :
               (void *) &usa->sin6.sin6_addr, buf, len);
 #elif defined(_WIN32)
@@ -1320,6 +1336,9 @@ static void sockaddr_to_string(char *buf, size_t len,
 #else
     inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, (socklen_t)len);
 #endif
+
+#endif
+
 }
 
 /* Convert time_t to a string. According to RFC2616, Sec 14.18, this must be included in all responses other than 100, 101, 5xx. */
@@ -6977,6 +6996,31 @@ static int is_valid_port(unsigned int port)
     return port < 0xffff;
 }
 
+int mg_inet_pton(int af, const char *src, void *dst)
+{
+    struct addrinfo hints, *res, *ressave;
+
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = af;
+
+    if (getaddrinfo(src, NULL, &hints, &res) != 0)
+    {
+        /* bad src string or bad address family */
+        return 0;
+    }
+
+    ressave = res;
+
+    while (res)
+    {
+        memcpy(dst, res->ai_addr, res->ai_addrlen);
+        res = res->ai_next;
+    }
+
+    freeaddrinfo(ressave);
+    return (ressave!=NULL);
+}
+
 /* Valid listening port specification is: [ip_address:]port[s]
    Examples: 80, 443s, 127.0.0.1:3128, 1.2.3.4:8080s
    TODO(lsm): add parsing of the IPv6 address */
@@ -7000,13 +7044,15 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
         so->lsa.sin.sin_port = htons((uint16_t) port);
 #if defined(USE_IPV6)
     } else if (sscanf(vec->ptr, "[%49[^]]]:%u%n", buf, &port, &len) == 2 &&
-               inet_pton(AF_INET6, buf, &so->lsa.sin6.sin6_addr)) {
+               mg_inet_pton(AF_INET6, buf, &so->lsa.sin6.sin6_addr)) {
         /* IPv6 address, e.g. [3ffe:2a00:100:7031::1]:8080 */
         so->lsa.sin6.sin6_family = AF_INET6;
         so->lsa.sin6.sin6_port = htons((uint16_t) port);
 #endif
     } else if (sscanf(vec->ptr, "%u%n", &port, &len) == 1) {
         /* If only port is specified, bind to IPv4, INADDR_ANY */
+        /* TODO: check -- so->lsa.sin6.sin6_family = AF_INET6; */
+        /* TODO: check -- so->lsa.sin6.sin6_port = htons((uint16_t) port); */
         so->lsa.sin.sin_port = htons((uint16_t) port);
     } else {
         port = len = 0;   /* Parsing failure. Make port invalid. */
@@ -7064,7 +7110,7 @@ static int set_ports_option(struct mg_context *ctx)
                                sizeof(off)) != 0) ||
 #endif
                    bind(so.sock, &so.lsa.sa, so.lsa.sa.sa_family == AF_INET ?
-                        sizeof(so.lsa.sin) : sizeof(so.lsa)) != 0 ||
+                        sizeof(so.lsa.sin) : sizeof(so.lsa.sin6)) != 0 ||
                    listen(so.sock, SOMAXCONN) != 0 ||
                    getsockname(so.sock, &(usa.sa), &len) != 0) {
             mg_cry(fc(ctx), "%s: cannot bind to %.*s: %d (%s)", __func__,
