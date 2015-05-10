@@ -90,12 +90,17 @@ static int guard = 0;                   /* test if any dialog is already open */
 #define MAX_OPTIONS 50
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
+struct tuser_data {
+    const char * first_message;
+};
+
 static int g_exit_flag = 0;               /* Main loop should exit */
 static char g_server_base_name[40];       /* Set by init_server_name() */
 static char *g_server_name;               /* Set by init_server_name() */
 static char *g_icon_name;                 /* Set by init_server_name() */
 static char g_config_file[PATH_MAX] = ""; /* Set by process_command_line_arguments() */
 static struct mg_context *g_ctx;          /* Set by start_civetweb() */
+static struct tuser_data g_user_data;     /* Passed to mg_start() by start_civetweb() */
 
 #if !defined(CONFIG_FILE)
 #define CONFIG_FILE "civetweb.conf"
@@ -485,8 +490,15 @@ static void init_server_name(int argc, const char *argv[])
 
 static int log_message(const struct mg_connection *conn, const char *message)
 {
-    (void) conn;
+    const struct mg_context * ctx = mg_get_context(conn);
+    struct tuser_data * ud = (struct tuser_data *) mg_get_user_data(ctx);
+
     printf("%s\n", message);
+
+    if (ud->first_message == NULL) {
+        ud->first_message = strdup(message);
+    }
+
     return 0;
 }
 
@@ -645,17 +657,27 @@ static void start_civetweb(int argc, char *argv[])
     signal(SIGTERM, signal_handler);
     signal(SIGINT, signal_handler);
 
+    /* Initialize user data */
+    memset(&g_user_data, 0, sizeof(g_user_data));
+
     /* Start Civetweb */
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.log_message = &log_message;
-    g_ctx = mg_start(&callbacks, NULL, (const char **) options);
+    g_ctx = mg_start(&callbacks, &g_user_data, (const char **) options);
     for (i = 0; options[i] != NULL; i++) {
         free(options[i]);
     }
 
     if (g_ctx == NULL) {
-        die("%s", "Failed to start Civetweb.");
+        die("Failed to start Civetweb:\n%s", (g_user_data.first_message == NULL) ? "unknown reason" : g_user_data.first_message);
     }
+}
+
+void stop_civetweb(void)
+{
+    mg_stop(g_ctx);
+    free(g_user_data.first_message);
+    g_user_data.first_message = NULL;
 }
 
 #ifdef _WIN32
@@ -702,7 +724,7 @@ static void WINAPI ServiceMain(void)
     while (ss.dwCurrentState == SERVICE_RUNNING) {
         Sleep(1000);
     }
-    mg_stop(g_ctx);
+    stop_civetweb();
 
     ss.dwCurrentState = SERVICE_STOPPED;
     ss.dwWin32ExitCode = (DWORD) -1;
@@ -776,7 +798,7 @@ static BOOL CALLBACK SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
             if ((fp = fopen(g_config_file, "w+")) != NULL) {
                 save_config(hDlg, fp);
                 fclose(fp);
-                mg_stop(g_ctx);
+                stop_civetweb();
                 start_civetweb(__argc, __argv);
             }
             EnableWindow(GetDlgItem(hDlg, ID_SAVE), TRUE);
@@ -1444,7 +1466,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
         case ID_QUIT:
-            mg_stop(g_ctx);
+            stop_civetweb();
             Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
             g_exit_flag = 1;
             PostQuitMessage(0);
@@ -1498,7 +1520,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
         }
         break;
     case WM_CLOSE:
-        mg_stop(g_ctx);
+        stop_civetweb();
         Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
         g_exit_flag = 1;
         PostQuitMessage(0);
@@ -1675,7 +1697,7 @@ int main(int argc, char *argv[])
 [NSApp activateIgnoringOtherApps:YES];
     [NSApp run];
 
-    mg_stop(g_ctx);
+    stop_civetweb(g_ctx);
 
     return EXIT_SUCCESS;
 }
@@ -1693,7 +1715,7 @@ int main(int argc, char *argv[])
     printf("Exiting on signal %d, waiting for all threads to finish...",
            g_exit_flag);
     fflush(stdout);
-    mg_stop(g_ctx);
+    stop_civetweb(g_ctx);
     printf("%s", " done.\n");
 
     return EXIT_SUCCESS;
