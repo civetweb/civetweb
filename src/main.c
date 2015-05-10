@@ -96,7 +96,7 @@ static int guard = 0;                   /* test if any dialog is already open */
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
 struct tuser_data {
-    const char * first_message;
+    char * first_message;
 };
 
 static int g_exit_flag = 0;               /* Main loop should exit */
@@ -1720,7 +1720,7 @@ int main(int argc, char *argv[])
     printf("Exiting on signal %d, waiting for all threads to finish...",
            g_exit_flag);
     fflush(stdout);
-    stop_civetweb(g_ctx);
+    stop_civetweb();
     printf("%s", " done.\n");
 
     return EXIT_SUCCESS;
