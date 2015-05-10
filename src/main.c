@@ -65,6 +65,11 @@ extern char *_getcwd(char *buf, size_t size);
 #endif
 static int guard = 0;                   /* test if any dialog is already open */
 
+#if defined (_MSC_VER)
+#define strdup _strdup
+/* or #pragma warning (disable : 4996 ) */
+#endif
+
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
 #endif
