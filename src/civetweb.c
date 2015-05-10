@@ -6747,6 +6747,7 @@ static void handle_request(struct mg_connection *conn)
         is_script_resource = 1;
         is_put_or_delete_request = is_put_or_delete_method(conn);
     } else {
+        no_callback_resource:
         /* 5.2.2. No callback is responsible for this request. The URI addresses a file
                   based resource (static content or Lua/cgi scripts in the file system). */
         is_callback_resource = 0;
@@ -6754,8 +6755,7 @@ static void handle_request(struct mg_connection *conn)
     }
 
     /* 6. authorization check */
-    auth_check:
-    if (is_put_or_delete_request && !is_script_resource) {
+    if (is_put_or_delete_request && !is_script_resource && !is_callback_resource) {
         /* 6.1. this request is a PUT/DELETE to a real file */
         /* 6.1.1. thus, the server must have real files */
 #if defined(NO_FILES)
@@ -6804,7 +6804,7 @@ static void handle_request(struct mg_connection *conn)
 
                 /* TODO: for the moment, a goto is simpler than some curious loop. */
                 /* The situation "callback does not handle the request" needs to be reconsidered anyway. */
-                goto auth_check;
+                goto no_callback_resource;
             }
         } else {
 #if defined(USE_WEBSOCKET)
@@ -7110,9 +7110,10 @@ static int set_ports_option(struct mg_context *ctx)
                                sizeof(off)) != 0) ||
 #endif
                    bind(so.sock, &so.lsa.sa, so.lsa.sa.sa_family == AF_INET ?
-                        sizeof(so.lsa.sin) : sizeof(so.lsa.sin6)) != 0 ||
+                        sizeof(so.lsa.sin) : sizeof(so.lsa.sa)) != 0 ||
                    listen(so.sock, SOMAXCONN) != 0 ||
                    getsockname(so.sock, &(usa.sa), &len) != 0) {
+                   /* TODO: rewrite this IF above */
             mg_cry(fc(ctx), "%s: cannot bind to %.*s: %d (%s)", __func__,
                    (int) vec.len, vec.ptr, (int)ERRNO, strerror(errno));
             if (so.sock != INVALID_SOCKET) {
