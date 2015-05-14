@@ -1,5 +1,6 @@
 
 civetweb
+civetweb_test
 libcivetweb.a
 libcivetweb.so
 *-cache
@@ -242,3 +243,9 @@ tags
 ##########################
 *.lo
 .libs
+
+##########################
+## Travis Build Dir
+##########################
+ci/lua
+

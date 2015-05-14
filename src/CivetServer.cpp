@@ -52,7 +52,7 @@ bool CivetHandler::handleOptions(CivetServer *server, struct mg_connection *conn
 
 int CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 {
-    struct mg_request_info *request_info = mg_get_request_info(conn);
+    const struct mg_request_info *request_info = mg_get_request_info(conn);
     assert(request_info != NULL);
     CivetServer *me = (CivetServer*) (request_info->user_data);
     assert(me != NULL);
@@ -106,9 +106,9 @@ CivetServer::~CivetServer()
     close();
 }
 
-void CivetServer::closeHandler(struct mg_connection *conn)
+void CivetServer::closeHandler(const struct mg_connection *conn)
 {
-    struct mg_request_info *request_info = mg_get_request_info(conn);
+    const struct mg_request_info *request_info = mg_get_request_info(conn);
     assert(request_info != NULL);
     CivetServer *me = (CivetServer*) (request_info->user_data);
     assert(me != NULL);
@@ -118,7 +118,7 @@ void CivetServer::closeHandler(struct mg_connection *conn)
 
     if (me->userCloseHandler) me->userCloseHandler(conn);
     mg_lock_context(me->context);
-    me->connections.erase(conn);
+    me->connections.erase(const_cast<struct mg_connection *>(conn));
     mg_unlock_context(me->context);
 }
 
@@ -190,7 +190,7 @@ CivetServer::getParam(struct mg_connection *conn, const char *name,
                       std::string &dst, size_t occurrence)
 {
     const char *formParams = NULL;
-    struct mg_request_info *ri = mg_get_request_info(conn);
+    const struct mg_request_info *ri = mg_get_request_info(conn);
     assert(ri != NULL);
     CivetServer *me = (CivetServer*) (ri->user_data);
     assert(me != NULL);

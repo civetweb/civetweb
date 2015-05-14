@@ -1,5 +1,15 @@
 language: c
+sudo: false
+
 compiler:
   - gcc
   - clang
-script: make WITH_LUA=1 WITH_DEBUG=1 WITH_IPV6=1 WITH_WEBSOCKET=1
+
+install: make WITH_LUA=1 WITH_DEBUG=1 WITH_IPV6=1 WITH_WEBSOCKET=1
+
+before_script:
+  - ci/travis/setup_lua.sh
+  - ci/travis/install_rocks.sh
+
+script:
+  - ci/travis/run_ci_tests.sh

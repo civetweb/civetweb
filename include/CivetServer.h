@@ -20,7 +20,7 @@ class CivetServer;
 /**
  * Exception class for thrown exceptions within the CivetHandler object.
  */
-class CivetException : public std::runtime_error
+class CIVETWEB_API CivetException : public std::runtime_error
 {
     public:
     CivetException(const std::string& msg) : std::runtime_error(msg) {}
@@ -30,7 +30,7 @@ class CivetException : public std::runtime_error
  * Basic interface for a URI request handler.  Handlers implementations
  * must be reentrant.
  */
-class CivetHandler
+class CIVETWEB_API CivetHandler
 {
 public:
 
@@ -91,7 +91,7 @@ public:
  *
  * Basic class for embedded web server.  This has an URL mapping built-in.
  */
-class CivetServer
+class CIVETWEB_API CivetServer
 {
 public:
 
@@ -139,10 +139,13 @@ public:
      * URI's are ordered and prefix (REST) URI's are supported.
      *
      *  @param uri - URI to match.
-     *  @param handler - handler instance to use.  This will be free'ed
-     *      when the server closes and instances cannot be reused.
+     *  @param handler - handler instance to use.
      */
     void addHandler(const std::string &uri, CivetHandler *handler);
+
+    void addHandler(const std::string &uri, CivetHandler &handler) {
+        addHandler(uri, &handler);
+    }
 
     /**
      * removeHandler(const std::string &)
@@ -160,7 +163,7 @@ public:
      *
      * @return A vector of ports
      */
-    
+
     std::vector<int> getListeningPorts();
 
     /**
@@ -341,12 +344,12 @@ private:
      *
      * @param conn - the connection information
      */
-    static void closeHandler(struct mg_connection *conn);
+    static void closeHandler(const struct mg_connection *conn);
 
     /**
      * Stores the user provided close handler
      */
-    void (*userCloseHandler)(struct mg_connection *conn);
+    void (*userCloseHandler)(const struct mg_connection *conn);
 
 };
 

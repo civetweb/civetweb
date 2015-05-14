@@ -3,6 +3,7 @@
 * Alex Kozlov
 * bel2125
 * Brian Spratke
+* cdbishop
 * celeron55
 * Daniel Oaks
 * Danny Al-Gaaf
@@ -11,8 +12,11 @@
 * HariKamath Kamath
 * Jordan Shelley
 * Keith Kyzivat
+* Kevin Wojniak
 * Kimmo Mustonen
+* Matt Clarkson
 * Morgan McGuire
+* nihildeb
 * No Face Press
 * Paul Sokolovsky
 * Richard Screene

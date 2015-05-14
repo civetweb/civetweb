@@ -26,9 +26,9 @@ public:
         mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
         mg_printf(conn, "<html><body>\r\n");
         mg_printf(conn, "<h2>This is an example text from a C++ handler</h2>\r\n");
-        mg_printf(conn, "<p>To see a page from the A handler <a href=\"A\">click here</a></p>\r\n");
-        mg_printf(conn, "<p>To see a page from the A handler with a parameter <a href=\"A?param=1\">click here</a></p>\r\n");
-        mg_printf(conn, "<p>To see a page from the A/B handler <a href=\"A/B\">click here</a></p>\r\n");
+        mg_printf(conn, "<p>To see a page from the A handler <a href=\"a\">click here</a></p>\r\n");
+        mg_printf(conn, "<p>To see a page from the A handler with a parameter <a href=\"a?param=1\">click here</a></p>\r\n");
+        mg_printf(conn, "<p>To see a page from the A/B handler <a href=\"a/b\">click here</a></p>\r\n");
         mg_printf(conn, "<p>To see a page from the *.foo handler <a href=\"xy.foo\">click here</a></p>\r\n");
         mg_printf(conn, "<p>To exit <a href=\"%s\">click here</a></p>\r\n", EXIT_URI);
         mg_printf(conn, "</body></html>\r\n");
@@ -89,7 +89,7 @@ class FooHandler: public CivetHandler
 public:
     bool handleGet(CivetServer *server, struct mg_connection *conn) {
         /* Handler may access the request info using mg_get_request_info */
-        struct mg_request_info * req_info = mg_get_request_info(conn);
+        const struct mg_request_info * req_info = mg_get_request_info(conn);
 
         mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
         mg_printf(conn, "<html><body>");
@@ -111,11 +111,20 @@ int main(int argc, char *argv[])
 
     CivetServer server(options);
 
-    server.addHandler(EXAMPLE_URI, new ExampleHandler());
-    server.addHandler(EXIT_URI, new ExitHandler());
-    server.addHandler("/a", new AHandler());
-    server.addHandler("/a/b", new ABHandler());
-    server.addHandler("**.foo$", new FooHandler());
+    ExampleHandler h_ex;
+    server.addHandler(EXAMPLE_URI, h_ex);
+
+    ExitHandler h_exit;
+    server.addHandler(EXIT_URI, h_exit);
+
+    AHandler h_a;
+    server.addHandler("/a", h_a);
+
+    ABHandler h_ab;
+    server.addHandler("/a/b", h_ab);
+
+    FooHandler h_foo;
+    server.addHandler("**.foo$", h_foo);
 
     printf("Browse files at http://localhost:%s/\n", PORT);
     printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);

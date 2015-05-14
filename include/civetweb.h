@@ -23,9 +23,7 @@
 #ifndef CIVETWEB_HEADER_INCLUDED
 #define CIVETWEB_HEADER_INCLUDED
 
-#ifndef CIVETWEB_VERSION
 #define CIVETWEB_VERSION "1.7"
-#endif
 
 #ifndef CIVETWEB_API
     #if defined(_WIN32)
@@ -120,11 +118,13 @@ struct mg_callbacks {
     /* Called when websocket request is received, before websocket handshake.
        Return value:
          0: civetweb proceeds with websocket handshake.
-         1: connection is closed immediately. */
+         1: connection is closed immediately.
+       This callback is deprecated, use mg_set_websocket_handler instead. */
     int (*websocket_connect)(const struct mg_connection *);
 
     /* Called when websocket handshake is successfully completed, and
-       connection is ready for data exchange. */
+       connection is ready for data exchange.
+       This callback is deprecated, use mg_set_websocket_handler instead. */
     void (*websocket_ready)(struct mg_connection *);
 
     /* Called when data frame has been received from the client.
@@ -134,15 +134,18 @@ struct mg_callbacks {
          data, data_len: payload, with mask (if any) already applied.
        Return value:
          1: keep this websocket connection open.
-         0: close this websocket connection. */
+         0: close this websocket connection.
+       This callback is deprecated, use mg_set_websocket_handler instead. */
     int  (*websocket_data)(struct mg_connection *, int bits,
                            char *data, size_t data_len);
 
     /* Called when civetweb is closing a connection.  The per-context mutex is
        locked when this is invoked.  This is primarily useful for noting when
        a websocket is closing and removing it from any application-maintained
-       list of clients. */
-    void (*connection_close)(struct mg_connection *);
+       list of clients.
+       Using this callback for websocket connections is deprecated, use
+       mg_set_websocket_handler instead. */
+    void (*connection_close)(const struct mg_connection *);
 
     /* Called when civetweb tries to open a file. Used to intercept file open
        calls, and serve file data from memory instead.
@@ -161,7 +164,7 @@ struct mg_callbacks {
        Lua support is enabled.
        Parameters:
          lua_context: "lua_State *" pointer. */
-    void (*init_lua)(struct mg_connection *, void *lua_context);
+    void (*init_lua)(const struct mg_connection *, void *lua_context);
 
     /* Called when civetweb has uploaded a file to a temporary directory as a
        result of mg_upload() call.
@@ -182,12 +185,12 @@ struct mg_callbacks {
        are processed.
        Parameters:
          ctx: context handle */
-    void (*init_context)(struct mg_context * ctx);
+    void (*init_context)(const struct mg_context * ctx);
 
     /* Called when civetweb context is deleted.
        Parameters:
          ctx: context handle */
-    void (*exit_context)(struct mg_context * ctx);
+    void (*exit_context)(const struct mg_context * ctx);
 };
 
 
@@ -264,6 +267,48 @@ typedef int (* mg_request_handler)(struct mg_connection *conn, void *cbdata);
       cbdata: the callback data to give to the handler when it is called. */
 CIVETWEB_API void mg_set_request_handler(struct mg_context *ctx, const char *uri, mg_request_handler handler, void *cbdata);
 
+/* Callback types for websocket handlers in C/C++.
+
+   mg_websocket_connect_handler
+       Is called when the client intends to establish a websocket connection,
+       before websocket handshake.
+       Return value:
+         0: civetweb proceeds with websocket handshake.
+         1: connection is closed immediately.
+
+   mg_websocket_ready_handler
+       Is called when websocket handshake is successfully completed, and
+       connection is ready for data exchange.
+
+   mg_websocket_data_handler
+       Is called when a data frame has been received from the client.
+       Parameters:
+         bits: first byte of the websocket frame, see websocket RFC at
+               http://tools.ietf.org/html/rfc6455, section 5.2
+         data, data_len: payload, with mask (if any) already applied.
+       Return value:
+         1: keep this websocket connection open.
+         0: close this websocket connection.
+
+   mg_connection_close_handler
+       Is called, when the connection is closed.*/
+typedef int  (*mg_websocket_connect_handler)(const struct mg_connection *, void *);
+typedef void (*mg_websocket_ready_handler)(struct mg_connection *, void *);
+typedef int  (*mg_websocket_data_handler)(struct mg_connection *, int, char *, size_t, void *);
+typedef void (*mg_websocket_close_handler)(const struct mg_connection *, void *);
+
+/* mg_set_websocket_handler
+
+   Set or remove handler functions for websocket connections.
+   This function works similar to mg_set_request_handler - see there. */
+CIVETWEB_API void mg_set_websocket_handler(struct mg_context *ctx,
+                                           const char *uri,
+                                           mg_websocket_connect_handler connect_handler,
+                                           mg_websocket_ready_handler ready_handler,
+                                           mg_websocket_data_handler data_handler,
+                                           mg_websocket_close_handler close_handler,
+                                           void *cbdata
+                                           );
 
 /* Get the value of particular configuration parameter.
    The value returned is read-only. Civetweb does not allow changing
@@ -275,11 +320,19 @@ CIVETWEB_API const char *mg_get_option(const struct mg_context *ctx, const char 
 
 
 /* Get context from connection. */
-CIVETWEB_API struct mg_context *mg_get_context(struct mg_connection *conn);
+CIVETWEB_API struct mg_context *mg_get_context(const struct mg_connection *conn);
 
 
 /* Get user data passed to mg_start from context. */
-CIVETWEB_API void *mg_get_user_data(struct mg_context *ctx);
+CIVETWEB_API void *mg_get_user_data(const struct mg_context *ctx);
+
+
+/* Set user data for the current connection. */
+CIVETWEB_API void mg_set_user_connection_data(const struct mg_connection *conn, void *data);
+
+
+/* Get user data set for the current connection. */
+CIVETWEB_API void *mg_get_user_connection_data(const struct mg_connection *conn);
 
 
 #if defined(MG_LEGACY_INTERFACE)
@@ -344,7 +397,7 @@ CIVETWEB_API int mg_modify_passwords_file(const char *passwords_file_name,
 
 
 /* Return information associated with the request. */
-CIVETWEB_API struct mg_request_info *mg_get_request_info(struct mg_connection *);
+CIVETWEB_API const struct mg_request_info *mg_get_request_info(const struct mg_connection *);
 
 
 /* Send data to the client.
@@ -591,7 +644,7 @@ CIVETWEB_API char *mg_md5(char buf[33], ...);
      ...: variable argument list
    Example:
      mg_cry(conn,"i like %s", "logging"); */
-CIVETWEB_API void mg_cry(struct mg_connection *conn,
+CIVETWEB_API void mg_cry(const struct mg_connection *conn,
                          PRINTF_FORMAT_STRING(const char *fmt), ...) PRINTF_ARGS(2, 3);
 
 
@@ -615,15 +668,10 @@ CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
      On error, NULL. Se error_buffer for details.
 */
 
-typedef int  (*websocket_data_func)(struct mg_connection *, int bits,
-                           char *data, size_t data_len);
-
-typedef void (*websocket_close_func)(struct mg_connection *);
-
 CIVETWEB_API struct mg_connection *mg_connect_websocket_client(const char *host, int port, int use_ssl,
                                                char *error_buffer, size_t error_buffer_size,
                                                const char *path, const char *origin,
-                                               websocket_data_func data_func, websocket_close_func close_func,
+                                               mg_websocket_data_handler data_func, mg_websocket_close_handler close_func,
                                                void * user_data);
 
 

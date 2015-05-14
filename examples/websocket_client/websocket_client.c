@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 the Civetweb developers
+* Copyright (c) 2014-2015 the Civetweb developers
 * Copyright (c) 2014 Jordan Shelley
 * https://github.com/jshelley
 * License http://opensource.org/licenses/mit-license.php MIT License
@@ -67,7 +67,7 @@ int websocket_server_data(struct mg_connection * conn, int bits, char *data, siz
     return 1; /* return 1 to keep the connetion open */
 }
 
-void websocket_server_connection_close(struct mg_connection * conn)
+void websocket_server_connection_close(const struct mg_connection * conn)
 {
     printf("Server: Close connection\n");
 
@@ -105,7 +105,7 @@ struct tclient_data {
     int closed;
 };
 
-static int websocket_client_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
+static int websocket_client_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len, void * user_data)
 {
     struct mg_context *ctx = mg_get_context(conn);
     struct tclient_data *pclient_data = (struct tclient_data *) mg_get_user_data(ctx);
@@ -122,7 +122,7 @@ static int websocket_client_data_handler(struct mg_connection *conn, int flags, 
     return 1;
 }
 
-static void websocket_client_close_handler(struct mg_connection *conn)
+static void websocket_client_close_handler(const struct mg_connection *conn, void * user_data)
 {
     struct mg_context *ctx = mg_get_context(conn);
     struct tclient_data *pclient_data = (struct tclient_data *) mg_get_user_data(ctx);

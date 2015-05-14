@@ -407,7 +407,7 @@ static void test_mg_download(int use_ssl) {
     int i, len1, len2, port;
     struct mg_connection *conn;
     struct mg_context *ctx;
-    struct mg_request_info *ri;
+    const struct mg_request_info *ri;
 
     if (use_ssl) port = atoi(HTTPS_PORT); else port = atoi(HTTP_PORT);
 
@@ -568,12 +568,13 @@ static void test_mg_download(int use_ssl) {
     mg_stop(ctx);
 }
 
-static int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len)
+static int websocket_data_handler(const struct mg_connection *conn, int flags, char *data, size_t data_len, void *cbdata)
 {
     (void)conn;
     (void)flags;
     (void)data;
     (void)data_len;
+    (void)cbdata;
     return 1;
 }
 
@@ -910,7 +911,7 @@ static void test_request_handlers(void) {
     char uri[64];
     int i;
     const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
-    
+
     ctx = mg_start(NULL, NULL, OPTIONS);
     ASSERT(ctx != NULL);
 
@@ -934,18 +935,18 @@ static void test_request_handlers(void) {
         sprintf(uri, "/U%u", i);
         mg_set_request_handler(ctx, uri, request_test_handler, (void*)i);
     }
-    
+
     conn = mg_download("localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
     ASSERT((conn) != NULL);
     mg_sleep(1000);
     mg_close_connection(conn);
-    
+
     mg_stop(ctx);
 
 }
 
 static int api_callback(struct mg_connection *conn) {
-    struct mg_request_info *ri = mg_get_request_info(conn);
+    const struct mg_request_info *ri = mg_get_request_info(conn);
     char post_data[100] = "";
 
     ASSERT(ri->user_data == (void *) 123);
@@ -1188,6 +1189,15 @@ int __cdecl main(void) {
 
     /* test completed */
     mg_free(fetch_data);
+
+#ifdef MEMORY_DEBUGGING
+    {
+    extern unsigned long mg_memory_debug_blockCount;
+    extern unsigned long mg_memory_debug_totalMemUsed;
+
+    printf("MEMORY DEBUGGING: %u %u\n", mg_memory_debug_blockCount, mg_memory_debug_totalMemUsed);
+    }
+#endif
 
     printf("TOTAL TESTS: %d, FAILED: %d\n", s_total_tests, s_failed_tests);
     return s_failed_tests == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

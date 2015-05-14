@@ -1161,8 +1161,10 @@ void mg_exec_lua_script(struct mg_connection *conn, const char *path,
         if (exports != NULL) {
             lua_pushglobaltable(L);
             for (i = 0; exports[i] != NULL && exports[i + 1] != NULL; i += 2) {
+                lua_CFunction func;
                 lua_pushstring(L, (const char *)(exports[i]));
-                lua_pushcclosure(L, (lua_CFunction) exports[i + 1], 0);
+                *(const void**)(&func) = exports[i + 1];
+                lua_pushcclosure(L, func, 0);
                 lua_rawset(L, -3);
             }
         }
@@ -1306,7 +1308,7 @@ static void * lua_websocket_new(const char * script, struct mg_connection *conn)
     return ok ? (void*)ws : NULL;
 }
 
-static int lua_websocket_data(struct mg_connection * conn, void *ws_arg, int bits, char *data, size_t data_len)
+static int lua_websocket_data(struct mg_connection * conn, int bits, char *data, size_t data_len, void *ws_arg)
 {
     struct lua_websock_data *ws = (struct lua_websock_data *)(ws_arg);
     int err, ok = 0;
