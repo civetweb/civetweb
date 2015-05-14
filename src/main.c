@@ -160,22 +160,28 @@ static void die(const char *fmt, ...)
 static int MakeConsole();
 #endif
 
+static void show_server_name(void)
+{
+#ifdef WIN32
+    MakeConsole();
+#endif
+
+    fprintf(stderr, "CivetWeb v%s, built on %s\n",
+            mg_version(), __DATE__);
+}
+
 static void show_usage_and_exit(const char *exeName)
 {
     const struct mg_option *options;
     int i;
 
-#ifdef WIN32
-    MakeConsole();
-#endif
-
     if (exeName==0 || *exeName==0) {
         exeName = "civetweb";
     }
 
-    fprintf(stderr, "Civetweb v%s, built on %s\n",
-            mg_version(), __DATE__);
-    fprintf(stderr, "Usage:\n");
+    show_server_name();
+
+    fprintf(stderr, "\nUsage:\n");
     fprintf(stderr, "  Start server with a set of options:\n");
     fprintf(stderr, "    %s [config_file]\n", exeName);
     fprintf(stderr, "    %s [-option value ...]\n", exeName);
@@ -583,12 +589,53 @@ static void set_absolute_path(char *options[], const char *option_name,
 
 
 #ifdef USE_LUA
-#define main luatest_main
-#define luaL_openlibs lua_civet_open_all_libs
-struct lua_State;
-extern void lua_civet_open_all_libs(struct lua_State *L);
-#include "../src/third_party/lua-5.2.4/src/lua.c"
-#undef main
+#include "lua.h"
+#include "lauxlib.h"
+extern void lua_civet_open_all_libs(lua_State *L);
+
+int run_lua(const char *file_name)
+{
+    struct lua_State * L;
+    int lua_ret;
+    int func_ret = EXIT_FAILURE;
+    const char * lua_err_txt;
+
+#ifdef WIN32
+    MakeConsole();
+#endif
+
+    L = luaL_newstate();
+    if (L == NULL) {
+        fprintf(stderr, "Error: Cannot create Lua state\n");
+        return EXIT_FAILURE;
+    }
+    lua_civet_open_all_libs(L);
+
+    lua_ret = luaL_loadfile(L, file_name);
+    if (lua_ret != LUA_OK) {
+        /* Error when loading the file (e.g. file not found, out of memory, ...) */
+        lua_err_txt = lua_tostring(L, -1);
+        fprintf(stderr, "Error loading file %s: %s\n", file_name, lua_err_txt);
+    } else {
+        /* The script file is loaded, now call it */
+        lua_ret = lua_pcall(L, /* no arguments */ 0, /* zero or one return value */ 1, /* errors as strint return value */ 0);
+        if (lua_ret != LUA_OK) {
+            /* Error when executing the script */
+            lua_err_txt = lua_tostring(L, -1);
+            fprintf(stderr, "Error running file %s: %s\n", file_name, lua_err_txt);
+        } else {
+            /* Script executed */
+            if (lua_type(L, -1) == LUA_TNUMBER) {
+                func_ret = (int)lua_tonumber(L, -1);
+            } else {
+                func_ret = EXIT_SUCCESS;
+            }
+        }
+    }
+    lua_close(L);
+
+    return func_ret;
+}
 #endif
 
 
@@ -618,13 +665,17 @@ static void start_civetweb(int argc, char *argv[])
 
     /* Call Lua with additional Civetweb specific Lua functions, if -L option is specified */
     if (argc > 1 && !strcmp(argv[1], "-L")) {
-#ifdef WIN32
-        MakeConsole();
-#endif
+
 #ifdef USE_LUA
-        exit(luatest_main(argc-1, &argv[1]));
-#endif
+        if (argc != 3) {
+            show_usage_and_exit(argv[0]);
+        }
+        exit(run_lua(argv[2]));
+#else
+        show_server_name();
+        fprintf(stderr, "\nError: Lua support not enabled\n");
         exit(EXIT_FAILURE);
+#endif
     }
 
     /* Show usage if -h or --help options are specified */
