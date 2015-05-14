@@ -1,6 +1,5 @@
 #include <lua.h>
 #include <lauxlib.h>
-#include <setjmp.h>
 
 #ifdef _WIN32
 static void *mmap(void *addr, int64_t len, int prot, int flags, int fd,
