@@ -133,9 +133,9 @@ ifdef WITH_LUA_SHARED
   LIBS += -llua5.2
 endif
 
-ifneq (, $(findstring mingw32, $(shell gcc -dumpmachine)))
+ifneq (, $(findstring mingw32, $(shell $(CC) -dumpmachine)))
   BUILD_RESOURCES = $(BUILD_DIR)/$(WINDOWS_RESOURCES:.rc=.o)
-  LIBS := $(filter-out -lrt, $(LIBS)) -lws2_32 -lcomdlg32 -mwindows
+  LIBS := -lws2_32 -mwindows
   SHARED_LIB = dll
 else
   SHARED_LIB = so
