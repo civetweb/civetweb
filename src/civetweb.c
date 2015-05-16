@@ -152,11 +152,7 @@ int clock_gettime(int clk_id, struct timespec* t) {
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
 #include <windows.h>
-<<<<<<< HEAD
 #include <winsock2.h>    /* DTL add for SO_EXCLUSIVE */
-=======
-#include <winsock2.h>    /* DTL add for SO_EXCLUSIVE */
->>>>>>> 8bf5a3e... inline under Solaris
 
 typedef const char * SOCK_OPT_TYPE;
 
@@ -1103,16 +1099,20 @@ static int is_file_in_memory(struct mg_connection *conn, const char *path,
 
 static int is_file_opened(const struct file *filep)
 {
-    if (!filep)
+    if (!filep) {
         return 0;
+    }
+
     return filep->membuf != NULL || filep->fp != NULL;
 }
 
 static int mg_fopen(struct mg_connection *conn, const char *path,
                     const char *mode, struct file *filep)
 {
-    if (!filep)
+    if (!filep) {
         return 0;
+    }
+
     if (!is_file_in_memory(conn, path, filep)) {
 #ifdef _WIN32
         wchar_t wbuf[PATH_MAX], wmode[20];
@@ -1310,8 +1310,9 @@ void * mg_get_user_connection_data(const struct mg_connection *conn)
 size_t mg_get_ports(const struct mg_context *ctx, size_t size, int* ports, int* ssl)
 {
     size_t i;
-    if (!ctx)
+    if (!ctx) {
         return 0;
+    }
     for (i = 0; i < size && i < (size_t)ctx->num_listening_sockets; i++)
     {
         ssl[i] = ctx->listening_sockets[i].is_ssl;
@@ -1432,8 +1433,9 @@ const char *mg_version(void)
 
 const struct mg_request_info *mg_get_request_info(const struct mg_connection *conn)
 {
-    if (!conn)
+    if (!conn) {
         return NULL;
+    }
     return &conn->request_info;
 }
 
@@ -1500,18 +1502,23 @@ static const char *get_header(const struct mg_request_info *ri,
                               const char *name)
 {
     int i;
-    if (ri)
-    for (i = 0; i < ri->num_headers; i++)
-        if (!mg_strcasecmp(name, ri->http_headers[i].name))
+    if (ri) {
+    for (i = 0; i < ri->num_headers; i++) {
+        if (!mg_strcasecmp(name, ri->http_headers[i].name)) {
             return ri->http_headers[i].value;
+}
+}
+}
 
     return NULL;
 }
 
 const char *mg_get_header(const struct mg_connection *conn, const char *name)
 {
-    if (!conn)
+    if (!conn) {
         return NULL;
+}
+
     return get_header(&conn->request_info, name);
 }
 
@@ -1618,8 +1625,10 @@ static int should_keep_alive(const struct mg_connection *conn)
 
 static int should_decode_url(const struct mg_connection *conn)
 {
-    if(!conn || !conn->ctx)
+    if(!conn || !conn->ctx) {
         return 0;
+    }
+
     return (mg_strcasecmp(conn->ctx->config[DECODE_URL], "yes") == 0);
 }
 
@@ -1762,8 +1771,9 @@ static void send_http_error(struct mg_connection *conn, int status, const char *
 
     const char *status_text = mg_get_response_code_text(status, conn);
 
-    if (conn == NULL)
+    if (conn == NULL) {
         return;
+}
 
     conn->status_code = status;
     if (conn->in_error_handler ||
@@ -2452,8 +2462,9 @@ static int mg_stat(struct mg_connection *conn, const char *path,
                    struct file *filep)
 {
     struct stat st;
-    if (!filep)
+    if (!filep) {
         return 0;
+}
     if (!is_file_in_memory(conn, path, filep) && !stat(path, &st)) {
         filep->size = st.st_size;
         filep->modification_time = st.st_mtime;
@@ -2539,8 +2550,9 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
 
     (void) envblk;
 
-    if(conn == NULL)
+    if(conn == NULL) {
         return 0;
+}
 
     if ((pid = fork()) == -1) {
         /* Parent */
@@ -2705,8 +2717,9 @@ static void discard_unread_request_data(struct mg_connection *conn)
     char buf[MG_BUF_LEN];
     int to_read, nread;
 
-    if (conn == NULL)
+    if (conn == NULL) {
         return;
+}
 
     to_read = sizeof(buf);
 
@@ -2790,8 +2803,9 @@ int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 static char mg_getc(struct mg_connection *conn)
 {
     char c;
-    if (conn == NULL)
+    if (conn == NULL) {
         return 0;
+}
     conn->content_len++;
     if (mg_read_inner(conn, &c, 1) <= 0)
     {
@@ -2877,8 +2891,9 @@ int mg_write(struct mg_connection *conn, const void *buf, size_t len)
     time_t now;
     int64_t n, total, allowed;
 
-    if (conn == NULL)
+    if (conn == NULL) {
         return 0;
+}
 
     if (conn->throttle > 0) {
         if ((now = time(NULL)) != conn->last_throttle_time) {
@@ -3063,8 +3078,9 @@ int mg_get_var2(const char *data, size_t data_len, const char *name,
                     s = e;
                 }
                 /* assert(s >= p); */
-                if (s < p)
+                if (s < p) {
                     return -3;
+}
 
                 /* Decode variable into destination buffer */
                 len = mg_url_decode(p, (int)(s - p), dst, (int)dst_len, 1);
@@ -3567,8 +3583,9 @@ static void get_mime_type(struct mg_context *ctx, const char *path,
 
     path_len = strlen(path);
 
-    if (ctx == NULL || vec == NULL)
+    if (ctx == NULL || vec == NULL) {
         return;
+}
 
     /* Scan user-defined mime types first, in case user wants to
        override default mime types. */
