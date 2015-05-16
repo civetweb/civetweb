@@ -20,25 +20,21 @@ class CivetServer;
 /**
  * Exception class for thrown exceptions within the CivetHandler object.
  */
-class CIVETWEB_API CivetException : public std::runtime_error
-{
-    public:
-    CivetException(const std::string& msg) : std::runtime_error(msg) {}
+class CIVETWEB_API CivetException : public std::runtime_error {
+  public:
+    CivetException(const std::string &msg) : std::runtime_error(msg) {}
 };
 
 /**
  * Basic interface for a URI request handler.  Handlers implementations
  * must be reentrant.
  */
-class CIVETWEB_API CivetHandler
-{
-public:
-
+class CIVETWEB_API CivetHandler {
+  public:
     /**
      * Destructor
      */
-    virtual ~CivetHandler() {
-    }
+    virtual ~CivetHandler() {}
 
     /**
      * Callback method for GET request.
@@ -91,10 +87,8 @@ public:
  *
  * Basic class for embedded web server.  This has an URL mapping built-in.
  */
-class CIVETWEB_API CivetServer
-{
-public:
-
+class CIVETWEB_API CivetServer {
+  public:
     /**
      * Constructor
      *
@@ -126,9 +120,7 @@ public:
      *
      * @return the context or 0 if not running.
      */
-    const struct mg_context *getContext() const {
-        return context;
-    }
+    const struct mg_context *getContext() const { return context; }
 
     /**
      * addHandler(const std::string &, CivetHandler *)
@@ -167,16 +159,20 @@ public:
     std::vector<int> getListeningPorts();
 
     /**
-     * getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue)
+     * getCookie(struct mg_connection *conn, const std::string &cookieName,
+     *std::string &cookieValue)
      *
-     * Puts the cookie value string that matches the cookie name in the cookieValue destinaton string.
+     * Puts the cookie value string that matches the cookie name in the
+     *cookieValue destinaton string.
      *
      * @param conn - the connection information
      * @param cookieName - cookie name to get the value from
      * @param cookieValue - cookie value is returned using thiis reference
      * @returns the size of the cookie value string read.
     */
-    static int getCookie(struct mg_connection *conn, const std::string &cookieName, std::string &cookieValue);
+    static int getCookie(struct mg_connection *conn,
+                         const std::string &cookieName,
+                         std::string &cookieValue);
 
     /**
      * getHeader(struct mg_connection *conn, const std::string &headerName)
@@ -184,28 +180,34 @@ public:
      * @param headerName - header name to get the value from
      * @returns a char array whcih contains the header value as string
     */
-    static const char* getHeader(struct mg_connection *conn, const std::string &headerName);
+    static const char *getHeader(struct mg_connection *conn,
+                                 const std::string &headerName);
 
     /**
      * getParam(struct mg_connection *conn, const char *, std::string &, size_t)
      *
      * Returns a query paramter contained in the supplied buffer.  The
      * occurance value is a zero-based index of a particular key name.  This
-     * should not be confused with the index over all of the keys.  Note that this
+     * should not be confused with the index over all of the keys.  Note that
+     *this
      * function assumes that parameters are sent as text in http query string
      * format, which is the default for web forms. This function will work for
-     * html forms with method="GET" and method="POST" attributes. In other cases,
-     * you may use a getParam version that directly takes the data instead of the
+     * html forms with method="GET" and method="POST" attributes. In other
+     *cases,
+     * you may use a getParam version that directly takes the data instead of
+     *the
      * connection as a first argument.
      *
-     * @param conn - parameters are read from the data sent through this connection
+     * @param conn - parameters are read from the data sent through this
+     *connection
      * @param name - the key to search for
      * @param dst - the destination string
-     * @param occurrence - the occurrence of the selected name in the query (0 based).
+     * @param occurrence - the occurrence of the selected name in the query (0
+     *based).
      * @return true if key was found
      */
     static bool getParam(struct mg_connection *conn, const char *name,
-                         std::string &dst, size_t occurrence=0);
+                         std::string &dst, size_t occurrence = 0);
 
     /**
      * getParam(const std::string &, const char *, std::string &, size_t)
@@ -217,11 +219,12 @@ public:
      * @param data - the query string (text)
      * @param name - the key to search for
      * @param dst - the destination string
-     * @param occurrence - the occurrence of the selected name in the query (0 based).
+     * @param occurrence - the occurrence of the selected name in the query (0
+     *based).
      * @return true if key was found
      */
     static bool getParam(const std::string &data, const char *name,
-                         std::string &dst, size_t occurrence=0) {
+                         std::string &dst, size_t occurrence = 0) {
         return getParam(data.c_str(), data.length(), name, dst, occurrence);
     }
 
@@ -236,12 +239,12 @@ public:
      * @param data_len - length of the query string
      * @param name - the key to search for
      * @param dst - the destination string
-     * @param occurrence - the occurrence of the selected name in the query (0 based).
+     * @param occurrence - the occurrence of the selected name in the query (0
+     *based).
      * @return true if key was found
      */
     static bool getParam(const char *data, size_t data_len, const char *name,
-                         std::string &dst, size_t occurrence=0);
-
+                         std::string &dst, size_t occurrence = 0);
 
     /**
      * urlDecode(const std::string &, std::string &, bool)
@@ -253,7 +256,8 @@ public:
      *       uses '+' as character for space, see RFC 1866 section 8.2.1
      *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
      */
-    static void urlDecode(const std::string &src, std::string &dst, bool is_form_url_encoded=true) {
+    static void urlDecode(const std::string &src, std::string &dst,
+                          bool is_form_url_encoded = true) {
         urlDecode(src.c_str(), src.length(), dst, is_form_url_encoded);
     }
 
@@ -268,7 +272,8 @@ public:
      *       uses '+' as character for space, see RFC 1866 section 8.2.1
      *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
      */
-    static void urlDecode(const char *src, size_t src_len, std::string &dst, bool is_form_url_encoded=true);
+    static void urlDecode(const char *src, size_t src_len, std::string &dst,
+                          bool is_form_url_encoded = true);
 
     /**
      * urlDecode(const char *, std::string &, bool)
@@ -280,7 +285,8 @@ public:
      *       uses '+' as character for space, see RFC 1866 section 8.2.1
      *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
      */
-    static void urlDecode(const char *src, std::string &dst, bool is_form_url_encoded=true);
+    static void urlDecode(const char *src, std::string &dst,
+                          bool is_form_url_encoded = true);
 
     /**
      * urlEncode(const std::string &, std::string &, bool)
@@ -289,7 +295,8 @@ public:
      * @param dst - destination string
      * @param append - true if string should not be cleared before encoding.
      */
-    static void urlEncode(const std::string &src, std::string &dst, bool append=false) {
+    static void urlEncode(const std::string &src, std::string &dst,
+                          bool append = false) {
         urlEncode(src.c_str(), src.length(), dst, append);
     }
 
@@ -300,7 +307,8 @@ public:
      * @param dst - destination string
      * @param append - true if string should not be cleared before encoding.
      */
-    static void urlEncode(const char *src, std::string &dst, bool append=false);
+    static void urlEncode(const char *src, std::string &dst,
+                          bool append = false);
 
     /**
      * urlEncode(const char *, size_t, std::string &, bool)
@@ -310,12 +318,13 @@ public:
      * @param dst - destination string
      * @param append - true if string should not be cleared before encoding.
      */
-    static void urlEncode(const char *src, size_t src_len, std::string &dst, bool append=false);
+    static void urlEncode(const char *src, size_t src_len, std::string &dst,
+                          bool append = false);
 
-protected:
+  protected:
     class CivetConnection {
-    public:
-        char * postData;
+      public:
+        char *postData;
         unsigned long postDataLen;
 
         CivetConnection();
@@ -325,7 +334,7 @@ protected:
     struct mg_context *context;
     std::map<struct mg_connection *, class CivetConnection> connections;
 
-private:
+  private:
     /**
      * requestHandler(struct mg_connection *, void *cbdata)
      *
@@ -350,7 +359,6 @@ private:
      * Stores the user provided close handler
      */
     void (*userCloseHandler)(const struct mg_connection *conn);
-
 };
 
 #endif /*  __cplusplus */
