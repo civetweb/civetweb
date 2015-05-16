@@ -1,3 +1,14 @@
+# http://clang.llvm.org/docs/ClangFormatStyleOptions.html
+
 BasedOnStyle: LLVM
+
 IndentWidth: 4
+TabWidth: 4
+UseTab: ForIndentation
+ColumnLimit: 80
+
 Language: Cpp
+
+AccessModifierOffset: 2
+AlignAfterOpenBracket: true
+AllowShortIfStatementsOnASingleLine: false
