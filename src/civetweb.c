@@ -823,7 +823,7 @@ struct file {
 	FILE *fp;
 	const char *membuf; /* Non-NULL if file data is in memory */
 	                    /* set to 1 if the content is gzipped
-	                       in which case we need a content-encoding: gzip header */
+	                     * in which case we need a content-encoding: gzip header */
 	int gzipped;
 };
 #define STRUCT_FILE_INITIALIZER                                                \
@@ -832,14 +832,14 @@ struct file {
 	}
 
 /* Describes listening socket, or socket which was accept()-ed by the master
-   thread and queued for future handling by the worker thread. */
+ * thread and queued for future handling by the worker thread. */
 struct socket {
 	SOCKET sock;             /* Listening socket */
 	union usa lsa;           /* Local socket address */
 	union usa rsa;           /* Remote socket address */
 	unsigned char is_ssl;    /* Is port SSL-ed */
 	unsigned char ssl_redir; /* Is port supposed to redirect everything to SSL
-	                            port */
+	                          * port */
 };
 
 /* NOTE(lsm): this enum shoulds be in sync with the config_options below. */
@@ -1021,15 +1021,14 @@ struct mg_connection {
 	SSL_CTX *client_ssl_ctx; /* SSL context for client connections */
 	struct socket client;    /* Connected client */
 	time_t conn_birth_time;  /* Time (wall clock) when connection was
-	                            established */
+	                          * established */
 	struct timespec
 	    req_time; /* Time (since system start) when the request was received */
 	int64_t num_bytes_sent;   /* Total bytes sent to client */
 	int64_t content_len;      /* Content-Length header value */
 	int64_t consumed_content; /* How many bytes of content have been read */
 	int is_chunked;           /* Transfer-encoding is chunked: 0=no, 1=yes: data
-	                             available,
-	                             2: all data read */
+	                           * available, 2: all data read */
 	size_t chunk_remainder;   /* Unread data from the last chunk */
 	char *buf;                /* Buffer for received data */
 	char *path_info;          /* PATH_INFO part of the URL */
@@ -1043,7 +1042,7 @@ struct mg_connection {
 	time_t last_throttle_time;   /* Last time throttled data was sent */
 	int64_t last_throttle_bytes; /* Bytes sent this second */
 	pthread_mutex_t mutex; /* Used by mg_lock_connection/mg_unlock_connection to
-	                          ensure atomic transmissions for websockets */
+	                        * ensure atomic transmissions for websockets */
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	void *lua_websocket_state; /* Lua_State for a websocket connection */
 #endif
@@ -1077,7 +1076,7 @@ int mg_atomic_inc(volatile int *addr)
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	/* Depending on the SDK, this function uses either
-	 * (volatile unsigned int *) or    (volatile LONG *),
+	 * (volatile unsigned int *) or (volatile LONG *),
 	 * so whatever you use, the other SDK is likely to raise a warning. */
 	ret = InterlockedIncrement((volatile unsigned int *)addr);
 #elif defined(__GNUC__)
@@ -1093,7 +1092,7 @@ int mg_atomic_dec(volatile int *addr)
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	/* Depending on the SDK, this function uses either
-	 * (volatile unsigned int *) or    (volatile LONG *),
+	 * (volatile unsigned int *) or (volatile LONG *),
 	 * so whatever you use, the other SDK is likely to raise a warning. */
 	ret = InterlockedDecrement((volatile unsigned int *)addr);
 #elif defined(__GNUC__)
@@ -1451,7 +1450,7 @@ static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 #endif
 
 #if 0
-    // TODO: test alternative code, remove old code
+    /* TODO: test alternative code, remove old code */
 #if defined(USE_IPV6)
     mg_inet_ntop(usa->sa.sa_family, usa->sa.sa_family == AF_INET ?
         (void *) &usa->sin.sin_addr :
@@ -1846,13 +1845,12 @@ static const char *mg_get_response_code_text(int response_code,
 		return "Expectation Failed"; /* RFC2616 Section 10.4.18 */
 	case 422:
 		return "Unproccessable entity"; /* RFC2518 Section 10.3, RFC4918
-		                                   Section
-		                                   11.2 */
+		                                 * Section 11.2 */
 	case 423:
 		return "Locked"; /* RFC2518 Section 10.4, RFC4918 Section 11.3 */
 	case 424:
-		return "Failed Dependency"; /* RFC2518 Section 10.5, RFC4918 Section
-		                             * 11.4 */
+		return "Failed Dependency"; /* RFC2518 Section 10.5, RFC4918
+		                             * Section 11.4 */
 	case 428:
 		return "Precondition Required"; /* RFC 6585, Section 3 */
 	case 429:
@@ -1874,9 +1872,8 @@ static const char *mg_get_response_code_text(int response_code,
 	case 505:
 		return "HTTP Version not supported"; /* RFC2616 Section 10.5.6 */
 	case 507:
-		return "Insufficient Storage"; /* RFC2518 Section 10.6, , RFC4918
-		                                  Section
-		                                  11.5 */
+		return "Insufficient Storage"; /* RFC2518 Section 10.6, RFC4918
+		                                * Section 11.5 */
 	case 511:
 		return "Network Authentication Required"; /* RFC 6585, Section 6 */
 
@@ -1899,7 +1896,7 @@ static const char *mg_get_response_code_text(int response_code,
 		return "Authentication Timeout"; /* common use */
 	case 451:
 		return "Unavailable For Legal Reasons"; /* draft-tbray-http-legally-restricted-status-05,
-		                                           Section 3 */
+		                                         * Section 3 */
 	case 506:
 		return "Variant Also Negotiates"; /* RFC 2295, Section 8.1 */
 	case 508:
@@ -4777,7 +4774,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 
 		while ((dp = readdir(dirp)) != NULL) {
 			/* Do not show current dir (but show hidden files as they will
-			also be removed) */
+			 * also be removed) */
 			if (!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")) {
 				continue;
 			}
@@ -5367,10 +5364,10 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 
 		buffered_len = (int64_t)(conn->data_len) - (int64_t)conn->request_len -
 		               conn->consumed_content;
-		/*
-		assert(buffered_len >= 0);
-		assert(conn->consumed_content == 0);
-		*/
+
+		/* assert(buffered_len >= 0); */
+		/* assert(conn->consumed_content == 0); */
+
 		if ((buffered_len < 0) || (conn->consumed_content != 0)) {
 			send_http_error(conn, 500, "%s", "Error: Size mismatch");
 			return 0;
@@ -5602,11 +5599,10 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 	blk->vars[blk->nvars++] = NULL;
 	blk->buf[blk->len++] = '\0';
 
-	/*
-	assert(blk->nvars < (int) ARRAY_SIZE(blk->vars));
-	assert(blk->len > 0);
-	assert(blk->len < (int) sizeof(blk->buf));
-	*/
+	/* assert(blk->nvars < (int) ARRAY_SIZE(blk->vars)); */
+	/* assert(blk->len > 0); */
+	/* assert(blk->len < (int) sizeof(blk->buf)); */
+
 	if ((blk->nvars >= (int)ARRAY_SIZE(blk->vars)) || (blk->len <= 0) ||
 	    (blk->len >= (int)sizeof(blk->buf)))
 		return;
@@ -5924,7 +5920,7 @@ static void put_file(struct mg_connection *conn, const char *path)
 
 		if (file.is_directory) {
 			/* This is an already existing directory,
-			so there is nothing to do for the server. */
+			 * so there is nothing to do for the server. */
 			rc = 0;
 
 		} else {
@@ -6799,7 +6795,7 @@ static void read_websocket(struct mg_connection *conn,
 				conn->data_len = conn->request_len;
 			} else {
 				mop = buf[0]; /* current mask and opcode, overwritten by
-				                 memmove() */
+				               * memmove() */
 				/* Length of the message being read at the front of the
 				 * queue */
 				len = data_len + header_len;
@@ -7309,13 +7305,11 @@ mg_set_request_handler_type(struct mg_context *ctx,
 	size_t urilen = strlen(uri);
 
 	if (is_websocket_handler) {
-		/*
-		assert(handler == NULL);
-		assert(is_delete_request || connect_handler!=NULL ||
-		ready_handler!=NULL
-		||
-		data_handler!=NULL || close_handler!=NULL);
-		*/
+		/* assert(handler == NULL); */
+		/* assert(is_delete_request || connect_handler!=NULL ||
+		 *        ready_handler!=NULL || data_handler!=NULL ||
+		 *        close_handler!=NULL);
+		 */
 		if (handler != NULL)
 			return;
 		if (!is_delete_request && connect_handler == NULL &&
@@ -7323,12 +7317,10 @@ mg_set_request_handler_type(struct mg_context *ctx,
 		    close_handler == NULL)
 			return;
 	} else {
-		/*
-		assert(connect_handler==NULL && ready_handler==NULL &&
-		data_handler==NULL &&
-		close_handler==NULL);
-		assert(is_delete_request || (handler!=NULL));
-		*/
+		/* assert(connect_handler==NULL && ready_handler==NULL &&
+		 *        data_handler==NULL && close_handler==NULL); */
+		/* assert(is_delete_request || (handler!=NULL));
+		 */
 		if (connect_handler != NULL || ready_handler != NULL ||
 		    data_handler != NULL || close_handler != NULL)
 			return;
@@ -7649,7 +7641,7 @@ static void handle_request(struct mg_connection *conn)
 		}
 
 		/* request not yet handled by a handler or redirect, so the request
-		is processed here */
+		 * is processed here */
 
 		/* 5. interpret the url to find out how the request must be handled */
 		/* 5.1. first test, if the request targets the regular http(s)://
@@ -8029,16 +8021,10 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 		port = len = 0; /* Parsing failure. Make port invalid. */
 	}
 
-	/*assert((len>=0) && ((unsigned)len<=(unsigned)vec->len));*/ /* sscanf and
-	                                                                the
-	                                                                option
-	                                                                splitting
-	                                                                code
-	                                                                ensure this
-	                                                                condition
-	                                                                */
-	if ((len < 0) && ((unsigned)len > (unsigned)vec->len))
+	/* sscanf and the option splitting code ensure the following condition */
+	if ((len < 0) && ((unsigned)len > (unsigned)vec->len)) {
 		return 0;
+	}
 	ch = vec->ptr[len]; /* Next character after the port number */
 	so->is_ssl = (ch == 's');
 	so->ssl_redir = (ch == 'r');
@@ -8337,7 +8323,8 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 	(void)line;
 	(void)file;
 
-	if (mode & 1) { /* 1 is CRYPTO_LOCK */
+	if (mode & 1) {
+		/* 1 is CRYPTO_LOCK */
 		(void)pthread_mutex_lock(&ssl_mutexes[mutex_num]);
 	} else {
 		(void)pthread_mutex_unlock(&ssl_mutexes[mutex_num]);
@@ -8419,7 +8406,8 @@ static int initialize_ssl(struct mg_context *ctx)
 		return 1;
 
 	/* Initialize locking callbacks, needed for thread safety.
-	http://www.openssl.org/support/faq.html#PROG1 */
+	 * http://www.openssl.org/support/faq.html#PROG1
+	 */
 	size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
 	if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc((size_t)size)) == NULL) {
 		mg_cry(
@@ -9085,8 +9073,7 @@ static void process_new_connection(struct mg_connection *conn)
 		    !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
 
 		/* Important: on new connection, reset the receiving buffer. Credit
-		goes
-		to crule42. */
+		 * goes to crule42. */
 		conn->data_len = 0;
 		do {
 			if (!getreq(conn, ebuf, sizeof(ebuf), &reqerr)) {
@@ -9147,10 +9134,10 @@ static void process_new_connection(struct mg_connection *conn)
 			        conn->buf + discard_len,
 			        conn->data_len - discard_len);
 			conn->data_len -= discard_len;
-			/*
-			assert(conn->data_len >= 0);
-			assert(conn->data_len <= conn->buf_size);
-			*/
+
+			/* assert(conn->data_len >= 0); */
+			/* assert(conn->data_len <= conn->buf_size); */
+
 			if ((conn->data_len < 0) || (conn->data_len > conn->buf_size))
 				break;
 
@@ -9221,8 +9208,8 @@ static void *worker_thread_run(void *thread_func_param)
 		(void)pthread_mutex_init(&conn->mutex, NULL);
 
 		/* Call consume_socket() even when ctx->stop_flag > 0, to let it
-		signal sq_empty condvar to wake up the master waiting in
-		produce_socket() */
+		 * signal sq_empty condvar to wake up the master waiting in
+		 * produce_socket() */
 		while (consume_socket(ctx, &conn->client)) {
 			conn->conn_birth_time = time(NULL);
 
