@@ -66,7 +66,9 @@
 #else
 char static_assert_replacement[1];
 #define mg_static_assert(cond, txt)                                            \
-	{ extern char static_assert_replacement[(cond) ? 1 : -1]; }
+	{                                                                          \
+		extern char static_assert_replacement[(cond) ? 1 : -1];                \
+	}
 #endif
 
 mg_static_assert(1, "static assert has to be available");
@@ -117,7 +119,8 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #include <assert.h>
 
 /* clock_gettime is not implemented on OSX */
-int clock_gettime(int clk_id, struct timespec *t) {
+int clock_gettime(int clk_id, struct timespec *t)
+{
 	if (clk_id == CLOCK_REALTIME) {
 		struct timeval now;
 		int rv = gettimeofday(&now, NULL);
@@ -431,7 +434,8 @@ static DWORD pthread_self(void) { return GetCurrentThreadId(); }
 int pthread_key_create(
     pthread_key_t *key,
     void (*_must_be_zero)(
-        void *) /* destructor function not supported for windows */) {
+        void *) /* destructor function not supported for windows */)
+{
 	assert(_must_be_zero == NULL);
 	if ((key != 0) && (_must_be_zero == NULL)) {
 		*key = TlsAlloc();
@@ -442,7 +446,8 @@ int pthread_key_create(
 
 int pthread_key_delete(pthread_key_t key) { return TlsFree(key) ? 0 : 1; }
 
-int pthread_setspecific(pthread_key_t key, void *value) {
+int pthread_setspecific(pthread_key_t key, void *value)
+{
 	return TlsSetValue(key, value) ? 0 : 1;
 }
 
@@ -468,16 +473,21 @@ mg_static_assert(MAX_REQUEST_SIZE >= 256,
 #if !defined(DEBUG_TRACE)
 #if defined(DEBUG)
 
-static void DEBUG_TRACE_FUNC(const char *func, unsigned line,
-                             PRINTF_FORMAT_STRING(const char *fmt), ...)
-    PRINTF_ARGS(3, 4);
+static void DEBUG_TRACE_FUNC(const char *func,
+                             unsigned line,
+                             PRINTF_FORMAT_STRING(const char *fmt),
+                             ...) PRINTF_ARGS(3, 4);
 
-static void DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt,
-                             ...) {
+static void
+DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
+{
 	va_list args;
 	flockfile(stdout);
-	printf("*** %lu.%p.%s.%u: ", (unsigned long)time(NULL),
-	       (void *)pthread_self(), func, line);
+	printf("*** %lu.%p.%s.%u: ",
+	       (unsigned long)time(NULL),
+	       (void *)pthread_self(),
+	       func,
+	       line);
 	va_start(args, fmt);
 	vprintf(fmt, args);
 	va_end(args);
@@ -498,7 +508,8 @@ static void DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt,
 unsigned long mg_memory_debug_blockCount = 0;
 unsigned long mg_memory_debug_totalMemUsed = 0;
 
-static void *mg_malloc_ex(size_t size, const char *file, unsigned line) {
+static void *mg_malloc_ex(size_t size, const char *file, unsigned line)
+{
 	void *data = malloc(size + sizeof(size_t));
 	void *memory = 0;
 	char mallocStr[256];
@@ -510,9 +521,14 @@ static void *mg_malloc_ex(size_t size, const char *file, unsigned line) {
 		memory = (void *)(((char *)data) + sizeof(size_t));
 	}
 
-	sprintf(mallocStr, "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n", memory,
-	        (unsigned long)size, mg_memory_debug_totalMemUsed,
-	        mg_memory_debug_blockCount, file, line);
+	sprintf(mallocStr,
+	        "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n",
+	        memory,
+	        (unsigned long)size,
+	        mg_memory_debug_totalMemUsed,
+	        mg_memory_debug_blockCount,
+	        file,
+	        line);
 #if defined(_WIN32)
 	OutputDebugStringA(mallocStr);
 #else
@@ -522,8 +538,9 @@ static void *mg_malloc_ex(size_t size, const char *file, unsigned line) {
 	return memory;
 }
 
-static void *mg_calloc_ex(size_t count, size_t size, const char *file,
-                          unsigned line) {
+static void *
+mg_calloc_ex(size_t count, size_t size, const char *file, unsigned line)
+{
 	void *data = mg_malloc_ex(size * count, file, line);
 	if (data)
 		memset(data, 0, size);
@@ -531,7 +548,8 @@ static void *mg_calloc_ex(size_t count, size_t size, const char *file,
 	return data;
 }
 
-static void mg_free_ex(void *memory, const char *file, unsigned line) {
+static void mg_free_ex(void *memory, const char *file, unsigned line)
+{
 	char mallocStr[256];
 	void *data = (void *)(((char *)memory) - sizeof(size_t));
 	size_t size;
@@ -540,9 +558,14 @@ static void mg_free_ex(void *memory, const char *file, unsigned line) {
 		size = *(size_t *)data;
 		mg_memory_debug_totalMemUsed -= size;
 		mg_memory_debug_blockCount--;
-		sprintf(mallocStr, "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n", memory,
-		        (unsigned long)size, mg_memory_debug_totalMemUsed,
-		        mg_memory_debug_blockCount, file, line);
+		sprintf(mallocStr,
+		        "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n",
+		        memory,
+		        (unsigned long)size,
+		        mg_memory_debug_totalMemUsed,
+		        mg_memory_debug_blockCount,
+		        file,
+		        line);
 #if defined(_WIN32)
 		OutputDebugStringA(mallocStr);
 #else
@@ -553,8 +576,9 @@ static void mg_free_ex(void *memory, const char *file, unsigned line) {
 	}
 }
 
-static void *mg_realloc_ex(void *memory, size_t newsize, const char *file,
-                           unsigned line) {
+static void *
+mg_realloc_ex(void *memory, size_t newsize, const char *file, unsigned line)
+{
 	char mallocStr[256];
 	void *data;
 	void *_realloc;
@@ -568,20 +592,28 @@ static void *mg_realloc_ex(void *memory, size_t newsize, const char *file,
 			if (_realloc) {
 				data = _realloc;
 				mg_memory_debug_totalMemUsed -= oldsize;
-				sprintf(mallocStr, "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
-				        memory, (unsigned long)oldsize,
+				sprintf(mallocStr,
+				        "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
+				        memory,
+				        (unsigned long)oldsize,
 				        mg_memory_debug_totalMemUsed,
-				        mg_memory_debug_blockCount, file, line);
+				        mg_memory_debug_blockCount,
+				        file,
+				        line);
 #if defined(_WIN32)
 				OutputDebugStringA(mallocStr);
 #else
 				DEBUG_TRACE("%s", mallocStr);
 #endif
 				mg_memory_debug_totalMemUsed += newsize;
-				sprintf(mallocStr, "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
-				        memory, (unsigned long)newsize,
+				sprintf(mallocStr,
+				        "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
+				        memory,
+				        (unsigned long)newsize,
 				        mg_memory_debug_totalMemUsed,
-				        mg_memory_debug_blockCount, file, line);
+				        mg_memory_debug_blockCount,
+				        file,
+				        line);
 #if defined(_WIN32)
 				OutputDebugStringA(mallocStr);
 #else
@@ -755,8 +787,18 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
 #endif /* NO_SSL */
 #endif /* NO_SSL_DL */
 
-static const char *month_names[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+static const char *month_names[] = {"Jan",
+                                    "Feb",
+                                    "Mar",
+                                    "Apr",
+                                    "May",
+                                    "Jun",
+                                    "Jul",
+                                    "Aug",
+                                    "Sep",
+                                    "Oct",
+                                    "Nov",
+                                    "Dec"};
 
 /* Unified socket address. For IPv6 support, add IPv6 address structure in the
  * union u. */
@@ -785,7 +827,9 @@ struct file {
 	int gzipped;
 };
 #define STRUCT_FILE_INITIALIZER                                                \
-	{ 0, 0, 0, NULL, NULL, 0 }
+	{                                                                          \
+		0, 0, 0, NULL, NULL, 0                                                 \
+	}
 
 /* Describes listening socket, or socket which was accept()-ed by the master
    thread and queued for future handling by the worker thread. */
@@ -857,7 +901,8 @@ static struct mg_option config_options[] = {
     {"enable_directory_listing", CONFIG_TYPE_BOOLEAN, "yes"},
     {"error_log_file", CONFIG_TYPE_FILE, NULL},
     {"global_auth_file", CONFIG_TYPE_FILE, NULL},
-    {"index_files", CONFIG_TYPE_STRING,
+    {"index_files",
+     CONFIG_TYPE_STRING,
 #ifdef USE_LUA
      "index.xhtml,index.html,index.htm,index.lp,index.lsp,index.lua,index.cgi,"
      "index.shtml,index.php"},
@@ -897,8 +942,8 @@ static struct mg_option config_options[] = {
 /* Check if the config_options and the corresponding enum have compatible
  * sizes. */
 mg_static_assert((sizeof(config_options) / sizeof(config_options[0])) ==
-                 (NUM_OPTIONS + 1),
-                "config_options and enum not sync");
+                     (NUM_OPTIONS + 1),
+                 "config_options and enum not sync");
 
 
 struct mg_request_handler_info {
@@ -1027,7 +1072,8 @@ static int is_websocket_protocol(const struct mg_connection *conn);
 #define is_websocket_protocol(conn) (0)
 #endif
 
-int mg_atomic_inc(volatile int *addr) {
+int mg_atomic_inc(volatile int *addr)
+{
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	/* Depending on the SDK, this function uses either
@@ -1042,7 +1088,8 @@ int mg_atomic_inc(volatile int *addr) {
 	return ret;
 }
 
-int mg_atomic_dec(volatile int *addr) {
+int mg_atomic_dec(volatile int *addr)
+{
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	/* Depending on the SDK, this function uses either
@@ -1074,10 +1121,12 @@ typedef struct tagTHREADNAME_INFO {
 #include <sys/prctl.h>
 #endif
 
-void mg_set_thread_name(const char *name) {
+void mg_set_thread_name(const char *name)
+{
 	char threadName[16]; /* Max. thread length in Linux/OSX/.. */
 
-    /* TODO: use strcpy and strcat instad of snprintf, use server name, don't return */
+	/* TODO: use strcpy and strcat instad of snprintf, use server name, don't
+	 * return */
 	if (snprintf(threadName, sizeof(threadName), "civetweb-%s", name) < 0)
 		return;
 
@@ -1086,14 +1135,17 @@ void mg_set_thread_name(const char *name) {
 #if defined(_WIN32)
 #if defined(_MSC_VER)
 	/* Windows and Visual Studio Compiler */
-	__try {
+	__try
+	{
 		THREADNAME_INFO info;
 		info.dwType = 0x1000;
 		info.szName = threadName;
 		info.dwThreadID = -1;
 		info.dwFlags = 0;
 
-		RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR),
+		RaiseException(0x406D1388,
+		               0,
+		               sizeof(info) / sizeof(ULONG_PTR),
 		               (ULONG_PTR *)&info);
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER) {}
@@ -1122,7 +1174,8 @@ void mg_set_thread_name(const char *threadName) {}
 #endif
 
 #if defined(MG_LEGACY_INTERFACE)
-const char **mg_get_valid_option_names(void) {
+const char **mg_get_valid_option_names(void)
+{
 	static const char *
 	    data[2 * sizeof(config_options) / sizeof(config_options[0])] = {0};
 	int i;
@@ -1138,8 +1191,10 @@ const char **mg_get_valid_option_names(void) {
 
 const struct mg_option *mg_get_valid_options(void) { return config_options; }
 
-static int is_file_in_memory(struct mg_connection *conn, const char *path,
-                             struct file *filep) {
+static int is_file_in_memory(struct mg_connection *conn,
+                             const char *path,
+                             struct file *filep)
+{
 	size_t size = 0;
 	if (!conn || !filep)
 		return 0;
@@ -1154,7 +1209,8 @@ static int is_file_in_memory(struct mg_connection *conn, const char *path,
 	return filep->membuf != NULL;
 }
 
-static int is_file_opened(const struct file *filep) {
+static int is_file_opened(const struct file *filep)
+{
 	if (!filep) {
 		return 0;
 	}
@@ -1162,8 +1218,11 @@ static int is_file_opened(const struct file *filep) {
 	return filep->membuf != NULL || filep->fp != NULL;
 }
 
-static int mg_fopen(struct mg_connection *conn, const char *path,
-                    const char *mode, struct file *filep) {
+static int mg_fopen(struct mg_connection *conn,
+                    const char *path,
+                    const char *mode,
+                    struct file *filep)
+{
 	if (!filep) {
 		return 0;
 	}
@@ -1182,24 +1241,28 @@ static int mg_fopen(struct mg_connection *conn, const char *path,
 	return is_file_opened(filep);
 }
 
-static void mg_fclose(struct file *filep) {
+static void mg_fclose(struct file *filep)
+{
 	if (filep != NULL && filep->fp != NULL) {
 		fclose(filep->fp);
 	}
 }
 
-static void mg_strlcpy(register char *dst, register const char *src, size_t n) {
+static void mg_strlcpy(register char *dst, register const char *src, size_t n)
+{
 	for (; *src != '\0' && n > 1; n--) {
 		*dst++ = *src++;
 	}
 	*dst = '\0';
 }
 
-static int lowercase(const char *s) {
+static int lowercase(const char *s)
+{
 	return tolower(*(const unsigned char *)s);
 }
 
-int mg_strncasecmp(const char *s1, const char *s2, size_t len) {
+int mg_strncasecmp(const char *s1, const char *s2, size_t len)
+{
 	int diff = 0;
 
 	if (len > 0)
@@ -1210,7 +1273,8 @@ int mg_strncasecmp(const char *s1, const char *s2, size_t len) {
 	return diff;
 }
 
-static int mg_strcasecmp(const char *s1, const char *s2) {
+static int mg_strcasecmp(const char *s1, const char *s2)
+{
 	int diff;
 
 	do {
@@ -1220,7 +1284,8 @@ static int mg_strcasecmp(const char *s1, const char *s2) {
 	return diff;
 }
 
-static char *mg_strndup(const char *ptr, size_t len) {
+static char *mg_strndup(const char *ptr, size_t len)
+{
 	char *p;
 
 	if ((p = (char *)mg_malloc(len + 1)) != NULL) {
@@ -1232,7 +1297,8 @@ static char *mg_strndup(const char *ptr, size_t len) {
 
 static char *mg_strdup(const char *str) { return mg_strndup(str, strlen(str)); }
 
-static const char *mg_strcasestr(const char *big_str, const char *small_str) {
+static const char *mg_strcasestr(const char *big_str, const char *small_str)
+{
 	int i, big_len = (int)strlen(big_str), small_len = (int)strlen(small_str);
 
 	for (i = 0; i <= big_len - small_len; i++) {
@@ -1248,8 +1314,12 @@ static const char *mg_strcasestr(const char *big_str, const char *small_str) {
  * that is larger than a supplied buffer.
  * Thanks to Adam Zeldis to pointing snprintf()-caused vulnerability
  * in his audit report. */
-static int mg_vsnprintf(struct mg_connection *conn, char *buf, size_t buflen,
-                        const char *fmt, va_list ap) {
+static int mg_vsnprintf(struct mg_connection *conn,
+                        char *buf,
+                        size_t buflen,
+                        const char *fmt,
+                        va_list ap)
+{
 	int n;
 
 	if (buflen == 0)
@@ -1272,7 +1342,9 @@ static int mg_vsnprintf(struct mg_connection *conn, char *buf, size_t buflen,
 		mg_cry(conn, "vsnprintf error");
 		n = 0;
 	} else if (n >= (int)buflen) {
-		mg_cry(conn, "truncating vsnprintf buffer: [%.*s]", n > 200 ? 200 : n,
+		mg_cry(conn,
+		       "truncating vsnprintf buffer: [%.*s]",
+		       n > 200 ? 200 : n,
 		       buf);
 		n = (int)buflen - 1;
 	}
@@ -1281,12 +1353,15 @@ static int mg_vsnprintf(struct mg_connection *conn, char *buf, size_t buflen,
 	return n;
 }
 
-static int mg_snprintf(struct mg_connection *conn, char *buf, size_t buflen,
-                       PRINTF_FORMAT_STRING(const char *fmt), ...)
-    PRINTF_ARGS(4, 5);
+static int mg_snprintf(struct mg_connection *conn,
+                       char *buf,
+                       size_t buflen,
+                       PRINTF_FORMAT_STRING(const char *fmt),
+                       ...) PRINTF_ARGS(4, 5);
 
-static int mg_snprintf(struct mg_connection *conn, char *buf, size_t buflen,
-                       const char *fmt, ...) {
+static int mg_snprintf(
+    struct mg_connection *conn, char *buf, size_t buflen, const char *fmt, ...)
+{
 	va_list ap;
 	int n;
 
@@ -1297,7 +1372,8 @@ static int mg_snprintf(struct mg_connection *conn, char *buf, size_t buflen,
 	return n;
 }
 
-static int get_option_index(const char *name) {
+static int get_option_index(const char *name)
+{
 	int i;
 
 	for (i = 0; config_options[i].name != NULL; i++) {
@@ -1308,7 +1384,8 @@ static int get_option_index(const char *name) {
 	return -1;
 }
 
-const char *mg_get_option(const struct mg_context *ctx, const char *name) {
+const char *mg_get_option(const struct mg_context *ctx, const char *name)
+{
 	int i;
 	if ((i = get_option_index(name)) == -1) {
 		return NULL;
@@ -1319,29 +1396,34 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name) {
 	}
 }
 
-struct mg_context *mg_get_context(const struct mg_connection *conn) {
+struct mg_context *mg_get_context(const struct mg_connection *conn)
+{
 	return (conn == NULL) ? (struct mg_context *)NULL : (conn->ctx);
 }
 
-void *mg_get_user_data(const struct mg_context *ctx) {
+void *mg_get_user_data(const struct mg_context *ctx)
+{
 	return (ctx == NULL) ? NULL : ctx->user_data;
 }
 
-void mg_set_user_connection_data(const struct mg_connection *conn, void *data) {
+void mg_set_user_connection_data(const struct mg_connection *conn, void *data)
+{
 	if (conn != NULL) {
 		((struct mg_connection *)conn)->request_info.conn_data = data;
 	}
 }
 
-void *mg_get_user_connection_data(const struct mg_connection *conn) {
+void *mg_get_user_connection_data(const struct mg_connection *conn)
+{
 	if (conn != NULL) {
 		return conn->request_info.conn_data;
 	}
 	return NULL;
 }
 
-size_t mg_get_ports(const struct mg_context *ctx, size_t size, int *ports,
-                    int *ssl) {
+size_t
+mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
+{
 	size_t i;
 	if (!ctx) {
 		return 0;
@@ -1353,17 +1435,18 @@ size_t mg_get_ports(const struct mg_context *ctx, size_t size, int *ports,
 	return i;
 }
 
-static void sockaddr_to_string(char *buf, size_t len, const union usa *usa) {
+static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
+{
 	buf[0] = '\0';
 
 	if (usa->sa.sa_family == AF_INET) {
-		getnameinfo(&usa->sa, sizeof(usa->sin), buf, len, NULL, 0,
-		            NI_NUMERICHOST);
+		getnameinfo(
+		    &usa->sa, sizeof(usa->sin), buf, len, NULL, 0, NI_NUMERICHOST);
 	}
 #if defined(USE_IPV6)
 	else if (usa->sa.sa_family == AF_INET6) {
-		getnameinfo(&usa->sa, sizeof(usa->sin6), buf, len, NULL, 0,
-		            NI_NUMERICHOST);
+		getnameinfo(
+		    &usa->sa, sizeof(usa->sin6), buf, len, NULL, 0, NI_NUMERICHOST);
 	}
 #endif
 
@@ -1384,7 +1467,8 @@ static void sockaddr_to_string(char *buf, size_t len, const union usa *usa) {
 
 /* Convert time_t to a string. According to RFC2616, Sec 14.18, this must be
  * included in all responses other than 100, 101, 5xx. */
-static void gmt_time_string(char *buf, size_t buf_len, time_t *t) {
+static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
+{
 	struct tm *tm;
 
 	tm = gmtime(t);
@@ -1398,13 +1482,15 @@ static void gmt_time_string(char *buf, size_t buf_len, time_t *t) {
 
 /* difftime for struct timespec. Return value is in seconds. */
 static double mg_difftimespec(const struct timespec *ts_now,
-                              const struct timespec *ts_before) {
+                              const struct timespec *ts_before)
+{
 	return (double)(ts_now->tv_nsec - ts_before->tv_nsec) * 1.0E-9 +
 	       (double)(ts_now->tv_sec - ts_before->tv_sec);
 }
 
 /* Print error message to the opened error log stream. */
-void mg_cry(const struct mg_connection *conn, const char *fmt, ...) {
+void mg_cry(const struct mg_connection *conn, const char *fmt, ...)
+{
 	char buf[MG_BUF_LEN], src_addr[IP_ADDR_STR_LEN];
 	va_list ap;
 	FILE *fp;
@@ -1428,11 +1514,15 @@ void mg_cry(const struct mg_connection *conn, const char *fmt, ...) {
 			timestamp = time(NULL);
 
 			sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
-			fprintf(fp, "[%010lu] [error] [client %s] ",
-			        (unsigned long)timestamp, src_addr);
+			fprintf(fp,
+			        "[%010lu] [error] [client %s] ",
+			        (unsigned long)timestamp,
+			        src_addr);
 
 			if (conn->request_info.request_method != NULL) {
-				fprintf(fp, "%s %s: ", conn->request_info.request_method,
+				fprintf(fp,
+				        "%s %s: ",
+				        conn->request_info.request_method,
 				        conn->request_info.uri);
 			}
 
@@ -1446,7 +1536,8 @@ void mg_cry(const struct mg_connection *conn, const char *fmt, ...) {
 
 /* Return fake connection structure. Used for logging, if connection
  * is not applicable at the moment of logging. */
-static struct mg_connection *fc(struct mg_context *ctx) {
+static struct mg_connection *fc(struct mg_context *ctx)
+{
 	static struct mg_connection fake_connection;
 	fake_connection.ctx = ctx;
 	return &fake_connection;
@@ -1455,7 +1546,8 @@ static struct mg_connection *fc(struct mg_context *ctx) {
 const char *mg_version(void) { return CIVETWEB_VERSION; }
 
 const struct mg_request_info *
-mg_get_request_info(const struct mg_connection *conn) {
+mg_get_request_info(const struct mg_connection *conn)
+{
 	if (!conn) {
 		return NULL;
 	}
@@ -1466,8 +1558,11 @@ mg_get_request_info(const struct mg_connection *conn) {
  * 0-terminate resulting word. Skip the delimiter and following whitespaces.
  * Advance pointer to buffer to the next word. Return found 0-terminated word.
  * Delimiters can be quoted with quotechar. */
-static char *skip_quoted(char **buf, const char *delimiters,
-                         const char *whitespace, char quotechar) {
+static char *skip_quoted(char **buf,
+                         const char *delimiters,
+                         const char *whitespace,
+                         char quotechar)
+{
 	char *p, *begin_word, *end_word, *end_whitespace;
 
 	begin_word = *buf;
@@ -1513,13 +1608,15 @@ static char *skip_quoted(char **buf, const char *delimiters,
 
 /* Simplified version of skip_quoted without quote char
  * and whitespace == delimiters */
-static char *skip(char **buf, const char *delimiters) {
+static char *skip(char **buf, const char *delimiters)
+{
 	return skip_quoted(buf, delimiters, delimiters, 0);
 }
 
 /* Return HTTP header value, or NULL if not found. */
 static const char *get_header(const struct mg_request_info *ri,
-                              const char *name) {
+                              const char *name)
+{
 	int i;
 	if (ri) {
 		for (i = 0; i < ri->num_headers; i++) {
@@ -1532,7 +1629,8 @@ static const char *get_header(const struct mg_request_info *ri,
 	return NULL;
 }
 
-const char *mg_get_header(const struct mg_connection *conn, const char *name) {
+const char *mg_get_header(const struct mg_connection *conn, const char *name)
+{
 	if (!conn) {
 		return NULL;
 	}
@@ -1546,8 +1644,9 @@ const char *mg_get_header(const struct mg_connection *conn, const char *name) {
  * Value is stored in val vector. If value has form "x=y", then eq_val
  * vector is initialized to point to the "y" part, and val vector length
  * is adjusted to point only to "x". */
-static const char *next_option(const char *list, struct vec *val,
-                               struct vec *eq_val) {
+static const char *
+next_option(const char *list, struct vec *val, struct vec *eq_val)
+{
 	if (val == NULL || list == NULL || *list == '\0') {
 		/* End of the list */
 		list = NULL;
@@ -1580,7 +1679,8 @@ static const char *next_option(const char *list, struct vec *val,
 }
 
 /* Perform case-insensitive match of string against pattern */
-static int match_prefix(const char *pattern, int pattern_len, const char *str) {
+static int match_prefix(const char *pattern, int pattern_len, const char *str)
+{
 	const char *or_str;
 	int i, j, len, res;
 
@@ -1624,7 +1724,8 @@ static int match_prefix(const char *pattern, int pattern_len, const char *str) {
 /* HTTP 1.1 assumes keep alive if "Connection:" header is not set
  * This function must tolerate situations when connection info is not
  * set up, for example if request parsing failed. */
-static int should_keep_alive(const struct mg_connection *conn) {
+static int should_keep_alive(const struct mg_connection *conn)
+{
 	if (conn != NULL) {
 		const char *http_version = conn->request_info.http_version;
 		const char *header = mg_get_header(conn, "Connection");
@@ -1640,7 +1741,8 @@ static int should_keep_alive(const struct mg_connection *conn) {
 	return 0;
 }
 
-static int should_decode_url(const struct mg_connection *conn) {
+static int should_decode_url(const struct mg_connection *conn)
+{
 	if (!conn || !conn->ctx) {
 		return 0;
 	}
@@ -1648,17 +1750,20 @@ static int should_decode_url(const struct mg_connection *conn) {
 	return (mg_strcasecmp(conn->ctx->config[DECODE_URL], "yes") == 0);
 }
 
-static const char *suggest_connection_header(const struct mg_connection *conn) {
+static const char *suggest_connection_header(const struct mg_connection *conn)
+{
 	return should_keep_alive(conn) ? "keep-alive" : "close";
 }
 
 static void handle_file_based_request(struct mg_connection *conn,
-                                      const char *path, struct file *filep);
-static int mg_stat(struct mg_connection *conn, const char *path,
-                   struct file *filep);
+                                      const char *path,
+                                      struct file *filep);
+static int
+mg_stat(struct mg_connection *conn, const char *path, struct file *filep);
 
 static const char *mg_get_response_code_text(int response_code,
-                                             struct mg_connection *conn) {
+                                             struct mg_connection *conn)
+{
 	switch (response_code) {
 	/* RFC2616 Section 10.1 - Informational 1xx */
 	case 100:
@@ -1835,12 +1940,14 @@ static const char *mg_get_response_code_text(int response_code,
 	}
 }
 
-static void send_http_error(struct mg_connection *, int,
-                            PRINTF_FORMAT_STRING(const char *fmt), ...)
-    PRINTF_ARGS(3, 4);
+static void send_http_error(struct mg_connection *,
+                            int,
+                            PRINTF_FORMAT_STRING(const char *fmt),
+                            ...) PRINTF_ARGS(3, 4);
 
-static void send_http_error(struct mg_connection *conn, int status,
-                            const char *fmt, ...) {
+static void
+send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
+{
 	char buf[MG_BUF_LEN];
 	va_list ap;
 	int len = 0, i, page_handler_found, scope;
@@ -1868,18 +1975,27 @@ static void send_http_error(struct mg_connection *conn, int status,
 				for (scope = 1; (scope <= 3) && !page_handler_found; scope++) {
 					switch (scope) {
 					case 1:
-						len =
-						    mg_snprintf(conn, buf, sizeof(buf) - 32,
-						                "%serror%03u.", error_handler, status);
+						len = mg_snprintf(conn,
+						                  buf,
+						                  sizeof(buf) - 32,
+						                  "%serror%03u.",
+						                  error_handler,
+						                  status);
 						break;
 					case 2:
-						len = mg_snprintf(conn, buf, sizeof(buf) - 32,
-						                  "%serror%01uxx.", error_handler,
+						len = mg_snprintf(conn,
+						                  buf,
+						                  sizeof(buf) - 32,
+						                  "%serror%01uxx.",
+						                  error_handler,
 						                  status / 100);
 						break;
 					default:
-						len = mg_snprintf(conn, buf, sizeof(buf) - 32,
-						                  "%serror.", error_handler);
+						len = mg_snprintf(conn,
+						                  buf,
+						                  sizeof(buf) - 32,
+						                  "%serror.",
+						                  error_handler);
 						break;
 					}
 					tstr = strchr(error_page_file_ext, '.');
@@ -1910,8 +2026,12 @@ static void send_http_error(struct mg_connection *conn, int status,
 
 		/* Errors 1xx, 204 and 304 MUST NOT send a body */
 		if (status > 199 && status != 204 && status != 304) {
-			len = mg_snprintf(conn, buf, sizeof(buf) - 1, "Error %d: %s",
-			                  status, status_text);
+			len = mg_snprintf(conn,
+			                  buf,
+			                  sizeof(buf) - 1,
+			                  "Error %d: %s",
+			                  status,
+			                  status_text);
 			buf[len] = '\n';
 			len++;
 			buf[len] = 0;
@@ -1926,30 +2046,37 @@ static void send_http_error(struct mg_connection *conn, int status,
 		if (len > 0) {
 			mg_printf(conn, "Content-Type: text/plain\r\n");
 		}
-		mg_printf(conn, "Content-Length: %d\r\n"
-		                "Date: %s\r\n"
-		                "Connection: %s\r\n\r\n",
-		          len, date, suggest_connection_header(conn));
+		mg_printf(conn,
+		          "Content-Length: %d\r\n"
+		          "Date: %s\r\n"
+		          "Connection: %s\r\n\r\n",
+		          len,
+		          date,
+		          suggest_connection_header(conn));
 		conn->num_bytes_sent += mg_printf(conn, "%s", buf);
 	}
 }
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-static int pthread_mutex_init(pthread_mutex_t *mutex, void *unused) {
+static int pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
+{
 	(void)unused;
 	*mutex = CreateMutex(NULL, FALSE, NULL);
 	return *mutex == NULL ? -1 : 0;
 }
 
-static int pthread_mutex_destroy(pthread_mutex_t *mutex) {
+static int pthread_mutex_destroy(pthread_mutex_t *mutex)
+{
 	return CloseHandle(*mutex) == 0 ? -1 : 0;
 }
 
-static int pthread_mutex_lock(pthread_mutex_t *mutex) {
+static int pthread_mutex_lock(pthread_mutex_t *mutex)
+{
 	return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0 ? 0 : -1;
 }
 
-static int pthread_mutex_trylock(pthread_mutex_t *mutex) {
+static int pthread_mutex_trylock(pthread_mutex_t *mutex)
+{
 	switch (WaitForSingleObject(*mutex, 0)) {
 	case WAIT_OBJECT_0:
 		return 0;
@@ -1959,12 +2086,14 @@ static int pthread_mutex_trylock(pthread_mutex_t *mutex) {
 	return -1;
 }
 
-static int pthread_mutex_unlock(pthread_mutex_t *mutex) {
+static int pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
 	return ReleaseMutex(*mutex) == 0 ? -1 : 0;
 }
 
 #ifndef WIN_PTHREADS_TIME_H
-static int clock_gettime(clockid_t clk_id, struct timespec *tp) {
+static int clock_gettime(clockid_t clk_id, struct timespec *tp)
+{
 	FILETIME ft;
 	ULARGE_INTEGER li;
 	BOOL ok = FALSE;
@@ -2000,7 +2129,8 @@ static int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 }
 #endif
 
-static int pthread_cond_init(pthread_cond_t *cv, const void *unused) {
+static int pthread_cond_init(pthread_cond_t *cv, const void *unused)
+{
 	(void)unused;
 	InitializeCriticalSection(&cv->threadIdSec);
 	cv->waitingthreadcount = 0;
@@ -2009,8 +2139,10 @@ static int pthread_cond_init(pthread_cond_t *cv, const void *unused) {
 	return (cv->waitingthreadhdls != NULL) ? 0 : -1;
 }
 
-static int pthread_cond_timedwait(pthread_cond_t *cv, pthread_mutex_t *mutex,
-                                  const struct timespec *abstime) {
+static int pthread_cond_timedwait(pthread_cond_t *cv,
+                                  pthread_mutex_t *mutex,
+                                  const struct timespec *abstime)
+{
 	struct mg_workerTLS *tls = (struct mg_workerTLS *)TlsGetValue(sTlsKey);
 	int ok;
 	struct timespec tsnow;
@@ -2045,11 +2177,13 @@ static int pthread_cond_timedwait(pthread_cond_t *cv, pthread_mutex_t *mutex,
 	return ok ? 0 : -1;
 }
 
-static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex) {
+static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
+{
 	return pthread_cond_timedwait(cv, mutex, NULL);
 }
 
-static int pthread_cond_signal(pthread_cond_t *cv) {
+static int pthread_cond_signal(pthread_cond_t *cv)
+{
 	int i;
 	HANDLE wkup = NULL;
 	BOOL ok = FALSE;
@@ -2071,7 +2205,8 @@ static int pthread_cond_signal(pthread_cond_t *cv) {
 	return ok ? 0 : 1;
 }
 
-static int pthread_cond_broadcast(pthread_cond_t *cv) {
+static int pthread_cond_broadcast(pthread_cond_t *cv)
+{
 	EnterCriticalSection(&cv->threadIdSec);
 	while (cv->waitingthreadcount) {
 		pthread_cond_signal(cv);
@@ -2081,7 +2216,8 @@ static int pthread_cond_broadcast(pthread_cond_t *cv) {
 	return 0;
 }
 
-static int pthread_cond_destroy(pthread_cond_t *cv) {
+static int pthread_cond_destroy(pthread_cond_t *cv)
+{
 	EnterCriticalSection(&cv->threadIdSec);
 	assert(cv->waitingthreadcount == 0);
 	mg_free(cv->waitingthreadhdls);
@@ -2093,7 +2229,8 @@ static int pthread_cond_destroy(pthread_cond_t *cv) {
 }
 
 /* For Windows, change all slashes to backslashes in path names. */
-static void change_slashes_to_backslashes(char *path) {
+static void change_slashes_to_backslashes(char *path)
+{
 	int i;
 
 	for (i = 0; path[i] != '\0'; i++) {
@@ -2113,7 +2250,8 @@ static void change_slashes_to_backslashes(char *path) {
 
 /* Encode 'path' which is assumed UTF-8 string, into UNICODE string.
  * wbuf and wbuf_len is a target buffer and its length. */
-static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len) {
+static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
+{
 	char buf[PATH_MAX], buf2[PATH_MAX];
 
 	mg_strlcpy(buf, path, sizeof(buf));
@@ -2123,15 +2261,16 @@ static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 	 * match the original, something is fishy, reject. */
 	memset(wbuf, 0, wbuf_len * sizeof(wchar_t));
 	MultiByteToWideChar(CP_UTF8, 0, buf, -1, wbuf, (int)wbuf_len);
-	WideCharToMultiByte(CP_UTF8, 0, wbuf, (int)wbuf_len, buf2, sizeof(buf2),
-	                    NULL, NULL);
+	WideCharToMultiByte(
+	    CP_UTF8, 0, wbuf, (int)wbuf_len, buf2, sizeof(buf2), NULL, NULL);
 	if (strcmp(buf, buf2) != 0) {
 		wbuf[0] = L'\0';
 	}
 }
 
 #if defined(_WIN32_WCE)
-static time_t time(time_t *ptime) {
+static time_t time(time_t *ptime)
+{
 	time_t t;
 	SYSTEMTIME st;
 	FILETIME ft;
@@ -2147,7 +2286,8 @@ static time_t time(time_t *ptime) {
 	return t;
 }
 
-static struct tm *localtime(const time_t *ptime, struct tm *ptm) {
+static struct tm *localtime(const time_t *ptime, struct tm *ptm)
+{
 	int64_t t = ((int64_t)*ptime) * RATE_DIFF + EPOCH_DIFF;
 	FILETIME ft, lft;
 	SYSTEMTIME st;
@@ -2174,13 +2314,15 @@ static struct tm *localtime(const time_t *ptime, struct tm *ptm) {
 	return ptm;
 }
 
-static struct tm *gmtime(const time_t *ptime, struct tm *ptm) {
+static struct tm *gmtime(const time_t *ptime, struct tm *ptm)
+{
 	/* FIXME(lsm): fix this. */
 	return localtime(ptime, ptm);
 }
 
-static size_t strftime(char *dst, size_t dst_size, const char *fmt,
-                       const struct tm *tm) {
+static size_t
+strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
+{
 	(void)snprintf(dst, dst_size, "implement strftime() for WinCE");
 	return 0;
 }
@@ -2190,14 +2332,16 @@ static size_t strftime(char *dst, size_t dst_size, const char *fmt,
  * For example, fopen("a.cgi    ", "r") on Windows successfully opens
  * "a.cgi", despite one would expect an error back.
  * This function returns non-0 if path ends with some garbage. */
-static int path_cannot_disclose_cgi(const char *path) {
+static int path_cannot_disclose_cgi(const char *path)
+{
 	static const char *allowed_last_characters = "_-";
 	int last = path[strlen(path) - 1];
 	return isalnum(last) || strchr(allowed_last_characters, last) != NULL;
 }
 
-static int mg_stat(struct mg_connection *conn, const char *path,
-                   struct file *filep) {
+static int
+mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
+{
 	wchar_t wbuf[PATH_MAX];
 	WIN32_FILE_ATTRIBUTE_DATA info;
 
@@ -2223,13 +2367,15 @@ static int mg_stat(struct mg_connection *conn, const char *path,
 	return filep->membuf != NULL || filep->modification_time != 0;
 }
 
-static int mg_remove(const char *path) {
+static int mg_remove(const char *path)
+{
 	wchar_t wbuf[PATH_MAX];
 	to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
 	return DeleteFileW(wbuf) ? 0 : -1;
 }
 
-static int mg_mkdir(const char *path, int mode) {
+static int mg_mkdir(const char *path, int mode)
+{
 	char buf[PATH_MAX];
 	wchar_t wbuf[PATH_MAX];
 
@@ -2243,7 +2389,8 @@ static int mg_mkdir(const char *path, int mode) {
 }
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
-static DIR *opendir(const char *name) {
+static DIR *opendir(const char *name)
+{
 	DIR *dir = NULL;
 	wchar_t wpath[PATH_MAX];
 	DWORD attrs;
@@ -2269,7 +2416,8 @@ static DIR *opendir(const char *name) {
 	return dir;
 }
 
-static int closedir(DIR *dir) {
+static int closedir(DIR *dir)
+{
 	int result = 0;
 
 	if (dir != NULL) {
@@ -2285,15 +2433,21 @@ static int closedir(DIR *dir) {
 	return result;
 }
 
-static struct dirent *readdir(DIR *dir) {
+static struct dirent *readdir(DIR *dir)
+{
 	struct dirent *result = 0;
 
 	if (dir) {
 		if (dir->handle != INVALID_HANDLE_VALUE) {
 			result = &dir->result;
-			(void)WideCharToMultiByte(CP_UTF8, 0, dir->info.cFileName, -1,
-			                          result->d_name, sizeof(result->d_name),
-			                          NULL, NULL);
+			(void)WideCharToMultiByte(CP_UTF8,
+			                          0,
+			                          dir->info.cFileName,
+			                          -1,
+			                          result->d_name,
+			                          sizeof(result->d_name),
+			                          NULL,
+			                          NULL);
 
 			if (!FindNextFileW(dir->handle, &dir->info)) {
 				(void)FindClose(dir->handle);
@@ -2311,7 +2465,8 @@ static struct dirent *readdir(DIR *dir) {
 }
 
 #ifndef HAVE_POLL
-static int poll(struct pollfd *pfd, int n, int milliseconds) {
+static int poll(struct pollfd *pfd, int n, int milliseconds)
+{
 	struct timeval tv;
 	fd_set set;
 	int i, result;
@@ -2343,12 +2498,14 @@ static int poll(struct pollfd *pfd, int n, int milliseconds) {
 #endif /* HAVE_POLL */
 
 static void set_close_on_exec(SOCKET sock,
-                              struct mg_connection *conn /* may be null */) {
+                              struct mg_connection *conn /* may be null */)
+{
 	(void)conn; /* Unused. */
 	(void)SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, 0);
 }
 
-int mg_start_thread(mg_thread_func_t f, void *p) {
+int mg_start_thread(mg_thread_func_t f, void *p)
+{
 #if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 	/* Compile-time option to control stack size, e.g. -DUSE_STACK_SIZE=16384
 	 */
@@ -2366,8 +2523,10 @@ int mg_start_thread(mg_thread_func_t f, void *p) {
 
 /* Start a thread storing the thread context. */
 
-static int mg_start_thread_with_id(unsigned(__stdcall *f)(void *), void *p,
-                                   pthread_t *threadidptr) {
+static int mg_start_thread_with_id(unsigned(__stdcall *f)(void *),
+                                   void *p,
+                                   pthread_t *threadidptr)
+{
 	uintptr_t uip;
 	HANDLE threadhandle;
 	int result = -1;
@@ -2384,7 +2543,8 @@ static int mg_start_thread_with_id(unsigned(__stdcall *f)(void *), void *p,
 
 /* Wait for a thread to finish. */
 
-static int mg_join_thread(pthread_t threadid) {
+static int mg_join_thread(pthread_t threadid)
+{
 	int result;
 	DWORD dwevent;
 
@@ -2404,14 +2564,16 @@ static int mg_join_thread(pthread_t threadid) {
 	return result;
 }
 
-static HANDLE dlopen(const char *dll_name, int flags) {
+static HANDLE dlopen(const char *dll_name, int flags)
+{
 	wchar_t wbuf[PATH_MAX];
 	(void)flags;
 	to_unicode(dll_name, wbuf, ARRAY_SIZE(wbuf));
 	return LoadLibraryW(wbuf);
 }
 
-static int dlclose(void *handle) {
+static int dlclose(void *handle)
+{
 	int result;
 
 	if (FreeLibrary((HMODULE)handle) != 0) {
@@ -2425,22 +2587,29 @@ static int dlclose(void *handle) {
 
 #if !defined(NO_CGI)
 #define SIGKILL (0)
-static int kill(pid_t pid, int sig_num) {
+static int kill(pid_t pid, int sig_num)
+{
 	(void)TerminateProcess(pid, sig_num);
 	(void)CloseHandle(pid);
 	return 0;
 }
 
-static void trim_trailing_whitespaces(char *s) {
+static void trim_trailing_whitespaces(char *s)
+{
 	char *e = s + strlen(s) - 1;
 	while (e > s && isspace(*(unsigned char *)e)) {
 		*e-- = '\0';
 	}
 }
 
-static pid_t spawn_process(struct mg_connection *conn, const char *prog,
-                           char *envblk, char *envp[], int fdin, int fdout,
-                           const char *dir) {
+static pid_t spawn_process(struct mg_connection *conn,
+                           const char *prog,
+                           char *envblk,
+                           char *envp[],
+                           int fdin,
+                           int fdout,
+                           const char *dir)
+{
 	HANDLE me;
 	char *p, *interp, full_interp[PATH_MAX], full_dir[PATH_MAX],
 	    cmdline[PATH_MAX], buf[PATH_MAX];
@@ -2458,10 +2627,20 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
 	si.wShowWindow = SW_HIDE;
 
 	me = GetCurrentProcess();
-	DuplicateHandle(me, (HANDLE)_get_osfhandle(fdin), me, &si.hStdInput, 0,
-	                TRUE, DUPLICATE_SAME_ACCESS);
-	DuplicateHandle(me, (HANDLE)_get_osfhandle(fdout), me, &si.hStdOutput, 0,
-	                TRUE, DUPLICATE_SAME_ACCESS);
+	DuplicateHandle(me,
+	                (HANDLE)_get_osfhandle(fdin),
+	                me,
+	                &si.hStdInput,
+	                0,
+	                TRUE,
+	                DUPLICATE_SAME_ACCESS);
+	DuplicateHandle(me,
+	                (HANDLE)_get_osfhandle(fdout),
+	                me,
+	                &si.hStdOutput,
+	                0,
+	                TRUE,
+	                DUPLICATE_SAME_ACCESS);
 
 	/* If CGI file is a script, try to read the interpreter line */
 	interp = conn->ctx->config[CGI_INTERPRETER];
@@ -2492,15 +2671,28 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
 	GetFullPathNameA(dir, sizeof(full_dir), full_dir, NULL);
 
 	if (interp[0] != '\0')
-		mg_snprintf(conn, cmdline, sizeof(cmdline), "\"%s\" \"%s\\%s\"", interp,
-		            full_dir, prog);
-	else
-		mg_snprintf(conn, cmdline, sizeof(cmdline), "\"%s\\%s\"", full_dir,
+		mg_snprintf(conn,
+		            cmdline,
+		            sizeof(cmdline),
+		            "\"%s\" \"%s\\%s\"",
+		            interp,
+		            full_dir,
 		            prog);
+	else
+		mg_snprintf(
+		    conn, cmdline, sizeof(cmdline), "\"%s\\%s\"", full_dir, prog);
 
 	DEBUG_TRACE("Running [%s]", cmdline);
-	if (CreateProcessA(NULL, cmdline, NULL, NULL, TRUE,
-	                   CREATE_NEW_PROCESS_GROUP, envblk, NULL, &si, &pi) == 0) {
+	if (CreateProcessA(NULL,
+	                   cmdline,
+	                   NULL,
+	                   NULL,
+	                   TRUE,
+	                   CREATE_NEW_PROCESS_GROUP,
+	                   envblk,
+	                   NULL,
+	                   &si,
+	                   &pi) == 0) {
 		mg_cry(conn, "%s: CreateProcess(%s): %ld", __func__, cmdline, ERRNO);
 		pi.hProcess = (pid_t)-1;
 	}
@@ -2514,14 +2706,16 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
 }
 #endif /* !NO_CGI */
 
-static int set_non_blocking_mode(SOCKET sock) {
+static int set_non_blocking_mode(SOCKET sock)
+{
 	unsigned long on = 1;
 	return ioctlsocket(sock, FIONBIO, &on);
 }
 
 #else
-static int mg_stat(struct mg_connection *conn, const char *path,
-                   struct file *filep) {
+static int
+mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
+{
 	struct stat st;
 	if (!filep) {
 		return 0;
@@ -2538,16 +2732,20 @@ static int mg_stat(struct mg_connection *conn, const char *path,
 }
 
 static void set_close_on_exec(int fd,
-                              struct mg_connection *conn /* may be null */) {
+                              struct mg_connection *conn /* may be null */)
+{
 	if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0) {
 		if (conn) {
-			mg_cry(conn, "%s: fcntl(F_SETFD FD_CLOEXEC) failed: %s", __func__,
+			mg_cry(conn,
+			       "%s: fcntl(F_SETFD FD_CLOEXEC) failed: %s",
+			       __func__,
 			       strerror(ERRNO));
 		}
 	}
 }
 
-int mg_start_thread(mg_thread_func_t func, void *param) {
+int mg_start_thread(mg_thread_func_t func, void *param)
+{
 	pthread_t thread_id;
 	pthread_attr_t attr;
 	int result;
@@ -2569,8 +2767,10 @@ int mg_start_thread(mg_thread_func_t func, void *param) {
 
 /* Start a thread storing the thread context. */
 
-static int mg_start_thread_with_id(mg_thread_func_t func, void *param,
-                                   pthread_t *threadidptr) {
+static int mg_start_thread_with_id(mg_thread_func_t func,
+                                   void *param,
+                                   pthread_t *threadidptr)
+{
 	pthread_t thread_id;
 	pthread_attr_t attr;
 	int result;
@@ -2593,7 +2793,8 @@ static int mg_start_thread_with_id(mg_thread_func_t func, void *param,
 
 /* Wait for a thread to finish. */
 
-static int mg_join_thread(pthread_t threadid) {
+static int mg_join_thread(pthread_t threadid)
+{
 	int result;
 
 	result = pthread_join(threadid, NULL);
@@ -2601,9 +2802,14 @@ static int mg_join_thread(pthread_t threadid) {
 }
 
 #ifndef NO_CGI
-static pid_t spawn_process(struct mg_connection *conn, const char *prog,
-                           char *envblk, char *envp[], int fdin, int fdout,
-                           const char *dir) {
+static pid_t spawn_process(struct mg_connection *conn,
+                           const char *prog,
+                           char *envblk,
+                           char *envp[],
+                           int fdin,
+                           int fdout,
+                           const char *dir)
+{
 	pid_t pid;
 	const char *interp;
 
@@ -2615,18 +2821,20 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
 
 	if ((pid = fork()) == -1) {
 		/* Parent */
-		send_http_error(conn, 500, "Error: Creating CGI process\nfork(): %s",
+		send_http_error(conn,
+		                500,
+		                "Error: Creating CGI process\nfork(): %s",
 		                strerror(ERRNO));
 	} else if (pid == 0) {
 		/* Child */
 		if (chdir(dir) != 0) {
 			mg_cry(conn, "%s: chdir(%s): %s", __func__, dir, strerror(ERRNO));
 		} else if (dup2(fdin, 0) == -1) {
-			mg_cry(conn, "%s: dup2(%d, 0): %s", __func__, fdin,
-			       strerror(ERRNO));
+			mg_cry(
+			    conn, "%s: dup2(%d, 0): %s", __func__, fdin, strerror(ERRNO));
 		} else if (dup2(fdout, 1) == -1) {
-			mg_cry(conn, "%s: dup2(%d, 1): %s", __func__, fdout,
-			       strerror(ERRNO));
+			mg_cry(
+			    conn, "%s: dup2(%d, 1): %s", __func__, fdout, strerror(ERRNO));
 		} else {
 			/* Not redirecting stderr to stdout, to avoid output being littered
 			 * with the error messages. */
@@ -2643,11 +2851,18 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
 			interp = conn->ctx->config[CGI_INTERPRETER];
 			if (interp == NULL) {
 				(void)execle(prog, prog, NULL, envp);
-				mg_cry(conn, "%s: execle(%s): %s", __func__, prog,
+				mg_cry(conn,
+				       "%s: execle(%s): %s",
+				       __func__,
+				       prog,
 				       strerror(ERRNO));
 			} else {
 				(void)execle(interp, interp, prog, NULL, envp);
-				mg_cry(conn, "%s: execle(%s %s): %s", __func__, interp, prog,
+				mg_cry(conn,
+				       "%s: execle(%s %s): %s",
+				       __func__,
+				       interp,
+				       prog,
 				       strerror(ERRNO));
 			}
 		}
@@ -2658,7 +2873,8 @@ static pid_t spawn_process(struct mg_connection *conn, const char *prog,
 }
 #endif /* !NO_CGI */
 
-static int set_non_blocking_mode(SOCKET sock) {
+static int set_non_blocking_mode(SOCKET sock)
+{
 	int flags;
 
 	flags = fcntl(sock, F_GETFL, 0);
@@ -2670,8 +2886,9 @@ static int set_non_blocking_mode(SOCKET sock) {
 
 /* Write data to the IO channel - opened file descriptor, socket or SSL
  * descriptor. Return number of bytes written. */
-static int64_t push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf,
-                    int64_t len) {
+static int64_t
+push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf, int64_t len)
+{
 	int64_t sent;
 	int n, k;
 
@@ -2705,7 +2922,8 @@ static int64_t push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf,
 
 /* Read from IO channel - opened file descriptor, socket, or SSL descriptor.
  * Return negative value on error, or number of bytes read on success. */
-static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len) {
+static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
+{
 	int nread;
 	double timeout = -1;
 	struct timespec start, now;
@@ -2749,7 +2967,8 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len) {
 	return -1;
 }
 
-static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len) {
+static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
+{
 	int n, nread = 0;
 
 	while (len > 0 && conn->ctx->stop_flag == 0) {
@@ -2769,7 +2988,8 @@ static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len) {
 	return nread;
 }
 
-static void discard_unread_request_data(struct mg_connection *conn) {
+static void discard_unread_request_data(struct mg_connection *conn)
+{
 	char buf[MG_BUF_LEN];
 	int to_read, nread;
 
@@ -2805,7 +3025,8 @@ static void discard_unread_request_data(struct mg_connection *conn) {
 	}
 }
 
-int mg_read_inner(struct mg_connection *conn, void *buf, size_t len) {
+int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
+{
 	int64_t n, buffered_len, nread;
 	int64_t len64 =
 	    (int64_t)(len > INT_MAX ? INT_MAX : len); /* since the return value is
@@ -2860,7 +3081,8 @@ int mg_read_inner(struct mg_connection *conn, void *buf, size_t len) {
 	return (int)nread;
 }
 
-static char mg_getc(struct mg_connection *conn) {
+static char mg_getc(struct mg_connection *conn)
+{
 	char c;
 	if (conn == NULL) {
 		return 0;
@@ -2872,7 +3094,8 @@ static char mg_getc(struct mg_connection *conn) {
 	return c;
 }
 
-int mg_read(struct mg_connection *conn, void *buf, size_t len) {
+int mg_read(struct mg_connection *conn, void *buf, size_t len)
+{
 	if (len > INT_MAX)
 		len = INT_MAX;
 
@@ -2946,7 +3169,8 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len) {
 	return mg_read_inner(conn, buf, len);
 }
 
-int mg_write(struct mg_connection *conn, const void *buf, size_t len) {
+int mg_write(struct mg_connection *conn, const void *buf, size_t len)
+{
 	time_t now;
 	int64_t n, total, allowed;
 
@@ -2963,7 +3187,10 @@ int mg_write(struct mg_connection *conn, const void *buf, size_t len) {
 		if (allowed > (int64_t)len) {
 			allowed = len;
 		}
-		if ((total = push(NULL, conn->client.sock, conn->ssl, (const char *)buf,
+		if ((total = push(NULL,
+		                  conn->client.sock,
+		                  conn->ssl,
+		                  (const char *)buf,
 		                  (int64_t)allowed)) == allowed) {
 			buf = (char *)buf + total;
 			conn->last_throttle_bytes += total;
@@ -2971,9 +3198,11 @@ int mg_write(struct mg_connection *conn, const void *buf, size_t len) {
 				allowed = conn->throttle > (int64_t)len - total
 				              ? (int64_t)len - total
 				              : conn->throttle;
-				if ((n = push(NULL, conn->client.sock, conn->ssl,
-				              (const char *)buf, (int64_t)allowed)) !=
-				    allowed) {
+				if ((n = push(NULL,
+				              conn->client.sock,
+				              conn->ssl,
+				              (const char *)buf,
+				              (int64_t)allowed)) != allowed) {
 					break;
 				}
 				sleep(1);
@@ -2984,14 +3213,18 @@ int mg_write(struct mg_connection *conn, const void *buf, size_t len) {
 			}
 		}
 	} else {
-		total = push(NULL, conn->client.sock, conn->ssl, (const char *)buf,
+		total = push(NULL,
+		             conn->client.sock,
+		             conn->ssl,
+		             (const char *)buf,
 		             (int64_t)len);
 	}
 	return (int)total;
 }
 
 /* Alternative alloc_vprintf() for non-compliant C runtimes */
-static int alloc_vprintf2(char **buf, const char *fmt, va_list ap) {
+static int alloc_vprintf2(char **buf, const char *fmt, va_list ap)
+{
 	va_list ap_copy;
 	int size = MG_BUF_LEN;
 	int len = -1;
@@ -3014,7 +3247,8 @@ static int alloc_vprintf2(char **buf, const char *fmt, va_list ap) {
 /* Print message to buffer. If buffer is large enough to hold the message,
  * return buffer. If buffer is to small, allocate large enough buffer on heap,
  * and return allocated buffer. */
-static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap) {
+static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
+{
 	va_list ap_copy;
 	int len;
 
@@ -3047,7 +3281,8 @@ static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap) {
 	return len;
 }
 
-int mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap) {
+int mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
+{
 	char mem[MG_BUF_LEN], *buf = mem;
 	int len;
 
@@ -3061,7 +3296,8 @@ int mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap) {
 	return len;
 }
 
-int mg_printf(struct mg_connection *conn, const char *fmt, ...) {
+int mg_printf(struct mg_connection *conn, const char *fmt, ...)
+{
 	va_list ap;
 	int result;
 
@@ -3072,8 +3308,12 @@ int mg_printf(struct mg_connection *conn, const char *fmt, ...) {
 	return result;
 }
 
-int mg_url_decode(const char *src, int src_len, char *dst, int dst_len,
-                  int is_form_url_encoded) {
+int mg_url_decode(const char *src,
+                  int src_len,
+                  char *dst,
+                  int dst_len,
+                  int is_form_url_encoded)
+{
 	int i, j, a, b;
 #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
 
@@ -3097,13 +3337,22 @@ int mg_url_decode(const char *src, int src_len, char *dst, int dst_len,
 	return i >= src_len ? j : -1;
 }
 
-int mg_get_var(const char *data, size_t data_len, const char *name, char *dst,
-               size_t dst_len) {
+int mg_get_var(const char *data,
+               size_t data_len,
+               const char *name,
+               char *dst,
+               size_t dst_len)
+{
 	return mg_get_var2(data, data_len, name, dst, dst_len, 0);
 }
 
-int mg_get_var2(const char *data, size_t data_len, const char *name, char *dst,
-                size_t dst_len, size_t occurrence) {
+int mg_get_var2(const char *data,
+                size_t data_len,
+                const char *name,
+                char *dst,
+                size_t dst_len,
+                size_t occurrence)
+{
 	const char *p, *e, *s;
 	size_t name_len;
 	int len;
@@ -3152,8 +3401,11 @@ int mg_get_var2(const char *data, size_t data_len, const char *name, char *dst,
 	return len;
 }
 
-int mg_get_cookie(const char *cookie_header, const char *var_name, char *dst,
-                  size_t dst_size) {
+int mg_get_cookie(const char *cookie_header,
+                  const char *var_name,
+                  char *dst,
+                  size_t dst_size)
+{
 	const char *s, *p, *end;
 	int name_len, len = -1;
 
@@ -3192,7 +3444,8 @@ int mg_get_cookie(const char *cookie_header, const char *var_name, char *dst,
 }
 
 #if defined(USE_WEBSOCKET) || defined(USE_LUA)
-static void base64_encode(const unsigned char *src, int src_len, char *dst) {
+static void base64_encode(const unsigned char *src, int src_len, char *dst)
+{
 	static const char *b64 =
 	    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	int i, j, a, b, c;
@@ -3219,7 +3472,8 @@ static void base64_encode(const unsigned char *src, int src_len, char *dst) {
 #endif
 
 #if defined(USE_LUA)
-static unsigned char b64reverse(char letter) {
+static unsigned char b64reverse(char letter)
+{
 	if (letter >= 'A' && letter <= 'Z')
 		return letter - 'A';
 	if (letter >= 'a' && letter <= 'z')
@@ -3235,8 +3489,9 @@ static unsigned char b64reverse(char letter) {
 	return 254;     /* error */
 }
 
-static int base64_decode(const unsigned char *src, int src_len, char *dst,
-                         size_t *dst_len) {
+static int
+base64_decode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
+{
 	int i;
 	unsigned char a, b, c, d;
 
@@ -3271,7 +3526,8 @@ static int base64_decode(const unsigned char *src, int src_len, char *dst,
 }
 #endif
 
-static int is_put_or_delete_method(const struct mg_connection *conn) {
+static int is_put_or_delete_method(const struct mg_connection *conn)
+{
 	if (conn) {
 		const char *s = conn->request_info.request_method;
 		return s != NULL && (!strcmp(s, "PUT") || !strcmp(s, "DELETE") ||
@@ -3288,7 +3544,8 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
               int *is_script_ressource,     /* out: handled by a script? */
               int *is_websocket_request,    /* out: websocket connetion? */
               int *is_put_or_delete_request /* out: put/delete a file? */
-              ) {
+              )
+{
 	if (conn && conn->ctx) {
 		const char *uri = conn->request_info.uri;
 		const char *root = conn->ctx->config[DOCUMENT_ROOT];
@@ -3334,8 +3591,13 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		rewrite = conn->ctx->config[REWRITE];
 		while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
 			if ((match_len = match_prefix(a.ptr, (int)a.len, uri)) > 0) {
-				mg_snprintf(conn, filename, filename_buf_len - 1, "%.*s%s",
-				            (int)b.len, b.ptr, uri + match_len);
+				mg_snprintf(conn,
+				            filename,
+				            filename_buf_len - 1,
+				            "%.*s%s",
+				            (int)b.len,
+				            b.ptr,
+				            uri + match_len);
 				break;
 			}
 		}
@@ -3438,7 +3700,8 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
  * -1  if request is malformed
  *  0  if request is not yet fully buffered
  * >0  actual request length, including last \r\n\r\n */
-static int get_request_len(const char *buf, int buflen) {
+static int get_request_len(const char *buf, int buflen)
+{
 	const char *s, *e;
 	int len = 0;
 
@@ -3460,7 +3723,8 @@ static int get_request_len(const char *buf, int buflen) {
 }
 
 /* Convert month to the month number. Return -1 on error, or month number */
-static int get_month_index(const char *s) {
+static int get_month_index(const char *s)
+{
 	size_t i;
 
 	for (i = 0; i < ARRAY_SIZE(month_names); i++)
@@ -3470,26 +3734,52 @@ static int get_month_index(const char *s) {
 	return -1;
 }
 
-static int num_leap_years(int year) {
+static int num_leap_years(int year)
+{
 	return year / 4 - year / 100 + year / 400;
 }
 
 /* Parse UTC date-time string, and return the corresponding time_t value. */
-static time_t parse_date_string(const char *datetime) {
+static time_t parse_date_string(const char *datetime)
+{
 	static const unsigned short days_before_month[] = {
 	    0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
 	char month_str[32] = {0};
 	int second, minute, hour, day, month, year, leap_days, days;
 	time_t result = (time_t)0;
 
-	if ((sscanf(datetime, "%d/%3s/%d %d:%d:%d", &day, month_str, &year, &hour,
-	            &minute, &second) == 6) ||
-	    (sscanf(datetime, "%d %3s %d %d:%d:%d", &day, month_str, &year, &hour,
-	            &minute, &second) == 6) ||
-	    (sscanf(datetime, "%*3s, %d %3s %d %d:%d:%d", &day, month_str, &year,
-	            &hour, &minute, &second) == 6) ||
-	    (sscanf(datetime, "%d-%3s-%d %d:%d:%d", &day, month_str, &year, &hour,
-	            &minute, &second) == 6)) {
+	if ((sscanf(datetime,
+	            "%d/%3s/%d %d:%d:%d",
+	            &day,
+	            month_str,
+	            &year,
+	            &hour,
+	            &minute,
+	            &second) == 6) ||
+	    (sscanf(datetime,
+	            "%d %3s %d %d:%d:%d",
+	            &day,
+	            month_str,
+	            &year,
+	            &hour,
+	            &minute,
+	            &second) == 6) ||
+	    (sscanf(datetime,
+	            "%*3s, %d %3s %d %d:%d:%d",
+	            &day,
+	            month_str,
+	            &year,
+	            &hour,
+	            &minute,
+	            &second) == 6) ||
+	    (sscanf(datetime,
+	            "%d-%3s-%d %d:%d:%d",
+	            &day,
+	            month_str,
+	            &year,
+	            &hour,
+	            &minute,
+	            &second) == 6)) {
 		month = get_month_index(month_str);
 		if ((month >= 0) && (year > 1970)) {
 			leap_days = num_leap_years(year) - num_leap_years(1970);
@@ -3506,7 +3796,8 @@ static time_t parse_date_string(const char *datetime) {
 
 /* Protect against directory disclosure attack by removing '..',
  * excessive '/' and '\' characters */
-static void remove_double_dots_and_double_slashes(char *s) {
+static void remove_double_dots_and_double_slashes(char *s)
+{
 	char *p = s;
 
 	while (*s != '\0') {
@@ -3598,7 +3889,8 @@ static const struct {
     {".ppt", 4, "application/x-mspowerpoint"},
     {".xls", 4, "application/x-msexcel"},
     {".zip", 4, "application/x-zip-compressed"},
-    {".aac", 4,
+    {".aac",
+     4,
      "audio/aac"}, /* http://en.wikipedia.org/wiki/Advanced_Audio_Coding */
     {".aif", 4, "audio/x-aif"},
     {".m3u", 4, "audio/x-mpegurl"},
@@ -3617,7 +3909,8 @@ static const struct {
     {".m4v", 4, "video/x-m4v"},
     {NULL, 0, NULL}};
 
-const char *mg_get_builtin_mime_type(const char *path) {
+const char *mg_get_builtin_mime_type(const char *path)
+{
 	const char *ext;
 	size_t i, path_len;
 
@@ -3636,8 +3929,9 @@ const char *mg_get_builtin_mime_type(const char *path) {
 
 /* Look at the "path" extension and figure what mime type it has.
  * Store mime type in the vector. */
-static void get_mime_type(struct mg_context *ctx, const char *path,
-                          struct vec *vec) {
+static void
+get_mime_type(struct mg_context *ctx, const char *path, struct vec *vec)
+{
 	struct vec ext_vec, mime_vec;
 	const char *list, *ext;
 	size_t path_len;
@@ -3666,7 +3960,8 @@ static void get_mime_type(struct mg_context *ctx, const char *path,
 
 /* Stringify binary data. Output buffer must be twice as big as input,
  * because each byte takes 2 bytes in string representation */
-static void bin2str(char *to, const unsigned char *p, size_t len) {
+static void bin2str(char *to, const unsigned char *p, size_t len)
+{
 	static const char *hex = "0123456789abcdef";
 
 	for (; len--; p++) {
@@ -3677,7 +3972,8 @@ static void bin2str(char *to, const unsigned char *p, size_t len) {
 }
 
 /* Return stringified MD5 hash for list of strings. Buffer must be 33 bytes. */
-char *mg_md5(char buf[33], ...) {
+char *mg_md5(char buf[33], ...)
+{
 	md5_byte_t hash[16];
 	const char *p;
 	va_list ap;
@@ -3697,9 +3993,15 @@ char *mg_md5(char buf[33], ...) {
 }
 
 /* Check the user's password, return 1 if OK */
-static int check_password(const char *method, const char *ha1, const char *uri,
-                          const char *nonce, const char *nc, const char *cnonce,
-                          const char *qop, const char *response) {
+static int check_password(const char *method,
+                          const char *ha1,
+                          const char *uri,
+                          const char *nonce,
+                          const char *nc,
+                          const char *cnonce,
+                          const char *qop,
+                          const char *response)
+{
 	char ha2[32 + 1], expected_response[32 + 1];
 
 	/* Some of the parameters may be NULL */
@@ -3718,16 +4020,28 @@ static int check_password(const char *method, const char *ha1, const char *uri,
 	}
 
 	mg_md5(ha2, method, ":", uri, NULL);
-	mg_md5(expected_response, ha1, ":", nonce, ":", nc, ":", cnonce, ":", qop,
-	       ":", ha2, NULL);
+	mg_md5(expected_response,
+	       ha1,
+	       ":",
+	       nonce,
+	       ":",
+	       nc,
+	       ":",
+	       cnonce,
+	       ":",
+	       qop,
+	       ":",
+	       ha2,
+	       NULL);
 
 	return mg_strcasecmp(response, expected_response) == 0;
 }
 
 /* Use the global passwords file, if specified by auth_gpass option,
  * or search for .htpasswd in the requested directory. */
-static void open_auth_file(struct mg_connection *conn, const char *path,
-                           struct file *filep) {
+static void
+open_auth_file(struct mg_connection *conn, const char *path, struct file *filep)
+{
 	if (conn != NULL && conn->ctx != NULL) {
 		char name[PATH_MAX];
 		const char *p, *e, *gpass = conn->ctx->config[GLOBAL_PASSWORDS_FILE];
@@ -3745,7 +4059,12 @@ static void open_auth_file(struct mg_connection *conn, const char *path,
 			 * If filep is used, mg_stat() makes it appear as if auth file was
 			 * opened. */
 		} else if (mg_stat(conn, path, &file) && file.is_directory) {
-			mg_snprintf(conn, name, sizeof(name), "%s%c%s", path, '/',
+			mg_snprintf(conn,
+			            name,
+			            sizeof(name),
+			            "%s%c%s",
+			            path,
+			            '/',
 			            PASSWORDS_FILE_NAME);
 			if (!mg_fopen(conn, name, "r", filep)) {
 #ifdef DEBUG
@@ -3759,8 +4078,14 @@ static void open_auth_file(struct mg_connection *conn, const char *path,
 					break;
 				}
 			}
-			mg_snprintf(conn, name, sizeof(name), "%.*s%c%s", (int)(e - p), p,
-			            '/', PASSWORDS_FILE_NAME);
+			mg_snprintf(conn,
+			            name,
+			            sizeof(name),
+			            "%.*s%c%s",
+			            (int)(e - p),
+			            p,
+			            '/',
+			            PASSWORDS_FILE_NAME);
 			if (!mg_fopen(conn, name, "r", filep)) {
 #ifdef DEBUG
 				mg_cry(conn, "fopen(%s): %s", name, strerror(ERRNO));
@@ -3776,8 +4101,11 @@ struct ah {
 };
 
 /* Return 1 on success. Always initializes the ah structure. */
-static int parse_auth_header(struct mg_connection *conn, char *buf,
-                             size_t buf_size, struct ah *ah) {
+static int parse_auth_header(struct mg_connection *conn,
+                             char *buf,
+                             size_t buf_size,
+                             struct ah *ah)
+{
 	char *name, *value, *s;
 	const char *auth_header;
 	unsigned long nonce;
@@ -3869,7 +4197,8 @@ static int parse_auth_header(struct mg_connection *conn, char *buf,
 	return 1;
 }
 
-static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p) {
+static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p)
+{
 	char *eof;
 	size_t len;
 	char *memend;
@@ -3880,7 +4209,8 @@ static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p) {
 	if (filep->membuf != NULL && *p != NULL) {
 		memend = (char *)&filep->membuf[filep->size];
 		eof = (char *)memchr(
-		    *p, '\n',
+		    *p,
+		    '\n',
 		    memend - *p); /* Search for \n from p till the end of stream */
 		if (eof != NULL) {
 			eof += 1; /* Include \n */
@@ -3910,7 +4240,8 @@ struct read_auth_file_struct {
 };
 
 static int read_auth_file(struct file *filep,
-                          struct read_auth_file_struct *workdata) {
+                          struct read_auth_file_struct *workdata)
+{
 	char *p;
 	int is_authorized = 0;
 	struct file fp;
@@ -3948,22 +4279,27 @@ static int read_auth_file(struct file *filep,
 					mg_fclose(&fp);
 				} else {
 					mg_cry(workdata->conn,
-					       "%s: cannot open authorization file: %s", __func__,
+					       "%s: cannot open authorization file: %s",
+					       __func__,
 					       workdata->buf);
 				}
 				continue;
 			}
 			/* everything is invalid for the moment (might change in the
 			 * future) */
-			mg_cry(workdata->conn, "%s: syntax error in authorization file: %s",
-			       __func__, workdata->buf);
+			mg_cry(workdata->conn,
+			       "%s: syntax error in authorization file: %s",
+			       __func__,
+			       workdata->buf);
 			continue;
 		}
 
 		workdata->f_domain = strchr(workdata->f_user, ':');
 		if (workdata->f_domain == NULL) {
-			mg_cry(workdata->conn, "%s: syntax error in authorization file: %s",
-			       __func__, workdata->buf);
+			mg_cry(workdata->conn,
+			       "%s: syntax error in authorization file: %s",
+			       __func__,
+			       workdata->buf);
 			continue;
 		}
 		*(workdata->f_domain) = 0;
@@ -3971,8 +4307,10 @@ static int read_auth_file(struct file *filep,
 
 		workdata->f_ha1 = strchr(workdata->f_domain, ':');
 		if (workdata->f_ha1 == NULL) {
-			mg_cry(workdata->conn, "%s: syntax error in authorization file: %s",
-			       __func__, workdata->buf);
+			mg_cry(workdata->conn,
+			       "%s: syntax error in authorization file: %s",
+			       __func__,
+			       workdata->buf);
 			continue;
 		}
 		*(workdata->f_ha1) = 0;
@@ -3980,10 +4318,14 @@ static int read_auth_file(struct file *filep,
 
 		if (!strcmp(workdata->ah.user, workdata->f_user) &&
 		    !strcmp(workdata->domain, workdata->f_domain)) {
-			return check_password(
-			    workdata->conn->request_info.request_method, workdata->f_ha1,
-			    workdata->ah.uri, workdata->ah.nonce, workdata->ah.nc,
-			    workdata->ah.cnonce, workdata->ah.qop, workdata->ah.response);
+			return check_password(workdata->conn->request_info.request_method,
+			                      workdata->f_ha1,
+			                      workdata->ah.uri,
+			                      workdata->ah.nonce,
+			                      workdata->ah.nc,
+			                      workdata->ah.cnonce,
+			                      workdata->ah.qop,
+			                      workdata->ah.response);
 		}
 	}
 
@@ -3991,7 +4333,8 @@ static int read_auth_file(struct file *filep,
 }
 
 /* Authorize against the opened passwords file. Return 1 if authorized. */
-static int authorize(struct mg_connection *conn, struct file *filep) {
+static int authorize(struct mg_connection *conn, struct file *filep)
+{
 	struct read_auth_file_struct workdata;
 	char buf[MG_BUF_LEN];
 
@@ -4010,7 +4353,8 @@ static int authorize(struct mg_connection *conn, struct file *filep) {
 }
 
 /* Return 1 if request is authorised, 0 otherwise. */
-static int check_authorization(struct mg_connection *conn, const char *path) {
+static int check_authorization(struct mg_connection *conn, const char *path)
+{
 	char fname[PATH_MAX];
 	struct vec uri_vec, filename_vec;
 	const char *list;
@@ -4023,10 +4367,17 @@ static int check_authorization(struct mg_connection *conn, const char *path) {
 	list = conn->ctx->config[PROTECT_URI];
 	while ((list = next_option(list, &uri_vec, &filename_vec)) != NULL) {
 		if (!memcmp(conn->request_info.uri, uri_vec.ptr, uri_vec.len)) {
-			mg_snprintf(conn, fname, sizeof(fname), "%.*s",
-			            (int)filename_vec.len, filename_vec.ptr);
+			mg_snprintf(conn,
+			            fname,
+			            sizeof(fname),
+			            "%.*s",
+			            (int)filename_vec.len,
+			            filename_vec.ptr);
 			if (!mg_fopen(conn, fname, "r", &file)) {
-				mg_cry(conn, "%s: cannot open %s: %s", __func__, fname,
+				mg_cry(conn,
+				       "%s: cannot open %s: %s",
+				       __func__,
+				       fname,
 				       strerror(errno));
 			}
 			break;
@@ -4045,7 +4396,8 @@ static int check_authorization(struct mg_connection *conn, const char *path) {
 	return authorized;
 }
 
-static void send_authorization_request(struct mg_connection *conn) {
+static void send_authorization_request(struct mg_connection *conn)
+{
 	char date[64];
 	time_t curtime = time(NULL);
 
@@ -4063,18 +4415,22 @@ static void send_authorization_request(struct mg_connection *conn) {
 
 		gmt_time_string(date, sizeof(date), &curtime);
 
-		mg_printf(conn, "HTTP/1.1 401 Unauthorized\r\n"
-		                "Date: %s\r\n"
-		                "Connection: %s\r\n"
-		                "Content-Length: 0\r\n"
-		                "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", "
-		                "nonce=\"%lu\"\r\n\r\n",
-		          date, suggest_connection_header(conn),
-		          conn->ctx->config[AUTHENTICATION_DOMAIN], nonce);
+		mg_printf(conn,
+		          "HTTP/1.1 401 Unauthorized\r\n"
+		          "Date: %s\r\n"
+		          "Connection: %s\r\n"
+		          "Content-Length: 0\r\n"
+		          "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", "
+		          "nonce=\"%lu\"\r\n\r\n",
+		          date,
+		          suggest_connection_header(conn),
+		          conn->ctx->config[AUTHENTICATION_DOMAIN],
+		          nonce);
 	}
 }
 
-static int is_authorized_for_put(struct mg_connection *conn) {
+static int is_authorized_for_put(struct mg_connection *conn)
+{
 	if (conn) {
 		struct file file = STRUCT_FILE_INITIALIZER;
 		const char *passfile = conn->ctx->config[PUT_DELETE_PASSWORDS_FILE];
@@ -4090,8 +4446,11 @@ static int is_authorized_for_put(struct mg_connection *conn) {
 	return 0;
 }
 
-int mg_modify_passwords_file(const char *fname, const char *domain,
-                             const char *user, const char *pass) {
+int mg_modify_passwords_file(const char *fname,
+                             const char *domain,
+                             const char *user,
+                             const char *pass)
+{
 	int found, i;
 	char line[512], u[512] = "", d[512] = "", ha1[33], tmp[PATH_MAX + 8];
 	FILE *fp, *fp2;
@@ -4183,8 +4542,13 @@ int mg_modify_passwords_file(const char *fname, const char *domain,
 	return 1;
 }
 
-static SOCKET conn2(struct mg_context *ctx /* may be null */, const char *host,
-                    int port, int use_ssl, char *ebuf, size_t ebuf_len) {
+static SOCKET conn2(struct mg_context *ctx /* may be null */,
+                    const char *host,
+                    int port,
+                    int use_ssl,
+                    char *ebuf,
+                    size_t ebuf_len)
+{
 	struct sockaddr_in sain;
 	struct hostent *he;
 	SOCKET sock = INVALID_SOCKET;
@@ -4199,8 +4563,8 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */, const char *host,
 		snprintf(ebuf, ebuf_len, "%s", "SSL is not initialized");
 		/* TODO(lsm): use something threadsafe instead of gethostbyname() */
 	} else if ((he = gethostbyname(host)) == NULL) {
-		snprintf(ebuf, ebuf_len, "gethostbyname(%s): %s", host,
-		         strerror(ERRNO));
+		snprintf(
+		    ebuf, ebuf_len, "gethostbyname(%s): %s", host, strerror(ERRNO));
 	} else if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
 		snprintf(ebuf, ebuf_len, "socket(): %s", strerror(ERRNO));
 	} else {
@@ -4210,7 +4574,11 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */, const char *host,
 		sain.sin_port = htons((uint16_t)port);
 		sain.sin_addr = *(struct in_addr *)he->h_addr_list[0];
 		if (connect(sock, (struct sockaddr *)&sain, sizeof(sain)) != 0) {
-			snprintf(ebuf, ebuf_len, "connect(%s:%d): %s", host, port,
+			snprintf(ebuf,
+			         ebuf_len,
+			         "connect(%s:%d): %s",
+			         host,
+			         port,
 			         strerror(ERRNO));
 			closesocket(sock);
 			sock = INVALID_SOCKET;
@@ -4219,7 +4587,8 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */, const char *host,
 	return sock;
 }
 
-int mg_url_encode(const char *src, char *dst, size_t dst_len) {
+int mg_url_encode(const char *src, char *dst, size_t dst_len)
+{
 	static const char *dont_escape = "._-$,;~()";
 	static const char *hex = "0123456789abcdef";
 	char *pos = dst;
@@ -4243,7 +4612,8 @@ int mg_url_encode(const char *src, char *dst, size_t dst_len) {
 	return (*src == '\0') ? (int)(pos - dst) : -1;
 }
 
-static void print_dir_entry(struct de *de) {
+static void print_dir_entry(struct de *de)
+{
 	char size[64], mod[64], href[PATH_MAX];
 	struct tm *tm;
 
@@ -4255,13 +4625,22 @@ static void print_dir_entry(struct de *de) {
 		if (de->file.size < 1024) {
 			mg_snprintf(de->conn, size, sizeof(size), "%d", (int)de->file.size);
 		} else if (de->file.size < 0x100000) {
-			mg_snprintf(de->conn, size, sizeof(size), "%.1fk",
+			mg_snprintf(de->conn,
+			            size,
+			            sizeof(size),
+			            "%.1fk",
 			            (double)de->file.size / 1024.0);
 		} else if (de->file.size < 0x40000000) {
-			mg_snprintf(de->conn, size, sizeof(size), "%.1fM",
+			mg_snprintf(de->conn,
+			            size,
+			            sizeof(size),
+			            "%.1fM",
 			            (double)de->file.size / 1048576);
 		} else {
-			mg_snprintf(de->conn, size, sizeof(size), "%.1fG",
+			mg_snprintf(de->conn,
+			            size,
+			            sizeof(size),
+			            "%.1fG",
 			            (double)de->file.size / 1073741824);
 		}
 	}
@@ -4273,18 +4652,25 @@ static void print_dir_entry(struct de *de) {
 		mod[sizeof(mod) - 1] = '\0';
 	}
 	mg_url_encode(de->file_name, href, sizeof(href));
-	de->conn->num_bytes_sent += mg_printf(
-	    de->conn, "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
+	de->conn->num_bytes_sent +=
+	    mg_printf(de->conn,
+	              "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
 	              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	    de->conn->request_info.uri, href, de->file.is_directory ? "/" : "",
-	    de->file_name, de->file.is_directory ? "/" : "", mod, size);
+	              de->conn->request_info.uri,
+	              href,
+	              de->file.is_directory ? "/" : "",
+	              de->file_name,
+	              de->file.is_directory ? "/" : "",
+	              mod,
+	              size);
 }
 
 /* This function is called from send_directory() and used for
  * sorting directory entries by size, or name, or modification time.
  * On windows, __cdecl specification is needed in case if project is built
  * with __stdcall convention. qsort always requires __cdels callback. */
-static int WINCDECL compare_dir_entries(const void *p1, const void *p2) {
+static int WINCDECL compare_dir_entries(const void *p1, const void *p2)
+{
 	if (p1 && p2) {
 		const struct de *a = (const struct de *)p1, *b = (const struct de *)p2;
 		const char *query_string = a->conn->request_info.query_string;
@@ -4318,7 +4704,8 @@ static int WINCDECL compare_dir_entries(const void *p1, const void *p2) {
 	return 0;
 }
 
-static int must_hide_file(struct mg_connection *conn, const char *path) {
+static int must_hide_file(struct mg_connection *conn, const char *path)
+{
 	if (conn && conn->ctx) {
 		const char *pw_pattern = "**" PASSWORDS_FILE_NAME "$";
 		const char *pattern = conn->ctx->config[HIDE_FILES];
@@ -4329,8 +4716,11 @@ static int must_hide_file(struct mg_connection *conn, const char *path) {
 	return 0;
 }
 
-static int scan_directory(struct mg_connection *conn, const char *dir,
-                          void *data, void (*cb)(struct de *, void *)) {
+static int scan_directory(struct mg_connection *conn,
+                          const char *dir,
+                          void *data,
+                          void (*cb)(struct de *, void *))
+{
 	char path[PATH_MAX];
 	struct dirent *dp;
 	DIR *dirp;
@@ -4348,8 +4738,8 @@ static int scan_directory(struct mg_connection *conn, const char *dir,
 				continue;
 			}
 
-			mg_snprintf(conn, path, sizeof(path), "%s%c%s", dir, '/',
-			            dp->d_name);
+			mg_snprintf(
+			    conn, path, sizeof(path), "%s%c%s", dir, '/', dp->d_name);
 
 			/* If we don't memset stat structure to zero, mtime will have
 			 * garbage and strftime() will segfault later on in
@@ -4358,7 +4748,10 @@ static int scan_directory(struct mg_connection *conn, const char *dir,
 			 * http://code.google.com/p/mongoose/issues/detail?id=79 */
 			memset(&de.file, 0, sizeof(de.file));
 			if (!mg_stat(conn, path, &de.file)) {
-				mg_cry(conn, "%s: mg_stat(%s) failed: %s", __func__, path,
+				mg_cry(conn,
+				       "%s: mg_stat(%s) failed: %s",
+				       __func__,
+				       path,
 				       strerror(ERRNO));
 			}
 
@@ -4370,7 +4763,8 @@ static int scan_directory(struct mg_connection *conn, const char *dir,
 	return 1;
 }
 
-static int remove_directory(struct mg_connection *conn, const char *dir) {
+static int remove_directory(struct mg_connection *conn, const char *dir)
+{
 	char path[PATH_MAX];
 	struct dirent *dp;
 	DIR *dirp;
@@ -4388,8 +4782,8 @@ static int remove_directory(struct mg_connection *conn, const char *dir) {
 				continue;
 			}
 
-			mg_snprintf(conn, path, sizeof(path), "%s%c%s", dir, '/',
-			            dp->d_name);
+			mg_snprintf(
+			    conn, path, sizeof(path), "%s%c%s", dir, '/', dp->d_name);
 
 			/* If we don't memset stat structure to zero, mtime will have
 			 * garbage and strftime() will segfault later on in
@@ -4398,7 +4792,10 @@ static int remove_directory(struct mg_connection *conn, const char *dir) {
 			 * http://code.google.com/p/mongoose/issues/detail?id=79 */
 			memset(&de.file, 0, sizeof(de.file));
 			if (!mg_stat(conn, path, &de.file)) {
-				mg_cry(conn, "%s: mg_stat(%s) failed: %s", __func__, path,
+				mg_cry(conn,
+				       "%s: mg_stat(%s) failed: %s",
+				       __func__,
+				       path,
 				       strerror(ERRNO));
 			}
 			if (de.file.modification_time) {
@@ -4424,7 +4821,8 @@ struct dir_scan_data {
 };
 
 /* Behaves like realloc(), but frees original pointer on failure */
-static void *realloc2(void *ptr, size_t size) {
+static void *realloc2(void *ptr, size_t size)
+{
 	void *new_ptr = mg_realloc(ptr, size);
 	if (new_ptr == NULL) {
 		mg_free(ptr);
@@ -4432,7 +4830,8 @@ static void *realloc2(void *ptr, size_t size) {
 	return new_ptr;
 }
 
-static void dir_scan_callback(struct de *de, void *data) {
+static void dir_scan_callback(struct de *de, void *data)
+{
 	struct dir_scan_data *dsd = (struct dir_scan_data *)data;
 
 	if (dsd->entries == NULL || dsd->num_entries >= dsd->arr_size) {
@@ -4452,15 +4851,18 @@ static void dir_scan_callback(struct de *de, void *data) {
 }
 
 static void handle_directory_request(struct mg_connection *conn,
-                                     const char *dir) {
+                                     const char *dir)
+{
 	int i, sort_direction;
 	struct dir_scan_data data = {NULL, 0, 128};
 	char date[64];
 	time_t curtime = time(NULL);
 
 	if (!scan_directory(conn, dir, &data, dir_scan_callback)) {
-		send_http_error(conn, 500,
-		                "Error: Cannot open directory\nopendir(%s): %s", dir,
+		send_http_error(conn,
+		                500,
+		                "Error: Cannot open directory\nopendir(%s): %s",
+		                dir,
 		                strerror(ERRNO));
 		return;
 	}
@@ -4476,32 +4878,44 @@ static void handle_directory_request(struct mg_connection *conn,
 	                     : 'd';
 
 	conn->must_close = 1;
-	mg_printf(conn, "HTTP/1.1 200 OK\r\n"
-	                "Date: %s\r\n"
-	                "Connection: close\r\n"
-	                "Content-Type: text/html; charset=utf-8\r\n\r\n",
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Date: %s\r\n"
+	          "Connection: close\r\n"
+	          "Content-Type: text/html; charset=utf-8\r\n\r\n",
 	          date);
 
-	conn->num_bytes_sent += mg_printf(
-	    conn, "<html><head><title>Index of %s</title>"
-	          "<style>th {text-align: left;}</style></head>"
-	          "<body><h1>Index of %s</h1><pre><table cellpadding=\"0\">"
-	          "<tr><th><a href=\"?n%c\">Name</a></th>"
-	          "<th><a href=\"?d%c\">Modified</a></th>"
-	          "<th><a href=\"?s%c\">Size</a></th></tr>"
-	          "<tr><td colspan=\"3\"><hr></td></tr>",
-	    conn->request_info.uri, conn->request_info.uri, sort_direction,
-	    sort_direction, sort_direction);
+	conn->num_bytes_sent +=
+	    mg_printf(conn,
+	              "<html><head><title>Index of %s</title>"
+	              "<style>th {text-align: left;}</style></head>"
+	              "<body><h1>Index of %s</h1><pre><table cellpadding=\"0\">"
+	              "<tr><th><a href=\"?n%c\">Name</a></th>"
+	              "<th><a href=\"?d%c\">Modified</a></th>"
+	              "<th><a href=\"?s%c\">Size</a></th></tr>"
+	              "<tr><td colspan=\"3\"><hr></td></tr>",
+	              conn->request_info.uri,
+	              conn->request_info.uri,
+	              sort_direction,
+	              sort_direction,
+	              sort_direction);
 
 	/* Print first entry - link to a parent directory */
 	conn->num_bytes_sent +=
-	    mg_printf(conn, "<tr><td><a href=\"%s%s\">%s</a></td>"
-	                    "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	              conn->request_info.uri, "..", "Parent directory", "-", "-");
+	    mg_printf(conn,
+	              "<tr><td><a href=\"%s%s\">%s</a></td>"
+	              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
+	              conn->request_info.uri,
+	              "..",
+	              "Parent directory",
+	              "-",
+	              "-");
 
 	/* Sort and print directory entries */
 	if (data.entries != NULL) {
-		qsort(data.entries, (size_t)data.num_entries, sizeof(data.entries[0]),
+		qsort(data.entries,
+		      (size_t)data.num_entries,
+		      sizeof(data.entries[0]),
 		      compare_dir_entries);
 		for (i = 0; i < data.num_entries; i++) {
 			print_dir_entry(&data.entries[i]);
@@ -4515,8 +4929,11 @@ static void handle_directory_request(struct mg_connection *conn,
 }
 
 /* Send len bytes from the opened file to the client. */
-static void send_file_data(struct mg_connection *conn, struct file *filep,
-                           int64_t offset, int64_t len) {
+static void send_file_data(struct mg_connection *conn,
+                           struct file *filep,
+                           int64_t offset,
+                           int64_t len)
+{
 	char buf[MG_BUF_LEN];
 	int to_read, num_read, num_written;
 
@@ -4562,24 +4979,31 @@ static void send_file_data(struct mg_connection *conn, struct file *filep,
 	}
 }
 
-static int parse_range_header(const char *header, int64_t *a, int64_t *b) {
+static int parse_range_header(const char *header, int64_t *a, int64_t *b)
+{
 	return sscanf(header, "bytes=%" INT64_FMT "-%" INT64_FMT, a, b);
 }
 
-static void construct_etag(char *buf, size_t buf_len,
-                           const struct file *filep) {
+static void construct_etag(char *buf, size_t buf_len, const struct file *filep)
+{
 	if (filep)
-		snprintf(buf, buf_len, "\"%lx.%" INT64_FMT "\"",
-		         (unsigned long)filep->modification_time, filep->size);
+		snprintf(buf,
+		         buf_len,
+		         "\"%lx.%" INT64_FMT "\"",
+		         (unsigned long)filep->modification_time,
+		         filep->size);
 }
 
-static void fclose_on_exec(struct file *filep, struct mg_connection *conn) {
+static void fclose_on_exec(struct file *filep, struct mg_connection *conn)
+{
 	if (filep != NULL && filep->fp != NULL) {
 #ifdef _WIN32
 		(void)conn; /* Unused. */
 #else
 		if (fcntl(fileno(filep->fp), F_SETFD, FD_CLOEXEC) != 0) {
-			mg_cry(conn, "%s: fcntl(F_SETFD FD_CLOEXEC) failed: %s", __func__,
+			mg_cry(conn,
+			       "%s: fcntl(F_SETFD FD_CLOEXEC) failed: %s",
+			       __func__,
 			       strerror(ERRNO));
 		}
 #endif
@@ -4587,7 +5011,9 @@ static void fclose_on_exec(struct file *filep, struct mg_connection *conn) {
 }
 
 static void handle_static_file_request(struct mg_connection *conn,
-                                       const char *path, struct file *filep) {
+                                       const char *path,
+                                       struct file *filep)
+{
 	char date[64], lm[64], etag[64], range[64];
 	const char *msg = "OK", *hdr;
 	time_t curtime = time(NULL);
@@ -4616,8 +5042,11 @@ static void handle_static_file_request(struct mg_connection *conn,
 	}
 
 	if (!mg_fopen(conn, path, "rb", filep)) {
-		send_http_error(conn, 500, "Error: Cannot open file\nfopen(%s): %s",
-		                path, strerror(ERRNO));
+		send_http_error(conn,
+		                500,
+		                "Error: Cannot open file\nfopen(%s): %s",
+		                path,
+		                strerror(ERRNO));
 		return;
 	}
 
@@ -4632,17 +5061,23 @@ static void handle_static_file_request(struct mg_connection *conn,
 		 * file (since the range is specified in the uncompressed space) */
 		if (filep->gzipped) {
 			send_http_error(
-			    conn, 501, "%s",
+			    conn,
+			    501,
+			    "%s",
 			    "Error: Range requests in gzipped files are not supported");
 			mg_fclose(filep);
 			return;
 		}
 		conn->status_code = 206;
 		cl = n == 2 ? (r2 > cl ? cl : r2) - r1 + 1 : cl - r1;
-		mg_snprintf(conn, range, sizeof(range),
+		mg_snprintf(conn,
+		            range,
+		            sizeof(range),
 		            "Content-Range: bytes "
 		            "%" INT64_FMT "-%" INT64_FMT "/%" INT64_FMT "\r\n",
-		            r1, r1 + cl - 1, filep->size);
+		            r1,
+		            r1 + cl - 1,
+		            filep->size);
 		msg = "Partial Content";
 	}
 
@@ -4665,19 +5100,31 @@ static void handle_static_file_request(struct mg_connection *conn,
 	gmt_time_string(lm, sizeof(lm), &filep->modification_time);
 	construct_etag(etag, sizeof(etag), filep);
 
-	(void)mg_printf(conn, "HTTP/1.1 %d %s\r\n"
-	                      "%s%s%s"
-	                      "Date: %s\r\n"
-	                      "Last-Modified: %s\r\n"
-	                      "Etag: %s\r\n"
-	                      "Content-Type: %.*s\r\n"
-	                      "Content-Length: %" INT64_FMT "\r\n"
-	                      "Connection: %s\r\n"
-	                      "Accept-Ranges: bytes\r\n"
-	                      "%s%s\r\n",
-	                conn->status_code, msg, cors1, cors2, cors3, date, lm, etag,
-	                (int)mime_vec.len, mime_vec.ptr, cl,
-	                suggest_connection_header(conn), range, encoding);
+	(void)mg_printf(conn,
+	                "HTTP/1.1 %d %s\r\n"
+	                "%s%s%s"
+	                "Date: %s\r\n"
+	                "Last-Modified: %s\r\n"
+	                "Etag: %s\r\n"
+	                "Content-Type: %.*s\r\n"
+	                "Content-Length: %" INT64_FMT "\r\n"
+	                "Connection: %s\r\n"
+	                "Accept-Ranges: bytes\r\n"
+	                "%s%s\r\n",
+	                conn->status_code,
+	                msg,
+	                cors1,
+	                cors2,
+	                cors3,
+	                date,
+	                lm,
+	                etag,
+	                (int)mime_vec.len,
+	                mime_vec.ptr,
+	                cl,
+	                suggest_connection_header(conn),
+	                range,
+	                encoding);
 
 	if (strcmp(conn->request_info.request_method, "HEAD") != 0) {
 		send_file_data(conn, filep, r1, cl);
@@ -4685,7 +5132,8 @@ static void handle_static_file_request(struct mg_connection *conn,
 	mg_fclose(filep);
 }
 
-void mg_send_file(struct mg_connection *conn, const char *path) {
+void mg_send_file(struct mg_connection *conn, const char *path)
+{
 	struct file file = STRUCT_FILE_INITIALIZER;
 	if (mg_stat(conn, path, &file)) {
 		if (file.is_directory) {
@@ -4695,8 +5143,8 @@ void mg_send_file(struct mg_connection *conn, const char *path) {
 			                   "yes")) {
 				handle_directory_request(conn, path);
 			} else {
-				send_http_error(conn, 403, "%s",
-				                "Error: Directory listing denied");
+				send_http_error(
+				    conn, 403, "%s", "Error: Directory listing denied");
 			}
 		} else {
 			handle_static_file_request(conn, path, &file);
@@ -4708,7 +5156,8 @@ void mg_send_file(struct mg_connection *conn, const char *path) {
 
 /* Parse HTTP headers from the given buffer, advance buffer to the point
  * where parsing stopped. */
-static void parse_http_headers(char **buf, struct mg_request_info *ri) {
+static void parse_http_headers(char **buf, struct mg_request_info *ri)
+{
 	int i;
 
 	if (!ri)
@@ -4723,7 +5172,8 @@ static void parse_http_headers(char **buf, struct mg_request_info *ri) {
 	}
 }
 
-static int is_valid_http_method(const char *method) {
+static int is_valid_http_method(const char *method)
+{
 	return !strcmp(method, "GET") || !strcmp(method, "POST") ||
 	       !strcmp(method, "HEAD") || !strcmp(method, "CONNECT") ||
 	       !strcmp(method, "PUT") || !strcmp(method, "DELETE") ||
@@ -4734,7 +5184,8 @@ static int is_valid_http_method(const char *method) {
 /* Parse HTTP request, fill in mg_request_info structure.
  * This function modifies the buffer by NUL-terminating
  * HTTP request components, header names and header values. */
-static int parse_http_message(char *buf, int len, struct mg_request_info *ri) {
+static int parse_http_message(char *buf, int len, struct mg_request_info *ri)
+{
 	int is_request, request_length = get_request_len(buf, len);
 	if (request_length > 0) {
 		if (!ri)
@@ -4776,8 +5227,9 @@ static int parse_http_message(char *buf, int len, struct mg_request_info *ri) {
  * buffer (which marks the end of HTTP request). Buffer buf may already
  * have some data. The length of the data is stored in nread.
  * Upon every read operation, increase nread by the number of bytes read. */
-static int read_request(FILE *fp, struct mg_connection *conn, char *buf,
-                        int bufsiz, int *nread) {
+static int read_request(
+    FILE *fp, struct mg_connection *conn, char *buf, int bufsiz, int *nread)
+{
 	int request_len, n = 0;
 	struct timespec last_action_time = {0, 0};
 	double request_timeout;
@@ -4815,8 +5267,11 @@ static int read_request(FILE *fp, struct mg_connection *conn, char *buf,
 /* For given directory path, substitute it to valid index file.
  * Return 1 if index file has been found, 0 if not found.
  * If the file is found, it's stats is returned in stp. */
-static int substitute_index_file(struct mg_connection *conn, char *path,
-                                 size_t path_len, struct file *filep) {
+static int substitute_index_file(struct mg_connection *conn,
+                                 char *path,
+                                 size_t path_len,
+                                 struct file *filep)
+{
 	if (conn && conn->ctx) {
 		const char *list = conn->ctx->config[INDEX_FILES];
 		struct file file = STRUCT_FILE_INITIALIZER;
@@ -4863,7 +5318,8 @@ static int substitute_index_file(struct mg_connection *conn, char *path,
 
 /* Return True if we should reply 304 Not Modified. */
 static int is_not_modified(const struct mg_connection *conn,
-                           const struct file *filep) {
+                           const struct file *filep)
+{
 	char etag[64];
 	const char *ims = mg_get_header(conn, "If-Modified-Since");
 	const char *inm = mg_get_header(conn, "If-None-Match");
@@ -4874,8 +5330,9 @@ static int is_not_modified(const struct mg_connection *conn,
 	       (ims != NULL && filep->modification_time <= parse_date_string(ims));
 }
 
-static int forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock,
-                             SSL *ssl) {
+static int
+forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
+{
 	const char *expect, *body;
 	char buf[MG_BUF_LEN];
 	int to_read, nread, success = 0;
@@ -4893,13 +5350,13 @@ static int forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock,
 
 	if (conn->content_len == -1 && !conn->is_chunked) {
 		/* Content length is not specified by the client. */
-		send_http_error(conn, 411, "%s",
-		                "Error: Client did not specify content length");
+		send_http_error(
+		    conn, 411, "%s", "Error: Client did not specify content length");
 	} else if ((expect != NULL) &&
 	           (mg_strcasecmp(expect, "100-continue") != 0)) {
 		/* Client sent an "Expect: xyz" header and xyz is not 100-continue. */
-		send_http_error(conn, 417, "Error: Can not fulfill expectation %s",
-		                expect);
+		send_http_error(
+		    conn, 417, "Error: Can not fulfill expectation %s", expect);
 	} else {
 		if (expect != NULL) {
 			(void)mg_printf(conn, "%s", "HTTP/1.1 100 Continue\r\n\r\n");
@@ -4973,12 +5430,13 @@ struct cgi_env_block {
 };
 
 static char *addenv(struct cgi_env_block *block,
-                    PRINTF_FORMAT_STRING(const char *fmt), ...)
-    PRINTF_ARGS(2, 3);
+                    PRINTF_FORMAT_STRING(const char *fmt),
+                    ...) PRINTF_ARGS(2, 3);
 
 /* Append VARIABLE=VALUE\0 string to the buffer, and add a respective
  * pointer into the vars array. */
-static char *addenv(struct cgi_env_block *block, const char *fmt, ...) {
+static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
+{
 	int n, space;
 	char *added;
 	va_list ap;
@@ -5008,7 +5466,9 @@ static char *addenv(struct cgi_env_block *block, const char *fmt, ...) {
 		/* Bump up used length counter. Include \0 terminator */
 		block->len += n + 1;
 	} else {
-		mg_cry(block->conn, "%s: CGI env buffer truncated for [%s]", __func__,
+		mg_cry(block->conn,
+		       "%s: CGI env buffer truncated for [%s]",
+		       __func__,
 		       fmt);
 	}
 
@@ -5017,7 +5477,8 @@ static char *addenv(struct cgi_env_block *block, const char *fmt, ...) {
 
 static void prepare_cgi_environment(struct mg_connection *conn,
                                     const char *prog,
-                                    struct cgi_env_block *blk) {
+                                    struct cgi_env_block *blk)
+{
 	const char *s;
 	struct vec var_vec;
 	char *p, src_addr[IP_ADDR_STR_LEN];
@@ -5049,7 +5510,8 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 	addenv(blk, "REQUEST_URI=%s", conn->request_info.uri);
 
 	/* SCRIPT_NAME */
-	addenv(blk, "SCRIPT_NAME=%.*s",
+	addenv(blk,
+	       "SCRIPT_NAME=%.*s",
 	       (int)strlen(conn->request_info.uri) -
 	           ((conn->path_info == NULL) ? 0 : (int)strlen(conn->path_info)),
 	       conn->request_info.uri);
@@ -5058,7 +5520,9 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 	if (conn->path_info == NULL) {
 		addenv(blk, "PATH_TRANSLATED=%s", conn->ctx->config[DOCUMENT_ROOT]);
 	} else {
-		addenv(blk, "PATH_TRANSLATED=%s%s", conn->ctx->config[DOCUMENT_ROOT],
+		addenv(blk,
+		       "PATH_TRANSLATED=%s%s",
+		       conn->ctx->config[DOCUMENT_ROOT],
 		       conn->path_info);
 	}
 
@@ -5116,7 +5580,9 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 
 	/* Add all headers as HTTP_* variables */
 	for (i = 0; i < conn->request_info.num_headers; i++) {
-		p = addenv(blk, "HTTP_%s=%s", conn->request_info.http_headers[i].name,
+		p = addenv(blk,
+		           "HTTP_%s=%s",
+		           conn->request_info.http_headers[i].name,
 		           conn->request_info.http_headers[i].value);
 
 		/* Convert variable name into uppercase, and change - to _ */
@@ -5146,7 +5612,8 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 		return;
 }
 
-static void handle_cgi_request(struct mg_connection *conn, const char *prog) {
+static void handle_cgi_request(struct mg_connection *conn, const char *prog)
+{
 	char *buf;
 	size_t buflen;
 	int headers_len, data_len, i, fdin[2] = {0, 0}, fdout[2] = {0, 0};
@@ -5177,15 +5644,18 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog) {
 	}
 
 	if (pipe(fdin) != 0 || pipe(fdout) != 0) {
-		send_http_error(conn, 500, "Error: Cannot create CGI pipe: %s",
-		                strerror(ERRNO));
+		send_http_error(
+		    conn, 500, "Error: Cannot create CGI pipe: %s", strerror(ERRNO));
 		goto done;
 	}
 
 	pid = spawn_process(conn, p, blk.buf, blk.vars, fdin[0], fdout[1], dir);
 	if (pid == (pid_t)-1) {
-		send_http_error(conn, 500, "Error: Cannot spawn CGI process [%s]: %s",
-		                prog, strerror(ERRNO));
+		send_http_error(conn,
+		                500,
+		                "Error: Cannot spawn CGI process [%s]: %s",
+		                prog,
+		                strerror(ERRNO));
 		goto done;
 	}
 
@@ -5204,12 +5674,16 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog) {
 	fdin[0] = fdout[1] = -1;
 
 	if ((in = fdopen(fdin[1], "wb")) == NULL) {
-		send_http_error(conn, 500, "Error: CGI can not open fdin\nfopen: %s",
+		send_http_error(conn,
+		                500,
+		                "Error: CGI can not open fdin\nfopen: %s",
 		                strerror(ERRNO));
 		goto done;
 	}
 	if ((out = fdopen(fdout[0], "rb")) == NULL) {
-		send_http_error(conn, 500, "Error: CGI can not open fdout\nfopen: %s",
+		send_http_error(conn,
+		                500,
+		                "Error: CGI can not open fdout\nfopen: %s",
 		                strerror(ERRNO));
 		goto done;
 	}
@@ -5240,17 +5714,21 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog) {
 	data_len = 0;
 	buf = (char *)mg_malloc(buflen);
 	if (buf == NULL) {
-		send_http_error(conn, 500,
+		send_http_error(conn,
+		                500,
 		                "Error: Not enough memory for CGI buffer (%u bytes)",
 		                (unsigned int)buflen);
 		goto done;
 	}
 	headers_len = read_request(out, conn, buf, (int)buflen, &data_len);
 	if (headers_len <= 0) {
-		send_http_error(conn, 500,
+		send_http_error(conn,
+		                500,
 		                "Error: CGI program sent malformed or too big "
 		                "(>%u bytes) HTTP headers: [%.*s]",
-		                (unsigned)buflen, data_len, buf);
+		                (unsigned)buflen,
+		                data_len,
+		                buf);
 		goto done;
 	}
 	pbuf = buf;
@@ -5279,7 +5757,9 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog) {
 
 	/* Send headers */
 	for (i = 0; i < ri.num_headers; i++) {
-		mg_printf(conn, "%s: %s\r\n", ri.http_headers[i].name,
+		mg_printf(conn,
+		          "%s: %s\r\n",
+		          ri.http_headers[i].name,
 		          ri.http_headers[i].value);
 	}
 	mg_write(conn, "\r\n", 2);
@@ -5332,7 +5812,8 @@ done:
  * Return -1  for if the path is too long.
  * Return -2  if path can not be created.
 */
-static int put_dir(struct mg_connection *conn, const char *path) {
+static int put_dir(struct mg_connection *conn, const char *path)
+{
 	char buf[PATH_MAX];
 	const char *s, *p;
 	struct file file = STRUCT_FILE_INITIALIZER;
@@ -5365,7 +5846,8 @@ static int put_dir(struct mg_connection *conn, const char *path) {
 	return res;
 }
 
-static void mkcol(struct mg_connection *conn, const char *path) {
+static void mkcol(struct mg_connection *conn, const char *path)
+{
 	int rc, body_len;
 	struct de de;
 	char date[64];
@@ -5378,20 +5860,23 @@ static void mkcol(struct mg_connection *conn, const char *path) {
 
 	memset(&de.file, 0, sizeof(de.file));
 	if (!mg_stat(conn, path, &de.file)) {
-		mg_cry(conn, "%s: mg_stat(%s) failed: %s", __func__, path,
+		mg_cry(conn,
+		       "%s: mg_stat(%s) failed: %s",
+		       __func__,
+		       path,
 		       strerror(ERRNO));
 	}
 
 	if (de.file.modification_time) {
-		send_http_error(conn, 405, "Error: mkcol(%s): %s", path,
-		                strerror(ERRNO));
+		send_http_error(
+		    conn, 405, "Error: mkcol(%s): %s", path, strerror(ERRNO));
 		return;
 	}
 
 	body_len = conn->data_len - conn->request_len;
 	if (body_len > 0) {
-		send_http_error(conn, 415, "Error: mkcol(%s): %s", path,
-		                strerror(ERRNO));
+		send_http_error(
+		    conn, 415, "Error: mkcol(%s): %s", path, strerror(ERRNO));
 		return;
 	}
 
@@ -5400,25 +5885,29 @@ static void mkcol(struct mg_connection *conn, const char *path) {
 	if (rc == 0) {
 		conn->status_code = 201;
 		gmt_time_string(date, sizeof(date), &curtime);
-		mg_printf(conn, "HTTP/1.1 %d Created\r\nDate: %s\r\nContent-Length: "
-		                "0\r\nConnection: %s\r\n\r\n",
-		          conn->status_code, date, suggest_connection_header(conn));
+		mg_printf(conn,
+		          "HTTP/1.1 %d Created\r\nDate: %s\r\nContent-Length: "
+		          "0\r\nConnection: %s\r\n\r\n",
+		          conn->status_code,
+		          date,
+		          suggest_connection_header(conn));
 	} else if (rc == -1) {
 		if (errno == EEXIST)
-			send_http_error(conn, 405, "Error:mkcol(%s): %s", path,
-			                strerror(ERRNO));
+			send_http_error(
+			    conn, 405, "Error:mkcol(%s): %s", path, strerror(ERRNO));
 		else if (errno == EACCES)
-			send_http_error(conn, 403, "Error: mkcol(%s): %s", path,
-			                strerror(ERRNO));
+			send_http_error(
+			    conn, 403, "Error: mkcol(%s): %s", path, strerror(ERRNO));
 		else if (errno == ENOENT)
-			send_http_error(conn, 409, "Error: mkcol(%s): %s", path,
-			                strerror(ERRNO));
+			send_http_error(
+			    conn, 409, "Error: mkcol(%s): %s", path, strerror(ERRNO));
 		else
 			send_http_error(conn, 500, "fopen(%s): %s", path, strerror(ERRNO));
 	}
 }
 
-static void put_file(struct mg_connection *conn, const char *path) {
+static void put_file(struct mg_connection *conn, const char *path)
+{
 	struct file file = STRUCT_FILE_INITIALIZER;
 	const char *range;
 	int64_t r1, r2;
@@ -5445,7 +5934,8 @@ static void put_file(struct mg_connection *conn, const char *path) {
 			if (file.modification_time == 0) {
 				/* This is an "in-memory" file, that can not be replaced */
 				send_http_error(
-				    conn, 405,
+				    conn,
+				    405,
 				    "Error: Put not possible\nReplacing %s is not supported",
 				    path);
 				return;
@@ -5458,7 +5948,8 @@ static void put_file(struct mg_connection *conn, const char *path) {
 				rc = 1;
 			} else {
 				send_http_error(
-				    conn, 403,
+				    conn,
+				    403,
 				    "Error: Put not possible\nReplacing %s is not allowed",
 				    path);
 				return;
@@ -5473,12 +5964,14 @@ static void put_file(struct mg_connection *conn, const char *path) {
 	if (rc == 0) {
 		/* put_dir returns 0 if path is a directory */
 		gmt_time_string(date, sizeof(date), &curtime);
-		mg_printf(conn, "HTTP/1.1 %d %s\r\n"
-		                "Date: %s\r\n"
-		                "Content-Length: 0\r\n"
-		                "Connection: %s\r\n\r\n",
+		mg_printf(conn,
+		          "HTTP/1.1 %d %s\r\n"
+		          "Date: %s\r\n"
+		          "Content-Length: 0\r\n"
+		          "Connection: %s\r\n\r\n",
 		          conn->status_code,
-		          mg_get_response_code_text(conn->status_code, NULL), date,
+		          mg_get_response_code_text(conn->status_code, NULL),
+		          date,
 		          suggest_connection_header(conn));
 
 		/* Request to create a directory has been fulfilled successfully.
@@ -5488,24 +5981,32 @@ static void put_file(struct mg_connection *conn, const char *path) {
 
 	if (rc == -1) {
 		/* put_dir returns -1 if the path is too long */
-		send_http_error(conn, 414, "Error: Path too long\nput_dir(%s): %s",
-		                path, strerror(ERRNO));
+		send_http_error(conn,
+		                414,
+		                "Error: Path too long\nput_dir(%s): %s",
+		                path,
+		                strerror(ERRNO));
 		return;
 	}
 
 	if (rc == -2) {
 		/* put_dir returns -2 if the directory can not be created */
-		send_http_error(conn, 500,
+		send_http_error(conn,
+		                500,
 		                "Error: Can not create directory\nput_dir(%s): %s",
-		                path, strerror(ERRNO));
+		                path,
+		                strerror(ERRNO));
 		return;
 	}
 
 	/* A file should be created or overwritten. */
 	if (!mg_fopen(conn, path, "wb+", &file) || file.fp == NULL) {
 		mg_fclose(&file);
-		send_http_error(conn, 500, "Error: Can not create file\nfopen(%s): %s",
-		                path, strerror(ERRNO));
+		send_http_error(conn,
+		                500,
+		                "Error: Can not create file\nfopen(%s): %s",
+		                path,
+		                strerror(ERRNO));
 		return;
 	}
 
@@ -5525,24 +6026,27 @@ static void put_file(struct mg_connection *conn, const char *path) {
 	}
 
 	gmt_time_string(date, sizeof(date), &curtime);
-	mg_printf(conn, "HTTP/1.1 %d %s\r\n"
-	                "Date: %s\r\n"
-	                "Content-Length: 0\r\n"
-	                "Connection: %s\r\n\r\n",
+	mg_printf(conn,
+	          "HTTP/1.1 %d %s\r\n"
+	          "Date: %s\r\n"
+	          "Content-Length: 0\r\n"
+	          "Connection: %s\r\n\r\n",
 	          conn->status_code,
-	          mg_get_response_code_text(conn->status_code, NULL), date,
+	          mg_get_response_code_text(conn->status_code, NULL),
+	          date,
 	          suggest_connection_header(conn));
 
 	mg_fclose(&file);
 }
 
-static void delete_file(struct mg_connection *conn, const char *path) {
+static void delete_file(struct mg_connection *conn, const char *path)
+{
 	struct de de;
 	memset(&de.file, 0, sizeof(de.file));
 	if (!mg_stat(conn, path, &de.file)) {
 		/* mg_stat returns 0 if the file does not exist */
-		send_http_error(conn, 404,
-		                "Error: Cannot delete file\nFile %s not found", path);
+		send_http_error(
+		    conn, 404, "Error: Cannot delete file\nFile %s not found", path);
 		return;
 	}
 
@@ -5550,8 +6054,10 @@ static void delete_file(struct mg_connection *conn, const char *path) {
 		/* mg_stat returns != 0 and modification_time == 0
 		 * if the file is cached in memory */
 		send_http_error(
-		    conn, 405,
-		    "Error: Delete not possible\nDeleting %s is not supported", path);
+		    conn,
+		    405,
+		    "Error: Delete not possible\nDeleting %s is not supported",
+		    path);
 		return;
 	}
 
@@ -5568,7 +6074,9 @@ static void delete_file(struct mg_connection *conn, const char *path) {
 	if (access(path, W_OK) != 0) {
 		/* File is read only */
 		send_http_error(
-		    conn, 403, "Error: Delete not possible\nDeleting %s is not allowed",
+		    conn,
+		    403,
+		    "Error: Delete not possible\nDeleting %s is not allowed",
 		    path);
 		return;
 	}
@@ -5579,16 +6087,22 @@ static void delete_file(struct mg_connection *conn, const char *path) {
 		send_http_error(conn, 204, "%s", "");
 	} else {
 		/* Delete not successful (file locked). */
-		send_http_error(conn, 423, "Error: Cannot delete file\nremove(%s): %s",
-		                path, strerror(ERRNO));
+		send_http_error(conn,
+		                423,
+		                "Error: Cannot delete file\nremove(%s): %s",
+		                path,
+		                strerror(ERRNO));
 	}
 }
 
-static void send_ssi_file(struct mg_connection *, const char *, struct file *,
-                          int);
+static void
+send_ssi_file(struct mg_connection *, const char *, struct file *, int);
 
-static void do_ssi_include(struct mg_connection *conn, const char *ssi,
-                           char *tag, int include_level) {
+static void do_ssi_include(struct mg_connection *conn,
+                           const char *ssi,
+                           char *tag,
+                           int include_level)
+{
 	char file_name[MG_BUF_LEN], path[512], *p;
 	struct file file = STRUCT_FILE_INITIALIZER;
 	size_t len;
@@ -5602,8 +6116,13 @@ static void do_ssi_include(struct mg_connection *conn, const char *ssi,
 	if (sscanf(tag, " virtual=\"%511[^\"]\"", file_name) == 1) {
 		/* File name is relative to the webserver root */
 		file_name[511] = 0;
-		(void)mg_snprintf(conn, path, sizeof(path), "%s%c%s",
-		                  conn->ctx->config[DOCUMENT_ROOT], '/', file_name);
+		(void)mg_snprintf(conn,
+		                  path,
+		                  sizeof(path),
+		                  "%s%c%s",
+		                  conn->ctx->config[DOCUMENT_ROOT],
+		                  '/',
+		                  file_name);
 	} else if (sscanf(tag, " abspath=\"%511[^\"]\"", file_name) == 1) {
 		/* File name is relative to the webserver working directory
 		 * or it is absolute system path */
@@ -5618,15 +6137,18 @@ static void do_ssi_include(struct mg_connection *conn, const char *ssi,
 			p[1] = '\0';
 		}
 		len = strlen(path);
-		(void)mg_snprintf(conn, path + len, sizeof(path) - len, "%s",
-		                  file_name);
+		(void)mg_snprintf(
+		    conn, path + len, sizeof(path) - len, "%s", file_name);
 	} else {
 		mg_cry(conn, "Bad SSI #include: [%s]", tag);
 		return;
 	}
 
 	if (!mg_fopen(conn, path, "rb", &file)) {
-		mg_cry(conn, "Cannot open SSI #include: [%s]: fopen(%s): %s", tag, path,
+		mg_cry(conn,
+		       "Cannot open SSI #include: [%s]: fopen(%s): %s",
+		       tag,
+		       path,
 		       strerror(ERRNO));
 	} else {
 		fclose_on_exec(&file, conn);
@@ -5642,7 +6164,8 @@ static void do_ssi_include(struct mg_connection *conn, const char *ssi,
 }
 
 #if !defined(NO_POPEN)
-static void do_ssi_exec(struct mg_connection *conn, char *tag) {
+static void do_ssi_exec(struct mg_connection *conn, char *tag)
+{
 	char cmd[1024] = "";
 	struct file file = STRUCT_FILE_INITIALIZER;
 
@@ -5660,7 +6183,8 @@ static void do_ssi_exec(struct mg_connection *conn, char *tag) {
 }
 #endif /* !NO_POPEN */
 
-static int mg_fgetc(struct file *filep, int offset) {
+static int mg_fgetc(struct file *filep, int offset)
+{
 	if (filep == NULL)
 		return EOF;
 	if (filep->membuf != NULL && offset >= 0 && offset < filep->size) {
@@ -5672,8 +6196,11 @@ static int mg_fgetc(struct file *filep, int offset) {
 	}
 }
 
-static void send_ssi_file(struct mg_connection *conn, const char *path,
-                          struct file *filep, int include_level) {
+static void send_ssi_file(struct mg_connection *conn,
+                          const char *path,
+                          struct file *filep,
+                          int include_level)
+{
 	char buf[MG_BUF_LEN];
 	int ch, offset, len, in_ssi_tag;
 
@@ -5702,9 +6229,11 @@ static void send_ssi_file(struct mg_connection *conn, const char *path,
 					do_ssi_exec(conn, buf + 9);
 #endif /* !NO_POPEN */
 				} else {
-					mg_cry(conn, "%s: unknown SSI "
-					             "command: \"%s\"",
-					       path, buf);
+					mg_cry(conn,
+					       "%s: unknown SSI "
+					       "command: \"%s\"",
+					       path,
+					       buf);
 				}
 			}
 			len = 0;
@@ -5740,7 +6269,9 @@ static void send_ssi_file(struct mg_connection *conn, const char *path,
 }
 
 static void handle_ssi_file_request(struct mg_connection *conn,
-                                    const char *path, struct file *filep) {
+                                    const char *path,
+                                    struct file *filep)
+{
 	char date[64];
 	time_t curtime = time(NULL);
 	const char *cors1, *cors2, *cors3;
@@ -5760,24 +6291,33 @@ static void handle_ssi_file_request(struct mg_connection *conn,
 	if (!mg_fopen(conn, path, "rb", filep)) {
 		/* File exists (precondition for calling this function),
 		 * but can not be opened by the server. */
-		send_http_error(conn, 500, "Error: Cannot read file\nfopen(%s): %s",
-		                path, strerror(ERRNO));
+		send_http_error(conn,
+		                500,
+		                "Error: Cannot read file\nfopen(%s): %s",
+		                path,
+		                strerror(ERRNO));
 	} else {
 		conn->must_close = 1;
 		gmt_time_string(date, sizeof(date), &curtime);
 		fclose_on_exec(filep, conn);
-		mg_printf(conn, "HTTP/1.1 200 OK\r\n"
-		                "%s%s%s"
-		                "Date: %s\r\n"
-		                "Content-Type: text/html\r\n"
-		                "Connection: %s\r\n\r\n",
-		          cors1, cors2, cors3, date, suggest_connection_header(conn));
+		mg_printf(conn,
+		          "HTTP/1.1 200 OK\r\n"
+		          "%s%s%s"
+		          "Date: %s\r\n"
+		          "Content-Type: text/html\r\n"
+		          "Connection: %s\r\n\r\n",
+		          cors1,
+		          cors2,
+		          cors3,
+		          date,
+		          suggest_connection_header(conn));
 		send_ssi_file(conn, path, filep, 0);
 		mg_fclose(filep);
 	}
 }
 
-static void send_options(struct mg_connection *conn) {
+static void send_options(struct mg_connection *conn)
+{
 	char date[64];
 	time_t curtime = time(NULL);
 
@@ -5788,53 +6328,67 @@ static void send_options(struct mg_connection *conn) {
 	conn->must_close = 1;
 	gmt_time_string(date, sizeof(date), &curtime);
 
-	mg_printf(conn, "HTTP/1.1 200 OK\r\n"
-	                "Date: %s\r\n"
-	                "Connection: %s\r\n"
-	                "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, "
-	                "PROPFIND, MKCOL\r\n"
-	                "DAV: 1\r\n\r\n",
-	          date, suggest_connection_header(conn));
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Date: %s\r\n"
+	          "Connection: %s\r\n"
+	          "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, "
+	          "PROPFIND, MKCOL\r\n"
+	          "DAV: 1\r\n\r\n",
+	          date,
+	          suggest_connection_header(conn));
 }
 
 /* Writes PROPFIND properties for a collection element */
-static void print_props(struct mg_connection *conn, const char *uri,
-                        struct file *filep) {
+static void
+print_props(struct mg_connection *conn, const char *uri, struct file *filep)
+{
 	char mtime[64];
 
 	if (!filep || !conn)
 		return;
 
 	gmt_time_string(mtime, sizeof(mtime), &filep->modification_time);
-	conn->num_bytes_sent += mg_printf(
-	    conn, "<d:response>"
-	          "<d:href>%s</d:href>"
-	          "<d:propstat>"
-	          "<d:prop>"
-	          "<d:resourcetype>%s</d:resourcetype>"
-	          "<d:getcontentlength>%" INT64_FMT "</d:getcontentlength>"
-	          "<d:getlastmodified>%s</d:getlastmodified>"
-	          "</d:prop>"
-	          "<d:status>HTTP/1.1 200 OK</d:status>"
-	          "</d:propstat>"
-	          "</d:response>\n",
-	    uri, filep->is_directory ? "<d:collection/>" : "", filep->size, mtime);
+	conn->num_bytes_sent +=
+	    mg_printf(conn,
+	              "<d:response>"
+	              "<d:href>%s</d:href>"
+	              "<d:propstat>"
+	              "<d:prop>"
+	              "<d:resourcetype>%s</d:resourcetype>"
+	              "<d:getcontentlength>%" INT64_FMT "</d:getcontentlength>"
+	              "<d:getlastmodified>%s</d:getlastmodified>"
+	              "</d:prop>"
+	              "<d:status>HTTP/1.1 200 OK</d:status>"
+	              "</d:propstat>"
+	              "</d:response>\n",
+	              uri,
+	              filep->is_directory ? "<d:collection/>" : "",
+	              filep->size,
+	              mtime);
 }
 
-static void print_dav_dir_entry(struct de *de, void *data) {
+static void print_dav_dir_entry(struct de *de, void *data)
+{
 	char href[PATH_MAX];
 	char href_encoded[PATH_MAX];
 	struct mg_connection *conn = (struct mg_connection *)data;
 	if (!de || !conn)
 		return;
-	mg_snprintf(conn, href, sizeof(href), "%s%s", conn->request_info.uri,
+	mg_snprintf(conn,
+	            href,
+	            sizeof(href),
+	            "%s%s",
+	            conn->request_info.uri,
 	            de->file_name);
 	mg_url_encode(href, href_encoded, PATH_MAX - 1);
 	print_props(conn, href_encoded, &de->file);
 }
 
-static void handle_propfind(struct mg_connection *conn, const char *path,
-                            struct file *filep) {
+static void handle_propfind(struct mg_connection *conn,
+                            const char *path,
+                            struct file *filep)
+{
 	const char *depth = mg_get_header(conn, "Depth");
 	char date[64];
 	time_t curtime = time(NULL);
@@ -5846,15 +6400,18 @@ static void handle_propfind(struct mg_connection *conn, const char *path,
 
 	conn->must_close = 1;
 	conn->status_code = 207;
-	mg_printf(conn, "HTTP/1.1 207 Multi-Status\r\n"
-	                "Date: %s\r\n"
-	                "Connection: %s\r\n"
-	                "Content-Type: text/xml; charset=utf-8\r\n\r\n",
-	          date, suggest_connection_header(conn));
+	mg_printf(conn,
+	          "HTTP/1.1 207 Multi-Status\r\n"
+	          "Date: %s\r\n"
+	          "Connection: %s\r\n"
+	          "Content-Type: text/xml; charset=utf-8\r\n\r\n",
+	          date,
+	          suggest_connection_header(conn));
 
 	conn->num_bytes_sent +=
-	    mg_printf(conn, "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-	                    "<d:multistatus xmlns:d='DAV:'>\n");
+	    mg_printf(conn,
+	              "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+	              "<d:multistatus xmlns:d='DAV:'>\n");
 
 	/* Print properties for the requested resource itself */
 	print_props(conn, conn->request_info.uri, filep);
@@ -5869,22 +6426,26 @@ static void handle_propfind(struct mg_connection *conn, const char *path,
 	conn->num_bytes_sent += mg_printf(conn, "%s\n", "</d:multistatus>");
 }
 
-void mg_lock_connection(struct mg_connection *conn) {
+void mg_lock_connection(struct mg_connection *conn)
+{
 	if (conn)
 		(void)pthread_mutex_lock(&conn->mutex);
 }
 
-void mg_unlock_connection(struct mg_connection *conn) {
+void mg_unlock_connection(struct mg_connection *conn)
+{
 	if (conn)
 		(void)pthread_mutex_unlock(&conn->mutex);
 }
 
-void mg_lock_context(struct mg_context *ctx) {
+void mg_lock_context(struct mg_context *ctx)
+{
 	if (ctx)
 		(void)pthread_mutex_lock(&ctx->nonce_mutex);
 }
 
-void mg_unlock_context(struct mg_context *ctx) {
+void mg_unlock_context(struct mg_context *ctx)
+{
 	if (ctx)
 		(void)pthread_mutex_unlock(&ctx->nonce_mutex);
 }
@@ -5906,7 +6467,8 @@ void mg_unlock_context(struct mg_context *ctx) {
 #include "solarisfixes.h"
 #endif
 
-static int is_big_endian(void) {
+static int is_big_endian(void)
+{
 	static const int n = 1;
 	return ((char *)&n)[0] == 0;
 }
@@ -5918,7 +6480,8 @@ union char64long16 {
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
-static uint32_t blk0(union char64long16 *block, int i) {
+static uint32_t blk0(union char64long16 *block, int i)
+{
 	/* Forrest: SHA expect BIG_ENDIAN, swap if LITTLE_ENDIAN */
 	if (!is_big_endian()) {
 		block->l[i] = (rol(block->l[i], 24) & 0xFF00FF00) |
@@ -5953,7 +6516,8 @@ typedef struct {
 	unsigned char buffer[64];
 } SHA1_CTX;
 
-static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
+static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64])
+{
 	uint32_t a, b, c, d, e;
 	union char64long16 block[1];
 
@@ -6052,7 +6616,8 @@ static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
 	memset(block, '\0', sizeof(block));
 }
 
-static void SHA1Init(SHA1_CTX *context) {
+static void SHA1Init(SHA1_CTX *context)
+{
 	context->state[0] = 0x67452301;
 	context->state[1] = 0xEFCDAB89;
 	context->state[2] = 0x98BADCFE;
@@ -6061,8 +6626,9 @@ static void SHA1Init(SHA1_CTX *context) {
 	context->count[0] = context->count[1] = 0;
 }
 
-static void SHA1Update(SHA1_CTX *context, const unsigned char *data,
-                       uint32_t len) {
+static void
+SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len)
+{
 	uint32_t i, j;
 
 	j = context->count[0];
@@ -6082,7 +6648,8 @@ static void SHA1Update(SHA1_CTX *context, const unsigned char *data,
 	memcpy(&context->buffer[j], &data[i], len - i);
 }
 
-static void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
+static void SHA1Final(unsigned char digest[20], SHA1_CTX *context)
+{
 	unsigned i;
 	unsigned char finalcount[8], c;
 
@@ -6108,27 +6675,36 @@ static void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
 }
 /* END OF SHA1 CODE */
 
-static void send_websocket_handshake(struct mg_connection *conn) {
+static void send_websocket_handshake(struct mg_connection *conn)
+{
 	static const char *magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 	char buf[100], sha[20], b64_sha[sizeof(sha) * 2];
 	SHA1_CTX sha_ctx;
 
-	mg_snprintf(conn, buf, sizeof(buf), "%s%s",
-	            mg_get_header(conn, "Sec-WebSocket-Key"), magic);
+	mg_snprintf(conn,
+	            buf,
+	            sizeof(buf),
+	            "%s%s",
+	            mg_get_header(conn, "Sec-WebSocket-Key"),
+	            magic);
 	SHA1Init(&sha_ctx);
 	SHA1Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
 	SHA1Final((unsigned char *)sha, &sha_ctx);
 	base64_encode((unsigned char *)sha, sizeof(sha), b64_sha);
-	mg_printf(conn, "%s%s%s", "HTTP/1.1 101 Switching Protocols\r\n"
-	                          "Upgrade: websocket\r\n"
-	                          "Connection: Upgrade\r\n"
-	                          "Sec-WebSocket-Accept: ",
-	          b64_sha, "\r\n\r\n");
+	mg_printf(conn,
+	          "%s%s%s",
+	          "HTTP/1.1 101 Switching Protocols\r\n"
+	          "Upgrade: websocket\r\n"
+	          "Connection: Upgrade\r\n"
+	          "Sec-WebSocket-Accept: ",
+	          b64_sha,
+	          "\r\n\r\n");
 }
 
 static void read_websocket(struct mg_connection *conn,
                            mg_websocket_data_handler ws_data_handler,
-                           void *callback_data) {
+                           void *callback_data)
+{
 	/* Pointer to the beginning of the portion of the incoming websocket
 	 * message queue.
 	 * The original websocket upgrade request is never removed, so the queue
@@ -6268,7 +6844,9 @@ static void read_websocket(struct mg_connection *conn,
 		} else {
 			/* Read from the socket into the next available location in the
 			 * message queue. */
-			if ((n = pull(NULL, conn, conn->buf + conn->data_len,
+			if ((n = pull(NULL,
+			              conn,
+			              conn->buf + conn->data_len,
 			              conn->buf_size - conn->data_len)) <= 0) {
 				/* Error, no bytes read */
 				break;
@@ -6280,8 +6858,11 @@ static void read_websocket(struct mg_connection *conn,
 	mg_set_thread_name("worker");
 }
 
-int mg_websocket_write(struct mg_connection *conn, int opcode, const char *data,
-                       size_t dataLen) {
+int mg_websocket_write(struct mg_connection *conn,
+                       int opcode,
+                       const char *data,
+                       size_t dataLen)
+{
 	unsigned char header[10];
 	size_t headerLen = 1;
 
@@ -6320,12 +6901,16 @@ int mg_websocket_write(struct mg_connection *conn, int opcode, const char *data,
 	return retval;
 }
 
-static void handle_websocket_request(
-    struct mg_connection *conn, const char *path, int is_callback_resource,
-    mg_websocket_connect_handler ws_connect_handler,
-    mg_websocket_ready_handler ws_ready_handler,
-    mg_websocket_data_handler ws_data_handler,
-    mg_websocket_close_handler ws_close_handler, void *cbData) {
+static void
+handle_websocket_request(struct mg_connection *conn,
+                         const char *path,
+                         int is_callback_resource,
+                         mg_websocket_connect_handler ws_connect_handler,
+                         mg_websocket_ready_handler ws_ready_handler,
+                         mg_websocket_data_handler ws_data_handler,
+                         mg_websocket_close_handler ws_close_handler,
+                         void *cbData)
+{
 	const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
 	int lua_websock = 0;
 
@@ -6358,7 +6943,8 @@ static void handle_websocket_request(
 		if (conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]) {
 			lua_websock = match_prefix(
 			    conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS],
-			    (int)strlen(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]), path);
+			    (int)strlen(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]),
+			    path);
 		}
 
 		if (lua_websock) {
@@ -6413,7 +6999,8 @@ static void handle_websocket_request(
 	}
 }
 
-static int is_websocket_protocol(const struct mg_connection *conn) {
+static int is_websocket_protocol(const struct mg_connection *conn)
+{
 	const char *host, *upgrade, *connection, *version, *key;
 
 	upgrade = mg_get_header(conn, "Upgrade");
@@ -6439,7 +7026,8 @@ static int is_websocket_protocol(const struct mg_connection *conn) {
 
 static int isbyte(int n) { return n >= 0 && n <= 255; }
 
-static int parse_net(const char *spec, uint32_t *net, uint32_t *mask) {
+static int parse_net(const char *spec, uint32_t *net, uint32_t *mask)
+{
 	int n, a, b, c, d, slash = 32, len = 0;
 
 	if ((sscanf(spec, "%d.%d.%d.%d/%d%n", &a, &b, &c, &d, &slash, &n) == 5 ||
@@ -6455,7 +7043,8 @@ static int parse_net(const char *spec, uint32_t *net, uint32_t *mask) {
 	return len;
 }
 
-static int set_throttle(const char *spec, uint32_t remote_ip, const char *uri) {
+static int set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
+{
 	int throttle = 0;
 	struct vec vec, val;
 	uint32_t net, mask;
@@ -6485,13 +7074,15 @@ static int set_throttle(const char *spec, uint32_t remote_ip, const char *uri) {
 	return throttle;
 }
 
-static uint32_t get_remote_ip(const struct mg_connection *conn) {
+static uint32_t get_remote_ip(const struct mg_connection *conn)
+{
 	if (!conn)
 		return 0;
 	return ntohl(*(uint32_t *)&conn->client.rsa.sin.sin_addr);
 }
 
-int mg_upload(struct mg_connection *conn, const char *destination_dir) {
+int mg_upload(struct mg_connection *conn, const char *destination_dir)
+{
 	/* TODO: set a timeout */
 	const char *content_type_header, *boundary_start, *sc;
 	char *s;
@@ -6654,7 +7245,8 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir) {
 	return num_uploaded_files;
 }
 
-static int get_first_ssl_listener_index(const struct mg_context *ctx) {
+static int get_first_ssl_listener_index(const struct mg_context *ctx)
+{
 	int i, idx = -1;
 	if (ctx)
 		for (i = 0; idx == -1 && i < ctx->num_listening_sockets; i++) {
@@ -6663,7 +7255,8 @@ static int get_first_ssl_listener_index(const struct mg_context *ctx) {
 	return idx;
 }
 
-static void redirect_to_https_port(struct mg_connection *conn, int ssl_index) {
+static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
+{
 	char host[1025];
 	const char *host_header;
 	size_t hostlen;
@@ -6688,24 +7281,30 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index) {
 
 	/* Send host, port, uri and (if it exists) ?query_string */
 	if (conn)
-		mg_printf(
-		    conn, "HTTP/1.1 302 Found\r\nLocation: https://%s:%d%s%s%s\r\n\r\n",
-		    host, (int)ntohs(
+		mg_printf(conn,
+		          "HTTP/1.1 302 Found\r\nLocation: https://%s:%d%s%s%s\r\n\r\n",
+		          host,
+		          (int)ntohs(
 		              conn->ctx->listening_sockets[ssl_index].lsa.sin.sin_port),
-		    conn->request_info.uri,
-		    (conn->request_info.query_string == NULL) ? "" : "?",
-		    (conn->request_info.query_string == NULL)
-		        ? ""
-		        : conn->request_info.query_string);
+		          conn->request_info.uri,
+		          (conn->request_info.query_string == NULL) ? "" : "?",
+		          (conn->request_info.query_string == NULL)
+		              ? ""
+		              : conn->request_info.query_string);
 }
 
-static void mg_set_request_handler_type(
-    struct mg_context *ctx, const char *uri, int is_websocket_handler,
-    int is_delete_request, mg_request_handler handler,
-    mg_websocket_connect_handler connect_handler,
-    mg_websocket_ready_handler ready_handler,
-    mg_websocket_data_handler data_handler,
-    mg_websocket_close_handler close_handler, void *cbdata) {
+static void
+mg_set_request_handler_type(struct mg_context *ctx,
+                            const char *uri,
+                            int is_websocket_handler,
+                            int is_delete_request,
+                            mg_request_handler handler,
+                            mg_websocket_connect_handler connect_handler,
+                            mg_websocket_ready_handler ready_handler,
+                            mg_websocket_data_handler data_handler,
+                            mg_websocket_close_handler close_handler,
+                            void *cbdata)
+{
 	struct mg_request_handler_info *tmp_rh, **lastref;
 	size_t urilen = strlen(uri);
 
@@ -6810,24 +7409,36 @@ static void mg_set_request_handler_type(
 	mg_unlock_context(ctx);
 }
 
-void mg_set_request_handler(struct mg_context *ctx, const char *uri,
-                            mg_request_handler handler, void *cbdata) {
-	mg_set_request_handler_type(ctx, uri, 0, handler == NULL, handler, NULL,
-	                            NULL, NULL, NULL, cbdata);
+void mg_set_request_handler(struct mg_context *ctx,
+                            const char *uri,
+                            mg_request_handler handler,
+                            void *cbdata)
+{
+	mg_set_request_handler_type(
+	    ctx, uri, 0, handler == NULL, handler, NULL, NULL, NULL, NULL, cbdata);
 }
 
-void mg_set_websocket_handler(struct mg_context *ctx, const char *uri,
+void mg_set_websocket_handler(struct mg_context *ctx,
+                              const char *uri,
                               mg_websocket_connect_handler connect_handler,
                               mg_websocket_ready_handler ready_handler,
                               mg_websocket_data_handler data_handler,
                               mg_websocket_close_handler close_handler,
-                              void *cbdata) {
+                              void *cbdata)
+{
 	int is_delete_request = (connect_handler == NULL) &&
 	                        (ready_handler == NULL) && (data_handler == NULL) &&
 	                        (close_handler == NULL);
-	mg_set_request_handler_type(ctx, uri, 1, is_delete_request, NULL,
-	                            connect_handler, ready_handler, data_handler,
-	                            close_handler, cbdata);
+	mg_set_request_handler_type(ctx,
+	                            uri,
+	                            1,
+	                            is_delete_request,
+	                            NULL,
+	                            connect_handler,
+	                            ready_handler,
+	                            data_handler,
+	                            close_handler,
+	                            cbdata);
 }
 
 static int get_request_handler(struct mg_connection *conn,
@@ -6837,7 +7448,8 @@ static int get_request_handler(struct mg_connection *conn,
                                mg_websocket_ready_handler *ready_handler,
                                mg_websocket_data_handler *data_handler,
                                mg_websocket_close_handler *close_handler,
-                               void **cbdata) {
+                               void **cbdata)
+{
 	const struct mg_request_info *request_info = mg_get_request_info(conn);
 	if (request_info) {
 		const char *uri = request_info->uri;
@@ -6918,7 +7530,8 @@ static int get_request_handler(struct mg_connection *conn,
 #if defined(USE_WEBSOCKET)
 static int
 deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
-                                     void *cbdata) {
+                                     void *cbdata)
+{
 	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
 	if (pcallbacks->websocket_connect) {
 		return pcallbacks->websocket_connect(conn);
@@ -6928,16 +7541,17 @@ deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
 }
 
 static void deprecated_websocket_ready_wrapper(struct mg_connection *conn,
-                                               void *cbdata) {
+                                               void *cbdata)
+{
 	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
 	if (pcallbacks->websocket_ready) {
 		pcallbacks->websocket_ready(conn);
 	}
 }
 
-static int deprecated_websocket_data_wrapper(struct mg_connection *conn,
-                                             int bits, char *data, size_t len,
-                                             void *cbdata) {
+static int deprecated_websocket_data_wrapper(
+    struct mg_connection *conn, int bits, char *data, size_t len, void *cbdata)
+{
 	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
 	if (pcallbacks->websocket_data) {
 		return pcallbacks->websocket_data(conn, bits, data, len);
@@ -6951,7 +7565,8 @@ static int deprecated_websocket_data_wrapper(struct mg_connection *conn,
  * This function is called when the request is read, parsed and validated,
  * and Civetweb must decide what action to take: serve a file, or
  * a directory, or call embedded function, etcetera. */
-static void handle_request(struct mg_connection *conn) {
+static void handle_request(struct mg_connection *conn)
+{
 	if (conn) {
 		struct mg_request_info *ri = &conn->request_info;
 		char path[PATH_MAX];
@@ -7001,7 +7616,9 @@ static void handle_request(struct mg_connection *conn) {
 			} else {
 				/* A http to https forward port has been specified,
 				 * but no https port to forward to. */
-				send_http_error(conn, 503, "%s",
+				send_http_error(conn,
+				                503,
+				                "%s",
 				                "Error: SSL forward not configured properly");
 				mg_cry(conn, "Can not redirect to SSL, no SSL port available");
 			}
@@ -7009,8 +7626,8 @@ static void handle_request(struct mg_connection *conn) {
 		}
 
 		/* 3. if this ip has limited speed, set it for this connection */
-		conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
-		                              get_remote_ip(conn), ri->uri);
+		conn->throttle = set_throttle(
+		    conn->ctx->config[THROTTLE], get_remote_ip(conn), ri->uri);
 
 		/* 4. call a "handle everything" callback, if registered */
 		if (conn->ctx->callbacks.begin_request != NULL) {
@@ -7040,9 +7657,13 @@ static void handle_request(struct mg_connection *conn) {
 		is_websocket_request = is_websocket_protocol(conn);
 
 		/* 5.2. check if the request will be handled by a callback */
-		if (get_request_handler(conn, is_websocket_request, &callback_handler,
-		                        &ws_connect_handler, &ws_ready_handler,
-		                        &ws_data_handler, &ws_close_handler,
+		if (get_request_handler(conn,
+		                        is_websocket_request,
+		                        &callback_handler,
+		                        &ws_connect_handler,
+		                        &ws_ready_handler,
+		                        &ws_data_handler,
+		                        &ws_close_handler,
 		                        &callback_data)) {
 			/* 5.2.1. A callback will handle this request. All requests handled
 			 * by a callback have to be considered as requests to a script
@@ -7056,8 +7677,13 @@ static void handle_request(struct mg_connection *conn) {
 			 * addresses a file based resource (static content or Lua/cgi
 			 * scripts in the file system). */
 			is_callback_resource = 0;
-			interpret_uri(conn, path, sizeof(path), &file, &is_script_resource,
-			              &is_websocket_request, &is_put_or_delete_request);
+			interpret_uri(conn,
+			              path,
+			              sizeof(path),
+			              &file,
+			              &is_script_resource,
+			              &is_websocket_request,
+			              &is_put_or_delete_request);
 		}
 
 		/* 6. authorization check */
@@ -7072,7 +7698,9 @@ static void handle_request(struct mg_connection *conn) {
 #endif
 				/* This server does not have any real files, thus the
 				 * PUT/DELETE methods are not valid. */
-				send_http_error(conn, 405, "%s method not allowed",
+				send_http_error(conn,
+				                405,
+				                "%s method not allowed",
 				                conn->request_info.request_method);
 				return;
 			}
@@ -7107,8 +7735,12 @@ static void handle_request(struct mg_connection *conn) {
 					/* The last version did handle this as a file request, but
 					 * since a file request is not always a script resource,
 					 * the authorization check might be different */
-					interpret_uri(conn, path, sizeof(path), &file,
-					              &is_script_resource, &is_websocket_request,
+					interpret_uri(conn,
+					              path,
+					              sizeof(path),
+					              &file,
+					              &is_script_resource,
+					              &is_websocket_request,
 					              &is_put_or_delete_request);
 					callback_handler = NULL;
 
@@ -7120,9 +7752,13 @@ static void handle_request(struct mg_connection *conn) {
 				}
 			} else {
 #if defined(USE_WEBSOCKET)
-				handle_websocket_request(conn, path, is_callback_resource,
-				                         ws_connect_handler, ws_ready_handler,
-				                         ws_data_handler, ws_close_handler,
+				handle_websocket_request(conn,
+				                         path,
+				                         is_callback_resource,
+				                         ws_connect_handler,
+				                         ws_ready_handler,
+				                         ws_data_handler,
+				                         ws_close_handler,
 				                         callback_data);
 #endif
 			}
@@ -7133,11 +7769,14 @@ static void handle_request(struct mg_connection *conn) {
 #if defined(USE_WEBSOCKET)
 		if (is_websocket_request) {
 			handle_websocket_request(
-			    conn, path,
+			    conn,
+			    path,
 			    !is_script_resource /* could be deprecated global callback */,
 			    deprecated_websocket_connect_wrapper,
 			    deprecated_websocket_ready_wrapper,
-			    deprecated_websocket_data_wrapper, NULL, &conn->ctx->callbacks);
+			    deprecated_websocket_data_wrapper,
+			    NULL,
+			    &conn->ctx->callbacks);
 			return;
 		} else
 #endif
@@ -7179,7 +7818,9 @@ static void handle_request(struct mg_connection *conn) {
 				return;
 			}
 			/* 11.4. should never reach this point */
-			send_http_error(conn, 405, "%s method not allowed",
+			send_http_error(conn,
+			                405,
+			                "%s method not allowed",
 			                conn->request_info.request_method);
 			return;
 		}
@@ -7195,12 +7836,15 @@ static void handle_request(struct mg_connection *conn) {
 		/* 12. Directories uris should end with a slash */
 		if (file.is_directory && ri->uri[uri_len - 1] != '/') {
 			gmt_time_string(date, sizeof(date), &curtime);
-			mg_printf(conn, "HTTP/1.1 301 Moved Permanently\r\n"
-			                "Location: %s/\r\n"
-			                "Date: %s\r\n"
-			                "Content-Length: 0\r\n"
-			                "Connection: %s\r\n\r\n",
-			          ri->uri, date, suggest_connection_header(conn));
+			mg_printf(conn,
+			          "HTTP/1.1 301 Moved Permanently\r\n"
+			          "Location: %s/\r\n"
+			          "Date: %s\r\n"
+			          "Content-Length: 0\r\n"
+			          "Connection: %s\r\n\r\n",
+			          ri->uri,
+			          date,
+			          suggest_connection_header(conn));
 			return;
 		}
 
@@ -7223,7 +7867,9 @@ static void handle_request(struct mg_connection *conn) {
 		/* 13.3. everything but GET and HEAD (e.g. POST) */
 		if (0 != strcmp(ri->request_method, "GET") &&
 		    0 != strcmp(ri->request_method, "HEAD")) {
-			send_http_error(conn, 405, "%s method not allowed",
+			send_http_error(conn,
+			                405,
+			                "%s method not allowed",
 			                conn->request_info.request_method);
 			return;
 		}
@@ -7240,8 +7886,8 @@ static void handle_request(struct mg_connection *conn) {
 				                   "yes")) {
 					handle_directory_request(conn, path);
 				} else {
-					send_http_error(conn, 403, "%s",
-					                "Error: Directory listing denied");
+					send_http_error(
+					    conn, 403, "%s", "Error: Directory listing denied");
 				}
 				return;
 			}
@@ -7261,7 +7907,9 @@ static void handle_request(struct mg_connection *conn) {
 }
 
 static void handle_file_based_request(struct mg_connection *conn,
-                                      const char *path, struct file *file) {
+                                      const char *path,
+                                      struct file *file)
+{
 	if (!conn || !conn->ctx)
 		return;
 
@@ -7301,7 +7949,8 @@ static void handle_file_based_request(struct mg_connection *conn,
 	}
 }
 
-static void close_all_listening_sockets(struct mg_context *ctx) {
+static void close_all_listening_sockets(struct mg_context *ctx)
+{
 	int i;
 	if (!ctx)
 		return;
@@ -7318,7 +7967,8 @@ static void close_all_listening_sockets(struct mg_context *ctx) {
 
 static int is_valid_port(unsigned int port) { return port < 0xffff; }
 
-int mg_inet_pton(int af, const char *src, void *dst) {
+int mg_inet_pton(int af, const char *src, void *dst)
+{
 	struct addrinfo hints, *res, *ressave;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -7343,7 +7993,8 @@ int mg_inet_pton(int af, const char *src, void *dst) {
 /* Valid listening port specification is: [ip_address:]port[s]
  * Examples: 80, 443s, 127.0.0.1:3128, 1.2.3.4:8080s
  * TODO(lsm): add parsing of the IPv6 address */
-static int parse_port_string(const struct vec *vec, struct socket *so) {
+static int parse_port_string(const struct vec *vec, struct socket *so)
+{
 	unsigned int a, b, c, d, port;
 	int ch, len;
 #if defined(USE_IPV6)
@@ -7397,7 +8048,8 @@ static int parse_port_string(const struct vec *vec, struct socket *so) {
 	       (ch == '\0' || ch == 's' || ch == 'r' || ch == ',');
 }
 
-static int set_ports_option(struct mg_context *ctx) {
+static int set_ports_option(struct mg_context *ctx)
+{
 	if (ctx) {
 		const char *list = ctx->config[LISTENING_PORTS];
 		int on = 1, success = 1;
@@ -7419,7 +8071,9 @@ static int set_ports_option(struct mg_context *ctx) {
 			if (!parse_port_string(&vec, &so)) {
 				mg_cry(fc(ctx),
 				       "%s: %.*s: invalid port spec. Expecting list of: %s",
-				       __func__, (int)vec.len, vec.ptr,
+				       __func__,
+				       (int)vec.len,
+				       vec.ptr,
 				       "[IP_ADDRESS:]PORT[s|r]");
 				success = 0;
 			} else if (so.is_ssl && ctx->ssl_ctx == NULL) {
@@ -7427,32 +8081,48 @@ static int set_ports_option(struct mg_context *ctx) {
 				    fc(ctx),
 				    "Cannot add SSL socket, is -ssl_certificate option set?");
 				success = 0;
-			} else if ((so.sock = socket(so.lsa.sa.sa_family, SOCK_STREAM,
-			                             6)) == INVALID_SOCKET ||
+			} else if ((so.sock =
+			                socket(so.lsa.sa.sa_family, SOCK_STREAM, 6)) ==
+			               INVALID_SOCKET ||
 #ifdef _WIN32
 			           /* Windows SO_REUSEADDR lets many procs binds to a
 			            * socket, SO_EXCLUSIVEADDRUSE makes the bind fail
 			            * if someone already has the socket -- DTL */
-			           setsockopt(so.sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
-			                      (SOCK_OPT_TYPE)&on, sizeof(on)) != 0 ||
+			           setsockopt(so.sock,
+			                      SOL_SOCKET,
+			                      SO_EXCLUSIVEADDRUSE,
+			                      (SOCK_OPT_TYPE)&on,
+			                      sizeof(on)) != 0 ||
 #else
-			           setsockopt(so.sock, SOL_SOCKET, SO_REUSEADDR,
-			                      (SOCK_OPT_TYPE)&on, sizeof(on)) != 0 ||
+			           setsockopt(so.sock,
+			                      SOL_SOCKET,
+			                      SO_REUSEADDR,
+			                      (SOCK_OPT_TYPE)&on,
+			                      sizeof(on)) != 0 ||
 #endif
 #if defined(USE_IPV6)
 			           (so.lsa.sa.sa_family == AF_INET6 &&
-			            setsockopt(so.sock, IPPROTO_IPV6, IPV6_V6ONLY,
-			                       (void *)&off, sizeof(off)) != 0) ||
+			            setsockopt(so.sock,
+			                       IPPROTO_IPV6,
+			                       IPV6_V6ONLY,
+			                       (void *)&off,
+			                       sizeof(off)) != 0) ||
 #endif
-			           bind(so.sock, &so.lsa.sa, so.lsa.sa.sa_family == AF_INET
-			                                         ? sizeof(so.lsa.sin)
-			                                         : sizeof(so.lsa.sa)) !=
-			               0 ||
+			           bind(so.sock,
+			                &so.lsa.sa,
+			                so.lsa.sa.sa_family == AF_INET
+			                    ? sizeof(so.lsa.sin)
+			                    : sizeof(so.lsa.sa)) != 0 ||
 			           listen(so.sock, SOMAXCONN) != 0 ||
 			           getsockname(so.sock, &(usa.sa), &len) != 0) {
 				/* TODO: rewrite this IF above */
-				mg_cry(fc(ctx), "%s: cannot bind to %.*s: %d (%s)", __func__,
-				       (int)vec.len, vec.ptr, (int)ERRNO, strerror(errno));
+				mg_cry(fc(ctx),
+				       "%s: cannot bind to %.*s: %d (%s)",
+				       __func__,
+				       (int)vec.len,
+				       vec.ptr,
+				       (int)ERRNO,
+				       strerror(errno));
 				if (so.sock != INVALID_SOCKET) {
 					closesocket(so.sock);
 					so.sock = INVALID_SOCKET;
@@ -7494,7 +8164,8 @@ static int set_ports_option(struct mg_context *ctx) {
 }
 
 static const char *header_val(const struct mg_connection *conn,
-                              const char *header) {
+                              const char *header)
+{
 	const char *header_value;
 
 	if ((header_value = mg_get_header(conn, header)) == NULL) {
@@ -7504,7 +8175,8 @@ static const char *header_val(const struct mg_connection *conn,
 	}
 }
 
-static void log_access(const struct mg_connection *conn) {
+static void log_access(const struct mg_connection *conn)
+{
 	const struct mg_request_info *ri;
 	FILE *fp;
 	char date[64], src_addr[IP_ADDR_STR_LEN];
@@ -7539,12 +8211,19 @@ static void log_access(const struct mg_connection *conn) {
 	referer = header_val(conn, "Referer");
 	user_agent = header_val(conn, "User-Agent");
 
-	snprintf(buf, sizeof(buf),
-	         "%s - %s [%s] \"%s %s HTTP/%s\" %d %" INT64_FMT " %s %s", src_addr,
-	         ri->remote_user == NULL ? "-" : ri->remote_user, date,
+	snprintf(buf,
+	         sizeof(buf),
+	         "%s - %s [%s] \"%s %s HTTP/%s\" %d %" INT64_FMT " %s %s",
+	         src_addr,
+	         ri->remote_user == NULL ? "-" : ri->remote_user,
+	         date,
 	         ri->request_method ? ri->request_method : "-",
-	         ri->uri ? ri->uri : "-", ri->http_version, conn->status_code,
-	         conn->num_bytes_sent, referer, user_agent);
+	         ri->uri ? ri->uri : "-",
+	         ri->http_version,
+	         conn->status_code,
+	         conn->num_bytes_sent,
+	         referer,
+	         user_agent);
 
 	if (conn->ctx->callbacks.log_access) {
 		conn->ctx->callbacks.log_access(conn, buf);
@@ -7562,7 +8241,8 @@ static void log_access(const struct mg_connection *conn) {
 
 /* Verify given socket address against the ACL.
  * Return -1 if ACL is malformed, 0 if address is disallowed, 1 if allowed. */
-static int check_acl(struct mg_context *ctx, uint32_t remote_ip) {
+static int check_acl(struct mg_context *ctx, uint32_t remote_ip)
+{
 	int allowed, flag;
 	uint32_t net, mask;
 	struct vec vec;
@@ -7577,8 +8257,8 @@ static int check_acl(struct mg_context *ctx, uint32_t remote_ip) {
 			flag = vec.ptr[0];
 			if ((flag != '+' && flag != '-') ||
 			    parse_net(&vec.ptr[1], &net, &mask) == 0) {
-				mg_cry(fc(ctx), "%s: subnet must be [+|-]x.x.x.x[/x]",
-				       __func__);
+				mg_cry(
+				    fc(ctx), "%s: subnet must be [+|-]x.x.x.x[/x]", __func__);
 				return -1;
 			}
 
@@ -7593,7 +8273,8 @@ static int check_acl(struct mg_context *ctx, uint32_t remote_ip) {
 }
 
 #if !defined(_WIN32)
-static int set_uid_option(struct mg_context *ctx) {
+static int set_uid_option(struct mg_context *ctx)
+{
 	struct passwd *pw;
 	if (ctx) {
 		const char *uid = ctx->config[RUN_AS_USER];
@@ -7605,13 +8286,19 @@ static int set_uid_option(struct mg_context *ctx) {
 			if ((pw = getpwnam(uid)) == NULL) {
 				mg_cry(fc(ctx), "%s: unknown user [%s]", __func__, uid);
 			} else if (setgid(pw->pw_gid) == -1) {
-				mg_cry(fc(ctx), "%s: setgid(%s): %s", __func__, uid,
+				mg_cry(fc(ctx),
+				       "%s: setgid(%s): %s",
+				       __func__,
+				       uid,
 				       strerror(errno));
 			} else if (setgroups(0, NULL)) {
-				mg_cry(fc(ctx), "%s: setgroups(): %s", __func__,
-				       strerror(errno));
+				mg_cry(
+				    fc(ctx), "%s: setgroups(): %s", __func__, strerror(errno));
 			} else if (setuid(pw->pw_uid) == -1) {
-				mg_cry(fc(ctx), "%s: setuid(%s): %s", __func__, uid,
+				mg_cry(fc(ctx),
+				       "%s: setuid(%s): %s",
+				       __func__,
+				       uid,
 				       strerror(errno));
 			} else {
 				success = 1;
@@ -7627,7 +8314,8 @@ static int set_uid_option(struct mg_context *ctx) {
 #if !defined(NO_SSL)
 static pthread_mutex_t *ssl_mutexes;
 
-static int sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *)) {
+static int sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
+{
 	if (!conn)
 		return 0;
 	return (conn->ssl = SSL_new(s)) != NULL &&
@@ -7636,14 +8324,16 @@ static int sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *)) {
 }
 
 /* Return OpenSSL error message (from CRYPTO lib) */
-static const char *ssl_error(void) {
+static const char *ssl_error(void)
+{
 	unsigned long err;
 	err = ERR_get_error();
 	return err == 0 ? "" : ERR_error_string(err, NULL);
 }
 
-static void ssl_locking_callback(int mode, int mutex_num, const char *file,
-                                 int line) {
+static void
+ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
+{
 	(void)line;
 	(void)file;
 
@@ -7654,13 +8344,15 @@ static void ssl_locking_callback(int mode, int mutex_num, const char *file,
 	}
 }
 
-static unsigned long ssl_id_callback(void) {
+static unsigned long ssl_id_callback(void)
+{
 	return (unsigned long)pthread_self();
 }
 
 #if !defined(NO_SSL_DL)
-static void *load_dll(struct mg_context *ctx, const char *dll_name,
-                      struct ssl_func *sw) {
+static void *
+load_dll(struct mg_context *ctx, const char *dll_name, struct ssl_func *sw)
+{
 	union {
 		void *p;
 		void (*fp)(void);
@@ -7684,7 +8376,10 @@ static void *load_dll(struct mg_context *ctx, const char *dll_name,
 		u.p = dlsym(dll_handle, fp->name);
 #endif /* _WIN32 */
 		if (u.fp == NULL) {
-			mg_cry(fc(ctx), "%s: %s: cannot find %s", __func__, dll_name,
+			mg_cry(fc(ctx),
+			       "%s: %s: cannot find %s",
+			       __func__,
+			       dll_name,
 			       fp->name);
 			dlclose(dll_handle);
 			return NULL;
@@ -7707,7 +8402,8 @@ static int cryptolib_users = 1; /* Reference counter for crypto library. */
 static int cryptolib_users = 0; /* Reference counter for crypto library. */
 #endif
 
-static int initialize_ssl(struct mg_context *ctx) {
+static int initialize_ssl(struct mg_context *ctx)
+{
 	int i, size;
 
 #if !defined(NO_SSL_DL)
@@ -7726,8 +8422,8 @@ static int initialize_ssl(struct mg_context *ctx) {
 	http://www.openssl.org/support/faq.html#PROG1 */
 	size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
 	if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc((size_t)size)) == NULL) {
-		mg_cry(fc(ctx), "%s: cannot allocate mutexes: %s", __func__,
-		       ssl_error());
+		mg_cry(
+		    fc(ctx), "%s: cannot allocate mutexes: %s", __func__, ssl_error());
 		return 0;
 	}
 
@@ -7742,7 +8438,8 @@ static int initialize_ssl(struct mg_context *ctx) {
 }
 
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
-static int set_ssl_option(struct mg_context *ctx) {
+static int set_ssl_option(struct mg_context *ctx)
+{
 	const char *pem;
 	int callback_ret;
 
@@ -7794,7 +8491,10 @@ static int set_ssl_option(struct mg_context *ctx) {
 		if (pem != NULL) {
 			if ((SSL_CTX_use_certificate_file(ctx->ssl_ctx, pem, 1) == 0) ||
 			    (SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, pem, 1) == 0)) {
-				mg_cry(fc(ctx), "%s: cannot open %s: %s", __func__, pem,
+				mg_cry(fc(ctx),
+				       "%s: cannot open %s: %s",
+				       __func__,
+				       pem,
 				       ssl_error());
 				return 0;
 			}
@@ -7808,7 +8508,8 @@ static int set_ssl_option(struct mg_context *ctx) {
 	return 1;
 }
 
-static void uninitialize_ssl(struct mg_context *ctx) {
+static void uninitialize_ssl(struct mg_context *ctx)
+{
 	int i;
 	(void)ctx;
 
@@ -7823,7 +8524,8 @@ static void uninitialize_ssl(struct mg_context *ctx) {
 }
 #endif /* !NO_SSL */
 
-static int set_gpass_option(struct mg_context *ctx) {
+static int set_gpass_option(struct mg_context *ctx)
+{
 	if (ctx) {
 		struct file file = STRUCT_FILE_INITIALIZER;
 		const char *path = ctx->config[GLOBAL_PASSWORDS_FILE];
@@ -7836,11 +8538,13 @@ static int set_gpass_option(struct mg_context *ctx) {
 	return 0;
 }
 
-static int set_acl_option(struct mg_context *ctx) {
+static int set_acl_option(struct mg_context *ctx)
+{
 	return check_acl(ctx, (uint32_t)0x7f000001UL) != -1;
 }
 
-static void reset_per_request_attributes(struct mg_connection *conn) {
+static void reset_per_request_attributes(struct mg_connection *conn)
+{
 	if (!conn)
 		return;
 	conn->path_info = NULL;
@@ -7858,7 +8562,8 @@ static void reset_per_request_attributes(struct mg_connection *conn) {
 	conn->chunk_remainder = 0;
 }
 
-static int set_sock_timeout(SOCKET sock, int milliseconds) {
+static int set_sock_timeout(SOCKET sock, int milliseconds)
+{
 	int r1, r2;
 #ifdef _WIN32
 	DWORD t = milliseconds;
@@ -7891,7 +8596,8 @@ static int set_sock_timeout(SOCKET sock, int milliseconds) {
 	return r1 || r2;
 }
 
-static void close_socket_gracefully(struct mg_connection *conn) {
+static void close_socket_gracefully(struct mg_connection *conn)
+{
 #if defined(_WIN32)
 	char buf[MG_BUF_LEN];
 	int n;
@@ -7904,10 +8610,15 @@ static void close_socket_gracefully(struct mg_connection *conn) {
 	linger.l_linger = 1;
 	if (!conn)
 		return;
-	if (setsockopt(conn->client.sock, SOL_SOCKET, SO_LINGER, (char *)&linger,
+	if (setsockopt(conn->client.sock,
+	               SOL_SOCKET,
+	               SO_LINGER,
+	               (char *)&linger,
 	               sizeof(linger)) != 0) {
-		mg_cry(conn, "%s: setsockopt(SOL_SOCKET SO_LINGER) failed: %s",
-		       __func__, strerror(ERRNO));
+		mg_cry(conn,
+		       "%s: setsockopt(SOL_SOCKET SO_LINGER) failed: %s",
+		       __func__,
+		       strerror(ERRNO));
 	}
 
 	/* Send FIN to the client */
@@ -7930,7 +8641,8 @@ static void close_socket_gracefully(struct mg_connection *conn) {
 	conn->client.sock = INVALID_SOCKET;
 }
 
-static void close_connection(struct mg_connection *conn) {
+static void close_connection(struct mg_connection *conn)
+{
 	if (!conn || !conn->ctx)
 		return;
 
@@ -7967,7 +8679,8 @@ static void close_connection(struct mg_connection *conn) {
 	mg_unlock_connection(conn);
 }
 
-void mg_close_connection(struct mg_connection *conn) {
+void mg_close_connection(struct mg_connection *conn)
+{
 	struct mg_context *client_ctx = NULL;
 	int i;
 
@@ -7998,8 +8711,9 @@ void mg_close_connection(struct mg_connection *conn) {
 	mg_free(conn);
 }
 
-struct mg_connection *mg_connect_client(const char *host, int port, int use_ssl,
-                                        char *ebuf, size_t ebuf_len) {
+struct mg_connection *mg_connect_client(
+    const char *host, int port, int use_ssl, char *ebuf, size_t ebuf_len)
+{
 	static struct mg_context fake_ctx;
 	struct mg_connection *conn = NULL;
 	SOCKET sock;
@@ -8026,7 +8740,9 @@ struct mg_connection *mg_connect_client(const char *host, int port, int use_ssl,
 		conn->ctx = &fake_ctx;
 		conn->client.sock = sock;
 		if (getsockname(sock, &conn->client.rsa.sa, &len) != 0) {
-			mg_cry(conn, "%s: getsockname() failed: %s", __func__,
+			mg_cry(conn,
+			       "%s: getsockname() failed: %s",
+			       __func__,
 			       strerror(ERRNO));
 		}
 		conn->client.is_ssl = use_ssl;
@@ -8045,15 +8761,17 @@ struct mg_connection *mg_connect_client(const char *host, int port, int use_ssl,
 	return conn;
 }
 
-static int is_valid_uri(const char *uri) {
+static int is_valid_uri(const char *uri)
+{
 	/* Conform to
 	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.2
 	 * URI can be an asterisk (*) or should start with slash. */
 	return uri[0] == '/' || (uri[0] == '*' && uri[1] == '\0');
 }
 
-static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len,
-                  int *err) {
+static int
+getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
+{
 	const char *cl;
 
 	if (ebuf_len > 0) {
@@ -8096,10 +8814,10 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len,
 			*err = 0;
 		}
 		return 0;
-	} else if (parse_http_message(conn->buf, conn->buf_size,
-	                              &conn->request_info) <= 0) {
-		snprintf(ebuf, ebuf_len, "Bad request: [%.*s]", conn->data_len,
-		         conn->buf);
+	} else if (parse_http_message(
+	               conn->buf, conn->buf_size, &conn->request_info) <= 0) {
+		snprintf(
+		    ebuf, ebuf_len, "Bad request: [%.*s]", conn->data_len, conn->buf);
 		*err = 400;
 		return 0;
 	} else {
@@ -8123,8 +8841,8 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len,
 		           !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
 			/* POST or PUT request without content length set */
 			conn->content_len = -1;
-		} else if (!mg_strncasecmp(conn->request_info.request_method, "HTTP/",
-		                           5)) {
+		} else if (!mg_strncasecmp(
+		               conn->request_info.request_method, "HTTP/", 5)) {
 			/* Response without content length set */
 			conn->content_len = -1;
 		} else {
@@ -8135,8 +8853,11 @@ static int getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len,
 	return 1;
 }
 
-int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len,
-                    int timeout) {
+int mg_get_response(struct mg_connection *conn,
+                    char *ebuf,
+                    size_t ebuf_len,
+                    int timeout)
+{
 	if (conn) {
 		/* Implementation of API function for HTTP clients */
 		int err, ret;
@@ -8163,9 +8884,14 @@ int mg_get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len,
 	return -1;
 }
 
-struct mg_connection *mg_download(const char *host, int port, int use_ssl,
-                                  char *ebuf, size_t ebuf_len, const char *fmt,
-                                  ...) {
+struct mg_connection *mg_download(const char *host,
+                                  int port,
+                                  int use_ssl,
+                                  char *ebuf,
+                                  size_t ebuf_len,
+                                  const char *fmt,
+                                  ...)
+{
 	struct mg_connection *conn;
 	va_list ap;
 	int i;
@@ -8230,11 +8956,18 @@ static void *websocket_client_thread(void *data)
 }
 #endif
 
-struct mg_connection *mg_connect_websocket_client(
-    const char *host, int port, int use_ssl, char *error_buffer,
-    size_t error_buffer_size, const char *path, const char *origin,
-    mg_websocket_data_handler data_func, mg_websocket_close_handler close_func,
-    void *user_data) {
+struct mg_connection *
+mg_connect_websocket_client(const char *host,
+                            int port,
+                            int use_ssl,
+                            char *error_buffer,
+                            size_t error_buffer_size,
+                            const char *path,
+                            const char *origin,
+                            mg_websocket_data_handler data_func,
+                            mg_websocket_close_handler close_func,
+                            void *user_data)
+{
 	struct mg_connection *conn = NULL;
 
 #if defined(USE_WEBSOCKET)
@@ -8263,15 +8996,25 @@ struct mg_connection *mg_connect_websocket_client(
 	}
 
 	/* Establish the client connection and request upgrade */
-	conn = mg_download(host, port, use_ssl, error_buffer, error_buffer_size,
-	                   handshake_req, path, host, magic, origin);
+	conn = mg_download(host,
+	                   port,
+	                   use_ssl,
+	                   error_buffer,
+	                   error_buffer_size,
+	                   handshake_req,
+	                   path,
+	                   host,
+	                   magic,
+	                   origin);
 
 	/* Connection object will be null if something goes wrong */
 	if (conn == NULL || (strcmp(conn->request_info.uri, "101") != 0)) {
 		if (!*error_buffer) {
 			/* if there is a connection, but it did not return 101,
 			 * error_buffer is not yet set */
-			mg_snprintf(conn, error_buffer, error_buffer_size,
+			mg_snprintf(conn,
+			            error_buffer,
+			            error_buffer_size,
 			            "Unexpected server reply");
 		}
 		DEBUG_TRACE("Websocket client connect error: %s\r\n", error_buffer);
@@ -8302,7 +9045,8 @@ struct mg_connection *mg_connect_websocket_client(
 	/* Start a thread to read the websocket client connection
 	 * This thread will automatically stop when mg_disconnect is
 	 * called on the client connection */
-	if (mg_start_thread_with_id(websocket_client_thread, (void *)thread_data,
+	if (mg_start_thread_with_id(websocket_client_thread,
+	                            (void *)thread_data,
 	                            newctx->workerthreadids) != 0) {
 		mg_free((void *)thread_data);
 		mg_free((void *)newctx->workerthreadids);
@@ -8329,7 +9073,8 @@ struct mg_connection *mg_connect_websocket_client(
 	return conn;
 }
 
-static void process_new_connection(struct mg_connection *conn) {
+static void process_new_connection(struct mg_connection *conn)
+{
 	if (conn && conn->ctx) {
 		struct mg_request_info *ri = &conn->request_info;
 		int keep_alive_enabled, keep_alive, discard_len;
@@ -8357,7 +9102,9 @@ static void process_new_connection(struct mg_connection *conn) {
 				send_http_error(conn, 400, "%s", ebuf);
 			} else if (strcmp(ri->http_version, "1.0") &&
 			           strcmp(ri->http_version, "1.1")) {
-				snprintf(ebuf, sizeof(ebuf), "Bad HTTP version: [%s]",
+				snprintf(ebuf,
+				         sizeof(ebuf),
+				         "Bad HTTP version: [%s]",
 				         ri->http_version);
 				send_http_error(conn, 505, "%s", ebuf);
 			}
@@ -8396,7 +9143,8 @@ static void process_new_connection(struct mg_connection *conn) {
 			/*assert(discard_len >= 0);*/
 			if (discard_len < 0)
 				break;
-			memmove(conn->buf, conn->buf + discard_len,
+			memmove(conn->buf,
+			        conn->buf + discard_len,
 			        conn->data_len - discard_len);
 			conn->data_len -= discard_len;
 			/*
@@ -8411,7 +9159,8 @@ static void process_new_connection(struct mg_connection *conn) {
 }
 
 /* Worker threads take accepted socket from the queue */
-static int consume_socket(struct mg_context *ctx, struct socket *sp) {
+static int consume_socket(struct mg_context *ctx, struct socket *sp)
+{
 	if (!ctx)
 		return 0;
 
@@ -8444,7 +9193,8 @@ static int consume_socket(struct mg_context *ctx, struct socket *sp) {
 	return !ctx->stop_flag;
 }
 
-static void *worker_thread_run(void *thread_func_param) {
+static void *worker_thread_run(void *thread_func_param)
+{
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	struct mg_connection *conn;
 	struct mg_workerTLS tls;
@@ -8487,14 +9237,16 @@ static void *worker_thread_run(void *thread_func_param) {
 			                   &conn->client.rsa);
 			/* TODO: #if defined(MG_LEGACY_INTERFACE) */
 			memcpy(&conn->request_info.remote_ip,
-			       &conn->client.rsa.sin.sin_addr.s_addr, 4);
+			       &conn->client.rsa.sin.sin_addr.s_addr,
+			       4);
 			conn->request_info.remote_ip = ntohl(conn->request_info.remote_ip);
 			/* #endif */
 			conn->request_info.is_ssl = conn->client.is_ssl;
 
 			if (!conn->client.is_ssl
 #ifndef NO_SSL
-			    || sslize(conn, conn->ctx->ssl_ctx, SSL_accept)
+			    ||
+			    sslize(conn, conn->ctx->ssl_ctx, SSL_accept)
 #endif
 			        ) {
 				process_new_connection(conn);
@@ -8526,19 +9278,22 @@ static void *worker_thread_run(void *thread_func_param) {
 /* Threads have different return types on Windows and Unix. */
 
 #ifdef _WIN32
-static unsigned __stdcall worker_thread(void *thread_func_param) {
+static unsigned __stdcall worker_thread(void *thread_func_param)
+{
 	worker_thread_run(thread_func_param);
 	return 0;
 }
 #else
-static void *worker_thread(void *thread_func_param) {
+static void *worker_thread(void *thread_func_param)
+{
 	worker_thread_run(thread_func_param);
 	return NULL;
 }
 #endif /* _WIN32 */
 
 /* Master thread adds accepted socket to a queue */
-static void produce_socket(struct mg_context *ctx, const struct socket *sp) {
+static void produce_socket(struct mg_context *ctx, const struct socket *sp)
+{
 	if (!ctx)
 		return;
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
@@ -8562,7 +9317,8 @@ static void produce_socket(struct mg_context *ctx, const struct socket *sp) {
 }
 
 static void accept_new_connection(const struct socket *listener,
-                                  struct mg_context *ctx) {
+                                  struct mg_context *ctx)
+{
 	struct socket so;
 	char src_addr[IP_ADDR_STR_LEN];
 	socklen_t len = sizeof(so.rsa);
@@ -8586,7 +9342,9 @@ static void accept_new_connection(const struct socket *listener,
 		so.is_ssl = listener->is_ssl;
 		so.ssl_redir = listener->ssl_redir;
 		if (getsockname(so.sock, &so.lsa.sa, &len) != 0) {
-			mg_cry(fc(ctx), "%s: getsockname() failed: %s", __func__,
+			mg_cry(fc(ctx),
+			       "%s: getsockname() failed: %s",
+			       __func__,
 			       strerror(ERRNO));
 		}
 
@@ -8596,11 +9354,15 @@ static void accept_new_connection(const struct socket *listener,
 		 * keep-alive, next keep-alive handshake will figure out that the
 		 * client is down and will close the server end.
 		 * Thanks to Igor Klopov who suggested the patch. */
-		if (setsockopt(so.sock, SOL_SOCKET, SO_KEEPALIVE, (SOCK_OPT_TYPE)&on,
+		if (setsockopt(so.sock,
+		               SOL_SOCKET,
+		               SO_KEEPALIVE,
+		               (SOCK_OPT_TYPE)&on,
 		               sizeof(on)) != 0) {
 			mg_cry(fc(ctx),
 			       "%s: setsockopt(SOL_SOCKET SO_KEEPALIVE) failed: %s",
-			       __func__, strerror(ERRNO));
+			       __func__,
+			       strerror(ERRNO));
 		}
 
 		if (ctx && ctx->config[REQUEST_TIMEOUT]) {
@@ -8624,7 +9386,8 @@ static void accept_new_connection(const struct socket *listener,
 	}
 }
 
-static void master_thread_run(void *thread_func_param) {
+static void master_thread_run(void *thread_func_param)
+{
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	struct mg_workerTLS tls;
 	struct pollfd *pfd;
@@ -8725,18 +9488,21 @@ static void master_thread_run(void *thread_func_param) {
 
 /* Threads have different return types on Windows and Unix. */
 #ifdef _WIN32
-static unsigned __stdcall master_thread(void *thread_func_param) {
+static unsigned __stdcall master_thread(void *thread_func_param)
+{
 	master_thread_run(thread_func_param);
 	return 0;
 }
 #else
-static void *master_thread(void *thread_func_param) {
+static void *master_thread(void *thread_func_param)
+{
 	master_thread_run(thread_func_param);
 	return NULL;
 }
 #endif /* _WIN32 */
 
-static void free_context(struct mg_context *ctx) {
+static void free_context(struct mg_context *ctx)
+{
 	int i;
 	struct mg_request_handler_info *tmp_rh;
 
@@ -8806,7 +9572,8 @@ static void free_context(struct mg_context *ctx) {
 	mg_free(ctx);
 }
 
-void mg_stop(struct mg_context *ctx) {
+void mg_stop(struct mg_context *ctx)
+{
 	if (!ctx)
 		return;
 
@@ -8824,7 +9591,8 @@ void mg_stop(struct mg_context *ctx) {
 #endif /* _WIN32 && !__SYMBIAN32__ */
 }
 
-static void get_system_name(char **sysName) {
+static void get_system_name(char **sysName)
+{
 #if defined(_WIN32)
 #if !defined(__SYMBIAN32__)
 	char name[128];
@@ -8840,7 +9608,9 @@ static void get_system_name(char **sysName) {
 	dwBuild = ((dwVersion < 0x80000000) ? (DWORD)(HIWORD(dwVersion)) : 0);
 	(void)dwBuild;
 
-	sprintf(name, "Windows %u.%u", (unsigned)dwMajorVersion,
+	sprintf(name,
+	        "Windows %u.%u",
+	        (unsigned)dwMajorVersion,
 	        (unsigned)dwMinorVersion);
 	*sysName = mg_strdup(name);
 #else
@@ -8855,7 +9625,9 @@ static void get_system_name(char **sysName) {
 }
 
 struct mg_context *mg_start(const struct mg_callbacks *callbacks,
-                            void *user_data, const char **options) {
+                            void *user_data,
+                            const char **options)
+{
 	struct mg_context *ctx;
 	const char *name, *value, *default_value;
 	int i, ok;
@@ -9016,17 +9788,19 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 		(void)pthread_mutex_lock(&ctx->thread_mutex);
 		ctx->num_threads++;
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
-		if (mg_start_thread_with_id(worker_thread, ctx,
-		                            &ctx->workerthreadids[i]) != 0) {
+		if (mg_start_thread_with_id(
+		        worker_thread, ctx, &ctx->workerthreadids[i]) != 0) {
 			(void)pthread_mutex_lock(&ctx->thread_mutex);
 			ctx->num_threads--;
 			(void)pthread_mutex_unlock(&ctx->thread_mutex);
 			if (i > 0) {
-				mg_cry(fc(ctx), "Cannot start worker thread %i: error %ld",
-				       i + 1, (long)ERRNO);
-			} else {
-				mg_cry(fc(ctx), "Cannot create threads: error %ld",
+				mg_cry(fc(ctx),
+				       "Cannot start worker thread %i: error %ld",
+				       i + 1,
 				       (long)ERRNO);
+			} else {
+				mg_cry(
+				    fc(ctx), "Cannot create threads: error %ld", (long)ERRNO);
 				free_context(ctx);
 				return NULL;
 			}
