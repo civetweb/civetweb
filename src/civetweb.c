@@ -893,6 +893,14 @@ static struct mg_option config_options[] = {
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
+
+/* Check if the config_options and the corresponding enum have compatible
+ * sizes. */
+mg_static_assert((sizeof(config_options) / sizeof(config_options[0])) ==
+                 (NUM_OPTIONS + 1),
+                "config_options and enum not sync");
+
+
 struct mg_request_handler_info {
 	/* Name/Pattern of the URI. */
 	char *uri;
@@ -1069,8 +1077,10 @@ typedef struct tagTHREADNAME_INFO {
 void mg_set_thread_name(const char *name) {
 	char threadName[16]; /* Max. thread length in Linux/OSX/.. */
 
+    /* TODO: use strcpy and strcat instad of snprintf, use server name, don't return */
 	if (snprintf(threadName, sizeof(threadName), "civetweb-%s", name) < 0)
 		return;
+
 	threadName[sizeof(threadName) - 1] = 0;
 
 #if defined(_WIN32)
@@ -8861,12 +8871,6 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	if (!sTlsInit)
 		InitializeCriticalSection(&global_log_file_lock);
 #endif /* _WIN32 && !__SYMBIAN32__ */
-
-	/* Check if the config_options and the corresponding enum have compatible
-	 * sizes. */
-	mg_static_assert((sizeof(config_options) / sizeof(config_options[0])) ==
-	                     (NUM_OPTIONS + 1),
-	                 "config_options and enum not sync");
 
 	/* Allocate context and initialize reasonable general case defaults.
 	 * TODO(lsm): do proper error handling here. */
