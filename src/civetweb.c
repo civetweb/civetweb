@@ -66,9 +66,7 @@
 #else
 char static_assert_replacement[1];
 #define mg_static_assert(cond, txt)                                            \
-	{                                                                          \
-		extern char static_assert_replacement[(cond) ? 1 : -1];                \
-	}
+	extern char static_assert_replacement[(cond) ? 1 : -1];
 #endif
 
 mg_static_assert(1, "static assert has to be available");
