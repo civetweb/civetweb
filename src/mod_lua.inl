@@ -13,9 +13,9 @@ static void *mmap(void *addr, int64_t len, int prot, int flags, int fd,
 
 static void munmap(void *addr, int64_t length) { UnmapViewOfFile(addr); }
 
-#define MAP_FAILED NULL
-#define MAP_PRIVATE 0
-#define PROT_READ 0
+#define MAP_FAILED (NULL)
+#define MAP_PRIVATE (0)
+#define PROT_READ (0)
 #else
 #include <sys/mman.h>
 #endif

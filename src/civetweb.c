@@ -74,7 +74,7 @@
 #endif /* __SYMBIAN32__ */
 
 #ifndef IGNORE_UNUSED_RESULT
-#define IGNORE_UNUSED_RESULT(a) (void)((a) && 1)
+#define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
 #ifndef _WIN32_WCE /* Some ANSI #includes are not available on Windows CE */
@@ -96,7 +96,7 @@
 #include <mach/mach_time.h>
 #include <assert.h>
 
-// clock_gettime is not implemented on OSX
+/* clock_gettime is not implemented on OSX */
 int clock_gettime(int clk_id, struct timespec *t) {
 	if (clk_id == CLOCK_REALTIME) {
 		struct timeval now;
@@ -118,8 +118,8 @@ int clock_gettime(int clk_id, struct timespec *t) {
 #if defined(DEBUG)
 			assert(mach_status == KERN_SUCCESS);
 #else
-			(void)mach_status; // appease "unused variable" warning for release
-                               // builds
+			/* appease "unused variable" warning for release builds */
+			(void)mach_status;
 #endif
 			start_time = now;
 		}
@@ -157,7 +157,7 @@ int clock_gettime(int clk_id, struct timespec *t) {
 typedef const char *SOCK_OPT_TYPE;
 
 #ifndef PATH_MAX
-#define PATH_MAX MAX_PATH
+#define PATH_MAX (MAX_PATH)
 #endif
 
 #ifndef _IN_PORT_T
@@ -175,37 +175,37 @@ typedef const char *SOCK_OPT_TYPE;
 
 typedef long off_t;
 
-#define errno GetLastError()
-#define strerror(x) _ultoa(x, (char *)_alloca(sizeof(x) * 3), 10)
+#define errno (GetLastError())
+#define strerror(x) (_ultoa(x, (char *)_alloca(sizeof(x) * 3), 10))
 #endif /* _WIN32_WCE */
 
 #define MAKEUQUAD(lo, hi)                                                      \
 	((uint64_t)(((uint32_t)(lo)) | ((uint64_t)((uint32_t)(hi))) << 32))
-#define RATE_DIFF 10000000 /* 100 nsecs */
-#define EPOCH_DIFF MAKEUQUAD(0xd53e8000, 0x019db1de)
+#define RATE_DIFF (10000000) /* 100 nsecs */
+#define EPOCH_DIFF (MAKEUQUAD(0xd53e8000, 0x019db1de))
 #define SYS2UNIX_TIME(lo, hi)                                                  \
-	(time_t)((MAKEUQUAD((lo), (hi)) - EPOCH_DIFF) / RATE_DIFF)
+	((time_t)((MAKEUQUAD((lo), (hi)) - EPOCH_DIFF) / RATE_DIFF))
 
 /* Visual Studio 6 does not know __func__ or __FUNCTION__
-   The rest of MS compilers use __FUNCTION__, not C99 __func__
-   Also use _strtoui64 on modern M$ compilers */
+ * The rest of MS compilers use __FUNCTION__, not C99 __func__
+ * Also use _strtoui64 on modern M$ compilers */
 #if defined(_MSC_VER) && _MSC_VER < 1300
 #define STRX(x) #x
 #define STR(x) STRX(x)
 #define __func__ __FILE__ ":" STR(__LINE__)
-#define strtoull(x, y, z) (unsigned __int64) _atoi64(x)
-#define strtoll(x, y, z) _atoi64(x)
+#define strtoull(x, y, z) ((unsigned __int64)_atoi64(x))
+#define strtoll(x, y, z) (_atoi64(x))
 #else
 #define __func__ __FUNCTION__
-#define strtoull(x, y, z) _strtoui64(x, y, z)
-#define strtoll(x, y, z) _strtoi64(x, y, z)
+#define strtoull(x, y, z) (_strtoui64(x, y, z))
+#define strtoll(x, y, z) (_strtoi64(x, y, z))
 #endif /* _MSC_VER */
 
-#define ERRNO GetLastError()
+#define ERRNO (GetLastError())
 #define NO_SOCKLEN_T
 #define SSL_LIB "ssleay32.dll"
 #define CRYPTO_LIB "libeay32.dll"
-#define O_NONBLOCK 0
+#define O_NONBLOCK (0)
 #ifndef W_OK
 #define W_OK (2) /* http://msdn.microsoft.com/en-us/library/1w06ktdy.aspx */
 #endif
@@ -216,39 +216,39 @@ typedef long off_t;
 #define INT64_FMT "I64d"
 
 #define WINCDECL __cdecl
-#define SHUT_RD 0
-#define SHUT_WR 1
-#define SHUT_BOTH 2
+#define SHUT_RD (0)
+#define SHUT_WR (1)
+#define SHUT_BOTH (2)
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #define access _access
-#define mg_sleep(x) Sleep(x)
+#define mg_sleep(x) (Sleep(x))
 
 #define pipe(x) _pipe(x, MG_BUF_LEN, _O_BINARY)
 #ifndef popen
-#define popen(x, y) _popen(x, y)
+#define popen(x, y) (_popen(x, y))
 #endif
 #ifndef pclose
-#define pclose(x) _pclose(x)
+#define pclose(x) (_pclose(x))
 #endif
-#define close(x) _close(x)
-#define dlsym(x, y) GetProcAddress((HINSTANCE)(x), (y))
-#define RTLD_LAZY 0
-#define fseeko(x, y, z) _lseeki64(_fileno(x), (y), (z))
-#define fdopen(x, y) _fdopen((x), (y))
-#define write(x, y, z) _write((x), (y), (unsigned)z)
-#define read(x, y, z) _read((x), (y), (unsigned)z)
-#define flockfile(x) EnterCriticalSection(&global_log_file_lock)
-#define funlockfile(x) LeaveCriticalSection(&global_log_file_lock)
-#define sleep(x) Sleep((x)*1000)
-#define rmdir(x) _rmdir(x)
+#define close(x) (_close(x))
+#define dlsym(x, y) (GetProcAddress((HINSTANCE)(x), (y)))
+#define RTLD_LAZY (0)
+#define fseeko(x, y, z) (_lseeki64(_fileno(x), (y), (z)))
+#define fdopen(x, y) (_fdopen((x), (y)))
+#define write(x, y, z) (_write((x), (y), (unsigned)z))
+#define read(x, y, z) (_read((x), (y), (unsigned)z))
+#define flockfile(x) (EnterCriticalSection(&global_log_file_lock))
+#define funlockfile(x) (LeaveCriticalSection(&global_log_file_lock))
+#define sleep(x) (Sleep((x)*1000))
+#define rmdir(x) (_rmdir(x))
 
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 #define USE_TIMERS
 #endif
 
 #if !defined(fileno)
-#define fileno(x) _fileno(x)
+#define fileno(x) (_fileno(x))
 #endif /* !fileno MINGW #defines fileno */
 
 typedef HANDLE pthread_mutex_t;
@@ -292,7 +292,7 @@ typedef unsigned int uint32_t;
 typedef unsigned short uint16_t;
 typedef unsigned __int64 uint64_t;
 typedef __int64 int64_t;
-#define INT64_MAX 9223372036854775807
+#define INT64_MAX (9223372036854775807)
 #endif /* HAVE_STDINT */
 
 /* POSIX dirent interface */
@@ -313,7 +313,7 @@ struct pollfd {
 	short events;
 	short revents;
 };
-#define POLLIN 0x0300
+#define POLLIN (0x0300)
 #endif
 #endif
 
@@ -359,13 +359,13 @@ typedef unsigned short int in_port_t;
 #endif
 #endif
 #ifndef O_BINARY
-#define O_BINARY 0
+#define O_BINARY (0)
 #endif /* O_BINARY */
-#define closesocket(a) close(a)
-#define mg_mkdir(x, y) mkdir(x, y)
-#define mg_remove(x) remove(x)
-#define mg_sleep(x) usleep((x)*1000)
-#define ERRNO errno
+#define closesocket(a) (close(a))
+#define mg_mkdir(x, y) (mkdir(x, y))
+#define mg_remove(x) (remove(x))
+#define mg_sleep(x) (usleep((x)*1000))
+#define ERRNO (errno)
 #define INVALID_SOCKET (-1)
 #define INT64_FMT PRId64
 typedef int SOCKET;
@@ -392,7 +392,7 @@ typedef int SOCKET;
 
 /* va_copy should always be a macro, C99 and C++11 - DTL */
 #ifndef va_copy
-#define va_copy(x, y) x = y
+#define va_copy(x, y) ((x) = (y))
 #endif
 
 #ifdef _WIN32
@@ -423,11 +423,11 @@ void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
 #include "civetweb.h"
 
 #define PASSWORDS_FILE_NAME ".htpasswd"
-#define CGI_ENVIRONMENT_SIZE 4096
-#define MAX_CGI_ENVIR_VARS 64
-#define MG_BUF_LEN 8192
+#define CGI_ENVIRONMENT_SIZE (4096)
+#define MAX_CGI_ENVIR_VARS (64)
+#define MG_BUF_LEN (8192)
 #ifndef MAX_REQUEST_SIZE
-#define MAX_REQUEST_SIZE 16384
+#define MAX_REQUEST_SIZE (16384)
 #endif
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
@@ -617,23 +617,23 @@ typedef int socklen_t;
 #endif /* NO_SOCKLEN_T */
 #define _DARWIN_UNLIMITED_SELECT
 
-#define IP_ADDR_STR_LEN 50 /* IPv6 hex string is 46 chars */
+#define IP_ADDR_STR_LEN (50) /* IPv6 hex string is 46 chars */
 
 #if !defined(MSG_NOSIGNAL)
-#define MSG_NOSIGNAL 0
+#define MSG_NOSIGNAL (0)
 #endif
 
 #if !defined(SOMAXCONN)
-#define SOMAXCONN 100
+#define SOMAXCONN (100)
 #endif
 
 #if !defined(PATH_MAX)
-#define PATH_MAX 4096
+#define PATH_MAX (4096)
 #endif
 
 /* Size of the accepted socket queue */
 #if !defined(MGSQLEN)
-#define MGSQLEN 20
+#define MGSQLEN (20)
 #endif
 
 #if defined(NO_SSL_DL)
@@ -2388,7 +2388,7 @@ static int dlclose(void *handle) {
 }
 
 #if !defined(NO_CGI)
-#define SIGKILL 0
+#define SIGKILL (0)
 static int kill(pid_t pid, int sig_num) {
 	(void)TerminateProcess(pid, sig_num);
 	(void)CloseHandle(pid);
@@ -8856,16 +8856,12 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
 	/* Check if the config_options and the corresponding enum have compatible
 	 * sizes. */
-	/* Could use static_assert, once it is verified that all compilers support
-	 * this. */
-	/* assert(sizeof(config_options)/sizeof(config_options[0]) ==
-	 * NUM_OPTIONS+1);
-	 */
-	if (sizeof(config_options) / sizeof(config_options[0]) != NUM_OPTIONS + 1)
-		return NULL;
+	static_assert(sizeof(config_options) / sizeof(config_options[0]) ==
+	                  NUM_OPTIONS + 1,
+	              "config_options and enum not sync");
 
 	/* Allocate context and initialize reasonable general case defaults.
-	TODO(lsm): do proper error handling here. */
+	 * TODO(lsm): do proper error handling here. */
 	if ((ctx = (struct mg_context *)mg_calloc(1, sizeof(*ctx))) == NULL) {
 		return NULL;
 	}
@@ -8873,8 +8869,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	if (mg_atomic_inc(&sTlsInit) == 1) {
 		if (0 != pthread_key_create(&sTlsKey, NULL)) {
 			/* Fatal error - abort start. However, this situation should never
-			 * occur
-			 * in practice. */
+			 * occur in practice. */
 			mg_atomic_dec(&sTlsInit);
 			mg_cry(fc(ctx), "Cannot initialize thread local storage");
 			mg_free(ctx);

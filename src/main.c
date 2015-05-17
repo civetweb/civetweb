@@ -32,7 +32,7 @@
 #endif
 
 #ifndef IGNORE_UNUSED_RESULT
-#define IGNORE_UNUSED_RESULT(a) (void)((a) && 1)
+#define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
 #include <sys/stat.h>
@@ -59,7 +59,7 @@
 #include <shlobj.h>
 #include <io.h>
 
-#define getcwd(a, b) _getcwd(a, b)
+#define getcwd(a, b) (_getcwd(a, b))
 #if !defined(__MINGW32__)
 extern char *_getcwd(char *buf, size_t size);
 #endif
@@ -81,18 +81,18 @@ static int guard = 0; /* test if any dialog is already open */
 #define DIRSEP '\\'
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
-#define sleep(x) Sleep((x)*1000)
+#define sleep(x) (Sleep((x)*1000))
 #define WINCDECL __cdecl
-#define abs_path(rel, abs, abs_size) _fullpath((abs), (rel), (abs_size))
+#define abs_path(rel, abs, abs_size) (_fullpath((abs), (rel), (abs_size)))
 #else
 #include <sys/wait.h>
 #include <unistd.h>
 #define DIRSEP '/'
 #define WINCDECL
-#define abs_path(rel, abs, abs_size) realpath((rel), (abs))
+#define abs_path(rel, abs, abs_size) (realpath((rel), (abs)))
 #endif /* _WIN32 */
 
-#define MAX_OPTIONS 50
+#define MAX_OPTIONS (50)
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
 struct tuser_data {
@@ -1075,9 +1075,9 @@ static void add_control(unsigned char **mem, DLGTEMPLATE *dia, WORD type,
 
 static int get_password(const char *user, const char *realm, char *passwd,
                         unsigned passwd_len) {
-#define HEIGHT 15
-#define WIDTH 280
-#define LABEL_WIDTH 90
+#define HEIGHT (15)
+#define WIDTH (280)
+#define LABEL_WIDTH (90)
 
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
@@ -1259,9 +1259,9 @@ static void add_control(unsigned char **mem, DLGTEMPLATE *dia, WORD type,
 }
 
 static void show_settings_dialog() {
-#define HEIGHT 15
-#define WIDTH 460
-#define LABEL_WIDTH 90
+#define HEIGHT (15)
+#define WIDTH (460)
+#define LABEL_WIDTH (90)
 
 	unsigned char mem[4096], *p;
 	const struct mg_option *options;
@@ -1359,9 +1359,9 @@ static void show_settings_dialog() {
 }
 
 static void change_password_file() {
-#define HEIGHT 15
-#define WIDTH 320
-#define LABEL_WIDTH 90
+#define HEIGHT (15)
+#define WIDTH (320)
+#define LABEL_WIDTH (90)
 
 	OPENFILENAME of;
 	char path[PATH_MAX] = PASSWORDS_FILE_NAME;
