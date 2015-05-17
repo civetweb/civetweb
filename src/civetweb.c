@@ -58,6 +58,26 @@
 #pragma warning(disable : 4204)
 #endif
 
+/* This code uses static_assert to check some conditions.
+ * Unfortunately some compilers still do not support it, so we have a
+ * replacement function here. */
+#if defined(_MSC_VER) && (_MSC_VER >= 1600)
+#define mg_static_assert static_assert
+#else
+char static_assert_replacement[1];
+#define mg_static_assert(cond, txt)                                            \
+	{ extern char static_assert_replacement[(cond) ? 1 : -1]; }
+#endif
+
+mg_static_assert(1, "static assert has to be available");
+mg_static_assert(sizeof(int) == 4 || sizeof(int) == 8,
+                 "int data type size check");
+mg_static_assert(sizeof(void *) == 4 || sizeof(void *) == 8,
+                 "pointer data type size check");
+mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
+/* mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8, "size_t data
+ * type size check"); */
+
 /* DTL -- including winsock2.h works better if lean and mean */
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -150,15 +170,24 @@ int clock_gettime(int clk_id, struct timespec *t) {
 #define MAX_WORKER_THREADS (1024 * 64)
 #endif
 
+mg_static_assert(MAX_WORKER_THREADS >= 1,
+                 "worker threads must be a positive number");
+
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
 #include <windows.h>
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
 
 typedef const char *SOCK_OPT_TYPE;
 
-#ifndef PATH_MAX
+#if !defined(PATH_MAX)
 #define PATH_MAX (MAX_PATH)
 #endif
+
+#if !defined(PATH_MAX)
+#define PATH_MAX (4096)
+#endif
+
+mg_static_assert(PATH_MAX >= 1, "path length must be a positive number");
 
 #ifndef _IN_PORT_T
 #ifndef in_port_t
@@ -189,7 +218,7 @@ typedef long off_t;
 /* Visual Studio 6 does not know __func__ or __FUNCTION__
  * The rest of MS compilers use __FUNCTION__, not C99 __func__
  * Also use _strtoui64 on modern M$ compilers */
-#if defined(_MSC_VER) && _MSC_VER < 1300
+#if defined(_MSC_VER) && (_MSC_VER < 1300)
 #define STRX(x) #x
 #define STR(x) STRX(x)
 #define __func__ __FILE__ ":" STR(__LINE__)
@@ -318,7 +347,7 @@ struct pollfd {
 #endif
 
 /* Mark required libraries */
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #pragma comment(lib, "Ws2_32.lib")
 #endif
 
@@ -426,9 +455,14 @@ void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
 #define CGI_ENVIRONMENT_SIZE (4096)
 #define MAX_CGI_ENVIR_VARS (64)
 #define MG_BUF_LEN (8192)
+
 #ifndef MAX_REQUEST_SIZE
 #define MAX_REQUEST_SIZE (16384)
 #endif
+
+mg_static_assert(MAX_REQUEST_SIZE >= 256,
+                 "request size length must be a positive number");
+
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 #if !defined(DEBUG_TRACE)
@@ -624,10 +658,6 @@ typedef int socklen_t;
 
 #if !defined(SOMAXCONN)
 #define SOMAXCONN (100)
-#endif
-
-#if !defined(PATH_MAX)
-#define PATH_MAX (4096)
 #endif
 
 /* Size of the accepted socket queue */
@@ -992,8 +1022,8 @@ static int is_websocket_protocol(const struct mg_connection *conn);
 int mg_atomic_inc(volatile int *addr) {
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-	/* Depending on the SDK, this function uses either 
-     * (volatile unsigned int *) or	(volatile LONG *), 
+	/* Depending on the SDK, this function uses either
+	 * (volatile unsigned int *) or    (volatile LONG *),
 	 * so whatever you use, the other SDK is likely to raise a warning. */
 	ret = InterlockedIncrement((volatile unsigned int *)addr);
 #elif defined(__GNUC__)
@@ -1007,8 +1037,8 @@ int mg_atomic_inc(volatile int *addr) {
 int mg_atomic_dec(volatile int *addr) {
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-	/* Depending on the SDK, this function uses either 
-     * (volatile unsigned int *) or	(volatile LONG *), 
+	/* Depending on the SDK, this function uses either
+	 * (volatile unsigned int *) or    (volatile LONG *),
 	 * so whatever you use, the other SDK is likely to raise a warning. */
 	ret = InterlockedDecrement((volatile unsigned int *)addr);
 #elif defined(__GNUC__)
@@ -1058,8 +1088,8 @@ void mg_set_thread_name(const char *name) {
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER) {}
 #elif defined(__MINGW32__)
-    /* No option known to set thread name for MinGW */
-    ;
+	/* No option known to set thread name for MinGW */
+	;
 #endif
 #elif defined(__linux__)
 	/* Linux */
@@ -2684,8 +2714,8 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len) {
 		if (fp != NULL) {
 			/* Use read() instead of fread(), because if we're reading from the
 			 * CGI pipe, fread() may block until IO buffer is filled up. We
-             * cannot afford to block and must pass all read bytes immediately
-             * to the client. */
+			 * cannot afford to block and must pass all read bytes immediately
+			 * to the client. */
 			nread = (int)read(fileno(fp), buf, (size_t)len);
 #ifndef NO_SSL
 		} else if (conn->ssl != NULL) {
@@ -3320,15 +3350,15 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 #endif
 			    ) {
 				/* The request addresses a CGI script or a Lua script. The URI
-				 * corresponds to the script itself (like /path/script.cgi), 
-                 * and there is no additional resource path 
-                 * (like /path/script.cgi/something).
+				 * corresponds to the script itself (like /path/script.cgi),
+				 * and there is no additional resource path
+				 * (like /path/script.cgi/something).
 				 * Requests that modify (replace or delete) a resource, like
-                 * PUT and DELETE requests, should replace/delete the script
-                 * file.
+				 * PUT and DELETE requests, should replace/delete the script
+				 * file.
 				 * Requests that read or write from/to a resource, like GET and
 				 * POST requests, should call the script and return the
-                 * generated response. */
+				 * generated response. */
 				*is_script_ressource = !*is_put_or_delete_request;
 			}
 			return;
@@ -3798,7 +3828,8 @@ static int parse_auth_header(struct mg_connection *conn, char *buf,
 	/* Convert the nonce from the client to a number and check it. */
 	/* Server side nonce check is valuable in all situations but one: if the
 	 * server restarts frequently,
-	 * but the client should not see that, so the server should accept nonces from
+	 * but the client should not see that, so the server should accept nonces
+	 * from
 	 * previous starts. */
 	if (ah->nonce == NULL) {
 		return 0;
@@ -6462,20 +6493,20 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir) {
 	struct mg_request_info part_request_info;
 
 	/* Request looks like this:
-     * 
+	 *
 	 * POST /upload HTTP/1.1
 	 * Host: 127.0.0.1:8080
 	 * Content-Length: 244894
 	 * Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryRVr
-     *
+	 *
 	 * ------WebKitFormBoundaryRVr
 	 * Content-Disposition: form-data; name="file"; filename="accum.png"
 	 * Content-Type: image/png
-     * 
+	 *
 	 * <89>PNG
 	 * <PNG DATA>
 	 * ------WebKitFormBoundaryRVr */
-       
+
 	/* Extract boundary string from the Content-Type header */
 	if ((content_type_header = mg_get_header(conn, "Content-Type")) == NULL ||
 	    (boundary_start = mg_strcasestr(content_type_header, "boundary=")) ==
@@ -7004,8 +7035,8 @@ static void handle_request(struct mg_connection *conn) {
 		                        &ws_data_handler, &ws_close_handler,
 		                        &callback_data)) {
 			/* 5.2.1. A callback will handle this request. All requests handled
-			 * by a callback have to be considered as requests to a script 
-             * resource. */
+			 * by a callback have to be considered as requests to a script
+			 * resource. */
 			is_callback_resource = 1;
 			is_script_resource = 1;
 			is_put_or_delete_request = is_put_or_delete_method(conn);
@@ -7013,7 +7044,7 @@ static void handle_request(struct mg_connection *conn) {
 		no_callback_resource:
 			/* 5.2.2. No callback is responsible for this request. The URI
 			 * addresses a file based resource (static content or Lua/cgi
-             * scripts in the file system). */
+			 * scripts in the file system). */
 			is_callback_resource = 0;
 			interpret_uri(conn, path, sizeof(path), &file, &is_script_resource,
 			              &is_websocket_request, &is_put_or_delete_request);
@@ -8305,8 +8336,8 @@ static void process_new_connection(struct mg_connection *conn) {
 		do {
 			if (!getreq(conn, ebuf, sizeof(ebuf), &reqerr)) {
 				/* The request sent by the client could not be understood by
-				 * the server, or it was incomplete or a timeout. Send an 
-                 * error message and close the connection. */
+				 * the server, or it was incomplete or a timeout. Send an
+				 * error message and close the connection. */
 				if (reqerr > 0) {
 					/*assert(ebuf[0] != '\0');*/
 					send_http_error(conn, reqerr, "%s", ebuf);
@@ -8339,7 +8370,8 @@ static void process_new_connection(struct mg_connection *conn) {
 			}
 
 			/* NOTE(lsm): order is important here. should_keep_alive() call is
-			 * using parsed request, which will be invalid after memmove's below.
+			 * using parsed request, which will be invalid after memmove's
+			 * below.
 			 * Therefore, memorize should_keep_alive() result now for later use
 			 * in loop exit condition. */
 			keep_alive = conn->ctx->stop_flag == 0 && keep_alive_enabled &&
@@ -8571,7 +8603,7 @@ static void accept_new_connection(const struct socket *listener,
 		 * so the server can exit after 10 seconds if required. */
 		/* TODO: Currently values > 10 s are round up to the next 10 s.
 		 * For values like 24 s a socket timeout of 8 or 12 s would be better.
-         */
+		 */
 		if ((timeout > 0) && (timeout < 10000)) {
 			set_sock_timeout(so.sock, timeout);
 		} else {
@@ -8722,7 +8754,7 @@ static void free_context(struct mg_context *ctx) {
 	/* Deallocate config parameters */
 	for (i = 0; i < NUM_OPTIONS; i++) {
 		if (ctx->config[i] != NULL)
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #pragma warning(suppress : 6001)
 #endif
 			mg_free(ctx->config[i]);
@@ -8823,7 +8855,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	WSADATA data;
 	WSAStartup(MAKEWORD(2, 2), &data);
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #pragma warning(suppress : 28125)
 #endif
 	if (!sTlsInit)
@@ -8832,9 +8864,9 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
 	/* Check if the config_options and the corresponding enum have compatible
 	 * sizes. */
-	static_assert(sizeof(config_options) / sizeof(config_options[0]) ==
-	                  NUM_OPTIONS + 1,
-	              "config_options and enum not sync");
+	mg_static_assert((sizeof(config_options) / sizeof(config_options[0])) ==
+	                     (NUM_OPTIONS + 1),
+	                 "config_options and enum not sync");
 
 	/* Allocate context and initialize reasonable general case defaults.
 	 * TODO(lsm): do proper error handling here. */
