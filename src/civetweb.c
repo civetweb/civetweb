@@ -69,7 +69,6 @@ char static_assert_replacement[1];
 	extern char static_assert_replacement[(cond) ? 1 : -1];
 #endif
 
-mg_static_assert(1, "static assert has to be available");
 mg_static_assert(sizeof(int) == 4 || sizeof(int) == 8,
                  "int data type size check");
 mg_static_assert(sizeof(void *) == 4 || sizeof(void *) == 8,
@@ -6457,9 +6456,13 @@ void mg_unlock_context(struct mg_context *ctx)
 /* START OF SHA-1 code
  * Copyright(c) By Steve Reid <steve@edmweb.com> */
 #define SHA1HANDSOFF
-#if defined(__sun)
-#include "solarisfixes.h"
-#endif
+
+/* According to current tests (May 2015), the <solarisfixes.h> is not required.
+ *
+ * #if defined(__sun)
+ * #include "solarisfixes.h"
+ * #endif
+ */
 
 static int is_big_endian(void)
 {
