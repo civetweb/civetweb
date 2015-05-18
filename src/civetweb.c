@@ -8803,7 +8803,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	} else if (parse_http_message(
 	               conn->buf, conn->buf_size, &conn->request_info) <= 0) {
 		snprintf(
-		    ebuf, ebuf_len, "Bad request: [%.*s]", conn->data_len, conn->buf);
+		    ebuf, ebuf_len, "Bad request: [len=%d]", conn->data_len);
 		*err = 400;
 		return 0;
 	} else {
