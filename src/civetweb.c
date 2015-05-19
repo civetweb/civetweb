@@ -5173,6 +5173,8 @@ static int is_valid_http_method(const char *method)
 	       !strcmp(method, "PUT") || !strcmp(method, "DELETE") ||
 	       !strcmp(method, "OPTIONS") || !strcmp(method, "PROPFIND") ||
 	       !strcmp(method, "MKCOL");
+
+	/* TRACE method is not supported for security reasons */
 }
 
 /* Parse HTTP request, fill in mg_request_info structure.
@@ -8805,8 +8807,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		return 0;
 	} else if (parse_http_message(
 	               conn->buf, conn->buf_size, &conn->request_info) <= 0) {
-		snprintf(
-		    ebuf, ebuf_len, "Bad request: [len=%d]", conn->data_len);
+		snprintf(ebuf, ebuf_len, "%s", "Bad Request");
 		*err = 400;
 		return 0;
 	} else {
