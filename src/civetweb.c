@@ -647,7 +647,7 @@ mg_realloc_ex(void *memory, size_t newsize, const char *file, unsigned line)
 static __inline void *mg_malloc(size_t a) { return malloc(a); }
 static __inline void *mg_calloc(size_t a, size_t b) { return calloc(a, b); }
 static __inline void *mg_realloc(void *a, size_t b) { return realloc(a, b); }
-static __inline void mg_free(void *a) { free(a); }
+static __inline void mg_free(void *a) { free(a); a = NULL}
 
 #endif
 
