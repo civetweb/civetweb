@@ -816,7 +816,7 @@ struct vec {
 struct file {
 	int is_directory;
 	time_t modification_time;
-	int64_t size;
+	uint64_t size;
 	FILE *fp;
 	const char *membuf; /* Non-NULL if file data is in memory */
 	                    /* set to 1 if the content is gzipped
@@ -2715,7 +2715,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 		return 0;
 	}
 	if (!is_file_in_memory(conn, path, filep) && !stat(path, &st)) {
-		filep->size = st.st_size;
+		filep->size = (uint64_t)(st.st_size);
 		filep->modification_time = st.st_mtime;
 		filep->is_directory = S_ISDIR(st.st_mode);
 	} else {
@@ -4930,15 +4930,17 @@ static void send_file_data(struct mg_connection *conn,
 {
 	char buf[MG_BUF_LEN];
 	int to_read, num_read, num_written;
+	int64_t size;
 
 	/* Sanity check the offset */
 	if (!filep)
 		return;
-	offset = offset < 0 ? 0 : offset > filep->size ? filep->size : offset;
+	size = filep->size > INT64_MAX ? INT64_MAX : (int64_t)(filep->size);
+	offset = offset < 0 ? 0 : offset > size ? size : offset;
 
-	if (len > 0 && filep->membuf != NULL && filep->size > 0) {
-		if (len > filep->size - offset) {
-			len = filep->size - offset;
+	if (len > 0 && filep->membuf != NULL && size > 0) {
+		if (len > size - offset) {
+			len = size - offset;
 		}
 		mg_write(conn, filep->membuf + offset, (size_t)len);
 	} else if (len > 0 && filep->fp != NULL) {
@@ -5022,7 +5024,13 @@ static void handle_static_file_request(struct mg_connection *conn,
 		return;
 
 	get_mime_type(conn->ctx, path, &mime_vec);
-	cl = filep->size;
+	if (filep->size > INT64_MAX) {
+		send_http_error(conn,
+		                500,
+		                "Error: File size is too large to send\n%" INT64_FMT,
+		                filep->size);
+	}
+	cl = (int64_t)filep->size;
 	conn->status_code = 200;
 	range[0] = '\0';
 
@@ -6182,7 +6190,8 @@ static int mg_fgetc(struct file *filep, int offset)
 {
 	if (filep == NULL)
 		return EOF;
-	if (filep->membuf != NULL && offset >= 0 && offset < filep->size) {
+	if (filep->membuf != NULL && offset >= 0 &&
+	    ((unsigned int)(offset)) < filep->size) {
 		return ((unsigned char *)filep->membuf)[offset];
 	} else if (filep->fp != NULL) {
 		return fgetc(filep->fp);
