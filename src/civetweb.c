@@ -63,6 +63,10 @@
  * replacement function here. */
 #if defined(_MSC_VER) && (_MSC_VER >= 1600)
 #define mg_static_assert static_assert
+#elif defined(__cplusplus) && (__cplusplus >= 201103L)
+#define mg_static_assert static_assert
+#elif defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#define mg_static_assert _Static_assert
 #else
 char static_assert_replacement[1];
 #define mg_static_assert(cond, txt)                                            \
