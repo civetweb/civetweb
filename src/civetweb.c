@@ -501,7 +501,7 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
 
 #else
-#define DEBUG_TRACE(fmt, ...)
+#define DEBUG_TRACE(fmt, ...) do {} while(0)
 #endif /* DEBUG */
 #endif /* DEBUG_TRACE */
 
