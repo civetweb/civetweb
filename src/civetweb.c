@@ -1654,12 +1654,12 @@ next_option(const char *list, struct vec *val, struct vec *eq_val)
 		val->ptr = list;
 		if ((list = strchr(val->ptr, ',')) != NULL) {
 			/* Comma found. Store length and shift the list ptr */
-			val->len = list - val->ptr;
+			val->len = ((size_t)(list - val->ptr));
 			list++;
 		} else {
 			/* This value is the last one */
 			list = val->ptr + strlen(val->ptr);
-			val->len = list - val->ptr;
+			val->len = ((size_t)(list - val->ptr));
 		}
 
 		if (eq_val != NULL) {
@@ -1669,8 +1669,8 @@ next_option(const char *list, struct vec *val, struct vec *eq_val)
 			eq_val->ptr = (const char *)memchr(val->ptr, '=', val->len);
 			if (eq_val->ptr != NULL) {
 				eq_val->ptr++; /* Skip over '=' character */
-				eq_val->len = val->ptr + val->len - eq_val->ptr;
-				val->len = (eq_val->ptr - val->ptr) - 1;
+				eq_val->len = ((size_t)(val->ptr - eq_val->ptr)) + val->len;
+				val->len = ((size_t)(eq_val->ptr - val->ptr)) - 1;
 			}
 		}
 	}
