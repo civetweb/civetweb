@@ -5174,8 +5174,8 @@ static void parse_http_headers(char **buf, struct mg_request_info *ri)
 		ri->http_headers[i].value = skip(buf, "\r\n");
 		if (ri->http_headers[i].name[0] == '\0')
 			break;
-		ri->num_headers = i + 1;
 	}
+	ri->num_headers = i;
 }
 
 static int is_valid_http_method(const char *method)
