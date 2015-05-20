@@ -244,7 +244,8 @@ static void upload_cb(struct mg_connection *conn, const char *path) {
         ASSERT((p2 = read_file(path, &len2)) != NULL);
         ASSERT(len1 == len2);
         ASSERT(memcmp(p1, p2, len1) == 0);
-        mg_free(p1), mg_free(p2);
+        mg_free(p1);
+        mg_free(p2);
         remove(upload_filename);
     } else if (atoi(ri->query_string) == 2) {
         if (!strcmp(path, "./upload_test.txt")) {
@@ -252,14 +253,16 @@ static void upload_cb(struct mg_connection *conn, const char *path) {
             ASSERT((p2 = read_file(path, &len2)) != NULL);
             ASSERT(len1 == len2);
             ASSERT(memcmp(p1, p2, len1) == 0);
-            mg_free(p1), mg_free(p2);
+            mg_free(p1);
+            mg_free(p2);
             remove(upload_filename);
         } else if (!strcmp(path, "./upload_test2.txt")) {
             ASSERT((p1 = read_file("README.md", &len1)) != NULL);
             ASSERT((p2 = read_file(path, &len2)) != NULL);
             ASSERT(len1 == len2);
             ASSERT(memcmp(p1, p2, len1) == 0);
-            mg_free(p1), mg_free(p2);
+            mg_free(p1);
+            mg_free(p2);
             remove(upload_filename);
         } else {
             ASSERT(0);
@@ -442,7 +445,8 @@ static void test_mg_download(int use_ssl) {
     ASSERT((p2 = read_file("unit_test.c", &len2)) != NULL);
     ASSERT(len1 == len2);
     ASSERT(memcmp(p1, p2, len1) == 0);
-    mg_free(p1), mg_free(p2);
+    mg_free(p1);
+    mg_free(p2);
     mg_close_connection(conn);
 
     /* Fetch in-memory file, should succeed. */
