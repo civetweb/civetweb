@@ -9659,7 +9659,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 {
 	struct mg_context *ctx;
 	const char *name, *value, *default_value;
-	int index, ok, workerthreadcount;
+	int idx, ok, workerthreadcount;
 	unsigned int i;
 	void (*exit_callback)(const struct mg_context *ctx) = 0;
 
@@ -9719,7 +9719,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #endif
 
 	while (options && (name = *options++) != NULL) {
-		if ((index = get_option_index(name)) == -1) {
+		if ((idx = get_option_index(name)) == -1) {
 			mg_cry(fc(ctx), "Invalid option: %s", name);
 			free_context(ctx);
 			return NULL;
@@ -9728,11 +9728,11 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 			free_context(ctx);
 			return NULL;
 		}
-		if (ctx->config[index] != NULL) {
+		if (ctx->config[idx] != NULL) {
 			mg_cry(fc(ctx), "warning: %s: duplicate option", name);
-			mg_free(ctx->config[index]);
+			mg_free(ctx->config[idx]);
 		}
-		ctx->config[index] = mg_strdup(value);
+		ctx->config[idx] = mg_strdup(value);
 		DEBUG_TRACE("[%s] -> [%s]", name, value);
 	}
 
