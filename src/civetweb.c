@@ -1072,7 +1072,7 @@ static int is_websocket_protocol(const struct mg_connection *conn);
 #define is_websocket_protocol(conn) (0)
 #endif
 
-int mg_atomic_inc(volatile int *addr)
+static int mg_atomic_inc(volatile int *addr)
 {
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -1088,7 +1088,7 @@ int mg_atomic_inc(volatile int *addr)
 	return ret;
 }
 
-int mg_atomic_dec(volatile int *addr)
+static int mg_atomic_dec(volatile int *addr)
 {
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -1121,7 +1121,7 @@ typedef struct tagTHREADNAME_INFO {
 #include <sys/prctl.h>
 #endif
 
-void mg_set_thread_name(const char *name)
+static void mg_set_thread_name(const char *name)
 {
 	char threadName[16]; /* Max. thread length in Linux/OSX/.. */
 
@@ -3023,7 +3023,7 @@ static void discard_unread_request_data(struct mg_connection *conn)
 	}
 }
 
-int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
+static int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 {
 	int64_t n, buffered_len, nread;
 	int64_t len64 =
@@ -3279,7 +3279,7 @@ static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
 	return len;
 }
 
-int mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
+static int mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
 {
 	char mem[MG_BUF_LEN], *buf = mem;
 	int len;
@@ -7977,7 +7977,8 @@ static void close_all_listening_sockets(struct mg_context *ctx)
 
 static int is_valid_port(unsigned int port) { return port < 0xffff; }
 
-int mg_inet_pton(int af, const char *src, void *dst)
+#if defined(USE_IPV6)
+static int mg_inet_pton(int af, const char *src, void *dst)
 {
 	struct addrinfo hints, *res, *ressave;
 
@@ -7999,6 +8000,7 @@ int mg_inet_pton(int af, const char *src, void *dst)
 	freeaddrinfo(ressave);
 	return (ressave != NULL);
 }
+#endif
 
 /* Valid listening port specification is: [ip_address:]port[s]
  * Examples: 80, 443s, 127.0.0.1:3128, 1.2.3.4:8080s
