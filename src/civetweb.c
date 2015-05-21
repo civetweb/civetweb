@@ -3267,7 +3267,7 @@ static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
 		va_copy(ap_copy, ap);
 		len = alloc_vprintf2(buf, fmt, ap);
 		va_end(ap_copy);
-	} else if (len > (int)size && (size = len + 1) > 0 &&
+	} else if ((size_t)(len) > size && (size = (size_t)(len) + 1) > 0 &&
 	           (*buf = (char *)mg_malloc(size)) == NULL) {
 		len = -1; /* Allocation failed, mark failure */
 	} else {
