@@ -5467,7 +5467,7 @@ static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
 		return NULL;
 
 	/* Calculate how much space is left in the buffer */
-	space = sizeof(block->buf) - block->len - 2;
+	space = (int)(sizeof(block->buf) - block->len) - 2;
 	/* assert(space >= 0); */
 	if (space < 0)
 		return NULL;
