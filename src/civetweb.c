@@ -1018,34 +1018,36 @@ struct mg_context {
 struct mg_connection {
 	struct mg_request_info request_info;
 	struct mg_context *ctx;
-	SSL *ssl;                /* SSL descriptor */
-	SSL_CTX *client_ssl_ctx; /* SSL context for client connections */
-	struct socket client;    /* Connected client */
-	time_t conn_birth_time;  /* Time (wall clock) when connection was
-	                          * established */
-	struct timespec
-	    req_time; /* Time (since system start) when the request was received */
-	int64_t num_bytes_sent;   /* Total bytes sent to client */
-	int64_t content_len;      /* Content-Length header value */
-	int64_t consumed_content; /* How many bytes of content have been read */
-	int is_chunked;           /* Transfer-encoding is chunked: 0=no, 1=yes: data
-	                           * available, 2: all data read */
-	size_t chunk_remainder;   /* Unread data from the last chunk */
-	char *buf;                /* Buffer for received data */
-	char *path_info;          /* PATH_INFO part of the URL */
-	int must_close;           /* 1 if connection must be closed */
-	int in_error_handler;     /* 1 if in handler for user defined error pages */
-	int buf_size;             /* Buffer size */
-	int request_len;          /* Size of the request + headers in a buffer */
-	int data_len;             /* Total size of data in a buffer */
-	int status_code;          /* HTTP reply status code, e.g. 200 */
-	int throttle; /* Throttling, bytes/sec. <= 0 means no throttle */
+	SSL *ssl;                    /* SSL descriptor */
+	SSL_CTX *client_ssl_ctx;     /* SSL context for client connections */
+	struct socket client;        /* Connected client */
+	time_t conn_birth_time;      /* Time (wall clock) when connection was
+	                              * established */
+	struct timespec req_time;    /* Time (since system start) when the request 
+                                  * was received */
+	int64_t num_bytes_sent;      /* Total bytes sent to client */
+	int64_t content_len;         /* Content-Length header value */
+	int64_t consumed_content;    /* How many bytes of content have been read */
+	int is_chunked;              /* Transfer-encoding is chunked: 0=no, 1=yes:
+                                  * data available, 2: all data read */
+	size_t chunk_remainder;      /* Unread data from the last chunk */
+	char *buf;                   /* Buffer for received data */
+	char *path_info;             /* PATH_INFO part of the URL */
+	int must_close;              /* 1 if connection must be closed */
+	int in_error_handler;        /* 1 if in handler for user defined error 
+                                  * pages */
+	int buf_size;                /* Buffer size */
+	int request_len;             /* Size of the request + headers in a buffer */
+	int data_len;                /* Total size of data in a buffer */
+	int status_code;             /* HTTP reply status code, e.g. 200 */
+	int throttle;                /* Throttling, bytes/sec. <= 0 means no 
+                                  * throttle */
 	time_t last_throttle_time;   /* Last time throttled data was sent */
 	int64_t last_throttle_bytes; /* Bytes sent this second */
-	pthread_mutex_t mutex; /* Used by mg_lock_connection/mg_unlock_connection to
-	                        * ensure atomic transmissions for websockets */
+	pthread_mutex_t mutex;       /* Used by mg_(un)lock_connection to ensure
+	                              * atomic transmissions for websockets */
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
-	void *lua_websocket_state; /* Lua_State for a websocket connection */
+	void *lua_websocket_state;   /* Lua_State for a websocket connection */
 #endif
 };
 
