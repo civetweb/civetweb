@@ -3183,7 +3183,7 @@ int mg_write(struct mg_connection *conn, const void *buf, size_t len)
 		}
 		allowed = conn->throttle - conn->last_throttle_bytes;
 		if (allowed > (int64_t)len) {
-			allowed = len;
+			allowed = (int64_t)len;
 		}
 		if ((total = push(NULL,
 		                  conn->client.sock,
