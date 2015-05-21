@@ -1446,7 +1446,7 @@ static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 	if (!usa) {
 		return;
 	}
-	
+
 	if (usa->sa.sa_family == AF_INET) {
 		getnameinfo(
 		    &usa->sa, sizeof(usa->sin), buf, len, NULL, 0, NI_NUMERICHOST);
@@ -6808,7 +6808,7 @@ static void read_websocket(struct mg_connection *conn,
 				memcpy(data, buf + header_len, len);
 				error = 0;
 				while (len < data_len) {
-					int n = pull(NULL, conn, data + len, (int)(data_len - len));
+					n = pull(NULL, conn, data + len, (int)(data_len - len));
 					if (n <= 0) {
 						error = 1;
 						break;

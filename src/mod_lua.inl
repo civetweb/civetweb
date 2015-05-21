@@ -1163,8 +1163,8 @@ static void *lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
 	return mg_realloc(ptr, nsize);
 }
 
-void mg_exec_lua_script(struct mg_connection *conn, const char *path,
-                        const void **exports) {
+static void mg_exec_lua_script(struct mg_connection *conn, const char *path,
+                               const void **exports) {
 	int i;
 	lua_State *L;
 

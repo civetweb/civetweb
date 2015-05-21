@@ -643,7 +643,7 @@ static void set_absolute_path(char *options[],
 #include "lauxlib.h"
 extern void lua_civet_open_all_libs(lua_State *L);
 
-int run_lua(const char *file_name)
+static int run_lua(const char *file_name)
 {
 	struct lua_State *L;
 	int lua_ret;
