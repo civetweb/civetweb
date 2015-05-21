@@ -65,7 +65,7 @@
 #define mg_static_assert static_assert
 #elif defined(__cplusplus) && (__cplusplus >= 201103L)
 #define mg_static_assert static_assert
-#elif defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #define mg_static_assert _Static_assert
 #else
 char static_assert_replacement[1];
@@ -501,7 +501,9 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
 
 #else
-#define DEBUG_TRACE(fmt, ...) do {} while(0)
+#define DEBUG_TRACE(fmt, ...)                                                  \
+	do {                                                                       \
+	} while (0)
 #endif /* DEBUG */
 #endif /* DEBUG_TRACE */
 
@@ -972,20 +974,20 @@ struct mg_request_handler_info {
 };
 
 struct mg_context {
-	volatile int stop_flag;         /* Should we stop event loop */
-	SSL_CTX *ssl_ctx;               /* SSL context */
-	char *config[NUM_OPTIONS];      /* Civetweb configuration parameters */
-	struct mg_callbacks callbacks;  /* User-defined callback function */
-	void *user_data;                /* User-defined data */
-	int context_type;               /* 1 = server context, 2 = client context */
+	volatile int stop_flag;        /* Should we stop event loop */
+	SSL_CTX *ssl_ctx;              /* SSL context */
+	char *config[NUM_OPTIONS];     /* Civetweb configuration parameters */
+	struct mg_callbacks callbacks; /* User-defined callback function */
+	void *user_data;               /* User-defined data */
+	int context_type;              /* 1 = server context, 2 = client context */
 
 	struct socket *listening_sockets;
 	in_port_t *listening_ports;
 	unsigned int num_listening_sockets;
 
-	volatile int num_threads;       /* Number of threads */
-	pthread_mutex_t thread_mutex;   /* Protects (max|num)_threads */
-	pthread_cond_t thread_cond;     /* Condvar for tracking workers terminations */
+	volatile int num_threads;     /* Number of threads */
+	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
+	pthread_cond_t thread_cond; /* Condvar for tracking workers terminations */
 
 	struct socket queue[MGSQLEN];   /* Accepted sockets */
 	volatile int sq_head;           /* Head of the socket queue */
@@ -996,11 +998,11 @@ struct mg_context {
 	unsigned int workerthreadcount; /* The amount of worker threads. */
 	pthread_t *workerthreadids;     /* The worker thread IDs */
 
-	unsigned long start_time;       /* Server start time, used for authentication */
-	pthread_mutex_t nonce_mutex;    /* Protects nonce_count */
-	unsigned long nonce_count;      /* Used nonces, used for authentication */
+	unsigned long start_time; /* Server start time, used for authentication */
+	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
+	unsigned long nonce_count;   /* Used nonces, used for authentication */
 
-	char *systemName;               /* What operating system is running */
+	char *systemName; /* What operating system is running */
 
 	/* linked list of uri handlers */
 	struct mg_request_handler_info *request_handlers;
@@ -1023,31 +1025,31 @@ struct mg_connection {
 	struct socket client;        /* Connected client */
 	time_t conn_birth_time;      /* Time (wall clock) when connection was
 	                              * established */
-	struct timespec req_time;    /* Time (since system start) when the request 
-                                  * was received */
+	struct timespec req_time;    /* Time (since system start) when the request
+	                              * was received */
 	int64_t num_bytes_sent;      /* Total bytes sent to client */
 	int64_t content_len;         /* Content-Length header value */
 	int64_t consumed_content;    /* How many bytes of content have been read */
 	int is_chunked;              /* Transfer-encoding is chunked: 0=no, 1=yes:
-                                  * data available, 2: all data read */
+	                              * data available, 2: all data read */
 	size_t chunk_remainder;      /* Unread data from the last chunk */
 	char *buf;                   /* Buffer for received data */
 	char *path_info;             /* PATH_INFO part of the URL */
 	int must_close;              /* 1 if connection must be closed */
-	int in_error_handler;        /* 1 if in handler for user defined error 
-                                  * pages */
+	int in_error_handler;        /* 1 if in handler for user defined error
+	                              * pages */
 	int buf_size;                /* Buffer size */
 	int request_len;             /* Size of the request + headers in a buffer */
 	int data_len;                /* Total size of data in a buffer */
 	int status_code;             /* HTTP reply status code, e.g. 200 */
-	int throttle;                /* Throttling, bytes/sec. <= 0 means no 
-                                  * throttle */
+	int throttle;                /* Throttling, bytes/sec. <= 0 means no
+	                              * throttle */
 	time_t last_throttle_time;   /* Last time throttled data was sent */
 	int64_t last_throttle_bytes; /* Bytes sent this second */
 	pthread_mutex_t mutex;       /* Used by mg_(un)lock_connection to ensure
 	                              * atomic transmissions for websockets */
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
-	void *lua_websocket_state;   /* Lua_State for a websocket connection */
+	void *lua_websocket_state; /* Lua_State for a websocket connection */
 #endif
 };
 
@@ -1681,7 +1683,8 @@ next_option(const char *list, struct vec *val, struct vec *eq_val)
 }
 
 /* Perform case-insensitive match of string against pattern */
-static int match_prefix(const char *pattern, size_t pattern_len, const char *str)
+static int
+match_prefix(const char *pattern, size_t pattern_len, const char *str)
 {
 	const char *or_str;
 	size_t i;
@@ -1689,11 +1692,10 @@ static int match_prefix(const char *pattern, size_t pattern_len, const char *str
 
 	if ((or_str = (const char *)memchr(pattern, '|', pattern_len)) != NULL) {
 		res = match_prefix(pattern, (size_t)(or_str - pattern), str);
-		return res > 0
-		           ? res
-		           : match_prefix(or_str + 1,
-		                          (size_t)((pattern + pattern_len) - (or_str + 1)),
-		                          str);
+		return res > 0 ? res : match_prefix(or_str + 1,
+		                                    (size_t)((pattern + pattern_len) -
+		                                             (or_str + 1)),
+		                                    str);
 	}
 
 	for (i = 0, j = 0; i < pattern_len; i++, j++) {
@@ -2037,7 +2039,8 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 			buf[len] = 0;
 
 			va_start(ap, fmt);
-			len += mg_vsnprintf(conn, buf + len, sizeof(buf) - (size_t)len, fmt, ap);
+			len += mg_vsnprintf(
+			    conn, buf + len, sizeof(buf) - (size_t)len, fmt, ap);
 			va_end(ap);
 		}
 		DEBUG_TRACE("[%s]", buf);
@@ -3013,7 +3016,8 @@ static void discard_unread_request_data(struct mg_connection *conn)
 	} else {
 		/* Not chunked: content length is known */
 		while (conn->consumed_content < conn->content_len) {
-			if (to_read > (size_t)(conn->content_len - conn->consumed_content)) {
+			if (to_read >
+			    (size_t)(conn->content_len - conn->consumed_content)) {
 				to_read = (size_t)(conn->content_len - conn->consumed_content);
 			}
 
@@ -3108,9 +3112,9 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 			if (conn->chunk_remainder) {
 				/* copy from the remainder of the last received chunk */
 				long read_ret;
-				size_t read_now = ((conn->chunk_remainder > len)
-				                         ? (len)
-				                         : (conn->chunk_remainder));
+				size_t read_now =
+				    ((conn->chunk_remainder > len) ? (len)
+				                                   : (conn->chunk_remainder));
 
 				conn->content_len += (int)read_now;
 				read_ret =
@@ -3615,10 +3619,9 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 #endif
 #if defined(USE_LUA)
 			    ||
-			    match_prefix(
-			        conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-			        strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
-			        filename) > 0
+			    match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+			                 strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+			                 filename) > 0
 #endif
 			    ) {
 				/* The request addresses a CGI script or a Lua script. The URI
@@ -3662,10 +3665,9 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				if ((0
 #if !defined(NO_CGI)
 				     ||
-				     match_prefix(
-				         conn->ctx->config[CGI_EXTENSIONS],
-				         strlen(conn->ctx->config[CGI_EXTENSIONS]),
-				         filename) > 0
+				     match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+				                  strlen(conn->ctx->config[CGI_EXTENSIONS]),
+				                  filename) > 0
 #endif
 #if defined(USE_LUA)
 				     ||
@@ -4172,6 +4174,7 @@ static int parse_auth_header(struct mg_connection *conn,
 	if (ah->nonce == NULL) {
 		return 0;
 	}
+	s = NULL;
 	nonce = strtoul(ah->nonce, &s, 10);
 	if ((s == NULL) || (*s != 0)) {
 		return 0;
@@ -4208,7 +4211,7 @@ static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p)
 
 	if (filep->membuf != NULL && *p != NULL) {
 		memend = (char *)&filep->membuf[filep->size];
-		 /* Search for \n from p till the end of stream */
+		/* Search for \n from p till the end of stream */
 		eof = (char *)memchr(*p, '\n', (size_t)(memend - *p));
 		if (eof != NULL) {
 			eof += 1; /* Include \n */
@@ -5471,8 +5474,7 @@ static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
 	va_end(ap);
 
 	/* Make sure we do not overflow buffer and the envp array */
-	if (n > 0 && n + 1 < space &&
-	    block->nvars + 2 < ARRAY_SIZE(block->vars)) {
+	if (n > 0 && n + 1 < space && block->nvars + 2 < ARRAY_SIZE(block->vars)) {
 		/* Append a pointer to the added string into the envp array */
 		block->vars[block->nvars++] = added;
 		/* Bump up used length counter. Include \0 terminator */
@@ -7053,7 +7055,7 @@ static int parse_net(const char *spec, uint32_t *net, uint32_t *mask)
 	    slash < 33) {
 		len = n;
 		*net = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)c << 8) |
-		        (uint32_t)d;
+		       (uint32_t)d;
 		*mask = slash ? 0xffffffffU << (32 - slash) : 0;
 	}
 
@@ -7937,10 +7939,9 @@ static void handle_file_based_request(struct mg_connection *conn,
 		/* Lua server page: an SSI like page containing mostly plain html code
 		 * plus some tags with server generated contents. */
 		handle_lsp_request(conn, path, file, NULL);
-	} else if (match_prefix(
-	               conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-	               strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
-	               path) > 0) {
+	} else if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+	                        strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+	                        path) > 0) {
 		/* Lua in-server module script: a CGI like script used to generate the
 		 * entire reply. */
 		mg_exec_lua_script(conn, path, NULL);
@@ -8043,7 +8044,7 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 		/* TODO: check -- so->lsa.sin6.sin6_port = htons((uint16_t) port); */
 		so->lsa.sin.sin_port = htons((uint16_t)port);
 	} else {
-		 /* Parsing failure. Make port invalid. */
+		/* Parsing failure. Make port invalid. */
 		port = 0;
 		len = 0;
 	}
@@ -8842,7 +8843,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		/* Message is a valid request or response */
 		if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
 			/* Request/response has content length set */
-			char *endptr;
+			char *endptr = NULL;
 			conn->content_len = strtoll(cl, &endptr, 10);
 			if (endptr == cl) {
 				snprintf(ebuf, ebuf_len, "%s", "Bad Request");
@@ -9162,7 +9163,8 @@ static void process_new_connection(struct mg_connection *conn)
 				break;
 			conn->data_len -= discard_len;
 			if (conn->data_len > 0)
-				memmove(conn->buf, conn->buf + discard_len, (size_t)conn->data_len);
+				memmove(
+				    conn->buf, conn->buf + discard_len, (size_t)conn->data_len);
 
 			/* assert(conn->data_len >= 0); */
 			/* assert(conn->data_len <= conn->buf_size); */
@@ -9177,7 +9179,7 @@ static void process_new_connection(struct mg_connection *conn)
 /* Worker threads take accepted socket from the queue */
 static int consume_socket(struct mg_context *ctx, struct socket *sp)
 {
-	#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
+#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
 	if (!ctx)
 		return 0;
 
@@ -9208,7 +9210,7 @@ static int consume_socket(struct mg_context *ctx, struct socket *sp)
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	return !ctx->stop_flag;
-	#undef QUEUE_SIZE
+#undef QUEUE_SIZE
 }
 
 static void *worker_thread_run(void *thread_func_param)
@@ -9312,7 +9314,7 @@ static void *worker_thread(void *thread_func_param)
 /* Master thread adds accepted socket to a queue */
 static void produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
-	#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
+#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
 	if (!ctx)
 		return;
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
@@ -9333,7 +9335,7 @@ static void produce_socket(struct mg_context *ctx, const struct socket *sp)
 
 	(void)pthread_cond_signal(&ctx->sq_full);
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
-	#undef QUEUE_SIZE
+#undef QUEUE_SIZE
 }
 
 static void accept_new_connection(const struct socket *listener,
