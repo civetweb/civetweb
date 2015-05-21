@@ -7240,7 +7240,8 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 				memmove(buf, &buf[len - bl], bl);
 				len = bl;
 			}
-		} while (!eof && (n = mg_read(conn, buf + len, sizeof(buf) - len)) > 0);
+			n = mg_read(conn, buf + len, sizeof(buf) - ((size_t)(len)));
+		} while (!eof && (n > 0));
 		fclose(fp);
 		if (eof) {
 			remove(path);
