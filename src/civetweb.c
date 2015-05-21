@@ -968,35 +968,35 @@ struct mg_request_handler_info {
 };
 
 struct mg_context {
-	volatile int stop_flag;        /* Should we stop event loop */
-	SSL_CTX *ssl_ctx;              /* SSL context */
-	char *config[NUM_OPTIONS];     /* Civetweb configuration parameters */
-	struct mg_callbacks callbacks; /* User-defined callback function */
-	void *user_data;               /* User-defined data */
-	int context_type;              /* 1 = server context, 2 = client context */
+	volatile int stop_flag;         /* Should we stop event loop */
+	SSL_CTX *ssl_ctx;               /* SSL context */
+	char *config[NUM_OPTIONS];      /* Civetweb configuration parameters */
+	struct mg_callbacks callbacks;  /* User-defined callback function */
+	void *user_data;                /* User-defined data */
+	int context_type;               /* 1 = server context, 2 = client context */
 
 	struct socket *listening_sockets;
 	in_port_t *listening_ports;
 	int num_listening_sockets;
 
-	volatile int num_threads;     /* Number of threads */
-	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
-	pthread_cond_t thread_cond; /* Condvar for tracking workers terminations */
+	volatile int num_threads;       /* Number of threads */
+	pthread_mutex_t thread_mutex;   /* Protects (max|num)_threads */
+	pthread_cond_t thread_cond;     /* Condvar for tracking workers terminations */
 
-	struct socket queue[MGSQLEN]; /* Accepted sockets */
-	volatile int sq_head;         /* Head of the socket queue */
-	volatile int sq_tail;         /* Tail of the socket queue */
-	pthread_cond_t sq_full;       /* Signaled when socket is produced */
-	pthread_cond_t sq_empty;      /* Signaled when socket is consumed */
-	pthread_t masterthreadid;     /* The master thread ID */
-	int workerthreadcount;        /* The amount of worker threads. */
-	pthread_t *workerthreadids;   /* The worker thread IDs */
+	struct socket queue[MGSQLEN];   /* Accepted sockets */
+	volatile int sq_head;           /* Head of the socket queue */
+	volatile int sq_tail;           /* Tail of the socket queue */
+	pthread_cond_t sq_full;         /* Signaled when socket is produced */
+	pthread_cond_t sq_empty;        /* Signaled when socket is consumed */
+	pthread_t masterthreadid;       /* The master thread ID */
+	int workerthreadcount;          /* The amount of worker threads. */
+	pthread_t *workerthreadids;     /* The worker thread IDs */
 
-	unsigned long start_time; /* Server start time, used for authentication */
-	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
-	unsigned long nonce_count;   /* Used nonces, used for authentication */
+	unsigned long start_time;       /* Server start time, used for authentication */
+	pthread_mutex_t nonce_mutex;    /* Protects nonce_count */
+	unsigned long nonce_count;      /* Used nonces, used for authentication */
 
-	char *systemName; /* What operating system is running */
+	char *systemName;               /* What operating system is running */
 
 	/* linked list of uri handlers */
 	struct mg_request_handler_info *request_handlers;
