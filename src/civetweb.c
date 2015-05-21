@@ -5432,9 +5432,9 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 struct cgi_env_block {
 	struct mg_connection *conn;
 	char buf[CGI_ENVIRONMENT_SIZE]; /* Environment buffer */
-	int len;                        /* Space taken */
+	unsigned int len;               /* Space taken */
 	char *vars[MAX_CGI_ENVIR_VARS]; /* char **envp */
-	int nvars;                      /* Number of variables */
+	unsigned int nvars;             /* Number of variables */
 };
 
 static char *addenv(struct cgi_env_block *block,
@@ -5468,11 +5468,11 @@ static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
 
 	/* Make sure we do not overflow buffer and the envp array */
 	if (n > 0 && n + 1 < space &&
-	    block->nvars < (int)ARRAY_SIZE(block->vars) - 2) {
+	    block->nvars + 2 < ARRAY_SIZE(block->vars)) {
 		/* Append a pointer to the added string into the envp array */
 		block->vars[block->nvars++] = added;
 		/* Bump up used length counter. Include \0 terminator */
-		block->len += n + 1;
+		block->len += (unsigned int)(n) + 1;
 	} else {
 		mg_cry(block->conn,
 		       "%s: CGI env buffer truncated for [%s]",
