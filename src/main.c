@@ -35,6 +35,14 @@
 #define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define NO_RETURN [[noreturn]]
+#elif defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#define NO_RETURN _Noreturn
+#else
+#define NO_RETURN
+#endif
+
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -131,7 +139,7 @@ static struct mg_option main_config_options[] = {
 
 static void WINCDECL signal_handler(int sig_num) { g_exit_flag = sig_num; }
 
-static void die(const char *fmt, ...)
+static NO_RETURN void die(const char *fmt, ...)
 {
 	va_list ap;
 	char msg[200] = "";
@@ -163,7 +171,7 @@ static void show_server_name(void)
 	fprintf(stderr, "CivetWeb v%s, built on %s\n", mg_version(), __DATE__);
 }
 
-static void show_usage_and_exit(const char *exeName)
+static NO_RETURN void show_usage_and_exit(const char *exeName)
 {
 	const struct mg_option *options;
 	int i;
