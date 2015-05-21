@@ -8408,7 +8408,8 @@ static int cryptolib_users = 0; /* Reference counter for crypto library. */
 
 static int initialize_ssl(struct mg_context *ctx)
 {
-	int i, size;
+	int i;
+	size_t size;
 
 #if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
@@ -8425,8 +8426,11 @@ static int initialize_ssl(struct mg_context *ctx)
 	/* Initialize locking callbacks, needed for thread safety.
 	 * http://www.openssl.org/support/faq.html#PROG1
 	 */
-	size = sizeof(pthread_mutex_t) * CRYPTO_num_locks();
-	if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc((size_t)size)) == NULL) {
+	i = CRYPTO_num_locks();
+	if (i < 0)
+		i = 0;
+	size = sizeof(pthread_mutex_t) * ((size_t)(i));
+	if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc(size)) == NULL) {
 		mg_cry(
 		    fc(ctx), "%s: cannot allocate mutexes: %s", __func__, ssl_error());
 		return 0;
