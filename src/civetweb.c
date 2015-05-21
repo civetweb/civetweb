@@ -5824,11 +5824,12 @@ static int put_dir(struct mg_connection *conn, const char *path)
 	char buf[PATH_MAX];
 	const char *s, *p;
 	struct file file = STRUCT_FILE_INITIALIZER;
-	int len, res = 1;
+	size_t len;
+	int res = 1;
 
 	for (s = p = path + 2; (p = strchr(s, '/')) != NULL; s = ++p) {
-		len = (int)(p - path);
-		if (len >= (int)sizeof(buf)) {
+		len = (size_t)(p - path);
+		if (len >= sizeof(buf)) {
 			/* path too long */
 			res = -1;
 			break;
