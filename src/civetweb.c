@@ -3224,7 +3224,7 @@ int mg_write(struct mg_connection *conn, const void *buf, size_t len)
 static int alloc_vprintf2(char **buf, const char *fmt, va_list ap)
 {
 	va_list ap_copy;
-	int size = MG_BUF_LEN;
+	size_t size = MG_BUF_LEN;
 	int len = -1;
 
 	*buf = NULL;
