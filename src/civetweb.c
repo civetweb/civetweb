@@ -1679,22 +1679,22 @@ next_option(const char *list, struct vec *val, struct vec *eq_val)
 }
 
 /* Perform case-insensitive match of string against pattern */
-static int match_prefix(const char *pattern, int pattern_len, const char *str)
+static int match_prefix(const char *pattern, size_t pattern_len, const char *str)
 {
 	const char *or_str;
-	int i, j, len, res;
+	size_t i;
+	int j, len, res;
 
 	if ((or_str = (const char *)memchr(pattern, '|', pattern_len)) != NULL) {
-		res = match_prefix(pattern, (int)(or_str - pattern), str);
+		res = match_prefix(pattern, (size_t)(or_str - pattern), str);
 		return res > 0
 		           ? res
 		           : match_prefix(or_str + 1,
-		                          (int)((pattern + pattern_len) - (or_str + 1)),
+		                          (size_t)((pattern + pattern_len) - (or_str + 1)),
 		                          str);
 	}
 
-	i = j = 0;
-	for (; i < pattern_len; i++, j++) {
+	for (i = 0, j = 0; i < pattern_len; i++, j++) {
 		if (pattern[i] == '?' && str[j] != '\0') {
 			continue;
 		} else if (pattern[i] == '$') {
@@ -3588,7 +3588,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 
 		rewrite = conn->ctx->config[REWRITE];
 		while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
-			if ((match_len = match_prefix(a.ptr, (int)a.len, uri)) > 0) {
+			if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
 				mg_snprintf(conn,
 				            filename,
 				            filename_buf_len - 1,
@@ -3608,14 +3608,14 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 #if !defined(NO_CGI)
 			    ||
 			    match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-			                 (int)strlen(conn->ctx->config[CGI_EXTENSIONS]),
+			                 strlen(conn->ctx->config[CGI_EXTENSIONS]),
 			                 filename) > 0
 #endif
 #if defined(USE_LUA)
 			    ||
 			    match_prefix(
 			        conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-			        (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+			        strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
 			        filename) > 0
 #endif
 			    ) {
@@ -3662,14 +3662,14 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				     ||
 				     match_prefix(
 				         conn->ctx->config[CGI_EXTENSIONS],
-				         (int)strlen(conn->ctx->config[CGI_EXTENSIONS]),
+				         strlen(conn->ctx->config[CGI_EXTENSIONS]),
 				         filename) > 0
 #endif
 #if defined(USE_LUA)
 				     ||
 				     match_prefix(
 				         conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-				         (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+				         strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
 				         filename) > 0
 #endif
 				     ) &&
@@ -4705,9 +4705,9 @@ static int must_hide_file(struct mg_connection *conn, const char *path)
 	if (conn && conn->ctx) {
 		const char *pw_pattern = "**" PASSWORDS_FILE_NAME "$";
 		const char *pattern = conn->ctx->config[HIDE_FILES];
-		return match_prefix(pw_pattern, (int)strlen(pw_pattern), path) > 0 ||
+		return match_prefix(pw_pattern, strlen(pw_pattern), path) > 0 ||
 		       (pattern != NULL &&
-		        match_prefix(pattern, (int)strlen(pattern), path) > 0);
+		        match_prefix(pattern, strlen(pattern), path) > 0);
 	}
 	return 0;
 }
@@ -6160,7 +6160,7 @@ static void do_ssi_include(struct mg_connection *conn,
 	} else {
 		fclose_on_exec(&file, conn);
 		if (match_prefix(conn->ctx->config[SSI_EXTENSIONS],
-		                 (int)strlen(conn->ctx->config[SSI_EXTENSIONS]),
+		                 strlen(conn->ctx->config[SSI_EXTENSIONS]),
 		                 path) > 0) {
 			send_ssi_file(conn, path, &file, include_level + 1);
 		} else {
@@ -6955,7 +6955,7 @@ handle_websocket_request(struct mg_connection *conn,
 		if (conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]) {
 			lua_websock = match_prefix(
 			    conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS],
-			    (int)strlen(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]),
+			    strlen(conn->ctx->config[LUA_WEBSOCKET_EXTENSIONS]),
 			    path);
 		}
 
@@ -7078,7 +7078,7 @@ static int set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
 			if ((remote_ip & mask) == net) {
 				throttle = (int)v;
 			}
-		} else if (match_prefix(vec.ptr, (int)vec.len, uri) > 0) {
+		} else if (match_prefix(vec.ptr, vec.len, uri) > 0) {
 			throttle = (int)v;
 		}
 	}
@@ -7516,7 +7516,7 @@ static int get_request_handler(struct mg_connection *conn,
 		for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL;
 		     tmp_rh = tmp_rh->next) {
 			if (tmp_rh->is_websocket_handler == is_websocket_request) {
-				if (match_prefix(tmp_rh->uri, (int)tmp_rh->uri_len, uri) > 0) {
+				if (match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0) {
 					if (is_websocket_request) {
 						*connect_handler = tmp_rh->connect_handler;
 						*ready_handler = tmp_rh->ready_handler;
@@ -7927,14 +7927,14 @@ static void handle_file_based_request(struct mg_connection *conn,
 #ifdef USE_LUA
 	} else if (match_prefix(
 	               conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS],
-	               (int)strlen(conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
+	               strlen(conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
 	               path) > 0) {
 		/* Lua server page: an SSI like page containing mostly plain html code
 		 * plus some tags with server generated contents. */
 		handle_lsp_request(conn, path, file, NULL);
 	} else if (match_prefix(
 	               conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-	               (int)strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+	               strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
 	               path) > 0) {
 		/* Lua in-server module script: a CGI like script used to generate the
 		 * entire reply. */
@@ -7942,13 +7942,13 @@ static void handle_file_based_request(struct mg_connection *conn,
 #endif
 #if !defined(NO_CGI)
 	} else if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-	                        (int)strlen(conn->ctx->config[CGI_EXTENSIONS]),
+	                        strlen(conn->ctx->config[CGI_EXTENSIONS]),
 	                        path) > 0) {
 		/* CGI scripts may support all HTTP methods */
 		handle_cgi_request(conn, path);
 #endif /* !NO_CGI */
 	} else if (match_prefix(conn->ctx->config[SSI_EXTENSIONS],
-	                        (int)strlen(conn->ctx->config[SSI_EXTENSIONS]),
+	                        strlen(conn->ctx->config[SSI_EXTENSIONS]),
 	                        path) > 0) {
 		handle_ssi_file_request(conn, path, file);
 	} else if ((!conn->in_error_handler) && is_not_modified(conn, file)) {
