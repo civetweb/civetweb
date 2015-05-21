@@ -738,7 +738,7 @@ static void start_civetweb(int argc, char *argv[]) {
 	}
 }
 
-void stop_civetweb(void) {
+static void stop_civetweb(void) {
 	mg_stop(g_ctx);
 	free(g_user_data.first_message);
 	g_user_data.first_message = NULL;
