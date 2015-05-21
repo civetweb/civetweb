@@ -3106,14 +3106,14 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 			if (conn->chunk_remainder) {
 				/* copy from the remainder of the last received chunk */
 				long read_ret;
-				int read_now = (int)((conn->chunk_remainder > len)
+				size_t read_now = ((conn->chunk_remainder > len)
 				                         ? (len)
 				                         : (conn->chunk_remainder));
 
-				conn->content_len += read_now;
+				conn->content_len += (int)read_now;
 				read_ret =
 				    mg_read_inner(conn, (char *)buf + all_read, read_now);
-				all_read += read_ret;
+				all_read += (size_t)read_ret;
 
 				conn->chunk_remainder -= read_now;
 				len -= read_now;
