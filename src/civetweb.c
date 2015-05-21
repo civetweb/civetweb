@@ -989,7 +989,7 @@ struct mg_context {
 	pthread_cond_t sq_full;         /* Signaled when socket is produced */
 	pthread_cond_t sq_empty;        /* Signaled when socket is consumed */
 	pthread_t masterthreadid;       /* The master thread ID */
-	int workerthreadcount;          /* The amount of worker threads. */
+	unsigned int workerthreadcount; /* The amount of worker threads. */
 	pthread_t *workerthreadids;     /* The worker thread IDs */
 
 	unsigned long start_time;       /* Server start time, used for authentication */
@@ -8683,7 +8683,7 @@ static void close_connection(struct mg_connection *conn)
 void mg_close_connection(struct mg_connection *conn)
 {
 	struct mg_context *client_ctx = NULL;
-	int i;
+	unsigned int i;
 
 	if (conn == NULL)
 		return;
@@ -9390,8 +9390,8 @@ static void master_thread_run(void *thread_func_param)
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	struct mg_workerTLS tls;
 	struct pollfd *pfd;
-	int i;
-	int workerthreadcount;
+	unsigned int i;
+	unsigned int workerthreadcount;
 
 	if (!ctx)
 		return;
@@ -9629,8 +9629,8 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 {
 	struct mg_context *ctx;
 	const char *name, *value, *default_value;
-	int i, ok;
-	int workerthreadcount;
+	int index, ok, workerthreadcount;
+	unsigned int i;
 	void (*exit_callback)(const struct mg_context *ctx) = 0;
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -9689,7 +9689,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #endif
 
 	while (options && (name = *options++) != NULL) {
-		if ((i = get_option_index(name)) == -1) {
+		if ((index = get_option_index(name)) == -1) {
 			mg_cry(fc(ctx), "Invalid option: %s", name);
 			free_context(ctx);
 			return NULL;
@@ -9698,11 +9698,11 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 			free_context(ctx);
 			return NULL;
 		}
-		if (ctx->config[i] != NULL) {
+		if (ctx->config[index] != NULL) {
 			mg_cry(fc(ctx), "warning: %s: duplicate option", name);
-			mg_free(ctx->config[i]);
+			mg_free(ctx->config[index]);
 		}
-		ctx->config[i] = mg_strdup(value);
+		ctx->config[index] = mg_strdup(value);
 		DEBUG_TRACE("[%s] -> [%s]", name, value);
 	}
 
@@ -9754,9 +9754,9 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	}
 
 	if (workerthreadcount > 0) {
-		ctx->workerthreadcount = workerthreadcount;
+		ctx->workerthreadcount = ((unsigned int)(workerthreadcount));
 		ctx->workerthreadids =
-		    (pthread_t *)mg_calloc(workerthreadcount, sizeof(pthread_t));
+		    (pthread_t *)mg_calloc(ctx->workerthreadcount, sizeof(pthread_t));
 		if (ctx->workerthreadids == NULL) {
 			mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
 			free_context(ctx);
@@ -9783,7 +9783,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid);
 
 	/* Start worker threads */
-	for (i = 0; i < workerthreadcount; i++) {
+	for (i = 0; i < ctx->workerthreadcount; i++) {
 		(void)pthread_mutex_lock(&ctx->thread_mutex);
 		ctx->num_threads++;
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
