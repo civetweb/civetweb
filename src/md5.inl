@@ -65,8 +65,8 @@ extern "C" {
 MD5_STATIC void md5_init(md5_state_t *pms);
 
 /* Append a string to the message. */
-MD5_STATIC void md5_append(md5_state_t *pms, const md5_byte_t *data,
-                           size_t nbytes);
+MD5_STATIC void
+md5_append(md5_state_t *pms, const md5_byte_t *data, size_t nbytes);
 
 /* Finish the message and return the digest. */
 MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
@@ -207,7 +207,8 @@ MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
 #define T63 (0x2ad7d2bb)
 #define T64 /* 0xeb86d391 */ (T_MASK ^ 0x14792c6e)
 
-static void md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/) {
+static void md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
+{
 	md5_word_t a = pms->abcd[0], b = pms->abcd[1], c = pms->abcd[2],
 	           d = pms->abcd[3];
 	md5_word_t t;
@@ -394,7 +395,8 @@ static void md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/) {
 	pms->abcd[3] += d;
 }
 
-MD5_STATIC void md5_init(md5_state_t *pms) {
+MD5_STATIC void md5_init(md5_state_t *pms)
+{
 	pms->count[0] = pms->count[1] = 0;
 	pms->abcd[0] = 0x67452301;
 	pms->abcd[1] = /*0xefcdab89*/ T_MASK ^ 0x10325476;
@@ -402,8 +404,9 @@ MD5_STATIC void md5_init(md5_state_t *pms) {
 	pms->abcd[3] = 0x10325476;
 }
 
-MD5_STATIC void md5_append(md5_state_t *pms, const md5_byte_t *data,
-                           size_t nbytes) {
+MD5_STATIC void
+md5_append(md5_state_t *pms, const md5_byte_t *data, size_t nbytes)
+{
 	const md5_byte_t *p = data;
 	size_t left = nbytes;
 	size_t offset = (pms->count[0] >> 3) & 63;
@@ -439,7 +442,8 @@ MD5_STATIC void md5_append(md5_state_t *pms, const md5_byte_t *data,
 		memcpy(pms->buf, p, left);
 }
 
-MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16]) {
+MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16])
+{
 	static const md5_byte_t pad[64] = {
 	    0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	    0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

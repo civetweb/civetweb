@@ -19,8 +19,13 @@ struct ttimers {
 	unsigned timer_count;             /* Current size of timer list */
 };
 
-static int timer_add(struct mg_context *ctx, double next_time, double period,
-                     int is_relative, taction action, void *arg) {
+static int timer_add(struct mg_context *ctx,
+                     double next_time,
+                     double period,
+                     int is_relative,
+                     taction action,
+                     void *arg)
+{
 	unsigned u, v;
 	int error = 0;
 	struct timespec now;
@@ -57,7 +62,8 @@ static int timer_add(struct mg_context *ctx, double next_time, double period,
 	return error;
 }
 
-static void timer_thread_run(void *thread_func_param) {
+static void timer_thread_run(void *thread_func_param)
+{
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	struct timespec now;
 	double d;
@@ -67,8 +73,9 @@ static void timer_thread_run(void *thread_func_param) {
 
 #if defined(HAVE_CLOCK_NANOSLEEP) /* Linux with librt */
 	/* TODO */
-	while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &request,
-	                       &request) == EINTR) { /*nop*/
+	while (
+	    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &request, &request) ==
+	    EINTR) { /*nop*/
 		;
 	}
 #else
@@ -99,18 +106,21 @@ static void timer_thread_run(void *thread_func_param) {
 }
 
 #ifdef _WIN32
-static unsigned __stdcall timer_thread(void *thread_func_param) {
+static unsigned __stdcall timer_thread(void *thread_func_param)
+{
 	timer_thread_run(thread_func_param);
 	return 0;
 }
 #else
-static void *timer_thread(void *thread_func_param) {
+static void *timer_thread(void *thread_func_param)
+{
 	timer_thread_run(thread_func_param);
 	return NULL;
 }
 #endif /* _WIN32 */
 
-static int timers_init(struct mg_context *ctx) {
+static int timers_init(struct mg_context *ctx)
+{
 	ctx->timers = (struct ttimers *)mg_calloc(sizeof(struct ttimers), 1);
 	(void)pthread_mutex_init(&ctx->timers->mutex, NULL);
 
@@ -120,7 +130,8 @@ static int timers_init(struct mg_context *ctx) {
 	return 0;
 }
 
-static void timers_exit(struct mg_context *ctx) {
+static void timers_exit(struct mg_context *ctx)
+{
 	if (ctx->timers) {
 		(void)pthread_mutex_destroy(&ctx->timers->mutex);
 		mg_free(ctx->timers);

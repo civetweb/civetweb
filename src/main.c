@@ -151,7 +151,7 @@ static void die(const char *fmt, ...)
 }
 
 #ifdef WIN32
-static int MakeConsole();
+static int MakeConsole(void);
 #endif
 
 static void show_server_name(void)
@@ -1115,7 +1115,7 @@ static BOOL CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 	return FALSE;
 }
 
-void suggest_passwd(char *passwd)
+static void suggest_passwd(char *passwd)
 {
 	unsigned u;
 	char *p;
@@ -1953,7 +1953,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-static int MakeConsole()
+static int MakeConsole(void)
 {
 	DWORD err;
 	int ok = (GetConsoleWindow() != NULL);
