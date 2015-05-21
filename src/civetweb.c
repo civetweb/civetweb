@@ -432,7 +432,7 @@ typedef int SOCKET;
 static CRITICAL_SECTION global_log_file_lock;
 static DWORD pthread_self(void) { return GetCurrentThreadId(); }
 
-int pthread_key_create(
+static int pthread_key_create(
     pthread_key_t *key,
     void (*_must_be_zero)(
         void *) /* destructor function not supported for windows */)
@@ -445,14 +445,17 @@ int pthread_key_create(
 	return -2;
 }
 
-int pthread_key_delete(pthread_key_t key) { return TlsFree(key) ? 0 : 1; }
+static int pthread_key_delete(pthread_key_t key)
+{
+	return TlsFree(key) ? 0 : 1;
+}
 
-int pthread_setspecific(pthread_key_t key, void *value)
+static int pthread_setspecific(pthread_key_t key, void *value)
 {
 	return TlsSetValue(key, value) ? 0 : 1;
 }
 
-void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
+static void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
 #endif /* _WIN32 */
 
 #include "civetweb.h"
@@ -1083,7 +1086,7 @@ static int mg_atomic_inc(volatile int *addr)
 	/* Depending on the SDK, this function uses either
 	 * (volatile unsigned int *) or (volatile LONG *),
 	 * so whatever you use, the other SDK is likely to raise a warning. */
-	ret = InterlockedIncrement((volatile unsigned int *)addr);
+	ret = InterlockedIncrement((volatile long *)addr);
 #elif defined(__GNUC__)
 	ret = __sync_add_and_fetch(addr, 1);
 #else
@@ -1099,7 +1102,7 @@ static int mg_atomic_dec(volatile int *addr)
 	/* Depending on the SDK, this function uses either
 	 * (volatile unsigned int *) or (volatile LONG *),
 	 * so whatever you use, the other SDK is likely to raise a warning. */
-	ret = InterlockedDecrement((volatile unsigned int *)addr);
+	ret = InterlockedDecrement((volatile long *)addr);
 #elif defined(__GNUC__)
 	ret = __sync_sub_and_fetch(addr, 1);
 #else
