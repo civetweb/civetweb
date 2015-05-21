@@ -2035,7 +2035,7 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 			buf[len] = 0;
 
 			va_start(ap, fmt);
-			len += mg_vsnprintf(conn, buf + len, sizeof(buf) - len, fmt, ap);
+			len += mg_vsnprintf(conn, buf + len, sizeof(buf) - (size_t)len, fmt, ap);
 			va_end(ap);
 		}
 		DEBUG_TRACE("[%s]", buf);
