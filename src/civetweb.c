@@ -9146,10 +9146,9 @@ static void process_new_connection(struct mg_connection *conn)
 			/*assert(discard_len >= 0);*/
 			if (discard_len < 0)
 				break;
-			memmove(conn->buf,
-			        conn->buf + discard_len,
-			        conn->data_len - discard_len);
 			conn->data_len -= discard_len;
+			if (conn->data_len > 0)
+				memmove(conn->buf, conn->buf + discard_len, (size_t)conn->data_len);
 
 			/* assert(conn->data_len >= 0); */
 			/* assert(conn->data_len <= conn->buf_size); */
