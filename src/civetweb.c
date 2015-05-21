@@ -4580,7 +4580,7 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		memset(&sain, '\0', sizeof(sain));
 		sain.sin_family = AF_INET;
 		sain.sin_port = htons((uint16_t)port);
-		sain.sin_addr = *(struct in_addr *)he->h_addr_list[0];
+		sain.sin_addr = *(struct in_addr *)(void*)he->h_addr_list[0];
 		if (connect(sock, (struct sockaddr *)&sain, sizeof(sain)) != 0) {
 			snprintf(ebuf,
 			         ebuf_len,
