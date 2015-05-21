@@ -7047,8 +7047,8 @@ static int parse_net(const char *spec, uint32_t *net, uint32_t *mask)
 	    isbyte(a) && isbyte(b) && isbyte(c) && isbyte(d) && slash >= 0 &&
 	    slash < 33) {
 		len = n;
-		*net =
-		    ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)c << 8) | d;
+		*net = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)c << 8) |
+		        (uint32_t)d;
 		*mask = slash ? 0xffffffffU << (32 - slash) : 0;
 	}
 
