@@ -7138,7 +7138,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 		/* assert(len >= 0 && len <= (int) sizeof(buf)); */
 		if (len < 0 || len > (int)sizeof(buf))
 			break;
-		while ((n = mg_read(conn, buf + len, sizeof(buf) - len)) > 0) {
+		while ((n = mg_read(conn, buf + len, sizeof(buf) - (size_t)len)) > 0) {
 			len += n;
 			/* assert(len <= (int) sizeof(buf)); */
 			if (len > (int)sizeof(buf))
@@ -7153,7 +7153,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 
 		/* Scan for the boundary string and skip it */
 		if (buf[0] == '-' && buf[1] == '-' &&
-		    !memcmp(buf + 2, boundary, boundary_len)) {
+		    !memcmp(buf + 2, boundary, (size_t)boundary_len)) {
 			s = &buf[bl];
 		} else {
 			s = &buf[2];
@@ -7217,7 +7217,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 		/* assert(len >= headers_len); */
 		if (len < headers_len)
 			break;
-		memmove(buf, &buf[headers_len], len - headers_len);
+		memmove(buf, &buf[headers_len], (size_t)(len - headers_len));
 		len -= headers_len;
 
 		/* Read POST data, write into file until boundary is found. */
@@ -7226,18 +7226,18 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 			len += n;
 			for (i = 0; i < len - bl; i++) {
 				if (!memcmp(&buf[i], "\r\n--", 4) &&
-				    !memcmp(&buf[i + 4], boundary, boundary_len)) {
+				    !memcmp(&buf[i + 4], boundary, (size_t)boundary_len)) {
 					/* Found boundary, that's the end of file data. */
-					fwrite(buf, 1, i, fp);
+					fwrite(buf, 1, (size_t)i, fp);
 					eof = 1;
-					memmove(buf, &buf[i + bl], len - (i + bl));
+					memmove(buf, &buf[i + bl], (size_t)(len - (i + bl)));
 					len -= i + bl;
 					break;
 				}
 			}
 			if (!eof && len > bl) {
-				fwrite(buf, 1, len - bl, fp);
-				memmove(buf, &buf[len - bl], bl);
+				fwrite(buf, 1, (size_t)(len - bl), fp);
+				memmove(buf, &buf[len - bl], (size_t)bl);
 				len = bl;
 			}
 			n = mg_read(conn, buf + len, sizeof(buf) - ((size_t)(len)));
