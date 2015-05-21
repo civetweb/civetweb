@@ -605,7 +605,7 @@ static void set_absolute_path(char *options[],
                               const char *option_name,
                               const char *path_to_civetweb_exe)
 {
-	char path[PATH_MAX] = "", abs[PATH_MAX] = "";
+	char path[PATH_MAX] = "", absolute[PATH_MAX] = "";
 	const char *option_value;
 	const char *p;
 
@@ -633,8 +633,8 @@ static void set_absolute_path(char *options[],
 		strncat(path, option_value, sizeof(path) - strlen(path) - 1);
 
 		/* Absolutize the path, and set the option */
-		IGNORE_UNUSED_RESULT(abs_path(path, abs, sizeof(abs)));
-		set_option(options, option_name, abs);
+		IGNORE_UNUSED_RESULT(abs_path(path, absolute, sizeof(absolute)));
+		set_option(options, option_name, absolute);
 	}
 }
 
