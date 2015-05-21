@@ -3981,7 +3981,7 @@ char *mg_md5(char buf[33], ...)
 
 	va_start(ap, buf);
 	while ((p = va_arg(ap, const char *)) != NULL) {
-		md5_append(&ctx, (const md5_byte_t *)p, (int)strlen(p));
+		md5_append(&ctx, (const md5_byte_t *)p, strlen(p));
 	}
 	va_end(ap);
 
