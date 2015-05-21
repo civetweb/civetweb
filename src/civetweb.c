@@ -2989,7 +2989,8 @@ static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 static void discard_unread_request_data(struct mg_connection *conn)
 {
 	char buf[MG_BUF_LEN];
-	int to_read, nread;
+	size_t to_read;
+	int nread;
 
 	if (conn == NULL) {
 		return;
@@ -3010,9 +3011,8 @@ static void discard_unread_request_data(struct mg_connection *conn)
 	} else {
 		/* Not chunked: content length is known */
 		while (conn->consumed_content < conn->content_len) {
-			if ((int64_t)to_read >
-			    (conn->content_len - conn->consumed_content)) {
-				to_read = (int)(conn->content_len - conn->consumed_content);
+			if (to_read > (size_t)(conn->content_len - conn->consumed_content)) {
+				to_read = (size_t)(conn->content_len - conn->consumed_content);
 			}
 
 			nread = mg_read(conn, buf, to_read);
