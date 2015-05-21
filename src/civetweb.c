@@ -8035,7 +8035,9 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 		/* TODO: check -- so->lsa.sin6.sin6_port = htons((uint16_t) port); */
 		so->lsa.sin.sin_port = htons((uint16_t)port);
 	} else {
-		port = len = 0; /* Parsing failure. Make port invalid. */
+		 /* Parsing failure. Make port invalid. */
+		port = 0;
+		len = 0;
 	}
 
 	/* sscanf and the option splitting code ensure the following condition */
