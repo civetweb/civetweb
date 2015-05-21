@@ -9225,6 +9225,7 @@ static void *worker_thread_run(void *thread_func_param)
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	struct mg_connection *conn;
 	struct mg_workerTLS tls;
+	in_addr_t addr;
 
 	mg_set_thread_name("worker");
 
@@ -9263,10 +9264,8 @@ static void *worker_thread_run(void *thread_func_param)
 			                   sizeof(conn->request_info.remote_addr),
 			                   &conn->client.rsa);
 			/* TODO: #if defined(MG_LEGACY_INTERFACE) */
-			memcpy(&conn->request_info.remote_ip,
-			       &conn->client.rsa.sin.sin_addr.s_addr,
-			       4);
-			conn->request_info.remote_ip = ntohl(conn->request_info.remote_ip);
+			addr = ntohl(conn->client.rsa.sin.sin_addr.s_addr);
+			memcpy(&conn->request_info.remote_ip, &addr, 4);
 			/* #endif */
 			conn->request_info.is_ssl = conn->client.is_ssl;
 
