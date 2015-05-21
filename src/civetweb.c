@@ -4814,8 +4814,8 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 
 struct dir_scan_data {
 	struct de *entries;
-	int num_entries;
-	int arr_size;
+	unsigned int num_entries;
+	unsigned int arr_size;
 };
 
 /* Behaves like realloc(), but frees original pointer on failure */
@@ -4851,7 +4851,8 @@ static void dir_scan_callback(struct de *de, void *data)
 static void handle_directory_request(struct mg_connection *conn,
                                      const char *dir)
 {
-	int i, sort_direction;
+	unsigned int i;
+	int sort_direction;
 	struct dir_scan_data data = {NULL, 0, 128};
 	char date[64];
 	time_t curtime = time(NULL);
