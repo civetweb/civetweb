@@ -4206,10 +4206,8 @@ static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p)
 
 	if (filep->membuf != NULL && *p != NULL) {
 		memend = (char *)&filep->membuf[filep->size];
-		eof = (char *)memchr(
-		    *p,
-		    '\n',
-		    memend - *p); /* Search for \n from p till the end of stream */
+		 /* Search for \n from p till the end of stream */
+		eof = (char *)memchr(*p, '\n', (size_t)(memend - *p));
 		if (eof != NULL) {
 			eof += 1; /* Include \n */
 		} else {
