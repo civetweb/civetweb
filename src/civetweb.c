@@ -8772,7 +8772,7 @@ struct mg_connection *mg_connect_client(
 			       __func__,
 			       strerror(ERRNO));
 		}
-		conn->client.is_ssl = use_ssl;
+		conn->client.is_ssl = use_ssl ? 1 : 0;
 		(void)pthread_mutex_init(&conn->mutex, NULL);
 #ifndef NO_SSL
 		if (use_ssl) {
