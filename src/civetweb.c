@@ -9164,6 +9164,7 @@ static void process_new_connection(struct mg_connection *conn)
 /* Worker threads take accepted socket from the queue */
 static int consume_socket(struct mg_context *ctx, struct socket *sp)
 {
+	#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
 	if (!ctx)
 		return 0;
 
@@ -9178,15 +9179,15 @@ static int consume_socket(struct mg_context *ctx, struct socket *sp)
 	/* If we're stopping, sq_head may be equal to sq_tail. */
 	if (ctx->sq_head > ctx->sq_tail) {
 		/* Copy socket from the queue and increment tail */
-		*sp = ctx->queue[ctx->sq_tail % ARRAY_SIZE(ctx->queue)];
+		*sp = ctx->queue[ctx->sq_tail % QUEUE_SIZE(ctx)];
 		ctx->sq_tail++;
 		if (sp)
 			DEBUG_TRACE("grabbed socket %d, going busy", sp->sock);
 
 		/* Wrap pointers if needed */
-		while (ctx->sq_tail > (int)ARRAY_SIZE(ctx->queue)) {
-			ctx->sq_tail -= ARRAY_SIZE(ctx->queue);
-			ctx->sq_head -= ARRAY_SIZE(ctx->queue);
+		while (ctx->sq_tail > QUEUE_SIZE(ctx)) {
+			ctx->sq_tail -= QUEUE_SIZE(ctx);
+			ctx->sq_head -= QUEUE_SIZE(ctx);
 		}
 	}
 
@@ -9194,6 +9195,7 @@ static int consume_socket(struct mg_context *ctx, struct socket *sp)
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	return !ctx->stop_flag;
+	#undef QUEUE_SIZE
 }
 
 static void *worker_thread_run(void *thread_func_param)
@@ -9297,19 +9299,20 @@ static void *worker_thread(void *thread_func_param)
 /* Master thread adds accepted socket to a queue */
 static void produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
+	#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
 	if (!ctx)
 		return;
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 
 	/* If the queue is full, wait */
 	while (ctx->stop_flag == 0 &&
-	       ctx->sq_head - ctx->sq_tail >= (int)ARRAY_SIZE(ctx->queue)) {
+	       ctx->sq_head - ctx->sq_tail >= QUEUE_SIZE(ctx)) {
 		(void)pthread_cond_wait(&ctx->sq_empty, &ctx->thread_mutex);
 	}
 
-	if (ctx->sq_head - ctx->sq_tail < (int)ARRAY_SIZE(ctx->queue)) {
+	if (ctx->sq_head - ctx->sq_tail < QUEUE_SIZE(ctx)) {
 		/* Copy socket to the queue and increment head */
-		ctx->queue[ctx->sq_head % ARRAY_SIZE(ctx->queue)] = *sp;
+		ctx->queue[ctx->sq_head % QUEUE_SIZE(ctx)] = *sp;
 		ctx->sq_head++;
 		if (sp)
 			DEBUG_TRACE("queued socket %d", sp->sock);
@@ -9317,6 +9320,7 @@ static void produce_socket(struct mg_context *ctx, const struct socket *sp)
 
 	(void)pthread_cond_signal(&ctx->sq_full);
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
+	#undef QUEUE_SIZE
 }
 
 static void accept_new_connection(const struct socket *listener,
