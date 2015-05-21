@@ -1,5 +1,6 @@
 #include <lua.h>
 #include <lauxlib.h>
+#include "lua_civet.h"
 
 #ifdef _WIN32
 static void *
