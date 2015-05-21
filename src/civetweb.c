@@ -5157,11 +5157,14 @@ static void parse_http_headers(char **buf, struct mg_request_info *ri)
 	if (!ri)
 		return;
 
+	ri->num_headers = 0;
+
 	for (i = 0; i < (int)ARRAY_SIZE(ri->http_headers); i++) {
 		ri->http_headers[i].name = skip_quoted(buf, ":", " ", 0);
 		ri->http_headers[i].value = skip(buf, "\r\n");
-		if (ri->http_headers[i].name[0] == '\0')
+		if (ri->http_headers[i].name[0] == '\0') {
 			break;
+		}
 		ri->num_headers = i + 1;
 	}
 }
