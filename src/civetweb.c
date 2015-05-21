@@ -977,7 +977,7 @@ struct mg_context {
 
 	struct socket *listening_sockets;
 	in_port_t *listening_ports;
-	int num_listening_sockets;
+	unsigned int num_listening_sockets;
 
 	volatile int num_threads;       /* Number of threads */
 	pthread_mutex_t thread_mutex;   /* Protects (max|num)_threads */
@@ -1424,7 +1424,7 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 	if (!ctx) {
 		return 0;
 	}
-	for (i = 0; i < size && i < (size_t)ctx->num_listening_sockets; i++) {
+	for (i = 0; i < size && i < ctx->num_listening_sockets; i++) {
 		ssl[i] = ctx->listening_sockets[i].is_ssl;
 		ports[i] = ctx->listening_ports[i];
 	}
@@ -7255,10 +7255,11 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 
 static int get_first_ssl_listener_index(const struct mg_context *ctx)
 {
-	int i, idx = -1;
+	unsigned int i;
+	int idx = -1;
 	if (ctx)
 		for (i = 0; idx == -1 && i < ctx->num_listening_sockets; i++) {
-			idx = ctx->listening_sockets[i].is_ssl ? i : -1;
+			idx = ctx->listening_sockets[i].is_ssl ? ((int)(i)) : -1;
 		}
 	return idx;
 }
@@ -7955,7 +7956,7 @@ static void handle_file_based_request(struct mg_connection *conn,
 
 static void close_all_listening_sockets(struct mg_context *ctx)
 {
-	int i;
+	unsigned int i;
 	if (!ctx)
 		return;
 
