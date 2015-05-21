@@ -1443,6 +1443,10 @@ static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 {
 	buf[0] = '\0';
 
+	if (!usa) {
+		return;
+	}
+	
 	if (usa->sa.sa_family == AF_INET) {
 		getnameinfo(
 		    &usa->sa, sizeof(usa->sin), buf, len, NULL, 0, NI_NUMERICHOST);
