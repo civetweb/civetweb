@@ -6253,16 +6253,16 @@ static void send_ssi_file(struct mg_connection *conn,
 				mg_cry(conn, "%s: SSI tag is too large", path);
 				len = 0;
 			}
-			buf[len++] = ch & 0xff;
+			buf[len++] = (char)(ch & 0xff);
 		} else if (ch == '<') {
 			in_ssi_tag = 1;
 			if (len > 0) {
 				mg_write(conn, buf, (size_t)len);
 			}
 			len = 0;
-			buf[len++] = ch & 0xff;
+			buf[len++] = (char)(ch & 0xff);
 		} else {
-			buf[len++] = ch & 0xff;
+			buf[len++] = (char)(ch & 0xff);
 			if (len == (int)sizeof(buf)) {
 				mg_write(conn, buf, (size_t)len);
 				len = 0;
