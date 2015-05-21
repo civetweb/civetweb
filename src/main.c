@@ -360,7 +360,6 @@ static int set_option(char **options, const char *name, const char *value)
 		break;
 	default:
 		die("Unknown option type - option %s", name);
-		break;
 	}
 
 	for (i = 0; i < MAX_OPTIONS; i++) {
