@@ -1150,12 +1150,12 @@ static void suggest_passwd(char *passwd)
 static void add_control(unsigned char **mem,
                         DLGTEMPLATE *dia,
                         WORD type,
-                        DWORD id,
+                        WORD id,
                         DWORD style,
-                        WORD x,
-                        WORD y,
-                        WORD cx,
-                        WORD cy,
+                        short x,
+                        short y,
+                        short cx,
+                        short cy,
                         const char *caption);
 
 static int get_password(const char *user,
@@ -1385,12 +1385,12 @@ PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 static void add_control(unsigned char **mem,
                         DLGTEMPLATE *dia,
                         WORD type,
-                        DWORD id,
+                        WORD id,
                         DWORD style,
-                        WORD x,
-                        WORD y,
-                        WORD cx,
-                        WORD cy,
+                        short x,
+                        short y,
+                        short cx,
+                        short cy,
                         const char *caption)
 {
 	DLGITEMTEMPLATE *tp;
@@ -1401,7 +1401,7 @@ static void add_control(unsigned char **mem,
 	*mem = align(*mem, 3);
 	tp = (DLGITEMTEMPLATE *)*mem;
 
-	tp->id = (WORD)id;
+	tp->id = id;
 	tp->style = style;
 	tp->dwExtendedStyle = 0;
 	tp->x = x;
@@ -1433,7 +1433,8 @@ static void show_settings_dialog()
 	const struct mg_option *options;
 	DWORD style;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
-	WORD i, cl, x, y, width, nelems = 0;
+	WORD i, cl, nelems = 0;
+	short width, x, y;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1488,7 +1489,7 @@ static void show_settings_dialog()
 			            0x80,
 			            ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA,
 			            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-			            (WORD)(x + width + LABEL_WIDTH + 5),
+			            x + width + LABEL_WIDTH + 5,
 			            y,
 			            15,
 			            12,
@@ -1512,7 +1513,7 @@ static void show_settings_dialog()
 		            cl,
 		            ID_CONTROLS + i,
 		            style,
-		            (WORD)(x + LABEL_WIDTH),
+		            x + LABEL_WIDTH,
 		            y,
 		            width,
 		            12,
@@ -1522,7 +1523,7 @@ static void show_settings_dialog()
 		assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 	}
 
-	y = (WORD)(((nelems + 1) / 2 + 1) * HEIGHT + 5);
+	y = (((nelems + 1) / 2 + 1) * HEIGHT + 5);
 	add_control(&p,
 	            dia,
 	            0x80,
