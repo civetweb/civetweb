@@ -27,12 +27,15 @@ int ExampleHandler(struct mg_connection *conn, void *cbdata)
     mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
     mg_printf(conn, "<html><body>");
     mg_printf(conn, "<h2>This is an example text from a C handler</h2>");
-    mg_printf(conn, "<p>To see a page from the A handler <a href=\"A\">click here</a></p>");
-    mg_printf(conn, "<p>To see a page from the A/B handler <a href=\"A/B\">click here</a></p>");
-    mg_printf(conn, "<p>To see a page from the *.foo handler <a href=\"xy.foo\">click here</a></p>");
-    mg_printf(conn, "<p>To test websocket handler <a href=\"/websocket\">click here</a></p>");
-    mg_printf(conn, "<p>To exit <a href=\"%s\">click here</a></p>",
-              EXIT_URI);
+    mg_printf(conn, "<p>To see a page from the A handler <a href=\"A\">click A</a></p>");
+    mg_printf(conn, "<p>To see a page from the A handler <a href=\"A/A\">click A/A</a></p>");
+    mg_printf(conn, "<p>To see a page from the A/B handler <a href=\"A/B\">click A/B</a></p>");
+    mg_printf(conn, "<p>To see a page from the B handler (0) <a href=\"B\">click B</a></p>");
+    mg_printf(conn, "<p>To see a page from the B handler (1) <a href=\"B/A\">click B/A</a></p>");
+    mg_printf(conn, "<p>To see a page from the B handler (2) <a href=\"B/B\">click B/B</a></p>");
+    mg_printf(conn, "<p>To see a page from the *.foo handler <a href=\"xy.foo\">click xy.foo</a></p>");
+    mg_printf(conn, "<p>To test websocket handler <a href=\"/websocket\">click websocket</a></p>");
+    mg_printf(conn, "<p>To exit <a href=\"%s\">click exit</a></p>", EXIT_URI);
     mg_printf(conn, "</body></html>\n");
     return 1;
 }
@@ -62,6 +65,20 @@ int ABHandler(struct mg_connection *conn, void *cbdata)
     mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
     mg_printf(conn, "<html><body>");
     mg_printf(conn, "<h2>This is the AB handler!!!</h2>");
+    mg_printf(conn, "</body></html>\n");
+    return 1;
+}
+
+
+int BXHandler(struct mg_connection *conn, void *cbdata)
+{
+    /* Handler may access the request info using mg_get_request_info */
+    const struct mg_request_info * req_info = mg_get_request_info(conn);
+
+    mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+    mg_printf(conn, "<html><body>");
+    mg_printf(conn, "<h2>This is the BX handler %i!!!</h2>", (int)cbdata);
+    mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
     mg_printf(conn, "</body></html>\n");
     return 1;
 }
@@ -204,12 +221,26 @@ int main(int argc, char *argv[])
     memset(&callbacks, 0, sizeof(callbacks));
     ctx = mg_start(&callbacks, 0, options);
 
+    /* Handler EXAMPLE_URI to explain the example */
     mg_set_request_handler(ctx, EXAMPLE_URI, ExampleHandler, 0);
     mg_set_request_handler(ctx, EXIT_URI, ExitHandler, 0);
-    mg_set_request_handler(ctx, "/a", AHandler, 0);
-    mg_set_request_handler(ctx, "/a/b", ABHandler, 0);
+
+    /* Handler for /A* and special handler for /A/B */
+    mg_set_request_handler(ctx, "/A", AHandler, 0);
+    mg_set_request_handler(ctx, "/A/B", ABHandler, 0);
+
+    /* Handler for /B, /B/A, /B/B but not for /B* */
+    mg_set_request_handler(ctx, "/B$", BXHandler, (void*)0);
+    mg_set_request_handler(ctx, "/B/A$", BXHandler, (void*)1);
+    mg_set_request_handler(ctx, "/B/B$", BXHandler, (void*)2);
+
+    /* Handler for all files with .foo extention */
     mg_set_request_handler(ctx, "**.foo$", FooHandler, 0);
+
+    /* HTTP site to open a websocket connection */
     mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);
+
+    /* WS site for the websocket connection */
     mg_set_websocket_handler(ctx, "/websocket", WebSocketConnectHandler, WebSocketReadyHandler, WebsocketDataHandler, WebSocketCloseHandler, 0);
 
     printf("Browse files at http://localhost:%s/\n", PORT);
