@@ -2479,11 +2479,12 @@ static struct dirent *readdir(DIR *dir)
 }
 
 #ifndef HAVE_POLL
-static int poll(struct pollfd *pfd, int n, int milliseconds)
+static int poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 {
 	struct timeval tv;
 	fd_set set;
-	int i, result;
+	unsigned int i;
+  int result;
 	SOCKET maxfd = 0;
 
 	tv.tv_sec = milliseconds / 1000;
