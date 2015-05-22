@@ -8598,7 +8598,7 @@ static int set_sock_timeout(SOCKET sock, int milliseconds)
 {
 	int r1, r2;
 #ifdef _WIN32
-	DWORD t = milliseconds;
+	DWORD t = (DWORD)milliseconds;
 #else
 #if defined(TCP_USER_TIMEOUT)
 	unsigned int uto = (unsigned int)milliseconds;
