@@ -922,7 +922,7 @@ static void save_config(HWND hDlg, FILE *fp)
 	}
 }
 
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	FILE *fp;
@@ -1079,7 +1079,7 @@ struct tstring_input_buf {
 	char *buffer;
 };
 
-static BOOL CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+static INT_PTR CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
 	static struct tstring_input_buf *inBuf = 0;
 	WORD ctrlId;
@@ -1315,7 +1315,7 @@ static int get_password(const char *user,
 #undef LABEL_WIDTH
 }
 
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
 	static const char *passfile = 0;
