@@ -2602,8 +2602,8 @@ static int dlclose(void *handle)
 #define SIGKILL (0)
 static int kill(pid_t pid, int sig_num)
 {
-	(void)TerminateProcess(pid, sig_num);
-	(void)CloseHandle(pid);
+	(void)TerminateProcess((HANDLE)pid, (UINT)sig_num);
+	(void)CloseHandle((HANDLE)pid);
 	return 0;
 }
 
