@@ -208,7 +208,7 @@ mg_static_assert(PATH_MAX >= 1, "path length must be a positive number");
 
 typedef long off_t;
 
-#define errno (GetLastError())
+#define errno ((int)(GetLastError()))
 #define strerror(x) (_ultoa(x, (char *)_alloca(sizeof(x) * 3), 10))
 #endif /* _WIN32_WCE */
 
@@ -234,7 +234,7 @@ typedef long off_t;
 #define strtoll(x, y, z) (_strtoi64(x, y, z))
 #endif /* _MSC_VER */
 
-#define ERRNO (GetLastError())
+#define ERRNO ((int)(GetLastError()))
 #define NO_SOCKLEN_T
 #define SSL_LIB "ssleay32.dll"
 #define CRYPTO_LIB "libeay32.dll"
@@ -455,7 +455,9 @@ static int pthread_setspecific(pthread_key_t key, void *value)
 	return TlsSetValue(key, value) ? 0 : 1;
 }
 
+#ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
 static void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
+#endif
 #endif /* _WIN32 */
 
 #include "civetweb.h"
@@ -1452,12 +1454,12 @@ static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 
 	if (usa->sa.sa_family == AF_INET) {
 		getnameinfo(
-		    &usa->sa, sizeof(usa->sin), buf, len, NULL, 0, NI_NUMERICHOST);
+		    &usa->sa, sizeof(usa->sin), buf, (unsigned)len, NULL, 0, NI_NUMERICHOST);
 	}
 #if defined(USE_IPV6)
 	else if (usa->sa.sa_family == AF_INET6) {
 		getnameinfo(
-		    &usa->sa, sizeof(usa->sin6), buf, len, NULL, 0, NI_NUMERICHOST);
+		    &usa->sa, sizeof(usa->sin6), buf, (unsigned)len, NULL, 0, NI_NUMERICHOST);
 	}
 #endif
 
@@ -2085,6 +2087,7 @@ static int pthread_mutex_lock(pthread_mutex_t *mutex)
 	return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0 ? 0 : -1;
 }
 
+#ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
 static int pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
 	switch (WaitForSingleObject(*mutex, 0)) {
@@ -2095,6 +2098,7 @@ static int pthread_mutex_trylock(pthread_mutex_t *mutex)
 	}
 	return -1;
 }
+#endif
 
 static int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
@@ -2168,9 +2172,9 @@ static int pthread_cond_timedwait(pthread_cond_t *cv,
 
 	if (abstime) {
 		clock_gettime(CLOCK_REALTIME, &tsnow);
-		nsnow = (((uint64_t)tsnow.tv_sec) * 1000000000) + tsnow.tv_nsec;
+		nsnow = (((int64_t)tsnow.tv_sec) * 1000000000) + tsnow.tv_nsec;
 		nswaitabs =
-		    (((uint64_t)abstime->tv_sec) * 1000000000) + abstime->tv_nsec;
+		    (((int64_t)abstime->tv_sec) * 1000000000) + abstime->tv_nsec;
 		nswaitrel = nswaitabs - nsnow;
 		if (nswaitrel < 0)
 			nswaitrel = 0;
@@ -2475,11 +2479,12 @@ static struct dirent *readdir(DIR *dir)
 }
 
 #ifndef HAVE_POLL
-static int poll(struct pollfd *pfd, int n, int milliseconds)
+static int poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 {
 	struct timeval tv;
 	fd_set set;
-	int i, result;
+	unsigned int i;
+  int result;
 	SOCKET maxfd = 0;
 
 	tv.tv_sec = milliseconds / 1000;
@@ -2507,11 +2512,11 @@ static int poll(struct pollfd *pfd, int n, int milliseconds)
 }
 #endif /* HAVE_POLL */
 
-static void set_close_on_exec(SOCKET sock,
+static void set_close_on_exec(int sock,
                               struct mg_connection *conn /* may be null */)
 {
 	(void)conn; /* Unused. */
-	(void)SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, 0);
+	(void)SetHandleInformation((HANDLE)(intptr_t)sock, HANDLE_FLAG_INHERIT, 0);
 }
 
 int mg_start_thread(mg_thread_func_t f, void *p)
@@ -2561,9 +2566,7 @@ static int mg_join_thread(pthread_t threadid)
 	result = -1;
 	dwevent = WaitForSingleObject(threadid, INFINITE);
 	if (dwevent == WAIT_FAILED) {
-		int err = GetLastError();
-		(void)err;
-		DEBUG_TRACE("WaitForSingleObject() failed, error %d", err);
+		DEBUG_TRACE("WaitForSingleObject() failed, error %d", ERRNO);
 	} else {
 		if (dwevent == WAIT_OBJECT_0) {
 			CloseHandle(threadid);
@@ -2599,8 +2602,8 @@ static int dlclose(void *handle)
 #define SIGKILL (0)
 static int kill(pid_t pid, int sig_num)
 {
-	(void)TerminateProcess(pid, sig_num);
-	(void)CloseHandle(pid);
+	(void)TerminateProcess((HANDLE)pid, (UINT)sig_num);
+	(void)CloseHandle((HANDLE)pid);
 	return 0;
 }
 
@@ -2719,7 +2722,7 @@ static pid_t spawn_process(struct mg_connection *conn,
 static int set_non_blocking_mode(SOCKET sock)
 {
 	unsigned long on = 1;
-	return ioctlsocket(sock, FIONBIO, &on);
+	return ioctlsocket(sock, (long)FIONBIO, &on);
 }
 
 #else
@@ -4186,7 +4189,7 @@ static int parse_auth_header(struct mg_connection *conn,
 	if ((s == NULL) || (*s != 0)) {
 		return 0;
 	}
-	nonce ^= (unsigned long)(conn->ctx);
+	nonce ^= (uintptr_t)(conn->ctx);
 	if (nonce < conn->ctx->start_time) {
 		/* nonce is from a previous start of the server and no longer valid
 		 * (replay attack?) */
@@ -4417,7 +4420,7 @@ static void send_authorization_request(struct mg_connection *conn)
 		++conn->ctx->nonce_count;
 		(void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
 
-		nonce ^= (unsigned long)(conn->ctx);
+		nonce ^= (uintptr_t)(conn->ctx);
 		conn->status_code = 401;
 		conn->must_close = 1;
 
@@ -4580,7 +4583,7 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		memset(&sain, '\0', sizeof(sain));
 		sain.sin_family = AF_INET;
 		sain.sin_port = htons((uint16_t)port);
-		sain.sin_addr = *(struct in_addr *)he->h_addr_list[0];
+		sain.sin_addr = *(struct in_addr *)(void*)he->h_addr_list[0];
 		if (connect(sock, (struct sockaddr *)&sain, sizeof(sain)) != 0) {
 			snprintf(ebuf,
 			         ebuf_len,
@@ -5467,7 +5470,7 @@ static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
 		return NULL;
 
 	/* Calculate how much space is left in the buffer */
-	space = sizeof(block->buf) - block->len - 2;
+	space = (int)(sizeof(block->buf) - block->len) - 2;
 	/* assert(space >= 0); */
 	if (space < 0)
 		return NULL;
@@ -8593,7 +8596,7 @@ static int set_sock_timeout(SOCKET sock, int milliseconds)
 {
 	int r1, r2;
 #ifdef _WIN32
-	DWORD t = milliseconds;
+	DWORD t = (DWORD)milliseconds;
 #else
 #if defined(TCP_USER_TIMEOUT)
 	unsigned int uto = (unsigned int)milliseconds;
@@ -8772,7 +8775,7 @@ struct mg_connection *mg_connect_client(
 			       __func__,
 			       strerror(ERRNO));
 		}
-		conn->client.is_ssl = use_ssl;
+		conn->client.is_ssl = use_ssl ? 1 : 0;
 		(void)pthread_mutex_init(&conn->mutex, NULL);
 #ifndef NO_SSL
 		if (use_ssl) {
@@ -9225,6 +9228,7 @@ static void *worker_thread_run(void *thread_func_param)
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	struct mg_connection *conn;
 	struct mg_workerTLS tls;
+	uint32_t addr;
 
 	mg_set_thread_name("worker");
 
@@ -9263,10 +9267,8 @@ static void *worker_thread_run(void *thread_func_param)
 			                   sizeof(conn->request_info.remote_addr),
 			                   &conn->client.rsa);
 			/* TODO: #if defined(MG_LEGACY_INTERFACE) */
-			memcpy(&conn->request_info.remote_ip,
-			       &conn->client.rsa.sin.sin_addr.s_addr,
-			       4);
-			conn->request_info.remote_ip = ntohl(conn->request_info.remote_ip);
+			addr = ntohl(conn->client.rsa.sin.sin_addr.s_addr);
+			memcpy(&conn->request_info.remote_ip, &addr, 4);
 			/* #endif */
 			conn->request_info.is_ssl = conn->client.is_ssl;
 
@@ -9659,7 +9661,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 {
 	struct mg_context *ctx;
 	const char *name, *value, *default_value;
-	int index, ok, workerthreadcount;
+	int idx, ok, workerthreadcount;
 	unsigned int i;
 	void (*exit_callback)(const struct mg_context *ctx) = 0;
 
@@ -9719,7 +9721,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #endif
 
 	while (options && (name = *options++) != NULL) {
-		if ((index = get_option_index(name)) == -1) {
+		if ((idx = get_option_index(name)) == -1) {
 			mg_cry(fc(ctx), "Invalid option: %s", name);
 			free_context(ctx);
 			return NULL;
@@ -9728,11 +9730,11 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 			free_context(ctx);
 			return NULL;
 		}
-		if (ctx->config[index] != NULL) {
+		if (ctx->config[idx] != NULL) {
 			mg_cry(fc(ctx), "warning: %s: duplicate option", name);
-			mg_free(ctx->config[index]);
+			mg_free(ctx->config[idx]);
 		}
-		ctx->config[index] = mg_strdup(value);
+		ctx->config[idx] = mg_strdup(value);
 		DEBUG_TRACE("[%s] -> [%s]", name, value);
 	}
 

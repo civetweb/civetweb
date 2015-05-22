@@ -35,6 +35,14 @@
 #define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define NO_RETURN [[noreturn]]
+#elif defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#define NO_RETURN _Noreturn
+#else
+#define NO_RETURN
+#endif
+
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -131,7 +139,7 @@ static struct mg_option main_config_options[] = {
 
 static void WINCDECL signal_handler(int sig_num) { g_exit_flag = sig_num; }
 
-static void die(const char *fmt, ...)
+static NO_RETURN void die(const char *fmt, ...)
 {
 	va_list ap;
 	char msg[200] = "";
@@ -163,7 +171,7 @@ static void show_server_name(void)
 	fprintf(stderr, "CivetWeb v%s, built on %s\n", mg_version(), __DATE__);
 }
 
-static void show_usage_and_exit(const char *exeName)
+static NO_RETURN void show_usage_and_exit(const char *exeName)
 {
 	const struct mg_option *options;
 	int i;
@@ -247,6 +255,7 @@ static const char *get_url_to_first_open_port(const struct mg_context *ctx)
 	return url;
 }
 
+#ifdef ENABLE_CREATE_CONFIG_FILE
 static void create_config_file(const struct mg_context *ctx, const char *path)
 {
 	const struct mg_option *options;
@@ -268,6 +277,7 @@ static void create_config_file(const struct mg_context *ctx, const char *path)
 		fclose(fp);
 	}
 }
+#endif
 #endif
 
 static char *sdup(const char *str)
@@ -352,7 +362,6 @@ static int set_option(char **options, const char *name, const char *value)
 		break;
 	default:
 		die("Unknown option type - option %s", name);
-		break;
 	}
 
 	for (i = 0; i < MAX_OPTIONS; i++) {
@@ -605,7 +614,7 @@ static void set_absolute_path(char *options[],
                               const char *option_name,
                               const char *path_to_civetweb_exe)
 {
-	char path[PATH_MAX] = "", abs[PATH_MAX] = "";
+	char path[PATH_MAX] = "", absolute[PATH_MAX] = "";
 	const char *option_value;
 	const char *p;
 
@@ -633,8 +642,8 @@ static void set_absolute_path(char *options[],
 		strncat(path, option_value, sizeof(path) - strlen(path) - 1);
 
 		/* Absolutize the path, and set the option */
-		IGNORE_UNUSED_RESULT(abs_path(path, abs, sizeof(abs)));
-		set_option(options, option_name, abs);
+		IGNORE_UNUSED_RESULT(abs_path(path, absolute, sizeof(absolute)));
+		set_option(options, option_name, absolute);
 	}
 }
 
@@ -878,7 +887,7 @@ static void show_error(void)
 
 static void *align(void *ptr, DWORD alig)
 {
-	ULONG ul = (ULONG)ptr;
+	uintptr_t ul = (uintptr_t)ptr;
 	ul += alig;
 	ul &= ~alig;
 	return ((void *)ul);
@@ -913,7 +922,7 @@ static void save_config(HWND hDlg, FILE *fp)
 	}
 }
 
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	FILE *fp;
@@ -1070,7 +1079,7 @@ struct tstring_input_buf {
 	char *buffer;
 };
 
-static BOOL CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+static INT_PTR CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
 	static struct tstring_input_buf *inBuf = 0;
 	WORD ctrlId;
@@ -1086,7 +1095,7 @@ static BOOL CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 		if (ctrlId == IDOK) {
 			/* Add user */
 			GetWindowText(
-			    GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer, inBuf->buflen);
+			    GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer, (int)inBuf->buflen);
 			if (strlen(inBuf->buffer) > 0) {
 				EndDialog(hDlg, IDOK);
 			}
@@ -1127,7 +1136,7 @@ static void suggest_passwd(char *passwd)
 
 	/* valid characters are 32 to 126 */
 	GetSystemTimeAsFileTime(&num.ft);
-	num.li.HighPart |= GetCurrentProcessId();
+	num.li.HighPart |= (LONG)GetCurrentProcessId();
 	p = passwd;
 	while (num.li.QuadPart) {
 		u = (unsigned)(num.li.QuadPart % 95);
@@ -1141,12 +1150,12 @@ static void suggest_passwd(char *passwd)
 static void add_control(unsigned char **mem,
                         DLGTEMPLATE *dia,
                         WORD type,
-                        DWORD id,
+                        WORD id,
                         DWORD style,
-                        WORD x,
-                        WORD y,
-                        WORD cx,
-                        WORD cy,
+                        short x,
+                        short y,
+                        short cx,
+                        short cy,
                         const char *caption);
 
 static int get_password(const char *user,
@@ -1290,7 +1299,7 @@ static int get_password(const char *user,
 	            12,
 	            "Cancel");
 
-	assert((int)p - (int)mem < (int)sizeof(mem));
+	assert((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
 
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 
@@ -1306,7 +1315,7 @@ static int get_password(const char *user,
 #undef LABEL_WIDTH
 }
 
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
 	static const char *passfile = 0;
@@ -1376,12 +1385,12 @@ PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 static void add_control(unsigned char **mem,
                         DLGTEMPLATE *dia,
                         WORD type,
-                        DWORD id,
+                        WORD id,
                         DWORD style,
-                        WORD x,
-                        WORD y,
-                        WORD cx,
-                        WORD cy,
+                        short x,
+                        short y,
+                        short cx,
+                        short cy,
                         const char *caption)
 {
 	DLGITEMTEMPLATE *tp;
@@ -1392,7 +1401,7 @@ static void add_control(unsigned char **mem,
 	*mem = align(*mem, 3);
 	tp = (DLGITEMTEMPLATE *)*mem;
 
-	tp->id = (WORD)id;
+	tp->id = id;
 	tp->style = style;
 	tp->dwExtendedStyle = 0;
 	tp->x = x;
@@ -1424,7 +1433,8 @@ static void show_settings_dialog()
 	const struct mg_option *options;
 	DWORD style;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
-	WORD i, cl, x, y, width, nelems = 0;
+	WORD i, cl, nelems = 0;
+	short width, x, y;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1479,7 +1489,7 @@ static void show_settings_dialog()
 			            0x80,
 			            ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA,
 			            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-			            (WORD)(x + width + LABEL_WIDTH + 5),
+			            x + width + LABEL_WIDTH + 5,
 			            y,
 			            15,
 			            12,
@@ -1503,17 +1513,17 @@ static void show_settings_dialog()
 		            cl,
 		            ID_CONTROLS + i,
 		            style,
-		            (WORD)(x + LABEL_WIDTH),
+		            x + LABEL_WIDTH,
 		            y,
 		            width,
 		            12,
 		            "");
 		nelems++;
 
-		assert(((int)p - (int)mem) < (int)sizeof(mem));
+		assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 	}
 
-	y = (WORD)(((nelems + 1) / 2 + 1) * HEIGHT + 5);
+	y = (((nelems + 1) / 2 + 1) * HEIGHT + 5);
 	add_control(&p,
 	            dia,
 	            0x80,
@@ -1576,7 +1586,7 @@ static void show_settings_dialog()
 	            12,
 	            g_server_base_name);
 
-	assert(((int)p - (int)mem) < (int)sizeof(mem));
+	assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
 	DialogBoxIndirectParam(NULL, dia, NULL, SettingsDlgProc, (LPARAM)NULL);
@@ -1715,7 +1725,7 @@ static void change_password_file()
 			            u);
 
 			nelems++;
-			assert(((int)p - (int)mem) < (int)sizeof(mem));
+			assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 		}
 		fclose(f);
 
@@ -1777,7 +1787,7 @@ static void change_password_file()
 		            12,
 		            g_server_base_name);
 
-		assert(((int)p - (int)mem) < (int)sizeof(mem));
+		assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 		dia->cy = y + 20;
 	} while ((IDOK == DialogBoxIndirectParam(
