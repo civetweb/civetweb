@@ -45,6 +45,7 @@
 
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
@@ -59,7 +60,7 @@
 
 #ifdef _WIN32
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501 /* Target Windows XP or higher */
+#define _WIN32_WINNT 0x0501 /* for tdm-gcc so we can use getconsolewindow */
 #endif
 #undef UNICODE
 #include <windows.h>

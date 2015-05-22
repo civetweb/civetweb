@@ -131,7 +131,7 @@ endif
 
 ifneq (, $(findstring mingw32, $(shell $(CC) -dumpmachine)))
   BUILD_RESOURCES = $(BUILD_DIR)/$(WINDOWS_RESOURCES:.rc=.o)
-  LIBS := -lws2_32 -mwindows
+  LIBS += -lws2_32 -mwindows
   SHARED_LIB = dll
 else
   SHARED_LIB = so
