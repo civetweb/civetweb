@@ -1299,7 +1299,7 @@ static int get_password(const char *user,
 	            12,
 	            "Cancel");
 
-	assert((int)p - (int)mem < (int)sizeof(mem));
+	assert((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
 
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 
@@ -1519,7 +1519,7 @@ static void show_settings_dialog()
 		            "");
 		nelems++;
 
-		assert(((int)p - (int)mem) < (int)sizeof(mem));
+		assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 	}
 
 	y = (WORD)(((nelems + 1) / 2 + 1) * HEIGHT + 5);
@@ -1585,7 +1585,7 @@ static void show_settings_dialog()
 	            12,
 	            g_server_base_name);
 
-	assert(((int)p - (int)mem) < (int)sizeof(mem));
+	assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
 	DialogBoxIndirectParam(NULL, dia, NULL, SettingsDlgProc, (LPARAM)NULL);
@@ -1724,7 +1724,7 @@ static void change_password_file()
 			            u);
 
 			nelems++;
-			assert(((int)p - (int)mem) < (int)sizeof(mem));
+			assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 		}
 		fclose(f);
 
@@ -1786,7 +1786,7 @@ static void change_password_file()
 		            12,
 		            g_server_base_name);
 
-		assert(((int)p - (int)mem) < (int)sizeof(mem));
+		assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 		dia->cy = y + 20;
 	} while ((IDOK == DialogBoxIndirectParam(
