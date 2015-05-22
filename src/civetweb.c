@@ -2566,9 +2566,7 @@ static int mg_join_thread(pthread_t threadid)
 	result = -1;
 	dwevent = WaitForSingleObject(threadid, INFINITE);
 	if (dwevent == WAIT_FAILED) {
-		int err = GetLastError();
-		(void)err;
-		DEBUG_TRACE("WaitForSingleObject() failed, error %d", err);
+		DEBUG_TRACE("WaitForSingleObject() failed, error %d", ERRNO);
 	} else {
 		if (dwevent == WAIT_OBJECT_0) {
 			CloseHandle(threadid);
