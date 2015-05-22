@@ -455,7 +455,9 @@ static int pthread_setspecific(pthread_key_t key, void *value)
 	return TlsSetValue(key, value) ? 0 : 1;
 }
 
+#ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
 static void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
+#endif
 #endif /* _WIN32 */
 
 #include "civetweb.h"
@@ -2085,6 +2087,7 @@ static int pthread_mutex_lock(pthread_mutex_t *mutex)
 	return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0 ? 0 : -1;
 }
 
+#ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
 static int pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
 	switch (WaitForSingleObject(*mutex, 0)) {
@@ -2095,6 +2098,7 @@ static int pthread_mutex_trylock(pthread_mutex_t *mutex)
 	}
 	return -1;
 }
+#endif
 
 static int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
