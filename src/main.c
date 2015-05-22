@@ -1136,7 +1136,7 @@ static void suggest_passwd(char *passwd)
 
 	/* valid characters are 32 to 126 */
 	GetSystemTimeAsFileTime(&num.ft);
-	num.li.HighPart |= GetCurrentProcessId();
+	num.li.HighPart |= (LONG)GetCurrentProcessId();
 	p = passwd;
 	while (num.li.QuadPart) {
 		u = (unsigned)(num.li.QuadPart % 95);
