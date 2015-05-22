@@ -1095,7 +1095,7 @@ static BOOL CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 		if (ctrlId == IDOK) {
 			/* Add user */
 			GetWindowText(
-			    GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer, inBuf->buflen);
+			    GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer, (int)inBuf->buflen);
 			if (strlen(inBuf->buffer) > 0) {
 				EndDialog(hDlg, IDOK);
 			}
