@@ -1453,13 +1453,23 @@ static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 	}
 
 	if (usa->sa.sa_family == AF_INET) {
-		getnameinfo(
-		    &usa->sa, sizeof(usa->sin), buf, (unsigned)len, NULL, 0, NI_NUMERICHOST);
+		getnameinfo(&usa->sa,
+		            sizeof(usa->sin),
+		            buf,
+		            (unsigned)len,
+		            NULL,
+		            0,
+		            NI_NUMERICHOST);
 	}
 #if defined(USE_IPV6)
 	else if (usa->sa.sa_family == AF_INET6) {
-		getnameinfo(
-		    &usa->sa, sizeof(usa->sin6), buf, (unsigned)len, NULL, 0, NI_NUMERICHOST);
+		getnameinfo(&usa->sa,
+		            sizeof(usa->sin6),
+		            buf,
+		            (unsigned)len,
+		            NULL,
+		            0,
+		            NI_NUMERICHOST);
 	}
 #endif
 
@@ -2484,7 +2494,7 @@ static int poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 	struct timeval tv;
 	fd_set set;
 	unsigned int i;
-  int result;
+	int result;
 	SOCKET maxfd = 0;
 
 	tv.tv_sec = milliseconds / 1000;
@@ -4583,7 +4593,7 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		memset(&sain, '\0', sizeof(sain));
 		sain.sin_family = AF_INET;
 		sain.sin_port = htons((uint16_t)port);
-		sain.sin_addr = *(struct in_addr *)(void*)he->h_addr_list[0];
+		sain.sin_addr = *(struct in_addr *)(void *)he->h_addr_list[0];
 		if (connect(sock, (struct sockaddr *)&sain, sizeof(sain)) != 0) {
 			snprintf(ebuf,
 			         ebuf_len,

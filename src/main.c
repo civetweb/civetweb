@@ -37,7 +37,7 @@
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define NO_RETURN [[noreturn]]
-#elif defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #define NO_RETURN _Noreturn
 #else
 #define NO_RETURN
@@ -1079,7 +1079,8 @@ struct tstring_input_buf {
 	char *buffer;
 };
 
-static INT_PTR CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+static INT_PTR CALLBACK
+InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
 	static struct tstring_input_buf *inBuf = 0;
 	WORD ctrlId;
@@ -1094,8 +1095,9 @@ static INT_PTR CALLBACK InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 		ctrlId = LOWORD(wParam);
 		if (ctrlId == IDOK) {
 			/* Add user */
-			GetWindowText(
-			    GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer, (int)inBuf->buflen);
+			GetWindowText(GetDlgItem(hDlg, ID_INPUT_LINE),
+			              inBuf->buffer,
+			              (int)inBuf->buflen);
 			if (strlen(inBuf->buffer) > 0) {
 				EndDialog(hDlg, IDOK);
 			}
