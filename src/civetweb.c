@@ -208,7 +208,7 @@ mg_static_assert(PATH_MAX >= 1, "path length must be a positive number");
 
 typedef long off_t;
 
-#define errno (GetLastError())
+#define errno ((int)(GetLastError()))
 #define strerror(x) (_ultoa(x, (char *)_alloca(sizeof(x) * 3), 10))
 #endif /* _WIN32_WCE */
 
@@ -234,7 +234,7 @@ typedef long off_t;
 #define strtoll(x, y, z) (_strtoi64(x, y, z))
 #endif /* _MSC_VER */
 
-#define ERRNO (GetLastError())
+#define ERRNO ((int)(GetLastError()))
 #define NO_SOCKLEN_T
 #define SSL_LIB "ssleay32.dll"
 #define CRYPTO_LIB "libeay32.dll"
