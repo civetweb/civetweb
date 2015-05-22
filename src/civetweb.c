@@ -1454,12 +1454,12 @@ static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 
 	if (usa->sa.sa_family == AF_INET) {
 		getnameinfo(
-		    &usa->sa, sizeof(usa->sin), buf, (socklen_t)len, NULL, 0, NI_NUMERICHOST);
+		    &usa->sa, sizeof(usa->sin), buf, (unsigned)len, NULL, 0, NI_NUMERICHOST);
 	}
 #if defined(USE_IPV6)
 	else if (usa->sa.sa_family == AF_INET6) {
 		getnameinfo(
-		    &usa->sa, sizeof(usa->sin6), buf, (socklen_t)len, NULL, 0, NI_NUMERICHOST);
+		    &usa->sa, sizeof(usa->sin6), buf, (unsigned)len, NULL, 0, NI_NUMERICHOST);
 	}
 #endif
 
