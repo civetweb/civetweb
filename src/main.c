@@ -255,6 +255,7 @@ static const char *get_url_to_first_open_port(const struct mg_context *ctx)
 	return url;
 }
 
+#ifdef ENABLE_CREATE_CONFIG_FILE
 static void create_config_file(const struct mg_context *ctx, const char *path)
 {
 	const struct mg_option *options;
@@ -276,6 +277,7 @@ static void create_config_file(const struct mg_context *ctx, const char *path)
 		fclose(fp);
 	}
 }
+#endif
 #endif
 
 static char *sdup(const char *str)
