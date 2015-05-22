@@ -2172,9 +2172,9 @@ static int pthread_cond_timedwait(pthread_cond_t *cv,
 
 	if (abstime) {
 		clock_gettime(CLOCK_REALTIME, &tsnow);
-		nsnow = (((uint64_t)tsnow.tv_sec) * 1000000000) + tsnow.tv_nsec;
+		nsnow = (((int64_t)tsnow.tv_sec) * 1000000000) + tsnow.tv_nsec;
 		nswaitabs =
-		    (((uint64_t)abstime->tv_sec) * 1000000000) + abstime->tv_nsec;
+		    (((int64_t)abstime->tv_sec) * 1000000000) + abstime->tv_nsec;
 		nswaitrel = nswaitabs - nsnow;
 		if (nswaitrel < 0)
 			nswaitrel = 0;
