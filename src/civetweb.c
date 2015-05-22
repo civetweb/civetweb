@@ -9230,7 +9230,7 @@ static void *worker_thread_run(void *thread_func_param)
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	struct mg_connection *conn;
 	struct mg_workerTLS tls;
-	in_addr_t addr;
+	uint32_t addr;
 
 	mg_set_thread_name("worker");
 
