@@ -2722,7 +2722,7 @@ static pid_t spawn_process(struct mg_connection *conn,
 static int set_non_blocking_mode(SOCKET sock)
 {
 	unsigned long on = 1;
-	return ioctlsocket(sock, FIONBIO, &on);
+	return ioctlsocket(sock, (long)FIONBIO, &on);
 }
 
 #else
