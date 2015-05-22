@@ -2512,11 +2512,11 @@ static int poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 }
 #endif /* HAVE_POLL */
 
-static void set_close_on_exec(SOCKET sock,
+static void set_close_on_exec(int sock,
                               struct mg_connection *conn /* may be null */)
 {
 	(void)conn; /* Unused. */
-	(void)SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, 0);
+	(void)SetHandleInformation((HANDLE)(intptr_t)sock, HANDLE_FLAG_INHERIT, 0);
 }
 
 int mg_start_thread(mg_thread_func_t f, void *p)
