@@ -887,7 +887,7 @@ static void show_error(void)
 
 static void *align(void *ptr, DWORD alig)
 {
-	ULONG ul = (ULONG)ptr;
+	uintptr_t ul = (uintptr_t)ptr;
 	ul += alig;
 	ul &= ~alig;
 	return ((void *)ul);
