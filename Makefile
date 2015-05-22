@@ -91,12 +91,6 @@ endif
 
 ifdef WITH_WEBSOCKET
   CFLAGS += -DUSE_WEBSOCKET
-  ifdef WITH_LUA
-    CFLAGS += -DUSE_TIMERS
-    ifeq ($(TARGET_OS),LINUX)
-      LIBS += -lrt
-    endif
-  endif
 endif
 
 ifdef CONFIG_FILE
