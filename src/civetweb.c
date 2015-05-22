@@ -4189,7 +4189,7 @@ static int parse_auth_header(struct mg_connection *conn,
 	if ((s == NULL) || (*s != 0)) {
 		return 0;
 	}
-	nonce ^= (unsigned long)(conn->ctx);
+	nonce ^= (uintptr_t)(conn->ctx);
 	if (nonce < conn->ctx->start_time) {
 		/* nonce is from a previous start of the server and no longer valid
 		 * (replay attack?) */
@@ -4420,7 +4420,7 @@ static void send_authorization_request(struct mg_connection *conn)
 		++conn->ctx->nonce_count;
 		(void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
 
-		nonce ^= (unsigned long)(conn->ctx);
+		nonce ^= (uintptr_t)(conn->ctx);
 		conn->status_code = 401;
 		conn->must_close = 1;
 
