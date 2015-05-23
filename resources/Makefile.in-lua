@@ -12,7 +12,7 @@ endif
 LUA_DIR = src/third_party/lua-5.2.4/src
 LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA
 
-ifneq ($(OS),Windows_NT)
+ifneq ($(TARGET_OS),WIN32)
   LUA_CFLAGS += -DLUA_USE_POSIX -DLUA_USE_DLOPEN
 endif
 

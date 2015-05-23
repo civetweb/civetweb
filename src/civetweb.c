@@ -24,6 +24,9 @@
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
 #endif
+#ifndef _WIN32_WINNT /* defined for tdm-gcc so we can use getnameinfo */
+#define _WIN32_WINNT 0x0501
+#endif
 #else
 #if defined(__GNUC__) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE /* for setgroups() */
@@ -84,10 +87,6 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 /* DTL -- including winsock2.h works better if lean and mean */
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#endif
-
-#if defined(_WIN32)
-#include <ws2tcpip.h>
 #endif
 
 #if defined(__SYMBIAN32__)
@@ -180,6 +179,7 @@ mg_static_assert(MAX_WORKER_THREADS >= 1,
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
 #include <windows.h>
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
+#include <ws2tcpip.h>
 
 typedef const char *SOCK_OPT_TYPE;
 
@@ -222,7 +222,8 @@ typedef long off_t;
 /* Visual Studio 6 does not know __func__ or __FUNCTION__
  * The rest of MS compilers use __FUNCTION__, not C99 __func__
  * Also use _strtoui64 on modern M$ compilers */
-#if defined(_MSC_VER) && (_MSC_VER < 1300)
+#if defined(_MSC_VER)
+#if (_MSC_VER < 1300)
 #define STRX(x) #x
 #define STR(x) STRX(x)
 #define __func__ __FILE__ ":" STR(__LINE__)
@@ -232,6 +233,7 @@ typedef long off_t;
 #define __func__ __FUNCTION__
 #define strtoull(x, y, z) (_strtoui64(x, y, z))
 #define strtoll(x, y, z) (_strtoi64(x, y, z))
+#endif
 #endif /* _MSC_VER */
 
 #define ERRNO ((int)(GetLastError()))
