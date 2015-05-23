@@ -9,6 +9,7 @@
 * Danny Al-Gaaf
 * Dialga
 * F-Secure Corporation
+* hansipie
 * HariKamath Kamath
 * Jordan Shelley
 * Keith Kyzivat
