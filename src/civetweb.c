@@ -9644,7 +9644,15 @@ static void get_system_name(char **sysName)
 	DWORD dwMinorVersion = 0;
 	DWORD dwBuild = 0;
 
+#ifdef _MSC_VER
+#pragma warning(push)
+// GetVersion was declared deprecated
+#pragma warning(disable: 4996)
+#endif
 	dwVersion = GetVersion();
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 	dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
 	dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
