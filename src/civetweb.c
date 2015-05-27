@@ -4584,8 +4584,16 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		snprintf(ebuf, ebuf_len, "%s", "NULL host");
 	} else if (use_ssl && SSLv23_client_method == NULL) {
 		snprintf(ebuf, ebuf_len, "%s", "SSL is not initialized");
-		/* TODO(lsm): use something threadsafe instead of gethostbyname() */
+#ifdef _MSC_VER
+#pragma warning(push)
+/* TODO(lsm): use something threadsafe instead of gethostbyname() */
+/* getaddrinfo is the replacement here but isn't cross platform */
+#pragma warning(disable: 4996)
+#endif
 	} else if ((he = gethostbyname(host)) == NULL) {
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 		snprintf(
 		    ebuf, ebuf_len, "gethostbyname(%s): %s", host, strerror(ERRNO));
 	} else if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
