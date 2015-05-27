@@ -2068,9 +2068,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	return (int)msg.wParam;
 }
 
-#if defined(CONSOLE)
-void main(void) { WinMain(0, 0, 0, 0); }
-#endif
+int main(void) { return WinMain(0, 0, 0, 0); }
 
 #elif defined(USE_COCOA)
 #import <Cocoa/Cocoa.h>
