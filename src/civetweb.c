@@ -2524,7 +2524,7 @@ static int poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 }
 #endif /* HAVE_POLL */
 
-static void set_close_on_exec(int sock,
+static void set_close_on_exec(SOCKET sock,
                               struct mg_connection *conn /* may be null */)
 {
 	(void)conn; /* Unused. */
@@ -2756,7 +2756,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 	return filep->membuf != NULL || filep->modification_time != (time_t)0;
 }
 
-static void set_close_on_exec(int fd,
+static void set_close_on_exec(SOCKET fd,
                               struct mg_connection *conn /* may be null */)
 {
 	if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0) {
@@ -5703,10 +5703,10 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	}
 
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1 */
-	set_close_on_exec(fdin[0], conn);
-	set_close_on_exec(fdin[1], conn);
-	set_close_on_exec(fdout[0], conn);
-	set_close_on_exec(fdout[1], conn);
+	set_close_on_exec((SOCKET)fdin[0], conn);
+	set_close_on_exec((SOCKET)fdin[1], conn);
+	set_close_on_exec((SOCKET)fdout[0], conn);
+	set_close_on_exec((SOCKET)fdout[1], conn);
 
 	/* Parent closes only one side of the pipes.
 	 * If we don't mark them as closed, close() attempt before
