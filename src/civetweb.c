@@ -1151,7 +1151,7 @@ static void mg_set_thread_name(const char *name)
 		THREADNAME_INFO info;
 		info.dwType = 0x1000;
 		info.szName = threadName;
-		info.dwThreadID = -1;
+		info.dwThreadID = ~0U;
 		info.dwFlags = 0;
 
 		RaiseException(0x406D1388,
