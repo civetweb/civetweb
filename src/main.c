@@ -1172,7 +1172,8 @@ static int get_password(const char *user,
 
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
-	int ok, y;
+	int ok;
+	short y;
 	struct tstring_input_buf dlgprms;
 	dlgprms.buffer = passwd;
 	dlgprms.buflen = passwd_len;
@@ -1613,7 +1614,7 @@ static void change_password_file()
 	char strbuf[256], u[256], d[256];
 	HWND hDlg = NULL;
 	FILE *f;
-	int y, nelems;
+	short y, nelems;
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	const char *domain = mg_get_option(g_ctx, "authentication_domain");
@@ -1734,7 +1735,7 @@ static void change_password_file()
 		}
 		fclose(f);
 
-		y = (WORD)((nelems + 1) * HEIGHT + 10);
+		y = (nelems + 1) * HEIGHT + 10;
 		add_control(&p,
 		            dia,
 		            0x80,
@@ -1768,7 +1769,7 @@ static void change_password_file()
 		            12,
 		            domain);
 
-		y = (WORD)((nelems + 2) * HEIGHT + 10);
+		y = (nelems + 2) * HEIGHT + 10;
 		add_control(&p,
 		            dia,
 		            0x80,
