@@ -4,7 +4,7 @@
 * License http://opensource.org/licenses/mit-license.php MIT License
 */
 
-// Simple example program on how to use Embedded C interface.
+/* Simple example program on how to use Embedded C interface. */
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -138,37 +138,60 @@ int WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 
 
 #ifdef USE_WEBSOCKET
-#define MAX_WS_CLIENTS 1024
-static struct mg_connection * ws_clients[MAX_WS_CLIENTS];
+
+#define MAX_WS_CLIENTS 5 /* just for the test: a small number that can be reached */
+                         /* a real server should use a much higher number here */
+
+struct t_ws_client {
+    struct mg_connection * conn;
+    int state;
+} static ws_clients[MAX_WS_CLIENTS];
+
+#define ASSERT(x) {if (!(x)) {fprintf(stderr, "Assertion failed in line %u\n", (unsigned)__LINE__);}}
+
 static unsigned long cnt;
 
 int WebSocketConnectHandler(const struct mg_connection * conn, void *cbdata)
 {
-    int reject = 0;
-    fprintf(stdout, "Websocket client %s\r\n\r\n", reject ? "rejected" : "accepted");
+    struct mg_context *ctx = mg_get_context(conn);
+    int reject = 1;
+    int i;
+
+    mg_lock_context(ctx);
+    for (i=0; i<MAX_WS_CLIENTS; i++) {
+        if (ws_clients[i].conn == NULL) {
+            ws_clients[i].conn = (struct mg_connection *) conn;
+            ws_clients[i].state = 1;
+            mg_set_user_connection_data(conn, (void*) (ws_clients+i));
+            reject = 0;
+            break;
+        }
+    }
+    mg_unlock_context(ctx);
+
+    fprintf(stdout, "Websocket client %s\r\n\r\n", (reject ? "rejected" : "accepted"));
     return reject;
 }
 
 void WebSocketReadyHandler(struct mg_connection * conn, void *cbdata)
 {
-    struct mg_context *ctx = mg_get_context(conn);
-    int i;
-
     const char * text = "Hello from the websocket ready handler";
+    struct t_ws_client * client = mg_get_user_connection_data(conn);
+
     mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
-    fprintf(stdout, "Client added to the set of webserver connections\r\n\r\n");
-    mg_lock_context(ctx);
-    for (i=0; i<MAX_WS_CLIENTS; i++) {
-        if (ws_clients[i] == NULL) {
-            ws_clients[i] = conn;
-            break;
-        }
-    }
-    mg_unlock_context(ctx);
+    fprintf(stdout, "Greeting message sent to websocket client\r\n\r\n");
+    ASSERT(client->conn == conn);
+    ASSERT(client->state == 1);
+
+    client->state = 2;
 }
 
 int WebsocketDataHandler(struct mg_connection * conn, int bits, char * data, size_t len, void *cbdata)
 {
+    struct t_ws_client * client = mg_get_user_connection_data(conn);
+    ASSERT(client->conn == conn);
+    ASSERT(client->state >= 1);
+
     fprintf(stdout, "Websocket got data:\r\n");
     fwrite(data, len, 1, stdout);
     fprintf(stdout, "\r\n\r\n");
@@ -178,17 +201,16 @@ int WebsocketDataHandler(struct mg_connection * conn, int bits, char * data, siz
 
 void WebSocketCloseHandler(const struct mg_connection * conn, void *cbdata)
 {
-    struct mg_context *ctx = mg_get_context((struct mg_connection *) /* TODO: check const_casts */ conn);
-    int i;
+    struct mg_context *ctx = mg_get_context(conn);
+    struct t_ws_client * client = mg_get_user_connection_data(conn);
+    ASSERT(client->conn == conn);
+    ASSERT(client->state >= 1);
 
     mg_lock_context(ctx);
-    for (i=0; i<MAX_WS_CLIENTS; i++) {
-        if (ws_clients[i] == conn) {
-            ws_clients[i] = NULL;
-            break;
-        }
-    }
+    client->state = 0;
+    client->conn = NULL;
     mg_unlock_context(ctx);
+
     fprintf(stdout, "Client droped from the set of webserver connections\r\n\r\n");
 }
 
@@ -201,8 +223,8 @@ void InformWebsockets(struct mg_context *ctx)
 
     mg_lock_context(ctx);
     for (i=0; i<MAX_WS_CLIENTS; i++) {
-        if (ws_clients[i] != NULL) {
-            mg_websocket_write(ws_clients[i], WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+        if (ws_clients[i].state == 2) {
+            mg_websocket_write(ws_clients[i].conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
         }
     }
     mg_unlock_context(ctx);
