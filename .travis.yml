@@ -1,15 +1,77 @@
 language: c
-sudo: false
+
+# This should be false to support container based building but the apt addons
+# don't seem to work right now
+sudo: required
 
 compiler:
   - gcc
   - clang
 
-install: make WITH_LUA=1 WITH_DEBUG=1 WITH_IPV6=1 WITH_WEBSOCKET=1
+os:
+  - linux
+  - osx
+
+env:
+  global:
+    - BUILD_TYPE=Coverage
+    - ENABLE_SSL=YES
+    - ENABLE_SSL_DYNAMIC_LOADING=YES
+    - ENABLE_WEBSOCKETS=NO
+    - ENABLE_CXX=NO
+    - ENABLE_IPV6=NO
+    - ENABLE_LUA=NO
+    - ENABLE_LUA_SHARED=NO
+    - C_STANDARD=auto
+    - CXX_STANDARD=auto
+  matrix:
+    - BUILD_SHARED=NO
+    - BUILD_SHARED=YES
+
+addons:
+  apt:
+    packages:
+      - cmake
+    sources:
+      - kubuntu-backports
+
+before_install:
+  - cmake --version
+
+install:
+  - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
+      PATH=~/.local/bin:${PATH};
+      pip install --user --upgrade pip;
+      pip install --user cpp-coveralls;
+    fi
 
 before_script:
-  - ci/travis/setup_lua.sh
-  - ci/travis/install_rocks.sh
+  # Generate the build scripts with CMake
+  - mkdir output
+  - cd output
+  - cmake --version
+  - cmake
+    -G "Unix Makefiles"
+    -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+    -DBUILD_SHARED_LIBS=${BUILD_SHARED}
+    -DCIVETWEB_ENABLE_SSL=${ENABLE_SSL}
+    -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=${ENABLE_SSL_DYNAMIC_LOADING}
+    -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
+    -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
+    -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6}
+    -DCIVETWEB_ENABLE_LUA=${ENABLE_LUA}
+    -DCIVETWEB_ENABLE_LUA_SHARED=${ENABLE_LUA_SHARED}
+    -DCIVETWEB_C_STANDARD=${C_STANDARD}
+    -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
+    ..
+
+matrix:
+  - fast_finish: true
 
 script:
-  - ci/travis/run_ci_tests.sh
+  - CTEST_OUTPUT_ON_FAILURE=1 make all test
+
+after_success:
+  - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
+      coveralls --include src --include include --gcov-options '\-lp' --root .. --build-root .;
+    fi
