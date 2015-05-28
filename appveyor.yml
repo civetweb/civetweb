@@ -1,0 +1,106 @@
+version: '{build}'
+
+configuration:
+  - Release
+
+platform:
+  - x86
+  - x64
+
+environment:
+  enable_ssl: YES
+  enable_ssl_dynamic_loading: YES
+  enable_websockets: NO
+  enable_cxx: NO
+  enable_ipv6: NO
+  enable_lua: NO
+  enable_lua_shared: NO
+  c_standard: auto
+  cxx_standard: auto
+  matrix:
+    - compiler: gcc-4.9.2-posix
+      build_shared: NO
+    - compiler: gcc-4.9.2-posix
+      build_shared: YES
+    - compiler: msvc-18-seh
+      build_shared: NO
+    - compiler: msvc-18-seh
+      build_shared: YES
+
+install:
+  # Derive some extra information
+  - set build_type=%configuration%
+  - for /f "tokens=1-3 delims=-" %%a in ("%compiler%") do (@set "compiler_name=%%a")
+  - for /f "tokens=1-3 delims=-" %%a in ("%compiler%") do (@set "compiler_version=%%b")
+  - for /f "tokens=1-3 delims=-" %%a in ("%compiler%") do (@set "compiler_threading=%%c")
+  - if "%platform%"=="x64" (set arch=x86_64)
+  - if "%platform%"=="x86" (set arch=i686)
+  # Download the specific version of MinGW
+  - if "%compiler_name%"=="gcc" (
+      for /f %%a in (
+        'call mingw.cmd
+          /version "%compiler_version%"
+          /arch "%arch%"
+          /threading "%compiler_threading%"
+          "C:\mingw-builds"'
+      ) do @set "compiler_path=%%a"
+    )
+
+before_build:
+  # Set up mingw commands
+  - if "%compiler_name%"=="gcc" (set "generator=MinGW Makefiles")
+  - if "%compiler_name%"=="gcc" (set "build=mingw32-make -j4")
+  - if "%compiler_name%"=="gcc" (set "test=mingw32-make CTEST_OUTPUT_ON_FAILURE=1 test")
+  # MSVC specific commands
+  - if "%compiler_version%"=="14" (set "vs_version=8" & set "vs_year=2005")
+  - if "%compiler_version%"=="15" (set "vs_version=9" & set "vs_year=2008")
+  - if "%compiler_version%"=="16" (set "vs_version=10" & set "vs_year=2010")
+  - if "%compiler_version%"=="17" (set "vs_version=11" & set "vs_year=2012")
+  - if "%compiler_version%"=="18" (set "vs_version=12" & set "vs_year=2013")
+  - if "%compiler_version%"=="19" (set "vs_version=14" & set "vs_year=2015")
+  - if "%compiler_name%"=="msvc" (set "generator=Visual Studio %vs_version% %vs_year%")
+  - if "%compiler_name%"=="msvc" (
+      if "%platform%"=="x64" (
+        set "generator=%generator% Win64"
+      )
+    )
+  - if %compiler_version% gtr 9 (set platform=%platform:x86=Win32%)
+  - if "%compiler_name%"=="msvc" (set "msbuild_opts=/clp:OnlyErrors;OnlyWarnings /nologo /m /v:m")
+  - if "%compiler_name%"=="msvc" (set "build=msbuild %msbuild_opts% /p:Configuration=%configuration% /p:Platform=%platform% civetweb.sln")
+  - if "%compiler_name%"=="msvc" (set "test=msbuild %msbuild_opts% RUN_TESTS.vcxproj")
+  # Add the compiler path if needed
+  - if not "%compiler_path%"=="" (set "PATH=%PATH%;%compiler_path%")
+  # git bash conflicts with MinGW makefiles
+  - if "%generator%"=="MinGW Makefiles" (set "PATH=%PATH:C:\Program Files (x86)\Git\bin=%")
+  # Generate the build files
+  - mkdir output
+  - cd output
+  - cmake --version
+  - appveyor AddMessage -Category Information "Generating '%generator%'"
+  - cmake
+    -G "%generator%"
+    -DCMAKE_BUILD_TYPE=%build_type%
+    -DBUILD_SHARED_LIBS=%build_shared%
+    -DCIVETWEB_ENABLE_SSL=%enable_ssl%
+    -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=%enable_ssl_dynamic_loading%
+    -DCIVETWEB_ENABLE_WEBSOCKETS=%enable_websockets%
+    -DCIVETWEB_ENABLE_CXX=%enable_cxx%
+    -DCIVETWEB_ENABLE_LUA=%enable_lua%
+    -DCIVETWEB_ENABLE_LUA_SHARED=%enable_lua_shared%
+    -DCIVETWEB_C_STANDARD=%c_standard%
+    -DCIVETWEB_CXX_STANDARD=%cxx_standard%
+    ..
+
+build_script:
+  - appveyor AddMessage -Category Information "Build command '%build%'"
+  - cmd /c "%build%"
+
+test_script:
+  - appveyor AddMessage -Category Information "Test command '%build%'"
+  - cmd /c "%test%"
+
+matrix:
+  fast_finish: true
+
+cache:
+  - C:\mingw-builds -> mingw.py
