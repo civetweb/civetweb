@@ -2933,7 +2933,12 @@ push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf, int64_t len)
 			if (ferror(fp))
 				n = -1;
 		} else {
-			n = (int)send(sock, buf + sent, (size_t)k, MSG_NOSIGNAL);
+#ifdef _WIN32
+			typedef int len_t;
+#else
+			typedef size_t len_t;
+#endif
+			n = (int)send(sock, buf + sent, (len_t)k, MSG_NOSIGNAL);
 		}
 
 		if (n <= 0)
@@ -2975,7 +2980,12 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
 			nread = SSL_read(conn->ssl, buf, len);
 #endif
 		} else {
-			nread = (int)recv(conn->client.sock, buf, (size_t)len, 0);
+#ifdef _WIN32
+			typedef int len_t;
+#else
+			typedef size_t len_t;
+#endif
+			nread = (int)recv(conn->client.sock, buf, (len_t)len, 0);
 		}
 		if (conn->ctx->stop_flag) {
 			return -1;
