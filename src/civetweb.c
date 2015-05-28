@@ -59,6 +59,14 @@
 #pragma warning(disable : 4127)
 /* non-constant aggregate initializer: issued due to missing C99 support */
 #pragma warning(disable : 4204)
+/* padding added after data member */
+#pragma warning (disable : 4820)
+/* not defined as a preprocessor macro, replacing with '0' for '#if/#elif' */
+#pragma warning (disable : 4668)
+/* no function prototype given: converting '()' to '(void)' */
+#pragma warning (disable : 4255)
+/* function has been selected for automatic inline expansion */
+#pragma warning (disable : 4711)
 #endif
 
 /* This code uses static_assert to check some conditions.
@@ -1151,7 +1159,7 @@ static void mg_set_thread_name(const char *name)
 		THREADNAME_INFO info;
 		info.dwType = 0x1000;
 		info.szName = threadName;
-		info.dwThreadID = -1;
+		info.dwThreadID = ~0U;
 		info.dwFlags = 0;
 
 		RaiseException(0x406D1388,
@@ -2524,7 +2532,7 @@ static int poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 }
 #endif /* HAVE_POLL */
 
-static void set_close_on_exec(int sock,
+static void set_close_on_exec(SOCKET sock,
                               struct mg_connection *conn /* may be null */)
 {
 	(void)conn; /* Unused. */
@@ -2756,7 +2764,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 	return filep->membuf != NULL || filep->modification_time != (time_t)0;
 }
 
-static void set_close_on_exec(int fd,
+static void set_close_on_exec(SOCKET fd,
                               struct mg_connection *conn /* may be null */)
 {
 	if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0) {
@@ -2933,7 +2941,12 @@ push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf, int64_t len)
 			if (ferror(fp))
 				n = -1;
 		} else {
-			n = (int)send(sock, buf + sent, (size_t)k, MSG_NOSIGNAL);
+#ifdef _WIN32
+			typedef int len_t;
+#else
+			typedef size_t len_t;
+#endif
+			n = (int)send(sock, buf + sent, (len_t)k, MSG_NOSIGNAL);
 		}
 
 		if (n <= 0)
@@ -2975,7 +2988,12 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
 			nread = SSL_read(conn->ssl, buf, len);
 #endif
 		} else {
-			nread = (int)recv(conn->client.sock, buf, (size_t)len, 0);
+#ifdef _WIN32
+			typedef int len_t;
+#else
+			typedef size_t len_t;
+#endif
+			nread = (int)recv(conn->client.sock, buf, (len_t)len, 0);
 		}
 		if (conn->ctx->stop_flag) {
 			return -1;
@@ -4584,8 +4602,16 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		snprintf(ebuf, ebuf_len, "%s", "NULL host");
 	} else if (use_ssl && SSLv23_client_method == NULL) {
 		snprintf(ebuf, ebuf_len, "%s", "SSL is not initialized");
-		/* TODO(lsm): use something threadsafe instead of gethostbyname() */
+#ifdef _MSC_VER
+#pragma warning(push)
+/* TODO(lsm): use something threadsafe instead of gethostbyname() */
+/* getaddrinfo is the replacement here but isn't cross platform */
+#pragma warning(disable: 4996)
+#endif
 	} else if ((he = gethostbyname(host)) == NULL) {
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 		snprintf(
 		    ebuf, ebuf_len, "gethostbyname(%s): %s", host, strerror(ERRNO));
 	} else if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
@@ -5695,10 +5721,10 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	}
 
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1 */
-	set_close_on_exec(fdin[0], conn);
-	set_close_on_exec(fdin[1], conn);
-	set_close_on_exec(fdout[0], conn);
-	set_close_on_exec(fdout[1], conn);
+	set_close_on_exec((SOCKET)fdin[0], conn);
+	set_close_on_exec((SOCKET)fdin[1], conn);
+	set_close_on_exec((SOCKET)fdout[0], conn);
+	set_close_on_exec((SOCKET)fdout[1], conn);
 
 	/* Parent closes only one side of the pipes.
 	 * If we don't mark them as closed, close() attempt before
@@ -9644,7 +9670,15 @@ static void get_system_name(char **sysName)
 	DWORD dwMinorVersion = 0;
 	DWORD dwBuild = 0;
 
+#ifdef _MSC_VER
+#pragma warning(push)
+// GetVersion was declared deprecated
+#pragma warning(disable: 4996)
+#endif
 	dwVersion = GetVersion();
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 	dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
 	dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));

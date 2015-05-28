@@ -1172,8 +1172,11 @@ static int get_password(const char *user,
 
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
-	int ok, y;
-	struct tstring_input_buf dlgprms = {passwd_len, passwd};
+	int ok;
+	short y;
+	struct tstring_input_buf dlgprms;
+	dlgprms.buffer = passwd;
+	dlgprms.buflen = passwd_len;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1611,7 +1614,7 @@ static void change_password_file()
 	char strbuf[256], u[256], d[256];
 	HWND hDlg = NULL;
 	FILE *f;
-	int y, nelems;
+	short y, nelems;
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	const char *domain = mg_get_option(g_ctx, "authentication_domain");
@@ -1732,7 +1735,7 @@ static void change_password_file()
 		}
 		fclose(f);
 
-		y = (WORD)((nelems + 1) * HEIGHT + 10);
+		y = (nelems + 1) * HEIGHT + 10;
 		add_control(&p,
 		            dia,
 		            0x80,
@@ -1766,7 +1769,7 @@ static void change_password_file()
 		            12,
 		            domain);
 
-		y = (WORD)((nelems + 2) * HEIGHT + 10);
+		y = (nelems + 2) * HEIGHT + 10;
 		add_control(&p,
 		            dia,
 		            0x80,
@@ -1809,7 +1812,8 @@ static int manage_service(int action)
 	static const char *service_name =
 	    "Civetweb"; /* TODO: check using server_name instead of service_name */
 	SC_HANDLE hSCM = NULL, hService = NULL;
-	SERVICE_DESCRIPTION descr = {g_server_name};
+	SERVICE_DESCRIPTION descr;
+	descr.lpDescription = g_server_name;
 	char path[PATH_MAX + 20] = ""; /* Path to executable plus magic argument */
 	int success = 1;
 
@@ -1866,7 +1870,9 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	static SERVICE_TABLE_ENTRY service_table[2];
 	int service_installed;
-	char buf[200], *service_argv[] = {__argv[0], NULL};
+	char buf[200], *service_argv[2];
+	service_argv[0] = __argv[0];
+	service_argv[1] = NULL;
 	POINT pt;
 	HMENU hMenu;
 	static UINT s_uTaskbarRestart; /* for taskbar creation */
@@ -2062,9 +2068,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	return (int)msg.wParam;
 }
 
-#if defined(CONSOLE)
-void main(void) { WinMain(0, 0, 0, 0); }
-#endif
+int main(void) { return WinMain(0, 0, 0, 0); }
 
 #elif defined(USE_COCOA)
 #import <Cocoa/Cocoa.h>
