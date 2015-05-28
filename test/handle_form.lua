@@ -37,7 +37,7 @@ bdata = table.concat(stringtab)
 stringtab = nil
 
 -- Get the boundary string.
-bs = "--" .. ((mg.request_info.content_type):upper():match("BOUNDARY=(.*)"));
+bs = "--" .. ((mg.request_info.content_type):match("boundary=(.*)"));
 
 -- The POST data has to start with the boundary string.
 -- Check this and remove the starting boundary.
