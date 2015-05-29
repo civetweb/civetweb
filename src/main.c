@@ -1175,8 +1175,6 @@ static int get_password(const char *user,
 	int ok;
 	short y;
 	struct tstring_input_buf dlgprms;
-	dlgprms.buffer = passwd;
-	dlgprms.buflen = passwd_len;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1197,6 +1195,9 @@ static int get_password(const char *user,
 	                   L"",
 	                   8,
 	                   L"Tahoma"};
+
+	dlgprms.buffer = passwd;
+	dlgprms.buflen = passwd_len;
 
 	assert((user != NULL) && (realm != NULL) && (passwd != NULL));
 
@@ -1813,9 +1814,10 @@ static int manage_service(int action)
 	    "Civetweb"; /* TODO: check using server_name instead of service_name */
 	SC_HANDLE hSCM = NULL, hService = NULL;
 	SERVICE_DESCRIPTION descr;
-	descr.lpDescription = g_server_name;
 	char path[PATH_MAX + 20] = ""; /* Path to executable plus magic argument */
 	int success = 1;
+
+	descr.lpDescription = g_server_name;
 
 	if ((hSCM = OpenSCManager(NULL,
 	                          NULL,
@@ -1871,11 +1873,12 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	static SERVICE_TABLE_ENTRY service_table[2];
 	int service_installed;
 	char buf[200], *service_argv[2];
-	service_argv[0] = __argv[0];
-	service_argv[1] = NULL;
 	POINT pt;
 	HMENU hMenu;
 	static UINT s_uTaskbarRestart; /* for taskbar creation */
+
+	service_argv[0] = __argv[0];
+	service_argv[1] = NULL;
 
 	memset(service_table, 0, sizeof(service_table));
 	service_table[0].lpServiceName = g_server_name;
