@@ -60,13 +60,13 @@
 /* non-constant aggregate initializer: issued due to missing C99 support */
 #pragma warning(disable : 4204)
 /* padding added after data member */
-#pragma warning (disable : 4820)
+#pragma warning(disable : 4820)
 /* not defined as a preprocessor macro, replacing with '0' for '#if/#elif' */
-#pragma warning (disable : 4668)
+#pragma warning(disable : 4668)
 /* no function prototype given: converting '()' to '(void)' */
-#pragma warning (disable : 4255)
+#pragma warning(disable : 4255)
 /* function has been selected for automatic inline expansion */
-#pragma warning (disable : 4711)
+#pragma warning(disable : 4711)
 #endif
 
 /* This code uses static_assert to check some conditions.
@@ -179,6 +179,9 @@ int clock_gettime(int clk_id, struct timespec *t)
 
 #ifndef MAX_WORKER_THREADS
 #define MAX_WORKER_THREADS (1024 * 64)
+#endif
+#ifndef SOCKET_TIMEOUT_QUANTUM
+#define SOCKET_TIMEOUT_QUANTUM (10000)
 #endif
 
 mg_static_assert(MAX_WORKER_THREADS >= 1,
@@ -2960,18 +2963,15 @@ push(FILE *fp, SOCKET sock, SSL *ssl, const char *buf, int64_t len)
 
 /* Read from IO channel - opened file descriptor, socket, or SSL descriptor.
  * Return negative value on error, or number of bytes read on success. */
-static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
+static int
+pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 {
 	int nread;
-	double timeout = -1;
 	struct timespec start, now;
 
 	memset(&start, 0, sizeof(start));
 	memset(&now, 0, sizeof(now));
 
-	if (conn->ctx->config[REQUEST_TIMEOUT]) {
-		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
-	}
 	if (timeout > 0) {
 		clock_gettime(CLOCK_MONOTONIC, &start);
 	}
@@ -3013,9 +3013,14 @@ static int pull(FILE *fp, struct mg_connection *conn, char *buf, int len)
 static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 {
 	int n, nread = 0;
+	double timeout = -1.0;
+
+	if (conn->ctx->config[REQUEST_TIMEOUT]) {
+		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+	}
 
 	while (len > 0 && conn->ctx->stop_flag == 0) {
-		n = pull(fp, conn, buf + nread, len);
+		n = pull(fp, conn, buf + nread, len, timeout);
 		if (n < 0) {
 			nread = n; /* Propagate the error */
 			break;
@@ -4606,7 +4611,7 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 #pragma warning(push)
 /* TODO(lsm): use something threadsafe instead of gethostbyname() */
 /* getaddrinfo is the replacement here but isn't cross platform */
-#pragma warning(disable: 4996)
+#pragma warning(disable : 4996)
 #endif
 	} else if ((he = gethostbyname(host)) == NULL) {
 #ifdef _MSC_VER
@@ -5308,12 +5313,14 @@ static int read_request(
 	}
 
 	request_len = get_request_len(buf, *nread);
-	while ((conn->ctx->stop_flag == 0) && (*nread < bufsiz) &&
-	       (request_len == 0) &&
-	       ((mg_difftimespec(&last_action_time, &(conn->req_time)) <=
-	         request_timeout) ||
-	        (request_timeout < 0)) &&
-	       ((n = pull(fp, conn, buf + *nread, bufsiz - *nread)) > 0)) {
+	while (
+	    (conn->ctx->stop_flag == 0) && (*nread < bufsiz) &&
+	    (request_len == 0) &&
+	    ((mg_difftimespec(&last_action_time, &(conn->req_time)) <=
+	      request_timeout) ||
+	     (request_timeout < 0)) &&
+	    ((n = pull(fp, conn, buf + *nread, bufsiz - *nread, request_timeout)) >
+	     0)) {
 		*nread += n;
 		/* assert(*nread <= bufsiz); */
 		if (*nread > bufsiz)
@@ -5400,9 +5407,14 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 	char buf[MG_BUF_LEN];
 	int to_read, nread, success = 0;
 	int64_t buffered_len;
+	double timeout = -1.0;
 
-	if (!conn)
+	if (!conn) {
 		return 0;
+	}
+	if (conn->ctx->config[REQUEST_TIMEOUT]) {
+		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+	}
 
 	expect = mg_get_header(conn, "Expect");
 	/* assert(fp != NULL); */
@@ -5454,7 +5466,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 			if ((int64_t)to_read > conn->content_len - conn->consumed_content) {
 				to_read = (int)(conn->content_len - conn->consumed_content);
 			}
-			nread = pull(NULL, conn, buf, to_read);
+			nread = pull(NULL, conn, buf, to_read, timeout);
 			if (nread <= 0 || push(fp, sock, ssl, buf, nread) != nread) {
 				break;
 			}
@@ -6796,6 +6808,11 @@ static void read_websocket(struct mg_connection *conn,
 	char mem[4096];
 	char *data = mem;
 	unsigned char mop; /* mask flag and opcode */
+	double timeout = -1.0;
+
+	if (conn->ctx->config[REQUEST_TIMEOUT]) {
+		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+	}
 
 	mg_set_thread_name("wsock");
 
@@ -6852,7 +6869,8 @@ static void read_websocket(struct mg_connection *conn,
 				memcpy(data, buf + header_len, len);
 				error = 0;
 				while (len < data_len) {
-					n = pull(NULL, conn, data + len, (int)(data_len - len));
+					n = pull(
+					    NULL, conn, data + len, (int)(data_len - len), timeout);
 					if (n <= 0) {
 						error = 1;
 						break;
@@ -6914,7 +6932,8 @@ static void read_websocket(struct mg_connection *conn,
 			if ((n = pull(NULL,
 			              conn,
 			              conn->buf + conn->data_len,
-			              conn->buf_size - conn->data_len)) <= 0) {
+			              conn->buf_size - conn->data_len,
+			              timeout)) <= 0) {
 				/* Error, no bytes read */
 				break;
 			}
@@ -8671,13 +8690,20 @@ static void close_socket_gracefully(struct mg_connection *conn)
 	int n;
 #endif
 	struct linger linger;
+	double timeout = -1.0;
+
+	if (!conn) {
+		return;
+	}
+	if (conn->ctx->config[REQUEST_TIMEOUT]) {
+		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+	}
 
 	/* Set linger option to avoid socket hanging out after close. This prevent
 	 * ephemeral port exhaust problem under high QPS. */
 	linger.l_onoff = 1;
 	linger.l_linger = 1;
-	if (!conn)
-		return;
+
 	if (setsockopt(conn->client.sock,
 	               SOL_SOCKET,
 	               SO_LINGER,
@@ -8700,7 +8726,7 @@ static void close_socket_gracefully(struct mg_connection *conn)
 	 * when server decides to close the connection; then when client
 	 * does recv() it gets no data back. */
 	do {
-		n = pull(NULL, conn, buf, sizeof(buf));
+		n = pull(NULL, conn, buf, sizeof(buf), timeout);
 	} while (n > 0);
 #endif
 
@@ -9440,15 +9466,13 @@ static void accept_new_connection(const struct socket *listener,
 			timeout = -1;
 		}
 
-		/* Set socket timeout to the given value, but not more than 10 seconds,
-		 * so the server can exit after 10 seconds if required. */
-		/* TODO: Currently values > 10 s are round up to the next 10 s.
-		 * For values like 24 s a socket timeout of 8 or 12 s would be better.
-		 */
-		if ((timeout > 0) && (timeout < 10000)) {
+		/* Set socket timeout to the given value, but not more than a
+		 * a certain limit (SOCKET_TIMEOUT_QUANTUM, default 10 seconds),
+		 * so the server can exit after that time if requested. */
+		if ((timeout > 0) && (timeout < SOCKET_TIMEOUT_QUANTUM)) {
 			set_sock_timeout(so.sock, timeout);
 		} else {
-			set_sock_timeout(so.sock, 10000);
+			set_sock_timeout(so.sock, SOCKET_TIMEOUT_QUANTUM);
 		}
 
 		produce_socket(ctx, &so);
@@ -9673,7 +9697,7 @@ static void get_system_name(char **sysName)
 #ifdef _MSC_VER
 #pragma warning(push)
 // GetVersion was declared deprecated
-#pragma warning(disable: 4996)
+#pragma warning(disable : 4996)
 #endif
 	dwVersion = GetVersion();
 #ifdef _MSC_VER
