@@ -889,6 +889,9 @@ enum {
 	REWRITE,
 	HIDE_FILES,
 	REQUEST_TIMEOUT,
+#if defined(USE_WEBSOCKET)
+    WEBSOCKET_TIMEOUT,
+#endif
 	DECODE_URL,
 
 #if defined(USE_LUA)
@@ -941,6 +944,9 @@ static struct mg_option config_options[] = {
     {"url_rewrite_patterns", CONFIG_TYPE_STRING, NULL},
     {"hide_files_patterns", CONFIG_TYPE_EXT_PATTERN, NULL},
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
+#if defined(USE_WEBSOCKET)
+    {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
+#endif
     {"decode_url", CONFIG_TYPE_BOOLEAN, "yes"},
 
 #if defined(USE_LUA)
@@ -6810,7 +6816,10 @@ static void read_websocket(struct mg_connection *conn,
 	unsigned char mop; /* mask flag and opcode */
 	double timeout = -1.0;
 
-	if (conn->ctx->config[REQUEST_TIMEOUT]) {
+	if (conn->ctx->config[WEBSOCKET_TIMEOUT]) {
+		timeout = atoi(conn->ctx->config[WEBSOCKET_TIMEOUT]) / 1000.0;
+	}
+    if ((timeout<=0.0) && (conn->ctx->config[REQUEST_TIMEOUT])) {
 		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 
