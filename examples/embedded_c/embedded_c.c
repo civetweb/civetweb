@@ -235,7 +235,12 @@ void InformWebsockets(struct mg_context *ctx)
 int main(int argc, char *argv[])
 {
     const char * options[] = { "document_root", DOCUMENT_ROOT,
-                               "listening_ports", PORT, 0
+                               "listening_ports", PORT,
+                               "request_timeout_ms", "10000",
+#ifdef USE_WEBSOCKET
+                               "websocket_timeout_ms", "3600000",
+#endif
+                               0
                              };
     struct mg_callbacks callbacks;
     struct mg_context *ctx;
