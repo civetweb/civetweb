@@ -6,9 +6,11 @@
 static void *
 mmap(void *addr, int64_t len, int prot, int flags, int fd, int offset)
 {
-
-	/* TODO: This is an incomplete implementation of mmap for windows.
+	/* TODO (low): This is an incomplete implementation of mmap for windows.
 	 * Currently it is sufficient, but there are a lot of unused parameters.
+     * Better use a function "mg_map" which only has the required parameters,
+     * and implement it using mmap in Linux and CreateFileMapping in Windows.
+     * Noone should expect a full mmap for Windows here.
 	 */
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
 	HANDLE mh = CreateFileMapping(fh, 0, PAGE_READONLY, 0, 0, 0);
@@ -537,7 +539,7 @@ static int lsp_get_var(lua_State *L)
 			/* Variable found: return value to Lua */
 			lua_pushstring(L, dst);
 		} else {
-			/* Variable not found (TODO: may be string too long) */
+			/* Variable not found (TODO (mid): may be string too long) */
 			lua_pushnil(L);
 		}
 	} else {
@@ -986,7 +988,7 @@ static int lwebsocket_set_timer(lua_State *L, int is_periodic)
 		                (taction)(is_periodic ? lua_action : lua_action_free),
 		                (void *)arg));
 	} else if (type1 == LUA_TFUNCTION && type2 == LUA_TNUMBER) {
-		/* TODO: not implemented yet */
+		/* TODO (mid): not implemented yet */
 		return luaL_error(L, "invalid arguments for set_timer/interval() call");
 	} else {
 		return luaL_error(L, "invalid arguments for set_timer/interval() call");
@@ -1039,7 +1041,7 @@ static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 	                                                          instead */
 #endif
 	reg_string(L, "remote_addr", conn->request_info.remote_addr);
-	/* TODO: ip version */
+	/* TODO (high): ip version */
 	reg_int(L, "remote_port", conn->request_info.remote_port);
 	reg_int(L, "num_headers", conn->request_info.num_headers);
 	reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
@@ -1105,6 +1107,16 @@ void lua_civet_open_all_libs(lua_State *L)
 		extern int luaopen_lfs(lua_State *);
 		luaopen_lfs(L);
 	}
+#endif
+#ifdef USE_LUA_BINARY
+    {
+        /* TODO (low): Test if this could be used as a replacement for bit32.
+         * Check again with Lua 5.3 later. */
+		extern int luaopen_binary(lua_State *);
+
+        luaL_requiref(L, "binary", luaopen_binary, 1);
+        lua_pop(L, 1);
+    }
 #endif
 }
 
@@ -1237,7 +1249,7 @@ static int lua_error_handler(lua_State *L)
 		IGNORE_UNUSED_RESULT(
 		    luaL_dostring(L, "print(debug.traceback(), '\\n')"));
 	}
-	/* TODO(lsm): leave the stack balanced */
+	/* TODO(lsm, low): leave the stack balanced */
 
 	return 0;
 }
@@ -1401,7 +1413,7 @@ static void *lua_websocket_new(const char *script, struct mg_connection *conn)
 		}
 		/* init ws list element */
 		ws = &(*shared_websock_list)->ws;
-		ws->script = mg_strdup(script); /* TODO: handle OOM */
+		ws->script = mg_strdup(script); /* TODO (low): handle OOM */
 		pthread_mutex_init(&(ws->ws_mutex), NULL);
 		ws->state = lua_newstate(lua_allocator, NULL);
 		ws->conn[0] = conn;
@@ -1444,8 +1456,8 @@ static void *lua_websocket_new(const char *script, struct mg_connection *conn)
 	}
 	if (!ok) {
 		/* Remove from ws connection list. */
-		/* TODO: Check if list entry and Lua state needs to be deleted (see
-		 * websocket_close). */
+		/* TODO (mid): Check if list entry and Lua state needs to be deleted
+		 * (see websocket_close). */
 		(*shared_websock_list)->ws.conn[--(ws->references)] = 0;
 	}
 

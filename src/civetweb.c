@@ -1153,7 +1153,7 @@ static void mg_set_thread_name(const char *name)
 {
 	char threadName[16]; /* Max. thread length in Linux/OSX/.. */
 
-	/* TODO: use strcpy and strcat instad of snprintf, use server name, don't
+	/* TODO (low): use strcpy and strcat instad of snprintf, use server name, don't
 	 * return */
 	if (snprintf(threadName, sizeof(threadName), "civetweb-%s", name) < 0)
 		return;
@@ -1491,20 +1491,6 @@ static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 		            NI_NUMERICHOST);
 	}
 #endif
-
-#if 0
-    /* TODO: test alternative code, remove old code */
-#if defined(USE_IPV6)
-    mg_inet_ntop(usa->sa.sa_family, usa->sa.sa_family == AF_INET ?
-        (void *) &usa->sin.sin_addr :
-    (void *) &usa->sin6.sin6_addr, buf, len);
-#elif defined(_WIN32)
-    /* Only Windows Vista (and newer) have inet_ntop() */
-    mg_strlcpy(buf, inet_ntoa(usa->sin.sin_addr), len);
-#else
-    inet_ntop(usa->sa.sa_family, (void *) &usa->sin.sin_addr, buf, (socklen_t)len);
-#endif
-#endif
 }
 
 /* Convert time_t to a string. According to RFC2616, Sec 14.18, this must be
@@ -1614,8 +1600,9 @@ static char *skip_quoted(char **buf,
 	if (end_word > begin_word) {
 		p = end_word - 1;
 		while (*p == quotechar) {
-			/* TODO (bel): it seems this code is never reached, so quotechar is
-			 * actually not needed - check if this code may be droped */
+			/* TODO (bel, low): it seems this code is never reached, so
+			 * quotechar is actually not needed - check if this code may be
+             * droped */
 
 			/* If there is anything beyond end_word, copy it */
 			if (*end_word == '\0') {
@@ -2664,7 +2651,7 @@ static pid_t spawn_process(struct mg_connection *conn,
 	memset(&si, 0, sizeof(si));
 	si.cb = sizeof(si);
 
-	/* TODO(lsm): redirect CGI errors to the error log file */
+	/* TODO(lsm, mid): redirect CGI errors to the error log file */
 	si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
 	si.wShowWindow = SW_HIDE;
 
@@ -4615,7 +4602,7 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		snprintf(ebuf, ebuf_len, "%s", "SSL is not initialized");
 #ifdef _MSC_VER
 #pragma warning(push)
-/* TODO(lsm): use something threadsafe instead of gethostbyname() */
+/* TODO(lsm, high): use something threadsafe instead of gethostbyname() */
 /* getaddrinfo is the replacement here but isn't cross platform */
 #pragma warning(disable : 4996)
 #endif
@@ -4899,8 +4886,8 @@ static void dir_scan_callback(struct de *de, void *data)
 		dsd->entries = (struct de *)realloc2(
 		    dsd->entries, dsd->arr_size * sizeof(dsd->entries[0]));
 	}
-	if (dsd->entries == NULL) {
-		/* TODO(lsm): propagate an error to the caller */
+	if (dsd->entries == NULL) {x
+		/* TODO(lsm, low): propagate an error to the caller */
 		dsd->num_entries = 0;
 	} else {
 		dsd->entries[dsd->num_entries].file_name = mg_strdup(de->file_name);
@@ -5485,7 +5472,9 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 
 		/* Each error code path in this function must send an error */
 		if (!success) {
-			/* TODO: Maybe some data has already been sent. */
+			/* NOTE: Maybe some data has already been sent. */
+            /* TODO (low): If some data has been sent, a correct error
+             * reply can no longer be sent, so just close the connection */
 			send_http_error(conn, 500, "%s", "");
 		}
 	}
@@ -5581,7 +5570,7 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 	addenv(blk, "%s", "SERVER_PROTOCOL=HTTP/1.1");
 	addenv(blk, "%s", "REDIRECT_STATUS=200"); /* For PHP */
 
-	/* TODO(lsm): fix this for IPv6 case */
+	/* TODO(lsm, high): fix this for IPv6 case */
 	addenv(blk, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin.sin_port));
 
 	addenv(blk, "REQUEST_METHOD=%s", conn->request_info.request_method);
@@ -5936,7 +5925,7 @@ static void mkcol(struct mg_connection *conn, const char *path)
 	if (conn == NULL)
 		return;
 
-	/* TODO: Check the send_http_error situations in this function */
+	/* TODO (mid): Check the send_http_error situations in this function */
 
 	memset(&de.file, 0, sizeof(de.file));
 	if (!mg_stat(conn, path, &de.file)) {
@@ -6143,7 +6132,7 @@ static void delete_file(struct mg_connection *conn, const char *path)
 
 	if (de.file.is_directory) {
 		remove_directory(conn, path);
-		/* TODO: remove_dir does not return success of the operation */
+		/* TODO (mid): remove_dir does not return success of the operation */
 		/* Assume delete is successful: Return 204 without content. */
 		send_http_error(conn, 204, "%s", "");
 		return;
@@ -6827,8 +6816,6 @@ static void read_websocket(struct mg_connection *conn,
 
 	/* Loop continuously, reading messages from the socket, invoking the
 	 * callback, and waiting repeatedly until an error occurs. */
-	/* TODO: Investigate if this next line is needed */
-	/* assert(conn->content_len == 0); */
 	while (!conn->ctx->stop_flag) {
 		header_len = 0;
 		assert(conn->data_len >= conn->request_len);
@@ -7056,8 +7043,9 @@ handle_websocket_request(struct mg_connection *conn,
 	/* Step 4: Check if there is a responsible websocket handler. */
 	if (!is_callback_resource && !lua_websock) {
 		/* There is no callback, an Lua is not responsible either. */
-		/* Reply with a 404 Not Found or with nothing at all? TODO: check if
-		 * this is correct for websockets */
+		/* Reply with a 404 Not Found or with nothing at all?
+         * TODO (mid): check the websocket standards, how to reply to
+         * requests to invalid websocket addresses. */
 		send_http_error(conn, 404, "%s", "Not found");
 		return;
 	}
@@ -7178,7 +7166,7 @@ static uint32_t get_remote_ip(const struct mg_connection *conn)
 
 int mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
-	/* TODO: set a timeout */
+	/* TODO (mid): set a timeout */
 	const char *content_type_header, *boundary_start, *sc;
 	char *s;
 	char buf[MG_BUF_LEN], path[PATH_MAX], tmp_path[PATH_MAX], fname[1024],
@@ -7824,7 +7812,7 @@ static void handle_request(struct mg_connection *conn)
 					/* Do nothing, callback has served the request */
 					discard_unread_request_data(conn);
 				} else {
-					/* TODO: what if the handler did NOT handle the request */
+					/* TODO (high): what if the handler did NOT handle the request */
 					/* The last version did handle this as a file request, but
 					 * since a file request is not always a script resource,
 					 * the authorization check might be different */
@@ -7837,8 +7825,8 @@ static void handle_request(struct mg_connection *conn)
 					              &is_put_or_delete_request);
 					callback_handler = NULL;
 
-					/* TODO: for the moment, a goto is simpler than some
-					 * curious loop. */
+					/* TODO (very low): goto is deprecatedm but for the moment, a goto is
+					 * simpler than some curious loop. */
 					/* The situation "callback does not handle the request"
 					 * needs to be reconsidered anyway. */
 					goto no_callback_resource;
@@ -7971,7 +7959,7 @@ static void handle_request(struct mg_connection *conn)
 		if (file.is_directory) {
 			if (substitute_index_file(conn, path, sizeof(path), &file)) {
 				/* 14.1. use a substitute file */
-				/* TODO: substitute index may be a script resource.
+				/* TODO (high): substitute index may be a script resource.
 				 * define what should be possible in this case. */
 			} else {
 				/* 14.2. no substitute file */
@@ -8085,8 +8073,11 @@ static int mg_inet_pton(int af, const char *src, void *dst)
 #endif
 
 /* Valid listening port specification is: [ip_address:]port[s]
- * Examples: 80, 443s, 127.0.0.1:3128, 1.2.3.4:8080s
- * TODO(lsm): add parsing of the IPv6 address */
+ * Examples for IPv4: 80, 443s, 127.0.0.1:3128, 1.2.3.4:8080s
+ * Examples for IPv6: [::1]:80, 
+ *   TODO (high): check ipv6 port without IP> [::]:80
+ *   [FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]:443s
+ *   see https://tools.ietf.org/html/rfc3513#section-2.2 */
 static int parse_port_string(const struct vec *vec, struct socket *so)
 {
 	unsigned int a, b, c, d, port;
@@ -8116,8 +8107,6 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 #endif
 	} else if (sscanf(vec->ptr, "%u%n", &port, &len) == 1) {
 		/* If only port is specified, bind to IPv4, INADDR_ANY */
-		/* TODO: check -- so->lsa.sin6.sin6_family = AF_INET6; */
-		/* TODO: check -- so->lsa.sin6.sin6_port = htons((uint16_t) port); */
 		so->lsa.sin.sin_port = htons((uint16_t)port);
 	} else {
 		/* Parsing failure. Make port invalid. */
@@ -8205,7 +8194,7 @@ static int set_ports_option(struct mg_context *ctx)
 			                    : sizeof(so.lsa.sa)) != 0 ||
 			           listen(so.sock, SOMAXCONN) != 0 ||
 			           getsockname(so.sock, &(usa.sa), &len) != 0) {
-				/* TODO: rewrite this IF above */
+				/* TODO(mid): rewrite this IF above */
 				mg_cry(fc(ctx),
 				       "%s: cannot bind to %.*s: %d (%s)",
 				       __func__,
@@ -8979,7 +8968,7 @@ int mg_get_response(struct mg_connection *conn,
 		ret = getreq(conn, ebuf, ebuf_len, &err);
 		conn->ctx = octx;
 
-		/* TODO: Define proper return values - maybe return length?
+		/* TODO (mid): Define proper return values - maybe return length?
 		 * For the first test use <0 for error and >0 for OK */
 		return (ret == 0) ? -1 : +1;
 	}
@@ -9333,7 +9322,7 @@ static void *worker_thread_run(void *thread_func_param)
 			/* Fill in IP, port info early so even if SSL setup below fails,
 			 * error handler would have the corresponding info.
 			 * Thanks to Johannes Winkelmann for the patch.
-			 * TODO(lsm): Fix IPv6 case */
+			 * TODO(lsm, high): Fix IPv6 case */
 			conn->request_info.remote_port =
 			    ntohs(conn->client.rsa.sin.sin_port);
 			sockaddr_to_string(conn->request_info.remote_addr,
@@ -9754,8 +9743,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 		InitializeCriticalSection(&global_log_file_lock);
 #endif /* _WIN32 && !__SYMBIAN32__ */
 
-	/* Allocate context and initialize reasonable general case defaults.
-	 * TODO(lsm): do proper error handling here. */
+	/* Allocate context and initialize reasonable general case defaults. */
 	if ((ctx = (struct mg_context *)mg_calloc(1, sizeof(*ctx))) == NULL) {
 		return NULL;
 	}
@@ -9770,7 +9758,8 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 			return NULL;
 		}
 	} else {
-		/* TODO: check if sTlsKey is already initialized */
+		/* TODO (low): istead of sleeping, check if sTlsKey is already 
+         * initialized. */
 		mg_sleep(1);
 	}
 

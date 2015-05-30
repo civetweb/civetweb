@@ -298,11 +298,13 @@ static const char *get_option(char **options, const char *option_name)
 	int i = 0;
 	const char *opt_value = NULL;
 
-	/* TODO: options should be an array of key-value-pairs, like
-	   struct {const char * key, const char * value} options[]
-	   but it currently is an array with
-	   options[2*i] = key, options[2*i + 1] = value
-	*/
+	/* TODO (low, api makeover): options should be an array of key-value-pairs,
+	 * like 
+     *     struct {const char * key, const char * value} options[]
+	 * but it currently is an array with
+	 *     options[2*i] = key, options[2*i + 1] = value
+     * (probably with a MG_LEGACY_INTERFACE definition)
+	 */
 	while (options[2 * i] != NULL) {
 		if (strcmp(options[2 * i], option_name) == 0) {
 			opt_value = options[2 * i + 1];
@@ -355,7 +357,7 @@ static int set_option(char **options, const char *name, const char *value)
 		break;
 	case CONFIG_TYPE_FILE:
 	case CONFIG_TYPE_DIRECTORY:
-		/* TODO: check this option when it is set, instead of calling
+		/* TODO (low): check this option when it is set, instead of calling
 		 * verify_existence later */
 		break;
 	case CONFIG_TYPE_EXT_PATTERN:
@@ -1811,7 +1813,8 @@ static void change_password_file()
 static int manage_service(int action)
 {
 	static const char *service_name =
-	    "Civetweb"; /* TODO: check using server_name instead of service_name */
+	    "Civetweb"; /* TODO (mid): check using server_name instead of 
+                     * service_name */
 	SC_HANDLE hSCM = NULL, hService = NULL;
 	SERVICE_DESCRIPTION descr;
 	char path[PATH_MAX + 20] = ""; /* Path to executable plus magic argument */
