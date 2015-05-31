@@ -890,7 +890,7 @@ enum {
 	HIDE_FILES,
 	REQUEST_TIMEOUT,
 #if defined(USE_WEBSOCKET)
-    WEBSOCKET_TIMEOUT,
+	WEBSOCKET_TIMEOUT,
 #endif
 	DECODE_URL,
 
@@ -1153,7 +1153,8 @@ static void mg_set_thread_name(const char *name)
 {
 	char threadName[16]; /* Max. thread length in Linux/OSX/.. */
 
-	/* TODO (low): use strcpy and strcat instad of snprintf, use server name, don't
+	/* TODO (low): use strcpy and strcat instad of snprintf, use server name,
+	 * don't
 	 * return */
 	if (snprintf(threadName, sizeof(threadName), "civetweb-%s", name) < 0)
 		return;
@@ -1602,7 +1603,7 @@ static char *skip_quoted(char **buf,
 		while (*p == quotechar) {
 			/* TODO (bel, low): it seems this code is never reached, so
 			 * quotechar is actually not needed - check if this code may be
-             * droped */
+			 * droped */
 
 			/* If there is anything beyond end_word, copy it */
 			if (*end_word == '\0') {
@@ -4581,6 +4582,38 @@ int mg_modify_passwords_file(const char *fname,
 	return 1;
 }
 
+
+static int is_valid_port(unsigned int port) { return port < 0xffff; }
+
+
+static int mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
+{
+	struct addrinfo hints, *res, *ressave;
+	int ret = 0;
+
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = af;
+
+	if (getaddrinfo(src, NULL, &hints, &res) != 0) {
+		/* bad src string or bad address family */
+		return 0;
+	}
+
+	ressave = res;
+
+	while (res) {
+		if (dstlen >= res->ai_addrlen) {
+			memcpy(dst, res->ai_addr, res->ai_addrlen);
+			ret = 1;
+		}
+		res = res->ai_next;
+	}
+
+	freeaddrinfo(ressave);
+	return ret;
+}
+
+
 static SOCKET conn2(struct mg_context *ctx /* may be null */,
                     const char *host,
                     int port,
@@ -4588,9 +4621,10 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
                     char *ebuf,
                     size_t ebuf_len)
 {
-	struct sockaddr_in sain;
-	struct hostent *he;
+	union usa sa;
 	SOCKET sock = INVALID_SOCKET;
+
+	memset(&sa, 0, sizeof(sa));
 
 	if (ebuf_len > 0) {
 		*ebuf = 0;
@@ -4598,39 +4632,47 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 
 	if (host == NULL) {
 		snprintf(ebuf, ebuf_len, "%s", "NULL host");
-	} else if (use_ssl && SSLv23_client_method == NULL) {
-		snprintf(ebuf, ebuf_len, "%s", "SSL is not initialized");
-#ifdef _MSC_VER
-#pragma warning(push)
-/* TODO(lsm, high): use something threadsafe instead of gethostbyname() */
-/* getaddrinfo is the replacement here but isn't cross platform */
-#pragma warning(disable : 4996)
-#endif
-	} else if ((he = gethostbyname(host)) == NULL) {
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-		snprintf(
-		    ebuf, ebuf_len, "gethostbyname(%s): %s", host, strerror(ERRNO));
-	} else if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-		snprintf(ebuf, ebuf_len, "socket(): %s", strerror(ERRNO));
-	} else {
-		set_close_on_exec(sock, fc(ctx));
-		memset(&sain, '\0', sizeof(sain));
-		sain.sin_family = AF_INET;
-		sain.sin_port = htons((uint16_t)port);
-		sain.sin_addr = *(struct in_addr *)(void *)he->h_addr_list[0];
-		if (connect(sock, (struct sockaddr *)&sain, sizeof(sain)) != 0) {
-			snprintf(ebuf,
-			         ebuf_len,
-			         "connect(%s:%d): %s",
-			         host,
-			         port,
-			         strerror(ERRNO));
-			closesocket(sock);
-			sock = INVALID_SOCKET;
-		}
+		return INVALID_SOCKET;
 	}
+
+	if (port < 0 || !is_valid_port((unsigned)port)) {
+		snprintf(ebuf, ebuf_len, "%s", "invalid port");
+		return INVALID_SOCKET;
+	}
+
+	if (use_ssl && (SSLv23_client_method == NULL)) {
+		snprintf(ebuf, ebuf_len, "%s", "SSL is not initialized");
+		return INVALID_SOCKET;
+	}
+
+	if (mg_inet_pton(AF_INET, host, &sa.sin, sizeof(sa.sin))) {
+		sa.sin.sin_port = htons((uint16_t)port);
+#ifdef USE_IPV6
+	} else if (mg_inet_pton(AF_INET6, host, &sa.sin6, sizeof(sa.sin6))) {
+		sa.sin6.sin6_port = htons((uint16_t)port);
+#endif
+	} else {
+		snprintf(ebuf, ebuf_len, "%s", "host not found");
+		return INVALID_SOCKET;
+	}
+
+	sock = socket(PF_INET, SOCK_STREAM, 0);
+
+	if (sock == INVALID_SOCKET) {
+		snprintf(ebuf, ebuf_len, "socket(): %s", strerror(ERRNO));
+		return INVALID_SOCKET;
+	}
+
+	set_close_on_exec(sock, fc(ctx));
+
+	/* TODO(mid): IPV6 */
+	if (connect(sock, (struct sockaddr *)&sa.sin, sizeof(sa.sin)) != 0) {
+		snprintf(
+		    ebuf, ebuf_len, "connect(%s:%d): %s", host, port, strerror(ERRNO));
+		closesocket(sock);
+		sock = INVALID_SOCKET;
+	}
+
 	return sock;
 }
 
@@ -4886,7 +4928,7 @@ static void dir_scan_callback(struct de *de, void *data)
 		dsd->entries = (struct de *)realloc2(
 		    dsd->entries, dsd->arr_size * sizeof(dsd->entries[0]));
 	}
-	if (dsd->entries == NULL) {x
+	if (dsd->entries == NULL) {
 		/* TODO(lsm, low): propagate an error to the caller */
 		dsd->num_entries = 0;
 	} else {
@@ -5473,8 +5515,8 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 		/* Each error code path in this function must send an error */
 		if (!success) {
 			/* NOTE: Maybe some data has already been sent. */
-            /* TODO (low): If some data has been sent, a correct error
-             * reply can no longer be sent, so just close the connection */
+			/* TODO (low): If some data has been sent, a correct error
+			 * reply can no longer be sent, so just close the connection */
 			send_http_error(conn, 500, "%s", "");
 		}
 	}
@@ -6808,7 +6850,7 @@ static void read_websocket(struct mg_connection *conn,
 	if (conn->ctx->config[WEBSOCKET_TIMEOUT]) {
 		timeout = atoi(conn->ctx->config[WEBSOCKET_TIMEOUT]) / 1000.0;
 	}
-    if ((timeout<=0.0) && (conn->ctx->config[REQUEST_TIMEOUT])) {
+	if ((timeout <= 0.0) && (conn->ctx->config[REQUEST_TIMEOUT])) {
 		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 
@@ -7044,8 +7086,8 @@ handle_websocket_request(struct mg_connection *conn,
 	if (!is_callback_resource && !lua_websock) {
 		/* There is no callback, an Lua is not responsible either. */
 		/* Reply with a 404 Not Found or with nothing at all?
-         * TODO (mid): check the websocket standards, how to reply to
-         * requests to invalid websocket addresses. */
+		 * TODO (mid): check the websocket standards, how to reply to
+		 * requests to invalid websocket addresses. */
 		send_http_error(conn, 404, "%s", "Not found");
 		return;
 	}
@@ -7812,7 +7854,8 @@ static void handle_request(struct mg_connection *conn)
 					/* Do nothing, callback has served the request */
 					discard_unread_request_data(conn);
 				} else {
-					/* TODO (high): what if the handler did NOT handle the request */
+					/* TODO (high): what if the handler did NOT handle the
+					 * request */
 					/* The last version did handle this as a file request, but
 					 * since a file request is not always a script resource,
 					 * the authorization check might be different */
@@ -7825,7 +7868,8 @@ static void handle_request(struct mg_connection *conn)
 					              &is_put_or_delete_request);
 					callback_handler = NULL;
 
-					/* TODO (very low): goto is deprecatedm but for the moment, a goto is
+					/* TODO (very low): goto is deprecatedm but for the moment,
+					 * a goto is
 					 * simpler than some curious loop. */
 					/* The situation "callback does not handle the request"
 					 * needs to be reconsidered anyway. */
@@ -8045,37 +8089,10 @@ static void close_all_listening_sockets(struct mg_context *ctx)
 	ctx->listening_ports = NULL;
 }
 
-static int is_valid_port(unsigned int port) { return port < 0xffff; }
-
-#if defined(USE_IPV6)
-static int mg_inet_pton(int af, const char *src, void *dst)
-{
-	struct addrinfo hints, *res, *ressave;
-
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = af;
-
-	if (getaddrinfo(src, NULL, &hints, &res) != 0) {
-		/* bad src string or bad address family */
-		return 0;
-	}
-
-	ressave = res;
-
-	while (res) {
-		memcpy(dst, res->ai_addr, res->ai_addrlen);
-		res = res->ai_next;
-	}
-
-	freeaddrinfo(ressave);
-	return (ressave != NULL);
-}
-#endif
 
 /* Valid listening port specification is: [ip_address:]port[s]
  * Examples for IPv4: 80, 443s, 127.0.0.1:3128, 1.2.3.4:8080s
- * Examples for IPv6: [::1]:80, 
- *   TODO (high): check ipv6 port without IP> [::]:80
+ * Examples for IPv6: [::]:80, [::1]:80,
  *   [FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]:443s
  *   see https://tools.ietf.org/html/rfc3513#section-2.2 */
 static int parse_port_string(const struct vec *vec, struct socket *so)
@@ -8100,9 +8117,10 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 		so->lsa.sin.sin_port = htons((uint16_t)port);
 #if defined(USE_IPV6)
 	} else if (sscanf(vec->ptr, "[%49[^]]]:%u%n", buf, &port, &len) == 2 &&
-	           mg_inet_pton(AF_INET6, buf, &so->lsa.sin6.sin6_addr)) {
-		/* IPv6 address, e.g. [3ffe:2a00:100:7031::1]:8080 */
-		so->lsa.sin6.sin6_family = AF_INET6;
+	           mg_inet_pton(
+	               AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6))) {
+		/* IPv6 address, examples: see above */
+		/* so->lsa.sin6.sin6_family = AF_INET6; already set by mg_inet_pton */
 		so->lsa.sin6.sin6_port = htons((uint16_t)port);
 #endif
 	} else if (sscanf(vec->ptr, "%u%n", &port, &len) == 1) {
@@ -9758,8 +9776,8 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 			return NULL;
 		}
 	} else {
-		/* TODO (low): istead of sleeping, check if sTlsKey is already 
-         * initialized. */
+		/* TODO (low): istead of sleeping, check if sTlsKey is already
+		 * initialized. */
 		mg_sleep(1);
 	}
 
