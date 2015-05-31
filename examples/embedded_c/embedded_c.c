@@ -16,7 +16,11 @@
 
 
 #define DOCUMENT_ROOT "."
+#ifdef USE_IPV6
+#define PORT "8888,[::]:8886"
+#else
 #define PORT "8888"
+#endif
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
 int exitNow = 0;
