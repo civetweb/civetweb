@@ -39,20 +39,22 @@
 static int s_total_tests = 0;
 static int s_failed_tests = 0;
 
-#define FAIL(str, line) do {                     \
-    printf("Fail on line %d: [%s]\n", line, str);   \
-    s_failed_tests++; \
-} while (0)
+void check_func(int condition, const char * cond_txt, unsigned line)
+{
+    ++s_total_tests;
+    if (!condition) {
+        printf("Fail on line %d: [%s]\n", line, cond_txt);
+        ++s_failed_tests;
+    }
+}
 
 #define ASSERT(expr) do { \
-    s_total_tests++; \
-    if (!(expr)) FAIL(#expr, __LINE__); \
+   check_func(expr, #expr, __LINE__); \
 } while (0)
 
 #define REQUIRE(expr) do { \
-    s_total_tests++; \
+   check_func(expr, #expr, __LINE__); \
     if (!(expr)) { \
-        FAIL(#expr, __LINE__); \
         exit(EXIT_FAILURE); \
     } \
 } while (0)
