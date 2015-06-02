@@ -1330,9 +1330,11 @@ static const char *mg_strcasestr(const char *big_str, const char *small_str)
 {
 	size_t i, big_len = strlen(big_str), small_len = strlen(small_str);
 
-	for (i = 0; i <= (big_len - small_len); i++) {
-		if (mg_strncasecmp(big_str + i, small_str, small_len) == 0) {
-			return big_str + i;
+	if (big_len >= small_len) {
+		for (i = 0; i <= (big_len - small_len); i++) {
+			if (mg_strncasecmp(big_str + i, small_str, small_len) == 0) {
+				return big_str + i;
+			}
 		}
 	}
 
