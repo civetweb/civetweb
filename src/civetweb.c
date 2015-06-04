@@ -8260,11 +8260,11 @@ static int set_ports_option(struct mg_context *ctx)
 			            * if someone already has the socket -- DTL */
 			           setsockopt(so.sock,
 			                      SOL_SOCKET,
-			                      /* TODO (high): unit test only works with
-			                       * SO_REUSEADDR, but not with
-			                       * SO_EXCLUSIVEADDRUSE. Maybe connection
-			                       * open/close is too fast in unit_test.c
-			                       * ==> needs to be checked
+			                      /* NOTE: If SO_EXCLUSIVEADDRUSE is used,
+			                       * Windows might need a few seconds before
+			                       * the same port can be used again in the
+			                       * same process, so a short Sleep may be
+			                       * required between mg_stop and mg_start.
 			                       */
 			                      SO_EXCLUSIVEADDRUSE,
 			                      (SOCK_OPT_TYPE)&on,
