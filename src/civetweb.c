@@ -2942,6 +2942,10 @@ static int push(struct mg_context *ctx,
 		clock_gettime(CLOCK_MONOTONIC, &start);
 	}
 
+	if (ctx == NULL){
+		return -1;
+	}
+
 	do {
 
 #ifndef NO_SSL
@@ -2990,6 +2994,10 @@ static int64_t push_all(struct mg_context *ctx,
 {
 	double timeout = -1.0;
 	int64_t n, nwritten = 0;
+
+	if (ctx == NULL){
+		return -1;
+	}
 
 	if (ctx->config[REQUEST_TIMEOUT]) {
 		timeout = atoi(ctx->config[REQUEST_TIMEOUT]) / 1000.0;
