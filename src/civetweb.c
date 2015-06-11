@@ -5106,9 +5106,11 @@ static void send_file_data(struct mg_connection *conn,
 	int to_read, num_read, num_written;
 	int64_t size;
 
+	if (!filep || !conn) {
+		break;
+	}
+
 	/* Sanity check the offset */
-	if (!filep)
-		return;
 	size = filep->size > INT64_MAX ? INT64_MAX : (int64_t)(filep->size);
 	offset = offset < 0 ? 0 : offset > size ? size : offset;
 
@@ -5141,8 +5143,6 @@ static void send_file_data(struct mg_connection *conn,
 			}
 
 			/* Both read and were successful, adjust counters */
-			if (!conn)
-				break;
 			conn->num_bytes_sent += num_written;
 			len -= num_written;
 		}
