@@ -2935,14 +2935,13 @@ static int push(struct mg_context *ctx,
 	typedef size_t len_t;
 #endif
 
-	memset(&start, 0, sizeof(start));
-	memset(&now, 0, sizeof(now));
-
 	if (timeout > 0) {
+		memset(&start, 0, sizeof(start));
+		memset(&now, 0, sizeof(now));
 		clock_gettime(CLOCK_MONOTONIC, &start);
 	}
 
-	if (ctx == NULL){
+	if (ctx == NULL) {
 		return -1;
 	}
 
@@ -2995,7 +2994,7 @@ static int64_t push_all(struct mg_context *ctx,
 	double timeout = -1.0;
 	int64_t n, nwritten = 0;
 
-	if (ctx == NULL){
+	if (ctx == NULL) {
 		return -1;
 	}
 
@@ -3034,10 +3033,9 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 	typedef size_t len_t;
 #endif
 
-	memset(&start, 0, sizeof(start));
-	memset(&now, 0, sizeof(now));
-
 	if (timeout > 0) {
+		memset(&start, 0, sizeof(start));
+		memset(&now, 0, sizeof(now));
 		clock_gettime(CLOCK_MONOTONIC, &start);
 	}
 
