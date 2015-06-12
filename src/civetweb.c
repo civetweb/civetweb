@@ -5107,7 +5107,7 @@ static void send_file_data(struct mg_connection *conn,
 	int64_t size;
 
 	if (!filep || !conn) {
-		break;
+		return;
 	}
 
 	/* Sanity check the offset */
