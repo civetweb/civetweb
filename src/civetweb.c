@@ -8817,13 +8817,9 @@ static void close_socket_gracefully(struct mg_connection *conn)
 	int n;
 #endif
 	struct linger linger;
-	double timeout = -1.0;
 
 	if (!conn) {
 		return;
-	}
-	if (conn->ctx->config[REQUEST_TIMEOUT]) {
-		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 
 	/* Set linger option to avoid socket hanging out after close. This prevent
@@ -8853,7 +8849,7 @@ static void close_socket_gracefully(struct mg_connection *conn)
 	 * when server decides to close the connection; then when client
 	 * does recv() it gets no data back. */
 	do {
-		n = pull(NULL, conn, buf, sizeof(buf), timeout);
+		n = pull(NULL, conn, buf, sizeof(buf), 1E-10 /* TODO: allow 0 as timeout */);
 	} while (n > 0);
 #endif
 
