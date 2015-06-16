@@ -2985,8 +2985,7 @@ static int push(struct mg_context *ctx,
 		}
 		if (n < 0) {
 			/* socket error - check errno */
-			int err = ERRNO;
-			DEBUG_TRACE("send() failed, error %d", err);
+			DEBUG_TRACE("send() failed, error %d", ERRNO);
 			return -1;
 		}
 		if (timeout > 0) {
