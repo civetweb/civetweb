@@ -2987,6 +2987,9 @@ static int push(struct mg_context *ctx,
 			/* socket error - check errno */
 			int err = ERRNO;
 			DEBUG_TRACE("send() failed, error %d", err);
+			(void)err; /* TODO: error handling depending on the error code.
+			            * These codes are different between Windows and Linux.
+			            */
 			return -1;
 		}
 		if (timeout > 0) {
@@ -8861,7 +8864,8 @@ static void close_socket_gracefully(struct mg_connection *conn)
 	 * when server decides to close the connection; then when client
 	 * does recv() it gets no data back. */
 	do {
-		n = pull(NULL, conn, buf, sizeof(buf), 1E-10 /* TODO: allow 0 as timeout */);
+		n = pull(
+		    NULL, conn, buf, sizeof(buf), 1E-10 /* TODO: allow 0 as timeout */);
 	} while (n > 0);
 #endif
 
