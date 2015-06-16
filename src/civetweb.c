@@ -2385,6 +2385,18 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 			filep->modification_time =
 			    SYS2UNIX_TIME(info.ftLastWriteTime.dwLowDateTime,
 			                  info.ftLastWriteTime.dwHighDateTime);
+
+			/* On Windows, the file creation time can be higher than the
+			 * modification time, e.g. when a file is copied.
+			 * Since the Last-Modified timestamp is used for caching
+			 * it should be based on the most recent timestamp. */
+			time_t creation_time =
+			    SYS2UNIX_TIME(info.ftCreationTime.dwLowDateTime,
+			                  info.ftCreationTime.dwHighDateTime);
+			if (creation_time > filep->modification_time) {
+				filep->modification_time = creation_time;
+			}
+
 			filep->is_directory =
 			    info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
 			/* If file name is fishy, reset the file structure and return
