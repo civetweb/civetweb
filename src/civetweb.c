@@ -2379,6 +2379,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 {
 	wchar_t wbuf[PATH_MAX];
 	WIN32_FILE_ATTRIBUTE_DATA info;
+	time_t creation_time;
 
 	if (!is_file_in_memory(conn, path, filep)) {
 		to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
@@ -2392,9 +2393,8 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 			 * modification time, e.g. when a file is copied.
 			 * Since the Last-Modified timestamp is used for caching
 			 * it should be based on the most recent timestamp. */
-			time_t creation_time =
-			    SYS2UNIX_TIME(info.ftCreationTime.dwLowDateTime,
-			                  info.ftCreationTime.dwHighDateTime);
+			creation_time = SYS2UNIX_TIME(info.ftCreationTime.dwLowDateTime,
+			                              info.ftCreationTime.dwHighDateTime);
 			if (creation_time > filep->modification_time) {
 				filep->modification_time = creation_time;
 			}
@@ -8269,123 +8269,180 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 
 static int set_ports_option(struct mg_context *ctx)
 {
-	if (ctx) {
-		const char *list = ctx->config[LISTENING_PORTS];
-		int on = 1, success = 1;
+	const char *list = ctx->config[LISTENING_PORTS];
+	int on = 1;
 #if defined(USE_IPV6)
-		int off = 0;
+	int off = 0;
 #endif
-		struct vec vec;
-		struct socket so, *ptr;
+	struct vec vec;
+	struct socket so, *ptr;
 
-		in_port_t *portPtr;
-		union usa usa;
-		socklen_t len;
+	in_port_t *portPtr;
+	union usa usa;
+	socklen_t len;
 
-		memset(&so, 0, sizeof(so));
-		memset(&usa, 0, sizeof(usa));
-		len = sizeof(usa);
+	int portsTotal = 0;
+	int portsOk = 0;
 
-		while (success && (list = next_option(list, &vec, NULL)) != NULL) {
-			if (!parse_port_string(&vec, &so)) {
-				mg_cry(fc(ctx),
-				       "%s: %.*s: invalid port spec. Expecting list of: %s",
-				       __func__,
-				       (int)vec.len,
-				       vec.ptr,
-				       "[IP_ADDRESS:]PORT[s|r]");
-				success = 0;
-			} else if (so.is_ssl && ctx->ssl_ctx == NULL) {
-				mg_cry(
-				    fc(ctx),
-				    "Cannot add SSL socket, is -ssl_certificate option set?");
-				success = 0;
-			} else if ((so.sock =
-			                socket(so.lsa.sa.sa_family, SOCK_STREAM, 6)) ==
-			               INVALID_SOCKET ||
-#ifdef _WIN32
-			           /* Windows SO_REUSEADDR lets many procs binds to a
-			            * socket, SO_EXCLUSIVEADDRUSE makes the bind fail
-			            * if someone already has the socket -- DTL */
-			           setsockopt(so.sock,
-			                      SOL_SOCKET,
-			                      /* NOTE: If SO_EXCLUSIVEADDRUSE is used,
-			                       * Windows might need a few seconds before
-			                       * the same port can be used again in the
-			                       * same process, so a short Sleep may be
-			                       * required between mg_stop and mg_start.
-			                       */
-			                      SO_EXCLUSIVEADDRUSE,
-			                      (SOCK_OPT_TYPE)&on,
-			                      sizeof(on)) != 0 ||
-#else
-			           setsockopt(so.sock,
-			                      SOL_SOCKET,
-			                      SO_REUSEADDR,
-			                      (SOCK_OPT_TYPE)&on,
-			                      sizeof(on)) != 0 ||
-#endif
-#if defined(USE_IPV6)
-			           (so.lsa.sa.sa_family == AF_INET6 &&
-			            setsockopt(so.sock,
-			                       IPPROTO_IPV6,
-			                       IPV6_V6ONLY,
-			                       (void *)&off,
-			                       sizeof(off)) != 0) ||
-#endif
-			           bind(so.sock,
-			                &so.lsa.sa,
-			                so.lsa.sa.sa_family == AF_INET
-			                    ? sizeof(so.lsa.sin)
-			                    : sizeof(so.lsa.sa)) != 0 ||
-			           listen(so.sock, SOMAXCONN) != 0 ||
-			           getsockname(so.sock, &(usa.sa), &len) != 0) {
-				/* TODO(mid): rewrite this IF above */
-				mg_cry(fc(ctx),
-				       "%s: cannot bind to %.*s: %d (%s)",
-				       __func__,
-				       (int)vec.len,
-				       vec.ptr,
-				       (int)ERRNO,
-				       strerror(errno));
-				if (so.sock != INVALID_SOCKET) {
-					closesocket(so.sock);
-					so.sock = INVALID_SOCKET;
-				}
-				success = 0;
-			} else if ((ptr = (struct socket *)mg_realloc(
-			                ctx->listening_sockets,
-			                (ctx->num_listening_sockets + 1) *
-			                    sizeof(ctx->listening_sockets[0]))) == NULL) {
-				closesocket(so.sock);
-				so.sock = INVALID_SOCKET;
-				success = 0;
-			} else if ((portPtr = (in_port_t *)mg_realloc(
-			                ctx->listening_ports,
-			                (ctx->num_listening_sockets + 1) *
-			                    sizeof(ctx->listening_ports[0]))) == NULL) {
-				closesocket(so.sock);
-				so.sock = INVALID_SOCKET;
-				mg_free(ptr);
-				success = 0;
-			} else {
-				set_close_on_exec(so.sock, fc(ctx));
-				ctx->listening_sockets = ptr;
-				ctx->listening_sockets[ctx->num_listening_sockets] = so;
-				ctx->listening_ports = portPtr;
-				ctx->listening_ports[ctx->num_listening_sockets] =
-				    ntohs(usa.sin.sin_port);
-				ctx->num_listening_sockets++;
-			}
-		}
-
-		if (!success) {
-			close_all_listening_sockets(ctx);
-		}
-
-		return success;
+	if (!ctx) {
+		return 0;
 	}
-	return 0;
+
+	memset(&so, 0, sizeof(so));
+	memset(&usa, 0, sizeof(usa));
+	len = sizeof(usa);
+
+	while ((list = next_option(list, &vec, NULL)) != NULL) {
+
+		portsTotal++;
+
+		if (!parse_port_string(&vec, &so)) {
+			mg_cry(fc(ctx),
+			       "%.*s: invalid port spec (entry %i). Expecting list of: %s",
+			       (int)vec.len,
+			       vec.ptr,
+			       portsTotal,
+			       "[IP_ADDRESS:]PORT[s|r]");
+			continue;
+		}
+
+		if (so.is_ssl && ctx->ssl_ctx == NULL) {
+			mg_cry(fc(ctx),
+			       "Cannot add SSL socket (entry %i). Is -ssl_certificate "
+			       "option set?",
+			       portsTotal);
+			continue;
+		}
+
+		if ((so.sock = socket(so.lsa.sa.sa_family, SOCK_STREAM, 6)) ==
+		    INVALID_SOCKET) {
+			mg_cry(fc(ctx), "cannot create socket (entry %i)", portsTotal);
+			continue;
+		}
+
+#ifdef _WIN32
+		/* Windows SO_REUSEADDR lets many procs binds to a
+		 * socket, SO_EXCLUSIVEADDRUSE makes the bind fail
+		 * if someone already has the socket -- DTL */
+		/* NOTE: If SO_EXCLUSIVEADDRUSE is used,
+		 * Windows might need a few seconds before
+		 * the same port can be used again in the
+		 * same process, so a short Sleep may be
+		 * required between mg_stop and mg_start.
+		 */
+		if (setsockopt(so.sock,
+		               SOL_SOCKET,
+		               SO_EXCLUSIVEADDRUSE,
+		               (SOCK_OPT_TYPE)&on,
+		               sizeof(on)) != 0) {
+			mg_cry(fc(ctx),
+			       "cannot set socket option SO_EXCLUSIVEADDRUSE (entry %i)",
+			       portsTotal);
+		}
+#else
+		if (setsockopt(so.sock,
+		               SOL_SOCKET,
+		               SO_REUSEADDR,
+		               (SOCK_OPT_TYPE)&on,
+		               sizeof(on)) != 0) {
+			mg_cry(fc(ctx),
+			       "cannot set socket option SO_REUSEADDR (entry %i)",
+			       portsTotal);
+		}
+#endif
+
+
+#if defined(USE_IPV6)
+		if (so.lsa.sa.sa_family == AF_INET6 &&
+		    setsockopt(so.sock,
+		               IPPROTO_IPV6,
+		               IPV6_V6ONLY,
+		               (void *)&off,
+		               sizeof(off)) != 0) {
+			mg_cry(fc(ctx),
+			       "cannot set socket option IPV6_V6ONLY (entry %i)",
+			       portsTotal);
+		}
+#endif
+		if (bind(so.sock,
+		         &so.lsa.sa,
+		         so.lsa.sa.sa_family == AF_INET ? sizeof(so.lsa.sin)
+		                                        : sizeof(so.lsa.sa)) != 0) {
+			mg_cry(fc(ctx),
+			       "cannot bind to %.*s: %d (%s)",
+			       (int)vec.len,
+			       vec.ptr,
+			       (int)ERRNO,
+			       strerror(errno));
+			closesocket(so.sock);
+			so.sock = INVALID_SOCKET;
+			continue;
+		}
+
+		if (listen(so.sock, SOMAXCONN) != 0) {
+			mg_cry(fc(ctx),
+			       "cannot listen to %.*s: %d (%s)",
+			       (int)vec.len,
+			       vec.ptr,
+			       (int)ERRNO,
+			       strerror(errno));
+			closesocket(so.sock);
+			so.sock = INVALID_SOCKET;
+			continue;
+		}
+
+
+		if (getsockname(so.sock, &(usa.sa), &len) != 0) {
+
+			mg_cry(fc(ctx),
+			       "call to getsockname failed %.*s: %d (%s)",
+			       (int)vec.len,
+			       vec.ptr,
+			       (int)ERRNO,
+			       strerror(errno));
+			closesocket(so.sock);
+			so.sock = INVALID_SOCKET;
+			continue;
+		}
+
+		if ((ptr = (struct socket *)mg_realloc(
+		         ctx->listening_sockets,
+		         (ctx->num_listening_sockets + 1) *
+		             sizeof(ctx->listening_sockets[0]))) == NULL) {
+
+			mg_cry(fc(ctx), "%s", "Out of memory");
+			closesocket(so.sock);
+			so.sock = INVALID_SOCKET;
+			continue;
+		}
+
+		if ((portPtr = (in_port_t *)mg_realloc(
+		         ctx->listening_ports,
+		         (ctx->num_listening_sockets + 1) *
+		             sizeof(ctx->listening_ports[0]))) == NULL) {
+
+			mg_cry(fc(ctx), "%s", "Out of memory");
+			closesocket(so.sock);
+			so.sock = INVALID_SOCKET;
+			mg_free(ptr);
+			continue;
+		}
+		set_close_on_exec(so.sock, fc(ctx));
+		ctx->listening_sockets = ptr;
+		ctx->listening_sockets[ctx->num_listening_sockets] = so;
+		ctx->listening_ports = portPtr;
+		ctx->listening_ports[ctx->num_listening_sockets] =
+		    ntohs(usa.sin.sin_port);
+		ctx->num_listening_sockets++;
+		portsOk++;
+	}
+
+	if (portsOk != portsTotal) {
+		close_all_listening_sockets(ctx);
+		portsOk = 0;
+	}
+
+	return portsOk;
 }
 
 static const char *header_val(const struct mg_connection *conn,
