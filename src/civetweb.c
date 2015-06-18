@@ -2739,7 +2739,8 @@ static pid_t spawn_process(struct mg_connection *conn,
 	                   NULL,
 	                   &si,
 	                   &pi) == 0) {
-        mg_cry(conn, "%s: CreateProcess(%s): %ld", __func__, cmdline, (long)ERRNO);
+		mg_cry(
+		    conn, "%s: CreateProcess(%s): %ld", __func__, cmdline, (long)ERRNO);
 		pi.hProcess = (pid_t)-1;
 	}
 
@@ -8307,6 +8308,7 @@ static int set_ports_option(struct mg_context *ctx)
 		}
 
 		if (so.is_ssl && ctx->ssl_ctx == NULL) {
+
 			mg_cry(fc(ctx),
 			       "Cannot add SSL socket (entry %i). Is -ssl_certificate "
 			       "option set?",
@@ -8316,6 +8318,7 @@ static int set_ports_option(struct mg_context *ctx)
 
 		if ((so.sock = socket(so.lsa.sa.sa_family, SOCK_STREAM, 6)) ==
 		    INVALID_SOCKET) {
+
 			mg_cry(fc(ctx), "cannot create socket (entry %i)", portsTotal);
 			continue;
 		}
@@ -8335,6 +8338,7 @@ static int set_ports_option(struct mg_context *ctx)
 		               SO_EXCLUSIVEADDRUSE,
 		               (SOCK_OPT_TYPE)&on,
 		               sizeof(on)) != 0) {
+
 			mg_cry(fc(ctx),
 			       "cannot set socket option SO_EXCLUSIVEADDRUSE (entry %i)",
 			       portsTotal);
@@ -8345,6 +8349,7 @@ static int set_ports_option(struct mg_context *ctx)
 		               SO_REUSEADDR,
 		               (SOCK_OPT_TYPE)&on,
 		               sizeof(on)) != 0) {
+
 			mg_cry(fc(ctx),
 			       "cannot set socket option SO_REUSEADDR (entry %i)",
 			       portsTotal);
@@ -8359,47 +8364,54 @@ static int set_ports_option(struct mg_context *ctx)
 		               IPV6_V6ONLY,
 		               (void *)&off,
 		               sizeof(off)) != 0) {
+
 			mg_cry(fc(ctx),
 			       "cannot set socket option IPV6_V6ONLY (entry %i)",
 			       portsTotal);
 		}
 #endif
 
-        if (so.lsa.sa.sa_family == AF_INET) {
-            if (bind(so.sock,
-		         &so.lsa.sa,
-                 sizeof(so.lsa.sin)) != 0) {
+		if (so.lsa.sa.sa_family == AF_INET) {
+
+			len = sizeof(so.lsa.sin);
+			if (bind(so.sock, &so.lsa.sa, len) != 0) {
+				mg_cry(fc(ctx),
+				       "cannot bind to %.*s: %d (%s)",
+				       (int)vec.len,
+				       vec.ptr,
+				       (int)ERRNO,
+				       strerror(errno));
+				closesocket(so.sock);
+				so.sock = INVALID_SOCKET;
+				continue;
+			}
+		}
+#if defined(USE_IPV6)
+		else if (so.lsa.sa.sa_family == AF_INET6) {
+
+			len = sizeof(so.lsa.sin6);
+			if (bind(so.sock, &so.lsa.sa, len) != 0) {
+				mg_cry(fc(ctx),
+				       "cannot bind to IPv6 %.*s: %d (%s)",
+				       (int)vec.len,
+				       vec.ptr,
+				       (int)ERRNO,
+				       strerror(errno));
+				closesocket(so.sock);
+				so.sock = INVALID_SOCKET;
+				continue;
+			}
+		}
+#endif
+		else {
 			mg_cry(fc(ctx),
-			       "cannot bind to %.*s: %d (%s)",
-			       (int)vec.len,
-			       vec.ptr,
-			       (int)ERRNO,
-			       strerror(errno));
-			closesocket(so.sock);
-			so.sock = INVALID_SOCKET;
+			       "cannot bind: address family not supported (entry %i)",
+			       portsTotal);
 			continue;
 		}
-        }
-
-#if defined(USE_IPV6)
-        if (so.lsa.sa.sa_family == AF_INET6) {
-            if (bind(so.sock,
-                 &so.lsa.sa,
-                 sizeof(so.lsa.sin6)) != 0) {
-            mg_cry(fc(ctx),
-                   "cannot bind to IPv6 %.*s: %d (%s)",
-                   (int)vec.len,
-                   vec.ptr,
-                   (int)ERRNO,
-                   strerror(errno));
-            closesocket(so.sock);
-            so.sock = INVALID_SOCKET;
-            continue;
-        }
-        }
-#endif
 
 		if (listen(so.sock, SOMAXCONN) != 0) {
+
 			mg_cry(fc(ctx),
 			       "cannot listen to %.*s: %d (%s)",
 			       (int)vec.len,
@@ -8414,11 +8426,12 @@ static int set_ports_option(struct mg_context *ctx)
 
 		if (getsockname(so.sock, &(usa.sa), &len) != 0) {
 
+			int err = (int)ERRNO;
 			mg_cry(fc(ctx),
 			       "call to getsockname failed %.*s: %d (%s)",
 			       (int)vec.len,
 			       vec.ptr,
-			       (int)ERRNO,
+			       err,
 			       strerror(errno));
 			closesocket(so.sock);
 			so.sock = INVALID_SOCKET;
@@ -8447,6 +8460,7 @@ static int set_ports_option(struct mg_context *ctx)
 			mg_free(ptr);
 			continue;
 		}
+
 		set_close_on_exec(so.sock, fc(ctx));
 		ctx->listening_sockets = ptr;
 		ctx->listening_sockets[ctx->num_listening_sockets] = so;
