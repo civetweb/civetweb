@@ -2739,7 +2739,7 @@ static pid_t spawn_process(struct mg_connection *conn,
 	                   NULL,
 	                   &si,
 	                   &pi) == 0) {
-		mg_cry(conn, "%s: CreateProcess(%s): %ld", __func__, cmdline, ERRNO);
+        mg_cry(conn, "%s: CreateProcess(%s): %ld", __func__, cmdline, (long)ERRNO);
 		pi.hProcess = (pid_t)-1;
 	}
 
@@ -8364,10 +8364,11 @@ static int set_ports_option(struct mg_context *ctx)
 			       portsTotal);
 		}
 #endif
-		if (bind(so.sock,
+
+        if (so.lsa.sa.sa_family == AF_INET) {
+            if (bind(so.sock,
 		         &so.lsa.sa,
-		         so.lsa.sa.sa_family == AF_INET ? sizeof(so.lsa.sin)
-		                                        : sizeof(so.lsa.sa)) != 0) {
+                 sizeof(so.lsa.sin)) != 0) {
 			mg_cry(fc(ctx),
 			       "cannot bind to %.*s: %d (%s)",
 			       (int)vec.len,
@@ -8378,6 +8379,25 @@ static int set_ports_option(struct mg_context *ctx)
 			so.sock = INVALID_SOCKET;
 			continue;
 		}
+        }
+
+#if defined(USE_IPV6)
+        if (so.lsa.sa.sa_family == AF_INET6) {
+            if (bind(so.sock,
+                 &so.lsa.sa,
+                 sizeof(so.lsa.sin6)) != 0) {
+            mg_cry(fc(ctx),
+                   "cannot bind to IPv6 %.*s: %d (%s)",
+                   (int)vec.len,
+                   vec.ptr,
+                   (int)ERRNO,
+                   strerror(errno));
+            closesocket(so.sock);
+            so.sock = INVALID_SOCKET;
+            continue;
+        }
+        }
+#endif
 
 		if (listen(so.sock, SOMAXCONN) != 0) {
 			mg_cry(fc(ctx),
