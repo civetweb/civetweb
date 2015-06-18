@@ -2180,6 +2180,12 @@ static void create_meta(lua_State *L, const char *name, const luaL_Reg *lib) {
     lua_pop(L, 1);
 }
 
+static int luaopen_sqlitelib (lua_State *L) {
+    luaL_newlibtable(L, sqlitelib);
+    luaL_setfuncs(L, sqlitelib, 0);
+    return 1;
+}
+
 LUALIB_API int luaopen_lsqlite3(lua_State *L) {
     create_meta(L, sqlite_meta, dblib);
     create_meta(L, sqlite_vm_meta, vmlib);
@@ -2188,8 +2194,8 @@ LUALIB_API int luaopen_lsqlite3(lua_State *L) {
     luaL_getmetatable(L, sqlite_ctx_meta);
     sqlite_ctx_meta_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    /* register (local) sqlite metatable */
-    luaL_register(L, "sqlite3", sqlitelib);
+    /* register global sqlite3 library */
+    luaL_requiref(L, "sqlite3", luaopen_sqlitelib, 1);
 
     {
         int i = 0;
