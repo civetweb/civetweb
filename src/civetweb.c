@@ -841,18 +841,17 @@ struct vec {
 };
 
 struct file {
-	int is_directory;
-	time_t modification_time;
 	uint64_t size;
+	time_t last_modified;
 	FILE *fp;
 	const char *membuf; /* Non-NULL if file data is in memory */
-	                    /* set to 1 if the content is gzipped
-	                     * in which case we need a content-encoding: gzip header */
-	int gzipped;
+	int is_directory;
+	int gzipped; /* set to 1 if the content is gzipped
+	              * in which case we need a content-encoding: gzip header */
 };
 #define STRUCT_FILE_INITIALIZER                                                \
 	{                                                                          \
-		0, 0, 0, NULL, NULL, 0                                                 \
+		(uint64_t)0, (time_t)0, (FILE *)NULL, (const char *)NULL, 0, 0         \
 	}
 
 /* Describes listening socket, or socket which was accept()-ed by the master
@@ -1233,7 +1232,7 @@ static int is_file_in_memory(struct mg_connection *conn,
 		return 0;
 	}
 
-	filep->modification_time = (time_t)0;
+	filep->last_modified = (time_t)0;
 
 	if ((filep->membuf =
 	         conn->ctx->callbacks.open_file == NULL
@@ -2402,7 +2401,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 	to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
 	if (GetFileAttributesExW(wbuf, GetFileExInfoStandard, &info) != 0) {
 		filep->size = MAKEUQUAD(info.nFileSizeLow, info.nFileSizeHigh);
-		filep->modification_time =
+		filep->last_modified =
 		    SYS2UNIX_TIME(info.ftLastWriteTime.dwLowDateTime,
 		                  info.ftLastWriteTime.dwHighDateTime);
 
@@ -2412,8 +2411,8 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 		 * it should be based on the most recent timestamp. */
 		creation_time = SYS2UNIX_TIME(info.ftCreationTime.dwLowDateTime,
 		                              info.ftCreationTime.dwHighDateTime);
-		if (creation_time > filep->modification_time) {
-			filep->modification_time = creation_time;
+		if (creation_time > filep->last_modified) {
+			filep->last_modified = creation_time;
 		}
 
 		filep->is_directory = info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
@@ -2795,7 +2794,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 
 	if (0 == stat(path, &st)) {
 		filep->size = (uint64_t)(st.st_size);
-		filep->modification_time = st.st_mtime;
+		filep->last_modified = st.st_mtime;
 		filep->is_directory = S_ISDIR(st.st_mode);
 		return 1;
 	}
@@ -3752,6 +3751,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
               char *filename,               /* out: filename */
               size_t filename_buf_len,      /* in: size of filename buffer */
               struct file *filep,           /* out: file structure */
+              int *is_found,                /* out: file is found (directly) */
               int *is_script_ressource,     /* out: handled by a script? */
               int *is_websocket_request,    /* out: websocket connetion? */
               int *is_put_or_delete_request /* out: put/delete a file? */
@@ -3772,6 +3772,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 
 		memset(filep, 0, sizeof(*filep));
 		*filename = 0;
+		*is_found = 0;
 		*is_script_ressource = 0;
 		*is_put_or_delete_request = is_put_or_delete_method(conn);
 
@@ -3843,6 +3844,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				 * generated response. */
 				*is_script_ressource = !*is_put_or_delete_request;
 			}
+			*is_found = 1;
 			return;
 		}
 
@@ -4917,7 +4919,7 @@ static void print_dir_entry(struct de *de)
 			            (double)de->file.size / 1073741824);
 		}
 	}
-	tm = localtime(&de->file.modification_time);
+	tm = localtime(&de->file.last_modified);
 	if (tm != NULL) {
 		strftime(mod, sizeof(mod), "%d-%b-%Y %H:%M", tm);
 	} else {
@@ -4965,11 +4967,10 @@ static int WINCDECL compare_dir_entries(const void *p1, const void *p2)
 			                 : a->file.size > b->file.size ? 1 : -1;
 		} else if (*query_string == 'd') {
 			cmp_result =
-			    a->file.modification_time == b->file.modification_time
+			    (a->file.last_modified == b->file.last_modified)
 			        ? 0
-			        : a->file.modification_time > b->file.modification_time
-			              ? 1
-			              : -1;
+			        : ((a->file.last_modified > b->file.last_modified) ? 1
+			                                                           : -1);
 		}
 
 		return query_string[1] == 'd' ? -cmp_result : cmp_result;
@@ -5071,7 +5072,8 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 				       path,
 				       strerror(ERRNO));
 			}
-			if (de.file.modification_time) {
+			if (de.file.membuf == NULL) {
+				/* file is not in memory */
 				if (de.file.is_directory) {
 					remove_directory(conn, path);
 				} else {
@@ -5267,7 +5269,7 @@ static void construct_etag(char *buf, size_t buf_len, const struct file *filep)
 		snprintf(buf,
 		         buf_len,
 		         "\"%lx.%" INT64_FMT "\"",
-		         (unsigned long)filep->modification_time,
+		         (unsigned long)filep->last_modified,
 		         filep->size);
 	}
 }
@@ -5382,7 +5384,7 @@ static void handle_static_file_request(struct mg_connection *conn,
 	/* Prepare Etag, Date, Last-Modified headers. Must be in UTC, according to
 	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3 */
 	gmt_time_string(date, sizeof(date), &curtime);
-	gmt_time_string(lm, sizeof(lm), &filep->modification_time);
+	gmt_time_string(lm, sizeof(lm), &filep->last_modified);
 	construct_etag(etag, sizeof(etag), filep);
 
 	(void)mg_printf(conn,
@@ -5630,7 +5632,7 @@ static int is_not_modified(const struct mg_connection *conn,
 		return 0;
 	}
 	return (inm != NULL && !mg_strcasecmp(etag, inm)) ||
-	       (ims != NULL && filep->modification_time <= parse_date_string(ims));
+	       (ims != NULL && (filep->last_modified <= parse_date_string(ims)));
 }
 
 static int
@@ -6188,7 +6190,8 @@ static void mkcol(struct mg_connection *conn, const char *path)
 		       strerror(ERRNO));
 	}
 
-	if (de.file.modification_time) {
+	if (de.file.last_modified) {
+		/* TODO (high): This check does not seem to make any sense ! */
 		send_http_error(
 		    conn, 405, "Error: mkcol(%s): %s", path, strerror(ERRNO));
 		return;
@@ -6254,7 +6257,7 @@ static void put_file(struct mg_connection *conn, const char *path)
 			/* File exists and is not a directory. */
 			/* Can it be replaced? */
 
-			if (file.modification_time == 0) {
+			if (file.membuf != NULL) {
 				/* This is an "in-memory" file, that can not be replaced */
 				send_http_error(
 				    conn,
@@ -6373,9 +6376,8 @@ static void delete_file(struct mg_connection *conn, const char *path)
 		return;
 	}
 
-	if (de.file.modification_time == 0) {
-		/* mg_stat returns != 0 and modification_time == 0
-		 * if the file is cached in memory */
+	if (de.file.membuf != NULL) {
+		/* the file is cached in memory */
 		send_http_error(
 		    conn,
 		    405,
@@ -6678,7 +6680,7 @@ print_props(struct mg_connection *conn, const char *uri, struct file *filep)
 		return;
 	}
 
-	gmt_time_string(mtime, sizeof(mtime), &filep->modification_time);
+	gmt_time_string(mtime, sizeof(mtime), &filep->last_modified);
 	conn->num_bytes_sent +=
 	    mg_printf(conn,
 	              "<d:response>"
@@ -7936,8 +7938,9 @@ static void handle_request(struct mg_connection *conn)
 	if (conn) {
 		struct mg_request_info *ri = &conn->request_info;
 		char path[PATH_MAX];
-		int uri_len, ssl_index, is_script_resource, is_websocket_request,
-		    is_put_or_delete_request, is_callback_resource;
+		int uri_len, ssl_index, is_found, is_script_resource,
+		    is_websocket_request, is_put_or_delete_request,
+		    is_callback_resource;
 		int i;
 		struct file file = STRUCT_FILE_INITIALIZER;
 		time_t curtime = time(NULL);
@@ -8049,6 +8052,7 @@ static void handle_request(struct mg_connection *conn)
 			              path,
 			              sizeof(path),
 			              &file,
+			              &is_found,
 			              &is_script_resource,
 			              &is_websocket_request,
 			              &is_put_or_delete_request);
@@ -8108,6 +8112,7 @@ static void handle_request(struct mg_connection *conn)
 					              path,
 					              sizeof(path),
 					              &file,
+					              &is_found,
 					              &is_script_resource,
 					              &is_websocket_request,
 					              &is_put_or_delete_request);
@@ -8197,8 +8202,7 @@ static void handle_request(struct mg_connection *conn)
 
 		/* 11. File does not exist, or it was configured that it should be
 		 * hidden */
-		if (((file.membuf == NULL) && (file.modification_time == (time_t)0)) ||
-		    (must_hide_file(conn, path))) {
+		if (!is_found || (must_hide_file(conn, path))) {
 			send_http_error(conn, 404, "%s", "Not found");
 			return;
 		}
