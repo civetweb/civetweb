@@ -3,11 +3,8 @@
  * This file is a part of civetweb project, http://github.com/bel2125/civetweb
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <fcntl.h>
-#include <stdlib.h>
 #ifdef _WIN32
+#define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>
 #include <io.h>
 #define strtoll strtol
@@ -15,7 +12,12 @@ typedef __int64 int64_t;
 #else
 #include <inttypes.h>
 #include <unistd.h>
-#endif // !_WIN32
+#endif /* !_WIN32 */
+
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <stdlib.h>
 
 #include "civetweb.h"
 
@@ -58,7 +60,7 @@ static int begin_request_handler(struct mg_connection *conn)
                   (int) strlen(html_form), html_form);
     }
 
-    // Mark request as processed
+    /* Mark request as processed */
     return 1;
 }
 
