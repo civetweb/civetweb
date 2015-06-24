@@ -23,9 +23,19 @@ typedef __int64 int64_t;
 /* callback: used to generate all content */
 static int begin_request_handler(struct mg_connection *conn)
 {
+    const char * tempPath = ".";
+#ifdef _WIN32
+    const char * env = getenv("TEMP");
+    if (!env) env = getenv("TMP");
+    if (env) tempPath = env;
+#else
+    tempPath = "/tmp";
+#endif
+
     if (!strcmp(mg_get_request_info(conn)->uri, "/handle_post_request")) {
+
         mg_printf(conn, "%s", "HTTP/1.0 200 OK\r\n\r\n");
-        mg_upload(conn, "/tmp");
+        mg_upload(conn, tempPath);
     } else {
         /* Show HTML form. */
         /* See http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.1 */
