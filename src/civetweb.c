@@ -1192,7 +1192,7 @@ static void mg_set_thread_name(const char *name)
 #elif defined(__linux__)
 	/* Linux */
 	#if defined(GLIBC_CHK)
-	(void)pthread_setname_np(threadName);
+	(void)pthread_setname_np(pthread_self(), threadName);
 	#else
 	(void)prctl(PR_SET_NAME, threadName, 0, 0, 0);
 	#endif
