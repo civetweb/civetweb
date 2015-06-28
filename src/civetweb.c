@@ -1151,6 +1151,10 @@ typedef struct tagTHREADNAME_INFO {
 #include <sys/prctl.h>
 #endif
 
+#if ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
+#define GLIBC_CHK
+#endif
+
 static void mg_set_thread_name(const char *name)
 {
 	char threadName[16]; /* Max. thread length in Linux/OSX/.. */
@@ -1165,7 +1169,7 @@ static void mg_set_thread_name(const char *name)
 	threadName[sizeof(threadName) - 1] = 0;
 
 #if defined(_WIN32)
-#if defined(_MSC_VER)
+	#if defined(_MSC_VER)
 	/* Windows and Visual Studio Compiler */
 	__try
 	{
@@ -1181,24 +1185,34 @@ static void mg_set_thread_name(const char *name)
 		               (ULONG_PTR *)&info);
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER) {}
-#elif defined(__MINGW32__)
+	#elif defined(__MINGW32__)
 	/* No option known to set thread name for MinGW */
 	;
-#endif
+	#endif
 #elif defined(__linux__)
 	/* Linux */
+	#if defined(GLIBC_CHK)
+	(void)pthread_setname_np(pthread_self(), threadName);
+	#else
 	(void)prctl(PR_SET_NAME, threadName, 0, 0, 0);
+	#endif
 #elif defined(__APPLE__) || defined(__MACH__)
-	/* OS X (TODO: test) */
+	/* OS X */
+	#if defined(GLIBC_CHK)
 	(void)pthread_setname_np(threadName);
+	#endif
 #elif defined(BSD) || defined(__FreeBSD__) || defined(__OpenBSD__)
 	/* BSD (TODO: test) */
+	#if defined(GLIBC_CHK)
 	pthread_set_name_np(pthread_self(), threadName);
+	#endif
 #elif defined(__AIX__) || defined(_AIX) || defined(__hpux) || defined(__sun)
-/* pthread_set_name_np seems to be missing on AIX, hpux, sun, ... */
+	/* pthread_set_name_np seems to be missing on AIX, hpux, sun, ... */
 #else
 	/* POSIX */
+	#if defined(GLIBC_CHK)
 	(void)pthread_setname_np(pthread_self(), threadName);
+	#endif
 #endif
 }
 #else /* !defined(NO_THREAD_NAME) */
