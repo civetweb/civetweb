@@ -340,7 +340,7 @@ static int set_option(char **options, const char *name, const char *value)
 		return 0;
 	case CONFIG_TYPE_NUMBER:
 		/* integer number > 0, e.g. number of threads */
-		if (atol(value) < 1) {
+		if (atol(value) < 0) {
 			/* invalid number */
 			return 0;
 		}
