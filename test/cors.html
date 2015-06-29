@@ -32,7 +32,7 @@ function getTitle(text) {
 
 // Make the actual CORS request.
 function makeCorsRequest(method, resource) {
-  var url = "http://localhost/cors.reply." + resource;
+  var url = "http://localhost:8080/cors.reply." + resource;
   var xhr = createCORSRequest(method, url);
   if (!xhr) {
     alert('ERROR: CORS not supported');
@@ -55,7 +55,7 @@ function makeCorsRequest(method, resource) {
 
 function start() {
   var el = document.getElementById("from");
-  el.innerHTML = "Test CORS from " + document.URL + " to http://localhost/cors.reply.*";
+  el.innerHTML = "Test CORS from " + document.URL + " to http://localhost:8080/cors.reply.*";
   if ((document.URL.indexOf("localhost") >= 0) || (document.URL.indexOf("127.0.0.1") >= 0)) {
     alert("This CORS test is only meaningful, if you open this site with a different url than \'localhost\' (127.0.0.1).\nYou may use a different IP of the same machine.");
   }
