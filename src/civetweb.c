@@ -52,6 +52,10 @@
 #endif
 #endif
 
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#define USE_TIMERS
+#endif
+
 #if defined(_MSC_VER)
 /* 'type cast' : conversion from 'int' to 'HANDLE' of greater size */
 #pragma warning(disable : 4306)
@@ -291,10 +295,6 @@ typedef long off_t;
 #define funlockfile(x) (LeaveCriticalSection(&global_log_file_lock))
 #define sleep(x) (Sleep((x)*1000))
 #define rmdir(x) (_rmdir(x))
-
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
-#define USE_TIMERS
-#endif
 
 #if !defined(fileno)
 #define fileno(x) (_fileno(x))
