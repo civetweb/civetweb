@@ -5238,37 +5238,54 @@ static void send_file_data(struct mg_connection *conn,
 	offset = offset < 0 ? 0 : offset > size ? size : offset;
 
 	if (len > 0 && filep->membuf != NULL && size > 0) {
+		/* file stored in memory */
 		if (len > size - offset) {
 			len = size - offset;
 		}
 		mg_write(conn, filep->membuf + offset, (size_t)len);
 	} else if (len > 0 && filep->fp != NULL) {
+		/* file stored on disk */
+#if defined(LINUX_SENDFILE_TEST)
+/* TODO: Test sendfile for Linux */
+                if (conn->throttle==0 && conn->ssl==0) {
+			off_t offs = (off_t)offset;
+			ssize_t sent = sendfile(conn->client.sock, fileno(filep->fp), &offs, (size_t)len);
+                        if (sent>0) {
+				conn->num_bytes_sent += sent;
+				return;
+                        }
+			/* sent<0 means error --> try classic way */          
+			mg_cry(conn, "%s: sendfile() failed: %s (trying read/write)", __func__, strerror(ERRNO));
+		}
+#else
 		if (offset > 0 && fseeko(filep->fp, offset, SEEK_SET) != 0) {
 			mg_cry(conn, "%s: fseeko() failed: %s", __func__, strerror(ERRNO));
+		} else {
+			while (len > 0) {
+				/* Calculate how much to read from the file in the buffer */
+				to_read = sizeof(buf);
+				if ((int64_t)to_read > len) {
+					to_read = (int)len;
+				}
+
+				/* Read from file, exit the loop on error */
+				if ((num_read = (int)fread(buf, 1, (size_t)to_read, filep->fp)) <=
+				    0) {
+					break;
+				}
+
+				/* Send read bytes to the client, exit the loop on error */
+				if ((num_written = mg_write(conn, buf, (size_t)num_read)) !=
+				    num_read) {
+					break;
+				}
+
+				/* Both read and were successful, adjust counters */
+				conn->num_bytes_sent += num_written;
+				len -= num_written;
+			}
 		}
-		while (len > 0) {
-			/* Calculate how much to read from the file in the buffer */
-			to_read = sizeof(buf);
-			if ((int64_t)to_read > len) {
-				to_read = (int)len;
-			}
-
-			/* Read from file, exit the loop on error */
-			if ((num_read = (int)fread(buf, 1, (size_t)to_read, filep->fp)) <=
-			    0) {
-				break;
-			}
-
-			/* Send read bytes to the client, exit the loop on error */
-			if ((num_written = mg_write(conn, buf, (size_t)num_read)) !=
-			    num_read) {
-				break;
-			}
-
-			/* Both read and were successful, adjust counters */
-			conn->num_bytes_sent += num_written;
-			len -= num_written;
-		}
+#endif
 	}
 }
 
