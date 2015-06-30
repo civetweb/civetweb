@@ -5246,18 +5246,32 @@ static void send_file_data(struct mg_connection *conn,
 	} else if (len > 0 && filep->fp != NULL) {
 /* file stored on disk */
 #if defined(LINUX)
-		/* TODO: Test sendfile for Linux */
+		/* TODO (high): Test sendfile for Linux */
 		if (conn->throttle == 0 && conn->ssl == 0) {
-			off_t offs = (off_t)offset;
-			ssize_t sent = sendfile(
-			    conn->client.sock, fileno(filep->fp), &offs, (size_t)len);
-			if (sent > 0) {
-				conn->num_bytes_sent += sent;
+			off_t sf_offs = (off_t)offset;
+			ssize_t sf_sent;
+			int sf_file = fileno(filep->fp);
+
+
+			do {
+				/* 2147479552 (0x7FFFF000) is a limit found by experiment on 64 bit Linux */
+				ssize_t sf_tosend = (size_t) ((len<0x7FFFF000) ? len : 0x7FFFF000);
+				sf_sent = sendfile(
+				    conn->client.sock, sf_file, &sf_offs, sf_tosend);
+				if (sf_sent>0) {
+					conn->num_bytes_sent += sf_sent;
+					len -= sf_sent;
+					offset += sf_sent;
+				}
+
+			} while ((len>0) && (sf_sent>=0));
+
+			if (sf_sent > 0) {
 				return; /* OK */
 			}
-			/* sent<0 means error --> try classic way */
+			/* sf_sent<0 means error, thus fall back to the classic way */
 			mg_cry(conn,
-			       "%s: sendfile() failed: %s (trying read/write)",
+			       "%s: sendfile() failed: %s (now trying read+write)",
 			       __func__,
 			       strerror(ERRNO));
 		}
