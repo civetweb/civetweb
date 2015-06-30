@@ -8,9 +8,9 @@ mmap(void *addr, int64_t len, int prot, int flags, int fd, int offset)
 {
 	/* TODO (low): This is an incomplete implementation of mmap for windows.
 	 * Currently it is sufficient, but there are a lot of unused parameters.
-     * Better use a function "mg_map" which only has the required parameters,
-     * and implement it using mmap in Linux and CreateFileMapping in Windows.
-     * Noone should expect a full mmap for Windows here.
+	 * Better use a function "mg_map" which only has the required parameters,
+	 * and implement it using mmap in Linux and CreateFileMapping in Windows.
+	 * Noone should expect a full mmap for Windows here.
 	 */
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
 	HANDLE mh = CreateFileMapping(fh, 0, PAGE_READONLY, 0, 0, 0);
@@ -1109,14 +1109,14 @@ void lua_civet_open_all_libs(lua_State *L)
 	}
 #endif
 #ifdef USE_LUA_BINARY
-    {
-        /* TODO (low): Test if this could be used as a replacement for bit32.
-         * Check again with Lua 5.3 later. */
+	{
+		/* TODO (low): Test if this could be used as a replacement for bit32.
+		 * Check again with Lua 5.3 later. */
 		extern int luaopen_binary(lua_State *);
 
-        luaL_requiref(L, "binary", luaopen_binary, 1);
-        lua_pop(L, 1);
-    }
+		luaL_requiref(L, "binary", luaopen_binary, 1);
+		lua_pop(L, 1);
+	}
 #endif
 }
 

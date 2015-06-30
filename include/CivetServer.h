@@ -20,7 +20,8 @@ class CivetServer;
 /**
  * Exception class for thrown exceptions within the CivetHandler object.
  */
-class CIVETWEB_API CivetException : public std::runtime_error {
+class CIVETWEB_API CivetException : public std::runtime_error
+{
 	  public:
 	CivetException(const std::string &msg) : std::runtime_error(msg) {}
 };
@@ -29,7 +30,8 @@ class CIVETWEB_API CivetException : public std::runtime_error {
  * Basic interface for a URI request handler.  Handlers implementations
  * must be reentrant.
  */
-class CIVETWEB_API CivetHandler {
+class CIVETWEB_API CivetHandler
+{
 	  public:
 	/**
 	 * Destructor
@@ -87,7 +89,8 @@ class CIVETWEB_API CivetHandler {
  *
  * Basic class for embedded web server.  This has an URL mapping built-in.
  */
-class CIVETWEB_API CivetServer {
+class CIVETWEB_API CivetServer
+{
 	  public:
 	/**
 	 * Constructor
@@ -135,7 +138,8 @@ class CIVETWEB_API CivetServer {
 	 */
 	void addHandler(const std::string &uri, CivetHandler *handler);
 
-	void addHandler(const std::string &uri, CivetHandler &handler) {
+	void addHandler(const std::string &uri, CivetHandler &handler)
+	{
 		addHandler(uri, &handler);
 	}
 
@@ -206,8 +210,10 @@ class CIVETWEB_API CivetServer {
 	 *based).
 	 * @return true if key was found
 	 */
-	static bool getParam(struct mg_connection *conn, const char *name,
-	                     std::string &dst, size_t occurrence = 0);
+	static bool getParam(struct mg_connection *conn,
+	                     const char *name,
+	                     std::string &dst,
+	                     size_t occurrence = 0);
 
 	/**
 	 * getParam(const std::string &, const char *, std::string &, size_t)
@@ -223,8 +229,11 @@ class CIVETWEB_API CivetServer {
 	 *based).
 	 * @return true if key was found
 	 */
-	static bool getParam(const std::string &data, const char *name,
-	                     std::string &dst, size_t occurrence = 0) {
+	static bool getParam(const std::string &data,
+	                     const char *name,
+	                     std::string &dst,
+	                     size_t occurrence = 0)
+	{
 		return getParam(data.c_str(), data.length(), name, dst, occurrence);
 	}
 
@@ -243,8 +252,11 @@ class CIVETWEB_API CivetServer {
 	 *based).
 	 * @return true if key was found
 	 */
-	static bool getParam(const char *data, size_t data_len, const char *name,
-	                     std::string &dst, size_t occurrence = 0);
+	static bool getParam(const char *data,
+	                     size_t data_len,
+	                     const char *name,
+	                     std::string &dst,
+	                     size_t occurrence = 0);
 
 	/**
 	 * urlDecode(const std::string &, std::string &, bool)
@@ -256,8 +268,10 @@ class CIVETWEB_API CivetServer {
 	 *       uses '+' as character for space, see RFC 1866 section 8.2.1
 	 *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
 	 */
-	static void urlDecode(const std::string &src, std::string &dst,
-	                      bool is_form_url_encoded = true) {
+	static void urlDecode(const std::string &src,
+	                      std::string &dst,
+	                      bool is_form_url_encoded = true)
+	{
 		urlDecode(src.c_str(), src.length(), dst, is_form_url_encoded);
 	}
 
@@ -272,7 +286,9 @@ class CIVETWEB_API CivetServer {
 	 *       uses '+' as character for space, see RFC 1866 section 8.2.1
 	 *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
 	 */
-	static void urlDecode(const char *src, size_t src_len, std::string &dst,
+	static void urlDecode(const char *src,
+	                      size_t src_len,
+	                      std::string &dst,
 	                      bool is_form_url_encoded = true);
 
 	/**
@@ -285,7 +301,8 @@ class CIVETWEB_API CivetServer {
 	 *       uses '+' as character for space, see RFC 1866 section 8.2.1
 	 *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
 	 */
-	static void urlDecode(const char *src, std::string &dst,
+	static void urlDecode(const char *src,
+	                      std::string &dst,
 	                      bool is_form_url_encoded = true);
 
 	/**
@@ -295,8 +312,9 @@ class CIVETWEB_API CivetServer {
 	 * @param dst - destination string
 	 * @param append - true if string should not be cleared before encoding.
 	 */
-	static void urlEncode(const std::string &src, std::string &dst,
-	                      bool append = false) {
+	static void
+	urlEncode(const std::string &src, std::string &dst, bool append = false)
+	{
 		urlEncode(src.c_str(), src.length(), dst, append);
 	}
 
@@ -307,8 +325,8 @@ class CIVETWEB_API CivetServer {
 	 * @param dst - destination string
 	 * @param append - true if string should not be cleared before encoding.
 	 */
-	static void urlEncode(const char *src, std::string &dst,
-	                      bool append = false);
+	static void
+	urlEncode(const char *src, std::string &dst, bool append = false);
 
 	/**
 	 * urlEncode(const char *, size_t, std::string &, bool)
@@ -318,11 +336,14 @@ class CIVETWEB_API CivetServer {
 	 * @param dst - destination string
 	 * @param append - true if string should not be cleared before encoding.
 	 */
-	static void urlEncode(const char *src, size_t src_len, std::string &dst,
+	static void urlEncode(const char *src,
+	                      size_t src_len,
+	                      std::string &dst,
 	                      bool append = false);
 
 	  protected:
-	class CivetConnection {
+	class CivetConnection
+	{
 		  public:
 		char *postData;
 		unsigned long postDataLen;
