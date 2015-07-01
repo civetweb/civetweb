@@ -5252,19 +5252,20 @@ static void send_file_data(struct mg_connection *conn,
 			ssize_t sf_sent;
 			int sf_file = fileno(filep->fp);
 
-
 			do {
-				/* 2147479552 (0x7FFFF000) is a limit found by experiment on 64 bit Linux */
-				ssize_t sf_tosend = (size_t) ((len<0x7FFFF000) ? len : 0x7FFFF000);
-				sf_sent = sendfile(
-				    conn->client.sock, sf_file, &sf_offs, sf_tosend);
-				if (sf_sent>0) {
+				/* 2147479552 (0x7FFFF000) is a limit found by experiment on 64
+				 * bit Linux (2^31 minus one memory page of 4k?). */
+				ssize_t sf_tosend =
+				    (size_t)((len < 0x7FFFF000) ? len : 0x7FFFF000);
+				sf_sent =
+				    sendfile(conn->client.sock, sf_file, &sf_offs, sf_tosend);
+				if (sf_sent > 0) {
 					conn->num_bytes_sent += sf_sent;
 					len -= sf_sent;
 					offset += sf_sent;
 				}
 
-			} while ((len>0) && (sf_sent>=0));
+			} while ((len > 0) && (sf_sent >= 0));
 
 			if (sf_sent > 0) {
 				return; /* OK */
