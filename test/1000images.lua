@@ -4,9 +4,15 @@ mg.write("Content-Type: text/html; charset=utf-8\r\n")
 mg.write("\r\n")
 
 t = os.time()
-cnt = 10000
 
 if not mg.request_info.query_string then
+  cnt = 1000
+else
+  cnt = tonumber(mg.get_var(mg.request_info.query_string, "cnt"))
+end
+
+cnt = 100*math.floor(cnt/100)
+
 mg.write([[
 <html>
   <head>
@@ -191,4 +197,3 @@ mg.write([[
   </body>
 </html>
 ]])
-end
