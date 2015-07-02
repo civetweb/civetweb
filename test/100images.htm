@@ -14,6 +14,13 @@
 
   <head>
     <title>100 images</title>
+    <script type="text/javascript">
+      var startLoad = Date.now();
+      window.onload = function () {
+        var loadTime = (Date.now()-startLoad) + " ms";
+        document.getElementById('timing').innerHTML = loadTime;
+      }
+    </script>
   </head>
   <body>
     <h1>A gallery of small images:</h1>
@@ -153,8 +160,8 @@
         </tr>
       </table>
     </p>
-    <p>
+    <p id="timing">
       Test case: all images are displayed.
-    </p>    
+    </p>
   </body>
 </html>
