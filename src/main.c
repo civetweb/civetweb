@@ -127,7 +127,7 @@ static struct tuser_data
 #endif
 
 /* backup config file */
-#if !defined(CONFIG_FILE2) && defined(LINUX)
+#if !defined(CONFIG_FILE2) && defined(__linux__)
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
@@ -299,11 +299,11 @@ static const char *get_option(char **options, const char *option_name)
 	const char *opt_value = NULL;
 
 	/* TODO (low, api makeover): options should be an array of key-value-pairs,
-	 * like 
-     *     struct {const char * key, const char * value} options[]
+	 * like
+	 *     struct {const char * key, const char * value} options[]
 	 * but it currently is an array with
 	 *     options[2*i] = key, options[2*i + 1] = value
-     * (probably with a MG_LEGACY_INTERFACE definition)
+	 * (probably with a MG_LEGACY_INTERFACE definition)
 	 */
 	while (options[2 * i] != NULL) {
 		if (strcmp(options[2 * i], option_name) == 0) {
@@ -340,7 +340,7 @@ static int set_option(char **options, const char *name, const char *value)
 		return 0;
 	case CONFIG_TYPE_NUMBER:
 		/* integer number > 0, e.g. number of threads */
-		if (atol(value) < 1) {
+		if (atol(value) < 0) {
 			/* invalid number */
 			return 0;
 		}
@@ -1813,8 +1813,8 @@ static void change_password_file()
 static int manage_service(int action)
 {
 	static const char *service_name =
-	    "Civetweb"; /* TODO (mid): check using server_name instead of 
-                     * service_name */
+	    "Civetweb"; /* TODO (mid): check using server_name instead of
+	                 * service_name */
 	SC_HANDLE hSCM = NULL, hService = NULL;
 	SERVICE_DESCRIPTION descr;
 	char path[PATH_MAX + 20] = ""; /* Path to executable plus magic argument */

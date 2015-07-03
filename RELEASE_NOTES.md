@@ -1,16 +1,24 @@
-Release Notes v1.7 (Under Development)
+Release Notes v1.7
 ===
-### Objectives: *Examples, documentation, additional API functions, rewritten handle_request method, bug fixes and updates*
+### Objectives: *Examples, documentation, additional API functions, some functions rewritten, bug fixes and updates*
 
 Changes
 -------
 
-- URI specific callbacks for websockets
-- Add chunked transfer support (TODO: currently not working)
+- Format source with clang_format
+- Use function 'sendfile' for Linux
+- Fix for CRAMFS in Linux
+- Fix for file modification times in Windows
+- Use SO_EXCLUSIVEADDRUSE instead of SO_REUSEADDR for Windows
+- Rewrite push/pull functions
+- Allow to use Lua as shared objects (WITH_LUA_SHARED)
+- Fixes for many warnings
+- URI specific callbacks and different timeouts for websockets
+- Add chunked transfer support
 - Update LuaFileSystem
 - Update Lua to 5.2.4
 - Fix build for MinGW-x64, TDM-GCC and clang
-- Update SQLite to 3.8.8.3
+- Update SQLite to 3.8.10.2
 - Fix CGI variables SCRIPT_NAME and PATH_TRANSLATED
 - Set TCP_USER_TIMEOUT to deal faster with broken connections
 - Add a Lua form handling example

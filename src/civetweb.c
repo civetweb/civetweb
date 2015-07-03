@@ -52,6 +52,10 @@
 #endif
 #endif
 
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#define USE_TIMERS
+#endif
+
 #if defined(_MSC_VER)
 /* 'type cast' : conversion from 'int' to 'HANDLE' of greater size */
 #pragma warning(disable : 4306)
@@ -291,10 +295,6 @@ typedef long off_t;
 #define funlockfile(x) (LeaveCriticalSection(&global_log_file_lock))
 #define sleep(x) (Sleep((x)*1000))
 #define rmdir(x) (_rmdir(x))
-
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
-#define USE_TIMERS
-#endif
 
 #if !defined(fileno)
 #define fileno(x) (_fileno(x))
@@ -1149,6 +1149,7 @@ typedef struct tagTHREADNAME_INFO {
 #pragma pack(pop)
 #elif defined(__linux__)
 #include <sys/prctl.h>
+#include <sys/sendfile.h>
 #endif
 
 #if ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
@@ -1169,7 +1170,7 @@ static void mg_set_thread_name(const char *name)
 	threadName[sizeof(threadName) - 1] = 0;
 
 #if defined(_WIN32)
-	#if defined(_MSC_VER)
+#if defined(_MSC_VER)
 	/* Windows and Visual Studio Compiler */
 	__try
 	{
@@ -1185,34 +1186,34 @@ static void mg_set_thread_name(const char *name)
 		               (ULONG_PTR *)&info);
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER) {}
-	#elif defined(__MINGW32__)
+#elif defined(__MINGW32__)
 	/* No option known to set thread name for MinGW */
 	;
-	#endif
+#endif
 #elif defined(__linux__)
-	/* Linux */
-	#if defined(GLIBC_CHK)
+/* Linux */
+#if defined(GLIBC_CHK)
 	(void)pthread_setname_np(pthread_self(), threadName);
-	#else
-	(void)prctl(PR_SET_NAME, threadName, 0, 0, 0);
-	#endif
-#elif defined(__APPLE__) || defined(__MACH__)
-	/* OS X */
-	#if defined(GLIBC_CHK)
-	(void)pthread_setname_np(threadName);
-	#endif
-#elif defined(BSD) || defined(__FreeBSD__) || defined(__OpenBSD__)
-	/* BSD (TODO: test) */
-	#if defined(GLIBC_CHK)
-	pthread_set_name_np(pthread_self(), threadName);
-	#endif
-#elif defined(__AIX__) || defined(_AIX) || defined(__hpux) || defined(__sun)
-	/* pthread_set_name_np seems to be missing on AIX, hpux, sun, ... */
 #else
-	/* POSIX */
-	#if defined(GLIBC_CHK)
+	(void)prctl(PR_SET_NAME, threadName, 0, 0, 0);
+#endif
+#elif defined(__APPLE__) || defined(__MACH__)
+/* OS X */
+#if defined(GLIBC_CHK)
+	(void)pthread_setname_np(threadName);
+#endif
+#elif defined(BSD) || defined(__FreeBSD__) || defined(__OpenBSD__)
+/* BSD (TODO: test) */
+#if defined(GLIBC_CHK)
+	pthread_set_name_np(pthread_self(), threadName);
+#endif
+#elif defined(__AIX__) || defined(_AIX) || defined(__hpux) || defined(__sun)
+/* pthread_set_name_np seems to be missing on AIX, hpux, sun, ... */
+#else
+/* POSIX */
+#if defined(GLIBC_CHK)
 	(void)pthread_setname_np(pthread_self(), threadName);
-	#endif
+#endif
 #endif
 }
 #else /* !defined(NO_THREAD_NAME) */
@@ -5238,36 +5239,71 @@ static void send_file_data(struct mg_connection *conn,
 	offset = offset < 0 ? 0 : offset > size ? size : offset;
 
 	if (len > 0 && filep->membuf != NULL && size > 0) {
+		/* file stored in memory */
 		if (len > size - offset) {
 			len = size - offset;
 		}
 		mg_write(conn, filep->membuf + offset, (size_t)len);
 	} else if (len > 0 && filep->fp != NULL) {
+/* file stored on disk */
+#if defined(__linux__)
+		/* TODO (high): Test sendfile for Linux */
+		if (conn->throttle == 0 && conn->ssl == 0) {
+			off_t sf_offs = (off_t)offset;
+			ssize_t sf_sent;
+			int sf_file = fileno(filep->fp);
+
+			do {
+				/* 2147479552 (0x7FFFF000) is a limit found by experiment on 64
+				 * bit Linux (2^31 minus one memory page of 4k?). */
+				ssize_t sf_tosend =
+				    (size_t)((len < 0x7FFFF000) ? len : 0x7FFFF000);
+				sf_sent =
+				    sendfile(conn->client.sock, sf_file, &sf_offs, sf_tosend);
+				if (sf_sent > 0) {
+					conn->num_bytes_sent += sf_sent;
+					len -= sf_sent;
+					offset += sf_sent;
+				}
+
+			} while ((len > 0) && (sf_sent >= 0));
+
+			if (sf_sent > 0) {
+				return; /* OK */
+			}
+			/* sf_sent<0 means error, thus fall back to the classic way */
+			mg_cry(conn,
+			       "%s: sendfile() failed: %s (now trying read+write)",
+			       __func__,
+			       strerror(ERRNO));
+		}
+#endif
 		if (offset > 0 && fseeko(filep->fp, offset, SEEK_SET) != 0) {
 			mg_cry(conn, "%s: fseeko() failed: %s", __func__, strerror(ERRNO));
-		}
-		while (len > 0) {
-			/* Calculate how much to read from the file in the buffer */
-			to_read = sizeof(buf);
-			if ((int64_t)to_read > len) {
-				to_read = (int)len;
-			}
+		} else {
+			while (len > 0) {
+				/* Calculate how much to read from the file in the buffer */
+				to_read = sizeof(buf);
+				if ((int64_t)to_read > len) {
+					to_read = (int)len;
+				}
 
-			/* Read from file, exit the loop on error */
-			if ((num_read = (int)fread(buf, 1, (size_t)to_read, filep->fp)) <=
-			    0) {
-				break;
-			}
+				/* Read from file, exit the loop on error */
+				if ((num_read =
+				         (int)fread(buf, 1, (size_t)to_read, filep->fp)) <= 0) {
+					break;
+				}
 
-			/* Send read bytes to the client, exit the loop on error */
-			if ((num_written = mg_write(conn, buf, (size_t)num_read)) !=
-			    num_read) {
-				break;
-			}
+				/* Send read bytes to the client, exit the loop on error */
+				if ((num_written = mg_write(conn, buf, (size_t)num_read)) !=
+				    num_read) {
+					break;
+				}
 
-			/* Both read and were successful, adjust counters */
-			conn->num_bytes_sent += num_written;
-			len -= num_written;
+				/* Both read and were successful, adjust counters */
+				conn->num_bytes_sent += num_written;
+				len -= num_written;
+			}
 		}
 	}
 }
