@@ -2,27 +2,54 @@
 
 * Alex Kozlov
 * bel2125
+* Ben M. Ward
+* Brian Lambert
 * Brian Spratke
 * cdbishop
 * celeron55
+* cjh
 * Daniel Oaks
 * Danny Al-Gaaf
+* David Arnold
+* David Loffredo
 * Dialga
+* Eric Tsau
 * F-Secure Corporation
+* Fernando G. Aranda
+* Grahack
+* grenclave
 * hansipie
 * HariKamath Kamath
+* Jan Willem Janssen
+* Jeremy Lin
+* Jim Evans
+* jmc-
+* Jordan
 * Jordan Shelley
+* kalphamon
 * Keith Kyzivat
 * Kevin Wojniak
 * Kimmo Mustonen
+* Lianghui
+* Maarten Fremouw
+* Mark Lakata
 * Matt Clarkson
 * Morgan McGuire
+* Nick Hildebrant
+* Nigel Stewart
 * nihildeb
 * No Face Press
 * Paul Sokolovsky
+* Perttu Ahola
+* Philipp Friedenberger
+* Philipp Hasper
 * Richard Screene
+* Sage Weil
+* Sangwhan Moon
+* Scott Nations
 * Thomas Davis
 * Toni Wilk
+* Ulrich Hertlein
 * William Greathouse
 * Yehuda Sadeh
 
