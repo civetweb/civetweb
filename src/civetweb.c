@@ -1149,6 +1149,7 @@ typedef struct tagTHREADNAME_INFO {
 #pragma pack(pop)
 #elif defined(__linux__)
 #include <sys/prctl.h>
+#include <sys/sendfile.h>
 #endif
 
 #if ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
@@ -5245,7 +5246,7 @@ static void send_file_data(struct mg_connection *conn,
 		mg_write(conn, filep->membuf + offset, (size_t)len);
 	} else if (len > 0 && filep->fp != NULL) {
 /* file stored on disk */
-#if defined(LINUX)
+#if defined(__linux__)
 		/* TODO (high): Test sendfile for Linux */
 		if (conn->throttle == 0 && conn->ssl == 0) {
 			off_t sf_offs = (off_t)offset;

@@ -1572,6 +1572,8 @@ static void lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 	/* TODO: Delete lua_websock_data and remove it from the websocket list.
 	   This must only be done, when all connections are closed, and all
 	   asynchronous operations and timers are completed/expired. */
+	(void)shared_websock_list; /* shared_websock_list unused (see open TODO) */
+
 	(void)pthread_mutex_unlock(&ws->ws_mutex);
 }
 #endif

@@ -127,7 +127,7 @@ static struct tuser_data
 #endif
 
 /* backup config file */
-#if !defined(CONFIG_FILE2) && defined(LINUX)
+#if !defined(CONFIG_FILE2) && defined(__linux__)
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
