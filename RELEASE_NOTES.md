@@ -1,3 +1,12 @@
+Release Notes v1.8 (work in progress)
+===
+### Objectives: *to be defined*
+
+Changes
+-------
+
+- Updated version number
+
 Release Notes v1.7
 ===
 ### Objectives: *Examples, documentation, additional API functions, some functions rewritten, bug fixes and updates*
