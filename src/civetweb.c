@@ -1188,32 +1188,13 @@ static void mg_set_thread_name(const char *name)
 	__except(EXCEPTION_EXECUTE_HANDLER) {}
 #elif defined(__MINGW32__)
 	/* No option known to set thread name for MinGW */
-	;
 #endif
+#elif ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
+	/* pthread_setname_np first appeared in glibc in version 2.12*/
+	(void)pthread_setname_np(pthread_self(), threadName);
 #elif defined(__linux__)
-/* Linux */
-#if defined(GLIBC_CHK)
-	(void)pthread_setname_np(pthread_self(), threadName);
-#else
+	/* on linux we can use the old prctl function */
 	(void)prctl(PR_SET_NAME, threadName, 0, 0, 0);
-#endif
-#elif defined(__APPLE__) || defined(__MACH__)
-/* OS X */
-#if defined(GLIBC_CHK)
-	(void)pthread_setname_np(threadName);
-#endif
-#elif defined(BSD) || defined(__FreeBSD__) || defined(__OpenBSD__)
-/* BSD (TODO: test) */
-#if defined(GLIBC_CHK)
-	pthread_set_name_np(pthread_self(), threadName);
-#endif
-#elif defined(__AIX__) || defined(_AIX) || defined(__hpux) || defined(__sun)
-/* pthread_set_name_np seems to be missing on AIX, hpux, sun, ... */
-#else
-/* POSIX */
-#if defined(GLIBC_CHK)
-	(void)pthread_setname_np(pthread_self(), threadName);
-#endif
 #endif
 }
 #else /* !defined(NO_THREAD_NAME) */
@@ -8451,7 +8432,7 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 
 static int set_ports_option(struct mg_context *ctx)
 {
-	const char *list = ctx->config[LISTENING_PORTS];
+	const char *list;
 	int on = 1;
 #if defined(USE_IPV6)
 	int off = 0;
@@ -8473,7 +8454,7 @@ static int set_ports_option(struct mg_context *ctx)
 	memset(&so, 0, sizeof(so));
 	memset(&usa, 0, sizeof(usa));
 	len = sizeof(usa);
-
+	list = ctx->config[LISTENING_PORTS];
 	while ((list = next_option(list, &vec, NULL)) != NULL) {
 
 		portsTotal++;
