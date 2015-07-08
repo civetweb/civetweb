@@ -1152,10 +1152,6 @@ typedef struct tagTHREADNAME_INFO {
 #include <sys/sendfile.h>
 #endif
 
-#if ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
-#define GLIBC_CHK
-#endif
-
 static void mg_set_thread_name(const char *name)
 {
 	char threadName[16]; /* Max. thread length in Linux/OSX/.. */
