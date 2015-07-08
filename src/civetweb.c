@@ -287,7 +287,7 @@ typedef long off_t;
 #define close(x) (_close(x))
 #define dlsym(x, y) (GetProcAddress((HINSTANCE)(x), (y)))
 #define RTLD_LAZY (0)
-#define fseeko(x, y, z) (_lseeki64(_fileno(x), (y), (z)))
+#define fseeko(x, y, z) (_lseeki64(_fileno(x), (y), (z)) == -1 ? -1 : 0)
 #define fdopen(x, y) (_fdopen((x), (y)))
 #define write(x, y, z) (_write((x), (y), (unsigned)z))
 #define read(x, y, z) (_read((x), (y), (unsigned)z))
