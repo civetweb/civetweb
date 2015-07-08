@@ -5276,10 +5276,13 @@ static void send_file_data(struct mg_connection *conn,
 			       "%s: sendfile() failed: %s (now trying read+write)",
 			       __func__,
 			       strerror(ERRNO));
+            offset = (int64_t)sf_offs;
 		}
 #endif
-		if (offset > 0 && fseeko(filep->fp, offset, SEEK_SET) != 0) {
+		if ((offset > 0) && (fseeko(filep->fp, offset, SEEK_SET) != 0)) {
 			mg_cry(conn, "%s: fseeko() failed: %s", __func__, strerror(ERRNO));
+            send_http_error(
+				    conn, 500, "%s", "Error: Unable to access file at requested position.");
 		} else {
 			while (len > 0) {
 				/* Calculate how much to read from the file in the buffer */
