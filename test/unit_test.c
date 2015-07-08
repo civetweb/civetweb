@@ -432,15 +432,19 @@ static char *read_conn(struct mg_connection *conn, int *size)
 	return data;
 }
 
+#ifdef MEMORY_DEBUGGING
 extern unsigned long mg_memory_debug_blockCount;
 extern unsigned long mg_memory_debug_totalMemUsed;
+#endif
 
 static void ut_mg_stop(struct mg_context *ctx)
 {
 	/* mg_stop for unit_test */
 	mg_stop(ctx);
+#ifdef MEMORY_DEBUGGING
 	ASSERT(mg_memory_debug_blockCount == 0);
 	ASSERT(mg_memory_debug_totalMemUsed == 0);
+#endif
 	mg_sleep(
 	    31000); /* This is required to ensure the operating system already
 	               allows to use the port again */
