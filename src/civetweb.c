@@ -7968,9 +7968,10 @@ static void handle_request(struct mg_connection *conn)
 	if (conn) {
 		struct mg_request_info *ri = &conn->request_info;
 		char path[PATH_MAX];
-		int uri_len, ssl_index, is_found, is_script_resource,
-		    is_websocket_request, is_put_or_delete_request,
-		    is_callback_resource;
+		int uri_len, ssl_index;
+        int is_found=0, is_script_resource=0,
+		    is_websocket_request=0, is_put_or_delete_request=0,
+		    is_callback_resource=0;
 		int i;
 		struct file file = STRUCT_FILE_INITIALIZER;
 		time_t curtime = time(NULL);
