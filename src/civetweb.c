@@ -5233,7 +5233,7 @@ static void send_file_data(struct mg_connection *conn,
 			do {
 				/* 2147479552 (0x7FFFF000) is a limit found by experiment on 64
 				 * bit Linux (2^31 minus one memory page of 4k?). */
-				ssize_t sf_tosend =
+				size_t sf_tosend =
 				    (size_t)((len < 0x7FFFF000) ? len : 0x7FFFF000);
 				sf_sent =
 				    sendfile(conn->client.sock, sf_file, &sf_offs, sf_tosend);
