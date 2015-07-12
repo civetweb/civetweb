@@ -641,6 +641,39 @@ static void test_mg_download(int use_ssl)
 	mg_free(p1);
 	mg_close_connection(conn);
 
+	/* Another chunked POST request with different chunk sizes. */
+	ASSERT((conn = mg_download("localhost",
+	                           port,
+	                           use_ssl,
+	                           ebuf,
+	                           sizeof(ebuf),
+	                           "POST /content_length "
+	                           "HTTP/1.1\r\n"
+	                           "Transfer-Encoding: chunked\r\n\r\n"
+	                           "2\r\n%c%c\r\n"
+	                           "1\r\n%c\r\n"
+	                           "2\r\n%c%c\r\n"
+	                           "2\r\n%c%c\r\n"
+	                           "%x\r\n%s\r\n"
+	                           "0\r\n\r\n",
+	                           test_data[0],
+	                           test_data[1],
+	                           test_data[2],
+	                           test_data[3],
+	                           test_data[4],
+	                           test_data[5],
+	                           test_data[6],
+	                           strlen(test_data + 7),
+	                           test_data + 7)) != NULL);
+	h = mg_get_header(conn, "Content-Length");
+	ASSERT(h == NULL);
+	ASSERT(conn->request_info.content_length == -1);
+	ASSERT((p1 = read_conn(conn, &len1)) != NULL);
+	ASSERT(len1 == (int)strlen(test_data));
+	ASSERT(memcmp(p1, test_data, len1) == 0);
+	mg_free(p1);
+	mg_close_connection(conn);
+
 	/* Test non existent */
 	ASSERT((conn = mg_download("localhost",
 	                           port,
