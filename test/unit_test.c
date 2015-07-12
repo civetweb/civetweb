@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014 the Civetweb developers
+/* Copyright (c) 2013-2015 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -220,7 +220,8 @@ static char *read_file(const char *path, int *size)
 	char *data = NULL;
 	if ((fp = fopen(path, "rb")) != NULL && !fstat(fileno(fp), &st)) {
 		*size = (int)st.st_size;
-		ASSERT((data = mg_malloc(*size)) != NULL);
+		data = mg_malloc(*size);
+		ASSERT(data != NULL);
 		ASSERT(fread(data, 1, *size, fp) == (size_t)*size);
 		fclose(fp);
 	}
@@ -321,6 +322,10 @@ static int begin_request_handler_cb(struct mg_connection *conn)
 			write_now = to_write > fetch_data_size ? fetch_data_size : to_write;
 			bytes_written = mg_write(conn, fetch_data, write_now);
 			ASSERT(bytes_written == write_now);
+			if (bytes_written < 0) {
+				ASSERT(0);
+				break;
+			}
 			to_write -= bytes_written;
 		}
 		close_connection(conn);
@@ -426,7 +431,8 @@ static char *read_conn(struct mg_connection *conn, int *size)
 	*size = 0;
 	while ((len = mg_read(conn, buf, sizeof(buf))) > 0) {
 		*size += len;
-		ASSERT((data = mg_realloc(data, *size)) != NULL);
+		data = mg_realloc(data, *size);
+		ASSERT(data != NULL);
 		memcpy(data + *size - len, buf, len);
 	}
 	return data;
@@ -444,10 +450,12 @@ static void ut_mg_stop(struct mg_context *ctx)
 #ifdef MEMORY_DEBUGGING
 	ASSERT(mg_memory_debug_blockCount == 0);
 	ASSERT(mg_memory_debug_totalMemUsed == 0);
+	mg_memory_debug_blockCount = 0;
+	mg_memory_debug_totalMemUsed = 0;
 #endif
-	mg_sleep(
-	    31000); /* This is required to ensure the operating system already
-	               allows to use the port again */
+
+	mg_sleep(31000); /* This is required to ensure the operating system already
+	                    allows to use the port again */
 }
 
 static void test_mg_download(int use_ssl)
@@ -462,12 +470,15 @@ static void test_mg_download(int use_ssl)
 	struct mg_context *ctx;
 	const struct mg_request_info *ri;
 
-	if (use_ssl)
+	if (use_ssl) {
 		port = atoi(HTTPS_PORT);
-	else
+	} else {
 		port = atoi(HTTP_PORT);
+	}
 
-	ASSERT((ctx = mg_start(&CALLBACKS, NULL, OPTIONS)) != NULL);
+	ctx = mg_start(&CALLBACKS, NULL, OPTIONS);
+
+	ASSERT(ctx != NULL);
 
 	ASSERT(mg_download(NULL, port, use_ssl, ebuf, sizeof(ebuf), "%s", "") ==
 	       NULL);
@@ -1287,8 +1298,9 @@ static void test_md5(void)
 	md5_val[16] = 0;
 	md5_init(&md5_state);
 	md5_finish(&md5_state, md5_val);
-	ASSERT(strcmp((const char *)md5_val, "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9"
-	                                     "\x80\x09\x98\xec\xf8\x42\x7e") == 0);
+	ASSERT(strcmp((const char *)md5_val,
+	              "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9"
+	              "\x80\x09\x98\xec\xf8\x42\x7e") == 0);
 	sprintf(md5_str,
 	        "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
 	        md5_val[0],
