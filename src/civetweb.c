@@ -1056,7 +1056,7 @@ struct mg_connection {
 	int64_t num_bytes_sent;      /* Total bytes sent to client */
 	int64_t content_len;         /* Content-Length header value */
 	int64_t consumed_content;    /* How many bytes of content have been read */
-	int is_chunked;              /* Transfer-encoding is chunked: 0=no, 1=yes:
+	int is_chunked;              /* Transfer-Encoding is chunked: 0=no, 1=yes:
 	                              * data available, 2: all data read */
 	size_t chunk_remainder;      /* Unread data from the last chunk */
 	char *buf;                   /* Buffer for received data */
@@ -1183,9 +1183,9 @@ static void mg_set_thread_name(const char *name)
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER) {}
 #elif defined(__MINGW32__)
-	/* No option known to set thread name for MinGW */
+/* No option known to set thread name for MinGW */
 #endif
-#elif ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
+#elif((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
 	/* pthread_setname_np first appeared in glibc in version 2.12*/
 	(void)pthread_setname_np(pthread_self(), threadName);
 #elif defined(__linux__)
@@ -3042,7 +3042,9 @@ static int64_t push_all(struct mg_context *ctx,
 	while (len > 0 && ctx->stop_flag == 0) {
 		n = push(ctx, fp, sock, ssl, buf + nwritten, (int)len, timeout);
 		if (n < 0) {
-			nwritten = n; /* Propagate the error */
+			if (nwritten == 0) {
+				nwritten = n; /* Propagate the error */
+			}
 			break;
 		} else if (n == 0) {
 			break; /* No more data to write */
@@ -3154,7 +3156,9 @@ static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 	while (len > 0 && conn->ctx->stop_flag == 0) {
 		n = pull(fp, conn, buf + nread, len, timeout);
 		if (n < 0) {
-			nread = n; /* Propagate the error */
+			if (nread == 0) {
+				nread = n; /* Propagate the error */
+			}
 			break;
 		} else if (n == 0) {
 			break; /* No more data to read */
@@ -5253,13 +5257,16 @@ static void send_file_data(struct mg_connection *conn,
 			       "%s: sendfile() failed: %s (now trying read+write)",
 			       __func__,
 			       strerror(ERRNO));
-            offset = (int64_t)sf_offs;
+			offset = (int64_t)sf_offs;
 		}
 #endif
 		if ((offset > 0) && (fseeko(filep->fp, offset, SEEK_SET) != 0)) {
 			mg_cry(conn, "%s: fseeko() failed: %s", __func__, strerror(ERRNO));
-            send_http_error(
-				    conn, 500, "%s", "Error: Unable to access file at requested position.");
+			send_http_error(
+			    conn,
+			    500,
+			    "%s",
+			    "Error: Unable to access file at requested position.");
 		} else {
 			while (len > 0) {
 				/* Calculate how much to read from the file in the buffer */
@@ -7969,9 +7976,8 @@ static void handle_request(struct mg_connection *conn)
 		struct mg_request_info *ri = &conn->request_info;
 		char path[PATH_MAX];
 		int uri_len, ssl_index;
-        int is_found=0, is_script_resource=0,
-		    is_websocket_request=0, is_put_or_delete_request=0,
-		    is_callback_resource=0;
+		int is_found = 0, is_script_resource = 0, is_websocket_request = 0,
+		    is_put_or_delete_request = 0, is_callback_resource = 0;
 		int i;
 		struct file file = STRUCT_FILE_INITIALIZER;
 		time_t curtime = time(NULL);
@@ -9328,7 +9334,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			/* Publish the content length back to the request info. */
 			conn->request_info.content_length = conn->content_len;
 		} else if ((cl = get_header(&conn->request_info,
-		                            "Transfer-encoding")) != NULL &&
+		                            "Transfer-Encoding")) != NULL &&
 		           strcmp(cl, "chunked") == 0) {
 			conn->is_chunked = 1;
 		} else if (!mg_strcasecmp(conn->request_info.request_method, "POST") ||

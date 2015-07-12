@@ -620,8 +620,7 @@ static void test_mg_download(int use_ssl)
 
 	/* A POST request without Content-Length set is only valid, if the request
 	 * used Transfer-Encoding: chunked. Otherwise, it is an HTTP protocol
-	 * violation. */
-	/* If it worked without Content-Length, it is pure coincidence. */
+	 * violation. Here we send a chunked request, the reply is not chunked. */
 	ASSERT((conn = mg_download("localhost",
 	                           port,
 	                           use_ssl,
