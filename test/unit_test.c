@@ -567,7 +567,7 @@ static void test_mg_download(int use_ssl)
 	mg_close_connection(conn);
 
 	/* Fetch in-memory data with no Content-Length, should succeed. */
-	for (i = 0; i <= 1024 * 1024 * 8; i += (i < 2 ? 1 : i)) {
+	for (i = 0; i <= 1024 * /* 1024 * */ 8; i += (i < 2 ? 1 : i)) {
 		ASSERT((conn = mg_download("localhost",
 		                           port,
 		                           use_ssl,
@@ -618,17 +618,20 @@ static void test_mg_download(int use_ssl)
 	mg_free(p1);
 	mg_close_connection(conn);
 
-	/* Fetch data without Content-Length, should succeed. It has no
-	   content-length header field,
-	   but still returns the correct amount of data. It is much slower, since it
-	   needs to wait
-	   for the connection shutdown. */
+	/* A POST request without Content-Length set is only valid, if the request
+	 * used Transfer-Encoding: chunked. Otherwise, it is an HTTP protocol
+	 * violation. */
+	/* If it worked without Content-Length, it is pure coincidence. */
 	ASSERT((conn = mg_download("localhost",
 	                           port,
 	                           use_ssl,
 	                           ebuf,
 	                           sizeof(ebuf),
-	                           "POST /content_length HTTP/1.1\r\n\r\n%s",
+	                           "POST /content_length "
+	                           "HTTP/1.1\r\n"
+	                           "Transfer-Encoding: chunked\r\n"
+	                           "\r\n%x\r\n%s\r\n0\r\n\r\n",
+	                           strlen(test_data),
 	                           test_data)) != NULL);
 	h = mg_get_header(conn, "Content-Length");
 	ASSERT(h == NULL);
