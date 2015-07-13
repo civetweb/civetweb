@@ -33,6 +33,7 @@
 /* Unreferenced formal parameter. START_TEST has _i */
 #pragma warning(disable: 4100)
 #endif
+#include <stdint.h>
 #include <check.h>
 #ifdef __clang__
 #pragma clang diagnostic pop
