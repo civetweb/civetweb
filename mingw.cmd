@@ -362,12 +362,15 @@
 @for /f %%a in ("%archive_path: =-%") do @set "file_name=%%~na"
 @for /f %%a in ("%archive_path: =-%") do @set "file_ext=%%~xa"
 @call :log 2 "Unzipping: %file_name%%file_ext%"
+@call :iso8601 iso8601
+@set "log_path=%temp%\unzip-%iso8601%-%file_name%.log"
 @powershell ^
   Add-Type -assembly "system.io.compression.filesystem"; ^
   [io.compression.zipfile]::ExtractToDirectory(^
-    '%archive_path%', '%folder_path%') 2>nul
+    '%archive_path%', '%folder_path%') 2>"%log_path%"
 @if errorlevel 1 (
   @call :log 0 "Failed to unzip: %file_name%%file_ext%"
+  @call :log_append "%log_path%"
   @exit /b 1
 )
 @endlocal
@@ -850,13 +853,15 @@
 @call :log 2 "Downloading %url%"
 @call :iso8601 iso8601
 @set "temp_path=%temp%\download-%iso8601%-%file_name%"
+@set "log_path=%temp%\download-%iso8601%-log-%file_name%"
 @call :log 4 "Using temp file %temp_path%"
 @powershell Invoke-WebRequest "'%url%'" ^
   -OutFile "'%temp_path%'" ^
   -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::IE ^
-  1> nul 2> nul
+  1>nul 2>"%log_path%"
 @if errorlevel 1 (
   @call :log 0 "Failed to download %url%"
+  @call :log_append "%log_path%"
   @exit /b 1
 )
 @if [%checksum%] neq [] (
