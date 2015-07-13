@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "public.h"
+#include <civetweb.h>
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
@@ -31,7 +32,19 @@
 
 START_TEST (test_mg_get_cookie)
 {
-  fail_if(0, "s not null after free");
+  char buf[20];
+
+  ck_assert_int_eq(-2, mg_get_cookie("", "foo", NULL, sizeof(buf)));
+  ck_assert_int_eq(-2, mg_get_cookie("", "foo", buf, 0));
+  ck_assert_int_eq(-1, mg_get_cookie("", "foo", buf, sizeof(buf)));
+  ck_assert_int_eq(-1, mg_get_cookie("", NULL, buf, sizeof(buf)));
+  ck_assert_int_eq(1, mg_get_cookie("a=1; b=2; c; d", "a", buf, sizeof(buf)));
+  ck_assert_str_eq("1", buf);
+  ck_assert_int_eq(1, mg_get_cookie("a=1; b=2; c; d", "b", buf, sizeof(buf)));
+  ck_assert_str_eq("2", buf);
+  ck_assert_int_eq(3, mg_get_cookie("a=1; b=123", "b", buf, sizeof(buf)));
+  ck_assert_str_eq("123", buf);
+  ck_assert_int_eq(-1, mg_get_cookie("a=1; b=2; c; d", "c", buf, sizeof(buf)));
 }
 END_TEST
 
