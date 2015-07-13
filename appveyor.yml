@@ -36,15 +36,19 @@ install:
   - if "%platform%"=="x64" (set arch=x86_64)
   - if "%platform%"=="x86" (set arch=i686)
   # Download the specific version of MinGW
+  - if "%compiler_name%"=="gcc" (@set "mingw_output_folder=C:\mingw-builds")
   - if "%compiler_name%"=="gcc" (
-      for /f %%a in (
+      @for /f %%a in (
         'call mingw.cmd
           /version "%compiler_version%"
           /arch "%arch%"
           /threading "%compiler_threading%"
-          "C:\mingw-builds"'
+          "%mingw_output_folder%"'
       ) do @set "compiler_path=%%a"
     )
+  - if "%compiler_name%"=="gcc" (@set "mingw_log_folder=%mingw_output_folder%\logs")
+  - if exist "%mingw_log_folder%" @for /f %%f in ('dir /b /oD /tc "%mingw_log_folder%"') do @set "mingw_log_file=%mingw_log_folder%\%%f"
+  - if exist "%mingw_log_file%" appveyor PushArtifact "%mingw_log_file%" -FileName mingw-download.log
 
 before_build:
   # Set up mingw commands
