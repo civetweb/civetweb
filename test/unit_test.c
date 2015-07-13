@@ -1135,8 +1135,25 @@ static void test_request_replies(void)
 
 static int request_test_handler(struct mg_connection *conn, void *cbdata)
 {
+	int i;
+	char chunk_data[32];
+
 	ASSERT(cbdata == (void *)7);
-	(void)conn;
+	strcpy(chunk_data, "123456789A123456789B123456789C");
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Transfer-Encoding: chunked\r\n"
+	          "Content-Type: text/plain\r\n\r\n");
+
+	for (i = 0; i < 20; i++) {
+		mg_printf(conn, "%s\r\n", i);
+		mg_write(conn, chunk_data, i);
+		mg_printf(conn, "\r\n");
+	}
+
+	mg_printf(conn, "0\r\n\r\n");
+
 	return 1;
 }
 
@@ -1176,7 +1193,7 @@ static void test_request_handlers(void)
 
 	conn = mg_download(
 	    "localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
-	ASSERT((conn) != NULL);
+	ASSERT(conn != NULL);
 	mg_sleep(1000);
 	mg_close_connection(conn);
 
