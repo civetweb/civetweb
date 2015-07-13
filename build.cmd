@@ -413,16 +413,16 @@
 :log_append - Appends another file into the current logging file
 :: %1 - the file_path to the file to concatenate
 @setlocal
-@set file_path=%~1
+@set "file_path=%~1"
 @if [%file_path%] == [] exit /b 1
 @call :log 3 "Appending to log: %file_path%"
 @call :iso8601 iso8601
-@set temp_log=%temp%\append-%iso8601%.log
+@set "temp_log=%temp%\append-%iso8601%.log"
 @call :log 4 "Using temp file %temp_log%"
 @type "%log_path%" "%file_path%" > "%temp_log%" 2>nul
 @move /y "%temp_log%" "%log_path%" 1>nul
-@del "%file_path% 2>nul
-@del "%temp_log% 2>nul
+@del "%file_path%" 2>nul
+@del "%temp_log%" 2>nul
 @endlocal
 @goto :eof
 
