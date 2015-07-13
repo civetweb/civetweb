@@ -1,6 +1,10 @@
 ![Civetweb](https://raw.github.com/bel2125/civetweb/master/resources/civetweb_64x64.png "Civetweb") Civetweb
 =======
 
+[![Travis Build Status](https://travis-ci.org/bel2125/civetweb.svg?branch=master)](https://travis-ci.org/bel2125/civetweb)
+[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/bel2125/civetweb?svg=true)](https://ci.appveyor.com/project/bel2125/civetweb/branch/master)
+[![Coverage Status](https://coveralls.io/repos/bel2125/civetweb/badge.svg)](https://coveralls.io/r/bel2125/civetweb)
+
 There is a new home!!!
 -----------------
 https://github.com/bel2125/civetweb
