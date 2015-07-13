@@ -32,6 +32,8 @@
 #define pid_t int
 /* Unreferenced formal parameter. START_TEST has _i */
 #pragma warning(disable: 4100)
+/* conditional expression is constant . asserts use while(0) */
+#pragma warning(disable: 4127)
 #endif
 #include <stdint.h>
 #include <check.h>
