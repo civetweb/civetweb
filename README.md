@@ -1,28 +1,27 @@
-![Civetweb](https://raw.github.com/bel2125/civetweb/master/resources/civetweb_64x64.png "Civetweb") Civetweb
+![CivetWeb](https://raw.github.com/bel2125/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
 =======
+
+**Appveyor support and coveralls/Coverage check are currently in a setup phase**
 
 [![Travis Build Status](https://travis-ci.org/bel2125/civetweb.svg?branch=master)](https://travis-ci.org/bel2125/civetweb)
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/bel2125/civetweb?svg=true)](https://ci.appveyor.com/project/bel2125/civetweb/branch/master)
-[![Coverage Status](https://coveralls.io/repos/bel2125/civetweb/badge.svg)](https://coveralls.io/r/bel2125/civetweb)
+[![Coverage Status](https://coveralls.io/repos/bel2125/civetweb/badge.svg?branch=master&service=github)](https://coveralls.io/github/bel2125/civetweb?branch=master)
 
-There is a new home!!!
------------------
-https://github.com/bel2125/civetweb
+**The official home of CivetWeb is https://github.com/bel2125/civetweb**
 
-Bel has been taking the lead on Civetweb, so the official repository is being
-moved under his control for ease of maintenance.
 
 Project Mission
 -----------------
 
 Project mission is to provide easy to use, powerful, C/C++ embeddable web
 server with optional CGI, SSL and Lua support.
-Civetweb has a MIT license so you can innovate without restrictions.
+CivetWeb has a MIT license so you can innovate without restrictions.
+
 
 Where to find the official version?
 -----------------------------------
 
-End users can download Civetweb at SourceForge
+End users can download CivetWeb at SourceForge
 https://sourceforge.net/projects/civetweb/
 
 Developers can contribute to CivetWeb via GitHub
@@ -34,6 +33,7 @@ https://github.com/bel2125/civetweb/issues
 Discussion/support group and announcements are at Google Groups
 https://groups.google.com/d/forum/civetweb
 
+
 Quick start documentation
 --------------------------
 
@@ -44,10 +44,11 @@ Quick start documentation
 - [RELEASE_NOTES.md](https://github.com/bel2125/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
 - [LICENSE.md](https://github.com/bel2125/civetweb/blob/master/LICENSE.md) - Copyright License
 
+
 Overview
 --------
 
-Civetweb keeps the balance between functionality and
+CivetWeb keeps the balance between functionality and
 simplicity by a carefully selected list of features:
 
 - Liberal, commercial-friendly, permissive,
@@ -92,6 +93,7 @@ simplicity by a carefully selected list of features:
 ![LuaXML](https://raw.github.com/bel2125/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")
 </a>
 
+
 Support
 -------
 
@@ -107,14 +109,14 @@ Contributions are welcome provided all contributions carry the MIT license.
 
 DO NOT APPLY fixes copied from Mongoose to this project to prevent GPL tainting.
 
+
 ### Author
 
-Civetweb is based on the Mongoose project - the original Author was Sergey Lyubka.  He still
-controls the original Mongoose project.  However, he has changed or said he would
-change licenses after writing and distributing the original code this
-project is based on.
+CivetWeb is based on the Mongoose project.  The original author of Mongoose was
+Sergey Lyubka, however, the license of Mongoose has been changed after writing
+and distributing the original code this project is based on.
 
-Using this project ensures the MIT licenses terms are applied and
+Using the CivetWeb project ensures the MIT licenses terms are applied and
 GPL cannot be imposed on any of this code as long as it is sourced from
 here. This code will remain free with the MIT license protection.
 
