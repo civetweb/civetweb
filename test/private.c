@@ -38,6 +38,7 @@
 START_TEST (test_parse_http_message)
 {
   struct mg_request_info ri;
+  char empty[] = "";
   char req1[] = "GET / HTTP/1.1\r\n\r\n";
   char req2[] = "BLAH / HTTP/1.1\r\n\r\n";
   char req3[] = "GET / HTTP/1.1\r\nBah\r\n";
@@ -59,7 +60,7 @@ START_TEST (test_parse_http_message)
   ck_assert_int_eq(0, parse_http_message(req3, sizeof(req3), &ri));
   ck_assert_int_eq(0, parse_http_message(req6, sizeof(req6), &ri));
   ck_assert_int_eq(0, parse_http_message(req7, sizeof(req7), &ri));
-  ck_assert_int_eq(0, parse_http_message("", 0, &ri));
+  ck_assert_int_eq(0, parse_http_message(empty, 0, &ri));
   ck_assert_int_eq(sizeof(req8) - 1, parse_http_message(req8, sizeof(req8), &ri));
 
   /* TODO(lsm): Fix this. Header value may span multiple lines. */
