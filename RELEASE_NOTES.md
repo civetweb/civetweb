@@ -1,10 +1,12 @@
 Release Notes v1.8 (work in progress)
 ===
-### Objectives: *to be defined*
+### Objectives: *to be defined  - CMake integration, bug fixes*
 
 Changes
 -------
 
+- Improved continuous integration
+- CMake support
 - Updated version number
 
 Release Notes v1.7
