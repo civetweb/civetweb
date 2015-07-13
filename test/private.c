@@ -37,7 +37,45 @@
 
 START_TEST (test_parse_http_message)
 {
-  fail_if(0, "s not null after free");
+  struct mg_request_info ri;
+  char req1[] = "GET / HTTP/1.1\r\n\r\n";
+  char req2[] = "BLAH / HTTP/1.1\r\n\r\n";
+  char req3[] = "GET / HTTP/1.1\r\nBah\r\n";
+  char req4[] = "GET / HTTP/1.1\r\nA: foo bar\r\nB: bar\r\nbaz\r\n\r\n";
+  char req5[] = "GET / HTTP/1.1\r\n\r\n";
+  char req6[] = "G";
+  char req7[] = " blah ";
+  char req8[] = " HTTP/1.1 200 OK \n\n";
+  char req9[] = "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n";
+
+  ck_assert_int_eq(sizeof(req9) - 1, parse_http_message(req9, sizeof(req9), &ri));
+  ck_assert_int_eq(1, ri.num_headers);
+
+  ck_assert_int_eq(sizeof(req1) - 1, parse_http_message(req1, sizeof(req1), &ri));
+  ck_assert_str_eq("1.1", ri.http_version);
+  ck_assert_int_eq(0, ri.num_headers);
+
+  ck_assert_int_eq(-1, parse_http_message(req2, sizeof(req2), &ri));
+  ck_assert_int_eq(0, parse_http_message(req3, sizeof(req3), &ri));
+  ck_assert_int_eq(0, parse_http_message(req6, sizeof(req6), &ri));
+  ck_assert_int_eq(0, parse_http_message(req7, sizeof(req7), &ri));
+  ck_assert_int_eq(0, parse_http_message("", 0, &ri));
+  ck_assert_int_eq(sizeof(req8) - 1, parse_http_message(req8, sizeof(req8), &ri));
+
+  /* TODO(lsm): Fix this. Header value may span multiple lines. */
+  ck_assert_int_eq(sizeof(req4) - 1, parse_http_message(req4, sizeof(req4), &ri));
+  ck_assert_str_eq("1.1", ri.http_version);
+  ck_assert_int_eq(3, ri.num_headers);
+  ck_assert_str_eq("A", ri.http_headers[0].name);
+  ck_assert_str_eq("foo bar", ri.http_headers[0].value);
+  ck_assert_str_eq("B", ri.http_headers[1].name);
+  ck_assert_str_eq("bar", ri.http_headers[1].value);
+  ck_assert_str_eq("baz\r\n\r", ri.http_headers[2].name);
+  ck_assert_str_eq("", ri.http_headers[2].value);
+
+  ck_assert_int_eq(sizeof(req5) - 1, parse_http_message(req5, sizeof(req5), &ri));
+  ck_assert_str_eq("GET", ri.request_method);
+  ck_assert_str_eq("1.1", ri.http_version);
 }
 END_TEST
 
