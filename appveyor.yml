@@ -94,6 +94,7 @@ before_build:
     -DCIVETWEB_C_STANDARD=%c_standard%
     -DCIVETWEB_CXX_STANDARD=%cxx_standard%
     ..
+  - appveyor PushArtifact CMakeCache.txt
 
 build_script:
   - appveyor AddMessage -Category Information "Build command '%build%'"
