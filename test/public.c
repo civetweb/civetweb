@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "public.h"
+#include <civetweb.h>
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
