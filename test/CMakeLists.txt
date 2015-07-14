@@ -7,7 +7,7 @@ endif()
 
 # We use the check unit testing framework for our C unit tests
 include(ExternalProject)
-ExternalProject_Add(check
+ExternalProject_Add(check-unit-test-framework
   DEPENDS c-library
   URL "https://downloads.sourceforge.net/project/check/check/${CIVETWEB_CHECK_VERSION}/check-${CIVETWEB_CHECK_VERSION}.tar.gz"
   URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
@@ -29,7 +29,7 @@ ExternalProject_Add(check
   LOG_BUILD ${THIRD_PARTY_LOGGING}
   LOG_TEST ${THIRD_PARTY_LOGGING}
   LOG_INSTALL ${THIRD_PARTY_LOGGING})
-ExternalProject_Get_Property(check INSTALL_DIR)
+ExternalProject_Get_Property(check-unit-test-framework INSTALL_DIR)
 set(CHECK_INSTALL_DIR ${INSTALL_DIR})
 unset(INSTALL_DIR)
 link_directories("${CHECK_INSTALL_DIR}/lib")
@@ -61,16 +61,21 @@ target_include_directories(
   public-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(public-c-unit-tests c-library ${CHECK_LIBRARIES})
-add_dependencies(public-c-unit-tests check)
+add_dependencies(public-c-unit-tests check-unit-test-framework)
 add_library(private-c-unit-tests STATIC private.c)
 target_include_directories(
   private-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(private-c-unit-tests ${CHECK_LIBRARIES})
-add_dependencies(private-c-unit-tests check)
+add_dependencies(private-c-unit-tests check-unit-test-framework)
 add_executable(civetweb-c-unit-test main.c)
 target_link_libraries(civetweb-c-unit-test public-c-unit-tests private-c-unit-tests ${CHECK_LIBRARIES})
-add_dependencies(civetweb-c-unit-test check)
+add_dependencies(civetweb-c-unit-test check-unit-test-framework)
+
+# Add a check command that builds the dependent test program
+add_custom_target(check
+  COMMAND ${CMAKE_CTEST_COMMAND}
+  DEPENDS civetweb-c-unit-test)
 
 # A macro for adding tests
 macro(civetweb_add_test suite test_case)
@@ -80,9 +85,11 @@ macro(civetweb_add_test suite test_case)
   add_test(
     NAME ${test}
     COMMAND civetweb-c-unit-test "--suite=${suite}" "--test-case=${test_case}")
-  string(REPLACE ";" "\\;" test_path "$ENV{PATH}")
-  set_tests_properties(${test} PROPERTIES
-    ENVIRONMENT "PATH=${test_path}\\;$<TARGET_FILE_DIR:c-library>")
+  if (WIN32)
+    string(REPLACE ";" "\\;" test_path "$ENV{PATH}")
+    set_tests_properties(${test} PROPERTIES
+      ENVIRONMENT "PATH=${test_path}\\;$<TARGET_FILE_DIR:c-library>")
+  endif()
 endmacro(civetweb_add_test)
 
 # Public API tests
