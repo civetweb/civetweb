@@ -21,9 +21,12 @@
  */
 
 /**
- * We include the source file so that we access to the internal private
+ * We include the source file so that we have access to the internal private
  * static functions
  */
+#ifdef _MSC_VER
+#define CIVETWEB_API static
+#endif
 #include "../src/civetweb.c"
 
 #include <stdlib.h>
