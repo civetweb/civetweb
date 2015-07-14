@@ -80,9 +80,11 @@ macro(civetweb_add_test suite test_case)
   add_test(
     NAME ${test}
     COMMAND civetweb-c-unit-test "--suite=${suite}" "--test-case=${test_case}")
-  string(REPLACE ";" "\\;" test_path "$ENV{PATH}")
-  set_tests_properties(${test} PROPERTIES
-    ENVIRONMENT "PATH=${test_path}\\;$<TARGET_FILE_DIR:c-library>")
+  if (WIN32)
+    string(REPLACE ";" "\\;" test_path "$ENV{PATH}")
+    set_tests_properties(${test} PROPERTIES
+      ENVIRONMENT "PATH=${test_path}\\;$<TARGET_FILE_DIR:c-library>")
+  endif()
 endmacro(civetweb_add_test)
 
 # Public API tests
