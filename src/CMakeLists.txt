@@ -82,7 +82,7 @@ if (CIVETWEB_ENABLE_LUA)
     ExternalProject_Add(lua
       URL "http://www.lua.org/ftp/lua-${CIVETWEB_LUA_VERSION}.tar.gz"
       URL_MD5 ${CIVETWEB_LUA_MD5_HASH}
-      PREFIX "${CMAKE_BINARY_DIR}/third_party"
+      PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
       CONFIGURE_COMMAND ""
       BUILD_COMMAND ${LUA_BUILD_COMMAND}
       BUILD_IN_SOURCE 1
@@ -109,7 +109,7 @@ if (CIVETWEB_ENABLE_LUA)
   ExternalProject_Add(luafilesystem
     URL "https://github.com/keplerproject/luafilesystem/archive/v_${LUA_FILESYSTEM_VERSION_UNDERSCORE}.tar.gz"
     URL_MD5 ${CIVETWEB_LUA_FILESYSTEM_MD5_HASH}
-    PREFIX "${CMAKE_BINARY_DIR}/third_party"
+    PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
       "${CMAKE_SOURCE_DIR}/cmake/luafilesystem/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
@@ -142,7 +142,7 @@ if (CIVETWEB_ENABLE_LUA)
   ExternalProject_Add(luasqlite
     URL "http://lua.sqlite.org/index.cgi/zip/${LUA_SQLITE_FILENAME}"
     URL_MD5 ${CIVETWEB_LUA_SQLITE_MD5_HASH}
-    PREFIX "${CMAKE_BINARY_DIR}/third_party"
+    PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
       "${CMAKE_SOURCE_DIR}/cmake/luasqlite/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
@@ -172,7 +172,7 @@ if (CIVETWEB_ENABLE_LUA)
   ExternalProject_Add(luaxml
     URL "http://viremo.eludi.net/LuaXML/${LUA_XML_FILENAME}"
     URL_MD5 ${CIVETWEB_LUA_XML_MD5_HASH}
-    PREFIX "${CMAKE_BINARY_DIR}/third_party"
+    PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
       "${CMAKE_SOURCE_DIR}/cmake/luaxml/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
@@ -200,7 +200,7 @@ if (CIVETWEB_ENABLE_LUA)
   ExternalProject_Add(sqlite
     URL "http://www.sqlite.org/2015/sqlite-amalgamation-${SQLITE_FILE_VERSION}.zip"
     URL_MD5 ${CIVETWEB_SQLITE_MD5_HASH}
-    PREFIX "${CMAKE_BINARY_DIR}/third_party"
+    PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
       "${CMAKE_SOURCE_DIR}/cmake/sqlite/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
