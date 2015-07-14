@@ -77,7 +77,12 @@ macro(civetweb_add_test suite test_case)
   set(test "test-${suite}-${test_case}")
   string(TOLOWER "${test}" test)
   string(REGEX REPLACE "[^-A-Za-z0-9]" "-" test "${test}")
-  add_test(${test} civetweb-c-unit-test "--suite=${suite}" "--test-case=${test_case}")
+  add_test(
+    NAME ${test}
+    COMMAND civetweb-c-unit-test "--suite=${suite}" "--test-case=${test_case}")
+  string(REPLACE ";" "\\;" test_path "$ENV{PATH}")
+  set_tests_properties(${test} PROPERTIES
+    ENVIRONMENT "PATH=${test_path}\\;$<TARGET_FILE_DIR:c-library>")
 endmacro(civetweb_add_test)
 
 # Public API tests
