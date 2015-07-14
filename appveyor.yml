@@ -76,9 +76,14 @@ before_build:
   - if not "%compiler_path%"=="" (set "PATH=%PATH%;%compiler_path%")
   # git bash conflicts with MinGW makefiles
   - if "%generator%"=="MinGW Makefiles" (set "PATH=%PATH:C:\Program Files (x86)\Git\bin=%")
+  # Useful locations
+  - set "source_path=%cd%"
+  - set "output_path=%source_path%\output"
+  - set "build_path=%output_path%\build"
+  - set "install_path=%output_path%\install"
   # Generate the build files
-  - mkdir output
-  - cd output
+  - mkdir "%build_path%"
+  - cd "%build_path%"
   - cmake --version
   - appveyor AddMessage -Category Information "Generating '%generator%'"
   - cmake
@@ -93,16 +98,24 @@ before_build:
     -DCIVETWEB_ENABLE_LUA_SHARED=%enable_lua_shared%
     -DCIVETWEB_C_STANDARD=%c_standard%
     -DCIVETWEB_CXX_STANDARD=%cxx_standard%
-    ..
+    "%source_path%"
   - appveyor PushArtifact CMakeCache.txt
+  - cd "%source_path%"
 
 build_script:
+  - cd "%build_path%"
   - appveyor AddMessage -Category Information "Build command '%build%'"
   - cmd /c "%build%"
+  - cd "%source_path%"
 
 test_script:
+  - cd "%build_path%"
   - appveyor AddMessage -Category Information "Test command '%build%'"
   - cmd /c "%test%"
+  - cd "%source_path%"
+
+after_test:
+  - cmake "-DCMAKE_INSTALL_PREFIX=%install_path%" -P "%build_path%/cmake_install.cmake"
 
 matrix:
   fast_finish: true
