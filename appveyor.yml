@@ -18,9 +18,9 @@ environment:
   c_standard: auto
   cxx_standard: auto
   matrix:
-    - compiler: gcc-4.9.2-posix
+    - compiler: gcc-5.1.0-posix
       build_shared: NO
-    - compiler: gcc-4.9.2-posix
+    - compiler: gcc-5.1.0-posix
       build_shared: YES
     - compiler: msvc-18-seh
       build_shared: NO
