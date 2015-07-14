@@ -1,7 +1,3 @@
-# Check the headers we need
-include(CheckIncludeFiles)
-check_include_files(stdint.h HAVE_STDINT)
-
 # The C API library
 add_library(c-library civetweb.c)
 set_target_properties(c-library PROPERTIES

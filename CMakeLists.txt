@@ -16,6 +16,7 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Load in the needed CMake modules
+include(CheckIncludeFiles)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(AddCCompilerFlag)
@@ -314,6 +315,9 @@ if (CIVETWEB_ENABLE_CXX)
       FORCE)
   add_cxx_compiler_flag(--coverage COVERAGE)
 endif()
+
+# Check the headers we need
+check_include_files(stdint.h HAVE_STDINT)
 
 # Set up the definitions
 if (${CMAKE_BUILD_TYPE} MATCHES "[Dd]ebug")

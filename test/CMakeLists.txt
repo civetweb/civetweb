@@ -72,11 +72,24 @@ add_executable(civetweb-c-unit-test main.c)
 target_link_libraries(civetweb-c-unit-test public-c-unit-tests private-c-unit-tests ${CHECK_LIBRARIES})
 add_dependencies(civetweb-c-unit-test check)
 
+# A macro for adding tests
+macro(civetweb_add_test suite test_case)
+  set(test "test-${suite}-${test_case}")
+  string(TOLOWER "${test}" test)
+  string(REGEX REPLACE "[^-A-Za-z0-9]" "-" test "${test}")
+  add_test(
+    NAME ${test}
+    COMMAND civetweb-c-unit-test "--suite=${suite}" "--test-case=${test_case}")
+  string(REPLACE ";" "\\;" test_path "$ENV{PATH}")
+  set_tests_properties(${test} PROPERTIES
+    ENVIRONMENT "PATH=${test_path}\\;$<TARGET_FILE_DIR:c-library>")
+endmacro(civetweb_add_test)
+
 # Public API tests
-add_test(test-public-cookie civetweb-c-unit-test --suite=Public --test-case=Cookies)
+civetweb_add_test(Public Cookies)
 
 # Private API tests
-add_test(test-private-http-message civetweb-c-unit-test --suite=Private "--test-case=HTTP Message")
+civetweb_add_test(Private "HTTP Message")
 
 # Add the coverage command(s)
 if (${CMAKE_BUILD_TYPE} MATCHES "[Cc]overage")
