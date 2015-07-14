@@ -81,6 +81,7 @@ before_build:
   - set "output_path=%source_path%\output"
   - set "build_path=%output_path%\build"
   - set "install_path=%output_path%\install"
+  - set "third_party_dir=C:\third-party"
   # Generate the build files
   - mkdir "%build_path%"
   - cd "%build_path%"
@@ -88,6 +89,7 @@ before_build:
   - appveyor AddMessage -Category Information "Generating '%generator%'"
   - cmake
     -G "%generator%"
+    "-DCIVETWEB_THIRD_PARTY_DIR=%third_party_dir:\=\\%"
     -DCMAKE_BUILD_TYPE=%build_type%
     -DBUILD_SHARED_LIBS=%build_shared%
     -DCIVETWEB_ENABLE_SSL=%enable_ssl%
@@ -122,3 +124,4 @@ matrix:
 
 cache:
   - C:\mingw-builds -> mingw.cmd
+  - C:\third-party -> **\CMakeLists.txt

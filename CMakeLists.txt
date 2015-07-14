@@ -170,6 +170,11 @@ if (CIVETWEB_ENABLE_SSL)
   message(STATUS "Dynamically load SSL libraries - ${CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING}")
 endif()
 
+# Third Party Download location
+set(CIVETWEB_THIRD_PARTY_DIR "${CMAKE_BINARY_DIR}/third_party" CACHE STRING
+  "The location that third party code is downloaded, built and installed")
+set_property(CACHE CIVETWEB_THIRD_PARTY_DIR PROPERTY VALUE ${CIVETWEB_THIRD_PARTY_DIR})
+
 # Unix systems can define the dynamic library names to load
 if (CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING AND NOT DARWIN AND UNIX)
   # SSL library name
