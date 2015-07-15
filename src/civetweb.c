@@ -7096,7 +7096,7 @@ static void read_websocket(struct mg_connection *conn,
 	 * len is the length of the current message
 	 * data_len is the length of the current message's data payload
 	 * header_len is the length of the current message's header */
-	size_t i, len, mask_len, data_len, header_len, body_len;
+	size_t i, len, mask_len = 0, data_len = 0, header_len, body_len;
 
 	/* "The masking key is a 32-bit value chosen at random by the client."
 	 * http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17#section-5
