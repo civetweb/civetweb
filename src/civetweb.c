@@ -7125,7 +7125,7 @@ static void read_websocket(struct mg_connection *conn,
 	while (!conn->ctx->stop_flag) {
 		header_len = 0;
 		assert(conn->data_len >= conn->request_len);
-		if ((body_len = conn->data_len - conn->request_len) >= 2) {
+		if ((body_len = (size_t)(conn->data_len - conn->request_len)) >= 2) {
 			len = buf[1] & 127;
 			mask_len = buf[1] & 128 ? 4 : 0;
 			if (len < 126 && body_len >= mask_len) {
