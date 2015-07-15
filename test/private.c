@@ -116,6 +116,31 @@ START_TEST (test_match_prefix)
 }
 END_TEST
 
+START_TEST (test_remove_double_dots_and_double_slashes)
+{
+  struct {
+    char before[20], after[20];
+  } data[] = {
+      {"////a", "/a"},
+      {"/.....", "/."},
+      {"/......", "/"},
+      {"...", "..."},
+      {"/...///", "/./"},
+      {"/a...///", "/a.../"},
+      {"/.x", "/.x"},
+      {"/\\", "/"},
+      {"/a\\", "/a\\"},
+      {"/a\\\\...", "/a\\."},
+  };
+  size_t i;
+
+  for (i = 0; i < ARRAY_SIZE(data); i++) {
+    remove_double_dots_and_double_slashes(data[i].before);
+    ck_assert_str_eq(data[i].before, data[i].after);
+  }
+}
+END_TEST
+
 Suite * make_private_suite (void) {
   Suite * const suite = suite_create("Private");
 
@@ -125,6 +150,7 @@ Suite * make_private_suite (void) {
 
   TCase * const url_parsing = tcase_create("URL Parsing");
   tcase_add_test(url_parsing, test_match_prefix);
+  tcase_add_test(url_parsing, test_remove_double_dots_and_double_slashes);
   suite_add_tcase(suite, url_parsing);
 
   return suite;
