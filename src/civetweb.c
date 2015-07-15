@@ -7133,7 +7133,7 @@ static void read_websocket(struct mg_connection *conn,
 				header_len = 2 + mask_len;
 			} else if (len == 126 && body_len >= 4 + mask_len) {
 				header_len = 4 + mask_len;
-				data_len = ((((int)buf[2]) << 8) + buf[3]);
+				data_len = ((((size_t)buf[2]) << 8) + buf[3]);
 			} else if (body_len >= 10 + mask_len) {
 				header_len = 10 + mask_len;
 				data_len = (((uint64_t)ntohl(*(uint32_t *)&buf[2])) << 32) +
