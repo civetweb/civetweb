@@ -7136,8 +7136,8 @@ static void read_websocket(struct mg_connection *conn,
 				data_len = ((((size_t)buf[2]) << 8) + buf[3]);
 			} else if (body_len >= 10 + mask_len) {
 				header_len = 10 + mask_len;
-				data_len = (((uint64_t)ntohl(*(uint32_t *)&buf[2])) << 32) +
-				           ntohl(*(uint32_t *)&buf[6]);
+				data_len = (((uint64_t)ntohl(*(uint32_t *)(void *)&buf[2])) << 32) +
+				           ntohl(*(uint32_t *)(void *)&buf[6]);
 			}
 		}
 
@@ -7266,13 +7266,13 @@ int mg_websocket_write(struct mg_connection *conn,
 	} else if (dataLen <= 0xFFFF) {
 		/* 16-bit length field */
 		header[1] = 126;
-		*(uint16_t *)(header + 2) = htons((uint16_t)dataLen);
+		*(uint16_t *)(void *)(header + 2) = htons((uint16_t)dataLen);
 		headerLen = 4;
 	} else {
 		/* 64-bit length field */
 		header[1] = 127;
-		*(uint32_t *)(header + 2) = htonl((uint64_t)dataLen >> 32);
-		*(uint32_t *)(header + 6) = htonl(dataLen & 0xFFFFFFFF);
+		*(uint32_t *)(void *)(header + 2) = htonl((uint64_t)dataLen >> 32);
+		*(uint32_t *)(void *)(header + 6) = htonl(dataLen & 0xFFFFFFFF);
 		headerLen = 10;
 	}
 
