@@ -97,6 +97,7 @@ civetweb_add_test(Public Cookies)
 
 # Private API tests
 civetweb_add_test(Private "HTTP Message")
+civetweb_add_test(Private "URL Parsing")
 
 # Add the coverage command(s)
 if (${CMAKE_BUILD_TYPE} MATCHES "[Cc]overage")
