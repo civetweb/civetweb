@@ -7177,7 +7177,7 @@ static void read_websocket(struct mg_connection *conn,
 						error = 1;
 						break;
 					}
-					len += n;
+					len += (size_t)n;
 				}
 				if (error) {
 					mg_cry(conn, "Websocket pull failed; closing connection");
