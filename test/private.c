@@ -83,12 +83,75 @@ START_TEST (test_parse_http_message)
 }
 END_TEST
 
+START_TEST (test_match_prefix)
+{
+  ck_assert_int_eq(4, match_prefix("/api", 4, "/api"));
+  ck_assert_int_eq(3, match_prefix("/a/", 3, "/a/b/c"));
+  ck_assert_int_eq(-1, match_prefix("/a/", 3, "/ab/c"));
+  ck_assert_int_eq(4, match_prefix("/*/", 3, "/ab/c"));
+  ck_assert_int_eq(6, match_prefix("**", 2, "/a/b/c"));
+  ck_assert_int_eq(2, match_prefix("/*", 2, "/a/b/c"));
+  ck_assert_int_eq(2, match_prefix("*/*", 3, "/a/b/c"));
+  ck_assert_int_eq(5, match_prefix("**/", 3, "/a/b/c"));
+  ck_assert_int_eq(5, match_prefix("**.foo|**.bar", 13, "a.bar"));
+  ck_assert_int_eq(2, match_prefix("a|b|cd", 6, "cdef"));
+  ck_assert_int_eq(2, match_prefix("a|b|c?", 6, "cdef"));
+  ck_assert_int_eq(1, match_prefix("a|?|cd", 6, "cdef"));
+  ck_assert_int_eq(-1, match_prefix("/a/**.cgi", 9, "/foo/bar/x.cgi"));
+  ck_assert_int_eq(12, match_prefix("/a/**.cgi", 9, "/a/bar/x.cgi"));
+  ck_assert_int_eq(5, match_prefix("**/", 3, "/a/b/c"));
+  ck_assert_int_eq(-1, match_prefix("**/$", 4, "/a/b/c"));
+  ck_assert_int_eq(5, match_prefix("**/$", 4, "/a/b/"));
+  ck_assert_int_eq(0, match_prefix("$", 1, ""));
+  ck_assert_int_eq(-1, match_prefix("$", 1, "x"));
+  ck_assert_int_eq(1, match_prefix("*$", 2, "x"));
+  ck_assert_int_eq(1, match_prefix("/$", 2, "/"));
+  ck_assert_int_eq(-1, match_prefix("**/$", 4, "/a/b/c"));
+  ck_assert_int_eq(5, match_prefix("**/$", 4, "/a/b/"));
+  ck_assert_int_eq(0, match_prefix("*", 1, "/hello/"));
+  ck_assert_int_eq(-1, match_prefix("**.a$|**.b$", 11, "/a/b.b/"));
+  ck_assert_int_eq(6, match_prefix("**.a$|**.b$", 11, "/a/b.b"));
+  ck_assert_int_eq(6, match_prefix("**.a$|**.b$", 11, "/a/B.A"));
+  ck_assert_int_eq(5, match_prefix("**o$", 4, "HELLO"));
+}
+END_TEST
+
+START_TEST (test_remove_double_dots_and_double_slashes)
+{
+  struct {
+    char before[20], after[20];
+  } data[] = {
+      {"////a", "/a"},
+      {"/.....", "/."},
+      {"/......", "/"},
+      {"...", "..."},
+      {"/...///", "/./"},
+      {"/a...///", "/a.../"},
+      {"/.x", "/.x"},
+      {"/\\", "/"},
+      {"/a\\", "/a\\"},
+      {"/a\\\\...", "/a\\."},
+  };
+  size_t i;
+
+  for (i = 0; i < ARRAY_SIZE(data); i++) {
+    remove_double_dots_and_double_slashes(data[i].before);
+    ck_assert_str_eq(data[i].before, data[i].after);
+  }
+}
+END_TEST
+
 Suite * make_private_suite (void) {
   Suite * const suite = suite_create("Private");
 
   TCase * const http_message = tcase_create("HTTP Message");
   tcase_add_test(http_message, test_parse_http_message);
   suite_add_tcase(suite, http_message);
+
+  TCase * const url_parsing = tcase_create("URL Parsing");
+  tcase_add_test(url_parsing, test_match_prefix);
+  tcase_add_test(url_parsing, test_remove_double_dots_and_double_slashes);
+  suite_add_tcase(suite, url_parsing);
 
   return suite;
 }
