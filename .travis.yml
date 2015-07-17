@@ -1,8 +1,6 @@
 language: c
 
-# This should be false to support container based building but the apt addons
-# don't seem to work right now
-sudo: required
+sudo: false
 
 compiler:
   - gcc
@@ -17,7 +15,7 @@ env:
     - BUILD_TYPE=Coverage
     - ENABLE_SSL=YES
     - ENABLE_SSL_DYNAMIC_LOADING=YES
-    - ENABLE_WEBSOCKETS=NO
+    - ENABLE_WEBSOCKETS=YES
     - ENABLE_CXX=NO
     - ENABLE_IPV6=NO
     - ENABLE_LUA=NO
@@ -52,6 +50,7 @@ before_script:
   - cmake --version
   - cmake
     -G "Unix Makefiles"
+    "-DCIVETWEB_THIRD_PARTY_DIR=${HOME}/third-party"
     -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
     -DBUILD_SHARED_LIBS=${BUILD_SHARED}
     -DCIVETWEB_ENABLE_SSL=${ENABLE_SSL}
@@ -64,6 +63,10 @@ before_script:
     -DCIVETWEB_C_STANDARD=${C_STANDARD}
     -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
     ..
+
+cache:
+  directories:
+  - $HOME/third-party
 
 matrix:
   - fast_finish: true

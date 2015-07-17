@@ -7096,7 +7096,7 @@ static void read_websocket(struct mg_connection *conn,
 	 * len is the length of the current message
 	 * data_len is the length of the current message's data payload
 	 * header_len is the length of the current message's header */
-	size_t i, len, mask_len, data_len, header_len, body_len;
+	size_t i, len, mask_len = 0, data_len = 0, header_len, body_len;
 
 	/* "The masking key is a 32-bit value chosen at random by the client."
 	 * http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17#section-5
@@ -7125,7 +7125,7 @@ static void read_websocket(struct mg_connection *conn,
 	while (!conn->ctx->stop_flag) {
 		header_len = 0;
 		assert(conn->data_len >= conn->request_len);
-		if ((body_len = conn->data_len - conn->request_len) >= 2) {
+		if ((body_len = (size_t)(conn->data_len - conn->request_len)) >= 2) {
 			len = buf[1] & 127;
 			mask_len = buf[1] & 128 ? 4 : 0;
 			if (len < 126 && body_len >= mask_len) {
@@ -7133,11 +7133,11 @@ static void read_websocket(struct mg_connection *conn,
 				header_len = 2 + mask_len;
 			} else if (len == 126 && body_len >= 4 + mask_len) {
 				header_len = 4 + mask_len;
-				data_len = ((((int)buf[2]) << 8) + buf[3]);
+				data_len = ((((size_t)buf[2]) << 8) + buf[3]);
 			} else if (body_len >= 10 + mask_len) {
 				header_len = 10 + mask_len;
-				data_len = (((uint64_t)ntohl(*(uint32_t *)&buf[2])) << 32) +
-				           ntohl(*(uint32_t *)&buf[6]);
+				data_len = (((uint64_t)ntohl(*(uint32_t *)(void *)&buf[2])) << 32) +
+				           ntohl(*(uint32_t *)(void *)&buf[6]);
 			}
 		}
 
@@ -7177,7 +7177,7 @@ static void read_websocket(struct mg_connection *conn,
 						error = 1;
 						break;
 					}
-					len += n;
+					len += (size_t)n;
 				}
 				if (error) {
 					mg_cry(conn, "Websocket pull failed; closing connection");
@@ -7266,13 +7266,13 @@ int mg_websocket_write(struct mg_connection *conn,
 	} else if (dataLen <= 0xFFFF) {
 		/* 16-bit length field */
 		header[1] = 126;
-		*(uint16_t *)(header + 2) = htons((uint16_t)dataLen);
+		*(uint16_t *)(void *)(header + 2) = htons((uint16_t)dataLen);
 		headerLen = 4;
 	} else {
 		/* 64-bit length field */
 		header[1] = 127;
-		*(uint32_t *)(header + 2) = htonl((uint64_t)dataLen >> 32);
-		*(uint32_t *)(header + 6) = htonl(dataLen & 0xFFFFFFFF);
+		*(uint32_t *)(void *)(header + 2) = htonl((uint64_t)dataLen >> 32);
+		*(uint32_t *)(void *)(header + 6) = htonl(dataLen & 0xFFFFFFFF);
 		headerLen = 10;
 	}
 
