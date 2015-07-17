@@ -1,11 +1,12 @@
 ![CivetWeb](https://raw.github.com/bel2125/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
 =======
 
-**Appveyor support and coveralls/Coverage check are currently in a setup phase**
+**Continuous integration (Travis, Appveyor), coverage check (coveralls) and source code analysis (coverity) are currently in a setup phase**
 
 [![Travis Build Status](https://travis-ci.org/bel2125/civetweb.svg?branch=master)](https://travis-ci.org/bel2125/civetweb)
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/bel2125/civetweb?svg=true)](https://ci.appveyor.com/project/bel2125/civetweb/branch/master)
 [![Coverage Status](https://coveralls.io/repos/bel2125/civetweb/badge.svg?branch=master&service=github)](https://coveralls.io/github/bel2125/civetweb?branch=master)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
 
 **The official home of CivetWeb is https://github.com/bel2125/civetweb**
 
