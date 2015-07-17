@@ -89,9 +89,10 @@ before_build:
   - appveyor AddMessage -Category Information "Generating '%generator%'"
   - cmake
     -G "%generator%"
-    "-DCIVETWEB_THIRD_PARTY_DIR=%third_party_dir:\=\\%"
     -DCMAKE_BUILD_TYPE=%build_type%
     -DBUILD_SHARED_LIBS=%build_shared%
+    "-DCIVETWEB_THIRD_PARTY_DIR=%third_party_dir:\=\\%"
+    -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES
     -DCIVETWEB_ENABLE_SSL=%enable_ssl%
     -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=%enable_ssl_dynamic_loading%
     -DCIVETWEB_ENABLE_WEBSOCKETS=%enable_websockets%
