@@ -37,7 +37,7 @@ bdata = table.concat(stringtab)
 stringtab = nil
 
 -- Get the boundary string.
-bs = "--" .. ((mg.request_info.content_type):match("boundary=(.*)"));
+bs = "--" .. ((mg.request_info.content_type):upper():match("BOUNDARY=(.*)"));
 
 -- The POST data has to start with the boundary string.
 -- Check this and remove the starting boundary.
@@ -79,15 +79,41 @@ while #bdata>4 do
    if form_field_name then
      mg.write("Field name: " .. form_field_name .. "\r\n")
    end
+
+   local len = #form_field_value
+   mg.write("Field data length: " .. len .. "\r\n")
+
    if file_name then
      mg.write("File name: " .. file_name .. "\r\n")
-   end
-   local len = #form_field_value
-   if len<50 then
-     mg.write("Field value: " .. form_field_value .. "\r\n")
+     mg.write("File content:\r\n")
+     local maxlen
+     if len>320 then maxlen=320 else maxlen=len end
+
+     for l=0,maxlen,16 do
+       for m=1,16 do
+         local b = form_field_value:byte(l+m)
+         if (b) then
+           mg.write(string.format("%02x ", b))
+         else
+           mg.write("   ")
+         end
+       end
+       mg.write(" -  " .. form_field_value:sub(l+1,l+16):gsub("[%c%z%s]", " ") .. "\r\n")
+     end
+     if maxlen<len then
+       mg.write(string.format("... (+ %u bytes)\r\n", len-maxlen))
+     end
+
    else
-     mg.write("Field value: " .. form_field_value:sub(1, 40) .. " .. (" .. len .. " bytes)\r\n")
+     -- not a file
+     if len<50 then
+       mg.write("Field value: " .. form_field_value .. "\r\n")
+     else
+       mg.write("Field value: " .. form_field_value:sub(1, 40) .. " .. (" .. len .. " bytes)\r\n")
+     end
    end
+
+
    mg.write("\r\n")
    fields = fields + 1
    datasize = datasize + len
