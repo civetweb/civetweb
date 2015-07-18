@@ -20,16 +20,17 @@
  */
 
 #include <stdlib.h>
+#include <time.h>
 
 #include "public.h"
 #include <civetweb.h>
 
 #if defined(_WIN32)
 #include <Windows.h>
-#define mg_sleep(x) (Sleep(x))
+#define mg_Sleep(x) (Sleep(x*1000))
 #else
 #include <unistd.h>
-#define mg_sleep(x) (usleep((x)*1000))
+#define mg_Sleep(x) (sleep(x))
 #endif
 
 /* This unit test file uses the excellent Check unit testing library.
@@ -67,7 +68,7 @@ START_TEST (test_mg_start_stop_server)
 
   ctx = mg_start(NULL, NULL, OPTIONS);
   ck_assert(ctx != NULL);
-  mg_sleep(1000);
+  mg_Sleep(2);
   mg_stop(ctx);
 }
 END_TEST
