@@ -57,6 +57,57 @@ START_TEST (test_mg_get_cookie)
 END_TEST
 
 
+START_TEST (test_mg_url_encode)
+{
+  char buf[20];
+  int ret;
+
+  memset(buf, 77, sizeof(buf));
+  ret = mg_url_encode("abc", buf, sizeof(buf));
+  ck_assert_int_eq(3, ret);
+  ck_assert_str_eq("abc", buf);
+
+  memset(buf, 77, sizeof(buf));
+  ret = mg_url_encode("a%b/c&d.e", buf, sizeof(buf));
+  ck_assert_int_eq(15, ret);
+  ck_assert_str_eq("a%25b%2fc%26d.e", buf);
+
+  memset(buf, 77, sizeof(buf));
+  ret = mg_url_encode("%%%", buf, 4);
+  ck_assert_int_eq(-1, ret);
+  ck_assert_str_eq("%25", buf);
+}
+END_TEST
+
+
+START_TEST (test_mg_url_decode)
+{
+  char buf[20];
+  int ret;
+
+  ret = mg_url_decode("abc", 3, buf, sizeof(buf), 0);
+  ck_assert_int_eq(ret, 3);
+  ck_assert_str_eq(buf, "abc");
+
+  ret = mg_url_decode("abcdef", 3, buf, sizeof(buf), 0);
+  ck_assert_int_eq(ret, 3);
+  ck_assert_str_eq(buf, "abc");
+
+  ret = mg_url_decode("x+y", 3, buf, sizeof(buf), 0);
+  ck_assert_int_eq(ret, 3);
+  ck_assert_str_eq(buf, "x+y");
+
+  ret = mg_url_decode("x+y", 3, buf, sizeof(buf), 1);
+  ck_assert_int_eq(ret, 3);
+  ck_assert_str_eq(buf, "x y");
+
+  ret = mg_url_decode("%25", 3, buf, sizeof(buf), 1);
+  ck_assert_int_eq(ret, 1);
+  ck_assert_str_eq(buf, "%");
+}
+END_TEST
+
+
 START_TEST (test_mg_start_stop_http_server)
 {
   struct mg_context *ctx;
@@ -79,7 +130,7 @@ START_TEST (test_mg_start_stop_https_server)
   const char *OPTIONS[] = {
     "document_root", ".",
     "listening_ports", "8080,8443s",
-    "ssl_certificate", "../resources/ssl_cert.pem",
+    "ssl_certificate", "resources/ssl_cert.pem", // TODO: check working path of CI test system
     NULL,
   };
 
@@ -94,9 +145,15 @@ END_TEST
 Suite * make_public_suite (void) {
 
   Suite * const suite = suite_create("Public");
+
+  TCase * const urlencodingdecoding = tcase_create("URL encoding decoding");
   TCase * const cookies = tcase_create("Cookies");
   TCase * const startstophttp = tcase_create("Start Stop HTTP Server");
   TCase * const startstophttps = tcase_create("Start Stop HTTPS Server");
+
+  tcase_add_test(urlencodingdecoding, test_mg_url_encode);
+  tcase_add_test(urlencodingdecoding, test_mg_url_decode);
+  suite_add_tcase(suite, urlencodingdecoding);
 
   tcase_add_test(cookies, test_mg_get_cookie);
   suite_add_tcase(suite, cookies);

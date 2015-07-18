@@ -156,6 +156,7 @@ END_TEST
 Suite * make_private_suite (void) {
 
   Suite * const suite = suite_create("Private");
+
   TCase * const http_message = tcase_create("HTTP Message");
   TCase * const url_parsing = tcase_create("URL Parsing");
 
