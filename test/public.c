@@ -78,7 +78,7 @@ START_TEST (test_mg_start_stop_https_server)
   struct mg_context *ctx;
   const char *OPTIONS[] = {
     "document_root", ".",
-    "listening_ports", "8080",
+    "listening_ports", "8080,8443s",
     "ssl_certificate", "../resources/ssl_cert.pem",
     NULL,
   };
@@ -95,14 +95,17 @@ Suite * make_public_suite (void) {
 
   Suite * const suite = suite_create("Public");
   TCase * const cookies = tcase_create("Cookies");
-  TCase * const startstop = tcase_create("Start Stop Server");
+  TCase * const startstophttp = tcase_create("Start Stop HTTP Server");
+  TCase * const startstophttps = tcase_create("Start Stop HTTPS Server");
 
   tcase_add_test(cookies, test_mg_get_cookie);
   suite_add_tcase(suite, cookies);
 
-  tcase_add_test(startstop, test_mg_start_stop_http_server);
-  tcase_add_test(startstop, test_mg_start_stop_https_server);
-  suite_add_tcase(suite, startstop);
+  tcase_add_test(startstophttp, test_mg_start_stop_http_server);
+  suite_add_tcase(suite, startstophttp);
+
+  tcase_add_test(startstophttps, test_mg_start_stop_https_server);
+  suite_add_tcase(suite, startstophttps);
 
   return suite;
 }

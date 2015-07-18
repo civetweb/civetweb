@@ -94,7 +94,8 @@ endmacro(civetweb_add_test)
 
 # Public API tests
 civetweb_add_test(Public "Cookies")
-civetweb_add_test(Public "Start Stop Server")
+civetweb_add_test(Public "Start Stop HTTP Server")
+civetweb_add_test(Public "Start Stop HTTPS Server")
 
 # Private API tests
 civetweb_add_test(Private "HTTP Message")
