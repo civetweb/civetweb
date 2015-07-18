@@ -24,6 +24,14 @@
 #include "public.h"
 #include <civetweb.h>
 
+#if defined(_WIN32)
+#include <Windows.h>
+#define mg_sleep(x) (Sleep(x))
+#else
+#include <unistd.h>
+#define mg_sleep(x) (usleep((x)*1000))
+#endif
+
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
  * http://check.sourceforge.net/doc/check_html/index.html
@@ -47,12 +55,35 @@ START_TEST (test_mg_get_cookie)
 }
 END_TEST
 
-Suite * make_public_suite (void) {
-  Suite * const suite = suite_create("Public");
 
+START_TEST (test_mg_start_stop_server)
+{
+  struct mg_context *ctx;
+  const char *OPTIONS[] = {
+    "document_root", ".",
+    "listening_ports", "8080",
+    NULL,
+  };
+
+  ctx = mg_start(NULL, NULL, OPTIONS);
+  ck_assert(ctx != NULL);
+  mg_sleep(1000);
+  mg_stop(ctx);
+}
+END_TEST
+
+
+Suite * make_public_suite (void) {
+
+  Suite * const suite = suite_create("Public");
   TCase * const cookies = tcase_create("Cookies");
+  TCase * const startserver = tcase_create("StartServer");
+
   tcase_add_test(cookies, test_mg_get_cookie);
   suite_add_tcase(suite, cookies);
+
+  tcase_add_test(startserver, test_mg_start_stop_server);
+  suite_add_tcase(suite, startserver);
 
   return suite;
 }
