@@ -93,7 +93,8 @@ macro(civetweb_add_test suite test_case)
 endmacro(civetweb_add_test)
 
 # Public API tests
-civetweb_add_test(Public Cookies)
+civetweb_add_test(Public "Cookies")
+civetweb_add_test(Public "Start Stop Server")
 
 # Private API tests
 civetweb_add_test(Private "HTTP Message")

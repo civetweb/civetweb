@@ -57,7 +57,7 @@ START_TEST (test_mg_get_cookie)
 END_TEST
 
 
-START_TEST (test_mg_start_stop_server)
+START_TEST (test_mg_start_stop_http_server)
 {
   struct mg_context *ctx;
   const char *OPTIONS[] = {
@@ -73,18 +73,36 @@ START_TEST (test_mg_start_stop_server)
 }
 END_TEST
 
+START_TEST (test_mg_start_stop_https_server)
+{
+  struct mg_context *ctx;
+  const char *OPTIONS[] = {
+    "document_root", ".",
+    "listening_ports", "8080",
+    "ssl_certificate", "../resources/ssl_cert.pem",
+    NULL,
+  };
+
+  ctx = mg_start(NULL, NULL, OPTIONS);
+  ck_assert(ctx != NULL);
+  mg_Sleep(2);
+  mg_stop(ctx);
+}
+END_TEST
+
 
 Suite * make_public_suite (void) {
 
   Suite * const suite = suite_create("Public");
   TCase * const cookies = tcase_create("Cookies");
-  TCase * const startserver = tcase_create("StartServer");
+  TCase * const startstop = tcase_create("Start Stop Server");
 
   tcase_add_test(cookies, test_mg_get_cookie);
   suite_add_tcase(suite, cookies);
 
-  tcase_add_test(startserver, test_mg_start_stop_server);
-  suite_add_tcase(suite, startserver);
+  tcase_add_test(startstop, test_mg_start_stop_http_server);
+  tcase_add_test(startstop, test_mg_start_stop_https_server);
+  suite_add_tcase(suite, startstop);
 
   return suite;
 }

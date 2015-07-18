@@ -82,6 +82,7 @@ START_TEST (test_parse_http_message)
 }
 END_TEST
 
+
 START_TEST (test_match_prefix)
 {
   ck_assert_int_eq(4, match_prefix("/api", 4, "/api"));
@@ -115,6 +116,7 @@ START_TEST (test_match_prefix)
 }
 END_TEST
 
+
 START_TEST (test_remove_double_dots_and_double_slashes)
 {
   struct {
@@ -140,16 +142,29 @@ START_TEST (test_remove_double_dots_and_double_slashes)
 }
 END_TEST
 
-Suite * make_private_suite (void) {
-  Suite * const suite = suite_create("Private");
 
+START_TEST (test_is_valid_uri)
+{
+  ck_assert_int_eq(1, is_valid_uri("/api"));
+  ck_assert_int_eq(0, is_valid_uri("api"));
+  ck_assert_int_eq(1, is_valid_uri("*"));
+  ck_assert_int_eq(0, is_valid_uri("*xy"));
+}
+END_TEST
+
+
+Suite * make_private_suite (void) {
+
+  Suite * const suite = suite_create("Private");
   TCase * const http_message = tcase_create("HTTP Message");
+  TCase * const url_parsing = tcase_create("URL Parsing");
+
   tcase_add_test(http_message, test_parse_http_message);
   suite_add_tcase(suite, http_message);
 
-  TCase * const url_parsing = tcase_create("URL Parsing");
   tcase_add_test(url_parsing, test_match_prefix);
   tcase_add_test(url_parsing, test_remove_double_dots_and_double_slashes);
+  tcase_add_test(url_parsing, test_is_valid_uri);
   suite_add_tcase(suite, url_parsing);
 
   return suite;
