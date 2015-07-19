@@ -97,8 +97,11 @@ civetweb_add_test(Private "HTTP Message")
 civetweb_add_test(Private "URL Parsing")
 
 # Public API tests
+civetweb_add_test(Public "Version")
+civetweb_add_test(Public "Cookies")
 civetweb_add_test(Public "URL encoding decoding")
 civetweb_add_test(Public "Cookies")
+civetweb_add_test(Public "MD5")
 civetweb_add_test(Public "Start Stop HTTP Server")
 #civetweb_add_test(Public "Start Stop HTTPS Server")
 
