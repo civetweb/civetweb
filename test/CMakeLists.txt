@@ -98,7 +98,9 @@ civetweb_add_test(Private "URL Parsing")
 
 # Public API tests
 civetweb_add_test(Public "Version")
-civetweb_add_test(Public "Cookies")
+civetweb_add_test(Public "Options")
+civetweb_add_test(Public "MIME types")
+civetweb_add_test(Public "strcasecmp")
 civetweb_add_test(Public "URL encoding decoding")
 civetweb_add_test(Public "Cookies")
 civetweb_add_test(Public "MD5")

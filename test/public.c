@@ -56,6 +56,63 @@ START_TEST (test_mg_version)
 END_TEST
 
 
+START_TEST (test_mg_get_valid_options)
+{
+  int i;
+  const struct mg_option *default_options = mg_get_valid_options();
+
+  ck_assert(default_options != NULL);
+
+  for (i = 0; default_options[i].name != NULL; i++) {
+    ck_assert(default_options[i].name != NULL);
+    ck_assert(strlen(default_options[i].name) > 0);
+    ck_assert(((int)default_options[i].type) > 0);
+  }
+
+  ck_assert(i > 0);
+}
+END_TEST
+
+
+START_TEST (test_mg_get_builtin_mime_type)
+{
+  ck_assert_str_eq(mg_get_builtin_mime_type("x.txt"), "text/plain");
+  ck_assert_str_eq(mg_get_builtin_mime_type("x.html"), "text/html");
+  ck_assert_str_eq(mg_get_builtin_mime_type("x.HTML"), "text/html");
+  ck_assert_str_eq(mg_get_builtin_mime_type("x.hTmL"), "text/html");
+  ck_assert_str_eq(mg_get_builtin_mime_type("/abc/def/ghi.htm"), "text/html");
+  ck_assert_str_eq(mg_get_builtin_mime_type("x.unknown_extention_xyz"), "text/plain");
+}
+END_TEST
+
+
+START_TEST (test_mg_strncasecmp)
+{
+    ck_assert(mg_strncasecmp("abc", "abc", 3) == 0);
+    ck_assert(mg_strncasecmp("abc", "abcd", 3) == 0);
+    ck_assert(mg_strncasecmp("abc", "abcd", 4) != 0);
+    ck_assert(mg_strncasecmp("a", "A", 1) == 0);
+
+    ck_assert(mg_strncasecmp("A", "B", 1) < 0);
+    ck_assert(mg_strncasecmp("A", "b", 1) < 0);
+    ck_assert(mg_strncasecmp("a", "B", 1) < 0);
+    ck_assert(mg_strncasecmp("a", "b", 1) < 0);
+    ck_assert(mg_strncasecmp("b", "A", 1) > 0);
+    ck_assert(mg_strncasecmp("B", "A", 1) > 0);
+    ck_assert(mg_strncasecmp("b", "a", 1) > 0);
+    ck_assert(mg_strncasecmp("B", "a", 1) > 0);
+
+    ck_assert(mg_strncasecmp("xAx", "xBx", 3) < 0);
+    ck_assert(mg_strncasecmp("xAx", "xbx", 3) < 0);
+    ck_assert(mg_strncasecmp("xax", "xBx", 3) < 0);
+    ck_assert(mg_strncasecmp("xax", "xbx", 3) < 0);
+    ck_assert(mg_strncasecmp("xbx", "xAx", 3) > 0);
+    ck_assert(mg_strncasecmp("xBx", "xAx", 3) > 0);
+    ck_assert(mg_strncasecmp("xbx", "xax", 3) > 0);
+    ck_assert(mg_strncasecmp("xBx", "xax", 3) > 0);
+}
+END_TEST
+
 
 START_TEST (test_mg_get_cookie)
 {
@@ -192,6 +249,9 @@ Suite * make_public_suite (void) {
   Suite * const suite = suite_create("Public");
 
   TCase * const version = tcase_create("Version");
+  TCase * const get_valid_options = tcase_create("Options");
+  TCase * const get_builtin_mime_type = tcase_create("MIME types");
+  TCase * const tstrncasecmp = tcase_create("strcasecmp");
   TCase * const urlencodingdecoding = tcase_create("URL encoding decoding");
   TCase * const cookies = tcase_create("Cookies");
   TCase * const md5 = tcase_create("MD5");
@@ -200,6 +260,15 @@ Suite * make_public_suite (void) {
 
   tcase_add_test(version, test_mg_version);
   suite_add_tcase(suite, version);
+
+  tcase_add_test(get_valid_options, test_mg_get_valid_options);
+  suite_add_tcase(suite, get_valid_options);
+
+  tcase_add_test(get_builtin_mime_type, test_mg_get_builtin_mime_type);
+  suite_add_tcase(suite, get_builtin_mime_type);
+
+  tcase_add_test(tstrncasecmp, test_mg_strncasecmp);
+  suite_add_tcase(suite, tstrncasecmp);
 
   tcase_add_test(urlencodingdecoding, test_mg_url_encode);
   tcase_add_test(urlencodingdecoding, test_mg_url_decode);
