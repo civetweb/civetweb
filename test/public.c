@@ -217,14 +217,14 @@ START_TEST(test_mg_md5)
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_md5(buf, long_str, NULL);
-	ck_assert_str_eq(buf, "1CB13CF9F16427807F081B2138241F08");
-	ck_assert_str_eq(ret, "1CB13CF9F16427807F081B2138241F08");
+	ck_assert_str_eq(buf, "1cb13cf9f16427807f081b2138241f08");
+	ck_assert_str_eq(ret, "1cb13cf9f16427807f081b2138241f08");
 	ck_assert_ptr_eq(ret, buf);
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_md5(buf, long_str+1, NULL);
-	ck_assert_str_eq(buf, "CF62D3264334154F5779D3694CC5093F");
-	ck_assert_str_eq(ret, "CF62D3264334154F5779D3694CC5093F");
+	ck_assert_str_eq(buf, "cf62d3264334154f5779d3694cc5093f");
+	ck_assert_str_eq(ret, "cf62d3264334154f5779d3694cc5093f");
 	ck_assert_ptr_eq(ret, buf);
 
 }
