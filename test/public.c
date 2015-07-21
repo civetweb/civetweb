@@ -120,20 +120,6 @@ END_TEST
 
 START_TEST(test_mg_get_cookie)
 {
-	char buf[20];
-
-	ck_assert_int_eq(-2, mg_get_cookie("", "foo", NULL, sizeof(buf)));
-	ck_assert_int_eq(-2, mg_get_cookie("", "foo", buf, 0));
-	ck_assert_int_eq(-1, mg_get_cookie("", "foo", buf, sizeof(buf)));
-	ck_assert_int_eq(-1, mg_get_cookie("", NULL, buf, sizeof(buf)));
-	ck_assert_int_eq(1, mg_get_cookie("a=1; b=2; c; d", "a", buf, sizeof(buf)));
-	ck_assert_str_eq("1", buf);
-	ck_assert_int_eq(1, mg_get_cookie("a=1; b=2; c; d", "b", buf, sizeof(buf)));
-	ck_assert_str_eq("2", buf);
-	ck_assert_int_eq(3, mg_get_cookie("a=1; b=123", "b", buf, sizeof(buf)));
-	ck_assert_str_eq("123", buf);
-	ck_assert_int_eq(-1,
-	                 mg_get_cookie("a=1; b=2; c; d", "c", buf, sizeof(buf)));
 }
 END_TEST
 
@@ -142,6 +128,7 @@ START_TEST(test_mg_md5)
 {
 	char buf[33];
 	char *ret;
+    const char * long_str = "_123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J123456789K123456789L123456789M123456789N123456789O123456789P123456789Q123456789R123456789S123456789T123456789U123456789V123456789W123456789X123456789Y123456789Z";
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_md5(buf, NULL);
@@ -172,6 +159,19 @@ START_TEST(test_mg_md5)
 	ck_assert_str_eq(buf, "e4d909c290d0fb1ca068ffaddf22cbd0");
 	ck_assert_str_eq(ret, "e4d909c290d0fb1ca068ffaddf22cbd0");
 	ck_assert_ptr_eq(ret, buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_md5(buf, long_str, NULL);
+	ck_assert_str_eq(buf, "1CB13CF9F16427807F081B2138241F08");
+	ck_assert_str_eq(ret, "1CB13CF9F16427807F081B2138241F08");
+	ck_assert_ptr_eq(ret, buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_md5(buf, long_str+1, NULL);
+	ck_assert_str_eq(buf, "CF62D3264334154F5779D3694CC5093F");
+	ck_assert_str_eq(ret, "CF62D3264334154F5779D3694CC5093F");
+	ck_assert_ptr_eq(ret, buf);
+
 }
 END_TEST
 
