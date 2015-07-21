@@ -120,6 +120,61 @@ END_TEST
 
 START_TEST(test_mg_get_cookie)
 {
+	char buf[32];
+    int ret;
+    const char *longcookie = "key1=1; key2=2; key3; key4=4; key5; key6; key7=this+is+it; key8=8; key9";
+
+    /* invalid result buffer */
+    ret = mg_get_cookie("", "notfound", NULL, 999);
+	ck_assert_int_eq(ret, -2);
+
+    /* zero size result buffer */
+    ret = mg_get_cookie("", "notfound", buf, 0);
+	ck_assert_int_eq(ret, -2);
+
+    /* too small result buffer */
+    ret = mg_get_cookie("key=toooooooooolong", "key", buf, 4);
+	ck_assert_int_eq(ret, -3);
+
+    /* key not found in string */
+    ret = mg_get_cookie("", "notfound", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+
+    ret = mg_get_cookie(longcookie, "notfound", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+
+    /* key not found in string */
+    ret = mg_get_cookie("key1=1; key2=2; key3=3", "notfound", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+
+    /* keys are found as first, middle and last key */
+    memset(buf, 77, sizeof(buf));
+    ret = mg_get_cookie("key1=1; key2=2; key3=3", "key1", buf, sizeof(buf));
+    ck_assert_int_eq(ret, 1);
+    ck_assert_str_eq("1", buf);
+
+    memset(buf, 77, sizeof(buf));
+    ret = mg_get_cookie("key1=1; key2=2; key3=3", "key2", buf, sizeof(buf));
+    ck_assert_int_eq(ret, 1);
+    ck_assert_str_eq("2", buf);
+
+    memset(buf, 77, sizeof(buf));
+    ret = mg_get_cookie("key1=1; key2=2; key3=3", "key3", buf, sizeof(buf));
+    ck_assert_int_eq(ret, 1);
+    ck_assert_str_eq("3", buf);
+
+    /* longer value in the middle of a longer string */
+    memset(buf, 77, sizeof(buf));
+    ret = mg_get_cookie(longcookie, "key7", buf, sizeof(buf));
+    ck_assert_int_eq(ret, 1);
+    ck_assert_str_eq("this+is+it", buf);
+
+    /* key without value in the middle of a longer string */
+    memset(buf, 77, sizeof(buf));
+    ret = mg_get_cookie(longcookie, "key5", buf, sizeof(buf));
+    ck_assert_int_eq(ret, -1);
+    /* TODO: we can not distinguish between "key not found" and "key has no value"
+     *       -> this is a problem in the API */
 }
 END_TEST
 
