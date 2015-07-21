@@ -166,7 +166,7 @@ START_TEST(test_mg_get_cookie)
     /* longer value in the middle of a longer string */
     memset(buf, 77, sizeof(buf));
     ret = mg_get_cookie(longcookie, "key7", buf, sizeof(buf));
-    ck_assert_int_eq(ret, 1);
+    ck_assert_int_eq(ret, 10);
     ck_assert_str_eq("this+is+it", buf);
 
     /* key without value in the middle of a longer string */
