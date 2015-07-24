@@ -270,11 +270,11 @@ START_TEST(test_base64_encode_decode)
     ck_assert_int_eq(ret, 3);
 #endif
 }
+END_TEST
 
 
 Suite *make_private_suite(void)
 {
-
 	Suite *const suite = suite_create("Private");
 
 	TCase *const http_message = tcase_create("HTTP Message");
@@ -292,7 +292,6 @@ Suite *make_private_suite(void)
 
 	tcase_add_test(encode_decode, test_base64_encode_decode);
 	suite_add_tcase(suite, encode_decode);
-
 
 	return suite;
 }
