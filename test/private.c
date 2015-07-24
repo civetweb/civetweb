@@ -40,9 +40,9 @@
 
 START_TEST(test_parse_http_message)
 {
-    /* Adapted from unit_test.c */
-    /* Copyright (c) 2013-2015 the Civetweb developers */
-    /* Copyright (c) 2004-2013 Sergey Lyubka */
+	/* Adapted from unit_test.c */
+	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	struct mg_request_info ri;
 	char empty[] = "";
 	char req1[] = "GET / HTTP/1.1\r\n\r\n";
@@ -92,11 +92,57 @@ START_TEST(test_parse_http_message)
 END_TEST
 
 
+START_TEST(test_should_keep_alive)
+{
+	/* Adapted from unit_test.c */
+	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2004-2013 Sergey Lyubka */
+	struct mg_connection conn;
+	struct mg_context ctx;
+	char req1[] = "GET / HTTP/1.1\r\n\r\n";
+	char req2[] = "GET / HTTP/1.0\r\n\r\n";
+	char req3[] = "GET / HTTP/1.1\r\nConnection: close\r\n\r\n";
+	char req4[] = "GET / HTTP/1.1\r\nConnection: keep-alive\r\n\r\n";
+
+	memset(&conn, 0, sizeof(conn));
+	conn.ctx = &ctx;
+	ck_assert_int_eq(parse_http_message(req1, sizeof(req1), &conn.request_info),
+	                 sizeof(req1) - 1);
+
+	ctx.config[ENABLE_KEEP_ALIVE] = "no";
+	ck_assert_int_eq(should_keep_alive(&conn), 0);
+
+	ctx.config[ENABLE_KEEP_ALIVE] = "yes";
+	ck_assert_int_eq(should_keep_alive(&conn), 1);
+
+	conn.must_close = 1;
+	ck_assert_int_eq(should_keep_alive(&conn), 0);
+
+	conn.must_close = 0;
+	parse_http_message(req2, sizeof(req2), &conn.request_info);
+	ck_assert_int_eq(should_keep_alive(&conn), 0);
+
+	parse_http_message(req3, sizeof(req3), &conn.request_info);
+	ck_assert_int_eq(should_keep_alive(&conn), 0);
+
+	parse_http_message(req4, sizeof(req4), &conn.request_info);
+	ck_assert_int_eq(should_keep_alive(&conn), 1);
+
+	conn.status_code = 401;
+	ck_assert_int_eq(should_keep_alive(&conn), 0);
+
+	conn.status_code = 200;
+	conn.must_close = 1;
+	ck_assert_int_eq(should_keep_alive(&conn), 0);
+}
+END_TEST
+
+
 START_TEST(test_match_prefix)
 {
-    /* Adapted from unit_test.c */
-    /* Copyright (c) 2013-2015 the Civetweb developers */
-    /* Copyright (c) 2004-2013 Sergey Lyubka */
+	/* Adapted from unit_test.c */
+	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	ck_assert_int_eq(4, match_prefix("/api", 4, "/api"));
 	ck_assert_int_eq(3, match_prefix("/a/", 3, "/a/b/c"));
 	ck_assert_int_eq(-1, match_prefix("/a/", 3, "/ab/c"));
@@ -131,9 +177,9 @@ END_TEST
 
 START_TEST(test_remove_double_dots_and_double_slashes)
 {
-    /* Adapted from unit_test.c */
-    /* Copyright (c) 2013-2015 the Civetweb developers */
-    /* Copyright (c) 2004-2013 Sergey Lyubka */
+	/* Adapted from unit_test.c */
+	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	struct {
 		char before[20], after[20];
 	} data[] = {
@@ -168,6 +214,64 @@ START_TEST(test_is_valid_uri)
 END_TEST
 
 
+START_TEST(test_base64_encode_decode)
+{
+	char buf[64];
+	const char *alpha = "abcdefghijklmnopqrstuvwxyz";
+	const char *enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
+	int ret;
+	size_t len;
+
+#if defined(USE_WEBSOCKET) || defined(USE_LUA)
+	memset(buf, 77, sizeof(buf));
+	base64_encode("a", 1, buf);
+	ck_assert_str_eq(buf, "YQ==");
+
+	memset(buf, 77, sizeof(buf));
+	base64_encode("ab", 1, buf);
+	ck_assert_str_eq(buf, "YQ==");
+
+	memset(buf, 77, sizeof(buf));
+	base64_encode("ab", 2, buf);
+	ck_assert_str_eq(buf, "YWI=");
+
+	memset(buf, 77, sizeof(buf));
+	base64_encode(alpha, 3, buf);
+	ck_assert_str_eq(buf, "YWJj");
+
+	memset(buf, 77, sizeof(buf));
+	base64_encode(alpha, 4, buf);
+	ck_assert_str_eq(buf, "YWJjZA==");
+
+	memset(buf, 77, sizeof(buf));
+	base64_encode(alpha, 5, buf);
+	ck_assert_str_eq(buf, "YWJjZGU=");
+
+	memset(buf, 77, sizeof(buf));
+	base64_encode(alpha, 6, buf);
+	ck_assert_str_eq(buf, "YWJjZGVm");
+
+	memset(buf, 77, sizeof(buf));
+	base64_encode(alpha, strlen(alpha), buf);
+	ck_assert_str_eq(buf, enc;
+#endif
+
+#if defined(USE_LUA)
+    memset(buf, 77, sizeof(buf));
+    len = 9999;
+    ret = base64_decode(enc, strlen(enc), buf, &len);
+    ck_assert_int_eq(ret, -1);
+    ck_assert_uint_eq((unsigned int)len, (unsigned int)strlen(alpha));
+    ck_assert_str_eq(buf, alpha);
+
+    memset(buf, 77, sizeof(buf));
+    len = 9999;
+    ret = base64_decode("AAA*AAA", 7, buf, &len);
+    ck_assert_int_eq(ret, 3);
+#endif
+}
+
+
 Suite *make_private_suite(void)
 {
 
@@ -175,14 +279,20 @@ Suite *make_private_suite(void)
 
 	TCase *const http_message = tcase_create("HTTP Message");
 	TCase *const url_parsing = tcase_create("URL Parsing");
+	TCase *const encode_decode = tcase_create("Encode Decode");
 
 	tcase_add_test(http_message, test_parse_http_message);
+	tcase_add_test(http_message, test_should_keep_alive);
 	suite_add_tcase(suite, http_message);
 
 	tcase_add_test(url_parsing, test_match_prefix);
 	tcase_add_test(url_parsing, test_remove_double_dots_and_double_slashes);
 	tcase_add_test(url_parsing, test_is_valid_uri);
 	suite_add_tcase(suite, url_parsing);
+
+	tcase_add_test(encode_decode, test_base64_encode_decode);
+	suite_add_tcase(suite, encode_decode);
+
 
 	return suite;
 }
