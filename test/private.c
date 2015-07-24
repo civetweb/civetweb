@@ -361,6 +361,13 @@ START_TEST(test_base64_encode_decode)
 	ret = base64_decode((unsigned char *)"AAA*AAA", 7, buf, &len);
 	ck_assert_int_eq(ret, 3);
 #endif
+
+	/* All variables are unused, if USE_LUA and USE_WEBSOCKET is not set */
+	(void)buf;
+	(void)alpha;
+	(void)enc;
+	(void)ret;
+	(void)len;
 }
 END_TEST
 
