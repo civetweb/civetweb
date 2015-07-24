@@ -214,6 +214,49 @@ START_TEST(test_is_valid_uri)
 END_TEST
 
 
+START_TEST(test_next_option)
+{
+	/* Adapted from unit_test.c */
+	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2004-2013 Sergey Lyubka */
+	const char *p, *list = "x/8,/y**=1;2k,z";
+	struct vec a, b;
+	int i;
+
+	ck_assert(next_option(NULL, &a, &b) == NULL);
+	for (i = 0, p = list; (p = next_option(p, &a, &b)) != NULL; i++) {
+		ck_assert(i != 0 || (a.ptr == list && a.len == 3 && b.len == 0));
+		ck_assert(i != 1 || (a.ptr == list + 4 && a.len == 4 &&
+		                     b.ptr == list + 9 && b.len == 4));
+		ck_assert(i != 2 || (a.ptr == list + 14 && a.len == 1 && b.len == 0));
+	}
+}
+END_TEST
+
+
+START_TEST(test_skip_quoted)
+{
+	/* Adapted from unit_test.c */
+	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2004-2013 Sergey Lyubka */
+	char x[] = "a=1, b=2, c='hi \' there', d='here\\, there'", *s = x, *p;
+
+	p = skip_quoted(&s, ", ", ", ", 0);
+	ck_assert(p != NULL && !strcmp(p, "a=1"));
+
+	p = skip_quoted(&s, ", ", ", ", 0);
+	ck_assert(p != NULL && !strcmp(p, "b=2"));
+
+	p = skip_quoted(&s, ",", " ", 0);
+	ck_assert(p != NULL && !strcmp(p, "c='hi \' there'"));
+
+	p = skip_quoted(&s, ",", " ", '\\');
+	ck_assert(p != NULL && !strcmp(p, "d='here, there'"));
+	ck_assert(*s == 0);
+}
+END_TEST
+
+
 START_TEST(test_base64_encode_decode)
 {
 	char buf[64];
@@ -279,6 +322,7 @@ Suite *make_private_suite(void)
 
 	TCase *const http_message = tcase_create("HTTP Message");
 	TCase *const url_parsing = tcase_create("URL Parsing");
+	TCase *const internal_parse = tcase_create("Internal Parsing");
 	TCase *const encode_decode = tcase_create("Encode Decode");
 
 	tcase_add_test(http_message, test_parse_http_message);
@@ -289,6 +333,10 @@ Suite *make_private_suite(void)
 	tcase_add_test(url_parsing, test_remove_double_dots_and_double_slashes);
 	tcase_add_test(url_parsing, test_is_valid_uri);
 	suite_add_tcase(suite, url_parsing);
+
+	tcase_add_test(internal_parse, test_next_option);
+	tcase_add_test(internal_parse, test_skip_quoted);
+	suite_add_tcase(suite, internal_parse);
 
 	tcase_add_test(encode_decode, test_base64_encode_decode);
 	suite_add_tcase(suite, encode_decode);

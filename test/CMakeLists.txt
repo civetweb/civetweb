@@ -95,6 +95,7 @@ endmacro(civetweb_add_test)
 # Private API tests
 civetweb_add_test(Private "HTTP Message")
 civetweb_add_test(Private "URL Parsing")
+civetweb_add_test(Private "Internal Parsing")
 civetweb_add_test(Private "Encode Decode")
 
 # Public API tests
