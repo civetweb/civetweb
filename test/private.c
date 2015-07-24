@@ -40,6 +40,9 @@
 
 START_TEST(test_parse_http_message)
 {
+    /* Adapted from unit_test.c */
+    /* Copyright (c) 2013-2015 the Civetweb developers */
+    /* Copyright (c) 2004-2013 Sergey Lyubka */
 	struct mg_request_info ri;
 	char empty[] = "";
 	char req1[] = "GET / HTTP/1.1\r\n\r\n";
@@ -91,6 +94,9 @@ END_TEST
 
 START_TEST(test_match_prefix)
 {
+    /* Adapted from unit_test.c */
+    /* Copyright (c) 2013-2015 the Civetweb developers */
+    /* Copyright (c) 2004-2013 Sergey Lyubka */
 	ck_assert_int_eq(4, match_prefix("/api", 4, "/api"));
 	ck_assert_int_eq(3, match_prefix("/a/", 3, "/a/b/c"));
 	ck_assert_int_eq(-1, match_prefix("/a/", 3, "/ab/c"));
@@ -125,6 +131,9 @@ END_TEST
 
 START_TEST(test_remove_double_dots_and_double_slashes)
 {
+    /* Adapted from unit_test.c */
+    /* Copyright (c) 2013-2015 the Civetweb developers */
+    /* Copyright (c) 2004-2013 Sergey Lyubka */
 	struct {
 		char before[20], after[20];
 	} data[] = {
