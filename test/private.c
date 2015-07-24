@@ -103,16 +103,18 @@ START_TEST(test_should_keep_alive)
 	char req2[] = "GET / HTTP/1.0\r\n\r\n";
 	char req3[] = "GET / HTTP/1.1\r\nConnection: close\r\n\r\n";
 	char req4[] = "GET / HTTP/1.1\r\nConnection: keep-alive\r\n\r\n";
+	char yes[] = "yes";
+	char no[] = "no";
 
 	memset(&conn, 0, sizeof(conn));
 	conn.ctx = &ctx;
 	ck_assert_int_eq(parse_http_message(req1, sizeof(req1), &conn.request_info),
 	                 sizeof(req1) - 1);
 
-	ctx.config[ENABLE_KEEP_ALIVE] = "no";
+	ctx.config[ENABLE_KEEP_ALIVE] = no;
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	ctx.config[ENABLE_KEEP_ALIVE] = "yes";
+	ctx.config[ENABLE_KEEP_ALIVE] = yes;
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
 
 	conn.must_close = 1;
@@ -257,7 +259,7 @@ START_TEST(test_skip_quoted)
 END_TEST
 
 
-static int alloc_printf(char **buf, size_t size, char *fmt, ...)
+static int alloc_printf(char **buf, size_t size, const char *fmt, ...)
 {
 	/* Test helper function - adapted from unit_test.c */
 	/* Copyright (c) 2013-2015 the Civetweb developers */
