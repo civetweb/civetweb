@@ -257,6 +257,41 @@ START_TEST(test_skip_quoted)
 END_TEST
 
 
+START_TEST(test_alloc_vprintf)
+{
+	/* Adapted from unit_test.c */
+	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2004-2013 Sergey Lyubka */
+	char buf[MG_BUF_LEN], *p = buf;
+
+	ck_assert(alloc_printf(&p, sizeof(buf), "%s", "hi") == 2);
+	ck_assert(p == buf);
+	ck_assert(alloc_printf(&p, sizeof(buf), "%s", "") == 0);
+	ck_assert(alloc_printf(&p, sizeof(buf), "") == 0);
+
+	/* Pass small buffer, make sure alloc_printf allocates */
+	ck_assert(alloc_printf(&p, 1, "%s", "hello") == 5);
+	ck_assert(p != buf);
+	mg_free(p);
+}
+END_TEST
+
+
+START_TEST(test_mg_strcasestr)
+{
+	/* Adapted from unit_test.c */
+	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2004-2013 Sergey Lyubka */
+	static const char *big1 = "abcdef";
+	ck_assert(mg_strcasestr("Y", "X") == NULL);
+	ck_assert(mg_strcasestr("Y", "y") != NULL);
+	ck_assert(mg_strcasestr(big1, "X") == NULL);
+	ck_assert(mg_strcasestr(big1, "CD") == big1 + 2);
+	ck_assert(mg_strcasestr("aa", "AAB") == NULL);
+}
+END_TEST
+
+
 START_TEST(test_base64_encode_decode)
 {
 	char buf[64];
@@ -336,6 +371,8 @@ Suite *make_private_suite(void)
 
 	tcase_add_test(internal_parse, test_next_option);
 	tcase_add_test(internal_parse, test_skip_quoted);
+	tcase_add_test(internal_parse, test_mg_strcasestr);
+	tcase_add_test(internal_parse, test_alloc_vprintf);
 	suite_add_tcase(suite, internal_parse);
 
 	tcase_add_test(encode_decode, test_base64_encode_decode);
