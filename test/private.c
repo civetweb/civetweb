@@ -345,21 +345,21 @@ START_TEST(test_base64_encode_decode)
 
 	memset(buf, 77, sizeof(buf));
 	base64_encode((unsigned char *)alpha, (int)strlen(alpha), buf);
-	ck_assert_str_eq(buf, enc;
+	ck_assert_str_eq(buf, enc);
 #endif
 
 #if defined(USE_LUA)
-    memset(buf, 77, sizeof(buf));
-    len = 9999;
-    ret = base64_decode((unsigned char *)enc, (int)strlen(enc), buf, &len);
-    ck_assert_int_eq(ret, -1);
-    ck_assert_uint_eq((unsigned int)len, (unsigned int)strlen(alpha));
-    ck_assert_str_eq(buf, alpha);
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	ret = base64_decode((unsigned char *)enc, (int)strlen(enc), buf, &len);
+	ck_assert_int_eq(ret, -1);
+	ck_assert_uint_eq((unsigned int)len, (unsigned int)strlen(alpha));
+	ck_assert_str_eq(buf, alpha);
 
-    memset(buf, 77, sizeof(buf));
-    len = 9999;
-    ret = base64_decode((unsigned char *)"AAA*AAA", 7, buf, &len);
-    ck_assert_int_eq(ret, 3);
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	ret = base64_decode((unsigned char *)"AAA*AAA", 7, buf, &len);
+	ck_assert_int_eq(ret, 3);
 #endif
 }
 END_TEST
