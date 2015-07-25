@@ -181,6 +181,99 @@ START_TEST(test_mg_get_cookie)
 END_TEST
 
 
+START_TEST(test_mg_get_var)
+{
+	char buf[32];
+	int ret;
+	const char *longquery = "key1=1&key2=2&key3&key4=4&key5=&key6&"
+	                        "key7=this+is+it&key8=8&key9&&key10=&&"
+	                        "key7=thas+is+it&key12=12";
+
+	/* invalid result buffer */
+	ret = mg_get_var2("", 0, "notfound", NULL, 999, 0);
+	ck_assert_int_eq(ret, -2);
+
+	/* zero size result buffer */
+	ret = mg_get_var2("", 0, "notfound", buf, 0, 0);
+	ck_assert_int_eq(ret, -2);
+
+	/* too small result buffer */
+	ret = mg_get_var2("key=toooooooooolong", 19, "key", buf, 4, 0);
+	ck_assert_int_eq(ret, -3);
+
+	/* key not found in string */
+	ret = mg_get_var2("", 0, "notfound", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, -1);
+
+	ret = mg_get_var2(
+	    longquery, strlen(longquery), "notfound", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, -1);
+
+	/* key not found in string */
+	ret = mg_get_var2(
+	    "key1=1; key2=2; key3=3", 22, "notfound", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, -1);
+
+	/* key not found in string */
+	ret = mg_get_var2("key1=1; key2=2; key3=3; notfound=here",
+	                  22,
+	                  "notfound",
+	                  buf,
+	                  sizeof(buf),
+	                  0);
+	ck_assert_int_eq(ret, -1);
+
+	/* key not found in string */
+	ret =
+	    mg_get_var2("key1=1; key2=2; key3=3", 22, "key1", buf, sizeof(buf), 1);
+	ck_assert_int_eq(ret, -1);
+
+	/* keys are found as first, middle and last key */
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2("key1=1; key2=2; key3=3", 22, "key1", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("1", buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2("key1=1; key2=2; key3=3", 22, "key2", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("2", buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2("key1=1; key2=2; key3=3", 22, "key3", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("3", buf);
+
+	/* longer value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2(longquery, strlen(longquery), "key7", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 10);
+	ck_assert_str_eq("this+is+it", buf);
+
+	/* longer value in the middle of a longer string - seccond occurance of key
+	 */
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2(longquery, strlen(longquery), "key7", buf, sizeof(buf), 1);
+	ck_assert_int_eq(ret, 10);
+	ck_assert_str_eq("that+is+it", buf);
+
+	/* key without value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2(longquery, strlen(longquery), "key5", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, -1);
+	/* TODO: we can not distinguish between "key not found" and "key has no
+	 * value"
+	 *       -> this is a problem in the API */
+}
+END_TEST
+
+
 START_TEST(test_mg_md5)
 {
 	char buf[33];
@@ -357,7 +450,13 @@ START_TEST(test_request_handlers)
 	int i;
 	const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
 	const char *HTTP_PORT = "8087";
-	const char *OPTIONS[] = {"listening_ports", HTTP_PORT, NULL};
+	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
+
+	memset(OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[0] = "listening_ports";
+	OPTIONS[1] = HTTP_PORT;
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
 	ctx = mg_start(NULL, NULL, OPTIONS);
 	ck_assert(ctx != NULL);
@@ -427,6 +526,7 @@ Suite *make_public_suite(void)
 	suite_add_tcase(suite, urlencodingdecoding);
 
 	tcase_add_test(cookies, test_mg_get_cookie);
+	tcase_add_test(cookies, test_mg_get_var);
 	suite_add_tcase(suite, cookies);
 
 	tcase_add_test(md5, test_mg_md5);
@@ -441,5 +541,3 @@ Suite *make_public_suite(void)
 
 	return suite;
 }
-
-/* TODO: mg_get_var */
