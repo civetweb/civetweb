@@ -353,10 +353,13 @@ START_TEST(test_encode_decode)
 {
 	char buf[128];
 	const char *alpha = "abcdefghijklmnopqrstuvwxyz";
-	const char *alpha_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
+	const char *alpha_b64_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
 	const char *nonalpha = " !\"#$%&'()*+,-./0123456789:;<=>?@";
-	const char *nonalpha_enc = "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
-	const char *nonalpha_url =
+	const char *nonalpha_b64_enc =
+	    "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
+	const char *nonalpha_url_enc1 =
+	    "%20%21%22%23$%25%26%27()%2a%2b,-.%2f0123456789%3a;%3c%3d%3e%3f%40";
+	const char *nonalpha_url_enc2 =
 	    "%20!%22%23%24%25%26'()*%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40";
 	int ret;
 	size_t len;
@@ -392,18 +395,18 @@ START_TEST(test_encode_decode)
 
 	memset(buf, 77, sizeof(buf));
 	base64_encode((unsigned char *)alpha, (int)strlen(alpha), buf);
-	ck_assert_str_eq(buf, alpha_enc);
+	ck_assert_str_eq(buf, alpha_b64_enc);
 
 	memset(buf, 77, sizeof(buf));
 	base64_encode((unsigned char *)nonalpha, (int)strlen(nonalpha), buf);
-	ck_assert_str_eq(buf, nonalpha_enc);
+	ck_assert_str_eq(buf, nonalpha_b64_enc);
 #endif
 
 #if defined(USE_LUA)
 	memset(buf, 77, sizeof(buf));
 	len = 9999;
 	ret = base64_decode(
-	    (unsigned char *)alpha_enc, (int)strlen(alpha_enc), buf, &len);
+	    (unsigned char *)alpha_b64_enc, (int)strlen(alpha_b64_enc), buf, &len);
 	ck_assert_int_eq(ret, -1);
 	ck_assert_uint_eq((unsigned int)len, (unsigned int)strlen(alpha));
 	ck_assert_str_eq(buf, alpha);
@@ -423,8 +426,8 @@ START_TEST(test_encode_decode)
 	memset(buf, 77, sizeof(buf));
 	ret = mg_url_encode(nonalpha, buf, sizeof(buf));
 	ck_assert_int_eq(ret, (int)strlen(buf));
-	ck_assert_int_eq(ret, (int)strlen(nonalpha_url));
-	ck_assert_str_eq(buf, nonalpha_url);
+	ck_assert_int_eq(ret, (int)strlen(nonalpha_url_enc1));
+	ck_assert_str_eq(buf, nonalpha_url_enc1);
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_url_decode(alpha, (int)strlen(alpha), buf, sizeof(buf), 0);
@@ -434,7 +437,14 @@ START_TEST(test_encode_decode)
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_url_decode(
-	    nonalpha_url, (int)strlen(nonalpha_url), buf, sizeof(buf), 0);
+	    nonalpha_url_enc1, (int)strlen(nonalpha_url_enc1), buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, (int)strlen(buf));
+	ck_assert_int_eq(ret, (int)strlen(nonalpha));
+	ck_assert_str_eq(buf, nonalpha);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_url_decode(
+	    nonalpha_url_enc2, (int)strlen(nonalpha_url_enc2), buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, (int)strlen(buf));
 	ck_assert_int_eq(ret, (int)strlen(nonalpha));
 	ck_assert_str_eq(buf, nonalpha);
