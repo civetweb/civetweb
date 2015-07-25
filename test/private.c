@@ -308,6 +308,46 @@ START_TEST(test_mg_strcasestr)
 END_TEST
 
 
+START_TEST(test_parse_port_string)
+{
+	/* Adapted from unit_test.c */
+	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2004-2013 Sergey Lyubka */
+	static const char *valid[] = {
+		"0",
+		"1",
+		"1s",
+		"1r",
+		"1.2.3.4:1",
+		"1.2.3.4:1s",
+		"1.2.3.4:1r",
+#if defined(USE_IPV6)
+		"[::1]:123",
+		"[3ffe:2a00:100:7031::1]:900",
+#endif
+		NULL
+	};
+	static const char *invalid[] = {
+	    "99999", "1k", "1.2.3", "1.2.3.4:", "1.2.3.4:2p", NULL};
+	struct socket so;
+	struct vec vec;
+	int i;
+
+	for (i = 0; valid[i] != NULL; i++) {
+		vec.ptr = valid[i];
+		vec.len = strlen(vec.ptr);
+		ck_assert(parse_port_string(&vec, &so) != 0);
+	}
+
+	for (i = 0; invalid[i] != NULL; i++) {
+		vec.ptr = invalid[i];
+		vec.len = strlen(vec.ptr);
+		ck_assert(parse_port_string(&vec, &so) == 0);
+	}
+}
+END_TEST
+
+
 START_TEST(test_encode_decode)
 {
 	char buf[64];
@@ -427,6 +467,7 @@ Suite *make_private_suite(void)
 	tcase_add_test(internal_parse, test_skip_quoted);
 	tcase_add_test(internal_parse, test_mg_strcasestr);
 	tcase_add_test(internal_parse, test_alloc_vprintf);
+	tcase_add_test(internal_parse, test_parse_port_string);
 	suite_add_tcase(suite, internal_parse);
 
 	tcase_add_test(encode_decode, test_encode_decode);
