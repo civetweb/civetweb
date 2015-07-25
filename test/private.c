@@ -312,7 +312,9 @@ START_TEST(test_base64_encode_decode)
 {
 	char buf[64];
 	const char *alpha = "abcdefghijklmnopqrstuvwxyz";
-	const char *enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
+	const char *alpha_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
+	const char *nonalpha = " !\"#$%&'()*+,-./0123456789:;<=>?@";
+	const char *nonalpha_enc = "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
 	int ret;
 	size_t len;
 
@@ -347,13 +349,18 @@ START_TEST(test_base64_encode_decode)
 
 	memset(buf, 77, sizeof(buf));
 	base64_encode((unsigned char *)alpha, (int)strlen(alpha), buf);
-	ck_assert_str_eq(buf, enc);
+	ck_assert_str_eq(buf, alpha_enc);
+
+	memset(buf, 77, sizeof(buf));
+	base64_encode((unsigned char *)nonalpha, (int)strlen(nonalpha), buf);
+	ck_assert_str_eq(buf, nonalpha_enc);
 #endif
 
 #if defined(USE_LUA)
 	memset(buf, 77, sizeof(buf));
 	len = 9999;
-	ret = base64_decode((unsigned char *)enc, (int)strlen(enc), buf, &len);
+	ret = base64_decode(
+	    (unsigned char *)alpha_enc, (int)strlen(alpha_enc), buf, &len);
 	ck_assert_int_eq(ret, -1);
 	ck_assert_uint_eq((unsigned int)len, (unsigned int)strlen(alpha));
 	ck_assert_str_eq(buf, alpha);
@@ -364,10 +371,13 @@ START_TEST(test_base64_encode_decode)
 	ck_assert_int_eq(ret, 3);
 #endif
 
+
 	/* All variables are unused, if USE_LUA and USE_WEBSOCKET is not set */
 	(void)buf;
 	(void)alpha;
-	(void)enc;
+	(void)alpha_enc;
+	(void)nonalpha;
+	(void)nonalpha_enc;
 	(void)ret;
 	(void)len;
 }
