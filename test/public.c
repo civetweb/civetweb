@@ -188,7 +188,7 @@ START_TEST(test_mg_get_var)
 	const char *shortquery = "key1=1&key2=2&key3=3";
 	const char *longquery = "key1=1&key2=2&key3&key4=4&key5=&key6&"
 	                        "key7=this+is+it&key8=8&key9&&key10=&&"
-	                        "key7=thas+is+it&key12=12";
+	                        "key7=that+is+it&key12=12";
 
 	/* invalid result buffer */
 	ret = mg_get_var2("", 0, "notfound", NULL, 999, 0);
