@@ -266,18 +266,20 @@ START_TEST(test_mg_get_var)
 	ck_assert_int_eq(ret, 10);
 	ck_assert_str_eq("that is it", buf);
 
-	/* key without value in the middle of a longer string */
+	/* key with = but without value in the middle of a longer string */
 	memset(buf, 77, sizeof(buf));
 	ret =
 	    mg_get_var2(longquery, strlen(longquery), "key5", buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, 0);
 	ck_assert_str_eq(buf, "");
 
+	/* key without = and without value in the middle of a longer string */
 	memset(buf, 77, sizeof(buf));
 	ret =
 	    mg_get_var2(longquery, strlen(longquery), "key6", buf, sizeof(buf), 0);
-	ck_assert_int_eq(ret, 0);
+	ck_assert_int_eq(ret, -1);
 	ck_assert_str_eq(buf, "");
+	/* TODO: this is the same situation as with mg_get_value */
 }
 END_TEST
 
