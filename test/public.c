@@ -270,10 +270,14 @@ START_TEST(test_mg_get_var)
 	memset(buf, 77, sizeof(buf));
 	ret =
 	    mg_get_var2(longquery, strlen(longquery), "key5", buf, sizeof(buf), 0);
-	ck_assert_int_eq(ret, -1);
-	/* TODO: we can not distinguish between "key not found" and "key has no
-	 * value"
-	 *       -> this is a problem in the API */
+	ck_assert_int_eq(ret, 0);
+	ck_assert_str_eq(buf, "");
+
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2(longquery, strlen(longquery), "key6", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 0);
+	ck_assert_str_eq(buf, "");
 }
 END_TEST
 
