@@ -328,7 +328,7 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 	int i;
 	char chunk_data[32];
 
-	ASSERT(cbdata == (void *)7);
+	ck_assert(cbdata == (void *)7);
 	strcpy(chunk_data, "123456789A123456789B123456789C");
 
 	mg_printf(conn,
@@ -337,8 +337,8 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 	          "Content-Type: text/plain\r\n\r\n");
 
 	for (i = 0; i < 20; i++) {
-		mg_printf(conn, "%s\r\n", i);
-		mg_write(conn, chunk_data, i);
+		mg_printf(conn, "%u\r\n", i);
+		mg_write(conn, chunk_data, (unsigned)i);
 		mg_printf(conn, "\r\n");
 	}
 

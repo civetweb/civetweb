@@ -427,14 +427,14 @@ START_TEST(test_encode_decode)
 	ck_assert_str_eq(buf, nonalpha_url);
 
 	memset(buf, 77, sizeof(buf));
-	ret = mg_url_decode(alpha, strlen(alpha), buf, sizeof(buf), 0);
+	ret = mg_url_decode(alpha, (int)strlen(alpha), buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, strlen(buf));
 	ck_assert_int_eq(ret, strlen(alpha));
 	ck_assert_str_eq(buf, alpha);
 
 	memset(buf, 77, sizeof(buf));
-	ret =
-	    mg_url_decode(nonalpha_url, strlen(nonalpha_url), buf, sizeof(buf), 0);
+	ret = mg_url_decode(
+	    nonalpha_url, (int)strlen(nonalpha_url), buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, strlen(buf));
 	ck_assert_int_eq(ret, strlen(nonalpha));
 	ck_assert_str_eq(buf, nonalpha);
