@@ -185,6 +185,7 @@ START_TEST(test_mg_get_var)
 {
 	char buf[32];
 	int ret;
+	const char *shortquery = "key1=1&key2=2&key3=3";
 	const char *longquery = "key1=1&key2=2&key3&key4=4&key5=&key6&"
 	                        "key7=this+is+it&key8=8&key9&&key10=&&"
 	                        "key7=thas+is+it&key12=12";
@@ -199,9 +200,10 @@ START_TEST(test_mg_get_var)
 
 	/* too small result buffer */
 	ret = mg_get_var2("key=toooooooooolong", 19, "key", buf, 4, 0);
-	/* ck_assert_int_eq(ret, -3); 
-       --> TODO: mg_get_cookie returns -3, mg_get_var -2. This should be unified. */
-    ck_assert(ret < 0);
+	/* ck_assert_int_eq(ret, -3);
+	   --> TODO: mg_get_cookie returns -3, mg_get_var -2. This should be
+	   unified. */
+	ck_assert(ret < 0);
 
 	/* key not found in string */
 	ret = mg_get_var2("", 0, "notfound", buf, sizeof(buf), 0);
@@ -213,12 +215,12 @@ START_TEST(test_mg_get_var)
 
 	/* key not found in string */
 	ret = mg_get_var2(
-	    "key1=1; key2=2; key3=3", 22, "notfound", buf, sizeof(buf), 0);
+	    shortquery, strlen(shortquery), "notfound", buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, -1);
 
 	/* key not found in string */
-	ret = mg_get_var2("key1=1; key2=2; key3=3; notfound=here",
-	                  22,
+	ret = mg_get_var2("key1=1&key2=2&key3=3&notfound=here",
+	                  strlen(shortquery),
 	                  "notfound",
 	                  buf,
 	                  sizeof(buf),
@@ -226,26 +228,26 @@ START_TEST(test_mg_get_var)
 	ck_assert_int_eq(ret, -1);
 
 	/* key not found in string */
-	ret =
-	    mg_get_var2("key1=1; key2=2; key3=3", 22, "key1", buf, sizeof(buf), 1);
+	ret = mg_get_var2(
+	    shortquery, strlen(shortquery), "key1", buf, sizeof(buf), 1);
 	ck_assert_int_eq(ret, -1);
 
 	/* keys are found as first, middle and last key */
 	memset(buf, 77, sizeof(buf));
-	ret =
-	    mg_get_var2("key1=1; key2=2; key3=3", 22, "key1", buf, sizeof(buf), 0);
+	ret = mg_get_var2(
+	    shortquery, strlen(shortquery), "key1", buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, 1);
 	ck_assert_str_eq("1", buf);
 
 	memset(buf, 77, sizeof(buf));
-	ret =
-	    mg_get_var2("key1=1; key2=2; key3=3", 22, "key2", buf, sizeof(buf), 0);
+	ret = mg_get_var2(
+	    shortquery, strlen(shortquery), "key2", buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, 1);
 	ck_assert_str_eq("2", buf);
 
 	memset(buf, 77, sizeof(buf));
-	ret =
-	    mg_get_var2("key1=1; key2=2; key3=3", 22, "key3", buf, sizeof(buf), 0);
+	ret = mg_get_var2(
+	    shortquery, strlen(shortquery), "key3", buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, 1);
 	ck_assert_str_eq("3", buf);
 
