@@ -272,8 +272,7 @@ typedef long off_t;
 #define SHUT_RD (0)
 #define SHUT_WR (1)
 #define SHUT_BOTH (2)
-#define vsnprintf_impl(buf, buflen, fmt, ap)                                   \
-	(void) _vsnprintf(buf, buflen, fmt, ap), buf[buflen - 1] = 0
+#define vsnprintf_impl _vsnprintf
 #define access _access
 #define mg_sleep(x) (Sleep(x))
 
@@ -392,9 +391,7 @@ typedef unsigned short int in_port_t;
 #include <unistd.h>
 #include <grp.h>
 #include <dirent.h>
-#define vsnprintf_impl                                                         \
-	(void) vsnprintf /* vsnprintf can be used directly if not on               \
-	                  * Windows/Visual studio */
+#define vsnprintf_impl vsnprintf
 
 #if !defined(NO_SSL_DL) && !defined(NO_SSL)
 #include <dlfcn.h>
@@ -1363,7 +1360,7 @@ static void mg_vsnprintf(const struct mg_connection *conn,
                          const char *fmt,
                          va_list ap)
 {
-	int n;
+	int n, ok;
 
 	if (buflen == 0) {
 		return;
@@ -1376,21 +1373,19 @@ static void mg_vsnprintf(const struct mg_connection *conn,
  * indirectly by mg_snprintf */
 #endif
 
-	vsnprintf_impl(buf, buflen, fmt, ap);
+	n = (int)vsnprintf_impl(buf, buflen, fmt, ap);
+	ok = (n >= 0) && ((size_t)n < buflen);
 
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
 
-	if (n < 0) {
-		mg_cry(conn, "vsnprintf error");
-		n = 0;
-	} else if (n >= (int)buflen) {
+	if (!ok) {
 		mg_cry(conn,
 		       "truncating vsnprintf buffer: [%.*s]",
 		       n > 200 ? 200 : n,
 		       buf);
-		n = (int)buflen - 1;
+		n = (int)buflen - 1;        
 	}
 	buf[n] = '\0';
 }
@@ -3422,7 +3417,7 @@ static int alloc_vprintf2(char **buf, const char *fmt, va_list ap)
 	int len = -1;
 
 	*buf = NULL;
-	while (len == -1) {
+	while (len < 0) {
 		if (*buf) {
 			mg_free(*buf);
 		}
@@ -3431,7 +3426,7 @@ static int alloc_vprintf2(char **buf, const char *fmt, va_list ap)
 			break;
 		}
 		va_copy(ap_copy, ap);
-		len = vsnprintf(*buf, size, fmt, ap_copy);
+		len = vsnprintf_impl(*buf, size, fmt, ap_copy);
 		va_end(ap_copy);
 	}
 
@@ -3453,7 +3448,7 @@ static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
 	 * length.
 	 * On second pass, actually print the message. */
 	va_copy(ap_copy, ap);
-	len = vsnprintf(NULL, 0, fmt, ap_copy);
+	len = vsnprintf_impl(NULL, 0, fmt, ap_copy);
 	va_end(ap_copy);
 
 	if (len < 0) {
@@ -3468,7 +3463,7 @@ static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
 		len = -1; /* Allocation failed, mark failure */
 	} else {
 		va_copy(ap_copy, ap);
-		IGNORE_UNUSED_RESULT(vsnprintf(*buf, size, fmt, ap_copy));
+		IGNORE_UNUSED_RESULT(vsnprintf_impl(*buf, size, fmt, ap_copy));
 		va_end(ap_copy);
 	}
 
