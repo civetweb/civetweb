@@ -308,13 +308,15 @@ START_TEST(test_mg_strcasestr)
 END_TEST
 
 
-START_TEST(test_base64_encode_decode)
+START_TEST(test_encode_decode)
 {
 	char buf[64];
 	const char *alpha = "abcdefghijklmnopqrstuvwxyz";
 	const char *alpha_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
 	const char *nonalpha = " !\"#$%&'()*+,-./0123456789:;<=>?@";
 	const char *nonalpha_enc = "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
+	const char *nonalpha_url =
+	    "%20!%22%23%24%25%26'()*%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40";
 	int ret;
 	size_t len;
 
@@ -371,14 +373,33 @@ START_TEST(test_base64_encode_decode)
 	ck_assert_int_eq(ret, 3);
 #endif
 
+	memset(buf, 77, sizeof(buf));
+	ret = mg_url_encode(alpha, buf, sizeof(buf));
+	ck_assert_int_eq(ret, strlen(buf));
+	ck_assert_int_eq(ret, strlen(alpha));
+	ck_assert_str_eq(buf, alpha);
 
-	/* All variables are unused, if USE_LUA and USE_WEBSOCKET is not set */
-	(void)buf;
-	(void)alpha;
-	(void)alpha_enc;
-	(void)nonalpha;
-	(void)nonalpha_enc;
-	(void)ret;
+	memset(buf, 77, sizeof(buf));
+	ret = mg_url_encode(alpha, buf, sizeof(buf));
+	ck_assert_int_eq(ret, strlen(buf));
+	ck_assert_int_eq(ret, strlen(nonalpha_url));
+	ck_assert_str_eq(buf, nonalpha_url);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_url_decode(alpha, strlen(alpha), buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, strlen(buf));
+	ck_assert_int_eq(ret, strlen(alpha));
+	ck_assert_str_eq(buf, alpha);
+
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_url_decode(nonalpha_url, strlen(nonalpha_url), buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, strlen(buf));
+	ck_assert_int_eq(ret, strlen(nonalpha));
+	ck_assert_str_eq(buf, nonalpha);
+
+	/* len could be unused, if base64_decode is not tested because USE_LUA is
+	 * not defined */
 	(void)len;
 }
 END_TEST
@@ -408,7 +429,7 @@ Suite *make_private_suite(void)
 	tcase_add_test(internal_parse, test_alloc_vprintf);
 	suite_add_tcase(suite, internal_parse);
 
-	tcase_add_test(encode_decode, test_base64_encode_decode);
+	tcase_add_test(encode_decode, test_encode_decode);
 	suite_add_tcase(suite, encode_decode);
 
 	return suite;
