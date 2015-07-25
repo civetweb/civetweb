@@ -409,15 +409,19 @@ lsp_write(lua_State *L)
 	const char *str;
 	size_t size;
 	int i;
+	int rv = 1;
 
 	for (i = 1; i <= num_args; i++) {
 		if (lua_isstring(L, i)) {
 			str = lua_tolstring(L, i, &size);
-			mg_write(conn, str, size);
+			if (mg_write(conn, str, size) != (int)size) {
+				rv = 0;
+			}
 		}
 	}
+	lua_pushboolean(L, rv);
 
-	return 0;
+	return 1;
 }
 
 
