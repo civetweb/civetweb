@@ -1381,7 +1381,10 @@ static void mg_vsnprintf(const struct mg_connection *conn,
 #endif
 
 	if (!ok) {
-		mg_cry(conn,
+        if (conn) {
+            conn->must_close = 1;
+        }
+        mg_cry(conn,
 		       "truncating vsnprintf buffer: [%.*s]",
 		       n > 200 ? 200 : n,
 		       buf);
@@ -2029,8 +2032,14 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 						            error_handler);
 						break;
 					}
-					tstr = strchr(error_page_file_ext, '.');
-					len = (int)strlen(buf);
+
+                    /* String truncation in buf may only occur if error_handler
+                     * is too long. This string is from the config, not from a
+                     * client. */
+                    len = (int)strlen(buf);
+
+					tstr = strchr(error_page_file_ext, '.');					
+
 					while (tstr) {
 						for (i = 1; i < 32 && tstr[i] != 0 && tstr[i] != ',';
 						     i++)
@@ -2070,8 +2079,7 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 
 			if (fmt != NULL) {
 				va_start(ap, fmt);
-				mg_vsnprintf(
-				    conn, buf + len, sizeof(buf) - (size_t)len, fmt, ap);
+				mg_vsnprintf(conn, buf, sizeof(buf), fmt, ap);
 				va_end(ap);
 				mg_write(conn, buf, strlen(buf));
 				DEBUG_TRACE("Error %i - [%s]", status, buf);
@@ -2353,7 +2361,7 @@ static struct tm *gmtime(const time_t *ptime, struct tm *ptm)
 static size_t
 strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
 {
-	(void)snprintf(dst, dst_size, "implement strftime() for WinCE");
+	(void)mg_snprintf(NULL, dst, dst_size, "implement strftime() for WinCE");
 	return 0;
 }
 #endif
@@ -2699,6 +2707,9 @@ static pid_t spawn_process(struct mg_connection *conn,
 
 		/* Read the first line of the script into the buffer */
 		mg_snprintf(conn, cmdline, sizeof(cmdline), "%s%c%s", dir, '/', prog);
+        
+        /* TODO(high): kick client on buffer overflow */
+
 		if (mg_fopen(conn, cmdline, "r", &file)) {
 			p = (char *)file.membuf;
 			mg_fgets(buf, sizeof(buf), &file, &p);
@@ -2732,6 +2743,8 @@ static pid_t spawn_process(struct mg_connection *conn,
 		mg_snprintf(
 		    conn, cmdline, sizeof(cmdline), "\"%s\\%s\"", full_dir, prog);
 	}
+
+    /* TODO(high): kick client on buffer overflow */
 
 	DEBUG_TRACE("Running [%s]", cmdline);
 	if (CreateProcessA(NULL,
@@ -3791,6 +3804,8 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		 * If document_root is NULL, leave the file empty. */
 		mg_snprintf(conn, filename, filename_buf_len - 1, "%s%s", root, uri);
 
+        /* TODO(high): kick client on buffer overflow */
+
 		rewrite = conn->ctx->config[REWRITE];
 		while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
 			if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
@@ -3804,6 +3819,8 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				break;
 			}
 		}
+
+        /* TODO(high): kick client on buffer overflow */
 
 		/* Local file path and name, corresponding to requested URI
 		 * is now stored in "filename" variable. */
@@ -3849,6 +3866,9 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		    NULL) {
 			if (strstr(accept_encoding, "gzip") != NULL) {
 				mg_snprintf(conn, gz_path, sizeof(gz_path), "%s.gz", filename);
+
+                /* TODO(high): kick client on buffer overflow */
+
 				if (mg_stat(conn, gz_path, filep)) {
 					if (filep) {
 						filep->gzipped = 1;
@@ -4271,6 +4291,9 @@ open_auth_file(struct mg_connection *conn, const char *path, struct file *filep)
 			            path,
 			            '/',
 			            PASSWORDS_FILE_NAME);
+
+            /* TODO(high): kick client on buffer overflow */
+
 			if (!mg_fopen(conn, name, "r", filep)) {
 #ifdef DEBUG
 				mg_cry(conn, "fopen(%s): %s", name, strerror(ERRNO));
@@ -4291,6 +4314,9 @@ open_auth_file(struct mg_connection *conn, const char *path, struct file *filep)
 			            p,
 			            '/',
 			            PASSWORDS_FILE_NAME);
+
+                        /* TODO(high): kick client on buffer overflow */
+
 			if (!mg_fopen(conn, name, "r", filep)) {
 #ifdef DEBUG
 				mg_cry(conn, "fopen(%s): %s", name, strerror(ERRNO));
@@ -4583,6 +4609,9 @@ static int check_authorization(struct mg_connection *conn, const char *path)
 			            "%.*s",
 			            (int)filename_vec.len,
 			            filename_vec.ptr);
+
+                        /* TODO(high): kick client on buffer overflow */
+
 			if (!mg_fopen(conn, fname, "r", &file)) {
 				mg_cry(conn,
 				       "%s: cannot open %s: %s",
@@ -4920,6 +4949,9 @@ static void print_dir_entry(struct de *de)
 			            (double)de->file.size / 1073741824);
 		}
 	}
+
+    /* Note: mg_snprintf will not cause a buffer overflow above. */
+
 	tm = localtime(&de->file.last_modified);
 	if (tm != NULL) {
 		strftime(mod, sizeof(mod), "%d-%b-%Y %H:%M", tm);
@@ -5016,6 +5048,8 @@ static int scan_directory(struct mg_connection *conn,
 			mg_snprintf(
 			    conn, path, sizeof(path), "%s%c%s", dir, '/', dp->d_name);
 
+            /* TODO(high): kick client on buffer overflow */
+
 			/* If we don't memset stat structure to zero, mtime will have
 			 * garbage and strftime() will segfault later on in
 			 * print_dir_entry(). memset is required only if mg_stat()
@@ -5059,6 +5093,8 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 
 			mg_snprintf(
 			    conn, path, sizeof(path), "%s%c%s", dir, '/', dp->d_name);
+
+            /* TODO(high): kick client on buffer overflow */
 
 			/* If we don't memset stat structure to zero, mtime will have
 			 * garbage and strftime() will segfault later on in
@@ -5337,7 +5373,8 @@ static void handle_static_file_request(struct mg_connection *conn,
                                        const char *path,
                                        struct file *filep)
 {
-	char date[64], lm[64], etag[64], range[64];
+	char date[64], lm[64], etag[64];
+    char range[128]; /* large enough, so there will be no overflow */
 	const char *msg = "OK", *hdr;
 	time_t curtime = time(NULL);
 	int64_t cl, r1, r2;
@@ -5367,6 +5404,9 @@ static void handle_static_file_request(struct mg_connection *conn,
 	 * the mime type from it, to preserve the actual file's type */
 	if (filep->gzipped) {
 		mg_snprintf(conn, gz_path, sizeof(gz_path), "%s.gz", path);
+
+        /* TODO(high): kick client on buffer overflow */
+
 		path = gz_path;
 		encoding = "Content-Encoding: gzip\r\n";
 	}
@@ -5815,6 +5855,8 @@ static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
 	mg_vsnprintf(block->conn, added, (size_t)space, fmt, ap);
 	va_end(ap);
 
+    /* TODO(high): don't add partial environment variables */
+
 	/* Number of bytes added to the environment */
 	n = strlen(added) + 1;
 
@@ -6002,6 +6044,9 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	 * directory containing executable program, 'p' must point to the
 	 * executable program name relative to 'dir'. */
 	(void)mg_snprintf(conn, dir, sizeof(dir), "%s", prog);
+
+    /* TODO(high): kick client on buffer overflow */
+
 	if ((p = strrchr(dir, '/')) != NULL) {
 		*p++ = '\0';
 	} else {
@@ -6494,22 +6539,34 @@ static void do_ssi_include(struct mg_connection *conn,
 		                  conn->ctx->config[DOCUMENT_ROOT],
 		                  '/',
 		                  file_name);
+
+                          /* TODO(high): kick client on buffer overflow */
+
 	} else if (sscanf(tag, " abspath=\"%511[^\"]\"", file_name) == 1) {
 		/* File name is relative to the webserver working directory
 		 * or it is absolute system path */
 		file_name[511] = 0;
 		(void)mg_snprintf(conn, path, sizeof(path), "%s", file_name);
+
+        /* TODO(high): kick client on buffer overflow */
+
 	} else if (sscanf(tag, " file=\"%511[^\"]\"", file_name) == 1 ||
 	           sscanf(tag, " \"%511[^\"]\"", file_name) == 1) {
 		/* File name is relative to the currect document */
 		file_name[511] = 0;
 		(void)mg_snprintf(conn, path, sizeof(path), "%s", ssi);
+
+        /* TODO(high): kick client on buffer overflow */
+
 		if ((p = strrchr(path, '/')) != NULL) {
 			p[1] = '\0';
 		}
 		len = strlen(path);
 		(void)mg_snprintf(
 		    conn, path + len, sizeof(path) - len, "%s", file_name);
+
+            /* TODO(high): kick client on buffer overflow */
+
 	} else {
 		mg_cry(conn, "Bad SSI #include: [%s]", tag);
 		return;
@@ -6759,6 +6816,9 @@ static void print_dav_dir_entry(struct de *de, void *data)
 	            "%s%s",
 	            conn->request_info.uri,
 	            de->file_name);
+
+                /* TODO(high): kick client on buffer overflow */
+
 	mg_url_encode(href, href_encoded, PATH_MAX - 1);
 	print_props(conn, href_encoded, &de->file);
 }
@@ -7075,6 +7135,9 @@ static void send_websocket_handshake(struct mg_connection *conn)
 	            "%s%s",
 	            mg_get_header(conn, "Sec-WebSocket-Key"),
 	            magic);
+
+                /* TODO(high): kick client on buffer overflow */
+
 	SHA1Init(&sha_ctx);
 	SHA1Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
 	SHA1Final((unsigned char *)sha, &sha_ctx);
@@ -7594,6 +7657,9 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 		/* There data is written to a temporary file first. */
 		/* Different users should use a different destination_dir. */
 		mg_snprintf(conn, path, sizeof(path) - 1, "%s/%s", destination_dir, s);
+
+        /* TODO(high): kick client on buffer overflow */
+
 		strcpy(tmp_path, path);
 		strcat(tmp_path, "~");
 
@@ -9375,7 +9441,7 @@ int mg_get_response(struct mg_connection *conn,
 		int err, ret;
 		struct mg_context *octx = conn->ctx;
 		struct mg_context rctx = *(conn->ctx);
-		char txt[32];
+		char txt[32]; /* will not overflow */
 
 		if (timeout >= 0) {
 			mg_snprintf(conn, txt, sizeof(txt), "%i", timeout);
