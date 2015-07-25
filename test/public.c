@@ -122,7 +122,7 @@ START_TEST(test_mg_get_cookie)
 {
 	char buf[32];
 	int ret;
-	const char *longcookie = "key1=1; key2=2; key3; key4=4; key5; key6; "
+	const char *longcookie = "key1=1; key2=2; key3; key4=4; key5=; key6; "
 	                         "key7=this+is+it; key8=8; key9";
 
 	/* invalid result buffer */
@@ -170,13 +170,17 @@ START_TEST(test_mg_get_cookie)
 	ck_assert_int_eq(ret, 10);
 	ck_assert_str_eq("this+is+it", buf);
 
-	/* key without value in the middle of a longer string */
+    /* key with = but without value in the middle of a longer string */
 	memset(buf, 77, sizeof(buf));
 	ret = mg_get_cookie(longcookie, "key5", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 0);
+    ck_assert_str_eq("", buf);
+
+	/* key without = and without value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie(longcookie, "key6", buf, sizeof(buf));
 	ck_assert_int_eq(ret, -1);
-	/* TODO: we can not distinguish between "key not found" and "key has no
-	 * value"
-	 *       -> this is a problem in the API */
+	/* TODO: mg_get_cookie and mg_get_var(2) should have the same behavior */
 }
 END_TEST
 
@@ -462,7 +466,7 @@ START_TEST(test_request_handlers)
 	const char *HTTP_PORT = "8087";
 	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
 
-	memset(OPTIONS, 0, sizeof(OPTIONS));
+	memset((void*)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[0] = "listening_ports";
 	OPTIONS[1] = HTTP_PORT;
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
@@ -514,7 +518,7 @@ Suite *make_public_suite(void)
 	TCase *const get_builtin_mime_type = tcase_create("MIME types");
 	TCase *const tstrncasecmp = tcase_create("strcasecmp");
 	TCase *const urlencodingdecoding = tcase_create("URL encoding decoding");
-	TCase *const cookies = tcase_create("Cookies");
+	TCase *const cookies = tcase_create("Cookies and variables");
 	TCase *const md5 = tcase_create("MD5");
 	TCase *const startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const startstophttps = tcase_create("Start Stop HTTPS Server");
