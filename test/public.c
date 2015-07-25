@@ -256,7 +256,7 @@ START_TEST(test_mg_get_var)
 	ret =
 	    mg_get_var2(longquery, strlen(longquery), "key7", buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, 10);
-	ck_assert_str_eq("this+is+it", buf);
+	ck_assert_str_eq("this is it", buf);
 
 	/* longer value in the middle of a longer string - seccond occurance of key
 	 */
@@ -264,7 +264,7 @@ START_TEST(test_mg_get_var)
 	ret =
 	    mg_get_var2(longquery, strlen(longquery), "key7", buf, sizeof(buf), 1);
 	ck_assert_int_eq(ret, 10);
-	ck_assert_str_eq("that+is+it", buf);
+	ck_assert_str_eq("that is it", buf);
 
 	/* key without value in the middle of a longer string */
 	memset(buf, 77, sizeof(buf));
