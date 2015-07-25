@@ -121,60 +121,62 @@ END_TEST
 START_TEST(test_mg_get_cookie)
 {
 	char buf[32];
-    int ret;
-    const char *longcookie = "key1=1; key2=2; key3; key4=4; key5; key6; key7=this+is+it; key8=8; key9";
+	int ret;
+	const char *longcookie = "key1=1; key2=2; key3; key4=4; key5; key6; "
+	                         "key7=this+is+it; key8=8; key9";
 
-    /* invalid result buffer */
-    ret = mg_get_cookie("", "notfound", NULL, 999);
+	/* invalid result buffer */
+	ret = mg_get_cookie("", "notfound", NULL, 999);
 	ck_assert_int_eq(ret, -2);
 
-    /* zero size result buffer */
-    ret = mg_get_cookie("", "notfound", buf, 0);
+	/* zero size result buffer */
+	ret = mg_get_cookie("", "notfound", buf, 0);
 	ck_assert_int_eq(ret, -2);
 
-    /* too small result buffer */
-    ret = mg_get_cookie("key=toooooooooolong", "key", buf, 4);
+	/* too small result buffer */
+	ret = mg_get_cookie("key=toooooooooolong", "key", buf, 4);
 	ck_assert_int_eq(ret, -3);
 
-    /* key not found in string */
-    ret = mg_get_cookie("", "notfound", buf, sizeof(buf));
+	/* key not found in string */
+	ret = mg_get_cookie("", "notfound", buf, sizeof(buf));
 	ck_assert_int_eq(ret, -1);
 
-    ret = mg_get_cookie(longcookie, "notfound", buf, sizeof(buf));
+	ret = mg_get_cookie(longcookie, "notfound", buf, sizeof(buf));
 	ck_assert_int_eq(ret, -1);
 
-    /* key not found in string */
-    ret = mg_get_cookie("key1=1; key2=2; key3=3", "notfound", buf, sizeof(buf));
+	/* key not found in string */
+	ret = mg_get_cookie("key1=1; key2=2; key3=3", "notfound", buf, sizeof(buf));
 	ck_assert_int_eq(ret, -1);
 
-    /* keys are found as first, middle and last key */
-    memset(buf, 77, sizeof(buf));
-    ret = mg_get_cookie("key1=1; key2=2; key3=3", "key1", buf, sizeof(buf));
-    ck_assert_int_eq(ret, 1);
-    ck_assert_str_eq("1", buf);
+	/* keys are found as first, middle and last key */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie("key1=1; key2=2; key3=3", "key1", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("1", buf);
 
-    memset(buf, 77, sizeof(buf));
-    ret = mg_get_cookie("key1=1; key2=2; key3=3", "key2", buf, sizeof(buf));
-    ck_assert_int_eq(ret, 1);
-    ck_assert_str_eq("2", buf);
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie("key1=1; key2=2; key3=3", "key2", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("2", buf);
 
-    memset(buf, 77, sizeof(buf));
-    ret = mg_get_cookie("key1=1; key2=2; key3=3", "key3", buf, sizeof(buf));
-    ck_assert_int_eq(ret, 1);
-    ck_assert_str_eq("3", buf);
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie("key1=1; key2=2; key3=3", "key3", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("3", buf);
 
-    /* longer value in the middle of a longer string */
-    memset(buf, 77, sizeof(buf));
-    ret = mg_get_cookie(longcookie, "key7", buf, sizeof(buf));
-    ck_assert_int_eq(ret, 10);
-    ck_assert_str_eq("this+is+it", buf);
+	/* longer value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie(longcookie, "key7", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 10);
+	ck_assert_str_eq("this+is+it", buf);
 
-    /* key without value in the middle of a longer string */
-    memset(buf, 77, sizeof(buf));
-    ret = mg_get_cookie(longcookie, "key5", buf, sizeof(buf));
-    ck_assert_int_eq(ret, -1);
-    /* TODO: we can not distinguish between "key not found" and "key has no value"
-     *       -> this is a problem in the API */
+	/* key without value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie(longcookie, "key5", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+	/* TODO: we can not distinguish between "key not found" and "key has no
+	 * value"
+	 *       -> this is a problem in the API */
 }
 END_TEST
 
@@ -183,7 +185,11 @@ START_TEST(test_mg_md5)
 {
 	char buf[33];
 	char *ret;
-    const char * long_str = "_123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J123456789K123456789L123456789M123456789N123456789O123456789P123456789Q123456789R123456789S123456789T123456789U123456789V123456789W123456789X123456789Y123456789Z";
+	const char *long_str =
+	    "_123456789A123456789B123456789C123456789D123456789E123456789F123456789"
+	    "G123456789H123456789I123456789J123456789K123456789L123456789M123456789"
+	    "N123456789O123456789P123456789Q123456789R123456789S123456789T123456789"
+	    "U123456789V123456789W123456789X123456789Y123456789Z";
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_md5(buf, NULL);
@@ -222,11 +228,10 @@ START_TEST(test_mg_md5)
 	ck_assert_ptr_eq(ret, buf);
 
 	memset(buf, 77, sizeof(buf));
-	ret = mg_md5(buf, long_str+1, NULL);
+	ret = mg_md5(buf, long_str + 1, NULL);
 	ck_assert_str_eq(buf, "cf62d3264334154f5779d3694cc5093f");
 	ck_assert_str_eq(ret, "cf62d3264334154f5779d3694cc5093f");
 	ck_assert_ptr_eq(ret, buf);
-
 }
 END_TEST
 
@@ -291,10 +296,11 @@ START_TEST(test_mg_start_stop_http_server)
 
 	ctx = mg_start(NULL, NULL, OPTIONS);
 	ck_assert(ctx != NULL);
-	mg_Sleep(2);
+	mg_Sleep(1);
 	mg_stop(ctx);
 }
 END_TEST
+
 
 START_TEST(test_mg_start_stop_https_server)
 {
@@ -311,7 +317,79 @@ START_TEST(test_mg_start_stop_https_server)
 
 	ctx = mg_start(NULL, NULL, OPTIONS);
 	ck_assert(ctx != NULL);
-	mg_Sleep(2);
+	mg_Sleep(1);
+	mg_stop(ctx);
+}
+END_TEST
+
+
+static int request_test_handler(struct mg_connection *conn, void *cbdata)
+{
+	int i;
+	char chunk_data[32];
+
+	ASSERT(cbdata == (void *)7);
+	strcpy(chunk_data, "123456789A123456789B123456789C");
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Transfer-Encoding: chunked\r\n"
+	          "Content-Type: text/plain\r\n\r\n");
+
+	for (i = 0; i < 20; i++) {
+		mg_printf(conn, "%s\r\n", i);
+		mg_write(conn, chunk_data, i);
+		mg_printf(conn, "\r\n");
+	}
+
+	mg_printf(conn, "0\r\n\r\n");
+
+	return 1;
+}
+
+
+START_TEST(test_request_handlers)
+{
+	char ebuf[100];
+	struct mg_context *ctx;
+	struct mg_connection *conn;
+	char uri[64];
+	int i;
+	const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
+	const char *HTTP_PORT = "8087";
+	const char *OPTIONS[] = {
+	    "document_root", NULL, "listening_ports", HTTP_PORT, NULL};
+
+	ctx = mg_start(NULL, NULL, OPTIONS);
+	ck_assert(ctx != NULL);
+
+	for (i = 0; i < 1000; i++) {
+		sprintf(uri, "/U%u", i);
+		mg_set_request_handler(ctx, uri, request_test_handler, NULL);
+	}
+	for (i = 500; i < 800; i++) {
+		sprintf(uri, "/U%u", i);
+		mg_set_request_handler(ctx, uri, NULL, (void *)1);
+	}
+	for (i = 600; i >= 0; i--) {
+		sprintf(uri, "/U%u", i);
+		mg_set_request_handler(ctx, uri, NULL, (void *)2);
+	}
+	for (i = 750; i <= 1000; i++) {
+		sprintf(uri, "/U%u", i);
+		mg_set_request_handler(ctx, uri, NULL, (void *)3);
+	}
+	for (i = 5; i < 9; i++) {
+		sprintf(uri, "/U%u", i);
+		mg_set_request_handler(ctx, uri, request_test_handler, (void *)i);
+	}
+
+	conn = mg_download(
+	    "localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
+	ck_assert(conn != NULL);
+	mg_Sleep(1);
+	mg_close_connection(conn);
+
 	mg_stop(ctx);
 }
 END_TEST
@@ -355,6 +433,7 @@ Suite *make_public_suite(void)
 	suite_add_tcase(suite, md5);
 
 	tcase_add_test(startstophttp, test_mg_start_stop_http_server);
+	tcase_add_test(startstophttp, test_request_handlers);
 	suite_add_tcase(suite, startstophttp);
 
 	tcase_add_test(startstophttps, test_mg_start_stop_https_server);
@@ -362,3 +441,5 @@ Suite *make_public_suite(void)
 
 	return suite;
 }
+
+/* TODO: mg_get_var */
