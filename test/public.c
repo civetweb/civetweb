@@ -357,8 +357,7 @@ START_TEST(test_request_handlers)
 	int i;
 	const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
 	const char *HTTP_PORT = "8087";
-	const char *OPTIONS[] = {
-	    "document_root", NULL, "listening_ports", HTTP_PORT, NULL};
+	const char *OPTIONS[] = {"listening_ports", HTTP_PORT, NULL};
 
 	ctx = mg_start(NULL, NULL, OPTIONS);
 	ck_assert(ctx != NULL);
@@ -381,7 +380,8 @@ START_TEST(test_request_handlers)
 	}
 	for (i = 5; i < 9; i++) {
 		sprintf(uri, "/U%u", i);
-		mg_set_request_handler(ctx, uri, request_test_handler, (void *)i);
+		mg_set_request_handler(
+		    ctx, uri, request_test_handler, (void *)(ptrdiff_t)i);
 	}
 
 	conn = mg_download(

@@ -351,7 +351,7 @@ END_TEST
 
 START_TEST(test_encode_decode)
 {
-	char buf[64];
+	char buf[128];
 	const char *alpha = "abcdefghijklmnopqrstuvwxyz";
 	const char *alpha_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
 	const char *nonalpha = " !\"#$%&'()*+,-./0123456789:;<=>?@";
@@ -416,27 +416,27 @@ START_TEST(test_encode_decode)
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_url_encode(alpha, buf, sizeof(buf));
-	ck_assert_int_eq(ret, strlen(buf));
-	ck_assert_int_eq(ret, strlen(alpha));
+	ck_assert_int_eq(ret, (int)strlen(buf));
+	ck_assert_int_eq(ret, (int)strlen(alpha));
 	ck_assert_str_eq(buf, alpha);
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_url_encode(alpha, buf, sizeof(buf));
-	ck_assert_int_eq(ret, strlen(buf));
-	ck_assert_int_eq(ret, strlen(nonalpha_url));
+	ck_assert_int_eq(ret, (int)strlen(buf));
+	ck_assert_int_eq(ret, (int)strlen(nonalpha_url));
 	ck_assert_str_eq(buf, nonalpha_url);
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_url_decode(alpha, (int)strlen(alpha), buf, sizeof(buf), 0);
-	ck_assert_int_eq(ret, strlen(buf));
-	ck_assert_int_eq(ret, strlen(alpha));
+	ck_assert_int_eq(ret, (int)strlen(buf));
+	ck_assert_int_eq(ret, (int)strlen(alpha));
 	ck_assert_str_eq(buf, alpha);
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_url_decode(
 	    nonalpha_url, (int)strlen(nonalpha_url), buf, sizeof(buf), 0);
-	ck_assert_int_eq(ret, strlen(buf));
-	ck_assert_int_eq(ret, strlen(nonalpha));
+	ck_assert_int_eq(ret, (int)strlen(buf));
+	ck_assert_int_eq(ret, (int)strlen(nonalpha));
 	ck_assert_str_eq(buf, nonalpha);
 
 	/* len could be unused, if base64_decode is not tested because USE_LUA is
