@@ -421,7 +421,7 @@ START_TEST(test_encode_decode)
 	ck_assert_str_eq(buf, alpha);
 
 	memset(buf, 77, sizeof(buf));
-	ret = mg_url_encode(alpha, buf, sizeof(buf));
+	ret = mg_url_encode(nonalpha, buf, sizeof(buf));
 	ck_assert_int_eq(ret, (int)strlen(buf));
 	ck_assert_int_eq(ret, (int)strlen(nonalpha_url));
 	ck_assert_str_eq(buf, nonalpha_url);
