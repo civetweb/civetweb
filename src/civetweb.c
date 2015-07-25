@@ -5613,6 +5613,8 @@ check_authorization(struct mg_connection *conn, const char *path)
 	if (is_file_opened(&file)) {
 		authorized = authorize(conn, &file);
 		mg_fclose(&file);
+	} else if (conn->ctx->config[GLOBAL_PASSWORDS_FILE] != NULL) {
+		authorized = 0;
 	}
 
 	return authorized;
