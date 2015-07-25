@@ -23,6 +23,6 @@
 
 #include "civetweb_check.h"
 
-Suite * make_private_suite (void);
+Suite *make_private_suite(void);
 
 #endif /* TEST_PRIVATE_H_ */

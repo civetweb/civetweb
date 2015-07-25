@@ -23,6 +23,6 @@
 
 #include "civetweb_check.h"
 
-Suite * make_public_suite (void);
+Suite *make_public_suite(void);
 
 #endif /* TEST_PUBLIC_H_ */

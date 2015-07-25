@@ -170,11 +170,11 @@ START_TEST(test_mg_get_cookie)
 	ck_assert_int_eq(ret, 10);
 	ck_assert_str_eq("this+is+it", buf);
 
-    /* key with = but without value in the middle of a longer string */
+	/* key with = but without value in the middle of a longer string */
 	memset(buf, 77, sizeof(buf));
 	ret = mg_get_cookie(longcookie, "key5", buf, sizeof(buf));
 	ck_assert_int_eq(ret, 0);
-    ck_assert_str_eq("", buf);
+	ck_assert_str_eq("", buf);
 
 	/* key without = and without value in the middle of a longer string */
 	memset(buf, 77, sizeof(buf));
@@ -466,7 +466,7 @@ START_TEST(test_request_handlers)
 	const char *HTTP_PORT = "8087";
 	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
 
-	memset((void*)OPTIONS, 0, sizeof(OPTIONS));
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[0] = "listening_ports";
 	OPTIONS[1] = HTTP_PORT;
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
