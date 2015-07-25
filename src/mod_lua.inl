@@ -324,8 +324,12 @@ static int lsp(struct mg_connection *conn,
 				if ((j + 1) < len && p[j] == '?' && p[j + 1] == '>') {
 					mg_write(conn, p + pos, i - pos);
 
-					snprintf(
-					    chunkname, sizeof(chunkname), "@%s+%i", path, lines);
+					mg_snprintf(conn,
+					            chunkname,
+					            sizeof(chunkname),
+					            "@%s+%i",
+					            path,
+					            lines);
 					lua_pushlightuserdata(L, conn);
 					lua_pushcclosure(L, lsp_error, 1);
 
