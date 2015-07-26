@@ -325,6 +325,7 @@ static int lsp(struct mg_connection *conn,
 					mg_write(conn, p + pos, i - pos);
 
 					mg_snprintf(conn,
+					            NULL, /* name only used for debugging */
 					            chunkname,
 					            sizeof(chunkname),
 					            "@%s+%i",
