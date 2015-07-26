@@ -1381,14 +1381,14 @@ static void mg_vsnprintf(const struct mg_connection *conn,
 #endif
 
 	if (!ok) {
-        if (conn) {
-            conn->must_close = 1;
-        }
-        mg_cry(conn,
+		if (conn) {
+			conn->must_close = 1;
+		}
+		mg_cry(conn,
 		       "truncating vsnprintf buffer: [%.*s]",
 		       n > 200 ? 200 : n,
 		       buf);
-		n = (int)buflen - 1;        
+		n = (int)buflen - 1;
 	}
 	buf[n] = '\0';
 }
@@ -2033,12 +2033,12 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 						break;
 					}
 
-                    /* String truncation in buf may only occur if error_handler
-                     * is too long. This string is from the config, not from a
-                     * client. */
-                    len = (int)strlen(buf);
+					/* String truncation in buf may only occur if error_handler
+					 * is too long. This string is from the config, not from a
+					 * client. */
+					len = (int)strlen(buf);
 
-					tstr = strchr(error_page_file_ext, '.');					
+					tstr = strchr(error_page_file_ext, '.');
 
 					while (tstr) {
 						for (i = 1; i < 32 && tstr[i] != 0 && tstr[i] != ',';
@@ -2707,8 +2707,8 @@ static pid_t spawn_process(struct mg_connection *conn,
 
 		/* Read the first line of the script into the buffer */
 		mg_snprintf(conn, cmdline, sizeof(cmdline), "%s%c%s", dir, '/', prog);
-        
-        /* TODO(high): kick client on buffer overflow */
+
+		/* TODO(high): kick client on buffer overflow */
 
 		if (mg_fopen(conn, cmdline, "r", &file)) {
 			p = (char *)file.membuf;
@@ -2744,7 +2744,7 @@ static pid_t spawn_process(struct mg_connection *conn,
 		    conn, cmdline, sizeof(cmdline), "\"%s\\%s\"", full_dir, prog);
 	}
 
-    /* TODO(high): kick client on buffer overflow */
+	/* TODO(high): kick client on buffer overflow */
 
 	DEBUG_TRACE("Running [%s]", cmdline);
 	if (CreateProcessA(NULL,
@@ -3745,7 +3745,7 @@ static int is_put_or_delete_method(const struct mg_connection *conn)
 	if (conn) {
 		const char *s = conn->request_info.request_method;
 		return s != NULL && (!strcmp(s, "PUT") || !strcmp(s, "DELETE") ||
-		                     !strcmp(s, "MKCOL"));
+		                     !strcmp(s, "MKCOL") || !strcmp(s, "PATCH"));
 	}
 	return 0;
 }
@@ -3804,7 +3804,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		 * If document_root is NULL, leave the file empty. */
 		mg_snprintf(conn, filename, filename_buf_len - 1, "%s%s", root, uri);
 
-        /* TODO(high): kick client on buffer overflow */
+		/* TODO(high): kick client on buffer overflow */
 
 		rewrite = conn->ctx->config[REWRITE];
 		while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
@@ -3820,7 +3820,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 			}
 		}
 
-        /* TODO(high): kick client on buffer overflow */
+		/* TODO(high): kick client on buffer overflow */
 
 		/* Local file path and name, corresponding to requested URI
 		 * is now stored in "filename" variable. */
@@ -3867,7 +3867,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 			if (strstr(accept_encoding, "gzip") != NULL) {
 				mg_snprintf(conn, gz_path, sizeof(gz_path), "%s.gz", filename);
 
-                /* TODO(high): kick client on buffer overflow */
+				/* TODO(high): kick client on buffer overflow */
 
 				if (mg_stat(conn, gz_path, filep)) {
 					if (filep) {
@@ -4292,7 +4292,7 @@ open_auth_file(struct mg_connection *conn, const char *path, struct file *filep)
 			            '/',
 			            PASSWORDS_FILE_NAME);
 
-            /* TODO(high): kick client on buffer overflow */
+			/* TODO(high): kick client on buffer overflow */
 
 			if (!mg_fopen(conn, name, "r", filep)) {
 #ifdef DEBUG
@@ -4315,7 +4315,7 @@ open_auth_file(struct mg_connection *conn, const char *path, struct file *filep)
 			            '/',
 			            PASSWORDS_FILE_NAME);
 
-                        /* TODO(high): kick client on buffer overflow */
+			/* TODO(high): kick client on buffer overflow */
 
 			if (!mg_fopen(conn, name, "r", filep)) {
 #ifdef DEBUG
@@ -4610,7 +4610,7 @@ static int check_authorization(struct mg_connection *conn, const char *path)
 			            (int)filename_vec.len,
 			            filename_vec.ptr);
 
-                        /* TODO(high): kick client on buffer overflow */
+			/* TODO(high): kick client on buffer overflow */
 
 			if (!mg_fopen(conn, fname, "r", &file)) {
 				mg_cry(conn,
@@ -4950,7 +4950,7 @@ static void print_dir_entry(struct de *de)
 		}
 	}
 
-    /* Note: mg_snprintf will not cause a buffer overflow above. */
+	/* Note: mg_snprintf will not cause a buffer overflow above. */
 
 	tm = localtime(&de->file.last_modified);
 	if (tm != NULL) {
@@ -5048,7 +5048,7 @@ static int scan_directory(struct mg_connection *conn,
 			mg_snprintf(
 			    conn, path, sizeof(path), "%s%c%s", dir, '/', dp->d_name);
 
-            /* TODO(high): kick client on buffer overflow */
+			/* TODO(high): kick client on buffer overflow */
 
 			/* If we don't memset stat structure to zero, mtime will have
 			 * garbage and strftime() will segfault later on in
@@ -5094,7 +5094,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 			mg_snprintf(
 			    conn, path, sizeof(path), "%s%c%s", dir, '/', dp->d_name);
 
-            /* TODO(high): kick client on buffer overflow */
+			/* TODO(high): kick client on buffer overflow */
 
 			/* If we don't memset stat structure to zero, mtime will have
 			 * garbage and strftime() will segfault later on in
@@ -5374,7 +5374,7 @@ static void handle_static_file_request(struct mg_connection *conn,
                                        struct file *filep)
 {
 	char date[64], lm[64], etag[64];
-    char range[128]; /* large enough, so there will be no overflow */
+	char range[128]; /* large enough, so there will be no overflow */
 	const char *msg = "OK", *hdr;
 	time_t curtime = time(NULL);
 	int64_t cl, r1, r2;
@@ -5405,7 +5405,7 @@ static void handle_static_file_request(struct mg_connection *conn,
 	if (filep->gzipped) {
 		mg_snprintf(conn, gz_path, sizeof(gz_path), "%s.gz", path);
 
-        /* TODO(high): kick client on buffer overflow */
+		/* TODO(high): kick client on buffer overflow */
 
 		path = gz_path;
 		encoding = "Content-Encoding: gzip\r\n";
@@ -5553,9 +5553,10 @@ static int is_valid_http_method(const char *method)
 	       !strcmp(method, "HEAD") || !strcmp(method, "CONNECT") ||
 	       !strcmp(method, "PUT") || !strcmp(method, "DELETE") ||
 	       !strcmp(method, "OPTIONS") || !strcmp(method, "PROPFIND") ||
-	       !strcmp(method, "MKCOL");
+	       !strcmp(method, "MKCOL") || !strcmp(method, "PATCH");
 
 	/* TRACE method is not supported for security reasons */
+	/* PATCH method (RFC 5789) only allowed for CGI/Lua/LSP and callbacks. */
 }
 
 /* Parse HTTP request, fill in mg_request_info structure.
@@ -5855,7 +5856,7 @@ static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
 	mg_vsnprintf(block->conn, added, (size_t)space, fmt, ap);
 	va_end(ap);
 
-    /* TODO(high): don't add partial environment variables */
+	/* TODO(high): don't add partial environment variables */
 
 	/* Number of bytes added to the environment */
 	n = strlen(added) + 1;
@@ -6045,7 +6046,7 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	 * executable program name relative to 'dir'. */
 	(void)mg_snprintf(conn, dir, sizeof(dir), "%s", prog);
 
-    /* TODO(high): kick client on buffer overflow */
+	/* TODO(high): kick client on buffer overflow */
 
 	if ((p = strrchr(dir, '/')) != NULL) {
 		*p++ = '\0';
@@ -6540,7 +6541,7 @@ static void do_ssi_include(struct mg_connection *conn,
 		                  '/',
 		                  file_name);
 
-                          /* TODO(high): kick client on buffer overflow */
+		/* TODO(high): kick client on buffer overflow */
 
 	} else if (sscanf(tag, " abspath=\"%511[^\"]\"", file_name) == 1) {
 		/* File name is relative to the webserver working directory
@@ -6548,7 +6549,7 @@ static void do_ssi_include(struct mg_connection *conn,
 		file_name[511] = 0;
 		(void)mg_snprintf(conn, path, sizeof(path), "%s", file_name);
 
-        /* TODO(high): kick client on buffer overflow */
+		/* TODO(high): kick client on buffer overflow */
 
 	} else if (sscanf(tag, " file=\"%511[^\"]\"", file_name) == 1 ||
 	           sscanf(tag, " \"%511[^\"]\"", file_name) == 1) {
@@ -6556,7 +6557,7 @@ static void do_ssi_include(struct mg_connection *conn,
 		file_name[511] = 0;
 		(void)mg_snprintf(conn, path, sizeof(path), "%s", ssi);
 
-        /* TODO(high): kick client on buffer overflow */
+		/* TODO(high): kick client on buffer overflow */
 
 		if ((p = strrchr(path, '/')) != NULL) {
 			p[1] = '\0';
@@ -6565,7 +6566,7 @@ static void do_ssi_include(struct mg_connection *conn,
 		(void)mg_snprintf(
 		    conn, path + len, sizeof(path) - len, "%s", file_name);
 
-            /* TODO(high): kick client on buffer overflow */
+		/* TODO(high): kick client on buffer overflow */
 
 	} else {
 		mg_cry(conn, "Bad SSI #include: [%s]", tag);
@@ -6817,7 +6818,7 @@ static void print_dav_dir_entry(struct de *de, void *data)
 	            conn->request_info.uri,
 	            de->file_name);
 
-                /* TODO(high): kick client on buffer overflow */
+	/* TODO(high): kick client on buffer overflow */
 
 	mg_url_encode(href, href_encoded, PATH_MAX - 1);
 	print_props(conn, href_encoded, &de->file);
@@ -7136,7 +7137,7 @@ static void send_websocket_handshake(struct mg_connection *conn)
 	            mg_get_header(conn, "Sec-WebSocket-Key"),
 	            magic);
 
-                /* TODO(high): kick client on buffer overflow */
+	/* TODO(high): kick client on buffer overflow */
 
 	SHA1Init(&sha_ctx);
 	SHA1Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
@@ -7658,7 +7659,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 		/* Different users should use a different destination_dir. */
 		mg_snprintf(conn, path, sizeof(path) - 1, "%s/%s", destination_dir, s);
 
-        /* TODO(high): kick client on buffer overflow */
+		/* TODO(high): kick client on buffer overflow */
 
 		strcpy(tmp_path, path);
 		strcat(tmp_path, "~");
@@ -8304,7 +8305,9 @@ static void handle_request(struct mg_connection *conn)
 				mkcol(conn, path);
 				return;
 			}
-			/* 11.4. should never reach this point */
+			/* 11.4. PATCH method
+			 * This method is not supported for static resources,
+			 * only for scripts (Lua, CGI) and callbacks. */
 			send_http_error(conn,
 			                405,
 			                "%s method not allowed",
