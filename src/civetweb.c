@@ -1063,24 +1063,28 @@ struct mg_context {
 struct mg_connection {
 	struct mg_request_info request_info;
 	struct mg_context *ctx;
-	SSL *ssl;                    /* SSL descriptor */
-	SSL_CTX *client_ssl_ctx;     /* SSL context for client connections */
-	struct socket client;        /* Connected client */
-	time_t conn_birth_time;      /* Time (wall clock) when connection was
-	                              * established */
-	struct timespec req_time;    /* Time (since system start) when the request
-	                              * was received */
-	int64_t num_bytes_sent;      /* Total bytes sent to client */
-	int64_t content_len;         /* Content-Length header value */
-	int64_t consumed_content;    /* How many bytes of content have been read */
-	int is_chunked;              /* Transfer-Encoding is chunked: 0=no, 1=yes:
-	                              * data available, 2: all data read */
-	size_t chunk_remainder;      /* Unread data from the last chunk */
-	char *buf;                   /* Buffer for received data */
-	char *path_info;             /* PATH_INFO part of the URL */
-	int must_close;              /* 1 if connection must be closed */
-	int in_error_handler;        /* 1 if in handler for user defined error
-	                              * pages */
+	SSL *ssl;                 /* SSL descriptor */
+	SSL_CTX *client_ssl_ctx;  /* SSL context for client connections */
+	struct socket client;     /* Connected client */
+	time_t conn_birth_time;   /* Time (wall clock) when connection was
+	                           * established */
+	struct timespec req_time; /* Time (since system start) when the request
+	                           * was received */
+	int64_t num_bytes_sent;   /* Total bytes sent to client */
+	int64_t content_len;      /* Content-Length header value */
+	int64_t consumed_content; /* How many bytes of content have been read */
+	int is_chunked;           /* Transfer-Encoding is chunked: 0=no, 1=yes:
+	                           * data available, 2: all data read */
+	size_t chunk_remainder;   /* Unread data from the last chunk */
+	char *buf;                /* Buffer for received data */
+	char *path_info;          /* PATH_INFO part of the URL */
+
+	int must_close;           /* 1 if connection must be closed */
+	int in_error_handler;     /* 1 if in handler for user defined error
+	                           * pages */
+	int internal_error;       /* 1 if an error occured while processing the
+	                           * request */
+
 	int buf_size;                /* Buffer size */
 	int request_len;             /* Size of the request + headers in a buffer */
 	int data_len;                /* Total size of data in a buffer */
@@ -1092,7 +1096,7 @@ struct mg_connection {
 	pthread_mutex_t mutex;       /* Used by mg_(un)lock_connection to ensure
 	                              * atomic transmissions for websockets */
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
-	void *lua_websocket_state; /* Lua_State for a websocket connection */
+	void *lua_websocket_state;   /* Lua_State for a websocket connection */
 #endif
 };
 
@@ -1382,7 +1386,7 @@ static void mg_vsnprintf(const struct mg_connection *conn,
 
 	if (!ok) {
 		if (conn) {
-			conn->must_close = 1;
+			conn->internal_error = 1;
 		}
 		mg_cry(conn,
 		       "truncating vsnprintf buffer: [%.*s]",
@@ -1764,7 +1768,8 @@ static int should_keep_alive(const struct mg_connection *conn)
 	if (conn != NULL) {
 		const char *http_version = conn->request_info.http_version;
 		const char *header = mg_get_header(conn, "Connection");
-		if (conn->must_close || conn->status_code == 401 ||
+		if (conn->must_close || conn->internal_error ||
+            conn->status_code == 401 ||
 		    mg_strcasecmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes") != 0 ||
 		    (header != NULL && mg_strcasecmp(header, "keep-alive") != 0) ||
 		    (header == NULL && http_version &&
@@ -2745,6 +2750,10 @@ static pid_t spawn_process(struct mg_connection *conn,
 	}
 
 	/* TODO(high): kick client on buffer overflow */
+    /* if (conn->internal_error) { */
+    /* pi.hProcess = (pid_t)-1; */
+	/* goto spawn_cleanup; */
+    /* } */
 
 	DEBUG_TRACE("Running [%s]", cmdline);
 	if (CreateProcessA(NULL,
@@ -2760,8 +2769,10 @@ static pid_t spawn_process(struct mg_connection *conn,
 		mg_cry(
 		    conn, "%s: CreateProcess(%s): %ld", __func__, cmdline, (long)ERRNO);
 		pi.hProcess = (pid_t)-1;
+		/* goto spawn_cleanup; */
 	}
 
+spawn_cleanup:
 	(void)CloseHandle(si.hStdOutput);
 	(void)CloseHandle(si.hStdInput);
 	if (pi.hThread != NULL) {
@@ -9134,6 +9145,7 @@ static void reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.num_headers = 0;
 	conn->data_len = 0;
 	conn->chunk_remainder = 0;
+	conn->internal_error = 0;
 }
 
 static int set_sock_timeout(SOCKET sock, int milliseconds)
