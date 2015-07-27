@@ -5934,7 +5934,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 struct cgi_env_block {
 	struct mg_connection *conn;
 	char buf[CGI_ENVIRONMENT_SIZE]; /* Environment buffer */
-	unsigned int len;               /* Space taken */
+	size_t len;                     /* Space taken */
 	char *vars[MAX_CGI_ENVIR_VARS]; /* char **envp */
 	unsigned int nvars;             /* Number of variables */
 };
