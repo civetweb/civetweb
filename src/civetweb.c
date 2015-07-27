@@ -4369,10 +4369,9 @@ open_auth_file(struct mg_connection *conn, const char *path, struct file *filep)
 			            &truncated,
 			            name,
 			            sizeof(name),
-			            "%.*s%c%s",
+			            "%.*s%s",
 			            (int)(e - p),
 			            p,
-			            '/',
 			            PASSWORDS_FILE_NAME);
 
 			if (truncated || !mg_fopen(conn, name, "r", filep)) {
@@ -5179,6 +5178,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 	struct dirent *dp;
 	DIR *dirp;
 	struct de de;
+	int truncated;
 
 	if ((dirp = opendir(dir)) == NULL) {
 		return 0;
@@ -5193,9 +5193,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 			}
 
 			mg_snprintf(
-			    conn, path, sizeof(path), "%s%c%s", dir, '/', dp->d_name);
-
-			/* TODO(high): kick client on buffer overflow */
+			    conn, &truncated, path, sizeof(path), "%s/%s", dir, dp->d_name);
 
 			/* If we don't memset stat structure to zero, mtime will have
 			 * garbage and strftime() will segfault later on in
@@ -5203,6 +5201,12 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 			 * fails. For more details, see
 			 * http://code.google.com/p/mongoose/issues/detail?id=79 */
 			memset(&de.file, 0, sizeof(de.file));
+
+			if (truncated) {
+				/* Do not delete anything shorter */
+				continue;
+			}
+
 			if (!mg_stat(conn, path, &de.file)) {
 				mg_cry(conn,
 				       "%s: mg_stat(%s) failed: %s",
@@ -5481,7 +5485,7 @@ static void handle_static_file_request(struct mg_connection *conn,
 	time_t curtime = time(NULL);
 	int64_t cl, r1, r2;
 	struct vec mime_vec;
-	int n;
+	int n, truncated;
 	char gz_path[PATH_MAX];
 	const char *encoding = "";
 	const char *cors1, *cors2, *cors3;
@@ -5505,9 +5509,13 @@ static void handle_static_file_request(struct mg_connection *conn,
 	 * it's important to rewrite the filename after resolving
 	 * the mime type from it, to preserve the actual file's type */
 	if (filep->gzipped) {
-		mg_snprintf(conn, gz_path, sizeof(gz_path), "%s.gz", path);
+		mg_snprintf(conn, &truncated, gz_path, sizeof(gz_path), "%s.gz", path);
 
-		/* TODO(high): kick client on buffer overflow */
+		if (truncated) {
+			send_http_error(
+			    conn, 500, "Error: Path of zipped file too long (%s)", path);
+			return;
+		}
 
 		path = gz_path;
 		encoding = "Content-Encoding: gzip\r\n";
@@ -6132,7 +6140,8 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 {
 	char *buf;
 	size_t buflen;
-	int headers_len, data_len, i, fdin[2] = {0, 0}, fdout[2] = {0, 0};
+	int headers_len, data_len, i, truncated;
+	int fdin[2] = {-1, -1}, fdout[2] = {-1, -1};
 	const char *status, *status_text, *connection_state;
 	char *pbuf, dir[PATH_MAX], *p;
 	struct mg_request_info ri;
@@ -6152,9 +6161,12 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	/* CGI must be executed in its own directory. 'dir' must point to the
 	 * directory containing executable program, 'p' must point to the
 	 * executable program name relative to 'dir'. */
-	(void)mg_snprintf(conn, dir, sizeof(dir), "%s", prog);
+	(void)mg_snprintf(conn, &truncated, dir, sizeof(dir), "%s", prog);
 
-	/* TODO(high): kick client on buffer overflow */
+	if (truncated) {
+		send_http_error(conn, 500, "Error: %s", "CGI path too long");
+		goto done;
+	}
 
 	if ((p = strrchr(dir, '/')) != NULL) {
 		*p++ = '\0';
@@ -6630,6 +6642,7 @@ static void do_ssi_include(struct mg_connection *conn,
 	char file_name[MG_BUF_LEN], path[512], *p;
 	struct file file = STRUCT_FILE_INITIALIZER;
 	size_t len;
+	int truncated = 0;
 
 	if (conn == NULL) {
 		return;
@@ -6642,42 +6655,46 @@ static void do_ssi_include(struct mg_connection *conn,
 		/* File name is relative to the webserver root */
 		file_name[511] = 0;
 		(void)mg_snprintf(conn,
+		                  &truncated,
 		                  path,
 		                  sizeof(path),
-		                  "%s%c%s",
+		                  "%s/%s",
 		                  conn->ctx->config[DOCUMENT_ROOT],
-		                  '/',
 		                  file_name);
-
-		/* TODO(high): kick client on buffer overflow */
 
 	} else if (sscanf(tag, " abspath=\"%511[^\"]\"", file_name) == 1) {
 		/* File name is relative to the webserver working directory
 		 * or it is absolute system path */
 		file_name[511] = 0;
-		(void)mg_snprintf(conn, path, sizeof(path), "%s", file_name);
-
-		/* TODO(high): kick client on buffer overflow */
+		(void)mg_snprintf(
+		    conn, &truncated, path, sizeof(path), "%s", file_name);
 
 	} else if (sscanf(tag, " file=\"%511[^\"]\"", file_name) == 1 ||
 	           sscanf(tag, " \"%511[^\"]\"", file_name) == 1) {
 		/* File name is relative to the currect document */
 		file_name[511] = 0;
-		(void)mg_snprintf(conn, path, sizeof(path), "%s", ssi);
+		(void)mg_snprintf(conn, &truncated, path, sizeof(path), "%s", ssi);
 
-		/* TODO(high): kick client on buffer overflow */
-
-		if ((p = strrchr(path, '/')) != NULL) {
-			p[1] = '\0';
+		if (!truncated) {
+			if ((p = strrchr(path, '/')) != NULL) {
+				p[1] = '\0';
+			}
+			len = strlen(path);
+			(void)mg_snprintf(conn,
+			                  &truncated,
+			                  path + len,
+			                  sizeof(path) - len,
+			                  "%s",
+			                  file_name);
 		}
-		len = strlen(path);
-		(void)mg_snprintf(
-		    conn, path + len, sizeof(path) - len, "%s", file_name);
-
-		/* TODO(high): kick client on buffer overflow */
 
 	} else {
 		mg_cry(conn, "Bad SSI #include: [%s]", tag);
+		return;
+	}
+
+	if (truncated) {
+		mg_cry(conn, "SSI #include path length overflow: [%s]", tag);
 		return;
 	}
 
@@ -7235,20 +7252,25 @@ static void SHA1Final(unsigned char digest[20], SHA1_CTX *context)
 }
 /* END OF SHA1 CODE */
 
-static void send_websocket_handshake(struct mg_connection *conn)
+static int send_websocket_handshake(struct mg_connection *conn)
 {
 	static const char *magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 	char buf[100], sha[20], b64_sha[sizeof(sha) * 2];
 	SHA1_CTX sha_ctx;
+	int truncated;
 
 	mg_snprintf(conn,
+	            &truncated,
 	            buf,
 	            sizeof(buf),
 	            "%s%s",
 	            mg_get_header(conn, "Sec-WebSocket-Key"),
 	            magic);
 
-	/* TODO(high): kick client on buffer overflow */
+	if (truncated) {
+		conn->must_close = 1;
+		return 0;
+	}
 
 	SHA1Init(&sha_ctx);
 	SHA1Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
@@ -7262,6 +7284,8 @@ static void send_websocket_handshake(struct mg_connection *conn)
 	          "Sec-WebSocket-Accept: ",
 	          b64_sha,
 	          "\r\n\r\n");
+
+	return 1;
 }
 
 static void read_websocket(struct mg_connection *conn,
@@ -7541,7 +7565,10 @@ handle_websocket_request(struct mg_connection *conn,
 	}
 
 	/* Step 5: The websocket connection has been accepted */
-	send_websocket_handshake(conn);
+	if (!send_websocket_handshake(conn)) {
+		send_http_error(conn, 500, "%s", "Websocket handshake failed");
+		return;
+	}
 
 	/* Step 6: Call the ready handler */
 	if (is_callback_resource) {
