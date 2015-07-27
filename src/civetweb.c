@@ -5947,7 +5947,7 @@ static char *addenv(struct cgi_env_block *block,
  * pointer into the vars array. */
 static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
 {
-	unsigned int n, space;
+	size_t n, space;
 	int truncated;
 	char *added;
 	va_list ap;
