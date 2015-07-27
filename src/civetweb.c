@@ -692,7 +692,7 @@ static void mg_snprintf(const struct mg_connection *conn,
                         char *buf,
                         size_t buflen,
                         PRINTF_FORMAT_STRING(const char *fmt),
-                        ...) PRINTF_ARGS(4, 5);
+                        ...) PRINTF_ARGS(5, 6);
 
 
 /* This following lines are just meant as a reminder to use the mg-functions
@@ -714,7 +714,9 @@ static void mg_snprintf(const struct mg_connection *conn,
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free DO_NOT_USE_THIS_FUNCTION__USE_mg_free
 #define snprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_snprintf
+#ifdef _WIN32 /* Don't use vsnprintf for Linux, Windows or anything else */
 #define vsnprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_vsnprintf
+#endif
 
 #define MD5_STATIC static
 #include "md5.inl"
