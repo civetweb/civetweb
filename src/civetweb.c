@@ -4899,17 +4899,32 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 	}
 
 	if (host == NULL) {
-		mg_snprintf(NULL, ebuf, ebuf_len, "%s", "NULL host");
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "%s",
+		            "NULL host");
 		return INVALID_SOCKET;
 	}
 
 	if (port < 0 || !is_valid_port((unsigned)port)) {
-		mg_snprintf(NULL, ebuf, ebuf_len, "%s", "invalid port");
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "%s",
+		            "invalid port");
 		return INVALID_SOCKET;
 	}
 
 	if (use_ssl && (SSLv23_client_method == NULL)) {
-		mg_snprintf(NULL, ebuf, ebuf_len, "%s", "SSL is not initialized");
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "%s",
+		            "SSL is not initialized");
 		return INVALID_SOCKET;
 	}
 
@@ -4920,14 +4935,24 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		sa.sin6.sin6_port = htons((uint16_t)port);
 #endif
 	} else {
-		mg_snprintf(NULL, ebuf, ebuf_len, "%s", "host not found");
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "%s",
+		            "host not found");
 		return INVALID_SOCKET;
 	}
 
 	sock = socket(PF_INET, SOCK_STREAM, 0);
 
 	if (sock == INVALID_SOCKET) {
-		mg_snprintf(NULL, ebuf, ebuf_len, "socket(): %s", strerror(ERRNO));
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "socket(): %s",
+		            strerror(ERRNO));
 		return INVALID_SOCKET;
 	}
 
@@ -4936,6 +4961,7 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 	/* TODO(mid): IPV6 */
 	if (connect(sock, (struct sockaddr *)&sa.sin, sizeof(sa.sin)) != 0) {
 		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
 		            ebuf,
 		            ebuf_len,
 		            "connect(%s:%d): %s",
@@ -4980,29 +5006,39 @@ static void print_dir_entry(struct de *de)
 	struct tm *tm;
 
 	if (de->file.is_directory) {
-		mg_snprintf(de->conn, size, sizeof(size), "%s", "[DIRECTORY]");
+		mg_snprintf(de->conn,
+		            NULL, /* Buffer is big enough */
+		            size,
+		            sizeof(size),
+		            "%s",
+		            "[DIRECTORY]");
 	} else {
 		/* We use (signed) cast below because MSVC 6 compiler cannot
 		 * convert unsigned __int64 to double. Sigh. */
 		if (de->file.size < 1024) {
-			mg_snprintf(de->conn, size, sizeof(size), "%d", (int)de->file.size);
+			mg_snprintf(de->conn,
+			            NULL, /* Buffer is big enough */
+			            size,
+			            sizeof(size),
+			            "%d",
+			            (int)de->file.size);
 		} else if (de->file.size < 0x100000) {
 			mg_snprintf(de->conn,
-			            NULL,
+			            NULL, /* Buffer is big enough */
 			            size,
 			            sizeof(size),
 			            "%.1fk",
 			            (double)de->file.size / 1024.0);
 		} else if (de->file.size < 0x40000000) {
 			mg_snprintf(de->conn,
-			            NULL,
+			            NULL, /* Buffer is big enough */
 			            size,
 			            sizeof(size),
 			            "%.1fM",
 			            (double)de->file.size / 1048576);
 		} else {
 			mg_snprintf(de->conn,
-			            NULL,
+			            NULL, /* Buffer is big enough */
 			            size,
 			            sizeof(size),
 			            "%.1fG",
@@ -5093,6 +5129,7 @@ static int scan_directory(struct mg_connection *conn,
 	struct dirent *dp;
 	DIR *dirp;
 	struct de de;
+	int truncated;
 
 	if ((dirp = opendir(dir)) == NULL) {
 		return 0;
@@ -5107,9 +5144,7 @@ static int scan_directory(struct mg_connection *conn,
 			}
 
 			mg_snprintf(
-			    conn, path, sizeof(path), "%s%c%s", dir, '/', dp->d_name);
-
-			/* TODO(high): kick client on buffer overflow */
+			    conn, &truncated, path, sizeof(path), "%s/%s", dir, dp->d_name);
 
 			/* If we don't memset stat structure to zero, mtime will have
 			 * garbage and strftime() will segfault later on in
@@ -5117,6 +5152,12 @@ static int scan_directory(struct mg_connection *conn,
 			 * fails. For more details, see
 			 * http://code.google.com/p/mongoose/issues/detail?id=79 */
 			memset(&de.file, 0, sizeof(de.file));
+
+			if (truncated) {
+				/* If the path is not complete, skip processing. */
+				continue;
+			}
+
 			if (!mg_stat(conn, path, &de.file)) {
 				mg_cry(conn,
 				       "%s: mg_stat(%s) failed: %s",
@@ -5124,7 +5165,6 @@ static int scan_directory(struct mg_connection *conn,
 				       path,
 				       strerror(ERRNO));
 			}
-
 			de.file_name = dp->d_name;
 			cb(&de, data);
 		}
@@ -5406,6 +5446,7 @@ static void construct_etag(char *buf, size_t buf_len, const struct file *filep)
 {
 	if (filep != NULL && buf != NULL) {
 		mg_snprintf(NULL,
+		            NULL, /* All calls to construct_etag use 64 byte buffer */
 		            buf,
 		            buf_len,
 		            "\"%lx.%" INT64_FMT "\"",
@@ -5502,6 +5543,7 @@ static void handle_static_file_request(struct mg_connection *conn,
 		conn->status_code = 206;
 		cl = n == 2 ? (r2 > cl ? cl : r2) - r1 + 1 : cl - r1;
 		mg_snprintf(conn,
+		            NULL, /* range buffer is big enough */
 		            range,
 		            sizeof(range),
 		            "Content-Range: bytes "
@@ -6873,21 +6915,24 @@ static void print_dav_dir_entry(struct de *de, void *data)
 {
 	char href[PATH_MAX];
 	char href_encoded[PATH_MAX];
+	int truncated;
+
 	struct mg_connection *conn = (struct mg_connection *)data;
 	if (!de || !conn) {
 		return;
 	}
 	mg_snprintf(conn,
+	            &truncated,
 	            href,
 	            sizeof(href),
 	            "%s%s",
 	            conn->request_info.uri,
 	            de->file_name);
 
-	/* TODO(high): kick client on buffer overflow */
-
-	mg_url_encode(href, href_encoded, PATH_MAX - 1);
-	print_props(conn, href_encoded, &de->file);
+	if (!truncated) {
+		mg_url_encode(href, href_encoded, PATH_MAX - 1);
+		print_props(conn, href_encoded, &de->file);
+	}
 }
 
 static void handle_propfind(struct mg_connection *conn,
@@ -7619,11 +7664,12 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 	/* TODO (mid): set a timeout */
 	const char *content_type_header, *boundary_start, *sc;
 	char *s;
-	char buf[MG_BUF_LEN], path[PATH_MAX], tmp_path[PATH_MAX], fname[1024],
-	    boundary[100];
+	char buf[MG_BUF_LEN], path[PATH_MAX], tmp_path[PATH_MAX];
+	char fname[1024], boundary[100];
 	FILE *fp;
-	int bl, n, i, headers_len, boundary_len, eof, len = 0,
-	                                              num_uploaded_files = 0;
+	int bl, n, i, headers_len, boundary_len, eof, truncated;
+	int len = 0, num_uploaded_files = 0;
+
 	struct mg_request_info part_request_info;
 
 	/* Request looks like this:
@@ -7723,7 +7769,13 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 
 		/* There data is written to a temporary file first. */
 		/* Different users should use a different destination_dir. */
-		mg_snprintf(conn, path, sizeof(path) - 1, "%s/%s", destination_dir, s);
+		mg_snprintf(conn,
+		            &truncated,
+		            path,
+		            sizeof(path) - 1,
+		            "%s/%s",
+		            destination_dir,
+		            s);
 
 		/* TODO(high): kick client on buffer overflow */
 
