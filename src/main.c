@@ -396,12 +396,12 @@ static void read_config_file(const char *config_file, char **options)
 {
 	char line[MAX_CONF_FILE_LINE_SIZE], *p;
 	FILE *fp = NULL;
-	size_t i, j, cmd_line_opts_start = 1, line_no = 0;
+	size_t i, j, line_no = 0;
 
 	fp = fopen(config_file, "r");
 
 	/* If config file was set in command line and open failed, die */
-	if (cmd_line_opts_start == 2 && fp == NULL) {
+	if (fp == NULL) {
 		die("Cannot open config file %s: %s", config_file, strerror(errno));
 	}
 

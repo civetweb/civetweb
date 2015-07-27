@@ -3758,7 +3758,7 @@ base64_decode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
 		}
 
 		d = b64reverse(i + 3 >= src_len ? 0 : src[i + 3]);
-		if (c == 254) {
+		if (d == 254) {
 			return i + 3;
 		}
 
@@ -7657,7 +7657,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 	for (;;) {
 		/* Pull in headers */
 		/* assert(len >= 0 && len <= (int) sizeof(buf)); */
-		if (len < 0 || len > (int)sizeof(buf)) {
+		if ((len < 0) || (len > (int)sizeof(buf))) {
 			break;
 		}
 		while ((n = mg_read(conn, buf + len, sizeof(buf) - (size_t)len)) > 0) {
@@ -9969,9 +9969,6 @@ static void *worker_thread_run(void *thread_func_param)
 	ctx->num_threads--;
 	(void)pthread_cond_signal(&ctx->thread_cond);
 	/* assert(ctx->num_threads >= 0); */
-	if (ctx->num_threads < 0) {
-		return NULL;
-	}
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	pthread_setspecific(sTlsKey, NULL);

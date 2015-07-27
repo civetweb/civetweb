@@ -231,6 +231,8 @@ static int lsp_connect(lua_State *L)
 			reg_string(L, "host", lua_tostring(L, -4));
 			luaL_getmetatable(L, LUASOCKET);
 			lua_setmetatable(L, -2);
+			/* TODO (high): The metatable misses a _gc method to free the
+			 * sock object -> currently lsp_connect is a resource leak. */
 		}
 	} else {
 		return luaL_error(
@@ -811,6 +813,8 @@ static int lwebsock_write(lua_State *L)
 	lua_gettable(L, LUA_REGISTRYINDEX);
 	ws = (struct lua_websock_data *)lua_touserdata(L, -1);
 
+	(void)pthread_mutex_lock(&(ws->ws_mutex));
+
 	if (num_args == 1) {
 		/* just one text: send it to all client */
 		if (lua_isstring(L, 1)) {
@@ -879,8 +883,12 @@ static int lwebsock_write(lua_State *L)
 			}
 		}
 	} else {
+		(void)pthread_mutex_unlock(&ws->ws_mutex);
 		return luaL_error(L, "invalid websocket write() call");
 	}
+
+	(void)pthread_mutex_unlock(&ws->ws_mutex);
+
 #else
 	(void)(L);           /* unused */
 #endif
@@ -1127,7 +1135,7 @@ void lua_civet_open_all_libs(lua_State *L)
 
 static void prepare_lua_environment(struct mg_context *ctx,
                                     struct mg_connection *conn,
-                                    struct lua_websock_data *conn_list,
+                                    struct lua_websock_data *ws_conn_list,
                                     lua_State *L,
                                     const char *script_name,
                                     int lua_env_type)
@@ -1142,14 +1150,14 @@ static void prepare_lua_environment(struct mg_context *ctx,
 	lua_register(L, "connect", lsp_connect);
 
 	/* Store context in the registry */
-	if (ctx) {
+	if (ctx != NULL) {
 		lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
 		lua_pushlightuserdata(L, (void *)ctx);
 		lua_settable(L, LUA_REGISTRYINDEX);
 	}
-	if (conn_list) {
+	if (ws_conn_list != NULL) {
 		lua_pushlightuserdata(L, (void *)&lua_regkey_connlist);
-		lua_pushlightuserdata(L, (void *)conn_list);
+		lua_pushlightuserdata(L, (void *)ws_conn_list);
 		lua_settable(L, LUA_REGISTRYINDEX);
 	}
 
@@ -1203,15 +1211,20 @@ static void prepare_lua_environment(struct mg_context *ctx,
 	reg_function(L, "get_response_code_text", lsp_get_response_code_text);
 
 	reg_string(L, "version", CIVETWEB_VERSION);
-	reg_string(L, "document_root", ctx->config[DOCUMENT_ROOT]);
-	reg_string(L, "auth_domain", ctx->config[AUTHENTICATION_DOMAIN]);
-#if defined(USE_WEBSOCKET)
-	reg_string(L, "websocket_root", ctx->config[WEBSOCKET_ROOT]);
-#endif
+
 	reg_string(L, "script_name", script_name);
 
-	if (ctx->systemName != NULL) {
-		reg_string(L, "system", ctx->systemName);
+	if (ctx != NULL) {
+		reg_string(L, "document_root", ctx->config[DOCUMENT_ROOT]);
+		reg_string(L, "auth_domain", ctx->config[AUTHENTICATION_DOMAIN]);
+#if defined(USE_WEBSOCKET)
+		reg_string(L, "websocket_root", ctx->config[WEBSOCKET_ROOT]);
+#endif
+
+
+		if (ctx->systemName != NULL) {
+			reg_string(L, "system", ctx->systemName);
+		}
 	}
 
 	/* Export connection specific info */
@@ -1227,13 +1240,15 @@ static void prepare_lua_environment(struct mg_context *ctx,
 	                  "mg.onerror = function(e) mg.write('\\nLua error:\\n', "
 	                  "debug.traceback(e, 1)) end"));
 
-	/* Preload */
-	if (ctx->config[LUA_PRELOAD_FILE] != NULL) {
-		IGNORE_UNUSED_RESULT(luaL_dofile(L, ctx->config[LUA_PRELOAD_FILE]));
-	}
+	if (ctx != NULL) {
+		/* Preload */
+		if (ctx->config[LUA_PRELOAD_FILE] != NULL) {
+			IGNORE_UNUSED_RESULT(luaL_dofile(L, ctx->config[LUA_PRELOAD_FILE]));
+		}
 
-	if (ctx->callbacks.init_lua != NULL) {
-		ctx->callbacks.init_lua(conn, L);
+		if (ctx->callbacks.init_lua != NULL) {
+			ctx->callbacks.init_lua(conn, L);
+		}
 	}
 }
 
@@ -1420,10 +1435,10 @@ static void *lua_websocket_new(const char *script, struct mg_connection *conn)
 		ws = &(*shared_websock_list)->ws;
 		ws->script = mg_strdup(script); /* TODO (low): handle OOM */
 		pthread_mutex_init(&(ws->ws_mutex), NULL);
+		(void)pthread_mutex_lock(&(ws->ws_mutex));
 		ws->state = lua_newstate(lua_allocator, NULL);
 		ws->conn[0] = conn;
 		ws->references = 1;
-		(void)pthread_mutex_lock(&(ws->ws_mutex));
 		prepare_lua_environment(
 		    conn->ctx, NULL, ws, ws->state, script, LUA_ENV_TYPE_LUA_WEBSOCKET);
 		err = luaL_loadfile(ws->state, script);
