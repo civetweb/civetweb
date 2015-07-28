@@ -7257,6 +7257,7 @@ static void SHA1Final(unsigned char digest[20], SHA1_CTX *context)
 static int send_websocket_handshake(struct mg_connection *conn)
 {
 	static const char *magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+	const char *protocol = NULL;
 	char buf[100], sha[20], b64_sha[sizeof(sha) * 2];
 	SHA1_CTX sha_ctx;
 	int truncated;
@@ -7285,7 +7286,19 @@ static int send_websocket_handshake(struct mg_connection *conn)
 	          "Connection: Upgrade\r\n"
 	          "Sec-WebSocket-Accept: ",
 	          b64_sha,
-	          "\r\n\r\n");
+	          "\r\n");
+	protocol = mg_get_header(conn, "Sec-WebSocket-Protocol");
+	if (protocol) {
+	mg_printf(conn,
+		"%s%s%s",
+		"Sec-WebSocket-Protocol:",
+		protocol,
+		"\r\n\r\n");
+	} else {
+		mg_printf(conn,
+			"%s",
+			"\r\n");
+	}
 
 	return 1;
 }
