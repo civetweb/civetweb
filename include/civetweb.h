@@ -92,8 +92,10 @@ struct mg_callbacks {
 	   Return value:
 	     0: civetweb will process the request itself. In this case,
 	        the callback must not send any data to the client.
-	     1: callback already processed the request. Civetweb will
-	        not send any data after the callback returned. */
+	     1-999: callback already processed the request. Civetweb will
+	            not send any data after the callback returned. The
+	            return code is stored as a HTTP status code for the
+	            access log. */
 	int (*begin_request)(struct mg_connection *);
 
 	/* Called when civetweb has finished processing request. */
@@ -243,7 +245,8 @@ CIVETWEB_API void mg_stop(struct mg_context *);
       cbdata: the callback data configured with mg_set_request_handler().
    Returns:
       0: the handler could not handle the request, so fall through.
-      1: the handler processed the request. */
+      1 - 999: the handler processed the request. The return code is
+               stored as a HTTP status code for the access log. */
 typedef int (*mg_request_handler)(struct mg_connection *conn, void *cbdata);
 
 /* mg_set_request_handler

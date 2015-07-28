@@ -8271,14 +8271,14 @@ static void handle_request(struct mg_connection *conn)
 			 * before an authorization check. If an authorization check is
 			 * required, use a request_handler instead. */
 			i = conn->ctx->callbacks.begin_request(conn);
-			switch (i) {
-			case 1:
-				/* callback already processed the request */
+			if (i > 0) {
+				/* callback already processed the request. Store the
+				   return value as a status code for the access log. */
+				conn->status_code = i;
 				return;
-			case 0:
+			} else if (i == 0) {
 				/* civetweb should process the request */
-				break;
-			default:
+			} else {
 				/* unspecified - may change with the next version */
 				return;
 			}
@@ -8364,8 +8364,12 @@ static void handle_request(struct mg_connection *conn)
 		/* 7. check if there are request handlers for this uri */
 		if (is_callback_resource) {
 			if (!is_websocket_request) {
-				if (callback_handler(conn, callback_data)) {
-					/* Do nothing, callback has served the request */
+				i = callback_handler(conn, callback_data);
+				if (i > 0) {
+					/* Do nothing, callback has served the request. Store the
+					 * return value as status code for the log and discard all
+					 * data from the client not used by the callback. */
+					conn->status_code = i;
 					discard_unread_request_data(conn);
 				} else {
 					/* TODO (high): what if the handler did NOT handle the
