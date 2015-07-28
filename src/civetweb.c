@@ -7287,8 +7287,8 @@ static int send_websocket_handshake(struct mg_connection *conn)
 	          "Sec-WebSocket-Accept: ",
 	          b64_sha,
 	          "\r\n");
-
-	if (protocol = mg_get_header(conn, "Sec-WebSocket-Protocol")) {
+	protocol = mg_get_header(conn, "Sec-WebSocket-Protocol");
+	if (protocol) {
 	mg_printf(conn,
 		"%s%s%s",
 		"Sec-WebSocket-Protocol:",
