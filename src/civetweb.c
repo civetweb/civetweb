@@ -7280,24 +7280,16 @@ static int send_websocket_handshake(struct mg_connection *conn)
 	SHA1Final((unsigned char *)sha, &sha_ctx);
 	base64_encode((unsigned char *)sha, sizeof(sha), b64_sha);
 	mg_printf(conn,
-	          "%s%s%s",
 	          "HTTP/1.1 101 Switching Protocols\r\n"
 	          "Upgrade: websocket\r\n"
 	          "Connection: Upgrade\r\n"
-	          "Sec-WebSocket-Accept: ",
-	          b64_sha,
-	          "\r\n");
+	          "Sec-WebSocket-Accept: %s\r\n",
+	          b64_sha);
 	protocol = mg_get_header(conn, "Sec-WebSocket-Protocol");
 	if (protocol) {
-	mg_printf(conn,
-		"%s%s%s",
-		"Sec-WebSocket-Protocol:",
-		protocol,
-		"\r\n\r\n");
+		mg_printf(conn, "Sec-WebSocket-Protocol: %s\r\n\r\n", protocol);
 	} else {
-		mg_printf(conn,
-			"%s",
-			"\r\n");
+		mg_printf(conn, "%s", "\r\n");
 	}
 
 	return 1;
