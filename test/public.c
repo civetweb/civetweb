@@ -546,7 +546,13 @@ START_TEST(test_request_handlers)
 
 
 	/* Try to load non existing file */
-	conn = mg_download("localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", "GET /U7 HTTP/1.0\r\n\r\n");
+	conn = mg_download("localhost",
+	                   atoi(HTTP_PORT),
+	                   0,
+	                   ebuf,
+	                   sizeof(ebuf),
+	                   "%s",
+	                   "GET /U7 HTTP/1.0\r\n\r\n");
 	ck_assert(conn != NULL);
 	ri = mg_get_request_info(conn);
 
@@ -555,7 +561,7 @@ START_TEST(test_request_handlers)
 	mg_close_connection(conn);
 
 
-    /* Get data from Callback */
+	/* Get data from Callback */
 	conn = mg_download(
 	    "localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
