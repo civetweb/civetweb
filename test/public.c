@@ -432,7 +432,8 @@ START_TEST(test_mg_start_stop_https_server)
 	    "listening_ports",
 	    "8080,8443s",
 	    "ssl_certificate",
-	    "resources/ssl_cert.pem", // TODO: check working path of CI test system
+	    "../resources/ssl_cert.pem", // TODO: check working path of CI test
+	                                 // system
 	    NULL,
 	};
 	size_t ports_cnt;
@@ -446,11 +447,13 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert(ctx != NULL);
 
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
-	ck_assert_uint_eq(ports_cnt, 1);
+	ck_assert_uint_eq(ports_cnt, 2);
 	ck_assert_int_eq(ports[0], 8080);
 	ck_assert_int_eq(ssl[0], 0);
-	ck_assert_int_eq(ports[1], 0);
-	ck_assert_int_eq(ssl[1], 0);
+	ck_assert_int_eq(ports[1], 8443);
+	ck_assert_int_eq(ssl[1], 1);
+	ck_assert_int_eq(ports[2], 0);
+	ck_assert_int_eq(ssl[2], 0);
 
 	mg_Sleep(1);
 	mg_stop(ctx);
@@ -488,7 +491,7 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 	          "Content-Type: text/plain\r\n\r\n");
 
 	for (i = 1; i <= 10; i++) {
-		mg_printf(conn, "%u\r\n", i);
+		mg_printf(conn, "%x\r\n", i);
 		mg_write(conn, chunk_data, (unsigned)i);
 		mg_printf(conn, "\r\n");
 	}
@@ -579,7 +582,6 @@ START_TEST(test_request_handlers)
 }
 END_TEST
 
-
 Suite *make_public_suite(void)
 {
 
@@ -627,3 +629,31 @@ Suite *make_public_suite(void)
 
 	return suite;
 }
+
+#if 0
+/* Used to debug test cases without using the check framework */
+void main(void)
+{
+	test_mg_start_stop_http_server(0);
+	test_mg_start_stop_https_server(0);
+	test_request_handlers(0);
+}
+
+void _ck_assert_failed(const char *file, int line, const char *expr, ...)
+{
+	fprintf(stderr, "error!\n");
+}
+
+void _mark_point(const char *file, int line) {}
+void tcase_fn_start(const char *fname, const char *file, int line) {}
+void suite_add_tcase(Suite *s, TCase *tc){};
+void _tcase_add_test(TCase *tc,
+                     TFun tf,
+                     const char *fname,
+                     int _signal,
+                     int allowed_exit_value,
+                     int start,
+                     int end){};
+TCase *tcase_create(const char *name) { return NULL; };
+Suite *suite_create(const char *name) { return NULL; };
+#endif
