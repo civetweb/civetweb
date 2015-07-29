@@ -552,7 +552,7 @@ START_TEST(test_request_handlers)
 	                   ebuf,
 	                   sizeof(ebuf),
 	                   "%s",
-	                   "GET /U7 HTTP/1.0\r\n\r\n");
+	                   "GET /file/not/found HTTP/1.0\r\n\r\n");
 	ck_assert(conn != NULL);
 	ri = mg_get_request_info(conn);
 
