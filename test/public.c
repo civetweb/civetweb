@@ -487,7 +487,7 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 	          "Transfer-Encoding: chunked\r\n"
 	          "Content-Type: text/plain\r\n\r\n");
 
-	for (i = 1; i <= 20; i++) {
+	for (i = 1; i <= 10; i++) {
 		mg_printf(conn, "%u\r\n", i);
 		mg_write(conn, chunk_data, (unsigned)i);
 		mg_printf(conn, "\r\n");
@@ -506,8 +506,7 @@ START_TEST(test_request_handlers)
 	struct mg_connection *conn;
 	const struct mg_request_info *ri;
 	char uri[64];
-	char buf[1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12 + 13 + 14 + 15 +
-	         16 + 17 + 18 + 19 + 20 + 8];
+	char buf[1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 8];
 	int i;
 	const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
 	const char *HTTP_PORT = "8087";
@@ -545,6 +544,18 @@ START_TEST(test_request_handlers)
 		    ctx, uri, request_test_handler, (void *)(ptrdiff_t)i);
 	}
 
+
+	/* Try to load non existing file */
+	conn = mg_download("localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", "GET /U7 HTTP/1.0\r\n\r\n");
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "404");
+	mg_close_connection(conn);
+
+
+    /* Get data from Callback */
 	conn = mg_download(
 	    "localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
@@ -554,9 +565,7 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(ri->uri, "200");
 	mg_Sleep(1);
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_int_eq(i,
-	                 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12 + 13 +
-	                     14 + 15 + 16 + 17 + 18 + 19 + 20);
+	ck_assert_int_eq(i, 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10);
 	mg_close_connection(conn);
 
 	g_ctx = NULL;
