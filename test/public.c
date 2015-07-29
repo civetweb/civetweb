@@ -400,9 +400,23 @@ START_TEST(test_mg_start_stop_http_server)
 	const char *OPTIONS[] = {
 	    "document_root", ".", "listening_ports", "8080", NULL,
 	};
+	size_t ports_cnt;
+	int ports[16];
+	int ssl[16];
+
+	memset(ports, 0, sizeof(ports));
+	memset(ssl, 0, sizeof(ssl));
 
 	ctx = mg_start(NULL, NULL, OPTIONS);
 	ck_assert(ctx != NULL);
+
+	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
+	ck_assert_uint_eq(ports_cnt, 1);
+	ck_assert_int_eq(ports[0], 8080);
+	ck_assert_int_eq(ssl[0], 0);
+	ck_assert_int_eq(ports[1], 0);
+	ck_assert_int_eq(ssl[1], 0);
+
 	mg_Sleep(1);
 	mg_stop(ctx);
 }
@@ -421,9 +435,23 @@ START_TEST(test_mg_start_stop_https_server)
 	    "resources/ssl_cert.pem", // TODO: check working path of CI test system
 	    NULL,
 	};
+	size_t ports_cnt;
+	int ports[16];
+	int ssl[16];
+
+	memset(ports, 0, sizeof(ports));
+	memset(ssl, 0, sizeof(ssl));
 
 	ctx = mg_start(NULL, NULL, OPTIONS);
 	ck_assert(ctx != NULL);
+
+	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
+	ck_assert_uint_eq(ports_cnt, 1);
+	ck_assert_int_eq(ports[0], 8080);
+	ck_assert_int_eq(ssl[0], 0);
+	ck_assert_int_eq(ports[1], 0);
+	ck_assert_int_eq(ssl[1], 0);
+
 	mg_Sleep(1);
 	mg_stop(ctx);
 }
