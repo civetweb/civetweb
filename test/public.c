@@ -429,11 +429,27 @@ START_TEST(test_mg_start_stop_https_server)
 }
 END_TEST
 
+static struct mg_context *g_ctx;
 
 static int request_test_handler(struct mg_connection *conn, void *cbdata)
 {
 	int i;
 	char chunk_data[32];
+	const struct mg_request_info *ri;
+	struct mg_context *ctx;
+	void *ud, *cud;
+
+	ctx = mg_get_context(conn);
+	ud = mg_get_user_data(ctx);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert(ctx == g_ctx);
+	ck_assert(ud == &g_ctx);
+
+	mg_set_user_connection_data(conn, (void *)6543);
+	cud = mg_get_user_connection_data(conn);
+	ck_assert(cud == (void *)6543);
 
 	ck_assert(cbdata == (void *)7);
 	strcpy(chunk_data, "123456789A123456789B123456789C");
@@ -443,7 +459,7 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 	          "Transfer-Encoding: chunked\r\n"
 	          "Content-Type: text/plain\r\n\r\n");
 
-	for (i = 0; i < 20; i++) {
+	for (i = 1; i <= 20; i++) {
 		mg_printf(conn, "%u\r\n", i);
 		mg_write(conn, chunk_data, (unsigned)i);
 		mg_printf(conn, "\r\n");
@@ -460,7 +476,10 @@ START_TEST(test_request_handlers)
 	char ebuf[100];
 	struct mg_context *ctx;
 	struct mg_connection *conn;
+	const struct mg_request_info *ri;
 	char uri[64];
+	char buf[1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12 + 13 + 14 + 15 +
+	         16 + 17 + 18 + 19 + 20 + 8];
 	int i;
 	const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
 	const char *HTTP_PORT = "8087";
@@ -472,8 +491,9 @@ START_TEST(test_request_handlers)
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
-	ctx = mg_start(NULL, NULL, OPTIONS);
+	ctx = mg_start(NULL, &g_ctx, OPTIONS);
 	ck_assert(ctx != NULL);
+	g_ctx = ctx;
 
 	for (i = 0; i < 1000; i++) {
 		sprintf(uri, "/U%u", i);
@@ -500,9 +520,18 @@ START_TEST(test_request_handlers)
 	conn = mg_download(
 	    "localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
 	mg_Sleep(1);
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert_int_eq(i,
+	                 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12 + 13 +
+	                     14 + 15 + 16 + 17 + 18 + 19 + 20);
 	mg_close_connection(conn);
 
+	g_ctx = NULL;
 	mg_stop(ctx);
 }
 END_TEST
