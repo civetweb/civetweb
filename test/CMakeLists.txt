@@ -107,7 +107,7 @@ civetweb_add_test(Public "URL encoding decoding")
 civetweb_add_test(Public "Cookies and variables")
 civetweb_add_test(Public "MD5")
 civetweb_add_test(Public "Start Stop HTTP Server")
-#civetweb_add_test(Public "Start Stop HTTPS Server")
+civetweb_add_test(Public "Start Stop HTTPS Server")
 
 # Add the coverage command(s)
 if (${CMAKE_BUILD_TYPE} MATCHES "[Cc]overage")
