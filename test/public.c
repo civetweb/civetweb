@@ -520,7 +520,7 @@ START_TEST(test_request_handlers)
 	OPTIONS[0] = "listening_ports";
 	OPTIONS[1] = HTTP_PORT;
 	OPTIONS[2] = "document_root";
-	OPTIONS[3] = "test";
+	OPTIONS[3] = ".";
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
@@ -601,7 +601,10 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_str_eq(buf, "simple text file");
+	ck_assert_int_eq(i, 17);
+	if ((i >= 0) && (i < sizeof(buf)))
+		buf[i] = 0;
+	ck_assert_str_eq(buf, "simple text file\n");
 	mg_close_connection(conn);
 
 
@@ -660,7 +663,7 @@ Suite *make_public_suite(void)
 	return suite;
 }
 
-#if 0
+#if 1
 /* Used to debug test cases without using the check framework */
 void main(void)
 {
