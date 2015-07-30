@@ -669,6 +669,22 @@ START_TEST(test_request_handlers)
 	mg_close_connection(conn);
 
 
+	/* PUT to static file (will not work) */
+	conn = mg_download("localhost",
+	                   atoi(HTTP_PORT),
+	                   0,
+	                   ebuf,
+	                   sizeof(ebuf),
+	                   "%s",
+	                   "PUT /test.txt HTTP/1.0\r\n\r\n");
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "401"); /* not authorized */
+	mg_close_connection(conn);
+
+
 	/* Close the server */
 	g_ctx = NULL;
 	mg_stop(ctx);
@@ -724,7 +740,7 @@ Suite *make_public_suite(void)
 	return suite;
 }
 
-#if 1
+#if 0
 /* Used to debug test cases without using the check framework */
 void main(void)
 {
