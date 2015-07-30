@@ -514,16 +514,26 @@ START_TEST(test_request_handlers)
 	const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
 	const char *HTTP_PORT = "8087";
 	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
+	const char *opt;
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[0] = "listening_ports";
 	OPTIONS[1] = HTTP_PORT;
+	OPTIONS[2] = "document_root";
+	OPTIONS[3] = "test";
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
 	ctx = mg_start(NULL, &g_ctx, OPTIONS);
 	ck_assert(ctx != NULL);
 	g_ctx = ctx;
+
+	opt = mg_get_option(ctx, "listening_ports");
+	ck_assert_str_eq(opt, HTTP_PORT);
+	opt = mg_get_option(ctx, "cgi_environment");
+	ck_assert_str_eq(opt, "");
+	opt = mg_get_option(ctx, "unknown_option_name");
+	ck_assert(opt == NULL);
 
 	for (i = 0; i < 1000; i++) {
 		sprintf(uri, "/U%u", i);
@@ -564,7 +574,7 @@ START_TEST(test_request_handlers)
 	mg_close_connection(conn);
 
 
-	/* Get data from Callback */
+	/* Get data from callback */
 	conn = mg_download(
 	    "localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
@@ -572,13 +582,33 @@ START_TEST(test_request_handlers)
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
-	mg_Sleep(1);
 	i = mg_read(conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10);
 	mg_close_connection(conn);
 
+
+	/* Get static data (if the CI test environment permits it) */
+	conn = mg_download("localhost",
+	                   atoi(HTTP_PORT),
+	                   0,
+	                   ebuf,
+	                   sizeof(ebuf),
+	                   "%s",
+	                   "GET /hello.txt HTTP/1.0\r\n\r\n");
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert_str_eq(buf, "simple text file");
+	mg_close_connection(conn);
+
+
+	/* Close the server */
 	g_ctx = NULL;
 	mg_stop(ctx);
+	mg_Sleep(1);
 }
 END_TEST
 
