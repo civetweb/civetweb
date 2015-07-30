@@ -587,7 +587,7 @@ START_TEST(test_request_handlers)
 	mg_close_connection(conn);
 
 
-	/* Get static data (if the CI test environment permits it) */
+	/* Get static data */
 	conn = mg_download("localhost",
 	                   atoi(HTTP_PORT),
 	                   0,
@@ -605,6 +605,46 @@ START_TEST(test_request_handlers)
 	if ((i >= 0) && (i < sizeof(buf)))
 		buf[i] = 0;
 	ck_assert_str_eq(buf, "simple text file\n");
+	mg_close_connection(conn);
+
+
+	/* Get directory listing */
+	conn = mg_download("localhost",
+	                   atoi(HTTP_PORT),
+	                   0,
+	                   ebuf,
+	                   sizeof(ebuf),
+	                   "%s",
+	                   "GET / HTTP/1.0\r\n\r\n");
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert(i > 6);
+    buf[6] = 0;
+	ck_assert_str_eq(buf, "<html>");
+	mg_close_connection(conn);
+
+
+	/* POST to static file (will not work) */
+	conn = mg_download("localhost",
+	                   atoi(HTTP_PORT),
+	                   0,
+	                   ebuf,
+	                   sizeof(ebuf),
+	                   "%s",
+	                   "POST /hello.txt HTTP/1.0\r\n\r\n");
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "405");
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert(i >= 29);
+    buf[29] = 0;
+    ck_assert_str_eq(buf, "Error 405: Method Not Allowed");
 	mg_close_connection(conn);
 
 
@@ -663,7 +703,7 @@ Suite *make_public_suite(void)
 	return suite;
 }
 
-#if 1
+#if 0
 /* Used to debug test cases without using the check framework */
 void main(void)
 {
