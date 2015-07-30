@@ -602,8 +602,9 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, 17);
-	if ((i >= 0) && (i < sizeof(buf)))
+	if ((i >= 0) && (i < (int)sizeof(buf))) {
 		buf[i] = 0;
+	}
 	ck_assert_str_eq(buf, "simple text file\n");
 	mg_close_connection(conn);
 
@@ -623,7 +624,7 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
 	ck_assert(i > 6);
-    buf[6] = 0;
+	buf[6] = 0;
 	ck_assert_str_eq(buf, "<html>");
 	mg_close_connection(conn);
 
@@ -643,8 +644,8 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(ri->uri, "405");
 	i = mg_read(conn, buf, sizeof(buf));
 	ck_assert(i >= 29);
-    buf[29] = 0;
-    ck_assert_str_eq(buf, "Error 405: Method Not Allowed");
+	buf[29] = 0;
+	ck_assert_str_eq(buf, "Error 405: Method Not Allowed");
 	mg_close_connection(conn);
 
 
