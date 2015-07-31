@@ -4973,6 +4973,7 @@ static int connect_socket(struct mg_context *ctx /* may be null */,
 	if ((ip_ver == 4) &&
 	    (connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin)) == 0)) {
 		/* connected with IPv4 */
+		sa->sin.sin_port = port;
 		return 1;
 	}
 
@@ -4980,6 +4981,7 @@ static int connect_socket(struct mg_context *ctx /* may be null */,
 	if ((ip_ver == 6) &&
 	    (connect(*sock, (struct sockaddr *)&sa->sin6, sizeof(sa->sin6)) == 0)) {
 		/* connected with IPv6 */
+		sa->sin6.sin6_port = port;
 		return 1;
 	}
 #endif
@@ -9507,17 +9509,26 @@ struct mg_connection *mg_connect_client(
 		conn = NULL;
 #endif /* NO_SSL */
 	} else {
-		socklen_t len = sizeof(struct sockaddr);
+		socklen_t len = (sa.sa.sa_family == AF_INET)
+		                    ? sizeof(conn->client.rsa.sin)
+		                    : sizeof(conn->client.rsa.sin6);
+		struct sockaddr *psa =
+		    (sa.sa.sa_family == AF_INET)
+		        ? (struct sockaddr *)&(conn->client.rsa.sin)
+		        : (struct sockaddr *)&(conn->client.rsa.sin6);
 		conn->buf_size = MAX_REQUEST_SIZE;
 		conn->buf = (char *)(conn + 1);
 		conn->ctx = &fake_ctx;
 		conn->client.sock = sock;
-		if (getsockname(sock, &conn->client.rsa.sa, &len) != 0) {
+		conn->client.lsa = sa;
+
+		if (getsockname(sock, psa, &len) != 0) {
 			mg_cry(conn,
 			       "%s: getsockname() failed: %s",
 			       __func__,
 			       strerror(ERRNO));
 		}
+
 		conn->client.is_ssl = use_ssl ? 1 : 0;
 		(void)pthread_mutex_init(&conn->mutex, NULL);
 #ifndef NO_SSL
