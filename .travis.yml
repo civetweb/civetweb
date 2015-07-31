@@ -25,6 +25,8 @@ env:
   matrix:
     - BUILD_SHARED=NO
     - BUILD_SHARED=YES
+    - CIVETWEB_SERVE_NO_FILES=NO
+    - CIVETWEB_SERVE_NO_FILES=YES
 
 addons:
   apt:

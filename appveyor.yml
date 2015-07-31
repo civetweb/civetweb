@@ -20,12 +20,23 @@ environment:
   matrix:
     - compiler: gcc-5.1.0-posix
       build_shared: NO
+      no_files: NO
     - compiler: gcc-5.1.0-posix
       build_shared: YES
+      no_files: NO
     - compiler: msvc-18-seh
       build_shared: NO
+      no_files: NO
     - compiler: msvc-18-seh
       build_shared: YES
+      no_files: NO
+    - compiler: gcc-5.1.0-posix
+      build_shared: YES
+      no_files: YES
+    - compiler: msvc-18-seh
+      build_shared: YES
+      no_files: YES
+
 
 install:
   # Derive some extra information
@@ -91,6 +102,7 @@ before_build:
     -G "%generator%"
     -DCMAKE_BUILD_TYPE=%build_type%
     -DBUILD_SHARED_LIBS=%build_shared%
+    -DCIVETWEB_SERVE_NO_FILES=%no_files%
     "-DCIVETWEB_THIRD_PARTY_DIR=%third_party_dir:\=\\%"
     -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES
     -DCIVETWEB_ENABLE_SSL=%enable_ssl%
