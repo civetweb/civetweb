@@ -9508,7 +9508,10 @@ struct mg_connection *mg_connect_client(
 		mg_free(conn);
 		conn = NULL;
 #endif /* NO_SSL */
+
 	} else {
+
+#ifdef USE_IPV6
 		socklen_t len = (sa.sa.sa_family == AF_INET)
 		                    ? sizeof(conn->client.rsa.sin)
 		                    : sizeof(conn->client.rsa.sin6);
@@ -9516,6 +9519,11 @@ struct mg_connection *mg_connect_client(
 		    (sa.sa.sa_family == AF_INET)
 		        ? (struct sockaddr *)&(conn->client.rsa.sin)
 		        : (struct sockaddr *)&(conn->client.rsa.sin6);
+#else
+		socklen_t len = sizeof(conn->client.rsa.sin);
+		struct sockaddr *psa = (struct sockaddr *)&(conn->client.rsa.sin);
+#endif
+
 		conn->buf_size = MAX_REQUEST_SIZE;
 		conn->buf = (char *)(conn + 1);
 		conn->ctx = &fake_ctx;
