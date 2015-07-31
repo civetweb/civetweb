@@ -4891,6 +4891,7 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
                     size_t ebuf_len)
 {
 	union usa sa;
+	int ip_ver = 0;
 	SOCKET sock = INVALID_SOCKET;
 
 	memset(&sa, 0, sizeof(sa));
@@ -4931,9 +4932,11 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 
 	if (mg_inet_pton(AF_INET, host, &sa.sin, sizeof(sa.sin))) {
 		sa.sin.sin_port = htons((uint16_t)port);
+		ip_ver = 4;
 #ifdef USE_IPV6
 	} else if (mg_inet_pton(AF_INET6, host, &sa.sin6, sizeof(sa.sin6))) {
 		sa.sin6.sin6_port = htons((uint16_t)port);
+		ip_ver = 6;
 #endif
 	} else {
 		mg_snprintf(NULL,
@@ -4945,7 +4948,11 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		return INVALID_SOCKET;
 	}
 
-	sock = socket(PF_INET, SOCK_STREAM, 0);
+	if (ip_ver == 4) {
+		sock = socket(PF_INET, SOCK_STREAM, 0);
+	} else if (ip_ver == 6) {
+		sock = socket(PF_INET6, SOCK_STREAM, 0);
+	}
 
 	if (sock == INVALID_SOCKET) {
 		mg_snprintf(NULL,
@@ -4959,21 +4966,29 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 
 	set_close_on_exec(sock, fc(ctx));
 
-	/* TODO(mid): IPV6 */
-	if (connect(sock, (struct sockaddr *)&sa.sin, sizeof(sa.sin)) != 0) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "connect(%s:%d): %s",
-		            host,
-		            port,
-		            strerror(ERRNO));
-		closesocket(sock);
-		sock = INVALID_SOCKET;
+	if ((ip_ver == 4) &&
+	    (connect(sock, (struct sockaddr *)&sa.sin, sizeof(sa.sin)) == 0)) {
+		/* connected with IPv4 */
+		return sock;
 	}
 
-	return sock;
+	if ((ip_ver == 6) &&
+	    (connect(sock, (struct sockaddr *)&sa.sin6, sizeof(sa.sin6)) == 0)) {
+		/* connected with IPv6 */
+		return sock;
+	}
+
+	/* Not connected */
+	mg_snprintf(NULL,
+	            NULL, /* No truncation check for ebuf */
+	            ebuf,
+	            ebuf_len,
+	            "connect(%s:%d): %s",
+	            host,
+	            port,
+	            strerror(ERRNO));
+	closesocket(sock);
+	return INVALID_SOCKET;
 }
 
 int mg_url_encode(const char *src, char *dst, size_t dst_len)

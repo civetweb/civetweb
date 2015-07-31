@@ -519,7 +519,11 @@ START_TEST(test_request_handlers)
 	char buf[1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 8];
 	int i;
 	const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
-	const char *HTTP_PORT = "8087";
+#ifdef USE_IPV6
+    const char *HTTP_PORT = "8084,[::]:8086";	
+#else
+    const char *HTTP_PORT = "8084";
+#endif
 	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
 	const char *opt;
 	FILE *f;
@@ -585,6 +589,32 @@ START_TEST(test_request_handlers)
 	/* Get data from callback */
 	conn = mg_download(
 	    "localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10);
+	mg_close_connection(conn);
+
+
+	/* Get data from callback using 127.0.0.1 */
+	conn = mg_download(
+	    "127.0.0.1", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10);
+	mg_close_connection(conn);
+
+
+	/* Get data from callback using [::1] */
+	conn = mg_download(
+	    "[::1]", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
 	ri = mg_get_request_info(conn);
 
@@ -684,6 +714,8 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(ri->uri, "401"); /* not authorized */
 	mg_close_connection(conn);
 
+	/* TODO: Test websockets */
+
 
 	/* Close the server */
 	g_ctx = NULL;
@@ -740,7 +772,7 @@ Suite *make_public_suite(void)
 	return suite;
 }
 
-#if 0
+#ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 /* Used to debug test cases without using the check framework */
 void main(void)
 {
@@ -751,7 +783,11 @@ void main(void)
 
 void _ck_assert_failed(const char *file, int line, const char *expr, ...)
 {
-	fprintf(stderr, "error!\n");
+	va_list va;
+	va_start(va, expr);
+	fprintf(stderr, "Error: %s, line %i\n", file, line); /* breakpoint here ! */
+	vfprintf(stderr, expr, va);
+	va_end(va);
 }
 
 void _mark_point(const char *file, int line) {}
