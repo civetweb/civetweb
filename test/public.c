@@ -612,6 +612,7 @@ START_TEST(test_request_handlers)
 	mg_close_connection(conn);
 
 
+#ifdef USE_IPV6
 	/* Get data from callback using [::1] */
 	conn = mg_download(
 	    "[::1]", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
@@ -623,6 +624,7 @@ START_TEST(test_request_handlers)
 	i = mg_read(conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10);
 	mg_close_connection(conn);
+#endif
 
 
 /* It seems to be impossible to find out what the actual working

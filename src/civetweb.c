@@ -4950,9 +4950,12 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 
 	if (ip_ver == 4) {
 		sock = socket(PF_INET, SOCK_STREAM, 0);
-	} else if (ip_ver == 6) {
+	}
+#ifdef USE_IPV6
+    else if (ip_ver == 6) {
 		sock = socket(PF_INET6, SOCK_STREAM, 0);
 	}
+#endif
 
 	if (sock == INVALID_SOCKET) {
 		mg_snprintf(NULL,
@@ -4972,11 +4975,13 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		return sock;
 	}
 
+#ifdef USE_IPV6
 	if ((ip_ver == 6) &&
 	    (connect(sock, (struct sockaddr *)&sa.sin6, sizeof(sa.sin6)) == 0)) {
 		/* connected with IPv6 */
 		return sock;
 	}
+#endif
 
 	/* Not connected */
 	mg_snprintf(NULL,
