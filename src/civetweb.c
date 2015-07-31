@@ -4883,18 +4883,19 @@ static int mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 }
 
 
-static SOCKET conn2(struct mg_context *ctx /* may be null */,
-                    const char *host,
-                    int port,
-                    int use_ssl,
-                    char *ebuf,
-                    size_t ebuf_len)
+static int connect_socket(struct mg_context *ctx /* may be null */,
+                          const char *host,
+                          int port,
+                          int use_ssl,
+                          char *ebuf,
+                          size_t ebuf_len,
+                          SOCKET *sock /* output: socket */,
+                          union usa *sa /* output: socket address */
+                          )
 {
-	union usa sa;
 	int ip_ver = 0;
-	SOCKET sock = INVALID_SOCKET;
-
-	memset(&sa, 0, sizeof(sa));
+	*sock = INVALID_SOCKET;
+	memset(sa, 0, sizeof(*sa));
 
 	if (ebuf_len > 0) {
 		*ebuf = 0;
@@ -4907,7 +4908,7 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		            ebuf_len,
 		            "%s",
 		            "NULL host");
-		return INVALID_SOCKET;
+		return 0;
 	}
 
 	if (port < 0 || !is_valid_port((unsigned)port)) {
@@ -4917,7 +4918,7 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		            ebuf_len,
 		            "%s",
 		            "invalid port");
-		return INVALID_SOCKET;
+		return 0;
 	}
 
 	if (use_ssl && (SSLv23_client_method == NULL)) {
@@ -4927,15 +4928,15 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		            ebuf_len,
 		            "%s",
 		            "SSL is not initialized");
-		return INVALID_SOCKET;
+		return 0;
 	}
 
-	if (mg_inet_pton(AF_INET, host, &sa.sin, sizeof(sa.sin))) {
-		sa.sin.sin_port = htons((uint16_t)port);
+	if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin))) {
+		sa->sin.sin_port = htons((uint16_t)port);
 		ip_ver = 4;
 #ifdef USE_IPV6
-	} else if (mg_inet_pton(AF_INET6, host, &sa.sin6, sizeof(sa.sin6))) {
-		sa.sin6.sin6_port = htons((uint16_t)port);
+	} else if (mg_inet_pton(AF_INET6, host, &sa->sin6, sizeof(sa->sin6))) {
+		sa->sin6.sin6_port = htons((uint16_t)port);
 		ip_ver = 6;
 #endif
 	} else {
@@ -4945,41 +4946,41 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 		            ebuf_len,
 		            "%s",
 		            "host not found");
-		return INVALID_SOCKET;
+		return 0;
 	}
 
 	if (ip_ver == 4) {
-		sock = socket(PF_INET, SOCK_STREAM, 0);
+		*sock = socket(PF_INET, SOCK_STREAM, 0);
 	}
 #ifdef USE_IPV6
-    else if (ip_ver == 6) {
-		sock = socket(PF_INET6, SOCK_STREAM, 0);
+	else if (ip_ver == 6) {
+		*sock = socket(PF_INET6, SOCK_STREAM, 0);
 	}
 #endif
 
-	if (sock == INVALID_SOCKET) {
+	if (*sock == INVALID_SOCKET) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
 		            ebuf_len,
 		            "socket(): %s",
 		            strerror(ERRNO));
-		return INVALID_SOCKET;
+		return 0;
 	}
 
-	set_close_on_exec(sock, fc(ctx));
+	set_close_on_exec(*sock, fc(ctx));
 
 	if ((ip_ver == 4) &&
-	    (connect(sock, (struct sockaddr *)&sa.sin, sizeof(sa.sin)) == 0)) {
+	    (connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin)) == 0)) {
 		/* connected with IPv4 */
-		return sock;
+		return 1;
 	}
 
 #ifdef USE_IPV6
 	if ((ip_ver == 6) &&
-	    (connect(sock, (struct sockaddr *)&sa.sin6, sizeof(sa.sin6)) == 0)) {
+	    (connect(*sock, (struct sockaddr *)&sa->sin6, sizeof(sa->sin6)) == 0)) {
 		/* connected with IPv6 */
-		return sock;
+		return 1;
 	}
 #endif
 
@@ -4992,9 +4993,11 @@ static SOCKET conn2(struct mg_context *ctx /* may be null */,
 	            host,
 	            port,
 	            strerror(ERRNO));
-	closesocket(sock);
-	return INVALID_SOCKET;
+	closesocket(*sock);
+	*sock = INVALID_SOCKET;
+	return 0;
 }
+
 
 int mg_url_encode(const char *src, char *dst, size_t dst_len)
 {
@@ -9476,9 +9479,11 @@ struct mg_connection *mg_connect_client(
 	static struct mg_context fake_ctx;
 	struct mg_connection *conn = NULL;
 	SOCKET sock;
+	union usa sa;
 
-	if ((sock = conn2(&fake_ctx, host, port, use_ssl, ebuf, ebuf_len)) ==
-	    INVALID_SOCKET) {
+	if (!connect_socket(
+	        &fake_ctx, host, port, use_ssl, ebuf, ebuf_len, &sock, &sa)) {
+		;
 	} else if ((conn = (struct mg_connection *)mg_calloc(
 	                1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
 		mg_snprintf(NULL,

@@ -214,16 +214,20 @@ static int lsp_connect(lua_State *L)
 	int num_args = lua_gettop(L);
 	char ebuf[100];
 	SOCKET sock;
+	union usa sa;
+	int ok;
 
 	if ((num_args == 3) && lua_isstring(L, -3) && lua_isnumber(L, -2) &&
 	    lua_isnumber(L, -1)) {
-		sock = conn2(NULL,
-		             lua_tostring(L, -3),
-		             (int)lua_tonumber(L, -2),
-		             (int)lua_tonumber(L, -1),
-		             ebuf,
-		             sizeof(ebuf));
-		if (sock == INVALID_SOCKET) {
+		ok = connect_socket(NULL,
+		                    lua_tostring(L, -3),
+		                    (int)lua_tonumber(L, -2),
+		                    (int)lua_tonumber(L, -1),
+		                    ebuf,
+		                    sizeof(ebuf),
+		                    &sock,
+		                    &sa);
+		if (!ok) {
 			return luaL_error(L, ebuf);
 		} else {
 			lua_newtable(L);
