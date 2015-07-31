@@ -61,8 +61,8 @@ set_property(CACHE CIVETWEB_THREAD_STACK_SIZE PROPERTY VALUE ${CIVETWEB_THREAD_S
 message(STATUS "Thread Stack Size - ${CIVETWEB_THREAD_STACK_SIZE}")
 
 # Serve no files from the web server
-option(CIVETWEB_ENABLE_SERVE_FILES "Configures the server to serve static files" ON)
-message(STATUS "Serve files - ${CIVETWEB_ENABLE_SERVE_FILES}")
+option(CIVETWEB_SERVE_NO_FILES "Configures the server to serve no static files" OFF)
+message(STATUS "Serve no static files - ${CIVETWEB_SERVE_NO_FILES}")
 
 # C++ wrappers
 option(CIVETWEB_ENABLE_CXX "Enables the C++ wrapper library" OFF)
@@ -341,7 +341,7 @@ endif()
 if (CIVETWEB_ENABLE_WEBSOCKETS)
   add_definitions(-DUSE_WEBSOCKET)
 endif()
-if (NOT CIVETWEB_ENABLE_SERVE_FILES)
+if (CIVETWEB_SERVE_NO_FILES)
   add_definitions(-DNO_FILES)
 endif()
 if (CIVETWEB_ENABLE_LUA)
