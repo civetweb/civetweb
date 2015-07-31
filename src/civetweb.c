@@ -4973,7 +4973,6 @@ static int connect_socket(struct mg_context *ctx /* may be null */,
 	if ((ip_ver == 4) &&
 	    (connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin)) == 0)) {
 		/* connected with IPv4 */
-		sa->sin.sin_port = port;
 		return 1;
 	}
 
@@ -4981,7 +4980,6 @@ static int connect_socket(struct mg_context *ctx /* may be null */,
 	if ((ip_ver == 6) &&
 	    (connect(*sock, (struct sockaddr *)&sa->sin6, sizeof(sa->sin6)) == 0)) {
 		/* connected with IPv6 */
-		sa->sin6.sin6_port = port;
 		return 1;
 	}
 #endif
