@@ -520,9 +520,12 @@ START_TEST(test_request_handlers)
 	int i;
 	const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
 #ifdef USE_IPV6
-    const char *HTTP_PORT = "8084,[::]:8086";	
+	const char *HTTP_PORT = "8084,[::]:8086";
+	short ipv4_port = 8084;
+	short ipv6_port = 8086;
 #else
-    const char *HTTP_PORT = "8084";
+	const char *HTTP_PORT = "8084";
+	short ipv4_port = 8084;
 #endif
 	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
 	const char *opt;
@@ -572,7 +575,7 @@ START_TEST(test_request_handlers)
 
 	/* Try to load non existing file */
 	conn = mg_download("localhost",
-	                   atoi(HTTP_PORT),
+	                   ipv4_port,
 	                   0,
 	                   ebuf,
 	                   sizeof(ebuf),
@@ -588,7 +591,7 @@ START_TEST(test_request_handlers)
 
 	/* Get data from callback */
 	conn = mg_download(
-	    "localhost", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
+	    "localhost", ipv4_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
 	ri = mg_get_request_info(conn);
 
@@ -601,7 +604,7 @@ START_TEST(test_request_handlers)
 
 	/* Get data from callback using 127.0.0.1 */
 	conn = mg_download(
-	    "127.0.0.1", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
+	    "127.0.0.1", ipv4_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
 	ri = mg_get_request_info(conn);
 
@@ -614,8 +617,8 @@ START_TEST(test_request_handlers)
 
 #ifdef USE_IPV6
 	/* Get data from callback using [::1] */
-	conn = mg_download(
-	    "[::1]", atoi(HTTP_PORT), 0, ebuf, sizeof(ebuf), "%s", request);
+	conn =
+	    mg_download("[::1]", ipv6_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
 	ri = mg_get_request_info(conn);
 
@@ -641,7 +644,7 @@ START_TEST(test_request_handlers)
 
 	/* Get static data */
 	conn = mg_download("localhost",
-	                   atoi(HTTP_PORT),
+	                   ipv4_port,
 	                   0,
 	                   ebuf,
 	                   sizeof(ebuf),
@@ -663,7 +666,7 @@ START_TEST(test_request_handlers)
 
 	/* Get directory listing */
 	conn = mg_download("localhost",
-	                   atoi(HTTP_PORT),
+	                   ipv4_port,
 	                   0,
 	                   ebuf,
 	                   sizeof(ebuf),
@@ -683,7 +686,7 @@ START_TEST(test_request_handlers)
 
 	/* POST to static file (will not work) */
 	conn = mg_download("localhost",
-	                   atoi(HTTP_PORT),
+	                   ipv4_port,
 	                   0,
 	                   ebuf,
 	                   sizeof(ebuf),
@@ -703,7 +706,7 @@ START_TEST(test_request_handlers)
 
 	/* PUT to static file (will not work) */
 	conn = mg_download("localhost",
-	                   atoi(HTTP_PORT),
+	                   ipv4_port,
 	                   0,
 	                   ebuf,
 	                   sizeof(ebuf),
