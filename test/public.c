@@ -618,7 +618,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, strlen(expected));
+	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(conn);
@@ -633,7 +633,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, strlen(expected));
+	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(conn);
@@ -649,7 +649,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, strlen(expected));
+	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(conn);
@@ -666,7 +666,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, strlen(expected));
+	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(conn);
@@ -695,7 +695,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, strlen(expected));
+	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(conn);
