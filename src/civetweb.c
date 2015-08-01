@@ -3025,9 +3025,9 @@ static int push(struct mg_context *ctx,
 #ifndef NO_SSL
 		if (ssl != NULL) {
 			n = SSL_write(ssl, buf, len);
-			if (n <= 0) {                
-				if (SSL_get_error(conn->ssl, n) ==
-				    5 /* SSL_ERROR_SYSCALL */) {
+			if (n <= 0) {
+				err = SSL_get_error(conn->ssl, n);
+				if (err == 5 /* SSL_ERROR_SYSCALL */) {
 					err = ERRNO;
 				} else {
 					DEBUG_TRACE("SSL_write() failed, error %d", err);
@@ -3150,8 +3150,8 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 		} else if (conn->ssl != NULL) {
 			nread = SSL_read(conn->ssl, buf, len);
 			if (nread <= 0) {
-				if (SSL_get_error(conn->ssl, nread) ==
-				    5 /* SSL_ERROR_SYSCALL */) {
+				err = SSL_get_error(conn->ssl, nread);
+				if (err == 5 /* SSL_ERROR_SYSCALL */) {
 					err = ERRNO;
 				} else {
 					DEBUG_TRACE("SSL_read() failed, error %d", err);
