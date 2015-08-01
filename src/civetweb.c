@@ -3026,7 +3026,7 @@ static int push(struct mg_context *ctx,
 		if (ssl != NULL) {
 			n = SSL_write(ssl, buf, len);
 			if (n <= 0) {
-				err = SSL_get_error(conn->ssl, n);
+				err = SSL_get_error(ssl, n);
 				if (err == 5 /* SSL_ERROR_SYSCALL */) {
 					err = ERRNO;
 				} else {

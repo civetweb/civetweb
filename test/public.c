@@ -517,16 +517,31 @@ START_TEST(test_request_handlers)
 	const struct mg_request_info *ri;
 	char uri[64];
 	char buf[1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 8];
+	const char *expected =
+	    "112123123412345123456123456712345678123456789123456789A";
 	int i;
 	const char *request = "GET /U7 HTTP/1.0\r\n\r\n";
-#ifdef USE_IPV6
+#if defined(USE_IPV6) && defined(NO_SSL)
 	const char *HTTP_PORT = "8084,[::]:8086";
 	short ipv4_port = 8084;
 	short ipv6_port = 8086;
-#else
+#elif !defined(USE_IPV6) && defined(NO_SSL)
 	const char *HTTP_PORT = "8084";
 	short ipv4_port = 8084;
+#elif defined(USE_IPV6) && !defined(NO_SSL)
+	const char *HTTP_PORT = "8084,[::]:8086,8194r,[::]:8196r,8094s,[::]:8096s";
+	short ipv4_port = 8084;
+	short ipv4s_port = 8094;
+	short ipv4r_port = 8194;
+	short ipv6_port = 8086;
+	short ipv6s_port = 8096;
+#elif !defined(USE_IPV6) && !defined(NO_SSL)
+	const char *HTTP_PORT = "8084,8194r,8094s";
+	short ipv4_port = 8084;
+	short ipv4s_port = 8094;
+	short ipv4r_port = 8194;
 #endif
+
 	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
 	const char *opt;
 	FILE *f;
@@ -536,6 +551,10 @@ START_TEST(test_request_handlers)
 	OPTIONS[1] = HTTP_PORT;
 	OPTIONS[2] = "document_root";
 	OPTIONS[3] = ".";
+#ifndef NO_SSL
+	OPTIONS[4] = "ssl_certificate";
+	OPTIONS[5] = "../resources/ssl_cert.pem";
+#endif
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
@@ -598,11 +617,13 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10);
+	ck_assert_int_eq(i, strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
 	mg_close_connection(conn);
 
 
-	/* Get data from callback using 127.0.0.1 */
+	/* Get data from callback using http://127.0.0.1 */
 	conn = mg_download(
 	    "127.0.0.1", ipv4_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
@@ -611,11 +632,13 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10);
+	ck_assert_int_eq(i, strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
 	mg_close_connection(conn);
 
 
-#ifdef USE_IPV6
+#if defined(USE_IPV6)
 	/* Get data from callback using [::1] */
 	conn =
 	    mg_download("[::1]", ipv6_port, 0, ebuf, sizeof(ebuf), "%s", request);
@@ -625,7 +648,25 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10);
+	ck_assert_int_eq(i, strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
+	mg_close_connection(conn);
+#endif
+
+#if !defined(NO_SSL)
+	/* Get data from callback using https://127.0.0.1 */
+	conn = mg_download(
+	    "127.0.0.1", ipv4s_port, 1, ebuf, sizeof(ebuf), "%s", request);
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
 	mg_close_connection(conn);
 #endif
 
@@ -641,6 +682,7 @@ START_TEST(test_request_handlers)
 #endif
 	fwrite("simple text file\n", 17, 1, f);
 	fclose(f);
+
 
 	/* Get static data */
 	conn = mg_download("localhost",
@@ -729,9 +771,9 @@ START_TEST(test_request_handlers)
 }
 END_TEST
 
+
 Suite *make_public_suite(void)
 {
-
 	Suite *const suite = suite_create("Public");
 
 	TCase *const version = tcase_create("Version");
@@ -777,13 +819,20 @@ Suite *make_public_suite(void)
 	return suite;
 }
 
+
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 /* Used to debug test cases without using the check framework */
+
+static int chk_ok = 0;
+static int chk_failed = 0;
+
 void main(void)
 {
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
 	test_request_handlers(0);
+
+	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }
 
 void _ck_assert_failed(const char *file, int line, const char *expr, ...)
@@ -793,9 +842,11 @@ void _ck_assert_failed(const char *file, int line, const char *expr, ...)
 	fprintf(stderr, "Error: %s, line %i\n", file, line); /* breakpoint here ! */
 	vfprintf(stderr, expr, va);
 	va_end(va);
+	chk_failed++;
 }
 
-void _mark_point(const char *file, int line) {}
+void _mark_point(const char *file, int line) { chk_ok++; }
+
 void tcase_fn_start(const char *fname, const char *file, int line) {}
 void suite_add_tcase(Suite *s, TCase *tc){};
 void _tcase_add_test(TCase *tc,
