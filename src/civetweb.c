@@ -3107,7 +3107,7 @@ static int64_t push_all(struct mg_context *ctx,
 static int
 pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 {
-	int nread;
+	int nread, err;
 	struct timespec start, now;
 
 #ifdef _WIN32
@@ -3129,13 +3129,29 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 			 * cannot afford to block and must pass all read bytes immediately
 			 * to the client. */
 			nread = (int)read(fileno(fp), buf, (size_t)len);
+			err = (nread < 0) ? ERRNO : 0;
+
 #ifndef NO_SSL
 		} else if (conn->ssl != NULL) {
 			nread = SSL_read(conn->ssl, buf, len);
+			if (nread <= 0) {
+				if (SSL_get_error(conn->ssl, nread) ==
+				    5 /* SSL_ERROR_SYSCALL */) {
+					err = ERRNO;
+				} else {
+					DEBUG_TRACE("SSL_read() failed, error %d", err);
+					return -1;
+				}
+			} else {
+				err = 0;
+			}
 #endif
+
 		} else {
 			nread = (int)recv(conn->client.sock, buf, (len_t)len, 0);
+			err = (nread < 0) ? ERRNO : 0;
 		}
+
 		if (conn->ctx->stop_flag) {
 			return -1;
 		}
@@ -3149,8 +3165,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 			return -1;
 		}
 		if (nread < 0) {
-			/* socket error - check errno */
-			int err = ERRNO;
+/* socket error - check errno */
 #ifdef _WIN32
 			if (err == WSAEWOULDBLOCK) {
 				/* standard case if called from close_socket_gracefully */
@@ -9726,6 +9741,8 @@ struct mg_connection *mg_download(const char *host,
 
 	/* open a connection */
 	conn = mg_connect_client(host, port, use_ssl, ebuf, ebuf_len);
+
+	Sleep(25000); /* Test for #184 */
 
 	if (conn != NULL) {
 		i = mg_vprintf(conn, fmt, ap);
