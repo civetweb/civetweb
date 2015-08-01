@@ -118,12 +118,13 @@ before_build:
   - cd "%source_path%"
 
 build_script:
+  - cd
   - cd "%build_path%"
   - appveyor AddMessage -Category Information "Build command '%build%'"
   - cmd /c "%build%"
   - cd "%source_path%"
 
-test_script:
+test_script:   
   - cd "%build_path%"
   - appveyor AddMessage -Category Information "Test command '%build%'"
   - cmd /c "%test%"

@@ -47,6 +47,9 @@ install:
 
 before_script:
   # Generate the build scripts with CMake
+  - pwd
+  - ldd crypto
+  - ldd ssl
   - mkdir output
   - cd output
   - cmake --version
