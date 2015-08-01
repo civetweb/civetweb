@@ -3002,7 +3002,7 @@ static int push(struct mg_context *ctx,
                 double timeout)
 {
 	struct timespec start, now;
-	int n;
+	int n, err;
 
 #ifdef _WIN32
 	typedef int len_t;
@@ -3025,15 +3025,30 @@ static int push(struct mg_context *ctx,
 #ifndef NO_SSL
 		if (ssl != NULL) {
 			n = SSL_write(ssl, buf, len);
+			if (n <= 0) {                
+				if (SSL_get_error(conn->ssl, n) ==
+				    5 /* SSL_ERROR_SYSCALL */) {
+					err = ERRNO;
+				} else {
+					DEBUG_TRACE("SSL_write() failed, error %d", err);
+					return -1;
+				}
+			} else {
+				err = 0;
+			}
 		} else
 #endif
 		    if (fp != NULL) {
 			n = (int)fwrite(buf, 1, (size_t)len, fp);
 			if (ferror(fp)) {
 				n = -1;
+				err = ERRNO;
+			} else {
+				err = 0;
 			}
 		} else {
 			n = (int)send(sock, buf, (len_t)len, MSG_NOSIGNAL);
+			err = (n < 0) ? ERRNO : 0;
 		}
 
 		if (ctx->stop_flag) {
@@ -3050,11 +3065,11 @@ static int push(struct mg_context *ctx,
 		}
 		if (n < 0) {
 			/* socket error - check errno */
-			int err = ERRNO;
 			DEBUG_TRACE("send() failed, error %d", err);
-			(void)err; /* TODO: error handling depending on the error code.
-			            * These codes are different between Windows and Linux.
-			            */
+
+			/* TODO: error handling depending on the error code.
+			 * These codes are different between Windows and Linux.
+			 */
 			return -1;
 		}
 		if (timeout > 0) {
@@ -9741,8 +9756,6 @@ struct mg_connection *mg_download(const char *host,
 
 	/* open a connection */
 	conn = mg_connect_client(host, port, use_ssl, ebuf, ebuf_len);
-
-	Sleep(25000); /* Test for #184 */
 
 	if (conn != NULL) {
 		i = mg_vprintf(conn, fmt, ap);
