@@ -32,6 +32,8 @@ addons:
   apt:
     packages:
       - cmake
+      - openssl
+      - libssl-dev
     sources:
       - kubuntu-backports
 
@@ -48,8 +50,7 @@ install:
 before_script:
   # Generate the build scripts with CMake
   - pwd
-  - ldd crypto
-  - ldd ssl
+  - ls -l
   - mkdir output
   - cd output
   - cmake --version

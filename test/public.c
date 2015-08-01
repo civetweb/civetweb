@@ -535,6 +535,7 @@ START_TEST(test_request_handlers)
 	short ipv4r_port = 8194;
 	short ipv6_port = 8086;
 	short ipv6s_port = 8096;
+	short ipv6r_port = 8196;
 #elif !defined(USE_IPV6) && !defined(NO_SSL)
 	const char *HTTP_PORT = "8084,8194r,8094s";
 	short ipv4_port = 8084;
@@ -639,7 +640,7 @@ START_TEST(test_request_handlers)
 
 
 #if defined(USE_IPV6)
-	/* Get data from callback using [::1] */
+	/* Get data from callback using http://[::1] */
 	conn =
 	    mg_download("[::1]", ipv6_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(conn != NULL);
@@ -654,6 +655,7 @@ START_TEST(test_request_handlers)
 	mg_close_connection(conn);
 #endif
 
+
 #if !defined(NO_SSL)
 	/* Get data from callback using https://127.0.0.1 */
 	conn = mg_download(
@@ -667,6 +669,47 @@ START_TEST(test_request_handlers)
 	ck_assert_int_eq(i, strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
+	mg_close_connection(conn);
+
+	/* Get redirect from callback using http://127.0.0.1 */
+	conn = mg_download(
+	    "127.0.0.1", ipv4r_port, 0, ebuf, sizeof(ebuf), "%s", request);
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "302");
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, -1);
+	mg_close_connection(conn);
+#endif
+
+
+#if defined(USE_IPV6) && !defined(NO_SSL)
+	/* Get data from callback using https://[::1] */
+	conn =
+	    mg_download("[::1]", ipv6s_port, 1, ebuf, sizeof(ebuf), "%s", request);
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
+	mg_close_connection(conn);
+
+	/* Get redirect from callback using http://127.0.0.1 */
+	conn =
+	    mg_download("[::1]", ipv6r_port, 0, ebuf, sizeof(ebuf), "%s", request);
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "302");
+	i = mg_read(conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, -1);
 	mg_close_connection(conn);
 #endif
 
