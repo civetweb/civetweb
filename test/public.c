@@ -445,12 +445,6 @@ START_TEST(test_mg_start_stop_https_server)
 	memset(ssl, 0, sizeof(ssl));
 
 	ctx = mg_start(NULL, NULL, OPTIONS);
-	if (!ctx) {
-		/* TODO (high): The continuous integration test environment seems to
-		 * not have SSL libraries available. */
-		return;
-	}
-
 	ck_assert(ctx != NULL);
 
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
