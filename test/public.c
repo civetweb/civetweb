@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "public.h"
 #include <civetweb.h>
@@ -395,6 +397,64 @@ START_TEST(test_mg_url_decode)
 END_TEST
 
 
+START_TEST(test_the_test_environment)
+{
+	char wd[300];
+	char buf[500];
+	FILE *f;
+	struct stat st;
+	int ret;
+
+	memset(wd, 0, sizeof(wd));
+	memset(buf, 0, sizeof(buf));
+
+/* Get the current working directory */
+#ifdef _WIN32
+	(void)GetCurrentDirectoryA(sizeof(wd), wd);
+	wd[sizeof(wd) - 1] = 0;
+#else
+	(void)getcwd(wd, sizeof(wd));
+	wd[sizeof(wd) - 1] = 0;
+#endif
+
+/* Check the pem file */
+#ifdef _WIN32
+	strcpy(buf, wd);
+	strcat(buf, "\\resources\\ssl_cert.pem");
+	f = fopen(buf, "rb");
+#else
+	strcpy(buf, wd);
+	strcat(buf, "/resources/ssl_cert.pem");
+	f = fopen(buf, "r");
+#endif
+
+	if (f) {
+		fclose(f);
+	} else {
+		ck_abort_msg("%s not found", buf);
+	}
+
+/* Check the test dir */
+#ifdef _WIN32
+	strcpy(buf, wd);
+	strcat(buf, "\\test");
+#else
+	strcpy(buf, wd);
+	strcat(buf, "/test");
+#endif
+
+	memset(&st, 0, sizeof(st));
+	ret = stat(buf, &st);
+
+	if (!ret) {
+		fclose(f);
+	} else {
+		ck_abort_msg("%s not found", buf);
+	}
+}
+END_TEST
+
+
 static int log_msg_func(const struct mg_connection *conn, const char *message)
 {
 	struct mg_context *ctx;
@@ -457,8 +517,8 @@ START_TEST(test_mg_start_stop_https_server)
 	    "listening_ports",
 	    "8080,8443s",
 	    "ssl_certificate",
-	    "../resources/ssl_cert.pem", // TODO: check working path of CI test
-	                                 // system
+	    "resources/ssl_cert.pem", // TODO: check working path of CI test
+	                              // system
 	    NULL,
 	};
 	size_t ports_cnt;
@@ -492,6 +552,7 @@ START_TEST(test_mg_start_stop_https_server)
 	mg_stop(ctx);
 }
 END_TEST
+
 
 static struct mg_context *g_ctx;
 
@@ -580,7 +641,7 @@ START_TEST(test_request_handlers)
 	OPTIONS[3] = ".";
 #ifndef NO_SSL
 	OPTIONS[4] = "ssl_certificate";
-	OPTIONS[5] = "../resources/ssl_cert.pem";
+	OPTIONS[5] = "resources/ssl_cert.pem";
 #endif
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
@@ -852,6 +913,7 @@ Suite *make_public_suite(void)
 	TCase *const urlencodingdecoding = tcase_create("URL encoding decoding");
 	TCase *const cookies = tcase_create("Cookies and variables");
 	TCase *const md5 = tcase_create("MD5");
+	TCase *const checktestenv = tcase_create("Check test environment");
 	TCase *const startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const startstophttps = tcase_create("Start Stop HTTPS Server");
 	TCase *const serverrequests = tcase_create("Server Requests");
@@ -880,6 +942,9 @@ Suite *make_public_suite(void)
 	tcase_add_test(md5, test_mg_md5);
 	suite_add_tcase(suite, md5);
 
+	tcase_add_test(checktestenv, test_the_test_environment);
+	suite_add_tcase(suite, checktestenv);
+
 	tcase_add_test(startstophttp, test_mg_start_stop_http_server);
 	suite_add_tcase(suite, startstophttp);
 
@@ -901,6 +966,7 @@ static int chk_failed = 0;
 
 void main(void)
 {
+	test_the_test_environment(0);
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
 	test_request_handlers(0);
