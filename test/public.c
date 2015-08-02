@@ -395,6 +395,22 @@ START_TEST(test_mg_url_decode)
 END_TEST
 
 
+static int log_msg_func(const struct mg_connection *conn, const char *message)
+{
+	struct mg_context *ctx;
+	char *ud;
+
+	ck_assert(conn != NULL);
+	ctx = mg_get_context(conn);
+	ck_assert(ctx != NULL);
+	ud = (char *)mg_get_user_data(ctx);
+
+	strncpy(ud, message, 255);
+	ud[255] = 0;
+	return 1;
+}
+
+
 START_TEST(test_mg_start_stop_http_server)
 {
 	struct mg_context *ctx;
@@ -404,11 +420,19 @@ START_TEST(test_mg_start_stop_http_server)
 	size_t ports_cnt;
 	int ports[16];
 	int ssl[16];
+	struct mg_callbacks callbacks;
+	char errmsg[256];
 
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
+	memset(&callbacks, 0, sizeof(callbacks));
+	memset(errmsg, 0, sizeof(errmsg));
 
-	ctx = mg_start(NULL, NULL, OPTIONS);
+	callbacks.log_message = log_msg_func;
+
+	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
+    mg_Sleep(1);
+    ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
@@ -440,11 +464,19 @@ START_TEST(test_mg_start_stop_https_server)
 	size_t ports_cnt;
 	int ports[16];
 	int ssl[16];
+	struct mg_callbacks callbacks;
+	char errmsg[256];
 
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
+	memset(&callbacks, 0, sizeof(callbacks));
+	memset(errmsg, 0, sizeof(errmsg));
 
-	ctx = mg_start(NULL, NULL, OPTIONS);
+	callbacks.log_message = log_msg_func;
+
+	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
+    mg_Sleep(1);
+    ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);

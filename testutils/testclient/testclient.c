@@ -20,8 +20,8 @@ static const char * METHODLIST[] = {
 
 static int CLIENTCOUNT = 0; // 20;
 static int TESTCYCLES = 1;
-static int RESOURCEINDEX = 2;
-static int METHODINDEX = 2;
+static int RESOURCEINDEX = 1;
+static int METHODINDEX = 0;
 
 
 int sockvprintf(SOCKET soc, const char * fmt, va_list vl) {

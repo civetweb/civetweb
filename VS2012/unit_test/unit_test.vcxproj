@@ -10,6 +10,16 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\civetweb.h" />
+    <ClInclude Include="..\..\test\civetweb_check.h" />
+    <ClInclude Include="..\..\test\private.h" />
+    <ClInclude Include="..\..\test\public.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\civetweb.c" />
+    <ClCompile Include="..\..\test\public.c" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1AC4A7A6-0100-4287-97F4-B95807BE5607}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -52,7 +62,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>MEMORY_DEBUGGING;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>REPLACE_CHECK_FOR_LOCAL_DEBUGGING;USE_IPV6;MEMORY_DEBUGGING;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\src;$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -78,9 +88,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\test\unit_test.c" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
