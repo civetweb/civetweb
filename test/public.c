@@ -431,8 +431,8 @@ START_TEST(test_mg_start_stop_http_server)
 	callbacks.log_message = log_msg_func;
 
 	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
-    mg_Sleep(1);
-    ck_assert_str_eq(errmsg, "");
+	mg_Sleep(1);
+	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
@@ -475,8 +475,8 @@ START_TEST(test_mg_start_stop_https_server)
 	callbacks.log_message = log_msg_func;
 
 	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
-    mg_Sleep(1);
-    ck_assert_str_eq(errmsg, "");
+	mg_Sleep(1);
+	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
@@ -854,6 +854,8 @@ Suite *make_public_suite(void)
 	TCase *const md5 = tcase_create("MD5");
 	TCase *const startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const startstophttps = tcase_create("Start Stop HTTPS Server");
+	TCase *const serverrequests = tcase_create("Server Requests");
+
 
 	tcase_add_test(version, test_mg_version);
 	suite_add_tcase(suite, version);
@@ -879,11 +881,13 @@ Suite *make_public_suite(void)
 	suite_add_tcase(suite, md5);
 
 	tcase_add_test(startstophttp, test_mg_start_stop_http_server);
-	tcase_add_test(startstophttp, test_request_handlers);
 	suite_add_tcase(suite, startstophttp);
 
 	tcase_add_test(startstophttps, test_mg_start_stop_https_server);
 	suite_add_tcase(suite, startstophttps);
+
+	tcase_add_test(serverrequests, test_request_handlers);
+	suite_add_tcase(suite, serverrequests);
 
 	return suite;
 }
