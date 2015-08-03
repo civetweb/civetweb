@@ -353,10 +353,7 @@ START_TEST(test_encode_decode)
 {
 	char buf[128];
 	const char *alpha = "abcdefghijklmnopqrstuvwxyz";
-	const char *alpha_b64_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
 	const char *nonalpha = " !\"#$%&'()*+,-./0123456789:;<=>?@";
-	const char *nonalpha_b64_enc =
-	    "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
 	const char *nonalpha_url_enc1 =
 	    "%20%21%22%23$%25%26%27()%2a%2b,-.%2f0123456789%3a;%3c%3d%3e%3f%40";
 	const char *nonalpha_url_enc2 =
@@ -365,6 +362,10 @@ START_TEST(test_encode_decode)
 	size_t len;
 
 #if defined(USE_WEBSOCKET) || defined(USE_LUA)
+	const char *alpha_b64_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
+	const char *nonalpha_b64_enc =
+	    "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
+
 	memset(buf, 77, sizeof(buf));
 	base64_encode((unsigned char *)"a", 1, buf);
 	ck_assert_str_eq(buf, "YQ==");
