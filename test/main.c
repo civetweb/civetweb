@@ -20,6 +20,7 @@
  */
 
 #include "civetweb_check.h"
+#include "shared.h"
 #include "public.h"
 #include "private.h"
 
@@ -40,15 +41,21 @@ int main(const int argc, const char * const * const argv) {
   const char * test_case = NULL;
   const char * const test_case_arg = "--test-case=";
   const size_t test_case_arg_size = strlen(test_case_arg);
+  const char * const test_dir_arg = "--test-dir=";
+  const size_t test_dir_arg_size = strlen(test_dir_arg);
   for (int i = 1; i < argc; ++i) {
     if (0 == strncmp(suite_arg, argv[i], suite_arg_size) && (strlen(argv[i]) > suite_arg_size)) {
       suite = &argv[i][suite_arg_size];
     } else if (0 == strncmp(test_case_arg, argv[i], test_case_arg_size) && (strlen(argv[i]) > test_case_arg_size)) {
       test_case = &argv[i][test_case_arg_size];
+    } else if (0 == strncmp(test_dir_arg, argv[i], test_dir_arg_size) && (strlen(argv[i]) > test_dir_arg_size)) {
+      set_test_directory(&argv[i][test_dir_arg_size]);
     } else if (0 == strcmp("--help", argv[i])) {
       printf("Usage: %s [options]\n"
         "  --suite=Suite            Determines the suite to run\n"
-        "  --test-case='Test Case'  Determines the test case to run\n",
+        "  --test-case='Test Case'  Determines the test case to run\n"
+        "  --test-dir='folder/path' The location of the test directory with the \n"
+        "                           'fixtures' and 'expected\n",
         argv[0]);
       exit(EXIT_SUCCESS);
     } else {

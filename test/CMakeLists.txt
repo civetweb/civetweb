@@ -53,6 +53,10 @@ if (LIBRT_FOUND)
 endif()
 
 # Build the C unit tests
+add_library(shared-c-unit-tests STATIC shared.c)
+target_include_directories(
+  shared-c-unit-tests PUBLIC
+  ${PROJECT_SOURCE_DIR}/include)
 add_library(public-c-unit-tests STATIC public.c)
 if (BUILD_SHARED_LIBS)
   target_compile_definitions(public-c-unit-tests PRIVATE CIVETWEB_DLL_IMPORTS)
@@ -69,7 +73,11 @@ target_include_directories(
 target_link_libraries(private-c-unit-tests ${CHECK_LIBRARIES})
 add_dependencies(private-c-unit-tests check-unit-test-framework)
 add_executable(civetweb-c-unit-test main.c)
-target_link_libraries(civetweb-c-unit-test public-c-unit-tests private-c-unit-tests ${CHECK_LIBRARIES})
+target_link_libraries(civetweb-c-unit-test
+  shared-c-unit-tests
+  public-c-unit-tests
+  private-c-unit-tests
+  ${CHECK_LIBRARIES})
 add_dependencies(civetweb-c-unit-test check-unit-test-framework)
 
 # Add a check command that builds the dependent test program
@@ -84,7 +92,7 @@ macro(civetweb_add_test suite test_case)
   string(REGEX REPLACE "[^-A-Za-z0-9]" "-" test "${test}")
   add_test(
     NAME ${test}
-    COMMAND civetweb-c-unit-test "--suite=${suite}" "--test-case=${test_case}")
+    COMMAND civetweb-c-unit-test "--test-dir=${CMAKE_CURRENT_SOURCE_DIR}" "--suite=${suite}" "--test-case=${test_case}")
   if (WIN32)
     string(REPLACE ";" "\\;" test_path "$ENV{PATH}")
     set_tests_properties(${test} PROPERTIES
