@@ -66,7 +66,8 @@ int main(const int argc, const char * const * const argv) {
   }
 
   // Run up the tests
-  SRunner * const srunner = srunner_create(make_public_suite());
+  SRunner * const srunner = srunner_create(make_public_func_suite());
+  srunner_add_suite(srunner, make_public_server_suite());
   srunner_add_suite(srunner, make_private_suite());
   srunner_run(srunner, suite, test_case, CK_NORMAL);
   const int number_run = srunner_ntests_run(srunner);

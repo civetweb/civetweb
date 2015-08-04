@@ -18,11 +18,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef TEST_PUBLIC_H_
-#define TEST_PUBLIC_H_
+#ifndef TEST_PUBLIC_FUNC_H_
+#define TEST_PUBLIC_FUNC_H_
 
 #include "civetweb_check.h"
 
-Suite *make_public_suite(void);
+Suite *make_public_func_suite(void);
 
 #endif /* TEST_PUBLIC_H_ */

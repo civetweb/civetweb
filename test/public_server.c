@@ -551,9 +551,9 @@ START_TEST(test_request_handlers)
 END_TEST
 
 
-Suite *make_public_suite(void)
+Suite *make_public_server_suite(void)
 {
-	Suite *const suite = suite_create("Public");
+	Suite *const suite = suite_create("PublicServer");
 
 	TCase *const checktestenv = tcase_create("Check test environment");
 	TCase *const startstophttp = tcase_create("Start Stop HTTP Server");
