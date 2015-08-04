@@ -122,19 +122,19 @@ civetweb_add_test(Private "Internal Parsing")
 civetweb_add_test(Private "Encode Decode")
 
 # Public API function tests
-civetweb_add_test(Public "Version")
-civetweb_add_test(Public "Options")
-civetweb_add_test(Public "MIME types")
-civetweb_add_test(Public "strcasecmp")
-civetweb_add_test(Public "URL encoding decoding")
-civetweb_add_test(Public "Cookies and variables")
-civetweb_add_test(Public "MD5")
+civetweb_add_test(PublicFunc "Version")
+civetweb_add_test(PublicFunc "Options")
+civetweb_add_test(PublicFunc "MIME types")
+civetweb_add_test(PublicFunc "strcasecmp")
+civetweb_add_test(PublicFunc "URL encoding decoding")
+civetweb_add_test(PublicFunc "Cookies and variables")
+civetweb_add_test(PublicFunc "MD5")
 
 # Public server tests
-civetweb_add_test(Public "Check test environment")
-civetweb_add_test(Public "Start Stop HTTP Server")
-civetweb_add_test(Public "Start Stop HTTPS Server")
-civetweb_add_test(Public "Server Requests")
+civetweb_add_test(PublicServer "Check test environment")
+civetweb_add_test(PublicServer "Start Stop HTTP Server")
+civetweb_add_test(PublicServer "Start Stop HTTPS Server")
+civetweb_add_test(PublicServer "Server Requests")
 
 
 # Add the coverage command(s)
