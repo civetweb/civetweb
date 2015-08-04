@@ -57,25 +57,39 @@ add_library(shared-c-unit-tests STATIC shared.c)
 target_include_directories(
   shared-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-add_library(public-c-unit-tests STATIC public.c)
+  
+add_library(public-func-c-unit-tests STATIC public_func.c)
 if (BUILD_SHARED_LIBS)
-  target_compile_definitions(public-c-unit-tests PRIVATE CIVETWEB_DLL_IMPORTS)
+  target_compile_definitions(public-func-c-unit-tests PRIVATE CIVETWEB_DLL_IMPORTS)
 endif()
 target_include_directories(
-  public-c-unit-tests PUBLIC
+  public-func-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(public-c-unit-tests c-library ${CHECK_LIBRARIES})
-add_dependencies(public-c-unit-tests check-unit-test-framework)
+target_link_libraries(public-func-c-unit-tests c-library ${CHECK_LIBRARIES})
+add_dependencies(public-func-c-unit-tests check-unit-test-framework)
+
+add_library(public-server-c-unit-tests STATIC public_server.c)
+if (BUILD_SHARED_LIBS)
+  target_compile_definitions(public-server-c-unit-tests PRIVATE CIVETWEB_DLL_IMPORTS)
+endif()
+target_include_directories(
+  public-server-c-unit-tests PUBLIC
+  ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(public-server-c-unit-tests c-library ${CHECK_LIBRARIES})
+add_dependencies(public-server-c-unit-tests check-unit-test-framework)
+
 add_library(private-c-unit-tests STATIC private.c)
 target_include_directories(
   private-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(private-c-unit-tests ${CHECK_LIBRARIES})
 add_dependencies(private-c-unit-tests check-unit-test-framework)
+
 add_executable(civetweb-c-unit-test main.c)
 target_link_libraries(civetweb-c-unit-test
   shared-c-unit-tests
-  public-c-unit-tests
+  public-func-c-unit-tests
+  public-server-c-unit-tests
   private-c-unit-tests
   ${CHECK_LIBRARIES})
 add_dependencies(civetweb-c-unit-test check-unit-test-framework)
@@ -107,7 +121,7 @@ civetweb_add_test(Private "URL Parsing")
 civetweb_add_test(Private "Internal Parsing")
 civetweb_add_test(Private "Encode Decode")
 
-# Public API tests
+# Public API function tests
 civetweb_add_test(Public "Version")
 civetweb_add_test(Public "Options")
 civetweb_add_test(Public "MIME types")
@@ -115,6 +129,8 @@ civetweb_add_test(Public "strcasecmp")
 civetweb_add_test(Public "URL encoding decoding")
 civetweb_add_test(Public "Cookies and variables")
 civetweb_add_test(Public "MD5")
+
+# Public server tests
 civetweb_add_test(Public "Check test environment")
 civetweb_add_test(Public "Start Stop HTTP Server")
 civetweb_add_test(Public "Start Stop HTTPS Server")

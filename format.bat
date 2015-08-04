@@ -9,8 +9,10 @@ clang-format -i src/timer.inl
 clang-format -i include/civetweb.h
 clang-format -i include/CivetServer.h
 
-clang-format -i test/public.h
-clang-format -i test/public.c
+clang-format -i test/public_func.h
+clang-format -i test/public_func.c
+clang-format -i test/public_server.h
+clang-format -i test/public_server.c
 clang-format -i test/private.h
 clang-format -i test/private.c
 clang-format -i test/civetweb_check.h
