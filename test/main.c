@@ -21,7 +21,8 @@
 
 #include "civetweb_check.h"
 #include "shared.h"
-#include "public.h"
+#include "public_func.h"
+#include "public_server.h"
 #include "private.h"
 
 #include <stdlib.h>
