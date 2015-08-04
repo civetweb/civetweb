@@ -34,6 +34,359 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
+
+START_TEST(test_mg_version)
+{
+	const char *ver = mg_version();
+	unsigned major = 0, minor = 0;
+	int ret;
+
+	ck_assert(ver != NULL);
+	ck_assert_str_eq(ver, CIVETWEB_VERSION);
+
+	/* check structure of version string */
+	ret = sscanf(ver, "%u.%u", &major, &minor);
+	ck_assert_int_eq(ret, 2);
+	ck_assert_uint_ge(major, 1);
+}
+END_TEST
+
+
+START_TEST(test_mg_get_valid_options)
+{
+	int i;
+	const struct mg_option *default_options = mg_get_valid_options();
+
+	ck_assert(default_options != NULL);
+
+	for (i = 0; default_options[i].name != NULL; i++) {
+		ck_assert(default_options[i].name != NULL);
+		ck_assert(strlen(default_options[i].name) > 0);
+		ck_assert(((int)default_options[i].type) > 0);
+	}
+
+	ck_assert(i > 0);
+}
+END_TEST
+
+
+START_TEST(test_mg_get_builtin_mime_type)
+{
+	ck_assert_str_eq(mg_get_builtin_mime_type("x.txt"), "text/plain");
+	ck_assert_str_eq(mg_get_builtin_mime_type("x.html"), "text/html");
+	ck_assert_str_eq(mg_get_builtin_mime_type("x.HTML"), "text/html");
+	ck_assert_str_eq(mg_get_builtin_mime_type("x.hTmL"), "text/html");
+	ck_assert_str_eq(mg_get_builtin_mime_type("/abc/def/ghi.htm"), "text/html");
+	ck_assert_str_eq(mg_get_builtin_mime_type("x.unknown_extention_xyz"),
+	                 "text/plain");
+}
+END_TEST
+
+
+START_TEST(test_mg_strncasecmp)
+{
+	ck_assert(mg_strncasecmp("abc", "abc", 3) == 0);
+	ck_assert(mg_strncasecmp("abc", "abcd", 3) == 0);
+	ck_assert(mg_strncasecmp("abc", "abcd", 4) != 0);
+	ck_assert(mg_strncasecmp("a", "A", 1) == 0);
+
+	ck_assert(mg_strncasecmp("A", "B", 1) < 0);
+	ck_assert(mg_strncasecmp("A", "b", 1) < 0);
+	ck_assert(mg_strncasecmp("a", "B", 1) < 0);
+	ck_assert(mg_strncasecmp("a", "b", 1) < 0);
+	ck_assert(mg_strncasecmp("b", "A", 1) > 0);
+	ck_assert(mg_strncasecmp("B", "A", 1) > 0);
+	ck_assert(mg_strncasecmp("b", "a", 1) > 0);
+	ck_assert(mg_strncasecmp("B", "a", 1) > 0);
+
+	ck_assert(mg_strncasecmp("xAx", "xBx", 3) < 0);
+	ck_assert(mg_strncasecmp("xAx", "xbx", 3) < 0);
+	ck_assert(mg_strncasecmp("xax", "xBx", 3) < 0);
+	ck_assert(mg_strncasecmp("xax", "xbx", 3) < 0);
+	ck_assert(mg_strncasecmp("xbx", "xAx", 3) > 0);
+	ck_assert(mg_strncasecmp("xBx", "xAx", 3) > 0);
+	ck_assert(mg_strncasecmp("xbx", "xax", 3) > 0);
+	ck_assert(mg_strncasecmp("xBx", "xax", 3) > 0);
+}
+END_TEST
+
+
+START_TEST(test_mg_get_cookie)
+{
+	char buf[32];
+	int ret;
+	const char *longcookie = "key1=1; key2=2; key3; key4=4; key5=; key6; "
+	                         "key7=this+is+it; key8=8; key9";
+
+	/* invalid result buffer */
+	ret = mg_get_cookie("", "notfound", NULL, 999);
+	ck_assert_int_eq(ret, -2);
+
+	/* zero size result buffer */
+	ret = mg_get_cookie("", "notfound", buf, 0);
+	ck_assert_int_eq(ret, -2);
+
+	/* too small result buffer */
+	ret = mg_get_cookie("key=toooooooooolong", "key", buf, 4);
+	ck_assert_int_eq(ret, -3);
+
+	/* key not found in string */
+	ret = mg_get_cookie("", "notfound", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+
+	ret = mg_get_cookie(longcookie, "notfound", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+
+	/* key not found in string */
+	ret = mg_get_cookie("key1=1; key2=2; key3=3", "notfound", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+
+	/* keys are found as first, middle and last key */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie("key1=1; key2=2; key3=3", "key1", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("1", buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie("key1=1; key2=2; key3=3", "key2", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("2", buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie("key1=1; key2=2; key3=3", "key3", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("3", buf);
+
+	/* longer value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie(longcookie, "key7", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 10);
+	ck_assert_str_eq("this+is+it", buf);
+
+	/* key with = but without value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie(longcookie, "key5", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 0);
+	ck_assert_str_eq("", buf);
+
+	/* key without = and without value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_cookie(longcookie, "key6", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+	/* TODO: mg_get_cookie and mg_get_var(2) should have the same behavior */
+}
+END_TEST
+
+
+START_TEST(test_mg_get_var)
+{
+	char buf[32];
+	int ret;
+	const char *shortquery = "key1=1&key2=2&key3=3";
+	const char *longquery = "key1=1&key2=2&key3&key4=4&key5=&key6&"
+	                        "key7=this+is+it&key8=8&key9&&key10=&&"
+	                        "key7=that+is+it&key12=12";
+
+	/* invalid result buffer */
+	ret = mg_get_var2("", 0, "notfound", NULL, 999, 0);
+	ck_assert_int_eq(ret, -2);
+
+	/* zero size result buffer */
+	ret = mg_get_var2("", 0, "notfound", buf, 0, 0);
+	ck_assert_int_eq(ret, -2);
+
+	/* too small result buffer */
+	ret = mg_get_var2("key=toooooooooolong", 19, "key", buf, 4, 0);
+	/* ck_assert_int_eq(ret, -3);
+	   --> TODO: mg_get_cookie returns -3, mg_get_var -2. This should be
+	   unified. */
+	ck_assert(ret < 0);
+
+	/* key not found in string */
+	ret = mg_get_var2("", 0, "notfound", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, -1);
+
+	ret = mg_get_var2(
+	    longquery, strlen(longquery), "notfound", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, -1);
+
+	/* key not found in string */
+	ret = mg_get_var2(
+	    shortquery, strlen(shortquery), "notfound", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, -1);
+
+	/* key not found in string */
+	ret = mg_get_var2("key1=1&key2=2&key3=3&notfound=here",
+	                  strlen(shortquery),
+	                  "notfound",
+	                  buf,
+	                  sizeof(buf),
+	                  0);
+	ck_assert_int_eq(ret, -1);
+
+	/* key not found in string */
+	ret = mg_get_var2(
+	    shortquery, strlen(shortquery), "key1", buf, sizeof(buf), 1);
+	ck_assert_int_eq(ret, -1);
+
+	/* keys are found as first, middle and last key */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_var2(
+	    shortquery, strlen(shortquery), "key1", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("1", buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_var2(
+	    shortquery, strlen(shortquery), "key2", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("2", buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_var2(
+	    shortquery, strlen(shortquery), "key3", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("3", buf);
+
+	/* longer value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2(longquery, strlen(longquery), "key7", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 10);
+	ck_assert_str_eq("this is it", buf);
+
+	/* longer value in the middle of a longer string - seccond occurance of key
+	 */
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2(longquery, strlen(longquery), "key7", buf, sizeof(buf), 1);
+	ck_assert_int_eq(ret, 10);
+	ck_assert_str_eq("that is it", buf);
+
+	/* key with = but without value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2(longquery, strlen(longquery), "key5", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 0);
+	ck_assert_str_eq(buf, "");
+
+	/* key without = and without value in the middle of a longer string */
+	memset(buf, 77, sizeof(buf));
+	ret =
+	    mg_get_var2(longquery, strlen(longquery), "key6", buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, -1);
+	ck_assert_str_eq(buf, "");
+	/* TODO: this is the same situation as with mg_get_value */
+}
+END_TEST
+
+
+START_TEST(test_mg_md5)
+{
+	char buf[33];
+	char *ret;
+	const char *long_str =
+	    "_123456789A123456789B123456789C123456789D123456789E123456789F123456789"
+	    "G123456789H123456789I123456789J123456789K123456789L123456789M123456789"
+	    "N123456789O123456789P123456789Q123456789R123456789S123456789T123456789"
+	    "U123456789V123456789W123456789X123456789Y123456789Z";
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_md5(buf, NULL);
+	ck_assert_str_eq(buf, "d41d8cd98f00b204e9800998ecf8427e");
+	ck_assert_str_eq(ret, "d41d8cd98f00b204e9800998ecf8427e");
+	ck_assert_ptr_eq(ret, buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_md5(buf, "The quick brown fox jumps over the lazy dog.", NULL);
+	ck_assert_str_eq(buf, "e4d909c290d0fb1ca068ffaddf22cbd0");
+	ck_assert_str_eq(ret, "e4d909c290d0fb1ca068ffaddf22cbd0");
+	ck_assert_ptr_eq(ret, buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_md5(buf,
+	             "",
+	             "The qu",
+	             "ick bro",
+	             "",
+	             "wn fox ju",
+	             "m",
+	             "ps over the la",
+	             "",
+	             "",
+	             "zy dog.",
+	             "",
+	             NULL);
+	ck_assert_str_eq(buf, "e4d909c290d0fb1ca068ffaddf22cbd0");
+	ck_assert_str_eq(ret, "e4d909c290d0fb1ca068ffaddf22cbd0");
+	ck_assert_ptr_eq(ret, buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_md5(buf, long_str, NULL);
+	ck_assert_str_eq(buf, "1cb13cf9f16427807f081b2138241f08");
+	ck_assert_str_eq(ret, "1cb13cf9f16427807f081b2138241f08");
+	ck_assert_ptr_eq(ret, buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_md5(buf, long_str + 1, NULL);
+	ck_assert_str_eq(buf, "cf62d3264334154f5779d3694cc5093f");
+	ck_assert_str_eq(ret, "cf62d3264334154f5779d3694cc5093f");
+	ck_assert_ptr_eq(ret, buf);
+}
+END_TEST
+
+
+START_TEST(test_mg_url_encode)
+{
+	char buf[20];
+	int ret;
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_url_encode("abc", buf, sizeof(buf));
+	ck_assert_int_eq(3, ret);
+	ck_assert_str_eq("abc", buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_url_encode("a%b/c&d.e", buf, sizeof(buf));
+	ck_assert_int_eq(15, ret);
+	ck_assert_str_eq("a%25b%2fc%26d.e", buf);
+
+	memset(buf, 77, sizeof(buf));
+	ret = mg_url_encode("%%%", buf, 4);
+	ck_assert_int_eq(-1, ret);
+	ck_assert_str_eq("%25", buf);
+}
+END_TEST
+
+
+START_TEST(test_mg_url_decode)
+{
+	char buf[20];
+	int ret;
+
+	ret = mg_url_decode("abc", 3, buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 3);
+	ck_assert_str_eq(buf, "abc");
+
+	ret = mg_url_decode("abcdef", 3, buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 3);
+	ck_assert_str_eq(buf, "abc");
+
+	ret = mg_url_decode("x+y", 3, buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 3);
+	ck_assert_str_eq(buf, "x+y");
+
+	ret = mg_url_decode("x+y", 3, buf, sizeof(buf), 1);
+	ck_assert_int_eq(ret, 3);
+	ck_assert_str_eq(buf, "x y");
+
+	ret = mg_url_decode("%25", 3, buf, sizeof(buf), 1);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq(buf, "%");
+}
+END_TEST
+
+
 Suite *make_public_func_suite(void)
 {
 	Suite *const suite = suite_create("PublicFunc");
