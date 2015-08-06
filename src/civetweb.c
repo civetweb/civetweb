@@ -4767,6 +4767,8 @@ static void send_authorization_request(struct mg_connection *conn)
 	}
 }
 
+
+#if !defined(NO_FILES)
 static int is_authorized_for_put(struct mg_connection *conn)
 {
 	if (conn) {
@@ -4783,6 +4785,8 @@ static int is_authorized_for_put(struct mg_connection *conn)
 	}
 	return 0;
 }
+#endif
+
 
 int mg_modify_passwords_file(const char *fname,
                              const char *domain,
@@ -8425,12 +8429,14 @@ static void handle_request(struct mg_connection *conn)
 				return;
 			}
 
+#if !defined(NO_FILES)
 			/* 6.1.2. Check if put authorization for static files is available.
 			 */
 			if (!is_authorized_for_put(conn)) {
 				send_authorization_request(conn);
 				return;
 			}
+#endif
 
 		} else {
 			/* 6.2. This is either a OPTIONS, GET, HEAD or POST request,
