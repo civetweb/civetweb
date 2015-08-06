@@ -4064,6 +4064,8 @@ static int num_leap_years(int year)
 	return year / 4 - year / 100 + year / 400;
 }
 
+
+#if !defined(NO_FILES)
 /* Parse UTC date-time string, and return the corresponding time_t value. */
 static time_t parse_date_string(const char *datetime)
 {
@@ -4118,6 +4120,8 @@ static time_t parse_date_string(const char *datetime)
 
 	return result;
 }
+#endif
+
 
 /* Protect against directory disclosure attack by removing '..',
  * excessive '/' and '\' characters */
@@ -5181,6 +5185,7 @@ static int must_hide_file(struct mg_connection *conn, const char *path)
 	return 0;
 }
 
+
 static int scan_directory(struct mg_connection *conn,
                           const char *dir,
                           void *data,
@@ -5234,6 +5239,8 @@ static int scan_directory(struct mg_connection *conn,
 	return 1;
 }
 
+
+#if !defined(NO_FILES)
 static int remove_directory(struct mg_connection *conn, const char *dir)
 {
 	char path[PATH_MAX];
@@ -5292,6 +5299,8 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 
 	return 1;
 }
+#endif
+
 
 struct dir_scan_data {
 	struct de *entries;
@@ -5877,6 +5886,8 @@ static int substitute_index_file(struct mg_connection *conn,
 	}
 	return 0;
 }
+#endif
+
 
 /* Return True if we should reply 304 Not Modified. */
 static int is_not_modified(const struct mg_connection *conn,
@@ -5892,7 +5903,7 @@ static int is_not_modified(const struct mg_connection *conn,
 	return (inm != NULL && !mg_strcasecmp(etag, inm)) ||
 	       (ims != NULL && (filep->last_modified <= parse_date_string(ims)));
 }
-#endif
+
 
 static int
 forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
@@ -6402,6 +6413,8 @@ done:
 }
 #endif /* !NO_CGI */
 
+
+#if !defined(NO_FILES)
 /* For a given PUT path, create all intermediate subdirectories.
  * Return  0  if the path itself is a directory.
  * Return  1  if the path leads to a file.
@@ -6443,7 +6456,7 @@ static int put_dir(struct mg_connection *conn, const char *path)
 	return res;
 }
 
-#if !defined(NO_FILES)
+
 static void mkcol(struct mg_connection *conn, const char *path)
 {
 	int rc, body_len;
@@ -6801,6 +6814,8 @@ static void do_ssi_exec(struct mg_connection *conn, char *tag)
 	}
 }
 #endif /* !NO_POPEN */
+#endif /* !NO_FILES */
+
 
 static int mg_fgetc(struct file *filep, int offset)
 {
@@ -6939,6 +6954,8 @@ static void handle_ssi_file_request(struct mg_connection *conn,
 	}
 }
 
+
+#if !defined(NO_FILES)
 static void send_options(struct mg_connection *conn)
 {
 	char date[64];
