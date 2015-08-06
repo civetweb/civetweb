@@ -165,7 +165,9 @@ START_TEST(test_mg_start_stop_https_server)
 	    "8080,8443s",
 	    "ssl_certificate",
 #ifdef _WIN32
-	    "..\\..\\..\\resources/ssl_cert.pem", // TODO: the different paths used in the different test system is an unsolved problem
+	    "..\\..\\..\\resources/ssl_cert.pem", // TODO: the different paths used
+	                                          // in the different test system is
+	                                          // an unsolved problem
 #else
 	    "../../resources/ssl_cert.pem", // TODO: fix path in CI test environment
 #endif
@@ -292,9 +294,13 @@ START_TEST(test_request_handlers)
 #ifndef NO_SSL
 	OPTIONS[4] = "ssl_certificate";
 #ifdef _WIN32
-	OPTIONS[5] = "..\\..\\..\\resources/ssl_cert.pem"; // TODO: the different paths used in the different test system is an unsolved problem
+	OPTIONS[5] = "..\\..\\..\\resources/ssl_cert.pem"; // TODO: the different
+	                                                   // paths used in the
+	                                                   // different test system
+	                                                   // is an unsolved problem
 #else
-	OPTIONS[5] = "../../resources/ssl_cert.pem"; // TODO: fix path in CI test environment
+	OPTIONS[5] =
+	    "../../resources/ssl_cert.pem"; // TODO: fix path in CI test environment
 #endif
 #endif
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
