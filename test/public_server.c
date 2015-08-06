@@ -69,7 +69,7 @@ START_TEST(test_the_test_environment)
 /* Check the pem file */
 #ifdef _WIN32
 	strcpy(buf, wd);
-	strcat(buf, "..\\..\\resources\\ssl_cert.pem");
+	strcat(buf, "..\\..\\..\\resources\\ssl_cert.pem");
 	f = fopen(buf, "rb");
 #else
 	strcpy(buf, wd);
@@ -164,7 +164,11 @@ START_TEST(test_mg_start_stop_https_server)
 	    "listening_ports",
 	    "8080,8443s",
 	    "ssl_certificate",
+#ifdef _WIN32
+	    "..\\..\\..\\resources/ssl_cert.pem", // TODO: the different paths used in the different test system is an unsolved problem
+#else
 	    "../../resources/ssl_cert.pem", // TODO: fix path in CI test environment
+#endif
 	    NULL,
 	};
 	size_t ports_cnt;
@@ -287,7 +291,11 @@ START_TEST(test_request_handlers)
 	OPTIONS[3] = ".";
 #ifndef NO_SSL
 	OPTIONS[4] = "ssl_certificate";
-	OPTIONS[5] = "../../resources/ssl_cert.pem";
+#ifdef _WIN32
+	OPTIONS[5] = "..\\..\\..\\resources/ssl_cert.pem"; // TODO: the different paths used in the different test system is an unsolved problem
+#else
+	OPTIONS[5] = "../../resources/ssl_cert.pem"; // TODO: fix path in CI test environment
+#endif
 #endif
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
