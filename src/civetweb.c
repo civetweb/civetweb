@@ -3827,11 +3827,12 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
               int *is_put_or_delete_request /* out: put/delete a file? */
               )
 {
+    /* TODO: Restructure this function */
 	if (conn && conn->ctx) {
-		const char *uri = conn->request_info.uri;
-		const char *root = conn->ctx->config[DOCUMENT_ROOT];
 
 #if !defined(NO_FILES)
+		const char *uri = conn->request_info.uri;
+		const char *root = conn->ctx->config[DOCUMENT_ROOT];
 		const char *rewrite;
 		struct vec a, b;
 		char *p;
@@ -3839,6 +3840,8 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		char gz_path[PATH_MAX];
 		char const *accept_encoding;
 		int truncated;
+#else
+        (void)filename_buf_len; /* unused if NO_FILES is defined */
 #endif
 
 		memset(filep, 0, sizeof(*filep));
@@ -3849,12 +3852,14 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 
 #if defined(USE_WEBSOCKET)
 		*is_websocket_request = is_websocket_protocol(conn);
+#if !defined(NO_FILES)
 		if (*is_websocket_request && conn->ctx->config[WEBSOCKET_ROOT]) {
 			root = conn->ctx->config[WEBSOCKET_ROOT];
 		}
-#else
+#endif /* !NO_FILES */
+#else /* USE_WEBSOCKET */
 		*is_websocket_request = 0;
-#endif
+#endif /* USE_WEBSOCKET */
 
 #if !defined(NO_FILES)
 		/* Note that root == NULL is a regular use case here. This occurs,
@@ -4004,12 +4009,14 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 	}
 	return;
 
+#if !defined(NO_FILES)
 /* Reset all outputs */
 interpret_cleanup:
 	memset(filep, 0, sizeof(*filep));
 	*filename = 0;
 	*is_found = 0;
 	*is_script_ressource = 0;
+#endif
 }
 
 /* Check whether full request is buffered. Return:
@@ -5817,6 +5824,7 @@ static int read_request(
 	return (request_len <= 0 && n <= 0) ? -1 : request_len;
 }
 
+#if !defined(NO_FILES)
 /* For given directory path, substitute it to valid index file.
  * Return 1 if index file has been found, 0 if not found.
  * If the file is found, it's stats is returned in stp. */
@@ -5884,6 +5892,7 @@ static int is_not_modified(const struct mg_connection *conn,
 	return (inm != NULL && !mg_strcasecmp(etag, inm)) ||
 	       (ims != NULL && (filep->last_modified <= parse_date_string(ims)));
 }
+#endif
 
 static int
 forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
@@ -6434,6 +6443,7 @@ static int put_dir(struct mg_connection *conn, const char *path)
 	return res;
 }
 
+#if !defined(NO_FILES)
 static void mkcol(struct mg_connection *conn, const char *path)
 {
 	int rc, body_len;
@@ -7048,6 +7058,7 @@ static void handle_propfind(struct mg_connection *conn,
 
 	conn->num_bytes_sent += mg_printf(conn, "%s\n", "</d:multistatus>");
 }
+#endif
 
 void mg_lock_connection(struct mg_connection *conn)
 {
@@ -8261,8 +8272,7 @@ static void handle_request(struct mg_connection *conn)
 		int is_found = 0, is_script_resource = 0, is_websocket_request = 0,
 		    is_put_or_delete_request = 0, is_callback_resource = 0;
 		int i;
-		struct file file = STRUCT_FILE_INITIALIZER;
-		time_t curtime = time(NULL);
+		struct file file = STRUCT_FILE_INITIALIZER;		
 		mg_request_handler callback_handler = NULL;
 		mg_websocket_connect_handler ws_connect_handler = NULL;
 		mg_websocket_ready_handler ws_ready_handler = NULL;
@@ -8270,6 +8280,7 @@ static void handle_request(struct mg_connection *conn)
 		mg_websocket_close_handler ws_close_handler = NULL;
 		void *callback_data = NULL;
 #if !defined(NO_FILES)
+        time_t curtime = time(NULL);
 		char date[64];
 #endif
 
