@@ -549,11 +549,15 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(conn);
 
 	ck_assert(ri != NULL);
+#if defined(NO_FILES)
+	ck_assert_str_eq(ri->uri, "404");
+#else
 	ck_assert_str_eq(ri->uri, "405");
 	i = mg_read(conn, buf, sizeof(buf));
 	ck_assert(i >= 29);
 	buf[29] = 0;
 	ck_assert_str_eq(buf, "Error 405: Method Not Allowed");
+#endif
 	mg_close_connection(conn);
 
 
