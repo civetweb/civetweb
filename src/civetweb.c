@@ -3827,7 +3827,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
               int *is_put_or_delete_request /* out: put/delete a file? */
               )
 {
-    /* TODO: Restructure this function */
+	/* TODO: Restructure this function */
 	if (conn && conn->ctx) {
 
 #if !defined(NO_FILES)
@@ -3841,7 +3841,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		char const *accept_encoding;
 		int truncated;
 #else
-        (void)filename_buf_len; /* unused if NO_FILES is defined */
+		(void)filename_buf_len; /* unused if NO_FILES is defined */
 #endif
 
 		memset(filep, 0, sizeof(*filep));
@@ -3857,7 +3857,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 			root = conn->ctx->config[WEBSOCKET_ROOT];
 		}
 #endif /* !NO_FILES */
-#else /* USE_WEBSOCKET */
+#else  /* USE_WEBSOCKET */
 		*is_websocket_request = 0;
 #endif /* USE_WEBSOCKET */
 
@@ -4045,6 +4045,8 @@ static int get_request_len(const char *buf, int buflen)
 	return len;
 }
 
+
+#if !defined(NO_FILES)
 /* Convert month to the month number. Return -1 on error, or month number */
 static int get_month_index(const char *s)
 {
@@ -4059,13 +4061,13 @@ static int get_month_index(const char *s)
 	return -1;
 }
 
+
 static int num_leap_years(int year)
 {
 	return year / 4 - year / 100 + year / 400;
 }
 
 
-#if !defined(NO_FILES)
 /* Parse UTC date-time string, and return the corresponding time_t value. */
 static time_t parse_date_string(const char *datetime)
 {
@@ -6708,6 +6710,8 @@ static void delete_file(struct mg_connection *conn, const char *path)
 		                strerror(ERRNO));
 	}
 }
+#endif /* !NO_FILES */
+
 
 static void
 send_ssi_file(struct mg_connection *, const char *, struct file *, int);
@@ -6814,7 +6818,6 @@ static void do_ssi_exec(struct mg_connection *conn, char *tag)
 	}
 }
 #endif /* !NO_POPEN */
-#endif /* !NO_FILES */
 
 
 static int mg_fgetc(struct file *filep, int offset)
@@ -8289,7 +8292,7 @@ static void handle_request(struct mg_connection *conn)
 		int is_found = 0, is_script_resource = 0, is_websocket_request = 0,
 		    is_put_or_delete_request = 0, is_callback_resource = 0;
 		int i;
-		struct file file = STRUCT_FILE_INITIALIZER;		
+		struct file file = STRUCT_FILE_INITIALIZER;
 		mg_request_handler callback_handler = NULL;
 		mg_websocket_connect_handler ws_connect_handler = NULL;
 		mg_websocket_ready_handler ws_ready_handler = NULL;
@@ -8297,7 +8300,7 @@ static void handle_request(struct mg_connection *conn)
 		mg_websocket_close_handler ws_close_handler = NULL;
 		void *callback_data = NULL;
 #if !defined(NO_FILES)
-        time_t curtime = time(NULL);
+		time_t curtime = time(NULL);
 		char date[64];
 #endif
 
