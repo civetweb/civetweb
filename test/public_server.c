@@ -122,7 +122,13 @@ START_TEST(test_mg_start_stop_http_server)
 {
 	struct mg_context *ctx;
 	const char *OPTIONS[] = {
-	    "document_root", ".", "listening_ports", "8080", NULL,
+#if !defined(NO_FILES)
+		"document_root",
+		".",
+#endif
+		"listening_ports",
+		"8080",
+		NULL,
 	};
 	size_t ports_cnt;
 	int ports[16];
@@ -159,19 +165,21 @@ START_TEST(test_mg_start_stop_https_server)
 {
 	struct mg_context *ctx;
 	const char *OPTIONS[] = {
-	    "document_root",
-	    ".",
-	    "listening_ports",
-	    "8080,8443s",
-	    "ssl_certificate",
-#ifdef _WIN32
-	    "..\\..\\..\\resources/ssl_cert.pem", // TODO: the different paths used
-	                                          // in the different test system is
-	                                          // an unsolved problem
-#else
-	    "../../resources/ssl_cert.pem", // TODO: fix path in CI test environment
+#if !defined(NO_FILES)
+		"document_root",
+		".",
 #endif
-	    NULL,
+		"listening_ports",
+		"8080r,8443s",
+		"ssl_certificate",
+#ifdef _WIN32
+		"..\\..\\..\\resources/ssl_cert.pem", // TODO: the different paths used
+                                              // in the different test system is
+                                              // an unsolved problem
+#else
+		"../../resources/ssl_cert.pem", // TODO: fix path in CI test environment
+#endif
+		NULL,
 	};
 	size_t ports_cnt;
 	int ports[16];
@@ -285,24 +293,29 @@ START_TEST(test_request_handlers)
 	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
 	const char *opt;
 	FILE *f;
+	int opt_idx = 0;
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
-	OPTIONS[0] = "listening_ports";
-	OPTIONS[1] = HTTP_PORT;
-	OPTIONS[2] = "document_root";
-	OPTIONS[3] = ".";
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = HTTP_PORT;
+#if !defined(NO_FILES)
+	OPTIONS[opt_idx++] = "document_root";
+	OPTIONS[opt_idx++] = ".";
+#endif
 #ifndef NO_SSL
-	OPTIONS[4] = "ssl_certificate";
+	OPTIONS[opt_idx++] = "ssl_certificate";
 #ifdef _WIN32
-	OPTIONS[5] = "..\\..\\..\\resources/ssl_cert.pem"; // TODO: the different
-	                                                   // paths used in the
-	                                                   // different test system
-	                                                   // is an unsolved problem
+	OPTIONS[opt_idx++] =
+	    "..\\..\\..\\resources/ssl_cert.pem"; // TODO: the different
+                                              // paths used in the
+                                              // different test system
+                                              // is an unsolved problem
 #else
-	OPTIONS[5] =
+	OPTIONS[opt_idx++] =
 	    "../../resources/ssl_cert.pem"; // TODO: fix path in CI test environment
 #endif
 #endif
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
@@ -460,7 +473,6 @@ START_TEST(test_request_handlers)
 	mg_close_connection(conn);
 #endif
 
-
 /* It seems to be impossible to find out what the actual working
  * directory of the CI test environment is. Before breaking another
  * dozen of builds by trying blindly with different paths, just
@@ -486,6 +498,10 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(conn);
 
 	ck_assert(ri != NULL);
+
+#if defined(NO_FILES)
+	ck_assert_str_eq(ri->uri, "404");
+#else
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, 17);
@@ -493,6 +509,7 @@ START_TEST(test_request_handlers)
 		buf[i] = 0;
 	}
 	ck_assert_str_eq(buf, "simple text file\n");
+#endif
 	mg_close_connection(conn);
 
 
@@ -508,11 +525,15 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(conn);
 
 	ck_assert(ri != NULL);
+#if defined(NO_FILES)
+	ck_assert_str_eq(ri->uri, "404");
+#else
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(conn, buf, sizeof(buf));
 	ck_assert(i > 6);
 	buf[6] = 0;
 	ck_assert_str_eq(buf, "<html>");
+#endif
 	mg_close_connection(conn);
 
 
@@ -550,6 +571,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "401"); /* not authorized */
 	mg_close_connection(conn);
+
 
 	/* TODO: Test websockets */
 
