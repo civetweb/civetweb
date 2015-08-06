@@ -4046,7 +4046,6 @@ static int get_request_len(const char *buf, int buflen)
 }
 
 
-#if !defined(NO_FILES)
 /* Convert month to the month number. Return -1 on error, or month number */
 static int get_month_index(const char *s)
 {
@@ -4122,7 +4121,6 @@ static time_t parse_date_string(const char *datetime)
 
 	return result;
 }
-#endif
 
 
 /* Protect against directory disclosure attack by removing '..',
