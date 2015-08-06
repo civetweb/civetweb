@@ -573,7 +573,11 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(conn);
 
 	ck_assert(ri != NULL);
+#if defined(NO_FILES)
+	ck_assert_str_eq(ri->uri, "405"); /* method not allowed */
+#else
 	ck_assert_str_eq(ri->uri, "401"); /* not authorized */
+#endif
 	mg_close_connection(conn);
 
 
