@@ -61,11 +61,11 @@ install:
   - if exist "%mingw_log_folder%" @for /f %%f in ('dir /b /oD /tc "%mingw_log_folder%"') do @set "mingw_log_file=%mingw_log_folder%\%%f"
   - if exist "%mingw_log_file%" powershell Push-AppveyorArtifact "%mingw_log_file%" -FileName mingw-download.log
   # Get OpenSSL
-  # - md c:\ssl\
-  # - curl http://slproweb.com/download/Win32OpenSSL-1_0_2d.exe -o C:\ssl\Win32OpenSSL.exe  
-  # - curl http://slproweb.com/download/Win64OpenSSL-1_0_2d.exe -o C:\ssl\Win64OpenSSL.exe
-  # - C:\ssl\Win32OpenSSL.exe /SILENT /LOG="C:\ssl\install32.log"
-  # - C:\ssl\Win64OpenSSL.exe /SILENT /LOG="C:\ssl\install64.log"
+  - md c:\ssl\
+  - curl http://slproweb.com/download/Win32OpenSSL-1_0_2d.exe -o C:\ssl\Win32OpenSSL.exe  
+  - curl http://slproweb.com/download/Win64OpenSSL-1_0_2d.exe -o C:\ssl\Win64OpenSSL.exe
+  - C:\ssl\Win32OpenSSL.exe /SILENT /LOG="C:\ssl\install32.log"
+  - C:\ssl\Win64OpenSSL.exe /SILENT /LOG="C:\ssl\install64.log"
   
 
 before_build:
