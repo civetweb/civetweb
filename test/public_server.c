@@ -34,10 +34,10 @@
 
 #if defined(_WIN32)
 #include <Windows.h>
-#define mg_Sleep(x) (Sleep(x * 1000))
+#define test_sleep(x) (Sleep(x * 1000))
 #else
 #include <unistd.h>
-#define mg_Sleep(x) (sleep(x))
+#define test_sleep(x) (sleep(x))
 #endif
 
 /* This unit test file uses the excellent Check unit testing library.
@@ -74,7 +74,7 @@ static int wait_not_null(void *volatile *data)
 {
 	int i;
 	for (i = 0; i < 100; i++) {
-		mg_Sleep(1);
+		test_sleep(1);
 		if (*data != NULL) {
 			return 1;
 		}
@@ -185,7 +185,7 @@ START_TEST(test_mg_start_stop_http_server)
 	callbacks.log_message = log_msg_func;
 
 	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
-	mg_Sleep(1);
+	test_sleep(1);
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
@@ -196,7 +196,7 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert_int_eq(ports[1], 0);
 	ck_assert_int_eq(ssl[1], 0);
 
-	mg_Sleep(1);
+	test_sleep(1);
 	mg_stop(ctx);
 }
 END_TEST
@@ -242,7 +242,7 @@ START_TEST(test_mg_start_stop_https_server)
 	callbacks.log_message = log_msg_func;
 
 	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
-	mg_Sleep(1);
+	test_sleep(1);
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
@@ -255,7 +255,7 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(ports[2], 0);
 	ck_assert_int_eq(ssl[2], 0);
 
-	mg_Sleep(1);
+	test_sleep(1);
 	mg_stop(ctx);
 #endif
 }
@@ -909,7 +909,7 @@ START_TEST(test_request_handlers)
 
 	mg_close_connection(ws_client1_conn);
 
-	mg_Sleep(3); /* Won't get any message */
+	test_sleep(3); /* Won't get any message */
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client1_data.data == NULL);
@@ -936,7 +936,7 @@ START_TEST(test_request_handlers)
 
 	mg_close_connection(ws_client2_conn);
 
-	mg_Sleep(3); /* Won't get any message */
+	test_sleep(3); /* Won't get any message */
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 1);
 	ck_assert(ws_client1_data.data == NULL);
@@ -983,7 +983,7 @@ START_TEST(test_request_handlers)
 	mg_stop(ctx);
 
 	for (i = 0; i < 100; i++) {
-		mg_Sleep(1);
+		test_sleep(1);
 		if (ws_client3_data.closed != 0) {
 			break;
 		}
