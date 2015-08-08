@@ -70,6 +70,19 @@ static const char *locate_ssl_cert(void)
 }
 
 
+static int wait_not_null(void *volatile *data)
+{
+	int i;
+	for (i = 0; i < 100; i++) {
+		mg_Sleep(1);
+		if (*data != NULL) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
 START_TEST(test_the_test_environment)
 {
 	char wd[300];
@@ -269,9 +282,9 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 
 	mg_set_user_connection_data(conn, (void *)6543);
 	cud = mg_get_user_connection_data(conn);
-	ck_assert_ptr_eq((void *)cud, (void*)6543);
+	ck_assert_ptr_eq((void *)cud, (void *)6543);
 
-	ck_assert_ptr_eq((void *)cbdata, (void*)7);
+	ck_assert_ptr_eq((void *)cbdata, (void *)7);
 	strcpy(chunk_data, "123456789A123456789B123456789C");
 
 	mg_printf(conn,
@@ -310,7 +323,7 @@ static int websock_server_connect(const struct mg_connection *conn, void *udata)
 {
 	(void)conn;
 
-	ck_assert_ptr_eq((void *)udata, (void*)7531);
+	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	printf("Server: Websocket connected\n");
 
 	return 0; /* return 0 to accept every connection */
@@ -318,7 +331,7 @@ static int websock_server_connect(const struct mg_connection *conn, void *udata)
 
 static void websock_server_ready(struct mg_connection *conn, void *udata)
 {
-	ck_assert_ptr_eq((void *)udata, (void*)7531);
+	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	printf("Server: Websocket ready\n");
 
 	/* Send websocket welcome message */
@@ -338,7 +351,7 @@ static int websock_server_data(struct mg_connection *conn,
 {
 	(void)bits;
 
-	ck_assert_ptr_eq((void *)udata, (void*)7531);
+	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	printf("Server: Got %u bytes from the client\n", (unsigned)data_len);
 
 	if (data_len < 3 || 0 != memcmp(data, "bye", 3)) {
@@ -366,7 +379,7 @@ static void websock_server_close(const struct mg_connection *conn, void *udata)
 {
 	(void)conn;
 
-	ck_assert_ptr_eq((void *)udata, (void*)7531);
+	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	printf("Server: Close connection\n");
 
 	/* Can not send a websocket goodbye message here - the connection is already
@@ -782,7 +795,8 @@ START_TEST(test_request_handlers)
 
 	ck_assert(ws_client1_conn != NULL);
 
-	mg_Sleep(3); /* Should get the websocket welcome message */
+	wait_not_null(
+	    &(ws_client1_data.data)); /* Wait for the websocket welcome message */
 	ck_assert_int_eq(ws_client1_data.closed, 0);
 	ck_assert_int_eq(ws_client2_data.closed, 0);
 	ck_assert_int_eq(ws_client3_data.closed, 0);
@@ -799,7 +813,9 @@ START_TEST(test_request_handlers)
 
 	mg_websocket_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "data1", 5);
 
-	mg_Sleep(3); /* Should get the acknowledge message */
+	wait_not_null(
+	    &(ws_client1_data
+	          .data)); /* Wait for the websocket acknowledge message */
 	ck_assert_int_eq(ws_client1_data.closed, 0);
 	ck_assert_int_eq(ws_client2_data.closed, 0);
 	ck_assert(ws_client2_data.data == NULL);
@@ -841,7 +857,8 @@ START_TEST(test_request_handlers)
 #endif
 	ck_assert(ws_client2_conn != NULL);
 
-	mg_Sleep(3); /* Client 2 should get the websocket welcome message */
+	wait_not_null(
+	    &(ws_client2_data.data)); /* Wait for the websocket welcome message */
 	ck_assert(ws_client1_data.closed == 0);
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client1_data.data == NULL);
@@ -857,7 +874,9 @@ START_TEST(test_request_handlers)
 
 	mg_websocket_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "data2", 5);
 
-	mg_Sleep(3); /* Should get the acknowledge message */
+	wait_not_null(
+	    &(ws_client1_data
+	          .data)); /* Wait for the websocket acknowledge message */
 	ck_assert(ws_client1_data.closed == 0);
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client2_data.data == NULL);
@@ -873,7 +892,8 @@ START_TEST(test_request_handlers)
 
 	mg_websocket_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
-	mg_Sleep(3); /* Should get the goodbye message */
+	wait_not_null(
+	    &(ws_client1_data.data)); /* Wait for the websocket goodbye message */
 	ck_assert(ws_client1_data.closed == 0);
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client2_data.data == NULL);
@@ -899,7 +919,8 @@ START_TEST(test_request_handlers)
 
 	mg_websocket_write(ws_client2_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
-	mg_Sleep(3); /* Should get the goodbye message */
+	wait_not_null(
+	    &(ws_client2_data.data)); /* Wait for the websocket goodbye message */
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client1_data.data == NULL);
@@ -938,7 +959,8 @@ START_TEST(test_request_handlers)
 
 	ck_assert(ws_client3_conn != NULL);
 
-	mg_Sleep(3); /* Client 3 should get the websocket welcome message */
+	wait_not_null(
+	    &(ws_client3_data.data)); /* Wait for the websocket welcome message */
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 1);
 	ck_assert(ws_client3_data.closed == 0);
@@ -959,7 +981,13 @@ START_TEST(test_request_handlers)
 	/* Close the server */
 	g_ctx = NULL;
 	mg_stop(ctx);
-	mg_Sleep(30);
+
+	for (i = 0; i < 100; i++) {
+		mg_Sleep(1);
+		if (ws_client3_data.closed != 0) {
+			break;
+		}
+	}
 
 	ck_assert_int_eq(ws_client3_data.closed, 1);
 }
