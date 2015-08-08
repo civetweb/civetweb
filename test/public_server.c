@@ -74,14 +74,14 @@ static int wait_not_null(void *volatile *data)
 {
 	int i;
 	for (i = 0; i < 100; i++) {
-        printf("Waiting for response ... %i\n", i);
+        /* printf("Waiting for response ... %i\n", i); */s
 		test_sleep(1);
 		if (*data != NULL) {
-            printf("Waiting for response ... %i (done)\n", i);
+            /* printf("Waiting for response ... %i (done)\n", i); */
 			return 1;
 		}
 	}
-    printf("Waiting for response ... %i (failed)\n", i);
+    /* printf("Waiting for response ... %i (failed)\n", i); */
 	return 0;
 }
 
