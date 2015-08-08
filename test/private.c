@@ -209,8 +209,9 @@ END_TEST
 START_TEST(test_is_valid_uri)
 {
 	ck_assert_int_eq(1, is_valid_uri("/api"));
-    ck_assert_int_eq(1, is_valid_uri("/api/"));
-    ck_assert_int_eq(1, is_valid_uri("/some/long/path%20with%20space/file.xyz"));
+	ck_assert_int_eq(1, is_valid_uri("/api/"));
+	ck_assert_int_eq(1,
+	                 is_valid_uri("/some/long/path%20with%20space/file.xyz"));
 	ck_assert_int_eq(0, is_valid_uri("api"));
 	ck_assert_int_eq(1, is_valid_uri("*"));
 	ck_assert_int_eq(0, is_valid_uri("*xy"));

@@ -55,13 +55,13 @@ const char *locate_ssl_cert(void)
 #else
 	    /* Appveyor */
 	    "..\\..\\..\\resources\\ssl_cert.pem"; /* TODO: the different paths
-                                                * used in the different test 
-                                                * system is an unsolved 
-                                                * problem */
+	                                            * used in the different test
+	                                            * system is an unsolved
+	                                            * problem */
 #endif
 #else
 #ifdef LOCAL_TEST
-        "../resources/ssl_cert.pem";
+	    "../resources/ssl_cert.pem";
 #else
 	    /* Travis */
 	    "../../resources/ssl_cert.pem"; // TODO: fix path in CI test environment
@@ -95,12 +95,12 @@ START_TEST(test_the_test_environment)
 /* Check the pem file */
 #ifdef _WIN32
 	strcpy(buf, wd);
-    strcat(buf, "\\");
+	strcat(buf, "\\");
 	strcat(buf, ssl_cert);
 	f = fopen(buf, "rb");
 #else
 	strcpy(buf, wd);
-    strcat(buf, "/");
+	strcat(buf, "/");
 	strcat(buf, ssl_cert);
 	f = fopen(buf, "r");
 #endif
@@ -269,9 +269,9 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 
 	mg_set_user_connection_data(conn, (void *)6543);
 	cud = mg_get_user_connection_data(conn);
-	ck_assert(cud == (void *)6543);
+	ck_assert_int_eq((int)cud, (int)6543);
 
-	ck_assert(cbdata == (void *)7);
+	ck_assert_int_eq((int)cbdata, (int)7);
 	strcpy(chunk_data, "123456789A123456789B123456789C");
 
 	mg_printf(conn,
@@ -291,11 +291,130 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 }
 
 
+#ifdef USE_WEBSOCKET
+/****************************************************************************/
+/* WEBSOCKET SERVER                                                         */
+/****************************************************************************/
+const char *websocket_welcome_msg = "websocket welcome\n";
+const size_t websocket_welcome_msg_len = 18 /* strlen(websocket_welcome_msg) */;
+const char *websocket_acknowledge_msg = "websocket msg ok\n";
+const size_t websocket_acknowledge_msg_len =
+    17 /* strlen(websocket_acknowledge_msg) */;
+const char *websocket_goodbye_msg = "websocket bye\n";
+const size_t websocket_goodbye_msg_len = 14 /* strlen(websocket_goodbye_msg) */;
+
+
+int websock_server_connect(const struct mg_connection *conn, void *udata)
+{
+	ck_assert_int_eq((int)udata, 7531);
+	printf("Server: Websocket connected\n");
+	return 0; /* return 0 to accept every connection */
+}
+
+void websock_server_ready(struct mg_connection *conn, void *udata)
+{
+	ck_assert_int_eq((int)udata, 7531);
+	printf("Server: Websocket ready\n");
+
+	/* Send websocket welcome message */
+	mg_lock_connection(conn);
+	mg_websocket_write(conn,
+	                   WEBSOCKET_OPCODE_TEXT,
+	                   websocket_welcome_msg,
+	                   websocket_welcome_msg_len);
+	mg_unlock_connection(conn);
+}
+
+int websock_server_data(struct mg_connection *conn,
+                        int bits,
+                        char *data,
+                        size_t data_len,
+                        void *udata)
+{
+	ck_assert_int_eq((int)udata, 7531);
+	printf("Server: Got %u bytes from the client\n", data_len);
+
+	if (data_len < 3 || 0 != memcmp(data, "bye", 3)) {
+		/* Send websocket acknowledge message */
+		mg_lock_connection(conn);
+		mg_websocket_write(conn,
+		                   WEBSOCKET_OPCODE_TEXT,
+		                   websocket_acknowledge_msg,
+		                   websocket_acknowledge_msg_len);
+		mg_unlock_connection(conn);
+	} else {
+		/* Send websocket acknowledge message */
+		mg_lock_connection(conn);
+		mg_websocket_write(conn,
+		                   WEBSOCKET_OPCODE_TEXT,
+		                   websocket_goodbye_msg,
+		                   websocket_goodbye_msg_len);
+		mg_unlock_connection(conn);
+	}
+
+	return 1; /* return 1 to keep the connetion open */
+}
+
+void websock_server_close(const struct mg_connection *conn, void *udata)
+{
+	ck_assert_int_eq((int)udata, 7531);
+	printf("Server: Close connection\n");
+
+	/* Can not send a websocket goodbye message here - the connection is already
+	 * closed */
+}
+
+/****************************************************************************/
+/* WEBSOCKET CLIENT                                                         */
+/****************************************************************************/
+struct tclient_data {
+	void *data;
+	size_t len;
+	int closed;
+};
+
+static int websocket_client_data_handler(struct mg_connection *conn,
+                                         int flags,
+                                         char *data,
+                                         size_t data_len,
+                                         void *user_data)
+{
+	struct mg_context *ctx = mg_get_context(conn);
+	struct tclient_data *pclient_data =
+	    (struct tclient_data *)mg_get_user_data(ctx);
+	ck_assert(pclient_data != NULL);
+
+	printf("Client received data from server: ");
+	fwrite(data, 1, data_len, stdout);
+	printf("\n");
+
+	pclient_data->data = malloc(data_len);
+	ck_assert(pclient_data->data != NULL);
+	memcpy(pclient_data->data, data, data_len);
+	pclient_data->len = data_len;
+
+	return 1;
+}
+
+static void websocket_client_close_handler(const struct mg_connection *conn,
+                                           void *user_data)
+{
+	struct mg_context *ctx = mg_get_context(conn);
+	struct tclient_data *pclient_data =
+	    (struct tclient_data *)mg_get_user_data(ctx);
+	ck_assert(pclient_data != NULL);
+
+	printf("Client: Close handler\n");
+	pclient_data->closed++;
+}
+#endif
+
+
 START_TEST(test_request_handlers)
 {
 	char ebuf[100];
 	struct mg_context *ctx;
-	struct mg_connection *conn;
+	struct mg_connection *client_conn;
 	const struct mg_request_info *ri;
 	char uri[64];
 	char buf[1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 8];
@@ -330,6 +449,16 @@ START_TEST(test_request_handlers)
 	FILE *f;
 	int opt_idx = 0;
 	const char *ssl_cert = locate_ssl_cert();
+
+#ifdef USE_WEBSOCKET
+	struct tclient_data ws_client1_data = {NULL, 0, 0};
+	struct tclient_data ws_client2_data = {NULL, 0, 0};
+	struct tclient_data ws_client3_data = {NULL, 0, 0};
+	struct mg_connection *ws_client1_conn = NULL;
+	struct mg_connection *ws_client2_conn = NULL;
+	struct mg_connection *ws_client3_conn = NULL;
+#endif
+
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
@@ -381,124 +510,135 @@ START_TEST(test_request_handlers)
 	}
 
 
+#ifdef USE_WEBSOCKET
+	mg_set_websocket_handler(ctx,
+	                         "/websocket",
+	                         websock_server_connect,
+	                         websock_server_ready,
+	                         websock_server_data,
+	                         websock_server_close,
+	                         (void *)7531);
+#endif
+
+
 	/* Try to load non existing file */
-	conn = mg_download("localhost",
-	                   ipv4_port,
-	                   0,
-	                   ebuf,
-	                   sizeof(ebuf),
-	                   "%s",
-	                   "GET /file/not/found HTTP/1.0\r\n\r\n");
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	client_conn = mg_download("localhost",
+	                          ipv4_port,
+	                          0,
+	                          ebuf,
+	                          sizeof(ebuf),
+	                          "%s",
+	                          "GET /file/not/found HTTP/1.0\r\n\r\n");
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "404");
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 
 
 	/* Get data from callback */
-	conn = mg_download(
+	client_conn = mg_download(
 	    "localhost", ipv4_port, 0, ebuf, sizeof(ebuf), "%s", request);
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 
 
 	/* Get data from callback using http://127.0.0.1 */
-	conn = mg_download(
+	client_conn = mg_download(
 	    "127.0.0.1", ipv4_port, 0, ebuf, sizeof(ebuf), "%s", request);
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 
 
 #if defined(USE_IPV6)
 	/* Get data from callback using http://[::1] */
-	conn =
+	client_conn =
 	    mg_download("[::1]", ipv6_port, 0, ebuf, sizeof(ebuf), "%s", request);
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 #endif
 
 
 #if !defined(NO_SSL)
 	/* Get data from callback using https://127.0.0.1 */
-	conn = mg_download(
+	client_conn = mg_download(
 	    "127.0.0.1", ipv4s_port, 1, ebuf, sizeof(ebuf), "%s", request);
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 
 	/* Get redirect from callback using http://127.0.0.1 */
-	conn = mg_download(
+	client_conn = mg_download(
 	    "127.0.0.1", ipv4r_port, 0, ebuf, sizeof(ebuf), "%s", request);
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "302");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, -1);
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 #endif
 
 
 #if defined(USE_IPV6) && !defined(NO_SSL)
 	/* Get data from callback using https://[::1] */
-	conn =
+	client_conn =
 	    mg_download("[::1]", ipv6s_port, 1, ebuf, sizeof(ebuf), "%s", request);
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 
 	/* Get redirect from callback using http://127.0.0.1 */
-	conn =
+	client_conn =
 	    mg_download("[::1]", ipv6r_port, 0, ebuf, sizeof(ebuf), "%s", request);
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "302");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, -1);
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 #endif
 
 /* It seems to be impossible to find out what the actual working
@@ -515,15 +655,15 @@ START_TEST(test_request_handlers)
 
 
 	/* Get static data */
-	conn = mg_download("localhost",
-	                   ipv4_port,
-	                   0,
-	                   ebuf,
-	                   sizeof(ebuf),
-	                   "%s",
-	                   "GET /test.txt HTTP/1.0\r\n\r\n");
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	client_conn = mg_download("localhost",
+	                          ipv4_port,
+	                          0,
+	                          ebuf,
+	                          sizeof(ebuf),
+	                          "%s",
+	                          "GET /test.txt HTTP/1.0\r\n\r\n");
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 
@@ -531,74 +671,74 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(ri->uri, "404");
 #else
 	ck_assert_str_eq(ri->uri, "200");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, 17);
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
 		buf[i] = 0;
 	}
 	ck_assert_str_eq(buf, "simple text file\n");
 #endif
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 
 
 	/* Get directory listing */
-	conn = mg_download("localhost",
-	                   ipv4_port,
-	                   0,
-	                   ebuf,
-	                   sizeof(ebuf),
-	                   "%s",
-	                   "GET / HTTP/1.0\r\n\r\n");
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	client_conn = mg_download("localhost",
+	                          ipv4_port,
+	                          0,
+	                          ebuf,
+	                          sizeof(ebuf),
+	                          "%s",
+	                          "GET / HTTP/1.0\r\n\r\n");
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 #if defined(NO_FILES)
 	ck_assert_str_eq(ri->uri, "404");
 #else
 	ck_assert_str_eq(ri->uri, "200");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert(i > 6);
 	buf[6] = 0;
 	ck_assert_str_eq(buf, "<html>");
 #endif
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 
 
 	/* POST to static file (will not work) */
-	conn = mg_download("localhost",
-	                   ipv4_port,
-	                   0,
-	                   ebuf,
-	                   sizeof(ebuf),
-	                   "%s",
-	                   "POST /test.txt HTTP/1.0\r\n\r\n");
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	client_conn = mg_download("localhost",
+	                          ipv4_port,
+	                          0,
+	                          ebuf,
+	                          sizeof(ebuf),
+	                          "%s",
+	                          "POST /test.txt HTTP/1.0\r\n\r\n");
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 #if defined(NO_FILES)
 	ck_assert_str_eq(ri->uri, "404");
 #else
 	ck_assert_str_eq(ri->uri, "405");
-	i = mg_read(conn, buf, sizeof(buf));
+	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert(i >= 29);
 	buf[29] = 0;
 	ck_assert_str_eq(buf, "Error 405: Method Not Allowed");
 #endif
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 
 
 	/* PUT to static file (will not work) */
-	conn = mg_download("localhost",
-	                   ipv4_port,
-	                   0,
-	                   ebuf,
-	                   sizeof(ebuf),
-	                   "%s",
-	                   "PUT /test.txt HTTP/1.0\r\n\r\n");
-	ck_assert(conn != NULL);
-	ri = mg_get_request_info(conn);
+	client_conn = mg_download("localhost",
+	                          ipv4_port,
+	                          0,
+	                          ebuf,
+	                          sizeof(ebuf),
+	                          "%s",
+	                          "PUT /test.txt HTTP/1.0\r\n\r\n");
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 #if defined(NO_FILES)
@@ -606,16 +746,204 @@ START_TEST(test_request_handlers)
 #else
 	ck_assert_str_eq(ri->uri, "401"); /* not authorized */
 #endif
-	mg_close_connection(conn);
+	mg_close_connection(client_conn);
 
 
-	/* TODO: Test websockets */
+/* Websocket test */
+#ifdef USE_WEBSOCKET
+	/* Then connect a first client */
+	ws_client1_conn =
+	    mg_connect_websocket_client("localhost",
+	                                ipv4_port,
+	                                0,
+	                                ebuf,
+	                                sizeof(ebuf),
+	                                "/websocket",
+	                                NULL,
+	                                websocket_client_data_handler,
+	                                websocket_client_close_handler,
+	                                &ws_client1_data);
 
+	ck_assert(ws_client1_conn != NULL);
+
+	mg_Sleep(3); /* Should get the websocket welcome message */
+	ck_assert_int_eq(ws_client1_data.closed, 0);
+	ck_assert_int_eq(ws_client2_data.closed, 0);
+	ck_assert_int_eq(ws_client3_data.closed, 0);
+	ck_assert(ws_client2_data.data == NULL);
+	ck_assert_uint_eq(ws_client2_data.len, 0);
+	ck_assert(ws_client1_data.data != NULL);
+	ck_assert_uint_eq(ws_client1_data.len, websocket_welcome_msg_len);
+	ck_assert(!memcmp(ws_client1_data.data,
+	                  websocket_welcome_msg,
+	                  websocket_welcome_msg_len));
+	free(ws_client1_data.data);
+	ws_client1_data.data = NULL;
+	ws_client1_data.len = 0;
+
+	mg_websocket_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "data1", 5);
+
+	mg_Sleep(3); /* Should get the acknowledge message */
+	ck_assert_int_eq(ws_client1_data.closed, 0);
+	ck_assert_int_eq(ws_client2_data.closed, 0);
+	ck_assert(ws_client2_data.data == NULL);
+	ck_assert_uint_eq(ws_client2_data.len, 0);
+	ck_assert(ws_client1_data.data != NULL);
+	ck_assert_uint_eq(ws_client1_data.len, websocket_acknowledge_msg_len);
+	ck_assert(!memcmp(ws_client1_data.data,
+	                  websocket_acknowledge_msg,
+	                  websocket_acknowledge_msg_len));
+	free(ws_client1_data.data);
+	ws_client1_data.data = NULL;
+	ws_client1_data.len = 0;
+
+/* Now connect a second client */
+#ifdef USE_IPV6
+	ws_client2_conn =
+	    mg_connect_websocket_client("[::1]",
+	                                ipv6_port,
+	                                0,
+	                                ebuf,
+	                                sizeof(ebuf),
+	                                "/websocket",
+	                                NULL,
+	                                websocket_client_data_handler,
+	                                websocket_client_close_handler,
+	                                &ws_client2_data);
+#else
+	ws_client2_conn =
+	    mg_connect_websocket_client("127.0.0.1",
+	                                ipv4_port,
+	                                0,
+	                                ebuf,
+	                                sizeof(ebuf),
+	                                "/websocket",
+	                                NULL,
+	                                websocket_client_data_handler,
+	                                websocket_client_close_handler,
+	                                &ws_client2_data);
+#endif
+	ck_assert(ws_client2_conn != NULL);
+
+	mg_Sleep(3); /* Client 2 should get the websocket welcome message */
+	ck_assert(ws_client1_data.closed == 0);
+	ck_assert(ws_client2_data.closed == 0);
+	ck_assert(ws_client1_data.data == NULL);
+	ck_assert(ws_client1_data.len == 0);
+	ck_assert(ws_client2_data.data != NULL);
+	ck_assert(ws_client2_data.len == websocket_welcome_msg_len);
+	ck_assert(!memcmp(ws_client2_data.data,
+	                  websocket_welcome_msg,
+	                  websocket_welcome_msg_len));
+	free(ws_client2_data.data);
+	ws_client2_data.data = NULL;
+	ws_client2_data.len = 0;
+
+	mg_websocket_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "data2", 5);
+
+	mg_Sleep(3); /* Should get the acknowledge message */
+	ck_assert(ws_client1_data.closed == 0);
+	ck_assert(ws_client2_data.closed == 0);
+	ck_assert(ws_client2_data.data == NULL);
+	ck_assert(ws_client2_data.len == 0);
+	ck_assert(ws_client1_data.data != NULL);
+	ck_assert(ws_client1_data.len == websocket_acknowledge_msg_len);
+	ck_assert(!memcmp(ws_client1_data.data,
+	                  websocket_acknowledge_msg,
+	                  websocket_acknowledge_msg_len));
+	free(ws_client1_data.data);
+	ws_client1_data.data = NULL;
+	ws_client1_data.len = 0;
+
+	mg_websocket_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
+
+	mg_Sleep(3); /* Should get the goodbye message */
+	ck_assert(ws_client1_data.closed == 0);
+	ck_assert(ws_client2_data.closed == 0);
+	ck_assert(ws_client2_data.data == NULL);
+	ck_assert(ws_client2_data.len == 0);
+	ck_assert(ws_client1_data.data != NULL);
+	ck_assert(ws_client1_data.len == websocket_goodbye_msg_len);
+	ck_assert(!memcmp(ws_client1_data.data,
+	                  websocket_goodbye_msg,
+	                  websocket_goodbye_msg_len));
+	free(ws_client1_data.data);
+	ws_client1_data.data = NULL;
+	ws_client1_data.len = 0;
+
+	mg_close_connection(ws_client1_conn);
+
+	mg_Sleep(3); /* Won't get any message */
+	ck_assert(ws_client1_data.closed == 1);
+	ck_assert(ws_client2_data.closed == 0);
+	ck_assert(ws_client1_data.data == NULL);
+	ck_assert(ws_client1_data.len == 0);
+	ck_assert(ws_client2_data.data == NULL);
+	ck_assert(ws_client2_data.len == 0);
+
+	mg_websocket_write(ws_client2_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
+
+	mg_Sleep(3); /* Should get the goodbye message */
+	ck_assert(ws_client1_data.closed == 1);
+	ck_assert(ws_client2_data.closed == 0);
+	ck_assert(ws_client1_data.data == NULL);
+	ck_assert(ws_client1_data.len == 0);
+	ck_assert(ws_client2_data.data != NULL);
+	ck_assert(ws_client2_data.len == websocket_goodbye_msg_len);
+	ck_assert(!memcmp(ws_client2_data.data,
+	                  websocket_goodbye_msg,
+	                  websocket_goodbye_msg_len));
+	free(ws_client2_data.data);
+	ws_client2_data.data = NULL;
+	ws_client2_data.len = 0;
+
+	mg_close_connection(ws_client2_conn);
+
+	mg_Sleep(3); /* Won't get any message */
+	ck_assert(ws_client1_data.closed == 1);
+	ck_assert(ws_client2_data.closed == 1);
+	ck_assert(ws_client1_data.data == NULL);
+	ck_assert(ws_client1_data.len == 0);
+	ck_assert(ws_client2_data.data == NULL);
+	ck_assert(ws_client2_data.len == 0);
+
+	/* Connect client 3 */
+	ws_client3_conn =
+	    mg_connect_websocket_client("localhost",
+	                                ipv4_port,
+	                                0,
+	                                ebuf,
+	                                sizeof(ebuf),
+	                                "/websocket",
+	                                NULL,
+	                                websocket_client_data_handler,
+	                                websocket_client_close_handler,
+	                                &ws_client3_data);
+
+	mg_Sleep(3); /* Client 3 should get the websocket welcome message */
+	ck_assert(ws_client1_data.closed == 1);
+	ck_assert(ws_client2_data.closed == 1);
+	ck_assert(ws_client3_data.closed == 0);
+	ck_assert(ws_client1_data.data == NULL);
+	ck_assert(ws_client1_data.len == 0);
+	ck_assert(ws_client2_data.data == NULL);
+	ck_assert(ws_client2_data.len == 0);
+	ck_assert(ws_client3_data.data != NULL);
+	ck_assert(ws_client3_data.len == websocket_welcome_msg_len);
+	ck_assert(!memcmp(ws_client3_data.data,
+	                  websocket_welcome_msg,
+	                  websocket_welcome_msg_len));
+	free(ws_client3_data.data);
+	ws_client3_data.data = NULL;
+	ws_client3_data.len = 0;
+#endif
 
 	/* Close the server */
 	g_ctx = NULL;
 	mg_stop(ctx);
-	mg_Sleep(1);
+	mg_Sleep(30);
+
+	ck_assert_int_eq(ws_client3_data.closed, 1);
 }
 END_TEST
 
@@ -668,6 +996,7 @@ void _ck_assert_failed(const char *file, int line, const char *expr, ...)
 	va_start(va, expr);
 	fprintf(stderr, "Error: %s, line %i\n", file, line); /* breakpoint here ! */
 	vfprintf(stderr, expr, va);
+	fprintf(stderr, "\n\n");
 	va_end(va);
 	chk_failed++;
 }
