@@ -46,7 +46,7 @@
  */
 
 
-const char *locate_ssl_cert(void)
+static const char *locate_ssl_cert(void)
 {
 	return
 #ifdef _WIN32
@@ -295,13 +295,15 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 /****************************************************************************/
 /* WEBSOCKET SERVER                                                         */
 /****************************************************************************/
-const char *websocket_welcome_msg = "websocket welcome\n";
-const size_t websocket_welcome_msg_len = 18 /* strlen(websocket_welcome_msg) */;
-const char *websocket_acknowledge_msg = "websocket msg ok\n";
-const size_t websocket_acknowledge_msg_len =
+static const char *websocket_welcome_msg = "websocket welcome\n";
+static const size_t websocket_welcome_msg_len =
+    18 /* strlen(websocket_welcome_msg) */;
+static const char *websocket_acknowledge_msg = "websocket msg ok\n";
+static const size_t websocket_acknowledge_msg_len =
     17 /* strlen(websocket_acknowledge_msg) */;
-const char *websocket_goodbye_msg = "websocket bye\n";
-const size_t websocket_goodbye_msg_len = 14 /* strlen(websocket_goodbye_msg) */;
+static const char *websocket_goodbye_msg = "websocket bye\n";
+static const size_t websocket_goodbye_msg_len =
+    14 /* strlen(websocket_goodbye_msg) */;
 
 
 static int websock_server_connect(const struct mg_connection *conn, void *udata)
