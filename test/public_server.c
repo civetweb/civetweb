@@ -269,9 +269,9 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 
 	mg_set_user_connection_data(conn, (void *)6543);
 	cud = mg_get_user_connection_data(conn);
-	ck_assert_int_eq((int)cud, (int)6543);
+	ck_assert_int_eq((intmax_t)(void *)cud, (intmax_t)6543);
 
-	ck_assert_int_eq((int)cbdata, (int)7);
+	ck_assert_int_eq((intmax_t)(void *)cbdata, (intmax_t)7);
 	strcpy(chunk_data, "123456789A123456789B123456789C");
 
 	mg_printf(conn,
@@ -304,16 +304,19 @@ const char *websocket_goodbye_msg = "websocket bye\n";
 const size_t websocket_goodbye_msg_len = 14 /* strlen(websocket_goodbye_msg) */;
 
 
-int websock_server_connect(const struct mg_connection *conn, void *udata)
+static int websock_server_connect(const struct mg_connection *conn, void *udata)
 {
-	ck_assert_int_eq((int)udata, 7531);
+	(void)conn;
+
+	ck_assert_int_eq((intmax_t)(void *)udata, 7531);
 	printf("Server: Websocket connected\n");
+
 	return 0; /* return 0 to accept every connection */
 }
 
-void websock_server_ready(struct mg_connection *conn, void *udata)
+static void websock_server_ready(struct mg_connection *conn, void *udata)
 {
-	ck_assert_int_eq((int)udata, 7531);
+	ck_assert_int_eq((intmax_t)(void *)udata, 7531);
 	printf("Server: Websocket ready\n");
 
 	/* Send websocket welcome message */
@@ -325,14 +328,16 @@ void websock_server_ready(struct mg_connection *conn, void *udata)
 	mg_unlock_connection(conn);
 }
 
-int websock_server_data(struct mg_connection *conn,
-                        int bits,
-                        char *data,
-                        size_t data_len,
-                        void *udata)
+static int websock_server_data(struct mg_connection *conn,
+                               int bits,
+                               char *data,
+                               size_t data_len,
+                               void *udata)
 {
-	ck_assert_int_eq((int)udata, 7531);
-	printf("Server: Got %u bytes from the client\n", data_len);
+	(void)bits;
+
+	ck_assert_int_eq((intmax_t)(void *)udata, 7531);
+	printf("Server: Got %u bytes from the client\n", (unsigned)data_len);
 
 	if (data_len < 3 || 0 != memcmp(data, "bye", 3)) {
 		/* Send websocket acknowledge message */
@@ -355,9 +360,11 @@ int websock_server_data(struct mg_connection *conn,
 	return 1; /* return 1 to keep the connetion open */
 }
 
-void websock_server_close(const struct mg_connection *conn, void *udata)
+static void websock_server_close(const struct mg_connection *conn, void *udata)
 {
-	ck_assert_int_eq((int)udata, 7531);
+	(void)conn;
+
+	ck_assert_int_eq((intmax_t)(void *)udata, 7531);
 	printf("Server: Close connection\n");
 
 	/* Can not send a websocket goodbye message here - the connection is already
@@ -382,7 +389,11 @@ static int websocket_client_data_handler(struct mg_connection *conn,
 	struct mg_context *ctx = mg_get_context(conn);
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
+
+	(void)user_data; /* TODO: check this */
+
 	ck_assert(pclient_data != NULL);
+	ck_assert_int_eq(flags, (int)(128 | 1));
 
 	printf("Client received data from server: ");
 	fwrite(data, 1, data_len, stdout);
@@ -402,6 +413,9 @@ static void websocket_client_close_handler(const struct mg_connection *conn,
 	struct mg_context *ctx = mg_get_context(conn);
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
+
+	(void)user_data; /* TODO: check this */
+
 	ck_assert(pclient_data != NULL);
 
 	printf("Client: Close handler\n");
@@ -919,6 +933,8 @@ START_TEST(test_request_handlers)
 	                                websocket_client_data_handler,
 	                                websocket_client_close_handler,
 	                                &ws_client3_data);
+
+	ck_assert(ws_client3_conn != NULL);
 
 	mg_Sleep(3); /* Client 3 should get the websocket welcome message */
 	ck_assert(ws_client1_data.closed == 1);
