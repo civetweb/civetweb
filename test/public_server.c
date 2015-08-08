@@ -46,6 +46,30 @@
  */
 
 
+const char *locate_ssl_cert(void)
+{
+	return
+#ifdef _WIN32
+#ifdef LOCAL_TEST
+	    "resources\\ssl_cert.pem";
+#else
+	    /* Appveyor */
+	    "..\\..\\..\\resources\\ssl_cert.pem"; /* TODO: the different paths
+                                                * used in the different test 
+                                                * system is an unsolved 
+                                                * problem */
+#endif
+#else
+#ifdef LOCAL_TEST
+        "../resources/ssl_cert.pem";
+#else
+	    /* Travis */
+	    "../../resources/ssl_cert.pem"; // TODO: fix path in CI test environment
+#endif
+#endif
+}
+
+
 START_TEST(test_the_test_environment)
 {
 	char wd[300];
@@ -53,9 +77,11 @@ START_TEST(test_the_test_environment)
 	FILE *f;
 	struct stat st;
 	int ret;
+	const char *ssl_cert = locate_ssl_cert();
 
 	memset(wd, 0, sizeof(wd));
 	memset(buf, 0, sizeof(buf));
+
 
 /* Get the current working directory */
 #ifdef _WIN32
@@ -69,11 +95,13 @@ START_TEST(test_the_test_environment)
 /* Check the pem file */
 #ifdef _WIN32
 	strcpy(buf, wd);
-	strcat(buf, "..\\..\\..\\resources\\ssl_cert.pem");
+    strcat(buf, "\\");
+	strcat(buf, ssl_cert);
 	f = fopen(buf, "rb");
 #else
 	strcpy(buf, wd);
-	strcat(buf, "../../resources/ssl_cert.pem");
+    strcat(buf, "/");
+	strcat(buf, ssl_cert);
 	f = fopen(buf, "r");
 #endif
 
@@ -163,29 +191,35 @@ END_TEST
 
 START_TEST(test_mg_start_stop_https_server)
 {
+#ifndef NO_SSL
+
 	struct mg_context *ctx;
-	const char *OPTIONS[] = {
-#if !defined(NO_FILES)
-		"document_root",
-		".",
-#endif
-		"listening_ports",
-		"8080r,8443s",
-		"ssl_certificate",
-#ifdef _WIN32
-		"..\\..\\..\\resources/ssl_cert.pem", // TODO: the different paths used
-                                              // in the different test system is
-                                              // an unsolved problem
-#else
-		"../../resources/ssl_cert.pem", // TODO: fix path in CI test environment
-#endif
-		NULL,
-	};
+
 	size_t ports_cnt;
 	int ports[16];
 	int ssl[16];
 	struct mg_callbacks callbacks;
 	char errmsg[256];
+
+	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
+	int opt_idx = 0;
+	const char *ssl_cert = locate_ssl_cert();
+	ck_assert(ssl_cert != NULL);
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+#if !defined(NO_FILES)
+	OPTIONS[opt_idx++] = "document_root";
+	OPTIONS[opt_idx++] = ".";
+#endif
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8080r,8443s";
+	OPTIONS[opt_idx++] = "ssl_certificate";
+	OPTIONS[opt_idx++] = ssl_cert;
+
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
+
 
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
@@ -210,6 +244,7 @@ START_TEST(test_mg_start_stop_https_server)
 
 	mg_Sleep(1);
 	mg_stop(ctx);
+#endif
 }
 END_TEST
 
@@ -294,6 +329,7 @@ START_TEST(test_request_handlers)
 	const char *opt;
 	FILE *f;
 	int opt_idx = 0;
+	const char *ssl_cert = locate_ssl_cert();
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
@@ -303,17 +339,9 @@ START_TEST(test_request_handlers)
 	OPTIONS[opt_idx++] = ".";
 #endif
 #ifndef NO_SSL
+	ck_assert(ssl_cert != NULL);
 	OPTIONS[opt_idx++] = "ssl_certificate";
-#ifdef _WIN32
-	OPTIONS[opt_idx++] =
-	    "..\\..\\..\\resources/ssl_cert.pem"; // TODO: the different
-                                              // paths used in the
-                                              // different test system
-                                              // is an unsolved problem
-#else
-	OPTIONS[opt_idx++] =
-	    "../../resources/ssl_cert.pem"; // TODO: fix path in CI test environment
-#endif
+	OPTIONS[opt_idx++] = ssl_cert;
 #endif
 	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
