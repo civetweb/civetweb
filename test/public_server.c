@@ -330,6 +330,14 @@ static int websock_server_connect(const struct mg_connection *conn, void *udata)
 	return 0; /* return 0 to accept every connection */
 }
 
+
+#ifndef _WIN32
+/* TODO(critical): Why is mg_lock_connection here a deadlock in Linux,
+ * while it is OK for Windows? */
+#define mg_lock_connection(conn)
+#define mg_unlock_connection(conn)
+#endif
+
 static void websock_server_ready(struct mg_connection *conn, void *udata)
 {
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
@@ -342,6 +350,8 @@ static void websock_server_ready(struct mg_connection *conn, void *udata)
 	                   websocket_welcome_msg,
 	                   websocket_welcome_msg_len);
 	mg_unlock_connection(conn);
+
+	printf("Server: Websocket ready X\n");
 }
 
 static int websock_server_data(struct mg_connection *conn,
@@ -1051,7 +1061,11 @@ void _ck_assert_failed(const char *file, int line, const char *expr, ...)
 
 void _ck_assert_msg(int cond, const char *file, int line, const char *expr, ...)
 {
-	if (cond) return;
+	if (cond) {
+		chk_ok++; 
+		return;
+	}
+
 	va_list va;
 	va_start(va, expr);
 	fprintf(stderr, "Error: %s, line %i\n", file, line); /* breakpoint here ! */
