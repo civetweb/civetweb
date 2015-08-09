@@ -1,14 +1,14 @@
-![CivetWeb](https://raw.github.com/bel2125/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
+![CivetWeb](https://raw.github.com/civetweb/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
 =======
 
 **Continuous integration (Travis, Appveyor), coverage check (coveralls) and source code analysis (coverity) are currently in a setup phase**
 
-[![Travis Build Status](https://travis-ci.org/bel2125/civetweb.svg?branch=master)](https://travis-ci.org/bel2125/civetweb)
-[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/bel2125/civetweb?svg=true)](https://ci.appveyor.com/project/bel2125/civetweb/branch/master)
-[![Coverage Status](https://coveralls.io/repos/bel2125/civetweb/badge.svg?branch=master&service=github)](https://coveralls.io/github/bel2125/civetweb?branch=master)
+[![Travis Build Status](https://travis-ci.org/civetweb/civetweb.svg?branch=master)](https://travis-ci.org/civetweb/civetweb)
+[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/civetweb/civetweb?svg=true)](https://ci.appveyor.com/project/civetweb/civetweb/branch/master)
+[![Coverage Status](https://coveralls.io/repos/civetweb/civetweb/badge.svg?branch=master&service=github)](https://coveralls.io/github/civetweb/civetweb?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
 
-**The official home of CivetWeb is https://github.com/bel2125/civetweb**
+**The official home of CivetWeb is https://github.com/civetweb/civetweb**
 
 
 Project Mission
@@ -26,10 +26,10 @@ End users can download CivetWeb at SourceForge
 https://sourceforge.net/projects/civetweb/
 
 Developers can contribute to CivetWeb via GitHub
-https://github.com/bel2125/civetweb
+https://github.com/civetweb/civetweb
 
 Trouble tickets should be filed on GitHub
-https://github.com/bel2125/civetweb/issues
+https://github.com/civetweb/civetweb/issues
 
 Discussion/support group and announcements are at Google Groups
 https://groups.google.com/d/forum/civetweb
@@ -38,12 +38,12 @@ https://groups.google.com/d/forum/civetweb
 Quick start documentation
 --------------------------
 
-- [docs/Installing.md](https://github.com/bel2125/civetweb/blob/master/docs/Installing.md) - Install Guide
-- [docs/UserManual.md](https://github.com/bel2125/civetweb/blob/master/docs/UserManual.md) - End User Guide
-- [docs/Building.md](https://github.com/bel2125/civetweb/blob/master/docs/Building.md) - Buildiing the Server Quick Start
-- [docs/Embedding.md](https://github.com/bel2125/civetweb/blob/master/docs/Embedding.md) - Embedding Quick Start
-- [RELEASE_NOTES.md](https://github.com/bel2125/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
-- [LICENSE.md](https://github.com/bel2125/civetweb/blob/master/LICENSE.md) - Copyright License
+- [docs/Installing.md](https://github.com/civetweb/civetweb/blob/master/docs/Installing.md) - Install Guide
+- [docs/UserManual.md](https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md) - End User Guide
+- [docs/Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md) - Buildiing the Server Quick Start
+- [docs/Embedding.md](https://github.com/civetweb/civetweb/blob/master/docs/Embedding.md) - Embedding Quick Start
+- [RELEASE_NOTES.md](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
+- [LICENSE.md](https://github.com/civetweb/civetweb/blob/master/LICENSE.md) - Copyright License
 
 
 Overview
@@ -59,7 +59,7 @@ simplicity by a carefully selected list of features:
 - Forked from [Mongoose](https://code.google.com/p/mongoose/) in 2013, before
   it changed the licence from MIT to commercial + GPL. A lot of enchancements
   have been added since that time, see
-  [RELEASE_NOTES.md](https://github.com/bel2125/civetweb/blob/master/RELEASE_NOTES.md).
+  [RELEASE_NOTES.md](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md).
 - Works on Windows, Mac, Linux, UNIX, iPhone, Android, Buildroot, and many
   other platforms.
 - Scripting and database support (Lua scipts, Lua Server Pages, CGI + SQLite
@@ -79,27 +79,27 @@ simplicity by a carefully selected list of features:
 ### Optionally included software
 
 <a href="http://lua.org">
-![Lua](https://raw.github.com/bel2125/civetweb/master/resources/lua-logo.jpg "Lua Logo")
+![Lua](https://raw.github.com/civetweb/civetweb/master/resources/lua-logo.jpg "Lua Logo")
 </a>
 <a href="http://sqlite.org">
-![Sqlite3](https://raw.github.com/bel2125/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")
+![Sqlite3](https://raw.github.com/civetweb/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")
 </a>
 <a href=http://keplerproject.github.io/luafilesystem/">
-![LuaFileSystem](https://raw.github.com/bel2125/civetweb/master/resources/luafilesystem-logo.jpg "LuaFileSystem Logo")
+![LuaFileSystem](https://raw.github.com/civetweb/civetweb/master/resources/luafilesystem-logo.jpg "LuaFileSystem Logo")
 </a>
 <a href=http://lua.sqlite.org/index.cgi/index">
-![LuaSQLite3](https://raw.github.com/bel2125/civetweb/master/resources/luasqlite-logo.jpg "LuaSQLite3 Logo")
+![LuaSQLite3](https://raw.github.com/civetweb/civetweb/master/resources/luasqlite-logo.jpg "LuaSQLite3 Logo")
 </a>
 <a href=http://viremo.eludi.net/LuaXML/index.html">
-![LuaXML](https://raw.github.com/bel2125/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")
+![LuaXML](https://raw.github.com/civetweb/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")
 </a>
 
 
 Support
 -------
 
-This project is very easy to install and use. Please read the [documentation](https://github.com/bel2125/civetweb/blob/master/docs/)
-and have a look at the [examples] (https://github.com/bel2125/civetweb/blob/master/examples/).
+This project is very easy to install and use. Please read the [documentation](https://github.com/civetweb/civetweb/blob/master/docs/)
+and have a look at the [examples] (https://github.com/civetweb/civetweb/blob/master/examples/).
 More information may be found on the [mailing list](https://groups.google.com/d/forum/civetweb).
 
 
@@ -121,5 +121,5 @@ Using the CivetWeb project ensures the MIT licenses terms are applied and
 GPL cannot be imposed on any of this code as long as it is sourced from
 here. This code will remain free with the MIT license protection.
 
-A list of authors can be found in [CREDITS.md](https://github.com/bel2125/civetweb/blob/master/CREDITS.md)
+A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
 
