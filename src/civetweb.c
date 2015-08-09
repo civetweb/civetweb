@@ -10728,3 +10728,48 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 
 	return ctx;
 }
+
+
+/* Feature check API function */
+unsigned mg_check_feature(unsigned feature)
+{
+	static const unsigned feature_set = 0
+/* Set bits for available features according to API documentation. */
+#if !defined(NO_FILES)
+	                                    | 1
+#endif
+#if !defined(NO_SSL)
+	                                    | 2
+#endif
+#if !defined(NO_CGI)
+	                                    | 4
+#endif
+#if defined(USE_IPV6)
+	                                    | 8
+#endif
+#if defined(USE_WEBSOCKET)
+	                                    | 16
+#endif
+#if defined(USE_LUA)
+	                                    | 32
+#endif
+/* Set some extra bits not defined in the API documentation.
+ * These bits may change without further notice. */
+#if !defined(NO_POPEN)
+	                                    | 64
+#endif
+#if defined(MG_LEGACY_INTERFACE)
+	                                    | 128
+#endif
+#if defined(MEMORY_DEBUGGING)
+	                                    | 256
+#endif
+#if defined(USE_TIMERS)
+	                                    | 512
+#endif
+#if !defined(NO_NONCE_CHECK)
+	                                    | 1024
+#endif
+	    ;
+	return (feature & feature_set);
+}

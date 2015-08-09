@@ -725,6 +725,24 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
                                  size_t ebuf_len,
                                  int timeout);
 
+
+/* Check which features where set when civetweb has been compiled.
+   Parameters:
+     feature: specifies which feature should be checked
+         1  serve files (NO_FILES not set)
+         2  support HTTPS (NO_SSL not set)
+         4  support CGI (NO_CGI not set)
+         8  support IPv6 (USE_IPV6 set)
+        16  support WebSocket (USE_WEBSOCKET set)
+        32  support Lua scripts and Lua server pages (USE_LUA is set)
+
+   Return:
+     If feature is available > 0
+     If feature is not available = 0
+*/
+CIVETWEB_API unsigned mg_check_feature(unsigned feature);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
