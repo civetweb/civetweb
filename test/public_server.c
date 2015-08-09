@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -61,7 +62,7 @@ static const char *locate_ssl_cert(void)
 #endif
 #else
 #ifdef LOCAL_TEST
-	    "../resources/ssl_cert.pem";
+	    "resources/ssl_cert.pem";
 #else
 	    /* Travis */
 	    "../../resources/ssl_cert.pem"; // TODO: fix path in CI test environment
@@ -1039,6 +1040,18 @@ void main(void)
 
 void _ck_assert_failed(const char *file, int line, const char *expr, ...)
 {
+	va_list va;
+	va_start(va, expr);
+	fprintf(stderr, "Error: %s, line %i\n", file, line); /* breakpoint here ! */
+	vfprintf(stderr, expr, va);
+	fprintf(stderr, "\n\n");
+	va_end(va);
+	chk_failed++;
+}
+
+void _ck_assert_msg(int cond, const char *file, int line, const char *expr, ...)
+{
+	if (cond) return;
 	va_list va;
 	va_start(va, expr);
 	fprintf(stderr, "Error: %s, line %i\n", file, line); /* breakpoint here ! */
