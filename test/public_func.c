@@ -39,6 +39,10 @@ START_TEST(test_mg_version)
 {
 	const char *ver = mg_version();
 	unsigned major = 0, minor = 0;
+	unsigned feature_files, feature_https, feature_cgi, feature_ipv6,
+	    feature_websocket, feature_lua;
+	unsigned expect_files = 0, expect_https = 0, expect_cgi = 0,
+	         expect_ipv6 = 0, expect_websocket = 0, expect_lua = 0;
 	int ret;
 
 	ck_assert(ver != NULL);
@@ -48,6 +52,40 @@ START_TEST(test_mg_version)
 	ret = sscanf(ver, "%u.%u", &major, &minor);
 	ck_assert_int_eq(ret, 2);
 	ck_assert_uint_ge(major, 1);
+
+	/* check feature */
+	feature_files = mg_check_feature(1);
+	feature_https = mg_check_feature(2);
+	feature_cgi = mg_check_feature(4);
+	feature_ipv6 = mg_check_feature(8);
+	feature_websocket = mg_check_feature(16);
+	feature_lua = mg_check_feature(32);
+
+#if !defined(NO_FILES)
+	expect_files = 1;
+#endif
+#if !defined(NO_SSL)
+	expect_https = 1;
+#endif
+#if !defined(NO_CGI)
+	expect_cgi = 1;
+#endif
+#if defined(USE_IPV6)
+	expect_ipv6 = 1;
+#endif
+#if defined(USE_WEBSOCKET)
+	expect_websocket = 1;
+#endif
+#if defined(USE_LUA)
+	expect_lua = 1;
+#endif
+
+	ck_assert_uint_eq(expect_files, !!feature_files);
+	ck_assert_uint_eq(expect_https, !!feature_https);
+	ck_assert_uint_eq(expect_cgi, !!feature_cgi);
+	ck_assert_uint_eq(expect_ipv6, !!feature_ipv6);
+	ck_assert_uint_eq(expect_websocket, !!feature_websocket);
+	ck_assert_uint_eq(expect_lua, !!feature_lua);
 }
 END_TEST
 
