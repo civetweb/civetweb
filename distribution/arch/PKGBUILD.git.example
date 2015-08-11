@@ -15,7 +15,7 @@ optdepends=('php-cgi: for php support')
 provides=("$_pkgname")
 conflicts=("$_pkgname")
 backup=("etc/$_pkgname/$_pkgname.conf")
-source=("$_pkgname::git+https://github.com/bel2125/civetweb.git")
+source=("$_pkgname::git+https://github.com/civetweb/civetweb.git")
 md5sums=('SKIP')
 
 pkgver() {
