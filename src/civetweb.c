@@ -9529,7 +9529,9 @@ void mg_close_connection(struct mg_connection *conn)
 	if (client_ctx != NULL) {
 		/* join worker thread and free context */
 		for (i = 0; i < client_ctx->workerthreadcount; i++) {
-			mg_join_thread(client_ctx->workerthreadids[i]);
+			if (client_ctx->workerthreadids[i] != 0) {
+				mg_join_thread(client_ctx->workerthreadids[i]);
+			}
 		}
 		mg_free(client_ctx->workerthreadids);
 		mg_free(client_ctx);
@@ -10371,7 +10373,9 @@ static void master_thread_run(void *thread_func_param)
 	/* Join all worker threads to avoid leaking threads. */
 	workerthreadcount = ctx->workerthreadcount;
 	for (i = 0; i < workerthreadcount; i++) {
-		mg_join_thread(ctx->workerthreadids[i]);
+		if (ctx->workerthreadids[i] != 0) {
+			mg_join_thread(ctx->workerthreadids[i]);
+		}
 	}
 
 #if !defined(NO_SSL)
@@ -10482,17 +10486,27 @@ static void free_context(struct mg_context *ctx)
 
 void mg_stop(struct mg_context *ctx)
 {
+	pthread_t mt;
 	if (!ctx) {
 		return;
 	}
 
+	/* We don't use a lock here. Calling mg_stop with the same ctx from
+	 * two threads is not allowed. */
+	mt = ctx->masterthreadid;
+	if (mt == 0) {
+		return;
+	}
+
+	ctx->masterthreadid = 0;
 	ctx->stop_flag = 1;
 
 	/* Wait until mg_fini() stops */
 	while (ctx->stop_flag != 2) {
 		(void)mg_sleep(10);
 	}
-	mg_join_thread(ctx->masterthreadid);
+
+	mg_join_thread(mt);
 	free_context(ctx);
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
