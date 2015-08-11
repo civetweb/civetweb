@@ -5,6 +5,8 @@ Release Notes v1.8 (work in progress)
 Changes
 -------
 
+- Created a "civetweb" organization at GitHub.
+- Repository moved from https://github.com/bel2125/civetweb to https://github.com/civetweb/civetweb
 - Improved continuous integration
 - CMake support
 - Updated version number
