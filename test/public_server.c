@@ -1025,7 +1025,7 @@ Suite *make_public_server_suite(void)
 	suite_add_tcase(suite, startstophttps);
 
 	tcase_add_test(serverrequests, test_request_handlers);
-    tcase_set_timeout(serverrequests, 120);
+	tcase_set_timeout(serverrequests, 120);
 	suite_add_tcase(suite, serverrequests);
 
 	return suite;
@@ -1061,12 +1061,13 @@ void _ck_assert_failed(const char *file, int line, const char *expr, ...)
 
 void _ck_assert_msg(int cond, const char *file, int line, const char *expr, ...)
 {
+	va_list va;
+
 	if (cond) {
-		chk_ok++; 
+		chk_ok++;
 		return;
 	}
 
-	va_list va;
 	va_start(va, expr);
 	fprintf(stderr, "Error: %s, line %i\n", file, line); /* breakpoint here ! */
 	vfprintf(stderr, expr, va);
@@ -1078,16 +1079,16 @@ void _ck_assert_msg(int cond, const char *file, int line, const char *expr, ...)
 void _mark_point(const char *file, int line) { chk_ok++; }
 
 void tcase_fn_start(const char *fname, const char *file, int line) {}
-void suite_add_tcase(Suite *s, TCase *tc) {};
+void suite_add_tcase(Suite *s, TCase *tc){};
 void _tcase_add_test(TCase *tc,
                      TFun tf,
                      const char *fname,
                      int _signal,
                      int allowed_exit_value,
                      int start,
-                     int end) {};
+                     int end){};
 TCase *tcase_create(const char *name) { return NULL; };
 Suite *suite_create(const char *name) { return NULL; };
-void tcase_set_timeout(TCase * tc, double timeout) {};
+void tcase_set_timeout(TCase *tc, double timeout){};
 
 #endif
