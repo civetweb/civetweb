@@ -286,7 +286,7 @@ The current directory is commonly referenced as dot (`.`).
 Path to the SSL certificate file. This option is only required when at least
 one of the `listening\_ports` is SSL. The file must be in PEM format,
 and it must have both, private key and certificate, see for example
-[ssl_cert.pem](https://github.com/bel2125/civetweb/blob/master/resources/ssl_cert.pem)
+[ssl_cert.pem](https://github.com/civetweb/civetweb/blob/master/resources/ssl_cert.pem)
 A description how to create a certificate can be found in doc/OpenSSL.md
 
 ### num\_threads `50`
@@ -422,22 +422,22 @@ is located in the path `mg.document_root`.
 Information on the request is available in the `mg.request_info`
 object, like the request method, all HTTP headers, etcetera.
 
-[page2.lua](https://github.com/bel2125/civetweb/blob/master/test/page2.lua)
+[page2.lua](https://github.com/civetweb/civetweb/blob/master/test/page2.lua)
 is an example for a plain Lua script.
 
-[page2.lp](https://github.com/bel2125/civetweb/blob/master/test/page2.lp)
+[page2.lp](https://github.com/civetweb/civetweb/blob/master/test/page2.lp)
 is an example for a Lua Server Page.
 
 Both examples show the content of the `mg.request_info` object as the page
 content. Please refer to `struct mg_request_info` definition in
-[civetweb.h](https://github.com/bel2125/civetweb/blob/master/include/civetweb.h)
+[civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)
 to see additional information on the elements of the `mg.request_info` object.
 
 Civetweb also provides access to the [SQlite3 database](http://www.sqlite.org/)
 through the [LuaSQLite3 interface](http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki)
 in Lua. Examples are given in
-[page.lua](https://github.com/bel2125/civetweb/blob/master/test/page.lua) and
-[page.lp](https://github.com/bel2125/civetweb/blob/master/test/page.lp).
+[page.lua](https://github.com/civetweb/civetweb/blob/master/test/page.lua) and
+[page.lp](https://github.com/civetweb/civetweb/blob/master/test/page.lp).
 
 
 Civetweb exports the following functions to Lua:
@@ -524,7 +524,7 @@ must return true in order to keep the connetion open.
 Lua websocket pages do support single shot (timeout) and interval timers.
 
 An example is shown in
-[websocket.lua](https://github.com/bel2125/civetweb/blob/master/test/websocket.lua).
+[websocket.lua](https://github.com/civetweb/civetweb/blob/master/test/websocket.lua).
 
 
 # Common Problems

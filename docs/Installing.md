@@ -1,14 +1,14 @@
 Civetweb Install Guide
 ====
 
-This guide covers the distributions for CivetWeb.  The latest source code is available at [https://github.com/bel2125/civetweb](https://github.com/bel2125/civetweb).
+This guide covers the distributions for CivetWeb.  The latest source code is available at [https://github.com/civetweb/civetweb](https://github.com/civetweb/civetweb).
 
 Windows
 ---
 
 This pre-built version comes pre-built wit Lua support. Libraries for SSL support are not included due to licensing restrictions;
 however, users may add an SSL library themselves.
-Instructions for adding SSL support can be found in [https://github.com/bel2125/civetweb/tree/master/docs](https://github.com/bel2125/civetweb/tree/master/docs)
+Instructions for adding SSL support can be found in [https://github.com/civetweb/civetweb/tree/master/docs](https://github.com/civetweb/civetweb/tree/master/docs)
 
 1a. 32 Bit: Install the [Visual C++ Redistributable for Visual Studio 2010](http://www.microsoft.com/en-us/download/details.aspx?id=8328)
 1b. 64 Bit: Install the [Visual C++ Redistributable for Visual Studio 2013](http://www.microsoft.com/en-us/download/details.aspx?id=40784)

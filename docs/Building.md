@@ -2,10 +2,10 @@ Building Civetweb
 =========
 
 This guide covers the build instructions for stand-alone web server.
-See [Embedding.md](https://github.com/bel2125/civetweb/blob/master/docs/Embedding.md) for information on extending an application.
+See [Embedding.md](https://github.com/civetweb/civetweb/blob/master/docs/Embedding.md) for information on extending an application.
 
 #### Where to get the source code?
-https://github.com/bel2125/civetweb
+https://github.com/civetweb/civetweb
 
 
 Building for Windows
@@ -14,7 +14,7 @@ Building for Windows
 #### Using Visual Studio
 Open the *VS2012/civetweb.sln* in Visual Studio.
 To include SSL support, you may have to use yaSSL.  However, it is GPL licensed.
-See [yaSSL.md](https://github.com/bel2125/civetweb/blob/master/docs/yaSSL.md) for more information.
+See [yaSSL.md](https://github.com/civetweb/civetweb/blob/master/docs/yaSSL.md) for more information.
 
 #### Using MinGW-w64 or TDM-GCC
 In the start menu locate and run the "Run terminal" batch file. For TDM-GCC this is named "MinGW Command Prompt".
