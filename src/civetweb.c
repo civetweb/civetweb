@@ -3827,7 +3827,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
               int *is_put_or_delete_request /* out: put/delete a file? */
               )
 {
-	/* TODO: Restructure this function */
+	/* TODO (high): Restructure this function */
 	if (conn && conn->ctx) {
 
 #if !defined(NO_FILES)
@@ -3962,6 +3962,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				if (mg_stat(conn, gz_path, filep)) {
 					if (filep) {
 						filep->gzipped = 1;
+						*is_found = 1;
 					}
 					/* Currently gz files can not be scripts. */
 					return;
