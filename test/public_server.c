@@ -487,6 +487,8 @@ START_TEST(test_request_handlers)
 	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
 	const char *opt;
 	FILE *f;
+	const char *plain_file_content;
+	const char *encoded_file_content;
 	int opt_idx = 0;
 	const char *ssl_cert = locate_ssl_cert();
 
@@ -693,6 +695,20 @@ START_TEST(test_request_handlers)
 	fwrite("simple text file\n", 17, 1, f);
 	fclose(f);
 
+#ifdef _WIN32
+	f = fopen("test_gz.txt.gz", "wb");
+#else
+	f = fopen("test_gz.txt.gz", "w");
+#endif
+
+	encoded_file_content = "\x1f\x8b\x08\x08\xf8\x9d\xcb\x55\x00\x00"
+	                       "test_gz.txt"
+	                       "\x00\x01\x11\x00\xee\xff"
+	                       "zipped text file"
+	                       "\x0a\x34\x5f\xcc\x49\x11\x00\x00\x00";
+	fwrite(encoded_file_content, 1, 52, f);
+	fclose(f);
+
 
 	/* Get static data */
 	client_conn = mg_download("localhost",
@@ -717,6 +733,51 @@ START_TEST(test_request_handlers)
 		buf[i] = 0;
 	}
 	ck_assert_str_eq(buf, "simple text file\n");
+#endif
+	mg_close_connection(client_conn);
+
+
+	/* Get zipped static data - will not work if Accept-Encoding is not set */
+	client_conn = mg_download("localhost",
+	                          ipv4_port,
+	                          0,
+	                          ebuf,
+	                          sizeof(ebuf),
+	                          "%s",
+	                          "GET /test_gz.txt HTTP/1.0\r\n\r\n");
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+
+	ck_assert_str_eq(ri->uri, "404");
+	mg_close_connection(client_conn);
+
+	/* Get zipped static data - with Accept-Encoding */
+	client_conn = mg_download(
+	    "localhost",
+	    ipv4_port,
+	    0,
+	    ebuf,
+	    sizeof(ebuf),
+	    "%s",
+	    "GET /test_gz.txt HTTP/1.0\r\nAccept-Encoding: gzip\r\n\r\n");
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+
+#if defined(NO_FILES)
+	ck_assert_str_eq(ri->uri, "404");
+#else
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(client_conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, 52);
+	if ((i >= 0) && (i < (int)sizeof(buf))) {
+		buf[i] = 0;
+	}
+	ck_assert_int_eq(ri->content_length, 52);
+	ck_assert_str_eq(buf, encoded_file_content);
 #endif
 	mg_close_connection(client_conn);
 
