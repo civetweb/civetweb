@@ -692,7 +692,8 @@ START_TEST(test_request_handlers)
 #else
 	f = fopen("test.txt", "w");
 #endif
-	fwrite("simple text file\n", 17, 1, f);
+	plain_file_content = "simple text file\n";
+	fwrite(plain_file_content, 17, 1, f);
 	fclose(f);
 
 #ifdef _WIN32
@@ -700,7 +701,6 @@ START_TEST(test_request_handlers)
 #else
 	f = fopen("test_gz.txt.gz", "w");
 #endif
-
 	encoded_file_content = "\x1f\x8b\x08\x08\xf8\x9d\xcb\x55\x00\x00"
 	                       "test_gz.txt"
 	                       "\x00\x01\x11\x00\xee\xff"
@@ -732,7 +732,7 @@ START_TEST(test_request_handlers)
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
 		buf[i] = 0;
 	}
-	ck_assert_str_eq(buf, "simple text file\n");
+	ck_assert_str_eq(buf, plain_file_content);
 #endif
 	mg_close_connection(client_conn);
 
