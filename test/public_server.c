@@ -1054,6 +1054,7 @@ START_TEST(test_request_handlers)
 	g_ctx = NULL;
 	mg_stop(ctx);
 
+#ifdef USE_WEBSOCKET
 	for (i = 0; i < 100; i++) {
 		test_sleep(1);
 		if (ws_client3_data.closed != 0) {
@@ -1062,6 +1063,7 @@ START_TEST(test_request_handlers)
 	}
 
 	ck_assert_int_eq(ws_client3_data.closed, 1);
+#endif
 }
 END_TEST
 
