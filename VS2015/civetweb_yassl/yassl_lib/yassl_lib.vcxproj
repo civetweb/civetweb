@@ -1,0 +1,185 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8C0C878B-BBD6-4241-BCA6-61753FFCC7F1}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>yassl_lib</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)\$(Configuration)\$(Platform)</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)\$(Configuration)\$(Platform)</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)\$(Configuration)\$(Platform)</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)\$(Configuration)\$(Platform)</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>OPENSSL_EXTRA;HAVE_ERRNO_H;HAVE_GETHOSTBYNAME;HAVE_INET_NTOA;HAVE_LIMITS_H;HAVE_MEMSET;HAVE_SOCKET;HAVE_STDDEF_H;HAVE_STDLIB_H;HAVE_STRING_H;HAVE_SYS_STAT_H;HAVE_SYS_TYPES_H;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\cyassl-2.7.0\;$(ProjectDir)..\..\..\..\cyassl-2.7.0\cyassl\</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>OPENSSL_EXTRA;HAVE_ERRNO_H;HAVE_GETHOSTBYNAME;HAVE_INET_NTOA;HAVE_LIMITS_H;HAVE_MEMSET;HAVE_SOCKET;HAVE_STDDEF_H;HAVE_STDLIB_H;HAVE_STRING_H;HAVE_SYS_STAT_H;HAVE_SYS_TYPES_H;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\cyassl-2.7.0\;$(ProjectDir)..\..\..\..\cyassl-2.7.0\cyassl\</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>OPENSSL_EXTRA;HAVE_ERRNO_H;HAVE_GETHOSTBYNAME;HAVE_INET_NTOA;HAVE_LIMITS_H;HAVE_MEMSET;HAVE_SOCKET;HAVE_STDDEF_H;HAVE_STDLIB_H;HAVE_STRING_H;HAVE_SYS_STAT_H;HAVE_SYS_TYPES_H;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\cyassl-2.7.0\;$(ProjectDir)..\..\..\..\cyassl-2.7.0\cyassl\</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>OPENSSL_EXTRA;HAVE_ERRNO_H;HAVE_GETHOSTBYNAME;HAVE_INET_NTOA;HAVE_LIMITS_H;HAVE_MEMSET;HAVE_SOCKET;HAVE_STDDEF_H;HAVE_STDLIB_H;HAVE_STRING_H;HAVE_SYS_STAT_H;HAVE_SYS_TYPES_H;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\cyassl-2.7.0\;$(ProjectDir)..\..\..\..\cyassl-2.7.0\cyassl\</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\aes.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\arc4.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\asn.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\coding.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\des3.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\dh.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\dsa.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\ecc.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\error.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\hc128.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\hmac.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\integer.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\logging.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\md2.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\md4.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\md5.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\memory.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\misc.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\pwdbased.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\rabbit.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\random.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\ripemd.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\rsa.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\sha.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\sha256.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\sha512.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\ctaocrypt\src\tfm.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\src\crl.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\src\internal.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\src\io.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\src\keys.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\src\ocsp.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\src\sniffer.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\src\ssl.c" />
+    <ClCompile Include="..\..\..\..\cyassl-2.7.0\src\tls.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
