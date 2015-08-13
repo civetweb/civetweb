@@ -5431,6 +5431,7 @@ static void send_file_data(struct mg_connection *conn,
 {
 	char buf[MG_BUF_LEN];
 	int to_read, num_read, num_written;
+	int loop_cnt = 0;
 	int64_t size;
 
 	if (!filep || !conn) {
@@ -5467,8 +5468,15 @@ static void send_file_data(struct mg_connection *conn,
 					conn->num_bytes_sent += sf_sent;
 					len -= sf_sent;
 					offset += sf_sent;
+				} else if (loop_cnt == 0) {
+					/* This file can not be sent using sendfile.
+					 * This might be the case for pseudo-files in the
+					 * /sys/ and /proc/ file system.
+					 * Use the regular user mode copy code instead. */
+					break;
 				}
 
+				loop_cnt++;
 			} while ((len > 0) && (sf_sent >= 0));
 
 			if (sf_sent > 0) {
@@ -5512,6 +5520,8 @@ static void send_file_data(struct mg_connection *conn,
 				/* Both read and were successful, adjust counters */
 				conn->num_bytes_sent += num_written;
 				len -= num_written;
+
+				loop_cnt++;
 			}
 		}
 	}
