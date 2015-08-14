@@ -751,7 +751,7 @@ CIVETWEB_API unsigned mg_check_feature(unsigned feature);
 	2: context has stopped
    -1: Invalid context
  */
-CIVETWEB_API int mg_is_ctx_stopped(const struct mg_context* ctx)
+CIVETWEB_API int mg_is_ctx_stopped(const struct mg_context* ctx);
 
 #ifdef __cplusplus
 }
