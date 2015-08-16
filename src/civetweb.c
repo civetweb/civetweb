@@ -4993,8 +4993,23 @@ static int connect_socket(struct mg_context *ctx /* may be null */,
 	} else if (mg_inet_pton(AF_INET6, host, &sa->sin6, sizeof(sa->sin6))) {
 		sa->sin6.sin6_port = htons((uint16_t)port);
 		ip_ver = 6;
+	} else if (host[0] == '[') {
+        /* While getaddrinfo on Windows will work with [::1],
+         * getaddrinfo on Linux only works with ::1 (without []). */
+		size_t l = strlen(host + 1);
+		char *h = l > 1 ? mg_strdup(host + 1) : NULL;
+		if (h) {
+			h[l - 1] = 0;
+			if (mg_inet_pton(AF_INET6, h, &sa->sin6, sizeof(sa->sin6))) {
+				sa->sin6.sin6_port = htons((uint16_t)port);
+				ip_ver = 6;
+			}
+			mg_free(h);
+		}
 #endif
-	} else {
+	}
+
+	if (ip_ver == 0) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
