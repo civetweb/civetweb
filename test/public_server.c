@@ -1048,8 +1048,13 @@ START_TEST(test_request_handlers)
 	/* Connect client 3 */
 	ws_client3_conn =
 	    mg_connect_websocket_client("localhost",
+#if defined(NO_SSL)
 	                                ipv4_port,
 	                                0,
+#else
+	                                ipv4s_port,
+	                                1,
+#endif
 	                                ebuf,
 	                                sizeof(ebuf),
 	                                "/websocket",
