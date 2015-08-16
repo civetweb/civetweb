@@ -3077,6 +3077,8 @@ static int push(struct mg_context *ctx,
 		}
 	} while ((timeout <= 0) || (mg_difftimespec(&now, &start) <= timeout));
 
+    (void)err; /* Avoid unused warning if NO_SSL is set and DEBUG_TRACE is not used */
+
 	return -1;
 }
 
