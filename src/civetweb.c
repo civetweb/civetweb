@@ -3020,6 +3020,12 @@ static int push(struct mg_context *ctx,
 		return -1;
 	}
 
+#ifdef NO_SSL
+	if (ssl) {
+		return -1;
+	}
+#endif
+
 	do {
 
 #ifndef NO_SSL
@@ -3076,6 +3082,9 @@ static int push(struct mg_context *ctx,
 			clock_gettime(CLOCK_MONOTONIC, &now);
 		}
 	} while ((timeout <= 0) || (mg_difftimespec(&now, &start) <= timeout));
+
+	(void)err; /* Avoid unused warning if NO_SSL is set and DEBUG_TRACE is not
+	              used */
 
 	return -1;
 }
@@ -5455,10 +5464,11 @@ static void send_file_data(struct mg_connection *conn,
 			off_t sf_offs = (off_t)offset;
 			ssize_t sf_sent;
 			int sf_file = fileno(filep->fp);
+			int loop_cnt = 0;
 
 			do {
-				/* 2147479552 (0x7FFFF000) is a limit found by experiment on 64
-				 * bit Linux (2^31 minus one memory page of 4k?). */
+				/* 2147479552 (0x7FFFF000) is a limit found by experiment on
+				 * 64 bit Linux (2^31 minus one memory page of 4k?). */
 				size_t sf_tosend =
 				    (size_t)((len < 0x7FFFF000) ? len : 0x7FFFF000);
 				sf_sent =
@@ -5467,7 +5477,19 @@ static void send_file_data(struct mg_connection *conn,
 					conn->num_bytes_sent += sf_sent;
 					len -= sf_sent;
 					offset += sf_sent;
+				} else if (loop_cnt == 0) {
+					/* This file can not be sent using sendfile.
+					 * This might be the case for pseudo-files in the
+					 * /sys/ and /proc/ file system.
+					 * Use the regular user mode copy code instead. */
+					break;
+				} else if (sf_sent == 0) {
+					/* No error, but 0 bytes sent. May be EOF? */
+					mg_sleep(1);
+					loop_cnt = -1;
+					/* TODO(high): Maybe just return here. --> Test required */
 				}
+				loop_cnt++;
 
 			} while ((len > 0) && (sf_sent >= 0));
 
@@ -5910,6 +5932,7 @@ static int is_not_modified(const struct mg_connection *conn,
 }
 
 
+#if !defined(NO_CGI) || !defined(NO_FILES)
 static int
 forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 {
@@ -5999,6 +6022,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 
 	return success;
 }
+#endif
 
 #if !defined(NO_CGI)
 /* This structure helps to create an environment for the spawned CGI program.

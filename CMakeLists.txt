@@ -64,6 +64,10 @@ message(STATUS "Thread Stack Size - ${CIVETWEB_THREAD_STACK_SIZE}")
 option(CIVETWEB_SERVE_NO_FILES "Configures the server to serve no static files" OFF)
 message(STATUS "Serve no static files - ${CIVETWEB_SERVE_NO_FILES}")
 
+# Serve no files from the web server
+option(CIVETWEB_DISABLE_CGI "Disables CGI, so theserver will not execute CGI scripts" OFF)
+message(STATUS "Disable CGI support - ${CIVETWEB_DISABLE_CGI}")
+
 # C++ wrappers
 option(CIVETWEB_ENABLE_CXX "Enables the C++ wrapper library" OFF)
 message(STATUS "C++ wrappers - ${CIVETWEB_ENABLE_CXX}")
@@ -343,6 +347,9 @@ if (CIVETWEB_ENABLE_WEBSOCKETS)
 endif()
 if (CIVETWEB_SERVE_NO_FILES)
   add_definitions(-DNO_FILES)
+endif()
+if (CIVETWEB_DISABLE_CGI)
+  add_definitions(-DNO_CGI)
 endif()
 if (CIVETWEB_ENABLE_LUA)
   add_definitions(-DUSE_LUA)

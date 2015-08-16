@@ -132,6 +132,7 @@ civetweb_add_test(PublicFunc "MD5")
 
 # Public server tests
 civetweb_add_test(PublicServer "Check test environment")
+civetweb_add_test(PublicServer "Start threads")
 civetweb_add_test(PublicServer "Start Stop HTTP Server")
 civetweb_add_test(PublicServer "Start Stop HTTPS Server")
 civetweb_add_test(PublicServer "Server Requests")

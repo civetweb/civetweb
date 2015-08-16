@@ -144,6 +144,32 @@ START_TEST(test_the_test_environment)
 END_TEST
 
 
+static void *threading_data;
+
+static void *test_thread_func_t(void *param)
+{
+	ck_assert_ptr_eq(param, &threading_data);
+	ck_assert_ptr_eq(threading_data, NULL);
+	threading_data = &threading_data;
+	return NULL;
+}
+
+
+START_TEST(test_threading)
+{
+	int ok;
+
+	threading_data = NULL;
+
+	ok = mg_start_thread(test_thread_func_t, &threading_data);
+	ck_assert_int_eq(ok, 0);
+
+	wait_not_null(&threading_data);
+	ck_assert_ptr_eq(threading_data, &threading_data);
+}
+END_TEST
+
+
 static int log_msg_func(const struct mg_connection *conn, const char *message)
 {
 	struct mg_context *ctx;
@@ -490,9 +516,12 @@ START_TEST(test_request_handlers)
 	const char *plain_file_content;
 	const char *encoded_file_content;
 	int opt_idx = 0;
-	const char *ssl_cert = locate_ssl_cert();
 
-#ifdef USE_WEBSOCKET
+#if !defined(NO_SSL)
+	const char *ssl_cert = locate_ssl_cert();
+#endif
+
+#if defined(USE_WEBSOCKET)
 	struct tclient_data ws_client1_data = {NULL, 0, 0};
 	struct tclient_data ws_client2_data = {NULL, 0, 0};
 	struct tclient_data ws_client3_data = {NULL, 0, 0};
@@ -1073,6 +1102,7 @@ Suite *make_public_server_suite(void)
 	Suite *const suite = suite_create("PublicServer");
 
 	TCase *const checktestenv = tcase_create("Check test environment");
+	TCase *const startthreads = tcase_create("Start threads");
 	TCase *const startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const startstophttps = tcase_create("Start Stop HTTPS Server");
 	TCase *const serverrequests = tcase_create("Server Requests");
@@ -1080,6 +1110,9 @@ Suite *make_public_server_suite(void)
 
 	tcase_add_test(checktestenv, test_the_test_environment);
 	suite_add_tcase(suite, checktestenv);
+
+	tcase_add_test(startthreads, test_threading);
+	suite_add_tcase(suite, startthreads);
 
 	tcase_add_test(startstophttp, test_mg_start_stop_http_server);
 	suite_add_tcase(suite, startstophttp);
@@ -1104,6 +1137,7 @@ static int chk_failed = 0;
 void main(void)
 {
 	test_the_test_environment(0);
+	test_threading(0);
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
 	test_request_handlers(0);

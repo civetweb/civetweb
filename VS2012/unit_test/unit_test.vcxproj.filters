@@ -18,18 +18,27 @@
     <ClInclude Include="..\..\test\civetweb_check.h">
       <Filter>Quelldateien</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\test\public.h">
-      <Filter>Quelldateien</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\test\private.h">
       <Filter>Quelldateien</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\civetweb.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\test\public_server.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\test\public_func.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\test\public.c">
+    <ClCompile Include="..\..\test\public_server.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\test\public_func.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\test\private.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\civetweb.c">
