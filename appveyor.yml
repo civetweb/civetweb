@@ -102,7 +102,12 @@ before_build:
   - set "build_path=%output_path%\build"
   - set "install_path=%output_path%\install"
   - set "third_party_dir=C:\third-party"
-  # Generate the build files
+  # Check some settings of the build server
+  - ver
+  - cd
+  - dir
+  - ipconfig /all
+  # Generate the build scripts with CMake
   - mkdir "%build_path%"
   - cd "%build_path%"
   - cmake --version
