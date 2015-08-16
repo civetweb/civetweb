@@ -3917,6 +3917,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		/* Local file path and name, corresponding to requested URI
 		 * is now stored in "filename" variable. */
 		if (mg_stat(conn, filename, filep)) {
+#if !defined(NO_CGI) || defined(USE_LUA)
 			/* File exists. Check if it is a script type. */
 			if (0
 #if !defined(NO_CGI)
@@ -3944,6 +3945,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				 * generated response. */
 				*is_script_ressource = !*is_put_or_delete_request;
 			}
+#endif /* !defined(NO_CGI) || defined(USE_LUA) */
 			*is_found = 1;
 			return;
 		}
@@ -3979,6 +3981,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 			}
 		}
 
+#if !defined(NO_CGI) || defined(USE_LUA)
 		/* Support PATH_INFO for CGI scripts. */
 		for (p = filename + strlen(filename); p > filename + 1; p--) {
 			if (*p == '/') {
@@ -4015,7 +4018,8 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				}
 			}
 		}
-#endif
+#endif /* !defined(NO_CGI) || defined(USE_LUA) */
+#endif /* !defined(NO_FILES) */
 	}
 	return;
 
@@ -4994,8 +4998,8 @@ static int connect_socket(struct mg_context *ctx /* may be null */,
 		sa->sin6.sin6_port = htons((uint16_t)port);
 		ip_ver = 6;
 	} else if (host[0] == '[') {
-        /* While getaddrinfo on Windows will work with [::1],
-         * getaddrinfo on Linux only works with ::1 (without []). */
+		/* While getaddrinfo on Windows will work with [::1],
+		 * getaddrinfo on Linux only works with ::1 (without []). */
 		size_t l = strlen(host + 1);
 		char *h = l > 1 ? mg_strdup(host + 1) : NULL;
 		if (h) {
