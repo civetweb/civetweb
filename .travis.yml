@@ -13,30 +13,143 @@ os:
 env:
   global:
     - BUILD_TYPE=Coverage
-    - ENABLE_SSL=YES
     - ENABLE_SSL_DYNAMIC_LOADING=YES
-    - ENABLE_WEBSOCKETS=YES
     - ENABLE_CXX=NO
     - ENABLE_LUA=NO
     - ENABLE_LUA_SHARED=NO
     - C_STANDARD=auto
     - CXX_STANDARD=auto
   matrix:
-    - BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_IPV6=NO
-    - BUILD_SHARED=YES
-      NO_FILES=NO
-      ENABLE_IPV6=NO
+    # Start with a minimal build
     - BUILD_SHARED=NO
       NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
       ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
     - BUILD_SHARED=YES
       NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
       ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+    # Run the default build (no "NO_*" options, no "USE_*"/"WITH_*" options)
     - BUILD_SHARED=NO
       NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+    - BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+    # Full featured build
+    - BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
       ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+    - BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+    # One selected feature (files)
+    - BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+    - BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+    # One selected feature (SSL)
+    - BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+    - BUILD_SHARED=YES
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+    # One selected feature (CGI)
+    - BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+    - BUILD_SHARED=YES
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+    # One selected feature (IPv6)
+    - BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+    - BUILD_SHARED=YES
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+    # One selected feature (WebSockets)
+    - BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+    - BUILD_SHARED=YES
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+    # Selecteded combination (SSL + websocket)
+    - BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+    - BUILD_SHARED=YES
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+    # Selecteded combination (SSL + CGI + files + websocket)
+    - BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+    - BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
 
 
 addons:
@@ -59,9 +172,11 @@ install:
     fi
 
 before_script:
-  # Generate the build scripts with CMake
+  # Check some settings of the build server
   - pwd
   - ls -l
+  - ifconfig
+  # Generate the build scripts with CMake
   - mkdir output
   - cd output
   - cmake --version
@@ -72,6 +187,7 @@ before_script:
     "-DCIVETWEB_THIRD_PARTY_DIR=${HOME}/third-party"
     -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES
     -DCIVETWEB_ENABLE_SSL=${ENABLE_SSL}
+    -DCIVETWEB_DISABLE_CGI=${NO_CGI}
     -DCIVETWEB_SERVE_NO_FILES=${NO_FILES}
     -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=${ENABLE_SSL_DYNAMIC_LOADING}
     -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
