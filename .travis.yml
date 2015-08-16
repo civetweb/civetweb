@@ -20,6 +20,7 @@ env:
     - C_STANDARD=auto
     - CXX_STANDARD=auto
   matrix:
+    # TODO: Lua is still missing
     # Start with a minimal build
     - BUILD_SHARED=NO
       NO_FILES=YES
@@ -124,7 +125,72 @@ env:
       NO_CGI=YES
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=YES
-    # Selecteded combination (SSL + websocket)
+    # Everything but one feature (files)
+    - BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+    - BUILD_SHARED=YES
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+    # Everything but one feature (SSL)
+    - BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+    - BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+    # Everything but one feature (CGI)
+    - BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+    - BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+    # Everything but one feature (IPv6)
+    - BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+    - BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+    # Everything but one feature (WebSockets)
+    - BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+    - BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      # Selected combination (SSL + websocket)
     - BUILD_SHARED=NO
       NO_FILES=YES
       ENABLE_SSL=YES
@@ -137,7 +203,7 @@ env:
       NO_CGI=YES
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=YES
-    # Selecteded combination (SSL + CGI + files + websocket)
+    # Selected combination (SSL + CGI + files + websocket)
     - BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
