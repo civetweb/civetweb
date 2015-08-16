@@ -5431,7 +5431,6 @@ static void send_file_data(struct mg_connection *conn,
 {
 	char buf[MG_BUF_LEN];
 	int to_read, num_read, num_written;
-	int loop_cnt = 0;
 	int64_t size;
 
 	if (!filep || !conn) {
@@ -5456,10 +5455,11 @@ static void send_file_data(struct mg_connection *conn,
 			off_t sf_offs = (off_t)offset;
 			ssize_t sf_sent;
 			int sf_file = fileno(filep->fp);
+			int loop_cnt = 0;
 
 			do {
-				/* 2147479552 (0x7FFFF000) is a limit found by experiment on 64
-				 * bit Linux (2^31 minus one memory page of 4k?). */
+				/* 2147479552 (0x7FFFF000) is a limit found by experiment on
+				 * 64 bit Linux (2^31 minus one memory page of 4k?). */
 				size_t sf_tosend =
 				    (size_t)((len < 0x7FFFF000) ? len : 0x7FFFF000);
 				sf_sent =
@@ -5474,9 +5474,14 @@ static void send_file_data(struct mg_connection *conn,
 					 * /sys/ and /proc/ file system.
 					 * Use the regular user mode copy code instead. */
 					break;
+				} else if (sf_sent == 0) {
+					/* No error, but 0 bytes sent. May be EOF? */
+					mg_sleep(1);
+                    loop_cnt = -1;
+                    /* TODO(high): Maybe just return here. --> Test required */
 				}
-
 				loop_cnt++;
+
 			} while ((len > 0) && (sf_sent >= 0));
 
 			if (sf_sent > 0) {
