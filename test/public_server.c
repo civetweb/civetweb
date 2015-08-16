@@ -516,9 +516,12 @@ START_TEST(test_request_handlers)
 	const char *plain_file_content;
 	const char *encoded_file_content;
 	int opt_idx = 0;
-	const char *ssl_cert = locate_ssl_cert();
 
-#ifdef USE_WEBSOCKET
+#if !defined(NO_SSL)
+	const char *ssl_cert = locate_ssl_cert();
+#endif
+
+#if defined(USE_WEBSOCKET)
 	struct tclient_data ws_client1_data = {NULL, 0, 0};
 	struct tclient_data ws_client2_data = {NULL, 0, 0};
 	struct tclient_data ws_client3_data = {NULL, 0, 0};
