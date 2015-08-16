@@ -1120,9 +1120,11 @@ Suite *make_public_server_suite(void)
 	suite_add_tcase(suite, startthreads);
 
 	tcase_add_test(startstophttp, test_mg_start_stop_http_server);
+	tcase_set_timeout(startstophttp, 10);
 	suite_add_tcase(suite, startstophttp);
 
 	tcase_add_test(startstophttps, test_mg_start_stop_https_server);
+    tcase_set_timeout(startstophttps, 10);
 	suite_add_tcase(suite, startstophttps);
 
 	tcase_add_test(serverrequests, test_request_handlers);
