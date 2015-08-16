@@ -173,9 +173,10 @@ install:
 
 before_script:
   # Check some settings of the build server
+  - uname -a
   - pwd
   - ls -l
-  - ifconfig
+  - /sbin/ip addr show
   # Generate the build scripts with CMake
   - mkdir output
   - cd output
