@@ -17,6 +17,7 @@ environment:
   enable_lua_shared: NO
   c_standard: auto
   cxx_standard: auto
+  no_cgi: NO
   matrix:
     - compiler: gcc-5.1.0-posix
       build_shared: NO
@@ -74,6 +75,7 @@ before_build:
   - if "%compiler_name%"=="gcc" (set "build=mingw32-make -j4")
   - if "%compiler_name%"=="gcc" (set "test=mingw32-make CTEST_OUTPUT_ON_FAILURE=1 test")
   # MSVC specific commands
+  # Note: The minimum version officially supported for CivetWeb is VS2010. Older ones might work or not.
   - if "%compiler_version%"=="14" (set "vs_version=8" & set "vs_year=2005")
   - if "%compiler_version%"=="15" (set "vs_version=9" & set "vs_year=2008")
   - if "%compiler_version%"=="16" (set "vs_version=10" & set "vs_year=2010")
@@ -113,6 +115,7 @@ before_build:
     "-DCIVETWEB_THIRD_PARTY_DIR=%third_party_dir:\=\\%"
     -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES
     -DCIVETWEB_ENABLE_SSL=%enable_ssl%
+    -DCIVETWEB_DISABLE_CGI=%no_cgi%
     -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=%enable_ssl_dynamic_loading%
     -DCIVETWEB_ENABLE_WEBSOCKETS=%enable_websockets%
     -DCIVETWEB_ENABLE_CXX=%enable_cxx%
