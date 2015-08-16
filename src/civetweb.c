@@ -5932,7 +5932,7 @@ static int is_not_modified(const struct mg_connection *conn,
 }
 
 
-#if !defined(NO_CGI)
+#if !defined(NO_CGI) || !defined(NO_FILES)
 static int
 forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 {
@@ -6022,8 +6022,9 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 
 	return success;
 }
+#endif
 
-
+#if !defined(NO_CGI)
 /* This structure helps to create an environment for the spawned CGI program.
  * Environment is an array of "VARIABLE=VALUE\0" ASCIIZ strings,
  * last element must be NULL.
