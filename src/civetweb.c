@@ -3021,9 +3021,9 @@ static int push(struct mg_context *ctx,
 	}
 
 #ifdef NO_SSL
-    if (ssl) {
-        return -1;
-    }
+	if (ssl) {
+		return -1;
+	}
 #endif
 
 	do {
@@ -3083,7 +3083,8 @@ static int push(struct mg_context *ctx,
 		}
 	} while ((timeout <= 0) || (mg_difftimespec(&now, &start) <= timeout));
 
-    (void)err; /* Avoid unused warning if NO_SSL is set and DEBUG_TRACE is not used */
+	(void)err; /* Avoid unused warning if NO_SSL is set and DEBUG_TRACE is not
+	              used */
 
 	return -1;
 }
@@ -5485,8 +5486,8 @@ static void send_file_data(struct mg_connection *conn,
 				} else if (sf_sent == 0) {
 					/* No error, but 0 bytes sent. May be EOF? */
 					mg_sleep(1);
-                    loop_cnt = -1;
-                    /* TODO(high): Maybe just return here. --> Test required */
+					loop_cnt = -1;
+					/* TODO(high): Maybe just return here. --> Test required */
 				}
 				loop_cnt++;
 
