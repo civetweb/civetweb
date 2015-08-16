@@ -14,11 +14,16 @@
     <ClInclude Include="..\..\include\civetweb.h" />
     <ClInclude Include="..\..\test\civetweb_check.h" />
     <ClInclude Include="..\..\test\private.h" />
-    <ClInclude Include="..\..\test\public.h" />
+    <ClInclude Include="..\..\test\public_func.h" />
+    <ClInclude Include="..\..\test\public_server.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\civetweb.c" />
-    <ClCompile Include="..\..\test\public.c" />
+    <ClCompile Include="..\..\test\private.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\test\public_func.c" />
+    <ClCompile Include="..\..\test\public_server.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1AC4A7A6-0100-4287-97F4-B95807BE5607}</ProjectGuid>
@@ -62,7 +67,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>REPLACE_CHECK_FOR_LOCAL_DEBUGGING;USE_IPV6;MEMORY_DEBUGGING;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LOCAL_TEST;REPLACE_CHECK_FOR_LOCAL_DEBUGGING;USE_IPV6;USE_WEBSOCKET;MEMORY_DEBUGGING;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\src;$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
