@@ -3844,11 +3844,13 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		const char *root = conn->ctx->config[DOCUMENT_ROOT];
 		const char *rewrite;
 		struct vec a, b;
-		char *p;
 		int match_len;
 		char gz_path[PATH_MAX];
 		char const *accept_encoding;
 		int truncated;
+#if !defined(NO_CGI) || defined(USE_LUA)
+		char *p;
+#endif
 #else
 		(void)filename_buf_len; /* unused if NO_FILES is defined */
 #endif
