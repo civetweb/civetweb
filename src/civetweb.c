@@ -10787,9 +10787,10 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	return ctx;
 }
 
-int mg_is_ctx_stopped(const struct mg_context* ctx)
+int mg_is_ctx_stopped(const struct mg_context *ctx)
 {
-	if (!ctx) return -1;
+	if (!ctx)
+		return -1;
 
 	return ctx->stop_flag;
 }
