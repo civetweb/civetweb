@@ -5525,8 +5525,6 @@ static void send_file_data(struct mg_connection *conn,
 				/* Both read and were successful, adjust counters */
 				conn->num_bytes_sent += num_written;
 				len -= num_written;
-
-				loop_cnt++;
 			}
 		}
 	}
