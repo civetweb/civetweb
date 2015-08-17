@@ -1114,17 +1114,19 @@ Suite *make_public_server_suite(void)
 
 
 	tcase_add_test(checktestenv, test_the_test_environment);
+	tcase_set_timeout(checktestenv, civetweb_min_test_timeout);
 	suite_add_tcase(suite, checktestenv);
 
 	tcase_add_test(startthreads, test_threading);
+	tcase_set_timeout(startthreads, civetweb_min_test_timeout);
 	suite_add_tcase(suite, startthreads);
 
 	tcase_add_test(startstophttp, test_mg_start_stop_http_server);
-	tcase_set_timeout(startstophttp, 10);
+	tcase_set_timeout(startstophttp, civetweb_min_test_timeout);
 	suite_add_tcase(suite, startstophttp);
 
 	tcase_add_test(startstophttps, test_mg_start_stop_https_server);
-	tcase_set_timeout(startstophttps, 10);
+	tcase_set_timeout(startstophttps, civetweb_min_test_timeout);
 	suite_add_tcase(suite, startstophttps);
 
 	tcase_add_test(serverrequests, test_request_handlers);

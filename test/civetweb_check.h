@@ -40,4 +40,7 @@
 #pragma clang diagnostic pop
 #endif
 
+/* A minimal timeout used for all tests with the "check" framework. */
+#define civetweb_min_test_timeout (10)
+
 #endif /* TEST_CIVETWEB_CHECK_H_ */
