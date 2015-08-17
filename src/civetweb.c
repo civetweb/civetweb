@@ -2446,6 +2446,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 	return 0;
 }
 
+#if !defined(NO_FILES)
 static int mg_remove(const char *path)
 {
 	wchar_t wbuf[PATH_MAX];
@@ -2466,6 +2467,7 @@ static int mg_mkdir(const char *path, int mode)
 
 	return CreateDirectoryW(wbuf, NULL) ? 0 : -1;
 }
+#endif
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
 static DIR *opendir(const char *name)
@@ -2642,6 +2644,7 @@ static int mg_join_thread(pthread_t threadid)
 	return result;
 }
 
+#if !defined(NO_SSL_DL)
 static HANDLE dlopen(const char *dll_name, int flags)
 {
 	wchar_t wbuf[PATH_MAX];
@@ -2662,6 +2665,7 @@ static int dlclose(void *handle)
 
 	return result;
 }
+#endif
 
 #if !defined(NO_CGI)
 #define SIGKILL (0)
