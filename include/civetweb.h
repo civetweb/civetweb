@@ -743,16 +743,6 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
 CIVETWEB_API unsigned mg_check_feature(unsigned feature);
 
 
-/* Get the stopping status of a given civetweb context.
-
-   Return:
-    0: context is running normally
-    1: context is shutting down
-    2: context has stopped
-   -1: Invalid context
- */
-CIVETWEB_API int mg_is_ctx_stopped(const struct mg_context *ctx);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
