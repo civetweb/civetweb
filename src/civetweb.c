@@ -2446,6 +2446,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 	return 0;
 }
 
+#if !defined(NO_FILES)
 static int mg_remove(const char *path)
 {
 	wchar_t wbuf[PATH_MAX];
@@ -2466,6 +2467,7 @@ static int mg_mkdir(const char *path, int mode)
 
 	return CreateDirectoryW(wbuf, NULL) ? 0 : -1;
 }
+#endif
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
 static DIR *opendir(const char *name)
@@ -2642,6 +2644,7 @@ static int mg_join_thread(pthread_t threadid)
 	return result;
 }
 
+#if !defined(NO_SSL_DL)
 static HANDLE dlopen(const char *dll_name, int flags)
 {
 	wchar_t wbuf[PATH_MAX];
@@ -2662,6 +2665,7 @@ static int dlclose(void *handle)
 
 	return result;
 }
+#endif
 
 #if !defined(NO_CGI)
 #define SIGKILL (0)
@@ -3844,11 +3848,13 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		const char *root = conn->ctx->config[DOCUMENT_ROOT];
 		const char *rewrite;
 		struct vec a, b;
-		char *p;
 		int match_len;
 		char gz_path[PATH_MAX];
 		char const *accept_encoding;
 		int truncated;
+#if !defined(NO_CGI) || defined(USE_LUA)
+		char *p;
+#endif
 #else
 		(void)filename_buf_len; /* unused if NO_FILES is defined */
 #endif
@@ -3917,6 +3923,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		/* Local file path and name, corresponding to requested URI
 		 * is now stored in "filename" variable. */
 		if (mg_stat(conn, filename, filep)) {
+#if !defined(NO_CGI) || defined(USE_LUA)
 			/* File exists. Check if it is a script type. */
 			if (0
 #if !defined(NO_CGI)
@@ -3944,6 +3951,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				 * generated response. */
 				*is_script_ressource = !*is_put_or_delete_request;
 			}
+#endif /* !defined(NO_CGI) || defined(USE_LUA) */
 			*is_found = 1;
 			return;
 		}
@@ -3979,6 +3987,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 			}
 		}
 
+#if !defined(NO_CGI) || defined(USE_LUA)
 		/* Support PATH_INFO for CGI scripts. */
 		for (p = filename + strlen(filename); p > filename + 1; p--) {
 			if (*p == '/') {
@@ -4015,7 +4024,8 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				}
 			}
 		}
-#endif
+#endif /* !defined(NO_CGI) || defined(USE_LUA) */
+#endif /* !defined(NO_FILES) */
 	}
 	return;
 
@@ -4993,8 +5003,23 @@ static int connect_socket(struct mg_context *ctx /* may be null */,
 	} else if (mg_inet_pton(AF_INET6, host, &sa->sin6, sizeof(sa->sin6))) {
 		sa->sin6.sin6_port = htons((uint16_t)port);
 		ip_ver = 6;
+	} else if (host[0] == '[') {
+		/* While getaddrinfo on Windows will work with [::1],
+		 * getaddrinfo on Linux only works with ::1 (without []). */
+		size_t l = strlen(host + 1);
+		char *h = l > 1 ? mg_strdup(host + 1) : NULL;
+		if (h) {
+			h[l - 1] = 0;
+			if (mg_inet_pton(AF_INET6, h, &sa->sin6, sizeof(sa->sin6))) {
+				sa->sin6.sin6_port = htons((uint16_t)port);
+				ip_ver = 6;
+			}
+			mg_free(h);
+		}
 #endif
-	} else {
+	}
+
+	if (ip_ver == 0) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,

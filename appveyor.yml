@@ -8,35 +8,69 @@ platform:
   - x64
 
 environment:
-  enable_ssl: YES
-  enable_ssl_dynamic_loading: YES
-  enable_websockets: YES
   enable_cxx: NO
-  enable_ipv6: NO
+  enable_ssl_dynamic_loading: YES
   enable_lua: NO
   enable_lua_shared: NO
   c_standard: auto
-  cxx_standard: auto
-  no_cgi: NO
+  cxx_standard: auto  
   matrix:
     - compiler: gcc-5.1.0-posix
       build_shared: NO
+      no_files: YES
+      enable_ipv6: NO
+      enable_ssl: NO
+      enable_websockets: NO
+      no_cgi: YES
+    - compiler: gcc-5.1.0-posix
+      build_shared: NO
       no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+    - compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
     - compiler: gcc-5.1.0-posix
       build_shared: YES
       no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
     - compiler: msvc-18-seh
       build_shared: NO
       no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
     - compiler: msvc-18-seh
       build_shared: YES
       no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
     - compiler: gcc-5.1.0-posix
       build_shared: YES
       no_files: YES
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
     - compiler: msvc-18-seh
       build_shared: YES
       no_files: YES
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
 
 
 install:
@@ -102,7 +136,12 @@ before_build:
   - set "build_path=%output_path%\build"
   - set "install_path=%output_path%\install"
   - set "third_party_dir=C:\third-party"
-  # Generate the build files
+  # Check some settings of the build server
+  - ver
+  - cd
+  - dir
+  - ipconfig /all
+  # Generate the build scripts with CMake
   - mkdir "%build_path%"
   - cd "%build_path%"
   - cmake --version

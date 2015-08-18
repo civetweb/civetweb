@@ -100,14 +100,14 @@ endif()
 if (CIVETWEB_ENABLE_LUA)
   if (NOT CIVETWEB_ENABLE_LUA_SHARED)
     # Lua Version
-    set(CIVETWEB_LUA_VERSION 5.3.0 CACHE STRING
+    set(CIVETWEB_LUA_VERSION 5.2.4 CACHE STRING
       "The version of Lua to build and include statically")
     set_property(CACHE CIVETWEB_LUA_VERSION PROPERTY VALUE ${CIVETWEB_LUA_VERSION})
     message(STATUS "Lua Version - ${CIVETWEB_LUA_VERSION}")
     mark_as_advanced(CIVETWEB_LUA_VERSION)
 
     # Lua Verification Hash
-    set(CIVETWEB_LUA_MD5_HASH a1b0a7e92d0c85bbff7a8d27bf29f8af CACHE STRING
+    set(CIVETWEB_LUA_MD5_HASH 913fdb32207046b273fdb17aad70be13 CACHE STRING
       "The hash of Lua archive to be downloaded")
     set_property(CACHE CIVETWEB_LUA_MD5_HASH PROPERTY VALUE ${CIVETWEB_LUA_MD5_HASH})
     mark_as_advanced(CIVETWEB_LUA_MD5_HASH)

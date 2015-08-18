@@ -438,26 +438,33 @@ Suite *make_public_func_suite(void)
 	TCase *const md5 = tcase_create("MD5");
 
 	tcase_add_test(version, test_mg_version);
+	tcase_set_timeout(version, civetweb_min_test_timeout);
 	suite_add_tcase(suite, version);
 
 	tcase_add_test(get_valid_options, test_mg_get_valid_options);
+	tcase_set_timeout(get_valid_options, civetweb_min_test_timeout);
 	suite_add_tcase(suite, get_valid_options);
 
 	tcase_add_test(get_builtin_mime_type, test_mg_get_builtin_mime_type);
+	tcase_set_timeout(get_builtin_mime_type, civetweb_min_test_timeout);
 	suite_add_tcase(suite, get_builtin_mime_type);
 
 	tcase_add_test(tstrncasecmp, test_mg_strncasecmp);
+	tcase_set_timeout(tstrncasecmp, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tstrncasecmp);
 
 	tcase_add_test(urlencodingdecoding, test_mg_url_encode);
 	tcase_add_test(urlencodingdecoding, test_mg_url_decode);
+	tcase_set_timeout(urlencodingdecoding, civetweb_min_test_timeout);
 	suite_add_tcase(suite, urlencodingdecoding);
 
 	tcase_add_test(cookies, test_mg_get_cookie);
 	tcase_add_test(cookies, test_mg_get_var);
+	tcase_set_timeout(cookies, civetweb_min_test_timeout);
 	suite_add_tcase(suite, cookies);
 
 	tcase_add_test(md5, test_mg_md5);
+	tcase_set_timeout(md5, civetweb_min_test_timeout);
 	suite_add_tcase(suite, md5);
 
 	return suite;
