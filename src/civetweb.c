@@ -481,7 +481,7 @@ static void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
 
 #define PASSWORDS_FILE_NAME ".htpasswd"
 #define CGI_ENVIRONMENT_SIZE (4096)
-#define MAX_CGI_ENVIR_VARS (64)
+#define MAX_CGI_ENVIR_VARS (256)
 #define MG_BUF_LEN (8192)
 
 #ifndef MAX_REQUEST_SIZE
@@ -6054,6 +6054,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 }
 #endif
 
+
 #if !defined(NO_CGI)
 /* This structure helps to create an environment for the spawned CGI program.
  * Environment is an array of "VARIABLE=VALUE\0" ASCIIZ strings,
@@ -6063,218 +6064,252 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
  * marked by two '\0' characters.
  * We satisfy both worlds: we create an envp array (which is vars), all
  * entries are actually pointers inside buf. */
-struct cgi_env_block {
+struct cgi_environment {
 	struct mg_connection *conn;
-	char buf[CGI_ENVIRONMENT_SIZE]; /* Environment buffer */
-	size_t len;                     /* Space taken */
-	char *vars[MAX_CGI_ENVIR_VARS]; /* char **envp */
-	unsigned int nvars;             /* Number of variables */
+	/* Data block */
+	char *buf;      /* Environment buffer */
+	size_t buflen;  /* Space available in buf */
+	size_t bufused; /* Space taken in buf */
+	                /* Index block */
+	char **var;     /* char **envp */
+	size_t varlen;  /* Number of variables available in var */
+	size_t varused; /* Number of variables stored in var */
 };
 
-static char *addenv(struct cgi_env_block *block,
-                    PRINTF_FORMAT_STRING(const char *fmt),
-                    ...) PRINTF_ARGS(2, 3);
+
+static void addenv(struct cgi_environment *env,
+                   PRINTF_FORMAT_STRING(const char *fmt),
+                   ...) PRINTF_ARGS(2, 3);
+
 
 /* Append VARIABLE=VALUE\0 string to the buffer, and add a respective
- * pointer into the vars array. */
-static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
+ * pointer into the vars array. Assumes block != NULL and fmt != NULL. */
+static void addenv(struct cgi_environment *env, const char *fmt, ...)
 {
 	size_t n, space;
 	int truncated;
 	char *added;
 	va_list ap;
 
-	if (block == NULL || fmt == NULL) {
-		return NULL;
-	}
 
 	/* Calculate how much space is left in the buffer */
-	space = (sizeof(block->buf) - block->len) - 2;
-	if (space <= 0) {
-		return NULL;
-	}
+	space = (env->buflen - env->bufused);
 
-	/* Make a pointer to the free space int the buffer */
-	added = block->buf + block->len;
+	/* Calculate an estimate for the required space */
+	n = strlen(fmt) + 2 + 128;
 
-	/* Copy VARIABLE=VALUE\0 string into the free space */
-	va_start(ap, fmt);
-	mg_vsnprintf(block->conn, &truncated, added, (size_t)space, fmt, ap);
-	va_end(ap);
+	do {
+		if (space <= n) {
+			/* Allocate new buffer */
+			n = env->buflen + CGI_ENVIRONMENT_SIZE;
+			added = (char *)mg_realloc(env->buf, n);
+			if (!added) {
+				/* Out of memory */
+				mg_cry(env->conn,
+				       "%s: Cannot allocate memory for CGI variable [%s]",
+				       __func__,
+				       fmt);
+				return;
+			}
+			env->buf = added;
+			env->buflen = n;
+			space = (env->buflen - env->bufused);
+		}
 
-	/* Do not add truncated strings to the environment */
-	if (truncated) {
-		added[0] = 0;
-		return NULL;
-	}
+		/* Make a pointer to the free space int the buffer */
+		added = env->buf + env->bufused;
 
-	/* Number of bytes added to the environment */
+		/* Copy VARIABLE=VALUE\0 string into the free space */
+		va_start(ap, fmt);
+		mg_vsnprintf(env->conn, &truncated, added, (size_t)space, fmt, ap);
+		va_end(ap);
+
+		/* Do not add truncated strings to the environment */
+		if (truncated) {
+			/* Reallocate the buffer */
+			space = 0;
+			n = 1;
+		}
+	} while (truncated);
+
+	/* Calculate number of bytes added to the environment */
 	n = strlen(added) + 1;
+	env->bufused += n;
 
-	/* Make sure we do not overflow buffer and the envp array */
-	if (n < space && block->nvars + 2 < ARRAY_SIZE(block->vars)) {
-		/* Append a pointer to the added string into the envp array */
-		block->vars[block->nvars++] = added;
-		/* Bump up used length counter. Include \0 terminator */
-		block->len += n;
-	} else {
-		mg_cry(block->conn,
-		       "%s: CGI env buffer truncated for [%s]",
-		       __func__,
-		       fmt);
-	}
-
-	return added;
-}
-
-static void prepare_cgi_environment(struct mg_connection *conn,
-                                    const char *prog,
-                                    struct cgi_env_block *blk)
-{
-	const char *s;
-	struct vec var_vec;
-	char *p, src_addr[IP_ADDR_STR_LEN];
-	int i;
-
-	if (conn == NULL || prog == NULL || blk == NULL) {
+	/* Now update the variable index */
+	space = (env->varlen - env->varused);
+	if (space < 2) {
+		mg_cry(
+		    env->conn, "%s: Cannot register CGI variable [%s]", __func__, fmt);
 		return;
 	}
 
-	blk->len = blk->nvars = 0;
-	blk->conn = conn;
-	sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
+	/* Append a pointer to the added string into the envp array */
+	env->var[env->varused] = added;
+	env->varused++;
+}
 
-	addenv(blk, "SERVER_NAME=%s", conn->ctx->config[AUTHENTICATION_DOMAIN]);
-	addenv(blk, "SERVER_ROOT=%s", conn->ctx->config[DOCUMENT_ROOT]);
-	addenv(blk, "DOCUMENT_ROOT=%s", conn->ctx->config[DOCUMENT_ROOT]);
-	addenv(blk, "SERVER_SOFTWARE=%s/%s", "Civetweb", mg_version());
+
+static void prepare_cgi_environment(struct mg_connection *conn,
+                                    const char *prog,
+                                    struct cgi_environment *env)
+{
+	const char *s;
+	struct vec var_vec;
+	char *p, src_addr[IP_ADDR_STR_LEN], http_var_name[128];
+	int i, truncated;
+
+	if (conn == NULL || prog == NULL || env == NULL) {
+		return;
+	}
+
+	env->conn = conn;
+	env->buflen = CGI_ENVIRONMENT_SIZE;
+	env->bufused = 0;
+	env->buf = (char *)mg_malloc(env->buflen);
+	env->varlen = MAX_CGI_ENVIR_VARS;
+	env->varused = 0;
+	env->var = (char **)mg_malloc(env->buflen * sizeof(char *));
+
+	addenv(env, "SERVER_NAME=%s", conn->ctx->config[AUTHENTICATION_DOMAIN]);
+	addenv(env, "SERVER_ROOT=%s", conn->ctx->config[DOCUMENT_ROOT]);
+	addenv(env, "DOCUMENT_ROOT=%s", conn->ctx->config[DOCUMENT_ROOT]);
+	addenv(env, "SERVER_SOFTWARE=%s/%s", "Civetweb", mg_version());
 
 	/* Prepare the environment block */
-	addenv(blk, "%s", "GATEWAY_INTERFACE=CGI/1.1");
-	addenv(blk, "%s", "SERVER_PROTOCOL=HTTP/1.1");
-	addenv(blk, "%s", "REDIRECT_STATUS=200"); /* For PHP */
+	addenv(env, "%s", "GATEWAY_INTERFACE=CGI/1.1");
+	addenv(env, "%s", "SERVER_PROTOCOL=HTTP/1.1");
+	addenv(env, "%s", "REDIRECT_STATUS=200"); /* For PHP */
 
 #if defined(USE_IPV6)
 	if (conn->client.lsa.sa.sa_family == AF_INET6) {
-		addenv(blk, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin6.sin6_port));
+		addenv(env, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin6.sin6_port));
 	} else
 #endif
 	{
-		addenv(blk, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin.sin_port));
+		addenv(env, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin.sin_port));
 	}
 
-	addenv(blk, "REQUEST_METHOD=%s", conn->request_info.request_method);
-	addenv(blk, "REMOTE_ADDR=%s", src_addr);
-	addenv(blk, "REMOTE_PORT=%d", conn->request_info.remote_port);
-	addenv(blk, "REQUEST_URI=%s", conn->request_info.uri);
+	sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
+	addenv(env, "REMOTE_ADDR=%s", src_addr);
+
+	addenv(env, "REQUEST_METHOD=%s", conn->request_info.request_method);
+	addenv(env, "REMOTE_PORT=%d", conn->request_info.remote_port);
+	addenv(env, "REQUEST_URI=%s", conn->request_info.uri);
 
 	/* SCRIPT_NAME */
-	addenv(blk,
+	addenv(env,
 	       "SCRIPT_NAME=%.*s",
 	       (int)strlen(conn->request_info.uri) -
 	           ((conn->path_info == NULL) ? 0 : (int)strlen(conn->path_info)),
 	       conn->request_info.uri);
 
-	addenv(blk, "SCRIPT_FILENAME=%s", prog);
+	addenv(env, "SCRIPT_FILENAME=%s", prog);
 	if (conn->path_info == NULL) {
-		addenv(blk, "PATH_TRANSLATED=%s", conn->ctx->config[DOCUMENT_ROOT]);
+		addenv(env, "PATH_TRANSLATED=%s", conn->ctx->config[DOCUMENT_ROOT]);
 	} else {
-		addenv(blk,
+		addenv(env,
 		       "PATH_TRANSLATED=%s%s",
 		       conn->ctx->config[DOCUMENT_ROOT],
 		       conn->path_info);
 	}
 
-	addenv(blk, "HTTPS=%s", conn->ssl == NULL ? "off" : "on");
+	addenv(env, "HTTPS=%s", conn->ssl == NULL ? "off" : "on");
 
 	if ((s = mg_get_header(conn, "Content-Type")) != NULL) {
-		addenv(blk, "CONTENT_TYPE=%s", s);
+		addenv(env, "CONTENT_TYPE=%s", s);
 	}
 	if (conn->request_info.query_string != NULL) {
-		addenv(blk, "QUERY_STRING=%s", conn->request_info.query_string);
+		addenv(env, "QUERY_STRING=%s", conn->request_info.query_string);
 	}
 	if ((s = mg_get_header(conn, "Content-Length")) != NULL) {
-		addenv(blk, "CONTENT_LENGTH=%s", s);
+		addenv(env, "CONTENT_LENGTH=%s", s);
 	}
 	if ((s = getenv("PATH")) != NULL) {
-		addenv(blk, "PATH=%s", s);
+		addenv(env, "PATH=%s", s);
 	}
 	if (conn->path_info != NULL) {
-		addenv(blk, "PATH_INFO=%s", conn->path_info);
+		addenv(env, "PATH_INFO=%s", conn->path_info);
 	}
 
 	if (conn->status_code > 0) {
 		/* CGI error handler should show the status code */
-		addenv(blk, "STATUS=%d", conn->status_code);
+		addenv(env, "STATUS=%d", conn->status_code);
 	}
 
 #if defined(_WIN32)
 	if ((s = getenv("COMSPEC")) != NULL) {
-		addenv(blk, "COMSPEC=%s", s);
+		addenv(env, "COMSPEC=%s", s);
 	}
 	if ((s = getenv("SYSTEMROOT")) != NULL) {
-		addenv(blk, "SYSTEMROOT=%s", s);
+		addenv(env, "SYSTEMROOT=%s", s);
 	}
 	if ((s = getenv("SystemDrive")) != NULL) {
-		addenv(blk, "SystemDrive=%s", s);
+		addenv(env, "SystemDrive=%s", s);
 	}
 	if ((s = getenv("ProgramFiles")) != NULL) {
-		addenv(blk, "ProgramFiles=%s", s);
+		addenv(env, "ProgramFiles=%s", s);
 	}
 	if ((s = getenv("ProgramFiles(x86)")) != NULL) {
-		addenv(blk, "ProgramFiles(x86)=%s", s);
+		addenv(env, "ProgramFiles(x86)=%s", s);
 	}
 #else
 	if ((s = getenv("LD_LIBRARY_PATH")) != NULL) {
-		addenv(blk, "LD_LIBRARY_PATH=%s", s);
+		addenv(env, "LD_LIBRARY_PATH=%s", s);
 	}
 #endif /* _WIN32 */
 
 	if ((s = getenv("PERLLIB")) != NULL) {
-		addenv(blk, "PERLLIB=%s", s);
+		addenv(env, "PERLLIB=%s", s);
 	}
 
 	if (conn->request_info.remote_user != NULL) {
-		addenv(blk, "REMOTE_USER=%s", conn->request_info.remote_user);
-		addenv(blk, "%s", "AUTH_TYPE=Digest");
+		addenv(env, "REMOTE_USER=%s", conn->request_info.remote_user);
+		addenv(env, "%s", "AUTH_TYPE=Digest");
 	}
 
 	/* Add all headers as HTTP_* variables */
 	for (i = 0; i < conn->request_info.num_headers; i++) {
-		p = addenv(blk,
-		           "HTTP_%s=%s",
-		           conn->request_info.http_headers[i].name,
-		           conn->request_info.http_headers[i].value);
+
+		(void)mg_snprintf(conn,
+		                  &truncated,
+		                  http_var_name,
+		                  sizeof(http_var_name),
+		                  "HTTP_%s",
+		                  conn->request_info.http_headers[i].name);
+
+		if (truncated) {
+			mg_cry(conn,
+			       "%s: HTTP header variable too long [%s]",
+			       __func__,
+			       conn->request_info.http_headers[i].name);
+			continue;
+		}
 
 		/* Convert variable name into uppercase, and change - to _ */
-		for (; *p != '=' && *p != '\0'; p++) {
+		for (p = http_var_name; *p != '\0'; p++) {
 			if (*p == '-') {
 				*p = '_';
 			}
 			*p = (char)toupper(*(unsigned char *)p);
 		}
+
+		addenv(env,
+		       "%s=%s",
+		       http_var_name,
+		       conn->request_info.http_headers[i].value);
 	}
 
 	/* Add user-specified variables */
 	s = conn->ctx->config[CGI_ENVIRONMENT];
 	while ((s = next_option(s, &var_vec, NULL)) != NULL) {
-		addenv(blk, "%.*s", (int)var_vec.len, var_vec.ptr);
+		addenv(env, "%.*s", (int)var_vec.len, var_vec.ptr);
 	}
 
-	blk->vars[blk->nvars++] = NULL;
-	blk->buf[blk->len++] = '\0';
-
-	/* assert(blk->nvars < (int) ARRAY_SIZE(blk->vars)); */
-	/* assert(blk->len > 0); */
-	/* assert(blk->len < (int) sizeof(blk->buf)); */
-
-	if ((blk->nvars >= (int)ARRAY_SIZE(blk->vars)) || (blk->len <= 0) ||
-	    (blk->len >= (int)sizeof(blk->buf))) {
-		/* TODO (mid): this statement is useless. Check original intention and
-		 * proper replacement. */
-		return;
-	}
+	env->var[env->varused] = NULL;
+	env->buf[env->bufused] = '\0';
 }
+
 
 static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 {
@@ -6285,7 +6320,7 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	const char *status, *status_text, *connection_state;
 	char *pbuf, dir[PATH_MAX], *p;
 	struct mg_request_info ri;
-	struct cgi_env_block blk;
+	struct cgi_environment blk;
 	FILE *in = NULL, *out = NULL;
 	struct file fout = STRUCT_FILE_INITIALIZER;
 	pid_t pid = (pid_t)-1;
@@ -6321,7 +6356,7 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 		goto done;
 	}
 
-	pid = spawn_process(conn, p, blk.buf, blk.vars, fdin[0], fdout[1], dir);
+	pid = spawn_process(conn, p, blk.buf, blk.var, fdin[0], fdout[1], dir);
 	if (pid == (pid_t)-1) {
 		send_http_error(conn,
 		                500,
@@ -6444,6 +6479,9 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	send_file_data(conn, &fout, 0, INT64_MAX);
 
 done:
+	mg_free(blk.var);
+	mg_free(blk.buf);
+
 	if (pid != (pid_t)-1) {
 		kill(pid, SIGKILL);
 #if !defined(_WIN32)
