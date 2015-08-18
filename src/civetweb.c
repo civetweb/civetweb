@@ -6154,8 +6154,14 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 	addenv(blk, "%s", "SERVER_PROTOCOL=HTTP/1.1");
 	addenv(blk, "%s", "REDIRECT_STATUS=200"); /* For PHP */
 
-	/* TODO(lsm, high): fix this for IPv6 case */
-	addenv(blk, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin.sin_port));
+#if defined(USE_IPV6)
+	if (conn->client.lsa.sa.sa_family == AF_INET6) {
+		addenv(blk, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin6.sin6_port));
+	} else
+#endif
+	{
+		addenv(blk, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin.sin_port));
+	}
 
 	addenv(blk, "REQUEST_METHOD=%s", conn->request_info.request_method);
 	addenv(blk, "REMOTE_ADDR=%s", src_addr);
