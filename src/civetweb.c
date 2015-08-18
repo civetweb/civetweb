@@ -5287,6 +5287,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 	DIR *dirp;
 	struct de de;
 	int truncated;
+	int ok = 1;
 
 	if ((dirp = opendir(dir)) == NULL) {
 		return 0;
@@ -5325,9 +5326,13 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 			if (de.file.membuf == NULL) {
 				/* file is not in memory */
 				if (de.file.is_directory) {
-					remove_directory(conn, path);
+					if (remove_directory(conn, path) == 0) {
+						ok = 0;
+					}
 				} else {
-					mg_remove(path);
+					if (mg_remove(path) == 0) {
+						ok = 0;
+					}
 				}
 			}
 		}
@@ -5336,7 +5341,7 @@ static int remove_directory(struct mg_connection *conn, const char *dir)
 		IGNORE_UNUSED_RESULT(rmdir(dir));
 	}
 
-	return 1;
+	return ok;
 }
 #endif
 
