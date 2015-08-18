@@ -5352,6 +5352,7 @@ struct dir_scan_data {
 	unsigned int arr_size;
 };
 
+
 /* Behaves like realloc(), but frees original pointer on failure */
 static void *realloc2(void *ptr, size_t size)
 {
@@ -5361,6 +5362,7 @@ static void *realloc2(void *ptr, size_t size)
 	}
 	return new_ptr;
 }
+
 
 static void dir_scan_callback(struct de *de, void *data)
 {
@@ -5381,6 +5383,7 @@ static void dir_scan_callback(struct de *de, void *data)
 		dsd->num_entries++;
 	}
 }
+
 
 static void handle_directory_request(struct mg_connection *conn,
                                      const char *dir)
@@ -5462,6 +5465,7 @@ static void handle_directory_request(struct mg_connection *conn,
 	conn->status_code = 200;
 }
 
+
 /* Send len bytes from the opened file to the client. */
 static void send_file_data(struct mg_connection *conn,
                            struct file *filep,
@@ -5489,7 +5493,7 @@ static void send_file_data(struct mg_connection *conn,
 	} else if (len > 0 && filep->fp != NULL) {
 /* file stored on disk */
 #if defined(__linux__)
-		/* TODO (high): Test sendfile for Linux */
+		/* sendfile is only available for Linux */
 		if (conn->throttle == 0 && conn->ssl == 0) {
 			off_t sf_offs = (off_t)offset;
 			ssize_t sf_sent;
@@ -5515,9 +5519,7 @@ static void send_file_data(struct mg_connection *conn,
 					break;
 				} else if (sf_sent == 0) {
 					/* No error, but 0 bytes sent. May be EOF? */
-					mg_sleep(1);
-					loop_cnt = -1;
-					/* TODO(high): Maybe just return here. --> Test required */
+					return;
 				}
 				loop_cnt++;
 
@@ -5526,11 +5528,10 @@ static void send_file_data(struct mg_connection *conn,
 			if (sf_sent > 0) {
 				return; /* OK */
 			}
+
 			/* sf_sent<0 means error, thus fall back to the classic way */
-			mg_cry(conn,
-			       "%s: sendfile() failed: %s (now trying read+write)",
-			       __func__,
-			       strerror(ERRNO));
+			/* This is always the case, if sf_file is not a "normal" file,
+			 * e.g., for sending data from the output of a CGI process. */
 			offset = (int64_t)sf_offs;
 		}
 #endif
@@ -5569,10 +5570,12 @@ static void send_file_data(struct mg_connection *conn,
 	}
 }
 
+
 static int parse_range_header(const char *header, int64_t *a, int64_t *b)
 {
 	return sscanf(header, "bytes=%" INT64_FMT "-%" INT64_FMT, a, b);
 }
+
 
 static void construct_etag(char *buf, size_t buf_len, const struct file *filep)
 {
@@ -5602,6 +5605,7 @@ static void fclose_on_exec(struct file *filep, struct mg_connection *conn)
 #endif
 	}
 }
+
 
 static void handle_static_file_request(struct mg_connection *conn,
                                        const char *path,
@@ -5741,6 +5745,7 @@ static void handle_static_file_request(struct mg_connection *conn,
 	mg_fclose(filep);
 }
 
+
 void mg_send_file(struct mg_connection *conn, const char *path)
 {
 	struct file file = STRUCT_FILE_INITIALIZER;
@@ -5764,6 +5769,7 @@ void mg_send_file(struct mg_connection *conn, const char *path)
 	}
 }
 
+
 /* Parse HTTP headers from the given buffer, advance buffer to the point
  * where parsing stopped. */
 static void parse_http_headers(char **buf, struct mg_request_info *ri)
@@ -5785,6 +5791,7 @@ static void parse_http_headers(char **buf, struct mg_request_info *ri)
 		ri->num_headers = i + 1;
 	}
 }
+
 
 static int is_valid_http_method(const char *method)
 {
