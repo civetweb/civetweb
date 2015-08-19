@@ -8353,7 +8353,7 @@ static int get_request_handler(struct mg_connection *conn,
 	return 0; /* none found */
 }
 
-#if defined(USE_WEBSOCKET)
+#if defined(USE_WEBSOCKET) && defined(MG_LEGACY_INTERFACE)
 static int
 deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
                                      void *cbdata)
@@ -8607,15 +8607,32 @@ static void handle_request(struct mg_connection *conn)
 /* 8. handle websocket requests */
 #if defined(USE_WEBSOCKET)
 		if (is_websocket_request) {
-			handle_websocket_request(
-			    conn,
-			    path,
-			    !is_script_resource /* could be deprecated global callback */,
-			    deprecated_websocket_connect_wrapper,
-			    deprecated_websocket_ready_wrapper,
-			    deprecated_websocket_data_wrapper,
-			    NULL,
-			    &conn->ctx->callbacks);
+			if (is_script_resource) {
+				/* Websocket Lua script */
+				handle_websocket_request(
+				    conn,
+				    path,
+				    !is_script_resource /* could be deprecated global callback */,
+				    NULL,
+				    NULL,
+				    NULL,
+				    NULL,
+				    &conn->ctx->callbacks);
+			} else {
+#if defined(MG_LEGACY_INTERFACE)
+				handle_websocket_request(
+				    conn,
+				    path,
+				    !is_script_resource /* could be deprecated global callback */,
+				    deprecated_websocket_connect_wrapper,
+				    deprecated_websocket_ready_wrapper,
+				    deprecated_websocket_data_wrapper,
+				    NULL,
+				    &conn->ctx->callbacks);
+#else
+				send_http_error(conn, 404, "%s", "Not found");
+#endif
+			}
 			return;
 		} else
 #endif
@@ -10213,7 +10230,9 @@ static void *worker_thread_run(void *thread_func_param)
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	struct mg_connection *conn;
 	struct mg_workerTLS tls;
+#if defined(MG_LEGACY_INTERFACE)
 	uint32_t addr;
+#endif
 
 	mg_set_thread_name("worker");
 

@@ -121,6 +121,7 @@ struct mg_callbacks {
 	    -1: initializing ssl fails. */
 	int (*init_ssl)(void *ssl_context, void *user_data);
 
+#if defined(MG_LEGACY_INTERFACE)
 	/* Called when websocket request is received, before websocket handshake.
 	   Return value:
 	     0: civetweb proceeds with websocket handshake.
@@ -146,6 +147,7 @@ struct mg_callbacks {
 	                      int bits,
 	                      char *data,
 	                      size_t data_len);
+#endif /* MG_LEGACY_INTERFACE */
 
 	/* Called when civetweb is closing a connection.  The per-context mutex is
 	   locked when this is invoked.  This is primarily useful for noting when
