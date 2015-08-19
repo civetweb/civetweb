@@ -34,7 +34,7 @@ static void send_to_all_websockets(struct mg_context *ctx, const char * data, in
 }
 
 
-void websocket_ready_handler(struct mg_connection *conn) {
+void websocket_ready_handler(struct mg_connection *conn, void *_ignored) {
 
     int i;
     const struct mg_request_info * rq = mg_get_request_info(conn);
@@ -77,7 +77,7 @@ static void websocket_done(tWebSockContext *ws_ctx, tWebSockInfo * wsock) {
 }
 
 
-int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len) {
+int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len, void *_ignored) {
 
     const struct mg_request_info * rq = mg_get_request_info(conn);
     tWebSockInfo * wsock = (tWebSockInfo*)rq->conn_data;
@@ -129,7 +129,7 @@ int websocket_data_handler(struct mg_connection *conn, int flags, char *data, si
 }
 
 
-void connection_close_handler(const struct mg_connection *conn) {
+void connection_close_handler(const struct mg_connection *conn, void *_ignored) {
 
     const struct mg_request_info * rq = mg_get_request_info(conn);
     tWebSockInfo * wsock = (tWebSockInfo*)rq->conn_data;
@@ -162,6 +162,7 @@ static void * eventMain(void * arg) {
     return NULL;
 }
 
+
 void websock_send_broadcast(struct mg_context *ctx, const char * data, int data_len) {
 
     char buffer[260];
@@ -174,6 +175,7 @@ void websock_send_broadcast(struct mg_context *ctx, const char * data, int data_
     }
 }
 
+
 void websock_init_lib(const struct mg_context *ctx) {
 
     tWebSockContext *ws_ctx = (tWebSockContext*) mg_get_user_data(ctx);
@@ -181,6 +183,7 @@ void websock_init_lib(const struct mg_context *ctx) {
     /* todo: use mg_start_thread_id instead of mg_start_thread */
     mg_start_thread(eventMain, (void*)ctx);
 }
+
 
 void websock_exit_lib(const struct mg_context *ctx) {
 

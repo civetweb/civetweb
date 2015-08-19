@@ -30,11 +30,16 @@ int main(void)
 
     callback_funcs.init_context = websock_init_lib;
     callback_funcs.exit_context = websock_exit_lib;
-    callback_funcs.websocket_ready = websocket_ready_handler;
-    callback_funcs.websocket_data = websocket_data_handler;
-    callback_funcs.connection_close = connection_close_handler;
 
     ctx = mg_start(&callback_funcs, &ws_ctx, server_options);
+
+    mg_set_websocket_handler(ctx, "/MyWebSock",
+                             NULL,
+                             websocket_ready_handler,
+                             websocket_data_handler,
+                             connection_close_handler,
+                             NULL);
+
     printf("Connect to localhost:%s/websock.htm\n", mg_get_option(ctx, "listening_ports"));
 
     puts("Enter an (ASCII) character or * to exit:");
