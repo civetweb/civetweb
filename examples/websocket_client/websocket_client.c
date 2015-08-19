@@ -32,13 +32,22 @@ const size_t websocket_goodbye_msg_len = 14 /* strlen(websocket_goodbye_msg) */ 
 /*************************************************************************************/
 /* WEBSOCKET SERVER                                                                  */
 /*************************************************************************************/
+#if defined(MG_LEGACY_INTERFACE)
 int websock_server_connect(const struct mg_connection * conn)
+#else
+int websocket_server_connect(const struct mg_connection * conn, void * _ignored)
+#endif
 {
     printf("Server: Websocket connected\n");
     return 0; /* return 0 to accept every connection */
 }
 
+
+#if defined(MG_LEGACY_INTERFACE)
 void websocket_server_ready(struct mg_connection * conn)
+#else
+void websocket_server_ready(struct mg_connection * conn, void * _ignored)
+#endif
 {
     printf("Server: Websocket ready\n");
 
@@ -48,7 +57,12 @@ void websocket_server_ready(struct mg_connection * conn)
     mg_unlock_connection(conn);
 }
 
+
+#if defined(MG_LEGACY_INTERFACE)
 int websocket_server_data(struct mg_connection * conn, int bits, char *data, size_t data_len)
+#else
+int websocket_server_data(struct mg_connection * conn, int bits, char *data, size_t data_len, void *_ignored)
+#endif
 {
     printf("Server: Got %u bytes from the client\n", data_len);
 
@@ -67,12 +81,18 @@ int websocket_server_data(struct mg_connection * conn, int bits, char *data, siz
     return 1; /* return 1 to keep the connetion open */
 }
 
+
+#if defined(MG_LEGACY_INTERFACE)
 void websocket_server_connection_close(const struct mg_connection * conn)
+#else
+void websocket_server_connection_close(const struct mg_connection * conn, void *_ignored)
+#endif
 {
     printf("Server: Close connection\n");
 
     /* Can not send a websocket goodbye message here - the connection is already closed */
 }
+
 
 struct mg_context * start_websocket_server()
 {
@@ -86,11 +106,26 @@ struct mg_context * start_websocket_server()
     struct mg_context *ctx;
 
     memset(&callbacks, 0, sizeof(callbacks));
+
+#if defined(MG_LEGACY_INTERFACE)
+    /* Obsolete: */
     callbacks.websocket_connect = websock_server_connect;
     callbacks.websocket_ready = websocket_server_ready;
     callbacks.websocket_data = websocket_server_data;
     callbacks.connection_close = websocket_server_connection_close;
+
     ctx = mg_start(&callbacks, 0, options);
+#else
+    /* New interface: */
+    ctx = mg_start(&callbacks, 0, options);
+
+    mg_set_websocket_handler(ctx, "/websocket",
+                             websocket_server_connect,
+                             websocket_server_ready,
+                             websocket_server_data,
+                             websocket_server_connection_close,
+                             NULL);
+#endif
 
     return ctx;
 }
