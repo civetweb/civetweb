@@ -10251,10 +10251,10 @@ static void *worker_thread_run(void *thread_func_param)
 			sockaddr_to_string(conn->request_info.remote_addr,
 			                   sizeof(conn->request_info.remote_addr),
 			                   &conn->client.rsa);
-			/* TODO: #if defined(MG_LEGACY_INTERFACE) */
+#if defined(MG_LEGACY_INTERFACE)
 			addr = ntohl(conn->client.rsa.sin.sin_addr.s_addr);
 			memcpy(&conn->request_info.remote_ip, &addr, 4);
-			/* #endif */
+#endif
 			conn->request_info.is_ssl = conn->client.is_ssl;
 
 			if (!conn->client.is_ssl
