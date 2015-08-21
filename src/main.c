@@ -655,6 +655,11 @@ static void set_absolute_path(char *options[],
 #include "lauxlib.h"
 #include "lua_civet.h"
 
+#if LUA_VERSION_NUM == 501
+/* Lua 5.1 detected */
+#define LUA_OK 0
+#endif
+
 
 static int run_lua(const char *file_name)
 {

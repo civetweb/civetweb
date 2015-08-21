@@ -9,7 +9,7 @@ ifndef WITH_LUA
   $(error WITH_LUA is not defined)
 endif
 
-LUA_DIR = src/third_party/lua-5.2.4/src
+LUA_DIR = src/third_party/lua-5.1.5/src
 LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA
 
 ifneq ($(TARGET_OS),WIN32)

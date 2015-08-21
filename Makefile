@@ -77,6 +77,11 @@ else
   LCC = $(CC)
 endif
 
+ifdef WITH_LUAJIT_SHARED
+  WITH_LUA_SHARED = 1
+  WITH_LUA = 1
+endif
+
 ifdef WITH_LUA_SHARED
   WITH_LUA = 1
 endif
@@ -125,8 +130,12 @@ ifeq ($(TARGET_OS),WIN32)
   RMRF = rmdir /s /q
 endif
 
+ifdef WITH_LUAJIT_SHARED
+  LIBS += -lluajit-5.1
+else
 ifdef WITH_LUA_SHARED
-  LIBS += -llua5.2
+  LIBS += -llua5.1
+endif
 endif
 
 ifneq (, $(findstring mingw32, $(shell $(CC) -dumpmachine)))

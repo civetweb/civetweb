@@ -2,6 +2,22 @@
 #include <lauxlib.h>
 #include "lua_civet.h"
 
+#ifndef LUA_VERSION_NUM
+#error "Unknown Lua version"
+#elif LUA_VERSION_NUM == 501
+/* Lua 5.1 detected */
+#define LUA_OK 0
+#define LUA_ERRGCMM 999 /* not supported */
+#define mg_lua_load(a,b,c,d,e) lua_load(a,b,c,d)
+#elif LUA_VERSION_NUM == 502
+/* Lua 5.2 detected */
+#define mg_lua_load lua_load
+#elif LUA_VERSION_NUM == 503
+/* Lua 5.3 detected */
+#define mg_lua_load lua_load
+#endif
+
+
 #ifdef _WIN32
 static void *
 mmap(void *addr, int64_t len, int prot, int flags, int fd, int offset)
@@ -345,7 +361,7 @@ static int lsp(struct mg_connection *conn,
 						data.len = j - (i + 3);
 						data.state = 0;
 						lua_ok =
-						    lua_load(L, lsp_var_reader, &data, chunkname, NULL);
+						    mg_lua_load(L, lsp_var_reader, &data, chunkname, NULL);
 					} else {
 						lua_ok = luaL_loadbuffer(
 						    L, p + (i + 2), j - (i + 2), chunkname);
