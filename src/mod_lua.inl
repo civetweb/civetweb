@@ -4,17 +4,23 @@
 
 #ifndef LUA_VERSION_NUM
 #error "Unknown Lua version"
+
 #elif LUA_VERSION_NUM == 501
 /* Lua 5.1 detected */
 #define LUA_OK 0
 #define LUA_ERRGCMM 999 /* not supported */
 #define mg_lua_load(a,b,c,d,e) lua_load(a,b,c,d)
+#define lua_rawlen lua_objlen
+#define lua_newstate(a, b) luaL_newstate() /* Must use luaL_newstate() for 64 bit target */
+
 #elif LUA_VERSION_NUM == 502
 /* Lua 5.2 detected */
 #define mg_lua_load lua_load
+
 #elif LUA_VERSION_NUM == 503
 /* Lua 5.3 detected */
 #define mg_lua_load lua_load
+
 #endif
 
 
@@ -1162,12 +1168,14 @@ static void prepare_lua_environment(struct mg_context *ctx,
 {
 	lua_civet_open_all_libs(L);
 
+#if LUA_VERSION_NUM != 501
 	luaL_newmetatable(L, LUASOCKET);
 	lua_pushliteral(L, "__index");
 	luaL_newlib(L, luasocket_methods);
 	lua_rawset(L, -3);
 	lua_pop(L, 1);
 	lua_register(L, "connect", lsp_connect);
+#endif
 
 	/* Store context in the registry */
 	if (ctx != NULL) {
