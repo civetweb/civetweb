@@ -20,6 +20,10 @@
 ** $Id: lfs.c,v 1.61 2009/07/04 02:10:16 mascarenhas Exp $
 */
 
+#if LUA_VERSION_NUM == 501
+#define lua_pushinteger lua_pushnumber
+#endif
+
 #ifndef LFS_DO_NOT_USE_LARGE_FILE
 #ifndef _WIN32
 #ifndef _AIX

@@ -34,6 +34,10 @@
 #include "lua.h"
 #include "lauxlib.h"
 
+#if LUA_VERSION_NUM == 501
+#define lua_pushinteger lua_pushnumber
+#endif
+
 #if LUA_VERSION_NUM > 501
 /*
 ** Lua 5.2
