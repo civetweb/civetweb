@@ -1,28 +1,6 @@
-#include <lua.h>
-#include <lauxlib.h>
+#include "civetweb_lua.h"
+
 #include "lua_civet.h"
-
-#ifndef LUA_VERSION_NUM
-#error "Unknown Lua version"
-
-#elif LUA_VERSION_NUM == 501
-/* Lua 5.1 detected */
-#define LUA_OK 0
-#define LUA_ERRGCMM 999 /* not supported */
-#define mg_lua_load(a,b,c,d,e) lua_load(a,b,c,d)
-#define lua_rawlen lua_objlen
-#define lua_newstate(a, b) luaL_newstate() /* Must use luaL_newstate() for 64 bit target */
-
-#elif LUA_VERSION_NUM == 502
-/* Lua 5.2 detected */
-#define mg_lua_load lua_load
-
-#elif LUA_VERSION_NUM == 503
-/* Lua 5.3 detected */
-#define mg_lua_load lua_load
-
-#endif
-
 
 #ifdef _WIN32
 static void *

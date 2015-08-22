@@ -64,9 +64,7 @@
 #include <utime.h>
 #endif
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
+#include "civetweb_lua.h"
 
 #include "lfs.h"
 
