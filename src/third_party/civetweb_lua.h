@@ -42,6 +42,8 @@
 #define lua_rawlen lua_objlen
 #define lua_newstate(a, b) luaL_newstate() /* Must use luaL_newstate() for 64 bit target */
 #define lua_pushinteger lua_pushnumber
+#define luaL_newlib(L, t) {luaL_Reg const *r = t; while (r->name) {lua_register(L, r->name, r->func); r++;}}
+
 
 #elif LUA_VERSION_NUM == 502
 /* Lua 5.2 detected */

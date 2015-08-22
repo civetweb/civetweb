@@ -1145,14 +1145,12 @@ static void prepare_lua_environment(struct mg_context *ctx,
 {
 	civetweb_open_lua_libs(L);
 
-#if LUA_VERSION_NUM != 501
 	luaL_newmetatable(L, LUASOCKET);
 	lua_pushliteral(L, "__index");
 	luaL_newlib(L, luasocket_methods);
 	lua_rawset(L, -3);
 	lua_pop(L, 1);
 	lua_register(L, "connect", lsp_connect);
-#endif
 
 	/* Store context in the registry */
 	if (ctx != NULL) {
