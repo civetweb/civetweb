@@ -651,15 +651,9 @@ static void set_absolute_path(char *options[],
 }
 
 #ifdef USE_LUA
-#include "lua.h"
-#include "lauxlib.h"
-#include "lua_civet.h"
 
-#if LUA_VERSION_NUM == 501
-/* Lua 5.1 detected */
-#define LUA_OK 0
-#endif
-
+#include "civetweb_lua.h"
+#include "civetweb_private_lua.h"
 
 static int run_lua(const char *file_name)
 {
@@ -677,7 +671,7 @@ static int run_lua(const char *file_name)
 		fprintf(stderr, "Error: Cannot create Lua state\n");
 		return EXIT_FAILURE;
 	}
-	lua_civet_open_all_libs(L);
+	civetweb_open_lua_libs(L);
 
 	lua_ret = luaL_loadfile(L, file_name);
 	if (lua_ret != LUA_OK) {

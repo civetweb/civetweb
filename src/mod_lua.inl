@@ -1,6 +1,5 @@
 #include "civetweb_lua.h"
-
-#include "lua_civet.h"
+#include "civetweb_private_lua.h"
 
 #ifdef _WIN32
 static void *
@@ -1100,7 +1099,7 @@ static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 	lua_rawset(L, -3);
 }
 
-void lua_civet_open_all_libs(lua_State *L)
+void civetweb_open_lua_libs(lua_State *L)
 {
 	{
 		extern void luaL_openlibs(lua_State *);
@@ -1144,7 +1143,7 @@ static void prepare_lua_environment(struct mg_context *ctx,
                                     const char *script_name,
                                     int lua_env_type)
 {
-	lua_civet_open_all_libs(L);
+	civetweb_open_lua_libs(L);
 
 #if LUA_VERSION_NUM != 501
 	luaL_newmetatable(L, LUASOCKET);
