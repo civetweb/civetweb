@@ -77,13 +77,14 @@ else
   LCC = $(CC)
 endif
 
-ifdef WITH_LUAJIT_SHARED
-  WITH_LUA_SHARED = 1
+ifdef WITH_LUA_SHARED
   WITH_LUA = 1
 endif
 
-ifdef WITH_LUA_SHARED
+ifdef WITH_LUAJIT_SHARED
+  WITH_LUA_SHARED = 1
   WITH_LUA = 1
+  WITH_LUA_VERSION = 501
 endif
 
 ifdef WITH_LUA

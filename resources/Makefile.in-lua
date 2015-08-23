@@ -9,7 +9,33 @@ ifndef WITH_LUA
   $(error WITH_LUA is not defined)
 endif
 
-LUA_DIR = src/third_party/lua-5.1.5/src
+# Lua Default version is 502
+WITH_LUA_VERSION ?= 502
+LUA_VERSION_KNOWN = 0
+
+# Select src and header according to the Lua version
+ifeq ($(WITH_LUA_VERSION), 501)
+  $(info Lua: Using version 5.1.5)
+  LUA_DIR = src/third_party/lua-5.1.5/src
+  LUA_VERSION_KNOWN = 1
+endif
+ifeq ($(WITH_LUA_VERSION), 502)
+  $(info Lua: Using version 5.2.4)
+  LUA_DIR = src/third_party/lua-5.2.4/src
+  LUA_VERSION_KNOWN = 1
+endif
+ifeq ($(WITH_LUA_VERSION), 503)
+  $(info Lua: Using version 5.3.0)
+  LUA_DIR = src/third_party/lua-5.3.0/src
+  LUA_VERSION_KNOWN = 1
+endif
+
+ifneq ($(LUA_VERSION_KNOWN), 1)
+  $(error Lua: Unknwon version - $(WITH_LUA_VERSION))
+endif
+
+
+# Add flags for all Lua versions
 LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA
 
 ifneq ($(TARGET_OS),WIN32)
