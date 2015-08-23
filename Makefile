@@ -135,7 +135,7 @@ ifdef WITH_LUAJIT_SHARED
   LIBS += -lluajit-5.1
 else
 ifdef WITH_LUA_SHARED
-  LIBS += -llua5.1
+  LIBS += $(LUA_SHARED_LIB_FLAG)
 endif
 endif
 
