@@ -1,10 +1,12 @@
 clang-format -i src/civetweb.c
 clang-format -i src/main.c
 clang-format -i src/CivetServer.cpp
-clang-format -i src/lua_civet.h
+clang-format -i src/civetweb_private_lua.h
 clang-format -i src/md5.inl
 clang-format -i src/mod_lua.inl
 clang-format -i src/timer.inl
+
+clang-format -i src/third_party/civetweb_lua.h
 
 clang-format -i include/civetweb.h
 clang-format -i include/CivetServer.h

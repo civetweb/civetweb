@@ -8,4 +8,3 @@
 void civetweb_open_lua_libs(lua_State *L);
 
 #endif
-

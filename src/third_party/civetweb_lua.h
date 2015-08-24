@@ -19,9 +19,9 @@
  * THE SOFTWARE.
  */
 
- /* This header is intended to support Lua 5.1, Lua 5.2 and Lua 5.3 in the same
-  * C source code.
-  */
+/* This header is intended to support Lua 5.1, Lua 5.2 and Lua 5.3 in the same
+ * C source code.
+ */
 
 #ifndef CIVETWEB_LUA_H
 #define CIVETWEB_LUA_H
@@ -38,11 +38,19 @@
 /* Lua 5.1 detected */
 #define LUA_OK 0
 #define LUA_ERRGCMM 999 /* not supported */
-#define mg_lua_load(a,b,c,d,e) lua_load(a,b,c,d)
+#define mg_lua_load(a, b, c, d, e) lua_load(a, b, c, d)
 #define lua_rawlen lua_objlen
-#define lua_newstate(a, b) luaL_newstate() /* Must use luaL_newstate() for 64 bit target */
+#define lua_newstate(a, b)                                                     \
+	luaL_newstate() /* Must use luaL_newstate() for 64 bit target */
 #define lua_pushinteger lua_pushnumber
-#define luaL_newlib(L, t) {luaL_Reg const *r = t; while (r->name) {lua_register(L, r->name, r->func); r++;}}
+#define luaL_newlib(L, t)                                                      \
+	{                                                                          \
+		luaL_Reg const *r = t;                                                 \
+		while (r->name) {                                                      \
+			lua_register(L, r->name, r->func);                                 \
+			r++;                                                               \
+		}                                                                      \
+	}
 #define luaL_setfuncs(L, r, u) lua_register(L, r->name, r->func)
 
 

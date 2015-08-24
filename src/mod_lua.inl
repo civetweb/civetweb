@@ -343,8 +343,8 @@ static int lsp(struct mg_connection *conn,
 						data.begin = p + (i + 3);
 						data.len = j - (i + 3);
 						data.state = 0;
-						lua_ok =
-						    mg_lua_load(L, lsp_var_reader, &data, chunkname, NULL);
+						lua_ok = mg_lua_load(
+						    L, lsp_var_reader, &data, chunkname, NULL);
 					} else {
 						lua_ok = luaL_loadbuffer(
 						    L, p + (i + 2), j - (i + 2), chunkname);
@@ -1146,10 +1146,10 @@ static void prepare_lua_environment(struct mg_context *ctx,
 	civetweb_open_lua_libs(L);
 
 #if LUA_VERSION_NUM == 502
-        /* Keep the "connect" method for compatibility, 
-         * but do not backport it to Lua 5.1.
-         * TODO: Redesign the interface.
-         */
+	/* Keep the "connect" method for compatibility,
+	 * but do not backport it to Lua 5.1.
+	 * TODO: Redesign the interface.
+	 */
 	luaL_newmetatable(L, LUASOCKET);
 	lua_pushliteral(L, "__index");
 	luaL_newlib(L, luasocket_methods);
@@ -1314,6 +1314,7 @@ static void mg_exec_lua_script(struct mg_connection *conn,
 		lua_pushcclosure(L, &lua_error_handler, 0);
 
 		if (exports != NULL) {
+#if LUA_VERSION_NUM > 501
 			lua_pushglobaltable(L);
 			for (i = 0; exports[i] != NULL && exports[i + 1] != NULL; i += 2) {
 				lua_CFunction func;
@@ -1322,6 +1323,14 @@ static void mg_exec_lua_script(struct mg_connection *conn,
 				lua_pushcclosure(L, func, 0);
 				lua_rawset(L, -3);
 			}
+#else
+			for (i = 0; exports[i] != NULL && exports[i + 1] != NULL; i += 2) {
+				lua_CFunction func;
+				const char *name = (const char *)(exports[i]));
+				*(const void **)(&func) = exports[i + 1];
+				lua_register(L, name, func);
+			}
+#endif
 		}
 
 		if (luaL_loadfile(L, path) != 0) {
