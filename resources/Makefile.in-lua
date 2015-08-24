@@ -27,8 +27,8 @@ ifeq ($(WITH_LUA_VERSION), 502)
   LUA_VERSION_KNOWN = 1
 endif
 ifeq ($(WITH_LUA_VERSION), 503)
-  $(info Lua: Using version 5.3.0)
-  LUA_DIR = src/third_party/lua-5.3.0/src
+  $(info Lua: Using version 5.3.1)
+  LUA_DIR = src/third_party/lua-5.3.1/src
   LUA_SHARED_LIB_FLAG = -llua5.3
   LUA_VERSION_KNOWN = 1
 endif
@@ -42,7 +42,7 @@ endif
 LUA_CFLAGS = -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA
 
 ifneq ($(TARGET_OS),WIN32)
-  LUA_CFLAGS += -DLUA_USE_POSIX -DLUA_USE_DLOPEN
+  LUA_CFLAGS += -DLUA_USE_POSIX -DLUA_USE_DLOPEN -DLUA_COMPAT_5_2
 endif
 
 ifdef WITH_LUA_SHARED
@@ -56,10 +56,7 @@ else
   LUA_SOURCE_FILES = lapi.c  \
     lauxlib.c \
     lbaselib.c  \
-    lbitlib.c  \
     lcode.c  \
-    lcorolib.c \
-    lctype.c \
     ldblib.c  \
     ldebug.c  \
     ldo.c  \
@@ -85,6 +82,18 @@ else
     lundump.c \
     lvm.c  \
     lzio.c
+
+ifeq ($(WITH_LUA_VERSION), 502)
+    LUA_SOURCE_FILES += lbitlib.c  \
+    lcorolib.c  \
+    lctype.c
+endif
+ifeq ($(WITH_LUA_VERSION), 503)
+    LUA_SOURCE_FILES += lbitlib.c  \
+    lcorolib.c  \
+    lctype.c  \
+    lutf8lib.c
+endif
 
   $(info Lua: using static library)
 
@@ -117,19 +126,20 @@ LFS_SOURCES = $(addprefix $(LFS_DIR)/, $(LFS_SOURCE_FILES))
 LFS_OBJECTS = $(LFS_SOURCES:.c=.o)
 LFS_CFLAGS = -I$(LFS_DIR)
 OBJECTS += $(LFS_OBJECTS)
-CFLAGS += $(LFS_CFLAGS) 
+CFLAGS += $(LFS_CFLAGS)
 CFLAGS += -DUSE_LUA_FILE_SYSTEM
 #SOURCE_DIRS = $(LFS_DIR)
 
 
 ifneq ($(WITH_LUA_VERSION), 501)
-  LXML_DIR = src/third_party  
+  LXML_DIR = src/third_party
   LXML_SOURCE_FILES = LuaXML_lib.c
   LXML_SOURCES = $(addprefix $(LXML_DIR)/, $(LXML_SOURCE_FILES))
   LXML_OBJECTS = $(LXML_SOURCES:.c=.o)
   LXML_CFLAGS = -I$(LXML_DIR)
   OBJECTS += $(LXML_OBJECTS)
-  CFLAGS += $(LXML_CFLAGS) 
+  CFLAGS += $(LXML_CFLAGS)
   CFLAGS += -DUSE_LUA_LUAXML
   #SOURCE_DIRS = $(LXML_DIR)
 endif
+
