@@ -1326,7 +1326,7 @@ static void mg_exec_lua_script(struct mg_connection *conn,
 #else
 			for (i = 0; exports[i] != NULL && exports[i + 1] != NULL; i += 2) {
 				lua_CFunction func;
-				const char *name = (const char *)(exports[i]));
+				const char *name = (const char *)(exports[i]);
 				*(const void **)(&func) = exports[i + 1];
 				lua_register(L, name, func);
 			}
