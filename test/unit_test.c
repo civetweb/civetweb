@@ -1147,7 +1147,7 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 	          "Content-Type: text/plain\r\n\r\n");
 
 	for (i = 0; i < 20; i++) {
-		mg_printf(conn, "%s\r\n", i);
+		mg_printf(conn, "%d\r\n", i);
 		mg_write(conn, chunk_data, i);
 		mg_printf(conn, "\r\n");
 	}
