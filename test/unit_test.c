@@ -773,7 +773,7 @@ static void test_mg_websocket_client_connect(int use_ssl)
 	                                   NULL);
 	ASSERT(conn == NULL);
 
-	/* Should succeed, the default civetweb sever should complete the handshake
+	/* Should succeed, the default civetweb server should complete the handshake
 	 */
 	conn = mg_connect_websocket_client("localhost",
 	                                   port,
