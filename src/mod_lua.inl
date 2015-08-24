@@ -1615,3 +1615,4 @@ static void lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 	(void)pthread_mutex_unlock(&ws->ws_mutex);
 }
 #endif
+
