@@ -53,7 +53,6 @@
 	}
 #define luaL_setfuncs(L, r, u) lua_register(L, r->name, r->func)
 
-
 #elif LUA_VERSION_NUM == 502
 /* Lua 5.2 detected */
 #define mg_lua_load lua_load
@@ -62,6 +61,12 @@
 /* Lua 5.3 detected */
 #define mg_lua_load lua_load
 
+#endif
+
+#ifdef LUA_VERSION_MAKEFILE
+#if LUA_VERSION_MAKEFILE != LUA_VERSION_NUM
+#error "Mismatch between Lua version specified in Makefile and Lua version in lua.h"
+#endif
 #endif
 
 #endif /* #ifndef CIVETWEB_LUA_H */
