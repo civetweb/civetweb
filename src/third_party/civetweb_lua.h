@@ -65,9 +65,9 @@
 
 #ifdef LUA_VERSION_MAKEFILE
 #if LUA_VERSION_MAKEFILE != LUA_VERSION_NUM
-#error "Mismatch between Lua version specified in Makefile and Lua version in lua.h"
+#error                                                                         \
+    "Mismatch between Lua version specified in Makefile and Lua version in lua.h"
 #endif
 #endif
 
 #endif /* #ifndef CIVETWEB_LUA_H */
-

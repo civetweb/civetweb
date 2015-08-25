@@ -1219,6 +1219,7 @@ void mg_set_thread_name(const char *threadName) {}
 #if defined(MG_LEGACY_INTERFACE)
 const char **mg_get_valid_option_names(void)
 {
+	/* This function is deprecated. Use mg_get_valid_options instead. */
 	static const char *
 	    data[2 * sizeof(config_options) / sizeof(config_options[0])] = {0};
 	int i;
@@ -4948,15 +4949,16 @@ static int mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 }
 
 
-static int connect_socket(struct mg_context *ctx /* may be null */,
-                          const char *host,
-                          int port,
-                          int use_ssl,
-                          char *ebuf,
-                          size_t ebuf_len,
-                          SOCKET *sock /* output: socket */,
-                          union usa *sa /* output: socket address */
-                          )
+static int
+connect_socket(struct mg_context *ctx /* may be NULL */,
+               const char *host,
+               int port,
+               int use_ssl,
+               char *ebuf,
+               size_t ebuf_len,
+               SOCKET *sock /* output: socket, must not be NULL */,
+               union usa *sa /* output: socket address, must not be NULL  */
+               )
 {
 	int ip_ver = 0;
 	*sock = INVALID_SOCKET;
@@ -6090,7 +6092,7 @@ static void addenv(struct cgi_environment *env,
 
 
 /* Append VARIABLE=VALUE\0 string to the buffer, and add a respective
- * pointer into the vars array. Assumes block != NULL and fmt != NULL. */
+ * pointer into the vars array. Assumes env != NULL and fmt != NULL. */
 static void addenv(struct cgi_environment *env, const char *fmt, ...)
 {
 	size_t n, space;
