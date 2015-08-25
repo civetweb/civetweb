@@ -2812,7 +2812,7 @@ static pid_t spawn_process(struct mg_connection *conn,
 
 spawn_cleanup:
 	(void)CloseHandle(si.hStdOutput);
-    (void)CloseHandle(si.hStdError);
+	(void)CloseHandle(si.hStdError);
 	(void)CloseHandle(si.hStdInput);
 	if (pi.hThread != NULL) {
 		(void)CloseHandle(pi.hThread);
@@ -2962,11 +2962,11 @@ static pid_t spawn_process(struct mg_connection *conn,
 			    conn, "%s: dup2(%d, 2): %s", __func__, fderr, strerror(ERRNO));
 		} else {
 			/* Keep stderr and stdout in two different pipes.
-             * Stdout will be sent back to the client, 
-             * stderr should go into a server error log. */
+			 * Stdout will be sent back to the client,
+			 * stderr should go into a server error log. */
 			(void)close(fdin);
 			(void)close(fdout);
-            (void)close(fderr);
+			(void)close(fderr);
 
 			/* After exec, all signal handlers are restored to their default
 			 * values, with one exception of SIGCHLD. According to
@@ -6380,7 +6380,8 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 		goto done;
 	}
 
-	pid = spawn_process(conn, p, blk.buf, blk.var, fdin[0], fdout[1], fderr[1], dir);
+	pid = spawn_process(
+	    conn, p, blk.buf, blk.var, fdin[0], fdout[1], fderr[1], dir);
 	if (pid == (pid_t)-1) {
 		send_http_error(conn,
 		                500,
@@ -6404,7 +6405,7 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	 * Windows does not like when closed descriptor is closed again. */
 	(void)close(fdin[0]);
 	(void)close(fdout[1]);
-    (void)close(fderr[1]);
+	(void)close(fderr[1]);
 	fdin[0] = fdout[1] = fderr[1] = -1;
 
 	if ((in = fdopen(fdin[1], "wb")) == NULL) {
@@ -6428,13 +6429,14 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 		                strerror(ERRNO));
 		goto done;
 	}
-    
+
 	setbuf(in, NULL);
 	setbuf(out, NULL);
-    setbuf(err, NULL);
+	setbuf(err, NULL);
 	fout.fp = out;
 
 	/* Send POST or PUT data to the CGI process if needed */
+	/* TODO(high): Methods like PATCH, MKCOL, ... also have body data. */
 	if (!mg_strcasecmp(conn->request_info.request_method, "POST") ||
 	    !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
 		/* This is a POST/PUT request */
@@ -6464,13 +6466,27 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	}
 	headers_len = read_request(out, conn, buf, (int)buflen, &data_len);
 	if (headers_len <= 0) {
-		send_http_error(conn,
-		                500,
-		                "Error: CGI program sent malformed or too big "
-		                "(>%u bytes) HTTP headers: [%.*s]",
-		                (unsigned)buflen,
-		                data_len,
-		                buf);
+
+		/* Could not parse the CGI response. Check if some error message on
+		 * stderr. */
+		i = pull_all(err, conn, buf, (int)buflen);
+		if (i > 0) {
+			send_http_error(conn,
+			                500,
+			                "Error: CGI program sent error "
+			                "message: [%.*s]",
+			                i,
+			                buf);
+		} else {
+			send_http_error(conn,
+			                500,
+			                "Error: CGI program sent malformed or too big "
+			                "(>%u bytes) HTTP headers: [%.*s]",
+			                (unsigned)buflen,
+			                data_len,
+			                buf);
+		}
+
 		goto done;
 	}
 	pbuf = buf;
