@@ -773,7 +773,7 @@ static void test_mg_websocket_client_connect(int use_ssl)
 	                                   NULL);
 	ASSERT(conn == NULL);
 
-	/* Should succeed, the default civetweb sever should complete the handshake
+	/* Should succeed, the default civetweb server should complete the handshake
 	 */
 	conn = mg_connect_websocket_client("localhost",
 	                                   port,
@@ -1147,7 +1147,7 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 	          "Content-Type: text/plain\r\n\r\n");
 
 	for (i = 0; i < 20; i++) {
-		mg_printf(conn, "%s\r\n", i);
+		mg_printf(conn, "%x\r\n", i);
 		mg_write(conn, chunk_data, i);
 		mg_printf(conn, "\r\n");
 	}
