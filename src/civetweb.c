@@ -2691,6 +2691,7 @@ static pid_t spawn_process(struct mg_connection *conn,
                            char *envp[],
                            int fdin,
                            int fdout,
+                           int fderr,
                            const char *dir)
 {
 	HANDLE me;
@@ -2722,6 +2723,13 @@ static pid_t spawn_process(struct mg_connection *conn,
 	                (HANDLE)_get_osfhandle(fdout),
 	                me,
 	                &si.hStdOutput,
+	                0,
+	                TRUE,
+	                DUPLICATE_SAME_ACCESS);
+	DuplicateHandle(me,
+	                (HANDLE)_get_osfhandle(fderr),
+	                me,
+	                &si.hStdError,
 	                0,
 	                TRUE,
 	                DUPLICATE_SAME_ACCESS);
@@ -2804,6 +2812,7 @@ static pid_t spawn_process(struct mg_connection *conn,
 
 spawn_cleanup:
 	(void)CloseHandle(si.hStdOutput);
+    (void)CloseHandle(si.hStdError);
 	(void)CloseHandle(si.hStdInput);
 	if (pi.hThread != NULL) {
 		(void)CloseHandle(pi.hThread);
@@ -2920,6 +2929,7 @@ static pid_t spawn_process(struct mg_connection *conn,
                            char *envp[],
                            int fdin,
                            int fdout,
+                           int fderr,
                            const char *dir)
 {
 	pid_t pid;
@@ -2947,11 +2957,16 @@ static pid_t spawn_process(struct mg_connection *conn,
 		} else if (dup2(fdout, 1) == -1) {
 			mg_cry(
 			    conn, "%s: dup2(%d, 1): %s", __func__, fdout, strerror(ERRNO));
+		} else if (dup2(fderr, 2) == -1) {
+			mg_cry(
+			    conn, "%s: dup2(%d, 2): %s", __func__, fderr, strerror(ERRNO));
 		} else {
-			/* Not redirecting stderr to stdout, to avoid output being littered
-			 * with the error messages. */
+			/* Keep stderr and stdout in two different pipes.
+             * Stdout will be sent back to the client, 
+             * stderr should go into a server error log. */
 			(void)close(fdin);
 			(void)close(fdout);
+            (void)close(fderr);
 
 			/* After exec, all signal handlers are restored to their default
 			 * values, with one exception of SIGCHLD. According to
@@ -6325,12 +6340,12 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	char *buf;
 	size_t buflen;
 	int headers_len, data_len, i, truncated;
-	int fdin[2] = {-1, -1}, fdout[2] = {-1, -1};
+	int fdin[2] = {-1, -1}, fdout[2] = {-1, -1}, fderr[2] = {-1, -1};
 	const char *status, *status_text, *connection_state;
 	char *pbuf, dir[PATH_MAX], *p;
 	struct mg_request_info ri;
 	struct cgi_environment blk;
-	FILE *in = NULL, *out = NULL;
+	FILE *in = NULL, *out = NULL, *err = NULL;
 	struct file fout = STRUCT_FILE_INITIALIZER;
 	pid_t pid = (pid_t)-1;
 
@@ -6359,13 +6374,13 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 		p = (char *)prog;
 	}
 
-	if (pipe(fdin) != 0 || pipe(fdout) != 0) {
+	if (pipe(fdin) != 0 || pipe(fdout) != 0 || pipe(fderr) != 0) {
 		send_http_error(
 		    conn, 500, "Error: Cannot create CGI pipe: %s", strerror(ERRNO));
 		goto done;
 	}
 
-	pid = spawn_process(conn, p, blk.buf, blk.var, fdin[0], fdout[1], dir);
+	pid = spawn_process(conn, p, blk.buf, blk.var, fdin[0], fdout[1], fderr[1], dir);
 	if (pid == (pid_t)-1) {
 		send_http_error(conn,
 		                500,
@@ -6380,6 +6395,8 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	set_close_on_exec((SOCKET)fdin[1], conn);
 	set_close_on_exec((SOCKET)fdout[0], conn);
 	set_close_on_exec((SOCKET)fdout[1], conn);
+	set_close_on_exec((SOCKET)fderr[0], conn);
+	set_close_on_exec((SOCKET)fderr[1], conn);
 
 	/* Parent closes only one side of the pipes.
 	 * If we don't mark them as closed, close() attempt before
@@ -6387,7 +6404,8 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	 * Windows does not like when closed descriptor is closed again. */
 	(void)close(fdin[0]);
 	(void)close(fdout[1]);
-	fdin[0] = fdout[1] = -1;
+    (void)close(fderr[1]);
+	fdin[0] = fdout[1] = fderr[1] = -1;
 
 	if ((in = fdopen(fdin[1], "wb")) == NULL) {
 		send_http_error(conn,
@@ -6403,9 +6421,17 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 		                strerror(ERRNO));
 		goto done;
 	}
-
+	if ((err = fdopen(fderr[0], "rb")) == NULL) {
+		send_http_error(conn,
+		                500,
+		                "Error: CGI can not open fdout\nfopen: %s",
+		                strerror(ERRNO));
+		goto done;
+	}
+    
 	setbuf(in, NULL);
 	setbuf(out, NULL);
+    setbuf(err, NULL);
 	fout.fp = out;
 
 	/* Send POST or PUT data to the CGI process if needed */
@@ -6519,6 +6545,13 @@ done:
 	} else if (fdout[0] != -1) {
 		close(fdout[0]);
 	}
+
+	if (err != NULL) {
+		fclose(err);
+	} else if (fderr[0] != -1) {
+		close(fderr[0]);
+	}
+
 	if (buf != NULL) {
 		mg_free(buf);
 	}
