@@ -4960,6 +4960,17 @@ static int connect_socket(struct mg_context *ctx /* may be null */,
 {
 	int ip_ver = 0;
 	*sock = INVALID_SOCKET;
+	
+	if (sa == NULL) {
+	mg_snprintf(NULL,
+	    NULL, /* No truncation check for ebuf */
+	    ebuf,
+	    ebuf_len,
+	    "%s",
+	    "NULL socket address output");
+	return 0;
+	}
+	
 	memset(sa, 0, sizeof(*sa));
 
 	if (ebuf_len > 0) {
@@ -6078,6 +6089,10 @@ static char *addenv(struct cgi_env_block *block, const char *fmt, ...)
 	int truncated;
 	char *added;
 	va_list ap;
+
+	if (env == NULL) {
+		return;
+	}
 
 	if (block == NULL || fmt == NULL) {
 		return NULL;
