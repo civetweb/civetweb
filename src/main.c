@@ -166,7 +166,7 @@ static int MakeConsole(void);
 static void show_server_name(void)
 {
 #ifdef WIN32
-	MakeConsole();
+	(void)MakeConsole();
 #endif
 
 	fprintf(stderr, "CivetWeb v%s, built on %s\n", mg_version(), __DATE__);
@@ -187,6 +187,8 @@ static NO_RETURN void show_usage_and_exit(const char *exeName)
 	fprintf(stderr, "  Start server with a set of options:\n");
 	fprintf(stderr, "    %s [config_file]\n", exeName);
 	fprintf(stderr, "    %s [-option value ...]\n", exeName);
+	fprintf(stderr, "  Show system information:\n");
+	fprintf(stderr, "    %s -I\n", exeName);
 	fprintf(stderr, "  Add user/change password:\n");
 	fprintf(
 	    stderr, "    %s -A <htpasswd_file> <realm> <user> <passwd>\n", exeName);
@@ -530,7 +532,7 @@ static void init_server_name(int argc, const char *argv[])
 	assert((strlen(mg_version()) + 12) < sizeof(g_server_base_name));
 	snprintf(g_server_base_name,
 	         sizeof(g_server_base_name),
-	         "Civetweb V%s",
+	         "CivetWeb V%s",
 	         mg_version());
 
 	g_server_name = g_server_base_name;
@@ -663,7 +665,7 @@ static int run_lua(const char *file_name)
 	const char *lua_err_txt;
 
 #ifdef WIN32
-	MakeConsole();
+	(void)MakeConsole();
 #endif
 
 	L = luaL_newstate();
@@ -710,6 +712,127 @@ static void start_civetweb(int argc, char *argv[])
 	struct mg_callbacks callbacks;
 	char *options[2 * MAX_OPTIONS + 1];
 	int i;
+
+	/* Show system information and exit */
+	if (argc > 1 && !strcmp(argv[1], "-I")) {
+		const char *version = mg_version();
+#if defined(_WIN32)
+#if !defined(__SYMBIAN32__)
+		DWORD dwVersion = 0;
+		DWORD dwMajorVersion = 0;
+		DWORD dwMinorVersion = 0;
+		SYSTEM_INFO si;
+
+		GetSystemInfo(&si);
+
+#ifdef _MSC_VER
+#pragma warning(push)
+// GetVersion was declared deprecated
+#pragma warning(disable : 4996)
+#endif
+		dwVersion = GetVersion();
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+		dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
+		dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
+
+		(void)MakeConsole();
+		printf("\n%s\n", g_server_name);
+		printf("%s - Windows %u.%u\n",
+		       g_server_base_name,
+		       (unsigned)dwMajorVersion,
+		       (unsigned)dwMinorVersion);
+
+		printf("CPU: type %u, cores %u, mask %x\n",
+		       (unsigned)si.wProcessorArchitecture,
+		       (unsigned)si.dwNumberOfProcessors,
+		       (unsigned)si.dwActiveProcessorMask);
+
+#else
+		printf("\n%s\n", g_server_name);
+		printf("%s - Symbian\n", g_server_base_name);
+#endif
+#else
+		struct utsname name = {0};
+		uname(&name);
+		printf("\n%s\n", g_server_name);
+		printf("%s - %s %s (%s) - %s\n",
+		       g_server_base_name,
+		       name.sysname,
+		       name.version,
+		       name.release,
+		       name.machine);
+#endif
+
+		printf("Features:");
+		if (mg_check_feature(1)) {
+			printf(" Files");
+		}
+		if (mg_check_feature(2)) {
+			printf(" HTTPS");
+		}
+		if (mg_check_feature(4)) {
+			printf(" CGI");
+		}
+		if (mg_check_feature(8)) {
+			printf(" IPv6");
+		}
+		if (mg_check_feature(16)) {
+			printf(" WebSockets");
+		}
+		if (mg_check_feature(32)) {
+			printf(" Lua");
+		}
+		printf("\n");
+
+#ifdef USE_LUA
+		printf(
+		    "Lua Version: %u (%s)\n", (unsigned)LUA_VERSION_NUM, LUA_RELEASE);
+#endif
+
+		printf("Version: %s\n", version);
+
+		printf("Build: %s\n", __DATE__);
+
+/* http://sourceforge.net/p/predef/wiki/Compilers/ */
+#if defined(_MSC_VER)
+		printf("MSC: %u (%u)\n", (unsigned)_MSC_VER, (unsigned)_MSC_FULL_VER);
+#elif defined(__MINGW64__)
+		printf("MinGW64: %u.%u\n",
+		       (unsigned)__MINGW64_MAJOR_VERSION,
+		       (unsigned)__MINGW64_MAJOR_VERSION);
+		printf("MinGW32: %u.%u\n",
+		       (unsigned)__MINGW32_MAJOR_VERSION,
+		       (unsigned)__MINGW32_MAJOR_VERSION);
+#elif defined(__MINGW32__)
+		printf("MinGW32: %u.%u\n",
+		       (unsigned)__MINGW32_MAJOR_VERSION,
+		       (unsigned)__MINGW32_MAJOR_VERSION);
+#elif defined(__clang__)
+		printf("clang: %u.%u.%u (%s)\n",
+		       __clang_major__,
+		       __clang_minor__,
+		       __clang_patchlevel__,
+		       __clang_version__);
+#elif defined(__GNUC__)
+		printf("gcc: %u.%u.%u\n",
+		       (unsigned)__GNUC__,
+		       (unsigned)__GNUC_MINOR__,
+		       (unsigned)__GNUC_PATCHLEVEL__);
+#elif defined(__INTEL_COMPILER)
+		printf("Intel C/C++: %u\n", (unsigned)__INTEL_COMPILER);
+#elif defined(__BORLANDC__)
+		printf("Borland C: 0x%x\n", (unsigned)__BORLANDC__);
+#elif defined(__SUNPRO_C)
+		printf("Solaris: 0x%x\n", (unsigned)__SUNPRO_C);
+#else
+		printf("Other\n");
+#endif
+
+		exit(EXIT_SUCCESS);
+	}
 
 	/* Edit passwords file: Add user or change password, if -A option is
 	 * specified */

@@ -10572,6 +10572,7 @@ static void master_thread_run(void *thread_func_param)
 	ctx->stop_flag = 2;
 }
 
+
 /* Threads have different return types on Windows and Unix. */
 #ifdef _WIN32
 static unsigned __stdcall master_thread(void *thread_func_param)
@@ -10586,6 +10587,7 @@ static void *master_thread(void *thread_func_param)
 	return NULL;
 }
 #endif /* _WIN32 */
+
 
 static void free_context(struct mg_context *ctx)
 {
@@ -10660,6 +10662,7 @@ static void free_context(struct mg_context *ctx)
 	mg_free(ctx);
 }
 
+
 void mg_stop(struct mg_context *ctx)
 {
 	pthread_t mt;
@@ -10689,6 +10692,7 @@ void mg_stop(struct mg_context *ctx)
 	(void)WSACleanup();
 #endif /* _WIN32 && !__SYMBIAN32__ */
 }
+
 
 static void get_system_name(char **sysName)
 {
@@ -10730,6 +10734,7 @@ static void get_system_name(char **sysName)
 	*sysName = mg_strdup(name.sysname);
 #endif
 }
+
 
 struct mg_context *mg_start(const struct mg_callbacks *callbacks,
                             void *user_data,
