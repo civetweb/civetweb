@@ -44,6 +44,7 @@
 #endif
 
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -755,7 +756,8 @@ static void start_civetweb(int argc, char *argv[])
 		printf("%s - Symbian\n", g_server_base_name);
 #endif
 #else
-		struct utsname name = {0};
+		struct utsname name;
+                memset(&name, 0, sizeof(name));
 		uname(&name);
 		printf("\n%s\n", g_server_name);
 		printf("%s - %s %s (%s) - %s\n",
