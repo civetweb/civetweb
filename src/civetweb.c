@@ -6363,6 +6363,7 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	(void)mg_snprintf(conn, &truncated, dir, sizeof(dir), "%s", prog);
 
 	if (truncated) {
+		mg_cry(conn, "Error: CGI program \"%s\": Path too long", prog);
 		send_http_error(conn, 500, "Error: %s", "CGI path too long");
 		goto done;
 	}
@@ -6375,19 +6376,29 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	}
 
 	if (pipe(fdin) != 0 || pipe(fdout) != 0 || pipe(fderr) != 0) {
-		send_http_error(
-		    conn, 500, "Error: Cannot create CGI pipe: %s", strerror(ERRNO));
+		status = strerror(ERRNO);
+		mg_cry(conn,
+		       "Error: CGI program \"%s\": Can not create CGI pipes: %s",
+		       prog,
+		       status);
+		send_http_error(conn, 500, "Error: Cannot create CGI pipe: %s", status);
 		goto done;
 	}
 
 	pid = spawn_process(
 	    conn, p, blk.buf, blk.var, fdin[0], fdout[1], fderr[1], dir);
+
 	if (pid == (pid_t)-1) {
+		status = strerror(ERRNO);
+		mg_cry(conn,
+		       "Error: CGI program \"%s\": Can not spawn CGI process: %s",
+		       prog,
+		       status);
 		send_http_error(conn,
 		                500,
 		                "Error: Cannot spawn CGI process [%s]: %s",
 		                prog,
-		                strerror(ERRNO));
+		                status);
 		goto done;
 	}
 
@@ -6409,24 +6420,35 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 	fdin[0] = fdout[1] = fderr[1] = -1;
 
 	if ((in = fdopen(fdin[1], "wb")) == NULL) {
-		send_http_error(conn,
-		                500,
-		                "Error: CGI can not open fdin\nfopen: %s",
-		                strerror(ERRNO));
+		status = strerror(ERRNO);
+		mg_cry(conn,
+		       "Error: CGI program \"%s\": Can not open stdin: %s",
+		       prog,
+		       status);
+		send_http_error(
+		    conn, 500, "Error: CGI can not open fdin\nfopen: %s", status);
 		goto done;
 	}
+
 	if ((out = fdopen(fdout[0], "rb")) == NULL) {
-		send_http_error(conn,
-		                500,
-		                "Error: CGI can not open fdout\nfopen: %s",
-		                strerror(ERRNO));
+		status = strerror(ERRNO);
+		mg_cry(conn,
+		       "Error: CGI program \"%s\": Can not open stdout: %s",
+		       prog,
+		       status);
+		send_http_error(
+		    conn, 500, "Error: CGI can not open fdout\nfopen: %s", status);
 		goto done;
 	}
+
 	if ((err = fdopen(fderr[0], "rb")) == NULL) {
-		send_http_error(conn,
-		                500,
-		                "Error: CGI can not open fdout\nfopen: %s",
-		                strerror(ERRNO));
+		status = strerror(ERRNO);
+		mg_cry(conn,
+		       "Error: CGI program \"%s\": Can not open stderr: %s",
+		       prog,
+		       status);
+		send_http_error(
+		    conn, 500, "Error: CGI can not open fdout\nfopen: %s", status);
 		goto done;
 	}
 
@@ -6442,6 +6464,9 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 		/* This is a POST/PUT request */
 		if (!forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
 			/* Error sending the body data */
+			mg_cry(conn,
+			       "Error: CGI program \"%s\": Forward body data failed",
+			       prog);
 			goto done;
 		}
 	}
@@ -6462,6 +6487,11 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 		                500,
 		                "Error: Not enough memory for CGI buffer (%u bytes)",
 		                (unsigned int)buflen);
+		mg_cry(conn,
+		       "Error: CGI program \"%s\": Not enough memory for buffer (%u "
+		       "bytes)",
+		       prog,
+		       (unsigned int)buflen);
 		goto done;
 	}
 	headers_len = read_request(out, conn, buf, (int)buflen, &data_len);
@@ -6471,13 +6501,27 @@ static void handle_cgi_request(struct mg_connection *conn, const char *prog)
 		 * stderr. */
 		i = pull_all(err, conn, buf, (int)buflen);
 		if (i > 0) {
+			mg_cry(conn,
+			       "Error: CGI program \"%s\" sent error "
+			       "message: [%.*s]",
+			       prog,
+			       i,
+			       buf);
 			send_http_error(conn,
 			                500,
-			                "Error: CGI program sent error "
+			                "Error: CGI program \"%s\" sent error "
 			                "message: [%.*s]",
+			                prog,
 			                i,
 			                buf);
 		} else {
+			mg_cry(conn,
+			       "Error: CGI program sent malformed or too big "
+			       "(>%u bytes) HTTP headers: [%.*s]",
+			       (unsigned)buflen,
+			       data_len,
+			       buf);
+
 			send_http_error(conn,
 			                500,
 			                "Error: CGI program sent malformed or too big "
