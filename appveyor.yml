@@ -15,6 +15,27 @@ environment:
   c_standard: auto
   cxx_standard: auto  
   matrix:
+    - compiler: msvc-18-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+    - compiler: msvc-18-seh
+      build_shared: YES
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+    - compiler: msvc-18-seh
+      build_shared: YES
+      no_files: YES
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
     - compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: YES
@@ -43,28 +64,7 @@ environment:
       enable_ssl: YES
       enable_websockets: YES
       no_cgi: NO
-    - compiler: msvc-18-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: NO
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-    - compiler: msvc-18-seh
-      build_shared: YES
-      no_files: NO
-      enable_ipv6: NO
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
     - compiler: gcc-5.1.0-posix
-      build_shared: YES
-      no_files: YES
-      enable_ipv6: NO
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-    - compiler: msvc-18-seh
       build_shared: YES
       no_files: YES
       enable_ipv6: NO
