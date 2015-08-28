@@ -2707,7 +2707,6 @@ static pid_t spawn_process(struct mg_connection *conn,
 	memset(&si, 0, sizeof(si));
 	si.cb = sizeof(si);
 
-	/* TODO(lsm, mid): redirect CGI errors to the error log file */
 	si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
 	si.wShowWindow = SW_HIDE;
 
@@ -8677,9 +8676,8 @@ static void handle_request(struct mg_connection *conn)
 					              &is_put_or_delete_request);
 					callback_handler = NULL;
 
-					/* TODO (very low): goto is deprecatedm but for the moment,
-					 * a goto is
-					 * simpler than some curious loop. */
+					/* TODO (very low): goto is deprecated but for the moment,
+					 * a goto is simpler than some curious loop. */
 					/* The situation "callback does not handle the request"
 					 * needs to be reconsidered anyway. */
 					goto no_callback_resource;
@@ -8704,15 +8702,14 @@ static void handle_request(struct mg_connection *conn)
 		if (is_websocket_request) {
 			if (is_script_resource) {
 				/* Websocket Lua script */
-				handle_websocket_request(
-				    conn,
-				    path,
-				    !is_script_resource /* could be deprecated global callback */,
-				    NULL,
-				    NULL,
-				    NULL,
-				    NULL,
-				    &conn->ctx->callbacks);
+				handle_websocket_request(conn,
+				                         path,
+				                         0 /* Lua Script */,
+				                         NULL,
+				                         NULL,
+				                         NULL,
+				                         NULL,
+				                         &conn->ctx->callbacks);
 			} else {
 #if defined(MG_LEGACY_INTERFACE)
 				handle_websocket_request(
@@ -8857,6 +8854,7 @@ static void handle_request(struct mg_connection *conn)
 	}
 	return;
 }
+
 
 static void handle_file_based_request(struct mg_connection *conn,
                                       const char *path,
@@ -10356,19 +10354,31 @@ static void *worker_thread_run(void *thread_func_param)
 		while (consume_socket(ctx, &conn->client)) {
 			conn->conn_birth_time = time(NULL);
 
-			/* Fill in IP, port info early so even if SSL setup below fails,
-			 * error handler would have the corresponding info.
-			 * Thanks to Johannes Winkelmann for the patch.
-			 * TODO(lsm, high): Fix IPv6 case */
-			conn->request_info.remote_port =
-			    ntohs(conn->client.rsa.sin.sin_port);
+/* Fill in IP, port info early so even if SSL setup below fails,
+ * error handler would have the corresponding info.
+ * Thanks to Johannes Winkelmann for the patch.
+ */
+#if defined(USE_IPV6)
+			if (conn->client.rsa.sa.sa_family == AF_INET6) {
+				conn->request_info.remote_port =
+				    ntohs(conn->client.rsa.sin6.sin6_port);
+			} else
+#endif
+			{
+				conn->request_info.remote_port =
+				    ntohs(conn->client.rsa.sin.sin_port);
+			}
+
 			sockaddr_to_string(conn->request_info.remote_addr,
 			                   sizeof(conn->request_info.remote_addr),
 			                   &conn->client.rsa);
+
 #if defined(MG_LEGACY_INTERFACE)
+			/* This legacy interface only works for the IPv4 case */
 			addr = ntohl(conn->client.rsa.sin.sin_addr.s_addr);
 			memcpy(&conn->request_info.remote_ip, &addr, 4);
 #endif
+
 			conn->request_info.is_ssl = conn->client.is_ssl;
 
 			if (!conn->client.is_ssl
