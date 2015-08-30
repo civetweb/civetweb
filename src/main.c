@@ -43,9 +43,6 @@
 #define NO_RETURN
 #endif
 
-#define printf                                                                 \
-	DO_NOT_USE_THIS_FUNCTION__USE_fprintf /* Required for unit testing */
-
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -60,6 +57,9 @@
 #include <assert.h>
 
 #include "civetweb.h"
+
+#define printf                                                                 \
+	DO_NOT_USE_THIS_FUNCTION__USE_fprintf /* Required for unit testing */
 
 #if defined(_WIN32) &&                                                         \
     !defined(__SYMBIAN32__) /* WINDOWS / UNIX include block */
