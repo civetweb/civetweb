@@ -27,14 +27,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#define main                                                                   \
-	exe_main /* main is already used in the test suite,                        \
-	          * rename main in main.c */
+#include "private_exe.h"
+
 #include "../src/main.c"
 
 #include <stdlib.h>
-
-#include "private_exe.h"
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:

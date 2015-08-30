@@ -2223,7 +2223,9 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	return (int)msg.wParam;
 }
 
-int main(void) { return WinMain(0, 0, 0, 0); }
+
+int main(int argc, char *argv[]) { return WinMain(0, 0, 0, 0); }
+
 
 #elif defined(USE_COCOA)
 #import <Cocoa/Cocoa.h>
@@ -2250,6 +2252,7 @@ int main(void) { return WinMain(0, 0, 0, 0); }
 }
 - (void)shutDown { [NSApp terminate:nil]; }
 @end
+
 
 int main(int argc, char *argv[])
 {
@@ -2314,7 +2317,9 @@ int main(int argc, char *argv[])
 
 	return EXIT_SUCCESS;
 }
+
 #else
+
 int main(int argc, char *argv[])
 {
 	init_server_name(argc, (const char **)argv);

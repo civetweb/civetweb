@@ -25,4 +25,11 @@
 
 Suite *make_private_exe_suite(void);
 
+
+/* main is already used in the test suite,
+ * so this define will rename main in main.c */
+#define main exe_main
+int exe_main(int argc, char *argv[]);
+
+
 #endif /* TEST_PRIVATE_H_ */
