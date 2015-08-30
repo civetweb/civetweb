@@ -43,6 +43,9 @@
 #define NO_RETURN
 #endif
 
+#define printf                                                                 \
+	DO_NOT_USE_THIS_FUNCTION__USE_fprintf /* Required for unit testing */
+
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -457,10 +460,11 @@ static void read_config_file(const char *config_file, char **options)
 
 			/* Set option */
 			if (!set_option(options, line + i, line + j)) {
-				printf("%s: line %d is invalid, ignoring it:\n %s",
-				       config_file,
-				       (int)line_no,
-				       p);
+				fprintf(stderr,
+				        "%s: line %d is invalid, ignoring it:\n %s",
+				        config_file,
+				        (int)line_no,
+				        p);
 			}
 		}
 
@@ -523,9 +527,11 @@ static void process_command_line_arguments(char *argv[], char **options)
 				show_usage_and_exit(argv[0]);
 			}
 			if (!set_option(options, &argv[i][1], argv[i + 1])) {
-				printf("command line option is invalid, ignoring it:\n %s %s\n",
-				       argv[i],
-				       argv[i + 1]);
+				fprintf(
+				    stderr,
+				    "command line option is invalid, ignoring it:\n %s %s\n",
+				    argv[i],
+				    argv[i + 1]);
 			}
 		}
 	}
@@ -564,7 +570,7 @@ static int log_message(const struct mg_connection *conn, const char *message)
 	const struct mg_context *ctx = mg_get_context(conn);
 	struct tuser_data *ud = (struct tuser_data *)mg_get_user_data(ctx);
 
-	printf("%s\n", message);
+	fprintf(stderr, "%s\n", message);
 
 	if (ud->first_message == NULL) {
 		ud->first_message = strdup(message);
@@ -746,97 +752,110 @@ static void start_civetweb(int argc, char *argv[])
 		dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
 
 		(void)MakeConsole();
-		printf("\n%s\n", g_server_name);
-		printf("%s - Windows %u.%u\n",
-		       g_server_base_name,
-		       (unsigned)dwMajorVersion,
-		       (unsigned)dwMinorVersion);
+		fprintf(stdout, "\n%s\n", g_server_name);
+		fprintf(stdout,
+		        "%s - Windows %u.%u\n",
+		        g_server_base_name,
+		        (unsigned)dwMajorVersion,
+		        (unsigned)dwMinorVersion);
 
-		printf("CPU: type %u, cores %u, mask %x\n",
-		       (unsigned)si.wProcessorArchitecture,
-		       (unsigned)si.dwNumberOfProcessors,
-		       (unsigned)si.dwActiveProcessorMask);
+		fprintf(stdout,
+		        "CPU: type %u, cores %u, mask %x\n",
+		        (unsigned)si.wProcessorArchitecture,
+		        (unsigned)si.dwNumberOfProcessors,
+		        (unsigned)si.dwActiveProcessorMask);
 
 #else
-		printf("\n%s\n", g_server_name);
-		printf("%s - Symbian\n", g_server_base_name);
+		fprintf(stdout, "\n%s\n", g_server_name);
+		fprintf(stdout, "%s - Symbian\n", g_server_base_name);
 #endif
 #else
 		struct utsname name;
 		memset(&name, 0, sizeof(name));
 		uname(&name);
-		printf("\n%s\n", g_server_name);
-		printf("%s - %s %s (%s) - %s\n",
-		       g_server_base_name,
-		       name.sysname,
-		       name.version,
-		       name.release,
-		       name.machine);
+		fprintf(stdout, "\n%s\n", g_server_name);
+		fprintf(stdout,
+		        "%s - %s %s (%s) - %s\n",
+		        g_server_base_name,
+		        name.sysname,
+		        name.version,
+		        name.release,
+		        name.machine);
 #endif
 
-		printf("Features:");
+		fprintf(stdout, "Features:");
 		if (mg_check_feature(1)) {
-			printf(" Files");
+			fprintf(stdout, " Files");
 		}
 		if (mg_check_feature(2)) {
-			printf(" HTTPS");
+			fprintf(stdout, " HTTPS");
 		}
 		if (mg_check_feature(4)) {
-			printf(" CGI");
+			fprintf(stdout, " CGI");
 		}
 		if (mg_check_feature(8)) {
-			printf(" IPv6");
+			fprintf(stdout, " IPv6");
 		}
 		if (mg_check_feature(16)) {
-			printf(" WebSockets");
+			fprintf(stdout, " WebSockets");
 		}
 		if (mg_check_feature(32)) {
-			printf(" Lua");
+			fprintf(stdout, " Lua");
 		}
-		printf("\n");
+		fprintf(stdout, "\n");
 
 #ifdef USE_LUA
-		printf(
-		    "Lua Version: %u (%s)\n", (unsigned)LUA_VERSION_NUM, LUA_RELEASE);
+		fprintf(stdout,
+		        "Lua Version: %u (%s)\n",
+		        (unsigned)LUA_VERSION_NUM,
+		        LUA_RELEASE);
 #endif
 
-		printf("Version: %s\n", version);
+		fprintf(stdout, "Version: %s\n", version);
 
-		printf("Build: %s\n", __DATE__);
+		fprintf(stdout, "Build: %s\n", __DATE__);
 
 /* http://sourceforge.net/p/predef/wiki/Compilers/ */
 #if defined(_MSC_VER)
-		printf("MSC: %u (%u)\n", (unsigned)_MSC_VER, (unsigned)_MSC_FULL_VER);
+		fprintf(stdout,
+		        "MSC: %u (%u)\n",
+		        (unsigned)_MSC_VER,
+		        (unsigned)_MSC_FULL_VER);
 #elif defined(__MINGW64__)
-		printf("MinGW64: %u.%u\n",
-		       (unsigned)__MINGW64_MAJOR_VERSION,
-		       (unsigned)__MINGW64_MAJOR_VERSION);
-		printf("MinGW32: %u.%u\n",
-		       (unsigned)__MINGW32_MAJOR_VERSION,
-		       (unsigned)__MINGW32_MAJOR_VERSION);
+		fprintf(stdout,
+		        "MinGW64: %u.%u\n",
+		        (unsigned)__MINGW64_MAJOR_VERSION,
+		        (unsigned)__MINGW64_MAJOR_VERSION);
+		fprintf(stdout,
+		        "MinGW32: %u.%u\n",
+		        (unsigned)__MINGW32_MAJOR_VERSION,
+		        (unsigned)__MINGW32_MAJOR_VERSION);
 #elif defined(__MINGW32__)
-		printf("MinGW32: %u.%u\n",
-		       (unsigned)__MINGW32_MAJOR_VERSION,
-		       (unsigned)__MINGW32_MAJOR_VERSION);
+		fprintf(stdout,
+		        "MinGW32: %u.%u\n",
+		        (unsigned)__MINGW32_MAJOR_VERSION,
+		        (unsigned)__MINGW32_MAJOR_VERSION);
 #elif defined(__clang__)
-		printf("clang: %u.%u.%u (%s)\n",
-		       __clang_major__,
-		       __clang_minor__,
-		       __clang_patchlevel__,
-		       __clang_version__);
+		fprintf(stdout,
+		        "clang: %u.%u.%u (%s)\n",
+		        __clang_major__,
+		        __clang_minor__,
+		        __clang_patchlevel__,
+		        __clang_version__);
 #elif defined(__GNUC__)
-		printf("gcc: %u.%u.%u\n",
-		       (unsigned)__GNUC__,
-		       (unsigned)__GNUC_MINOR__,
-		       (unsigned)__GNUC_PATCHLEVEL__);
+		fprintf(stdout,
+		        "gcc: %u.%u.%u\n",
+		        (unsigned)__GNUC__,
+		        (unsigned)__GNUC_MINOR__,
+		        (unsigned)__GNUC_PATCHLEVEL__);
 #elif defined(__INTEL_COMPILER)
-		printf("Intel C/C++: %u\n", (unsigned)__INTEL_COMPILER);
+		fprintf(stdout, "Intel C/C++: %u\n", (unsigned)__INTEL_COMPILER);
 #elif defined(__BORLANDC__)
-		printf("Borland C: 0x%x\n", (unsigned)__BORLANDC__);
+		fprintf(stdout, "Borland C: 0x%x\n", (unsigned)__BORLANDC__);
 #elif defined(__SUNPRO_C)
-		printf("Solaris: 0x%x\n", (unsigned)__SUNPRO_C);
+		fprintf(stdout, "Solaris: 0x%x\n", (unsigned)__SUNPRO_C);
 #else
-		printf("Other\n");
+		fprintf(stdout, "Other\n");
 #endif
 
 		exit(EXIT_SUCCESS);
@@ -2047,7 +2066,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			manage_service(LOWORD(wParam));
 			break;
 		case ID_CONNECT:
-			printf("[%s]\n", get_url_to_first_open_port(g_ctx));
+			fprintf(stdout, "[%s]\n", get_url_to_first_open_port(g_ctx));
 			ShellExecute(NULL,
 			             "open",
 			             get_url_to_first_open_port(g_ctx),
@@ -2300,18 +2319,20 @@ int main(int argc, char *argv[])
 {
 	init_server_name(argc, (const char **)argv);
 	start_civetweb(argc, argv);
-	printf("%s started on port(s) %s with web root [%s]\n",
-	       g_server_name,
-	       mg_get_option(g_ctx, "listening_ports"),
-	       mg_get_option(g_ctx, "document_root"));
+	fprintf(stdout,
+	        "%s started on port(s) %s with web root [%s]\n",
+	        g_server_name,
+	        mg_get_option(g_ctx, "listening_ports"),
+	        mg_get_option(g_ctx, "document_root"));
 	while (g_exit_flag == 0) {
 		sleep(1);
 	}
-	printf("Exiting on signal %d, waiting for all threads to finish...",
-	       g_exit_flag);
+	fprintf(stdout,
+	        "Exiting on signal %d, waiting for all threads to finish...",
+	        g_exit_flag);
 	fflush(stdout);
 	stop_civetweb();
-	printf("%s", " done.\n");
+	fprintf(stdout, "%s", " done.\n");
 
 	return EXIT_SUCCESS;
 }
