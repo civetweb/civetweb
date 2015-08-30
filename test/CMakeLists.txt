@@ -85,12 +85,23 @@ target_include_directories(
 target_link_libraries(private-c-unit-tests ${CHECK_LIBRARIES})
 add_dependencies(private-c-unit-tests check-unit-test-framework)
 
+add_library(exe-unit-tests STATIC private_exe.c)
+if (BUILD_SHARED_LIBS)
+  target_compile_definitions(exe-unit-tests PRIVATE)
+endif()
+target_include_directories(
+  exe-unit-tests PUBLIC
+  ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(exe-unit-tests c-library ${CHECK_LIBRARIES})
+add_dependencies(exe-unit-tests check-unit-test-framework)
+
 add_executable(civetweb-c-unit-test main.c)
 target_link_libraries(civetweb-c-unit-test
   shared-c-unit-tests
   public-func-c-unit-tests
   public-server-c-unit-tests
   private-c-unit-tests
+  exe-unit-tests
   ${CHECK_LIBRARIES})
 add_dependencies(civetweb-c-unit-test check-unit-test-framework)
 
@@ -136,6 +147,9 @@ civetweb_add_test(PublicServer "Start threads")
 civetweb_add_test(PublicServer "Start Stop HTTP Server")
 civetweb_add_test(PublicServer "Start Stop HTTPS Server")
 civetweb_add_test(PublicServer "Server Requests")
+
+# Tests with main.c
+civetweb_add_test(EXE "Helper funcs")
 
 
 # Add the coverage command(s)
