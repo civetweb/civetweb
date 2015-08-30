@@ -194,7 +194,8 @@ int clock_gettime(int clk_id, struct timespec *t)
 mg_static_assert(MAX_WORKER_THREADS >= 1,
                  "worker threads must be a positive number");
 
-#if defined(_WIN32) && !defined(__SYMBIAN32__) /* Windows specific */
+#if defined(_WIN32) &&                                                         \
+    !defined(__SYMBIAN32__) /* WINDOWS / UNIX include block */
 #include <windows.h>
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
 #include <ws2tcpip.h>
@@ -370,7 +371,8 @@ struct pollfd {
 #pragma comment(lib, "Ws2_32.lib")
 #endif
 
-#else /* UNIX  specific */
+#else /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include   \
+         block */
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
@@ -438,7 +440,8 @@ typedef int SOCKET;
 #define socklen_t int
 #endif /* hpux */
 
-#endif /* End of Windows and UNIX specific includes */
+#endif /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include  \
+          block */
 
 /* va_copy should always be a macro, C99 and C++11 - DTL */
 #ifndef va_copy

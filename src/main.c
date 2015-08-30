@@ -44,7 +44,6 @@
 #endif
 
 #include <sys/stat.h>
-#include <sys/utsname.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -59,7 +58,8 @@
 
 #include "civetweb.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) &&                                                         \
+    !defined(__SYMBIAN32__) /* WINDOWS / UNIX include block */
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0501 /* for tdm-gcc so we can use getconsolewindow */
 #endif
@@ -94,13 +94,19 @@ static int guard = 0; /* test if any dialog is already open */
 #define sleep(x) (Sleep((x)*1000))
 #define WINCDECL __cdecl
 #define abs_path(rel, abs, abs_size) (_fullpath((abs), (rel), (abs_size)))
-#else
+
+#else /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include   \
+         block */
+
+#include <sys/utsname.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #define DIRSEP '/'
 #define WINCDECL
 #define abs_path(rel, abs, abs_size) (realpath((rel), (abs)))
-#endif /* _WIN32 */
+
+#endif /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include  \
+          block */
 
 #define MAX_OPTIONS (50)
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
@@ -757,7 +763,7 @@ static void start_civetweb(int argc, char *argv[])
 #endif
 #else
 		struct utsname name;
-                memset(&name, 0, sizeof(name));
+		memset(&name, 0, sizeof(name));
 		uname(&name);
 		printf("\n%s\n", g_server_name);
 		printf("%s - %s %s (%s) - %s\n",
