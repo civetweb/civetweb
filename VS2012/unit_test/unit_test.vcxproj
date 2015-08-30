@@ -22,6 +22,7 @@
     <ClCompile Include="..\..\test\private.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\test\private_exe.c" />
     <ClCompile Include="..\..\test\public_func.c" />
     <ClCompile Include="..\..\test\public_server.c" />
   </ItemGroup>

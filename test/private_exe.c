@@ -26,7 +26,10 @@
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #endif
-#define printf DO_NOT_USE_PRINTF
+
+#define main                                                                   \
+	exe_main /* main is already used in the test suite,                        \
+	          * rename main in main.c */
 #include "../src/main.c"
 
 #include <stdlib.h>
@@ -40,15 +43,15 @@
 
 START_TEST(test_helper_funcs)
 {
-    const char *psrc = "test str";
+	const char *psrc = "test str";
 	char *pdst;
 
-    /* test sdup */
-    pdst = sdup(psrc);
-    ck_assert(pdst != NULL);
-    ck_assert_str_eq(pdst, psrc);
+	/* test sdup */
+	pdst = sdup(psrc);
+	ck_assert(pdst != NULL);
+	ck_assert_str_eq(pdst, psrc);
 	ck_assert_ptr_ne(pdst, psrc);
-    free(pdst);
+	free(pdst);
 }
 END_TEST
 
@@ -61,7 +64,7 @@ Suite *make_private_exe_suite(void)
 
 	tcase_add_test(helper_funcs, test_helper_funcs);
 	tcase_set_timeout(helper_funcs, civetweb_min_test_timeout);
-	suite_add_tcase(suite, encode_decode);
+	suite_add_tcase(suite, helper_funcs);
 
 	return suite;
 }
