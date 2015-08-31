@@ -21,14 +21,23 @@
 */
 
 #if defined(_WIN32)
+
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
 #endif
 #ifndef _CRT_SECURE_NO_DEPRECATE
 #define _CRT_SECURE_NO_DEPRECATE
 #endif
+
 #else
+
 #define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
+/* This should also be sufficient for "realpath", according to
+ * http://man7.org/linux/man-pages/man3/realpath.3.html, but in
+ * reality it does not seem to work. Try some other defines. */
+#define _BSD_SOURCE
+#define _XOPEN_SOURCE_EXTENDED
+
 #endif
 
 #ifndef IGNORE_UNUSED_RESULT
@@ -46,11 +55,11 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
-#include <limits.h>
 #include <stddef.h>
 #include <stdarg.h>
 #include <ctype.h>
