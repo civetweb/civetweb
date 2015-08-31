@@ -9837,13 +9837,23 @@ struct mg_connection *mg_connect_client(
 	return conn;
 }
 
+
 static int is_valid_uri(const char *uri)
 {
-	/* Conform to
+	/* According to the HTTP standard
 	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.2
-	 * URI can be an asterisk (*) or should start with slash. */
-	return uri[0] == '/' || (uri[0] == '*' && uri[1] == '\0');
+	 * URI can be an asterisk (*) or should start with slash (relative uri),
+     * or it should start with the protocoll (absolute uri). */
+    if (uri[0] == '*' && uri[1] == '\0') {
+        return 1;
+    }
+    if (uri[0] == '/') {
+        return 1;
+    }
+    /* TODO: support absoluteURI #197 */
+	return 0;
 }
+
 
 static int
 getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
