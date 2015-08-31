@@ -78,11 +78,6 @@ extern char *_getcwd(char *buf, size_t size);
 #endif
 static int guard = 0; /* test if any dialog is already open */
 
-#if defined(_MSC_VER)
-#define strdup _strdup
-/* or #pragma warning (disable : 4996 ) */
-#endif
-
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
 #endif
@@ -110,6 +105,10 @@ static int guard = 0; /* test if any dialog is already open */
 
 #endif /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include  \
           block */
+
+#ifndef PATH_MAX
+#define PATH_MAX (1024)
+#endif
 
 #define MAX_OPTIONS (50)
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
@@ -573,7 +572,7 @@ static int log_message(const struct mg_connection *conn, const char *message)
 	fprintf(stderr, "%s\n", message);
 
 	if (ud->first_message == NULL) {
-		ud->first_message = strdup(message);
+		ud->first_message = sdup(message);
 	}
 
 	return 0;
