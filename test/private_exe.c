@@ -33,12 +33,7 @@
  * http://man7.org/linux/man-pages/man3/realpath.3.html
  * defining _XOPEN_SOURCE 600 should be enough, but in
  * practice this does not work. */
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wimplicit-function-declaration"
-#endif
-#ifdef GCC
-#pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
-#endif
+extern char *realpath(const char *path, char *resolved_path);
 
 #include "../src/main.c"
 
