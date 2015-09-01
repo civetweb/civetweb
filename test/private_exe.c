@@ -29,6 +29,17 @@
 
 #include "private_exe.h"
 
+/* This is required for "realpath". According to
+ * http://man7.org/linux/man-pages/man3/realpath.3.html
+ * defining _XOPEN_SOURCE 600 should be enough, but in
+ * practice this does not work. */
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wimplicit-function-declaration"
+#endif
+#ifdef GCC
+#pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#endif
+
 #include "../src/main.c"
 
 #include <stdlib.h>

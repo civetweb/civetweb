@@ -34,10 +34,11 @@
 #define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
 /* This should also be sufficient for "realpath", according to
  * http://man7.org/linux/man-pages/man3/realpath.3.html, but in
- * reality it does not seem to work. Try some other defines. */
-#define _BSD_SOURCE
-#define _XOPEN_SOURCE_EXTENDED
-
+ * reality it does not seem to work. */
+/* In case this causes a problem, disable the warning:
+ * #pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+ * #pragma clang diagnostic ignored "-Wimplicit-function-declaration"
+ */
 #endif
 
 #ifndef IGNORE_UNUSED_RESULT
