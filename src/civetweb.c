@@ -9838,13 +9838,12 @@ struct mg_connection *mg_connect_client(
 }
 
 
-static int is_valid_uri(const char *uri, const struct mg_context *ctx)
+static int is_valid_uri(const char *uri, const struct mg_connection *conn)
 {
 	const char *domain;
 	size_t domain_len;
 	unsigned long port;
 	char *pend;
-	int i;
 
 	/* According to the HTTP standard
 	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.2
@@ -9858,7 +9857,7 @@ static int is_valid_uri(const char *uri, const struct mg_context *ctx)
 	}
 
 	/* DNS is case insensitive, so use case insensitive string compare here */
-	domain = ctx->config[AUTHENTICATION_DOMAIN];
+	domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
 	if (!domain) {
 		return 0;
 	}
@@ -9940,13 +9939,13 @@ static int is_valid_uri(const char *uri, const struct mg_context *ctx)
 		return 0;
 	}
 
-	for (i = 0; i < (int)ctx->num_listening_sockets; i++) {
-		if (ctx->listening_ports[i] == port) {
-			return 1;
-		}
+#if defined(USE_IPV6)
+	if (conn->client.lsa.sa.sa_family == AF_INET6) {
+		return (conn->client.lsa.sin6.sin6_port == port);
 	}
-
-	return 0;
+#endif
+	
+    return (conn->client.lsa.sin.sin_port == port);
 }
 
 
@@ -10317,7 +10316,7 @@ static void process_new_connection(struct mg_connection *conn)
 					/*assert(ebuf[0] != '\0');*/
 					send_http_error(conn, reqerr, "%s", ebuf);
 				}
-			} else if (!is_valid_uri(conn->request_info.uri, conn->ctx)) {
+			} else if (!is_valid_uri(conn->request_info.uri, conn)) {
 				mg_snprintf(conn,
 				            NULL, /* No truncation check for ebuf */
 				            ebuf,
