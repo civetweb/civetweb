@@ -9595,6 +9595,7 @@ static void reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.remote_user = NULL;
 	conn->request_info.request_method = NULL;
 	conn->request_info.uri = NULL;
+	conn->request_info.rel_uri = NULL;
 	conn->request_info.http_version = NULL;
 	conn->request_info.num_headers = 0;
 	conn->data_len = 0;
@@ -9849,6 +9850,7 @@ struct {
                                 {NULL, 0, 0}};
 
 
+/* return 0 for invalid uri, 1 for *, 2 for relative uri, 3 for absolute uri without port and 4 dor absolute uri with port */
 static int is_valid_uri(const char *uri)
 {
 	int i;
@@ -9865,7 +9867,7 @@ static int is_valid_uri(const char *uri)
 	}
 	if (uri[0] == '/') {
 		/* relative uri */
-		return 1;
+		return 2;
 	}
 
 	/* it could be an absolute uri */
@@ -9884,7 +9886,7 @@ static int is_valid_uri(const char *uri)
 			}
 			portbegin = strchr(uri + abs_uri_protocols[i].proto_len, ':');
 			if (!portbegin) {
-				return 1;
+				return 3;
 			}
 
 			port = strtoul(portbegin + 1, &portend, 10);
@@ -9892,7 +9894,7 @@ static int is_valid_uri(const char *uri)
 				return 0;
 			}
 
-			return 1;
+			return 4;
 		}
 	}
 
@@ -9900,8 +9902,10 @@ static int is_valid_uri(const char *uri)
 }
 
 
-static int is_absolute_uri_at_current_server(const char *uri,
-                                             const struct mg_connection *conn)
+/* Return NULL or the relative uri at the current server */
+static const char *
+is_absolute_uri_at_current_server(const char *uri,
+                                  const struct mg_connection *conn)
 {
 	const char *domain;
 	size_t domain_len;
@@ -9937,6 +9941,7 @@ static int is_absolute_uri_at_current_server(const char *uri,
 					return 0;
 				}
 			}
+			/* protocol found, port set */
 		}
 	}
 
@@ -9947,11 +9952,17 @@ static int is_absolute_uri_at_current_server(const char *uri,
 
 #if defined(USE_IPV6)
 	if (conn->client.lsa.sa.sa_family == AF_INET6) {
-		return (conn->client.lsa.sin6.sin6_port == port);
-	}
+		if (conn->client.lsa.sin6.sin6_port != port) {
+			return 0;
+		}
+	} else
 #endif
-
-	return (conn->client.lsa.sin.sin_port == port);
+	{
+		if (conn->client.lsa.sin.sin_port == port) {
+			return 0;
+		}
+	}
+	return hostend;
 }
 
 
@@ -10299,13 +10310,15 @@ mg_connect_websocket_client(const char *host,
 	return conn;
 }
 
+
 static void process_new_connection(struct mg_connection *conn)
 {
 	if (conn && conn->ctx) {
 		struct mg_request_info *ri = &conn->request_info;
 		int keep_alive_enabled, keep_alive, discard_len;
 		char ebuf[100];
-		int reqerr;
+		const char *hostend;
+		int reqerr, uri_type;
 
 		keep_alive_enabled =
 		    !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
@@ -10322,7 +10335,7 @@ static void process_new_connection(struct mg_connection *conn)
 					/*assert(ebuf[0] != '\0');*/
 					send_http_error(conn, reqerr, "%s", ebuf);
 				}
-			} else if (!is_valid_uri(conn->request_info.uri)) {
+			} else if ((uri_type = is_valid_uri(conn->request_info.uri)) == 0) {
 				mg_snprintf(conn,
 				            NULL, /* No truncation check for ebuf */
 				            ebuf,
@@ -10339,6 +10352,36 @@ static void process_new_connection(struct mg_connection *conn)
 				            "Bad HTTP version: [%s]",
 				            ri->http_version);
 				send_http_error(conn, 505, "%s", ebuf);
+			}
+
+			switch (uri_type) {
+			case 1:
+				/* Asterisk */
+				conn->request_info.rel_uri = NULL;
+				break;
+			case 2:
+				/* relative uri */
+				conn->request_info.rel_uri = conn->request_info.uri;
+				break;
+			case 3:
+				/* absolute uri */
+				hostend = is_absolute_uri_at_current_server(
+				    conn->request_info.uri, conn);
+				if (hostend) {
+					conn->request_info.rel_uri = hostend;
+				} else {
+					conn->request_info.rel_uri = NULL;
+				}
+				break;
+			default:
+				mg_snprintf(conn,
+				            NULL, /* No truncation check for ebuf */
+				            ebuf,
+				            sizeof(ebuf),
+				            "Invalid URI: [%s]",
+				            ri->uri);
+				send_http_error(conn, 400, "%s", ebuf);
+				break;
 			}
 
 			if (ebuf[0] == '\0') {
@@ -10392,6 +10435,7 @@ static void process_new_connection(struct mg_connection *conn)
 	}
 }
 
+
 /* Worker threads take accepted socket from the queue */
 static int consume_socket(struct mg_context *ctx, struct socket *sp)
 {
@@ -10430,6 +10474,7 @@ static int consume_socket(struct mg_context *ctx, struct socket *sp)
 	return !ctx->stop_flag;
 #undef QUEUE_SIZE
 }
+
 
 static void *worker_thread_run(void *thread_func_param)
 {
@@ -10524,8 +10569,8 @@ static void *worker_thread_run(void *thread_func_param)
 	return NULL;
 }
 
-/* Threads have different return types on Windows and Unix. */
 
+/* Threads have different return types on Windows and Unix. */
 #ifdef _WIN32
 static unsigned __stdcall worker_thread(void *thread_func_param)
 {
@@ -10539,6 +10584,7 @@ static void *worker_thread(void *thread_func_param)
 	return NULL;
 }
 #endif /* _WIN32 */
+
 
 /* Master thread adds accepted socket to a queue */
 static void produce_socket(struct mg_context *ctx, const struct socket *sp)
@@ -10566,6 +10612,7 @@ static void produce_socket(struct mg_context *ctx, const struct socket *sp)
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 #undef QUEUE_SIZE
 }
+
 
 static void accept_new_connection(const struct socket *listener,
                                   struct mg_context *ctx)
@@ -10635,6 +10682,7 @@ static void accept_new_connection(const struct socket *listener,
 		produce_socket(ctx, &so);
 	}
 }
+
 
 static void master_thread_run(void *thread_func_param)
 {
