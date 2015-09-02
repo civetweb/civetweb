@@ -6727,6 +6727,7 @@ static void mkcol(struct mg_connection *conn, const char *path)
 	}
 }
 
+
 static void put_file(struct mg_connection *conn, const char *path)
 {
 	struct file file = STRUCT_FILE_INITIALIZER;
@@ -6860,6 +6861,7 @@ static void put_file(struct mg_connection *conn, const char *path)
 
 	mg_fclose(&file);
 }
+
 
 static void delete_file(struct mg_connection *conn, const char *path)
 {
@@ -7004,6 +7006,7 @@ static void do_ssi_include(struct mg_connection *conn,
 	}
 }
 
+
 #if !defined(NO_POPEN)
 static void do_ssi_exec(struct mg_connection *conn, char *tag)
 {
@@ -7039,6 +7042,7 @@ static int mg_fgetc(struct file *filep, int offset)
 		return EOF;
 	}
 }
+
 
 static void send_ssi_file(struct mg_connection *conn,
                           const char *path,
@@ -7112,6 +7116,7 @@ static void send_ssi_file(struct mg_connection *conn,
 		mg_write(conn, buf, (size_t)len);
 	}
 }
+
 
 static void handle_ssi_file_request(struct mg_connection *conn,
                                     const char *path,
@@ -7188,6 +7193,7 @@ static void send_options(struct mg_connection *conn)
 	          suggest_connection_header(conn));
 }
 
+
 /* Writes PROPFIND properties for a collection element */
 static void
 print_props(struct mg_connection *conn, const char *uri, struct file *filep)
@@ -7218,6 +7224,7 @@ print_props(struct mg_connection *conn, const char *uri, struct file *filep)
 	              mtime);
 }
 
+
 static void print_dav_dir_entry(struct de *de, void *data)
 {
 	char href[PATH_MAX];
@@ -7241,6 +7248,7 @@ static void print_dav_dir_entry(struct de *de, void *data)
 		print_props(conn, href_encoded, &de->file);
 	}
 }
+
 
 static void handle_propfind(struct mg_connection *conn,
                             const char *path,
@@ -7285,12 +7293,14 @@ static void handle_propfind(struct mg_connection *conn,
 }
 #endif
 
+
 void mg_lock_connection(struct mg_connection *conn)
 {
 	if (conn) {
 		(void)pthread_mutex_lock(&conn->mutex);
 	}
 }
+
 
 void mg_unlock_connection(struct mg_connection *conn)
 {
@@ -7299,12 +7309,14 @@ void mg_unlock_connection(struct mg_connection *conn)
 	}
 }
 
+
 void mg_lock_context(struct mg_context *ctx)
 {
 	if (ctx) {
 		(void)pthread_mutex_lock(&ctx->nonce_mutex);
 	}
 }
+
 
 void mg_unlock_context(struct mg_context *ctx)
 {
@@ -7313,13 +7325,16 @@ void mg_unlock_context(struct mg_context *ctx)
 	}
 }
 
+
 #if defined(USE_TIMERS)
 #include "timer.inl"
 #endif /* USE_TIMERS */
 
+
 #ifdef USE_LUA
 #include "mod_lua.inl"
 #endif /* USE_LUA */
+
 
 #if defined(USE_WEBSOCKET)
 
@@ -7340,12 +7355,15 @@ static int is_big_endian(void)
 	return ((char *)&n)[0] == 0;
 }
 
+
 union char64long16 {
 	unsigned char c[64];
 	uint32_t l[16];
 };
 
+
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
+
 
 static uint32_t blk0(union char64long16 *block, int i)
 {
@@ -7356,6 +7374,7 @@ static uint32_t blk0(union char64long16 *block, int i)
 	}
 	return block->l[i];
 }
+
 
 #define blk(i)                                                                 \
 	(block->l[i & 15] = rol(block->l[(i + 13) & 15] ^ block->l[(i + 8) & 15] ^ \
@@ -7377,11 +7396,13 @@ static uint32_t blk0(union char64long16 *block, int i)
 	z += (w ^ x ^ y) + blk(i) + 0xCA62C1D6 + rol(v, 5);                        \
 	w = rol(w, 30);
 
+
 typedef struct {
 	uint32_t state[5];
 	uint32_t count[2];
 	unsigned char buffer[64];
 } SHA1_CTX;
+
 
 static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64])
 {
@@ -7483,6 +7504,7 @@ static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64])
 	memset(block, '\0', sizeof(block));
 }
 
+
 static void SHA1Init(SHA1_CTX *context)
 {
 	context->state[0] = 0x67452301;
@@ -7492,6 +7514,7 @@ static void SHA1Init(SHA1_CTX *context)
 	context->state[4] = 0xC3D2E1F0;
 	context->count[0] = context->count[1] = 0;
 }
+
 
 static void
 SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len)
@@ -7515,6 +7538,7 @@ SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len)
 		i = 0;
 	memcpy(&context->buffer[j], &data[i], len - i);
 }
+
 
 static void SHA1Final(unsigned char digest[20], SHA1_CTX *context)
 {
@@ -7542,6 +7566,7 @@ static void SHA1Final(unsigned char digest[20], SHA1_CTX *context)
 	memset(&finalcount, '\0', sizeof(finalcount));
 }
 /* END OF SHA1 CODE */
+
 
 static int send_websocket_handshake(struct mg_connection *conn)
 {
@@ -7583,6 +7608,7 @@ static int send_websocket_handshake(struct mg_connection *conn)
 
 	return 1;
 }
+
 
 static void read_websocket(struct mg_connection *conn,
                            mg_websocket_data_handler ws_data_handler,
@@ -7750,6 +7776,7 @@ static void read_websocket(struct mg_connection *conn,
 	mg_set_thread_name("worker");
 }
 
+
 int mg_websocket_write(struct mg_connection *conn,
                        int opcode,
                        const char *data,
@@ -7792,6 +7819,7 @@ int mg_websocket_write(struct mg_connection *conn,
 
 	return retval;
 }
+
 
 static void
 handle_websocket_request(struct mg_connection *conn,
@@ -7895,6 +7923,7 @@ handle_websocket_request(struct mg_connection *conn,
 	}
 }
 
+
 static int is_websocket_protocol(const struct mg_connection *conn)
 {
 	const char *host, *upgrade, *connection, *version, *key;
@@ -7924,7 +7953,9 @@ static int is_websocket_protocol(const struct mg_connection *conn)
 }
 #endif /* !USE_WEBSOCKET */
 
+
 static int isbyte(int n) { return n >= 0 && n <= 255; }
+
 
 static int parse_net(const char *spec, uint32_t *net, uint32_t *mask)
 {
@@ -7942,6 +7973,7 @@ static int parse_net(const char *spec, uint32_t *net, uint32_t *mask)
 
 	return len;
 }
+
 
 static int set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
 {
@@ -7974,6 +8006,7 @@ static int set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
 	return throttle;
 }
 
+
 static uint32_t get_remote_ip(const struct mg_connection *conn)
 {
 	if (!conn) {
@@ -7981,6 +8014,7 @@ static uint32_t get_remote_ip(const struct mg_connection *conn)
 	}
 	return ntohl(*(uint32_t *)&conn->client.rsa.sin.sin_addr);
 }
+
 
 int mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
@@ -8162,6 +8196,7 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 	return num_uploaded_files;
 }
 
+
 static int get_first_ssl_listener_index(const struct mg_context *ctx)
 {
 	unsigned int i;
@@ -8173,6 +8208,7 @@ static int get_first_ssl_listener_index(const struct mg_context *ctx)
 	}
 	return idx;
 }
+
 
 static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 {
@@ -8213,6 +8249,7 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 		              : conn->request_info.query_string);
 	}
 }
+
 
 static void
 mg_set_request_handler_type(struct mg_context *ctx,
@@ -8331,6 +8368,7 @@ mg_set_request_handler_type(struct mg_context *ctx,
 	mg_unlock_context(ctx);
 }
 
+
 void mg_set_request_handler(struct mg_context *ctx,
                             const char *uri,
                             mg_request_handler handler,
@@ -8339,6 +8377,7 @@ void mg_set_request_handler(struct mg_context *ctx,
 	mg_set_request_handler_type(
 	    ctx, uri, 0, handler == NULL, handler, NULL, NULL, NULL, NULL, cbdata);
 }
+
 
 void mg_set_websocket_handler(struct mg_context *ctx,
                               const char *uri,
@@ -8362,6 +8401,7 @@ void mg_set_websocket_handler(struct mg_context *ctx,
 	                            close_handler,
 	                            cbdata);
 }
+
 
 static int get_request_handler(struct mg_connection *conn,
                                int is_websocket_request,
@@ -8450,6 +8490,7 @@ static int get_request_handler(struct mg_connection *conn,
 	return 0; /* none found */
 }
 
+
 #if defined(USE_WEBSOCKET) && defined(MG_LEGACY_INTERFACE)
 static int
 deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
@@ -8463,6 +8504,7 @@ deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
 	return 0;
 }
 
+
 static void deprecated_websocket_ready_wrapper(struct mg_connection *conn,
                                                void *cbdata)
 {
@@ -8471,6 +8513,7 @@ static void deprecated_websocket_ready_wrapper(struct mg_connection *conn,
 		pcallbacks->websocket_ready(conn);
 	}
 }
+
 
 static int deprecated_websocket_data_wrapper(
     struct mg_connection *conn, int bits, char *data, size_t len, void *cbdata)
@@ -8483,6 +8526,7 @@ static int deprecated_websocket_data_wrapper(
 	return 1;
 }
 #endif
+
 
 /* This is the heart of the Civetweb's logic.
  * This function is called when the request is read, parsed and validated,
@@ -8902,6 +8946,7 @@ static void handle_file_based_request(struct mg_connection *conn,
 	}
 }
 
+
 static void close_all_listening_sockets(struct mg_context *ctx)
 {
 	unsigned int i;
@@ -8974,6 +9019,7 @@ static int parse_port_string(const struct vec *vec, struct socket *so)
 	return is_valid_port(port) &&
 	       (ch == '\0' || ch == 's' || ch == 'r' || ch == ',');
 }
+
 
 static int set_ports_option(struct mg_context *ctx)
 {
@@ -9186,6 +9232,7 @@ static int set_ports_option(struct mg_context *ctx)
 	return portsOk;
 }
 
+
 static const char *header_val(const struct mg_connection *conn,
                               const char *header)
 {
@@ -9197,6 +9244,7 @@ static const char *header_val(const struct mg_connection *conn,
 		return header_value;
 	}
 }
+
 
 static void log_access(const struct mg_connection *conn)
 {
@@ -9266,6 +9314,7 @@ static void log_access(const struct mg_connection *conn)
 	}
 }
 
+
 /* Verify given socket address against the ACL.
  * Return -1 if ACL is malformed, 0 if address is disallowed, 1 if allowed. */
 static int check_acl(struct mg_context *ctx, uint32_t remote_ip)
@@ -9298,6 +9347,7 @@ static int check_acl(struct mg_context *ctx, uint32_t remote_ip)
 	}
 	return -1;
 }
+
 
 #if !defined(_WIN32)
 static int set_uid_option(struct mg_context *ctx)
@@ -9338,6 +9388,7 @@ static int set_uid_option(struct mg_context *ctx)
 }
 #endif /* !_WIN32 */
 
+
 #if !defined(NO_SSL)
 static pthread_mutex_t *ssl_mutexes;
 
@@ -9352,6 +9403,7 @@ static int sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 	       func(conn->ssl) == 1;
 }
 
+
 /* Return OpenSSL error message (from CRYPTO lib) */
 static const char *ssl_error(void)
 {
@@ -9359,6 +9411,7 @@ static const char *ssl_error(void)
 	err = ERR_get_error();
 	return err == 0 ? "" : ERR_error_string(err, NULL);
 }
+
 
 static void
 ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
@@ -9374,10 +9427,12 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 	}
 }
 
+
 static unsigned long ssl_id_callback(void)
 {
 	return (unsigned long)pthread_self();
 }
+
 
 #if !defined(NO_SSL_DL)
 static void *
@@ -9426,11 +9481,13 @@ static void *cryptolib_dll_handle; /* Store the crypto library handle. */
 
 #endif /* NO_SSL_DL */
 
+
 #if defined(SSL_ALREADY_INITIALIZED)
 static int cryptolib_users = 1; /* Reference counter for crypto library. */
 #else
 static int cryptolib_users = 0; /* Reference counter for crypto library. */
 #endif
+
 
 static int initialize_ssl(struct mg_context *ctx)
 {
@@ -9473,6 +9530,7 @@ static int initialize_ssl(struct mg_context *ctx)
 
 	return 1;
 }
+
 
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
 static int set_ssl_option(struct mg_context *ctx)
@@ -9546,6 +9604,7 @@ static int set_ssl_option(struct mg_context *ctx)
 	return 1;
 }
 
+
 static void uninitialize_ssl(struct mg_context *ctx)
 {
 	int i;
@@ -9562,6 +9621,7 @@ static void uninitialize_ssl(struct mg_context *ctx)
 }
 #endif /* !NO_SSL */
 
+
 static int set_gpass_option(struct mg_context *ctx)
 {
 	if (ctx) {
@@ -9576,10 +9636,12 @@ static int set_gpass_option(struct mg_context *ctx)
 	return 0;
 }
 
+
 static int set_acl_option(struct mg_context *ctx)
 {
 	return check_acl(ctx, (uint32_t)0x7f000001UL) != -1;
 }
+
 
 static void reset_per_request_attributes(struct mg_connection *conn)
 {
@@ -9602,6 +9664,7 @@ static void reset_per_request_attributes(struct mg_connection *conn)
 	conn->chunk_remainder = 0;
 	conn->internal_error = 0;
 }
+
 
 static int set_sock_timeout(SOCKET sock, int milliseconds)
 {
@@ -9636,6 +9699,7 @@ static int set_sock_timeout(SOCKET sock, int milliseconds)
 
 	return r1 || r2;
 }
+
 
 static void close_socket_gracefully(struct mg_connection *conn)
 {
@@ -9686,6 +9750,7 @@ static void close_socket_gracefully(struct mg_connection *conn)
 	conn->client.sock = INVALID_SOCKET;
 }
 
+
 static void close_connection(struct mg_connection *conn)
 {
 	if (!conn || !conn->ctx) {
@@ -9725,6 +9790,7 @@ static void close_connection(struct mg_connection *conn)
 	mg_unlock_connection(conn);
 }
 
+
 void mg_close_connection(struct mg_connection *conn)
 {
 	struct mg_context *client_ctx = NULL;
@@ -9759,6 +9825,7 @@ void mg_close_connection(struct mg_connection *conn)
 	(void)pthread_mutex_destroy(&conn->mutex);
 	mg_free(conn);
 }
+
 
 struct mg_connection *mg_connect_client(
     const char *host, int port, int use_ssl, char *ebuf, size_t ebuf_len)
@@ -9839,15 +9906,15 @@ struct mg_connection *mg_connect_client(
 }
 
 
-struct {
+static const struct {
 	const char *proto;
 	size_t proto_len;
-	int default_port;
-} static abs_uri_protocols[] = {{"http://", 7, 80},
-                                {"https://", 8, 443},
-                                {"ws://", 5, 80},
-                                {"wss://", 6, 443},
-                                {NULL, 0, 0}};
+	unsigned default_port;
+} abs_uri_protocols[] = {{"http://", 7, 80},
+                         {"https://", 8, 443},
+                         {"ws://", 5, 80},
+                         {"wss://", 6, 443},
+                         {NULL, 0, 0}};
 
 
 /* Check if the uri is valid.
@@ -9945,7 +10012,7 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 				}
 			}
 			/* protocol found, port set */
-            break;
+			break;
 		}
 	}
 
