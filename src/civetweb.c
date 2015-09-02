@@ -9838,23 +9838,69 @@ struct mg_connection *mg_connect_client(
 }
 
 
-static int is_valid_uri(const char *uri, const struct mg_connection *conn)
+static int is_valid_uri(const char *uri)
 {
-	const char *domain;
-	size_t domain_len;
+	size_t proto_len;
+	char *hostend, *portbegin;
 	unsigned long port;
 	char *pend;
 
 	/* According to the HTTP standard
 	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.2
 	 * URI can be an asterisk (*) or should start with slash (relative uri),
-	 * or it should start with the protocoll (absolute uri). */
+	 * or it should start with the protocol (absolute uri). */
 	if (uri[0] == '*' && uri[1] == '\0') {
+		/* asterisk */
 		return 1;
 	}
 	if (uri[0] == '/') {
+		/* relative uri */
 		return 1;
 	}
+
+	/* it could be an absolute uri */
+	/* is_valid_uri only checks if the uri is valid, not if it is
+	 * addressing the current server. So civetweb can also be used
+	 * as a proxy server. */
+
+	if (mg_strncasecmp(uri, "http://", 7) == 0) {
+		proto_len = 7;
+	} else if (mg_strncasecmp(uri, "https://", 8) == 0) {
+		proto_len = 8;
+	} else if (mg_strncasecmp(uri, "ws://", 5) == 0) {
+		proto_len = 5;
+	} else if (mg_strncasecmp(uri, "wss://", 6) == 0) {
+		proto_len = 6;
+	} else {
+		/* unknown protocol */
+		return 0;
+	}
+
+	hostend = strchr(uri + proto_len, '/');
+	if (!hostend) {
+		return 0;
+	}
+	portbegin = strchr(uri + proto_len, ':');
+	if (!portbegin) {
+		return 1;
+	}
+
+	port = strtoul(portbegin + 1, &pend, 10);
+	if ((pend != hostend) || !is_valid_port(port)) {
+		return 0;
+	}
+
+	return port && is_valid_port(port);
+}
+
+
+static int is_absolute_uri_at_current_server(const char *uri,
+                                             const struct mg_connection *conn)
+{
+	const char *domain;
+	size_t domain_len;
+	unsigned long port;
+	char *pend;
 
 	/* DNS is case insensitive, so use case insensitive string compare here */
 	domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
@@ -9944,8 +9990,8 @@ static int is_valid_uri(const char *uri, const struct mg_connection *conn)
 		return (conn->client.lsa.sin6.sin6_port == port);
 	}
 #endif
-	
-    return (conn->client.lsa.sin.sin_port == port);
+
+	return (conn->client.lsa.sin.sin_port == port);
 }
 
 
@@ -10316,7 +10362,7 @@ static void process_new_connection(struct mg_connection *conn)
 					/*assert(ebuf[0] != '\0');*/
 					send_http_error(conn, reqerr, "%s", ebuf);
 				}
-			} else if (!is_valid_uri(conn->request_info.uri, conn)) {
+			} else if (!is_valid_uri(conn->request_info.uri)) {
 				mg_snprintf(conn,
 				            NULL, /* No truncation check for ebuf */
 				            ebuf,
