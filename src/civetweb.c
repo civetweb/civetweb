@@ -3862,7 +3862,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 	if (conn && conn->ctx) {
 
 #if !defined(NO_FILES)
-		const char *uri = conn->request_info.uri;
+		const char *uri = conn->request_info.rel_uri;
 		const char *root = conn->ctx->config[DOCUMENT_ROOT];
 		const char *rewrite;
 		struct vec a, b;
@@ -9908,8 +9908,7 @@ static int get_uri_type(const char *uri)
 
 /* Return NULL or the relative uri at the current server */
 static const char *
-is_absolute_uri_at_current_server(const char *uri,
-                                  const struct mg_connection *conn)
+get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 {
 	const char *domain;
 	size_t domain_len;
@@ -9946,6 +9945,7 @@ is_absolute_uri_at_current_server(const char *uri,
 				}
 			}
 			/* protocol found, port set */
+            break;
 		}
 	}
 
@@ -9956,16 +9956,17 @@ is_absolute_uri_at_current_server(const char *uri,
 
 #if defined(USE_IPV6)
 	if (conn->client.lsa.sa.sa_family == AF_INET6) {
-		if (conn->client.lsa.sin6.sin6_port != port) {
+		if (ntohs(conn->client.lsa.sin6.sin6_port) != port) {
 			return 0;
 		}
 	} else
 #endif
 	{
-		if (conn->client.lsa.sin.sin_port == port) {
+		if (ntohs(conn->client.lsa.sin.sin_port) != port) {
 			return 0;
 		}
 	}
+
 	return hostend;
 }
 
@@ -10339,14 +10340,6 @@ static void process_new_connection(struct mg_connection *conn)
 					/*assert(ebuf[0] != '\0');*/
 					send_http_error(conn, reqerr, "%s", ebuf);
 				}
-			} else if ((uri_type = get_uri_type(conn->request_info.uri)) == 0) {
-				mg_snprintf(conn,
-				            NULL, /* No truncation check for ebuf */
-				            ebuf,
-				            sizeof(ebuf),
-				            "Invalid URI: [%s]",
-				            ri->uri);
-				send_http_error(conn, 400, "%s", ebuf);
 			} else if (strcmp(ri->http_version, "1.0") &&
 			           strcmp(ri->http_version, "1.1")) {
 				mg_snprintf(conn,
@@ -10358,34 +10351,38 @@ static void process_new_connection(struct mg_connection *conn)
 				send_http_error(conn, 505, "%s", ebuf);
 			}
 
-			switch (uri_type) {
-			case 1:
-				/* Asterisk */
-				conn->request_info.rel_uri = NULL;
-				break;
-			case 2:
-				/* relative uri */
-				conn->request_info.rel_uri = conn->request_info.uri;
-				break;
-			case 3:
-				/* absolute uri */
-				hostend = is_absolute_uri_at_current_server(
-				    conn->request_info.uri, conn);
-				if (hostend) {
-					conn->request_info.rel_uri = hostend;
-				} else {
+			if (ebuf[0] == '\0') {
+				uri_type = get_uri_type(conn->request_info.uri);
+				switch (uri_type) {
+				case 1:
+					/* Asterisk */
 					conn->request_info.rel_uri = NULL;
+					break;
+				case 2:
+					/* relative uri */
+					conn->request_info.rel_uri = conn->request_info.uri;
+					break;
+				case 3:
+				case 4:
+					/* absolute uri (with/without port) */
+					hostend = get_rel_url_at_current_server(
+					    conn->request_info.uri, conn);
+					if (hostend) {
+						conn->request_info.rel_uri = hostend;
+					} else {
+						conn->request_info.rel_uri = NULL;
+					}
+					break;
+				default:
+					mg_snprintf(conn,
+					            NULL, /* No truncation check for ebuf */
+					            ebuf,
+					            sizeof(ebuf),
+					            "Invalid URI: [%s]",
+					            ri->uri);
+					send_http_error(conn, 400, "%s", ebuf);
+					break;
 				}
-				break;
-			default:
-				mg_snprintf(conn,
-				            NULL, /* No truncation check for ebuf */
-				            ebuf,
-				            sizeof(ebuf),
-				            "Invalid URI: [%s]",
-				            ri->uri);
-				send_http_error(conn, 400, "%s", ebuf);
-				break;
 			}
 
 			if (ebuf[0] == '\0') {
