@@ -9838,12 +9838,22 @@ struct mg_connection *mg_connect_client(
 }
 
 
+struct {
+	const char *proto;
+	size_t proto_len;
+	int default_port;
+} static abs_uri_protocols[] = {{"http://", 7, 80},
+                                {"https://", 8, 443},
+                                {"ws://", 5, 80},
+                                {"wss://", 6, 443},
+                                {NULL, 0, 0}};
+
+
 static int is_valid_uri(const char *uri)
 {
-	size_t proto_len;
-	char *hostend, *portbegin;
+	int i;
+	char *hostend, *portbegin, *portend;
 	unsigned long port;
-	char *pend;
 
 	/* According to the HTTP standard
 	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.2
@@ -9863,34 +9873,30 @@ static int is_valid_uri(const char *uri)
 	 * addressing the current server. So civetweb can also be used
 	 * as a proxy server. */
 
-	if (mg_strncasecmp(uri, "http://", 7) == 0) {
-		proto_len = 7;
-	} else if (mg_strncasecmp(uri, "https://", 8) == 0) {
-		proto_len = 8;
-	} else if (mg_strncasecmp(uri, "ws://", 5) == 0) {
-		proto_len = 5;
-	} else if (mg_strncasecmp(uri, "wss://", 6) == 0) {
-		proto_len = 6;
-	} else {
-		/* unknown protocol */
-		return 0;
+	for (i = 0; abs_uri_protocols[i].proto != NULL; i++) {
+		if (mg_strncasecmp(uri,
+		                   abs_uri_protocols[i].proto,
+		                   abs_uri_protocols[i].proto_len) == 0) {
+
+			hostend = strchr(uri + abs_uri_protocols[i].proto_len, '/');
+			if (!hostend) {
+				return 0;
+			}
+			portbegin = strchr(uri + abs_uri_protocols[i].proto_len, ':');
+			if (!portbegin) {
+				return 1;
+			}
+
+			port = strtoul(portbegin + 1, &portend, 10);
+			if ((portend != hostend) || !port || !is_valid_port(port)) {
+				return 0;
+			}
+
+			return 1;
+		}
 	}
 
-	hostend = strchr(uri + proto_len, '/');
-	if (!hostend) {
-		return 0;
-	}
-	portbegin = strchr(uri + proto_len, ':');
-	if (!portbegin) {
-		return 1;
-	}
-
-	port = strtoul(portbegin + 1, &pend, 10);
-	if ((pend != hostend) || !is_valid_port(port)) {
-		return 0;
-	}
-
-	return port && is_valid_port(port);
+	return 0;
 }
 
 
@@ -9899,8 +9905,9 @@ static int is_absolute_uri_at_current_server(const char *uri,
 {
 	const char *domain;
 	size_t domain_len;
-	unsigned long port;
-	char *pend;
+	unsigned long port = 0;
+	int i;
+	char *hostend, *portbegin, *portend;
 
 	/* DNS is case insensitive, so use case insensitive string compare here */
 	domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
@@ -9912,76 +9919,29 @@ static int is_absolute_uri_at_current_server(const char *uri,
 		return 0;
 	}
 
-	if (mg_strncasecmp(uri, "http://", 7) == 0) {
-		if (mg_strncasecmp(uri + 7, domain, domain_len) == 0) {
-			if (uri[7 + domain_len] == '/') {
-				port = 80;
-			} else if (uri[7 + domain_len] == ':') {
-				port = strtoul(uri + 7 + domain_len + 1, &pend, 10);
-				if (!pend || *pend != '/') {
-					return 0;
-				}
-			} else {
+	for (i = 0; abs_uri_protocols[i].proto != NULL; i++) {
+		if (mg_strncasecmp(uri,
+		                   abs_uri_protocols[i].proto,
+		                   abs_uri_protocols[i].proto_len) == 0) {
+
+			hostend = strchr(uri + abs_uri_protocols[i].proto_len, '/');
+			if (!hostend) {
 				return 0;
 			}
-		} else {
-			/* not the correct domain */
-			return 0;
-		}
-	} else if (mg_strncasecmp(uri, "https://", 8) == 0) {
-		if (mg_strncasecmp(uri + 8, domain, domain_len) == 0) {
-			if (uri[8 + domain_len] == '/') {
-				port = 443;
-			} else if (uri[8 + domain_len] == ':') {
-				port = strtoul(uri + 8 + domain_len + 1, &pend, 10);
-				if (!pend || *pend != '/') {
+			portbegin = strchr(uri + abs_uri_protocols[i].proto_len, ':');
+			if (!portbegin) {
+				port = abs_uri_protocols[i].default_port;
+			} else {
+				port = strtoul(portbegin + 1, &portend, 10);
+				if ((portend != hostend) || !port || !is_valid_port(port)) {
 					return 0;
 				}
-			} else {
-				return 0;
 			}
-		} else {
-			/* not the correct domain */
-			return 0;
 		}
-	} else if (mg_strncasecmp(uri, "ws://", 5) == 0) {
-		if (mg_strncasecmp(uri + 5, domain, domain_len) == 0) {
-			if (uri[5 + domain_len] == '/') {
-				port = 80;
-			} else if (uri[5 + domain_len] == ':') {
-				port = strtoul(uri + 5 + domain_len + 1, &pend, 10);
-				if (!pend || *pend != '/') {
-					return 0;
-				}
-			} else {
-				return 0;
-			}
-		} else {
-			/* not the correct domain */
-			return 0;
-		}
-	} else if (mg_strncasecmp(uri, "wss://", 6) == 0) {
-		if (mg_strncasecmp(uri + 6, domain, domain_len) == 0) {
-			if (uri[6 + domain_len] == '/') {
-				port = 443;
-			} else if (uri[6 + domain_len] == ':') {
-				port = strtoul(uri + 6 + domain_len + 1, &pend, 10);
-				if (!pend || *pend != '/') {
-					return 0;
-				}
-			} else {
-				return 0;
-			}
-		} else {
-			/* not the correct domain */
-			return 0;
-		}
-	} else {
-		/* unknown protocol */
-		return 0;
 	}
 
-	if (!is_valid_port(port)) {
+	if (!port) {
+		/* port remains 0 if the protocol is not found */
 		return 0;
 	}
 
