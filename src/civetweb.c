@@ -9838,19 +9838,114 @@ struct mg_connection *mg_connect_client(
 }
 
 
-static int is_valid_uri(const char *uri)
+static int is_valid_uri(const char *uri, const struct mg_context *ctx)
 {
+	const char *domain;
+	size_t domain_len;
+	unsigned long port;
+	char *pend;
+	int i;
+
 	/* According to the HTTP standard
 	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.2
 	 * URI can be an asterisk (*) or should start with slash (relative uri),
-     * or it should start with the protocoll (absolute uri). */
-    if (uri[0] == '*' && uri[1] == '\0') {
-        return 1;
-    }
-    if (uri[0] == '/') {
-        return 1;
-    }
-    /* TODO: support absoluteURI #197 */
+	 * or it should start with the protocoll (absolute uri). */
+	if (uri[0] == '*' && uri[1] == '\0') {
+		return 1;
+	}
+	if (uri[0] == '/') {
+		return 1;
+	}
+
+	/* DNS is case insensitive, so use case insensitive string compare here */
+	domain = ctx->config[AUTHENTICATION_DOMAIN];
+	if (!domain) {
+		return 0;
+	}
+	domain_len = strlen(domain);
+	if (!domain_len) {
+		return 0;
+	}
+
+	if (mg_strncasecmp(uri, "http://", 7) == 0) {
+		if (mg_strncasecmp(uri + 7, domain, domain_len) == 0) {
+			if (uri[7 + domain_len] == '/') {
+				port = 80;
+			} else if (uri[7 + domain_len] == ':') {
+				port = strtoul(uri + 7 + domain_len + 1, &pend, 10);
+				if (!pend || *pend != '/') {
+					return 0;
+				}
+			} else {
+				return 0;
+			}
+		} else {
+			/* not the correct domain */
+			return 0;
+		}
+	} else if (mg_strncasecmp(uri, "https://", 8) == 0) {
+		if (mg_strncasecmp(uri + 8, domain, domain_len) == 0) {
+			if (uri[8 + domain_len] == '/') {
+				port = 443;
+			} else if (uri[8 + domain_len] == ':') {
+				port = strtoul(uri + 8 + domain_len + 1, &pend, 10);
+				if (!pend || *pend != '/') {
+					return 0;
+				}
+			} else {
+				return 0;
+			}
+		} else {
+			/* not the correct domain */
+			return 0;
+		}
+	} else if (mg_strncasecmp(uri, "ws://", 5) == 0) {
+		if (mg_strncasecmp(uri + 5, domain, domain_len) == 0) {
+			if (uri[5 + domain_len] == '/') {
+				port = 80;
+			} else if (uri[5 + domain_len] == ':') {
+				port = strtoul(uri + 5 + domain_len + 1, &pend, 10);
+				if (!pend || *pend != '/') {
+					return 0;
+				}
+			} else {
+				return 0;
+			}
+		} else {
+			/* not the correct domain */
+			return 0;
+		}
+	} else if (mg_strncasecmp(uri, "wss://", 6) == 0) {
+		if (mg_strncasecmp(uri + 6, domain, domain_len) == 0) {
+			if (uri[6 + domain_len] == '/') {
+				port = 443;
+			} else if (uri[6 + domain_len] == ':') {
+				port = strtoul(uri + 6 + domain_len + 1, &pend, 10);
+				if (!pend || *pend != '/') {
+					return 0;
+				}
+			} else {
+				return 0;
+			}
+		} else {
+			/* not the correct domain */
+			return 0;
+		}
+	} else {
+		/* unknown protocol */
+		return 0;
+	}
+
+	if (!is_valid_port(port)) {
+		return 0;
+	}
+
+	for (i = 0; i < (int)ctx->num_listening_sockets; i++) {
+		if (ctx->listening_ports[i] == port) {
+			return 1;
+		}
+	}
+
 	return 0;
 }
 
@@ -10222,7 +10317,7 @@ static void process_new_connection(struct mg_connection *conn)
 					/*assert(ebuf[0] != '\0');*/
 					send_http_error(conn, reqerr, "%s", ebuf);
 				}
-			} else if (!is_valid_uri(conn->request_info.uri)) {
+			} else if (!is_valid_uri(conn->request_info.uri, conn->ctx)) {
 				mg_snprintf(conn,
 				            NULL, /* No truncation check for ebuf */
 				            ebuf,
