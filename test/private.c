@@ -208,13 +208,18 @@ END_TEST
 
 START_TEST(test_is_valid_uri)
 {
-	ck_assert_int_eq(1, is_valid_uri("/api"));
-	ck_assert_int_eq(1, is_valid_uri("/api/"));
-	ck_assert_int_eq(1,
-	                 is_valid_uri("/some/long/path%20with%20space/file.xyz"));
-	ck_assert_int_eq(0, is_valid_uri("api"));
-	ck_assert_int_eq(1, is_valid_uri("*"));
-	ck_assert_int_eq(0, is_valid_uri("*xy"));
+	/* is_valid_uri is superseeded by get_uri_type */
+	ck_assert_int_eq(2, get_uri_type("/api"));
+	ck_assert_int_eq(2, get_uri_type("/api/"));
+	ck_assert_int_eq(2,
+	                 get_uri_type("/some/long/path%20with%20space/file.xyz"));
+	ck_assert_int_eq(0, get_uri_type("api"));
+	ck_assert_int_eq(1, get_uri_type("*"));
+	ck_assert_int_eq(0, get_uri_type("*xy"));
+	ck_assert_int_eq(3, get_uri_type("http://somewhere/"));
+	ck_assert_int_eq(3, get_uri_type("https://somewhere/some/file.html"));
+	ck_assert_int_eq(4, get_uri_type("http://somewhere:8080/"));
+	ck_assert_int_eq(4, get_uri_type("https://somewhere:8080/some/file.html"));
 }
 END_TEST
 

@@ -9850,8 +9850,13 @@ struct {
                                 {NULL, 0, 0}};
 
 
-/* return 0 for invalid uri, 1 for *, 2 for relative uri, 3 for absolute uri without port and 4 dor absolute uri with port */
-static int is_valid_uri(const char *uri)
+/* Check if the uri is valid.
+ * return 0 for invalid uri,
+ * return 1 for *,
+ * return 2 for relative uri,
+ * return 3 for absolute uri without port,
+ * return 4 for absolute uri with port */
+static int get_uri_type(const char *uri)
 {
 	int i;
 	char *hostend, *portbegin, *portend;
@@ -9870,11 +9875,10 @@ static int is_valid_uri(const char *uri)
 		return 2;
 	}
 
-	/* it could be an absolute uri */
-	/* is_valid_uri only checks if the uri is valid, not if it is
+	/* It could be an absolute uri: */
+	/* This function only checks if the uri is valid, not if it is
 	 * addressing the current server. So civetweb can also be used
 	 * as a proxy server. */
-
 	for (i = 0; abs_uri_protocols[i].proto != NULL; i++) {
 		if (mg_strncasecmp(uri,
 		                   abs_uri_protocols[i].proto,
@@ -10335,7 +10339,7 @@ static void process_new_connection(struct mg_connection *conn)
 					/*assert(ebuf[0] != '\0');*/
 					send_http_error(conn, reqerr, "%s", ebuf);
 				}
-			} else if ((uri_type = is_valid_uri(conn->request_info.uri)) == 0) {
+			} else if ((uri_type = get_uri_type(conn->request_info.uri)) == 0) {
 				mg_snprintf(conn,
 				            NULL, /* No truncation check for ebuf */
 				            ebuf,
