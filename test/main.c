@@ -24,10 +24,12 @@
 #include "public_func.h"
 #include "public_server.h"
 #include "private.h"
+#include "private_exe.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
@@ -69,9 +71,14 @@ int main(const int argc, const char * const * const argv) {
   SRunner * const srunner = srunner_create(make_public_func_suite());
   srunner_add_suite(srunner, make_public_server_suite());
   srunner_add_suite(srunner, make_private_suite());
-  srunner_run(srunner, suite, test_case, CK_NORMAL);
+  srunner_add_suite(srunner, make_private_exe_suite());
+
+  /* CK_NORMAL offers not enough diagnosis during setup phase*/
+  srunner_run(srunner, suite, test_case, CK_VERBOSE);
+
   const int number_run = srunner_ntests_run(srunner);
   const int number_failed = srunner_ntests_failed(srunner);
   srunner_free(srunner);
   return (number_failed == 0) && (number_run != 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+

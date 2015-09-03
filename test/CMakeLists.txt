@@ -85,15 +85,15 @@ target_include_directories(
 target_link_libraries(private-c-unit-tests ${CHECK_LIBRARIES})
 add_dependencies(private-c-unit-tests check-unit-test-framework)
 
-add_library(exe-unit-tests STATIC private_exe.c)
+add_library(exe-c-unit-tests STATIC private_exe.c)
 if (BUILD_SHARED_LIBS)
-  target_compile_definitions(exe-unit-tests PRIVATE)
+  target_compile_definitions(exe-c-unit-tests PRIVATE)
 endif()
 target_include_directories(
-  exe-unit-tests PUBLIC
+  exe-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(exe-unit-tests c-library ${CHECK_LIBRARIES})
-add_dependencies(exe-unit-tests check-unit-test-framework)
+target_link_libraries(exe-c-unit-tests c-library ${CHECK_LIBRARIES})
+add_dependencies(exe-c-unit-tests check-unit-test-framework)
 
 add_executable(civetweb-c-unit-test main.c)
 target_link_libraries(civetweb-c-unit-test
@@ -101,7 +101,7 @@ target_link_libraries(civetweb-c-unit-test
   public-func-c-unit-tests
   public-server-c-unit-tests
   private-c-unit-tests
-  exe-unit-tests
+  exe-c-unit-tests
   ${CHECK_LIBRARIES})
 add_dependencies(civetweb-c-unit-test check-unit-test-framework)
 
@@ -163,7 +163,7 @@ if (${CMAKE_BUILD_TYPE} MATCHES "[Cc]overage")
       OUTPUT ${CMAKE_BINARY_DIR}/lcov/index.html
       COMMAND ${LCOV_EXECUTABLE} -q -z -d .
       COMMAND ${LCOV_EXECUTABLE} -q --no-external -c -b "${CMAKE_SOURCE_DIR}" -d . -o before.lcov -i
-      COMMAND ${CTEST_EXECUTABLE} --force-new-ctest-process --extra-verbose
+      COMMAND ${CTEST_EXECUTABLE} --force-new-ctest-process
       COMMAND ${LCOV_EXECUTABLE} -q --no-external -c -b "${CMAKE_SOURCE_DIR}" -d . -o after.lcov
       COMMAND ${LCOV_EXECUTABLE} -q -a before.lcov -a after.lcov --output-file final.lcov
       COMMAND ${LCOV_EXECUTABLE} -q -r final.lcov "'${CMAKE_SOURCE_DIR}/test/*'" -o final.lcov
