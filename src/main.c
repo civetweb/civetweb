@@ -2233,7 +2233,13 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 }
 
 
-int main(int argc, char *argv[]) { return WinMain(0, 0, 0, 0); }
+int main(int argc, char *argv[])
+{
+	(void)argc;
+	(void)argv;
+
+	return WinMain(0, 0, 0, 0);
+}
 
 
 #elif defined(USE_COCOA)

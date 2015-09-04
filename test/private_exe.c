@@ -35,6 +35,10 @@
  * practice this does not work. */
 extern char *realpath(const char *path, char *resolved_path);
 
+/* main is already used in the test suite,
+ * so this define will rename main in main.c */
+#define main exe_main
+
 #include "../src/main.c"
 
 #include <stdlib.h>

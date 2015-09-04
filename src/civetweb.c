@@ -9982,7 +9982,7 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	unsigned long port = 0;
 	int i;
 	char *hostend = NULL;
-    char *portbegin, *portend;
+	char *portbegin, *portend;
 
 	/* DNS is case insensitive, so use case insensitive string compare here */
 	domain = conn->ctx->config[AUTHENTICATION_DOMAIN];

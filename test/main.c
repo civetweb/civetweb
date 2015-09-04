@@ -36,7 +36,7 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
-int main(const int argc, const char *const *const argv)
+int main(const int argc, char *argv[])
 {
 	// Determine what tests to run
 	const char *suite = NULL;
