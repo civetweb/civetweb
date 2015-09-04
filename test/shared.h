@@ -21,7 +21,9 @@
 #ifndef TEST_SHARED_H_
 #define TEST_SHARED_H_
 
-const char * get_test_directory(void);
-void set_test_directory(const char * const path);
+
+const char *get_test_directory(void);
+void set_test_directory(const char *const path);
+
 
 #endif /* TEST_SHARED_H_ */

@@ -19,15 +19,25 @@
  * THE SOFTWARE.
  */
 
+
+#if !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+#if !defined(_CRT_SECURE_NO_DEPRECATE)
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
+
+
 #include "shared.h"
 #include <string.h>
 
 static char s_test_directory[1024] = {'\0'};
 
-const char * get_test_directory(void) {
-  return s_test_directory;
-}
+const char *get_test_directory(void) { return s_test_directory; }
 
-void set_test_directory(const char * const path) {
-  strncpy(s_test_directory, path, sizeof(s_test_directory)/sizeof(s_test_directory[0]));
+void set_test_directory(const char *const path)
+{
+	strncpy(s_test_directory,
+	        path,
+	        sizeof(s_test_directory) / sizeof(s_test_directory[0]));
 }

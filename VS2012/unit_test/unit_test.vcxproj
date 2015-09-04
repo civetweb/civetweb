@@ -17,6 +17,7 @@
     <ClInclude Include="..\..\test\private_exe.h" />
     <ClInclude Include="..\..\test\public_func.h" />
     <ClInclude Include="..\..\test\public_server.h" />
+    <ClInclude Include="..\..\test\shared.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\civetweb.c" />
@@ -26,6 +27,7 @@
     <ClCompile Include="..\..\test\private_exe.c" />
     <ClCompile Include="..\..\test\public_func.c" />
     <ClCompile Include="..\..\test\public_server.c" />
+    <ClCompile Include="..\..\test\shared.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1AC4A7A6-0100-4287-97F4-B95807BE5607}</ProjectGuid>

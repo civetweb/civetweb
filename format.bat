@@ -19,6 +19,8 @@ clang-format -i test/private.h
 clang-format -i test/private.c
 clang-format -i test/private_exe.h
 clang-format -i test/private_exe.c
+clang-format -i test/shared.h
+clang-format -i test/shared.c
 clang-format -i test/civetweb_check.h
 clang-format -i test/main.c
 
