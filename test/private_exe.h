@@ -18,8 +18,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef TEST_PRIVATE_H_
-#define TEST_PRIVATE_H_
+#ifndef TEST_PRIVATE_EXE_H_
+#define TEST_PRIVATE_EXE_H_
 
 #include "civetweb_check.h"
 
