@@ -1,12 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual C++ Express 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "civetweb", "civetweb\civetweb.vcxproj", "{E23B0040-F485-43D6-AA24-B34F9FED8484}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_websocket", "ex_websocket\ex_websocket.vcxproj", "{58B93E94-7766-435E-93AE-42A2FB5D99B1}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_embed_cpp", "ex_embed_cpp\ex_embed_cpp.vcxproj", "{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "civetweb_lua", "civetweb_lua\civetweb_lua.vcxproj", "{9BE9C008-E851-42B1-A034-BD4630AE4CD6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_lib", "lua_lib\lua_lib.vcxproj", "{8F5E5D77-D269-4665-9E27-1045DA6CF0D8}"
@@ -35,42 +29,6 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Debug|Win32.ActiveCfg = Debug|Win32
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Debug|Win32.Build.0 = Debug|Win32
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Debug|x64.ActiveCfg = Debug|x64
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Debug|x64.Build.0 = Debug|x64
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Release|Win32.ActiveCfg = Release|Win32
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Release|Win32.Build.0 = Release|Win32
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Release|x64.ActiveCfg = Release|x64
-		{E23B0040-F485-43D6-AA24-B34F9FED8484}.Release|x64.Build.0 = Release|x64
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Debug|Win32.ActiveCfg = Debug|Win32
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Debug|Win32.Build.0 = Debug|Win32
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Debug|x64.ActiveCfg = Debug|x64
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Debug|x64.Build.0 = Debug|x64
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|Win32.ActiveCfg = Release|Win32
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|Win32.Build.0 = Release|Win32
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|x64.ActiveCfg = Release|x64
-		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|x64.Build.0 = Release|x64
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Win32.ActiveCfg = Debug|Win32
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Win32.Build.0 = Debug|Win32
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|x64.ActiveCfg = Debug|x64
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|x64.Build.0 = Debug|x64
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Win32.ActiveCfg = Release|Win32
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Win32.Build.0 = Release|Win32
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|x64.ActiveCfg = Release|x64
-		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|x64.Build.0 = Release|x64
 		{9BE9C008-E851-42B1-A034-BD4630AE4CD6}.Debug|Mixed Platforms.ActiveCfg = Debug CONSOLE|Win32
 		{9BE9C008-E851-42B1-A034-BD4630AE4CD6}.Debug|Mixed Platforms.Build.0 = Debug CONSOLE|Win32
 		{9BE9C008-E851-42B1-A034-BD4630AE4CD6}.Debug|Win32.ActiveCfg = Debug|Win32

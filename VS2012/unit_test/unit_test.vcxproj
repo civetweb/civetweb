@@ -14,6 +14,7 @@
     <ClInclude Include="..\..\include\civetweb.h" />
     <ClInclude Include="..\..\test\civetweb_check.h" />
     <ClInclude Include="..\..\test\private.h" />
+    <ClInclude Include="..\..\test\private_exe.h" />
     <ClInclude Include="..\..\test\public_func.h" />
     <ClInclude Include="..\..\test\public_server.h" />
   </ItemGroup>
