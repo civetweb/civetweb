@@ -40,6 +40,13 @@
 #pragma clang diagnostic pop
 #endif
 
+#if !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+#if !defined(_CRT_SECURE_NO_DEPRECATE)
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
+
 /* A minimal timeout used for all tests with the "check" framework. */
 #define civetweb_min_test_timeout (30)
 
