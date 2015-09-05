@@ -449,6 +449,11 @@ typedef int SOCKET;
 #endif
 
 #ifdef _WIN32
+/* Create substitutes for POSIX functions in Win32. 
+ * Show no warning in case system functions are not used. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 static CRITICAL_SECTION global_log_file_lock;
 static DWORD pthread_self(void) { return GetCurrentThreadId(); }
 
@@ -478,6 +483,8 @@ static int pthread_setspecific(pthread_key_t key, void *value)
 #ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
 static void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
 #endif
+
+#pragma GCC diagnostic pop
 #endif /* _WIN32 */
 
 #include "civetweb.h"
@@ -2117,6 +2124,11 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 }
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
+/* Create substitutes for POSIX functions in Win32. 
+ * Show no warning in case system functions are not used. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 static int pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
 {
 	(void)unused;
@@ -2290,6 +2302,9 @@ static int pthread_cond_destroy(pthread_cond_t *cv)
 	return 0;
 }
 
+/* Enable unused function warning again */
+#pragma GCC diagnostic pop
+
 /* For Windows, change all slashes to backslashes in path names. */
 static void change_slashes_to_backslashes(char *path)
 {
@@ -2331,6 +2346,11 @@ static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
 }
 
 #if defined(_WIN32_WCE)
+/* Create substitutes for POSIX functions in Win32. 
+ * Show no warning in case system functions are not used. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 static time_t time(time_t *ptime)
 {
 	time_t t;
@@ -2388,6 +2408,8 @@ strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
 	(void)mg_snprintf(NULL, dst, dst_size, "implement strftime() for WinCE");
 	return 0;
 }
+
+#pragma GCC diagnostic pop
 #endif
 
 /* Windows happily opens files with some garbage at the end of file name.
@@ -2472,6 +2494,11 @@ static int mg_mkdir(const char *path, int mode)
 	return CreateDirectoryW(wbuf, NULL) ? 0 : -1;
 }
 #endif
+
+/* Create substitutes for POSIX functions in Win32. 
+ * Show no warning in case system functions are not used. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
 static DIR *opendir(const char *name)
@@ -2583,6 +2610,9 @@ static int poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 }
 #endif /* HAVE_POLL */
 
+#pragma GCC diagnostic pop
+
+
 static void set_close_on_exec(SOCKET sock,
                               struct mg_connection *conn /* may be null */)
 {
@@ -2648,7 +2678,13 @@ static int mg_join_thread(pthread_t threadid)
 	return result;
 }
 
+
 #if !defined(NO_SSL_DL)
+/* Create substitutes for POSIX functions in Win32. 
+ * Show no warning in case system functions are not used. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 static HANDLE dlopen(const char *dll_name, int flags)
 {
 	wchar_t wbuf[PATH_MAX];
@@ -2669,7 +2705,10 @@ static int dlclose(void *handle)
 
 	return result;
 }
+
+#pragma GCC diagnostic pop
 #endif
+
 
 #if !defined(NO_CGI)
 #define SIGKILL (0)
@@ -2679,6 +2718,7 @@ static int kill(pid_t pid, int sig_num)
 	(void)CloseHandle((HANDLE)pid);
 	return 0;
 }
+
 
 static void trim_trailing_whitespaces(char *s)
 {
