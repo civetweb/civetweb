@@ -33,7 +33,10 @@
 
 static char s_test_directory[1024] = {'\0'};
 
-const char *get_test_directory(void) { return s_test_directory; }
+const char *get_test_directory(void)
+{
+	return s_test_directory;
+}
 
 void set_test_directory(const char *const path)
 {

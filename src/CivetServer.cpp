@@ -105,7 +105,10 @@ CivetServer::CivetServer(const char **options,
 		                     "Possible problem binding to port.");
 }
 
-CivetServer::~CivetServer() { close(); }
+CivetServer::~CivetServer()
+{
+	close();
+}
 
 void CivetServer::closeHandler(const struct mg_connection *conn)
 {
@@ -330,4 +333,7 @@ CivetServer::CivetConnection::CivetConnection()
 	postDataLen = 0;
 }
 
-CivetServer::CivetConnection::~CivetConnection() { free(postData); }
+CivetServer::CivetConnection::~CivetConnection()
+{
+	free(postData);
+}

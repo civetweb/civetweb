@@ -458,7 +458,10 @@ typedef int SOCKET;
 #endif
 
 static CRITICAL_SECTION global_log_file_lock;
-static DWORD pthread_self(void) { return GetCurrentThreadId(); }
+static DWORD pthread_self(void)
+{
+	return GetCurrentThreadId();
+}
 
 static int pthread_key_create(
     pthread_key_t *key,
@@ -484,7 +487,10 @@ static int pthread_setspecific(pthread_key_t key, void *value)
 }
 
 #ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
-static void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
+static void *pthread_getspecific(pthread_key_t key)
+{
+	return TlsGetValue(key);
+}
 #endif
 
 #if defined(__MINGW32__)
@@ -688,10 +694,22 @@ mg_realloc_ex(void *memory, size_t newsize, const char *file, unsigned line)
 
 #else
 
-static __inline void *mg_malloc(size_t a) { return malloc(a); }
-static __inline void *mg_calloc(size_t a, size_t b) { return calloc(a, b); }
-static __inline void *mg_realloc(void *a, size_t b) { return realloc(a, b); }
-static __inline void mg_free(void *a) { free(a); }
+static __inline void *mg_malloc(size_t a)
+{
+	return malloc(a);
+}
+static __inline void *mg_calloc(size_t a, size_t b)
+{
+	return calloc(a, b);
+}
+static __inline void *mg_realloc(void *a, size_t b)
+{
+	return realloc(a, b);
+}
+static __inline void mg_free(void *a)
+{
+	free(a);
+}
 
 #endif
 
@@ -1216,7 +1234,9 @@ static void mg_set_thread_name(const char *name)
 		               sizeof(info) / sizeof(ULONG_PTR),
 		               (ULONG_PTR *)&info);
 	}
-	__except(EXCEPTION_EXECUTE_HANDLER) {}
+	__except(EXCEPTION_EXECUTE_HANDLER)
+	{
+	}
 #elif defined(__MINGW32__)
 /* No option known to set thread name for MinGW */
 #endif
@@ -1229,7 +1249,9 @@ static void mg_set_thread_name(const char *name)
 #endif
 }
 #else /* !defined(NO_THREAD_NAME) */
-void mg_set_thread_name(const char *threadName) {}
+void mg_set_thread_name(const char *threadName)
+{
+}
 #endif
 
 #if defined(MG_LEGACY_INTERFACE)
@@ -1249,7 +1271,10 @@ const char **mg_get_valid_option_names(void)
 }
 #endif
 
-const struct mg_option *mg_get_valid_options(void) { return config_options; }
+const struct mg_option *mg_get_valid_options(void)
+{
+	return config_options;
+}
 
 static int is_file_in_memory(struct mg_connection *conn,
                              const char *path,
@@ -1360,7 +1385,10 @@ static char *mg_strndup(const char *ptr, size_t len)
 	return p;
 }
 
-static char *mg_strdup(const char *str) { return mg_strndup(str, strlen(str)); }
+static char *mg_strdup(const char *str)
+{
+	return mg_strndup(str, strlen(str));
+}
 
 static const char *mg_strcasestr(const char *big_str, const char *small_str)
 {
@@ -1608,7 +1636,10 @@ static struct mg_connection *fc(struct mg_context *ctx)
 	return &fake_connection;
 }
 
-const char *mg_version(void) { return CIVETWEB_VERSION; }
+const char *mg_version(void)
+{
+	return CIVETWEB_VERSION;
+}
 
 const struct mg_request_info *
 mg_get_request_info(const struct mg_connection *conn)
@@ -5008,7 +5039,10 @@ int mg_modify_passwords_file(const char *fname,
 }
 
 
-static int is_valid_port(unsigned long port) { return port < 0xffff; }
+static int is_valid_port(unsigned long port)
+{
+	return port < 0xffff;
+}
 
 
 static int mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
@@ -5948,8 +5982,11 @@ static int parse_http_message(char *buf, int len, struct mg_request_info *ri)
  * buffer (which marks the end of HTTP request). Buffer buf may already
  * have some data. The length of the data is stored in nread.
  * Upon every read operation, increase nread by the number of bytes read. */
-static int read_request(
-    FILE *fp, struct mg_connection *conn, char *buf, int bufsiz, int *nread)
+static int read_request(FILE *fp,
+                        struct mg_connection *conn,
+                        char *buf,
+                        int bufsiz,
+                        int *nread)
 {
 	int request_len, n = 0;
 	struct timespec last_action_time = {0, 0};
@@ -8027,7 +8064,10 @@ static int is_websocket_protocol(const struct mg_connection *conn)
 #endif /* !USE_WEBSOCKET */
 
 
-static int isbyte(int n) { return n >= 0 && n <= 255; }
+static int isbyte(int n)
+{
+	return n >= 0 && n <= 255;
+}
 
 
 static int parse_net(const char *spec, uint32_t *net, uint32_t *mask)
@@ -8588,8 +8628,11 @@ static void deprecated_websocket_ready_wrapper(struct mg_connection *conn,
 }
 
 
-static int deprecated_websocket_data_wrapper(
-    struct mg_connection *conn, int bits, char *data, size_t len, void *cbdata)
+static int deprecated_websocket_data_wrapper(struct mg_connection *conn,
+                                             int bits,
+                                             char *data,
+                                             size_t len,
+                                             void *cbdata)
 {
 	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
 	if (pcallbacks->websocket_data) {
@@ -9900,8 +9943,11 @@ void mg_close_connection(struct mg_connection *conn)
 }
 
 
-struct mg_connection *mg_connect_client(
-    const char *host, int port, int use_ssl, char *ebuf, size_t ebuf_len)
+struct mg_connection *mg_connect_client(const char *host,
+                                        int port,
+                                        int use_ssl,
+                                        char *ebuf,
+                                        size_t ebuf_len)
 {
 	static struct mg_context fake_ctx;
 	struct mg_connection *conn = NULL;

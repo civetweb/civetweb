@@ -1182,9 +1182,14 @@ void _ck_assert_msg(int cond, const char *file, int line, const char *expr, ...)
 	chk_failed++;
 }
 
-void _mark_point(const char *file, int line) { chk_ok++; }
+void _mark_point(const char *file, int line)
+{
+	chk_ok++;
+}
 
-void tcase_fn_start(const char *fname, const char *file, int line) {}
+void tcase_fn_start(const char *fname, const char *file, int line)
+{
+}
 void suite_add_tcase(Suite *s, TCase *tc){};
 void _tcase_add_test(TCase *tc,
                      TFun tf,
@@ -1193,8 +1198,14 @@ void _tcase_add_test(TCase *tc,
                      int allowed_exit_value,
                      int start,
                      int end){};
-TCase *tcase_create(const char *name) { return NULL; };
-Suite *suite_create(const char *name) { return NULL; };
+TCase *tcase_create(const char *name)
+{
+	return NULL;
+};
+Suite *suite_create(const char *name)
+{
+	return NULL;
+};
 void tcase_set_timeout(TCase *tc, double timeout){};
 
 #endif

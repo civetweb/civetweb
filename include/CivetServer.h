@@ -23,7 +23,9 @@ class CivetServer;
 class CIVETWEB_API CivetException : public std::runtime_error
 {
 	  public:
-	CivetException(const std::string &msg) : std::runtime_error(msg) {}
+	CivetException(const std::string &msg) : std::runtime_error(msg)
+	{
+	}
 };
 
 /**
@@ -36,7 +38,9 @@ class CIVETWEB_API CivetHandler
 	/**
 	 * Destructor
 	 */
-	virtual ~CivetHandler() {}
+	virtual ~CivetHandler()
+	{
+	}
 
 	/**
 	 * Callback method for GET request.
@@ -123,7 +127,10 @@ class CIVETWEB_API CivetServer
 	 *
 	 * @return the context or 0 if not running.
 	 */
-	const struct mg_context *getContext() const { return context; }
+	const struct mg_context *getContext() const
+	{
+		return context;
+	}
 
 	/**
 	 * addHandler(const std::string &, CivetHandler *)

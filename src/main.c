@@ -157,7 +157,10 @@ static struct mg_option main_config_options[] = {
     {"icon", CONFIG_TYPE_STRING, NULL},
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
-static void WINCDECL signal_handler(int sig_num) { g_exit_flag = sig_num; }
+static void WINCDECL signal_handler(int sig_num)
+{
+	g_exit_flag = sig_num;
+}
 
 static NO_RETURN void die(const char *fmt, ...)
 {
@@ -2265,7 +2268,10 @@ int main(int argc, char *argv[])
 	           openFile:[NSString stringWithUTF8String:g_config_file]
 	    withApplication:@"TextEdit"];
 }
-- (void)shutDown { [NSApp terminate:nil]; }
+- (void)shutDown
+{
+	[NSApp terminate:nil];
+}
 @end
 
 
