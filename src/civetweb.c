@@ -449,10 +449,13 @@ typedef int SOCKET;
 #endif
 
 #ifdef _WIN32
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 static CRITICAL_SECTION global_log_file_lock;
 static DWORD pthread_self(void) { return GetCurrentThreadId(); }
@@ -484,7 +487,10 @@ static int pthread_setspecific(pthread_key_t key, void *value)
 static void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
 #endif
 
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
 #endif /* _WIN32 */
 
 #include "civetweb.h"
@@ -2123,11 +2129,15 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 	}
 }
 
+
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 static int pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
 {
@@ -2302,8 +2312,10 @@ static int pthread_cond_destroy(pthread_cond_t *cv)
 	return 0;
 }
 
+#if defined(__MINGW32__)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
 
 /* For Windows, change all slashes to backslashes in path names. */
 static void change_slashes_to_backslashes(char *path)
@@ -2346,10 +2358,13 @@ static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
 }
 
 #if defined(_WIN32_WCE)
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 static time_t time(time_t *ptime)
 {
@@ -2409,7 +2424,11 @@ strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
 	return 0;
 }
 
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
+
 #endif
 
 /* Windows happily opens files with some garbage at the end of file name.
@@ -2495,10 +2514,13 @@ static int mg_mkdir(const char *path, int mode)
 }
 #endif
 
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
 static DIR *opendir(const char *name)
@@ -2610,7 +2632,10 @@ static int poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 }
 #endif /* HAVE_POLL */
 
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
 
 
 static void set_close_on_exec(SOCKET sock,
@@ -2680,10 +2705,14 @@ static int mg_join_thread(pthread_t threadid)
 
 
 #if !defined(NO_SSL_DL)
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 
 static HANDLE dlopen(const char *dll_name, int flags)
 {
@@ -2706,7 +2735,11 @@ static int dlclose(void *handle)
 	return result;
 }
 
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
+
 #endif
 
 
@@ -4975,7 +5008,7 @@ int mg_modify_passwords_file(const char *fname,
 }
 
 
-static int is_valid_port(unsigned int port) { return port < 0xffff; }
+static int is_valid_port(unsigned long port) { return port < 0xffff; }
 
 
 static int mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
