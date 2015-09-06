@@ -754,7 +754,10 @@ static void mg_snprintf(const struct mg_connection *conn,
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free DO_NOT_USE_THIS_FUNCTION__USE_mg_free
 #define snprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_snprintf
+#ifdef _WIN32 /* vsnprintf must not be used in any system, *                   \
+               * but this define only works well for Windows. */
 #define vsnprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_vsnprintf
+#endif
 
 #define MD5_STATIC static
 #include "md5.inl"
