@@ -743,14 +743,18 @@ static void mg_snprintf(const struct mg_connection *conn,
 #ifdef free
 #undef free
 #endif
+#ifdef snprintf
+#undef snprintf
+#endif
+#ifdef vsnprintf
+#undef vsnprintf
+#endif
 #define malloc DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
 #define calloc DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free DO_NOT_USE_THIS_FUNCTION__USE_mg_free
 #define snprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_snprintf
-#ifdef _WIN32 /* Don't use vsnprintf for Linux, Windows or anything else */
 #define vsnprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_vsnprintf
-#endif
 
 #define MD5_STATIC static
 #include "md5.inl"
@@ -1240,7 +1244,8 @@ static void mg_set_thread_name(const char *name)
 #elif defined(__MINGW32__)
 /* No option known to set thread name for MinGW */
 #endif
-#elif((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
+#elif defined(__GLIBC__) &&                                                    \
+    ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
 	/* pthread_setname_np first appeared in glibc in version 2.12*/
 	(void)pthread_setname_np(pthread_self(), threadName);
 #elif defined(__linux__)
