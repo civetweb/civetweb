@@ -943,7 +943,7 @@ before_script:
   - uname -a
   - pwd
   #- ls -l
-  - ifconfig
+  #- ifconfig
   #- /sbin/ip addr show
   # Generate the build scripts with CMake
   - mkdir output
