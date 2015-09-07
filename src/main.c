@@ -521,9 +521,10 @@ static void process_command_line_arguments(char *argv[], char **options)
 		fclose(fp);
 	}
 #endif
-
-	/* read all configurations from a config file */
-	(void)read_config_file(g_config_file, options);
+	if (cmd_line_opts_start == 2) {
+		/* read all configurations from a config file */
+		(void)read_config_file(g_config_file, options);
+	}
 
 	/* If we're under MacOS and started by launchd, then the second
 	   argument is process serial number, -psn_.....
