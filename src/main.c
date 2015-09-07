@@ -732,6 +732,13 @@ static int run_lua(const char *file_name)
 }
 #endif
 
+
+#if defined(__MINGW32__) || defined(__MINGW64__)
+/* For __MINGW32/64_MAJOR/MINOR_VERSION define */
+#include <_mingw.h>
+#endif
+
+
 static void start_civetweb(int argc, char *argv[])
 {
 	struct mg_callbacks callbacks;
