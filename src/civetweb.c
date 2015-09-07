@@ -4979,6 +4979,11 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 {
 	int ip_ver = 0;
 	*sock = INVALID_SOCKET;
+	
+	if (sa == NULL) {
+		return 0;
+	}
+	
 	memset(sa, 0, sizeof(*sa));
 
 	if (ebuf_len > 0) {
@@ -6117,6 +6122,9 @@ static void addenv(struct cgi_environment *env, const char *fmt, ...)
 	char *added;
 	va_list ap;
 
+	if (env == NULL) {
+		return;
+	}
 
 	/* Calculate how much space is left in the buffer */
 	space = (env->buflen - env->bufused);
