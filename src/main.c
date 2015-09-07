@@ -843,17 +843,17 @@ static void start_civetweb(int argc, char *argv[])
 #elif defined(__MINGW64__)
 		fprintf(stdout,
 		        "MinGW64: %u.%u\n",
-		        (unsigned)__MINGW64_MAJOR_VERSION,
-		        (unsigned)__MINGW64_MAJOR_VERSION);
+		        (unsigned)__MINGW64_VERSION_MAJOR,
+		        (unsigned)__MINGW64_VERSION_MINOR);
 		fprintf(stdout,
 		        "MinGW32: %u.%u\n",
-		        (unsigned)__MINGW32_MAJOR_VERSION,
-		        (unsigned)__MINGW32_MAJOR_VERSION);
+		        (unsigned)__MINGW32_VERSION_MAJOR,
+		        (unsigned)__MINGW32_VERSION_MINOR);
 #elif defined(__MINGW32__)
 		fprintf(stdout,
 		        "MinGW32: %u.%u\n",
-		        (unsigned)__MINGW32_MAJOR_VERSION,
-		        (unsigned)__MINGW32_MAJOR_VERSION);
+		        (unsigned)__MINGW32_VERSION_MAJOR,
+		        (unsigned)__MINGW32_VERSION_MINOR);
 #elif defined(__clang__)
 		fprintf(stdout,
 		        "clang: %u.%u.%u (%s)\n",
