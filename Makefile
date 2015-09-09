@@ -282,7 +282,7 @@ $(BUILD_DIR)/%.o : %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_RESOURCES) : $(WINDOWS_RESOURCES)
-	windres $< $@
+	windres $(WINDRES_FLAGS) $< $@
 
 # This rules is used to keep the code formatted in a reasonable manor
 # For this to work astyle must be installed and in the path
