@@ -5741,6 +5741,9 @@ static void handle_static_file_request(struct mg_connection *conn,
 	                "Content-Type: %.*s\r\n"
 	                "Content-Length: %" INT64_FMT "\r\n"
 	                "Connection: %s\r\n"
+	               	"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+			"Pragma: no-cache\r\n"
+			"Expires: 0\r\n"
 	                "Accept-Ranges: bytes\r\n"
 	                "%s%s\r\n",
 	                conn->status_code,
