@@ -9556,14 +9556,19 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 /* Must be set if sizeof(pthread_t) > sizeof(unsigned long) */
 static unsigned long ssl_id_callback(void)
 {
+#if defined _WIN32
+	/* Win32 thread IDs are DWORDs */
+	return (unsigned long)GetCurrentThreadId();
+#else
 	/* CRYPTO_set_id_callback() assumes thread IDs can be represented by
 	 * unsigned long. See
 	 * https://www.openssl.org/docs/manmaster/crypto/threads.html#HISTORY */
 	mg_static_assert(sizeof(pthread_t) <= sizeof(unsigned long),
-	                 "Thread-ID data type size check - set "
-	                 "pthread_t_LARGER_THAN_unsigned_long");
+	                 "Thread-ID data type size check"
+	                 " - set pthread_t_LARGER_THAN_unsigned_long");
 
 	return (unsigned long)pthread_self();
+#endif
 }
 #endif
 
