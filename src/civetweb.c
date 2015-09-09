@@ -9551,19 +9551,20 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 	}
 }
 
-#if sizeof(pthread_t) <= sizeof(unsigned long)
+
+#ifndef pthread_t_LARGER_THAN_unsigned_long
+/* Must be set if sizeof(pthread_t) > sizeof(unsigned long) */
 static unsigned long ssl_id_callback(void)
 {
 	/* CRYPTO_set_id_callback() assumes thread IDs can be represented by
 	 * unsigned long. See
 	 * https://www.openssl.org/docs/manmaster/crypto/threads.html#HISTORY */
 	mg_static_assert(sizeof(pthread_t) <= sizeof(unsigned long),
-	                 "Thread-ID data type size check");
+	                 "Thread-ID data type size check - set "
+	                 "pthread_t_LARGER_THAN_unsigned_long");
 
 	return (unsigned long)pthread_self();
 }
-#else
-#define pthread_t_LARGER_THAN_unsigned_long
 #endif
 
 
