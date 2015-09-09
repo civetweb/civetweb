@@ -9551,7 +9551,7 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 	}
 }
 
-
+#if sizeof(pthread_t) <= sizeof(unsigned long)
 static unsigned long ssl_id_callback(void)
 {
 	/* CRYPTO_set_id_callback() assumes thread IDs can be represented by
@@ -9562,6 +9562,9 @@ static unsigned long ssl_id_callback(void)
 
 	return (unsigned long)pthread_self();
 }
+#else
+#define pthread_t_LARGER_THAN_unsigned_long
+#endif
 
 
 #if !defined(NO_SSL_DL)
@@ -9656,7 +9659,11 @@ static int initialize_ssl(struct mg_context *ctx)
 	}
 
 	CRYPTO_set_locking_callback(&ssl_locking_callback);
+
+#ifndef pthread_t_LARGER_THAN_unsigned_long
+	/* Cannot use this function if sizeof(pthread_t) > sizeof(unsigned long) */
 	CRYPTO_set_id_callback(&ssl_id_callback);
+#endif
 
 	return 1;
 }
