@@ -9554,6 +9554,12 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 
 static unsigned long ssl_id_callback(void)
 {
+	/* CRYPTO_set_id_callback() assumes thread IDs can be represented by
+	 * unsigned long. See
+	 * https://www.openssl.org/docs/manmaster/crypto/threads.html#HISTORY */
+	mg_static_assert(sizeof(pthread_t) <= sizeof(unsigned long),
+	                 "Thread-ID data type size check");
+
 	return (unsigned long)pthread_self();
 }
 
