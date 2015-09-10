@@ -157,7 +157,10 @@ static struct mg_option main_config_options[] = {
     {"icon", CONFIG_TYPE_STRING, NULL},
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
-static void WINCDECL signal_handler(int sig_num) { g_exit_flag = sig_num; }
+static void WINCDECL signal_handler(int sig_num)
+{
+	g_exit_flag = sig_num;
+}
 
 static NO_RETURN void die(const char *fmt, ...)
 {
@@ -729,6 +732,13 @@ static int run_lua(const char *file_name)
 }
 #endif
 
+
+#if defined(__MINGW32__) || defined(__MINGW64__)
+/* For __MINGW32/64_MAJOR/MINOR_VERSION define */
+#include <_mingw.h>
+#endif
+
+
 static void start_civetweb(int argc, char *argv[])
 {
 	struct mg_callbacks callbacks;
@@ -833,17 +843,17 @@ static void start_civetweb(int argc, char *argv[])
 #elif defined(__MINGW64__)
 		fprintf(stdout,
 		        "MinGW64: %u.%u\n",
-		        (unsigned)__MINGW64_MAJOR_VERSION,
-		        (unsigned)__MINGW64_MAJOR_VERSION);
+		        (unsigned)__MINGW64_VERSION_MAJOR,
+		        (unsigned)__MINGW64_VERSION_MINOR);
 		fprintf(stdout,
 		        "MinGW32: %u.%u\n",
 		        (unsigned)__MINGW32_MAJOR_VERSION,
-		        (unsigned)__MINGW32_MAJOR_VERSION);
+		        (unsigned)__MINGW32_MINOR_VERSION);
 #elif defined(__MINGW32__)
 		fprintf(stdout,
 		        "MinGW32: %u.%u\n",
 		        (unsigned)__MINGW32_MAJOR_VERSION,
-		        (unsigned)__MINGW32_MAJOR_VERSION);
+		        (unsigned)__MINGW32_MINOR_VERSION);
 #elif defined(__clang__)
 		fprintf(stdout,
 		        "clang: %u.%u.%u (%s)\n",
@@ -2265,7 +2275,10 @@ int main(int argc, char *argv[])
 	           openFile:[NSString stringWithUTF8String:g_config_file]
 	    withApplication:@"TextEdit"];
 }
-- (void)shutDown { [NSApp terminate:nil]; }
+- (void)shutDown
+{
+	[NSApp terminate:nil];
+}
 @end
 
 

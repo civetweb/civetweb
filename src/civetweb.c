@@ -449,13 +449,19 @@ typedef int SOCKET;
 #endif
 
 #ifdef _WIN32
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 static CRITICAL_SECTION global_log_file_lock;
-static DWORD pthread_self(void) { return GetCurrentThreadId(); }
+static DWORD pthread_self(void)
+{
+	return GetCurrentThreadId();
+}
 
 static int pthread_key_create(
     pthread_key_t *key,
@@ -481,10 +487,16 @@ static int pthread_setspecific(pthread_key_t key, void *value)
 }
 
 #ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
-static void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
+static void *pthread_getspecific(pthread_key_t key)
+{
+	return TlsGetValue(key);
+}
 #endif
 
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
 #endif /* _WIN32 */
 
 #include "civetweb.h"
@@ -682,10 +694,22 @@ mg_realloc_ex(void *memory, size_t newsize, const char *file, unsigned line)
 
 #else
 
-static __inline void *mg_malloc(size_t a) { return malloc(a); }
-static __inline void *mg_calloc(size_t a, size_t b) { return calloc(a, b); }
-static __inline void *mg_realloc(void *a, size_t b) { return realloc(a, b); }
-static __inline void mg_free(void *a) { free(a); }
+static __inline void *mg_malloc(size_t a)
+{
+	return malloc(a);
+}
+static __inline void *mg_calloc(size_t a, size_t b)
+{
+	return calloc(a, b);
+}
+static __inline void *mg_realloc(void *a, size_t b)
+{
+	return realloc(a, b);
+}
+static __inline void mg_free(void *a)
+{
+	free(a);
+}
 
 #endif
 
@@ -719,12 +743,19 @@ static void mg_snprintf(const struct mg_connection *conn,
 #ifdef free
 #undef free
 #endif
+#ifdef snprintf
+#undef snprintf
+#endif
+#ifdef vsnprintf
+#undef vsnprintf
+#endif
 #define malloc DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
 #define calloc DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free DO_NOT_USE_THIS_FUNCTION__USE_mg_free
 #define snprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_snprintf
-#ifdef _WIN32 /* Don't use vsnprintf for Linux, Windows or anything else */
+#ifdef _WIN32 /* vsnprintf must not be used in any system, *                   \
+               * but this define only works well for Windows. */
 #define vsnprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_vsnprintf
 #endif
 
@@ -1210,11 +1241,14 @@ static void mg_set_thread_name(const char *name)
 		               sizeof(info) / sizeof(ULONG_PTR),
 		               (ULONG_PTR *)&info);
 	}
-	__except(EXCEPTION_EXECUTE_HANDLER) {}
+	__except(EXCEPTION_EXECUTE_HANDLER)
+	{
+	}
 #elif defined(__MINGW32__)
 /* No option known to set thread name for MinGW */
 #endif
-#elif((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
+#elif defined(__GLIBC__) &&                                                    \
+    ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
 	/* pthread_setname_np first appeared in glibc in version 2.12*/
 	(void)pthread_setname_np(pthread_self(), threadName);
 #elif defined(__linux__)
@@ -1223,7 +1257,9 @@ static void mg_set_thread_name(const char *name)
 #endif
 }
 #else /* !defined(NO_THREAD_NAME) */
-void mg_set_thread_name(const char *threadName) {}
+void mg_set_thread_name(const char *threadName)
+{
+}
 #endif
 
 #if defined(MG_LEGACY_INTERFACE)
@@ -1243,7 +1279,10 @@ const char **mg_get_valid_option_names(void)
 }
 #endif
 
-const struct mg_option *mg_get_valid_options(void) { return config_options; }
+const struct mg_option *mg_get_valid_options(void)
+{
+	return config_options;
+}
 
 static int is_file_in_memory(struct mg_connection *conn,
                              const char *path,
@@ -1354,7 +1393,10 @@ static char *mg_strndup(const char *ptr, size_t len)
 	return p;
 }
 
-static char *mg_strdup(const char *str) { return mg_strndup(str, strlen(str)); }
+static char *mg_strdup(const char *str)
+{
+	return mg_strndup(str, strlen(str));
+}
 
 static const char *mg_strcasestr(const char *big_str, const char *small_str)
 {
@@ -1602,7 +1644,10 @@ static struct mg_connection *fc(struct mg_context *ctx)
 	return &fake_connection;
 }
 
-const char *mg_version(void) { return CIVETWEB_VERSION; }
+const char *mg_version(void)
+{
+	return CIVETWEB_VERSION;
+}
 
 const struct mg_request_info *
 mg_get_request_info(const struct mg_connection *conn)
@@ -2123,11 +2168,15 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 	}
 }
 
+
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 static int pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
 {
@@ -2302,8 +2351,10 @@ static int pthread_cond_destroy(pthread_cond_t *cv)
 	return 0;
 }
 
+#if defined(__MINGW32__)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
 
 /* For Windows, change all slashes to backslashes in path names. */
 static void change_slashes_to_backslashes(char *path)
@@ -2346,10 +2397,13 @@ static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
 }
 
 #if defined(_WIN32_WCE)
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 static time_t time(time_t *ptime)
 {
@@ -2409,7 +2463,11 @@ strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
 	return 0;
 }
 
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
+
 #endif
 
 /* Windows happily opens files with some garbage at the end of file name.
@@ -2495,10 +2553,13 @@ static int mg_mkdir(const char *path, int mode)
 }
 #endif
 
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
 static DIR *opendir(const char *name)
@@ -2610,7 +2671,10 @@ static int poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 }
 #endif /* HAVE_POLL */
 
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
 
 
 static void set_close_on_exec(SOCKET sock,
@@ -2680,10 +2744,14 @@ static int mg_join_thread(pthread_t threadid)
 
 
 #if !defined(NO_SSL_DL)
-/* Create substitutes for POSIX functions in Win32. 
- * Show no warning in case system functions are not used. */
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 
 static HANDLE dlopen(const char *dll_name, int flags)
 {
@@ -2706,7 +2774,11 @@ static int dlclose(void *handle)
 	return result;
 }
 
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
 #pragma GCC diagnostic pop
+#endif
+
 #endif
 
 
@@ -4975,7 +5047,10 @@ int mg_modify_passwords_file(const char *fname,
 }
 
 
-static int is_valid_port(unsigned int port) { return port < 0xffff; }
+static int is_valid_port(unsigned long port)
+{
+	return port < 0xffff;
+}
 
 
 static int mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
@@ -5920,8 +5995,11 @@ static int parse_http_message(char *buf, int len, struct mg_request_info *ri)
  * buffer (which marks the end of HTTP request). Buffer buf may already
  * have some data. The length of the data is stored in nread.
  * Upon every read operation, increase nread by the number of bytes read. */
-static int read_request(
-    FILE *fp, struct mg_connection *conn, char *buf, int bufsiz, int *nread)
+static int read_request(FILE *fp,
+                        struct mg_connection *conn,
+                        char *buf,
+                        int bufsiz,
+                        int *nread)
 {
 	int request_len, n = 0;
 	struct timespec last_action_time = {0, 0};
@@ -8002,7 +8080,10 @@ static int is_websocket_protocol(const struct mg_connection *conn)
 #endif /* !USE_WEBSOCKET */
 
 
-static int isbyte(int n) { return n >= 0 && n <= 255; }
+static int isbyte(int n)
+{
+	return n >= 0 && n <= 255;
+}
 
 
 static int parse_net(const char *spec, uint32_t *net, uint32_t *mask)
@@ -8563,8 +8644,11 @@ static void deprecated_websocket_ready_wrapper(struct mg_connection *conn,
 }
 
 
-static int deprecated_websocket_data_wrapper(
-    struct mg_connection *conn, int bits, char *data, size_t len, void *cbdata)
+static int deprecated_websocket_data_wrapper(struct mg_connection *conn,
+                                             int bits,
+                                             char *data,
+                                             size_t len,
+                                             void *cbdata)
 {
 	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
 	if (pcallbacks->websocket_data) {
@@ -9476,10 +9560,25 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 }
 
 
+#ifndef pthread_t_LARGER_THAN_unsigned_long
+/* Must be set if sizeof(pthread_t) > sizeof(unsigned long) */
 static unsigned long ssl_id_callback(void)
 {
+#if defined _WIN32
+	/* Win32 thread IDs are DWORDs */
+	return (unsigned long)GetCurrentThreadId();
+#else
+	/* CRYPTO_set_id_callback() assumes thread IDs can be represented by
+	 * unsigned long. See
+	 * https://www.openssl.org/docs/manmaster/crypto/threads.html#HISTORY */
+	mg_static_assert(sizeof(pthread_t) <= sizeof(unsigned long),
+	                 "Thread-ID data type size check"
+	                 " - set pthread_t_LARGER_THAN_unsigned_long");
+
 	return (unsigned long)pthread_self();
+#endif
 }
+#endif
 
 
 #if !defined(NO_SSL_DL)
@@ -9574,7 +9673,11 @@ static int initialize_ssl(struct mg_context *ctx)
 	}
 
 	CRYPTO_set_locking_callback(&ssl_locking_callback);
+
+#ifndef pthread_t_LARGER_THAN_unsigned_long
+	/* Cannot use this function if sizeof(pthread_t) > sizeof(unsigned long) */
 	CRYPTO_set_id_callback(&ssl_id_callback);
+#endif
 
 	return 1;
 }
@@ -9875,8 +9978,11 @@ void mg_close_connection(struct mg_connection *conn)
 }
 
 
-struct mg_connection *mg_connect_client(
-    const char *host, int port, int use_ssl, char *ebuf, size_t ebuf_len)
+struct mg_connection *mg_connect_client(const char *host,
+                                        int port,
+                                        int use_ssl,
+                                        char *ebuf,
+                                        size_t ebuf_len)
 {
 	static struct mg_context fake_ctx;
 	struct mg_connection *conn = NULL;
