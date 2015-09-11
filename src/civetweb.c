@@ -10141,6 +10141,10 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	char *hostend = NULL;
 	char *portbegin, *portend;
 
+	if (!conn) {
+		return 0;
+	}
+
 	/* DNS is case insensitive, so use case insensitive string compare here */
 	domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
 	if (!domain) {
