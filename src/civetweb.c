@@ -3704,8 +3704,9 @@ static int alloc_vprintf2(char **buf, const char *fmt, va_list ap)
 			break;
 		}
 		va_copy(ap_copy, ap);
-		len = vsnprintf_impl(*buf, size, fmt, ap_copy);
+		len = vsnprintf_impl(*buf, size - 1, fmt, ap_copy);
 		va_end(ap_copy);
+		*buf[size - 1] = 0;
 	}
 
 	return len;
