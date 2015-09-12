@@ -1162,11 +1162,13 @@ struct de {
 	struct file file;
 };
 
+
 #if defined(USE_WEBSOCKET)
 static int is_websocket_protocol(const struct mg_connection *conn);
 #else
 #define is_websocket_protocol(conn) (0)
 #endif
+
 
 static int mg_atomic_inc(volatile int *addr)
 {
@@ -1184,6 +1186,7 @@ static int mg_atomic_inc(volatile int *addr)
 	return ret;
 }
 
+
 static int mg_atomic_dec(volatile int *addr)
 {
 	int ret;
@@ -1199,6 +1202,7 @@ static int mg_atomic_dec(volatile int *addr)
 #endif
 	return ret;
 }
+
 
 #if !defined(NO_THREAD_NAME)
 #if defined(_WIN32) && defined(_MSC_VER)
@@ -1217,6 +1221,7 @@ typedef struct tagTHREADNAME_INFO {
 #include <sys/prctl.h>
 #include <sys/sendfile.h>
 #endif
+
 
 static void mg_set_thread_name(const char *name)
 {
@@ -1262,6 +1267,7 @@ void mg_set_thread_name(const char *threadName)
 }
 #endif
 
+
 #if defined(MG_LEGACY_INTERFACE)
 const char **mg_get_valid_option_names(void)
 {
@@ -1279,10 +1285,12 @@ const char **mg_get_valid_option_names(void)
 }
 #endif
 
+
 const struct mg_option *mg_get_valid_options(void)
 {
 	return config_options;
 }
+
 
 static int is_file_in_memory(struct mg_connection *conn,
                              const char *path,
@@ -1306,6 +1314,7 @@ static int is_file_in_memory(struct mg_connection *conn,
 	return filep->membuf != NULL;
 }
 
+
 static int is_file_opened(const struct file *filep)
 {
 	if (!filep) {
@@ -1314,6 +1323,7 @@ static int is_file_opened(const struct file *filep)
 
 	return filep->membuf != NULL || filep->fp != NULL;
 }
+
 
 static int mg_fopen(struct mg_connection *conn,
                     const char *path,
@@ -1345,6 +1355,7 @@ static void mg_fclose(struct file *filep)
 	}
 }
 
+
 static void mg_strlcpy(register char *dst, register const char *src, size_t n)
 {
 	for (; *src != '\0' && n > 1; n--) {
@@ -1353,10 +1364,12 @@ static void mg_strlcpy(register char *dst, register const char *src, size_t n)
 	*dst = '\0';
 }
 
+
 static int lowercase(const char *s)
 {
 	return tolower(*(const unsigned char *)s);
 }
+
 
 int mg_strncasecmp(const char *s1, const char *s2, size_t len)
 {
@@ -1371,6 +1384,7 @@ int mg_strncasecmp(const char *s1, const char *s2, size_t len)
 	return diff;
 }
 
+
 static int mg_strcasecmp(const char *s1, const char *s2)
 {
 	int diff;
@@ -1381,6 +1395,7 @@ static int mg_strcasecmp(const char *s1, const char *s2)
 
 	return diff;
 }
+
 
 static char *mg_strndup(const char *ptr, size_t len)
 {
@@ -1393,10 +1408,12 @@ static char *mg_strndup(const char *ptr, size_t len)
 	return p;
 }
 
+
 static char *mg_strdup(const char *str)
 {
 	return mg_strndup(str, strlen(str));
 }
+
 
 static const char *mg_strcasestr(const char *big_str, const char *small_str)
 {
@@ -1412,6 +1429,7 @@ static const char *mg_strcasestr(const char *big_str, const char *small_str)
 
 	return NULL;
 }
+
 
 /* Return null terminated string of given maximum length.
  * Report errors if length is exceeded. */
@@ -1452,12 +1470,13 @@ static void mg_vsnprintf(const struct mg_connection *conn,
 		}
 		mg_cry(conn,
 		       "truncating vsnprintf buffer: [%.*s]",
-		       n > 200 ? 200 : n,
+		       buflen > 200 ? 200 : buflen - 1,
 		       buf);
 		n = (int)buflen - 1;
 	}
 	buf[n] = '\0';
 }
+
 
 static void mg_snprintf(const struct mg_connection *conn,
                         int *truncated,
@@ -1473,6 +1492,7 @@ static void mg_snprintf(const struct mg_connection *conn,
 	va_end(ap);
 }
 
+
 static int get_option_index(const char *name)
 {
 	int i;
@@ -1484,6 +1504,7 @@ static int get_option_index(const char *name)
 	}
 	return -1;
 }
+
 
 const char *mg_get_option(const struct mg_context *ctx, const char *name)
 {
@@ -1497,15 +1518,18 @@ const char *mg_get_option(const struct mg_context *ctx, const char *name)
 	}
 }
 
+
 struct mg_context *mg_get_context(const struct mg_connection *conn)
 {
 	return (conn == NULL) ? (struct mg_context *)NULL : (conn->ctx);
 }
 
+
 void *mg_get_user_data(const struct mg_context *ctx)
 {
 	return (ctx == NULL) ? NULL : ctx->user_data;
 }
+
 
 void mg_set_user_connection_data(const struct mg_connection *conn, void *data)
 {
@@ -1514,6 +1538,7 @@ void mg_set_user_connection_data(const struct mg_connection *conn, void *data)
 	}
 }
 
+
 void *mg_get_user_connection_data(const struct mg_connection *conn)
 {
 	if (conn != NULL) {
@@ -1521,6 +1546,7 @@ void *mg_get_user_connection_data(const struct mg_connection *conn)
 	}
 	return NULL;
 }
+
 
 size_t
 mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
@@ -1535,6 +1561,7 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 	}
 	return i;
 }
+
 
 static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 {
@@ -1566,6 +1593,7 @@ static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 #endif
 }
 
+
 /* Convert time_t to a string. According to RFC2616, Sec 14.18, this must be
  * included in all responses other than 100, 101, 5xx. */
 static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
@@ -1581,6 +1609,7 @@ static void gmt_time_string(char *buf, size_t buf_len, time_t *t)
 	}
 }
 
+
 /* difftime for struct timespec. Return value is in seconds. */
 static double mg_difftimespec(const struct timespec *ts_now,
                               const struct timespec *ts_before)
@@ -1588,6 +1617,7 @@ static double mg_difftimespec(const struct timespec *ts_now,
 	return (double)(ts_now->tv_nsec - ts_before->tv_nsec) * 1.0E-9 +
 	       (double)(ts_now->tv_sec - ts_before->tv_sec);
 }
+
 
 /* Print error message to the opened error log stream. */
 void mg_cry(const struct mg_connection *conn, const char *fmt, ...)
@@ -1600,6 +1630,7 @@ void mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 	va_start(ap, fmt);
 	IGNORE_UNUSED_RESULT(vsnprintf_impl(buf, sizeof(buf), fmt, ap));
 	va_end(ap);
+	buf[sizeof(buf) - 1] = 0;
 
 	/* Do not lock when getting the callback value, here and below.
 	 * I suppose this is fine, since function cannot disappear in the
@@ -1635,6 +1666,7 @@ void mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 	}
 }
 
+
 /* Return fake connection structure. Used for logging, if connection
  * is not applicable at the moment of logging. */
 static struct mg_connection *fc(struct mg_context *ctx)
@@ -1644,10 +1676,12 @@ static struct mg_connection *fc(struct mg_context *ctx)
 	return &fake_connection;
 }
 
+
 const char *mg_version(void)
 {
 	return CIVETWEB_VERSION;
 }
+
 
 const struct mg_request_info *
 mg_get_request_info(const struct mg_connection *conn)
@@ -1657,6 +1691,7 @@ mg_get_request_info(const struct mg_connection *conn)
 	}
 	return &conn->request_info;
 }
+
 
 /* Skip the characters until one of the delimiters characters found.
  * 0-terminate resulting word. Skip the delimiter and following whitespaces.
@@ -1711,12 +1746,14 @@ static char *skip_quoted(char **buf,
 	return begin_word;
 }
 
+
 /* Simplified version of skip_quoted without quote char
  * and whitespace == delimiters */
 static char *skip(char **buf, const char *delimiters)
 {
 	return skip_quoted(buf, delimiters, delimiters, 0);
 }
+
 
 /* Return HTTP header value, or NULL if not found. */
 static const char *get_header(const struct mg_request_info *ri,
@@ -1734,6 +1771,7 @@ static const char *get_header(const struct mg_request_info *ri,
 	return NULL;
 }
 
+
 const char *mg_get_header(const struct mg_connection *conn, const char *name)
 {
 	if (!conn) {
@@ -1742,6 +1780,7 @@ const char *mg_get_header(const struct mg_connection *conn, const char *name)
 
 	return get_header(&conn->request_info, name);
 }
+
 
 /* A helper function for traversing a comma separated list of values.
  * It returns a list pointer shifted to the next value, or NULL if the end
@@ -1782,6 +1821,7 @@ next_option(const char *list, struct vec *val, struct vec *eq_val)
 
 	return list;
 }
+
 
 /* Perform case-insensitive match of string against pattern */
 static int
@@ -1826,6 +1866,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 	return j;
 }
 
+
 /* HTTP 1.1 assumes keep alive if "Connection:" header is not set
  * This function must tolerate situations when connection info is not
  * set up, for example if request parsing failed. */
@@ -1847,6 +1888,7 @@ static int should_keep_alive(const struct mg_connection *conn)
 	return 0;
 }
 
+
 static int should_decode_url(const struct mg_connection *conn)
 {
 	if (!conn || !conn->ctx) {
@@ -1856,16 +1898,19 @@ static int should_decode_url(const struct mg_connection *conn)
 	return (mg_strcasecmp(conn->ctx->config[DECODE_URL], "yes") == 0);
 }
 
+
 static const char *suggest_connection_header(const struct mg_connection *conn)
 {
 	return should_keep_alive(conn) ? "keep-alive" : "close";
 }
+
 
 static void handle_file_based_request(struct mg_connection *conn,
                                       const char *path,
                                       struct file *filep);
 static int
 mg_stat(struct mg_connection *conn, const char *path, struct file *filep);
+
 
 static const char *mg_get_response_code_text(int response_code,
                                              struct mg_connection *conn)
@@ -2044,6 +2089,7 @@ static const char *mg_get_response_code_text(int response_code,
 	}
 }
 
+
 static void send_http_error(struct mg_connection *,
                             int,
                             PRINTF_FORMAT_STRING(const char *fmt),
@@ -2178,6 +2224,7 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
+
 static int pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
 {
 	(void)unused;
@@ -2185,15 +2232,18 @@ static int pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
 	return *mutex == NULL ? -1 : 0;
 }
 
+
 static int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
 	return CloseHandle(*mutex) == 0 ? -1 : 0;
 }
 
+
 static int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
 	return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0 ? 0 : -1;
 }
+
 
 #ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
 static int pthread_mutex_trylock(pthread_mutex_t *mutex)
@@ -3389,6 +3439,7 @@ static int pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 	return nread;
 }
 
+
 static void discard_unread_request_data(struct mg_connection *conn)
 {
 	char buf[MG_BUF_LEN];
@@ -3426,6 +3477,7 @@ static void discard_unread_request_data(struct mg_connection *conn)
 		}
 	}
 }
+
 
 static int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 {
@@ -3484,6 +3536,7 @@ static int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 	return (int)nread;
 }
 
+
 static char mg_getc(struct mg_connection *conn)
 {
 	char c;
@@ -3496,6 +3549,7 @@ static char mg_getc(struct mg_connection *conn)
 	}
 	return c;
 }
+
 
 int mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
@@ -3575,6 +3629,7 @@ int mg_read(struct mg_connection *conn, void *buf, size_t len)
 	return mg_read_inner(conn, buf, len);
 }
 
+
 int mg_write(struct mg_connection *conn, const void *buf, size_t len)
 {
 	time_t now;
@@ -3631,6 +3686,7 @@ int mg_write(struct mg_connection *conn, const void *buf, size_t len)
 	return (int)total;
 }
 
+
 /* Alternative alloc_vprintf() for non-compliant C runtimes */
 static int alloc_vprintf2(char **buf, const char *fmt, va_list ap)
 {
@@ -3654,6 +3710,7 @@ static int alloc_vprintf2(char **buf, const char *fmt, va_list ap)
 
 	return len;
 }
+
 
 /* Print message to buffer. If buffer is large enough to hold the message,
  * return buffer. If buffer is to small, allocate large enough buffer on heap,
@@ -3692,6 +3749,7 @@ static int alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
 	return len;
 }
 
+
 static int mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
 {
 	char mem[MG_BUF_LEN], *buf = mem;
@@ -3707,6 +3765,7 @@ static int mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
 	return len;
 }
 
+
 int mg_printf(struct mg_connection *conn, const char *fmt, ...)
 {
 	va_list ap;
@@ -3718,6 +3777,7 @@ int mg_printf(struct mg_connection *conn, const char *fmt, ...)
 
 	return result;
 }
+
 
 int mg_url_decode(const char *src,
                   int src_len,
@@ -3748,6 +3808,7 @@ int mg_url_decode(const char *src,
 	return i >= src_len ? j : -1;
 }
 
+
 int mg_get_var(const char *data,
                size_t data_len,
                const char *name,
@@ -3756,6 +3817,7 @@ int mg_get_var(const char *data,
 {
 	return mg_get_var2(data, data_len, name, dst, dst_len, 0);
 }
+
 
 int mg_get_var2(const char *data,
                 size_t data_len,
@@ -3812,6 +3874,7 @@ int mg_get_var2(const char *data,
 	return len;
 }
 
+
 int mg_get_cookie(const char *cookie_header,
                   const char *var_name,
                   char *dst,
@@ -3856,6 +3919,7 @@ int mg_get_cookie(const char *cookie_header,
 	return len;
 }
 
+
 #if defined(USE_WEBSOCKET) || defined(USE_LUA)
 static void base64_encode(const unsigned char *src, int src_len, char *dst)
 {
@@ -3884,6 +3948,7 @@ static void base64_encode(const unsigned char *src, int src_len, char *dst)
 }
 #endif
 
+
 #if defined(USE_LUA)
 static unsigned char b64reverse(char letter)
 {
@@ -3907,6 +3972,7 @@ static unsigned char b64reverse(char letter)
 	}
 	return 254; /* error */
 }
+
 
 static int
 base64_decode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
@@ -3949,6 +4015,7 @@ base64_decode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
 }
 #endif
 
+
 static int is_put_or_delete_method(const struct mg_connection *conn)
 {
 	if (conn) {
@@ -3958,6 +4025,7 @@ static int is_put_or_delete_method(const struct mg_connection *conn)
 	}
 	return 0;
 }
+
 
 static void
 interpret_uri(struct mg_connection *conn,   /* in: request */
@@ -4168,6 +4236,7 @@ interpret_cleanup:
 	*is_script_ressource = 0;
 #endif
 }
+
 
 /* Check whether full request is buffered. Return:
  * -1  if request is malformed
