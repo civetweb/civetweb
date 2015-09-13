@@ -1077,14 +1077,15 @@ struct mg_context {
 	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
 	pthread_cond_t thread_cond; /* Condvar for tracking workers terminations */
 
-	struct socket queue[MGSQLEN];   /* Accepted sockets */
-	volatile int sq_head;           /* Head of the socket queue */
-	volatile int sq_tail;           /* Tail of the socket queue */
-	pthread_cond_t sq_full;         /* Signaled when socket is produced */
-	pthread_cond_t sq_empty;        /* Signaled when socket is consumed */
-	pthread_t masterthreadid;       /* The master thread ID */
-	unsigned int workerthreadcount; /* The amount of worker threads. */
-	pthread_t *workerthreadids;     /* The worker thread IDs */
+	struct socket queue[MGSQLEN]; /* Accepted sockets */
+	volatile int sq_head;         /* Head of the socket queue */
+	volatile int sq_tail;         /* Tail of the socket queue */
+	pthread_cond_t sq_full;       /* Signaled when socket is produced */
+	pthread_cond_t sq_empty;      /* Signaled when socket is consumed */
+	pthread_t masterthreadid;     /* The master thread ID */
+	unsigned int
+	    cfg_worker_threads;     /* The number of configured worker threads. */
+	pthread_t *workerthreadids; /* The worker thread IDs */
 
 	unsigned long start_time; /* Server start time, used for authentication */
 	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
@@ -10034,7 +10035,7 @@ void mg_close_connection(struct mg_connection *conn)
 	close_connection(conn);
 	if (client_ctx != NULL) {
 		/* join worker thread and free context */
-		for (i = 0; i < client_ctx->workerthreadcount; i++) {
+		for (i = 0; i < client_ctx->cfg_worker_threads; i++) {
 			if (client_ctx->workerthreadids[i] != 0) {
 				mg_join_thread(client_ctx->workerthreadids[i]);
 			}
@@ -10563,10 +10564,10 @@ mg_connect_websocket_client(const char *host,
 	newctx = (struct mg_context *)mg_malloc(sizeof(struct mg_context));
 	memcpy(newctx, conn->ctx, sizeof(struct mg_context));
 	newctx->user_data = user_data;
-	newctx->context_type = 2;      /* client context type */
-	newctx->workerthreadcount = 1; /* one worker thread will be created */
+	newctx->context_type = 2;       /* client context type */
+	newctx->cfg_worker_threads = 1; /* one worker thread will be created */
 	newctx->workerthreadids =
-	    (pthread_t *)mg_calloc(newctx->workerthreadcount, sizeof(pthread_t));
+	    (pthread_t *)mg_calloc(newctx->cfg_worker_threads, sizeof(pthread_t));
 	conn->ctx = newctx;
 	thread_data = (struct websocket_client_thread_data *)mg_calloc(
 	    sizeof(struct websocket_client_thread_data), 1);
@@ -11054,7 +11055,7 @@ static void master_thread_run(void *thread_func_param)
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	/* Join all worker threads to avoid leaking threads. */
-	workerthreadcount = ctx->workerthreadcount;
+	workerthreadcount = ctx->cfg_worker_threads;
 	for (i = 0; i < workerthreadcount; i++) {
 		if (ctx->workerthreadids[i] != 0) {
 			mg_join_thread(ctx->workerthreadids[i]);
@@ -11375,9 +11376,9 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	}
 
 	if (workerthreadcount > 0) {
-		ctx->workerthreadcount = ((unsigned int)(workerthreadcount));
+		ctx->cfg_worker_threads = ((unsigned int)(workerthreadcount));
 		ctx->workerthreadids =
-		    (pthread_t *)mg_calloc(ctx->workerthreadcount, sizeof(pthread_t));
+		    (pthread_t *)mg_calloc(ctx->cfg_worker_threads, sizeof(pthread_t));
 		if (ctx->workerthreadids == NULL) {
 			mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
 			free_context(ctx);
@@ -11404,7 +11405,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid);
 
 	/* Start worker threads */
-	for (i = 0; i < ctx->workerthreadcount; i++) {
+	for (i = 0; i < ctx->cfg_worker_threads; i++) {
 		(void)pthread_mutex_lock(&ctx->thread_mutex);
 		ctx->num_threads++;
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
