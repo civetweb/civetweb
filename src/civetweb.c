@@ -1073,9 +1073,10 @@ struct mg_context {
 	in_port_t *listening_ports;
 	unsigned int num_listening_sockets;
 
-	volatile int num_threads;     /* Number of threads */
+	volatile int
+	    running_worker_threads;   /* Number of currently running worker threads */
 	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
-	pthread_cond_t thread_cond; /* Condvar for tracking workers terminations */
+	pthread_cond_t thread_cond;   /* Condvar for tracking workers terminations */
 
 	struct socket queue[MGSQLEN]; /* Accepted sockets */
 	volatile int sq_head;         /* Head of the socket queue */
@@ -1084,12 +1085,12 @@ struct mg_context {
 	pthread_cond_t sq_empty;      /* Signaled when socket is consumed */
 	pthread_t masterthreadid;     /* The master thread ID */
 	unsigned int
-	    cfg_worker_threads;     /* The number of configured worker threads. */
-	pthread_t *workerthreadids; /* The worker thread IDs */
+	    cfg_worker_threads;       /* The number of configured worker threads. */
+	pthread_t *workerthreadids;   /* The worker thread IDs */
 
-	unsigned long start_time; /* Server start time, used for authentication */
-	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
-	unsigned long nonce_count;   /* Used nonces, used for authentication */
+	unsigned long start_time;     /* Server start time, used for authentication */
+	pthread_mutex_t nonce_mutex;  /* Protects nonce_count */
+	unsigned long nonce_count;    /* Used nonces, used for authentication */
 
 	char *systemName; /* What operating system is running */
 
@@ -10847,9 +10848,9 @@ static void *worker_thread_run(void *thread_func_param)
 
 	/* Signal master that we're done with connection and exiting */
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
-	ctx->num_threads--;
+	ctx->running_worker_threads--;
 	(void)pthread_cond_signal(&ctx->thread_cond);
-	/* assert(ctx->num_threads >= 0); */
+	/* assert(ctx->running_worker_threads >= 0); */
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	pthread_setspecific(sTlsKey, NULL);
@@ -11049,7 +11050,7 @@ static void master_thread_run(void *thread_func_param)
 
 	/* Wait until all threads finish */
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
-	while (ctx->num_threads > 0) {
+	while (ctx->running_worker_threads > 0) {
 		(void)pthread_cond_wait(&ctx->thread_cond, &ctx->thread_mutex);
 	}
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
@@ -11407,12 +11408,12 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	/* Start worker threads */
 	for (i = 0; i < ctx->cfg_worker_threads; i++) {
 		(void)pthread_mutex_lock(&ctx->thread_mutex);
-		ctx->num_threads++;
+		ctx->running_worker_threads++;
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 		if (mg_start_thread_with_id(
 		        worker_thread, ctx, &ctx->workerthreadids[i]) != 0) {
 			(void)pthread_mutex_lock(&ctx->thread_mutex);
-			ctx->num_threads--;
+			ctx->running_worker_threads--;
 			(void)pthread_mutex_unlock(&ctx->thread_mutex);
 			if (i > 0) {
 				mg_cry(fc(ctx),
