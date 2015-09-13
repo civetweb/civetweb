@@ -8766,19 +8766,20 @@ static void handle_request(struct mg_connection *conn)
 		    NULL) {
 			*((char *)conn->request_info.query_string++) = '\0';
 		}
-		uri_len = (int)strlen(ri->uri);
+		uri_len = (int)strlen(ri->rel_uri);
 
 		/* 1.2. decode url (if config says so) */
 		if (should_decode_url(conn)) {
-			mg_url_decode(ri->uri, uri_len, (char *)ri->uri, uri_len + 1, 0);
+			mg_url_decode(
+			    ri->rel_uri, uri_len, (char *)ri->rel_uri, uri_len + 1, 0);
 		}
 
 		/* 1.3. clean URIs, so a path like allowed_dir/../forbidden_file is not
 		 * possible */
-		remove_double_dots_and_double_slashes((char *)ri->uri);
+		remove_double_dots_and_double_slashes((char *)ri->rel_uri);
 
 		/* step 1. completed, the url is known now */
-		DEBUG_TRACE("URL: %s", ri->uri);
+		DEBUG_TRACE("URL: %s", ri->rel_uri);
 
 		/* 2. do a https redirect, if required */
 		if (!conn->client.is_ssl && conn->client.ssl_redir) {
@@ -8799,7 +8800,7 @@ static void handle_request(struct mg_connection *conn)
 
 		/* 3. if this ip has limited speed, set it for this connection */
 		conn->throttle = set_throttle(
-		    conn->ctx->config[THROTTLE], get_remote_ip(conn), ri->uri);
+		    conn->ctx->config[THROTTLE], get_remote_ip(conn), ri->rel_uri);
 
 		/* 4. call a "handle everything" callback, if registered */
 		if (conn->ctx->callbacks.begin_request != NULL) {
@@ -9032,7 +9033,7 @@ static void handle_request(struct mg_connection *conn)
 		}
 
 		/* 12. Directories uris should end with a slash */
-		if (file.is_directory && ri->uri[uri_len - 1] != '/') {
+		if (file.is_directory && ri->rel_uri[uri_len - 1] != '/') {
 			gmt_time_string(date, sizeof(date), &curtime);
 			mg_printf(conn,
 			          "HTTP/1.1 301 Moved Permanently\r\n"
@@ -9040,7 +9041,7 @@ static void handle_request(struct mg_connection *conn)
 			          "Date: %s\r\n"
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n\r\n",
-			          ri->uri,
+			          ri->request_uri,
 			          date,
 			          suggest_connection_header(conn));
 			return;
