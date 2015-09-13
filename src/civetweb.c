@@ -1074,9 +1074,9 @@ struct mg_context {
 	unsigned int num_listening_sockets;
 
 	volatile int
-	    running_worker_threads;   /* Number of currently running worker threads */
+	    running_worker_threads; /* Number of currently running worker threads */
 	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
-	pthread_cond_t thread_cond;   /* Condvar for tracking workers terminations */
+	pthread_cond_t thread_cond; /* Condvar for tracking workers terminations */
 
 	struct socket queue[MGSQLEN]; /* Accepted sockets */
 	volatile int sq_head;         /* Head of the socket queue */
@@ -1085,12 +1085,12 @@ struct mg_context {
 	pthread_cond_t sq_empty;      /* Signaled when socket is consumed */
 	pthread_t masterthreadid;     /* The master thread ID */
 	unsigned int
-	    cfg_worker_threads;       /* The number of configured worker threads. */
-	pthread_t *workerthreadids;   /* The worker thread IDs */
+	    cfg_worker_threads;     /* The number of configured worker threads. */
+	pthread_t *workerthreadids; /* The worker thread IDs */
 
-	unsigned long start_time;     /* Server start time, used for authentication */
-	pthread_mutex_t nonce_mutex;  /* Protects nonce_count */
-	unsigned long nonce_count;    /* Used nonces, used for authentication */
+	unsigned long start_time; /* Server start time, used for authentication */
+	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
+	unsigned long nonce_count;   /* Used nonces, used for authentication */
 
 	char *systemName; /* What operating system is running */
 
@@ -1472,7 +1472,7 @@ static void mg_vsnprintf(const struct mg_connection *conn,
 		}
 		mg_cry(conn,
 		       "truncating vsnprintf buffer: [%.*s]",
-		       buflen > 200 ? 200 : buflen - 1,
+		       (int)((buflen > 200) ? 200 : (buflen - 1)),
 		       buf);
 		n = (int)buflen - 1;
 	}
@@ -1657,7 +1657,7 @@ void mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 				fprintf(fp,
 				        "%s %s: ",
 				        conn->request_info.request_method,
-				        conn->request_info.uri);
+				        conn->request_info.request_uri);
 			}
 
 			fprintf(fp, "%s", buf);
@@ -4924,7 +4924,7 @@ static int check_authorization(struct mg_connection *conn, const char *path)
 
 	list = conn->ctx->config[PROTECT_URI];
 	while ((list = next_option(list, &uri_vec, &filename_vec)) != NULL) {
-		if (!memcmp(conn->request_info.uri, uri_vec.ptr, uri_vec.len)) {
+		if (!memcmp(conn->request_info.rel_uri, uri_vec.ptr, uri_vec.len)) {
 			mg_snprintf(conn,
 			            &truncated,
 			            fname,
@@ -5310,6 +5310,7 @@ int mg_url_encode(const char *src, char *dst, size_t dst_len)
 	return (*src == '\0') ? (int)(pos - dst) : -1;
 }
 
+
 static void print_dir_entry(struct de *de)
 {
 	char size[64], mod[64], href[PATH_MAX];
@@ -5371,7 +5372,7 @@ static void print_dir_entry(struct de *de)
 	    mg_printf(de->conn,
 	              "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
 	              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	              de->conn->request_info.uri,
+	              de->conn->request_info.rel_uri,
 	              href,
 	              de->file.is_directory ? "/" : "",
 	              de->file_name,
@@ -5379,6 +5380,7 @@ static void print_dir_entry(struct de *de)
 	              mod,
 	              size);
 }
+
 
 /* This function is called from send_directory() and used for
  * sorting directory entries by size, or name, or modification time.
@@ -5417,6 +5419,7 @@ static int WINCDECL compare_dir_entries(const void *p1, const void *p2)
 	}
 	return 0;
 }
+
 
 static int must_hide_file(struct mg_connection *conn, const char *path)
 {
@@ -5637,8 +5640,8 @@ static void handle_directory_request(struct mg_connection *conn,
 	              "<th><a href=\"?d%c\">Modified</a></th>"
 	              "<th><a href=\"?s%c\">Size</a></th></tr>"
 	              "<tr><td colspan=\"3\"><hr></td></tr>",
-	              conn->request_info.uri,
-	              conn->request_info.uri,
+	              conn->request_info.rel_uri,
+	              conn->request_info.rel_uri,
 	              sort_direction,
 	              sort_direction,
 	              sort_direction);
@@ -5648,7 +5651,7 @@ static void handle_directory_request(struct mg_connection *conn,
 	    mg_printf(conn,
 	              "<tr><td><a href=\"%s%s\">%s</a></td>"
 	              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	              conn->request_info.uri,
+	              conn->request_info.rel_uri,
 	              "..",
 	              "Parent directory",
 	              "-",
@@ -6027,8 +6030,8 @@ static int parse_http_message(char *buf, int len, struct mg_request_info *ri)
 	if (request_length > 0) {
 		/* Reset attributes. DO NOT TOUCH is_ssl, remote_ip, remote_addr,
 		 * remote_port */
-		ri->remote_user = ri->request_method = ri->uri = ri->http_version =
-		    NULL;
+		ri->remote_user = ri->request_method = ri->request_uri =
+		    ri->http_version = NULL;
 		ri->num_headers = 0;
 
 		buf[request_length - 1] = '\0';
@@ -6038,7 +6041,7 @@ static int parse_http_message(char *buf, int len, struct mg_request_info *ri)
 			buf++;
 		}
 		ri->request_method = skip(&buf, " ");
-		ri->uri = skip(&buf, " ");
+		ri->request_uri = skip(&buf, " ");
 		ri->http_version = skip(&buf, "\r\n");
 
 		/* HTTP message could be either HTTP request or HTTP response, e.g.
@@ -6411,14 +6414,16 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 
 	addenv(env, "REQUEST_METHOD=%s", conn->request_info.request_method);
 	addenv(env, "REMOTE_PORT=%d", conn->request_info.remote_port);
-	addenv(env, "REQUEST_URI=%s", conn->request_info.uri);
+
+	/* TODO: Check if request_uri or rel_uri should be used */
+	addenv(env, "REQUEST_URI=%s", conn->request_info.request_uri);
 
 	/* SCRIPT_NAME */
 	addenv(env,
 	       "SCRIPT_NAME=%.*s",
-	       (int)strlen(conn->request_info.uri) -
+	       (int)strlen(conn->request_info.rel_uri) -
 	           ((conn->path_info == NULL) ? 0 : (int)strlen(conn->path_info)),
-	       conn->request_info.uri);
+	       conn->request_info.rel_uri);
 
 	addenv(env, "SCRIPT_FILENAME=%s", prog);
 	if (conn->path_info == NULL) {
@@ -7430,7 +7435,7 @@ static void print_dav_dir_entry(struct de *de, void *data)
 	            href,
 	            sizeof(href),
 	            "%s%s",
-	            conn->request_info.uri,
+	            conn->request_info.rel_uri,
 	            de->file_name);
 
 	if (!truncated) {
@@ -7470,7 +7475,7 @@ static void handle_propfind(struct mg_connection *conn,
 	              "<d:multistatus xmlns:d='DAV:'>\n");
 
 	/* Print properties for the requested resource itself */
-	print_props(conn, conn->request_info.uri, filep);
+	print_props(conn, conn->request_info.rel_uri, filep);
 
 	/* If it is a directory, print directory entries too if Depth is not 0 */
 	if (filep && conn->ctx && filep->is_directory &&
@@ -8435,7 +8440,7 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 		          host,
 		          (int)ntohs(
 		              conn->ctx->listening_sockets[ssl_index].lsa.sin.sin_port),
-		          conn->request_info.uri,
+		          conn->request_info.rel_uri,
 		          (conn->request_info.query_string == NULL) ? "" : "?",
 		          (conn->request_info.query_string == NULL)
 		              ? ""
@@ -8607,7 +8612,7 @@ static int get_request_handler(struct mg_connection *conn,
 {
 	const struct mg_request_info *request_info = mg_get_request_info(conn);
 	if (request_info) {
-		const char *uri = request_info->uri;
+		const char *uri = request_info->rel_uri;
 		size_t urilen = strlen(uri);
 		struct mg_request_handler_info *tmp_rh;
 
@@ -8757,7 +8762,8 @@ static void handle_request(struct mg_connection *conn)
 
 		/* 1. get the request url */
 		/* 1.1. split into url and query string */
-		if ((conn->request_info.query_string = strchr(ri->uri, '?')) != NULL) {
+		if ((conn->request_info.query_string = strchr(ri->request_uri, '?')) !=
+		    NULL) {
 			*((char *)conn->request_info.query_string++) = '\0';
 		}
 		uri_len = (int)strlen(ri->uri);
@@ -9489,7 +9495,7 @@ static void log_access(const struct mg_connection *conn)
 	            ri->remote_user == NULL ? "-" : ri->remote_user,
 	            date,
 	            ri->request_method ? ri->request_method : "-",
-	            ri->uri ? ri->uri : "-",
+	            ri->request_uri ? ri->request_uri : "-",
 	            ri->http_version,
 	            conn->status_code,
 	            conn->num_bytes_sent,
@@ -9878,7 +9884,7 @@ static void reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.content_length = -1;
 	conn->request_info.remote_user = NULL;
 	conn->request_info.request_method = NULL;
-	conn->request_info.uri = NULL;
+	conn->request_info.request_uri = NULL;
 	conn->request_info.rel_uri = NULL;
 	conn->request_info.http_version = NULL;
 	conn->request_info.num_headers = 0;
@@ -10645,7 +10651,7 @@ static void process_new_connection(struct mg_connection *conn)
 			}
 
 			if (ebuf[0] == '\0') {
-				uri_type = get_uri_type(conn->request_info.uri);
+				uri_type = get_uri_type(conn->request_info.request_uri);
 				switch (uri_type) {
 				case 1:
 					/* Asterisk */
@@ -10653,13 +10659,13 @@ static void process_new_connection(struct mg_connection *conn)
 					break;
 				case 2:
 					/* relative uri */
-					conn->request_info.rel_uri = conn->request_info.uri;
+					conn->request_info.rel_uri = conn->request_info.request_uri;
 					break;
 				case 3:
 				case 4:
 					/* absolute uri (with/without port) */
 					hostend = get_rel_url_at_current_server(
-					    conn->request_info.uri, conn);
+					    conn->request_info.request_uri, conn);
 					if (hostend) {
 						conn->request_info.rel_uri = hostend;
 					} else {
@@ -10672,7 +10678,7 @@ static void process_new_connection(struct mg_connection *conn)
 					            ebuf,
 					            sizeof(ebuf),
 					            "Invalid URI: [%s]",
-					            ri->uri);
+					            ri->request_uri);
 					send_http_error(conn, 400, "%s", ebuf);
 					break;
 				}
