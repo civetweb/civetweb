@@ -9887,6 +9887,8 @@ static void reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.request_method = NULL;
 	conn->request_info.request_uri = NULL;
 	conn->request_info.rel_uri = NULL;
+	conn->request_info.uri = NULL; /* TODO: cleanup uri,
+	                                * rel_uri and request_uri */
 	conn->request_info.http_version = NULL;
 	conn->request_info.num_headers = 0;
 	conn->data_len = 0;
@@ -10683,6 +10685,9 @@ static void process_new_connection(struct mg_connection *conn)
 					send_http_error(conn, 400, "%s", ebuf);
 					break;
 				}
+
+				/* TODO: cleanup uri, rel_uri and request_uri */
+				conn->request_info.uri = conn->request_info.rel_uri;
 			}
 
 			if (ebuf[0] == '\0') {
