@@ -486,12 +486,10 @@ static int pthread_setspecific(pthread_key_t key, void *value)
 	return TlsSetValue(key, value) ? 0 : 1;
 }
 
-#ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
 static void *pthread_getspecific(pthread_key_t key)
 {
 	return TlsGetValue(key);
 }
-#endif
 
 #if defined(__MINGW32__)
 /* Enable unused function warning again */
@@ -1149,9 +1147,11 @@ struct mg_connection {
 
 static pthread_key_t sTlsKey; /* Thread local storage index */
 static int sTlsInit = 0;
+static int thread_idx_max = 0;
 
 struct mg_workerTLS {
 	int is_master;
+	unsigned long thread_idx;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	HANDLE pthread_cond_helper_mutex;
 #endif
@@ -2317,7 +2317,8 @@ static int pthread_cond_timedwait(pthread_cond_t *cv,
                                   pthread_mutex_t *mutex,
                                   const struct timespec *abstime)
 {
-	struct mg_workerTLS *tls = (struct mg_workerTLS *)TlsGetValue(sTlsKey);
+	struct mg_workerTLS *tls =
+	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
 	int ok;
 	struct timespec tsnow;
 	int64_t nsnow, nswaitabs, nswaitrel;
@@ -9631,32 +9632,16 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 }
 
 
-#ifndef pthread_t_LARGER_THAN_unsigned_long
 /* Must be set if sizeof(pthread_t) > sizeof(unsigned long) */
 static unsigned long ssl_id_callback(void)
 {
-#if defined _WIN32
-	/* Win32 thread IDs are DWORDs */
-	return (unsigned long)GetCurrentThreadId();
-#else
-	/* CRYPTO_set_id_callback() assumes thread IDs can be represented by
-	 * unsigned long. See
-	 * https://www.openssl.org/docs/manmaster/crypto/threads.html#HISTORY */
-
-	/* TODO(high): Deal with sizeof(pthread_t) > sizeof(unsigned long) in
-	 * another way. Using the new openSSL API would cause an in incompatibility
-	 * with systems running the old SSL library. Maybe the entire function is
-	 * not required at all, since the default function will work?
-
-	    mg_static_assert(sizeof(pthread_t) <= sizeof(unsigned long),
-	                     "Thread-ID data type size check"
-	                     " - set pthread_t_LARGER_THAN_unsigned_long");
-	*/
-
-	return (unsigned long)pthread_self();
-#endif
+	struct mg_workerTLS *tls =
+	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+	if (tls == NULL) {
+		return 0;
+	}
+	return tls->thread_idx;
 }
-#endif
 
 
 #if !defined(NO_SSL_DL)
@@ -9751,11 +9736,7 @@ static int initialize_ssl(struct mg_context *ctx)
 	}
 
 	CRYPTO_set_locking_callback(&ssl_locking_callback);
-
-#ifndef pthread_t_LARGER_THAN_unsigned_long
-	/* Cannot use this function if sizeof(pthread_t) > sizeof(unsigned long) */
 	CRYPTO_set_id_callback(&ssl_id_callback);
-#endif
 
 	return 1;
 }
@@ -10794,6 +10775,7 @@ static void *worker_thread_run(void *thread_func_param)
 	mg_set_thread_name("worker");
 
 	tls.is_master = 0;
+	tls.thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
 #endif
