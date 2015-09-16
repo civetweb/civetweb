@@ -9637,9 +9637,8 @@ static unsigned long ssl_id_callback(void)
 {
 	struct mg_workerTLS *tls =
 	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
-	if (tls == NULL) {
-		return 0;
-	}
+	/* Do not check for tls == NULL here. If tls == NULL, something is wrong
+     * and there is no way to fix it here. In particular, do not return 0. */
 	return tls->thread_idx;
 }
 
@@ -11249,6 +11248,8 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	unsigned int i;
 	void (*exit_callback)(const struct mg_context *ctx) = 0;
 
+	struct mg_workerTLS tls;
+
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	WSADATA data;
 	WSAStartup(MAKEWORD(2, 2), &data);
@@ -11280,6 +11281,13 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 		mg_sleep(1);
 	}
 
+	tls.is_master = -1;
+	tls.thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+	tls.pthread_cond_helper_mutex = NULL;
+#endif
+	pthread_setspecific(sTlsKey, &tls);
+
 	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, NULL);
 	ok &= 0 == pthread_cond_init(&ctx->thread_cond, NULL);
 	ok &= 0 == pthread_cond_init(&ctx->sq_empty, NULL);
@@ -11290,6 +11298,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 		 * occur in practice. */
 		mg_cry(fc(ctx), "Cannot initialize thread synchronization objects");
 		mg_free(ctx);
+		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
 
@@ -11309,10 +11318,12 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 		if ((idx = get_option_index(name)) == -1) {
 			mg_cry(fc(ctx), "Invalid option: %s", name);
 			free_context(ctx);
+			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
 		} else if ((value = *options++) == NULL) {
 			mg_cry(fc(ctx), "%s: option value cannot be NULL", name);
 			free_context(ctx);
+			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
 		}
 		if (ctx->config[idx] != NULL) {
@@ -11335,6 +11346,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	if (ctx->config[DOCUMENT_ROOT] != NULL) {
 		mg_cry(fc(ctx), "%s", "Document root must not be set");
 		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
 #endif
@@ -11353,6 +11365,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #endif
 	    !set_acl_option(ctx)) {
 		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
 
@@ -11367,6 +11380,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	if (workerthreadcount > MAX_WORKER_THREADS) {
 		mg_cry(fc(ctx), "Too many worker threads");
 		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
 
@@ -11377,6 +11391,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 		if (ctx->workerthreadids == NULL) {
 			mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
 			free_context(ctx);
+			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
 		}
 	}
@@ -11385,6 +11400,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	if (timers_init(ctx) != 0) {
 		mg_cry(fc(ctx), "Error creating timers");
 		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
 #endif
@@ -11418,12 +11434,14 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 				mg_cry(
 				    fc(ctx), "Cannot create threads: error %ld", (long)ERRNO);
 				free_context(ctx);
+				pthread_setspecific(sTlsKey, NULL);
 				return NULL;
 			}
 			break;
 		}
 	}
 
+	pthread_setspecific(sTlsKey, NULL);
 	return ctx;
 }
 
