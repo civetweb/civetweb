@@ -9635,11 +9635,26 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 /* Must be set if sizeof(pthread_t) > sizeof(unsigned long) */
 static unsigned long ssl_id_callback(void)
 {
-	struct mg_workerTLS *tls =
-	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
-	/* Do not check for tls == NULL here. If tls == NULL, something is wrong
-     * and there is no way to fix it here. In particular, do not return 0. */
-	return tls->thread_idx;
+#ifdef _WIN32
+	return GetCurrentThreadId();
+#else
+	if (sizeof(pthread_t) > sizeof(unsigned long)) {
+		struct mg_workerTLS *tls =
+		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+		if (tls == NULL) {
+			/* SSL called from an unknown thread: Create some thread index.
+			 * This will cause a minimal memory leak when the thread exits.
+			 * TODO (low): Use a destructor function. */
+			tls = calloc(1, sizeof(struct mg_workerTLS));
+			tls.is_master = -2;
+			tls.thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
+			pthread_setspecific(sTlsKey, tls);
+		}
+		return tls->thread_idx;
+	} else {
+		return (unsigned long)pthread_self();
+	}
+#endif
 }
 
 
