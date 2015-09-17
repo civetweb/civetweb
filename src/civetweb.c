@@ -9574,9 +9574,16 @@ static unsigned long ssl_id_callback(void)
 	/* CRYPTO_set_id_callback() assumes thread IDs can be represented by
 	 * unsigned long. See
 	 * https://www.openssl.org/docs/manmaster/crypto/threads.html#HISTORY */
-	mg_static_assert(sizeof(pthread_t) <= sizeof(unsigned long),
-	                 "Thread-ID data type size check"
-	                 " - set pthread_t_LARGER_THAN_unsigned_long");
+
+	/* TODO(high): Deal with sizeof(pthread_t) > sizeof(unsigned long) in
+	 * another way. Using the new openSSL API would cause an in incompatibility
+	 * with systems running the old SSL library. Maybe the entire function is
+	 * not required at all, since the default function will work?
+
+	    mg_static_assert(sizeof(pthread_t) <= sizeof(unsigned long),
+	                     "Thread-ID data type size check"
+	                     " - set pthread_t_LARGER_THAN_unsigned_long");
+	*/
 
 	return (unsigned long)pthread_self();
 #endif
