@@ -10123,7 +10123,7 @@ static int get_uri_type(const char *uri)
 			if (!portbegin) {
 				return 3;
 			}
-
+			portend = portbegin + 1;
 			port = strtoul(portbegin + 1, &portend, 10);
 			if ((portend != hostend) || !port || !is_valid_port(port)) {
 				return 0;
@@ -10175,6 +10175,7 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 			if (!portbegin) {
 				port = abs_uri_protocols[i].default_port;
 			} else {
+				portend = portbegin + 1;
 				port = strtoul(portbegin + 1, &portend, 10);
 				if ((portend != hostend) || !port || !is_valid_port(port)) {
 					return 0;
