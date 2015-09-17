@@ -465,11 +465,12 @@ static DWORD pthread_self(void)
 
 static int pthread_key_create(
     pthread_key_t *key,
-    void (*_must_be_zero)(
-        void *) /* destructor function not supported for windows */)
+    void (*_ignored)(void *) /* destructor not supported for Windows */
+    )
 {
-	assert(_must_be_zero == NULL);
-	if ((key != 0) && (_must_be_zero == NULL)) {
+	(void)_ignored;
+
+	if ((key != 0)) {
 		*key = TlsAlloc();
 		return (*key != TLS_OUT_OF_INDEXES) ? 0 : -1;
 	}
@@ -9593,7 +9594,47 @@ static int set_uid_option(struct mg_context *ctx)
 #endif /* !_WIN32 */
 
 
+static void tls_dtor(void *key)
+{
+	struct mg_workerTLS *tls = (struct mg_workerTLS *)key;
+	/* key == pthread_getspecific(sTlsKey); */
+
+	if (tls) {
+		if (tls->is_master == 2) {
+			tls->is_master = -3; /* Mark memory as dead */
+			mg_free(tls);
+		}
+	}
+	pthread_setspecific(sTlsKey, NULL);
+}
+
+
 #if !defined(NO_SSL)
+
+/* Must be set if sizeof(pthread_t) > sizeof(unsigned long) */
+static unsigned long ssl_id_callback(void)
+{
+#ifdef _WIN32
+	return GetCurrentThreadId();
+#else
+	if (sizeof(pthread_t) > sizeof(unsigned long)) {
+		struct mg_workerTLS *tls =
+		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+		if (tls == NULL) {
+			/* SSL called from an unknown thread: Create some thread index. */
+			tls = mg_malloc(sizeof(struct mg_workerTLS));
+			tls.is_master = -2; /* -2 means "3rd party thread" */
+			tls.thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
+			pthread_setspecific(sTlsKey, tls);
+		}
+		return tls->thread_idx;
+	} else {
+		return (unsigned long)pthread_self();
+	}
+#endif
+}
+
+
 static pthread_mutex_t *ssl_mutexes;
 
 static int sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
@@ -9629,32 +9670,6 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 	} else {
 		(void)pthread_mutex_unlock(&ssl_mutexes[mutex_num]);
 	}
-}
-
-
-/* Must be set if sizeof(pthread_t) > sizeof(unsigned long) */
-static unsigned long ssl_id_callback(void)
-{
-#ifdef _WIN32
-	return GetCurrentThreadId();
-#else
-	if (sizeof(pthread_t) > sizeof(unsigned long)) {
-		struct mg_workerTLS *tls =
-		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
-		if (tls == NULL) {
-			/* SSL called from an unknown thread: Create some thread index.
-			 * This will cause a minimal memory leak when the thread exits.
-			 * TODO (low): Use a destructor function. */
-			tls = calloc(1, sizeof(struct mg_workerTLS));
-			tls.is_master = -2;
-			tls.thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
-			pthread_setspecific(sTlsKey, tls);
-		}
-		return tls->thread_idx;
-	} else {
-		return (unsigned long)pthread_self();
-	}
-#endif
 }
 
 
@@ -11282,7 +11297,7 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	}
 
 	if (mg_atomic_inc(&sTlsInit) == 1) {
-		if (0 != pthread_key_create(&sTlsKey, NULL)) {
+		if (0 != pthread_key_create(&sTlsKey, tls_dtor)) {
 			/* Fatal error - abort start. However, this situation should never
 			 * occur in practice. */
 			mg_atomic_dec(&sTlsInit);
