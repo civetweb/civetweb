@@ -10401,6 +10401,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	return 1;
 }
 
+
 int mg_get_response(struct mg_connection *conn,
                     char *ebuf,
                     size_t ebuf_len,
@@ -10425,12 +10426,17 @@ int mg_get_response(struct mg_connection *conn,
 		ret = getreq(conn, ebuf, ebuf_len, &err);
 		conn->ctx = octx;
 
+		/* TODO: 1) uri is deprecated;
+		 *       2) here, ri.uri is the http response code */
+		conn->request_info.uri = conn->request_info.request_uri;
+
 		/* TODO (mid): Define proper return values - maybe return length?
 		 * For the first test use <0 for error and >0 for OK */
 		return (ret == 0) ? -1 : +1;
 	}
 	return -1;
 }
+
 
 struct mg_connection *mg_download(const char *host,
                                   int port,
@@ -10462,6 +10468,10 @@ struct mg_connection *mg_download(const char *host,
 			            "Error sending request");
 		} else {
 			getreq(conn, ebuf, ebuf_len, &reqerr);
+
+			/* TODO: 1) uri is deprecated;
+			 *       2) here, ri.uri is the http response code */
+			conn->request_info.uri = conn->request_info.request_uri;
 		}
 	}
 
@@ -10475,12 +10485,14 @@ struct mg_connection *mg_download(const char *host,
 	return conn;
 }
 
+
 struct websocket_client_thread_data {
 	struct mg_connection *conn;
 	mg_websocket_data_handler data_handler;
 	mg_websocket_close_handler close_handler;
 	void *callback_data;
 };
+
 
 #if defined(USE_WEBSOCKET)
 #ifdef _WIN32
