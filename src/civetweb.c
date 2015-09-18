@@ -9618,13 +9618,15 @@ static unsigned long ssl_id_callback(void)
 	return GetCurrentThreadId();
 #else
 	if (sizeof(pthread_t) > sizeof(unsigned long)) {
+		/* This is the problematic case for CRYPTO_set_id_callback:
+		 * The OS pthread_t can not be cast to unsigned long. */
 		struct mg_workerTLS *tls =
 		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
 		if (tls == NULL) {
 			/* SSL called from an unknown thread: Create some thread index. */
-			tls = mg_malloc(sizeof(struct mg_workerTLS));
-			tls.is_master = -2; /* -2 means "3rd party thread" */
-			tls.thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
+			tls = (struct mg_workerTLS *)mg_malloc(sizeof(struct mg_workerTLS));
+			tls->is_master = -2; /* -2 means "3rd party thread" */
+			tls->thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
 			pthread_setspecific(sTlsKey, tls);
 		}
 		return tls->thread_idx;
