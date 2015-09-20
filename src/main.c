@@ -733,6 +733,67 @@ static int run_lua(const char *file_name)
 #endif
 
 
+#ifdef USE_DUKTAPE
+
+#include "duktape.h"
+
+static int run_duktape(const char *file_name)
+{
+	duk_context *ctx = NULL;
+	char line[4096];
+	char idx;
+	int ch;
+
+	ctx = duk_create_heap_default();
+	if (!ctx) {
+		fprintf(stderr, "Failed to create a Duktape heap.\n");
+		exit(1);
+	}
+
+	if (duk_peval_file(ctx, file_name) != 0) {
+		fprintf(stderr, "Error: %s\n", duk_safe_to_string(ctx, -1));
+		goto finished;
+	}
+	duk_pop(ctx); /* ignore result */
+
+	memset(line, 0, sizeof(line));
+	idx = 0;
+	for (;;) {
+		if (idx >= sizeof(line)) {
+			fprintf(stderr, "Line too long\n");
+			exit(1);
+		}
+
+		ch = fgetc(stdin);
+		if (ch == 0x0a) {
+			line[idx++] = '\0';
+
+			duk_push_global_object(ctx);
+			duk_get_prop_string(ctx, -1 /*index*/, "processLine");
+			duk_push_string(ctx, line);
+			if (duk_pcall(ctx, 1 /*nargs*/) != 0) {
+				fprintf(stderr, "Error: %s\n", duk_safe_to_string(ctx, -1));
+			} else {
+				fprintf(stdout, "%s\n", duk_safe_to_string(ctx, -1));
+			}
+			duk_pop(ctx); /* pop result/error */
+
+			idx = 0;
+		} else if (ch == EOF) {
+			break;
+		} else {
+			line[idx++] = (char)ch;
+		}
+	}
+
+finished:
+	duk_destroy_heap(ctx);
+
+	return 0;
+}
+#endif
+
+
 #if defined(__MINGW32__) || defined(__MINGW64__)
 /* For __MINGW32/64_MAJOR/MINOR_VERSION define */
 #include <_mingw.h>
@@ -901,8 +962,8 @@ static void start_civetweb(int argc, char *argv[])
 		         : EXIT_FAILURE);
 	}
 
-	/* Call Lua with additional Civetweb specific Lua functions, if -L option is
-	 * specified */
+	/* Call Lua with additional CivetWeb specific Lua functions, if -L option
+	 * is specified */
 	if (argc > 1 && !strcmp(argv[1], "-L")) {
 
 #ifdef USE_LUA
@@ -913,6 +974,21 @@ static void start_civetweb(int argc, char *argv[])
 #else
 		show_server_name();
 		fprintf(stderr, "\nError: Lua support not enabled\n");
+		exit(EXIT_FAILURE);
+#endif
+	}
+
+	/* Call Duktape, if -E option is specified */
+	if (argc > 1 && !strcmp(argv[1], "-E")) {
+
+#ifdef USE_DUKTAPE
+		if (argc != 3) {
+			show_usage_and_exit(argv[0]);
+		}
+		exit(run_duktape(argv[2]));
+#else
+		show_server_name();
+		fprintf(stderr, "\nError: Ecmascript support not enabled\n");
 		exit(EXIT_FAILURE);
 #endif
 	}

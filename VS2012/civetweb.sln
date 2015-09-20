@@ -2,6 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual C++ Express 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "civetweb_lua", "civetweb_lua\civetweb_lua.vcxproj", "{9BE9C008-E851-42B1-A034-BD4630AE4CD6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD} = {0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_lib", "lua_lib\lua_lib.vcxproj", "{8F5E5D77-D269-4665-9E27-1045DA6CF0D8}"
 EndProject
@@ -18,6 +21,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Browser", "..\testutils\Browser\Browser.vcxproj", "{277772B0-D4B3-451E-86B6-261FBC645793}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testclient2", "..\testutils\testclient_chunked_linux\testclient2.vcxproj", "{150140C5-2989-4D0D-8714-5A47B78EAD4D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "duktape_lib", "duktape_lib\duktape_lib.vcxproj", "{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -125,6 +130,16 @@ Global
 		{150140C5-2989-4D0D-8714-5A47B78EAD4D}.Release|Win32.ActiveCfg = Release|Win32
 		{150140C5-2989-4D0D-8714-5A47B78EAD4D}.Release|Win32.Build.0 = Release|Win32
 		{150140C5-2989-4D0D-8714-5A47B78EAD4D}.Release|x64.ActiveCfg = Release|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Debug|Win32.Build.0 = Debug|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Debug|x64.ActiveCfg = Debug|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Release|Win32.ActiveCfg = Release|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Release|Win32.Build.0 = Release|Win32
+		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

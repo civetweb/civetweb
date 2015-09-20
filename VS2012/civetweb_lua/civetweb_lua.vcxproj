@@ -118,8 +118,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_WEBSOCKET;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party;$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>USE_DUKTAPE;USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_WEBSOCKET;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party;$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;$(ProjectDir)..\..\src\third_party\duktape-1.3.0\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -227,7 +227,9 @@
     <ProjectReference Include="..\lua_lib\lua_lib.vcxproj">
       <Project>{8f5e5d77-d269-4665-9e27-1045da6cf0d8}</Project>
     </ProjectReference>
-  </ItemGroup>
+    <ProjectReference Include="..\duktape_lib\duktape_lib.vcxproj">
+      <Project>{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}</Project>
+    </ProjectReference>  </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\md5.inl" />
     <None Include="..\..\src\mod_lua.inl" />
