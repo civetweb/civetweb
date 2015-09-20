@@ -9617,6 +9617,17 @@ static unsigned long ssl_id_callback(void)
 #ifdef _WIN32
 	return GetCurrentThreadId();
 #else
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
+/* For every compiler, either "sizeof(pthread_t) > sizeof(unsigned long)"
+ * or not, so one of the two conditions will be unreachable by construction.
+ * Unfortunately the C standard does not define a way to check this at
+ * compile time, since the #if preprocessor conditions can not use the sizeof
+ * operator as an argument. */
+#endif
+
 	if (sizeof(pthread_t) > sizeof(unsigned long)) {
 		/* This is the problematic case for CRYPTO_set_id_callback:
 		 * The OS pthread_t can not be cast to unsigned long. */
@@ -9633,6 +9644,11 @@ static unsigned long ssl_id_callback(void)
 	} else {
 		return (unsigned long)pthread_self();
 	}
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 #endif
 }
 
