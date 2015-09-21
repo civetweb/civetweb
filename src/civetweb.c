@@ -962,6 +962,10 @@ enum {
 	LUA_SCRIPT_EXTENSIONS,
 	LUA_SERVER_PAGE_EXTENSIONS,
 #endif
+#if defined(USE_DUKTAPE)
+	DUKTAPE_SCRIPT_EXTENSIONS,
+#endif
+
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_ROOT,
 #endif
@@ -1017,6 +1021,12 @@ static struct mg_option config_options[] = {
     {"lua_script_pattern", CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
     {"lua_server_page_pattern", CONFIG_TYPE_EXT_PATTERN, "**.lp$|**.lsp$"},
 #endif
+#if defined(USE_DUKTAPE)
+    {"_experimental_duktape_script_pattern",
+     CONFIG_TYPE_EXT_PATTERN,
+     "**.ssjs$"}, /* TODO: redefine parameter */
+#endif
+
 #if defined(USE_WEBSOCKET)
     {"websocket_root", CONFIG_TYPE_DIRECTORY, NULL},
 #endif
@@ -3508,7 +3518,7 @@ static int mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 		/* Adjust number of bytes to read. */
 		int64_t left_to_read = conn->content_len - conn->consumed_content;
 		if (left_to_read < len64) {
-			/* Do not reade more than the total content length of the request.
+			/* Do not read more than the total content length of the request.
 			 */
 			len64 = left_to_read;
 		}
@@ -4126,7 +4136,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		/* Local file path and name, corresponding to requested URI
 		 * is now stored in "filename" variable. */
 		if (mg_stat(conn, filename, filep)) {
-#if !defined(NO_CGI) || defined(USE_LUA)
+#if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 			/* File exists. Check if it is a script type. */
 			if (0
 #if !defined(NO_CGI)
@@ -4141,6 +4151,13 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 			                 strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
 			                 filename) > 0
 #endif
+#if defined(USE_DUKTAPE)
+			    ||
+			    match_prefix(
+			        conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+			        strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
+			        filename) > 0
+#endif
 			    ) {
 				/* The request addresses a CGI script or a Lua script. The URI
 				 * corresponds to the script itself (like /path/script.cgi),
@@ -4154,7 +4171,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				 * generated response. */
 				*is_script_ressource = !*is_put_or_delete_request;
 			}
-#endif /* !defined(NO_CGI) || defined(USE_LUA) */
+#endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
 			*is_found = 1;
 			return;
 		}
@@ -4190,7 +4207,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 			}
 		}
 
-#if !defined(NO_CGI) || defined(USE_LUA)
+#if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 		/* Support PATH_INFO for CGI scripts. */
 		for (p = filename + strlen(filename); p > filename + 1; p--) {
 			if (*p == '/') {
@@ -4207,6 +4224,13 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				     match_prefix(
 				         conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
 				         strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+				         filename) > 0
+#endif
+#if defined(USE_DUKTAPE)
+				     ||
+				     match_prefix(
+				         conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+				         strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
 				         filename) > 0
 #endif
 				     ) &&
@@ -4227,7 +4251,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				}
 			}
 		}
-#endif /* !defined(NO_CGI) || defined(USE_LUA) */
+#endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
 #endif /* !defined(NO_FILES) */
 	}
 	return;
@@ -7532,6 +7556,10 @@ void mg_unlock_context(struct mg_context *ctx)
 #include "mod_lua.inl"
 #endif /* USE_LUA */
 
+#ifdef USE_DUKTAPE
+#include "mod_duktape.inl"
+#endif /* USE_DUKTAPE */
+
 
 #if defined(USE_WEBSOCKET)
 
@@ -9131,6 +9159,14 @@ static void handle_file_based_request(struct mg_connection *conn,
 		/* Lua in-server module script: a CGI like script used to generate the
 		 * entire reply. */
 		mg_exec_lua_script(conn, path, NULL);
+#endif
+#if defined(USE_DUKTAPE)
+	} else if (match_prefix(
+	               conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+	               strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
+	               path) > 0) {
+		/* Call duktape to generate the page */
+		mg_exec_duktape_script(conn, path);
 #endif
 #if !defined(NO_CGI)
 	} else if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],

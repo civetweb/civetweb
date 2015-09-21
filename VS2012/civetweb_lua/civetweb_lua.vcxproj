@@ -233,6 +233,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\md5.inl" />
+    <None Include="..\..\src\mod_duktape.inl" />
     <None Include="..\..\src\mod_lua.inl" />
     <None Include="..\..\src\timer.inl" />
   </ItemGroup>

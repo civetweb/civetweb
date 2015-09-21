@@ -740,9 +740,6 @@ static int run_lua(const char *file_name)
 static int run_duktape(const char *file_name)
 {
 	duk_context *ctx = NULL;
-	char line[4096];
-	char idx;
-	int ch;
 
 #ifdef WIN32
 	(void)MakeConsole();

@@ -62,5 +62,8 @@
     <None Include="..\..\src\timer.inl">
       <Filter>inl files</Filter>
     </None>
+    <None Include="..\..\src\mod_duktape.inl">
+      <Filter>inl files</Filter>
+    </None>
   </ItemGroup>
 </Project>
