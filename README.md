@@ -93,6 +93,9 @@ simplicity by a carefully selected list of features:
 <a href=http://viremo.eludi.net/LuaXML/index.html">
 ![LuaXML](https://raw.github.com/civetweb/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")
 </a>
+<a href=http://duktape.org">
+![Duktape](https://raw.github.com/civetweb/civetweb/master/resources/duktape-logo.png "Duktape Logo")
+</a>
 
 
 Support
