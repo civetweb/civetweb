@@ -8406,7 +8406,9 @@ int mg_upload(struct mg_connection *conn, const char *destination_dir)
 				memmove(buf, &buf[len - bl], (size_t)bl);
 				len = bl;
 			}
-			n = mg_read(conn, buf + len, sizeof(buf) - ((size_t)(len)));
+			if (!eof) {
+				n = mg_read(conn, buf + len, sizeof(buf) - ((size_t)(len)));
+			}
 		} while (!eof && (n > 0));
 		fclose(fp);
 		if (eof) {
