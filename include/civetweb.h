@@ -54,8 +54,10 @@ struct mg_connection; /* Handle for the individual connection */
 /* This structure contains information about the HTTP request. */
 struct mg_request_info {
 	const char *request_method; /* "GET", "POST", etc */
-	const char *uri;            /* URL-decoded URI (full) */
+	const char *request_uri;    /* URL-decoded URI (absolute or relative,
+	                                 * as in the request) */
 	const char *rel_uri;        /* URL-decoded URI (relative) */
+	const char *uri;            /* Deprecated: use rel_uri instead */
 	const char *http_version;   /* E.g. "1.0", "1.1" */
 	const char *query_string;   /* URL part after '?', not including '?', or
 	                               NULL */

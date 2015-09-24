@@ -38,7 +38,9 @@ int ExampleHandler(struct mg_connection *conn, void *cbdata)
     mg_printf(conn, "<p>To see a page from the B handler (1) <a href=\"B/A\">click B/A</a></p>");
     mg_printf(conn, "<p>To see a page from the B handler (2) <a href=\"B/B\">click B/B</a></p>");
     mg_printf(conn, "<p>To see a page from the *.foo handler <a href=\"xy.foo\">click xy.foo</a></p>");
+#ifdef USE_WEBSOCKET
     mg_printf(conn, "<p>To test websocket handler <a href=\"/websocket\">click websocket</a></p>");
+#endif
     mg_printf(conn, "<p>To exit <a href=\"%s\">click exit</a></p>", EXIT_URI);
     mg_printf(conn, "</body></html>\n");
     return 1;
@@ -81,7 +83,7 @@ int BXHandler(struct mg_connection *conn, void *cbdata)
 
     mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
     mg_printf(conn, "<html><body>");
-    mg_printf(conn, "<h2>This is the BX handler %i!!!</h2>", (int)cbdata);
+    mg_printf(conn, "<h2>This is the BX handler %p!!!</h2>", cbdata);
     mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
     mg_printf(conn, "</body></html>\n");
     return 1;
@@ -271,8 +273,10 @@ int main(int argc, char *argv[])
     /* HTTP site to open a websocket connection */
     mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);
 
+#ifdef USE_WEBSOCKET
     /* WS site for the websocket connection */
     mg_set_websocket_handler(ctx, "/websocket", WebSocketConnectHandler, WebSocketReadyHandler, WebsocketDataHandler, WebSocketCloseHandler, 0);
+#endif
 
     printf("Browse files at http://localhost:%s/\n", PORT);
     printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);

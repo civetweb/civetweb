@@ -12,7 +12,7 @@ SRC = embedded_c.c
 TOP = ../..
 CIVETWEB_LIB = libcivetweb.a
 
-CFLAGS = -I$(TOP)/include $(COPT)
+CFLAGS = -I$(TOP)/include $(COPT) -DUSE_WEBSOCKET
 LIBS = -lpthread
 
 include $(TOP)/resources/Makefile.in-os
