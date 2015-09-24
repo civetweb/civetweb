@@ -910,6 +910,7 @@ struct file {
 	int gzipped; /* set to 1 if the content is gzipped
 	              * in which case we need a content-encoding: gzip header */
 };
+
 #define STRUCT_FILE_INITIALIZER                                                \
 	{                                                                          \
 		(uint64_t)0, (time_t)0, (FILE *)NULL, (const char *)NULL, 0, 0         \
@@ -1314,16 +1315,15 @@ static int is_file_in_memory(struct mg_connection *conn,
 		return 0;
 	}
 
-	filep->last_modified = (time_t)0;
-
-	if ((filep->membuf =
-	         conn->ctx->callbacks.open_file == NULL
-	             ? NULL
-	             : conn->ctx->callbacks.open_file(conn, path, &size)) != NULL) {
-		/* NOTE: override filep->size only on success. Otherwise, it might
-		 * break constructs like if (!mg_stat() || !mg_fopen()) ... */
-		filep->size = size;
+	if (conn->ctx->callbacks.open_file) {
+		filep->membuf = conn->ctx->callbacks.open_file(conn, path, &size);
+		if (filep->membuf != NULL) {
+			/* NOTE: override filep->size only on success. Otherwise, it might
+			 * break constructs like if (!mg_stat() || !mg_fopen()) ... */
+			filep->size = size;
+		}
 	}
+
 	return filep->membuf != NULL;
 }
 
@@ -1346,6 +1346,8 @@ static int mg_fopen(struct mg_connection *conn,
 	if (!filep) {
 		return 0;
 	}
+
+	memset(filep, 0, sizeof(*filep));
 
 	if (!is_file_in_memory(conn, path, filep)) {
 #ifdef _WIN32
