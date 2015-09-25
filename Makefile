@@ -91,6 +91,18 @@ ifdef WITH_LUA
   include resources/Makefile.in-lua
 endif
 
+ifdef WITH_SSJS
+  WITH_DUKTAPE = 1
+endif
+
+ifdef WITH_DUKTAPE_SHARED
+  WITH_DUKTAPE = 1
+endif
+
+ifdef WITH_DUKTAPE
+  include resources/Makefile.in-duktape
+endif
+
 ifdef WITH_IPV6
   CFLAGS += -DUSE_IPV6
 endif
@@ -161,6 +173,10 @@ help:
 	@echo " Make Options"
 	@echo "   WITH_LUA=1            build with Lua support; include Lua as static library"
 	@echo "   WITH_LUA_SHARED=1     build with Lua support; use dynamic linking to liblua5.2.so"
+	@echo "   WITH_LUA_VERSION=502  build with Lua 5.2.x (501 for Lua 5.1.x to 503 for 5.3.x)"
+	@echo "   WITH_DUKTAPE=1        build with Duktape support; include as static library"
+	@echo "   WITH_DUKTAPE_SHARED=1 build with Duktape support; use libduktape1.3.so"
+#	@echo "   WITH_DUKTAPE_VERSION=103 build with Duktape 1.3.x"
 	@echo "   WITH_DEBUG=1          build with GDB debug support"
 	@echo "   WITH_IPV6=1           with IPV6 support"
 	@echo "   WITH_WEBSOCKET=1      build with web socket support"

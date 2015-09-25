@@ -1,4 +1,4 @@
-// prime.js
+// prime.js - a test from the Duktape home page (with minimal modifications)
 
 // Pure Ecmascript version of low level helper
 function primeCheckEcmascript(val, limit) {
@@ -22,7 +22,7 @@ function primeCheck(val) {
 function primeTest() {
     var res = [];
 
-    print('Have native helper: ' + (primeCheckHelper !== primeCheckEcmascript));
+    print('Have native helper: ' + (primeCheckHelper !== primeCheckEcmascript) + '\n');
     for (var i = 2; i <= 1000; i++) {
         if (primeCheck(i)) { res.push(i); }
     } 
@@ -34,3 +34,4 @@ print = this.send || print
 print('HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n');
 
 primeTest();
+

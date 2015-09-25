@@ -1,0 +1,60 @@
+#
+# Copyright (c) 2015 the Civetweb developers
+#
+# License http://opensource.org/licenses/mit-license.php MIT License
+#
+
+ifndef WITH_DUKTAPE
+  $(error WITH_DUKTAPE is not defined)
+endif
+
+# Duktape default version is 1.3.0 (103)
+WITH_DUKTAPE_VERSION ?= 103
+DUKTAPE_VERSION_KNOWN = 0
+
+# Select src and header according to the Duktape version
+ifeq ($(WITH_DUKTAPE_VERSION), 103)
+  $(info Duktape: Using version 1.3.0)
+  DUKTAPE_DIR = src/third_party/duktape-1.3.0/src
+  DUKTAPE_SHARED_LIB_FLAG = -lduktape1.3
+  DUKTAPE_CFLAGS = -DDUKTAPE_VERSION_MAKEFILE=501
+  DUKTAPE_VERSION_KNOWN = 1
+endif
+
+ifneq ($(DUKTAPE_VERSION_KNOWN), 1)
+  $(error Duktape: Unknwon version - $(WITH_DUKTAPE_VERSION))
+endif
+
+
+# Add flags for all Duktape versions
+DUKTAPE_CFLAGS += -I$(DUKTAPE_DIR) -DUSE_DUKTAPE
+
+ifneq ($(TARGET_OS),WIN32)
+#  DUKTAPE_CFLAGS += 
+endif
+
+ifdef WITH_DUKTAPE_SHARED
+
+  DUKTAPE_SOURCE_FILES =
+
+  $(info Duktape: using dynamic linking)
+
+else
+
+  DUKTAPE_SOURCE_FILES = duktape.c
+
+ifeq ($(WITH_DUKTAPE_VERSION), 104)
+#    DUKTAPE_SOURCE_FILES +=
+endif
+
+  $(info Duktape: using static library)
+
+endif
+
+DUKTAPE_SOURCES = $(addprefix $(DUKTAPE_DIR)/, $(DUKTAPE_SOURCE_FILES))
+DUKTAPE_OBJECTS = $(DUKTAPE_SOURCES:.c=.o)
+
+OBJECTS += $(DUKTAPE_OBJECTS)
+CFLAGS += $(DUKTAPE_CFLAGS)
+SOURCE_DIRS = $(DUKTAPE_DIR)
+
