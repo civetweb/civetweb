@@ -248,6 +248,7 @@ clean:
 	$(RMRF) $(BUILD_DIR)
 	$(eval version=$(shell grep "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
 	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
+	$(RMRF) lib$(CPROG).a
 	$(RMRF) lib$(CPROG).so
 	$(RMRF) lib$(CPROG).so.$(major)
 	$(RMRF) lib$(CPROG).so.$(version).0

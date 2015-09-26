@@ -17,7 +17,7 @@
 
 #define DOCUMENT_ROOT "."
 #ifdef USE_IPV6
-#define PORT "8888,[::]:8888"
+#define PORT "8888,[::]:8886"
 #else
 #define PORT "8888"
 #endif
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
     struct mg_callbacks callbacks;
     struct mg_context *ctx;
     struct mg_server_ports ports[32];
-    size_t port_cnt, n;
+    int port_cnt, n;
 
     memset(&callbacks, 0, sizeof(callbacks));
     ctx = mg_start(&callbacks, 0, options);
@@ -282,6 +282,7 @@ int main(int argc, char *argv[])
     
     memset(ports, 0, sizeof(ports));    
     port_cnt = mg_get_server_ports(ctx, 32, ports);
+    printf("\n%i listening ports:\n\n", port_cnt);
 
     for (n=0; n<port_cnt && n<32; n++) {
         const char *proto = ports[n].is_ssl ? "https" : "http";
