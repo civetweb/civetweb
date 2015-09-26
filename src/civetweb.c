@@ -1587,7 +1587,7 @@ int mg_get_server_ports(const struct mg_context *ctx,
 	if (size <= 0) {
 		return -1;
 	}
-	memset(ports, 0, sizeof(*ports) * size);
+	memset(ports, 0, sizeof(*ports) * (size_t)size);
 	if (!ctx) {
 		return -1;
 	}
