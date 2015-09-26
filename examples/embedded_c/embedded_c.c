@@ -17,7 +17,7 @@
 
 #define DOCUMENT_ROOT "."
 #ifdef USE_IPV6
-#define PORT "8888,[::]:8886"
+#define PORT "8888,[::]:8888"
 #else
 #define PORT "8888"
 #endif
