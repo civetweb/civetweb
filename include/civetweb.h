@@ -386,15 +386,32 @@ enum {
    The array is terminated by a NULL name option. */
 CIVETWEB_API const struct mg_option *mg_get_valid_options(void);
 
+
+struct mg_server_ports {
+	int protocol;    /* 1 = IPv4, 2 = IPv6 */
+	int port;        /* port number */
+	int is_ssl;      /* https port: 0 = no, 1 = yes */
+	int is_redirect; /* redirect all requests: 0 = no, 1 = yes */
+	int _reserved1;
+	int _reserved2;
+	int _reserved3;
+	int _reserved4;
+};
+
 /* Get the list of ports that civetweb is listening on.
-   size is the size of the ports int array and ssl int array to fill.
-   It is the caller's responsibility to make sure ports and ssl each
-   contain at least size int elements worth of memory to write into.
-   Return value is the number of ports and ssl information filled in.
-   The value returned is read-only. Civetweb does not allow changing
-   configuration at run time. */
+   The parameter size is the size of the ports array in elements.
+   The caller is responsibility to allocate the required memory.
+   This function returns the number of struct mg_server_ports elements
+   filled in, or <0 in case of an error. */
+CIVETWEB_API int mg_get_server_ports(const struct mg_context *ctx,
+                                     int size,
+                                     struct mg_server_ports *ports);
+
+
+/* Deprecated. Use mg_get_server_ports instead. */
 CIVETWEB_API size_t
 mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl);
+
 
 /* Add, edit or delete the entry in the passwords file.
 

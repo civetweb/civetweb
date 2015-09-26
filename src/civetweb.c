@@ -1578,6 +1578,44 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 }
 
 
+int mg_get_server_ports(const struct mg_context *ctx,
+                        int size,
+                        struct mg_server_ports *ports)
+{
+	int i, cnt = 0;
+
+	if (size <= 0) {
+		return -1;
+	}
+	memset(ports, 0, sizeof(*ports) * size);
+	if (!ctx) {
+		return -1;
+	}
+	if (!ctx->listening_sockets || !ctx->listening_ports) {
+		return -1;
+	}
+
+	for (i = 0; (i < size) && (i < (int)ctx->num_listening_sockets); i++) {
+
+		ports[cnt].port = ctx->listening_ports[i];
+		ports[cnt].is_ssl = ctx->listening_sockets[i].is_ssl;
+		ports[cnt].is_redirect = ctx->listening_sockets[i].ssl_redir;
+
+		if (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET) {
+			/* IPv4 */
+			ports[cnt].protocol = 1;
+			cnt++;
+		} else if (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6) {
+			/* IPv6 */
+			ports[cnt].protocol = 2;
+			cnt++;
+		}
+	}
+
+	return cnt;
+}
+
+
 static void sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 {
 	buf[0] = '\0';

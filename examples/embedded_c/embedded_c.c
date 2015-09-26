@@ -250,6 +250,8 @@ int main(int argc, char *argv[])
                              };
     struct mg_callbacks callbacks;
     struct mg_context *ctx;
+    struct mg_server_ports ports[32];
+    size_t port_cnt, n;
 
     memset(&callbacks, 0, sizeof(callbacks));
     ctx = mg_start(&callbacks, 0, options);
@@ -277,10 +279,18 @@ int main(int argc, char *argv[])
     /* WS site for the websocket connection */
     mg_set_websocket_handler(ctx, "/websocket", WebSocketConnectHandler, WebSocketReadyHandler, WebsocketDataHandler, WebSocketCloseHandler, 0);
 #endif
+    
+    memset(ports, 0, sizeof(ports));    
+    port_cnt = mg_get_server_ports(ctx, 32, ports);
 
-    printf("Browse files at http://localhost:%s/\n", PORT);
-    printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
-    printf("Exit at http://localhost:%s%s\n", PORT, EXIT_URI);
+    for (n=0; n<port_cnt && n<32; n++) {
+        const char *proto = ports[n].is_ssl ? "https" : "http";
+        const char *host = ports[n].protocol==2 ? "[::1]" : "127.0.0.1";
+        printf("Browse files at %s://%s:%i/\n", proto, host, ports[n].port);
+        printf("Run example at %s://%s:%i%s\n", proto, host, ports[n].port, EXAMPLE_URI);
+        printf("Exit at %s://%s:%i%s\n", proto, host, ports[n].port, EXIT_URI);
+        printf("\n");
+    }
 
     while (!exitNow) {
 #ifdef _WIN32
