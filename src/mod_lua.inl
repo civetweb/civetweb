@@ -488,7 +488,7 @@ static int lsp_redirect(lua_State *L)
 	const char *target = (num_args == 1) ? lua_tostring(L, 1) : NULL;
 
 	if (target) {
-		conn->request_info.rel_uri = target;
+		conn->request_info.local_uri = target;
 		handle_request(conn);
 		lsp_abort(L);
 	} else {
@@ -1048,7 +1048,7 @@ static void prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 	lua_newtable(L);
 	reg_string(L, "request_method", conn->request_info.request_method);
 	reg_string(L, "request_uri", conn->request_info.request_uri);
-	reg_string(L, "uri", conn->request_info.rel_uri);
+	reg_string(L, "uri", conn->request_info.local_uri);
 	reg_string(L, "http_version", conn->request_info.http_version);
 	reg_string(L, "query_string", conn->request_info.query_string);
 #if defined(MG_LEGACY_INTERFACE)

@@ -4088,7 +4088,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
               size_t filename_buf_len,      /* in: size of filename buffer */
               struct file *filep,           /* out: file structure */
               int *is_found,                /* out: file is found (directly) */
-              int *is_script_ressource,     /* out: handled by a script? */
+              int *is_script_resource,      /* out: handled by a script? */
               int *is_websocket_request,    /* out: websocket connetion? */
               int *is_put_or_delete_request /* out: put/delete a file? */
               )
@@ -4097,7 +4097,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 	if (conn && conn->ctx) {
 
 #if !defined(NO_FILES)
-		const char *uri = conn->request_info.rel_uri;
+		const char *uri = conn->request_info.local_uri;
 		const char *root = conn->ctx->config[DOCUMENT_ROOT];
 		const char *rewrite;
 		struct vec a, b;
@@ -4115,7 +4115,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 		memset(filep, 0, sizeof(*filep));
 		*filename = 0;
 		*is_found = 0;
-		*is_script_ressource = 0;
+		*is_script_resource = 0;
 		*is_put_or_delete_request = is_put_or_delete_method(conn);
 
 #if defined(USE_WEBSOCKET)
@@ -4209,7 +4209,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 				 * Requests that read or write from/to a resource, like GET and
 				 * POST requests, should call the script and return the
 				 * generated response. */
-				*is_script_ressource = !*is_put_or_delete_request;
+				*is_script_resource = !*is_put_or_delete_request;
 			}
 #endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
 			*is_found = 1;
@@ -4284,7 +4284,7 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
 					memmove(p + 2, p + 1, strlen(p + 1) + 1); /* +1 is for
 					                                           * trailing \0 */
 					p[1] = '/';
-					*is_script_ressource = 1;
+					*is_script_resource = 1;
 					break;
 				} else {
 					*p = '/';
@@ -4302,7 +4302,7 @@ interpret_cleanup:
 	memset(filep, 0, sizeof(*filep));
 	*filename = 0;
 	*is_found = 0;
-	*is_script_ressource = 0;
+	*is_script_resource = 0;
 #endif
 }
 
@@ -4990,7 +4990,7 @@ static int check_authorization(struct mg_connection *conn, const char *path)
 
 	list = conn->ctx->config[PROTECT_URI];
 	while ((list = next_option(list, &uri_vec, &filename_vec)) != NULL) {
-		if (!memcmp(conn->request_info.rel_uri, uri_vec.ptr, uri_vec.len)) {
+		if (!memcmp(conn->request_info.local_uri, uri_vec.ptr, uri_vec.len)) {
 			mg_snprintf(conn,
 			            &truncated,
 			            fname,
@@ -5438,7 +5438,7 @@ static void print_dir_entry(struct de *de)
 	    mg_printf(de->conn,
 	              "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
 	              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	              de->conn->request_info.rel_uri,
+	              de->conn->request_info.local_uri,
 	              href,
 	              de->file.is_directory ? "/" : "",
 	              de->file_name,
@@ -5706,8 +5706,8 @@ static void handle_directory_request(struct mg_connection *conn,
 	              "<th><a href=\"?d%c\">Modified</a></th>"
 	              "<th><a href=\"?s%c\">Size</a></th></tr>"
 	              "<tr><td colspan=\"3\"><hr></td></tr>",
-	              conn->request_info.rel_uri,
-	              conn->request_info.rel_uri,
+	              conn->request_info.local_uri,
+	              conn->request_info.local_uri,
 	              sort_direction,
 	              sort_direction,
 	              sort_direction);
@@ -5717,7 +5717,7 @@ static void handle_directory_request(struct mg_connection *conn,
 	    mg_printf(conn,
 	              "<tr><td><a href=\"%s%s\">%s</a></td>"
 	              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	              conn->request_info.rel_uri,
+	              conn->request_info.local_uri,
 	              "..",
 	              "Parent directory",
 	              "-",
@@ -6481,15 +6481,15 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "REQUEST_METHOD=%s", conn->request_info.request_method);
 	addenv(env, "REMOTE_PORT=%d", conn->request_info.remote_port);
 
-	/* TODO: Check if request_uri or rel_uri should be used */
+	/* TODO: Check if request_uri or local_uri should be used */
 	addenv(env, "REQUEST_URI=%s", conn->request_info.request_uri);
 
 	/* SCRIPT_NAME */
 	addenv(env,
 	       "SCRIPT_NAME=%.*s",
-	       (int)strlen(conn->request_info.rel_uri) -
+	       (int)strlen(conn->request_info.local_uri) -
 	           ((conn->path_info == NULL) ? 0 : (int)strlen(conn->path_info)),
-	       conn->request_info.rel_uri);
+	       conn->request_info.local_uri);
 
 	addenv(env, "SCRIPT_FILENAME=%s", prog);
 	if (conn->path_info == NULL) {
@@ -7501,7 +7501,7 @@ static void print_dav_dir_entry(struct de *de, void *data)
 	            href,
 	            sizeof(href),
 	            "%s%s",
-	            conn->request_info.rel_uri,
+	            conn->request_info.local_uri,
 	            de->file_name);
 
 	if (!truncated) {
@@ -7541,7 +7541,7 @@ static void handle_propfind(struct mg_connection *conn,
 	              "<d:multistatus xmlns:d='DAV:'>\n");
 
 	/* Print properties for the requested resource itself */
-	print_props(conn, conn->request_info.rel_uri, filep);
+	print_props(conn, conn->request_info.local_uri, filep);
 
 	/* If it is a directory, print directory entries too if Depth is not 0 */
 	if (filep && conn->ctx && filep->is_directory &&
@@ -8512,7 +8512,7 @@ static void redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 		          host,
 		          (int)ntohs(
 		              conn->ctx->listening_sockets[ssl_index].lsa.sin.sin_port),
-		          conn->request_info.rel_uri,
+		          conn->request_info.local_uri,
 		          (conn->request_info.query_string == NULL) ? "" : "?",
 		          (conn->request_info.query_string == NULL)
 		              ? ""
@@ -8684,7 +8684,7 @@ static int get_request_handler(struct mg_connection *conn,
 {
 	const struct mg_request_info *request_info = mg_get_request_info(conn);
 	if (request_info) {
-		const char *uri = request_info->rel_uri;
+		const char *uri = request_info->local_uri;
 		size_t urilen = strlen(uri);
 		struct mg_request_handler_info *tmp_rh;
 
@@ -8838,20 +8838,20 @@ static void handle_request(struct mg_connection *conn)
 		    NULL) {
 			*((char *)conn->request_info.query_string++) = '\0';
 		}
-		uri_len = (int)strlen(ri->rel_uri);
+		uri_len = (int)strlen(ri->local_uri);
 
 		/* 1.2. decode url (if config says so) */
 		if (should_decode_url(conn)) {
 			mg_url_decode(
-			    ri->rel_uri, uri_len, (char *)ri->rel_uri, uri_len + 1, 0);
+			    ri->local_uri, uri_len, (char *)ri->local_uri, uri_len + 1, 0);
 		}
 
 		/* 1.3. clean URIs, so a path like allowed_dir/../forbidden_file is not
 		 * possible */
-		remove_double_dots_and_double_slashes((char *)ri->rel_uri);
+		remove_double_dots_and_double_slashes((char *)ri->local_uri);
 
 		/* step 1. completed, the url is known now */
-		DEBUG_TRACE("URL: %s", ri->rel_uri);
+		DEBUG_TRACE("URL: %s", ri->local_uri);
 
 		/* 2. do a https redirect, if required */
 		if (!conn->client.is_ssl && conn->client.ssl_redir) {
@@ -8872,7 +8872,7 @@ static void handle_request(struct mg_connection *conn)
 
 		/* 3. if this ip has limited speed, set it for this connection */
 		conn->throttle = set_throttle(
-		    conn->ctx->config[THROTTLE], get_remote_ip(conn), ri->rel_uri);
+		    conn->ctx->config[THROTTLE], get_remote_ip(conn), ri->local_uri);
 
 		/* 4. call a "handle everything" callback, if registered */
 		if (conn->ctx->callbacks.begin_request != NULL) {
@@ -9105,7 +9105,7 @@ static void handle_request(struct mg_connection *conn)
 		}
 
 		/* 12. Directories uris should end with a slash */
-		if (file.is_directory && ri->rel_uri[uri_len - 1] != '/') {
+		if (file.is_directory && ri->local_uri[uri_len - 1] != '/') {
 			gmt_time_string(date, sizeof(date), &curtime);
 			mg_printf(conn,
 			          "HTTP/1.1 301 Moved Permanently\r\n"
@@ -9992,9 +9992,9 @@ static void reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.remote_user = NULL;
 	conn->request_info.request_method = NULL;
 	conn->request_info.request_uri = NULL;
-	conn->request_info.rel_uri = NULL;
+	conn->request_info.local_uri = NULL;
 	conn->request_info.uri = NULL; /* TODO: cleanup uri,
-	                                * rel_uri and request_uri */
+	                                * local_uri and request_uri */
 	conn->request_info.http_version = NULL;
 	conn->request_info.num_headers = 0;
 	conn->data_len = 0;
@@ -10776,11 +10776,12 @@ static void process_new_connection(struct mg_connection *conn)
 				switch (uri_type) {
 				case 1:
 					/* Asterisk */
-					conn->request_info.rel_uri = NULL;
+					conn->request_info.local_uri = NULL;
 					break;
 				case 2:
 					/* relative uri */
-					conn->request_info.rel_uri = conn->request_info.request_uri;
+					conn->request_info.local_uri =
+					    conn->request_info.request_uri;
 					break;
 				case 3:
 				case 4:
@@ -10788,9 +10789,9 @@ static void process_new_connection(struct mg_connection *conn)
 					hostend = get_rel_url_at_current_server(
 					    conn->request_info.request_uri, conn);
 					if (hostend) {
-						conn->request_info.rel_uri = hostend;
+						conn->request_info.local_uri = hostend;
 					} else {
-						conn->request_info.rel_uri = NULL;
+						conn->request_info.local_uri = NULL;
 					}
 					break;
 				default:
@@ -10804,8 +10805,8 @@ static void process_new_connection(struct mg_connection *conn)
 					break;
 				}
 
-				/* TODO: cleanup uri, rel_uri and request_uri */
-				conn->request_info.uri = conn->request_info.rel_uri;
+				/* TODO: cleanup uri, local_uri and request_uri */
+				conn->request_info.uri = conn->request_info.local_uri;
 			}
 
 			if (ebuf[0] == '\0') {
