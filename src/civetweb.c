@@ -1607,7 +1607,7 @@ int mg_get_server_ports(const struct mg_context *ctx,
 			cnt++;
 		} else if (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6) {
 			/* IPv6 */
-			ports[cnt].protocol = 2;
+			ports[cnt].protocol = 3;
 			cnt++;
 		}
 	}

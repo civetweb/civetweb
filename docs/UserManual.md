@@ -278,6 +278,11 @@ an IP address and a colon must be pre-pended to the port number.
 For example, to bind to a loopback interface on port 80 and to
 all interfaces on HTTPS port 443, use `127.0.0.1:80,443s`.
 
+If the server is built with IPv6 support, `[::]:8080` can be used to
+listen to connections to port 8080 from both, IPv4 and IPv6.
+IPv6 addresses of network interfaces can be specified as well,
+e.g. `[::1]:8080` for the IPv6 loopback interface.
+
 ### document\_root `.`
 A directory to serve. By default, the current working directory is served.
 The current directory is commonly referenced as dot (`.`).

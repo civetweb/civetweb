@@ -388,7 +388,7 @@ CIVETWEB_API const struct mg_option *mg_get_valid_options(void);
 
 
 struct mg_server_ports {
-	int protocol;    /* 1 = IPv4, 2 = IPv6 */
+	int protocol;    /* 1 = IPv4, 2 = IPv6, 3 = both */
 	int port;        /* port number */
 	int is_ssl;      /* https port: 0 = no, 1 = yes */
 	int is_redirect; /* redirect all requests: 0 = no, 1 = yes */
