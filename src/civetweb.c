@@ -496,6 +496,10 @@ static void *pthread_getspecific(pthread_key_t key)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
 #endif
+
+static struct pthread_mutex_undefined_struct *pthread_mutex_attr = NULL;
+#else
+static pthread_mutexattr_t pthread_mutex_attr;
 #endif /* _WIN32 */
 
 #include "civetweb.h"
@@ -9857,7 +9861,7 @@ static int initialize_ssl(struct mg_context *ctx)
 	}
 
 	for (i = 0; i < CRYPTO_num_locks(); i++) {
-		pthread_mutex_init(&ssl_mutexes[i], NULL);
+		pthread_mutex_init(&ssl_mutexes[i], &pthread_mutex_attr);
 	}
 
 	CRYPTO_set_locking_callback(&ssl_locking_callback);
@@ -10230,7 +10234,7 @@ struct mg_connection *mg_connect_client(const char *host,
 		}
 
 		conn->client.is_ssl = use_ssl ? 1 : 0;
-		(void)pthread_mutex_init(&conn->mutex, NULL);
+		(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 #ifndef NO_SSL
 		if (use_ssl) {
 			/* SSL_CTX_set_verify call is needed to switch off server
@@ -10930,7 +10934,7 @@ static void *worker_thread_run(void *thread_func_param)
 		conn->request_info.user_data = ctx->user_data;
 		/* Allocate a mutex for this connection to allow communication both
 		 * within the request handler and from elsewhere in the application */
-		(void)pthread_mutex_init(&conn->mutex, NULL);
+		(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 
 		/* Call consume_socket() even when ctx->stop_flag > 0, to let it
 		 * signal sq_empty condvar to wake up the master waiting in
@@ -11392,12 +11396,6 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	WSADATA data;
 	WSAStartup(MAKEWORD(2, 2), &data);
-#if defined(_MSC_VER)
-#pragma warning(suppress : 28125)
-#endif
-	if (!sTlsInit) {
-		InitializeCriticalSection(&global_log_file_lock);
-	}
 #endif /* _WIN32 && !__SYMBIAN32__ */
 
 	/* Allocate context and initialize reasonable general case defaults. */
@@ -11406,6 +11404,18 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	}
 
 	if (mg_atomic_inc(&sTlsInit) == 1) {
+
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+#if defined(_MSC_VER)
+#pragma warning(suppress : 28125)
+#endif
+		InitializeCriticalSection(&global_log_file_lock);
+#endif /* _WIN32 && !__SYMBIAN32__ */
+#if !defined(_WIN32)
+		pthread_mutexattr_init(&pthread_mutex_attr);
+		pthread_mutexattr_settype(&pthread_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
+#endif
+
 		if (0 != pthread_key_create(&sTlsKey, tls_dtor)) {
 			/* Fatal error - abort start. However, this situation should never
 			 * occur in practice. */
@@ -11427,11 +11437,11 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 #endif
 	pthread_setspecific(sTlsKey, &tls);
 
-	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, NULL);
+	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr);
 	ok &= 0 == pthread_cond_init(&ctx->thread_cond, NULL);
 	ok &= 0 == pthread_cond_init(&ctx->sq_empty, NULL);
 	ok &= 0 == pthread_cond_init(&ctx->sq_full, NULL);
-	ok &= 0 == pthread_mutex_init(&ctx->nonce_mutex, NULL);
+	ok &= 0 == pthread_mutex_init(&ctx->nonce_mutex, &pthread_mutex_attr);
 	if (!ok) {
 		/* Fatal error - abort start. However, this situation should never
 		 * occur in practice. */
