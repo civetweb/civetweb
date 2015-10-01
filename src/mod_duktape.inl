@@ -16,6 +16,7 @@
 /* TODO: use upvalues (or whatever equivalent) */
 static struct mg_connection *xxx_conn = NULL;
 
+
 static duk_ret_t duk_itf_send(duk_context *ctx)
 {
 	duk_size_t len = 0;

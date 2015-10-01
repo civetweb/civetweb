@@ -6485,8 +6485,8 @@ static void prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "REQUEST_METHOD=%s", conn->request_info.request_method);
 	addenv(env, "REMOTE_PORT=%d", conn->request_info.remote_port);
 
-	/* TODO: Check if request_uri or local_uri should be used */
 	addenv(env, "REQUEST_URI=%s", conn->request_info.request_uri);
+	addenv(env, "LOCAL_URI=%s", conn->request_info.local_uri);
 
 	/* SCRIPT_NAME */
 	addenv(env,
@@ -11297,6 +11297,13 @@ static void free_context(struct mg_context *ctx)
 
 	/* Deallocate the tls variable */
 	if (mg_atomic_dec(&sTlsInit) == 0) {
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+		DeleteCriticalSection(&global_log_file_lock);
+#endif /* _WIN32 && !__SYMBIAN32__ */
+#if !defined(_WIN32)
+		pthread_mutexattr_destroy(&pthread_mutex_attr);
+#endif
+
 		pthread_key_delete(sTlsKey);
 	}
 
@@ -11406,9 +11413,6 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 	if (mg_atomic_inc(&sTlsInit) == 1) {
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-#if defined(_MSC_VER)
-#pragma warning(suppress : 28125)
-#endif
 		InitializeCriticalSection(&global_log_file_lock);
 #endif /* _WIN32 && !__SYMBIAN32__ */
 #if !defined(_WIN32)

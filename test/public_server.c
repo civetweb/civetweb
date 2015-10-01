@@ -357,13 +357,6 @@ static int websock_server_connect(const struct mg_connection *conn, void *udata)
 }
 
 
-#ifndef _WIN32
-/* TODO(critical): Why is mg_lock_connection here a deadlock in Linux,
- * while it is OK for Windows? */
-#define mg_lock_connection(conn)
-#define mg_unlock_connection(conn)
-#endif
-
 static void websock_server_ready(struct mg_connection *conn, void *udata)
 {
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
@@ -423,6 +416,7 @@ static void websock_server_close(const struct mg_connection *conn, void *udata)
 	 * closed */
 }
 
+
 /****************************************************************************/
 /* WEBSOCKET CLIENT                                                         */
 /****************************************************************************/
@@ -431,6 +425,7 @@ struct tclient_data {
 	size_t len;
 	int closed;
 };
+
 
 static int websocket_client_data_handler(struct mg_connection *conn,
                                          int flags,
@@ -458,6 +453,7 @@ static int websocket_client_data_handler(struct mg_connection *conn,
 
 	return 1;
 }
+
 
 static void websocket_client_close_handler(const struct mg_connection *conn,
                                            void *user_data)
