@@ -132,6 +132,7 @@ int WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn, "<html>\n<head>\n");
 	mg_printf(conn, "<meta charset=\"UTF-8\">\n");
 	mg_printf(conn, "<title>Embedded websocket example</title>\n");
+
 #ifdef USE_WEBSOCKET
 	/* mg_printf(conn, "<script type=\"text/javascript\"><![CDATA[\n"); ...
 	 * xhtml style */
@@ -163,6 +164,7 @@ int WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn, "Example not compiled with USE_WEBSOCKET\n");
 #endif
 	mg_printf(conn, "</body>\n</html>\n");
+
 	return 1;
 }
 
@@ -178,6 +180,7 @@ struct t_ws_client {
 	int state;
 } static ws_clients[MAX_WS_CLIENTS];
 
+
 #define ASSERT(x)                                                              \
 	{                                                                          \
 		if (!(x)) {                                                            \
@@ -186,7 +189,6 @@ struct t_ws_client {
 		}                                                                      \
 	}
 
-static unsigned long cnt;
 
 int WebSocketConnectHandler(const struct mg_connection *conn, void *cbdata)
 {
@@ -212,6 +214,7 @@ int WebSocketConnectHandler(const struct mg_connection *conn, void *cbdata)
 	return reject;
 }
 
+
 void WebSocketReadyHandler(struct mg_connection *conn, void *cbdata)
 {
 	const char *text = "Hello from the websocket ready handler";
@@ -224,6 +227,7 @@ void WebSocketReadyHandler(struct mg_connection *conn, void *cbdata)
 
 	client->state = 2;
 }
+
 
 int WebsocketDataHandler(struct mg_connection *conn,
                          int bits,
@@ -242,6 +246,7 @@ int WebsocketDataHandler(struct mg_connection *conn,
 	return 1;
 }
 
+
 void WebSocketCloseHandler(const struct mg_connection *conn, void *cbdata)
 {
 	struct mg_context *ctx = mg_get_context(conn);
@@ -258,8 +263,10 @@ void WebSocketCloseHandler(const struct mg_connection *conn, void *cbdata)
 	        "Client droped from the set of webserver connections\r\n\r\n");
 }
 
+
 void InformWebsockets(struct mg_context *ctx)
 {
+	static unsigned long cnt = 0;
 	char text[32];
 	int i;
 
@@ -298,6 +305,7 @@ int main(int argc, char *argv[])
 	int port_cnt, n;
 	int err = 0;
 
+/* Check if libcivetweb has been built with all required features. */
 #ifdef USE_IPV6
 	if (!mg_check_feature(8)) {
 		fprintf(stderr,
@@ -320,26 +328,27 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	/* Start CivetWeb web server */
 	memset(&callbacks, 0, sizeof(callbacks));
 	ctx = mg_start(&callbacks, 0, options);
 
-	/* Handler EXAMPLE_URI to explain the example */
+	/* Add handler EXAMPLE_URI, to explain the example */
 	mg_set_request_handler(ctx, EXAMPLE_URI, ExampleHandler, 0);
 	mg_set_request_handler(ctx, EXIT_URI, ExitHandler, 0);
 
-	/* Handler for /A* and special handler for /A/B */
+	/* Add handler for /A* and special handler for /A/B */
 	mg_set_request_handler(ctx, "/A", AHandler, 0);
 	mg_set_request_handler(ctx, "/A/B", ABHandler, 0);
 
-	/* Handler for /B, /B/A, /B/B but not for /B* */
+	/* Add handler for /B, /B/A, /B/B but not for /B* */
 	mg_set_request_handler(ctx, "/B$", BXHandler, (void *)0);
 	mg_set_request_handler(ctx, "/B/A$", BXHandler, (void *)1);
 	mg_set_request_handler(ctx, "/B/B$", BXHandler, (void *)2);
 
-	/* Handler for all files with .foo extention */
+	/* Add handler for all files with .foo extention */
 	mg_set_request_handler(ctx, "**.foo$", FooHandler, 0);
 
-	/* HTTP site to open a websocket connection */
+	/* Add HTTP site to open a websocket connection */
 	mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);
 
 #ifdef USE_WEBSOCKET
@@ -353,6 +362,7 @@ int main(int argc, char *argv[])
 	                         0);
 #endif
 
+	/* List all listening ports */
 	memset(ports, 0, sizeof(ports));
 	port_cnt = mg_get_server_ports(ctx, 32, ports);
 	printf("\n%i listening ports:\n\n", port_cnt);
@@ -390,6 +400,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/* Wait until the server should be closed */
 	while (!exitNow) {
 #ifdef _WIN32
 		Sleep(1000);
@@ -401,8 +412,10 @@ int main(int argc, char *argv[])
 #endif
 	}
 
+	/* Stop the server */
 	mg_stop(ctx);
+	printf("Server stopped.\n");
 	printf("Bye!\n");
 
-	return 0;
+	return EXIT_SUCCESS;
 }
