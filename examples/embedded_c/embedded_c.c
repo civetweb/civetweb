@@ -4,14 +4,16 @@
 * License http://opensource.org/licenses/mit-license.php MIT License
 */
 
-/* Simple example program on how to use Embedded C interface. */
+/* Simple example program on how to use CivetWeb embedded into a C program. */
 #ifdef _WIN32
 #include <Windows.h>
 #else
 #include <unistd.h>
 #endif
 
+#include <stdlib.h>
 #include <string.h>
+
 #include "civetweb.h"
 
 
@@ -66,6 +68,7 @@ int ExampleHandler(struct mg_connection *conn, void *cbdata)
 int ExitHandler(struct mg_connection *conn, void *cbdata)
 {
 	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+	mg_printf(conn, "Server will shut down.\n");
 	mg_printf(conn, "Bye!\n");
 	exitNow = 1;
 	return 1;
@@ -171,9 +174,12 @@ int WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 
 #ifdef USE_WEBSOCKET
 
-#define MAX_WS_CLIENTS                                                         \
-	5 /* just for the test: a small number that can be reached */
-      /* a real server should use a much higher number here */
+/* MAX_WS_CLIENTS defines how many clients can connect to a websocket at the
+ * same time. The value 5 is very small and used here only for demonstration;
+ * it can be easily tested to connect more than MAX_WS_CLIENTS clients.
+ * A real server should use a much higher number, or better use a dynamic list
+ * of currently connected websocket clients. */
+#define MAX_WS_CLIENTS (5)
 
 struct t_ws_client {
 	struct mg_connection *conn;
