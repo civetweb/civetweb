@@ -11603,7 +11603,9 @@ struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 unsigned mg_check_feature(unsigned feature)
 {
 	static const unsigned feature_set = 0
-/* Set bits for available features according to API documentation. */
+/* Set bits for available features according to API documentation.
+ * This bit mask is created at compile time, according to the active
+ * preprocessor defines. It is a single const value at runtime. */
 #if !defined(NO_FILES)
 	                                    | 1
 #endif
@@ -11622,11 +11624,12 @@ unsigned mg_check_feature(unsigned feature)
 #if defined(USE_LUA)
 	                                    | 32
 #endif
-/* Set some extra bits not defined in the API documentation.
- * These bits may change without further notice. */
-#if !defined(NO_POPEN)
+#if defined(USE_DUKTAPE)
 	                                    | 64
 #endif
+
+/* Set some extra bits not defined in the API documentation.
+ * These bits may change without further notice. */
 #if defined(MG_LEGACY_INTERFACE)
 	                                    | 128
 #endif
@@ -11638,6 +11641,9 @@ unsigned mg_check_feature(unsigned feature)
 #endif
 #if !defined(NO_NONCE_CHECK)
 	                                    | 1024
+#endif
+#if !defined(NO_POPEN)
+	                                    | 2048
 #endif
 	    ;
 	return (feature & feature_set);
