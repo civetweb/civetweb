@@ -34,21 +34,28 @@ int ExampleHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(
 	    conn,
 	    "<p>To see a page from the A handler <a href=\"A\">click A</a></p>");
-	mg_printf(conn, "<p>To see a page from the A handler <a href=\"A/A\">click "
-	                "A/A</a></p>");
-	mg_printf(conn, "<p>To see a page from the A/B handler <a "
-	                "href=\"A/B\">click A/B</a></p>");
-	mg_printf(conn, "<p>To see a page from the B handler (0) <a "
-	                "href=\"B\">click B</a></p>");
-	mg_printf(conn, "<p>To see a page from the B handler (1) <a "
-	                "href=\"B/A\">click B/A</a></p>");
-	mg_printf(conn, "<p>To see a page from the B handler (2) <a "
-	                "href=\"B/B\">click B/B</a></p>");
-	mg_printf(conn, "<p>To see a page from the *.foo handler <a "
-	                "href=\"xy.foo\">click xy.foo</a></p>");
+	mg_printf(conn,
+	          "<p>To see a page from the A handler <a href=\"A/A\">click "
+	          "A/A</a></p>");
+	mg_printf(conn,
+	          "<p>To see a page from the A/B handler <a "
+	          "href=\"A/B\">click A/B</a></p>");
+	mg_printf(conn,
+	          "<p>To see a page from the B handler (0) <a "
+	          "href=\"B\">click B</a></p>");
+	mg_printf(conn,
+	          "<p>To see a page from the B handler (1) <a "
+	          "href=\"B/A\">click B/A</a></p>");
+	mg_printf(conn,
+	          "<p>To see a page from the B handler (2) <a "
+	          "href=\"B/B\">click B/B</a></p>");
+	mg_printf(conn,
+	          "<p>To see a page from the *.foo handler <a "
+	          "href=\"xy.foo\">click xy.foo</a></p>");
 #ifdef USE_WEBSOCKET
-	mg_printf(conn, "<p>To test websocket handler <a href=\"/websocket\">click "
-	                "websocket</a></p>");
+	mg_printf(conn,
+	          "<p>To test websocket handler <a href=\"/websocket\">click "
+	          "websocket</a></p>");
 #endif
 	mg_printf(conn, "<p>To exit <a href=\"%s\">click exit</a></p>", EXIT_URI);
 	mg_printf(conn, "</body></html>\n");
@@ -289,6 +296,29 @@ int main(int argc, char *argv[])
 	struct mg_context *ctx;
 	struct mg_server_ports ports[32];
 	int port_cnt, n;
+	int err = 0;
+
+#ifdef USE_IPV6
+	if (!mg_check_feature(8)) {
+		fprintf(stderr,
+		        "Error: Embedded example built with websocket support, "
+		        "but civetweb library build without.\n");
+		err = 1;
+	}
+#endif
+#ifdef USE_WEBSOCKET
+	if (!mg_check_feature(16)) {
+		fprintf(stderr,
+		        "Error: Embedded example built with websocket support, "
+		        "but civetweb library build without.\n");
+		err = 1;
+	}
+#endif
+
+	if (err) {
+		fprintf(stderr, "Cannot start CivetWeb - inconsistent build.\n");
+		return EXIT_FAILURE;
+	}
 
 	memset(&callbacks, 0, sizeof(callbacks));
 	ctx = mg_start(&callbacks, 0, options);
