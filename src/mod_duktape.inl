@@ -5,8 +5,6 @@
 
 #include "duktape.h"
 
-/* TODO: Malloc function should use mg_malloc/mg_free */
-
 /* TODO: the mg context should be added to duktape as well */
 /* Alternative: redefine a new, clean API from scratch (instead of using mg),
  * or at least do not add problematic functions. */
@@ -17,6 +15,40 @@
 
 
 static const char *civetweb_conn_id = "civetweb_conn";
+
+
+static void *mg_duk_mem_alloc(void *udata, duk_size_t size)
+{
+	return mg_malloc(size);
+}
+
+
+static void *mg_duk_mem_realloc(void *udata, void *ptr, duk_size_t newsize)
+{
+	return mg_realloc(ptr, newsize);
+}
+
+
+static void mg_duk_mem_free(void *udata, void *ptr)
+{
+	mg_free(ptr);
+}
+
+
+static void
+mg_duk_fatal_handler(duk_context *ctx, duk_errcode_t code, const char *msg)
+{
+	/* TODO: check if this handler is required - duk_peval_file probably
+	 * already avoids that this function is called. */
+	/* TODO: test this handler (if it is called) */
+	struct mg_connection *conn;
+
+	duk_push_global_stash(ctx);
+	duk_get_prop_string(ctx, -1, civetweb_conn_id);
+	conn = (struct mg_connection *)duk_to_pointer(ctx, -1);
+
+	mg_cry(conn, "%s", msg);
+}
 
 
 static duk_ret_t duk_itf_send(duk_context *ctx)
@@ -51,7 +83,11 @@ static void mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 
 	conn->must_close = 1;
 
-	ctx = duk_create_heap_default();
+	ctx = duk_create_heap(mg_duk_mem_alloc,
+	                      mg_duk_mem_realloc,
+	                      mg_duk_mem_free,
+	                      NULL,
+	                      mg_duk_fatal_handler);
 	if (!ctx) {
 		mg_cry(conn, "Failed to create a Duktape heap.");
 		goto exec_duktape_finished;
