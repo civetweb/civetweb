@@ -14,7 +14,8 @@
 /* Note: This is only experimental support, so any API may still change. */
 
 
-static const char *civetweb_conn_id = "\xFF" "civetweb_conn";
+static const char *civetweb_conn_id = "\xFF"
+                                      "civetweb_conn";
 
 
 static void *mg_duk_mem_alloc(void *udata, duk_size_t size)
@@ -51,7 +52,7 @@ mg_duk_fatal_handler(duk_context *ctx, duk_errcode_t code, const char *msg)
 }
 
 
-static duk_ret_t duk_itf_send(duk_context *ctx)
+static duk_ret_t duk_itf_write(duk_context *ctx)
 {
 	struct mg_connection *conn;
 	duk_double_t ret;
@@ -77,12 +78,38 @@ static duk_ret_t duk_itf_send(duk_context *ctx)
 }
 
 
+static duk_ret_t duk_itf_read(duk_context *ctx)
+{
+	struct mg_connection *conn;
+	char buf[1024];
+	int len;
+
+	duk_push_global_stash(ctx);
+	duk_get_prop_string(ctx, -1, civetweb_conn_id);
+	conn = (struct mg_connection *)duk_to_pointer(ctx, -1);
+
+	if (!conn) {
+		duk_error(ctx,
+		          DUK_ERR_INTERNAL_ERROR,
+		          "function not available without connection object");
+		/* probably never reached, but satisfies static code analysis */
+		return DUK_RET_INTERNAL_ERROR;
+	}
+
+	len = mg_read(conn, buf, sizeof(buf));
+
+	duk_push_lstring(ctx, buf, len);
+	return 1;
+}
+
+
 static void mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 {
 	duk_context *ctx = NULL;
 
 	conn->must_close = 1;
 
+	/* Create Duktape interpreter state */
 	ctx = duk_create_heap(mg_duk_mem_alloc,
 	                      mg_duk_mem_realloc,
 	                      mg_duk_mem_free,
@@ -93,9 +120,17 @@ static void mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 		goto exec_duktape_finished;
 	}
 
+	/* Add "conn" object */
 	duk_push_global_object(ctx);
-	duk_push_c_function(ctx, duk_itf_send, 1 /*nargs*/);
-	duk_put_prop_string(ctx, -2, "send");
+	duk_push_object(ctx); /* create a new table/object ("conn") */
+
+	duk_push_c_function(ctx, duk_itf_write, 1 /* 1 = nargs */);
+	duk_put_prop_string(ctx, -2, "write"); /* add function conn.write */
+
+	duk_push_c_function(ctx, duk_itf_read, 0 /* 0 = nargs */);
+	duk_put_prop_string(ctx, -2, "read"); /* add function conn.read */
+
+	duk_put_prop_string(ctx, -2, "conn"); /* call the table "conn" */
 
 	duk_push_global_stash(ctx);
 	duk_push_pointer(ctx, (void *)conn);

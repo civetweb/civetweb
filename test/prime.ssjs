@@ -29,7 +29,7 @@ function primeTest() {
     print(res.join(' '));
 }
 
-print = this.send || print
+print = this.send || conn.write
 
 print('HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n');
 
