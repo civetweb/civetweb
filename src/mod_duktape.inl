@@ -14,7 +14,7 @@
 /* Note: This is only experimental support, so any API may still change. */
 
 
-static const char *civetweb_conn_id = "civetweb_conn";
+static const char *civetweb_conn_id = "\xFF" "civetweb_conn";
 
 
 static void *mg_duk_mem_alloc(void *udata, duk_size_t size)
