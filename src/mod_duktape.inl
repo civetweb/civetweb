@@ -59,9 +59,14 @@ static duk_ret_t duk_itf_write(duk_context *ctx)
 	duk_size_t len = 0;
 	const char *val = duk_require_lstring(ctx, -1, &len);
 
+    /*
 	duk_push_global_stash(ctx);
 	duk_get_prop_string(ctx, -1, civetweb_conn_id);
 	conn = (struct mg_connection *)duk_to_pointer(ctx, -1);
+    */
+    duk_push_current_function(ctx);
+    duk_get_prop_string(ctx, -1, civetweb_conn_id);
+    conn = (struct mg_connection *)duk_to_pointer(ctx, -1);
 
 	if (!conn) {
 		duk_error(ctx,
@@ -126,9 +131,13 @@ static void mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 
 	duk_push_c_function(ctx, duk_itf_write, 1 /* 1 = nargs */);
 	duk_put_prop_string(ctx, -2, "write"); /* add function conn.write */
+    duk_push_pointer(ctx, (void *)conn);
+	duk_put_prop_string(ctx, -2, civetweb_conn_id);
 
 	duk_push_c_function(ctx, duk_itf_read, 0 /* 0 = nargs */);
 	duk_put_prop_string(ctx, -2, "read"); /* add function conn.read */
+    duk_push_pointer(ctx, (void *)conn);
+	duk_put_prop_string(ctx, -2, civetweb_conn_id);
 
 	duk_put_prop_string(ctx, -2, "conn"); /* call the table "conn" */
 
