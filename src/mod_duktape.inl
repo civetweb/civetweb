@@ -128,14 +128,14 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 	duk_push_object(ctx); /* create a new table/object ("conn") */
 
 	duk_push_c_function(ctx, duk_itf_write, 1 /* 1 = nargs */);
-	duk_put_prop_string(ctx, -2, "write"); /* add function conn.write */
 	duk_push_pointer(ctx, (void *)conn);
 	duk_put_prop_string(ctx, -2, civetweb_conn_id);
+	duk_put_prop_string(ctx, -2, "write"); /* add function conn.write */
 
 	duk_push_c_function(ctx, duk_itf_read, 0 /* 0 = nargs */);
-	duk_put_prop_string(ctx, -2, "read"); /* add function conn.read */
 	duk_push_pointer(ctx, (void *)conn);
 	duk_put_prop_string(ctx, -2, civetweb_conn_id);
+	duk_put_prop_string(ctx, -2, "read"); /* add function conn.read */
 
 	duk_put_prop_string(ctx, -2, "conn"); /* call the table "conn" */
 

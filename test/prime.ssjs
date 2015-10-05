@@ -22,7 +22,7 @@ function primeCheck(val) {
 function primeTest() {
     var res = [];
 
-    print('Have native helper: ' + (primeCheckHelper !== primeCheckEcmascript));
+    print('Have native helper: ' + (primeCheckHelper !== primeCheckEcmascript) + '\n');
     for (var i = 2; i <= 1000; i++) {
         if (primeCheck(i)) { res.push(i); }
     } 
