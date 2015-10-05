@@ -22,7 +22,7 @@ class CivetServer;
  */
 class CIVETWEB_API CivetException : public std::runtime_error
 {
-	  public:
+  public:
 	CivetException(const std::string &msg) : std::runtime_error(msg)
 	{
 	}
@@ -34,7 +34,7 @@ class CIVETWEB_API CivetException : public std::runtime_error
  */
 class CIVETWEB_API CivetHandler
 {
-	  public:
+  public:
 	/**
 	 * Destructor
 	 */
@@ -95,7 +95,7 @@ class CIVETWEB_API CivetHandler
  */
 class CIVETWEB_API CivetServer
 {
-	  public:
+  public:
 	/**
 	 * Constructor
 	 *
@@ -127,7 +127,8 @@ class CIVETWEB_API CivetServer
 	 *
 	 * @return the context or 0 if not running.
 	 */
-	const struct mg_context *getContext() const
+	const struct mg_context *
+	getContext() const
 	{
 		return context;
 	}
@@ -145,7 +146,8 @@ class CIVETWEB_API CivetServer
 	 */
 	void addHandler(const std::string &uri, CivetHandler *handler);
 
-	void addHandler(const std::string &uri, CivetHandler &handler)
+	void
+	addHandler(const std::string &uri, CivetHandler &handler)
 	{
 		addHandler(uri, &handler);
 	}
@@ -236,10 +238,11 @@ class CIVETWEB_API CivetServer
 	 *based).
 	 * @return true if key was found
 	 */
-	static bool getParam(const std::string &data,
-	                     const char *name,
-	                     std::string &dst,
-	                     size_t occurrence = 0)
+	static bool
+	getParam(const std::string &data,
+	         const char *name,
+	         std::string &dst,
+	         size_t occurrence = 0)
 	{
 		return getParam(data.c_str(), data.length(), name, dst, occurrence);
 	}
@@ -275,9 +278,10 @@ class CIVETWEB_API CivetServer
 	 *       uses '+' as character for space, see RFC 1866 section 8.2.1
 	 *       http://ftp.ics.uci.edu/pub/ietf/html/rfc1866.txt
 	 */
-	static void urlDecode(const std::string &src,
-	                      std::string &dst,
-	                      bool is_form_url_encoded = true)
+	static void
+	urlDecode(const std::string &src,
+	          std::string &dst,
+	          bool is_form_url_encoded = true)
 	{
 		urlDecode(src.c_str(), src.length(), dst, is_form_url_encoded);
 	}
@@ -348,10 +352,10 @@ class CIVETWEB_API CivetServer
 	                      std::string &dst,
 	                      bool append = false);
 
-	  protected:
+  protected:
 	class CivetConnection
 	{
-		  public:
+	  public:
 		char *postData;
 		unsigned long postDataLen;
 
@@ -362,7 +366,7 @@ class CIVETWEB_API CivetServer
 	struct mg_context *context;
 	std::map<struct mg_connection *, class CivetConnection> connections;
 
-	  private:
+  private:
 	/**
 	 * requestHandler(struct mg_connection *, void *cbdata)
 	 *

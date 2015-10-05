@@ -28,5 +28,4 @@ Suite *make_private_exe_suite(void);
 /* This is a redefine for "main" in main.c */
 int exe_main(int argc, char *argv[]);
 
-
 #endif /* TEST_PRIVATE_H_ */

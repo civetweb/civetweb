@@ -62,8 +62,8 @@ START_TEST(test_helper_funcs)
 }
 END_TEST
 
-
-Suite *make_private_exe_suite(void)
+Suite *
+make_private_exe_suite(void)
 {
 	Suite *const suite = suite_create("EXE");
 

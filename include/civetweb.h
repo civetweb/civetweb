@@ -388,7 +388,6 @@ enum {
    The array is terminated by a NULL name option. */
 CIVETWEB_API const struct mg_option *mg_get_valid_options(void);
 
-
 struct mg_server_ports {
 	int protocol;    /* 1 = IPv4, 2 = IPv6, 3 = both */
 	int port;        /* port number */
@@ -409,11 +408,9 @@ CIVETWEB_API int mg_get_server_ports(const struct mg_context *ctx,
                                      int size,
                                      struct mg_server_ports *ports);
 
-
 /* Deprecated. Use mg_get_server_ports instead. */
 CIVETWEB_API size_t
 mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl);
-
 
 /* Add, edit or delete the entry in the passwords file.
 
@@ -755,7 +752,6 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
                                  size_t ebuf_len,
                                  int timeout);
 
-
 /* Check which features where set when civetweb has been compiled.
    Parameters:
      feature: specifies which feature should be checked
@@ -773,7 +769,6 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
      If feature is not available = 0
 */
 CIVETWEB_API unsigned mg_check_feature(unsigned feature);
-
 
 #ifdef __cplusplus
 }

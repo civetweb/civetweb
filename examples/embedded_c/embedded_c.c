@@ -28,7 +28,8 @@
 int exitNow = 0;
 
 
-int ExampleHandler(struct mg_connection *conn, void *cbdata)
+int
+ExampleHandler(struct mg_connection *conn, void *cbdata)
 {
 	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
 	mg_printf(conn, "<html><body>");
@@ -65,7 +66,8 @@ int ExampleHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-int ExitHandler(struct mg_connection *conn, void *cbdata)
+int
+ExitHandler(struct mg_connection *conn, void *cbdata)
 {
 	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
 	mg_printf(conn, "Server will shut down.\n");
@@ -75,7 +77,8 @@ int ExitHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-int AHandler(struct mg_connection *conn, void *cbdata)
+int
+AHandler(struct mg_connection *conn, void *cbdata)
 {
 	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
 	mg_printf(conn, "<html><body>");
@@ -85,7 +88,8 @@ int AHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-int ABHandler(struct mg_connection *conn, void *cbdata)
+int
+ABHandler(struct mg_connection *conn, void *cbdata)
 {
 	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
 	mg_printf(conn, "<html><body>");
@@ -95,7 +99,8 @@ int ABHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-int BXHandler(struct mg_connection *conn, void *cbdata)
+int
+BXHandler(struct mg_connection *conn, void *cbdata)
 {
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
@@ -109,7 +114,8 @@ int BXHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-int FooHandler(struct mg_connection *conn, void *cbdata)
+int
+FooHandler(struct mg_connection *conn, void *cbdata)
 {
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
@@ -127,7 +133,8 @@ int FooHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-int WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
+int
+WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 {
 	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
 
@@ -190,13 +197,15 @@ struct t_ws_client {
 #define ASSERT(x)                                                              \
 	{                                                                          \
 		if (!(x)) {                                                            \
-			fprintf(                                                           \
-			    stderr, "Assertion failed in line %u\n", (unsigned)__LINE__);  \
+			fprintf(stderr,                                                    \
+			        "Assertion failed in line %u\n",                           \
+			        (unsigned)__LINE__);                                       \
 		}                                                                      \
 	}
 
 
-int WebSocketConnectHandler(const struct mg_connection *conn, void *cbdata)
+int
+WebSocketConnectHandler(const struct mg_connection *conn, void *cbdata)
 {
 	struct mg_context *ctx = mg_get_context(conn);
 	int reject = 1;
@@ -221,7 +230,8 @@ int WebSocketConnectHandler(const struct mg_connection *conn, void *cbdata)
 }
 
 
-void WebSocketReadyHandler(struct mg_connection *conn, void *cbdata)
+void
+WebSocketReadyHandler(struct mg_connection *conn, void *cbdata)
 {
 	const char *text = "Hello from the websocket ready handler";
 	struct t_ws_client *client = mg_get_user_connection_data(conn);
@@ -235,11 +245,12 @@ void WebSocketReadyHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-int WebsocketDataHandler(struct mg_connection *conn,
-                         int bits,
-                         char *data,
-                         size_t len,
-                         void *cbdata)
+int
+WebsocketDataHandler(struct mg_connection *conn,
+                     int bits,
+                     char *data,
+                     size_t len,
+                     void *cbdata)
 {
 	struct t_ws_client *client = mg_get_user_connection_data(conn);
 	ASSERT(client->conn == conn);
@@ -253,7 +264,8 @@ int WebsocketDataHandler(struct mg_connection *conn,
 }
 
 
-void WebSocketCloseHandler(const struct mg_connection *conn, void *cbdata)
+void
+WebSocketCloseHandler(const struct mg_connection *conn, void *cbdata)
 {
 	struct mg_context *ctx = mg_get_context(conn);
 	struct t_ws_client *client = mg_get_user_connection_data(conn);
@@ -270,7 +282,8 @@ void WebSocketCloseHandler(const struct mg_connection *conn, void *cbdata)
 }
 
 
-void InformWebsockets(struct mg_context *ctx)
+void
+InformWebsockets(struct mg_context *ctx)
 {
 	static unsigned long cnt = 0;
 	char text[32];
@@ -281,8 +294,10 @@ void InformWebsockets(struct mg_context *ctx)
 	mg_lock_context(ctx);
 	for (i = 0; i < MAX_WS_CLIENTS; i++) {
 		if (ws_clients[i].state == 2) {
-			mg_websocket_write(
-			    ws_clients[i].conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+			mg_websocket_write(ws_clients[i].conn,
+			                   WEBSOCKET_OPCODE_TEXT,
+			                   text,
+			                   strlen(text));
 		}
 	}
 	mg_unlock_context(ctx);
@@ -290,7 +305,8 @@ void InformWebsockets(struct mg_context *ctx)
 #endif
 
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	const char *options[] = {"document_root",
 	                         DOCUMENT_ROOT,

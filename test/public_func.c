@@ -34,7 +34,6 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
-
 START_TEST(test_mg_version)
 {
 	const char *ver = mg_version();
@@ -89,7 +88,6 @@ START_TEST(test_mg_version)
 }
 END_TEST
 
-
 START_TEST(test_mg_get_valid_options)
 {
 	int i;
@@ -107,7 +105,6 @@ START_TEST(test_mg_get_valid_options)
 }
 END_TEST
 
-
 START_TEST(test_mg_get_builtin_mime_type)
 {
 	ck_assert_str_eq(mg_get_builtin_mime_type("x.txt"), "text/plain");
@@ -119,7 +116,6 @@ START_TEST(test_mg_get_builtin_mime_type)
 	                 "text/plain");
 }
 END_TEST
-
 
 START_TEST(test_mg_strncasecmp)
 {
@@ -147,7 +143,6 @@ START_TEST(test_mg_strncasecmp)
 	ck_assert(mg_strncasecmp("xBx", "xax", 3) > 0);
 }
 END_TEST
-
 
 START_TEST(test_mg_get_cookie)
 {
@@ -214,7 +209,6 @@ START_TEST(test_mg_get_cookie)
 	/* TODO: mg_get_cookie and mg_get_var(2) should have the same behavior */
 }
 END_TEST
-
 
 START_TEST(test_mg_get_var)
 {
@@ -318,7 +312,6 @@ START_TEST(test_mg_get_var)
 }
 END_TEST
 
-
 START_TEST(test_mg_md5)
 {
 	char buf[33];
@@ -373,7 +366,6 @@ START_TEST(test_mg_md5)
 }
 END_TEST
 
-
 START_TEST(test_mg_url_encode)
 {
 	char buf[20];
@@ -395,7 +387,6 @@ START_TEST(test_mg_url_encode)
 	ck_assert_str_eq("%25", buf);
 }
 END_TEST
-
 
 START_TEST(test_mg_url_decode)
 {
@@ -424,8 +415,8 @@ START_TEST(test_mg_url_decode)
 }
 END_TEST
 
-
-Suite *make_public_func_suite(void)
+Suite *
+make_public_func_suite(void)
 {
 	Suite *const suite = suite_create("PublicFunc");
 

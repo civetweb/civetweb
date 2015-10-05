@@ -19,126 +19,153 @@
 #define EXIT_URI "/exit"
 bool exitNow = false;
 
-class ExampleHandler: public CivetHandler
+class ExampleHandler : public CivetHandler
 {
-public:
-    bool handleGet(CivetServer *server, struct mg_connection *conn) {
-        mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
-        mg_printf(conn, "<html><body>\r\n");
-        mg_printf(conn, "<h2>This is an example text from a C++ handler</h2>\r\n");
-        mg_printf(conn, "<p>To see a page from the A handler <a href=\"a\">click here</a></p>\r\n");
-        mg_printf(conn, "<p>To see a page from the A handler with a parameter <a href=\"a?param=1\">click here</a></p>\r\n");
-        mg_printf(conn, "<p>To see a page from the A/B handler <a href=\"a/b\">click here</a></p>\r\n");
-        mg_printf(conn, "<p>To see a page from the *.foo handler <a href=\"xy.foo\">click here</a></p>\r\n");
-        mg_printf(conn, "<p>To exit <a href=\"%s\">click here</a></p>\r\n", EXIT_URI);
-        mg_printf(conn, "</body></html>\r\n");
-        return true;
-    }
+  public:
+	bool
+	handleGet(CivetServer *server, struct mg_connection *conn)
+	{
+		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+		mg_printf(conn, "<html><body>\r\n");
+		mg_printf(conn,
+		          "<h2>This is an example text from a C++ handler</h2>\r\n");
+		mg_printf(conn, "<p>To see a page from the A handler <a "
+		                "href=\"a\">click here</a></p>\r\n");
+		mg_printf(conn, "<p>To see a page from the A handler with a parameter "
+		                "<a href=\"a?param=1\">click here</a></p>\r\n");
+		mg_printf(conn, "<p>To see a page from the A/B handler <a "
+		                "href=\"a/b\">click here</a></p>\r\n");
+		mg_printf(conn, "<p>To see a page from the *.foo handler <a "
+		                "href=\"xy.foo\">click here</a></p>\r\n");
+		mg_printf(conn,
+		          "<p>To exit <a href=\"%s\">click here</a></p>\r\n",
+		          EXIT_URI);
+		mg_printf(conn, "</body></html>\r\n");
+		return true;
+	}
 };
 
-class ExitHandler: public CivetHandler
+class ExitHandler : public CivetHandler
 {
-public:
-    bool handleGet(CivetServer *server, struct mg_connection *conn) {
-        mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
-        mg_printf(conn, "Bye!\n");
-        exitNow = true;
-        return true;
-    }
+  public:
+	bool
+	handleGet(CivetServer *server, struct mg_connection *conn)
+	{
+		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+		mg_printf(conn, "Bye!\n");
+		exitNow = true;
+		return true;
+	}
 };
 
-class AHandler: public CivetHandler
+class AHandler : public CivetHandler
 {
-private:
-    bool handleAll(const char * method, CivetServer *server, struct mg_connection *conn) {
-        std::string s = "";
-        mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
-        mg_printf(conn, "<html><body>");
-        mg_printf(conn, "<h2>This is the A handler for \"%s\" !</h2>", method);
-        if (CivetServer::getParam(conn, "param", s)) {
-            mg_printf(conn, "<p>param set to %s</p>", s.c_str());
-        } else {
-            mg_printf(conn, "<p>param not set</p>");
-        }
-        mg_printf(conn, "</body></html>\n");
-        return true;
-    }
-public:
-    bool handleGet(CivetServer *server, struct mg_connection *conn) {
-        return handleAll("GET", server, conn);
-    }
-    bool handlePost(CivetServer *server, struct mg_connection *conn) {
-        return handleAll("POST", server, conn);
-    }
+  private:
+	bool
+	handleAll(const char *method,
+	          CivetServer *server,
+	          struct mg_connection *conn)
+	{
+		std::string s = "";
+		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+		mg_printf(conn, "<html><body>");
+		mg_printf(conn, "<h2>This is the A handler for \"%s\" !</h2>", method);
+		if (CivetServer::getParam(conn, "param", s)) {
+			mg_printf(conn, "<p>param set to %s</p>", s.c_str());
+		} else {
+			mg_printf(conn, "<p>param not set</p>");
+		}
+		mg_printf(conn, "</body></html>\n");
+		return true;
+	}
+
+  public:
+	bool
+	handleGet(CivetServer *server, struct mg_connection *conn)
+	{
+		return handleAll("GET", server, conn);
+	}
+	bool
+	handlePost(CivetServer *server, struct mg_connection *conn)
+	{
+		return handleAll("POST", server, conn);
+	}
 };
 
-class ABHandler: public CivetHandler
+class ABHandler : public CivetHandler
 {
-public:
-    bool handleGet(CivetServer *server, struct mg_connection *conn) {
-        mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
-        mg_printf(conn, "<html><body>");
-        mg_printf(conn, "<h2>This is the AB handler!!!</h2>");
-        mg_printf(conn, "</body></html>\n");
-        return true;
-    }
+  public:
+	bool
+	handleGet(CivetServer *server, struct mg_connection *conn)
+	{
+		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+		mg_printf(conn, "<html><body>");
+		mg_printf(conn, "<h2>This is the AB handler!!!</h2>");
+		mg_printf(conn, "</body></html>\n");
+		return true;
+	}
 };
 
-class FooHandler: public CivetHandler
+class FooHandler : public CivetHandler
 {
-public:
-    bool handleGet(CivetServer *server, struct mg_connection *conn) {
-        /* Handler may access the request info using mg_get_request_info */
-        const struct mg_request_info * req_info = mg_get_request_info(conn);
+  public:
+	bool
+	handleGet(CivetServer *server, struct mg_connection *conn)
+	{
+		/* Handler may access the request info using mg_get_request_info */
+		const struct mg_request_info *req_info = mg_get_request_info(conn);
 
-        mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
-        mg_printf(conn, "<html><body>");
-        mg_printf(conn, "<h2>This is the Foo handler!!!</h2>");
-        mg_printf(conn, "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>",
-                  req_info->request_method, req_info->uri, req_info->http_version);
-        mg_printf(conn, "</body></html>\n");
-        return true;
-    }
+		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+		mg_printf(conn, "<html><body>");
+		mg_printf(conn, "<h2>This is the Foo handler!!!</h2>");
+		mg_printf(conn,
+		          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>",
+		          req_info->request_method,
+		          req_info->uri,
+		          req_info->http_version);
+		mg_printf(conn, "</body></html>\n");
+		return true;
+	}
 };
 
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 
-    const char * options[] = { "document_root", DOCUMENT_ROOT,
-                               "listening_ports", PORT, 0
-                             };
+	const char *options[] = {
+	    "document_root", DOCUMENT_ROOT, "listening_ports", PORT, 0};
 
-    CivetServer server(options);
+	CivetServer server(options);
 
-    ExampleHandler h_ex;
-    server.addHandler(EXAMPLE_URI, h_ex);
+	ExampleHandler h_ex;
+	server.addHandler(EXAMPLE_URI, h_ex);
 
-    ExitHandler h_exit;
-    server.addHandler(EXIT_URI, h_exit);
+	ExitHandler h_exit;
+	server.addHandler(EXIT_URI, h_exit);
 
-    AHandler h_a;
-    server.addHandler("/a", h_a);
+	AHandler h_a;
+	server.addHandler("/a", h_a);
 
-    ABHandler h_ab;
-    server.addHandler("/a/b", h_ab);
+	ABHandler h_ab;
+	server.addHandler("/a/b", h_ab);
 
-    FooHandler h_foo;
-    server.addHandler("**.foo$", h_foo);
+	FooHandler h_foo;
+	server.addHandler("**.foo$", h_foo);
 
-    printf("Browse files at http://localhost:%s/\n", PORT);
-    printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
-    printf("Exit at http://localhost:%s%s\n", PORT, EXIT_URI);
+	printf("Browse files at http://localhost:%s/\n", PORT);
+	printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
+	printf("Exit at http://localhost:%s%s\n", PORT, EXIT_URI);
 
-    while (!exitNow) {
+	while (!exitNow) {
 #ifdef _WIN32
-        Sleep(1000);
+		Sleep(1000);
 #else
-        sleep(1);
+		sleep(1);
 #endif
-    }
+	}
 
-    printf("Bye!\n");
+	printf("Bye!\n");
 
-    return 0;
+	return 0;
 }

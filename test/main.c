@@ -30,13 +30,13 @@
 #include <stdio.h>
 #include <string.h>
 
-
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
-int main(const int argc, char *argv[])
+int
+main(const int argc, char *argv[])
 {
 	// Determine what tests to run
 	const char *suite = NULL;
@@ -48,14 +48,14 @@ int main(const int argc, char *argv[])
 	const char *const test_dir_arg = "--test-dir=";
 	const size_t test_dir_arg_size = strlen(test_dir_arg);
 	for (int i = 1; i < argc; ++i) {
-		if (0 == strncmp(suite_arg, argv[i], suite_arg_size) &&
-		    (strlen(argv[i]) > suite_arg_size)) {
+		if (0 == strncmp(suite_arg, argv[i], suite_arg_size)
+		    && (strlen(argv[i]) > suite_arg_size)) {
 			suite = &argv[i][suite_arg_size];
-		} else if (0 == strncmp(test_case_arg, argv[i], test_case_arg_size) &&
-		           (strlen(argv[i]) > test_case_arg_size)) {
+		} else if (0 == strncmp(test_case_arg, argv[i], test_case_arg_size)
+		           && (strlen(argv[i]) > test_case_arg_size)) {
 			test_case = &argv[i][test_case_arg_size];
-		} else if (0 == strncmp(test_dir_arg, argv[i], test_dir_arg_size) &&
-		           (strlen(argv[i]) > test_dir_arg_size)) {
+		} else if (0 == strncmp(test_dir_arg, argv[i], test_dir_arg_size)
+		           && (strlen(argv[i]) > test_dir_arg_size)) {
 			set_test_directory(&argv[i][test_dir_arg_size]);
 		} else if (0 == strcmp("--help", argv[i])) {
 			printf(

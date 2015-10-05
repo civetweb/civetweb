@@ -46,8 +46,8 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
-
-static const char *locate_ssl_cert(void)
+static const char *
+locate_ssl_cert(void)
 {
 	return
 #ifdef _WIN32
@@ -70,8 +70,8 @@ static const char *locate_ssl_cert(void)
 #endif
 }
 
-
-static int wait_not_null(void *volatile *data)
+static int
+wait_not_null(void *volatile *data)
 {
 	int i;
 	for (i = 0; i < 100; i++) {
@@ -82,7 +82,6 @@ static int wait_not_null(void *volatile *data)
 	}
 	return 0;
 }
-
 
 START_TEST(test_the_test_environment)
 {
@@ -95,7 +94,6 @@ START_TEST(test_the_test_environment)
 
 	memset(wd, 0, sizeof(wd));
 	memset(buf, 0, sizeof(buf));
-
 
 /* Get the current working directory */
 #ifdef _WIN32
@@ -143,17 +141,16 @@ START_TEST(test_the_test_environment)
 }
 END_TEST
 
-
 static void *threading_data;
 
-static void *test_thread_func_t(void *param)
+static void *
+test_thread_func_t(void *param)
 {
 	ck_assert_ptr_eq(param, &threading_data);
 	ck_assert_ptr_eq(threading_data, NULL);
 	threading_data = &threading_data;
 	return NULL;
 }
-
 
 START_TEST(test_threading)
 {
@@ -169,8 +166,8 @@ START_TEST(test_threading)
 }
 END_TEST
 
-
-static int log_msg_func(const struct mg_connection *conn, const char *message)
+static int
+log_msg_func(const struct mg_connection *conn, const char *message)
 {
 	struct mg_context *ctx;
 	char *ud;
@@ -184,7 +181,6 @@ static int log_msg_func(const struct mg_connection *conn, const char *message)
 	ud[255] = 0;
 	return 1;
 }
-
 
 START_TEST(test_mg_start_stop_http_server)
 {
@@ -228,7 +224,6 @@ START_TEST(test_mg_start_stop_http_server)
 }
 END_TEST
 
-
 START_TEST(test_mg_start_stop_https_server)
 {
 #ifndef NO_SSL
@@ -260,7 +255,6 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
-
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
 	memset(&callbacks, 0, sizeof(callbacks));
@@ -288,10 +282,10 @@ START_TEST(test_mg_start_stop_https_server)
 }
 END_TEST
 
-
 static struct mg_context *g_ctx;
 
-static int request_test_handler(struct mg_connection *conn, void *cbdata)
+static int
+request_test_handler(struct mg_connection *conn, void *cbdata)
 {
 	int i;
 	char chunk_data[32];
@@ -330,7 +324,6 @@ static int request_test_handler(struct mg_connection *conn, void *cbdata)
 	return 1;
 }
 
-
 #ifdef USE_WEBSOCKET
 /****************************************************************************/
 /* WEBSOCKET SERVER                                                         */
@@ -345,8 +338,8 @@ static const char *websocket_goodbye_msg = "websocket bye\n";
 static const size_t websocket_goodbye_msg_len =
     14 /* strlen(websocket_goodbye_msg) */;
 
-
-static int websock_server_connect(const struct mg_connection *conn, void *udata)
+static int
+websock_server_connect(const struct mg_connection *conn, void *udata)
 {
 	(void)conn;
 
@@ -356,8 +349,8 @@ static int websock_server_connect(const struct mg_connection *conn, void *udata)
 	return 0; /* return 0 to accept every connection */
 }
 
-
-static void websock_server_ready(struct mg_connection *conn, void *udata)
+static void
+websock_server_ready(struct mg_connection *conn, void *udata)
 {
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	printf("Server: Websocket ready\n");
@@ -373,11 +366,12 @@ static void websock_server_ready(struct mg_connection *conn, void *udata)
 	printf("Server: Websocket ready X\n");
 }
 
-static int websock_server_data(struct mg_connection *conn,
-                               int bits,
-                               char *data,
-                               size_t data_len,
-                               void *udata)
+static int
+websock_server_data(struct mg_connection *conn,
+                    int bits,
+                    char *data,
+                    size_t data_len,
+                    void *udata)
 {
 	(void)bits;
 
@@ -405,7 +399,8 @@ static int websock_server_data(struct mg_connection *conn,
 	return 1; /* return 1 to keep the connetion open */
 }
 
-static void websock_server_close(const struct mg_connection *conn, void *udata)
+static void
+websock_server_close(const struct mg_connection *conn, void *udata)
 {
 	(void)conn;
 
@@ -416,7 +411,6 @@ static void websock_server_close(const struct mg_connection *conn, void *udata)
 	 * closed */
 }
 
-
 /****************************************************************************/
 /* WEBSOCKET CLIENT                                                         */
 /****************************************************************************/
@@ -426,12 +420,12 @@ struct tclient_data {
 	int closed;
 };
 
-
-static int websocket_client_data_handler(struct mg_connection *conn,
-                                         int flags,
-                                         char *data,
-                                         size_t data_len,
-                                         void *user_data)
+static int
+websocket_client_data_handler(struct mg_connection *conn,
+                              int flags,
+                              char *data,
+                              size_t data_len,
+                              void *user_data)
 {
 	struct mg_context *ctx = mg_get_context(conn);
 	struct tclient_data *pclient_data =
@@ -454,9 +448,9 @@ static int websocket_client_data_handler(struct mg_connection *conn,
 	return 1;
 }
 
-
-static void websocket_client_close_handler(const struct mg_connection *conn,
-                                           void *user_data)
+static void
+websocket_client_close_handler(const struct mg_connection *conn,
+                               void *user_data)
 {
 	struct mg_context *ctx = mg_get_context(conn);
 	struct tclient_data *pclient_data =
@@ -470,7 +464,6 @@ static void websocket_client_close_handler(const struct mg_connection *conn,
 	pclient_data->closed++;
 }
 #endif
-
 
 START_TEST(test_request_handlers)
 {
@@ -526,7 +519,6 @@ START_TEST(test_request_handlers)
 	struct mg_connection *ws_client3_conn = NULL;
 #endif
 
-
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
 	OPTIONS[opt_idx++] = HTTP_PORT;
@@ -572,10 +564,11 @@ START_TEST(test_request_handlers)
 	}
 	for (i = 5; i < 9; i++) {
 		sprintf(uri, "/U%u", i);
-		mg_set_request_handler(
-		    ctx, uri, request_test_handler, (void *)(ptrdiff_t)i);
+		mg_set_request_handler(ctx,
+		                       uri,
+		                       request_test_handler,
+		                       (void *)(ptrdiff_t)i);
 	}
-
 
 #ifdef USE_WEBSOCKET
 	mg_set_websocket_handler(ctx,
@@ -586,7 +579,6 @@ START_TEST(test_request_handlers)
 	                         websock_server_close,
 	                         (void *)7531);
 #endif
-
 
 	/* Try to load non existing file */
 	client_conn = mg_download("localhost",
@@ -603,7 +595,6 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(ri->uri, "404");
 	mg_close_connection(client_conn);
 
-
 	/* Get data from callback */
 	client_conn = mg_download(
 	    "localhost", ipv4_port, 0, ebuf, sizeof(ebuf), "%s", request);
@@ -618,7 +609,6 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(client_conn);
 
-
 	/* Get data from callback using http://127.0.0.1 */
 	client_conn = mg_download(
 	    "127.0.0.1", ipv4_port, 0, ebuf, sizeof(ebuf), "%s", request);
@@ -632,7 +622,6 @@ START_TEST(test_request_handlers)
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(client_conn);
-
 
 #if defined(USE_IPV6)
 	/* Get data from callback using http://[::1] */
@@ -649,7 +638,6 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(client_conn);
 #endif
-
 
 #if !defined(NO_SSL)
 	/* Get data from callback using https://127.0.0.1 */
@@ -678,7 +666,6 @@ START_TEST(test_request_handlers)
 	ck_assert_int_eq(i, -1);
 	mg_close_connection(client_conn);
 #endif
-
 
 #if defined(USE_IPV6) && !defined(NO_SSL)
 	/* Get data from callback using https://[::1] */
@@ -734,7 +721,6 @@ START_TEST(test_request_handlers)
 	fwrite(encoded_file_content, 1, 52, f);
 	fclose(f);
 
-
 	/* Get static data */
 	client_conn = mg_download("localhost",
 	                          ipv4_port,
@@ -760,7 +746,6 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, plain_file_content);
 #endif
 	mg_close_connection(client_conn);
-
 
 	/* Get zipped static data - will not work if Accept-Encoding is not set */
 	client_conn = mg_download("localhost",
@@ -806,7 +791,6 @@ START_TEST(test_request_handlers)
 #endif
 	mg_close_connection(client_conn);
 
-
 	/* Get directory listing */
 	client_conn = mg_download("localhost",
 	                          ipv4_port,
@@ -829,7 +813,6 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, "<html>");
 #endif
 	mg_close_connection(client_conn);
-
 
 	/* POST to static file (will not work) */
 	client_conn = mg_download("localhost",
@@ -854,7 +837,6 @@ START_TEST(test_request_handlers)
 #endif
 	mg_close_connection(client_conn);
 
-
 	/* PUT to static file (will not work) */
 	client_conn = mg_download("localhost",
 	                          ipv4_port,
@@ -873,7 +855,6 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(ri->uri, "401"); /* not authorized */
 #endif
 	mg_close_connection(client_conn);
-
 
 /* Websocket test */
 #ifdef USE_WEBSOCKET
@@ -1097,8 +1078,8 @@ START_TEST(test_request_handlers)
 }
 END_TEST
 
-
-Suite *make_public_server_suite(void)
+Suite *
+make_public_server_suite(void)
 {
 	Suite *const suite = suite_create("PublicServer");
 
@@ -1107,7 +1088,6 @@ Suite *make_public_server_suite(void)
 	TCase *const startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const startstophttps = tcase_create("Start Stop HTTPS Server");
 	TCase *const serverrequests = tcase_create("Server Requests");
-
 
 	tcase_add_test(checktestenv, test_the_test_environment);
 	tcase_set_timeout(checktestenv, civetweb_min_test_timeout);
@@ -1132,14 +1112,14 @@ Suite *make_public_server_suite(void)
 	return suite;
 }
 
-
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 /* Used to debug test cases without using the check framework */
 
 static int chk_ok = 0;
 static int chk_failed = 0;
 
-void main(void)
+void
+main(void)
 {
 	test_the_test_environment(0);
 	test_threading(0);
@@ -1150,7 +1130,8 @@ void main(void)
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }
 
-void _ck_assert_failed(const char *file, int line, const char *expr, ...)
+void
+_ck_assert_failed(const char *file, int line, const char *expr, ...)
 {
 	va_list va;
 	va_start(va, expr);
@@ -1161,7 +1142,8 @@ void _ck_assert_failed(const char *file, int line, const char *expr, ...)
 	chk_failed++;
 }
 
-void _ck_assert_msg(int cond, const char *file, int line, const char *expr, ...)
+void
+_ck_assert_msg(int cond, const char *file, int line, const char *expr, ...)
 {
 	va_list va;
 
@@ -1178,12 +1160,14 @@ void _ck_assert_msg(int cond, const char *file, int line, const char *expr, ...)
 	chk_failed++;
 }
 
-void _mark_point(const char *file, int line)
+void
+_mark_point(const char *file, int line)
 {
 	chk_ok++;
 }
 
-void tcase_fn_start(const char *fname, const char *file, int line)
+void
+tcase_fn_start(const char *fname, const char *file, int line)
 {
 }
 void suite_add_tcase(Suite *s, TCase *tc){};
@@ -1194,11 +1178,13 @@ void _tcase_add_test(TCase *tc,
                      int allowed_exit_value,
                      int start,
                      int end){};
-TCase *tcase_create(const char *name)
+TCase *
+tcase_create(const char *name)
 {
 	return NULL;
 };
-Suite *suite_create(const char *name)
+Suite *
+suite_create(const char *name)
 {
 	return NULL;
 };

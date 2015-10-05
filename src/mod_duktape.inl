@@ -13,28 +13,26 @@
 
 /* Note: This is only experimental support, so any API may still change. */
 
-
 static const char *civetweb_conn_id = "\xFF"
                                       "civetweb_conn";
 
-
-static void *mg_duk_mem_alloc(void *udata, duk_size_t size)
+static void *
+mg_duk_mem_alloc(void *udata, duk_size_t size)
 {
 	return mg_malloc(size);
 }
 
-
-static void *mg_duk_mem_realloc(void *udata, void *ptr, duk_size_t newsize)
+static void *
+mg_duk_mem_realloc(void *udata, void *ptr, duk_size_t newsize)
 {
 	return mg_realloc(ptr, newsize);
 }
 
-
-static void mg_duk_mem_free(void *udata, void *ptr)
+static void
+mg_duk_mem_free(void *udata, void *ptr)
 {
 	mg_free(ptr);
 }
-
 
 static void
 mg_duk_fatal_handler(duk_context *ctx, duk_errcode_t code, const char *msg)
@@ -51,22 +49,22 @@ mg_duk_fatal_handler(duk_context *ctx, duk_errcode_t code, const char *msg)
 	mg_cry(conn, "%s", msg);
 }
 
-
-static duk_ret_t duk_itf_write(duk_context *ctx)
+static duk_ret_t
+duk_itf_write(duk_context *ctx)
 {
 	struct mg_connection *conn;
 	duk_double_t ret;
 	duk_size_t len = 0;
 	const char *val = duk_require_lstring(ctx, -1, &len);
 
-    /*
-	duk_push_global_stash(ctx);
+	/*
+	    duk_push_global_stash(ctx);
+	    duk_get_prop_string(ctx, -1, civetweb_conn_id);
+	    conn = (struct mg_connection *)duk_to_pointer(ctx, -1);
+	*/
+	duk_push_current_function(ctx);
 	duk_get_prop_string(ctx, -1, civetweb_conn_id);
 	conn = (struct mg_connection *)duk_to_pointer(ctx, -1);
-    */
-    duk_push_current_function(ctx);
-    duk_get_prop_string(ctx, -1, civetweb_conn_id);
-    conn = (struct mg_connection *)duk_to_pointer(ctx, -1);
 
 	if (!conn) {
 		duk_error(ctx,
@@ -82,8 +80,8 @@ static duk_ret_t duk_itf_write(duk_context *ctx)
 	return 1;
 }
 
-
-static duk_ret_t duk_itf_read(duk_context *ctx)
+static duk_ret_t
+duk_itf_read(duk_context *ctx)
 {
 	struct mg_connection *conn;
 	char buf[1024];
@@ -107,8 +105,8 @@ static duk_ret_t duk_itf_read(duk_context *ctx)
 	return 1;
 }
 
-
-static void mg_exec_duktape_script(struct mg_connection *conn, const char *path)
+static void
+mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 {
 	duk_context *ctx = NULL;
 
@@ -131,12 +129,12 @@ static void mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 
 	duk_push_c_function(ctx, duk_itf_write, 1 /* 1 = nargs */);
 	duk_put_prop_string(ctx, -2, "write"); /* add function conn.write */
-    duk_push_pointer(ctx, (void *)conn);
+	duk_push_pointer(ctx, (void *)conn);
 	duk_put_prop_string(ctx, -2, civetweb_conn_id);
 
 	duk_push_c_function(ctx, duk_itf_read, 0 /* 0 = nargs */);
 	duk_put_prop_string(ctx, -2, "read"); /* add function conn.read */
-    duk_push_pointer(ctx, (void *)conn);
+	duk_push_pointer(ctx, (void *)conn);
 	duk_put_prop_string(ctx, -2, civetweb_conn_id);
 
 	duk_put_prop_string(ctx, -2, "conn"); /* call the table "conn" */

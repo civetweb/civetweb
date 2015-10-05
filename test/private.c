@@ -91,7 +91,6 @@ START_TEST(test_parse_http_message)
 }
 END_TEST
 
-
 START_TEST(test_should_keep_alive)
 {
 	/* Adapted from unit_test.c */
@@ -139,7 +138,6 @@ START_TEST(test_should_keep_alive)
 }
 END_TEST
 
-
 START_TEST(test_match_prefix)
 {
 	/* Adapted from unit_test.c */
@@ -176,7 +174,6 @@ START_TEST(test_match_prefix)
 }
 END_TEST
 
-
 START_TEST(test_remove_double_dots_and_double_slashes)
 {
 	/* Adapted from unit_test.c */
@@ -205,7 +202,6 @@ START_TEST(test_remove_double_dots_and_double_slashes)
 }
 END_TEST
 
-
 START_TEST(test_is_valid_uri)
 {
 	/* is_valid_uri is superseeded by get_uri_type */
@@ -223,7 +219,6 @@ START_TEST(test_is_valid_uri)
 }
 END_TEST
 
-
 START_TEST(test_next_option)
 {
 	/* Adapted from unit_test.c */
@@ -236,13 +231,13 @@ START_TEST(test_next_option)
 	ck_assert(next_option(NULL, &a, &b) == NULL);
 	for (i = 0, p = list; (p = next_option(p, &a, &b)) != NULL; i++) {
 		ck_assert(i != 0 || (a.ptr == list && a.len == 3 && b.len == 0));
-		ck_assert(i != 1 || (a.ptr == list + 4 && a.len == 4 &&
-		                     b.ptr == list + 9 && b.len == 4));
+		ck_assert(i != 1
+		          || (a.ptr == list + 4 && a.len == 4 && b.ptr == list + 9
+		              && b.len == 4));
 		ck_assert(i != 2 || (a.ptr == list + 14 && a.len == 1 && b.len == 0));
 	}
 }
 END_TEST
-
 
 START_TEST(test_skip_quoted)
 {
@@ -266,8 +261,8 @@ START_TEST(test_skip_quoted)
 }
 END_TEST
 
-
-static int alloc_printf(char **buf, size_t size, const char *fmt, ...)
+static int
+alloc_printf(char **buf, size_t size, const char *fmt, ...)
 {
 	/* Test helper function - adapted from unit_test.c */
 	/* Copyright (c) 2013-2015 the Civetweb developers */
@@ -279,7 +274,6 @@ static int alloc_printf(char **buf, size_t size, const char *fmt, ...)
 	va_end(ap);
 	return ret;
 }
-
 
 START_TEST(test_alloc_vprintf)
 {
@@ -300,7 +294,6 @@ START_TEST(test_alloc_vprintf)
 }
 END_TEST
 
-
 START_TEST(test_mg_strcasestr)
 {
 	/* Adapted from unit_test.c */
@@ -315,27 +308,25 @@ START_TEST(test_mg_strcasestr)
 }
 END_TEST
 
-
 START_TEST(test_parse_port_string)
 {
 	/* Adapted from unit_test.c */
 	/* Copyright (c) 2013-2015 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
-	static const char *valid[] = {
-		"0",
-		"1",
-		"1s",
-		"1r",
-		"1.2.3.4:1",
-		"1.2.3.4:1s",
-		"1.2.3.4:1r",
+	static const char *valid[] =
+	{ "0",
+	  "1",
+	  "1s",
+	  "1r",
+	  "1.2.3.4:1",
+	  "1.2.3.4:1s",
+	  "1.2.3.4:1r",
 #if defined(USE_IPV6)
-		"[::1]:123",
-		"[::]:80",
-		"[3ffe:2a00:100:7031::1]:900",
+	  "[::1]:123",
+	  "[::]:80",
+	  "[3ffe:2a00:100:7031::1]:900",
 #endif
-		NULL
-	};
+	  NULL };
 	static const char *invalid[] = {
 	    "99999", "1k", "1.2.3", "1.2.3.4:", "1.2.3.4:2p", NULL};
 	struct socket so;
@@ -355,7 +346,6 @@ START_TEST(test_parse_port_string)
 	}
 }
 END_TEST
-
 
 START_TEST(test_encode_decode)
 {
@@ -414,8 +404,10 @@ START_TEST(test_encode_decode)
 #if defined(USE_LUA)
 	memset(buf, 77, sizeof(buf));
 	len = 9999;
-	ret = base64_decode(
-	    (unsigned char *)alpha_b64_enc, (int)strlen(alpha_b64_enc), buf, &len);
+	ret = base64_decode((unsigned char *)alpha_b64_enc,
+	                    (int)strlen(alpha_b64_enc),
+	                    buf,
+	                    &len);
 	ck_assert_int_eq(ret, -1);
 	ck_assert_uint_eq((unsigned int)len, (unsigned int)strlen(alpha));
 	ck_assert_str_eq(buf, alpha);
@@ -464,8 +456,8 @@ START_TEST(test_encode_decode)
 }
 END_TEST
 
-
-Suite *make_private_suite(void)
+Suite *
+make_private_suite(void)
 {
 	Suite *const suite = suite_create("Private");
 
