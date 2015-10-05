@@ -5236,6 +5236,11 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 {
 	int ip_ver = 0;
 	*sock = INVALID_SOCKET;
+	
+	if (sa == NULL) {
+		return 0;
+	}
+	
 	memset(sa, 0, sizeof(*sa));
 
 	if (ebuf_len > 0) {
@@ -6001,6 +6006,9 @@ static void handle_static_file_request(struct mg_connection *conn,
 	                "Content-Type: %.*s\r\n"
 	                "Content-Length: %" INT64_FMT "\r\n"
 	                "Connection: %s\r\n"
+	               	"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+			"Pragma: no-cache\r\n"
+			"Expires: 0\r\n"
 	                "Accept-Ranges: bytes\r\n"
 	                "%s%s\r\n",
 	                conn->status_code,
@@ -6380,6 +6388,9 @@ static void addenv(struct cgi_environment *env, const char *fmt, ...)
 	char *added;
 	va_list ap;
 
+	if (env == NULL) {
+		return;
+	}
 
 	/* Calculate how much space is left in the buffer */
 	space = (env->buflen - env->bufused);
@@ -10303,7 +10314,7 @@ static int get_uri_type(const char *uri)
 			if (!portbegin) {
 				return 3;
 			}
-
+			portend = portbegin + 1;
 			port = strtoul(portbegin + 1, &portend, 10);
 			if ((portend != hostend) || !port || !is_valid_port(port)) {
 				return 0;
@@ -10328,6 +10339,10 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	char *hostend = NULL;
 	char *portbegin, *portend;
 
+	if (!conn) {
+		return 0;
+	}
+
 	/* DNS is case insensitive, so use case insensitive string compare here */
 	domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
 	if (!domain) {
@@ -10351,6 +10366,7 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 			if (!portbegin) {
 				port = abs_uri_protocols[i].default_port;
 			} else {
+				portend = portbegin + 1;
 				port = strtoul(portbegin + 1, &portend, 10);
 				if ((portend != hostend) || !port || !is_valid_port(port)) {
 					return 0;
