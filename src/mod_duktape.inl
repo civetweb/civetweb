@@ -155,6 +155,12 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 	duk_push_string(ctx, conn->request_info.remote_addr);
 	duk_put_prop_string(ctx, -2, "remote_addr");
 
+	duk_push_int(ctx, conn->request_info.remote_port);
+	duk_put_prop_string(ctx, -2, "remote_port");
+
+	duk_push_int(ctx, ntohs(conn->client.lsa.sin.sin_port));
+	duk_put_prop_string(ctx, -2, "server_port");
+
 	duk_put_prop_string(ctx, -2, "conn"); /* call the table "conn" */
 
 	duk_push_global_stash(ctx);
