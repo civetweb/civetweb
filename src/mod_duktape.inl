@@ -137,6 +137,24 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 	duk_put_prop_string(ctx, -2, civetweb_conn_id);
 	duk_put_prop_string(ctx, -2, "read"); /* add function conn.read */
 
+	duk_push_string(ctx, conn->request_info.request_method);
+	duk_put_prop_string(ctx, -2, "request_method"); /* add string conn.r... */
+
+	duk_push_string(ctx, conn->request_info.request_uri);
+	duk_put_prop_string(ctx, -2, "request_uri");
+
+	duk_push_string(ctx, conn->request_info.local_uri);
+	duk_put_prop_string(ctx, -2, "uri");
+
+	duk_push_string(ctx, conn->request_info.http_version);
+	duk_put_prop_string(ctx, -2, "http_version");
+
+	duk_push_string(ctx, conn->request_info.query_string);
+	duk_put_prop_string(ctx, -2, "query_string");
+
+	duk_push_string(ctx, conn->request_info.remote_addr);
+	duk_put_prop_string(ctx, -2, "remote_addr");
+
 	duk_put_prop_string(ctx, -2, "conn"); /* call the table "conn" */
 
 	duk_push_global_stash(ctx);
