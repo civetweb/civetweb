@@ -163,6 +163,34 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 
 	duk_put_prop_string(ctx, -2, "conn"); /* call the table "conn" */
 
+	/* Add "civetweb" object */
+	duk_push_global_object(ctx);
+	duk_push_object(ctx); /* create a new table/object ("conn") */
+
+	duk_push_string(ctx, CIVETWEB_VERSION);
+	duk_put_prop_string(ctx, -2, "version");
+
+	duk_push_string(ctx, script_name);
+	duk_put_prop_string(ctx, -2, "script_name");
+
+	/* TODO: Port the following Lua code - or alternatively add a function to
+access all config params
+
+	if (ctx != NULL) {
+	    reg_string(L, "document_root", ctx->config[DOCUMENT_ROOT]);
+	    reg_string(L, "auth_domain", ctx->config[AUTHENTICATION_DOMAIN]);
+#if defined(USE_WEBSOCKET)
+	    reg_string(L, "websocket_root", ctx->config[WEBSOCKET_ROOT]);
+#endif
+
+	    if (ctx->systemName != NULL) {
+	        reg_string(L, "system", ctx->systemName);
+	    }
+	}
+	*/
+
+	duk_put_prop_string(ctx, -2, "civetweb"); /* call the table "civetweb" */
+
 	duk_push_global_stash(ctx);
 	duk_push_pointer(ctx, (void *)conn);
 	duk_put_prop_string(ctx, -2, civetweb_conn_id);
