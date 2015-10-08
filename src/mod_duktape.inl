@@ -11,10 +11,13 @@
 /* For evaluation purposes, currently only "send" is supported.
  * All other ~50 functions will be added later. */
 
-/* Note: This is only experimental support, so any API may still change. */
+/* Note: This is only experimental support, so the API may still change. */
 
 static const char *civetweb_conn_id = "\xFF"
                                       "civetweb_conn";
+static const char *civetweb_ctx_id = "\xFF"
+                                     "civetweb_ctx";
+
 
 static void *
 mg_duk_mem_alloc(void *udata, duk_size_t size)
@@ -22,17 +25,20 @@ mg_duk_mem_alloc(void *udata, duk_size_t size)
 	return mg_malloc(size);
 }
 
+
 static void *
 mg_duk_mem_realloc(void *udata, void *ptr, duk_size_t newsize)
 {
 	return mg_realloc(ptr, newsize);
 }
 
+
 static void
 mg_duk_mem_free(void *udata, void *ptr)
 {
 	mg_free(ptr);
 }
+
 
 static void
 mg_duk_fatal_handler(duk_context *ctx, duk_errcode_t code, const char *msg)
@@ -48,6 +54,7 @@ mg_duk_fatal_handler(duk_context *ctx, duk_errcode_t code, const char *msg)
 
 	mg_cry(conn, "%s", msg);
 }
+
 
 static duk_ret_t
 duk_itf_write(duk_context *ctx)
@@ -80,6 +87,7 @@ duk_itf_write(duk_context *ctx)
 	return 1;
 }
 
+
 static duk_ret_t
 duk_itf_read(duk_context *ctx)
 {
@@ -105,8 +113,40 @@ duk_itf_read(duk_context *ctx)
 	return 1;
 }
 
+
+static duk_ret_t
+duk_itf_getoption(duk_context *ctx)
+{
+	struct mg_context *cv_ctx;
+	const char *ret;
+	duk_size_t len = 0;
+	const char *val = duk_require_lstring(ctx, -1, &len);
+
+	duk_push_current_function(ctx);
+	duk_get_prop_string(ctx, -1, civetweb_ctx_id);
+	cv_ctx = (struct mg_context *)duk_to_pointer(ctx, -1);
+
+	if (!cv_ctx) {
+		duk_error(ctx,
+		          DUK_ERR_INTERNAL_ERROR,
+		          "function not available without connection object");
+		/* probably never reached, but satisfies static code analysis */
+		return DUK_RET_INTERNAL_ERROR;
+	}
+
+	ret = mg_get_option(cv_ctx, val);
+	if (ret) {
+		duk_push_string(ctx, ret);
+	} else {
+		duk_push_null(ctx);
+	}
+
+	return 1;
+}
+
+
 static void
-mg_exec_duktape_script(struct mg_connection *conn, const char *path)
+mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 {
 	duk_context *ctx = NULL;
 
@@ -173,21 +213,17 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *path)
 	duk_push_string(ctx, script_name);
 	duk_put_prop_string(ctx, -2, "script_name");
 
-	/* TODO: Port the following Lua code - or alternatively add a function to
-access all config params
+	if (conn->ctx != NULL) {
+		duk_push_c_function(ctx, duk_itf_getoption, 1 /* 1 = nargs */);
+		duk_push_pointer(ctx, (void *)(conn->ctx));
+		duk_put_prop_string(ctx, -2, civetweb_ctx_id);
+		duk_put_prop_string(ctx, -2, "getoption"); /* add function conn.write */
 
-	if (ctx != NULL) {
-	    reg_string(L, "document_root", ctx->config[DOCUMENT_ROOT]);
-	    reg_string(L, "auth_domain", ctx->config[AUTHENTICATION_DOMAIN]);
-#if defined(USE_WEBSOCKET)
-	    reg_string(L, "websocket_root", ctx->config[WEBSOCKET_ROOT]);
-#endif
-
-	    if (ctx->systemName != NULL) {
-	        reg_string(L, "system", ctx->systemName);
-	    }
+		if (conn->ctx->systemName != NULL) {
+			duk_push_string(ctx, conn->ctx->systemName);
+			duk_put_prop_string(ctx, -2, "system");
+		}
 	}
-	*/
 
 	duk_put_prop_string(ctx, -2, "civetweb"); /* call the table "civetweb" */
 
@@ -195,7 +231,7 @@ access all config params
 	duk_push_pointer(ctx, (void *)conn);
 	duk_put_prop_string(ctx, -2, civetweb_conn_id);
 
-	if (duk_peval_file(ctx, path) != 0) {
+	if (duk_peval_file(ctx, script_name) != 0) {
 		mg_cry(conn, "%s", duk_safe_to_string(ctx, -1));
 		goto exec_duktape_finished;
 	}
