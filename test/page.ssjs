@@ -1,4 +1,4 @@
-print = this.send || print
+print = conn.write || print
 
 // send a header
 print('HTTP/1.0 200 OK\r\n');
