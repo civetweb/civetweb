@@ -34,7 +34,8 @@ opts = [
 "websocket_root",
 "lua_websocket_pattern",
 "access_control_allow_origin",
-"error_pages"
+"error_pages",
+"_unknown__option"
 ]
 
 // send a header
@@ -53,7 +54,7 @@ for (var i=0; i < opts.length; i++) {
   if (typeof(n) == "string") {
     print("<p>Option " + o + " = " + n + "</p>\n");
   } else {
-    print("<p>Option " + o + " not set</p>\n");
+    print("<p>Option " + o + " not known</p>\n");
   }
 }
 

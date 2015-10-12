@@ -43,9 +43,9 @@ mg_duk_mem_free(void *udata, void *ptr)
 static void
 mg_duk_fatal_handler(duk_context *ctx, duk_errcode_t code, const char *msg)
 {
-	/* TODO: check if this handler is required - duk_peval_file probably
-	 * already avoids that this function is called. */
-	/* TODO: test this handler (if it is called) */
+	/* Script is called "protected" (duk_peval_file), so script errors should
+	 * never yield in a call to this function. Maybe calls prior to executing
+	 * the script could raise a fatal error. */
 	struct mg_connection *conn;
 
 	duk_push_global_stash(ctx);
@@ -148,6 +148,7 @@ duk_itf_getoption(duk_context *ctx)
 static void
 mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 {
+	int i;
 	duk_context *ctx = NULL;
 
 	conn->must_close = 1;
@@ -200,6 +201,13 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 
 	duk_push_int(ctx, ntohs(conn->client.lsa.sin.sin_port));
 	duk_put_prop_string(ctx, -2, "server_port");
+
+	duk_push_object(ctx); /* subfolder "conn.http_headers" */
+	for (i = 0; i < conn->request_info.num_headers; i++) {
+		duk_push_string(ctx, conn->request_info.http_headers[i].value);
+		duk_put_prop_string(ctx, -2, conn->request_info.http_headers[i].name);
+	}
+	duk_put_prop_string(ctx, -2, "http_headers");
 
 	duk_put_prop_string(ctx, -2, "conn"); /* call the table "conn" */
 
