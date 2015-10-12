@@ -166,6 +166,10 @@ if (CIVETWEB_ENABLE_LUA)
   mark_as_advanced(CIVETWEB_SQLITE_MD5_HASH)
 endif()
 
+# Duktape CGI support
+option(CIVETWEB_ENABLE_DUKTAPE "Enable Duktape CGIs" OFF)
+message(STATUS "Duktape CGI support - ${CIVETWEB_ENABLE_DUKTAPE}")
+
 # SSL support
 option(CIVETWEB_ENABLE_SSL "Enables the secure socket layer" ON)
 message(STATUS "SSL support - ${CIVETWEB_ENABLE_SSL}")
@@ -353,6 +357,9 @@ if (CIVETWEB_DISABLE_CGI)
 endif()
 if (CIVETWEB_ENABLE_LUA)
   add_definitions(-DUSE_LUA)
+endif()
+if (CIVETWEB_ENABLE_DUKTAPE)
+  add_definitions(-DUSE_DUKTAPE)
 endif()
 if (CIVETWEB_ENABLE_MEMORY_DEBUGGING)
   add_definitions(-DMEMORY_DEBUGGING)
