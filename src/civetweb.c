@@ -8076,14 +8076,19 @@ read_websocket(struct mg_connection *conn,
 	mg_set_thread_name("worker");
 }
 
-int
-mg_websocket_write(struct mg_connection *conn,
-                   int opcode,
-                   const char *data,
-                   size_t dataLen)
+static int
+mg_websocket_write_exec(struct mg_connection *conn,
+                        int opcode,
+                        const char *data,
+                        size_t dataLen,
+                        char mask)
 {
-	unsigned char header[10];
+	unsigned char header[14];
 	size_t headerLen = 1;
+	uint8_t masking_key[4];
+	unsigned char masked_data[dataLen];
+	const char* send_data;
+	size_t i = 0;
 
 	int retval = -1;
 
@@ -8107,6 +8112,29 @@ mg_websocket_write(struct mg_connection *conn,
 		headerLen = 10;
 	}
 
+	if(mask) {
+		/* add mask */
+		srand(time(NULL));
+		masking_key[0] = rand() & 0xff;
+		masking_key[1] = rand() & 0xff;
+		masking_key[2] = rand() & 0xff;
+		masking_key[3] = rand() & 0xff;
+
+		header[1] |= 0x80;
+		header[headerLen] = masking_key[0];
+		header[headerLen + 1] = masking_key[1];
+		header[headerLen + 2] = masking_key[2];
+		header[headerLen + 3] = masking_key[3];
+		headerLen += 4;
+		for (i = 0; i != dataLen; ++i) {
+			masked_data[i] = *data++ ^ masking_key[i&0x3];
+		}
+		send_data = (const char*)masked_data;
+	} else {
+		send_data = data;
+	}
+
+
 	/* Note that POSIX/Winsock's send() is threadsafe
 	 * http://stackoverflow.com/questions/1981372/are-parallel-calls-to-send-recv-on-the-same-socket-valid
 	 * but mongoose's mg_printf/mg_write is not (because of the loop in
@@ -8114,10 +8142,30 @@ mg_websocket_write(struct mg_connection *conn,
 	 * outgoing buffer is full). */
 	(void)mg_lock_connection(conn);
 	retval = mg_write(conn, header, headerLen);
-	retval = mg_write(conn, data, dataLen);
+	if (dataLen > 0) {
+		retval = mg_write(conn, send_data, dataLen);
+	}
 	mg_unlock_connection(conn);
 
 	return retval;
+}
+
+int
+mg_websocket_write(struct mg_connection *conn,
+                   int opcode,
+                   const char *data,
+                   size_t dataLen)
+{
+	return mg_websocket_write_exec(conn, opcode, data, dataLen, 0);
+}
+
+int
+mg_websocket_client_write(struct mg_connection *conn,
+                          int opcode,
+                          const char *data,
+                          size_t dataLen)
+{
+	return mg_websocket_write_exec(conn, opcode, data, dataLen, 1);
 }
 
 static void
