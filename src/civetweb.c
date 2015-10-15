@@ -136,6 +136,7 @@ int clock_gettime(int clk_id, struct timespec *t);
 int
 clock_gettime(int clk_id, struct timespec *t)
 {
+    memset(t, 0, sizeof(*t);
 	if (clk_id == CLOCK_REALTIME) {
 		struct timeval now;
 		int rv = gettimeofday(&now, NULL);
@@ -2328,6 +2329,7 @@ clock_gettime(clockid_t clk_id, struct timespec *tp)
 	static double perfcnt_per_sec = 0.0;
 
 	if (tp) {
+		memset(tp, 0, sizeof(*tp));
 		if (clk_id == CLOCK_REALTIME) {
 			GetSystemTimeAsFileTime(&ft);
 			li.LowPart = ft.dwLowDateTime;
@@ -2770,6 +2772,7 @@ poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 	int result;
 	SOCKET maxfd = 0;
 
+	memset(&tv, 0, sizeof(tv));
 	tv.tv_sec = milliseconds / 1000;
 	tv.tv_usec = (milliseconds % 1000) * 1000;
 	FD_ZERO(&set);
@@ -6176,12 +6179,14 @@ read_request(FILE *fp,
              int *nread)
 {
 	int request_len, n = 0;
-	struct timespec last_action_time = {0, 0};
+	struct timespec last_action_time;
 	double request_timeout;
 
 	if (!conn) {
 		return 0;
 	}
+
+	memset(&last_action_time, 0, sizeof(last_action_time));
 
 	if (conn->ctx->config[REQUEST_TIMEOUT]) {
 		/* value of request_timeout is in seconds, config in milliseconds */
@@ -10050,6 +10055,8 @@ set_sock_timeout(SOCKET sock, int milliseconds)
 	unsigned int uto = (unsigned int)milliseconds;
 #endif
 	struct timeval t;
+
+	memset(&tv, 0, sizeof(tv));
 	t.tv_sec = milliseconds / 1000;
 	t.tv_usec = (milliseconds * 1000) % 1000000;
 
