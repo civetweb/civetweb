@@ -55,6 +55,48 @@ CivetHandler::handleOptions(CivetServer *server, struct mg_connection *conn)
 	return false;
 }
 
+bool
+CivetWebSocketHandler::handleConnection(CivetServer *server,
+                                        const struct mg_connection *conn)
+{
+	UNUSED_PARAMETER(server);
+	UNUSED_PARAMETER(conn);
+	return true;
+}
+
+void
+CivetWebSocketHandler::handleReadyState(CivetServer *server,
+                                        struct mg_connection *conn)
+{
+	UNUSED_PARAMETER(server);
+	UNUSED_PARAMETER(conn);
+	return;
+}
+
+bool
+CivetWebSocketHandler::handleData(CivetServer *server,
+                                  struct mg_connection *conn,
+                                  int bits,
+                                  char *data,
+                                  size_t data_len)
+{
+	UNUSED_PARAMETER(server);
+	UNUSED_PARAMETER(conn);
+	UNUSED_PARAMETER(bits);
+	UNUSED_PARAMETER(data);
+	UNUSED_PARAMETER(data_len);
+	return true;
+}
+
+void
+CivetWebSocketHandler::handleClose(CivetServer *server,
+                                   const struct mg_connection *conn)
+{
+	UNUSED_PARAMETER(server);
+	UNUSED_PARAMETER(conn);
+	return;
+}
+
 int
 CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 {
@@ -88,6 +130,92 @@ CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 	}
 
 	return 0; // No handler found
+}
+
+int
+CivetServer::webSocketConnectionHandler(const struct mg_connection *conn,
+                                        void *cbdata)
+{
+	const struct mg_request_info *request_info = mg_get_request_info(conn);
+	assert(request_info != NULL);
+	CivetServer *me = (CivetServer *)(request_info->user_data);
+	assert(me != NULL);
+
+	// Happens when a request hits the server before the context is saved
+	if (me->context == NULL)
+		return 0;
+
+	CivetWebSocketHandler *handler = (CivetWebSocketHandler *)cbdata;
+
+	if (handler) {
+		return handler->handleConnection(me, conn) ? 0 : 1;
+	}
+
+	return 1; // No handler found, close connection
+}
+
+void
+CivetServer::webSocketReadyHandler(struct mg_connection *conn, void *cbdata)
+{
+	const struct mg_request_info *request_info = mg_get_request_info(conn);
+	assert(request_info != NULL);
+	CivetServer *me = (CivetServer *)(request_info->user_data);
+	assert(me != NULL);
+
+	// Happens when a request hits the server before the context is saved
+	if (me->context == NULL)
+		return;
+
+	CivetWebSocketHandler *handler = (CivetWebSocketHandler *)cbdata;
+
+	if (handler) {
+		handler->handleReadyState(me, conn);
+	}
+}
+
+int
+CivetServer::webSocketDataHandler(struct mg_connection *conn,
+                                  int bits,
+                                  char *data,
+                                  size_t data_len,
+                                  void *cbdata)
+{
+	const struct mg_request_info *request_info = mg_get_request_info(conn);
+	assert(request_info != NULL);
+	CivetServer *me = (CivetServer *)(request_info->user_data);
+	assert(me != NULL);
+
+	// Happens when a request hits the server before the context is saved
+	if (me->context == NULL)
+		return 0;
+
+	CivetWebSocketHandler *handler = (CivetWebSocketHandler *)cbdata;
+
+	if (handler) {
+		return handler->handleData(me, conn, bits, data, data_len) ? 1 : 0;
+	}
+
+	return 1; // No handler found
+}
+
+void
+CivetServer::webSocketCloseHandler(const struct mg_connection *conn,
+                                   void *cbdata)
+{
+	const struct mg_request_info *request_info = mg_get_request_info(conn);
+	assert(request_info != NULL);
+	CivetServer *me = (CivetServer *)(request_info->user_data);
+	assert(me != NULL);
+
+	// Happens when a request hits the server before the context is saved
+	if (me->context == NULL)
+		return;
+
+	CivetWebSocketHandler *handler = (CivetWebSocketHandler *)cbdata;
+
+	if (handler) {
+		handler->handleClose(me, conn);
+	}
 }
 
 CivetServer::CivetServer(const char **options,
@@ -138,6 +266,19 @@ void
 CivetServer::addHandler(const std::string &uri, CivetHandler *handler)
 {
 	mg_set_request_handler(context, uri.c_str(), requestHandler, handler);
+}
+
+void
+CivetServer::addWebSocketHandler(const std::string &uri,
+                                 CivetWebSocketHandler *handler)
+{
+	mg_set_websocket_handler(context,
+	                         uri.c_str(),
+	                         webSocketConnectionHandler,
+	                         webSocketReadyHandler,
+	                         webSocketDataHandler,
+	                         webSocketCloseHandler,
+	                         handler);
 }
 
 void

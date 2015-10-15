@@ -89,6 +89,67 @@ class CIVETWEB_API CivetHandler
 };
 
 /**
+ * Basic interface for a websocket handler.  Handlers implementations
+ * must be reentrant.
+ */
+class CIVETWEB_API CivetWebSocketHandler
+{
+  public:
+	/**
+	 * Destructor
+	 */
+	virtual ~CivetWebSocketHandler()
+	{
+	}
+
+	/**
+	 * Callback method for when the client intends to establish a websocket
+	 *connection, before websocket handshake.
+	 *
+	 * @param server - the calling server
+	 * @param conn - the connection information
+	 * @returns true to keep socket open, false to close it
+	 */
+	virtual bool handleConnection(CivetServer *server,
+	                              const struct mg_connection *conn);
+
+	/**
+	 * Callback method for when websocket handshake is successfully completed,
+	 *and connection is ready for data exchange.
+	 *
+	 * @param server - the calling server
+	 * @param conn - the connection information
+	 */
+	virtual void handleReadyState(CivetServer *server,
+	                              struct mg_connection *conn);
+
+	/**
+	 * Callback method for when a data frame has been received from the client.
+	 *
+	 * @param server - the calling server
+	 * @param conn - the connection information
+	 * @bits: first byte of the websocket frame, see websocket RFC at
+	 *http://tools.ietf.org/html/rfc6455, section 5.2
+	 * @data, data_len: payload, with mask (if any) already applied.
+	 * @returns true to keep socket open, false to close it
+	 */
+	virtual bool handleData(CivetServer *server,
+	                        struct mg_connection *conn,
+	                        int bits,
+	                        char *data,
+	                        size_t data_len);
+
+	/**
+	 * Callback method for when the connection is closed.
+	 *
+	 * @param server - the calling server
+	 * @param conn - the connection information
+	 */
+	virtual void handleClose(CivetServer *server,
+	                         const struct mg_connection *conn);
+};
+
+/**
  * CivetServer
  *
  * Basic class for embedded web server.  This has an URL mapping built-in.
@@ -150,6 +211,27 @@ class CIVETWEB_API CivetServer
 	addHandler(const std::string &uri, CivetHandler &handler)
 	{
 		addHandler(uri, &handler);
+	}
+
+	/**
+	 * addWebSocketHandler
+	 *
+	 * Adds a WebSocket handler for a specific URI.  If there is existing URI
+	 *handler, it will
+	 * be replaced with this one.
+	 *
+	 * URI's are ordered and prefix (REST) URI's are supported.
+	 *
+	 *  @param uri - URI to match.
+	 *  @param handler - handler instance to use.
+	 */
+	void addWebSocketHandler(const std::string &uri,
+	                         CivetWebSocketHandler *handler);
+
+	void
+	addWebSocketHandler(const std::string &uri, CivetWebSocketHandler &handler)
+	{
+		addWebSocketHandler(uri, &handler);
 	}
 
 	/**
@@ -378,6 +460,16 @@ class CIVETWEB_API CivetServer
 	 */
 	static int requestHandler(struct mg_connection *conn, void *cbdata);
 
+	static int webSocketConnectionHandler(const struct mg_connection *conn,
+	                                      void *cbdata);
+	static void webSocketReadyHandler(struct mg_connection *conn, void *cbdata);
+	static int webSocketDataHandler(struct mg_connection *conn,
+	                                int bits,
+	                                char *data,
+	                                size_t data_len,
+	                                void *cbdata);
+	static void webSocketCloseHandler(const struct mg_connection *conn,
+	                                  void *cbdata);
 	/**
 	 * closeHandler(struct mg_connection *)
 	 *
