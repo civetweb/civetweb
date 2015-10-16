@@ -8081,13 +8081,14 @@ read_websocket(struct mg_connection *conn,
 	mg_set_thread_name("worker");
 }
 
-int
-mg_websocket_write(struct mg_connection *conn,
-                   int opcode,
-                   const char *data,
-                   size_t dataLen)
+static int
+mg_websocket_write_exec(struct mg_connection *conn,
+                        int opcode,
+                        const char *data,
+                        size_t dataLen,
+                        uint32_t masking_key)
 {
-	unsigned char header[10];
+	unsigned char header[14];
 	size_t headerLen = 1;
 
 	int retval = -1;
@@ -8112,6 +8113,14 @@ mg_websocket_write(struct mg_connection *conn,
 		headerLen = 10;
 	}
 
+	if(masking_key) {
+		/* add mask */
+		header[1] |= 0x80;
+		*(uint32_t *)(void *)(header + headerLen) = masking_key;
+		headerLen += 4;
+	}
+
+
 	/* Note that POSIX/Winsock's send() is threadsafe
 	 * http://stackoverflow.com/questions/1981372/are-parallel-calls-to-send-recv-on-the-same-socket-valid
 	 * but mongoose's mg_printf/mg_write is not (because of the loop in
@@ -8119,9 +8128,38 @@ mg_websocket_write(struct mg_connection *conn,
 	 * outgoing buffer is full). */
 	(void)mg_lock_connection(conn);
 	retval = mg_write(conn, header, headerLen);
-	retval = mg_write(conn, data, dataLen);
+	if (dataLen > 0) {
+		retval = mg_write(conn, data, dataLen);
+	}
 	mg_unlock_connection(conn);
 
+	return retval;
+}
+
+int
+mg_websocket_write(struct mg_connection *conn,
+                   int opcode,
+                   const char *data,
+                   size_t dataLen)
+{
+	return mg_websocket_write_exec(conn, opcode, data, dataLen, 0);
+}
+
+int
+mg_websocket_client_write(struct mg_connection *conn,
+                          int opcode,
+                          const char *data,
+                          size_t dataLen)
+{
+	int retval = -1;
+	size_t i = 0;
+	uint32_t masking_key = 0x1594DAC0;
+	char* masked_data = (char*)mg_malloc(dataLen + 4);
+	for (i = 0; i < dataLen; i+= 4) {
+		*(uint32_t *)(void *)(masked_data + i) = *(uint32_t *)(void *)(data + i) ^ masking_key;
+	}
+	retval = mg_websocket_write_exec(conn, opcode, masked_data, dataLen, masking_key);
+	mg_free(masked_data);
 	return retval;
 }
 

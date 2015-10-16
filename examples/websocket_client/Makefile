@@ -28,7 +28,7 @@ $(PROG): $(CIVETWEB_LIB) $(SRC)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(SRC) $(CIVETWEB_LIB) $(LIBS)
 
 $(CIVETWEB_LIB):
-	$(MAKE) -C $(TOP) clean lib
+	$(MAKE) -C $(TOP) clean lib WITH_WEBSOCKET=1
 	cp $(TOP)/$(CIVETWEB_LIB) .
 
 clean:

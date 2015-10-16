@@ -457,6 +457,23 @@ CIVETWEB_API int mg_websocket_write(struct mg_connection *conn,
                                     const char *data,
                                     size_t data_len);
 
+/* Send data to a websocket server wrapped in a masked websocket frame.  Uses
+   mg_lock_connection to ensure that the transmission is not interrupted,
+   i.e., when the application is proactively communicating and responding to
+   a request simultaneously.
+
+   Send data to a websocket server wrapped in a masked websocket frame.
+   This function is available when civetweb is compiled with -DUSE_WEBSOCKET
+
+   Return:
+    0   when the connection has been closed
+    -1  on error
+    >0  number of bytes written on success */
+CIVETWEB_API int mg_websocket_client_write(struct mg_connection *conn,
+                                           int opcode,
+                                           const char *data,
+                                           size_t data_len);
+
 /* Blocks until unique access is obtained to this connection. Intended for use
    with websockets only.
    Invoke this before mg_write or mg_printf when communicating with a

@@ -82,6 +82,9 @@ websocket_server_data(struct mg_connection *conn,
 #endif
 {
 	printf("Server: Got %u bytes from the client\n", data_len);
+	printf("Server received data from client: ");
+	fwrite(data, 1, data_len, stdout);
+	printf("\n");
 
 	if (data_len < 3 || 0 != memcmp(data, "bye", 3)) {
 		/* Send websocket acknowledge message */
@@ -258,7 +261,7 @@ main(int argc, char *argv[])
 	client1_data.data = NULL;
 	client1_data.len = 0;
 
-	mg_websocket_write(newconn1, WEBSOCKET_OPCODE_TEXT, "data1", 5);
+	mg_websocket_client_write(newconn1, WEBSOCKET_OPCODE_TEXT, "data1", 5);
 
 	sleep(1); /* Should get the acknowledge message */
 	assert(client1_data.closed == 0);
@@ -305,7 +308,7 @@ main(int argc, char *argv[])
 	client2_data.data = NULL;
 	client2_data.len = 0;
 
-	mg_websocket_write(newconn1, WEBSOCKET_OPCODE_TEXT, "data2", 5);
+	mg_websocket_client_write(newconn1, WEBSOCKET_OPCODE_TEXT, "data2", 5);
 
 	sleep(1); /* Should get the acknowledge message */
 	assert(client1_data.closed == 0);
@@ -321,7 +324,7 @@ main(int argc, char *argv[])
 	client1_data.data = NULL;
 	client1_data.len = 0;
 
-	mg_websocket_write(newconn1, WEBSOCKET_OPCODE_TEXT, "bye", 3);
+	mg_websocket_client_write(newconn1, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
 	sleep(1); /* Should get the goodbye message */
 	assert(client1_data.closed == 0);
@@ -347,7 +350,7 @@ main(int argc, char *argv[])
 	assert(client2_data.data == NULL);
 	assert(client2_data.len == 0);
 
-	mg_websocket_write(newconn2, WEBSOCKET_OPCODE_TEXT, "bye", 3);
+	mg_websocket_client_write(newconn2, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
 	sleep(1); /* Should get the goodbye message */
 	assert(client1_data.closed == 1);
