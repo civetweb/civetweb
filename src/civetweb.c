@@ -8113,7 +8113,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 		headerLen = 10;
 	}
 
-	if(masking_key) {
+	if (masking_key) {
 		/* add mask */
 		header[1] |= 0x80;
 		*(uint32_t *)(void *)(header + headerLen) = masking_key;
@@ -8153,13 +8153,25 @@ mg_websocket_client_write(struct mg_connection *conn,
 {
 	int retval = -1;
 	size_t i = 0;
-	uint32_t masking_key = 0x1594DAC0;
-	char* masked_data = (char*)mg_malloc(dataLen + 4);
-	for (i = 0; i < dataLen; i+= 4) {
-		*(uint32_t *)(void *)(masked_data + i) = *(uint32_t *)(void *)(data + i) ^ masking_key;
+	uint32_t masking_key =
+	    0x1594DAC0; /* TODO (mid): replace by random generator */
+	char *masked_data = (char *)mg_malloc(((dataLen + 7) / 4) * 4);
+
+	if (masked_data == NULL) {
+		/* Return -1 in an error case */
+		mg_cry(conn, "Cannot allocate buffer for masked websocket response: "
+		             "Out of memory");
+		return -1;
 	}
-	retval = mg_websocket_write_exec(conn, opcode, masked_data, dataLen, masking_key);
+	for (i = 0; i < dataLen; i += 4) {
+		*(uint32_t *)(void *)(masked_data + i) =
+		    *(uint32_t *)(void *)(data + i) ^ masking_key;
+	}
+	/* TODO (high): Deal with ((dataLen % 4) != 0) and misalignment */
+	retval = mg_websocket_write_exec(
+	    conn, opcode, masked_data, dataLen, masking_key);
 	mg_free(masked_data);
+
 	return retval;
 }
 
@@ -10086,13 +10098,14 @@ static int
 set_sock_timeout(SOCKET sock, int milliseconds)
 {
 	int r1, r2;
+	struct timeval tv;
+
 #ifdef _WIN32
 	DWORD t = (DWORD)milliseconds;
 #else
 #if defined(TCP_USER_TIMEOUT)
 	unsigned int uto = (unsigned int)milliseconds;
 #endif
-	struct timeval tv;
 
 	memset(&tv, 0, sizeof(tv));
 	tv.tv_sec = milliseconds / 1000;
