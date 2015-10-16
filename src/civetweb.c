@@ -8081,14 +8081,10 @@ mg_websocket_write_exec(struct mg_connection *conn,
                         int opcode,
                         const char *data,
                         size_t dataLen,
-                        char mask)
+                        uint32_t masking_key)
 {
 	unsigned char header[14];
 	size_t headerLen = 1;
-	uint8_t masking_key[4];
-	unsigned char masked_data[dataLen];
-	const char* send_data;
-	size_t i = 0;
 
 	int retval = -1;
 
@@ -8112,26 +8108,11 @@ mg_websocket_write_exec(struct mg_connection *conn,
 		headerLen = 10;
 	}
 
-	if(mask) {
+	if(masking_key) {
 		/* add mask */
-		srand(time(NULL));
-		masking_key[0] = rand() & 0xff;
-		masking_key[1] = rand() & 0xff;
-		masking_key[2] = rand() & 0xff;
-		masking_key[3] = rand() & 0xff;
-
 		header[1] |= 0x80;
-		header[headerLen] = masking_key[0];
-		header[headerLen + 1] = masking_key[1];
-		header[headerLen + 2] = masking_key[2];
-		header[headerLen + 3] = masking_key[3];
+		*(uint32_t *)(void *)(header + headerLen) = masking_key;
 		headerLen += 4;
-		for (i = 0; i != dataLen; ++i) {
-			masked_data[i] = *data++ ^ masking_key[i&0x3];
-		}
-		send_data = (const char*)masked_data;
-	} else {
-		send_data = data;
 	}
 
 
@@ -8143,7 +8124,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	(void)mg_lock_connection(conn);
 	retval = mg_write(conn, header, headerLen);
 	if (dataLen > 0) {
-		retval = mg_write(conn, send_data, dataLen);
+		retval = mg_write(conn, data, dataLen);
 	}
 	mg_unlock_connection(conn);
 
@@ -8165,7 +8146,16 @@ mg_websocket_client_write(struct mg_connection *conn,
                           const char *data,
                           size_t dataLen)
 {
-	return mg_websocket_write_exec(conn, opcode, data, dataLen, 1);
+	int retval = -1;
+	size_t i = 0;
+	uint32_t masking_key = 0x1594DAC0;
+	char* masked_data = (char*)mg_malloc(dataLen + 4);
+	for (i = 0; i < dataLen; i+= 4) {
+		*(uint32_t *)(void *)(masked_data + i) = *(uint32_t *)(void *)(data + i) ^ masking_key;
+	}
+	retval = mg_websocket_write_exec(conn, opcode, masked_data, dataLen, masking_key);
+	mg_free(masked_data);
+	return retval;
 }
 
 static void
