@@ -8153,14 +8153,24 @@ mg_websocket_client_write(struct mg_connection *conn,
 {
 	int retval = -1;
 	size_t i = 0;
-	uint32_t masking_key =
-	    0x1594DAC0; /* TODO (mid): replace by random generator */
+	static uint64_t lfsr = 0;
+	uint32_t masking_key;
 	char *masked_data = (char *)mg_malloc(((dataLen + 7) / 4) * 4);
+
+	if (lfsr == 0) {
+		lfsr = (uint64_t)time(NULL);
+	} else {
+		lfsr = (lfsr >> 1)
+		       | ((((lfsr >> 0) ^ (lfsr >> 1) ^ (lfsr >> 3) ^ (lfsr >> 4)) & 1)
+		          << 63);
+	}
+	masking_key = (uint32_t)lfsr;
 
 	if (masked_data == NULL) {
 		/* Return -1 in an error case */
-		mg_cry(conn, "Cannot allocate buffer for masked websocket response: "
-		             "Out of memory");
+		mg_cry(conn,
+		       "Cannot allocate buffer for masked websocket response: "
+		       "Out of memory");
 		return -1;
 	}
 	for (i = 0; i < dataLen; i += 4) {
