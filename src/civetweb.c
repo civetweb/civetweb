@@ -8184,17 +8184,23 @@ mg_websocket_client_write(struct mg_connection *conn,
 		       "Out of memory");
 		return -1;
 	}
-	for (i = 0; i < dataLen - 3; i += 4) {
-		*(uint32_t *)(void *)(masked_data + i) =
-		    *(uint32_t *)(void *)(data + i) ^ masking_key;
+
+	i = 0;
+	if (((ptrdiff_t)data % 4) == 0) {
+		/* Convert in 32 bit words, if data is 4 byte aligned */
+		while (i < (dataLen - 3)) {
+			*(uint32_t *)(void *)(masked_data + i) =
+			    *(uint32_t *)(void *)(data + i) ^ masking_key;
+			i += 4;
+		}
 	}
 	if (i != dataLen) {
-		/* convert 1-3 remaining bytes */
+		/* convert 1-3 remaining bytes if ((dataLen % 4) != 0)*/
 		i -= 4;
 		while (i < dataLen) {
 			*(uint8_t *)(void *)(masked_data + i) =
 			    *(uint8_t *)(void *)(data + i)
-			    ^ *(((uint8_t *)&masking_key) + i);
+			    ^ *(((uint8_t *)&masking_key) + (i % 4));
 			i++;
 		}
 	}
