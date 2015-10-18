@@ -338,8 +338,9 @@ static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p);
 #if defined(HAVE_STDINT)
 #include <stdint.h>
 #else
-typedef unsigned int uint32_t;
+typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
 typedef unsigned __int64 uint64_t;
 typedef __int64 int64_t;
 #define INT64_MAX (9223372036854775807)
@@ -8153,10 +8154,10 @@ mg_websocket_client_write(struct mg_connection *conn,
 {
 	int retval = -1;
 	size_t i = 0;
+	char *masked_data = (char *)mg_malloc(((dataLen + 7) / 4) * 4);
+	uint32_t masking_key;
 	static uint64_t lfsr = 0;
 	static uint64_t lcg = 0;
-	uint32_t masking_key;
-	char *masked_data = (char *)mg_malloc(((dataLen + 7) / 4) * 4);
 	struct timespec now;
 
 	memset(&now, 0, sizeof(now));
@@ -8165,15 +8166,12 @@ mg_websocket_client_write(struct mg_connection *conn,
 	if (lfsr == 0) {
 		lfsr = (((uint64_t)now.tv_sec) << 21) ^ (uint64_t)now.tv_nsec
 		       ^ (uint64_t)&dataLen;
+		lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
+		      + (uint64_t)data;
 	} else {
 		lfsr = (lfsr >> 1)
 		       | ((((lfsr >> 0) ^ (lfsr >> 1) ^ (lfsr >> 3) ^ (lfsr >> 4)) & 1)
 		          << 63);
-	}
-	if (lcg == 0) {
-		lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
-		      + (uint64_t)data;
-	} else {
 		lcg = lcg * 6364136223846793005 + 1442695040888963407;
 	}
 
@@ -8186,9 +8184,19 @@ mg_websocket_client_write(struct mg_connection *conn,
 		       "Out of memory");
 		return -1;
 	}
-	for (i = 0; i < dataLen; i += 4) {
+	for (i = 0; i < dataLen - 3; i += 4) {
 		*(uint32_t *)(void *)(masked_data + i) =
 		    *(uint32_t *)(void *)(data + i) ^ masking_key;
+	}
+	if (i != dataLen) {
+		/* convert 1-3 remaining bytes */
+		i -= 4;
+		while (i < dataLen) {
+			*(uint8_t *)(void *)(masked_data + i) =
+			    *(uint8_t *)(void *)(data + i)
+			    ^ *(((uint8_t *)&masking_key) + i);
+			i++;
+		}
 	}
 	/* TODO (high): Deal with ((dataLen % 4) != 0) and misalignment */
 	retval = mg_websocket_write_exec(
