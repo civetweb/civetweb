@@ -8154,17 +8154,30 @@ mg_websocket_client_write(struct mg_connection *conn,
 	int retval = -1;
 	size_t i = 0;
 	static uint64_t lfsr = 0;
+	static uint64_t lcg = 0;
 	uint32_t masking_key;
 	char *masked_data = (char *)mg_malloc(((dataLen + 7) / 4) * 4);
+	struct timespec now;
+
+	memset(&now, 0, sizeof(now));
+	clock_gettime(CLOCK_MONOTONIC, &now);
 
 	if (lfsr == 0) {
-		lfsr = (uint64_t)time(NULL);
+		lfsr = (((uint64_t)now.tv_sec) << 21) ^ (uint64_t)now.tv_nsec
+		       ^ (uint64_t)&dataLen;
 	} else {
 		lfsr = (lfsr >> 1)
 		       | ((((lfsr >> 0) ^ (lfsr >> 1) ^ (lfsr >> 3) ^ (lfsr >> 4)) & 1)
 		          << 63);
 	}
-	masking_key = (uint32_t)lfsr;
+	if (lcg == 0) {
+		lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
+		      + (uint64_t)data;
+	} else {
+		lcg = lcg * 6364136223846793005 + 1442695040888963407;
+	}
+
+	masking_key = (uint32_t)lfsr ^ (uint32_t)lcg ^ now.tv_nsec;
 
 	if (masked_data == NULL) {
 		/* Return -1 in an error case */
