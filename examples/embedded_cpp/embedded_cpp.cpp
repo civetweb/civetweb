@@ -25,18 +25,24 @@ class ExampleHandler : public CivetHandler
 	bool
 	handleGet(CivetServer *server, struct mg_connection *conn)
 	{
-		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n");
+		mg_printf(conn,
+		          "HTTP/1.1 200 OK\r\nContent-Type: "
+		          "text/html\r\nConnection: close\r\n\r\n");
 		mg_printf(conn, "<html><body>\r\n");
 		mg_printf(conn,
 		          "<h2>This is an example text from a C++ handler</h2>\r\n");
-		mg_printf(conn, "<p>To see a page from the A handler <a "
-		                "href=\"a\">click here</a></p>\r\n");
-		mg_printf(conn, "<p>To see a page from the A handler with a parameter "
-		                "<a href=\"a?param=1\">click here</a></p>\r\n");
-		mg_printf(conn, "<p>To see a page from the A/B handler <a "
-		                "href=\"a/b\">click here</a></p>\r\n");
-		mg_printf(conn, "<p>To see a page from the *.foo handler <a "
-		                "href=\"xy.foo\">click here</a></p>\r\n");
+		mg_printf(conn,
+		          "<p>To see a page from the A handler <a "
+		          "href=\"a\">click here</a></p>\r\n");
+		mg_printf(conn,
+		          "<p>To see a page from the A handler with a parameter "
+		          "<a href=\"a?param=1\">click here</a></p>\r\n");
+		mg_printf(conn,
+		          "<p>To see a page from the A/B handler <a "
+		          "href=\"a/b\">click here</a></p>\r\n");
+		mg_printf(conn,
+		          "<p>To see a page from the *.foo handler <a "
+		          "href=\"xy.foo\">click here</a></p>\r\n");
 		mg_printf(conn,
 		          "<p>To exit <a href=\"%s\">click here</a></p>\r\n",
 		          EXIT_URI);
@@ -51,7 +57,9 @@ class ExitHandler : public CivetHandler
 	bool
 	handleGet(CivetServer *server, struct mg_connection *conn)
 	{
-		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n");
+		mg_printf(conn,
+		          "HTTP/1.1 200 OK\r\nContent-Type: "
+		          "text/plain\r\nConnection: close\r\n\r\n");
 		mg_printf(conn, "Bye!\n");
 		exitNow = true;
 		return true;
@@ -67,7 +75,9 @@ class AHandler : public CivetHandler
 	          struct mg_connection *conn)
 	{
 		std::string s = "";
-		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n");
+		mg_printf(conn,
+		          "HTTP/1.1 200 OK\r\nContent-Type: "
+		          "text/html\r\nConnection: close\r\n\r\n");
 		mg_printf(conn, "<html><body>");
 		mg_printf(conn, "<h2>This is the A handler for \"%s\" !</h2>", method);
 		if (CivetServer::getParam(conn, "param", s)) {
@@ -98,7 +108,9 @@ class ABHandler : public CivetHandler
 	bool
 	handleGet(CivetServer *server, struct mg_connection *conn)
 	{
-		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n");
+		mg_printf(conn,
+		          "HTTP/1.1 200 OK\r\nContent-Type: "
+		          "text/html\r\nConnection: close\r\n\r\n");
 		mg_printf(conn, "<html><body>");
 		mg_printf(conn, "<h2>This is the AB handler!!!</h2>");
 		mg_printf(conn, "</body></html>\n");
@@ -115,7 +127,9 @@ class FooHandler : public CivetHandler
 		/* Handler may access the request info using mg_get_request_info */
 		const struct mg_request_info *req_info = mg_get_request_info(conn);
 
-		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n");
+		mg_printf(conn,
+		          "HTTP/1.1 200 OK\r\nContent-Type: "
+		          "text/html\r\nConnection: close\r\n\r\n");
 
 		mg_printf(conn, "<html><body>\n");
 		mg_printf(conn, "<h2>This is the Foo GET handler!!!</h2>\n");
@@ -123,7 +137,7 @@ class FooHandler : public CivetHandler
 		          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>\n",
 		          req_info->request_method,
 		          req_info->uri,
-		          req_info->http_version);        
+		          req_info->http_version);
 		mg_printf(conn, "</body></html>\n");
 
 		return true;
@@ -133,12 +147,14 @@ class FooHandler : public CivetHandler
 	{
 		/* Handler may access the request info using mg_get_request_info */
 		const struct mg_request_info *req_info = mg_get_request_info(conn);
-        size_t rlen, wlen;
-        size_t nlen = 0;
-        size_t tlen = (size_t)req_info->content_length;
-        char buf[1024];
+		long long rlen, wlen;
+		long long nlen = 0;
+		long long tlen = req_info->content_length;
+		char buf[1024];
 
-		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n");
+		mg_printf(conn,
+		          "HTTP/1.1 200 OK\r\nContent-Type: "
+		          "text/html\r\nConnection: close\r\n\r\n");
 
 		mg_printf(conn, "<html><body>\n");
 		mg_printf(conn, "<h2>This is the Foo POST handler!!!</h2>\n");
@@ -147,20 +163,26 @@ class FooHandler : public CivetHandler
 		          req_info->request_method,
 		          req_info->uri,
 		          req_info->http_version);
-        mg_printf(conn, "<p>Content Length: %li</p>\n", (long)tlen);
-        mg_printf(conn, "<pre>\n");
+		mg_printf(conn, "<p>Content Length: %li</p>\n", (long)tlen);
+		mg_printf(conn, "<pre>\n");
 
-        while (nlen < tlen) {
-            rlen = tlen - nlen;
-            if (rlen>sizeof(buf)) {rlen=sizeof(buf);}           
-            rlen = mg_read(conn, buf, rlen);
-            if (rlen<=0) break;
-            wlen = mg_write(conn, buf, rlen);
-            if (rlen!=rlen) break;
-            nlen += wlen;
-        }
+		while (nlen < tlen) {
+			rlen = tlen - nlen;
+			if (rlen > sizeof(buf)) {
+				rlen = sizeof(buf);
+			}
+			rlen = mg_read(conn, buf, rlen);
+			if (rlen <= 0) {
+				break;
+			}
+			wlen = mg_write(conn, buf, rlen);
+			if (rlen != rlen) {
+				break;
+			}
+			nlen += wlen;
+		}
 
-        mg_printf(conn, "\n</pre>\n");
+		mg_printf(conn, "\n</pre>\n");
 		mg_printf(conn, "</body></html>\n");
 
 		return true;
@@ -170,12 +192,14 @@ class FooHandler : public CivetHandler
 	{
 		/* Handler may access the request info using mg_get_request_info */
 		const struct mg_request_info *req_info = mg_get_request_info(conn);
-        size_t rlen, wlen;
-        size_t nlen = 0;
-        size_t tlen = (size_t)req_info->content_length;
-        char buf[1024];
+		long long rlen, wlen;
+		long long nlen = 0;
+		long long tlen = (size_t)req_info->content_length;
+		char buf[1024];
 
-		mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n");
+		mg_printf(conn,
+		          "HTTP/1.1 200 OK\r\nContent-Type: "
+		          "text/html\r\nConnection: close\r\n\r\n");
 
 		mg_printf(conn, "<html><body>\n");
 		mg_printf(conn, "<h2>This is the Foo PUT handler!!!</h2>\n");
@@ -184,20 +208,26 @@ class FooHandler : public CivetHandler
 		          req_info->request_method,
 		          req_info->uri,
 		          req_info->http_version);
-        mg_printf(conn, "<p>Content Length: %li</p>\n", (long)tlen);
-        mg_printf(conn, "<pre>\n");
+		mg_printf(conn, "<p>Content Length: %li</p>\n", (long)tlen);
+		mg_printf(conn, "<pre>\n");
 
-        while (nlen < tlen) {
-            rlen = tlen - nlen;
-            if (rlen>sizeof(buf)) {rlen=sizeof(buf);}           
-            rlen = mg_read(conn, buf, rlen);
-            if (rlen<=0) break;
-            wlen = mg_write(conn, buf, rlen);
-            if (rlen!=rlen) break;
-            nlen += wlen;
-        }
+		while (nlen < tlen) {
+			rlen = tlen - nlen;
+			if (rlen > sizeof(buf)) {
+				rlen = sizeof(buf);
+			}
+			rlen = mg_read(conn, buf, rlen);
+			if (rlen <= 0) {
+				break;
+			}
+			wlen = mg_write(conn, buf, rlen);
+			if (rlen != rlen) {
+				break;
+			}
+			nlen += wlen;
+		}
 
-        mg_printf(conn, "\n</pre>\n");
+		mg_printf(conn, "\n</pre>\n");
 		mg_printf(conn, "</body></html>\n");
 
 		return true;
