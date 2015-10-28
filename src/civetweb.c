@@ -811,6 +811,7 @@ typedef int socklen_t;
 typedef struct ssl_st SSL;
 typedef struct ssl_method_st SSL_METHOD;
 typedef struct ssl_ctx_st SSL_CTX;
+typedef struct x5099_store_ctx_st X509_STORE_CTX;
 
 struct ssl_func {
 	const char *name;  /* SSL function name */
@@ -842,6 +843,8 @@ struct ssl_func {
 #define SSL_pending (*(int (*)(SSL *))ssl_sw[18].ptr)
 #define SSL_CTX_set_verify (*(void (*)(SSL_CTX *, int, int))ssl_sw[19].ptr)
 #define SSL_shutdown (*(int (*)(SSL *))ssl_sw[20].ptr)
+#define SSL_CTX_load_verify_locations 										   \
+(*(int (*)(SSL_CTX *, const char *, const char *))ssl_sw[21].ptr)
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
@@ -876,6 +879,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_pending", NULL},
                                    {"SSL_CTX_set_verify", NULL},
                                    {"SSL_shutdown", NULL},
+								   {"SSL_CTX_load_verify_locations", NULL},
                                    {NULL, NULL}};
 
 /* Similar array as ssl_sw. These functions could be located in different
@@ -9876,7 +9880,8 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		return 0;
 	}
 
-	return (conn->ssl = SSL_new(s)) != NULL
+	conn->ssl = SSL_new(s);
+	return (conn->ssl != NULL)
 	       && SSL_set_fd(conn->ssl, conn->client.sock) == 1
 	       && func(conn->ssl) == 1;
 }
@@ -10008,6 +10013,8 @@ set_ssl_option(struct mg_context *ctx)
 {
 	const char *pem;
 	int callback_ret;
+	int should_verify_peer;
+	const char* ca_path;
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
@@ -10070,6 +10077,19 @@ set_ssl_option(struct mg_context *ctx)
 
 	if (pem != NULL) {
 		(void)SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem);
+	}
+
+	should_verify_peer = (ctx->config[SSL_VERIFY_PEER] != NULL)
+		&& (mg_strcasecmp(ctx->config[SSL_VERIFY_PEER], "yes") == 0);
+
+	if (should_verify_peer) {
+		ca_path = ctx->config[SSL_CA_PATH];
+		if ((ca_path != NULL
+		&& SSL_CTX_load_verify_locations(ctx->ssl_ctx, NULL, ca_path)) == 0) {
+			mg_cry(fc(ctx), "SSL_CTX_new (SSL_CTX_load_verify_locations) error: %s", ssl_error());
+			return 0;
+		}
+		SSL_CTX_set_verify(ctx->ssl_ctx, 3, 0);
 	}
 
 	return 1;

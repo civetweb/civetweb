@@ -386,6 +386,16 @@ See the [Wikipedia page on HTTP status codes](http://en.wikipedia.org/wiki/HTTP_
 URL encoded request strings are decoded in the server, unless it is disabled
 by setting this option to `no`.
 
+### ssl_verify_peer `no`
+Enable client's certificate verification by the server.
+
+### ssl_ca_path
+The name of a directory containing CA certificates. Each file in the directory
+must contain only a single CA certificate, and the files must be named by the
+subject name’s hash and an extension of “.0”. If there is more than one
+certificate with the same subject name they should have extensions ".0", ".1",
+".2" and so on.
+
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
 support as well as support for Lua Server Pages.
@@ -549,4 +559,3 @@ An example is shown in
 - Embedding with OpenSSL on Windows might fail because of calling convention.
   To force Civetweb to use `__stdcall` convention, add `/Gz` compilation
   flag in Visual Studio compiler.
-
