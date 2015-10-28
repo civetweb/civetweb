@@ -968,6 +968,8 @@ enum {
 	REWRITE,
 	HIDE_FILES,
 	REQUEST_TIMEOUT,
+	SSL_VERIFY_PEER,
+	SSL_CA_PATH,
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_TIMEOUT,
 #endif
@@ -1027,6 +1029,8 @@ static struct mg_option config_options[] = {
     {"url_rewrite_patterns", CONFIG_TYPE_STRING, NULL},
     {"hide_files_patterns", CONFIG_TYPE_EXT_PATTERN, NULL},
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
+	{"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
+	{"ssl_ca_path", SSL_CA_PATH, NULL},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
@@ -10365,10 +10369,12 @@ mg_connect_client(const char *host,
 		(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 #ifndef NO_SSL
 		if (use_ssl) {
-			/* SSL_CTX_set_verify call is needed to switch off server
+			//TODO: SSL tylko z certyfikatem tylko po stronie serwera / po stronie serwera i klienta
+			/*
+			   SSL_CTX_set_verify call is needed to switch off server
 			 * certificate checking, which is off by default in OpenSSL and on
 			 * in yaSSL. */
-			SSL_CTX_set_verify(conn->client_ssl_ctx, 0, 0);
+			SSL_CTX_set_verify(conn->client_ssl_ctx, 1, 0);
 			sslize(conn, conn->client_ssl_ctx, SSL_connect);
 		}
 #endif
