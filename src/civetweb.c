@@ -977,6 +977,9 @@ enum {
 	REQUEST_TIMEOUT,
 	SSL_VERIFY_PEER,
 	SSL_CA_PATH,
+	SSL_CA_FILE,
+	SSL_VERIFY_DEPTH,
+	SSL_DEFAULT_VERIFY_PATHS,
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_TIMEOUT,
 #endif
@@ -1038,6 +1041,9 @@ static struct mg_option config_options[] = {
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 	{"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
 	{"ssl_ca_path", CONFIG_TYPE_DIRECTORY, NULL},
+	{"ssl_ca_file", CONFIG_TYPE_FILE, NULL},
+	{"ssl_verify_depth", CONFIG_TYPE_NUMBER, "9"},
+	{"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
