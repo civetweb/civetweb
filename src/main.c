@@ -1015,6 +1015,7 @@ start_civetweb(int argc, char *argv[])
 	verify_existence(options, "document_root", 1);
 	verify_existence(options, "cgi_interpreter", 0);
 	verify_existence(options, "ssl_certificate", 0);
+	verify_existence(options, "ssl_ca_path", 1);
 #ifdef USE_LUA
 	verify_existence(options, "lua_preload_file", 0);
 #endif
