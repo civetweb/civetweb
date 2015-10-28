@@ -1033,7 +1033,7 @@ static struct mg_option config_options[] = {
     {"hide_files_patterns", CONFIG_TYPE_EXT_PATTERN, NULL},
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 	{"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
-	{"ssl_ca_path", SSL_CA_PATH, NULL},
+	{"ssl_ca_path", CONFIG_TYPE_DIRECTORY, NULL},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
@@ -10372,12 +10372,11 @@ mg_connect_client(const char *host,
 		(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 #ifndef NO_SSL
 		if (use_ssl) {
-			//TODO: SSL tylko z certyfikatem tylko po stronie serwera / po stronie serwera i klienta
-			/*
+			/* TODO: Check ssl_verify_peer and ssl_ca_path here.
 			   SSL_CTX_set_verify call is needed to switch off server
 			 * certificate checking, which is off by default in OpenSSL and on
 			 * in yaSSL. */
-			SSL_CTX_set_verify(conn->client_ssl_ctx, 1, 0);
+			SSL_CTX_set_verify(conn->client_ssl_ctx, 0, 0);
 			sslize(conn, conn->client_ssl_ctx, SSL_connect);
 		}
 #endif
