@@ -408,7 +408,7 @@ than the depth set here connection is refused.
 Loads default trusted certificates locations set at openssl compile time.
 
 ### ssl_forward_secrecy `yes`
-Enable [forward secrecy|https://en.wikipedia.org/wiki/Forward_secrecy].
+Enable [forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
 
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
