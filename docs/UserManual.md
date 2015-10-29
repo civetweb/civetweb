@@ -390,11 +390,22 @@ by setting this option to `no`.
 Enable client's certificate verification by the server.
 
 ### ssl_ca_path
-The name of a directory containing CA certificates. Each file in the directory
-must contain only a single CA certificate, and the files must be named by the
-subject name’s hash and an extension of “.0”. If there is more than one
+Name of a directory containing trusted CA certificates. Each file in the
+directory must contain only a single CA certificate. The files must be named
+by the subject name’s hash and an extension of “.0”. If there is more than one
 certificate with the same subject name they should have extensions ".0", ".1",
-".2" and so on.
+".2" and so on respectively.
+
+### ssl_ca_file
+Path to a .pem file containing trusted certificates. The file may contain
+more than one certificate.
+
+### ssl_verify_depth `9`
+Sets maximum depth of certificate chain. If client's certificate chain is longer
+than the depth set here connection is refused.
+
+### ssl_default_verify_paths `yes`
+Loads default trusted certificates locations set at openssl compile time.
 
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
