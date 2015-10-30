@@ -811,6 +811,7 @@ typedef int socklen_t;
 typedef struct ssl_st SSL;
 typedef struct ssl_method_st SSL_METHOD;
 typedef struct ssl_ctx_st SSL_CTX;
+typedef struct x5099_store_ctx_st X509_STORE_CTX;
 
 struct ssl_func {
 	const char *name;  /* SSL function name */
@@ -842,6 +843,11 @@ struct ssl_func {
 #define SSL_pending (*(int (*)(SSL *))ssl_sw[18].ptr)
 #define SSL_CTX_set_verify (*(void (*)(SSL_CTX *, int, int))ssl_sw[19].ptr)
 #define SSL_shutdown (*(int (*)(SSL *))ssl_sw[20].ptr)
+#define SSL_CTX_load_verify_locations 										   \
+(*(int (*)(SSL_CTX *, const char *, const char *))ssl_sw[21].ptr)
+#define SSL_CTX_set_default_verify_paths									   \
+(*(int (*)(SSL_CTX *))ssl_sw[22].ptr)
+#define SSL_CTX_set_verify_depth (*(void (*)(SSL_CTX *, int))ssl_sw[23].ptr)
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
@@ -876,6 +882,9 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_pending", NULL},
                                    {"SSL_CTX_set_verify", NULL},
                                    {"SSL_shutdown", NULL},
+                                   {"SSL_CTX_load_verify_locations", NULL},
+                                   {"SSL_CTX_set_default_verify_paths", NULL},
+                                   {"SSL_CTX_set_verify_depth", NULL},
                                    {NULL, NULL}};
 
 /* Similar array as ssl_sw. These functions could be located in different
@@ -971,6 +980,12 @@ enum {
 	REWRITE,
 	HIDE_FILES,
 	REQUEST_TIMEOUT,
+	SSL_VERIFY_PEER,
+	SSL_CA_PATH,
+	SSL_CA_FILE,
+	SSL_VERIFY_DEPTH,
+	SSL_DEFAULT_VERIFY_PATHS,
+	SSL_FORWARD_SECRECY,
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_TIMEOUT,
 #endif
@@ -1030,6 +1045,12 @@ static struct mg_option config_options[] = {
     {"url_rewrite_patterns", CONFIG_TYPE_STRING, NULL},
     {"hide_files_patterns", CONFIG_TYPE_EXT_PATTERN, NULL},
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
+	{"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
+	{"ssl_ca_path", CONFIG_TYPE_DIRECTORY, NULL},
+	{"ssl_ca_file", CONFIG_TYPE_FILE, NULL},
+	{"ssl_verify_depth", CONFIG_TYPE_NUMBER, "9"},
+	{"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
+	{"ssl_forward_secrecy", CONFIG_TYPE_BOOLEAN, "yes"},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
@@ -9872,7 +9893,8 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		return 0;
 	}
 
-	return (conn->ssl = SSL_new(s)) != NULL
+	conn->ssl = SSL_new(s);
+	return (conn->ssl != NULL)
 	       && SSL_set_fd(conn->ssl, conn->client.sock) == 1
 	       && func(conn->ssl) == 1;
 }
@@ -10004,6 +10026,11 @@ set_ssl_option(struct mg_context *ctx)
 {
 	const char *pem;
 	int callback_ret;
+	int should_verify_peer;
+	const char* ca_path;
+	const char* ca_file;
+	int use_default_verify_paths;
+	int verify_depth;
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
@@ -10066,6 +10093,36 @@ set_ssl_option(struct mg_context *ctx)
 
 	if (pem != NULL) {
 		(void)SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem);
+	}
+
+	should_verify_peer = (ctx->config[SSL_VERIFY_PEER] != NULL)
+		&& (mg_strcasecmp(ctx->config[SSL_VERIFY_PEER], "yes") == 0);
+
+	use_default_verify_paths = (ctx->config[SSL_DEFAULT_VERIFY_PATHS] != NULL)
+			&& (mg_strcasecmp(ctx->config[SSL_DEFAULT_VERIFY_PATHS], "yes") == 0);
+
+	if (should_verify_peer) {
+		ca_path = ctx->config[SSL_CA_PATH];
+		ca_file = ctx->config[SSL_CA_FILE];
+		if (SSL_CTX_load_verify_locations(ctx->ssl_ctx, ca_file, ca_path) != 1) {
+			mg_cry(fc(ctx), "SSL_CTX_load_verify_locations error: %s "
+		    "ssl_verify_peer requires setting "
+			"either ssl_ca_path or ssl_ca_file. Is any of them present in "
+			"the .conf file?", ssl_error());
+			return 0;
+		}
+		SSL_CTX_set_verify(ctx->ssl_ctx, 3, 0);
+
+		if (use_default_verify_paths
+		&& SSL_CTX_set_default_verify_paths(ctx->ssl_ctx) != 1) {
+			mg_cry(fc(ctx), "SSL_CTX_set_default_verify_paths error: %s", ssl_error());
+			return 0;
+		}
+
+		if (ctx->config[SSL_VERIFY_DEPTH]){
+			verify_depth = atoi(ctx->config[SSL_VERIFY_DEPTH]);
+			SSL_CTX_set_verify_depth(ctx->ssl_ctx, verify_depth);
+		}
 	}
 
 	return 1;
@@ -10368,7 +10425,8 @@ mg_connect_client(const char *host,
 		(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 #ifndef NO_SSL
 		if (use_ssl) {
-			/* SSL_CTX_set_verify call is needed to switch off server
+			/* TODO: Check ssl_verify_peer and ssl_ca_path here.
+			   SSL_CTX_set_verify call is needed to switch off server
 			 * certificate checking, which is off by default in OpenSSL and on
 			 * in yaSSL. */
 			SSL_CTX_set_verify(conn->client_ssl_ctx, 0, 0);

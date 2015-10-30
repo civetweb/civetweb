@@ -1015,6 +1015,8 @@ start_civetweb(int argc, char *argv[])
 	verify_existence(options, "document_root", 1);
 	verify_existence(options, "cgi_interpreter", 0);
 	verify_existence(options, "ssl_certificate", 0);
+	verify_existence(options, "ssl_ca_path", 1);
+	verify_existence(options, "ssl_ca_file", 0);
 #ifdef USE_LUA
 	verify_existence(options, "lua_preload_file", 0);
 #endif
@@ -1689,7 +1691,7 @@ show_settings_dialog()
 #define WIDTH (460)
 #define LABEL_WIDTH (90)
 
-	unsigned char mem[4096], *p;
+	unsigned char mem[8192], *p;
 	const struct mg_option *options;
 	DWORD style;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;

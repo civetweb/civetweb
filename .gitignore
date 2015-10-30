@@ -67,6 +67,7 @@ local.properties
 # Build results
 
 [Dd]ebug/
+[Dd]ebug CONSOLE/
 [Rr]elease/
 x64/
 [Bb]in/
@@ -244,7 +245,8 @@ requests.db
 ##########################
 ## Files created by ctags
 ##########################
-tags
+?tags
+?tags?
 
 ##########################
 ## Files created by autotools
@@ -256,3 +258,5 @@ tags
 ## Travis Build Dir
 ##########################
 ci/lua
+
+
