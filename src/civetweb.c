@@ -803,6 +803,9 @@ typedef int socklen_t;
 #if defined(NO_SSL_DL)
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/crypto.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
 #else
 /* SSL loaded dynamically from DLL.
  * I put the prototypes here to be independent from OpenSSL source
@@ -811,7 +814,12 @@ typedef int socklen_t;
 typedef struct ssl_st SSL;
 typedef struct ssl_method_st SSL_METHOD;
 typedef struct ssl_ctx_st SSL_CTX;
-typedef struct x5099_store_ctx_st X509_STORE_CTX;
+typedef struct x509_store_ctx_st X509_STORE_CTX;
+
+#define SSL_VERIFY_NONE (0)
+#define SSL_VERIFY_PEER (1)
+#define SSL_VERIFY_FAIL_IF_NO_PEER_CERT (2)
+#define SSL_VERIFY_CLIENT_ONCE (4)
 
 struct ssl_func {
 	const char *name;  /* SSL function name */
@@ -841,14 +849,21 @@ struct ssl_func {
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[16].ptr)
 #define SSLv23_client_method (*(SSL_METHOD * (*)(void))ssl_sw[17].ptr)
 #define SSL_pending (*(int (*)(SSL *))ssl_sw[18].ptr)
-#define SSL_CTX_set_verify (*(void (*)(SSL_CTX *, int, int))ssl_sw[19].ptr)
+#define SSL_CTX_set_verify                                                     \
+	(*(void (*)(SSL_CTX *,                                                     \
+	            int,                                                           \
+	            int (*verify_callback)(int, X509_STORE_CTX *)))ssl_sw[19].ptr)
 #define SSL_shutdown (*(int (*)(SSL *))ssl_sw[20].ptr)
-#define SSL_CTX_load_verify_locations 										   \
-(*(int (*)(SSL_CTX *, const char *, const char *))ssl_sw[21].ptr)
-#define SSL_CTX_set_default_verify_paths									   \
-(*(int (*)(SSL_CTX *))ssl_sw[22].ptr)
+#define SSL_CTX_load_verify_locations                                          \
+	(*(int (*)(SSL_CTX *, const char *, const char *))ssl_sw[21].ptr)
+#define SSL_CTX_set_default_verify_paths (*(int (*)(SSL_CTX *))ssl_sw[22].ptr)
 #define SSL_CTX_set_verify_depth (*(void (*)(SSL_CTX *, int))ssl_sw[23].ptr)
-
+#define SSL_get_peer_certificate (*(X509 * (*)(SSL *))ssl_sw[24].ptr)
+#define SSL_get_version (*(const char *(*)(SSL *))ssl_sw[25].ptr)
+#define SSL_get_current_cipher (*(SSL_CIPHER * (*)(SSL *))ssl_sw[26].ptr)
+#define SSL_CIPHER_get_name                                                    \
+	(*(const char *(*)(const SSL_CIPHER *))ssl_sw[27].ptr)
+#define SSL_CTX_check_private_key (*(int (*)(SSL_CTX *))ssl_sw[28].ptr)
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
 	(*(void (*)(void (*)(int, int, const char *, int)))crypto_sw[1].ptr)
@@ -885,6 +900,11 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_load_verify_locations", NULL},
                                    {"SSL_CTX_set_default_verify_paths", NULL},
                                    {"SSL_CTX_set_verify_depth", NULL},
+                                   {"SSL_get_peer_certificate", NULL},
+                                   {"SSL_get_version", NULL},
+                                   {"SSL_get_current_cipher", NULL},
+                                   {"SSL_CIPHER_get_name", NULL},
+                                   {"SSL_CTX_check_private_key", NULL},
                                    {NULL, NULL}};
 
 /* Similar array as ssl_sw. These functions could be located in different
@@ -980,7 +1000,7 @@ enum {
 	REWRITE,
 	HIDE_FILES,
 	REQUEST_TIMEOUT,
-	SSL_VERIFY_PEER,
+	SSL_DO_VERIFY_PEER,
 	SSL_CA_PATH,
 	SSL_CA_FILE,
 	SSL_VERIFY_DEPTH,
@@ -1045,12 +1065,12 @@ static struct mg_option config_options[] = {
     {"url_rewrite_patterns", CONFIG_TYPE_STRING, NULL},
     {"hide_files_patterns", CONFIG_TYPE_EXT_PATTERN, NULL},
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
-	{"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
-	{"ssl_ca_path", CONFIG_TYPE_DIRECTORY, NULL},
-	{"ssl_ca_file", CONFIG_TYPE_FILE, NULL},
-	{"ssl_verify_depth", CONFIG_TYPE_NUMBER, "9"},
-	{"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
-	{"ssl_forward_secrecy", CONFIG_TYPE_BOOLEAN, "yes"},
+    {"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
+    {"ssl_ca_path", CONFIG_TYPE_DIRECTORY, NULL},
+    {"ssl_ca_file", CONFIG_TYPE_FILE, NULL},
+    {"ssl_verify_depth", CONFIG_TYPE_NUMBER, "9"},
+    {"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
+    {"ssl_forward_secrecy", CONFIG_TYPE_BOOLEAN, "yes"},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
@@ -8199,7 +8219,7 @@ mg_websocket_client_write(struct mg_connection *conn,
 		lcg = lcg * 6364136223846793005 + 1442695040888963407;
 	}
 
-	masking_key = (uint32_t)lfsr ^ (uint32_t)lcg ^ now.tv_nsec;
+	masking_key = (uint32_t)lfsr ^ (uint32_t)lcg ^ (uint32_t)now.tv_nsec;
 
 	if (masked_data == NULL) {
 		/* Return -1 in an error case */
@@ -9400,6 +9420,7 @@ close_all_listening_sockets(struct mg_context *ctx)
 	ctx->listening_ports = NULL;
 }
 
+
 /* Valid listening port specification is: [ip_address:]port[s]
  * Examples for IPv4: 80, 443s, 127.0.0.1:3128, 1.2.3.4:8080s
  * Examples for IPv6: [::]:80, [::1]:80,
@@ -9455,6 +9476,7 @@ parse_port_string(const struct vec *vec, struct socket *so)
 	return is_valid_port(port)
 	       && (ch == '\0' || ch == 's' || ch == 'r' || ch == ',');
 }
+
 
 static int
 set_ports_option(struct mg_context *ctx)
@@ -9667,6 +9689,7 @@ set_ports_option(struct mg_context *ctx)
 	return portsOk;
 }
 
+
 static const char *
 header_val(const struct mg_connection *conn, const char *header)
 {
@@ -9678,6 +9701,7 @@ header_val(const struct mg_connection *conn, const char *header)
 		return header_value;
 	}
 }
+
 
 static void
 log_access(const struct mg_connection *conn)
@@ -9748,6 +9772,7 @@ log_access(const struct mg_connection *conn)
 	}
 }
 
+
 /* Verify given socket address against the ACL.
  * Return -1 if ACL is malformed, 0 if address is disallowed, 1 if allowed. */
 static int
@@ -9782,6 +9807,7 @@ check_acl(struct mg_context *ctx, uint32_t remote_ip)
 	}
 	return -1;
 }
+
 
 #if !defined(_WIN32)
 static int
@@ -9825,6 +9851,7 @@ set_uid_option(struct mg_context *ctx)
 }
 #endif /* !_WIN32 */
 
+
 static void
 tls_dtor(void *key)
 {
@@ -9839,6 +9866,7 @@ tls_dtor(void *key)
 	}
 	pthread_setspecific(sTlsKey, NULL);
 }
+
 
 #if !defined(NO_SSL)
 
@@ -9886,18 +9914,36 @@ ssl_id_callback(void)
 
 static pthread_mutex_t *ssl_mutexes;
 
+
 static int
 sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 {
+	int ret, err;
 	if (!conn) {
 		return 0;
 	}
 
 	conn->ssl = SSL_new(s);
-	return (conn->ssl != NULL)
-	       && SSL_set_fd(conn->ssl, conn->client.sock) == 1
-	       && func(conn->ssl) == 1;
+	if (conn->ssl == NULL) {
+		return 0;
+	}
+
+	ret = SSL_set_fd(conn->ssl, conn->client.sock);
+	if (ret != 1) {
+		err = SSL_get_error(conn->ssl, ret);
+		return 0;
+	}
+
+	ret = func(conn->ssl);
+	if (ret != 1) {
+		err = SSL_get_error(conn->ssl, ret);
+
+		return 0;
+	}
+
+	return 1;
 }
+
 
 /* Return OpenSSL error message (from CRYPTO lib) */
 static const char *
@@ -9907,6 +9953,7 @@ ssl_error(void)
 	err = ERR_get_error();
 	return err == 0 ? "" : ERR_error_string(err, NULL);
 }
+
 
 static void
 ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
@@ -9921,6 +9968,7 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 		(void)pthread_mutex_unlock(&ssl_mutexes[mutex_num]);
 	}
 }
+
 
 #if !defined(NO_SSL_DL)
 static void *
@@ -9969,11 +10017,13 @@ static void *cryptolib_dll_handle; /* Store the crypto library handle. */
 
 #endif /* NO_SSL_DL */
 
+
 #if defined(SSL_ALREADY_INITIALIZED)
 static int cryptolib_users = 1; /* Reference counter for crypto library. */
 #else
 static int cryptolib_users = 0; /* Reference counter for crypto library. */
 #endif
+
 
 static int
 initialize_ssl(struct mg_context *ctx)
@@ -10020,6 +10070,30 @@ initialize_ssl(struct mg_context *ctx)
 	return 1;
 }
 
+
+int
+verify_ssl_client(int preverify_ok, X509_STORE_CTX *x509_ctx)
+{
+	int ret = preverify_ok;
+	/* TODO: check if this function is required at all
+       TODO: store rejected connection attempts
+	char buf[256];
+	struct X509 *err_cert;
+	int err, depth;
+	SSL *ssl;
+	*/
+
+	/* Ignore pre-verification - only accept clients we know locally */
+	(void)preverify_ok;
+	/*
+	err_cert = X509_STORE_CTX_get_current_cert(x509_st);
+	err = X509_STORE_CTX_get_error(x509_st);
+	depth = X509_STORE_CTX_get_error_depth(x509_st);
+	*/
+	return ret;
+}
+
+
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
 static int
 set_ssl_option(struct mg_context *ctx)
@@ -10027,8 +10101,8 @@ set_ssl_option(struct mg_context *ctx)
 	const char *pem;
 	int callback_ret;
 	int should_verify_peer;
-	const char* ca_path;
-	const char* ca_file;
+	const char *ca_path;
+	const char *ca_file;
 	int use_default_verify_paths;
 	int verify_depth;
 
@@ -10077,53 +10151,100 @@ set_ssl_option(struct mg_context *ctx)
 		mg_cry(fc(ctx), "SSL callback returned error: %i", callback_ret);
 		return 0;
 	}
-	if (callback_ret == 0) {
+	if (callback_ret > 0) {
 		if (pem != NULL) {
-			if ((SSL_CTX_use_certificate_file(ctx->ssl_ctx, pem, 1) == 0)
-			    || (SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, pem, 1) == 0)) {
-				mg_cry(fc(ctx),
-				       "%s: cannot open %s: %s",
-				       __func__,
-				       pem,
-				       ssl_error());
-				return 0;
-			}
+			(void)SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem);
 		}
+		return 1;
 	}
 
 	if (pem != NULL) {
-		(void)SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem);
+		if (SSL_CTX_use_certificate_file(ctx->ssl_ctx, pem, 1) == 0) {
+			mg_cry(fc(ctx),
+			       "%s: cannot open certificate file %s: %s",
+			       __func__,
+			       pem,
+			       ssl_error());
+			return 0;
+		}
+
+		/* could use SSL_CTX_set_default_passwd_cb_userdata */
+
+		if (SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, pem, 1) == 0) {
+			mg_cry(fc(ctx),
+			       "%s: cannot open private key file %s: %s",
+			       __func__,
+			       pem,
+			       ssl_error());
+			return 0;
+		}
+
+		if (SSL_CTX_check_private_key(ctx->ssl_ctx) == 0) {
+			mg_cry(fc(ctx),
+			       "%s: certificate and private key do not match: %s",
+			       __func__,
+			       pem);
+			return 0;
+		}
+
+		if (SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem) == 0) {
+			mg_cry(fc(ctx),
+			       "%s: cannot use certificate chain file %s: %s",
+			       __func__,
+			       pem,
+			       ssl_error());
+			return 0;
+		}
 	}
 
-	should_verify_peer = (ctx->config[SSL_VERIFY_PEER] != NULL)
-		&& (mg_strcasecmp(ctx->config[SSL_VERIFY_PEER], "yes") == 0);
+	should_verify_peer =
+	    (ctx->config[SSL_DO_VERIFY_PEER] != NULL)
+	    && (mg_strcasecmp(ctx->config[SSL_DO_VERIFY_PEER], "yes") == 0);
 
-	use_default_verify_paths = (ctx->config[SSL_DEFAULT_VERIFY_PATHS] != NULL)
-			&& (mg_strcasecmp(ctx->config[SSL_DEFAULT_VERIFY_PATHS], "yes") == 0);
+	use_default_verify_paths =
+	    (ctx->config[SSL_DEFAULT_VERIFY_PATHS] != NULL)
+	    && (mg_strcasecmp(ctx->config[SSL_DEFAULT_VERIFY_PATHS], "yes") == 0);
 
 	if (should_verify_peer) {
 		ca_path = ctx->config[SSL_CA_PATH];
 		ca_file = ctx->config[SSL_CA_FILE];
-		if (SSL_CTX_load_verify_locations(ctx->ssl_ctx, ca_file, ca_path) != 1) {
-			mg_cry(fc(ctx), "SSL_CTX_load_verify_locations error: %s "
-		    "ssl_verify_peer requires setting "
-			"either ssl_ca_path or ssl_ca_file. Is any of them present in "
-			"the .conf file?", ssl_error());
+		if (SSL_CTX_load_verify_locations(ctx->ssl_ctx, ca_file, ca_path)
+		    != 1) {
+			mg_cry(
+			    fc(ctx),
+			    "SSL_CTX_load_verify_locations error: %s "
+			    "ssl_verify_peer requires setting "
+			    "either ssl_ca_path or ssl_ca_file. Is any of them present in "
+			    "the .conf file?",
+			    ssl_error());
 			return 0;
 		}
 		SSL_CTX_set_verify(ctx->ssl_ctx, 3, 0);
 
 		if (use_default_verify_paths
-		&& SSL_CTX_set_default_verify_paths(ctx->ssl_ctx) != 1) {
-			mg_cry(fc(ctx), "SSL_CTX_set_default_verify_paths error: %s", ssl_error());
+		    && SSL_CTX_set_default_verify_paths(ctx->ssl_ctx) != 1) {
+			mg_cry(fc(ctx),
+			       "SSL_CTX_set_default_verify_paths error: %s",
+			       ssl_error());
 			return 0;
 		}
 
-		if (ctx->config[SSL_VERIFY_DEPTH]){
+		if (ctx->config[SSL_VERIFY_DEPTH]) {
 			verify_depth = atoi(ctx->config[SSL_VERIFY_DEPTH]);
 			SSL_CTX_set_verify_depth(ctx->ssl_ctx, verify_depth);
 		}
 	}
+
+
+/* TODO: could set use SSL_CTX_set_cipher_list if set*/
+
+/* TODO: could use client certificates here */
+#if 0
+	SSL_CTX_set_verify(ctx->ssl_ctx,
+	                   SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+	                   NULL);
+	SSL_CTX_load_verify_locations(ctx->ssl_ctx, "D:\\civetweb\\civetweb\\resources\\cert\\client.pem", NULL);
+#endif
 
 	return 1;
 }
@@ -10355,6 +10476,7 @@ mg_close_connection(struct mg_connection *conn)
 	mg_free(conn);
 }
 
+
 struct mg_connection *
 mg_connect_client(const char *host,
                   int port,
@@ -10429,7 +10551,9 @@ mg_connect_client(const char *host,
 			   SSL_CTX_set_verify call is needed to switch off server
 			 * certificate checking, which is off by default in OpenSSL and on
 			 * in yaSSL. */
-			SSL_CTX_set_verify(conn->client_ssl_ctx, 0, 0);
+			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_NONE, NULL);
+			// TODO: SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_PEER,
+			// verify_ssl_server);
 			sslize(conn, conn->client_ssl_ctx, SSL_connect);
 		}
 #endif
@@ -11162,6 +11286,8 @@ worker_thread_run(void *thread_func_param)
 			    || sslize(conn, conn->ctx->ssl_ctx, SSL_accept)
 #endif
 			        ) {
+
+
 				process_new_connection(conn);
 			}
 

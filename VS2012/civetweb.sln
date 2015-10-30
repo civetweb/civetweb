@@ -26,6 +26,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "duktape_lib", "duktape_lib\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_websocket", "ex_websocket\ex_websocket.vcxproj", "{58B93E94-7766-435E-93AE-42A2FB5D99B1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_embed_cpp", "ex_embed_cpp\ex_embed_cpp.vcxproj", "{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -152,6 +154,16 @@ Global
 		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|Win32.ActiveCfg = Release|Win32
 		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|Win32.Build.0 = Release|Win32
 		{58B93E94-7766-435E-93AE-42A2FB5D99B1}.Release|x64.ActiveCfg = Release|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|Win32.Build.0 = Debug|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Debug|x64.ActiveCfg = Debug|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Win32.ActiveCfg = Release|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|Win32.Build.0 = Release|Win32
+		{4308C5EE-45E4-45D8-9D73-6C4E2587AD78}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

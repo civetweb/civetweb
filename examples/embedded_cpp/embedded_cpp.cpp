@@ -187,51 +187,64 @@ class FooHandler : public CivetHandler
 
 		return true;
 	}
-	bool
-	handlePut(CivetServer *server, struct mg_connection *conn)
-	{
-		/* Handler may access the request info using mg_get_request_info */
-		const struct mg_request_info *req_info = mg_get_request_info(conn);
-		long long rlen, wlen;
-		long long nlen = 0;
-		long long tlen = (size_t)req_info->content_length;
-		char buf[1024];
 
-		mg_printf(conn,
-		          "HTTP/1.1 200 OK\r\nContent-Type: "
-		          "text/html\r\nConnection: close\r\n\r\n");
+    #define fopen_recursive fopen
 
-		mg_printf(conn, "<html><body>\n");
-		mg_printf(conn, "<h2>This is the Foo PUT handler!!!</h2>\n");
-		mg_printf(conn,
-		          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>\n",
-		          req_info->request_method,
-		          req_info->uri,
-		          req_info->http_version);
-		mg_printf(conn, "<p>Content Length: %li</p>\n", (long)tlen);
-		mg_printf(conn, "<pre>\n");
+    bool
+        handlePut(CivetServer *server, struct mg_connection *conn)
+    {
+        /* Handler may access the request info using mg_get_request_info */
+        const struct mg_request_info *req_info = mg_get_request_info(conn);
+        long long rlen, wlen;
+        long long nlen = 0;
+        long long tlen = req_info->content_length;
+        FILE * f;
+        char buf[1024];
+        int fail = 0;
 
-		while (nlen < tlen) {
-			rlen = tlen - nlen;
-			if (rlen > sizeof(buf)) {
-				rlen = sizeof(buf);
-			}
-			rlen = mg_read(conn, buf, rlen);
-			if (rlen <= 0) {
-				break;
-			}
-			wlen = mg_write(conn, buf, rlen);
-			if (rlen != rlen) {
-				break;
-			}
-			nlen += wlen;
-		}
+        _snprintf(buf, sizeof(buf), "D:\\somewhere\\%s\\%s", req_info->remote_user, req_info->local_uri);
+        buf[sizeof(buf)-1] = 0; /* TODO: check overflow */
+        f = fopen_recursive(buf, "wb");
 
-		mg_printf(conn, "\n</pre>\n");
-		mg_printf(conn, "</body></html>\n");
+        if (!f) {
+            fail = 1;
+        } else {
+            while (nlen < tlen) {
+                rlen = tlen - nlen;
+                if (rlen > sizeof(buf)) {
+                    rlen = sizeof(buf);
+                }
+                rlen = mg_read(conn, buf, (size_t)rlen);
+                if (rlen <= 0) {
+                    fail = 1;
+                    break;
+                }
+                wlen = fwrite(buf, 1, (size_t)rlen, f);
+                if (rlen != rlen) {
+                    fail = 1;
+                    break;
+                }
+                nlen += wlen;
+            }
+            fclose(f);
+        }
 
-		return true;
-	}
+        if (fail) {
+            mg_printf(conn,
+                "HTTP/1.1 409 Conflict\r\n"
+                "Content-Type: text/plain\r\n"
+                "Connection: close\r\n\r\n");
+            MessageBeep(MB_ICONERROR);
+        } else {
+            mg_printf(conn,
+                "HTTP/1.1 201 Created\r\n"
+                "Content-Type: text/plain\r\n"
+                "Connection: close\r\n\r\n");
+            MessageBeep(MB_OK);
+        }
+
+        return true;
+    }
 };
 
 
@@ -257,7 +270,7 @@ main(int argc, char *argv[])
 	server.addHandler("/a/b", h_ab);
 
 	FooHandler h_foo;
-	server.addHandler("**.foo$", h_foo);
+	server.addHandler("", h_foo);
 
 	printf("Browse files at http://localhost:%s/\n", PORT);
 	printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
