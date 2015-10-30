@@ -9931,13 +9931,14 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 	ret = SSL_set_fd(conn->ssl, conn->client.sock);
 	if (ret != 1) {
 		err = SSL_get_error(conn->ssl, ret);
+		(void)err; /* TODO: set some error message */
 		return 0;
 	}
 
 	ret = func(conn->ssl);
 	if (ret != 1) {
 		err = SSL_get_error(conn->ssl, ret);
-
+		(void)err; /* TODO: set some error message */
 		return 0;
 	}
 
@@ -10070,13 +10071,13 @@ initialize_ssl(struct mg_context *ctx)
 	return 1;
 }
 
-
-int
+#if 0 /* TODO: check if this function is required at all */
+static int
 verify_ssl_client(int preverify_ok, X509_STORE_CTX *x509_ctx)
 {
 	int ret = preverify_ok;
-	/* TODO: check if this function is required at all
-       TODO: store rejected connection attempts
+	/* 
+    TODO: store rejected connection attempts
 	char buf[256];
 	struct X509 *err_cert;
 	int err, depth;
@@ -10092,7 +10093,7 @@ verify_ssl_client(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	*/
 	return ret;
 }
-
+#endif
 
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
 static int
@@ -10219,7 +10220,10 @@ set_ssl_option(struct mg_context *ctx)
 			    ssl_error());
 			return 0;
 		}
-		SSL_CTX_set_verify(ctx->ssl_ctx, 3, 0);
+
+		SSL_CTX_set_verify(ctx->ssl_ctx,
+		                   SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+		                   NULL);
 
 		if (use_default_verify_paths
 		    && SSL_CTX_set_default_verify_paths(ctx->ssl_ctx) != 1) {
@@ -10236,15 +10240,7 @@ set_ssl_option(struct mg_context *ctx)
 	}
 
 
-/* TODO: could set use SSL_CTX_set_cipher_list if set*/
-
-/* TODO: could use client certificates here */
-#if 0
-	SSL_CTX_set_verify(ctx->ssl_ctx,
-	                   SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-	                   NULL);
-	SSL_CTX_load_verify_locations(ctx->ssl_ctx, "D:\\civetweb\\civetweb\\resources\\cert\\client.pem", NULL);
-#endif
+	/* TODO: could set use SSL_CTX_set_cipher_list if set */
 
 	return 1;
 }
