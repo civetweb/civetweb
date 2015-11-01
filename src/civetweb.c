@@ -9932,6 +9932,8 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 	if (ret != 1) {
 		err = SSL_get_error(conn->ssl, ret);
 		(void)err; /* TODO: set some error message */
+		SSL_free(conn->ssl);
+		conn->ssl = NULL;
 		return 0;
 	}
 
@@ -9939,6 +9941,8 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 	if (ret != 1) {
 		err = SSL_get_error(conn->ssl, ret);
 		(void)err; /* TODO: set some error message */
+		SSL_free(conn->ssl);
+		conn->ssl = NULL;
 		return 0;
 	}
 
@@ -10095,6 +10099,50 @@ verify_ssl_client(int preverify_ok, X509_STORE_CTX *x509_ctx)
 }
 #endif
 
+
+static int
+ssl_use_pem_file(struct mg_context *ctx, const char *pem)
+{
+	if (SSL_CTX_use_certificate_file(ctx->ssl_ctx, pem, 1) == 0) {
+		mg_cry(fc(ctx),
+		       "%s: cannot open certificate file %s: %s",
+		       __func__,
+		       pem,
+		       ssl_error());
+		return 0;
+	}
+
+	/* could use SSL_CTX_set_default_passwd_cb_userdata */
+
+	if (SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, pem, 1) == 0) {
+		mg_cry(fc(ctx),
+		       "%s: cannot open private key file %s: %s",
+		       __func__,
+		       pem,
+		       ssl_error());
+		return 0;
+	}
+
+	if (SSL_CTX_check_private_key(ctx->ssl_ctx) == 0) {
+		mg_cry(fc(ctx),
+		       "%s: certificate and private key do not match: %s",
+		       __func__,
+		       pem);
+		return 0;
+	}
+
+	if (SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem) == 0) {
+		mg_cry(fc(ctx),
+		       "%s: cannot use certificate chain file %s: %s",
+		       __func__,
+		       pem,
+		       ssl_error());
+		return 0;
+	}
+	return 1;
+}
+
+
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
 static int
 set_ssl_option(struct mg_context *ctx)
@@ -10160,40 +10208,7 @@ set_ssl_option(struct mg_context *ctx)
 	}
 
 	if (pem != NULL) {
-		if (SSL_CTX_use_certificate_file(ctx->ssl_ctx, pem, 1) == 0) {
-			mg_cry(fc(ctx),
-			       "%s: cannot open certificate file %s: %s",
-			       __func__,
-			       pem,
-			       ssl_error());
-			return 0;
-		}
-
-		/* could use SSL_CTX_set_default_passwd_cb_userdata */
-
-		if (SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, pem, 1) == 0) {
-			mg_cry(fc(ctx),
-			       "%s: cannot open private key file %s: %s",
-			       __func__,
-			       pem,
-			       ssl_error());
-			return 0;
-		}
-
-		if (SSL_CTX_check_private_key(ctx->ssl_ctx) == 0) {
-			mg_cry(fc(ctx),
-			       "%s: certificate and private key do not match: %s",
-			       __func__,
-			       pem);
-			return 0;
-		}
-
-		if (SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem) == 0) {
-			mg_cry(fc(ctx),
-			       "%s: cannot use certificate chain file %s: %s",
-			       __func__,
-			       pem,
-			       ssl_error());
+		if (!ssl_use_pem_file(ctx, pem)) {
 			return 0;
 		}
 	}
@@ -10473,20 +10488,25 @@ mg_close_connection(struct mg_connection *conn)
 }
 
 
-struct mg_connection *
-mg_connect_client(const char *host,
-                  int port,
-                  int use_ssl,
-                  char *ebuf,
-                  size_t ebuf_len)
+static struct mg_connection *
+mg_connect_client_impl(const struct mg_client_options *client_options,
+                       int use_ssl,
+                       char *ebuf,
+                       size_t ebuf_len)
 {
 	static struct mg_context fake_ctx;
 	struct mg_connection *conn = NULL;
 	SOCKET sock;
 	union usa sa;
 
-	if (!connect_socket(
-	        &fake_ctx, host, port, use_ssl, ebuf, ebuf_len, &sock, &sa)) {
+	if (!connect_socket(&fake_ctx,
+	                    client_options->host,
+	                    client_options->port,
+	                    use_ssl,
+	                    ebuf,
+	                    ebuf_len,
+	                    &sock,
+	                    &sa)) {
 		;
 	} else if ((conn = (struct mg_connection *)
 	                mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
@@ -10541,22 +10561,90 @@ mg_connect_client(const char *host,
 
 		conn->client.is_ssl = use_ssl ? 1 : 0;
 		(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
+
 #ifndef NO_SSL
 		if (use_ssl) {
+			fake_ctx.ssl_ctx = conn->client_ssl_ctx;
+
 			/* TODO: Check ssl_verify_peer and ssl_ca_path here.
 			   SSL_CTX_set_verify call is needed to switch off server
 			 * certificate checking, which is off by default in OpenSSL and on
 			 * in yaSSL. */
-			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_NONE, NULL);
+
 			// TODO: SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_PEER,
 			// verify_ssl_server);
-			sslize(conn, conn->client_ssl_ctx, SSL_connect);
+
+			if (client_options->client_cert) {
+				if (!ssl_use_pem_file(&fake_ctx, client_options->client_cert)) {
+					mg_snprintf(NULL,
+					            NULL, /* No truncation check for ebuf */
+					            ebuf,
+					            ebuf_len,
+					            "Can not use SSL client certificate");
+					SSL_CTX_free(conn->client_ssl_ctx);
+					closesocket(sock);
+					mg_free(conn);
+					conn = NULL;
+				}
+			}
+
+			if (client_options->server_cert) {
+				SSL_CTX_load_verify_locations(conn->client_ssl_ctx,
+				                              client_options->server_cert,
+				                              NULL);
+				SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_PEER, NULL);
+			} else {
+				SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_NONE, NULL);
+			}
+
+			if (!sslize(conn, conn->client_ssl_ctx, SSL_connect)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for ebuf */
+				            ebuf,
+				            ebuf_len,
+				            "SSL connection error");
+				SSL_CTX_free(conn->client_ssl_ctx);
+				closesocket(sock);
+				mg_free(conn);
+				conn = NULL;
+			}
 		}
 #endif
 	}
 
 	return conn;
 }
+
+
+CIVETWEB_API struct mg_connection *
+mg_connect_client_secure(const struct mg_client_options *client_options,
+                         char *error_buffer,
+                         size_t error_buffer_size)
+{
+	return mg_connect_client_impl(client_options,
+	                              1,
+	                              error_buffer,
+	                              error_buffer_size);
+}
+
+
+struct mg_connection *
+mg_connect_client(const char *host,
+                  int port,
+                  int use_ssl,
+                  char *error_buffer,
+                  size_t error_buffer_size)
+{
+	struct mg_client_options opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.host = host;
+	opts.port = port;
+	return mg_connect_client_impl(&opts,
+	                              use_ssl,
+	                              error_buffer,
+	                              error_buffer_size);
+}
+
 
 static const struct {
 	const char *proto;
@@ -10567,6 +10655,7 @@ static const struct {
                          {"ws://", 5, 80},
                          {"wss://", 6, 443},
                          {NULL, 0, 0}};
+
 
 /* Check if the uri is valid.
  * return 0 for invalid uri,

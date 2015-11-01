@@ -146,6 +146,7 @@ civetweb_add_test(PublicServer "Check test environment")
 civetweb_add_test(PublicServer "Start threads")
 civetweb_add_test(PublicServer "Start Stop HTTP Server")
 civetweb_add_test(PublicServer "Start Stop HTTPS Server")
+civetweb_add_test(PublicServer "TLS Server Client")
 civetweb_add_test(PublicServer "Server Requests")
 
 # Tests with main.c

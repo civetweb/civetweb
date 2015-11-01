@@ -161,6 +161,7 @@ START_TEST(test_the_test_environment)
 }
 END_TEST
 
+
 static void *threading_data;
 
 static void *
@@ -185,6 +186,7 @@ START_TEST(test_threading)
 	ck_assert_ptr_eq(threading_data, &threading_data);
 }
 END_TEST
+
 
 static int
 log_msg_func(const struct mg_connection *conn, const char *message)
@@ -270,6 +272,7 @@ START_TEST(test_mg_start_stop_http_server)
 	mg_stop(ctx);
 }
 END_TEST
+
 
 START_TEST(test_mg_start_stop_https_server)
 {
@@ -369,6 +372,12 @@ START_TEST(test_mg_server_and_client_tls)
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
+	struct mg_connection *client_conn;
+	char client_err[256];
+	const struct mg_request_info *client_ri;
+	int client_res;
+	struct mg_client_options client_options;
+
 	const char *OPTIONS[32]; /* initializer list here is rejected by CI test */
 	int opt_idx = 0;
 	char server_cert[256];
@@ -431,6 +440,38 @@ START_TEST(test_mg_server_and_client_tls)
 	ck_assert_int_eq(ports[2].is_redirect, 0);
 
 	test_sleep(1);
+
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
+	ck_assert(client_conn == NULL);
+	ck_assert_str_ne(client_err, "");
+
+	memset(client_err, 0, sizeof(client_err));
+	memset(&client_options, 0, sizeof(client_options));
+	client_options.host = "127.0.0.1";
+	client_options.port = 8443;
+	client_options.client_cert = client_cert;
+	client_options.server_cert = server_cert;
+
+	client_conn = mg_connect_client_secure(&client_options,
+	                                       client_err,
+	                                       sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+	ck_assert_str_eq(client_ri->uri, "200");
+	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	ck_assert_int_gt(client_res, 0);
+	ck_assert_int_le(client_res, sizeof(client_err));
+	mg_close_connection(client_conn);
 
 	/* TODO: A client API using a client certificate is missing */
 
@@ -1238,6 +1279,7 @@ START_TEST(test_request_handlers)
 }
 END_TEST
 
+
 Suite *
 make_public_server_suite(void)
 {
@@ -1247,8 +1289,7 @@ make_public_server_suite(void)
 	TCase *const startthreads = tcase_create("Start threads");
 	TCase *const startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const startstophttps = tcase_create("Start Stop HTTPS Server");
-	TCase *const serverandclienttls =
-	    tcase_create("Start Stop TLS Server Client");
+	TCase *const serverandclienttls = tcase_create("TLS Server Client");
 	TCase *const serverrequests = tcase_create("Server Requests");
 
 	tcase_add_test(checktestenv, test_the_test_environment);

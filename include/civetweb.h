@@ -751,6 +751,21 @@ CIVETWEB_API struct mg_connection *mg_connect_client(const char *host,
                                                      char *error_buffer,
                                                      size_t error_buffer_size);
 
+
+struct mg_client_options {
+	const char *host;
+	int port;
+	const char *client_cert;
+	const char *server_cert;
+	/* TODO: add more data */
+};
+
+CIVETWEB_API struct mg_connection *
+mg_connect_client_secure(const struct mg_client_options *client_options,
+                         char *error_buffer,
+                         size_t error_buffer_size);
+
+
 enum { TIMEOUT_INFINITE = -1 };
 
 /* Wait for a response from the server

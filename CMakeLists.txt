@@ -259,7 +259,6 @@ add_c_compiler_flag(-Wno-format-nonliteral)
 if (MINGW)
   add_c_compiler_flag(-Wno-format)
 endif()
-if
 if (NOT CIVETWEB_ALLOW_WARNINGS)
   add_c_compiler_flag(-Werror)
 endif()
