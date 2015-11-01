@@ -88,6 +88,11 @@ message(STATUS "Memory Debugging - ${CIVETWEB_ENABLE_MEMORY_DEBUGGING}")
 option(CIVETWEB_ENABLE_LUA "Enable Lua CGIs" OFF)
 message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 
+# Allow builds to complete with warnings (do not set -Werror)
+option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
+message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
+
+
 # Link to the shared LUA library
 cmake_dependent_option(
   CIVETWEB_ENABLE_LUA_SHARED  "Link to the shared LUA system library" OFF
@@ -249,7 +254,10 @@ add_c_compiler_flag(-Wno-format-nonliteral)
 if (MINGW)
   add_c_compiler_flag(-Wno-format)
 endif()
-add_c_compiler_flag(-Werror)
+if
+if (NOT CIVETWEB_ALLOW_WARNINGS)
+  add_c_compiler_flag(-Werror)
+endif()
 add_c_compiler_flag(/WX)
 add_c_compiler_flag(-pedantic-errors)
 add_c_compiler_flag(-fvisibility=hidden)
@@ -313,7 +321,9 @@ if (CIVETWEB_ENABLE_CXX)
   if (MINGW)
     add_cxx_compiler_flag(-Wno-format)
   endif()
-  add_cxx_compiler_flag(-Werror)
+  if (NOT CIVETWEB_ALLOW_WARNINGS)
+    add_cxx_compiler_flag(-Werror)
+  endif()
   add_cxx_compiler_flag(/WX)
   add_cxx_compiler_flag(-pedantic-errors)
   add_cxx_compiler_flag(-Wzero-as-null-pointer-constant)
