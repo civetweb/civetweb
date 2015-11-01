@@ -89,8 +89,12 @@ option(CIVETWEB_ENABLE_LUA "Enable Lua CGIs" OFF)
 message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 
 # Allow builds to complete with warnings (do not set -Werror)
-option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
-message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
+#option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
+#message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
+# ... this option is not set by the user, but it is set if there are 3rd party components
+if (CIVETWEB_ENABLE_LUA OR CIVETWEB_ENABLE_DUKTAPE)
+SET(CIVETWEB_ALLOW_WARNINGS YES)
+endif()
 
 
 # Link to the shared LUA library
