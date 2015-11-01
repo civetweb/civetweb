@@ -89,12 +89,8 @@ option(CIVETWEB_ENABLE_LUA "Enable Lua CGIs" OFF)
 message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 
 # Allow builds to complete with warnings (do not set -Werror)
-#option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
-#message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
-# ... this option is not set by the user, but it is set if there are 3rd party components
-if (CIVETWEB_ENABLE_LUA OR CIVETWEB_ENABLE_DUKTAPE)
-SET(CIVETWEB_ALLOW_WARNINGS YES)
-endif()
+option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
+message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
 
 
 # Link to the shared LUA library
@@ -209,6 +205,11 @@ if (CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING AND NOT DARWIN AND UNIX)
     "The name of the SSL Cryptography library to load")
   set_property(CACHE CIVETWEB_SSL_CRYPTO_LIB PROPERTY VALUE ${CIVETWEB_SSL_CRYPTO_LIB})
   message(STATUS "SSL Cryptography Library Name - ${CIVETWEB_SSL_CRYPTO_LIB}")
+endif()
+
+# Allow warnings in 3rd party components
+if (CIVETWEB_ENABLE_LUA OR CIVETWEB_ENABLE_DUKTAPE)
+SET(CIVETWEB_ALLOW_WARNINGS YES)
 endif()
 
 # The C and C++ standards to use

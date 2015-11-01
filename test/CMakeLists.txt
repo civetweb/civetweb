@@ -141,7 +141,7 @@ civetweb_add_test(PublicFunc "URL encoding decoding")
 civetweb_add_test(PublicFunc "Cookies and variables")
 civetweb_add_test(PublicFunc "MD5")
 
-# Public server tests
+# Public API server tests
 civetweb_add_test(PublicServer "Check test environment")
 civetweb_add_test(PublicServer "Start threads")
 civetweb_add_test(PublicServer "Start Stop HTTP Server")

@@ -47,28 +47,48 @@
  */
 
 static const char *
-locate_ssl_cert(void)
+locate_resources(void)
 {
 	return
 #ifdef _WIN32
 #ifdef LOCAL_TEST
-	    "resources\\ssl_cert.pem";
+	    "resources\\";
 #else
 	    /* Appveyor */
-	    "..\\..\\..\\resources\\ssl_cert.pem"; /* TODO: the different paths
+	    "..\\..\\..\\resources\\"; /* TODO: the different paths
 	                                            * used in the different test
 	                                            * system is an unsolved
 	                                            * problem */
 #endif
 #else
 #ifdef LOCAL_TEST
-	    "resources/ssl_cert.pem";
+	    "resources/";
 #else
 	    /* Travis */
-	    "../../resources/ssl_cert.pem"; // TODO: fix path in CI test environment
+	    "../../resources/"; // TODO: fix path in CI test environment
 #endif
 #endif
 }
+
+
+static const char *
+locate_ssl_cert(void)
+{
+	static char cert_path[256];
+	const char *res = locate_resources();
+	size_t l;
+
+	ck_assert(res != NULL);
+	l = strlen(res);
+	ck_assert_int_gt(l, 0);
+	ck_assert_int_lt(l, 100); /* assume there is enough space left in our
+	                             typical 255 character string buffers */
+
+	strcpy(cert_path, res);
+	strcat(cert_path, "ssl_cert.pem");
+	return cert_path;
+}
+
 
 static int
 wait_not_null(void *volatile *data)
@@ -200,6 +220,11 @@ START_TEST(test_mg_start_stop_http_server)
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
+	struct mg_connection *client_conn;
+	char client_err[256];
+	const struct mg_request_info *client_ri;
+	int client_res;
+
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
 	memset(&callbacks, 0, sizeof(callbacks));
@@ -220,6 +245,28 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert_int_eq(ssl[1], 0);
 
 	test_sleep(1);
+
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+	ck_assert_str_eq(client_ri->uri, "200");
+	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	ck_assert_int_gt(client_res, 0);
+	ck_assert_int_le(client_res, sizeof(client_err));
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
 	mg_stop(ctx);
 }
 END_TEST
@@ -239,6 +286,12 @@ START_TEST(test_mg_start_stop_https_server)
 	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
 	int opt_idx = 0;
 	const char *ssl_cert = locate_ssl_cert();
+
+	struct mg_connection *client_conn;
+	char client_err[256];
+	const struct mg_request_info *client_ri;
+	int client_res;
+
 	ck_assert(ssl_cert != NULL);
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
@@ -277,10 +330,117 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(ssl[2], 0);
 
 	test_sleep(1);
+
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+	ck_assert_str_eq(client_ri->uri, "200");
+	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	ck_assert_int_gt(client_res, 0);
+	ck_assert_int_le(client_res, sizeof(client_err));
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
 	mg_stop(ctx);
 #endif
 }
 END_TEST
+
+
+START_TEST(test_mg_server_and_client_tls)
+{
+#ifndef NO_SSL
+
+	struct mg_context *ctx;
+
+	size_t ports_cnt;
+	struct mg_server_ports ports[16];
+	struct mg_callbacks callbacks;
+	char errmsg[256];
+
+	const char *OPTIONS[32]; /* initializer list here is rejected by CI test */
+	int opt_idx = 0;
+	char server_cert[256];
+	char client_cert[256];
+	const char *res_dir = locate_resources();
+
+	ck_assert(res_dir != NULL);
+	strcpy(server_cert, res_dir);
+	strcpy(client_cert, res_dir);
+#ifdef _WIN32
+	strcat(server_cert, "cert\\server.pem");
+	strcat(client_cert, "cert\\client.pem");
+#else
+	strcat(server_cert, "cert/server.pem");
+	strcat(client_cert, "cert/client.pem");
+#endif
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+#if !defined(NO_FILES)
+	OPTIONS[opt_idx++] = "document_root";
+	OPTIONS[opt_idx++] = ".";
+#endif
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8080r,8443s";
+	OPTIONS[opt_idx++] = "ssl_certificate";
+	OPTIONS[opt_idx++] = server_cert;
+	OPTIONS[opt_idx++] = "ssl_verify_peer";
+	OPTIONS[opt_idx++] = "yes";
+	OPTIONS[opt_idx++] = "ssl_ca_file";
+	OPTIONS[opt_idx++] = client_cert;
+
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
+
+	memset(ports, 0, sizeof(ports));
+	memset(&callbacks, 0, sizeof(callbacks));
+	memset(errmsg, 0, sizeof(errmsg));
+
+	callbacks.log_message = log_msg_func;
+
+	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
+	test_sleep(1);
+	ck_assert_str_eq(errmsg, "");
+	ck_assert(ctx != NULL);
+
+	ports_cnt = mg_get_server_ports(ctx, 16, ports);
+	ck_assert_uint_eq(ports_cnt, 2);
+	ck_assert_int_eq(ports[0].protocol, 1);
+	ck_assert_int_eq(ports[0].port, 8080);
+	ck_assert_int_eq(ports[0].is_ssl, 0);
+	ck_assert_int_eq(ports[0].is_redirect, 1);
+	ck_assert_int_eq(ports[1].protocol, 1);
+	ck_assert_int_eq(ports[1].port, 8443);
+	ck_assert_int_eq(ports[1].is_ssl, 1);
+	ck_assert_int_eq(ports[1].is_redirect, 0);
+	ck_assert_int_eq(ports[2].protocol, 0);
+	ck_assert_int_eq(ports[2].port, 0);
+	ck_assert_int_eq(ports[2].is_ssl, 0);
+	ck_assert_int_eq(ports[2].is_redirect, 0);
+
+	test_sleep(1);
+
+	/* TODO: A client API using a client certificate is missing */
+
+	test_sleep(1);
+
+	mg_stop(ctx);
+#endif
+}
+END_TEST
+
 
 static struct mg_context *g_ctx;
 
@@ -1087,6 +1247,8 @@ make_public_server_suite(void)
 	TCase *const startthreads = tcase_create("Start threads");
 	TCase *const startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const startstophttps = tcase_create("Start Stop HTTPS Server");
+	TCase *const serverandclienttls =
+	    tcase_create("Start Stop TLS Server Client");
 	TCase *const serverrequests = tcase_create("Server Requests");
 
 	tcase_add_test(checktestenv, test_the_test_environment);
@@ -1104,6 +1266,10 @@ make_public_server_suite(void)
 	tcase_add_test(startstophttps, test_mg_start_stop_https_server);
 	tcase_set_timeout(startstophttps, civetweb_min_test_timeout);
 	suite_add_tcase(suite, startstophttps);
+
+	tcase_add_test(serverandclienttls, test_mg_server_and_client_tls);
+	tcase_set_timeout(serverandclienttls, civetweb_min_test_timeout);
+	suite_add_tcase(suite, serverandclienttls);
 
 	tcase_add_test(serverrequests, test_request_handlers);
 	tcase_set_timeout(serverrequests, 120);
@@ -1126,6 +1292,7 @@ main(void)
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
 	test_request_handlers(0);
+	test_mg_server_and_client_tls(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }
