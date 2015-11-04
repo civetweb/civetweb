@@ -864,6 +864,8 @@ struct ssl_func {
 #define SSL_CIPHER_get_name                                                    \
 	(*(const char *(*)(const SSL_CIPHER *))ssl_sw[27].ptr)
 #define SSL_CTX_check_private_key (*(int (*)(SSL_CTX *))ssl_sw[28].ptr)
+#define SSL_CTX_set_session_id_context                                         \
+	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
 	(*(void (*)(void (*)(int, int, const char *, int)))crypto_sw[1].ptr)
@@ -905,6 +907,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_get_current_cipher", NULL},
                                    {"SSL_CIPHER_get_name", NULL},
                                    {"SSL_CTX_check_private_key", NULL},
+                                   {"SSL_CTX_set_session_id_context", NULL},
                                    {NULL, NULL}};
 
 /* Similar array as ssl_sw. These functions could be located in different
@@ -10080,7 +10083,7 @@ static int
 verify_ssl_client(int preverify_ok, X509_STORE_CTX *x509_ctx)
 {
 	int ret = preverify_ok;
-	/* 
+	/*
     TODO: store rejected connection attempts
 	char buf[256];
 	struct X509 *err_cert;
@@ -10154,6 +10157,7 @@ set_ssl_option(struct mg_context *ctx)
 	const char *ca_file;
 	int use_default_verify_paths;
 	int verify_depth;
+	int session_context_id = 1;
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
@@ -10206,6 +10210,9 @@ set_ssl_option(struct mg_context *ctx)
 		}
 		return 1;
 	}
+
+	SSL_CTX_set_session_id_context(ctx->ssl_ctx,
+		                           &session_context_id, sizeof(int));
 
 	if (pem != NULL) {
 		if (!ssl_use_pem_file(ctx, pem)) {
