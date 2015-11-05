@@ -243,6 +243,15 @@ class CIVETWEB_API CivetServer
 	 */
 	void removeHandler(const std::string &uri);
 
+    /**
+     * removeWebSocketHandler(const std::string &)
+     *
+     * Removes a web socket handler.
+     *
+     * @param uri - the exact URL used in addWebSocketHandler().
+     */
+    void removeWebSocketHandler(const std::string &uri);
+
 	/**
 	 * getListeningPorts()
 	 *
