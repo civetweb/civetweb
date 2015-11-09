@@ -80,9 +80,9 @@ locate_ssl_cert(void)
 
 	ck_assert(res != NULL);
 	l = strlen(res);
-	ck_assert_int_gt(l, 0);
-	ck_assert_int_lt(l, 100); /* assume there is enough space left in our
-	                             typical 255 character string buffers */
+	ck_assert_uint_gt(l, 0);
+	ck_assert_uint_lt(l, 100); /* assume there is enough space left in our
+	                              typical 255 character string buffers */
 
 	strcpy(cert_path, res);
 	strcat(cert_path, "ssl_cert.pem");
