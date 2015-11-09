@@ -866,6 +866,7 @@ struct ssl_func {
 #define SSL_CTX_check_private_key (*(int (*)(SSL_CTX *))ssl_sw[28].ptr)
 #define SSL_CTX_set_session_id_context                                         \
 	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
+
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
 	(*(void (*)(void (*)(int, int, const char *, int)))crypto_sw[1].ptr)
@@ -4662,6 +4663,7 @@ bin2str(char *to, const unsigned char *p, size_t len)
 	*to = '\0';
 }
 
+
 /* Return stringified MD5 hash for list of strings. Buffer must be 33 bytes. */
 char *
 mg_md5(char buf[33], ...)
@@ -4683,6 +4685,7 @@ mg_md5(char buf[33], ...)
 	bin2str(buf, hash, sizeof(hash));
 	return buf;
 }
+
 
 /* Check the user's password, return 1 if OK */
 static int
@@ -4730,6 +4733,7 @@ check_password(const char *method,
 
 	return mg_strcasecmp(response, expected_response) == 0;
 }
+
 
 /* Use the global passwords file, if specified by auth_gpass option,
  * or search for .htpasswd in the requested directory. */
@@ -10157,7 +10161,10 @@ set_ssl_option(struct mg_context *ctx)
 	const char *ca_file;
 	int use_default_verify_paths;
 	int verify_depth;
-	int session_context_id = 1;
+	time_t now_rt = time(NULL);
+	struct timespec now_mt;
+	md5_byte_t ssl_context_id[16];
+	md5_state_t md5state;
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
@@ -10211,8 +10218,20 @@ set_ssl_option(struct mg_context *ctx)
 		return 1;
 	}
 
+	/* Use some UID as session context ID. */
+	md5_init(&md5state);
+	md5_append(&md5state, (const md5_byte_t *)&now_rt, sizeof(now_rt));
+	clock_gettime(CLOCK_MONOTONIC, &now_mt);
+	md5_append(&md5state, (const md5_byte_t *)&now_mt, sizeof(now_mt));
+	md5_append(&md5state,
+	           (const md5_byte_t *)ctx->config[LISTENING_PORTS],
+	           strlen(ctx->config[LISTENING_PORTS]));
+	md5_append(&md5state, (const md5_byte_t *)ctx, sizeof(*ctx));
+	md5_finish(&md5state, ssl_context_id);
+
 	SSL_CTX_set_session_id_context(ctx->ssl_ctx,
-		                           &session_context_id, sizeof(int));
+	                               (const unsigned char *)&ssl_context_id,
+	                               sizeof(ssl_context_id));
 
 	if (pem != NULL) {
 		if (!ssl_use_pem_file(ctx, pem)) {
