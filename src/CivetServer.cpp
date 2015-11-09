@@ -290,7 +290,8 @@ CivetServer::removeHandler(const std::string &uri)
 void
 CivetServer::removeWebSocketHandler(const std::string &uri)
 {
-    mg_set_websocket_handler(context, uri.c_str(), NULL, NULL, NULL, NULL, NULL);
+	mg_set_websocket_handler(
+	    context, uri.c_str(), NULL, NULL, NULL, NULL, NULL);
 }
 
 void
