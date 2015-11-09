@@ -10353,18 +10353,16 @@ static int
 set_sock_timeout(SOCKET sock, int milliseconds)
 {
 	int r1, r2;
-	struct timeval tv;
 
 #ifdef _WIN32
-	DWORD t = (DWORD)milliseconds;
-#else
-#if defined(TCP_USER_TIMEOUT)
-	unsigned int uto = (unsigned int)milliseconds;
-#endif
+	/* Windows specific */
 
-	memset(&tv, 0, sizeof(tv));
-	tv.tv_sec = milliseconds / 1000;
-	tv.tv_usec = (milliseconds * 1000) % 1000000;
+	DWORD tv = (DWORD)milliseconds;
+
+#else
+	/* Linux, ... (not Windows) */
+
+	struct timeval tv;
 
 /* TCP_USER_TIMEOUT/RFC5482 (http://tools.ietf.org/html/rfc5482):
  * max. time waiting for the acknowledged of TCP data before the connection
@@ -10374,10 +10372,15 @@ set_sock_timeout(SOCKET sock, int milliseconds)
 /* #define TCP_USER_TIMEOUT (18) */
 
 #if defined(TCP_USER_TIMEOUT)
+	unsigned int uto = (unsigned int)milliseconds;
 	setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
 #endif
 
-#endif
+	memset(&tv, 0, sizeof(tv));
+	tv.tv_sec = milliseconds / 1000;
+	tv.tv_usec = (milliseconds * 1000) % 1000000;
+
+#endif /* _WIN32 */
 
 	r1 = setsockopt(
 	    sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE)&tv, sizeof(tv));
