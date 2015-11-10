@@ -137,7 +137,7 @@ int clock_gettime(int clk_id, struct timespec *t);
 int
 clock_gettime(int clk_id, struct timespec *t)
 {
-    memset(t, 0, sizeof(*t));
+	memset(t, 0, sizeof(*t));
 	if (clk_id == CLOCK_REALTIME) {
 		struct timeval now;
 		int rv = gettimeofday(&now, NULL);
@@ -10081,30 +10081,6 @@ initialize_ssl(struct mg_context *ctx)
 
 	return 1;
 }
-
-#if 0 /* TODO: check if this function is required at all */
-static int
-verify_ssl_client(int preverify_ok, X509_STORE_CTX *x509_ctx)
-{
-	int ret = preverify_ok;
-	/*
-    TODO: store rejected connection attempts
-	char buf[256];
-	struct X509 *err_cert;
-	int err, depth;
-	SSL *ssl;
-	*/
-
-	/* Ignore pre-verification - only accept clients we know locally */
-	(void)preverify_ok;
-	/*
-	err_cert = X509_STORE_CTX_get_current_cert(x509_st);
-	err = X509_STORE_CTX_get_error(x509_st);
-	depth = X509_STORE_CTX_get_error_depth(x509_st);
-	*/
-	return ret;
-}
-#endif
 
 
 static int

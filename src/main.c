@@ -2067,9 +2067,7 @@ change_password_file()
 static int
 manage_service(int action)
 {
-	static const char *service_name =
-	    "Civetweb"; /* TODO (mid): check using server_name instead of
-	                 * service_name */
+	const char *service_name = g_server_name;
 	SC_HANDLE hSCM = NULL, hService = NULL;
 	SERVICE_DESCRIPTION descr;
 	char path[PATH_MAX + 20] = ""; /* Path to executable plus magic argument */
@@ -2125,6 +2123,7 @@ manage_service(int action)
 
 	return success;
 }
+
 
 static LRESULT CALLBACK
 WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
