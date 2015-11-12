@@ -351,11 +351,16 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_str_eq(client_err, "");
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
+
+#if defined(NO_FILES)
+	ck_assert_str_eq(client_ri->uri, "404");
+#else
 	ck_assert_str_eq(client_ri->uri, "200");
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
 	ck_assert_int_le(client_res, sizeof(client_err));
+#endif
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
