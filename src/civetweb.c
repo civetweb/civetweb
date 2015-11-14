@@ -1410,6 +1410,10 @@ mg_fopen(struct mg_connection *conn,
 
 	memset(filep, 0, sizeof(*filep));
 
+	struct stat st;
+	if (stat(filename, &st) == 0)
+		filep->size = st.st_size;
+
 	if (!is_file_in_memory(conn, path, filep)) {
 #ifdef _WIN32
 		wchar_t wbuf[PATH_MAX], wmode[20];
