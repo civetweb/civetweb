@@ -817,10 +817,19 @@ typedef struct ssl_method_st SSL_METHOD;
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct x509_store_ctx_st X509_STORE_CTX;
 
+#define SSL_CTRL_OPTIONS (32)
+
 #define SSL_VERIFY_NONE (0)
 #define SSL_VERIFY_PEER (1)
 #define SSL_VERIFY_FAIL_IF_NO_PEER_CERT (2)
 #define SSL_VERIFY_CLIENT_ONCE (4)
+#define SSL_OP_ALL (0x80000BFFL)
+#define SSL_OP_NO_SSLv2 (0x01000000L)
+#define SSL_OP_NO_SSLv3 (0x02000000L)
+#define SSL_OP_NO_TLSv1	(0x04000000L)
+#define SSL_OP_NO_TLSv1_2 (0x08000000L)
+#define SSL_OP_NO_TLSv1_1 (0x10000000L)
+#define SSL_OP_SINGLE_DH_USE (0x00100000L)
 
 struct ssl_func {
 	const char *name;  /* SSL function name */
@@ -867,6 +876,14 @@ struct ssl_func {
 #define SSL_CTX_check_private_key (*(int (*)(SSL_CTX *))ssl_sw[28].ptr)
 #define SSL_CTX_set_session_id_context                                         \
 	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
+#define SSL_CTX_ctrl                                                           \
+	(*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
+#define SSL_CTX_set_cipher_list                                                \
+	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
+#define SSL_CTX_set_options(ctx,op)                                            \
+	SSL_CTX_ctrl((ctx),SSL_CTRL_OPTIONS,(op),NULL)
+#define SSL_set_options(ssl,op) \
+	SSL_ctrl((ssl),SSL_CTRL_OPTIONS,(op),NULL)
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
@@ -910,6 +927,8 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CIPHER_get_name", NULL},
                                    {"SSL_CTX_check_private_key", NULL},
                                    {"SSL_CTX_set_session_id_context", NULL},
+                                   {"SSL_CTX_ctrl", NULL},
+                                   {"SSL_CTX_set_cipher_list", NULL},
                                    {NULL, NULL}};
 
 /* Similar array as ssl_sw. These functions could be located in different
@@ -1011,6 +1030,7 @@ enum {
 	SSL_VERIFY_DEPTH,
 	SSL_DEFAULT_VERIFY_PATHS,
 	SSL_FORWARD_SECRECY,
+	SSL_CIPHER_LIST,
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_TIMEOUT,
 #endif
@@ -1076,6 +1096,7 @@ static struct mg_option config_options[] = {
     {"ssl_verify_depth", CONFIG_TYPE_NUMBER, "9"},
     {"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssl_forward_secrecy", CONFIG_TYPE_BOOLEAN, "yes"},
+    {"ssl_cipher_list", CONFIG_TYPE_STRING, "ALL"},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
@@ -10142,6 +10163,7 @@ set_ssl_option(struct mg_context *ctx)
 	struct timespec now_mt;
 	md5_byte_t ssl_context_id[16];
 	md5_state_t md5state;
+	const char *cipehr_list;
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
@@ -10175,6 +10197,9 @@ set_ssl_option(struct mg_context *ctx)
 		return 0;
 	}
 
+	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_ALL | SSL_OP_NO_SSLv2
+		| SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1
+		| SSL_OP_SINGLE_DH_USE);
 	/* If a callback has been specified, call it. */
 	callback_ret =
 	    (ctx->callbacks.init_ssl == NULL)
@@ -10257,8 +10282,13 @@ set_ssl_option(struct mg_context *ctx)
 		}
 	}
 
-
+	cipehr_list = ctx->config[SSL_CIPHER_LIST];
 	/* TODO: could set use SSL_CTX_set_cipher_list if set */
+	if(SSL_CTX_set_cipher_list(ctx->ssl_ctx, ctx->config[SSL_CIPHER_LIST]) != 1) {
+	mg_cry(fc(ctx),
+			"SSL_CTX_set_cipher_list error: %s",
+			ssl_error());
+	}
 
 	return 1;
 }
