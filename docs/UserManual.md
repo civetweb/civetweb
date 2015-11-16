@@ -410,7 +410,7 @@ Loads default trusted certificates locations set at openssl compile time.
 ### ssl_forward_secrecy `yes`
 Enable [forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
 
-### ssl_cipher_list
+### ssl_cipher_list `ALL`
 List of ciphers, specified in OpenSSL format, to present to the client.
 See [this entry](https://www.openssl.org/docs/manmaster/apps/ciphers.html) in OpenSSL documentation for details.
 
