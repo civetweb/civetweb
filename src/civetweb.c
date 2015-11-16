@@ -10163,7 +10163,6 @@ set_ssl_option(struct mg_context *ctx)
 	struct timespec now_mt;
 	md5_byte_t ssl_context_id[16];
 	md5_state_t md5state;
-	const char *cipehr_list;
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
@@ -10282,8 +10281,6 @@ set_ssl_option(struct mg_context *ctx)
 		}
 	}
 
-	cipehr_list = ctx->config[SSL_CIPHER_LIST];
-	/* TODO: could set use SSL_CTX_set_cipher_list if set */
 	if(SSL_CTX_set_cipher_list(ctx->ssl_ctx, ctx->config[SSL_CIPHER_LIST]) != 1) {
 	mg_cry(fc(ctx),
 			"SSL_CTX_set_cipher_list error: %s",
