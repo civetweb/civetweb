@@ -18,10 +18,18 @@
 
 
 #define DOCUMENT_ROOT "."
+#ifdef NO_SSL
 #ifdef USE_IPV6
 #define PORT "[::]:8888"
 #else
 #define PORT "8888"
+#endif
+#else
+#ifdef USE_IPV6
+#define PORT "[::]:8888r,[::]:8843s"
+#else
+#define PORT "8888r,8843s"
+#endif
 #endif
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
@@ -320,6 +328,10 @@ main(int argc, char *argv[])
 	                         "websocket_timeout_ms",
 	                         "3600000",
 #endif
+#ifndef NO_SSL
+	                         "ssl_certificate",
+                             "../../resources/cert/server.pem",
+#endif
 	                         0};
 	struct mg_callbacks callbacks;
 	struct mg_context *ctx;
@@ -344,7 +356,14 @@ main(int argc, char *argv[])
 		err = 1;
 	}
 #endif
-
+#ifndef NO_SSL
+	if (!mg_check_feature(2)) {
+		fprintf(stderr,
+		        "Error: Embedded example built with SSL support, "
+		        "but civetweb library build without.\n");
+		err = 1;
+	}
+#endif
 	if (err) {
 		fprintf(stderr, "Cannot start CivetWeb - inconsistent build.\n");
 		return EXIT_FAILURE;
