@@ -410,9 +410,16 @@ Loads default trusted certificates locations set at openssl compile time.
 ### ssl_forward_secrecy `yes`
 Enable [forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
 
-### ssl_cipher_list `ALL`
-List of ciphers, specified in OpenSSL format, to present to the client.
-See [this entry](https://www.openssl.org/docs/manmaster/apps/ciphers.html) in OpenSSL documentation for details.
+### ssl_cipher_list
+List of ciphers to present to the client. Entries should be separated by 
+colons, commas or spaces.
+
+    ALL           All available ciphers
+    ALL:!eNULL    All ciphers excluding NULL ciphers
+    AES128:!MD5   AES 128 with digests other than MD5
+
+See [this entry](https://www.openssl.org/docs/manmaster/apps/ciphers.html) in
+OpenSSL documentation for full list of options and additional examples.
 
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting

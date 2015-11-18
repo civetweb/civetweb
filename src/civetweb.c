@@ -1094,7 +1094,7 @@ static struct mg_option config_options[] = {
     {"ssl_verify_depth", CONFIG_TYPE_NUMBER, "9"},
     {"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssl_forward_secrecy", CONFIG_TYPE_BOOLEAN, "yes"},
-    {"ssl_cipher_list", CONFIG_TYPE_STRING, "ALL"},
+    {"ssl_cipher_list", CONFIG_TYPE_STRING, NULL},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
@@ -10279,10 +10279,12 @@ set_ssl_option(struct mg_context *ctx)
 		}
 	}
 
-	if(SSL_CTX_set_cipher_list(ctx->ssl_ctx, ctx->config[SSL_CIPHER_LIST]) != 1) {
-	mg_cry(fc(ctx),
-			"SSL_CTX_set_cipher_list error: %s",
-			ssl_error());
+	if (ctx->config[SSL_CIPHER_LIST] != NULL) {
+		if (SSL_CTX_set_cipher_list(ctx->ssl_ctx, ctx->config[SSL_CIPHER_LIST]) != 1) {
+		mg_cry(fc(ctx),
+				"SSL_CTX_set_cipher_list error: %s",
+				ssl_error());
+		}
 	}
 
 	return 1;
