@@ -882,8 +882,6 @@ struct ssl_func {
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
 #define SSL_CTX_set_options(ctx,op)                                            \
 	SSL_CTX_ctrl((ctx),SSL_CTRL_OPTIONS,(op),NULL)
-#define SSL_set_options(ssl,op) \
-	SSL_ctrl((ssl),SSL_CTRL_OPTIONS,(op),NULL)
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
