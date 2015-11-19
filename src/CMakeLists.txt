@@ -246,6 +246,24 @@ if (LIBRT_FOUND)
   target_link_libraries(c-executable LIBRT::LIBRT)
 endif()
 
+if (CIVETWEB_ENABLE_LUA)
+  add_library(lua-library third_party/lfs.c third_party/lsqlite3.c third_party/LuaXML_lib.c third_party/sqlite3.c)
+  set_target_properties(lua-library PROPERTIES
+    OUTPUT_NAME "lua-library"
+    VERSION ${CIVETWEB_VERSION}
+    SOVERSION ${CIVETWEB_VERSION}
+  )
+  target_include_directories(
+    lua-library PUBLIC
+    ${PROJECT_SOURCE_DIR}/src/third_party/lua-5.2.4)
+  install(
+    TARGETS lua-library
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+    COMPONENT lua-library)  
+endif()
+
 # The C++ API library
 if (CIVETWEB_ENABLE_CXX)
   add_library(cxx-library CivetServer.cpp)
