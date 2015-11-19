@@ -486,7 +486,7 @@ mg (table):
     mg.get_mime_type(filename) -- get MIME type of a file
     mg.send_file(filename)     -- send a file, including MIME type
     mg.url_encode(str)         -- URL encode a string
-    mg.url_decode(str)         -- URL decode a string
+    mg.url_decode(str, [form]) -- URL decode a string. If form=true, replace + by space.
     mg.base64_encode(str)      -- BASE64 encode a string
     mg.base64_decode(str)      -- BASE64 decode a string
     mg.md5(str)                -- return the MD5 hash of a string
