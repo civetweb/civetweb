@@ -852,7 +852,9 @@ lwebsock_write(lua_State *L)
 	lua_gettable(L, LUA_REGISTRYINDEX);
 	ws = (struct lua_websock_data *)lua_touserdata(L, -1);
 
-	(void)pthread_mutex_lock(&(ws->ws_mutex));
+printf("wwwww lock == %p)\n", ws);
+		(void)pthread_mutex_lock(&(ws->ws_mutex));
+printf("wwwww locked == %p)\n", ws);
 
 	if (num_args == 1) {
 		/* just one text: send it to all client */
@@ -922,11 +924,15 @@ lwebsock_write(lua_State *L)
 			}
 		}
 	} else {
-		(void)pthread_mutex_unlock(&ws->ws_mutex);
+printf("wwwwwerr unlock == %p)\n", ws);
+	(void)pthread_mutex_unlock(&(ws->ws_mutex));
+printf("wwwwwerr unlocked == %p)\n", ws);
 		return luaL_error(L, "invalid websocket write() call");
 	}
 
-	(void)pthread_mutex_unlock(&ws->ws_mutex);
+printf("wwwww unlock == %p)\n", ws);
+	(void)pthread_mutex_unlock(&(ws->ws_mutex));
+printf("wwwww unlocked == %p)\n", ws);
 
 #else
 	(void)(L);           /* unused */
@@ -947,7 +953,9 @@ lua_action(struct laction_arg *arg)
 	int err, ok;
 	struct mg_context *ctx;
 
+printf("action lock %p\n", arg->pmutex);
 	(void)pthread_mutex_lock(arg->pmutex);
+printf("action locked %p\n", arg->pmutex);
 
 	lua_pushlightuserdata(arg->state, (void *)&lua_regkey_ctx);
 	lua_gettable(arg->state, LUA_REGISTRYINDEX);
@@ -956,14 +964,18 @@ lua_action(struct laction_arg *arg)
 	err = luaL_loadstring(arg->state, arg->txt);
 	if (err != 0) {
 		lua_cry(fc(ctx), err, arg->state, arg->script, "timer");
+printf("action unlock1 %p\n", arg->pmutex);
 		(void)pthread_mutex_unlock(arg->pmutex);
+printf("action unlocked1 %p\n", arg->pmutex);
 		mg_free(arg);
 		return 0;
 	}
 	err = lua_pcall(arg->state, 0, 1, 0);
 	if (err != 0) {
 		lua_cry(fc(ctx), err, arg->state, arg->script, "timer");
+printf("action unlock2 %p\n", arg->pmutex);
 		(void)pthread_mutex_unlock(arg->pmutex);
+printf("action unlocked2 %p\n", arg->pmutex);
 		mg_free(arg);
 		return 0;
 	}
@@ -976,7 +988,9 @@ lua_action(struct laction_arg *arg)
 	}
 	lua_pop(arg->state, 1);
 
-	(void)pthread_mutex_unlock(arg->pmutex);
+printf("action unlockX %p\n", arg->pmutex);
+		(void)pthread_mutex_unlock(arg->pmutex);
+printf("action unlockedX %p\n", arg->pmutex);
 
 	if (!ok) {
 		mg_free(arg);
@@ -1222,12 +1236,15 @@ prepare_lua_environment(struct mg_context *ctx,
 	switch (lua_env_type) {
 	case LUA_ENV_TYPE_LUA_SERVER_PAGE:
 		reg_string(L, "lua_type", "page");
+printf(">Y>Y>Y page\n");
 		break;
 	case LUA_ENV_TYPE_PLAIN_LUA_PAGE:
 		reg_string(L, "lua_type", "script");
+printf(">Y>Y>Y script\n");
 		break;
 	case LUA_ENV_TYPE_LUA_WEBSOCKET:
 		reg_string(L, "lua_type", "websocket");
+printf(">Y>Y>Y websocket\n");
 		break;
 	}
 
@@ -1481,6 +1498,8 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 
 	assert(conn->lua_websocket_state == NULL);
 
+printf("XXXXX lua_websocket_new(%s, %p)\n", script, conn);
+
 	/* lock list (mg_context global) */
 	mg_lock_context(conn->ctx);
 	while (*shared_websock_list) {
@@ -1490,6 +1509,9 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		}
 		shared_websock_list = &((*shared_websock_list)->next);
 	}
+
+printf("XXXXX shared_websock_list == %p)\n", shared_websock_list);
+
 	if (*shared_websock_list == NULL) {
 		/* add ws to list */
 		*shared_websock_list = (struct mg_shared_lua_websocket_list *)
@@ -1503,7 +1525,9 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		ws = &(*shared_websock_list)->ws;
 		ws->script = mg_strdup(script); /* TODO (low): handle OOM */
 		pthread_mutex_init(&(ws->ws_mutex), NULL);
+printf("XXXXX lock == %p)\n", ws);
 		(void)pthread_mutex_lock(&(ws->ws_mutex));
+printf("XXXXX locked == %p)\n", ws);
 		ws->state = lua_newstate(lua_allocator, NULL);
 		ws->conn[0] = conn;
 		ws->references = 1;
@@ -1520,10 +1544,14 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 	} else {
 		/* inc ref count */
 		ws = &(*shared_websock_list)->ws;
+printf("XXXXX lock == %p)\n", ws);
 		(void)pthread_mutex_lock(&(ws->ws_mutex));
+printf("XXXXX locked == %p)\n", ws);
 		(*shared_websock_list)->ws.conn[(ws->references)++] = conn;
 	}
 	mg_unlock_context(conn->ctx);
+
+printf("XXXXX ws == %p)\n", ws);
 
 	/* call add */
 	lua_getglobal(ws->state, "open");
@@ -1532,6 +1560,8 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 	lua_pushstring(ws->state, "client");
 	lua_pushlightuserdata(ws->state, (void *)conn);
 	lua_rawset(ws->state, -3);
+
+printf("XXXXX lua_pcall == %p)\n", ws->state);
 
 	err = lua_pcall(ws->state, 1, 1, 0);
 	if (err != 0) {
@@ -1549,7 +1579,9 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		(*shared_websock_list)->ws.conn[--(ws->references)] = 0;
 	}
 
+printf("XXXXX unlock == %p)\n", ws);
 	(void)pthread_mutex_unlock(&(ws->ws_mutex));
+printf("XXXXX unlocked == %p)\n", ws);
 
 	return ok ? (void *)ws : NULL;
 }
@@ -1567,7 +1599,9 @@ lua_websocket_data(struct mg_connection *conn,
 	assert(ws != NULL);
 	assert(ws->state != NULL);
 
-	(void)pthread_mutex_lock(&ws->ws_mutex);
+printf("ddddd lock == %p)\n", ws);
+		(void)pthread_mutex_lock(&(ws->ws_mutex));
+printf("ddddd locked == %p)\n", ws);
 
 	lua_getglobal(ws->state, "data");
 	lua_newtable(ws->state);
@@ -1593,7 +1627,9 @@ lua_websocket_data(struct mg_connection *conn,
 		}
 		lua_pop(ws->state, 1);
 	}
-	(void)pthread_mutex_unlock(&ws->ws_mutex);
+printf("ddddd unlock == %p)\n", ws);
+	(void)pthread_mutex_unlock(&(ws->ws_mutex));
+printf("ddddd unlocked == %p)\n", ws);
 
 	return ok;
 }
@@ -1607,7 +1643,9 @@ lua_websocket_ready(struct mg_connection *conn, void *ws_arg)
 	assert(ws != NULL);
 	assert(ws->state != NULL);
 
-	(void)pthread_mutex_lock(&ws->ws_mutex);
+printf("rrrrr lock == %p)\n", ws);
+		(void)pthread_mutex_lock(&(ws->ws_mutex));
+printf("rrrrr locked == %p)\n", ws);
 
 	lua_getglobal(ws->state, "ready");
 	lua_newtable(ws->state);
@@ -1625,7 +1663,9 @@ lua_websocket_ready(struct mg_connection *conn, void *ws_arg)
 		lua_pop(ws->state, 1);
 	}
 
-	(void)pthread_mutex_unlock(&ws->ws_mutex);
+printf("rrrrr unlock == %p)\n", ws);
+	(void)pthread_mutex_unlock(&(ws->ws_mutex));
+printf("rrrrr unlocked == %p)\n", ws);
 
 	return ok;
 }
@@ -1642,7 +1682,9 @@ lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 	assert(ws != NULL);
 	assert(ws->state != NULL);
 
-	(void)pthread_mutex_lock(&ws->ws_mutex);
+printf("ccccc lock == %p)\n", ws);
+		(void)pthread_mutex_lock(&(ws->ws_mutex));
+printf("ccccc locked == %p)\n", ws);
 
 	lua_getglobal(ws->state, "close");
 	lua_newtable(ws->state);
@@ -1665,6 +1707,8 @@ lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 	   asynchronous operations and timers are completed/expired. */
 	(void)shared_websock_list; /* shared_websock_list unused (see open TODO) */
 
-	(void)pthread_mutex_unlock(&ws->ws_mutex);
+printf("ccccc unlock == %p)\n", ws);
+	(void)pthread_mutex_unlock(&(ws->ws_mutex));
+printf("ccccc unlocked == %p)\n", ws);
 }
 #endif
