@@ -486,7 +486,7 @@ START_TEST(test_mask_data)
 		ck_assert_int_eq((int)((unsigned char)out[i]),
 		                 (int)(((unsigned char)in[i]) ^ (char)1u));
 	}
-	for (i = 256; i < sizeof(out); i++) {
+	for (i = 256; i < (int)sizeof(out); i++) {
 		ck_assert_int_eq((int)((unsigned char)out[i]), (int)0);
 	}
 
