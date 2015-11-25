@@ -100,6 +100,7 @@ wait_not_null(void *volatile *data)
 			return 1;
 		}
 	}
+	ck_abort_msg("wait_not_null failed");
 	return 0;
 }
 
@@ -547,9 +548,6 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 static const char *websocket_welcome_msg = "websocket welcome\n";
 static const size_t websocket_welcome_msg_len =
     18 /* strlen(websocket_welcome_msg) */;
-static const char *websocket_acknowledge_msg = "websocket msg ok\n";
-static const size_t websocket_acknowledge_msg_len =
-    17 /* strlen(websocket_acknowledge_msg) */;
 static const char *websocket_goodbye_msg = "websocket bye\n";
 static const size_t websocket_goodbye_msg_len =
     14 /* strlen(websocket_goodbye_msg) */;
@@ -594,22 +592,29 @@ websock_server_data(struct mg_connection *conn,
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	printf("Server: Got %u bytes from the client\n", (unsigned)data_len);
 
-	if (data_len < 3 || 0 != memcmp(data, "bye", 3)) {
-		/* Send websocket acknowledge message */
-		mg_lock_connection(conn);
-		mg_websocket_write(conn,
-		                   WEBSOCKET_OPCODE_TEXT,
-		                   websocket_acknowledge_msg,
-		                   websocket_acknowledge_msg_len);
-		mg_unlock_connection(conn);
-	} else {
-		/* Send websocket acknowledge message */
+	if (data_len == 3 && !memcmp(data, "bye", 3)) {
+		/* Send websocket goodbye message */
 		mg_lock_connection(conn);
 		mg_websocket_write(conn,
 		                   WEBSOCKET_OPCODE_TEXT,
 		                   websocket_goodbye_msg,
 		                   websocket_goodbye_msg_len);
 		mg_unlock_connection(conn);
+	} else if (data_len == 5 && !memcmp(data, "data1", 5)) {
+		mg_lock_connection(conn);
+		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok1", 3);
+		mg_unlock_connection(conn);
+	} else if (data_len == 5 && !memcmp(data, "data2", 5)) {
+		mg_lock_connection(conn);
+		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok 2", 4);
+		mg_unlock_connection(conn);
+	} else if (data_len == 5 && !memcmp(data, "data3", 5)) {
+		mg_lock_connection(conn);
+		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok - 3", 6);
+		mg_unlock_connection(conn);
+	} else {
+		ck_abort_msg("Got unexpected message from websocket client");
+		return 0;
 	}
 
 	return 1; /* return 1 to keep the connetion open */
@@ -1105,7 +1110,10 @@ START_TEST(test_request_handlers)
 	ws_client1_data.data = NULL;
 	ws_client1_data.len = 0;
 
-	mg_websocket_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "data1", 5);
+	mg_websocket_client_write(ws_client1_conn,
+	                          WEBSOCKET_OPCODE_TEXT,
+	                          "data1",
+	                          5);
 
 	wait_not_null(
 	    &(ws_client1_data
@@ -1115,10 +1123,8 @@ START_TEST(test_request_handlers)
 	ck_assert(ws_client2_data.data == NULL);
 	ck_assert_uint_eq(ws_client2_data.len, 0);
 	ck_assert(ws_client1_data.data != NULL);
-	ck_assert_uint_eq(ws_client1_data.len, websocket_acknowledge_msg_len);
-	ck_assert(!memcmp(ws_client1_data.data,
-	                  websocket_acknowledge_msg,
-	                  websocket_acknowledge_msg_len));
+	ck_assert_uint_eq(ws_client1_data.len, 3);
+	ck_assert(!memcmp(ws_client1_data.data, "ok1", 3));
 	free(ws_client1_data.data);
 	ws_client1_data.data = NULL;
 	ws_client1_data.len = 0;
@@ -1166,7 +1172,10 @@ START_TEST(test_request_handlers)
 	ws_client2_data.data = NULL;
 	ws_client2_data.len = 0;
 
-	mg_websocket_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "data2", 5);
+	mg_websocket_client_write(ws_client1_conn,
+	                          WEBSOCKET_OPCODE_TEXT,
+	                          "data2",
+	                          5);
 
 	wait_not_null(
 	    &(ws_client1_data
@@ -1176,15 +1185,13 @@ START_TEST(test_request_handlers)
 	ck_assert(ws_client2_data.data == NULL);
 	ck_assert(ws_client2_data.len == 0);
 	ck_assert(ws_client1_data.data != NULL);
-	ck_assert(ws_client1_data.len == websocket_acknowledge_msg_len);
-	ck_assert(!memcmp(ws_client1_data.data,
-	                  websocket_acknowledge_msg,
-	                  websocket_acknowledge_msg_len));
+	ck_assert(ws_client1_data.len == 4);
+	ck_assert(!memcmp(ws_client1_data.data, "ok 2", 4));
 	free(ws_client1_data.data);
 	ws_client1_data.data = NULL;
 	ws_client1_data.len = 0;
 
-	mg_websocket_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
+	mg_websocket_client_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
 	wait_not_null(
 	    &(ws_client1_data.data)); /* Wait for the websocket goodbye message */
@@ -1211,7 +1218,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ws_client2_data.data == NULL);
 	ck_assert(ws_client2_data.len == 0);
 
-	mg_websocket_write(ws_client2_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
+	mg_websocket_client_write(ws_client2_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
 	wait_not_null(
 	    &(ws_client2_data.data)); /* Wait for the websocket goodbye message */

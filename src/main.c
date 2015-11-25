@@ -974,7 +974,6 @@ start_civetweb(int argc, char *argv[])
 	/* Call Duktape, if -E option is specified */
 	if (argc > 1 && !strcmp(argv[1], "-E")) {
 
-		fprintf(stdout, "asd\n");
 #ifdef USE_DUKTAPE
 		if (argc != 3) {
 			show_usage_and_exit(argv[0]);

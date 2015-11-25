@@ -126,11 +126,12 @@ macro(civetweb_add_test suite test_case)
 endmacro(civetweb_add_test)
 
 
-# Private API tests
+# Tests of private functions
 civetweb_add_test(Private "HTTP Message")
 civetweb_add_test(Private "URL Parsing")
 civetweb_add_test(Private "Internal Parsing")
 civetweb_add_test(Private "Encode Decode")
+civetweb_add_test(Private "Mask Data")
 
 # Public API function tests
 civetweb_add_test(PublicFunc "Version")

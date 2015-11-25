@@ -456,6 +456,37 @@ START_TEST(test_encode_decode)
 }
 END_TEST
 
+
+START_TEST(test_mask_data)
+{
+	char in[1024];
+	char out[1024];
+	char zero[1024];
+	int i;
+
+	memset(in, 0, sizeof(in));
+	memset(out, 99, sizeof(out));
+
+	mask_data(in, sizeof(out), 0, out);
+	ck_assert(!memcmp(out, in, sizeof(out)));
+
+	for (i = 0; i < 1024; i++) {
+		in[i] = (char)((unsigned char)i);
+	}
+	mask_data(in, 107, 0, out);
+	ck_assert(!memcmp(out, in, 107));
+
+	mask_data(in, 256, 0x01010101, out);
+	for (i = 0; i < 256; i++) {
+		ch_assert_int_eq((int)out[i], (int)(((unsigned char)in[i]) ^ (char)1u));
+	}
+	for (i = 256; i < sizeof(out)) {
+		ch_assert_int_eq((int)out[i], (int)0);
+	}
+}
+END_TEST
+
+
 Suite *
 make_private_suite(void)
 {
@@ -465,6 +496,7 @@ make_private_suite(void)
 	TCase *const url_parsing = tcase_create("URL Parsing");
 	TCase *const internal_parse = tcase_create("Internal Parsing");
 	TCase *const encode_decode = tcase_create("Encode Decode");
+	TCase *const mask_data = tcase_create("Mask Data");
 
 	tcase_add_test(http_message, test_parse_http_message);
 	tcase_add_test(http_message, test_should_keep_alive);
@@ -488,6 +520,10 @@ make_private_suite(void)
 	tcase_add_test(encode_decode, test_encode_decode);
 	tcase_set_timeout(encode_decode, civetweb_min_test_timeout);
 	suite_add_tcase(suite, encode_decode);
+
+	tcase_add_test(mask_data, test_mask_data);
+	tcase_set_timeout(mask_data, civetweb_min_test_timeout);
+	suite_add_tcase(suite, mask_data);
 
 	return suite;
 }
