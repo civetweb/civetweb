@@ -8222,7 +8222,6 @@ mask_data(const char *in, size_t in_len, uint32_t masking_key, char *out)
 			i++;
 		}
 	}
-	/* TODO (high): Deal with ((dataLen % 4) != 0) and misalignment */
 }
 
 

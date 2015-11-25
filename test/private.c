@@ -27,6 +27,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define CIVETWEB_API static
 #endif
+
+#ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
+#define HAVE_STDINT
+#undef MEMORY_DEBUGGING
+#endif
+
 #include "../src/civetweb.c"
 
 #include <stdlib.h>
@@ -461,7 +467,6 @@ START_TEST(test_mask_data)
 {
 	char in[1024];
 	char out[1024];
-	char zero[1024];
 	int i;
 
 	memset(in, 0, sizeof(in));
@@ -478,11 +483,20 @@ START_TEST(test_mask_data)
 
 	mask_data(in, 256, 0x01010101, out);
 	for (i = 0; i < 256; i++) {
-		ch_assert_int_eq((int)out[i], (int)(((unsigned char)in[i]) ^ (char)1u));
+		ck_assert_int_eq((int)((unsigned char)out[i]),
+		                 (int)(((unsigned char)in[i]) ^ (char)1u));
 	}
-	for (i = 256; i < sizeof(out)) {
-		ch_assert_int_eq((int)out[i], (int)0);
+	for (i = 256; i < sizeof(out); i++) {
+		ck_assert_int_eq((int)((unsigned char)out[i]), (int)0);
 	}
+
+	/* TODO: check this for big endian */
+	mask_data(in, 5, 0x01020304, out);
+	ck_assert_uint_eq((unsigned char)out[0], 0u ^ 4u);
+	ck_assert_uint_eq((unsigned char)out[1], 1u ^ 3u);
+	ck_assert_uint_eq((unsigned char)out[2], 2u ^ 2u);
+	ck_assert_uint_eq((unsigned char)out[3], 3u ^ 1u);
+	ck_assert_uint_eq((unsigned char)out[4], 4u ^ 4u);
 }
 END_TEST
 
