@@ -471,9 +471,9 @@ START_TEST(test_mask_data)
 	int i;
 #endif
 
-    uint32_t mask = 0x61626364;
-    /* TODO: adapt test for big endian */
-    ck_assert((*(unsigned char*)mask) == 0x64u);
+	uint32_t mask = 0x61626364;
+	/* TODO: adapt test for big endian */
+	ck_assert((*(unsigned char *)mask) == 0x64u);
 
 #if defined(USE_WEBSOCKET)
 	memset(in, 0, sizeof(in));

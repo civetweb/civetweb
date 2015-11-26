@@ -100,8 +100,19 @@ wait_not_null(void *volatile *data)
 			return 1;
 		}
 	}
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code
+#endif
+
 	ck_abort_msg("wait_not_null failed");
+
 	return 0;
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 }
 
 START_TEST(test_the_test_environment)
@@ -613,8 +624,19 @@ websock_server_data(struct mg_connection *conn,
 		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok - 3", 6);
 		mg_unlock_connection(conn);
 	} else {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code
+#endif
+
 		ck_abort_msg("Got unexpected message from websocket client");
+
+
 		return 0;
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 	}
 
 	return 1; /* return 1 to keep the connetion open */
