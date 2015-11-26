@@ -1329,36 +1329,36 @@ make_public_server_suite(void)
 {
 	Suite *const suite = suite_create("PublicServer");
 
-	TCase *const checktestenv = tcase_create("Check test environment");
-	TCase *const startthreads = tcase_create("Start threads");
-	TCase *const startstophttp = tcase_create("Start Stop HTTP Server");
-	TCase *const startstophttps = tcase_create("Start Stop HTTPS Server");
-	TCase *const serverandclienttls = tcase_create("TLS Server Client");
-	TCase *const serverrequests = tcase_create("Server Requests");
+	TCase *const tcase_checktestenv = tcase_create("Check test environment");
+	TCase *const tcase_startthreads = tcase_create("Start threads");
+	TCase *const tcase_startstophttp = tcase_create("Start Stop HTTP Server");
+	TCase *const tcase_startstophttps = tcase_create("Start Stop HTTPS Server");
+	TCase *const tcase_serverandclienttls = tcase_create("TLS Server Client");
+	TCase *const tcase_serverrequests = tcase_create("Server Requests");
 
-	tcase_add_test(checktestenv, test_the_test_environment);
-	tcase_set_timeout(checktestenv, civetweb_min_test_timeout);
-	suite_add_tcase(suite, checktestenv);
+	tcase_add_test(tcase_checktestenv, test_the_test_environment);
+	tcase_set_timeout(tcase_checktestenv, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_checktestenv);
 
-	tcase_add_test(startthreads, test_threading);
-	tcase_set_timeout(startthreads, civetweb_min_test_timeout);
-	suite_add_tcase(suite, startthreads);
+	tcase_add_test(tcase_startthreads, test_threading);
+	tcase_set_timeout(tcase_startthreads, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_startthreads);
 
-	tcase_add_test(startstophttp, test_mg_start_stop_http_server);
-	tcase_set_timeout(startstophttp, civetweb_min_test_timeout);
-	suite_add_tcase(suite, startstophttp);
+	tcase_add_test(tcase_startstophttp, test_mg_start_stop_http_server);
+	tcase_set_timeout(tcase_startstophttp, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_startstophttp);
 
-	tcase_add_test(startstophttps, test_mg_start_stop_https_server);
-	tcase_set_timeout(startstophttps, civetweb_min_test_timeout);
-	suite_add_tcase(suite, startstophttps);
+	tcase_add_test(tcase_startstophttps, test_mg_start_stop_https_server);
+	tcase_set_timeout(tcase_startstophttps, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_startstophttps);
 
-	tcase_add_test(serverandclienttls, test_mg_server_and_client_tls);
-	tcase_set_timeout(serverandclienttls, civetweb_min_test_timeout);
-	suite_add_tcase(suite, serverandclienttls);
+	tcase_add_test(tcase_serverandclienttls, test_mg_server_and_client_tls);
+	tcase_set_timeout(tcase_serverandclienttls, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_serverandclienttls);
 
-	tcase_add_test(serverrequests, test_request_handlers);
-	tcase_set_timeout(serverrequests, 120);
-	suite_add_tcase(suite, serverrequests);
+	tcase_add_test(tcase_serverrequests, test_request_handlers);
+	tcase_set_timeout(tcase_serverrequests, 120);
+	suite_add_tcase(suite, tcase_serverrequests);
 
 	return suite;
 }

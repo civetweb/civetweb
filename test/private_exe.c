@@ -67,11 +67,11 @@ make_private_exe_suite(void)
 {
 	Suite *const suite = suite_create("EXE");
 
-	TCase *const helper_funcs = tcase_create("Helper funcs");
+	TCase *const tcase_helper_funcs = tcase_create("Helper funcs");
 
-	tcase_add_test(helper_funcs, test_helper_funcs);
-	tcase_set_timeout(helper_funcs, civetweb_min_test_timeout);
-	suite_add_tcase(suite, helper_funcs);
+	tcase_add_test(tcase_helper_funcs, test_helper_funcs);
+	tcase_set_timeout(tcase_helper_funcs, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_helper_funcs);
 
 	return suite;
 }

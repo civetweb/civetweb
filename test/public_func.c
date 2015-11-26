@@ -420,43 +420,44 @@ make_public_func_suite(void)
 {
 	Suite *const suite = suite_create("PublicFunc");
 
-	TCase *const version = tcase_create("Version");
-	TCase *const get_valid_options = tcase_create("Options");
-	TCase *const get_builtin_mime_type = tcase_create("MIME types");
-	TCase *const tstrncasecmp = tcase_create("strcasecmp");
-	TCase *const urlencodingdecoding = tcase_create("URL encoding decoding");
-	TCase *const cookies = tcase_create("Cookies and variables");
-	TCase *const md5 = tcase_create("MD5");
+	TCase *const tcase_version = tcase_create("Version");
+	TCase *const tcase_get_valid_options = tcase_create("Options");
+	TCase *const tcase_get_builtin_mime_type = tcase_create("MIME types");
+	TCase *const tcase_strncasecmp = tcase_create("strcasecmp");
+	TCase *const tcase_urlencodingdecoding =
+	    tcase_create("URL encoding decoding");
+	TCase *const tcase_cookies = tcase_create("Cookies and variables");
+	TCase *const tcase_md5 = tcase_create("MD5");
 
-	tcase_add_test(version, test_mg_version);
-	tcase_set_timeout(version, civetweb_min_test_timeout);
-	suite_add_tcase(suite, version);
+	tcase_add_test(tcase_version, test_mg_version);
+	tcase_set_timeout(tcase_version, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_version);
 
-	tcase_add_test(get_valid_options, test_mg_get_valid_options);
-	tcase_set_timeout(get_valid_options, civetweb_min_test_timeout);
-	suite_add_tcase(suite, get_valid_options);
+	tcase_add_test(tcase_get_valid_options, test_mg_get_valid_options);
+	tcase_set_timeout(tcase_get_valid_options, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_get_valid_options);
 
-	tcase_add_test(get_builtin_mime_type, test_mg_get_builtin_mime_type);
-	tcase_set_timeout(get_builtin_mime_type, civetweb_min_test_timeout);
-	suite_add_tcase(suite, get_builtin_mime_type);
+	tcase_add_test(tcase_get_builtin_mime_type, test_mg_get_builtin_mime_type);
+	tcase_set_timeout(tcase_get_builtin_mime_type, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_get_builtin_mime_type);
 
-	tcase_add_test(tstrncasecmp, test_mg_strncasecmp);
-	tcase_set_timeout(tstrncasecmp, civetweb_min_test_timeout);
-	suite_add_tcase(suite, tstrncasecmp);
+	tcase_add_test(tcase_strncasecmp, test_mg_strncasecmp);
+	tcase_set_timeout(tcase_strncasecmp, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_strncasecmp);
 
-	tcase_add_test(urlencodingdecoding, test_mg_url_encode);
-	tcase_add_test(urlencodingdecoding, test_mg_url_decode);
-	tcase_set_timeout(urlencodingdecoding, civetweb_min_test_timeout);
-	suite_add_tcase(suite, urlencodingdecoding);
+	tcase_add_test(tcase_urlencodingdecoding, test_mg_url_encode);
+	tcase_add_test(tcase_urlencodingdecoding, test_mg_url_decode);
+	tcase_set_timeout(tcase_urlencodingdecoding, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_urlencodingdecoding);
 
-	tcase_add_test(cookies, test_mg_get_cookie);
-	tcase_add_test(cookies, test_mg_get_var);
-	tcase_set_timeout(cookies, civetweb_min_test_timeout);
-	suite_add_tcase(suite, cookies);
+	tcase_add_test(tcase_cookies, test_mg_get_cookie);
+	tcase_add_test(tcase_cookies, test_mg_get_var);
+	tcase_set_timeout(tcase_cookies, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_cookies);
 
-	tcase_add_test(md5, test_mg_md5);
-	tcase_set_timeout(md5, civetweb_min_test_timeout);
-	suite_add_tcase(suite, md5);
+	tcase_add_test(tcase_md5, test_mg_md5);
+	tcase_set_timeout(tcase_md5, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_md5);
 
 	return suite;
 }
