@@ -465,10 +465,17 @@ END_TEST
 
 START_TEST(test_mask_data)
 {
+#if defined(USE_WEBSOCKET)
 	char in[1024];
 	char out[1024];
 	int i;
+#endif
 
+    uint32_t mask = 0x61626364;
+    /* TODO: adapt test for big endian */
+    ck_assert((*(unsigned char*)mask) == 0x64u);
+
+#if defined(USE_WEBSOCKET)
 	memset(in, 0, sizeof(in));
 	memset(out, 99, sizeof(out));
 
@@ -497,6 +504,7 @@ START_TEST(test_mask_data)
 	ck_assert_uint_eq((unsigned char)out[2], 2u ^ 2u);
 	ck_assert_uint_eq((unsigned char)out[3], 3u ^ 1u);
 	ck_assert_uint_eq((unsigned char)out[4], 4u ^ 4u);
+#endif
 }
 END_TEST
 
