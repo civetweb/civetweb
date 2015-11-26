@@ -421,6 +421,22 @@ colons, commas or spaces.
 See [this entry](https://www.openssl.org/docs/manmaster/apps/ciphers.html) in
 OpenSSL documentation for full list of options and additional examples.
 
+### ssl_protocol_version `0`
+Sets the minimal accepted version of SSL/TLS protocol according to the table:
+
+Protocols | Value
+------------ | -------------
+SSL2+SSL3+TLS1.0+TLS1.1+TLS1.2  | 0
+SSL3+TLS1.0+TLS1.1+TLS1.2  | 1
+TLS1.0+TLS1.1+TLS1.2 | 2
+TLS1.1+TLS1.2 | 3
+TLS1.2 | 4
+
+### ssl_single_dh_use `no`
+Enables creating new DH key during every negotiation. This delays
+creation of DH key until connection is negotiated instead of
+creating DH key only once during initialization.
+
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
 support as well as support for Lua Server Pages.
