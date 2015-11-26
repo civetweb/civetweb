@@ -8224,6 +8224,33 @@ mg_websocket_write(struct mg_connection *conn,
 	return mg_websocket_write_exec(conn, opcode, data, dataLen, 0);
 }
 
+
+static void
+mask_data(const char *in, size_t in_len, uint32_t masking_key, char *out)
+{
+	size_t i = 0;
+
+	i = 0;
+	if (((ptrdiff_t)in % 4) == 0) {
+		/* Convert in 32 bit words, if data is 4 byte aligned */
+		while (i < (in_len - 3)) {
+			*(uint32_t *)(void *)(out + i) =
+			    *(uint32_t *)(void *)(in + i) ^ masking_key;
+			i += 4;
+		}
+	}
+	if (i != in_len) {
+		/* convert 1-3 remaining bytes if ((dataLen % 4) != 0)*/
+		while (i < in_len) {
+			*(uint8_t *)(void *)(out + i) =
+			    *(uint8_t *)(void *)(in + i)
+			    ^ *(((uint8_t *)&masking_key) + (i % 4));
+			i++;
+		}
+	}
+}
+
+
 int
 mg_websocket_client_write(struct mg_connection *conn,
                           int opcode,
@@ -8231,7 +8258,6 @@ mg_websocket_client_write(struct mg_connection *conn,
                           size_t dataLen)
 {
 	int retval = -1;
-	size_t i = 0;
 	char *masked_data = (char *)mg_malloc(((dataLen + 7) / 4) * 4);
 	uint32_t masking_key;
 	static uint64_t lfsr = 0;
@@ -8263,26 +8289,8 @@ mg_websocket_client_write(struct mg_connection *conn,
 		return -1;
 	}
 
-	i = 0;
-	if (((ptrdiff_t)data % 4) == 0) {
-		/* Convert in 32 bit words, if data is 4 byte aligned */
-		while (i < (dataLen - 3)) {
-			*(uint32_t *)(void *)(masked_data + i) =
-			    *(uint32_t *)(void *)(data + i) ^ masking_key;
-			i += 4;
-		}
-	}
-	if (i != dataLen) {
-		/* convert 1-3 remaining bytes if ((dataLen % 4) != 0)*/
-		i -= 4;
-		while (i < dataLen) {
-			*(uint8_t *)(void *)(masked_data + i) =
-			    *(uint8_t *)(void *)(data + i)
-			    ^ *(((uint8_t *)&masking_key) + (i % 4));
-			i++;
-		}
-	}
-	/* TODO (high): Deal with ((dataLen % 4) != 0) and misalignment */
+	mask_data(data, dataLen, masking_key, masked_data);
+
 	retval = mg_websocket_write_exec(
 	    conn, opcode, masked_data, dataLen, masking_key);
 	mg_free(masked_data);

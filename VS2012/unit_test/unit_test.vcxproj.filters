@@ -47,13 +47,13 @@
     <ClCompile Include="..\..\test\private.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\civetweb.c">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\test\private_exe.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="..\..\test\shared.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\civetweb.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
