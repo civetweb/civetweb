@@ -103,7 +103,7 @@ wait_not_null(void *volatile *data)
 
 #ifdef __clang__
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code
+#pragma clang diagnostic ignored "-Wunreachable-code"
 #endif
 
 	ck_abort_msg("wait_not_null failed");
@@ -626,7 +626,7 @@ websock_server_data(struct mg_connection *conn,
 	} else {
 #ifdef __clang__
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code
+#pragma clang diagnostic ignored "-Wunreachable-code"
 #endif
 
 		ck_abort_msg("Got unexpected message from websocket client");
