@@ -818,6 +818,7 @@ typedef struct ssl_ctx_st SSL_CTX;
 typedef struct x509_store_ctx_st X509_STORE_CTX;
 
 #define SSL_CTRL_OPTIONS (32)
+#define SSL_CTRL_CLEAR_OPTIONS (77)
 
 #define SSL_VERIFY_NONE (0)
 #define SSL_VERIFY_PEER (1)
@@ -882,6 +883,10 @@ struct ssl_func {
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
 #define SSL_CTX_set_options(ctx,op)                                            \
 	SSL_CTX_ctrl((ctx),SSL_CTRL_OPTIONS,(op),NULL)
+#define SSL_CTX_get_options(ctx)                                               \
+	SSL_CTX_ctrl((ctx),SSL_CTRL_OPTIONS,0,NULL)
+#define SSL_CTX_clear_options(ctx,op)                                          \
+	SSL_CTX_ctrl((ctx),SSL_CTRL_CLEAR_OPTIONS,(op),NULL)
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
@@ -1029,6 +1034,8 @@ enum {
 	SSL_DEFAULT_VERIFY_PATHS,
 	SSL_FORWARD_SECRECY,
 	SSL_CIPHER_LIST,
+	SSL_PROTOCOL_VERSION,
+	SSL_SINGLE_DH_USE,
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_TIMEOUT,
 #endif
@@ -1095,6 +1102,8 @@ static struct mg_option config_options[] = {
     {"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssl_forward_secrecy", CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssl_cipher_list", CONFIG_TYPE_STRING, NULL},
+    {"ssl_protocol_version", CONFIG_TYPE_NUMBER, "0"},
+    {"ssl_single_dh_use", CONFIG_TYPE_BOOLEAN, "no"},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
@@ -10146,6 +10155,21 @@ ssl_use_pem_file(struct mg_context *ctx, const char *pem)
 }
 
 
+static long
+ssl_get_protocol(int version_id)
+{
+	long ret = SSL_OP_ALL;
+	if (version_id > 0)
+		ret |= SSL_OP_NO_SSLv2;
+	if (version_id > 1)
+		ret |= SSL_OP_NO_SSLv3;
+	if (version_id > 2)
+		ret |= SSL_OP_NO_TLSv1;
+	if(version_id > 3)
+		ret |= SSL_OP_NO_TLSv1_1;
+	return ret;
+}
+
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
 static int
 set_ssl_option(struct mg_context *ctx)
@@ -10161,6 +10185,7 @@ set_ssl_option(struct mg_context *ctx)
 	struct timespec now_mt;
 	md5_byte_t ssl_context_id[16];
 	md5_state_t md5state;
+	long protocol_ver;
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
@@ -10194,9 +10219,15 @@ set_ssl_option(struct mg_context *ctx)
 		return 0;
 	}
 
-	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_ALL | SSL_OP_NO_SSLv2
-		| SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1
-		| SSL_OP_SINGLE_DH_USE);
+	SSL_CTX_clear_options(ctx->ssl_ctx, SSL_OP_NO_SSLv2 |
+                          SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 |
+                          SSL_OP_NO_TLSv1_1 | SSL_OP_SINGLE_DH_USE);
+	protocol_ver = atoi(ctx->config[SSL_PROTOCOL_VERSION]);
+	SSL_CTX_set_options(ctx->ssl_ctx, ssl_get_protocol(protocol_ver));
+
+	if (mg_strcasecmp(ctx->config[SSL_SINGLE_DH_USE], "yes") == 0)
+		SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
+
 	/* If a callback has been specified, call it. */
 	callback_ret =
 	    (ctx->callbacks.init_ssl == NULL)
