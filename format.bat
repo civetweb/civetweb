@@ -1,3 +1,4 @@
+#!/bin/sh
 clang-format -i src/civetweb.c
 clang-format -i src/main.c
 clang-format -i src/CivetServer.cpp
