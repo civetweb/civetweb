@@ -252,9 +252,9 @@ CivetServer::CivetServer(std::vector<std::string> options,
 	}
 	callbacks.connection_close = closeHandler;
 
-	std::vector<const char*> pointers(options.size());
-	for (int i=0; i<options.size(); i++) {
-		pointers.push_back( options[i].c_str() );
+	std::vector<const char *> pointers(options.size());
+	for (int i = 0; i < options.size(); i++) {
+		pointers.push_back(options[i].c_str());
 	}
 	pointers.push_back(0);
 
