@@ -9771,7 +9771,7 @@ log_access(const struct mg_connection *conn)
 	            ri->request_method ? ri->request_method : "-",
 	            ri->request_uri ? ri->request_uri : "-",
 	            ri->query_string ? "?" : "",
-	            ri->query_string ? ri->query_string ? "",
+	            ri->query_string ? ri->query_string : "",
 	            ri->http_version,
 	            conn->status_code,
 	            conn->num_bytes_sent,
