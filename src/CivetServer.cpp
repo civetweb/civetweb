@@ -237,6 +237,32 @@ CivetServer::CivetServer(const char **options,
 		throw CivetException("null context when constructing CivetServer. "
 		                     "Possible problem binding to port.");
 }
+CivetServer::CivetServer(std::vector<std::string> options,
+                         const struct mg_callbacks *_callbacks)
+    : context(0)
+{
+	struct mg_callbacks callbacks;
+	memset(&callbacks, 0, sizeof(callbacks));
+
+	if (_callbacks) {
+		callbacks = *_callbacks;
+		userCloseHandler = _callbacks->connection_close;
+	} else {
+		userCloseHandler = NULL;
+	}
+	callbacks.connection_close = closeHandler;
+
+	std::vector<const char *> pointers(options.size());
+	for (int i = 0; i < options.size(); i++) {
+		pointers.push_back(options[i].c_str());
+	}
+	pointers.push_back(0);
+
+	context = mg_start(&callbacks, this, &pointers[0]);
+	if (context == NULL)
+		throw CivetException("null context when constructing CivetServer. "
+		                     "Possible problem binding to port.");
+}
 
 CivetServer::~CivetServer()
 {

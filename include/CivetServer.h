@@ -170,6 +170,8 @@ class CIVETWEB_API CivetServer
 	 * @throws CivetException
 	 */
 	CivetServer(const char **options, const struct mg_callbacks *callbacks = 0);
+	CivetServer(std::vector<std::string> options,
+	            const struct mg_callbacks *callbacks = 0);
 
 	/**
 	 * Destructor

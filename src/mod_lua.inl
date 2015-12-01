@@ -922,11 +922,11 @@ lwebsock_write(lua_State *L)
 			}
 		}
 	} else {
-		(void)pthread_mutex_unlock(&ws->ws_mutex);
+		(void)pthread_mutex_unlock(&(ws->ws_mutex));
 		return luaL_error(L, "invalid websocket write() call");
 	}
 
-	(void)pthread_mutex_unlock(&ws->ws_mutex);
+	(void)pthread_mutex_unlock(&(ws->ws_mutex));
 
 #else
 	(void)(L);           /* unused */
@@ -1398,30 +1398,54 @@ handle_lsp_request(struct mg_connection *conn,
 	void *p = NULL;
 	lua_State *L = NULL;
 	int error = 1;
+	struct file filesize = STRUCT_FILE_INITIALIZER;
 
 	/* Assume the script does not support keep_alive. The script may change this
 	 * by calling mg.keep_alive(true). */
 	conn->must_close = 1;
 
 	/* We need both mg_stat to get file size, and mg_fopen to get fd */
-	if (!mg_stat(conn, path, filep) || !mg_fopen(conn, path, "r", filep)) {
-		/* File not found or not accessible */
+	if (!mg_stat(conn, path, &filesize)) {
+
+		/* File not found */
 		if (ls == NULL) {
-			send_http_error(
-			    conn,
-			    500,
-			    "Error: Cannot open script\nFile %s can not be read",
-			    path);
+			send_http_error(conn, 500, "Error: File %s not found", path);
 		} else {
 			luaL_error(ls, "File [%s] not found", path);
 		}
-	} else if (filep->membuf == NULL
-	           && (p = mmap(NULL,
-	                        (size_t)filep->size,
-	                        PROT_READ,
-	                        MAP_PRIVATE,
-	                        fileno(filep->fp),
-	                        0)) == MAP_FAILED) {
+
+		goto cleanup_handle_lsp_request;
+	}
+
+	if (!mg_fopen(conn, path, "r", filep)) {
+
+		/* File not found or not accessible */
+		if (ls == NULL) {
+			send_http_error(conn,
+			                500,
+			                "Error: Cannot open script file %s",
+			                path);
+		} else {
+			luaL_error(ls, "Cannot  [%s] not found", path);
+		}
+
+		goto cleanup_handle_lsp_request;
+	}
+
+	/* TODO: Operations mg_fopen and mg_stat should do what their names
+	 * indicate. They should not fill in different members of the same
+	 * struct file.
+	 * See Github issue #225 */
+	filep->size = filesize.size;
+
+	if (filep->membuf == NULL
+	    && (p = mmap(NULL,
+	                 (size_t)filep->size,
+	                 PROT_READ,
+	                 MAP_PRIVATE,
+	                 fileno(filep->fp),
+	                 0)) == MAP_FAILED) {
+
 		/* mmap failed */
 		if (ls == NULL) {
 			send_http_error(
@@ -1437,31 +1461,45 @@ handle_lsp_request(struct mg_connection *conn,
 			           fileno(filep->fp),
 			           strerror(errno));
 		}
-	} else if ((L = (ls != NULL ? ls : lua_newstate(lua_allocator, NULL)))
-	           == NULL) {
-		send_http_error(conn,
-		                500,
-		                "%s",
-		                "Error: Cannot execute script\nlua_newstate failed");
-	} else {
-		/* We're not sending HTTP headers here, Lua page must do it. */
-		if (ls == NULL) {
-			prepare_lua_environment(
-			    conn->ctx, conn, NULL, L, path, LUA_ENV_TYPE_LUA_SERVER_PAGE);
-		}
-		error = lsp(conn,
-		            path,
-		            (filep->membuf == NULL) ? (const char *)p
-		                                    : (const char *)filep->membuf,
-		            filep->size,
-		            L);
+
+		goto cleanup_handle_lsp_request;
 	}
+
+	if (ls != NULL) {
+		L = ls;
+	} else {
+		L = lua_newstate(lua_allocator, NULL);
+		if (L == NULL) {
+			send_http_error(
+			    conn,
+			    500,
+			    "%s",
+			    "Error: Cannot execute script\nlua_newstate failed");
+
+			goto cleanup_handle_lsp_request;
+		}
+		prepare_lua_environment(
+		    conn->ctx, conn, NULL, L, path, LUA_ENV_TYPE_LUA_SERVER_PAGE);
+	}
+
+	/* Lua state is ready to use */
+	/* We're not sending HTTP headers here, Lua page must do it. */
+	error = lsp(conn,
+	            path,
+	            (filep->membuf == NULL) ? (const char *)p
+	                                    : (const char *)filep->membuf,
+	            filep->size,
+	            L);
+
+
+cleanup_handle_lsp_request:
 
 	if (L != NULL && ls == NULL)
 		lua_close(L);
 	if (p != NULL)
 		munmap(p, filep->size);
 	mg_fclose(filep);
+
 	return error;
 }
 
@@ -1490,6 +1528,7 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		}
 		shared_websock_list = &((*shared_websock_list)->next);
 	}
+
 	if (*shared_websock_list == NULL) {
 		/* add ws to list */
 		*shared_websock_list = (struct mg_shared_lua_websocket_list *)
@@ -1502,7 +1541,7 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		/* init ws list element */
 		ws = &(*shared_websock_list)->ws;
 		ws->script = mg_strdup(script); /* TODO (low): handle OOM */
-		pthread_mutex_init(&(ws->ws_mutex), NULL);
+		pthread_mutex_init(&(ws->ws_mutex), &pthread_mutex_attr);
 		(void)pthread_mutex_lock(&(ws->ws_mutex));
 		ws->state = lua_newstate(lua_allocator, NULL);
 		ws->conn[0] = conn;
@@ -1567,7 +1606,7 @@ lua_websocket_data(struct mg_connection *conn,
 	assert(ws != NULL);
 	assert(ws->state != NULL);
 
-	(void)pthread_mutex_lock(&ws->ws_mutex);
+	(void)pthread_mutex_lock(&(ws->ws_mutex));
 
 	lua_getglobal(ws->state, "data");
 	lua_newtable(ws->state);
@@ -1593,7 +1632,7 @@ lua_websocket_data(struct mg_connection *conn,
 		}
 		lua_pop(ws->state, 1);
 	}
-	(void)pthread_mutex_unlock(&ws->ws_mutex);
+	(void)pthread_mutex_unlock(&(ws->ws_mutex));
 
 	return ok;
 }
@@ -1607,14 +1646,13 @@ lua_websocket_ready(struct mg_connection *conn, void *ws_arg)
 	assert(ws != NULL);
 	assert(ws->state != NULL);
 
-	(void)pthread_mutex_lock(&ws->ws_mutex);
+	(void)pthread_mutex_lock(&(ws->ws_mutex));
 
 	lua_getglobal(ws->state, "ready");
 	lua_newtable(ws->state);
 	lua_pushstring(ws->state, "client");
 	lua_pushlightuserdata(ws->state, (void *)conn);
 	lua_rawset(ws->state, -3);
-
 	err = lua_pcall(ws->state, 1, 1, 0);
 	if (err != 0) {
 		lua_cry(conn, err, ws->state, ws->script, "ready handler");
@@ -1625,7 +1663,7 @@ lua_websocket_ready(struct mg_connection *conn, void *ws_arg)
 		lua_pop(ws->state, 1);
 	}
 
-	(void)pthread_mutex_unlock(&ws->ws_mutex);
+	(void)pthread_mutex_unlock(&(ws->ws_mutex));
 
 	return ok;
 }
@@ -1642,7 +1680,7 @@ lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 	assert(ws != NULL);
 	assert(ws->state != NULL);
 
-	(void)pthread_mutex_lock(&ws->ws_mutex);
+	(void)pthread_mutex_lock(&(ws->ws_mutex));
 
 	lua_getglobal(ws->state, "close");
 	lua_newtable(ws->state);
@@ -1665,6 +1703,6 @@ lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 	   asynchronous operations and timers are completed/expired. */
 	(void)shared_websock_list; /* shared_websock_list unused (see open TODO) */
 
-	(void)pthread_mutex_unlock(&ws->ws_mutex);
+	(void)pthread_mutex_unlock(&(ws->ws_mutex));
 }
 #endif

@@ -465,10 +465,17 @@ END_TEST
 
 START_TEST(test_mask_data)
 {
+#if defined(USE_WEBSOCKET)
 	char in[1024];
 	char out[1024];
 	int i;
+#endif
 
+	uint32_t mask = 0x61626364;
+	/* TODO: adapt test for big endian */
+	ck_assert((*(unsigned char *)&mask) == 0x64u);
+
+#if defined(USE_WEBSOCKET)
 	memset(in, 0, sizeof(in));
 	memset(out, 99, sizeof(out));
 
@@ -497,6 +504,7 @@ START_TEST(test_mask_data)
 	ck_assert_uint_eq((unsigned char)out[2], 2u ^ 2u);
 	ck_assert_uint_eq((unsigned char)out[3], 3u ^ 1u);
 	ck_assert_uint_eq((unsigned char)out[4], 4u ^ 4u);
+#endif
 }
 END_TEST
 
@@ -506,38 +514,39 @@ make_private_suite(void)
 {
 	Suite *const suite = suite_create("Private");
 
-	TCase *const http_message = tcase_create("HTTP Message");
-	TCase *const url_parsing = tcase_create("URL Parsing");
-	TCase *const internal_parse = tcase_create("Internal Parsing");
-	TCase *const encode_decode = tcase_create("Encode Decode");
-	TCase *const mask_data = tcase_create("Mask Data");
+	TCase *const tcase_http_message = tcase_create("HTTP Message");
+	TCase *const tcase_url_parsing = tcase_create("URL Parsing");
+	TCase *const tcase_internal_parse = tcase_create("Internal Parsing");
+	TCase *const tcase_encode_decode = tcase_create("Encode Decode");
+	TCase *const tcase_mask_data = tcase_create("Mask Data");
 
-	tcase_add_test(http_message, test_parse_http_message);
-	tcase_add_test(http_message, test_should_keep_alive);
-	tcase_set_timeout(http_message, civetweb_min_test_timeout);
-	suite_add_tcase(suite, http_message);
+	tcase_add_test(tcase_http_message, test_parse_http_message);
+	tcase_add_test(tcase_http_message, test_should_keep_alive);
+	tcase_set_timeout(tcase_http_message, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_http_message);
 
-	tcase_add_test(url_parsing, test_match_prefix);
-	tcase_add_test(url_parsing, test_remove_double_dots_and_double_slashes);
-	tcase_add_test(url_parsing, test_is_valid_uri);
-	tcase_set_timeout(url_parsing, civetweb_min_test_timeout);
-	suite_add_tcase(suite, url_parsing);
+	tcase_add_test(tcase_url_parsing, test_match_prefix);
+	tcase_add_test(tcase_url_parsing,
+	               test_remove_double_dots_and_double_slashes);
+	tcase_add_test(tcase_url_parsing, test_is_valid_uri);
+	tcase_set_timeout(tcase_url_parsing, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_url_parsing);
 
-	tcase_add_test(internal_parse, test_next_option);
-	tcase_add_test(internal_parse, test_skip_quoted);
-	tcase_add_test(internal_parse, test_mg_strcasestr);
-	tcase_add_test(internal_parse, test_alloc_vprintf);
-	tcase_add_test(internal_parse, test_parse_port_string);
-	tcase_set_timeout(internal_parse, civetweb_min_test_timeout);
-	suite_add_tcase(suite, internal_parse);
+	tcase_add_test(tcase_internal_parse, test_next_option);
+	tcase_add_test(tcase_internal_parse, test_skip_quoted);
+	tcase_add_test(tcase_internal_parse, test_mg_strcasestr);
+	tcase_add_test(tcase_internal_parse, test_alloc_vprintf);
+	tcase_add_test(tcase_internal_parse, test_parse_port_string);
+	tcase_set_timeout(tcase_internal_parse, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse);
 
-	tcase_add_test(encode_decode, test_encode_decode);
-	tcase_set_timeout(encode_decode, civetweb_min_test_timeout);
-	suite_add_tcase(suite, encode_decode);
+	tcase_add_test(tcase_encode_decode, test_encode_decode);
+	tcase_set_timeout(tcase_encode_decode, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_encode_decode);
 
-	tcase_add_test(mask_data, test_mask_data);
-	tcase_set_timeout(mask_data, civetweb_min_test_timeout);
-	suite_add_tcase(suite, mask_data);
+	tcase_add_test(tcase_mask_data, test_mask_data);
+	tcase_set_timeout(tcase_mask_data, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_mask_data);
 
 	return suite;
 }
