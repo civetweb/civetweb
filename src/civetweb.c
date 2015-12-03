@@ -10128,13 +10128,6 @@ initialize_ssl(struct mg_context *ctx)
 	return 1;
 }
 
-int pem_passwd_cb(char *buf, int size, int rwflag, void *password)
-{
-	strncpy(buf, (char *)(password), size);
-	buf[size - 1] = '\0';
-	return(strlen(buf));
-}
-
 static int
 ssl_use_pem_file(struct mg_context *ctx, const char *pem)
 {
