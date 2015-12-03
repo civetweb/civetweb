@@ -1033,7 +1033,6 @@ enum {
 	SSL_FORWARD_SECRECY,
 	SSL_CIPHER_LIST,
 	SSL_PROTOCOL_VERSION,
-	SSL_SINGLE_DH_USE,
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_TIMEOUT,
 #endif
@@ -1101,7 +1100,6 @@ static struct mg_option config_options[] = {
     {"ssl_forward_secrecy", CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssl_cipher_list", CONFIG_TYPE_STRING, NULL},
     {"ssl_protocol_version", CONFIG_TYPE_NUMBER, "0"},
-    {"ssl_single_dh_use", CONFIG_TYPE_BOOLEAN, "no"},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
@@ -10128,6 +10126,12 @@ initialize_ssl(struct mg_context *ctx)
 	return 1;
 }
 
+int pem_passwd_cb(char *buf, int size, int rwflag, void *password)
+{
+	strncpy(buf, (char *)(password), size);
+	buf[size - 1] = '\0';
+	return(strlen(buf));
+}
 
 static int
 ssl_use_pem_file(struct mg_context *ctx, const char *pem)
@@ -10142,7 +10146,6 @@ ssl_use_pem_file(struct mg_context *ctx, const char *pem)
 	}
 
 	/* could use SSL_CTX_set_default_passwd_cb_userdata */
-
 	if (SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, pem, 1) == 0) {
 		mg_cry(fc(ctx),
 		       "%s: cannot open private key file %s: %s",
@@ -10238,12 +10241,10 @@ set_ssl_option(struct mg_context *ctx)
 
 	SSL_CTX_clear_options(ctx->ssl_ctx, SSL_OP_NO_SSLv2 |
                           SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 |
-                          SSL_OP_NO_TLSv1_1 | SSL_OP_SINGLE_DH_USE);
+                          SSL_OP_NO_TLSv1_1);
 	protocol_ver = atoi(ctx->config[SSL_PROTOCOL_VERSION]);
 	SSL_CTX_set_options(ctx->ssl_ctx, ssl_get_protocol(protocol_ver));
-
-	if (mg_strcasecmp(ctx->config[SSL_SINGLE_DH_USE], "yes") == 0)
-		SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
+	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
 
 	/* If a callback has been specified, call it. */
 	callback_ret =
