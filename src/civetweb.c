@@ -2668,7 +2668,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 	if (conn && is_file_in_memory(conn, path, filep)) {
 		/* filep->is_directory = 0; filep->gzipped = 0; .. already done by
 		 * memset */
-		last_modified = time(NULL);
+		filep->last_modified = time(NULL);
 		/* last_modified = now ... assumes the file may change during runtime,
 		 * so every mg_fopen call may return different data */
 		/* last_modified = conn->ctx.start_time;
