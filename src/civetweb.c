@@ -4175,7 +4175,7 @@ is_put_or_delete_method(const struct mg_connection *conn)
 }
 
 static void
-interpret_uri(struct mg_connection *conn,   /* in: request */
+interpret_uri(struct mg_connection *conn,   /* in: request (must be valid) */
               char *filename,               /* out: filename */
               size_t filename_buf_len,      /* in: size of filename buffer */
               struct file *filep,           /* out: file structure */
@@ -4185,202 +4185,188 @@ interpret_uri(struct mg_connection *conn,   /* in: request */
               int *is_put_or_delete_request /* out: put/delete a file? */
               )
 {
-	/* TODO (high): Restructure this function */
-	if (conn && conn->ctx) {
+/* TODO (high): Restructure this function */
 
 #if !defined(NO_FILES)
-		const char *uri = conn->request_info.local_uri;
-		const char *root = conn->ctx->config[DOCUMENT_ROOT];
-		const char *rewrite;
-		struct vec a, b;
-		int match_len;
-		char gz_path[PATH_MAX];
-		char const *accept_encoding;
-		int truncated;
+	const char *uri = conn->request_info.local_uri;
+	const char *root = conn->ctx->config[DOCUMENT_ROOT];
+	const char *rewrite;
+	struct vec a, b;
+	int match_len;
+	char gz_path[PATH_MAX];
+	char const *accept_encoding;
+	int truncated;
 #if !defined(NO_CGI) || defined(USE_LUA)
-		char *p;
+	char *p;
 #endif
 #else
-		(void)filename_buf_len; /* unused if NO_FILES is defined */
+	(void)filename_buf_len; /* unused if NO_FILES is defined */
 #endif
 
-		memset(filep, 0, sizeof(*filep));
-		*filename = 0;
-		*is_found = 0;
-		*is_script_resource = 0;
-		*is_put_or_delete_request = is_put_or_delete_method(conn);
+	memset(filep, 0, sizeof(*filep));
+	*filename = 0;
+	*is_found = 0;
+	*is_script_resource = 0;
+	*is_put_or_delete_request = is_put_or_delete_method(conn);
 
 #if defined(USE_WEBSOCKET)
-		*is_websocket_request = is_websocket_protocol(conn);
+	*is_websocket_request = is_websocket_protocol(conn);
 #if !defined(NO_FILES)
-		if (*is_websocket_request && conn->ctx->config[WEBSOCKET_ROOT]) {
-			root = conn->ctx->config[WEBSOCKET_ROOT];
-		}
+	if (*is_websocket_request && conn->ctx->config[WEBSOCKET_ROOT]) {
+		root = conn->ctx->config[WEBSOCKET_ROOT];
+	}
 #endif /* !NO_FILES */
 #else  /* USE_WEBSOCKET */
-		*is_websocket_request = 0;
+	*is_websocket_request = 0;
 #endif /* USE_WEBSOCKET */
 
 #if !defined(NO_FILES)
-		/* Note that root == NULL is a regular use case here. This occurs,
-		 * if all requests are handled by callbacks, so the WEBSOCKET_ROOT
-		 * config is not required. */
-		if (root == NULL) {
-			/* all file related outputs have already been set to 0, just return
-			 */
-			return;
+	/* Note that root == NULL is a regular use case here. This occurs,
+	 * if all requests are handled by callbacks, so the WEBSOCKET_ROOT
+	 * config is not required. */
+	if (root == NULL) {
+		/* all file related outputs have already been set to 0, just return
+		 */
+		return;
+	}
+
+	/* Using buf_len - 1 because memmove() for PATH_INFO may shift part
+	 * of the path one byte on the right.
+	 * If document_root is NULL, leave the file empty. */
+	mg_snprintf(
+	    conn, &truncated, filename, filename_buf_len - 1, "%s%s", root, uri);
+
+	if (truncated) {
+		goto interpret_cleanup;
+	}
+
+	rewrite = conn->ctx->config[REWRITE];
+	while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
+		if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
+			mg_snprintf(conn,
+			            &truncated,
+			            filename,
+			            filename_buf_len - 1,
+			            "%.*s%s",
+			            (int)b.len,
+			            b.ptr,
+			            uri + match_len);
+			break;
 		}
+	}
 
-		/* Using buf_len - 1 because memmove() for PATH_INFO may shift part
-		 * of the path one byte on the right.
-		 * If document_root is NULL, leave the file empty. */
-		mg_snprintf(conn,
-		            &truncated,
-		            filename,
-		            filename_buf_len - 1,
-		            "%s%s",
-		            root,
-		            uri);
+	if (truncated) {
+		goto interpret_cleanup;
+	}
 
-		if (truncated) {
-			goto interpret_cleanup;
-		}
-
-		rewrite = conn->ctx->config[REWRITE];
-		while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
-			if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
-				mg_snprintf(conn,
-				            &truncated,
-				            filename,
-				            filename_buf_len - 1,
-				            "%.*s%s",
-				            (int)b.len,
-				            b.ptr,
-				            uri + match_len);
-				break;
-			}
-		}
-
-		if (truncated) {
-			goto interpret_cleanup;
-		}
-
-		/* Local file path and name, corresponding to requested URI
-		 * is now stored in "filename" variable. */
-		if (mg_stat(conn, filename, filep)) {
+	/* Local file path and name, corresponding to requested URI
+	 * is now stored in "filename" variable. */
+	if (mg_stat(conn, filename, filep)) {
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
-			/* File exists. Check if it is a script type. */
-			if (0
+		/* File exists. Check if it is a script type. */
+		if (0
 #if !defined(NO_CGI)
-			    || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-			                    strlen(conn->ctx->config[CGI_EXTENSIONS]),
-			                    filename) > 0
+		    || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+		                    strlen(conn->ctx->config[CGI_EXTENSIONS]),
+		                    filename) > 0
 #endif
 #if defined(USE_LUA)
-			    || match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-			                    strlen(
-			                        conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
-			                    filename) > 0
+		    || match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+		                    strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+		                    filename) > 0
 #endif
 #if defined(USE_DUKTAPE)
-			    || match_prefix(
-			           conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
-			           strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-			           filename) > 0
+		    || match_prefix(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+		                    strlen(
+		                        conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
+		                    filename) > 0
 #endif
-			    ) {
-				/* The request addresses a CGI script or a Lua script. The URI
-				 * corresponds to the script itself (like /path/script.cgi),
-				 * and there is no additional resource path
-				 * (like /path/script.cgi/something).
-				 * Requests that modify (replace or delete) a resource, like
-				 * PUT and DELETE requests, should replace/delete the script
-				 * file.
-				 * Requests that read or write from/to a resource, like GET and
-				 * POST requests, should call the script and return the
-				 * generated response. */
-				*is_script_resource = !*is_put_or_delete_request;
-			}
+		    ) {
+			/* The request addresses a CGI script or a Lua script. The URI
+			 * corresponds to the script itself (like /path/script.cgi),
+			 * and there is no additional resource path
+			 * (like /path/script.cgi/something).
+			 * Requests that modify (replace or delete) a resource, like
+			 * PUT and DELETE requests, should replace/delete the script
+			 * file.
+			 * Requests that read or write from/to a resource, like GET and
+			 * POST requests, should call the script and return the
+			 * generated response. */
+			*is_script_resource = !*is_put_or_delete_request;
+		}
 #endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
-			*is_found = 1;
-			return;
-		}
+		*is_found = 1;
+		return;
+	}
 
-		/* If we can't find the actual file, look for the file
-		 * with the same name but a .gz extension. If we find it,
-		 * use that and set the gzipped flag in the file struct
-		 * to indicate that the response need to have the content-
-		 * encoding: gzip header.
-		 * We can only do this if the browser declares support. */
-		if ((accept_encoding = mg_get_header(conn, "Accept-Encoding"))
-		    != NULL) {
-			if (strstr(accept_encoding, "gzip") != NULL) {
-				mg_snprintf(conn,
-				            &truncated,
-				            gz_path,
-				            sizeof(gz_path),
-				            "%s.gz",
-				            filename);
+	/* If we can't find the actual file, look for the file
+	 * with the same name but a .gz extension. If we find it,
+	 * use that and set the gzipped flag in the file struct
+	 * to indicate that the response need to have the content-
+	 * encoding: gzip header.
+	 * We can only do this if the browser declares support. */
+	if ((accept_encoding = mg_get_header(conn, "Accept-Encoding")) != NULL) {
+		if (strstr(accept_encoding, "gzip") != NULL) {
+			mg_snprintf(
+			    conn, &truncated, gz_path, sizeof(gz_path), "%s.gz", filename);
 
-				if (truncated) {
-					goto interpret_cleanup;
+			if (truncated) {
+				goto interpret_cleanup;
+			}
+
+			if (mg_stat(conn, gz_path, filep)) {
+				if (filep) {
+					filep->gzipped = 1;
+					*is_found = 1;
 				}
-
-				if (mg_stat(conn, gz_path, filep)) {
-					if (filep) {
-						filep->gzipped = 1;
-						*is_found = 1;
-					}
-					/* Currently gz files can not be scripts. */
-					return;
-				}
+				/* Currently gz files can not be scripts. */
+				return;
 			}
 		}
+	}
 
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
-		/* Support PATH_INFO for CGI scripts. */
-		for (p = filename + strlen(filename); p > filename + 1; p--) {
-			if (*p == '/') {
-				*p = '\0';
-				if ((0
+	/* Support PATH_INFO for CGI scripts. */
+	for (p = filename + strlen(filename); p > filename + 1; p--) {
+		if (*p == '/') {
+			*p = '\0';
+			if ((0
 #if !defined(NO_CGI)
-				     || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-				                     strlen(conn->ctx->config[CGI_EXTENSIONS]),
-				                     filename) > 0
+			     || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+			                     strlen(conn->ctx->config[CGI_EXTENSIONS]),
+			                     filename) > 0
 #endif
 #if defined(USE_LUA)
-				     || match_prefix(
-				            conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-				            strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
-				            filename) > 0
+			     || match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+			                     strlen(
+			                         conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+			                     filename) > 0
 #endif
 #if defined(USE_DUKTAPE)
-				     || match_prefix(
-				            conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
-				            strlen(
-				                conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-				            filename) > 0
+			     || match_prefix(
+			            conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+			            strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
+			            filename) > 0
 #endif
-				     ) && mg_stat(conn, filename, filep)) {
-					/* Shift PATH_INFO block one character right, e.g.
-					 * "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
-					 * conn->path_info is pointing to the local variable "path"
-					 * declared in handle_request(), so PATH_INFO is not valid
-					 * after handle_request returns. */
-					conn->path_info = p + 1;
-					memmove(p + 2, p + 1, strlen(p + 1) + 1); /* +1 is for
-					                                           * trailing \0 */
-					p[1] = '/';
-					*is_script_resource = 1;
-					break;
-				} else {
-					*p = '/';
-				}
+			     ) && mg_stat(conn, filename, filep)) {
+				/* Shift PATH_INFO block one character right, e.g.
+				 * "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
+				 * conn->path_info is pointing to the local variable "path"
+				 * declared in handle_request(), so PATH_INFO is not valid
+				 * after handle_request returns. */
+				conn->path_info = p + 1;
+				memmove(p + 2, p + 1, strlen(p + 1) + 1); /* +1 is for
+				                                           * trailing \0 */
+				p[1] = '/';
+				*is_script_resource = 1;
+				break;
+			} else {
+				*p = '/';
 			}
 		}
+	}
 #endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
 #endif /* !defined(NO_FILES) */
-	}
 	return;
 
 #if !defined(NO_FILES)
@@ -4390,7 +4376,9 @@ interpret_cleanup:
 	*filename = 0;
 	*is_found = 0;
 	*is_script_resource = 0;
-#endif
+	*is_websocket_request = 0;
+	*is_put_or_delete_request = 0;
+#endif /* !defined(NO_FILES) */
 }
 
 /* Check whether full request is buffered. Return:
@@ -6173,14 +6161,28 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 static int
 is_valid_http_method(const char *method)
 {
-	return !strcmp(method, "GET") || !strcmp(method, "POST")
-	       || !strcmp(method, "HEAD") || !strcmp(method, "CONNECT")
-	       || !strcmp(method, "PUT") || !strcmp(method, "DELETE")
-	       || !strcmp(method, "OPTIONS") || !strcmp(method, "PROPFIND")
-	       || !strcmp(method, "MKCOL") || !strcmp(method, "PATCH");
+	return !strcmp(method, "GET")        /* HTTP (RFC 2616) */
+	       || !strcmp(method, "POST")    /* HTTP (RFC 2616) */
+	       || !strcmp(method, "HEAD")    /* HTTP (RFC 2616) */
+	       || !strcmp(method, "PUT")     /* HTTP (RFC 2616) */
+	       || !strcmp(method, "DELETE")  /* HTTP (RFC 2616) */
+	       || !strcmp(method, "OPTIONS") /* HTTP (RFC 2616) */
+	       /* TRACE method (RFC 2616) is not supported for security reasons */
+	       || !strcmp(method, "CONNECT") /* HTTP (RFC 2616) */
 
-	/* TRACE method is not supported for security reasons */
-	/* PATCH method (RFC 5789) only allowed for CGI/Lua/LSP and callbacks. */
+	       || !strcmp(method, "PROPFIND") /* WEBDAV (RFC 2518) */
+	       || !strcmp(method, "MKCOL")    /* WEBDAV (RFC 2518) */
+	                                      /* Unsupported WEBDAV Methods: */
+	       /* PROPPATCH, COPY, MOVE, LOCK, UNLOCK (RFC 2518) */
+	       /* + 11 methods from RFC 3253 */
+	       /* ORDERPATCH (RFC 3648) */
+	       /* ACL (RFC 3744) */
+	       /* SEARCH (RFC 5323) */
+	       /* + MicroSoft extensions
+	        * https://msdn.microsoft.com/en-us/library/aa142917.aspx */
+
+	       /* PATCH method only allowed for CGI/Lua/LSP and callbacks. */
+	       || !strcmp(method, "PATCH"); /* PATCH method (RFC 5789) */
 }
 
 /* Parse HTTP request, fill in mg_request_info structure.
@@ -7088,7 +7090,7 @@ mkcol(struct mg_connection *conn, const char *path)
 	} else if (rc == -1) {
 		if (errno == EEXIST) {
 			send_http_error(
-			    conn, 405, "Error:mkcol(%s): %s", path, strerror(ERRNO));
+			    conn, 405, "Error: mkcol(%s): %s", path, strerror(ERRNO));
 		} else if (errno == EACCES) {
 			send_http_error(
 			    conn, 403, "Error: mkcol(%s): %s", path, strerror(ERRNO));
