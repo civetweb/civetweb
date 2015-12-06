@@ -7280,8 +7280,8 @@ delete_file(struct mg_connection *conn, const char *path)
 			/* Delete is successful: Return 204 without content. */
 			send_http_error(conn, 204, "%s", "");
 		} else {
-			/* Delete is not successful: Return 409 "Conflict". */
-			send_http_error(conn, 409, "Could not delete %s", path);
+			/* Delete is not successful: Return 500 (Server error). */
+			send_http_error(conn, 500, "Error: Could not delete %s", path);
 		}
 		return;
 	}
