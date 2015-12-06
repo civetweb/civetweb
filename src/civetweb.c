@@ -5682,6 +5682,7 @@ remove_directory(struct mg_connection *conn, const char *dir)
 
 			if (truncated) {
 				/* Do not delete anything shorter */
+				ok = 0;
 				continue;
 			}
 
@@ -5691,6 +5692,7 @@ remove_directory(struct mg_connection *conn, const char *dir)
 				       __func__,
 				       path,
 				       strerror(ERRNO));
+				ok = 0;
 			}
 			if (de.file.membuf == NULL) {
 				/* file is not in memory */
@@ -5703,6 +5705,9 @@ remove_directory(struct mg_connection *conn, const char *dir)
 						ok = 0;
 					}
 				}
+			} else {
+				/* file is in memory. It can not be deleted. */
+				ok = 0;
 			}
 		}
 		(void)closedir(dirp);
@@ -7271,10 +7276,13 @@ delete_file(struct mg_connection *conn, const char *path)
 	}
 
 	if (de.file.is_directory) {
-		remove_directory(conn, path);
-		/* TODO (mid): remove_dir does not return success of the operation */
-		/* Assume delete is successful: Return 204 without content. */
-		send_http_error(conn, 204, "%s", "");
+		if (remove_directory(conn, path)) {
+			/* Delete is successful: Return 204 without content. */
+			send_http_error(conn, 204, "%s", "");
+		} else {
+			/* Delete is not successful: Return 409 "Conflict". */
+			send_http_error(conn, 409, "Could not delete %s", path);
+		}
 		return;
 	}
 
