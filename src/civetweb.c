@@ -1825,19 +1825,19 @@ skip_quoted(char **buf,
 	if (end_word > begin_word) {
 		p = end_word - 1;
 		while (*p == quotechar) {
-			/* TODO (bel, low): it seems this code is never reached, so
-			 * quotechar is actually not needed - check if this code may be
-			 * droped */
+			/* While the delimiter is quoted, look for the next delimiter. */
+			/* This happens, e.g., in calls from parse_auth_header,
+			 * if the user name contains a " character. */
 
-			/* If there is anything beyond end_word, copy it */
-			if (*end_word == '\0') {
-				*p = '\0';
-				break;
-			} else {
+			/* If there is anything beyond end_word, copy it. */
+			if (*end_word != '\0') {
 				size_t end_off = strcspn(end_word + 1, delimiters);
 				memmove(p, end_word, end_off + 1);
 				p += end_off; /* p must correspond to end_word - 1 */
 				end_word += end_off + 1;
+			} else {
+				*p = '\0';
+				break;
 			}
 		}
 		for (p++; p < end_word; p++) {
@@ -6172,7 +6172,8 @@ is_valid_http_method(const char *method)
 
 	       || !strcmp(method, "PROPFIND") /* WEBDAV (RFC 2518) */
 	       || !strcmp(method, "MKCOL")    /* WEBDAV (RFC 2518) */
-	                                      /* Unsupported WEBDAV Methods: */
+
+	       /* Unsupported WEBDAV Methods: */
 	       /* PROPPATCH, COPY, MOVE, LOCK, UNLOCK (RFC 2518) */
 	       /* + 11 methods from RFC 3253 */
 	       /* ORDERPATCH (RFC 3648) */
