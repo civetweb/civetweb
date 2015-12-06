@@ -4708,11 +4708,7 @@ check_password(const char *method,
 	}
 
 	/* NOTE(lsm): due to a bug in MSIE, we do not compare the URI */
-	/* TODO(lsm): check for authentication timeout */
-	if (/* strcmp(dig->uri, c->ouri) != 0 || */
-	    strlen(response) != 32
-	    /* || now - strtoul(dig->nonce, NULL, 10) > 3600 */
-	    ) {
+	if (strlen(response) != 32) {
 		return 0;
 	}
 
@@ -4795,10 +4791,12 @@ open_auth_file(struct mg_connection *conn, const char *path, struct file *filep)
 	}
 }
 
+
 /* Parsed Authorization header */
 struct ah {
 	char *user, *uri, *cnonce, *response, *qop, *nc, *nonce;
 };
+
 
 /* Return 1 on success. Always initializes the ah structure. */
 static int
@@ -4865,12 +4863,7 @@ parse_auth_header(struct mg_connection *conn,
 	}
 
 #ifndef NO_NONCE_CHECK
-	/* Convert the nonce from the client to a number and check it. */
-	/* Server side nonce check is valuable in all situations but one: if the
-	 * server restarts frequently,
-	 * but the client should not see that, so the server should accept nonces
-	 * from
-	 * previous starts. */
+	/* Read the nonce from the response. */
 	if (ah->nonce == NULL) {
 		return 0;
 	}
@@ -4879,12 +4872,25 @@ parse_auth_header(struct mg_connection *conn,
 	if ((s == NULL) || (*s != 0)) {
 		return 0;
 	}
+
+	/* Convert the nonce from the client to a number. */
 	nonce ^= (uintptr_t)(conn->ctx);
+
+	/* The converted number corresponds to the time the nounce has been
+	 * created. This should not be earlier than the server start. */
+	/* Server side nonce check is valuable in all situations but one:
+	 * if the server restarts frequently, but the client should not see
+	 * that, so the server should accept nonces from previous starts. */
+	/* However, the reasonable default is to not accept a nonce from a
+	 * previous start, so if anyone changed the access rights between
+	 * two restarts, a new login is required. */
 	if (nonce < conn->ctx->start_time) {
 		/* nonce is from a previous start of the server and no longer valid
 		 * (replay attack?) */
 		return 0;
 	}
+	/* Check if the nonce is too high, so it has not (yet) been used by the
+	 * server. */
 	if (nonce >= conn->ctx->start_time + conn->ctx->nonce_count) {
 		return 0;
 	}
@@ -4899,6 +4905,7 @@ parse_auth_header(struct mg_connection *conn,
 
 	return 1;
 }
+
 
 static char *
 mg_fgets(char *buf, size_t size, struct file *filep, char **p)
