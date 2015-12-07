@@ -25,9 +25,11 @@ The *INL* file extension represents code that is statically included inline in a
 
 #### Other Files
 
-  1. Reference C Server
+  1. Stand-alone C Server
     - src/main.c
-  2. Reference C++ Server
+  2. Embedded reference C Server
+    - examples/embedded_c/embedded_c.c
+  3. Embedded reference C++ Server
     - examples/embedded_cpp/embedded_cpp.cpp
 
 Quick Start
@@ -36,6 +38,7 @@ Quick Start
 By default, the server will automatically serve up files like a normal HTTP server.  An embedded server is most likely going to overload this functionality.
 
 ### C
+  - Include the C interface ```civetweb.h```.
   - Use ```mg_start()``` to start the server.
       - Use *options* to select the port and document root among other things.
       - Use *callbacks* to add your own hooks.
@@ -43,6 +46,8 @@ By default, the server will automatically serve up files like a normal HTTP serv
   - Use ```mg_stop()``` to stop the server.
 
 ### C++
+  - Note that CivetWeb is Clean C, and C++ interface ```CivetServer.h``` is only a wrapper layer.
+    Not all CivetWeb features available in C are also available in C++.
   - Create CivetHandlers for each URI.
   - Register the handlers with ```CivetServer::addHandler()```
   - ```CivetServer``` starts on contruction and stops on destruction.
