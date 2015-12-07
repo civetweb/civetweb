@@ -1030,7 +1030,6 @@ enum {
 	SSL_CA_FILE,
 	SSL_VERIFY_DEPTH,
 	SSL_DEFAULT_VERIFY_PATHS,
-	SSL_FORWARD_SECRECY,
 	SSL_CIPHER_LIST,
 	SSL_PROTOCOL_VERSION,
 #if defined(USE_WEBSOCKET)
@@ -1097,7 +1096,6 @@ static struct mg_option config_options[] = {
     {"ssl_ca_file", CONFIG_TYPE_FILE, NULL},
     {"ssl_verify_depth", CONFIG_TYPE_NUMBER, "9"},
     {"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
-    {"ssl_forward_secrecy", CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssl_cipher_list", CONFIG_TYPE_STRING, NULL},
     {"ssl_protocol_version", CONFIG_TYPE_NUMBER, "0"},
 #if defined(USE_WEBSOCKET)

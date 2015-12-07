@@ -407,9 +407,6 @@ than the depth set here connection is refused.
 ### ssl_default_verify_paths `yes`
 Loads default trusted certificates locations set at openssl compile time.
 
-### ssl_forward_secrecy `yes`
-Enable [forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
-
 ### ssl_cipher_list
 List of ciphers to present to the client. Entries should be separated by 
 colons, commas or spaces.
