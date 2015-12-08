@@ -1,7 +1,7 @@
 Building Civetweb
 =========
 
-This guide covers the build instructions for stand-alone web server.
+This guide covers the build instructions for the stand-alone web server.
 See [Embedding.md](https://github.com/civetweb/civetweb/blob/master/docs/Embedding.md) for information on extending an application.
 
 #### Where to get the source code?
@@ -13,8 +13,8 @@ Building for Windows
 
 #### Using Visual Studio
 Open the *VS2012/civetweb.sln* in Visual Studio.
-To include SSL support, you may have to use yaSSL.  However, it is GPL licensed.
-See [yaSSL.md](https://github.com/civetweb/civetweb/blob/master/docs/yaSSL.md) for more information.
+To include SSL support, you may have to add an extra library for the cryptography support. You might wish to use yaSSL.  However, it is GPL licensed. See [yaSSL.md](https://github.com/civetweb/civetweb/blob/master/docs/yaSSL.md) for more information.
+Alternatively, you might wish to use OpenSSL. See [OpenSSL.md](https://github.com/civetweb/civetweb/blob/master/docs/OpenSSL.md) for more information.
 
 #### Using MinGW-w64 or TDM-GCC
 In the start menu locate and run the "Run terminal" batch file. For TDM-GCC this is named "MinGW Command Prompt".
@@ -22,6 +22,14 @@ Navigate to the civetweb sources directory and run:
 ```
 mingw32-make CC=gcc
 ```
+
+#### Using Qt Creator
+Open the Qt Designer project in the Qt folder
+
+#### Using CMake
+Except for Lua and Duktape support, CivetWeb can also be built with CMake.
+CMake can be used for all supported operating systems.
+
 
 Building for Linux, BSD, and OSX
 ---------
@@ -150,7 +158,7 @@ Building on Android
 This is a small guide to help you run civetweb on Android. Currently it is
 tested on the HTC Wildfire. If you have managed to run it on other devices
 as well, please comment or drop an email in the mailing list.
-Note : You dont need root access to run civetweb on Android.
+Note: You do not need root access to run civetweb on Android.
 
 - Download the source from the Downloads page.
 - Download the Android NDK from [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)

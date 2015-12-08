@@ -141,7 +141,7 @@ about web server instance:
 - a queue for accepted sockets
 - mutexes and condition variables for inter-thread synchronization
 
-When `mg_start()` returns, all initialization is quaranteed to be complete
+When `mg_start()` returns, all initialization is guaranteed to be complete
 (e.g. listening ports are opened, SSL is initialized, etc). `mg_start()` starts
 some threads: a master thread, that accepts new connections, and several
 worker threads, that process accepted connections. The number of worker threads
@@ -190,3 +190,4 @@ threads use blocking IO on accepted sockets for reading and writing data.
 All accepted sockets have `SO_RCVTIMEO` and `SO_SNDTIMEO` socket options set
 (controlled by the `request_timeout_ms` CivetWeb option, 30 seconds default) 
 which specifies a read/write timeout on client connections.
+
