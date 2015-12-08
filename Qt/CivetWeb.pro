@@ -20,3 +20,6 @@ INCLUDEPATH +=  \
     ../include/
 
 LIBS += -lws2_32 -lComdlg32
+
+DEFINES += USE_IPV6
+DEFINES += USE_WEBSOCKET
