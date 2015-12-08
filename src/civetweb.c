@@ -1571,6 +1571,33 @@ mg_snprintf(const struct mg_connection *conn,
 	va_end(ap);
 }
 
+
+static int64_t
+get_random(void)
+{
+    static uint64_t lfsr = 0;
+    static uint64_t lcg = 0;
+    struct timespec now;
+
+    memset(&now, 0, sizeof(now));
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    if (lfsr == 0) {
+        lfsr = (((uint64_t)now.tv_sec) << 21) ^ (uint64_t)now.tv_nsec
+               ^ (uint64_t)(ptrdiff_t)&now;
+        lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
+              + (uint64_t)(ptrdiff_t)&now;
+    } else {
+        lfsr = (lfsr >> 1)
+               | ((((lfsr >> 0) ^ (lfsr >> 1) ^ (lfsr >> 3) ^ (lfsr >> 4)) & 1)
+                  << 63);
+        lcg = lcg * 6364136223846793005 + 1442695040888963407;
+    }
+
+    return (lfsr ^ lcg ^ now.tv_nsec);
+}
+
+
 static int
 get_option_index(const char *name)
 {
@@ -8262,27 +8289,7 @@ mg_websocket_client_write(struct mg_connection *conn,
 {
 	int retval = -1;
 	char *masked_data = (char *)mg_malloc(((dataLen + 7) / 4) * 4);
-	uint32_t masking_key;
-	static uint64_t lfsr = 0;
-	static uint64_t lcg = 0;
-	struct timespec now;
-
-	memset(&now, 0, sizeof(now));
-	clock_gettime(CLOCK_MONOTONIC, &now);
-
-	if (lfsr == 0) {
-		lfsr = (((uint64_t)now.tv_sec) << 21) ^ (uint64_t)now.tv_nsec
-		       ^ (uint64_t)&dataLen;
-		lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
-		      + (uint64_t)data;
-	} else {
-		lfsr = (lfsr >> 1)
-		       | ((((lfsr >> 0) ^ (lfsr >> 1) ^ (lfsr >> 3) ^ (lfsr >> 4)) & 1)
-		          << 63);
-		lcg = lcg * 6364136223846793005 + 1442695040888963407;
-	}
-
-	masking_key = (uint32_t)lfsr ^ (uint32_t)lcg ^ (uint32_t)now.tv_nsec;
+    uint32_t masking_key = (uint32_t)get_random();
 
 	if (masked_data == NULL) {
 		/* Return -1 in an error case */
@@ -11851,6 +11858,9 @@ mg_start(const struct mg_callbacks *callbacks,
 	if ((ctx = (struct mg_context *)mg_calloc(1, sizeof(*ctx))) == NULL) {
 		return NULL;
 	}
+
+    /* Random number generator will initialize at the first call */
+    (void)get_random();
 
 	if (mg_atomic_inc(&sTlsInit) == 1) {
 
