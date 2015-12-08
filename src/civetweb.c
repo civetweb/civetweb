@@ -10216,7 +10216,7 @@ set_ssl_option(struct mg_context *ctx)
 	struct timespec now_mt;
 	md5_byte_t ssl_context_id[16];
 	md5_state_t md5state;
-	long protocol_ver;
+	int protocol_ver;
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
