@@ -3350,7 +3350,7 @@ set_non_blocking_mode(SOCKET sock)
 
 
 /* Get a random number (independent of C rand function) */
-static int64_t
+static uint64_t
 get_random(void)
 {
 	static uint64_t lfsr = 0; /* Linear feedback shift register */
