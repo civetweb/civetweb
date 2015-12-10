@@ -149,12 +149,12 @@ clock_gettime(int clk_id, struct timespec *t)
 		return 0;
 
 	} else if (clk_id == CLOCK_MONOTONIC) {
-		static uint64_t start_time = 0;
+		static uint64_t clock_start_time = 0;
 		static mach_timebase_info_data_t timebase_ifo = {0, 0};
 
 		uint64_t now = mach_absolute_time();
 
-		if (start_time == 0) {
+		if (clock_start_time == 0) {
 			kern_return_t mach_status = mach_timebase_info(&timebase_ifo);
 #if defined(DEBUG)
 			assert(mach_status == KERN_SUCCESS);
@@ -162,10 +162,11 @@ clock_gettime(int clk_id, struct timespec *t)
 			/* appease "unused variable" warning for release builds */
 			(void)mach_status;
 #endif
-			start_time = now;
+			clock_start_time = now;
 		}
 
-		now = (uint64_t)((double)(now - start_time) * (double)timebase_ifo.numer
+		now = (uint64_t)((double)(now - clock_start_time)
+		                 * (double)timebase_ifo.numer
 		                 / (double)timebase_ifo.denom);
 
 		t->tv_sec = now / 1000000000;
@@ -270,6 +271,7 @@ typedef long off_t;
 #endif /* !EWOULDBLOCK */
 #define _POSIX_
 #define INT64_FMT "I64d"
+#define UINT64_FMT "I64u"
 
 #define WINCDECL __cdecl
 #define SHUT_RD (0)
@@ -426,6 +428,7 @@ typedef unsigned short int in_port_t;
 #define ERRNO (errno)
 #define INVALID_SOCKET (-1)
 #define INT64_FMT PRId64
+#define UINT64_FMT PRIu64
 typedef int SOCKET;
 #define WINCDECL
 
@@ -1182,7 +1185,8 @@ struct mg_context {
 	    cfg_worker_threads;     /* The number of configured worker threads. */
 	pthread_t *workerthreadids; /* The worker thread IDs */
 
-	unsigned long start_time; /* Server start time, used for authentication */
+	time_t start_time;        /* Server start time, used for authentication */
+	uint64_t auth_nonce_mask; /* Mask for all nonce values */
 	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
 	unsigned long nonce_count;   /* Used nonces, used for authentication */
 
@@ -1276,7 +1280,7 @@ mg_atomic_inc(volatile int *addr)
 	 * so whatever you use, the other SDK is likely to raise a warning. */
 	ret = InterlockedIncrement((volatile long *)addr);
 #elif defined(__GNUC__)                                                        \
-    && (__GNUC__ > 5 || (__GNUC__ == 4 && __GNUC_MINOR__ > 0))
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
 	ret = __sync_add_and_fetch(addr, 1);
 #else
 	ret = (++(*addr));
@@ -1294,7 +1298,7 @@ mg_atomic_dec(volatile int *addr)
 	 * so whatever you use, the other SDK is likely to raise a warning. */
 	ret = InterlockedDecrement((volatile long *)addr);
 #elif defined(__GNUC__)                                                        \
-    && (__GNUC__ > 5 || (__GNUC__ == 4 && __GNUC_MINOR__ > 0))
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
 	ret = __sync_sub_and_fetch(addr, 1);
 #else
 	ret = (--(*addr));
@@ -1578,6 +1582,7 @@ mg_vsnprintf(const struct mg_connection *conn,
 	buf[n] = '\0';
 }
 
+
 static void
 mg_snprintf(const struct mg_connection *conn,
             int *truncated,
@@ -1593,6 +1598,7 @@ mg_snprintf(const struct mg_connection *conn,
 	va_end(ap);
 }
 
+
 static int
 get_option_index(const char *name)
 {
@@ -1605,6 +1611,7 @@ get_option_index(const char *name)
 	}
 	return -1;
 }
+
 
 const char *
 mg_get_option(const struct mg_context *ctx, const char *name)
@@ -1619,17 +1626,20 @@ mg_get_option(const struct mg_context *ctx, const char *name)
 	}
 }
 
+
 struct mg_context *
 mg_get_context(const struct mg_connection *conn)
 {
 	return (conn == NULL) ? (struct mg_context *)NULL : (conn->ctx);
 }
 
+
 void *
 mg_get_user_data(const struct mg_context *ctx)
 {
 	return (ctx == NULL) ? NULL : ctx->user_data;
 }
+
 
 void
 mg_set_user_connection_data(const struct mg_connection *conn, void *data)
@@ -1639,6 +1649,7 @@ mg_set_user_connection_data(const struct mg_connection *conn, void *data)
 	}
 }
 
+
 void *
 mg_get_user_connection_data(const struct mg_connection *conn)
 {
@@ -1647,6 +1658,7 @@ mg_get_user_connection_data(const struct mg_connection *conn)
 	}
 	return NULL;
 }
+
 
 size_t
 mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
@@ -1661,6 +1673,7 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 	}
 	return i;
 }
+
 
 int
 mg_get_server_ports(const struct mg_context *ctx,
@@ -1700,6 +1713,7 @@ mg_get_server_ports(const struct mg_context *ctx,
 	return cnt;
 }
 
+
 static void
 sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 {
@@ -1731,6 +1745,7 @@ sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 #endif
 }
 
+
 /* Convert time_t to a string. According to RFC2616, Sec 14.18, this must be
  * included in all responses other than 100, 101, 5xx. */
 static void
@@ -1747,6 +1762,7 @@ gmt_time_string(char *buf, size_t buf_len, time_t *t)
 	}
 }
 
+
 /* difftime for struct timespec. Return value is in seconds. */
 static double
 mg_difftimespec(const struct timespec *ts_now, const struct timespec *ts_before)
@@ -1754,6 +1770,7 @@ mg_difftimespec(const struct timespec *ts_now, const struct timespec *ts_before)
 	return (double)(ts_now->tv_nsec - ts_before->tv_nsec) * 1.0E-9
 	       + (double)(ts_now->tv_sec - ts_before->tv_sec);
 }
+
 
 /* Print error message to the opened error log stream. */
 void
@@ -1803,6 +1820,7 @@ mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 	}
 }
 
+
 /* Return fake connection structure. Used for logging, if connection
  * is not applicable at the moment of logging. */
 static struct mg_connection *
@@ -1813,11 +1831,13 @@ fc(struct mg_context *ctx)
 	return &fake_connection;
 }
 
+
 const char *
 mg_version(void)
 {
 	return CIVETWEB_VERSION;
 }
+
 
 const struct mg_request_info *
 mg_get_request_info(const struct mg_connection *conn)
@@ -1827,6 +1847,7 @@ mg_get_request_info(const struct mg_connection *conn)
 	}
 	return &conn->request_info;
 }
+
 
 /* Skip the characters until one of the delimiters characters found.
  * 0-terminate resulting word. Skip the delimiter and following whitespaces.
@@ -1882,6 +1903,7 @@ skip_quoted(char **buf,
 	return begin_word;
 }
 
+
 /* Simplified version of skip_quoted without quote char
  * and whitespace == delimiters */
 static char *
@@ -1889,6 +1911,7 @@ skip(char **buf, const char *delimiters)
 {
 	return skip_quoted(buf, delimiters, delimiters, 0);
 }
+
 
 /* Return HTTP header value, or NULL if not found. */
 static const char *
@@ -1906,6 +1929,7 @@ get_header(const struct mg_request_info *ri, const char *name)
 	return NULL;
 }
 
+
 const char *
 mg_get_header(const struct mg_connection *conn, const char *name)
 {
@@ -1915,6 +1939,7 @@ mg_get_header(const struct mg_connection *conn, const char *name)
 
 	return get_header(&conn->request_info, name);
 }
+
 
 /* A helper function for traversing a comma separated list of values.
  * It returns a list pointer shifted to the next value, or NULL if the end
@@ -3343,6 +3368,42 @@ set_non_blocking_mode(SOCKET sock)
 	return 0;
 }
 #endif /* _WIN32 */
+/* End of initial operating system specific define block. */
+
+
+/* Get a random number (independent of C rand function) */
+static uint64_t
+get_random(void)
+{
+	static uint64_t lfsr = 0; /* Linear feedback shift register */
+	static uint64_t lcg = 0;  /* Linear congruential generator */
+	struct timespec now;
+
+	memset(&now, 0, sizeof(now));
+	clock_gettime(CLOCK_MONOTONIC, &now);
+
+	if (lfsr == 0) {
+		/* lfsr will be only 0 if has not been initialized,
+		 * so this code is called only once. */
+		lfsr = (((uint64_t)now.tv_sec) << 21) ^ ((uint64_t)now.tv_nsec)
+		       ^ ((uint64_t)(ptrdiff_t)&now) ^ ((uint64_t)pthread_self())
+		       ^ (((uint64_t)time(NULL)) << 33);
+		lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
+		      + (uint64_t)(ptrdiff_t)&now;
+	} else {
+		/* Get the next step of both random number generators. */
+		lfsr = (lfsr >> 1)
+		       | ((((lfsr >> 0) ^ (lfsr >> 1) ^ (lfsr >> 3) ^ (lfsr >> 4)) & 1)
+		          << 63);
+		lcg = lcg * 6364136223846793005 + 1442695040888963407;
+	}
+
+	/* Combining two pseudo-random number generators and a high resolution part
+	 * of the current server time will make it hard (impossible?) to guess the
+	 * next number. */
+	return (lfsr ^ lcg ^ (uint64_t)now.tv_nsec);
+}
+
 
 /* Write data to the IO channel - opened file descriptor, socket or SSL
  * descriptor. Return number of bytes written. */
@@ -4829,7 +4890,7 @@ parse_auth_header(struct mg_connection *conn,
 {
 	char *name, *value, *s;
 	const char *auth_header;
-	unsigned long nonce;
+	uint64_t nonce;
 
 	if (!ah || !conn) {
 		return 0;
@@ -4890,13 +4951,13 @@ parse_auth_header(struct mg_connection *conn,
 		return 0;
 	}
 	s = NULL;
-	nonce = strtoul(ah->nonce, &s, 10);
+	nonce = strtoull(ah->nonce, &s, 10);
 	if ((s == NULL) || (*s != 0)) {
 		return 0;
 	}
 
 	/* Convert the nonce from the client to a number. */
-	nonce ^= (uintptr_t)(conn->ctx);
+	nonce ^= conn->ctx->auth_nonce_mask;
 
 	/* The converted number corresponds to the time the nounce has been
 	 * created. This should not be earlier than the server start. */
@@ -4906,14 +4967,14 @@ parse_auth_header(struct mg_connection *conn,
 	/* However, the reasonable default is to not accept a nonce from a
 	 * previous start, so if anyone changed the access rights between
 	 * two restarts, a new login is required. */
-	if (nonce < conn->ctx->start_time) {
+	if (nonce < (uint64_t)conn->ctx->start_time) {
 		/* nonce is from a previous start of the server and no longer valid
 		 * (replay attack?) */
 		return 0;
 	}
 	/* Check if the nonce is too high, so it has not (yet) been used by the
 	 * server. */
-	if (nonce >= conn->ctx->start_time + conn->ctx->nonce_count) {
+	if (nonce >= ((uint64_t)conn->ctx->start_time + conn->ctx->nonce_count)) {
 		return 0;
 	}
 #endif
@@ -5143,14 +5204,14 @@ send_authorization_request(struct mg_connection *conn)
 	time_t curtime = time(NULL);
 
 	if (conn && conn->ctx) {
-		unsigned long nonce = (unsigned long)(conn->ctx->start_time);
+		uint64_t nonce = (uint64_t)(conn->ctx->start_time);
 
 		(void)pthread_mutex_lock(&conn->ctx->nonce_mutex);
 		nonce += conn->ctx->nonce_count;
 		++conn->ctx->nonce_count;
 		(void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
 
-		nonce ^= (uintptr_t)(conn->ctx);
+		nonce ^= conn->ctx->auth_nonce_mask;
 		conn->status_code = 401;
 		conn->must_close = 1;
 
@@ -5162,7 +5223,7 @@ send_authorization_request(struct mg_connection *conn)
 		          "Connection: %s\r\n"
 		          "Content-Length: 0\r\n"
 		          "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", "
-		          "nonce=\"%lu\"\r\n\r\n",
+		          "nonce=\"%" UINT64_FMT "\"\r\n\r\n",
 		          date,
 		          suggest_connection_header(conn),
 		          conn->ctx->config[AUTHENTICATION_DOMAIN],
@@ -8284,27 +8345,7 @@ mg_websocket_client_write(struct mg_connection *conn,
 {
 	int retval = -1;
 	char *masked_data = (char *)mg_malloc(((dataLen + 7) / 4) * 4);
-	uint32_t masking_key;
-	static uint64_t lfsr = 0;
-	static uint64_t lcg = 0;
-	struct timespec now;
-
-	memset(&now, 0, sizeof(now));
-	clock_gettime(CLOCK_MONOTONIC, &now);
-
-	if (lfsr == 0) {
-		lfsr = (((uint64_t)now.tv_sec) << 21) ^ (uint64_t)now.tv_nsec
-		       ^ (uint64_t)&dataLen;
-		lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
-		      + (uint64_t)data;
-	} else {
-		lfsr = (lfsr >> 1)
-		       | ((((lfsr >> 0) ^ (lfsr >> 1) ^ (lfsr >> 3) ^ (lfsr >> 4)) & 1)
-		          << 63);
-		lcg = lcg * 6364136223846793005 + 1442695040888963407;
-	}
-
-	masking_key = (uint32_t)lfsr ^ (uint32_t)lcg ^ (uint32_t)now.tv_nsec;
+	uint32_t masking_key = (uint32_t)get_random();
 
 	if (masked_data == NULL) {
 		/* Return -1 in an error case */
@@ -11641,7 +11682,7 @@ master_thread_run(void *thread_func_param)
 	pthread_setspecific(sTlsKey, &tls);
 
 	/* Server starts *now* */
-	ctx->start_time = (unsigned long)time(NULL);
+	ctx->start_time = time(NULL);
 
 	/* Allocate memory for the listening sockets, and start the server */
 	pfd =
@@ -11899,6 +11940,10 @@ mg_start(const struct mg_callbacks *callbacks,
 	if ((ctx = (struct mg_context *)mg_calloc(1, sizeof(*ctx))) == NULL) {
 		return NULL;
 	}
+
+	/* Random number generator will initialize at the first call */
+	ctx->auth_nonce_mask =
+	    (uint64_t)get_random() ^ (uint64_t)(ptrdiff_t)(options);
 
 	if (mg_atomic_inc(&sTlsInit) == 1) {
 
