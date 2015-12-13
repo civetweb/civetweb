@@ -2039,6 +2039,24 @@ suggest_connection_header(const struct mg_connection *conn)
 	return should_keep_alive(conn) ? "keep-alive" : "close";
 }
 
+
+static int
+send_no_cache_header(struct mg_connection *conn)
+{
+	/* According to
+	 * http://stackoverflow.com/questions/49547/making-sure-a-web-page-is-not-cached-across-all-browsers
+	 * there must be several response headers to ensure no browser caches the
+	 * response.
+	 */
+	int ret;
+	ret = mg_printf(conn,
+	                "Cache-Control: no-cache, no-store, must-revalidate\r\n"
+	                "Pragma: no-cache\r\n"
+	                "Expires: 0\r\n");
+	return ret;
+}
+
+
 static void handle_file_based_request(struct mg_connection *conn,
                                       const char *path,
                                       struct file *filep);
@@ -2320,10 +2338,10 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 		gmt_time_string(date, sizeof(date), &curtime);
 
 		conn->must_close = 1;
-		mg_printf(conn, "HTTP/1.1 %d %s\r\n", status, status_text);        
+		mg_printf(conn, "HTTP/1.1 %d %s\r\n", status, status_text);
+		send_no_cache_header(conn);
 		mg_printf(conn,
 		          "Date: %s\r\n"
-                  "Cache-Control: no-cache\r\n"
 		          "Connection: close\r\n\r\n",
 		          date);
 
@@ -5200,10 +5218,10 @@ send_authorization_request(struct mg_connection *conn)
 
 		gmt_time_string(date, sizeof(date), &curtime);
 
+		mg_printf(conn, "HTTP/1.1 401 Unauthorized\r\n");
+		send_no_cache_header(conn);
 		mg_printf(conn,
-		          "HTTP/1.1 401 Unauthorized\r\n"
 		          "Date: %s\r\n"
-                  "Cache-Control: no-cache\r\n"
 		          "Connection: %s\r\n"
 		          "Content-Length: 0\r\n"
 		          "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", "
@@ -5858,7 +5876,7 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\n"
 	          "Date: %s\r\n"
-              /* TODO: Cache-Control */
+	          /* TODO: Cache-Control */
 	          "Connection: close\r\n"
 	          "Content-Type: text/html; charset=utf-8\r\n\r\n",
 	          date);
@@ -6161,7 +6179,7 @@ handle_static_file_request(struct mg_connection *conn,
 	                "HTTP/1.1 %d %s\r\n"
 	                "%s%s%s"
 	                "Date: %s\r\n"
-                    /* TODO: "Cache-Control" */
+	                /* TODO: "Cache-Control" */
 	                "Last-Modified: %s\r\n"
 	                "Etag: %s\r\n"
 	                "Content-Type: %.*s\r\n"
@@ -7165,10 +7183,10 @@ mkcol(struct mg_connection *conn, const char *path)
 		gmt_time_string(date, sizeof(date), &curtime);
 		mg_printf(conn,
 		          "HTTP/1.1 %d Created\r\n"
-                  "Date: %s\r\n"
-                  /* TODO: "Cache-Control" */
-                  "Content-Length: 0\r\n"
-                  "Connection: %s\r\n\r\n",
+		          "Date: %s\r\n"
+		          /* TODO: "Cache-Control" */
+		          "Content-Length: 0\r\n"
+		          "Connection: %s\r\n\r\n",
 		          conn->status_code,
 		          date,
 		          suggest_connection_header(conn));
@@ -7249,13 +7267,14 @@ put_file(struct mg_connection *conn, const char *path)
 		/* put_dir returns 0 if path is a directory */
 		gmt_time_string(date, sizeof(date), &curtime);
 		mg_printf(conn,
-		          "HTTP/1.1 %d %s\r\n"
+		          "HTTP/1.1 %d %s\r\n",
+		          conn->status_code,
+		          mg_get_response_code_text(conn->status_code, NULL));
+		send_no_cache_header(conn);
+		mg_printf(conn,
 		          "Date: %s\r\n"
-                  "Cache-Control: no-cache\r\n"
 		          "Content-Length: 0\r\n"
 		          "Connection: %s\r\n\r\n",
-		          conn->status_code,
-		          mg_get_response_code_text(conn->status_code, NULL),
 		          date,
 		          suggest_connection_header(conn));
 
@@ -7311,10 +7330,10 @@ put_file(struct mg_connection *conn, const char *path)
 	}
 
 	gmt_time_string(date, sizeof(date), &curtime);
+	mg_printf(conn, "HTTP/1.1 %d %s\r\n");
+	send_no_cache_header(conn);
 	mg_printf(conn,
-	          "HTTP/1.1 %d %s\r\n"
 	          "Date: %s\r\n"
-              "Cache-Control: no-cache\r\n"
 	          "Content-Length: 0\r\n"
 	          "Connection: %s\r\n\r\n",
 	          conn->status_code,
@@ -7619,11 +7638,11 @@ handle_ssi_file_request(struct mg_connection *conn,
 		conn->must_close = 1;
 		gmt_time_string(date, sizeof(date), &curtime);
 		fclose_on_exec(filep, conn);
+		mg_printf(conn, "HTTP/1.1 200 OK\r\n");
+		send_no_cache_header(conn);
 		mg_printf(conn,
-		          "HTTP/1.1 200 OK\r\n"
 		          "%s%s%s"
 		          "Date: %s\r\n"
-                  "Cache-Control: no-cache\r\n"
 		          "Content-Type: text/html\r\n"
 		          "Connection: %s\r\n\r\n",
 		          cors1,
@@ -7654,7 +7673,7 @@ send_options(struct mg_connection *conn)
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\n"
 	          "Date: %s\r\n"
-              /* TODO: "Cache-Control" ? */
+	          /* TODO: "Cache-Control" ? */
 	          "Connection: %s\r\n"
 	          "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, "
 	          "PROPFIND, MKCOL\r\n"
@@ -7738,7 +7757,7 @@ handle_propfind(struct mg_connection *conn,
 	mg_printf(conn,
 	          "HTTP/1.1 207 Multi-Status\r\n"
 	          "Date: %s\r\n"
-              /* TODO: "Cache-Control" */
+	          /* TODO: "Cache-Control" */
 	          "Connection: %s\r\n"
 	          "Content-Type: text/xml; charset=utf-8\r\n\r\n",
 	          date,
@@ -9392,7 +9411,7 @@ handle_request(struct mg_connection *conn)
 			          "HTTP/1.1 301 Moved Permanently\r\n"
 			          "Location: %s/\r\n"
 			          "Date: %s\r\n"
-                      /* TODO: "Cache-Control" ? */
+			          /* TODO: "Cache-Control" ? */
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n\r\n",
 			          ri->request_uri,
@@ -12171,4 +12190,3 @@ mg_check_feature(unsigned feature)
 	    ;
 	return (feature & feature_set);
 }
-
