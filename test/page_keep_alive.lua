@@ -17,6 +17,7 @@ end
 mg.write("HTTP/1.1 200 OK\r\n")
 mg.write("Content-Type: text/html\r\n")
 mg.write("Date: " .. os.date("!%a, %d %b %Y %H:%M:%S") .. " GMT\r\n")
+mg.write("Cache-Control: no-cache\r\n")
 
 if canKeepAlive then
     mg.write("Content-Length: " .. tostring(string.len(reply)) .. "\r\n")

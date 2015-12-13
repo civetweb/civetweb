@@ -2320,9 +2320,10 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 		gmt_time_string(date, sizeof(date), &curtime);
 
 		conn->must_close = 1;
-		mg_printf(conn, "HTTP/1.1 %d %s\r\n", status, status_text);
+		mg_printf(conn, "HTTP/1.1 %d %s\r\n", status, status_text);        
 		mg_printf(conn,
 		          "Date: %s\r\n"
+                  "Cache-Control: no-cache\r\n"
 		          "Connection: close\r\n\r\n",
 		          date);
 
@@ -3183,6 +3184,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 	return 0;
 }
 
+
 static void
 set_close_on_exec(SOCKET fd, struct mg_connection *conn /* may be null */)
 {
@@ -3195,6 +3197,7 @@ set_close_on_exec(SOCKET fd, struct mg_connection *conn /* may be null */)
 		}
 	}
 }
+
 
 int
 mg_start_thread(mg_thread_func_t func, void *param)
@@ -3218,8 +3221,8 @@ mg_start_thread(mg_thread_func_t func, void *param)
 	return result;
 }
 
-/* Start a thread storing the thread context. */
 
+/* Start a thread storing the thread context. */
 static int
 mg_start_thread_with_id(mg_thread_func_t func,
                         void *param,
@@ -3245,8 +3248,8 @@ mg_start_thread_with_id(mg_thread_func_t func,
 	return result;
 }
 
-/* Wait for a thread to finish. */
 
+/* Wait for a thread to finish. */
 static int
 mg_join_thread(pthread_t threadid)
 {
@@ -3255,6 +3258,7 @@ mg_join_thread(pthread_t threadid)
 	result = pthread_join(threadid, NULL);
 	return result;
 }
+
 
 #ifndef NO_CGI
 static pid_t
@@ -3334,6 +3338,7 @@ spawn_process(struct mg_connection *conn,
 	return pid;
 }
 #endif /* !NO_CGI */
+
 
 static int
 set_non_blocking_mode(SOCKET sock)
@@ -5198,6 +5203,7 @@ send_authorization_request(struct mg_connection *conn)
 		mg_printf(conn,
 		          "HTTP/1.1 401 Unauthorized\r\n"
 		          "Date: %s\r\n"
+                  "Cache-Control: no-cache\r\n"
 		          "Connection: %s\r\n"
 		          "Content-Length: 0\r\n"
 		          "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", "
@@ -5852,6 +5858,7 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\n"
 	          "Date: %s\r\n"
+              /* TODO: Cache-Control */
 	          "Connection: close\r\n"
 	          "Content-Type: text/html; charset=utf-8\r\n\r\n",
 	          date);
@@ -6154,6 +6161,7 @@ handle_static_file_request(struct mg_connection *conn,
 	                "HTTP/1.1 %d %s\r\n"
 	                "%s%s%s"
 	                "Date: %s\r\n"
+                    /* TODO: "Cache-Control" */
 	                "Last-Modified: %s\r\n"
 	                "Etag: %s\r\n"
 	                "Content-Type: %.*s\r\n"
@@ -7156,8 +7164,11 @@ mkcol(struct mg_connection *conn, const char *path)
 		conn->status_code = 201;
 		gmt_time_string(date, sizeof(date), &curtime);
 		mg_printf(conn,
-		          "HTTP/1.1 %d Created\r\nDate: %s\r\nContent-Length: "
-		          "0\r\nConnection: %s\r\n\r\n",
+		          "HTTP/1.1 %d Created\r\n"
+                  "Date: %s\r\n"
+                  /* TODO: "Cache-Control" */
+                  "Content-Length: 0\r\n"
+                  "Connection: %s\r\n\r\n",
 		          conn->status_code,
 		          date,
 		          suggest_connection_header(conn));
@@ -7240,6 +7251,7 @@ put_file(struct mg_connection *conn, const char *path)
 		mg_printf(conn,
 		          "HTTP/1.1 %d %s\r\n"
 		          "Date: %s\r\n"
+                  "Cache-Control: no-cache\r\n"
 		          "Content-Length: 0\r\n"
 		          "Connection: %s\r\n\r\n",
 		          conn->status_code,
@@ -7302,6 +7314,7 @@ put_file(struct mg_connection *conn, const char *path)
 	mg_printf(conn,
 	          "HTTP/1.1 %d %s\r\n"
 	          "Date: %s\r\n"
+              "Cache-Control: no-cache\r\n"
 	          "Content-Length: 0\r\n"
 	          "Connection: %s\r\n\r\n",
 	          conn->status_code,
@@ -7610,6 +7623,7 @@ handle_ssi_file_request(struct mg_connection *conn,
 		          "HTTP/1.1 200 OK\r\n"
 		          "%s%s%s"
 		          "Date: %s\r\n"
+                  "Cache-Control: no-cache\r\n"
 		          "Content-Type: text/html\r\n"
 		          "Connection: %s\r\n\r\n",
 		          cors1,
@@ -7640,6 +7654,7 @@ send_options(struct mg_connection *conn)
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\n"
 	          "Date: %s\r\n"
+              /* TODO: "Cache-Control" ? */
 	          "Connection: %s\r\n"
 	          "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, "
 	          "PROPFIND, MKCOL\r\n"
@@ -7723,6 +7738,7 @@ handle_propfind(struct mg_connection *conn,
 	mg_printf(conn,
 	          "HTTP/1.1 207 Multi-Status\r\n"
 	          "Date: %s\r\n"
+              /* TODO: "Cache-Control" */
 	          "Connection: %s\r\n"
 	          "Content-Type: text/xml; charset=utf-8\r\n\r\n",
 	          date,
@@ -8777,6 +8793,7 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 	}
 }
 
+
 static void
 mg_set_request_handler_type(struct mg_context *ctx,
                             const char *uri,
@@ -8896,6 +8913,7 @@ mg_set_request_handler_type(struct mg_context *ctx,
 	mg_unlock_context(ctx);
 }
 
+
 void
 mg_set_request_handler(struct mg_context *ctx,
                        const char *uri,
@@ -8905,6 +8923,7 @@ mg_set_request_handler(struct mg_context *ctx,
 	mg_set_request_handler_type(
 	    ctx, uri, 0, handler == NULL, handler, NULL, NULL, NULL, NULL, cbdata);
 }
+
 
 void
 mg_set_websocket_handler(struct mg_context *ctx,
@@ -8929,6 +8948,7 @@ mg_set_websocket_handler(struct mg_context *ctx,
 	                            close_handler,
 	                            cbdata);
 }
+
 
 static int
 get_request_handler(struct mg_connection *conn,
@@ -9018,6 +9038,7 @@ get_request_handler(struct mg_connection *conn,
 	return 0; /* none found */
 }
 
+
 #if defined(USE_WEBSOCKET) && defined(MG_LEGACY_INTERFACE)
 static int
 deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
@@ -9031,6 +9052,7 @@ deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
 	return 0;
 }
 
+
 static void
 deprecated_websocket_ready_wrapper(struct mg_connection *conn, void *cbdata)
 {
@@ -9039,6 +9061,7 @@ deprecated_websocket_ready_wrapper(struct mg_connection *conn, void *cbdata)
 		pcallbacks->websocket_ready(conn);
 	}
 }
+
 
 static int
 deprecated_websocket_data_wrapper(struct mg_connection *conn,
@@ -9055,6 +9078,7 @@ deprecated_websocket_data_wrapper(struct mg_connection *conn,
 	return 1;
 }
 #endif
+
 
 /* This is the heart of the Civetweb's logic.
  * This function is called when the request is read, parsed and validated,
@@ -9368,6 +9392,7 @@ handle_request(struct mg_connection *conn)
 			          "HTTP/1.1 301 Moved Permanently\r\n"
 			          "Location: %s/\r\n"
 			          "Date: %s\r\n"
+                      /* TODO: "Cache-Control" ? */
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n\r\n",
 			          ri->request_uri,
@@ -9436,6 +9461,7 @@ handle_request(struct mg_connection *conn)
 	return;
 }
 
+
 static void
 handle_file_based_request(struct mg_connection *conn,
                           const char *path,
@@ -9487,6 +9513,7 @@ handle_file_based_request(struct mg_connection *conn,
 		handle_static_file_request(conn, path, file);
 	}
 }
+
 
 static void
 close_all_listening_sockets(struct mg_context *ctx)
@@ -11527,6 +11554,7 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 #undef QUEUE_SIZE
 }
 
+
 static void
 accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 {
@@ -11595,6 +11623,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		produce_socket(ctx, &so);
 	}
 }
+
 
 static void
 master_thread_run(void *thread_func_param)
@@ -11716,6 +11745,7 @@ master_thread(void *thread_func_param)
 }
 #endif /* _WIN32 */
 
+
 static void
 free_context(struct mg_context *ctx)
 {
@@ -11797,6 +11827,7 @@ free_context(struct mg_context *ctx)
 	mg_free(ctx);
 }
 
+
 void
 mg_stop(struct mg_context *ctx)
 {
@@ -11827,6 +11858,7 @@ mg_stop(struct mg_context *ctx)
 	(void)WSACleanup();
 #endif /* _WIN32 && !__SYMBIAN32__ */
 }
+
 
 static void
 get_system_name(char **sysName)
@@ -11869,6 +11901,7 @@ get_system_name(char **sysName)
 	*sysName = mg_strdup(name.sysname);
 #endif
 }
+
 
 struct mg_context *
 mg_start(const struct mg_callbacks *callbacks,
@@ -12087,6 +12120,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	return ctx;
 }
 
+
 /* Feature check API function */
 unsigned
 mg_check_feature(unsigned feature)
@@ -12137,3 +12171,4 @@ mg_check_feature(unsigned feature)
 	    ;
 	return (feature & feature_set);
 }
+

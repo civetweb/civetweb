@@ -6,6 +6,7 @@ now = os.date("!%a, %d %b %Y %H:%M:%S")
 mg.write("HTTP/1.1 200 OK\r\n")
 mg.write("Content-Type: text/html\r\n")
 mg.write("Date: " .. now .. " GMT\r\n")
+mg.write("Cache-Control: no-cache\r\n")
 mg.write("Last-Modified: " .. now .. " GMT\r\n")
 if not canKeepAlive then
     mg.write("Connection: close\r\n")
