@@ -5876,7 +5876,7 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\n"
 	          "Date: %s\r\n"
-	          /* TODO: Cache-Control */
+	          /* TODO: Cache-Control (static files) */
 	          "Connection: close\r\n"
 	          "Content-Type: text/html; charset=utf-8\r\n\r\n",
 	          date);
@@ -6179,7 +6179,7 @@ handle_static_file_request(struct mg_connection *conn,
 	                "HTTP/1.1 %d %s\r\n"
 	                "%s%s%s"
 	                "Date: %s\r\n"
-	                /* TODO: "Cache-Control" */
+	                /* TODO: "Cache-Control" (static files) */
 	                "Last-Modified: %s\r\n"
 	                "Etag: %s\r\n"
 	                "Content-Type: %.*s\r\n"
@@ -7184,7 +7184,7 @@ mkcol(struct mg_connection *conn, const char *path)
 		mg_printf(conn,
 		          "HTTP/1.1 %d Created\r\n"
 		          "Date: %s\r\n"
-		          /* TODO: "Cache-Control" */
+		          /* TODO: "Cache-Control" (static files or no cache?) */
 		          "Content-Length: 0\r\n"
 		          "Connection: %s\r\n\r\n",
 		          conn->status_code,
@@ -7673,7 +7673,7 @@ send_options(struct mg_connection *conn)
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\n"
 	          "Date: %s\r\n"
-	          /* TODO: "Cache-Control" ? */
+	          /* TODO: "Cache-Control" (?) */
 	          "Connection: %s\r\n"
 	          "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, "
 	          "PROPFIND, MKCOL\r\n"
@@ -7757,7 +7757,7 @@ handle_propfind(struct mg_connection *conn,
 	mg_printf(conn,
 	          "HTTP/1.1 207 Multi-Status\r\n"
 	          "Date: %s\r\n"
-	          /* TODO: "Cache-Control" */
+	          /* TODO: "Cache-Control" (static files) */
 	          "Connection: %s\r\n"
 	          "Content-Type: text/xml; charset=utf-8\r\n\r\n",
 	          date,
@@ -9404,14 +9404,14 @@ handle_request(struct mg_connection *conn)
 			return;
 		}
 
-		/* 12. Directories uris should end with a slash */
+		/* 12. Directory uris should end with a slash */
 		if (file.is_directory && ri->local_uri[uri_len - 1] != '/') {
 			gmt_time_string(date, sizeof(date), &curtime);
 			mg_printf(conn,
 			          "HTTP/1.1 301 Moved Permanently\r\n"
 			          "Location: %s/\r\n"
 			          "Date: %s\r\n"
-			          /* TODO: "Cache-Control" ? */
+			          /* TODO: "Cache-Control" (private = default) */
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n\r\n",
 			          ri->request_uri,
