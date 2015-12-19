@@ -2093,24 +2093,25 @@ send_no_cache_header(struct mg_connection *conn)
 	 * there must be several response headers to ensure no browser caches the
 	 * response.
 	 */
-	int ret;
-	ret = mg_printf(conn,
-	                "Cache-Control: no-cache, no-store, "
-                    "must-revalidate, private, max-age=0\r\n"
-	                "Pragma: no-cache\r\n"
-	                "Expires: 0\r\n");
-	return ret;
+	return mg_printf(conn,
+	                 "Cache-Control: no-cache, no-store, "
+	                 "must-revalidate, private, max-age=0\r\n"
+	                 "Pragma: no-cache\r\n"
+	                 "Expires: 0\r\n");
 }
 
 
 static int
 send_static_cache_header(struct mg_connection *conn)
 {
-	int ret;
-	ret = mg_printf(conn,
-	                "Cache-Control: max-age=%u\r\n", 
-                    /* TODO: set some time */ 60);
-	return ret;
+	/* TODO: Get max age (in seconds) for static files from conn->ctx */
+	int max_age = 60 /* + conn->ctx.TODO */;
+
+	if (max_age <= 0) {
+		return send_no_cache_header(conn);
+	}
+
+	return mg_printf(conn, "Cache-Control: max-age=%u\r\n", max_age);
 }
 
 
@@ -9598,7 +9599,7 @@ handle_request(struct mg_connection *conn)
 			          "HTTP/1.1 301 Moved Permanently\r\n"
 			          "Location: %s/\r\n"
 			          "Date: %s\r\n"
-			          /* TODO: "Cache-Control" (private = default) */
+			          /* "Cache-Control: private\r\n" (= default) */
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n\r\n",
 			          ri->request_uri,
