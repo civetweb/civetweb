@@ -73,6 +73,7 @@
 #pragma warning(disable : 4711)
 #endif
 
+
 /* This code uses static_assert to check some conditions.
  * Unfortunately some compilers still do not support it, so we have a
  * replacement function here. */
@@ -177,6 +178,7 @@ clock_gettime(int clk_id, struct timespec *t)
 }
 #endif
 
+
 #include <time.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -186,6 +188,7 @@ clock_gettime(int clk_id, struct timespec *t)
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
+
 
 #ifndef MAX_WORKER_THREADS
 #define MAX_WORKER_THREADS (1024 * 64)
@@ -381,6 +384,7 @@ struct pollfd {
 
 #else /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include   \
          block */
+
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
@@ -2088,11 +2092,7 @@ suggest_connection_header(const struct mg_connection *conn)
 static int
 send_no_cache_header(struct mg_connection *conn)
 {
-	/* According to
-	 * http://stackoverflow.com/questions/49547/making-sure-a-web-page-is-not-cached-across-all-browsers
-	 * there must be several response headers to ensure no browser caches the
-	 * response.
-	 */
+	/* Send all current and obsolete cache opt-out directives. */
 	return mg_printf(conn,
 	                 "Cache-Control: no-cache, no-store, "
 	                 "must-revalidate, private, max-age=0\r\n"
@@ -4802,6 +4802,7 @@ static const struct {
     {".m4v", 4, "video/x-m4v"},
     {NULL, 0, NULL}};
 
+
 const char *
 mg_get_builtin_mime_type(const char *path)
 {
@@ -5378,6 +5379,7 @@ is_authorized_for_put(struct mg_connection *conn)
 	return 0;
 }
 #endif
+
 
 int
 mg_modify_passwords_file(const char *fname,
@@ -7487,14 +7489,15 @@ put_file(struct mg_connection *conn, const char *path)
 	}
 
 	gmt_time_string(date, sizeof(date), &curtime);
-	mg_printf(conn, "HTTP/1.1 %d %s\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 %d %s\r\n",
+	          conn->status_code,
+	          mg_get_response_code_text(conn->status_code, NULL));
 	send_no_cache_header(conn);
 	mg_printf(conn,
 	          "Date: %s\r\n"
 	          "Content-Length: 0\r\n"
 	          "Connection: %s\r\n\r\n",
-	          conn->status_code,
-	          mg_get_response_code_text(conn->status_code, NULL),
 	          date,
 	          suggest_connection_header(conn));
 
