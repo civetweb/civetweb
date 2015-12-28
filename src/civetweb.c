@@ -11728,6 +11728,7 @@ worker_thread_run(void *thread_func_param)
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	CloseHandle(tls.pthread_cond_helper_mutex);
 #endif
+	pthread_mutex_destroy(&conn->mutex);
 	mg_free(conn);
 
 	DEBUG_TRACE("%s", "exiting");
