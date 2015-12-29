@@ -276,7 +276,7 @@ alloc_printf(char **buf, size_t size, const char *fmt, ...)
 	va_list ap;
 	int ret = 0;
 	va_start(ap, fmt);
-	ret = alloc_vprintf(buf, size, fmt, ap);
+	ret = alloc_vprintf(buf, *buf, size, fmt, ap);
 	va_end(ap);
 	return ret;
 }
