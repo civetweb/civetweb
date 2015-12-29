@@ -3887,6 +3887,7 @@ mg_getc(struct mg_connection *conn)
 	return c;
 }
 
+
 int
 mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
@@ -3965,6 +3966,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 	}
 	return mg_read_inner(conn, buf, len);
 }
+
 
 int
 mg_write(struct mg_connection *conn, const void *buf, size_t len)
@@ -4055,7 +4057,11 @@ alloc_vprintf2(char **buf, const char *fmt, va_list ap)
  * return buffer. If buffer is to small, allocate large enough buffer on heap,
  * and return allocated buffer. */
 static int
-alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
+alloc_vprintf(char **out_buf,
+              char *prealloc_buf,
+              size_t prealloc_size,
+              const char *fmt,
+              va_list ap)
 {
 	va_list ap_copy;
 	int len;
@@ -4075,15 +4081,30 @@ alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
 		 * Switch to alternative code path that uses incremental allocations.
 		*/
 		va_copy(ap_copy, ap);
-		len = alloc_vprintf2(buf, fmt, ap);
+		len = alloc_vprintf2(out_buf, fmt, ap);
 		va_end(ap_copy);
-	} else if ((size_t)(len) > size && (size = (size_t)(len) + 1) > 0
-	           && (*buf = (char *)mg_malloc(size)) == NULL) {
-		len = -1; /* Allocation failed, mark failure */
-	} else {
+
+	} else if ((size_t)(len) >= prealloc_size) {
+		/* The pre-allocated buffer not large enough. */
+		/* Allocate a new buffer. */
+		*out_buf = (char *)mg_malloc(len + 1);
+		if (!*out_buf) {
+			/* Allocation failed. Return -1 as "out of memory" error. */
+			return -1;
+		}
+		/* Buffer allocation successful. Store the string there. */
 		va_copy(ap_copy, ap);
-		IGNORE_UNUSED_RESULT(vsnprintf_impl(*buf, size, fmt, ap_copy));
+		IGNORE_UNUSED_RESULT(vsnprintf_impl(*out_buf, len + 1, fmt, ap_copy));
 		va_end(ap_copy);
+
+	} else {
+		/* The pre-allocated buffer is large enough.
+		 * Use it to store the string and return the address. */
+		va_copy(ap_copy, ap);
+		IGNORE_UNUSED_RESULT(
+		    vsnprintf_impl(prealloc_buf, prealloc_size, fmt, ap_copy));
+		va_end(ap_copy);
+		*out_buf = prealloc_buf;
 	}
 
 	return len;
@@ -4093,10 +4114,11 @@ alloc_vprintf(char **buf, size_t size, const char *fmt, va_list ap)
 static int
 mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
 {
-	char mem[MG_BUF_LEN], *buf = mem;
+	char mem[MG_BUF_LEN];
+	char *buf = NULL;
 	int len;
 
-	if ((len = alloc_vprintf(&buf, sizeof(mem), fmt, ap)) > 0) {
+	if ((len = alloc_vprintf(&buf, mem, sizeof(mem), fmt, ap)) > 0) {
 		len = mg_write(conn, buf, (size_t)len);
 	}
 	if (buf != mem && buf != NULL) {
@@ -4105,6 +4127,7 @@ mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
 
 	return len;
 }
+
 
 int
 mg_printf(struct mg_connection *conn, const char *fmt, ...)
@@ -4118,6 +4141,7 @@ mg_printf(struct mg_connection *conn, const char *fmt, ...)
 
 	return result;
 }
+
 
 int
 mg_url_decode(const char *src,
@@ -4149,6 +4173,7 @@ mg_url_decode(const char *src,
 	return i >= src_len ? j : -1;
 }
 
+
 int
 mg_get_var(const char *data,
            size_t data_len,
@@ -4158,6 +4183,7 @@ mg_get_var(const char *data,
 {
 	return mg_get_var2(data, data_len, name, dst, dst_len, 0);
 }
+
 
 int
 mg_get_var2(const char *data,
@@ -4214,6 +4240,7 @@ mg_get_var2(const char *data,
 
 	return len;
 }
+
 
 int
 mg_get_cookie(const char *cookie_header,
