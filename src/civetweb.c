@@ -4087,14 +4087,15 @@ alloc_vprintf(char **out_buf,
 	} else if ((size_t)(len) >= prealloc_size) {
 		/* The pre-allocated buffer not large enough. */
 		/* Allocate a new buffer. */
-		*out_buf = (char *)mg_malloc(len + 1);
+		*out_buf = (char *)mg_malloc((size_t)(len) + 1);
 		if (!*out_buf) {
 			/* Allocation failed. Return -1 as "out of memory" error. */
 			return -1;
 		}
 		/* Buffer allocation successful. Store the string there. */
 		va_copy(ap_copy, ap);
-		IGNORE_UNUSED_RESULT(vsnprintf_impl(*out_buf, len + 1, fmt, ap_copy));
+		IGNORE_UNUSED_RESULT(
+		    vsnprintf_impl(*out_buf, (size_t)(len) + 1, fmt, ap_copy));
 		va_end(ap_copy);
 
 	} else {
