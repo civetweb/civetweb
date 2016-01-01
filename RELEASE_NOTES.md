@@ -1,25 +1,35 @@
 Release Notes v1.8 (work in progress)
 ===
-### Objectives: *to be defined  - CMake integration, bug fixes*
+### Objectives: *Support client certificates, CMake integration, bug fixes*
 
 Changes
 -------
 
+- Client API using SSL certificates (preliminary)
+- Send "Cache-Control" headers (preliminary)
+
 - Add API function to check available features
 - Add new interface to get listening ports
+- Add websocket client interface and encode websocket data with a simple random number
+- Support SSL client certificates
+- Add configuration options for SSL client certificates
 - Stand-alone server: Add command line option -I to display information about the system
 - Redirect stderr of CGI process to error log
+- Support absolute URI; split uri in mg_request_info to request_uri and local_uri
 - Some source code refactoring, to improve maintainability
+- Use recursive mutex for Linux
 - Allow CGI environment to grow dynamically
-- Improve examples
+- Support build for Lua 5.1 (including LuaJIT), Lua 5.2 and Lua 5.3
+- Improve examples and documentation
 - Build option CIVETWEB_SERVE_NO_FILES to disable serving static files
 - Add Server side JavaScript support (Duktape library)
 - Created a "civetweb" organization at GitHub.
 - Repository moved from https://github.com/bel2125/civetweb to https://github.com/civetweb/civetweb
 - Improved continuous integration
-- CMake support, continuouse integration with Travis CI and Appveyor
+- CMake support, continuous integration with Travis CI and Appveyor
 - Adapt/port unit tests to CMake/Travis/Appveyor
-- Add status badges to the Github project main page
+- Bug fixes, including issues from static code analysis
+- Add status badges to the GitHub project main page
 - Updated version number
 
 Release Notes v1.7
