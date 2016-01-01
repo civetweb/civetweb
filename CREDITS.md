@@ -3,6 +3,7 @@
 * Alex Kozlov
 * bel2125
 * Ben M. Ward
+* brett
 * Brian Lambert
 * Brian Spratke
 * cdbishop
@@ -24,15 +25,19 @@
 * Jeremy Lin
 * Jim Evans
 * jmc-
+* Jochen Scheib
+* Joe Mucchiello
 * Jordan
 * Jordan Shelley
 * kalphamon
 * Keith Kyzivat
 * Kevin Wojniak
 * Kimmo Mustonen
+* Lawrence
 * Lianghui
 * Maarten Fremouw
 * Mark Lakata
+* Mateusz Gralka
 * Matt Clarkson
 * Morgan McGuire
 * Nick Hildebrant
@@ -43,11 +48,15 @@
 * Perttu Ahola
 * Philipp Friedenberger
 * Philipp Hasper
+* Red54
 * Richard Screene
 * Sage Weil
 * Sangwhan Moon
+* shantanugadgil
 * Scott Nations
+* sunfch
 * Thomas Davis
+* tnoho
 * Toni Wilk
 * Ulrich Hertlein
 * William Greathouse
