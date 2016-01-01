@@ -5,10 +5,21 @@ Release Notes v1.8 (work in progress)
 Changes
 -------
 
+- Add API function to check available features
+- Add new interface to get listening ports
+- Stand-alone server: Add command line option -I to display information about the system
+- Redirect stderr of CGI process to error log
+- Some source code refactoring, to improve maintainability
+- Allow CGI environment to grow dynamically
+- Improve examples
+- Build option CIVETWEB_SERVE_NO_FILES to disable serving static files
+- Add Server side JavaScript support (Duktape library)
 - Created a "civetweb" organization at GitHub.
 - Repository moved from https://github.com/bel2125/civetweb to https://github.com/civetweb/civetweb
 - Improved continuous integration
-- CMake support
+- CMake support, continuouse integration with Travis CI and Appveyor
+- Adapt/port unit tests to CMake/Travis/Appveyor
+- Add status badges to the Github project main page
 - Updated version number
 
 Release Notes v1.7
