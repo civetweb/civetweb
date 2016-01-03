@@ -7118,11 +7118,8 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	setbuf(err, NULL);
 	fout.fp = out;
 
-	/* Send POST or PUT data to the CGI process if needed */
-	/* TODO(high): Methods like PATCH, MKCOL, ... also have body data. */
-	if (!mg_strcasecmp(conn->request_info.request_method, "POST")
-	    || !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
-		/* This is a POST/PUT request */
+	if ((conn->request_info.content_length > 0) || conn->is_chunked) {
+		/* This is a POST/PUT request, or another request with body data. */
 		if (!forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
 			/* Error sending the body data */
 			mg_cry(conn,
