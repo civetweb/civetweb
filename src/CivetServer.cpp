@@ -40,6 +40,14 @@ CivetHandler::handlePut(CivetServer *server, struct mg_connection *conn)
 }
 
 bool
+CivetHandler::handlePatch(CivetServer *server, struct mg_connection *conn)
+{
+	UNUSED_PARAMETER(server);
+	UNUSED_PARAMETER(conn);
+	return false;
+}
+
+bool
 CivetHandler::handleDelete(CivetServer *server, struct mg_connection *conn)
 {
 	UNUSED_PARAMETER(server);
@@ -126,6 +134,8 @@ CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 			return handler->handleDelete(me, conn) ? 1 : 0;
 		} else if (strcmp(request_info->request_method, "OPTIONS") == 0) {
 			return handler->handleOptions(me, conn) ? 1 : 0;
+		} else if (strcmp(request_info->request_method, "PATCH") == 0) {
+			return handler->handlePatch(me, conn) ? 1 : 0;
 		}
 	}
 

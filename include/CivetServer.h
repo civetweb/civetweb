@@ -86,6 +86,15 @@ class CIVETWEB_API CivetHandler
 	 * @returns true if implemented, false otherwise
 	 */
 	virtual bool handleOptions(CivetServer *server, struct mg_connection *conn);
+
+	/**
+	 * Callback method for PATCH request.
+	 *
+	 * @param server - the calling server
+	 * @param conn - the connection information
+	 * @returns true if implemented, false otherwise
+	 */
+	virtual bool handlePatch(CivetServer *server, struct mg_connection *conn);
 };
 
 /**
