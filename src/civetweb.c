@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 
+
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
@@ -8788,6 +8789,11 @@ get_remote_ip(const struct mg_connection *conn)
 	}
 	return ntohl(*(uint32_t *)&conn->client.rsa.sin.sin_addr);
 }
+
+
+/* Experimental replacement for mg_upload. */
+#include "handle_form.inl"
+
 
 int
 mg_upload(struct mg_connection *conn, const char *destination_dir)
