@@ -343,7 +343,7 @@ main(int argc, char *argv[])
 #ifdef USE_IPV6
 	if (!mg_check_feature(8)) {
 		fprintf(stderr,
-		        "Error: Embedded example built with websocket support, "
+		        "Error: Embedded example built with IPv6 support, "
 		        "but civetweb library build without.\n");
 		err = 1;
 	}

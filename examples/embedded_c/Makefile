@@ -27,7 +27,7 @@ $(PROG): $(CIVETWEB_LIB) $(SRC)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(SRC) $(CIVETWEB_LIB) $(LIBS)
 
 $(CIVETWEB_LIB):
-	$(MAKE) -C $(TOP) clean lib
+	$(MAKE) -C $(TOP) WITH_IPV6=1 WITH_WEBSOCKET=1 clean lib
 	cp $(TOP)/$(CIVETWEB_LIB) .
 
 clean:
