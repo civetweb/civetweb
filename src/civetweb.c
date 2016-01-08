@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015 the Civetweb developers
+/* Copyright (c) 2013-2016 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -8266,14 +8266,9 @@ send_websocket_handshake(struct mg_connection *conn)
 	char buf[100], sha[20], b64_sha[sizeof(sha) * 2];
 	SHA1_CTX sha_ctx;
 	int truncated;
+	const char *websock_key = mg_get_header(conn, "Sec-WebSocket-Key");
 
-	mg_snprintf(conn,
-	            &truncated,
-	            buf,
-	            sizeof(buf),
-	            "%s%s",
-	            mg_get_header(conn, "Sec-WebSocket-Key"),
-	            magic);
+	mg_snprintf(conn, &truncated, buf, sizeof(buf), "%s%s", websock_key, magic);
 
 	if (truncated) {
 		conn->must_close = 1;
@@ -8714,10 +8709,39 @@ is_websocket_protocol(const struct mg_connection *conn)
 	}
 
 	host = mg_get_header(conn, "Host");
-	key = mg_get_header(conn, "Sec-WebSocket-Key");
-	version = mg_get_header(conn, "Sec-WebSocket-Version");
+	if (!host) {
+		return 0;
+	}
 
-	return (host != NULL && key != NULL && version != NULL);
+	key = mg_get_header(conn, "Sec-WebSocket-Key");
+	if (key) {
+		/* RFC standard version:
+		 * https://tools.ietf.org/html/rfc6455 */
+		version = mg_get_header(conn, "Sec-WebSocket-Version");
+	} else {
+		/* hixie draft version:
+		 * http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76 */
+		const char *key1 = mg_get_header(conn, "Sec-WebSocket-Key1");
+		const char *key2 = mg_get_header(conn, "Sec-WebSocket-Key2");
+		char key3[8];
+
+		if ((!key1) || (!key2)) {
+			return 0;
+		}
+
+		/* This version uses data in a GET request */
+
+		/* can not assign to const conn ...
+		conn->content_len = 8;
+		if ((!key1) || (!key2) || (8 != mg_read(conn, key3, 8))) {
+		    return 0;
+		}
+		*/
+
+		version = "";
+	}
+
+	return (version != NULL);
 }
 #endif /* !USE_WEBSOCKET */
 
