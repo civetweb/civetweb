@@ -98,6 +98,31 @@ class CIVETWEB_API CivetHandler
 };
 
 /**
+ * Basic interface for a URI authorization handler.  Handler implementations
+ * must be reentrant.
+ */
+class CIVETWEB_API CivetAuthHandler
+{
+  public:
+	/**
+	 * Destructor
+	 */
+	virtual ~CivetAuthHandler()
+	{
+	}
+
+	/**
+	 * Callback method for authorization requests. It is up the this handler
+	 * to generate authorization requests.
+	 *
+	 * @param server - the calling server
+	 * @param conn - the connection information
+	 * @returns true if authorization succeeded, false otherwise
+	 */
+	virtual bool authorize(CivetServer *server, struct mg_connection *conn);
+};
+
+/**
  * Basic interface for a websocket handler.  Handlers implementations
  * must be reentrant.
  */
@@ -262,6 +287,34 @@ class CIVETWEB_API CivetServer
 	 * @param uri - the exact URL used in addWebSocketHandler().
 	 */
 	void removeWebSocketHandler(const std::string &uri);
+
+	/**
+	 * addAuthHandler(const std::string &, CivetAuthHandler *)
+	 *
+	 * Adds a URI authorization handler.  If there is existing URI authorization
+	 * handler, it will be replaced with this one.
+	 *
+	 * URI's are ordered and prefix (REST) URI's are supported.
+	 *
+	 * @param uri - URI to match.
+	 * @param handler - authorization handler instance to use.
+	 */
+	void addAuthHandler(const std::string &uri, CivetAuthHandler *handler);
+
+	void
+	addAuthHandler(const std::string &uri, CivetAuthHandler &handler)
+	{
+		addAuthHandler(uri, &handler);
+	}
+
+	/**
+	 * removeAuthHandler(const std::string &)
+	 *
+	 * Removes an authorization handler.
+	 *
+	 * @param uri - the exact URL used in addAuthHandler().
+	 */
+	void removeAuthHandler(const std::string &uri);
 
 	/**
 	 * getListeningPorts()
@@ -490,6 +543,17 @@ class CIVETWEB_API CivetServer
 	                                void *cbdata);
 	static void webSocketCloseHandler(const struct mg_connection *conn,
 	                                  void *cbdata);
+	/**
+	 * authHandler(struct mg_connection *, void *cbdata)
+	 *
+	 * Handles the authorization requests.
+	 *
+	 * @param conn - the connection information
+	 * @param cbdata - pointer to the CivetAuthHandler instance.
+	 * @returns 1 if authorized, 0 otherwise
+	 */
+	static int authHandler(struct mg_connection *conn, void *cbdata);
+
 	/**
 	 * closeHandler(struct mg_connection *)
 	 *

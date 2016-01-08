@@ -1136,16 +1136,18 @@ mg_static_assert((sizeof(config_options) / sizeof(config_options[0]))
                      == (NUM_OPTIONS + 1),
                  "config_options and enum not sync");
 
+enum { REQUEST_HANDLER, WEBSOCKET_HANDLER, AUTH_HANDLER, NUM_HANDLERS };
 
 struct mg_request_handler_info {
 	/* Name/Pattern of the URI. */
 	char *uri;
 	size_t uri_len;
 
-	/* URI type: ws/wss (websocket) or http/https (web page). */
-	int is_websocket_handler;
+	/* handler type: ws/wss (websocket) or http/https (web page) or
+	 * authorization. */
+	int handler_type;
 
-	/* Handler for http/https requests. */
+	/* Handler for http/https or authorization requests. */
 	mg_request_handler handler;
 
 	/* Handler for ws/wss (websocket) requests. */
@@ -9032,7 +9034,7 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 static void
 mg_set_request_handler_type(struct mg_context *ctx,
                             const char *uri,
-                            int is_websocket_handler,
+                            int handler_type,
                             int is_delete_request,
                             mg_request_handler handler,
                             mg_websocket_connect_handler connect_handler,
@@ -9043,6 +9045,7 @@ mg_set_request_handler_type(struct mg_context *ctx,
 {
 	struct mg_request_handler_info *tmp_rh, **lastref;
 	size_t urilen = strlen(uri);
+	int is_websocket_handler = (handler_type == WEBSOCKET_HANDLER);
 
 	if (is_websocket_handler) {
 		/* assert(handler == NULL); */
@@ -9084,7 +9087,7 @@ mg_set_request_handler_type(struct mg_context *ctx,
 	lastref = &(ctx->request_handlers);
 	for (tmp_rh = ctx->request_handlers; tmp_rh != NULL;
 	     tmp_rh = tmp_rh->next) {
-		if (tmp_rh->is_websocket_handler == is_websocket_handler) {
+		if (tmp_rh->handler_type == handler_type) {
 			if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri, uri)) {
 				if (!is_delete_request) {
 					/* update existing handler */
@@ -9141,7 +9144,7 @@ mg_set_request_handler_type(struct mg_context *ctx,
 		tmp_rh->close_handler = close_handler;
 	}
 	tmp_rh->cbdata = cbdata;
-	tmp_rh->is_websocket_handler = is_websocket_handler;
+	tmp_rh->handler_type = handler_type;
 	tmp_rh->next = NULL;
 
 	*lastref = tmp_rh;
@@ -9155,8 +9158,16 @@ mg_set_request_handler(struct mg_context *ctx,
                        mg_request_handler handler,
                        void *cbdata)
 {
-	mg_set_request_handler_type(
-	    ctx, uri, 0, handler == NULL, handler, NULL, NULL, NULL, NULL, cbdata);
+	mg_set_request_handler_type(ctx,
+	                            uri,
+	                            REQUEST_HANDLER,
+	                            handler == NULL,
+	                            handler,
+	                            NULL,
+	                            NULL,
+	                            NULL,
+	                            NULL,
+	                            cbdata);
 }
 
 
@@ -9174,7 +9185,7 @@ mg_set_websocket_handler(struct mg_context *ctx,
 	                        && (close_handler == NULL);
 	mg_set_request_handler_type(ctx,
 	                            uri,
-	                            1,
+	                            WEBSOCKET_HANDLER,
 	                            is_delete_request,
 	                            NULL,
 	                            connect_handler,
@@ -9184,10 +9195,27 @@ mg_set_websocket_handler(struct mg_context *ctx,
 	                            cbdata);
 }
 
+void
+mg_set_auth_handler(struct mg_context *ctx,
+                    const char *uri,
+                    mg_request_handler handler,
+                    void *cbdata)
+{
+	mg_set_request_handler_type(ctx,
+	                            uri,
+	                            AUTH_HANDLER,
+	                            handler == NULL,
+	                            handler,
+	                            NULL,
+	                            NULL,
+	                            NULL,
+	                            NULL,
+	                            cbdata);
+}
 
 static int
 get_request_handler(struct mg_connection *conn,
-                    int is_websocket_request,
+                    int handler_type,
                     mg_request_handler *handler,
                     mg_websocket_connect_handler *connect_handler,
                     mg_websocket_ready_handler *ready_handler,
@@ -9200,6 +9228,7 @@ get_request_handler(struct mg_connection *conn,
 		const char *uri = request_info->local_uri;
 		size_t urilen = strlen(uri);
 		struct mg_request_handler_info *tmp_rh;
+		int is_websocket_request = (handler_type == WEBSOCKET_HANDLER);
 
 		if (!conn || !conn->ctx) {
 			return 0;
@@ -9210,7 +9239,7 @@ get_request_handler(struct mg_connection *conn,
 		/* first try for an exact match */
 		for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL;
 		     tmp_rh = tmp_rh->next) {
-			if (tmp_rh->is_websocket_handler == is_websocket_request) {
+			if (tmp_rh->handler_type == handler_type) {
 				if (urilen == tmp_rh->uri_len && !strcmp(tmp_rh->uri, uri)) {
 					if (is_websocket_request) {
 						*connect_handler = tmp_rh->connect_handler;
@@ -9230,7 +9259,7 @@ get_request_handler(struct mg_connection *conn,
 		/* next try for a partial match, we will accept uri/something */
 		for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL;
 		     tmp_rh = tmp_rh->next) {
-			if (tmp_rh->is_websocket_handler == is_websocket_request) {
+			if (tmp_rh->handler_type == handler_type) {
 				if (tmp_rh->uri_len < urilen && uri[tmp_rh->uri_len] == '/'
 				    && memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0) {
 					if (is_websocket_request) {
@@ -9251,7 +9280,7 @@ get_request_handler(struct mg_connection *conn,
 		/* finally try for pattern match */
 		for (tmp_rh = conn->ctx->request_handlers; tmp_rh != NULL;
 		     tmp_rh = tmp_rh->next) {
-			if (tmp_rh->is_websocket_handler == is_websocket_request) {
+			if (tmp_rh->handler_type == handler_type) {
 				if (match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0) {
 					if (is_websocket_request) {
 						*connect_handler = tmp_rh->connect_handler;
@@ -9336,6 +9365,8 @@ handle_request(struct mg_connection *conn)
 		mg_websocket_data_handler ws_data_handler = NULL;
 		mg_websocket_close_handler ws_close_handler = NULL;
 		void *callback_data = NULL;
+		mg_request_handler auth_handler = NULL;
+		void *auth_callback_data = NULL;
 #if !defined(NO_FILES)
 		time_t curtime = time(NULL);
 		char date[64];
@@ -9419,7 +9450,8 @@ handle_request(struct mg_connection *conn)
 
 		/* 5.2. check if the request will be handled by a callback */
 		if (get_request_handler(conn,
-		                        is_websocket_request,
+		                        is_websocket_request ? WEBSOCKET_HANDLER
+		                                             : REQUEST_HANDLER,
 		                        &callback_handler,
 		                        &ws_connect_handler,
 		                        &ws_ready_handler,
@@ -9449,10 +9481,22 @@ handle_request(struct mg_connection *conn)
 		}
 
 		/* 6. authorization check */
-		if (is_put_or_delete_request && !is_script_resource
-		    && !is_callback_resource) {
-/* 6.1. this request is a PUT/DELETE to a real file */
-/* 6.1.1. thus, the server must have real files */
+		/* 6.1. a custom authorization handler is installed */
+		if (get_request_handler(conn,
+		                        AUTH_HANDLER,
+		                        &auth_handler,
+		                        NULL,
+		                        NULL,
+		                        NULL,
+		                        NULL,
+		                        &auth_callback_data)) {
+			if (!auth_handler(conn, auth_callback_data)) {
+				return;
+			}
+		} else if (is_put_or_delete_request && !is_script_resource
+		           && !is_callback_resource) {
+/* 6.2. this request is a PUT/DELETE to a real file */
+/* 6.2.1. thus, the server must have real files */
 #if defined(NO_FILES)
 			if (1) {
 #else
@@ -9468,7 +9512,7 @@ handle_request(struct mg_connection *conn)
 			}
 
 #if !defined(NO_FILES)
-			/* 6.1.2. Check if put authorization for static files is available.
+			/* 6.2.2. Check if put authorization for static files is available.
 			 */
 			if (!is_authorized_for_put(conn)) {
 				send_authorization_request(conn);
@@ -9477,7 +9521,7 @@ handle_request(struct mg_connection *conn)
 #endif
 
 		} else {
-			/* 6.2. This is either a OPTIONS, GET, HEAD or POST request,
+			/* 6.3. This is either a OPTIONS, GET, HEAD or POST request,
 			 * or it is a PUT or DELETE request to a resource that does not
 			 * correspond to a file. Check authorization. */
 			if (!check_authorization(conn, path)) {
