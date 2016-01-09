@@ -7,6 +7,7 @@ clang-format -i src/md5.inl
 clang-format -i src/mod_lua.inl
 clang-format -i src/mod_duktape.inl
 clang-format -i src/timer.inl
+clang-format -i src/handle_form.inl
 
 clang-format -i src/third_party/civetweb_lua.h
 

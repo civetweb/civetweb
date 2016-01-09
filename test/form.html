@@ -8,7 +8,21 @@
 </head>
 
 <body>
-  <form action="/handle_form.lua" method="POST" enctype="multipart/form-data">
+
+  <!-- HTML forms can use GET or POST, and the encoding can be application/x-www-form-urlencoded or multipart/form-data.
+       If no method is specified (like <form method="method">), GET should be the default method.
+       If no encoding is specified, application/x-www-form-urlencoded should be the default.
+       Submit buttons may overwrite action, method and enctype by using formaction, formmethod and formenctype.
+
+       References:
+       http://www.w3.org/TR/html401/interact/forms.html
+       http://www.w3schools.com/html/html_forms.asp,
+       http://www.w3schools.com/html/html_form_attributes.asp
+       http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
+  -->
+
+
+  <form action="/handle_form.lua">
     See <a href="http://www.w3schools.com/html/html_form_input_types.asp">HTML form tutorial</a>.<br />
 
     <fieldset>
@@ -75,7 +89,11 @@
       <textarea name="message" rows="10" cols="30">Text area default text.</textarea>
     </fieldset>
 
-    <input type="submit" value="Submit">
+    <input type="submit" value="Submit (form default)">
+    <input type="submit" value="Submit (GET)"                 formmethod="GET">
+    <input type="submit" value="Submit (POST)"                formmethod="POST">
+    <input type="submit" value="Submit (POST, url-encoded)"   formmethod="POST"   formenctype="application/x-www-form-urlencoded">
+    <input type="submit" value="Submit (POST, form-data)"     formmethod="POST"   formenctype="multipart/form-data">
 
   </form>
 </body>

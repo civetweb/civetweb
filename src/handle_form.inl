@@ -23,39 +23,40 @@
 /* EXPERIMENTAL !!! */
 /********************/
 
-int handle_form_data(struct mg_connection *conn, struct mg_form_data_handler *fdh)
+int
+handle_form_data(struct mg_connection *conn, struct mg_form_data_handler *fdh)
 {
-    const char *content_type;
-    const char *boundary;
-    int has_body_data = (conn->request_info.content_length>0) || conn->is_chunked;
-    char *data;
-            
-    content_type = mg_get_header(conn, "Content-Type");
-    if (content_type == NULL) {
-        /* This request does not have a content type set */
-        return 0;
-    }
+	const char *content_type;
+	const char *boundary;
+	int has_body_data =
+	    (conn->request_info.content_length > 0) || (conn->is_chunked);
+	char *data;
 
-    if (!mg_strcasecmp(content_type, "APPLICATION/X-WWW-FORM-URLENCODED")) {
-        /* Encoded in key/value pairs */
+	content_type = mg_get_header(conn, "Content-Type");
+	if (content_type == NULL) {
+		/* This request does not have a content type set */
+		return 0;
+	}
 
-        if (has_body_data) {
-            /* form data is in the request body data */
-            
-        } else {
-            /* form data is in the query string */
+	if (!mg_strcasecmp(content_type, "APPLICATION/X-WWW-FORM-URLENCODED")) {
+		/* Encoded in key/value pairs */
 
-        }
-    }
+		if (has_body_data) {
+			/* form data is in the request body data */
 
-    if (!mg_strncasecmp(content_type, "MULTIPART/FORM-DATA;", 20)) {
-        /* Encoded in multipart body */
+		} else {
+			/* form data is in the query string */
+		}
+	}
 
-        if (!has_body_data) {
-            /* Error: no form data */
-            return 0;
-        }
-    }
+	if (!mg_strncasecmp(content_type, "MULTIPART/FORM-DATA;", 20)) {
+		/* Encoded in multipart body */
 
-    return 0;
+		if (!has_body_data) {
+			/* Error: no form data */
+			return 0;
+		}
+	}
+
+	return 0;
 }
