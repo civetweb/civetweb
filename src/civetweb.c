@@ -8268,7 +8268,36 @@ send_websocket_handshake(struct mg_connection *conn)
 	int truncated;
 	const char *websock_key = mg_get_header(conn, "Sec-WebSocket-Key");
 
-	mg_snprintf(conn, &truncated, buf, sizeof(buf), "%s%s", websock_key, magic);
+	if (websock_key) {
+		/* RFC standard version:
+		 * https://tools.ietf.org/html/rfc6455 */
+
+		/* Reply for Sec-WebSocket-Accept */
+		mg_snprintf(
+		    conn, &truncated, buf, sizeof(buf), "%s%s", websock_key, magic);
+
+	} else {
+		/* hixie draft version:
+		 * http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76 */
+		const char *key1 = mg_get_header(conn, "Sec-WebSocket-Key1");
+		const char *key2 = mg_get_header(conn, "Sec-WebSocket-Key2");
+		char key3[8];
+
+		if ((!key1) || (!key2)) {
+			return 0;
+		}
+
+		/* This version uses 8 byte body data in a GET request */
+		conn->content_len = 8;
+		if ((!key1) || (!key2) || (8 != mg_read(conn, key3, 8))) {
+			return 0;
+		}
+	}
+
+	const char *host = mg_get_header(conn, "Host");
+	if (!host) {
+		return 0;
+	}
 
 	if (truncated) {
 		conn->must_close = 1;
@@ -8691,6 +8720,12 @@ is_websocket_protocol(const struct mg_connection *conn)
 {
 	const char *host, *upgrade, *connection, *version, *key;
 
+	/* A websocket protocoll has the following HTTP headers:
+	 *
+	 * Connection: Upgrade
+	 * Upgrade: Websocket
+	 */
+
 	upgrade = mg_get_header(conn, "Upgrade");
 	if (upgrade == NULL) {
 		return 0; /* fail early, don't waste time checking other header fields
@@ -8708,40 +8743,14 @@ is_websocket_protocol(const struct mg_connection *conn)
 		return 0;
 	}
 
-	host = mg_get_header(conn, "Host");
-	if (!host) {
-		return 0;
-	}
+	/* The headers "Host", "Sec-WebSocket-Key", "Sec-WebSocket-Protocol" and
+	 * "Sec-WebSocket-Version" are also required.
+	 * Don't check them here, since even an unsupported websocket protocol
+	 * request still IS a websocket request (in contrast to a standard HTTP
+	 * request). It will fail later in the websocket handshake.
+	 */
 
-	key = mg_get_header(conn, "Sec-WebSocket-Key");
-	if (key) {
-		/* RFC standard version:
-		 * https://tools.ietf.org/html/rfc6455 */
-		version = mg_get_header(conn, "Sec-WebSocket-Version");
-	} else {
-		/* hixie draft version:
-		 * http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76 */
-		const char *key1 = mg_get_header(conn, "Sec-WebSocket-Key1");
-		const char *key2 = mg_get_header(conn, "Sec-WebSocket-Key2");
-		char key3[8];
-
-		if ((!key1) || (!key2)) {
-			return 0;
-		}
-
-		/* This version uses data in a GET request */
-
-		/* can not assign to const conn ...
-		conn->content_len = 8;
-		if ((!key1) || (!key2) || (8 != mg_read(conn, key3, 8))) {
-		    return 0;
-		}
-		*/
-
-		version = "";
-	}
-
-	return (version != NULL);
+	return 1;
 }
 #endif /* !USE_WEBSOCKET */
 
