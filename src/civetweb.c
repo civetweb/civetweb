@@ -8259,46 +8259,16 @@ SHA1Final(unsigned char digest[20], SHA1_CTX *context)
 
 
 static int
-send_websocket_handshake(struct mg_connection *conn)
+send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 {
 	static const char *magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 	const char *protocol = NULL;
 	char buf[100], sha[20], b64_sha[sizeof(sha) * 2];
 	SHA1_CTX sha_ctx;
 	int truncated;
-	const char *websock_key = mg_get_header(conn, "Sec-WebSocket-Key");
 
-	if (websock_key) {
-		/* RFC standard version:
-		 * https://tools.ietf.org/html/rfc6455 */
-
-		/* Reply for Sec-WebSocket-Accept */
-		mg_snprintf(
-		    conn, &truncated, buf, sizeof(buf), "%s%s", websock_key, magic);
-
-	} else {
-		/* hixie draft version:
-		 * http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76 */
-		const char *key1 = mg_get_header(conn, "Sec-WebSocket-Key1");
-		const char *key2 = mg_get_header(conn, "Sec-WebSocket-Key2");
-		char key3[8];
-
-		if ((!key1) || (!key2)) {
-			return 0;
-		}
-
-		/* This version uses 8 byte body data in a GET request */
-		conn->content_len = 8;
-		if ((!key1) || (!key2) || (8 != mg_read(conn, key3, 8))) {
-			return 0;
-		}
-	}
-
-	const char *host = mg_get_header(conn, "Host");
-	if (!host) {
-		return 0;
-	}
-
+	/* Calculate Sec-WebSocket-Accept reply from Sec-WebSocket-Key. */
+	mg_snprintf(conn, &truncated, buf, sizeof(buf), "%s%s", websock_key, magic);
 	if (truncated) {
 		conn->must_close = 1;
 		return 0;
@@ -8621,6 +8591,7 @@ handle_websocket_request(struct mg_connection *conn,
                          mg_websocket_close_handler ws_close_handler,
                          void *cbData)
 {
+	const char *websock_key = mg_get_header(conn, "Sec-WebSocket-Key");
 	const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
 	int lua_websock = 0;
 
@@ -8629,17 +8600,55 @@ handle_websocket_request(struct mg_connection *conn,
 #endif
 
 	/* Step 1: Check websocket protocol version. */
+	/* Step 1.1: Check Sec-WebSocket-Key. */
+	if (!websock_key) {
+		/* The RFC standard version (https://tools.ietf.org/html/rfc6455)
+		 * requires a Sec-WebSocket-Key header.
+		 */
+		/* It could be the hixie draft version
+		 * (http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76).
+		 */
+		const char *key1 = mg_get_header(conn, "Sec-WebSocket-Key1");
+		const char *key2 = mg_get_header(conn, "Sec-WebSocket-Key2");
+		char key3[8];
+
+		if ((key1 != NULL) && (key2 != NULL)) {
+			/* This version uses 8 byte body data in a GET request */
+			conn->content_len = 8;
+			if (8 == mg_read(conn, key3, 8)) {
+				/* This is the hixie version */
+				send_http_error(conn,
+				                426,
+				                "%s",
+				                "Protocol upgrade to RFC 6455 required");
+				return;
+			}
+		}
+		/* This is an unknown version */
+		send_http_error(conn, 400, "%s", "Malformed websocket request");
+		return;
+	}
+
+	/* Step 1.2: Check websocket protocol version. */
+	/* The RFC version (https://tools.ietf.org/html/rfc6455) is 13. */
 	if (version == NULL || strcmp(version, "13") != 0) {
 		/* Reject wrong versions */
 		send_http_error(conn, 426, "%s", "Protocol upgrade required");
 		return;
 	}
 
+	/* Step 1.3: Check Host. */
+	const char *host = mg_get_header(conn, "Host");
+	if (!host) {
+		return 0;
+	}
+
 	/* Step 2: If a callback is responsible, call it. */
 	if (is_callback_resource) {
 		if (ws_connect_handler != NULL
 		    && ws_connect_handler(conn, cbData) != 0) {
-			/* C callback has returned non-zero, do not proceed with handshake.
+			/* C callback has returned non-zero, do not proceed with
+			 * handshake.
 			 */
 			/* Note that C callbacks are no longer called when Lua is
 			 * responsible, so C can no longer filter callbacks for Lua. */
@@ -8680,7 +8689,7 @@ handle_websocket_request(struct mg_connection *conn,
 	}
 
 	/* Step 5: The websocket connection has been accepted */
-	if (!send_websocket_handshake(conn)) {
+	if (!send_websocket_handshake(conn, websock_key)) {
 		send_http_error(conn, 500, "%s", "Websocket handshake failed");
 		return;
 	}
@@ -8728,7 +8737,8 @@ is_websocket_protocol(const struct mg_connection *conn)
 
 	upgrade = mg_get_header(conn, "Upgrade");
 	if (upgrade == NULL) {
-		return 0; /* fail early, don't waste time checking other header fields
+		return 0; /* fail early, don't waste time checking other header
+		           * fields
 		             */
 	}
 	if (!mg_strcasestr(upgrade, "websocket")) {
@@ -8747,7 +8757,7 @@ is_websocket_protocol(const struct mg_connection *conn)
 	 * "Sec-WebSocket-Version" are also required.
 	 * Don't check them here, since even an unsupported websocket protocol
 	 * request still IS a websocket request (in contrast to a standard HTTP
-	 * request). It will fail later in the websocket handshake.
+	 * request). It will fail later in handle_websocket_request.
 	 */
 
 	return 1;
@@ -9400,7 +9410,8 @@ handle_request(struct mg_connection *conn)
 			    ri->local_uri, uri_len, (char *)ri->local_uri, uri_len + 1, 0);
 		}
 
-		/* 1.3. clean URIs, so a path like allowed_dir/../forbidden_file is not
+		/* 1.3. clean URIs, so a path like allowed_dir/../forbidden_file is
+		 * not
 		 * possible */
 		remove_double_dots_and_double_slashes((char *)ri->local_uri);
 
@@ -9451,9 +9462,11 @@ handle_request(struct mg_connection *conn)
 		/* request not yet handled by a handler or redirect, so the request
 		 * is processed here */
 
-		/* 5. interpret the url to find out how the request must be handled */
+		/* 5. interpret the url to find out how the request must be handled
+		 */
 		/* 5.1. first test, if the request targets the regular http(s)://
-		 * protocol namespace or the websocket ws(s):// protocol namespace. */
+		 * protocol namespace or the websocket ws(s):// protocol namespace.
+		 */
 		is_websocket_request = is_websocket_protocol(conn);
 
 		/* 5.2. check if the request will be handled by a callback */
@@ -9465,7 +9478,8 @@ handle_request(struct mg_connection *conn)
 		                        &ws_data_handler,
 		                        &ws_close_handler,
 		                        &callback_data)) {
-			/* 5.2.1. A callback will handle this request. All requests handled
+			/* 5.2.1. A callback will handle this request. All requests
+			 * handled
 			 * by a callback have to be considered as requests to a script
 			 * resource. */
 			is_callback_resource = 1;
@@ -9507,7 +9521,8 @@ handle_request(struct mg_connection *conn)
 			}
 
 #if !defined(NO_FILES)
-			/* 6.1.2. Check if put authorization for static files is available.
+			/* 6.1.2. Check if put authorization for static files is
+			 * available.
 			 */
 			if (!is_authorized_for_put(conn)) {
 				send_authorization_request(conn);
@@ -9532,15 +9547,18 @@ handle_request(struct mg_connection *conn)
 			if (!is_websocket_request) {
 				i = callback_handler(conn, callback_data);
 				if (i > 0) {
-					/* Do nothing, callback has served the request. Store the
-					 * return value as status code for the log and discard all
+					/* Do nothing, callback has served the request. Store
+					 * the
+					 * return value as status code for the log and discard
+					 * all
 					 * data from the client not used by the callback. */
 					conn->status_code = i;
 					discard_unread_request_data(conn);
 				} else {
 					/* TODO (high): what if the handler did NOT handle the
 					 * request */
-					/* The last version did handle this as a file request, but
+					/* The last version did handle this as a file request,
+					 * but
 					 * since a file request is not always a script resource,
 					 * the authorization check might be different */
 					interpret_uri(conn,
@@ -9553,7 +9571,8 @@ handle_request(struct mg_connection *conn)
 					              &is_put_or_delete_request);
 					callback_handler = NULL;
 
-					/* TODO (very low): goto is deprecated but for the moment,
+					/* TODO (very low): goto is deprecated but for the
+					 * moment,
 					 * a goto is simpler than some curious loop. */
 					/* The situation "callback does not handle the request"
 					 * needs to be reconsidered anyway. */
@@ -9607,7 +9626,8 @@ handle_request(struct mg_connection *conn)
 #endif
 
 #if defined(NO_FILES)
-			/* 9a. In case the server uses only callbacks, this uri is unknown.
+			/* 9a. In case the server uses only callbacks, this uri is
+			 * unknown.
 			 * Then, all request handling ends here. */
 			send_http_error(conn, 404, "%s", "Not Found");
 
@@ -9751,13 +9771,15 @@ handle_file_based_request(struct mg_connection *conn,
 	                        strlen(
 	                            conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
 	                        path) > 0) {
-		/* Lua server page: an SSI like page containing mostly plain html code
+		/* Lua server page: an SSI like page containing mostly plain html
+		 * code
 		 * plus some tags with server generated contents. */
 		handle_lsp_request(conn, path, file, NULL);
 	} else if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
 	                        strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
 	                        path) > 0) {
-		/* Lua in-server module script: a CGI like script used to generate the
+		/* Lua in-server module script: a CGI like script used to generate
+		 * the
 		 * entire reply. */
 		mg_exec_lua_script(conn, path, NULL);
 #endif
@@ -9839,7 +9861,8 @@ parse_port_string(const struct vec *vec, struct socket *so)
 	           && mg_inet_pton(
 	                  AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6))) {
 		/* IPv6 address, examples: see above */
-		/* so->lsa.sin6.sin6_family = AF_INET6; already set by mg_inet_pton */
+		/* so->lsa.sin6.sin6_family = AF_INET6; already set by mg_inet_pton
+		 */
 		so->lsa.sin6.sin6_port = htons((uint16_t)port);
 #endif
 	} else if (sscanf(vec->ptr, "%u%n", &port, &len) == 1) {
@@ -9851,7 +9874,8 @@ parse_port_string(const struct vec *vec, struct socket *so)
 		len = 0;
 	}
 
-	/* sscanf and the option splitting code ensure the following condition */
+	/* sscanf and the option splitting code ensure the following condition
+	 */
 	if ((len < 0) && ((unsigned)len > (unsigned)vec->len)) {
 		return 0;
 	}
@@ -10163,7 +10187,8 @@ log_access(const struct mg_connection *conn)
 
 
 /* Verify given socket address against the ACL.
- * Return -1 if ACL is malformed, 0 if address is disallowed, 1 if allowed. */
+ * Return -1 if ACL is malformed, 0 if address is disallowed, 1 if allowed.
+ */
 static int
 check_acl(struct mg_context *ctx, uint32_t remote_ip)
 {
@@ -10283,7 +10308,8 @@ ssl_id_callback(void)
 		struct mg_workerTLS *tls =
 		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
 		if (tls == NULL) {
-			/* SSL called from an unknown thread: Create some thread index. */
+			/* SSL called from an unknown thread: Create some thread index.
+			 */
 			tls = (struct mg_workerTLS *)mg_malloc(sizeof(struct mg_workerTLS));
 			tls->is_master = -2; /* -2 means "3rd party thread" */
 			tls->thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
@@ -10611,13 +10637,13 @@ set_ssl_option(struct mg_context *ctx)
 		ca_file = ctx->config[SSL_CA_FILE];
 		if (SSL_CTX_load_verify_locations(ctx->ssl_ctx, ca_file, ca_path)
 		    != 1) {
-			mg_cry(
-			    fc(ctx),
-			    "SSL_CTX_load_verify_locations error: %s "
-			    "ssl_verify_peer requires setting "
-			    "either ssl_ca_path or ssl_ca_file. Is any of them present in "
-			    "the .conf file?",
-			    ssl_error());
+			mg_cry(fc(ctx),
+			       "SSL_CTX_load_verify_locations error: %s "
+			       "ssl_verify_peer requires setting "
+			       "either ssl_ca_path or ssl_ca_file. Is any of them "
+			       "present in "
+			       "the .conf file?",
+			       ssl_error());
 			return 0;
 		}
 
@@ -10768,7 +10794,8 @@ close_socket_gracefully(struct mg_connection *conn)
 		return;
 	}
 
-	/* Set linger option to avoid socket hanging out after close. This prevent
+	/* Set linger option to avoid socket hanging out after close. This
+	 * prevent
 	 * ephemeral port exhaust problem under high QPS. */
 	linger.l_onoff = 1;
 	linger.l_linger = 1;
@@ -10789,7 +10816,8 @@ close_socket_gracefully(struct mg_connection *conn)
 	set_non_blocking_mode(conn->client.sock);
 
 #if defined(_WIN32)
-	/* Read and discard pending incoming data. If we do not do that and close
+	/* Read and discard pending incoming data. If we do not do that and
+	 * close
 	 * the socket, the data in the send buffer may be discarded. This
 	 * behaviour is seen on Windows, when client keeps sending data
 	 * when server decides to close the connection; then when client
@@ -10832,7 +10860,8 @@ close_connection(struct mg_connection *conn)
 
 #ifndef NO_SSL
 	if (conn->ssl != NULL) {
-		/* Run SSL_shutdown twice to ensure completly close SSL connection */
+		/* Run SSL_shutdown twice to ensure completly close SSL connection
+		 */
 		SSL_shutdown(conn->ssl);
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
@@ -10963,10 +10992,12 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 
 			/* TODO: Check ssl_verify_peer and ssl_ca_path here.
 			   SSL_CTX_set_verify call is needed to switch off server
-			 * certificate checking, which is off by default in OpenSSL and on
+			 * certificate checking, which is off by default in OpenSSL and
+			 on
 			 * in yaSSL. */
 
-			// TODO: SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_PEER,
+			// TODO: SSL_CTX_set_verify(conn->client_ssl_ctx,
+			// SSL_VERIFY_PEER,
 			// verify_ssl_server);
 
 			if (client_options->client_cert) {
@@ -11120,7 +11151,8 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	char *hostend = NULL;
 	char *portbegin, *portend;
 
-	/* DNS is case insensitive, so use case insensitive string compare here */
+	/* DNS is case insensitive, so use case insensitive string compare here
+	 */
 	domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
 	if (!domain) {
 		return 0;
@@ -11203,7 +11235,8 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	conn->request_len =
 	    read_request(NULL, conn, conn->buf, conn->buf_size, &conn->data_len);
-	/* assert(conn->request_len < 0 || conn->data_len >= conn->request_len); */
+	/* assert(conn->request_len < 0 || conn->data_len >= conn->request_len);
+	 */
 	if (conn->request_len >= 0 && conn->data_len < conn->request_len) {
 		mg_snprintf(conn,
 		            NULL, /* No truncation check for ebuf */
@@ -11626,10 +11659,12 @@ process_new_connection(struct mg_connection *conn)
 				ri->remote_user = NULL;
 			}
 
-			/* NOTE(lsm): order is important here. should_keep_alive() call is
+			/* NOTE(lsm): order is important here. should_keep_alive() call
+			 * is
 			 * using parsed request, which will be invalid after memmove's
 			 * below.
-			 * Therefore, memorize should_keep_alive() result now for later use
+			 * Therefore, memorize should_keep_alive() result now for later
+			 * use
 			 * in loop exit condition. */
 			keep_alive = conn->ctx->stop_flag == 0 && keep_alive_enabled
 			             && conn->content_len >= 0 && should_keep_alive(conn);
@@ -11731,7 +11766,8 @@ worker_thread_run(void *thread_func_param)
 		conn->ctx = ctx;
 		conn->request_info.user_data = ctx->user_data;
 		/* Allocate a mutex for this connection to allow communication both
-		 * within the request handler and from elsewhere in the application */
+		 * within the request handler and from elsewhere in the application
+		 */
 		(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 
 		/* Call consume_socket() even when ctx->stop_flag > 0, to let it
@@ -11879,9 +11915,11 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 			       strerror(ERRNO));
 		}
 
-		/* Set TCP keep-alive. This is needed because if HTTP-level keep-alive
+		/* Set TCP keep-alive. This is needed because if HTTP-level
+		 * keep-alive
 		 * is enabled, and client resets the connection, server won't get
-		 * TCP FIN or RST and will keep the connection open forever. With TCP
+		 * TCP FIN or RST and will keep the connection open forever. With
+		 * TCP
 		 * keep-alive, next keep-alive handshake will figure out that the
 		 * client is down and will close the server end.
 		 * Thanks to Igor Klopov who suggested the patch. */
@@ -12052,7 +12090,8 @@ free_context(struct mg_context *ctx)
 		ctx->callbacks.exit_context(ctx);
 	}
 
-	/* All threads exited, no sync is needed. Destroy thread mutex and condvars
+	/* All threads exited, no sync is needed. Destroy thread mutex and
+	 * condvars
 	 */
 	(void)pthread_mutex_destroy(&ctx->thread_mutex);
 	(void)pthread_cond_destroy(&ctx->thread_cond);
@@ -12233,7 +12272,8 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif
 
 		if (0 != pthread_key_create(&sTlsKey, tls_dtor)) {
-			/* Fatal error - abort start. However, this situation should never
+			/* Fatal error - abort start. However, this situation should
+			 * never
 			 * occur in practice. */
 			mg_atomic_dec(&sTlsInit);
 			mg_cry(fc(ctx), "Cannot initialize thread local storage");
