@@ -8637,11 +8637,8 @@ handle_websocket_request(struct mg_connection *conn,
 		return;
 	}
 
-	/* Step 1.3: Check Host. */
-	const char *host = mg_get_header(conn, "Host");
-	if (!host) {
-		return 0;
-	}
+	/* Step 1.3: Could check for "Host", but we do not really nead this
+	 * value for anything, so just ignore it. */
 
 	/* Step 2: If a callback is responsible, call it. */
 	if (is_callback_resource) {
@@ -8727,7 +8724,7 @@ handle_websocket_request(struct mg_connection *conn,
 static int
 is_websocket_protocol(const struct mg_connection *conn)
 {
-	const char *host, *upgrade, *connection, *version, *key;
+	const char *upgrade, *connection;
 
 	/* A websocket protocoll has the following HTTP headers:
 	 *
