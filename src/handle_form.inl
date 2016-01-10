@@ -32,10 +32,21 @@ handle_form_data(struct mg_connection *conn, struct mg_form_data_handler *fdh)
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
 	char *data;
 
+    /* There are three ways to encode data from a HTML form:
+     * 1) method: GET (default)
+     *    The form data is in the HTTP query string.
+     * 2) method: POST, enctype: "application/x-www-form-urlencoded"
+     *    The form data is in the request body. 
+     *    The body is url encoded (the default encoding for POST).
+     * 3) method: POST, enctype: "multipart/form-data".
+     *    The form data is in the request body of a multipart message.
+     *    This is the typical way to handle file upload from a form.
+     */
+
 	content_type = mg_get_header(conn, "Content-Type");
 	if (content_type == NULL) {
-		/* This request does not have a content type set */
-		return 0;
+		/* This request does not have a content type set .. TODO: but it could be a GET requst */
+		//return 0;
 	}
 
 	if (!mg_strcasecmp(content_type, "APPLICATION/X-WWW-FORM-URLENCODED")) {

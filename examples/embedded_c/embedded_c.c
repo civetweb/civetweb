@@ -147,10 +147,10 @@ FooHandler(struct mg_connection *conn, void *cbdata)
 int
 FileHandler(struct mg_connection *conn, void *cbdata)
 {
-    /* In this handler, we ignore the req_info and send the file "fileName". */
-    const char *fileName = (const char*)cbdata;
+	/* In this handler, we ignore the req_info and send the file "fileName". */
+	const char *fileName = (const char *)cbdata;
 
-    mg_send_file(conn, fileName);
+	mg_send_file(conn, fileName);
 	return 1;
 }
 
@@ -160,13 +160,13 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 {
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
-    int ret;
-    struct mg_form_data_handler *fdh = 0;
+	int ret;
+	struct mg_form_data_handler *fdh = 0;
 
-    /* TODO: Checks before calling handle_form_data ? */
-    (void)req_info;
+	/* TODO: Checks before calling handle_form_data ? */
+	(void)req_info;
 
-    ret = handle_form_data(conn, fdh);
+	ret = handle_form_data(conn, fdh);
 
 	return 1;
 }
@@ -361,7 +361,7 @@ main(int argc, char *argv[])
 #endif
 #ifndef NO_SSL
 	                         "ssl_certificate",
-                             "../../resources/cert/server.pem",
+	                         "../../resources/cert/server.pem",
 #endif
 	                         0};
 	struct mg_callbacks callbacks;
@@ -421,13 +421,16 @@ main(int argc, char *argv[])
 	mg_set_request_handler(ctx, "**.foo$", FooHandler, 0);
 
 	/* Add handler for /form  (serve a file outside the document root) */
-	mg_set_request_handler(ctx, "/form", FileHandler, (void *)"../../test/form.html");
+	mg_set_request_handler(ctx,
+	                       "/form",
+	                       FileHandler,
+	                       (void *)"../../test/form.html");
 
-    /* Add handler for form data */
-    mg_set_request_handler(ctx, 
-                           "/handle_form.embedded_c.example.callback",
-                           FormHandler, 
-                           (void *)0);
+	/* Add handler for form data */
+	mg_set_request_handler(ctx,
+	                       "/handle_form.embedded_c.example.callback",
+	                       FormHandler,
+	                       (void *)0);
 
 	/* Add HTTP site to open a websocket connection */
 	mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);

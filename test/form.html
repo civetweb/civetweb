@@ -23,7 +23,8 @@
 
 
   <form action="/handle_form.embedded_c.example.callback">
-    See <a href="http://www.w3schools.com/html/html_form_input_types.asp">HTML form tutorial</a>.<br />
+    See <a href="http://www.w3schools.com/html/html_form_input_types.asp">HTML form tutorial</a>
+    and <a href="http://www.w3.org/TR/html401/interact/forms.html">HTML spec</a>.<br />
 
     <fieldset>
       <legend>Text inputs:</legend>
@@ -89,14 +90,27 @@
       <textarea name="message" rows="10" cols="30">Text area default text.</textarea>
     </fieldset>
 
-    <input type="submit" value="Submit to Lua script"         formmethod="POST"   formenctype="multipart/form-data"
-     formaction="/handle_form.lua">
-     
-    <input type="submit" value="Submit (form default)">
-    <input type="submit" value="Submit (GET)"                 formmethod="GET">
-    <input type="submit" value="Submit (POST)"                formmethod="POST">
-    <input type="submit" value="Submit (POST, url-encoded)"   formmethod="POST"   formenctype="application/x-www-form-urlencoded">
-    <input type="submit" value="Submit (POST, form-data)"     formmethod="POST"   formenctype="multipart/form-data">
+    <fieldset>
+    <legend>Submit:</legend>
+      <fieldset>
+        <legend>Submit to Lua script:</legend>
+        This will only work if server side Lua scripting is activated and /handle_form.lua can be found on the server.
+        <br>
+        <input type="submit" value="Submit"  formmethod="POST"  formenctype="multipart/form-data"
+         formaction="/handle_form.lua">
+      </fieldset>
+
+      <fieldset>
+        <legend>Submit to callback:</legend>
+        This will only work in the embedded_c example.
+        <br>
+        <input type="submit" value="Submit (form default)">
+        <input type="submit" value="Submit (GET)"                 formmethod="GET">
+        <input type="submit" value="Submit (POST)"                formmethod="POST">
+        <input type="submit" value="Submit (POST, url-encoded)"   formmethod="POST"   formenctype="application/x-www-form-urlencoded">
+        <input type="submit" value="Submit (POST, form-data)"     formmethod="POST"   formenctype="multipart/form-data">
+      </fieldset>
+    </fieldset>
 
   </form>
 </body>

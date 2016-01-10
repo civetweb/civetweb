@@ -27,3 +27,4 @@ clang-format -i test/shared.c
 clang-format -i test/civetweb_check.h
 clang-format -i test/main.c
 
+clang-format -i examples/embedded_c/embedded_c.c
