@@ -22,7 +22,7 @@
   -->
 
 
-  <form action="/handle_form.lua">
+  <form action="/handle_form.embedded_c.example.callback">
     See <a href="http://www.w3schools.com/html/html_form_input_types.asp">HTML form tutorial</a>.<br />
 
     <fieldset>
@@ -89,6 +89,9 @@
       <textarea name="message" rows="10" cols="30">Text area default text.</textarea>
     </fieldset>
 
+    <input type="submit" value="Submit to Lua script"         formmethod="POST"   formenctype="multipart/form-data"
+     formaction="/handle_form.lua">
+     
     <input type="submit" value="Submit (form default)">
     <input type="submit" value="Submit (GET)"                 formmethod="GET">
     <input type="submit" value="Submit (POST)"                formmethod="POST">
