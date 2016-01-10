@@ -6383,6 +6383,7 @@ handle_static_file_request(struct mg_connection *conn,
 	mg_fclose(filep);
 }
 
+
 void
 mg_send_file(struct mg_connection *conn, const char *path)
 {

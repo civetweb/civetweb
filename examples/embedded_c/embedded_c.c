@@ -155,18 +155,23 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
+struct mg_form_data_handler {
+	int (*field_found)(const char *key, const char *value);
+};
+
+
 int
 FormHandler(struct mg_connection *conn, void *cbdata)
 {
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
-	struct mg_form_data_handler *fdh = 0;
+	struct mg_form_data_handler fdh = {0};
 
 	/* TODO: Checks before calling handle_form_data ? */
 	(void)req_info;
 
-	ret = handle_form_data(conn, fdh);
+	ret = handle_form_data(conn, &fdh);
 
 	return 1;
 }
