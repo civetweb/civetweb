@@ -113,7 +113,7 @@ class CIVETWEB_API CivetAuthHandler
 
 	/**
 	 * Callback method for authorization requests. It is up the this handler
-	 * to generate authorization requests.
+	 * to generate 401 responses if authorization fails.
 	 *
 	 * @param server - the calling server
 	 * @param conn - the connection information

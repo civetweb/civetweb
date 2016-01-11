@@ -334,13 +334,27 @@ mg_set_websocket_handler(struct mg_context *ctx,
                          mg_websocket_close_handler close_handler,
                          void *cbdata);
 
+/* mg_authorization_handler
+
+   Some description here
+
+   Parameters:
+      conn: current connection information.
+      cbdata: the callback data configured with mg_set_request_handler().
+   Returns:
+      0: access denied
+      1: access granted
+ */
+typedef int (*mg_authorization_handler)(struct mg_connection *conn,
+                                        void *cbdata);
+
 /* mg_set_auth_handler
 
    Sets or removes a URI mapping for an authorization handler.
    This function works similar to mg_set_request_handler - see there. */
 CIVETWEB_API void mg_set_auth_handler(struct mg_context *ctx,
                                       const char *uri,
-                                      mg_request_handler handler,
+                                      mg_authorization_handler handler,
                                       void *cbdata);
 
 /* Get the value of particular configuration parameter.
