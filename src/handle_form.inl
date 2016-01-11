@@ -39,8 +39,13 @@ mirror_body___dev_helper(struct mg_connection *conn)
 
 
 struct mg_form_data_handler {
-	int (*field_found)(const char *key, const char *value, void *user_data);
+	int (*field_found)(const char *key,
+	                   size_t keylen,
+	                   const char *value,
+	                   size_t vallen,
+	                   void *user_data);
 	int (*file_found)(const char *key,
+	                  size_t keylen,
 	                  const char *filename,
 	                  int *disposition,
 	                  void *user_data);
@@ -78,7 +83,38 @@ mg_handle_form_data(struct mg_connection *conn,
 
 		/* GET request: form data is in the query string. */
 		data = conn->request_info.query_string;
-		/* TODO: split data in a=1&b&c=3&c=4 ... */
+		if (!data) {
+			/* No query string. */
+			return 0;
+		}
+
+		/* Split data in a=1&b&c=3&c=4 ... */
+		while (*data) {
+			const char *val = strchr(data, '=');
+			const char *next;
+			ptrdiff_t keylen, vallen;
+
+			if (!val) {
+				break;
+			}
+			keylen = val - data;
+			val++;
+			next = strchr(val, '&');
+			if (next) {
+				vallen = next - val;
+				next++;
+			} else {
+				vallen = strlen(val);
+			}
+
+			/* Call callback */
+			fdh->field_found(
+			    data, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
+
+			/* Proceed to next entry */
+			data = val + vallen;
+		}
+
 		return 0;
 	}
 

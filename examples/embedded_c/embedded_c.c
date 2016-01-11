@@ -26,7 +26,7 @@
 #endif
 #else
 #ifdef USE_IPV6
-#define PORT "[::]:8888r,[::]:8843s"
+#define PORT "[::]:8888r,[::]:8843s,8884"
 #else
 #define PORT "8888r,8843s"
 #endif
@@ -156,8 +156,13 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 
 
 struct mg_form_data_handler {
-	int (*field_found)(const char *key, const char *value, void *user_data);
+	int (*field_found)(const char *key,
+	                   size_t keylen,
+	                   const char *value,
+	                   size_t vallen,
+	                   void *user_data);
 	int (*file_found)(const char *key,
+	                  size_t keylen,
 	                  const char *filename,
 	                  int *disposition,
 	                  void *user_data);
@@ -166,12 +171,23 @@ struct mg_form_data_handler {
 
 
 int
+field_found(const char *key,
+            size_t keylen,
+            const char *value,
+            size_t vallen,
+            void *user_data)
+{
+	return 0;
+}
+
+
+int
 FormHandler(struct mg_connection *conn, void *cbdata)
 {
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
-	struct mg_form_data_handler fdh = {0, 0, 0};
+	struct mg_form_data_handler fdh = {field_found, 0, 0};
 
 	/* TODO: Checks before calling handle_form_data ? */
 	(void)req_info;
