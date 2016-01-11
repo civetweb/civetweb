@@ -119,7 +119,7 @@ class CIVETWEB_API CivetAuthHandler
 	 * @param conn - the connection information
 	 * @returns true if authorization succeeded, false otherwise
 	 */
-	virtual bool authorize(CivetServer *server, struct mg_connection *conn);
+	virtual bool authorize(CivetServer *server, struct mg_connection *conn) = 0;
 };
 
 /**

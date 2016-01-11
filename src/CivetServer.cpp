@@ -105,14 +105,6 @@ CivetWebSocketHandler::handleClose(CivetServer *server,
 	return;
 }
 
-bool
-CivetAuthHandler::authorize(CivetServer *server, struct mg_connection *conn)
-{
-	UNUSED_PARAMETER(server);
-	UNUSED_PARAMETER(conn);
-	return false;
-}
-
 int
 CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 {
@@ -296,7 +288,7 @@ CivetServer::CivetServer(std::vector<std::string> options,
 	callbacks.connection_close = closeHandler;
 
 	std::vector<const char *> pointers(options.size());
-	for (int i = 0; i < options.size(); i++) {
+	for (size_t i = 0; i < options.size(); i++) {
 		pointers.push_back(options[i].c_str());
 	}
 	pointers.push_back(0);
