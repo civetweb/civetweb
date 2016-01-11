@@ -39,18 +39,24 @@ mirror_body___dev_helper(struct mg_connection *conn)
 
 
 struct mg_form_data_handler {
-	int (*field_found)(const char *key, const char *value);
+	int (*field_found)(const char *key, const char *value, void *user_data);
+	int (*file_found)(const char *key,
+	                  const char *filename,
+	                  int *disposition,
+	                  void *user_data);
+	void *user_data;
 };
 
 
 int
-handle_form_data(struct mg_connection *conn, struct mg_form_data_handler *fdh)
+mg_handle_form_data(struct mg_connection *conn,
+                    struct mg_form_data_handler *fdh)
 {
 	const char *content_type;
 	const char *boundary;
+	const char *data;
 	int has_body_data =
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
-	char *data;
 
 	/* There are three ways to encode data from a HTML form:
 	 * 1) method: GET (default)
