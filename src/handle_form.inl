@@ -131,29 +131,39 @@ mg_handle_form_data(struct mg_connection *conn,
 		 * on the fly */
 		char buf[/*10*/ 24];
 		int buf_fill = 0;
-		buf_fill = mg_read(conn, buf, sizeof(buf) - 1);
-		if (buf_fill <= 0) {
-			/* No data available */
-			return 0;
-		}
-		buf[buf_fill] = 0;
 
+		memset(buf, 0, sizeof(buf));
 		data = buf;
 
-		while (*data) {
-			const char *val = strchr(data, '=');
+		for (;;) {
+
+			const char *val;
 			const char *next;
 			ptrdiff_t keylen, vallen;
 
+			if (!*data) {
+				buf_fill = mg_read(conn, buf, sizeof(buf) - 1);
+				if (buf_fill <= 0) {
+					/* No more data available */
+					break;
+				}
+				buf[buf_fill] = 0;
+
+				data = buf;
+			}
+
+			val = strchr(data, '=');
+
 			if (!val) {
 				size_t used = data - buf;
-				char *tgt = buf + sizeof(buf) - used;
+				char *tgt = buf + sizeof(buf) - 1 - used;
 
 				/* Drop used data (used = data - buf) */
 				memmove(buf, data, used);
 				buf_fill -= used;
 				buf_fill += mg_read(conn, tgt, used);
 				buf[sizeof(buf) - 1] = 0;
+				data = buf;
 
 				val = strchr(data, '=');
 				if (!val) {
@@ -162,12 +172,18 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 			keylen = val - data;
 			val++;
-			next = strchr(val, '&');
+			
+            next = strchr(val, '&');
+            if (!next) {
+               /* TODO: could need to add data to the buffer to get the next & */
+            }
+
 			if (next) {
 				vallen = next - val;
 				next++;
 			} else {
 				vallen = strlen(val);
+				next = val + vallen;
 			}
 
 			/* Call callback */
@@ -175,7 +191,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			    data, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
 
 			/* Proceed to next entry */
-			data = val + vallen;
+			data = next;	
 		}
 
 		return 0;
