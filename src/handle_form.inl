@@ -22,6 +22,7 @@
 /********************/
 /* EXPERIMENTAL !!! */
 /********************/
+#ifdef USE_EXPERIMENTAL
 
 void
 mirror_body___dev_helper(struct mg_connection *conn)
@@ -118,17 +119,69 @@ mg_handle_form_data(struct mg_connection *conn,
 		return 0;
 	}
 
-	mirror_body___dev_helper(conn);
-
 	content_type = mg_get_header(conn, "Content-Type");
 
 	if (!content_type
 	    || !mg_strcasecmp(content_type, "APPLICATION/X-WWW-FORM-URLENCODED")) {
 		/* The form data is in the request body data, encoded in key/value
 		 * pairs. */
-		/* TODO: read body data and split it in a=1&b&c=3&c=4 ... */
+
+		/* Read body data and split it in a=1&b&c=3&c=4 ... */
+		/* The encoding is like in the "GET" case above, but here we read data
+		 * on the fly */
+		char buf[/*10*/ 24];
+		int buf_fill = 0;
+		buf_fill = mg_read(conn, buf, sizeof(buf) - 1);
+		if (buf_fill <= 0) {
+			/* No data available */
+			return 0;
+		}
+		buf[buf_fill] = 0;
+
+		data = buf;
+
+		while (*data) {
+			const char *val = strchr(data, '=');
+			const char *next;
+			ptrdiff_t keylen, vallen;
+
+			if (!val) {
+				size_t used = data - buf;
+				char *tgt = buf + sizeof(buf) - used;
+
+				/* Drop used data (used = data - buf) */
+				memmove(buf, data, used);
+				buf_fill -= used;
+				buf_fill += mg_read(conn, tgt, used);
+				buf[sizeof(buf) - 1] = 0;
+
+				val = strchr(data, '=');
+				if (!val) {
+					break;
+				}
+			}
+			keylen = val - data;
+			val++;
+			next = strchr(val, '&');
+			if (next) {
+				vallen = next - val;
+				next++;
+			} else {
+				vallen = strlen(val);
+			}
+
+			/* Call callback */
+			fdh->field_found(
+			    data, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
+
+			/* Proceed to next entry */
+			data = val + vallen;
+		}
+
 		return 0;
 	}
+
+	mirror_body___dev_helper(conn);
 
 	if (!mg_strncasecmp(content_type, "MULTIPART/FORM-DATA;", 20)) {
 		/* The form data is in the request body data, encoded as multipart
@@ -147,3 +200,5 @@ mg_handle_form_data(struct mg_connection *conn,
 	/* Unknown Content-Type */
 	return 0;
 }
+
+#endif
