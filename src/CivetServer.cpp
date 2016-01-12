@@ -143,6 +143,31 @@ CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 }
 
 int
+CivetServer::authHandler(struct mg_connection *conn, void *cbdata)
+{
+	const struct mg_request_info *request_info = mg_get_request_info(conn);
+	assert(request_info != NULL);
+	CivetServer *me = (CivetServer *)(request_info->user_data);
+	assert(me != NULL);
+
+	// Happens when a request hits the server before the context is saved
+	if (me->context == NULL)
+		return 0;
+
+	mg_lock_context(me->context);
+	me->connections[conn] = CivetConnection();
+	mg_unlock_context(me->context);
+
+	CivetAuthHandler *handler = (CivetAuthHandler *)cbdata;
+
+	if (handler) {
+		return handler->authorize(me, conn) ? 1 : 0;
+	}
+
+	return 0; // No handler found
+}
+
+int
 CivetServer::webSocketConnectionHandler(const struct mg_connection *conn,
                                         void *cbdata)
 {
@@ -263,7 +288,7 @@ CivetServer::CivetServer(std::vector<std::string> options,
 	callbacks.connection_close = closeHandler;
 
 	std::vector<const char *> pointers(options.size());
-	for (int i = 0; i < options.size(); i++) {
+	for (size_t i = 0; i < options.size(); i++) {
 		pointers.push_back(options[i].c_str());
 	}
 	pointers.push_back(0);
@@ -318,6 +343,12 @@ CivetServer::addWebSocketHandler(const std::string &uri,
 }
 
 void
+CivetServer::addAuthHandler(const std::string &uri, CivetAuthHandler *handler)
+{
+	mg_set_auth_handler(context, uri.c_str(), authHandler, handler);
+}
+
+void
 CivetServer::removeHandler(const std::string &uri)
 {
 	mg_set_request_handler(context, uri.c_str(), NULL, NULL);
@@ -328,6 +359,12 @@ CivetServer::removeWebSocketHandler(const std::string &uri)
 {
 	mg_set_websocket_handler(
 	    context, uri.c_str(), NULL, NULL, NULL, NULL, NULL);
+}
+
+void
+CivetServer::removeAuthHandler(const std::string &uri)
+{
+	mg_set_auth_handler(context, uri.c_str(), NULL, NULL);
 }
 
 void
