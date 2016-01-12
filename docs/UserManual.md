@@ -407,8 +407,27 @@ than the depth set here connection is refused.
 ### ssl_default_verify_paths `yes`
 Loads default trusted certificates locations set at openssl compile time.
 
-### ssl_forward_secrecy `yes`
-Enable [forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
+### ssl_cipher_list
+List of ciphers to present to the client. Entries should be separated by 
+colons, commas or spaces.
+
+    ALL           All available ciphers
+    ALL:!eNULL    All ciphers excluding NULL ciphers
+    AES128:!MD5   AES 128 with digests other than MD5
+
+See [this entry](https://www.openssl.org/docs/manmaster/apps/ciphers.html) in
+OpenSSL documentation for full list of options and additional examples.
+
+### ssl_protocol_version `0`
+Sets the minimal accepted version of SSL/TLS protocol according to the table:
+
+Protocols | Value
+------------ | -------------
+SSL2+SSL3+TLS1.0+TLS1.1+TLS1.2  | 0
+SSL3+TLS1.0+TLS1.1+TLS1.2  | 1
+TLS1.0+TLS1.1+TLS1.2 | 2
+TLS1.1+TLS1.2 | 3
+TLS1.2 | 4
 
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
