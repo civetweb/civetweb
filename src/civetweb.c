@@ -851,7 +851,7 @@ typedef struct x509_store_ctx_st X509_STORE_CTX;
 #define SSL_OP_ALL (0x80000BFFL)
 #define SSL_OP_NO_SSLv2 (0x01000000L)
 #define SSL_OP_NO_SSLv3 (0x02000000L)
-#define SSL_OP_NO_TLSv1	(0x04000000L)
+#define SSL_OP_NO_TLSv1 (0x04000000L)
 #define SSL_OP_NO_TLSv1_2 (0x08000000L)
 #define SSL_OP_NO_TLSv1_1 (0x10000000L)
 #define SSL_OP_SINGLE_DH_USE (0x00100000L)
@@ -901,14 +901,13 @@ struct ssl_func {
 #define SSL_CTX_check_private_key (*(int (*)(SSL_CTX *))ssl_sw[28].ptr)
 #define SSL_CTX_set_session_id_context                                         \
 	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
-#define SSL_CTX_ctrl                                                           \
-	(*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
+#define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
-#define SSL_CTX_set_options(ctx,op)                                            \
-	SSL_CTX_ctrl((ctx),SSL_CTRL_OPTIONS,(op),NULL)
-#define SSL_CTX_clear_options(ctx,op)                                          \
-	SSL_CTX_ctrl((ctx),SSL_CTRL_CLEAR_OPTIONS,(op),NULL)
+#define SSL_CTX_set_options(ctx, op)                                           \
+	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
+#define SSL_CTX_clear_options(ctx, op)                                         \
+	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
@@ -10646,7 +10645,7 @@ ssl_get_protocol(int version_id)
 		ret |= SSL_OP_NO_SSLv3;
 	if (version_id > 2)
 		ret |= SSL_OP_NO_TLSv1;
-	if(version_id > 3)
+	if (version_id > 3)
 		ret |= SSL_OP_NO_TLSv1_1;
 	return ret;
 }
@@ -10700,9 +10699,9 @@ set_ssl_option(struct mg_context *ctx)
 		return 0;
 	}
 
-	SSL_CTX_clear_options(ctx->ssl_ctx, SSL_OP_NO_SSLv2 |
-                          SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 |
-                          SSL_OP_NO_TLSv1_1);
+	SSL_CTX_clear_options(ctx->ssl_ctx,
+	                      SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
+	                          | SSL_OP_NO_TLSv1_1);
 	protocol_ver = atoi(ctx->config[SSL_PROTOCOL_VERSION]);
 	SSL_CTX_set_options(ctx->ssl_ctx, ssl_get_protocol(protocol_ver));
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
@@ -10790,10 +10789,9 @@ set_ssl_option(struct mg_context *ctx)
 	}
 
 	if (ctx->config[SSL_CIPHER_LIST] != NULL) {
-		if (SSL_CTX_set_cipher_list(ctx->ssl_ctx, ctx->config[SSL_CIPHER_LIST]) != 1) {
-		mg_cry(fc(ctx),
-				"SSL_CTX_set_cipher_list error: %s",
-				ssl_error());
+		if (SSL_CTX_set_cipher_list(ctx->ssl_ctx, ctx->config[SSL_CIPHER_LIST])
+		    != 1) {
+			mg_cry(fc(ctx), "SSL_CTX_set_cipher_list error: %s", ssl_error());
 		}
 	}
 
