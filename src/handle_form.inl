@@ -60,7 +60,7 @@ mg_handle_form_data(struct mg_connection *conn,
 {
 	const char *content_type;
 	const char *boundary;
-	const char *data;
+
 	int has_body_data =
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
 
@@ -76,6 +76,8 @@ mg_handle_form_data(struct mg_connection *conn,
 	 */
 
 	if (!has_body_data) {
+		const char *data;
+
 		if (strcmp(conn->request_info.request_method, "GET")) {
 			/* No body data, but not a GET request.
 			 * This is not a valid form request. */
@@ -129,55 +131,40 @@ mg_handle_form_data(struct mg_connection *conn,
 		/* Read body data and split it in a=1&b&c=3&c=4 ... */
 		/* The encoding is like in the "GET" case above, but here we read data
 		 * on the fly */
-		char buf[/*10*/ 24];
+		char buf[1024];
 		int buf_fill = 0;
-
-		memset(buf, 0, sizeof(buf));
-		data = buf;
 
 		for (;;) {
 
 			const char *val;
 			const char *next;
 			ptrdiff_t keylen, vallen;
+			int used;
 
-			if (!*data) {
-				buf_fill = mg_read(conn, buf, sizeof(buf) - 1);
-				if (buf_fill <= 0) {
-					/* No more data available */
+			if (buf_fill < (sizeof(buf) - 1)) {
+
+				int r =
+				    mg_read(conn, buf + buf_fill, sizeof(buf) - 1 - buf_fill);
+				if (r < 0) {
+					/* read error */
+					return 0;
+				}
+				buf_fill += r;
+				buf[buf_fill] = 0;
+				if (buf_fill < 1) {
 					break;
 				}
-				buf[buf_fill] = 0;
-
-				data = buf;
 			}
 
-			val = strchr(data, '=');
+			val = strchr(buf, '=');
 
 			if (!val) {
-				size_t used = data - buf;
-				char *tgt = buf + sizeof(buf) - 1 - used;
-
-				/* Drop used data (used = data - buf) */
-				memmove(buf, data, used);
-				buf_fill -= used;
-				buf_fill += mg_read(conn, tgt, used);
-				buf[sizeof(buf) - 1] = 0;
-				data = buf;
-
-				val = strchr(data, '=');
-				if (!val) {
-					break;
-				}
+				break;
 			}
-			keylen = val - data;
+			keylen = val - buf;
 			val++;
-			
-            next = strchr(val, '&');
-            if (!next) {
-               /* TODO: could need to add data to the buffer to get the next & */
-            }
 
+			next = strchr(val, '&');
 			if (next) {
 				vallen = next - val;
 				next++;
@@ -188,10 +175,12 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			/* Call callback */
 			fdh->field_found(
-			    data, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
+			    buf, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
 
 			/* Proceed to next entry */
-			data = next;	
+			used = next - buf;
+			memmove(buf, buf + used, sizeof(buf) - used);
+			buf_fill -= used;
 		}
 
 		return 0;
