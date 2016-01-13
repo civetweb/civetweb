@@ -1476,7 +1476,10 @@ mg_fopen(struct mg_connection *conn,
 		return 0;
 	}
 
-	memset(filep, 0, sizeof(*filep));
+	/* TODO (high): mg_fopen should only open a file, while mg_stat should
+	 * only get the file status. They should not work on different members of
+	 * the same structure (bad cohesion). */
+	/* memset(filep, 0, sizeof(*filep)); <-- remove this (issue #244) */
 
 	if (!is_file_in_memory(conn, path, filep)) {
 #ifdef _WIN32
