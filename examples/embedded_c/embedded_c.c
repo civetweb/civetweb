@@ -177,6 +177,13 @@ field_found(const char *key,
             size_t vallen,
             void *user_data)
 {
+	struct mg_connection *conn = (struct mg_connection *)user_data;
+
+	mg_write(conn, key, keylen);
+	mg_printf(conn, " = ");
+	mg_write(conn, value, vallen);
+	mg_printf(conn, "\r\n");
+
 	return 0;
 }
 
@@ -191,6 +198,9 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 
 	/* TODO: Checks before calling handle_form_data ? */
 	(void)req_info;
+
+	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+	fdh.user_data = (void *)conn;
 
 	/* TODO: Handle the return value */
 	ret = mg_handle_form_data(conn, &fdh);

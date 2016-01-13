@@ -108,6 +108,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				next++;
 			} else {
 				vallen = strlen(val);
+				next = val + vallen;
 			}
 
 			/* Call callback */
@@ -115,7 +116,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			    data, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
 
 			/* Proceed to next entry */
-			data = val + vallen;
+			data = next;
 		}
 
 		return 0;
@@ -135,7 +136,7 @@ mg_handle_form_data(struct mg_connection *conn,
 		int buf_fill = 0;
 
 		for (;;) {
-
+			/* TODO(high): Handle (text) fields with data > sizeof(buf). */
 			const char *val;
 			const char *next;
 			ptrdiff_t keylen, vallen;
