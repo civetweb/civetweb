@@ -1472,6 +1472,8 @@ mg_fopen(struct mg_connection *conn,
          const char *mode,
          struct file *filep)
 {
+	struct stat st;
+
 	if (!filep) {
 		return 0;
 	}
@@ -1481,9 +1483,9 @@ mg_fopen(struct mg_connection *conn,
 	 * the same structure (bad cohesion). */
 	memset(filep, 0, sizeof(*filep));
 
-	struct stat st;
-	if (stat(path, &st) == 0)
-		filep->size = st.st_size;
+	if (stat(path, &st) == 0) {
+		filep->size = (uint64_t)(st.st_size);
+	}
 
 	if (!is_file_in_memory(conn, path, filep)) {
 #ifdef _WIN32
