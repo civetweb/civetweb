@@ -158,14 +158,9 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 struct mg_form_data_handler {
 	int (*field_found)(const char *key,
 	                   size_t keylen,
-	                   const char *value,
-	                   size_t vallen,
+	                   const char *filename,
+	                   int *disposition,
 	                   void *user_data);
-	int (*file_found)(const char *key,
-	                  size_t keylen,
-	                  const char *filename,
-	                  int *disposition,
-	                  void *user_data);
 	void *user_data;
 };
 
@@ -173,15 +168,16 @@ struct mg_form_data_handler {
 int
 field_found(const char *key,
             size_t keylen,
-            const char *value,
-            size_t vallen,
+            const char *filename,
+            int *disposition,
             void *user_data)
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
 	mg_write(conn, key, keylen);
 	mg_printf(conn, " = ");
-	mg_write(conn, value, vallen);
+	// mg_write(conn, value, vallen);
+	// TODO: disposition = skip/store/read/abort
 	mg_printf(conn, "\r\n");
 
 	return 0;

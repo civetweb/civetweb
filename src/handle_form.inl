@@ -49,15 +49,15 @@ struct mg_form_data_handler {
 
 
 static int
-field_found(const char *key,
-            size_t keylen,
-            const char *value,
-            size_t vallen,
-            struct mg_form_data_handler *fdh)
+url_encoded_field_found(const char *key,
+                        size_t keylen,
+                        const char *filename,
+                        int *disposition,
+                        struct mg_form_data_handler *fdh)
 {
 	/* Call callback */
-	mg_url_decode(data, (size_t)keylen, ) return field_found(
-	    data, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
+	/* TODO: mg_url_decode(key, (size_t)keylen, ) */
+	return fdh->field_found(key, keylen, filename, disposition, fdh->user_data);
 }
 
 
@@ -67,7 +67,7 @@ mg_handle_form_data(struct mg_connection *conn,
 {
 	const char *content_type;
 	const char *boundary;
-    int disposition;
+	int disposition;
 
 	int has_body_data =
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
@@ -110,7 +110,8 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 			keylen = val - data;
 
-            field_found(data, (size_t)keylen, &disposition, fdh);
+			url_encoded_field_found(
+			    data, (size_t)keylen, NULL, &disposition, fdh);
 
 			val++;
 			next = strchr(val, '&');
@@ -123,7 +124,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 
 			/* Call callback */
-			//field_found(data, (size_t)keylen, val, (size_t)vallen, fdh);
+			// field_found(data, (size_t)keylen, val, (size_t)vallen, fdh);
 
 			/* Proceed to next entry */
 			data = next;
