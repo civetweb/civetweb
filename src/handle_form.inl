@@ -22,7 +22,6 @@
 /********************/
 /* EXPERIMENTAL !!! */
 /********************/
-#ifdef USE_EXPERIMENTAL
 
 void
 mirror_body___dev_helper(struct mg_connection *conn)
@@ -42,16 +41,24 @@ mirror_body___dev_helper(struct mg_connection *conn)
 struct mg_form_data_handler {
 	int (*field_found)(const char *key,
 	                   size_t keylen,
-	                   const char *value,
-	                   size_t vallen,
+	                   const char *filename,
+	                   int *disposition,
 	                   void *user_data);
-	int (*file_found)(const char *key,
-	                  size_t keylen,
-	                  const char *filename,
-	                  int *disposition,
-	                  void *user_data);
 	void *user_data;
 };
+
+
+static int
+field_found(const char *key,
+            size_t keylen,
+            const char *value,
+            size_t vallen,
+            struct mg_form_data_handler *fdh)
+{
+	/* Call callback */
+	mg_url_decode(data, (size_t)keylen, ) return field_found(
+	    data, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
+}
 
 
 int
@@ -60,6 +67,7 @@ mg_handle_form_data(struct mg_connection *conn,
 {
 	const char *content_type;
 	const char *boundary;
+    int disposition;
 
 	int has_body_data =
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
@@ -101,6 +109,9 @@ mg_handle_form_data(struct mg_connection *conn,
 				break;
 			}
 			keylen = val - data;
+
+            field_found(data, (size_t)keylen, &disposition, fdh);
+
 			val++;
 			next = strchr(val, '&');
 			if (next) {
@@ -112,8 +123,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 
 			/* Call callback */
-			fdh->field_found(
-			    data, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
+			//field_found(data, (size_t)keylen, val, (size_t)vallen, fdh);
 
 			/* Proceed to next entry */
 			data = next;
@@ -206,5 +216,3 @@ mg_handle_form_data(struct mg_connection *conn,
 	/* Unknown Content-Type */
 	return 0;
 }
-
-#endif
