@@ -1481,6 +1481,10 @@ mg_fopen(struct mg_connection *conn,
 	 * the same structure (bad cohesion). */
 	/* memset(filep, 0, sizeof(*filep)); <-- remove this (issue #244) */
 
+	struct stat st;
+	if (stat(path, &st) == 0)
+		filep->size = st.st_size;
+
 	if (!is_file_in_memory(conn, path, filep)) {
 #ifdef _WIN32
 		wchar_t wbuf[PATH_MAX], wmode[20];
