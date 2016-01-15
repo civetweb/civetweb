@@ -155,12 +155,26 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
+enum {
+	FORM_DISPOSITION_SKIP = 0x0,
+	FORM_DISPOSITION_GET = 0x1,
+	FORM_DISPOSITION_STORE = 0x2,
+	FORM_DISPOSITION_READ = 0x4,
+	FORM_DISPOSITION_ABORT = 0x10
+};
+
+
 struct mg_form_data_handler {
 	int (*field_found)(const char *key,
 	                   size_t keylen,
 	                   const char *filename,
-	                   int *disposition,
 	                   void *user_data);
+	int (*field_get)(const char *key,
+	                 size_t keylen,
+	                 const char *filename,
+	                 const char *value,
+	                 size_t valuelen,
+	                 void *user_data);
 	void *user_data;
 };
 
@@ -169,16 +183,30 @@ int
 field_found(const char *key,
             size_t keylen,
             const char *filename,
-            int *disposition,
             void *user_data)
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
 	mg_write(conn, key, keylen);
+	mg_printf(conn, ":\r\n");
+	return FORM_DISPOSITION_GET;
+}
+
+
+int
+field_get(const char *key,
+          size_t keylen,
+          const char *filename,
+          const char *value,
+          size_t valuelen,
+          void *user_data)
+{
+	struct mg_connection *conn = (struct mg_connection *)user_data;
+
+	mg_write(conn, key, keylen);
 	mg_printf(conn, " = ");
-	// mg_write(conn, value, vallen);
-	// TODO: disposition = skip/store/read/abort
-	mg_printf(conn, "\r\n");
+	mg_write(conn, value, valuelen);
+	mg_printf(conn, "\r\n\r\n");
 
 	return 0;
 }
@@ -190,7 +218,7 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
-	struct mg_form_data_handler fdh = {field_found, 0};
+	struct mg_form_data_handler fdh = {field_found, field_get, 0};
 
 	/* TODO: Checks before calling handle_form_data ? */
 	(void)req_info;

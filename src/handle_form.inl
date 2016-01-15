@@ -51,8 +51,13 @@ struct mg_form_data_handler {
 	int (*field_found)(const char *key,
 	                   size_t keylen,
 	                   const char *filename,
-	                   int *disposition,
 	                   void *user_data);
+	int (*field_get)(const char *key,
+	                 size_t keylen,
+	                 const char *filename,
+	                 const char *value,
+	                 size_t valuelen,
+	                 void *user_data);
 	void *user_data;
 };
 
@@ -61,7 +66,6 @@ static int
 url_encoded_field_found(const char *key,
                         size_t keylen,
                         const char *filename,
-                        int *disposition,
                         struct mg_form_data_handler *fdh)
 {
 	/* Call callback */
@@ -69,14 +73,13 @@ url_encoded_field_found(const char *key,
 	int ret =
 	    mg_url_decode(key, (size_t)keylen, key_dec, (int)sizeof(key_dec), 1);
 	if ((ret < sizeof(key_dec)) && (ret >= 0)) {
-		return fdh->field_found(
-		    key, keylen, filename, disposition, fdh->user_data);
+		return fdh->field_found(key, keylen, filename, fdh->user_data);
 	}
 	return FORM_DISPOSITION_SKIP;
 }
 
 
-void
+int
 url_encoded_field_get(const char *key,
                       size_t keylen,
                       const char *filename,
@@ -88,16 +91,14 @@ url_encoded_field_get(const char *key,
 	char *value_dec = mg_malloc(valuelen + 1);
 	if (!value_dec) {
 		/* TODO: oom */
-		return;
+		return FORM_DISPOSITION_ABORT;
 	}
 
 	mg_url_decode(key, (size_t)keylen, key_dec, (int)sizeof(key_dec), 1);
 	mg_url_decode(value, (size_t)valuelen, value_dec, (int)valuelen + 1, 1);
 
-
-	/* TODO: Form decode */
-	fdh->field_get(
-	    key, keylen, filename, value, strlen(value_dec), fdh->user_data);
+	return fdh->field_get(
+	    key, keylen, filename, value_dec, strlen(value_dec), fdh->user_data);
 }
 
 
@@ -106,8 +107,9 @@ mg_handle_form_data(struct mg_connection *conn,
                     struct mg_form_data_handler *fdh)
 {
 	const char *content_type;
-	const char *boundary;
+	char buf[1024];
 	int disposition;
+	int buf_fill = 0;
 
 	int has_body_data =
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
@@ -150,8 +152,8 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 			keylen = val - data;
 
-			url_encoded_field_found(
-			    data, (size_t)keylen, NULL, &disposition, fdh);
+			disposition =
+			    url_encoded_field_found(data, (size_t)keylen, NULL, fdh);
 
 			val++;
 			next = strchr(val, '&');
@@ -166,7 +168,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			if (disposition == FORM_DISPOSITION_GET) {
 				/* Call callback */
 				url_encoded_field_get(
-				    data, (size_t)keylen, val, (size_t)vallen, fdh);
+				    data, (size_t)keylen, NULL, val, (size_t)vallen, fdh);
 			}
 
 			/* Proceed to next entry */
@@ -186,9 +188,6 @@ mg_handle_form_data(struct mg_connection *conn,
 		/* Read body data and split it in a=1&b&c=3&c=4 ... */
 		/* The encoding is like in the "GET" case above, but here we read data
 		 * on the fly */
-		char buf[1024];
-		int buf_fill = 0;
-
 		for (;;) {
 			/* TODO(high): Handle (text) fields with data > sizeof(buf). */
 			const char *val;
@@ -229,8 +228,8 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 
 			/* Call callback */
-			fdh->field_found(
-			    buf, (size_t)keylen, NULL, &disposition, fdh->user_data);
+			disposition =
+			    fdh->field_found(buf, (size_t)keylen, NULL, fdh->user_data);
 
 			/* Proceed to next entry */
 			used = next - buf;
@@ -241,14 +240,45 @@ mg_handle_form_data(struct mg_connection *conn,
 		return 0;
 	}
 
-	mirror_body___dev_helper(conn);
+	// mirror_body___dev_helper(conn);
 
 	if (!mg_strncasecmp(content_type, "MULTIPART/FORM-DATA;", 20)) {
 		/* The form data is in the request body data, encoded as multipart
 		 * content. */
+		const char *boundary;
+		size_t bl;
+		int r;
 
 		/* There has to be a BOUNDARY definition in the Content-Type header */
-		if (!mg_strncasecmp(content_type + 20, "BOUNDARY=", 9)) {
+		if (mg_strncasecmp(content_type + 21, "BOUNDARY=", 9)) {
+			/* Malformed request */
+			return 0;
+		}
+
+		boundary = content_type + 30;
+		bl = strlen(boundary);
+
+		r = mg_read(conn, buf + buf_fill, sizeof(buf) - 1 - buf_fill);
+		if (r < 0) {
+			/* read error */
+			return 0;
+		}
+		buf_fill += r;
+		buf[buf_fill] = 0;
+		if (buf_fill < 1) {
+			/* No data */
+			return 0;
+		}
+
+		if (buf[0] != '-' || buf[1] != '-') {
+			/* Malformed request */
+			return 0;
+		}
+		if (strncmp(buf + 2, boundary, bl)) {
+			/* Malformed request */
+			return 0;
+		}
+		if (buf[bl + 2] != '\r' || buf[bl + 3] != '\n') {
 			/* Malformed request */
 			return 0;
 		}
