@@ -56,8 +56,14 @@ url_encoded_field_found(const char *key,
                         struct mg_form_data_handler *fdh)
 {
 	/* Call callback */
-	/* TODO: mg_url_decode(key, (size_t)keylen, ) */
-	return fdh->field_found(key, keylen, filename, disposition, fdh->user_data);
+	char key_dec[1024];
+	int ret =
+	    mg_url_decode(key, (size_t)keylen, key_dec, (int)sizeof(key_dec), 1);
+	if ((ret < sizeof(key_dec)) && (ret >= 0)) {
+		return fdh->field_found(
+		    key, keylen, filename, disposition, fdh->user_data);
+	}
+	return 0; /* SKIP; */
 }
 
 
@@ -187,7 +193,7 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			/* Call callback */
 			fdh->field_found(
-			    buf, (size_t)keylen, val, (size_t)vallen, fdh->user_data);
+			    buf, (size_t)keylen, NULL, &disposition, fdh->user_data);
 
 			/* Proceed to next entry */
 			used = next - buf;

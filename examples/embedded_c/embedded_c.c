@@ -190,7 +190,7 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
-	struct mg_form_data_handler fdh = {field_found, 0, 0};
+	struct mg_form_data_handler fdh = {field_found, 0};
 
 	/* TODO: Checks before calling handle_form_data ? */
 	(void)req_info;
