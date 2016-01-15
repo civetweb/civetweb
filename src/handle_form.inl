@@ -38,6 +38,15 @@ mirror_body___dev_helper(struct mg_connection *conn)
 }
 
 
+enum {
+	FORM_DISPOSITION_SKIP = 0x0,
+	FORM_DISPOSITION_GET = 0x1,
+	FORM_DISPOSITION_STORE = 0x2,
+	FORM_DISPOSITION_READ = 0x4,
+	FORM_DISPOSITION_ABORT = 0x10
+};
+
+
 struct mg_form_data_handler {
 	int (*field_found)(const char *key,
 	                   size_t keylen,
@@ -63,7 +72,32 @@ url_encoded_field_found(const char *key,
 		return fdh->field_found(
 		    key, keylen, filename, disposition, fdh->user_data);
 	}
-	return 0; /* SKIP; */
+	return FORM_DISPOSITION_SKIP;
+}
+
+
+void
+url_encoded_field_get(const char *key,
+                      size_t keylen,
+                      const char *filename,
+                      const char *value,
+                      size_t valuelen,
+                      struct mg_form_data_handler *fdh)
+{
+	char key_dec[1024];
+	char *value_dec = mg_malloc(valuelen + 1);
+	if (!value_dec) {
+		/* TODO: oom */
+		return;
+	}
+
+	mg_url_decode(key, (size_t)keylen, key_dec, (int)sizeof(key_dec), 1);
+	mg_url_decode(value, (size_t)valuelen, value_dec, (int)valuelen + 1, 1);
+
+
+	/* TODO: Form decode */
+	fdh->field_get(
+	    key, keylen, filename, value, strlen(value_dec), fdh->user_data);
 }
 
 
@@ -129,8 +163,11 @@ mg_handle_form_data(struct mg_connection *conn,
 				next = val + vallen;
 			}
 
-			/* Call callback */
-			// field_found(data, (size_t)keylen, val, (size_t)vallen, fdh);
+			if (disposition == FORM_DISPOSITION_GET) {
+				/* Call callback */
+				url_encoded_field_get(
+				    data, (size_t)keylen, val, (size_t)vallen, fdh);
+			}
 
 			/* Proceed to next entry */
 			data = next;
