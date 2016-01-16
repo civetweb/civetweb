@@ -42,7 +42,7 @@ enum {
 	FORM_DISPOSITION_SKIP = 0x0,
 	FORM_DISPOSITION_GET = 0x1,
 	FORM_DISPOSITION_STORE = 0x2,
-	FORM_DISPOSITION_READ = 0x4,
+	FORM_DISPOSITION_READ = 0x3,
 	FORM_DISPOSITION_ABORT = 0x10
 };
 
@@ -135,13 +135,16 @@ mg_handle_form_data(struct mg_connection *conn,
 		}
 
 		/* GET request: form data is in the query string. */
+		/* The entire data has already been loaded, so there is no nead to
+		 * call mg_read. We just need to split the query string into key-value
+		 * pairs. */
 		data = conn->request_info.query_string;
 		if (!data) {
 			/* No query string. */
 			return 0;
 		}
 
-		/* Split data in a=1&b&c=3&c=4 ... */
+		/* Split data in a=1&b=xy&c=3&c=4 ... */
 		while (*data) {
 			const char *val = strchr(data, '=');
 			const char *next;
@@ -152,6 +155,17 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 			keylen = val - data;
 
+			/* In every "field_found" callback we ask what to do with the
+			 * data ("disposition"). This could be:
+			 * FORM_DISPOSITION_SKIP (0) ... ignore the value if this field
+			 * FORM_DISPOSITION_GET (1) ... read the data and call the get
+			 *                              callback function
+			 * FORM_DISPOSITION_STORE (2) ... store the data in a file
+			 *                                TODO: get a filename
+			 * FORM_DISPOSITION_READ (3) ... let the user read the data
+			 *                               (for parsing long data on the fly)
+			 * FORM_DISPOSITION_ABORT (flag) ... stop parsing
+			 */
 			disposition =
 			    url_encoded_field_found(data, (size_t)keylen, NULL, fdh);
 
@@ -169,6 +183,17 @@ mg_handle_form_data(struct mg_connection *conn,
 				/* Call callback */
 				url_encoded_field_get(
 				    data, (size_t)keylen, NULL, val, (size_t)vallen, fdh);
+			}
+			if (disposition == FORM_DISPOSITION_STORE) {
+				/* TODO */
+			}
+			if (disposition == FORM_DISPOSITION_READ) {
+				/* TODO */
+			}
+			if (disposition
+			    & FORM_DISPOSITION_ABORT == FORM_DISPOSITION_ABORT) {
+				/* Stop parsing the request */
+				break;
 			}
 
 			/* Proceed to next entry */
