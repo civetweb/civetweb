@@ -179,19 +179,46 @@ mg_handle_form_data(struct mg_connection *conn,
 				next = val + vallen;
 			}
 
-			if (disposition == FORM_DISPOSITION_GET) {
+			if (disposition == mg_cry(conn,
+			                          "%s: Cannot store file %s",
+			                          __func__,
+			                          path);) {
 				/* Call callback */
 				url_encoded_field_get(
 				    data, (size_t)keylen, NULL, val, (size_t)vallen, fdh);
 			}
 			if (disposition == FORM_DISPOSITION_STORE) {
-				/* TODO */
+				/* Store the content to a file */
+				/* TODO: Get "path" from callback" */
+				struct mg_file f;
+				if (mg_fopen(conn, path, "wb", &f)) {
+					size_t n = (size_t)fwrite(value, 1, (size_t)vallen, f.fp);
+			        if ((n != vallen) || (ferror(fp)) {
+						mg_cry(conn,
+						       "%s: Cannot write file %s",
+						       __func__,
+						       path);
+                    }
+                    mg_fclose(&f);
+				} else {
+					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+				}
 			}
 			if (disposition == FORM_DISPOSITION_READ) {
+				/* The idea of "disposition=read" is to let the API user read
+				 * data chunk by chunk and to some data processing on the fly.
+				 * This should avoid the need to store data in the server:
+				 * It should neither be stored in memory, like
+				 * "disposition=get" does, nor in a file like
+				 * "disposition=store".
+				 * However, for a "GET" request this does not make any much
+				 * sense, since the data is already stored in memory, as it is
+				 * part of the query string.
+				 */
 				/* TODO */
 			}
-			if (disposition
-			    & FORM_DISPOSITION_ABORT == FORM_DISPOSITION_ABORT) {
+			if ((disposition & FORM_DISPOSITION_ABORT)
+			    == FORM_DISPOSITION_ABORT) {
 				/* Stop parsing the request */
 				break;
 			}
