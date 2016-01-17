@@ -183,6 +183,8 @@ int
 field_found(const char *key,
             size_t keylen,
             const char *filename,
+            char *path,
+            size_t pathlen,
             void *user_data)
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;

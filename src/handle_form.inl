@@ -51,6 +51,8 @@ struct mg_form_data_handler {
 	int (*field_found)(const char *key,
 	                   size_t keylen,
 	                   const char *filename,
+	                   char *path,
+	                   size_t pathlen,
 	                   void *user_data);
 	int (*field_get)(const char *key,
 	                 size_t keylen,
@@ -66,6 +68,8 @@ static int
 url_encoded_field_found(const char *key,
                         size_t keylen,
                         const char *filename,
+                        char *path,
+                        size_t pathlen,
                         struct mg_form_data_handler *fdh)
 {
 	/* Call callback */
@@ -73,7 +77,8 @@ url_encoded_field_found(const char *key,
 	int ret =
 	    mg_url_decode(key, (size_t)keylen, key_dec, (int)sizeof(key_dec), 1);
 	if ((ret < sizeof(key_dec)) && (ret >= 0)) {
-		return fdh->field_found(key, keylen, filename, fdh->user_data);
+		return fdh->field_found(
+		    key, keylen, filename, path, pathlen, fdh->user_data);
 	}
 	return FORM_DISPOSITION_SKIP;
 }
@@ -107,6 +112,7 @@ mg_handle_form_data(struct mg_connection *conn,
                     struct mg_form_data_handler *fdh)
 {
 	const char *content_type;
+	char path[512];
 	char buf[1024];
 	int disposition;
 	int buf_fill = 0;
@@ -166,8 +172,9 @@ mg_handle_form_data(struct mg_connection *conn,
 			 *                               (for parsing long data on the fly)
 			 * FORM_DISPOSITION_ABORT (flag) ... stop parsing
 			 */
-			disposition =
-			    url_encoded_field_found(data, (size_t)keylen, NULL, fdh);
+			memset(path, 0, sizeof(path));
+			disposition = url_encoded_field_found(
+			    data, (size_t)keylen, NULL, path, sizeof(path) - 1, fdh);
 
 			val++;
 			next = strchr(val, '&');
@@ -179,10 +186,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				next = val + vallen;
 			}
 
-			if (disposition == mg_cry(conn,
-			                          "%s: Cannot store file %s",
-			                          __func__,
-			                          path);) {
+			if (disposition == FORM_DISPOSITION_GET) {
 				/* Call callback */
 				url_encoded_field_get(
 				    data, (size_t)keylen, NULL, val, (size_t)vallen, fdh);
@@ -190,16 +194,16 @@ mg_handle_form_data(struct mg_connection *conn,
 			if (disposition == FORM_DISPOSITION_STORE) {
 				/* Store the content to a file */
 				/* TODO: Get "path" from callback" */
-				struct mg_file f;
-				if (mg_fopen(conn, path, "wb", &f)) {
-					size_t n = (size_t)fwrite(value, 1, (size_t)vallen, f.fp);
-			        if ((n != vallen) || (ferror(fp)) {
+				FILE *f = fopen(path, "wb");
+				if (f != NULL) {
+					size_t n = (size_t)fwrite(val, 1, (size_t)vallen, f);
+					if ((n != vallen) || (ferror(f))) {
 						mg_cry(conn,
 						       "%s: Cannot write file %s",
 						       __func__,
 						       path);
-                    }
-                    mg_fclose(&f);
+					}
+					fclose(f);
 				} else {
 					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
 				}
@@ -280,8 +284,13 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 
 			/* Call callback */
-			disposition =
-			    fdh->field_found(buf, (size_t)keylen, NULL, fdh->user_data);
+			memset(path, 0, sizeof(path));
+			disposition = fdh->field_found(buf,
+			                               (size_t)keylen,
+			                               NULL,
+			                               path,
+			                               sizeof(path) - 1,
+			                               fdh->user_data);
 
 			/* Proceed to next entry */
 			used = next - buf;
