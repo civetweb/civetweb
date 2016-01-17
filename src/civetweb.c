@@ -6459,12 +6459,28 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 	ri->num_headers = 0;
 
 	for (i = 0; i < (int)ARRAY_SIZE(ri->http_headers); i++) {
-		ri->http_headers[i].name = skip_quoted(buf, ":", " ", 0);
-		ri->http_headers[i].value = skip(buf, "\r\n");
-		if (ri->http_headers[i].name[0] == '\0') {
+		char *dp = strchr(*buf, ':');
+		if (!dp) {
 			break;
 		}
+		*dp = 0;
+		ri->http_headers[i].name = *buf;
+		do {
+			dp++;
+		} while (*dp == ' ');
+
+		ri->http_headers[i].value = dp;
+		*buf = strstr(dp, "\r\n");
+
 		ri->num_headers = i + 1;
+		if (*buf) {
+			(*buf)[0] = 0;
+			(*buf)[1] = 0;
+			*buf += 2;
+		} else {
+			*buf = dp;
+			break;
+		}
 	}
 }
 
