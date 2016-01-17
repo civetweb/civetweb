@@ -134,7 +134,7 @@ url_encoded_field_get(const char *key,
 	    value, (size_t)value_len, value_dec, (int)value_len + 1, 1);
 
 	return fdh->field_get(
-	    key, filename, value_dec, value_dec_len, fdh->user_data);
+	    key, filename, value_dec, (size_t)value_dec_len, fdh->user_data);
 }
 
 
