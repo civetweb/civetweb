@@ -50,6 +50,7 @@ struct mg_form_data_handler {
 	void *user_data;
 };
 
+
 int mg_handle_form_data(struct mg_connection *conn,
                         struct mg_form_data_handler *fdh);
 
@@ -65,7 +66,6 @@ url_encoded_field_found(const char *key,
                         size_t path_len,
                         struct mg_form_data_handler *fdh)
 {
-	/* Call callback */
 	char key_dec[1024];
 	char filename_dec[1024];
 	int key_dec_len;
@@ -100,24 +100,41 @@ url_encoded_field_found(const char *key,
 
 static int
 url_encoded_field_get(const char *key,
-                      size_t keylen,
+                      size_t key_len,
                       const char *filename,
+                      size_t filename_len,
                       const char *value,
-                      size_t valuelen,
+                      size_t value_len,
                       struct mg_form_data_handler *fdh)
 {
 	char key_dec[1024];
-	char *value_dec = mg_malloc(valuelen + 1);
+	char filename_dec[1024];
+
+	char *value_dec = mg_malloc(value_len + 1);
+	int value_dec_len;
+
 	if (!value_dec) {
 		/* TODO: oom */
 		return FORM_DISPOSITION_ABORT;
 	}
 
-	mg_url_decode(key, (size_t)keylen, key_dec, (int)sizeof(key_dec), 1);
-	mg_url_decode(value, (size_t)valuelen, value_dec, (int)valuelen + 1, 1);
+	mg_url_decode(key, (size_t)key_len, key_dec, (int)sizeof(key_dec), 1);
+
+	if (filename) {
+		mg_url_decode(filename,
+		              (size_t)filename_len,
+		              filename_dec,
+		              (int)sizeof(filename_dec),
+		              1);
+	} else {
+		filename_dec[0] = 0;
+	}
+
+	value_dec_len = mg_url_decode(
+	    value, (size_t)value_len, value_dec, (int)value_len + 1, 1);
 
 	return fdh->field_get(
-	    key, keylen, filename, value_dec, strlen(value_dec), fdh->user_data);
+	    key, filename, value_dec, value_dec_len, fdh->user_data);
 }
 
 
@@ -203,7 +220,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			if (disposition == FORM_DISPOSITION_GET) {
 				/* Call callback */
 				url_encoded_field_get(
-				    data, (size_t)keylen, NULL, val, (size_t)vallen, fdh);
+				    data, (size_t)keylen, NULL, 0, val, (size_t)vallen, fdh);
 			}
 			if (disposition == FORM_DISPOSITION_STORE) {
 				/* Store the content to a file */
