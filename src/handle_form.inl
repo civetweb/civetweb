@@ -95,8 +95,12 @@ url_encoded_field_found(const char *key,
 		filename_dec[0] = 0;
 	}
 
-	return fdh->field_found(
-	    key_dec, key_dec_len, filename_dec, path, path_len, fdh->user_data);
+	return fdh->field_found(key_dec,
+	                        (size_t)key_dec_len,
+	                        filename_dec,
+	                        path,
+	                        path_len,
+	                        fdh->user_data);
 }
 
 
@@ -198,7 +202,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				vallen = next - val;
 				next++;
 			} else {
-				vallen = strlen(val);
+				vallen = (ptrdiff_t)strlen(val);
 				next = val + vallen;
 			}
 
@@ -213,7 +217,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				FILE *f = fopen(path, "wb");
 				if (f != NULL) {
 					size_t n = (size_t)fwrite(val, 1, (size_t)vallen, f);
-					if ((n != vallen) || (ferror(f))) {
+					if ((n != (size_t)vallen) || (ferror(f))) {
 						mg_cry(conn,
 						       "%s: Cannot write file %s",
 						       __func__,
@@ -267,10 +271,11 @@ mg_handle_form_data(struct mg_connection *conn,
 			ptrdiff_t keylen, vallen;
 			int used;
 
-			if (buf_fill < (sizeof(buf) - 1)) {
+			if ((size_t)buf_fill < (sizeof(buf) - 1)) {
 
-				int r =
-				    mg_read(conn, buf + buf_fill, sizeof(buf) - 1 - buf_fill);
+				int r = mg_read(conn,
+				                buf + (size_t)buf_fill,
+				                sizeof(buf) - 1 - (size_t)buf_fill);
 				if (r < 0) {
 					/* read error */
 					return 0;
@@ -295,7 +300,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				vallen = next - val;
 				next++;
 			} else {
-				vallen = strlen(val);
+				vallen = (size_t)strlen(val);
 				next = val + vallen;
 			}
 
@@ -306,7 +311,7 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			/* Proceed to next entry */
 			used = next - buf;
-			memmove(buf, buf + used, sizeof(buf) - used);
+			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
 			buf_fill -= used;
 		}
 
@@ -335,7 +340,9 @@ mg_handle_form_data(struct mg_connection *conn,
 		boundary = content_type + 30;
 		bl = strlen(boundary);
 
-		r = mg_read(conn, buf + buf_fill, sizeof(buf) - 1 - buf_fill);
+		r = mg_read(conn,
+		            buf + (size_t)buf_fill,
+		            sizeof(buf) - 1 - (size_t)buf_fill);
 		if (r < 0) {
 			/* read error */
 			return 0;
