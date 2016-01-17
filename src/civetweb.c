@@ -6481,6 +6481,11 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 			*buf = dp;
 			break;
 		}
+
+		if (*buf[0] == '\r') {
+			/* This is the end of the header */
+			break;
+		}
 	}
 }
 

@@ -23,20 +23,9 @@
 /* EXPERIMENTAL !!! */
 /********************/
 
-void
-mirror_body___dev_helper(struct mg_connection *conn)
-{
-	/* TODO: remove this function when handle_form_data is completed. */
-	char buf[256];
-	int r;
-	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
 
-	do {
-		r = mg_read(conn, buf, sizeof(buf));
-		mg_write(conn, buf, r);
-	} while (r > 0);
-}
-
+/**********************/
+/* proposed interface */
 
 enum {
 	FORM_DISPOSITION_SKIP = 0x0,
@@ -63,28 +52,55 @@ struct mg_form_data_handler {
 	void *user_data;
 };
 
+int mg_handle_form_data(struct mg_connection *conn,
+                        struct mg_form_data_handler *fdh);
+
+/* end of interface */
+/********************/
 
 static int
 url_encoded_field_found(const char *key,
-                        size_t keylen,
+                        size_t key_len,
                         const char *filename,
+                        size_t filename_len,
                         char *path,
-                        size_t pathlen,
+                        size_t path_len,
                         struct mg_form_data_handler *fdh)
 {
 	/* Call callback */
 	char key_dec[1024];
-	int ret =
-	    mg_url_decode(key, (size_t)keylen, key_dec, (int)sizeof(key_dec), 1);
-	if ((ret < sizeof(key_dec)) && (ret >= 0)) {
-		return fdh->field_found(
-		    key, keylen, filename, path, pathlen, fdh->user_data);
+	char filename_dec[1024];
+	int key_dec_len;
+	int filename_dec_len;
+
+	key_dec_len =
+	    mg_url_decode(key, (size_t)key_len, key_dec, (int)sizeof(key_dec), 1);
+
+	if (((size_t)key_dec_len >= (size_t)sizeof(key_dec)) || (key_dec_len < 0)) {
+		return FORM_DISPOSITION_SKIP;
 	}
-	return FORM_DISPOSITION_SKIP;
+
+	if (filename) {
+		filename_dec_len = mg_url_decode(filename,
+		                                 (size_t)filename_len,
+		                                 filename_dec,
+		                                 (int)sizeof(filename_dec),
+		                                 1);
+
+		if (((size_t)filename_dec_len >= (size_t)sizeof(filename_dec))
+		    || (filename_dec_len < 0)) {
+			return FORM_DISPOSITION_SKIP;
+		}
+	} else {
+		filename_dec[0] = 0;
+	}
+
+	return fdh->field_found(
+	    key_dec, key_dec_len, filename_dec, path, path_len, fdh->user_data);
 }
 
 
-int
+static int
 url_encoded_field_get(const char *key,
                       size_t keylen,
                       const char *filename,
@@ -174,7 +190,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			 */
 			memset(path, 0, sizeof(path));
 			disposition = url_encoded_field_found(
-			    data, (size_t)keylen, NULL, path, sizeof(path) - 1, fdh);
+			    data, (size_t)keylen, NULL, 0, path, sizeof(path) - 1, fdh);
 
 			val++;
 			next = strchr(val, '&');
@@ -285,12 +301,8 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			/* Call callback */
 			memset(path, 0, sizeof(path));
-			disposition = fdh->field_found(buf,
-			                               (size_t)keylen,
-			                               NULL,
-			                               path,
-			                               sizeof(path) - 1,
-			                               fdh->user_data);
+			disposition = url_encoded_field_found(
+			    buf, (size_t)keylen, NULL, 0, path, sizeof(path) - 1, fdh);
 
 			/* Proceed to next entry */
 			used = next - buf;
@@ -301,8 +313,6 @@ mg_handle_form_data(struct mg_connection *conn,
 		return 0;
 	}
 
-	// mirror_body___dev_helper(conn);
-
 	if (!mg_strncasecmp(content_type, "MULTIPART/FORM-DATA;", 20)) {
 		/* The form data is in the request body data, encoded as multipart
 		 * content (see https://www.ietf.org/rfc/rfc1867.txt,
@@ -311,7 +321,7 @@ mg_handle_form_data(struct mg_connection *conn,
 		size_t bl;
 		int r;
 		struct mg_request_info part_header;
-		char *hbuf, *hend;
+		char *hbuf, *hend, *fbeg, *fend, *nbeg, *nend;
 		const char *content_disp;
 
 		memset(&part_header, 0, sizeof(part_header));
@@ -358,7 +368,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			return 0;
 		}
 		parse_http_headers(&hbuf, &part_header);
-		if (hend != hbuf) {
+		if ((hend + 2) != hbuf) {
 			/* Malformed request */
 			return 0;
 		}
@@ -366,6 +376,48 @@ mg_handle_form_data(struct mg_connection *conn,
 		/* According to the RFC, every part has to have a header field like:
 		 * Content-Disposition: form-data; name="..." */
 		content_disp = get_header(&part_header, "Content-Disposition");
+		if (!content_disp) {
+			/* Malformed request */
+			return 0;
+		}
+
+		/* Get the mandatory name="..." part of the Content-Disposition
+		 * header. */
+		nbeg = strstr(content_disp, "name=\"");
+		if (!nbeg) {
+			/* Malformed request */
+			return 0;
+		}
+		nbeg += 6;
+		nend = strchr(nbeg, '\"');
+		if (!hend) {
+			/* Malformed request */
+			return 0;
+		}
+
+		/* Get the optional filename="..." part of the Content-Disposition
+		 * header. */
+		fbeg = strstr(content_disp, "filename=\"");
+		if (fbeg) {
+			fbeg += 10;
+			fend = strchr(fbeg, '\"');
+			if (!fend) {
+				/* Malformed request (the filename field is optional, but if it
+				 * exists, it needs to be terminated correctly). */
+				return 0;
+			}
+		} else {
+			fend = fbeg;
+		}
+
+		memset(path, 0, sizeof(path));
+		disposition = url_encoded_field_found(nbeg,
+		                                      (size_t)(nend - nbeg),
+		                                      fbeg,
+		                                      (size_t)(fend - fbeg),
+		                                      path,
+		                                      sizeof(path) - 1,
+		                                      fdh);
 
 
 		/* Content-Type: application/octet-stream */
