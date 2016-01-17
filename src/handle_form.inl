@@ -38,13 +38,11 @@ enum {
 
 struct mg_form_data_handler {
 	int (*field_found)(const char *key,
-	                   size_t keylen,
 	                   const char *filename,
 	                   char *path,
 	                   size_t pathlen,
 	                   void *user_data);
 	int (*field_get)(const char *key,
-	                 size_t keylen,
 	                 const char *filename,
 	                 const char *value,
 	                 size_t valuelen,
@@ -95,12 +93,8 @@ url_encoded_field_found(const char *key,
 		filename_dec[0] = 0;
 	}
 
-	return fdh->field_found(key_dec,
-	                        (size_t)key_dec_len,
-	                        filename_dec,
-	                        path,
-	                        path_len,
-	                        fdh->user_data);
+	return fdh->field_found(
+	    key_dec, filename_dec, path, path_len, fdh->user_data);
 }
 
 
@@ -300,7 +294,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				vallen = next - val;
 				next++;
 			} else {
-				vallen = (size_t)strlen(val);
+				vallen = (ptrdiff_t)strlen(val);
 				next = val + vallen;
 			}
 

@@ -155,22 +155,25 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
+/**********************/
+/* proposed interface */
+
 enum {
 	FORM_DISPOSITION_SKIP = 0x0,
 	FORM_DISPOSITION_GET = 0x1,
 	FORM_DISPOSITION_STORE = 0x2,
-	FORM_DISPOSITION_READ = 0x4,
+	FORM_DISPOSITION_READ = 0x3,
 	FORM_DISPOSITION_ABORT = 0x10
 };
 
 
 struct mg_form_data_handler {
 	int (*field_found)(const char *key,
-	                   size_t keylen,
 	                   const char *filename,
+	                   char *path,
+	                   size_t pathlen,
 	                   void *user_data);
 	int (*field_get)(const char *key,
-	                 size_t keylen,
 	                 const char *filename,
 	                 const char *value,
 	                 size_t valuelen,
@@ -178,10 +181,15 @@ struct mg_form_data_handler {
 	void *user_data;
 };
 
+int mg_handle_form_data(struct mg_connection *conn,
+                        struct mg_form_data_handler *fdh);
+
+/* end of interface */
+/********************/
+
 
 int
 field_found(const char *key,
-            size_t keylen,
             const char *filename,
             char *path,
             size_t pathlen,
@@ -189,15 +197,13 @@ field_found(const char *key,
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
-	mg_write(conn, key, keylen);
-	mg_printf(conn, ":\r\n");
+	mg_printf(conn, "%s:\r\n", key);
 	return FORM_DISPOSITION_GET;
 }
 
 
 int
 field_get(const char *key,
-          size_t keylen,
           const char *filename,
           const char *value,
           size_t valuelen,
@@ -205,8 +211,7 @@ field_get(const char *key,
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
-	mg_write(conn, key, keylen);
-	mg_printf(conn, " = ");
+	mg_printf(conn, "%s = ", key);
 	mg_write(conn, value, valuelen);
 	mg_printf(conn, "\r\n\r\n");
 
