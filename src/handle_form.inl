@@ -305,10 +305,16 @@ mg_handle_form_data(struct mg_connection *conn,
 
 	if (!mg_strncasecmp(content_type, "MULTIPART/FORM-DATA;", 20)) {
 		/* The form data is in the request body data, encoded as multipart
-		 * content. */
+		 * content (see https://www.ietf.org/rfc/rfc1867.txt,
+		 * https://www.ietf.org/rfc/rfc2388.txt). */
 		const char *boundary;
 		size_t bl;
 		int r;
+		struct mg_request_info part_header;
+		char *hbuf, *hend;
+		const char *content_disp;
+
+		memset(&part_header, 0, sizeof(part_header));
 
 		/* There has to be a BOUNDARY definition in the Content-Type header */
 		if (mg_strncasecmp(content_type + 21, "BOUNDARY=", 9)) {
@@ -343,6 +349,26 @@ mg_handle_form_data(struct mg_connection *conn,
 			/* Malformed request */
 			return 0;
 		}
+
+		/* Next, we need to get the part header: Read until \r\n\r\n */
+		hbuf = buf + bl + 4;
+		hend = strstr(hbuf, "\r\n\r\n");
+		if (!hend) {
+			/* Malformed request */
+			return 0;
+		}
+		parse_http_headers(&hbuf, &part_header);
+		if (hend != hbuf) {
+			/* Malformed request */
+			return 0;
+		}
+
+		/* According to the RFC, every part has to have a header field like:
+		 * Content-Disposition: form-data; name="..." */
+		content_disp = get_header(&part_header, "Content-Disposition");
+
+
+		/* Content-Type: application/octet-stream */
 
 		/* TODO: handle multipart request */
 		return 0;
