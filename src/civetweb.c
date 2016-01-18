@@ -6462,7 +6462,7 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 		char *dp = *buf;
 		while ((*dp != ':') && (*dp != '\r') && (*dp != 0)) {
 			dp++;
-        }
+		}
 		if (!*dp) {
 			/* neither : nor \r\n. This is not a valid field. */
 			break;

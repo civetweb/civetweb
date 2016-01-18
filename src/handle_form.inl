@@ -224,7 +224,6 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 			if (disposition == FORM_DISPOSITION_STORE) {
 				/* Store the content to a file */
-				/* TODO: Get "path" from callback" */
 				FILE *f = fopen(path, "wb");
 				if (f != NULL) {
 					size_t n = (size_t)fwrite(val, 1, (size_t)vallen, f);
@@ -250,7 +249,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				 * sense, since the data is already stored in memory, as it is
 				 * part of the query string.
 				 */
-				/* TODO */
+				/* TODO, or not TODO, that is the question */
 			}
 			if ((disposition & FORM_DISPOSITION_ABORT)
 			    == FORM_DISPOSITION_ABORT) {
@@ -319,6 +318,18 @@ mg_handle_form_data(struct mg_connection *conn,
 			memset(path, 0, sizeof(path));
 			disposition = url_encoded_field_found(
 			    buf, (size_t)keylen, NULL, 0, path, sizeof(path) - 1, fdh);
+
+			if (disposition == FORM_DISPOSITION_GET) {
+				/* TODO */
+			}
+			if (disposition == FORM_DISPOSITION_STORE) {
+				/* TODO */
+			}
+			if ((disposition & FORM_DISPOSITION_ABORT)
+			    == FORM_DISPOSITION_ABORT) {
+				/* Stop parsing the request */
+				break;
+			}
 
 			/* Proceed to next entry */
 			used = next - buf;
@@ -424,6 +435,10 @@ mg_handle_form_data(struct mg_connection *conn,
 				 * exists, it needs to be terminated correctly). */
 				return 0;
 			}
+
+			/* TODO: check Content-Type */
+			/* Content-Type: application/octet-stream */
+
 		} else {
 			fend = fbeg;
 		}
@@ -437,8 +452,24 @@ mg_handle_form_data(struct mg_connection *conn,
 		                                      sizeof(path) - 1,
 		                                      fdh);
 
+		if (disposition == FORM_DISPOSITION_GET) {
+			/* TODO */
+		}
+		if (disposition == FORM_DISPOSITION_STORE) {
+			/* Store the content to a file */
+			FILE *f = fopen(path, "wb");
+			if (f != NULL) {
 
-		/* Content-Type: application/octet-stream */
+				/* TODO: store from part_header to next boundary */
+				fclose(f);
+			} else {
+				mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+			}
+		}
+		if ((disposition & FORM_DISPOSITION_ABORT) == FORM_DISPOSITION_ABORT) {
+			/* Stop parsing the request */
+			/* TODO: break; */
+		}
 
 		/* TODO: handle multipart request */
 		return 0;
