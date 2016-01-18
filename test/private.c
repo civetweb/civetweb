@@ -87,8 +87,8 @@ START_TEST(test_parse_http_message)
 	ck_assert_str_eq("foo bar", ri.http_headers[0].value);
 	ck_assert_str_eq("B", ri.http_headers[1].name);
 	ck_assert_str_eq("bar", ri.http_headers[1].value);
-	ck_assert_str_eq("baz\r\n\r", ri.http_headers[2].name);
-	ck_assert_str_eq("", ri.http_headers[2].value);
+	ck_assert_str_eq("baz", ri.http_headers[2].name);
+	ck_assert(ri.http_headers[2].value == NULL);
 
 	ck_assert_int_eq(sizeof(req5) - 1,
 	                 parse_http_message(req5, sizeof(req5), &ri));
