@@ -198,6 +198,11 @@ field_found(const char *key,
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
 	mg_printf(conn, "%s:\r\n", key);
+
+	if (filename && *filename) {
+		_snprintf(path, pathlen, "C:\\tmp\\%s", filename);
+		return FORM_DISPOSITION_STORE;
+	}
 	return FORM_DISPOSITION_GET;
 }
 

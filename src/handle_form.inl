@@ -72,7 +72,7 @@ url_encoded_field_found(const char *key,
 	int filename_dec_len;
 
 	key_dec_len =
-	    mg_url_decode(key, (size_t)key_len, key_dec, (int)sizeof(key_dec), 1);
+	    mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 
 	if (((size_t)key_dec_len >= (size_t)sizeof(key_dec)) || (key_dec_len < 0)) {
 		return FORM_DISPOSITION_SKIP;
@@ -80,7 +80,7 @@ url_encoded_field_found(const char *key,
 
 	if (filename) {
 		filename_dec_len = mg_url_decode(filename,
-		                                 (size_t)filename_len,
+		                                 (int)filename_len,
 		                                 filename_dec,
 		                                 (int)sizeof(filename_dec),
 		                                 1);
@@ -118,11 +118,11 @@ url_encoded_field_get(const char *key,
 		return FORM_DISPOSITION_ABORT;
 	}
 
-	mg_url_decode(key, (size_t)key_len, key_dec, (int)sizeof(key_dec), 1);
+	mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 
 	if (filename) {
 		mg_url_decode(filename,
-		              (size_t)filename_len,
+		              (int)filename_len,
 		              filename_dec,
 		              (int)sizeof(filename_dec),
 		              1);
@@ -130,8 +130,8 @@ url_encoded_field_get(const char *key,
 		filename_dec[0] = 0;
 	}
 
-	value_dec_len = mg_url_decode(
-	    value, (size_t)value_len, value_dec, (int)value_len + 1, 1);
+	value_dec_len =
+	    mg_url_decode(value, (int)value_len, value_dec, (int)value_len + 1, 1);
 
 	return fdh->field_get(
 	    key, filename, value_dec, (size_t)value_dec_len, fdh->user_data);
@@ -279,7 +279,9 @@ mg_handle_form_data(struct mg_connection *conn,
 			const char *val;
 			const char *next;
 			ptrdiff_t keylen, vallen;
-			int used;
+			ptrdiff_t used;
+			FILE *fstore = NULL;
+			int end_of_data_found;
 
 			if ((size_t)buf_fill < (sizeof(buf) - 1)) {
 
@@ -305,31 +307,61 @@ mg_handle_form_data(struct mg_connection *conn,
 			keylen = val - buf;
 			val++;
 
-			next = strchr(val, '&');
-			if (next) {
-				vallen = next - val;
-				next++;
-			} else {
-				vallen = (ptrdiff_t)strlen(val);
-				next = val + vallen;
-			}
-
 			/* Call callback */
 			memset(path, 0, sizeof(path));
 			disposition = url_encoded_field_found(
 			    buf, (size_t)keylen, NULL, 0, path, sizeof(path) - 1, fdh);
 
-			if (disposition == FORM_DISPOSITION_GET) {
-				/* TODO */
-			}
-			if (disposition == FORM_DISPOSITION_STORE) {
-				/* TODO */
-			}
 			if ((disposition & FORM_DISPOSITION_ABORT)
 			    == FORM_DISPOSITION_ABORT) {
 				/* Stop parsing the request */
 				break;
 			}
+
+			if (disposition == FORM_DISPOSITION_STORE) {
+				fstore = fopen(path, "wb");
+				if (!fstore) {
+					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+				}
+			}
+
+			if (disposition == FORM_DISPOSITION_GET) {
+				/* TODO */
+			}
+
+			do {
+				next = strchr(val, '&');
+				if (next) {
+					vallen = next - val;
+					next++;
+					end_of_data_found = 1;
+				} else {
+					vallen = (ptrdiff_t)strlen(val);
+					next = val + vallen;
+				}
+
+				if (fstore) {
+					size_t n = (size_t)fwrite(val, 1, (size_t)vallen, fstore);
+					if ((n != (size_t)vallen) || (ferror(fstore))) {
+						mg_cry(conn,
+						       "%s: Cannot write file %s",
+						       __func__,
+						       path);
+						fclose(fstore);
+						fstore = NULL;
+					}
+				}
+				if (!end_of_data_found) {
+					/* TODO: read more data */
+					break;
+				}
+
+			} while (!end_of_data_found);
+
+			if (fstore) {
+				fclose(fstore);
+			}
+
 
 			/* Proceed to next entry */
 			used = next - buf;
