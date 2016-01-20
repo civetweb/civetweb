@@ -133,8 +133,11 @@ url_encoded_field_get(const char *key,
 	value_dec_len =
 	    mg_url_decode(value, (int)value_len, value_dec, (int)value_len + 1, 1);
 
-	return fdh->field_get(
-	    key, filename, value_dec, (size_t)value_dec_len, fdh->user_data);
+	return fdh->field_get(key_dec,
+	                      filename_dec,
+	                      value_dec,
+	                      (size_t)value_dec_len,
+	                      fdh->user_data);
 }
 
 
@@ -283,6 +286,8 @@ mg_handle_form_data(struct mg_connection *conn,
 			FILE *fstore = NULL;
 			int end_of_data_found;
 
+			end_of_data_found = 0;
+
 			if ((size_t)buf_fill < (sizeof(buf) - 1)) {
 
 				int r = mg_read(conn,
@@ -325,10 +330,6 @@ mg_handle_form_data(struct mg_connection *conn,
 				}
 			}
 
-			if (disposition == FORM_DISPOSITION_GET) {
-				/* TODO */
-			}
-
 			do {
 				next = strchr(val, '&');
 				if (next) {
@@ -351,6 +352,19 @@ mg_handle_form_data(struct mg_connection *conn,
 						fstore = NULL;
 					}
 				}
+				if (disposition == FORM_DISPOSITION_GET) {
+					if (!end_of_data_found) {
+						/* TODO: check for an easy way to get longer data */
+						mg_cry(conn,
+						       "%s: Data too long for callback",
+						       __func__);
+						break;
+					}
+					/* Call callback */
+					url_encoded_field_get(
+					    buf, (size_t)keylen, NULL, 0, val, (size_t)vallen, fdh);
+				}
+
 				if (!end_of_data_found) {
 					/* TODO: read more data */
 					break;
