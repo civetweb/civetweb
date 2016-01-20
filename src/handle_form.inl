@@ -273,6 +273,7 @@ mg_handle_form_data(struct mg_connection *conn,
 	    || !mg_strcasecmp(content_type, "APPLICATION/X-WWW-FORM-URLENCODED")) {
 		/* The form data is in the request body data, encoded in key/value
 		 * pairs. */
+		int all_data_read = 0;
 
 		/* Read body data and split it in a=1&b&c=3&c=4 ... */
 		/* The encoding is like in the "GET" case above, but here we read data
@@ -284,9 +285,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			ptrdiff_t keylen, vallen;
 			ptrdiff_t used;
 			FILE *fstore = NULL;
-			int end_of_data_found;
-
-			end_of_data_found = 0;
+			int end_of_key_value_pair_found = 0;
 
 			if ((size_t)buf_fill < (sizeof(buf) - 1)) {
 
@@ -296,6 +295,14 @@ mg_handle_form_data(struct mg_connection *conn,
 				if (r < 0) {
 					/* read error */
 					return 0;
+				}
+				if (r == 0) {
+					/* TODO: Create a function to get "all_data_read" from
+					 * the conn object. Add data is read if the Content-Length
+					 * has been reached, or if chunked encoding is used and
+					 * the end marker has been read, or if the connection has
+					 * been closed. */
+					all_data_read = 1;
 				}
 				buf_fill += r;
 				buf[buf_fill] = 0;
@@ -330,12 +337,13 @@ mg_handle_form_data(struct mg_connection *conn,
 				}
 			}
 
+			/* Loop to read values larger than sizeof(buf)-keylen-2 */
 			do {
 				next = strchr(val, '&');
 				if (next) {
 					vallen = next - val;
 					next++;
-					end_of_data_found = 1;
+					end_of_key_value_pair_found = 1;
 				} else {
 					vallen = (ptrdiff_t)strlen(val);
 					next = val + vallen;
@@ -353,7 +361,7 @@ mg_handle_form_data(struct mg_connection *conn,
 					}
 				}
 				if (disposition == FORM_DISPOSITION_GET) {
-					if (!end_of_data_found) {
+					if (!end_of_key_value_pair_found && !all_data_read) {
 						/* TODO: check for an easy way to get longer data */
 						mg_cry(conn,
 						       "%s: Data too long for callback",
@@ -365,12 +373,12 @@ mg_handle_form_data(struct mg_connection *conn,
 					    buf, (size_t)keylen, NULL, 0, val, (size_t)vallen, fdh);
 				}
 
-				if (!end_of_data_found) {
+				if (!end_of_key_value_pair_found) {
 					/* TODO: read more data */
 					break;
 				}
 
-			} while (!end_of_data_found);
+			} while (!end_of_key_value_pair_found);
 
 			if (fstore) {
 				fclose(fstore);
