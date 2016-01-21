@@ -281,7 +281,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			ptrdiff_t keylen, vallen;
 			ptrdiff_t used;
 			FILE *fstore = NULL;
-			int end_of_data_found;
+			int end_of_data_found = 0;
 
 			if ((size_t)buf_fill < (sizeof(buf) - 1)) {
 
