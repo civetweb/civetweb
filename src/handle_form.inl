@@ -289,14 +289,13 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			if ((size_t)buf_fill < (sizeof(buf) - 1)) {
 
-				int r = mg_read(conn,
-				                buf + (size_t)buf_fill,
-				                sizeof(buf) - 1 - (size_t)buf_fill);
+				size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
+				int r = mg_read(conn, buf + (size_t)buf_fill, to_read);
 				if (r < 0) {
 					/* read error */
 					return 0;
 				}
-				if (r == 0) {
+				if (r != (int)to_read) {
 					/* TODO: Create a function to get "all_data_read" from
 					 * the conn object. Add data is read if the Content-Length
 					 * has been reached, or if chunked encoding is used and
@@ -366,7 +365,7 @@ mg_handle_form_data(struct mg_connection *conn,
 						mg_cry(conn,
 						       "%s: Data too long for callback",
 						       __func__);
-						break;
+						return 0;
 					}
 					/* Call callback */
 					url_encoded_field_get(
@@ -473,7 +472,7 @@ mg_handle_form_data(struct mg_connection *conn,
 		}
 		nbeg += 6;
 		nend = strchr(nbeg, '\"');
-		if (!hend) {
+		if (!nend) {
 			/* Malformed request */
 			return 0;
 		}
@@ -506,24 +505,46 @@ mg_handle_form_data(struct mg_connection *conn,
 		                                      sizeof(path) - 1,
 		                                      fdh);
 
-		if (disposition == FORM_DISPOSITION_GET) {
-			/* TODO */
-		}
-		if (disposition == FORM_DISPOSITION_STORE) {
-			/* Store the content to a file */
-			FILE *f = fopen(path, "wb");
-			if (f != NULL) {
-
-				/* TODO: store from part_header to next boundary */
-				fclose(f);
-			} else {
-				mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+		do {
+			const char *next = strstr(hbuf, "--");
+			while (next && (strncmp(next + 2, boundary, bl))) {
+				/* found "--" not followed by boundary: look for next "--" */
+				next = strstr(next + 1, "--");
 			}
-		}
-		if ((disposition & FORM_DISPOSITION_ABORT) == FORM_DISPOSITION_ABORT) {
-			/* Stop parsing the request */
-			/* TODO: break; */
-		}
+
+			if (disposition == FORM_DISPOSITION_GET) {
+				if (!next) {
+					/* TODO: check for an easy way to get longer data */
+					mg_cry(conn, "%s: Data too long for callback", __func__);
+					return 0;
+				}
+
+				/* Call callback */
+				url_encoded_field_get(nbeg,
+				                      (size_t)(nend - nbeg),
+				                      fbeg,
+				                      (size_t)(fend - fbeg),
+				                      hend,
+				                      (size_t)(next - hend),
+				                      fdh);
+			}
+			if (disposition == FORM_DISPOSITION_STORE) {
+				/* Store the content to a file */
+				FILE *f = fopen(path, "wb");
+				if (f != NULL) {
+
+					/* TODO: store from part_header to next boundary */
+					fclose(f);
+				} else {
+					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+				}
+			}
+			if ((disposition & FORM_DISPOSITION_ABORT)
+			    == FORM_DISPOSITION_ABORT) {
+				/* Stop parsing the request */
+				return 0;
+			}
+		} while (0 /* TODO */);
 
 		/* TODO: handle multipart request */
 		return 0;
