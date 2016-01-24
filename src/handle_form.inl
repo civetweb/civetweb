@@ -383,7 +383,6 @@ mg_handle_form_data(struct mg_connection *conn,
 				fclose(fstore);
 			}
 
-
 			/* Proceed to next entry */
 			used = next - buf;
 			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
@@ -400,9 +399,11 @@ mg_handle_form_data(struct mg_connection *conn,
 		const char *boundary;
 		size_t bl;
 		int r;
+		ptrdiff_t used;
 		struct mg_request_info part_header;
 		char *hbuf, *hend, *fbeg, *fend, *nbeg, *nend;
 		const char *content_disp;
+		const char *next;
 
 		memset(&part_header, 0, sizeof(part_header));
 
@@ -415,98 +416,100 @@ mg_handle_form_data(struct mg_connection *conn,
 		boundary = content_type + 30;
 		bl = strlen(boundary);
 
-		r = mg_read(conn,
-		            buf + (size_t)buf_fill,
-		            sizeof(buf) - 1 - (size_t)buf_fill);
-		if (r < 0) {
-			/* read error */
-			return 0;
-		}
-		buf_fill += r;
-		buf[buf_fill] = 0;
-		if (buf_fill < 1) {
-			/* No data */
-			return 0;
-		}
+		do {
 
-		if (buf[0] != '-' || buf[1] != '-') {
-			/* Malformed request */
-			return 0;
-		}
-		if (strncmp(buf + 2, boundary, bl)) {
-			/* Malformed request */
-			return 0;
-		}
-		if (buf[bl + 2] != '\r' || buf[bl + 3] != '\n') {
-			/* Malformed request */
-			return 0;
-		}
-
-		/* Next, we need to get the part header: Read until \r\n\r\n */
-		hbuf = buf + bl + 4;
-		hend = strstr(hbuf, "\r\n\r\n");
-		if (!hend) {
-			/* Malformed request */
-			return 0;
-		}
-		parse_http_headers(&hbuf, &part_header);
-		if ((hend + 2) != hbuf) {
-			/* Malformed request */
-			return 0;
-		}
-
-		/* According to the RFC, every part has to have a header field like:
-		 * Content-Disposition: form-data; name="..." */
-		content_disp = get_header(&part_header, "Content-Disposition");
-		if (!content_disp) {
-			/* Malformed request */
-			return 0;
-		}
-
-		/* Get the mandatory name="..." part of the Content-Disposition
-		 * header. */
-		nbeg = strstr(content_disp, "name=\"");
-		if (!nbeg) {
-			/* Malformed request */
-			return 0;
-		}
-		nbeg += 6;
-		nend = strchr(nbeg, '\"');
-		if (!nend) {
-			/* Malformed request */
-			return 0;
-		}
-
-		/* Get the optional filename="..." part of the Content-Disposition
-		 * header. */
-		fbeg = strstr(content_disp, "filename=\"");
-		if (fbeg) {
-			fbeg += 10;
-			fend = strchr(fbeg, '\"');
-			if (!fend) {
-				/* Malformed request (the filename field is optional, but if it
-				 * exists, it needs to be terminated correctly). */
+			r = mg_read(conn,
+			            buf + (size_t)buf_fill,
+			            sizeof(buf) - 1 - (size_t)buf_fill);
+			if (r < 0) {
+				/* read error */
+				return 0;
+			}
+			buf_fill += r;
+			buf[buf_fill] = 0;
+			if (buf_fill < 1) {
+				/* No data */
 				return 0;
 			}
 
-			/* TODO: check Content-Type */
-			/* Content-Type: application/octet-stream */
+			if (buf[0] != '-' || buf[1] != '-') {
+				/* Malformed request */
+				return 0;
+			}
+			if (strncmp(buf + 2, boundary, bl)) {
+				/* Malformed request */
+				return 0;
+			}
+			if (buf[bl + 2] != '\r' || buf[bl + 3] != '\n') {
+				/* Malformed request */
+				return 0;
+			}
 
-		} else {
-			fend = fbeg;
-		}
+			/* Next, we need to get the part header: Read until \r\n\r\n */
+			hbuf = buf + bl + 4;
+			hend = strstr(hbuf, "\r\n\r\n");
+			if (!hend) {
+				/* Malformed request */
+				return 0;
+			}
+			parse_http_headers(&hbuf, &part_header);
+			if ((hend + 2) != hbuf) {
+				/* Malformed request */
+				return 0;
+			}
 
-		memset(path, 0, sizeof(path));
-		disposition = url_encoded_field_found(nbeg,
-		                                      (size_t)(nend - nbeg),
-		                                      fbeg,
-		                                      (size_t)(fend - fbeg),
-		                                      path,
-		                                      sizeof(path) - 1,
-		                                      fdh);
+			/* According to the RFC, every part has to have a header field like:
+			 * Content-Disposition: form-data; name="..." */
+			content_disp = get_header(&part_header, "Content-Disposition");
+			if (!content_disp) {
+				/* Malformed request */
+				return 0;
+			}
 
-		do {
-			const char *next = strstr(hbuf, "--");
+			/* Get the mandatory name="..." part of the Content-Disposition
+			 * header. */
+			nbeg = strstr(content_disp, "name=\"");
+			if (!nbeg) {
+				/* Malformed request */
+				return 0;
+			}
+			nbeg += 6;
+			nend = strchr(nbeg, '\"');
+			if (!nend) {
+				/* Malformed request */
+				return 0;
+			}
+
+			/* Get the optional filename="..." part of the Content-Disposition
+			 * header. */
+			fbeg = strstr(content_disp, "filename=\"");
+			if (fbeg) {
+				fbeg += 10;
+				fend = strchr(fbeg, '\"');
+				if (!fend) {
+					/* Malformed request (the filename field is optional, but if
+					 * it
+					 * exists, it needs to be terminated correctly). */
+					return 0;
+				}
+
+				/* TODO: check Content-Type */
+				/* Content-Type: application/octet-stream */
+
+			} else {
+				fend = fbeg;
+			}
+
+			memset(path, 0, sizeof(path));
+			disposition = url_encoded_field_found(nbeg,
+			                                      (size_t)(nend - nbeg),
+			                                      fbeg,
+			                                      (size_t)(fend - fbeg),
+			                                      path,
+			                                      sizeof(path) - 1,
+			                                      fdh);
+
+			next = strstr(hbuf, "--");
 			while (next && (strncmp(next + 2, boundary, bl))) {
 				/* found "--" not followed by boundary: look for next "--" */
 				next = strstr(next + 1, "--");
@@ -528,6 +531,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				                      (size_t)(next - hend),
 				                      fdh);
 			}
+
 			if (disposition == FORM_DISPOSITION_STORE) {
 				/* Store the content to a file */
 				FILE *f = fopen(path, "wb");
@@ -544,7 +548,13 @@ mg_handle_form_data(struct mg_connection *conn,
 				/* Stop parsing the request */
 				return 0;
 			}
-		} while (0 /* TODO */);
+
+			/* Remove from the buffer */
+			used = next - buf;
+			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
+			buf_fill -= used;
+
+		} while (1 /* TODO */);
 
 		/* TODO: handle multipart request */
 		return 0;
