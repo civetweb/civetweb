@@ -32,7 +32,7 @@
 #if defined(__GNUC__) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE /* for setgroups() */
 #endif
-#ifdef __linux__
+#if defined(__linux__) && !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE 600 /* For flockfile() on Linux */
 #endif
 #ifndef _LARGEFILE_SOURCE
