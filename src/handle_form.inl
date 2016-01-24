@@ -443,10 +443,10 @@ mg_handle_form_data(struct mg_connection *conn,
 			if (buf[bl + 2] != '\r' || buf[bl + 3] != '\n') {
 				/* Every part must end with \r\n, if there is another part.
 				 * The end of the request has an extra -- */
-				if (strncmp(buf + 2, "--\r\n", 4)) {
+				if ((buf_fill != (bl + 6)) || (strncmp(buf + bl + 2, "--\r\n", 4))) {
 					/* Malformed request */
 					return 0;
-				}
+				}                
 				/* End of the request */
 				break;
 			}
@@ -542,14 +542,52 @@ mg_handle_form_data(struct mg_connection *conn,
 				/* Store the content to a file */
 				FILE *fstore = fopen(path, "wb");
 				if (fstore != NULL) {
+					size_t towrite, n;
 
-					/* TODO: store all data until the next boundary */
-					/* while (!next) {
-					} */
+					while (!next) {
+						/* Store the entire buffer */
+						if (fstore) {
+							towrite = (size_t)(buf - hend - 4 + buf_fill);
+							n = (size_t)fwrite(hend + 4, 1, towrite, fstore);
+							if ((n != towrite) || (ferror(fstore))) {
+								mg_cry(conn,
+								       "%s: Cannot write file %s",
+								       __func__,
+								       path);
+								fclose(fstore);
+								fstore = NULL;
+							}
+						}
+
+						/* Read new data */
+						r = mg_read(conn,
+						            buf + (size_t)buf_fill,
+						            sizeof(buf) - 1 - (size_t)buf_fill);
+						if (r < 0) {
+							/* read error */
+							return 0;
+						}
+						buf_fill += r;
+						buf[buf_fill] = 0;
+						if (buf_fill < 1) {
+							/* No data */
+							return 0;
+						}
+
+                        /* Find boundary */
+                        next = strstr(hbuf, "\r\n--");
+			            while (next && (strncmp(next + 4, boundary, bl))) {
+				            /* found "--" not followed by boundary: look for next "--" */
+				            next = strstr(next + 1, "\r\n--");
+			            }
+
+                        /* TODO (high): handle boundary split between two chunks */
+					}
+
 
 					if (fstore) {
 						size_t towrite = (size_t)(next - hend - 4);
-						size_t n = (size_t)fwrite(hend + 4, 1, towrite, fstore);
+						n = (size_t)fwrite(hend + 4, 1, towrite, fstore);
 						if ((n != towrite) || (ferror(fstore))) {
 							mg_cry(conn,
 							       "%s: Cannot write file %s",
