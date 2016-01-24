@@ -8606,7 +8606,7 @@ mask_data(const char *in, size_t in_len, uint32_t masking_key, char *out)
 	size_t i = 0;
 
 	i = 0;
-	if (((ptrdiff_t)in % 4) == 0) {
+	if ((in_len > 3) && ((ptrdiff_t)in % 4) == 0) {
 		/* Convert in 32 bit words, if data is 4 byte aligned */
 		while (i < (in_len - 3)) {
 			*(uint32_t *)(void *)(out + i) =
