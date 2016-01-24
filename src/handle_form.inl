@@ -509,10 +509,10 @@ mg_handle_form_data(struct mg_connection *conn,
 			                                      sizeof(path) - 1,
 			                                      fdh);
 
-			next = strstr(hbuf, "--");
-			while (next && (strncmp(next + 2, boundary, bl))) {
+			next = strstr(hbuf, "\r\n--");
+			while (next && (strncmp(next + 4, boundary, bl))) {
 				/* found "--" not followed by boundary: look for next "--" */
-				next = strstr(next + 1, "--");
+				next = strstr(next + 1, "\r\n--");
 			}
 
 			if (disposition == FORM_DISPOSITION_GET) {
@@ -527,8 +527,8 @@ mg_handle_form_data(struct mg_connection *conn,
 				                      (size_t)(nend - nbeg),
 				                      fbeg,
 				                      (size_t)(fend - fbeg),
-				                      hend,
-				                      (size_t)(next - hend),
+				                      hend + 4,
+				                      (size_t)(next - hend - 4),
 				                      fdh);
 			}
 
@@ -550,7 +550,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 
 			/* Remove from the buffer */
-			used = next - buf;
+			used = next - buf + 2;
 			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
 			buf_fill -= used;
 
