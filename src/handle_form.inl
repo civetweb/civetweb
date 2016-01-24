@@ -416,7 +416,7 @@ mg_handle_form_data(struct mg_connection *conn,
 		boundary = content_type + 30;
 		bl = strlen(boundary);
 
-		do {
+		for (;;) {
 
 			r = mg_read(conn,
 			            buf + (size_t)buf_fill,
@@ -441,8 +441,14 @@ mg_handle_form_data(struct mg_connection *conn,
 				return 0;
 			}
 			if (buf[bl + 2] != '\r' || buf[bl + 3] != '\n') {
-				/* Malformed request */
-				return 0;
+				/* Every part must end with \r\n, if there is another part.
+				 * The end of the request has an extra -- */
+				if (strncmp(buf + 2, "--\r\n", 4)) {
+					/* Malformed request */
+					return 0;
+				}
+				/* End of the request */
+				break;
 			}
 
 			/* Next, we need to get the part header: Read until \r\n\r\n */
@@ -534,11 +540,29 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			if (disposition == FORM_DISPOSITION_STORE) {
 				/* Store the content to a file */
-				FILE *f = fopen(path, "wb");
-				if (f != NULL) {
+				FILE *fstore = fopen(path, "wb");
+				if (fstore != NULL) {
 
-					/* TODO: store from part_header to next boundary */
-					fclose(f);
+					/* TODO: store all data until the next boundary */
+					/* while (!next) {
+					} */
+
+					if (fstore) {
+						size_t towrite = (size_t)(next - hend - 4);
+						size_t n = (size_t)fwrite(hend + 4, 1, towrite, fstore);
+						if ((n != towrite) || (ferror(fstore))) {
+							mg_cry(conn,
+							       "%s: Cannot write file %s",
+							       __func__,
+							       path);
+							fclose(fstore);
+							fstore = NULL;
+						}
+					}
+
+					if (fstore) {
+						fclose(fstore);
+					}
 				} else {
 					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
 				}
@@ -553,10 +577,9 @@ mg_handle_form_data(struct mg_connection *conn,
 			used = next - buf + 2;
 			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
 			buf_fill -= used;
+		}
 
-		} while (1 /* TODO */);
-
-		/* TODO: handle multipart request */
+		/* All parts handled */
 		return 0;
 	}
 
