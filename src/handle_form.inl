@@ -443,10 +443,11 @@ mg_handle_form_data(struct mg_connection *conn,
 			if (buf[bl + 2] != '\r' || buf[bl + 3] != '\n') {
 				/* Every part must end with \r\n, if there is another part.
 				 * The end of the request has an extra -- */
-				if ((buf_fill != (bl + 6)) || (strncmp(buf + bl + 2, "--\r\n", 4))) {
+				if (((size_t)buf_fill != (size_t)(bl + 6))
+				    || (strncmp(buf + bl + 2, "--\r\n", 4))) {
 					/* Malformed request */
 					return 0;
-				}                
+				}
 				/* End of the request */
 				break;
 			}
@@ -574,19 +575,22 @@ mg_handle_form_data(struct mg_connection *conn,
 							return 0;
 						}
 
-                        /* Find boundary */
-                        next = strstr(hbuf, "\r\n--");
-			            while (next && (strncmp(next + 4, boundary, bl))) {
-				            /* found "--" not followed by boundary: look for next "--" */
-				            next = strstr(next + 1, "\r\n--");
-			            }
+						/* Find boundary */
+						next = strstr(hbuf, "\r\n--");
+						while (next && (strncmp(next + 4, boundary, bl))) {
+							/* found "--" not followed by boundary: look for
+							 * next "--" */
+							next = strstr(next + 1, "\r\n--");
+						}
 
-                        /* TODO (high): handle boundary split between two chunks */
+						/* TODO (high): handle boundaries split between two
+						   chunks
+						   part of the chunk here, part of the chunk yet unread
+						 */
 					}
 
-
 					if (fstore) {
-						size_t towrite = (size_t)(next - hend - 4);
+						towrite = (size_t)(next - hend - 4);
 						n = (size_t)fwrite(hend + 4, 1, towrite, fstore);
 						if ((n != towrite) || (ferror(fstore))) {
 							mg_cry(conn,

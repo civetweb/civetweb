@@ -12407,7 +12407,6 @@ get_system_name(char **sysName)
 #endif
 }
 
-
 struct mg_context *
 mg_start(const struct mg_callbacks *callbacks,
          void *user_data,
