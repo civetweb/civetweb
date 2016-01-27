@@ -4750,15 +4750,24 @@ parse_date_string(const char *datetime)
 			alt_result = mktime(&tm);
 			if (alt_result > 0) {
 				struct tm *lt = gmtime(&alt_result);
+				signed int delta_mon =
+				    (lt->tm_mon - tm.tm_mon) + 12 * (lt->tm_year - tm.tm_year);
 				time_t delta;
-				if (lt->tm_mday == tm.tm_mday) {
+
+				if (delta_mon != 0) {
+					/* No need to consider different length of months */
 					delta = (lt->tm_sec - tm.tm_sec)
 					        + 60 * (lt->tm_min - tm.tm_min)
-					        + 60 * 60 * (lt->tm_hour - tm.tm_hour);
+					        + 60 * 60 * (lt->tm_hour - tm.tm_hour)
+					        + 24 * 60 * 60 * (lt->tm_mday - tm.tm_mday);
 				} else {
-					/* TODO */
-					delta = 0;
+					/* Get clock time and add or subtract a day */
+					delta = (lt->tm_sec - tm.tm_sec)
+					        + 60 * (lt->tm_min - tm.tm_min)
+					        + 60 * 60 * (lt->tm_hour - tm.tm_hour)
+					        + (delta_mon * 24 * 60 * 60);
 				}
+
 				alt_result -= delta;
 			}
 
