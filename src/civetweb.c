@@ -4734,13 +4734,43 @@ parse_date_string(const char *datetime)
 	                                         &minute,
 	                                         &second) == 6)) {
 		month = get_month_index(month_str);
-		if ((month >= 0) && (year > 1970)) {
+		if ((month >= 0) && (year >= 1970)) {
+
+			/* alternative code (#250) */
+			time_t alt_result;
+			struct tm tm;
+			memset(&tm, 0, sizeof(tm));
+
+			tm.tm_year = year - 1900;
+			tm.tm_mon = month;
+			tm.tm_mday = day;
+			tm.tm_hour = hour;
+			tm.tm_min = minute;
+			tm.tm_sec = second;
+			alt_result = mktime(&tm);
+			if (alt_result > 0) {
+				struct tm *lt = gmtime(&alt_result);
+				time_t delta;
+				if (lt->tm_mday == tm.tm_mday) {
+					delta = (lt->tm_sec - tm.tm_sec)
+					        + 60 * (lt->tm_min - tm.tm_min)
+					        + 60 * 60 * (lt->tm_hour - tm.tm_hour);
+				} else {
+					/* TODO */
+					delta = 0;
+				}
+				alt_result -= delta;
+			}
+
+			/* original code */
 			leap_days = num_leap_years(year) - num_leap_years(1970);
 			year -= 1970;
 			days =
 			    year * 365 + days_before_month[month] + (day - 1) + leap_days;
 			result = (time_t)days * 24 * 3600 + (time_t)hour * 3600
 			         + minute * 60 + second;
+
+			/* TODO: fix original code or use alternate code - see #250 */
 		}
 	}
 
