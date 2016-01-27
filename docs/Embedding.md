@@ -21,7 +21,7 @@ These files constitute the CivetWeb library.  They do not contain a `main` funct
 but all functions required to run a HTTP server.
 
   - HTTP Server API
-      - include/civetweb.c
+      - include/civetweb.h
   - C implementation
     - src/civetweb.c
     - src/md5.inl (MD5 calculation)    
