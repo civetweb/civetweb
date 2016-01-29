@@ -91,7 +91,7 @@ int main(void)
 
     /* Display a welcome message */
     printf("File upload demo.\n");
-    printf("Open http://localhost:%s/ im your browser.\n\n", PORT);
+    printf("Open http://localhost:%s/ in your browser.\n\n", PORT);
 
     /* Start the server */
     ctx = mg_start(&callbacks, NULL, options);

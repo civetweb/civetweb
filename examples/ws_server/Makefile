@@ -18,7 +18,7 @@ LIBS = -lpthread
 include $(TOP)/resources/Makefile.in-os
 
 ifeq ($(TARGET_OS),LINUX) 
-	LIBS += -ldl
+	LIBS += -ldl -DMG_LEGACY_INTERFACE=1
 endif
 
 all: $(PROG)
