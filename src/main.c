@@ -157,11 +157,13 @@ static struct mg_option main_config_options[] = {
     {"icon", CONFIG_TYPE_STRING, NULL},
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
+
 static void WINCDECL
 signal_handler(int sig_num)
 {
 	g_exit_flag = sig_num;
 }
+
 
 static NO_RETURN void
 die(const char *fmt, ...)
@@ -183,9 +185,11 @@ die(const char *fmt, ...)
 	exit(EXIT_FAILURE);
 }
 
+
 #ifdef WIN32
 static int MakeConsole(void);
 #endif
+
 
 static void
 show_server_name(void)
@@ -196,6 +200,7 @@ show_server_name(void)
 
 	fprintf(stderr, "CivetWeb v%s, built on %s\n", mg_version(), __DATE__);
 }
+
 
 static NO_RETURN void
 show_usage_and_exit(const char *exeName)
@@ -246,6 +251,7 @@ show_usage_and_exit(const char *exeName)
 	exit(EXIT_FAILURE);
 }
 
+
 #if defined(_WIN32) || defined(USE_COCOA)
 static const char *config_file_top_comment =
     "# Civetweb web server configuration file.\n"
@@ -286,6 +292,7 @@ get_url_to_first_open_port(const struct mg_context *ctx)
 	return url;
 }
 
+
 #ifdef ENABLE_CREATE_CONFIG_FILE
 static void
 create_config_file(const struct mg_context *ctx, const char *path)
@@ -314,6 +321,7 @@ create_config_file(const struct mg_context *ctx, const char *path)
 #endif
 #endif
 
+
 static char *
 sdup(const char *str)
 {
@@ -326,6 +334,7 @@ sdup(const char *str)
 	}
 	return p;
 }
+
 
 static const char *
 get_option(char **options, const char *option_name)
@@ -349,6 +358,7 @@ get_option(char **options, const char *option_name)
 	}
 	return opt_value;
 }
+
 
 static int
 set_option(char **options, const char *name, const char *value)
@@ -428,6 +438,7 @@ set_option(char **options, const char *name, const char *value)
 	return 1;
 }
 
+
 static void
 read_config_file(const char *config_file, char **options)
 {
@@ -498,6 +509,7 @@ read_config_file(const char *config_file, char **options)
 	}
 }
 
+
 static void
 process_command_line_arguments(char *argv[], char **options)
 {
@@ -564,6 +576,7 @@ process_command_line_arguments(char *argv[], char **options)
 	}
 }
 
+
 static void
 init_server_name(int argc, const char *argv[])
 {
@@ -594,6 +607,7 @@ init_server_name(int argc, const char *argv[])
 	}
 }
 
+
 static int
 log_message(const struct mg_connection *conn, const char *message)
 {
@@ -609,6 +623,7 @@ log_message(const struct mg_connection *conn, const char *message)
 	return 0;
 }
 
+
 static int
 is_path_absolute(const char *path)
 {
@@ -622,6 +637,7 @@ is_path_absolute(const char *path)
 	return path != NULL && path[0] == '/';
 #endif
 }
+
 
 static void
 verify_existence(char **options, const char *option_name, int must_be_dir)
@@ -658,6 +674,7 @@ verify_existence(char **options, const char *option_name, int must_be_dir)
 		    strerror(errno));
 	}
 }
+
 
 static void
 set_absolute_path(char *options[],
@@ -696,6 +713,7 @@ set_absolute_path(char *options[],
 		set_option(options, option_name, absolute);
 	}
 }
+
 
 #ifdef USE_LUA
 
@@ -755,6 +773,7 @@ run_lua(const char *file_name)
 }
 #endif
 
+
 #ifdef USE_DUKTAPE
 
 #include "duktape.h"
@@ -787,10 +806,12 @@ finished:
 }
 #endif
 
+
 #if defined(__MINGW32__) || defined(__MINGW64__)
 /* For __MINGW32/64_MAJOR/MINOR_VERSION define */
 #include <_mingw.h>
 #endif
+
 
 static void
 start_civetweb(int argc, char *argv[])
@@ -1042,6 +1063,7 @@ start_civetweb(int argc, char *argv[])
 	}
 }
 
+
 static void
 stop_civetweb(void)
 {
@@ -1049,6 +1071,7 @@ stop_civetweb(void)
 	free(g_user_data.first_message);
 	g_user_data.first_message = NULL;
 }
+
 
 #ifdef _WIN32
 enum {
@@ -1081,11 +1104,13 @@ enum {
    text box ID. */
 	ID_FILE_BUTTONS_DELTA = 1000
 };
+
 static HICON hIcon;
 static SERVICE_STATUS ss;
 static SERVICE_STATUS_HANDLE hStatus;
 static const char *service_magic_argument = "--";
 static NOTIFYICONDATA TrayIcon;
+
 
 static void WINAPI
 ControlHandler(DWORD code)
@@ -1096,6 +1121,7 @@ ControlHandler(DWORD code)
 	}
 	SetServiceStatus(hStatus, &ss);
 }
+
 
 static void WINAPI
 ServiceMain(void)
@@ -1117,6 +1143,7 @@ ServiceMain(void)
 	SetServiceStatus(hStatus, &ss);
 }
 
+
 static void
 show_error(void)
 {
@@ -1131,6 +1158,7 @@ show_error(void)
 	MessageBox(NULL, buf, "Error", MB_OK);
 }
 
+
 static void *
 align(void *ptr, DWORD alig)
 {
@@ -1139,6 +1167,7 @@ align(void *ptr, DWORD alig)
 	ul &= ~alig;
 	return ((void *)ul);
 }
+
 
 static void
 save_config(HWND hDlg, FILE *fp)
@@ -1169,6 +1198,7 @@ save_config(HWND hDlg, FILE *fp)
 		}
 	}
 }
+
 
 static INT_PTR CALLBACK
 SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -1323,10 +1353,12 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 	return FALSE;
 }
 
+
 struct tstring_input_buf {
 	unsigned buflen;
 	char *buffer;
 };
+
 
 static INT_PTR CALLBACK
 InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
@@ -1376,6 +1408,7 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 	return FALSE;
 }
 
+
 static void
 suggest_passwd(char *passwd)
 {
@@ -1399,6 +1432,7 @@ suggest_passwd(char *passwd)
 	}
 }
 
+
 static void add_control(unsigned char **mem,
                         DLGTEMPLATE *dia,
                         WORD type,
@@ -1409,6 +1443,7 @@ static void add_control(unsigned char **mem,
                         short cx,
                         short cy,
                         const char *caption);
+
 
 static int
 get_password(const char *user,
@@ -1572,6 +1607,7 @@ get_password(const char *user,
 #undef LABEL_WIDTH
 }
 
+
 static INT_PTR CALLBACK
 PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 {
@@ -1641,6 +1677,7 @@ PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 	return FALSE;
 }
 
+
 static void
 add_control(unsigned char **mem,
             DLGTEMPLATE *dia,
@@ -1682,6 +1719,7 @@ add_control(unsigned char **mem,
 	*p++ = 0;
 	*mem = (unsigned char *)p;
 }
+
 
 static void
 show_settings_dialog()
@@ -1857,6 +1895,7 @@ show_settings_dialog()
 #undef WIDTH
 #undef LABEL_WIDTH
 }
+
 
 static void
 change_password_file()
@@ -2063,6 +2102,7 @@ change_password_file()
 #undef LABEL_WIDTH
 }
 
+
 static int
 manage_service(int action)
 {
@@ -2235,6 +2275,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+
 static int
 MakeConsole(void)
 {
@@ -2270,13 +2311,13 @@ MakeConsole(void)
 	return ok;
 }
 
+
 int WINAPI
 WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 {
 	WNDCLASS cls;
 	HWND hWnd;
 	MSG msg;
-
 
 	int i;
 	int dataLen = 4;
@@ -2324,7 +2365,6 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 		return state[index];
 	}
 
-
 	uint32_t x, y, z, w;
 
 	uint32_t xorshift128(void)
@@ -2336,11 +2376,9 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 		return w = w ^ (w >> 19) ^ t ^ (t >> 8);
 	}
 
-
 	static uint64_t lfsr = 1;
 	static uint64_t lcg = 0;
 	uint64_t r = 0;
-
 
 	do {
 		lfsr = (lfsr >> 1)
@@ -2349,7 +2387,6 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 		lcg = lcg * 6364136223846793005 + 1442695040888963407;
 		++r;
 	} while (lcg != 0);
-
 
 	fprintf(stdout, "lfsr = %I64u, lcg = %i64u, r = %i64u\n", lfsr, lcg, r);
 #endif
@@ -2409,6 +2446,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	return (int)msg.wParam;
 }
 
+
 int
 main(int argc, char *argv[])
 {
@@ -2417,6 +2455,7 @@ main(int argc, char *argv[])
 
 	return WinMain(0, 0, 0, 0);
 }
+
 
 #elif defined(USE_COCOA)
 #import <Cocoa/Cocoa.h>

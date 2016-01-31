@@ -102,7 +102,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 Including a dertificate from a certificate authority
 ----
 
-
 CivetWeb requires one certificate file in PEM format.
 If you got multiple files from your certificate authority, 
 you need to copy their content together into one file. 
