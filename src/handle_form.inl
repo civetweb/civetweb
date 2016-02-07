@@ -141,6 +141,16 @@ url_encoded_field_get(const char *key,
 }
 
 
+static void
+remove_bad_file(const struct mg_connection *conn, const char *path)
+{
+	int r = remove(path);
+	if (r != 0) {
+		mg_cry(conn, "%s: Cannot remove invalid file %s", __func__, path);
+	}
+}
+
+
 int
 mg_handle_form_data(struct mg_connection *conn,
                     struct mg_form_data_handler *fdh)
@@ -150,6 +160,8 @@ mg_handle_form_data(struct mg_connection *conn,
 	char buf[1024];
 	int disposition;
 	int buf_fill = 0;
+	int r;
+	FILE *fstore = NULL;
 
 	int has_body_data =
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
@@ -227,16 +239,33 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 			if (disposition == FORM_DISPOSITION_STORE) {
 				/* Store the content to a file */
-				FILE *f = fopen(path, "wb");
-				if (f != NULL) {
-					size_t n = (size_t)fwrite(val, 1, (size_t)vallen, f);
-					if ((n != (size_t)vallen) || (ferror(f))) {
+				fstore = fopen(path, "wb");
+				if (fstore != NULL) {
+					size_t n = (size_t)fwrite(val, 1, (size_t)vallen, fstore);
+					if ((n != (size_t)vallen) || (ferror(fstore))) {
 						mg_cry(conn,
 						       "%s: Cannot write file %s",
 						       __func__,
 						       path);
+						fclose(fstore);
+						fstore = NULL;
+						remove_bad_file(conn, path);
 					}
-					fclose(f);
+
+					if (fstore) {
+						r = fclose(fstore);
+						if (r == 0) {
+							/* stored successfully */
+						} else {
+							mg_cry(conn,
+							       "%s: Error saving file %s",
+							       __func__,
+							       path);
+							remove_bad_file(conn, path);
+						}
+						fstore = NULL;
+					}
+
 				} else {
 					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
 				}
@@ -284,13 +313,12 @@ mg_handle_form_data(struct mg_connection *conn,
 			const char *next;
 			ptrdiff_t keylen, vallen;
 			ptrdiff_t used;
-			FILE *fstore = NULL;
 			int end_of_key_value_pair_found = 0;
 
 			if ((size_t)buf_fill < (sizeof(buf) - 1)) {
 
 				size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
-				int r = mg_read(conn, buf + (size_t)buf_fill, to_read);
+				r = mg_read(conn, buf + (size_t)buf_fill, to_read);
 				if (r < 0) {
 					/* read error */
 					return 0;
@@ -357,6 +385,7 @@ mg_handle_form_data(struct mg_connection *conn,
 						       path);
 						fclose(fstore);
 						fstore = NULL;
+						remove_bad_file(conn, path);
 					}
 				}
 				if (disposition == FORM_DISPOSITION_GET) {
@@ -380,7 +409,14 @@ mg_handle_form_data(struct mg_connection *conn,
 			} while (!end_of_key_value_pair_found);
 
 			if (fstore) {
-				fclose(fstore);
+				r = fclose(fstore);
+				if (r == 0) {
+					/* stored successfully */
+				} else {
+					mg_cry(conn, "%s: Error saving file %s", __func__, path);
+					remove_bad_file(conn, path);
+				}
+				fstore = NULL;
 			}
 
 			/* Proceed to next entry */
@@ -398,7 +434,6 @@ mg_handle_form_data(struct mg_connection *conn,
 		 * https://www.ietf.org/rfc/rfc2388.txt). */
 		const char *boundary;
 		size_t bl;
-		int r;
 		ptrdiff_t used;
 		struct mg_request_info part_header;
 		char *hbuf, *hend, *fbeg, *fend, *nbeg, *nend;
@@ -557,6 +592,7 @@ mg_handle_form_data(struct mg_connection *conn,
 								       path);
 								fclose(fstore);
 								fstore = NULL;
+								remove_bad_file(conn, path);
 							}
 						}
 
@@ -599,11 +635,22 @@ mg_handle_form_data(struct mg_connection *conn,
 							       path);
 							fclose(fstore);
 							fstore = NULL;
+							remove_bad_file(conn, path);
 						}
 					}
 
 					if (fstore) {
-						fclose(fstore);
+						r = fclose(fstore);
+						if (r == 0) {
+							/* stored successfully */
+						} else {
+							mg_cry(conn,
+							       "%s: Error saving file %s",
+							       __func__,
+							       path);
+							remove_bad_file(conn, path);
+						}
+						fstore = NULL;
 					}
 				} else {
 					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
