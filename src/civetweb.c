@@ -843,6 +843,7 @@ typedef struct x509_store_ctx_st X509_STORE_CTX;
 
 #define SSL_CTRL_OPTIONS (32)
 #define SSL_CTRL_CLEAR_OPTIONS (77)
+#define SSL_CTRL_SET_ECDH_AUTO (94)
 
 #define SSL_VERIFY_NONE (0)
 #define SSL_VERIFY_PEER (1)
@@ -908,6 +909,8 @@ struct ssl_func {
 	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
+#define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
+	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
@@ -10791,6 +10794,7 @@ set_ssl_option(struct mg_context *ctx)
 	protocol_ver = atoi(ctx->config[SSL_PROTOCOL_VERSION]);
 	SSL_CTX_set_options(ctx->ssl_ctx, ssl_get_protocol(protocol_ver));
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
+	SSL_CTX_set_ecdh_auto(ctx->ssl_ctx, 1);
 
 	/* If a callback has been specified, call it. */
 	callback_ret =
