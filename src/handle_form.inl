@@ -31,7 +31,7 @@ enum {
 	FORM_DISPOSITION_SKIP = 0x0,
 	FORM_DISPOSITION_GET = 0x1,
 	FORM_DISPOSITION_STORE = 0x2,
-	FORM_DISPOSITION_READ = 0x3,
+	/*	FORM_DISPOSITION_READ = 0x3, not in the first step */
 	FORM_DISPOSITION_ABORT = 0x10
 };
 
@@ -47,6 +47,7 @@ struct mg_form_data_handler {
 	                 const char *value,
 	                 size_t valuelen,
 	                 void *user_data);
+	int (*field_stored)(const char *path, void *user_data);
 	void *user_data;
 };
 
@@ -138,6 +139,14 @@ url_encoded_field_get(const char *key,
 	                      value_dec,
 	                      (size_t)value_dec_len,
 	                      fdh->user_data);
+}
+
+
+static int
+field_stored(const char *path, struct mg_form_data_handler *fdh)
+{
+	/* Equivalent to "upload" callback of "mg_upload". */
+	return fdh->field_stored(path, fdh->user_data);
 }
 
 
@@ -256,6 +265,7 @@ mg_handle_form_data(struct mg_connection *conn,
 						r = fclose(fstore);
 						if (r == 0) {
 							/* stored successfully */
+							field_stored(path, fdh);
 						} else {
 							mg_cry(conn,
 							       "%s: Error saving file %s",
@@ -270,19 +280,20 @@ mg_handle_form_data(struct mg_connection *conn,
 					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
 				}
 			}
-			if (disposition == FORM_DISPOSITION_READ) {
-				/* The idea of "disposition=read" is to let the API user read
-				 * data chunk by chunk and to some data processing on the fly.
-				 * This should avoid the need to store data in the server:
-				 * It should neither be stored in memory, like
-				 * "disposition=get" does, nor in a file like
-				 * "disposition=store".
-				 * However, for a "GET" request this does not make any much
-				 * sense, since the data is already stored in memory, as it is
-				 * part of the query string.
-				 */
-				/* TODO, or not TODO, that is the question */
-			}
+
+			/* if (disposition == FORM_DISPOSITION_READ) { */
+			/* The idea of "disposition=read" is to let the API user read
+			 * data chunk by chunk and to some data processing on the fly.
+			 * This should avoid the need to store data in the server:
+			 * It should neither be stored in memory, like
+			 * "disposition=get" does, nor in a file like
+			 * "disposition=store".
+			 * However, for a "GET" request this does not make any much
+			 * sense, since the data is already stored in memory, as it is
+			 * part of the query string.
+			 */
+			/* } */
+
 			if ((disposition & FORM_DISPOSITION_ABORT)
 			    == FORM_DISPOSITION_ABORT) {
 				/* Stop parsing the request */
@@ -412,6 +423,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				r = fclose(fstore);
 				if (r == 0) {
 					/* stored successfully */
+					field_stored(path, fdh);
 				} else {
 					mg_cry(conn, "%s: Error saving file %s", __func__, path);
 					remove_bad_file(conn, path);
@@ -643,6 +655,7 @@ mg_handle_form_data(struct mg_connection *conn,
 						r = fclose(fstore);
 						if (r == 0) {
 							/* stored successfully */
+							field_stored(path, fdh);
 						} else {
 							mg_cry(conn,
 							       "%s: Error saving file %s",

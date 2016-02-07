@@ -10739,6 +10739,7 @@ ssl_get_protocol(int version_id)
 	return ret;
 }
 
+
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
 static int
 set_ssl_option(struct mg_context *ctx)

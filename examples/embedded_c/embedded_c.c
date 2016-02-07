@@ -178,6 +178,7 @@ struct mg_form_data_handler {
 	                 const char *value,
 	                 size_t valuelen,
 	                 void *user_data);
+	int (*field_stored)(const char *path, void *user_data);
 	void *user_data;
 };
 
