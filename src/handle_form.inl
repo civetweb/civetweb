@@ -588,7 +588,7 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			if (disposition == FORM_DISPOSITION_STORE) {
 				/* Store the content to a file */
-				FILE *fstore = fopen(path, "wb");
+				fstore = fopen(path, "wb");
 				if (fstore != NULL) {
 					size_t towrite, n;
 

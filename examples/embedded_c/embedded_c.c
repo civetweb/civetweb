@@ -226,12 +226,23 @@ field_get(const char *key,
 
 
 int
+field_stored(const char *path, void *user_data)
+{
+	struct mg_connection *conn = (struct mg_connection *)user_data;
+
+	mg_printf(conn, "stored as %s\r\n\r\n", path);
+
+	return 0;
+}
+
+
+int
 FormHandler(struct mg_connection *conn, void *cbdata)
 {
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
-	struct mg_form_data_handler fdh = {field_found, field_get, 0};
+	struct mg_form_data_handler fdh = {field_found, field_get, field_stored, 0};
 
 	/* TODO: Checks before calling handle_form_data ? */
 	(void)req_info;
