@@ -518,11 +518,15 @@ mg_handle_form_data(struct mg_connection *conn,
 				/* Malformed request */
 				return 0;
 			}
+
 			parse_http_headers(&hbuf, &part_header);
 			if ((hend + 2) != hbuf) {
 				/* Malformed request */
 				return 0;
 			}
+
+			/* Skip \r\n\r\n */
+			hend += 4;
 
 			/* According to the RFC, every part has to have a header field like:
 			 * Content-Disposition: form-data; name="..." */
@@ -592,8 +596,8 @@ mg_handle_form_data(struct mg_connection *conn,
 				                      (size_t)(nend - nbeg),
 				                      fbeg,
 				                      (size_t)(fend - fbeg),
-				                      hend + 4,
-				                      (size_t)(next - hend - 4),
+				                      hend,
+				                      (size_t)(next - hend),
 				                      fdh);
 			}
 
@@ -604,17 +608,20 @@ mg_handle_form_data(struct mg_connection *conn,
 					size_t towrite, n;
 
 					while (!next) {
-						/* Store the entire buffer */
-						if (fstore) {
-							/* Set "towrite" to the number of bytes available
-							 * in the buffer */
-							towrite = (size_t)(buf - hend - 4 + buf_fill);
-							/* Subtract the boundary length, to deal with
-							 * cases the boundary is only partially stored
-							 * in the buffer. */
-							towrite -= bl + 4;
 
-							n = (size_t)fwrite(hend + 4, 1, towrite, fstore);
+
+						/* Set "towrite" to the number of bytes available
+						 * in the buffer */
+						towrite = (size_t)(buf - hend + buf_fill);
+						/* Subtract the boundary length, to deal with
+						 * cases the boundary is only partially stored
+						 * in the buffer. */
+						towrite -= bl + 4;
+
+						if (fstore) {
+
+							/* Store the content of the buffer. */
+							n = (size_t)fwrite(hend, 1, towrite, fstore);
 							if ((n != towrite) || (ferror(fstore))) {
 								mg_cry(conn,
 								       "%s: Cannot write file %s",
@@ -624,11 +631,11 @@ mg_handle_form_data(struct mg_connection *conn,
 								fstore = NULL;
 								remove_bad_file(conn, path);
 							}
-
-							memmove(buf, hend + 4 + towrite, bl + 4);
-							buf_fill = bl + 4;
-							hend = buf - 4;
 						}
+
+						memmove(buf, hend + towrite, bl + 4);
+						buf_fill = bl + 4;
+						hend = buf;
 
 						/* Read new data */
 						r = mg_read(conn,
@@ -655,8 +662,8 @@ mg_handle_form_data(struct mg_connection *conn,
 					}
 
 					if (fstore) {
-						towrite = (size_t)(next - hend - 4);
-						n = (size_t)fwrite(hend + 4, 1, towrite, fstore);
+						towrite = (size_t)(next - hend);
+						n = (size_t)fwrite(hend, 1, towrite, fstore);
 						if ((n != towrite) || (ferror(fstore))) {
 							mg_cry(conn,
 							       "%s: Cannot write file %s",
