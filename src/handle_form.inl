@@ -463,6 +463,18 @@ mg_handle_form_data(struct mg_connection *conn,
 		boundary = content_type + 30;
 		bl = strlen(boundary);
 
+		if (bl + 800 > sizeof(buf)) {
+			/* Sanity check:  The algorithm can not work if bl >= sizeof(buf),
+			 * and it will not work effectively, if the buf is only a few byte
+			 * larger than bl, or it buf can not hold the multipart header
+			 * plus the boundary.
+			 * Check some reasonable number here, that should be fulfilled by
+			 * any reasonable request from every browser. If it is not
+			 * fulfilled, it might be a hand-made request, intended to
+			 * interfere with the algorithm. */
+			return 0;
+		}
+
 		for (;;) {
 
 			r = mg_read(conn,
@@ -542,8 +554,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				fend = strchr(fbeg, '\"');
 				if (!fend) {
 					/* Malformed request (the filename field is optional, but if
-					 * it
-					 * exists, it needs to be terminated correctly). */
+					 * it exists, it needs to be terminated correctly). */
 					return 0;
 				}
 
@@ -595,7 +606,14 @@ mg_handle_form_data(struct mg_connection *conn,
 					while (!next) {
 						/* Store the entire buffer */
 						if (fstore) {
+							/* Set "towrite" to the number of bytes available
+							 * in the buffer */
 							towrite = (size_t)(buf - hend - 4 + buf_fill);
+							/* Subtract the boundary length, to deal with
+							 * cases the boundary is only partially stored
+							 * in the buffer. */
+							towrite -= bl + 4;
+
 							n = (size_t)fwrite(hend + 4, 1, towrite, fstore);
 							if ((n != towrite) || (ferror(fstore))) {
 								mg_cry(conn,
@@ -606,6 +624,10 @@ mg_handle_form_data(struct mg_connection *conn,
 								fstore = NULL;
 								remove_bad_file(conn, path);
 							}
+
+							memmove(buf, hend + 4 + towrite, bl + 4);
+							buf_fill = bl + 4;
+							hend = buf - 4;
 						}
 
 						/* Read new data */
@@ -630,11 +652,6 @@ mg_handle_form_data(struct mg_connection *conn,
 							 * next "--" */
 							next = strstr(next + 1, "\r\n--");
 						}
-
-						/* TODO (high): handle boundaries split between two
-						   chunks
-						   part of the chunk here, part of the chunk yet unread
-						 */
 					}
 
 					if (fstore) {
