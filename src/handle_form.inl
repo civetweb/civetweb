@@ -603,66 +603,26 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			if (disposition == FORM_DISPOSITION_STORE) {
 				/* Store the content to a file */
+				size_t towrite, n;
+				size_t flen = 0;
 				fstore = fopen(path, "wb");
-				if (fstore != NULL) {
-					size_t towrite, n;
 
-					while (!next) {
+				if (!fstore) {
+					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+				}
 
-
-						/* Set "towrite" to the number of bytes available
-						 * in the buffer */
-						towrite = (size_t)(buf - hend + buf_fill);
-						/* Subtract the boundary length, to deal with
-						 * cases the boundary is only partially stored
-						 * in the buffer. */
-						towrite -= bl + 4;
-
-						if (fstore) {
-
-							/* Store the content of the buffer. */
-							n = (size_t)fwrite(hend, 1, towrite, fstore);
-							if ((n != towrite) || (ferror(fstore))) {
-								mg_cry(conn,
-								       "%s: Cannot write file %s",
-								       __func__,
-								       path);
-								fclose(fstore);
-								fstore = NULL;
-								remove_bad_file(conn, path);
-							}
-						}
-
-						memmove(buf, hend + towrite, bl + 4);
-						buf_fill = bl + 4;
-						hend = buf;
-
-						/* Read new data */
-						r = mg_read(conn,
-						            buf + (size_t)buf_fill,
-						            sizeof(buf) - 1 - (size_t)buf_fill);
-						if (r < 0) {
-							/* read error */
-							return 0;
-						}
-						buf_fill += r;
-						buf[buf_fill] = 0;
-						if (buf_fill < 1) {
-							/* No data */
-							return 0;
-						}
-
-						/* Find boundary */
-						next = strstr(hbuf, "\r\n--");
-						while (next && (strncmp(next + 4, boundary, bl))) {
-							/* found "--" not followed by boundary: look for
-							 * next "--" */
-							next = strstr(next + 1, "\r\n--");
-						}
-					}
+				while (!next) {
+					/* Set "towrite" to the number of bytes available
+					 * in the buffer */
+					towrite = (size_t)(buf - hend + buf_fill);
+					/* Subtract the boundary length, to deal with
+					 * cases the boundary is only partially stored
+					 * in the buffer. */
+					towrite -= bl + 4;
 
 					if (fstore) {
-						towrite = (size_t)(next - hend);
+
+						/* Store the content of the buffer. */
 						n = (size_t)fwrite(hend, 1, towrite, fstore);
 						if ((n != towrite) || (ferror(fstore))) {
 							mg_cry(conn,
@@ -673,24 +633,65 @@ mg_handle_form_data(struct mg_connection *conn,
 							fstore = NULL;
 							remove_bad_file(conn, path);
 						}
+						flen += n;
 					}
 
-					if (fstore) {
-						r = fclose(fstore);
-						if (r == 0) {
-							/* stored successfully */
-							field_stored(path, fdh);
-						} else {
-							mg_cry(conn,
-							       "%s: Error saving file %s",
-							       __func__,
-							       path);
-							remove_bad_file(conn, path);
-						}
-						fstore = NULL;
+					memmove(buf, hend + towrite, bl + 4);
+					buf_fill = bl + 4;
+					hend = buf;
+
+					/* Read new data */
+					r = mg_read(conn,
+					            buf + (size_t)buf_fill,
+					            sizeof(buf) - 1 - (size_t)buf_fill);
+					if (r < 0) {
+						/* read error */
+						return 0;
 					}
-				} else {
-					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+					buf_fill += r;
+					buf[buf_fill] = 0;
+					if (buf_fill < 1) {
+						/* No data */
+						return 0;
+					}
+
+					/* Find boundary */
+					next = strstr(buf, "\r\n--");
+					while (next && (strncmp(next + 4, boundary, bl))) {
+						/* found "--" not followed by boundary: look for
+						 * next "--" */
+						next = strstr(next + 1, "\r\n--");
+					}
+				}
+
+				if (fstore) {
+					towrite = (size_t)(next - hend);
+					n = (size_t)fwrite(hend, 1, towrite, fstore);
+					if ((n != towrite) || (ferror(fstore))) {
+						mg_cry(conn,
+						       "%s: Cannot write file %s",
+						       __func__,
+						       path);
+						fclose(fstore);
+						fstore = NULL;
+						remove_bad_file(conn, path);
+					}
+					flen += n;
+				}
+
+				if (fstore) {
+					r = fclose(fstore);
+					if (r == 0) {
+						/* stored successfully */
+						field_stored(path, fdh);
+					} else {
+						mg_cry(conn,
+						       "%s: Error saving file %s",
+						       __func__,
+						       path);
+						remove_bad_file(conn, path);
+					}
+					fstore = NULL;
 				}
 			}
 			if ((disposition & FORM_DISPOSITION_ABORT)
