@@ -61,6 +61,15 @@ class CIVETWEB_API CivetHandler
 	virtual bool handlePost(CivetServer *server, struct mg_connection *conn);
 
 	/**
+	 * Callback method for HEAD request.
+	 *
+	 * @param server - the calling server
+	 * @param conn - the connection information
+	 * @returns true if implemented, false otherwise
+	 */
+	virtual bool handleHead(CivetServer *server, struct mg_connection *conn);
+
+	/**
 	 * Callback method for PUT request.
 	 *
 	 * @param server - the calling server
