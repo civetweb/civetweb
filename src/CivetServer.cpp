@@ -32,6 +32,14 @@ CivetHandler::handlePost(CivetServer *server, struct mg_connection *conn)
 }
 
 bool
+CivetHandler::handleHead(CivetServer *server, struct mg_connection *conn)
+{
+	UNUSED_PARAMETER(server);
+	UNUSED_PARAMETER(conn);
+	return false;
+}
+
+bool
 CivetHandler::handlePut(CivetServer *server, struct mg_connection *conn)
 {
 	UNUSED_PARAMETER(server);
@@ -128,6 +136,8 @@ CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 			return handler->handleGet(me, conn) ? 1 : 0;
 		} else if (strcmp(request_info->request_method, "POST") == 0) {
 			return handler->handlePost(me, conn) ? 1 : 0;
+		} else if (strcmp(request_info->request_method, "HEAD") == 0) {
+			return handler->handleHead(me, conn) ? 1 : 0;
 		} else if (strcmp(request_info->request_method, "PUT") == 0) {
 			return handler->handlePut(me, conn) ? 1 : 0;
 		} else if (strcmp(request_info->request_method, "DELETE") == 0) {
