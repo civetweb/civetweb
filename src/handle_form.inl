@@ -89,6 +89,8 @@ url_encoded_field_found(const struct mg_connection *conn,
 
 		if (((size_t)filename_dec_len >= (size_t)sizeof(filename_dec))
 		    || (filename_dec_len < 0)) {
+			/* Log error message and skip this field. */
+			mg_cry(conn, "%s: Cannot decode filename", __func__);
 			return FORM_DISPOSITION_SKIP;
 		}
 	} else {
@@ -117,7 +119,11 @@ url_encoded_field_get(const struct mg_connection *conn,
 	int value_dec_len;
 
 	if (!value_dec) {
-		/* TODO: oom */
+		/* Log error message and stop parsing the form data. */
+		mg_cry(conn,
+		       "%s: Not enough memory (required: %lu)",
+		       __func__,
+		       (unsigned long)(value_len + 1));
 		return FORM_DISPOSITION_ABORT;
 	}
 
@@ -150,6 +156,9 @@ field_stored(const struct mg_connection *conn,
              struct mg_form_data_handler *fdh)
 {
 	/* Equivalent to "upload" callback of "mg_upload". */
+
+	(void)conn; /* we do not need mg_cry here, so conn is currently unused */
+
 	return fdh->field_stored(path, fdh->user_data);
 }
 
@@ -161,6 +170,18 @@ remove_bad_file(const struct mg_connection *conn, const char *path)
 	if (r != 0) {
 		mg_cry(conn, "%s: Cannot remove invalid file %s", __func__, path);
 	}
+}
+
+
+static const char *
+search_boundary(const char *buf, const char *boundary, size_t bl)
+{
+	const char *next = strstr(buf, "\r\n--");
+	while (next && (strncmp(next + 4, boundary, bl))) {
+		/* found "--" not followed by boundary: look for next "--" */
+		next = strstr(next + 1, "\r\n--");
+	}
+	return next;
 }
 
 
@@ -607,11 +628,9 @@ mg_handle_form_data(struct mg_connection *conn,
 			                                      sizeof(path) - 1,
 			                                      fdh);
 
-			next = strstr(hbuf, "\r\n--");
-			while (next && (strncmp(next + 4, boundary, bl))) {
-				/* found "--" not followed by boundary: look for next "--" */
-				next = strstr(next + 1, "\r\n--");
-			}
+			/* If the boundary is already in the buffer, get the address,
+			 * otherwise next will be NULL. */
+			next = search_boundary(hbuf, boundary, bl);
 
 			if (disposition == FORM_DISPOSITION_GET) {
 				if (!next) {
@@ -686,12 +705,7 @@ mg_handle_form_data(struct mg_connection *conn,
 					}
 
 					/* Find boundary */
-					next = strstr(buf, "\r\n--");
-					while (next && (strncmp(next + 4, boundary, bl))) {
-						/* found "--" not followed by boundary: look for
-						 * next "--" */
-						next = strstr(next + 1, "\r\n--");
-					}
+					next = search_boundary(buf, boundary, bl);
 				}
 
 				if (fstore) {
