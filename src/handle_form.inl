@@ -59,7 +59,8 @@ int mg_handle_form_data(struct mg_connection *conn,
 /********************/
 
 static int
-url_encoded_field_found(const char *key,
+url_encoded_field_found(const struct mg_connection *conn,
+                        const char *key,
                         size_t key_len,
                         const char *filename,
                         size_t filename_len,
@@ -100,7 +101,8 @@ url_encoded_field_found(const char *key,
 
 
 static int
-url_encoded_field_get(const char *key,
+url_encoded_field_get(const struct mg_connection *conn,
+                      const char *key,
                       size_t key_len,
                       const char *filename,
                       size_t filename_len,
@@ -143,7 +145,9 @@ url_encoded_field_get(const char *key,
 
 
 static int
-field_stored(const char *path, struct mg_form_data_handler *fdh)
+field_stored(const struct mg_connection *conn,
+             const char *path,
+             struct mg_form_data_handler *fdh)
 {
 	/* Equivalent to "upload" callback of "mg_upload". */
 	return fdh->field_stored(path, fdh->user_data);
@@ -218,18 +222,24 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			/* In every "field_found" callback we ask what to do with the
 			 * data ("disposition"). This could be:
-			 * FORM_DISPOSITION_SKIP (0) ... ignore the value if this field
+			 * FORM_DISPOSITION_SKIP (0) ... ignore the value of this field
 			 * FORM_DISPOSITION_GET (1) ... read the data and call the get
 			 *                              callback function
 			 * FORM_DISPOSITION_STORE (2) ... store the data in a file
-			 *                                TODO: get a filename
 			 * FORM_DISPOSITION_READ (3) ... let the user read the data
 			 *                               (for parsing long data on the fly)
+			 *                               (currently not implemented)
 			 * FORM_DISPOSITION_ABORT (flag) ... stop parsing
 			 */
 			memset(path, 0, sizeof(path));
-			disposition = url_encoded_field_found(
-			    data, (size_t)keylen, NULL, 0, path, sizeof(path) - 1, fdh);
+			disposition = url_encoded_field_found(conn,
+			                                      data,
+			                                      (size_t)keylen,
+			                                      NULL,
+			                                      0,
+			                                      path,
+			                                      sizeof(path) - 1,
+			                                      fdh);
 
 			val++;
 			next = strchr(val, '&');
@@ -243,8 +253,14 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			if (disposition == FORM_DISPOSITION_GET) {
 				/* Call callback */
-				url_encoded_field_get(
-				    data, (size_t)keylen, NULL, 0, val, (size_t)vallen, fdh);
+				url_encoded_field_get(conn,
+				                      data,
+				                      (size_t)keylen,
+				                      NULL,
+				                      0,
+				                      val,
+				                      (size_t)vallen,
+				                      fdh);
 			}
 			if (disposition == FORM_DISPOSITION_STORE) {
 				/* Store the content to a file */
@@ -265,7 +281,7 @@ mg_handle_form_data(struct mg_connection *conn,
 						r = fclose(fstore);
 						if (r == 0) {
 							/* stored successfully */
-							field_stored(path, fdh);
+							field_stored(conn, path, fdh);
 						} else {
 							mg_cry(conn,
 							       "%s: Error saving file %s",
@@ -359,8 +375,14 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			/* Call callback */
 			memset(path, 0, sizeof(path));
-			disposition = url_encoded_field_found(
-			    buf, (size_t)keylen, NULL, 0, path, sizeof(path) - 1, fdh);
+			disposition = url_encoded_field_found(conn,
+			                                      buf,
+			                                      (size_t)keylen,
+			                                      NULL,
+			                                      0,
+			                                      path,
+			                                      sizeof(path) - 1,
+			                                      fdh);
 
 			if ((disposition & FORM_DISPOSITION_ABORT)
 			    == FORM_DISPOSITION_ABORT) {
@@ -408,8 +430,14 @@ mg_handle_form_data(struct mg_connection *conn,
 						return 0;
 					}
 					/* Call callback */
-					url_encoded_field_get(
-					    buf, (size_t)keylen, NULL, 0, val, (size_t)vallen, fdh);
+					url_encoded_field_get(conn,
+					                      buf,
+					                      (size_t)keylen,
+					                      NULL,
+					                      0,
+					                      val,
+					                      (size_t)vallen,
+					                      fdh);
 				}
 
 				if (!end_of_key_value_pair_found) {
@@ -423,7 +451,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				r = fclose(fstore);
 				if (r == 0) {
 					/* stored successfully */
-					field_stored(path, fdh);
+					field_stored(conn, path, fdh);
 				} else {
 					mg_cry(conn, "%s: Error saving file %s", __func__, path);
 					remove_bad_file(conn, path);
@@ -570,7 +598,8 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 
 			memset(path, 0, sizeof(path));
-			disposition = url_encoded_field_found(nbeg,
+			disposition = url_encoded_field_found(conn,
+			                                      nbeg,
 			                                      (size_t)(nend - nbeg),
 			                                      fbeg,
 			                                      (size_t)(fend - fbeg),
@@ -592,7 +621,8 @@ mg_handle_form_data(struct mg_connection *conn,
 				}
 
 				/* Call callback */
-				url_encoded_field_get(nbeg,
+				url_encoded_field_get(conn,
+				                      nbeg,
 				                      (size_t)(nend - nbeg),
 				                      fbeg,
 				                      (size_t)(fend - fbeg),
@@ -683,7 +713,7 @@ mg_handle_form_data(struct mg_connection *conn,
 					r = fclose(fstore);
 					if (r == 0) {
 						/* stored successfully */
-						field_stored(path, fdh);
+						field_stored(conn, path, fdh);
 					} else {
 						mg_cry(conn,
 						       "%s: Error saving file %s",
@@ -694,6 +724,7 @@ mg_handle_form_data(struct mg_connection *conn,
 					fstore = NULL;
 				}
 			}
+
 			if ((disposition & FORM_DISPOSITION_ABORT)
 			    == FORM_DISPOSITION_ABORT) {
 				/* Stop parsing the request */
