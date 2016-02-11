@@ -174,14 +174,24 @@ remove_bad_file(const struct mg_connection *conn, const char *path)
 
 
 static const char *
-search_boundary(const char *buf, const char *boundary, size_t bl)
+search_boundary(const char *buf,
+                size_t buf_len,
+                const char *boundary,
+                size_t boundary_len)
 {
-	const char *next = strstr(buf, "\r\n--");
-	while (next && (strncmp(next + 4, boundary, bl))) {
-		/* found "--" not followed by boundary: look for next "--" */
-		next = strstr(next + 1, "\r\n--");
+	/* We must do a binary search here, not a string search, since the buffer
+	 * may contain '\x00' bytes, if binary data is transfered. */
+	int clen = (int)buf_len - (int)boundary_len - 4;
+	int i;
+
+	for (i = 0; i <= clen; i++) {
+		if (!memcmp(buf + i, "\r\n--", 4)) {
+			if (!memcmp(buf + i + 4, boundary, boundary_len)) {
+				return buf + i;
+			}
+		}
 	}
-	return next;
+	return NULL;
 }
 
 
@@ -630,7 +640,7 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			/* If the boundary is already in the buffer, get the address,
 			 * otherwise next will be NULL. */
-			next = search_boundary(hbuf, boundary, bl);
+			next = search_boundary(hbuf, buf - hbuf + buf_fill, boundary, bl);
 
 			if (disposition == FORM_DISPOSITION_GET) {
 				if (!next) {
@@ -705,7 +715,7 @@ mg_handle_form_data(struct mg_connection *conn,
 					}
 
 					/* Find boundary */
-					next = search_boundary(buf, boundary, bl);
+					next = search_boundary(buf, buf_fill, boundary, bl);
 				}
 
 				if (fstore) {
