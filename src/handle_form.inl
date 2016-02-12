@@ -99,8 +99,13 @@ enum {
 };
 
 
-int mg_handle_form_data(struct mg_connection *conn,
-                        struct mg_form_data_handler *fdh);
+/* Process form data.
+ * Returns the number of fields handled, or < 0 in case of an error.
+ * Note: It is possible that several fields are handled succesfully (e.g.,
+ * stored in a file), before the request handling is stopped with an
+ * error. In this case a number < 0 is returned as well. */
+CIVETWEB_API int mg_handle_form_data(struct mg_connection *conn,
+                                     struct mg_form_data_handler *fdh);
 
 /* end of interface */
 /********************/
@@ -239,6 +244,7 @@ mg_handle_form_data(struct mg_connection *conn,
 	int buf_fill = 0;
 	int r;
 	FILE *fstore = NULL;
+	int field_count = 0;
 
 	int has_body_data =
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
@@ -260,7 +266,7 @@ mg_handle_form_data(struct mg_connection *conn,
 		if (strcmp(conn->request_info.request_method, "GET")) {
 			/* No body data, but not a GET request.
 			 * This is not a valid form request. */
-			return 0;
+			return -1;
 		}
 
 		/* GET request: form data is in the query string. */
@@ -270,7 +276,7 @@ mg_handle_form_data(struct mg_connection *conn,
 		data = conn->request_info.query_string;
 		if (!data) {
 			/* No query string. */
-			return 0;
+			return -1;
 		}
 
 		/* Split data in a=1&b=xy&c=3&c=4 ... */
@@ -296,6 +302,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			 * FORM_FIELD_STORAGE_ABORT (flag) ... stop parsing
 			 */
 			memset(path, 0, sizeof(path));
+			field_count++;
 			field_storage = url_encoded_field_found(conn,
 			                                        data,
 			                                        (size_t)keylen,
@@ -378,7 +385,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			data = next;
 		}
 
-		return 0;
+		return field_count;
 	}
 
 	content_type = mg_get_header(conn, "Content-Type");
@@ -393,7 +400,7 @@ mg_handle_form_data(struct mg_connection *conn,
 		/* The encoding is like in the "GET" case above, but here we read data
 		 * on the fly */
 		for (;;) {
-			/* TODO(high): Handle (text) fields with data > sizeof(buf). */
+			/* TODO(high): Handle (text) fields with data size > sizeof(buf). */
 			const char *val;
 			const char *next;
 			ptrdiff_t keylen, vallen;
@@ -406,7 +413,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				r = mg_read(conn, buf + (size_t)buf_fill, to_read);
 				if (r < 0) {
 					/* read error */
-					return 0;
+					return -1;
 				}
 				if (r != (int)to_read) {
 					/* TODO: Create a function to get "all_data_read" from
@@ -433,6 +440,7 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			/* Call callback */
 			memset(path, 0, sizeof(path));
+			field_count++;
 			field_storage = url_encoded_field_found(conn,
 			                                        buf,
 			                                        (size_t)keylen,
@@ -485,7 +493,7 @@ mg_handle_form_data(struct mg_connection *conn,
 						mg_cry(conn,
 						       "%s: Data too long for callback",
 						       __func__);
-						return 0;
+						return -1;
 					}
 					/* Call callback */
 					url_encoded_field_get(
@@ -517,7 +525,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			buf_fill -= used;
 		}
 
-		return 0;
+		return field_count;
 	}
 
 	if (!mg_strncasecmp(content_type, "MULTIPART/FORM-DATA;", 20)) {
@@ -537,7 +545,7 @@ mg_handle_form_data(struct mg_connection *conn,
 		/* There has to be a BOUNDARY definition in the Content-Type header */
 		if (mg_strncasecmp(content_type + 21, "BOUNDARY=", 9)) {
 			/* Malformed request */
-			return 0;
+			return -1;
 		}
 
 		boundary = content_type + 30;
@@ -552,7 +560,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			 * any reasonable request from every browser. If it is not
 			 * fulfilled, it might be a hand-made request, intended to
 			 * interfere with the algorithm. */
-			return 0;
+			return -1;
 		}
 
 		for (;;) {
@@ -562,22 +570,22 @@ mg_handle_form_data(struct mg_connection *conn,
 			            sizeof(buf) - 1 - (size_t)buf_fill);
 			if (r < 0) {
 				/* read error */
-				return 0;
+				return -1;
 			}
 			buf_fill += r;
 			buf[buf_fill] = 0;
 			if (buf_fill < 1) {
 				/* No data */
-				return 0;
+				return -1;
 			}
 
 			if (buf[0] != '-' || buf[1] != '-') {
 				/* Malformed request */
-				return 0;
+				return -1;
 			}
 			if (strncmp(buf + 2, boundary, bl)) {
 				/* Malformed request */
-				return 0;
+				return -1;
 			}
 			if (buf[bl + 2] != '\r' || buf[bl + 3] != '\n') {
 				/* Every part must end with \r\n, if there is another part.
@@ -585,7 +593,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				if (((size_t)buf_fill != (size_t)(bl + 6))
 				    || (strncmp(buf + bl + 2, "--\r\n", 4))) {
 					/* Malformed request */
-					return 0;
+					return -1;
 				}
 				/* End of the request */
 				break;
@@ -596,13 +604,13 @@ mg_handle_form_data(struct mg_connection *conn,
 			hend = strstr(hbuf, "\r\n\r\n");
 			if (!hend) {
 				/* Malformed request */
-				return 0;
+				return -1;
 			}
 
 			parse_http_headers(&hbuf, &part_header);
 			if ((hend + 2) != hbuf) {
 				/* Malformed request */
-				return 0;
+				return -1;
 			}
 
 			/* Skip \r\n\r\n */
@@ -613,7 +621,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			content_disp = get_header(&part_header, "Content-Disposition");
 			if (!content_disp) {
 				/* Malformed request */
-				return 0;
+				return -1;
 			}
 
 			/* Get the mandatory name="..." part of the Content-Disposition
@@ -621,13 +629,13 @@ mg_handle_form_data(struct mg_connection *conn,
 			nbeg = strstr(content_disp, "name=\"");
 			if (!nbeg) {
 				/* Malformed request */
-				return 0;
+				return -1;
 			}
 			nbeg += 6;
 			nend = strchr(nbeg, '\"');
 			if (!nend) {
 				/* Malformed request */
-				return 0;
+				return -1;
 			}
 
 			/* Get the optional filename="..." part of the Content-Disposition
@@ -639,7 +647,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				if (!fend) {
 					/* Malformed request (the filename field is optional, but if
 					 * it exists, it needs to be terminated correctly). */
-					return 0;
+					return -1;
 				}
 
 				/* TODO: check Content-Type */
@@ -650,6 +658,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 
 			memset(path, 0, sizeof(path));
+			field_count++;
 			field_storage = url_encoded_field_found(conn,
 			                                        nbeg,
 			                                        (size_t)(nend - nbeg),
@@ -670,7 +679,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				if (!next) {
 					/* TODO: check for an easy way to get longer data */
 					mg_cry(conn, "%s: Data too long for callback", __func__);
-					return 0;
+					return -1;
 				}
 
 				/* Call callback */
@@ -727,13 +736,13 @@ mg_handle_form_data(struct mg_connection *conn,
 					            sizeof(buf) - 1 - (size_t)buf_fill);
 					if (r < 0) {
 						/* read error */
-						return 0;
+						return -1;
 					}
 					buf_fill += r;
 					buf[buf_fill] = 0;
 					if (buf_fill < 1) {
 						/* No data */
-						return 0;
+						return -1;
 					}
 
 					/* Find boundary */
@@ -774,7 +783,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			if ((field_storage & FORM_FIELD_STORAGE_ABORT)
 			    == FORM_FIELD_STORAGE_ABORT) {
 				/* Stop parsing the request */
-				return 0;
+				return -1;
 			}
 
 			/* Remove from the buffer */
@@ -784,9 +793,9 @@ mg_handle_form_data(struct mg_connection *conn,
 		}
 
 		/* All parts handled */
-		return 0;
+		return field_count;
 	}
 
 	/* Unknown Content-Type */
-	return 0;
+	return -1;
 }

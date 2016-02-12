@@ -156,7 +156,8 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 
 
 /**********************/
-/* proposed interface */
+/* proposed interface - will be moved to the header once it is ready for release
+ */
 
 enum {
 	FORM_FIELD_STORAGE_SKIP = 0x0,
@@ -181,8 +182,8 @@ struct mg_form_data_handler {
 	void *user_data;
 };
 
-int mg_handle_form_data(struct mg_connection *conn,
-                        struct mg_form_data_handler *fdh);
+extern int mg_handle_form_data(struct mg_connection *conn,
+                               struct mg_form_data_handler *fdh);
 
 /* end of interface */
 /********************/
