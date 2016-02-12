@@ -29,19 +29,23 @@
 
 
 /* This structure contains callback functions for handling form fields.
-   It is used as an argument to mg_handle_form_data.
-*/
+   It is used as an argument to mg_handle_form_data. */
 struct mg_form_data_handler {
-	/* This callback is called, if a new field is about to be read.
+	/* This callback function is called, if a new field has been found.
+	 * The return value of this callback is used to define how the field
+	 * should be processed.
+	 *
 	 * Parameters:
 	 *   key: Name of the field ("name" property of the HTML input field).
 	 *   filename: Name of a file to upload, at the client computer.
 	 *             Only set for input fields of type "file", otherwise NULL.
 	 *   path: Output parameter: File name (incl. path) to store the file
 	 *         at the server computer. Only used if FORM_FIELD_STORAGE_STORE
-	 *         is returned by this callback.
+	 *         is returned by this callback. Existing files will be
+	 *         overwritten.
 	 *   pathlen: Length of the buffer for path.
 	 *   user_data: Value of the member user_data of mg_form_data_handler
+	 *
 	 * Return value:
 	 *   The callback must return the intended storage for this field
 	 *   (See FORM_FIELD_STORAGE_*).
@@ -54,10 +58,12 @@ struct mg_form_data_handler {
 
 	/* If the "field_found" callback returned FORM_FIELD_STORAGE_GET,
 	 * this callback will receive the field data.
+	 *
 	 * Parameters:
 	 *   key: Name of the field ("name" property of the HTML input field).
 	 *   value: Value of the input field.
 	 *   user_data: Value of the member user_data of mg_form_data_handler
+	 *
 	 * Return value:
 	 *   TODO: Needs to be defined.
 	 */
@@ -68,16 +74,22 @@ struct mg_form_data_handler {
 
 	/* If the "field_found" callback returned FORM_FIELD_STORAGE_STORE,
 	 * the data will be stored into a file. If the file has been written
-	 * sucessfully, this callback will be called.
+	 * successfully, this callback will be called. This callback will
+	 * not be called for only partially uploaded files. The
+	 * mg_handle_form_data function will either store the file completely
+	 * and call this callback, or it will remove any partial content and
+	 * not call this callback function.
+	 *
 	 * Parameters:
 	 *   path: Path of the file stored at the server.
 	 *   user_data: Value of the member user_data of mg_form_data_handler
+	 *
 	 * Return value:
 	 *   TODO: Needs to be defined.
 	 */
 	int (*field_stored)(const char *path, void *user_data);
 
-	/* User supplied argument, passed to all callbacks. */
+	/* User supplied argument, passed to all callback functions. */
 	void *user_data;
 };
 
@@ -101,9 +113,11 @@ enum {
 
 /* Process form data.
  * Returns the number of fields handled, or < 0 in case of an error.
- * Note: It is possible that several fields are handled succesfully (e.g.,
- * stored in a file), before the request handling is stopped with an
- * error. In this case a number < 0 is returned as well. */
+ * Note: It is possible that several fields are already handled successfully
+ * (e.g., stored into files), before the request handling is stopped with an
+ * error. In this case a number < 0 is returned as well.
+ * In any case, it is the duty of the caller to remove files once they are
+ * no longer required. */
 CIVETWEB_API int mg_handle_form_data(struct mg_connection *conn,
                                      struct mg_form_data_handler *fdh);
 
@@ -727,7 +741,7 @@ mg_handle_form_data(struct mg_connection *conn,
 					}
 
 					memmove(buf, hend + towrite, bl + 4);
-					buf_fill = bl + 4;
+					buf_fill = (int)(bl + 4);
 					hend = buf;
 
 					/* Read new data */

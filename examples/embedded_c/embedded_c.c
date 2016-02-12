@@ -201,7 +201,11 @@ field_found(const char *key,
 	mg_printf(conn, "%s:\r\n", key);
 
 	if (filename && *filename) {
-		_snprintf(path, pathlen, "C:\\tmp\\%s", filename);
+#ifdef _WIN32
+		_snprintf(path, pathlen, "D:\\tmp\\%s", filename);
+#else
+		snprintf(path, pathlen, "/tmp/%s", filename);
+#endif
 		return FORM_FIELD_STORAGE_STORE;
 	}
 	return FORM_FIELD_STORAGE_GET;
