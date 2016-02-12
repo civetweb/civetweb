@@ -27,28 +27,75 @@
 /**********************/
 /* proposed interface */
 
-enum {
-	FORM_DISPOSITION_SKIP = 0x0,
-	FORM_DISPOSITION_GET = 0x1,
-	FORM_DISPOSITION_STORE = 0x2,
-	/*	FORM_DISPOSITION_READ = 0x3, not in the first step */
-	FORM_DISPOSITION_ABORT = 0x10
-};
 
-
+/* This structure contains callback functions for handling form fields.
+   It is used as an argument to mg_handle_form_data.
+*/
 struct mg_form_data_handler {
+	/* This callback is called, if a new field is about to be read.
+	 * Parameters:
+	 *   key: Name of the field ("name" property of the HTML input field).
+	 *   filename: Name of a file to upload, at the client computer.
+	 *             Only set for input fields of type "file", otherwise NULL.
+	 *   path: Output parameter: File name (incl. path) to store the file
+	 *         at the server computer. Only used if FORM_FIELD_STORAGE_STORE
+	 *         is returned by this callback.
+	 *   pathlen: Length of the buffer for path.
+	 *   user_data: Value of the member user_data of mg_form_data_handler
+	 * Return value:
+	 *   The callback must return the intended storage for this field
+	 *   (See FORM_FIELD_STORAGE_*).
+	 */
 	int (*field_found)(const char *key,
 	                   const char *filename,
 	                   char *path,
 	                   size_t pathlen,
 	                   void *user_data);
+
+	/* If the "field_found" callback returned FORM_FIELD_STORAGE_GET,
+	 * this callback will receive the field data.
+	 * Parameters:
+	 *   key: Name of the field ("name" property of the HTML input field).
+	 *   value: Value of the input field.
+	 *   user_data: Value of the member user_data of mg_form_data_handler
+	 * Return value:
+	 *   TODO: Needs to be defined.
+	 */
 	int (*field_get)(const char *key,
-	                 const char *filename,
 	                 const char *value,
 	                 size_t valuelen,
 	                 void *user_data);
+
+	/* If the "field_found" callback returned FORM_FIELD_STORAGE_STORE,
+	 * the data will be stored into a file. If the file has been written
+	 * sucessfully, this callback will be called.
+	 * Parameters:
+	 *   path: Path of the file stored at the server.
+	 *   user_data: Value of the member user_data of mg_form_data_handler
+	 * Return value:
+	 *   TODO: Needs to be defined.
+	 */
 	int (*field_stored)(const char *path, void *user_data);
+
+	/* User supplied argument, passed to all callbacks. */
 	void *user_data;
+};
+
+
+/* Return values definition for the "field_found" callback in
+ * mg_form_data_handler. */
+enum {
+	/* Skip this field (neither get nor store it). Continue with the
+     * next field. */
+	FORM_FIELD_STORAGE_SKIP = 0x0,
+	/* Get the field value. */
+	FORM_FIELD_STORAGE_GET = 0x1,
+	/* Store the field value into a file. */
+	FORM_FIELD_STORAGE_STORE = 0x2,
+	/* Read the filed in chunks using a read function. */
+	/*	FORM_FIELD_STORAGE_READ = 0x3, not in the first step */
+	/* Stop parsing this request. Skip the remaining fields. */
+	FORM_FIELD_STORAGE_ABORT = 0x10
 };
 
 
@@ -77,7 +124,7 @@ url_encoded_field_found(const struct mg_connection *conn,
 	    mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 
 	if (((size_t)key_dec_len >= (size_t)sizeof(key_dec)) || (key_dec_len < 0)) {
-		return FORM_DISPOSITION_SKIP;
+		return FORM_FIELD_STORAGE_SKIP;
 	}
 
 	if (filename) {
@@ -91,7 +138,7 @@ url_encoded_field_found(const struct mg_connection *conn,
 		    || (filename_dec_len < 0)) {
 			/* Log error message and skip this field. */
 			mg_cry(conn, "%s: Cannot decode filename", __func__);
-			return FORM_DISPOSITION_SKIP;
+			return FORM_FIELD_STORAGE_SKIP;
 		}
 	} else {
 		filename_dec[0] = 0;
@@ -106,14 +153,11 @@ static int
 url_encoded_field_get(const struct mg_connection *conn,
                       const char *key,
                       size_t key_len,
-                      const char *filename,
-                      size_t filename_len,
                       const char *value,
                       size_t value_len,
                       struct mg_form_data_handler *fdh)
 {
 	char key_dec[1024];
-	char filename_dec[1024];
 
 	char *value_dec = mg_malloc(value_len + 1);
 	int value_dec_len;
@@ -124,26 +168,15 @@ url_encoded_field_get(const struct mg_connection *conn,
 		       "%s: Not enough memory (required: %lu)",
 		       __func__,
 		       (unsigned long)(value_len + 1));
-		return FORM_DISPOSITION_ABORT;
+		return FORM_FIELD_STORAGE_ABORT;
 	}
 
 	mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
-
-	if (filename) {
-		mg_url_decode(filename,
-		              (int)filename_len,
-		              filename_dec,
-		              (int)sizeof(filename_dec),
-		              1);
-	} else {
-		filename_dec[0] = 0;
-	}
 
 	value_dec_len =
 	    mg_url_decode(value, (int)value_len, value_dec, (int)value_len + 1, 1);
 
 	return fdh->field_get(key_dec,
-	                      filename_dec,
 	                      value_dec,
 	                      (size_t)value_dec_len,
 	                      fdh->user_data);
@@ -202,7 +235,7 @@ mg_handle_form_data(struct mg_connection *conn,
 	const char *content_type;
 	char path[512];
 	char buf[1024];
-	int disposition;
+	int field_storage;
 	int buf_fill = 0;
 	int r;
 	FILE *fstore = NULL;
@@ -252,25 +285,25 @@ mg_handle_form_data(struct mg_connection *conn,
 			keylen = val - data;
 
 			/* In every "field_found" callback we ask what to do with the
-			 * data ("disposition"). This could be:
-			 * FORM_DISPOSITION_SKIP (0) ... ignore the value of this field
-			 * FORM_DISPOSITION_GET (1) ... read the data and call the get
+			 * data ("field_storage"). This could be:
+			 * FORM_FIELD_STORAGE_SKIP (0) ... ignore the value of this field
+			 * FORM_FIELD_STORAGE_GET (1) ... read the data and call the get
 			 *                              callback function
-			 * FORM_DISPOSITION_STORE (2) ... store the data in a file
-			 * FORM_DISPOSITION_READ (3) ... let the user read the data
+			 * FORM_FIELD_STORAGE_STORE (2) ... store the data in a file
+			 * FORM_FIELD_STORAGE_READ (3) ... let the user read the data
 			 *                               (for parsing long data on the fly)
 			 *                               (currently not implemented)
-			 * FORM_DISPOSITION_ABORT (flag) ... stop parsing
+			 * FORM_FIELD_STORAGE_ABORT (flag) ... stop parsing
 			 */
 			memset(path, 0, sizeof(path));
-			disposition = url_encoded_field_found(conn,
-			                                      data,
-			                                      (size_t)keylen,
-			                                      NULL,
-			                                      0,
-			                                      path,
-			                                      sizeof(path) - 1,
-			                                      fdh);
+			field_storage = url_encoded_field_found(conn,
+			                                        data,
+			                                        (size_t)keylen,
+			                                        NULL,
+			                                        0,
+			                                        path,
+			                                        sizeof(path) - 1,
+			                                        fdh);
 
 			val++;
 			next = strchr(val, '&');
@@ -282,18 +315,12 @@ mg_handle_form_data(struct mg_connection *conn,
 				next = val + vallen;
 			}
 
-			if (disposition == FORM_DISPOSITION_GET) {
+			if (field_storage == FORM_FIELD_STORAGE_GET) {
 				/* Call callback */
-				url_encoded_field_get(conn,
-				                      data,
-				                      (size_t)keylen,
-				                      NULL,
-				                      0,
-				                      val,
-				                      (size_t)vallen,
-				                      fdh);
+				url_encoded_field_get(
+				    conn, data, (size_t)keylen, val, (size_t)vallen, fdh);
 			}
-			if (disposition == FORM_DISPOSITION_STORE) {
+			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
 				fstore = fopen(path, "wb");
 				if (fstore != NULL) {
@@ -328,21 +355,21 @@ mg_handle_form_data(struct mg_connection *conn,
 				}
 			}
 
-			/* if (disposition == FORM_DISPOSITION_READ) { */
-			/* The idea of "disposition=read" is to let the API user read
+			/* if (field_storage == FORM_FIELD_STORAGE_READ) { */
+			/* The idea of "field_storage=read" is to let the API user read
 			 * data chunk by chunk and to some data processing on the fly.
 			 * This should avoid the need to store data in the server:
 			 * It should neither be stored in memory, like
-			 * "disposition=get" does, nor in a file like
-			 * "disposition=store".
+			 * "field_storage=get" does, nor in a file like
+			 * "field_storage=store".
 			 * However, for a "GET" request this does not make any much
 			 * sense, since the data is already stored in memory, as it is
 			 * part of the query string.
 			 */
 			/* } */
 
-			if ((disposition & FORM_DISPOSITION_ABORT)
-			    == FORM_DISPOSITION_ABORT) {
+			if ((field_storage & FORM_FIELD_STORAGE_ABORT)
+			    == FORM_FIELD_STORAGE_ABORT) {
 				/* Stop parsing the request */
 				break;
 			}
@@ -406,22 +433,22 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			/* Call callback */
 			memset(path, 0, sizeof(path));
-			disposition = url_encoded_field_found(conn,
-			                                      buf,
-			                                      (size_t)keylen,
-			                                      NULL,
-			                                      0,
-			                                      path,
-			                                      sizeof(path) - 1,
-			                                      fdh);
+			field_storage = url_encoded_field_found(conn,
+			                                        buf,
+			                                        (size_t)keylen,
+			                                        NULL,
+			                                        0,
+			                                        path,
+			                                        sizeof(path) - 1,
+			                                        fdh);
 
-			if ((disposition & FORM_DISPOSITION_ABORT)
-			    == FORM_DISPOSITION_ABORT) {
+			if ((field_storage & FORM_FIELD_STORAGE_ABORT)
+			    == FORM_FIELD_STORAGE_ABORT) {
 				/* Stop parsing the request */
 				break;
 			}
 
-			if (disposition == FORM_DISPOSITION_STORE) {
+			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 				fstore = fopen(path, "wb");
 				if (!fstore) {
 					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
@@ -452,7 +479,7 @@ mg_handle_form_data(struct mg_connection *conn,
 						remove_bad_file(conn, path);
 					}
 				}
-				if (disposition == FORM_DISPOSITION_GET) {
+				if (field_storage == FORM_FIELD_STORAGE_GET) {
 					if (!end_of_key_value_pair_found && !all_data_read) {
 						/* TODO: check for an easy way to get longer data */
 						mg_cry(conn,
@@ -461,14 +488,8 @@ mg_handle_form_data(struct mg_connection *conn,
 						return 0;
 					}
 					/* Call callback */
-					url_encoded_field_get(conn,
-					                      buf,
-					                      (size_t)keylen,
-					                      NULL,
-					                      0,
-					                      val,
-					                      (size_t)vallen,
-					                      fdh);
+					url_encoded_field_get(
+					    conn, buf, (size_t)keylen, val, (size_t)vallen, fdh);
 				}
 
 				if (!end_of_key_value_pair_found) {
@@ -629,20 +650,23 @@ mg_handle_form_data(struct mg_connection *conn,
 			}
 
 			memset(path, 0, sizeof(path));
-			disposition = url_encoded_field_found(conn,
-			                                      nbeg,
-			                                      (size_t)(nend - nbeg),
-			                                      fbeg,
-			                                      (size_t)(fend - fbeg),
-			                                      path,
-			                                      sizeof(path) - 1,
-			                                      fdh);
+			field_storage = url_encoded_field_found(conn,
+			                                        nbeg,
+			                                        (size_t)(nend - nbeg),
+			                                        fbeg,
+			                                        (size_t)(fend - fbeg),
+			                                        path,
+			                                        sizeof(path) - 1,
+			                                        fdh);
 
 			/* If the boundary is already in the buffer, get the address,
 			 * otherwise next will be NULL. */
-			next = search_boundary(hbuf, buf - hbuf + buf_fill, boundary, bl);
+			next = search_boundary(hbuf,
+			                       (size_t)((buf - hbuf) + buf_fill),
+			                       boundary,
+			                       bl);
 
-			if (disposition == FORM_DISPOSITION_GET) {
+			if (field_storage == FORM_FIELD_STORAGE_GET) {
 				if (!next) {
 					/* TODO: check for an easy way to get longer data */
 					mg_cry(conn, "%s: Data too long for callback", __func__);
@@ -653,14 +677,12 @@ mg_handle_form_data(struct mg_connection *conn,
 				url_encoded_field_get(conn,
 				                      nbeg,
 				                      (size_t)(nend - nbeg),
-				                      fbeg,
-				                      (size_t)(fend - fbeg),
 				                      hend,
 				                      (size_t)(next - hend),
 				                      fdh);
 			}
 
-			if (disposition == FORM_DISPOSITION_STORE) {
+			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
 				size_t towrite, n;
 				size_t flen = 0;
@@ -715,7 +737,7 @@ mg_handle_form_data(struct mg_connection *conn,
 					}
 
 					/* Find boundary */
-					next = search_boundary(buf, buf_fill, boundary, bl);
+					next = search_boundary(buf, (size_t)buf_fill, boundary, bl);
 				}
 
 				if (fstore) {
@@ -749,8 +771,8 @@ mg_handle_form_data(struct mg_connection *conn,
 				}
 			}
 
-			if ((disposition & FORM_DISPOSITION_ABORT)
-			    == FORM_DISPOSITION_ABORT) {
+			if ((field_storage & FORM_FIELD_STORAGE_ABORT)
+			    == FORM_FIELD_STORAGE_ABORT) {
 				/* Stop parsing the request */
 				return 0;
 			}

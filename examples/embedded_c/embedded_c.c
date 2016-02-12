@@ -159,11 +159,11 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 /* proposed interface */
 
 enum {
-	FORM_DISPOSITION_SKIP = 0x0,
-	FORM_DISPOSITION_GET = 0x1,
-	FORM_DISPOSITION_STORE = 0x2,
-	/*	FORM_DISPOSITION_READ = 0x3, not in the first step */
-	FORM_DISPOSITION_ABORT = 0x10
+	FORM_FIELD_STORAGE_SKIP = 0x0,
+	FORM_FIELD_STORAGE_GET = 0x1,
+	FORM_FIELD_STORAGE_STORE = 0x2,
+	/*	FORM_FIELD_STORAGE_READ = 0x3, not in the first step */
+	FORM_FIELD_STORAGE_ABORT = 0x10
 };
 
 
@@ -174,7 +174,6 @@ struct mg_form_data_handler {
 	                   size_t pathlen,
 	                   void *user_data);
 	int (*field_get)(const char *key,
-	                 const char *filename,
 	                 const char *value,
 	                 size_t valuelen,
 	                 void *user_data);
@@ -202,18 +201,14 @@ field_found(const char *key,
 
 	if (filename && *filename) {
 		_snprintf(path, pathlen, "C:\\tmp\\%s", filename);
-		return FORM_DISPOSITION_STORE;
+		return FORM_FIELD_STORAGE_STORE;
 	}
-	return FORM_DISPOSITION_GET;
+	return FORM_FIELD_STORAGE_GET;
 }
 
 
 int
-field_get(const char *key,
-          const char *filename,
-          const char *value,
-          size_t valuelen,
-          void *user_data)
+field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
