@@ -303,6 +303,7 @@ typedef long off_t;
 #define funlockfile(x) (LeaveCriticalSection(&global_log_file_lock))
 #define sleep(x) (Sleep((x)*1000))
 #define rmdir(x) (_rmdir(x))
+#define timegm(x) (_mkgmtime(x))
 
 #if !defined(fileno)
 #define fileno(x) (_fileno(x))
@@ -4689,22 +4690,14 @@ get_month_index(const char *s)
 }
 
 
-static int
-num_leap_years(int year)
-{
-	return year / 4 - year / 100 + year / 400;
-}
-
-
 /* Parse UTC date-time string, and return the corresponding time_t value. */
 static time_t
 parse_date_string(const char *datetime)
 {
-	static const unsigned short days_before_month[] = {
-	    0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
 	char month_str[32] = {0};
-	int second, minute, hour, day, month, year, leap_days, days;
+	int second, minute, hour, day, month, year;
 	time_t result = (time_t)0;
+	struct tm tm;
 
 	if ((sscanf(datetime,
 	            "%d/%3s/%d %d:%d:%d",
@@ -4738,51 +4731,14 @@ parse_date_string(const char *datetime)
 	                                         &second) == 6)) {
 		month = get_month_index(month_str);
 		if ((month >= 0) && (year >= 1970)) {
-
-			/* alternative code (#250) */
-			time_t alt_result;
-			struct tm tm;
 			memset(&tm, 0, sizeof(tm));
-
 			tm.tm_year = year - 1900;
 			tm.tm_mon = month;
 			tm.tm_mday = day;
 			tm.tm_hour = hour;
 			tm.tm_min = minute;
 			tm.tm_sec = second;
-			alt_result = mktime(&tm);
-			if (alt_result > 0) {
-				struct tm *lt = gmtime(&alt_result);
-				signed int delta_mon =
-				    (lt->tm_mon - tm.tm_mon) + 12 * (lt->tm_year - tm.tm_year);
-				time_t delta;
-
-				if (delta_mon != 0) {
-					/* No need to consider different length of months */
-					delta = (lt->tm_sec - tm.tm_sec)
-					        + 60 * (lt->tm_min - tm.tm_min)
-					        + 60 * 60 * (lt->tm_hour - tm.tm_hour)
-					        + 24 * 60 * 60 * (lt->tm_mday - tm.tm_mday);
-				} else {
-					/* Get clock time and add or subtract a day */
-					delta = (lt->tm_sec - tm.tm_sec)
-					        + 60 * (lt->tm_min - tm.tm_min)
-					        + 60 * 60 * (lt->tm_hour - tm.tm_hour)
-					        + (delta_mon * 24 * 60 * 60);
-				}
-
-				alt_result -= delta;
-			}
-
-			/* original code */
-			leap_days = num_leap_years(year) - num_leap_years(1970);
-			year -= 1970;
-			days =
-			    year * 365 + days_before_month[month] + (day - 1) + leap_days;
-			result = (time_t)days * 24 * 3600 + (time_t)hour * 3600
-			         + minute * 60 + second;
-
-			/* TODO: fix original code or use alternate code - see #250 */
+			result = timegm(&tm);
 		}
 	}
 
