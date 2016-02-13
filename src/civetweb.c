@@ -200,9 +200,6 @@ clock_gettime(int clk_id, struct timespec *t)
 #ifndef MAX_WORKER_THREADS
 #define MAX_WORKER_THREADS (1024 * 64)
 #endif
-#ifndef SOCKET_TIMEOUT_QUANTUM
-#define SOCKET_TIMEOUT_QUANTUM (10000)
-#endif
 
 mg_static_assert(MAX_WORKER_THREADS >= 1,
                  "worker threads must be a positive number");
@@ -12574,13 +12571,11 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 			timeout = -1;
 		}
 
-		/* Set socket timeout to the given value, but not more than a
-		 * a certain limit (SOCKET_TIMEOUT_QUANTUM, default 10 seconds),
-		 * so the server can exit after that time if requested. */
-		if ((timeout > 0) && (timeout < SOCKET_TIMEOUT_QUANTUM)) {
-			set_sock_timeout(so.sock, timeout);
+		/* Set socket timeout to the given value. */
+		if (timeout > 0) {
+			set_sock_timeout(so.sock, timeout + 500);
 		} else {
-			set_sock_timeout(so.sock, SOCKET_TIMEOUT_QUANTUM);
+			set_sock_timeout(so.sock, 0);
 		}
 
 		produce_socket(ctx, &so);
