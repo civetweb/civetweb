@@ -3,6 +3,10 @@
  * This file is a part of civetweb project, http://github.com/bel2125/civetweb
  */
 
+/* This example is deprecated and no longer maintained.
+ * All relevant parts have been merged into the embedded_c example. */
+
+
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>

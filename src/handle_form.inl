@@ -19,110 +19,6 @@
  * THE SOFTWARE.
  */
 
-/********************/
-/* EXPERIMENTAL !!! */
-/********************/
-
-
-/**********************/
-/* proposed interface */
-
-
-/* This structure contains callback functions for handling form fields.
-   It is used as an argument to mg_handle_form_data. */
-struct mg_form_data_handler {
-	/* This callback function is called, if a new field has been found.
-	 * The return value of this callback is used to define how the field
-	 * should be processed.
-	 *
-	 * Parameters:
-	 *   key: Name of the field ("name" property of the HTML input field).
-	 *   filename: Name of a file to upload, at the client computer.
-	 *             Only set for input fields of type "file", otherwise NULL.
-	 *   path: Output parameter: File name (incl. path) to store the file
-	 *         at the server computer. Only used if FORM_FIELD_STORAGE_STORE
-	 *         is returned by this callback. Existing files will be
-	 *         overwritten.
-	 *   pathlen: Length of the buffer for path.
-	 *   user_data: Value of the member user_data of mg_form_data_handler
-	 *
-	 * Return value:
-	 *   The callback must return the intended storage for this field
-	 *   (See FORM_FIELD_STORAGE_*).
-	 */
-	int (*field_found)(const char *key,
-	                   const char *filename,
-	                   char *path,
-	                   size_t pathlen,
-	                   void *user_data);
-
-	/* If the "field_found" callback returned FORM_FIELD_STORAGE_GET,
-	 * this callback will receive the field data.
-	 *
-	 * Parameters:
-	 *   key: Name of the field ("name" property of the HTML input field).
-	 *   value: Value of the input field.
-	 *   user_data: Value of the member user_data of mg_form_data_handler
-	 *
-	 * Return value:
-	 *   TODO: Needs to be defined.
-	 */
-	int (*field_get)(const char *key,
-	                 const char *value,
-	                 size_t valuelen,
-	                 void *user_data);
-
-	/* If the "field_found" callback returned FORM_FIELD_STORAGE_STORE,
-	 * the data will be stored into a file. If the file has been written
-	 * successfully, this callback will be called. This callback will
-	 * not be called for only partially uploaded files. The
-	 * mg_handle_form_data function will either store the file completely
-	 * and call this callback, or it will remove any partial content and
-	 * not call this callback function.
-	 *
-	 * Parameters:
-	 *   path: Path of the file stored at the server.
-	 *   user_data: Value of the member user_data of mg_form_data_handler
-	 *
-	 * Return value:
-	 *   TODO: Needs to be defined.
-	 */
-	int (*field_stored)(const char *path, size_t file_size, void *user_data);
-
-	/* User supplied argument, passed to all callback functions. */
-	void *user_data;
-};
-
-
-/* Return values definition for the "field_found" callback in
- * mg_form_data_handler. */
-enum {
-	/* Skip this field (neither get nor store it). Continue with the
-     * next field. */
-	FORM_FIELD_STORAGE_SKIP = 0x0,
-	/* Get the field value. */
-	FORM_FIELD_STORAGE_GET = 0x1,
-	/* Store the field value into a file. */
-	FORM_FIELD_STORAGE_STORE = 0x2,
-	/* Read the filed in chunks using a read function. */
-	/*	FORM_FIELD_STORAGE_READ = 0x3, not in the first step */
-	/* Stop parsing this request. Skip the remaining fields. */
-	FORM_FIELD_STORAGE_ABORT = 0x10
-};
-
-
-/* Process form data.
- * Returns the number of fields handled, or < 0 in case of an error.
- * Note: It is possible that several fields are already handled successfully
- * (e.g., stored into files), before the request handling is stopped with an
- * error. In this case a number < 0 is returned as well.
- * In any case, it is the duty of the caller to remove files once they are
- * no longer required. */
-CIVETWEB_API int mg_handle_form_data(struct mg_connection *conn,
-                                     struct mg_form_data_handler *fdh);
-
-/* end of interface */
-/********************/
 
 static int
 url_encoded_field_found(const struct mg_connection *conn,
@@ -249,8 +145,8 @@ search_boundary(const char *buf,
 
 
 int
-mg_handle_form_data(struct mg_connection *conn,
-                    struct mg_form_data_handler *fdh)
+mg_handle_form_request(struct mg_connection *conn,
+                       struct mg_form_data_handler *fdh)
 {
 	const char *content_type;
 	char path[512];

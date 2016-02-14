@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2015 the CivetWeb developers
+* Copyright (c) 2013-2016 the CivetWeb developers
 * Copyright (c) 2013 No Face Press, LLC
 * License http://opensource.org/licenses/mit-license.php MIT License
 */
@@ -155,41 +155,6 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-/**********************/
-/* proposed interface - will be moved to the header once it is ready for release
- */
-
-enum {
-	FORM_FIELD_STORAGE_SKIP = 0x0,
-	FORM_FIELD_STORAGE_GET = 0x1,
-	FORM_FIELD_STORAGE_STORE = 0x2,
-	/*	FORM_FIELD_STORAGE_READ = 0x3, not in the first step */
-	FORM_FIELD_STORAGE_ABORT = 0x10
-};
-
-
-struct mg_form_data_handler {
-	int (*field_found)(const char *key,
-	                   const char *filename,
-	                   char *path,
-	                   size_t pathlen,
-	                   void *user_data);
-	int (*field_get)(const char *key,
-	                 const char *value,
-	                 size_t valuelen,
-	                 void *user_data);
-	int (*field_stored)(const char *path, size_t file_size, void *user_data);
-	void *user_data;
-};
-
-
-extern int mg_handle_form_data(struct mg_connection *conn,
-                               struct mg_form_data_handler *fdh);
-
-/* end of interface */
-/********************/
-
-
 int
 field_found(const char *key,
             const char *filename,
@@ -248,14 +213,14 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	int ret;
 	struct mg_form_data_handler fdh = {field_found, field_get, field_stored, 0};
 
-	/* TODO: Checks before calling handle_form_data ? */
+	/* TODO: Checks before calling mg_handle_form_request ? */
 	(void)req_info;
 
 	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
 	fdh.user_data = (void *)conn;
 
 	/* TODO: Handle the return value */
-	ret = mg_handle_form_data(conn, &fdh);
+	ret = mg_handle_form_request(conn, &fdh);
 
 	return 1;
 }
