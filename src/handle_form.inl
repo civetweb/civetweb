@@ -87,7 +87,7 @@ struct mg_form_data_handler {
 	 * Return value:
 	 *   TODO: Needs to be defined.
 	 */
-	int (*field_stored)(const char *path, void *user_data);
+	int (*field_stored)(const char *path, size_t file_size, void *user_data);
 
 	/* User supplied argument, passed to all callback functions. */
 	void *user_data;
@@ -205,13 +205,14 @@ url_encoded_field_get(const struct mg_connection *conn,
 static int
 field_stored(const struct mg_connection *conn,
              const char *path,
+             size_t file_size,
              struct mg_form_data_handler *fdh)
 {
 	/* Equivalent to "upload" callback of "mg_upload". */
 
 	(void)conn; /* we do not need mg_cry here, so conn is currently unused */
 
-	return fdh->field_stored(path, fdh->user_data);
+	return fdh->field_stored(path, file_size, fdh->user_data);
 }
 
 
@@ -258,6 +259,7 @@ mg_handle_form_data(struct mg_connection *conn,
 	int buf_fill = 0;
 	int r;
 	FILE *fstore = NULL;
+	size_t file_size;
 	int field_count = 0;
 
 	int has_body_data =
@@ -344,6 +346,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
 				fstore = fopen(path, "wb");
+				file_size = 0;
 				if (fstore != NULL) {
 					size_t n = (size_t)fwrite(val, 1, (size_t)vallen, fstore);
 					if ((n != (size_t)vallen) || (ferror(fstore))) {
@@ -355,12 +358,13 @@ mg_handle_form_data(struct mg_connection *conn,
 						fstore = NULL;
 						remove_bad_file(conn, path);
 					}
+					file_size += (size_t)n;
 
 					if (fstore) {
 						r = fclose(fstore);
 						if (r == 0) {
 							/* stored successfully */
-							field_stored(conn, path, fdh);
+							field_stored(conn, path, file_size, fdh);
 						} else {
 							mg_cry(conn,
 							       "%s: Error saving file %s",
@@ -472,6 +476,7 @@ mg_handle_form_data(struct mg_connection *conn,
 
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 				fstore = fopen(path, "wb");
+				file_size = 0;
 				if (!fstore) {
 					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
 				}
@@ -500,6 +505,7 @@ mg_handle_form_data(struct mg_connection *conn,
 						fstore = NULL;
 						remove_bad_file(conn, path);
 					}
+					file_size += (size_t)n;
 				}
 				if (field_storage == FORM_FIELD_STORAGE_GET) {
 					if (!end_of_key_value_pair_found && !all_data_read) {
@@ -525,7 +531,7 @@ mg_handle_form_data(struct mg_connection *conn,
 				r = fclose(fstore);
 				if (r == 0) {
 					/* stored successfully */
-					field_stored(conn, path, fdh);
+					field_stored(conn, path, file_size, fdh);
 				} else {
 					mg_cry(conn, "%s: Error saving file %s", __func__, path);
 					remove_bad_file(conn, path);
@@ -536,7 +542,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			/* Proceed to next entry */
 			used = next - buf;
 			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
-			buf_fill -= used;
+			buf_fill -= (int)used;
 		}
 
 		return field_count;
@@ -708,8 +714,8 @@ mg_handle_form_data(struct mg_connection *conn,
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
 				size_t towrite, n;
-				size_t flen = 0;
 				fstore = fopen(path, "wb");
+				file_size = 0;
 
 				if (!fstore) {
 					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
@@ -737,7 +743,7 @@ mg_handle_form_data(struct mg_connection *conn,
 							fstore = NULL;
 							remove_bad_file(conn, path);
 						}
-						flen += n;
+						file_size += (size_t)n;
 					}
 
 					memmove(buf, hend + towrite, bl + 4);
@@ -775,14 +781,14 @@ mg_handle_form_data(struct mg_connection *conn,
 						fstore = NULL;
 						remove_bad_file(conn, path);
 					}
-					flen += n;
+					file_size += (size_t)n;
 				}
 
 				if (fstore) {
 					r = fclose(fstore);
 					if (r == 0) {
 						/* stored successfully */
-						field_stored(conn, path, fdh);
+						field_stored(conn, path, file_size, fdh);
 					} else {
 						mg_cry(conn,
 						       "%s: Error saving file %s",
@@ -803,7 +809,7 @@ mg_handle_form_data(struct mg_connection *conn,
 			/* Remove from the buffer */
 			used = next - buf + 2;
 			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
-			buf_fill -= used;
+			buf_fill -= (int)used;
 		}
 
 		/* All parts handled */

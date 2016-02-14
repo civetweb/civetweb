@@ -178,9 +178,10 @@ struct mg_form_data_handler {
 	                 const char *value,
 	                 size_t valuelen,
 	                 void *user_data);
-	int (*field_stored)(const char *path, void *user_data);
+	int (*field_stored)(const char *path, size_t file_size, void *user_data);
 	void *user_data;
 };
+
 
 extern int mg_handle_form_data(struct mg_connection *conn,
                                struct mg_form_data_handler *fdh);
@@ -226,11 +227,14 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 
 
 int
-field_stored(const char *path, void *user_data)
+field_stored(const char *path, size_t file_size, void *user_data)
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
-	mg_printf(conn, "stored as %s\r\n\r\n", path);
+	mg_printf(conn,
+	          "stored as %s (%lu bytes)\r\n\r\n",
+	          path,
+	          (unsigned long)file_size);
 
 	return 0;
 }
