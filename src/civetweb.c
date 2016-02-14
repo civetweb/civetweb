@@ -8906,6 +8906,7 @@ get_remote_ip(const struct mg_connection *conn)
 #include "handle_form.inl"
 
 
+/* Replacement for mg_upload (Note: mg_upload is deprecated) */
 struct mg_upload_user_data {
 	struct mg_connection *conn;
 	const char *destination_dir;
@@ -8913,7 +8914,8 @@ struct mg_upload_user_data {
 };
 
 
-int
+/* Helper function for deprecated mg_upload. */
+static int
 mg_upload_field_found(const char *key,
                       const char *filename,
                       char *path,
@@ -8922,8 +8924,10 @@ mg_upload_field_found(const char *key,
 {
 	int truncated = 0;
 	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
+	(void)key;
 
 	if (!filename) {
+		mg_cry(fud->conn, "%s: No filename set", __func__);
 		return FORM_FIELD_STORAGE_ABORT;
 	}
 	mg_snprintf(fud->conn,
@@ -8934,17 +8938,18 @@ mg_upload_field_found(const char *key,
 	            fud->destination_dir,
 	            filename);
 	if (!truncated) {
+		mg_cry(fud->conn, "%s: File path too long", __func__);
 		return FORM_FIELD_STORAGE_ABORT;
 	}
 	return FORM_FIELD_STORAGE_STORE;
 }
 
 
-int
+/* Helper function for deprecated mg_upload. */
+static int
 mg_upload_field_stored(const char *path, size_t file_size, void *user_data)
 {
 	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
-
 	(void)file_size;
 
 	fud->num_uploaded_files++;
@@ -8954,6 +8959,7 @@ mg_upload_field_stored(const char *path, size_t file_size, void *user_data)
 }
 
 
+/* Deprecated function mg_upload - use mg_handle_form_request instead. */
 int
 mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
@@ -8964,6 +8970,9 @@ mg_upload(struct mg_connection *conn, const char *destination_dir)
 	                                   &fud};
 
 	int ret = mg_handle_form_request(conn, &fdh);
+	if (ret < 0) {
+		mg_cry(conn, "%s: Error while parsing the request", __func__);
+	}
 
 	return fud.num_uploaded_files;
 }
