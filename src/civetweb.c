@@ -8967,9 +8967,12 @@ mg_upload(struct mg_connection *conn, const char *destination_dir)
 	struct mg_form_data_handler fdh = {mg_upload_field_found,
 	                                   NULL,
 	                                   mg_upload_field_stored,
-	                                   &fud};
+	                                   0};
+	int ret;
 
-	int ret = mg_handle_form_request(conn, &fdh);
+	fdh.user_data = (void *)&fud;
+	ret = mg_handle_form_request(conn, &fdh);
+
 	if (ret < 0) {
 		mg_cry(conn, "%s: Error while parsing the request", __func__);
 	}
