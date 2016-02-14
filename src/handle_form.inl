@@ -154,9 +154,10 @@ mg_handle_form_request(struct mg_connection *conn,
 	int field_storage;
 	int buf_fill = 0;
 	int r;
-	FILE *fstore = NULL;
-	size_t file_size;
 	int field_count = 0;
+	FILE *fstore = NULL;
+	size_t file_size = 0; /* init here, to a avoid a false positive
+	                         "uninitialized variable used" warning */
 
 	int has_body_data =
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);

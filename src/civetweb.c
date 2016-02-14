@@ -8906,187 +8906,66 @@ get_remote_ip(const struct mg_connection *conn)
 #include "handle_form.inl"
 
 
+struct mg_upload_user_data {
+	struct mg_connection *conn;
+	const char *destination_dir;
+	int num_uploaded_files;
+};
+
+
+int
+mg_upload_field_found(const char *key,
+                      const char *filename,
+                      char *path,
+                      size_t pathlen,
+                      void *user_data)
+{
+	int truncated = 0;
+	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
+
+	if (!filename) {
+		return FORM_FIELD_STORAGE_ABORT;
+	}
+	mg_snprintf(fud->conn,
+	            &truncated,
+	            path,
+	            pathlen - 1,
+	            "%s/%s",
+	            fud->destination_dir,
+	            filename);
+	if (!truncated) {
+		return FORM_FIELD_STORAGE_ABORT;
+	}
+	return FORM_FIELD_STORAGE_STORE;
+}
+
+
+int
+mg_upload_field_stored(const char *path, size_t file_size, void *user_data)
+{
+	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
+
+	(void)file_size;
+
+	fud->num_uploaded_files++;
+	fud->conn->ctx->callbacks.upload(fud->conn, path);
+
+	return 0;
+}
+
+
 int
 mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
-	/* TODO (high): completely rewrite this function. See issue #180. */
-	/* TODO (mid): set a timeout */
-	const char *content_type_header, *boundary_start, *sc;
-	char *s;
-	char buf[MG_BUF_LEN], path[PATH_MAX], tmp_path[PATH_MAX];
-	char fname[1024], boundary[100];
-	FILE *fp;
-	int bl, n, i, headers_len, boundary_len, eof, truncated;
-	int len = 0, num_uploaded_files = 0;
+	struct mg_upload_user_data fud = {conn, destination_dir, 0};
+	struct mg_form_data_handler fdh = {mg_upload_field_found,
+	                                   NULL,
+	                                   mg_upload_field_stored,
+	                                   &fud};
 
-	struct mg_request_info part_request_info;
+	int ret = mg_handle_form_request(conn, &fdh);
 
-	/* Request looks like this:
-	 *
-	 * POST /upload HTTP/1.1
-	 * Host: 127.0.0.1:8080
-	 * Content-Length: 244894
-	 * Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryRVr
-	 *
-	 * ------WebKitFormBoundaryRVr
-	 * Content-Disposition: form-data; name="file"; filename="accum.png"
-	 * Content-Type: image/png
-	 *
-	 * <89>PNG
-	 * <PNG DATA>
-	 * ------WebKitFormBoundaryRVr */
-
-	/* Extract boundary string from the Content-Type header */
-	if ((content_type_header = mg_get_header(conn, "Content-Type")) == NULL
-	    || (boundary_start = mg_strcasestr(content_type_header, "boundary="))
-	           == NULL
-	    || (sscanf(boundary_start, "boundary=\"%99[^\"]\"", boundary) == 0
-	        && sscanf(boundary_start, "boundary=%99s", boundary) == 0)
-	    || boundary[0] == '\0') {
-		return num_uploaded_files;
-	}
-
-	boundary[99] = 0;
-	boundary_len = (int)strlen(boundary);
-	bl = boundary_len + 4; /* \r\n--<boundary> */
-	for (;;) {
-		/* Pull in headers */
-		/* assert(len >= 0 && len <= (int) sizeof(buf)); */
-		if ((len < 0) || (len > (int)sizeof(buf))) {
-			break;
-		}
-		while ((n = mg_read(conn, buf + len, sizeof(buf) - (size_t)len)) > 0) {
-			len += n;
-			/* assert(len <= (int) sizeof(buf)); */
-			if (len > (int)sizeof(buf)) {
-				break;
-			}
-		}
-		if ((headers_len = get_request_len(buf, len)) <= 0) {
-			break;
-		}
-
-		/* terminate header */
-		buf[headers_len - 1] = 0;
-
-		/* Scan for the boundary string and skip it */
-		if (buf[0] == '-' && buf[1] == '-'
-		    && !memcmp(buf + 2, boundary, (size_t)boundary_len)) {
-			s = &buf[bl];
-		} else {
-			s = &buf[2];
-		}
-
-		/* Get headers for this part of the multipart message */
-		memset(&part_request_info, 0, sizeof(part_request_info));
-		parse_http_headers(&s, &part_request_info);
-		/* assert(&buf[headers_len-1] == s); */
-		if (&buf[headers_len - 1] != s) {
-			break;
-		}
-
-		/* Fetch file name. */
-		sc = get_header(&part_request_info, "Content-Disposition");
-		if (!sc) {
-			/* invalid part of a multipart message */
-			break;
-		}
-
-		sc = strstr(sc, "filename");
-		if (!sc) {
-			/* no filename set */
-			break;
-		}
-		sc += 8; /* skip "filename" */
-		fname[0] = '\0';
-		IGNORE_UNUSED_RESULT(sscanf(sc, " = \"%1023[^\"]", fname));
-		fname[1023] = 0;
-
-		/* Give up if the headers are not what we expect */
-		if (fname[0] == '\0') {
-			break;
-		}
-
-		/* Construct destination file name. Do not allow paths to have
-		 * slashes. */
-		if ((s = strrchr(fname, '/')) == NULL
-		    && (s = strrchr(fname, '\\')) == NULL) {
-			s = fname;
-		} else {
-			s++;
-		}
-
-		/* There data is written to a temporary file first. */
-		/* Different users should use a different destination_dir. */
-		mg_snprintf(conn,
-		            &truncated,
-		            path,
-		            sizeof(path) - 1,
-		            "%s/%s",
-		            destination_dir,
-		            s);
-
-		/* TODO(high): kick client on buffer overflow */
-
-		strcpy(tmp_path, path);
-		strcat(tmp_path, "~");
-
-		/* We open the file with exclusive lock held. This guarantee us
-		 * there is no other thread can save into the same file
-		 * simultaneously. */
-		fp = NULL;
-		/* Open file in binary mode. */
-		if ((fp = fopen(tmp_path, "wb")) == NULL) {
-			break;
-		}
-
-		/* Move data to the beginning of the buffer */
-		/* part_request_info is no longer valid after this operation */
-		/* assert(len >= headers_len); */
-		if (len < headers_len) {
-			break;
-		}
-		memmove(buf, &buf[headers_len], (size_t)(len - headers_len));
-		len -= headers_len;
-
-		/* Read POST data, write into file until boundary is found. */
-		eof = n = 0;
-		do {
-			len += n;
-			for (i = 0; i < len - bl; i++) {
-				if (!memcmp(&buf[i], "\r\n--", 4)
-				    && !memcmp(&buf[i + 4], boundary, (size_t)boundary_len)) {
-					/* Found boundary, that's the end of file data. */
-					fwrite(buf, 1, (size_t)i, fp);
-					eof = 1;
-					memmove(buf, &buf[i + bl], (size_t)(len - (i + bl)));
-					len -= i + bl;
-					break;
-				}
-			}
-			if (!eof && len > bl) {
-				fwrite(buf, 1, (size_t)(len - bl), fp);
-				memmove(buf, &buf[len - bl], (size_t)bl);
-				len = bl;
-			}
-			if (!eof) {
-				n = mg_read(conn, buf + len, sizeof(buf) - ((size_t)(len)));
-			}
-		} while (!eof && (n > 0));
-		fclose(fp);
-		if (eof) {
-			remove(path);
-			rename(tmp_path, path);
-			num_uploaded_files++;
-			if (conn && conn->ctx && conn->ctx->callbacks.upload != NULL) {
-				conn->ctx->callbacks.upload(conn, path);
-			}
-		} else {
-			remove(tmp_path);
-		}
-	}
-
-	return num_uploaded_files;
+	return fud.num_uploaded_files;
 }
 
 
