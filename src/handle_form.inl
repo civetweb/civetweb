@@ -34,6 +34,7 @@ url_encoded_field_found(const struct mg_connection *conn,
 	char filename_dec[1024];
 	int key_dec_len;
 	int filename_dec_len;
+	int ret;
 
 	key_dec_len =
 	    mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
@@ -59,8 +60,23 @@ url_encoded_field_found(const struct mg_connection *conn,
 		filename_dec[0] = 0;
 	}
 
-	return fdh->field_found(
-	    key_dec, filename_dec, path, path_len, fdh->user_data);
+	ret =
+	    fdh->field_found(key_dec, filename_dec, path, path_len, fdh->user_data);
+
+	if ((ret & 0xF) == FORM_FIELD_STORAGE_GET) {
+		if (fdh->field_get == NULL) {
+			mg_cry(conn, "%s: Function \"Get\" not available", __func__);
+			return FORM_FIELD_STORAGE_SKIP;
+		}
+	}
+	if ((ret & 0xF) == FORM_FIELD_STORAGE_STORE) {
+		if (fdh->field_store == NULL) {
+			mg_cry(conn, "%s: Function \"Store\" not available", __func__);
+			return FORM_FIELD_STORAGE_SKIP;
+		}
+	}
+
+	return ret;
 }
 
 

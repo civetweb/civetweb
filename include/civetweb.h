@@ -796,8 +796,6 @@ enum {
 	FORM_FIELD_STORAGE_GET = 0x1,
 	/* Store the field value into a file. */
 	FORM_FIELD_STORAGE_STORE = 0x2,
-	/* Read the filed in chunks using a read function. */
-	/*	FORM_FIELD_STORAGE_READ = 0x3, not in the first step */
 	/* Stop parsing this request. Skip the remaining fields. */
 	FORM_FIELD_STORAGE_ABORT = 0x10
 };
