@@ -124,7 +124,7 @@ field_stored(const struct mg_connection *conn,
 
 	(void)conn; /* we do not need mg_cry here, so conn is currently unused */
 
-	return fdh->field_stored(path, file_size, fdh->user_data);
+	return fdh->field_store(path, file_size, fdh->user_data);
 }
 
 
