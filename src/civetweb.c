@@ -397,6 +397,7 @@ struct pollfd {
 #include <stdint.h>
 #include <inttypes.h>
 #include <netdb.h>
+#include <netinet/tcp.h>
 typedef const void *SOCK_OPT_TYPE;
 
 #if defined(ANDROID)
@@ -1084,6 +1085,7 @@ enum {
 #endif
 	ACCESS_CONTROL_ALLOW_ORIGIN,
 	ERROR_PAGES,
+	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the socket option typedef TCP_NODELAY */
 
 	NUM_OPTIONS
 };
@@ -1153,6 +1155,7 @@ static struct mg_option config_options[] = {
 #endif
     {"access_control_allow_origin", CONFIG_TYPE_STRING, "*"},
     {"error_pages", CONFIG_TYPE_DIRECTORY, NULL},
+    {"tcp_nodelay", CONFIG_TYPE_BOOLEAN, "no"},
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
@@ -11998,6 +12001,27 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 			       __func__,
 			       strerror(ERRNO));
 		}
+
+
+        /* Disable TCP Nagle's algorithm.  Normally TCP packets are coalesced
+         * to effectively fill up the underlying IP packet payload and reduce
+         * the overhead of sending lots of small buffers. However this hurts
+         * the server's throughput (ie. operations per second) when HTTP 1.1
+         * persistent connections are used and the responses are relatively
+         * small (eg. less than 1400 bytes).
+         */
+        if (ctx && mg_strcasecmp(ctx->config[CONFIG_TCP_NODELAY], "yes") == 0) {
+            if (setsockopt(so.sock,
+                           IPPROTO_TCP,
+                           TCP_NODELAY,
+                           (SOCK_OPT_TYPE)&on,
+                           sizeof(on)) != 0) {
+                mg_cry(fc(ctx),
+                       "%s: setsockopt(IPPROTO_TCP TCP_NODELAY) failed: %s",
+                       __func__,
+                       strerror(ERRNO));
+            }
+        }
 
 		if (ctx && ctx->config[REQUEST_TIMEOUT]) {
 			timeout = atoi(ctx->config[REQUEST_TIMEOUT]);
