@@ -382,6 +382,13 @@ must be called error404.ext, error4xx.ext or error.ext, whereas the file
 extention may be one of the extentions specified for the index_files option.
 See the [Wikipedia page on HTTP status codes](http://en.wikipedia.org/wiki/HTTP_status_code).
 
+### tcp\_nodelay `no`
+Enable TCP_NODELAY socket option on client connections, either yes or no.
+
+If set the socket option will disable Nagle's algorithm on the connection 
+which means that packets will be sent as soon as possible instead of waiting 
+for a full buffer or timeout to occur.
+
 ### decode\_url `yes`
 URL encoded request strings are decoded in the server, unless it is disabled
 by setting this option to `no`.
