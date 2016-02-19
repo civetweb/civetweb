@@ -251,11 +251,16 @@ class FooHandler : public CivetHandler
 int
 main(int argc, char *argv[])
 {
-
 	const char *options[] = {
 	    "document_root", DOCUMENT_ROOT, "listening_ports", PORT, 0};
+    
+    std::vector<std::string> cpp_options;
+    for (int i=0; i<(sizeof(options)/sizeof(options[0])-1); i++) {
+        cpp_options.push_back(options[i]);
+    }
 
-	CivetServer server(options);
+	// CivetServer server(options); // <-- C style start
+    CivetServer server(cpp_options); // <-- C++ style start
 
 	ExampleHandler h_ex;
 	server.addHandler(EXAMPLE_URI, h_ex);

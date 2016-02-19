@@ -282,6 +282,7 @@ CivetServer::CivetServer(const char **options,
 		throw CivetException("null context when constructing CivetServer. "
 		                     "Possible problem binding to port.");
 }
+
 CivetServer::CivetServer(std::vector<std::string> options,
                          const struct mg_callbacks *_callbacks)
     : context(0)
@@ -299,7 +300,7 @@ CivetServer::CivetServer(std::vector<std::string> options,
 
 	std::vector<const char *> pointers(options.size());
 	for (size_t i = 0; i < options.size(); i++) {
-		pointers.push_back(options[i].c_str());
+		pointers[i] = (options[i].c_str());
 	}
 	pointers.push_back(0);
 
