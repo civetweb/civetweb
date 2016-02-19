@@ -10971,9 +10971,9 @@ mg_close_connection(struct mg_connection *conn)
 		}
 		mg_free(client_ctx->workerthreadids);
 		mg_free(client_ctx);
+		mg_free(conn);
 	}
 	(void)pthread_mutex_destroy(&conn->mutex);
-	mg_free(conn);
 }
 
 
