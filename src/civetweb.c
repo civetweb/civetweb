@@ -1085,7 +1085,8 @@ enum {
 #endif
 	ACCESS_CONTROL_ALLOW_ORIGIN,
 	ERROR_PAGES,
-	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the socket option typedef TCP_NODELAY */
+	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the socket
+                           option typedef TCP_NODELAY */
 
 	NUM_OPTIONS
 };
@@ -2889,6 +2890,7 @@ mg_remove(const char *path)
 	to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
 	return DeleteFileW(wbuf) ? 0 : -1;
 }
+#endif
 
 
 static int
@@ -2905,7 +2907,7 @@ mg_mkdir(const char *path, int mode)
 
 	return CreateDirectoryW(wbuf, NULL) ? 0 : -1;
 }
-#endif
+
 
 /* Create substitutes for POSIX functions in Win32. */
 
@@ -6446,6 +6448,98 @@ mg_send_file(struct mg_connection *conn, const char *path)
 }
 
 
+/* For a given PUT path, create all intermediate subdirectories.
+ * Return  0  if the path itself is a directory.
+ * Return  1  if the path leads to a file.
+ * Return -1  for if the path is too long.
+ * Return -2  if path can not be created.
+*/
+static int
+put_dir(struct mg_connection *conn, const char *path)
+{
+	char buf[PATH_MAX];
+	const char *s, *p;
+	struct file file = STRUCT_FILE_INITIALIZER;
+	size_t len;
+	int res = 1;
+
+	for (s = p = path + 2; (p = strchr(s, '/')) != NULL; s = ++p) {
+		len = (size_t)(p - path);
+		if (len >= sizeof(buf)) {
+			/* path too long */
+			res = -1;
+			break;
+		}
+		memcpy(buf, path, len);
+		buf[len] = '\0';
+
+		/* Try to create intermediate directory */
+		DEBUG_TRACE("mkdir(%s)", buf);
+		if (!mg_stat(conn, buf, &file) && mg_mkdir(buf, 0755) != 0) {
+			/* path does not exixt and can not be created */
+			res = -2;
+			break;
+		}
+
+		/* Is path itself a directory? */
+		if (p[1] == '\0') {
+			res = 0;
+		}
+	}
+
+	return res;
+}
+
+
+long long
+mg_store_body(struct mg_connection *conn, const char *path)
+{
+	char buf[MG_BUF_LEN];
+	long long len = 0;
+	int ret, n;
+	FILE *f;
+
+	if (conn->consumed_content != 0) {
+		mg_cry(conn, "%s: Contents already consumed", __func__);
+		return -11;
+	}
+
+	ret = put_dir(conn, path);
+	if (ret < 0) {
+		/* -1 for path too long,
+		 * -2 for path can not be created. */
+		return ret;
+	}
+	if (ret != 1) {
+		/* Return 0 means, path itself is a directory. */
+		return 0;
+	}
+
+	f = fopen(path, "w");
+	if (!f) {
+		return -12;
+	}
+
+	ret = mg_read(conn, buf, sizeof(buf));
+	while (ret > 0) {
+		n = (int)fwrite(buf, 1, (size_t)ret, f);
+		if (n != ret) {
+			fclose(f);
+			remove(path);
+			return -13;
+		}
+		ret = mg_read(conn, buf, sizeof(buf));
+	}
+
+	if (fclose(f) != 0) {
+		remove(path);
+		return -14;
+	}
+
+	return len;
+}
+
+
 /* Parse HTTP headers from the given buffer, advance buffer to the point
  * where parsing stopped. */
 static void
@@ -6788,7 +6882,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 		}
 
 		if (conn->consumed_content == conn->content_len) {
-			success = nread >= 0;
+			success = (nread >= 0);
 		}
 
 		/* Each error code path in this function must send an error */
@@ -7353,49 +7447,6 @@ done:
 
 
 #if !defined(NO_FILES)
-/* For a given PUT path, create all intermediate subdirectories.
- * Return  0  if the path itself is a directory.
- * Return  1  if the path leads to a file.
- * Return -1  for if the path is too long.
- * Return -2  if path can not be created.
-*/
-static int
-put_dir(struct mg_connection *conn, const char *path)
-{
-	char buf[PATH_MAX];
-	const char *s, *p;
-	struct file file = STRUCT_FILE_INITIALIZER;
-	size_t len;
-	int res = 1;
-
-	for (s = p = path + 2; (p = strchr(s, '/')) != NULL; s = ++p) {
-		len = (size_t)(p - path);
-		if (len >= sizeof(buf)) {
-			/* path too long */
-			res = -1;
-			break;
-		}
-		memcpy(buf, path, len);
-		buf[len] = '\0';
-
-		/* Try to create intermediate directory */
-		DEBUG_TRACE("mkdir(%s)", buf);
-		if (!mg_stat(conn, buf, &file) && mg_mkdir(buf, 0755) != 0) {
-			/* path does not exixt and can not be created */
-			res = -2;
-			break;
-		}
-
-		/* Is path itself a directory? */
-		if (p[1] == '\0') {
-			res = 0;
-		}
-	}
-
-	return res;
-}
-
-
 static void
 mkcol(struct mg_connection *conn, const char *path)
 {
@@ -7585,6 +7636,7 @@ put_file(struct mg_connection *conn, const char *path)
 		/* forward_body_data failed.
 		 * The error code has already been sent to the client,
 		 * and conn->status_code is already set. */
+		mg_fclose(&file);
 		return;
 	}
 
@@ -12003,25 +12055,25 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		}
 
 
-        /* Disable TCP Nagle's algorithm.  Normally TCP packets are coalesced
-         * to effectively fill up the underlying IP packet payload and reduce
-         * the overhead of sending lots of small buffers. However this hurts
-         * the server's throughput (ie. operations per second) when HTTP 1.1
-         * persistent connections are used and the responses are relatively
-         * small (eg. less than 1400 bytes).
-         */
-        if (ctx && mg_strcasecmp(ctx->config[CONFIG_TCP_NODELAY], "yes") == 0) {
-            if (setsockopt(so.sock,
-                           IPPROTO_TCP,
-                           TCP_NODELAY,
-                           (SOCK_OPT_TYPE)&on,
-                           sizeof(on)) != 0) {
-                mg_cry(fc(ctx),
-                       "%s: setsockopt(IPPROTO_TCP TCP_NODELAY) failed: %s",
-                       __func__,
-                       strerror(ERRNO));
-            }
-        }
+		/* Disable TCP Nagle's algorithm.  Normally TCP packets are coalesced
+		 * to effectively fill up the underlying IP packet payload and reduce
+		 * the overhead of sending lots of small buffers. However this hurts
+		 * the server's throughput (ie. operations per second) when HTTP 1.1
+		 * persistent connections are used and the responses are relatively
+		 * small (eg. less than 1400 bytes).
+		 */
+		if (ctx && mg_strcasecmp(ctx->config[CONFIG_TCP_NODELAY], "yes") == 0) {
+			if (setsockopt(so.sock,
+			               IPPROTO_TCP,
+			               TCP_NODELAY,
+			               (SOCK_OPT_TYPE)&on,
+			               sizeof(on)) != 0) {
+				mg_cry(fc(ctx),
+				       "%s: setsockopt(IPPROTO_TCP TCP_NODELAY) failed: %s",
+				       __func__,
+				       strerror(ERRNO));
+			}
+		}
 
 		if (ctx && ctx->config[REQUEST_TIMEOUT]) {
 			timeout = atoi(ctx->config[REQUEST_TIMEOUT]);

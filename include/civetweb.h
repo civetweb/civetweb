@@ -589,6 +589,16 @@ CIVETWEB_API int mg_printf(struct mg_connection *,
 CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
 
 
+/* Store body data into a file. */
+CIVETWEB_API long long mg_store_body(struct mg_connection *conn,
+                                     const char *path);
+/* Read entire request body and stor it in a file "path".
+   Return:
+     < 0   Error
+     >= 0  Number of bytes stored in file "path".
+*/
+
+
 /* Read data from the remote end, return number of bytes read.
    Return:
      0     connection has been closed by peer. No more data could be read.

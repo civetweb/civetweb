@@ -63,9 +63,9 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn,
 	          "<p>To see a page from the *.foo handler <a "
 	          "href=\"xy.foo\">click xy.foo</a></p>");
-	mg_printf(
-	    conn,
-	    "<p>To see a page from the close handler <a href=\"close\">click close</a></p>");
+	mg_printf(conn,
+	          "<p>To see a page from the close handler <a "
+	          "href=\"close\">click close</a></p>");
 	mg_printf(conn,
 	          "<p>To see a page from the FileHandler handler <a "
 	          "href=\"form\">click form</a> (this is the form test page)</p>");
@@ -155,22 +155,23 @@ CloseHandler(struct mg_connection *conn, void *cbdata)
 
 	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn, "<h2>This handler will close the connection in a second</h2>");
+	mg_printf(conn,
+	          "<h2>This handler will close the connection in a second</h2>");
 #ifdef _WIN32
-		Sleep(1000);
+	Sleep(1000);
 #else
-		sleep(1);
+	sleep(1);
 #endif
 	mg_printf(conn, "bye");
-    printf("CloseHandler: close connection\n");
-    mg_close_connection(conn);
-    printf("CloseHandler: wait 10 sec\n");
+	printf("CloseHandler: close connection\n");
+	mg_close_connection(conn);
+	printf("CloseHandler: wait 10 sec\n");
 #ifdef _WIN32
-		Sleep(10000);
+	Sleep(10000);
 #else
-		sleep(10);
+	sleep(10);
 #endif
-    printf("CloseHandler: return from function\n");
+	printf("CloseHandler: return from function\n");
 	return 1;
 }
 
