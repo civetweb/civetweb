@@ -63,6 +63,9 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn,
 	          "<p>To see a page from the *.foo handler <a "
 	          "href=\"xy.foo\">click xy.foo</a></p>");
+	mg_printf(
+	    conn,
+	    "<p>To see a page from the close handler <a href=\"close\">click close</a></p>");
 	mg_printf(conn,
 	          "<p>To see a page from the FileHandler handler <a "
 	          "href=\"form\">click form</a> (this is the form test page)</p>");
@@ -140,6 +143,34 @@ FooHandler(struct mg_connection *conn, void *cbdata)
 	          req_info->uri,
 	          req_info->http_version);
 	mg_printf(conn, "</body></html>\n");
+	return 1;
+}
+
+
+int
+CloseHandler(struct mg_connection *conn, void *cbdata)
+{
+	/* Handler may access the request info using mg_get_request_info */
+	const struct mg_request_info *req_info = mg_get_request_info(conn);
+
+	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+	mg_printf(conn, "<html><body>");
+	mg_printf(conn, "<h2>This handler will close the connection in a second</h2>");
+#ifdef _WIN32
+		Sleep(1000);
+#else
+		sleep(1);
+#endif
+	mg_printf(conn, "bye");
+    printf("CloseHandler: close connection\n");
+    mg_close_connection(conn);
+    printf("CloseHandler: wait 10 sec\n");
+#ifdef _WIN32
+		Sleep(10000);
+#else
+		sleep(10);
+#endif
+    printf("CloseHandler: return from function\n");
 	return 1;
 }
 
@@ -473,6 +504,9 @@ main(int argc, char *argv[])
 
 	/* Add handler for all files with .foo extention */
 	mg_set_request_handler(ctx, "**.foo$", FooHandler, 0);
+
+	/* Add handler for /close extention */
+	mg_set_request_handler(ctx, "/close", CloseHandler, 0);
 
 	/* Add handler for /form  (serve a file outside the document root) */
 	mg_set_request_handler(ctx,
