@@ -1441,7 +1441,7 @@ mg_get_valid_options(void)
 
 
 static int
-is_file_in_memory(struct mg_connection *conn,
+is_file_in_memory(const struct mg_connection *conn,
                   const char *path,
                   struct file *filep)
 {
@@ -1475,7 +1475,7 @@ is_file_opened(const struct file *filep)
 
 
 static int
-mg_fopen(struct mg_connection *conn,
+mg_fopen(const struct mg_connection *conn,
          const char *path,
          const char *mode,
          struct file *filep)
@@ -1502,6 +1502,7 @@ mg_fopen(struct mg_connection *conn,
 		MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, ARRAY_SIZE(wmode));
 		filep->fp = _wfopen(wbuf, wmode);
 #else
+		/* Linux et al already use unicode. No need to convert. */
 		filep->fp = fopen(path, mode);
 #endif
 	}
@@ -1844,7 +1845,7 @@ mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 {
 	char buf[MG_BUF_LEN], src_addr[IP_ADDR_STR_LEN];
 	va_list ap;
-	FILE *fp;
+	struct file fi;
 	time_t timestamp;
 
 	va_start(ap, fmt);
@@ -1852,36 +1853,48 @@ mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 	va_end(ap);
 	buf[sizeof(buf) - 1] = 0;
 
+	if (!conn) {
+		puts(buf);
+		return;
+	}
+
 	/* Do not lock when getting the callback value, here and below.
 	 * I suppose this is fine, since function cannot disappear in the
 	 * same way string option can. */
-	if (conn && (conn->ctx->callbacks.log_message == NULL
-	             || conn->ctx->callbacks.log_message(conn, buf) == 0)) {
-		fp = conn->ctx->config[ERROR_LOG_FILE] == NULL
-		         ? NULL
-		         : fopen(conn->ctx->config[ERROR_LOG_FILE], "a+");
+	if ((conn->ctx->callbacks.log_message == NULL)
+	    || (conn->ctx->callbacks.log_message(conn, buf) == 0)) {
 
-		if (fp != NULL) {
-			flockfile(fp);
+		if (conn->ctx->config[ERROR_LOG_FILE] != NULL) {
+			if (mg_fopen(conn, conn->ctx->config[ERROR_LOG_FILE], "a+", &fi)
+			    == 0) {
+				fi.fp = NULL;
+			}
+		} else {
+			fi.fp = NULL;
+		}
+
+		if (fi.fp != NULL) {
+			flockfile(fi.fp);
 			timestamp = time(NULL);
 
 			sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
-			fprintf(fp,
+			fprintf(fi.fp,
 			        "[%010lu] [error] [client %s] ",
 			        (unsigned long)timestamp,
 			        src_addr);
 
 			if (conn->request_info.request_method != NULL) {
-				fprintf(fp,
+				fprintf(fi.fp,
 				        "%s %s: ",
 				        conn->request_info.request_method,
 				        conn->request_info.request_uri);
 			}
 
-			fprintf(fp, "%s", buf);
-			fputc('\n', fp);
-			funlockfile(fp);
-			fclose(fp);
+			fprintf(fi.fp, "%s", buf);
+			fputc('\n', fi.fp);
+			fflush(fi.fp);
+			funlockfile(fi.fp);
+			mg_fclose(&fi);
 		}
 	}
 }
@@ -5508,6 +5521,7 @@ mg_modify_passwords_file(const char *fname,
 	strcat(tmp, ".tmp");
 
 	/* Create the file if does not exist */
+	/* Use of fopen here is OK, since fname is only ASCII */
 	if ((fp = fopen(fname, "a+")) != NULL) {
 		(void)fclose(fp);
 	}
@@ -6497,7 +6511,7 @@ mg_store_body(struct mg_connection *conn, const char *path)
 	char buf[MG_BUF_LEN];
 	long long len = 0;
 	int ret, n;
-	FILE *f;
+	struct file fi;
 
 	if (conn->consumed_content != 0) {
 		mg_cry(conn, "%s: Contents already consumed", __func__);
@@ -6515,23 +6529,24 @@ mg_store_body(struct mg_connection *conn, const char *path)
 		return 0;
 	}
 
-	f = fopen(path, "w");
-	if (!f) {
+	if (mg_fopen(conn, path, "w", &fi) == 0) {
 		return -12;
 	}
 
 	ret = mg_read(conn, buf, sizeof(buf));
 	while (ret > 0) {
-		n = (int)fwrite(buf, 1, (size_t)ret, f);
+		n = (int)fwrite(buf, 1, (size_t)ret, fi.fp);
 		if (n != ret) {
-			fclose(f);
+			fclose(fi.fp);
 			remove(path);
 			return -13;
 		}
 		ret = mg_read(conn, buf, sizeof(buf));
 	}
 
-	if (fclose(f) != 0) {
+	/* TODO: mg_fclose should return an error,
+	 * and every caller should check and handle it. */
+	if (fclose(fi.fp) != 0) {
 		remove(path);
 		return -14;
 	}
@@ -10211,7 +10226,7 @@ static void
 log_access(const struct mg_connection *conn)
 {
 	const struct mg_request_info *ri;
-	FILE *fp;
+	struct file fi;
 	char date[64], src_addr[IP_ADDR_STR_LEN];
 	struct tm *tm;
 
@@ -10224,11 +10239,16 @@ log_access(const struct mg_connection *conn)
 		return;
 	}
 
-	fp = conn->ctx->config[ACCESS_LOG_FILE] == NULL
-	         ? NULL
-	         : fopen(conn->ctx->config[ACCESS_LOG_FILE], "a+");
+	if (conn->ctx->config[ACCESS_LOG_FILE] != NULL) {
+		if (mg_fopen(conn, conn->ctx->config[ACCESS_LOG_FILE], "a+", &fi)
+		    == 0) {
+			fi.fp = NULL;
+		}
+	} else {
+		fi.fp = NULL;
+	}
 
-	if (fp == NULL && conn->ctx->callbacks.log_message == NULL) {
+	if (fi.fp == NULL && conn->ctx->callbacks.log_message == NULL) {
 		return;
 	}
 
@@ -10268,13 +10288,12 @@ log_access(const struct mg_connection *conn)
 		conn->ctx->callbacks.log_access(conn, buf);
 	}
 
-	if (fp) {
-		flockfile(fp);
-		fprintf(fp, "%s", buf);
-		fputc('\n', fp);
-		fflush(fp);
-		funlockfile(fp);
-		fclose(fp);
+	if (fi.fp) {
+		flockfile(fi.fp);
+		fprintf(fi.fp, "%s\n", buf);
+		fflush(fi.fp);
+		funlockfile(fi.fp);
+		mg_fclose(&fi);
 	}
 }
 
