@@ -11283,21 +11283,24 @@ get_uri_type(const char *uri)
 static const char *
 get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 {
-	const char *domain;
-	size_t domain_len;
+	const char *server_domain;
+	size_t server_domain_len;
+	size_t request_domain_len = 0;
 	unsigned long port = 0;
 	int i;
-	char *hostend = NULL;
-	char *portbegin, *portend;
+	const char *hostbegin = NULL;
+	const char *hostend = NULL;
+	const char *portbegin;
+	char *portend;
 
 	/* DNS is case insensitive, so use case insensitive string compare here
 	 */
-	domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
-	if (!domain) {
+	server_domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
+	if (!server_domain) {
 		return 0;
 	}
-	domain_len = strlen(domain);
-	if (!domain_len) {
+	server_domain_len = strlen(server_domain);
+	if (!server_domain_len) {
 		return 0;
 	}
 
@@ -11306,18 +11309,21 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 		                   abs_uri_protocols[i].proto,
 		                   abs_uri_protocols[i].proto_len) == 0) {
 
-			hostend = strchr(uri + abs_uri_protocols[i].proto_len, '/');
+			hostbegin = uri + abs_uri_protocols[i].proto_len;
+			hostend = strchr(hostbegin, '/');
 			if (!hostend) {
 				return 0;
 			}
-			portbegin = strchr(uri + abs_uri_protocols[i].proto_len, ':');
-			if (!portbegin) {
+			portbegin = strchr(hostbegin, ':');
+			if ((!portbegin) || (portbegin > hostend)) {
 				port = abs_uri_protocols[i].default_port;
+				request_domain_len = (size_t)(hostend - hostbegin);
 			} else {
 				port = strtoul(portbegin + 1, &portend, 10);
 				if ((portend != hostend) || !port || !is_valid_port(port)) {
 					return 0;
 				}
+				request_domain_len = (size_t)(portbegin - hostbegin);
 			}
 			/* protocol found, port set */
 			break;
@@ -11332,14 +11338,22 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 #if defined(USE_IPV6)
 	if (conn->client.lsa.sa.sa_family == AF_INET6) {
 		if (ntohs(conn->client.lsa.sin6.sin6_port) != port) {
+			/* Request is directed to a different port */
 			return 0;
 		}
 	} else
 #endif
 	{
 		if (ntohs(conn->client.lsa.sin.sin_port) != port) {
+			/* Request is directed to a different port */
 			return 0;
 		}
+	}
+
+	if ((request_domain_len != server_domain_len)
+	    || (0 != memcmp(server_domain, hostbegin, server_domain_len))) {
+		/* Request is directed to another server */
+		return 0;
 	}
 
 	return hostend;
