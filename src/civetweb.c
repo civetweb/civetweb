@@ -11796,11 +11796,18 @@ process_new_connection(struct mg_connection *conn)
 			}
 
 			if (ebuf[0] == '\0') {
-				handle_request(conn);
-				if (conn->ctx->callbacks.end_request != NULL) {
-					conn->ctx->callbacks.end_request(conn, conn->status_code);
+				if (conn->request_info.local_uri) {
+					/* handle request to local server */
+					handle_request(conn);
+					if (conn->ctx->callbacks.end_request != NULL) {
+						conn->ctx->callbacks.end_request(conn,
+						                                 conn->status_code);
+					}
+					log_access(conn);
+				} else {
+					/* TODO: handle non-local request (PROXY) */
+					conn->must_close = 1;
 				}
-				log_access(conn);
 			} else {
 				conn->must_close = 1;
 			}
