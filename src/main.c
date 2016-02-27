@@ -131,7 +131,7 @@ static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
 static char *g_server_name;         /* Set by init_server_name() */
 static char *g_icon_name;           /* Set by init_server_name() */
-static char g_config_file[PATH_MAX] =
+static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
 static struct mg_context *g_ctx; /* Set by start_civetweb() */
 static struct tuser_data
@@ -439,18 +439,18 @@ set_option(char **options, const char *name, const char *value)
 }
 
 
-static void
+static int
 read_config_file(const char *config_file, char **options)
 {
 	char line[MAX_CONF_FILE_LINE_SIZE], *p;
 	FILE *fp = NULL;
 	size_t i, j, line_no = 0;
 
+	/* Open the config file */
 	fp = fopen(config_file, "r");
-
-	/* If config file was set in command line and open failed, die */
 	if (fp == NULL) {
-		die("Cannot open config file %s: %s", config_file, strerror(errno));
+		/* Failed to open the file. Keep errno for the caller. */
+		return 0;
 	}
 
 	/* Load config file settings first */
@@ -507,6 +507,7 @@ read_config_file(const char *config_file, char **options)
 
 		(void)fclose(fp);
 	}
+	return 1;
 }
 
 
@@ -521,30 +522,38 @@ process_command_line_arguments(char *argv[], char **options)
 
 	/* Should we use a config file ? */
 	if (argv[1] != NULL && argv[1][0] != '-') {
-		snprintf(g_config_file, sizeof(g_config_file) - 1, "%s", argv[1]);
+		/* A config file was set */
+		snprintf(g_config_file_name,
+		         sizeof(g_config_file_name) - 1,
+		         "%s",
+		         argv[1]);
 		cmd_line_opts_start = 2;
 	} else if ((p = strrchr(argv[0], DIRSEP)) == NULL) {
-		/* No command line flags specified. Look where binary lives */
-		snprintf(g_config_file, sizeof(g_config_file) - 1, "%s", CONFIG_FILE);
+		/* No config file set. Use default file name in the current path. */
+		snprintf(g_config_file_name,
+		         sizeof(g_config_file_name) - 1,
+		         "%s",
+		         CONFIG_FILE);
 	} else {
-		snprintf(g_config_file,
-		         sizeof(g_config_file) - 1,
+		/* No config file set. Use default file name next to the executable. */
+		snprintf(g_config_file_name,
+		         sizeof(g_config_file_name) - 1,
 		         "%.*s%c%s",
 		         (int)(p - argv[0]),
 		         argv[0],
 		         DIRSEP,
 		         CONFIG_FILE);
 	}
-	g_config_file[sizeof(g_config_file) - 1] = 0;
+	g_config_file_name[sizeof(g_config_file_name) - 1] = 0;
 
 #ifdef CONFIG_FILE2
-	fp = fopen(g_config_file, "r");
+	fp = fopen(g_config_file_name, "r");
 
 	/* try alternate config file */
 	if (fp == NULL) {
 		fp = fopen(CONFIG_FILE2, "r");
 		if (fp != NULL) {
-			strcpy(g_config_file, CONFIG_FILE2);
+			strcpy(g_config_file_name, CONFIG_FILE2);
 		}
 	}
 	if (fp != NULL) {
@@ -553,7 +562,16 @@ process_command_line_arguments(char *argv[], char **options)
 #endif
 
 	/* read all configurations from a config file */
-	(void)read_config_file(g_config_file, options);
+	if (0 == read_config_file(g_config_file_name, options)) {
+		if (cmd_line_opts_start == 2) {
+			/* If config file was set in command line and open failed, die. */
+			/* Errno will still hold the error from fopen. */
+			die("Cannot open config file %s: %s",
+			    g_config_file_name,
+			    strerror(errno));
+		}
+		/* Otherwise: CivetWeb can work without a config file */
+	}
 
 	/* If we're under MacOS and started by launchd, then the second
 	   argument is process serial number, -psn_.....
@@ -1221,7 +1239,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		case ID_SAVE:
 			EnableWindow(GetDlgItem(hDlg, ID_SAVE), FALSE);
-			if ((fp = fopen(g_config_file, "w+")) != NULL) {
+			if ((fp = fopen(g_config_file_name, "w+")) != NULL) {
 				save_config(hDlg, fp);
 				fclose(fp);
 				stop_civetweb();
@@ -1248,7 +1266,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_RESET_FILE:
-			read_config_file(g_config_file, file_options);
+			read_config_file(g_config_file_name, file_options);
 			for (i = 0; default_options[i].name != NULL; i++) {
 				name = default_options[i].name;
 				value = default_options[i].default_value;
