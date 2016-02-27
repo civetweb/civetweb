@@ -921,6 +921,12 @@ struct ssl_func {
 	(*(void (*)(unsigned long (*)(void)))crypto_sw[2].ptr)
 #define ERR_get_error (*(unsigned long (*)(void))crypto_sw[3].ptr)
 #define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[4].ptr)
+#define ERR_remove_state (*(void (*)(unsigned long))crypto_sw[5].ptr)
+#define ERR_free_strings (*(void (*)(void))crypto_sw[6].ptr)
+#define ENGINE_cleanup (*(void (*)(void))crypto_sw[7].ptr)
+#define CONF_modules_unload (*(void (*)(int))crypto_sw[8].ptr)
+#define CRYPTO_cleanup_all_ex_data (*(void (*)(void))crypto_sw[9].ptr)
+#define EVP_cleanup (*(void (*)(void))crypto_sw[10].ptr)
 
 
 /* set_ssl_option() function updates this array.
@@ -970,6 +976,12 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"CRYPTO_set_id_callback", NULL},
                                       {"ERR_get_error", NULL},
                                       {"ERR_error_string", NULL},
+                                      {"ERR_remove_state", NULL},
+                                      {"ERR_free_strings", NULL},
+                                      {"ENGINE_cleanup", NULL},
+                                      {"CONF_modules_unload", NULL},
+                                      {"CRYPTO_cleanup_all_ex_data", NULL},
+                                      {"EVP_cleanup", NULL},
                                       {NULL, NULL}};
 #endif /* NO_SSL */
 #endif /* NO_SSL_DL */
@@ -10461,6 +10473,7 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		(void)err; /* TODO: set some error message */
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
+		ERR_remove_state(0);
 		return 0;
 	}
 
@@ -10470,6 +10483,7 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		(void)err; /* TODO: set some error message */
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
+		ERR_remove_state(0);
 		return 0;
 	}
 
@@ -10818,12 +10832,22 @@ uninitialize_ssl(struct mg_context *ctx)
 	(void)ctx;
 
 	if (mg_atomic_dec(&cryptolib_users) == 0) {
+
+		/* Shutdown according to
+		 * https://wiki.openssl.org/index.php/Library_Initialization#Cleanup
+		 * http://stackoverflow.com/questions/29845527/how-to-properly-uninitialize-openssl
+		 */
 		CRYPTO_set_locking_callback(NULL);
+		CRYPTO_set_id_callback(NULL);
+		ENGINE_cleanup();
+		CONF_modules_unload(1);
+		ERR_free_strings();
+		EVP_cleanup();
+		CRYPTO_cleanup_all_ex_data();
+
 		for (i = 0; i < CRYPTO_num_locks(); i++) {
 			pthread_mutex_destroy(&ssl_mutexes[i]);
 		}
-		CRYPTO_set_locking_callback(NULL);
-		CRYPTO_set_id_callback(NULL);
 	}
 }
 #endif /* !NO_SSL */
@@ -11003,6 +11027,7 @@ close_connection(struct mg_connection *conn)
 		 */
 		SSL_shutdown(conn->ssl);
 		SSL_free(conn->ssl);
+		ERR_remove_state(0);
 		conn->ssl = NULL;
 	}
 #endif
