@@ -5,9 +5,11 @@ Release Notes v1.8 (work in progress)
 Changes
 -------
 
-- Client API using SSL certificates (preliminary)
-- Send "Cache-Control" headers (preliminary)
-
+- Client API using SSL certificates
+- Send "Cache-Control" headers
+- Add alternative to mg_upload
+- Additional configuration options
+- Fix memory leaks
 - Add API function to check available features
 - Add new interface to get listening ports
 - Add websocket client interface and encode websocket data with a simple random number
