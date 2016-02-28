@@ -704,7 +704,7 @@ lsp_url_encode(lua_State *L)
 	int num_args = lua_gettop(L);
 	const char *text;
 	size_t text_len;
-	char dst[512];
+	char dst[512 * 3];
 
 	if (num_args == 1) {
 		text = lua_tolstring(L, 1, &text_len);
