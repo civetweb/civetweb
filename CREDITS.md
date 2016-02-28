@@ -4,12 +4,15 @@
 * bel2125
 * Ben M. Ward
 * brett
+* Bjoern Petri
 * Brian Lambert
 * Brian Spratke
 * cdbishop
 * celeron55
+* Christopher Galas
 * cjh
 * Daniel Oaks
+* Daniel Rempel
 * Danny Al-Gaaf
 * David Arnold
 * David Loffredo
@@ -21,6 +24,7 @@
 * grenclave
 * hansipie
 * HariKamath Kamath
+* Jacob Skillin
 * Jan Willem Janssen
 * Jeremy Lin
 * Jim Evans
@@ -36,10 +40,12 @@
 * Lawrence
 * Lianghui
 * Maarten Fremouw
+* makrsmark
 * Mark Lakata
 * Mateusz Gralka
 * Matt Clarkson
 * Morgan McGuire
+* Neil Jensen
 * Nick Hildebrant
 * Nigel Stewart
 * nihildeb
@@ -59,6 +65,7 @@
 * tnoho
 * Toni Wilk
 * Ulrich Hertlein
+* Walt Steverson
 * William Greathouse
 * Yehuda Sadeh
 
