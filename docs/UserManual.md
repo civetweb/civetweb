@@ -382,12 +382,15 @@ must be called error404.ext, error4xx.ext or error.ext, whereas the file
 extention may be one of the extentions specified for the index_files option.
 See the [Wikipedia page on HTTP status codes](http://en.wikipedia.org/wiki/HTTP_status_code).
 
-### tcp\_nodelay `no`
-Enable TCP_NODELAY socket option on client connections, either yes or no.
+### tcp\_nodelay `0`
+Enable TCP_NODELAY socket option on client connections.
 
-If set the socket option will disable Nagle's algorithm on the connection 
-which means that packets will be sent as soon as possible instead of waiting 
+If set the socket option will disable Nagle's algorithm on the connection
+which means that packets will be sent as soon as possible instead of waiting
 for a full buffer or timeout to occur.
+
+    0    Keep the default: Nagel's algorithm enabled
+    1    Disable Nagel's algorithm for all sockets
 
 ### decode\_url `yes`
 URL encoded request strings are decoded in the server, unless it is disabled
@@ -415,7 +418,7 @@ than the depth set here connection is refused.
 Loads default trusted certificates locations set at openssl compile time.
 
 ### ssl_cipher_list
-List of ciphers to present to the client. Entries should be separated by 
+List of ciphers to present to the client. Entries should be separated by
 colons, commas or spaces.
 
     ALL           All available ciphers

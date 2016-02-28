@@ -1168,7 +1168,7 @@ static struct mg_option config_options[] = {
 #endif
     {"access_control_allow_origin", CONFIG_TYPE_STRING, "*"},
     {"error_pages", CONFIG_TYPE_DIRECTORY, NULL},
-    {"tcp_nodelay", CONFIG_TYPE_BOOLEAN, "no"},
+    {"tcp_nodelay", CONFIG_TYPE_NUMBER, "0"},
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
@@ -10944,6 +10944,22 @@ set_sock_timeout(SOCKET sock, int milliseconds)
 }
 
 
+static int
+set_tcp_nodelay(SOCKET sock, int nodelay_on)
+{
+	if (setsockopt(sock,
+	               IPPROTO_TCP,
+	               TCP_NODELAY,
+	               (SOCK_OPT_TYPE)&nodelay_on,
+	               sizeof(nodelay_on)) != 0) {
+		/* Error */
+		return 1;
+	}
+	/* OK */
+	return 0;
+}
+
+
 static void
 close_socket_gracefully(struct mg_connection *conn)
 {
@@ -12104,9 +12120,8 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		 * keep-alive
 		 * is enabled, and client resets the connection, server won't get
 		 * TCP FIN or RST and will keep the connection open forever. With
-		 * TCP
-		 * keep-alive, next keep-alive handshake will figure out that the
-		 * client is down and will close the server end.
+		 * TCP keep-alive, next keep-alive handshake will figure out that
+		 * the client is down and will close the server end.
 		 * Thanks to Igor Klopov who suggested the patch. */
 		if (setsockopt(so.sock,
 		               SOL_SOCKET,
@@ -12127,12 +12142,9 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		 * persistent connections are used and the responses are relatively
 		 * small (eg. less than 1400 bytes).
 		 */
-		if (ctx && mg_strcasecmp(ctx->config[CONFIG_TCP_NODELAY], "yes") == 0) {
-			if (setsockopt(so.sock,
-			               IPPROTO_TCP,
-			               TCP_NODELAY,
-			               (SOCK_OPT_TYPE)&on,
-			               sizeof(on)) != 0) {
+		if ((ctx != NULL) && (ctx->config[CONFIG_TCP_NODELAY] != NULL)
+		    && (!strcmp(ctx->config[CONFIG_TCP_NODELAY], "1"))) {
+			if (set_tcp_nodelay(so.sock, 1) != 0) {
 				mg_cry(fc(ctx),
 				       "%s: setsockopt(IPPROTO_TCP TCP_NODELAY) failed: %s",
 				       __func__,
