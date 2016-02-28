@@ -5,7 +5,7 @@
 
 [![Travis Build Status](https://travis-ci.org/civetweb/civetweb.svg?branch=master)](https://travis-ci.org/civetweb/civetweb)
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/civetweb/civetweb?svg=true)](https://ci.appveyor.com/project/civetweb/civetweb/branch/master)
-[![Coverage Status](https://coveralls.io/repos/civetweb/civetweb/badge.svg?branch=master&service=github)](https://coveralls.io/github/civetweb/civetweb?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
 
 **The official home of CivetWeb is https://github.com/civetweb/civetweb**
