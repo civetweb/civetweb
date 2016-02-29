@@ -207,6 +207,11 @@ class CIVETWEB_API CivetServer
 	 * It is good practice to call getContext() after this in case there
 	 * were errors starting the server.
 	 *
+	 * Note: CivetServer should not be used as a static instance in a Windows
+	 * DLL, since the constructor creates threads and the destructor joins
+	 * them again (creating/joining threads should not be done in static
+	 * constructors).
+	 *
 	 * @param options - the web server options.
 	 * @param callbacks - optional web server callback methods.
 	 *
