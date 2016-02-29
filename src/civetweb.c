@@ -6736,6 +6736,10 @@ read_request(FILE *fp,
 	}
 
 	request_len = get_request_len(buf, *nread);
+
+    /* first time reading from this connection */
+    clock_gettime(CLOCK_MONOTONIC, &last_action_time);
+
 	while (
 	    (conn->ctx->stop_flag == 0) && (*nread < bufsiz) && (request_len == 0)
 	    && ((mg_difftimespec(&last_action_time, &(conn->req_time))
