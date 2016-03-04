@@ -2194,6 +2194,10 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep);
 static const char *
 mg_get_response_code_text(int response_code, struct mg_connection *conn)
 {
+	/* See IANA HTTP status code assignment:
+	 * http://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+	 */
+
 	switch (response_code) {
 	/* RFC2616 Section 10.1 - Informational 1xx */
 	case 100:
@@ -2220,6 +2224,11 @@ mg_get_response_code_text(int response_code, struct mg_connection *conn)
 		return "Partial Content"; /* RFC2616 Section 10.2.7 */
 	case 207:
 		return "Multi-Status"; /* RFC2518 Section 10.2, RFC4918 Section 11.1 */
+	case 208:
+		return "Already Reported"; /* RFC5842 Section 7.1 */
+
+	case 226:
+		return "IM used"; /* RFC3229 Section 10.4.1 */
 
 	/* RFC2616 Section 10.3 - Redirection 3xx */
 	case 300:
@@ -2236,6 +2245,8 @@ mg_get_response_code_text(int response_code, struct mg_connection *conn)
 		return "Use Proxy"; /* RFC2616 Section 10.3.6 */
 	case 307:
 		return "Temporary Redirect"; /* RFC2616 Section 10.3.8 */
+	case 308:
+		return "Permanent Redirect"; /* RFC7238 Section 3 */
 
 	/* RFC2616 Section 10.4 - Client Error 4xx */
 	case 400:
@@ -2274,6 +2285,9 @@ mg_get_response_code_text(int response_code, struct mg_connection *conn)
 		return "Requested range not satisfiable"; /* RFC2616 Section 10.4.17 */
 	case 417:
 		return "Expectation Failed"; /* RFC2616 Section 10.4.18 */
+
+	case 421:
+		return "Misdirected Request"; /* RFC7540 Section 9.1.2 */
 	case 422:
 		return "Unproccessable entity"; /* RFC2518 Section 10.3, RFC4918
 		                                 * Section 11.2 */
@@ -2282,12 +2296,21 @@ mg_get_response_code_text(int response_code, struct mg_connection *conn)
 	case 424:
 		return "Failed Dependency"; /* RFC2518 Section 10.5, RFC4918
 		                             * Section 11.4 */
+
+	case 426:
+		return "Upgrade Required"; /* RFC 2817 Section 4 */
+
 	case 428:
 		return "Precondition Required"; /* RFC 6585, Section 3 */
 	case 429:
 		return "Too Many Requests"; /* RFC 6585, Section 4 */
+
 	case 431:
 		return "Request Header Fields Too Large"; /* RFC 6585, Section 5 */
+
+	case 451:
+		return "Unavailable For Legal Reasons"; /* draft-tbray-http-legally-restricted-status-05,
+		                                         * Section 3 */
 
 	/* RFC2616 Section 10.5 - Server Error 5xx */
 	case 500:
@@ -2302,38 +2325,25 @@ mg_get_response_code_text(int response_code, struct mg_connection *conn)
 		return "Gateway Time-out"; /* RFC2616 Section 10.5.5 */
 	case 505:
 		return "HTTP Version not supported"; /* RFC2616 Section 10.5.6 */
+	case 506:
+		return "Variant Also Negotiates"; /* RFC 2295, Section 8.1 */
 	case 507:
 		return "Insufficient Storage"; /* RFC2518 Section 10.6, RFC4918
 		                                * Section 11.5 */
+	case 508:
+		return "Loop Detected"; /* RFC5842 Section 7.1 */
+
+	case 510:
+		return "Not Extended"; /* RFC 2774, Section 7 */
 	case 511:
 		return "Network Authentication Required"; /* RFC 6585, Section 6 */
 
-	/* Other RFCs */
-	case 426:
-		return "Upgrade Required"; /* RFC 2817 */
-
-	/* Return codes from non normative RFCs: */
-	/* Informative and experimental RFCs, "de facto" standards due to common
-	 * use, ... */
-	case 208:
-		return "Already Reported"; /* RFC5842 Section 7.1 */
-	case 226:
-		return "IM used"; /* RFC3229 Section 10.4.1 */
-	case 308:
-		return "Permanent Redirect"; /* RFC7238 Section 3 */
+	/* Other status codes, not shown in the IANA HTTP status code assignment.
+	/* E.g., "de facto" standards due to common use, ... */
 	case 418:
 		return "I am a teapot"; /* RFC2324 Section 2.3.2 */
 	case 419:
 		return "Authentication Timeout"; /* common use */
-	case 451:
-		return "Unavailable For Legal Reasons"; /* draft-tbray-http-legally-restricted-status-05,
-		                                         * Section 3 */
-	case 506:
-		return "Variant Also Negotiates"; /* RFC 2295, Section 8.1 */
-	case 508:
-		return "Loop Detected"; /* RFC5842 Section 7.1 */
-	case 510:
-		return "Not Extended"; /* RFC 2774, Section 7 */
 
 	default:
 		/* This error code is unknown. This should not happen. */
