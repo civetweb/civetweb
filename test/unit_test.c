@@ -20,6 +20,16 @@
  * THE SOFTWARE.
  */
 
+/* Note: The unit_test.c file is mostly obsolete, since the current unit
+ * tests are performed by the CMake build framework based on the
+ * CMakeList (https://github.com/civetweb/civetweb/blob/master/test/CMakeLists.txt).
+ * The tests do no longer use unit_test.c but public_func.c, public_server.c,
+ * private.c, private_exe.c and others.
+ * This file is left here for reference and will be removed in the future.
+ * It is no longer actively maintained.
+ */
+
+
 /* Unit test for the civetweb web server. Tests embedded API.
  */
 #define USE_WEBSOCKET
