@@ -79,7 +79,7 @@ static void test_parse_http_message()
 	char req1[] = "GET / HTTP/1.1\r\n\r\n";
 	char req2[] = "BLAH / HTTP/1.1\r\n\r\n";
 	char req3[] = "GET / HTTP/1.1\r\nBah\r\n";
-	char req4[] = "GET / HTTP/1.1\r\nA: foo bar\r\nB: bar\r\nbaz\r\n\r\n";
+	char req4[] = "GET / HTTP/1.1\r\nA: foo bar\r\nB: bar\r\nbaz:\r\n\r\n";
 	char req5[] = "GET / HTTP/1.1\r\n\r\n";
 	char req6[] = "G";
 	char req7[] = " blah ";
@@ -108,7 +108,7 @@ static void test_parse_http_message()
 	ASSERT(strcmp(ri.http_headers[0].value, "foo bar") == 0);
 	ASSERT(strcmp(ri.http_headers[1].name, "B") == 0);
 	ASSERT(strcmp(ri.http_headers[1].value, "bar") == 0);
-	ASSERT(strcmp(ri.http_headers[2].name, "baz\r\n\r") == 0);
+	ASSERT(strcmp(ri.http_headers[2].name, "baz") == 0);
 	ASSERT(strcmp(ri.http_headers[2].value, "") == 0);
 
 	ASSERT(parse_http_message(req5, sizeof(req5), &ri) == sizeof(req5) - 1);
@@ -630,7 +630,7 @@ static void test_mg_download(int use_ssl)
 	                           "HTTP/1.1\r\n"
 	                           "Transfer-Encoding: chunked\r\n"
 	                           "\r\n%x\r\n%s\r\n0\r\n\r\n",
-	                           strlen(test_data),
+	                           (uint32_t)strlen(test_data),
 	                           test_data)) != NULL);
 	h = mg_get_header(conn, "Content-Length");
 	ASSERT(h == NULL);
@@ -663,7 +663,7 @@ static void test_mg_download(int use_ssl)
 	                           test_data[4],
 	                           test_data[5],
 	                           test_data[6],
-	                           strlen(test_data + 7),
+	                           (uint32_t)strlen(test_data + 7),
 	                           test_data + 7)) != NULL);
 	h = mg_get_header(conn, "Content-Length");
 	ASSERT(h == NULL);
@@ -835,12 +835,12 @@ static void test_mg_websocket_client_connect(int use_ssl)
 	ut_mg_stop(ctx);
 }
 
-static int alloc_printf(char **buf, size_t size, char *fmt, ...)
+static int alloc_printf(char **out_buf, char *buf, size_t size, char *fmt, ...)
 {
 	va_list ap;
 	int ret = 0;
 	va_start(ap, fmt);
-	ret = alloc_vprintf(buf, size, fmt, ap);
+	ret = alloc_vprintf(out_buf, buf, size, fmt, ap);
 	va_end(ap);
 	return ret;
 }
@@ -863,6 +863,7 @@ static void test_mg_upload(void)
 	ASSERT((file_data = read_file("unit_test.c", &file_len)) != NULL);
 	post_data = NULL;
 	post_data_len = alloc_printf(&post_data,
+                                 NULL,
 	                             0,
 	                             "--%s\r\n"
 	                             "Content-Disposition: form-data; "
@@ -1008,7 +1009,7 @@ static void check_lua_expr(lua_State *L, const char *expr, const char *value)
 	const char *v, *var_name = "myVar";
 	char buf[100];
 
-	snprintf(buf, sizeof(buf), "%s = %s", var_name, expr);
+	mg_snprintf(buf, sizeof(buf), "%s = %s", var_name, expr);
 	(void)luaL_dostring(L, buf);
 	lua_getglobal(L, var_name);
 	v = lua_tostring(L, -1);
@@ -1033,7 +1034,7 @@ static void test_lua(void)
 	    parse_http_message(conn.buf, conn.data_len, &conn.request_info);
 	conn.content_len = conn.data_len - conn.request_len;
 
-	prepare_lua_environment(&conn, L, "unit_test", LUA_ENV_TYPE_PLAIN_LUA_PAGE);
+	prepare_lua_environment(&ctx, &conn, NULL, L, "unit_test", LUA_ENV_TYPE_PLAIN_LUA_PAGE);
 	ASSERT(lua_gettop(L) == 4);
 
 	check_lua_expr(L, "'hi'", "hi");
@@ -1079,13 +1080,13 @@ static void test_alloc_vprintf(void)
 {
 	char buf[MG_BUF_LEN], *p = buf;
 
-	ASSERT(alloc_printf(&p, sizeof(buf), "%s", "hi") == 2);
+	ASSERT(alloc_printf(&p, buf, sizeof(buf), "%s", "hi") == 2);
 	ASSERT(p == buf);
-	ASSERT(alloc_printf(&p, sizeof(buf), "%s", "") == 0);
-	ASSERT(alloc_printf(&p, sizeof(buf), "") == 0);
+	ASSERT(alloc_printf(&p, buf, sizeof(buf), "%s", "") == 0);
+	ASSERT(alloc_printf(&p, buf, sizeof(buf), "") == 0);
 
 	/* Pass small buffer, make sure alloc_printf allocates */
-	ASSERT(alloc_printf(&p, 1, "%s", "hello") == 5);
+	ASSERT(alloc_printf(&p, buf, 1, "%s", "hello") == 5);
 	ASSERT(p != buf);
 	mg_free(p);
 }
