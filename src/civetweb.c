@@ -1097,8 +1097,9 @@ enum {
 #endif
 	ACCESS_CONTROL_ALLOW_ORIGIN,
 	ERROR_PAGES,
-	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the socket
-                           option typedef TCP_NODELAY */
+	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
+                         * socket option typedef TCP_NODELAY. */
+	STATIC_FILE_MAX_AGE,
 
 	NUM_OPTIONS
 };
@@ -1169,6 +1170,9 @@ static struct mg_option config_options[] = {
     {"access_control_allow_origin", CONFIG_TYPE_STRING, "*"},
     {"error_pages", CONFIG_TYPE_DIRECTORY, NULL},
     {"tcp_nodelay", CONFIG_TYPE_NUMBER, "0"},
+    {"_experimental_static_file_max_age",
+     CONFIG_TYPE_NUMBER,
+     "3600"}, /* TODO: redefine parameter */
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
@@ -2172,13 +2176,13 @@ send_no_cache_header(struct mg_connection *conn)
 static int
 send_static_cache_header(struct mg_connection *conn)
 {
-	/* TODO: Get max age (in seconds) for static files from conn->ctx */
-	int max_age = 60 /* + conn->ctx.TODO */;
-
+	int max_age = atoi(conn->ctx->config[STATIC_FILE_MAX_AGE]);
 	if (max_age <= 0) {
 		return send_no_cache_header(conn);
 	}
 
+	/* Use "Cache-Control: max-age" instead of "Expires" header.
+	 * Reason: see https://www.mnot.net/blog/2007/05/15/expires_max-age */
 	return mg_printf(conn, "Cache-Control: max-age=%u\r\n", max_age);
 }
 
