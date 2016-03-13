@@ -10491,6 +10491,7 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		(void)err; /* TODO: set some error message */
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
+		CRYPTO_cleanup_all_ex_data();
 		ERR_remove_state(0);
 		return 0;
 	}
@@ -10501,6 +10502,7 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		(void)err; /* TODO: set some error message */
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
+		CRYPTO_cleanup_all_ex_data();
 		ERR_remove_state(0);
 		return 0;
 	}
@@ -10862,6 +10864,7 @@ uninitialize_ssl(struct mg_context *ctx)
 		ERR_free_strings();
 		EVP_cleanup();
 		CRYPTO_cleanup_all_ex_data();
+		ERR_remove_state(0);
 
 		for (i = 0; i < CRYPTO_num_locks(); i++) {
 			pthread_mutex_destroy(&ssl_mutexes[i]);
@@ -11061,6 +11064,7 @@ close_connection(struct mg_connection *conn)
 		 */
 		SSL_shutdown(conn->ssl);
 		SSL_free(conn->ssl);
+		CRYPTO_cleanup_all_ex_data();
 		ERR_remove_state(0);
 		conn->ssl = NULL;
 	}
