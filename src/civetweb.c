@@ -2339,7 +2339,7 @@ mg_get_response_code_text(int response_code, struct mg_connection *conn)
 		return "Network Authentication Required"; /* RFC 6585, Section 6 */
 
 	/* Other status codes, not shown in the IANA HTTP status code assignment.
-	/* E.g., "de facto" standards due to common use, ... */
+	 * E.g., "de facto" standards due to common use, ... */
 	case 418:
 		return "I am a teapot"; /* RFC2324 Section 2.3.2 */
 	case 419:
