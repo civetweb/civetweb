@@ -2176,14 +2176,21 @@ send_no_cache_header(struct mg_connection *conn)
 static int
 send_static_cache_header(struct mg_connection *conn)
 {
+	/* Read the server config to check how long a file may be cached.
+	 * The configuration is in seconds. */
 	int max_age = atoi(conn->ctx->config[STATIC_FILE_MAX_AGE]);
 	if (max_age <= 0) {
+		/* 0 means "do not cache". All values <0 are reserved
+		 * and may be used differently in the future. */
+		/* If a file should not be cached, do not only send
+		 * max-age=0, but also pragmas and Expires headers. */
 		return send_no_cache_header(conn);
 	}
 
 	/* Use "Cache-Control: max-age" instead of "Expires" header.
 	 * Reason: see https://www.mnot.net/blog/2007/05/15/expires_max-age */
-	return mg_printf(conn, "Cache-Control: max-age=%u\r\n", max_age);
+	/* See also https://www.mnot.net/cache_docs/ */
+	return mg_printf(conn, "Cache-Control: max-age=%u\r\n", (unsigned)max_age);
 }
 
 
