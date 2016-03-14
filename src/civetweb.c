@@ -3676,9 +3676,14 @@ push(struct mg_context *ctx,
 			 */
 			return -1;
 		}
+
+		/* This code is not reached in the moment.
+		 * ==> Fix the TODOs above first. */
+
 		if (timeout > 0) {
 			clock_gettime(CLOCK_MONOTONIC, &now);
 		}
+
 	} while ((timeout <= 0) || (mg_difftimespec(&now, &start) <= timeout));
 
 	(void)err; /* Avoid unused warning if NO_SSL is set and DEBUG_TRACE is not
@@ -6531,6 +6536,16 @@ put_dir(struct mg_connection *conn, const char *path)
 }
 
 
+static void
+remove_bad_file(const struct mg_connection *conn, const char *path)
+{
+	int r = mg_remove(path);
+	if (r != 0) {
+		mg_cry(conn, "%s: Cannot remove invalid file %s", __func__, path);
+	}
+}
+
+
 long long
 mg_store_body(struct mg_connection *conn, const char *path)
 {
@@ -6564,7 +6579,7 @@ mg_store_body(struct mg_connection *conn, const char *path)
 		n = (int)fwrite(buf, 1, (size_t)ret, fi.fp);
 		if (n != ret) {
 			fclose(fi.fp);
-			remove(path);
+			remove_bad_file(conn, path);
 			return -13;
 		}
 		ret = mg_read(conn, buf, sizeof(buf));
@@ -6573,7 +6588,7 @@ mg_store_body(struct mg_connection *conn, const char *path)
 	/* TODO: mg_fclose should return an error,
 	 * and every caller should check and handle it. */
 	if (fclose(fi.fp) != 0) {
-		remove(path);
+		remove_bad_file(conn, path);
 		return -14;
 	}
 
@@ -8116,7 +8131,7 @@ handle_propfind(struct mg_connection *conn,
 
 	gmt_time_string(date, sizeof(date), &curtime);
 
-	if (!conn || !path || !filep) {
+	if (!conn || !path || !filep || !conn->ctx) {
 		return;
 	}
 
@@ -8141,7 +8156,7 @@ handle_propfind(struct mg_connection *conn,
 	print_props(conn, conn->request_info.local_uri, filep);
 
 	/* If it is a directory, print directory entries too if Depth is not 0 */
-	if (filep && conn->ctx && filep->is_directory
+	if (filep && filep->is_directory
 	    && !mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING], "yes")
 	    && (depth == NULL || strcmp(depth, "0") != 0)) {
 		scan_directory(conn, path, conn, &print_dav_dir_entry);
@@ -9047,6 +9062,23 @@ mg_upload_field_found(const char *key,
 
 /* Helper function for deprecated mg_upload. */
 static int
+mg_upload_field_get(const char *key,
+                    const char *value,
+                    size_t value_size,
+                    void *user_data)
+{
+	/* Function should never be called */
+	(void)key;
+	(void)value;
+	(void)value_size;
+	(void)user_data;
+
+	return 0;
+}
+
+
+/* Helper function for deprecated mg_upload. */
+static int
 mg_upload_field_stored(const char *path, size_t file_size, void *user_data)
 {
 	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
@@ -9065,7 +9097,7 @@ mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
 	struct mg_upload_user_data fud = {conn, destination_dir, 0};
 	struct mg_form_data_handler fdh = {mg_upload_field_found,
-	                                   NULL,
+	                                   mg_upload_field_get,
 	                                   mg_upload_field_stored,
 	                                   0};
 	int ret;
@@ -10926,7 +10958,7 @@ reset_per_request_attributes(struct mg_connection *conn)
 static int
 set_sock_timeout(SOCKET sock, int milliseconds)
 {
-	int r1, r2;
+	int r0 = 0, r1, r2;
 
 #ifdef _WIN32
 	/* Windows specific */
@@ -10947,7 +10979,7 @@ set_sock_timeout(SOCKET sock, int milliseconds)
 
 #if defined(TCP_USER_TIMEOUT)
 	unsigned int uto = (unsigned int)milliseconds;
-	setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
+	r0 = setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
 #endif
 
 	memset(&tv, 0, sizeof(tv));
@@ -10961,7 +10993,7 @@ set_sock_timeout(SOCKET sock, int milliseconds)
 	r2 = setsockopt(
 	    sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE)&tv, sizeof(tv));
 
-	return r1 || r2;
+	return r0 || r1 || r2;
 }
 
 

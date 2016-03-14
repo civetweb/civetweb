@@ -128,16 +128,6 @@ field_stored(const struct mg_connection *conn,
 }
 
 
-static void
-remove_bad_file(const struct mg_connection *conn, const char *path)
-{
-	int r = remove(path);
-	if (r != 0) {
-		mg_cry(conn, "%s: Cannot remove invalid file %s", __func__, path);
-	}
-}
-
-
 static const char *
 search_boundary(const char *buf,
                 size_t buf_len,
@@ -171,7 +161,7 @@ mg_handle_form_request(struct mg_connection *conn,
 	int buf_fill = 0;
 	int r;
 	int field_count = 0;
-	struct file fstore;
+	struct file fstore = STRUCT_FILE_INITIALIZER;
 	size_t file_size = 0; /* init here, to a avoid a false positive
 	                         "uninitialized variable used" warning */
 
