@@ -10528,7 +10528,8 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		(void)err; /* TODO: set some error message */
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
-		CRYPTO_cleanup_all_ex_data();
+		/* maybe not? CRYPTO_cleanup_all_ex_data(); */
+		/* see https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 		ERR_remove_state(0);
 		return 0;
 	}
@@ -10539,7 +10540,8 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		(void)err; /* TODO: set some error message */
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
-		CRYPTO_cleanup_all_ex_data();
+		/* maybe not? CRYPTO_cleanup_all_ex_data(); */
+		/* see https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 		ERR_remove_state(0);
 		return 0;
 	}
@@ -11101,7 +11103,8 @@ close_connection(struct mg_connection *conn)
 		 */
 		SSL_shutdown(conn->ssl);
 		SSL_free(conn->ssl);
-		CRYPTO_cleanup_all_ex_data();
+		/* maybe not? CRYPTO_cleanup_all_ex_data(); */
+		/* see https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 		ERR_remove_state(0);
 		conn->ssl = NULL;
 	}
