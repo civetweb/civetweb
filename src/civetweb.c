@@ -2928,7 +2928,6 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 }
 
 
-#if !defined(NO_FILES)
 static int
 mg_remove(const char *path)
 {
@@ -2936,7 +2935,6 @@ mg_remove(const char *path)
 	to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
 	return DeleteFileW(wbuf) ? 0 : -1;
 }
-#endif
 
 
 static int
