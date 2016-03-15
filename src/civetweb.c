@@ -4845,6 +4845,15 @@ static const struct {
     {".xsl", 4, "application/xml"},
     {".xslt", 5, "application/xml"},
 
+    /* fonts */
+    {".ttf", 4, "application/font-sfnt"},
+    {".cff", 4, "application/font-sfnt"},
+    {".otf", 4, "application/font-sfnt"},
+    {".aat", 4, "application/font-sfnt"},
+    {".sil", 4, "application/font-sfnt"},
+    {".pfr", 4, "application/font-tdpfr"},
+    {".woff", 5, "application/font-woff"},
+
     /* audio */
     {".mp3", 4, "audio/mpeg"},
     {".oga", 4, "audio/ogg"},
