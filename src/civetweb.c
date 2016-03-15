@@ -10685,6 +10685,7 @@ initialize_ssl(struct mg_context *ctx)
 	return 1;
 }
 
+
 static int
 ssl_use_pem_file(struct mg_context *ctx, const char *pem)
 {
@@ -10917,6 +10918,8 @@ uninitialize_ssl(struct mg_context *ctx)
 		for (i = 0; i < CRYPTO_num_locks(); i++) {
 			pthread_mutex_destroy(&ssl_mutexes[i]);
 		}
+		mg_free(ssl_mutexes);
+		ssl_mutexes = NULL;
 	}
 }
 #endif /* !NO_SSL */
@@ -12416,10 +12419,6 @@ free_context(struct mg_context *ctx)
 	/* Deallocate SSL context */
 	if (ctx->ssl_ctx != NULL) {
 		SSL_CTX_free(ctx->ssl_ctx);
-	}
-	if (ssl_mutexes != NULL) {
-		mg_free(ssl_mutexes);
-		ssl_mutexes = NULL;
 	}
 #endif /* !NO_SSL */
 
