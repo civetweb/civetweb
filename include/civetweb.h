@@ -596,8 +596,8 @@ CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
                 looked up by the file extension.
 */
 CIVETWEB_API void mg_send_mime_file(struct mg_connection *conn,
-				    const char *path,
-				    const char *mime_type);
+                                    const char *path,
+                                    const char *mime_type);
 
 /* Store body data into a file. */
 CIVETWEB_API long long mg_store_body(struct mg_connection *conn,

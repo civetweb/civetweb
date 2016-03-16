@@ -6490,13 +6490,12 @@ void
 mg_send_file(struct mg_connection *conn, const char *path)
 {
 	mg_send_mime_file(conn, path, NULL);
-  
 }
 
 void
 mg_send_mime_file(struct mg_connection *conn,
-		  const char *path,
-		  const char *mime_type)
+                  const char *path,
+                  const char *mime_type)
 {
 	struct file file = STRUCT_FILE_INITIALIZER;
 	if (mg_stat(conn, path, &file)) {
