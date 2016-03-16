@@ -6339,7 +6339,8 @@ fclose_on_exec(struct file *filep, struct mg_connection *conn)
 static void
 handle_static_file_request(struct mg_connection *conn,
                            const char *path,
-                           struct file *filep)
+                           struct file *filep,
+                           const char *mime_type)
 {
 	char date[64], lm[64], etag[64];
 	char range[128]; /* large enough, so there will be no overflow */
@@ -6356,7 +6357,12 @@ handle_static_file_request(struct mg_connection *conn,
 		return;
 	}
 
-	get_mime_type(conn->ctx, path, &mime_vec);
+	if (mime_type == NULL) {
+		get_mime_type(conn->ctx, path, &mime_vec);
+	} else {
+		mime_vec.ptr = mime_type;
+		mime_vec.len = strlen(mime_type);
+	}
 	if (filep->size > INT64_MAX) {
 		send_http_error(conn,
 		                500,
@@ -6483,6 +6489,15 @@ handle_static_file_request(struct mg_connection *conn,
 void
 mg_send_file(struct mg_connection *conn, const char *path)
 {
+	mg_send_mime_file(conn, path, NULL);
+  
+}
+
+void
+mg_send_mime_file(struct mg_connection *conn,
+		  const char *path,
+		  const char *mime_type)
+{
 	struct file file = STRUCT_FILE_INITIALIZER;
 	if (mg_stat(conn, path, &file)) {
 		if (file.is_directory) {
@@ -6499,7 +6514,7 @@ mg_send_file(struct mg_connection *conn, const char *path)
 				                "Error: Directory listing denied");
 			}
 		} else {
-			handle_static_file_request(conn, path, &file);
+			handle_static_file_request(conn, path, &file, mime_type);
 		}
 	} else {
 		send_http_error(conn, 404, "%s", "Error: File not found");
@@ -9990,7 +10005,7 @@ handle_file_based_request(struct mg_connection *conn,
 		/* Send 304 "Not Modified" - this must not send any body data */
 		send_http_error(conn, 304, "%s", "");
 	} else {
-		handle_static_file_request(conn, path, file);
+		handle_static_file_request(conn, path, file, NULL);
 	}
 }
 

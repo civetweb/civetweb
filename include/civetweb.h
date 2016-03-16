@@ -588,6 +588,16 @@ CIVETWEB_API int mg_printf(struct mg_connection *,
 /* Send contents of the entire file together with HTTP headers. */
 CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
 
+/* Send contents of the entire file together with HTTP headers.
+   Parameters:
+     conn: Current connection information.
+     path: Full path to the file to send.
+     mime_type: Content-Type for file.  NULL will cause the type to be
+                looked up by the file extension.
+*/
+CIVETWEB_API void mg_send_mime_file(struct mg_connection *conn,
+				    const char *path,
+				    const char *mime_type);
 
 /* Store body data into a file. */
 CIVETWEB_API long long mg_store_body(struct mg_connection *conn,
