@@ -1077,9 +1077,10 @@ START_TEST(test_request_handlers)
 
 	ck_assert(ri != NULL);
 
-	ck_assert_str_eq(ri->uri, "200");
+#if defined(NO_FILES)
+	ck_assert_str_eq(ri->uri, "404");
+#else	
 	i = mg_read(client_conn, buf, sizeof(buf));
-	ck_assert_int_ge(i, (int)strlen(expected_cgi_result));
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
 		while ((i > 0) && ((buf[i - 1] == '\r') || (buf[i - 1] == '\n'))) {
 			i--;
@@ -1088,7 +1089,10 @@ START_TEST(test_request_handlers)
 	}
 	ck_assert_int_eq(i, (int)strlen(expected_cgi_result));
 	ck_assert_str_eq(buf, expected_cgi_result);
+    ck_assert_str_eq(ri->uri, "200");
 	mg_close_connection(client_conn);
+#endif
+
 #else
 	(void)expected_cgi_result;
 	(void)cgi_script_content;
