@@ -982,10 +982,10 @@ START_TEST(test_request_handlers)
 	fclose(f);
 #else
 	f = fopen("test.cgi", "w");
-	cgi_script_content = "#!/bin/sh\n"
+	cgi_script_content = "#!/bin/sh\n\n"
 	                     "echo \"Connection: close\"\n"
 	                     "echo \"Content-Type: text/plain\"\n"
-	                     "echo \n"
+	                     "echo\n"
 	                     "echo \"CGI test\"\n"
 	                     "\n";
 	fwrite(cgi_script_content, strlen(cgi_script_content), 1, f);
