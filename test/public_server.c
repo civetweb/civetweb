@@ -1079,14 +1079,14 @@ START_TEST(test_request_handlers)
 
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
-	ck_assert_int_ge(i, strlen(expected_cgi_result));
+	ck_assert_int_ge(i, (int)strlen(expected_cgi_result));
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
 		while ((i > 0) && ((buf[i - 1] == '\r') || (buf[i - 1] == '\n'))) {
 			i--;
 		}
 		buf[i] = 0;
 	}
-	ck_assert_int_eq(i, strlen(expected_cgi_result));
+	ck_assert_int_eq(i, (int)strlen(expected_cgi_result));
 	ck_assert_str_eq(buf, expected_cgi_result);
 	mg_close_connection(client_conn);
 #else
