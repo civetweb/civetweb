@@ -1075,6 +1075,7 @@ enum {
 	SSL_DEFAULT_VERIFY_PATHS,
 	SSL_CIPHER_LIST,
 	SSL_PROTOCOL_VERSION,
+	SSL_SHORT_TRUST,
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_TIMEOUT,
 #endif
@@ -1145,6 +1146,7 @@ static struct mg_option config_options[] = {
     {"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssl_cipher_list", CONFIG_TYPE_STRING, NULL},
     {"ssl_protocol_version", CONFIG_TYPE_NUMBER, "0"},
+    {"ssl_short_trust", CONFIG_TYPE_BOOLEAN, "no"},
 #if defined(USE_WEBSOCKET)
     {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
 #endif
@@ -10540,6 +10542,40 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		return 0;
 	}
 
+	int short_trust = !strcmp(conn->ctx->config[SSL_SHORT_TRUST], "yes");
+	if (short_trust) {
+		// TODO: verify cached certificate here to reduce disk io.
+
+		int should_verify_peer =
+				(conn->ctx->config[SSL_DO_VERIFY_PEER] != NULL)
+				&& (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER], "yes") == 0);
+
+		if (should_verify_peer) {
+			char *ca_path = conn->ctx->config[SSL_CA_PATH];
+			char *ca_file = conn->ctx->config[SSL_CA_FILE];
+			if (SSL_CTX_load_verify_locations(conn->ctx->ssl_ctx, ca_file, ca_path)
+				!= 1) {
+				mg_cry(fc(conn->ctx),
+					   "SSL_CTX_load_verify_locations error: %s "
+							   "ssl_verify_peer requires setting "
+							   "either ssl_ca_path or ssl_ca_file. Is any of them "
+							   "present in "
+							   "the .conf file?",
+					   ssl_error());
+				return 0;
+			}
+		}
+
+		printf("\nreload certificate\n");
+		char *pem;
+		if ((pem = conn->ctx->config[SSL_CERTIFICATE]) == NULL
+			&& conn->ctx->callbacks.init_ssl == NULL) {
+			return 1;
+		}
+		if (ssl_use_pem_file(conn->ctx, pem) == 0) {
+			return 0;
+		}
+	}
 	conn->ssl = SSL_new(s);
 	if (conn->ssl == NULL) {
 		return 0;
