@@ -13,7 +13,7 @@ environment:
   enable_lua: NO
   enable_lua_shared: NO
   c_standard: auto
-  cxx_standard: auto  
+  cxx_standard: auto
   matrix:
     - compiler: msvc-18-seh
       build_shared: NO
@@ -103,7 +103,7 @@ install:
   - C:\ssl\Win32OpenSSL.exe /SILENT /LOG="C:\ssl\install32.log"
   - C:\ssl\Win64OpenSSL.exe /SILENT /LOG="C:\ssl\install64.log"
   - dir C:\ssl
-  
+
 
 before_build:
   # Remove sh.exe from the path otherwise CMake will complain:
@@ -114,7 +114,7 @@ before_build:
   # Set up mingw commands
   - if "%compiler_name%"=="gcc" (set "generator=MinGW Makefiles")
   - if "%compiler_name%"=="gcc" (set "build=mingw32-make -j4")
-  - if "%compiler_name%"=="gcc" (set "test=mingw32-make CTEST_OUTPUT_ON_FAILURE=1 test")
+  - if "%compiler_name%"=="gcc" (set "test=mingw32-make test")
   # MSVC specific commands
   # Note: The minimum version officially supported for CivetWeb is VS2010. Older ones might work or not.
   - if "%compiler_version%"=="14" (set "vs_version=8" & set "vs_year=2005")
@@ -180,9 +180,10 @@ build_script:
   - cmd /c "%build%"
   - cd "%source_path%"
 
-test_script:   
+test_script:
   - cd "%build_path%"
   - appveyor AddMessage -Category Information "Test command '%build%'"
+  - set CTEST_OUTPUT_ON_FAILURE=1
   - cmd /c "%test%"
   - cd "%source_path%"
 
