@@ -990,6 +990,7 @@ START_TEST(test_request_handlers)
 	                     "\n";
 	fwrite(cgi_script_content, strlen(cgi_script_content), 1, f);
 	fclose(f);
+	system("chmod a+x test.cgi");
 #endif
 	expected_cgi_result = "CGI test";
 
