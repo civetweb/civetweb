@@ -969,6 +969,23 @@ start_civetweb(int argc, char *argv[])
 #else
 		fprintf(stdout, "Other\n");
 #endif
+		/* Determine 32/64 bit data mode.
+		 * see https://en.wikipedia.org/wiki/64-bit_computing */
+		fprintf(stdout,
+		        "Data model: i:%u/%u/%u/%u, f:%u/%u/%u, c:%u/%u, "
+		        "p:%u, s:%u, t:%u",
+		        sizeof(short),
+		        sizeof(int),
+		        sizeof(long),
+		        sizeof(long long),
+		        sizeof(float),
+		        sizeof(double),
+		        sizeof(long double),
+		        sizeof(char),
+		        sizeof(wchar_t),
+		        sizeof(void *),
+		        sizeof(size_t),
+		        sizeof(time_t));
 
 		exit(EXIT_SUCCESS);
 	}
