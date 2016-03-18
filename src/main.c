@@ -974,18 +974,18 @@ start_civetweb(int argc, char *argv[])
 		fprintf(stdout,
 		        "Data model: i:%u/%u/%u/%u, f:%u/%u/%u, c:%u/%u, "
 		        "p:%u, s:%u, t:%u",
-		        sizeof(short),
-		        sizeof(int),
-		        sizeof(long),
-		        sizeof(long long),
-		        sizeof(float),
-		        sizeof(double),
-		        sizeof(long double),
-		        sizeof(char),
-		        sizeof(wchar_t),
-		        sizeof(void *),
-		        sizeof(size_t),
-		        sizeof(time_t));
+		        (unsigned)sizeof(short),
+		        (unsigned)sizeof(int),
+		        (unsigned)sizeof(long),
+		        (unsigned)sizeof(long long),
+		        (unsigned)sizeof(float),
+		        (unsigned)sizeof(double),
+		        (unsigned)sizeof(long double),
+		        (unsigned)sizeof(char),
+		        (unsigned)sizeof(wchar_t),
+		        (unsigned)sizeof(void *),
+		        (unsigned)sizeof(size_t),
+		        (unsigned)sizeof(time_t));
 
 		exit(EXIT_SUCCESS);
 	}
