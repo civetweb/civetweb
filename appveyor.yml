@@ -191,7 +191,7 @@ after_test:
   - cmake "-DCMAKE_INSTALL_PREFIX=%install_path%" -P "%build_path%/cmake_install.cmake"
 
 matrix:
-  fast_finish: true
+  fast_finish: false
 
 cache:
   - C:\mingw-builds -> mingw.cmd
