@@ -80,7 +80,8 @@ main(const int argc, char *argv[])
 	srunner_add_suite(srunner, make_private_exe_suite());
 
 	/* Write test logs to a file */
-	srunner_set_log(sr, "test.log");
+	srunner_set_log(srunner, "test.log");
+	srunner_set_xml(srunner, "test.xml");
 
 	/* CK_NORMAL offers not enough diagnosis during setup phase*/
 	srunner_run(srunner, suite, test_case, CK_VERBOSE);
