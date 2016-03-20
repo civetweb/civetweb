@@ -103,6 +103,7 @@ install:
   - C:\ssl\Win32OpenSSL_102g.exe /SILENT /LOG="C:\ssl\install32_102g.log"
   - C:\ssl\Win64OpenSSL_102g.exe /SILENT /LOG="C:\ssl\install64_102g.log"
   - dir C:\ssl
+  - type C:\ssl\install64_102g.log
 
 
 before_build:
