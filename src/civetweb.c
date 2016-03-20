@@ -858,13 +858,13 @@ typedef struct x509_store_ctx_st X509_STORE_CTX;
 #define SSL_VERIFY_PEER (1)
 #define SSL_VERIFY_FAIL_IF_NO_PEER_CERT (2)
 #define SSL_VERIFY_CLIENT_ONCE (4)
-#define SSL_OP_ALL (0x80000BFFL)
-#define SSL_OP_NO_SSLv2 (0x01000000L)
-#define SSL_OP_NO_SSLv3 (0x02000000L)
-#define SSL_OP_NO_TLSv1 (0x04000000L)
-#define SSL_OP_NO_TLSv1_2 (0x08000000L)
-#define SSL_OP_NO_TLSv1_1 (0x10000000L)
-#define SSL_OP_SINGLE_DH_USE (0x00100000L)
+#define SSL_OP_ALL (0x80000BFFUL)
+#define SSL_OP_NO_SSLv2 (0x01000000UL)
+#define SSL_OP_NO_SSLv3 (0x02000000UL)
+#define SSL_OP_NO_TLSv1 (0x04000000UL)
+#define SSL_OP_NO_TLSv1_2 (0x08000000UL)
+#define SSL_OP_NO_TLSv1_1 (0x10000000UL)
+#define SSL_OP_SINGLE_DH_USE (0x00100000UL)
 
 struct ssl_func {
 	const char *name;  /* SSL function name */
