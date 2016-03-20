@@ -1,7 +1,7 @@
 #!/bin/sh
 
-echo "Content-Type: text/plain"
-echo
+printf "Content-Type: text/plain\r\n"
+printf "\r\n"
 
 echo "This is a shell script called by CGI:"
 echo
