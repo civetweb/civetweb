@@ -8,7 +8,7 @@ compiler:
 
 os:
   - linux
-#  - osx
+  - osx
 
 env:
   global:
@@ -2326,7 +2326,8 @@ env:
 #      ENABLE_WEBSOCKETS=YES
 #      ENABLE_LUA=YES
 #      ENABLE_DUKTAPE=YES
-
+  allow_failures:
+    - os: osx
 
 addons:
   apt:
