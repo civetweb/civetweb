@@ -3581,7 +3581,7 @@ get_random(void)
 		/* lfsr will be only 0 if has not been initialized,
 		 * so this code is called only once. */
 		lfsr = (((uint64_t)now.tv_sec) << 21) ^ ((uint64_t)now.tv_nsec)
-		       ^ ((uint64_t)(ptrdiff_t)&now) ^ ((uint64_t)pthread_self())
+		       ^ ((uint64_t)(ptrdiff_t)&now)
 		       ^ (((uint64_t)time(NULL)) << 33);
 		lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
 		      + (uint64_t)(ptrdiff_t)&now;
@@ -10526,7 +10526,7 @@ ssl_id_callback(void)
 		}
 		return tls->thread_idx;
 	} else {
-		return (unsigned long)pthread_self();
+		return (unsigned long)((void*)pthread_self());
 	}
 
 #ifdef __clang__
