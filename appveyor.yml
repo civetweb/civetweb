@@ -99,11 +99,9 @@ install:
   - if not exist C:\ssl\ (md C:\ssl\)
   - if not exist C:\ssl\Win32OpenSSL_102g.exe (curl http://slproweb.com/download/Win32OpenSSL-1_0_2g.exe -o C:\ssl\Win32OpenSSL_102g.exe)
   - if not exist C:\ssl\Win64OpenSSL_102g.exe (curl http://slproweb.com/download/Win64OpenSSL-1_0_2g.exe -o C:\ssl\Win64OpenSSL_102g.exe)
-  - dir C:\ssl
   - C:\ssl\Win32OpenSSL_102g.exe /SILENT /LOG="C:\ssl\install32_102g.log"
   - C:\ssl\Win64OpenSSL_102g.exe /SILENT /LOG="C:\ssl\install64_102g.log"
   - dir C:\ssl
-  - type C:\ssl\install64_102g.log
 
 
 before_build:
@@ -198,3 +196,13 @@ cache:
   - C:\mingw-builds -> mingw.cmd
   - C:\third-party -> **\CMakeLists.txt
   - C:\ssl
+
+artifacts:
+  - path: 'C:\ssl\*.log' # OpenSSL install logs
+    name: OpenSSL install logs
+  - path: '**\*.exe' # All created exe files
+    name: Applications
+  - path: '**\*.log' # All Log files
+    name: Logs
+  - path: '**\test.*' # All Test output files
+    name: Test
