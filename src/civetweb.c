@@ -3581,8 +3581,7 @@ get_random(void)
 		/* lfsr will be only 0 if has not been initialized,
 		 * so this code is called only once. */
 		lfsr = (((uint64_t)now.tv_sec) << 21) ^ ((uint64_t)now.tv_nsec)
-		       ^ ((uint64_t)(ptrdiff_t)&now)
-		       ^ (((uint64_t)time(NULL)) << 33);
+		       ^ ((uint64_t)(ptrdiff_t)&now) ^ (((uint64_t)time(NULL)) << 33);
 		lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
 		      + (uint64_t)(ptrdiff_t)&now;
 	} else {
@@ -10526,12 +10525,12 @@ ssl_id_callback(void)
 		}
 		return tls->thread_idx;
 	} else {
-        /* pthread_t may be any data type, so a simple cast to unsigned long
-         * can rise a warning/error, depending on the platform.
-         * Here memcpy is used as an anything-to-anything cast. */
-        unsigned long ret = 0;
-        pthread_t t = pthread_self();
-        memcpy(&ret, &t, sizeof(pthread_t));
+		/* pthread_t may be any data type, so a simple cast to unsigned long
+		 * can rise a warning/error, depending on the platform.
+		 * Here memcpy is used as an anything-to-anything cast. */
+		unsigned long ret = 0;
+		pthread_t t = pthread_self();
+		memcpy(&ret, &t, sizeof(pthread_t));
 		return ret;
 	}
 
