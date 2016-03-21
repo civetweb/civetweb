@@ -10568,10 +10568,10 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		char *pem;
 		if ((pem = conn->ctx->config[SSL_CERTIFICATE]) == NULL
 			&& conn->ctx->callbacks.init_ssl == NULL) {
-			return 1;
+			return 0;
 		}
 		if (ssl_use_pem_file(conn->ctx, pem) == 0) {
-			return 1;
+			return 0;
 		}
 	}
 	conn->ssl = SSL_new(s);
