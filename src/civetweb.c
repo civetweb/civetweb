@@ -10526,7 +10526,13 @@ ssl_id_callback(void)
 		}
 		return tls->thread_idx;
 	} else {
-		return (unsigned long)((void*)pthread_self());
+        /* pthread_t may be any data type, so a simple cast to unsigned long
+         * can rise a warning/error, depending on the platform.
+         * Here memcpy is used as an anything-to-anything cast. */
+        unsigned long ret = 0;
+        pthread_t t = pthread_self();
+        memcpy(&ret, &t, sizeof(pthread_t));
+		return ret;
 	}
 
 #ifdef __clang__
