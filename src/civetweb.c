@@ -10532,7 +10532,8 @@ ssl_id_callback(void)
 }
 
 static pthread_mutex_t *ssl_mutexes;
-
+static int ssl_use_pem_file(struct mg_context *ctx, const char *pem);
+static const char * ssl_error(void);
 
 static int
 sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
@@ -10544,8 +10545,6 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 
 	int short_trust = !strcmp(conn->ctx->config[SSL_SHORT_TRUST], "yes");
 	if (short_trust) {
-		// TODO: verify cached certificate here to reduce disk io.
-
 		int should_verify_peer =
 				(conn->ctx->config[SSL_DO_VERIFY_PEER] != NULL)
 				&& (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER], "yes") == 0);
@@ -10566,14 +10565,13 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 			}
 		}
 
-		printf("\nreload certificate\n");
 		char *pem;
 		if ((pem = conn->ctx->config[SSL_CERTIFICATE]) == NULL
 			&& conn->ctx->callbacks.init_ssl == NULL) {
 			return 1;
 		}
 		if (ssl_use_pem_file(conn->ctx, pem) == 0) {
-			return 0;
+			return 1;
 		}
 	}
 	conn->ssl = SSL_new(s);
