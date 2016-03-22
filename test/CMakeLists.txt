@@ -1,8 +1,3 @@
-if (${CMAKE_VERSION} VERSION_GREATER 3.0.2 OR
-    ${CMAKE_VERSION} VERSION_EQUAL 3.0.2)
-  cmake_policy(SET CMP0028 OLD)
-endif()
-
 # Determine if we should print to the output
 if (CIVETWEB_ENABLE_THIRD_PARTY_OUTPUT)
   set(THIRD_PARTY_LOGGING 0)
