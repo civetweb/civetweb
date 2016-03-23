@@ -3858,11 +3858,17 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 			 * blocking in close_socket_gracefully, so we can not distinguish
 			 * here. We have to wait for the timeout in both cases for now.
 			 */
-			if (err == EAGAIN || err == EWOULDBLOCK) {
-				/* standard case if called from close_socket_gracefully
+			if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
+				/* EAGAIN/EWOULDBLOCK:
+				 * standard case if called from close_socket_gracefully
 				 * => should return -1 */
 				/* or timeout occured
 				 * => the code must stay in the while loop */
+
+				/* EINTR can be generated on a socket with a timeout set even
+				 * when SA_RESTART is effective for all relevant signals
+				 * (see signal(7)).
+				 * => stay in the while loop */
 			} else {
 				DEBUG_TRACE("recv() failed, error %d", err);
 				return -1;
