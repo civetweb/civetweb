@@ -187,7 +187,12 @@ test_script:
   - cd "%source_path%"
 
 after_test:
+  - cd
+  - dir
+  - md dist
   - cmake "-DCMAKE_INSTALL_PREFIX=%install_path%" -P "%build_path%/cmake_install.cmake"
+  - copy "%build_path%" dist\
+  - dir dist\
 
 matrix:
   fast_finish: false
@@ -198,11 +203,4 @@ cache:
   - C:\ssl
 
 artifacts:
-  - path: 'C:\ssl\*.log' # OpenSSL install logs
-    name: OpenSSL install logs
-  - path: '**\*.exe' # All created exe files
-    name: Applications
-  - path: '**\*.log' # All Log files
-    name: Logs
-  - path: '**\test.*' # All Test output files
-    name: Test
+  - path: dist\*
