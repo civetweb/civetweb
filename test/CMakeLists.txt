@@ -9,8 +9,9 @@ endif()
 include(ExternalProject)
 ExternalProject_Add(check-unit-test-framework
   DEPENDS c-library
-  URL "https://downloads.sourceforge.net/project/check/check/${CIVETWEB_CHECK_VERSION}/check-${CIVETWEB_CHECK_VERSION}.tar.gz"
-  URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
+  #URL "https://downloads.sourceforge.net/project/check/check/${CIVETWEB_CHECK_VERSION}/check-${CIVETWEB_CHECK_VERSION}.tar.gz"
+  #URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
+  URL "https://github.com/libcheck/check/archive/master.zip"
   PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
   BUILD_IN_SOURCE 1
   PATCH_COMMAND ${CMAKE_COMMAND}
