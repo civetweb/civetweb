@@ -2052,10 +2052,17 @@ mg_get_header(const struct mg_connection *conn, const char *name)
 static const char *
 next_option(const char *list, struct vec *val, struct vec *eq_val)
 {
+	int end;
+
+reparse:
 	if (val == NULL || list == NULL || *list == '\0') {
 		/* End of the list */
 		list = NULL;
 	} else {
+		/* Skip over leading LWS */
+		while (*list == ' ' || *list == '\t')
+			list++;
+
 		val->ptr = list;
 		if ((list = strchr(val->ptr, ',')) != NULL) {
 			/* Comma found. Store length and shift the list ptr */
@@ -2065,6 +2072,17 @@ next_option(const char *list, struct vec *val, struct vec *eq_val)
 			/* This value is the last one */
 			list = val->ptr + strlen(val->ptr);
 			val->len = ((size_t)(list - val->ptr));
+		}
+
+		/* Adjust length for trailing LWS */
+		end = (int)val->len - 1;
+		while (end >= 0 && (val->ptr[end] == ' ' || val->ptr[end] == '\t'))
+			end--;
+		val->len = (size_t)(end + 1);
+
+		if (val->len == 0) {
+			/* Ignore any empty entries. */
+			goto reparse;
 		}
 
 		if (eq_val != NULL) {
@@ -2083,6 +2101,24 @@ next_option(const char *list, struct vec *val, struct vec *eq_val)
 	return list;
 }
 
+/* A helper function for checking if a comma separated list of values contains
+ * the given option (case insensitvely).
+ * 'header' can be NULL, in which case false is returned. */
+static int header_has_option(const char *header, const char *option)
+{
+	struct vec opt_vec;
+	struct vec eq_vec;
+
+	assert(option != NULL);
+	assert(option[0] != '\0');
+
+	while ((header = next_option(header, &opt_vec, &eq_vec)) != NULL) {
+		if (mg_strncasecmp(option, opt_vec.ptr, opt_vec.len) == 0)
+			return 1;
+	}
+
+	return 0;
+}
 
 /* Perform case-insensitive match of string against pattern */
 static int
@@ -2139,7 +2175,7 @@ should_keep_alive(const struct mg_connection *conn)
 		const char *header = mg_get_header(conn, "Connection");
 		if (conn->must_close || conn->internal_error || conn->status_code == 401
 		    || mg_strcasecmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes") != 0
-		    || (header != NULL && mg_strcasecmp(header, "keep-alive") != 0)
+		    || (header != NULL && !header_has_option(header, "keep-alive"))
 		    || (header == NULL && http_version
 		        && 0 != strcmp(http_version, "1.1"))) {
 			return 0;
@@ -3822,11 +3858,17 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 			 * blocking in close_socket_gracefully, so we can not distinguish
 			 * here. We have to wait for the timeout in both cases for now.
 			 */
-			if (err == EAGAIN || err == EWOULDBLOCK) {
-				/* standard case if called from close_socket_gracefully
+			if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
+				/* EAGAIN/EWOULDBLOCK:
+				 * standard case if called from close_socket_gracefully
 				 * => should return -1 */
 				/* or timeout occured
 				 * => the code must stay in the while loop */
+
+				/* EINTR can be generated on a socket with a timeout set even
+				 * when SA_RESTART is effective for all relevant signals
+				 * (see signal(7)).
+				 * => stay in the while loop */
 			} else {
 				DEBUG_TRACE("recv() failed, error %d", err);
 				return -1;
@@ -7472,8 +7514,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		conn->status_code = 200;
 	}
 	connection_state = get_header(&ri, "Connection");
-	if (connection_state == NULL
-	    || mg_strcasecmp(connection_state, "keep-alive")) {
+	if (!header_has_option(connection_state, "keep-alive")) {
 		conn->must_close = 1;
 	}
 	(void)mg_printf(conn, "HTTP/1.1 %d %s\r\n", conn->status_code, status_text);
