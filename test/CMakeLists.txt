@@ -9,17 +9,14 @@ endif()
 include(ExternalProject)
 ExternalProject_Add(check-unit-test-framework
   DEPENDS c-library
-  #URL "https://downloads.sourceforge.net/project/check/check/${CIVETWEB_CHECK_VERSION}/check-${CIVETWEB_CHECK_VERSION}.tar.gz"
-  #URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
-  URL "https://github.com/libcheck/check/archive/master.zip"
+  URL "https://codeload.github.com/libcheck/check/zip/${CIVETWEB_CHECK_VERSION}"
+  DOWNLOAD_NAME "${CIVETWEB_CHECK_VERSION}.zip"
+  URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
   PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
   BUILD_IN_SOURCE 1
-  PATCH_COMMAND ${CMAKE_COMMAND}
-    -DSOURCE_DIR=<SOURCE_DIR>
-    -DBINARY_DIR=<BINARY_DIR>
-    -DINSTALL_DIR=<INSTALL_DIR>
-    -DVERSION=${CIVETWEB_CHECK_VERSION}
-    -P ${CMAKE_SOURCE_DIR}/cmake/check/patch.cmake
+  PATCH_COMMAND patch
+     ${CIVETWEB_THIRD_PARTY_DIR}/src/check-unit-test-framework/CMakeLists.txt		
+     ${CMAKE_SOURCE_DIR}/cmake/check/c82fe8888aacfe784476112edd3878256d2e30bc.patch
   CMAKE_ARGS
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
@@ -30,6 +27,7 @@ ExternalProject_Add(check-unit-test-framework
   LOG_BUILD ${THIRD_PARTY_LOGGING}
   LOG_TEST ${THIRD_PARTY_LOGGING}
   LOG_INSTALL ${THIRD_PARTY_LOGGING})
+
 ExternalProject_Get_Property(check-unit-test-framework INSTALL_DIR)
 set(CHECK_INSTALL_DIR ${INSTALL_DIR})
 unset(INSTALL_DIR)
