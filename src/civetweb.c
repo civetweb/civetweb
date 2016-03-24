@@ -2075,10 +2075,10 @@ reparse:
 		}
 
 		/* Adjust length for trailing LWS */
-		end = val->len - 1;
+		end = (int)val->len - 1;
 		while (end >= 0 && (val->ptr[end] == ' ' || val->ptr[end] == '\t'))
 			end--;
-		val->len = end + 1;
+		val->len = (size_t)(end + 1);
 
 		if (val->len == 0) {
 			/* Ignore any empty entries. */
