@@ -10531,18 +10531,12 @@ ssl_id_callback(void)
 #endif
 }
 
-static pthread_mutex_t *ssl_mutexes;
 static int ssl_use_pem_file(struct mg_context *ctx, const char *pem);
 static const char * ssl_error(void);
 
 static int
-sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
+refresh_trust(struct mg_connection *conn)
 {
-	int ret, err;
-	if (!conn) {
-		return 0;
-	}
-
 	static int reload_lock = 0;
 	static long int data_check = 0;
 
@@ -10558,42 +10552,61 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		t = (long int) cert_buf.st_mtime;
 	}
 
-	int short_trust = !strcmp(conn->ctx->config[SSL_SHORT_TRUST], "yes");
 	if (data_check != t) {
 		data_check = t;
-		if (short_trust) {
-			int should_verify_peer =
-					(conn->ctx->config[SSL_DO_VERIFY_PEER] != NULL)
-					&& (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER], "yes") == 0);
 
-			if (should_verify_peer) {
-				char *ca_path = conn->ctx->config[SSL_CA_PATH];
-				char *ca_file = conn->ctx->config[SSL_CA_FILE];
-				if (SSL_CTX_load_verify_locations(conn->ctx->ssl_ctx, ca_file, ca_path)
-					!= 1) {
-					mg_cry(fc(conn->ctx),
-						   "SSL_CTX_load_verify_locations error: %s "
-								   "ssl_verify_peer requires setting "
-								   "either ssl_ca_path or ssl_ca_file. Is any of them "
-								   "present in "
-								   "the .conf file?",
-						   ssl_error());
-					return 0;
-				}
-			}
+		int should_verify_peer =
+				(conn->ctx->config[SSL_DO_VERIFY_PEER] != NULL)
+				&& (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER], "yes") == 0);
 
-			if (!reload_lock) {
-				reload_lock = 1;
-				if (ssl_use_pem_file(conn->ctx, pem) == 0) {
-					return 0;
-				}
-				reload_lock = 0;
+		if (should_verify_peer) {
+			char *ca_path = conn->ctx->config[SSL_CA_PATH];
+			char *ca_file = conn->ctx->config[SSL_CA_FILE];
+			if (SSL_CTX_load_verify_locations(conn->ctx->ssl_ctx, ca_file, ca_path)
+				!= 1) {
+				mg_cry(fc(conn->ctx),
+					   "SSL_CTX_load_verify_locations error: %s "
+							   "ssl_verify_peer requires setting "
+							   "either ssl_ca_path or ssl_ca_file. Is any of them "
+							   "present in "
+							   "the .conf file?",
+					   ssl_error());
+				return 0;
 			}
+		}
+
+		if (!reload_lock) {
+			reload_lock = 1;
+			if (ssl_use_pem_file(conn->ctx, pem) == 0) {
+				return 0;
+			}
+			reload_lock = 0;
 		}
 	}
 	/* lock while cert is reloading */
 	while (reload_lock) {
 		sleep(1);
+	}
+
+	return 1;
+}
+
+static pthread_mutex_t *ssl_mutexes;
+
+static int
+sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
+{
+	int ret, err;
+	if (!conn) {
+		return 0;
+	}
+
+	int short_trust = !strcmp(conn->ctx->config[SSL_SHORT_TRUST], "yes");
+	if (short_trust) {
+		int trust_ret = refresh_trust(conn);
+		if (!trust_ret) {
+			return trust_ret;
+		}
 	}
 
 	conn->ssl = SSL_new(s);
