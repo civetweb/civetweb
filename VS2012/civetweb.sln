@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual C++ Express 2010
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "civetweb_lua", "civetweb_lua\civetweb_lua.vcxproj", "{9BE9C008-E851-42B1-A034-BD4630AE4CD6}"
 	ProjectSection(ProjectDependencies) = postProject
 		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD} = {0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}
@@ -17,8 +19,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "upload", "upload\upload.vcxproj", "{882EC43C-2EEE-434B-A711-C845678D29C6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testclient", "..\testutils\testclient\testclient.vcxproj", "{15D6AAA6-36CE-453B-ABBF-3C52BD247EBE}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Browser", "..\testutils\Browser\Browser.vcxproj", "{277772B0-D4B3-451E-86B6-261FBC645793}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testclient2", "..\testutils\testclient_chunked_linux\testclient2.vcxproj", "{150140C5-2989-4D0D-8714-5A47B78EAD4D}"
 EndProject
@@ -114,16 +114,6 @@ Global
 		{15D6AAA6-36CE-453B-ABBF-3C52BD247EBE}.Release|Win32.ActiveCfg = Release|Win32
 		{15D6AAA6-36CE-453B-ABBF-3C52BD247EBE}.Release|Win32.Build.0 = Release|Win32
 		{15D6AAA6-36CE-453B-ABBF-3C52BD247EBE}.Release|x64.ActiveCfg = Release|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Debug|Win32.ActiveCfg = Debug|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Debug|Win32.Build.0 = Debug|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Debug|x64.ActiveCfg = Debug|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Release|Win32.ActiveCfg = Release|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Release|Win32.Build.0 = Release|Win32
-		{277772B0-D4B3-451E-86B6-261FBC645793}.Release|x64.ActiveCfg = Release|Win32
 		{150140C5-2989-4D0D-8714-5A47B78EAD4D}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{150140C5-2989-4D0D-8714-5A47B78EAD4D}.Debug|Mixed Platforms.Build.0 = Debug|Win32
 		{150140C5-2989-4D0D-8714-5A47B78EAD4D}.Debug|Win32.ActiveCfg = Debug|Win32
