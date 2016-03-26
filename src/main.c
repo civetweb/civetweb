@@ -973,7 +973,7 @@ start_civetweb(int argc, char *argv[])
 		 * see https://en.wikipedia.org/wiki/64-bit_computing */
 		fprintf(stdout,
 		        "Data model: i:%u/%u/%u/%u, f:%u/%u/%u, c:%u/%u, "
-		        "p:%u, s:%u, t:%u",
+		        "p:%u, s:%u, t:%u\n",
 		        (unsigned)sizeof(short),
 		        (unsigned)sizeof(int),
 		        (unsigned)sizeof(long),

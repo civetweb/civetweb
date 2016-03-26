@@ -171,11 +171,11 @@ class FooHandler : public CivetHandler
 			if (rlen > sizeof(buf)) {
 				rlen = sizeof(buf);
 			}
-			rlen = mg_read(conn, buf, rlen);
+			rlen = mg_read(conn, buf, (size_t)rlen);
 			if (rlen <= 0) {
 				break;
 			}
-			wlen = mg_write(conn, buf, rlen);
+			wlen = mg_write(conn, buf, (size_t)rlen);
 			if (rlen != rlen) {
 				break;
 			}
