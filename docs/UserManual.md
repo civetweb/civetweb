@@ -439,6 +439,18 @@ TLS1.0+TLS1.1+TLS1.2 | 2
 TLS1.1+TLS1.2 | 3
 TLS1.2 | 4
 
+### ssl_short_trust `no`
+Enables the use of short lived certificates. This will allow for the certificates
+and keys specified in `ssl_certificate`, `ssl_ca_file` and `ssl_ca_path` to be 
+exchanged and reloaded while the server is running.
+
+In an automated environment it is advised to first write the new pem file to
+a different filename and then to rename it to the configured pem file name to
+increase performance while swapping the certificate.
+
+Disk IO performance can be improved when keeping the certificates and keys stored
+on a tmpfs (linux) on a system with very high throughput.
+
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
 support as well as support for Lua Server Pages.

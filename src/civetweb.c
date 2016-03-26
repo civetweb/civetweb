@@ -10584,20 +10584,30 @@ ssl_id_callback(void)
 #endif
 }
 
-static pthread_mutex_t *ssl_mutexes;
 static int ssl_use_pem_file(struct mg_context *ctx, const char *pem);
 static const char * ssl_error(void);
 
 static int
-sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
+refresh_trust(struct mg_connection *conn)
 {
-	int ret, err;
-	if (!conn) {
+	static int reload_lock = 0;
+	static long int data_check = 0;
+
+	char *pem;
+	if ((pem = conn->ctx->config[SSL_CERTIFICATE]) == NULL
+		&& conn->ctx->callbacks.init_ssl == NULL) {
 		return 0;
 	}
 
-	int short_trust = !strcmp(conn->ctx->config[SSL_SHORT_TRUST], "yes");
-	if (short_trust) {
+	struct stat cert_buf;
+	long int t = data_check;
+	if (stat(pem, &cert_buf) != -1) {
+		t = (long int) cert_buf.st_mtime;
+	}
+
+	if (data_check != t) {
+		data_check = t;
+
 		int should_verify_peer =
 				(conn->ctx->config[SSL_DO_VERIFY_PEER] != NULL)
 				&& (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER], "yes") == 0);
@@ -10618,15 +10628,40 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 			}
 		}
 
-		char *pem;
-		if ((pem = conn->ctx->config[SSL_CERTIFICATE]) == NULL
-			&& conn->ctx->callbacks.init_ssl == NULL) {
-			return 0;
-		}
-		if (ssl_use_pem_file(conn->ctx, pem) == 0) {
-			return 0;
+		if (!reload_lock) {
+			reload_lock = 1;
+			if (ssl_use_pem_file(conn->ctx, pem) == 0) {
+				return 0;
+			}
+			reload_lock = 0;
 		}
 	}
+	/* lock while cert is reloading */
+	while (reload_lock) {
+		sleep(1);
+	}
+
+	return 1;
+}
+
+static pthread_mutex_t *ssl_mutexes;
+
+static int
+sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
+{
+	int ret, err;
+	if (!conn) {
+		return 0;
+	}
+
+	int short_trust = !strcmp(conn->ctx->config[SSL_SHORT_TRUST], "yes");
+	if (short_trust) {
+		int trust_ret = refresh_trust(conn);
+		if (!trust_ret) {
+			return trust_ret;
+		}
+	}
+
 	conn->ssl = SSL_new(s);
 	if (conn->ssl == NULL) {
 		return 0;
