@@ -84,16 +84,16 @@ simplicity by a carefully selected list of features:
 <a href="http://sqlite.org">
 ![Sqlite3](https://raw.github.com/civetweb/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")
 </a>
-<a href=http://keplerproject.github.io/luafilesystem/">
+<a href="http://keplerproject.github.io/luafilesystem/">
 ![LuaFileSystem](https://raw.github.com/civetweb/civetweb/master/resources/luafilesystem-logo.jpg "LuaFileSystem Logo")
 </a>
-<a href=http://lua.sqlite.org/index.cgi/index">
+<a href="http://lua.sqlite.org/index.cgi/index">
 ![LuaSQLite3](https://raw.github.com/civetweb/civetweb/master/resources/luasqlite-logo.jpg "LuaSQLite3 Logo")
 </a>
-<a href=http://viremo.eludi.net/LuaXML/index.html">
+<a href="http://viremo.eludi.net/LuaXML/index.html">
 ![LuaXML](https://raw.github.com/civetweb/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")
 </a>
-<a href=http://duktape.org">
+<a href="http://duktape.org">
 ![Duktape](https://raw.github.com/civetweb/civetweb/master/resources/duktape-logo.png "Duktape Logo")
 </a>
 
