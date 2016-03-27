@@ -105,7 +105,7 @@ wait_not_null(void *volatile *data)
 
 #if defined(__MINGW32__) || defined(__GNUC__)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunreachable-code-return"
+#pragma GCC diagnostic ignored "-Wunreachable-code"
 #endif
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -654,7 +654,7 @@ websock_server_data(struct mg_connection *conn,
 
 #if defined(__MINGW32__) || defined(__GNUC__)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunreachable-code-return"
+#pragma GCC diagnostic ignored "-Wunreachable-code"
 #endif
 #ifdef __clang__
 #pragma clang diagnostic push
