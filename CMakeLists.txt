@@ -92,7 +92,6 @@ message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
 message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
 
-
 # Link to the shared LUA library
 cmake_dependent_option(
   CIVETWEB_ENABLE_LUA_SHARED  "Link to the shared LUA system library" OFF
@@ -398,14 +397,14 @@ add_subdirectory(src)
 include(CTest)
 if (BUILD_TESTING)
   # Check unit testing framework Version
-  set(CIVETWEB_CHECK_VERSION 0.9.14 CACHE STRING
+  set(CIVETWEB_CHECK_VERSION 0.10.0 CACHE STRING
     "The version of Check unit testing framework to build and include statically")
   set_property(CACHE CIVETWEB_CHECK_VERSION PROPERTY VALUE ${CIVETWEB_CHECK_VERSION})
   message(STATUS "Check Unit Testing Framework Version - ${CIVETWEB_CHECK_VERSION}")
   mark_as_advanced(CIVETWEB_CHECK_VERSION)
 
   # Check unit testing framework Verification Hash
-  set(CIVETWEB_CHECK_MD5_HASH 38263d115d784c17aa3b959ce94be8b8 CACHE STRING
+  set(CIVETWEB_CHECK_MD5_HASH 67a34c40b5bc888737f4e5ae82e9939f CACHE STRING
     "The hash of Check unit testing framework archive to be downloaded")
   set_property(CACHE CIVETWEB_CHECK_MD5_HASH PROPERTY VALUE ${CIVETWEB_CHECK_MD5_HASH})
   mark_as_advanced(CIVETWEB_CHECK_MD5_HASH)
