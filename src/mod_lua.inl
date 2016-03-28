@@ -283,6 +283,7 @@ struct lsp_var_reader_data {
 	unsigned state;
 };
 
+
 static const char *
 lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 {
@@ -311,6 +312,7 @@ lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 	reader->state++;
 	return ret;
 }
+
 
 static int
 lsp(struct mg_connection *conn,
@@ -396,6 +398,7 @@ lsp(struct mg_connection *conn,
 	return 0;
 }
 
+
 /* mg.write: Send data to the client */
 static int
 lsp_write(lua_State *L)
@@ -417,6 +420,7 @@ lsp_write(lua_State *L)
 	return 0;
 }
 
+
 /* mg.read: Read data from the client (e.g., from a POST request) */
 static int
 lsp_read(lua_State *L)
@@ -432,6 +436,7 @@ lsp_read(lua_State *L)
 
 	return 1;
 }
+
 
 /* mg.keep_alive: Allow Lua pages to use the http keep-alive mechanism */
 static int
@@ -456,6 +461,7 @@ lsp_keep_alive(lua_State *L)
 	lua_pushboolean(L, should_keep_alive(conn));
 	return 1;
 }
+
 
 /* mg.include: Include another .lp file */
 static int
@@ -482,6 +488,7 @@ lsp_include(lua_State *L)
 	return 0;
 }
 
+
 /* mg.cry: Log an error. Default value for mg.onerror. */
 static int
 lsp_cry(lua_State *L)
@@ -499,6 +506,7 @@ lsp_cry(lua_State *L)
 	}
 	return 0;
 }
+
 
 /* mg.redirect: Redirect the request (internally). */
 static int
@@ -520,6 +528,7 @@ lsp_redirect(lua_State *L)
 	return 0;
 }
 
+
 /* mg.send_file */
 static int
 lsp_send_file(lua_State *L)
@@ -538,6 +547,7 @@ lsp_send_file(lua_State *L)
 	return 0;
 }
 
+
 /* mg.get_time */
 static int
 lsp_get_time(lua_State *L)
@@ -552,6 +562,7 @@ lsp_get_time(lua_State *L)
 	lua_pushnumber(L, d);
 	return 1;
 }
+
 
 /* mg.get_var */
 static int
@@ -583,6 +594,7 @@ lsp_get_var(lua_State *L)
 	}
 	return 1;
 }
+
 
 /* mg.get_mime_type */
 static int
@@ -618,6 +630,7 @@ lsp_get_mime_type(lua_State *L)
 	return 1;
 }
 
+
 /* mg.get_cookie */
 static int
 lsp_get_cookie(lua_State *L)
@@ -649,6 +662,7 @@ lsp_get_cookie(lua_State *L)
 	return 1;
 }
 
+
 /* mg.md5 */
 static int
 lsp_md5(lua_State *L)
@@ -678,6 +692,7 @@ lsp_md5(lua_State *L)
 	return 1;
 }
 
+
 /* mg.url_encode */
 static int
 lsp_url_encode(lua_State *L)
@@ -701,6 +716,7 @@ lsp_url_encode(lua_State *L)
 	}
 	return 1;
 }
+
 
 /* mg.url_decode */
 static int
@@ -727,6 +743,7 @@ lsp_url_decode(lua_State *L)
 	}
 	return 1;
 }
+
 
 /* mg.base64_encode */
 static int
@@ -757,6 +774,7 @@ lsp_base64_encode(lua_State *L)
 	}
 	return 1;
 }
+
 
 /* mg.base64_encode */
 static int
@@ -799,6 +817,7 @@ lsp_base64_decode(lua_State *L)
 	return 1;
 }
 
+
 /* mg.get_response_code_text */
 static int
 lsp_get_response_code_text(lua_State *L)
@@ -824,6 +843,30 @@ lsp_get_response_code_text(lua_State *L)
 	/* Syntax error */
 	return luaL_error(L, "invalid get_response_code_text() call");
 }
+
+
+/* mg.random - might be better than math.random on some systems */
+static int
+lsp_random(lua_State *L)
+{
+	int num_args = lua_gettop(L);
+	if (num_args == 0) {
+		/* The civetweb internal random number generator will generate
+                 * a 64 bit random number. */
+		uint64_t r = get_random();
+                /* Lua "number" is a IEEE 754 double precission float:
+		 * https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+                 * Thus, mask with 2^53-1 to get an integer with the maximum 
+		 * precission available. */
+		r &= ((1<<53)-1);
+		lua_pushnumber(L, (double)r);
+		return 1;
+	}
+
+	/* Syntax error */
+	return luaL_error(L, "invalid random() call");
+}
+
 
 #ifdef USE_WEBSOCKET
 struct lua_websock_data {
@@ -1264,6 +1307,7 @@ prepare_lua_environment(struct mg_context *ctx,
 	reg_function(L, "base64_encode", lsp_base64_encode);
 	reg_function(L, "base64_decode", lsp_base64_decode);
 	reg_function(L, "get_response_code_text", lsp_get_response_code_text);
+	reg_function(L, "random", lsp_random);
 
 	reg_string(L, "version", CIVETWEB_VERSION);
 
