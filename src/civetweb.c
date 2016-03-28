@@ -12719,6 +12719,10 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif
 	pthread_setspecific(sTlsKey, &tls);
 
+#if defined(USE_LUA)
+	lua_init_optional_libraries();
+#endif
+
 	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr);
 	ok &= 0 == pthread_cond_init(&ctx->thread_cond, NULL);
 	ok &= 0 == pthread_cond_init(&ctx->sq_empty, NULL);

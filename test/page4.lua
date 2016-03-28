@@ -162,6 +162,19 @@ dec_mg_string = mg.base64_decode(mg_string)
 dec_ref_string = mg.base64_decode(ref_string)
 mg.write("  decoded mg-base64:        " .. htmlEscape(dec_mg_string) .. "\r\n")
 mg.write("  decoded reference base64: " .. htmlEscape(dec_ref_string) .. "\r\n")
+mg.write("\r\n")
+
+-- random
+mg.write("Random numbers:\r\n")
+for i=1,10 do mg.write(string.format("%18u\r\n", mg.random())) end
+mg.write("\r\n")
+
+-- uuid
+if mg.uuid then
+mg.write("UUIDs:\r\n")
+for i=1,10 do mg.write(string.format("%40s\r\n", mg.uuid())) end
+mg.write("\r\n")
+end
 
 -- end of page
 mg.write("</pre>\r\n</body>\r\n</html>\r\n")
