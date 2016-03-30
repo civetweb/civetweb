@@ -902,10 +902,13 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
-	if ((i>=0) && ((size_t)i<sizeof(buf))) {
+	if ((i >= 0) && ((size_t)i < sizeof(buf))) {
 		buf[i] = 0;
-        } else {
-		ck_abort_msg("ERROR: test_request_handlers: read returned %i (>=0, <%i)", (int)i, (int)sizeof(buf));
+	} else {
+		ck_abort_msg(
+		    "ERROR: test_request_handlers: read returned %i (>=0, <%i)",
+		    (int)i,
+		    (int)sizeof(buf));
 	}
 	ck_assert((int)i < (int)sizeof(buf));
 	ck_assert(i > 0);
@@ -1566,4 +1569,3 @@ suite_create(const char *name)
 void tcase_set_timeout(TCase *tc, double timeout){};
 
 #endif
-

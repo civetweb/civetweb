@@ -2106,7 +2106,8 @@ reparse:
 /* A helper function for checking if a comma separated list of values contains
  * the given option (case insensitvely).
  * 'header' can be NULL, in which case false is returned. */
-static int header_has_option(const char *header, const char *option)
+static int
+header_has_option(const char *header, const char *option)
 {
 	struct vec opt_vec;
 	struct vec eq_vec;
@@ -10586,7 +10587,7 @@ ssl_id_callback(void)
 
 
 static int ssl_use_pem_file(struct mg_context *ctx, const char *pem);
-static const char * ssl_error(void);
+static const char *ssl_error(void);
 
 
 static int
@@ -10598,37 +10599,39 @@ refresh_trust(struct mg_connection *conn)
 	struct stat cert_buf;
 	long int t;
 	char *pem;
-    int should_verify_peer;
+	int should_verify_peer;
 
 	if ((pem = conn->ctx->config[SSL_CERTIFICATE]) == NULL
-		&& conn->ctx->callbacks.init_ssl == NULL) {
+	    && conn->ctx->callbacks.init_ssl == NULL) {
 		return 0;
 	}
 
-    t = data_check;
+	t = data_check;
 	if (stat(pem, &cert_buf) != -1) {
-		t = (long int) cert_buf.st_mtime;
+		t = (long int)cert_buf.st_mtime;
 	}
 
 	if (data_check != t) {
 		data_check = t;
 
 		should_verify_peer =
-				(conn->ctx->config[SSL_DO_VERIFY_PEER] != NULL)
-				&& (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER], "yes") == 0);
+		    (conn->ctx->config[SSL_DO_VERIFY_PEER] != NULL)
+		    && (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER], "yes")
+		        == 0);
 
 		if (should_verify_peer) {
 			char *ca_path = conn->ctx->config[SSL_CA_PATH];
 			char *ca_file = conn->ctx->config[SSL_CA_FILE];
-			if (SSL_CTX_load_verify_locations(conn->ctx->ssl_ctx, ca_file, ca_path)
-				!= 1) {
+			if (SSL_CTX_load_verify_locations(conn->ctx->ssl_ctx,
+			                                  ca_file,
+			                                  ca_path) != 1) {
 				mg_cry(fc(conn->ctx),
-					   "SSL_CTX_load_verify_locations error: %s "
-							   "ssl_verify_peer requires setting "
-							   "either ssl_ca_path or ssl_ca_file. Is any of them "
-							   "present in "
-							   "the .conf file?",
-					   ssl_error());
+				       "SSL_CTX_load_verify_locations error: %s "
+				       "ssl_verify_peer requires setting "
+				       "either ssl_ca_path or ssl_ca_file. Is any of them "
+				       "present in "
+				       "the .conf file?",
+				       ssl_error());
 				return 0;
 			}
 		}
@@ -10657,15 +10660,15 @@ static int
 sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 {
 	int ret, err;
-    int short_trust;
+	int short_trust;
 
 	if (!conn) {
 		return 0;
 	}
 
 	short_trust =
-			(conn->ctx->config[SSL_SHORT_TRUST] != NULL)
-			&& (mg_strcasecmp(conn->ctx->config[SSL_SHORT_TRUST], "yes") == 0);
+	    (conn->ctx->config[SSL_SHORT_TRUST] != NULL)
+	    && (mg_strcasecmp(conn->ctx->config[SSL_SHORT_TRUST], "yes") == 0);
 
 	if (short_trust) {
 		int trust_ret = refresh_trust(conn);

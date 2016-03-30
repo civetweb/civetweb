@@ -852,13 +852,13 @@ lsp_random(lua_State *L)
 	int num_args = lua_gettop(L);
 	if (num_args == 0) {
 		/* The civetweb internal random number generator will generate
-                 * a 64 bit random number. */
+		         * a 64 bit random number. */
 		uint64_t r = get_random();
-                /* Lua "number" is a IEEE 754 double precission float:
-		 * https://en.wikipedia.org/wiki/Double-precision_floating-point_format
-                 * Thus, mask with 2^53-1 to get an integer with the maximum 
-		 * precission available. */
-		r &= ((((uint64_t)1)<<53)-1);
+		/* Lua "number" is a IEEE 754 double precission float:
+ * https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+		 * Thus, mask with 2^53-1 to get an integer with the maximum
+ * precission available. */
+		r &= ((((uint64_t)1) << 53) - 1);
 		lua_pushnumber(L, (double)r);
 		return 1;
 	}
@@ -898,19 +898,20 @@ lsp_uuid(lua_State *L)
 
 		pf_uuid_generate.f(uuid.uuid_array);
 
-		sprintf(uuid_str, "{%08lX-%04X-%04X-%02X%02X-"
-			"%02X%02X%02X%02X%02X%02X}",
-			(unsigned long)uuid.uuid_struct.data1, 
-			(unsigned)uuid.uuid_struct.data2,
-			(unsigned)uuid.uuid_struct.data3, 
-			(unsigned)uuid.uuid_struct.data4[0],
-			(unsigned)uuid.uuid_struct.data4[1],
-			(unsigned)uuid.uuid_struct.data4[2],
-			(unsigned)uuid.uuid_struct.data4[3],
-			(unsigned)uuid.uuid_struct.data4[4],
-			(unsigned)uuid.uuid_struct.data4[5],
-			(unsigned)uuid.uuid_struct.data4[6],
-			(unsigned)uuid.uuid_struct.data4[7]);
+		sprintf(uuid_str,
+		        "{%08lX-%04X-%04X-%02X%02X-"
+		        "%02X%02X%02X%02X%02X%02X}",
+		        (unsigned long)uuid.uuid_struct.data1,
+		        (unsigned)uuid.uuid_struct.data2,
+		        (unsigned)uuid.uuid_struct.data3,
+		        (unsigned)uuid.uuid_struct.data4[0],
+		        (unsigned)uuid.uuid_struct.data4[1],
+		        (unsigned)uuid.uuid_struct.data4[2],
+		        (unsigned)uuid.uuid_struct.data4[3],
+		        (unsigned)uuid.uuid_struct.data4[4],
+		        (unsigned)uuid.uuid_struct.data4[5],
+		        (unsigned)uuid.uuid_struct.data4[6],
+		        (unsigned)uuid.uuid_struct.data4[7]);
 
 		lua_pushstring(L, uuid_str);
 		return 1;
@@ -1837,4 +1838,3 @@ lua_init_optional_libraries(void)
 	pf_uuid_generate.p = 0;
 #endif
 }
-
