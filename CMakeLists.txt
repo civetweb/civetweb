@@ -89,7 +89,13 @@ option(CIVETWEB_ENABLE_LUA "Enable Lua CGIs" OFF)
 message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 
 # Allow builds to complete with warnings (do not set -Werror)
-option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
+if (LINUX)
+# CivetWeb Linux support is stable: Builds must be free from warnings.
+  option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
+else()
+# CivetWeb Linux support for other systems is in a setup phase.
+  option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
+endif()
 message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
 
 # Link to the shared LUA library
