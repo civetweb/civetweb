@@ -283,6 +283,18 @@ alloc_printf(char **buf, size_t size, const char *fmt, ...)
 	return ret;
 }
 
+static int
+alloc_printf2(char **buf, const char *fmt, ...)
+{
+	/* Test alternative implementation */
+	va_list ap;
+	int ret = 0;
+	va_start(ap, fmt);
+	ret = alloc_vprintf2(buf, fmt, ap);
+	va_end(ap);
+	return ret;
+}
+
 START_TEST(test_alloc_vprintf)
 {
 	/* Adapted from unit_test.c */
@@ -292,13 +304,24 @@ START_TEST(test_alloc_vprintf)
 
 	ck_assert(alloc_printf(&p, sizeof(buf), "%s", "hi") == 2);
 	ck_assert(p == buf);
+
 	ck_assert(alloc_printf(&p, sizeof(buf), "%s", "") == 0);
+	ck_assert(p == buf);
+
 	ck_assert(alloc_printf(&p, sizeof(buf), "") == 0);
+	ck_assert(p == buf);
 
 	/* Pass small buffer, make sure alloc_printf allocates */
 	ck_assert(alloc_printf(&p, 1, "%s", "hello") == 5);
 	ck_assert(p != buf);
 	mg_free(p);
+	p = buf;
+
+	/* Test alternative implementation */
+	ck_assert(alloc_printf2(&p, "%s", "hello") == 5);
+	ck_assert(p != buf);
+	mg_free(p);
+	p = buf;
 }
 END_TEST
 
@@ -511,6 +534,16 @@ START_TEST(test_mask_data)
 END_TEST
 
 
+START_TEST(test_parse_date_string)
+{
+	ch_assert_uint_eq(parse_date_string("1/Jan/1970 00:01:02"), 62);
+	ch_assert_uint_eq(parse_date_string("1 Jan 1970 00:02:03"), 123);
+	ch_assert_uint_eq(parse_date_string("1-Jan-1970 00:03:04"), 184);
+	ch_assert_uint_eq(parse_date_string("Xyz, 1 Jan 1970 00:04:05"), 245);
+}
+END_TEST
+
+
 Suite *
 make_private_suite(void)
 {
@@ -521,6 +554,7 @@ make_private_suite(void)
 	TCase *const tcase_internal_parse = tcase_create("Internal Parsing");
 	TCase *const tcase_encode_decode = tcase_create("Encode Decode");
 	TCase *const tcase_mask_data = tcase_create("Mask Data");
+	TCase *const tcase_parse_date_string = tcase_create("Date Parsing");
 
 	tcase_add_test(tcase_http_message, test_parse_http_message);
 	tcase_add_test(tcase_http_message, test_should_keep_alive);
@@ -549,6 +583,10 @@ make_private_suite(void)
 	tcase_add_test(tcase_mask_data, test_mask_data);
 	tcase_set_timeout(tcase_mask_data, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_mask_data);
+
+	tcase_add_test(tcase_parse_date_string, test_parse_date_string);
+	tcase_set_timeout(tcase_mask_data, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_parse_date_string);
 
 	return suite;
 }

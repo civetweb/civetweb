@@ -131,6 +131,7 @@ civetweb_add_test(Private "URL Parsing")
 civetweb_add_test(Private "Internal Parsing")
 civetweb_add_test(Private "Encode Decode")
 civetweb_add_test(Private "Mask Data")
+civetweb_add_test(Private "Date Parsing")
 
 # Public API function tests
 civetweb_add_test(PublicFunc "Version")

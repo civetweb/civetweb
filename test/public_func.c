@@ -282,6 +282,12 @@ START_TEST(test_mg_get_var)
 	ck_assert_int_eq(ret, 1);
 	ck_assert_str_eq("3", buf);
 
+	/* mg_get_var call mg_get_var2 with last argument 0 */
+	memset(buf, 77, sizeof(buf));
+	ret = mg_get_var(shortquery, strlen(shortquery), "key1", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("1", buf);
+
 	/* longer value in the middle of a longer string */
 	memset(buf, 77, sizeof(buf));
 	ret =
