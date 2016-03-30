@@ -10654,7 +10654,10 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		return 0;
 	}
 
-	int short_trust = !strcmp(conn->ctx->config[SSL_SHORT_TRUST], "yes");
+	int short_trust =
+			(conn->ctx->config[SSL_SHORT_TRUST] != NULL)
+			&& (mg_strcasecmp(conn->ctx->config[SSL_SHORT_TRUST], "yes") == 0);
+
 	if (short_trust) {
 		int trust_ret = refresh_trust(conn);
 		if (!trust_ret) {
