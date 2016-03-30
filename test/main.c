@@ -73,11 +73,15 @@ main(const int argc, char *argv[])
 		}
 	}
 
-	// Run up the tests
+	/* Run up the tests */
 	SRunner *const srunner = srunner_create(make_public_func_suite());
 	srunner_add_suite(srunner, make_public_server_suite());
 	srunner_add_suite(srunner, make_private_suite());
 	srunner_add_suite(srunner, make_private_exe_suite());
+
+	/* Write test logs to a file */
+	srunner_set_log(srunner, "test.log");
+	srunner_set_xml(srunner, "test.xml");
 
 	/* CK_NORMAL offers not enough diagnosis during setup phase*/
 	srunner_run(srunner, suite, test_case, CK_VERBOSE);

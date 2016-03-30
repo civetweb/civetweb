@@ -45,7 +45,7 @@ if (CIVETWEB_ENABLE_SLL AND NOT CIVETWEB_ENABLE_OPENSLL_DYNAMIC_LOADING)
 else()
   find_package(LibDl)
   if (LIBDL_FOUND)
-    target_link_libraries(c-library LIBDL::LIBDL)
+    target_link_libraries(c-library -ldl)
   endif()
 endif()
 
@@ -111,7 +111,7 @@ if (CIVETWEB_ENABLE_LUA)
     URL_MD5 ${CIVETWEB_LUA_FILESYSTEM_MD5_HASH}
     PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
-      "${CMAKE_SOURCE_DIR}/cmake/luafilesystem/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
+      "${CMAKE_CURRENT_SOURCE_DIR}/cmake/luafilesystem/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
       "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
       "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
@@ -144,7 +144,7 @@ if (CIVETWEB_ENABLE_LUA)
     URL_MD5 ${CIVETWEB_LUA_SQLITE_MD5_HASH}
     PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
-      "${CMAKE_SOURCE_DIR}/cmake/luasqlite/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
+      "${CMAKE_CURRENT_SOURCE_DIR}/cmake/luasqlite/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
       "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
       "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
@@ -174,7 +174,7 @@ if (CIVETWEB_ENABLE_LUA)
     URL_MD5 ${CIVETWEB_LUA_XML_MD5_HASH}
     PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
-      "${CMAKE_SOURCE_DIR}/cmake/luaxml/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
+      "${CMAKE_CURRENT_SOURCE_DIR}/cmake/luaxml/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
       "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
       "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
@@ -202,7 +202,7 @@ if (CIVETWEB_ENABLE_LUA)
     URL_MD5 ${CIVETWEB_SQLITE_MD5_HASH}
     PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
-      "${CMAKE_SOURCE_DIR}/cmake/sqlite/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
+      "${CMAKE_CURRENT_SOURCE_DIR}/cmake/sqlite/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
       "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
       "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"

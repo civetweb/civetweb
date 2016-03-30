@@ -23,3 +23,11 @@
 
 # Preserver Windows specfic lines endings
 *.cmd text eol=crlf
+
+
+# Settings for github syntax highlighting
+# see https://github.com/github/linguist/blob/master/README.md
+docs/* linguist-documentation
+*.inl linguist-language=C
+*.h linguist-language=C
+include/CivetServer.h linguist-language=C++

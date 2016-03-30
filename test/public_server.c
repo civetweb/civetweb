@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 the Civetweb developers
+/* Copyright (c) 2015-2016 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,9 @@
  */
 
 #ifdef _MSC_VER
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #endif
 
 #include <stdlib.h>
@@ -35,7 +37,7 @@
 
 #if defined(_WIN32)
 #include <Windows.h>
-#define test_sleep(x) (Sleep(x * 1000))
+#define test_sleep(x) (Sleep((x)*1000))
 #else
 #include <unistd.h>
 #define test_sleep(x) (sleep(x))
@@ -101,6 +103,10 @@ wait_not_null(void *volatile *data)
 		}
 	}
 
+#if defined(__MINGW32__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+#endif
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
@@ -113,7 +119,11 @@ wait_not_null(void *volatile *data)
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
+#if defined(__MINGW32__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 }
+
 
 START_TEST(test_the_test_environment)
 {
@@ -185,6 +195,7 @@ test_thread_func_t(void *param)
 	return NULL;
 }
 
+
 START_TEST(test_threading)
 {
 	int ok;
@@ -215,6 +226,7 @@ log_msg_func(const struct mg_connection *conn, const char *message)
 	ud[255] = 0;
 	return 1;
 }
+
 
 START_TEST(test_mg_start_stop_http_server)
 {
@@ -247,6 +259,7 @@ START_TEST(test_mg_start_stop_http_server)
 	callbacks.log_message = log_msg_func;
 
 	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
+	mark_point();
 	test_sleep(1);
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
@@ -259,6 +272,7 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert_int_eq(ssl[1], 0);
 
 	test_sleep(1);
+	mark_point();
 
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
@@ -284,7 +298,9 @@ START_TEST(test_mg_start_stop_http_server)
 #endif
 	mg_close_connection(client_conn);
 
+	mark_point();
 	test_sleep(1);
+	mark_point();
 
 	mg_stop(ctx);
 }
@@ -336,6 +352,7 @@ START_TEST(test_mg_start_stop_https_server)
 	callbacks.log_message = log_msg_func;
 
 	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
+	mark_point();
 	test_sleep(1);
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
@@ -350,6 +367,7 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(ssl[2], 0);
 
 	test_sleep(1);
+	mark_point();
 
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
@@ -375,7 +393,9 @@ START_TEST(test_mg_start_stop_https_server)
 #endif
 	mg_close_connection(client_conn);
 
+	mark_point();
 	test_sleep(1);
+	mark_point();
 
 	mg_stop(ctx);
 #endif
@@ -442,6 +462,7 @@ START_TEST(test_mg_server_and_client_tls)
 	callbacks.log_message = log_msg_func;
 
 	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
+	mark_point();
 	test_sleep(1);
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
@@ -462,6 +483,7 @@ START_TEST(test_mg_server_and_client_tls)
 	ck_assert_int_eq(ports[2].is_redirect, 0);
 
 	test_sleep(1);
+	mark_point();
 
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
@@ -502,7 +524,9 @@ START_TEST(test_mg_server_and_client_tls)
 
 	/* TODO: A client API using a client certificate is missing */
 
+	mark_point();
 	test_sleep(1);
+	mark_point();
 
 	mg_stop(ctx);
 #endif
@@ -563,6 +587,7 @@ static const char *websocket_goodbye_msg = "websocket bye\n";
 static const size_t websocket_goodbye_msg_len =
     14 /* strlen(websocket_goodbye_msg) */;
 
+
 static int
 websock_server_connect(const struct mg_connection *conn, void *udata)
 {
@@ -573,6 +598,7 @@ websock_server_connect(const struct mg_connection *conn, void *udata)
 
 	return 0; /* return 0 to accept every connection */
 }
+
 
 static void
 websock_server_ready(struct mg_connection *conn, void *udata)
@@ -590,6 +616,7 @@ websock_server_ready(struct mg_connection *conn, void *udata)
 
 	printf("Server: Websocket ready X\n");
 }
+
 
 static int
 websock_server_data(struct mg_connection *conn,
@@ -624,6 +651,11 @@ websock_server_data(struct mg_connection *conn,
 		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok - 3", 6);
 		mg_unlock_connection(conn);
 	} else {
+
+#if defined(__MINGW32__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+#endif
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
@@ -636,6 +668,9 @@ websock_server_data(struct mg_connection *conn,
 
 #ifdef __clang__
 #pragma clang diagnostic pop
+#endif
+#if defined(__MINGW32__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 	}
 
@@ -654,6 +689,7 @@ websock_server_close(const struct mg_connection *conn, void *udata)
 	 * closed */
 }
 
+
 /****************************************************************************/
 /* WEBSOCKET CLIENT                                                         */
 /****************************************************************************/
@@ -662,6 +698,7 @@ struct tclient_data {
 	size_t len;
 	int closed;
 };
+
 
 static int
 websocket_client_data_handler(struct mg_connection *conn,
@@ -691,6 +728,7 @@ websocket_client_data_handler(struct mg_connection *conn,
 	return 1;
 }
 
+
 static void
 websocket_client_close_handler(const struct mg_connection *conn,
                                void *user_data)
@@ -707,6 +745,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	pclient_data->closed++;
 }
 #endif
+
 
 START_TEST(test_request_handlers)
 {
@@ -863,6 +902,13 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
+	if ((i>=0) && ((size_t)i<sizeof(buf))) {
+		buf[i] = 0;
+        } else {
+		ck_abort_msg("ERROR: test_request_handlers: read returned %i (>=0, <%i)", (int)i, (int)sizeof(buf));
+	}
+	ck_assert((int)i < (int)sizeof(buf));
+	ck_assert(i > 0);
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
@@ -982,14 +1028,15 @@ START_TEST(test_request_handlers)
 	fclose(f);
 #else
 	f = fopen("test.cgi", "w");
-	cgi_script_content = "#!/bin/sh\n"
-	                     "echo \"Connection: close\"\n"
-	                     "echo \"Content-Type: text/plain\"\n"
-	                     "echo \n"
-	                     "echo \"CGI test\"\n"
+	cgi_script_content = "#!/bin/sh\n\n"
+	                     "printf \"Connection: close\\r\\n\"\n"
+	                     "printf \"Content-Type: text/plain\\r\\n\"\n"
+	                     "printf \"\\r\\n\"\n"
+	                     "printf \"CGI test\\r\\n\"\n"
 	                     "\n";
 	fwrite(cgi_script_content, strlen(cgi_script_content), 1, f);
 	fclose(f);
+	system("chmod a+x test.cgi");
 #endif
 	expected_cgi_result = "CGI test";
 
@@ -1077,18 +1124,25 @@ START_TEST(test_request_handlers)
 
 	ck_assert(ri != NULL);
 
-	ck_assert_str_eq(ri->uri, "200");
+#if defined(NO_FILES)
+	ck_assert_str_eq(ri->uri, "404");
+
+	(void)expected_cgi_result;
+	(void)cgi_script_content;
+#else
 	i = mg_read(client_conn, buf, sizeof(buf));
-	ck_assert_int_ge(i, strlen(expected_cgi_result));
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
 		while ((i > 0) && ((buf[i - 1] == '\r') || (buf[i - 1] == '\n'))) {
 			i--;
 		}
 		buf[i] = 0;
 	}
-	ck_assert_int_eq(i, strlen(expected_cgi_result));
+	/* ck_assert_int_eq(i, (int)strlen(expected_cgi_result)); */
 	ck_assert_str_eq(buf, expected_cgi_result);
+	ck_assert_str_eq(ri->uri, "200");
 	mg_close_connection(client_conn);
+#endif
+
 #else
 	(void)expected_cgi_result;
 	(void)cgi_script_content;
@@ -1197,6 +1251,7 @@ START_TEST(test_request_handlers)
 	                          "data1",
 	                          5);
 
+	mark_point();
 	wait_not_null(
 	    &(ws_client1_data
 	          .data)); /* Wait for the websocket acknowledge message */
@@ -1259,6 +1314,7 @@ START_TEST(test_request_handlers)
 	                          "data2",
 	                          5);
 
+	mark_point();
 	wait_not_null(
 	    &(ws_client1_data
 	          .data)); /* Wait for the websocket acknowledge message */
@@ -1275,6 +1331,7 @@ START_TEST(test_request_handlers)
 
 	mg_websocket_client_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
+	mark_point();
 	wait_not_null(
 	    &(ws_client1_data.data)); /* Wait for the websocket goodbye message */
 	ck_assert(ws_client1_data.closed == 0);
@@ -1292,6 +1349,7 @@ START_TEST(test_request_handlers)
 
 	mg_close_connection(ws_client1_conn);
 
+	mark_point();
 	test_sleep(3); /* Won't get any message */
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 0);
@@ -1302,6 +1360,7 @@ START_TEST(test_request_handlers)
 
 	mg_websocket_client_write(ws_client2_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
+	mark_point();
 	wait_not_null(
 	    &(ws_client2_data.data)); /* Wait for the websocket goodbye message */
 	ck_assert(ws_client1_data.closed == 1);
@@ -1319,6 +1378,7 @@ START_TEST(test_request_handlers)
 
 	mg_close_connection(ws_client2_conn);
 
+	mark_point();
 	test_sleep(3); /* Won't get any message */
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 1);
@@ -1369,11 +1429,13 @@ START_TEST(test_request_handlers)
 	/* Close the server */
 	g_ctx = NULL;
 	mg_stop(ctx);
+	mark_point();
 
 #ifdef USE_WEBSOCKET
 	for (i = 0; i < 100; i++) {
 		test_sleep(1);
 		if (ws_client3_data.closed != 0) {
+			mark_point();
 			break;
 		}
 	}
@@ -1422,6 +1484,7 @@ make_public_server_suite(void)
 
 	return suite;
 }
+
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 /* Used to debug test cases without using the check framework */
@@ -1503,3 +1566,4 @@ suite_create(const char *name)
 void tcase_set_timeout(TCase *tc, double timeout){};
 
 #endif
+

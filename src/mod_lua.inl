@@ -716,7 +716,7 @@ lsp_url_decode(lua_State *L)
 		text = lua_tolstring(L, 1, &text_len);
 		is_form = (num_args == 2) ? lua_isboolean(L, 2) : 0;
 		if (text) {
-			mg_url_decode(text, text_len, dst, sizeof(dst), is_form);
+			mg_url_decode(text, text_len, dst, (int)sizeof(dst), is_form);
 			lua_pushstring(L, dst);
 		} else {
 			lua_pushnil(L);
@@ -742,7 +742,7 @@ lsp_base64_encode(lua_State *L)
 		if (text) {
 			dst = (char *)mg_malloc(text_len * 8 / 6 + 4);
 			if (dst) {
-				base64_encode((const unsigned char *)text, text_len, dst);
+				base64_encode((const unsigned char *)text, (int)text_len, dst);
 				lua_pushstring(L, dst);
 				mg_free(dst);
 			} else {
@@ -774,7 +774,7 @@ lsp_base64_decode(lua_State *L)
 			dst = (char *)mg_malloc(text_len);
 			if (dst) {
 				ret = base64_decode((const unsigned char *)text,
-				                    text_len,
+				                    (int)text_len,
 				                    dst,
 				                    &dst_len);
 				if (ret != -1) {
