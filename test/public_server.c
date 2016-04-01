@@ -1495,8 +1495,9 @@ make_public_server_suite(void)
 static int chk_ok = 0;
 static int chk_failed = 0;
 
+
 void
-main(void)
+xmain(void)
 {
 	test_the_test_environment(0);
 	test_threading(0);

@@ -536,10 +536,51 @@ END_TEST
 
 START_TEST(test_parse_date_string)
 {
-	ck_assert_uint_eq((unsigned long)parse_date_string("1/Jan/1970 00:01:02"), 62ul);
-	ck_assert_uint_eq((unsigned long)parse_date_string("1 Jan 1970 00:02:03"), 123ul);
-	ck_assert_uint_eq((unsigned long)parse_date_string("1-Jan-1970 00:03:04"), 184ul);
-	ck_assert_uint_eq((unsigned long)parse_date_string("Xyz, 1 Jan 1970 00:04:05"), 245ul);
+	time_t now = time(0);
+	struct tm *tm = gmtime(&now);
+	char date[64] = {0};
+	unsigned long i;
+
+	ck_assert_uint_eq((unsigned long)parse_date_string("1/Jan/1970 00:01:02"),
+	                  62ul);
+	ck_assert_uint_eq((unsigned long)parse_date_string("1 Jan 1970 00:02:03"),
+	                  123ul);
+	ck_assert_uint_eq((unsigned long)parse_date_string("1-Jan-1970 00:03:04"),
+	                  184ul);
+	ck_assert_uint_eq((unsigned long)parse_date_string(
+	                      "Xyz, 1 Jan 1970 00:04:05"),
+	                  245ul);
+
+	gmt_time_string(date, sizeof(date), &now);
+	ck_assert_uint_eq((uintmax_t)parse_date_string(date), (uintmax_t)now);
+
+	sprintf(date,
+	        "%02u %s %04u %02u:%02u:%02u",
+	        tm->tm_mday,
+	        month_names[tm->tm_mon],
+	        tm->tm_year + 1900,
+	        tm->tm_hour,
+	        tm->tm_min,
+	        tm->tm_sec);
+	ck_assert_uint_eq((uintmax_t)parse_date_string(date), (uintmax_t)now);
+
+	for (i = 2ul; i < 0x8000000ul; i += i / 2) {
+		now = (time_t)i;
+
+		gmt_time_string(date, sizeof(date), &now);
+		ck_assert_uint_eq((uintmax_t)parse_date_string(date), (uintmax_t)now);
+
+		tm = gmtime(&now);
+		sprintf(date,
+		        "%02u-%s-%04u %02u:%02u:%02u",
+		        tm->tm_mday,
+		        month_names[tm->tm_mon],
+		        tm->tm_year + 1900,
+		        tm->tm_hour,
+		        tm->tm_min,
+		        tm->tm_sec);
+		ck_assert_uint_eq((uintmax_t)parse_date_string(date), (uintmax_t)now);
+	}
 }
 END_TEST
 
@@ -590,3 +631,16 @@ make_private_suite(void)
 
 	return suite;
 }
+
+
+#ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
+/* Used to debug test cases without using the check framework */
+
+void
+main(void)
+{
+	test_alloc_vprintf(0);
+	test_parse_date_string(0);
+}
+
+#endif
