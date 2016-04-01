@@ -1499,6 +1499,11 @@ is_file_opened(const struct file *filep)
 }
 
 
+/* mg_fopen will open a file either in memory or on the disk.
+ * The input parameter path is a string in UTF-8 encoding.
+ * The input parameter mode is the same as for fopen.
+ * Either fp or membuf will be set in the output struct filep.
+ * The function returns 1 on success, 0 on error. */
 static int
 mg_fopen(const struct mg_connection *conn,
          const char *path,
@@ -6660,7 +6665,7 @@ mg_store_body(struct mg_connection *conn, const char *path)
 	while (ret > 0) {
 		n = (int)fwrite(buf, 1, (size_t)ret, fi.fp);
 		if (n != ret) {
-			fclose(fi.fp);
+			mg_fclose(&fi);
 			remove_bad_file(conn, path);
 			return -13;
 		}
