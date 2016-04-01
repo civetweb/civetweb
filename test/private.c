@@ -536,10 +536,10 @@ END_TEST
 
 START_TEST(test_parse_date_string)
 {
-	ck_assert_uint_eq(parse_date_string("1/Jan/1970 00:01:02"), 62);
-	ck_assert_uint_eq(parse_date_string("1 Jan 1970 00:02:03"), 123);
-	ck_assert_uint_eq(parse_date_string("1-Jan-1970 00:03:04"), 184);
-	ck_assert_uint_eq(parse_date_string("Xyz, 1 Jan 1970 00:04:05"), 245);
+	ck_assert_uint_eq((unsigned long)parse_date_string("1/Jan/1970 00:01:02"), 62ul);
+	ck_assert_uint_eq((unsigned long)parse_date_string("1 Jan 1970 00:02:03"), 123ul);
+	ck_assert_uint_eq((unsigned long)parse_date_string("1-Jan-1970 00:03:04"), 184ul);
+	ck_assert_uint_eq((unsigned long)parse_date_string("Xyz, 1 Jan 1970 00:04:05"), 245ul);
 }
 END_TEST
 
