@@ -1739,10 +1739,10 @@ mg_get_user_data(const struct mg_context *ctx)
 
 
 void
-mg_set_user_connection_data(const struct mg_connection *conn, void *data)
+mg_set_user_connection_data(struct mg_connection *conn, void *data)
 {
 	if (conn != NULL) {
-		((struct mg_connection *)conn)->request_info.conn_data = data;
+		conn->request_info.conn_data = data;
 	}
 }
 
