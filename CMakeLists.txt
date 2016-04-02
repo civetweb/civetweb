@@ -278,7 +278,10 @@ if (HAVE_C_FLAG_FSANITIZE_ADDRESS)
   add_c_compiler_flag(-static-asan DEBUG)
 endif()
 add_c_compiler_flag(-fstack-protector-all DEBUG)
-add_c_compiler_flag(-mwindows)
+if(NOT APPLE)
+  # Clang on OS X allows adding -mwindows but generates "Argument unused during compilation"
+  add_c_compiler_flag(-mwindows)
+endif()
 
 # Coverage build type
 set(CMAKE_C_FLAGS_COVERAGE "${CMAKE_C_FLAGS_DEBUG}" CACHE STRING
@@ -343,7 +346,10 @@ if (CIVETWEB_ENABLE_CXX)
     add_cxx_compiler_flag(-static-asan DEBUG)
   endif()
   add_cxx_compiler_flag(-fstack-protector-all DEBUG)
-  add_cxx_compiler_flag(-mwindows)
+  if(NOT APPLE)
+    # Clang on OS X allows adding -mwindows but generates "Argument unused during compilation"
+    add_cxx_compiler_flag(-mwindows)
+  endif()
   set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING
       "Flags used by the C++ compiler during coverage builds."
       FORCE)
