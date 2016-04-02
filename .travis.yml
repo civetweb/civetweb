@@ -2326,6 +2326,8 @@ env:
 #      ENABLE_WEBSOCKETS=YES
 #      ENABLE_LUA=YES
 #      ENABLE_DUKTAPE=YES
+
+matrix:
   allow_failures:
     - os: osx
 
