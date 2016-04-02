@@ -31,7 +31,9 @@
 
 #else
 
+#if !__APPLE__
 #define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
+#endif
 /* This should also be sufficient for "realpath", according to
  * http://man7.org/linux/man-pages/man3/realpath.3.html, but in
  * reality it does not seem to work. */

@@ -29,22 +29,22 @@
 #define _WIN32_WINNT 0x0501
 #endif
 #else
-#if defined(__GNUC__) && !defined(_GNU_SOURCE)
+#if defined(__GNUC__) && !defined(_GNU_SOURCE) && !__APPLE__
 #define _GNU_SOURCE /* for setgroups() */
 #endif
 #if defined(__linux__) && !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE 600 /* For flockfile() on Linux */
 #endif
-#ifndef _LARGEFILE_SOURCE
+#if !defined(_LARGEFILE_SOURCE) && !__APPLE__
 #define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
 #endif
-#ifndef _FILE_OFFSET_BITS
+#if !defined(_FILE_OFFSET_BITS) && !__APPLE__
 #define _FILE_OFFSET_BITS 64 /* Use 64-bit file offsets by default */
 #endif
-#ifndef __STDC_FORMAT_MACROS
+#if !defined(__STDC_FORMAT_MACROS) && !__APPLE__
 #define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
 #endif
-#ifndef __STDC_LIMIT_MACROS
+#if !defined(__STDC_LIMIT_MACROS) && !__APPLE__
 #define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
 #endif
 #ifdef __sun
@@ -817,7 +817,9 @@ static void mg_snprintf(const struct mg_connection *conn,
 #ifdef NO_SOCKLEN_T
 typedef int socklen_t;
 #endif /* NO_SOCKLEN_T */
+#if !__APPLE__
 #define _DARWIN_UNLIMITED_SELECT
+#endif
 
 #define IP_ADDR_STR_LEN (50) /* IPv6 hex string is 46 chars */
 
