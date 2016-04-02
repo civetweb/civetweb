@@ -109,7 +109,11 @@ before_build:
   # "sh.exe was found in your PATH, here: C:/Program Files/Git/usr/bin/sh.exe"
   # and the MinGW build will not work (the Visual Studio build does not care).
   # See http://help.appveyor.com/discussions/problems/3193-cmake-building-for-mingw-issue-with-git-shexe
+  # The entire directory containing sh.exe could be removed from the PATH environment:
   # - set PATH=%PATH:C:\Program Files\Git\usr\bin;=%
+  # However, this will also remove all other programs in this directory from the PATH.
+  # In particular "patch" is still required.
+  # So, just rename sh.exe:
   - ren "C:\Program Files\Git\usr\bin\sh.exe" _sh.exe
   # Set up mingw commands
   - if "%compiler_name%"=="gcc" (set "generator=MinGW Makefiles")
@@ -202,7 +206,6 @@ cache:
   - C:\mingw-builds -> mingw.cmd
   - C:\third-party -> **\CMakeLists.txt
   - C:\ssl
-  - C:\git
 
 artifacts:
   - path: dist\*
