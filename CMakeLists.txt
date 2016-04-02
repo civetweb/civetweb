@@ -282,6 +282,7 @@ if(NOT APPLE)
   # Clang on OS X allows adding -mwindows but generates "Argument unused during compilation"
   add_c_compiler_flag(-mwindows)
 endif()
+add_c_compiler_flag(-Wno-date-time)
 
 # Coverage build type
 set(CMAKE_C_FLAGS_COVERAGE "${CMAKE_C_FLAGS_DEBUG}" CACHE STRING
