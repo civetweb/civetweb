@@ -31,7 +31,9 @@
 
 #else
 
+#if !__APPLE__
 #define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
+#endif
 /* This should also be sufficient for "realpath", according to
  * http://man7.org/linux/man-pages/man3/realpath.3.html, but in
  * reality it does not seem to work. */
@@ -129,8 +131,8 @@ struct tuser_data {
 
 static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
-static char *g_server_name;         /* Set by init_server_name() */
-static char *g_icon_name;           /* Set by init_server_name() */
+static const char *g_server_name;         /* Set by init_server_name() */
+static const char *g_icon_name;           /* Set by init_server_name() */
 static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
 static struct mg_context *g_ctx; /* Set by start_civetweb() */
@@ -612,7 +614,7 @@ init_server_name(int argc, const char *argv[])
 		if ((argv[i][0] == '-')
 		    && (0 == strcmp(argv[i] + 1,
 		                    main_config_options[OPTION_TITLE].name))) {
-			g_server_name = (char *)(argv[i + 1]);
+			g_server_name = (const char *)(argv[i + 1]);
 		}
 	}
 	g_icon_name = NULL;
@@ -620,7 +622,7 @@ init_server_name(int argc, const char *argv[])
 		if ((argv[i][0] == '-')
 		    && (0 == strcmp(argv[i] + 1,
 		                    main_config_options[OPTION_ICON].name))) {
-			g_icon_name = (char *)(argv[i + 1]);
+			g_icon_name = (const char *)(argv[i + 1]);
 		}
 	}
 }

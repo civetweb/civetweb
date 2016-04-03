@@ -389,7 +389,7 @@ CIVETWEB_API void *mg_get_user_data(const struct mg_context *ctx);
 
 
 /* Set user data for the current connection. */
-CIVETWEB_API void mg_set_user_connection_data(const struct mg_connection *conn,
+CIVETWEB_API void mg_set_user_connection_data(struct mg_connection *conn,
                                               void *data);
 
 

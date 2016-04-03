@@ -29,22 +29,22 @@
 #define _WIN32_WINNT 0x0501
 #endif
 #else
-#if defined(__GNUC__) && !defined(_GNU_SOURCE)
+#if defined(__GNUC__) && !defined(_GNU_SOURCE) && !__APPLE__
 #define _GNU_SOURCE /* for setgroups() */
 #endif
 #if defined(__linux__) && !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE 600 /* For flockfile() on Linux */
 #endif
-#ifndef _LARGEFILE_SOURCE
+#if !defined(_LARGEFILE_SOURCE) && !__APPLE__
 #define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
 #endif
-#ifndef _FILE_OFFSET_BITS
+#if !defined(_FILE_OFFSET_BITS) && !__APPLE__
 #define _FILE_OFFSET_BITS 64 /* Use 64-bit file offsets by default */
 #endif
-#ifndef __STDC_FORMAT_MACROS
+#if !defined(__STDC_FORMAT_MACROS) && !__APPLE__
 #define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
 #endif
-#ifndef __STDC_LIMIT_MACROS
+#if !defined(__STDC_LIMIT_MACROS) && !__APPLE__
 #define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
 #endif
 #ifdef __sun
@@ -817,7 +817,9 @@ static void mg_snprintf(const struct mg_connection *conn,
 #ifdef NO_SOCKLEN_T
 typedef int socklen_t;
 #endif /* NO_SOCKLEN_T */
+#if !__APPLE__
 #define _DARWIN_UNLIMITED_SELECT
+#endif
 
 #define IP_ADDR_STR_LEN (50) /* IPv6 hex string is 46 chars */
 
@@ -1739,10 +1741,10 @@ mg_get_user_data(const struct mg_context *ctx)
 
 
 void
-mg_set_user_connection_data(const struct mg_connection *conn, void *data)
+mg_set_user_connection_data(struct mg_connection *conn, void *data)
 {
 	if (conn != NULL) {
-		((struct mg_connection *)conn)->request_info.conn_data = data;
+		conn->request_info.conn_data = data;
 	}
 }
 
@@ -4142,7 +4144,7 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 		                      conn->ssl,
 		                      (const char *)buf,
 		                      (int64_t)allowed)) == allowed) {
-			buf = (char *)buf + total;
+			buf = (const char *)buf + total;
 			conn->last_throttle_bytes += total;
 			while (total < (int64_t)len && conn->ctx->stop_flag == 0) {
 				allowed = conn->throttle > (int64_t)len - total
@@ -4159,7 +4161,7 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 				sleep(1);
 				conn->last_throttle_bytes = allowed;
 				conn->last_throttle_time = time(NULL);
-				buf = (char *)buf + n;
+				buf = (const char *)buf + n;
 				total += n;
 			}
 		}
@@ -5296,19 +5298,19 @@ parse_auth_header(struct mg_connection *conn,
 }
 
 
-static char *
+static const char *
 mg_fgets(char *buf, size_t size, struct file *filep, char **p)
 {
-	char *eof;
+	const char *eof;
 	size_t len;
-	char *memend;
+	const char *memend;
 
 	if (!filep) {
 		return NULL;
 	}
 
 	if (filep->membuf != NULL && *p != NULL) {
-		memend = (char *)&filep->membuf[filep->size];
+		memend = (const char *)&filep->membuf[filep->size];
 		/* Search for \n from p till the end of stream */
 		eof = (char *)memchr(*p, '\n', (size_t)(memend - *p));
 		if (eof != NULL) {
@@ -7516,7 +7518,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	if ((status = get_header(&ri, "Status")) != NULL) {
 		conn->status_code = atoi(status);
 		status_text = status;
-		while (isdigit(*(unsigned char *)status_text) || *status_text == ' ') {
+		while (isdigit(*(const unsigned char *)status_text) || *status_text == ' ') {
 			status_text++;
 		}
 	} else if (get_header(&ri, "Location") != NULL) {
@@ -7985,7 +7987,7 @@ mg_fgetc(struct file *filep, int offset)
 	}
 	if (filep->membuf != NULL && offset >= 0
 	    && ((unsigned int)(offset)) < filep->size) {
-		return ((unsigned char *)filep->membuf)[offset];
+		return ((const unsigned char *)filep->membuf)[offset];
 	} else if (filep->fp != NULL) {
 		return fgetc(filep->fp);
 	} else {
@@ -9099,7 +9101,7 @@ get_remote_ip(const struct mg_connection *conn)
 	if (!conn) {
 		return 0;
 	}
-	return ntohl(*(uint32_t *)&conn->client.rsa.sin.sin_addr);
+	return ntohl(*(const uint32_t *)&conn->client.rsa.sin.sin_addr);
 }
 
 
