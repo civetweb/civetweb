@@ -4142,7 +4142,7 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 		                      conn->ssl,
 		                      (const char *)buf,
 		                      (int64_t)allowed)) == allowed) {
-			buf = (char *)buf + total;
+			buf = (const char *)buf + total;
 			conn->last_throttle_bytes += total;
 			while (total < (int64_t)len && conn->ctx->stop_flag == 0) {
 				allowed = conn->throttle > (int64_t)len - total
@@ -4159,7 +4159,7 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 				sleep(1);
 				conn->last_throttle_bytes = allowed;
 				conn->last_throttle_time = time(NULL);
-				buf = (char *)buf + n;
+				buf = (const char *)buf + n;
 				total += n;
 			}
 		}
@@ -5296,19 +5296,19 @@ parse_auth_header(struct mg_connection *conn,
 }
 
 
-static char *
+static const char *
 mg_fgets(char *buf, size_t size, struct file *filep, char **p)
 {
-	char *eof;
+	const char *eof;
 	size_t len;
-	char *memend;
+	const char *memend;
 
 	if (!filep) {
 		return NULL;
 	}
 
 	if (filep->membuf != NULL && *p != NULL) {
-		memend = (char *)&filep->membuf[filep->size];
+		memend = (const char *)&filep->membuf[filep->size];
 		/* Search for \n from p till the end of stream */
 		eof = (char *)memchr(*p, '\n', (size_t)(memend - *p));
 		if (eof != NULL) {
