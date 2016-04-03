@@ -19,11 +19,13 @@
  * THE SOFTWARE.
  */
 
+#ifdef _MSC_VER
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 #if !defined(_CRT_SECURE_NO_DEPRECATE)
 #define _CRT_SECURE_NO_DEPRECATE
+#endif
 #endif
 
 #include "shared.h"

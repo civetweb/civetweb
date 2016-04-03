@@ -40,11 +40,13 @@
 #pragma clang diagnostic pop
 #endif
 
+#ifdef _MSC_VER
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 #if !defined(_CRT_SECURE_NO_DEPRECATE)
 #define _CRT_SECURE_NO_DEPRECATE
+#endif
 #endif
 
 /* A minimal timeout used for all tests with the "check" framework. */
