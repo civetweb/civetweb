@@ -7518,7 +7518,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	if ((status = get_header(&ri, "Status")) != NULL) {
 		conn->status_code = atoi(status);
 		status_text = status;
-		while (isdigit(*(unsigned char *)status_text) || *status_text == ' ') {
+		while (isdigit(*(const unsigned char *)status_text) || *status_text == ' ') {
 			status_text++;
 		}
 	} else if (get_header(&ri, "Location") != NULL) {
@@ -7987,7 +7987,7 @@ mg_fgetc(struct file *filep, int offset)
 	}
 	if (filep->membuf != NULL && offset >= 0
 	    && ((unsigned int)(offset)) < filep->size) {
-		return ((unsigned char *)filep->membuf)[offset];
+		return ((const unsigned char *)filep->membuf)[offset];
 	} else if (filep->fp != NULL) {
 		return fgetc(filep->fp);
 	} else {
