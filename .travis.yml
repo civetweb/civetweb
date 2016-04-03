@@ -2327,10 +2327,6 @@ env:
 #      ENABLE_LUA=YES
 #      ENABLE_DUKTAPE=YES
 
-matrix:
-  allow_failures:
-    - os: osx
-
 addons:
   apt:
     packages:
