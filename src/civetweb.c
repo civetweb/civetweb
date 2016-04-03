@@ -1739,10 +1739,10 @@ mg_get_user_data(const struct mg_context *ctx)
 
 
 void
-mg_set_user_connection_data(const struct mg_connection *conn, void *data)
+mg_set_user_connection_data(struct mg_connection *conn, void *data)
 {
 	if (conn != NULL) {
-		((struct mg_connection *)conn)->request_info.conn_data = data;
+		conn->request_info.conn_data = data;
 	}
 }
 
@@ -4142,7 +4142,7 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 		                      conn->ssl,
 		                      (const char *)buf,
 		                      (int64_t)allowed)) == allowed) {
-			buf = (char *)buf + total;
+			buf = (const char *)buf + total;
 			conn->last_throttle_bytes += total;
 			while (total < (int64_t)len && conn->ctx->stop_flag == 0) {
 				allowed = conn->throttle > (int64_t)len - total
@@ -4159,7 +4159,7 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 				sleep(1);
 				conn->last_throttle_bytes = allowed;
 				conn->last_throttle_time = time(NULL);
-				buf = (char *)buf + n;
+				buf = (const char *)buf + n;
 				total += n;
 			}
 		}
@@ -5296,19 +5296,19 @@ parse_auth_header(struct mg_connection *conn,
 }
 
 
-static char *
+static const char *
 mg_fgets(char *buf, size_t size, struct file *filep, char **p)
 {
-	char *eof;
+	const char *eof;
 	size_t len;
-	char *memend;
+	const char *memend;
 
 	if (!filep) {
 		return NULL;
 	}
 
 	if (filep->membuf != NULL && *p != NULL) {
-		memend = (char *)&filep->membuf[filep->size];
+		memend = (const char *)&filep->membuf[filep->size];
 		/* Search for \n from p till the end of stream */
 		eof = (char *)memchr(*p, '\n', (size_t)(memend - *p));
 		if (eof != NULL) {
@@ -7516,7 +7516,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	if ((status = get_header(&ri, "Status")) != NULL) {
 		conn->status_code = atoi(status);
 		status_text = status;
-		while (isdigit(*(unsigned char *)status_text) || *status_text == ' ') {
+		while (isdigit(*(const unsigned char *)status_text) || *status_text == ' ') {
 			status_text++;
 		}
 	} else if (get_header(&ri, "Location") != NULL) {
@@ -7985,7 +7985,7 @@ mg_fgetc(struct file *filep, int offset)
 	}
 	if (filep->membuf != NULL && offset >= 0
 	    && ((unsigned int)(offset)) < filep->size) {
-		return ((unsigned char *)filep->membuf)[offset];
+		return ((const unsigned char *)filep->membuf)[offset];
 	} else if (filep->fp != NULL) {
 		return fgetc(filep->fp);
 	} else {
@@ -9099,7 +9099,7 @@ get_remote_ip(const struct mg_connection *conn)
 	if (!conn) {
 		return 0;
 	}
-	return ntohl(*(uint32_t *)&conn->client.rsa.sin.sin_addr);
+	return ntohl(*(const uint32_t *)&conn->client.rsa.sin.sin_addr);
 }
 
 

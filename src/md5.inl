@@ -245,7 +245,7 @@ md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
 				   see
 				   https://github.com/bel2125/civetweb/issues/94#issuecomment-98112861
 				   */
-				X = (const md5_word_t *)(void *)data;
+				X = (const md5_word_t *)(const void *)data;
 			} else {
 				/* not aligned */
 				memcpy(xbuf, data, 64);
