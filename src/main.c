@@ -2511,9 +2511,14 @@ main(int argc, char *argv[])
 - (void)editConfig
 {
 	create_config_file(g_ctx, g_config_file_name);
-	[[NSWorkspace sharedWorkspace]
-	           openFile:[NSString stringWithUTF8String:g_config_file_name]
-	    withApplication:@"TextEdit"];
+	NSString *path = [NSString stringWithUTF8String:g_config_file_name];
+	if (![[NSWorkspace sharedWorkspace] openFile:path withApplication:@"TextEdit"]) {
+			NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+			[alert setAlertStyle:NSWarningAlertStyle];
+			[alert setMessageText:NSLocalizedString(@"Unable to open config file.", "")];
+			[alert setInformativeText:path];
+			(void)[alert runModal];
+	}
 }
 - (void)shutDown
 {
