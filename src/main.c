@@ -2510,9 +2510,9 @@ main(int argc, char *argv[])
 }
 - (void)editConfig
 {
-	create_config_file(g_ctx, g_config_file);
+	create_config_file(g_ctx, g_config_file_name);
 	[[NSWorkspace sharedWorkspace]
-	           openFile:[NSString stringWithUTF8String:g_config_file]
+	           openFile:[NSString stringWithUTF8String:g_config_file_name]
 	    withApplication:@"TextEdit"];
 }
 - (void)shutDown
@@ -2581,7 +2581,7 @@ main(int argc, char *argv[])
 	[NSApp activateIgnoringOtherApps:YES];
 	[NSApp run];
 
-	stop_civetweb(g_ctx);
+	stop_civetweb();
 
 	return EXIT_SUCCESS;
 }
