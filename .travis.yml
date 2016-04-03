@@ -2387,6 +2387,10 @@ cache:
 
 matrix:
   - fast_finish: true
+  exclude:
+    # Exclude GCC from OS X builds because it's actually clang so it's just duplicate builds
+    - os: osx
+      compiler: gcc
 
 script:
   - CTEST_OUTPUT_ON_FAILURE=1 make all test
