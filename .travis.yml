@@ -2327,10 +2327,6 @@ env:
 #      ENABLE_LUA=YES
 #      ENABLE_DUKTAPE=YES
 
-matrix:
-  allow_failures:
-    - os: osx
-
 addons:
   apt:
     packages:
@@ -2386,7 +2382,11 @@ cache:
   - $HOME/third-party
 
 matrix:
-  - fast_finish: true
+  fast_finish: true
+  exclude:
+    # Exclude GCC from OS X builds because it's actually clang so it's just duplicate builds
+    - os: osx
+      compiler: gcc
 
 script:
   - CTEST_OUTPUT_ON_FAILURE=1 make all test
