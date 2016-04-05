@@ -7,7 +7,7 @@ endif()
 
 # We use the check unit testing framework for our C unit tests
 include(ExternalProject)
-if(APPLE)
+if(NOT WIN32)
   # Apply the patch to check to fix CMake building on OS X
   set(CHECK_PATCH_COMMAND patch
      ${CIVETWEB_THIRD_PARTY_DIR}/src/check-unit-test-framework/CMakeLists.txt		
