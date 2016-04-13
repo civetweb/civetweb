@@ -1474,23 +1474,25 @@ mg_get_valid_options(void)
 static int
 is_file_in_memory(const struct mg_connection *conn,
                   const char *path,
-                  struct file *filep)
+                  const char **membufp,
+                  uint64_t *sizep)
 {
+	const char *membuf;
 	size_t size = 0;
-	if (!conn || !filep) {
+	if (!conn || !membufp || !sizep) {
 		return 0;
 	}
 
+	membuf = NULL;
 	if (conn->ctx->callbacks.open_file) {
-		filep->membuf = conn->ctx->callbacks.open_file(conn, path, &size);
-		if (filep->membuf != NULL) {
-			/* NOTE: override filep->size only on success. Otherwise, it might
-			 * break constructs like if (!mg_stat() || !mg_fopen()) ... */
-			filep->size = size;
+		membuf = conn->ctx->callbacks.open_file(conn, path, &size);
+		if (membuf != NULL) {
+			*membufp = membuf;
+			*sizep = size;
 		}
 	}
 
-	return filep->membuf != NULL;
+	return membuf != NULL;
 }
 
 
@@ -1516,22 +1518,14 @@ mg_fopen(const struct mg_connection *conn,
          const char *mode,
          struct file *filep)
 {
-	struct stat st;
-
 	if (!filep) {
 		return 0;
 	}
+	/* Either fp or membuf must be NULL */
+	filep->fp = NULL;
+	filep->membuf = NULL;
 
-	/* TODO (high): mg_fopen should only open a file, while mg_stat should
-	 * only get the file status. They should not work on different members of
-	 * the same structure (bad cohesion). */
-	memset(filep, 0, sizeof(*filep));
-
-	if (stat(path, &st) == 0) {
-		filep->size = (uint64_t)(st.st_size);
-	}
-
-	if (!is_file_in_memory(conn, path, filep)) {
+	if (!is_file_in_memory(conn, path, &filep->membuf, &filep->size)) {
 #ifdef _WIN32
 		wchar_t wbuf[PATH_MAX], wmode[20];
 		path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
@@ -3001,7 +2995,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 	}
 	memset(filep, 0, sizeof(*filep));
 
-	if (conn && is_file_in_memory(conn, path, filep)) {
+	if (conn && is_file_in_memory(conn, path, &filep->membuf, &filep->size)) {
 		/* filep->is_directory = 0; filep->gzipped = 0; .. already done by
 		 * memset */
 		filep->last_modified = time(NULL);
@@ -3503,7 +3497,8 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 	}
 	memset(filep, 0, sizeof(*filep));
 
-	if (conn && is_file_in_memory(conn, path, filep)) {
+	if (conn && is_file_in_memory(conn, path, &filep->membuf, &filep->size)) {
+		/* membuf has size field only, last_modified is always Epoch. */
 		return 1;
 	}
 
