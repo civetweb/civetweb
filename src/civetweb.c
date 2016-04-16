@@ -8558,7 +8558,31 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 	          b64_sha);
 	protocol = mg_get_header(conn, "Sec-WebSocket-Protocol");
 	if (protocol) {
-		mg_printf(conn, "Sec-WebSocket-Protocol: %s\r\n\r\n", protocol);
+		/* The protocol is a comma seperated list of names. */
+		/* The server must only return one value from this list. */
+		/* First check if it is a list or just a single value. */
+		const char *sep = strchr(protocol, ',');
+		if (sep == NULL) {
+			/* Just a single protocol -> accept it. */
+			mg_printf(conn, "Sec-WebSocket-Protocol: %s\r\n\r\n", protocol);
+		} else {
+			/* Multiple protocols -> accept the first one. */
+			/* This is just a quick fix if the client offers multiple
+			 * protocols. In order to get the behavior intended by
+			 * RFC 6455 (https://tools.ietf.org/rfc/rfc6455.txt), it is
+			 * required to have a list of websocket subprotocols accepted
+			 * by the server. Then the server must either select a subprotocol
+			 * supported by client and server, or the server has to abort the
+			 * handshake by not returning a Sec-Websocket-Protocol header if
+			 * no subprotocol is acceptable.
+			 */
+			mg_printf(conn,
+			          "Sec-WebSocket-Protocol: %.*s\r\n\r\n",
+			          (int)(sep - protocol),
+			          protocol);
+		}
+		/* TODO: Real subprotocol negotiation instead of just taking the first
+		 * websocket subprotocol suggested by the client. */
 	} else {
 		mg_printf(conn, "%s", "\r\n");
 	}
@@ -8590,7 +8614,8 @@ read_websocket(struct mg_connection *conn,
 	*/
 	unsigned char mask[4];
 
-	/* data points to the place where the message is stored when passed to the
+	/* data points to the place where the message is stored when passed to
+	 * the
 	 * websocket_data callback.  This is either mem on the stack, or a
 	 * dynamically allocated buffer if it is too large. */
 	char mem[4096];
@@ -9778,7 +9803,8 @@ handle_request(struct mg_connection *conn)
 			}
 
 #if !defined(NO_FILES)
-			/* 6.2.2. Check if put authorization for static files is available.
+			/* 6.2.2. Check if put authorization for static files is
+			 * available.
 			 */
 			if (!is_authorized_for_put(conn)) {
 				send_authorization_request(conn);
@@ -10697,7 +10723,8 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
 		/* maybe not? CRYPTO_cleanup_all_ex_data(); */
-		/* see https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+		/* see
+		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 		ERR_remove_state(0);
 		return 0;
 	}
@@ -10709,7 +10736,8 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
 		/* maybe not? CRYPTO_cleanup_all_ex_data(); */
-		/* see https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+		/* see
+		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 		ERR_remove_state(0);
 		return 0;
 	}
@@ -11275,7 +11303,8 @@ close_connection(struct mg_connection *conn)
 		SSL_shutdown(conn->ssl);
 		SSL_free(conn->ssl);
 		/* maybe not? CRYPTO_cleanup_all_ex_data(); */
-		/* see https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+		/* see
+		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 		ERR_remove_state(0);
 		conn->ssl = NULL;
 	}
@@ -12368,8 +12397,10 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		}
 
 
-		/* Disable TCP Nagle's algorithm.  Normally TCP packets are coalesced
-		 * to effectively fill up the underlying IP packet payload and reduce
+		/* Disable TCP Nagle's algorithm.  Normally TCP packets are
+		 * coalesced
+		 * to effectively fill up the underlying IP packet payload and
+		 * reduce
 		 * the overhead of sending lots of small buffers. However this hurts
 		 * the server's throughput (ie. operations per second) when HTTP 1.1
 		 * persistent connections are used and the responses are relatively
