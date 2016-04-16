@@ -129,8 +129,8 @@ struct tuser_data {
 
 static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
-static const char *g_server_name;         /* Set by init_server_name() */
-static const char *g_icon_name;           /* Set by init_server_name() */
+static const char *g_server_name;   /* Set by init_server_name() */
+static const char *g_icon_name;     /* Set by init_server_name() */
 static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
 static struct mg_context *g_ctx; /* Set by start_civetweb() */
@@ -2512,12 +2512,14 @@ main(int argc, char *argv[])
 {
 	create_config_file(g_ctx, g_config_file_name);
 	NSString *path = [NSString stringWithUTF8String:g_config_file_name];
-	if (![[NSWorkspace sharedWorkspace] openFile:path withApplication:@"TextEdit"]) {
-			NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-			[alert setAlertStyle:NSWarningAlertStyle];
-			[alert setMessageText:NSLocalizedString(@"Unable to open config file.", "")];
-			[alert setInformativeText:path];
-			(void)[alert runModal];
+	if (![[NSWorkspace sharedWorkspace] openFile:path
+	                             withApplication:@"TextEdit"]) {
+		NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+		[alert setAlertStyle:NSWarningAlertStyle];
+		[alert setMessageText:NSLocalizedString(@"Unable to open config file.",
+		                                        "")];
+		[alert setInformativeText:path];
+		(void)[alert runModal];
 	}
 }
 - (void)shutDown
