@@ -3276,9 +3276,9 @@ spawn_process(struct mg_connection *conn,
               const char *prog,
               char *envblk,
               char *envp[],
-              int fdin,
-              int fdout,
-              int fderr,
+              int fdin[2],
+              int fdout[2],
+              int fderr[2],
               const char *dir)
 {
 	HANDLE me;
@@ -3299,21 +3299,21 @@ spawn_process(struct mg_connection *conn,
 
 	me = GetCurrentProcess();
 	DuplicateHandle(me,
-	                (HANDLE)_get_osfhandle(fdin),
+	                (HANDLE)_get_osfhandle(fdin[0]),
 	                me,
 	                &si.hStdInput,
 	                0,
 	                TRUE,
 	                DUPLICATE_SAME_ACCESS);
 	DuplicateHandle(me,
-	                (HANDLE)_get_osfhandle(fdout),
+	                (HANDLE)_get_osfhandle(fdout[1]),
 	                me,
 	                &si.hStdOutput,
 	                0,
 	                TRUE,
 	                DUPLICATE_SAME_ACCESS);
 	DuplicateHandle(me,
-	                (HANDLE)_get_osfhandle(fderr),
+	                (HANDLE)_get_osfhandle(fderr[1]),
 	                me,
 	                &si.hStdError,
 	                0,
@@ -3569,9 +3569,9 @@ spawn_process(struct mg_connection *conn,
 			/* Keep stderr and stdout in two different pipes.
 			 * Stdout will be sent back to the client,
 			 * stderr should go into a server error log. */
-			(void)close(fdin);
-			(void)close(fdout);
-			(void)close(fderr);
+			(void)close(fdin[0]);
+			(void)close(fdout[1]);
+			(void)close(fderr[1]);
 
 			/* Close write end fdin and read end fdout and fderr */
 			(void)close(fdin[1]);
