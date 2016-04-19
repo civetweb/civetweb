@@ -2355,7 +2355,7 @@ before_script:
   #- /sbin/ip addr show
   # Generate the build scripts with CMake
   - mkdir output
-  - gcc test/test_cgi.c -o output/test_cgi.cgi
+  - gcc test/cgi_test.c -o output/cgi_test.cgi
   - cd output
   - cmake --version
   - cmake
@@ -2377,6 +2377,7 @@ before_script:
     -DCIVETWEB_C_STANDARD=${C_STANDARD}
     -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
     ..
+  - ls -la
 
 cache:
   directories:
