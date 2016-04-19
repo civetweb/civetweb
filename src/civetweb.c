@@ -1109,10 +1109,18 @@ enum {
 	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
                          * socket option typedef TCP_NODELAY. */
 	STATIC_FILE_MAX_AGE,
+	THREAD_STACK_SIZE,
+#if !defined(_WIN32)
+	THREAD_PRIORITY,
+	THREAD_POLICY,
+#endif
 
 	NUM_OPTIONS
 };
 
+/* Macros for stringification */
+#define TO_STRING(s) X_TO_STRING(s)
+#define X_TO_STRING(s) #s
 
 /* Config option name, config types, default value */
 static struct mg_option config_options[] = {
@@ -1183,7 +1191,15 @@ static struct mg_option config_options[] = {
     {"_experimental_static_file_max_age",
      CONFIG_TYPE_NUMBER,
      "3600"}, /* TODO: redefine parameter */
-
+#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+    {"thread_stack_size", CONFIG_TYPE_NUMBER, TO_STRING(USE_STACK_SIZE)},
+#else
+    {"thread_stack_size", CONFIG_TYPE_NUMBER, "0"},
+#endif
+#if !defined(_WIN32)
+    {"thread_priority", CONFIG_TYPE_NUMBER, NULL},
+    {"thread_policy", CONFIG_TYPE_STRING, NULL},
+#endif
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
 /* Check if the config_options and the corresponding enum have compatible
@@ -3149,19 +3165,22 @@ set_close_on_exec(SOCKET sock, struct mg_connection *conn /* may be null */)
 int
 mg_start_thread(mg_thread_func_t f, void *p)
 {
-#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
-	/* Compile-time option to control stack size, e.g. -DUSE_STACK_SIZE=16384
-	 */
-	return ((_beginthread((void(__cdecl *)(void *))f, USE_STACK_SIZE, p)
+	struct mg_context* ctx = p;
+	char* stacksize = ctx->config[THREAD_STACK_SIZE];
+	unsigned size = 0;
+
+	if (stacksize != NULL) {
+		int size = atoi(stacksize);
+		if (size <= 0) {
+			mg_cry(fc(ctx),
+			    "Stack size has to be a positive number. Is: %d",
+			    size);
+		}
+	}
+	return ((_beginthread((void(__cdecl *)(void *))f, size, p)
 	         == ((uintptr_t)(-1L)))
 	            ? -1
 	            : 0);
-#else
-	return (
-	    (_beginthread((void(__cdecl *)(void *))f, 0, p) == ((uintptr_t)(-1L)))
-	        ? -1
-	        : 0);
-#endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
 }
 
 
@@ -3468,6 +3487,68 @@ set_close_on_exec(SOCKET fd, struct mg_connection *conn /* may be null */)
 	}
 }
 
+static void
+set_pthread_attributes(struct mg_context *ctx, pthread_attr_t *attr)
+{
+	char* stacksize = ctx->config[THREAD_STACK_SIZE];
+	char* priority = ctx->config[THREAD_PRIORITY];
+	char* policy = ctx->config[THREAD_POLICY];
+	int noinheritsched = 0;
+
+	if (stacksize != NULL) {
+		int size = atoi(stacksize);
+		if (size <= 0) {
+			mg_cry(fc(ctx),
+			    "Stack size has to be a positive number. Is: %d",
+			    size);
+		}
+		(void) pthread_attr_setstacksize(attr, (size_t) size);
+	}
+
+	if (priority != NULL) {
+		struct sched_param sched_param;
+		memset(&sched_param, 0, sizeof(sched_param));
+		sched_param.sched_priority = atoi(priority);
+		(void) pthread_attr_setschedparam(attr, &sched_param);
+		noinheritsched = 1;
+	}
+
+	if (policy != NULL) {
+		int p_policy;
+		(void) pthread_attr_getschedpolicy(attr, &p_policy);
+
+		switch (policy[0]) {
+		case 'o':
+			p_policy = SCHED_OTHER;
+			break;
+		case 'f':
+			p_policy = SCHED_FIFO;
+			break;
+		case 'r':
+			p_policy = SCHED_RR;
+			break;
+#if (defined(_POSIX_SPORADIC_SERVER) && (_POSIX_SPORADIC_SERVER > 0)) || \
+    (defined(_POSIX_THREAD_SPORADIC_SERVER) && \
+    (_POSIX_THREAD_SPORADIC_SERVER > 0))
+		case 's':
+			p_policy = SCHED_SPORADIC;
+			break;
+#endif
+		default:
+			mg_cry(fc(ctx), "Unknown scheduler: %s", policy);
+			break;
+		}
+
+		(void) pthread_attr_setschedpolicy(attr, p_policy);
+
+		noinheritsched = 1;
+	}
+
+	if (noinheritsched != 0) {
+		(void) pthread_attr_setinheritsched(attr,
+		    PTHREAD_EXPLICIT_SCHED);
+	}
+}
 
 int
 mg_start_thread(mg_thread_func_t func, void *param)
@@ -3475,15 +3556,12 @@ mg_start_thread(mg_thread_func_t func, void *param)
 	pthread_t thread_id;
 	pthread_attr_t attr;
 	int result;
+	struct mg_context* ctx = param;
 
 	(void)pthread_attr_init(&attr);
 	(void)pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
-	/* Compile-time option to control stack size,
-	 * e.g. -DUSE_STACK_SIZE=16384 */
-	(void)pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
-#endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
+	set_pthread_attributes(ctx, &attr);
 
 	result = pthread_create(&thread_id, &attr, func, param);
 	pthread_attr_destroy(&attr);
@@ -3501,14 +3579,11 @@ mg_start_thread_with_id(mg_thread_func_t func,
 	pthread_t thread_id;
 	pthread_attr_t attr;
 	int result;
+	struct mg_context* ctx = param;
 
 	(void)pthread_attr_init(&attr);
 
-#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
-	/* Compile-time option to control stack size,
-	 * e.g. -DUSE_STACK_SIZE=16384 */
-	(void)pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
-#endif /* defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1 */
+	set_pthread_attributes(ctx, &attr);
 
 	result = pthread_create(&thread_id, &attr, func, param);
 	pthread_attr_destroy(&attr);
