@@ -3523,9 +3523,9 @@ spawn_process(struct mg_connection *conn,
               const char *prog,
               char *envblk,
               char *envp[],
-              int fdin,
-              int fdout,
-              int fderr,
+              int fdin[2],
+              int fdout[2],
+              int fderr[2],
               const char *dir)
 {
 	pid_t pid;
@@ -3547,15 +3547,24 @@ spawn_process(struct mg_connection *conn,
 		/* Child */
 		if (chdir(dir) != 0) {
 			mg_cry(conn, "%s: chdir(%s): %s", __func__, dir, strerror(ERRNO));
-		} else if (dup2(fdin, 0) == -1) {
-			mg_cry(
-			    conn, "%s: dup2(%d, 0): %s", __func__, fdin, strerror(ERRNO));
-		} else if (dup2(fdout, 1) == -1) {
-			mg_cry(
-			    conn, "%s: dup2(%d, 1): %s", __func__, fdout, strerror(ERRNO));
-		} else if (dup2(fderr, 2) == -1) {
-			mg_cry(
-			    conn, "%s: dup2(%d, 2): %s", __func__, fderr, strerror(ERRNO));
+		} else if (dup2(fdin[0], 0) == -1) {
+			mg_cry(conn,
+			       "%s: dup2(%d, 0): %s",
+			       __func__,
+			       fdin[0],
+			       strerror(ERRNO));
+		} else if (dup2(fdout[1], 1) == -1) {
+			mg_cry(conn,
+			       "%s: dup2(%d, 1): %s",
+			       __func__,
+			       fdout[1],
+			       strerror(ERRNO));
+		} else if (dup2(fderr[1], 2) == -1) {
+			mg_cry(conn,
+			       "%s: dup2(%d, 2): %s",
+			       __func__,
+			       fderr[1],
+			       strerror(ERRNO));
 		} else {
 			/* Keep stderr and stdout in two different pipes.
 			 * Stdout will be sent back to the client,
@@ -3563,6 +3572,11 @@ spawn_process(struct mg_connection *conn,
 			(void)close(fdin);
 			(void)close(fdout);
 			(void)close(fderr);
+
+			/* Close write end fdin and read end fdout and fderr */
+			(void)close(fdin[1]);
+			(void)close(fdout[0]);
+			(void)close(fderr[0]);
 
 			/* After exec, all signal handlers are restored to their default
 			 * values, with one exception of SIGCHLD. According to
@@ -7357,8 +7371,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		goto done;
 	}
 
-	pid = spawn_process(
-	    conn, p, blk.buf, blk.var, fdin[0], fdout[1], fderr[1], dir);
+	pid = spawn_process(conn, p, blk.buf, blk.var, fdin, fdout, fderr, dir);
 
 	if (pid == (pid_t)-1) {
 		status = strerror(ERRNO);
