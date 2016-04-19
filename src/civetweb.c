@@ -3320,13 +3320,18 @@ spawn_process(struct mg_connection *conn,
 	                TRUE,
 	                DUPLICATE_SAME_ACCESS);
 
-    /* Close unsued handles, so they are not inherited.
-     * (Already tested close, according to https://support.microsoft.com/en-us/kb/190351, but this does not work here)
-     * TODO: check https://msdn.microsoft.com/en-us/library/windows/desktop/ms682499%28v=vs.85%29.aspx
-     */
-    SetHandleInformation((HANDLE)_get_osfhandle(fdin[1]), HANDLE_FLAG_INHERIT, 0);
-    SetHandleInformation((HANDLE)_get_osfhandle(fdout[0]), HANDLE_FLAG_INHERIT, 0);
-    SetHandleInformation((HANDLE)_get_osfhandle(fderr[0]), HANDLE_FLAG_INHERIT, 0);
+	/* Mark handles that should not be inherited. See
+	 * https://msdn.microsoft.com/en-us/library/windows/desktop/ms682499%28v=vs.85%29.aspx
+	 */
+	SetHandleInformation((HANDLE)_get_osfhandle(fdin[1]),
+	                     HANDLE_FLAG_INHERIT,
+	                     0);
+	SetHandleInformation((HANDLE)_get_osfhandle(fdout[0]),
+	                     HANDLE_FLAG_INHERIT,
+	                     0);
+	SetHandleInformation((HANDLE)_get_osfhandle(fderr[0]),
+	                     HANDLE_FLAG_INHERIT,
+	                     0);
 
 	/* If CGI file is a script, try to read the interpreter line */
 	interp = conn->ctx->config[CGI_INTERPRETER];
