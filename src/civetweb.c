@@ -3320,6 +3320,14 @@ spawn_process(struct mg_connection *conn,
 	                TRUE,
 	                DUPLICATE_SAME_ACCESS);
 
+    /* Close unsued handles, so they are not inherited.
+     * (Already tested close, according to https://support.microsoft.com/en-us/kb/190351, but this does not work here)
+     * TODO: check https://msdn.microsoft.com/en-us/library/windows/desktop/ms682499%28v=vs.85%29.aspx
+     */
+    SetHandleInformation((HANDLE)_get_osfhandle(fdin[1]), HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation((HANDLE)_get_osfhandle(fdout[0]), HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation((HANDLE)_get_osfhandle(fderr[0]), HANDLE_FLAG_INHERIT, 0);
+
 	/* If CGI file is a script, try to read the interpreter line */
 	interp = conn->ctx->config[CGI_INTERPRETER];
 	if (interp == NULL) {
@@ -7388,12 +7396,12 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	}
 
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1 */
-	set_close_on_exec((SOCKET)fdin[0], conn);
-	set_close_on_exec((SOCKET)fdin[1], conn);
-	set_close_on_exec((SOCKET)fdout[0], conn);
-	set_close_on_exec((SOCKET)fdout[1], conn);
-	set_close_on_exec((SOCKET)fderr[0], conn);
-	set_close_on_exec((SOCKET)fderr[1], conn);
+	set_close_on_exec((SOCKET)fdin[0], conn);  /* stdin read */
+	set_close_on_exec((SOCKET)fdout[1], conn); /* stdout write */
+	set_close_on_exec((SOCKET)fderr[1], conn); /* stderr write */
+	set_close_on_exec((SOCKET)fdin[1], conn);  /* stdin write */
+	set_close_on_exec((SOCKET)fdout[0], conn); /* stdout read */
+	set_close_on_exec((SOCKET)fderr[0], conn); /* stderr read */
 
 	/* Parent closes only one side of the pipes.
 	 * If we don't mark them as closed, close() attempt before
