@@ -49,28 +49,37 @@
  */
 
 static const char *
-locate_resources(void)
+locate_path(const char *a_path)
 {
-	return
+	static char r_path[256];
+
 #ifdef _WIN32
 #ifdef LOCAL_TEST
-	    "resources\\";
+	sprintf(r_path, "%s\\", a_path);
 #else
-	    /* Appveyor */
-	    "..\\..\\..\\resources\\"; /* TODO: the different paths
-	                                            * used in the different test
-	                                            * system is an unsolved
-	                                            * problem */
+	/* Appveyor */
+	sprintf(r_path, "..\\..\\..\\%s\\", a_path);
+/* TODO: the different paths
+ * used in the different test
+ * system is an unsolved
+ * problem. */
 #endif
 #else
 #ifdef LOCAL_TEST
-	    "resources/";
+	sprintf(r_path, "%s/", a_path);
 #else
-	    /* Travis */
-	    "../../resources/"; // TODO: fix path in CI test environment
+	/* Travis */
+	sprintf(r_path,
+	        "../../%s/",
+	        a_path); // TODO: fix path in CI test environment
 #endif
 #endif
+
+	return r_path;
 }
+
+#define locate_resources() locate_path("resources")
+#define locate_test_exes() locate_path("output")
 
 
 static const char *
@@ -803,6 +812,8 @@ START_TEST(test_request_handlers)
 	struct mg_connection *ws_client3_conn = NULL;
 #endif
 
+	char cmd_buf[256];
+
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
 	OPTIONS[opt_idx++] = HTTP_PORT;
@@ -1068,6 +1079,34 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, plain_file_content);
 #endif
 	mg_close_connection(client_conn);
+
+
+/* Test with CGI test executable */
+#if defined(_WIN32)
+	sprintf(cmd_buf, "copy %s\\cgi_test.cgi cgi_test.exe", locate_test_exes());
+#else
+	sprintf(cmd_buf, "cp %s/cgi_test.cgi cgi_test.cgi", locate_test_exes());
+#endif
+	system(cmd_buf);
+
+#if !defined(NO_CGI) && !defined(NO_FILES) && !defined(_WIN32)
+	/* TODO: add test for windows, check with POST */
+	client_conn = mg_download(
+	    "localhost",
+	    ipv4_port,
+	    0,
+	    ebuf,
+	    sizeof(ebuf),
+	    "%s",
+	    "POST /cgi_test.cgi HTTP/1.0\r\nContent-Length: 3\r\n\r\nABC");
+	ck_assert(client_conn != NULL);
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	mg_close_connection(client_conn);
+#endif
+
 
 	/* Get zipped static data - will not work if Accept-Encoding is not set */
 	client_conn = mg_download("localhost",
