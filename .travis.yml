@@ -2355,6 +2355,7 @@ before_script:
   #- /sbin/ip addr show
   # Generate the build scripts with CMake
   - mkdir output
+  - gcc test/test_cgi.c -o output/test_cgi.cgi
   - cd output
   - cmake --version
   - cmake
