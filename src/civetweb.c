@@ -995,6 +995,7 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
 #endif /* NO_SSL_DL */
 
 
+#if !defined(NO_CACHING)
 static const char *month_names[] = {"Jan",
                                     "Feb",
                                     "Mar",
@@ -1007,6 +1008,7 @@ static const char *month_names[] = {"Jan",
                                     "Oct",
                                     "Nov",
                                     "Dec"};
+#endif /* !NO_CACHING */
 
 /* Unified socket address. For IPv6 support, add IPv6 address structure in the
  * union u. */
@@ -1108,7 +1110,9 @@ enum {
 	ERROR_PAGES,
 	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
                          * socket option typedef TCP_NODELAY. */
+#if !defined(NO_CACHING)
 	STATIC_FILE_MAX_AGE,
+#endif
 
 	NUM_OPTIONS
 };
@@ -1180,9 +1184,11 @@ static struct mg_option config_options[] = {
     {"access_control_allow_origin", CONFIG_TYPE_STRING, "*"},
     {"error_pages", CONFIG_TYPE_DIRECTORY, NULL},
     {"tcp_nodelay", CONFIG_TYPE_NUMBER, "0"},
+#if !defined(NO_CACHING)
     {"_experimental_static_file_max_age",
      CONFIG_TYPE_NUMBER,
      "3600"}, /* TODO: redefine parameter */
+#endif
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
@@ -2228,6 +2234,7 @@ send_no_cache_header(struct mg_connection *conn)
 static int
 send_static_cache_header(struct mg_connection *conn)
 {
+#if !defined(NO_CACHING)
 	/* Read the server config to check how long a file may be cached.
 	 * The configuration is in seconds. */
 	int max_age = atoi(conn->ctx->config[STATIC_FILE_MAX_AGE]);
@@ -2243,6 +2250,9 @@ send_static_cache_header(struct mg_connection *conn)
 	 * Reason: see https://www.mnot.net/blog/2007/05/15/expires_max-age */
 	/* See also https://www.mnot.net/cache_docs/ */
 	return mg_printf(conn, "Cache-Control: max-age=%u\r\n", (unsigned)max_age);
+#else /* NO_CACHING */
+	return send_no_cache_header(conn);
+#endif /* !NO_CACHING */
 }
 
 
@@ -4815,6 +4825,7 @@ get_request_len(const char *buf, int buflen)
 }
 
 
+#if !defined(NO_CACHING)
 /* Convert month to the month number. Return -1 on error, or month number */
 static int
 get_month_index(const char *s)
@@ -4832,7 +4843,6 @@ get_month_index(const char *s)
 
 
 /* Parse UTC date-time string, and return the corresponding time_t value. */
-#if !defined(NO_TIMEGM)
 static time_t
 parse_date_string(const char *datetime)
 {
@@ -4886,7 +4896,7 @@ parse_date_string(const char *datetime)
 
 	return result;
 }
-#endif /* !NO_TIMEGM */
+#endif /* !NO_CACHING */
 
 
 /* Protect against directory disclosure attack by removing '..',
@@ -6963,11 +6973,11 @@ substitute_index_file(struct mg_connection *conn,
 #endif
 
 
+#if !defined(NO_CACHING)
 /* Return True if we should reply 304 Not Modified. */
 static int
 is_not_modified(const struct mg_connection *conn, const struct file *filep)
 {
-#if !defined(NO_TIMEGM)
 	char etag[64];
 	const char *ims = mg_get_header(conn, "If-Modified-Since");
 	const char *inm = mg_get_header(conn, "If-None-Match");
@@ -6977,10 +6987,8 @@ is_not_modified(const struct mg_connection *conn, const struct file *filep)
 	}
 	return (inm != NULL && !mg_strcasecmp(etag, inm))
 	       || (ims != NULL && (filep->last_modified <= parse_date_string(ims)));
-#else /* NO_TIMEGM */
-	return false;
-#endif /* !NO_TIMEGM */
 }
+#endif /* !NO_CACHING */
 
 
 #if !defined(NO_CGI) || !defined(NO_FILES)
@@ -10118,9 +10126,11 @@ handle_file_based_request(struct mg_connection *conn,
 	                        strlen(conn->ctx->config[SSI_EXTENSIONS]),
 	                        path) > 0) {
 		handle_ssi_file_request(conn, path, file);
+#if !defined(NO_CACHING)
 	} else if ((!conn->in_error_handler) && is_not_modified(conn, file)) {
 		/* Send 304 "Not Modified" - this must not send any body data */
 		send_http_error(conn, 304, "%s", "");
+#endif /* !NO_CACHING */
 	} else {
 		handle_static_file_request(conn, path, file, NULL);
 	}

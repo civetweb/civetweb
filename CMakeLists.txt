@@ -68,6 +68,10 @@ message(STATUS "Serve no static files - ${CIVETWEB_SERVE_NO_FILES}")
 option(CIVETWEB_DISABLE_CGI "Disables CGI, so theserver will not execute CGI scripts" OFF)
 message(STATUS "Disable CGI support - ${CIVETWEB_DISABLE_CGI}")
 
+# Disable caching
+option(CIVETWEB_DISABLE_CACHING "Disables caching, so that no timegm is used." OFF)
+message(STATUS "Disable caching support - ${CIVETWEB_DISABLE_CACHING}")
+
 # C++ wrappers
 option(CIVETWEB_ENABLE_CXX "Enables the C++ wrapper library" OFF)
 message(STATUS "C++ wrappers - ${CIVETWEB_ENABLE_CXX}")
@@ -371,6 +375,9 @@ if (CIVETWEB_SERVE_NO_FILES)
 endif()
 if (CIVETWEB_DISABLE_CGI)
   add_definitions(-DNO_CGI)
+endif()
+if (CIVETWEB_DISABLE_CACHING)
+  add_definitions(-DNO_CACHING)
 endif()
 if (CIVETWEB_ENABLE_LUA)
   add_definitions(-DUSE_LUA)
