@@ -349,7 +349,7 @@ struct timespec {
 
 static int pthread_mutex_lock(pthread_mutex_t *);
 static int pthread_mutex_unlock(pthread_mutex_t *);
-static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len);
+static void path_to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len);
 struct file;
 static const char *
 mg_fgets(char *buf, size_t size, struct file *filep, char **p);
@@ -1529,7 +1529,7 @@ mg_fopen(const struct mg_connection *conn,
 	if (!is_file_in_memory(conn, path, filep)) {
 #ifdef _WIN32
 		wchar_t wbuf[PATH_MAX], wmode[20];
-		to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
+		path_to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
 		MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, ARRAY_SIZE(wmode));
 		filep->fp = _wfopen(wbuf, wmode);
 #else
@@ -2807,9 +2807,11 @@ change_slashes_to_backslashes(char *path)
 /* Encode 'path' which is assumed UTF-8 string, into UNICODE string.
  * wbuf and wbuf_len is a target buffer and its length. */
 static void
-to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
+path_to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
 {
 	char buf[PATH_MAX], buf2[PATH_MAX];
+	wchar_t wbuf2[MAX_PATH + 1];
+	DWORD long_len, err;
 
 	mg_strlcpy(buf, path, sizeof(buf));
 	change_slashes_to_backslashes(buf);
@@ -2823,7 +2825,23 @@ to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
 	if (strcmp(buf, buf2) != 0) {
 		wbuf[0] = L'\0';
 	}
+
+	/* Only accept a full file path, not a Windows short (8.3) path. */
+	memset(wbuf2, 0, ARRAY_SIZE(wbuf2) * sizeof(wchar_t));
+	long_len = GetLongPathNameW(wbuf, wbuf2, ARRAY_SIZE(wbuf2) - 1);
+	if (long_len == 0) {
+		err = GetLastError();
+		if (err == ERROR_FILE_NOT_FOUND) {
+			/* File does not exist. This is not always a problem here. */
+			return;
+		}
+	}
+	if ((long_len >= ARRAY_SIZE(wbuf2)) || (wcscmp(wbuf, wbuf2) != 0)) {
+		/* Short name is used. */
+		wbuf[0] = L'\0';
+	}
 }
+
 
 #if defined(_WIN32_WCE)
 /* Create substitutes for POSIX functions in Win32. */
@@ -2946,7 +2964,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 		return 1;
 	}
 
-	to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
+	path_to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
 	if (GetFileAttributesExW(wbuf, GetFileExInfoStandard, &info) != 0) {
 		filep->size = MAKEUQUAD(info.nFileSizeLow, info.nFileSizeHigh);
 		filep->last_modified =
@@ -2984,7 +3002,7 @@ static int
 mg_remove(const char *path)
 {
 	wchar_t wbuf[PATH_MAX];
-	to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
+	path_to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
 	return DeleteFileW(wbuf) ? 0 : -1;
 }
 
@@ -2992,15 +3010,9 @@ mg_remove(const char *path)
 static int
 mg_mkdir(const char *path, int mode)
 {
-	char buf[PATH_MAX];
 	wchar_t wbuf[PATH_MAX];
-
 	(void)mode;
-	mg_strlcpy(buf, path, sizeof(buf));
-	change_slashes_to_backslashes(buf);
-
-	(void)MultiByteToWideChar(CP_UTF8, 0, buf, -1, wbuf, ARRAY_SIZE(wbuf));
-
+	path_to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
 	return CreateDirectoryW(wbuf, NULL) ? 0 : -1;
 }
 
@@ -3027,7 +3039,7 @@ opendir(const char *name)
 	} else if ((dir = (DIR *)mg_malloc(sizeof(*dir))) == NULL) {
 		SetLastError(ERROR_NOT_ENOUGH_MEMORY);
 	} else {
-		to_unicode(name, wpath, ARRAY_SIZE(wpath));
+		path_to_unicode(name, wpath, ARRAY_SIZE(wpath));
 		attrs = GetFileAttributesW(wpath);
 		if (attrs != 0xFFFFFFFF && ((attrs & FILE_ATTRIBUTE_DIRECTORY)
 		                            == FILE_ATTRIBUTE_DIRECTORY)) {
@@ -3222,7 +3234,7 @@ dlopen(const char *dll_name, int flags)
 {
 	wchar_t wbuf[PATH_MAX];
 	(void)flags;
-	to_unicode(dll_name, wbuf, ARRAY_SIZE(wbuf));
+	path_to_unicode(dll_name, wbuf, ARRAY_SIZE(wbuf));
 	return LoadLibraryW(wbuf);
 }
 
