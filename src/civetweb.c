@@ -441,8 +441,12 @@ typedef unsigned short int in_port_t;
 #endif /* O_BINARY */
 #define closesocket(a) (close(a))
 #define mg_mkdir(x, y) (mkdir(x, y))
-#define mg_remove(x) (remove(x))
+#define mg_remove(conn, x) (remove(x))
 #define mg_sleep(x) (usleep((x)*1000))
+#define mg_opendir(x) (opendir(x))
+#define mg_opendir(conn, x) (opendir(x))
+#define mg_closedir(x) (closedir(x))
+#define mg_readdir(x) (readdir(x))
 #define ERRNO (errno)
 #define INVALID_SOCKET (-1)
 #define INT64_FMT PRId64
@@ -3060,7 +3064,7 @@ mg_mkdir(const struct mg_connection *conn, const char *path, int mode)
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
 static DIR *
-opendir(const struct mg_connection *conn, const char *name)
+mg_opendir(const struct mg_connection *conn, const char *name)
 {
 	DIR *dir = NULL;
 	wchar_t wpath[PATH_MAX];
@@ -3089,7 +3093,7 @@ opendir(const struct mg_connection *conn, const char *name)
 
 
 static int
-closedir(DIR *dir)
+mg_closedir(DIR *dir)
 {
 	int result = 0;
 
@@ -3108,7 +3112,7 @@ closedir(DIR *dir)
 
 
 static struct dirent *
-readdir(DIR *dir)
+mg_readdir(DIR *dir)
 {
 	struct dirent *result = 0;
 
@@ -6083,12 +6087,12 @@ scan_directory(struct mg_connection *conn,
 	struct de de;
 	int truncated;
 
-	if ((dirp = opendir(conn, dir)) == NULL) {
+	if ((dirp = mg_opendir(conn, dir)) == NULL) {
 		return 0;
 	} else {
 		de.conn = conn;
 
-		while ((dp = readdir(dirp)) != NULL) {
+		while ((dp = mg_readdir(dirp)) != NULL) {
 			/* Do not show current dir and hidden files */
 			if (!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")
 			    || must_hide_file(conn, dp->d_name)) {
@@ -6120,7 +6124,7 @@ scan_directory(struct mg_connection *conn,
 			de.file_name = dp->d_name;
 			cb(&de, data);
 		}
-		(void)closedir(dirp);
+		(void)mg_closedir(dirp);
 	}
 	return 1;
 }
@@ -6137,12 +6141,12 @@ remove_directory(struct mg_connection *conn, const char *dir)
 	int truncated;
 	int ok = 1;
 
-	if ((dirp = opendir(conn, dir)) == NULL) {
+	if ((dirp = mg_opendir(conn, dir)) == NULL) {
 		return 0;
 	} else {
 		de.conn = conn;
 
-		while ((dp = readdir(dirp)) != NULL) {
+		while ((dp = mg_readdir(dirp)) != NULL) {
 			/* Do not show current dir (but show hidden files as they will
 			 * also be removed) */
 			if (!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")) {
@@ -6189,7 +6193,7 @@ remove_directory(struct mg_connection *conn, const char *dir)
 				ok = 0;
 			}
 		}
-		(void)closedir(dirp);
+		(void)mg_closedir(dirp);
 
 		IGNORE_UNUSED_RESULT(rmdir(dir));
 	}
