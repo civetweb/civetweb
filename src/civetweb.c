@@ -440,10 +440,9 @@ typedef unsigned short int in_port_t;
 #define O_BINARY (0)
 #endif /* O_BINARY */
 #define closesocket(a) (close(a))
-#define mg_mkdir(x, y) (mkdir(x, y))
+#define mg_mkdir(conn, path, mode) (mkdir(path, mode))
 #define mg_remove(conn, x) (remove(x))
 #define mg_sleep(x) (usleep((x)*1000))
-#define mg_opendir(x) (opendir(x))
 #define mg_opendir(conn, x) (opendir(x))
 #define mg_closedir(x) (closedir(x))
 #define mg_readdir(x) (readdir(x))
@@ -6201,6 +6200,7 @@ remove_directory(struct mg_connection *conn, const char *dir)
 	return ok;
 }
 #endif
+
 
 struct dir_scan_data {
 	struct de *entries;
