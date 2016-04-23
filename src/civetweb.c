@@ -349,7 +349,10 @@ struct timespec {
 
 static int pthread_mutex_lock(pthread_mutex_t *);
 static int pthread_mutex_unlock(pthread_mutex_t *);
-static void path_to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len);
+static void path_to_unicode(const struct mg_connection *conn,
+                            const char *path,
+                            wchar_t *wbuf,
+                            size_t wbuf_len);
 struct file;
 static const char *
 mg_fgets(char *buf, size_t size, struct file *filep, char **p);
@@ -1529,7 +1532,7 @@ mg_fopen(const struct mg_connection *conn,
 	if (!is_file_in_memory(conn, path, filep)) {
 #ifdef _WIN32
 		wchar_t wbuf[PATH_MAX], wmode[20];
-		path_to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
+		path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
 		MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, ARRAY_SIZE(wmode));
 		filep->fp = _wfopen(wbuf, wmode);
 #else
@@ -2804,14 +2807,33 @@ change_slashes_to_backslashes(char *path)
 }
 
 
+static int
+mg_wcscasecmp(const wchar_t *s1, const wchar_t *s2)
+{
+	int diff;
+
+	do {
+		diff = tolower(*s1) - tolower(*s2);
+		s1++;
+		s2++;
+	} while (diff == 0 && s1[-1] != '\0');
+
+	return diff;
+}
+
+
 /* Encode 'path' which is assumed UTF-8 string, into UNICODE string.
  * wbuf and wbuf_len is a target buffer and its length. */
 static void
-path_to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
+path_to_unicode(const struct mg_connection *conn,
+                const char *path,
+                wchar_t *wbuf,
+                size_t wbuf_len)
 {
 	char buf[PATH_MAX], buf2[PATH_MAX];
 	wchar_t wbuf2[MAX_PATH + 1];
 	DWORD long_len, err;
+	int (*fcompare)(const wchar_t *, const wchar_t *) = mg_wcscasecmp;
 
 	mg_strlcpy(buf, path, sizeof(buf));
 	change_slashes_to_backslashes(buf);
@@ -2826,6 +2848,16 @@ path_to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
 		wbuf[0] = L'\0';
 	}
 
+	/* TODO: Add a configuration to switch between case sensitive and 
+     * case insensitive URIs for Windows server. */
+    /*
+	if (conn) {
+		if (conn->ctx->config[WINDOWS_CASE_SENSITIVE]) {
+			fcompare = wcscmp;
+		}
+	}
+    */
+
 	/* Only accept a full file path, not a Windows short (8.3) path. */
 	memset(wbuf2, 0, ARRAY_SIZE(wbuf2) * sizeof(wchar_t));
 	long_len = GetLongPathNameW(wbuf, wbuf2, ARRAY_SIZE(wbuf2) - 1);
@@ -2836,7 +2868,7 @@ path_to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len)
 			return;
 		}
 	}
-	if ((long_len >= ARRAY_SIZE(wbuf2)) || (wcscmp(wbuf, wbuf2) != 0)) {
+	if ((long_len >= ARRAY_SIZE(wbuf2)) || (fcompare(wbuf, wbuf2) != 0)) {
 		/* Short name is used. */
 		wbuf[0] = L'\0';
 	}
@@ -2964,7 +2996,7 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 		return 1;
 	}
 
-	path_to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
+	path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
 	if (GetFileAttributesExW(wbuf, GetFileExInfoStandard, &info) != 0) {
 		filep->size = MAKEUQUAD(info.nFileSizeLow, info.nFileSizeHigh);
 		filep->last_modified =
@@ -2999,20 +3031,20 @@ mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
 
 
 static int
-mg_remove(const char *path)
+mg_remove(const struct mg_connection *conn, const char *path)
 {
 	wchar_t wbuf[PATH_MAX];
-	path_to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
+	path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
 	return DeleteFileW(wbuf) ? 0 : -1;
 }
 
 
 static int
-mg_mkdir(const char *path, int mode)
+mg_mkdir(const struct mg_connection *conn, const char *path, int mode)
 {
 	wchar_t wbuf[PATH_MAX];
 	(void)mode;
-	path_to_unicode(path, wbuf, ARRAY_SIZE(wbuf));
+	path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
 	return CreateDirectoryW(wbuf, NULL) ? 0 : -1;
 }
 
@@ -3028,7 +3060,7 @@ mg_mkdir(const char *path, int mode)
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
 static DIR *
-opendir(const char *name)
+opendir(const struct mg_connection *conn, const char *name)
 {
 	DIR *dir = NULL;
 	wchar_t wpath[PATH_MAX];
@@ -3039,7 +3071,7 @@ opendir(const char *name)
 	} else if ((dir = (DIR *)mg_malloc(sizeof(*dir))) == NULL) {
 		SetLastError(ERROR_NOT_ENOUGH_MEMORY);
 	} else {
-		path_to_unicode(name, wpath, ARRAY_SIZE(wpath));
+		path_to_unicode(conn, name, wpath, ARRAY_SIZE(wpath));
 		attrs = GetFileAttributesW(wpath);
 		if (attrs != 0xFFFFFFFF && ((attrs & FILE_ATTRIBUTE_DIRECTORY)
 		                            == FILE_ATTRIBUTE_DIRECTORY)) {
@@ -3234,7 +3266,7 @@ dlopen(const char *dll_name, int flags)
 {
 	wchar_t wbuf[PATH_MAX];
 	(void)flags;
-	path_to_unicode(dll_name, wbuf, ARRAY_SIZE(wbuf));
+	path_to_unicode(NULL, dll_name, wbuf, ARRAY_SIZE(wbuf));
 	return LoadLibraryW(wbuf);
 }
 
@@ -3252,6 +3284,7 @@ dlclose(void *handle)
 
 	return result;
 }
+
 
 #if defined(__MINGW32__)
 /* Enable unused function warning again */
@@ -6050,7 +6083,7 @@ scan_directory(struct mg_connection *conn,
 	struct de de;
 	int truncated;
 
-	if ((dirp = opendir(dir)) == NULL) {
+	if ((dirp = opendir(conn, dir)) == NULL) {
 		return 0;
 	} else {
 		de.conn = conn;
@@ -6104,7 +6137,7 @@ remove_directory(struct mg_connection *conn, const char *dir)
 	int truncated;
 	int ok = 1;
 
-	if ((dirp = opendir(dir)) == NULL) {
+	if ((dirp = opendir(conn, dir)) == NULL) {
 		return 0;
 	} else {
 		de.conn = conn;
@@ -6147,7 +6180,7 @@ remove_directory(struct mg_connection *conn, const char *dir)
 						ok = 0;
 					}
 				} else {
-					if (mg_remove(path) == 0) {
+					if (mg_remove(conn, path) == 0) {
 						ok = 0;
 					}
 				}
@@ -6647,7 +6680,7 @@ put_dir(struct mg_connection *conn, const char *path)
 
 		/* Try to create intermediate directory */
 		DEBUG_TRACE("mkdir(%s)", buf);
-		if (!mg_stat(conn, buf, &file) && mg_mkdir(buf, 0755) != 0) {
+		if (!mg_stat(conn, buf, &file) && mg_mkdir(conn, buf, 0755) != 0) {
 			/* path does not exixt and can not be created */
 			res = -2;
 			break;
@@ -6666,7 +6699,7 @@ put_dir(struct mg_connection *conn, const char *path)
 static void
 remove_bad_file(const struct mg_connection *conn, const char *path)
 {
-	int r = mg_remove(path);
+	int r = mg_remove(conn, path);
 	if (r != 0) {
 		mg_cry(conn, "%s: Cannot remove invalid file %s", __func__, path);
 	}
@@ -7670,7 +7703,7 @@ mkcol(struct mg_connection *conn, const char *path)
 		return;
 	}
 
-	rc = mg_mkdir(path, 0755);
+	rc = mg_mkdir(conn, path, 0755);
 
 	if (rc == 0) {
 		conn->status_code = 201;
@@ -7891,7 +7924,7 @@ delete_file(struct mg_connection *conn, const char *path)
 	}
 
 	/* Try to delete it. */
-	if (mg_remove(path) == 0) {
+	if (mg_remove(conn, path) == 0) {
 		/* Delete was successful: Return 204 without content. */
 		send_http_error(conn, 204, "%s", "");
 	} else {
