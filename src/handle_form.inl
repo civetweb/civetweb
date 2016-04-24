@@ -315,7 +315,8 @@ mg_handle_form_request(struct mg_connection *conn,
 	content_type = mg_get_header(conn, "Content-Type");
 
 	if (!content_type
-	    || !mg_strcasecmp(content_type, "APPLICATION/X-WWW-FORM-URLENCODED")) {
+	    || !mg_strcasecmp(content_type, "APPLICATION/X-WWW-FORM-URLENCODED")
+	    || !mg_strcasecmp(content_type, "APPLICATION/WWW-FORM-URLENCODED")) {
 		/* The form data is in the request body data, encoded in key/value
 		 * pairs. */
 		int all_data_read = 0;
@@ -493,7 +494,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		}
 
 		for (;;) {
-			size_t towrite, n;
+			size_t towrite, n, get_block;
 
 			r = mg_read(conn,
 			            buf + (size_t)buf_fill,
@@ -617,33 +618,29 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 			}
 
-			if (field_storage == FORM_FIELD_STORAGE_GET) {
-				if (!next) {
-					/* TODO: check for an easy way to get longer data */
-					mg_cry(conn, "%s: Data too long for callback", __func__);
-					return -1;
+			get_block = 0;
+			while (!next) {
+				/* Set "towrite" to the number of bytes available
+				 * in the buffer */
+				towrite = (size_t)(buf - hend + buf_fill);
+				/* Subtract the boundary length, to deal with
+				 * cases the boundary is only partially stored
+				 * in the buffer. */
+				towrite -= bl + 4;
+
+				if (field_storage == FORM_FIELD_STORAGE_GET) {
+					url_encoded_field_get(conn,
+					                      ((get_block > 0) ? NULL : nbeg),
+					                      ((get_block > 0)
+					                           ? 0
+					                           : (size_t)(nend - nbeg)),
+					                      hend,
+					                      towrite,
+					                      fdh);
+					get_block++;
 				}
 
-				/* Call callback */
-				url_encoded_field_get(conn,
-				                      nbeg,
-				                      (size_t)(nend - nbeg),
-				                      hend,
-				                      (size_t)(next - hend),
-				                      fdh);
-			}
-
-			if (field_storage == FORM_FIELD_STORAGE_STORE) {
-
-				while (!next) {
-					/* Set "towrite" to the number of bytes available
-					 * in the buffer */
-					towrite = (size_t)(buf - hend + buf_fill);
-					/* Subtract the boundary length, to deal with
-					 * cases the boundary is only partially stored
-					 * in the buffer. */
-					towrite -= bl + 4;
-
+				if (field_storage == FORM_FIELD_STORAGE_STORE) {
 					if (fstore.fp) {
 
 						/* Store the content of the buffer. */
@@ -659,35 +656,47 @@ mg_handle_form_request(struct mg_connection *conn,
 						}
 						file_size += (size_t)n;
 					}
-
-					memmove(buf, hend + towrite, bl + 4);
-					buf_fill = (int)(bl + 4);
-					hend = buf;
-
-					/* Read new data */
-					r = mg_read(conn,
-					            buf + (size_t)buf_fill,
-					            sizeof(buf) - 1 - (size_t)buf_fill);
-					if (r < 0) {
-						/* read error */
-						return -1;
-					}
-					buf_fill += r;
-					buf[buf_fill] = 0;
-					if (buf_fill < 1) {
-						/* No data */
-						return -1;
-					}
-
-					/* Find boundary */
-					next = search_boundary(buf, (size_t)buf_fill, boundary, bl);
 				}
+
+				memmove(buf, hend + towrite, bl + 4);
+				buf_fill = (int)(bl + 4);
+				hend = buf;
+
+				/* Read new data */
+				r = mg_read(conn,
+				            buf + (size_t)buf_fill,
+				            sizeof(buf) - 1 - (size_t)buf_fill);
+				if (r < 0) {
+					/* read error */
+					return -1;
+				}
+				buf_fill += r;
+				buf[buf_fill] = 0;
+				if (buf_fill < 1) {
+					/* No data */
+					return -1;
+				}
+
+				/* Find boundary */
+				next = search_boundary(buf, (size_t)buf_fill, boundary, bl);
+			}
+
+			towrite = (size_t)(next - hend);
+
+			if (field_storage == FORM_FIELD_STORAGE_GET) {
+				/* Call callback */
+				url_encoded_field_get(conn,
+				                      ((get_block > 0) ? NULL : nbeg),
+				                      ((get_block > 0) ? 0
+				                                       : (size_t)(nend - nbeg)),
+				                      hend,
+				                      towrite,
+				                      fdh);
 			}
 
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 
 				if (fstore.fp) {
-					towrite = (size_t)(next - hend);
 					n = (size_t)fwrite(hend, 1, towrite, fstore.fp);
 					if ((n != towrite) || (ferror(fstore.fp))) {
 						mg_cry(conn,
