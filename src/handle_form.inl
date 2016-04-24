@@ -341,7 +341,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 				if (r != (int)to_read) {
 					/* TODO: Create a function to get "all_data_read" from
-					 * the conn object. Add data is read if the Content-Length
+					 * the conn object. All data is read if the Content-Length
 					 * has been reached, or if chunked encoding is used and
 					 * the end marker has been read, or if the connection has
 					 * been closed. */
@@ -493,6 +493,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		}
 
 		for (;;) {
+			size_t towrite, n;
 
 			r = mg_read(conn,
 			            buf + (size_t)buf_fill,
@@ -604,6 +605,18 @@ mg_handle_form_request(struct mg_connection *conn,
 			                       boundary,
 			                       bl);
 
+			if (field_storage == FORM_FIELD_STORAGE_STORE) {
+				/* Store the content to a file */
+				if (mg_fopen(conn, path, "wb", &fstore) == 0) {
+					fstore.fp = NULL;
+				}
+				file_size = 0;
+
+				if (!fstore.fp) {
+					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+				}
+			}
+
 			if (field_storage == FORM_FIELD_STORAGE_GET) {
 				if (!next) {
 					/* TODO: check for an easy way to get longer data */
@@ -621,16 +634,6 @@ mg_handle_form_request(struct mg_connection *conn,
 			}
 
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
-				/* Store the content to a file */
-				size_t towrite, n;
-				if (mg_fopen(conn, path, "wb", &fstore) == 0) {
-					fstore.fp = NULL;
-				}
-				file_size = 0;
-
-				if (!fstore.fp) {
-					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
-				}
 
 				while (!next) {
 					/* Set "towrite" to the number of bytes available
@@ -679,6 +682,9 @@ mg_handle_form_request(struct mg_connection *conn,
 					/* Find boundary */
 					next = search_boundary(buf, (size_t)buf_fill, boundary, bl);
 				}
+			}
+
+			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 
 				if (fstore.fp) {
 					towrite = (size_t)(next - hend);
@@ -694,6 +700,9 @@ mg_handle_form_request(struct mg_connection *conn,
 					}
 					file_size += (size_t)n;
 				}
+			}
+
+			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 
 				if (fstore.fp) {
 					r = fclose(fstore.fp);

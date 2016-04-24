@@ -2851,15 +2851,15 @@ path_to_unicode(const struct mg_connection *conn,
 		wbuf[0] = L'\0';
 	}
 
-	/* TODO: Add a configuration to switch between case sensitive and 
-     * case insensitive URIs for Windows server. */
-    /*
+	/* TODO: Add a configuration to switch between case sensitive and
+	 * case insensitive URIs for Windows server. */
+	/*
 	if (conn) {
-		if (conn->ctx->config[WINDOWS_CASE_SENSITIVE]) {
-			fcompare = wcscmp;
-		}
+	    if (conn->ctx->config[WINDOWS_CASE_SENSITIVE]) {
+	        fcompare = wcscmp;
+	    }
 	}
-    */
+	*/
 
 	/* Only accept a full file path, not a Windows short (8.3) path. */
 	memset(wbuf2, 0, ARRAY_SIZE(wbuf2) * sizeof(wchar_t));
@@ -6628,6 +6628,7 @@ mg_send_file(struct mg_connection *conn, const char *path)
 	mg_send_mime_file(conn, path, NULL);
 }
 
+
 void
 mg_send_mime_file(struct mg_connection *conn,
                   const char *path,
@@ -9550,6 +9551,7 @@ mg_set_websocket_handler(struct mg_context *ctx,
 	                    cbdata);
 }
 
+
 void
 mg_set_auth_handler(struct mg_context *ctx,
                     const char *uri,
@@ -9568,6 +9570,7 @@ mg_set_auth_handler(struct mg_context *ctx,
 	                    handler,
 	                    cbdata);
 }
+
 
 static int
 get_request_handler(struct mg_connection *conn,
@@ -9755,8 +9758,7 @@ handle_request(struct mg_connection *conn)
 		}
 
 		/* 1.3. clean URIs, so a path like allowed_dir/../forbidden_file is
-		 * not
-		 * possible */
+		 * not possible */
 		remove_double_dots_and_double_slashes((char *)ri->local_uri);
 
 		/* step 1. completed, the url is known now */
@@ -11946,6 +11948,7 @@ mg_download(const char *host,
 	return conn;
 }
 
+
 struct websocket_client_thread_data {
 	struct mg_connection *conn;
 	mg_websocket_data_handler data_handler;
@@ -11981,6 +11984,7 @@ websocket_client_thread(void *data)
 #endif
 }
 #endif
+
 
 struct mg_connection *
 mg_connect_websocket_client(const char *host,
@@ -12787,6 +12791,7 @@ get_system_name(char **sysName)
 	*sysName = mg_strdup(name.sysname);
 #endif
 }
+
 
 struct mg_context *
 mg_start(const struct mg_callbacks *callbacks,
