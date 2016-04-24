@@ -196,7 +196,7 @@ field_found(const char *key,
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
-	mg_printf(conn, "%s:\r\n", key);
+	mg_printf(conn, "\r\n\r\n%s:\r\n", key);
 
 	if (filename && *filename) {
 #ifdef _WIN32
@@ -215,9 +215,10 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
-	mg_printf(conn, "%s = ", key);
+	if (key[0]) {
+		mg_printf(conn, "%s = ", key);
+	}
 	mg_write(conn, value, valuelen);
-	mg_printf(conn, "\r\n\r\n");
 
 	return 0;
 }
@@ -251,8 +252,10 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
 	fdh.user_data = (void *)conn;
 
-	/* TODO: Handle the return value */
+	/* Call the form handler */
+	mg_printf(conn, "Form data:");
 	ret = mg_handle_form_request(conn, &fdh);
+	mg_printf(conn, "\r\n%i fields found", ret);
 
 	return 1;
 }

@@ -331,6 +331,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			ptrdiff_t keylen, vallen;
 			ptrdiff_t used;
 			int end_of_key_value_pair_found = 0;
+			int get_block;
 
 			if ((size_t)buf_fill < (sizeof(buf) - 1)) {
 
@@ -391,6 +392,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 			}
 
+			get_block = 0;
 			/* Loop to read values larger than sizeof(buf)-keylen-2 */
 			do {
 				next = strchr(val, '&');
@@ -403,6 +405,22 @@ mg_handle_form_request(struct mg_connection *conn,
 					next = val + vallen;
 				}
 
+				if (field_storage == FORM_FIELD_STORAGE_GET) {
+#if 0
+					if (!end_of_key_value_pair_found && !all_data_read) {
+						/* This callback will deliver partial contents */
+					}
+#endif
+					/* Call callback */
+					url_encoded_field_get(conn,
+					                      ((get_block > 0) ? NULL : buf),
+					                      ((get_block > 0) ? 0
+					                                       : (size_t)keylen),
+					                      val,
+					                      (size_t)vallen,
+					                      fdh);
+					get_block++;
+				}
 				if (fstore.fp) {
 					size_t n =
 					    (size_t)fwrite(val, 1, (size_t)vallen, fstore.fp);
@@ -417,22 +435,40 @@ mg_handle_form_request(struct mg_connection *conn,
 					}
 					file_size += (size_t)n;
 				}
-				if (field_storage == FORM_FIELD_STORAGE_GET) {
-					if (!end_of_key_value_pair_found && !all_data_read) {
-						/* TODO: check for an easy way to get longer data */
-						mg_cry(conn,
-						       "%s: Data too long for callback",
-						       __func__);
-						return -1;
-					}
-					/* Call callback */
-					url_encoded_field_get(
-					    conn, buf, (size_t)keylen, val, (size_t)vallen, fdh);
-				}
 
 				if (!end_of_key_value_pair_found) {
-					/* TODO: read more data */
-					break;
+					used = next - buf;
+					memmove(buf,
+					        buf + (size_t)used,
+					        sizeof(buf) - (size_t)used);
+					buf_fill -= (int)used;
+					if ((size_t)buf_fill < (sizeof(buf) - 1)) {
+
+						size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
+						r = mg_read(conn, buf + (size_t)buf_fill, to_read);
+						if (r < 0) {
+							/* read error */
+							return -1;
+						}
+						if (r != (int)to_read) {
+							/* TODO: Create a function to get "all_data_read"
+							 * from
+							 * the conn object. All data is read if the
+							 * Content-Length
+							 * has been reached, or if chunked encoding is used
+							 * and
+							 * the end marker has been read, or if the
+							 * connection has
+							 * been closed. */
+							all_data_read = 1;
+						}
+						buf_fill += r;
+						buf[buf_fill] = 0;
+						if (buf_fill < 1) {
+							break;
+						}
+						val = buf;
+					}
 				}
 
 			} while (!end_of_key_value_pair_found);
@@ -494,7 +530,8 @@ mg_handle_form_request(struct mg_connection *conn,
 		}
 
 		for (;;) {
-			size_t towrite, n, get_block;
+			size_t towrite, n;
+			int get_block;
 
 			r = mg_read(conn,
 			            buf + (size_t)buf_fill,
