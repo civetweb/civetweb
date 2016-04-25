@@ -321,11 +321,12 @@ mg_handle_form_request(struct mg_connection *conn,
 		 * pairs. */
 		int all_data_read = 0;
 
-		/* Read body data and split it in a=1&b&c=3&c=4 ... */
-		/* The encoding is like in the "GET" case above, but here we read data
-		 * on the fly */
+		/* Read body data and split it in keys and values.
+		/* The encoding is like in the "GET" case above: a=1&b&c=3&c=4.
+		 * Here we use "POST", and read the data from the request body.
+		 * The data read on the fly, so it is not required to buffer the
+		 * entire request in memory before processing it. */
 		for (;;) {
-			/* TODO(high): Handle (text) fields with data size > sizeof(buf). */
 			const char *val;
 			const char *next;
 			ptrdiff_t keylen, vallen;
@@ -410,7 +411,10 @@ mg_handle_form_request(struct mg_connection *conn,
 					if (!end_of_key_value_pair_found && !all_data_read) {
 						/* This callback will deliver partial contents */
 					}
+#else
+					(void)all_data_read; /* avoid warning */
 #endif
+
 					/* Call callback */
 					url_encoded_field_get(conn,
 					                      ((get_block > 0) ? NULL : buf),
@@ -452,14 +456,10 @@ mg_handle_form_request(struct mg_connection *conn,
 						}
 						if (r != (int)to_read) {
 							/* TODO: Create a function to get "all_data_read"
-							 * from
-							 * the conn object. All data is read if the
-							 * Content-Length
-							 * has been reached, or if chunked encoding is used
-							 * and
-							 * the end marker has been read, or if the
-							 * connection has
-							 * been closed. */
+							 * from the conn object. All data is read if the
+							 * Content-Length has been reached, or if chunked
+							 * encoding is used and the end marker has been
+							 * read, or if the connection has been closed. */
 							all_data_read = 1;
 						}
 						buf_fill += r;
