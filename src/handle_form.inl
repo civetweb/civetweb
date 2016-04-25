@@ -322,7 +322,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		int all_data_read = 0;
 
 		/* Read body data and split it in keys and values.
-		/* The encoding is like in the "GET" case above: a=1&b&c=3&c=4.
+		 * The encoding is like in the "GET" case above: a=1&b&c=3&c=4.
 		 * Here we use "POST", and read the data from the request body.
 		 * The data read on the fly, so it is not required to buffer the
 		 * entire request in memory before processing it. */
