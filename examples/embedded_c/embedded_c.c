@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "civetweb.h"
 
@@ -68,7 +69,12 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	          "href=\"close\">click close</a></p>");
 	mg_printf(conn,
 	          "<p>To see a page from the FileHandler handler <a "
-	          "href=\"form\">click form</a> (this is the form test page)</p>");
+	          "href=\"form\">click form</a> (the starting point of the "
+	          "<b>form</b> test)</p>");
+	mg_printf(conn,
+	          "<p>To see a page from the CookieHandler handler <a "
+	          "href=\"cookie\">click cookie</a></p>");
+
 #ifdef USE_WEBSOCKET
 	mg_printf(conn,
 	          "<p>To test websocket handler <a href=\"/websocket\">click "
@@ -246,7 +252,8 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	int ret;
 	struct mg_form_data_handler fdh = {field_found, field_get, field_stored, 0};
 
-	/* TODO: Checks before calling mg_handle_form_request ? */
+	/* It would be possible to check the request info here before calling
+	 * mg_handle_form_request. */
 	(void)req_info;
 
 	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
@@ -257,6 +264,51 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	ret = mg_handle_form_request(conn, &fdh);
 	mg_printf(conn, "\r\n%i fields found", ret);
 
+	return 1;
+}
+
+
+int
+CookieHandler(struct mg_connection *conn, void *cbdata)
+{
+	/* Handler may access the request info using mg_get_request_info */
+	const struct mg_request_info *req_info = mg_get_request_info(conn);
+	const char *cookie = mg_get_header(conn, "Cookie");
+	char first_str[64], count_str[64];
+	int count;
+
+	(void)mg_get_cookie(cookie, "first", first_str, sizeof(first_str));
+	(void)mg_get_cookie(cookie, "count", count_str, sizeof(count_str));
+
+	mg_printf(conn, "HTTP/1.1 200 OK\r\n");
+	if (first_str[0] == 0) {
+		time_t t = time(0);
+		struct tm *ptm = localtime(&t);
+		mg_printf(conn,
+		          "Set-Cookie: first=%04i-%02i-%02iT%02i:%02i:%02i\r\n",
+		          ptm->tm_year + 1900,
+		          ptm->tm_mon + 1,
+		          ptm->tm_mday,
+		          ptm->tm_hour,
+		          ptm->tm_min,
+		          ptm->tm_sec);
+	}
+	count = (count_str[0] == 0) ? 0 : atoi(count_str);
+	mg_printf(conn, "Set-Cookie: count=%i\r\n", count + 1);
+	mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+
+	mg_printf(conn, "<html><body>");
+	mg_printf(conn, "<h2>This is the CookieHandler.</h2>", cbdata);
+	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
+
+	if (first_str[0] == 0) {
+		mg_printf(conn, "<p>This is the first time, you opened this page</p>");
+	} else {
+		mg_printf(conn, "<p>You opened this page %i times before.</p>", count);
+		mg_printf(conn, "<p>You first opened this page on %s.</p>", first_str);
+	}
+
+	mg_printf(conn, "</body></html>\n");
 	return 1;
 }
 
@@ -344,7 +396,8 @@ WebSocketConnectHandler(const struct mg_connection *conn, void *cbdata)
 		if (ws_clients[i].conn == NULL) {
 			ws_clients[i].conn = (struct mg_connection *)conn;
 			ws_clients[i].state = 1;
-			mg_set_user_connection_data(conn, (void *)(ws_clients + i));
+			mg_set_user_connection_data(ws_clients[i].conn,
+			                            (void *)(ws_clients + i));
 			reject = 0;
 			break;
 		}
@@ -523,6 +576,9 @@ main(int argc, char *argv[])
 	                       "/handle_form.embedded_c.example.callback",
 	                       FormHandler,
 	                       (void *)0);
+
+	/* Add handler for /cookie example */
+	mg_set_request_handler(ctx, "/cookie", CookieHandler, 0);
 
 	/* Add HTTP site to open a websocket connection */
 	mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);
