@@ -12291,6 +12291,10 @@ worker_thread_run(void *thread_func_param)
 	uint32_t addr;
 #endif
 
+	if (ctx->callbacks.init_thread) {
+		ctx->callbacks.init_thread(ctx);
+	}
+
 	mg_set_thread_name("worker");
 
 	tls.is_master = 0;
