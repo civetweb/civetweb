@@ -12299,6 +12299,10 @@ worker_thread_run(void *thread_func_param)
 	tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
 #endif
 
+	if (ctx->callbacks.init_thread) {
+		ctx->callbacks.init_thread(ctx, 1);
+	}
+
 	conn =
 	    (struct mg_connection *)mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE);
 	if (conn == NULL) {
