@@ -12291,10 +12291,6 @@ worker_thread_run(void *thread_func_param)
 	uint32_t addr;
 #endif
 
-	if (ctx->callbacks.init_thread) {
-		ctx->callbacks.init_thread(ctx);
-	}
-
 	mg_set_thread_name("worker");
 
 	tls.is_master = 0;
@@ -12302,6 +12298,10 @@ worker_thread_run(void *thread_func_param)
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
 #endif
+
+	if (ctx->callbacks.init_thread) {
+		ctx->callbacks.init_thread(ctx, 1);
+	}
 
 	conn =
 	    (struct mg_connection *)mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE);
