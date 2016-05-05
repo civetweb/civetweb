@@ -533,9 +533,9 @@ START_TEST(test_mask_data)
 }
 END_TEST
 
-
 START_TEST(test_parse_date_string)
 {
+#if !defined(NO_CACHING)
 	time_t now = time(0);
 	struct tm *tm = gmtime(&now);
 	char date[64] = {0};
@@ -581,9 +581,9 @@ START_TEST(test_parse_date_string)
 		        tm->tm_sec);
 		ck_assert_uint_eq((uintmax_t)parse_date_string(date), (uintmax_t)now);
 	}
+#endif
 }
 END_TEST
-
 
 Suite *
 make_private_suite(void)

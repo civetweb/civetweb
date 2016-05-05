@@ -109,6 +109,7 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | NDEBUG                    | strip off all debug code             |
 | DEBUG                     | build debug version (very noisy)     |
 | NO_CGI                    | disable CGI support                  |
+| NO_CACHING                | disable caching functionality        |
 | NO_SSL                    | disable SSL functionality            |
 | NO_SSL_DL                 | link against system libssl library   |
 | NO_FILES                  | do not serve files from a directory  |
