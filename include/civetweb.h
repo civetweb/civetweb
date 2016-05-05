@@ -210,7 +210,7 @@ struct mg_callbacks {
 	   Parameters:
 	     ctx: context handle
 	     thread_type: a value of 1 indicates a worker thread. */
-	void(*init_thread)(const struct mg_context *ctx, int thread_type);
+	void (*init_thread)(const struct mg_context *ctx, int thread_type);
 
 	/* Called when civetweb context is deleted.
 	   Parameters:

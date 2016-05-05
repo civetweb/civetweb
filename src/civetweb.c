@@ -2256,7 +2256,7 @@ send_static_cache_header(struct mg_connection *conn)
 	 * Reason: see https://www.mnot.net/blog/2007/05/15/expires_max-age */
 	/* See also https://www.mnot.net/cache_docs/ */
 	return mg_printf(conn, "Cache-Control: max-age=%u\r\n", (unsigned)max_age);
-#else /* NO_CACHING */
+#else  /* NO_CACHING */
 	return send_no_cache_header(conn);
 #endif /* !NO_CACHING */
 }
