@@ -1517,114 +1517,116 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 	switch (g_field_step) {
 	case 1:
 		ck_assert_str_eq(key, "textin");
-		ck_assert_int_eq(valuelen, 4);
+		ck_assert_uint_eq(valuelen, 4);
 		ck_assert_str_eq(value, "text");
 		break;
 	case 2:
 		ck_assert_str_eq(key, "passwordin");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 3:
 		ck_assert_str_eq(key, "radio1");
-		ck_assert_int_eq(valuelen, 4);
+		ck_assert_uint_eq(valuelen, 4);
 		ck_assert_str_eq(value, "val1");
 		break;
 	case 4:
 		ck_assert_str_eq(key, "radio2");
-		ck_assert_int_eq(valuelen, 4);
+		ck_assert_uint_eq(valuelen, 4);
 		ck_assert_str_eq(value, "val1");
 		break;
 	case 5:
 		ck_assert_str_eq(key, "check1");
-		ck_assert_int_eq(valuelen, 4);
+		ck_assert_uint_eq(valuelen, 4);
 		ck_assert_str_eq(value, "val1");
 		break;
 	case 6:
 		ck_assert_str_eq(key, "numberin");
-		ck_assert_int_eq(valuelen, 1);
+		ck_assert_uint_eq(valuelen, 1);
 		ck_assert_str_eq(value, "1");
 		break;
 	case 7:
 		ck_assert_str_eq(key, "datein");
-		ck_assert_int_eq(valuelen, 8);
+		ck_assert_uint_eq(valuelen, 8);
 		ck_assert_str_eq(value, "1.1.2016");
 		break;
 	case 8:
 		ck_assert_str_eq(key, "colorin");
-		ck_assert_int_eq(valuelen, 7);
+		ck_assert_uint_eq(valuelen, 7);
 		ck_assert_str_eq(value, "#80ff00");
 		break;
 	case 9:
 		ck_assert_str_eq(key, "rangein");
-		ck_assert_int_eq(valuelen, 1);
+		ck_assert_uint_eq(valuelen, 1);
 		ck_assert_str_eq(value, "3");
 		break;
 	case 10:
 		ck_assert_str_eq(key, "monthin");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 11:
 		ck_assert_str_eq(key, "weekin");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 12:
 		ck_assert_str_eq(key, "timein");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 13:
 		ck_assert_str_eq(key, "datetimen");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 14:
 		ck_assert_str_eq(key, "datetimelocalin");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 15:
 		ck_assert_str_eq(key, "emailin");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 16:
 		ck_assert_str_eq(key, "searchin");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 17:
 		ck_assert_str_eq(key, "telin");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 18:
 		ck_assert_str_eq(key, "urlin");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 19:
 		ck_assert_str_eq(key, "filein");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 20:
 		ck_assert_str_eq(key, "filesin");
-		ck_assert_int_eq(valuelen, 0);
+		ck_assert_uint_eq(valuelen, 0);
 		ck_assert_str_eq(value, "");
 		break;
 	case 21:
 		ck_assert_str_eq(key, "selectin");
-		ck_assert_int_eq(valuelen, 4);
+		ck_assert_uint_eq(valuelen, 4);
 		ck_assert_str_eq(value, "opt1");
 		break;
 	case 22:
 		ck_assert_str_eq(key, "message");
-		ck_assert_int_eq(valuelen, 23);
+		ck_assert_uint_eq(valuelen, 23);
 		ck_assert_str_eq(value, "Text area default text.");
 		break;
+    default:
+        ck_abort_msg("field_get called with g_field_step == %i", (int)g_field_step);
 	}
 
 	return 0;
@@ -1637,6 +1639,8 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
 	struct mg_form_data_handler fdh = {field_found, field_get, NULL, NULL};
+
+    (void)cbdata;
 
 	ck_assert(req_info != NULL);
 
