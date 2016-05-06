@@ -1176,9 +1176,9 @@ static struct mg_option config_options[] = {
     {"lua_server_page_pattern", CONFIG_TYPE_EXT_PATTERN, "**.lp$|**.lsp$"},
 #endif
 #if defined(USE_DUKTAPE)
-    {"_experimental_duktape_script_pattern",
-     CONFIG_TYPE_EXT_PATTERN,
-     "**.ssjs$"}, /* TODO: redefine parameter */
+    /* The support for duktape is still in alpha version state.
+     * The name of this config option might change. */
+    {"duktape_script_pattern", CONFIG_TYPE_EXT_PATTERN, "**.ssjs$"},
 #endif
 
 #if defined(USE_WEBSOCKET)
@@ -1191,9 +1191,9 @@ static struct mg_option config_options[] = {
     {"error_pages", CONFIG_TYPE_DIRECTORY, NULL},
     {"tcp_nodelay", CONFIG_TYPE_NUMBER, "0"},
 #if !defined(NO_CACHING)
-    {"_experimental_static_file_max_age",
-     CONFIG_TYPE_NUMBER,
-     "3600"}, /* TODO: redefine parameter */
+    /* The name of this config option might change (until it is documented). */
+    /* TODO: Document this option. */
+    {"static_file_max_age", CONFIG_TYPE_NUMBER, "3600"},
 #endif
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
