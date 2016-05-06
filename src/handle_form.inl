@@ -508,13 +508,19 @@ mg_handle_form_request(struct mg_connection *conn,
 
 		memset(&part_header, 0, sizeof(part_header));
 
+		/* Skip all spaces between MULTIPART/FORM-DATA; and BOUNDARY= */
+		bl = 20;
+		while (content_type[bl] == ' ') {
+			bl++;
+		}
+
 		/* There has to be a BOUNDARY definition in the Content-Type header */
-		if (mg_strncasecmp(content_type + 21, "BOUNDARY=", 9)) {
+		if (mg_strncasecmp(content_type + bl, "BOUNDARY=", 9)) {
 			/* Malformed request */
 			return -1;
 		}
 
-		boundary = content_type + 30;
+		boundary = content_type + bl + 9;
 		bl = strlen(boundary);
 
 		if (bl + 800 > sizeof(buf)) {

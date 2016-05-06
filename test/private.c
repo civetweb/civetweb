@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 the Civetweb developers
+/* Copyright (c) 2015-2016 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -533,6 +533,7 @@ START_TEST(test_mask_data)
 }
 END_TEST
 
+
 START_TEST(test_parse_date_string)
 {
 #if !defined(NO_CACHING)
@@ -584,6 +585,7 @@ START_TEST(test_parse_date_string)
 #endif
 }
 END_TEST
+
 
 Suite *
 make_private_suite(void)
@@ -637,7 +639,7 @@ make_private_suite(void)
 /* Used to debug test cases without using the check framework */
 
 void
-main(void)
+xmain(void)
 {
 	test_alloc_vprintf(0);
 	test_parse_date_string(0);

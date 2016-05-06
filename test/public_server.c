@@ -106,8 +106,11 @@ wait_not_null(void *volatile *data)
 {
 	int i;
 	for (i = 0; i < 100; i++) {
+		mark_point();
 		test_sleep(1);
+
 		if (*data != NULL) {
+			mark_point();
 			return 1;
 		}
 	}
@@ -267,9 +270,11 @@ START_TEST(test_mg_start_stop_http_server)
 
 	callbacks.log_message = log_msg_func;
 
-	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
 	mark_point();
+	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
+
 	test_sleep(1);
+
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
@@ -281,7 +286,6 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert_int_eq(ssl[1], 0);
 
 	test_sleep(1);
-	mark_point();
 
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
@@ -307,9 +311,7 @@ START_TEST(test_mg_start_stop_http_server)
 #endif
 	mg_close_connection(client_conn);
 
-	mark_point();
 	test_sleep(1);
-	mark_point();
 
 	mg_stop(ctx);
 }
@@ -360,8 +362,8 @@ START_TEST(test_mg_start_stop_https_server)
 
 	callbacks.log_message = log_msg_func;
 
-	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
 	mark_point();
+	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
 	test_sleep(1);
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
@@ -376,7 +378,6 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(ssl[2], 0);
 
 	test_sleep(1);
-	mark_point();
 
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
@@ -402,9 +403,7 @@ START_TEST(test_mg_start_stop_https_server)
 #endif
 	mg_close_connection(client_conn);
 
-	mark_point();
 	test_sleep(1);
-	mark_point();
 
 	mg_stop(ctx);
 #endif
@@ -470,8 +469,8 @@ START_TEST(test_mg_server_and_client_tls)
 
 	callbacks.log_message = log_msg_func;
 
-	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
 	mark_point();
+	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
 	test_sleep(1);
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
@@ -492,7 +491,6 @@ START_TEST(test_mg_server_and_client_tls)
 	ck_assert_int_eq(ports[2].is_redirect, 0);
 
 	test_sleep(1);
-	mark_point();
 
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
@@ -533,9 +531,7 @@ START_TEST(test_mg_server_and_client_tls)
 
 	/* TODO: A client API using a client certificate is missing */
 
-	mark_point();
 	test_sleep(1);
-	mark_point();
 
 	mg_stop(ctx);
 #endif
@@ -830,6 +826,7 @@ START_TEST(test_request_handlers)
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
+	mark_point();
 	ctx = mg_start(NULL, &g_ctx, OPTIONS);
 	ck_assert(ctx != NULL);
 	g_ctx = ctx;
@@ -1293,7 +1290,6 @@ START_TEST(test_request_handlers)
 	                          "data1",
 	                          5);
 
-	mark_point();
 	wait_not_null(
 	    &(ws_client1_data
 	          .data)); /* Wait for the websocket acknowledge message */
@@ -1356,10 +1352,10 @@ START_TEST(test_request_handlers)
 	                          "data2",
 	                          5);
 
-	mark_point();
 	wait_not_null(
 	    &(ws_client1_data
 	          .data)); /* Wait for the websocket acknowledge message */
+
 	ck_assert(ws_client1_data.closed == 0);
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client2_data.data == NULL);
@@ -1373,9 +1369,9 @@ START_TEST(test_request_handlers)
 
 	mg_websocket_client_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
-	mark_point();
 	wait_not_null(
 	    &(ws_client1_data.data)); /* Wait for the websocket goodbye message */
+
 	ck_assert(ws_client1_data.closed == 0);
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client2_data.data == NULL);
@@ -1391,8 +1387,8 @@ START_TEST(test_request_handlers)
 
 	mg_close_connection(ws_client1_conn);
 
-	mark_point();
 	test_sleep(3); /* Won't get any message */
+
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client1_data.data == NULL);
@@ -1402,9 +1398,9 @@ START_TEST(test_request_handlers)
 
 	mg_websocket_client_write(ws_client2_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
 
-	mark_point();
 	wait_not_null(
 	    &(ws_client2_data.data)); /* Wait for the websocket goodbye message */
+
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client1_data.data == NULL);
@@ -1420,8 +1416,8 @@ START_TEST(test_request_handlers)
 
 	mg_close_connection(ws_client2_conn);
 
-	mark_point();
 	test_sleep(3); /* Won't get any message */
+
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 1);
 	ck_assert(ws_client1_data.data == NULL);
@@ -1488,6 +1484,382 @@ START_TEST(test_request_handlers)
 END_TEST
 
 
+static int
+field_found(const char *key,
+            const char *filename,
+            char *path,
+            size_t pathlen,
+            void *user_data)
+{
+	(void)key;
+	(void)filename;
+	(void)path;
+	(void)pathlen;
+	(void)user_data;
+
+	return FORM_FIELD_STORAGE_GET;
+}
+
+
+static int g_field_step;
+
+static int
+field_get(const char *key, const char *value, size_t valuelen, void *user_data)
+{
+	(void)key;
+	(void)value;
+	(void)valuelen;
+	(void)user_data;
+
+	ck_assert(user_data == (void *)0x12345);
+
+	++g_field_step;
+	switch (g_field_step) {
+	case 1:
+		ck_assert_str_eq(key, "textin");
+		ck_assert_int_eq(valuelen, 4);
+		ck_assert_str_eq(value, "text");
+		break;
+	case 2:
+		ck_assert_str_eq(key, "passwordin");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 3:
+		ck_assert_str_eq(key, "radio1");
+		ck_assert_int_eq(valuelen, 4);
+		ck_assert_str_eq(value, "val1");
+		break;
+	case 4:
+		ck_assert_str_eq(key, "radio2");
+		ck_assert_int_eq(valuelen, 4);
+		ck_assert_str_eq(value, "val1");
+		break;
+	case 5:
+		ck_assert_str_eq(key, "check1");
+		ck_assert_int_eq(valuelen, 4);
+		ck_assert_str_eq(value, "val1");
+		break;
+	case 6:
+		ck_assert_str_eq(key, "numberin");
+		ck_assert_int_eq(valuelen, 1);
+		ck_assert_str_eq(value, "1");
+		break;
+	case 7:
+		ck_assert_str_eq(key, "datein");
+		ck_assert_int_eq(valuelen, 8);
+		ck_assert_str_eq(value, "1.1.2016");
+		break;
+	case 8:
+		ck_assert_str_eq(key, "colorin");
+		ck_assert_int_eq(valuelen, 7);
+		ck_assert_str_eq(value, "#80ff00");
+		break;
+	case 9:
+		ck_assert_str_eq(key, "rangein");
+		ck_assert_int_eq(valuelen, 1);
+		ck_assert_str_eq(value, "3");
+		break;
+	case 10:
+		ck_assert_str_eq(key, "monthin");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 11:
+		ck_assert_str_eq(key, "weekin");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 12:
+		ck_assert_str_eq(key, "timein");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 13:
+		ck_assert_str_eq(key, "datetimen");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 14:
+		ck_assert_str_eq(key, "datetimelocalin");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 15:
+		ck_assert_str_eq(key, "emailin");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 16:
+		ck_assert_str_eq(key, "searchin");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 17:
+		ck_assert_str_eq(key, "telin");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 18:
+		ck_assert_str_eq(key, "urlin");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 19:
+		ck_assert_str_eq(key, "filein");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 20:
+		ck_assert_str_eq(key, "filesin");
+		ck_assert_int_eq(valuelen, 0);
+		ck_assert_str_eq(value, "");
+		break;
+	case 21:
+		ck_assert_str_eq(key, "selectin");
+		ck_assert_int_eq(valuelen, 4);
+		ck_assert_str_eq(value, "opt1");
+		break;
+	case 22:
+		ck_assert_str_eq(key, "message");
+		ck_assert_int_eq(valuelen, 23);
+		ck_assert_str_eq(value, "Text area default text.");
+		break;
+	}
+
+	return 0;
+}
+
+
+static int
+FormHandler(struct mg_connection *conn, void *cbdata)
+{
+	const struct mg_request_info *req_info = mg_get_request_info(conn);
+	int ret;
+	struct mg_form_data_handler fdh = {field_found, field_get, NULL, NULL};
+
+	ck_assert(req_info != NULL);
+
+	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+	fdh.user_data = (void *)0x12345;
+
+	/* Call the form handler */
+	g_field_step = 0;
+	ret = mg_handle_form_request(conn, &fdh);
+	ck_assert_int_eq(ret, 22);
+	ck_assert_int_eq(g_field_step, 22);
+	mg_printf(conn, "%i\r\n", ret);
+
+	return 1;
+}
+
+
+START_TEST(test_handle_form)
+{
+	struct mg_context *ctx;
+	struct mg_connection *client_conn;
+	const struct mg_request_info *ri;
+	const char *OPTIONS[8];
+	const char *opt;
+	int opt_idx = 0;
+	char ebuf[100];
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8884";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
+
+	mark_point();
+	ctx = mg_start(NULL, &g_ctx, OPTIONS);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+
+	opt = mg_get_option(ctx, "listening_ports");
+	ck_assert_str_eq(opt, "8884");
+
+	mg_set_request_handler(ctx, "/handle_form", FormHandler, (void *)0);
+
+	test_sleep(1);
+
+	/* Handle form: "GET" */
+	client_conn = mg_download("localhost",
+	                          8884,
+	                          0,
+	                          ebuf,
+	                          sizeof(ebuf),
+	                          "%s",
+	                          "GET /handle_form"
+	                          "?textin=text&passwordin=&radio1=val1"
+	                          "&radio2=val1&check1=val1&numberin=1"
+	                          "&datein=1.1.2016&colorin=%2380ff00"
+	                          "&rangein=3&monthin=&weekin=&timein="
+	                          "&datetimen=&datetimelocalin=&emailin="
+	                          "&searchin=&telin=&urlin=&filein="
+	                          "&filesin=&selectin=opt1"
+	                          "&message=Text+area+default+text. "
+	                          "HTTP/1.0\r\n"
+	                          "Host: localhost:8884\r\n"
+	                          "Connection: close\r\n\r\n");
+	ck_assert(client_conn != NULL);
+	test_sleep(1);
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	mg_close_connection(client_conn);
+
+	/* Handle form: "POST x-www-form-urlencoded" */
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "%s",
+	                "POST /handle_form HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: application/x-www-form-urlencoded\r\n"
+	                "Content-Length: 263\r\n"
+	                "\r\n"
+	                "textin=text&passwordin=&radio1=val1&radio2=val1"
+	                "&check1=val1&numberin=1&datein=1.1.2016"
+	                "&colorin=%2380ff00&rangein=3&monthin=&weekin="
+	                "&timein=&datetimen=&datetimelocalin=&emailin="
+	                "&searchin=&telin=&urlin=&filein=&filesin="
+	                "&selectin=opt1&message=Text+area+default+text.");
+	ck_assert(client_conn != NULL);
+	test_sleep(1);
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	mg_close_connection(client_conn);
+
+	/* Handle form: "POST multipart/form-data" */
+	client_conn = mg_download(
+	    "localhost",
+	    8884,
+	    0,
+	    ebuf,
+	    sizeof(ebuf),
+	    "%s",
+	    "POST /handle_form HTTP/1.1\r\n"
+	    "Host: localhost:8884\r\n"
+	    "Connection: close\r\n"
+	    "Content-Type: multipart/form-data; "
+	    "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Length: 2374\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"textin\"\r\n"
+	    "\r\n"
+	    "text\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"passwordin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"radio1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"radio2\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"check1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"numberin\"\r\n"
+	    "\r\n"
+	    "1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datein\"\r\n"
+	    "\r\n"
+	    "1.1.2016\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"colorin\"\r\n"
+	    "\r\n"
+	    "#80ff00\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"rangein\"\r\n"
+	    "\r\n"
+	    "3\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"monthin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"weekin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"timein\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimen\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimelocalin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"emailin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"searchin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"telin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"urlin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"filein\"; filename=\"\"\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"filesin\"; filename=\"\"\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"selectin\"\r\n"
+	    "\r\n"
+	    "opt1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"message\"\r\n"
+	    "\r\n"
+	    "Text area default text.\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388--\r\n");
+	ck_assert(client_conn != NULL);
+	test_sleep(1);
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	mg_close_connection(client_conn);
+
+	/* Close the server */
+	g_ctx = NULL;
+	mg_stop(ctx);
+	mark_point();
+}
+END_TEST
+
+
 Suite *
 make_public_server_suite(void)
 {
@@ -1499,6 +1871,7 @@ make_public_server_suite(void)
 	TCase *const tcase_startstophttps = tcase_create("Start Stop HTTPS Server");
 	TCase *const tcase_serverandclienttls = tcase_create("TLS Server Client");
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
+	TCase *const tcase_handle_form = tcase_create("Handle Form");
 
 	tcase_add_test(tcase_checktestenv, test_the_test_environment);
 	tcase_set_timeout(tcase_checktestenv, civetweb_min_test_timeout);
@@ -1524,6 +1897,10 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_serverrequests, 120);
 	suite_add_tcase(suite, tcase_serverrequests);
 
+	tcase_add_test(tcase_handle_form, test_handle_form);
+	tcase_set_timeout(tcase_handle_form, 60);
+	suite_add_tcase(suite, tcase_handle_form);
+
 	return suite;
 }
 
@@ -1536,14 +1913,17 @@ static int chk_failed = 0;
 
 
 void
-xmain(void)
+main(void)
 {
-	test_the_test_environment(0);
-	test_threading(0);
-	test_mg_start_stop_http_server(0);
-	test_mg_start_stop_https_server(0);
-	test_request_handlers(0);
-	test_mg_server_and_client_tls(0);
+	/*
+	    test_the_test_environment(0);
+	    test_threading(0);
+	    test_mg_start_stop_http_server(0);
+	    test_mg_start_stop_https_server(0);
+	    test_request_handlers(0);
+	    test_mg_server_and_client_tls(0);
+	*/
+	test_handle_form(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }
