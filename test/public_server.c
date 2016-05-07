@@ -1625,8 +1625,9 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 		ck_assert_uint_eq(valuelen, 23);
 		ck_assert_str_eq(value, "Text area default text.");
 		break;
-    default:
-        ck_abort_msg("field_get called with g_field_step == %i", (int)g_field_step);
+	default:
+		ck_abort_msg("field_get called with g_field_step == %i",
+		             (int)g_field_step);
 	}
 
 	return 0;
@@ -1640,7 +1641,7 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	int ret;
 	struct mg_form_data_handler fdh = {field_found, field_get, NULL, NULL};
 
-    (void)cbdata;
+	(void)cbdata;
 
 	ck_assert(req_info != NULL);
 
