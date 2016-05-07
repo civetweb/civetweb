@@ -156,6 +156,7 @@ civetweb_add_test(PublicServer "Start Stop HTTP Server")
 civetweb_add_test(PublicServer "Start Stop HTTPS Server")
 civetweb_add_test(PublicServer "TLS Server Client")
 civetweb_add_test(PublicServer "Server Requests")
+civetweb_add_test(PublicServer "Handle Form")
 
 # Tests with main.c
 civetweb_add_test(EXE "Helper funcs")
