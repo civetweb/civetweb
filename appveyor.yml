@@ -22,6 +22,7 @@ environment:
       enable_ssl: YES
       enable_websockets: YES
       no_cgi: NO
+      no_caching: NO
     - compiler: msvc-18-seh
       build_shared: YES
       no_files: NO
@@ -29,6 +30,7 @@ environment:
       enable_ssl: YES
       enable_websockets: YES
       no_cgi: NO
+      no_caching: NO
     - compiler: msvc-18-seh
       build_shared: YES
       no_files: YES
@@ -36,6 +38,7 @@ environment:
       enable_ssl: YES
       enable_websockets: YES
       no_cgi: NO
+      no_caching: NO
     - compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: YES
@@ -43,6 +46,7 @@ environment:
       enable_ssl: NO
       enable_websockets: NO
       no_cgi: YES
+      no_caching: YES
     - compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: NO
@@ -50,6 +54,7 @@ environment:
       enable_ssl: YES
       enable_websockets: YES
       no_cgi: NO
+      no_caching: YES
     - compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: NO
@@ -57,6 +62,7 @@ environment:
       enable_ssl: YES
       enable_websockets: YES
       no_cgi: NO
+      no_caching: YES
     - compiler: gcc-5.1.0-posix
       build_shared: YES
       no_files: NO
@@ -64,6 +70,7 @@ environment:
       enable_ssl: YES
       enable_websockets: YES
       no_cgi: NO
+      no_caching: YES
     - compiler: gcc-5.1.0-posix
       build_shared: YES
       no_files: YES
@@ -71,6 +78,7 @@ environment:
       enable_ssl: YES
       enable_websockets: YES
       no_cgi: NO
+      no_caching: YES
 
 
 install:
@@ -171,6 +179,7 @@ before_build:
     -DCIVETWEB_ENABLE_CXX=%enable_cxx%
     -DCIVETWEB_ENABLE_LUA=%enable_lua%
     -DCIVETWEB_ENABLE_LUA_SHARED=%enable_lua_shared%
+    -DCIVETWEB_DISABLE_CACHING=%no_caching%
     -DCIVETWEB_C_STANDARD=%c_standard%
     -DCIVETWEB_CXX_STANDARD=%cxx_standard%
     "%source_path%"
