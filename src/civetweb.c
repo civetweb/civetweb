@@ -109,6 +109,12 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #define PATH_MAX FILENAME_MAX
 #endif /* __SYMBIAN32__ */
 
+
+/* Include the header file here, so the CivetWeb interface is defined for the
+ * entire implementation, including the following forward definitions. */
+#include "civetweb.h"
+
+
 #ifndef IGNORE_UNUSED_RESULT
 #define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
@@ -541,9 +547,6 @@ static struct pthread_mutex_undefined_struct *pthread_mutex_attr = NULL;
 #else
 static pthread_mutexattr_t pthread_mutex_attr;
 #endif /* _WIN32 */
-
-
-#include "civetweb.h"
 
 
 #define PASSWORDS_FILE_NAME ".htpasswd"
@@ -1279,6 +1282,7 @@ struct mg_context {
 	struct ttimers *timers;
 #endif
 };
+
 
 struct mg_connection {
 	struct mg_request_info request_info;
@@ -2870,6 +2874,7 @@ path_to_unicode(const struct mg_connection *conn,
 	    }
 	}
 	*/
+	(void)conn; /* conn is currently unused */
 
 	/* Only accept a full file path, not a Windows short (8.3) path. */
 	memset(wbuf2, 0, ARRAY_SIZE(wbuf2) * sizeof(wchar_t));
