@@ -363,6 +363,7 @@ struct file;
 static const char *
 mg_fgets(char *buf, size_t size, struct file *filep, char **p);
 
+
 #if defined(HAVE_STDINT)
 #include <stdint.h>
 #else
