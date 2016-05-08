@@ -46,6 +46,7 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
+
 START_TEST(test_parse_http_message)
 {
 	/* Adapted from unit_test.c */
@@ -99,6 +100,7 @@ START_TEST(test_parse_http_message)
 }
 END_TEST
 
+
 START_TEST(test_should_keep_alive)
 {
 	/* Adapted from unit_test.c */
@@ -146,6 +148,7 @@ START_TEST(test_should_keep_alive)
 }
 END_TEST
 
+
 START_TEST(test_match_prefix)
 {
 	/* Adapted from unit_test.c */
@@ -182,6 +185,7 @@ START_TEST(test_match_prefix)
 }
 END_TEST
 
+
 START_TEST(test_remove_double_dots_and_double_slashes)
 {
 	/* Adapted from unit_test.c */
@@ -210,6 +214,7 @@ START_TEST(test_remove_double_dots_and_double_slashes)
 }
 END_TEST
 
+
 START_TEST(test_is_valid_uri)
 {
 	/* is_valid_uri is superseeded by get_uri_type */
@@ -226,6 +231,7 @@ START_TEST(test_is_valid_uri)
 	ck_assert_int_eq(4, get_uri_type("https://somewhere:8080/some/file.html"));
 }
 END_TEST
+
 
 START_TEST(test_next_option)
 {
@@ -246,6 +252,7 @@ START_TEST(test_next_option)
 	}
 }
 END_TEST
+
 
 START_TEST(test_skip_quoted)
 {
@@ -269,6 +276,7 @@ START_TEST(test_skip_quoted)
 }
 END_TEST
 
+
 static int
 alloc_printf(char **buf, size_t size, const char *fmt, ...)
 {
@@ -283,6 +291,7 @@ alloc_printf(char **buf, size_t size, const char *fmt, ...)
 	return ret;
 }
 
+
 static int
 alloc_printf2(char **buf, const char *fmt, ...)
 {
@@ -294,6 +303,7 @@ alloc_printf2(char **buf, const char *fmt, ...)
 	va_end(ap);
 	return ret;
 }
+
 
 START_TEST(test_alloc_vprintf)
 {
@@ -325,6 +335,46 @@ START_TEST(test_alloc_vprintf)
 }
 END_TEST
 
+
+START_TEST(test_mg_vsnprintf)
+{
+    char buf[16];
+    int trunc;
+
+    memset(buf, 0, sizeof(buf));
+
+    trunc=777;
+    mg_snprintf(NULL, &trunc, buf, 10, "%8i", 123);
+    ck_assert_str_eq(buf, "     123");
+    ck_assert_int_eq(trunc, 0);
+
+    trunc=777;
+    mg_snprintf(NULL, &trunc, buf, 10, "%9i", 123);
+    ck_assert_str_eq(buf, "      123");
+    ck_assert_int_eq(trunc, 0);
+
+    trunc=777;
+    mg_snprintf(NULL, &trunc, buf, 9, "%9i", 123);
+    ck_assert_str_eq(buf, "      12");
+    ck_assert_int_eq(trunc, 1);
+
+    trunc=777;
+    mg_snprintf(NULL, &trunc, buf, 8, "%9i", 123);
+    ck_assert_str_eq(buf, "      1");
+    ck_assert_int_eq(trunc, 1);
+
+    trunc=777;
+    mg_snprintf(NULL, &trunc, buf, 7, "%9i", 123);
+    ck_assert_str_eq(buf, "      ");
+    ck_assert_int_eq(trunc, 1);
+
+    strcpy(buf, "1234567890");
+    mg_snprintf(NULL, &trunc, buf, 0, "%i", 543);
+    ck_assert_str_eq(buf, "1234567890");
+}
+END_TEST
+
+
 START_TEST(test_mg_strcasestr)
 {
 	/* Adapted from unit_test.c */
@@ -338,6 +388,7 @@ START_TEST(test_mg_strcasestr)
 	ck_assert(mg_strcasestr("aa", "AAB") == NULL);
 }
 END_TEST
+
 
 START_TEST(test_parse_port_string)
 {
@@ -377,6 +428,7 @@ START_TEST(test_parse_port_string)
 	}
 }
 END_TEST
+
 
 START_TEST(test_encode_decode)
 {
@@ -615,6 +667,7 @@ make_private_suite(void)
 	tcase_add_test(tcase_internal_parse, test_skip_quoted);
 	tcase_add_test(tcase_internal_parse, test_mg_strcasestr);
 	tcase_add_test(tcase_internal_parse, test_alloc_vprintf);
+    tcase_add_test(tcase_internal_parse, test_mg_vsnprintf);
 	tcase_add_test(tcase_internal_parse, test_parse_port_string);
 	tcase_set_timeout(tcase_internal_parse, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_internal_parse);
@@ -639,9 +692,10 @@ make_private_suite(void)
 /* Used to debug test cases without using the check framework */
 
 void
-xmain(void)
+main(void)
 {
 	test_alloc_vprintf(0);
+    test_mg_vsnprintf(0);
 	test_parse_date_string(0);
 }
 
