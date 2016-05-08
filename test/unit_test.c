@@ -46,6 +46,8 @@
 
 #include "civetweb.c"
 
+void check_func(int condition, const char *cond_txt, unsigned line);
+
 static int s_total_tests = 0;
 static int s_failed_tests = 0;
 
@@ -778,7 +780,7 @@ static void test_mg_websocket_client_connect(int use_ssl)
 	                                   sizeof(ebuf),
 	                                   "/",
 	                                   "http://localhost",
-	                                   websocket_data_handler,
+	                                   (mg_websocket_data_handler)websocket_data_handler,
 	                                   NULL,
 	                                   NULL);
 	ASSERT(conn == NULL);
@@ -792,7 +794,7 @@ static void test_mg_websocket_client_connect(int use_ssl)
 	                                   sizeof(ebuf),
 	                                   "/",
 	                                   "http://localhost",
-	                                   websocket_data_handler,
+	                                   (mg_websocket_data_handler)websocket_data_handler,
 	                                   NULL,
 	                                   NULL);
 	ASSERT(conn != NULL);
@@ -811,7 +813,7 @@ static void test_mg_websocket_client_connect(int use_ssl)
 	                                   sizeof(ebuf),
 	                                   "/",
 	                                   "http://websocket.org",
-	                                   websocket_data_handler,
+	                                   (mg_websocket_data_handler)websocket_data_handler,
 	                                   NULL,
 	                                   NULL);
 	ASSERT(conn == NULL);
@@ -824,7 +826,7 @@ static void test_mg_websocket_client_connect(int use_ssl)
 	                                   sizeof(ebuf),
 	                                   "/",
 	                                   "http://websocket.org",
-	                                   websocket_data_handler,
+	                                   (mg_websocket_data_handler)websocket_data_handler,
 	                                   NULL,
 	                                   NULL);
 	ASSERT(conn == NULL);
@@ -837,7 +839,7 @@ static void test_mg_websocket_client_connect(int use_ssl)
 	                                   sizeof(ebuf),
 	                                   "/",
 	                                   "http://websocket.org",
-	                                   websocket_data_handler,
+	                                   (mg_websocket_data_handler)websocket_data_handler,
 	                                   NULL,
 	                                   NULL);
 	ASSERT(conn != NULL);
@@ -1199,7 +1201,7 @@ static void test_request_handlers(void)
 	}
 	for (i = 5; i < 9; i++) {
 		sprintf(uri, "/U%u", i);
-		mg_set_request_handler(ctx, uri, request_test_handler, (void *)i);
+		mg_set_request_handler(ctx, uri, request_test_handler, (void *)(intptr_t)i);
 	}
 
 	conn = mg_download(
@@ -1519,7 +1521,7 @@ int __cdecl main(void)
 		extern unsigned long mg_memory_debug_blockCount;
 		extern unsigned long mg_memory_debug_totalMemUsed;
 
-		printf("MEMORY DEBUGGING: %u %u\n",
+		printf("MEMORY DEBUGGING: %lu %lu\n",
 		       mg_memory_debug_blockCount,
 		       mg_memory_debug_totalMemUsed);
 	}
