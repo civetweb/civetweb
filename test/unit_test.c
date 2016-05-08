@@ -20,6 +20,12 @@
  * THE SOFTWARE.
  */
 
+#if defined(_MSC_VER)
+#pragma message("Warning: " __FILE__ " is obsolete. See note below.")
+#else
+#pragma message __FILE__ ": This file is obsolete. See note below."
+#endif
+
 /* Note: The unit_test.c file is mostly obsolete, since the current unit
  * tests are performed by the CMake build framework based on the
  * CMakeList (https://github.com/civetweb/civetweb/blob/master/test/CMakeLists.txt).
