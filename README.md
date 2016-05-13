@@ -1,9 +1,13 @@
 ![CivetWeb](https://raw.github.com/civetweb/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
 =======
 
-**Continuous integration (Travis, Appveyor), coverage check (coveralls) and source code analysis (coverity) are currently in a setup phase**
+Continuous integration for Linux and OSX using ([Travis CI](https://travis-ci.org/civetweb/civetweb)):
 
 [![Travis Build Status](https://travis-ci.org/civetweb/civetweb.svg?branch=master)](https://travis-ci.org/civetweb/civetweb)
+
+
+Note: Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)), coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb)) and source code analysis ([Coverity](https://scan.coverity.com/projects/5784)) are currently in a setup phase:
+
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/civetweb/civetweb?svg=true)](https://ci.appveyor.com/project/civetweb/civetweb/branch/master)
 [![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
@@ -17,6 +21,9 @@ Project Mission
 Project mission is to provide easy to use, powerful, C/C++ embeddable web
 server with optional CGI, SSL and Lua support.
 CivetWeb has a MIT license so you can innovate without restrictions.
+
+CivetWeb can be used by developers as a library, to add web server functionality to an existing application.
+It can also be used by end users as a stand-alone web server. It is available as single executable, no installation is required.
 
 
 Where to find the official version?
@@ -38,10 +45,11 @@ https://groups.google.com/d/forum/civetweb
 Quick start documentation
 --------------------------
 
-- [docs/Installing.md](https://github.com/civetweb/civetweb/blob/master/docs/Installing.md) - Install Guide
+- [docs/Installing.md](https://github.com/civetweb/civetweb/blob/master/docs/Installing.md) - Install Guide (for end users using pre-built binaries)
 - [docs/UserManual.md](https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md) - End User Guide
-- [docs/Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md) - Buildiing the Server Quick Start
-- [docs/Embedding.md](https://github.com/civetweb/civetweb/blob/master/docs/Embedding.md) - Embedding Quick Start
+- [docs/Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md) - Building the Server (quick start guide)
+- [docs/Embedding.md](https://github.com/civetweb/civetweb/blob/master/docs/Embedding.md) - Embedding (how to add HTTP support to an existing application)
+- [docs/OpenSSL.md](https://github.com/civetweb/civetweb/blob/master/docs/OpenSSL.md) - Adding HTTPS (SSL/TLS) support using OpenSSL.
 - [RELEASE_NOTES.md](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
 - [LICENSE.md](https://github.com/civetweb/civetweb/blob/master/LICENSE.md) - Copyright License
 
@@ -63,17 +71,19 @@ simplicity by a carefully selected list of features:
 - Works on Windows, Mac, Linux, UNIX, iPhone, Android, Buildroot, and many
   other platforms.
 - Scripting and database support (Lua scipts, Lua Server Pages, CGI + SQLite
-  database).
+  database, Server side javascript).
   This provides a ready to go, powerful web development platform in a one
   single-click executable with **no dependencies**.
-- Support for CGI, HTTPS/SSL, SSI, HTTP digest (MD5) authorization, Websocket,
+- Support for CGI, HTTPS (SSL/TLS), SSI, HTTP digest (MD5) authorization, Websocket,
   WEbDAV.
+- Optional support for authentication using client side X.509 certificates.
 - Resumed download, URL rewrite, file blacklist, IP-based ACL, Windows service.
 - Download speed limit based on client subnet or URI pattern.
 - Simple and clean embedding API.
 - The source is in single file to make things easy.
 - Embedding examples included.
 - HTTP client capable of sending arbitrary HTTP/HTTPS requests.
+- Websocket client functionality available (WS/WSS).
 
 
 ### Optionally included software
@@ -112,17 +122,29 @@ Contributions
 Contributions are welcome provided all contributions carry the MIT license.
 
 DO NOT APPLY fixes copied from Mongoose to this project to prevent GPL tainting.
+Since 2013 CivetWeb and Mongoose are developed independently. By now the code base differs, so patches cannot be safely transfered in either direction.
 
+Some guidelines can be found in [docs/Contribution.md](https://github.com/civetweb/civetweb/blob/master/docs/Contribution.md).
 
-### Author
+### Authors
 
 CivetWeb is based on the Mongoose project.  The original author of Mongoose was
-Sergey Lyubka, however, the license of Mongoose has been changed after writing
-and distributing the original code this project is based on.
+Sergey Lyubka:
+```
+Copyright (c) 2004-2013 Sergey Lyubka
+MIT license
+```
+
+However, on August 16, 2013, the license of Mongoose has been changed
+after writing and distributing the original code this project is based on.
+CivetWeb has been forked from the last MIT version of Mongoose.
+Since 2013, CivetWeb has seen many improvements from various authors.
+```
+Copyright (c) 2013-2016 the CivetWeb developers
+```
+A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
 
 Using the CivetWeb project ensures the MIT licenses terms are applied and
 GPL cannot be imposed on any of this code as long as it is sourced from
 here. This code will remain free with the MIT license protection.
-
-A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
 

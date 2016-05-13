@@ -3,8 +3,7 @@ Embedding CivetWeb
 
 CivetWeb is primarily designed so applications can easily add HTTP and HTTPS server as well as WebSocket functionality.  For example, an application server could use CivetWeb to enable a web service interface for automation or remote control.
 
-However, it can also be used as a stand-alone executable. It can deliver static files and offers built-in server side Lua, JavaScript and CGI support.
-
+However, it can also be used as a stand-alone executable. It can deliver static files and offers built-in server side Lua, JavaScript and CGI support. Some instructions how to build the stand-alone server can be found in [Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md).
 
 Files
 ------
@@ -20,16 +19,22 @@ The *INL* file extension represents code that is statically included inline in a
 These files constitute the CivetWeb library.  They do not contain a `main` function,
 but all functions required to run a HTTP server.
 
-  - HTTP Server API
-      - include/civetweb.h
+  - HTTP server API
+    - include/civetweb.h
   - C implementation
     - src/civetweb.c
-    - src/md5.inl (MD5 calculation)    
-  - Optional: C++ Wrapper
+    - src/md5.inl (MD5 calculation)
+    - src/handle_form.inl (HTML form handling functions)
+  - Optional: C++ wrapper
     - include/CivetServer.h (C++ interface)
     - src/CivetServer.cpp (C++ wrapper implementation)
-    
-#### Executable Source Files
+  - Optional: Third party components
+    - src/third_party/* (third party components, mainly used for the standalone server)
+    - src/mod_*.inl (modules to access third party components from civetweb)
+
+Note: The C++ wrapper uses the official C interface (civetweb.h) and does not add new features to the server. Some features available in the C interface might be missing in the C++ interface.
+
+#### Additional Source Files for Executables
 
 These files can be used to build a server executable. They contain a `main` function
 starting the HTTP server.
@@ -40,6 +45,8 @@ starting the HTTP server.
       - examples/embedded_c/embedded_c.c
   - Reference embedded C++ Server
       - examples/embedded_cpp/embedded_cpp.cpp
+
+Note: The "embedded" example is actively maintained, updated, extended and tested. Other examples in the examples/ folder might be outdated and remain there for reference.
 
 Quick Start
 ------
@@ -176,7 +183,7 @@ looks something like this:
 Function `consume_socket()` gets a new accepted socket from the CivetWeb socket
 queue, atomically removing it from the queue. If the queue is empty,
 `consume_socket()` blocks and waits until a new socket is placed in the queue
-by the master thread. 
+by the master thread.
 
 `process_new_connection()` actually processes the
 connection, i.e. reads the request, parses it, and performs appropriate action
@@ -188,6 +195,6 @@ listening sockets. `poll()` is used to avoid `FD_SETSIZE` limitation of
 to use hi-performance alternatives like `epoll()` or `kqueue()`. Worker
 threads use blocking IO on accepted sockets for reading and writing data.
 All accepted sockets have `SO_RCVTIMEO` and `SO_SNDTIMEO` socket options set
-(controlled by the `request_timeout_ms` CivetWeb option, 30 seconds default) 
+(controlled by the `request_timeout_ms` CivetWeb option, 30 seconds default)
 which specifies a read/write timeout on client connections.
 

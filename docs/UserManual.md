@@ -392,6 +392,18 @@ for a full buffer or timeout to occur.
     0    Keep the default: Nagel's algorithm enabled
     1    Disable Nagel's algorithm for all sockets
 
+### static\_file\_max\_age `3600`
+Set the maximum time (in seconds) a cache may store a static files.
+
+This option will set the `Cache-Control: max-age` value for static files.
+Dynamically generated content, i.e., content created by a script or callback,
+must send cache control headers by themselfes.
+
+A value >0 corresponds to a maximum allowed caching time in seconds.
+This value should not exceed one year (RFC 2616, Section 14.21).
+A value of 0 will send "do not cache" headers for all static files.
+For values <0 and values >31622400, the behavior is undefined.
+
 ### decode\_url `yes`
 URL encoded request strings are decoded in the server, unless it is disabled
 by setting this option to `no`.
@@ -441,7 +453,7 @@ TLS1.2 | 4
 
 ### ssl_short_trust `no`
 Enables the use of short lived certificates. This will allow for the certificates
-and keys specified in `ssl_certificate`, `ssl_ca_file` and `ssl_ca_path` to be 
+and keys specified in `ssl_certificate`, `ssl_ca_file` and `ssl_ca_path` to be
 exchanged and reloaded while the server is running.
 
 In an automated environment it is advised to first write the new pem file to

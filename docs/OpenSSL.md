@@ -99,23 +99,23 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 </pre>
 
 
-Including a dertificate from a certificate authority
+Including a certificate from a certificate authority
 ----
 
 CivetWeb requires one certificate file in PEM format.
-If you got multiple files from your certificate authority, 
-you need to copy their content together into one file. 
-Make sure the file has one section BEGIN RSA PRIVATE KEY / 
-END RSA PRIVATE KEY, and at least one section 
-BEGIN CERTIFICATE / END CERTIFICATE. 
-In case you received a file with a section 
-BEGIN PRIVATE KEY / END PRIVATE KEY, 
+If you got multiple files from your certificate authority,
+you need to copy their content together into one file.
+Make sure the file has one section BEGIN RSA PRIVATE KEY /
+END RSA PRIVATE KEY, and at least one section
+BEGIN CERTIFICATE / END CERTIFICATE.
+In case you received a file with a section
+BEGIN PRIVATE KEY / END PRIVATE KEY,
 you may get a suitable file by adding the letters RSA manually.
 
-Set the "ssl_certificate" configuration parameter to the 
+Set the "ssl_certificate" configuration parameter to the
 file name (including path) of the resulting *.pem file.
 
-The file must look like the file in the section 
+The file must look like the file in the section
 "Creating a self signed certificate", but it will have several
 BEGIN CERTIFICATE / END CERTIFICATE sections.
 
