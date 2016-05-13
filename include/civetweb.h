@@ -185,11 +185,14 @@ struct mg_callbacks {
 	     lua_context: "lua_State *" pointer. */
 	void (*init_lua)(const struct mg_connection *, void *lua_context);
 
+#if defined(MG_LEGACY_INTERFACE)
 	/* Called when civetweb has uploaded a file to a temporary directory as a
 	   result of mg_upload() call.
+	   Note that mg_upload is deprecated. Use mg_handle_form_request instead.
 	   Parameters:
 	     file_name: full path name to the uploaded file. */
 	void (*upload)(struct mg_connection *, const char *file_name);
+#endif
 
 	/* Called when civetweb is about to send HTTP error to the client.
 	   Implementing this callback allows to create custom error pages.
@@ -741,12 +744,14 @@ mg_download(const char *host,
 CIVETWEB_API void mg_close_connection(struct mg_connection *conn);
 
 
+#if defined(MG_LEGACY_INTERFACE)
 /* File upload functionality. Each uploaded file gets saved into a temporary
    file and MG_UPLOAD event is sent.
    Return number of uploaded files.
    Deprecated: Use mg_handle_form_request instead. */
 CIVETWEB_API int mg_upload(struct mg_connection *conn,
                            const char *destination_dir);
+#endif
 
 
 /* This structure contains callback functions for handling form fields.

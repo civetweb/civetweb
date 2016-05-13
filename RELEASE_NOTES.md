@@ -5,6 +5,7 @@ Release Notes v1.8 (work in progress)
 Changes
 -------
 
+- Replace mg_upload by mg_handle_form_request
 - CGI-scripts must receive EOF if all POST data is read
 - Add API function to handle all kinds of HTML form data
 - Do not allow short file names in Windows

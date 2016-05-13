@@ -2258,12 +2258,14 @@ send_static_cache_header(struct mg_connection *conn)
 	/* Use "Cache-Control: max-age" instead of "Expires" header.
 	 * Reason: see https://www.mnot.net/blog/2007/05/15/expires_max-age */
 	/* See also https://www.mnot.net/cache_docs/ */
-    /* According to RFC 2616, Section 14.21, caching times should not exceed
+	/* According to RFC 2616, Section 14.21, caching times should not exceed
      * one year. A year with 365 days corresponds to 31536000 seconds, a leap
      * year to 31622400 seconds. For the moment, we just send whatever has
      * been configured, still the behavior for >1 year should be considered
-     * as undefined. */.
-	return mg_printf(conn, "Cache-Control: max-age=%u\r\n", (unsigned)max_age);
+     * as undefined. */
+	    .return mg_printf(conn,
+	                      "Cache-Control: max-age=%u\r\n",
+	                      (unsigned)max_age);
 #else  /* NO_CACHING */
 	return send_no_cache_header(conn);
 #endif /* !NO_CACHING */
@@ -9229,11 +9231,16 @@ get_remote_ip(const struct mg_connection *conn)
 }
 
 
-/* Experimental replacement for mg_upload. */
+/* The mg_upload function is superseeded by mg_handle_form_request. */
 #include "handle_form.inl"
 
 
-/* Replacement for mg_upload (Note: mg_upload is deprecated) */
+#if defined(MG_LEGACY_INTERFACE)
+/* Implement the deprecated mg_upload function by calling the new
+ * mg_handle_form_request function. While mg_upload could only handle
+ * HTML forms sent as POST request in multipart/form-data format
+ * containing only file input elements, mg_handle_form_request can
+ * handle all form input elements and all standard request methods. */
 struct mg_upload_user_data {
 	struct mg_connection *conn;
 	const char *destination_dir;
@@ -9323,6 +9330,7 @@ mg_upload(struct mg_connection *conn, const char *destination_dir)
 
 	return fud.num_uploaded_files;
 }
+#endif
 
 
 static int
