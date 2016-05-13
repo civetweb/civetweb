@@ -73,6 +73,13 @@ timer_thread_run(void *thread_func_param)
 	int re_schedule;
 	struct ttimer t;
 
+	mg_set_thread_name("timer");
+
+	if (ctx->callbacks.init_thread) {
+		/* Timer thread */
+		ctx->callbacks.init_thread(ctx, 2);
+	}
+
 #if defined(HAVE_CLOCK_NANOSLEEP) /* Linux with librt */
 	/* TODO */
 	while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &request, &request)

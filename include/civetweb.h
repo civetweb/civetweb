@@ -209,7 +209,11 @@ struct mg_callbacks {
 	/* Called when a new worker thread is initialized.
 	   Parameters:
 	     ctx: context handle
-	     thread_type: a value of 1 indicates a worker thread. */
+	     thread_type:
+	       0 indicates the master thread
+	       1 indicates a worker thread handling client connections
+	       2 indicates an internal helper thread (timer thread)
+	       */
 	void (*init_thread)(const struct mg_context *ctx, int thread_type);
 
 	/* Called when civetweb context is deleted.

@@ -11534,14 +11534,11 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			fake_ctx.ssl_ctx = conn->client_ssl_ctx;
 
 			/* TODO: Check ssl_verify_peer and ssl_ca_path here.
-			   SSL_CTX_set_verify call is needed to switch off server
+			 * SSL_CTX_set_verify call is needed to switch off server
 			 * certificate checking, which is off by default in OpenSSL and
-			 on
-			 * in yaSSL. */
-
-			// TODO: SSL_CTX_set_verify(conn->client_ssl_ctx,
-			// SSL_VERIFY_PEER,
-			// verify_ssl_server);
+			 * on in yaSSL. */
+			/* TODO: SSL_CTX_set_verify(conn->client_ssl_ctx,
+			 * SSL_VERIFY_PEER, verify_ssl_server); */
 
 			if (client_options->client_cert) {
 				if (!ssl_use_pem_file(&fake_ctx, client_options->client_cert)) {
@@ -11989,6 +11986,17 @@ websocket_client_thread(void *data)
 {
 	struct websocket_client_thread_data *cdata =
 	    (struct websocket_client_thread_data *)data;
+
+	mg_set_thread_name("ws-client");
+
+	if (cdata->conn->ctx) {
+		if (cdata->conn->ctx->callbacks.init_thread) {
+			/* 3 indicates a websocket client thread */
+			/* TODO: check if conn->ctx can be set */
+			cdata->conn->ctx->callbacks.init_thread(cdata->conn->ctx, 3);
+		}
+	}
+
 	read_websocket(cdata->conn, cdata->data_handler, cdata->callback_data);
 
 	DEBUG_TRACE("%s", "Websocket client thread exited\n");
@@ -12322,6 +12330,7 @@ worker_thread_run(void *thread_func_param)
 #endif
 
 	if (ctx->callbacks.init_thread) {
+		/* call init_thread for a worker thread (type 1) */
 		ctx->callbacks.init_thread(ctx, 1);
 	}
 
@@ -12579,6 +12588,11 @@ master_thread_run(void *thread_func_param)
 #endif
 	tls.is_master = 1;
 	pthread_setspecific(sTlsKey, &tls);
+
+	if (ctx->callbacks.init_thread) {
+		/* Callback for the master thread (type 0) */
+		ctx->callbacks.init_thread(ctx, 0);
+	}
 
 	/* Server starts *now* */
 	ctx->start_time = time(NULL);
