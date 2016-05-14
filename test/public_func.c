@@ -465,7 +465,7 @@ make_public_func_suite(void)
 	    tcase_create("URL encoding decoding");
 	TCase *const tcase_cookies = tcase_create("Cookies and variables");
 	TCase *const tcase_md5 = tcase_create("MD5");
-    TCase *const tcase_aux = tcase_create("Aux functions");
+	TCase *const tcase_aux = tcase_create("Aux functions");
 
 	tcase_add_test(tcase_version, test_mg_version);
 	tcase_set_timeout(tcase_version, civetweb_min_test_timeout);

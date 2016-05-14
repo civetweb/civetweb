@@ -261,10 +261,12 @@ START_TEST(test_mg_start_stop_http_server)
 	struct mg_connection *client_conn;
 	char client_err[256];
 	const struct mg_request_info *client_ri;
-	int client_res;
+	int client_res, ret;
+	struct mg_server_ports portinfo[8];
 
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
+	memset(portinfo, 0, sizeof(portinfo));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(errmsg, 0, sizeof(errmsg));
 
@@ -272,7 +274,6 @@ START_TEST(test_mg_start_stop_http_server)
 
 	mark_point();
 	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
-
 	test_sleep(1);
 
 	ck_assert_str_eq(errmsg, "");
@@ -284,6 +285,28 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert_int_eq(ssl[0], 0);
 	ck_assert_int_eq(ports[1], 0);
 	ck_assert_int_eq(ssl[1], 0);
+
+	ret = mg_get_server_ports(ctx, 0, portinfo);
+	ck_assert_int_lt(ret, 0);
+	ck_assert_int_eq(portinfo[0].protocol, 0);
+	ck_assert_int_eq(portinfo[0].port, 0);
+	ck_assert_int_eq(portinfo[0].is_ssl, 0);
+	ck_assert_int_eq(portinfo[0].is_redirect, 0);
+	ck_assert_int_eq(portinfo[1].protocol, 0);
+	ck_assert_int_eq(portinfo[1].port, 0);
+	ck_assert_int_eq(portinfo[1].is_ssl, 0);
+	ck_assert_int_eq(portinfo[1].is_redirect, 0);
+
+	ret = mg_get_server_ports(ctx, 4, portinfo);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_int_eq(portinfo[0].protocol, 1);
+	ck_assert_int_eq(portinfo[0].port, 8080);
+	ck_assert_int_eq(portinfo[0].is_ssl, 0);
+	ck_assert_int_eq(portinfo[0].is_redirect, 0);
+	ck_assert_int_eq(portinfo[1].protocol, 0);
+	ck_assert_int_eq(portinfo[1].port, 0);
+	ck_assert_int_eq(portinfo[1].is_ssl, 0);
+	ck_assert_int_eq(portinfo[1].is_redirect, 0);
 
 	test_sleep(1);
 
@@ -337,7 +360,8 @@ START_TEST(test_mg_start_stop_https_server)
 	struct mg_connection *client_conn;
 	char client_err[256];
 	const struct mg_request_info *client_ri;
-	int client_res;
+	int client_res, ret;
+	struct mg_server_ports portinfo[8];
 
 	ck_assert(ssl_cert != NULL);
 
@@ -357,6 +381,7 @@ START_TEST(test_mg_start_stop_https_server)
 
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
+	memset(portinfo, 0, sizeof(portinfo));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(errmsg, 0, sizeof(errmsg));
 
@@ -376,6 +401,33 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(ssl[1], 1);
 	ck_assert_int_eq(ports[2], 0);
 	ck_assert_int_eq(ssl[2], 0);
+
+
+	ret = mg_get_server_ports(ctx, 0, portinfo);
+	ck_assert_int_lt(ret, 0);
+	ck_assert_int_eq(portinfo[0].protocol, 0);
+	ck_assert_int_eq(portinfo[0].port, 0);
+	ck_assert_int_eq(portinfo[0].is_ssl, 0);
+	ck_assert_int_eq(portinfo[0].is_redirect, 0);
+	ck_assert_int_eq(portinfo[1].protocol, 0);
+	ck_assert_int_eq(portinfo[1].port, 0);
+	ck_assert_int_eq(portinfo[1].is_ssl, 0);
+	ck_assert_int_eq(portinfo[1].is_redirect, 0);
+
+	ret = mg_get_server_ports(ctx, 4, portinfo);
+	ck_assert_int_eq(ret, 2);
+	ck_assert_int_eq(portinfo[0].protocol, 1);
+	ck_assert_int_eq(portinfo[0].port, 8080);
+	ck_assert_int_eq(portinfo[0].is_ssl, 0);
+	ck_assert_int_eq(portinfo[0].is_redirect, 1);
+	ck_assert_int_eq(portinfo[1].protocol, 1);
+	ck_assert_int_eq(portinfo[1].port, 8443);
+	ck_assert_int_eq(portinfo[1].is_ssl, 1);
+	ck_assert_int_eq(portinfo[1].is_redirect, 0);
+	ck_assert_int_eq(portinfo[2].protocol, 0);
+	ck_assert_int_eq(portinfo[2].port, 0);
+	ck_assert_int_eq(portinfo[2].is_ssl, 0);
+	ck_assert_int_eq(portinfo[2].is_redirect, 0);
 
 	test_sleep(1);
 
