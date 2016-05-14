@@ -438,7 +438,7 @@ START_TEST(test_mg_get_response_code_text)
 	const char *resp;
 
 	for (i = 100; i < 600; i++) {
-		resp = mg_get_response_code_text(i, NULL);
+		resp = mg_get_response_code_text(NULL, i);
 		ck_assert_ptr_ne(resp, NULL);
 		len = strlen(resp);
 		ck_assert_uint_gt(len, 1);

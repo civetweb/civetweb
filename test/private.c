@@ -617,6 +617,13 @@ START_TEST(test_parse_date_string)
 	        tm->tm_sec);
 	ck_assert_uint_eq((uintmax_t)parse_date_string(date), (uintmax_t)now);
 
+	gmt_time_string(date, 1, NULL);
+	ck_assert_str_eq(date, "");
+	gmt_time_string(date, 6, NULL);
+	ck_assert_str_eq(date, "Tue, ");
+	gmt_time_string(date, sizeof(date), NULL);
+	ck_assert_str_eq(date, "Thu, 01 Jan 1970 00:00:00 GMT");
+
 	for (i = 2ul; i < 0x8000000ul; i += i / 2) {
 		now = (time_t)i;
 
@@ -692,7 +699,7 @@ make_private_suite(void)
 /* Used to debug test cases without using the check framework */
 
 void
-main(void)
+xmain(void)
 {
 	test_alloc_vprintf(0);
 	test_mg_vsnprintf(0);

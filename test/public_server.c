@@ -838,7 +838,7 @@ START_TEST(test_request_handlers)
 	short ipv4r_port = 8194;
 #endif
 
-	const char *OPTIONS[8]; /* initializer list here is rejected by CI test */
+	const char *OPTIONS[16];
 	const char *opt;
 	FILE *f;
 	const char *plain_file_content;
@@ -865,6 +865,8 @@ START_TEST(test_request_handlers)
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
 	OPTIONS[opt_idx++] = HTTP_PORT;
+	OPTIONS[opt_idx++] = "authentication_domain";
+	OPTIONS[opt_idx++] = "test.domain";
 #if !defined(NO_FILES)
 	OPTIONS[opt_idx++] = "document_root";
 	OPTIONS[opt_idx++] = ".";
@@ -1155,7 +1157,6 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(ri->uri, "200");
 	mg_close_connection(client_conn);
 #endif
-
 
 	/* Get zipped static data - will not work if Accept-Encoding is not set */
 	client_conn = mg_download("localhost",
@@ -1532,6 +1533,54 @@ START_TEST(test_request_handlers)
 
 	ck_assert_int_eq(ws_client3_data.closed, 1);
 #endif
+
+	/* Get data from callback using mg_connect_client instead of mg_download */
+	memset(ebuf, 0, sizeof(ebuf));
+	client_conn =
+	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(ebuf, "");
+
+	mg_printf(client_conn, "%s", request);
+
+	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(i, 0);
+	ck_assert_str_eq(ebuf, "");
+
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(client_conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, (int)strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
+	mg_close_connection(client_conn);
+
+	/* Get data from callback using mg_connect_client and absolute URI */
+	memset(ebuf, 0, sizeof(ebuf));
+	client_conn =
+	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(ebuf, "");
+
+	mg_printf(client_conn,
+	          "GET http://test.domain:%d/U7 HTTP/1.0\r\n\r\n",
+	          ipv4_port);
+
+	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(i, 0);
+	ck_assert_str_eq(ebuf, "");
+
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(client_conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, (int)strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
+	mg_close_connection(client_conn);
 }
 END_TEST
 
@@ -1721,7 +1770,7 @@ START_TEST(test_handle_form)
 	int opt_idx = 0;
 	char ebuf[100];
 	const char *multipart_body;
-	size_t body_len, chunk_len;
+	size_t body_len, body_sent, chunk_len;
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
@@ -1937,14 +1986,15 @@ START_TEST(test_handle_form)
 
 	body_len = strlen(multipart_body);
 	chunk_len = 1;
-	while (body_len > 0) {
-		if (chunk_len > body_len) {
-			chunk_len = body_len;
+	body_sent = 0;
+	while (body_len < body_sent) {
+		if (chunk_len > (body_len - body_sent)) {
+			chunk_len = body_len - body_sent;
 		}
 		mg_printf(client_conn, "%x\r\n", chunk_len);
-		mg_write(client_conn, multipart_body + i, chunk_len);
+		mg_write(client_conn, multipart_body + body_len, chunk_len);
 		mg_printf(client_conn, "\r\n");
-		body_len -= chunk_len;
+		body_sent += chunk_len;
 		chunk_len = (chunk_len % 40) + 1;
 	}
 
@@ -2016,16 +2066,16 @@ static int chk_failed = 0;
 
 
 void
-xmain(void)
+main(void)
 {
 	/*
 	    test_the_test_environment(0);
 	    test_threading(0);
 	    test_mg_start_stop_http_server(0);
 	    test_mg_start_stop_https_server(0);
-	    test_request_handlers(0);
-	    test_mg_server_and_client_tls(0);
 	*/
+	test_request_handlers(0);
+	test_mg_server_and_client_tls(0);
 	test_handle_form(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
