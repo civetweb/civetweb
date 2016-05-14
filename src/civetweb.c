@@ -2431,6 +2431,12 @@ mg_get_response_code_text(int response_code, struct mg_connection *conn)
 		return "I am a teapot"; /* RFC2324 Section 2.3.2 */
 	case 419:
 		return "Authentication Timeout"; /* common use */
+	case 420:
+		return "Enhance Your Calm"; /* common use */
+	case 440:
+		return "Login Timeout"; /* common use */
+	case 509:
+		return "Bandwidth Limit Exceeded"; /* common use */
 
 	default:
 		/* This error code is unknown. This should not happen. */

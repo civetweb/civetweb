@@ -90,6 +90,7 @@ START_TEST(test_mg_version)
 }
 END_TEST
 
+
 START_TEST(test_mg_get_valid_options)
 {
 	int i;
@@ -107,6 +108,7 @@ START_TEST(test_mg_get_valid_options)
 }
 END_TEST
 
+
 START_TEST(test_mg_get_builtin_mime_type)
 {
 	ck_assert_str_eq(mg_get_builtin_mime_type("x.txt"), "text/plain");
@@ -118,6 +120,7 @@ START_TEST(test_mg_get_builtin_mime_type)
 	                 "text/plain");
 }
 END_TEST
+
 
 START_TEST(test_mg_strncasecmp)
 {
@@ -145,6 +148,7 @@ START_TEST(test_mg_strncasecmp)
 	ck_assert(mg_strncasecmp("xBx", "xax", 3) > 0);
 }
 END_TEST
+
 
 START_TEST(test_mg_get_cookie)
 {
@@ -211,6 +215,7 @@ START_TEST(test_mg_get_cookie)
 	/* TODO: mg_get_cookie and mg_get_var(2) should have the same behavior */
 }
 END_TEST
+
 
 START_TEST(test_mg_get_var)
 {
@@ -320,6 +325,7 @@ START_TEST(test_mg_get_var)
 }
 END_TEST
 
+
 START_TEST(test_mg_md5)
 {
 	char buf[33];
@@ -374,6 +380,7 @@ START_TEST(test_mg_md5)
 }
 END_TEST
 
+
 START_TEST(test_mg_url_encode)
 {
 	char buf[20];
@@ -395,6 +402,7 @@ START_TEST(test_mg_url_encode)
 	ck_assert_str_eq("%25", buf);
 }
 END_TEST
+
 
 START_TEST(test_mg_url_decode)
 {
@@ -423,6 +431,27 @@ START_TEST(test_mg_url_decode)
 }
 END_TEST
 
+
+START_TEST(test_mg_get_response_code_text)
+{
+	size_t i, j, len;
+	const char *resp;
+
+	for (i = 100; i < 600; i++) {
+		resp = mg_get_response_code_text(i, NULL);
+		ck_assert_ptr_ne(resp, NULL);
+		len = strlen(resp);
+		ck_assert_uint_gt(len, 1);
+		ck_assert_uint_lt(len, 32);
+		for (j = 0; j < len; j++) {
+			ck_assert(resp[j] == ' ' || (resp[j] >= 'A' && resp[j] <= 'Z')
+			          || (resp[j] >= 'a' && resp[j] <= 'z'));
+		}
+	}
+}
+END_TEST
+
+
 Suite *
 make_public_func_suite(void)
 {
@@ -436,6 +465,7 @@ make_public_func_suite(void)
 	    tcase_create("URL encoding decoding");
 	TCase *const tcase_cookies = tcase_create("Cookies and variables");
 	TCase *const tcase_md5 = tcase_create("MD5");
+    TCase *const tcase_aux = tcase_create("Aux functions");
 
 	tcase_add_test(tcase_version, test_mg_version);
 	tcase_set_timeout(tcase_version, civetweb_min_test_timeout);
@@ -466,6 +496,10 @@ make_public_func_suite(void)
 	tcase_add_test(tcase_md5, test_mg_md5);
 	tcase_set_timeout(tcase_md5, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_md5);
+
+	tcase_add_test(tcase_aux, test_mg_get_response_code_text);
+	tcase_set_timeout(tcase_aux, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_aux);
 
 	return suite;
 }
