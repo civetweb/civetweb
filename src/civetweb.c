@@ -2259,13 +2259,11 @@ send_static_cache_header(struct mg_connection *conn)
 	 * Reason: see https://www.mnot.net/blog/2007/05/15/expires_max-age */
 	/* See also https://www.mnot.net/cache_docs/ */
 	/* According to RFC 2616, Section 14.21, caching times should not exceed
-     * one year. A year with 365 days corresponds to 31536000 seconds, a leap
-     * year to 31622400 seconds. For the moment, we just send whatever has
-     * been configured, still the behavior for >1 year should be considered
-     * as undefined. */
-	    .return mg_printf(conn,
-	                      "Cache-Control: max-age=%u\r\n",
-	                      (unsigned)max_age);
+	 * one year. A year with 365 days corresponds to 31536000 seconds, a leap
+	 * year to 31622400 seconds. For the moment, we just send whatever has
+	 * been configured, still the behavior for >1 year should be considered
+	 * as undefined. */
+	return mg_printf(conn, "Cache-Control: max-age=%u\r\n", (unsigned)max_age);
 #else  /* NO_CACHING */
 	return send_no_cache_header(conn);
 #endif /* !NO_CACHING */
