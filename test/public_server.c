@@ -1720,6 +1720,8 @@ START_TEST(test_handle_form)
 	const char *opt;
 	int opt_idx = 0;
 	char ebuf[100];
+	const char *multipart_body;
+	size_t body_len, chunk_len;
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
@@ -1796,20 +1798,7 @@ START_TEST(test_handle_form)
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST multipart/form-data" */
-	client_conn = mg_download(
-	    "localhost",
-	    8884,
-	    0,
-	    ebuf,
-	    sizeof(ebuf),
-	    "%s",
-	    "POST /handle_form HTTP/1.1\r\n"
-	    "Host: localhost:8884\r\n"
-	    "Connection: close\r\n"
-	    "Content-Type: multipart/form-data; "
-	    "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
-	    "Content-Length: 2374\r\n"
-	    "\r\n"
+	multipart_body =
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
 	    "Content-Disposition: form-data; name=\"textin\"\r\n"
 	    "\r\n"
@@ -1900,8 +1889,65 @@ START_TEST(test_handle_form)
 	    "Content-Disposition: form-data; name=\"message\"\r\n"
 	    "\r\n"
 	    "Text area default text.\r\n"
-	    "--multipart-form-data-boundary--see-RFC-2388--\r\n");
+	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
+	body_len = strlen(multipart_body);
+	ck_assert_uint_eq(body_len, 2374); /* not required */
+
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "POST /handle_form HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Content-Length: %u\r\n"
+	                "\r\n%s",
+	                body_len,
+	                multipart_body);
+
 	ck_assert(client_conn != NULL);
+	test_sleep(1);
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	mg_close_connection(client_conn);
+
+	/* Handle form: "POST multipart/form-data" with chunked transfer encoding */
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "%s",
+	                "POST /handle_form HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Transfer-Encoding: chunked\r\n"
+	                "\r\n");
+
+	ck_assert(client_conn != NULL);
+
+	body_len = strlen(multipart_body);
+	chunk_len = 1;
+	while (body_len > 0) {
+		if (chunk_len > body_len) {
+			chunk_len = body_len;
+		}
+		mg_printf(client_conn, "%x\r\n", chunk_len);
+		mg_write(client_conn, multipart_body + i, chunk_len);
+		mg_printf(client_conn, "\r\n");
+		body_len -= chunk_len;
+		chunk_len = (chunk_len % 40) + 1;
+	}
+
 	test_sleep(1);
 	ri = mg_get_request_info(client_conn);
 

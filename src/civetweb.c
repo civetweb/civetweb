@@ -11878,7 +11878,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			conn->request_info.content_length = conn->content_len;
 		} else if ((cl = get_header(&conn->request_info, "Transfer-Encoding"))
 		               != NULL
-		           && strcmp(cl, "chunked") == 0) {
+		           && !mg_strcasecmp(cl, "chunked")) {
 			conn->is_chunked = 1;
 		} else if (!mg_strcasecmp(conn->request_info.request_method, "POST")
 		           || !mg_strcasecmp(conn->request_info.request_method,
