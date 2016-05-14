@@ -1955,8 +1955,8 @@ START_TEST(test_handle_form)
 	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
 	                "Content-Length: %u\r\n"
 	                "\r\n%s",
-	                body_len,
-	                (unsigned int)multipart_body);
+	                (unsigned int)body_len,
+	                multipart_body);
 
 	ck_assert(client_conn != NULL);
 	test_sleep(1);
