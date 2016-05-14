@@ -2278,8 +2278,8 @@ static int
 mg_stat(struct mg_connection *conn, const char *path, struct file *filep);
 
 
-static const char *
-mg_get_response_code_text(int response_code, struct mg_connection *conn)
+const char *
+mg_get_response_code_text(struct mg_connection *conn, int response_code)
 {
 	/* See IANA HTTP status code assignment:
 	 * http://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
@@ -2489,7 +2489,7 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 	struct file error_page_file = STRUCT_FILE_INITIALIZER;
 	const char *error_page_file_ext, *tstr;
 
-	const char *status_text = mg_get_response_code_text(status, conn);
+	const char *status_text = mg_get_response_code_text(conn, status);
 
 	if (conn == NULL) {
 		return;
@@ -7832,7 +7832,7 @@ put_file(struct mg_connection *conn, const char *path)
 		mg_printf(conn,
 		          "HTTP/1.1 %d %s\r\n",
 		          conn->status_code,
-		          mg_get_response_code_text(conn->status_code, NULL));
+		          mg_get_response_code_text(NULL, conn->status_code));
 		send_no_cache_header(conn);
 		mg_printf(conn,
 		          "Date: %s\r\n"
@@ -7897,7 +7897,7 @@ put_file(struct mg_connection *conn, const char *path)
 	mg_printf(conn,
 	          "HTTP/1.1 %d %s\r\n",
 	          conn->status_code,
-	          mg_get_response_code_text(conn->status_code, NULL));
+	          mg_get_response_code_text(NULL, conn->status_code));
 	send_no_cache_header(conn);
 	mg_printf(conn,
 	          "Date: %s\r\n"
@@ -11898,6 +11898,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	return 1;
 }
 
+
 int
 mg_get_response(struct mg_connection *conn,
                 char *ebuf,
@@ -11933,6 +11934,7 @@ mg_get_response(struct mg_connection *conn,
 	}
 	return -1;
 }
+
 
 struct mg_connection *
 mg_download(const char *host,

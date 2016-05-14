@@ -858,7 +858,12 @@ CIVETWEB_API int mg_start_thread(mg_thread_func_t f, void *p);
 CIVETWEB_API const char *mg_get_builtin_mime_type(const char *file_name);
 
 
-/* Return Civetweb version. */
+/* Get text representation of HTTP status code. */
+CIVETWEB_API const char *mg_get_response_code_text(struct mg_connection *conn,
+                                                   int response_code);
+
+
+/* Return CivetWeb version. */
 CIVETWEB_API const char *mg_version(void);
 
 
