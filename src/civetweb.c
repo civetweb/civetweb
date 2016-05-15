@@ -4151,7 +4151,14 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 
 	if (conn->is_chunked) {
 		size_t all_read = 0;
+
 		while (len > 0) {
+
+			if (conn->is_chunked == 2) {
+				/* No more data left to read */
+				return 0;
+			}
+
 			if (conn->chunk_remainder) {
 				/* copy from the remainder of the last received chunk */
 				long read_ret;
@@ -4191,6 +4198,10 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 					if (i > 1 && lenbuf[i] == '\n' && lenbuf[i - 1] == '\r') {
 						lenbuf[i + 1] = 0;
 						chunkSize = strtoul(lenbuf, &end, 16);
+						if (chunkSize == 0) {
+							/* regular end of content */
+							conn->is_chunked = 2;
+						}
 						break;
 					}
 					if (!isalnum(lenbuf[i])) {
@@ -4202,13 +4213,11 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 					/* chunksize not set correctly */
 					return -1;
 				}
-
-				conn->chunk_remainder = chunkSize;
 				if (chunkSize == 0) {
-					/* regular end of content */
-					conn->is_chunked = 2;
 					break;
 				}
+
+				conn->chunk_remainder = chunkSize;
 			}
 		}
 
@@ -5789,13 +5798,21 @@ static int
 mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 {
 	struct addrinfo hints, *res, *ressave;
-	int ret = 0;
+	int func_ret = 0;
+	int gai_ret;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = af;
 
-	if (getaddrinfo(src, NULL, &hints, &res) != 0) {
-		/* bad src string or bad address family */
+	gai_ret = getaddrinfo(src, NULL, &hints, &res);
+	if (gai_ret != 0) {
+		/* gai_strerror could be used to convert gai_ret to a string */
+		/* POSIX return values: see
+		 * http://pubs.opengroup.org/onlinepubs/9699919799/functions/freeaddrinfo.html
+		 */
+		/* Windows return values: see
+		 * https://msdn.microsoft.com/en-us/library/windows/desktop/ms738520%28v=vs.85%29.aspx
+		 */
 		return 0;
 	}
 
@@ -5804,13 +5821,13 @@ mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 	while (res) {
 		if (dstlen >= res->ai_addrlen) {
 			memcpy(dst, res->ai_addr, res->ai_addrlen);
-			ret = 1;
+			func_ret = 1;
 		}
 		res = res->ai_next;
 	}
 
 	freeaddrinfo(ressave);
-	return ret;
+	return func_ret;
 }
 
 
