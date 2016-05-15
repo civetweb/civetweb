@@ -2010,7 +2010,7 @@ START_TEST(test_handle_form)
 		if (chunk_len > (body_len - body_sent)) {
 			chunk_len = body_len - body_sent;
 		}
-		ck_assert_int_gt(chunk_len, 0);
+		ck_assert_int_gt((int)chunk_len, 0);
 		mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
 		mg_write(client_conn, multipart_body + body_sent, chunk_len);
 		mg_printf(client_conn, "\r\n");
