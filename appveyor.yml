@@ -105,8 +105,8 @@ install:
   - if exist "%mingw_log_file%" powershell Push-AppveyorArtifact "%mingw_log_file%" -FileName mingw-download.log
   # Get OpenSSL
   - if not exist C:\ssl\ (md C:\ssl\)
-  - if not exist C:\ssl\Win32OpenSSL_102h.exe (curl http://slproweb.com/download/Win32OpenSSL-1_0_2g.exe -o C:\ssl\Win32OpenSSL_102h.exe)
-  - if not exist C:\ssl\Win64OpenSSL_102h.exe (curl http://slproweb.com/download/Win64OpenSSL-1_0_2g.exe -o C:\ssl\Win64OpenSSL_102h.exe)
+  - if not exist C:\ssl\Win32OpenSSL_102h.exe (curl http://slproweb.com/download/Win32OpenSSL-1_0_2h.exe -o C:\ssl\Win32OpenSSL_102h.exe) 
+  - if not exist C:\ssl\Win64OpenSSL_102h.exe (curl http://slproweb.com/download/Win64OpenSSL-1_0_2h.exe -o C:\ssl\Win64OpenSSL_102h.exe)
   - C:\ssl\Win32OpenSSL_102h.exe /SILENT /LOG="C:\ssl\install_ssl32.log" & exit 0
   - C:\ssl\Win64OpenSSL_102h.exe /SILENT /LOG="C:\ssl\install_ssl64.log" & exit 0
   - dir C:\ssl
