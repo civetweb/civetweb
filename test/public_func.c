@@ -434,7 +434,8 @@ END_TEST
 
 START_TEST(test_mg_get_response_code_text)
 {
-	size_t i, j, len;
+	int i;
+	size_t j, len;
 	const char *resp;
 
 	for (i = 100; i < 600; i++) {
@@ -444,8 +445,10 @@ START_TEST(test_mg_get_response_code_text)
 		ck_assert_uint_gt(len, 1);
 		ck_assert_uint_lt(len, 32);
 		for (j = 0; j < len; j++) {
-			ck_assert(resp[j] == ' ' || (resp[j] >= 'A' && resp[j] <= 'Z')
-			          || (resp[j] >= 'a' && resp[j] <= 'z'));
+			if (!(resp[j] != ' ' || (resp[j] >= 'A' && resp[j] <= 'Z')
+			      || (resp[j] >= 'a' && resp[j] <= 'z'))) {
+				ck_abort_msg("Found letter %c in %s", resp[j], resp);
+			}
 		}
 	}
 }

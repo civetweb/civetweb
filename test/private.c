@@ -620,7 +620,8 @@ START_TEST(test_parse_date_string)
 	gmt_time_string(date, 1, NULL);
 	ck_assert_str_eq(date, "");
 	gmt_time_string(date, 6, NULL);
-	ck_assert_str_eq(date, "Tue, ");
+	ck_assert_str_eq(date,
+	                 "Thu, "); /* part of "Thu, 01 Jan 1970 00:00:00 GMT" */
 	gmt_time_string(date, sizeof(date), NULL);
 	ck_assert_str_eq(date, "Thu, 01 Jan 1970 00:00:00 GMT");
 
