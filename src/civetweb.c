@@ -1866,7 +1866,7 @@ gmt_time_string(char *buf, size_t buf_len, time_t *t)
 {
 	struct tm *tm;
 
-	tm = gmtime(t);
+	tm = ((t != NULL) ? gmtime(t) : NULL);
 	if (tm != NULL) {
 		strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S GMT", tm);
 	} else {

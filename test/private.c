@@ -700,7 +700,7 @@ make_private_suite(void)
 /* Used to debug test cases without using the check framework */
 
 void
-xmain(void)
+main(void)
 {
 	test_alloc_vprintf(0);
 	test_mg_vsnprintf(0);
