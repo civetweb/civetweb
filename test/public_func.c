@@ -445,9 +445,17 @@ START_TEST(test_mg_get_response_code_text)
 		ck_assert_uint_gt(len, 1);
 		ck_assert_uint_lt(len, 32);
 		for (j = 0; j < len; j++) {
-			if (!(resp[j] != ' ' || (resp[j] >= 'A' && resp[j] <= 'Z')
-			      || (resp[j] >= 'a' && resp[j] <= 'z'))) {
-				ck_abort_msg("Found letter %c in %s", resp[j], resp);
+			if (resp[j] == ' ') {
+				/* space is valid */
+			} else if (resp[j] >= 'A' && resp[j] <= 'Z') {
+				/* A-Z is valid */
+			} else if (resp[j] >= 'a' && resp[j] <= 'z') {
+				/* a-z is valid */
+			} else {
+				ck_abort_msg("Found letter %c (%02xh) in %s",
+				             resp[j],
+				             resp[j],
+				             resp);
 			}
 		}
 	}

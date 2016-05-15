@@ -1305,6 +1305,56 @@ START_TEST(test_request_handlers)
 #endif
 	mg_close_connection(client_conn);
 
+
+	/* Get data from callback using mg_connect_client instead of mg_download */
+	memset(ebuf, 0, sizeof(ebuf));
+	client_conn =
+	    mg_connect_client("127.0.0.1", ipv4_port, 0, ebuf, sizeof(ebuf));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(ebuf, "");
+
+	mg_printf(client_conn, "%s", request);
+
+	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(i, 0);
+	ck_assert_str_eq(ebuf, "");
+
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(client_conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, (int)strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
+	mg_close_connection(client_conn);
+
+	/* Get data from callback using mg_connect_client and absolute URI */
+	memset(ebuf, 0, sizeof(ebuf));
+	client_conn =
+	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(ebuf, "");
+
+	mg_printf(client_conn,
+	          "GET http://test.domain:%d/U7 HTTP/1.0\r\n\r\n",
+	          ipv4_port);
+
+	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(i, 0);
+	ck_assert_str_eq(ebuf, "");
+
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(client_conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, (int)strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
+	mg_close_connection(client_conn);
+
+
 /* Websocket test */
 #ifdef USE_WEBSOCKET
 	/* Then connect a first client */
@@ -1533,54 +1583,6 @@ START_TEST(test_request_handlers)
 
 	ck_assert_int_eq(ws_client3_data.closed, 1);
 #endif
-
-	/* Get data from callback using mg_connect_client instead of mg_download */
-	memset(ebuf, 0, sizeof(ebuf));
-	client_conn =
-	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
-	ck_assert(client_conn != NULL);
-	ck_assert_str_eq(ebuf, "");
-
-	mg_printf(client_conn, "%s", request);
-
-	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
-	ck_assert_int_ge(i, 0);
-	ck_assert_str_eq(ebuf, "");
-
-	ri = mg_get_request_info(client_conn);
-
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
-	i = mg_read(client_conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, (int)strlen(expected));
-	buf[i] = 0;
-	ck_assert_str_eq(buf, expected);
-	mg_close_connection(client_conn);
-
-	/* Get data from callback using mg_connect_client and absolute URI */
-	memset(ebuf, 0, sizeof(ebuf));
-	client_conn =
-	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
-	ck_assert(client_conn != NULL);
-	ck_assert_str_eq(ebuf, "");
-
-	mg_printf(client_conn,
-	          "GET http://test.domain:%d/U7 HTTP/1.0\r\n\r\n",
-	          ipv4_port);
-
-	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
-	ck_assert_int_ge(i, 0);
-	ck_assert_str_eq(ebuf, "");
-
-	ri = mg_get_request_info(client_conn);
-
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
-	i = mg_read(client_conn, buf, sizeof(buf));
-	ck_assert_int_eq(i, (int)strlen(expected));
-	buf[i] = 0;
-	ck_assert_str_eq(buf, expected);
-	mg_close_connection(client_conn);
 }
 END_TEST
 
@@ -1771,6 +1773,7 @@ START_TEST(test_handle_form)
 	char ebuf[100];
 	const char *multipart_body;
 	size_t body_len, body_sent, chunk_len;
+	int sleep_cnt;
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
@@ -1811,7 +1814,12 @@ START_TEST(test_handle_form)
 	                          "Host: localhost:8884\r\n"
 	                          "Connection: close\r\n\r\n");
 	ck_assert(client_conn != NULL);
-	test_sleep(1);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 22) {
+			break;
+		}
+	}
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
@@ -1839,7 +1847,12 @@ START_TEST(test_handle_form)
 	                "&searchin=&telin=&urlin=&filein=&filesin="
 	                "&selectin=opt1&message=Text+area+default+text.");
 	ck_assert(client_conn != NULL);
-	test_sleep(1);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 22) {
+			break;
+		}
+	}
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
@@ -1959,12 +1972,18 @@ START_TEST(test_handle_form)
 	                multipart_body);
 
 	ck_assert(client_conn != NULL);
-	test_sleep(1);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 22) {
+			break;
+		}
+	}
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	mg_close_connection(client_conn);
+
 
 	/* Handle form: "POST multipart/form-data" with chunked transfer encoding */
 	client_conn =
@@ -1987,18 +2006,25 @@ START_TEST(test_handle_form)
 	body_len = strlen(multipart_body);
 	chunk_len = 1;
 	body_sent = 0;
-	while (body_len < body_sent) {
+	while (body_len > body_sent) {
 		if (chunk_len > (body_len - body_sent)) {
 			chunk_len = body_len - body_sent;
 		}
+		ck_assert_int_gt(chunk_len, 0);
 		mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
-		mg_write(client_conn, multipart_body + body_len, chunk_len);
+		mg_write(client_conn, multipart_body + body_sent, chunk_len);
 		mg_printf(client_conn, "\r\n");
 		body_sent += chunk_len;
 		chunk_len = (chunk_len % 40) + 1;
 	}
+	mg_printf(client_conn, "0\r\n");
 
-	test_sleep(1);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 22) {
+			break;
+		}
+	}
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
@@ -2073,9 +2099,9 @@ main(void)
 	    test_threading(0);
 	    test_mg_start_stop_http_server(0);
 	    test_mg_start_stop_https_server(0);
+	    test_request_handlers(0);
+	    test_mg_server_and_client_tls(0);
 	*/
-	test_request_handlers(0);
-	test_mg_server_and_client_tls(0);
 	test_handle_form(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
