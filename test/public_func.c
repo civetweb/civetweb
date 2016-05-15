@@ -447,6 +447,8 @@ START_TEST(test_mg_get_response_code_text)
 		for (j = 0; j < len; j++) {
 			if (resp[j] == ' ') {
 				/* space is valid */
+            } else if (resp[j] == '-') {
+                /* hyphen is valid */
 			} else if (resp[j] >= 'A' && resp[j] <= 'Z') {
 				/* A-Z is valid */
 			} else if (resp[j] >= 'a' && resp[j] <= 'z') {
