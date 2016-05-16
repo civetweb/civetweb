@@ -1,21 +1,25 @@
 ![CivetWeb](https://raw.github.com/civetweb/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
 =======
 
-**The official home of CivetWeb is https://github.com/civetweb/civetweb**
+**The official home of CivetWeb is [https://github.com/civetweb/civetweb](https://github.com/civetweb/civetweb)**
 
 
-Continuous integration for Linux and OSX using ([Travis CI](https://travis-ci.org/civetweb/civetweb)):
+Continuous integration for Linux and OSX ([Travis CI](https://travis-ci.org/civetweb/civetweb)):
 
 [![Travis Build Status](https://travis-ci.org/civetweb/civetweb.svg?branch=master)](https://travis-ci.org/civetweb/civetweb)
 
-source code analysis ([Coverity](https://scan.coverity.com/projects/5784)): 
+Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)) (currently in a setup phase):
+
+[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/civetweb/civetweb?svg=true)](https://ci.appveyor.com/project/civetweb/civetweb/branch/master)
+
+Test coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb)) (currently in a setup phase):
+
+[![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
+
+Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)): 
 
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
 
-Note: Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)) and coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb)) are currently in a setup phase:
-
-[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/civetweb/civetweb?svg=true)](https://ci.appveyor.com/project/civetweb/civetweb/branch/master)
-[![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
 
 
 
@@ -34,16 +38,16 @@ Where to find the official version?
 -----------------------------------
 
 End users can download CivetWeb at SourceForge
-https://sourceforge.net/projects/civetweb/
+[https://sourceforge.net/projects/civetweb/](https://sourceforge.net/projects/civetweb/)
 
 Developers can contribute to CivetWeb via GitHub
-https://github.com/civetweb/civetweb
+[https://github.com/civetweb/civetweb](https://github.com/civetweb/civetweb)
 
 Trouble tickets should be filed on GitHub
-https://github.com/civetweb/civetweb/issues
+[https://github.com/civetweb/civetweb/issues](https://github.com/civetweb/civetweb/issues)
 
 Discussion/support group and announcements are at Google Groups
-https://groups.google.com/d/forum/civetweb
+[https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb)
 
 
 Quick start documentation
@@ -138,7 +142,7 @@ Sergey Lyubka (Copyright (c) 2004-2013 Sergey Lyubka, MIT license).
 
 However, in August 16, 2013, the [license of Mongoose has been changed](https://groups.google.com/forum/#!topic/mongoose-users/aafbOnHonkI)
 after writing and distributing the original code this project is based on.
-The license change used to be described on the Wikipedia page as well, but it's getting deleted there regularly.
+The license change used to be described on the Mongoose Wikipedia page as well, but it's getting deleted there regularly.
 
 CivetWeb has been forked from the last MIT version of Mongoose. 
 Since 2013, CivetWeb has seen many improvements from various authors 
