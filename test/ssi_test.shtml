@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>The HTML5 Herald</title>
+  <meta name="author" content="CivetWeb developers">
+  <meta name="description" content="CivetWeb Server Side Include (SSI) Test Page">
+</head>
+
+<body>
+  <h1>CivetWeb Server Side Include (SSI) Test Page</h1>
+  <p>Note: Some of the tests below will only work on Windows, others only on Linux, and some probably not on all Linux distributions and all Windows versions.</p>
+
+  <h2>Execute: "cd"</h2>
+  <!--#exec "cd" -->
+  <h2>Execute: "pwd"</h2>
+  <!--#exec "pwd" -->
+
+  <h2>File relative to current document: "hello.txt"</h2>
+  <!--#include file="hello.txt" -->
+  <h2>Short form: "hello.txt"</h2>
+  <!--#include "hello.txt" -->
+
+  <h2>File relative to document root: "hello.txt"</h2>
+  <!--#include virtual="hello.txt" -->
+
+  <h2>File with absolute path: "C:\Windows\system.ini"</h2>
+  <!--#include abspath="C:\Windows\system.ini" -->
+  <h2>File with absolute path: "/etc/issue"</h2>
+  <!--#include abspath="/etc/issue" -->
+
+  <h2>Nested file relative to current documentt: "hello.shtml"</h2>
+  <!--#include file="./hello.shtml" -->
+
+</body>
+</html>
+

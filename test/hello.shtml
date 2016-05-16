@@ -1,0 +1,5 @@
+<pre>
+hello.shtml: include "hello.txt":
+<!--#include file="hello.txt" -->
+hello.shtml: end
+</pre>
