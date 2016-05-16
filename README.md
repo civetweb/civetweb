@@ -1,18 +1,22 @@
 ![CivetWeb](https://raw.github.com/civetweb/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
 =======
 
+**The official home of CivetWeb is https://github.com/civetweb/civetweb**
+
+
 Continuous integration for Linux and OSX using ([Travis CI](https://travis-ci.org/civetweb/civetweb)):
 
 [![Travis Build Status](https://travis-ci.org/civetweb/civetweb.svg?branch=master)](https://travis-ci.org/civetweb/civetweb)
 
+source code analysis ([Coverity](https://scan.coverity.com/projects/5784)): 
 
-Note: Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)), coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb)) and source code analysis ([Coverity](https://scan.coverity.com/projects/5784)) are currently in a setup phase:
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
+
+Note: Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)) and coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb)) are currently in a setup phase:
 
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/civetweb/civetweb?svg=true)](https://ci.appveyor.com/project/civetweb/civetweb/branch/master)
 [![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
 
-**The official home of CivetWeb is https://github.com/civetweb/civetweb**
 
 
 Project Mission
@@ -126,22 +130,17 @@ Since 2013 CivetWeb and Mongoose are developed independently. By now the code ba
 
 Some guidelines can be found in [docs/Contribution.md](https://github.com/civetweb/civetweb/blob/master/docs/Contribution.md).
 
+
 ### Authors
 
 CivetWeb is based on the Mongoose project.  The original author of Mongoose was
-Sergey Lyubka:
-```
-Copyright (c) 2004-2013 Sergey Lyubka
-MIT license
-```
+Sergey Lyubka (Copyright (c) 2004-2013 Sergey Lyubka, MIT license).
 
 However, on August 16, 2013, the license of Mongoose has been changed
 after writing and distributing the original code this project is based on.
 CivetWeb has been forked from the last MIT version of Mongoose.
-Since 2013, CivetWeb has seen many improvements from various authors.
-```
-Copyright (c) 2013-2016 the CivetWeb developers
-```
+Since 2013, CivetWeb has seen many improvements from various authors 
+(Copyright (c) 2013-2016 the CivetWeb developers, MIT license).
 A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
 
 Using the CivetWeb project ensures the MIT licenses terms are applied and
