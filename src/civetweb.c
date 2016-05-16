@@ -5278,7 +5278,7 @@ open_auth_file(struct mg_connection *conn, const char *path, struct file *filep)
 			            &truncated,
 			            name,
 			            sizeof(name),
-			            "%.*s%s",
+			            "%.*s/%s",
 			            (int)(e - p),
 			            p,
 			            PASSWORDS_FILE_NAME);

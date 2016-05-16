@@ -2136,7 +2136,7 @@ START_TEST(test_http_auth)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	/* ck_assert_str_eq(client_ri->uri, "401"); */
+	ck_assert_str_eq(client_ri->uri, "401");
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
