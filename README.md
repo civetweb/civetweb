@@ -136,12 +136,14 @@ Some guidelines can be found in [docs/Contribution.md](https://github.com/civetw
 CivetWeb is based on the Mongoose project.  The original author of Mongoose was
 Sergey Lyubka (Copyright (c) 2004-2013 Sergey Lyubka, MIT license).
 
-However, on August 16, 2013, the license of Mongoose has been changed
+However, in August 16, 2013, the [license of Mongoose has been changed](https://groups.google.com/forum/#!topic/mongoose-users/aafbOnHonkI)
 after writing and distributing the original code this project is based on.
-CivetWeb has been forked from the last MIT version of Mongoose.
+The license change used to be described on the Wikipedia page as well, but it's getting deleted there regularly.
+
+CivetWeb has been forked from the last MIT version of Mongoose. 
 Since 2013, CivetWeb has seen many improvements from various authors 
 (Copyright (c) 2013-2016 the CivetWeb developers, MIT license).
-A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
+A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md).
 
 Using the CivetWeb project ensures the MIT licenses terms are applied and
 GPL cannot be imposed on any of this code as long as it is sourced from
