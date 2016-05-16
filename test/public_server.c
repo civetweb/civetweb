@@ -2039,6 +2039,101 @@ START_TEST(test_handle_form)
 END_TEST
 
 
+START_TEST(test_http_auth)
+{
+#if !defined(NO_FILES)
+	struct mg_context *ctx;
+	struct mg_connection *client_conn;
+	char client_err[256];
+	const struct mg_request_info *client_ri;
+	int client_res;
+	FILE * f;
+	const char *test_content = "test_http_auth test_file content";
+	const char *domain;
+	size_t len;
+
+	memset(errmsg, 0, sizeof(errmsg));
+
+	mark_point();
+        /* Start with default options */
+	ctx = mg_start(NULL, NULL, NULL);
+	test_sleep(1);
+
+	ck_assert(ctx != NULL);
+	domain = mg_get_option(ctx, "authentication_domain");
+	ck_assert(domain != NULL);
+	len = strlen(domain);
+	ck_assert_uint_gt(domain, 0);
+	ck_assert_uint_lt(domain, 64);
+
+        /* Create a default file in the document root */
+        f = fopen("test_http_auth.test_file.txt", "w");
+        if (f) {
+		fprintf(f, "%s", test_content);
+		fclose(f);		
+	} else {
+		ck_assert_abort_msg(f, "Cannot create file test_http_auth.test_file.txt");
+	}
+
+	/* Read file before a .htpasswd file has been created */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "200");
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	ck_assert_int_gt(client_res, 0);
+	ck_assert_int_le(client_res, sizeof(client_err));
+	ck_assert_str_eq(client_res, test_content);
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
+	/* Create a .htpasswd file */
+	client_res = mg_modify_passwords_file(".htpasswd", domain, "user", "pass");
+	ck_assert_int_eq(client_res, 1);
+
+	client_res = mg_modify_passwords_file(NULL, domain, "user", "pass");
+	ck_assert_int_eq(client_res, 0); /* Filename is required */
+
+	test_sleep(1);
+
+	/* Repeat test after .htpasswd is created */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "401");
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
+
+	mg_stop(ctx);
+#endif
+
+}
+END_TEST
+
+
 Suite *
 make_public_server_suite(void)
 {
@@ -2051,6 +2146,7 @@ make_public_server_suite(void)
 	TCase *const tcase_serverandclienttls = tcase_create("TLS Server Client");
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
+	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 
 	tcase_add_test(tcase_checktestenv, test_the_test_environment);
 	tcase_set_timeout(tcase_checktestenv, civetweb_min_test_timeout);
@@ -2079,6 +2175,10 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_handle_form, test_handle_form);
 	tcase_set_timeout(tcase_handle_form, 60);
 	suite_add_tcase(suite, tcase_handle_form);
+
+	tcase_add_test(tcase_http_auth, test_http_auth);
+	tcase_set_timeout(tcase_http_auth, 60);
+	suite_add_tcase(suite, tcase_http_auth);
 
 	return suite;
 }
