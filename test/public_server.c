@@ -2057,7 +2057,7 @@ START_TEST(test_http_auth)
 	};
 	struct mg_context *ctx;
 	struct mg_connection *client_conn;
-	char client_err[256];
+	char client_err[256], nonce[256];
 	const struct mg_request_info *client_ri;
 	int client_res;
 	FILE *f;
@@ -2067,8 +2067,15 @@ START_TEST(test_http_auth)
 	const char *domain;
 	const char *doc_root;
 	const char *auth_request;
+	const char *str;
 	size_t len;
 	int i;
+	char HA1[256], HA2[256], HA[256];
+	char HA1_md5_buf[33], HA2_md5_buf[33], HA_md5_buf[33];
+	char *HA1_md5_ret, *HA2_md5_ret, *HA_md5_ret;
+	const char *nc = "00000001";
+	const char *cnonce = "6789ABCD";
+
 
 	/* Start with default options */
 	mark_point();
@@ -2153,8 +2160,152 @@ START_TEST(test_http_auth)
 		}
 	}
 	ck_assert_ptr_ne(auth_request, NULL);
+	str = "Digest qop=\"auth\", realm=\"";
+	len = strlen(str);
+	ck_assert(!mg_strncasecmp(auth_request, str, len));
+	ck_assert(!strncmp(auth_request + len, domain, strlen(domain)));
+	len += strlen(domain);
+	str = "\", nonce=\"";
+	ck_assert(!strncmp(auth_request + len, str, strlen(str)));
+	len += strlen(str);
+	str = strchr(auth_request + len, '\"');
+	ck_assert_ptr_ne(str, NULL);
+	ck_assert_ptr_ne(str, auth_request + len);
+	/* nonce is from including (auth_request + len) to excluding (str) */
+	ck_assert_int_gt((int)(str) - (int)(auth_request + len), 0);
+	ck_assert_int_lt((int)(str) - (int)(auth_request + len), sizeof(nonce));
+	memset(nonce, 0, sizeof(nonce));
+	memcpy(nonce, auth_request + len, (int)(str) - (int)(auth_request + len));
+	memset(HA1, 0, sizeof(HA1));
+	memset(HA2, 0, sizeof(HA2));
+	memset(HA, 0, sizeof(HA));
+	memset(HA1_md5_buf, 0, sizeof(HA1_md5_buf));
+	memset(HA2_md5_buf, 0, sizeof(HA2_md5_buf));
+	memset(HA_md5_buf, 0, sizeof(HA_md5_buf));
+
+	sprintf(HA1, "%s:%s:%s", "user", domain, "pass");
+	sprintf(HA2, "%s:/%s", "GET", test_file);
+	HA1_md5_ret = mg_md5(HA1_md5_buf, HA1, NULL);
+	HA2_md5_ret = mg_md5(HA2_md5_buf, HA2, NULL);
+
+	ck_assert_ptr_eq(HA1_md5_ret, HA1_md5_buf);
+	ck_assert_ptr_eq(HA2_md5_ret, HA2_md5_buf);
+
+	HA_md5_ret = mg_md5(HA_md5_buf, "user", ":", domain, ":", "pass", NULL);
+	ck_assert_ptr_eq(HA_md5_ret, HA_md5_buf);
+	ck_assert_str_eq(HA1_md5_ret, HA_md5_buf);
+
+	HA_md5_ret = mg_md5(HA_md5_buf, "GET", ":", "/", test_file, NULL);
+	ck_assert_ptr_eq(HA_md5_ret, HA_md5_buf);
+	ck_assert_str_eq(HA2_md5_ret, HA_md5_buf);
+
+	HA_md5_ret = mg_md5(HA_md5_buf,
+	                    HA1_md5_buf,
+	                    ":",
+	                    nonce,
+	                    ":",
+	                    nc,
+	                    ":",
+	                    cnonce,
+	                    ":",
+	                    "auth",
+	                    ":",
+	                    HA2_md5_buf,
+	                    NULL);
+	ck_assert_ptr_eq(HA_md5_ret, HA_md5_buf);
+
+	/* Retry with Authorization */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n", test_file);
+	mg_printf(client_conn,
+	          "Authorization: Digest "
+	          "username=\"%s\", "
+	          "realm=\"%s\", "
+	          "nonce=\"%s\", "
+	          "uri=\"/%s\", "
+	          "qop=auth, "
+	          "nc=%s, "
+	          "cnonce=\"%s\", "
+	          "response=\"%s\"\r\n\r\n",
+	          "user",
+	          domain,
+	          nonce,
+	          test_file,
+	          nc,
+	          cnonce,
+	          HA_md5_buf);
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "200");
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	ck_assert_int_gt(client_res, 0);
+	ck_assert_int_le(client_res, sizeof(client_err));
+	ck_assert_str_eq(client_err, test_content);
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
 
 
+	/* Remove the user from the .htpasswd file again */
+	client_res = mg_modify_passwords_file(passwd_file, domain, "user", NULL);
+	ck_assert_int_eq(client_res, 1);
+
+	test_sleep(1);
+
+
+	/* Try to access the file again. Expected: 401 error */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "401");
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
+
+	/* Now remove the password file */
+	remove(passwd_file);
+	test_sleep(1);
+
+
+	/* Access to the file must work like before */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "200");
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	ck_assert_int_gt(client_res, 0);
+	ck_assert_int_le(client_res, sizeof(client_err));
+	ck_assert_str_eq(client_err, test_content);
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
@@ -2162,7 +2313,6 @@ START_TEST(test_http_auth)
 
 	/* Stop the server and clean up */
 	mg_stop(ctx);
-	remove(passwd_file); /* Don't leave it here for the next test */
 	remove(test_file);
 
 #endif
