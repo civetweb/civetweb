@@ -48,6 +48,20 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
+/* Replicate this function here, since it is static in civetweb.c */
+static int
+mg_strcasecmp(const char *s1, const char *s2)
+{
+	int diff;
+
+	do {
+		diff = lowercase(s1++) - lowercase(s2++);
+	} while (diff == 0 && s1[-1] != '\0');
+
+	return diff;
+}
+
+
 static const char *
 locate_path(const char *a_path)
 {
@@ -77,6 +91,7 @@ locate_path(const char *a_path)
 
 	return r_path;
 }
+
 
 #define locate_resources() locate_path("resources")
 #define locate_test_exes() locate_path("output")
@@ -2064,7 +2079,9 @@ START_TEST(test_http_auth)
 	const char *test_content = "test_http_auth test_file content";
 	const char *domain;
 	const char *doc_root;
+	const char *auth_request;
 	size_t len;
+	int i;
 
 	/* Start with default options */
 	mark_point();
@@ -2078,6 +2095,7 @@ START_TEST(test_http_auth)
 	ck_assert_uint_gt(len, 0);
 	ck_assert_uint_lt(len, 64);
 	doc_root = mg_get_option(ctx, "document_root");
+	ck_assert_str_eq(doc_root, ".");
 
 	/* Create a default file in the document root */
 	f = fopen(test_file, "w");
@@ -2137,6 +2155,19 @@ START_TEST(test_http_auth)
 	ck_assert(client_ri != NULL);
 
 	ck_assert_str_eq(client_ri->uri, "401");
+
+	auth_request = NULL;
+	for (i = 0; i < client_ri->num_headers; i++) {
+		if (!mg_strcasecmp(client_ri->http_headers[i].name,
+		                   "WWW-Authenticate")) {
+			ck_assert_ptr_eq(auth_request, NULL);
+			auth_request = client_ri->http_headers[i].value;
+			ck_assert_ptr_ne(auth_request, NULL);
+		}
+	}
+	ck_assert_ptr_ne(auth_request, NULL);
+
+
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
