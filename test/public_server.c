@@ -48,19 +48,6 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
-/* Replicate this function here, since it is static in civetweb.c */
-static int
-mg_strcasecmp(const char *s1, const char *s2)
-{
-	int diff;
-
-	do {
-		diff = lowercase(s1++) - lowercase(s2++);
-	} while (diff == 0 && s1[-1] != '\0');
-
-	return diff;
-}
-
 
 static const char *
 locate_path(const char *a_path)

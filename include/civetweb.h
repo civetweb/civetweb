@@ -907,7 +907,8 @@ CIVETWEB_API void mg_cry(const struct mg_connection *conn,
                          ...) PRINTF_ARGS(2, 3);
 
 
-/* utility method to compare two buffers, case incensitive. */
+/* utility methods to compare two buffers, case incensitive. */
+CIVETWEB_API int mg_strcasecmp(const char *s1, const char *s2);
 CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
 
 

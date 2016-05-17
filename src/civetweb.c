@@ -1598,7 +1598,7 @@ mg_strncasecmp(const char *s1, const char *s2, size_t len)
 }
 
 
-static int
+int
 mg_strcasecmp(const char *s1, const char *s2)
 {
 	int diff;
