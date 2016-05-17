@@ -2172,10 +2172,13 @@ START_TEST(test_http_auth)
 	ck_assert_ptr_ne(str, NULL);
 	ck_assert_ptr_ne(str, auth_request + len);
 	/* nonce is from including (auth_request + len) to excluding (str) */
-	ck_assert_int_gt((int)(str) - (int)(auth_request + len), 0);
-	ck_assert_int_lt((int)(str) - (int)(auth_request + len), sizeof(nonce));
+	ck_assert_int_gt((ptrdiff_t)(str) - (ptrdiff_t)(auth_request + len), 0);
+	ck_assert_int_lt((ptrdiff_t)(str) - (ptrdiff_t)(auth_request + len),
+	                 (ptrdiff_t)sizeof(nonce));
 	memset(nonce, 0, sizeof(nonce));
-	memcpy(nonce, auth_request + len, (int)(str) - (int)(auth_request + len));
+	memcpy(nonce,
+	       auth_request + len,
+	       (size_t)((ptrdiff_t)(str) - (ptrdiff_t)(auth_request + len)));
 	memset(HA1, 0, sizeof(HA1));
 	memset(HA2, 0, sizeof(HA2));
 	memset(HA, 0, sizeof(HA));
