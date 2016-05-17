@@ -2045,14 +2045,14 @@ START_TEST(test_http_auth)
 {
 #if !defined(NO_FILES)
 	const char *OPTIONS[] = {
-#if !defined(NO_FILES)
 		"document_root",
 		".",
-#endif
 		"listening_ports",
 		"8080",
+#if !defined(NO_CACHING)
 		"static_file_max_age",
 		"0",
+#endif
 		NULL,
 	};
 	struct mg_context *ctx;
