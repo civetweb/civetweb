@@ -193,6 +193,15 @@ class CIVETWEB_API CivetWebSocketHandler
 };
 
 /**
+ * CivetCallbacks
+ *
+ * wrapper for mg_callbacks
+ */
+struct CIVETWEB_API CivetCallbacks : public mg_callbacks {
+    CivetCallbacks();
+};
+
+/**
  * CivetServer
  *
  * Basic class for embedded web server.  This has an URL mapping built-in.
@@ -217,9 +226,9 @@ class CIVETWEB_API CivetServer
 	 *
 	 * @throws CivetException
 	 */
-	CivetServer(const char **options, const struct mg_callbacks *callbacks = 0);
+	CivetServer(const char **options, const struct CivetCallbacks *callbacks = 0);
 	CivetServer(std::vector<std::string> options,
-	            const struct mg_callbacks *callbacks = 0);
+	            const struct CivetCallbacks *callbacks = 0);
 
 	/**
 	 * Destructor

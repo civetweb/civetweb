@@ -263,12 +263,16 @@ CivetServer::webSocketCloseHandler(const struct mg_connection *conn,
 	}
 }
 
+CivetCallbacks::CivetCallbacks()
+{
+    memset(this, 0, sizeof(*this));
+}
+
 CivetServer::CivetServer(const char **options,
-                         const struct mg_callbacks *_callbacks)
+                         const struct CivetCallbacks *_callbacks)
     : context(0)
 {
-	struct mg_callbacks callbacks;
-	memset(&callbacks, 0, sizeof(callbacks));
+	struct CivetCallbacks callbacks;
 
 	if (_callbacks) {
 		callbacks = *_callbacks;
@@ -284,11 +288,10 @@ CivetServer::CivetServer(const char **options,
 }
 
 CivetServer::CivetServer(std::vector<std::string> options,
-                         const struct mg_callbacks *_callbacks)
+                         const struct CivetCallbacks *_callbacks)
     : context(0)
 {
-	struct mg_callbacks callbacks;
-	memset(&callbacks, 0, sizeof(callbacks));
+	struct CivetCallbacks callbacks;
 
 	if (_callbacks) {
 		callbacks = *_callbacks;
