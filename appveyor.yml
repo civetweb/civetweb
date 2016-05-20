@@ -104,14 +104,20 @@ install:
   - if exist "%mingw_log_folder%" @for /f %%f in ('dir /b /oD /tc "%mingw_log_folder%"') do @set "mingw_log_file=%mingw_log_folder%\%%f"
   - if exist "%mingw_log_file%" powershell Push-AppveyorArtifact "%mingw_log_file%" -FileName mingw-download.log
   # Get OpenSSL
-  - if not exist C:\ssl\ (md C:\ssl\)
-  - if not exist C:\ssl\Win32OpenSSL_102h.exe (curl http://slproweb.com/download/Win32OpenSSL-1_0_2h.exe -o C:\ssl\Win32OpenSSL_102h.exe) 
-  - if not exist C:\ssl\Win64OpenSSL_102h.exe (curl http://slproweb.com/download/Win64OpenSSL-1_0_2h.exe -o C:\ssl\Win64OpenSSL_102h.exe)
-  - C:\ssl\Win32OpenSSL_102h.exe /SILENT /LOG="C:\ssl\install_ssl32.log" & exit 0
-  - C:\ssl\Win64OpenSSL_102h.exe /SILENT /LOG="C:\ssl\install_ssl64.log" & exit 0
-  - dir C:\ssl
+  #
+  # OpenSSL should already be installed, according to 
+  # - http://help.appveyor.com/discussions/questions/1132-openssl-installation-issues
+  # - https://github.com/appveyor/ci/issues/576
+  # 
+  - dir C:\OpenSSL-Win32
+  - dir C:\OpenSSL-Win64
+  - path
 
-
+environment:
+  OPENSSL_ROOT_DIR: "C:\OpenSSL-Win32"
+  path: %path%;C:\OpenSSL-Win32;C:\OpenSSL-Win64
+  
+  
 before_build:
   # Remove sh.exe from the path otherwise CMake will complain:
   # "sh.exe was found in your PATH, here: C:/Program Files/Git/usr/bin/sh.exe"
