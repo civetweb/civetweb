@@ -101,15 +101,15 @@ target_include_directories(
 target_link_libraries(exe-c-unit-tests c-library ${CHECK_LIBRARIES})
 add_dependencies(exe-c-unit-tests check-unit-test-framework)
 
-add_executable(civetweb-c-unit-test main.c)
-target_link_libraries(civetweb-c-unit-test
-  shared-c-unit-tests
-  public-func-c-unit-tests
-  public-server-c-unit-tests
-  private-c-unit-tests
-  exe-c-unit-tests
-  ${CHECK_LIBRARIES})
-add_dependencies(civetweb-c-unit-test check-unit-test-framework)
+#add_executable(civetweb-c-unit-test main.c)
+#target_link_libraries(civetweb-c-unit-test
+#  shared-c-unit-tests
+#  public-func-c-unit-tests
+#  public-server-c-unit-tests
+#  private-c-unit-tests
+#  exe-c-unit-tests
+#  ${CHECK_LIBRARIES})
+#add_dependencies(civetweb-c-unit-test check-unit-test-framework)
 
 # Add a check command that builds the dependent test program
 add_custom_target(check
@@ -161,7 +161,7 @@ civetweb_add_test(PublicServer "Handle Form")
 civetweb_add_test(PublicServer "HTTP Authentication")
 
 # Tests with main.c
-civetweb_add_test(EXE "Helper funcs")
+# civetweb_add_test(EXE "Helper funcs")
 
 
 # Add the coverage command(s)
