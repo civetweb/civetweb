@@ -101,29 +101,29 @@ target_include_directories(
 target_link_libraries(exe-c-unit-tests c-library ${CHECK_LIBRARIES})
 add_dependencies(exe-c-unit-tests check-unit-test-framework)
 
-add_executable(civetweb-c-unit-test main.c)
-target_link_libraries(civetweb-c-unit-test
-  shared-c-unit-tests
-  public-func-c-unit-tests
-  public-server-c-unit-tests
-  private-c-unit-tests
-  exe-c-unit-tests
-  ${CHECK_LIBRARIES})
-add_dependencies(civetweb-c-unit-test check-unit-test-framework)
+#add_executable(main-c-unit-test main.c)
+#target_link_libraries(main-c-unit-test
+#  shared-c-unit-tests
+#  public-func-c-unit-tests
+#  public-server-c-unit-tests
+#  private-c-unit-tests
+#  exe-c-unit-tests
+#  ${CHECK_LIBRARIES})
+#add_dependencies(main-c-unit-test check-unit-test-framework)
 
 # Add a check command that builds the dependent test program
-add_custom_target(check
-  COMMAND ${CMAKE_CTEST_COMMAND}
-  DEPENDS civetweb-c-unit-test)
+#add_custom_target(check
+#  COMMAND ${CMAKE_CTEST_COMMAND}
+#  DEPENDS main-c-unit-test)
 
 # A macro for adding tests
 macro(civetweb_add_test suite test_case)
   set(test "test-${suite}-${test_case}")
   string(TOLOWER "${test}" test)
   string(REGEX REPLACE "[^-A-Za-z0-9]" "-" test "${test}")
-  add_test(
-    NAME ${test}
-    COMMAND civetweb-c-unit-test "--test-dir=${CMAKE_CURRENT_SOURCE_DIR}" "--suite=${suite}" "--test-case=${test_case}")
+#  add_test(
+#    NAME ${test}
+#    COMMAND main-c-unit-test "--test-dir=${CMAKE_CURRENT_SOURCE_DIR}" "--suite=${suite}" "--test-case=${test_case}")
   if (WIN32)
     string(REPLACE ";" "\\;" test_path "$ENV{PATH}")
     set_tests_properties(${test} PROPERTIES
@@ -180,7 +180,7 @@ if (${CMAKE_BUILD_TYPE} MATCHES "[Cc]overage")
       COMMAND ${LCOV_EXECUTABLE} -q -a before.lcov -a after.lcov --output-file final.lcov
       COMMAND ${LCOV_EXECUTABLE} -q -r final.lcov "'${CMAKE_SOURCE_DIR}/test/*'" -o final.lcov
       COMMAND ${GENHTML_EXECUTABLE} final.lcov -o lcov --demangle-cpp --sort -p "${CMAKE_SOURCE_DIR}" -t benchmark
-      DEPENDS civetweb-c-unit-test
+#      DEPENDS main-c-unit-test
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       COMMENT "Running LCOV"
     )
