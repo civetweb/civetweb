@@ -198,6 +198,12 @@ build_script:
 
 test_script:
   - cd "%build_path%"
+  - cmd /c copy C:\OpenSSL-Win32\libeay32.dll libeay32.dll
+  - cmd /c copy C:\OpenSSL-Win32\libssl32.dll libssl32.dll
+  - cmd /c copy C:\OpenSSL-Win32\ssleay32.dll ssleay32.dll
+  - cmd /c copy C:\OpenSSL-Win64\libeay32.dll libeay64.dll
+  - cmd /c copy C:\OpenSSL-Win64\libssl32.dll libssl64.dll
+  - cmd /c copy C:\OpenSSL-Win64\ssleay32.dll ssleay64.dll
   - appveyor AddMessage -Category Information "Test command '%build%'"
   - set CTEST_OUTPUT_ON_FAILURE=1
   - cmd /c "%test%"
