@@ -114,7 +114,7 @@ install:
   - path
 
 environment:
-  OPENSSL_ROOT_DIR: "C:\OpenSSL-Win32"
+  OPENSSL_ROOT_DIR: "C:\\OpenSSL-Win32"
   path: %path%;C:\OpenSSL-Win32;C:\OpenSSL-Win64
   
   
