@@ -10,7 +10,7 @@ include(ExternalProject)
 if(NOT WIN32)
   # Apply the patch to check to fix CMake building on OS X
   set(CHECK_PATCH_COMMAND patch
-     ${CIVETWEB_THIRD_PARTY_DIR}/src/check-unit-test-framework/CMakeLists.txt		
+     ${CIVETWEB_THIRD_PARTY_DIR}/src/check-unit-test-framework/CMakeLists.txt
      ${CMAKE_SOURCE_DIR}/cmake/check/c82fe8888aacfe784476112edd3878256d2e30bc.patch
    )
 else()
@@ -63,7 +63,7 @@ add_library(shared-c-unit-tests STATIC shared.c)
 target_include_directories(
   shared-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-  
+
 add_library(public-func-c-unit-tests STATIC public_func.c)
 if (BUILD_SHARED_LIBS)
   target_compile_definitions(public-func-c-unit-tests PRIVATE CIVETWEB_DLL_IMPORTS)
@@ -121,9 +121,9 @@ macro(civetweb_add_test suite test_case)
   set(test "test-${suite}-${test_case}")
   string(TOLOWER "${test}" test)
   string(REGEX REPLACE "[^-A-Za-z0-9]" "-" test "${test}")
-#  add_test(
-#    NAME ${test}
-#    COMMAND main-c-unit-test "--test-dir=${CMAKE_CURRENT_SOURCE_DIR}" "--suite=${suite}" "--test-case=${test_case}")
+  add_test(
+    NAME ${test}
+    COMMAND main-c-unit-test "--test-dir=${CMAKE_CURRENT_SOURCE_DIR}" "--suite=${suite}" "--test-case=${test_case}")
   if (WIN32)
     string(REPLACE ";" "\\;" test_path "$ENV{PATH}")
     set_tests_properties(${test} PROPERTIES

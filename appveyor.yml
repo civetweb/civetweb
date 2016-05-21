@@ -105,19 +105,16 @@ install:
   - if exist "%mingw_log_file%" powershell Push-AppveyorArtifact "%mingw_log_file%" -FileName mingw-download.log
   # Get OpenSSL
   #
-  # OpenSSL should already be installed, according to 
+  # OpenSSL should already be installed, according to
   # - http://help.appveyor.com/discussions/questions/1132-openssl-installation-issues
   # - https://github.com/appveyor/ci/issues/576
-  # 
+  #
   - cmd: set PATH=%PATH%;C:\OpenSSL-Win32;C:\OpenSSL-Win64
   - dir C:\OpenSSL-Win32
   - dir C:\OpenSSL-Win64
   - path
 
-environment:
-  OPENSSL_ROOT_DIR: "C:\\OpenSSL-Win32"
-  
-  
+
 before_build:
   # Remove sh.exe from the path otherwise CMake will complain:
   # "sh.exe was found in your PATH, here: C:/Program Files/Git/usr/bin/sh.exe"
