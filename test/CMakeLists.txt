@@ -102,6 +102,7 @@ target_link_libraries(exe-c-unit-tests c-library ${CHECK_LIBRARIES})
 add_dependencies(exe-c-unit-tests check-unit-test-framework)
 
 #add_executable(main-c-unit-test main.c)
+add_executable(main-c-unit-test)
 target_link_libraries(main-c-unit-test
   shared-c-unit-tests
   public-func-c-unit-tests
