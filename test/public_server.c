@@ -199,16 +199,16 @@ START_TEST(test_the_test_environment)
 #ifdef _WIN32
 /* Try to copy the files required for AppVeyor */
 #if defined(_WIN64) || defined(__MINGW64__)
-	system("cmd /c copy C:\OpenSSL-Win64\libeay32.dll libeay32.dll");
-	system("cmd /c copy C:\OpenSSL-Win64\libssl32.dll libssl32.dll");
-	system("cmd /c copy C:\OpenSSL-Win64\ssleay32.dll ssleay32.dll");
-	system("cmd /c copy C:\OpenSSL-Win64\libeay32.dll libeay64.dll");
-	system("cmd /c copy C:\OpenSSL-Win64\libssl32.dll libssl64.dll");
-	system("cmd /c copy C:\OpenSSL-Win64\ssleay32.dll ssleay64.dll");
+	system("cmd /c copy C:\\OpenSSL-Win64\\libeay32.dll libeay32.dll");
+	system("cmd /c copy C:\\OpenSSL-Win64\\libssl32.dll libssl32.dll");
+	system("cmd /c copy C:\\OpenSSL-Win64\\ssleay32.dll ssleay32.dll");
+	system("cmd /c copy C:\\OpenSSL-Win64\\libeay32.dll libeay64.dll");
+	system("cmd /c copy C:\\OpenSSL-Win64\\libssl32.dll libssl64.dll");
+	system("cmd /c copy C:\\OpenSSL-Win64\\ssleay32.dll ssleay64.dll");
 #else
-	system("cmd /c copy C:\OpenSSL-Win32\libeay32.dll libeay32.dll");
-	system("cmd /c copy C:\OpenSSL-Win32\libssl32.dll libssl32.dll");
-	system("cmd /c copy C:\OpenSSL-Win32\ssleay32.dll ssleay32.dll");
+	system("cmd /c copy C:\\OpenSSL-Win32\\libeay32.dll libeay32.dll");
+	system("cmd /c copy C:\\OpenSSL-Win32\\libssl32.dll libssl32.dll");
+	system("cmd /c copy C:\\OpenSSL-Win32\\ssleay32.dll ssleay32.dll");
 #endif
 #endif
 }
