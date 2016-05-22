@@ -265,7 +265,7 @@ CivetServer::webSocketCloseHandler(const struct mg_connection *conn,
 
 CivetCallbacks::CivetCallbacks()
 {
-    memset(this, 0, sizeof(*this));
+	memset(this, 0, sizeof(*this));
 }
 
 CivetServer::CivetServer(const char **options,

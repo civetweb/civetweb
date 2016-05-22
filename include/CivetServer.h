@@ -198,7 +198,7 @@ class CIVETWEB_API CivetWebSocketHandler
  * wrapper for mg_callbacks
  */
 struct CIVETWEB_API CivetCallbacks : public mg_callbacks {
-    CivetCallbacks();
+	CivetCallbacks();
 };
 
 /**
@@ -226,7 +226,8 @@ class CIVETWEB_API CivetServer
 	 *
 	 * @throws CivetException
 	 */
-	CivetServer(const char **options, const struct CivetCallbacks *callbacks = 0);
+	CivetServer(const char **options,
+	            const struct CivetCallbacks *callbacks = 0);
 	CivetServer(std::vector<std::string> options,
 	            const struct CivetCallbacks *callbacks = 0);
 
