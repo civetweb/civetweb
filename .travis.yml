@@ -2481,5 +2481,5 @@ script:
 # Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
 after_success:
   - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
-      coveralls --include src --exclude main.c --include include --gcov-options '\-lp' --root .. --build-root .;
+      coveralls --include src --exclude src/main.c --include include --gcov-options '\-lp' --root .. --build-root .;
     fi

@@ -109,7 +109,7 @@ install:
   # - http://help.appveyor.com/discussions/questions/1132-openssl-installation-issues
   # - https://github.com/appveyor/ci/issues/576
   #
-  - cmd: set PATH=%PATH%;C:\OpenSSL-Win32;C:\OpenSSL-Win64
+  - cmd: set PATH=%PATH%;C:\OpenSSL-Win32;C:\OpenSSL-Win64;%build_path%
   - dir C:\OpenSSL-Win32
   - dir C:\OpenSSL-Win64
   - path
