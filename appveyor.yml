@@ -221,3 +221,5 @@ cache:
 
 artifacts:
   - path: dist\*
+
+  
