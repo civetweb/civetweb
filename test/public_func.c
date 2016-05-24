@@ -41,9 +41,10 @@ START_TEST(test_mg_version)
 	const char *ver = mg_version();
 	unsigned major = 0, minor = 0;
 	unsigned feature_files, feature_https, feature_cgi, feature_ipv6,
-	    feature_websocket, feature_lua;
+	    feature_websocket, feature_lua, feature_duktape, feature_caching;
 	unsigned expect_files = 0, expect_https = 0, expect_cgi = 0,
-	         expect_ipv6 = 0, expect_websocket = 0, expect_lua = 0;
+	         expect_ipv6 = 0, expect_websocket = 0, expect_lua = 0,
+	         expect_duktape = 0, expect_caching = 0;
 	int ret;
 
 	ck_assert(ver != NULL);
@@ -53,6 +54,9 @@ START_TEST(test_mg_version)
 	ret = sscanf(ver, "%u.%u", &major, &minor);
 	ck_assert_int_eq(ret, 2);
 	ck_assert_uint_ge(major, 1);
+	if (major == 1) {
+		ck_assert_uint_ge(minor, 8); /* current version is 1.8 */
+	}
 
 	/* check feature */
 	feature_files = mg_check_feature(1);
@@ -61,6 +65,8 @@ START_TEST(test_mg_version)
 	feature_ipv6 = mg_check_feature(8);
 	feature_websocket = mg_check_feature(16);
 	feature_lua = mg_check_feature(32);
+	feature_duktape = mg_check_feature(64);
+	feature_caching = mg_check_feature(128);
 
 #if !defined(NO_FILES)
 	expect_files = 1;
@@ -80,6 +86,12 @@ START_TEST(test_mg_version)
 #if defined(USE_LUA)
 	expect_lua = 1;
 #endif
+#if defined(USE_DUKTAPE)
+	expect_duktape = 1;
+#endif
+#if !defined(NO_CACHING)
+	expect_caching = 1;
+#endif
 
 	ck_assert_uint_eq(expect_files, !!feature_files);
 	ck_assert_uint_eq(expect_https, !!feature_https);
@@ -87,6 +99,8 @@ START_TEST(test_mg_version)
 	ck_assert_uint_eq(expect_ipv6, !!feature_ipv6);
 	ck_assert_uint_eq(expect_websocket, !!feature_websocket);
 	ck_assert_uint_eq(expect_lua, !!feature_lua);
+	ck_assert_uint_eq(expect_duktape, !!feature_duktape);
+	ck_assert_uint_eq(expect_caching, !!feature_caching);
 }
 END_TEST
 

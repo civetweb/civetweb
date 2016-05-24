@@ -13099,43 +13099,46 @@ mg_check_feature(unsigned feature)
  * This bit mask is created at compile time, according to the active
  * preprocessor defines. It is a single const value at runtime. */
 #if !defined(NO_FILES)
-	                                    | 1
+	                                    | 0x0001u
 #endif
 #if !defined(NO_SSL)
-	                                    | 2
+	                                    | 0x0002u
 #endif
 #if !defined(NO_CGI)
-	                                    | 4
+	                                    | 0x0004u
 #endif
 #if defined(USE_IPV6)
-	                                    | 8
+	                                    | 0x0008u
 #endif
 #if defined(USE_WEBSOCKET)
-	                                    | 16
+	                                    | 0x0010u
 #endif
 #if defined(USE_LUA)
-	                                    | 32
+	                                    | 0x0020u
 #endif
 #if defined(USE_DUKTAPE)
-	                                    | 64
+	                                    | 0x0040u
+#endif
+#if !defined(NO_CACHING)
+	                                    | 0x0080u
 #endif
 
 /* Set some extra bits not defined in the API documentation.
  * These bits may change without further notice. */
 #if defined(MG_LEGACY_INTERFACE)
-	                                    | 128
+	                                    | 0x8000u
 #endif
 #if defined(MEMORY_DEBUGGING)
-	                                    | 256
+	                                    | 0x0100u
 #endif
 #if defined(USE_TIMERS)
-	                                    | 512
+	                                    | 0x0200u
 #endif
 #if !defined(NO_NONCE_CHECK)
-	                                    | 1024
+	                                    | 0x0400u
 #endif
 #if !defined(NO_POPEN)
-	                                    | 2048
+	                                    | 0x0800u
 #endif
 	    ;
 	return (feature & feature_set);

@@ -1606,6 +1606,8 @@ START_TEST(test_request_handlers)
 END_TEST
 
 
+static int field_found_return = 0;
+
 static int
 field_found(const char *key,
             const char *filename,
@@ -1618,6 +1620,14 @@ field_found(const char *key,
 	(void)path;
 	(void)pathlen;
 	(void)user_data;
+
+    ck_assert_ptr_eq(user_data, (void*)&field_found_return);
+
+    ck_assert((field_found_return == FORM_FIELD_STORAGE_GET) ||
+              (field_found_return == FORM_FIELD_STORAGE_STORE) ||
+              (field_found_return == FORM_FIELD_STORAGE_SKIP) ||
+              (field_found_return == FORM_FIELD_STORAGE_ABORT)
+              );
 
 	return FORM_FIELD_STORAGE_GET;
 }
@@ -1633,7 +1643,8 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 	(void)valuelen;
 	(void)user_data;
 
-	ck_assert(user_data == (void *)0x12345);
+	ck_assert_ptr_eq(user_data, (void*)&field_found_return);
+    ck_assert_int_ge(g_field_step, 0);
 
 	++g_field_step;
 	switch (g_field_step) {
@@ -1757,7 +1768,7 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 
 
 static int
-FormHandler(struct mg_connection *conn, void *cbdata)
+FormGet(struct mg_connection *conn, void *cbdata)
 {
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
@@ -1768,10 +1779,35 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	ck_assert(req_info != NULL);
 
 	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
-	fdh.user_data = (void *)0x12345;
+	fdh.user_data = (void*)&field_found_return;
 
 	/* Call the form handler */
 	g_field_step = 0;
+	ret = mg_handle_form_request(conn, &fdh);
+	ck_assert_int_eq(ret, 22);
+	ck_assert_int_eq(g_field_step, 22);
+	mg_printf(conn, "%i\r\n", ret);
+
+	return 1;
+}
+
+
+static int
+FormStore(struct mg_connection *conn, void *cbdata)
+{
+	const struct mg_request_info *req_info = mg_get_request_info(conn);
+	int ret;
+	struct mg_form_data_handler fdh = {field_found, field_get, field_store, NULL};
+
+	(void)cbdata;
+
+	ck_assert(req_info != NULL);
+
+	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+	fdh.user_data = (void*)&field_found_return;
+
+	/* Call the form handler */
+	g_field_step = -999;
 	ret = mg_handle_form_request(conn, &fdh);
 	ck_assert_int_eq(ret, 22);
 	ck_assert_int_eq(g_field_step, 22);
@@ -1809,7 +1845,7 @@ START_TEST(test_handle_form)
 	opt = mg_get_option(ctx, "listening_ports");
 	ck_assert_str_eq(opt, "8884");
 
-	mg_set_request_handler(ctx, "/handle_form", FormHandler, (void *)0);
+	mg_set_request_handler(ctx, "/handle_form", FormGet, (void *)0);
 
 	test_sleep(1);
 
@@ -2407,8 +2443,8 @@ MAIN_PUBLIC_SERVER(void)
 	    test_mg_start_stop_https_server(0);
 	    test_request_handlers(0);
 	    test_mg_server_and_client_tls(0);
-	    test_handle_form(0);
-	*/
+    */
+    test_handle_form(0);
 	test_http_auth(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
