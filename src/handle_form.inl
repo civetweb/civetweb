@@ -264,7 +264,7 @@ mg_handle_form_request(struct mg_connection *conn,
 						fstore.fp = NULL;
 						remove_bad_file(conn, path);
 					}
-					file_size += n;
+					file_size += (int64_t)n;
 
 					if (fstore.fp) {
 						r = fclose(fstore.fp);
@@ -437,7 +437,7 @@ mg_handle_form_request(struct mg_connection *conn,
 						fstore.fp = NULL;
 						remove_bad_file(conn, path);
 					}
-					file_size += n;
+					file_size += (int64_t)n;
 				}
 
 				if (!end_of_key_value_pair_found) {
@@ -697,7 +697,7 @@ mg_handle_form_request(struct mg_connection *conn,
 							fstore.fp = NULL;
 							remove_bad_file(conn, path);
 						}
-						file_size += n;
+						file_size += (int64_t)n;
 					}
 				}
 
@@ -750,7 +750,7 @@ mg_handle_form_request(struct mg_connection *conn,
 						fstore.fp = NULL;
 						remove_bad_file(conn, path);
 					}
-					file_size += n;
+					file_size += (int64_t)n;
 				}
 			}
 
