@@ -814,7 +814,7 @@ struct mg_form_data_handler {
 	 * Return value:
 	 *   TODO: Needs to be defined.
 	 */
-	int (*field_store)(const char *path, size_t file_size, void *user_data);
+	int (*field_store)(const char *path, long long file_size, void *user_data);
 
 	/* User supplied argument, passed to all callback functions. */
 	void *user_data;

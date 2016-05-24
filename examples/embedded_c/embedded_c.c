@@ -231,7 +231,7 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 
 
 int
-field_stored(const char *path, size_t file_size, void *user_data)
+field_stored(const char *path, long long file_size, void *user_data)
 {
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 

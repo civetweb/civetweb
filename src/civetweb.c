@@ -9319,7 +9319,7 @@ mg_upload_field_get(const char *key,
 
 /* Helper function for deprecated mg_upload. */
 static int
-mg_upload_field_stored(const char *path, size_t file_size, void *user_data)
+mg_upload_field_stored(const char *path, long long file_size, void *user_data)
 {
 	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
 	(void)file_size;

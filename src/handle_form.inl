@@ -117,7 +117,7 @@ url_encoded_field_get(const struct mg_connection *conn,
 static int
 field_stored(const struct mg_connection *conn,
              const char *path,
-             size_t file_size,
+             long long file_size,
              struct mg_form_data_handler *fdh)
 {
 	/* Equivalent to "upload" callback of "mg_upload". */
@@ -162,7 +162,7 @@ mg_handle_form_request(struct mg_connection *conn,
 	int r;
 	int field_count = 0;
 	struct file fstore = STRUCT_FILE_INITIALIZER;
-	size_t file_size = 0; /* init here, to a avoid a false positive
+	int64_t file_size = 0; /* init here, to a avoid a false positive
 	                         "uninitialized variable used" warning */
 
 	int has_body_data =
