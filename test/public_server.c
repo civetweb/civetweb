@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -1606,7 +1607,7 @@ START_TEST(test_request_handlers)
 END_TEST
 
 
-static int field_found_return = 0;
+static int g_field_found_return = -999;
 
 static int
 field_found(const char *key,
@@ -1615,21 +1616,30 @@ field_found(const char *key,
             size_t pathlen,
             void *user_data)
 {
-	(void)key;
-	(void)filename;
-	(void)path;
-	(void)pathlen;
-	(void)user_data;
+	ck_assert_ptr_ne(key, NULL);
+	ck_assert_ptr_ne(filename, NULL);
+	ck_assert_ptr_ne(path, NULL);
+	ck_assert_uint_gt(pathlen, 128);
+	ck_assert_ptr_eq(user_data, (void *)&g_field_found_return);
 
-    ck_assert_ptr_eq(user_data, (void*)&field_found_return);
+	ck_assert((g_field_found_return == FORM_FIELD_STORAGE_GET)
+	          || (g_field_found_return == FORM_FIELD_STORAGE_STORE)
+	          || (g_field_found_return == FORM_FIELD_STORAGE_SKIP)
+	          || (g_field_found_return == FORM_FIELD_STORAGE_ABORT));
 
-    ck_assert((field_found_return == FORM_FIELD_STORAGE_GET) ||
-              (field_found_return == FORM_FIELD_STORAGE_STORE) ||
-              (field_found_return == FORM_FIELD_STORAGE_SKIP) ||
-              (field_found_return == FORM_FIELD_STORAGE_ABORT)
-              );
+	if (!strcmp(key, "break_field_handler")) {
+		return FORM_FIELD_STORAGE_ABORT;
+	}
+	if (!strcmp(key, "continue_field_handler")) {
+		return FORM_FIELD_STORAGE_SKIP;
+	}
 
-	return FORM_FIELD_STORAGE_GET;
+	if (g_field_found_return == FORM_FIELD_STORAGE_STORE) {
+		strncpy(path, key, pathlen - 8);
+		strcat(path, ".txt");
+	}
+
+	return g_field_found_return;
 }
 
 
@@ -1638,13 +1648,8 @@ static int g_field_step;
 static int
 field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 {
-	(void)key;
-	(void)value;
-	(void)valuelen;
-	(void)user_data;
-
-	ck_assert_ptr_eq(user_data, (void*)&field_found_return);
-    ck_assert_int_ge(g_field_step, 0);
+	ck_assert_ptr_eq(user_data, (void *)&g_field_found_return);
+	ck_assert_int_ge(g_field_step, 0);
 
 	++g_field_step;
 	switch (g_field_step) {
@@ -1768,6 +1773,40 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 
 
 static int
+field_store(const char *path, long long file_size, void *user_data)
+{
+	FILE *f;
+	ck_assert_ptr_eq(user_data, (void *)&g_field_found_return);
+	ck_assert_int_ge(g_field_step, 100);
+
+	++g_field_step;
+	switch (g_field_step) {
+	case 101:
+		ck_assert_str_eq(path, "storeme.txt");
+		ck_assert_uint_eq(file_size, 9);
+		f = fopen("storeme.txt", "r");
+		ck_assert_ptr_ne(f, NULL);
+		if (f) {
+			char buf[10] = {0};
+			int i = (int)fread(buf, 1, 9, f);
+			ck_assert_int_eq(i, 9);
+			fclose(f);
+			ck_assert_str_eq(buf, "storetest");
+		}
+		break;
+	case 102:
+		/* TODO: A file upload is only possible with multipart/form-data */
+		break;
+	default:
+		ck_abort_msg("field_get called with g_field_step == %i",
+		             (int)g_field_step);
+	}
+
+	return 0;
+}
+
+
+static int
 FormGet(struct mg_connection *conn, void *cbdata)
 {
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
@@ -1779,11 +1818,13 @@ FormGet(struct mg_connection *conn, void *cbdata)
 	ck_assert(req_info != NULL);
 
 	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
-	fdh.user_data = (void*)&field_found_return;
+	fdh.user_data = (void *)&g_field_found_return;
 
 	/* Call the form handler */
 	g_field_step = 0;
+	g_field_found_return = FORM_FIELD_STORAGE_GET;
 	ret = mg_handle_form_request(conn, &fdh);
+	g_field_found_return = -888;
 	ck_assert_int_eq(ret, 22);
 	ck_assert_int_eq(g_field_step, 22);
 	mg_printf(conn, "%i\r\n", ret);
@@ -1797,20 +1838,24 @@ FormStore(struct mg_connection *conn, void *cbdata)
 {
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
-	struct mg_form_data_handler fdh = {field_found, field_get, field_store, NULL};
+	struct mg_form_data_handler fdh = {field_found,
+	                                   field_get,
+	                                   field_store,
+	                                   NULL};
 
 	(void)cbdata;
 
 	ck_assert(req_info != NULL);
 
 	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
-	fdh.user_data = (void*)&field_found_return;
+	fdh.user_data = (void *)&g_field_found_return;
 
 	/* Call the form handler */
-	g_field_step = -999;
+	g_field_step = 100;
+	g_field_found_return = FORM_FIELD_STORAGE_STORE;
 	ret = mg_handle_form_request(conn, &fdh);
-	ck_assert_int_eq(ret, 22);
-	ck_assert_int_eq(g_field_step, 22);
+	ck_assert_int_eq(ret, 3);
+	ck_assert_int_eq(g_field_step, 101);
 	mg_printf(conn, "%i\r\n", ret);
 
 	return 1;
@@ -1846,6 +1891,7 @@ START_TEST(test_handle_form)
 	ck_assert_str_eq(opt, "8884");
 
 	mg_set_request_handler(ctx, "/handle_form", FormGet, (void *)0);
+	mg_set_request_handler(ctx, "/handle_form_store", FormStore, (void *)0);
 
 	test_sleep(1);
 
@@ -2085,6 +2131,38 @@ START_TEST(test_handle_form)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->uri, "200");
 	mg_close_connection(client_conn);
+
+
+	/* Now test form_store */
+
+	/* First test with GET */
+	client_conn = mg_download("localhost",
+	                          8884,
+	                          0,
+	                          ebuf,
+	                          sizeof(ebuf),
+	                          "%s",
+	                          "GET /handle_form_store"
+	                          "?storeme=storetest"
+	                          "&continue_field_handler=ignor"
+	                          "&break_field_handler=abort"
+	                          "&dontread=xyz "
+	                          "HTTP/1.0\r\n"
+	                          "Host: localhost:8884\r\n"
+	                          "Connection: close\r\n\r\n");
+	ck_assert(client_conn != NULL);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 100) {
+			break;
+		}
+	}
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	mg_close_connection(client_conn);
+
 
 	/* Close the server */
 	g_ctx = NULL;
@@ -2443,8 +2521,8 @@ MAIN_PUBLIC_SERVER(void)
 	    test_mg_start_stop_https_server(0);
 	    test_request_handlers(0);
 	    test_mg_server_and_client_tls(0);
-    */
-    test_handle_form(0);
+	*/
+	test_handle_form(0);
 	test_http_auth(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
