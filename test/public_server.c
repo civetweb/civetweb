@@ -1783,7 +1783,7 @@ field_store(const char *path, long long file_size, void *user_data)
 	switch (g_field_step) {
 	case 101:
 		ck_assert_str_eq(path, "storeme.txt");
-		ck_assert_uint_eq(file_size, 9);
+		ck_assert_int_eq(file_size, 9);
 		f = fopen("storeme.txt", "r");
 		ck_assert_ptr_ne(f, NULL);
 		if (f) {
@@ -1859,6 +1859,16 @@ FormStore(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn, "%i\r\n", ret);
 
 	return 1;
+}
+
+
+static void
+send_chunk_string(struct mg_connection *conn, const char *txt)
+{
+	unsigned int chunk_len = (unsigned int)strlen(txt);
+	mg_printf(conn, "%x\r\n", chunk_len);
+	mg_write(conn, txt, chunk_len);
+	mg_printf(conn, "\r\n");
 }
 
 
@@ -2150,10 +2160,50 @@ START_TEST(test_handle_form)
 	                          "HTTP/1.0\r\n"
 	                          "Host: localhost:8884\r\n"
 	                          "Connection: close\r\n\r\n");
+
 	ck_assert(client_conn != NULL);
+
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 100) {
+		if (g_field_step == 101) {
+			break;
+		}
+	}
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	mg_close_connection(client_conn);
+
+
+	/* Handle form: "POST x-www-form-urlencoded" */
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "%s",
+	                "POST /handle_form_store HTTP/1.0\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: application/x-www-form-urlencoded\r\n"
+	                "Transfer-Encoding: chunked\r\n"
+	                "\r\n");
+	ck_assert(client_conn != NULL);
+
+	send_chunk_string(client_conn, "storeme=store");
+	send_chunk_string(client_conn, "test&");
+	send_chunk_string(client_conn, "continue_field_handler=ignor");
+	send_chunk_string(client_conn, "&br");
+	test_sleep(1);
+	send_chunk_string(client_conn, "eak_field_handler=abort&");
+	send_chunk_string(client_conn, "dontread=xyz");
+	mg_printf(client_conn, "0\r\n");
+
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 101) {
 			break;
 		}
 	}
