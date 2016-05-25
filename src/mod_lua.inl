@@ -833,7 +833,7 @@ lsp_get_response_code_text(lua_State *L)
 			/* If the first argument is a number,
 			   convert it to the corresponding text. */
 			code = lua_tonumber(L, 1);
-			text = mg_get_response_code_text((int)code, NULL);
+			text = mg_get_response_code_text(NULL, (int)code);
 			if (text)
 				lua_pushstring(L, text);
 			return text ? 1 : 0;
