@@ -775,7 +775,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			if ((field_storage & FORM_FIELD_STORAGE_ABORT)
 			    == FORM_FIELD_STORAGE_ABORT) {
 				/* Stop parsing the request */
-				return -1;
+				break;
 			}
 
 			/* Remove from the buffer */

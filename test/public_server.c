@@ -1627,6 +1627,8 @@ field_found(const char *key,
 	          || (g_field_found_return == FORM_FIELD_STORAGE_SKIP)
 	          || (g_field_found_return == FORM_FIELD_STORAGE_ABORT));
 
+	ck_assert_str_ne(key, "dontread");
+
 	if (!strcmp(key, "break_field_handler")) {
 		return FORM_FIELD_STORAGE_ABORT;
 	}
@@ -1882,6 +1884,7 @@ START_TEST(test_handle_form)
 	int opt_idx = 0;
 	char ebuf[100];
 	const char *multipart_body;
+	const char *boundary;
 	size_t body_len, body_sent, chunk_len;
 	int sleep_cnt;
 
@@ -2154,7 +2157,7 @@ START_TEST(test_handle_form)
 	                          "%s",
 	                          "GET /handle_form_store"
 	                          "?storeme=storetest"
-	                          "&continue_field_handler=ignor"
+	                          "&continue_field_handler=ignore"
 	                          "&break_field_handler=abort"
 	                          "&dontread=xyz "
 	                          "HTTP/1.0\r\n"
@@ -2176,7 +2179,7 @@ START_TEST(test_handle_form)
 	mg_close_connection(client_conn);
 
 
-	/* Handle form: "POST x-www-form-urlencoded" */
+	/* Handle form: "POST x-www-form-urlencoded", chunked, store */
 	client_conn =
 	    mg_download("localhost",
 	                8884,
@@ -2194,11 +2197,150 @@ START_TEST(test_handle_form)
 
 	send_chunk_string(client_conn, "storeme=store");
 	send_chunk_string(client_conn, "test&");
-	send_chunk_string(client_conn, "continue_field_handler=ignor");
+	send_chunk_string(client_conn, "continue_field_handler=ignore");
 	send_chunk_string(client_conn, "&br");
 	test_sleep(1);
 	send_chunk_string(client_conn, "eak_field_handler=abort&");
 	send_chunk_string(client_conn, "dontread=xyz");
+	mg_printf(client_conn, "0\r\n");
+
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 101) {
+			break;
+		}
+	}
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	mg_close_connection(client_conn);
+
+	/* Handle form: "POST multipart/form-data", chunked, store */
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "%s",
+	                "POST /handle_form_store HTTP/1.0\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Transfer-Encoding: chunked\r\n"
+	                "\r\n");
+	ck_assert(client_conn != NULL);
+
+	send_chunk_string(client_conn, "--multipart-form-data-boundary");
+	send_chunk_string(client_conn, "--see-RFC-2388\r\n");
+	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
+	send_chunk_string(client_conn, "name=\"storeme\"\r\n");
+	send_chunk_string(client_conn, "\r\n");
+	send_chunk_string(client_conn, "storetest\r\n");
+
+	send_chunk_string(client_conn, "--multipart-form-data-boundary-");
+	send_chunk_string(client_conn, "-see-RFC-2388\r\n");
+	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
+	send_chunk_string(client_conn, "name=\"continue_field_handler\"\r\n");
+	send_chunk_string(client_conn, "\r\n");
+	send_chunk_string(client_conn, "ignore\r\n");
+
+	send_chunk_string(client_conn, "--multipart-form-data-boundary-");
+	send_chunk_string(client_conn, "-see-RFC-2388\r\n");
+	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
+	send_chunk_string(client_conn, "name=\"break_field_handler\"\r\n");
+	send_chunk_string(client_conn, "\r\n");
+	send_chunk_string(client_conn, "abort\r\n");
+
+	send_chunk_string(client_conn, "--multipart-form-data-boundary-");
+	send_chunk_string(client_conn, "-see-RFC-2388\r\n");
+	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
+	send_chunk_string(client_conn, "name=\"dontread\"\r\n");
+	send_chunk_string(client_conn, "\r\n");
+	send_chunk_string(client_conn, "xyz\r\n");
+	send_chunk_string(client_conn, "--multipart-form-data-boundary");
+	send_chunk_string(client_conn, "--see-RFC-2388--\r\n");
+	mg_printf(client_conn, "0\r\n");
+
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 101) {
+			break;
+		}
+	}
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	mg_close_connection(client_conn);
+
+
+	/* Handle form: "POST multipart/form-data", chunked, store, with files */
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "%s",
+	                "POST /handle_form_store HTTP/1.0\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Transfer-Encoding: chunked\r\n"
+	                "\r\n");
+	ck_assert(client_conn != NULL);
+
+	boundary = "--multipart-form-data-boundary--see-RFC-2388\r\n";
+
+	send_chunk_string(client_conn, boundary);
+	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
+	send_chunk_string(client_conn, "name=\"storeme\"\r\n");
+	send_chunk_string(client_conn, "\r\n");
+	send_chunk_string(client_conn, "storetest\r\n");
+
+	send_chunk_string(client_conn, boundary);
+	send_chunk_string(client_conn, "-see-RFC-2388\r\n");
+	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
+	send_chunk_string(client_conn, "name=\"continue_field_handler\";");
+	send_chunk_string(client_conn, "filename=\"file_ignored.txt\"\r\n");
+	send_chunk_string(client_conn, "Content-Type: ");
+	send_chunk_string(client_conn, "application/octet-stream\r\n");
+	send_chunk_string(client_conn, "X-Ignored-Header: xyz\r\n");
+	send_chunk_string(client_conn, "\r\n");
+
+	/* send some megabyte of data */
+	body_sent = 0;
+	do {
+		send_chunk_string(client_conn, "ignore\r\n");
+		body_sent += 8;
+		/* send some strings that are almost boundaries */
+		for (chunk_len = 1; chunk_len < strlen(boundary); chunk_len++) {
+			/* chunks from 1 byte to strlen(boundary)-1 */
+			mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
+			mg_write(client_conn, boundary, chunk_len);
+			mg_printf(client_conn, "\r\n");
+			body_sent += chunk_len;
+		}
+	} while (body_sent < 1024 * 1024);
+	send_chunk_string(client_conn, "\r\n");
+
+	send_chunk_string(client_conn, boundary);
+	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
+	send_chunk_string(client_conn, "name=\"break_field_handler\"\r\n");
+	send_chunk_string(client_conn, "\r\n");
+	send_chunk_string(client_conn, "abort\r\n");
+
+	send_chunk_string(client_conn, boundary);
+	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
+	send_chunk_string(client_conn, "name=\"dontread\"\r\n");
+	send_chunk_string(client_conn, "\r\n");
+	send_chunk_string(client_conn, "xyz\r\n");
+	send_chunk_string(client_conn, "--multipart-form-data-boundary");
+	send_chunk_string(client_conn, "--see-RFC-2388--\r\n");
 	mg_printf(client_conn, "0\r\n");
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
@@ -2543,7 +2685,7 @@ make_public_server_suite(void)
 	suite_add_tcase(suite, tcase_serverrequests);
 
 	tcase_add_test(tcase_handle_form, test_handle_form);
-	tcase_set_timeout(tcase_handle_form, 60);
+	tcase_set_timeout(tcase_handle_form, 120);
 	suite_add_tcase(suite, tcase_handle_form);
 
 	tcase_add_test(tcase_http_auth, test_http_auth);
