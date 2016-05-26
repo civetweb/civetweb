@@ -1773,6 +1773,7 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 	return 0;
 }
 
+static const char *myfile_content = "Content of myfile.txt\r\n";
 
 static int
 field_store(const char *path, long long file_size, void *user_data)
@@ -1786,7 +1787,7 @@ field_store(const char *path, long long file_size, void *user_data)
 	case 101:
 		ck_assert_str_eq(path, "storeme.txt");
 		ck_assert_int_eq(file_size, 9);
-		f = fopen("storeme.txt", "r");
+		f = fopen(path, "r");
 		ck_assert_ptr_ne(f, NULL);
 		if (f) {
 			char buf[10] = {0};
@@ -1797,7 +1798,22 @@ field_store(const char *path, long long file_size, void *user_data)
 		}
 		break;
 	case 102:
-		/* TODO: A file upload is only possible with multipart/form-data */
+		ck_assert_str_eq(path, "file2store.txt");
+		ck_assert_int_eq(file_size, 23);
+		ck_assert_int_eq(23, strlen(myfile_content));
+#ifdef _WIN32
+		f = fopen(path, "rb");
+#else
+		f = fopen(path, "r");
+#endif
+		ck_assert_ptr_ne(f, NULL);
+		if (f) {
+			char buf[32] = {0};
+			int i = (int)fread(buf, 1, sizeof(buf) - 1, f);
+			ck_assert_int_eq(i, file_size);
+			fclose(f);
+			ck_assert_str_eq(buf, myfile_content);
+		}
 		break;
 	default:
 		ck_abort_msg("field_get called with g_field_step == %i",
@@ -1836,7 +1852,10 @@ FormGet(struct mg_connection *conn, void *cbdata)
 
 
 static int
-FormStore(struct mg_connection *conn, void *cbdata)
+FormStore(struct mg_connection *conn,
+          void *cbdata,
+          int ret_expected,
+          int field_step_expected)
 {
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
@@ -1856,11 +1875,25 @@ FormStore(struct mg_connection *conn, void *cbdata)
 	g_field_step = 100;
 	g_field_found_return = FORM_FIELD_STORAGE_STORE;
 	ret = mg_handle_form_request(conn, &fdh);
-	ck_assert_int_eq(ret, 3);
-	ck_assert_int_eq(g_field_step, 101);
+	ck_assert_int_eq(ret, ret_expected);
+	ck_assert_int_eq(g_field_step, field_step_expected);
 	mg_printf(conn, "%i\r\n", ret);
 
 	return 1;
+}
+
+
+static int
+FormStore1(struct mg_connection *conn, void *cbdata)
+{
+	return FormStore(conn, cbdata, 3, 101);
+}
+
+
+static int
+FormStore2(struct mg_connection *conn, void *cbdata)
+{
+	return FormStore(conn, cbdata, 4, 102);
 }
 
 
@@ -1904,7 +1937,8 @@ START_TEST(test_handle_form)
 	ck_assert_str_eq(opt, "8884");
 
 	mg_set_request_handler(ctx, "/handle_form", FormGet, (void *)0);
-	mg_set_request_handler(ctx, "/handle_form_store", FormStore, (void *)0);
+	mg_set_request_handler(ctx, "/handle_form_store", FormStore1, (void *)0);
+	mg_set_request_handler(ctx, "/handle_form_store2", FormStore2, (void *)0);
 
 	test_sleep(1);
 
@@ -2285,7 +2319,7 @@ START_TEST(test_handle_form)
 	                ebuf,
 	                sizeof(ebuf),
 	                "%s",
-	                "POST /handle_form_store HTTP/1.0\r\n"
+	                "POST /handle_form_store2 HTTP/1.0\r\n"
 	                "Host: localhost:8884\r\n"
 	                "Connection: close\r\n"
 	                "Content-Type: multipart/form-data; "
@@ -2329,6 +2363,18 @@ START_TEST(test_handle_form)
 	send_chunk_string(client_conn, "\r\n");
 
 	send_chunk_string(client_conn, boundary);
+	send_chunk_string(client_conn, "-see-RFC-2388\r\n");
+	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
+	send_chunk_string(client_conn, "name=\"file2store\";");
+	send_chunk_string(client_conn, "filename=\"myfile.txt\"\r\n");
+	send_chunk_string(client_conn, "Content-Type: ");
+	send_chunk_string(client_conn, "application/octet-stream\r\n");
+	send_chunk_string(client_conn, "X-Ignored-Header: xyz\r\n");
+	send_chunk_string(client_conn, "\r\n");
+	send_chunk_string(client_conn, myfile_content);
+	send_chunk_string(client_conn, "\r\n");
+
+	send_chunk_string(client_conn, boundary);
 	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
 	send_chunk_string(client_conn, "name=\"break_field_handler\"\r\n");
 	send_chunk_string(client_conn, "\r\n");
@@ -2345,7 +2391,7 @@ START_TEST(test_handle_form)
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 101) {
+		if (g_field_step == 102) {
 			break;
 		}
 	}
@@ -2685,7 +2731,7 @@ make_public_server_suite(void)
 	suite_add_tcase(suite, tcase_serverrequests);
 
 	tcase_add_test(tcase_handle_form, test_handle_form);
-	tcase_set_timeout(tcase_handle_form, 120);
+	tcase_set_timeout(tcase_handle_form, 300);
 	suite_add_tcase(suite, tcase_handle_form);
 
 	tcase_add_test(tcase_http_auth, test_http_auth);
