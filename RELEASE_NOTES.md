@@ -1,6 +1,6 @@
-Release Notes v1.8 (work in progress)
+Release Notes v1.8
 ===
-### Objectives: *Support client certificates, CMake integration, bug fixes*
+### Objectives: *CMake integration and continuous integration tests, Support client certificates, bug fixes*
 
 Changes
 -------
