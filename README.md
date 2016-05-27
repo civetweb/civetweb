@@ -8,7 +8,7 @@ Continuous integration for Linux and OSX ([Travis CI](https://travis-ci.org/cive
 
 [![Travis Build Status](https://travis-ci.org/civetweb/civetweb.svg?branch=master)](https://travis-ci.org/civetweb/civetweb)
 
-Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)) (currently in a setup phase):
+Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)):
 
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/civetweb/civetweb?svg=true)](https://ci.appveyor.com/project/civetweb/civetweb/branch/master)
 
