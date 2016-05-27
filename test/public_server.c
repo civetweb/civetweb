@@ -330,6 +330,7 @@ START_TEST(test_mg_start_stop_http_server)
 
 	test_sleep(1);
 
+	/* HTTP 1.0 GET request */
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
@@ -356,6 +357,60 @@ START_TEST(test_mg_start_stop_http_server)
 
 	test_sleep(1);
 
+	/* HTTP 1.1 GET request */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
+	mg_printf(client_conn, "Host: localhost:8080\r\n");
+	mg_printf(client_conn, "Connection: close\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+#if defined(NO_FILES)
+	ck_assert_str_eq(client_ri->uri, "404");
+#else
+	ck_assert_str_eq(client_ri->uri, "200");
+	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	ck_assert_int_gt(client_res, 0);
+	ck_assert_int_le(client_res, sizeof(client_err));
+#endif
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
+
+	/* HTTP 1.7 GET request - this HTTP version does not exist  */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET / HTTP/1.7\r\n");
+	mg_printf(client_conn, "Host: localhost:8080\r\n");
+	mg_printf(client_conn, "Connection: close\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	/* Response must be 505 HTTP Version not supported */
+	ck_assert_str_eq(client_ri->uri, "505");
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
+
+	/* End test */
 	mg_stop(ctx);
 }
 END_TEST
@@ -1773,7 +1828,10 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 	return 0;
 }
 
+
 static const char *myfile_content = "Content of myfile.txt\r\n";
+static const int myfile_content_rep = 50000;
+
 
 static int
 field_store(const char *path, long long file_size, void *user_data)
@@ -1790,8 +1848,8 @@ field_store(const char *path, long long file_size, void *user_data)
 		f = fopen(path, "r");
 		ck_assert_ptr_ne(f, NULL);
 		if (f) {
-			char buf[10] = {0};
-			int i = (int)fread(buf, 1, 9, f);
+			char buf[32] = {0};
+			int i = (int)fread(buf, 1, 31, f);
 			ck_assert_int_eq(i, 9);
 			fclose(f);
 			ck_assert_str_eq(buf, "storetest");
@@ -1799,8 +1857,8 @@ field_store(const char *path, long long file_size, void *user_data)
 		break;
 	case 102:
 		ck_assert_str_eq(path, "file2store.txt");
-		ck_assert_int_eq(file_size, 23);
-		ck_assert_int_eq(23, strlen(myfile_content));
+		ck_assert_uint_eq(23, strlen(myfile_content));
+		ck_assert_int_eq(file_size, 23 * myfile_content_rep);
 #ifdef _WIN32
 		f = fopen(path, "rb");
 #else
@@ -1809,10 +1867,15 @@ field_store(const char *path, long long file_size, void *user_data)
 		ck_assert_ptr_ne(f, NULL);
 		if (f) {
 			char buf[32] = {0};
-			int i = (int)fread(buf, 1, sizeof(buf) - 1, f);
-			ck_assert_int_eq(i, file_size);
+			int r, i;
+			for (r = 0; r < myfile_content_rep; r++) {
+				i = (int)fread(buf, 1, 23, f);
+				ck_assert_int_eq(i, 23);
+				ck_assert_str_eq(buf, myfile_content);
+			}
+			i = (int)fread(buf, 1, 23, f);
+			ck_assert_int_eq(i, 0);
 			fclose(f);
-			ck_assert_str_eq(buf, myfile_content);
 		}
 		break;
 	default:
@@ -1846,6 +1909,7 @@ FormGet(struct mg_connection *conn, void *cbdata)
 	ck_assert_int_eq(ret, 22);
 	ck_assert_int_eq(g_field_step, 22);
 	mg_printf(conn, "%i\r\n", ret);
+	g_field_step = 1000;
 
 	return 1;
 }
@@ -1878,6 +1942,7 @@ FormStore(struct mg_connection *conn,
 	ck_assert_int_eq(ret, ret_expected);
 	ck_assert_int_eq(g_field_step, field_step_expected);
 	mg_printf(conn, "%i\r\n", ret);
+	g_field_step = 1000;
 
 	return 1;
 }
@@ -1964,7 +2029,7 @@ START_TEST(test_handle_form)
 	ck_assert(client_conn != NULL);
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 22) {
+		if (g_field_step == 1000) {
 			break;
 		}
 	}
@@ -1997,7 +2062,7 @@ START_TEST(test_handle_form)
 	ck_assert(client_conn != NULL);
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 22) {
+		if (g_field_step == 1000) {
 			break;
 		}
 	}
@@ -2122,7 +2187,7 @@ START_TEST(test_handle_form)
 	ck_assert(client_conn != NULL);
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 22) {
+		if (g_field_step == 1000) {
 			break;
 		}
 	}
@@ -2169,7 +2234,7 @@ START_TEST(test_handle_form)
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 22) {
+		if (g_field_step == 1000) {
 			break;
 		}
 	}
@@ -2202,7 +2267,7 @@ START_TEST(test_handle_form)
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 101) {
+		if (g_field_step == 1000) {
 			break;
 		}
 	}
@@ -2240,7 +2305,7 @@ START_TEST(test_handle_form)
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 101) {
+		if (g_field_step == 1000) {
 			break;
 		}
 	}
@@ -2300,7 +2365,7 @@ START_TEST(test_handle_form)
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 101) {
+		if (g_field_step == 1000) {
 			break;
 		}
 	}
@@ -2371,7 +2436,9 @@ START_TEST(test_handle_form)
 	send_chunk_string(client_conn, "application/octet-stream\r\n");
 	send_chunk_string(client_conn, "X-Ignored-Header: xyz\r\n");
 	send_chunk_string(client_conn, "\r\n");
-	send_chunk_string(client_conn, myfile_content);
+	for (body_sent = 0; (int)body_sent < (int)myfile_content_rep; body_sent++) {
+		send_chunk_string(client_conn, myfile_content);
+	}
 	send_chunk_string(client_conn, "\r\n");
 
 	send_chunk_string(client_conn, boundary);
@@ -2391,7 +2458,7 @@ START_TEST(test_handle_form)
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
-		if (g_field_step == 102) {
+		if (g_field_step == 1000) {
 			break;
 		}
 	}
@@ -2755,13 +2822,15 @@ MAIN_PUBLIC_SERVER(void)
 	/*
 	    test_the_test_environment(0);
 	    test_threading(0);
-	    test_mg_start_stop_http_server(0);
-	    test_mg_start_stop_https_server(0);
-	    test_request_handlers(0);
-	    test_mg_server_and_client_tls(0);
-	*/
+	    */
+	test_mg_start_stop_http_server(0);
+	/*
+	test_mg_start_stop_https_server(0);
+	test_request_handlers(0);
+	test_mg_server_and_client_tls(0);
 	test_handle_form(0);
 	test_http_auth(0);
+*/
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }
