@@ -2410,6 +2410,8 @@ env:
 #      ENABLE_WEBSOCKETS=YES
 #      ENABLE_LUA=YES
 #      ENABLE_DUKTAPE=YES
+    # Make a separate matrix build that only makes the OS X package
+    - MACOSX_PACKAGE=1
 
 addons:
   apt:
@@ -2474,9 +2476,17 @@ matrix:
     # Exclude GCC from OS X builds because it's actually clang so it's just duplicate builds
     - os: osx
       compiler: gcc
+    # Exclude Linux from MACOSX_PACKAGE builds
+    - os: linux
+      env: MACOSX_PACKAGE=1
 
 script:
-  - CTEST_OUTPUT_ON_FAILURE=1 make all test
+  - if [ "${MACOSX_PACKAGE}" == "1" ]; then
+      cd "${TRAVIS_BUILD_DIR}";
+      make -f Makefile.osx package;
+    else
+      CTEST_OUTPUT_ON_FAILURE=1 make all test;
+    fi
 
 # Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
 after_success:
