@@ -23,7 +23,7 @@
 #ifndef CIVETWEB_HEADER_INCLUDED
 #define CIVETWEB_HEADER_INCLUDED
 
-#define CIVETWEB_VERSION "1.8"
+#define CIVETWEB_VERSION "1.9"
 
 #ifndef CIVETWEB_API
 #if defined(_WIN32)
@@ -174,7 +174,7 @@ struct mg_callbacks {
 	   Return value:
 	     NULL: do not serve file from memory, proceed with normal file open.
 	     non-NULL: pointer to the file contents in memory. data_len must be
-	       initilized with the size of the memory block. */
+	       initialized with the size of the memory block. */
 	const char *(*open_file)(const struct mg_connection *,
 	                         const char *path,
 	                         size_t *data_len);
@@ -615,7 +615,7 @@ CIVETWEB_API void mg_send_mime_file(struct mg_connection *conn,
 /* Store body data into a file. */
 CIVETWEB_API long long mg_store_body(struct mg_connection *conn,
                                      const char *path);
-/* Read entire request body and stor it in a file "path".
+/* Read entire request body and store it in a file "path".
    Return:
      < 0   Error
      >= 0  Number of bytes stored in file "path".
@@ -907,7 +907,7 @@ CIVETWEB_API void mg_cry(const struct mg_connection *conn,
                          ...) PRINTF_ARGS(2, 3);
 
 
-/* utility methods to compare two buffers, case incensitive. */
+/* utility methods to compare two buffers, case insensitive. */
 CIVETWEB_API int mg_strcasecmp(const char *s1, const char *s2);
 CIVETWEB_API int mg_strncasecmp(const char *s1, const char *s2, size_t len);
 

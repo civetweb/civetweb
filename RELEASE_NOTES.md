@@ -1,3 +1,12 @@
+Release Notes v1.9 (work in progress)
+===
+### Objectives: *TO BE DEFINED*
+
+Changes
+-------
+
+- Updated version number
+
 Release Notes v1.8
 ===
 ### Objectives: *CMake integration and continuous integration tests, Support client certificates, bug fixes*

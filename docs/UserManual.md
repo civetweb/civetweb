@@ -616,6 +616,14 @@ An example is shown in
   Solution: specify the full path to the PHP interpreter, e.g.:
     `civetweb -cgi_interpreter /full/path/to/php-cgi`
 
+- `php-cgi` is unavailable, for example on Mac OS X. As long as the `php` binary is installed, you can run CGI programs in command line mode (see the example below). Note that in this mode, `$_GET` and friends will be unavailable, and you'll have to parse the query string manually using [parse_str](http://php.net/manual/en/function.parse-str.php) and the `QUERY_STRING` environmental variable.
+
+        #!/usr/bin/php
+        <?php
+        echo "Content-Type: text/html\r\n\r\n";
+        echo "Hello World!\n";
+        ?>
+
 - Civetweb fails to start. If Civetweb exits immediately when started, this
   usually indicates a syntax error in the configuration file
   (named `civetweb.conf` by default) or the command-line arguments.
