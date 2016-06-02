@@ -298,7 +298,7 @@ CookieHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn, "<h2>This is the CookieHandler.</h2>", cbdata);
+	mg_printf(conn, "<h2>This is the CookieHandler.</h2>");
 	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
 
 	if (first_str[0] == 0) {
