@@ -9251,11 +9251,11 @@ get_remote_ip(const struct mg_connection *conn)
 }
 
 
+#if defined(MG_LEGACY_INTERFACE)
 /* The mg_upload function is superseeded by mg_handle_form_request. */
 #include "handle_form.inl"
 
 
-#if defined(MG_LEGACY_INTERFACE)
 /* Implement the deprecated mg_upload function by calling the new
  * mg_handle_form_request function. While mg_upload could only handle
  * HTML forms sent as POST request in multipart/form-data format

@@ -759,7 +759,6 @@ CIVETWEB_API void mg_close_connection(struct mg_connection *conn);
    Deprecated: Use mg_handle_form_request instead. */
 CIVETWEB_API int mg_upload(struct mg_connection *conn,
                            const char *destination_dir);
-#endif
 
 
 /* This structure contains callback functions for handling form fields.
@@ -853,6 +852,7 @@ enum {
  * no longer required. */
 CIVETWEB_API int mg_handle_form_request(struct mg_connection *conn,
                                         struct mg_form_data_handler *fdh);
+#endif
 
 
 /* Convenience function -- create detached thread.
