@@ -10107,7 +10107,9 @@ handle_request(struct mg_connection *conn)
 		}
 
 		/* 12. Directory uris should end with a slash */
-		if (file.is_directory && ri->local_uri[uri_len - 1] != '/') {
+		uri_len = (int)strlen(ri->local_uri);
+		if (file.is_directory && uri_len > 0
+		    && ri->local_uri[uri_len - 1] != '/') {
 			gmt_time_string(date, sizeof(date), &curtime);
 			mg_printf(conn,
 			          "HTTP/1.1 301 Moved Permanently\r\n"
