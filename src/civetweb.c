@@ -11466,6 +11466,7 @@ close_connection(struct mg_connection *conn)
 	mg_unlock_connection(conn);
 }
 
+#if defined(MG_CLIENT_UTIL)
 void
 mg_close_connection(struct mg_connection *conn)
 {
@@ -11658,6 +11659,7 @@ mg_connect_client(const char *host,
 	                              error_buffer,
 	                              error_buffer_size);
 }
+#endif /* MG_CLIENT_UTIL */
 
 
 static const struct {
@@ -11932,6 +11934,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 }
 
 
+#if defined(MG_CLIENT_UTIL)
 int
 mg_get_response(struct mg_connection *conn,
                 char *ebuf,
@@ -12183,6 +12186,7 @@ mg_connect_websocket_client(const char *host,
 
 	return conn;
 }
+#endif /* MG_CLIENT_UTIL */
 
 
 static void
