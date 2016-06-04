@@ -6654,16 +6654,19 @@ handle_static_file_request(struct mg_connection *conn,
 
 
 static void
-handle_not_modified_static_file_request(struct mg_connection *conn)
+handle_not_modified_static_file_request(struct mg_connection *conn,
+                                        struct file *filep)
 {
-	char date[64];
+	char date[64], lm[64], etag[64];
 	time_t curtime = time(NULL);
 
-	if (conn == NULL) {
+	if (conn == NULL || filep == NULL) {
 		return;
 	}
 	conn->status_code = 304;
 	gmt_time_string(date, sizeof(date), &curtime);
+	gmt_time_string(lm, sizeof(lm), &filep->last_modified);
+	construct_etag(etag, sizeof(etag), filep);
 
 	(void)mg_printf(conn,
 	                "HTTP/1.1 %d %s\r\n"
@@ -6673,9 +6676,12 @@ handle_not_modified_static_file_request(struct mg_connection *conn)
 	                date);
 	send_static_cache_header(conn);
 	(void)mg_printf(conn,
-	                "Content-Length: 0\r\n"
+	                "Last-Modified: %s\r\n"
+	                "Etag: %s\r\n"
 	                "Connection: %s\r\n"
 	                "\r\n",
+	                lm,
+	                etag,
 	                suggest_connection_header(conn));
 }
 
@@ -10234,7 +10240,7 @@ handle_file_based_request(struct mg_connection *conn,
 #if !defined(NO_CACHING)
 	} else if ((!conn->in_error_handler) && is_not_modified(conn, file)) {
 		/* Send 304 "Not Modified" - this must not send any body data */
-		handle_not_modified_static_file_request(conn);
+		handle_not_modified_static_file_request(conn, file);
 #endif /* !NO_CACHING */
 	} else {
 		handle_static_file_request(conn, path, file, NULL);
