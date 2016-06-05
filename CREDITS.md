@@ -68,8 +68,9 @@
 * Richard Screene
 * Sage Weil
 * Sangwhan Moon
-* shantanugadgil
 * Scott Nations
+* shantanugadgil
+* SpaceLord
 * sunfch
 * thewaterymoon
 * Thomas Davis

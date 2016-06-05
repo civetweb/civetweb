@@ -373,7 +373,9 @@ typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 typedef unsigned __int64 uint64_t;
 typedef __int64 int64_t;
+#ifndef INT64_MAX
 #define INT64_MAX (9223372036854775807)
+#endif
 #endif /* HAVE_STDINT */
 
 /* POSIX dirent interface */
@@ -599,7 +601,7 @@ time(time_t *ptime)
 
 
 static struct tm *
-localtime(const time_t *ptime, struct tm *ptm)
+localtime_s(const time_t *ptime, struct tm *ptm)
 {
 	int64_t t = ((int64_t)*ptime) * RATE_DIFF + EPOCH_DIFF;
 	FILETIME ft, lft;
@@ -629,27 +631,88 @@ localtime(const time_t *ptime, struct tm *ptm)
 
 
 static struct tm *
-gmtime(const time_t *ptime, struct tm *ptm)
+gmtime_s(const time_t *ptime, struct tm *ptm)
 {
 	/* FIXME(lsm): fix this. */
-	return localtime(ptime, ptm);
+	return localtime_s(ptime, ptm);
+}
+
+
+static struct tm tm_array[MAX_WORKER_THREADS];
+static int tm_index = 0;
+
+static struct tm *
+localtime(const time_t *ptime)
+{
+	int i = mg_atomic_inc(&tm_index) % (sizeof(tm_array) / sizeof(tm_array[0]));
+	return localtime_s(ptime, tls_tm + i);
+}
+
+
+static struct tm *
+gmtime(const time_t *ptime)
+{
+	int i = mg_atomic_inc(&tm_index) % ARRAY_SIZE(tm_array);
+	return gmtime_s(ptime, tls_tm + i);
 }
 
 
 static size_t
 strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
 {
-	(void)mg_snprintf(NULL, dst, dst_size, "implement strftime() for WinCE");
+	/* TODO */ //(void)mg_snprintf(NULL, dst, dst_size, "implement strftime()
+	// for WinCE");
 	return 0;
 }
 
+#define _beginthreadex(psec, stack, func, prm, flags, ptid)                    \
+	(uintptr_t) CreateThread(psec, stack, func, prm, flags, ptid)
+
+#define remove(f) mg_remove(NULL, f)
+
+static int
+rename(const char *a, const char *b)
+{
+	wchar_t wa[PATH_MAX];
+	wchar_t wb[PATH_MAX];
+	path_to_unicode(conn, path, wa, ARRAY_SIZE(wa));
+	path_to_unicode(conn, path, wb, ARRAY_SIZE(wb));
+
+	return MoveFileW(wa, wb) ? 0 : -1;
+}
+
+struct stat {
+	int64_t st_size;
+};
+
+static int
+stat(const char *name, struct stat *st)
+{
+	wchar_t wbuf[PATH_MAX];
+	WIN32_FILE_ATTRIBUTE_DATA attr;
+	path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
+	memset(&attr, 0, sizeof(attr));
+
+	GetFileAttributesExW(wbuf, GetFileExInfoStandard, &attr);
+	st->st_size = ((int64_t)attr.nFileSizeHigh)
+	              << 32 + (int64_t)attr.nFileSizeLow;
+	/* TODO ... */
+}
+
+#define access(x, a) 1 /* not required anyway */
+
+/* WinCE-TODO: define stat, remove, rename, _rmdir, _lseeki64 */
+#define EEXIST 1 /* TODO: See Windows error codes */
+#define EACCES 2 /* TODO: See Windows error codes */
+#define ENOENT 3 /* TODO: See Windows Error codes */
 
 #if defined(__MINGW32__)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
 #endif
 
-#endif
+#endif /* defined(_WIN32_WCE) */
+
 static void DEBUG_TRACE_FUNC(const char *func,
                              unsigned line,
                              PRINTF_FORMAT_STRING(const char *fmt),
