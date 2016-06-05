@@ -235,8 +235,9 @@ mg_static_assert(PATH_MAX >= 1, "path length must be a positive number");
 #include <process.h>
 #include <direct.h>
 #include <io.h>
-#else          /* _WIN32_WCE */
-#define NO_CGI /* WinCE has no pipes */
+#else            /* _WIN32_WCE */
+#define NO_CGI   /* WinCE has no pipes */
+#define NO_POPEN /* WinCE has no popen */
 
 typedef long off_t;
 
@@ -845,6 +846,10 @@ typedef int socklen_t;
 #define MGSQLEN (20)
 #endif
 
+
+#if defined(NO_SSL)
+typedef struct SSL SSL; /* dummy for SSL argument to push/pull */
+#else
 #if defined(NO_SSL_DL)
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -990,7 +995,6 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
 
 /* Similar array as ssl_sw. These functions could be located in different
  * lib. */
-#if !defined(NO_SSL)
 static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"CRYPTO_set_locking_callback", NULL},
                                       {"CRYPTO_set_id_callback", NULL},
@@ -1003,8 +1007,8 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"CRYPTO_cleanup_all_ex_data", NULL},
                                       {"EVP_cleanup", NULL},
                                       {NULL, NULL}};
-#endif /* NO_SSL */
 #endif /* NO_SSL_DL */
+#endif /* NO_SSL */
 
 
 #if !defined(NO_CACHING)
@@ -2888,6 +2892,7 @@ path_to_unicode(const struct mg_connection *conn,
 	*/
 	(void)conn; /* conn is currently unused */
 
+#if !defined(_WIN32_WCE)
 	/* Only accept a full file path, not a Windows short (8.3) path. */
 	memset(wbuf2, 0, ARRAY_SIZE(wbuf2) * sizeof(wchar_t));
 	long_len = GetLongPathNameW(wbuf, wbuf2, ARRAY_SIZE(wbuf2) - 1);
@@ -2902,6 +2907,15 @@ path_to_unicode(const struct mg_connection *conn,
 		/* Short name is used. */
 		wbuf[0] = L'\0';
 	}
+#else
+	(void)long_len;
+	(void)wbuf2;
+	(void)err;
+
+	if (strchr(path, '~')) {
+		wbuf[0] = L'\0';
+	}
+#endif
 }
 
 
@@ -3911,11 +3925,16 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 
 	do {
 		if (fp != NULL) {
+#if !defined(_WIN32_WCE)
 			/* Use read() instead of fread(), because if we're reading from the
 			 * CGI pipe, fread() may block until IO buffer is filled up. We
 			 * cannot afford to block and must pass all read bytes immediately
 			 * to the client. */
 			nread = (int)read(fileno(fp), buf, (size_t)len);
+#else
+			/* WinCE does not support CGI pipes */
+			nread = (int)fread(buf, 1, (size_t)len, fp);
+#endif
 			err = (nread < 0) ? ERRNO : 0;
 
 #ifndef NO_SSL
@@ -5397,6 +5416,8 @@ parse_auth_header(struct mg_connection *conn,
 	if (nonce >= ((uint64_t)conn->ctx->start_time + conn->ctx->nonce_count)) {
 		return 0;
 	}
+#else
+	(void)nonce;
 #endif
 
 	/* CGI needs it as REMOTE_USER */
@@ -5872,7 +5893,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		return 0;
 	}
 
-#if !defined(NO_SSL_DL)
+#if !defined(NO_SSL)
 	if (use_ssl && (SSLv23_client_method == NULL)) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
@@ -5883,7 +5904,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		return 0;
 	}
 #else
-    (void)use_ssl;
+	(void)use_ssl;
 #endif
 
 	if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin))) {
@@ -10099,9 +10120,7 @@ handle_request(struct mg_connection *conn)
 		}
 
 		/* 12. Directory uris should end with a slash */
-		uri_len = (int)strlen(ri->local_uri);
-		if (file.is_directory && uri_len > 0
-		    && ri->local_uri[uri_len - 1] != '/') {
+		if (file.is_directory && ri->local_uri[uri_len - 1] != '/') {
 			gmt_time_string(date, sizeof(date), &curtime);
 			mg_printf(conn,
 			          "HTTP/1.1 301 Moved Permanently\r\n"
@@ -10352,6 +10371,7 @@ set_ports_option(struct mg_context *ctx)
 			continue;
 		}
 
+#if !defined(NO_SSL)
 		if (so.is_ssl && ctx->ssl_ctx == NULL) {
 
 			mg_cry(fc(ctx),
@@ -10360,6 +10380,7 @@ set_ports_option(struct mg_context *ctx)
 			       portsTotal);
 			continue;
 		}
+#endif
 
 		if ((so.sock = socket(so.lsa.sa.sa_family, SOCK_STREAM, 6))
 		    == INVALID_SOCKET) {
@@ -11457,6 +11478,7 @@ close_connection(struct mg_connection *conn)
 
 	mg_unlock_connection(conn);
 }
+
 
 void
 mg_close_connection(struct mg_connection *conn)
