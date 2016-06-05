@@ -569,6 +569,87 @@ mg_static_assert(MAX_REQUEST_SIZE >= 256,
 #if defined(DEBUG)
 
 
+#if defined(_WIN32_WCE)
+/* Create substitutes for POSIX functions in Win32. */
+
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
+
+static time_t
+time(time_t *ptime)
+{
+	time_t t;
+	SYSTEMTIME st;
+	FILETIME ft;
+
+	GetSystemTime(&st);
+	SystemTimeToFileTime(&st, &ft);
+	t = SYS2UNIX_TIME(ft.dwLowDateTime, ft.dwHighDateTime);
+
+	if (ptime != NULL) {
+		*ptime = t;
+	}
+
+	return t;
+}
+
+
+static struct tm *
+localtime(const time_t *ptime, struct tm *ptm)
+{
+	int64_t t = ((int64_t)*ptime) * RATE_DIFF + EPOCH_DIFF;
+	FILETIME ft, lft;
+	SYSTEMTIME st;
+	TIME_ZONE_INFORMATION tzinfo;
+
+	if (ptm == NULL) {
+		return NULL;
+	}
+
+	*(int64_t *)&ft = t;
+	FileTimeToLocalFileTime(&ft, &lft);
+	FileTimeToSystemTime(&lft, &st);
+	ptm->tm_year = st.wYear - 1900;
+	ptm->tm_mon = st.wMonth - 1;
+	ptm->tm_wday = st.wDayOfWeek;
+	ptm->tm_mday = st.wDay;
+	ptm->tm_hour = st.wHour;
+	ptm->tm_min = st.wMinute;
+	ptm->tm_sec = st.wSecond;
+	ptm->tm_yday = 0; /* hope nobody uses this */
+	ptm->tm_isdst =
+	    GetTimeZoneInformation(&tzinfo) == TIME_ZONE_ID_DAYLIGHT ? 1 : 0;
+
+	return ptm;
+}
+
+
+static struct tm *
+gmtime(const time_t *ptime, struct tm *ptm)
+{
+	/* FIXME(lsm): fix this. */
+	return localtime(ptime, ptm);
+}
+
+
+static size_t
+strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
+{
+	(void)mg_snprintf(NULL, dst, dst_size, "implement strftime() for WinCE");
+	return 0;
+}
+
+
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
+#pragma GCC diagnostic pop
+#endif
+
+#endif
 static void DEBUG_TRACE_FUNC(const char *func,
                              unsigned line,
                              PRINTF_FORMAT_STRING(const char *fmt),
@@ -2917,89 +2998,6 @@ path_to_unicode(const struct mg_connection *conn,
 	}
 #endif
 }
-
-
-#if defined(_WIN32_WCE)
-/* Create substitutes for POSIX functions in Win32. */
-
-#if defined(__MINGW32__)
-/* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
-
-
-static time_t
-time(time_t *ptime)
-{
-	time_t t;
-	SYSTEMTIME st;
-	FILETIME ft;
-
-	GetSystemTime(&st);
-	SystemTimeToFileTime(&st, &ft);
-	t = SYS2UNIX_TIME(ft.dwLowDateTime, ft.dwHighDateTime);
-
-	if (ptime != NULL) {
-		*ptime = t;
-	}
-
-	return t;
-}
-
-
-static struct tm *
-localtime(const time_t *ptime, struct tm *ptm)
-{
-	int64_t t = ((int64_t)*ptime) * RATE_DIFF + EPOCH_DIFF;
-	FILETIME ft, lft;
-	SYSTEMTIME st;
-	TIME_ZONE_INFORMATION tzinfo;
-
-	if (ptm == NULL) {
-		return NULL;
-	}
-
-	*(int64_t *)&ft = t;
-	FileTimeToLocalFileTime(&ft, &lft);
-	FileTimeToSystemTime(&lft, &st);
-	ptm->tm_year = st.wYear - 1900;
-	ptm->tm_mon = st.wMonth - 1;
-	ptm->tm_wday = st.wDayOfWeek;
-	ptm->tm_mday = st.wDay;
-	ptm->tm_hour = st.wHour;
-	ptm->tm_min = st.wMinute;
-	ptm->tm_sec = st.wSecond;
-	ptm->tm_yday = 0; /* hope nobody uses this */
-	ptm->tm_isdst =
-	    GetTimeZoneInformation(&tzinfo) == TIME_ZONE_ID_DAYLIGHT ? 1 : 0;
-
-	return ptm;
-}
-
-
-static struct tm *
-gmtime(const time_t *ptime, struct tm *ptm)
-{
-	/* FIXME(lsm): fix this. */
-	return localtime(ptime, ptm);
-}
-
-
-static size_t
-strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
-{
-	(void)mg_snprintf(NULL, dst, dst_size, "implement strftime() for WinCE");
-	return 0;
-}
-
-
-#if defined(__MINGW32__)
-/* Enable unused function warning again */
-#pragma GCC diagnostic pop
-#endif
-
-#endif
 
 
 /* Windows happily opens files with some garbage at the end of file name.
