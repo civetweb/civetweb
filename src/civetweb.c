@@ -6919,7 +6919,7 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 			if (dp[1] == '\n') {
 				/* \r\n */
 				ri->http_headers[i].name = *buf;
-				ri->http_headers[i].value = 0;
+				ri->http_headers[i].value = "";
 				*buf = dp;
 			} else {
 				/* stray \r. This is not valid. */
