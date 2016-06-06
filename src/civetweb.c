@@ -7017,6 +7017,7 @@ static int
 parse_http_message(char *buf, int len, struct mg_request_info *ri)
 {
 	int is_request, request_length;
+	char *start_line;
 
 	if (!ri) {
 		return 0;
@@ -7037,9 +7038,10 @@ parse_http_message(char *buf, int len, struct mg_request_info *ri)
 		while (*buf != '\0' && isspace(*(unsigned char *)buf)) {
 			buf++;
 		}
-		ri->request_method = skip(&buf, " ");
-		ri->request_uri = skip(&buf, " ");
-		ri->http_version = skip(&buf, "\r\n");
+		start_line = skip(&buf, "\r\n");
+		ri->request_method = skip(&start_line, " ");
+		ri->request_uri = skip(&start_line, " ");
+		ri->http_version = start_line;
 
 		/* HTTP message could be either HTTP request or HTTP response, e.g.
 		 * "GET / HTTP/1.0 ...." or  "HTTP/1.0 200 OK ..." */
