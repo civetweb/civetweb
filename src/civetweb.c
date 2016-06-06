@@ -6840,23 +6840,12 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 
 	for (i = 0; i < (int)ARRAY_SIZE(ri->http_headers); i++) {
 		char *dp = *buf;
-		while ((*dp != ':') && (*dp != '\r') && (*dp != 0)) {
+		while ((*dp != ':') && (*dp >= 32) && (*dp <= 126)) {
 			dp++;
 		}
-		if (!*dp) {
-			/* neither : nor \r\n. This is not a valid field. */
+		if ((dp == *buf) || (*dp != ':')) {
+			/* This is not a valid field. */
 			break;
-		}
-		if (*dp == '\r') {
-			if (dp[1] == '\n') {
-				/* \r\n */
-				ri->http_headers[i].name = *buf;
-				ri->http_headers[i].value = 0;
-				*buf = dp;
-			} else {
-				/* stray \r. This is not valid. */
-				break;
-			}
 		} else {
 			/* (*dp == ':') */
 			*dp = 0;
@@ -6866,7 +6855,10 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 			} while (*dp == ' ');
 
 			ri->http_headers[i].value = dp;
-			*buf = strstr(dp, "\r\n");
+			*buf = dp + strcspn(dp, "\r\n");
+			if (((*buf)[0] != '\r') || ((*buf)[1] != '\n')) {
+				*buf = NULL;
+			}
 		}
 
 		ri->num_headers = i + 1;
@@ -6879,7 +6871,7 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 			break;
 		}
 
-		if (*buf[0] == '\r') {
+		if ((*buf)[0] == '\r') {
 			/* This is the end of the header */
 			break;
 		}
