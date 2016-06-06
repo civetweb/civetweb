@@ -9815,22 +9815,8 @@ handle_request(struct mg_connection *conn)
 		    != NULL) {
 			*((char *)conn->request_info.query_string++) = '\0';
 		}
-		uri_len = (int)strlen(ri->local_uri);
 
-		/* 1.2. decode url (if config says so) */
-		if (should_decode_url(conn)) {
-			mg_url_decode(
-			    ri->local_uri, uri_len, (char *)ri->local_uri, uri_len + 1, 0);
-		}
-
-		/* 1.3. clean URIs, so a path like allowed_dir/../forbidden_file is
-		 * not possible */
-		remove_double_dots_and_double_slashes((char *)ri->local_uri);
-
-		/* step 1. completed, the url is known now */
-		DEBUG_TRACE("URL: %s", ri->local_uri);
-
-		/* 2. do a https redirect, if required */
+		/* 1.2. do a https redirect, if required. Do not decode URIs yet. */
 		if (!conn->client.is_ssl && conn->client.ssl_redir) {
 			ssl_index = get_first_ssl_listener_index(conn->ctx);
 			if (ssl_index >= 0) {
@@ -9846,6 +9832,20 @@ handle_request(struct mg_connection *conn)
 			}
 			return;
 		}
+		uri_len = (int)strlen(ri->local_uri);
+
+		/* 1.3. decode url (if config says so) */
+		if (should_decode_url(conn)) {
+			mg_url_decode(
+			    ri->local_uri, uri_len, (char *)ri->local_uri, uri_len + 1, 0);
+		}
+
+		/* 1.4. clean URIs, so a path like allowed_dir/../forbidden_file is
+		 * not possible */
+		remove_double_dots_and_double_slashes((char *)ri->local_uri);
+
+		/* step 1. completed, the url is known now */
+		DEBUG_TRACE("URL: %s", ri->local_uri);
 
 		/* 3. if this ip has limited speed, set it for this connection */
 		conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
