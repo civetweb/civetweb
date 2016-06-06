@@ -993,6 +993,7 @@ typedef int socklen_t;
 
 #if defined(NO_SSL)
 typedef struct SSL SSL; /* dummy for SSL argument to push/pull */
+typedef struct SSL_CTX SSL_CTX;
 #else
 #if defined(NO_SSL_DL)
 #include <openssl/ssl.h>
