@@ -2402,7 +2402,6 @@ START_TEST(test_handle_form)
 	send_chunk_string(client_conn, "storetest\r\n");
 
 	send_chunk_string(client_conn, boundary);
-	send_chunk_string(client_conn, "-see-RFC-2388\r\n");
 	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
 	send_chunk_string(client_conn, "name=\"continue_field_handler\";");
 	send_chunk_string(client_conn, "filename=\"file_ignored.txt\"\r\n");
@@ -2428,7 +2427,6 @@ START_TEST(test_handle_form)
 	send_chunk_string(client_conn, "\r\n");
 
 	send_chunk_string(client_conn, boundary);
-	send_chunk_string(client_conn, "-see-RFC-2388\r\n");
 	send_chunk_string(client_conn, "Content-Disposition: form-data; ");
 	send_chunk_string(client_conn, "name=\"file2store\";");
 	send_chunk_string(client_conn, "filename=\"myfile.txt\"\r\n");
@@ -2819,18 +2817,14 @@ static int chk_failed = 0;
 void
 MAIN_PUBLIC_SERVER(void)
 {
-	/*
-	    test_the_test_environment(0);
-	    test_threading(0);
-	    */
+	test_the_test_environment(0);
+	test_threading(0);
 	test_mg_start_stop_http_server(0);
-	/*
 	test_mg_start_stop_https_server(0);
 	test_request_handlers(0);
 	test_mg_server_and_client_tls(0);
 	test_handle_form(0);
 	test_http_auth(0);
-*/
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }
