@@ -6927,16 +6927,14 @@ mg_store_body(struct mg_connection *conn, const char *path)
 }
 
 
-/* Parse HTTP headers from the given buffer, advance buffer to the point
- * where parsing stopped. */
-static void
+/* Parse HTTP headers from the given buffer, advance buf pointer
+ * to the point where parsing stopped.
+ * All parameters must be valid pointers (not NULL).
+ * Return <0 on error. */
+static int
 parse_http_headers(char **buf, struct mg_request_info *ri)
 {
 	int i;
-
-	if (!ri) {
-		return;
-	}
 
 	ri->num_headers = 0;
 
@@ -6945,23 +6943,30 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 		while ((*dp != ':') && (*dp >= 32) && (*dp <= 126)) {
 			dp++;
 		}
-		if ((dp == *buf) || (*dp != ':')) {
-			/* This is not a valid field. */
+		if (dp == *buf) {
+			/* End of headers reached. */
 			break;
-		} else {
-			/* (*dp == ':') */
-			*dp = 0;
-			ri->http_headers[i].name = *buf;
-			do {
-				dp++;
-			} while (*dp == ' ');
-
-			ri->http_headers[i].value = dp;
-			*buf = dp + strcspn(dp, "\r\n");
-			if (((*buf)[0] != '\r') || ((*buf)[1] != '\n')) {
-				*buf = NULL;
-			}
 		}
+		if (*dp != ':') {
+			/* This is not a valid field. */
+			return -1;
+		}
+
+		/* End of header key (*dp == ':') */
+		/* Truncate here and set the key name */
+		*dp = 0;
+		ri->http_headers[i].name = *buf;
+		do {
+			dp++;
+		} while (*dp == ' ');
+
+		/* The rest of the line is the value */
+		ri->http_headers[i].value = dp;
+		*buf = dp + strcspn(dp, "\r\n");
+		if (((*buf)[0] != '\r') || ((*buf)[1] != '\n')) {
+			*buf = NULL;
+		}
+
 
 		ri->num_headers = i + 1;
 		if (*buf) {
@@ -6978,6 +6983,7 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 			break;
 		}
 	}
+	return ri->num_headers;
 }
 
 
@@ -7012,16 +7018,18 @@ is_valid_http_method(const char *method)
 
 /* Parse HTTP request, fill in mg_request_info structure.
  * This function modifies the buffer by NUL-terminating
- * HTTP request components, header names and header values. */
+ * HTTP request components, header names and header values.
+ * Parameters:
+ *   buf (in/out): pointer to the HTTP header to parse and split
+ *   len (in): length of HTTP header buffer
+ *   re (out): parsed header as mg_request_info
+ * buf and ri must be valid pointers (not NULL), len>0.
+ * Returns <0 on error. */
 static int
 parse_http_message(char *buf, int len, struct mg_request_info *ri)
 {
 	int is_request, request_length;
 	char *start_line;
-
-	if (!ri) {
-		return 0;
-	}
 
 	request_length = get_request_len(buf, len);
 
@@ -7043,17 +7051,24 @@ parse_http_message(char *buf, int len, struct mg_request_info *ri)
 		ri->request_uri = skip(&start_line, " ");
 		ri->http_version = start_line;
 
-		/* HTTP message could be either HTTP request or HTTP response, e.g.
-		 * "GET / HTTP/1.0 ...." or  "HTTP/1.0 200 OK ..." */
+		/* HTTP message could be either HTTP request:
+		 * "GET / HTTP/1.0 ..."
+		 * or a HTTP response:
+		 *  "HTTP/1.0 200 OK ..."
+		 * otherwise it is invalid.
+		 */
 		is_request = is_valid_http_method(ri->request_method);
 		if ((is_request && memcmp(ri->http_version, "HTTP/", 5) != 0)
 		    || (!is_request && memcmp(ri->request_method, "HTTP/", 5) != 0)) {
-			request_length = -1;
-		} else {
-			if (is_request) {
-				ri->http_version += 5;
-			}
-			parse_http_headers(&buf, ri);
+			/* Not a valid request or response: invalid */
+			return -1;
+		}
+		if (is_request) {
+			ri->http_version += 5;
+		}
+		if (parse_http_headers(&buf, ri) < 0) {
+			/* Error while parsing headers */
+			return -1;
 		}
 	}
 	return request_length;
