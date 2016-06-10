@@ -6755,6 +6755,7 @@ handle_static_file_request(struct mg_connection *conn,
 }
 
 
+#if !defined(NO_CACHING)
 static void
 handle_not_modified_static_file_request(struct mg_connection *conn,
                                         struct file *filep)
@@ -6786,6 +6787,7 @@ handle_not_modified_static_file_request(struct mg_connection *conn,
 	                etag,
 	                suggest_connection_header(conn));
 }
+#endif
 
 
 void
