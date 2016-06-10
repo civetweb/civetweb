@@ -6940,7 +6940,7 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 
 	for (i = 0; i < (int)ARRAY_SIZE(ri->http_headers); i++) {
 		char *dp = *buf;
-		while ((*dp != ':') && (*dp >= 32) && (*dp <= 126)) {
+		while ((*dp != ':') && (*dp >= 33) && (*dp <= 126)) {
 			dp++;
 		}
 		if (dp == *buf) {

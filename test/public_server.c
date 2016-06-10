@@ -410,6 +410,32 @@ START_TEST(test_mg_start_stop_http_server)
 	test_sleep(1);
 
 
+	/* HTTP request with multiline header.
+	 * Multiline header are obsolete with RFC 7230 section-3.2.4
+	 * and must return "400 Bad Request" */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
+	mg_printf(client_conn, "Host: localhost:8080\r\n");
+	mg_printf(client_conn, "X-Obsolete-Header: something\r\nfor nothing\r\n");
+	mg_printf(client_conn, "Connection: close\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	/* Response must be 400 Bad Request */
+	ck_assert_str_eq(client_ri->uri, "400");
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
+
 	/* End test */
 	mg_stop(ctx);
 }
