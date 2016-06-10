@@ -159,6 +159,7 @@ civetweb_add_test(PublicServer "TLS Server Client")
 civetweb_add_test(PublicServer "Server Requests")
 civetweb_add_test(PublicServer "Handle Form")
 civetweb_add_test(PublicServer "HTTP Authentication")
+civetweb_add_test(PublicServer "HTTP Keep Alive")
 
 # Tests with main.c
 #civetweb_add_test(EXE "Helper funcs")

@@ -2783,6 +2783,82 @@ START_TEST(test_http_auth)
 END_TEST
 
 
+START_TEST(test_keep_alive)
+{
+	struct mg_context *ctx;
+	const char *OPTIONS[] =
+	{ "listening_ports",
+	  "8080",
+	  "request_timeout_ms",
+	  "10000",
+	  "enable_keep_alive",
+	  "yes",
+#if !defined(NO_FILES)
+	  "document_root",
+	  ".",
+	  "enable_directory_listing",
+	  "no",
+#endif
+	  NULL };
+
+	struct mg_connection *client_conn;
+	char client_err[256];
+	const struct mg_request_info *client_ri;
+	int client_res, i;
+	const char *connection_header;
+
+	mark_point();
+	ctx = mg_start(NULL, NULL, OPTIONS);
+	ck_assert(ctx != NULL);
+
+	test_sleep(1);
+
+	/* HTTP 1.1 GET request */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn,
+	          "GET / HTTP/1.1\r\nHost: "
+	          "localhost:8080\r\nConnection: keep-alive\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+#if defined(NO_FILES)
+	ck_assert_str_eq(client_ri->uri, "404");
+#else
+	ck_assert_str_eq(client_ri->uri, "403");
+#endif
+
+	connection_header = 0;
+	for (i = 0; i < client_ri->num_headers; i++) {
+		if (!mg_strcasecmp(client_ri->http_headers[i].name, "Connection")) {
+			ck_assert_ptr_eq(connection_header, NULL);
+			connection_header = client_ri->http_headers[i].value;
+			ck_assert_ptr_ne(connection_header, NULL);
+		}
+	}
+	/* Error replies will close the connection, even if keep-alive is set. */
+	ck_assert_ptr_ne(connection_header, NULL);
+	ck_assert_str_eq(connection_header, "close");
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
+	/* TODO: request a file and keep alive
+	 * (will only work if NO_FILES is not set). */
+
+	/* Stop the server and clean up */
+	mg_stop(ctx);
+}
+END_TEST
+
+
 Suite *
 make_public_server_suite(void)
 {
@@ -2796,6 +2872,7 @@ make_public_server_suite(void)
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
+	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
 
 	tcase_add_test(tcase_checktestenv, test_the_test_environment);
 	tcase_set_timeout(tcase_checktestenv, civetweb_min_test_timeout);
@@ -2829,6 +2906,10 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_http_auth, 60);
 	suite_add_tcase(suite, tcase_http_auth);
 
+	tcase_add_test(tcase_keep_alive, test_keep_alive);
+	tcase_set_timeout(tcase_keep_alive, 300);
+	suite_add_tcase(suite, tcase_keep_alive);
+
 	return suite;
 }
 
@@ -2846,11 +2927,12 @@ MAIN_PUBLIC_SERVER(void)
 	test_the_test_environment(0);
 	test_threading(0);
 	test_mg_start_stop_http_server(0);
-	test_mg_start_stop_https_server(0);
-	test_request_handlers(0);
-	test_mg_server_and_client_tls(0);
-	test_handle_form(0);
-	test_http_auth(0);
+	// test_mg_start_stop_https_server(0);
+	// test_request_handlers(0);
+	// test_mg_server_and_client_tls(0);
+	// test_handle_form(0);
+	// test_http_auth(0);
+	test_keep_alive(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }
