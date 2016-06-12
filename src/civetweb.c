@@ -3375,7 +3375,8 @@ mg_join_thread(pthread_t threadid)
 	return result;
 }
 
-#if !defined(NO_SSL_DL)
+#if !defined(NO_SSL_DL) && !defined(NO_SSL)
+/* If SSL is loaded dynamically, dlopen/dlclose is required. */
 /* Create substitutes for POSIX functions in Win32. */
 
 #if defined(__MINGW32__)
