@@ -405,8 +405,8 @@ struct pollfd {
 #pragma comment(lib, "Ws2_32.lib")
 #endif
 
-#else /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include   \
-         block */
+#else /* defined(_WIN32) && !defined(__SYMBIAN32__) -                          \
+         WINDOWS / UNIX include block */
 
 #include <sys/wait.h>
 #include <sys/socket.h>
@@ -480,8 +480,8 @@ typedef int SOCKET;
 #define socklen_t int
 #endif /* hpux */
 
-#endif /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include  \
-          block */
+#endif /* defined(_WIN32) && !defined(__SYMBIAN32__) -                         \
+          WINDOWS / UNIX include block */
 
 /* va_copy should always be a macro, C99 and C++11 - DTL */
 #ifndef va_copy
@@ -637,7 +637,7 @@ gmtime_s(const time_t *ptime, struct tm *ptm)
 	return localtime_s(ptime, ptm);
 }
 
-
+static int mg_atomic_inc(volatile int *addr);
 static struct tm tm_array[MAX_WORKER_THREADS];
 static int tm_index = 0;
 
@@ -645,7 +645,7 @@ static struct tm *
 localtime(const time_t *ptime)
 {
 	int i = mg_atomic_inc(&tm_index) % (sizeof(tm_array) / sizeof(tm_array[0]));
-	return localtime_s(ptime, tls_tm + i);
+	return localtime_s(ptime, tm_array + i);
 }
 
 
@@ -653,7 +653,7 @@ static struct tm *
 gmtime(const time_t *ptime)
 {
 	int i = mg_atomic_inc(&tm_index) % ARRAY_SIZE(tm_array);
-	return gmtime_s(ptime, tls_tm + i);
+	return gmtime_s(ptime, tm_array + i);
 }
 
 
@@ -675,14 +675,15 @@ rename(const char *a, const char *b)
 {
 	wchar_t wa[PATH_MAX];
 	wchar_t wb[PATH_MAX];
-	path_to_unicode(conn, path, wa, ARRAY_SIZE(wa));
-	path_to_unicode(conn, path, wb, ARRAY_SIZE(wb));
+	path_to_unicode(NULL, a, wa, ARRAY_SIZE(wa));
+	path_to_unicode(NULL, b, wb, ARRAY_SIZE(wb));
 
 	return MoveFileW(wa, wb) ? 0 : -1;
 }
 
 struct stat {
 	int64_t st_size;
+	time_t st_mtime;
 };
 
 static int
@@ -690,13 +691,26 @@ stat(const char *name, struct stat *st)
 {
 	wchar_t wbuf[PATH_MAX];
 	WIN32_FILE_ATTRIBUTE_DATA attr;
-	path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
+	time_t creation_time, write_time;
+
+	path_to_unicode(NULL, name, wbuf, ARRAY_SIZE(wbuf));
 	memset(&attr, 0, sizeof(attr));
 
 	GetFileAttributesExW(wbuf, GetFileExInfoStandard, &attr);
-	st->st_size = ((int64_t)attr.nFileSizeHigh)
-	              << 32 + (int64_t)attr.nFileSizeLow;
-	/* TODO ... */
+	st->st_size =
+	    (((int64_t)attr.nFileSizeHigh) << 32) + (int64_t)attr.nFileSizeLow;
+
+	write_time = SYS2UNIX_TIME(attr.ftLastWriteTime.dwLowDateTime,
+	                           attr.ftLastWriteTime.dwHighDateTime);
+	creation_time = SYS2UNIX_TIME(attr.ftCreationTime.dwLowDateTime,
+	                              attr.ftCreationTime.dwHighDateTime);
+
+	if (creation_time > write_time) {
+		st->st_mtime = creation_time;
+	} else {
+		st->st_mtime = write_time;
+	}
+	return 0;
 }
 
 #define access(x, a) 1 /* not required anyway */
@@ -961,7 +975,7 @@ static void mg_snprintf(const struct mg_connection *conn,
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free DO_NOT_USE_THIS_FUNCTION__USE_mg_free
 #define snprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_snprintf
-#ifdef _WIN32 /* vsnprintf must not be used in any system, *                   \
+#ifdef _WIN32 /* vsnprintf must not be used in any system, * \ \ \             \
                * but this define only works well for Windows. */
 #define vsnprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_vsnprintf
 #endif
@@ -3292,7 +3306,11 @@ static void
 set_close_on_exec(SOCKET sock, struct mg_connection *conn /* may be null */)
 {
 	(void)conn; /* Unused. */
+#if defined(_WIN32_WCE)
+	(void)sock;
+#else
 	(void)SetHandleInformation((HANDLE)(intptr_t)sock, HANDLE_FLAG_INHERIT, 0);
+#endif
 }
 
 
@@ -12965,6 +12983,9 @@ get_system_name(char **sysName)
 {
 #if defined(_WIN32)
 #if !defined(__SYMBIAN32__)
+#if defined(_WIN32_WCE)
+	*sysName = mg_strdup("WinCE");
+#else
 	char name[128];
 	DWORD dwVersion = 0;
 	DWORD dwMajorVersion = 0;
@@ -12991,6 +13012,7 @@ get_system_name(char **sysName)
 	        (unsigned)dwMajorVersion,
 	        (unsigned)dwMinorVersion);
 	*sysName = mg_strdup(name);
+#endif
 #else
 	*sysName = mg_strdup("Symbian");
 #endif
