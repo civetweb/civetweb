@@ -12686,10 +12686,10 @@ master_thread_run(void *thread_func_param)
 	close_all_listening_sockets(ctx);
 
 	/* Wakeup workers that are waiting for connections to handle. */
+	(void)pthread_mutex_lock(&ctx->thread_mutex);
 	pthread_cond_broadcast(&ctx->sq_full);
 
 	/* Wait until all threads finish */
-	(void)pthread_mutex_lock(&ctx->thread_mutex);
 	while (ctx->running_worker_threads > 0) {
 		(void)pthread_cond_wait(&ctx->thread_cond, &ctx->thread_mutex);
 	}
