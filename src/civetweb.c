@@ -327,8 +327,7 @@ typedef DWORD pthread_key_t;
 typedef HANDLE pthread_t;
 typedef struct {
 	CRITICAL_SECTION threadIdSec;
-	int waitingthreadcount;       /* The number of threads queued. */
-	pthread_t *waitingthreadhdls; /* The thread handles. */
+	struct mg_workerTLS *waiting_thread; /* The chain of threads */
 } pthread_cond_t;
 
 #ifndef __clockid_t_defined
@@ -1331,6 +1330,7 @@ struct mg_workerTLS {
 	unsigned long thread_idx;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	HANDLE pthread_cond_helper_mutex;
+	struct mg_workerTLS *next_waiting_thread;
 #endif
 };
 
@@ -2707,10 +2707,8 @@ pthread_cond_init(pthread_cond_t *cv, const void *unused)
 {
 	(void)unused;
 	InitializeCriticalSection(&cv->threadIdSec);
-	cv->waitingthreadcount = 0;
-	cv->waitingthreadhdls =
-	    (pthread_t *)mg_calloc(MAX_WORKER_THREADS, sizeof(pthread_t));
-	return (cv->waitingthreadhdls != NULL) ? 0 : -1;
+	cv->waiting_thread = NULL;
+	return 0;
 }
 
 
@@ -2719,7 +2717,7 @@ pthread_cond_timedwait(pthread_cond_t *cv,
                        pthread_mutex_t *mutex,
                        const struct timespec *abstime)
 {
-	struct mg_workerTLS *tls =
+	struct mg_workerTLS **ptls, *tls =
 	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
 	int ok;
 	struct timespec tsnow;
@@ -2727,10 +2725,11 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 	DWORD mswaitrel;
 
 	EnterCriticalSection(&cv->threadIdSec);
-	assert(cv->waitingthreadcount < MAX_WORKER_THREADS);
-	cv->waitingthreadhdls[cv->waitingthreadcount] =
-	    tls->pthread_cond_helper_mutex;
-	cv->waitingthreadcount++;
+	/* Add this thread to cv's waiting list */
+	ptls = &cv->waiting_thread;
+	for (; *ptls != NULL; ptls = &(*ptls)->next_waiting_thread);
+	tls->next_waiting_thread = NULL;
+	*ptls = tls;
 	LeaveCriticalSection(&cv->threadIdSec);
 
 	if (abstime) {
@@ -2750,6 +2749,23 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 	pthread_mutex_unlock(mutex);
 	ok = (WAIT_OBJECT_0
 	      == WaitForSingleObject(tls->pthread_cond_helper_mutex, mswaitrel));
+	if (!ok) {
+		ok = 1;
+		EnterCriticalSection(&cv->threadIdSec);
+		ptls = &cv->waiting_thread;
+		for (; *ptls != NULL; ptls = &(*ptls)->next_waiting_thread) {
+			if (*ptls == tls) {
+				*ptls = tls->next_waiting_thread;
+				ok = 0;
+				break;
+			}
+		}
+		LeaveCriticalSection(&cv->threadIdSec);
+		if (ok) {
+			WaitForSingleObject(tls->pthread_cond_helper_mutex, INFINITE);
+		}
+	}
+	/* This thread has been removed from cv's waiting list */
 	pthread_mutex_lock(mutex);
 
 	return ok ? 0 : -1;
@@ -2766,20 +2782,15 @@ pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
 static int
 pthread_cond_signal(pthread_cond_t *cv)
 {
-	int i;
 	HANDLE wkup = NULL;
 	BOOL ok = FALSE;
 
 	EnterCriticalSection(&cv->threadIdSec);
-	if (cv->waitingthreadcount) {
-		wkup = cv->waitingthreadhdls[0];
+	if (cv->waiting_thread) {
+		wkup = cv->waiting_thread->pthread_cond_helper_mutex;
+		cv->waiting_thread = cv->waiting_thread->next_waiting_thread;
+
 		ok = SetEvent(wkup);
-
-		for (i = 1; i < cv->waitingthreadcount; i++) {
-			cv->waitingthreadhdls[i - 1] = cv->waitingthreadhdls[i];
-		}
-		cv->waitingthreadcount--;
-
 		assert(ok);
 	}
 	LeaveCriticalSection(&cv->threadIdSec);
@@ -2792,7 +2803,7 @@ static int
 pthread_cond_broadcast(pthread_cond_t *cv)
 {
 	EnterCriticalSection(&cv->threadIdSec);
-	while (cv->waitingthreadcount) {
+	while (cv->waiting_thread) {
 		pthread_cond_signal(cv);
 	}
 	LeaveCriticalSection(&cv->threadIdSec);
@@ -2805,9 +2816,7 @@ static int
 pthread_cond_destroy(pthread_cond_t *cv)
 {
 	EnterCriticalSection(&cv->threadIdSec);
-	assert(cv->waitingthreadcount == 0);
-	mg_free(cv->waitingthreadhdls);
-	cv->waitingthreadhdls = 0;
+	assert(cv->waiting_thread == NULL);
 	LeaveCriticalSection(&cv->threadIdSec);
 	DeleteCriticalSection(&cv->threadIdSec);
 
