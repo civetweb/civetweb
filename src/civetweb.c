@@ -1244,6 +1244,7 @@ struct mg_context {
 	int context_type;              /* 1 = server context, 2 = client context */
 
 	struct socket *listening_sockets;
+	struct pollfd *listening_socket_fds;
 	unsigned int num_listening_sockets;
 
 	volatile int
@@ -10258,6 +10259,8 @@ close_all_listening_sockets(struct mg_context *ctx)
 	}
 	mg_free(ctx->listening_sockets);
 	ctx->listening_sockets = NULL;
+	mg_free(ctx->listening_socket_fds);
+	ctx->listening_socket_fds = NULL;
 }
 
 
@@ -10331,6 +10334,7 @@ set_ports_option(struct mg_context *ctx)
 	struct vec vec;
 	struct socket so, *ptr;
 
+	struct pollfd *pfd;
 	union usa usa;
 	socklen_t len;
 
@@ -10510,9 +10514,23 @@ set_ports_option(struct mg_context *ctx)
 			continue;
 		}
 
+		if ((pfd = (struct pollfd *)
+		         mg_realloc(ctx->listening_socket_fds,
+		                    (ctx->num_listening_sockets + 1)
+		                        * sizeof(ctx->listening_socket_fds[0])))
+		    == NULL) {
+
+			mg_cry(fc(ctx), "%s", "Out of memory");
+			closesocket(so.sock);
+			so.sock = INVALID_SOCKET;
+			mg_free(ptr);
+			continue;
+		}
+
 		set_close_on_exec(so.sock, fc(ctx));
 		ctx->listening_sockets = ptr;
 		ctx->listening_sockets[ctx->num_listening_sockets] = so;
+		ctx->listening_socket_fds = pfd;
 		ctx->num_listening_sockets++;
 		portsOk++;
 	}
@@ -12641,10 +12659,9 @@ master_thread_run(void *thread_func_param)
 	/* Server starts *now* */
 	ctx->start_time = time(NULL);
 
-	/* Allocate memory for the listening sockets, and start the server */
-	pfd =
-	    (struct pollfd *)mg_calloc(ctx->num_listening_sockets, sizeof(pfd[0]));
-	while (pfd != NULL && ctx->stop_flag == 0) {
+	/* Start the server */
+	pfd = ctx->listening_socket_fds;
+	while (ctx->stop_flag == 0) {
 		for (i = 0; i < ctx->num_listening_sockets; i++) {
 			pfd[i].fd = ctx->listening_sockets[i].sock;
 			pfd[i].events = POLLIN;
@@ -12663,7 +12680,6 @@ master_thread_run(void *thread_func_param)
 			}
 		}
 	}
-	mg_free(pfd);
 	DEBUG_TRACE("%s", "stopping workers");
 
 	/* Stop signal received: somebody called mg_stop. Quit. */
