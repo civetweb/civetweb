@@ -1244,7 +1244,6 @@ struct mg_context {
 	int context_type;              /* 1 = server context, 2 = client context */
 
 	struct socket *listening_sockets;
-	in_port_t *listening_ports;
 	unsigned int num_listening_sockets;
 
 	volatile int
@@ -1782,7 +1781,13 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 	}
 	for (i = 0; i < size && i < ctx->num_listening_sockets; i++) {
 		ssl[i] = ctx->listening_sockets[i].is_ssl;
-		ports[i] = ctx->listening_ports[i];
+		ports[i] =
+#if defined(USE_IPV6)
+			(ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
+				? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
+				:
+#endif
+			ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
 	}
 	return i;
 }
@@ -1802,13 +1807,19 @@ mg_get_server_ports(const struct mg_context *ctx,
 	if (!ctx) {
 		return -1;
 	}
-	if (!ctx->listening_sockets || !ctx->listening_ports) {
+	if (!ctx->listening_sockets) {
 		return -1;
 	}
 
 	for (i = 0; (i < size) && (i < (int)ctx->num_listening_sockets); i++) {
 
-		ports[cnt].port = ctx->listening_ports[i];
+		ports[cnt].port =
+#if defined(USE_IPV6)
+			(ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
+				? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
+				:
+#endif
+			ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
 		ports[cnt].is_ssl = ctx->listening_sockets[i].is_ssl;
 		ports[cnt].is_redirect = ctx->listening_sockets[i].ssl_redir;
 
@@ -9399,6 +9410,13 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 		mg_printf(conn,
 		          "HTTP/1.1 302 Found\r\nLocation: https://%s:%d%s%s%s\r\n\r\n",
 		          host,
+#if defined(USE_IPV6)
+		          (conn->ctx->listening_sockets[ssl_index].lsa.sa.sa_family
+		              == AF_INET6) ?
+		          (int)ntohs(
+		              conn->ctx->listening_sockets[ssl_index].lsa.sin6.sin6_port
+		              ) :
+#endif
 		          (int)ntohs(
 		              conn->ctx->listening_sockets[ssl_index].lsa.sin.sin_port),
 		          conn->request_info.local_uri,
@@ -10240,8 +10258,6 @@ close_all_listening_sockets(struct mg_context *ctx)
 	}
 	mg_free(ctx->listening_sockets);
 	ctx->listening_sockets = NULL;
-	mg_free(ctx->listening_ports);
-	ctx->listening_ports = NULL;
 }
 
 
@@ -10315,7 +10331,6 @@ set_ports_option(struct mg_context *ctx)
 	struct vec vec;
 	struct socket so, *ptr;
 
-	in_port_t *portPtr;
 	union usa usa;
 	socklen_t len;
 
@@ -10459,7 +10474,8 @@ set_ports_option(struct mg_context *ctx)
 			continue;
 		}
 
-		if (getsockname(so.sock, &(usa.sa), &len) != 0) {
+		if (getsockname(so.sock, &(usa.sa), &len) != 0
+		    || usa.sa.sa_family != so.lsa.sa.sa_family) {
 
 			int err = (int)ERRNO;
 			mg_cry(fc(ctx),
@@ -10473,6 +10489,16 @@ set_ports_option(struct mg_context *ctx)
 			continue;
 		}
 
+		/* Update lsa port in case of random free ports */
+#if defined(USE_IPV6)
+		if (so.lsa.sa.sa_family == AF_INET6) {
+			so.lsa.sin6.sin6_port = usa.sin6.sin6_port;
+		} else
+#endif
+		{
+			so.lsa.sin.sin_port = usa.sin.sin_port;
+		}
+
 		if ((ptr = (struct socket *)
 		         mg_realloc(ctx->listening_sockets,
 		                    (ctx->num_listening_sockets + 1)
@@ -10484,25 +10510,9 @@ set_ports_option(struct mg_context *ctx)
 			continue;
 		}
 
-		if ((portPtr =
-		         (in_port_t *)mg_realloc(ctx->listening_ports,
-		                                 (ctx->num_listening_sockets + 1)
-		                                     * sizeof(ctx->listening_ports[0])))
-		    == NULL) {
-
-			mg_cry(fc(ctx), "%s", "Out of memory");
-			closesocket(so.sock);
-			so.sock = INVALID_SOCKET;
-			mg_free(ptr);
-			continue;
-		}
-
 		set_close_on_exec(so.sock, fc(ctx));
 		ctx->listening_sockets = ptr;
 		ctx->listening_sockets[ctx->num_listening_sockets] = so;
-		ctx->listening_ports = portPtr;
-		ctx->listening_ports[ctx->num_listening_sockets] =
-		    ntohs(usa.sin.sin_port);
 		ctx->num_listening_sockets++;
 		portsOk++;
 	}
