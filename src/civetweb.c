@@ -1247,10 +1247,7 @@ struct mg_context {
 	struct pollfd *listening_socket_fds;
 	unsigned int num_listening_sockets;
 
-	volatile int
-	    running_worker_threads; /* Number of currently running worker threads */
 	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
-	pthread_cond_t thread_cond; /* Condvar for tracking workers terminations */
 
 	struct socket queue[MGSQLEN]; /* Accepted sockets */
 	volatile int sq_head;         /* Head of the socket queue */
@@ -12458,13 +12455,6 @@ worker_thread_run(void *thread_func_param)
 		}
 	}
 
-	/* Signal master that we're done with connection and exiting */
-	(void)pthread_mutex_lock(&ctx->thread_mutex);
-	ctx->running_worker_threads--;
-	(void)pthread_cond_signal(&ctx->thread_cond);
-	/* assert(ctx->running_worker_threads >= 0); */
-	(void)pthread_mutex_unlock(&ctx->thread_mutex);
-
 	pthread_setspecific(sTlsKey, NULL);
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	CloseHandle(tls.pthread_cond_helper_mutex);
@@ -12688,11 +12678,6 @@ master_thread_run(void *thread_func_param)
 	/* Wakeup workers that are waiting for connections to handle. */
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 	pthread_cond_broadcast(&ctx->sq_full);
-
-	/* Wait until all threads finish */
-	while (ctx->running_worker_threads > 0) {
-		(void)pthread_cond_wait(&ctx->thread_cond, &ctx->thread_mutex);
-	}
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	/* Join all worker threads to avoid leaking threads. */
@@ -12757,7 +12742,6 @@ free_context(struct mg_context *ctx)
 	 * condvars
 	 */
 	(void)pthread_mutex_destroy(&ctx->thread_mutex);
-	(void)pthread_cond_destroy(&ctx->thread_cond);
 	(void)pthread_cond_destroy(&ctx->sq_empty);
 	(void)pthread_cond_destroy(&ctx->sq_full);
 
@@ -12957,7 +12941,6 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif
 
 	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr);
-	ok &= 0 == pthread_cond_init(&ctx->thread_cond, NULL);
 	ok &= 0 == pthread_cond_init(&ctx->sq_empty, NULL);
 	ok &= 0 == pthread_cond_init(&ctx->sq_full, NULL);
 	ok &= 0 == pthread_mutex_init(&ctx->nonce_mutex, &pthread_mutex_attr);
@@ -13085,15 +13068,9 @@ mg_start(const struct mg_callbacks *callbacks,
 
 	/* Start worker threads */
 	for (i = 0; i < ctx->cfg_worker_threads; i++) {
-		(void)pthread_mutex_lock(&ctx->thread_mutex);
-		ctx->running_worker_threads++;
-		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 		if (mg_start_thread_with_id(worker_thread,
 		                            ctx,
 		                            &ctx->workerthreadids[i]) != 0) {
-			(void)pthread_mutex_lock(&ctx->thread_mutex);
-			ctx->running_worker_threads--;
-			(void)pthread_mutex_unlock(&ctx->thread_mutex);
 			if (i > 0) {
 				mg_cry(fc(ctx),
 				       "Cannot start worker thread %i: error %ld",
