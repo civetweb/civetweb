@@ -1778,7 +1778,7 @@ show_settings_dialog()
 #define WIDTH (460)
 #define LABEL_WIDTH (90)
 
-	unsigned char mem[16*1024], *p;
+	unsigned char mem[16 * 1024], *p;
 	const struct mg_option *options;
 	DWORD style;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;

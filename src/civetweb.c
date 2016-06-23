@@ -1946,11 +1946,11 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 		ssl[i] = ctx->listening_sockets[i].is_ssl;
 		ports[i] =
 #if defined(USE_IPV6)
-			(ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
-				? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
-				:
+		    (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
+		        ? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
+		        :
 #endif
-			ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
+		        ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
 	}
 	return i;
 }
@@ -1978,11 +1978,11 @@ mg_get_server_ports(const struct mg_context *ctx,
 
 		ports[cnt].port =
 #if defined(USE_IPV6)
-			(ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
-				? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
-				:
+		    (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
+		        ? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
+		        :
 #endif
-			ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
+		        ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
 		ports[cnt].is_ssl = ctx->listening_sockets[i].is_ssl;
 		ports[cnt].is_redirect = ctx->listening_sockets[i].ssl_redir;
 
@@ -2882,8 +2882,8 @@ pthread_cond_timedwait(pthread_cond_t *cv,
                        pthread_mutex_t *mutex,
                        const struct timespec *abstime)
 {
-	struct mg_workerTLS **ptls, *tls =
-	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+	struct mg_workerTLS **ptls,
+	    *tls = (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
 	int ok;
 	struct timespec tsnow;
 	int64_t nsnow, nswaitabs, nswaitrel;
@@ -2892,7 +2892,8 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 	EnterCriticalSection(&cv->threadIdSec);
 	/* Add this thread to cv's waiting list */
 	ptls = &cv->waiting_thread;
-	for (; *ptls != NULL; ptls = &(*ptls)->next_waiting_thread);
+	for (; *ptls != NULL; ptls = &(*ptls)->next_waiting_thread)
+		;
 	tls->next_waiting_thread = NULL;
 	*ptls = tls;
 	LeaveCriticalSection(&cv->threadIdSec);
@@ -9571,13 +9572,13 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 		          host,
 #if defined(USE_IPV6)
 		          (conn->ctx->listening_sockets[ssl_index].lsa.sa.sa_family
-		              == AF_INET6) ?
-		          (int)ntohs(
-		              conn->ctx->listening_sockets[ssl_index].lsa.sin6.sin6_port
-		              ) :
+		           == AF_INET6)
+		              ? (int)ntohs(conn->ctx->listening_sockets[ssl_index]
+		                               .lsa.sin6.sin6_port)
+		              :
 #endif
-		          (int)ntohs(
-		              conn->ctx->listening_sockets[ssl_index].lsa.sin.sin_port),
+		              (int)ntohs(conn->ctx->listening_sockets[ssl_index]
+		                             .lsa.sin.sin_port),
 		          conn->request_info.local_uri,
 		          (conn->request_info.query_string == NULL) ? "" : "?",
 		          (conn->request_info.query_string == NULL)
@@ -10653,7 +10654,7 @@ set_ports_option(struct mg_context *ctx)
 			continue;
 		}
 
-		/* Update lsa port in case of random free ports */
+/* Update lsa port in case of random free ports */
 #if defined(USE_IPV6)
 		if (so.lsa.sa.sa_family == AF_INET6) {
 			so.lsa.sin6.sin6_port = usa.sin6.sin6_port;
@@ -10674,11 +10675,10 @@ set_ports_option(struct mg_context *ctx)
 			continue;
 		}
 
-		if ((pfd = (struct pollfd *)
-		         mg_realloc(ctx->listening_socket_fds,
-		                    (ctx->num_listening_sockets + 1)
-		                        * sizeof(ctx->listening_socket_fds[0])))
-		    == NULL) {
+		if ((pfd = (struct pollfd *)mg_realloc(
+		         ctx->listening_socket_fds,
+		         (ctx->num_listening_sockets + 1)
+		             * sizeof(ctx->listening_socket_fds[0]))) == NULL) {
 
 			mg_cry(fc(ctx), "%s", "Out of memory");
 			closesocket(so.sock);
