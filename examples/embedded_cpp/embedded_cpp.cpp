@@ -202,9 +202,15 @@ class FooHandler : public CivetHandler
         char buf[1024];
         int fail = 0;
 
+#ifdef _WIN32
         _snprintf(buf, sizeof(buf), "D:\\somewhere\\%s\\%s", req_info->remote_user, req_info->local_uri);
         buf[sizeof(buf)-1] = 0; /* TODO: check overflow */
         f = fopen_recursive(buf, "wb");
+#else
+        snprintf(buf, sizeof(buf), "~/somewhere/%s/%s", req_info->remote_user, req_info->local_uri);
+        buf[sizeof(buf)-1] = 0; /* TODO: check overflow */
+        f = fopen_recursive(buf, "w");
+#endif
 
         if (!f) {
             fail = 1;
@@ -234,13 +240,11 @@ class FooHandler : public CivetHandler
                 "HTTP/1.1 409 Conflict\r\n"
                 "Content-Type: text/plain\r\n"
                 "Connection: close\r\n\r\n");
-            MessageBeep(MB_ICONERROR);
         } else {
             mg_printf(conn,
                 "HTTP/1.1 201 Created\r\n"
                 "Content-Type: text/plain\r\n"
                 "Connection: close\r\n\r\n");
-            MessageBeep(MB_OK);
         }
 
         return true;
