@@ -2,6 +2,11 @@ version: '{build}'
 
 configuration:
   - Release
+  - Debug
+
+build:
+# no automatic build in script mode
+  
 
 platform:
   - x86
