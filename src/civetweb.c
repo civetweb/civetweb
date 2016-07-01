@@ -11034,8 +11034,9 @@ static pthread_mutex_t *ssl_mutexes;
 static int
 sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 {
-	int ret, err, i;
+	int ret, err;
 	int short_trust;
+    unsigned i;
 
 	if (!conn) {
 		return 0;
