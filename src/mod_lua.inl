@@ -328,11 +328,11 @@ lsp(struct mg_connection *conn,
 	for (i = 0; i < len; i++) {
 		if (p[i] == '\n')
 			lines++;
-		if ((i + 1) < len && p[i] == '<' && p[i + 1] == '?') {
+		if (((i + 1) < len) && (p[i] == '<') && (p[i + 1] == '?')) {
 
 			/* <?= ?> means a variable is enclosed and its value should be
 			 * printed */
-			is_var = ((i + 2) < len && p[i + 2] == '=');
+			is_var = (((i + 2) < len) && (p[i + 2] == '='));
 
 			if (is_var)
 				j = i + 2;
@@ -342,7 +342,7 @@ lsp(struct mg_connection *conn,
 			while (j < len) {
 				if (p[j] == '\n')
 					lualines++;
-				if ((j + 1) < len && p[j] == '?' && p[j + 1] == '>') {
+				if (((j + 1) < len) && (p[j] == '?') && (p[j + 1] == '>')) {
 					mg_write(conn, p + pos, i - pos);
 
 					mg_snprintf(conn,
