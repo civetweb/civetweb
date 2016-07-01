@@ -3905,6 +3905,9 @@ push(struct mg_context *ctx,
 				err = SSL_get_error(ssl, n);
 				if ((err == 5 /* SSL_ERROR_SYSCALL */) && (n == -1)) {
 					err = ERRNO;
+				} else if ((err == 2 /* SSL_ERROR_WANT_READ */)
+				           || (err == 3 /* SSL_ERROR_WANT_READ */)) {
+					n = 0;
 				} else {
 					DEBUG_TRACE("SSL_write() failed, error %d", err);
 					return -1;
@@ -3925,6 +3928,10 @@ push(struct mg_context *ctx,
 		} else {
 			n = (int)send(sock, buf, (len_t)len, MSG_NOSIGNAL);
 			err = (n < 0) ? ERRNO : 0;
+			if (n == 0) {
+				/* shutdown of the socket at client side */
+				return -1;
+			}
 		}
 
 		if (ctx->stop_flag) {
@@ -3934,10 +3941,6 @@ push(struct mg_context *ctx,
 		if ((n > 0) || (n == 0 && len == 0)) {
 			/* some data has been read, or no data was requested */
 			return n;
-		}
-		if (n == 0) {
-			/* shutdown of the socket at client side */
-			return -1;
 		}
 		if (n < 0) {
 			/* socket error - check errno */
@@ -4044,6 +4047,9 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 				err = SSL_get_error(conn->ssl, nread);
 				if ((err == 5 /* SSL_ERROR_SYSCALL */) && (nread == -1)) {
 					err = ERRNO;
+				} else if ((err == 2 /* SSL_ERROR_WANT_READ */)
+				           || (err == 3 /* SSL_ERROR_WANT_READ */)) {
+					nread = 0;
 				} else {
 					DEBUG_TRACE("SSL_read() failed, error %d", err);
 					return -1;
@@ -4056,6 +4062,10 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 		} else {
 			nread = (int)recv(conn->client.sock, buf, (len_t)len, 0);
 			err = (nread < 0) ? ERRNO : 0;
+			if (nread == 0) {
+				/* shutdown of the socket at client side */
+				return -1;
+			}
 		}
 
 		if (conn->ctx->stop_flag) {
@@ -4066,10 +4076,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 			/* some data has been read, or no data was requested */
 			return nread;
 		}
-		if (nread == 0) {
-			/* shutdown of the socket at client side */
-			return -1;
-		}
+
 		if (nread < 0) {
 /* socket error - check errno */
 #ifdef _WIN32
