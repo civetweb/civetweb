@@ -1424,12 +1424,18 @@ struct mg_context {
 
 	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
 
+#ifdef ALTERNATIVE_QUEUE
+	struct socket *client_socks;
+	int *client_wait_events;
+#else
 	struct socket queue[MGSQLEN]; /* Accepted sockets */
 	volatile int sq_head;         /* Head of the socket queue */
 	volatile int sq_tail;         /* Tail of the socket queue */
 	pthread_cond_t sq_full;       /* Signaled when socket is produced */
 	pthread_cond_t sq_empty;      /* Signaled when socket is consumed */
-	pthread_t masterthreadid;     /* The master thread ID */
+#endif
+
+	pthread_t masterthreadid; /* The master thread ID */
 	unsigned int
 	    cfg_worker_threads;     /* The number of configured worker threads. */
 	pthread_t *workerthreadids; /* The worker thread IDs */
@@ -12613,6 +12619,26 @@ process_new_connection(struct mg_connection *conn)
 }
 
 
+#if defined(ALTERNATIVE_QUEUE)
+
+static void
+produce_socket(struct mg_context *ctx, const struct socket *sp)
+{
+	unsigned int i;
+
+	for (i = 0; i < ctx->cfg_worker_threads; i++) {
+		/* TODO: find a free worker slot and signal it */
+	}
+}
+
+static int
+consume_socket(struct mg_context *ctx, struct socket *sp)
+{
+	/* TODO: every thread must wait for exactly one slot in the list */
+}
+
+#else /* ALTERNATIVE_QUEUE */
+
 /* Worker threads take accepted socket from the queue */
 static int
 consume_socket(struct mg_context *ctx, struct socket *sp)
@@ -12680,6 +12706,7 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 #undef QUEUE_SIZE
 }
+#endif /* ALTERNATIVE_QUEUE */
 
 
 static void *
@@ -12957,7 +12984,12 @@ master_thread_run(void *thread_func_param)
 
 	/* Wakeup workers that are waiting for connections to handle. */
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
+#if defined(ALTERNATIVE_QUEUE)
+/* TODO: signal all workers */
+/* TODO: close all socket handles (will avoid SOCKET_TIMEOUT_QUANTUM) */
+#else
 	pthread_cond_broadcast(&ctx->sq_full);
+#endif
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	/* Join all worker threads to avoid leaking threads. */
@@ -13022,8 +13054,12 @@ free_context(struct mg_context *ctx)
 	 * condvars
 	 */
 	(void)pthread_mutex_destroy(&ctx->thread_mutex);
+#if defined(ALTERNATIVE_QUEUE)
+/* TODO: free allocated memory */
+#else
 	(void)pthread_cond_destroy(&ctx->sq_empty);
 	(void)pthread_cond_destroy(&ctx->sq_full);
+#endif
 
 	/* Destroy other context global data structures mutex */
 	(void)pthread_mutex_destroy(&ctx->nonce_mutex);
@@ -13102,10 +13138,7 @@ mg_stop(struct mg_context *ctx)
 	/* Set stop flag, so all threads know they have to exit. */
 	ctx->stop_flag = 1;
 
-	/* TODO: close all socket handles (will avoid SOCKET_TIMEOUT_QUANTUM) */
-
-
-	/* Wait until mg_fini() stops */
+	/* Wait until everything has stopped. */
 	while (ctx->stop_flag != 2) {
 		(void)mg_sleep(10);
 	}
@@ -13230,8 +13263,12 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif
 
 	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr);
+#if defined(ALTERNATIVE_QUEUE)
+/* TODO: allocate memory */
+#else
 	ok &= 0 == pthread_cond_init(&ctx->sq_empty, NULL);
 	ok &= 0 == pthread_cond_init(&ctx->sq_full, NULL);
+#endif
 	ok &= 0 == pthread_mutex_init(&ctx->nonce_mutex, &pthread_mutex_attr);
 	if (!ok) {
 		/* Fatal error - abort start. However, this situation should never
