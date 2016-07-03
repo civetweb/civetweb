@@ -1449,7 +1449,6 @@ lua_error_handler(lua_State *L)
 static void *
 lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
 {
-
 	(void)ud;
 	(void)osize; /* not used */
 
@@ -1609,7 +1608,6 @@ handle_lsp_request(struct mg_connection *conn,
 	                                    : (const char *)filep->membuf,
 	            filep->size,
 	            L);
-
 
 cleanup_handle_lsp_request:
 

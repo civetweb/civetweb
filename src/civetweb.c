@@ -1575,9 +1575,60 @@ typedef struct tagTHREADNAME_INFO {
 	DWORD dwFlags;    /* Reserved for future use, must be zero. */
 } THREADNAME_INFO;
 #pragma pack(pop)
+
 #elif defined(__linux__)
+
 #include <sys/prctl.h>
 #include <sys/sendfile.h>
+#include <sys/eventfd.h>
+
+
+static int
+event_create(void)
+{
+	int ret = eventfd(0, EFD_CLOEXEC);
+	if (ret == -1) {
+		/* Linux uses -1 on error, Windows NULL. */
+		/* However, Linux does not return 0 on success either. */
+		return 0;
+	}
+	return ret;
+}
+
+
+static int
+event_wait(int eventhdl)
+{
+	uint64_t u;
+	int s = read(eventhdl, &u, sizeof(u));
+	if (s != sizeof(uint64_t)) {
+		/* error */
+		return 0;
+	}
+	(void)u; /* the value is not required */
+	return 1;
+}
+
+
+static int
+event_signal(int eventhdl)
+{
+	uint64_t u = 1;
+	int s = write(eventhdl, &u, sizeof(u));
+	if (s != sizeof(uint64_t)) {
+		/* error */
+		return 0;
+	}
+	return 1;
+}
+
+
+static void
+event_destroy(int eventhdl)
+{
+	close(eventhdl);
+}
+
 #endif
 
 
@@ -2998,6 +3049,35 @@ pthread_cond_destroy(pthread_cond_t *cv)
 	DeleteCriticalSection(&cv->threadIdSec);
 
 	return 0;
+}
+
+
+static int
+event_create(void)
+{
+	return (int)CreateEvent(NULL, FALSE, FALSE, NULL);
+}
+
+
+static int
+event_wait(int eventhdl)
+{
+	int res = WaitForSingleObject((HANDLE)eventhdl, INFINITE);
+	return (res == WAIT_OBJECT_0);
+}
+
+
+static int
+event_signal(int eventhdl, unsigned timeout)
+{
+	return (int)SetEvent((HANDLE)eventhdl);
+}
+
+
+static void
+event_destroy(int eventhdl)
+{
+	CloseHandle((HANDLE)eventhdl);
 }
 
 
@@ -11036,7 +11116,7 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 {
 	int ret, err;
 	int short_trust;
-    unsigned i;
+	unsigned i;
 
 	if (!conn) {
 		return 0;
@@ -12573,6 +12653,35 @@ consume_socket(struct mg_context *ctx, struct socket *sp)
 }
 
 
+/* Master thread adds accepted socket to a queue */
+static void
+produce_socket(struct mg_context *ctx, const struct socket *sp)
+{
+#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
+	if (!ctx) {
+		return;
+	}
+	(void)pthread_mutex_lock(&ctx->thread_mutex);
+
+	/* If the queue is full, wait */
+	while (ctx->stop_flag == 0
+	       && ctx->sq_head - ctx->sq_tail >= QUEUE_SIZE(ctx)) {
+		(void)pthread_cond_wait(&ctx->sq_empty, &ctx->thread_mutex);
+	}
+
+	if (ctx->sq_head - ctx->sq_tail < QUEUE_SIZE(ctx)) {
+		/* Copy socket to the queue and increment head */
+		ctx->queue[ctx->sq_head % QUEUE_SIZE(ctx)] = *sp;
+		ctx->sq_head++;
+		DEBUG_TRACE("queued socket %d", sp ? sp->sock : -1);
+	}
+
+	(void)pthread_cond_signal(&ctx->sq_full);
+	(void)pthread_mutex_unlock(&ctx->thread_mutex);
+#undef QUEUE_SIZE
+}
+
+
 static void *
 worker_thread_run(void *thread_func_param)
 {
@@ -12687,35 +12796,6 @@ worker_thread(void *thread_func_param)
 #endif /* _WIN32 */
 
 
-/* Master thread adds accepted socket to a queue */
-static void
-produce_socket(struct mg_context *ctx, const struct socket *sp)
-{
-#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
-	if (!ctx) {
-		return;
-	}
-	(void)pthread_mutex_lock(&ctx->thread_mutex);
-
-	/* If the queue is full, wait */
-	while (ctx->stop_flag == 0
-	       && ctx->sq_head - ctx->sq_tail >= QUEUE_SIZE(ctx)) {
-		(void)pthread_cond_wait(&ctx->sq_empty, &ctx->thread_mutex);
-	}
-
-	if (ctx->sq_head - ctx->sq_tail < QUEUE_SIZE(ctx)) {
-		/* Copy socket to the queue and increment head */
-		ctx->queue[ctx->sq_head % QUEUE_SIZE(ctx)] = *sp;
-		ctx->sq_head++;
-		DEBUG_TRACE("queued socket %d", sp ? sp->sock : -1);
-	}
-
-	(void)pthread_cond_signal(&ctx->sq_full);
-	(void)pthread_mutex_unlock(&ctx->thread_mutex);
-#undef QUEUE_SIZE
-}
-
-
 static void
 accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 {
@@ -12767,15 +12847,12 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 			       strerror(ERRNO));
 		}
 
-
-		/* Disable TCP Nagle's algorithm.  Normally TCP packets are
-		 * coalesced
+		/* Disable TCP Nagle's algorithm. Normally TCP packets are coalesced
 		 * to effectively fill up the underlying IP packet payload and
-		 * reduce
-		 * the overhead of sending lots of small buffers. However this hurts
-		 * the server's throughput (ie. operations per second) when HTTP 1.1
-		 * persistent connections are used and the responses are relatively
-		 * small (eg. less than 1400 bytes).
+		 * reduce the overhead of sending lots of small buffers. However
+		 * this hurts the server's throughput (ie. operations per second)
+		 * when HTTP 1.1 persistent connections are used and the responses
+		 * are relatively small (eg. less than 1400 bytes).
 		 */
 		if ((ctx != NULL) && (ctx->config[CONFIG_TCP_NODELAY] != NULL)
 		    && (!strcmp(ctx->config[CONFIG_TCP_NODELAY], "1"))) {
@@ -13021,7 +13098,12 @@ mg_stop(struct mg_context *ctx)
 	}
 
 	ctx->masterthreadid = 0;
+
+	/* Set stop flag, so all threads know they have to exit. */
 	ctx->stop_flag = 1;
+
+	/* TODO: close all socket handles (will avoid SOCKET_TIMEOUT_QUANTUM) */
+
 
 	/* Wait until mg_fini() stops */
 	while (ctx->stop_flag != 2) {
