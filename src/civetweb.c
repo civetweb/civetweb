@@ -20,8 +20,6 @@
  * THE SOFTWARE.
  */
 
-#define ALTERNATIVE_QUEUE
-
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
@@ -13005,6 +13003,8 @@ master_thread_run(void *thread_func_param)
 			}
 		}
 	}
+
+	/* Here stop_flag is 1 - Initiate shutdown. */
 	DEBUG_TRACE("%s", "stopping workers");
 
 	/* Stop signal received: somebody called mg_stop. Quit. */
@@ -13015,6 +13015,11 @@ master_thread_run(void *thread_func_param)
 #if defined(ALTERNATIVE_QUEUE)
 	for (i = 0; i < ctx->cfg_worker_threads; i++) {
 		event_signal(ctx->client_wait_events[i]);
+
+		/* Since we know all sockets, we can shutdown the connections. */
+		if (ctx->client_socks[i].in_use) {
+			shutdown(ctx->client_socks[i].sock, SD_BOTH);
+		}
 	}
 #else
 	pthread_cond_broadcast(&ctx->sq_full);
@@ -13089,7 +13094,6 @@ free_context(struct mg_context *ctx)
 		event_destroy(ctx->client_wait_events[i]);
 	}
 	mg_free(ctx->client_wait_events);
-/* TODO: free allocated memory */
 #else
 	(void)pthread_cond_destroy(&ctx->sq_empty);
 	(void)pthread_cond_destroy(&ctx->sq_full);
