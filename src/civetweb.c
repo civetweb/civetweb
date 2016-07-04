@@ -20,8 +20,6 @@
  * THE SOFTWARE.
  */
 
-#define ALTERNATIVE_QUEUE
-
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
@@ -12647,11 +12645,11 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 
 
 static int
-consume_socket(struct mg_context *ctx, struct socket *sp, int index)
+consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 {
-	ctx->client_socks[index].in_use = 0;
-	event_wait(ctx->client_wait_events[index]);
-	*sp = ctx->client_socks[index];
+	ctx->client_socks[thread_index].in_use = 0;
+	event_wait(ctx->client_wait_events[thread_index]);
+	*sp = ctx->client_socks[thread_index];
 
 	return !ctx->stop_flag;
 }
@@ -12837,7 +12835,7 @@ static unsigned __stdcall worker_thread(void *thread_func_param)
 {
 	struct worker_thread_args *pwta =
 	    (struct worker_thread_args *)thread_func_param;
-	worker_thread_run(thread_func_param);
+	worker_thread_run(pwta);
 	mg_free(thread_func_param);
 	return 0;
 }
@@ -12847,7 +12845,7 @@ worker_thread(void *thread_func_param)
 {
 	struct worker_thread_args *pwta =
 	    (struct worker_thread_args *)thread_func_param;
-	worker_thread_run(thread_func_param);
+	worker_thread_run(pwta);
 	mg_free(thread_func_param);
 	return NULL;
 }
@@ -13463,7 +13461,7 @@ mg_start(const struct mg_callbacks *callbacks,
 		    mg_malloc(sizeof(struct worker_thread_args));
 		if (wta) {
 			wta->ctx = ctx;
-			wta->index = i;
+			wta->index = (int)i;
 		}
 
 		if ((wta == NULL)
