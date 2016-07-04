@@ -20,6 +20,8 @@
  * THE SOFTWARE.
  */
 
+#define ALTERNATIVE_QUEUE
+
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
@@ -199,9 +201,7 @@ clock_gettime(int clk_id, struct timespec *t)
 #ifndef MAX_WORKER_THREADS
 #define MAX_WORKER_THREADS (1024 * 64)
 #endif
-#ifndef SOCKET_TIMEOUT_QUANTUM
-#define SOCKET_TIMEOUT_QUANTUM (10000)
-#endif
+
 
 mg_static_assert(MAX_WORKER_THREADS >= 1,
                  "worker threads must be a positive number");
@@ -12930,13 +12930,8 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 			timeout = -1;
 		}
 
-		/* Set socket timeout to the given value, but not more than a
-		 * a certain limit (SOCKET_TIMEOUT_QUANTUM, default 10 seconds),
-		 * so the server can exit after that time if requested. */
-		if ((timeout > 0) && (timeout < SOCKET_TIMEOUT_QUANTUM)) {
+		if (timeout > 0) {
 			set_sock_timeout(so.sock, timeout);
-		} else {
-			set_sock_timeout(so.sock, SOCKET_TIMEOUT_QUANTUM);
 		}
 
 		produce_socket(ctx, &so);
@@ -13018,8 +13013,9 @@ master_thread_run(void *thread_func_param)
 	/* Wakeup workers that are waiting for connections to handle. */
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 #if defined(ALTERNATIVE_QUEUE)
-/* TODO: signal all workers */
-/* TODO: close all socket handles (will avoid SOCKET_TIMEOUT_QUANTUM) */
+	for (i = 0; i < ctx->cfg_worker_threads; i++) {
+		event_signal(ctx->client_wait_events[i]);
+	}
 #else
 	pthread_cond_broadcast(&ctx->sq_full);
 #endif
