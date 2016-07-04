@@ -1591,6 +1591,7 @@ typedef struct tagTHREADNAME_INFO {
 #include <sys/eventfd.h>
 
 
+#ifdef ALTERNATIVE_QUEUE
 static int
 event_create(void)
 {
@@ -1636,6 +1637,7 @@ event_destroy(int eventhdl)
 {
 	close(eventhdl);
 }
+#endif
 
 #endif
 
@@ -3060,6 +3062,7 @@ pthread_cond_destroy(pthread_cond_t *cv)
 }
 
 
+#ifdef ALTERNATIVE_QUEUE
 static int
 event_create(void)
 {
@@ -3087,6 +3090,7 @@ event_destroy(int eventhdl)
 {
 	CloseHandle((HANDLE)eventhdl);
 }
+#endif
 
 
 #if defined(__MINGW32__)
@@ -12658,11 +12662,11 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 
 /* Worker threads take accepted socket from the queue */
 static int
-consume_socket(struct mg_context *ctx, struct socket *sp, int index)
+consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 {
 #define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
 
-	(void)index;
+	(void)thread_index;
 
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 	DEBUG_TRACE("%s", "going idle");
