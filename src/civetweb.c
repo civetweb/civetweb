@@ -20,6 +20,8 @@
  * THE SOFTWARE.
  */
 
+#define ALTERNATIVE_QUEUE
+
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
@@ -94,8 +96,7 @@ mg_static_assert(sizeof(int) == 4 || sizeof(int) == 8,
 mg_static_assert(sizeof(void *) == 4 || sizeof(void *) == 8,
                  "pointer data type size check");
 mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
-/* mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8, "size_t data
- * type size check"); */
+
 
 /* DTL -- including winsock2.h works better if lean and mean */
 #ifndef WIN32_LEAN_AND_MEAN
@@ -200,9 +201,15 @@ clock_gettime(int clk_id, struct timespec *t)
 #define MAX_WORKER_THREADS (1024 * 64)
 #endif
 
+#define SHUTDOWN_RD (0)
+#define SHUTDOWN_WR (1)
+#define SHUTDOWN_BOTH (2)
 
 mg_static_assert(MAX_WORKER_THREADS >= 1,
                  "worker threads must be a positive number");
+
+mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8, 
+                 "size_t data type size check");
 
 #if defined(_WIN32)                                                            \
     && !defined(__SYMBIAN32__) /* WINDOWS / UNIX include block */
@@ -289,9 +296,6 @@ typedef long off_t;
 #define UINT64_FMT "I64u"
 
 #define WINCDECL __cdecl
-#define SHUT_RD (0)
-#define SHUT_WR (1)
-#define SHUT_BOTH (2)
 #define vsnprintf_impl _vsnprintf
 #define access _access
 #define mg_sleep(x) (Sleep(x))
@@ -1589,7 +1593,8 @@ typedef struct tagTHREADNAME_INFO {
 #include <sys/eventfd.h>
 
 
-#ifdef ALTERNATIVE_QUEUE
+#if defined(ALTERNATIVE_QUEUE) && 0 /* XXX:remove && 0 */
+
 static int
 event_create(void)
 {
@@ -1607,7 +1612,7 @@ static int
 event_wait(int eventhdl)
 {
 	uint64_t u;
-	int s = read(eventhdl, &u, sizeof(u));
+	int s = (int)read(eventhdl, &u, sizeof(u));
 	if (s != sizeof(uint64_t)) {
 		/* error */
 		return 0;
@@ -1621,7 +1626,7 @@ static int
 event_signal(int eventhdl)
 {
 	uint64_t u = 1;
-	int s = write(eventhdl, &u, sizeof(u));
+	int s = (int)write(eventhdl, &u, sizeof(u));
 	if (s != sizeof(uint64_t)) {
 		/* error */
 		return 0;
@@ -1637,6 +1642,72 @@ event_destroy(int eventhdl)
 }
 #endif
 
+#endif
+
+
+#if /* XXX:uncomment !defined(__linux__) &&*/ !defined(_WIN32) && defined(ALTERNATIVE_QUEUE)
+
+struct posix_event {
+	pthread_mutex_t mutex;
+	pthread_cond_t cond;
+};
+
+mg_static_assert(sizeof(struct posix_event *) == sizeof(int), "data type size check");
+
+
+static int
+event_create(void)
+{
+	struct posix_event *ret = mg_malloc(sizeof(struct posix_event));
+	if (ret == 0) {
+		/* out of memory */
+		return 0;
+	}
+	if (0!=pthread_mutex_init(&(ret->mutex), NULL)) {
+		/* pthread mutex not available */
+		mg_free(ret);
+		return 0;
+	}
+	if (0!=pthread_cond_init(&(ret->cond), NULL)) {
+		/* pthread cond not available */
+		pthread_mutex_destroy(&(ret->mutex));
+		mg_free(ret);
+		return 0;
+	}
+	return (int)ret;
+}
+
+
+static int
+event_wait(int eventhdl)
+{
+	struct posix_event *ev = (struct posix_event*)eventhdl;
+	pthread_mutex_lock(&(ev->mutex));
+	pthread_cond_wait(&(ev->cond));
+	pthread_mutex_unlock(&(ev->mutex));
+	return 1;
+}
+
+
+static int
+event_signal(int eventhdl)
+{
+	struct posix_event *ev = (struct posix_event*)eventhdl;
+	pthread_mutex_lock(&(ev->mutex));
+	pthread_cond_signal(&(ev->cond));
+	pthread_mutex_unlock(&(ev->mutex));
+	return 1;
+}
+
+
+static void
+event_destroy(int eventhdl)
+{
+	struct posix_event *ev = (struct posix_event*)eventhdl;
+	pthread_cond_destroy(&(ev->cond));
+	pthread_mutex_destroy(&(ev->mutex));
+	mg_free(ev);
+}
 #endif
 
 
@@ -11701,7 +11772,7 @@ close_socket_gracefully(struct mg_connection *conn)
 	}
 
 	/* Send FIN to the client */
-	shutdown(conn->client.sock, SHUT_WR);
+	shutdown(conn->client.sock, SHUTDOWN_WR);
 	set_non_blocking_mode(conn->client.sock);
 
 #if defined(_WIN32)
@@ -13018,7 +13089,7 @@ master_thread_run(void *thread_func_param)
 
 		/* Since we know all sockets, we can shutdown the connections. */
 		if (ctx->client_socks[i].in_use) {
-			shutdown(ctx->client_socks[i].sock, SD_BOTH);
+			shutdown(ctx->client_socks[i].sock, SHUTDOWN_BOTH);
 		}
 	}
 #else
