@@ -208,7 +208,7 @@ clock_gettime(int clk_id, struct timespec *t)
 mg_static_assert(MAX_WORKER_THREADS >= 1,
                  "worker threads must be a positive number");
 
-mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8, 
+mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
                  "size_t data type size check");
 
 #if defined(_WIN32)                                                            \
@@ -1428,7 +1428,7 @@ struct mg_context {
 
 #ifdef ALTERNATIVE_QUEUE
 	struct socket *client_socks;
-	int *client_wait_events;
+	void **client_wait_events;
 #else
 	struct socket queue[MGSQLEN]; /* Accepted sockets */
 	volatile int sq_head;         /* Head of the socket queue */
@@ -1595,7 +1595,7 @@ typedef struct tagTHREADNAME_INFO {
 
 #if defined(ALTERNATIVE_QUEUE) && 0 /* XXX:remove && 0 */
 
-static int
+static void *
 event_create(void)
 {
 	int ret = eventfd(0, EFD_CLOEXEC);
@@ -1604,15 +1604,15 @@ event_create(void)
 		/* However, Linux does not return 0 on success either. */
 		return 0;
 	}
-	return ret;
+	return (void *)ret;
 }
 
 
 static int
-event_wait(int eventhdl)
+event_wait(void *eventhdl)
 {
 	uint64_t u;
-	int s = (int)read(eventhdl, &u, sizeof(u));
+	int s = (int)read((int)eventhdl, &u, sizeof(u));
 	if (s != sizeof(uint64_t)) {
 		/* error */
 		return 0;
@@ -1623,10 +1623,10 @@ event_wait(int eventhdl)
 
 
 static int
-event_signal(int eventhdl)
+event_signal(void *eventhdl)
 {
 	uint64_t u = 1;
-	int s = (int)write(eventhdl, &u, sizeof(u));
+	int s = (int)write((int)eventhdl, &u, sizeof(u));
 	if (s != sizeof(uint64_t)) {
 		/* error */
 		return 0;
@@ -1636,26 +1636,25 @@ event_signal(int eventhdl)
 
 
 static void
-event_destroy(int eventhdl)
+event_destroy(void *eventhdl)
 {
-	close(eventhdl);
+	close((int)eventhdl);
 }
 #endif
 
 #endif
 
 
-#if /* XXX:uncomment !defined(__linux__) &&*/ !defined(_WIN32) && defined(ALTERNATIVE_QUEUE)
+#if /* XXX:uncomment !defined(__linux__) &&*/ !defined(_WIN32)                 \
+    && defined(ALTERNATIVE_QUEUE)
 
 struct posix_event {
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 };
 
-mg_static_assert(sizeof(struct posix_event *) == sizeof(int), "data type size check");
 
-
-static int
+static void *
 event_create(void)
 {
 	struct posix_event *ret = mg_malloc(sizeof(struct posix_event));
@@ -1663,36 +1662,36 @@ event_create(void)
 		/* out of memory */
 		return 0;
 	}
-	if (0!=pthread_mutex_init(&(ret->mutex), NULL)) {
+	if (0 != pthread_mutex_init(&(ret->mutex), NULL)) {
 		/* pthread mutex not available */
 		mg_free(ret);
 		return 0;
 	}
-	if (0!=pthread_cond_init(&(ret->cond), NULL)) {
+	if (0 != pthread_cond_init(&(ret->cond), NULL)) {
 		/* pthread cond not available */
 		pthread_mutex_destroy(&(ret->mutex));
 		mg_free(ret);
 		return 0;
 	}
-	return (int)ret;
+	return (void *)ret;
 }
 
 
 static int
-event_wait(int eventhdl)
+event_wait(void *eventhdl)
 {
-	struct posix_event *ev = (struct posix_event*)eventhdl;
+	struct posix_event *ev = (struct posix_event *)eventhdl;
 	pthread_mutex_lock(&(ev->mutex));
-	pthread_cond_wait(&(ev->cond));
+	pthread_cond_wait(&(ev->cond), &(ev->mutex));
 	pthread_mutex_unlock(&(ev->mutex));
 	return 1;
 }
 
 
 static int
-event_signal(int eventhdl)
+event_signal(void *eventhdl)
 {
-	struct posix_event *ev = (struct posix_event*)eventhdl;
+	struct posix_event *ev = (struct posix_event *)eventhdl;
 	pthread_mutex_lock(&(ev->mutex));
 	pthread_cond_signal(&(ev->cond));
 	pthread_mutex_unlock(&(ev->mutex));
@@ -1701,9 +1700,9 @@ event_signal(int eventhdl)
 
 
 static void
-event_destroy(int eventhdl)
+event_destroy(void *eventhdl)
 {
-	struct posix_event *ev = (struct posix_event*)eventhdl;
+	struct posix_event *ev = (struct posix_event *)eventhdl;
 	pthread_cond_destroy(&(ev->cond));
 	pthread_mutex_destroy(&(ev->mutex));
 	mg_free(ev);
@@ -3132,15 +3131,15 @@ pthread_cond_destroy(pthread_cond_t *cv)
 
 
 #ifdef ALTERNATIVE_QUEUE
-static int
+static void *
 event_create(void)
 {
-	return (int)CreateEvent(NULL, FALSE, FALSE, NULL);
+	return (void *)CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
 
 static int
-event_wait(int eventhdl)
+event_wait(void *eventhdl)
 {
 	int res = WaitForSingleObject((HANDLE)eventhdl, INFINITE);
 	return (res == WAIT_OBJECT_0);
@@ -3148,14 +3147,14 @@ event_wait(int eventhdl)
 
 
 static int
-event_signal(int eventhdl)
+event_signal(void *eventhdl)
 {
 	return (int)SetEvent((HANDLE)eventhdl);
 }
 
 
 static void
-event_destroy(int eventhdl)
+event_destroy(void *eventhdl)
 {
 	CloseHandle((HANDLE)eventhdl);
 }
