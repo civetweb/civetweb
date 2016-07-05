@@ -20,8 +20,6 @@
  * THE SOFTWARE.
  */
 
-#define ALTERNATIVE_QUEUE
-
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
@@ -1593,7 +1591,7 @@ typedef struct tagTHREADNAME_INFO {
 #include <sys/eventfd.h>
 
 
-#if defined(ALTERNATIVE_QUEUE) && 0 /* XXX:remove && 0 */
+#if defined(ALTERNATIVE_QUEUE)
 
 static void *
 event_create(void)
@@ -1645,8 +1643,7 @@ event_destroy(void *eventhdl)
 #endif
 
 
-#if /* XXX:uncomment !defined(__linux__) &&*/ !defined(_WIN32)                 \
-    && defined(ALTERNATIVE_QUEUE)
+#if !defined(__linux__) && !defined(_WIN32) && defined(ALTERNATIVE_QUEUE)
 
 struct posix_event {
 	pthread_mutex_t mutex;
