@@ -10189,6 +10189,7 @@ handle_request(struct mg_connection *conn)
 		remove_double_dots_and_double_slashes((char *)ri->local_uri);
 
 		/* step 1. completed, the url is known now */
+		uri_len = (int)strlen(ri->local_uri);
 		DEBUG_TRACE("URL: %s", ri->local_uri);
 
 		/* 3. if this ip has limited speed, set it for this connection */
@@ -10451,7 +10452,7 @@ handle_request(struct mg_connection *conn)
 		}
 
 		/* 12. Directory uris should end with a slash */
-		if (file.is_directory && ri->local_uri[uri_len - 1] != '/') {
+		if (file.is_directory && (uri_len>0) && (ri->local_uri[uri_len - 1] != '/')) {
 			gmt_time_string(date, sizeof(date), &curtime);
 			mg_printf(conn,
 			          "HTTP/1.1 301 Moved Permanently\r\n"
