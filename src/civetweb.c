@@ -9251,21 +9251,24 @@ mg_websocket_write_exec(struct mg_connection *conn,
 		headerLen = 2;
 	} else if (dataLen <= 0xFFFF) {
 		/* 16-bit length field */
+		uint16_t len = htons((uint16_t)dataLen);
 		header[1] = 126;
-		*(uint16_t *)(void *)(header + 2) = htons((uint16_t)dataLen);
+		memcpy(header + 2, &len, 2);
 		headerLen = 4;
 	} else {
 		/* 64-bit length field */
+		uint32_t len1 = htonl((uint64_t)dataLen >> 32);
+		uint32_t len2 = htonl(dataLen & 0xFFFFFFFF);
 		header[1] = 127;
-		*(uint32_t *)(void *)(header + 2) = htonl((uint64_t)dataLen >> 32);
-		*(uint32_t *)(void *)(header + 6) = htonl(dataLen & 0xFFFFFFFF);
+		memcpy(header + 2, &len1, 4);
+		memcpy(header + 6, &len2, 4);
 		headerLen = 10;
 	}
 
 	if (masking_key) {
 		/* add mask */
 		header[1] |= 0x80;
-		*(uint32_t *)(void *)(header + headerLen) = masking_key;
+		memcpy(header + headerLen, &masking_key, 4);
 		headerLen += 4;
 	}
 
