@@ -4985,6 +4985,8 @@ interpret_uri(struct mg_connection *conn,   /* in: request (must be valid) */
 #else
 	(void)filename_buf_len; /* unused if NO_FILES is defined */
 #endif
+  int check_match_prefix = 0;
+	int check_match_prefix_script = 0;
 
 	memset(filep, 0, sizeof(*filep));
 	*filename = 0;
@@ -5047,24 +5049,22 @@ interpret_uri(struct mg_connection *conn,   /* in: request (must be valid) */
 	if (mg_stat(conn, filename, filep)) {
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 		/* File exists. Check if it is a script type. */
-		if (0
 #if !defined(NO_CGI)
-		    || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-		                    strlen(conn->ctx->config[CGI_EXTENSIONS]),
-		                    filename) > 0
+		check_match_prefix = (check_match_prefix || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+		                      strlen(conn->ctx->config[CGI_EXTENSIONS]),
+		                      filename) > 0);
 #endif
 #if defined(USE_LUA)
-		    || match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-		                    strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
-		                    filename) > 0
+		check_match_prefix = (check_match_prefix || match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+		                      strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+		                      filename) > 0);
 #endif
 #if defined(USE_DUKTAPE)
-		    || match_prefix(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
-		                    strlen(
-		                        conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-		                    filename) > 0
+		check_match_prefix = (check_match_prefix || match_prefix(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+		                      strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
+		                      filename) > 0);
 #endif
-		    ) {
+		if (check_match_prefix) {
 			/* The request addresses a CGI script or a Lua script. The URI
 			 * corresponds to the script itself (like /path/script.cgi),
 			 * and there is no additional resource path
@@ -5113,25 +5113,25 @@ interpret_uri(struct mg_connection *conn,   /* in: request (must be valid) */
 	for (p = filename + strlen(filename); p > filename + 1; p--) {
 		if (*p == '/') {
 			*p = '\0';
-			if ((0
 #if !defined(NO_CGI)
-			     || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-			                     strlen(conn->ctx->config[CGI_EXTENSIONS]),
-			                     filename) > 0
+			check_match_prefix_script = (check_match_prefix_script
+				                          || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+			                            strlen(conn->ctx->config[CGI_EXTENSIONS]),
+			                            filename) > 0);
 #endif
 #if defined(USE_LUA)
-			     || match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-			                     strlen(
-			                         conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
-			                     filename) > 0
+			check_match_prefix_script = (check_match_prefix_script
+			                            || match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+			                            strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+			                            filename) > 0);
 #endif
 #if defined(USE_DUKTAPE)
-			     || match_prefix(
-			            conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
-			            strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-			            filename) > 0
+			check_match_prefix_script= (check_match_prefix_script
+			                           || match_prefix(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+			                           strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
+			                           filename) > 0);
 #endif
-			     ) && mg_stat(conn, filename, filep)) {
+			  if (check_match_prefix_script && mg_stat(conn, filename, filep)) {
 				/* Shift PATH_INFO block one character right, e.g.
 				 * "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
 				 * conn->path_info is pointing to the local variable "path"
@@ -12813,6 +12813,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 #if defined(MG_LEGACY_INTERFACE)
 	uint32_t addr;
 #endif
+int check_ssl;
 
 	mg_set_thread_name("worker");
 
@@ -12876,11 +12877,11 @@ worker_thread_run(struct worker_thread_args *thread_args)
 
 			conn->request_info.is_ssl = conn->client.is_ssl;
 
-			if (!conn->client.is_ssl
+			check_ssl = (!conn->client.is_ssl);
 #ifndef NO_SSL
-			    || sslize(conn, conn->ctx->ssl_ctx, SSL_accept)
+			check_ssl = (check_ssl || sslize(conn, conn->ctx->ssl_ctx, SSL_accept));
 #endif
-			        ) {
+			if (check_ssl) {
 
 
 				process_new_connection(conn);
