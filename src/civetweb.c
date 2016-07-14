@@ -10452,7 +10452,8 @@ handle_request(struct mg_connection *conn)
 		}
 
 		/* 12. Directory uris should end with a slash */
-		if (file.is_directory && (uri_len>0) && (ri->local_uri[uri_len - 1] != '/')) {
+		if (file.is_directory && (uri_len > 0)
+		    && (ri->local_uri[uri_len - 1] != '/')) {
 			gmt_time_string(date, sizeof(date), &curtime);
 			mg_printf(conn,
 			          "HTTP/1.1 301 Moved Permanently\r\n"
@@ -11131,6 +11132,7 @@ refresh_trust(struct mg_connection *conn)
 {
 	static int reload_lock = 0;
 	static long int data_check = 0;
+	volatile int *p_reload_lock = (volatile int *)&reload_lock;
 
 	struct stat cert_buf;
 	long int t;
@@ -11172,16 +11174,15 @@ refresh_trust(struct mg_connection *conn)
 			}
 		}
 
-		if (!reload_lock) {
-			reload_lock = 1;
+		if (1 == InterlockedIncrement(p_reload_lock)) {
 			if (ssl_use_pem_file(conn->ctx, pem) == 0) {
 				return 0;
 			}
-			reload_lock = 0;
+			*p_reload_lock = 0;
 		}
 	}
 	/* lock while cert is reloading */
-	while (reload_lock) {
+	while (*p_reload_lock) {
 		sleep(1);
 	}
 
