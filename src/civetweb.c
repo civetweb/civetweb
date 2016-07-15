@@ -11174,7 +11174,7 @@ refresh_trust(struct mg_connection *conn)
 			}
 		}
 
-		if (1 == InterlockedIncrement(p_reload_lock)) {
+		if (1 == mg_atomic_inc(p_reload_lock)) {
 			if (ssl_use_pem_file(conn->ctx, pem) == 0) {
 				return 0;
 			}
