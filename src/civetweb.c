@@ -1024,6 +1024,8 @@ typedef struct ssl_st SSL;
 typedef struct ssl_method_st SSL_METHOD;
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct x509_store_ctx_st X509_STORE_CTX;
+typedef struct x509 X509;
+typedef struct x509_name X509_NAME;
 
 #define SSL_CTRL_OPTIONS (32)
 #define SSL_CTRL_CLEAR_OPTIONS (77)
@@ -1098,6 +1100,7 @@ struct ssl_func {
 #define SSL_CTX_set_session_id_context                                         \
 	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
 #define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
+
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
 #define SSL_CTX_set_options(ctx, op)                                           \
@@ -1120,6 +1123,11 @@ struct ssl_func {
 #define CONF_modules_unload (*(void (*)(int))crypto_sw[8].ptr)
 #define CRYPTO_cleanup_all_ex_data (*(void (*)(void))crypto_sw[9].ptr)
 #define EVP_cleanup (*(void (*)(void))crypto_sw[10].ptr)
+#define X509_free (*(void (*)(X509 *))crypto_sw[11].ptr)
+#define X509_get_subject_name (*(X509_NAME * (*)(X509 *))crypto_sw[12].ptr)
+#define X509_get_issuer_name (*(X509_NAME * (*)(X509 *))crypto_sw[13].ptr)
+#define X509_NAME_oneline                                                      \
+	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[14].ptr)
 
 
 /* set_ssl_option() function updates this array.
@@ -1174,6 +1182,10 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"CONF_modules_unload", NULL},
                                       {"CRYPTO_cleanup_all_ex_data", NULL},
                                       {"EVP_cleanup", NULL},
+                                      {"X509_free", NULL},
+                                      {"X509_get_subject_name", NULL},
+                                      {"X509_get_issuer_name", NULL},
+                                      {"X509_NAME_oneline", NULL},
                                       {NULL, NULL}};
 #endif /* NO_SSL_DL */
 #endif /* NO_SSL */
@@ -11280,6 +11292,25 @@ ssl_error(void)
 
 
 static void
+ssl_get_client_cert_info(struct mg_connection *conn)
+{
+	X509 *cert = SSL_get_peer_certificate(conn->ssl);
+	if (cert) {
+		X509_NAME *subj = X509_get_subject_name(cert);
+		X509_NAME *iss = X509_get_issuer_name(cert);
+		char buf1[1024];
+		char buf2[1024];
+		char *ret1 = X509_NAME_oneline(subj, buf1, sizeof(buf1));
+		char *ret2 = X509_NAME_oneline(iss, buf2, sizeof(buf2));
+
+		/* TODO: store this information somewhere */
+
+		X509_free(cert);
+	}
+}
+
+
+static void
 ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 {
 	(void)line;
@@ -12877,13 +12908,16 @@ worker_thread_run(struct worker_thread_args *thread_args)
 
 			conn->request_info.is_ssl = conn->client.is_ssl;
 
-			if (!conn->client.is_ssl
+			if (conn->client.is_ssl) {
 #ifndef NO_SSL
-			    || sslize(conn, conn->ctx->ssl_ctx, SSL_accept)
+				/* HTTPS connection */
+				if (sslize(conn, conn->ctx->ssl_ctx, SSL_accept)) {
+					ssl_get_client_cert_info(conn);
+					process_new_connection(conn);
+				}
 #endif
-			        ) {
-
-
+			} else {
+				/* HTTP connection */
 				process_new_connection(conn);
 			}
 
