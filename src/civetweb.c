@@ -800,7 +800,7 @@ mg_calloc_ex(size_t count, size_t size, const char *file, unsigned line)
 {
 	void *data = mg_malloc_ex(size * count, file, line);
 	if (data) {
-		memset(data, 0, size);
+		memset(data, 0, size * count);
 	}
 	return data;
 }
@@ -11300,10 +11300,12 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		X509_NAME *iss = X509_get_issuer_name(cert);
 		char buf1[1024];
 		char buf2[1024];
-		char *ret1 = X509_NAME_oneline(subj, buf1, sizeof(buf1));
-		char *ret2 = X509_NAME_oneline(iss, buf2, sizeof(buf2));
+		char *ret1 = X509_NAME_oneline(subj, buf1, (int)sizeof(buf1));
+		char *ret2 = X509_NAME_oneline(iss, buf2, (int)sizeof(buf2));
 
 		/* TODO: store this information somewhere */
+        (void)ret1;
+        (void)ret2;
 
 		X509_free(cert);
 	}
