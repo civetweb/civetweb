@@ -5286,6 +5286,10 @@ remove_double_dots_and_double_slashes(char *s)
 {
 	char *p = s;
 
+    while ((s[0] == '.') && (s[1] == '.')) {
+        s++;
+    }
+
 	while (*s != '\0') {
 		*p++ = *s++;
 		if (s[-1] == '/' || s[-1] == '\\') {
