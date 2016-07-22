@@ -1026,6 +1026,15 @@ typedef struct ssl_ctx_st SSL_CTX;
 typedef struct x509_store_ctx_st X509_STORE_CTX;
 typedef struct x509 X509;
 typedef struct x509_name X509_NAME;
+typedef struct asn1_integer ASN1_INTEGER;
+
+/*
+typedef struct asn1_bit_string_st {
+	int length;
+	int type;
+	unsigned char *data;
+} ASN1_BIT_STRING;
+*/
 
 #define SSL_CTRL_OPTIONS (32)
 #define SSL_CTRL_CLEAR_OPTIONS (77)
@@ -1128,6 +1137,8 @@ struct ssl_func {
 #define X509_get_issuer_name (*(X509_NAME * (*)(X509 *))crypto_sw[13].ptr)
 #define X509_NAME_oneline                                                      \
 	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[14].ptr)
+#define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *))crypto_sw[15].ptr)
+#define i2c_ASN1_INTEGER (*(int (*)(ASN1_INTEGER *, unsigned char **))crypto_sw[16].ptr)
 
 
 /* set_ssl_option() function updates this array.
@@ -1186,6 +1197,8 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"X509_get_subject_name", NULL},
                                       {"X509_get_issuer_name", NULL},
                                       {"X509_NAME_oneline", NULL},
+                                      {"X509_get_serialNumber", NULL},
+                                      {"i2c_ASN1_INTEGER", NULL},
                                       {NULL, NULL}};
 #endif /* NO_SSL_DL */
 #endif /* NO_SSL */
@@ -11295,6 +11308,32 @@ ssl_error(void)
 }
 
 
+static int
+hexdump2string(void *mem, int memlen, char *buf, int buflen)
+{
+	int i;
+	const char hexdigit[] = "0123456789abcdef";
+
+	if (memlen <= 0 || buflen <= 0) {
+		return 0;
+	}
+    if (buflen < (3*memlen)) {
+        return 0;
+    }
+
+	for (i = 0; i < memlen; i++) {
+		if (i > 0) {
+			buf[3 * i - 1] = ' ';
+		}
+		buf[3 * i] = hexdigit[(((uint8_t *)mem)[i] >> 4)&0xF];
+		buf[3 * i + 1] = hexdigit[((uint8_t *)mem)[i] & 0xF];
+	}
+    buf[3*memlen-1] = 0;
+
+	return 1;
+}
+
+
 static void
 ssl_get_client_cert_info(struct mg_connection *conn)
 {
@@ -11304,10 +11343,24 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		X509_NAME *iss = X509_get_issuer_name(cert);
 		char buf1[1024];
 		char buf2[1024];
+		char buf3[1024];
+        unsigned char intbuf[256];
 		char *ret1 = X509_NAME_oneline(subj, buf1, (int)sizeof(buf1));
 		char *ret2 = X509_NAME_oneline(iss, buf2, (int)sizeof(buf2));
+		ASN1_INTEGER *serial = X509_get_serialNumber(cert);
+        int len = i2c_ASN1_INTEGER(serial, NULL);
+        if (len < sizeof(intbuf)) {
+            unsigned char *pbuf = intbuf;
+            int len2 = i2c_ASN1_INTEGER(serial, &pbuf);
 
-		/* TODO: store this information somewhere */
+		    if (!hexdump2string(intbuf, len2, buf3, (int)sizeof(buf3))) {
+			    *buf3 = 0;
+		    }        
+        } else {
+            *buf3 = 0;
+        }
+
+		/* TODO: store the information in buf1-3 somewhere */
         (void)ret1;
         (void)ret2;
 
