@@ -202,7 +202,8 @@ START_TEST(test_remove_double_dots_and_double_slashes)
 	    {"////a", "/a"},
 	    {"/.....", "/."},
 	    {"/......", "/"},
-	    {"...", "..."},
+	    {"..", "."},
+	    {"...", "."},
 	    {"/...///", "/./"},
 	    {"/a...///", "/a.../"},
 	    {"/.x", "/.x"},
@@ -709,6 +710,7 @@ MAIN_PRIVATE(void)
 {
 	test_alloc_vprintf(0);
 	test_mg_vsnprintf(0);
+	test_remove_double_dots_and_double_slashes(0);
 	test_parse_date_string(0);
 	test_parse_http_message(0);
 }
