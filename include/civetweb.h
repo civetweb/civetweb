@@ -86,6 +86,17 @@ struct mg_request_info {
 		const char *name;  /* HTTP header name */
 		const char *value; /* HTTP header value */
 	} http_headers[64];    /* Maximum 64 headers */
+
+	struct client_cert *client_cert; /* Client certificate information */
+};
+
+
+/* Client certificate information (part of mg_request_info) */
+struct client_cert {
+	const char *subject;
+	const char *issuer;
+	const char *serial;
+	const char *finger;
 };
 
 

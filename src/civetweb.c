@@ -1024,17 +1024,11 @@ typedef struct ssl_st SSL;
 typedef struct ssl_method_st SSL_METHOD;
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct x509_store_ctx_st X509_STORE_CTX;
-typedef struct x509 X509;
 typedef struct x509_name X509_NAME;
 typedef struct asn1_integer ASN1_INTEGER;
+typedef struct evp_md EVP_MD;
+typedef struct x509 X509;
 
-/*
-typedef struct asn1_bit_string_st {
-	int length;
-	int type;
-	unsigned char *data;
-} ASN1_BIT_STRING;
-*/
 
 #define SSL_CTRL_OPTIONS (32)
 #define SSL_CTRL_CLEAR_OPTIONS (77)
@@ -1110,6 +1104,7 @@ struct ssl_func {
 	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
 #define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
 
+
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
 #define SSL_CTX_set_options(ctx, op)                                           \
@@ -1118,6 +1113,10 @@ struct ssl_func {
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
 #define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
 	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
+
+#define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
+#define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
+
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
@@ -1138,7 +1137,17 @@ struct ssl_func {
 #define X509_NAME_oneline                                                      \
 	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[14].ptr)
 #define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *))crypto_sw[15].ptr)
-#define i2c_ASN1_INTEGER (*(int (*)(ASN1_INTEGER *, unsigned char **))crypto_sw[16].ptr)
+#define i2c_ASN1_INTEGER                                                       \
+	(*(int (*)(ASN1_INTEGER *, unsigned char **))crypto_sw[16].ptr)
+#define EVP_get_digestbyname                                                   \
+	(*(const EVP_MD *(*)(const char *))crypto_sw[17].ptr)
+#define ASN1_digest                                                            \
+	(*(int (*)(int (*)(),                                                      \
+	           const EVP_MD *,                                                 \
+	           char *,                                                         \
+	           unsigned char *,                                                \
+	           unsigned int *))crypto_sw[18].ptr)
+#define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[19].ptr)
 
 
 /* set_ssl_option() function updates this array.
@@ -1199,6 +1208,9 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"X509_NAME_oneline", NULL},
                                       {"X509_get_serialNumber", NULL},
                                       {"i2c_ASN1_INTEGER", NULL},
+                                      {"EVP_get_digestbyname", NULL},
+                                      {"ASN1_digest", NULL},
+                                      {"i2d_X509", NULL},
                                       {NULL, NULL}};
 #endif /* NO_SSL_DL */
 #endif /* NO_SSL */
@@ -5299,9 +5311,9 @@ remove_double_dots_and_double_slashes(char *s)
 {
 	char *p = s;
 
-    while ((s[0] == '.') && (s[1] == '.')) {
-        s++;
-    }
+	while ((s[0] == '.') && (s[1] == '.')) {
+		s++;
+	}
 
 	while (*s != '\0') {
 		*p++ = *s++;
@@ -11317,18 +11329,18 @@ hexdump2string(void *mem, int memlen, char *buf, int buflen)
 	if (memlen <= 0 || buflen <= 0) {
 		return 0;
 	}
-    if (buflen < (3*memlen)) {
-        return 0;
-    }
+	if (buflen < (3 * memlen)) {
+		return 0;
+	}
 
 	for (i = 0; i < memlen; i++) {
 		if (i > 0) {
 			buf[3 * i - 1] = ' ';
 		}
-		buf[3 * i] = hexdigit[(((uint8_t *)mem)[i] >> 4)&0xF];
+		buf[3 * i] = hexdigit[(((uint8_t *)mem)[i] >> 4) & 0xF];
 		buf[3 * i + 1] = hexdigit[((uint8_t *)mem)[i] & 0xF];
 	}
-    buf[3*memlen-1] = 0;
+	buf[3 * memlen - 1] = 0;
 
 	return 1;
 }
@@ -11339,30 +11351,57 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 {
 	X509 *cert = SSL_get_peer_certificate(conn->ssl);
 	if (cert) {
+		char str_subject[1024];
+		char str_issuer[1024];
+		char str_serial[1024];
+		char str_finger[1024];
+		unsigned char buf[256];
+		int len;
+
+		/* Handle to algorithm used for fingerprint */
+		const EVP_MD *digest = EVP_get_digestbyname("sha1");
+
+		/* Get Subject and issuer */
 		X509_NAME *subj = X509_get_subject_name(cert);
 		X509_NAME *iss = X509_get_issuer_name(cert);
-		char buf1[1024];
-		char buf2[1024];
-		char buf3[1024];
-        unsigned char intbuf[256];
-		char *ret1 = X509_NAME_oneline(subj, buf1, (int)sizeof(buf1));
-		char *ret2 = X509_NAME_oneline(iss, buf2, (int)sizeof(buf2));
+
+		/* Get serial number */
 		ASN1_INTEGER *serial = X509_get_serialNumber(cert);
-        int len = i2c_ASN1_INTEGER(serial, NULL);
-        if (len < sizeof(intbuf)) {
-            unsigned char *pbuf = intbuf;
-            int len2 = i2c_ASN1_INTEGER(serial, &pbuf);
 
-		    if (!hexdump2string(intbuf, len2, buf3, (int)sizeof(buf3))) {
-			    *buf3 = 0;
-		    }        
-        } else {
-            *buf3 = 0;
-        }
+		/* Translate subject and issuer to a string */
+		(void)X509_NAME_oneline(subj, str_subject, (int)sizeof(str_subject));
+		(void)X509_NAME_oneline(iss, str_issuer, (int)sizeof(str_issuer));
 
-		/* TODO: store the information in buf1-3 somewhere */
-        (void)ret1;
-        (void)ret2;
+		/* Translate serial number to a hex string */
+		len = i2c_ASN1_INTEGER(serial, NULL);
+		if (len < sizeof(buf)) {
+			unsigned char *pbuf = buf;
+			int len2 = i2c_ASN1_INTEGER(serial, &pbuf);
+			if (!hexdump2string(
+			        buf, len2, str_serial, (int)sizeof(str_serial))) {
+				*str_serial = 0;
+			}
+		} else {
+			*str_serial = 0;
+		}
+
+		/* Calculate SHA1 fingerprint and store as a hex string */
+		len = 0;
+		ASN1_digest((int (*)())i2d_X509, digest, (char *)cert, buf, &len);
+		if (!hexdump2string(buf, len, str_finger, (int)sizeof(str_finger))) {
+			*str_finger = 0;
+		}
+
+		conn->request_info.client_cert =
+		    (struct client_cert *)mg_malloc(sizeof(struct client_cert));
+		if (conn->request_info.client_cert) {
+			conn->request_info.client_cert->subject = mg_strdup(str_subject);
+			conn->request_info.client_cert->issuer = mg_strdup(str_issuer);
+			conn->request_info.client_cert->serial = mg_strdup(str_serial);
+			conn->request_info.client_cert->finger = mg_strdup(str_finger);
+		} else {
+			/* TODO: write some OOM message */
+		}
 
 		X509_free(cert);
 	}
@@ -12971,12 +13010,29 @@ worker_thread_run(struct worker_thread_args *thread_args)
 #ifndef NO_SSL
 				/* HTTPS connection */
 				if (sslize(conn, conn->ctx->ssl_ctx, SSL_accept)) {
+					/* Get SSL client certificate information (if set) */
 					ssl_get_client_cert_info(conn);
+
+					/* process HTTPS connection */
 					process_new_connection(conn);
+
+					/* Free client certificate info */
+					if (conn->request_info.client_cert) {
+						mg_free((void*)(conn->request_info.client_cert->subject));
+						mg_free((void*)(conn->request_info.client_cert->issuer));
+						mg_free((void*)(conn->request_info.client_cert->serial));
+						mg_free((void*)(conn->request_info.client_cert->finger));
+						conn->request_info.client_cert->subject = 0;
+						conn->request_info.client_cert->issuer = 0;
+						conn->request_info.client_cert->serial = 0;
+						conn->request_info.client_cert->finger = 0;
+						mg_free(conn->request_info.client_cert);
+						conn->request_info.client_cert = 0;
+					}
 				}
 #endif
 			} else {
-				/* HTTP connection */
+				/* process HTTP connection */
 				process_new_connection(conn);
 			}
 
