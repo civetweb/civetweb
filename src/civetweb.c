@@ -11389,7 +11389,7 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		/* Calculate SHA1 fingerprint and store as a hex string */
 		ulen = 0;
 		ASN1_digest((int (*)())i2d_X509, digest, (char *)cert, buf, &ulen);
-		if (!hexdump2string(buf, ulen, str_finger, (int)sizeof(str_finger))) {
+		if (!hexdump2string(buf, (int)ulen, str_finger, (int)sizeof(str_finger))) {
 			*str_finger = 0;
 		}
 
