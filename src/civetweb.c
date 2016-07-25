@@ -11357,6 +11357,7 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		char str_finger[1024];
 		unsigned char buf[256];
 		int len;
+		unsigned int ulen;
 
 		/* Handle to algorithm used for fingerprint */
 		const EVP_MD *digest = EVP_get_digestbyname("sha1");
@@ -11374,7 +11375,7 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 
 		/* Translate serial number to a hex string */
 		len = i2c_ASN1_INTEGER(serial, NULL);
-		if (len < sizeof(buf)) {
+		if ((len > 0) && ((unsigned)len < (unsigned)sizeof(buf))) {
 			unsigned char *pbuf = buf;
 			int len2 = i2c_ASN1_INTEGER(serial, &pbuf);
 			if (!hexdump2string(
@@ -11386,9 +11387,9 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		}
 
 		/* Calculate SHA1 fingerprint and store as a hex string */
-		len = 0;
-		ASN1_digest((int (*)())i2d_X509, digest, (char *)cert, buf, &len);
-		if (!hexdump2string(buf, len, str_finger, (int)sizeof(str_finger))) {
+		ulen = 0;
+		ASN1_digest((int (*)())i2d_X509, digest, (char *)cert, buf, &ulen);
+		if (!hexdump2string(buf, ulen, str_finger, (int)sizeof(str_finger))) {
 			*str_finger = 0;
 		}
 
@@ -13018,10 +13019,14 @@ worker_thread_run(struct worker_thread_args *thread_args)
 
 					/* Free client certificate info */
 					if (conn->request_info.client_cert) {
-						mg_free((void*)(conn->request_info.client_cert->subject));
-						mg_free((void*)(conn->request_info.client_cert->issuer));
-						mg_free((void*)(conn->request_info.client_cert->serial));
-						mg_free((void*)(conn->request_info.client_cert->finger));
+						mg_free(
+						    (void *)(conn->request_info.client_cert->subject));
+						mg_free(
+						    (void *)(conn->request_info.client_cert->issuer));
+						mg_free(
+						    (void *)(conn->request_info.client_cert->serial));
+						mg_free(
+						    (void *)(conn->request_info.client_cert->finger));
 						conn->request_info.client_cert->subject = 0;
 						conn->request_info.client_cert->issuer = 0;
 						conn->request_info.client_cert->serial = 0;
