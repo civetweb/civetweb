@@ -6871,7 +6871,8 @@ static void
 handle_static_file_request(struct mg_connection *conn,
                            const char *path,
                            struct file *filep,
-                           const char *mime_type)
+                           const char *mime_type,
+                           const char *additional_headers)
 {
 	char date[64], lm[64], etag[64];
 	char range[128]; /* large enough, so there will be no overflow */
@@ -7000,7 +7001,7 @@ handle_static_file_request(struct mg_connection *conn,
 	                "Content-Length: %" INT64_FMT "\r\n"
 	                "Connection: %s\r\n"
 	                "Accept-Ranges: bytes\r\n"
-	                "%s%s\r\n",
+	                "%s%s",
 	                lm,
 	                etag,
 	                (int)mime_vec.len,
@@ -7009,6 +7010,18 @@ handle_static_file_request(struct mg_connection *conn,
 	                suggest_connection_header(conn),
 	                range,
 	                encoding);
+
+    /* The previous code must not add any header starting with X- to make
+     * sure no one of the additional_headers is included twice */
+
+    if (additional_headers != NULL) {
+        (void)mg_printf(conn,
+                        "%.*s\r\n\r\n",
+                        (int)strlen(additional_headers),
+                        additional_headers);
+    } else {
+        (void)mg_printf(conn, "\r\n");
+    }
 
 	if (strcmp(conn->request_info.request_method, "HEAD") != 0) {
 		send_file_data(conn, filep, r1, cl);
@@ -7064,6 +7077,16 @@ mg_send_mime_file(struct mg_connection *conn,
                   const char *path,
                   const char *mime_type)
 {
+	mg_send_mime_file2(conn, path, mime_type, NULL);
+}
+
+
+void
+mg_send_mime_file2(struct mg_connection *conn,
+                  const char *path,
+                  const char *mime_type,
+                  const char* additional_headers)
+{
 	struct file file = STRUCT_FILE_INITIALIZER;
 	if (mg_stat(conn, path, &file)) {
 		if (file.is_directory) {
@@ -7080,7 +7103,7 @@ mg_send_mime_file(struct mg_connection *conn,
 				                "Error: Directory listing denied");
 			}
 		} else {
-			handle_static_file_request(conn, path, &file, mime_type);
+			handle_static_file_request(conn, path, &file, mime_type, additional_headers);
 		}
 	} else {
 		send_http_error(conn, 404, "%s", "Error: File not found");
@@ -10629,7 +10652,7 @@ handle_file_based_request(struct mg_connection *conn,
 		handle_not_modified_static_file_request(conn, file);
 #endif /* !NO_CACHING */
 	} else {
-		handle_static_file_request(conn, path, file, NULL);
+		handle_static_file_request(conn, path, file, NULL, NULL);
 	}
 }
 
