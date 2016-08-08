@@ -46,7 +46,7 @@ timer_add(struct mg_context *ctx,
 		error = 1;
 	} else {
 		for (u = 0; u < ctx->timers->timer_count; u++) {
-			if (ctx->timers->timers[u].time < next_time) {
+			if (ctx->timers->timers[u].time > next_time) {
 				for (v = ctx->timers->timer_count; v > u; v--) {
 					ctx->timers->timers[v] = ctx->timers->timers[v - 1];
 				}
