@@ -30,13 +30,24 @@ timer_add(struct mg_context *ctx,
 	unsigned u, v;
 	int error = 0;
 	struct timespec now;
+  double          d;
 
 	if (ctx->stop_flag) {
 		return 0;
 	}
 
+  /* get current time */
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  d  = now.tv_sec * 1.0; /* disable compiler warning */
+  d += now.tv_nsec * 1.0E-9;
+  /* next_time should never < current time 
+     if  is_relative = 0 and next_time = 0 and period = 1 then 
+     the timer function will called until next_time >= now without pause 
+  */
+  if (!is_relative && (next_time < d)) {
+    next_time = d; /* next_time < current not allowed */
+  }
 	if (is_relative) {
-		clock_gettime(CLOCK_MONOTONIC, &now);
 		next_time += now.tv_sec;
 		next_time += now.tv_nsec * 1.0E-9;
 	}

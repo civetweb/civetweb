@@ -17,6 +17,7 @@
 
 #include "civetweb.h"
 
+#define NO_SSL
 
 #define DOCUMENT_ROOT "."
 #ifdef NO_SSL
@@ -632,7 +633,11 @@ main(int argc, char *argv[])
 		}
 	}
 
-	/* Wait until the server should be closed */
+  extern void mg_test_timer(struct mg_context *ctx);
+
+  mg_test_timer(ctx);
+
+  /* Wait until the server should be closed */
 	while (!exitNow) {
 #ifdef _WIN32
 		Sleep(1000);
