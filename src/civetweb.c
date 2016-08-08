@@ -52,9 +52,6 @@
 #endif
 #endif
 
-#define USE_TIMERS
-// #define USE_DYNAMIC_TIMERS
-
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 #define USE_TIMERS
 #endif
@@ -114,7 +111,6 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 /* Include the header file here, so the CivetWeb interface is defined for the
  * entire implementation, including the following forward definitions. */
 #include "civetweb.h"
-
 
 #ifndef IGNORE_UNUSED_RESULT
 #define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
@@ -8818,12 +8814,33 @@ mg_unlock_context(struct mg_context *ctx)
 	}
 }
 
+/*
+  HCP24
+  Dynamic Timers are single linked and sorted list
+  - memory is allocate if timer needed
+  - same interface as timers.inl
+  insert dyn_timer.inl
+
+  enable Dynamic Timers with #define USE_DYNAMIC_TIMERS
+
+  enable timer test  #define USE_TIMER_TEST
+  insert timer_test.inl
+  call mg_test_timer(struct mg_context *ctx);
+  show source timer_test.inl
+  IS ONLY FOR TIMER FUNCTION TEST IN DEVELOPMENT STATE
+
+*/
+
 #if defined(USE_TIMERS)
-#if defined( USE_DYNAMIC_TIMERS)
-#include "dyn_timer.inl"
-#else
-#include "timer.inl"
-#endif  /* USE_DYNAMIC_TIMERS */
+  #if defined( USE_DYNAMIC_TIMERS)
+    #include "dyn_timer.inl"
+  #else
+    #include "timer.inl"
+  #endif  /* USE_DYNAMIC_TIMERS */
+
+  #if defined( USE_TIMER_TEST)
+    #include "timer_test.inl"
+  #endif
 #endif /* USE_TIMERS */
 
 #ifdef USE_LUA
