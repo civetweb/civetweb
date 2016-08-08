@@ -4844,50 +4844,63 @@ mg_get_var2(const char *data,
 	return len;
 }
 
-
+/* HCP24: some changes to compare hole var_name */
 int
 mg_get_cookie(const char *cookie_header,
-              const char *var_name,
-              char *dst,
-              size_t dst_size)
+  const char *var_name,
+  char *dst,
+  size_t dst_size)
 {
-	const char *s, *p, *end;
-	int name_len, len = -1;
+  const char *s, *p, *end;
+  size_t name_len;
+  int len;
 
-	if (dst == NULL || dst_size == 0) {
-		len = -2;
-	} else if (var_name == NULL || (s = cookie_header) == NULL) {
-		len = -1;
-		dst[0] = '\0';
-	} else {
-		name_len = (int)strlen(var_name);
-		end = s + strlen(s);
-		dst[0] = '\0';
+  if (dst == NULL || dst_size == 0) {
+    return -2;
+  }
+  if (var_name == NULL || (s = cookie_header) == NULL) {
+    *dst = '\0';
+    return -1;
+  }
+  *dst = '\0';
 
-		for (; (s = mg_strcasestr(s, var_name)) != NULL; s += name_len) {
-			if (s[name_len] == '=') {
-				s += name_len + 1;
-				if ((p = strchr(s, ' ')) == NULL) {
-					p = end;
-				}
-				if (p[-1] == ';') {
-					p--;
-				}
-				if (*s == '"' && p[-1] == '"' && p > s + 1) {
-					s++;
-					p--;
-				}
-				if ((size_t)(p - s) < dst_size) {
-					len = (int)(p - s);
-					mg_strlcpy(dst, s, (size_t)len + 1);
-				} else {
-					len = -3;
-				}
-				break;
-			}
-		}
-	}
-	return len;
+  name_len = (int)strlen(var_name);
+  end = s + strlen(s);
+  /* ignore starting spaces */
+  while (*s == ' ') s++;
+  /* first search '=' */
+  while ((p = strchr(s, '=')) != NULL) {
+    len = (int)(p - s);
+    if ((size_t)(p - s) == name_len) {
+      if (_strnicmp(s, var_name, name_len) == 0) {
+        /* var_name found */
+        s = p + 1;
+        /* s points to value */
+        /* cookie must be : name1=value1; name2=value2*/
+        /* '; ' not allowed in values (scanner will not work)*/
+        /* TODO: very simple scanning if values with '; ' exists it does not work */
+        /*        but in the moment much better then search only ' '*/
+        p = strstr(s, "; ");
+        if (p == NULL)
+          p = end;
+        if (*s == '"' && p[-1] == '"' && p > s + 1) {
+          s++;
+          p--;
+        }
+        len = (int)(p - s);
+        if (len < (int)dst_size) {
+          mg_strlcpy(dst, s, (size_t)len + 1);
+          return len;
+        }
+        return -3;
+      }
+    }
+    /* not found goto next */
+    if ((s = strstr(p, "; ")) == NULL)
+      break; /* no more - finish */
+    s += 2; /* move to name ( after "; ") */
+  }
+  return -1;
 }
 
 
