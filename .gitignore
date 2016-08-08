@@ -63,7 +63,7 @@ local.properties
 *.suo
 *.user
 *.sln.docstates
-
+*.VC.db
 # Text-mode IDE tools
 cscope.out
 tags
