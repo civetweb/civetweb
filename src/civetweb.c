@@ -52,6 +52,9 @@
 #endif
 #endif
 
+#define USE_TIMERS
+// #define USE_DYNAMIC_TIMERS
+
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 #define USE_TIMERS
 #endif
@@ -4852,26 +4855,24 @@ mg_get_cookie(const char *cookie_header,
   size_t dst_size)
 {
   const char *s, *p, *end;
-  size_t name_len;
-  int len;
+  size_t name_len, len;
 
   if (dst == NULL || dst_size == 0) {
     return -2;
   }
+  *dst = '\0';
   if (var_name == NULL || (s = cookie_header) == NULL) {
-    *dst = '\0';
     return -1;
   }
-  *dst = '\0';
 
-  name_len = (int)strlen(var_name);
+  name_len = strlen(var_name);
   end = s + strlen(s);
   /* ignore starting spaces */
   while (*s == ' ') s++;
   /* first search '=' */
   while ((p = strchr(s, '=')) != NULL) {
-    len = (int)(p - s);
-    if ((size_t)(p - s) == name_len) {
+    len = (p - s);
+    if (len == name_len) {
       if (_strnicmp(s, var_name, name_len) == 0) {
         /* var_name found */
         s = p + 1;
@@ -4881,16 +4882,17 @@ mg_get_cookie(const char *cookie_header,
         /* TODO: very simple scanning if values with '; ' exists it does not work */
         /*        but in the moment much better then search only ' '*/
         p = strstr(s, "; ");
-        if (p == NULL)
+        if (p == NULL) {
           p = end;
+        }
         if (*s == '"' && p[-1] == '"' && p > s + 1) {
           s++;
           p--;
         }
-        len = (int)(p - s);
-        if (len < (int)dst_size) {
-          mg_strlcpy(dst, s, (size_t)len + 1);
-          return len;
+        len = (p - s);
+        if (len < dst_size) {
+          mg_strlcpy(dst, s, len + 1);
+          return (int)len;
         }
         return -3;
       }
@@ -8817,7 +8819,11 @@ mg_unlock_context(struct mg_context *ctx)
 }
 
 #if defined(USE_TIMERS)
+#if defined( USE_DYNAMIC_TIMERS)
+#include "dyn_timer.inl"
+#else
 #include "timer.inl"
+#endif  /* USE_DYNAMIC_TIMERS */
 #endif /* USE_TIMERS */
 
 #ifdef USE_LUA
