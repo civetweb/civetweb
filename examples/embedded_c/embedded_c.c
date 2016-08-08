@@ -17,8 +17,6 @@
 
 #include "civetweb.h"
 
-#define NO_SSL
-
 #define DOCUMENT_ROOT "."
 #ifdef NO_SSL
 #ifdef USE_IPV6
