@@ -4853,56 +4853,46 @@ mg_get_cookie(const char *cookie_header,
   size_t dst_size)
 {
   const char *s, *p, *end;
-  size_t name_len, len;
-
+  int name_len, len = -1;
+  
   if (dst == NULL || dst_size == 0) {
     return -2;
   }
-  *dst = '\0';
+
+  dst[0] = '\0';
   if (var_name == NULL || (s = cookie_header) == NULL) {
     return -1;
   }
-#if 1
-  /* that is only for travis error: mg_strcasestr defined but not used */
-  IGNORE_UNUSED_RESULT( mg_strcasestr( "", ""));
-#endif
-  name_len = strlen(var_name);
-  end = s + strlen(s);
-  /* ignore starting spaces */
-  while (*s == ' ') s++;
-  /* first search '=' */
-  while ((p = strchr(s, '=')) != NULL) {
-    len = (size_t)(p - s);
-    if (len == name_len) {
-      if (mg_strncasecmp(s, var_name, name_len) == 0) {
-        /* var_name found */
-        s = p + 1;
-        /* s points to value */
-        /* cookie must be : name1=value1; name2=value2*/
-        /* TODO: very simple scanning if values with '; ' exists it does not work */
-        /*        but in the moment much better then search only ' '*/
-        p = strstr(s, "; ");
-        if (p == NULL) {
+
+  name_len = (int)strlen(var_name);
+  end = s + strlen(s); 
+  for (; (s = mg_strcasestr( s, var_name)) != NULL; s += name_len) {
+    if (s[name_len] == '=') {
+      /* HCP24: now check is it a substring or a full cookie name */
+      if ((s == cookie_header) || (s[-1] == ' ')) {
+        s += name_len + 1;
+        if ((p = strchr(s, ' ')) == NULL) {
           p = end;
+        }
+        if (p[-1] == ';') {
+          p--;
         }
         if (*s == '"' && p[-1] == '"' && p > s + 1) {
           s++;
           p--;
         }
-        len = (size_t)(p - s);
-        if (len < dst_size) {
-          mg_strlcpy(dst, s, len + 1);
-          return (int)len;
+        if ((size_t)(p - s) < dst_size) {
+          len = (int)(p - s);
+          mg_strlcpy(dst, s, (size_t)len + 1);
         }
-        return -3;
+        else {
+          len = -3;
+        }
+        break;
       }
     }
-    /* not found goto next */
-    if ((s = strstr(p, "; ")) == NULL)
-      break; /* no more - finish */
-    s += 2; /* move to name ( after "; ") */
   }
-  return -1;
+  return len;
 }
 
 
