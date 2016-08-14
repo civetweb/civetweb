@@ -10978,7 +10978,9 @@ log_access(const struct mg_connection *conn)
 		fi.fp = NULL;
 	}
 
-	if (fi.fp == NULL && conn->ctx->callbacks.log_message == NULL) {
+	/* Log is written to a file and/or a callback. If both are not set,
+	 * executing the rest of the function is pointless. */
+	if ((fi.fp == NULL) && (conn->ctx->callbacks.log_access == NULL)) {
 		return;
 	}
 
