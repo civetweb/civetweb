@@ -12796,9 +12796,9 @@ process_new_connection(struct mg_connection *conn)
 					            NULL, /* No truncation check for ebuf */
 					            ebuf,
 					            sizeof(ebuf),
-					            "Invalid URI: [%s]",
-					            ri->request_uri);
+					            "Invalid URI");
 					send_http_error(conn, 400, "%s", ebuf);
+					conn->request_info.local_uri = NULL;
 					break;
 				}
 
