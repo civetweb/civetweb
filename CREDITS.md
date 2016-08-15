@@ -62,6 +62,7 @@
 * No Face Press
 * Paul Sokolovsky
 * Perttu Ahola
+* Peter Foerster
 * Philipp Friedenberger
 * Philipp Hasper
 * Red54
@@ -79,6 +80,7 @@
 * Ulrich Hertlein
 * Walt Steverson
 * William Greathouse
+* xtne6f
 * Yehuda Sadeh
 
 # Mongoose Contributors
