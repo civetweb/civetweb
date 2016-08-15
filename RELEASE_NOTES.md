@@ -1,10 +1,15 @@
 Release Notes v1.9 (work in progress)
 ===
-### Objectives: *TO BE DEFINED*
+### Objectives: *Read client certificate information, bug fixes*
 
 Changes
 -------
 
+- Retry failing TLS/HTTPS read/write operations
+- Read client certificate information
+- Do not tolerate URIs with invalid characters
+- Fix mg_get_cookie to ignore substrings
+- Fix bug in timer logic (for Lua Websockets)
 - Updated version number
 
 Release Notes v1.8
