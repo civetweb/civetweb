@@ -30,24 +30,42 @@ timer_add(struct mg_context *ctx,
 	unsigned u, v;
 	int error = 0;
 	struct timespec now;
+  double          dt; /* double time */
 
 	if (ctx->stop_flag) {
 		return 0;
 	}
 
-	if (is_relative) {
-		clock_gettime(CLOCK_MONOTONIC, &now);
-		next_time += now.tv_sec;
-		next_time += now.tv_nsec * 1.0E-9;
-	}
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  dt  = (double)now.tv_sec; 
+  dt += now.tv_nsec * 1.0E-9;
+
+  /* HCP24: if is_relative = 0 and next_time < now 
+   *        action will be called so fast as possible
+   *        if additional period > 0 
+   *        action will be called so fast as possible
+   *        n times until (next_time + (n * period)) > now
+   *        then the period is working
+   * Solution:
+   *        if next_time < now then we set  next_time = now.
+   *        The first callback will be so fast as possible  (now)
+   *        but the next callback on period
+  */
+  if (is_relative) {
+    next_time += dt;
+  }
+  else if (next_time < dt) {
+    next_time = dt;
+  }
 
 	pthread_mutex_lock(&ctx->timers->mutex);
 	if (ctx->timers->timer_count == MAX_TIMERS) {
 		error = 1;
 	} else {
 		for (u = 0; u < ctx->timers->timer_count; u++) {
-			if (ctx->timers->timers[u].time < next_time) {
-				for (v = ctx->timers->timer_count; v > u; v--) {
+			if (ctx->timers->timers[u].time > next_time) {
+        /* HCP24: moving all timers > next_time */
+        for (v = ctx->timers->timer_count; v > u; v--) {
 					ctx->timers->timers[v] = ctx->timers->timers[v - 1];
 				}
 				break;
