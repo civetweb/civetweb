@@ -1,0 +1,3 @@
+It seems building the same code with Travis CI several times, different builds fail with different errors. CivetWeb currently does 199 builds for Linux and OSX. As a test, I will only change this file, keep all other failes in the repository unchanged and submit several builds. If different builds fail differently, I will submit an issue to Travis CI:
+
+Travis test: 1
