@@ -463,6 +463,10 @@ increase performance while swapping the certificate.
 Disk IO performance can be improved when keeping the certificates and keys stored
 on a tmpfs (linux) on a system with very high throughput.
 
+### allow_sendfile_call `yes`
+This option can be used to enable or disable the use of the Linux `sendfile` system call. It is only available for Linux systems and only affecting HTTP (not HTTPS) connections if `throttle` is not enabled. While using the `sendfile` call will lead to a performance boost for HTTP connections, this call may be broken for some file systems and some operating system versions.
+
+
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
 support as well as support for Lua Server Pages.
