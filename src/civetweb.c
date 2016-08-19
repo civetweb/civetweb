@@ -1308,9 +1308,11 @@ enum {
 	SSL_CIPHER_LIST,
 	SSL_PROTOCOL_VERSION,
 	SSL_SHORT_TRUST,
+
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_TIMEOUT,
 #endif
+
 	DECODE_URL,
 
 #if defined(USE_LUA)
@@ -1328,12 +1330,16 @@ enum {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	LUA_WEBSOCKET_EXTENSIONS,
 #endif
+
 	ACCESS_CONTROL_ALLOW_ORIGIN,
 	ERROR_PAGES,
 	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
                          * socket option typedef TCP_NODELAY. */
 #if !defined(NO_CACHING)
 	STATIC_FILE_MAX_AGE,
+#endif
+#if defined(__linux__)
+	ALLOW_SENDFILE_CALL,
 #endif
 
 	NUM_OPTIONS
@@ -1408,6 +1414,9 @@ static struct mg_option config_options[] = {
     {"tcp_nodelay", CONFIG_TYPE_NUMBER, "0"},
 #if !defined(NO_CACHING)
     {"static_file_max_age", CONFIG_TYPE_NUMBER, "3600"},
+#endif
+#if defined(__linux__)
+    {"allow_sendfile_call", CONFIG_TYPE_BOOLEAN, "yes"},
 #endif
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
@@ -6754,7 +6763,9 @@ send_file_data(struct mg_connection *conn,
 /* file stored on disk */
 #if defined(__linux__)
 		/* sendfile is only available for Linux */
-		if (conn->throttle == 0 && conn->ssl == 0) {
+		if ((conn->ssl == 0) && (conn->throttle == 0)
+		    && (!mg_strcasecmp(conn->ctx->config[ALLOW_SENDFILE_CALL],
+		                       "yes"))) {
 			off_t sf_offs = (off_t)offset;
 			ssize_t sf_sent;
 			int sf_file = fileno(filep->fp);
