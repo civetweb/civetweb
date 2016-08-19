@@ -40,7 +40,9 @@ int exitNow = 0;
 int
 ExampleHandler(struct mg_connection *conn, void *cbdata)
 {
-	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn, "<h2>This is an example text from a C handler</h2>");
 	mg_printf(
@@ -74,6 +76,10 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn,
 	          "<p>To see a page from the CookieHandler handler <a "
 	          "href=\"cookie\">click cookie</a></p>");
+	mg_printf(conn,
+	          "<p>To see an example for parsing files on the fly <a "
+	          "href=\"on_the_fly_form\">click form</a> (form for "
+	          "uploading files)</p>");
 
 #ifdef USE_WEBSOCKET
 	mg_printf(conn,
@@ -89,7 +95,9 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 int
 ExitHandler(struct mg_connection *conn, void *cbdata)
 {
-	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: "
+	          "text/plain\r\nConnection: close\r\n\r\n");
 	mg_printf(conn, "Server will shut down.\n");
 	mg_printf(conn, "Bye!\n");
 	exitNow = 1;
@@ -100,7 +108,9 @@ ExitHandler(struct mg_connection *conn, void *cbdata)
 int
 AHandler(struct mg_connection *conn, void *cbdata)
 {
-	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn, "<h2>This is the A handler!!!</h2>");
 	mg_printf(conn, "</body></html>\n");
@@ -111,7 +121,9 @@ AHandler(struct mg_connection *conn, void *cbdata)
 int
 ABHandler(struct mg_connection *conn, void *cbdata)
 {
-	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn, "<h2>This is the AB handler!!!</h2>");
 	mg_printf(conn, "</body></html>\n");
@@ -125,7 +137,9 @@ BXHandler(struct mg_connection *conn, void *cbdata)
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 
-	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn, "<h2>This is the BX handler %p!!!</h2>", cbdata);
 	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
@@ -140,7 +154,9 @@ FooHandler(struct mg_connection *conn, void *cbdata)
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 
-	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn, "<h2>This is the Foo handler!!!</h2>");
 	mg_printf(conn,
@@ -159,7 +175,9 @@ CloseHandler(struct mg_connection *conn, void *cbdata)
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 
-	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn,
 	          "<h2>This handler will close the connection in a second</h2>");
@@ -256,13 +274,145 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	 * mg_handle_form_request. */
 	(void)req_info;
 
-	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: "
+	          "text/plain\r\nConnection: close\r\n\r\n");
 	fdh.user_data = (void *)conn;
 
 	/* Call the form handler */
 	mg_printf(conn, "Form data:");
 	ret = mg_handle_form_request(conn, &fdh);
 	mg_printf(conn, "\r\n%i fields found", ret);
+
+	return 1;
+}
+
+
+int
+FileUploadForm(struct mg_connection *conn, void *cbdata)
+{
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
+
+	mg_printf(conn, "<!DOCTYPE html>\n");
+	mg_printf(conn, "<html>\n<head>\n");
+	mg_printf(conn, "<meta charset=\"UTF-8\">\n");
+	mg_printf(conn, "<title>File upload</title>\n");
+	mg_printf(conn, "</head>\n<body>\n");
+	mg_printf(conn,
+	          "<form action=\"%s\" method=\"POST\" "
+	          "enctype=\"multipart/form-data\">\n",
+	          (const char *)cbdata);
+	mg_printf(conn, "<input type=\"file\" name=\"filesin\" multiple>\n");
+	mg_printf(conn, "<input type=\"submit\" value=\"Submit\">\n");
+	mg_printf(conn, "</form>\n</body>\n</html>\n");
+	return 1;
+}
+
+#define MD5_STATIC static
+#include "../src/md5.inl"
+
+struct tfile_checksum {
+	char name[128];
+	unsigned long long length;
+	md5_state_t chksum;
+};
+
+#define MAX_FILES (10)
+
+struct tfiles_checksums {
+	int index;
+	struct tfile_checksum file[MAX_FILES];
+};
+
+
+int
+field_disp_read_on_the_fly(const char *key,
+                           const char *filename,
+                           char *path,
+                           size_t pathlen,
+                           void *user_data)
+{
+	struct tfiles_checksums *context = (struct tfiles_checksums *)user_data;
+
+	(void)key;
+	(void)path;
+	(void)pathlen;
+
+	if (context->index < MAX_FILES) {
+		context->index++;
+		strncpy(context->file[context->index - 1].name, filename, 128);
+		context->file[context->index - 1].name[127] = 0;
+		context->file[context->index - 1].length = 0;
+		md5_init(&(context->file[context->index - 1].chksum));
+		return FORM_FIELD_STORAGE_GET;
+	}
+	return FORM_FIELD_STORAGE_ABORT;
+}
+
+
+int
+field_get_checksum(const char *key,
+                   const char *value,
+                   size_t valuelen,
+                   void *user_data)
+{
+	struct tfiles_checksums *context = (struct tfiles_checksums *)user_data;
+
+	char path[1026];
+	FILE *f;
+
+	(void)key;
+
+	context->file[context->index - 1].length += valuelen;
+	md5_append(&(context->file[context->index - 1].chksum),
+	           (const md5_byte_t *)value,
+	           valuelen);
+
+	return 0;
+}
+
+
+int
+CheckSumHandler(struct mg_connection *conn, void *cbdata)
+{
+	/* Handler may access the request info using mg_get_request_info */
+	const struct mg_request_info *req_info = mg_get_request_info(conn);
+	int i, j, ret;
+	struct tfiles_checksums chksums;
+	md5_byte_t digest[16];
+	struct mg_form_data_handler fdh = {field_disp_read_on_the_fly,
+	                                   field_get_checksum,
+	                                   0,
+	                                   (void *)&chksums};
+
+	/* It would be possible to check the request info here before calling
+	 * mg_handle_form_request. */
+	(void)req_info;
+
+	memset(&chksums, 0, sizeof(chksums));
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Type: text/plain\r\n"
+	          "Connection: close\r\n\r\n");
+
+	/* Call the form handler */
+	mg_printf(conn, "File checksums:");
+	ret = mg_handle_form_request(conn, &fdh);
+	for (i = 0; i < chksums.index; i++) {
+		md5_finish(&(chksums.file[i].chksum), digest);
+		/* Visual Studio 2010+ support llu */
+		mg_printf(conn,
+		          "\r\n%s %llu ",
+		          chksums.file[i].name,
+		          chksums.file[i].length);
+		for (j = 0; j < 16; j++) {
+			mg_printf(conn, "%02x", (unsigned int)digest[j]);
+		}
+	}
+	mg_printf(conn, "\r\n%i files\r\n", ret);
 
 	return 1;
 }
@@ -280,7 +430,7 @@ CookieHandler(struct mg_connection *conn, void *cbdata)
 	(void)mg_get_cookie(cookie, "first", first_str, sizeof(first_str));
 	(void)mg_get_cookie(cookie, "count", count_str, sizeof(count_str));
 
-	mg_printf(conn, "HTTP/1.1 200 OK\r\n");
+	mg_printf(conn, "HTTP/1.1 200 OK\r\nConnection: close\r\n");
 	if (first_str[0] == 0) {
 		time_t t = time(0);
 		struct tm *ptm = localtime(&t);
@@ -316,7 +466,9 @@ CookieHandler(struct mg_connection *conn, void *cbdata)
 int
 WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 {
-	mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
 
 	mg_printf(conn, "<!DOCTYPE html>\n");
 	mg_printf(conn, "<html>\n<head>\n");
@@ -575,6 +727,16 @@ main(int argc, char *argv[])
 	mg_set_request_handler(ctx,
 	                       "/handle_form.embedded_c.example.callback",
 	                       FormHandler,
+	                       (void *)0);
+
+	/* Add a file upload handler for parsing files on the fly */
+	mg_set_request_handler(ctx,
+	                       "/on_the_fly_form",
+	                       FileUploadForm,
+	                       (void *)"/on_the_fly_form.md5.callback");
+	mg_set_request_handler(ctx,
+	                       "/on_the_fly_form.md5.callback",
+	                       CheckSumHandler,
 	                       (void *)0);
 
 	/* Add handler for /cookie example */
