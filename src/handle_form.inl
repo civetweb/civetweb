@@ -115,6 +115,21 @@ url_encoded_field_get(const struct mg_connection *conn,
 
 
 static int
+unencoded_field_get(const struct mg_connection *conn,
+                    const char *key,
+                    size_t key_len,
+                    const char *value,
+                    size_t value_len,
+                    struct mg_form_data_handler *fdh)
+{
+	char key_dec[1024];
+	mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
+
+	return fdh->field_get(key_dec, value, value_len, fdh->user_data);
+}
+
+
+static int
 field_stored(const struct mg_connection *conn,
              const char *path,
              long long file_size,
@@ -672,14 +687,14 @@ mg_handle_form_request(struct mg_connection *conn,
 				towrite -= bl + 4;
 
 				if (field_storage == FORM_FIELD_STORAGE_GET) {
-					url_encoded_field_get(conn,
-					                      ((get_block > 0) ? NULL : nbeg),
-					                      ((get_block > 0)
-					                           ? 0
-					                           : (size_t)(nend - nbeg)),
-					                      hend,
-					                      towrite,
-					                      fdh);
+					unencoded_field_get(conn,
+					                    ((get_block > 0) ? NULL : nbeg),
+					                    ((get_block > 0)
+					                         ? 0
+					                         : (size_t)(nend - nbeg)),
+					                    hend,
+					                    towrite,
+					                    fdh);
 					get_block++;
 				}
 
@@ -728,13 +743,13 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			if (field_storage == FORM_FIELD_STORAGE_GET) {
 				/* Call callback */
-				url_encoded_field_get(conn,
-				                      ((get_block > 0) ? NULL : nbeg),
-				                      ((get_block > 0) ? 0
-				                                       : (size_t)(nend - nbeg)),
-				                      hend,
-				                      towrite,
-				                      fdh);
+				unencoded_field_get(conn,
+				                    ((get_block > 0) ? NULL : nbeg),
+				                    ((get_block > 0) ? 0
+				                                     : (size_t)(nend - nbeg)),
+				                    hend,
+				                    towrite,
+				                    fdh);
 			}
 
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
