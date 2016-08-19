@@ -791,3 +791,447 @@ mg_handle_form_request(struct mg_connection *conn,
 	/* Unknown Content-Type */
 	return -1;
 }
+
+
+struct mg_form_data {
+	struct mg_connection *conn;
+	/* key: Name of the field ("name" property of the HTML input field). */
+	const char *key;
+	/*   filename: Name of a file to upload, at the client computer.
+	 *             Only set for input fields of type "file", otherwise NULL. */
+	const char *filename;
+
+	int enctype; /* 0=urlencoded, 1=multipart/form-data */
+
+	const char *boundary;
+
+	char *buf; /* Intermediate buffer, must hold > strlen(boundary) + 4 */
+	size_t buf_size; /* Total size of available memory at *buf */
+
+	size_t buf_len; /* Length of buffered data */
+
+	size_t data_len; /* Length of validated data */
+	size_t read_offset; /* Read offset into validated data */
+};
+
+
+static int mg_read_form_data_inner(struct mg_form_data *fd, void *buf, size_t len);
+
+int mg_handle_form_data(struct mg_connection *conn,
+                        mg_form_data_callback fdh,
+                        void *user_data)
+{
+	const char *content_type;
+	char buf[1024];
+	int buf_fill = 0;
+	int r;
+	int field_count = 0;
+
+	int has_body_data =
+			(conn->request_info.content_length > 0) || (conn->is_chunked);
+
+	/* There are three ways to encode data from a HTML form:
+	 * 1) method: GET (default)
+	 *    The form data is in the HTTP query string.
+	 * 2) method: POST, enctype: "application/x-www-form-urlencoded"
+	 *    The form data is in the request body.
+	 *    The body is url encoded (the default encoding for POST).
+	 * 3) method: POST, enctype: "multipart/form-data".
+	 *    The form data is in the request body of a multipart message.
+	 *    This is the typical way to handle file upload from a form.
+	 */
+
+	if (!has_body_data) {
+		/* TODO: Fix below parser to call handler for each key with fd setup
+		 * so the read handler will retrieve the corresponding value. */
+	}
+
+	content_type = mg_get_header(conn, "Content-Type");
+
+	if (!content_type
+			|| !mg_strcasecmp(content_type, "APPLICATION/X-WWW-FORM-URLENCODED")
+			|| !mg_strcasecmp(content_type, "APPLICATION/WWW-FORM-URLENCODED")) {
+		/* TODO: Much like the GET case above, but the buffer needs to be
+		 * refilled with the POST data, like below multipart case. */
+	}
+
+	if (!mg_strncasecmp(content_type, "MULTIPART/FORM-DATA;", 20)) {
+		/* The form data is in the request body data, encoded as multipart
+		 * content (see https://www.ietf.org/rfc/rfc1867.txt,
+		 * https://www.ietf.org/rfc/rfc2388.txt). */
+		const char *boundary;
+		size_t bl;
+		struct mg_request_info part_header;
+		char *hbuf, *hend, *fbeg, *fend, *nbeg, *nend;
+		const char *content_disp;
+
+		memset(&part_header, 0, sizeof(part_header));
+
+		/* Skip all spaces between MULTIPART/FORM-DATA; and BOUNDARY= */
+		bl = 20;
+		while (content_type[bl] == ' ') {
+			bl++;
+		}
+
+		/* There has to be a BOUNDARY definition in the Content-Type header */
+		if (mg_strncasecmp(content_type + bl, "BOUNDARY=", 9)) {
+			/* Malformed request */
+			return -1;
+		}
+
+		boundary = content_type + bl + 9;
+		bl = strlen(boundary);
+
+		if (bl + 800 > sizeof(buf)) {
+			/* Sanity check:  The algorithm can not work if bl >= sizeof(buf),
+			 * and it will not work effectively, if the buf is only a few byte
+			 * larger than bl, or it buf can not hold the multipart header
+			 * plus the boundary.
+			 * Check some reasonable number here, that should be fulfilled by
+			 * any reasonable request from every browser. If it is not
+			 * fulfilled, it might be a hand-made request, intended to
+			 * interfere with the algorithm. */
+			return -1;
+		}
+
+		/* Set up initial condition to match the following for easier handling. */
+		buf[0] = '\r';
+		buf[1] = '\n';
+		buf_fill = 2;
+
+		for (;;) {
+
+			r = mg_read(conn,
+			            buf + (size_t)buf_fill,
+			            sizeof(buf) - 1 - (size_t)buf_fill);
+			if (r < 0) {
+				/* read error */
+				return -1;
+			}
+			buf_fill += r;
+			buf[buf_fill] = 0;
+			if (buf_fill < (int)bl + 6) {
+				/* Not enough data */
+				return -1;
+			}
+
+			if (memcmp(buf, "\r\n--", 4)) {
+				/* Malformed request */
+				return -1;
+			}
+			if (strncmp(buf + 4, boundary, bl)) {
+				/* Malformed request */
+				return -1;
+			}
+			if (buf[bl + 4] != '\r' || buf[bl + 5] != '\n') {
+				/* Every part must end with \r\n, if there is another part.
+				 * The end of the request has an extra -- */
+				if (((size_t)buf_fill != (size_t)(bl + 8))
+						|| (strncmp(buf + bl + 4, "--\r\n", 4))) {
+					/* Malformed request */
+					return -1;
+				}
+				/* End of the request */
+				break;
+			}
+
+			/* Next, we need to get the part header: Read until \r\n\r\n */
+			hbuf = buf + bl + 6;
+			hend = strstr(hbuf, "\r\n\r\n");
+			if (!hend) {
+				/* Malformed request */
+				return -1;
+			}
+
+			parse_http_headers(&hbuf, &part_header);
+			if ((hend + 2) != hbuf) {
+				/* Malformed request */
+				return -1;
+			}
+
+			/* Skip \r\n\r\n */
+			hend += 4;
+
+			/* According to the RFC, every part has to have a header field like:
+			 * Content-Disposition: form-data; name="..." */
+			content_disp = get_header(&part_header, "Content-Disposition");
+			if (!content_disp) {
+				/* Malformed request */
+				return -1;
+			}
+
+			/* Get the mandatory name="..." part of the Content-Disposition
+			 * header. */
+			nbeg = strstr(content_disp, "name=\"");
+			if (!nbeg) {
+				/* Malformed request */
+				return -1;
+			}
+			nbeg += 6;
+			nend = strchr(nbeg, '\"');
+			if (!nend) {
+				/* Malformed request */
+				return -1;
+			}
+
+			char key_dec[256];
+			int key_dec_len = mg_url_decode(nbeg,
+			                                (int)(nend - nbeg),
+			                                key_dec,
+			                                (int)sizeof(key_dec),
+			                                1);
+
+			if (((size_t)key_dec_len >= (size_t)sizeof(key_dec))
+			    || (key_dec_len < 0)) {
+				return -1;
+			}
+
+			char filename[256];
+			int filename_len = 0;
+
+			/* Get the optional filename="..." part of the Content-Disposition
+			 * header. */
+			fbeg = strstr(content_disp, "filename=\"");
+			if (fbeg) {
+				fbeg += 10;
+				fend = strchr(fbeg, '\"');
+				if (!fend) {
+					/* Malformed request (the filename field is optional, but if
+					 * it exists, it needs to be terminated correctly). */
+					return -1;
+				}
+
+				/* TODO: check Content-Type */
+				/* Content-Type: application/octet-stream */
+
+				filename_len = mg_url_decode(fbeg,
+				                             (int)(fend - fbeg),
+				                             filename,
+				                             (int)sizeof(filename),
+				                             1);
+
+				if (((size_t)filename_len >= (size_t)sizeof(filename))
+				    || (filename_len < 0)) {
+					return -1;
+				}
+			} else {
+				fend = fbeg;
+			}
+
+			field_count++;
+
+			struct mg_form_data fd = {
+				.conn = conn,
+				.key = key_dec,
+				.filename = filename_len > 0 ? filename : NULL,
+				.boundary = boundary,
+				.enctype = 1,
+				.buf = buf,
+				.buf_size = sizeof(buf) - 1,
+				.buf_len = buf_fill,
+				.data_len = hend - buf,
+				.read_offset = hend - buf,
+			};
+
+			/* Give the callback a chance to consume the data. */
+			if (fdh != NULL) {
+				r = fdh(&fd, user_data);
+				if (r < 0) {
+					return -1;
+				}
+			}
+
+			/* Discard any remaining data. */
+			do {
+				char tmp_buf[64];
+				r = mg_read_form_data_inner(&fd, tmp_buf, sizeof(tmp_buf));
+			} while (r > 0);
+
+			if (r < 0) {
+				return -1;
+			}
+
+			buf_fill = fd.buf_len;
+		}
+
+		/* All parts handled */
+		return field_count;
+	}
+
+	/* Unknown Content-Type */
+	return -1;
+}
+
+
+/* Returns the number of bytes that are definitely *not* part of a boundary.
+ * Enough data must be buffered so that if a boundary starts at offset zero,
+ * it must be complete. */
+static int to_boundary(const char *buf,
+                       size_t buf_len,
+                       const char *boundary,
+                       size_t boundary_len)
+{
+	/* We must do a binary search here, not a string search, since the buffer
+	 * may contain '\x00' bytes, if binary data is transferred. */
+	int clen = (int)buf_len - (int)boundary_len - 4;
+	int i;
+
+	if (clen < 0) {
+		/* Boundary can't fit. If this was a real boundary, all of it would
+		 * have been available, i.e. this is all valid data. */
+		return buf_len;
+	}
+
+	for (i = 0; i <= clen; i++) {
+		if (buf[i] == '\r' && buf[i+1] == '\n' && buf[i+2] == '-' && buf[i+3] == '-') {
+			if (!memcmp(buf + i + 4, boundary, boundary_len)) {
+				break;
+			}
+		}
+	}
+	return i;
+}
+
+
+const char *mg_get_form_key(struct mg_form_data *fd)
+{
+	return fd->key;
+}
+
+
+const char *mg_get_form_filename(struct mg_form_data *fd)
+{
+	return fd->filename;
+}
+
+
+struct mg_connection *mg_get_form_connection(struct mg_form_data *fd)
+{
+	return fd->conn;
+}
+
+
+static int mg_read_form_data_inner(struct mg_form_data *fd, void *buf, size_t len)
+{
+	/* Fill buffer if empty. */
+	if (fd->read_offset == fd->data_len) {
+		if (fd->enctype == 1) {
+			/* Move remaining buffered but not validated data, including potential
+			 * partial boundary to the start of the buffer. */
+			memmove(fd->buf, fd->buf + fd->data_len, fd->buf_len - fd->data_len);
+			fd->buf_len -= fd->data_len;
+			fd->data_len = 0;
+			fd->read_offset = 0;
+
+			/* Fill the buffer */
+			int ret = mg_read(fd->conn,
+			                  fd->buf + fd->buf_len,
+			                  fd->buf_size - fd->buf_len);
+			if (ret < 0) {
+				return ret;
+			}
+
+			fd->buf_len += ret;
+
+			/* Validate data by holding off any possible prefix of the boundary */
+			fd->data_len = to_boundary(fd->buf, fd->buf_len,
+			                           fd->boundary, strlen(fd->boundary));
+
+			if (fd->data_len == 0) {
+				/* No more data available for this field. */
+				return 0;
+			}
+		} else {
+			/* TODO:
+			 * Decode application/x-www-form-urlencoded data into buffer, until '&'.
+			 * If fd->conn->method is "GET", the source is in the query string. If
+			 * it is "POST", the data must be fetched with mg_read, similarly to
+			 * above multipart/form-data case. It should be possible to decode
+			 * directly into the target buf if we can keep track of the state
+			 * between calls when not all data is consumed.*/
+		}
+	}
+
+	if (len > fd->data_len - fd->read_offset) {
+		len = fd->data_len - fd->read_offset;
+	}
+
+	memcpy(buf, fd->buf + fd->read_offset, len);
+	fd->read_offset += len;
+
+	return len;
+}
+
+
+int mg_read_form_data(struct mg_form_data *fd, void *buf, size_t len)
+{
+	int num_read = 0;
+	int r;
+
+	do {
+		r = mg_read_form_data_inner(fd, buf + num_read, len - num_read);
+		if (r < 0) {
+			return -1;
+		}
+		if (r == 0) {
+			break;
+		}
+		num_read += r;
+	} while ((size_t)num_read < len);
+
+	return num_read;
+}
+
+
+int mg_store_form_data(struct mg_form_data *fd, const char *filename)
+{
+	struct file fstore = STRUCT_FILE_INITIALIZER;
+	int file_size;
+	char block[512];
+	int r;
+
+	/* Default to client-provided name */
+	if (filename == NULL) {
+		filename = fd->filename;
+	}
+	if (filename == NULL) {
+		return -1;
+	}
+
+	if (mg_fopen(fd->conn, filename, "wb", &fstore) == 0) {
+		fstore.fp = NULL;
+	}
+	file_size = 0;
+	if (!fstore.fp) {
+		mg_cry(fd->conn, "%s: Cannot create file %s", __func__, filename);
+		return -1;
+	}
+
+	for (;;) {
+		r = mg_read_form_data(fd, block, sizeof(block));
+		if (r < 0) {
+			mg_cry(fd->conn, "%s: Cannot read from socket", __func__);
+			goto err;
+		}
+		if (r == 0) {
+			break;
+		}
+		size_t n = fwrite(block, 1, (size_t)r, fstore.fp);
+		if ((n != (size_t)r) || (ferror(fstore.fp))) {
+			mg_cry(fd->conn, "%s: Cannot write file %s", __func__, filename);
+			goto err;
+		}
+		file_size += (size_t)n;
+	}
+
+	return file_size;
+
+err:
+	fclose(fstore.fp);
+	fstore.fp = NULL;
+	r = mg_remove(mg_get_form_connection(fd), filename);
+	if (r != 0) {
+		mg_cry(fd->conn, "%s: Cannot remove invalid file %s", __func__, filename);
+	}
+	return -1;
+}

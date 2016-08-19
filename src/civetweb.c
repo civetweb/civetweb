@@ -9666,15 +9666,14 @@ get_remote_ip(const struct mg_connection *conn)
 }
 
 
-/* The mg_upload function is superseeded by mg_handle_form_request. */
+/* The mg_upload function is superseeded by mg_handle_form_data. */
 #include "handle_form.inl"
-
 
 #if defined(MG_LEGACY_INTERFACE)
 /* Implement the deprecated mg_upload function by calling the new
- * mg_handle_form_request function. While mg_upload could only handle
+ * mg_handle_form_data function. While mg_upload could only handle
  * HTML forms sent as POST request in multipart/form-data format
- * containing only file input elements, mg_handle_form_request can
+ * containing only file input elements, mg_handle_form_data can
  * handle all form input elements and all standard request methods. */
 struct mg_upload_user_data {
 	struct mg_connection *conn;
@@ -9685,58 +9684,36 @@ struct mg_upload_user_data {
 
 /* Helper function for deprecated mg_upload. */
 static int
-mg_upload_field_found(const char *key,
-                      const char *filename,
-                      char *path,
-                      size_t pathlen,
+mg_upload_field_found(struct mg_form_data *field,
                       void *user_data)
 {
+	const char *filename;
 	int truncated = 0;
 	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
-	(void)key;
+	char path[512];
+	int ret;
 
+	filename = mg_get_form_filename(field);
 	if (!filename) {
 		mg_cry(fud->conn, "%s: No filename set", __func__);
-		return FORM_FIELD_STORAGE_ABORT;
+		return -1;
 	}
 	mg_snprintf(fud->conn,
 	            &truncated,
 	            path,
-	            pathlen - 1,
+	            sizeof(path) - 1,
 	            "%s/%s",
 	            fud->destination_dir,
 	            filename);
 	if (!truncated) {
 		mg_cry(fud->conn, "%s: File path too long", __func__);
-		return FORM_FIELD_STORAGE_ABORT;
+		return -1;
 	}
-	return FORM_FIELD_STORAGE_STORE;
-}
 
-
-/* Helper function for deprecated mg_upload. */
-static int
-mg_upload_field_get(const char *key,
-                    const char *value,
-                    size_t value_size,
-                    void *user_data)
-{
-	/* Function should never be called */
-	(void)key;
-	(void)value;
-	(void)value_size;
-	(void)user_data;
-
-	return 0;
-}
-
-
-/* Helper function for deprecated mg_upload. */
-static int
-mg_upload_field_stored(const char *path, long long file_size, void *user_data)
-{
-	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
-	(void)file_size;
+	ret = mg_store_form_data(field, filename);
+	if (ret < 0) {
+		return -1;
+	}
 
 	fud->num_uploaded_files++;
 	fud->conn->ctx->callbacks.upload(fud->conn, path);
@@ -9750,14 +9727,9 @@ int
 mg_upload(struct mg_connection *conn, const char *destination_dir)
 {
 	struct mg_upload_user_data fud = {conn, destination_dir, 0};
-	struct mg_form_data_handler fdh = {mg_upload_field_found,
-	                                   mg_upload_field_get,
-	                                   mg_upload_field_stored,
-	                                   0};
 	int ret;
 
-	fdh.user_data = (void *)&fud;
-	ret = mg_handle_form_request(conn, &fdh);
+	ret = mg_handle_form_data(conn, mg_upload_field_found, (void *)&fud);
 
 	if (ret < 0) {
 		mg_cry(conn, "%s: Error while parsing the request", __func__);

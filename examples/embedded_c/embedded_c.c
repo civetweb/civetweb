@@ -194,13 +194,14 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 
 
 int
-field_found(const char *key,
-            const char *filename,
-            char *path,
-            size_t pathlen,
+field_found(struct mg_form_data *field,
             void *user_data)
 {
-	struct mg_connection *conn = (struct mg_connection *)user_data;
+	struct mg_connection *conn = mg_get_form_connection(field);
+	const char *key = mg_get_form_key(field);
+	const char *filename = mg_get_form_filename(field);
+	char path[512];
+	int ret;
 
 	mg_printf(conn, "\r\n\r\n%s:\r\n", key);
 
@@ -208,37 +209,28 @@ field_found(const char *key,
 #ifdef _WIN32
 		_snprintf(path, pathlen, "D:\\tmp\\%s", filename);
 #else
-		snprintf(path, pathlen, "/tmp/%s", filename);
+		snprintf(path, sizeof(path), "/tmp/%s", filename);
 #endif
-		return FORM_FIELD_STORAGE_STORE;
+		ret = mg_store_form_data(field, path);
+		if (ret < 0) {
+			return -1;
+		}
+		mg_printf(conn,
+		          "stored as %s (%lu bytes)\r\n\r\n",
+		          path,
+		          (unsigned long)ret);
+		return 0;
 	}
-	return FORM_FIELD_STORAGE_GET;
-}
 
-
-int
-field_get(const char *key, const char *value, size_t valuelen, void *user_data)
-{
-	struct mg_connection *conn = (struct mg_connection *)user_data;
-
-	if (key[0]) {
-		mg_printf(conn, "%s = ", key);
+	ret = mg_read_form_data(field, path, sizeof(path) - 1);
+	if (ret < 0) {
+		return -1;
 	}
-	mg_write(conn, value, valuelen);
 
-	return 0;
-}
+	path[ret] = '\0';
 
-
-int
-field_stored(const char *path, long long file_size, void *user_data)
-{
-	struct mg_connection *conn = (struct mg_connection *)user_data;
-
-	mg_printf(conn,
-	          "stored as %s (%lu bytes)\r\n\r\n",
-	          path,
-	          (unsigned long)file_size);
+	mg_printf(conn, "%s = ", key);
+	mg_write(conn, path, ret);
 
 	return 0;
 }
@@ -250,18 +242,16 @@ FormHandler(struct mg_connection *conn, void *cbdata)
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
 	int ret;
-	struct mg_form_data_handler fdh = {field_found, field_get, field_stored, 0};
 
 	/* It would be possible to check the request info here before calling
 	 * mg_handle_form_request. */
 	(void)req_info;
 
 	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
-	fdh.user_data = (void *)conn;
 
 	/* Call the form handler */
 	mg_printf(conn, "Form data:");
-	ret = mg_handle_form_request(conn, &fdh);
+	ret = mg_handle_form_data(conn, &field_found, NULL);
 	mg_printf(conn, "\r\n%i fields found", ret);
 
 	return 1;
@@ -298,7 +288,7 @@ CookieHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn, "<h2>This is the CookieHandler.</h2>", cbdata);
+	mg_printf(conn, "<h2>This is the CookieHandler.</h2>");
 	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
 
 	if (first_str[0] == 0) {

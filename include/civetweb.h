@@ -765,6 +765,54 @@ CIVETWEB_API int mg_upload(struct mg_connection *conn,
 #endif
 
 
+struct mg_form_data;
+
+/* This callback function is called if a new field has been found.
+ * The callback should examine the key and read the field's data using
+ * mg_form_data_read(). Data not read will be discarded.
+ *
+ * Parameters:
+ *   field: Form field handle.
+ *   user_data: Value of the user_data parameter to mg_handle_form_data().
+ *
+ * Return value:
+ *   0 after successful field handling, < 0 to abort form processing.
+ */
+typedef int (*mg_form_data_callback)(struct mg_form_data *field,
+                                    void *user_data);
+
+/* Process form data.
+ * Returns the number of fields handled, or < 0 in case of an error.
+ * Note: It is possible that several fields are already handled successfully
+ * (e.g., stored into files), before the request handling is stopped with an
+ * error. In this case a number < 0 is returned as well.
+ * In any case, it is the duty of the caller to perform any necessary
+ * cleanup. */
+CIVETWEB_API int mg_handle_form_data(struct mg_connection *conn,
+                                     mg_form_data_callback fdh,
+                                     void *user_data);
+
+/* Get the form field's key ("name" property of the HTML input field). */
+CIVETWEB_API const char *mg_get_form_key(struct mg_form_data *fd);
+
+/* Get the client-provided file name for the form field (for input fields
+ * of type "file"), or NULL if none was provided. */
+CIVETWEB_API const char *mg_get_form_filename(struct mg_form_data *fd);
+
+/* Get the connection associated with form data handle fd. */
+CIVETWEB_API struct mg_connection *mg_get_form_connection(struct mg_form_data *fd);
+
+/* Read form data associated with form data handle fd. This has the same
+ * semantics as mg_read(). */
+CIVETWEB_API int mg_read_form_data(struct mg_form_data *fd,
+                                   void *buf,
+                                   size_t len);
+
+/* Convenience function for storing form data to file from a mg_form_data_callback.
+ * filename may be NULL to use the client provided name, if any. */
+CIVETWEB_API int mg_store_form_data(struct mg_form_data *fd,
+                                    const char *filename);
+
 /* This structure contains callback functions for handling form fields.
    It is used as an argument to mg_handle_form_request. */
 struct mg_form_data_handler {
