@@ -123,6 +123,8 @@ unencoded_field_get(const struct mg_connection *conn,
                     struct mg_form_data_handler *fdh)
 {
 	char key_dec[1024];
+    (void)conn;
+
 	mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 
 	return fdh->field_get(key_dec, value, value_len, fdh->user_data);
