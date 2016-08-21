@@ -1729,8 +1729,18 @@ field_found(const char *key,
 static int g_field_step;
 
 static int
-field_get(const char *key, const char *value, size_t valuelen, void *user_data)
+field_get(const char *key,
+          const char *value_untruncated,
+          size_t valuelen,
+          void *user_data)
 {
+	/* Copy the untruncated value, so string compare functions can be used. */
+	/* The check unit test library does not have build in memcmp functions. */
+	char *value = (char *)malloc(valuelen + 1);
+	ck_assert(value != NULL);
+	memcpy(value, value_untruncated, valuelen);
+	value[valuelen] = 0;
+
 	ck_assert_ptr_eq(user_data, (void *)&g_field_found_return);
 	ck_assert_int_ge(g_field_step, 0);
 
@@ -1850,6 +1860,8 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 		ck_abort_msg("field_get called with g_field_step == %i",
 		             (int)g_field_step);
 	}
+
+	free(value);
 
 	return 0;
 }
