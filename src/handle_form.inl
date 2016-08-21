@@ -91,7 +91,7 @@ url_encoded_field_get(const struct mg_connection *conn,
 	char key_dec[1024];
 
 	char *value_dec = mg_malloc(value_len + 1);
-	int value_dec_len;
+	int value_dec_len, ret;
 
 	if (!value_dec) {
 		/* Log error message and stop parsing the form data. */
@@ -107,10 +107,14 @@ url_encoded_field_get(const struct mg_connection *conn,
 	value_dec_len =
 	    mg_url_decode(value, (int)value_len, value_dec, (int)value_len + 1, 1);
 
-	return fdh->field_get(key_dec,
-	                      value_dec,
-	                      (size_t)value_dec_len,
-	                      fdh->user_data);
+	ret = fdh->field_get(key_dec,
+	                     value_dec,
+	                     (size_t)value_dec_len,
+	                     fdh->user_data);
+
+	mg_free(value_dec);
+
+	return ret;
 }
 
 
@@ -123,7 +127,7 @@ unencoded_field_get(const struct mg_connection *conn,
                     struct mg_form_data_handler *fdh)
 {
 	char key_dec[1024];
-    (void)conn;
+	(void)conn;
 
 	mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 
