@@ -60,14 +60,14 @@ BUILD_DIRS += $(BUILD_DIR)/test
 endif
 
 # only set main compile options if none were chosen
-CFLAGS += -Wall -Wextra -Wshadow -Wformat-security -Winit-self -Wmissing-prototypes -O2 -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400
+CFLAGS += -Wall -Wextra -Wshadow -Wformat-security -Winit-self -Wmissing-prototypes -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400
 
 LIBS = -lpthread -lm
 
 ifdef WITH_DEBUG
-  CFLAGS += -g -DDEBUG_ENABLED
+  CFLAGS += -g -DDEBUG
 else
-  CFLAGS += -DNDEBUG
+  CFLAGS += -O2 -DNDEBUG
 endif
 
 ifdef WITH_CPP
