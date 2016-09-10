@@ -11915,16 +11915,22 @@ close_socket_gracefully(struct mg_connection *conn)
 	 * ephemeral port exhaust problem under high QPS. */
 	linger.l_onoff = 1;
 	linger.l_linger = 1;
-
-	if (setsockopt(conn->client.sock,
-	               SOL_SOCKET,
-	               SO_LINGER,
-	               (char *)&linger,
-	               sizeof(linger)) != 0) {
-		mg_cry(conn,
-		       "%s: setsockopt(SOL_SOCKET SO_LINGER) failed: %s",
-		       __func__,
-		       strerror(ERRNO));
+	int error_code=0;
+	getsockopt(conn->client.sock, SOL_SOCKET, SO_ERROR, &error_code, sizeof(error_code));
+	if (error_code==ECONNRESET) {
+		/* Socket already closed by client/peer, close socket without linger */
+	}
+	else{
+		if (setsockopt(conn->client.sock,
+					   SOL_SOCKET,
+					   SO_LINGER,
+					   (char *)&linger,
+					   sizeof(linger)) != 0) {
+			mg_cry(conn,
+				   "%s: setsockopt(SOL_SOCKET SO_LINGER) failed: %s",
+				   __func__,
+				   strerror(ERRNO));
+		}
 	}
 
 	/* Send FIN to the client */
