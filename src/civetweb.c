@@ -11915,8 +11915,8 @@ close_socket_gracefully(struct mg_connection *conn)
 	 * ephemeral port exhaust problem under high QPS. */
 	linger.l_onoff = 1;
 	linger.l_linger = 1;
-	int error_code=0;
-	getsockopt(conn->client.sock, SOL_SOCKET, SO_ERROR, &error_code, sizeof(error_code));
+	socklen_t error_code=0;
+	getsockopt(conn->client.sock, SOL_SOCKET, SO_ERROR, &error_code, (socklen_t *)sizeof(error_code));
 	if (error_code==ECONNRESET) {
 		/* Socket already closed by client/peer, close socket without linger */
 	}
