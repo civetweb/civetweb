@@ -140,7 +140,7 @@ Comma separated list of URI=PATH pairs, specifying that given
 URIs must be protected with password files specified by PATH.
 All Paths must be full file paths.
 
-### authentication_domain `mydomain.com`
+### authentication\_domain `mydomain.com`
 Authorization realm used for HTTP digest authentication. This domain is
 used in the encoding of the `.htpasswd` authorization files as well.
 Changing the domain retroactively will render the existing passwords useless.
@@ -279,13 +279,20 @@ For example, to bind to a loopback interface on port 80 and to
 all interfaces on HTTPS port 443, use `127.0.0.1:80,443s`.
 
 If the server is built with IPv6 support, `[::]:8080` can be used to
-listen to connections to port 8080 from both, IPv4 and IPv6.
-IPv6 addresses of network interfaces can be specified as well,
+listen to IPv6 connections to port 8080. IPv6 addresses of network
+interfaces can be specified as well,
 e.g. `[::1]:8080` for the IPv6 loopback interface.
+
+It is possible to use network interface addresses (e.g., `192.0.2.3:80`,
+`[2001:0db8::1234]:80`). To get a list of available network interface
+addresses, use `ipconfig` (in a `cmd` window in Windows) or `ifconfig` 
+(in a Linux shell).
 
 ### document\_root `.`
 A directory to serve. By default, the current working directory is served.
 The current directory is commonly referenced as dot (`.`).
+It is recommended to use an absolute path for document\_root, in order to 
+avoid accidentally serving the wrong directory.
 
 ### ssl\_certificate
 Path to the SSL certificate file. This option is only required when at least
@@ -408,28 +415,28 @@ For values <0 and values >31622400, the behavior is undefined.
 URL encoded request strings are decoded in the server, unless it is disabled
 by setting this option to `no`.
 
-### ssl_verify_peer `no`
+### ssl\_verify\_peer `no`
 Enable client's certificate verification by the server.
 
-### ssl_ca_path
+### ssl\_ca\_path
 Name of a directory containing trusted CA certificates. Each file in the
 directory must contain only a single CA certificate. The files must be named
 by the subject name’s hash and an extension of “.0”. If there is more than one
 certificate with the same subject name they should have extensions ".0", ".1",
 ".2" and so on respectively.
 
-### ssl_ca_file
+### ssl\_ca\_file
 Path to a .pem file containing trusted certificates. The file may contain
 more than one certificate.
 
-### ssl_verify_depth `9`
+### ssl\_verify\_depth `9`
 Sets maximum depth of certificate chain. If client's certificate chain is longer
 than the depth set here connection is refused.
 
-### ssl_default_verify_paths `yes`
+### ssl\_default\_verify\_paths `yes`
 Loads default trusted certificates locations set at openssl compile time.
 
-### ssl_cipher_list
+### ssl\_cipher\_list
 List of ciphers to present to the client. Entries should be separated by
 colons, commas or spaces.
 
@@ -440,7 +447,7 @@ colons, commas or spaces.
 See [this entry](https://www.openssl.org/docs/manmaster/apps/ciphers.html) in
 OpenSSL documentation for full list of options and additional examples.
 
-### ssl_protocol_version `0`
+### ssl\_protocol\_version `0`
 Sets the minimal accepted version of SSL/TLS protocol according to the table:
 
 Protocols | Value
@@ -451,7 +458,7 @@ TLS1.0+TLS1.1+TLS1.2 | 2
 TLS1.1+TLS1.2 | 3
 TLS1.2 | 4
 
-### ssl_short_trust `no`
+### ssl\_short\_trust `no`
 Enables the use of short lived certificates. This will allow for the certificates
 and keys specified in `ssl_certificate`, `ssl_ca_file` and `ssl_ca_path` to be
 exchanged and reloaded while the server is running.
@@ -463,7 +470,7 @@ increase performance while swapping the certificate.
 Disk IO performance can be improved when keeping the certificates and keys stored
 on a tmpfs (linux) on a system with very high throughput.
 
-### allow_sendfile_call `yes`
+### allow\_sendfile\_call `yes`
 This option can be used to enable or disable the use of the Linux `sendfile` system call. It is only available for Linux systems and only affecting HTTP (not HTTPS) connections if `throttle` is not enabled. While using the `sendfile` call will lead to a performance boost for HTTP connections, this call may be broken for some file systems and some operating system versions.
 
 
