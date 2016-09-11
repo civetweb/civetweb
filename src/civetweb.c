@@ -7029,17 +7029,17 @@ handle_static_file_request(struct mg_connection *conn,
 	                range,
 	                encoding);
 
-    /* The previous code must not add any header starting with X- to make
-     * sure no one of the additional_headers is included twice */
+	/* The previous code must not add any header starting with X- to make
+	 * sure no one of the additional_headers is included twice */
 
-    if (additional_headers != NULL) {
-        (void)mg_printf(conn,
-                        "%.*s\r\n\r\n",
-                        (int)strlen(additional_headers),
-                        additional_headers);
-    } else {
-        (void)mg_printf(conn, "\r\n");
-    }
+	if (additional_headers != NULL) {
+		(void)mg_printf(conn,
+		                "%.*s\r\n\r\n",
+		                (int)strlen(additional_headers),
+		                additional_headers);
+	} else {
+		(void)mg_printf(conn, "\r\n");
+	}
 
 	if (strcmp(conn->request_info.request_method, "HEAD") != 0) {
 		send_file_data(conn, filep, r1, cl);
@@ -7101,9 +7101,9 @@ mg_send_mime_file(struct mg_connection *conn,
 
 void
 mg_send_mime_file2(struct mg_connection *conn,
-                  const char *path,
-                  const char *mime_type,
-                  const char* additional_headers)
+                   const char *path,
+                   const char *mime_type,
+                   const char *additional_headers)
 {
 	struct file file = STRUCT_FILE_INITIALIZER;
 	if (mg_stat(conn, path, &file)) {
@@ -7121,7 +7121,8 @@ mg_send_mime_file2(struct mg_connection *conn,
 				                "Error: Directory listing denied");
 			}
 		} else {
-			handle_static_file_request(conn, path, &file, mime_type, additional_headers);
+			handle_static_file_request(
+			    conn, path, &file, mime_type, additional_headers);
 		}
 	} else {
 		send_http_error(conn, 404, "%s", "Error: File not found");
@@ -11942,21 +11943,24 @@ close_socket_gracefully(struct mg_connection *conn)
 	 * ephemeral port exhaust problem under high QPS. */
 	linger.l_onoff = 1;
 	linger.l_linger = 1;
-	socklen_t error_code=0;
-	getsockopt(conn->client.sock, SOL_SOCKET, SO_ERROR, &error_code, (socklen_t *)sizeof(error_code));
-	if (error_code==ECONNRESET) {
+	socklen_t error_code = 0;
+	getsockopt(conn->client.sock,
+	           SOL_SOCKET,
+	           SO_ERROR,
+	           &error_code,
+	           (socklen_t *)sizeof(error_code));
+	if (error_code == ECONNRESET) {
 		/* Socket already closed by client/peer, close socket without linger */
-	}
-	else{
+	} else {
 		if (setsockopt(conn->client.sock,
-					   SOL_SOCKET,
-					   SO_LINGER,
-					   (char *)&linger,
-					   sizeof(linger)) != 0) {
+		               SOL_SOCKET,
+		               SO_LINGER,
+		               (char *)&linger,
+		               sizeof(linger)) != 0) {
 			mg_cry(conn,
-				   "%s: setsockopt(SOL_SOCKET SO_LINGER) failed: %s",
-				   __func__,
-				   strerror(ERRNO));
+			       "%s: setsockopt(SOL_SOCKET SO_LINGER) failed: %s",
+			       __func__,
+			       strerror(ERRNO));
 		}
 	}
 

@@ -630,13 +630,14 @@ CIVETWEB_API void mg_send_mime_file(struct mg_connection *conn,
      mime_type: Content-Type for file.  NULL will cause the type to be
                 looked up by the file extension.
      additional_headers: Additional custom header fields appended to the header.
-                         Each header must start with an X- to ensure it is not included twice.
+                         Each header must start with an X- to ensure it is not
+   included twice.
                          NULL does not append anything.
 */
 CIVETWEB_API void mg_send_mime_file2(struct mg_connection *conn,
-                                    const char *path,
-                                    const char *mime_type,
-                                    const char* additional_headers);
+                                     const char *path,
+                                     const char *mime_type,
+                                     const char *additional_headers);
 
 /* Store body data into a file. */
 CIVETWEB_API long long mg_store_body(struct mg_connection *conn,
