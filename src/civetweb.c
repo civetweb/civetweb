@@ -1015,6 +1015,7 @@ typedef struct SSL_CTX SSL_CTX;
 #include <openssl/pem.h>
 #include <openssl/engine.h>
 #include <openssl/conf.h>
+#include <openssl/dh.h>
 #else
 /* SSL loaded dynamically from DLL.
  * I put the prototypes here to be independent from OpenSSL source
@@ -1045,6 +1046,8 @@ typedef struct x509 X509;
 #define SSL_OP_NO_TLSv1_2 (0x08000000L)
 #define SSL_OP_NO_TLSv1_1 (0x10000000L)
 #define SSL_OP_SINGLE_DH_USE (0x00100000L)
+#define SSL_OP_CIPHER_SERVER_PREFERENCE (0x00400000L)
+#define SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION (0x00010000L)
 
 #define SSL_ERROR_NONE (0)
 #define SSL_ERROR_SSL (1)
@@ -11687,6 +11690,7 @@ set_ssl_option(struct mg_context *ctx)
 	protocol_ver = atoi(ctx->config[SSL_PROTOCOL_VERSION]);
 	SSL_CTX_set_options(ctx->ssl_ctx, ssl_get_protocol(protocol_ver));
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
+	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
 	SSL_CTX_set_ecdh_auto(ctx->ssl_ctx, 1);
 
 	/* If a callback has been specified, call it. */
