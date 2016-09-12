@@ -136,8 +136,17 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #include <mach/mach_time.h>
 #include <assert.h>
 
+/* Determine if the current OSX version supports clock_gettime */
+#ifdef __APPLE__
+  #include <AvailabilityMacros.h>
+  #ifndef MAC_OS_X_VERSION_10_12
+    #define MAC_OS_X_VERSION_10_12 101200
+  #endif
+#endif
+#define CIVETWEB_APPLE_HAVE_CLOCK_GETTIME defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
 
-/* clock_gettime is not implemented on OSX */
+#if !(CIVETWEB_APPLE_HAVE_CLOCK_GETTIME)
+/* clock_gettime is not implemented on OSX prior to 10.12 */
 int clock_gettime(int clk_id, struct timespec *t);
 
 int
@@ -181,6 +190,7 @@ clock_gettime(int clk_id, struct timespec *t)
 	}
 	return -1; /* EINVAL - Clock ID is unknown */
 }
+#endif
 #endif
 
 
