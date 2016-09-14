@@ -359,10 +359,6 @@ field_get_checksum(const char *key,
                    void *user_data)
 {
 	struct tfiles_checksums *context = (struct tfiles_checksums *)user_data;
-
-	char path[1026];
-	FILE *f;
-
 	(void)key;
 
 	context->file[context->index - 1].length += valuelen;
@@ -638,6 +634,17 @@ InformWebsockets(struct mg_context *ctx)
 #endif
 
 
+#ifndef NO_SSL
+int
+init_ssl(void *ssl_context, void *user_data)
+{
+	/* Add application specific SSL initialization */
+
+	return 0;
+}
+#endif
+
+
 int
 main(int argc, char *argv[])
 {
@@ -656,6 +663,10 @@ main(int argc, char *argv[])
 #ifndef NO_SSL
 	                         "ssl_certificate",
 	                         "../../resources/cert/server.pem",
+                             "ssl_protocol_version",
+                             "3",
+                             "ssl_cipher_list",
+                             "DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256"
 #endif
 	                         0};
 	struct mg_callbacks callbacks;
@@ -696,6 +707,9 @@ main(int argc, char *argv[])
 
 	/* Start CivetWeb web server */
 	memset(&callbacks, 0, sizeof(callbacks));
+#ifndef NO_SSL
+	callbacks.init_ssl = init_ssl;
+#endif
 	ctx = mg_start(&callbacks, 0, options);
 
 	/* Add handler EXAMPLE_URI, to explain the example */
@@ -813,3 +827,4 @@ main(int argc, char *argv[])
 
 	return EXIT_SUCCESS;
 }
+
