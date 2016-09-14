@@ -138,12 +138,14 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 /* Determine if the current OSX version supports clock_gettime */
 #ifdef __APPLE__
-  #include <AvailabilityMacros.h>
-  #ifndef MAC_OS_X_VERSION_10_12
-    #define MAC_OS_X_VERSION_10_12 101200
-  #endif
+#include <AvailabilityMacros.h>
+#ifndef MAC_OS_X_VERSION_10_12
+#define MAC_OS_X_VERSION_10_12 101200
 #endif
-#define CIVETWEB_APPLE_HAVE_CLOCK_GETTIME defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
+#endif
+#define CIVETWEB_APPLE_HAVE_CLOCK_GETTIME                                      \
+	defined(__APPLE__)                                                         \
+	    && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
 
 #if !(CIVETWEB_APPLE_HAVE_CLOCK_GETTIME)
 /* clock_gettime is not implemented on OSX prior to 10.12 */
@@ -11943,22 +11945,21 @@ close_socket_gracefully(struct mg_connection *conn)
 	int n;
 #endif
 	struct linger linger;
+	int error_code = 0;
+	socklen_t opt_len = sizeof(error_code);
 
 	if (!conn) {
 		return;
 	}
 
 	/* Set linger option to avoid socket hanging out after close. This
-	 * prevent
-	 * ephemeral port exhaust problem under high QPS. */
+	 * prevent ephemeral port exhaust problem under high QPS. */
 	linger.l_onoff = 1;
 	linger.l_linger = 1;
-	socklen_t error_code = 0;
-	getsockopt(conn->client.sock,
-	           SOL_SOCKET,
-	           SO_ERROR,
-	           &error_code,
-	           (socklen_t *)sizeof(error_code));
+
+	getsockopt(
+	    conn->client.sock, SOL_SOCKET, SO_ERROR, (char *)&error_code, &opt_len);
+
 	if (error_code == ECONNRESET) {
 		/* Socket already closed by client/peer, close socket without linger */
 	} else {
