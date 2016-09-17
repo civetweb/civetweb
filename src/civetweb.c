@@ -183,13 +183,15 @@ _civet_clock_gettime(int clk_id, struct timespec *t)
 
 /* if clock_gettime is declared, then __CLOCK_AVAILABILITY will be defined */
 #ifdef __CLOCK_AVAILABILITY
-/* If we compiled with Mac OSX 10.12 or later, then clock_gettime will be declared
+/* If we compiled with Mac OSX 10.12 or later, then clock_gettime will be
+ * declared
  * but it may be NULL at runtime. So we need to check before using it. */
 int _civet_safe_clock_gettime(int clk_id, struct timespec *t);
 
 int
-_civet_safe_clock_gettime(int clk_id, struct timespec *t) {
-	if( clock_gettime ) {
+_civet_safe_clock_gettime(int clk_id, struct timespec *t)
+{
+	if (clock_gettime) {
 		return clock_gettime(clk_id, t);
 	}
 	return _civet_clock_gettime(clk_id, t);
@@ -10714,12 +10716,21 @@ close_all_listening_sockets(struct mg_context *ctx)
 
 
 /* Valid listening port specification is: [ip_address:]port[s]
- * Examples for IPv4: 80, 443s, 127.0.0.1:3128, 1.2.3.4:8080s
+ * Examples for IPv4: 80, 443s, 127.0.0.1:3128, 192.0.2.3:8080s
  * Examples for IPv6: [::]:80, [::1]:80,
- *   [FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]:443s
- *   see https://tools.ietf.org/html/rfc3513#section-2.2 */
+ *   [2001:0db8:7654:3210:FEDC:BA98:7654:3210]:443s
+ *   see https://tools.ietf.org/html/rfc3513#section-2.2
+ * In order to bind to both, IPv4 and IPv6, you can either add
+ * both ports using 8080,[::]:8080, or the short form +8080.
+ * Both forms differ in detail: 8080,[::]:8080 create two sockets,
+ * one only accepting IPv4 the other only IPv6. +8080 creates
+ * one socket accepting IPv4 and IPv6. Depending on the IPv6
+ * environment, they might work differently, or might not work
+ * at all - it must be tested what options work best in the
+ * relevant network environment.
+ */
 static int
-parse_port_string(const struct vec *vec, struct socket *so)
+parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 {
 	unsigned int a, b, c, d, port;
 	int ch, len;
@@ -10732,6 +10743,7 @@ parse_port_string(const struct vec *vec, struct socket *so)
 	 * for both IPv4 and IPv6 (INADDR_ANY and IN6ADDR_ANY_INIT). */
 	memset(so, 0, sizeof(*so));
 	so->lsa.sin.sin_family = AF_INET;
+	*ip_version = 0;
 
 	if (sscanf(vec->ptr, "%u.%u.%u.%u:%u%n", &a, &b, &c, &d, &port, &len)
 	    == 5) {
@@ -10739,6 +10751,8 @@ parse_port_string(const struct vec *vec, struct socket *so)
 		so->lsa.sin.sin_addr.s_addr =
 		    htonl((a << 24) | (b << 16) | (c << 8) | d);
 		so->lsa.sin.sin_port = htons((uint16_t)port);
+		*ip_version = 4;
+
 #if defined(USE_IPV6)
 	} else if (sscanf(vec->ptr, "[%49[^]]]:%u%n", buf, &port, &len) == 2
 	           && mg_inet_pton(
@@ -10747,10 +10761,29 @@ parse_port_string(const struct vec *vec, struct socket *so)
 		/* so->lsa.sin6.sin6_family = AF_INET6; already set by mg_inet_pton
 		 */
 		so->lsa.sin6.sin6_port = htons((uint16_t)port);
+		*ip_version = 6;
 #endif
+
+	} else if ((vec->ptr[0] == '+')
+	           && (sscanf(vec->ptr + 1, "%u%n", &port, &len) == 1)) {
+/* Port is specified with a +, bind to IPv6 and IPv4, INADDR_ANY */
+
+#if defined(USE_IPV6)
+		/* Set socket family to IPv6, do not use IPV6_V6ONLY */
+		so->lsa.sin6.sin6_family = AF_INET6;
+		so->lsa.sin6.sin6_port = htons((uint16_t)port);
+		*ip_version = 4 + 6;
+#else
+		/* Bind to IPv4 only, since IPv6 is not built in. */
+		so->lsa.sin.sin_port = htons((uint16_t)port);
+		*ip_version = 4;
+#endif
+
 	} else if (sscanf(vec->ptr, "%u%n", &port, &len) == 1) {
 		/* If only port is specified, bind to IPv4, INADDR_ANY */
 		so->lsa.sin.sin_port = htons((uint16_t)port);
+		*ip_version = 4;
+
 	} else {
 		/* Parsing failure. Make port invalid. */
 		port = 0;
@@ -10786,6 +10819,7 @@ set_ports_option(struct mg_context *ctx)
 	struct pollfd *pfd;
 	union usa usa;
 	socklen_t len;
+	int ip_version;
 
 	int portsTotal = 0;
 	int portsOk = 0;
@@ -10798,11 +10832,12 @@ set_ports_option(struct mg_context *ctx)
 	memset(&usa, 0, sizeof(usa));
 	len = sizeof(usa);
 	list = ctx->config[LISTENING_PORTS];
+
 	while ((list = next_option(list, &vec, NULL)) != NULL) {
 
 		portsTotal++;
 
-		if (!parse_port_string(&vec, &so)) {
+		if (!parse_port_string(&vec, &so, &ip_version)) {
 			mg_cry(fc(ctx),
 			       "%.*s: invalid port spec (entry %i). Expecting list of: %s",
 			       (int)vec.len,
@@ -10846,6 +10881,7 @@ set_ports_option(struct mg_context *ctx)
 		               (SOCK_OPT_TYPE)&on,
 		               sizeof(on)) != 0) {
 
+			/* Set reuse option, but don't abort on errors. */
 			mg_cry(fc(ctx),
 			       "cannot set socket option SO_EXCLUSIVEADDRUSE (entry %i)",
 			       portsTotal);
@@ -10857,25 +10893,36 @@ set_ports_option(struct mg_context *ctx)
 		               (SOCK_OPT_TYPE)&on,
 		               sizeof(on)) != 0) {
 
+			/* Set reuse option, but don't abort on errors. */
 			mg_cry(fc(ctx),
 			       "cannot set socket option SO_REUSEADDR (entry %i)",
 			       portsTotal);
 		}
 #endif
 
+		if (ip_version > 4) {
 #if defined(USE_IPV6)
-		if (so.lsa.sa.sa_family == AF_INET6
-		    && setsockopt(so.sock,
-		                  IPPROTO_IPV6,
-		                  IPV6_V6ONLY,
-		                  (void *)&off,
-		                  sizeof(off)) != 0) {
+			if (ip_version == 6) {
+				if (so.lsa.sa.sa_family == AF_INET6
+				    && setsockopt(so.sock,
+				                  IPPROTO_IPV6,
+				                  IPV6_V6ONLY,
+				                  (void *)&off,
+				                  sizeof(off)) != 0) {
 
-			mg_cry(fc(ctx),
-			       "cannot set socket option IPV6_V6ONLY (entry %i)",
-			       portsTotal);
-		}
+					/* Set IPv6 only option, but don't abort on errors. */
+					mg_cry(fc(ctx),
+					       "cannot set socket option IPV6_V6ONLY (entry %i)",
+					       portsTotal);
+				}
+			}
+#else
+			mg_cry(fc(ctx), "IPv6 not available");
+			closesocket(so.sock);
+			so.sock = INVALID_SOCKET;
+			continue;
 #endif
+		}
 
 		if (so.lsa.sa.sa_family == AF_INET) {
 

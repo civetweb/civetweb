@@ -283,6 +283,15 @@ listen to IPv6 connections to port 8080. IPv6 addresses of network
 interfaces can be specified as well,
 e.g. `[::1]:8080` for the IPv6 loopback interface.
 
+[::]:80 will bind to port 80 IPv6 only. In order to use port 80 for
+all interfaces, both IPv4 and IPv6, use either the configuration
+`80,[::]:80` (create one socket for IPv4 and one for IPv6 only),
+or `+80` (create one socket for both, IPv4 and IPv6). 
+The `+`-notation to use IPv4 and IPv6 will only work in no network
+interface is specified. Depending on your IPv6 network environment,
+some configurations might not work (properly), so you have to test
+to find the configuration most suitable for your needs.
+
 It is possible to use network interface addresses (e.g., `192.0.2.3:80`,
 `[2001:0db8::1234]:80`). To get a list of available network interface
 addresses, use `ipconfig` (in a `cmd` window in Windows) or `ifconfig` 
