@@ -10793,6 +10793,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	/* sscanf and the option splitting code ensure the following condition
 	 */
 	if ((len < 0) && ((unsigned)len > (unsigned)vec->len)) {
+		*ip_version = 0;
 		return 0;
 	}
 	ch = vec->ptr[len]; /* Next character after the port number */
@@ -10800,8 +10801,14 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	so->ssl_redir = (ch == 'r');
 
 	/* Make sure the port is valid and vector ends with 's', 'r' or ',' */
-	return is_valid_port(port)
-	       && (ch == '\0' || ch == 's' || ch == 'r' || ch == ',');
+	if (is_valid_port(port)
+	    && (ch == '\0' || ch == 's' || ch == 'r' || ch == ',')) {
+		return 1;
+	}
+
+	/* Reset ip_version to 0 of there is an error */
+	*ip_version = 0;
+	return 0;
 }
 
 
