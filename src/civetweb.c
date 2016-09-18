@@ -10766,7 +10766,10 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 
 	} else if ((vec->ptr[0] == '+')
 	           && (sscanf(vec->ptr + 1, "%u%n", &port, &len) == 1)) {
-/* Port is specified with a +, bind to IPv6 and IPv4, INADDR_ANY */
+
+		/* Port is specified with a +, bind to IPv6 and IPv4, INADDR_ANY */
+		/* Add 1 to len for the + character we skipped before */
+		len++;
 
 #if defined(USE_IPV6)
 		/* Set socket family to IPv6, do not use IPV6_V6ONLY */

@@ -720,6 +720,12 @@ make_private_suite(void)
 void
 MAIN_PRIVATE(void)
 {
+#if defined(_WIN32)
+	/* test_parse_port_string requires WSAStartup for IPv6 */
+	WSADATA data;
+	WSAStartup(MAKEWORD(2, 2), &data);
+#endif
+
 	test_alloc_vprintf(0);
 	test_mg_vsnprintf(0);
 	test_remove_double_dots_and_double_slashes(0);
