@@ -430,7 +430,7 @@ START_TEST(test_parse_port_string)
 		ck_assert_int_ne(parse_port_string(&vec, &so, &ip_family), 0);
 		if (i < 7) {
 			ck_assert_int_eq(ip_family, 4);
-		} else if (i < 7) {
+		} else if (i < 10) {
 			ck_assert_int_eq(ip_family, 6);
 		} else {
 			ck_assert_int_eq(ip_family, 4 + 6);
