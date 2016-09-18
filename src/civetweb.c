@@ -9680,9 +9680,9 @@ set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
 
 	while ((spec = next_option(spec, &vec, &val)) != NULL) {
 		mult = ',';
-		if (sscanf(val.ptr, "%lf%c", &v, &mult) < 1 || v < 0
-		    || (lowercase(&mult) != 'k' && lowercase(&mult) != 'm'
-		        && mult != ',')) {
+		if ((val.ptr == NULL) || (sscanf(val.ptr, "%lf%c", &v, &mult) < 1)
+		    || (v < 0) || ((lowercase(&mult) != 'k')
+		                   && (lowercase(&mult) != 'm') && (mult != ','))) {
 			continue;
 		}
 		v *= (lowercase(&mult) == 'k')
