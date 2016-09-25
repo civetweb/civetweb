@@ -24,13 +24,14 @@ endif
 all: $(PROG)
 
 $(PROG): $(CIVETWEB_LIB) $(SRC)
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(SRC) $(CIVETWEB_LIB) $(LIBS)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(SRC) $(CIVETWEB_LIB) $(LIBS) -lcrypto -lssl -DUSE_SSL_DH=1
 
 $(CIVETWEB_LIB):
-	$(MAKE) -C $(TOP) WITH_IPV6=1 WITH_WEBSOCKET=1 clean lib
+	$(MAKE) -C $(TOP) WITH_IPV6=1 WITH_WEBSOCKET=1 COPT='-DNO_SSL_DL=1' clean lib
 	cp $(TOP)/$(CIVETWEB_LIB) .
 
 clean:
 	rm -f $(CIVETWEB_LIB) $(PROG)
 
 .PHONY: all clean
+
