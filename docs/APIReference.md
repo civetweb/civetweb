@@ -4,7 +4,35 @@ CivetWeb is often used as HTTP and HTTPS library inside a larger application. An
 
 ## Structures
 
-### `struct mg_header {};`
+### `struct client_cert;`
+
+#### Fields
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `subject` | `const char *` | The subject of the certificate |
+| `issuer` | `const char *` | The issuer of the certificate |
+| `serial` | `const char *` | The serial number of the certificate |
+| `finger` | `const char *` | The fingerprint of the certificate |
+
+#### Description
+
+The structure `client_cert` is used asa sub-structure in the `mg_request_info` structure to store information of an optional client supplied certificate.
+
+### `struct mg_callbacks;`
+
+#### Fields
+
+| Callback | Parameters | Returns | Description |
+| :--- | :--- | :--- | :--- |
+|`begin_request`|`struct mg_connection *`|`int`| The `begin_request()` callback function is called when CivetWeb has received a new HTTP request. If the callback function does not process the request, it should return 0. In that case CivetWeb will handle the request with the default callback routine. If the callback function returns a value between 1 and 999, CivetWeb does nothing and the callback function should do all the processing, including sending the proper HTTP headers etc. Starting at CivetWeb version 1.7, the function `begin_request()` is called before any authorization is done. If an authorization check is required, `request_handler()` should be used instead. The return value of the callback function is not only used to signal CivetWeb to not further process the request. The returned value is also stored as HTTP status code in the access log. |
+|`end_request`|`const struct mg_connection *, int reply_status_code`|-|The callback function `end_request` is called by CivetWeb when a request has been completely processed. It sends the reply status code which was sent to the client to the application.|
+
+#### Description
+
+A pointer to a `mg_callbacks` structure is passed as parameter to the `mg_start()` function to provide links to callback functions which the webserver will call at specific events. If a specific callback function is not supplied, CivetWeb will fallback to default internal callback routines. Callback functions give the application detailed control over how specific events should be handled.
+
+### `struct mg_header;`
 
 #### Fields
 
@@ -17,7 +45,7 @@ CivetWeb is often used as HTTP and HTTPS library inside a larger application. An
 
 The structure `mg_header` is used as a sub-structure in the `mg_request_info` structure to store the name and value of one HTTP request header as sent by the client.
 
-### `struct mg_request_info {};`
+### `struct mg_request_info;`
 
 #### Fields
 
