@@ -10,10 +10,10 @@ CivetWeb is often used as HTTP and HTTPS library inside a larger application. An
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `subject` | `const char *` | The subject of the certificate |
-| `issuer` | `const char *` | The issuer of the certificate |
-| `serial` | `const char *` | The serial number of the certificate |
-| `finger` | `const char *` | The fingerprint of the certificate |
+|**`subject`**|`const char *`| The subject of the certificate |
+|**`issuer`**|`const char *`| The issuer of the certificate |
+|**`serial`**|`const char *`| The serial number of the certificate |
+|**`finger`**|`const char *`| The fingerprint of the certificate |
 
 #### Description
 
@@ -25,9 +25,9 @@ The structure `client_cert` is used asa sub-structure in the `mg_request_info` s
 
 | Field | Description |
 | :--- | :--- | :--- | :--- |
-|`begin_request`| **`int begin_request( struct mg_connection *);`** |
+|**`begin_request`**|**`int begin_request( struct mg_connection *);`**|
 | |The `begin_request()` callback function is called when CivetWeb has received a new HTTP request. If the callback function does not process the request, it should return 0. In that case CivetWeb will handle the request with the default callback routine. If the callback function returns a value between 1 and 999, CivetWeb does nothing and the callback function should do all the processing, including sending the proper HTTP headers etc. Starting at CivetWeb version 1.7, the function `begin_request()` is called before any authorization is done. If an authorization check is required, `request_handler()` should be used instead. The return value of the callback function is not only used to signal CivetWeb to not further process the request. The returned value is also stored as HTTP status code in the access log. |
-|`end_request`| `void end_request( const struct mg_connection *);`|
+|**`end_request`**|**`void end_request( const struct mg_connection *);`**|
 | |The callback function `end_request` is called by CivetWeb when a request has been completely processed. It sends the reply status code which was sent to the client to the application.|
 
 #### Description
@@ -40,8 +40,8 @@ A pointer to a `mg_callbacks` structure is passed as parameter to the `mg_start(
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `name` | `const char *` | The name of the client request header |
-| `value` | `const char *` | The value of the client request header |
+|**`name`**|`const char *`| The name of the client request header |
+|**`value`**|`const char *`| The value of the client request header |
 
 #### Description
 
@@ -115,8 +115,8 @@ Parameter values other than the values mentioned above will give undefined resul
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `conn` | `struct mg_connection *` | A pointer referencing the connection |
-| `name` | `const char *` | The name of the request header |
+|**`conn`**|`struct mg_connection *`| A pointer referencing the connection |
+|**`name`**|`const char *`| The name of the request header |
 
 #### Returns
 
@@ -134,8 +134,8 @@ HTTP and HTTPS clients can send request headers to the server to provide details
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `ctx` | `const struct mg_context *` | A pointer to the webserver context |
-| `name` | `const char *` | The name of the option to query |
+|**`ctx`**|`const struct mg_context *`| A pointer to the webserver context |
+|**`name`**|`const char *`| The name of the option to query |
 
 #### Returns
 
@@ -214,7 +214,7 @@ The function `mg_start()` is the only function needed to call to initialize the 
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `ctx` | `struct mg_context *` | A pointer to the current webserver context |
+|**`ctx`**|**`struct mg_context *`**| A pointer to the current webserver context |
 
 #### Returns
 
@@ -247,9 +247,9 @@ The function `mg_version()` can be used to return the current CivetWeb version. 
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `conn` | `struct mg_connection *` | A pointer to the connection to be used to send data |
-| `buf` | `const void *` | A pointer to the blob of information to be sent |
-| `len` | `size_t` | The amount of bytes to be sent |
+|**`conn`**|`struct mg_connection *`| A pointer to the connection to be used to send data |
+|**`buf`**|`const void *`| A pointer to the blob of information to be sent |
+|**`len`**|`size_t`| The amount of bytes to be sent |
 
 #### Returns
 
