@@ -1,20 +1,27 @@
 CivetWeb API Reference
 =========
 
-CivetWeb is often used as HTTP and HTTPS library inside a larger application. An API is available to integrate the CivetWeb functionality in a larger codebase. This document describes the API. Basic usage examples of the API can be found in [Embedded.md](https://github.com/civetweb/civetweb/blob/master/docs/Embedding.md).
+CivetWeb is often used as HTTP and HTTPS library inside a larger application. An API is available to integrate the CivetWeb functionality in a larger codebase. This document describes the API. Basic usage examples of the API can be found in [Embedding.md](Embedding.md).
 
-CivetWeb is primarily designed so applications can easily add HTTP and HTTPS server as well as WebSocket functionality.  For example, an application server could use CivetWeb to enable a web service interface for automation or remote control.
-
-However, it can also be used as a stand-alone executable. It can deliver static files and offers built-in server side Lua, JavaScript and CGI support. Some instructions how to build the stand-alone server can be found in [Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md).
-
-Files
+Functions
 ------
 
-There is just a small set of files to compile in to the application,
-but if a library is desired, see [Building.md](https://github.com/CivetWeb/CivetWeb/blob/master/docs/Building.md)
+### `mg_start( callbacks, user_data, options )`
 
-#### Regarding the INL file extension
-The *INL* file extension represents code that is statically included inline in a source file.  Slightly different from C++ where it means "inline" code which is technically not the same as static code. CivetWeb overloads this extension for the sake of clarity as opposed to having .c extensions on files that should not be directly compiled.
+#### Parameters
+
+  - `const struct mg_callbacks *callbacks` - a structure with optional callback functions to process requests from the web server.
+  - `void *user_data` - a pointer to optional user data
+  - `char **options` - a list of options used to initialize the web server
+
+#### Returns
+
+  - `struct mg_context *` - a pointer to a context structure when successful, or NULL in case of failure
+
+##### Description
+
+`mg_start()` is the only function needed to call to initialize the webserver. After the function returns and a pointer to a contect structure is provided, it is guaranteed that the server has started and is listening on the designated ports. In case of failure a NULL pointer is returned. The behaviour of the web server is controlled by a list of callback functions and a list of options. The callback functions can do application specific processing of events which are encountered by the webserver. If a specific callback function is not provided, the webserver uses their default callback routines. The options list controls how the webserver should be started and contains settings for for example the ports to listen on, the maximum number of threads created to handle requests in parallel and if settings for SSL encryption.
+
 
 #### HTTP Server Source Files
 
