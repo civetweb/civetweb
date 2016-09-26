@@ -41,6 +41,8 @@ The structure `client_cert` is used asa sub-structure in the `mg_request_info` s
 | |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
 |~~`websocket_data`~~|**`int websocket_data( struct mg_connection *conn, int bits, char *data, size_t data_len );`**|
 | |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
+|**`connection_close`**|**`void connection_close( const struct mg_connection *conn );`**|
+| |The callback function `connection_close()` is called when CivetWeb is closing a connection. The per-context mutex is locked when the callback function is invoked. The function is primarly useful for noting when a websocket is closing and removing it from any application-maintained list of clients. *Using this callback for websocket connections is deprecated. Use* `mg_set_websocket_handler()` *instead.*|
 
 #### Description
 
