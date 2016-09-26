@@ -33,6 +33,20 @@ The following parameter values can be used:
 
 Parameter values other than the values mentioned above will give undefined results.
 
+### `mg_get_option( context, name )`
+
+#### Parameters
+
+  - `const struct mg_context *` - a pointer to the webserver contect
+  - `const char *name` - the name of the option to query
+
+#### Returns
+
+  - `const char *` - a pointer to the option value in text, or NULL if an error occured
+
+##### Description
+
+When starting the CivetWeb webserver, options are provided to set the wanted behaviour of the server. The options which were used during startup can be queried through the `mg_get_option()` function. Options are read-only and cannot be changed while the webserver is running. The function returns a pointer to a text string containing the value of the queried option, or NULL if an error occured. It is guaranteed however that if a valid option name is provided as a parameter to this function, that a pointer to a string is returned and not NULL. In case an option was empty or NULL during initialisation, `mg_get_option()` will return a pointer to an empty string.
 
 ### `mg_start( callbacks, user_data, options )`
 
@@ -50,4 +64,33 @@ Parameter values other than the values mentioned above will give undefined resul
 
 The function `mg_start()` is the only function needed to call to initialize the webserver. After the function returns and a pointer to a contect structure is provided, it is guaranteed that the server has started and is listening on the designated ports. In case of failure a NULL pointer is returned. The behaviour of the web server is controlled by a list of callback functions and a list of options. The callback functions can do application specific processing of events which are encountered by the webserver. If a specific callback function is not provided, the webserver uses their default callback routines. The options list controls how the webserver should be started and contains settings for for example the ports to listen on, the maximum number of threads created to handle requests in parallel and if settings for SSL encryption.
 
+### `mg_stop( context )`
+
+#### Parameters
+
+  - `struct mg_context *context` - a pointer to the current webserver context
+
+#### Returns
+
+Nothing
+
+#### Description
+
+The function `mg_stop()` is used to stop and cleanup a running webserver. A pointer to the context of the running webserver is provided as a parameter. The execution of this function may take some time because it waits until all threads have stopped and returns all memory to the heap. After the function returns, the location the context pointer points to is invalid. The function does not return a return value and it is therefore not possible to know if stopping the webserver succeeded or not.
+
+### `mg_write( conn, buf, len )`
+
+#### Parameters
+
+  - `struct mg_connection *conn` - a pointer to the connection to be used to send data
+  - `const void *buf` - a pointer to the blob of information to be sent
+  - `size_t len` - the amount of bytes to be sent
+
+#### Returns
+
+  - `int` - An integer indicating the amount of bytes sent, or failure
+
+#### Description
+
+The function `mg_write()` can be used to send a blob of arbitrary data over a connection. The size of the data is provided as a parameter. The only length limitation on this function is MAX_INT, because the return value of this function will turn negative with larger blocks of data, although they may have been sent correctly. The function returns the amount of bytes sent in case of success, the value 0 when the connection has been closed, and -1 in case of an error.
 
