@@ -4,7 +4,45 @@ CivetWeb is often used as HTTP and HTTPS library inside a larger application. An
 
 ## Structures
 
-Work in progress...
+### `struct mg_header {};`
+
+#### Fields
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `name` | `const char *` | The name of the client request header |
+| `value` | `const char *` | The value of the client request header |
+
+#### Description
+
+The structure `mg_header` is used as a sub-structure in the `mg_request_info` structure to store the name and value of one HTTP request header as sent by the client.
+
+### `struct mg_request_info {};`
+
+#### Fields
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `request_method` | `const char *` | The request method used by the client for the connection this can be **GET**, **POST** or one of the other common HTTP request methods |
+| `request_uri` | `const char *` | The absolute or URL-encoded URI as it was sent in the request |
+| `local_uri` | `const char *` | The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL |
+| `uri` | `const char *` | *Deprecated. Use* `local_uri` *instead* |
+| `http_version` | `const char *` | The HTTP version as mentioned in the client request. This can be "1.0", "1.1", etc. |
+| `remote_user` | `const char *` | The name of the authenticated remote user, or NULL if no authentication was used |
+| `remote addr` | `char[48]` | The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address. |
+| `remote_ip` | `long` | *Deprecated. Use* `remote_addr` *instead* |
+| `content_length` | `long long` | The content length of the request body. This value can be -1 if no content length was provided. |
+| `remote_port` | `int` | The port number at the client's side |
+| `is_ssl` | `int` | 1 if the connection is over SSL, and 0 if it is a plain connection |
+| `user_data` | `void *` | A pointer to the `user_data` information which was provided as a parameter to `mg_start()`. |
+| `conn_data` | `void *` | A pointer to connection specific user data |
+| `num_headers` | `int` | The number of HTTP request headers sent by the client |
+| `http_headers` | `struct mg_header[64]` | Array of structures with the HTTP request headers sent by the client |
+| `client_cert` | `struct client_cert *` | Pointer to the client certificate information, when available |
+
+#### Description
+
+The `mg_request_info` structure contains the client information of an existing connection.
 
 ## Functions
 
@@ -164,8 +202,8 @@ The function `mg_stop()` is used to stop and cleanup a running webserver. A poin
 
 #### Returns
 
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
+| Type | Description |
+| :--- | :--- |
 | `const char *` | A pointer to a text with the current CivetWeb version |
 
 #### Description
