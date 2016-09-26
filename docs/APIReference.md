@@ -25,9 +25,9 @@ The structure `client_cert` is used asa sub-structure in the `mg_request_info` s
 
 | Field | Description |
 | :--- | :--- | :--- | :--- |
-|**`begin_request`**|**`int begin_request( struct mg_connection *);`**|
+|**`begin_request`**|**`int begin_request( struct mg_connection * );`**|
 | |The `begin_request()` callback function is called when CivetWeb has received a new HTTP request. If the callback function does not process the request, it should return 0. In that case CivetWeb will handle the request with the default callback routine. If the callback function returns a value between 1 and 999, CivetWeb does nothing and the callback function should do all the processing, including sending the proper HTTP headers etc. Starting at CivetWeb version 1.7, the function `begin_request()` is called before any authorization is done. If an authorization check is required, `request_handler()` should be used instead. The return value of the callback function is not only used to signal CivetWeb to not further process the request. The returned value is also stored as HTTP status code in the access log. |
-|**`end_request`**|**`void end_request( const struct mg_connection *);`**|
+|**`end_request`**|**`void end_request( const struct mg_connection * );`**|
 | |The callback function `end_request` is called by CivetWeb when a request has been completely processed. It sends the reply status code which was sent to the client to the application.|
 
 #### Description
@@ -53,22 +53,22 @@ The structure `mg_header` is used as a sub-structure in the `mg_request_info` st
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `request_method` | `const char *` | The request method used by the client for the connection this can be **GET**, **POST** or one of the other common HTTP request methods |
-| `request_uri` | `const char *` | The absolute or URL-encoded URI as it was sent in the request |
-| `local_uri` | `const char *` | The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL |
-| `uri` | `const char *` | *Deprecated. Use* `local_uri` *instead* |
-| `http_version` | `const char *` | The HTTP version as mentioned in the client request. This can be "1.0", "1.1", etc. |
-| `remote_user` | `const char *` | The name of the authenticated remote user, or NULL if no authentication was used |
-| `remote addr` | `char[48]` | The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address. |
-| `remote_ip` | `long` | *Deprecated. Use* `remote_addr` *instead* |
-| `content_length` | `long long` | The content length of the request body. This value can be -1 if no content length was provided. |
-| `remote_port` | `int` | The port number at the client's side |
-| `is_ssl` | `int` | 1 if the connection is over SSL, and 0 if it is a plain connection |
-| `user_data` | `void *` | A pointer to the `user_data` information which was provided as a parameter to `mg_start()`. |
-| `conn_data` | `void *` | A pointer to connection specific user data |
-| `num_headers` | `int` | The number of HTTP request headers sent by the client |
-| `http_headers` | `struct mg_header[64]` | Array of structures with the HTTP request headers sent by the client |
-| `client_cert` | `struct client_cert *` | Pointer to the client certificate information, when available |
+|**`request_method**|`const char *`| The request method used by the client for the connection this can be **GET**, **POST** or one of the other common HTTP request methods |
+|**`request_uri`**|`const char *`| The absolute or URL-encoded URI as it was sent in the request |
+|**`local_uri`**|`const char *`| The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL |
+|**`uri`**|`const char *`| *Deprecated. Use* `local_uri` *instead* |
+|**`http_version`**|`const char *`| The HTTP version as mentioned in the client request. This can be "1.0", "1.1", etc. |
+|**`remote_user`**|`const char *`| The name of the authenticated remote user, or NULL if no authentication was used |
+|**`remote addr`**|`char[48]`| The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address. |
+|**`remote_ip`**|`long`| *Deprecated. Use* `remote_addr` *instead* |
+|**`content_length`**|`long long`| The content length of the request body. This value can be -1 if no content length was provided. |
+|**`remote_port`**|`int`| The port number at the client's side |
+|**`is_ssl`**|`int`| 1 if the connection is over SSL, and 0 if it is a plain connection |
+|**`user_data`**|`void *`| A pointer to the `user_data` information which was provided as a parameter to `mg_start()`. |
+|**`conn_data`**|`void *`| A pointer to connection specific user data |
+|**`num_headers`**|`int`| The number of HTTP request headers sent by the client |
+|**`http_headers`**|`struct mg_header[64]`| Array of structures with the HTTP request headers sent by the client |
+|**`client_cert`**|`struct client_cert *`| Pointer to the client certificate information, when available |
 
 #### Description
 
@@ -82,13 +82,13 @@ The `mg_request_info` structure contains the client information of an existing c
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `feature` | `unsigned` | A value indicating the feature to be checked |
+|**`feature`**|`unsigned`| A value indicating the feature to be checked |
 
 #### Returns
 
 | Type | Description |
 | :--- | :--- |
-| `unsigned` | A value indicating if a feature is available. A positive value indicates available, while 0 is returned for an unavailable feature |
+|`unsigned`| A value indicating if a feature is available. A positive value indicates available, while 0 is returned for an unavailable feature |
 
 #### Description
 
@@ -122,7 +122,7 @@ Parameter values other than the values mentioned above will give undefined resul
 
 | Type | Description |
 | :--- | :--- |
-| `const char *` | A pointer to the value of the request header, or NULL of no matching header count be found |
+|`const char *`| A pointer to the value of the request header, or NULL of no matching header count be found |
 
 #### Description
 
@@ -141,7 +141,7 @@ HTTP and HTTPS clients can send request headers to the server to provide details
 
 | Type | Description |
 | :--- | :--- |
-| `const char *` | A pointer to the option value in text, or NULL if an error occured |
+|`const char *`| A pointer to the option value in text, or NULL if an error occured |
 
 #### Description
 
@@ -154,14 +154,14 @@ When starting the CivetWeb webserver, options are provided to set the wanted beh
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `conn` | `struct mg_connection *` | A pointer referencing the connection |
-| `response_code` | `int` | Response code for which the text is queried |
+|**`conn`**|`struct mg_connection *`| A pointer referencing the connection |
+|**`response_code`**|`int`| Response code for which the text is queried |
 
 #### Returns
 
 | Type | Description |
 | :--- | :--- |
-| `const char *` | A pointer to a human readable text explaining the response code. |
+|`const char *`| A pointer to a human readable text explaining the response code. |
 
 #### Description
 
@@ -174,15 +174,15 @@ The function `mg_get_response_code_text()` returns a pointer to a human readable
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `conn` | `struct mg_connection *` | A pointer referencing the connection |
-| `buf` | `void *` | A pointer to the location where the received data can be stored |
-| `len` | `size_t` | The maximum number of bytes to be stored in the buffer |
+|**`conn`**|`struct mg_connection *`| A pointer referencing the connection |
+|**`buf`**|`void *`| A pointer to the location where the received data can be stored |
+|**`len`**|`size_t`| The maximum number of bytes to be stored in the buffer |
 
 #### Returns
 
 | Type | Description |
 | :--- | :--- |
-| `int` | The number of read bytes, or a status indication |
+|`int`| The number of read bytes, or a status indication |
 
 #### Description
 
@@ -194,15 +194,15 @@ The function `mg_read()` receives data over an existing connection. The data is 
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `callbacks` | `const struct mg_callbacks *` | A structure with optional callback functions to process requests from the web server |
-| `user_data` |`void *` | A pointer to optional user data |
-| `options` | `char **` | A list of options used to initialize the web server |
+|**`callbacks`**|`const struct mg_callbacks *`| A structure with optional callback functions to process requests from the web server |
+|**`user_data`**|`void *`| A pointer to optional user data |
+|**`options`**|`char **`| A list of options used to initialize the web server |
 
 #### Returns
 
 | Type | Description |
 | :--- | :--- |
-| `struct mg_context *` | A pointer to a context structure when successful, or NULL in case of failure |
+|`struct mg_context *`| A pointer to a context structure when successful, or NULL in case of failure |
 
 #### Description
 
@@ -234,7 +234,7 @@ The function `mg_stop()` is used to stop and cleanup a running webserver. A poin
 
 | Type | Description |
 | :--- | :--- |
-| `const char *` | A pointer to a text with the current CivetWeb version |
+|`const char *`| A pointer to a text with the current CivetWeb version |
 
 #### Description
 
@@ -255,7 +255,7 @@ The function `mg_version()` can be used to return the current CivetWeb version. 
 
 | Type | Description |
 | :--- | :--- |
-| `int` | An integer indicating the amount of bytes sent, or failure |
+|`int`| An integer indicating the amount of bytes sent, or failure |
 
 #### Description
 
