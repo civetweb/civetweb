@@ -53,7 +53,7 @@ The structure `mg_header` is used as a sub-structure in the `mg_request_info` st
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-|**`request_method**|`const char *`| The request method used by the client for the connection this can be **GET**, **POST** or one of the other common HTTP request methods |
+|**`request_method`**|`const char *`| The request method used by the client for the connection this can be **GET**, **POST** or one of the other common HTTP request methods |
 |**`request_uri`**|`const char *`| The absolute or URL-encoded URI as it was sent in the request |
 |**`local_uri`**|`const char *`| The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL |
 |**`uri`**|`const char *`| *Deprecated. Use* `local_uri` *instead* |
