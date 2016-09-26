@@ -24,16 +24,16 @@ The function `mg_check_feature()` can be called from an application program to c
 
 The following parameter values can be used:
 
-| Value | Description |
-| --- | --- |
-| **1** | Serve files (NO_FILES not set during compilation). If this feature is available, the webserver is able to serve files directly from a directory tree. |
-| **2** | Support HTTPS (NO_SSL not set during compiletion). If this feature is available, the webserver van use encryption in the client-server connection. SSLv2, SSLv3, TLSv1.0, TLSv1.1 and TLSv1.2 are supported depending on the SSL library CivetWeb has been compiled with, but which protocols are used effectively when the server is running is dependent on the options used when the server is started. |
-| **4** | support CGI (NO_CGI not set during compilation). If this feature is available, external CGI scripts can be called by the webserver. |
-| **8** | support IPv6 (USE_IPV6 set during compilation). The CivetWeb library is capable of communicating over both IPv4 and IPv6, but IPv6 support is only available if it has been enabled at compile time. |
-| **16** | support WebSocket (USE_WEBSOCKET set during compilation). WebSockets support is available in the CivetWeb library if the proper options has been used during cimpile time. |
-| **32** | support Lua scripts and Lua server pages (USE_LUA set during compilation). CivetWeb supports server side scripting through the Lua language, if that has been enabled at compile time. Lua is an efficient scripting language which is less resource heavy than for example PHP. |
-| **64** | support server side JavaScript (USE_DUKTAPE set during compilation). Server side JavaScript can be used for dynamic page generation if the proper options have been set at compile time. Please note that client side JavaScript execution is always available if it has been enabled in the connecting browser. |
-| **128** | support caching (NO_CACHING not set during compilation). The webserver will support caching, if it has not been disabled while compiling the library. |
+| Value | Compilation option | Description |
+| --- | --- | --- |
+| **1** | NO_FILES | *Able to serve files*. If this feature is available, the webserver is able to serve files directly from a directory tree. |
+| **2** | NO_SSL | *Support for HTTPS*. If this feature is available, the webserver van use encryption in the client-server connection. SSLv2, SSLv3, TLSv1.0, TLSv1.1 and TLSv1.2 are supported depending on the SSL library CivetWeb has been compiled with, but which protocols are used effectively when the server is running is dependent on the options used when the server is started. |
+| **4** | NO_CGI | *Support for CGI*. If this feature is available, external CGI scripts can be called by the webserver. |
+| **8** | USE_IPV6 | *Support IPv6*. The CivetWeb library is capable of communicating over both IPv4 and IPv6, but IPv6 support is only available if it has been enabled at compile time. |
+| **16** | USE_WEBSOCKET | Support for web sockets. WebSockets support is available in the CivetWeb library if the proper options has been used during cimpile time. |
+| **32** | USE_LUA | *Support for Lua scripts and Lua server pages*. CivetWeb supports server side scripting through the Lua language, if that has been enabled at compile time. Lua is an efficient scripting language which is less resource heavy than for example PHP. |
+| **64** | USE_DUKTAPE | *Support for server side JavaScript*. Server side JavaScript can be used for dynamic page generation if the proper options have been set at compile time. Please note that client side JavaScript execution is always available if it has been enabled in the connecting browser. |
+| **128** | NO_CACHING | *Support for caching*. The webserver will support caching, if it has not been disabled while compiling the library. |
 
 Parameter values other than the values mentioned above will give undefined results.
 
