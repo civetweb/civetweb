@@ -1,10 +1,12 @@
-CivetWeb API Reference
-=========
+# CivetWeb API Reference
 
 CivetWeb is often used as HTTP and HTTPS library inside a larger application. An API is available to integrate the CivetWeb functionality in a larger codebase. This document describes the API. Basic usage examples of the API can be found in [Embedding.md](Embedding.md).
 
-Functions
-------
+## Structures
+
+Work in progress...
+
+## Functions
 
 ### `mg_check_feature( feature )`
 
@@ -22,16 +24,31 @@ The function `mg_check_feature()` can be called from an application program to c
 
 The following parameter values can be used:
 
-  - `1` - Serve files (NO_FILES not set during compilation). If this feature is available, the webserver is able to serve files directly from a directory tree.
-  - `2` - Support HTTPS (NO_SSL not set during compiletion). If this feature is available, the webserver van use encryption in the client-server connection. SSLv2, SSLv3, TLSv1.0, TLSv1.1 and TLSv1.2 are supported, but which protocols are used effectively is dependent on the options used when the server is started.
-  - `4` - support CGI (NO_CGI not set during compilation). If this feature is available, external CGI scripts can be called by the webserver.
-  - `8` - support IPv6 (USE_IPV6 set during compilation). The CivetWeb library is capable of communicating over both IPv4 and IPv6, but IPv6 support is only available if it has been enabled at compile time.
-  - `16` - support WebSocket (USE_WEBSOCKET set during compilation). WebSockets support is available in the CivetWeb library if the proper options has been used during cimpile time.
-  - `32` - support Lua scripts and Lua server pages (USE_LUA set during compilation). CivetWeb supports server side scripting through the Lua language, if that has been enabled at compile time. Lua is an efficient scripting language which is less resource heavy than for example PHP.
-  - `64` - support server side JavaScript (USE_DUKTAPE set during compilation). Server side JavaScript can be used for dynamic page generation if the proper options have been set at compile time. Please note that client side JavaScript execution is always available if it has been enabled in the connecting browser.
-  - `128` - support caching (NO_CACHING not set during compilation). The webserver will support caching, if it has not been disabled while compiling the library.
+- **1** - Serve files (NO_FILES not set during compilation). If this feature is available, the webserver is able to serve files directly from a directory tree.
+- **2** - Support HTTPS (NO_SSL not set during compiletion). If this feature is available, the webserver van use encryption in the client-server connection. SSLv2, SSLv3, TLSv1.0, TLSv1.1 and TLSv1.2 are supported depending on the SSL library CivetWeb has been compiled with, but which protocols are used effectively when the server is running is dependent on the options used when the server is started.
+- **4** - support CGI (NO_CGI not set during compilation). If this feature is available, external CGI scripts can be called by the webserver.
+- **8** - support IPv6 (USE_IPV6 set during compilation). The CivetWeb library is capable of communicating over both IPv4 and IPv6, but IPv6 support is only available if it has been enabled at compile time.
+- **16** - support WebSocket (USE_WEBSOCKET set during compilation). WebSockets support is available in the CivetWeb library if the proper options has been used during cimpile time.
+- **32** - support Lua scripts and Lua server pages (USE_LUA set during compilation). CivetWeb supports server side scripting through the Lua language, if that has been enabled at compile time. Lua is an efficient scripting language which is less resource heavy than for example PHP.
+- **64** - support server side JavaScript (USE_DUKTAPE set during compilation). Server side JavaScript can be used for dynamic page generation if the proper options have been set at compile time. Please note that client side JavaScript execution is always available if it has been enabled in the connecting browser.
+- **128** - support caching (NO_CACHING not set during compilation). The webserver will support caching, if it has not been disabled while compiling the library.
 
 Parameter values other than the values mentioned above will give undefined results.
+
+### `mg_get_header( conn, name )`
+
+#### Parameters
+
+  - `struct mg_connection *conn` - a pointer referencing the connection
+  - `const char *name` - the name of the request header
+
+#### Returns
+
+  - `const char *` - a pointer to the value of the request header, or NULL of no matching header count be found
+
+##### Description
+
+HTTP and HTTPS clients can send request headers to the server to provide details about the communication. These request headers can for example specify the preferred language in which the server should respond and the supported compression algorithms. The function `mg_get_header()` can be called to return the contents of a specific request header. The function will return a pointer to the value text of the header when succesful, and NULL of no matching request header from the client could be found.
 
 ### `mg_get_option( context, name )`
 
@@ -47,6 +64,39 @@ Parameter values other than the values mentioned above will give undefined resul
 ##### Description
 
 When starting the CivetWeb webserver, options are provided to set the wanted behaviour of the server. The options which were used during startup can be queried through the `mg_get_option()` function. Options are read-only and cannot be changed while the webserver is running. The function returns a pointer to a text string containing the value of the queried option, or NULL if an error occured. It is guaranteed however that if a valid option name is provided as a parameter to this function, that a pointer to a string is returned and not NULL. In case an option was empty or NULL during initialisation, `mg_get_option()` will return a pointer to an empty string.
+
+
+### `mg_get_response_code_text( conn, response_code )`
+
+#### Parameters
+
+  - `struct mg_connection *conn` - a pointer referencing the connection
+  - `int response_code` - response code who's text is queried
+
+#### Returns
+
+  - `const char *` - a pointer to a human readable text explaining the response code
+
+##### Description
+
+The function `mg_get_response_code_text()` returns a pointer to a human readable text describing the HTTP response code which was provided as a parameter.
+
+
+### `mg_read( conn, buf, len )`
+
+#### Parametera
+
+  - `struct mg_connection *conn` - a pointer referencing the connection
+  - `void *buf` - a pointer to the location where the received data can be stored
+  - `size_t len` - the maximum number of bytes to be stored in the buffer
+
+#### Returns
+
+  - `int` - The number of read bytes, or a status indication
+
+##### Description
+
+The function `mg_read()` receives data over an existing connection. The data is handled as binary and is stored in a buffer whose address has been provided as a parameter. The function returns the number of read bytes when successful, the value 0 when the connection has been closed by peer and a negative value when no more data could be read from the connection.
 
 ### `mg_start( callbacks, user_data, options )`
 
@@ -77,6 +127,21 @@ Nothing
 #### Description
 
 The function `mg_stop()` is used to stop and cleanup a running webserver. A pointer to the context of the running webserver is provided as a parameter. The execution of this function may take some time because it waits until all threads have stopped and returns all memory to the heap. After the function returns, the location the context pointer points to is invalid. The function does not return a return value and it is therefore not possible to know if stopping the webserver succeeded or not.
+
+### `mg_version()`
+
+#### Parameters
+
+None
+
+#### Returns
+
+ - `const char *` - a pointer to a text with the current CivetWeb version
+
+##### Description
+
+The function `mg_version()` can be used to return the current CivetWeb version. function returns a pointer to a string with the current major and minor version number, separated with a dot. For example "1.9".
+
 
 ### `mg_write( conn, buf, len )`
 
