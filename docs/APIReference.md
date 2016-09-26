@@ -60,11 +60,11 @@ The structure `mg_header` is used as a sub-structure in the `mg_request_info` st
 |**`request_method`**|`const char *`| The request method used by the client for the connection this can be **GET**, **POST** or one of the other common HTTP request methods |
 |**`request_uri`**|`const char *`| The absolute or URL-encoded URI as it was sent in the request |
 |**`local_uri`**|`const char *`| The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL |
-|**`uri`**|`const char *`| *Deprecated. Use* `local_uri` *instead* |
+|~~`uri`~~|`const char *`| *Deprecated. Use* `local_uri` *instead* |
 |**`http_version`**|`const char *`| The HTTP version as mentioned in the client request. This can be "1.0", "1.1", etc. |
 |**`remote_user`**|`const char *`| The name of the authenticated remote user, or NULL if no authentication was used |
 |**`remote addr`**|`char[48]`| The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address. |
-|**`remote_ip`**|`long`| *Deprecated. Use* `remote_addr` *instead* |
+|~~`remote_ip`~~|`long`| *Deprecated. Use* `remote_addr` *instead* |
 |**`content_length`**|`long long`| The content length of the request body. This value can be -1 if no content length was provided. |
 |**`remote_port`**|`int`| The port number at the client's side |
 |**`is_ssl`**|`int`| 1 if the connection is over SSL, and 0 if it is a plain connection |
