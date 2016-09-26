@@ -35,9 +35,11 @@ The structure `client_cert` is used asa sub-structure in the `mg_request_info` s
 | |The callback function `log_access()` is called when CivetWeb is about to log a message. If the callback function returns 0, CivetWeb will use the default internal access log routines to log the access. If a non-zero value is returned, CivetWeb assumes that access logging has already been done and no further action is performed.|
 |**`init_ssl`**|**`int init_ssl( void *ssl_context, void *user_data );`**|
 | |The callback function `init_ssl()` is called when CivetWeb initializes the SSL library. The parameter `user_data` contains a pointer to the data which was provided to `mg_start()` when the server was started. The callback function can return 0 to signal that CivetWeb should setup the SSL certificate. With a return value of 1 the callback function signals CivetWeb that the certificate has already been setup and no further processing is necessary. The value -1 should be returned when the SSL initialization fails.|
-|~~websocket_connect~~|**`int websocket_connect( const struct mg_connection *conn );`**|
+|~~`websocket_connect`~~|**`int websocket_connect( const struct mg_connection *conn );`**|
 | |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
-|~~websocket_ready~~|**`int websocket_ready( const struct mg_connection *conn );`**|
+|~~`websocket_ready`~~|**`int websocket_ready( struct mg_connection *conn );`**|
+| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
+|~~`websocket_data`~~|**`int websocket_data( struct mg_connection *conn, int bits, char *data, size_t data_len );`**|
 | |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
 
 #### Description
