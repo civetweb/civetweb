@@ -47,8 +47,20 @@ The structure `client_cert` is used as a sub-structure in the `mg_request_info` 
 | |The callback function `open_file()` is called when a file is to be opened by CivetWeb. The callback can return a pointer to a memory location and set the memory block size in the variable pointed to by `data_len` to signal CivetWeb that the file should not be loaded from disk, but that instead a cached version in memory should be used. If the callback function returns NULL, CivetWeb will open the file from disk. This callback allows caching to be implemented.|
 |**`init_lua`**|**`void init_lua( const struct mg_connection *conn, void *lua_context );`**|
 | |The callback function `init_lua()` is called just before a Lua server page is to be served. Lua page serving must have been enabled at compile time for this callback function to be called. The parameter `lua_context` is a `lua_State *` pointer.|
-|~~`upload`~~|**`void upload( struct mg_connection *, const char *file_name );`**|
+|~~`upload`~~|**`void upload( struct mg_connection * conn, const char *file_name );`**|
 | |*Deprecated. Use* `mg_handle_form_request()` *instead.*|
+|**`http_error`**|**`int http_error( struct mg_connection *conn, int status );`**|
+| |The callback function `http_error()` is called by CivetWeb just before an HTTP error is to be sent to the client. The function allows the application to send a custom error page. The status code of the error is provided as a parameter. If the application sends their own error page, it must return 1 to signal CivetWeb that no further processing is needed. If the returned value is 0, CivetWeb will send a built-in error page to the client.|
+|**`init_context`**|**`void init_context( const struct mg_context *ctx );`**|
+| |The callback function `init_context()` is called after the CivetWeb server has been started and initialized, but before any requests are served. This allowes the application to perform some initialization activities before the first requests are handled.|
+|**`init_thread`**|**`void init_thread( const struct mg_context *ctx, int thread_type );`**|
+| |The callback function `init_thread()` is called when a new thread is created by CivetWeb. The `thread_type` parameter indicates which type of thread has been created. following thread types are recognized:|
+| |**0** The master thread is created |
+| |**1** A worker thread which handles client connections has been created|
+| |**2** An internal helper thread (timer thread) has been created|
+|**`exit_context`**|**void exit_context( const struct mg_context *ctx );`**|
+| |The callback function `exit_context()` is called by CivetWeb when the server is stopped. It allows the application to do some cleanup on the application side.|
+
 
 #### Description
 
