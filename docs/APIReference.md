@@ -17,7 +17,7 @@ CivetWeb is often used as HTTP and HTTPS library inside a larger application. An
 
 #### Description
 
-The structure `client_cert` is used asa sub-structure in the `mg_request_info` structure to store information of an optional client supplied certificate.
+The structure `client_cert` is used as a sub-structure in the `mg_request_info` structure to store information of an optional client supplied certificate.
 
 ### `struct mg_callbacks;`
 
@@ -43,6 +43,12 @@ The structure `client_cert` is used asa sub-structure in the `mg_request_info` s
 | |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
 |**`connection_close`**|**`void connection_close( const struct mg_connection *conn );`**|
 | |The callback function `connection_close()` is called when CivetWeb is closing a connection. The per-context mutex is locked when the callback function is invoked. The function is primarly useful for noting when a websocket is closing and removing it from any application-maintained list of clients. *Using this callback for websocket connections is deprecated. Use* `mg_set_websocket_handler()` *instead.*|
+|**`open_file`**|**`const char *open_file( const struct mg_connection *conn, const char *path, size_t *data_len );`**|
+| |The callback function `open_file()` is called when a file is to be opened by CivetWeb. The callback can return a pointer to a memory location and set the memory block size in the variable pointed to by `data_len` to signal CivetWeb that the file should not be loaded from disk, but that instead a cached version in memory should be used. If the callback function returns NULL, CivetWeb will open the file from disk. This callback allows caching to be implemented.|
+|**`init_lua`**|**`void init_lua( const struct mg_connection *conn, void *lua_context );`**|
+| |The callback function `init_lua()` is called just before a Lua server page is to be served. Lua page serving must have been enabled at compile time for this callback function to be called. The parameter `lua_context` is a `lua_State *` pointer.|
+|~~`upload`~~|**`void upload( struct mg_connection *, const char *file_name );`**|
+| |*Deprecated. Use* `mg_handle_form_request()` *instead.*|
 
 #### Description
 
