@@ -30,7 +30,7 @@ The structure `client_cert` is used as a sub-structure in the `mg_request_info` 
 #### Fields
 
 | Field | Description |
-| :--- | :--- | :--- | :--- |
+| :--- | :--- | 
 |**`begin_request`**|**`int (*begin_request)( struct mg_connection * conn );`**|
 | |The `begin_request()` callback function is called when CivetWeb has received a new HTTP request. If the callback function does not process the request, it should return 0. In that case CivetWeb will handle the request with the default callback routine. If the callback function returns a value between 1 and 999, CivetWeb does nothing and the callback function should do all the processing, including sending the proper HTTP headers etc. Starting at CivetWeb version 1.7, the function `begin_request()` is called before any authorization is done. If an authorization check is required, `request_handler()` should be used instead. The return value of the callback function is not only used to signal CivetWeb to not further process the request. The returned value is also stored as HTTP status code in the access log. |
 |**`connection_close`**|**`void (*connection_close)( const struct mg_connection *conn );`**|
@@ -243,7 +243,7 @@ The function `mg_read()` receives data over an existing connection. The data is 
 
 The option list can be used to set the following options:
 
-| Option | Default Description |
+| Option | Default | Description |
 | :---: | :--- | :--- |
 | **`cgi_environment`** | NULL | The option `cgi_environment` can contain extra variables to be passed to the CGI script in addition to the standard environment variables. The lust must be a comma separated list of name=value pairs like this: `VARIABLE1=VALUE1,VARIABLE2=VALUE2`.|
 | **`cgi_interpreter`**| NULL | The option `cgi_interpreter` can contain a path to an executable which will be used as a CGI interpreter for **all** CGI scripts regardless of the script file extension. If this option is not set (which is the default), CivetWeb looks at the first line of a CGI script to see if an interpreter is defined there. This first line is formatted as a shebang line as common in unix style shell scripts, but this will also work in Windows. For more information about the syntax, please see the Wikipedia page about the [shebang line](http://en.wikipedia.org/wiki/Shebang_(Unix\)).|
