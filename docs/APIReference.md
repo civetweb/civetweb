@@ -66,8 +66,8 @@ The structure `client_cert` is used as a sub-structure in the `mg_request_info` 
 | |**1** - CivetWeb must close the connection immediately without performing a handshake |
 |~~`websocket_data`~~|**`int (*websocket_data)( struct mg_connection *conn, int bits, char *data, size_t data_len );`**|
 | |*Deprecated. Use* `mg_set_websocket_handler()` *instead.* The callback function `websocket_data()` is called when a data frame has been received from the client. The parameters contain the following information: |
-| | **`bits`** - The first byte of the websocket frame. [RFC-6455](See http://tools.ietf.org/html/rfc6455) at section 5.2 for more detailed information. |
-| | **`data`** - The pointer to the beginning of the received data block. Masks--if any--have already been applied. |
+| | **`bits`** - The first byte of the websocket frame. See [RFC-6455](http://tools.ietf.org/html/rfc6455) at section 5.2 for more information. |
+| | **`data`** - The pointer to the received data block. Masks--if any--have already been applied. |
 | | **`data_len`** - The length of the received data block |
 | | If the application wants to keep the websocket open to receive more data, the callback function should return the value **1**. If the value **0** is returned by the callback function, CivetWeb will close the websocket connection and no more frames will be received.|
 |~~`websocket_ready`~~|**`int (*websocket_ready)( struct mg_connection *conn );`**|
