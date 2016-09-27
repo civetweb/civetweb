@@ -25,40 +25,40 @@ The structure `client_cert` is used as a sub-structure in the `mg_request_info` 
 
 | Field | Description |
 | :--- | :--- | :--- | :--- |
-|**`begin_request`**|**`int begin_request( struct mg_connection * conn );`**|
+|**`begin_request`**|**`int (*begin_request)( struct mg_connection * conn );`**|
 | |The `begin_request()` callback function is called when CivetWeb has received a new HTTP request. If the callback function does not process the request, it should return 0. In that case CivetWeb will handle the request with the default callback routine. If the callback function returns a value between 1 and 999, CivetWeb does nothing and the callback function should do all the processing, including sending the proper HTTP headers etc. Starting at CivetWeb version 1.7, the function `begin_request()` is called before any authorization is done. If an authorization check is required, `request_handler()` should be used instead. The return value of the callback function is not only used to signal CivetWeb to not further process the request. The returned value is also stored as HTTP status code in the access log. |
-|**`end_request`**|**`void end_request( const struct mg_connection * conn );`**|
+|**`end_request`**|**`void (*end_request)( const struct mg_connection * conn );`**|
 | |The callback function `end_request()` is called by CivetWeb when a request has been completely processed. It sends the reply status code which was sent to the client to the application.|
-|**`log_message`**|**`int log_message( const struct mg_connection *conn, const char *message );`**|
+|**`log_message`**|**`int (*log_message)( const struct mg_connection *conn, const char *message );`**|
 | |The callback function `log_message()` is called when CivetWeb is about to log a message. If the callback function returns 0, CivetWeb will use the default internal log routines to log the message. If a non-zero value is returned CivetWeb assumes that logging has already been done and no further action is performed.|
-|**`log_access`**|**`int log_access( const struct mg_connection *conn, const char *message );`**|
+|**`log_access`**|**`int (*log_access)( const struct mg_connection *conn, const char *message );`**|
 | |The callback function `log_access()` is called when CivetWeb is about to log a message. If the callback function returns 0, CivetWeb will use the default internal access log routines to log the access. If a non-zero value is returned, CivetWeb assumes that access logging has already been done and no further action is performed.|
-|**`init_ssl`**|**`int init_ssl( void *ssl_context, void *user_data );`**|
+|**`init_ssl`**|**`int (*init_ssl)( void *ssl_context, void *user_data );`**|
 | |The callback function `init_ssl()` is called when CivetWeb initializes the SSL library. The parameter `user_data` contains a pointer to the data which was provided to `mg_start()` when the server was started. The callback function can return 0 to signal that CivetWeb should setup the SSL certificate. With a return value of 1 the callback function signals CivetWeb that the certificate has already been setup and no further processing is necessary. The value -1 should be returned when the SSL initialization fails.|
-|~~`websocket_connect`~~|**`int websocket_connect( const struct mg_connection *conn );`**|
+|~~`websocket_connect`~~|**`int (*websocket_connect)( const struct mg_connection *conn );`**|
 | |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
-|~~`websocket_ready`~~|**`int websocket_ready( struct mg_connection *conn );`**|
+|~~`websocket_ready`~~|**`int (*websocket_ready)( struct mg_connection *conn );`**|
 | |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
-|~~`websocket_data`~~|**`int websocket_data( struct mg_connection *conn, int bits, char *data, size_t data_len );`**|
+|~~`websocket_data`~~|**`int (*websocket_data)( struct mg_connection *conn, int bits, char *data, size_t data_len );`**|
 | |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
-|**`connection_close`**|**`void connection_close( const struct mg_connection *conn );`**|
+|**`connection_close`**|**`void (*connection_close)( const struct mg_connection *conn );`**|
 | |The callback function `connection_close()` is called when CivetWeb is closing a connection. The per-context mutex is locked when the callback function is invoked. The function is primarly useful for noting when a websocket is closing and removing it from any application-maintained list of clients. *Using this callback for websocket connections is deprecated. Use* `mg_set_websocket_handler()` *instead.*|
-|**`open_file`**|**`const char *open_file( const struct mg_connection *conn, const char *path, size_t *data_len );`**|
+|**`open_file`**|**`const char *(*open_file)( const struct mg_connection *conn, const char *path, size_t *data_len );`**|
 | |The callback function `open_file()` is called when a file is to be opened by CivetWeb. The callback can return a pointer to a memory location and set the memory block size in the variable pointed to by `data_len` to signal CivetWeb that the file should not be loaded from disk, but that instead a cached version in memory should be used. If the callback function returns NULL, CivetWeb will open the file from disk. This callback allows caching to be implemented.|
-|**`init_lua`**|**`void init_lua( const struct mg_connection *conn, void *lua_context );`**|
+|**`init_lua`**|**`void (*init_lua)( const struct mg_connection *conn, void *lua_context );`**|
 | |The callback function `init_lua()` is called just before a Lua server page is to be served. Lua page serving must have been enabled at compile time for this callback function to be called. The parameter `lua_context` is a `lua_State *` pointer.|
-|~~`upload`~~|**`void upload( struct mg_connection * conn, const char *file_name );`**|
+|~~`upload`~~|**`void (*upload)( struct mg_connection * conn, const char *file_name );`**|
 | |*Deprecated. Use* `mg_handle_form_request()` *instead.*|
-|**`http_error`**|**`int http_error( struct mg_connection *conn, int status );`**|
+|**`http_error`**|**`int (*http_error)( struct mg_connection *conn, int status );`**|
 | |The callback function `http_error()` is called by CivetWeb just before an HTTP error is to be sent to the client. The function allows the application to send a custom error page. The status code of the error is provided as a parameter. If the application sends their own error page, it must return 1 to signal CivetWeb that no further processing is needed. If the returned value is 0, CivetWeb will send a built-in error page to the client.|
-|**`init_context`**|**`void init_context( const struct mg_context *ctx );`**|
+|**`init_context`**|**`void (*init_context)( const struct mg_context *ctx );`**|
 | |The callback function `init_context()` is called after the CivetWeb server has been started and initialized, but before any requests are served. This allowes the application to perform some initialization activities before the first requests are handled.|
-|**`init_thread`**|**`void init_thread( const struct mg_context *ctx, int thread_type );`**|
+|**`init_thread`**|**`void (*init_thread)( const struct mg_context *ctx, int thread_type );`**|
 | |The callback function `init_thread()` is called when a new thread is created by CivetWeb. The `thread_type` parameter indicates which type of thread has been created. following thread types are recognized:|
-| |**0** The master thread is created |
-| |**1** A worker thread which handles client connections has been created|
-| |**2** An internal helper thread (timer thread) has been created|
-|**`exit_context`**|**void exit_context( const struct mg_context *ctx );`**|
+| |**0** - The master thread is created |
+| |**1** - A worker thread which handles client connections has been created|
+| |**2** - An internal helper thread (timer thread) has been created|
+|**`exit_context`**|**`void (*exit_context)( const struct mg_context *ctx );`**|
 | |The callback function `exit_context()` is called by CivetWeb when the server is stopped. It allows the application to do some cleanup on the application side.|
 
 
