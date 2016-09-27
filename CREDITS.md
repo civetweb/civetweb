@@ -16,6 +16,7 @@
 * Daniel Oaks
 * Daniel Rempel
 * Danny Al-Gaaf
+* Dave Brower
 * David Arnold
 * David Loffredo
 * Dialga

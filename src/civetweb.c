@@ -11403,7 +11403,7 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 	/* SSL functions may fail and require to be called again:
 	 * see https://www.openssl.org/docs/manmaster/ssl/SSL_get_error.html
 	 * Here "func" could be SSL_connect or SSL_accept. */
-	for (i = 0; i <= 16; i *= 2) {
+	for (i = 1; i <= 16; i *= 2) {
 		ret = func(conn->ssl);
 		if (ret != 1) {
 			err = SSL_get_error(conn->ssl, ret);
