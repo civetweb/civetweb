@@ -1,6 +1,12 @@
 # CivetWeb API Reference
 
-CivetWeb is often used as HTTP and HTTPS library inside a larger application. An API is available to integrate the CivetWeb functionality in a larger codebase. This document describes the API. Basic usage examples of the API can be found in [Embedding.md](Embedding.md).
+CivetWeb is often used as HTTP and HTTPS library inside a larger application. A C API is available to integrate the CivetWeb functionality in a larger codebase. A C++ wrapper is also available, although it is not guaranteed that all functionality available through the C API can also be accessed from C++. This document describes the public C API. Basic usage examples of the API can be found in [Embedding.md](Embedding.md).
+
+## Macros
+
+| Macro | Description |
+| :--- | :--- |
+| **`CIVETWEB_VERSION`** | The current version of the website as a string with the major and minor version number seperated with a dot. For version 1.9, this string will for example have the value "1.9" |
 
 ## Structures
 
@@ -51,15 +57,21 @@ The structure `client_cert` is used as a sub-structure in the `mg_request_info` 
 |**`log_message`**|**`int (*log_message)( const struct mg_connection *conn, const char *message );`**|
 | |The callback function `log_message()` is called when CivetWeb is about to log a message. If the callback function returns 0, CivetWeb will use the default internal log routines to log the message. If a non-zero value is returned CivetWeb assumes that logging has already been done and no further action is performed.|
 |**`open_file`**|**`const char *(*open_file)( const struct mg_connection *conn, const char *path, size_t *data_len );`**|
-| |The callback function `open_file()` is called when a file is to be opened by CivetWeb. The callback can return a pointer to a memory location and set the memory block size in the variable pointed to by `data_len` to signal CivetWeb that the file should not be loaded from disk, but that instead a cached version in memory should be used. If the callback function returns NULL, CivetWeb will open the file from disk. This callback allows caching to be implemented.|
+| |The callback function `open_file()` is called when a file is to be opened by CivetWeb. The callback can return a pointer to a memory location and set the memory block size in the variable pointed to by `data_len` to signal CivetWeb that the file should not be loaded from disk, but that instead a stored version in memory should be used. If the callback function returns NULL, CivetWeb will open the file from disk. This callback allows caching to be implementedi at the application side, or to serve specific files from static memory instead of from disk.|
 |~~`upload`~~|**`void (*upload)( struct mg_connection * conn, const char *file_name );`**|
-| |*Deprecated. Use* `mg_handle_form_request()` *instead.*|
+| |*Deprecated. Use* `mg_handle_form_request()` *instead.* The callback function `upload()` is called when CivetWeb has uploaded a file to a temporary directory as result of a call to `mg_upload()`. The parameter `file_name` contains the full file name including path to the uploaded file.|
 |~~`websocket_connect`~~|**`int (*websocket_connect)( const struct mg_connection *conn );`**|
-| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
+| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.* The callback function `websocket_connect()` is called when a websocket request is received, before the actual websocket handshake has taken place. The callback function can signal to CivetWeb if it should accept or deny the incoming request with one of the following return values: |
+| |**0** - CivetWeb can proceed with the handshake to accept the connection |
+| |**1** - CivetWeb must close the connection immediately without performing a handshake |
 |~~`websocket_data`~~|**`int (*websocket_data)( struct mg_connection *conn, int bits, char *data, size_t data_len );`**|
-| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
+| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.* The callback function `websocket_data()` is called when a data frame has been received from the client. The parameters contain the following information: |
+| | **`bits`** - The first byte of the websocket frame. [RFC-6455](See http://tools.ietf.org/html/rfc6455) at section 5.2 for more detailed information. |
+| | **`data`** - The pointer to the beginning of the received data block. Masks--if any--have already been applied. |
+| | **`data_len`** - The length of the received data block |
+| | If the application wants to keep the websocket open to receive more data, the callback function should return the value **1**. If the value **0** is returned by the callback function, CivetWeb will close the websocket connection and no more frames will be received.|
 |~~`websocket_ready`~~|**`int (*websocket_ready)( struct mg_connection *conn );`**|
-| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.*|
+| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.* The callback function `websocket_ready()` is called after the handshake of a websocket connection has succeeded succesfully to signal the application that the connection is ready for use. |
 
 #### Description
 
