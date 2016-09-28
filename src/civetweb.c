@@ -1445,7 +1445,7 @@ static struct mg_option config_options[] = {
     {"allow_sendfile_call", CONFIG_TYPE_BOOLEAN, "yes"},
 #endif
 #if defined(_WIN32)
-    {"case_sensitive_files", CONFIG_TYPE_BOOLEAN, "no"},
+    {"case_sensitive", CONFIG_TYPE_BOOLEAN, "no"},
 #endif
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
