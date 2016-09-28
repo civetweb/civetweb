@@ -266,6 +266,7 @@ open_file_cb(const struct mg_connection *conn, const char *path, size_t *size)
 	return NULL;
 }
 
+#if defined(MG_LEGACY_INTERFACE)
 static void upload_cb(struct mg_connection *conn, const char *path)
 {
 	const struct mg_request_info *ri = mg_get_request_info(conn);
@@ -310,6 +311,7 @@ static void upload_cb(struct mg_connection *conn, const char *path)
 	          (int)strlen(upload_ok_message),
 	          upload_ok_message);
 }
+#endif
 
 static int begin_request_handler_cb(struct mg_connection *conn)
 {
@@ -383,10 +385,12 @@ static int begin_request_handler_cb(struct mg_connection *conn)
 		return 1;
 	}
 
+#if defined(MG_LEGACY_INTERFACE)
 	if (!strcmp(ri->uri, "/upload")) {
 		ASSERT(ri->query_string != NULL);
 		ASSERT(mg_upload(conn, ".") == atoi(ri->query_string));
 	}
+#endif
 
 	return 0;
 }
@@ -425,7 +429,9 @@ static void init_CALLBACKS()
 	CALLBACKS.begin_request = begin_request_handler_cb;
 	CALLBACKS.log_message = log_message_cb;
 	CALLBACKS.open_file = open_file_cb;
+#if defined(MG_LEGACY_INTERFACE)
 	CALLBACKS.upload = upload_cb;
+#endif
 };
 
 static const char *OPTIONS[] = {
@@ -863,6 +869,7 @@ static int alloc_printf(char **out_buf, char *buf, size_t size, char *fmt, ...)
 	return ret;
 }
 
+#if defined(MG_LEGACY_INTERFACE)
 static void test_mg_upload(void)
 {
 	static const char *boundary = "OOO___MY_BOUNDARY___OOO";
@@ -953,6 +960,7 @@ static void test_mg_upload(void)
 
 	ut_mg_stop(ctx);
 }
+#endif
 
 static void test_base64_encode(void)
 {
@@ -1343,18 +1351,19 @@ static void test_parse_port_string(void)
 	    "99999", "1k", "1.2.3", "1.2.3.4:", "1.2.3.4:2p", NULL};
 	struct socket so;
 	struct vec vec;
+	int ipv;
 	int i;
 
 	for (i = 0; valid[i] != NULL; i++) {
 		vec.ptr = valid[i];
 		vec.len = strlen(vec.ptr);
-		ASSERT(parse_port_string(&vec, &so) != 0);
+		ASSERT(parse_port_string(&vec, &so, &ipv) != 0);
 	}
 
 	for (i = 0; invalid[i] != NULL; i++) {
 		vec.ptr = invalid[i];
 		vec.len = strlen(vec.ptr);
-		ASSERT(parse_port_string(&vec, &so) == 0);
+		ASSERT(parse_port_string(&vec, &so, &ipv) == 0);
 	}
 }
 
@@ -1510,7 +1519,9 @@ int __cdecl main(void)
 	test_mg_websocket_client_connect(1);
 #endif
 
+#if defined(MG_LEGACY_INTERFACE)
 	test_mg_upload();
+#endif
 	test_request_replies();
 	test_api_calls();
 	test_request_handlers();
