@@ -1364,6 +1364,9 @@ enum {
 #if defined(__linux__)
 	ALLOW_SENDFILE_CALL,
 #endif
+#if defined(_WIN32)
+	CASE_SENSITIVE_FILES,
+#endif
 
 	NUM_OPTIONS
 };
@@ -1440,6 +1443,9 @@ static struct mg_option config_options[] = {
 #endif
 #if defined(__linux__)
     {"allow_sendfile_call", CONFIG_TYPE_BOOLEAN, "yes"},
+#endif
+#if defined(_WIN32)
+    {"case_sensitive_files", CONFIG_TYPE_BOOLEAN, "no"},
 #endif
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
@@ -3303,15 +3309,22 @@ path_to_unicode(const struct mg_connection *conn,
 		wbuf[0] = L'\0';
 	}
 
-	/* TODO: Add a configuration to switch between case sensitive and
-	 * case insensitive URIs for Windows server. */
-	/*
+	/* Windows file systems are not case sensitive, but you can still use
+	 * uppercase and lowercase letters (on all modern file systems).
+	 * The server can check if the URI uses the same upper/lowercase
+	 * letters an the file system, effectively making Windows servers
+	 * case sensitive (like Linux servers are). It is still not possible
+	 * to use two files with the same name in different cases on Windows
+	 * (like /a and /A) - this would be possible in Linux.
+	 * As a default, Windows is not case sensitive, but the case sensitive
+	 * file name check can be activated by an additional configuration. */
 	if (conn) {
-	    if (conn->ctx->config[WINDOWS_CASE_SENSITIVE]) {
-	        fcompare = wcscmp;
-	    }
+		if (conn->ctx->config[CASE_SENSITIVE_FILES]
+		    && !mg_strcasecmp(conn->ctx->config[CASE_SENSITIVE_FILES], "yes")) {
+            /* Use case sensitive compare function */
+			fcompare = wcscmp;
+		}
 	}
-	*/
 	(void)conn; /* conn is currently unused */
 
 #if !defined(_WIN32_WCE)
