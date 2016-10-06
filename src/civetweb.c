@@ -10317,6 +10317,7 @@ handle_request(struct mg_connection *conn)
 				/* callback already processed the request. Store the
 				   return value as a status code for the access log. */
 				conn->status_code = i;
+				discard_unread_request_data(conn);
 				return;
 			} else if (i == 0) {
 				/* civetweb should process the request */
