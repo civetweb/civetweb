@@ -130,6 +130,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #define CLOCK_MONOTONIC (1)
 #define CLOCK_REALTIME (2)
 
+#include <sys/errno.h>
 #include <sys/time.h>
 #include <mach/clock.h>
 #include <mach/mach.h>
@@ -3321,7 +3322,7 @@ path_to_unicode(const struct mg_connection *conn,
 	if (conn) {
 		if (conn->ctx->config[CASE_SENSITIVE_FILES]
 		    && !mg_strcasecmp(conn->ctx->config[CASE_SENSITIVE_FILES], "yes")) {
-            /* Use case sensitive compare function */
+			/* Use case sensitive compare function */
 			fcompare = wcscmp;
 		}
 	}
