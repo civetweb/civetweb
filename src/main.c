@@ -28,6 +28,9 @@
 #ifndef _CRT_SECURE_NO_DEPRECATE
 #define _CRT_SECURE_NO_DEPRECATE
 #endif
+#ifdef WIN32_LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN /* Required for some functions (tray icons, ...) */
+#endif
 
 #else
 
@@ -53,14 +56,28 @@
 #define NO_RETURN
 #endif
 
+/* Use same defines as in civetweb.c before including system headers. */
+#ifndef _LARGEFILE_SOURCE
+#define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
+#endif
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 64 /* Use 64-bit file offsets by default */
+#endif
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
+#endif
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
+#endif
+
+#include <string.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <string.h>
-#include <errno.h>
 #include <stddef.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -106,9 +123,10 @@ static int guard = 0; /* test if any dialog is already open */
 #else /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include   \
          block */
 
+#include <unistd.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
-#include <unistd.h>
+
 #define DIRSEP '/'
 #define WINCDECL
 #define abs_path(rel, abs, abs_size) (realpath((rel), (abs)))
