@@ -2707,6 +2707,14 @@ install:
 
 before_script:
   # Check some settings of the build server
+  - echo "Commit Id: ${TRAVIS_COMMIT}"
+  - echo "Commit Tag: ${TRAVIS_TAG}"
+  - echo "Repo: ${TRAVIS_REPO_SLUG}"
+  - echo "Branch: ${TRAVIS_BRANCH}"
+  - echo "Job: ${TRAVIS_JOB_NUMBER}"
+  - echo "OS: ${TRAVIS_OS_NAME}"
+  - echo "Features: ${FEATURES}"
+  - echo "Reference configuration: ${REFERENCE_BUILD}"
   - uname -a
   - pwd
   #- ls -l
@@ -2745,33 +2753,20 @@ cache:
 
 matrix:
   fast_finish: false
-
-matrix:
   exclude:
     # Exclude GCC from OS X builds because it's actually clang so it's just duplicate builds
     - os: osx
       compiler: gcc
-
-matrix:
-  exclude:
     # Exclude Linux from MACOSX_PACKAGE builds
     - os: linux
       env: MACOSX_PACKAGE=1
-
-matrix:
-  exclude:
     # Build only a subset for OSX
     - os: osx
       env: REFERENCE_BUILD=false
-
-matrix:
-  exclude:
     # Build only a subset for gcc linux - all configurations are build with clang
     - os: linux
       compiler: gcc
       env: REFERENCE_BUILD=false
-
-matrix:
   allow_failures:
     # Allow OSX to fail until #364 is solved
     - os: osx
