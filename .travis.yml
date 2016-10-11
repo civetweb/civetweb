@@ -2745,22 +2745,35 @@ cache:
 
 matrix:
   fast_finish: false
+
+matrix:
   exclude:
     # Exclude GCC from OS X builds because it's actually clang so it's just duplicate builds
     - os: osx
       compiler: gcc
+
+matrix:
+  exclude:
     # Exclude Linux from MACOSX_PACKAGE builds
     - os: linux
       env: MACOSX_PACKAGE=1
+
+matrix:
+  exclude:
     # Build only a subset for OSX
     - os: osx
       env: REFERENCE_BUILD=false
+
+matrix:
+  exclude:
     # Build only a subset for gcc linux - all configurations are build with clang
     - os: linux
       compiler: gcc
       env: REFERENCE_BUILD=false
-  # Allow OSX to fail until #364 is solved
+
+matrix:
   allow_failures:
+    # Allow OSX to fail until #364 is solved
     - os: osx
 
 script:
