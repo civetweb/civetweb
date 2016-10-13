@@ -2707,15 +2707,15 @@ install:
 
 before_script:
   # Check some settings of the build server
-  - bash -c echo Commit Id: ${TRAVIS_COMMIT}
-  - bash -c echo Commit Tag: ${TRAVIS_TAG}
-  - bash -c echo Repo: ${TRAVIS_REPO_SLUG}
-  - bash -c echo Branch: ${TRAVIS_BRANCH}
-  - bash -c echo Job: ${TRAVIS_JOB_NUMBER}
-  - bash -c echo OS: ${TRAVIS_OS_NAME}
-  - bash -c echo Compiler: ${CC}
-  - bash -c echo Features: ${FEATURES}
-  - bash -c echo Reference configuration: ${REFERENCE_BUILD}
+  - echo Commit Id: ${TRAVIS_COMMIT}                    || true
+  - echo Commit Tag: ${TRAVIS_TAG}                      || true
+  - echo Repo: ${TRAVIS_REPO_SLUG}                      || true
+  - echo Branch: ${TRAVIS_BRANCH}                       || true
+  - echo Job: ${TRAVIS_JOB_NUMBER}                      || true
+  - echo OS: ${TRAVIS_OS_NAME}                          || true
+  - echo Compiler: ${CC}                                || true
+  - echo Features: ${FEATURES}                          || true
+  - echo Reference configuration: ${REFERENCE_BUILD}    || true
   - uname -a
   - pwd
   # Generate the build scripts with CMake
