@@ -435,21 +435,21 @@ matrix:
     os: osx
     compiler: clang
     env:
-      N=Combination0
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
+#      N=Combination0
+#      BUILD_TYPE=Release
+#      ENABLE_SSL_DYNAMIC_LOADING=YES
+#      ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=0
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+#      ENABLE_LUA_SHARED=NO
+#      FEATURES=0
+#      BUILD_SHARED=NO
+#      NO_FILES=NO
+#      ENABLE_SSL=NO
+#      NO_CGI=NO
+#      ENABLE_IPV6=NO
+#      ENABLE_WEBSOCKETS=NO
+#      ENABLE_LUA=NO
+#      ENABLE_DUKTAPE=NO
+#      NO_CACHING=NO
 
