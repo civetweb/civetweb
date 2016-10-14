@@ -410,7 +410,7 @@ matrix:
 #      print("    compiler: clang")
 #      print("    env:")
 #      print("      N=Combination" .. tostring(i))
-#      print("      BUILD_TYPE=Release")
+#      print("      BUILD_TYPE=Coverage")
 #      print("      ENABLE_SSL_DYNAMIC_LOADING=YES")
 #      print("      ENABLE_CXX=NO")
 #      print("      C_STANDARD=auto")
@@ -437,7 +437,7 @@ matrix:
     compiler: clang
     env:
       N=Combination0
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -459,7 +459,7 @@ matrix:
     compiler: clang
     env:
       N=Combination1
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -481,7 +481,7 @@ matrix:
     compiler: clang
     env:
       N=Combination2
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -503,7 +503,7 @@ matrix:
     compiler: clang
     env:
       N=Combination3
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -525,7 +525,7 @@ matrix:
     compiler: clang
     env:
       N=Combination4
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -547,7 +547,7 @@ matrix:
     compiler: clang
     env:
       N=Combination5
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -569,7 +569,7 @@ matrix:
     compiler: clang
     env:
       N=Combination6
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -591,7 +591,7 @@ matrix:
     compiler: clang
     env:
       N=Combination7
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -613,7 +613,7 @@ matrix:
     compiler: clang
     env:
       N=Combination8
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -635,7 +635,7 @@ matrix:
     compiler: clang
     env:
       N=Combination9
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -657,7 +657,7 @@ matrix:
     compiler: clang
     env:
       N=Combination10
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -679,7 +679,7 @@ matrix:
     compiler: clang
     env:
       N=Combination11
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -701,7 +701,7 @@ matrix:
     compiler: clang
     env:
       N=Combination12
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -723,7 +723,7 @@ matrix:
     compiler: clang
     env:
       N=Combination13
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -745,7 +745,7 @@ matrix:
     compiler: clang
     env:
       N=Combination14
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -767,7 +767,7 @@ matrix:
     compiler: clang
     env:
       N=Combination15
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -789,7 +789,7 @@ matrix:
     compiler: clang
     env:
       N=Combination16
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -811,7 +811,7 @@ matrix:
     compiler: clang
     env:
       N=Combination17
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -833,7 +833,7 @@ matrix:
     compiler: clang
     env:
       N=Combination18
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -855,7 +855,7 @@ matrix:
     compiler: clang
     env:
       N=Combination19
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -877,7 +877,7 @@ matrix:
     compiler: clang
     env:
       N=Combination20
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -899,7 +899,7 @@ matrix:
     compiler: clang
     env:
       N=Combination21
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -921,7 +921,7 @@ matrix:
     compiler: clang
     env:
       N=Combination22
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -943,7 +943,7 @@ matrix:
     compiler: clang
     env:
       N=Combination23
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -965,7 +965,7 @@ matrix:
     compiler: clang
     env:
       N=Combination24
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -987,7 +987,7 @@ matrix:
     compiler: clang
     env:
       N=Combination25
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -1009,7 +1009,7 @@ matrix:
     compiler: clang
     env:
       N=Combination26
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -1031,7 +1031,7 @@ matrix:
     compiler: clang
     env:
       N=Combination27
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -1053,7 +1053,7 @@ matrix:
     compiler: clang
     env:
       N=Combination28
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -1075,7 +1075,7 @@ matrix:
     compiler: clang
     env:
       N=Combination29
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -1097,7 +1097,7 @@ matrix:
     compiler: clang
     env:
       N=Combination30
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -1119,7 +1119,7 @@ matrix:
     compiler: clang
     env:
       N=Combination31
-      BUILD_TYPE=Release
+      BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       C_STANDARD=auto
