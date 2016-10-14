@@ -406,3 +406,38 @@ matrix:
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
       MACOSX_PACKAGE=1
+
+#### Now all define combinations, but only for Linux clang
+##### Generated with Lua:
+#
+#  function YN(i,b) if math.mod(i, b) >= (b/2) then return "YES" end return "NO" end
+#  for i=0,31 do
+#    if (i~=0) and (i~=7) and (i~=31) then
+#      print("   -")
+#      print("    os: osx")
+#      print("    compiler: clang")
+#      print("    env:")
+#      print("      N=Combination_" .. tostring(i))
+#      print("      BUILD_TYPE=DoNotCheckCoverage")
+#      print("      ENABLE_SSL_DYNAMIC_LOADING=YES")
+#      print("      ENABLE_CXX=NO")
+#      print("      C_STANDARD=auto")
+#      print("      CXX_STANDARD=auto")
+#      print("      ENABLE_LUA_SHARED=NO")
+#      print("      FEATURES=" .. tostring(i))
+#      print("      BUILD_SHARED=NO")
+#      print("      NO_FILES=" .. YN(i, 1))
+#      print("      ENABLE_SSL=" .. YN(i, 2))
+#      print("      NO_CGI=" .. YN(i, 4))
+#      print("      ENABLE_IPV6=" .. YN(i, 8))
+#      print("      ENABLE_WEBSOCKETS=" .. YN(i, 16))
+#      print("      ENABLE_LUA=" .. YN(i, 32))
+#      print("      ENABLE_DUKTAPE=" .. YN(i, 64))
+#      print("      NO_CACHING=NO")
+#      print("")
+#    end
+#  end
+#
+
+# ... to be added ... now removed ... try and error to fix .travis.yml file ...
+
