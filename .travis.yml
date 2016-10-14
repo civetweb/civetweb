@@ -452,5 +452,621 @@ matrix:
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination2
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=2
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination3
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=3
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination4
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=4
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination5
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=5
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination6
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=6
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination8
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=8
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination9
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=9
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination10
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=10
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination11
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=11
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination12
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=12
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination13
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=13
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination14
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=14
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination15
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=15
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination16
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=16
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination17
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=17
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination18
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=18
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination19
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=19
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination20
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=20
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination21
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=21
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination22
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=22
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination23
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=23
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination24
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=24
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination25
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=25
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination26
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=26
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination27
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=27
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination28
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=28
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination29
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=29
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+   -
+    os: osx
+    compiler: clang
+    env:
+      N=Combination30
+      BUILD_TYPE=DoNotCheckCoverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=30
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
 
 
