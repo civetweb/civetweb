@@ -435,8 +435,8 @@ matrix:
     os: osx
     compiler: clang
     env:
-      N=ClangOSXDefaultShared
-      BUILD_TYPE=Coverage
+      N=Combination12345
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
