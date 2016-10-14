@@ -405,7 +405,7 @@ matrix:
 #  end
 #  for i=0,31 do
 #    if true then -- (i~=0) and (i~=7) and (i~=31) then
-#      print("   -")
+#      print("  -")
 #      print("    os: linux")
 #      print("    compiler: clang")
 #      print("    env:")
@@ -431,7 +431,7 @@ matrix:
 #  end
 #
 
-   -
+  -
     os: linux
     compiler: clang
     env:
