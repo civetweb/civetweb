@@ -398,10 +398,25 @@ matrix:
 ##### Generated with Lua:
 #
 #  function YN(i,b)
-#    if (math.mod(i, b) >= (b/2)) then
+#    local bits = {}
+#    while (i > 0.5) do
+#      i = math.floor(i)
+#      bits[#bits+1] = (math.mod(i, 2) == 1)
+#      i = i/2
+#    end
+#    if (bits[b]) then
 #      return "YES"
 #    end
 #    return "NO"
+#  end
+#  function INV(t) 
+#    if t=="YES" then 
+#      return "NO" 
+#    elseif t=="NO" then 
+#      return "YES"
+#    else
+#      assert("ERROR in INV!")
+#    end
 #  end
 #  for i=0,31 do
 #    if true then -- (i~=0) and (i~=7) and (i~=31) then
@@ -409,7 +424,7 @@ matrix:
 #      print("    os: linux")
 #      print("    compiler: clang")
 #      print("    env:")
-#      print("      N=Combination" .. tostring(i))
+#      print("      N=C" .. tostring(i) .. "_")
 #      print("      BUILD_TYPE=Release")
 #      print("      ENABLE_SSL_DYNAMIC_LOADING=YES")
 #      print("      ENABLE_CXX=NO")
@@ -418,13 +433,13 @@ matrix:
 #      print("      ENABLE_LUA_SHARED=NO")
 #      print("      FEATURES=" .. tostring(i))
 #      print("      BUILD_SHARED=NO")
-#      print("      NO_FILES=" .. YN(i, 1))
+#      print("      NO_FILES=" .. INV(YN(i, 1)))
 #      print("      ENABLE_SSL=" .. YN(i, 2))
-#      print("      NO_CGI=" .. YN(i, 4))
-#      print("      ENABLE_IPV6=" .. YN(i, 8))
-#      print("      ENABLE_WEBSOCKETS=" .. YN(i, 16))
-#      print("      ENABLE_LUA=" .. YN(i, 32))
-#      print("      ENABLE_DUKTAPE=" .. YN(i, 64))
+#      print("      NO_CGI=" .. INV(YN(i, 3)))
+#      print("      ENABLE_IPV6=" .. YN(i, 4))
+#      print("      ENABLE_WEBSOCKETS=" .. YN(i, 5))
+#      print("      ENABLE_LUA=" .. YN(i, 6))
+#      print("      ENABLE_DUKTAPE=" .. YN(i, 7))
 #      print("      NO_CACHING=NO")
 #      print("")
 #    end
@@ -435,7 +450,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination0
+      N=C0_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -444,9 +459,9 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=0
       BUILD_SHARED=NO
-      NO_FILES=NO
+      NO_FILES=YES
       ENABLE_SSL=NO
-      NO_CGI=NO
+      NO_CGI=YES
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
@@ -457,7 +472,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination1
+      N=C1_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -465,28 +480,6 @@ matrix:
       CXX_STANDARD=auto
       ENABLE_LUA_SHARED=NO
       FEATURES=1
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=Combination2
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=2
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=NO
@@ -501,7 +494,29 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination3
+      N=C2_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=2
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C3_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -523,7 +538,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination4
+      N=C4_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -532,10 +547,10 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=4
       BUILD_SHARED=NO
-      NO_FILES=NO
+      NO_FILES=YES
       ENABLE_SSL=NO
       NO_CGI=NO
-      ENABLE_IPV6=YES
+      ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
@@ -545,7 +560,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination5
+      N=C5_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -555,9 +570,9 @@ matrix:
       FEATURES=5
       BUILD_SHARED=NO
       NO_FILES=NO
-      ENABLE_SSL=YES
+      ENABLE_SSL=NO
       NO_CGI=NO
-      ENABLE_IPV6=YES
+      ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
@@ -567,7 +582,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination6
+      N=C6_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -576,10 +591,10 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=6
       BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=YES
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
@@ -589,7 +604,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination7
+      N=C7_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -600,6 +615,28 @@ matrix:
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C8_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=8
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
       NO_CGI=YES
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=NO
@@ -611,29 +648,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination8
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=8
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=Combination9
+      N=C9_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -643,10 +658,10 @@ matrix:
       FEATURES=9
       BUILD_SHARED=NO
       NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -655,7 +670,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination10
+      N=C10_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -664,11 +679,11 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=10
       BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
       NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -677,7 +692,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination11
+      N=C11_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -689,8 +704,8 @@ matrix:
       NO_FILES=NO
       ENABLE_SSL=YES
       NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -699,7 +714,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination12
+      N=C12_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -708,11 +723,11 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=12
       BUILD_SHARED=NO
-      NO_FILES=NO
+      NO_FILES=YES
       ENABLE_SSL=NO
       NO_CGI=NO
       ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
+      ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -721,7 +736,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination13
+      N=C13_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -731,10 +746,10 @@ matrix:
       FEATURES=13
       BUILD_SHARED=NO
       NO_FILES=NO
-      ENABLE_SSL=YES
+      ENABLE_SSL=NO
       NO_CGI=NO
       ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
+      ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -743,7 +758,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination14
+      N=C14_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -752,11 +767,11 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=14
       BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=YES
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
       ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
+      ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -765,7 +780,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination15
+      N=C15_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -776,8 +791,30 @@ matrix:
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
-      NO_CGI=YES
+      NO_CGI=NO
       ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C16_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=16
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
@@ -787,29 +824,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination16
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=16
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=YES
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=Combination17
+      N=C17_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -819,11 +834,11 @@ matrix:
       FEATURES=17
       BUILD_SHARED=NO
       NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
       ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -831,7 +846,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination18
+      N=C18_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -840,12 +855,12 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=18
       BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
       NO_CGI=YES
       ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -853,7 +868,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination19
+      N=C19_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -866,8 +881,8 @@ matrix:
       ENABLE_SSL=YES
       NO_CGI=YES
       ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -875,7 +890,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination20
+      N=C20_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -884,12 +899,12 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=20
       BUILD_SHARED=NO
-      NO_FILES=NO
+      NO_FILES=YES
       ENABLE_SSL=NO
       NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -897,7 +912,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination21
+      N=C21_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -907,11 +922,11 @@ matrix:
       FEATURES=21
       BUILD_SHARED=NO
       NO_FILES=NO
-      ENABLE_SSL=YES
+      ENABLE_SSL=NO
       NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -919,7 +934,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination22
+      N=C22_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -928,12 +943,12 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=22
       BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=YES
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -941,7 +956,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination23
+      N=C23_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -952,10 +967,10 @@ matrix:
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -963,7 +978,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination24
+      N=C24_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -972,12 +987,12 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=24
       BUILD_SHARED=NO
-      NO_FILES=NO
+      NO_FILES=YES
       ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -985,7 +1000,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination25
+      N=C25_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -995,11 +1010,11 @@ matrix:
       FEATURES=25
       BUILD_SHARED=NO
       NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -1007,7 +1022,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination26
+      N=C26_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -1016,12 +1031,12 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=26
       BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
       NO_CGI=YES
-      ENABLE_IPV6=NO
+      ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -1029,7 +1044,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination27
+      N=C27_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -1041,9 +1056,9 @@ matrix:
       NO_FILES=NO
       ENABLE_SSL=YES
       NO_CGI=YES
-      ENABLE_IPV6=NO
+      ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -1051,7 +1066,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination28
+      N=C28_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -1060,12 +1075,12 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=28
       BUILD_SHARED=NO
-      NO_FILES=NO
+      NO_FILES=YES
       ENABLE_SSL=NO
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -1073,7 +1088,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination29
+      N=C29_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -1083,11 +1098,11 @@ matrix:
       FEATURES=29
       BUILD_SHARED=NO
       NO_FILES=NO
-      ENABLE_SSL=YES
+      ENABLE_SSL=NO
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -1095,7 +1110,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination30
+      N=C30_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -1104,12 +1119,12 @@ matrix:
       ENABLE_LUA_SHARED=NO
       FEATURES=30
       BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=YES
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
@@ -1117,7 +1132,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      N=Combination31
+      N=C31_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
@@ -1128,10 +1143,9 @@ matrix:
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
-      NO_CGI=YES
+      NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=YES
+      ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
-
