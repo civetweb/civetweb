@@ -9269,7 +9269,7 @@ read_websocket(struct mg_connection *conn,
 			/* Allocate space to hold websocket payload */
 			data = mem;
 			if (data_len > sizeof(mem)) {
-				data = (char *)mg_malloc(data_len);
+				data = (unsigned char *)mg_malloc(data_len);
 				if (data == NULL) {
 					/* Allocation failed, exit the loop and then close the
 					 * connection */
@@ -9295,8 +9295,11 @@ read_websocket(struct mg_connection *conn,
 				memcpy(data, buf + header_len, len);
 				error = 0;
 				while (len < data_len) {
-					n = pull(
-					    NULL, conn, data + len, (int)(data_len - len), timeout);
+					n = pull(NULL,
+					         conn,
+					         (char *)(data + len),
+					         (int)(data_len - len),
+					         timeout);
 					if (n <= 0) {
 						error = 1;
 						break;
@@ -9337,7 +9340,8 @@ read_websocket(struct mg_connection *conn,
 			 * or "connection close" opcode received (client side). */
 			exit_by_callback = 0;
 			if ((ws_data_handler != NULL)
-			    && !ws_data_handler(conn, mop, data, data_len, callback_data)) {
+			    && !ws_data_handler(
+			           conn, mop, (char *)data, data_len, callback_data)) {
 				exit_by_callback = 1;
 			}
 
@@ -9398,7 +9402,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 		headerLen = 4;
 	} else {
 		/* 64-bit length field */
-		len1 = htonl((uint32_t)((uint64_t)dataLen >> 32));
+		uint32_t len1 = htonl((uint32_t)((uint64_t)dataLen >> 32));
 		uint32_t len2 = htonl((uint32_t)(dataLen & 0xFFFFFFFFu));
 		header[1] = 127;
 		memcpy(header + 2, &len1, 4);
