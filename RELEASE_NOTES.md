@@ -5,6 +5,11 @@ Release Notes v1.9 (work in progress)
 Changes
 -------
 
+- Allow some additional compiler checks (higher warning level)
+- Add option for case sensitive file names for Windows
+- Short notation for listening_ports option when using IPv4 and IPv6 ports
+- Make usage of Linux sendfile configurable
+- Optimize build matrix for Travis CI
 - Retry failing TLS/HTTPS read/write operations
 - Read client certificate information
 - Do not tolerate URIs with invalid characters
