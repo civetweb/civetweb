@@ -47,6 +47,13 @@
 #define _CRT_SECURE_NO_DEPRECATE
 #endif
 
+#ifdef __clang__
+/* When using -Weverything, clang does not accept it's own headers
+ * in a release build configuration. Disable what is too much in
+ * -Weverything. */
+#pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#endif
+
 /* A minimal timeout used for all tests with the "check" framework. */
 #define civetweb_min_test_timeout (30)
 
