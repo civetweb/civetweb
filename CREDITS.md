@@ -20,7 +20,9 @@
 * David Arnold
 * David Loffredo
 * Dialga
+* ehlertjd
 * Eric Tsau
+* Erik Beran
 * F-Secure Corporation
 * Fernando G. Aranda
 * Grahack
@@ -70,6 +72,7 @@
 * Richard Screene
 * Sage Weil
 * Sangwhan Moon
+* Saumitra Vikram
 * Scott Nations
 * shantanugadgil
 * SpaceLord
