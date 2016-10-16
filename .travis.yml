@@ -82,6 +82,7 @@ matrix:
   allow_failures:
     # Allow OSX to fail until #364 is solved
     - os: osx
+    - env: ALLOW_FAIL=YES
   include:
 
   -
@@ -1149,3 +1150,123 @@ matrix:
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
+
+### Test all build types:
+# According to CMakeLists, options are:
+# None Debug Release RelWithDebInfo MinSizeRel Coverage
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      N=GCCLinuxDefault_Debug
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_FAIL=YES
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      N=GCCLinuxDefault_Release
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_FAIL=YES
+      
+  -
+    os: linux
+    compiler: gcc
+    env:
+      N=GCCLinuxDefault_RelWithDebInfo
+      BUILD_TYPE=RelWithDebInfo
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_FAIL=YES
+      
+  -
+    os: linux
+    compiler: gcc
+    env:
+      N=GCCLinuxDefault_MinSizeRel
+      BUILD_TYPE=MinSizeRel
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_FAIL=YES
+     
+  -
+    os: linux
+    compiler: gcc
+    env:
+      N=GCCLinuxDefault_None
+      BUILD_TYPE=None
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_FAIL=YES
+           
