@@ -125,7 +125,16 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #include <fcntl.h>
 #endif /* !_WIN32_WCE */
 
-#ifdef __MACH__
+
+#ifdef __clang__
+/* When using -Weverything, clang does not accept it's own headers
+ * in a release build configuration. Disable what is too much in
+ * -Weverything. */
+#pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#endif
+
+
+#ifdef __MACH__ /* Apple OSX section */
 
 #ifdef __clang__
 /* Avoid warnings for Xopen 7.00 and higher */
@@ -2410,7 +2419,7 @@ skip_quoted(char **buf,
 		*buf = end_word;
 	} else {
 		end_whitespace =
-		    end_word + 1u + (unsigned int)strspn(end_word + 1, whitespace);
+		    end_word + ((unsigned int)strspn(end_word + 1, whitespace) + 1u);
 
 		for (p = end_word; p < end_whitespace; p++) {
 			*p = '\0';
