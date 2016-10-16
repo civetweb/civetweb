@@ -9387,7 +9387,8 @@ mg_websocket_write_exec(struct mg_connection *conn,
 
 	int retval = -1;
 
-	header[0] = 0x80 + (((unsigned char)opcode) & 0xF);
+	header[0] =
+	    (unsigned char)0x80u + ((unsigned char)opcode & (unsigned char)0xFu);
 
 	/* Frame format: http://tools.ietf.org/html/rfc6455#section-5.2 */
 	if (dataLen < 126) {
