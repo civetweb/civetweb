@@ -12496,6 +12496,8 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 		return 0;
 	}
 
+/* Check if the request is directed to a different server. */
+/* First check if the port is the same (IPv4 and IPv6). */
 #if defined(USE_IPV6)
 	if (conn->client.lsa.sa.sa_family == AF_INET6) {
 		if (ntohs(conn->client.lsa.sin6.sin6_port) != port) {
@@ -12511,10 +12513,36 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 		}
 	}
 
-	if ((request_domain_len != server_domain_len)
-	    || (0 != memcmp(server_domain, hostbegin, server_domain_len))) {
-		/* Request is directed to another server */
-		return 0;
+	/* Finally check if the server corresponds to the authentication
+	 * domain of the server (the server domain).
+	 * Allow full matches (like http://mydomain.com/path/file.ext), and
+	 * allow subdomain matches (like http://www.mydomain.com/path/file.ext),
+	 * but do not allow substrings (like http://notmydomain.com/path/file.ext
+	 * or http://mydomain.com.fake/path/file.ext).
+	 */
+	if ((request_domain_len == server_domain_len)
+	    && (!memcmp(server_domain, hostbegin, server_domain_len))) {
+		/* Request is directed to this server - full name match. */
+	} else {
+		if (request_domain_len < (server_domain_len + 2)) {
+			/* Request is directed to another server: The server name is longer
+			 * than
+			 * the request name. Drop this case here to avoid overflows in the
+			 * following checks. */
+			return 0;
+		}
+		if (hostbegin[request_domain_len - server_domain_len - 1] != '.') {
+			/* Request is directed to another server: It could be a substring
+			 * like notmyserver.com */
+			return 0;
+		}
+		if (0 != memcmp(server_domain,
+		                hostbegin + request_domain_len - server_domain_len,
+		                server_domain_len)) {
+			/* Request is directed to another server:
+			 * The server name is different. */
+			return 0;
+		}
 	}
 
 	return hostend;

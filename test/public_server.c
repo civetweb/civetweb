@@ -1455,6 +1455,32 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(client_conn);
 
+	/* Get data from callback using mg_connect_client and absolute URI with a
+	 * sub-domain */
+	memset(ebuf, 0, sizeof(ebuf));
+	client_conn =
+	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(ebuf, "");
+
+	mg_printf(client_conn,
+	          "GET http://subdomain.test.domain:%d/U7 HTTP/1.0\r\n\r\n",
+	          ipv4_port);
+
+	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(i, 0);
+	ck_assert_str_eq(ebuf, "");
+
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->uri, "200");
+	i = mg_read(client_conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, (int)strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
+	mg_close_connection(client_conn);
+
 
 /* Websocket test */
 #ifdef USE_WEBSOCKET
@@ -2940,7 +2966,7 @@ MAIN_PUBLIC_SERVER(void)
 	test_threading(0);
 	test_mg_start_stop_http_server(0);
 	// test_mg_start_stop_https_server(0);
-	// test_request_handlers(0);
+	test_request_handlers(0);
 	// test_mg_server_and_client_tls(0);
 	// test_handle_form(0);
 	// test_http_auth(0);
