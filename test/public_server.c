@@ -200,16 +200,16 @@ START_TEST(test_the_test_environment)
 #ifdef _WIN32
 /* Try to copy the files required for AppVeyor */
 #if defined(_WIN64) || defined(__MINGW64__)
-	system("cmd /c copy C:\\OpenSSL-Win64\\libeay32.dll libeay32.dll");
-	system("cmd /c copy C:\\OpenSSL-Win64\\libssl32.dll libssl32.dll");
-	system("cmd /c copy C:\\OpenSSL-Win64\\ssleay32.dll ssleay32.dll");
-	system("cmd /c copy C:\\OpenSSL-Win64\\libeay32.dll libeay64.dll");
-	system("cmd /c copy C:\\OpenSSL-Win64\\libssl32.dll libssl64.dll");
-	system("cmd /c copy C:\\OpenSSL-Win64\\ssleay32.dll ssleay64.dll");
+	(void)system("cmd /c copy C:\\OpenSSL-Win64\\libeay32.dll libeay32.dll");
+	(void)system("cmd /c copy C:\\OpenSSL-Win64\\libssl32.dll libssl32.dll");
+	(void)system("cmd /c copy C:\\OpenSSL-Win64\\ssleay32.dll ssleay32.dll");
+	(void)system("cmd /c copy C:\\OpenSSL-Win64\\libeay32.dll libeay64.dll");
+	(void)system("cmd /c copy C:\\OpenSSL-Win64\\libssl32.dll libssl64.dll");
+	(void)system("cmd /c copy C:\\OpenSSL-Win64\\ssleay32.dll ssleay64.dll");
 #else
-	system("cmd /c copy C:\\OpenSSL-Win32\\libeay32.dll libeay32.dll");
-	system("cmd /c copy C:\\OpenSSL-Win32\\libssl32.dll libssl32.dll");
-	system("cmd /c copy C:\\OpenSSL-Win32\\ssleay32.dll ssleay32.dll");
+	(void)system("cmd /c copy C:\\OpenSSL-Win32\\libeay32.dll libeay32.dll");
+	(void)system("cmd /c copy C:\\OpenSSL-Win32\\libssl32.dll libssl32.dll");
+	(void)system("cmd /c copy C:\\OpenSSL-Win32\\ssleay32.dll ssleay32.dll");
 #endif
 #endif
 }
@@ -1202,7 +1202,7 @@ START_TEST(test_request_handlers)
 	                     "\n";
 	fwrite(cgi_script_content, strlen(cgi_script_content), 1, f);
 	fclose(f);
-	system("chmod a+x test.cgi");
+	(void)system("chmod a+x test.cgi");
 #endif
 	expected_cgi_result = "CGI test";
 
@@ -1239,7 +1239,7 @@ START_TEST(test_request_handlers)
 #else
 	sprintf(cmd_buf, "cp %s/cgi_test.cgi cgi_test.cgi", locate_test_exes());
 #endif
-	system(cmd_buf);
+	(void)system(cmd_buf);
 
 #if !defined(NO_CGI) && !defined(NO_FILES) && !defined(_WIN32)
 	/* TODO: add test for windows, check with POST */

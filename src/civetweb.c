@@ -2419,8 +2419,8 @@ skip_quoted(char **buf,
 		*buf = end_word;
 	} else {
 		end_whitespace =
-		    end_word + ((unsigned int)strspn(&end_word[1], whitespace)
-		                + (unsigned int)1);
+		    end_word + ((long unsigned int)strspn(&end_word[1], whitespace)
+		                + (long unsigned int)1);
 
 		for (p = end_word; p < end_whitespace; p++) {
 			*p = '\0';
@@ -9388,7 +9388,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	int retval = -1;
 
 	header[0] =
-	    (unsigned char)0x80u + ((unsigned char)opcode & (unsigned char)0xFu);
+	    (unsigned char)0x80u + (((unsigned char)(unsigned)opcode) & (unsigned char)0xFu);
 
 	/* Frame format: http://tools.ietf.org/html/rfc6455#section-5.2 */
 	if (dataLen < 126) {
