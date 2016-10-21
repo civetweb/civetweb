@@ -29,7 +29,8 @@
 
 find_path(LIBM_INCLUDE_DIRS
   NAMES math.h
-  PATHS ${LIBM_ROOT}/include/
+  PATHS /usr/include /usr/local/include /usr/local/bic/include
+  NO_DEFAULT_PATH
 )
 find_library(LIBM_LIBRARIES m)
 include(FindPackageHandleStandardArgs)
