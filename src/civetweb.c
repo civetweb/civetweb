@@ -9385,7 +9385,17 @@ mg_websocket_write_exec(struct mg_connection *conn,
 
 	int retval = -1;
 
-	header[0] = 0x80u | (opcode & 0xf);
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* Disable spurious conversion warning for GCC */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
+	header[0] = 0x80u | (unsigned char)((unsigned)opcode & 0xf);
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif
 
 	/* Frame format: http://tools.ietf.org/html/rfc6455#section-5.2 */
 	if (dataLen < 126) {
