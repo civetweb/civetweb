@@ -79,9 +79,6 @@ after_success:
 
 matrix:
   fast_finish: false
-  allow_failures:
-    # Allow OSX to fail until #364 is solved
-    - os: osx
   include:
 
   -
