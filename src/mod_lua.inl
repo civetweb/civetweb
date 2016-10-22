@@ -55,17 +55,17 @@ static int handle_lsp_request(struct mg_connection *,
 static void
 reg_lstring(struct lua_State *L,
             const char *name,
-            const char *buffer,
+            const void *buffer,
             size_t buflen)
 {
 	if (name != NULL && buffer != NULL) {
 		lua_pushstring(L, name);
-		lua_pushlstring(L, buffer, buflen);
+		lua_pushlstring(L, (const char *)buffer, buflen);
 		lua_rawset(L, -3);
 	}
 }
 
-#define reg_string(L, name, val) reg_lstring(L, name, val, strlen(val));
+#define reg_string(L, name, val) reg_lstring(L, name, val, strlen(val))
 
 static void
 reg_int(struct lua_State *L, const char *name, int val)
@@ -172,10 +172,11 @@ lsp_sock_close(lua_State *L)
 			return luaL_error(L, "invalid internal state in :close() call");
 		}
 		/* Do not closesocket(*psock); here, close it in __gc */
+		(void)psock;
 	} else {
 		return luaL_error(L, "invalid :close() call");
 	}
-	return 1;
+	return 0;
 }
 
 static int
@@ -255,7 +256,7 @@ lsp_sock_gc(lua_State *L)
 	} else {
 		return luaL_error(L, "__gc for object created by connect failed");
 	}
-	return 1;
+	return 0;
 }
 
 /* Methods and meta-methods supported by the object returned by connect.
