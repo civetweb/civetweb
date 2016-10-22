@@ -49,6 +49,12 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
+#if defined(__MINGW32__) || defined(__GNUC__)
+/* Return codes of the tested functions are evaluated. Checking all other
+ * functions, used only to prepare the test environment seems redundant.
+ * If they fail, the test fails anyway. */
+#pragma GCC diagnostic ignored "-Wunused-result"
+#endif
 
 static const char *
 locate_path(const char *a_path)
@@ -1200,8 +1206,8 @@ START_TEST(test_request_handlers)
 	                     "printf \"\\r\\n\"\n"
 	                     "printf \"CGI test\\r\\n\"\n"
 	                     "\n";
-	fwrite(cgi_script_content, strlen(cgi_script_content), 1, f);
-	fclose(f);
+	(void)fwrite(cgi_script_content, strlen(cgi_script_content), 1, f);
+	(void)fclose(f);
 	(void)system("chmod a+x test.cgi");
 #endif
 	expected_cgi_result = "CGI test";
