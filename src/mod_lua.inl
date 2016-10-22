@@ -1829,14 +1829,25 @@ lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 }
 #endif
 
+static void *lib_handle_uuid = NULL;
 
 static void
 lua_init_optional_libraries(void)
 {
 #if !defined(_WIN32)
-	void *dll_handle = dlopen("libuuid.so", RTLD_LAZY);
-	pf_uuid_generate.p = dlsym(dll_handle, "uuid_generate");
+	lib_handle_uuid = dlopen("libuuid.so", RTLD_LAZY);
+	pf_uuid_generate.p = dlsym(lib_handle_uuid, "uuid_generate");
 #else
 	pf_uuid_generate.p = 0;
 #endif
+}
+
+static void
+lua_exit_optional_libraries(void)
+{
+#if !defined(_WIN32)
+	dlclose(lib_handle_uuid);
+#endif
+	pf_uuid_generate.p = 0;
+	lib_handle_uuid = NULL;
 }

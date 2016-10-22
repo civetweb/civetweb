@@ -9387,8 +9387,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 
 	int retval = -1;
 
-	header[0] = (unsigned char)0x80u
-	            + (((unsigned char)(unsigned)opcode) & (unsigned char)0xFu);
+	header[0] = 0x80u | (opcode & 0xf);
 
 	/* Frame format: http://tools.ietf.org/html/rfc6455#section-5.2 */
 	if (dataLen < 126) {
@@ -13617,6 +13616,10 @@ free_context(struct mg_context *ctx)
 #endif
 
 		pthread_key_delete(sTlsKey);
+
+#if defined(USE_LUA)
+		lua_exit_optional_libraries();
+#endif
 	}
 
 	/* deallocate system name string */
@@ -13754,6 +13757,11 @@ mg_start(const struct mg_callbacks *callbacks,
 			mg_free(ctx);
 			return NULL;
 		}
+
+#if defined(USE_LUA)
+		lua_init_optional_libraries();
+#endif
+
 	} else {
 		/* TODO (low): istead of sleeping, check if sTlsKey is already
 		 * initialized. */
@@ -13766,10 +13774,6 @@ mg_start(const struct mg_callbacks *callbacks,
 	tls.pthread_cond_helper_mutex = NULL;
 #endif
 	pthread_setspecific(sTlsKey, &tls);
-
-#if defined(USE_LUA)
-	lua_init_optional_libraries();
-#endif
 
 	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr);
 #if !defined(ALTERNATIVE_QUEUE)
