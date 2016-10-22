@@ -11361,8 +11361,9 @@ refresh_trust(struct mg_connection *conn)
 	char *pem;
 	int should_verify_peer;
 
-	if ((pem = conn->ctx->config[SSL_CERTIFICATE]) == NULL
-	    && conn->ctx->callbacks.init_ssl == NULL) {
+	if ((pem = conn->ctx->config[SSL_CERTIFICATE]) == NULL) {
+		/* If peem is NULL and conn->ctx->callbacks.init_ssl is not,
+		 * refresh_trust still can not work. */
 		return 0;
 	}
 
