@@ -9387,8 +9387,8 @@ mg_websocket_write_exec(struct mg_connection *conn,
 
 	int retval = -1;
 
-	header[0] =
-	    (unsigned char)0x80u + (((unsigned char)(unsigned)opcode) & (unsigned char)0xFu);
+	header[0] = (unsigned char)0x80u
+	            + (((unsigned char)(unsigned)opcode) & (unsigned char)0xFu);
 
 	/* Frame format: http://tools.ietf.org/html/rfc6455#section-5.2 */
 	if (dataLen < 126) {
@@ -12057,10 +12057,19 @@ close_socket_gracefully(struct mg_connection *conn)
 	linger.l_onoff = 1;
 	linger.l_linger = 1;
 
-	getsockopt(
-	    conn->client.sock, SOL_SOCKET, SO_ERROR, (char *)&error_code, &opt_len);
-
-	if (error_code == ECONNRESET) {
+	if (getsockopt(conn->client.sock,
+	               SOL_SOCKET,
+	               SO_ERROR,
+	               (char *)&error_code,
+	               &opt_len) != 0) {
+		/* Cannot determine if socket is already closed. This should
+		 * not occur and never did in a test. Log an error message
+		 * and continue. */
+		mg_cry(conn,
+		       "%s: getsockopt(SOL_SOCKET SO_ERROR) failed: %s",
+		       __func__,
+		       strerror(ERRNO));
+	} else if (error_code == ECONNRESET) {
 		/* Socket already closed by client/peer, close socket without linger */
 	} else {
 		if (setsockopt(conn->client.sock,
