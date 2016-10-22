@@ -2418,7 +2418,18 @@ skip_quoted(char **buf,
 	if (*end_word == '\0') {
 		*buf = end_word;
 	} else {
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* Disable spurious conversion warning for GCC */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#endif
+
 		end_whitespace = end_word + strspn(&end_word[1], whitespace) + 1;
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif
 
 		for (p = end_word; p < end_whitespace; p++) {
 			*p = '\0';
@@ -9388,7 +9399,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 #if defined(__GNUC__) || defined(__MINGW32__)
 /* Disable spurious conversion warning for GCC */
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wconversion"
 #endif
 
 	header[0] = 0x80u | (unsigned char)((unsigned)opcode & 0xf);
