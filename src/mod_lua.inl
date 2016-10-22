@@ -53,14 +53,19 @@ static int handle_lsp_request(struct mg_connection *,
                               struct lua_State *);
 
 static void
-reg_string(struct lua_State *L, const char *name, const char *val)
+reg_lstring(struct lua_State *L,
+            const char *name,
+            const char *buffer,
+            size_t buflen)
 {
-	if (name != NULL && val != NULL) {
+	if (name != NULL && buffer != NULL) {
 		lua_pushstring(L, name);
-		lua_pushstring(L, val);
+		lua_pushlstring(L, buffer, buflen);
 		lua_rawset(L, -3);
 	}
 }
+
+#define reg_string(L, name, val) reg_lstring(L, name, val, strlen(val));
 
 static void
 reg_int(struct lua_State *L, const char *name, int val)
@@ -157,9 +162,16 @@ static int
 lsp_sock_close(lua_State *L)
 {
 	int num_args = lua_gettop(L);
+	size_t s;
+	SOCKET *psock;
+
 	if ((num_args == 1) && lua_istable(L, -1)) {
 		lua_getfield(L, -1, "sock");
-		closesocket((SOCKET)lua_tonumber(L, -1));
+		psock = (SOCKET *)lua_tolstring(L, -1, &s);
+		if (s != sizeof(SOCKET)) {
+			return luaL_error(L, "invalid internal state in :close() call");
+		}
+		/* Do not closesocket(*psock); here, close it in __gc */
 	} else {
 		return luaL_error(L, "invalid :close() call");
 	}
@@ -172,17 +184,23 @@ lsp_sock_recv(lua_State *L)
 	int num_args = lua_gettop(L);
 	char buf[2000];
 	int n;
+	size_t s;
+	SOCKET *psock;
 
 	if ((num_args == 1) && lua_istable(L, -1)) {
 		lua_getfield(L, -1, "sock");
-		n = recv((SOCKET)lua_tonumber(L, -1), buf, sizeof(buf), 0);
+		psock = (SOCKET *)lua_tolstring(L, -1, &s);
+		if (s != sizeof(SOCKET)) {
+			return luaL_error(L, "invalid internal state in :recv() call");
+		}
+		n = recv(*psock, buf, sizeof(buf), 0);
 		if (n <= 0) {
 			lua_pushnil(L);
 		} else {
 			lua_pushlstring(L, buf, n);
 		}
 	} else {
-		return luaL_error(L, "invalid :close() call");
+		return luaL_error(L, "invalid :recv() call");
 	}
 	return 1;
 }
@@ -193,14 +211,20 @@ lsp_sock_send(lua_State *L)
 	int num_args = lua_gettop(L);
 	const char *buf;
 	size_t len, sent = 0;
-	int n = 0, sock;
+	int n = 0;
+	size_t s;
+	SOCKET *psock;
 
 	if ((num_args == 2) && lua_istable(L, -2) && lua_isstring(L, -1)) {
 		buf = lua_tolstring(L, -1, &len);
 		lua_getfield(L, -2, "sock");
-		sock = (int)lua_tonumber(L, -1);
+		psock = (SOCKET *)lua_tolstring(L, -1, &s);
+		if (s != sizeof(SOCKET)) {
+			return luaL_error(L, "invalid internal state in :close() call");
+		}
+
 		while (sent < len) {
-			if ((n = send(sock, buf + sent, (int)(len - sent), 0)) <= 0) {
+			if ((n = send(*psock, buf + sent, (int)(len - sent), 0)) <= 0) {
 				break;
 			}
 			sent += n;
@@ -212,9 +236,34 @@ lsp_sock_send(lua_State *L)
 	return 1;
 }
 
+static int
+lsp_sock_gc(lua_State *L)
+{
+	int num_args = lua_gettop(L);
+	size_t s;
+	SOCKET *psock;
+
+	if ((num_args == 1) && lua_istable(L, -1)) {
+		lua_getfield(L, -1, "sock");
+		psock = (SOCKET *)lua_tolstring(L, -1, &s);
+		if (s != sizeof(SOCKET)) {
+			return luaL_error(
+			    L,
+			    "invalid internal state in __gc for object created by connect");
+		}
+		closesocket(*psock);
+	} else {
+		return luaL_error(L, "__gc for object created by connect failed");
+	}
+	return 1;
+}
+
+/* Methods and meta-methods supported by the object returned by connect.
+ * For meta-methods, see http://lua-users.org/wiki/MetatableEvents */
 static const struct luaL_Reg luasocket_methods[] = {{"close", lsp_sock_close},
                                                     {"send", lsp_sock_send},
                                                     {"recv", lsp_sock_recv},
+                                                    {"__gc", lsp_sock_gc},
                                                     {NULL, NULL}};
 
 static int
@@ -240,12 +289,10 @@ lsp_connect(lua_State *L)
 			return luaL_error(L, ebuf);
 		} else {
 			lua_newtable(L);
-			reg_int(L, "sock", (int)sock);
+			reg_lstring(L, "sock", &sock, sizeof(SOCKET));
 			reg_string(L, "host", lua_tostring(L, -4));
 			luaL_getmetatable(L, LUASOCKET);
 			lua_setmetatable(L, -2);
-			/* TODO (high): The metatable misses a _gc method to free the
-			 * sock object -> currently lsp_connect is a resource leak. */
 		}
 	} else {
 		return luaL_error(
