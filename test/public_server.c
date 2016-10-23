@@ -1698,6 +1698,48 @@ START_TEST(test_request_handlers)
 	free(ws_client3_data.data);
 	ws_client3_data.data = NULL;
 	ws_client3_data.len = 0;
+
+	/* Disconnect client 3 */
+	mg_close_connection(ws_client3_conn);
+
+	/* Connect client 3 again */
+	ws_client3_conn =
+	    mg_connect_websocket_client("localhost",
+#if defined(NO_SSL)
+	                                ipv4_port,
+	                                0,
+#else
+	                                ipv4s_port,
+	                                1,
+#endif
+	                                ebuf,
+	                                sizeof(ebuf),
+	                                "/websocket",
+	                                NULL,
+	                                websocket_client_data_handler,
+	                                websocket_client_close_handler,
+	                                &ws_client3_data);
+
+	ck_assert(ws_client3_conn != NULL);
+
+	wait_not_null(
+	    &(ws_client3_data.data)); /* Wait for the websocket welcome message */
+	ck_assert(ws_client1_data.closed == 1);
+	ck_assert(ws_client2_data.closed == 1);
+	ck_assert(ws_client3_data.closed == 0);
+	ck_assert(ws_client1_data.data == NULL);
+	ck_assert(ws_client1_data.len == 0);
+	ck_assert(ws_client2_data.data == NULL);
+	ck_assert(ws_client2_data.len == 0);
+	ck_assert(ws_client3_data.data != NULL);
+	ck_assert(ws_client3_data.len == websocket_welcome_msg_len);
+	ck_assert(!memcmp(ws_client3_data.data,
+	                  websocket_welcome_msg,
+	                  websocket_welcome_msg_len));
+	free(ws_client3_data.data);
+	ws_client3_data.data = NULL;
+	ws_client3_data.len = 0;
+
 #endif
 
 	/* Close the server */
