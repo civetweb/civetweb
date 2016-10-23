@@ -1507,7 +1507,9 @@ struct mg_context {
 	char *config[NUM_OPTIONS];     /* Civetweb configuration parameters */
 	struct mg_callbacks callbacks; /* User-defined callback function */
 	void *user_data;               /* User-defined data */
-	int context_type;              /* 1 = server context, 2 = client context */
+	int context_type;              /* 1 = server context,
+	                                * 2 = ws/wss client context,
+	                                */
 
 	struct socket *listening_sockets;
 	struct pollfd *listening_socket_fds;
@@ -12182,24 +12184,33 @@ mg_close_connection(struct mg_connection *conn)
 	}
 
 	if (conn->ctx->context_type == 2) {
+		/* ws/wss client */
 		client_ctx = conn->ctx;
+
 		/* client context: loops must end */
 		conn->ctx->stop_flag = 1;
+
+		/* get client out of recv function */
+		// shutdown(conn->client.sock, SHUTDOWN_RD);
 	}
+
 
 #ifndef NO_SSL
 	if (conn->client_ssl_ctx != NULL) {
 		SSL_CTX_free((SSL_CTX *)conn->client_ssl_ctx);
 	}
 #endif
+
 	close_connection(conn);
+
 	if (client_ctx != NULL) {
-		/* join worker thread and free context */
+		/* join worker thread */
 		for (i = 0; i < client_ctx->cfg_worker_threads; i++) {
 			if (client_ctx->workerthreadids[i] != 0) {
 				mg_join_thread(client_ctx->workerthreadids[i]);
 			}
 		}
+		/* free context */
 		mg_free(client_ctx->workerthreadids);
 		mg_free(client_ctx);
 		(void)pthread_mutex_destroy(&conn->mutex);
@@ -12823,6 +12834,10 @@ websocket_client_thread(void *data)
 		cdata->close_handler(cdata->conn, cdata->callback_data);
 	}
 
+	/* The websocket_client context has only this thread. If it runs out,
+	   set the stop_flag to 2 (= "stopped"). */
+	cdata->conn->ctx->stop_flag = 2;
+
 	mg_free((void *)cdata);
 
 #ifdef _WIN32
@@ -12909,7 +12924,7 @@ mg_connect_websocket_client(const char *host,
 	newctx = (struct mg_context *)mg_malloc(sizeof(struct mg_context));
 	memcpy(newctx, conn->ctx, sizeof(struct mg_context));
 	newctx->user_data = user_data;
-	newctx->context_type = 2;       /* client context type */
+	newctx->context_type = 2;       /* ws/wss client context type */
 	newctx->cfg_worker_threads = 1; /* one worker thread will be created */
 	newctx->workerthreadids =
 	    (pthread_t *)mg_calloc(newctx->cfg_worker_threads, sizeof(pthread_t));

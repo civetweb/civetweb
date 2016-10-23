@@ -289,7 +289,7 @@ lsp_connect(lua_State *L)
 			return luaL_error(L, ebuf);
 		} else {
 			lua_newtable(L);
-			reg_lstring(L, "sock", (const char*)&sock, sizeof(SOCKET));
+			reg_lstring(L, "sock", (const char *)&sock, sizeof(SOCKET));
 			reg_string(L, "host", lua_tostring(L, -4));
 			luaL_getmetatable(L, LUASOCKET);
 			lua_setmetatable(L, -2);

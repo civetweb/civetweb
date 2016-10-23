@@ -962,9 +962,11 @@ START_TEST(test_request_handlers)
 	struct tclient_data ws_client1_data = {NULL, 0, 0};
 	struct tclient_data ws_client2_data = {NULL, 0, 0};
 	struct tclient_data ws_client3_data = {NULL, 0, 0};
+	struct tclient_data ws_client4_data = {NULL, 0, 0};
 	struct mg_connection *ws_client1_conn = NULL;
 	struct mg_connection *ws_client2_conn = NULL;
 	struct mg_connection *ws_client3_conn = NULL;
+	struct mg_connection *ws_client4_conn = NULL;
 #endif
 
 	char cmd_buf[256];
@@ -1700,10 +1702,12 @@ START_TEST(test_request_handlers)
 	ws_client3_data.len = 0;
 
 	/* Disconnect client 3 */
+	ck_assert(ws_client3_data.closed == 0);
 	mg_close_connection(ws_client3_conn);
+	ck_assert(ws_client3_data.closed == 1);
 
-	/* Connect client 3 again */
-	ws_client3_conn =
+	/* Connect client 4 */
+	ws_client4_conn =
 	    mg_connect_websocket_client("localhost",
 #if defined(NO_SSL)
 	                                ipv4_port,
@@ -1718,7 +1722,7 @@ START_TEST(test_request_handlers)
 	                                NULL,
 	                                websocket_client_data_handler,
 	                                websocket_client_close_handler,
-	                                &ws_client3_data);
+	                                &ws_client4_data);
 
 	ck_assert(ws_client3_conn != NULL);
 
@@ -1726,19 +1730,18 @@ START_TEST(test_request_handlers)
 	    &(ws_client3_data.data)); /* Wait for the websocket welcome message */
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 1);
-	ck_assert(ws_client3_data.closed == 0);
-	ck_assert(ws_client1_data.data == NULL);
-	ck_assert(ws_client1_data.len == 0);
-	ck_assert(ws_client2_data.data == NULL);
-	ck_assert(ws_client2_data.len == 0);
-	ck_assert(ws_client3_data.data != NULL);
-	ck_assert(ws_client3_data.len == websocket_welcome_msg_len);
-	ck_assert(!memcmp(ws_client3_data.data,
+	ck_assert(ws_client3_data.closed == 1);
+	ck_assert(ws_client4_data.closed == 0);
+	ck_assert(ws_client4_data.data != NULL);
+	ck_assert(ws_client4_data.len == websocket_welcome_msg_len);
+	ck_assert(!memcmp(ws_client4_data.data,
 	                  websocket_welcome_msg,
 	                  websocket_welcome_msg_len));
-	free(ws_client3_data.data);
-	ws_client3_data.data = NULL;
-	ws_client3_data.len = 0;
+	free(ws_client4_data.data);
+	ws_client4_data.data = NULL;
+	ws_client4_data.len = 0;
+
+/* stop the server without closing this connection */
 
 #endif
 
@@ -1756,7 +1759,7 @@ START_TEST(test_request_handlers)
 		}
 	}
 
-	ck_assert_int_eq(ws_client3_data.closed, 1);
+	ck_assert_int_eq(ws_client4_data.closed, 1);
 #endif
 }
 END_TEST
