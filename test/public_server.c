@@ -1725,7 +1725,7 @@ START_TEST(test_request_handlers)
 	                                websocket_client_close_handler,
 	                                &ws_client4_data);
 
-	ck_assert(ws_client3_conn != NULL);
+	ck_assert(ws_client4_conn != NULL);
 
 	wait_not_null(
 	    &(ws_client4_data.data)); /* Wait for the websocket welcome message */
