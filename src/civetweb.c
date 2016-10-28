@@ -4297,7 +4297,7 @@ push_all(struct mg_context *ctx,
 static int
 pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 {
-	int nread, err;
+	int nread, err = 0;
 	struct timespec start, now;
 
 #ifdef _WIN32
