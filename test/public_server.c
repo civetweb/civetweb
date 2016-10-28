@@ -861,6 +861,7 @@ struct tclient_data {
 	void *data;
 	size_t len;
 	int closed;
+	int clientId;
 };
 
 
@@ -880,7 +881,7 @@ websocket_client_data_handler(struct mg_connection *conn,
 	ck_assert(pclient_data != NULL);
 	ck_assert_int_eq(flags, (int)(128 | 1));
 
-	printf("Client received data from server: ");
+	printf("Client %i received data from server: ", pclient_data->clientId);
 	fwrite(data, 1, data_len, stdout);
 	printf("\n");
 
@@ -905,7 +906,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 
 	ck_assert(pclient_data != NULL);
 
-	printf("Client: Close handler\n");
+	printf("Client %i: Close handler\n", pclient_data->clientId);
 	pclient_data->closed++;
 }
 #endif
@@ -959,10 +960,10 @@ START_TEST(test_request_handlers)
 #endif
 
 #if defined(USE_WEBSOCKET)
-	struct tclient_data ws_client1_data = {NULL, 0, 0};
-	struct tclient_data ws_client2_data = {NULL, 0, 0};
-	struct tclient_data ws_client3_data = {NULL, 0, 0};
-	struct tclient_data ws_client4_data = {NULL, 0, 0};
+	struct tclient_data ws_client1_data = {NULL, 0, 0, 1};
+	struct tclient_data ws_client2_data = {NULL, 0, 0, 2};
+	struct tclient_data ws_client3_data = {NULL, 0, 0, 3};
+	struct tclient_data ws_client4_data = {NULL, 0, 0, 4};
 	struct mg_connection *ws_client1_conn = NULL;
 	struct mg_connection *ws_client2_conn = NULL;
 	struct mg_connection *ws_client3_conn = NULL;
@@ -1727,7 +1728,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ws_client3_conn != NULL);
 
 	wait_not_null(
-	    &(ws_client3_data.data)); /* Wait for the websocket welcome message */
+	    &(ws_client4_data.data)); /* Wait for the websocket welcome message */
 	ck_assert(ws_client1_data.closed == 1);
 	ck_assert(ws_client2_data.closed == 1);
 	ck_assert(ws_client3_data.closed == 1);
@@ -3016,11 +3017,11 @@ MAIN_PUBLIC_SERVER(void)
 	test_the_test_environment(0);
 	test_threading(0);
 	test_mg_start_stop_http_server(0);
-	// test_mg_start_stop_https_server(0);
+	test_mg_start_stop_https_server(0);
 	test_request_handlers(0);
-	// test_mg_server_and_client_tls(0);
-	// test_handle_form(0);
-	// test_http_auth(0);
+	test_mg_server_and_client_tls(0);
+	test_handle_form(0);
+	test_http_auth(0);
 	test_keep_alive(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
