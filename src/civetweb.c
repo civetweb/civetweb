@@ -3596,10 +3596,54 @@ poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 			}
 		}
 	}
+	/* Should subtract time used in select from remaining "milliseconds",
+	 * in particular if called from mg_poll with a timeout quantum.
+	 * Unfortunately, the remaining time is not stored in "tv" in all
+	 * implementations, so the result in "tv" must be considered undefined.
+	 * See http://man7.org/linux/man-pages/man2/select.2.html */
 
 	return result;
 }
 #endif /* HAVE_POLL */
+
+
+static int
+mg_poll(struct pollfd *pfd,
+        unsigned int n,
+        int milliseconds,
+        volatile int *stop_server)
+{
+	int ms_now, result;
+
+	/* Call poll, but only for a maximum time of a few seconds.
+	 * This will allow to stop the server after some seconds, instead
+	 * of having to wait for a long socket timeout. */
+	ms_now = 2000; /* Sleep quantum */
+
+	do {
+		if (*stop_server) {
+			/* Shut down signal */
+			return -2;
+		}
+
+		if (milliseconds < ms_now) {
+			ms_now = milliseconds;
+		}
+
+		result = poll(pfd, n, ms_now);
+		if (result != 0) {
+			/* Poll returned either success (1) or error (-1).
+			 * Forward both to the caller. */
+			return result;
+		}
+
+		/* Poll returned timeout (0). */
+		milliseconds -= ms_now;
+
+	} while (milliseconds > 0);
+
+	return result;
+}
 
 #if defined(__MINGW32__)
 /* Enable unused function warning again */
@@ -4334,7 +4378,10 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 
 			pfd[0].fd = conn->client.sock;
 			pfd[0].events = POLLIN;
-			pollres = poll(pfd, 1, (int)(timeout * 1000.0));
+			pollres = mg_poll(pfd,
+			                  1,
+			                  (int)(timeout * 1000.0),
+			                  &(conn->ctx->stop_flag));
 			if (conn->ctx->stop_flag) {
 				return -1;
 			}
@@ -4371,7 +4418,10 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 
 			pfd[0].fd = conn->client.sock;
 			pfd[0].events = POLLIN;
-			pollres = poll(pfd, 1, (int)(timeout * 1000.0));
+			pollres = mg_poll(pfd,
+			                  1,
+			                  (int)(timeout * 1000.0),
+			                  &(conn->ctx->stop_flag));
 			if (conn->ctx->stop_flag) {
 				return -1;
 			}
@@ -6404,6 +6454,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	    && (connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin))
 	        == 0)) {
 		/* connected with IPv4 */
+		set_non_blocking_mode(*sock);
 		return 1;
 	}
 
@@ -6412,6 +6463,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	    && (connect(*sock, (struct sockaddr *)&sa->sin6, sizeof(sa->sin6))
 	        == 0)) {
 		/* connected with IPv6 */
+		set_non_blocking_mode(*sock);
 		return 1;
 	}
 #endif
@@ -6427,6 +6479,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	            strerror(ERRNO));
 	closesocket(*sock);
 	*sock = INVALID_SOCKET;
+
 	return 0;
 }
 
@@ -11456,7 +11509,10 @@ static pthread_mutex_t *ssl_mutexes;
 
 
 static int
-sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
+sslize(struct mg_connection *conn,
+       SSL_CTX *s,
+       int (*func)(SSL *),
+       volatile int *stop_server)
 {
 	int ret, err;
 	int short_trust;
@@ -11497,17 +11553,30 @@ sslize(struct mg_connection *conn, SSL_CTX *s, int (*func)(SSL *))
 	/* SSL functions may fail and require to be called again:
 	 * see https://www.openssl.org/docs/manmaster/ssl/SSL_get_error.html
 	 * Here "func" could be SSL_connect or SSL_accept. */
-	for (i = 1; i <= 16; i *= 2) {
+	for (i = 16; i <= 1024; i *= 2) {
 		ret = func(conn->ssl);
 		if (ret != 1) {
 			err = SSL_get_error(conn->ssl, ret);
 			if ((err == SSL_ERROR_WANT_CONNECT)
-			    || (err == SSL_ERROR_WANT_ACCEPT)) {
-				/* Retry */
+			    || (err == SSL_ERROR_WANT_ACCEPT)
+			    || (err == SSL_ERROR_WANT_READ)
+			    || (err == SSL_ERROR_WANT_WRITE)) {
+				/* Need to retry the function call "later".
+				 * See https://linux.die.net/man/3/ssl_get_error
+				 * This is typical for non-blocking sockets. */
+				if (*stop_server) {
+					/* Don't wait if the server is going to be stopped. */
+					break;
+				}
 				mg_sleep(i);
 
+			} else if (err == SSL_ERROR_SYSCALL) {
+				/* This is an IO error. Look at errno. */
+				err = errno;
+				/* TODO: set some error message */
+				break;
 			} else {
-				/* This is an error */
+				/* This is an SSL specific error */
 				/* TODO: set some error message */
 				break;
 			}
@@ -12369,7 +12438,10 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 				SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_NONE, NULL);
 			}
 
-			if (!sslize(conn, conn->client_ssl_ctx, SSL_connect)) {
+			if (!sslize(conn,
+			            conn->client_ssl_ctx,
+			            SSL_connect,
+			            &(conn->ctx->stop_flag))) {
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for ebuf */
 				            ebuf,
@@ -13331,7 +13403,10 @@ worker_thread_run(struct worker_thread_args *thread_args)
 			if (conn->client.is_ssl) {
 #ifndef NO_SSL
 				/* HTTPS connection */
-				if (sslize(conn, conn->ctx->ssl_ctx, SSL_accept)) {
+				if (sslize(conn,
+				           conn->ctx->ssl_ctx,
+				           SSL_accept,
+				           &(conn->ctx->stop_flag))) {
 					/* Get SSL client certificate information (if set) */
 					ssl_get_client_cert_info(conn);
 
@@ -13475,9 +13550,13 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 			timeout = -1;
 		}
 
-		if (timeout > 0) {
-			set_sock_timeout(so.sock, timeout);
-		}
+
+		/* TODO: if non blocking sockets are used, timeouts are implemented
+		 * differently */
+		// if (timeout > 0) {
+		//	set_sock_timeout(so.sock, timeout);
+		//}
+		set_non_blocking_mode(so.sock);
 
 		produce_socket(ctx, &so);
 	}

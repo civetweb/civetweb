@@ -44,6 +44,11 @@
 #define test_sleep(x) (sleep(x))
 #endif
 
+#define SLEEP_BEFORE_MG_START (1)
+#define SLEEP_AFTER_MG_START (3)
+#define SLEEP_BEFORE_MG_STOP (1)
+#define SLEEP_AFTER_MG_STOP (5)
+
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
  * http://check.sourceforge.net/doc/check_html/index.html
@@ -266,6 +271,36 @@ log_msg_func(const struct mg_connection *conn, const char *message)
 }
 
 
+static struct mg_context *
+test_mg_start(const struct mg_callbacks *callbacks,
+              void *user_data,
+              const char **configuration_options)
+{
+	struct mg_context *ctx;
+	mark_point();
+	test_sleep(SLEEP_BEFORE_MG_START);
+	mark_point();
+	ctx = mg_start(callbacks, user_data, configuration_options);
+	mark_point();
+	test_sleep(SLEEP_AFTER_MG_START);
+	mark_point();
+	return ctx;
+}
+
+
+static void
+test_mg_stop(struct mg_context *ctx)
+{
+	mark_point();
+	test_sleep(SLEEP_BEFORE_MG_STOP);
+	mark_point();
+	mg_stop(ctx);
+	mark_point();
+	test_sleep(SLEEP_AFTER_MG_STOP);
+	mark_point();
+}
+
+
 START_TEST(test_mg_start_stop_http_server)
 {
 	struct mg_context *ctx;
@@ -298,9 +333,7 @@ START_TEST(test_mg_start_stop_http_server)
 
 	callbacks.log_message = log_msg_func;
 
-	mark_point();
-	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
-	test_sleep(1);
+	ctx = test_mg_start(&callbacks, (void *)errmsg, OPTIONS);
 
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
@@ -441,9 +474,8 @@ START_TEST(test_mg_start_stop_http_server)
 
 	test_sleep(1);
 
-
 	/* End test */
-	mg_stop(ctx);
+	test_mg_stop(ctx);
 }
 END_TEST
 
@@ -494,9 +526,8 @@ START_TEST(test_mg_start_stop_https_server)
 
 	callbacks.log_message = log_msg_func;
 
-	mark_point();
-	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
-	test_sleep(1);
+	ctx = test_mg_start(&callbacks, (void *)errmsg, OPTIONS);
+
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
@@ -564,7 +595,7 @@ START_TEST(test_mg_start_stop_https_server)
 
 	test_sleep(1);
 
-	mg_stop(ctx);
+	test_mg_stop(ctx);
 #endif
 }
 END_TEST
@@ -628,9 +659,8 @@ START_TEST(test_mg_server_and_client_tls)
 
 	callbacks.log_message = log_msg_func;
 
-	mark_point();
-	ctx = mg_start(&callbacks, (void *)errmsg, OPTIONS);
-	test_sleep(1);
+	ctx = test_mg_start(&callbacks, (void *)errmsg, OPTIONS);
+
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
@@ -692,7 +722,7 @@ START_TEST(test_mg_server_and_client_tls)
 
 	test_sleep(1);
 
-	mg_stop(ctx);
+	test_mg_stop(ctx);
 #endif
 }
 END_TEST
@@ -990,8 +1020,8 @@ START_TEST(test_request_handlers)
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
-	mark_point();
-	ctx = mg_start(NULL, &g_ctx, OPTIONS);
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS);
+
 	ck_assert(ctx != NULL);
 	g_ctx = ctx;
 
@@ -1748,7 +1778,7 @@ START_TEST(test_request_handlers)
 
 	/* Close the server */
 	g_ctx = NULL;
-	mg_stop(ctx);
+	test_mg_stop(ctx);
 	mark_point();
 
 #ifdef USE_WEBSOCKET
@@ -2109,8 +2139,8 @@ START_TEST(test_handle_form)
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
-	mark_point();
-	ctx = mg_start(NULL, &g_ctx, OPTIONS);
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS);
+
 	ck_assert(ctx != NULL);
 	g_ctx = ctx;
 
@@ -2585,7 +2615,7 @@ START_TEST(test_handle_form)
 
 	/* Close the server */
 	g_ctx = NULL;
-	mg_stop(ctx);
+	test_mg_stop(ctx);
 	mark_point();
 }
 END_TEST
@@ -2628,9 +2658,7 @@ START_TEST(test_http_auth)
 
 
 	/* Start with default options */
-	mark_point();
-	ctx = mg_start(NULL, NULL, OPTIONS);
-	test_sleep(1);
+	ctx = test_mg_start(NULL, NULL, OPTIONS);
 
 	ck_assert(ctx != NULL);
 	domain = mg_get_option(ctx, "authentication_domain");
@@ -2865,7 +2893,7 @@ START_TEST(test_http_auth)
 
 
 	/* Stop the server and clean up */
-	mg_stop(ctx);
+	test_mg_stop(ctx);
 	remove(test_file);
 
 #endif
@@ -2897,11 +2925,9 @@ START_TEST(test_keep_alive)
 	int client_res, i;
 	const char *connection_header;
 
-	mark_point();
-	ctx = mg_start(NULL, NULL, OPTIONS);
-	ck_assert(ctx != NULL);
+	ctx = test_mg_start(NULL, NULL, OPTIONS);
 
-	test_sleep(1);
+	ck_assert(ctx != NULL);
 
 	/* HTTP 1.1 GET request */
 	memset(client_err, 0, sizeof(client_err));
@@ -2944,7 +2970,7 @@ START_TEST(test_keep_alive)
 	 * (will only work if NO_FILES is not set). */
 
 	/* Stop the server and clean up */
-	mg_stop(ctx);
+	test_mg_stop(ctx);
 }
 END_TEST
 
