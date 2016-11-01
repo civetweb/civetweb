@@ -3600,8 +3600,10 @@ poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 			}
 		}
 	}
-	/* Should subtract time used in select from remaining "milliseconds",
-	 * in particular if called from mg_poll with a timeout quantum.
+
+	/* We should subtract the time used in select from remaining
+	 * "milliseconds", in particular if called from mg_poll with a 
+	 * timeout quantum.
 	 * Unfortunately, the remaining time is not stored in "tv" in all
 	 * implementations, so the result in "tv" must be considered undefined.
 	 * See http://man7.org/linux/man-pages/man2/select.2.html */
@@ -4165,8 +4167,8 @@ mg_poll(struct pollfd *pfd,
 	int ms_now, result;
 
 	/* Call poll, but only for a maximum time of a few seconds.
-	* This will allow to stop the server after some seconds, instead
-	* of having to wait for a long socket timeout. */
+	 * This will allow to stop the server after some seconds, instead
+	 * of having to wait for a long socket timeout. */
 	ms_now = SOCKET_TIMEOUT_QUANTUM; /* Sleep quantum in ms */
 
 	do {
@@ -4182,7 +4184,7 @@ mg_poll(struct pollfd *pfd,
 		result = poll(pfd, n, ms_now);
 		if (result != 0) {
 			/* Poll returned either success (1) or error (-1).
-			* Forward both to the caller. */
+			 * Forward both to the caller. */
 			return result;
 		}
 
@@ -4347,7 +4349,6 @@ static int
 pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 {
 	int nread, err = 0;
-	struct timespec start, now;
 
 #ifdef _WIN32
 	typedef int len_t;
@@ -4355,13 +4356,6 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 	typedef size_t len_t;
 #endif
 
-	if (timeout > 0) {
-		memset(&start, 0, sizeof(start));
-		memset(&now, 0, sizeof(now));
-		clock_gettime(CLOCK_MONOTONIC, &start);
-	}
-
-	do {
 		if (fp != NULL) {
 #if !defined(_WIN32_WCE)
 			/* Use read() instead of fread(), because if we're reading from the
@@ -4459,9 +4453,11 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 /* socket error - check errno */
 #ifdef _WIN32
 			if (err == WSAEWOULDBLOCK) {
+				/* TODO: check if this is still required */
 				/* standard case if called from close_socket_gracefully */
 				return -1;
 			} else if (err == WSAETIMEDOUT) {
+				/* TODO: check if this is still required */
 				/* timeout is handled by the while loop  */
 			} else {
 				DEBUG_TRACE("recv() failed, error %d", err);
@@ -4474,6 +4470,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 			 * here. We have to wait for the timeout in both cases for now.
 			 */
 			if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
+				/* TODO: check if this is still required */
 				/* EAGAIN/EWOULDBLOCK:
 				 * standard case if called from close_socket_gracefully
 				 * => should return -1 */
@@ -4490,10 +4487,6 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 			}
 #endif
 		}
-		if (timeout > 0) {
-			clock_gettime(CLOCK_MONOTONIC, &now);
-		}
-	} while ((timeout <= 0) || (mg_difftimespec(&now, &start) <= timeout));
 
 	/* Timeout occured, but no data available. */
 	return -1;
