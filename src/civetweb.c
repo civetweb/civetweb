@@ -3602,7 +3602,7 @@ poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 	}
 
 	/* We should subtract the time used in select from remaining
-	 * "milliseconds", in particular if called from mg_poll with a 
+	 * "milliseconds", in particular if called from mg_poll with a
 	 * timeout quantum.
 	 * Unfortunately, the remaining time is not stored in "tv" in all
 	 * implementations, so the result in "tv" must be considered undefined.
@@ -4189,9 +4189,9 @@ mg_poll(struct pollfd *pfd,
 		}
 
 		/* Poll returned timeout (0). */
-        if (milliseconds > 0) {
-		    milliseconds -= ms_now;
-        }
+		if (milliseconds > 0) {
+			milliseconds -= ms_now;
+		}
 
 	} while (milliseconds != 0);
 
@@ -4358,141 +4358,137 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 	typedef size_t len_t;
 #endif
 
-		if (fp != NULL) {
+	if (fp != NULL) {
 #if !defined(_WIN32_WCE)
-			/* Use read() instead of fread(), because if we're reading from the
-			 * CGI pipe, fread() may block until IO buffer is filled up. We
-			 * cannot afford to block and must pass all read bytes immediately
-			 * to the client. */
-			nread = (int)read(fileno(fp), buf, (size_t)len);
+		/* Use read() instead of fread(), because if we're reading from the
+		 * CGI pipe, fread() may block until IO buffer is filled up. We
+		 * cannot afford to block and must pass all read bytes immediately
+		 * to the client. */
+		nread = (int)read(fileno(fp), buf, (size_t)len);
 #else
-			/* WinCE does not support CGI pipes */
-			nread = (int)fread(buf, 1, (size_t)len, fp);
+		/* WinCE does not support CGI pipes */
+		nread = (int)fread(buf, 1, (size_t)len, fp);
 #endif
-			err = (nread < 0) ? ERRNO : 0;
+		err = (nread < 0) ? ERRNO : 0;
 
 #ifndef NO_SSL
-		} else if (conn->ssl != NULL) {
+	} else if (conn->ssl != NULL) {
 
-			struct pollfd pfd[1];
-			int pollres;
+		struct pollfd pfd[1];
+		int pollres;
 
-			pfd[0].fd = conn->client.sock;
-			pfd[0].events = POLLIN;
-			pollres = mg_poll(pfd,
-			                  1,
-			                  (int)(timeout * 1000.0),
-			                  &(conn->ctx->stop_flag));
-			if (conn->ctx->stop_flag) {
-				return -1;
-			}
-			if (pollres > 0) {
-				nread = SSL_read(conn->ssl, buf, len);
-				if (nread <= 0) {
-					err = SSL_get_error(conn->ssl, nread);
-					if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
-						err = ERRNO;
-					} else if ((err == SSL_ERROR_WANT_READ)
-					           || (err == SSL_ERROR_WANT_WRITE)) {
-						nread = 0;
-					} else {
-						DEBUG_TRACE("SSL_read() failed, error %d", err);
-						return -1;
-					}
-				} else {
-					err = 0;
-				}
-
-			} else if (pollres < 0) {
-				/* Error */
-				return -1;
-			} else {
-				/* pollres = 0 means timeout */
-				nread = 0;
-			}
-
-#endif
-
-		} else {
-			struct pollfd pfd[1];
-			int pollres;
-
-			pfd[0].fd = conn->client.sock;
-			pfd[0].events = POLLIN;
-			pollres = mg_poll(pfd,
-			                  1,
-			                  (int)(timeout * 1000.0),
-			                  &(conn->ctx->stop_flag));
-			if (conn->ctx->stop_flag) {
-				return -1;
-			}
-			if (pollres > 0) {
-				nread = (int)recv(conn->client.sock, buf, (len_t)len, 0);
-				err = (nread < 0) ? ERRNO : 0;
-				if (nread == 0) {
-					/* shutdown of the socket at client side */
-					return -1;
-				}
-			} else if (pollres < 0) {
-				/* error callint poll */
-				return -1;
-			} else {
-				/* pollres = 0 means timeout */
-				nread = 0;
-			}
-		}
-
+		pfd[0].fd = conn->client.sock;
+		pfd[0].events = POLLIN;
+		pollres =
+		    mg_poll(pfd, 1, (int)(timeout * 1000.0), &(conn->ctx->stop_flag));
 		if (conn->ctx->stop_flag) {
 			return -1;
 		}
+		if (pollres > 0) {
+			nread = SSL_read(conn->ssl, buf, len);
+			if (nread <= 0) {
+				err = SSL_get_error(conn->ssl, nread);
+				if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
+					err = ERRNO;
+				} else if ((err == SSL_ERROR_WANT_READ)
+				           || (err == SSL_ERROR_WANT_WRITE)) {
+					nread = 0;
+				} else {
+					DEBUG_TRACE("SSL_read() failed, error %d", err);
+					return -1;
+				}
+			} else {
+				err = 0;
+			}
 
-		if ((nread > 0) || (nread == 0 && len == 0)) {
-			/* some data has been read, or no data was requested */
-			return nread;
+		} else if (pollres < 0) {
+			/* Error */
+			return -1;
+		} else {
+			/* pollres = 0 means timeout */
+			nread = 0;
 		}
 
-		if (nread < 0) {
+#endif
+
+	} else {
+		struct pollfd pfd[1];
+		int pollres;
+
+		pfd[0].fd = conn->client.sock;
+		pfd[0].events = POLLIN;
+		pollres =
+		    mg_poll(pfd, 1, (int)(timeout * 1000.0), &(conn->ctx->stop_flag));
+		if (conn->ctx->stop_flag) {
+			return -1;
+		}
+		if (pollres > 0) {
+			nread = (int)recv(conn->client.sock, buf, (len_t)len, 0);
+			err = (nread < 0) ? ERRNO : 0;
+			if (nread == 0) {
+				/* shutdown of the socket at client side */
+				return -1;
+			}
+		} else if (pollres < 0) {
+			/* error callint poll */
+			return -1;
+		} else {
+			/* pollres = 0 means timeout */
+			nread = 0;
+		}
+	}
+
+	if (conn->ctx->stop_flag) {
+		return -1;
+	}
+
+	if ((nread > 0) || (nread == 0 && len == 0)) {
+		/* some data has been read, or no data was requested */
+		return nread;
+	}
+
+	if (nread < 0) {
 /* socket error - check errno */
 #ifdef _WIN32
-			if (err == WSAEWOULDBLOCK) {
-				/* TODO: check if this is still required */
-				/* standard case if called from close_socket_gracefully */
-				return -1;
-			} else if (err == WSAETIMEDOUT) {
-				/* TODO: check if this is still required */
-				/* timeout is handled by the while loop  */
-                return 0;
-            } else if (err == WSAECONNABORTED) {
-                /* See https://www.chilkatsoft.com/p/p_299.asp */
-                return -1;
-			} else {
-				DEBUG_TRACE("recv() failed, error %d", err);
-				return -1;
-			}
-#else
-			/* TODO: POSIX returns either EAGAIN or EWOULDBLOCK in both cases,
-			 * if the timeout is reached and if the socket was set to non-
-			 * blocking in close_socket_gracefully, so we can not distinguish
-			 * here. We have to wait for the timeout in both cases for now.
-			 */
-			if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
-				/* TODO: check if this is still required */
-				/* EAGAIN/EWOULDBLOCK:
-				 * standard case if called from close_socket_gracefully
-				 * => should return -1 */
-				/* or timeout occured
-				 * => the code must stay in the while loop */
-
-				/* EINTR can be generated on a socket with a timeout set even
-				 * when SA_RESTART is effective for all relevant signals
-				 * (see signal(7)).
-				 * => stay in the while loop */
-			} else {
-				DEBUG_TRACE("recv() failed, error %d", err);
-				return -1;
-			}
-#endif
+		if (err == WSAEWOULDBLOCK) {
+			/* TODO: check if this is still required */
+			/* standard case if called from close_socket_gracefully */
+			return -1;
+		} else if (err == WSAETIMEDOUT) {
+			/* TODO: check if this is still required */
+			/* timeout is handled by the while loop  */
+			return 0;
+		} else if (err == WSAECONNABORTED) {
+			/* See https://www.chilkatsoft.com/p/p_299.asp */
+			return -1;
+		} else {
+			DEBUG_TRACE("recv() failed, error %d", err);
+			return -1;
 		}
+#else
+		/* TODO: POSIX returns either EAGAIN or EWOULDBLOCK in both cases,
+		 * if the timeout is reached and if the socket was set to non-
+		 * blocking in close_socket_gracefully, so we can not distinguish
+		 * here. We have to wait for the timeout in both cases for now.
+		 */
+		if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
+			/* TODO: check if this is still required */
+			/* EAGAIN/EWOULDBLOCK:
+			 * standard case if called from close_socket_gracefully
+			 * => should return -1 */
+			/* or timeout occured
+			 * => the code must stay in the while loop */
+
+			/* EINTR can be generated on a socket with a timeout set even
+			 * when SA_RESTART is effective for all relevant signals
+			 * (see signal(7)).
+			 * => stay in the while loop */
+		} else {
+			DEBUG_TRACE("recv() failed, error %d", err);
+			return -1;
+		}
+#endif
+	}
 
 	/* Timeout occured, but no data available. */
 	return -1;
@@ -7571,34 +7567,34 @@ read_request(FILE *fp,
 	/* first time reading from this connection */
 	clock_gettime(CLOCK_MONOTONIC, &last_action_time);
 
-    while (request_len == 0) {
-        /* Full request not yet received */
-        if (conn->ctx->stop_flag != 0) {
-            /* Server is to be stopped. */
-            return -1;
-        }
+	while (request_len == 0) {
+		/* Full request not yet received */
+		if (conn->ctx->stop_flag != 0) {
+			/* Server is to be stopped. */
+			return -1;
+		}
 
 		if (*nread >= bufsiz) {
-            /* Request too long */
+			/* Request too long */
 			return -2;
 		}
 
-        n = pull(fp, conn, buf + *nread, bufsiz - *nread, request_timeout);
-        if (n < 0) {
-            /* Receive error */
-            return -1;
-        }
-        *nread += n;
-        request_len = get_request_len(buf, *nread);
+		n = pull(fp, conn, buf + *nread, bufsiz - *nread, request_timeout);
+		if (n < 0) {
+			/* Receive error */
+			return -1;
+		}
+		*nread += n;
+		request_len = get_request_len(buf, *nread);
 
-        if ((request_len == 0) && (request_timeout >= 0)) {
-            if (mg_difftimespec(&last_action_time, &(conn->req_time))
-	         > request_timeout) {
-                /* Timeout */
-                return -1;
-             }
-             clock_gettime(CLOCK_MONOTONIC, &last_action_time);
-        }
+		if ((request_len == 0) && (request_timeout >= 0)) {
+			if (mg_difftimespec(&last_action_time, &(conn->req_time))
+			    > request_timeout) {
+				/* Timeout */
+				return -1;
+			}
+			clock_gettime(CLOCK_MONOTONIC, &last_action_time);
+		}
 	}
 
 	return request_len;
