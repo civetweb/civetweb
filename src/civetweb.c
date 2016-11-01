@@ -4189,11 +4189,11 @@ mg_poll(struct pollfd *pfd,
 		}
 
 		/* Poll returned timeout (0). */
-        if (milliseconds >= 0) {
+        if (milliseconds > 0) {
 		    milliseconds -= ms_now;
         }
 
-	} while (milliseconds > 0);
+	} while (milliseconds != 0);
 
 	return result;
 }
