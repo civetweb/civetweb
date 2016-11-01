@@ -235,6 +235,10 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #define MAX_WORKER_THREADS (1024 * 64)
 #endif
 
+#ifndef SOCKET_TIMEOUT_QUANTUM /* in ms */
+#define SOCKET_TIMEOUT_QUANTUM (2000)
+#endif
+
 #define SHUTDOWN_RD (0)
 #define SHUTDOWN_WR (1)
 #define SHUTDOWN_BOTH (2)
@@ -3607,44 +3611,6 @@ poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 #endif /* HAVE_POLL */
 
 
-static int
-mg_poll(struct pollfd *pfd,
-        unsigned int n,
-        int milliseconds,
-        volatile int *stop_server)
-{
-	int ms_now, result;
-
-	/* Call poll, but only for a maximum time of a few seconds.
-	 * This will allow to stop the server after some seconds, instead
-	 * of having to wait for a long socket timeout. */
-	ms_now = 2000; /* Sleep quantum */
-
-	do {
-		if (*stop_server) {
-			/* Shut down signal */
-			return -2;
-		}
-
-		if (milliseconds < ms_now) {
-			ms_now = milliseconds;
-		}
-
-		result = poll(pfd, n, ms_now);
-		if (result != 0) {
-			/* Poll returned either success (1) or error (-1).
-			 * Forward both to the caller. */
-			return result;
-		}
-
-		/* Poll returned timeout (0). */
-		milliseconds -= ms_now;
-
-	} while (milliseconds > 0);
-
-	return result;
-}
-
 #if defined(__MINGW32__)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
@@ -4187,6 +4153,45 @@ get_random(void)
 	 * of the current server time will make it hard (impossible?) to guess the
 	 * next number. */
 	return (lfsr ^ lcg ^ (uint64_t)now.tv_nsec);
+}
+
+
+static int
+mg_poll(struct pollfd *pfd,
+        unsigned int n,
+        int milliseconds,
+        volatile int *stop_server)
+{
+	int ms_now, result;
+
+	/* Call poll, but only for a maximum time of a few seconds.
+	* This will allow to stop the server after some seconds, instead
+	* of having to wait for a long socket timeout. */
+	ms_now = SOCKET_TIMEOUT_QUANTUM; /* Sleep quantum in ms */
+
+	do {
+		if (*stop_server) {
+			/* Shut down signal */
+			return -2;
+		}
+
+		if (milliseconds < ms_now) {
+			ms_now = milliseconds;
+		}
+
+		result = poll(pfd, n, ms_now);
+		if (result != 0) {
+			/* Poll returned either success (1) or error (-1).
+			* Forward both to the caller. */
+			return result;
+		}
+
+		/* Poll returned timeout (0). */
+		milliseconds -= ms_now;
+
+	} while (milliseconds > 0);
+
+	return result;
 }
 
 
@@ -12298,8 +12303,9 @@ mg_close_connection(struct mg_connection *conn)
 		/* client context: loops must end */
 		conn->ctx->stop_flag = 1;
 
-		/* we need to get the client thread out of the select/recv call here */
-		// mg_websocket_write(conn, WEBSOCKET_OPCODE_CONNECTION_CLOSE, "", 0);
+		/* We need to get the client thread out of the select/recv call here. */
+		/* Since we use a sleep quantum of some seconds to check for recv
+		 * timeouts, we will just wait a few seconds in mg_join_thread. */
 
 		/* join worker thread */
 		for (i = 0; i < client_ctx->cfg_worker_threads; i++) {
@@ -13556,6 +13562,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		// if (timeout > 0) {
 		//	set_sock_timeout(so.sock, timeout);
 		//}
+		(void)timeout;
 		set_non_blocking_mode(so.sock);
 
 		produce_socket(ctx, &so);
@@ -13836,7 +13843,7 @@ get_system_name(char **sysName)
 
 #ifdef _MSC_VER
 #pragma warning(push)
-// GetVersion was declared deprecated
+/* GetVersion was declared deprecated */
 #pragma warning(disable : 4996)
 #endif
 	dwVersion = GetVersion();
