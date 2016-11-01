@@ -7565,24 +7565,37 @@ read_request(FILE *fp,
 	/* first time reading from this connection */
 	clock_gettime(CLOCK_MONOTONIC, &last_action_time);
 
-	while (
-	    (conn->ctx->stop_flag == 0) && (*nread < bufsiz) && (request_len == 0)
-	    && ((mg_difftimespec(&last_action_time, &(conn->req_time))
-	         <= request_timeout) || (request_timeout < 0))
-	    && ((n = pull(fp, conn, buf + *nread, bufsiz - *nread, request_timeout))
-	        > 0)) {
-		*nread += n;
-		/* assert(*nread <= bufsiz); */
-		if (*nread > bufsiz) {
+    while (request_len == 0) {
+        /* Full request not yet received */
+        if (conn->ctx->stop_flag != 0) {
+            /* Server is to be stopped. */
+            return -1;
+        }
+
+		if (*nread >= bufsiz) {
+            /* Request too long */
 			return -2;
 		}
-		request_len = get_request_len(buf, *nread);
-		if (request_timeout > 0.0) {
-			clock_gettime(CLOCK_MONOTONIC, &last_action_time);
-		}
+
+        n = pull(fp, conn, buf + *nread, bufsiz - *nread, request_timeout);
+        if (n < 0) {
+            /* Receive error */
+            return -1;
+        }
+        *nread += n;
+        request_len = get_request_len(buf, *nread);
+
+        if ((request_len == 0) && (request_timeout >= 0)) {
+            if (mg_difftimespec(&last_action_time, &(conn->req_time))
+	         > request_timeout) {
+                /* Timeout */
+                return -1;
+             }
+             clock_gettime(CLOCK_MONOTONIC, &last_action_time);
+        }
 	}
 
-	return ((request_len <= 0) && (n <= 0)) ? -1 : request_len;
+	return request_len;
 }
 
 #if !defined(NO_FILES)
@@ -12761,7 +12774,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			            "Client sent malformed request");
 			*err = 400;
 		} else {
-			/* Server did not send anything -> just close the connection */
+			/* Server did not recv anything -> just close the connection */
 			conn->must_close = 1;
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
