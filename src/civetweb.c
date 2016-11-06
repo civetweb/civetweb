@@ -4670,15 +4670,22 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 				conn->content_len += (int)read_now;
 				read_ret =
 				    mg_read_inner(conn, (char *)buf + all_read, read_now);
-				all_read += (size_t)read_ret;
 
-				conn->chunk_remainder -= read_now;
-				len -= read_now;
+				if (read_ret < 1) {
+					/* read error */
+					return -1;
+				}
+
+				all_read += (size_t)read_ret;
+				conn->chunk_remainder -= read_ret;
+				len -= read_ret;
 
 				if (conn->chunk_remainder == 0) {
-					/* the rest of the data in the current chunk has been read
-					 */
-					if ((mg_getc(conn) != '\r') || (mg_getc(conn) != '\n')) {
+					/* Add data bytes in the current chunk have been read,
+					 * so we are expecting \r\n now. */
+					char x1 = mg_getc(conn);
+					char x2 = mg_getc(conn);
+					if ((x1 != '\r') || (x2 != '\n')) {
 						/* Protocol violation */
 						return -1;
 					}
