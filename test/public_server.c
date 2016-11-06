@@ -2114,7 +2114,7 @@ send_chunk_stringl(struct mg_connection *conn,
                    unsigned int chunk_len)
 {
 	char lenbuf[16];
-	int lenbuf_len;
+	size_t lenbuf_len;
 	int ret;
 
 	/* First store the length information in a text buffer. */
@@ -2123,10 +2123,10 @@ send_chunk_stringl(struct mg_connection *conn,
 
 	/* Then send length information, chunk and terminating \r\n. */
 	ret = mg_write(conn, lenbuf, lenbuf_len);
-	ck_assert_int_eq(ret, lenbuf_len);
+	ck_assert_int_eq(ret, (int)lenbuf_len);
 
 	ret = mg_write(conn, chunk, chunk_len);
-	ck_assert_int_eq(ret, chunk_len);
+	ck_assert_int_eq(ret, (int)chunk_len);
 
 	ret = mg_write(conn, "\r\n", 2);
 	ck_assert_int_eq(ret, 2);
@@ -2586,7 +2586,7 @@ START_TEST(test_handle_form)
 		/* send some strings that are almost boundaries */
 		for (chunk_len = 1; chunk_len < strlen(boundary); chunk_len++) {
 			/* chunks from 1 byte to strlen(boundary)-1 */
-			send_chunk_stringl(client_conn, boundary, chunk_len);
+			send_chunk_stringl(client_conn, boundary, (unsigned int)chunk_len);
 			body_sent += chunk_len;
 		}
 	} while (body_sent < 1024 * 10.24);
