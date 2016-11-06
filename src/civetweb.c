@@ -4677,8 +4677,8 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 				}
 
 				all_read += (size_t)read_ret;
-				conn->chunk_remainder -= read_ret;
-				len -= read_ret;
+				conn->chunk_remainder -= (size_t)read_ret;
+				len -= (size_t)read_ret;
 
 				if (conn->chunk_remainder == 0) {
 					/* Add data bytes in the current chunk have been read,
