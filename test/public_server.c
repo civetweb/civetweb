@@ -2109,12 +2109,34 @@ FormStore2(struct mg_connection *conn, void *cbdata)
 
 
 static void
-send_chunk_string(struct mg_connection *conn, const char *txt)
+send_chunk_stringl(struct mg_connection *conn,
+                   const char *chunk,
+                   unsigned int chunk_len)
 {
-	unsigned int chunk_len = (unsigned int)strlen(txt);
-	mg_printf(conn, "%x\r\n", chunk_len);
-	mg_write(conn, txt, chunk_len);
-	mg_printf(conn, "\r\n");
+	char lenbuf[16];
+	int lenbuf_len;
+	int ret;
+
+	/* First store the length information in a text buffer. */
+	sprintf(lenbuf, "%x\r\n", chunk_len);
+	lenbuf_len = strlen(lenbuf);
+
+	/* Then send length information, chunk and terminating \r\n. */
+	ret = mg_write(conn, lenbuf, lenbuf_len);
+	ck_assert_int_eq(ret, lenbuf_len);
+
+	ret = mg_write(conn, chunk, chunk_len);
+	ck_assert_int_eq(ret, chunk_len);
+
+	ret = mg_write(conn, "\r\n", 2);
+	ck_assert_int_eq(ret, 2);
+}
+
+
+static void
+send_chunk_string(struct mg_connection *conn, const char *chunk)
+{
+	send_chunk_stringl(conn, chunk, (unsigned int)strlen(chunk));
 }
 
 
@@ -2564,12 +2586,10 @@ START_TEST(test_handle_form)
 		/* send some strings that are almost boundaries */
 		for (chunk_len = 1; chunk_len < strlen(boundary); chunk_len++) {
 			/* chunks from 1 byte to strlen(boundary)-1 */
-			mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
-			mg_write(client_conn, boundary, chunk_len);
-			mg_printf(client_conn, "\r\n");
+			send_chunk_stringl(client_conn, boundary, chunk_len);
 			body_sent += chunk_len;
 		}
-	} while (body_sent < 1024 * 1024);
+	} while (body_sent < 1024 * 10.24);
 	send_chunk_string(client_conn, "\r\n");
 
 	send_chunk_string(client_conn, boundary);
@@ -3042,6 +3062,7 @@ MAIN_PUBLIC_SERVER(void)
 {
 	test_the_test_environment(0);
 	test_threading(0);
+
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
 	test_request_handlers(0);
