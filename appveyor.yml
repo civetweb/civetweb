@@ -1,16 +1,19 @@
 version: '{build}'
 
+
 configuration:
   - Release
   - Debug
 
+
 build:
 # no automatic build in script mode
-  
+
 
 platform:
   - x86
   - x64
+
 
 environment:
   enable_cxx: NO
@@ -20,7 +23,8 @@ environment:
   c_standard: auto
   cxx_standard: auto
   matrix:
-    - compiler: msvc-18-seh
+    - id: 1
+      compiler: msvc-18-seh
       build_shared: NO
       no_files: NO
       enable_ipv6: NO
@@ -28,7 +32,8 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
-    - compiler: msvc-18-seh
+    - id: 2
+      compiler: msvc-18-seh
       build_shared: YES
       no_files: NO
       enable_ipv6: NO
@@ -36,7 +41,8 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
-    - compiler: msvc-18-seh
+    - id: 3
+      compiler: msvc-18-seh
       build_shared: YES
       no_files: YES
       enable_ipv6: NO
@@ -44,7 +50,8 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
-    - compiler: gcc-5.1.0-posix
+    - id: 4
+      compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: YES
       enable_ipv6: NO
@@ -52,7 +59,8 @@ environment:
       enable_websockets: NO
       no_cgi: YES
       no_caching: YES
-    - compiler: gcc-5.1.0-posix
+    - id: 5
+      compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: NO
       enable_ipv6: YES
@@ -60,7 +68,8 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: YES
-    - compiler: gcc-5.1.0-posix
+    - id: 6
+      compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: NO
       enable_ipv6: NO
@@ -68,7 +77,8 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: YES
-    - compiler: gcc-5.1.0-posix
+    - id: 7
+      compiler: gcc-5.1.0-posix
       build_shared: YES
       no_files: NO
       enable_ipv6: NO
@@ -76,7 +86,8 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: YES
-    - compiler: gcc-5.1.0-posix
+    - id: 8
+      compiler: gcc-5.1.0-posix
       build_shared: YES
       no_files: YES
       enable_ipv6: NO
