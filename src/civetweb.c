@@ -1922,20 +1922,13 @@ mg_fopen(const struct mg_connection *conn,
          const char *mode,
          struct file *filep)
 {
-	struct stat st;
-
 	if (!filep) {
 		return 0;
 	}
 
-	/* TODO (high): mg_fopen should only open a file, while mg_stat should
-	 * only get the file status. They should not work on different members of
-	 * the same structure (bad cohesion). */
-	/* memset(filep, 0, sizeof(*filep)); */
-
-	if (stat(path, &st) == 0) {
-		filep->size = (uint64_t)(st.st_size);
-	}
+    /* filep is initialized in mg_stat: all fields with memset to, 
+     * some fields like size and modification date with values */
+	mg_stat(conn, path, &filep);
 
 	if (!is_file_in_memory(conn, path, filep)) {
 #ifdef _WIN32
@@ -4267,7 +4260,7 @@ push(struct mg_context *ctx,
 		} else {
 			n = (int)send(sock, buf, (len_t)len, MSG_NOSIGNAL);
 			err = (n < 0) ? ERRNO : 0;
-			if (n == 0) {
+			if (n <= 0) {
 				/* shutdown of the socket at client side */
 				return -1;
 			}
@@ -4425,7 +4418,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 		if (pollres > 0) {
 			nread = (int)recv(conn->client.sock, buf, (len_t)len, 0);
 			err = (nread < 0) ? ERRNO : 0;
-			if (nread == 0) {
+			if (nread <= 0) {
 				/* shutdown of the socket at client side */
 				return -1;
 			}
