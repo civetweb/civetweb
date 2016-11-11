@@ -1901,14 +1901,7 @@ is_file_in_memory(const struct mg_connection *conn,
 
 
 static int
-is_file_opened(const struct file *filep)
-{
-	if (!filep) {
-		return 0;
-	}
-
-	return filep->membuf != NULL || filep->fp != NULL;
-}
+mg_stat(struct mg_connection *conn, const char *path, struct file *filep);
 
 
 /* mg_fopen will open a file either in memory or on the disk.
@@ -1922,27 +1915,35 @@ mg_fopen(const struct mg_connection *conn,
          const char *mode,
          struct file *filep)
 {
+	int found;
+
 	if (!filep) {
 		return 0;
 	}
 
-    /* filep is initialized in mg_stat: all fields with memset to, 
-     * some fields like size and modification date with values */
-	mg_stat(conn, path, &filep);
+	/* filep is initialized in mg_stat: all fields with memset to,
+	 * some fields like size and modification date with values */
+	found = mg_stat(conn, path, filep);
 
 	if (!is_file_in_memory(conn, path, filep)) {
+		if (found) {
 #ifdef _WIN32
-		wchar_t wbuf[PATH_MAX], wmode[20];
-		path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
-		MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, ARRAY_SIZE(wmode));
-		filep->fp = _wfopen(wbuf, wmode);
+			wchar_t wbuf[PATH_MAX], wmode[20];
+			path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
+			MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, ARRAY_SIZE(wmode));
+			filep->fp = _wfopen(wbuf, wmode);
 #else
-		/* Linux et al already use unicode. No need to convert. */
-		filep->fp = fopen(path, mode);
+			/* Linux et al already use unicode. No need to convert. */
+			filep->fp = fopen(path, mode);
 #endif
+		}
+	} else {
+		/* file is in memory */
+		return (filep->membuf != NULL);
 	}
 
-	return is_file_opened(filep);
+	/* file is on disk */
+	return (filep->fp != NULL);
 }
 
 
@@ -2685,9 +2686,6 @@ send_static_cache_header(struct mg_connection *conn)
 static void handle_file_based_request(struct mg_connection *conn,
                                       const char *path,
                                       struct file *filep);
-
-static int
-mg_stat(struct mg_connection *conn, const char *path, struct file *filep);
 
 
 const char *
