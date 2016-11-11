@@ -1901,7 +1901,18 @@ is_file_in_memory(const struct mg_connection *conn,
 
 
 static int
-mg_stat(struct mg_connection *conn, const char *path, struct file *filep);
+is_file_opened(const struct file *filep)
+{
+	if (!filep) {
+		return 0;
+	}
+
+	return filep->membuf != NULL || filep->fp != NULL;
+}
+
+
+static int
+mg_stat(const struct mg_connection *conn, const char *path, struct file *filep);
 
 
 /* mg_fopen will open a file either in memory or on the disk.
@@ -3392,7 +3403,7 @@ path_cannot_disclose_cgi(const char *path)
 
 
 static int
-mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
+mg_stat(const struct mg_connection *conn, const char *path, struct file *filep)
 {
 	wchar_t wbuf[PATH_MAX];
 	WIN32_FILE_ATTRIBUTE_DATA info;
@@ -3910,7 +3921,7 @@ set_non_blocking_mode(SOCKET sock)
 #else
 
 static int
-mg_stat(struct mg_connection *conn, const char *path, struct file *filep)
+mg_stat(const struct mg_connection *conn, const char *path, struct file *filep)
 {
 	struct stat st;
 	if (!filep) {
