@@ -103,7 +103,7 @@
 #if !defined(__MINGW32__)
 extern char *_getcwd(char *buf, size_t size);
 #endif
-static int guard = 0; /* test if any dialog is already open */
+static int sGuard = 0; /* test if any dialog is already open */
 
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -1398,6 +1398,10 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_INITDIALOG:
+		/* Store hWnd in a parameter accessible by the parent, so we can
+		 * bring this window to front if required. */
+		*((HWND *)lParam) = hDlg;
+		/* Initialize the dialog elements */
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
 		title = malloc(strlen(g_server_name) + 16);
@@ -1554,8 +1558,8 @@ get_password(const char *user,
 
 	assert((user != NULL) && (realm != NULL) && (passwd != NULL));
 
-	if (guard < 100) {
-		guard += 100;
+	if (sGuard < 100) {
+		sGuard += 100;
 	} else {
 		return 0;
 	}
@@ -1666,7 +1670,7 @@ get_password(const char *user,
 	ok = (IDOK == DialogBoxIndirectParam(
 	                  NULL, dia, NULL, InputDlgProc, (LPARAM)&dlgprms));
 
-	guard -= 100;
+	sGuard -= 100;
 
 	return ok;
 
@@ -1802,6 +1806,7 @@ show_settings_dialog()
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	WORD i, cl, nelems = 0;
 	short width, x, y;
+	static HWND sDlgHWnd;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1823,9 +1828,10 @@ show_settings_dialog()
 	                   8,
 	                   L"Tahoma"};
 
-	if (guard == 0) {
-		guard++;
+	if (sGuard == 0) {
+		sGuard++;
 	} else {
+		SetForegroundWindow(sDlgHWnd);
 		return;
 	}
 
@@ -1956,8 +1962,9 @@ show_settings_dialog()
 	assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
-	DialogBoxIndirectParam(NULL, dia, NULL, SettingsDlgProc, (LPARAM)NULL);
-	guard--;
+	DialogBoxIndirectParam(NULL, dia, NULL, SettingsDlgProc, (LPARAM)&sDlgHWnd);
+	sGuard--;
+	sDlgHWnd = NULL;
 
 #undef HEIGHT
 #undef WIDTH
@@ -2002,8 +2009,8 @@ change_password_file()
 	                   8,
 	                   L"Tahoma"};
 
-	if (guard == 0) {
-		guard++;
+	if (sGuard == 0) {
+		sGuard++;
 	} else {
 		return;
 	}
@@ -2017,7 +2024,7 @@ change_password_file()
 	of.Flags = OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
 
 	if (IDOK != GetSaveFileName(&of)) {
-		guard--;
+		sGuard--;
 		return;
 	}
 
@@ -2026,7 +2033,7 @@ change_password_file()
 		fclose(f);
 	} else {
 		MessageBox(NULL, path, "Can not open file", MB_ICONERROR);
-		guard--;
+		sGuard--;
 		return;
 	}
 
@@ -2038,7 +2045,7 @@ change_password_file()
 		f = fopen(path, "r+");
 		if (!f) {
 			MessageBox(NULL, path, "Can not open file", MB_ICONERROR);
-			guard--;
+			sGuard--;
 			return;
 		}
 
@@ -2163,7 +2170,7 @@ change_password_file()
 	                      NULL, dia, NULL, PasswordDlgProc, (LPARAM)path))
 	         && (!g_exit_flag));
 
-	guard--;
+	sGuard--;
 
 #undef HEIGHT
 #undef WIDTH
