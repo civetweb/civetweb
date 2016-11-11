@@ -1931,7 +1931,7 @@ mg_fopen(const struct mg_connection *conn,
 	/* TODO (high): mg_fopen should only open a file, while mg_stat should
 	 * only get the file status. They should not work on different members of
 	 * the same structure (bad cohesion). */
-	memset(filep, 0, sizeof(*filep));
+	/* memset(filep, 0, sizeof(*filep)); */
 
 	if (stat(path, &st) == 0) {
 		filep->size = (uint64_t)(st.st_size);
