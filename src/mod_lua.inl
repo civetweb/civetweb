@@ -65,7 +65,8 @@ reg_lstring(struct lua_State *L,
 	}
 }
 
-#define reg_string(L, name, val) reg_lstring(L, name, val, strlen(val))
+#define reg_string(L, name, val)                                               \
+	reg_lstring(L, name, val, val ? strlen(val) : 0)
 
 static void
 reg_int(struct lua_State *L, const char *name, int val)
@@ -1436,7 +1437,11 @@ prepare_lua_environment(struct mg_context *ctx,
 		reg_string(L, "document_root", ctx->config[DOCUMENT_ROOT]);
 		reg_string(L, "auth_domain", ctx->config[AUTHENTICATION_DOMAIN]);
 #if defined(USE_WEBSOCKET)
-		reg_string(L, "websocket_root", ctx->config[WEBSOCKET_ROOT]);
+		if (ctx->config[WEBSOCKET_ROOT]) {
+			reg_string(L, "websocket_root", ctx->config[WEBSOCKET_ROOT]);
+		} else {
+			reg_string(L, "websocket_root", ctx->config[DOCUMENT_ROOT]);
+		}
 #endif
 
 		if (ctx->systemName != NULL) {
