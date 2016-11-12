@@ -176,6 +176,9 @@ struct mg_callbacks {
 	   mg_set_websocket_handler instead. */
 	void (*connection_close)(const struct mg_connection *);
 
+#if 0 /* This interface is a part of the problem causing #246 and others.
+         It will be replaced. */
+
 	/* Called when civetweb tries to open a file. Used to intercept file open
 	   calls, and serve file data from memory instead.
 	   Parameters:
@@ -189,6 +192,7 @@ struct mg_callbacks {
 	const char *(*open_file)(const struct mg_connection *,
 	                         const char *path,
 	                         size_t *data_len);
+#endif
 
 	/* Called when civetweb is about to serve Lua server page, if
 	   Lua support is enabled.
