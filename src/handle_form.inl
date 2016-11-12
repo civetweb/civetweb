@@ -182,7 +182,7 @@ mg_handle_form_request(struct mg_connection *conn,
 	int buf_fill = 0;
 	int r;
 	int field_count = 0;
-	struct file fstore = STRUCT_FILE_INITIALIZER;
+	struct mg_file fstore = STRUCT_FILE_INITIALIZER;
 	int64_t file_size = 0; /* init here, to a avoid a false positive
 	                         "uninitialized variable used" warning */
 

@@ -49,7 +49,7 @@ static const char lua_regkey_connlist = 2;
 static void handle_request(struct mg_connection *);
 static int handle_lsp_request(struct mg_connection *,
                               const char *,
-                              struct file *,
+                              struct mg_file *,
                               struct lua_State *);
 
 static void
@@ -523,7 +523,7 @@ lsp_include(lua_State *L)
 	struct mg_connection *conn =
 	    (struct mg_connection *)lua_touserdata(L, lua_upvalueindex(1));
 	int num_args = lua_gettop(L);
-	struct file file = STRUCT_FILE_INITIALIZER;
+	struct mg_file file = STRUCT_FILE_INITIALIZER;
 	const char *filename = (num_args == 1) ? lua_tostring(L, 1) : NULL;
 
 	if (filename) {
@@ -1563,13 +1563,13 @@ mg_exec_lua_script(struct mg_connection *conn,
 static int
 handle_lsp_request(struct mg_connection *conn,
                    const char *path,
-                   struct file *filep,
+                   struct mg_file *filep,
                    struct lua_State *ls)
 {
 	void *p = NULL;
 	lua_State *L = NULL;
 	int error = 1;
-	struct file filesize = STRUCT_FILE_INITIALIZER;
+	struct mg_file filesize = STRUCT_FILE_INITIALIZER;
 
 	/* Assume the script does not support keep_alive. The script may change this
 	 * by calling mg.keep_alive(true). */
@@ -1605,16 +1605,16 @@ handle_lsp_request(struct mg_connection *conn,
 
 	/* TODO: Operations mg_fopen and mg_stat should do what their names
 	 * indicate. They should not fill in different members of the same
-	 * struct file.
+	 * struct mg_file.
 	 * See Github issue #225 */
 	filep->size = filesize.size;
 
-	if (filep->membuf == NULL
+	if (filep->access.membuf == NULL
 	    && (p = mmap(NULL,
-	                 (size_t)filep->size,
+	                 (size_t)filep->stat.size,
 	                 PROT_READ,
 	                 MAP_PRIVATE,
-	                 fileno(filep->fp),
+	                 fileno(filep->access.fp),
 	                 0)) == MAP_FAILED) {
 
 		/* mmap failed */
@@ -1628,8 +1628,8 @@ handle_lsp_request(struct mg_connection *conn,
 			luaL_error(ls,
 			           "mmap(%s, %zu, %d): %s",
 			           path,
-			           (size_t)filep->size,
-			           fileno(filep->fp),
+			           (size_t)filep->stat.size,
+			           fileno(filep->access.fp),
 			           strerror(errno));
 		}
 
@@ -1655,12 +1655,13 @@ handle_lsp_request(struct mg_connection *conn,
 
 	/* Lua state is ready to use */
 	/* We're not sending HTTP headers here, Lua page must do it. */
-	error = lsp(conn,
-	            path,
-	            (filep->membuf == NULL) ? (const char *)p
-	                                    : (const char *)filep->membuf,
-	            filep->size,
-	            L);
+	error =
+	    lsp(conn,
+	        path,
+	        (filep->access.membuf == NULL) ? (const char *)p
+	                                       : (const char *)filep->access.membuf,
+	        filep->stat.size,
+	        L);
 
 cleanup_handle_lsp_request:
 
