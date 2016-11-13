@@ -399,15 +399,8 @@ static void path_to_unicode(const struct mg_connection *conn,
                             wchar_t *wbuf,
                             size_t wbuf_len);
 
-/* We use a special file struct to access files on disk and in
- * memory, and store all required file properties there as well. */
-struct mg_file;
-struct mg_file_stat;
-struct mg_file_access;
-
-static const char *
-mg_fgets(char *buf, size_t size, struct mg_file *fileacc, char **p);
-
+/* All file operations need to be rewritten to solve #246. */
+#include "file_ops.inl"
 
 #if defined(HAVE_STDINT)
 #include <stdint.h>
@@ -1303,12 +1296,13 @@ struct mg_file_stat {
 	int is_directory; /* Set to 1 if mg_stat is called for a directory */
 	int is_gzipped;   /* Set to 1 if the content is gzipped, in which
 	                   * case we need a "Content-Eencoding: gzip" header */
+	int location;     /* 0 = nowhere, 1 = on disk, 2 = in memory */
 };
 
 struct mg_file_access {
-	/* File properties filled by mg_fopen or open_file_in_memory: */
+	/* File properties filled by mg_fopen: */
 	FILE *fp;
-	const char *membuf; /* Non-NULL if file data is in memory */
+	const char *membuf;
 };
 
 struct mg_file {
@@ -1318,7 +1312,7 @@ struct mg_file {
 
 #define STRUCT_FILE_INITIALIZER                                                \
 	{                                                                          \
-		(uint64_t)0, (time_t)0, 0, 0, (FILE *)NULL, (const char *)NULL         \
+		(uint64_t)0, (time_t)0, 0, 0, 0, (FILE *)NULL, (const char *)NULL      \
 	}
 
 /* Describes listening socket, or socket which was accept()-ed by the master
@@ -3889,7 +3883,7 @@ spawn_process(struct mg_connection *conn,
 		if (mg_fopen(conn, cmdline, "r", &file)) {
 			p = (char *)file.access.membuf;
 			mg_fgets(buf, sizeof(buf), &file, &p);
-			mg_fclose(&file);
+			mg_fclose(&file.access);
 			buf[sizeof(buf) - 1] = '\0';
 		}
 
@@ -8600,7 +8594,7 @@ put_file(struct mg_connection *conn, const char *path)
 	          date,
 	          suggest_connection_header(conn));
 
-	mg_fclose(&file);
+	mg_fclose(&file.access);
 }
 
 
@@ -8618,7 +8612,7 @@ delete_file(struct mg_connection *conn, const char *path)
 		return;
 	}
 
-	if (de.file.membuf != NULL) {
+	if (de.access.membuf != NULL) {
 		/* the file is cached in memory */
 		send_http_error(
 		    conn,
@@ -8903,7 +8897,7 @@ handle_ssi_file_request(struct mg_connection *conn,
 	} else {
 		conn->must_close = 1;
 		gmt_time_string(date, sizeof(date), &curtime);
-		fclose_on_exec(filep.access, conn);
+		fclose_on_exec(&filep->access, conn);
 		mg_printf(conn, "HTTP/1.1 200 OK\r\n");
 		send_no_cache_header(conn);
 		mg_printf(conn,
@@ -10600,7 +10594,7 @@ handle_request(struct mg_connection *conn)
 			interpret_uri(conn,
 			              path,
 			              sizeof(path),
-			              &file,
+			              &file.stat,
 			              &is_found,
 			              &is_script_resource,
 			              &is_websocket_request,
@@ -10683,7 +10677,7 @@ handle_request(struct mg_connection *conn)
 					interpret_uri(conn,
 					              path,
 					              sizeof(path),
-					              &file,
+					              &file.stat,
 					              &is_found,
 					              &is_script_resource,
 					              &is_websocket_request,
@@ -10799,7 +10793,7 @@ handle_request(struct mg_connection *conn)
 		}
 
 		/* 12. Directory uris should end with a slash */
-		if (file.is_directory && (uri_len > 0)
+		if (file.stat.is_directory && (uri_len > 0)
 		    && (ri->local_uri[uri_len - 1] != '/')) {
 			gmt_time_string(date, sizeof(date), &curtime);
 			mg_printf(conn,
@@ -10818,7 +10812,7 @@ handle_request(struct mg_connection *conn)
 		/* 13. Handle other methods than GET/HEAD */
 		/* 13.1. Handle PROPFIND */
 		if (!strcmp(ri->request_method, "PROPFIND")) {
-			handle_propfind(conn, path, &file);
+			handle_propfind(conn, path, &file.stat);
 			return;
 		}
 		/* 13.2. Handle OPTIONS for files */
@@ -10842,7 +10836,7 @@ handle_request(struct mg_connection *conn)
 		}
 
 		/* 14. directories */
-		if (file.is_directory) {
+		if (file.stat.is_directory) {
 			if (substitute_index_file(conn, path, sizeof(path), &file)) {
 				/* 14.1. use a substitute file */
 				/* TODO (high): substitute index may be a script resource.
@@ -10923,7 +10917,8 @@ handle_file_based_request(struct mg_connection *conn,
 	                        path) > 0) {
 		handle_ssi_file_request(conn, path, file);
 #if !defined(NO_CACHING)
-	} else if ((!conn->in_error_handler) && is_not_modified(conn, file)) {
+	} else if ((!conn->in_error_handler)
+	           && is_not_modified(conn, &file->stat)) {
 		/* Send 304 "Not Modified" - this must not send any body data */
 		handle_not_modified_static_file_request(conn, file);
 #endif /* !NO_CACHING */
@@ -11321,15 +11316,15 @@ log_access(const struct mg_connection *conn)
 	if (conn->ctx->config[ACCESS_LOG_FILE] != NULL) {
 		if (mg_fopen(conn, conn->ctx->config[ACCESS_LOG_FILE], "a+", &fi)
 		    == 0) {
-			fi.fp = NULL;
+			fi.access.fp = NULL;
 		}
 	} else {
-		fi.fp = NULL;
+		fi.access.fp = NULL;
 	}
 
 	/* Log is written to a file and/or a callback. If both are not set,
 	 * executing the rest of the function is pointless. */
-	if ((fi.fp == NULL) && (conn->ctx->callbacks.log_access == NULL)) {
+	if ((fi.access.fp == NULL) && (conn->ctx->callbacks.log_access == NULL)) {
 		return;
 	}
 
@@ -11369,12 +11364,12 @@ log_access(const struct mg_connection *conn)
 		conn->ctx->callbacks.log_access(conn, buf);
 	}
 
-	if (fi.fp) {
-		flockfile(fi.fp);
-		fprintf(fi.fp, "%s\n", buf);
-		fflush(fi.fp);
-		funlockfile(fi.fp);
-		mg_fclose(&fi);
+	if (fi.access.fp) {
+		flockfile(fi.access.fp);
+		fprintf(fi.access.fp, "%s\n", buf);
+		fflush(fi.access.fp);
+		funlockfile(fi.access.fp);
+		mg_fclose(&fi.access);
 	}
 }
 
@@ -12153,7 +12148,7 @@ set_gpass_option(struct mg_context *ctx)
 	if (ctx) {
 		struct mg_file file = STRUCT_FILE_INITIALIZER;
 		const char *path = ctx->config[GLOBAL_PASSWORDS_FILE];
-		if (path != NULL && !mg_stat(fc(ctx), path, &file)) {
+		if (path != NULL && !mg_stat(fc(ctx), path, &file.stat)) {
 			mg_cry(fc(ctx), "Cannot open %s: %s", path, strerror(ERRNO));
 			return 0;
 		}

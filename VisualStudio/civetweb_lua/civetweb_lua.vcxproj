@@ -206,6 +206,7 @@
     <None Include="..\..\src\mod_duktape.inl" />
     <None Include="..\..\src\mod_lua.inl" />
     <None Include="..\..\src\timer.inl" />
+    <None Include="..\..\src\file_ops.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

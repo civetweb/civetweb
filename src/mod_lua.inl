@@ -1576,7 +1576,7 @@ handle_lsp_request(struct mg_connection *conn,
 	conn->must_close = 1;
 
 	/* We need both mg_stat to get file size, and mg_fopen to get fd */
-	if (!mg_stat(conn, path, &filesize)) {
+	if (!mg_stat(conn, path, &filesize.stat)) {
 
 		/* File not found */
 		if (ls == NULL) {
@@ -1607,7 +1607,7 @@ handle_lsp_request(struct mg_connection *conn,
 	 * indicate. They should not fill in different members of the same
 	 * struct mg_file.
 	 * See Github issue #225 */
-	filep->size = filesize.size;
+	filep->size = filesize.stat.size;
 
 	if (filep->access.membuf == NULL
 	    && (p = mmap(NULL,
@@ -1668,7 +1668,7 @@ cleanup_handle_lsp_request:
 	if (L != NULL && ls == NULL)
 		lua_close(L);
 	if (p != NULL)
-		munmap(p, filep->size);
+		munmap(p, filep->stat.size);
 	mg_fclose(filep);
 
 	return error;
