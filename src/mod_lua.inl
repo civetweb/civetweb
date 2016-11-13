@@ -1607,7 +1607,7 @@ handle_lsp_request(struct mg_connection *conn,
 	 * indicate. They should not fill in different members of the same
 	 * struct mg_file.
 	 * See Github issue #225 */
-	filep->size = filesize.stat.size;
+	filep->stat.size = filesize.stat.size;
 
 	if (filep->access.membuf == NULL
 	    && (p = mmap(NULL,
@@ -1669,7 +1669,7 @@ cleanup_handle_lsp_request:
 		lua_close(L);
 	if (p != NULL)
 		munmap(p, filep->stat.size);
-	mg_fclose(filep);
+	mg_fclose(&filep->access);
 
 	return error;
 }

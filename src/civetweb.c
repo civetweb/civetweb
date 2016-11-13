@@ -402,6 +402,10 @@ static void path_to_unicode(const struct mg_connection *conn,
 /* All file operations need to be rewritten to solve #246. */
 #include "file_ops.inl"
 
+static const char *
+mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p);
+
+#define HAVE_STDINT
 #if defined(HAVE_STDINT)
 #include <stdint.h>
 #else
@@ -8612,6 +8616,7 @@ delete_file(struct mg_connection *conn, const char *path)
 		return;
 	}
 
+#if 0 /* Ignore if a file in memory is inside a folder */
 	if (de.access.membuf != NULL) {
 		/* the file is cached in memory */
 		send_http_error(
@@ -8621,6 +8626,7 @@ delete_file(struct mg_connection *conn, const char *path)
 		    path);
 		return;
 	}
+#endif
 
 	if (de.file.is_directory) {
 		if (remove_directory(conn, path)) {
