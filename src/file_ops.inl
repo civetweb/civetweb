@@ -48,8 +48,7 @@ int32_t cvf_read(CV_FILE file, void *block_ptr, int32_t block_size);
 
 /* Callbacks for file system */
 struct cv_filesys {
-	int (*cv_get_file_disp)(const char *path_utf8, void *user_arg);
-
+	int (*cv_get_file_disp)(const char *path_utf8, void *user_arg);    
 	void *user_arg;
 };
 

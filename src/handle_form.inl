@@ -281,14 +281,13 @@ mg_handle_form_request(struct mg_connection *conn,
 						       "%s: Cannot write file %s",
 						       __func__,
 						       path);
-						fclose(fstore.access.fp);
-						fstore.access.fp = NULL;
+						(void)mg_fclose(&fstore.access);
 						remove_bad_file(conn, path);
 					}
 					file_size += (int64_t)n;
 
 					if (fstore.access.fp) {
-						r = fclose(fstore.access.fp);
+						r = mg_fclose(&fstore.access);
 						if (r == 0) {
 							/* stored successfully */
 							field_stored(conn, path, file_size, fdh);
@@ -454,8 +453,7 @@ mg_handle_form_request(struct mg_connection *conn,
 						       "%s: Cannot write file %s",
 						       __func__,
 						       path);
-						fclose(fstore.access.fp);
-						fstore.access.fp = NULL;
+						mg_fclose(&fstore.access);
 						remove_bad_file(conn, path);
 					}
 					file_size += (int64_t)n;
@@ -495,7 +493,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			} while (!end_of_key_value_pair_found);
 
 			if (fstore.access.fp) {
-				r = fclose(fstore.access.fp);
+				r = mg_fclose(&fstore.access);
 				if (r == 0) {
 					/* stored successfully */
 					field_stored(conn, path, file_size, fdh);
@@ -714,8 +712,7 @@ mg_handle_form_request(struct mg_connection *conn,
 							       "%s: Cannot write file %s",
 							       __func__,
 							       path);
-							fclose(fstore.access.fp);
-							fstore.access.fp = NULL;
+							mg_fclose(&fstore.access);
 							remove_bad_file(conn, path);
 						}
 						file_size += (int64_t)n;
@@ -767,8 +764,7 @@ mg_handle_form_request(struct mg_connection *conn,
 						       "%s: Cannot write file %s",
 						       __func__,
 						       path);
-						fclose(fstore.access.fp);
-						fstore.access.fp = NULL;
+						mg_fclose(&fstore.access);
 						remove_bad_file(conn, path);
 					}
 					file_size += (int64_t)n;
@@ -778,7 +774,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 
 				if (fstore.access.fp) {
-					r = fclose(fstore.access.fp);
+					r = mg_fclose(&fstore.access);
 					if (r == 0) {
 						/* stored successfully */
 						field_stored(conn, path, file_size, fdh);

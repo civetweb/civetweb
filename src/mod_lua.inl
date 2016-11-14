@@ -1669,7 +1669,7 @@ cleanup_handle_lsp_request:
 		lua_close(L);
 	if (p != NULL)
 		munmap(p, filep->stat.size);
-	mg_fclose(&filep->access);
+	(void)mg_fclose(&filep->access);
 
 	return error;
 }

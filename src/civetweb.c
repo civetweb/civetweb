@@ -1316,7 +1316,13 @@ struct mg_file {
 
 #define STRUCT_FILE_INITIALIZER                                                \
 	{                                                                          \
-		(uint64_t)0, (time_t)0, 0, 0, 0, (FILE *)NULL, (const char *)NULL      \
+		{                                                                      \
+			(uint64_t)0, (time_t)0, 0, 0, 0                                    \
+		}                                                                      \
+		,                                                                      \
+		{                                                                      \
+			(FILE *) NULL, (const char *)NULL                                  \
+		}                                                                      \
 	}
 
 /* Describes listening socket, or socket which was accept()-ed by the master
@@ -1974,12 +1980,12 @@ mg_fopen(const struct mg_connection *conn,
 		return 0;
 	}
 
-	/* filep is initialized in mg_stat: all fields with memset to,
-	 * some fields like size and modification date with values */
-	found = mg_stat(conn, path, &(filep->stat));
+	if (!is_file_in_memory(conn, path)) {
 
-	/* TODO: mg_stat already opens file if in memory */
-	if (!open_file_in_memory(conn, path, filep)) {
+		/* filep is initialized in mg_stat: all fields with memset to,
+		* some fields like size and modification date with values */
+		found = mg_stat(conn, path, &(filep->stat));
+
 		if (found) {
 #ifdef _WIN32
 			wchar_t wbuf[PATH_MAX], wmode[20];
@@ -1988,28 +1994,39 @@ mg_fopen(const struct mg_connection *conn,
 			filep->access.fp = _wfopen(wbuf, wmode);
 #else
 			/* Linux et al already use unicode. No need to convert. */
-			filep->> access.fp = fopen(path, mode);
+			filep->access.fp = fopen(path, mode);
 #endif
+			/* file is on disk */
+			return (filep->access.fp != NULL);
 		}
+
 	} else {
-		/* file is in memory */
-		return (filep->access.membuf != NULL);
+		if (open_file_in_memory(conn, path, filep)) {
+			/* file is in memory */
+			return (filep->access.membuf != NULL);
+		}
 	}
 
-	/* file is on disk */
-	return (filep->access.fp != NULL);
+	/* Open failed */
+	return 0;
 }
 
 
-static void
+/* return 0 on success, just like fclose */
+static int
 mg_fclose(struct mg_file_access *fileacc)
 {
+	int ret = -1;
 	if (fileacc != NULL) {
 		if (fileacc->fp != NULL) {
-			fclose(fileacc->fp);
+			ret = fclose(fileacc->fp);
+		} else if (fileacc->membuf != NULL) {
+			ret = 0;
 		}
+		/* reset all members of fileacc */
 		memset(fileacc, 0, sizeof(*fileacc));
 	}
+	return ret;
 }
 
 
@@ -2399,7 +2416,8 @@ mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 			fputc('\n', fi.access.fp);
 			fflush(fi.access.fp);
 			funlockfile(fi.access.fp);
-			mg_fclose(&fi.access);
+			(void)mg_fclose(&fi.access); /* Ignore errors. We can't call
+			                              * mg_cry here anyway ;-) */
 		}
 	}
 }
@@ -3887,7 +3905,7 @@ spawn_process(struct mg_connection *conn,
 		if (mg_fopen(conn, cmdline, "r", &file)) {
 			p = (char *)file.access.membuf;
 			mg_fgets(buf, sizeof(buf), &file, &p);
-			mg_fclose(&file.access);
+			(void)mg_fclose(&file.access); /* ignore error on read only file */
 			buf[sizeof(buf) - 1] = '\0';
 		}
 
@@ -3979,7 +3997,7 @@ mg_stat(const struct mg_connection *conn,
 	}
 	memset(filep, 0, sizeof(*filep));
 
-	if (conn && is_file_in_memory(conn, path, filep)) {
+	if (conn && is_file_in_memory(conn, path)) {
 		return 1;
 	}
 
@@ -4323,12 +4341,14 @@ push(struct mg_context *ctx,
 				/* shutdown of the socket at client side */
 				return -1;
 			}
+#if defined(TEMPORARY_INSTRUMENTATION)
 			{
 				FILE *f = fopen("r:\\all.txt", "ab");
 				fprintf(f, "\r\n%010u SEND:\r\n", GetTickCount());
 				fwrite(buf, 1, n, f);
 				fclose(f);
 			}
+#endif
 		}
 
 		if (ctx->stop_flag) {
@@ -4487,12 +4507,14 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 				/* shutdown of the socket at client side */
 				return -1;
 			}
+#if defined(TEMPORARY_INSTRUMENTATION)
 			{
 				FILE *f = fopen("r:\\all.txt", "ab");
 				fprintf(f, "\r\n%010u RECV:\r\n", GetTickCount());
 				fwrite(buf, 1, nread, f);
 				fclose(f);
 			}
+#endif
 		} else if (pollres < 0) {
 			/* error callint poll */
 			return -1;
@@ -6077,7 +6099,8 @@ read_auth_file(struct mg_file *filep, struct read_auth_file_struct *workdata)
 			} else if (!strncmp(workdata->f_user + 1, "include=", 8)) {
 				if (mg_fopen(workdata->conn, workdata->f_user + 9, "r", &fp)) {
 					is_authorized = read_auth_file(&fp, workdata);
-					mg_fclose(&fp.access);
+					(void)mg_fclose(
+					    &fp.access); /* ignore error on read only file */
 				} else {
 					mg_cry(workdata->conn,
 					       "%s: cannot open authorization file: %s",
@@ -6199,7 +6222,7 @@ check_authorization(struct mg_connection *conn, const char *path)
 
 	if (is_file_opened(&file.access)) {
 		authorized = authorize(conn, &file);
-		mg_fclose(&file.access);
+		(void)mg_fclose(&file.access); /* ignore error on read only file */
 	}
 
 	return authorized;
@@ -6253,7 +6276,7 @@ is_authorized_for_put(struct mg_connection *conn)
 
 		if (passfile != NULL && mg_fopen(conn, passfile, "r", &file)) {
 			ret = authorize(conn, &file);
-			mg_fclose(&file.access);
+			(void)mg_fclose(&file.access); /* ignore error on read only file */
 		}
 
 		return ret;
@@ -6995,7 +7018,7 @@ send_file_data(struct mg_connection *conn,
 		                       "yes"))) {
 			off_t sf_offs = (off_t)offset;
 			ssize_t sf_sent;
-			int sf_file = fileno(filep->fp);
+			int sf_file = fileno(filep->access.fp);
 			int loop_cnt = 0;
 
 			do {
@@ -7190,7 +7213,8 @@ handle_static_file_request(struct mg_connection *conn,
 			    501,
 			    "%s",
 			    "Error: Range requests in gzipped files are not supported");
-			mg_fclose(&filep->access);
+			(void)mg_fclose(
+			    &filep->access); /* ignore error on read only file */
 			return;
 		}
 		conn->status_code = 206;
@@ -7269,7 +7293,7 @@ handle_static_file_request(struct mg_connection *conn,
 	if (strcmp(conn->request_info.request_method, "HEAD") != 0) {
 		send_file_data(conn, filep, r1, cl);
 	}
-	mg_fclose(&filep->access);
+	(void)mg_fclose(&filep->access); /* ignore error on read only file */
 }
 
 
@@ -7440,16 +7464,18 @@ mg_store_body(struct mg_connection *conn, const char *path)
 	while (ret > 0) {
 		n = (int)fwrite(buf, 1, (size_t)ret, fi.access.fp);
 		if (n != ret) {
-			mg_fclose(&fi.access);
+			(void)mg_fclose(
+			    &fi.access); /* File is bad and will be removed anyway. */
 			remove_bad_file(conn, path);
 			return -13;
 		}
 		ret = mg_read(conn, buf, sizeof(buf));
 	}
 
-	/* TODO: mg_fclose should return an error,
-	 * and every caller should check and handle it. */
-	if (fclose(fi.access.fp) != 0) {
+	/* File is open for writing. If fclose fails, there was probably an
+	 * error flushing the buffer to disk, so the file on disk might be
+	 * broken. Delete it and return an error to the caller. */
+	if (mg_fclose(&fi.access) != 0) {
 		remove_bad_file(conn, path);
 		return -14;
 	}
@@ -8560,7 +8586,7 @@ put_file(struct mg_connection *conn, const char *path)
 
 	/* A file should be created or overwritten. */
 	if (!mg_fopen(conn, path, "wb+", &file) || file.access.fp == NULL) {
-		mg_fclose(&file.access);
+		(void)mg_fclose(&file.access);
 		send_http_error(conn,
 		                500,
 		                "Error: Can not create file\nfopen(%s): %s",
@@ -8581,8 +8607,14 @@ put_file(struct mg_connection *conn, const char *path)
 		/* forward_body_data failed.
 		 * The error code has already been sent to the client,
 		 * and conn->status_code is already set. */
-		mg_fclose(&file.access);
+		(void)mg_fclose(&file.access);
 		return;
+	}
+
+	if (mg_fclose(&file.access) != 0) {
+		/* fclose failed. This might have different reasons, but a likely
+		 * one is "no space on disk", http 507. */
+		conn->status_code = 507;
 	}
 
 	gmt_time_string(date, sizeof(date), &curtime);
@@ -8597,8 +8629,6 @@ put_file(struct mg_connection *conn, const char *path)
 	          "Connection: %s\r\n\r\n",
 	          date,
 	          suggest_connection_header(conn));
-
-	mg_fclose(&file.access);
 }
 
 
@@ -8751,7 +8781,7 @@ do_ssi_include(struct mg_connection *conn,
 		} else {
 			send_file_data(conn, &file, 0, INT64_MAX);
 		}
-		mg_fclose(&file.access);
+		(void)mg_fclose(&file.access); /* Ignore errors for readonly files */
 	}
 }
 
@@ -8917,7 +8947,7 @@ handle_ssi_file_request(struct mg_connection *conn,
 		          date,
 		          suggest_connection_header(conn));
 		send_ssi_file(conn, path, filep, 0);
-		mg_fclose(&filep->access);
+		(void)mg_fclose(&filep->access); /* Ignore errors for readonly files */
 	}
 }
 
@@ -11371,11 +11401,23 @@ log_access(const struct mg_connection *conn)
 	}
 
 	if (fi.access.fp) {
+		int ok = 1;
 		flockfile(fi.access.fp);
-		fprintf(fi.access.fp, "%s\n", buf);
-		fflush(fi.access.fp);
+		if (fprintf(fi.access.fp, "%s\n", buf) < 1) {
+			ok = 0;
+		}
+		if (fflush(fi.access.fp) != 0) {
+			ok = 0;
+		}
 		funlockfile(fi.access.fp);
-		mg_fclose(&fi.access);
+		if (mg_fclose(&fi.access) != 0) {
+			ok = 0;
+		}
+		if (!ok) {
+			mg_cry(conn,
+			       "Error writing log file %s",
+			       conn->ctx->config[ACCESS_LOG_FILE]);
+		}
 	}
 }
 
