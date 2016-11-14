@@ -1976,7 +1976,7 @@ field_get(const char *key,
 
 
 static const char *myfile_content = "Content of myfile.txt\r\n";
-static const int myfile_content_rep = 50000;
+static const int myfile_content_rep = 500;
 
 
 static int
@@ -2578,7 +2578,9 @@ START_TEST(test_handle_form)
 	send_chunk_string(client_conn, "X-Ignored-Header: xyz\r\n");
 	send_chunk_string(client_conn, "\r\n");
 
-	/* send some megabyte of data */
+	/* send some kilobyte of data */
+	/* sending megabytes to localhost does not allways work in CI test
+	 * environments (depending on the network stack) */
 	body_sent = 0;
 	do {
 		send_chunk_string(client_conn, "ignore\r\n");
@@ -2589,7 +2591,7 @@ START_TEST(test_handle_form)
 			send_chunk_stringl(client_conn, boundary, (unsigned int)chunk_len);
 			body_sent += chunk_len;
 		}
-	} while (body_sent < 1024 * 10.24);
+	} while (body_sent < 8 * 1024);
 	send_chunk_string(client_conn, "\r\n");
 
 	send_chunk_string(client_conn, boundary);
