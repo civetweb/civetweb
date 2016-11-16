@@ -88,6 +88,8 @@ struct mg_request_info {
 	} http_headers[64];    /* Maximum 64 headers */
 
 	struct client_cert *client_cert; /* Client certificate information */
+
+	const char *acceptedSubprotocol; /* websocket, subprotocol accepted during handshake */
 };
 
 
@@ -353,6 +355,14 @@ typedef int (*mg_websocket_data_handler)(struct mg_connection *,
 typedef void (*mg_websocket_close_handler)(const struct mg_connection *,
                                            void *);
 
+/* struct mg_websocket_subprotocols
+ *
+ * List of accepted subprotocols
+ */
+struct mg_websocket_subprotocols {
+	int nb_subprotocols;
+	char ** subprotocols;
+};
 
 /* mg_set_websocket_handler
 
@@ -361,6 +371,20 @@ typedef void (*mg_websocket_close_handler)(const struct mg_connection *,
 CIVETWEB_API void
 mg_set_websocket_handler(struct mg_context *ctx,
                          const char *uri,
+                         mg_websocket_connect_handler connect_handler,
+                         mg_websocket_ready_handler ready_handler,
+                         mg_websocket_data_handler data_handler,
+                         mg_websocket_close_handler close_handler,
+                         void *cbdata);
+
+/* mg_set_websocket_handler
+
+   Set or remove handler functions for websocket connections.
+   This function works similar to mg_set_request_handler - see there. */
+CIVETWEB_API void
+mg_set_websocket_handler_with_subprotocols(struct mg_context *ctx,
+                         const char *uri,
+						 struct mg_websocket_subprotocols *subprotocols,
                          mg_websocket_connect_handler connect_handler,
                          mg_websocket_ready_handler ready_handler,
                          mg_websocket_data_handler data_handler,
