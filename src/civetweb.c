@@ -1981,19 +1981,30 @@ mg_fopen(const struct mg_connection *conn,
 		* some fields like size and modification date with values */
 		found = mg_stat(conn, path, &(filep->stat));
 
-		if (found) {
+		/* TODO: if found=false, only call fopen if the file should
+		 * be created. If it should only be read, fail early. */
+
 #ifdef _WIN32
+		{
 			wchar_t wbuf[PATH_MAX], wmode[20];
 			path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
 			MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, ARRAY_SIZE(wmode));
 			filep->access.fp = _wfopen(wbuf, wmode);
-#else
-			/* Linux et al already use unicode. No need to convert. */
-			filep->access.fp = fopen(path, mode);
-#endif
-			/* file is on disk */
-			return (filep->access.fp != NULL);
 		}
+#else
+		/* Linux et al already use unicode. No need to convert. */
+		filep->access.fp = fopen(path, mode);
+#endif
+		if (!found) {
+			/* File did not exist before fopen was called.
+			 * Maybe it has been created now. Get stat info
+			 * like creation time now. */
+			found = mg_stat(conn, path, &(filep->stat));
+			(void)found;
+		}
+
+		/* file is on disk */
+		return (filep->access.fp != NULL);		
 
 	} else {
 		if (open_file_in_memory(conn, path, filep)) {
