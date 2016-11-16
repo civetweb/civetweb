@@ -359,15 +359,9 @@ if (CIVETWEB_ENABLE_CXX)
   add_cxx_compiler_flag(--coverage COVERAGE)
 endif()
 
-# Check the headers we need
-check_include_files(stdint.h HAVE_STDINT)
-
 # Set up the definitions
 if (${CMAKE_BUILD_TYPE} MATCHES "[Dd]ebug")
   add_definitions(-DDEBUG)
-endif()
-if (HAVE_STDINT)
-  add_definitions(-DHAVE_STDINT)
 endif()
 if (CIVETWEB_ENABLE_IPV6)
   add_definitions(-DUSE_IPV6)

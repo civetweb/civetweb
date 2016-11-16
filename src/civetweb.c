@@ -229,6 +229,11 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdint.h>
+
+#ifndef INT64_MAX
+#define INT64_MAX (9223372036854775807)
+#endif
 
 
 #ifndef MAX_WORKER_THREADS
@@ -405,19 +410,6 @@ static void path_to_unicode(const struct mg_connection *conn,
 static const char *
 mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p);
 
-#define HAVE_STDINT
-#if defined(HAVE_STDINT)
-#include <stdint.h>
-#else
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned __int64 uint64_t;
-typedef __int64 int64_t;
-#ifndef INT64_MAX
-#define INT64_MAX (9223372036854775807)
-#endif
-#endif /* HAVE_STDINT */
 
 /* POSIX dirent interface */
 struct dirent {

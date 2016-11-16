@@ -31,7 +31,6 @@
 #endif
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
-#define HAVE_STDINT
 #undef MEMORY_DEBUGGING
 #endif
 
