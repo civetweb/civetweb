@@ -89,8 +89,8 @@ struct mg_request_info {
 
 	struct client_cert *client_cert; /* Client certificate information */
 
-	const char *acceptedSubprotocol; /* websocket, subprotocol accepted during
-	                                    handshake */
+	const char *acceptedWebSocketSubprotocol; /* websocket subprotocol,
+	                                           * accepted during handshake */
 };
 
 

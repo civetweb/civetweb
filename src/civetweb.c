@@ -9391,10 +9391,10 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 	          "Connection: Upgrade\r\n"
 	          "Sec-WebSocket-Accept: %s\r\n",
 	          b64_sha);
-	if (conn->request_info.acceptedSubprotocol) {
+	if (conn->request_info.acceptedWebSocketSubprotocol) {
 		mg_printf(conn,
 		          "Sec-WebSocket-Protocol: %s\r\n\r\n",
-		          conn->request_info.acceptedSubprotocol);
+		          conn->request_info.acceptedWebSocketSubprotocol);
 	} else {
 		mg_printf(conn, "%s", "\r\n");
 	}
@@ -9773,7 +9773,8 @@ handle_websocket_request(struct mg_connection *conn,
 		const char *protocol = mg_get_header(conn, "Sec-WebSocket-Protocol");
 		if (protocol && subprotocols) {
 			int len, idx;
-			const char *sep, *curSubProtocol, *acceptedSubProtocol = NULL;
+			const char *sep, *curSubProtocol,
+			    *acceptedWebSocketSubprotocol = NULL;
 
 
 			/* look for matching subprotocol */
@@ -9789,13 +9790,15 @@ handle_websocket_request(struct mg_connection *conn,
 					    && strncmp(curSubProtocol,
 					               subprotocols->subprotocols[idx],
 					               len) == 0) {
-						acceptedSubProtocol = subprotocols->subprotocols[idx];
+						acceptedWebSocketSubprotocol =
+						    subprotocols->subprotocols[idx];
 						break;
 					}
 				}
-			} while (sep && !acceptedSubProtocol);
+			} while (sep && !acceptedWebSocketSubprotocol);
 
-			conn->request_info.acceptedSubprotocol = acceptedSubProtocol;
+			conn->request_info.acceptedWebSocketSubprotocol =
+			    acceptedWebSocketSubprotocol;
 		} else if (protocol) {
 			/* keep legacy behavior */
 
@@ -9805,7 +9808,7 @@ handle_websocket_request(struct mg_connection *conn,
 			const char *sep = strrchr(protocol, ',');
 			if (sep == NULL) {
 				/* Just a single protocol -> accept it. */
-				conn->request_info.acceptedSubprotocol = protocol;
+				conn->request_info.acceptedWebSocketSubprotocol = protocol;
 			} else {
 				/* Multiple protocols -> accept the last one. */
 				/* This is just a quick fix if the client offers multiple
@@ -9814,7 +9817,7 @@ handle_websocket_request(struct mg_connection *conn,
 				 * and use it to select one protocol among those the client has
 				 * offered.
 				 */
-				conn->request_info.acceptedSubprotocol = (sep + 1);
+				conn->request_info.acceptedWebSocketSubprotocol = (sep + 1);
 			}
 		}
 
