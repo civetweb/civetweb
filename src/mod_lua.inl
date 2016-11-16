@@ -1588,7 +1588,7 @@ handle_lsp_request(struct mg_connection *conn,
 		goto cleanup_handle_lsp_request;
 	}
 
-	if (!mg_fopen(conn, path, "r", filep)) {
+	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
 
 		/* File not found or not accessible */
 		if (ls == NULL) {

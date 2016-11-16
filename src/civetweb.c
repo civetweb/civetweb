@@ -1960,15 +1960,19 @@ static int mg_stat(const struct mg_connection *conn,
                    struct mg_file_stat *filep);
 
 
+#define MG_FOPEN_MODE_READ (1)
+#define MG_FOPEN_MODE_WRITE (2)
+#define MG_FOPEN_MODE_APPEND (4)
+
 /* mg_fopen will open a file either in memory or on the disk.
  * The input parameter path is a string in UTF-8 encoding.
- * The input parameter mode is the same as for fopen.
+ * The input parameter mode is MG_FOPEN_MODE_*
  * Either fp or membuf will be set in the output struct file.
  * The function returns 1 on success, 0 on error. */
 static int
 mg_fopen(const struct mg_connection *conn,
          const char *path,
-         const char *mode,
+         int mode,
          struct mg_file *filep)
 {
 	int found;
@@ -1976,6 +1980,8 @@ mg_fopen(const struct mg_connection *conn,
 	if (!filep) {
 		return 0;
 	}
+	filep->access.fp = NULL;
+	filep->access.membuf = NULL;
 
 	if (!is_file_in_memory(conn, path)) {
 
@@ -1983,19 +1989,42 @@ mg_fopen(const struct mg_connection *conn,
 		* some fields like size and modification date with values */
 		found = mg_stat(conn, path, &(filep->stat));
 
-/* TODO: if found=false, only call fopen if the file should
- * be created. If it should only be read, fail early. */
+		if ((mode == MG_FOPEN_MODE_READ) && (!found)) {
+			/* file does not exist and will not be created */
+			return 0;
+		}
 
 #ifdef _WIN32
 		{
-			wchar_t wbuf[PATH_MAX], wmode[20];
+			wchar_t wbuf[PATH_MAX];
 			path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
-			MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, ARRAY_SIZE(wmode));
-			filep->access.fp = _wfopen(wbuf, wmode);
+			switch (mode) {
+			case MG_FOPEN_MODE_READ:
+				filep->access.fp = _wfopen(wbuf, L"rb");
+				break;
+			case MG_FOPEN_MODE_WRITE:
+				filep->access.fp = _wfopen(wbuf, L"wb");
+				break;
+			case MG_FOPEN_MODE_APPEND:
+				filep->access.fp = _wfopen(wbuf, L"ab");
+				break;
+			}
 		}
 #else
 		/* Linux et al already use unicode. No need to convert. */
-		filep->access.fp = fopen(path, mode);
+		switch (mode) {
+		case MG_FOPEN_MODE_READ:
+			filep->access.fp = fopen(path, "r");
+			break;
+		case MG_FOPEN_MODE_WRITE:
+			filep->access.fp = fopen(path, "w");
+			break;
+		case MG_FOPEN_MODE_APPEND:
+			filep->access.fp = fopen(path, "a");
+			break;
+		}
+
+
 #endif
 		if (!found) {
 			/* File did not exist before fopen was called.
@@ -2395,8 +2424,10 @@ mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 	    || (conn->ctx->callbacks.log_message(conn, buf) == 0)) {
 
 		if (conn->ctx->config[ERROR_LOG_FILE] != NULL) {
-			if (mg_fopen(conn, conn->ctx->config[ERROR_LOG_FILE], "a+", &fi)
-			    == 0) {
+			if (mg_fopen(conn,
+			             conn->ctx->config[ERROR_LOG_FILE],
+			             MG_FOPEN_MODE_APPEND,
+			             &fi) == 0) {
 				fi.access.fp = NULL;
 			}
 		} else {
@@ -3910,7 +3941,7 @@ spawn_process(struct mg_connection *conn,
 			goto spawn_cleanup;
 		}
 
-		if (mg_fopen(conn, cmdline, "r", &file)) {
+		if (mg_fopen(conn, cmdline, MG_FOPEN_MODE_READ, &file)) {
 			p = (char *)file.access.membuf;
 			mg_fgets(buf, sizeof(buf), &file, &p);
 			(void)mg_fclose(&file.access); /* ignore error on read only file */
@@ -5856,7 +5887,7 @@ open_auth_file(struct mg_connection *conn,
 
 		if (gpass != NULL) {
 			/* Use global passwords file */
-			if (!mg_fopen(conn, gpass, "r", filep)) {
+			if (!mg_fopen(conn, gpass, MG_FOPEN_MODE_READ, filep)) {
 #ifdef DEBUG
 				mg_cry(conn, "fopen(%s): %s", gpass, strerror(ERRNO));
 #endif
@@ -5876,7 +5907,7 @@ open_auth_file(struct mg_connection *conn,
 			            path,
 			            PASSWORDS_FILE_NAME);
 
-			if (truncated || !mg_fopen(conn, name, "r", filep)) {
+			if (truncated || !mg_fopen(conn, name, MG_FOPEN_MODE_READ, filep)) {
 #ifdef DEBUG
 				mg_cry(conn, "fopen(%s): %s", name, strerror(ERRNO));
 #endif
@@ -5897,7 +5928,7 @@ open_auth_file(struct mg_connection *conn,
 			            p,
 			            PASSWORDS_FILE_NAME);
 
-			if (truncated || !mg_fopen(conn, name, "r", filep)) {
+			if (truncated || !mg_fopen(conn, name, MG_FOPEN_MODE_READ, filep)) {
 #ifdef DEBUG
 				mg_cry(conn, "fopen(%s): %s", name, strerror(ERRNO));
 #endif
@@ -6105,7 +6136,10 @@ read_auth_file(struct mg_file *filep, struct read_auth_file_struct *workdata)
 				/* :# is a comment */
 				continue;
 			} else if (!strncmp(workdata->f_user + 1, "include=", 8)) {
-				if (mg_fopen(workdata->conn, workdata->f_user + 9, "r", &fp)) {
+				if (mg_fopen(workdata->conn,
+				             workdata->f_user + 9,
+				             MG_FOPEN_MODE_READ,
+				             &fp)) {
 					is_authorized = read_auth_file(&fp, workdata);
 					(void)mg_fclose(
 					    &fp.access); /* ignore error on read only file */
@@ -6213,7 +6247,8 @@ check_authorization(struct mg_connection *conn, const char *path)
 			            (int)filename_vec.len,
 			            filename_vec.ptr);
 
-			if (truncated || !mg_fopen(conn, fname, "r", &file)) {
+			if (truncated
+			    || !mg_fopen(conn, fname, MG_FOPEN_MODE_READ, &file)) {
 				mg_cry(conn,
 				       "%s: cannot open %s: %s",
 				       __func__,
@@ -6282,7 +6317,8 @@ is_authorized_for_put(struct mg_connection *conn)
 		const char *passfile = conn->ctx->config[PUT_DELETE_PASSWORDS_FILE];
 		int ret = 0;
 
-		if (passfile != NULL && mg_fopen(conn, passfile, "r", &file)) {
+		if (passfile != NULL
+		    && mg_fopen(conn, passfile, MG_FOPEN_MODE_READ, &file)) {
 			ret = authorize(conn, &file);
 			(void)mg_fclose(&file.access); /* ignore error on read only file */
 		}
@@ -7197,7 +7233,7 @@ handle_static_file_request(struct mg_connection *conn,
 		encoding = "Content-Encoding: gzip\r\n";
 	}
 
-	if (!mg_fopen(conn, path, "rb", filep)) {
+	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
 		send_http_error(conn,
 		                500,
 		                "Error: Cannot open file\nfopen(%s): %s",
@@ -7464,7 +7500,7 @@ mg_store_body(struct mg_connection *conn, const char *path)
 		return 0;
 	}
 
-	if (mg_fopen(conn, path, "w", &fi) == 0) {
+	if (mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &fi) == 0) {
 		return -12;
 	}
 
@@ -8593,7 +8629,9 @@ put_file(struct mg_connection *conn, const char *path)
 	}
 
 	/* A file should be created or overwritten. */
-	if (!mg_fopen(conn, path, "wb+", &file) || file.access.fp == NULL) {
+	/* TODO: Test if write or write+read is required. */
+	if (!mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &file)
+	    || file.access.fp == NULL) {
 		(void)mg_fclose(&file.access);
 		send_http_error(conn,
 		                500,
@@ -8774,7 +8812,7 @@ do_ssi_include(struct mg_connection *conn,
 		return;
 	}
 
-	if (!mg_fopen(conn, path, "rb", &file)) {
+	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, &file)) {
 		mg_cry(conn,
 		       "Cannot open SSI #include: [%s]: fopen(%s): %s",
 		       tag,
@@ -8930,7 +8968,7 @@ handle_ssi_file_request(struct mg_connection *conn,
 		cors1 = cors2 = cors3 = "";
 	}
 
-	if (!mg_fopen(conn, path, "rb", filep)) {
+	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
 		/* File exists (precondition for calling this function),
 		 * but can not be opened by the server. */
 		send_http_error(conn,
@@ -11426,8 +11464,10 @@ log_access(const struct mg_connection *conn)
 	}
 
 	if (conn->ctx->config[ACCESS_LOG_FILE] != NULL) {
-		if (mg_fopen(conn, conn->ctx->config[ACCESS_LOG_FILE], "a+", &fi)
-		    == 0) {
+		if (mg_fopen(conn,
+		             conn->ctx->config[ACCESS_LOG_FILE],
+		             MG_FOPEN_MODE_APPEND,
+		             &fi) == 0) {
 			fi.access.fp = NULL;
 		}
 	} else {

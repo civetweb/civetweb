@@ -269,7 +269,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			}
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
-				if (mg_fopen(conn, path, "wb", &fstore) == 0) {
+				if (mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &fstore) == 0) {
 					fstore.access.fp = NULL;
 				}
 				file_size = 0;
@@ -404,7 +404,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			}
 
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
-				if (mg_fopen(conn, path, "wb", &fstore) == 0) {
+				if (mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &fstore) == 0) {
 					fstore.access.fp = NULL;
 				}
 				file_size = 0;
@@ -670,7 +670,7 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			if (field_storage == FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
-				if (mg_fopen(conn, path, "wb", &fstore) == 0) {
+				if (mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &fstore) == 0) {
 					fstore.access.fp = NULL;
 				}
 				file_size = 0;
