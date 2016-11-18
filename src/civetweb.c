@@ -9826,7 +9826,8 @@ handle_websocket_request(struct mg_connection *conn,
 				sep = strchr(protocol, ',');
 				curSubProtocol = protocol;
 				len = sep ? (unsigned long)(sep - protocol) : strlen(protocol);
-				protocol = sep ? sep + 1 : NULL;
+				while(sep && isspace(*++sep)); // ignore leading whitespaces
+				protocol = sep;
 
 
 				for (idx = 0; idx < subprotocols->nb_subprotocols; idx++) {
@@ -9861,7 +9862,8 @@ handle_websocket_request(struct mg_connection *conn,
 				 * and use it to select one protocol among those the client has
 				 * offered.
 				 */
-				conn->request_info.acceptedWebSocketSubprotocol = (sep + 1);
+				while(isspace(*++sep)); // ignore leading whitespaces
+				conn->request_info.acceptedWebSocketSubprotocol = sep;
 			}
 		}
 
