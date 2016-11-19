@@ -356,6 +356,24 @@ Timeout for network read and network write operations, in milliseconds.
 If a client intends to keep long-running connection, either increase this
 value or (better) use keep-alive messages.
 
+### keep\_alive\_timeout\_ms `500` or `0`
+Idle timeout between two requests in one keep-alive connection.
+If keep alive is enabled, multiple requests using the same connection 
+are possible. This reduces the overhead for opening and closing connections
+when loading several resources from one server, but it also blocks one port
+and one thread at the server during the lifetime of this connection.
+Unfortunately, browsers do not close the keep-alive connection after loading
+all resources required to show a website.
+The server closes a keep-alive connection, if there is no additional request
+from the client during this timeout.
+
+Note: if enable\_keep\_alive is set to `no` the value of 
+keep\_alive\_timeout\_ms should be set to `0`, if enable\_keep\_alive is set 
+to `yes`, the value of keep\_alive\_timeout\_ms must be >0.
+Currently keep\_alive\_timeout\_ms is ignored if enable\_keep\_alive is no,
+but future versions my drop the enable\_keep\_alive configuration value and
+automatically use keep-alive if keep\_alive\_timeout\_ms is not 0.
+
 ### lua\_preload\_file
 This configuration option can be used to specify a Lua script file, which
 is executed before the actual web page script (Lua script, Lua server page

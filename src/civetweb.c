@@ -1409,6 +1409,7 @@ enum {
 	REWRITE,
 	HIDE_FILES,
 	REQUEST_TIMEOUT,
+	KEEP_ALIVE_TIMEOUT,
 	SSL_DO_VERIFY_PEER,
 	SSL_CA_PATH,
 	SSL_CA_FILE,
@@ -1491,6 +1492,7 @@ static struct mg_option config_options[] = {
     {"url_rewrite_patterns", CONFIG_TYPE_STRING, NULL},
     {"hide_files_patterns", CONFIG_TYPE_EXT_PATTERN, NULL},
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
+    {"keep_alive_timeout_ms", CONFIG_TYPE_NUMBER, "500"},
     {"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
     {"ssl_ca_path", CONFIG_TYPE_DIRECTORY, NULL},
     {"ssl_ca_file", CONFIG_TYPE_FILE, NULL},
@@ -7712,6 +7714,12 @@ read_request(FILE *fp,
 		request_timeout = atof(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	} else {
 		request_timeout = -1.0;
+	}
+	if (conn->handled_requests > 0) {
+		if (conn->ctx->config[KEEP_ALIVE_TIMEOUT]) {
+			request_timeout =
+			    atof(conn->ctx->config[KEEP_ALIVE_TIMEOUT]) / 1000.0;
+		}
 	}
 
 	request_len = get_request_len(buf, *nread);
