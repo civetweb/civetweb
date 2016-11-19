@@ -385,6 +385,46 @@ typedef DWORD clockid_t;
 #define CLOCK_REALTIME (2)
 #endif
 
+#ifndef WIN_PTHREADS_TIME_H
+static int
+clock_gettime(clockid_t clk_id, struct timespec *tp)
+{
+	FILETIME ft;
+	ULARGE_INTEGER li;
+	BOOL ok = FALSE;
+	double d;
+	static double perfcnt_per_sec = 0.0;
+
+	if (tp) {
+		memset(tp, 0, sizeof(*tp));
+		if (clk_id == CLOCK_REALTIME) {
+			GetSystemTimeAsFileTime(&ft);
+			li.LowPart = ft.dwLowDateTime;
+			li.HighPart = ft.dwHighDateTime;
+			li.QuadPart -= 116444736000000000; /* 1.1.1970 in filedate */
+			tp->tv_sec = (time_t)(li.QuadPart / 10000000);
+			tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
+			ok = TRUE;
+		} else if (clk_id == CLOCK_MONOTONIC) {
+			if (perfcnt_per_sec == 0.0) {
+				QueryPerformanceFrequency((LARGE_INTEGER *)&li);
+				perfcnt_per_sec = 1.0 / li.QuadPart;
+			}
+			if (perfcnt_per_sec != 0.0) {
+				QueryPerformanceCounter((LARGE_INTEGER *)&li);
+				d = li.QuadPart * perfcnt_per_sec;
+				tp->tv_sec = (time_t)d;
+				d -= tp->tv_sec;
+				tp->tv_nsec = (long)(d * 1.0E9);
+				ok = TRUE;
+			}
+		}
+	}
+
+	return ok ? 0 : -1;
+}
+#endif
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
 #define _TIMESPEC_DEFINED
 #endif
@@ -602,9 +642,6 @@ mg_static_assert(MAX_REQUEST_SIZE >= 256,
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
-#if !defined(DEBUG_TRACE)
-#if defined(DEBUG)
-
 
 #if defined(_WIN32_WCE)
 /* Create substitutes for POSIX functions in Win32. */
@@ -762,6 +799,9 @@ stat(const char *name, struct stat *st)
 
 #endif /* defined(_WIN32_WCE) */
 
+
+#if !defined(DEBUG_TRACE)
+#if defined(DEBUG)
 static void DEBUG_TRACE_FUNC(const char *func,
                              unsigned line,
                              PRINTF_FORMAT_STRING(const char *fmt),
@@ -771,9 +811,18 @@ static void
 DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 {
 	va_list args;
+	struct timespec tsnow;
+	uint64_t nsnow;
+	static uint64_t nslast;
+
+	clock_gettime(CLOCK_REALTIME, &tsnow);
+	nsnow = (((int64_t)tsnow.tv_sec) * 1000000000) + tsnow.tv_nsec;
+
 	flockfile(stdout);
-	printf("*** %lu.%p.%s.%u: ",
-	       (unsigned long)time(NULL),
+	printf("*** %lu.%09lu %12" INT64_FMT " %p %s:%u: ",
+	       (unsigned long)tsnow.tv_sec,
+	       (unsigned long)tsnow.tv_nsec,
+	       nsnow - nslast,
 	       (void *)pthread_self(),
 	       func,
 	       line);
@@ -783,6 +832,7 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	putchar('\n');
 	fflush(stdout);
 	funlockfile(stdout);
+	nslast = nsnow;
 }
 
 #define DEBUG_TRACE(fmt, ...)                                                  \
@@ -794,6 +844,7 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	} while (0)
 #endif /* DEBUG */
 #endif /* DEBUG_TRACE */
+
 
 #if defined(MEMORY_DEBUGGING)
 unsigned long mg_memory_debug_blockCount = 0;
@@ -3181,47 +3232,6 @@ pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
 	return (ReleaseMutex(*mutex) == 0) ? -1 : 0;
 }
-
-
-#ifndef WIN_PTHREADS_TIME_H
-static int
-clock_gettime(clockid_t clk_id, struct timespec *tp)
-{
-	FILETIME ft;
-	ULARGE_INTEGER li;
-	BOOL ok = FALSE;
-	double d;
-	static double perfcnt_per_sec = 0.0;
-
-	if (tp) {
-		memset(tp, 0, sizeof(*tp));
-		if (clk_id == CLOCK_REALTIME) {
-			GetSystemTimeAsFileTime(&ft);
-			li.LowPart = ft.dwLowDateTime;
-			li.HighPart = ft.dwHighDateTime;
-			li.QuadPart -= 116444736000000000; /* 1.1.1970 in filedate */
-			tp->tv_sec = (time_t)(li.QuadPart / 10000000);
-			tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
-			ok = TRUE;
-		} else if (clk_id == CLOCK_MONOTONIC) {
-			if (perfcnt_per_sec == 0.0) {
-				QueryPerformanceFrequency((LARGE_INTEGER *)&li);
-				perfcnt_per_sec = 1.0 / li.QuadPart;
-			}
-			if (perfcnt_per_sec != 0.0) {
-				QueryPerformanceCounter((LARGE_INTEGER *)&li);
-				d = li.QuadPart * perfcnt_per_sec;
-				tp->tv_sec = (time_t)d;
-				d -= tp->tv_sec;
-				tp->tv_nsec = (long)(d * 1.0E9);
-				ok = TRUE;
-			}
-		}
-	}
-
-	return ok ? 0 : -1;
-}
-#endif
 
 
 static int
@@ -13349,6 +13359,10 @@ process_new_connection(struct mg_connection *conn)
 		 * goes to crule42. */
 		conn->data_len = 0;
 		do {
+
+			DEBUG_TRACE("calling getreq (%i times for this connection)",
+			            0); /* TODO */
+
 			if (!getreq(conn, ebuf, sizeof(ebuf), &reqerr)) {
 				/* The request sent by the client could not be understood by
 				 * the server, or it was incomplete or a timeout. Send an
@@ -13406,13 +13420,19 @@ process_new_connection(struct mg_connection *conn)
 				conn->request_info.uri = conn->request_info.local_uri;
 			}
 
+			DEBUG_TRACE("http: %s, error: %s",
+			            (ri->http_version ? ri->http_version : "none"),
+			            (ebuf[0] ? ebuf : "none"));
+
 			if (ebuf[0] == '\0') {
 				if (conn->request_info.local_uri) {
 					/* handle request to local server */
 					handle_request(conn);
+					DEBUG_TRACE("%s", "handle_request done");
 					if (conn->ctx->callbacks.end_request != NULL) {
 						conn->ctx->callbacks.end_request(conn,
 						                                 conn->status_code);
+						DEBUG_TRACE("%s", "end_request callback done");
 					}
 					log_access(conn);
 				} else {
@@ -13437,8 +13457,9 @@ process_new_connection(struct mg_connection *conn)
 			 * Therefore, memorize should_keep_alive() result now for later
 			 * use
 			 * in loop exit condition. */
-			keep_alive = conn->ctx->stop_flag == 0 && keep_alive_enabled
-			             && conn->content_len >= 0 && should_keep_alive(conn);
+			keep_alive = (conn->ctx->stop_flag == 0) && keep_alive_enabled
+			             && (conn->content_len >= 0) && should_keep_alive(conn);
+
 
 			/* Discard all buffered data for this request */
 			discard_len = ((conn->content_len >= 0) && (conn->request_len > 0)
@@ -13447,10 +13468,14 @@ process_new_connection(struct mg_connection *conn)
 			                  ? (int)(conn->request_len + conn->content_len)
 			                  : conn->data_len;
 			/*assert(discard_len >= 0);*/
-			if (discard_len < 0)
+			if (discard_len < 0) {
+				DEBUG_TRACE("internal error: discard_len = %li",
+				            (long int)discard_len);
 				break;
+			}
 			conn->data_len -= discard_len;
 			if (conn->data_len > 0) {
+				DEBUG_TRACE("discard_len = %lu", (long unsigned)discard_len);
 				memmove(conn->buf,
 				        conn->buf + discard_len,
 				        (size_t)conn->data_len);
@@ -13460,6 +13485,9 @@ process_new_connection(struct mg_connection *conn)
 			/* assert(conn->data_len <= conn->buf_size); */
 
 			if ((conn->data_len < 0) || (conn->data_len > conn->buf_size)) {
+				DEBUG_TRACE("internal error: data_len = %li, buf_size = %li",
+				            (long int)conn->data_len,
+				            (long int)conn->buf_size);
 				break;
 			}
 
@@ -13494,9 +13522,11 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 static int
 consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 {
+	DEBUG_TRACE("%s", "going idle");
 	ctx->client_socks[thread_index].in_use = 0;
 	event_wait(ctx->client_wait_events[thread_index]);
 	*sp = ctx->client_socks[thread_index];
+	DEBUG_TRACE("grabbed socket %d, going busy", sp ? sp->sock : -1);
 
 	return !ctx->stop_flag;
 }
@@ -13642,6 +13672,9 @@ worker_thread_run(struct worker_thread_args *thread_args)
 			                   sizeof(conn->request_info.remote_addr),
 			                   &conn->client.rsa);
 
+			DEBUG_TRACE("Start processing connection from %s",
+			            conn->request_info.remote_addr);
+
 #if defined(MG_LEGACY_INTERFACE)
 			/* This legacy interface only works for the IPv4 case */
 			addr = ntohl(conn->client.rsa.sin.sin_addr.s_addr);
@@ -13687,7 +13720,13 @@ worker_thread_run(struct worker_thread_args *thread_args)
 				process_new_connection(conn);
 			}
 
+			DEBUG_TRACE("Done processing connection from %s (%f sec)",
+			            conn->request_info.remote_addr,
+			            difftime(time(NULL), conn->conn_birth_time));
+
 			close_connection(conn);
+
+			DEBUG_TRACE("%s", "Connection closed");
 		}
 	}
 
