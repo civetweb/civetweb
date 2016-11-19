@@ -385,6 +385,16 @@ typedef DWORD clockid_t;
 #define CLOCK_REALTIME (2)
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#define _TIMESPEC_DEFINED
+#endif
+#ifndef _TIMESPEC_DEFINED
+struct timespec {
+	time_t tv_sec; /* seconds */
+	long tv_nsec;  /* nanoseconds */
+};
+#endif
+
 #ifndef WIN_PTHREADS_TIME_H
 static int
 clock_gettime(clockid_t clk_id, struct timespec *tp)
@@ -425,15 +435,6 @@ clock_gettime(clockid_t clk_id, struct timespec *tp)
 }
 #endif
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
-#define _TIMESPEC_DEFINED
-#endif
-#ifndef _TIMESPEC_DEFINED
-struct timespec {
-	time_t tv_sec; /* seconds */
-	long tv_nsec;  /* nanoseconds */
-};
-#endif
 
 #define pid_t HANDLE /* MINGW typedefs pid_t to int. Using #define here. */
 
@@ -1648,15 +1649,13 @@ struct mg_connection {
 	int must_close;       /* 1 if connection must be closed */
 	int in_error_handler; /* 1 if in handler for user defined error
 	                       * pages */
-	int internal_error;   /* 1 if an error occured while processing the
-	                       * request */
-
-	int buf_size;                /* Buffer size */
-	int request_len;             /* Size of the request + headers in a buffer */
-	int data_len;                /* Total size of data in a buffer */
-	int status_code;             /* HTTP reply status code, e.g. 200 */
-	int throttle;                /* Throttling, bytes/sec. <= 0 means no
-	                              * throttle */
+	int handled_requests; /* Number of requests handled by this connection */
+	int buf_size;         /* Buffer size */
+	int request_len;      /* Size of the request + headers in a buffer */
+	int data_len;         /* Total size of data in a buffer */
+	int status_code;      /* HTTP reply status code, e.g. 200 */
+	int throttle;         /* Throttling, bytes/sec. <= 0 means no
+	                       * throttle */
 	time_t last_throttle_time;   /* Last time throttled data was sent */
 	int64_t last_throttle_bytes; /* Bytes sent this second */
 	pthread_mutex_t mutex;       /* Used by mg_(un)lock_connection to ensure
@@ -2775,7 +2774,7 @@ should_keep_alive(const struct mg_connection *conn)
 	if (conn != NULL) {
 		const char *http_version = conn->request_info.http_version;
 		const char *header = mg_get_header(conn, "Connection");
-		if (conn->must_close || conn->internal_error || conn->status_code == 401
+		if (conn->must_close || conn->status_code == 401
 		    || mg_strcasecmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes") != 0
 		    || (header != NULL && !header_has_option(header, "keep-alive"))
 		    || (header == NULL && http_version
@@ -4027,10 +4026,10 @@ spawn_cleanup:
 
 
 static int
-set_non_blocking_mode(SOCKET sock)
+set_blocking_mode(SOCKET sock, int blocking)
 {
-	unsigned long on = 1;
-	return ioctlsocket(sock, (long)FIONBIO, &on);
+	unsigned long non_blocking = !blocking;
+	return ioctlsocket(sock, (long)FIONBIO, &non_blocking);
 }
 
 #else
@@ -6606,7 +6605,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	    && (connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin))
 	        == 0)) {
 		/* connected with IPv4 */
-		set_non_blocking_mode(*sock);
+		set_blocking_mode(*sock, 0);
 		return 1;
 	}
 
@@ -6615,7 +6614,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	    && (connect(*sock, (struct sockaddr *)&sa->sin6, sizeof(sa->sin6))
 	        == 0)) {
 		/* connected with IPv6 */
-		set_non_blocking_mode(*sock);
+		set_blocking_mode(*sock, 0);
 		return 1;
 	}
 #endif
@@ -9836,7 +9835,8 @@ handle_websocket_request(struct mg_connection *conn,
 				sep = strchr(protocol, ',');
 				curSubProtocol = protocol;
 				len = sep ? (unsigned long)(sep - protocol) : strlen(protocol);
-				while(sep && isspace(*++sep)); // ignore leading whitespaces
+				while (sep && isspace(*++sep))
+					; // ignore leading whitespaces
 				protocol = sep;
 
 
@@ -9872,7 +9872,8 @@ handle_websocket_request(struct mg_connection *conn,
 				 * and use it to select one protocol among those the client has
 				 * offered.
 				 */
-				while(isspace(*++sep)); // ignore leading whitespaces
+				while (isspace(*++sep))
+					; // ignore leading whitespaces
 				conn->request_info.acceptedWebSocketSubprotocol = sep;
 			}
 		}
@@ -12363,7 +12364,6 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.num_headers = 0;
 	conn->data_len = 0;
 	conn->chunk_remainder = 0;
-	conn->internal_error = 0;
 }
 
 
@@ -12440,6 +12440,27 @@ close_socket_gracefully(struct mg_connection *conn)
 		return;
 	}
 
+	/* http://msdn.microsoft.com/en-us/library/ms739165(v=vs.85).aspx:
+ * "Note that enabling a nonzero timeout on a nonblocking socket
+ * is not recommended.", so set it to blocking now */
+	set_blocking_mode(conn->client.sock, 1);
+
+	/* Send FIN to the client */
+	shutdown(conn->client.sock, SHUTDOWN_WR);
+
+
+#if defined(_WIN32)
+	/* Read and discard pending incoming data. If we do not do that and
+	 * close
+	 * the socket, the data in the send buffer may be discarded. This
+	 * behaviour is seen on Windows, when client keeps sending data
+	 * when server decides to close the connection; then when client
+	 * does recv() it gets no data back. */
+	do {
+		n = pull(NULL, conn, buf, sizeof(buf), /* Timeout in s: */ 1.0);
+	} while (n > 0);
+#endif
+
 	/* Set linger option to avoid socket hanging out after close. This
 	 * prevent ephemeral port exhaust problem under high QPS. */
 	linger.l_onoff = 1;
@@ -12460,6 +12481,9 @@ close_socket_gracefully(struct mg_connection *conn)
 	} else if (error_code == ECONNRESET) {
 		/* Socket already closed by client/peer, close socket without linger */
 	} else {
+
+
+		/* Set linger timeout */
 		if (setsockopt(conn->client.sock,
 		               SOL_SOCKET,
 		               SO_LINGER,
@@ -12471,23 +12495,6 @@ close_socket_gracefully(struct mg_connection *conn)
 			       strerror(ERRNO));
 		}
 	}
-
-	/* Send FIN to the client */
-	shutdown(conn->client.sock, SHUTDOWN_WR);
-	set_non_blocking_mode(conn->client.sock);
-
-#if defined(_WIN32)
-	/* Read and discard pending incoming data. If we do not do that and
-	 * close
-	 * the socket, the data in the send buffer may be discarded. This
-	 * behaviour is seen on Windows, when client keeps sending data
-	 * when server decides to close the connection; then when client
-	 * does recv() it gets no data back. */
-	do {
-		n = pull(
-		    NULL, conn, buf, sizeof(buf), 1E-10 /* TODO: allow 0 as timeout */);
-	} while (n > 0);
-#endif
 
 	/* Now we know that our FIN is ACK-ed, safe to close */
 	closesocket(conn->client.sock);
@@ -13360,10 +13367,11 @@ process_new_connection(struct mg_connection *conn)
 		/* Important: on new connection, reset the receiving buffer. Credit
 		 * goes to crule42. */
 		conn->data_len = 0;
+		conn->handled_requests = 0;
 		do {
 
 			DEBUG_TRACE("calling getreq (%i times for this connection)",
-			            0); /* TODO */
+			            conn->handled_requests + 1);
 
 			if (!getreq(conn, ebuf, sizeof(ebuf), &reqerr)) {
 				/* The request sent by the client could not be understood by
@@ -13492,6 +13500,8 @@ process_new_connection(struct mg_connection *conn)
 				            (long int)conn->buf_size);
 				break;
 			}
+
+			conn->handled_requests++;
 
 		} while (keep_alive);
 	}
@@ -13848,7 +13858,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		//	set_sock_timeout(so.sock, timeout);
 		//}
 		(void)timeout;
-		set_non_blocking_mode(so.sock);
+		set_blocking_mode(so.sock, 0);
 
 		produce_socket(ctx, &so);
 	}
