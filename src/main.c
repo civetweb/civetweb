@@ -2399,6 +2399,10 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	HWND hWnd;
 	MSG msg;
 
+#if defined(DEBUG)
+	(void)MakeConsole();
+#endif
+
 	(void)hInst;
 	(void)hPrev;
 	(void)cmdline;
