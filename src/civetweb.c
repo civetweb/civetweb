@@ -4232,12 +4232,16 @@ spawn_process(struct mg_connection *conn,
 
 
 static int
-set_non_blocking_mode(SOCKET sock)
+set_blocking_mode(SOCKET sock, int blocking)
 {
 	int flags;
 
 	flags = fcntl(sock, F_GETFL, 0);
-	(void)fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+	if (blocking) {
+		(void)fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+	} else {
+		(void)fcntl(sock, F_SETFL, flags & (~(int)(O_NONBLOCK)));
+	}
 
 	return 0;
 }
@@ -12449,8 +12453,8 @@ close_socket_gracefully(struct mg_connection *conn)
 	}
 
 	/* http://msdn.microsoft.com/en-us/library/ms739165(v=vs.85).aspx:
- * "Note that enabling a nonzero timeout on a nonblocking socket
- * is not recommended.", so set it to blocking now */
+	 * "Note that enabling a nonzero timeout on a nonblocking socket
+	 * is not recommended.", so set it to blocking now */
 	set_blocking_mode(conn->client.sock, 1);
 
 	/* Send FIN to the client */
