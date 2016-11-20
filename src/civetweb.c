@@ -817,7 +817,7 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	static uint64_t nslast;
 
 	clock_gettime(CLOCK_REALTIME, &tsnow);
-	nsnow = (((int64_t)tsnow.tv_sec) * 1000000000) + tsnow.tv_nsec;
+	nsnow = (((uint64_t)tsnow.tv_sec) * 1000000000) + (uint64_t)tsnow.tv_nsec;
 
 	flockfile(stdout);
 	printf("*** %lu.%09lu %12" INT64_FMT " %p %s:%u: ",
