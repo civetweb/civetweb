@@ -5,6 +5,8 @@ Release Notes v1.9 (work in progress)
 Changes
 -------
 
+- Use non-blocking sockets
+- stdint.h is now required and no longer optional
 - Rewrite connection close handling
 - Rewrite mg_fopen/mg_stat
 - Enhanced tray icon menu for Windows
