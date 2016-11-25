@@ -24,6 +24,7 @@
 * Eric Tsau
 * Erik Beran
 * F-Secure Corporation
+* feneuilflo
 * Fernando G. Aranda
 * Grahack
 * grenclave
