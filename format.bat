@@ -4,6 +4,7 @@ clang-format -i src/main.c
 clang-format -i src/CivetServer.cpp
 clang-format -i src/civetweb_private_lua.h
 clang-format -i src/md5.inl
+clang-format -i src/sha1.inl
 clang-format -i src/mod_lua.inl
 clang-format -i src/mod_duktape.inl
 clang-format -i src/timer.inl

@@ -9197,6 +9197,7 @@ mg_unlock_context(struct mg_context *ctx)
 
 #if defined(USE_WEBSOCKET)
 
+#define SHA_API static
 #include "sha1.inl"
 
 static int
@@ -9214,9 +9215,9 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 		return 0;
 	}
 
-	SHA1Init(&sha_ctx);
-	SHA1Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
-	SHA1Final((unsigned char *)sha, &sha_ctx);
+	SHA1_Init(&sha_ctx);
+	SHA1_Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
+	SHA1_Final(&sha_ctx, (unsigned char *)sha);
 	base64_encode((unsigned char *)sha, sizeof(sha), b64_sha);
 	mg_printf(conn,
 	          "HTTP/1.1 101 Switching Protocols\r\n"
