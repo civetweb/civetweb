@@ -56,10 +56,16 @@
     <None Include="..\..\src\md5.inl">
       <Filter>inl files</Filter>
     </None>
+    <None Include="..\..\src\sha1.inl">
+      <Filter>inl files</Filter>
+    </None>
     <None Include="..\..\src\mod_lua.inl">
       <Filter>inl files</Filter>
     </None>
     <None Include="..\..\src\timer.inl">
+      <Filter>inl files</Filter>
+    </None>
+    <None Include="..\..\src\file_ops.inl">
       <Filter>inl files</Filter>
     </None>
     <None Include="..\..\src\mod_duktape.inl">
