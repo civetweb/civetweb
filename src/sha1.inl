@@ -72,6 +72,7 @@ move public api to sha1.h
   rename to sha1.inl
   remove unused #ifdef sections
   make endian independent
+  align buffer to 4 bytes
 */
 
 /*
@@ -152,7 +153,11 @@ SHA1_Transform(uint32_t state[5], const uint8_t buffer[64])
 	uint32_t a, b, c, d, e;
 	CHAR64LONG16 *block;
 
-	block = (CHAR64LONG16 *)buffer;
+	/* Must use an aligned buffer */
+	CHAR64LONG16 aligned_buf;
+	memcpy(&aligned_buf, &buffer, sizeof(aligned_buf));
+
+	block = &aligned_buf;
 
 	/* Copy context->state[] to working vars */
 	a = state[0];
@@ -271,7 +276,7 @@ SHA1_Init(SHA1_CTX *context)
 
 /* Run your data through this. */
 SHA_API void
-SHA1_Update(SHA1_CTX *context, const uint8_t *data, const size_t len)
+SHA1_Update(SHA1_CTX *context, const uint8_t *data, const uint32_t len)
 {
 	size_t i, j;
 
