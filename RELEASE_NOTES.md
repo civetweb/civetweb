@@ -5,6 +5,13 @@ Release Notes v1.9 (work in progress)
 Changes
 -------
 
+- Rewrite connection close handling
+- Rewrite mg_fopen/mg_stat
+- Enhanced tray icon menu for Windows
+- Add subprotocol management for websocket connections
+- Partially rewrite timeout handling
+- Add option keep_alive_timeout_ms
+- Improve support for absolute URIs
 - Allow some additional compiler checks (higher warning level)
 - Add option for case sensitive file names for Windows
 - Short notation for listening_ports option when using IPv4 and IPv6 ports
