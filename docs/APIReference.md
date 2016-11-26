@@ -1,6 +1,11 @@
 # CivetWeb API Reference
 
-CivetWeb is often used as HTTP and HTTPS library inside a larger application. A C API is available to integrate the CivetWeb functionality in a larger codebase. A C++ wrapper is also available, although it is not guaranteed that all functionality available through the C API can also be accessed from C++. This document describes the public C API. Basic usage examples of the API can be found in [Embedding.md](Embedding.md).
+CivetWeb is often used as HTTP and HTTPS library inside a larger application.
+A C API is available to integrate the CivetWeb functionality in a larger
+codebase. A C++ wrapper is also available, although it is not guaranteed
+that all functionality available through the C API can also be accessed
+from C++. This document describes the public C API. Basic usage examples of
+the API can be found in [Embedding.md](Embedding.md).
 
 ## Macros
 
@@ -10,310 +15,64 @@ CivetWeb is often used as HTTP and HTTPS library inside a larger application. A 
 
 ## Structures
 
-### `struct client_cert;`
-
-#### Fields
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-|**`subject`**|`const char *`| The subject of the certificate |
-|**`issuer`**|`const char *`| The issuer of the certificate |
-|**`serial`**|`const char *`| The serial number of the certificate |
-|**`finger`**|`const char *`| The fingerprint of the certificate |
-
-#### Description
-
-The structure `client_cert` is used as a sub-structure in the `mg_request_info` structure to store information of an optional client supplied certificate.
-
-### `struct mg_callbacks;`
-
-#### Fields
-
-| Field | Description |
-| :--- | :--- | 
-|**`begin_request`**|**`int (*begin_request)( struct mg_connection * conn );`**|
-| |The `begin_request()` callback function is called when CivetWeb has received a new HTTP request. If the callback function does not process the request, it should return 0. In that case CivetWeb will handle the request with the default callback routine. If the callback function returns a value between 1 and 999, CivetWeb does nothing and the callback function should do all the processing, including sending the proper HTTP headers etc. Starting at CivetWeb version 1.7, the function `begin_request()` is called before any authorization is done. If an authorization check is required, `request_handler()` should be used instead. The return value of the callback function is not only used to signal CivetWeb to not further process the request. The returned value is also stored as HTTP status code in the access log. |
-|**`connection_close`**|**`void (*connection_close)( const struct mg_connection *conn );`**|
-| |The callback function `connection_close()` is called when CivetWeb is closing a connection. The per-context mutex is locked when the callback function is invoked. The function is primarly useful for noting when a websocket is closing and removing it from any application-maintained list of clients. *Using this callback for websocket connections is deprecated. Use* `mg_set_websocket_handler()` *instead.*|
-|**`end_request`**|**`void (*end_request)( const struct mg_connection * conn );`**|
-| |The callback function `end_request()` is called by CivetWeb when a request has been completely processed. It sends the reply status code which was sent to the client to the application.|
-|**`exit_context`**|**`void (*exit_context)( const struct mg_context *ctx );`**|
-| |The callback function `exit_context()` is called by CivetWeb when the server is stopped. It allows the application to do some cleanup on the application side.|
-|**`http_error`**|**`int (*http_error)( struct mg_connection *conn, int status );`**|
-| |The callback function `http_error()` is called by CivetWeb just before an HTTP error is to be sent to the client. The function allows the application to send a custom error page. The status code of the error is provided as a parameter. If the application sends their own error page, it must return 1 to signal CivetWeb that no further processing is needed. If the returned value is 0, CivetWeb will send a built-in error page to the client.|
-|**`init_context`**|**`void (*init_context)( const struct mg_context *ctx );`**|
-| |The callback function `init_context()` is called after the CivetWeb server has been started and initialized, but before any requests are served. This allowes the application to perform some initialization activities before the first requests are handled.|
-|**`init_lua`**|**`void (*init_lua)( const struct mg_connection *conn, void *lua_context );`**|
-| |The callback function `init_lua()` is called just before a Lua server page is to be served. Lua page serving must have been enabled at compile time for this callback function to be called. The parameter `lua_context` is a `lua_State *` pointer.|
-|**`init_ssl`**|**`int (*init_ssl)( void *ssl_context, void *user_data );`**|
-| |The callback function `init_ssl()` is called when CivetWeb initializes the SSL library. The parameter `user_data` contains a pointer to the data which was provided to `mg_start()` when the server was started. The callback function can return 0 to signal that CivetWeb should setup the SSL certificate. With a return value of 1 the callback function signals CivetWeb that the certificate has already been setup and no further processing is necessary. The value -1 should be returned when the SSL initialization fails.|
-|**`init_thread`**|**`void (*init_thread)( const struct mg_context *ctx, int thread_type );`**|
-| |The callback function `init_thread()` is called when a new thread is created by CivetWeb. The `thread_type` parameter indicates which type of thread has been created. following thread types are recognized:|
-| |**0** - The master thread is created |
-| |**1** - A worker thread which handles client connections has been created|
-| |**2** - An internal helper thread (timer thread) has been created|
-|**`log_access`**|**`int (*log_access)( const struct mg_connection *conn, const char *message );`**|
-| |The callback function `log_access()` is called when CivetWeb is about to log a message. If the callback function returns 0, CivetWeb will use the default internal access log routines to log the access. If a non-zero value is returned, CivetWeb assumes that access logging has already been done and no further action is performed.|
-|**`log_message`**|**`int (*log_message)( const struct mg_connection *conn, const char *message );`**|
-| |The callback function `log_message()` is called when CivetWeb is about to log a message. If the callback function returns 0, CivetWeb will use the default internal log routines to log the message. If a non-zero value is returned CivetWeb assumes that logging has already been done and no further action is performed.|
-|**`open_file`**|**`const char *(*open_file)( const struct mg_connection *conn, const char *path, size_t *data_len );`**|
-| |The callback function `open_file()` is called when a file is to be opened by CivetWeb. The callback can return a pointer to a memory location and set the memory block size in the variable pointed to by `data_len` to signal CivetWeb that the file should not be loaded from disk, but that instead a stored version in memory should be used. If the callback function returns NULL, CivetWeb will open the file from disk. This callback allows caching to be implementedi at the application side, or to serve specific files from static memory instead of from disk.|
-|~~`upload`~~|**`void (*upload)( struct mg_connection * conn, const char *file_name );`**|
-| |*Deprecated. Use* `mg_handle_form_request()` *instead.* The callback function `upload()` is called when CivetWeb has uploaded a file to a temporary directory as result of a call to `mg_upload()`. The parameter `file_name` contains the full file name including path to the uploaded file.|
-|~~`websocket_connect`~~|**`int (*websocket_connect)( const struct mg_connection *conn );`**|
-| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.* The callback function `websocket_connect()` is called when a websocket request is received, before the actual websocket handshake has taken place. The callback function can signal to CivetWeb if it should accept or deny the incoming request with one of the following return values: |
-| |**0** - CivetWeb can proceed with the handshake to accept the connection |
-| |**1** - CivetWeb must close the connection immediately without performing a handshake |
-|~~`websocket_data`~~|**`int (*websocket_data)( struct mg_connection *conn, int bits, char *data, size_t data_len );`**|
-| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.* The callback function `websocket_data()` is called when a data frame has been received from the client. The parameters contain the following information: |
-| | **`bits`** - The first byte of the websocket frame. See [RFC-6455](http://tools.ietf.org/html/rfc6455) at section 5.2 for more information. |
-| | **`data`** - The pointer to the received data block. Masks--if any--have already been applied. |
-| | **`data_len`** - The length of the received data block |
-| | If the application wants to keep the websocket open to receive more data, the callback function should return the value **1**. If the value **0** is returned by the callback function, CivetWeb will close the websocket connection and no more frames will be received.|
-|~~`websocket_ready`~~|**`int (*websocket_ready)( struct mg_connection *conn );`**|
-| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.* The callback function `websocket_ready()` is called after the handshake of a websocket connection has succeeded succesfully to signal the application that the connection is ready for use. |
-
-#### Description
-
-A pointer to a `mg_callbacks` structure is passed as parameter to the `mg_start()` function to provide links to callback functions which the webserver will call at specific events. If a specific callback function is not supplied, CivetWeb will fallback to default internal callback routines. Callback functions give the application detailed control over how specific events should be handled.
-
-### `struct mg_header;`
-
-#### Fields
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-|**`name`**|`const char *`| The name of the client request header |
-|**`value`**|`const char *`| The value of the client request header |
-
-#### Description
-
-The structure `mg_header` is used as a sub-structure in the `mg_request_info` structure to store the name and value of one HTTP request header as sent by the client.
-
-### `struct mg_request_info;`
-
-#### Fields
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-|**`request_method`**|`const char *`| The request method used by the client for the connection this can be **GET**, **POST** or one of the other common HTTP request methods |
-|**`request_uri`**|`const char *`| The absolute or URL-encoded URI as it was sent in the request |
-|**`local_uri`**|`const char *`| The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL |
-|~~`uri`~~|`const char *`| *Deprecated. Use* `local_uri` *instead* |
-|**`http_version`**|`const char *`| The HTTP version as mentioned in the client request. This can be "1.0", "1.1", etc. |
-|**`remote_user`**|`const char *`| The name of the authenticated remote user, or NULL if no authentication was used |
-|**`remote addr`**|`char[48]`| The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address. |
-|~~`remote_ip`~~|`long`| *Deprecated. Use* `remote_addr` *instead* |
-|**`content_length`**|`long long`| The content length of the request body. This value can be -1 if no content length was provided. |
-|**`remote_port`**|`int`| The port number at the client's side |
-|**`is_ssl`**|`int`| 1 if the connection is over SSL, and 0 if it is a plain connection |
-|**`user_data`**|`void *`| A pointer to the `user_data` information which was provided as a parameter to `mg_start()`. |
-|**`conn_data`**|`void *`| A pointer to connection specific user data |
-|**`num_headers`**|`int`| The number of HTTP request headers sent by the client |
-|**`http_headers`**|`struct mg_header[64]`| Array of structures with the HTTP request headers sent by the client |
-|**`client_cert`**|`struct client_cert *`| Pointer to the client certificate information, when available |
-
-#### Description
-
-The `mg_request_info` structure contains the client information of an existing connection.
+* [`struct client_cert;`](client_cert.md)
+* [`struct mg_client_options;`](mg_client_options.md)
+* [`struct mg_callbacks;`](mg_callbacks.md)
+* [`struct mg_form_data_handler;`](mg_form_data_handler.md)
+* [`struct mg_header;`](api/mg_header.md)
+* [`struct mg_option;`](api/mg_option.md)
+* [`struct mg_request_info;`](api/mg_request_info.md)
+* [`struct mg_server_ports;`](api/mg_server_ports.md)
 
 ## Functions
 
-### `mg_check_feature( feature );`
-
-#### Parameters
-
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-|**`feature`**|`unsigned`| A value indicating the feature to be checked |
-
-#### Returns
-
-| Type | Description |
-| :--- | :--- |
-|`unsigned`| A value indicating if a feature is available. A positive value indicates available, while 0 is returned for an unavailable feature |
-
-#### Description
-
-The function `mg_check_feature()` can be called from an application program to check of specific features have been compiled in the civetweb version which the application has been linked to. The feature to check is provided as an unsigned integer parameter. If the function is available in the currently linked library version, a value > 0 is returned. Otherwise the function mg_check_feature() returns the value 0.
-
-The following parameter values can be used:
-
-| Value | Compilation option | Description |
-| :---: | :---: | :--- |
-| **1** | NO_FILES | *Able to serve files*.  If this feature is available, the webserver is able to serve files directly from a directory tree. |
-| **2** | NO_SSL | *Support for HTTPS*. If this feature is available, the webserver van use encryption in the client-server connection. SSLv2, SSLv3, TLSv1.0, TLSv1.1 and TLSv1.2 are supported depending on the SSL library CivetWeb has been compiled with, but which protocols are used effectively when the server is running is dependent on the options used when the server is started. |
-| **4** | NO_CGI | *Support for CGI*. If this feature is available, external CGI scripts can be called by the webserver. |
-| **8** | USE_IPV6 | *Support IPv6*. The CivetWeb library is capable of communicating over both IPv4 and IPv6, but IPv6 support is only available if it has been enabled at compile time. |
-| **16** | USE_WEBSOCKET | Support for web sockets. WebSockets support is available in the CivetWeb library if the proper options has been used during cimpile time. |
-| **32** | USE_LUA | *Support for Lua scripts and Lua server pages*. CivetWeb supports server side scripting through the Lua language, if that has been enabled at compile time. Lua is an efficient scripting language which is less resource heavy than for example PHP. |
-| **64** | USE_DUKTAPE | *Support for server side JavaScript*. Server side JavaScript can be used for dynamic page generation if the proper options have been set at compile time. Please note that client side JavaScript execution is always available if it has been enabled in the connecting browser. |
-| **128** | NO_CACHING | *Support for caching*. The webserver will support caching, if it has not been disabled while compiling the library. |
-
-Parameter values other than the values mentioned above will give undefined results.
-
-### `mg_get_header( conn, name );`
-
-#### Parameters
-
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-|**`conn`**|`struct mg_connection *`| A pointer referencing the connection |
-|**`name`**|`const char *`| The name of the request header |
-
-#### Returns
-
-| Type | Description |
-| :--- | :--- |
-|`const char *`| A pointer to the value of the request header, or NULL of no matching header count be found |
-
-#### Description
-
-HTTP and HTTPS clients can send request headers to the server to provide details about the communication. These request headers can for example specify the preferred language in which the server should respond and the supported compression algorithms. The function `mg_get_header()` can be called to return the contents of a specific request header. The function will return a pointer to the value text of the header when succesful, and NULL of no matching request header from the client could be found.
-
-### `mg_get_option( ctx, name );`
-
-#### Parameters
-
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-|**`ctx`**|`const struct mg_context *`| A pointer to the webserver context |
-|**`name`**|`const char *`| The name of the option to query |
-
-#### Returns
-
-| Type | Description |
-| :--- | :--- |
-|`const char *`| A pointer to the option value in text, or NULL if an error occured |
-
-#### Description
-
-When starting the CivetWeb webserver, options are provided to set the wanted behaviour of the server. The options which were used during startup can be queried through the `mg_get_option()` function. Options are read-only and cannot be changed while the webserver is running. The function returns a pointer to a text string containing the value of the queried option, or NULL if an error occured. It is guaranteed however that if a valid option name is provided as a parameter to this function, that a pointer to a string is returned and not NULL. In case an option was empty or NULL during initialisation, `mg_get_option()` will return a pointer to an empty string.
-
-
-### `mg_get_response_code_text( conn, response_code );`
-
-#### Parameters
-
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-|**`conn`**|`struct mg_connection *`| A pointer referencing the connection |
-|**`response_code`**|`int`| Response code for which the text is queried |
-
-#### Returns
-
-| Type | Description |
-| :--- | :--- |
-|`const char *`| A pointer to a human readable text explaining the response code. |
-
-#### Description
-
-The function `mg_get_response_code_text()` returns a pointer to a human readable text describing the HTTP response code which was provided as a parameter.
-
-
-### `mg_read( conn, buf, len );`
-
-#### Parameters
-
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-|**`conn`**|`struct mg_connection *`| A pointer referencing the connection |
-|**`buf`**|`void *`| A pointer to the location where the received data can be stored |
-|**`len`**|`size_t`| The maximum number of bytes to be stored in the buffer |
-
-#### Returns
-
-| Type | Description |
-| :--- | :--- |
-|`int`| The number of read bytes, or a status indication |
-
-#### Description
-
-The function `mg_read()` receives data over an existing connection. The data is handled as binary and is stored in a buffer whose address has been provided as a parameter. The function returns the number of read bytes when successful, the value 0 when the connection has been closed by peer and a negative value when no more data could be read from the connection.
-
-### `mg_start( callbacks, user_data, options );`
-
-#### Parameters
-
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-|**`callbacks`**|`const struct mg_callbacks *`| A structure with optional callback functions to process requests from the web server |
-|**`user_data`**|`void *`| A pointer to optional user data |
-|**`options`**|`char **`| A list of options used to initialize the web server. The list consists of an NULL terminated list of option-value string pairs. |
-
-The option list can be used to set the following options:
-
-| Option | Default | Description |
-| :--- | :--- | :--- |
-| **`cgi_environment`** | *empty* | The option `cgi_environment` can contain extra variables to be passed to the CGI script in addition to the standard environment variables. The lust must be a comma separated list of name=value pairs like this: `VARIABLE1=VALUE1,VARIABLE2=VALUE2`.|
-| **`cgi_interpreter`**| *empty* | The option `cgi_interpreter` can contain a path to an executable which will be used as a CGI interpreter for **all** CGI scripts regardless of the script file extension. If this option is not set (which is the default), CivetWeb looks at the first line of a CGI script to see if an interpreter is defined there. This first line is formatted as a shebang line as common in unix style shell scripts, but this will also work in Windows. For more information about the syntax, please see the Wikipedia page about the [shebang line](http://en.wikipedia.org/wiki/Shebang_(Unix\)).|
-| | |For example on a Windows system where both PHP and Perl CGI scripts are used, `#!/path/to/php-cgi.exe` and `#!/path/to/perl.exe` must be the first line of the respective CGI scripts. Note that the paths should be either full file paths, or file paths relative to the current working directory of the CivetWeb server. The current working directory may be dependent on the way the application is started. When started from the command line it is the directory from where the executable was called, but when starting it from a shortcut in a graphical desktop environment, it will be the directory where the executable is located, the default directory of the user or a directory mentioned in the shortcut, depending on the operating system and graphical user interface used.|
-| | |If all CGIs use the same interpreter, it is more efficient to set the option `cgi_interpreter` to the path to that executable because in that case no processing of the shebang line is necessary. When using PHP, be sure to point tot php-cgi(.exe) and not the php(.exe) executable, as the latter is a stand alone interpreter which doesn't interface over CGI with CivetWeb.
-| **`cgi_pattern`** | `**.cgi$|**.pl$|**.php$` | All files that match `cgi_pattern` are treated as CGI files. The default pattern allows CGI files to be anywhere. To restrict CGIs to a certain directory, use `/path/to/cgi-bin/**.cgi` as a pattern. Note that the full path of the local file is matched against the pattern, not the URI provided in the client request.|
-|**`put_delete_auth_file`**| *empty* | The option `put_delete_auth_file` defines the password file to be used for PUT and DELETE requests. Without a password file it is not possible to put new files to the server, or to delete existing ones. This only applies to direct HTTP requests which use the PUT and DELETE methods without server side scripting. PUT and DELETE requests might still be handled by Lua scripts and CGI pages. |
-
-#### Returns
-
-| Type | Description |
-| :--- | :--- |
-|`struct mg_context *`| A pointer to a context structure when successful, or NULL in case of failure |
-
-#### Description
-
-The function `mg_start()` is the only function needed to call to initialize the webserver. After the function returns and a pointer to a contect structure is provided, it is guaranteed that the server has started and is listening on the designated ports. In case of failure a NULL pointer is returned. The behaviour of the web server is controlled by a list of callback functions and a list of options. The callback functions can do application specific processing of events which are encountered by the webserver. If a specific callback function is set to NULL, the webserver uses their default callback routine. The options list controls how the webserver should be started and contains settings for for example the ports to listen on, the maximum number of threads created to handle requests in parallel and if settings for SSL encryption.
-
-As a side effect on Unix systems, SIGCHLD and SIGPIPE signals will be ignored. If custom processing is needed for these signals, signal handlers must be setup after the call to mg_start() has completed.
-
-### `mg_stop( ctx );`
-
-#### Parameters
-
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-|**`ctx`**|**`struct mg_context *`**| A pointer to the current webserver context |
-
-#### Returns
-
-*nothing*
-
-#### Description
-
-The function `mg_stop()` is used to stop and cleanup a running webserver. A pointer to the context of the running webserver is provided as a parameter. The execution of this function may take some time because it waits until all threads have stopped and returns all memory to the heap. After the function returns, the location the context pointer points to is invalid. The function does not return a return value and it is therefore not possible to know if stopping the webserver succeeded or not.
-
-### `mg_version();`
-
-#### Parameters
-
-*none*
-
-#### Returns
-
-| Type | Description |
-| :--- | :--- |
-|`const char *`| A pointer to a text with the current CivetWeb version |
-
-#### Description
-
-The function `mg_version()` can be used to return the current CivetWeb version. function returns a pointer to a string with the current major and minor version number, separated with a dot. For example "1.9".
-
-
-### `mg_write( conn, buf, len );`
-
-#### Parameters
-
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-|**`conn`**|`struct mg_connection *`| A pointer to the connection to be used to send data |
-|**`buf`**|`const void *`| A pointer to the blob of information to be sent |
-|**`len`**|`size_t`| The amount of bytes to be sent |
-
-#### Returns
-
-| Type | Description |
-| :--- | :--- |
-|`int`| An integer indicating the amount of bytes sent, or failure |
-
-#### Description
-
-The function `mg_write()` can be used to send a blob of arbitrary data over a connection. The size of the data is provided as a parameter. The only length limitation on this function is MAX_INT, because the return value of this function will turn negative with larger blocks of data, although they may have been sent correctly. The function returns the amount of bytes sent in case of success, the value 0 when the connection has been closed, and -1 in case of an error.
-
+* [`mg_check_feature( feature );`](api/mg_check_feature.md)
+* [`mg_close_connection( conn );`](api/mg_close_connection.md)
+* [`mg_connect_client( host, port, use_ssl, error_buffer, error_buffer_size );`](api/mg_connect_client.md)
+* [`mg_connect_websocket_client( host, port, use_ssl, error_buffer, error_buffer_size, path, origin, data_func, close_func, user_data);`](api/mg_connect_websocket_client.md)
+* [`mg_cry( conn, fmt, ... );`](api/mg_cry.md)
+* [`mg_download( host, port, use_ssl, error_buffer, error_buffer_size, fmt, ... );`](api/mg_download.md)
+* [`mg_get_builtin_mime_type( file_name );`](api/mg_get_builtin_mime_type.md)
+* [`mg_get_context( conn );`](api/mg_get_context.md)
+* [`mg_get_cookie( cookie, var_name, buf, buf_len );`](mg_get_cookie.md)
+* [`mg_get_header( conn, name );`](api/mg_get_header.md)
+* [`mg_get_option( ctx, name );`](api/mg_get_option.md)
+* [`mg_get_request_info( conn );`](api/mg_get_request_info.md)
+* [`mg_get_response( conn, ebuf, ebuf_len, timeout );`](api/mg_get_response.md)
+* [`mg_get_response_code_text( conn, response_code );`](api/mg_get_response_code_text.md)
+* [`mg_get_server_ports( ctx, size, ports );`](api/mg_get_server_ports.md)
+* [`mg_get_user_connection_data( conn );`](api/get_user_connection_data.md)
+* [`mg_get_user_data( ctx );`](api/mg_get_user_data.md)
+* [~~`mg_get_valid_option_names();`~~](api/mg_get_valid_option_names.md)
+* [`mg_get_valid_options();`](api/mg_get_valid_options.md)
+* [`mg_get_var( data, data_len, var_name, dst, dst_len );`](api/mg_get_var.md)
+* [`mg_get_var2( data, data_len, var_name, dst, dst_len, occurrence );`](api/mg_get_var2.md)
+* [`mg_handle_form_request( conn, fdh );`](mg_handle_form_request.md)
+* [`mg_lock_connection( conn );`](api/mg_lock_connection.md)
+* [`mg_lock_context( ctx );`](api_mg_lock_context.md)
+* [`mg_md5( buf, ... );`](api/mg_md5.md)
+* [`mg_modify_passwords_file( passwords_file_name, domain, user, password );`](api/mg_modify_passwords_file.md)
+* [`mg_printf( conn, fmt, ... );`](api/mg_printf.md)
+* [`mg_read( conn, buf, len );`](api/mg_read.md)
+* [`mg_send_file( conn, path );`](api/mg_send_file.md)
+* [`mg_send_mime_file( conn, path, mime_type );`](api/mg_send_mime_file.md)
+* [`mg_send_mime_file2( conn, path, mime_type, additional_headers );`](api/mg_send_mime_file2.md)
+* [`mg_set_auto_handler( ctx, uri, handler, cbdata );`](api/mg_set_auth_handler.md)
+* [`mg_set_request_handler( ctx, uri, handler, cbdata );`](api/mg_set_request_handler.md)
+* [`mg_set_user_connection_data( conn, data );`](api/mg_set_user_connection_data.md)
+* [`mg_set_websocket_handler( ctx, uri, connect_handler, ready_handler, data_handler, close_handler, cbdata );`](api/mg_set_websocket_handler.md)
+* [`mg_start( callbacks, user_data, options );`](api/mg_start.md)
+* [`mg_start_thread( f, p );`](api/mg_start_thread.md)
+* [`mg_store_body( conn, path );`](api/mg_store_body.md)
+* [`mg_stop( ctx );`](api/mg_stop.md)
+* [`mg_strcasecmp( s1, s2 );`](mg_strcasecmp.md)
+* [`mg_strncasecmp( s1, s2, len );`](mg_strncasecmp.md)
+* [`mg_unlock_connection( conn );`](api/mg_unlock_connection.md)
+* [`mg_unlock_context( ctx );`](api/mg_unlock_context.md)
+* [~~`mg_upload( conn, destination_dir );`~~](mg_upload.md)
+* [`mg_url_decode( src, src_len, dst, dst_len, is_form_url_encoded );`](api/mg_url_decode.md)
+* [`mg_url_encode( src, dst, dst_len );`](api/mg_url_encode.md)
+* [`mg_version();`](api/mg_version.md)
+* [`mg_websocket_client_write( conn, opcode, data, data_len );`](api/mg_websocket_client_write.md)
+* [`mg_websocket_write( conn, opcode, data, data_len );`](api/mg_websocket_write.md)
+* [`mg_write( conn, buf, len );`](api/mg_write.md)
