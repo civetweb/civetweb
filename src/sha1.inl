@@ -114,16 +114,13 @@ blk0(CHAR64LONG16 *block, int i)
 	static const uint32_t n = 1u;
 	if ((*((uint8_t *)(&n))) == 1) {
 		/* little endian / intel byte order */
-		return (rol(block->l[i], 24) & 0xFF00FF00)
-		       | (rol(block->l[i], 8) & 0x00FF00FF);
-	} else {
-		/* big endian / motorola byte order */
-		return block->l[i];
+		block->l[i] = (rol(block->l[i], 24) & 0xFF00FF00)
+		              | (rol(block->l[i], 8) & 0x00FF00FF);
 	}
+	return block->l[i];
 }
 
-
-#define blk(i)                                                                 \
+#define blk(block, i)                                                          \
 	(block->l[i & 15] = rol(block->l[(i + 13) & 15] ^ block->l[(i + 8) & 15]   \
 	                            ^ block->l[(i + 2) & 15] ^ block->l[i & 15],   \
 	                        1))
@@ -133,16 +130,16 @@ blk0(CHAR64LONG16 *block, int i)
 	z += ((w & (x ^ y)) ^ y) + blk0(block, i) + 0x5A827999 + rol(v, 5);        \
 	w = rol(w, 30);
 #define R1(v, w, x, y, z, i)                                                   \
-	z += ((w & (x ^ y)) ^ y) + blk(i) + 0x5A827999 + rol(v, 5);                \
+	z += ((w & (x ^ y)) ^ y) + blk(block, i) + 0x5A827999 + rol(v, 5);         \
 	w = rol(w, 30);
 #define R2(v, w, x, y, z, i)                                                   \
-	z += (w ^ x ^ y) + blk(i) + 0x6ED9EBA1 + rol(v, 5);                        \
+	z += (w ^ x ^ y) + blk(block, i) + 0x6ED9EBA1 + rol(v, 5);                 \
 	w = rol(w, 30);
 #define R3(v, w, x, y, z, i)                                                   \
-	z += (((w | x) & y) | (w & x)) + blk(i) + 0x8F1BBCDC + rol(v, 5);          \
+	z += (((w | x) & y) | (w & x)) + blk(block, i) + 0x8F1BBCDC + rol(v, 5);   \
 	w = rol(w, 30);
 #define R4(v, w, x, y, z, i)                                                   \
-	z += (w ^ x ^ y) + blk(i) + 0xCA62C1D6 + rol(v, 5);                        \
+	z += (w ^ x ^ y) + blk(block, i) + 0xCA62C1D6 + rol(v, 5);                 \
 	w = rol(w, 30);
 
 
@@ -151,13 +148,10 @@ static void
 SHA1_Transform(uint32_t state[5], const uint8_t buffer[64])
 {
 	uint32_t a, b, c, d, e;
-	CHAR64LONG16 *block;
 
-	/* Must use an aligned buffer */
-	CHAR64LONG16 aligned_buf;
-	memcpy(&aligned_buf, &buffer, sizeof(aligned_buf));
-
-	block = &aligned_buf;
+	/* Must use an aligned, read/write buffer */
+	CHAR64LONG16 block[1];
+	memcpy(block, buffer, sizeof(block));
 
 	/* Copy context->state[] to working vars */
 	a = state[0];
@@ -274,25 +268,28 @@ SHA1_Init(SHA1_CTX *context)
 }
 
 
-/* Run your data through this. */
 SHA_API void
 SHA1_Update(SHA1_CTX *context, const uint8_t *data, const uint32_t len)
 {
-	size_t i, j;
+	uint32_t i, j;
 
-	j = (context->count[0] >> 3) & 63;
-	if ((context->count[0] += len << 3) < (len << 3))
+	j = context->count[0];
+	if ((context->count[0] += (len << 3)) < j) {
 		context->count[1]++;
+	}
 	context->count[1] += (len >> 29);
+	j = (j >> 3) & 63;
 	if ((j + len) > 63) {
-		memcpy(&context->buffer[j], data, (i = 64 - j));
+		i = 64 - j;
+		memcpy(&context->buffer[j], data, i);
 		SHA1_Transform(context->state, context->buffer);
 		for (; i + 63 < len; i += 64) {
-			SHA1_Transform(context->state, data + i);
+			SHA1_Transform(context->state, &data[i]);
 		}
 		j = 0;
-	} else
+	} else {
 		i = 0;
+	}
 	memcpy(&context->buffer[j], &data[i], len - i);
 }
 
@@ -305,13 +302,13 @@ SHA1_Final(SHA1_CTX *context, uint8_t digest[SHA1_DIGEST_SIZE])
 	uint8_t finalcount[8];
 
 	for (i = 0; i < 8; i++) {
-		finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
-		                                 >> ((3 - (i & 3)) * 8))
-		                                & 255); /* Endian independent */
+		finalcount[i] =
+		    (uint8_t)((context->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8))
+		              & 255); /* Endian independent */
 	}
-	SHA1_Update(context, (uint8_t *)"\200", 1);
+	SHA1_Update(context, (uint8_t *)"\x80", 1);
 	while ((context->count[0] & 504) != 448) {
-		SHA1_Update(context, (uint8_t *)"\0", 1);
+		SHA1_Update(context, (uint8_t *)"\x00", 1);
 	}
 	SHA1_Update(context, finalcount, 8); /* Should cause a SHA1_Transform() */
 	for (i = 0; i < SHA1_DIGEST_SIZE; i++) {
@@ -321,8 +318,6 @@ SHA1_Final(SHA1_CTX *context, uint8_t digest[SHA1_DIGEST_SIZE])
 
 	/* Wipe variables */
 	i = 0;
-	memset(context->buffer, 0, 64);
-	memset(context->state, 0, 20);
-	memset(context->count, 0, 8);
-	memset(finalcount, 0, 8); /* SWR */
+	memset(context, '\0', sizeof(*context));
+	memset(&finalcount, '\0', sizeof(finalcount));
 }

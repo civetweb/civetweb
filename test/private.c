@@ -664,6 +664,77 @@ START_TEST(test_parse_date_string)
 END_TEST
 
 
+START_TEST(test_sha1)
+{
+#ifdef SHA1_DIGEST_SIZE
+	SHA1_CTX sha_ctx;
+	uint8_t digest[SHA1_DIGEST_SIZE] = {0};
+	char str[48] = {0};
+	int i;
+	const char *test_str;
+
+	ck_assert_uint_eq(sizeof(digest), 20);
+	ck_assert_uint_gt(sizeof(str), sizeof(digest) * 2 + 1);
+
+	/* empty string */
+	SHA1_Init(&sha_ctx);
+	SHA1_Final(&sha_ctx, digest);
+	bin2str(str, digest, sizeof(digest));
+	ck_assert_uint_eq(strlen(str), 40);
+	ck_assert_str_eq(str, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
+
+	/* empty string */
+	SHA1_Init(&sha_ctx);
+	SHA1_Update(&sha_ctx, "abc", 0);
+	SHA1_Final(&sha_ctx, digest);
+	bin2str(str, digest, sizeof(digest));
+	ck_assert_uint_eq(strlen(str), 40);
+	ck_assert_str_eq(str, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
+
+	/* "abc" */
+	SHA1_Init(&sha_ctx);
+	SHA1_Update(&sha_ctx, "abc", 3);
+	SHA1_Final(&sha_ctx, digest);
+	bin2str(str, digest, sizeof(digest));
+	ck_assert_uint_eq(strlen(str), 40);
+	ck_assert_str_eq(str, "a9993e364706816aba3e25717850c26c9cd0d89d");
+
+	/* "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" */
+	test_str = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+	SHA1_Init(&sha_ctx);
+	SHA1_Update(&sha_ctx, test_str, strlen(test_str));
+	SHA1_Final(&sha_ctx, digest);
+	bin2str(str, digest, sizeof(digest));
+	ck_assert_uint_eq(strlen(str), 40);
+	ck_assert_str_eq(str, "84983e441c3bd26ebaae4aa1f95129e5e54670f1");
+
+	/* a million "a" */
+	SHA1_Init(&sha_ctx);
+	for (i = 0; i < 1000000; i++) {
+		SHA1_Update(&sha_ctx, "a", 1);
+	}
+	SHA1_Final(&sha_ctx, digest);
+	bin2str(str, digest, sizeof(digest));
+	ck_assert_uint_eq(strlen(str), 40);
+	ck_assert_str_eq(str, "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
+
+	/* a million "a" in blocks of 10 */
+	SHA1_Init(&sha_ctx);
+	for (i = 0; i < 100000; i++) {
+		SHA1_Update(&sha_ctx, "aaaaaaaaaa", 10);
+	}
+	SHA1_Final(&sha_ctx, digest);
+	bin2str(str, digest, sizeof(digest));
+	ck_assert_uint_eq(strlen(str), 40);
+	ck_assert_str_eq(str, "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
+#else
+	/* Can not test, if SHA1 is not included */
+	ck_assert(1);
+#endif
+}
+END_TEST
+
+
 Suite *
 make_private_suite(void)
 {
@@ -675,6 +746,7 @@ make_private_suite(void)
 	TCase *const tcase_encode_decode = tcase_create("Encode Decode");
 	TCase *const tcase_mask_data = tcase_create("Mask Data");
 	TCase *const tcase_parse_date_string = tcase_create("Date Parsing");
+	TCase *const tcase_sha1 = tcase_create("SHA1");
 
 	tcase_add_test(tcase_http_message, test_parse_http_message);
 	tcase_add_test(tcase_http_message, test_should_keep_alive);
@@ -706,8 +778,12 @@ make_private_suite(void)
 	suite_add_tcase(suite, tcase_mask_data);
 
 	tcase_add_test(tcase_parse_date_string, test_parse_date_string);
-	tcase_set_timeout(tcase_mask_data, civetweb_min_test_timeout);
+	tcase_set_timeout(tcase_parse_date_string, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_parse_date_string);
+
+	tcase_add_test(tcase_sha1, test_sha1);
+	tcase_set_timeout(tcase_sha1, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_sha1);
 
 	return suite;
 }
@@ -731,6 +807,7 @@ MAIN_PRIVATE(void)
 	test_parse_date_string(0);
 	test_parse_port_string(0);
 	test_parse_http_message(0);
+	test_sha1(0);
 }
 
 #endif
