@@ -1,6 +1,6 @@
 # Civetweb API Reference
 
-### `mg_modify_passwords_file( passwords_file_name, domain, user, password );
+### `mg_modify_passwords_file( passwords_file_name, domain, user, password );`
 
 ### Parameters
 
