@@ -685,7 +685,7 @@ START_TEST(test_sha1)
 
 	/* empty string */
 	SHA1_Init(&sha_ctx);
-	SHA1_Update(&sha_ctx, "abc", 0);
+	SHA1_Update(&sha_ctx, (uint8_t*)"abc", 0);
 	SHA1_Final(&sha_ctx, digest);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
@@ -693,7 +693,7 @@ START_TEST(test_sha1)
 
 	/* "abc" */
 	SHA1_Init(&sha_ctx);
-	SHA1_Update(&sha_ctx, "abc", 3);
+	SHA1_Update(&sha_ctx, (uint8_t*)"abc", 3);
 	SHA1_Final(&sha_ctx, digest);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
@@ -702,7 +702,7 @@ START_TEST(test_sha1)
 	/* "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" */
 	test_str = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
 	SHA1_Init(&sha_ctx);
-	SHA1_Update(&sha_ctx, test_str, strlen(test_str));
+	SHA1_Update(&sha_ctx, (uint8_t*)test_str, (uint32_t)strlen(test_str));
 	SHA1_Final(&sha_ctx, digest);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
@@ -711,7 +711,7 @@ START_TEST(test_sha1)
 	/* a million "a" */
 	SHA1_Init(&sha_ctx);
 	for (i = 0; i < 1000000; i++) {
-		SHA1_Update(&sha_ctx, "a", 1);
+		SHA1_Update(&sha_ctx, (uint8_t*)"a", 1);
 	}
 	SHA1_Final(&sha_ctx, digest);
 	bin2str(str, digest, sizeof(digest));
@@ -721,7 +721,7 @@ START_TEST(test_sha1)
 	/* a million "a" in blocks of 10 */
 	SHA1_Init(&sha_ctx);
 	for (i = 0; i < 100000; i++) {
-		SHA1_Update(&sha_ctx, "aaaaaaaaaa", 10);
+		SHA1_Update(&sha_ctx, (uint8_t*)"aaaaaaaaaa", 10);
 	}
 	SHA1_Final(&sha_ctx, digest);
 	bin2str(str, digest, sizeof(digest));
