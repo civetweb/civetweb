@@ -60,3 +60,4 @@ should be handled.
 ### See Also
 
 * [`mg_start();`](mg_start.md)
+* [`mg_stop();`](mg_stop.md)
