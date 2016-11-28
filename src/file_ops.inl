@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 /* Handle */
-typedef struct cv_file *CV_FILE;
+typedef struct cv_file CV_FILE;
 
 /* Callbacks for memory mapped files */
 typedef struct cv_filesys *CV_FILESYS;
@@ -50,20 +50,6 @@ int32_t cvf_read(CV_FILE file, void *block_ptr, int32_t block_size);
 struct cv_filesys {
 	int (*cv_get_file_disp)(const char *path_utf8, void *user_arg);    
 	void *user_arg;
-};
-
-
-/* Implementation */
-struct cv_file {
-	int64_t size;
-
-	int disp; /* 0 = not exist, 1 = on disk */
-
-#if defined(_WIN32)
-	const wchar_t *fname;
-#else
-	const char *fname;
-#endif
 };
 
 

@@ -446,6 +446,7 @@ static void path_to_unicode(const struct mg_connection *conn,
                             size_t wbuf_len);
 
 /* All file operations need to be rewritten to solve #246. */
+
 #include "file_ops.inl"
 
 struct mg_file;
@@ -1349,10 +1350,17 @@ struct mg_file_stat {
 	int location;     /* 0 = nowhere, 1 = on disk, 2 = in memory */
 };
 
+struct mg_file_in_memory {
+	char *p;
+	uint32_t pos;
+	char mode;
+};
+
 struct mg_file_access {
 	/* File properties filled by mg_fopen: */
 	FILE *fp;
-	const char *membuf;
+	/* TODO: struct mg_file_in_memory *mf; */
+	const char *membuf; /* TODO: remove */
 };
 
 struct mg_file {
@@ -1946,12 +1954,23 @@ mg_get_valid_options(void)
 }
 
 
+/* Open file for read only access */
+#define MG_FOPEN_MODE_READ (1)
+
+/* Open file for writing, create and overwrite */
+#define MG_FOPEN_MODE_WRITE (2)
+
+/* Open file for writing, create and append */
+#define MG_FOPEN_MODE_APPEND (4)
+
+
 /* If a file is in memory, set all "stat" members and the membuf pointer of
  * output filep and return 1, otherwise return 0 and don't modify anything. */
 static int
 open_file_in_memory(const struct mg_connection *conn,
                     const char *path,
-                    struct mg_file *filep)
+                    struct mg_file *filep,
+                    int mode)
 {
 	size_t size = 0;
 	const char *buf = NULL;
@@ -1993,7 +2012,7 @@ open_file_in_memory(const struct mg_connection *conn,
 static int
 is_file_in_memory(const struct mg_connection *conn, const char *path)
 {
-	return open_file_in_memory(conn, path, NULL);
+	return open_file_in_memory(conn, path, NULL, 0);
 }
 
 
@@ -2012,14 +2031,11 @@ static int mg_stat(const struct mg_connection *conn,
                    struct mg_file_stat *filep);
 
 
-#define MG_FOPEN_MODE_READ (1)
-#define MG_FOPEN_MODE_WRITE (2)
-#define MG_FOPEN_MODE_APPEND (4)
-
 /* mg_fopen will open a file either in memory or on the disk.
  * The input parameter path is a string in UTF-8 encoding.
  * The input parameter mode is MG_FOPEN_MODE_*
- * Either fp or membuf will be set in the output struct file.
+ * On success, either fp or membuf will be set in the output
+ * struct file. All status members will also be set.
  * The function returns 1 on success, 0 on error. */
 static int
 mg_fopen(const struct mg_connection *conn,
@@ -2076,7 +2092,6 @@ mg_fopen(const struct mg_connection *conn,
 			break;
 		}
 
-
 #endif
 		if (!found) {
 			/* File did not exist before fopen was called.
@@ -2090,7 +2105,8 @@ mg_fopen(const struct mg_connection *conn,
 		return (filep->access.fp != NULL);
 
 	} else {
-		if (open_file_in_memory(conn, path, filep)) {
+		/* is_file_in_memory returned true */
+		if (open_file_in_memory(conn, path, filep, mode)) {
 			/* file is in memory */
 			return (filep->access.membuf != NULL);
 		}
