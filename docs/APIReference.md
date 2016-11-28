@@ -15,10 +15,10 @@ the API can be found in [Embedding.md](Embedding.md).
 
 ## Structures
 
-* [`struct client_cert;`](client_cert.md)
-* [`struct mg_client_options;`](mg_client_options.md)
-* [`struct mg_callbacks;`](mg_callbacks.md)
-* [`struct mg_form_data_handler;`](mg_form_data_handler.md)
+* [`struct client_cert;`](api/client_cert.md)
+* [`struct mg_client_options;`](api/mg_client_options.md)
+* [`struct mg_callbacks;`](api/mg_callbacks.md)
+* [`struct mg_form_data_handler;`](api/mg_form_data_handler.md)
 * [`struct mg_header;`](api/mg_header.md)
 * [`struct mg_option;`](api/mg_option.md)
 * [`struct mg_request_info;`](api/mg_request_info.md)
