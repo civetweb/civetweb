@@ -19,3 +19,4 @@ structure to store information of an optional client supplied certificate.
 ### See Also
 
 * [`struct mg_request_info;`](mg_request_info.md)
+* [`mg_get_request_info();`](mg_get_request_info.md)

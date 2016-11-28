@@ -6,24 +6,28 @@
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-|**`host`**|`const char *`||
-|**`port`**|`int`||
-|**`use_ssl`**|`int`||
-|**`error_buffer`**|`char *`||
-|**`error_buffer_size`**|`size_t`||
-|**`path`**|`const char *`||
-|**`origin`**|`const char *`||
-|**`data_func`**|`mg_websocket_data_handler`||
-|**`close_func`**|`mg_websocket_close_handler`||
-|**`user_data`**|`void *`||
+|**`host`**|`const char *`|The hostname or IP address of the server|
+|**`port`**|`int`|The port on the server|
+|**`use_ssl`**|`int`|Use SSL if this parameter is not equal to zero|
+|**`error_buffer`**|`char *`|Buffer to store an error message|
+|**`error_buffer_size`**|`size_t`|Size of the error message buffer including the NUL terminator|
+|**`path`**|`const char *`|The server path to connect to, for example `/app` if you want to connect to `localhost/app`|
+|**`origin`**|`const char *`|The value of the `Origin` HTTP header|
+|**`data_func`**|`mg_websocket_data_handler`|Callback which is used to process data coming back from the server|
+|**`close_func`**|`mg_websocket_close_handler`|Callback which is called when the connection is to be closed|
+|**`user_data`**|`void *`|User supplied argument|
 
 ### Return Value
 
 | Type | Description |
 | :--- | :--- |
-|`struct mg_connection *`||
+|`struct mg_connection *`|A pointer to the connection structure, or NULL if connecting failed|
 
 ### Description
+
+The function `mg_connect_websocket_client()` connects to a websocket on a server as a client.
+Data and close events are processed with callback functions which must be provided in the
+call.
 
 ### See Also
 
