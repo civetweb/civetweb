@@ -13,8 +13,7 @@
 
 ### Description
 
-The structure `client_cert` is used as a sub-structure in the [`mg_request_info`](mg_request_info.md)
-structure to store information of an optional client supplied certificate.
+The structure `client_cert` is used as a sub-structure in the [`mg_request_info`](mg_request_info.md) structure to store information of an optional client supplied certificate.
 
 ### See Also
 

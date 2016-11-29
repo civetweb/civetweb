@@ -50,12 +50,9 @@
 
 ### Description
 
-A pointer to a `mg_callbacks` structure is passed as parameter to the [`mg_start()`](mg_start.md)
-function to
-provide links to callback functions which the webserver will call at specific events. If a
-specific callback function is not supplied, CivetWeb will fallback to default internal callback
-routines. Callback functions give the application detailed control over how specific events
-should be handled.
+Much of the functionality in the Civetweb library is provided through callback functions. The application registers their own processing functions with the Civetweb library and when an event happens, the appropriate callback function is called. In this way an application is able to have their processing code right at the heart of the webserver, without the need to change the code of the webserver itself. A number of callback functions are registered when the civetweb subsystem is started. Other may be added or changed at runtime with helper functions.
+
+A pointer to a `mg_callbacks` structure is passed as parameter to the [`mg_start()`](mg_start.md) function to provide links to callback functions which the webserver will call at specific events. If a specific callback function is not supplied, CivetWeb will fallback to default internal callback routines. Callback functions give the application detailed control over how specific events should be handled.
 
 ### See Also
 
