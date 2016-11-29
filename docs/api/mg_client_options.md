@@ -13,10 +13,9 @@
 
 ### Description
 
-The the `mgclient_options` structure contains host and security information to connect
-as a client to another host. A parameter of this type is used in the call to the
-function [`mg_connect_client_secure();`](mg_connect_client_secure.md).
+The the `mgclient_options` structure contains host and security information to connect as a client to another host. A parameter of this type is used in the call to the function [`mg_connect_client_secure();`](mg_connect_client_secure.md). Please note that IPv6 addresses are only permitted if IPv6 support was enabled during compilation. You can use the function [`mg_check_feature()`](mg_check_feature.md) with the parameter `USE_IPV6` while running your application to check if IPv6 is supported.
 
 ### See Also
 
+* [`mg_check_feature();`](mg_check_feature.md)
 * [`mg_connect_client_secure();`](mg_connect_client_secure.md)
