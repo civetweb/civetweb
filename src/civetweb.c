@@ -8054,7 +8054,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 	const char *s;
 	struct vec var_vec;
 	char *p, src_addr[IP_ADDR_STR_LEN], http_var_name[128];
-	int i, truncated;
+	int i, truncated, uri_len;
 
 	if (conn == NULL || prog == NULL || env == NULL) {
 		return;
@@ -8097,11 +8097,28 @@ prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "LOCAL_URI=%s", conn->request_info.local_uri);
 
 	/* SCRIPT_NAME */
-	addenv(env,
-	       "SCRIPT_NAME=%.*s",
-	       (int)strlen(conn->request_info.local_uri)
-	           - ((conn->path_info == NULL) ? 0 : (int)strlen(conn->path_info)),
-	       conn->request_info.local_uri);
+	uri_len = (int)strlen(conn->request_info.local_uri);
+	if (conn->path_info == NULL) {
+		if (conn->request_info.local_uri[uri_len - 1] != '/') {
+			/* URI: /path_to_script/script.cgi */
+			addenv(env, "SCRIPT_NAME=%s", conn->request_info.local_uri);
+		} else {
+			/* URI: /path_to_script/ ... using index.cgi */
+			char *index_file = strrchr(prog, '/');
+			if (index_file) {
+				addenv(env,
+				       "SCRIPT_NAME=%s%s",
+				       conn->request_info.local_uri,
+				       index_file + 1);
+			}
+		}
+	} else {
+		/* URI: /path_to_script/script.cgi/path_info */
+		addenv(env,
+		       "SCRIPT_NAME=%.*s",
+		       uri_len - (int)strlen(conn->path_info),
+		       conn->request_info.local_uri);
+	}
 
 	addenv(env, "SCRIPT_FILENAME=%s", prog);
 	if (conn->path_info == NULL) {
