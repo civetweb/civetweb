@@ -6,15 +6,17 @@
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-|**`file_name`**|`const char *`||
+|**`file_name`**|`const char *`|The name of the file for which the MIME type has to be determined|
 
 ### Return Value
 
 | Type | Description |
 | :--- | :--- |
-|`const char *`||
+|`const char *`|A text string describing the MIME type|
 
 ### Description
+
+The function `mg_get_builtin_mime_type()` tries to determine the MIME type of a given file. If the MIME type cannot be determined, the value `text/plain` is returned. Please note that this function does not an intelligent check of the file contents. The MIME type is solely determined based on the file name extension.
 
 ### See Also
 

@@ -8,14 +8,14 @@
 | :--- | :--- | :--- |
 |**`cookie`**|`const char *`||
 |**`var_name`**|`const char *`||
-|**`buf`**|`char *`||
-|**`buf_len`**|`size_t`||
+|**`buf`**|`char *`|The buffer where to store the contents of the cookie|
+|**`buf_len`**|`size_t`|The length of the cookie buffer, including the terminating NUL|
 
 ### Return Value
 
 | Type | Description |
 | :--- | :--- |
-|`int`||
+|`int`|The length of the cookie or an error code|
 
 ### Description
 

@@ -20,7 +20,11 @@
 ||**`FORM_FIELD_STORAGE_ABORT`** - Stop parsing the request and ignore all remaining form fields|
 |**`field_get`**|**`int field_get( const char *key, const char *value, size_t valuelen, void *user_data );`**|
 |**`field_store`**|**`int field_store( const char *path, long long file_size, void *user_data );`**|
-|**`user_data`**|**`void *`**|
+||If the callback function `field_found()` returned `FORM_FIELD_STORAGE_STORE`, Civetweb will try to store the received data in a file. If writing the file is successful, the callback function `field_store()` is called. This function is only called after completion of a full upload, not if a file has only partly been uploaded. When only part of a file is received, Civetweb will delete that partly upload in the background and not inform the main application through this callback. The following parameters are provided in the function call:|
+||**`path`** -|
+||**`file_size`** - The path on the server where the file was stored|
+||**`user_data`** - The size of the stored file in bytes|
+|**`user_data`**|**`void *`** The value of the field `user_data` when the callback functions were registered with a call to `mg_handle_form_request();`|
 ||The `user_data` field is a user supplied argument that will be passed as parameter to each of callback functions|
 
 ### Description
