@@ -1,6 +1,6 @@
 # Civetweb API Reference
 
-### `mg_get_context( conn );
+### `mg_get_context( conn );`
 
 ### Parameters
 
@@ -16,4 +16,9 @@
 
 ### Description
 
+The function `mg_get_context()` returns the context associated with a connection.
+
 ### See Also
+
+* [`mg_start();`](mg_start.md)
+* [`mg_stop();`](mg_stop.md)
