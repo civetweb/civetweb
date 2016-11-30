@@ -808,6 +808,10 @@ MAIN_PRIVATE(void)
 	test_parse_port_string(0);
 	test_parse_http_message(0);
 	test_sha1(0);
+
+#if defined(_WIN32)
+    WSACleanup();
+#endif
 }
 
 #endif

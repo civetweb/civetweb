@@ -849,8 +849,8 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 
 
 #if defined(MEMORY_DEBUGGING)
-unsigned long mg_memory_debug_blockCount = 0;
-unsigned long mg_memory_debug_totalMemUsed = 0;
+static unsigned long mg_memory_debug_blockCount = 0;
+static unsigned long mg_memory_debug_totalMemUsed = 0;
 
 
 static void *
