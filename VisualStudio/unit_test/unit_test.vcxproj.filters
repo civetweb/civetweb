@@ -30,6 +30,9 @@
     <ClInclude Include="..\..\test\private.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\test\timertest.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\test\shared.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
@@ -50,6 +53,9 @@
     <ClCompile Include="..\..\test\private_exe.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\test\timertest.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>    
     <ClCompile Include="..\..\test\shared.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>

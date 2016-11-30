@@ -17,6 +17,7 @@
     <ClInclude Include="..\..\test\private_exe.h" />
     <ClInclude Include="..\..\test\public_func.h" />
     <ClInclude Include="..\..\test\public_server.h" />
+    <ClInclude Include="..\..\test\timertest.h" />
     <ClInclude Include="..\..\test\shared.h" />
   </ItemGroup>
   <ItemGroup>
@@ -25,6 +26,7 @@
     <ClCompile Include="..\..\test\private_exe.c" />
     <ClCompile Include="..\..\test\public_func.c" />
     <ClCompile Include="..\..\test\public_server.c" />
+    <ClInclude Include="..\..\test\timertest.c" />
     <ClCompile Include="..\..\test\shared.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

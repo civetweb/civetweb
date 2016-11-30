@@ -810,7 +810,7 @@ MAIN_PRIVATE(void)
 	test_sha1(0);
 
 #if defined(_WIN32)
-    WSACleanup();
+	WSACleanup();
 #endif
 }
 

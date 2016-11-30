@@ -91,6 +91,13 @@ target_include_directories(
 target_link_libraries(private-c-unit-tests ${CHECK_LIBRARIES})
 add_dependencies(private-c-unit-tests check-unit-test-framework)
 
+add_library(timer-c-unit-tests STATIC timertest.c)
+target_include_directories(
+  timer-c-unit-tests PUBLIC
+  ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(timer-c-unit-tests ${CHECK_LIBRARIES})
+add_dependencies(timer-c-unit-tests check-unit-test-framework)
+
 add_library(exe-c-unit-tests STATIC private_exe.c)
 if (BUILD_SHARED_LIBS)
   target_compile_definitions(exe-c-unit-tests PRIVATE)
@@ -107,6 +114,7 @@ target_link_libraries(main-c-unit-test
   public-func-c-unit-tests
   public-server-c-unit-tests
   private-c-unit-tests
+  timer-c-unit-tests
   exe-c-unit-tests
   ${CHECK_LIBRARIES})
 add_dependencies(main-c-unit-test check-unit-test-framework)
@@ -161,6 +169,9 @@ civetweb_add_test(PublicServer "Server Requests")
 civetweb_add_test(PublicServer "Handle Form")
 civetweb_add_test(PublicServer "HTTP Authentication")
 civetweb_add_test(PublicServer "HTTP Keep Alive")
+
+# Timer tests
+civetweb_add_test(Timer "Timer1")
 
 # Tests with main.c
 #civetweb_add_test(EXE "Helper funcs")

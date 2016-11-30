@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 the Civetweb developers
+/* Copyright (c) 2015-2016 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@
 #include "public_func.h"
 #include "public_server.h"
 #include "private.h"
+#include "timertest.h"
 #include "private_exe.h"
 
 #include <stdlib.h>
@@ -78,6 +79,7 @@ main(const int argc, char *argv[])
 	srunner_add_suite(srunner, make_public_server_suite());
 	srunner_add_suite(srunner, make_private_suite());
 	srunner_add_suite(srunner, make_private_exe_suite());
+	srunner_add_suite(srunner, make_timertest_suite());
 
 	/* Write test logs to a file */
 	srunner_set_log(srunner, "test.log");

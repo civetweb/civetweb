@@ -19,6 +19,7 @@ struct ttimers {
 	unsigned timer_count;             /* Current size of timer list */
 };
 
+
 static int
 timer_add(struct mg_context *ctx,
           double next_time,
@@ -47,7 +48,7 @@ timer_add(struct mg_context *ctx,
 	 *        n times until (next_time + (n * period)) > now
 	 *        then the period is working
 	 * Solution:
-	 *        if next_time < now then we set  next_time = now.
+	 *        if next_time < now then we set next_time = now.
 	 *        The first callback will be so fast as possible  (now)
 	 *        but the next callback on period
 	*/
@@ -79,6 +80,7 @@ timer_add(struct mg_context *ctx,
 	pthread_mutex_unlock(&ctx->timers->mutex);
 	return error;
 }
+
 
 static void
 timer_thread_run(void *thread_func_param)
@@ -130,6 +132,7 @@ timer_thread_run(void *thread_func_param)
 #endif
 }
 
+
 #ifdef _WIN32
 static unsigned __stdcall timer_thread(void *thread_func_param)
 {
@@ -145,6 +148,7 @@ timer_thread(void *thread_func_param)
 }
 #endif /* _WIN32 */
 
+
 static int
 timers_init(struct mg_context *ctx)
 {
@@ -156,6 +160,7 @@ timers_init(struct mg_context *ctx)
 
 	return 0;
 }
+
 
 static void
 timers_exit(struct mg_context *ctx)
