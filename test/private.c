@@ -27,6 +27,9 @@
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 #endif
+#else
+#include <pthread.h>
+#include <time.h>
 #endif
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
