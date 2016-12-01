@@ -27,13 +27,15 @@
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 #endif
-#define CIVETWEB_API static
 #endif
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 #undef MEMORY_DEBUGGING
 #endif
 
+#define USE_TIMERS
+#define CIVETWEB_API static
+#include "../include/civetweb.h"
 #include "../src/civetweb.c"
 
 #include <stdlib.h>
