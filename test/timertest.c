@@ -79,9 +79,18 @@ START_TEST(test_timer1)
 	mg_sleep(100);
 	timers_exit(&ctx);
 
+#ifdef LOCAL_TEST
 	ck_assert_int_eq(c[0], 0);
 	ck_assert_int_eq(c[1], 0);
 	ck_assert_int_eq(c[2], 0);
+#else
+	ck_assert_int_ge(c[0], -1);
+	ck_assert_int_le(c[0], +1);
+	ck_assert_int_ge(c[1], -1);
+	ck_assert_int_le(c[1], +1);
+	ck_assert_int_ge(c[2], -1);
+	ck_assert_int_le(c[2], +1);
+#endif
 }
 END_TEST
 
