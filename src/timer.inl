@@ -38,8 +38,8 @@ timer_add(struct mg_context *ctx,
 	}
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	dt = (double)now.tv_sec;
-	dt += now.tv_nsec * 1.0E-9;
+	dt = (double)(now.tv_sec);
+	dt += (double)(now.tv_nsec) * 1.0E-9;
 
 	/* HCP24: if is_relative = 0 and next_time < now
 	 *        action will be called so fast as possible
