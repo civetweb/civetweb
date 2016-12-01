@@ -29,6 +29,10 @@
 #endif
 #endif
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 #define CIVETWEB_API static
 #define USE_TIMERS
 
