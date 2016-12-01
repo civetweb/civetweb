@@ -29,13 +29,13 @@
 #endif
 #endif
 
+#define CIVETWEB_API static
+#define USE_TIMERS
+
+#include "../src/civetweb.c"
+
 #include <stdlib.h>
 #include <time.h>
-
-#define USE_TIMERS
-#define CIVETWEB_API static
-#include "../include/civetweb.h"
-#include "../src/civetweb.c"
 
 #include "timertest.h"
 
