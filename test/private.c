@@ -36,9 +36,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define USE_TIMERS
 //#define CIVETWEB_API static
-#include "../include/civetweb.h"
+//#include "../include/civetweb.h"
 #include "../src/civetweb.c"
 
 #include "private.h"
