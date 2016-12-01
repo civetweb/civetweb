@@ -33,14 +33,14 @@
 #undef MEMORY_DEBUGGING
 #endif
 
-#include <stdlib.h>
-#include <time.h>
-
 //#define CIVETWEB_API static
 //#include "../include/civetweb.h"
 #include "../src/civetweb.c"
 
 #include "private.h"
+
+#include <stdlib.h>
+#include <time.h>
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
