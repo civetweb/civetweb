@@ -27,23 +27,20 @@
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 #endif
-#else
-#include <pthread.h>
-#include <time.h>
+#define CIVETWEB_API static
 #endif
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 #undef MEMORY_DEBUGGING
 #endif
 
-//#define CIVETWEB_API static
-//#include "../include/civetweb.h"
 #include "../src/civetweb.c"
-
-#include "private.h"
 
 #include <stdlib.h>
 #include <time.h>
+
+#include "private.h"
+
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
