@@ -37,7 +37,7 @@
 #include "timertest.h"
 
 
-int
+static int
 action(void *arg)
 {
 	int *p = (int *)arg;
