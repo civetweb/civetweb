@@ -11,7 +11,8 @@
 
 ### Description
 
-The structure `mg_header` is used as a sub-structure in the `mg_request_info` structure to
-store the name and value of one HTTP request header as sent by the client.
+The structure `mg_header` is used as a sub-structure in the [`struct mg_request_info;`](mg_request_info.md) structure to store the name and value of one HTTP request header as sent by the client.
 
 ### See Also
+
+* [`struct mg_request_info;`](mg_request_info.md)
