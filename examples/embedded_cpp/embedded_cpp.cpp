@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014 the Civetweb developers
+/* Copyright (c) 2013-2016 the Civetweb developers
  * Copyright (c) 2013 No Face Press, LLC
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
@@ -8,7 +8,7 @@
 #include "CivetServer.h"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif

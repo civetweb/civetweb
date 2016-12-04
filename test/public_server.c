@@ -37,7 +37,7 @@
 #include <civetweb.h>
 
 #if defined(_WIN32)
-#include <Windows.h>
+#include <windows.h>
 #define test_sleep(x) (Sleep((x)*1000))
 #else
 #include <unistd.h>

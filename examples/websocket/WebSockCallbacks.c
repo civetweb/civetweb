@@ -10,7 +10,7 @@
 #include "WebSockCallbacks.h"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #define mg_sleep(x) Sleep(x)
 #else
 #include <unistd.h>

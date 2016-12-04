@@ -2,7 +2,7 @@
 #include <time.h>
 
 #if defined(_WIN32) || defined(WIN32) 
-#include <Windows.h>
+#include <windows.h>
 void INIT(void) {WSADATA wsaData; WSAStartup(MAKEWORD(2,2), &wsaData);}
 #else
 #define INIT()

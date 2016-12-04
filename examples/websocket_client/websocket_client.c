@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2015 the Civetweb developers
+* Copyright (c) 2014-2016 the Civetweb developers
 * Copyright (c) 2014 Jordan Shelley
 * https://github.com/jshelley
 * License http://opensource.org/licenses/mit-license.php MIT License
@@ -12,7 +12,7 @@
 
 // Simple example program on how to use websocket client embedded C interface.
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #define sleep(x) Sleep(1000 * (x))
 #else
 #include <unistd.h>

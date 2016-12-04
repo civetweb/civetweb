@@ -6,7 +6,7 @@
 
 /* Simple example program on how to use CivetWeb embedded into a C program. */
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif
