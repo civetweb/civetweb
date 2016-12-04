@@ -719,6 +719,14 @@ init_ssl(void *ssl_context, void *user_data)
 
 
 int
+log_message(const struct mg_connection *conn, const char *message)
+{
+	puts(message);
+	return 1;
+}
+
+
+int
 main(int argc, char *argv[])
 {
 	const char *options[] = {
@@ -788,7 +796,14 @@ main(int argc, char *argv[])
 #ifndef NO_SSL
 	callbacks.init_ssl = init_ssl;
 #endif
+	callbacks.log_message = log_message;
 	ctx = mg_start(&callbacks, 0, options);
+
+	/* Check return value: */
+	if (ctx == NULL) {
+		fprintf(stderr, "Cannot start CivetWeb - mg_start failed.\n");
+		return EXIT_FAILURE;
+	}
 
 	/* Add handler EXAMPLE_URI, to explain the example */
 	mg_set_request_handler(ctx, EXAMPLE_URI, ExampleHandler, 0);
