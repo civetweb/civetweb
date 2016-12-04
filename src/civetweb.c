@@ -391,7 +391,11 @@ struct timespec {
 };
 #endif
 
-#ifndef WIN_PTHREADS_TIME_H
+#if !defined(WIN_PTHREADS_TIME_H)
+#define MUST_IMPLEMENT_CLOCK_GETTIME
+#endif
+
+#ifdef MUST_IMPLEMENT_CLOCK_GETTIME
 static int
 clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
