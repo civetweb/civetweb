@@ -396,6 +396,7 @@ struct timespec {
 #endif
 
 #ifdef MUST_IMPLEMENT_CLOCK_GETTIME
+#define clock_gettime mg_clock_gettime
 static int
 clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
