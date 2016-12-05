@@ -1,6 +1,6 @@
 # Civetweb API Reference
 
-### `mg_set_user_connection_data( conn, data );
+### `mg_set_user_connection_data( conn, data );`
 
 ### Parameters
 
