@@ -49,7 +49,7 @@ the API can be found in [Embedding.md](Embedding.md).
 * [`mg_get_var2( data, data_len, var_name, dst, dst_len, occurrence );`](api/mg_get_var2.md)
 * [`mg_handle_form_request( conn, fdh );`](api/mg_handle_form_request.md)
 * [`mg_lock_connection( conn );`](api/mg_lock_connection.md)
-* [`mg_lock_context( ctx );`](api_mg_lock_context.md)
+* [`mg_lock_context( ctx );`](api/mg_lock_context.md)
 * [`mg_md5( buf, ... );`](api/mg_md5.md)
 * [`mg_modify_passwords_file( passwords_file_name, domain, user, password );`](api/mg_modify_passwords_file.md)
 * [`mg_printf( conn, fmt, ... );`](api/mg_printf.md)
