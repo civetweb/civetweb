@@ -6,13 +6,15 @@
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-|**`conn`**|`struct mg_connection *`||
+|**`conn`**|`struct mg_connection *`|Connection to remove the lock from|
 
 ### Return Value
 
 *none*
 
 ### Description
+
+The function `mg_unlock_connection()` removes the lock on a connection which was previously set with a call to [`mg_lock_connection()`](mg_lock_connection.md). Locking may be necessary when using [`mg_write()`](mg_write.md) or [`mg_printf()`](mg_printf.md) on websocket connections to prevent data corruption.
 
 ### See Also
 

@@ -17,15 +17,7 @@
 
 ### Description
 
-When starting the CivetWeb webserver, options are provided to set the wanted
-behaviour of the server. The options which were used during startup can be
-queried through the `mg_get_option()` function. Options are read-only and
-cannot be changed while the webserver is running. The function returns a
-pointer to a text string containing the value of the queried option, or NULL
-if an error occured. It is guaranteed however that if a valid option name is
-provided as a parameter to this function, that a pointer to a string is returned
-and not NULL. In case an option was empty or NULL during initialisation,
-`mg_get_option()` will return a pointer to an empty string.
+When starting the CivetWeb webserver, options are provided to set the wanted behaviour of the server. The options which were used during startup can be queried through the `mg_get_option()` function. Options are read-only and cannot be changed while the webserver is running. The function returns a pointer to a text string containing the value of the queried option, or NULL if an error occured. It is guaranteed however that if a valid option name is provided as a parameter to this function, that a pointer to a string is returned and not NULL. In case an option was empty or NULL during initialisation, `mg_get_option()` will return a pointer to an empty string.
 
 ### See Also
 

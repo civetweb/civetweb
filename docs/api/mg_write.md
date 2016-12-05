@@ -18,13 +18,7 @@
 
 ### Description
 
-The function `mg_write()` can be used to send a blob of arbitrary data over a
-connection. The size of the data is provided as a parameter. The only length
-limitation on this function is `MAX_INT`, because the return value of this
-function will turn negative with larger blocks of data, although they may
-have been sent correctly. The function returns the amount of bytes sent in
-case of success, the value **0** when the connection has been closed, and **-1** in
-case of an error.
+The function `mg_write()` can be used to send a blob of arbitrary data over a connection. The size of the data is provided as a parameter. The only length limitation on this function is `MAX_INT`, because the return value of this function will turn negative with larger blocks of data, although they may have been sent correctly. The function returns the amount of bytes sent in case of success, the value **0** when the connection has been closed, and **-1** in case of an error.
 
 ### See Also
 

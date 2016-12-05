@@ -6,14 +6,16 @@
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-|**`conn`**|`struct mg_connection *`||
-|**`path`**|`const char *`||
+|**`conn`**|`struct mg_connection *`|The connection over which the file must be sent|
+|**`path`**|`const char *`|The full path and filename of the file|
 
 ### Return Value
 
 *none*
 
 ### Description
+
+The function `mg_send_file()` sends the contents of a file over a connection to the remote peer. The function also adds the necessary HTTP headers.
 
 ### See Also
 
