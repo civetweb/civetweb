@@ -57,7 +57,7 @@ the API can be found in [Embedding.md](Embedding.md).
 * [`mg_send_file( conn, path );`](api/mg_send_file.md)
 * [`mg_send_mime_file( conn, path, mime_type );`](api/mg_send_mime_file.md)
 * [`mg_send_mime_file2( conn, path, mime_type, additional_headers );`](api/mg_send_mime_file2.md)
-* [`mg_set_auto_handler( ctx, uri, handler, cbdata );`](api/mg_set_auth_handler.md)
+* [`mg_set_auth_handler( ctx, uri, handler, cbdata );`](api/mg_set_auth_handler.md)
 * [`mg_set_request_handler( ctx, uri, handler, cbdata );`](api/mg_set_request_handler.md)
 * [`mg_set_user_connection_data( conn, data );`](api/mg_set_user_connection_data.md)
 * [`mg_set_websocket_handler( ctx, uri, connect_handler, ready_handler, data_handler, close_handler, cbdata );`](api/mg_set_websocket_handler.md)
