@@ -1,6 +1,6 @@
 # Civetweb API Reference
 
-### `mg_get_server_ports( ctx, size, ports );
+### `mg_get_server_ports( ctx, size, ports );`
 
 ### Parameters
 
