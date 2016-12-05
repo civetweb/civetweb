@@ -1,6 +1,6 @@
 # Civetweb API Reference
 
-### `mg_md5( buf, ... );
+### `mg_md5( buf, ... );`
 
 ### Parameters
 
