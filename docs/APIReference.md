@@ -41,7 +41,7 @@ the API can be found in [Embedding.md](Embedding.md).
 * [`mg_get_response( conn, ebuf, ebuf_len, timeout );`](api/mg_get_response.md)
 * [`mg_get_response_code_text( conn, response_code );`](api/mg_get_response_code_text.md)
 * [`mg_get_server_ports( ctx, size, ports );`](api/mg_get_server_ports.md)
-* [`mg_get_user_connection_data( conn );`](api/get_user_connection_data.md)
+* [`mg_get_user_connection_data( conn );`](api/mg_get_user_connection_data.md)
 * [`mg_get_user_data( ctx );`](api/mg_get_user_data.md)
 * [~~`mg_get_valid_option_names();`~~](api/mg_get_valid_option_names.md)
 * [`mg_get_valid_options();`](api/mg_get_valid_options.md)
