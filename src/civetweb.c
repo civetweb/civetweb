@@ -6131,6 +6131,9 @@ mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p)
  * to infinitely recurse and then crash.
  */
 #define INITIAL_DEPTH 9
+#if INITIAL_DEPTH <= 0
+#error Bad INITIAL_DEPTH for recursion, set to at least 1
+#endif
 
 struct read_auth_file_struct {
 	struct mg_connection *conn;
