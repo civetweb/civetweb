@@ -6126,6 +6126,12 @@ mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p)
 	}
 }
 
+/* Define the initial recursion depth for procesesing htpasswd files that include other htpasswd 
+ * (or even the same) files.  It is not difficult to provide a file or files s.t. they force civetweb
+ * to infinitely recurse and then crash.
+ */
+#define INITIAL_DEPTH 9
+
 struct read_auth_file_struct {
 	struct mg_connection *conn;
 	struct ah ah;
@@ -6138,14 +6144,14 @@ struct read_auth_file_struct {
 
 
 static int
-read_auth_file(struct mg_file *filep, struct read_auth_file_struct *workdata)
+read_auth_file(struct mg_file *filep, struct read_auth_file_struct *workdata, int depth)
 {
 	char *p;
 	int is_authorized = 0;
 	struct mg_file fp;
 	size_t l;
 
-	if (!filep || !workdata) {
+	if (!filep || !workdata || 0 == depth) {
 		return 0;
 	}
 
@@ -6178,9 +6184,16 @@ read_auth_file(struct mg_file *filep, struct read_auth_file_struct *workdata)
 				             workdata->f_user + 9,
 				             MG_FOPEN_MODE_READ,
 				             &fp)) {
-					is_authorized = read_auth_file(&fp, workdata);
+					is_authorized = read_auth_file(&fp, workdata, depth - 1);
 					(void)mg_fclose(
 					    &fp.access); /* ignore error on read only file */
+					
+					/* No need to continue processing files once we have a match, since nothing will reset it back
+					 * to 0.
+					 */
+					if (is_authorized) {
+						return is_authorized;
+					}
 				} else {
 					mg_cry(workdata->conn,
 					       "%s: cannot open authorization file: %s",
@@ -6256,7 +6269,7 @@ authorize(struct mg_connection *conn, struct mg_file *filep)
 	}
 	workdata.domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
 
-	return read_auth_file(filep, &workdata);
+	return read_auth_file(filep, &workdata, INITIAL_DEPTH);
 }
 
 
