@@ -5,6 +5,7 @@ Release Notes v1.9 (work in progress)
 Changes
 -------
 
+- Add API documentation
 - Use non-blocking sockets
 - stdint.h is now required and no longer optional
 - Rewrite connection close handling
