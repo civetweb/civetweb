@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015 the Civetweb developers
+# Copyright (c) 2015-2016 the Civetweb developers
 #
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
@@ -8,16 +8,16 @@ ifndef WITH_DUKTAPE
   $(error WITH_DUKTAPE is not defined)
 endif
 
-# Duktape default version is 1.3.0 (103)
-WITH_DUKTAPE_VERSION ?= 103
+# Duktape default version is 1.5.2 (105)
+WITH_DUKTAPE_VERSION ?= 105
 DUKTAPE_VERSION_KNOWN = 0
 
 # Select src and header according to the Duktape version
-ifeq ($(WITH_DUKTAPE_VERSION), 103)
-  $(info Duktape: Using version 1.3.0)
-  DUKTAPE_DIR = src/third_party/duktape-1.3.0/src
-  DUKTAPE_SHARED_LIB_FLAG = -lduktape1.3
-  DUKTAPE_CFLAGS = -DDUKTAPE_VERSION_MAKEFILE=501
+ifeq ($(WITH_DUKTAPE_VERSION), 105)
+  $(info Duktape: Using version 1.5.2)
+  DUKTAPE_DIR = src/third_party/duktape-1.5.2/src
+  DUKTAPE_SHARED_LIB_FLAG = -lduktape1.5
+  DUKTAPE_CFLAGS = -DDUKTAPE_VERSION_MAKEFILE=105
   DUKTAPE_VERSION_KNOWN = 1
 endif
 
@@ -44,7 +44,7 @@ else
   DUKTAPE_SOURCE_FILES = duktape.c
 
 ifeq ($(WITH_DUKTAPE_VERSION), 104)
-#    DUKTAPE_SOURCE_FILES +=
+#    DUKTAPE_SOURCE_FILES += ... TODO ...
 endif
 
   $(info Duktape: using static library)
