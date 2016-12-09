@@ -144,11 +144,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\third_party\duktape-1.3.0\src\duktape.h" />
-    <ClInclude Include="..\..\src\third_party\duktape-1.3.0\src\duk_config.h" />
+    <ClInclude Include="..\..\src\third_party\duktape-1.5.2\src\duktape.h" />
+    <ClInclude Include="..\..\src\third_party\duktape-1.5.2\src\duk_config.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\third_party\duktape-1.3.0\src\duktape.c" />
+    <ClCompile Include="..\..\src\third_party\duktape-1.5.2\src\duktape.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
