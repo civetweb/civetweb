@@ -2997,6 +2997,267 @@ START_TEST(test_keep_alive)
 END_TEST
 
 
+START_TEST(test_error_handling)
+{
+	struct mg_context *ctx;
+	FILE *f;
+
+	char bad_thread_num[32] = "badnumber";
+
+	const char *OPTIONS[] = {
+#if !defined(NO_FILES)
+		"document_root",
+		".",
+#endif
+		"error_pages",
+		"./",
+		"listening_ports",
+		"8080",
+		"num_threads",
+		bad_thread_num,
+		"unknown_option",
+		"unknown_option_value",
+		NULL
+	};
+	struct mg_callbacks callbacks;
+	char errmsg[256];
+
+	struct mg_connection *client_conn;
+	char client_err[256];
+	const struct mg_request_info *client_ri;
+	int client_res, i;
+
+	memset(&callbacks, 0, sizeof(callbacks));
+
+	callbacks.log_message = log_msg_func;
+
+	/* test with unknown option */
+	memset(errmsg, 0, sizeof(errmsg));
+	ctx = test_mg_start(&callbacks, (void *)errmsg, OPTIONS);
+
+	/* Details of errmsg may vary, but it may not be empty */
+	ck_assert_str_ne(errmsg, "");
+	ck_assert(ctx == NULL);
+	ck_assert_str_eq(errmsg, "Invalid option: unknown_option");
+
+	/* Remove invalid option */
+	for (i = 0; OPTIONS[i]; i++) {
+		if (strstr(OPTIONS[i], "unknown_option")) {
+			OPTIONS[i] = 0;
+		}
+	}
+
+	/* Test with bad num_thread option */
+	memset(errmsg, 0, sizeof(errmsg));
+	ctx = test_mg_start(&callbacks, (void *)errmsg, OPTIONS);
+
+	/* Details of errmsg may vary, but it may not be empty */
+	ck_assert_str_ne(errmsg, "");
+	ck_assert(ctx == NULL);
+	ck_assert_str_eq(errmsg, "Invalid number of worker threads");
+
+/* Set to a number - but use a number above the limit */
+#ifdef MAX_WORKER_THREADS
+	sprintf(bad_thread_num, "%u", MAX_WORKER_THREADS + 1);
+#else
+	sprintf(bad_thread_num, "%lu", 1000000000lu);
+#endif
+
+	/* Test with bad num_thread option */
+	memset(errmsg, 0, sizeof(errmsg));
+	ctx = test_mg_start(&callbacks, (void *)errmsg, OPTIONS);
+
+	/* Details of errmsg may vary, but it may not be empty */
+	ck_assert_str_ne(errmsg, "");
+	ck_assert(ctx == NULL);
+	ck_assert_str_eq(errmsg, "Too many worker threads");
+
+
+	/* HTTP 1.0 GET request - server is not running */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn == NULL);
+
+	/* Error message detail may vary - it may not be empty ans should contain
+	 * some information "connect" failed */
+	ck_assert_str_ne(client_err, "");
+	ck_assert(strstr(client_err, "connect"));
+
+
+	/* This time start the server with a valid configuration */
+	sprintf(bad_thread_num, "%i", 1);
+	memset(errmsg, 0, sizeof(errmsg));
+	ctx = test_mg_start(&callbacks, (void *)errmsg, OPTIONS);
+
+	ck_assert_str_eq(errmsg, "");
+	ck_assert(ctx != NULL);
+
+
+	/* Server is running now */
+	test_sleep(1);
+
+	/* Remove error files (in case they exist) */
+	(void)remove("error.htm");
+	(void)remove("error4xx.htm");
+	(void)remove("error404.htm");
+
+
+	/* Ask for something not existing - should get default 404 */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "404");
+	mg_close_connection(client_conn);
+	test_sleep(1);
+
+	/* Create an error.htm file */
+	f = fopen("error.htm", "wt");
+	ck_assert(f != NULL);
+	(void)fprintf(f, "err-all");
+	(void)fclose(f);
+
+
+	/* Ask for something not existing - should get error.htm */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "200");
+
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	mg_close_connection(client_conn);
+	ck_assert_int_eq(client_res, 7);
+	client_err[8] = 0;
+	ck_assert_str_eq(client_err, "err-all");
+	test_sleep(1);
+
+	/* Create an error4xx.htm file */
+	f = fopen("error4xx.htm", "wt");
+	ck_assert(f != NULL);
+	(void)fprintf(f, "err-4xx");
+	(void)fclose(f);
+
+
+	/* Ask for something not existing - should get error4xx.htm */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "200");
+
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	mg_close_connection(client_conn);
+	ck_assert_int_eq(client_res, 7);
+	client_err[8] = 0;
+	ck_assert_str_eq(client_err, "err-4xx");
+	test_sleep(1);
+
+	/* Create an error404.htm file */
+	f = fopen("error404.htm", "wt");
+	ck_assert(f != NULL);
+	(void)fprintf(f, "err-404");
+	(void)fclose(f);
+
+
+	/* Ask for something not existing - should get error404.htm */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "200");
+
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	mg_close_connection(client_conn);
+	ck_assert_int_eq(client_res, 7);
+	client_err[8] = 0;
+	ck_assert_str_eq(client_err, "err-404");
+	test_sleep(1);
+
+
+	/* Ask in a malformed way - should get error4xx.htm */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn, "Gimme some file!\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->uri, "200");
+
+	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
+	mg_close_connection(client_conn);
+	ck_assert_int_eq(client_res, 7);
+	client_err[8] = 0;
+	ck_assert_str_eq(client_err, "err-4xx");
+	test_sleep(1);
+
+
+	/* Remove all error files created by this test */
+	(void)remove("error.htm");
+	(void)remove("error4xx.htm");
+	(void)remove("error404.htm");
+
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+
+
+	/* HTTP 1.1 GET request - must not work, since server is already stopped  */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn == NULL);
+	ck_assert_str_ne(client_err, "");
+
+	test_sleep(1);
+}
+END_TEST
+
+
 Suite *
 make_public_server_suite(void)
 {
@@ -3011,6 +3272,7 @@ make_public_server_suite(void)
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
+	TCase *const tcase_error_handling = tcase_create("Error handling");
 
 	tcase_add_test(tcase_checktestenv, test_the_test_environment);
 	tcase_set_timeout(tcase_checktestenv, civetweb_min_test_timeout);
@@ -3048,6 +3310,10 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_keep_alive, 300);
 	suite_add_tcase(suite, tcase_keep_alive);
 
+	tcase_add_test(tcase_error_handling, test_error_handling);
+	tcase_set_timeout(tcase_error_handling, 300);
+	suite_add_tcase(suite, tcase_error_handling);
+
 	return suite;
 }
 
@@ -3072,6 +3338,7 @@ MAIN_PUBLIC_SERVER(void)
 	test_handle_form(0);
 	test_http_auth(0);
 	test_keep_alive(0);
+	test_error_handling(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }
