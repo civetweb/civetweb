@@ -277,13 +277,19 @@ test_mg_start(const struct mg_callbacks *callbacks,
               const char **configuration_options)
 {
 	struct mg_context *ctx;
+
 	mark_point();
 	test_sleep(SLEEP_BEFORE_MG_START);
 	mark_point();
 	ctx = mg_start(callbacks, user_data, configuration_options);
 	mark_point();
-	test_sleep(SLEEP_AFTER_MG_START);
+	if (ctx) {
+		/* Give the server some time to start in the test VM */
+		/* Don't need to do this if mg_start failed */
+		test_sleep(SLEEP_AFTER_MG_START);
+	}
 	mark_point();
+
 	return ctx;
 }
 
