@@ -6126,8 +6126,10 @@ mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p)
 	}
 }
 
-/* Define the initial recursion depth for procesesing htpasswd files that include other htpasswd 
- * (or even the same) files.  It is not difficult to provide a file or files s.t. they force civetweb
+/* Define the initial recursion depth for procesesing htpasswd files that
+ * include other htpasswd
+ * (or even the same) files.  It is not difficult to provide a file or files
+ * s.t. they force civetweb
  * to infinitely recurse and then crash.
  */
 #define INITIAL_DEPTH 9
@@ -6147,7 +6149,9 @@ struct read_auth_file_struct {
 
 
 static int
-read_auth_file(struct mg_file *filep, struct read_auth_file_struct *workdata, int depth)
+read_auth_file(struct mg_file *filep,
+               struct read_auth_file_struct *workdata,
+               int depth)
 {
 	char *p;
 	int is_authorized = 0;
@@ -6190,8 +6194,9 @@ read_auth_file(struct mg_file *filep, struct read_auth_file_struct *workdata, in
 					is_authorized = read_auth_file(&fp, workdata, depth - 1);
 					(void)mg_fclose(
 					    &fp.access); /* ignore error on read only file */
-					
-					/* No need to continue processing files once we have a match, since nothing will reset it back
+
+					/* No need to continue processing files once we have a
+					 * match, since nothing will reset it back
 					 * to 0.
 					 */
 					if (is_authorized) {
@@ -14141,6 +14146,22 @@ mg_start(const struct mg_callbacks *callbacks,
 		}
 	}
 
+	workerthreadcount = atoi(ctx->config[NUM_THREADS]);
+
+	if (workerthreadcount > MAX_WORKER_THREADS) {
+		mg_cry(fc(ctx), "Too many worker threads");
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
+
+	if (workerthreadcount <= 0) {
+		mg_cry(fc(ctx), "Invalid number of worker threads");
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
+
 #if defined(NO_FILES)
 	if (ctx->config[DOCUMENT_ROOT] != NULL) {
 		mg_cry(fc(ctx), "%s", "Document root must not be set");
@@ -14174,57 +14195,47 @@ mg_start(const struct mg_callbacks *callbacks,
 	(void)signal(SIGPIPE, SIG_IGN);
 #endif /* !_WIN32 && !__SYMBIAN32__ */
 
-	workerthreadcount = atoi(ctx->config[NUM_THREADS]);
-
-	if (workerthreadcount > MAX_WORKER_THREADS) {
-		mg_cry(fc(ctx), "Too many worker threads");
+	ctx->cfg_worker_threads = ((unsigned int)(workerthreadcount));
+	ctx->workerthreadids =
+	    (pthread_t *)mg_calloc(ctx->cfg_worker_threads, sizeof(pthread_t));
+	if (ctx->workerthreadids == NULL) {
+		mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
 
-	if (workerthreadcount > 0) {
-		ctx->cfg_worker_threads = ((unsigned int)(workerthreadcount));
-		ctx->workerthreadids =
-		    (pthread_t *)mg_calloc(ctx->cfg_worker_threads, sizeof(pthread_t));
-		if (ctx->workerthreadids == NULL) {
-			mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
-			free_context(ctx);
-			pthread_setspecific(sTlsKey, NULL);
-			return NULL;
-		}
-
 #if defined(ALTERNATIVE_QUEUE)
-		ctx->client_wait_events = mg_calloc(sizeof(ctx->client_wait_events[0]),
-		                                    ctx->cfg_worker_threads);
-		if (ctx->client_wait_events == NULL) {
-			mg_cry(fc(ctx), "Not enough memory for worker event array");
-			mg_free(ctx->workerthreadids);
-			free_context(ctx);
-			pthread_setspecific(sTlsKey, NULL);
-			return NULL;
-		}
-
-		ctx->client_socks =
-		    mg_calloc(sizeof(ctx->client_socks[0]), ctx->cfg_worker_threads);
-		if (ctx->client_wait_events == NULL) {
-			mg_cry(fc(ctx), "Not enough memory for worker socket array");
-			mg_free(ctx->client_socks);
-			mg_free(ctx->workerthreadids);
-			free_context(ctx);
-			pthread_setspecific(sTlsKey, NULL);
-			return NULL;
-		}
-
-		for (i = 0; (unsigned)i < ctx->cfg_worker_threads; i++) {
-			ctx->client_wait_events[i] = event_create();
-			if (ctx->client_wait_events[i] == 0) {
-				mg_cry(fc(ctx), "Error creating worker event %i", i);
-				/* TODO: clean all and exit */
-			}
-		}
-#endif
+	ctx->client_wait_events =
+	    mg_calloc(sizeof(ctx->client_wait_events[0]), ctx->cfg_worker_threads);
+	if (ctx->client_wait_events == NULL) {
+		mg_cry(fc(ctx), "Not enough memory for worker event array");
+		mg_free(ctx->workerthreadids);
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
 	}
+
+	ctx->client_socks =
+	    mg_calloc(sizeof(ctx->client_socks[0]), ctx->cfg_worker_threads);
+	if (ctx->client_wait_events == NULL) {
+		mg_cry(fc(ctx), "Not enough memory for worker socket array");
+		mg_free(ctx->client_socks);
+		mg_free(ctx->workerthreadids);
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
+
+	for (i = 0; (unsigned)i < ctx->cfg_worker_threads; i++) {
+		ctx->client_wait_events[i] = event_create();
+		if (ctx->client_wait_events[i] == 0) {
+			mg_cry(fc(ctx), "Error creating worker event %i", i);
+			/* TODO: clean all and exit */
+		}
+	}
+#endif
+
 
 #if defined(USE_TIMERS)
 	if (timers_init(ctx) != 0) {
