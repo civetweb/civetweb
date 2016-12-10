@@ -86,7 +86,7 @@ matrix:
     compiler: clang
     env:
       N=ClangLinuxMinimal
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -108,7 +108,7 @@ matrix:
     compiler: gcc
     env:
       N=GCCLinuxMinimal
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -130,7 +130,7 @@ matrix:
     compiler: clang
     env:
       N=ClangOSXMinimal
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -152,7 +152,7 @@ matrix:
     compiler: clang
     env:
       N=ClangLinuxMinNoCache
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -196,7 +196,7 @@ matrix:
     compiler: gcc
     env:
       N=GCCLinuxMax
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -218,7 +218,7 @@ matrix:
     compiler: clang
     env:
       N=ClangOSXMax
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -240,7 +240,7 @@ matrix:
     compiler: clang
     env:
       N=ClangLinuxDefault
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -262,7 +262,7 @@ matrix:
     compiler: gcc
     env:
       N=GCCLinuxDefault
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -284,7 +284,7 @@ matrix:
     compiler: clang
     env:
       N=ClangOSXDefault
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -306,7 +306,7 @@ matrix:
     compiler: clang
     env:
       N=ClangLinuxDefaultShared
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -328,7 +328,7 @@ matrix:
     compiler: gcc
     env:
       N=GCCLinuxDefaultShared
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -350,7 +350,7 @@ matrix:
     compiler: clang
     env:
       N=ClangOSXDefaultShared
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -372,7 +372,7 @@ matrix:
     compiler: clang
     env:
       N=OSX_Package
-      BUILD_TYPE=Coverage
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -1157,28 +1157,6 @@ matrix:
     env:
       N=GCCLinuxDefault_Debug
       BUILD_TYPE=Debug
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault_Release
-      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
