@@ -1030,6 +1030,16 @@ static int sTlsInit = 0;
 static int thread_idx_max = 0;
 
 
+struct mg_workerTLS {
+	int is_master;
+	unsigned long thread_idx;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+	HANDLE pthread_cond_helper_mutex;
+	struct mg_workerTLS *next_waiting_thread;
+#endif
+};
+
+
 #if defined(__GNUC__)
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
@@ -1769,15 +1779,6 @@ struct mg_connection {
 	int thread_index; /* Thread index within ctx */
 };
 
-
-struct mg_workerTLS {
-	int is_master;
-	unsigned long thread_idx;
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
-	HANDLE pthread_cond_helper_mutex;
-	struct mg_workerTLS *next_waiting_thread;
-#endif
-};
 
 /* Directory entry */
 struct de {
