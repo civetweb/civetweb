@@ -712,9 +712,11 @@ gmtime_s(const time_t *ptime, struct tm *ptm)
 	return localtime_s(ptime, ptm);
 }
 
+
 static int mg_atomic_inc(volatile int *addr);
 static struct tm tm_array[MAX_WORKER_THREADS];
 static int tm_index = 0;
+
 
 static struct tm *
 localtime(const time_t *ptime)
@@ -802,6 +804,43 @@ stat(const char *name, struct stat *st)
 
 #endif /* defined(_WIN32_WCE) */
 
+
+static int
+mg_atomic_inc(volatile int *addr)
+{
+	int ret;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+	/* Depending on the SDK, this function uses either
+	 * (volatile unsigned int *) or (volatile LONG *),
+	 * so whatever you use, the other SDK is likely to raise a warning. */
+	ret = InterlockedIncrement((volatile long *)addr);
+#elif defined(__GNUC__)                                                        \
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+	ret = __sync_add_and_fetch(addr, 1);
+#else
+	ret = (++(*addr));
+#endif
+	return ret;
+}
+
+
+static int
+mg_atomic_dec(volatile int *addr)
+{
+	int ret;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+	/* Depending on the SDK, this function uses either
+	 * (volatile unsigned int *) or (volatile LONG *),
+	 * so whatever you use, the other SDK is likely to raise a warning. */
+	ret = InterlockedDecrement((volatile long *)addr);
+#elif defined(__GNUC__)                                                        \
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+	ret = __sync_sub_and_fetch(addr, 1);
+#else
+	ret = (--(*addr));
+#endif
+	return ret;
+}
 
 
 #if defined(MEMORY_DEBUGGING)
@@ -1794,43 +1833,6 @@ static int is_websocket_protocol(const struct mg_connection *conn);
 #define is_websocket_protocol(conn) (0)
 #endif
 
-
-static int
-mg_atomic_inc(volatile int *addr)
-{
-	int ret;
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
-	/* Depending on the SDK, this function uses either
-	 * (volatile unsigned int *) or (volatile LONG *),
-	 * so whatever you use, the other SDK is likely to raise a warning. */
-	ret = InterlockedIncrement((volatile long *)addr);
-#elif defined(__GNUC__)                                                        \
-    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
-	ret = __sync_add_and_fetch(addr, 1);
-#else
-	ret = (++(*addr));
-#endif
-	return ret;
-}
-
-
-static int
-mg_atomic_dec(volatile int *addr)
-{
-	int ret;
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
-	/* Depending on the SDK, this function uses either
-	 * (volatile unsigned int *) or (volatile LONG *),
-	 * so whatever you use, the other SDK is likely to raise a warning. */
-	ret = InterlockedDecrement((volatile long *)addr);
-#elif defined(__GNUC__)                                                        \
-    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
-	ret = __sync_sub_and_fetch(addr, 1);
-#else
-	ret = (--(*addr));
-#endif
-	return ret;
-}
 
 #if !defined(NO_THREAD_NAME)
 #if defined(_WIN32) && defined(_MSC_VER)
