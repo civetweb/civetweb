@@ -803,135 +803,6 @@ stat(const char *name, struct stat *st)
 #endif /* defined(_WIN32_WCE) */
 
 
-#if defined(__GNUC__)
-/* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
-#if defined(__clang__)
-/* Show no warning in case system functions are not used. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#endif
-
-
-/* Get a unique thread ID as unsigned long, independent from the data type
- * of thread IDs defined by the operating system API.
- * If two calls to mg_current_thread_id  return the same value, they calls
- * are done from the same thread. If they return different values, they are
- * done from different threads. (Provided this function is used in the same
- * process context and threads are not repeatedly created and deleted, but
- * CivetWeb does not do that).
- * This function must match the signature required for SSL id callbacks:
- * CRYPTO_set_id_callback
- */
-static unsigned long
-mg_current_thread_id(void)
-{
-#ifdef _WIN32
-	return GetCurrentThreadId();
-#else
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code"
-/* For every compiler, either "sizeof(pthread_t) > sizeof(unsigned long)"
- * or not, so one of the two conditions will be unreachable by construction.
- * Unfortunately the C standard does not define a way to check this at
- * compile time, since the #if preprocessor conditions can not use the sizeof
- * operator as an argument. */
-#endif
-
-	if (sizeof(pthread_t) > sizeof(unsigned long)) {
-		/* This is the problematic case for CRYPTO_set_id_callback:
-		 * The OS pthread_t can not be cast to unsigned long. */
-		struct mg_workerTLS *tls =
-		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
-		if (tls == NULL) {
-			/* SSL called from an unknown thread: Create some thread index.
-			 */
-			tls = (struct mg_workerTLS *)mg_malloc(sizeof(struct mg_workerTLS));
-			tls->is_master = -2; /* -2 means "3rd party thread" */
-			tls->thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
-			pthread_setspecific(sTlsKey, tls);
-		}
-		return tls->thread_idx;
-	} else {
-		/* pthread_t may be any data type, so a simple cast to unsigned long
-		 * can rise a warning/error, depending on the platform.
-		 * Here memcpy is used as an anything-to-anything cast. */
-		unsigned long ret = 0;
-		pthread_t t = pthread_self();
-		memcpy(&ret, &t, sizeof(pthread_t));
-		return ret;
-	}
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
-#endif
-}
-
-
-#if defined(__GNUC__)
-/* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic pop
-#endif
-#if defined(__clang__)
-/* Show no warning in case system functions are not used. */
-#pragma clang diagnostic pop
-#endif
-
-
-#if !defined(DEBUG_TRACE)
-#if defined(DEBUG)
-static void DEBUG_TRACE_FUNC(const char *func,
-                             unsigned line,
-                             PRINTF_FORMAT_STRING(const char *fmt),
-                             ...) PRINTF_ARGS(3, 4);
-
-static void
-DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
-{
-	va_list args;
-	struct timespec tsnow;
-	uint64_t nsnow;
-	static uint64_t nslast;
-
-	/* Get some operating system independent thread id */
-	unsigned long thread_id = mg_current_thread_id();
-
-	clock_gettime(CLOCK_REALTIME, &tsnow);
-	nsnow = (((uint64_t)tsnow.tv_sec) * 1000000000) + (uint64_t)tsnow.tv_nsec;
-
-	flockfile(stdout);
-	printf("*** %lu.%09lu %12" INT64_FMT " %lu %s:%u: ",
-	       (unsigned long)tsnow.tv_sec,
-	       (unsigned long)tsnow.tv_nsec,
-	       nsnow - nslast,
-	       thread_id,
-	       func,
-	       line);
-	va_start(args, fmt);
-	vprintf(fmt, args);
-	va_end(args);
-	putchar('\n');
-	fflush(stdout);
-	funlockfile(stdout);
-	nslast = nsnow;
-}
-
-#define DEBUG_TRACE(fmt, ...)                                                  \
-	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
-
-#else
-#define DEBUG_TRACE(fmt, ...)                                                  \
-	do {                                                                       \
-	} while (0)
-#endif /* DEBUG */
-#endif /* DEBUG_TRACE */
-
 
 #if defined(MEMORY_DEBUGGING)
 static unsigned long mg_memory_debug_blockCount = 0;
@@ -1152,6 +1023,142 @@ static void mg_snprintf(const struct mg_connection *conn,
                * but this define only works well for Windows. */
 #define vsnprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_vsnprintf
 #endif
+
+
+static pthread_key_t sTlsKey; /* Thread local storage index */
+static int sTlsInit = 0;
+static int thread_idx_max = 0;
+
+
+#if defined(__GNUC__)
+/* Show no warning in case system functions are not used. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+#if defined(__clang__)
+/* Show no warning in case system functions are not used. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
+
+/* Get a unique thread ID as unsigned long, independent from the data type
+ * of thread IDs defined by the operating system API.
+ * If two calls to mg_current_thread_id  return the same value, they calls
+ * are done from the same thread. If they return different values, they are
+ * done from different threads. (Provided this function is used in the same
+ * process context and threads are not repeatedly created and deleted, but
+ * CivetWeb does not do that).
+ * This function must match the signature required for SSL id callbacks:
+ * CRYPTO_set_id_callback
+ */
+static unsigned long
+mg_current_thread_id(void)
+{
+#ifdef _WIN32
+	return GetCurrentThreadId();
+#else
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
+/* For every compiler, either "sizeof(pthread_t) > sizeof(unsigned long)"
+ * or not, so one of the two conditions will be unreachable by construction.
+ * Unfortunately the C standard does not define a way to check this at
+ * compile time, since the #if preprocessor conditions can not use the sizeof
+ * operator as an argument. */
+#endif
+
+	if (sizeof(pthread_t) > sizeof(unsigned long)) {
+		/* This is the problematic case for CRYPTO_set_id_callback:
+		 * The OS pthread_t can not be cast to unsigned long. */
+		struct mg_workerTLS *tls =
+		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+		if (tls == NULL) {
+			/* SSL called from an unknown thread: Create some thread index.
+			 */
+			tls = (struct mg_workerTLS *)mg_malloc(sizeof(struct mg_workerTLS));
+			tls->is_master = -2; /* -2 means "3rd party thread" */
+			tls->thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
+			pthread_setspecific(sTlsKey, tls);
+		}
+		return tls->thread_idx;
+	} else {
+		/* pthread_t may be any data type, so a simple cast to unsigned long
+		 * can rise a warning/error, depending on the platform.
+		 * Here memcpy is used as an anything-to-anything cast. */
+		unsigned long ret = 0;
+		pthread_t t = pthread_self();
+		memcpy(&ret, &t, sizeof(pthread_t));
+		return ret;
+	}
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+#endif
+}
+
+
+#if defined(__GNUC__)
+/* Show no warning in case system functions are not used. */
+#pragma GCC diagnostic pop
+#endif
+#if defined(__clang__)
+/* Show no warning in case system functions are not used. */
+#pragma clang diagnostic pop
+#endif
+
+
+#if !defined(DEBUG_TRACE)
+#if defined(DEBUG)
+static void DEBUG_TRACE_FUNC(const char *func,
+                             unsigned line,
+                             PRINTF_FORMAT_STRING(const char *fmt),
+                             ...) PRINTF_ARGS(3, 4);
+
+static void
+DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
+{
+	va_list args;
+	struct timespec tsnow;
+	uint64_t nsnow;
+	static uint64_t nslast;
+
+	/* Get some operating system independent thread id */
+	unsigned long thread_id = mg_current_thread_id();
+
+	clock_gettime(CLOCK_REALTIME, &tsnow);
+	nsnow = (((uint64_t)tsnow.tv_sec) * 1000000000) + (uint64_t)tsnow.tv_nsec;
+
+	flockfile(stdout);
+	printf("*** %lu.%09lu %12" INT64_FMT " %lu %s:%u: ",
+	       (unsigned long)tsnow.tv_sec,
+	       (unsigned long)tsnow.tv_nsec,
+	       nsnow - nslast,
+	       thread_id,
+	       func,
+	       line);
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+	putchar('\n');
+	fflush(stdout);
+	funlockfile(stdout);
+	nslast = nsnow;
+}
+
+#define DEBUG_TRACE(fmt, ...)                                                  \
+	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
+
+#else
+#define DEBUG_TRACE(fmt, ...)                                                  \
+	do {                                                                       \
+	} while (0)
+#endif /* DEBUG */
+#endif /* DEBUG_TRACE */
+
 
 #define MD5_STATIC static
 #include "md5.inl"
@@ -1761,11 +1768,6 @@ struct mg_connection {
 
 	int thread_index; /* Thread index within ctx */
 };
-
-
-static pthread_key_t sTlsKey; /* Thread local storage index */
-static int sTlsInit = 0;
-static int thread_idx_max = 0;
 
 
 struct mg_workerTLS {
