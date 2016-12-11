@@ -818,15 +818,23 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	uint64_t nsnow;
 	static uint64_t nslast;
 
+	/* Get some operating system independent thread id */
+	uint64_t thread_as_i64;
+	pthread_t t = pthread_self();
+	memcpy(&thread_as_i64,
+	       &t,
+	       ((sizeof(t) < sizeof(thread_as_i64)) ? sizeof(t)
+	                                            : sizeof(thread_as_i64)));
+
 	clock_gettime(CLOCK_REALTIME, &tsnow);
 	nsnow = (((uint64_t)tsnow.tv_sec) * 1000000000) + (uint64_t)tsnow.tv_nsec;
 
 	flockfile(stdout);
-	printf("*** %lu.%09lu %12" INT64_FMT " %p %s:%u: ",
+	printf("*** %lu.%09lu %12" INT64_FMT " %" INT64_FMT " %s:%u: ",
 	       (unsigned long)tsnow.tv_sec,
 	       (unsigned long)tsnow.tv_nsec,
 	       nsnow - nslast,
-	       (void *)pthread_self(),
+	       thread_as_i64,
 	       func,
 	       line);
 	va_start(args, fmt);
