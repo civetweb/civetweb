@@ -6016,6 +6016,7 @@ open_auth_file(struct mg_connection *conn,
 			/* Use global passwords file */
 			if (!mg_fopen(conn, gpass, MG_FOPEN_MODE_READ, filep)) {
 #ifdef DEBUG
+                /* Use mg_cry here, since gpass has been configured. */
 				mg_cry(conn, "fopen(%s): %s", gpass, strerror(ERRNO));
 #endif
 			}
@@ -6036,6 +6037,9 @@ open_auth_file(struct mg_connection *conn,
 
 			if (truncated || !mg_fopen(conn, name, MG_FOPEN_MODE_READ, filep)) {
 #ifdef DEBUG
+                /* Don't use mg_cry here, but only a trace, since this is 
+                 * a typical case. It will occur for every directory
+                 * without a password file. */
 				DEBUG_TRACE("fopen(%s): %s", name, strerror(ERRNO));
 #endif
 			}
@@ -6057,7 +6061,10 @@ open_auth_file(struct mg_connection *conn,
 
 			if (truncated || !mg_fopen(conn, name, MG_FOPEN_MODE_READ, filep)) {
 #ifdef DEBUG
-				mg_cry(conn, "fopen(%s): %s", name, strerror(ERRNO));
+                /* Don't use mg_cry here, but only a trace, since this is 
+                 * a typical case. It will occur for every directory
+                 * without a password file. */
+				DEBUG_TRACE("fopen(%s): %s", name, strerror(ERRNO));
 #endif
 			}
 		}
