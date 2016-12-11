@@ -1083,7 +1083,6 @@ struct mg_workerTLS {
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-static unsigned long mg_current_thread_id(void) __attribute__((unused));
 #endif
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
@@ -14137,6 +14136,14 @@ mg_start(const struct mg_callbacks *callbacks,
 	tls.pthread_cond_helper_mutex = NULL;
 #endif
 	pthread_setspecific(sTlsKey, &tls);
+
+    /* Dummy use this function - in some #ifdef combinations it's used, 
+     * while it's not used in others, but GCC seems to stupid to understand
+     * #pragma GCC diagnostic ignored "-Wunused-function"
+     * in cases the function is unused, and it also complains on
+     * __attribute((unused))__ in cases it is used.
+     * So dummy use it, to have our peace. */
+    (void)mg_current_thread_id();
 
 	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr);
 #if !defined(ALTERNATIVE_QUEUE)
