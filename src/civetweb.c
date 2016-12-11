@@ -1079,7 +1079,7 @@ struct mg_workerTLS {
 };
 
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__MINGW32__)
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
