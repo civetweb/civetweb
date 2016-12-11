@@ -3346,11 +3346,15 @@ START_TEST(test_error_log_file)
 	ck_assert_msg(ok, "Did not find HTTP status code in access log file");
 
 	/* Check error.log */
+	memset(buf, 0, sizeof(buf));
 	f = fopen("error.log", "r");
 	if (f) {
+		(void)fgets(buf, sizeof(buf) - 1, f);
 		fclose(f);
 	}
-	ck_assert_msg(f == NULL, "Should not create error log file on 404");
+	ck_assert_msg(f == NULL,
+	              "Should not create error log file on 404, but got [%s]",
+	              buf);
 
 	/* Remove log files */
 	(void)remove("error.log");
@@ -3366,12 +3370,16 @@ START_TEST(test_error_log_file)
 	    "Should not be able to start server with bad port configuration");
 
 	/* Check access.log */
+	memset(buf, 0, sizeof(buf));
 	f = fopen("access.log", "r");
 	if (f) {
+		(void)fgets(buf, sizeof(buf) - 1, f);
 		fclose(f);
 	}
-	ck_assert_msg(f == NULL,
-	              "Should not create access log file if start fails");
+	ck_assert_msg(
+	    f == NULL,
+	    "Should not create access log file if start fails, but got [%s]",
+	    buf);
 
 	/* Check error.log */
 	memset(buf, 0, sizeof(buf));
