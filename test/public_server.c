@@ -2706,7 +2706,7 @@ START_TEST(test_http_auth)
 		ck_abort_msg("Cannot create file %s", test_file);
 	}
 
-	remove(passwd_file);
+	(void)remove(passwd_file);
 
 	/* Read file before a .htpasswd file has been created */
 	memset(client_err, 0, sizeof(client_err));
@@ -2892,7 +2892,7 @@ START_TEST(test_http_auth)
 
 
 	/* Now remove the password file */
-	remove(passwd_file);
+	(void)remove(passwd_file);
 	test_sleep(1);
 
 
@@ -2922,7 +2922,7 @@ START_TEST(test_http_auth)
 
 	/* Stop the server and clean up */
 	test_mg_stop(ctx);
-	remove(test_file);
+	(void)remove(test_file);
 
 #endif
 }
@@ -3266,6 +3266,133 @@ START_TEST(test_error_handling)
 END_TEST
 
 
+START_TEST(test_error_log_file)
+{
+	/* Server var */
+	struct mg_context *ctx;
+	const char *OPTIONS[32];
+	int opt_cnt = 0;
+
+	/* Client var */
+	struct mg_connection *client;
+	char client_err_buf[256];
+	char client_data_buf[256];
+	const struct mg_request_info *client_ri;
+
+	/* File content check var */
+	FILE *f;
+	char buf[1024];
+	int len, ok;
+
+	/* Set options and start server */
+	OPTIONS[opt_cnt++] = "listening_ports";
+	OPTIONS[opt_cnt++] = "8080";
+	OPTIONS[opt_cnt++] = "error_log_file";
+	OPTIONS[opt_cnt++] = "error.log";
+	OPTIONS[opt_cnt++] = "access_log_file";
+	OPTIONS[opt_cnt++] = "access.log";
+#if !defined(NO_FILES)
+	OPTIONS[opt_cnt++] = "document_root";
+	OPTIONS[opt_cnt++] = ".";
+#endif
+	OPTIONS[opt_cnt] = NULL;
+
+	ctx = test_mg_start(NULL, 0, OPTIONS);
+	ck_assert(ctx != NULL);
+
+	/* Remove log files (they may exist from previous incomplete runs of
+	 * this test) */
+	(void)remove("error.log");
+	(void)remove("access.log");
+
+	/* connect client */
+	memset(client_err_buf, 0, sizeof(client_err_buf));
+	memset(client_data_buf, 0, sizeof(client_data_buf));
+
+	client = mg_download("127.0.0.1",
+	                     8080,
+	                     0,
+	                     client_err_buf,
+	                     sizeof(client_err_buf),
+	                     "GET /not_existing_file.ext HTTP/1.0\r\n\r\n");
+
+	ck_assert(ctx != NULL);
+	ck_assert_str_eq(client_err_buf, "");
+
+	client_ri = mg_get_request_info(client);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_str_eq(client_ri->uri, "404");
+
+	/* Close the client connection */
+	mg_close_connection(client);
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+
+
+	/* Check access.log */
+	memset(buf, 0, sizeof(buf));
+	f = fopen("access.log", "r");
+	ck_assert_msg(f != NULL, "Cannot open access log file");
+	ok = (NULL != fgets(buf, sizeof(buf) - 1, f));
+	(void)fclose(f);
+	ck_assert_msg(ok, "Cannot read access log file");
+	len = (int)strlen(buf);
+	ck_assert_int_gt(len, 0);
+	ok = (NULL != strstr(buf, "not_existing_file.ext"));
+	ck_assert_msg(ok, "Did not find uri in access log file");
+	ok = (NULL != strstr(buf, "404"));
+	ck_assert_msg(ok, "Did not find HTTP status code in access log file");
+
+	/* Check error.log */
+	f = fopen("error.log", "r");
+	if (f) {
+		fclose(f);
+	}
+	ck_assert_msg(f == NULL, "Should not create error log file on 404");
+
+	/* Remove log files */
+	(void)remove("error.log");
+	(void)remove("access.log");
+
+	/* Start server with bad options */
+	ck_assert_str_eq(OPTIONS[0], "listening_ports");
+	OPTIONS[1] = "bad port syntax";
+
+	ctx = test_mg_start(NULL, 0, OPTIONS);
+	ck_assert_msg(
+	    ctx == NULL,
+	    "Should not be able to start server with bad port configuration");
+
+	/* Check access.log */
+	f = fopen("access.log", "r");
+	if (f) {
+		fclose(f);
+	}
+	ck_assert_msg(f == NULL,
+	              "Should not create access log file if start fails");
+
+	/* Check error.log */
+	memset(buf, 0, sizeof(buf));
+	f = fopen("error.log", "r");
+	ck_assert_msg(f != NULL, "Cannot open access log file");
+	ok = (NULL != fgets(buf, sizeof(buf) - 1, f));
+	(void)fclose(f);
+	ck_assert_msg(ok, "Cannot read access log file");
+	len = (int)strlen(buf);
+	ck_assert_int_gt(len, 0);
+	ok = (NULL != strstr(buf, "port"));
+	ck_assert_msg(ok, "Did not find port as error reason in error log file");
+
+
+	/* Remove log files */
+	(void)remove("error.log");
+	(void)remove("access.log");
+}
+END_TEST
+
+
 static int
 test_throttle_begin_request(struct mg_connection *conn)
 {
@@ -3466,6 +3593,7 @@ make_public_server_suite(void)
 	suite_add_tcase(suite, tcase_keep_alive);
 
 	tcase_add_test(tcase_error_handling, test_error_handling);
+	tcase_add_test(tcase_error_handling, test_error_log_file);
 	tcase_set_timeout(tcase_error_handling, 300);
 	suite_add_tcase(suite, tcase_error_handling);
 
@@ -3498,6 +3626,7 @@ MAIN_PUBLIC_SERVER(void)
 	test_http_auth(0);
 	test_keep_alive(0);
 	test_error_handling(0);
+	test_error_log_file(0);
 	test_throttle(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
