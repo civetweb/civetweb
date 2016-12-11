@@ -3010,21 +3010,6 @@ START_TEST(test_error_handling)
 
 	char bad_thread_num[32] = "badnumber";
 
-	const char *OPTIONS[] = {
-#if !defined(NO_FILES)
-		"document_root",
-		".",
-#endif
-		"error_pages",
-		"./",
-		"listening_ports",
-		"8080",
-		"num_threads",
-		bad_thread_num,
-		"unknown_option",
-		"unknown_option_value",
-		NULL
-	};
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
@@ -3032,6 +3017,23 @@ START_TEST(test_error_handling)
 	char client_err[256];
 	const struct mg_request_info *client_ri;
 	int client_res, i;
+
+	const char *OPTIONS[32];
+	int opt_cnt = 0;
+
+#if !defined(NO_FILES)
+	OPTIONS[opt_cnt++] = "document_root";
+	OPTIONS[opt_cnt++] = ".";
+#endif
+	OPTIONS[opt_cnt++] = "error_pages";
+	OPTIONS[opt_cnt++] = "./";
+	OPTIONS[opt_cnt++] = "listening_ports";
+	OPTIONS[opt_cnt++] = "8080";
+	OPTIONS[opt_cnt++] = "num_threads";
+	OPTIONS[opt_cnt++] = bad_thread_num;
+	OPTIONS[opt_cnt++] = "unknown_option";
+	OPTIONS[opt_cnt++] = "unknown_option_value";
+	OPTIONS[opt_cnt] = NULL;
 
 	memset(&callbacks, 0, sizeof(callbacks));
 
@@ -3264,6 +3266,151 @@ START_TEST(test_error_handling)
 END_TEST
 
 
+static int
+test_throttle_begin_request(struct mg_connection *conn)
+{
+	const struct mg_request_info *ri;
+	long unsigned len = 1024 * 10;
+	const char *block = "0123456789";
+	unsigned long i, blocklen;
+
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+	ck_assert(ri != NULL);
+
+	ck_assert_str_eq(ri->request_method, "GET");
+	ck_assert_str_eq(ri->request_uri, "/throttle");
+	ck_assert_str_eq(ri->local_uri, "/throttle");
+	ck_assert_str_eq(ri->http_version, "1.0");
+	ck_assert_str_eq(ri->query_string, "q");
+	ck_assert_str_eq(ri->remote_addr, "127.0.0.1");
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Length: %lu\r\n"
+	          "Connection: close\r\n\r\n",
+	          len);
+
+	blocklen = (unsigned long)strlen(block);
+
+	for (i = 0; i < len; i += blocklen) {
+		mg_write(conn, block, blocklen);
+	}
+
+	return 987; /* Not a valid HTTP response code,
+	             * but it should be written to the log and passed to
+	             * end_request. */
+}
+
+
+static void
+test_throttle_end_request(const struct mg_connection *conn,
+                          int reply_status_code)
+{
+	const struct mg_request_info *ri;
+
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+	ck_assert(ri != NULL);
+
+	ck_assert_str_eq(ri->request_method, "GET");
+	ck_assert_str_eq(ri->request_uri, "/throttle");
+	ck_assert_str_eq(ri->local_uri, "/throttle");
+	ck_assert_str_eq(ri->http_version, "1.0");
+	ck_assert_str_eq(ri->query_string, "q");
+	ck_assert_str_eq(ri->remote_addr, "127.0.0.1");
+
+	ck_assert_int_eq(reply_status_code, 987);
+}
+
+
+START_TEST(test_throttle)
+{
+	/* Server var */
+	struct mg_context *ctx;
+	struct mg_callbacks callbacks;
+	const char *OPTIONS[32];
+	int opt_cnt = 0;
+
+	/* Client var */
+	struct mg_connection *client;
+	char client_err_buf[256];
+	char client_data_buf[256];
+	const struct mg_request_info *client_ri;
+
+	/* timing test */
+	int r, data_read;
+	time_t t0, t1;
+	double dt;
+
+
+/* Set options and start server */
+#if !defined(NO_FILES)
+	OPTIONS[opt_cnt++] = "document_root";
+	OPTIONS[opt_cnt++] = ".";
+#endif
+	OPTIONS[opt_cnt++] = "listening_ports";
+	OPTIONS[opt_cnt++] = "8080";
+	OPTIONS[opt_cnt++] = "throttle";
+	OPTIONS[opt_cnt++] = "*=1k";
+	OPTIONS[opt_cnt] = NULL;
+
+	memset(&callbacks, 0, sizeof(callbacks));
+	callbacks.begin_request = test_throttle_begin_request;
+	callbacks.end_request = test_throttle_end_request;
+
+	ctx = test_mg_start(&callbacks, 0, OPTIONS);
+	ck_assert(ctx != NULL);
+
+	/* connect client */
+	memset(client_err_buf, 0, sizeof(client_err_buf));
+	memset(client_data_buf, 0, sizeof(client_data_buf));
+
+	strcpy(client_err_buf, "reset-content");
+	client = mg_download("127.0.0.1",
+	                     8080,
+	                     0,
+	                     client_err_buf,
+	                     sizeof(client_err_buf),
+	                     "GET /throttle?q HTTP/1.0\r\n\r\n");
+
+	ck_assert(ctx != NULL);
+	ck_assert_str_eq(client_err_buf, "");
+
+	client_ri = mg_get_request_info(client);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_str_eq(client_ri->uri, "200");
+
+	ck_assert_int_eq(client_ri->content_length, 1024 * 10);
+
+	data_read = 0;
+	t0 = time(NULL);
+	while (data_read < client_ri->content_length) {
+		r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+		ck_assert_int_ge(r, 0);
+		data_read += r;
+	}
+	t1 = time(NULL);
+	dt = difftime(t1, t0) * 1000.0; /* Elapsed time in ms - in most systems
+	                                 * only with second resolution */
+
+	/* Check if there are at least 10 seconds */
+	ck_assert_int_ge((int)dt, 10 * 1000);
+
+	/* Nothing left to read */
+	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+	ck_assert_int_eq(r, 0);
+
+	/* Close the client connection */
+	mg_close_connection(client);
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+}
+END_TEST
+
+
 Suite *
 make_public_server_suite(void)
 {
@@ -3279,6 +3426,8 @@ make_public_server_suite(void)
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
 	TCase *const tcase_error_handling = tcase_create("Error handling");
+	TCase *const tcase_throttle = tcase_create("Limit speed");
+
 
 	tcase_add_test(tcase_checktestenv, test_the_test_environment);
 	tcase_set_timeout(tcase_checktestenv, civetweb_min_test_timeout);
@@ -3320,6 +3469,10 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_error_handling, 300);
 	suite_add_tcase(suite, tcase_error_handling);
 
+	tcase_add_test(tcase_throttle, test_throttle);
+	tcase_set_timeout(tcase_throttle, 300);
+	suite_add_tcase(suite, tcase_throttle);
+
 	return suite;
 }
 
@@ -3345,6 +3498,7 @@ MAIN_PUBLIC_SERVER(void)
 	test_http_auth(0);
 	test_keep_alive(0);
 	test_error_handling(0);
+	test_throttle(0);
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }

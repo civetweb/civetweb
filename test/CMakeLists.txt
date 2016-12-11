@@ -170,6 +170,7 @@ civetweb_add_test(PublicServer "Handle Form")
 civetweb_add_test(PublicServer "HTTP Authentication")
 civetweb_add_test(PublicServer "HTTP Keep Alive")
 civetweb_add_test(PublicServer "Error handling")
+civetweb_add_test(PublicServer "Limit speed")
 
 # Timer tests
 civetweb_add_test(Timer "Timer1")
