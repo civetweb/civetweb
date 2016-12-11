@@ -1083,6 +1083,7 @@ struct mg_workerTLS {
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+static unsigned long mg_current_thread_id(void) __attribute__((unused));
 #endif
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
