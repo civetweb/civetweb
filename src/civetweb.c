@@ -12333,7 +12333,7 @@ close_socket_gracefully(struct mg_connection *conn)
 #endif
 	struct linger linger;
 	int error_code = 0;
-	int linger_timeout = -1;
+	int linger_timeout = -2;
 	socklen_t opt_len = sizeof(error_code);
 
 	if (!conn) {
@@ -12370,7 +12370,9 @@ close_socket_gracefully(struct mg_connection *conn)
 	linger.l_onoff = (linger_timeout >= 0);
 	linger.l_linger = (linger_timeout + 999) / 1000;
 
-	if (getsockopt(conn->client.sock,
+	if (linger_timeout < -1) {
+        /* Default: don't configure any linger */
+    } else if (getsockopt(conn->client.sock,
 	               SOL_SOCKET,
 	               SO_ERROR,
 	               (char *)&error_code,
@@ -12393,8 +12395,10 @@ close_socket_gracefully(struct mg_connection *conn)
 		               (char *)&linger,
 		               sizeof(linger)) != 0) {
 			mg_cry(conn,
-			       "%s: setsockopt(SOL_SOCKET SO_LINGER) failed: %s",
+			       "%s: setsockopt(SOL_SOCKET SO_LINGER(%i,%i)) failed: %s",
 			       __func__,
+                   linger.l_onoff,
+                   linger.l_linger,
 			       strerror(ERRNO));
 		}
 	}
