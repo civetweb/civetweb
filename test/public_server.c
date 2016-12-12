@@ -2923,6 +2923,7 @@ START_TEST(test_http_auth)
 	/* Stop the server and clean up */
 	test_mg_stop(ctx);
 	(void)remove(test_file);
+	(void)remove(passwd_file);
 
 #endif
 }

@@ -1559,6 +1559,7 @@ enum {
 	HIDE_FILES,
 	REQUEST_TIMEOUT,
 	KEEP_ALIVE_TIMEOUT,
+	LINGER_TIMEOUT,
 	SSL_DO_VERIFY_PEER,
 	SSL_CA_PATH,
 	SSL_CA_FILE,
@@ -1642,6 +1643,7 @@ static struct mg_option config_options[] = {
     {"hide_files_patterns", CONFIG_TYPE_EXT_PATTERN, NULL},
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
     {"keep_alive_timeout_ms", CONFIG_TYPE_NUMBER, "500"},
+    {"linger_timeout_ms", CONFIG_TYPE_NUMBER, NULL},
     {"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
     {"ssl_ca_path", CONFIG_TYPE_DIRECTORY, NULL},
     {"ssl_ca_file", CONFIG_TYPE_FILE, NULL},
@@ -6016,7 +6018,7 @@ open_auth_file(struct mg_connection *conn,
 			/* Use global passwords file */
 			if (!mg_fopen(conn, gpass, MG_FOPEN_MODE_READ, filep)) {
 #ifdef DEBUG
-                /* Use mg_cry here, since gpass has been configured. */
+				/* Use mg_cry here, since gpass has been configured. */
 				mg_cry(conn, "fopen(%s): %s", gpass, strerror(ERRNO));
 #endif
 			}
@@ -6037,9 +6039,9 @@ open_auth_file(struct mg_connection *conn,
 
 			if (truncated || !mg_fopen(conn, name, MG_FOPEN_MODE_READ, filep)) {
 #ifdef DEBUG
-                /* Don't use mg_cry here, but only a trace, since this is 
-                 * a typical case. It will occur for every directory
-                 * without a password file. */
+				/* Don't use mg_cry here, but only a trace, since this is
+				 * a typical case. It will occur for every directory
+				 * without a password file. */
 				DEBUG_TRACE("fopen(%s): %s", name, strerror(ERRNO));
 #endif
 			}
@@ -6061,9 +6063,9 @@ open_auth_file(struct mg_connection *conn,
 
 			if (truncated || !mg_fopen(conn, name, MG_FOPEN_MODE_READ, filep)) {
 #ifdef DEBUG
-                /* Don't use mg_cry here, but only a trace, since this is 
-                 * a typical case. It will occur for every directory
-                 * without a password file. */
+				/* Don't use mg_cry here, but only a trace, since this is
+				 * a typical case. It will occur for every directory
+				 * without a password file. */
 				DEBUG_TRACE("fopen(%s): %s", name, strerror(ERRNO));
 #endif
 			}
@@ -12331,6 +12333,7 @@ close_socket_gracefully(struct mg_connection *conn)
 #endif
 	struct linger linger;
 	int error_code = 0;
+	int linger_timeout = -1;
 	socklen_t opt_len = sizeof(error_code);
 
 	if (!conn) {
@@ -12358,11 +12361,14 @@ close_socket_gracefully(struct mg_connection *conn)
 	} while (n > 0);
 #endif
 
-#if !defined(__MACH__)
+	if (conn->ctx->config[LINGER_TIMEOUT]) {
+		linger_timeout = atoi(conn->ctx->config[LINGER_TIMEOUT]);
+	}
+
 	/* Set linger option to avoid socket hanging out after close. This
 	 * prevent ephemeral port exhaust problem under high QPS. */
-	linger.l_onoff = 1;
-	linger.l_linger = 1;
+	linger.l_onoff = (linger_timeout >= 0);
+	linger.l_linger = (linger_timeout + 999) / 1000;
 
 	if (getsockopt(conn->client.sock,
 	               SOL_SOCKET,
@@ -12379,7 +12385,7 @@ close_socket_gracefully(struct mg_connection *conn)
 	} else if (error_code == ECONNRESET) {
 		/* Socket already closed by client/peer, close socket without linger */
 	} else {
-    
+
 		/* Set linger timeout */
 		if (setsockopt(conn->client.sock,
 		               SOL_SOCKET,
@@ -12392,7 +12398,6 @@ close_socket_gracefully(struct mg_connection *conn)
 			       strerror(ERRNO));
 		}
 	}
-#endif
 
 	/* Now we know that our FIN is ACK-ed, safe to close */
 	closesocket(conn->client.sock);
@@ -14138,13 +14143,13 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif
 	pthread_setspecific(sTlsKey, &tls);
 
-    /* Dummy use this function - in some #ifdef combinations it's used, 
-     * while it's not used in others, but GCC seems to stupid to understand
-     * #pragma GCC diagnostic ignored "-Wunused-function"
-     * in cases the function is unused, and it also complains on
-     * __attribute((unused))__ in cases it is used.
-     * So dummy use it, to have our peace. */
-    (void)mg_current_thread_id();
+	/* Dummy use this function - in some #ifdef combinations it's used,
+	 * while it's not used in others, but GCC seems to stupid to understand
+	 * #pragma GCC diagnostic ignored "-Wunused-function"
+	 * in cases the function is unused, and it also complains on
+	 * __attribute((unused))__ in cases it is used.
+	 * So dummy use it, to have our peace. */
+	(void)mg_current_thread_id();
 
 	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr);
 #if !defined(ALTERNATIVE_QUEUE)
