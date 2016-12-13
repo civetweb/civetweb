@@ -5,7 +5,12 @@ Release Notes v1.9 (work in progress)
 Changes
 -------
 
+- Add option to set linger timeout
+- Update Duktape and Lua (third-party code)
+- Add continuous integration tests
 - Add API documentation
+- Limit recursions in .htpasswd files
+- Fix SCRIPT_NAME for CGI directory index files (index.php)
 - Use non-blocking sockets
 - stdint.h is now required and no longer optional
 - Rewrite connection close handling
