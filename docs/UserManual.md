@@ -241,6 +241,13 @@ For this to work when using request handlers it is important to add the
 correct Content-Length HTTP header for each request. If this is forgotten the
 client will time out.
 
+Note: If you set keep\_alive to `yes`, you should set keep\_alive\_timeout\_ms
+to some value > 0 (e.g. 500). If you set keep\_alive to `no`, you should set
+keep\_alive\_timeout\_ms to 0. Currently, this is done as a default value,
+but this configuration is redundant. In a future version, the keep\_alive 
+configuration option might be removed and automatically set to `yes` if 
+a timeout > 0 is set.
+
 ### access\_control\_list
 An Access Control List (ACL) allows restrictions to be put on the list of IP
 addresses which have access to the web server. In the case of the Civetweb
@@ -373,6 +380,19 @@ to `yes`, the value of keep\_alive\_timeout\_ms must be >0.
 Currently keep\_alive\_timeout\_ms is ignored if enable\_keep\_alive is no,
 but future versions my drop the enable\_keep\_alive configuration value and
 automatically use keep-alive if keep\_alive\_timeout\_ms is not 0.
+
+### linger\_timeout\_ms
+Set TCP socket linger timeout before closing sockets (SO\_LINGER option).
+The configured value is a timeout in milliseconds. Setting the value to 0
+will yield in abortive close (if the socket is closed from the server side).
+Setting the value to -1 will turn off linger.
+If the value is not set (or set to -2), CivetWeb will not set the linger
+option at all.
+
+Note: For consistency with other timeouts, the value is configured in
+milliseconds. However, the TCP socket layer usually only offers a timeout in 
+seconds, so the value should be an integer multiple of 1000.
+
 
 ### lua\_preload\_file
 This configuration option can be used to specify a Lua script file, which
