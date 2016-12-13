@@ -65,6 +65,7 @@
 * Nigel Stewart
 * nihildeb
 * No Face Press
+* Patrick Trinkle
 * Paul Sokolovsky
 * Perttu Ahola
 * Peter Foerster
