@@ -12365,18 +12365,24 @@ close_socket_gracefully(struct mg_connection *conn)
 		linger_timeout = atoi(conn->ctx->config[LINGER_TIMEOUT]);
 	}
 
-	/* Set linger option to avoid socket hanging out after close. This
-	 * prevent ephemeral port exhaust problem under high QPS. */
-	linger.l_onoff = (linger_timeout >= 0);
-	linger.l_linger = (linger_timeout + 999) / 1000;
+	/* Set linger option according to configuration */
+	if (linger_timeout >= 0) {
+		/* Set linger option to avoid socket hanging out after close. This
+		 * prevent ephemeral port exhaust problem under high QPS. */
+		linger.l_onoff = 1;
+		linger.l_linger = (linger_timeout + 999) / 1000;
+	} else {
+		linger.l_onoff = 0;
+		linger.l_linger = 0;
+	}
 
 	if (linger_timeout < -1) {
-        /* Default: don't configure any linger */
-    } else if (getsockopt(conn->client.sock,
-	               SOL_SOCKET,
-	               SO_ERROR,
-	               (char *)&error_code,
-	               &opt_len) != 0) {
+		/* Default: don't configure any linger */
+	} else if (getsockopt(conn->client.sock,
+	                      SOL_SOCKET,
+	                      SO_ERROR,
+	                      (char *)&error_code,
+	                      &opt_len) != 0) {
 		/* Cannot determine if socket is already closed. This should
 		 * not occur and never did in a test. Log an error message
 		 * and continue. */
@@ -12397,8 +12403,8 @@ close_socket_gracefully(struct mg_connection *conn)
 			mg_cry(conn,
 			       "%s: setsockopt(SOL_SOCKET SO_LINGER(%i,%i)) failed: %s",
 			       __func__,
-                   linger.l_onoff,
-                   linger.l_linger,
+			       linger.l_onoff,
+			       linger.l_linger,
 			       strerror(ERRNO));
 		}
 	}
