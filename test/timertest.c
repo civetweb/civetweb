@@ -46,10 +46,13 @@
 
 
 static int
-action(void *arg)
+action1(void *arg)
 {
 	int *p = (int *)arg;
 	(*p)--;
+
+	ck_assert_int_ge(*p, -1);
+
 	return 1;
 }
 
@@ -67,17 +70,18 @@ START_TEST(test_timer1)
 	mark_point();
 
 	c[0] = 10;
-	timer_add(&ctx, 0, 0.1, 1, action, c + 0);
+	timer_add(&ctx, 0, 0.1, 1, action1, c + 0);
 	c[2] = 2;
-	timer_add(&ctx, 0, 0.5, 1, action, c + 2);
+	timer_add(&ctx, 0, 0.5, 1, action1, c + 2);
 	c[1] = 5;
-	timer_add(&ctx, 0, 0.2, 1, action, c + 1);
+	timer_add(&ctx, 0, 0.2, 1, action1, c + 1);
 
 	mg_sleep(1000);
 
 	ctx.stop_flag = 99;
 	mg_sleep(100);
 	timers_exit(&ctx);
+	mg_sleep(100);
 
 #ifdef LOCAL_TEST
 	ck_assert_int_eq(c[0], 0);
@@ -95,16 +99,62 @@ START_TEST(test_timer1)
 END_TEST
 
 
+static int
+action2(void *arg)
+{
+	int *p = (int *)arg;
+	(*p)--;
+
+	ck_assert_int_ge(*p, -1);
+
+	return 0;
+}
+
+
+START_TEST(test_timer2)
+{
+	struct mg_context ctx;
+	int c[10];
+	memset(&ctx, 0, sizeof(ctx));
+	memset(c, 0, sizeof(c));
+
+	mark_point();
+	timers_init(&ctx);
+	mg_sleep(100);
+	mark_point();
+
+	c[0] = 10;
+	timer_add(&ctx, 0, 0.1, 1, action2, c + 0);
+	c[2] = 2;
+	timer_add(&ctx, 0, 0.5, 1, action2, c + 2);
+	c[1] = 5;
+	timer_add(&ctx, 0, 0.2, 1, action2, c + 1);
+
+	mg_sleep(1000);
+
+	ctx.stop_flag = 99;
+	mg_sleep(100);
+	timers_exit(&ctx);
+	mg_sleep(100);
+
+	ck_assert_int_eq(c[0], 9);
+	ck_assert_int_eq(c[1], 4);
+	ck_assert_int_eq(c[2], 1);
+}
+END_TEST
+
+
 Suite *
 make_timertest_suite(void)
 {
 	Suite *const suite = suite_create("Timer");
 
-	TCase *const tcase_timer1 = tcase_create("Timer1");
+	TCase *const tcase_timer = tcase_create("Timer1");
 
-	tcase_add_test(tcase_timer1, test_timer1);
-	tcase_set_timeout(tcase_timer1, civetweb_min_test_timeout);
-	suite_add_tcase(suite, tcase_timer1);
+	tcase_add_test(tcase_timer, test_timer1);
+	tcase_add_test(tcase_timer, test_timer2);
+	tcase_set_timeout(tcase_timer, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_timer);
 
 	return suite;
 }
@@ -122,6 +172,7 @@ TIMER_PRIVATE(void)
 #endif
 
 	test_timer1(0);
+	test_timer2(0);
 
 #if defined(_WIN32)
 	WSACleanup();
