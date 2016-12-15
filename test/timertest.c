@@ -149,12 +149,16 @@ make_timertest_suite(void)
 {
 	Suite *const suite = suite_create("Timer");
 
-	TCase *const tcase_timer = tcase_create("Timer1");
+	TCase *const tcase_timer1 = tcase_create("Timer Periodic");
+	TCase *const tcase_timer2 = tcase_create("Timer Single Shot");
 
-	tcase_add_test(tcase_timer, test_timer1);
-	tcase_add_test(tcase_timer, test_timer2);
-	tcase_set_timeout(tcase_timer, civetweb_min_test_timeout);
-	suite_add_tcase(suite, tcase_timer);
+	tcase_add_test(tcase_timer1, test_timer1);
+	tcase_set_timeout(tcase_timer1, 30);
+	suite_add_tcase(suite, tcase_timer1);
+
+	tcase_add_test(tcase_timer2, test_timer2);
+	tcase_set_timeout(tcase_timer2, 30);
+	suite_add_tcase(suite, tcase_timer2);
 
 	return suite;
 }
