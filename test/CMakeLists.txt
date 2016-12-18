@@ -191,7 +191,7 @@ if (${CMAKE_BUILD_TYPE} MATCHES "[Cc]overage")
       OUTPUT ${CMAKE_BINARY_DIR}/lcov/index.html
       COMMAND ${LCOV_EXECUTABLE} -q -z -d .
       COMMAND ${LCOV_EXECUTABLE} -q --no-external -c -b "${CMAKE_SOURCE_DIR}" -d . -o before.lcov -i
-      COMMAND ${CTEST_EXECUTABLE} --force-new-ctest-process
+      COMMAND ${CTEST_EXECUTABLE} --force-new-ctest-process --extra-verbose
       COMMAND ${LCOV_EXECUTABLE} -q --no-external -c -b "${CMAKE_SOURCE_DIR}" -d . -o after.lcov
       COMMAND ${LCOV_EXECUTABLE} -q -a before.lcov -a after.lcov --output-file final.lcov
       COMMAND ${LCOV_EXECUTABLE} -q -r final.lcov "'${CMAKE_SOURCE_DIR}/test/*'" -o final.lcov
