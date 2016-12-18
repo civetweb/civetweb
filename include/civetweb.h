@@ -1069,6 +1069,14 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
 CIVETWEB_API unsigned mg_check_feature(unsigned feature);
 
 
+/* Check which features where set when civetweb has been compiled.
+   Parameters:
+     To be defined - 0, 0 prints to stdout.
+   Return:
+     To be defined.
+*/
+CIVETWEB_API int mg_print_system_info(int prm1, char *prm2);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

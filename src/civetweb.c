@@ -14428,3 +14428,159 @@ mg_check_feature(unsigned feature)
 	    ;
 	return (feature & feature_set);
 }
+
+
+/* Print system information.
+ * TODO: define parameters. */
+int
+mg_print_system_info(int prm1, char *prm2)
+{
+	const char *version = mg_version();
+#if defined(_WIN32)
+#if !defined(__SYMBIAN32__)
+	DWORD dwVersion = 0;
+	DWORD dwMajorVersion = 0;
+	DWORD dwMinorVersion = 0;
+	SYSTEM_INFO si;
+
+	GetSystemInfo(&si);
+
+#ifdef _MSC_VER
+#pragma warning(push)
+// GetVersion was declared deprecated
+#pragma warning(disable : 4996)
+#endif
+	dwVersion = GetVersion();
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+	(void)prm1;
+	(void)prm2;
+
+	dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
+	dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
+
+	fprintf(stdout,
+	        "\nWindows %u.%u\n",
+	        (unsigned)dwMajorVersion,
+	        (unsigned)dwMinorVersion);
+
+	fprintf(stdout,
+	        "CPU: type %u, cores %u, mask %x\n",
+	        (unsigned)si.wProcessorArchitecture,
+	        (unsigned)si.dwNumberOfProcessors,
+	        (unsigned)si.dwActiveProcessorMask);
+
+#else
+	fprintf(stdout, "\n%s - Symbian\n");
+#endif
+#else
+	struct utsname name;
+	memset(&name, 0, sizeof(name));
+	uname(&name);
+
+	fprintf(stdout,
+	        "\n%s %s (%s) - %s\n",
+	        name.sysname,
+	        name.version,
+	        name.release,
+	        name.machine);
+#endif
+
+	fprintf(stdout, "Features:");
+	if (mg_check_feature(1)) {
+		fprintf(stdout, " Files");
+	}
+	if (mg_check_feature(2)) {
+		fprintf(stdout, " HTTPS");
+	}
+	if (mg_check_feature(4)) {
+		fprintf(stdout, " CGI");
+	}
+	if (mg_check_feature(8)) {
+		fprintf(stdout, " IPv6");
+	}
+	if (mg_check_feature(16)) {
+		fprintf(stdout, " WebSockets");
+	}
+	if (mg_check_feature(32)) {
+		fprintf(stdout, " Lua");
+	}
+	fprintf(stdout, "\n");
+
+#ifdef USE_LUA
+	fprintf(stdout,
+	        "Lua Version: %u (%s)\n",
+	        (unsigned)LUA_VERSION_NUM,
+	        LUA_RELEASE);
+#endif
+
+	fprintf(stdout, "Version: %s\n", version);
+
+	fprintf(stdout, "Build: %s\n", __DATE__);
+
+/* http://sourceforge.net/p/predef/wiki/Compilers/ */
+#if defined(_MSC_VER)
+	fprintf(stdout,
+	        "MSC: %u (%u)\n",
+	        (unsigned)_MSC_VER,
+	        (unsigned)_MSC_FULL_VER);
+#elif defined(__MINGW64__)
+	fprintf(stdout,
+	        "MinGW64: %u.%u\n",
+	        (unsigned)__MINGW64_VERSION_MAJOR,
+	        (unsigned)__MINGW64_VERSION_MINOR);
+	fprintf(stdout,
+	        "MinGW32: %u.%u\n",
+	        (unsigned)__MINGW32_MAJOR_VERSION,
+	        (unsigned)__MINGW32_MINOR_VERSION);
+#elif defined(__MINGW32__)
+	fprintf(stdout,
+	        "MinGW32: %u.%u\n",
+	        (unsigned)__MINGW32_MAJOR_VERSION,
+	        (unsigned)__MINGW32_MINOR_VERSION);
+#elif defined(__clang__)
+	fprintf(stdout,
+	        "clang: %u.%u.%u (%s)\n",
+	        __clang_major__,
+	        __clang_minor__,
+	        __clang_patchlevel__,
+	        __clang_version__);
+#elif defined(__GNUC__)
+	fprintf(stdout,
+	        "gcc: %u.%u.%u\n",
+	        (unsigned)__GNUC__,
+	        (unsigned)__GNUC_MINOR__,
+	        (unsigned)__GNUC_PATCHLEVEL__);
+#elif defined(__INTEL_COMPILER)
+	fprintf(stdout, "Intel C/C++: %u\n", (unsigned)__INTEL_COMPILER);
+#elif defined(__BORLANDC__)
+	fprintf(stdout, "Borland C: 0x%x\n", (unsigned)__BORLANDC__);
+#elif defined(__SUNPRO_C)
+	fprintf(stdout, "Solaris: 0x%x\n", (unsigned)__SUNPRO_C);
+#else
+	fprintf(stdout, "Other\n");
+#endif
+	/* Determine 32/64 bit data mode.
+	 * see https://en.wikipedia.org/wiki/64-bit_computing */
+	fprintf(stdout,
+	        "Data model: i:%u/%u/%u/%u, f:%u/%u/%u, c:%u/%u, "
+	        "p:%u, s:%u, t:%u\n",
+	        (unsigned)sizeof(short),
+	        (unsigned)sizeof(int),
+	        (unsigned)sizeof(long),
+	        (unsigned)sizeof(long long),
+	        (unsigned)sizeof(float),
+	        (unsigned)sizeof(double),
+	        (unsigned)sizeof(long double),
+	        (unsigned)sizeof(char),
+	        (unsigned)sizeof(wchar_t),
+	        (unsigned)sizeof(void *),
+	        (unsigned)sizeof(size_t),
+	        (unsigned)sizeof(time_t));
+
+	return 0;
+}
+
+/* End of civetweb.c */
