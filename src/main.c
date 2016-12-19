@@ -1018,7 +1018,7 @@ enum {
 	ID_ADD_USER_NAME,
 	ID_ADD_USER_REALM,
 	ID_INPUT_LINE,
-    ID_SYSINFO,
+	ID_SYSINFO,
 
 	/* All dynamically created text boxes for options have IDs starting from
    ID_CONTROLS, incremented by one. */
@@ -2040,15 +2040,15 @@ change_password_file()
 static void
 show_system_info()
 {
-    if (sGuard == 0) {
+	if (sGuard == 0) {
 		sGuard++;
 	} else {
 		return;
 	}
 
-    /* TODO */
+	/* TODO */
 
-    sGuard--;
+	sGuard--;
 }
 
 
@@ -2159,7 +2159,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			break;
 		case ID_SYSINFO:
 			show_system_info();
-			break;        
+			break;
 		case ID_INSTALL_SERVICE:
 		case ID_REMOVE_SERVICE:
 			manage_service(LOWORD(wParam));
@@ -2206,7 +2206,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			AppendMenu(hMenu, MF_STRING, ID_CONNECT, "Start browser");
 			AppendMenu(hMenu, MF_STRING, ID_SETTINGS, "Edit settings");
 			AppendMenu(hMenu, MF_STRING, ID_PASSWORD, "Modify password file");
-            AppendMenu(hMenu, MF_STRING, ID_SYSINFO, "Show system info");
+			AppendMenu(hMenu, MF_STRING, ID_SYSINFO, "Show system info");
 			AppendMenu(hMenu, MF_SEPARATOR, ID_SEPARATOR, "");
 			AppendMenu(hMenu, MF_STRING, ID_QUIT, "Exit");
 			GetCursorPos(&pt);
