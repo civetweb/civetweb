@@ -57,7 +57,7 @@ action1(void *arg)
 }
 
 
-START_TEST(test_timer1)
+START_TEST(test_timer_cyclic)
 {
 	struct mg_context ctx;
 	int c[10];
@@ -76,11 +76,14 @@ START_TEST(test_timer1)
 	c[1] = 5;
 	timer_add(&ctx, 0, 0.2, 1, action1, c + 1);
 
-	mg_sleep(1000);
+	mg_sleep(1000); /* Sleep 1 second - timer will run */
 
-	ctx.stop_flag = 99;
-	mg_sleep(100);
+	ctx.stop_flag = 99; /* End timer thread */
+
+	mg_sleep(1000); /* Sleep 1 second - timer will not run */
+
 	timers_exit(&ctx);
+
 	mg_sleep(100);
 
 #ifdef LOCAL_TEST
@@ -111,7 +114,7 @@ action2(void *arg)
 }
 
 
-START_TEST(test_timer2)
+START_TEST(test_timer_oneshot)
 {
 	struct mg_context ctx;
 	int c[10];
@@ -130,10 +133,12 @@ START_TEST(test_timer2)
 	c[1] = 5;
 	timer_add(&ctx, 0, 0.2, 1, action2, c + 1);
 
-	mg_sleep(1000);
+	mg_sleep(1000); /* Sleep 1 second - timer will run */
 
-	ctx.stop_flag = 99;
-	mg_sleep(100);
+	ctx.stop_flag = 99; /* End timer thread */
+
+	mg_sleep(1000); /* Sleep 1 second - timer will not run */
+
 	timers_exit(&ctx);
 	mg_sleep(100);
 
@@ -149,16 +154,16 @@ make_timertest_suite(void)
 {
 	Suite *const suite = suite_create("Timer");
 
-	TCase *const tcase_timer1 = tcase_create("Timer Periodic");
-	TCase *const tcase_timer2 = tcase_create("Timer Single Shot");
+	TCase *const tcase_timer_cyclic = tcase_create("Timer Periodic");
+	TCase *const tcase_timer_oneshot = tcase_create("Timer Single Shot");
 
-	tcase_add_test(tcase_timer1, test_timer1);
-	tcase_set_timeout(tcase_timer1, 30);
-	suite_add_tcase(suite, tcase_timer1);
+	tcase_add_test(tcase_timer_cyclic, test_timer_cyclic);
+	tcase_set_timeout(tcase_timer_cyclic, 30);
+	suite_add_tcase(suite, tcase_timer_cyclic);
 
-	tcase_add_test(tcase_timer2, test_timer2);
-	tcase_set_timeout(tcase_timer2, 30);
-	suite_add_tcase(suite, tcase_timer2);
+	tcase_add_test(tcase_timer_oneshot, test_timer_oneshot);
+	tcase_set_timeout(tcase_timer_oneshot, 30);
+	suite_add_tcase(suite, tcase_timer_oneshot);
 
 	return suite;
 }
@@ -175,8 +180,8 @@ TIMER_PRIVATE(void)
 	WSAStartup(MAKEWORD(2, 2), &data);
 #endif
 
-	test_timer1(0);
-	test_timer2(0);
+	test_timer_cyclic(0);
+	test_timer_oneshot(0);
 
 #if defined(_WIN32)
 	WSACleanup();
