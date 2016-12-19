@@ -5105,7 +5105,7 @@ alloc_vprintf(char **out_buf,
 		 * Switch to alternative code path that uses incremental allocations.
 		*/
 		va_copy(ap_copy, ap);
-		len = alloc_vprintf2(out_buf, fmt, ap);
+		len = alloc_vprintf2(out_buf, fmt, ap_copy);
 		va_end(ap_copy);
 
 	} else if ((size_t)(len) >= prealloc_size) {
