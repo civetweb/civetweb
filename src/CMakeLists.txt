@@ -266,26 +266,26 @@ endif()
 
 # The C++ API library
 if (CIVETWEB_ENABLE_CXX)
-  add_library(cxx-library CivetServer.cpp)
-  set_target_properties(cxx-library PROPERTIES
-    OUTPUT_NAME "cxx-library"
+  add_library(civetweb-cpp CivetServer.cpp)
+  set_target_properties(civetweb-cpp PROPERTIES
+    OUTPUT_NAME "civetweb-cpp"
     VERSION ${CIVETWEB_VERSION}
     SOVERSION ${CIVETWEB_VERSION}
   )
   if (BUILD_SHARED_LIBS)
-    target_compile_definitions(cxx-library PRIVATE CIVETWEB_DLL_EXPORTS)
+    target_compile_definitions(civetweb-cpp PRIVATE CIVETWEB_DLL_EXPORTS)
   endif()
   target_include_directories(
-    cxx-library PUBLIC
+    civetweb-cpp PUBLIC
     ${PROJECT_SOURCE_DIR}/include)
   install(
-    TARGETS cxx-library
+    TARGETS civetweb-cpp
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
-    COMPONENT cxx-library)
+    COMPONENT civetweb-cpp)
   install(FILES
     ${PROJECT_SOURCE_DIR}/include/CivetServer.h
     DESTINATION include
-    COMPONENT cxx-library)
+    COMPONENT civetweb-cpp)
 endif()

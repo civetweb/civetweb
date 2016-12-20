@@ -14435,6 +14435,10 @@ mg_check_feature(unsigned feature)
 int
 mg_print_system_info(int prm1, char *prm2)
 {
+    //WARNING: these parameters are not being used
+	(void)prm1;
+	(void)prm2;
+	
 	const char *version = mg_version();
 #if defined(_WIN32)
 #if !defined(__SYMBIAN32__)
@@ -14454,9 +14458,6 @@ mg_print_system_info(int prm1, char *prm2)
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
-	(void)prm1;
-	(void)prm2;
 
 	dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
 	dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
