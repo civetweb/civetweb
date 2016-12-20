@@ -1486,6 +1486,7 @@ static struct ssl_func crypto_sw[] = {
 #define SSL_CTX_set_session_id_context                                         \
 	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
 #define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
+#define ASN1_INTEGER_to_BN (*(BIGNUM *(*)(const ASN1_INTEGER *ai, BIGNUM *bn))crypto_sw[31].ptr)
 
 
 #define SSL_CTX_set_cipher_list                                                \
@@ -1531,6 +1532,8 @@ static struct ssl_func crypto_sw[] = {
 	           unsigned char *,                                                \
 	           unsigned int *))crypto_sw[18].ptr)
 #define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[19].ptr)
+#define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[20].ptr)
+#define BN_free (*(void(*)(const BIGNUM *a))crypto_sw[21].ptr)
 
 
 /* set_ssl_option() function updates this array.
@@ -1569,6 +1572,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_set_session_id_context", NULL},
                                    {"SSL_CTX_ctrl", NULL},
                                    {"SSL_CTX_set_cipher_list", NULL},
+                                   {"ASN1_INTEGER_to_BN", NULL},
                                    {NULL, NULL}};
 
 
@@ -1594,6 +1598,8 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"EVP_get_digestbyname", NULL},
                                       {"ASN1_digest", NULL},
                                       {"i2d_X509", NULL},
+                                      {"BN_bn2hex", NULL},
+                                      {"BN_free", NULL},
                                       {NULL, NULL}};
 #endif /* OPENSSL_API_1_1 */
 #endif /* NO_SSL_DL */
