@@ -864,7 +864,9 @@ start_civetweb(int argc, char *argv[])
 	 * This is very useful for diagnosis. */
 	if (argc > 1 && !strcmp(argv[1], "-I")) {
 
+#ifdef WIN32
 		(void)MakeConsole();
+#endif
 		fprintf(stdout, "\n%s (%s)\n", g_server_base_name, g_server_name);
 		(void)mg_print_system_info(0, 0);
 
