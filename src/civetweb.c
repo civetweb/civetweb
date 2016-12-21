@@ -14435,10 +14435,7 @@ mg_check_feature(unsigned feature)
 int
 mg_print_system_info(int prm1, char *prm2)
 {
-    //WARNING: these parameters are not being used
-	(void)prm1;
-	(void)prm2;
-	
+	char buf[256];
 	const char *version = mg_version();
 #if defined(_WIN32)
 #if !defined(__SYMBIAN32__)
@@ -14462,124 +14459,220 @@ mg_print_system_info(int prm1, char *prm2)
 	dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
 	dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
 
-	fprintf(stdout,
-	        "\nWindows %u.%u\n",
-	        (unsigned)dwMajorVersion,
-	        (unsigned)dwMinorVersion);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "Windows %u.%u",
+	            (unsigned)dwMajorVersion,
+	            (unsigned)dwMinorVersion);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 
-	fprintf(stdout,
-	        "CPU: type %u, cores %u, mask %x\n",
-	        (unsigned)si.wProcessorArchitecture,
-	        (unsigned)si.dwNumberOfProcessors,
-	        (unsigned)si.dwActiveProcessorMask);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "CPU: type %u, cores %u, mask %x",
+	            (unsigned)si.wProcessorArchitecture,
+	            (unsigned)si.dwNumberOfProcessors,
+	            (unsigned)si.dwActiveProcessorMask);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 
 #else
-	fprintf(stdout, "\n%s - Symbian\n");
+	mg_snprintf(NULL, NULL, buf, sizeof(buf), "%s - Symbian");
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #endif
 #else
 	struct utsname name;
 	memset(&name, 0, sizeof(name));
 	uname(&name);
 
-	fprintf(stdout,
-	        "\n%s %s (%s) - %s\n",
-	        name.sysname,
-	        name.version,
-	        name.release,
-	        name.machine);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "%s %s (%s) - %s",
+	            name.sysname,
+	            name.version,
+	            name.release,
+	            name.machine);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #endif
 
-	fprintf(stdout, "Features:");
-	if (mg_check_feature(1)) {
-		fprintf(stdout, " Files");
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "Features: %X%s%s%s%s%s%s",
+	            mg_check_feature(0xFFFFFFFFu),
+	            mg_check_feature(1) ? " Files" : "",
+	            mg_check_feature(2) ? " HTTPS" : "",
+	            mg_check_feature(4) ? " CGI" : "",
+	            mg_check_feature(8) ? " IPv6" : "",
+	            mg_check_feature(16) ? " WebSockets" : "",
+	            mg_check_feature(32) ? " Lua" : "");
+	if (prm1 == 0) {
+		puts(buf);
 	}
-	if (mg_check_feature(2)) {
-		fprintf(stdout, " HTTPS");
-	}
-	if (mg_check_feature(4)) {
-		fprintf(stdout, " CGI");
-	}
-	if (mg_check_feature(8)) {
-		fprintf(stdout, " IPv6");
-	}
-	if (mg_check_feature(16)) {
-		fprintf(stdout, " WebSockets");
-	}
-	if (mg_check_feature(32)) {
-		fprintf(stdout, " Lua");
-	}
-	fprintf(stdout, "\n");
 
 #ifdef USE_LUA
-	fprintf(stdout,
-	        "Lua Version: %u (%s)\n",
-	        (unsigned)LUA_VERSION_NUM,
-	        LUA_RELEASE);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "Lua Version: %u (%s)",
+	            (unsigned)LUA_VERSION_NUM,
+	            LUA_RELEASE);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #endif
 
-	fprintf(stdout, "Version: %s\n", version);
+	mg_snprintf(NULL, NULL, buf, sizeof(buf), "Version: %s", version);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 
-	fprintf(stdout, "Build: %s\n", __DATE__);
+	mg_snprintf(NULL, NULL, buf, sizeof(buf), "Build: %s", __DATE__);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 
 /* http://sourceforge.net/p/predef/wiki/Compilers/ */
 #if defined(_MSC_VER)
-	fprintf(stdout,
-	        "MSC: %u (%u)\n",
-	        (unsigned)_MSC_VER,
-	        (unsigned)_MSC_FULL_VER);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "MSC: %u (%u)",
+	            (unsigned)_MSC_VER,
+	            (unsigned)_MSC_FULL_VER);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #elif defined(__MINGW64__)
-	fprintf(stdout,
-	        "MinGW64: %u.%u\n",
-	        (unsigned)__MINGW64_VERSION_MAJOR,
-	        (unsigned)__MINGW64_VERSION_MINOR);
-	fprintf(stdout,
-	        "MinGW32: %u.%u\n",
-	        (unsigned)__MINGW32_MAJOR_VERSION,
-	        (unsigned)__MINGW32_MINOR_VERSION);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "MinGW64: %u.%u",
+	            (unsigned)__MINGW64_VERSION_MAJOR,
+	            (unsigned)__MINGW64_VERSION_MINOR);
+	if (prm1 == 0) {
+		puts(buf);
+	}
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "MinGW32: %u.%u",
+	            (unsigned)__MINGW32_MAJOR_VERSION,
+	            (unsigned)__MINGW32_MINOR_VERSION);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #elif defined(__MINGW32__)
-	fprintf(stdout,
-	        "MinGW32: %u.%u\n",
-	        (unsigned)__MINGW32_MAJOR_VERSION,
-	        (unsigned)__MINGW32_MINOR_VERSION);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "MinGW32: %u.%u",
+	            (unsigned)__MINGW32_MAJOR_VERSION,
+	            (unsigned)__MINGW32_MINOR_VERSION);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #elif defined(__clang__)
-	fprintf(stdout,
-	        "clang: %u.%u.%u (%s)\n",
-	        __clang_major__,
-	        __clang_minor__,
-	        __clang_patchlevel__,
-	        __clang_version__);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "clang: %u.%u.%u (%s)",
+	            __clang_major__,
+	            __clang_minor__,
+	            __clang_patchlevel__,
+	            __clang_version__);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #elif defined(__GNUC__)
-	fprintf(stdout,
-	        "gcc: %u.%u.%u\n",
-	        (unsigned)__GNUC__,
-	        (unsigned)__GNUC_MINOR__,
-	        (unsigned)__GNUC_PATCHLEVEL__);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "gcc: %u.%u.%u",
+	            (unsigned)__GNUC__,
+	            (unsigned)__GNUC_MINOR__,
+	            (unsigned)__GNUC_PATCHLEVEL__);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #elif defined(__INTEL_COMPILER)
-	fprintf(stdout, "Intel C/C++: %u\n", (unsigned)__INTEL_COMPILER);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "Intel C/C++: %u",
+	            (unsigned)__INTEL_COMPILER);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #elif defined(__BORLANDC__)
-	fprintf(stdout, "Borland C: 0x%x\n", (unsigned)__BORLANDC__);
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "Borland C: 0x%x",
+	            (unsigned)__BORLANDC__);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #elif defined(__SUNPRO_C)
-	fprintf(stdout, "Solaris: 0x%x\n", (unsigned)__SUNPRO_C);
+	mg_snprintf(
+	    NULL, NULL, buf, sizeof(buf), "Solaris: 0x%x", (unsigned)__SUNPRO_C);
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #else
-	fprintf(stdout, "Other\n");
+	mg_snprintf(NULL, NULL, buf, sizeof(buf), "Other");
+	if (prm1 == 0) {
+		puts(buf);
+	}
 #endif
 	/* Determine 32/64 bit data mode.
 	 * see https://en.wikipedia.org/wiki/64-bit_computing */
-	fprintf(stdout,
-	        "Data model: i:%u/%u/%u/%u, f:%u/%u/%u, c:%u/%u, "
-	        "p:%u, s:%u, t:%u\n",
-	        (unsigned)sizeof(short),
-	        (unsigned)sizeof(int),
-	        (unsigned)sizeof(long),
-	        (unsigned)sizeof(long long),
-	        (unsigned)sizeof(float),
-	        (unsigned)sizeof(double),
-	        (unsigned)sizeof(long double),
-	        (unsigned)sizeof(char),
-	        (unsigned)sizeof(wchar_t),
-	        (unsigned)sizeof(void *),
-	        (unsigned)sizeof(size_t),
-	        (unsigned)sizeof(time_t));
+	mg_snprintf(NULL,
+	            NULL,
+	            buf,
+	            sizeof(buf),
+	            "Data model: int:%u/%u/%u/%u, float:%u/%u/%u, char:%u/%u, "
+	            "ptr:%u, size:%u, time:%u",
+	            (unsigned)sizeof(short),
+	            (unsigned)sizeof(int),
+	            (unsigned)sizeof(long),
+	            (unsigned)sizeof(long long),
+	            (unsigned)sizeof(float),
+	            (unsigned)sizeof(double),
+	            (unsigned)sizeof(long double),
+	            (unsigned)sizeof(char),
+	            (unsigned)sizeof(wchar_t),
+	            (unsigned)sizeof(void *),
+	            (unsigned)sizeof(size_t),
+	            (unsigned)sizeof(time_t));
+	if (prm1 == 0) {
+		puts(buf);
+	}
+
+	// WARNING: these parameters are not being used
+	(void)prm2;
 
 	return 0;
 }
