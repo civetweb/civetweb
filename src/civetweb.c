@@ -1347,12 +1347,11 @@ struct ssl_func {
 #define SSL_CTX_set_session_id_context                                         \
 	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[28].ptr)
 #define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[29].ptr)
+#define SSL_CTX_set_options (*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[30].ptr)
 
 
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[30].ptr)
-#define SSL_CTX_set_options(ctx, op)                                           \
-	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
 #define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
@@ -1421,6 +1420,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_set_session_id_context", NULL},
                                    {"SSL_CTX_ctrl", NULL},
                                    {"SSL_CTX_set_cipher_list", NULL},
+                                   {"SSL_CTX_set_options", NULL},
                                    {NULL, NULL}};
 
 
@@ -6838,6 +6838,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	}
 
 #if !defined(NO_SSL)
+#if !defined(NO_SSL_DL)
 #ifdef OPENSSL_API_1_1
 	if (use_ssl && (TLS_client_method == NULL)) {
 		mg_snprintf(NULL,
@@ -6860,6 +6861,9 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	}
 
 #endif /* OPENSSL_API_1_1 */
+#else
+	(void)use_ssl;
+#endif /* NO_SSL_DL */
 #else
 	(void)use_ssl;
 #endif /* !defined(NO_SSL) */
@@ -9526,15 +9530,17 @@ mg_unlock_context(struct mg_context *ctx)
 
 #if defined(USE_WEBSOCKET)
 
+#if !defined(NO_SSL_DL)
 #define SHA_API static
 #include "sha1.inl"
+#endif
 
 static int
 send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 {
 	static const char *magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 	char buf[100], sha[20], b64_sha[sizeof(sha) * 2];
-	SHA1_CTX sha_ctx;
+	SHA_CTX sha_ctx;
 	int truncated;
 
 	/* Calculate Sec-WebSocket-Accept reply from Sec-WebSocket-Key. */
@@ -9546,7 +9552,7 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
-	SHA1_Final(&sha_ctx, (unsigned char *)sha);
+	SHA1_Final((unsigned char *)sha, &sha_ctx);
 	base64_encode((unsigned char *)sha, sizeof(sha), b64_sha);
 	mg_printf(conn,
 	          "HTTP/1.1 101 Switching Protocols\r\n"
@@ -11871,7 +11877,9 @@ sslize(struct mg_connection *conn,
 		conn->ssl = NULL;
 		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
 		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+#ifndef OPENSSL_API_1_1
 		ERR_remove_state(0);
+#endif
 		return 0;
 	}
 
@@ -11917,7 +11925,9 @@ sslize(struct mg_connection *conn,
 		conn->ssl = NULL;
 		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
 		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+#ifndef OPENSSL_API_1_1
 		ERR_remove_state(0);
+#endif
 		return 0;
 	}
 
@@ -12103,6 +12113,8 @@ initialize_ssl(struct mg_context *ctx)
 			return 0;
 		}
 	}
+#else
+    (void)ctx;
 #endif /* NO_SSL_DL */
 
 	if (mg_atomic_inc(&cryptolib_users) > 1) {
@@ -12120,6 +12132,8 @@ initialize_ssl(struct mg_context *ctx)
 			return 0;
 		}
 	}
+#else
+    (void)ctx;
 #endif /* NO_SSL_DL */
 
 	if (mg_atomic_inc(&cryptolib_users) > 1) {
@@ -12196,10 +12210,10 @@ ssl_use_pem_file(struct mg_context *ctx, const char *pem)
 }
 
 
-static long
+static unsigned long
 ssl_get_protocol(int version_id)
 {
-	long ret = SSL_OP_ALL;
+	long unsigned ret = SSL_OP_ALL;
 	if (version_id > 0)
 		ret |= SSL_OP_NO_SSLv2;
 	if (version_id > 1)
@@ -12388,7 +12402,6 @@ uninitialize_ssl(struct mg_context *ctx)
 		 * http://stackoverflow.com/questions/29845527/how-to-properly-uninitialize-openssl
 		 */
 		CONF_modules_unload(1);
-		ERR_remove_state(0);
 #else
 	int i;
 	(void)ctx;
@@ -12663,7 +12676,9 @@ close_connection(struct mg_connection *conn)
 		SSL_free(conn->ssl);
 		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
 		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+#ifndef OPENSSL_API_1_1
 		ERR_remove_state(0);
+#endif
 		conn->ssl = NULL;
 	}
 #endif
