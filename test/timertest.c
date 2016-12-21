@@ -51,7 +51,10 @@ action1(void *arg)
 	int *p = (int *)arg;
 	(*p)--;
 
-	ck_assert_int_ge(*p, -1);
+	if (*p < -1) {
+		ck_abort_msg("Periodic timer called too often");
+		return 0;
+	}
 
 	return 1;
 }
@@ -76,33 +79,33 @@ START_TEST(test_timer_cyclic)
 	c[1] = 5;
 	timer_add(&ctx, 0, 0.2, 1, action1, c + 1);
 
-    mark_point();
+	mark_point();
 
 	mg_sleep(1000); /* Sleep 1 second - timer will run */
 
-    mark_point();
+	mark_point();
 	ctx.stop_flag = 99; /* End timer thread */
-    mark_point();
+	mark_point();
 
 	mg_sleep(1000); /* Sleep 1 second - timer will not run */
 
-    mark_point();
+	mark_point();
 
 	timers_exit(&ctx);
 
 	mark_point();
-    mg_sleep(100);
+	mg_sleep(100);
 
 #ifdef LOCAL_TEST
-    /* If performed locally (on a physical machine that's not overloaded),
-     * timing will be precise to the ~100 ms required here. */
+	/* If performed locally (on a physical machine that's not overloaded),
+	 * timing will be precise to the ~100 ms required here. */
 	ck_assert_int_eq(c[0], 0);
 	ck_assert_int_eq(c[1], 0);
 	ck_assert_int_eq(c[2], 0);
 #else
-    /* If this test runs in a virtual environment, like the CI unit test
-     * containers, there might be some timing deviations, so check the
-     * counter with some tolerance. */
+	/* If this test runs in a virtual environment, like the CI unit test
+	 * containers, there might be some timing deviations, so check the
+	 * counter with some tolerance. */
 	ck_assert_int_ge(c[0], -1);
 	ck_assert_int_le(c[0], +1);
 	ck_assert_int_ge(c[1], -1);
@@ -145,22 +148,22 @@ START_TEST(test_timer_oneshot)
 	c[1] = 5;
 	timer_add(&ctx, 0, 0.2, 1, action2, c + 1);
 
-    mark_point();
+	mark_point();
 
 	mg_sleep(1000); /* Sleep 1 second - timer will run */
 
-    mark_point();
+	mark_point();
 	ctx.stop_flag = 99; /* End timer thread */
-    mark_point();
+	mark_point();
 
 	mg_sleep(1000); /* Sleep 1 second - timer will not run */
 
-    mark_point();
+	mark_point();
 
 	timers_exit(&ctx);
 
 	mark_point();
-    mg_sleep(100);
+	mg_sleep(100);
 
 	ck_assert_int_eq(c[0], 9);
 	ck_assert_int_eq(c[1], 4);
