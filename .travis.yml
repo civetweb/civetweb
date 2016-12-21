@@ -1147,6 +1147,28 @@ matrix:
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C32_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
 ### Test all build types:
 # According to CMakeLists, options are:
 # None Debug Release RelWithDebInfo MinSizeRel Coverage
