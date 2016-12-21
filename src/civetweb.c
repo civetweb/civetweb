@@ -1248,6 +1248,7 @@ typedef struct SSL_CTX SSL_CTX;
 #include <openssl/conf.h>
 #include <openssl/dh.h>
 #include <openssl/bn.h>
+#include <openssl/opensslv.h>
 #else
 
 /* SSL loaded dynamically from DLL.
@@ -12210,6 +12211,7 @@ ssl_use_pem_file(struct mg_context *ctx, const char *pem)
 }
 
 
+#ifdef OPENSSL_API_1_1
 static unsigned long
 ssl_get_protocol(int version_id)
 {
@@ -12224,6 +12226,22 @@ ssl_get_protocol(int version_id)
 		ret |= SSL_OP_NO_TLSv1_1;
 	return ret;
 }
+#else
+static long
+ssl_get_protocol(int version_id)
+{
+	long ret = SSL_OP_ALL;
+	if (version_id > 0)
+		ret |= SSL_OP_NO_SSLv2;
+	if (version_id > 1)
+		ret |= SSL_OP_NO_SSLv3;
+	if (version_id > 2)
+		ret |= SSL_OP_NO_TLSv1;
+	if (version_id > 3)
+		ret |= SSL_OP_NO_TLSv1_1;
+	return ret;
+}
+#endif /* OPENSSL_API_1_1 */
 
 
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
@@ -12294,7 +12312,9 @@ set_ssl_option(struct mg_context *ctx)
 	SSL_CTX_set_options(ctx->ssl_ctx, ssl_get_protocol(protocol_ver));
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
+#if OPENSSL_VERSION_NUMBER < 0x1000114fL
 	SSL_CTX_set_ecdh_auto(ctx->ssl_ctx, 1);
+#endif
 
 	/* If a callback has been specified, call it. */
 	callback_ret =
