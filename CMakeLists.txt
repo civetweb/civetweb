@@ -188,6 +188,10 @@ message(STATUS "Duktape CGI support - ${CIVETWEB_ENABLE_DUKTAPE}")
 option(CIVETWEB_ENABLE_SSL "Enables the secure socket layer" ON)
 message(STATUS "SSL support - ${CIVETWEB_ENABLE_SSL}")
 
+# OpenSSL 1.1 API
+option(CIVETWEB_SSL_OPENSSL_API_1_1 "Use the OpenSSL 1.1 API" ON)
+message(STATUS "Compile for OpenSSL 1.1 API - ${CIVETWEB_SSL_OPENSSL_API_1_1}")
+
 # Dynamically load or link the SSL libraries
 cmake_dependent_option(
   CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING "Dynamically loads the SSL library rather than linking it" ON
