@@ -33,9 +33,7 @@ before_script:
   # Check some settings of the build server
   - uname -a
   - pwd
-  - if [[ "${BUILD_TYPE}" == "OSX_OPENSSL_1_1" ]]; then
-	 brew install openssl@1.1
-    fi
+  - if [[ "${BUILD_TYPE}" == "OSX_OPENSSL_1_1" ]]; then brew install openssl@1.1 ;fi
   # Generate the build scripts with CMake
   - mkdir output
   - gcc test/cgi_test.c -o output/cgi_test.cgi
