@@ -169,12 +169,20 @@ static struct tuser_data
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
-enum { OPTION_TITLE, OPTION_ICON, OPTION_LUA_SCRIPT, NUM_MAIN_OPTIONS };
+enum { OPTION_TITLE, 
+       OPTION_ICON, 
+#ifdef USE_LUA
+       OPTION_LUA_SCRIPT, 
+#endif
+       NUM_MAIN_OPTIONS };
 
 static struct mg_option main_config_options[] = {
     {"title", CONFIG_TYPE_STRING, NULL},
     {"icon", CONFIG_TYPE_STRING, NULL},
+#ifdef USE_LUA
+    /* TODO: Move from here to civetweb.c and stop with server */
     {"lua_script", CONFIG_TYPE_STRING, NULL},
+#endif
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -646,14 +654,17 @@ init_server_name(int argc, const char *argv[])
 			g_icon_name = (const char *)(argv[i + 1]);
 		}
 	}
+#ifdef USE_LUA
 	g_lua_script = NULL;
 	for (i = 0; i < argc - 1; i++) {
 		if ((argv[i][0] == '-')
 		    && (0 == strcmp(argv[i] + 1,
-		                    main_config_options[OPTION_ICON].name))) {
+		                    main_config_options[OPTION_LUA_SCRIPT].name))) {
 			g_lua_script = (const char *)(argv[i + 1]);
 		}
 	}
+#endif
+
 }
 
 
