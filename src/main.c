@@ -149,6 +149,7 @@ static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
 static const char *g_server_name;   /* Set by init_server_name() */
 static const char *g_icon_name;     /* Set by init_server_name() */
+static const char *g_lua_script;    /* Set by init_server_name() */
 static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
 static struct mg_context *g_ctx; /* Set by start_civetweb() */
@@ -168,11 +169,12 @@ static struct tuser_data
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
-enum { OPTION_TITLE, OPTION_ICON, NUM_MAIN_OPTIONS };
+enum { OPTION_TITLE, OPTION_ICON, OPTION_LUA_SCRIPT, NUM_MAIN_OPTIONS };
 
 static struct mg_option main_config_options[] = {
     {"title", CONFIG_TYPE_STRING, NULL},
     {"icon", CONFIG_TYPE_STRING, NULL},
+    {"lua_script", CONFIG_TYPE_STRING, NULL},
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -644,6 +646,14 @@ init_server_name(int argc, const char *argv[])
 			g_icon_name = (const char *)(argv[i + 1]);
 		}
 	}
+	g_lua_script = NULL;
+	for (i = 0; i < argc - 1; i++) {
+		if ((argv[i][0] == '-')
+		    && (0 == strcmp(argv[i] + 1,
+		                    main_config_options[OPTION_ICON].name))) {
+			g_lua_script = (const char *)(argv[i + 1]);
+		}
+	}
 }
 
 
@@ -810,6 +820,13 @@ run_lua(const char *file_name)
 
 	return func_ret;
 }
+
+static void *
+run_lua_thread(void *file_name) {
+    run_lua((const char*)file_name);
+    return NULL;
+}
+
 #endif
 
 
@@ -957,6 +974,8 @@ start_civetweb(int argc, char *argv[])
 	verify_existence(options, "ssl_ca_file", 0);
 #ifdef USE_LUA
 	verify_existence(options, "lua_preload_file", 0);
+
+    mg_start_thread(run_lua_thread, (void*)g_lua_script);
 #endif
 
 	/* Setup signal handler: quit on Ctrl-C */
