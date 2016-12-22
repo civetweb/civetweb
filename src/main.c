@@ -822,9 +822,10 @@ run_lua(const char *file_name)
 }
 
 static void *
-run_lua_thread(void *file_name) {
-    run_lua((const char*)file_name);
-    return NULL;
+run_lua_thread(void *file_name)
+{
+	run_lua((const char *)file_name);
+	return NULL;
 }
 
 #endif
@@ -975,7 +976,17 @@ start_civetweb(int argc, char *argv[])
 #ifdef USE_LUA
 	verify_existence(options, "lua_preload_file", 0);
 
-    mg_start_thread(run_lua_thread, (void*)g_lua_script);
+    if (g_lua_script) {
+        struct stat st;
+        if ((stat(g_lua_script, &st) != 0) || (S_ISDIR(st.st_mode))) {
+            fprintf(stderr, "\nError: lua_script not found\n");
+            exit(EXIT_FAILURE);
+        }
+	    if (0!=mg_start_thread(run_lua_thread, (void *)g_lua_script)) {
+            fprintf(stderr, "\nError: Cannot create thread for lua_script\n");
+            exit(EXIT_FAILURE);
+        }
+    }
 #endif
 
 	/* Setup signal handler: quit on Ctrl-C */
