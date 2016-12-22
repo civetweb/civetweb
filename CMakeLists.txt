@@ -189,7 +189,7 @@ option(CIVETWEB_ENABLE_SSL "Enables the secure socket layer" ON)
 message(STATUS "SSL support - ${CIVETWEB_ENABLE_SSL}")
 
 # OpenSSL 1.1 API
-option(CIVETWEB_SSL_OPENSSL_API_1_1 "Use the OpenSSL 1.1 API" ON)
+option(CIVETWEB_SSL_OPENSSL_API_1_1 "Use the OpenSSL 1.1 API" OFF)
 message(STATUS "Compile for OpenSSL 1.1 API - ${CIVETWEB_SSL_OPENSSL_API_1_1}")
 
 # Dynamically load or link the SSL libraries
