@@ -266,6 +266,9 @@ matrix:
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
+      LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
+      CFLAGS="-I/usr/local/opt/openssl@1.1/include"
+      PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 
   -
     os: osx
@@ -289,6 +292,9 @@ matrix:
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
+      LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
+      CFLAGS="-I/usr/local/opt/openssl@1.1/include"
+      PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 
   -
     os: linux
