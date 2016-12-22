@@ -1264,6 +1264,10 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 	reg_int(L, "num_headers", conn->request_info.num_headers);
 	reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
 
+	if (conn->path_info != NULL) {
+		reg_string(L, "path_info", conn->path_info);
+	}
+
 	if (conn->request_info.content_length >= 0) {
 		/* reg_int64: content_length */
 		lua_pushstring(L, "content_length");
