@@ -779,6 +779,8 @@ set_absolute_path(char *options[],
 
 #ifdef USE_LUA
 
+/* TODO: Move to civetweb.c, use config lua_background_script, start in mg_start, allow access to server state, set mg.sleep or use timer */
+
 #include "civetweb_lua.h"
 #include "civetweb_private_lua.h"
 
