@@ -149,7 +149,9 @@ static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
 static const char *g_server_name;   /* Set by init_server_name() */
 static const char *g_icon_name;     /* Set by init_server_name() */
+#ifdef USE_LUA
 static const char *g_lua_script;    /* Set by init_server_name() */
+#endif
 static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
 static struct mg_context *g_ctx; /* Set by start_civetweb() */
