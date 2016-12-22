@@ -12312,9 +12312,9 @@ set_ssl_option(struct mg_context *ctx)
 	SSL_CTX_set_options(ctx->ssl_ctx, ssl_get_protocol(protocol_ver));
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
-#if defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x1000114fL
+#if !defined(NO_SSL_DL)
 	SSL_CTX_set_ecdh_auto(ctx->ssl_ctx, 1);
-#endif
+#endif /* NO_SSL_DL */
 
 	/* If a callback has been specified, call it. */
 	callback_ret =
