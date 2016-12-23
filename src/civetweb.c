@@ -1764,8 +1764,8 @@ struct mg_context {
 	unsigned int
 	    cfg_worker_threads;     /* The number of configured worker threads. */
 	pthread_t *workerthreadids; /* The worker thread IDs */
-    struct mg_connection *worker_connections; /* The connection struct, pre-
-                                               * allocated for each worker */
+	struct mg_connection *worker_connections; /* The connection struct, pre-
+	                                           * allocated for each worker */
 
 	time_t start_time;        /* Server start time, used for authentication */
 	uint64_t auth_nonce_mask; /* Mask for all nonce values */
@@ -12508,7 +12508,7 @@ mg_close_connection(struct mg_connection *conn)
 			if (client_ctx->workerthreadids[i] != 0) {
 				mg_join_thread(client_ctx->workerthreadids[i]);
 			}
-		}        
+		}
 	}
 #else
 	(void)client_ctx;
@@ -13583,99 +13583,95 @@ worker_thread_run(struct worker_thread_args *thread_args)
 		ctx->callbacks.init_thread(ctx, 1);
 	}
 	conn = ctx->worker_connections[thread_args->index];
-		pthread_setspecific(sTlsKey, &tls);
-		conn->buf_size = MAX_REQUEST_SIZE;
-		conn->buf = (char *)(conn + 1);
-		conn->ctx = ctx;
-		conn->thread_index = thread_args->index;
-		conn->request_info.user_data = ctx->user_data;
-		/* Allocate a mutex for this connection to allow communication both
-		 * within the request handler and from elsewhere in the application
-		 */
-		(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
+	pthread_setspecific(sTlsKey, &tls);
+	conn->buf_size = MAX_REQUEST_SIZE;
+	conn->buf = (char *)(conn + 1);
+	conn->ctx = ctx;
+	conn->thread_index = thread_args->index;
+	conn->request_info.user_data = ctx->user_data;
+	/* Allocate a mutex for this connection to allow communication both
+	 * within the request handler and from elsewhere in the application
+	 */
+	(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 
-		/* Call consume_socket() even when ctx->stop_flag > 0, to let it
-		 * signal sq_empty condvar to wake up the master waiting in
-		 * produce_socket() */
-		while (consume_socket(ctx, &conn->client, conn->thread_index)) {
-			conn->conn_birth_time = time(NULL);
+	/* Call consume_socket() even when ctx->stop_flag > 0, to let it
+	 * signal sq_empty condvar to wake up the master waiting in
+	 * produce_socket() */
+	while (consume_socket(ctx, &conn->client, conn->thread_index)) {
+		conn->conn_birth_time = time(NULL);
 
 /* Fill in IP, port info early so even if SSL setup below fails,
  * error handler would have the corresponding info.
  * Thanks to Johannes Winkelmann for the patch.
  */
 #if defined(USE_IPV6)
-			if (conn->client.rsa.sa.sa_family == AF_INET6) {
-				conn->request_info.remote_port =
-				    ntohs(conn->client.rsa.sin6.sin6_port);
-			} else
+		if (conn->client.rsa.sa.sa_family == AF_INET6) {
+			conn->request_info.remote_port =
+			    ntohs(conn->client.rsa.sin6.sin6_port);
+		} else
 #endif
-			{
-				conn->request_info.remote_port =
-				    ntohs(conn->client.rsa.sin.sin_port);
-			}
+		{
+			conn->request_info.remote_port =
+			    ntohs(conn->client.rsa.sin.sin_port);
+		}
 
-			sockaddr_to_string(conn->request_info.remote_addr,
-			                   sizeof(conn->request_info.remote_addr),
-			                   &conn->client.rsa);
+		sockaddr_to_string(conn->request_info.remote_addr,
+		                   sizeof(conn->request_info.remote_addr),
+		                   &conn->client.rsa);
 
-			DEBUG_TRACE("Start processing connection from %s",
-			            conn->request_info.remote_addr);
+		DEBUG_TRACE("Start processing connection from %s",
+		            conn->request_info.remote_addr);
 
 #if defined(MG_LEGACY_INTERFACE)
-			/* This legacy interface only works for the IPv4 case */
-			addr = ntohl(conn->client.rsa.sin.sin_addr.s_addr);
-			memcpy(&conn->request_info.remote_ip, &addr, 4);
+		/* This legacy interface only works for the IPv4 case */
+		addr = ntohl(conn->client.rsa.sin.sin_addr.s_addr);
+		memcpy(&conn->request_info.remote_ip, &addr, 4);
 #endif
 
-			conn->request_info.is_ssl = conn->client.is_ssl;
+		conn->request_info.is_ssl = conn->client.is_ssl;
 
-			if (conn->client.is_ssl) {
+		if (conn->client.is_ssl) {
 #ifndef NO_SSL
-				/* HTTPS connection */
-				if (sslize(conn,
-				           conn->ctx->ssl_ctx,
-				           SSL_accept,
-				           &(conn->ctx->stop_flag))) {
-					/* Get SSL client certificate information (if set) */
-					ssl_get_client_cert_info(conn);
+			/* HTTPS connection */
+			if (sslize(conn,
+			           conn->ctx->ssl_ctx,
+			           SSL_accept,
+			           &(conn->ctx->stop_flag))) {
+				/* Get SSL client certificate information (if set) */
+				ssl_get_client_cert_info(conn);
 
-					/* process HTTPS connection */
-					process_new_connection(conn);
-
-					/* Free client certificate info */
-					if (conn->request_info.client_cert) {
-						mg_free(
-						    (void *)(conn->request_info.client_cert->subject));
-						mg_free(
-						    (void *)(conn->request_info.client_cert->issuer));
-						mg_free(
-						    (void *)(conn->request_info.client_cert->serial));
-						mg_free(
-						    (void *)(conn->request_info.client_cert->finger));
-						conn->request_info.client_cert->subject = 0;
-						conn->request_info.client_cert->issuer = 0;
-						conn->request_info.client_cert->serial = 0;
-						conn->request_info.client_cert->finger = 0;
-						mg_free(conn->request_info.client_cert);
-						conn->request_info.client_cert = 0;
-					}
-				}
-#endif
-			} else {
-				/* process HTTP connection */
+				/* process HTTPS connection */
 				process_new_connection(conn);
+
+				/* Free client certificate info */
+				if (conn->request_info.client_cert) {
+					mg_free((void *)(conn->request_info.client_cert->subject));
+					mg_free((void *)(conn->request_info.client_cert->issuer));
+					mg_free((void *)(conn->request_info.client_cert->serial));
+					mg_free((void *)(conn->request_info.client_cert->finger));
+					conn->request_info.client_cert->subject = 0;
+					conn->request_info.client_cert->issuer = 0;
+					conn->request_info.client_cert->serial = 0;
+					conn->request_info.client_cert->finger = 0;
+					mg_free(conn->request_info.client_cert);
+					conn->request_info.client_cert = 0;
+				}
 			}
-
-			DEBUG_TRACE("Done processing connection from %s (%f sec)",
-			            conn->request_info.remote_addr,
-			            difftime(time(NULL), conn->conn_birth_time));
-
-			close_connection(conn);
-
-			DEBUG_TRACE("%s", "Connection closed");
+#endif
+		} else {
+			/* process HTTP connection */
+			process_new_connection(conn);
 		}
-	
+
+		DEBUG_TRACE("Done processing connection from %s (%f sec)",
+		            conn->request_info.remote_addr,
+		            difftime(time(NULL), conn->conn_birth_time));
+
+		close_connection(conn);
+
+		DEBUG_TRACE("%s", "Connection closed");
+	}
+
 
 	pthread_setspecific(sTlsKey, NULL);
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -14006,7 +14002,7 @@ free_context(struct mg_context *ctx)
 	if (ctx->workerthreadids != NULL) {
 		mg_free(ctx->workerthreadids);
 	}
-    
+
 	/* Deallocate worker thread ID array */
 	if (ctx->worker_connections != NULL) {
 		mg_free(ctx->worker_connections);
@@ -14321,14 +14317,15 @@ mg_start(const struct mg_callbacks *callbacks,
 		return NULL;
 	}
 	ctx->worker_connections =
-	    (struct mg_connection *)mg_calloc(ctx->cfg_worker_threads, sizeof(struct mg_connection));
+	    (struct mg_connection *)mg_calloc(ctx->cfg_worker_threads,
+	                                      sizeof(struct mg_connection));
 	if (ctx->worker_connections == NULL) {
 		mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
-    
+
 
 #if defined(ALTERNATIVE_QUEUE)
 	ctx->client_wait_events =
