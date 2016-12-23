@@ -7,6 +7,7 @@ Changes
 
 - Add library init/exit functions (calls will be required in later versions)
 - Add Lua background script, running independent from server state
+- Move obsolete examples into separated directory
 - Change name of CMake generated C++ library to civetweb-cpp
 - Add option to set linger timeout
 - Update Duktape and Lua (third-party code)
