@@ -5,6 +5,9 @@ Release Notes v1.9 (work in progress)
 Changes
 -------
 
+- Add library init/exit functions (calls will be required in later versions)
+- Add Lua background script, running independent from server state
+- Change name of CMake generated C++ library to civetweb-cpp
 - Add option to set linger timeout
 - Update Duktape and Lua (third-party code)
 - Add continuous integration tests
@@ -29,6 +32,7 @@ Changes
 - Read client certificate information
 - Do not tolerate URIs with invalid characters
 - Fix mg_get_cookie to ignore substrings
+- Fix memory leak in form handling
 - Fix bug in timer logic (for Lua Websockets)
 - Updated version number
 
