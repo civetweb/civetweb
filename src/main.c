@@ -1394,12 +1394,9 @@ get_password(const char *user,
 	                   8,
 	                   L"Tahoma"};
 
-	memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
-	s_dlg_proc_param.buffer = passwd;
-	s_dlg_proc_param.buflen = passwd_len;
-
 	assert((user != NULL) && (realm != NULL) && (passwd != NULL));
 
+	/* Only allow one instance of this dialog to be open. */
 	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
 		s_dlg_proc_param.guard = 1;
@@ -1408,9 +1405,19 @@ get_password(const char *user,
 		return 0;
 	}
 
+	/* Do not open a password dialog, if the username is empty */
+	if (user[0] == 0) {
+		s_dlg_proc_param.guard = 0;
+		return 0;
+	}
+
 	/* Create a password suggestion */
 	memset(passwd, 0, passwd_len);
 	suggest_passwd(passwd);
+
+	/* Make buffer available for input dialog */
+	s_dlg_proc_param.buffer = passwd;
+	s_dlg_proc_param.buflen = passwd_len;
 
 	/* Create the dialog */
 	(void)memset(mem, 0, sizeof(mem));
