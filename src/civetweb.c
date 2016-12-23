@@ -14468,7 +14468,7 @@ mg_check_feature(unsigned feature)
 /* Print system information.
  * TODO: define parameters. */
 int
-mg_print_system_info(int prm1, char *prm2)
+mg_print_system_info__experimental(int prm1, char *prm2)
 {
 	char buf[256];
 	const char *version = mg_version();

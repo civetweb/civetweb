@@ -812,7 +812,7 @@ start_civetweb(int argc, char *argv[])
 		(void)MakeConsole();
 #endif
 		fprintf(stdout, "\n%s (%s)\n", g_server_base_name, g_server_name);
-		(void)mg_print_system_info(0, 0);
+		(void)mg_print_system_info__experimental(0, 0);
 
 		exit(EXIT_SUCCESS);
 	}

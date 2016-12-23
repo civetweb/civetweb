@@ -1098,12 +1098,13 @@ CIVETWEB_API unsigned mg_check_feature(unsigned feature);
 
 
 /* Check which features where set when civetweb has been compiled.
+   (Experimental: The API of this function is likely to change.)
    Parameters:
      To be defined - 0, 0 prints to stdout.
    Return:
      To be defined.
 */
-CIVETWEB_API int mg_print_system_info(int prm1, char *prm2);
+CIVETWEB_API int mg_print_system_info__experimental(int prm1, char *prm2);
 
 #ifdef __cplusplus
 }
