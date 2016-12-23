@@ -1764,6 +1764,8 @@ struct mg_context {
 	unsigned int
 	    cfg_worker_threads;     /* The number of configured worker threads. */
 	pthread_t *workerthreadids; /* The worker thread IDs */
+    struct mg_connection *worker_connections; /* The connection struct, pre-
+                                               * allocated for each worker */
 
 	time_t start_time;        /* Server start time, used for authentication */
 	uint64_t auth_nonce_mask; /* Mask for all nonce values */
@@ -12506,7 +12508,7 @@ mg_close_connection(struct mg_connection *conn)
 			if (client_ctx->workerthreadids[i] != 0) {
 				mg_join_thread(client_ctx->workerthreadids[i]);
 			}
-		}
+		}        
 	}
 #else
 	(void)client_ctx;
@@ -13580,12 +13582,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 		/* call init_thread for a worker thread (type 1) */
 		ctx->callbacks.init_thread(ctx, 1);
 	}
-
-	conn =
-	    (struct mg_connection *)mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE);
-	if (conn == NULL) {
-		mg_cry(fc(ctx), "%s", "Cannot create new connection struct, OOM");
-	} else {
+	conn = ctx->worker_connections[thread_args->index];
 		pthread_setspecific(sTlsKey, &tls);
 		conn->buf_size = MAX_REQUEST_SIZE;
 		conn->buf = (char *)(conn + 1);
@@ -13678,7 +13675,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 
 			DEBUG_TRACE("%s", "Connection closed");
 		}
-	}
+	
 
 	pthread_setspecific(sTlsKey, NULL);
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -14009,6 +14006,11 @@ free_context(struct mg_context *ctx)
 	if (ctx->workerthreadids != NULL) {
 		mg_free(ctx->workerthreadids);
 	}
+    
+	/* Deallocate worker thread ID array */
+	if (ctx->worker_connections != NULL) {
+		mg_free(ctx->worker_connections);
+	}
 
 	/* Deallocate the tls variable */
 	if (mg_atomic_dec(&sTlsInit) == 0) {
@@ -14318,6 +14320,15 @@ mg_start(const struct mg_callbacks *callbacks,
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
+	ctx->worker_connections =
+	    (struct mg_connection *)mg_calloc(ctx->cfg_worker_threads, sizeof(struct mg_connection));
+	if (ctx->worker_connections == NULL) {
+		mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
+    
 
 #if defined(ALTERNATIVE_QUEUE)
 	ctx->client_wait_events =
