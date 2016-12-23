@@ -14721,20 +14721,32 @@ mg_print_system_info(int prm1, char *prm2)
 }
 
 
-/* Initialize this library. */
-int
+/* mg_init_library counter */
+static int mg_init_library_called = 0;
+
+
+/* Initialize this library. This function does not need to be thread safe. */
+unsigned
 mg_init_library(unsigned features)
 {
 	/* Currently we do nothing here. This is planned for Version 1.10.
 	 * For now, we just add this function, so clients can be changed early. */
-	return 1;
+	if (mg_init_library_called <= 0) {
+		mg_init_library_called = 1;
+		return mg_check_feature(features & 0xFFu);
+	}
+	return 0;
 }
 
 
 /* Un-initialize this library. */
-int
+unsigned
 mg_exit_library(void)
 {
+	if (mg_init_library_called <= 0) {
+		return 0;
+	}
+	mg_init_library_called--;
 	return 1;
 }
 

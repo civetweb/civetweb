@@ -49,12 +49,23 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Initialize this library. This should be called before any other function. */
-int mg_init_library(unsigned features);
+/* Initialize this library. This should be called once before any other
+ * function from this library. This function is not guaranteed to be
+ * thread safe.
+ * Parameters:
+ *   features: bit mask for features to be initialized.
+ * Return value:
+ *   initialized features
+ *   0: error
+ */
+unsigned mg_init_library(unsigned features);
 
 
-/* Un-initialize this library. */
-int mg_exit_library(void);
+/* Un-initialize this library.
+ * Return value:
+ *   0: error
+ */
+unsigned mg_exit_library(void);
 
 
 struct mg_context;    /* Handle for the HTTP service itself */
