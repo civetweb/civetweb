@@ -103,7 +103,6 @@
 #if !defined(__MINGW32__)
 extern char *_getcwd(char *buf, size_t size);
 #endif
-static int sGuard = 0; /* test if any dialog is already open */
 
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -1103,6 +1102,7 @@ save_config(HWND hDlg, FILE *fp)
 
 /* LPARAM pointer passed to WM_INITDIALOG */
 struct dlg_proc_param {
+	int guard;
 	HWND hWnd;
 	const char *name;
 	char *buffer;
@@ -1400,9 +1400,9 @@ get_password(const char *user,
 
 	assert((user != NULL) && (realm != NULL) && (passwd != NULL));
 
-	if (sGuard < 100) {
+	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
-		sGuard += 100;
+		s_dlg_proc_param.guard = 1;
 	} else {
 		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return 0;
@@ -1516,7 +1516,7 @@ get_password(const char *user,
 	                 NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
-	sGuard -= 100;
+	s_dlg_proc_param.guard = 0;
 
 	return ok;
 
@@ -1678,9 +1678,9 @@ show_settings_dialog()
 	                   8,
 	                   L"Tahoma"};
 
-	if (sGuard == 0) {
+	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
-		sGuard++;
+		s_dlg_proc_param.guard = 1;
 	} else {
 		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return;
@@ -1818,7 +1818,7 @@ show_settings_dialog()
 	    NULL, dia, NULL, SettingsDlgProc, (LPARAM)&s_dlg_proc_param);
 
 	s_dlg_proc_param.hWnd = NULL;
-	sGuard--;
+	s_dlg_proc_param.guard = 0;
 
 #undef HEIGHT
 #undef WIDTH
@@ -1864,9 +1864,9 @@ change_password_file()
 	                   8,
 	                   L"Tahoma"};
 
-	if (sGuard == 0) {
+	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
-		sGuard++;
+		s_dlg_proc_param.guard = 1;
 	} else {
 		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return;
@@ -1881,7 +1881,7 @@ change_password_file()
 	of.Flags = OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
 
 	if (IDOK != GetSaveFileName(&of)) {
-		sGuard--;
+		s_dlg_proc_param.guard = 0;
 		return;
 	}
 
@@ -1890,11 +1890,12 @@ change_password_file()
 		fclose(f);
 	} else {
 		MessageBox(NULL, path, "Can not open file", MB_ICONERROR);
-		sGuard--;
+		s_dlg_proc_param.guard = 0;
 		return;
 	}
 
 	do {
+		s_dlg_proc_param.hWnd = NULL;
 		(void)memset(mem, 0, sizeof(mem));
 		(void)memcpy(mem, &dialog_header, sizeof(dialog_header));
 		p = mem + sizeof(dialog_header);
@@ -1902,7 +1903,7 @@ change_password_file()
 		f = fopen(path, "r+");
 		if (!f) {
 			MessageBox(NULL, path, "Can not open file", MB_ICONERROR);
-			sGuard--;
+			s_dlg_proc_param.guard = 0;
 			return;
 		}
 
@@ -2034,7 +2035,7 @@ change_password_file()
 	         && (!g_exit_flag));
 
 	s_dlg_proc_param.hWnd = NULL;
-	sGuard--;
+	s_dlg_proc_param.guard = 0;
 
 #undef HEIGHT
 #undef WIDTH
@@ -2045,6 +2046,7 @@ change_password_file()
 static void
 show_system_info()
 {
+	static int sGuard = 0;
 	if (sGuard == 0) {
 		sGuard++;
 	} else {
