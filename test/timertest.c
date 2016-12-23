@@ -44,9 +44,10 @@
 
 #include "timertest.h"
 
+static int action_dec_ret;
 
 static int
-action1(void *arg)
+action_dec(void *arg)
 {
 	int *p = (int *)arg;
 	(*p)--;
@@ -56,7 +57,7 @@ action1(void *arg)
 		return 0;
 	}
 
-	return 1;
+	return action_dec_ret;
 }
 
 
@@ -67,17 +68,19 @@ START_TEST(test_timer_cyclic)
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
+	action_dec_ret = 1;
+
 	mark_point();
 	timers_init(&ctx);
 	mg_sleep(100);
 	mark_point();
 
 	c[0] = 10;
-	timer_add(&ctx, 0, 0.1, 1, action1, c + 0);
+	timer_add(&ctx, 0, 0.1, 1, action_dec, c + 0);
 	c[2] = 2;
-	timer_add(&ctx, 0, 0.5, 1, action1, c + 2);
+	timer_add(&ctx, 0, 0.5, 1, action_dec, c + 2);
 	c[1] = 5;
-	timer_add(&ctx, 0, 0.2, 1, action1, c + 1);
+	timer_add(&ctx, 0, 0.2, 1, action_dec, c + 1);
 
 	mark_point();
 
@@ -117,24 +120,14 @@ START_TEST(test_timer_cyclic)
 END_TEST
 
 
-static int
-action2(void *arg)
-{
-	int *p = (int *)arg;
-	(*p)--;
-
-	ck_assert_int_ge(*p, -1);
-
-	return 0;
-}
-
-
-START_TEST(test_timer_oneshot)
+START_TEST(test_timer_oneshot_by_callback_retval)
 {
 	struct mg_context ctx;
 	int c[10];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
+
+	action_dec_ret = 0;
 
 	mark_point();
 	timers_init(&ctx);
@@ -142,11 +135,56 @@ START_TEST(test_timer_oneshot)
 	mark_point();
 
 	c[0] = 10;
-	timer_add(&ctx, 0, 0.1, 1, action2, c + 0);
+	timer_add(&ctx, 0, 0.1, 1, action_dec, c + 0);
 	c[2] = 2;
-	timer_add(&ctx, 0, 0.5, 1, action2, c + 2);
+	timer_add(&ctx, 0, 0.5, 1, action_dec, c + 2);
 	c[1] = 5;
-	timer_add(&ctx, 0, 0.2, 1, action2, c + 1);
+	timer_add(&ctx, 0, 0.2, 1, action_dec, c + 1);
+
+	mark_point();
+
+	mg_sleep(1000); /* Sleep 1 second - timer will run */
+
+	mark_point();
+	ctx.stop_flag = 99; /* End timer thread */
+	mark_point();
+
+	mg_sleep(1000); /* Sleep 1 second - timer will not run */
+
+	mark_point();
+
+	timers_exit(&ctx);
+
+	mark_point();
+	mg_sleep(100);
+
+	ck_assert_int_eq(c[0], 9);
+	ck_assert_int_eq(c[1], 4);
+	ck_assert_int_eq(c[2], 1);
+}
+END_TEST
+
+
+START_TEST(test_timer_oneshot_by_timer_add)
+{
+	struct mg_context ctx;
+	int c[10];
+	memset(&ctx, 0, sizeof(ctx));
+	memset(c, 0, sizeof(c));
+
+	action_dec_ret = 1;
+
+	mark_point();
+	timers_init(&ctx);
+	mg_sleep(100);
+	mark_point();
+
+	c[0] = 10;
+	timer_add(&ctx, 0, 0, 1, action2, c + 0);
+	c[2] = 2;
+	timer_add(&ctx, 0, 0, 1, action2, c + 2);
+	c[1] = 5;
+	timer_add(&ctx, 0, 0, 1, action2, c + 1);
 
 	mark_point();
 
@@ -184,7 +222,8 @@ make_timertest_suite(void)
 	tcase_set_timeout(tcase_timer_cyclic, 30);
 	suite_add_tcase(suite, tcase_timer_cyclic);
 
-	tcase_add_test(tcase_timer_oneshot, test_timer_oneshot);
+	tcase_add_test(tcase_timer_oneshot, test_timer_oneshot_by_timer_add);
+	tcase_add_test(tcase_timer_oneshot, test_timer_oneshot_by_callback_retval);
 	tcase_set_timeout(tcase_timer_oneshot, 30);
 	suite_add_tcase(suite, tcase_timer_oneshot);
 

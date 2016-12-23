@@ -129,7 +129,7 @@ timer_thread_run(void *thread_func_param)
 		clock_gettime(CLOCK_MONOTONIC, &now);
 		d = (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
 	}
-    ctx->timers->timer_count = 0;
+	ctx->timers->timer_count = 0;
 #endif
 }
 
@@ -167,7 +167,7 @@ static void
 timers_exit(struct mg_context *ctx)
 {
 	if (ctx->timers) {
-        ctx->timers->timer_count = 0;
+		ctx->timers->timer_count = 0;
 		(void)pthread_mutex_destroy(&ctx->timers->mutex);
 		mg_free(ctx->timers);
 	}
