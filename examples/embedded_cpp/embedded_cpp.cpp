@@ -204,12 +204,29 @@ class FooHandler : public CivetHandler
 
 #ifdef _WIN32
         _snprintf(buf, sizeof(buf), "D:\\somewhere\\%s\\%s", req_info->remote_user, req_info->local_uri);
-        buf[sizeof(buf)-1] = 0; /* TODO: check overflow */
-        f = fopen_recursive(buf, "wb");
+        buf[sizeof(buf)-1] = 0;
+        if (strlen(buf)>255) {
+            /* Windows will not work with path > 260 (MAX_PATH), unless we use
+             * the unicode API. However, this is just an example code: A real
+             * code will probably never store anything to D:\\somewhere and
+             * must be adapted to the specific needs anyhow. */
+            fail = 1;
+            f = NULL;
+        } else {
+            f = fopen_recursive(buf, "wb");
+        }
 #else
         snprintf(buf, sizeof(buf), "~/somewhere/%s/%s", req_info->remote_user, req_info->local_uri);
-        buf[sizeof(buf)-1] = 0; /* TODO: check overflow */
-        f = fopen_recursive(buf, "w");
+        buf[sizeof(buf)-1] = 0;
+        if (strlen(buf)>1020) {
+            /* The string is too long and probably truncated. Make sure an
+             * UTF-8 string is never truncated between the UTF-8 code bytes.
+             * This example code must be adapted to the specific needs. */
+            fail = 1;
+            f = NULL;
+        } else {
+            f = fopen_recursive(buf, "w");
+        }
 #endif
 
         if (!f) {
