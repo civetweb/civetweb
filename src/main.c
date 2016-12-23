@@ -1013,7 +1013,6 @@ static SERVICE_STATUS_HANDLE hStatus;
 static const char *service_magic_argument = "--";
 static NOTIFYICONDATA TrayIcon;
 
-
 static void WINAPI
 ControlHandler(DWORD code)
 {
@@ -1102,6 +1101,16 @@ save_config(HWND hDlg, FILE *fp)
 }
 
 
+/* LPARAM pointer passed to WM_INITDIALOG */
+struct dlg_proc_param {
+	HWND hWnd;
+	const char *name;
+	char *buffer;
+	unsigned buflen;
+};
+
+
+/* Dialog proc for settings dialog */
 static INT_PTR CALLBACK
 SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -1111,7 +1120,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 	const struct mg_option *default_options = mg_get_valid_options();
 	char *file_options[MAX_OPTIONS * 2 + 1] = {0};
 	char *title;
-	(void)lParam;
+	struct dlg_proc_param *pdlg_proc_param;
 
 	switch (msg) {
 
@@ -1235,7 +1244,9 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_INITDIALOG:
 		/* Store hWnd in a parameter accessible by the parent, so we can
 		 * bring this window to front if required. */
-		*((HWND *)lParam) = hDlg;
+		pdlg_proc_param = (struct dlg_proc_param *)lParam;
+		pdlg_proc_param->hWnd = hDlg;
+
 		/* Initialize the dialog elements */
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
@@ -1261,16 +1272,11 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 
-struct tstring_input_buf {
-	unsigned buflen;
-	char *buffer;
-};
-
-
+/* Dialog proc for input dialog */
 static INT_PTR CALLBACK
-InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static struct tstring_input_buf *inBuf = 0;
+	static struct dlg_proc_param *inBuf = 0;
 	WORD ctrlId;
 
 	switch (msg) {
@@ -1295,7 +1301,7 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 		break;
 
 	case WM_INITDIALOG:
-		inBuf = (struct tstring_input_buf *)lP;
+		inBuf = (struct dlg_proc_param *)lParam;
 		assert(inBuf != NULL);
 		assert((inBuf->buffer != NULL) && (inBuf->buflen != 0));
 		assert(strlen(inBuf->buffer) < inBuf->buflen);
@@ -1366,7 +1372,7 @@ get_password(const char *user,
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	int ok;
 	short y;
-	struct tstring_input_buf dlgprms;
+	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1388,14 +1394,17 @@ get_password(const char *user,
 	                   8,
 	                   L"Tahoma"};
 
-	dlgprms.buffer = passwd;
-	dlgprms.buflen = passwd_len;
+	memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
+	s_dlg_proc_param.buffer = passwd;
+	s_dlg_proc_param.buflen = passwd_len;
 
 	assert((user != NULL) && (realm != NULL) && (passwd != NULL));
 
 	if (sGuard < 100) {
+		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
 		sGuard += 100;
 	} else {
+		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return 0;
 	}
 
@@ -1502,9 +1511,11 @@ get_password(const char *user,
 
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 
-	ok = (IDOK == DialogBoxIndirectParam(
-	                  NULL, dia, NULL, InputDlgProc, (LPARAM)&dlgprms));
+	ok =
+	    (IDOK == DialogBoxIndirectParam(
+	                 NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
 
+	s_dlg_proc_param.hWnd = NULL;
 	sGuard -= 100;
 
 	return ok;
@@ -1515,12 +1526,14 @@ get_password(const char *user,
 }
 
 
+/* Dialog proc for password dialog */
 static INT_PTR CALLBACK
-PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	static const char *passfile = 0;
 	char domain[256], user[256], password[256];
 	WORD ctrlId;
+	struct dlg_proc_param *pdlg_proc_param;
 
 	switch (msg) {
 	case WM_CLOSE:
@@ -1570,7 +1583,9 @@ PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 		break;
 
 	case WM_INITDIALOG:
-		passfile = (const char *)lP;
+		pdlg_proc_param = (struct dlg_proc_param *)lParam;
+		pdlg_proc_param->hWnd = hDlg;
+		passfile = pdlg_proc_param->name;
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
 		SetWindowText(hDlg, passfile);
@@ -1641,7 +1656,7 @@ show_settings_dialog()
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	WORD i, cl, nelems = 0;
 	short width, x, y;
-	static HWND sDlgHWnd;
+	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1664,9 +1679,10 @@ show_settings_dialog()
 	                   L"Tahoma"};
 
 	if (sGuard == 0) {
+		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
 		sGuard++;
 	} else {
-		SetForegroundWindow(sDlgHWnd);
+		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return;
 	}
 
@@ -1797,9 +1813,12 @@ show_settings_dialog()
 	assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
-	DialogBoxIndirectParam(NULL, dia, NULL, SettingsDlgProc, (LPARAM)&sDlgHWnd);
+
+	DialogBoxIndirectParam(
+	    NULL, dia, NULL, SettingsDlgProc, (LPARAM)&s_dlg_proc_param);
+
+	s_dlg_proc_param.hWnd = NULL;
 	sGuard--;
-	sDlgHWnd = NULL;
 
 #undef HEIGHT
 #undef WIDTH
@@ -1823,6 +1842,7 @@ change_password_file()
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	const char *domain = mg_get_option(g_ctx, "authentication_domain");
+	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1845,8 +1865,10 @@ change_password_file()
 	                   L"Tahoma"};
 
 	if (sGuard == 0) {
+		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
 		sGuard++;
 	} else {
+		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return;
 	}
 
@@ -2001,10 +2023,17 @@ change_password_file()
 		assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 		dia->cy = y + 20;
-	} while ((IDOK == DialogBoxIndirectParam(
-	                      NULL, dia, NULL, PasswordDlgProc, (LPARAM)path))
+
+		s_dlg_proc_param.name = path;
+
+	} while ((IDOK == DialogBoxIndirectParam(NULL,
+	                                         dia,
+	                                         NULL,
+	                                         PasswordDlgProc,
+	                                         (LPARAM)&s_dlg_proc_param))
 	         && (!g_exit_flag));
 
+	s_dlg_proc_param.hWnd = NULL;
 	sGuard--;
 
 #undef HEIGHT
@@ -2092,6 +2121,7 @@ manage_service(int action)
 }
 
 
+/* Window proc for taskbar icon */
 static LRESULT CALLBACK
 WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
