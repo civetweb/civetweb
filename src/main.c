@@ -1288,11 +1288,18 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		ctrlId = LOWORD(wParam);
 		if (ctrlId == IDOK) {
-			/* Add user */
-			GetWindowText(GetDlgItem(hDlg, ID_INPUT_LINE),
-			              inBuf->buffer,
-			              (int)inBuf->buflen);
-			if (strlen(inBuf->buffer) > 0) {
+			/* Get handle of input line */
+			HWND hIn = GetDlgItem(hDlg, ID_INPUT_LINE);
+
+			if (hIn) {
+				/* Get content of input line */
+				GetWindowText(hIn, inBuf->buffer, (int)inBuf->buflen);
+				if (strlen(inBuf->buffer) > 0) {
+					/* Input dialog is not empty. */
+					EndDialog(hDlg, IDOK);
+				}
+			} else {
+				/* There is no input line in this dialog. */
 				EndDialog(hDlg, IDOK);
 			}
 		} else if (ctrlId == IDCANCEL) {
