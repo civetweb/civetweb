@@ -1458,7 +1458,7 @@ get_password(const char *user,
 	            0x81,
 	            ID_CONTROLS + 1,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-	                | WS_DISABLED,
+	                | ES_READONLY,
 	            15 + LABEL_WIDTH,
 	            y,
 	            WIDTH - LABEL_WIDTH - 25,
@@ -1481,7 +1481,7 @@ get_password(const char *user,
 	            0x81,
 	            ID_CONTROLS + 2,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-	                | WS_DISABLED,
+	                | ES_READONLY,
 	            15 + LABEL_WIDTH,
 	            y,
 	            WIDTH - LABEL_WIDTH - 25,
@@ -1967,7 +1967,7 @@ change_password_file()
 			            0x81,
 			            ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA,
 			            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-			                | WS_DISABLED,
+			                | ES_READONLY,
 			            245,
 			            y,
 			            60,
@@ -1978,7 +1978,7 @@ change_password_file()
 			            0x81,
 			            ID_CONTROLS + nelems,
 			            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-			                | WS_DISABLED,
+			                | ES_READONLY,
 			            140,
 			            y,
 			            100,
@@ -2133,14 +2133,14 @@ show_system_info()
 	            0x81,
 	            ID_CONTROLS + 1,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-	                | ES_AUTOVSCROLL | ES_MULTILINE | WS_DISABLED,
+	                | ES_AUTOVSCROLL | ES_MULTILINE | ES_READONLY,
 	            15 + LABEL_WIDTH,
 	            y,
 	            WIDTH - LABEL_WIDTH - 25,
-	            HEIGHT,
+	            HEIGHT*10,
 	            g_system_info);
 
-	y += (WORD)(HEIGHT * 2);
+	y += (WORD)(HEIGHT * 11);
 	add_control(&p,
 	            dia,
 	            0x80,
