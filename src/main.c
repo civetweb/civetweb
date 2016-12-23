@@ -150,7 +150,7 @@ static char g_server_base_name[40]; /* Set by init_server_name() */
 static const char *g_server_name;   /* Set by init_server_name() */
 static const char *g_icon_name;     /* Set by init_server_name() */
 #ifdef USE_LUA
-static const char *g_lua_script;    /* Set by init_server_name() */
+static const char *g_lua_script; /* Set by init_server_name() */
 #endif
 static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
@@ -171,12 +171,14 @@ static struct tuser_data
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
-enum { OPTION_TITLE, 
-       OPTION_ICON, 
+enum {
+	OPTION_TITLE,
+	OPTION_ICON,
 #ifdef USE_LUA
-       OPTION_LUA_SCRIPT, 
+	OPTION_LUA_SCRIPT,
 #endif
-       NUM_MAIN_OPTIONS };
+	NUM_MAIN_OPTIONS
+};
 
 static struct mg_option main_config_options[] = {
     {"title", CONFIG_TYPE_STRING, NULL},
@@ -666,7 +668,6 @@ init_server_name(int argc, const char *argv[])
 		}
 	}
 #endif
-
 }
 
 
@@ -779,62 +780,11 @@ set_absolute_path(char *options[],
 
 #ifdef USE_LUA
 
-/* TODO: Move to civetweb.c, use config lua_background_script, start in mg_start, allow access to server state, set mg.sleep or use timer */
+/* TODO: Move to civetweb.c (done), use config lua_background_script (open:
+ * move from here), start in mg_start, allow access to server state, set
+ * mg.sleep or use timer */
 
-#include "civetweb_lua.h"
 #include "civetweb_private_lua.h"
-
-static int
-run_lua(const char *file_name)
-{
-	struct lua_State *L;
-	int lua_ret;
-	int func_ret = EXIT_FAILURE;
-	const char *lua_err_txt;
-
-#ifdef WIN32
-	(void)MakeConsole();
-#endif
-
-	L = luaL_newstate();
-	if (L == NULL) {
-		fprintf(stderr, "Error: Cannot create Lua state\n");
-		return EXIT_FAILURE;
-	}
-	civetweb_open_lua_libs(L);
-
-	lua_ret = luaL_loadfile(L, file_name);
-	if (lua_ret != LUA_OK) {
-		/* Error when loading the file (e.g. file not found, out of memory, ...)
-		 */
-		lua_err_txt = lua_tostring(L, -1);
-		fprintf(stderr, "Error loading file %s: %s\n", file_name, lua_err_txt);
-	} else {
-		/* The script file is loaded, now call it */
-		lua_ret = lua_pcall(L,
-		                    /* no arguments */ 0,
-		                    /* zero or one return value */ 1,
-		                    /* errors as strint return value */ 0);
-		if (lua_ret != LUA_OK) {
-			/* Error when executing the script */
-			lua_err_txt = lua_tostring(L, -1);
-			fprintf(stderr,
-			        "Error running file %s: %s\n",
-			        file_name,
-			        lua_err_txt);
-		} else {
-			/* Script executed */
-			if (lua_type(L, -1) == LUA_TNUMBER) {
-				func_ret = (int)lua_tonumber(L, -1);
-			} else {
-				func_ret = EXIT_SUCCESS;
-			}
-		}
-	}
-	lua_close(L);
-
-	return func_ret;
-}
 
 static void *
 run_lua_thread(void *file_name)
@@ -935,6 +885,9 @@ start_civetweb(int argc, char *argv[])
 		if (argc != 3) {
 			show_usage_and_exit(argv[0]);
 		}
+#ifdef WIN32
+		(void)MakeConsole();
+#endif
 		exit(run_lua(argv[2]));
 #else
 		show_server_name();
@@ -991,17 +944,17 @@ start_civetweb(int argc, char *argv[])
 #ifdef USE_LUA
 	verify_existence(options, "lua_preload_file", 0);
 
-    if (g_lua_script) {
-        struct stat st;
-        if ((stat(g_lua_script, &st) != 0) || (S_ISDIR(st.st_mode))) {
-            fprintf(stderr, "\nError: lua_script not found\n");
-            exit(EXIT_FAILURE);
-        }
-	    if (0!=mg_start_thread(run_lua_thread, (void *)g_lua_script)) {
-            fprintf(stderr, "\nError: Cannot create thread for lua_script\n");
-            exit(EXIT_FAILURE);
-        }
-    }
+	if (g_lua_script) {
+		struct stat st;
+		if ((stat(g_lua_script, &st) != 0) || (S_ISDIR(st.st_mode))) {
+			fprintf(stderr, "\nError: lua_script not found\n");
+			exit(EXIT_FAILURE);
+		}
+		if (0 != mg_start_thread(run_lua_thread, (void *)g_lua_script)) {
+			fprintf(stderr, "\nError: Cannot create thread for lua_script\n");
+			exit(EXIT_FAILURE);
+		}
+	}
 #endif
 
 	/* Setup signal handler: quit on Ctrl-C */

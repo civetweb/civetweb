@@ -1887,6 +1887,90 @@ lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 }
 #endif
 
+
+lua_State *
+mg_prepare_lua_context_script(const char *file_name,
+                              struct mg_context *ctx,
+                              char *ebuf,
+                              size_t ebuf_len)
+{
+	struct lua_State *L;
+	int lua_ret;
+	const char *lua_err_txt;
+
+	L = luaL_newstate();
+	if (L == NULL) {
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "Error: %s",
+		            "Cannot create Lua state");
+		return 0;
+	}
+	civetweb_open_lua_libs(L);
+
+	lua_ret = luaL_loadfile(L, file_name);
+	if (lua_ret != LUA_OK) {
+		/* Error when loading the file (e.g. file not found, out of memory, ...)
+		 */
+		lua_err_txt = lua_tostring(L, -1);
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "Error loading file %s: %s\n",
+		            file_name,
+		            lua_err_txt);
+		return 0;
+	}
+
+	/* The script file is loaded, now call it */
+	lua_ret = lua_pcall(L,
+	                    /* no arguments */ 0,
+	                    /* zero or one return value */ 1,
+	                    /* errors as strint return value */ 0);
+
+	if (lua_ret != LUA_OK) {
+		/* Error when executing the script */
+		lua_err_txt = lua_tostring(L, -1);
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "Error running file %s: %s\n",
+		            file_name,
+		            lua_err_txt);
+		return 0;
+	}
+	/*	lua_close(L); must be done somewhere else */
+
+	return L;
+}
+
+
+int
+run_lua(const char *file_name)
+{
+	int func_ret = EXIT_FAILURE;
+	char ebuf[512] = {0};
+	lua_State *L =
+	    mg_prepare_lua_context_script(file_name, NULL, ebuf, sizeof(ebuf));
+	if (L) {
+		/* Script executed */
+		if (lua_type(L, -1) == LUA_TNUMBER) {
+			func_ret = (int)lua_tonumber(L, -1);
+		} else {
+			func_ret = EXIT_SUCCESS;
+		}
+		lua_close(L);
+	} else {
+		fprintf(stderr, "%s\n", ebuf);
+	}
+	return func_ret;
+}
+
+
 static void *lib_handle_uuid = NULL;
 
 static void
@@ -1899,6 +1983,7 @@ lua_init_optional_libraries(void)
 	pf_uuid_generate.p = 0;
 #endif
 }
+
 
 static void
 lua_exit_optional_libraries(void)
