@@ -149,6 +149,7 @@ static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
 static const char *g_server_name;   /* Set by init_server_name() */
 static const char *g_icon_name;     /* Set by init_server_name() */
+static char *g_system_info;         /* Set by init_system_info() */
 static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
 static struct mg_context *g_ctx; /* Set by start_civetweb() */
@@ -647,6 +648,26 @@ init_server_name(int argc, const char *argv[])
 }
 
 
+static void
+init_system_info(void)
+{
+	int len = mg_get_system_info(NULL, 0);
+	if (len > 0) {
+		g_system_info = malloc(len + 1);
+		(void)mg_get_system_info(g_system_info, len + 1);
+	} else {
+		g_system_info = sdup("Not available");
+	}
+}
+
+
+static void
+free_system_info(void)
+{
+	free(g_system_info);
+}
+
+
 static int
 log_message(const struct mg_connection *conn, const char *message)
 {
@@ -811,8 +832,11 @@ start_civetweb(int argc, char *argv[])
 #ifdef WIN32
 		(void)MakeConsole();
 #endif
-		fprintf(stdout, "\n%s (%s)\n", g_server_base_name, g_server_name);
-		(void)mg_print_system_info__experimental(0, 0);
+		fprintf(stdout,
+		        "\n%s (%s)\n%s\n",
+		        g_server_base_name,
+		        g_server_name,
+		        g_system_info);
 
 		exit(EXIT_SUCCESS);
 	}
@@ -1998,7 +2022,10 @@ show_system_info()
 		return;
 	}
 
-	/* TODO */
+	(void)MessageBox(NULL,
+	                 g_system_info,
+	                 "System Information:",
+	                 MB_ICONINFORMATION);
 
 	sGuard--;
 }
@@ -2239,6 +2266,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	(void)show;
 
 	init_server_name((int)__argc, (const char **)__argv);
+	init_system_info();
 	memset(&cls, 0, sizeof(cls));
 	cls.lpfnWndProc = (WNDPROC)WindowProc;
 	cls.hIcon = LoadIcon(NULL, IDI_APPLICATION);
@@ -2283,6 +2311,8 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+	free_system_info();
 
 	/* Return the WM_QUIT value. */
 	return (int)msg.wParam;
@@ -2339,6 +2369,7 @@ int
 main(int argc, char *argv[])
 {
 	init_server_name(argc, (const char **)argv);
+	init_system_info();
 	start_civetweb(argc, argv);
 
 	[NSAutoreleasePool new];
@@ -2396,6 +2427,7 @@ main(int argc, char *argv[])
 	[NSApp run];
 
 	stop_civetweb();
+	free_system_info();
 
 	return EXIT_SUCCESS;
 }
@@ -2406,6 +2438,7 @@ int
 main(int argc, char *argv[])
 {
 	init_server_name(argc, (const char **)argv);
+	init_system_info();
 	start_civetweb(argc, argv);
 	fprintf(stdout,
 	        "%s started on port(s) %s with web root [%s]\n",
@@ -2421,6 +2454,8 @@ main(int argc, char *argv[])
 	fflush(stdout);
 	stop_civetweb();
 	fprintf(stdout, "%s", " done.\n");
+
+	free_system_info();
 
 	return EXIT_SUCCESS;
 }

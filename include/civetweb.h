@@ -1097,14 +1097,19 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
 CIVETWEB_API unsigned mg_check_feature(unsigned feature);
 
 
-/* Check which features where set when civetweb has been compiled.
-   (Experimental: The API of this function is likely to change.)
+/* Get information on the system. Useful, if in support requests.
    Parameters:
-     To be defined - 0, 0 prints to stdout.
+     buffer: Store system information as string here.
+     buflen: Length of buffer (including a byte required for a terminating 0).
    Return:
-     To be defined.
+     Available size of system information, exluding a terminating 0.
+     The information is complete, if the return value is smaller than buflen.
+   Note:
+     It is possible to determine the required buflen, by first calling this
+     function with  buffer = NULL and buflen = NULL. The required buflen is
+     one byte more than the returned value.
 */
-CIVETWEB_API int mg_print_system_info__experimental(int prm1, char *prm2);
+CIVETWEB_API int mg_get_system_info(char *buffer, int buflen);
 
 #ifdef __cplusplus
 }
