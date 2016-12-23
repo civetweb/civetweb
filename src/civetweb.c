@@ -1348,11 +1348,11 @@ struct ssl_func {
 #define SSL_CTX_set_session_id_context                                         \
 	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[28].ptr)
 #define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[29].ptr)
-#define SSL_CTX_set_options (*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[30].ptr)
-
-
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[30].ptr)
+#define SSL_CTX_set_options (*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[31].ptr)
+
+
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
 #define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
