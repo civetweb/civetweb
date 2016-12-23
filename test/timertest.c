@@ -180,11 +180,11 @@ START_TEST(test_timer_oneshot_by_timer_add)
 	mark_point();
 
 	c[0] = 10;
-	timer_add(&ctx, 0, 0, 1, action2, c + 0);
+	timer_add(&ctx, 0, 0, 1, action_dec, c + 0);
 	c[2] = 2;
-	timer_add(&ctx, 0, 0, 1, action2, c + 2);
+	timer_add(&ctx, 0, 0, 1, action_dec, c + 2);
 	c[1] = 5;
-	timer_add(&ctx, 0, 0, 1, action2, c + 1);
+	timer_add(&ctx, 0, 0, 1, action_dec, c + 1);
 
 	mark_point();
 
@@ -243,7 +243,8 @@ TIMER_PRIVATE(void)
 #endif
 
 	test_timer_cyclic(0);
-	test_timer_oneshot(0);
+	test_timer_oneshot_by_timer_add(0);
+    test_timer_oneshot_by_callback_retval(0);
 
 #if defined(_WIN32)
 	WSACleanup();
