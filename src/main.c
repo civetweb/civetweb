@@ -1315,6 +1315,9 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 		/* Get dialog parameters */
 		inBuf = (struct dlg_proc_param *)lParam;
 
+		/* Set dialog handle for the caller */
+		inBuf->hWnd = hDlg;
+
 		/* Set dialog name */
 		SetWindowText(hDlg, inBuf->name);
 
@@ -2074,8 +2077,8 @@ int
 show_system_info()
 {
 #define HEIGHT (15)
-#define WIDTH (280)
-#define LABEL_WIDTH (90)
+#define WIDTH (320)
+#define LABEL_WIDTH (50)
 
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
@@ -2137,10 +2140,10 @@ show_system_info()
 	            15 + LABEL_WIDTH,
 	            y,
 	            WIDTH - LABEL_WIDTH - 25,
-	            HEIGHT*10,
+	            HEIGHT * 7,
 	            g_system_info);
 
-	y += (WORD)(HEIGHT * 11);
+	y += (WORD)(HEIGHT * 8);
 	add_control(&p,
 	            dia,
 	            0x80,
