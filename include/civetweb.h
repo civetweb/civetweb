@@ -58,14 +58,14 @@ extern "C" {
  *   initialized features
  *   0: error
  */
-unsigned mg_init_library(unsigned features);
+CIVETWEB_API unsigned mg_init_library(unsigned features);
 
 
 /* Un-initialize this library.
  * Return value:
  *   0: error
  */
-unsigned mg_exit_library(void);
+CIVETWEB_API unsigned mg_exit_library(void);
 
 
 struct mg_context;    /* Handle for the HTTP service itself */

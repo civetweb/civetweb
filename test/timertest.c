@@ -237,14 +237,23 @@ make_timertest_suite(void)
 void
 TIMER_PRIVATE(void)
 {
+	unsigned f_avail;
+	unsigned f_ret;
+
 #if defined(_WIN32)
 	WSADATA data;
 	WSAStartup(MAKEWORD(2, 2), &data);
 #endif
 
+	f_avail = mg_check_feature(0xFF);
+	f_ret = mg_init_library(f_avail);
+	ck_assert_uint_eq(f_ret, f_avail);
+
 	test_timer_cyclic(0);
 	test_timer_oneshot_by_timer_add(0);
 	test_timer_oneshot_by_callback_retval(0);
+
+	mg_exit_library();
 
 #if defined(_WIN32)
 	WSACleanup();

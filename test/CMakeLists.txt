@@ -161,6 +161,7 @@ civetweb_add_test(PublicFunc "Aux functions")
 
 # Public API server tests
 civetweb_add_test(PublicServer "Check test environment")
+civetweb_add_test(PublicServer "Init library")
 civetweb_add_test(PublicServer "Start threads")
 civetweb_add_test(PublicServer "Start Stop HTTP Server")
 civetweb_add_test(PublicServer "Start Stop HTTPS Server")
