@@ -14720,4 +14720,23 @@ mg_print_system_info(int prm1, char *prm2)
 	return 0;
 }
 
+
+/* Initialize this library. */
+int
+mg_init_library(unsigned features)
+{
+	/* Currently we do nothing here. This is planned for Version 1.10.
+	 * For now, we just add this function, so clients can be changed early. */
+	return 1;
+}
+
+
+/* Un-initialize this library. */
+int
+mg_exit_library(void)
+{
+	return 1;
+}
+
+
 /* End of civetweb.c */

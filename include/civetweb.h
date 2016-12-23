@@ -49,6 +49,14 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Initialize this library. This should be called before any other function. */
+int mg_init_library(unsigned features);
+
+
+/* Un-initialize this library. */
+int mg_exit_library(void);
+
+
 struct mg_context;    /* Handle for the HTTP service itself */
 struct mg_connection; /* Handle for the individual connection */
 
