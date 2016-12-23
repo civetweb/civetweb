@@ -737,8 +737,8 @@ gmtime(const time_t *ptime)
 static size_t
 strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
 {
-	/* TODO */ //(void)mg_snprintf(NULL, dst, dst_size, "implement strftime()
-	// for WinCE");
+	/* TODO: (void)mg_snprintf(NULL, dst, dst_size, "implement strftime()
+	 * for WinCE"); */
 	return 0;
 }
 
@@ -9790,8 +9790,9 @@ handle_websocket_request(struct mg_connection *conn,
 				curSubProtocol = protocol;
 				len = sep ? (unsigned long)(sep - protocol)
 				          : (unsigned long)strlen(protocol);
-				while (sep && isspace(*++sep))
-					; // ignore leading whitespaces
+				while (sep && isspace(*++sep)) {
+					; /* ignore leading whitespaces */
+				}
 				protocol = sep;
 
 
@@ -9827,8 +9828,9 @@ handle_websocket_request(struct mg_connection *conn,
 				 * and use it to select one protocol among those the client has
 				 * offered.
 				 */
-				while (isspace(*++sep))
-					; // ignore leading whitespaces
+				while (isspace(*++sep)) {
+					; /* ignore leading whitespaces */
+				}
 				conn->request_info.acceptedWebSocketSubprotocol = sep;
 			}
 		}
@@ -13714,7 +13716,6 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 	char src_addr[IP_ADDR_STR_LEN];
 	socklen_t len = sizeof(so.rsa);
 	int on = 1;
-	int timeout;
 
 	if (!listener) {
 		return;
@@ -13775,19 +13776,10 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 			}
 		}
 
-		if (ctx && ctx->config[REQUEST_TIMEOUT]) {
-			timeout = atoi(ctx->config[REQUEST_TIMEOUT]);
-		} else {
-			timeout = -1;
-		}
+		/* We are using non-blocking sockets. Thus, the
+		 * set_sock_timeout(so.sock, timeout);
+		 * call is no longer required. */
 
-
-		/* TODO: if non blocking sockets are used, timeouts are implemented
-		 * differently */
-		// if (timeout > 0) {
-		//	set_sock_timeout(so.sock, timeout);
-		//}
-		(void)timeout;
 		set_blocking_mode(so.sock, 0);
 
 		produce_socket(ctx, &so);
@@ -14491,7 +14483,7 @@ mg_print_system_info(int prm1, char *prm2)
 
 #ifdef _MSC_VER
 #pragma warning(push)
-// GetVersion was declared deprecated
+/* GetVersion was declared deprecated */
 #pragma warning(disable : 4996)
 #endif
 	dwVersion = GetVersion();
@@ -14714,7 +14706,7 @@ mg_print_system_info(int prm1, char *prm2)
 		puts(buf);
 	}
 
-	// WARNING: these parameters are not being used
+	/* WARNING: these parameters are not being used */
 	(void)prm2;
 
 	return 0;
