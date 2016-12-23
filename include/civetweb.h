@@ -1068,9 +1068,16 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
                                  int timeout);
 
 
-/* Check which features where set when civetweb has been compiled.
+/* Check which features where set when the civetweb library has been compiled.
+   The function explicitly addresses compile time defines used when building
+   the library - it does not mean, the feature has been initialized using a
+   mg_init_library call.
+   mg_check_feature can be called anytime, even before mg_init_library has
+   been called.
+
    Parameters:
      feature: specifies which feature should be checked
+       The value is a bit mask. The individual bits are defined as:
          1  serve files (NO_FILES not set)
          2  support HTTPS (NO_SSL not set)
          4  support CGI (NO_CGI not set)
@@ -1079,11 +1086,13 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
         32  support Lua scripts and Lua server pages (USE_LUA is set)
         64  support server side JavaScript (USE_DUKTAPE is set)
        128  support caching (NO_CACHING not set)
-       The result is undefined for all other feature values.
+       The result is undefined, if bits are set that do not represent a
+       defined feature (currently: feature >= 256).
+       The result is undefined, if no bit is set (feature == 0).
 
    Return:
-     If feature is available > 0
-     If feature is not available = 0
+     If feature is available, the corresponding bit is set
+     If feature is not available, the bit is 0
 */
 CIVETWEB_API unsigned mg_check_feature(unsigned feature);
 
