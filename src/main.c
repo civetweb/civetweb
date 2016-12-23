@@ -149,9 +149,6 @@ static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
 static const char *g_server_name;   /* Set by init_server_name() */
 static const char *g_icon_name;     /* Set by init_server_name() */
-#ifdef USE_LUA
-static const char *g_lua_script; /* Set by init_server_name() */
-#endif
 static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
 static struct mg_context *g_ctx; /* Set by start_civetweb() */
@@ -171,22 +168,11 @@ static struct tuser_data
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
-enum {
-	OPTION_TITLE,
-	OPTION_ICON,
-#ifdef USE_LUA
-	OPTION_LUA_SCRIPT,
-#endif
-	NUM_MAIN_OPTIONS
-};
+enum { OPTION_TITLE, OPTION_ICON, NUM_MAIN_OPTIONS };
 
 static struct mg_option main_config_options[] = {
     {"title", CONFIG_TYPE_STRING, NULL},
     {"icon", CONFIG_TYPE_STRING, NULL},
-#ifdef USE_LUA
-    /* TODO: Move from here to civetweb.c and stop with server */
-    {"lua_script", CONFIG_TYPE_STRING, NULL},
-#endif
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -658,16 +644,6 @@ init_server_name(int argc, const char *argv[])
 			g_icon_name = (const char *)(argv[i + 1]);
 		}
 	}
-#ifdef USE_LUA
-	g_lua_script = NULL;
-	for (i = 0; i < argc - 1; i++) {
-		if ((argv[i][0] == '-')
-		    && (0 == strcmp(argv[i] + 1,
-		                    main_config_options[OPTION_LUA_SCRIPT].name))) {
-			g_lua_script = (const char *)(argv[i + 1]);
-		}
-	}
-#endif
 }
 
 
@@ -780,18 +756,7 @@ set_absolute_path(char *options[],
 
 #ifdef USE_LUA
 
-/* TODO: Move to civetweb.c (done), use config lua_background_script (open:
- * move from here), start in mg_start, allow access to server state, set
- * mg.sleep or use timer */
-
 #include "civetweb_private_lua.h"
-
-static void *
-run_lua_thread(void *file_name)
-{
-	run_lua((const char *)file_name);
-	return NULL;
-}
 
 #endif
 
@@ -804,10 +769,6 @@ static int
 run_duktape(const char *file_name)
 {
 	duk_context *ctx = NULL;
-
-#ifdef WIN32
-	(void)MakeConsole();
-#endif
 
 	ctx = duk_create_heap_default();
 	if (!ctx) {
@@ -903,6 +864,9 @@ start_civetweb(int argc, char *argv[])
 		if (argc != 3) {
 			show_usage_and_exit(argv[0]);
 		}
+#ifdef WIN32
+		(void)MakeConsole();
+#endif
 		exit(run_duktape(argv[2]));
 #else
 		show_server_name();
@@ -943,18 +907,6 @@ start_civetweb(int argc, char *argv[])
 	verify_existence(options, "ssl_ca_file", 0);
 #ifdef USE_LUA
 	verify_existence(options, "lua_preload_file", 0);
-
-	if (g_lua_script) {
-		struct stat st;
-		if ((stat(g_lua_script, &st) != 0) || (S_ISDIR(st.st_mode))) {
-			fprintf(stderr, "\nError: lua_script not found\n");
-			exit(EXIT_FAILURE);
-		}
-		if (0 != mg_start_thread(run_lua_thread, (void *)g_lua_script)) {
-			fprintf(stderr, "\nError: Cannot create thread for lua_script\n");
-			exit(EXIT_FAILURE);
-		}
-	}
 #endif
 
 	/* Setup signal handler: quit on Ctrl-C */

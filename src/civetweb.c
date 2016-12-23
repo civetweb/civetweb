@@ -52,7 +52,7 @@
 #endif
 #endif
 
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#if defined(USE_LUA)
 #define USE_TIMERS
 #endif
 
@@ -1604,6 +1604,9 @@ enum {
 #if defined(_WIN32)
 	CASE_SENSITIVE_FILES,
 #endif
+#if defined(USE_LUA)
+	LUA_BACKGROUND_SCRIPT,
+#endif
 
 	NUM_OPTIONS
 };
@@ -1685,6 +1688,9 @@ static struct mg_option config_options[] = {
 #endif
 #if defined(_WIN32)
     {"case_sensitive", CONFIG_TYPE_BOOLEAN, "no"},
+#endif
+#if defined(USE_LUA)
+    {"lua_background_script", CONFIG_TYPE_FILE, NULL},
 #endif
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
@@ -1774,8 +1780,12 @@ struct mg_context {
 	struct mg_shared_lua_websocket_list *shared_lua_websockets;
 #endif
 
-#ifdef USE_TIMERS
+#if defined(USE_TIMERS)
 	struct ttimers *timers;
+#endif
+
+#if defined(USE_LUA)
+	void *lua_background_state;
 #endif
 };
 
@@ -13890,6 +13900,14 @@ master_thread_run(void *thread_func_param)
 		}
 	}
 
+#if defined(USE_LUA)
+	/* Free Lua state of lua background task */
+	if (ctx->lua_background_state) {
+		lua_close((lua_State *)ctx->lua_background_state);
+		ctx->lua_background_state = 0;
+	}
+#endif
+
 #if !defined(NO_SSL)
 	if (ctx->ssl_ctx != NULL) {
 		uninitialize_ssl(ctx);
@@ -14250,6 +14268,24 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif
 
 	get_system_name(&ctx->systemName);
+
+#if defined(USE_LUA)
+	/* If a Lua background script has been configured, start it. */
+	if (ctx->config[LUA_BACKGROUND_SCRIPT] != NULL) {
+		char ebuf[256];
+		void *state = (void *)mg_prepare_lua_context_script(
+		    ctx->config[LUA_BACKGROUND_SCRIPT], ctx, ebuf, sizeof(ebuf));
+		if (!state) {
+			mg_cry(fc(ctx), "lua_background_script error: %s", ebuf);
+			free_context(ctx);
+			pthread_setspecific(sTlsKey, NULL);
+			return NULL;
+		}
+		ctx->lua_background_state = state;
+	} else {
+		ctx->lua_background_state = 0;
+	}
+#endif
 
 	/* NOTE(lsm): order is important here. SSL certificates must
 	 * be initialized before listening ports. UID must be set last. */

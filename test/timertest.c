@@ -244,7 +244,7 @@ TIMER_PRIVATE(void)
 
 	test_timer_cyclic(0);
 	test_timer_oneshot_by_timer_add(0);
-    test_timer_oneshot_by_callback_retval(0);
+	test_timer_oneshot_by_callback_retval(0);
 
 #if defined(_WIN32)
 	WSACleanup();
