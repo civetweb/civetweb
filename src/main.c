@@ -1278,6 +1278,7 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	static struct dlg_proc_param *inBuf = 0;
 	WORD ctrlId;
+	HWND hIn;
 
 	switch (msg) {
 	case WM_CLOSE:
@@ -1289,7 +1290,7 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 		ctrlId = LOWORD(wParam);
 		if (ctrlId == IDOK) {
 			/* Get handle of input line */
-			HWND hIn = GetDlgItem(hDlg, ID_INPUT_LINE);
+			hIn = GetDlgItem(hDlg, ID_INPUT_LINE);
 
 			if (hIn) {
 				/* Get content of input line */
@@ -1308,17 +1309,27 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_INITDIALOG:
+		/* Get handle of input line */
+		hIn = GetDlgItem(hDlg, ID_INPUT_LINE);
+
+		/* Get dialog parameters */
 		inBuf = (struct dlg_proc_param *)lParam;
-		assert(inBuf != NULL);
-		assert((inBuf->buffer != NULL) && (inBuf->buflen != 0));
-		assert(strlen(inBuf->buffer) < inBuf->buflen);
-		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
-		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
-		SendDlgItemMessage(
-		    hDlg, ID_INPUT_LINE, EM_LIMITTEXT, inBuf->buflen - 1, 0);
-		SetWindowText(GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer);
-		SetWindowText(hDlg, "Modify password");
-		SetFocus(GetDlgItem(hDlg, ID_INPUT_LINE));
+
+		/* Set dialog name */
+		SetWindowText(hDlg, inBuf->name);
+
+		if (hIn) {
+			/* This is an input dialog */
+			assert(inBuf != NULL);
+			assert((inBuf->buffer != NULL) && (inBuf->buflen != 0));
+			assert(strlen(inBuf->buffer) < inBuf->buflen);
+			SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
+			SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
+			SendMessage(hIn, EM_LIMITTEXT, inBuf->buflen - 1, 0);
+			SetWindowText(hIn, inBuf->buffer);
+			SetFocus(hIn);
+		}
+
 		break;
 
 	default:
@@ -1524,6 +1535,8 @@ get_password(const char *user,
 	assert((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
 
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
+
+	s_dlg_proc_param.name = "Modify password";
 
 	ok =
 	    (IDOK == DialogBoxIndirectParam(
@@ -2057,22 +2070,109 @@ change_password_file()
 }
 
 
-static void
+int
 show_system_info()
 {
-	static int sGuard = 0;
-	if (sGuard == 0) {
-		sGuard++;
+#define HEIGHT (15)
+#define WIDTH (280)
+#define LABEL_WIDTH (90)
+
+	unsigned char mem[4096], *p;
+	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
+	int ok;
+	short y;
+	static struct dlg_proc_param s_dlg_proc_param;
+
+	static struct {
+		DLGTEMPLATE template; /* 18 bytes */
+		WORD menu, class;
+		wchar_t caption[1];
+		WORD fontsiz;
+		wchar_t fontface[7];
+	} dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU | WS_VISIBLE
+	                        | DS_SETFONT | WS_DLGFRAME,
+	                    WS_EX_TOOLWINDOW,
+	                    0,
+	                    200,
+	                    200,
+	                    WIDTH,
+	                    0},
+	                   0,
+	                   0,
+	                   L"",
+	                   8,
+	                   L"Tahoma"};
+
+	/* Only allow one instance of this dialog to be open. */
+	if (s_dlg_proc_param.guard == 0) {
+		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
+		s_dlg_proc_param.guard = 1;
 	} else {
-		return;
+		SetForegroundWindow(s_dlg_proc_param.hWnd);
+		return 0;
 	}
 
-	(void)MessageBox(NULL,
-	                 g_system_info,
-	                 "System Information:",
-	                 MB_ICONINFORMATION);
+	/* Make buffer available for input dialog */
+	s_dlg_proc_param.name = g_system_info;
 
-	sGuard--;
+	/* Create the dialog */
+	(void)memset(mem, 0, sizeof(mem));
+	(void)memcpy(mem, &dialog_header, sizeof(dialog_header));
+	p = mem + sizeof(dialog_header);
+
+	y = HEIGHT;
+	add_control(&p,
+	            dia,
+	            0x82,
+	            ID_STATIC,
+	            WS_VISIBLE | WS_CHILD,
+	            10,
+	            y,
+	            LABEL_WIDTH,
+	            HEIGHT,
+	            "System Information:");
+	add_control(&p,
+	            dia,
+	            0x81,
+	            ID_CONTROLS + 1,
+	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
+	                | WS_DISABLED,
+	            15 + LABEL_WIDTH,
+	            y,
+	            WIDTH - LABEL_WIDTH - 25,
+	            HEIGHT,
+	            g_system_info);
+
+	y += (WORD)(HEIGHT * 2);
+	add_control(&p,
+	            dia,
+	            0x80,
+	            IDOK,
+	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+	            80,
+	            y,
+	            55,
+	            12,
+	            "Ok");
+
+	assert((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
+
+	dia->cy = y + (WORD)(HEIGHT * 1.5);
+
+	s_dlg_proc_param.name = "System information";
+
+	ok =
+	    (IDOK == DialogBoxIndirectParam(
+	                 NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+
+	s_dlg_proc_param.hWnd = NULL;
+	s_dlg_proc_param.guard = 0;
+
+	return ok;
+
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
 }
 
 
