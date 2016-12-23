@@ -14472,263 +14472,284 @@ mg_get_system_info_impl(char *buffer, int buflen)
 {
 	char block[256];
 	int system_info_length = 0;
-	const char *version = mg_version();
 
+	/* Server version */
+	{
+		const char *version = mg_version();
+		mg_snprintf(
+		    NULL, NULL, block, sizeof(block), "Server Version: %s\n", version);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
+	}
+
+	/* System info */
+	{
 #if defined(_WIN32)
 #if !defined(__SYMBIAN32__)
-	DWORD dwVersion = 0;
-	DWORD dwMajorVersion = 0;
-	DWORD dwMinorVersion = 0;
-	SYSTEM_INFO si;
+		DWORD dwVersion = 0;
+		DWORD dwMajorVersion = 0;
+		DWORD dwMinorVersion = 0;
+		SYSTEM_INFO si;
 
-	GetSystemInfo(&si);
+		GetSystemInfo(&si);
 
 #ifdef _MSC_VER
 #pragma warning(push)
 /* GetVersion was declared deprecated */
 #pragma warning(disable : 4996)
 #endif
-	dwVersion = GetVersion();
+		dwVersion = GetVersion();
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-	dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
-	dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
+		dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
+		dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
 
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "Windows %u.%u\n",
-	            (unsigned)dwMajorVersion,
-	            (unsigned)dwMinorVersion);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "Windows %u.%u\n",
+		            (unsigned)dwMajorVersion,
+		            (unsigned)dwMinorVersion);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "CPU: type %u, cores %u, mask %x\n",
-	            (unsigned)si.wProcessorArchitecture,
-	            (unsigned)si.dwNumberOfProcessors,
-	            (unsigned)si.dwActiveProcessorMask);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "CPU: type %u, cores %u, mask %x\n",
+		            (unsigned)si.wProcessorArchitecture,
+		            (unsigned)si.dwNumberOfProcessors,
+		            (unsigned)si.dwActiveProcessorMask);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 
 #else
-	mg_snprintf(NULL, NULL, block, sizeof(block), "%s - Symbian\n");
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL, NULL, block, sizeof(block), "%s - Symbian\n");
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #endif
 #else
-	struct utsname name;
-	memset(&name, 0, sizeof(name));
-	uname(&name);
+		struct utsname name;
+		memset(&name, 0, sizeof(name));
+		uname(&name);
 
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "%s %s (%s) - %s\n",
-	            name.sysname,
-	            name.version,
-	            name.release,
-	            name.machine);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "%s %s (%s) - %s\n",
+		            name.sysname,
+		            name.version,
+		            name.release,
+		            name.machine);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #endif
-
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "Features: %X%s%s%s%s%s%s\n",
-	            mg_check_feature(0xFFFFFFFFu),
-	            mg_check_feature(1) ? " Files" : "",
-	            mg_check_feature(2) ? " HTTPS" : "",
-	            mg_check_feature(4) ? " CGI" : "",
-	            mg_check_feature(8) ? " IPv6" : "",
-	            mg_check_feature(16) ? " WebSockets" : "",
-	            mg_check_feature(32) ? " Lua" : "");
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
 	}
+
+	/* Features */
+	{
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "Features: %X\n%s%s%s%s%s%s\n",
+		            mg_check_feature(0xFFFFFFFFu),
+		            mg_check_feature(1) ? " Files" : "",
+		            mg_check_feature(2) ? " HTTPS" : "",
+		            mg_check_feature(4) ? " CGI" : "",
+		            mg_check_feature(8) ? " IPv6" : "",
+		            mg_check_feature(16) ? " WebSockets" : "",
+		            mg_check_feature(32) ? " Lua" : "");
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 
 #ifdef USE_LUA
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "Lua Version: %u (%s)\n",
-	            (unsigned)LUA_VERSION_NUM,
-	            LUA_RELEASE);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "Lua Version: %u (%s)\n",
+		            (unsigned)LUA_VERSION_NUM,
+		            LUA_RELEASE);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #endif
-
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "Version: %s, Build: %s\n",
-	            version,
-	            __DATE__);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
 	}
 
-/* http://sourceforge.net/p/predef/wiki/Compilers/ */
+	/* Build date */
+	{
+		mg_snprintf(NULL, NULL, block, sizeof(block), "Build: %s\n", __DATE__);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
+	}
+
+
+	/* Compiler information */
+	/* http://sourceforge.net/p/predef/wiki/Compilers/ */
+	{
 #if defined(_MSC_VER)
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "MSC: %u (%u)\n",
-	            (unsigned)_MSC_VER,
-	            (unsigned)_MSC_FULL_VER);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "MSC: %u (%u)\n",
+		            (unsigned)_MSC_VER,
+		            (unsigned)_MSC_FULL_VER);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #elif defined(__MINGW64__)
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "MinGW64: %u.%u\n",
-	            (unsigned)__MINGW64_VERSION_MAJOR,
-	            (unsigned)__MINGW64_VERSION_MINOR);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "MinGW32: %u.%u\n",
-	            (unsigned)__MINGW32_MAJOR_VERSION,
-	            (unsigned)__MINGW32_MINOR_VERSION);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "MinGW64: %u.%u\n",
+		            (unsigned)__MINGW64_VERSION_MAJOR,
+		            (unsigned)__MINGW64_VERSION_MINOR);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "MinGW32: %u.%u\n",
+		            (unsigned)__MINGW32_MAJOR_VERSION,
+		            (unsigned)__MINGW32_MINOR_VERSION);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #elif defined(__MINGW32__)
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "MinGW32: %u.%u\n",
-	            (unsigned)__MINGW32_MAJOR_VERSION,
-	            (unsigned)__MINGW32_MINOR_VERSION);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "MinGW32: %u.%u\n",
+		            (unsigned)__MINGW32_MAJOR_VERSION,
+		            (unsigned)__MINGW32_MINOR_VERSION);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #elif defined(__clang__)
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "clang: %u.%u.%u (%s)\n",
-	            __clang_major__,
-	            __clang_minor__,
-	            __clang_patchlevel__,
-	            __clang_version__);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "clang: %u.%u.%u (%s)\n",
+		            __clang_major__,
+		            __clang_minor__,
+		            __clang_patchlevel__,
+		            __clang_version__);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #elif defined(__GNUC__)
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "gcc: %u.%u.%u\n",
-	            (unsigned)__GNUC__,
-	            (unsigned)__GNUC_MINOR__,
-	            (unsigned)__GNUC_PATCHLEVEL__);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "gcc: %u.%u.%u\n",
+		            (unsigned)__GNUC__,
+		            (unsigned)__GNUC_MINOR__,
+		            (unsigned)__GNUC_PATCHLEVEL__);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #elif defined(__INTEL_COMPILER)
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "Intel C/C++: %u\n",
-	            (unsigned)__INTEL_COMPILER);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "Intel C/C++: %u\n",
+		            (unsigned)__INTEL_COMPILER);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #elif defined(__BORLANDC__)
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "Borland C: 0x%x\n",
-	            (unsigned)__BORLANDC__);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "Borland C: 0x%x\n",
+		            (unsigned)__BORLANDC__);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #elif defined(__SUNPRO_C)
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "Solaris: 0x%x\n",
-	            (unsigned)__SUNPRO_C);
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "Solaris: 0x%x\n",
+		            (unsigned)__SUNPRO_C);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #else
-	mg_snprintf(NULL, NULL, block, sizeof(block), "Other\n");
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
-	}
+		mg_snprintf(NULL, NULL, block, sizeof(block), "Other compiler\n");
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 #endif
+	}
+
+
 	/* Determine 32/64 bit data mode.
 	 * see https://en.wikipedia.org/wiki/64-bit_computing */
-	mg_snprintf(NULL,
-	            NULL,
-	            block,
-	            sizeof(block),
-	            "Data model: int:%u/%u/%u/%u, float:%u/%u/%u, char:%u/%u, "
-	            "ptr:%u, size:%u, time:%u\n",
-	            (unsigned)sizeof(short),
-	            (unsigned)sizeof(int),
-	            (unsigned)sizeof(long),
-	            (unsigned)sizeof(long long),
-	            (unsigned)sizeof(float),
-	            (unsigned)sizeof(double),
-	            (unsigned)sizeof(long double),
-	            (unsigned)sizeof(char),
-	            (unsigned)sizeof(wchar_t),
-	            (unsigned)sizeof(void *),
-	            (unsigned)sizeof(size_t),
-	            (unsigned)sizeof(time_t));
-	system_info_length += (int)strlen(block);
-	if (system_info_length < buflen) {
-		strcat(buffer, block);
+	{
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "Data model: int:%u/%u/%u/%u, float:%u/%u/%u, char:%u/%u, "
+		            "ptr:%u, size:%u, time:%u\n",
+		            (unsigned)sizeof(short),
+		            (unsigned)sizeof(int),
+		            (unsigned)sizeof(long),
+		            (unsigned)sizeof(long long),
+		            (unsigned)sizeof(float),
+		            (unsigned)sizeof(double),
+		            (unsigned)sizeof(long double),
+		            (unsigned)sizeof(char),
+		            (unsigned)sizeof(wchar_t),
+		            (unsigned)sizeof(void *),
+		            (unsigned)sizeof(size_t),
+		            (unsigned)sizeof(time_t));
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
 	}
 
 	return system_info_length;
@@ -14745,7 +14766,7 @@ mg_get_system_info(char *buffer, int buflen)
 	} else {
 		/* Reset buffer, so we can always use strcat. */
 		buffer[0] = 0;
-		return mg_get_system_info_impl(buffer, buffer);
+		return mg_get_system_info_impl(buffer, buflen);
 	}
 }
 
