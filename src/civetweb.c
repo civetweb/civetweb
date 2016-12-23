@@ -14567,14 +14567,16 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "Features: %X\n%s%s%s%s%s%s\n",
+		            "Features: %X\n%s%s%s%s%s%s%s%s\n",
 		            mg_check_feature(0xFFFFFFFFu),
 		            mg_check_feature(1) ? " Files" : "",
 		            mg_check_feature(2) ? " HTTPS" : "",
 		            mg_check_feature(4) ? " CGI" : "",
 		            mg_check_feature(8) ? " IPv6" : "",
 		            mg_check_feature(16) ? " WebSockets" : "",
-		            mg_check_feature(32) ? " Lua" : "");
+		            mg_check_feature(32) ? " Lua" : "",
+		            mg_check_feature(64) ? " JavaScript" : "",
+		            mg_check_feature(128) ? " Cache" : "");
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
 			strcat(buffer, block);
@@ -14588,6 +14590,20 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            "Lua Version: %u (%s)\n",
 		            (unsigned)LUA_VERSION_NUM,
 		            LUA_RELEASE);
+		system_info_length += (int)strlen(block);
+		if (system_info_length < buflen) {
+			strcat(buffer, block);
+		}
+#endif
+#if defined(USE_DUKTAPE)
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "JavaScript: Duktape %u.%u.%u\n",
+		            (unsigned)DUK_VERSION / 10000,
+		            ((unsigned)DUK_VERSION / 100) % 100,
+		            (unsigned)DUK_VERSION % 10000);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
 			strcat(buffer, block);
