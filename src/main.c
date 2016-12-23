@@ -2112,9 +2112,6 @@ show_system_info()
 		return 0;
 	}
 
-	/* Make buffer available for input dialog */
-	s_dlg_proc_param.name = g_system_info;
-
 	/* Create the dialog */
 	(void)memset(mem, 0, sizeof(mem));
 	(void)memcpy(mem, &dialog_header, sizeof(dialog_header));
@@ -2136,7 +2133,7 @@ show_system_info()
 	            0x81,
 	            ID_CONTROLS + 1,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-	                | WS_DISABLED,
+	                | ES_AUTOVSCROLL | ES_MULTILINE | WS_DISABLED,
 	            15 + LABEL_WIDTH,
 	            y,
 	            WIDTH - LABEL_WIDTH - 25,
@@ -2149,7 +2146,7 @@ show_system_info()
 	            0x80,
 	            IDOK,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            80,
+	            (WIDTH - 55) / 2,
 	            y,
 	            55,
 	            12,
