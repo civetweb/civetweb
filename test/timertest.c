@@ -49,15 +49,6 @@ static int action_dec_ret;
 static int
 action_dec(void *arg)
 {
-#if defined(__MINGW32__)
-    /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
-     * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
-    https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
-    https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
-    */
-    (void)arg;
-    return 0;
-#else
 	int *p = (int *)arg;
 	(*p)--;
 
@@ -67,22 +58,12 @@ action_dec(void *arg)
 	}
 
 	return (*p >= -3) ? action_dec_ret : 0;
-#endif
 }
 
 
 static int
 action_dec_to_0(void *arg)
 {
-#if defined(__MINGW32__)
-    /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
-     * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
-    https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
-    https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
-    */
-    (void)arg;
-    return 0;
-#else
 	int *p = (int *)arg;
 	(*p)--;
 
@@ -92,7 +73,6 @@ action_dec_to_0(void *arg)
 	}
 
 	return (*p > 0);
-#endif
 }
 
 
@@ -118,6 +98,15 @@ START_TEST(test_timer_cyclic)
 	timer_add(&ctx, 0, 0.2, 1, action_dec, c + 1);
 
 	mark_point();
+
+#if defined(__MINGW32__)
+    /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
+     * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
+    https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
+    https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
+    */
+    ck_abort_msg("Abort here (instead of SegFault)");
+#endif
 
 	mg_sleep(1000); /* Sleep 1 second - timer will run */
 
