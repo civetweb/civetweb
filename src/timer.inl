@@ -30,16 +30,16 @@ timer_add(struct mg_context *ctx,
 {
 	unsigned u, v;
 	int error = 0;
-	struct timespec now;
-	double dt; /* double time */
+	struct timespec now_ts; /* now in timespec */
+	double now_d;           /* now in double */
 
 	if (ctx->stop_flag) {
 		return 0;
 	}
 
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	dt = (double)(now.tv_sec);
-	dt += (double)(now.tv_nsec) * 1.0E-9;
+	clock_gettime(CLOCK_MONOTONIC, &now_ts);
+	now_d = (double)(now_ts.tv_sec);
+	now_d += (double)(now_ts.tv_nsec) * 1.0E-9;
 
 	/* HCP24: if is_relative = 0 and next_time < now
 	 *        action will be called so fast as possible
@@ -49,19 +49,26 @@ timer_add(struct mg_context *ctx,
 	 *        then the period is working
 	 * Solution:
 	 *        if next_time < now then we set next_time = now.
-	 *        The first callback will be so fast as possible  (now)
+	 *        The first callback will be so fast as possible (now)
 	 *        but the next callback on period
 	*/
 	if (is_relative) {
-		next_time += dt;
-	} else if (next_time < dt) {
-		next_time = dt;
+		next_time += now_d;
+	}
+
+	/* You can not set timers into the past */
+	if (next_time < now_d) {
+		next_time = now_d;
 	}
 
 	pthread_mutex_lock(&ctx->timers->mutex);
 	if (ctx->timers->timer_count == MAX_TIMERS) {
 		error = 1;
 	} else {
+		/* Insert new timer into a sorted list. */
+		/* The linear list is still most efficient for short lists (small
+		 * number of timers) - if there are many timers, different
+		 * algorithms will work better. */
 		for (u = 0; u < ctx->timers->timer_count; u++) {
 			if (ctx->timers->timers[u].time > next_time) {
 				/* HCP24: moving all timers > next_time */
@@ -110,7 +117,8 @@ timer_thread_run(void *thread_func_param)
 	d = (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
 	while (ctx->stop_flag == 0) {
 		pthread_mutex_lock(&ctx->timers->mutex);
-		if (ctx->timers->timer_count > 0 && d >= ctx->timers->timers[0].time) {
+		if ((ctx->timers->timer_count > 0)
+		    && (d >= ctx->timers->timers[0].time)) {
 			t = ctx->timers->timers[0];
 			for (u = 1; u < ctx->timers->timer_count; u++) {
 				ctx->timers->timers[u - 1] = ctx->timers->timers[u];
@@ -125,7 +133,13 @@ timer_thread_run(void *thread_func_param)
 		} else {
 			pthread_mutex_unlock(&ctx->timers->mutex);
 		}
-		mg_sleep(1);
+
+		/* 10 ms seems reasonable.
+		 * A faster loop (smaller sleep value) increases CPU load,
+		 * a slower loop (higher sleep value) decreases timer accuracy.
+		 */
+		mg_sleep(10);
+
 		clock_gettime(CLOCK_MONOTONIC, &now);
 		d = (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
 	}

@@ -174,8 +174,9 @@ civetweb_add_test(PublicServer "Error handling")
 civetweb_add_test(PublicServer "Limit speed")
 
 # Timer tests
-civetweb_add_test(Timer "Timer Periodic")
 civetweb_add_test(Timer "Timer Single Shot")
+civetweb_add_test(Timer "Timer Periodic")
+civetweb_add_test(Timer "Timer Mixed")
 
 # Tests with main.c
 #civetweb_add_test(EXE "Helper funcs")
