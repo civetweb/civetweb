@@ -232,8 +232,6 @@ START_TEST(test_timer_mixed)
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
-	action_dec_ret = 0;
-
 	mark_point();
 	timers_init(&ctx);
 	mg_sleep(100);
