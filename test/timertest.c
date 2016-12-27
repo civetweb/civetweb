@@ -54,10 +54,10 @@ action_dec(void *arg)
 
 	if (*p < -1) {
 		ck_abort_msg("Periodic timer called too often");
-		return 0;
+        /* return 0 here would be unreachable code */
 	}
 
-	return action_dec_ret;
+	return (*p >= -3) ? action_dec_ret : 0;
 }
 
 
