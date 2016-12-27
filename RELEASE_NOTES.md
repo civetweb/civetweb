@@ -6,6 +6,8 @@ Changes
 -------
 
 - Add library init/exit functions (calls will be required in later versions)
+- Windows: Show system information from the tray icon
+- Windows: Bring overlaid windows to top from the tray icon
 - Add Lua background script, running independent from server state
 - Move obsolete examples into separated directory
 - Change name of CMake generated C++ library to civetweb-cpp
