@@ -652,7 +652,7 @@ init_system_info(void)
 {
 	int len = mg_get_system_info(NULL, 0);
 	if (len > 0) {
-		g_system_info = (char*)malloc((unsigned)len + 1);
+		g_system_info = (char *)malloc((unsigned)len + 1);
 		(void)mg_get_system_info(g_system_info, len + 1);
 	} else {
 		g_system_info = sdup("Not available");

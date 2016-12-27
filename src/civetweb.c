@@ -13580,14 +13580,37 @@ worker_thread_run(struct worker_thread_args *thread_args)
 	tls.pthread_cond_helper_mutex = CreateEvent(NULL, FALSE, FALSE, NULL);
 #endif
 
+	/* Initialize thread local storage before calling any callback */
+	pthread_setspecific(sTlsKey, &tls);
+
 	if (ctx->callbacks.init_thread) {
 		/* call init_thread for a worker thread (type 1) */
 		ctx->callbacks.init_thread(ctx, 1);
 	}
-	conn = &ctx->worker_connections[thread_args->index];
-	pthread_setspecific(sTlsKey, &tls);
+
+	/* Connection structure has been pre-allocated */
+	if (((int)thread_args->index < 0)
+	    || ((unsigned)thread_args->index
+	        >= (unsigned)ctx->cfg_worker_threads)) {
+		mg_cry(fc(ctx),
+		       "Internal error: Invalid worker index %i",
+		       (int)thread_args->index);
+		return NULL;
+	}
+	conn = ctx->worker_connections + thread_args->index;
+
+	/* Request buffers are not pre-allocated. They are private to the
+	 * request and do not contain any state information that might be
+	 * of interest to anyone observing a server status.  */
+	conn->buf = (char *)mg_malloc(MAX_REQUEST_SIZE);
+	if (conn->buf == NULL) {
+		mg_cry(fc(ctx),
+		       "Out of memory: Cannot allocate buffer for worker %i",
+		       (int)thread_args->index);
+		return NULL;
+	}
 	conn->buf_size = MAX_REQUEST_SIZE;
-	conn->buf = (char *)(conn + 1);
+
 	conn->ctx = ctx;
 	conn->thread_index = thread_args->index;
 	conn->request_info.user_data = ctx->user_data;
@@ -13680,6 +13703,11 @@ worker_thread_run(struct worker_thread_args *thread_args)
 	CloseHandle(tls.pthread_cond_helper_mutex);
 #endif
 	pthread_mutex_destroy(&conn->mutex);
+
+	/* Free the request buffer. */
+	conn->buf_size = 0;
+	mg_free(conn->buf);
+	conn->buf = NULL;
 
 	DEBUG_TRACE("%s", "exiting");
 	return NULL;
@@ -14311,7 +14339,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	    (struct mg_connection *)mg_calloc(ctx->cfg_worker_threads,
 	                                      sizeof(struct mg_connection));
 	if (ctx->worker_connections == NULL) {
-		mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
+		mg_cry(fc(ctx), "Not enough memory for worker thread connection array");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
