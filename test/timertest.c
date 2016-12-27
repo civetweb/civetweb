@@ -261,15 +261,15 @@ START_TEST(test_timer_mixed)
 	c[4] = 3;
 	timer_add(&ctx, 2.5, 0.1, 1, action_dec_to_0, c + 4);
 
-	/* 3 --> 2, an absolute timer in the past (123.456) will still
+	/* 3 --> 2, an absolute timer in the past (-123.456) will still
 	 * run once at start, and then with the period */
 	c[5] = 3;
-	timer_add(&ctx, 123.456, 2.5, 0, action_dec_to_0, c + 5);
+	timer_add(&ctx, -123.456, 2.5, 0, action_dec_to_0, c + 5);
 
-	/* 3 --> 1, an absolute timer in the past (123.456) will still
+	/* 3 --> 1, an absolute timer in the past (-123.456) will still
 	 * run once at start, and then with the period */
 	c[6] = 3;
-	timer_add(&ctx, 123.456, 0.75, 0, action_dec_to_0, c + 6);
+	timer_add(&ctx, -123.456, 0.75, 0, action_dec_to_0, c + 6);
 
 	mark_point();
 
