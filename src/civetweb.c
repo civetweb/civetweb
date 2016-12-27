@@ -793,9 +793,10 @@ stat(const char *name, struct stat *st)
 #define access(x, a) 1 /* not required anyway */
 
 /* WinCE-TODO: define stat, remove, rename, _rmdir, _lseeki64 */
-#define EEXIST 1 /* TODO: See Windows error codes */
-#define EACCES 2 /* TODO: See Windows error codes */
-#define ENOENT 3 /* TODO: See Windows Error codes */
+/* Values from errno.h in Windows SDK (Visual Studio). */
+#define EEXIST 17
+#define EACCES 13
+#define ENOENT 2
 
 #if defined(__MINGW32__)
 /* Enable unused function warning again */
@@ -1500,8 +1501,10 @@ struct mg_file_in_memory {
 struct mg_file_access {
 	/* File properties filled by mg_fopen: */
 	FILE *fp;
-	/* TODO: struct mg_file_in_memory *mf; */
-	const char *membuf; /* TODO: remove */
+	/* TODO (low): Replace "membuf" implementation by a "file in memory"
+	 * support library. Use some struct mg_file_in_memory *mf; instead of
+	 * membuf char pointer. */
+	const char *membuf;
 };
 
 struct mg_file {
@@ -4544,8 +4547,11 @@ push(struct mg_context *ctx,
 			/* socket error - check errno */
 			DEBUG_TRACE("send() failed, error %d", err);
 
-			/* TODO: error handling depending on the error code.
+			/* TODO (mid): error handling depending on the error code.
 			 * These codes are different between Windows and Linux.
+			 * Currently there is no problem with failing send calls,
+			 * if there is a reproducible situation, it should be
+			 * investigated in detail.
 			 */
 			return -1;
 		}
@@ -4717,11 +4723,11 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 /* socket error - check errno */
 #ifdef _WIN32
 		if (err == WSAEWOULDBLOCK) {
-			/* TODO: check if this is still required */
+			/* TODO (low): check if this is still required */
 			/* standard case if called from close_socket_gracefully */
 			return -1;
 		} else if (err == WSAETIMEDOUT) {
-			/* TODO: check if this is still required */
+			/* TODO (low): check if this is still required */
 			/* timeout is handled by the while loop  */
 			return 0;
 		} else if (err == WSAECONNABORTED) {
@@ -4738,7 +4744,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 		 * here. We have to wait for the timeout in both cases for now.
 		 */
 		if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
-			/* TODO: check if this is still required */
+			/* TODO (low): check if this is still required */
 			/* EAGAIN/EWOULDBLOCK:
 			 * standard case if called from close_socket_gracefully
 			 * => should return -1 */
@@ -5450,7 +5456,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
               int *is_put_or_delete_request  /* out: put/delete a file? */
               )
 {
-/* TODO (high): Restructure this function */
+/* TODO (high / maintainability issue): Restructure this function */
 
 #if !defined(NO_FILES)
 	const char *uri = conn->request_info.local_uri;
@@ -6035,10 +6041,10 @@ open_auth_file(struct mg_connection *conn,
 #endif
 			}
 			/* Important: using local struct mg_file to test path for
-			 * is_directory
-			 * flag. If filep is used, mg_stat() makes it appear as if auth file
-			 * was opened. TODO: mg_stat must not make anything appear to be
-			 * opened */
+			 * is_directory flag. If filep is used, mg_stat() makes it
+			 * appear as if auth file was opened.
+			 * TODO(mid): Check if this is still required after rewriting
+			 * mg_stat */
 		} else if (mg_stat(conn, path, &filep->stat)
 		           && filep->stat.is_directory) {
 			mg_snprintf(conn,
@@ -8678,7 +8684,9 @@ mkcol(struct mg_connection *conn, const char *path)
 	}
 
 	if (de.file.last_modified) {
-		/* TODO (high): This check does not seem to make any sense ! */
+		/* TODO (mid): This check does not seem to make any sense ! */
+		/* TODO (mid): Add a webdav unit test first, before changing
+		 * anything here. */
 		send_http_error(
 		    conn, 405, "Error: mkcol(%s): %s", path, strerror(ERRNO));
 		return;
@@ -8821,7 +8829,7 @@ put_file(struct mg_connection *conn, const char *path)
 	}
 
 	/* A file should be created or overwritten. */
-	/* TODO: Test if write or write+read is required. */
+	/* Currently CivetWeb does not nead read+write access. */
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &file)
 	    || file.access.fp == NULL) {
 		(void)mg_fclose(&file.access);
@@ -9205,10 +9213,12 @@ send_options(struct mg_connection *conn)
 	conn->must_close = 1;
 	gmt_time_string(date, sizeof(date), &curtime);
 
+	/* We do not set a "Cache-Control" header here, but leave the default.
+	 * Since browsers do not send an OPTIONS request, we can not test the
+	 * effect anyway. */
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\n"
 	          "Date: %s\r\n"
-	          /* TODO: "Cache-Control" (?) */
 	          "Connection: %s\r\n"
 	          "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, "
 	          "PROPFIND, MKCOL\r\n"
@@ -9871,9 +9881,9 @@ handle_websocket_request(struct mg_connection *conn,
 	/* Step 4: Check if there is a responsible websocket handler. */
 	if (!is_callback_resource && !lua_websock) {
 		/* There is no callback, and Lua is not responsible either. */
-		/* Reply with a 404 Not Found or with nothing at all?
-		 * TODO (mid): check the websocket standards, how to reply to
-		 * requests to invalid websocket addresses. */
+		/* Reply with a 404 Not Found. We are still at a standard
+		 * HTTP request here, before the websocket handshake, so
+		 * we can still send standard HTTP error replies. */
 		send_http_error(conn, 404, "%s", "Not found");
 		return;
 	}
@@ -10801,11 +10811,15 @@ handle_request(struct mg_connection *conn)
 					              &is_put_or_delete_request);
 					callback_handler = NULL;
 
-					/* TODO (very low): goto is deprecated but for the
-					 * moment,
-					 * a goto is simpler than some curious loop. */
-					/* The situation "callback does not handle the request"
-					 * needs to be reconsidered anyway. */
+					/* Here we are at a dead end:
+					 * According to URI matching, a callback should be
+					 * responsible for handling the request,
+					 * we called it, but the callback declared itself
+					 * not responsible.
+					 * We use a goto here, to get out of this dead end,
+					 * and continue with the default handling.
+					 * A goto here is simpler and better to understand
+					 * than some curious loop. */
 					goto no_callback_resource;
 				}
 			} else {
@@ -14372,7 +14386,15 @@ mg_start(const struct mg_callbacks *callbacks,
 		ctx->client_wait_events[i] = event_create();
 		if (ctx->client_wait_events[i] == 0) {
 			mg_cry(fc(ctx), "Error creating worker event %i", i);
-			/* TODO: clean all and exit */
+			while (i > 0) {
+				i--;
+				event_destroy(ctx->client_wait_events[i]);
+			}
+			mg_free(ctx->client_socks);
+			mg_free(ctx->worker_threadids);
+			free_context(ctx);
+			pthread_setspecific(sTlsKey, NULL);
+			return NULL;
 		}
 	}
 #endif

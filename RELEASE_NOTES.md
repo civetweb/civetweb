@@ -1,11 +1,11 @@
-Release Notes v1.9 (work in progress)
+Release Notes v1.9 (during finalization)
 ===
-### Objectives: *Read client certificate information, bug fixes*
+### Objectives: *Read SSI client certificate information, improve windows usability, use non-blocking sockets, bug fixes*
 
 Changes
 -------
 
-- Add library init/exit functions (calls will be required in later versions)
+- Add library init/exit functions (call is now optional, but will be required in V1.10)
 - Windows: Show system information from the tray icon
 - Windows: Bring overlaid windows to top from the tray icon
 - Add Lua background script, running independent from server state
