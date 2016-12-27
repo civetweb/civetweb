@@ -61,7 +61,8 @@ action_dec(void *arg)
 }
 
 
-static action_dec_to_0(void *arg)
+static int
+action_dec_to_0(void *arg)
 {
 	int *p = (int *)arg;
 	(*p)--;
