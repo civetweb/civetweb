@@ -181,6 +181,7 @@ static void
 timers_exit(struct mg_context *ctx)
 {
 	if (ctx->timers) {
+        pthread_mutex_lock(&ctx->timers->mutex);
 		ctx->timers->timer_count = 0;
 		(void)pthread_mutex_destroy(&ctx->timers->mutex);
 		mg_free(ctx->timers);
