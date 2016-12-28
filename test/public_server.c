@@ -3531,8 +3531,17 @@ START_TEST(test_throttle)
 	dt = difftime(t1, t0) * 1000.0; /* Elapsed time in ms - in most systems
 	                                 * only with second resolution */
 
-	/* Check if there are at least 10 seconds */
-	ck_assert_int_ge((int)dt, 10 * 1000);
+    /* Time estimation: Data size is 10 kB, with 1 kB/s speed limit.
+     * The first block (1st kB) is transferred immediately, the second
+     * block (2nd kB) one second later, the third block (3rd kB) two
+     * seconds later, .. the last block (10th kB) nine seconds later.     
+     * The resolution of time measurement using the "time" C library
+     * function is 1 second, so we should add +/- one second tolerance.
+     * Thus, download of 10 kB with 1 kB/s should not be faster than
+     * 8 seconds. */
+
+	/* Check if there are at least 8 seconds */
+	ck_assert_int_ge((int)dt, 8 * 1000);
 
 	/* Nothing left to read */
 	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
