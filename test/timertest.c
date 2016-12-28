@@ -111,15 +111,6 @@ START_TEST(test_timer_cyclic)
 
 	timers_exit(&ctx);
 
-#if defined(__MINGW32__)
-    /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
-     * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
-    https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
-    https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
-    */
-    ck_abort_msg("Abort test_timer_cyclic here (instead of SegFault)");
-#endif
-
 	mark_point();
 	mg_sleep(100);
 
@@ -139,6 +130,16 @@ START_TEST(test_timer_cyclic)
 	ck_assert_int_le(c[1], +1);
 	ck_assert_int_ge(c[2], -1);
 	ck_assert_int_le(c[2], +1);
+#endif
+
+#if defined(__MINGW32__)
+	mg_sleep(10000);
+    /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
+     * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
+    https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
+    https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
+    */
+    ck_abort_msg("Abort test_timer_cyclic here (instead of SegFault)");
 #endif
 }
 END_TEST
@@ -295,6 +296,14 @@ START_TEST(test_timer_mixed)
 	mark_point();
 	mg_sleep(100);
 
+	ck_assert_int_eq(c[0], 2);
+	ck_assert_int_eq(c[1], 0);
+	ck_assert_int_eq(c[2], 1);
+	ck_assert_int_eq(c[3], 2);
+	ck_assert_int_eq(c[4], 3);
+	ck_assert_int_eq(c[5], 2);
+	ck_assert_int_eq(c[6], 1);
+
 #if defined(__MINGW32__)
     /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
      * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
@@ -303,14 +312,6 @@ START_TEST(test_timer_mixed)
     */
     ck_abort_msg("Abort test_timer_mixed here (instead of SegFault)");
 #endif
-
-	ck_assert_int_eq(c[0], 2);
-	ck_assert_int_eq(c[1], 0);
-	ck_assert_int_eq(c[2], 1);
-	ck_assert_int_eq(c[3], 2);
-	ck_assert_int_eq(c[4], 3);
-	ck_assert_int_eq(c[5], 2);
-	ck_assert_int_eq(c[6], 1);
 }
 END_TEST
 
