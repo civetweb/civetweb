@@ -306,6 +306,17 @@ START_TEST(test_timer_mixed)
     https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
     https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
     */
+    {
+        int d = 0;
+        d += (c[0] - 2)*(c[0] - 2);
+        d += (c[1] - 0)*(c[1] - 0);
+        d += (c[2] - 1)*(c[2] - 1);
+        d += (c[3] - 2)*(c[3] - 2);
+        d += (c[4] - 3)*(c[4] - 3);
+        d += (c[5] - 2)*(c[5] - 2);
+        d += (c[6] - 1)*(c[6] - 1);
+        ck_assert_int_eq(d, 0);
+    }
     return;
 #else
 
