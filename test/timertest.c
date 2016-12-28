@@ -131,7 +131,10 @@ START_TEST(test_timer_cyclic)
     https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
     https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
     */
-    return;
+    {
+        int d = (c[0] * c[0]) + (c[1] * c[1]) + (c[2] * c[2]);
+        ck_assert_int_le(d, 3);
+    }    
 #else
 	ck_assert_int_ge(c[0], -1);
 	ck_assert_int_le(c[0], +1);
