@@ -101,18 +101,18 @@ START_TEST(test_timer_cyclic)
 
 	mg_sleep(1000); /* Sleep 1 second - timer will run */
 
+	mark_point();
+	ctx.stop_flag = 99; /* End timer thread */
+	mark_point();
+
 #if defined(__MINGW32__)
     /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
      * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
     https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
     https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
     */
-    ck_abort_msg("Abort here (instead of SegFault)");
+    ck_abort_msg("Abort test_timer_cyclic here (instead of SegFault)");
 #endif
-
-	mark_point();
-	ctx.stop_flag = 99; /* End timer thread */
-	mark_point();
 
 	mg_sleep(1000); /* Sleep 1 second - timer will not run */
 
@@ -287,6 +287,15 @@ START_TEST(test_timer_mixed)
 	mark_point();
 
 	mg_sleep(1000); /* Sleep 1 second - timer will not run */
+
+#if defined(__MINGW32__)
+    /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
+     * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
+    https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
+    https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
+    */
+    ck_abort_msg("Abort test_timer_mixed here (instead of SegFault)");
+#endif
 
 	mark_point();
 
