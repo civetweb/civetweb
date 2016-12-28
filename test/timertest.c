@@ -105,6 +105,12 @@ START_TEST(test_timer_cyclic)
 	ctx.stop_flag = 99; /* End timer thread */
 	mark_point();
 
+	mg_sleep(1000); /* Sleep 1 second - timer will not run */
+
+	mark_point();
+
+	timers_exit(&ctx);
+
 #if defined(__MINGW32__)
     /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
      * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
@@ -113,12 +119,6 @@ START_TEST(test_timer_cyclic)
     */
     ck_abort_msg("Abort test_timer_cyclic here (instead of SegFault)");
 #endif
-
-	mg_sleep(1000); /* Sleep 1 second - timer will not run */
-
-	mark_point();
-
-	timers_exit(&ctx);
 
 	mark_point();
 	mg_sleep(100);
@@ -288,6 +288,13 @@ START_TEST(test_timer_mixed)
 
 	mg_sleep(1000); /* Sleep 1 second - timer will not run */
 
+	mark_point();
+
+	timers_exit(&ctx);
+
+	mark_point();
+	mg_sleep(100);
+
 #if defined(__MINGW32__)
     /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
      * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
@@ -296,13 +303,6 @@ START_TEST(test_timer_mixed)
     */
     ck_abort_msg("Abort test_timer_mixed here (instead of SegFault)");
 #endif
-
-	mark_point();
-
-	timers_exit(&ctx);
-
-	mark_point();
-	mg_sleep(100);
 
 	ck_assert_int_eq(c[0], 2);
 	ck_assert_int_eq(c[1], 0);
