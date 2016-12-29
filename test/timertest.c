@@ -90,37 +90,29 @@ START_TEST(test_timer_cyclic)
 	mg_sleep(100);
 	mark_point();
 
-	c[0] = 10;
-	timer_add(&ctx, 0, 0.1, 1, action_dec, c + 0);
-	c[2] = 2;
-	timer_add(&ctx, 0, 0.5, 1, action_dec, c + 2);
-	c[1] = 5;
-	timer_add(&ctx, 0, 0.2, 1, action_dec, c + 1);
+	c[0] = 100;
+	timer_add(&ctx, 0.05, 0.1, 1, action_dec, c + 0);
+	c[2] = 20;
+	timer_add(&ctx, 0.25, 0.5, 1, action_dec, c + 2);
+	c[1] = 50;
+	timer_add(&ctx, 0.1, 0.2, 1, action_dec, c + 1);
 
 	mark_point();
 
-	mg_sleep(1000); /* Sleep 1 second - timer will run */
+	mg_sleep(10000); /* Sleep 10 second - timers will run */
 
 	mark_point();
 	ctx.stop_flag = 99; /* End timer thread */
 	mark_point();
 
-	mg_sleep(1000); /* Sleep 1 second - timer will not run */
+	mg_sleep(2000); /* Sleep 2 second - timers will not run */
 
 	mark_point();
 
 	timers_exit(&ctx);
 
 	mark_point();
-	mg_sleep(100);
 
-#ifdef LOCAL_TEST
-	/* If performed locally (on a physical machine that's not overloaded),
-	 * timing will be precise to the ~100 ms required here. */
-	ck_assert_int_eq(c[0], 0);
-	ck_assert_int_eq(c[1], 0);
-	ck_assert_int_eq(c[2], 0);
-#else
 /* If this test runs in a virtual environment, like the CI unit test
  * containers, there might be some timing deviations, so check the
  * counter with some tolerance. */
@@ -146,8 +138,6 @@ START_TEST(test_timer_cyclic)
 	ck_assert_int_le(c[1], +1);
 	ck_assert_int_ge(c[2], -1);
 	ck_assert_int_le(c[2], +1);
-#endif
-
 #endif
 }
 END_TEST
