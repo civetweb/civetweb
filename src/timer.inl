@@ -41,8 +41,8 @@ timer_getcurrenttime(void)
 #else
 	struct timespec now_ts;
 
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	return (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
+	clock_gettime(CLOCK_MONOTONIC, &now_ts);
+	return (double)now_ts.tv_sec + (double)now_ts.tv_nsec * 1.0E-9;
 #endif
 }
 
