@@ -1,4 +1,4 @@
-Release Notes v1.9 (during finalization)
+Release Notes v1.9
 ===
 ### Objectives: *Read SSI client certificate information, improve windows usability, use non-blocking sockets, bug fixes*
 
