@@ -16,7 +16,7 @@ Test coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb))
 
 [![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
 
-Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)): 
+Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)):
 
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
 
@@ -49,6 +49,9 @@ Trouble tickets should be filed on GitHub
 Discussion/support group and announcements are at Google Groups
 [https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb)
 
+Source releases can be found on GitHub
+[https://github.com/civetweb/civetweb/releases](https://github.com/civetweb/civetweb/releases)
+
 
 Quick start documentation
 --------------------------
@@ -58,6 +61,7 @@ Quick start documentation
 - [docs/Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md) - Building the Server (quick start guide)
 - [docs/Embedding.md](https://github.com/civetweb/civetweb/blob/master/docs/Embedding.md) - Embedding (how to add HTTP support to an existing application)
 - [docs/OpenSSL.md](https://github.com/civetweb/civetweb/blob/master/docs/OpenSSL.md) - Adding HTTPS (SSL/TLS) support using OpenSSL.
+- [API documentation](https://github.com/civetweb/civetweb/tree/master/docs/api) - Additional documentation on the civetweb application programming interface ([civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)).
 - [RELEASE_NOTES.md](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
 - [LICENSE.md](https://github.com/civetweb/civetweb/blob/master/LICENSE.md) - Copyright License
 
@@ -130,7 +134,8 @@ Contributions
 Contributions are welcome provided all contributions carry the MIT license.
 
 DO NOT APPLY fixes copied from Mongoose to this project to prevent GPL tainting.
-Since 2013 CivetWeb and Mongoose are developed independently. By now the code base differs, so patches cannot be safely transfered in either direction.
+Since 2013 CivetWeb and Mongoose are developed independently.
+By now the code base differs, so patches cannot be safely transfered in either direction.
 
 Some guidelines can be found in [docs/Contribution.md](https://github.com/civetweb/civetweb/blob/master/docs/Contribution.md).
 
@@ -142,14 +147,16 @@ Sergey Lyubka (Copyright (c) 2004-2013 Sergey Lyubka, MIT license).
 
 However, in August 16, 2013, the [license of Mongoose has been changed](https://groups.google.com/forum/#!topic/mongoose-users/aafbOnHonkI)
 after writing and distributing the original code this project is based on.
-The license change used to be described on the Mongoose Wikipedia page as well, but it's getting deleted there regularly.
+The license change and CivetWeb used to be mentioned on the Mongoose
+[Wikipedia](https://en.wikipedia.org/wiki/Mongoose_(web_server))
+page as well, but it's getting deleted (and added again) there every
+now and then.
 
-CivetWeb has been forked from the last MIT version of Mongoose. 
-Since 2013, CivetWeb has seen many improvements from various authors 
+CivetWeb has been forked from the last MIT version of Mongoose.
+Since 2013, CivetWeb has seen many improvements from various authors
 (Copyright (c) 2013-2016 the CivetWeb developers, MIT license).
 A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md).
 
 Using the CivetWeb project ensures the MIT licenses terms are applied and
-GPL cannot be imposed on any of this code as long as it is sourced from
+GPL cannot be imposed on any of this code, as long as it is sourced from
 here. This code will remain free with the MIT license protection.
-
