@@ -125,10 +125,9 @@ START_TEST(test_timer_cyclic)
 	*/
 	{
 		int d = (c[0] * c[0]) + (c[1] * c[1]) + (c[2] * c[2]);
-		(void)d;
 		/* ck_assert_int_le(d, 3); <-- will crash */
 		if (d <= 3) {
-			ck_abort_msg("Timer counter not OK");
+			ck_abort_msg("Timer must be zero: (%i, %i, %i)", c[0], c[1], c[2]);
 		}
 	}
 #else
