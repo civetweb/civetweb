@@ -121,21 +121,24 @@ START_TEST(test_timer_cyclic)
 	ck_assert_int_eq(c[1], 0);
 	ck_assert_int_eq(c[2], 0);
 #else
-	/* If this test runs in a virtual environment, like the CI unit test
-	 * containers, there might be some timing deviations, so check the
-	 * counter with some tolerance. */
+/* If this test runs in a virtual environment, like the CI unit test
+ * containers, there might be some timing deviations, so check the
+ * counter with some tolerance. */
 
-#if defined(__MINGW32__)    
-    /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
-     * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
-    https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
-    https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
-    */
-    {
-        int d = (c[0] * c[0]) + (c[1] * c[1]) + (c[2] * c[2]);
-        (void)d;
-        //ck_assert_int_le(d, 3);
-    }    
+#if defined(__MINGW32__)
+	/* Try to find "***Exception: SegFault" that occurs only with MinGW builds
+	 * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
+	https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
+	https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
+	*/
+	{
+		int d = (c[0] * c[0]) + (c[1] * c[1]) + (c[2] * c[2]);
+		(void)d;
+		/* ck_assert_int_le(d, 3); <-- will crash */
+		if (d <= 3) {
+			ck_abort_msg("Timer counter not OK");
+		}
+	}
 #else
 	ck_assert_int_ge(c[0], -1);
 	ck_assert_int_le(c[0], +1);
@@ -302,28 +305,30 @@ START_TEST(test_timer_mixed)
 	mg_sleep(100);
 
 #if defined(__MINGW32__)
-    /* Try to find "***Exception: SegFault" that occurs only with MinGW builds 
-     * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
-    https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
-    https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
-    */
-    {
-        int d = 0;
-        d += (c[0] - 2)*(c[0] - 2);
-        d += (c[1] - 0)*(c[1] - 0);
-        d += (c[2] - 1)*(c[2] - 1);
-        d += (c[3] - 2)*(c[3] - 2);
-        d += (c[4] - 3)*(c[4] - 3);
-        d += (c[5] - 2)*(c[5] - 2);
-        d += (c[6] - 1)*(c[6] - 1);
-        (void)d;
-        // ck_assert_int_eq(d, 0);
-    }    
+	/* Try to find "***Exception: SegFault" that occurs only with MinGW builds
+	 * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
+	https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
+	https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
+	*/
+	{
+		int d = 0;
+		d += (c[0] - 2) * (c[0] - 2);
+		d += (c[1] - 0) * (c[1] - 0);
+		d += (c[2] - 1) * (c[2] - 1);
+		d += (c[3] - 2) * (c[3] - 2);
+		d += (c[4] - 3) * (c[4] - 3);
+		d += (c[5] - 2) * (c[5] - 2);
+		d += (c[6] - 1) * (c[6] - 1);
+		/* ck_assert_int_eq(d, 0);  <-- will crash */
+		if (d != 0) {
+			ck_abort_msg("Timer counter not OK");
+		}
+	}
 #else
 
 	ck_assert_int_eq(c[0], 2);
 	ck_assert_int_eq(c[1], 0);
-    ck_assert_int_eq(c[2], 1);
+	ck_assert_int_eq(c[2], 1);
 	ck_assert_int_eq(c[3], 2);
 	ck_assert_int_eq(c[4], 3);
 	ck_assert_int_eq(c[5], 2);
