@@ -118,12 +118,15 @@ START_TEST(test_timer_cyclic)
  * counter with some tolerance. */
 
 #if defined(__MINGW32__)
-	/* Try to find "***Exception: SegFault" that occurs only with MinGW builds
-	 * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
+	/* For unknown reasons, the MinGW build on AppVeyor will cause a SegFault
+	 * when calling ck_assert_int_ge / ck_assert_int_le, while it works for
+	 * other compilers. See
 	https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
 	https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
 	*/
 	{
+		/* The three conditions -1 <= c[n] <= +1 (n=0..2) are fulfilled,
+		 * if the sum(n=0..2) of (c[n])^2 is <= 3. */
 		int d = (c[0] * c[0]) + (c[1] * c[1]) + (c[2] * c[2]);
 		/* ck_assert_int_le(d, 3); <-- will crash */
 		if (d > 3) {
@@ -294,8 +297,9 @@ START_TEST(test_timer_mixed)
 	mg_sleep(100);
 
 #if defined(__MINGW32__)
-	/* Try to find "***Exception: SegFault" that occurs only with MinGW builds
-	 * on AppVeyor/Windows, not with gcc/Linux and not MinGW/local.
+	/* For unknown reasons, the MinGW build on AppVeyor will cause a SegFault
+	 * when calling ck_assert_int_ge / ck_assert_int_le, while it works for
+	 * other compilers. See
 	https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
 	https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
 	*/
