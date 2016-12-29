@@ -20,6 +20,33 @@ struct ttimers {
 };
 
 
+static double
+timer_getcurrenttime(void)
+{
+#if defined(_WIN32)
+	/* GetTickCount returns milliseconds since system start as
+	 * unsigned 32 bit value. It will wrap around every 49.7 days.
+	 * We need to use a 64 bit counter (will wrap in 500 mio. years),
+	 * by adding the 32 bit difference since the last call to a
+	 * 64 bit counter. This algorithm will only work, if this
+	 * function is called at least once every 7 weeks. */
+	static DWORD last_tick;
+	static uint64_t now_tick64;
+
+	DWORD now_tick = GetTickCount();
+
+	now_tick64 += ((DWORD)(now_tick - last_tick));
+	last_tick = now_tick;
+	return (double)now_tick64 * 1.0E-3;
+#else
+	struct timespec now_ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
+#endif
+}
+
+
 static int
 timer_add(struct mg_context *ctx,
           double next_time,
@@ -30,16 +57,13 @@ timer_add(struct mg_context *ctx,
 {
 	unsigned u, v;
 	int error = 0;
-	struct timespec now_ts; /* now in timespec */
-	double now_d;           /* now in double */
+	double now;
 
 	if (ctx->stop_flag) {
 		return 0;
 	}
 
-	clock_gettime(CLOCK_MONOTONIC, &now_ts);
-	now_d = (double)(now_ts.tv_sec);
-	now_d += (double)(now_ts.tv_nsec) * 1.0E-9;
+	now = timer_getcurrenttime();
 
 	/* HCP24: if is_relative = 0 and next_time < now
 	 *        action will be called so fast as possible
@@ -53,12 +77,12 @@ timer_add(struct mg_context *ctx,
 	 *        but the next callback on period
 	*/
 	if (is_relative) {
-		next_time += now_d;
+		next_time += now;
 	}
 
 	/* You can not set timers into the past */
-	if (next_time < now_d) {
-		next_time = now_d;
+	if (next_time < now) {
+		next_time = now;
 	}
 
 	pthread_mutex_lock(&ctx->timers->mutex);
@@ -93,7 +117,6 @@ static void
 timer_thread_run(void *thread_func_param)
 {
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
-	struct timespec now;
 	double d;
 	unsigned u;
 	int re_schedule;
@@ -106,15 +129,8 @@ timer_thread_run(void *thread_func_param)
 		ctx->callbacks.init_thread(ctx, 2);
 	}
 
-#if defined(HAVE_CLOCK_NANOSLEEP) /* Linux with librt */
-	/* TODO */
-	while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &request, &request)
-	       == EINTR) { /*nop*/
-		;
-	}
-#else
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	d = (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
+	d = timer_getcurrenttime();
+
 	while (ctx->stop_flag == 0) {
 		pthread_mutex_lock(&ctx->timers->mutex);
 		if ((ctx->timers->timer_count > 0)
@@ -134,17 +150,19 @@ timer_thread_run(void *thread_func_param)
 			pthread_mutex_unlock(&ctx->timers->mutex);
 		}
 
-		/* 10 ms seems reasonable.
-		 * A faster loop (smaller sleep value) increases CPU load,
-		 * a slower loop (higher sleep value) decreases timer accuracy.
-		 */
-		mg_sleep(10);
+/* 10 ms seems reasonable.
+ * A faster loop (smaller sleep value) increases CPU load,
+ * a slower loop (higher sleep value) decreases timer accuracy.
+ */
+#ifdef _WIN32
+		Sleep(10);
+#else
+		usleep(10000);
+#endif
 
-		clock_gettime(CLOCK_MONOTONIC, &now);
-		d = (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
+		d = timer_getcurrenttime();
 	}
 	ctx->timers->timer_count = 0;
-#endif
 }
 
 
@@ -169,6 +187,8 @@ timers_init(struct mg_context *ctx)
 {
 	ctx->timers = (struct ttimers *)mg_calloc(sizeof(struct ttimers), 1);
 	(void)pthread_mutex_init(&ctx->timers->mutex, NULL);
+
+	(void)timer_getcurrenttime();
 
 	/* Start timer thread */
 	mg_start_thread_with_id(timer_thread, ctx, &ctx->timers->threadid);
