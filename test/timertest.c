@@ -257,35 +257,35 @@ START_TEST(test_timer_mixed)
 
 	/* 3 --> 2, because it is a single shot timer */
 	c[0] = 3;
-	timer_add(&ctx, 0, 0, 1, action_dec_to_0, c + 0);
+	timer_add(&ctx, 0, 0, 1, action_dec_to_0, &c[0]);
 
 	/* 3 --> 0, because it will run until c[1] = 0 and then stop */
 	c[1] = 3;
-	timer_add(&ctx, 0, 0.2, 1, action_dec_to_0, c + 1);
+	timer_add(&ctx, 0, 0.2, 1, action_dec_to_0, &c[1]);
 
 	/* 3 --> 1, with 750 ms period, it will run once at start,
 	 * then once 750 ms later, but not 1500 ms later, since the
 	 * timer is already stopped then. */
 	c[2] = 3;
-	timer_add(&ctx, 0, 0.75, 1, action_dec_to_0, c + 2);
+	timer_add(&ctx, 0, 0.75, 1, action_dec_to_0, &c[2]);
 
 	/* 3 --> 2, will run at start, but no cyclic in 1 second */
 	c[3] = 3;
-	timer_add(&ctx, 0, 2.5, 1, action_dec_to_0, c + 3);
+	timer_add(&ctx, 0, 2.5, 1, action_dec_to_0, &c[3]);
 
 	/* 3 --> 3, will not run at start */
 	c[4] = 3;
-	timer_add(&ctx, 2.5, 0.1, 1, action_dec_to_0, c + 4);
+	timer_add(&ctx, 2.5, 0.1, 1, action_dec_to_0, &c[4]);
 
 	/* 3 --> 2, an absolute timer in the past (-123.456) will still
 	 * run once at start, and then with the period */
 	c[5] = 3;
-	timer_add(&ctx, -123.456, 2.5, 0, action_dec_to_0, c + 5);
+	timer_add(&ctx, -123.456, 2.5, 0, action_dec_to_0, &c[5]);
 
 	/* 3 --> 1, an absolute timer in the past (-123.456) will still
 	 * run once at start, and then with the period */
 	c[6] = 3;
-	timer_add(&ctx, -123.456, 0.75, 0, action_dec_to_0, c + 6);
+	timer_add(&ctx, -123.456, 0.75, 0, action_dec_to_0, &c[6]);
 
 	mark_point();
 
@@ -311,26 +311,30 @@ START_TEST(test_timer_mixed)
 	https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
 	*/
 	{
+		char errbuf[256] = {0};
 		if (c[0] != 2) {
-			ck_abort_msg("Timer 0 counter not OK (%i)", c[0]);
+			sprintf(errbuf + strlen(errbuf), "0: (%i != 2)\r\n", c[0]);
 		}
 		if (c[1] != 0) {
-			ck_abort_msg("Timer 1 counter not OK (%i)", c[1]);
+			sprintf(errbuf + strlen(errbuf), "1: (%i != 0)\r\n", c[1]);
 		}
 		if (c[2] != 1) {
-			ck_abort_msg("Timer 2 counter not OK (%i)", c[2]);
+			sprintf(errbuf + strlen(errbuf), "2: (%i != 1)\r\n", c[2]);
 		}
 		if (c[3] != 2) {
-			ck_abort_msg("Timer 3 counter not OK (%i)", c[3]);
+			sprintf(errbuf + strlen(errbuf), "3: (%i != 2)\r\n", c[3]);
 		}
 		if (c[4] != 3) {
-			ck_abort_msg("Timer 4 counter not OK (%i)", c[4]);
+			sprintf(errbuf + strlen(errbuf), "4: (%i != 3)\r\n", c[4]);
 		}
 		if (c[5] != 2) {
-			ck_abort_msg("Timer 5 counter not OK (%i)", c[5]);
+			sprintf(errbuf + strlen(errbuf), "5: (%i != 2)\r\n", c[5]);
 		}
 		if (c[6] != 1) {
-			ck_abort_msg("Timer 6 counter not OK (%i)", c[6]);
+			sprintf(errbuf + strlen(errbuf), "6: (%i != 1)\r\n", c[6]);
+		}
+		if (errbuf[0]) {
+			ck_abort_msg("Timer error:\r\n%s", errbuf);
 		}
 	}
 #else
