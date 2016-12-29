@@ -311,17 +311,26 @@ START_TEST(test_timer_mixed)
 	https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
 	*/
 	{
-		int d = 0;
-		d += (c[0] - 2) * (c[0] - 2);
-		d += (c[1] - 0) * (c[1] - 0);
-		d += (c[2] - 1) * (c[2] - 1);
-		d += (c[3] - 2) * (c[3] - 2);
-		d += (c[4] - 3) * (c[4] - 3);
-		d += (c[5] - 2) * (c[5] - 2);
-		d += (c[6] - 1) * (c[6] - 1);
-		/* ck_assert_int_eq(d, 0);  <-- will crash */
-		if (d != 0) {
-			ck_abort_msg("Timer counter not OK");
+		if (c[0] != 2) {
+			ck_abort_msg("Timer 0 counter not OK (%i)", c[0]);
+		}
+		if (c[1] != 0) {
+			ck_abort_msg("Timer 1 counter not OK (%i)", c[1]);
+		}
+		if (c[2] != 1) {
+			ck_abort_msg("Timer 2 counter not OK (%i)", c[2]);
+		}
+		if (c[3] != 2) {
+			ck_abort_msg("Timer 3 counter not OK (%i)", c[3]);
+		}
+		if (c[4] != 3) {
+			ck_abort_msg("Timer 4 counter not OK (%i)", c[4]);
+		}
+		if (c[5] != 2) {
+			ck_abort_msg("Timer 5 counter not OK (%i)", c[5]);
+		}
+		if (c[6] != 1) {
+			ck_abort_msg("Timer 6 counter not OK (%i)", c[6]);
 		}
 	}
 #else
