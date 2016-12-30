@@ -14670,7 +14670,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            "JavaScript: Duktape %u.%u.%u%s",
 		            (unsigned)DUK_VERSION / 10000,
 		            ((unsigned)DUK_VERSION / 100) % 100,
-		            (unsigned)DUK_VERSION % 10000,
+		            (unsigned)DUK_VERSION % 100,
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
