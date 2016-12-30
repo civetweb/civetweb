@@ -785,7 +785,7 @@ lsp_url_decode(lua_State *L)
 		text = lua_tolstring(L, 1, &text_len);
 		is_form = (num_args == 2) ? lua_isboolean(L, 2) : 0;
 		if (text) {
-			mg_url_decode(text, text_len, dst, (int)sizeof(dst), is_form);
+			mg_url_decode(text, (int)text_len, dst, (int)sizeof(dst), is_form);
 			lua_pushstring(L, dst);
 		} else {
 			lua_pushnil(L);
