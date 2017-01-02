@@ -154,7 +154,7 @@ now and then.
 
 CivetWeb has been forked from the last MIT version of Mongoose.
 Since 2013, CivetWeb has seen many improvements from various authors
-(Copyright (c) 2013-2016 the CivetWeb developers, MIT license).
+(Copyright (c) 2013-2017 the CivetWeb developers, MIT license).
 A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md).
 
 Using the CivetWeb project ensures the MIT licenses terms are applied and

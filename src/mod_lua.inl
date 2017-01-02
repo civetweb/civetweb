@@ -1,3 +1,7 @@
+/* This file is part of the CivetWeb web server.
+ * See https://github.com/civetweb/civetweb/
+ */
+
 #include "civetweb_lua.h"
 #include "civetweb_private_lua.h"
 

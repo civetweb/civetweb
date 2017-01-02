@@ -1,6 +1,6 @@
 /* This file is part of the CivetWeb web server.
  * See https://github.com/civetweb/civetweb/
- * (C) 2015 by the CivetWeb authors, MIT license.
+ * (C) 2015-2017 by the CivetWeb authors, MIT license.
  */
 
 #include "duktape.h"
