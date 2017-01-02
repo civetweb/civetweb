@@ -346,37 +346,37 @@ END_TEST
 START_TEST(test_mg_vsnprintf)
 {
 	char buf[16];
-	int trunc;
+	int is_trunc;
 
 	memset(buf, 0, sizeof(buf));
 
-	trunc = 777;
-	mg_snprintf(NULL, &trunc, buf, 10, "%8i", 123);
+	is_trunc = 777;
+	mg_snprintf(NULL, &is_trunc, buf, 10, "%8i", 123);
 	ck_assert_str_eq(buf, "     123");
-	ck_assert_int_eq(trunc, 0);
+	ck_assert_int_eq(is_trunc, 0);
 
-	trunc = 777;
-	mg_snprintf(NULL, &trunc, buf, 10, "%9i", 123);
+	is_trunc = 777;
+	mg_snprintf(NULL, &is_trunc, buf, 10, "%9i", 123);
 	ck_assert_str_eq(buf, "      123");
-	ck_assert_int_eq(trunc, 0);
+	ck_assert_int_eq(is_trunc, 0);
 
-	trunc = 777;
-	mg_snprintf(NULL, &trunc, buf, 9, "%9i", 123);
+	is_trunc = 777;
+	mg_snprintf(NULL, &is_trunc, buf, 9, "%9i", 123);
 	ck_assert_str_eq(buf, "      12");
-	ck_assert_int_eq(trunc, 1);
+	ck_assert_int_eq(is_trunc, 1);
 
-	trunc = 777;
-	mg_snprintf(NULL, &trunc, buf, 8, "%9i", 123);
+	is_trunc = 777;
+	mg_snprintf(NULL, &is_trunc, buf, 8, "%9i", 123);
 	ck_assert_str_eq(buf, "      1");
-	ck_assert_int_eq(trunc, 1);
+	ck_assert_int_eq(is_trunc, 1);
 
-	trunc = 777;
-	mg_snprintf(NULL, &trunc, buf, 7, "%9i", 123);
+	is_trunc = 777;
+	mg_snprintf(NULL, &is_trunc, buf, 7, "%9i", 123);
 	ck_assert_str_eq(buf, "      ");
-	ck_assert_int_eq(trunc, 1);
+	ck_assert_int_eq(is_trunc, 1);
 
 	strcpy(buf, "1234567890");
-	mg_snprintf(NULL, &trunc, buf, 0, "%i", 543);
+	mg_snprintf(NULL, &is_trunc, buf, 0, "%i", 543);
 	ck_assert_str_eq(buf, "1234567890");
 }
 END_TEST
