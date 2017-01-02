@@ -117,30 +117,12 @@ START_TEST(test_timer_cyclic)
  * containers, there might be some timing deviations, so check the
  * counter with some tolerance. */
 
-#if 0 //defined(__MINGW32__)
-	/* For unknown reasons, the MinGW build on AppVeyor will cause a SegFault
-	 * when calling ck_assert_int_ge / ck_assert_int_le, while it works for
-	 * other compilers. See
-	https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
-	https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
-	*/
-	{
-		/* The three conditions -1 <= c[n] <= +1 (n=0..2) are fulfilled,
-		 * if the sum(n=0..2) of (c[n])^2 is <= 3. */
-		int d = (c[0] * c[0]) + (c[1] * c[1]) + (c[2] * c[2]);
-		/* ck_assert_int_le(d, 3); <-- will crash */
-		if (d > 3) {
-			ck_abort_msg("Timer must be zero: (%i, %i, %i)", c[0], c[1], c[2]);
-		}
-	}
-#else
 	ck_assert_int_ge(c[0], -1);
 	ck_assert_int_le(c[0], +1);
 	ck_assert_int_ge(c[1], -1);
 	ck_assert_int_le(c[1], +1);
 	ck_assert_int_ge(c[2], -1);
 	ck_assert_int_le(c[2], +1);
-#endif
 }
 END_TEST
 
@@ -296,42 +278,6 @@ START_TEST(test_timer_mixed)
 	mark_point();
 	mg_sleep(100);
 
-#if 0 //defined(__MINGW32__)
-	/* For unknown reasons, the MinGW build on AppVeyor will cause a SegFault
-	 * when calling ck_assert_int_ge / ck_assert_int_le, while it works for
-	 * other compilers. See
-	https://ci.appveyor.com/project/civetweb/civetweb/build/job/epsqi8perbca1jd6
-	https://github.com/civetweb/civetweb/issues/366#issuecomment-269383810
-	*/
-	{
-		char errbuf[256] = {0};
-		if (c[0] != 2) {
-			sprintf(errbuf + strlen(errbuf), "0: (%i != 2)\r\n", c[0]);
-		}
-		if (c[1] != 0) {
-			sprintf(errbuf + strlen(errbuf), "1: (%i != 0)\r\n", c[1]);
-		}
-		if (c[2] != 1) {
-			sprintf(errbuf + strlen(errbuf), "2: (%i != 1)\r\n", c[2]);
-		}
-		if (c[3] != 2) {
-			sprintf(errbuf + strlen(errbuf), "3: (%i != 2)\r\n", c[3]);
-		}
-		if (c[4] != 3) {
-			sprintf(errbuf + strlen(errbuf), "4: (%i != 3)\r\n", c[4]);
-		}
-		if (c[5] != 2) {
-			sprintf(errbuf + strlen(errbuf), "5: (%i != 2)\r\n", c[5]);
-		}
-		if (c[6] != 1) {
-			sprintf(errbuf + strlen(errbuf), "6: (%i != 1)\r\n", c[6]);
-		}
-		if (errbuf[0]) {
-			ck_abort_msg("Timer error:\r\n%s", errbuf);
-		}
-	}
-#else
-
 	ck_assert_int_eq(c[0], 2);
 	ck_assert_int_eq(c[1], 0);
 	ck_assert_int_eq(c[2], 1);
@@ -339,7 +285,6 @@ START_TEST(test_timer_mixed)
 	ck_assert_int_eq(c[4], 3);
 	ck_assert_int_eq(c[5], 2);
 	ck_assert_int_eq(c[6], 1);
-#endif
 }
 END_TEST
 
