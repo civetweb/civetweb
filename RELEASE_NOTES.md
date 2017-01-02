@@ -1,3 +1,13 @@
+Release Notes v1.10 (work in progress)
+===
+### Objectives: *TO BE DEFINED*
+
+Changes
+-------
+
+- Update version number
+
+
 Release Notes v1.9
 ===
 ### Objectives: *Read SSI client certificate information, improve windows usability, use non-blocking sockets, bug fixes*
