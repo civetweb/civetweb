@@ -7,15 +7,15 @@ endif()
 
 # We use the check unit testing framework for our C unit tests
 include(ExternalProject)
-if(NOT WIN32)
-  # Apply the patch to check to fix CMake building on OS X
-  set(CHECK_PATCH_COMMAND patch
-     ${CIVETWEB_THIRD_PARTY_DIR}/src/check-unit-test-framework/CMakeLists.txt
-     ${CMAKE_SOURCE_DIR}/cmake/check/c82fe8888aacfe784476112edd3878256d2e30bc.patch
-   )
-else()
-  set(CHECK_PATCH_COMMAND "")
-endif()
+#if(NOT WIN32)
+#  # Apply the patch to check to fix CMake building on OS X
+#  set(CHECK_PATCH_COMMAND patch
+#     ${CIVETWEB_THIRD_PARTY_DIR}/src/check-unit-test-framework/CMakeLists.txt
+#     ${CMAKE_SOURCE_DIR}/cmake/check/c82fe8888aacfe784476112edd3878256d2e30bc.patch
+#   )
+#else()
+#  set(CHECK_PATCH_COMMAND "")
+#endif()
 ExternalProject_Add(check-unit-test-framework
   DEPENDS c-library
   URL "https://codeload.github.com/libcheck/check/zip/${CIVETWEB_CHECK_VERSION}"
