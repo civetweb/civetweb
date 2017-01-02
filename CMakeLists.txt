@@ -409,7 +409,7 @@ add_subdirectory(src)
 include(CTest)
 if (BUILD_TESTING)
   # Check unit testing framework Version
-  set(CIVETWEB_CHECK_VERSION 0.10.0 CACHE STRING
+  set(CIVETWEB_CHECK_VERSION 0.11.0 CACHE STRING
     "The version of Check unit testing framework to build and include statically")
   set_property(CACHE CIVETWEB_CHECK_VERSION PROPERTY VALUE ${CIVETWEB_CHECK_VERSION})
   message(STATUS "Check Unit Testing Framework Version - ${CIVETWEB_CHECK_VERSION}")
