@@ -117,7 +117,7 @@ START_TEST(test_timer_cyclic)
  * containers, there might be some timing deviations, so check the
  * counter with some tolerance. */
 
-#if defined(__MINGW32__)
+#if 0 //defined(__MINGW32__)
 	/* For unknown reasons, the MinGW build on AppVeyor will cause a SegFault
 	 * when calling ck_assert_int_ge / ck_assert_int_le, while it works for
 	 * other compilers. See
@@ -296,7 +296,7 @@ START_TEST(test_timer_mixed)
 	mark_point();
 	mg_sleep(100);
 
-#if defined(__MINGW32__)
+#if 0 //defined(__MINGW32__)
 	/* For unknown reasons, the MinGW build on AppVeyor will cause a SegFault
 	 * when calling ck_assert_int_ge / ck_assert_int_le, while it works for
 	 * other compilers. See
