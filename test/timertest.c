@@ -113,9 +113,9 @@ START_TEST(test_timer_cyclic)
 
 	mark_point();
 
-/* If this test runs in a virtual environment, like the CI unit test
- * containers, there might be some timing deviations, so check the
- * counter with some tolerance. */
+	/* If this test runs in a virtual environment, like the CI unit test
+	 * containers, there might be some timing deviations, so check the
+	 * counter with some tolerance. */
 
 	ck_assert_int_ge(c[0], -1);
 	ck_assert_int_le(c[0], +1);

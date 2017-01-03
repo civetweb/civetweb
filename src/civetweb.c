@@ -4536,14 +4536,6 @@ push(struct mg_context *ctx,
 				/* shutdown of the socket at client side */
 				return -1;
 			}
-#if defined(TEMPORARY_INSTRUMENTATION)
-			{
-				FILE *f = fopen("r:\\all.txt", "ab");
-				fprintf(f, "\r\n%010u SEND:\r\n", GetTickCount());
-				fwrite(buf, 1, n, f);
-				fclose(f);
-			}
-#endif
 		}
 
 		if (ctx->stop_flag) {
@@ -4704,14 +4696,6 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 				/* shutdown of the socket at client side */
 				return -1;
 			}
-#if defined(TEMPORARY_INSTRUMENTATION)
-			{
-				FILE *f = fopen("r:\\all.txt", "ab");
-				fprintf(f, "\r\n%010u RECV:\r\n", GetTickCount());
-				fwrite(buf, 1, nread, f);
-				fclose(f);
-			}
-#endif
 		} else if (pollres < 0) {
 			/* error callint poll */
 			return -1;
