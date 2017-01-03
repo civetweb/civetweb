@@ -1,10 +1,12 @@
-Release Notes v1.10 (work in progress)
+Release Notes v1.9.1
 ===
-### Objectives: *TO BE DEFINED*
+### Objectives: *Bug fix*
 
 Changes
 -------
 
+- Fix for connections closed prematurely
+- Update to a new check unit test framework and remove patches required for previous version
 - Update version number
 
 
