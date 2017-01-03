@@ -59,6 +59,7 @@ before_script:
     -DCIVETWEB_DISABLE_CACHING=${NO_CACHING}
     -DCIVETWEB_C_STANDARD=${C_STANDARD}
     -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
+    ${ADDITIONAL_CMAKE_ARGS}
     ..
   - ls -la
 
@@ -248,32 +249,6 @@ matrix:
     os: osx
     compiler: clang
     env:
-      N=ClangOSXOpenSSL_1_1
-      BUILD_TYPE=OSX_OPENSSL_1_1
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=31
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=YES
-      LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
-      CFLAGS="-I/usr/local/opt/openssl@1.1/include"
-      PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
-
-  -
-    os: osx
-    compiler: clang
-    env:
       N=ClangOSXOpenSSL_1_1_NoDynLoad
       BUILD_TYPE=OSX_OPENSSL_1_1
       ENABLE_SSL_DYNAMIC_LOADING=NO
@@ -292,9 +267,12 @@ matrix:
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
-      LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
-      CFLAGS="-I/usr/local/opt/openssl@1.1/include"
-      PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
+      OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+      LDFLAGS="-L${OPENSSL_ROOT_DIR}/lib"
+      CFLAGS="-I${OPENSSL_ROOT_DIR}/include"
+      ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DCMAKE_C_FLAGS=${CFLAGS}"
+      PATH="${OPENSSL_ROOT_DIR}/bin:$PATH"
+      DYLD_LIBRARY_PATH="${OPENSSL_ROOT_DIR}/lib:${DYLD_LIBRARY_PATH}"
 
   -
     os: linux
