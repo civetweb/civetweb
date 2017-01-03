@@ -4521,7 +4521,18 @@ push(struct mg_context *ctx,
 		} else {
 			n = (int)send(sock, buf, (len_t)len, MSG_NOSIGNAL);
 			err = (n < 0) ? ERRNO : 0;
-			if (n <= 0) {
+#ifdef _WIN32
+			if (err == WSAEWOULDBLOCK) {
+				err = 0;
+				n = 0;
+			}
+#else
+			if (err == EWOULDBLOCK) {
+				err = 0;
+				n = 0;
+			}
+#endif
+			if (n < 0) {
 				/* shutdown of the socket at client side */
 				return -1;
 			}
