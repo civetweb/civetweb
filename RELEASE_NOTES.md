@@ -1,10 +1,26 @@
-Release Notes v1.9 (work in progress)
+Release Notes v1.10 (work in progress)
 ===
-### Objectives: *Read client certificate information, bug fixes*
+### Objectives: *TO BE DEFINED*
 
 Changes
 -------
 
+- Update version number
+
+
+Release Notes v1.9
+===
+### Objectives: *Read SSI client certificate information, improve windows usability, use non-blocking sockets, bug fixes*
+
+Changes
+-------
+
+- Add library init/exit functions (call is now optional, but will be required in V1.10)
+- Windows: Show system information from the tray icon
+- Windows: Bring overlaid windows to top from the tray icon
+- Add Lua background script, running independent from server state
+- Move obsolete examples into separated directory
+- Change name of CMake generated C++ library to civetweb-cpp
 - Add option to set linger timeout
 - Update Duktape and Lua (third-party code)
 - Add continuous integration tests
@@ -29,6 +45,7 @@ Changes
 - Read client certificate information
 - Do not tolerate URIs with invalid characters
 - Fix mg_get_cookie to ignore substrings
+- Fix memory leak in form handling
 - Fix bug in timer logic (for Lua Websockets)
 - Updated version number
 

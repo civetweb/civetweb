@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2016 the Civetweb developers
+/* Copyright (c) 2013-2017 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -103,7 +103,6 @@
 #if !defined(__MINGW32__)
 extern char *_getcwd(char *buf, size_t size);
 #endif
-static int sGuard = 0; /* test if any dialog is already open */
 
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -149,6 +148,7 @@ static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
 static const char *g_server_name;   /* Set by init_server_name() */
 static const char *g_icon_name;     /* Set by init_server_name() */
+static char *g_system_info;         /* Set by init_system_info() */
 static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
 static struct mg_context *g_ctx; /* Set by start_civetweb() */
@@ -647,6 +647,26 @@ init_server_name(int argc, const char *argv[])
 }
 
 
+static void
+init_system_info(void)
+{
+	int len = mg_get_system_info(NULL, 0);
+	if (len > 0) {
+		g_system_info = (char *)malloc((unsigned)len + 1);
+		(void)mg_get_system_info(g_system_info, len + 1);
+	} else {
+		g_system_info = sdup("Not available");
+	}
+}
+
+
+static void
+free_system_info(void)
+{
+	free(g_system_info);
+}
+
+
 static int
 log_message(const struct mg_connection *conn, const char *message)
 {
@@ -756,60 +776,8 @@ set_absolute_path(char *options[],
 
 #ifdef USE_LUA
 
-#include "civetweb_lua.h"
 #include "civetweb_private_lua.h"
 
-static int
-run_lua(const char *file_name)
-{
-	struct lua_State *L;
-	int lua_ret;
-	int func_ret = EXIT_FAILURE;
-	const char *lua_err_txt;
-
-#ifdef WIN32
-	(void)MakeConsole();
-#endif
-
-	L = luaL_newstate();
-	if (L == NULL) {
-		fprintf(stderr, "Error: Cannot create Lua state\n");
-		return EXIT_FAILURE;
-	}
-	civetweb_open_lua_libs(L);
-
-	lua_ret = luaL_loadfile(L, file_name);
-	if (lua_ret != LUA_OK) {
-		/* Error when loading the file (e.g. file not found, out of memory, ...)
-		 */
-		lua_err_txt = lua_tostring(L, -1);
-		fprintf(stderr, "Error loading file %s: %s\n", file_name, lua_err_txt);
-	} else {
-		/* The script file is loaded, now call it */
-		lua_ret = lua_pcall(L,
-		                    /* no arguments */ 0,
-		                    /* zero or one return value */ 1,
-		                    /* errors as strint return value */ 0);
-		if (lua_ret != LUA_OK) {
-			/* Error when executing the script */
-			lua_err_txt = lua_tostring(L, -1);
-			fprintf(stderr,
-			        "Error running file %s: %s\n",
-			        file_name,
-			        lua_err_txt);
-		} else {
-			/* Script executed */
-			if (lua_type(L, -1) == LUA_TNUMBER) {
-				func_ret = (int)lua_tonumber(L, -1);
-			} else {
-				func_ret = EXIT_SUCCESS;
-			}
-		}
-	}
-	lua_close(L);
-
-	return func_ret;
-}
 #endif
 
 
@@ -821,10 +789,6 @@ static int
 run_duktape(const char *file_name)
 {
 	duk_context *ctx = NULL;
-
-#ifdef WIN32
-	(void)MakeConsole();
-#endif
 
 	ctx = duk_create_heap_default();
 	if (!ctx) {
@@ -867,8 +831,11 @@ start_civetweb(int argc, char *argv[])
 #ifdef WIN32
 		(void)MakeConsole();
 #endif
-		fprintf(stdout, "\n%s (%s)\n", g_server_base_name, g_server_name);
-		(void)mg_print_system_info(0, 0);
+		fprintf(stdout,
+		        "\n%s (%s)\n%s\n",
+		        g_server_base_name,
+		        g_server_name,
+		        g_system_info);
 
 		exit(EXIT_SUCCESS);
 	}
@@ -902,6 +869,9 @@ start_civetweb(int argc, char *argv[])
 		if (argc != 3) {
 			show_usage_and_exit(argv[0]);
 		}
+#ifdef WIN32
+		(void)MakeConsole();
+#endif
 		exit(run_lua(argv[2]));
 #else
 		show_server_name();
@@ -917,6 +887,9 @@ start_civetweb(int argc, char *argv[])
 		if (argc != 3) {
 			show_usage_and_exit(argv[0]);
 		}
+#ifdef WIN32
+		(void)MakeConsole();
+#endif
 		exit(run_duktape(argv[2]));
 #else
 		show_server_name();
@@ -1039,7 +1012,6 @@ static SERVICE_STATUS_HANDLE hStatus;
 static const char *service_magic_argument = "--";
 static NOTIFYICONDATA TrayIcon;
 
-
 static void WINAPI
 ControlHandler(DWORD code)
 {
@@ -1128,6 +1100,17 @@ save_config(HWND hDlg, FILE *fp)
 }
 
 
+/* LPARAM pointer passed to WM_INITDIALOG */
+struct dlg_proc_param {
+	int guard;
+	HWND hWnd;
+	const char *name;
+	char *buffer;
+	unsigned buflen;
+};
+
+
+/* Dialog proc for settings dialog */
 static INT_PTR CALLBACK
 SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -1137,7 +1120,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 	const struct mg_option *default_options = mg_get_valid_options();
 	char *file_options[MAX_OPTIONS * 2 + 1] = {0};
 	char *title;
-	(void)lParam;
+	struct dlg_proc_param *pdlg_proc_param;
 
 	switch (msg) {
 
@@ -1261,7 +1244,9 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_INITDIALOG:
 		/* Store hWnd in a parameter accessible by the parent, so we can
 		 * bring this window to front if required. */
-		*((HWND *)lParam) = hDlg;
+		pdlg_proc_param = (struct dlg_proc_param *)lParam;
+		pdlg_proc_param->hWnd = hDlg;
+
 		/* Initialize the dialog elements */
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
@@ -1287,17 +1272,13 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 
-struct tstring_input_buf {
-	unsigned buflen;
-	char *buffer;
-};
-
-
+/* Dialog proc for input dialog */
 static INT_PTR CALLBACK
-InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static struct tstring_input_buf *inBuf = 0;
+	static struct dlg_proc_param *inBuf = 0;
 	WORD ctrlId;
+	HWND hIn;
 
 	switch (msg) {
 	case WM_CLOSE:
@@ -1308,11 +1289,18 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 	case WM_COMMAND:
 		ctrlId = LOWORD(wParam);
 		if (ctrlId == IDOK) {
-			/* Add user */
-			GetWindowText(GetDlgItem(hDlg, ID_INPUT_LINE),
-			              inBuf->buffer,
-			              (int)inBuf->buflen);
-			if (strlen(inBuf->buffer) > 0) {
+			/* Get handle of input line */
+			hIn = GetDlgItem(hDlg, ID_INPUT_LINE);
+
+			if (hIn) {
+				/* Get content of input line */
+				GetWindowText(hIn, inBuf->buffer, (int)inBuf->buflen);
+				if (strlen(inBuf->buffer) > 0) {
+					/* Input dialog is not empty. */
+					EndDialog(hDlg, IDOK);
+				}
+			} else {
+				/* There is no input line in this dialog. */
 				EndDialog(hDlg, IDOK);
 			}
 		} else if (ctrlId == IDCANCEL) {
@@ -1321,17 +1309,30 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 		break;
 
 	case WM_INITDIALOG:
-		inBuf = (struct tstring_input_buf *)lP;
-		assert(inBuf != NULL);
-		assert((inBuf->buffer != NULL) && (inBuf->buflen != 0));
-		assert(strlen(inBuf->buffer) < inBuf->buflen);
-		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
-		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
-		SendDlgItemMessage(
-		    hDlg, ID_INPUT_LINE, EM_LIMITTEXT, inBuf->buflen - 1, 0);
-		SetWindowText(GetDlgItem(hDlg, ID_INPUT_LINE), inBuf->buffer);
-		SetWindowText(hDlg, "Modify password");
-		SetFocus(GetDlgItem(hDlg, ID_INPUT_LINE));
+		/* Get handle of input line */
+		hIn = GetDlgItem(hDlg, ID_INPUT_LINE);
+
+		/* Get dialog parameters */
+		inBuf = (struct dlg_proc_param *)lParam;
+
+		/* Set dialog handle for the caller */
+		inBuf->hWnd = hDlg;
+
+		/* Set dialog name */
+		SetWindowText(hDlg, inBuf->name);
+
+		if (hIn) {
+			/* This is an input dialog */
+			assert(inBuf != NULL);
+			assert((inBuf->buffer != NULL) && (inBuf->buflen != 0));
+			assert(strlen(inBuf->buffer) < inBuf->buflen);
+			SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
+			SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
+			SendMessage(hIn, EM_LIMITTEXT, inBuf->buflen - 1, 0);
+			SetWindowText(hIn, inBuf->buffer);
+			SetFocus(hIn);
+		}
+
 		break;
 
 	default:
@@ -1392,7 +1393,7 @@ get_password(const char *user,
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	int ok;
 	short y;
-	struct tstring_input_buf dlgprms;
+	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1414,20 +1415,30 @@ get_password(const char *user,
 	                   8,
 	                   L"Tahoma"};
 
-	dlgprms.buffer = passwd;
-	dlgprms.buflen = passwd_len;
-
 	assert((user != NULL) && (realm != NULL) && (passwd != NULL));
 
-	if (sGuard < 100) {
-		sGuard += 100;
+	/* Only allow one instance of this dialog to be open. */
+	if (s_dlg_proc_param.guard == 0) {
+		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
+		s_dlg_proc_param.guard = 1;
 	} else {
+		SetForegroundWindow(s_dlg_proc_param.hWnd);
+		return 0;
+	}
+
+	/* Do not open a password dialog, if the username is empty */
+	if (user[0] == 0) {
+		s_dlg_proc_param.guard = 0;
 		return 0;
 	}
 
 	/* Create a password suggestion */
 	memset(passwd, 0, passwd_len);
 	suggest_passwd(passwd);
+
+	/* Make buffer available for input dialog */
+	s_dlg_proc_param.buffer = passwd;
+	s_dlg_proc_param.buflen = passwd_len;
 
 	/* Create the dialog */
 	(void)memset(mem, 0, sizeof(mem));
@@ -1450,7 +1461,7 @@ get_password(const char *user,
 	            0x81,
 	            ID_CONTROLS + 1,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-	                | WS_DISABLED,
+	                | ES_READONLY,
 	            15 + LABEL_WIDTH,
 	            y,
 	            WIDTH - LABEL_WIDTH - 25,
@@ -1473,7 +1484,7 @@ get_password(const char *user,
 	            0x81,
 	            ID_CONTROLS + 2,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-	                | WS_DISABLED,
+	                | ES_READONLY,
 	            15 + LABEL_WIDTH,
 	            y,
 	            WIDTH - LABEL_WIDTH - 25,
@@ -1528,10 +1539,14 @@ get_password(const char *user,
 
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 
-	ok = (IDOK == DialogBoxIndirectParam(
-	                  NULL, dia, NULL, InputDlgProc, (LPARAM)&dlgprms));
+	s_dlg_proc_param.name = "Modify password";
 
-	sGuard -= 100;
+	ok =
+	    (IDOK == DialogBoxIndirectParam(
+	                 NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+
+	s_dlg_proc_param.hWnd = NULL;
+	s_dlg_proc_param.guard = 0;
 
 	return ok;
 
@@ -1541,12 +1556,14 @@ get_password(const char *user,
 }
 
 
+/* Dialog proc for password dialog */
 static INT_PTR CALLBACK
-PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
+PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	static const char *passfile = 0;
 	char domain[256], user[256], password[256];
 	WORD ctrlId;
+	struct dlg_proc_param *pdlg_proc_param;
 
 	switch (msg) {
 	case WM_CLOSE:
@@ -1596,7 +1613,9 @@ PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP)
 		break;
 
 	case WM_INITDIALOG:
-		passfile = (const char *)lP;
+		pdlg_proc_param = (struct dlg_proc_param *)lParam;
+		pdlg_proc_param->hWnd = hDlg;
+		passfile = pdlg_proc_param->name;
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
 		SetWindowText(hDlg, passfile);
@@ -1667,7 +1686,7 @@ show_settings_dialog()
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	WORD i, cl, nelems = 0;
 	short width, x, y;
-	static HWND sDlgHWnd;
+	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1689,10 +1708,11 @@ show_settings_dialog()
 	                   8,
 	                   L"Tahoma"};
 
-	if (sGuard == 0) {
-		sGuard++;
+	if (s_dlg_proc_param.guard == 0) {
+		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
+		s_dlg_proc_param.guard = 1;
 	} else {
-		SetForegroundWindow(sDlgHWnd);
+		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return;
 	}
 
@@ -1823,9 +1843,12 @@ show_settings_dialog()
 	assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
-	DialogBoxIndirectParam(NULL, dia, NULL, SettingsDlgProc, (LPARAM)&sDlgHWnd);
-	sGuard--;
-	sDlgHWnd = NULL;
+
+	DialogBoxIndirectParam(
+	    NULL, dia, NULL, SettingsDlgProc, (LPARAM)&s_dlg_proc_param);
+
+	s_dlg_proc_param.hWnd = NULL;
+	s_dlg_proc_param.guard = 0;
 
 #undef HEIGHT
 #undef WIDTH
@@ -1849,6 +1872,7 @@ change_password_file()
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	const char *domain = mg_get_option(g_ctx, "authentication_domain");
+	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
 		DLGTEMPLATE template; /* 18 bytes */
@@ -1870,9 +1894,11 @@ change_password_file()
 	                   8,
 	                   L"Tahoma"};
 
-	if (sGuard == 0) {
-		sGuard++;
+	if (s_dlg_proc_param.guard == 0) {
+		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
+		s_dlg_proc_param.guard = 1;
 	} else {
+		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return;
 	}
 
@@ -1885,7 +1911,7 @@ change_password_file()
 	of.Flags = OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
 
 	if (IDOK != GetSaveFileName(&of)) {
-		sGuard--;
+		s_dlg_proc_param.guard = 0;
 		return;
 	}
 
@@ -1894,11 +1920,12 @@ change_password_file()
 		fclose(f);
 	} else {
 		MessageBox(NULL, path, "Can not open file", MB_ICONERROR);
-		sGuard--;
+		s_dlg_proc_param.guard = 0;
 		return;
 	}
 
 	do {
+		s_dlg_proc_param.hWnd = NULL;
 		(void)memset(mem, 0, sizeof(mem));
 		(void)memcpy(mem, &dialog_header, sizeof(dialog_header));
 		p = mem + sizeof(dialog_header);
@@ -1906,7 +1933,7 @@ change_password_file()
 		f = fopen(path, "r+");
 		if (!f) {
 			MessageBox(NULL, path, "Can not open file", MB_ICONERROR);
-			sGuard--;
+			s_dlg_proc_param.guard = 0;
 			return;
 		}
 
@@ -1943,7 +1970,7 @@ change_password_file()
 			            0x81,
 			            ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA,
 			            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-			                | WS_DISABLED,
+			                | ES_READONLY,
 			            245,
 			            y,
 			            60,
@@ -1954,7 +1981,7 @@ change_password_file()
 			            0x81,
 			            ID_CONTROLS + nelems,
 			            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
-			                | WS_DISABLED,
+			                | ES_READONLY,
 			            140,
 			            y,
 			            100,
@@ -2027,11 +2054,18 @@ change_password_file()
 		assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 		dia->cy = y + 20;
-	} while ((IDOK == DialogBoxIndirectParam(
-	                      NULL, dia, NULL, PasswordDlgProc, (LPARAM)path))
+
+		s_dlg_proc_param.name = path;
+
+	} while ((IDOK == DialogBoxIndirectParam(NULL,
+	                                         dia,
+	                                         NULL,
+	                                         PasswordDlgProc,
+	                                         (LPARAM)&s_dlg_proc_param))
 	         && (!g_exit_flag));
 
-	sGuard--;
+	s_dlg_proc_param.hWnd = NULL;
+	s_dlg_proc_param.guard = 0;
 
 #undef HEIGHT
 #undef WIDTH
@@ -2039,18 +2073,106 @@ change_password_file()
 }
 
 
-static void
+int
 show_system_info()
 {
-	if (sGuard == 0) {
-		sGuard++;
+#define HEIGHT (15)
+#define WIDTH (320)
+#define LABEL_WIDTH (50)
+
+	unsigned char mem[4096], *p;
+	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
+	int ok;
+	short y;
+	static struct dlg_proc_param s_dlg_proc_param;
+
+	static struct {
+		DLGTEMPLATE template; /* 18 bytes */
+		WORD menu, class;
+		wchar_t caption[1];
+		WORD fontsiz;
+		wchar_t fontface[7];
+	} dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU | WS_VISIBLE
+	                        | DS_SETFONT | WS_DLGFRAME,
+	                    WS_EX_TOOLWINDOW,
+	                    0,
+	                    200,
+	                    200,
+	                    WIDTH,
+	                    0},
+	                   0,
+	                   0,
+	                   L"",
+	                   8,
+	                   L"Tahoma"};
+
+	/* Only allow one instance of this dialog to be open. */
+	if (s_dlg_proc_param.guard == 0) {
+		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
+		s_dlg_proc_param.guard = 1;
 	} else {
-		return;
+		SetForegroundWindow(s_dlg_proc_param.hWnd);
+		return 0;
 	}
 
-	/* TODO */
+	/* Create the dialog */
+	(void)memset(mem, 0, sizeof(mem));
+	(void)memcpy(mem, &dialog_header, sizeof(dialog_header));
+	p = mem + sizeof(dialog_header);
 
-	sGuard--;
+	y = HEIGHT;
+	add_control(&p,
+	            dia,
+	            0x82,
+	            ID_STATIC,
+	            WS_VISIBLE | WS_CHILD,
+	            10,
+	            y,
+	            LABEL_WIDTH,
+	            HEIGHT,
+	            "System Information:");
+	add_control(&p,
+	            dia,
+	            0x81,
+	            ID_CONTROLS + 1,
+	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
+	                | ES_AUTOVSCROLL | ES_MULTILINE | ES_READONLY,
+	            15 + LABEL_WIDTH,
+	            y,
+	            WIDTH - LABEL_WIDTH - 25,
+	            HEIGHT * 7,
+	            g_system_info);
+
+	y += (WORD)(HEIGHT * 8);
+	add_control(&p,
+	            dia,
+	            0x80,
+	            IDOK,
+	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+	            (WIDTH - 55) / 2,
+	            y,
+	            55,
+	            12,
+	            "Ok");
+
+	assert((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
+
+	dia->cy = y + (WORD)(HEIGHT * 1.5);
+
+	s_dlg_proc_param.name = "System information";
+
+	ok =
+	    (IDOK == DialogBoxIndirectParam(
+	                 NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+
+	s_dlg_proc_param.hWnd = NULL;
+	s_dlg_proc_param.guard = 0;
+
+	return ok;
+
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
 }
 
 
@@ -2115,6 +2237,7 @@ manage_service(int action)
 }
 
 
+/* Window proc for taskbar icon */
 static LRESULT CALLBACK
 WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -2289,6 +2412,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	(void)show;
 
 	init_server_name((int)__argc, (const char **)__argv);
+	init_system_info();
 	memset(&cls, 0, sizeof(cls));
 	cls.lpfnWndProc = (WNDPROC)WindowProc;
 	cls.hIcon = LoadIcon(NULL, IDI_APPLICATION);
@@ -2333,6 +2457,8 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+	free_system_info();
 
 	/* Return the WM_QUIT value. */
 	return (int)msg.wParam;
@@ -2389,6 +2515,7 @@ int
 main(int argc, char *argv[])
 {
 	init_server_name(argc, (const char **)argv);
+	init_system_info();
 	start_civetweb(argc, argv);
 
 	[NSAutoreleasePool new];
@@ -2446,6 +2573,7 @@ main(int argc, char *argv[])
 	[NSApp run];
 
 	stop_civetweb();
+	free_system_info();
 
 	return EXIT_SUCCESS;
 }
@@ -2456,6 +2584,7 @@ int
 main(int argc, char *argv[])
 {
 	init_server_name(argc, (const char **)argv);
+	init_system_info();
 	start_civetweb(argc, argv);
 	fprintf(stdout,
 	        "%s started on port(s) %s with web root [%s]\n",
@@ -2471,6 +2600,8 @@ main(int argc, char *argv[])
 	fflush(stdout);
 	stop_civetweb();
 	fprintf(stdout, "%s", " done.\n");
+
+	free_system_info();
 
 	return EXIT_SUCCESS;
 }

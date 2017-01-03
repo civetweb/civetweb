@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016 the Civetweb developers
+/* Copyright (c) 2015-2017 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -3531,8 +3531,17 @@ START_TEST(test_throttle)
 	dt = difftime(t1, t0) * 1000.0; /* Elapsed time in ms - in most systems
 	                                 * only with second resolution */
 
-	/* Check if there are at least 10 seconds */
-	ck_assert_int_ge((int)dt, 10 * 1000);
+	/* Time estimation: Data size is 10 kB, with 1 kB/s speed limit.
+	 * The first block (1st kB) is transferred immediately, the second
+	 * block (2nd kB) one second later, the third block (3rd kB) two
+	 * seconds later, .. the last block (10th kB) nine seconds later.
+	 * The resolution of time measurement using the "time" C library
+	 * function is 1 second, so we should add +/- one second tolerance.
+	 * Thus, download of 10 kB with 1 kB/s should not be faster than
+	 * 8 seconds. */
+
+	/* Check if there are at least 8 seconds */
+	ck_assert_int_ge((int)dt, 8 * 1000);
 
 	/* Nothing left to read */
 	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
@@ -3547,12 +3556,22 @@ START_TEST(test_throttle)
 END_TEST
 
 
+START_TEST(test_init_library)
+{
+	unsigned f_avail = mg_check_feature(0xFF);
+	unsigned f_ret = mg_init_library(f_avail);
+	ck_assert_uint_eq(f_ret, f_avail);
+}
+END_TEST
+
+
 Suite *
 make_public_server_suite(void)
 {
 	Suite *const suite = suite_create("PublicServer");
 
 	TCase *const tcase_checktestenv = tcase_create("Check test environment");
+	TCase *const tcase_initlib = tcase_create("Init library");
 	TCase *const tcase_startthreads = tcase_create("Start threads");
 	TCase *const tcase_startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const tcase_startstophttps = tcase_create("Start Stop HTTPS Server");
@@ -3568,6 +3587,10 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_checktestenv, test_the_test_environment);
 	tcase_set_timeout(tcase_checktestenv, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_checktestenv);
+
+	tcase_add_test(tcase_initlib, test_init_library);
+	tcase_set_timeout(tcase_initlib, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_initlib);
 
 	tcase_add_test(tcase_startthreads, test_threading);
 	tcase_set_timeout(tcase_startthreads, civetweb_min_test_timeout);
@@ -3624,6 +3647,10 @@ static int chk_failed = 0;
 void
 MAIN_PUBLIC_SERVER(void)
 {
+	unsigned f_avail = mg_check_feature(0xFF);
+	unsigned f_ret = mg_init_library(f_avail);
+	ck_assert_uint_eq(f_ret, f_avail);
+
 	test_the_test_environment(0);
 	test_threading(0);
 
@@ -3637,6 +3664,8 @@ MAIN_PUBLIC_SERVER(void)
 	test_error_handling(0);
 	test_error_log_file(0);
 	test_throttle(0);
+
+	mg_exit_library();
 
 	printf("\nok: %i\nfailed: %i\n\n", chk_ok, chk_failed);
 }

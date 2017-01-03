@@ -26,7 +26,7 @@ include(CMakeDependentOption)
 
 # Set up the project
 project (civetweb)
-set(CIVETWEB_VERSION "1.7.0" CACHE STRING "The version of the civetweb library")
+set(CIVETWEB_VERSION "1.10.0" CACHE STRING "The version of the civetweb library")
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" CIVETWEB_VERSION_MATCH "${CIVETWEB_VERSION}")
 if ("${CIVETWEB_VERSION_MATCH}" STREQUAL "")
   message(FATAL_ERROR "Must specify a semantic version: major.minor.patch")
@@ -416,14 +416,16 @@ add_subdirectory(src)
 include(CTest)
 if (BUILD_TESTING)
   # Check unit testing framework Version
-  set(CIVETWEB_CHECK_VERSION 0.10.0 CACHE STRING
+  set(CIVETWEB_CHECK_VERSION 0.11.0 CACHE STRING
     "The version of Check unit testing framework to build and include statically")
   set_property(CACHE CIVETWEB_CHECK_VERSION PROPERTY VALUE ${CIVETWEB_CHECK_VERSION})
   message(STATUS "Check Unit Testing Framework Version - ${CIVETWEB_CHECK_VERSION}")
   mark_as_advanced(CIVETWEB_CHECK_VERSION)
 
   # Check unit testing framework Verification Hash
-  set(CIVETWEB_CHECK_MD5_HASH 67a34c40b5bc888737f4e5ae82e9939f CACHE STRING
+  # Hash for Check 0.10.0: 67a34c40b5bc888737f4e5ae82e9939f
+  # Hash for Check 0.11.0: 1b14ee307dca8e954a8219c34484d7c4
+  set(CIVETWEB_CHECK_MD5_HASH 1b14ee307dca8e954a8219c34484d7c4 CACHE STRING
     "The hash of Check unit testing framework archive to be downloaded")
   set_property(CACHE CIVETWEB_CHECK_MD5_HASH PROPERTY VALUE ${CIVETWEB_CHECK_MD5_HASH})
   mark_as_advanced(CIVETWEB_CHECK_MD5_HASH)

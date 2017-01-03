@@ -235,8 +235,8 @@ are additional default index files, ordered before `index.cgi`.
 ### enable\_keep\_alive `no`
 Enable connection keep alive, either `yes` or `no`.
 
-Experimental feature. Allows clients to reuse TCP connection for subsequent
-HTTP requests, which improves performance.
+Allows clients to reuse TCP connection for subsequent HTTP requests, 
+which improves performance.
 For this to work when using request handlers it is important to add the
 correct Content-Length HTTP header for each request. If this is forgotten the
 client will time out.
@@ -393,7 +393,6 @@ Note: For consistency with other timeouts, the value is configured in
 milliseconds. However, the TCP socket layer usually only offers a timeout in 
 seconds, so the value should be an integer multiple of 1000.
 
-
 ### lua\_preload\_file
 This configuration option can be used to specify a Lua script file, which
 is executed before the actual web page script (Lua script, Lua server page
@@ -414,6 +413,18 @@ In contrast to Lua scripts, the content of a Lua server pages is delivered
 directly to the client. Lua script parts are delimited from the standard
 content by including them between <? and ?> tags.
 An example can be found in the test directory.
+
+### lua\_background\_script
+Experimental feature, and subject to change.
+Run a Lua script in the background, independent from any connection.
+The script is started before network access to the server is available.
+It can be used to prepare the document root (e.g., update files, compress
+files, ...), check for external resources, remove old log files, etc.
+
+The Lua state remains open until the server is stopped.
+In the future, some callback functions will be available to notify the
+script on changes of the server state.
+
 
 ### websocket\_root
 In case civetweb is built with Lua and websocket support, Lua scripts may
