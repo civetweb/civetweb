@@ -5,6 +5,7 @@ Release Notes v1.9.1
 Changes
 -------
 
+- Add "open website" button for pre-built Windows binaries
 - Fix for connections closed prematurely
 - Update to a new check unit test framework and remove patches required for previous version
 - Update version number

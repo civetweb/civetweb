@@ -1,20 +1,15 @@
 ![CivetWeb](https://raw.github.com/civetweb/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
 =======
 
-
-Project Mission
------------------
-
-Project mission is to provide easy to use, powerful, C/C++ embeddable web
-server with optional CGI, SSL and Lua support.
-CivetWeb has a MIT license so you can innovate without restrictions.
+CivetWeb is an easy to use, powerful, C/C++ embeddable web server with optional CGI, SSL and Lua support.
 
 CivetWeb can be used by developers as a library, to add web server functionality to an existing application.
+CivetWeb uses an [MIT license](https://github.com/civetweb/civetweb/blob/master/LICENSE.md).
+
 It can also be used by end users as a stand-alone web server. It is available as single executable, no installation is required.
 
+The current stable version is 1.9.1 - [release notes](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md)
 
-Where to find the official version?
------------------------------------
 
 End users can download CivetWeb at SourceForge
 [https://sourceforge.net/projects/civetweb/](https://sourceforge.net/projects/civetweb/)
@@ -32,8 +27,8 @@ Source releases can be found on GitHub
 [https://github.com/civetweb/civetweb/releases](https://github.com/civetweb/civetweb/releases)
 
 
-Quick start documentation
---------------------------
+Documentation
+---------------
 
 - [Installing.md](Installing.md) - Install Guide (for end users using pre-built binaries)
 - [UserManual.md](UserManual.md) - End User Guide
@@ -42,6 +37,4 @@ Quick start documentation
 - [OpenSSL.md](OpenSSL.md) - Adding HTTPS (SSL/TLS) support using OpenSSL.
 - [API documentation](api) - Additional documentation on the civetweb application programming interface ([civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)).
 
-- [RELEASE_NOTES.md](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
-- [LICENSE.md](https://github.com/civetweb/civetweb/blob/master/LICENSE.md) - Copyright License
-- [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md) - Authors
+[Authors](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
