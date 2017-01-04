@@ -144,10 +144,12 @@ struct tuser_data {
 	char *first_message;
 };
 
+
 static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
 static const char *g_server_name;   /* Set by init_server_name() */
 static const char *g_icon_name;     /* Set by init_server_name() */
+static const char *g_website;       /* Set by init_server_name() */
 static char *g_system_info;         /* Set by init_system_info() */
 static char g_config_file_name[PATH_MAX] =
     "";                          /* Set by process_command_line_arguments() */
@@ -168,11 +170,12 @@ static struct tuser_data
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
-enum { OPTION_TITLE, OPTION_ICON, NUM_MAIN_OPTIONS };
+enum { OPTION_TITLE, OPTION_ICON, OPTION_WEBPAGE, NUM_MAIN_OPTIONS };
 
 static struct mg_option main_config_options[] = {
     {"title", CONFIG_TYPE_STRING, NULL},
     {"icon", CONFIG_TYPE_STRING, NULL},
+	{"website", CONFIG_TYPE_STRING, NULL },
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -636,6 +639,7 @@ init_server_name(int argc, const char *argv[])
 			g_server_name = (const char *)(argv[i + 1]);
 		}
 	}
+
 	g_icon_name = NULL;
 	for (i = 0; i < argc - 1; i++) {
 		if ((argv[i][0] == '-')
@@ -644,6 +648,16 @@ init_server_name(int argc, const char *argv[])
 			g_icon_name = (const char *)(argv[i + 1]);
 		}
 	}
+
+	g_website = "http://civetweb.github.io/civetweb/";
+	for (i = 0; i < argc - 1; i++) {
+		if ((argv[i][0] == '-')
+			&& (0 == strcmp(argv[i] + 1,
+				main_config_options[OPTION_WEBPAGE].name))) {
+			g_website = (const char *)(argv[i + 1]);
+		}
+	}
+
 }
 
 
@@ -994,6 +1008,7 @@ enum {
 	ID_ADD_USER_REALM,
 	ID_INPUT_LINE,
 	ID_SYSINFO,
+	ID_WEBSITE,
 
 	/* All dynamically created text boxes for options have IDs starting from
    ID_CONTROLS, incremented by one. */
@@ -2298,6 +2313,15 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			             NULL,
 			             SW_SHOW);
 			break;
+		case ID_WEBSITE:
+			fprintf(stdout, "[%s]\n", g_website);
+			ShellExecute(NULL,
+				"open",
+				g_website,
+				NULL,
+				NULL,
+				SW_SHOW);
+			break;
 		}
 		break;
 
@@ -2332,6 +2356,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			AppendMenu(hMenu, MF_STRING, ID_SETTINGS, "Edit settings");
 			AppendMenu(hMenu, MF_STRING, ID_PASSWORD, "Modify password file");
 			AppendMenu(hMenu, MF_STRING, ID_SYSINFO, "Show system info");
+			AppendMenu(hMenu, MF_STRING, ID_WEBSITE, "Visit website");
 			AppendMenu(hMenu, MF_SEPARATOR, ID_SEPARATOR, "");
 			AppendMenu(hMenu, MF_STRING, ID_QUIT, "Exit");
 			GetCursorPos(&pt);
