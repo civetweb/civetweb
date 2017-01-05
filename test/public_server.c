@@ -3691,6 +3691,129 @@ START_TEST(test_large_file)
 }
 END_TEST
 
+#define FILE_IN_MEM_SIZE (1024 * 00)
+static char *file_in_mem_data;
+
+static const char *
+test_file_in_memory_open_file(const struct mg_connection *conn,
+                              const char *file_path,
+                              size_t *file_size)
+{
+	(void)conn;
+
+	if (strcmp(file_path, "./file_in_mem") == 0) {
+		/* File is in memory */
+		*file_size = FILE_IN_MEM_SIZE;
+		return file_in_mem_data;
+	} else {
+		/* File is not in memory */
+		return NULL;
+	}
+}
+
+
+START_TEST(test_file_in_memory)
+{
+	/* Server var */
+	struct mg_context *ctx;
+	struct mg_callbacks callbacks;
+	const char *OPTIONS[32];
+	int opt_cnt = 0;
+#if !defined(NO_SSL)
+	const char *ssl_cert = locate_ssl_cert();
+#endif
+
+	/* Client var */
+	struct mg_connection *client;
+	char client_err_buf[256];
+	char client_data_buf[256];
+	const struct mg_request_info *client_ri;
+	int64_t data_read;
+	int r;
+
+
+	/* Prepare test data */
+	file_in_mem_data = (char *)malloc(FILE_IN_MEM_SIZE);
+	ck_assert_ptr_ne(file_in_mem_data, NULL);
+	for (r = 0; r < FILE_IN_MEM_SIZE; r++) {
+		file_in_mem_data[r] = (char)(r);
+	}
+
+
+/* Set options and start server */
+#if !defined(NO_FILES)
+	OPTIONS[opt_cnt++] = "document_root";
+	OPTIONS[opt_cnt++] = ".";
+#endif
+#if defined(NO_SSL)
+	OPTIONS[opt_cnt++] = "listening_ports";
+	OPTIONS[opt_cnt++] = "8080";
+#else
+	OPTIONS[opt_cnt++] = "listening_ports";
+	OPTIONS[opt_cnt++] = "8443s";
+	OPTIONS[opt_cnt++] = "ssl_certificate";
+	OPTIONS[opt_cnt++] = ssl_cert;
+	ck_assert(ssl_cert != NULL);
+#endif
+	OPTIONS[opt_cnt] = NULL;
+
+
+	memset(&callbacks, 0, sizeof(callbacks));
+	callbacks.open_file = test_file_in_memory_open_file;
+
+	ctx = test_mg_start(&callbacks, 0, OPTIONS);
+	ck_assert(ctx != NULL);
+
+	/* connect client */
+	memset(client_err_buf, 0, sizeof(client_err_buf));
+	memset(client_data_buf, 0, sizeof(client_data_buf));
+
+	client =
+	    mg_download("127.0.0.1",
+#if defined(NO_SSL)
+	                8080,
+	                0,
+#else
+	                8443,
+	                1,
+#endif
+	                client_err_buf,
+	                sizeof(client_err_buf),
+	                "GET /file_in_mem HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+
+	ck_assert(ctx != NULL);
+	ck_assert_str_eq(client_err_buf, "");
+
+	client_ri = mg_get_request_info(client);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_str_eq(client_ri->uri, "200");
+
+	ck_assert_int_eq(client_ri->content_length, FILE_IN_MEM_SIZE);
+
+	data_read = 0;
+	while (data_read < client_ri->content_length) {
+		r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+		ck_assert_int_ge(r, 0);
+		data_read += r;
+	}
+
+	/* Nothing left to read */
+	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+	ck_assert_int_eq(r, 0);
+
+	/* Close the client connection */
+	mg_close_connection(client);
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+
+	/* Free test data */
+	free(file_in_mem_data);
+	file_in_mem_data = NULL;
+}
+END_TEST
+
 
 Suite *
 make_public_server_suite(void)
@@ -3710,6 +3833,8 @@ make_public_server_suite(void)
 	TCase *const tcase_error_handling = tcase_create("Error handling");
 	TCase *const tcase_throttle = tcase_create("Limit speed");
 	TCase *const tcase_large_file = tcase_create("Large file");
+	TCase *const tcase_file_in_mem = tcase_create("File in memory");
+
 
 	tcase_add_test(tcase_checktestenv, test_the_test_environment);
 	tcase_set_timeout(tcase_checktestenv, civetweb_min_test_timeout);
@@ -3764,6 +3889,10 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_large_file, 600);
 	suite_add_tcase(suite, tcase_large_file);
 
+	tcase_add_test(tcase_file_in_mem, test_file_in_memory);
+	tcase_set_timeout(tcase_file_in_mem, 300);
+	suite_add_tcase(suite, tcase_file_in_mem);
+
 	return suite;
 }
 
@@ -3796,6 +3925,7 @@ MAIN_PUBLIC_SERVER(void)
 	test_error_log_file(0);
 	test_throttle(0);
 	test_large_file(0);
+	test_file_in_memory(0);
 
 	mg_exit_library();
 
