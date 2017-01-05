@@ -175,7 +175,7 @@ enum { OPTION_TITLE, OPTION_ICON, OPTION_WEBPAGE, NUM_MAIN_OPTIONS };
 static struct mg_option main_config_options[] = {
     {"title", CONFIG_TYPE_STRING, NULL},
     {"icon", CONFIG_TYPE_STRING, NULL},
-	{"website", CONFIG_TYPE_STRING, NULL },
+    {"website", CONFIG_TYPE_STRING, NULL},
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -652,12 +652,11 @@ init_server_name(int argc, const char *argv[])
 	g_website = "http://civetweb.github.io/civetweb/";
 	for (i = 0; i < argc - 1; i++) {
 		if ((argv[i][0] == '-')
-			&& (0 == strcmp(argv[i] + 1,
-				main_config_options[OPTION_WEBPAGE].name))) {
+		    && (0 == strcmp(argv[i] + 1,
+		                    main_config_options[OPTION_WEBPAGE].name))) {
 			g_website = (const char *)(argv[i + 1]);
 		}
 	}
-
 }
 
 
@@ -2315,12 +2314,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			break;
 		case ID_WEBSITE:
 			fprintf(stdout, "[%s]\n", g_website);
-			ShellExecute(NULL,
-				"open",
-				g_website,
-				NULL,
-				NULL,
-				SW_SHOW);
+			ShellExecute(NULL, "open", g_website, NULL, NULL, SW_SHOW);
 			break;
 		}
 		break;
