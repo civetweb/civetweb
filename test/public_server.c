@@ -3565,6 +3565,133 @@ START_TEST(test_init_library)
 END_TEST
 
 
+#define LARGE_FILE_SIZE (1024 * 1024 * 10)
+
+static int
+test_large_file_begin_request(struct mg_connection *conn)
+{
+	const struct mg_request_info *ri;
+	long unsigned len = LARGE_FILE_SIZE;
+	const char *block = "0123456789";
+	uint64_t i;
+	size_t blocklen;
+
+	ck_assert(conn != NULL);
+	ri = mg_get_request_info(conn);
+	ck_assert(ri != NULL);
+
+	ck_assert_str_eq(ri->request_method, "GET");
+	ck_assert_str_eq(ri->http_version, "1.1");
+	ck_assert_str_eq(ri->remote_addr, "127.0.0.1");
+	ck_assert_ptr_eq(ri->query_string, NULL);
+	ck_assert_ptr_ne(ri->local_uri, NULL);
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Length: %lu\r\n"
+	          "Connection: close\r\n\r\n",
+	          len);
+
+	blocklen = strlen(block);
+
+	for (i = 0; i < len; i += blocklen) {
+		mg_write(conn, block, blocklen);
+	}
+
+	return 200;
+}
+
+
+START_TEST(test_large_file)
+{
+	/* Server var */
+	struct mg_context *ctx;
+	struct mg_callbacks callbacks;
+	const char *OPTIONS[32];
+	int opt_cnt = 0;
+#if !defined(NO_SSL)
+	const char *ssl_cert = locate_ssl_cert();
+#endif
+
+	/* Client var */
+	struct mg_connection *client;
+	char client_err_buf[256];
+	char client_data_buf[256];
+	const struct mg_request_info *client_ri;
+	int64_t data_read;
+	int r;
+
+
+/* Set options and start server */
+#if !defined(NO_FILES)
+	OPTIONS[opt_cnt++] = "document_root";
+	OPTIONS[opt_cnt++] = ".";
+#endif
+#if defined(NO_SSL)
+	OPTIONS[opt_cnt++] = "listening_ports";
+	OPTIONS[opt_cnt++] = "8080";
+#else
+	OPTIONS[opt_cnt++] = "listening_ports";
+	OPTIONS[opt_cnt++] = "8443s";
+	OPTIONS[opt_cnt++] = "ssl_certificate";
+	OPTIONS[opt_cnt++] = ssl_cert;
+	ck_assert(ssl_cert != NULL);
+#endif
+	OPTIONS[opt_cnt] = NULL;
+
+
+	memset(&callbacks, 0, sizeof(callbacks));
+	callbacks.begin_request = test_large_file_begin_request;
+
+	ctx = test_mg_start(&callbacks, 0, OPTIONS);
+	ck_assert(ctx != NULL);
+
+	/* connect client */
+	memset(client_err_buf, 0, sizeof(client_err_buf));
+	memset(client_data_buf, 0, sizeof(client_data_buf));
+
+	client = mg_download("127.0.0.1",
+#if defined(NO_SSL)
+	                     8080,
+	                     0,
+#else
+	                     8443,
+	                     1,
+#endif
+	                     client_err_buf,
+	                     sizeof(client_err_buf),
+	                     "GET /large.file HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+
+	ck_assert(ctx != NULL);
+	ck_assert_str_eq(client_err_buf, "");
+
+	client_ri = mg_get_request_info(client);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_str_eq(client_ri->uri, "200");
+
+	ck_assert_int_eq(client_ri->content_length, LARGE_FILE_SIZE);
+
+	data_read = 0;
+	while (data_read < client_ri->content_length) {
+		r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+		ck_assert_int_ge(r, 0);
+		data_read += r;
+	}
+
+	/* Nothing left to read */
+	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+	ck_assert_int_eq(r, 0);
+
+	/* Close the client connection */
+	mg_close_connection(client);
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+}
+END_TEST
+
+
 Suite *
 make_public_server_suite(void)
 {
@@ -3582,7 +3709,7 @@ make_public_server_suite(void)
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
 	TCase *const tcase_error_handling = tcase_create("Error handling");
 	TCase *const tcase_throttle = tcase_create("Limit speed");
-
+	TCase *const tcase_large_file = tcase_create("Large file");
 
 	tcase_add_test(tcase_checktestenv, test_the_test_environment);
 	tcase_set_timeout(tcase_checktestenv, civetweb_min_test_timeout);
@@ -3633,6 +3760,10 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_throttle, 300);
 	suite_add_tcase(suite, tcase_throttle);
 
+	tcase_add_test(tcase_large_file, test_large_file);
+	tcase_set_timeout(tcase_large_file, 600);
+	suite_add_tcase(suite, tcase_large_file);
+
 	return suite;
 }
 
@@ -3664,6 +3795,7 @@ MAIN_PUBLIC_SERVER(void)
 	test_error_handling(0);
 	test_error_log_file(0);
 	test_throttle(0);
+	test_large_file(0);
 
 	mg_exit_library();
 
