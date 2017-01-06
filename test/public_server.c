@@ -3730,7 +3730,7 @@ START_TEST(test_file_in_memory)
 	char client_data_buf[256];
 	const struct mg_request_info *client_ri;
 	int64_t data_read;
-	int r;
+	int r, i;
 
 
 	/* Prepare test data */
@@ -3794,7 +3794,10 @@ START_TEST(test_file_in_memory)
 	while (data_read < client_ri->content_length) {
 		r = mg_read(client, client_data_buf, sizeof(client_data_buf));
 		if (r > 0) {
-			ck_assert_int_eq((int)client_data_buf[0], (int)((char)data_read));
+			for (i = 0; i < r; i++) {
+				ck_assert_int_eq((int)client_data_buf[i],
+				                 (int)file_in_mem_data[data_read + i]);
+			}
 			data_read += r;
 		}
 	}
