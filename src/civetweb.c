@@ -3663,6 +3663,12 @@ mg_stat(const struct mg_connection *conn,
 	if (conn && is_file_in_memory(conn, path)) {
 		/* filep->is_directory = 0; filep->gzipped = 0; .. already done by
 		 * memset */
+
+		/* Quick fix (for 1.9.x): */
+		/* mg_stat must fill all fields, also for files in memory */
+		open_file_in_memory(conn, path, filep, MG_FOPEN_MODE_NONE);
+		/* TODO: for 1.10: restructure how files in memory are handled */
+
 		filep->last_modified = time(NULL); /* xxxxxxxx */
 		/* last_modified = now ... assumes the file may change during runtime,
 		 * so every mg_fopen call may return different data */
