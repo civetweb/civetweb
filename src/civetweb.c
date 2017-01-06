@@ -4187,6 +4187,16 @@ mg_stat(const struct mg_connection *conn,
 	memset(filep, 0, sizeof(*filep));
 
 	if (conn && is_file_in_memory(conn, path)) {
+
+		/* Quick fix (for 1.9.x): */
+		/* mg_stat must fill all fields, also for files in memory */
+        struct mg_file tmp_file;
+		open_file_in_memory(conn, path, &tmp_file, MG_FOPEN_MODE_NONE);
+        filep->size = tmp_file.stat.size;
+        filep->time = time(NULL);
+        filep->location = 2;
+		/* TODO: for 1.10: restructure how files in memory are handled */
+
 		return 1;
 	}
 
