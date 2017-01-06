@@ -3691,7 +3691,7 @@ START_TEST(test_large_file)
 }
 END_TEST
 
-#define FILE_IN_MEM_SIZE (1024 * 00)
+#define FILE_IN_MEM_SIZE (1024 * 100)
 static char *file_in_mem_data;
 
 static const char *
@@ -3714,6 +3714,7 @@ test_file_in_memory_open_file(const struct mg_connection *conn,
 
 START_TEST(test_file_in_memory)
 {
+#if !defined(NO_FILES)
 	/* Server var */
 	struct mg_context *ctx;
 	struct mg_callbacks callbacks;
@@ -3740,11 +3741,9 @@ START_TEST(test_file_in_memory)
 	}
 
 
-/* Set options and start server */
-#if !defined(NO_FILES)
+	/* Set options and start server */
 	OPTIONS[opt_cnt++] = "document_root";
 	OPTIONS[opt_cnt++] = ".";
-#endif
 #if defined(NO_SSL)
 	OPTIONS[opt_cnt++] = "listening_ports";
 	OPTIONS[opt_cnt++] = "8080";
@@ -3794,8 +3793,10 @@ START_TEST(test_file_in_memory)
 	data_read = 0;
 	while (data_read < client_ri->content_length) {
 		r = mg_read(client, client_data_buf, sizeof(client_data_buf));
-		ck_assert_int_ge(r, 0);
-		data_read += r;
+		if (r > 0) {
+			ck_assert_int_eq((int)client_data_buf[0], (int)((char)data_read));
+			data_read += r;
+		}
 	}
 
 	/* Nothing left to read */
@@ -3811,6 +3812,11 @@ START_TEST(test_file_in_memory)
 	/* Free test data */
 	free(file_in_mem_data);
 	file_in_mem_data = NULL;
+#else
+	/* This test is not meaningful, if NO_FILES is set */
+	/* Use file_in_mem_data (to avoid unused warning) */
+	ck_assert_ptr_eq(file_in_mem_data, NULL);
+#endif
 }
 END_TEST
 
