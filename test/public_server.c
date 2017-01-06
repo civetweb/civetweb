@@ -3691,6 +3691,9 @@ START_TEST(test_large_file)
 }
 END_TEST
 
+
+#if !defined(NO_FILES)
+
 #define FILE_IN_MEM_SIZE (1024 * 100)
 static char *file_in_mem_data;
 
@@ -3710,6 +3713,7 @@ test_file_in_memory_open_file(const struct mg_connection *conn,
 		return NULL;
 	}
 }
+#endif
 
 
 START_TEST(test_file_in_memory)
@@ -3816,9 +3820,8 @@ START_TEST(test_file_in_memory)
 	free(file_in_mem_data);
 	file_in_mem_data = NULL;
 #else
-	/* This test is not meaningful, if NO_FILES is set */
-	/* Use file_in_mem_data (to avoid unused warning) */
-	ck_assert_ptr_eq(file_in_mem_data, NULL);
+	/* This test is not meaningful, if NO_FILES is set */	
+	ck_assert_uint_eq(mg_check_feature(1), 0);
 #endif
 }
 END_TEST
