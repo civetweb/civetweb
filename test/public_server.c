@@ -3820,7 +3820,7 @@ START_TEST(test_file_in_memory)
 	free(file_in_mem_data);
 	file_in_mem_data = NULL;
 #else
-	/* This test is not meaningful, if NO_FILES is set */	
+	/* This test is not meaningful, if NO_FILES is set */
 	ck_assert_uint_eq(mg_check_feature(1), 0);
 #endif
 }
