@@ -5,6 +5,7 @@ Release Notes v1.10 (work in progress)
 Changes
 -------
 
+- OpenSSL 1.1 support
 - Update version number
 
 
