@@ -1,3 +1,13 @@
+Release Notes v1.10 (work in progress)
+===
+### Objectives:
+
+Changes
+-------
+
+- Update version number
+
+
 Release Notes v1.9.1
 ===
 ### Objectives: *Bug fix*

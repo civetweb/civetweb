@@ -11,7 +11,11 @@ the API can be found in [Embedding.md](Embedding.md).
 
 | Macro | Description |
 | :--- | :--- |
-| **`CIVETWEB_VERSION`** | The current version of the website as a string with the major and minor version number seperated with a dot. For version 1.9, this string will for example have the value "1.9" |
+| **`CIVETWEB_VERSION`** | The current version of the software as a string with the major and minor version number seperated with a dot. For version 1.9, this string will have the value "1.9", for thw first patch of this version "1.9.1". |
+| **`CIVETWEB_VERSION_MAJOR`** | The current major version as number, e.g., (1) for version 1.9. |
+| **`CIVETWEB_VERSION_MINOR`** | The current minor version as number, e.g., (9) for version 1.9. |
+| **`CIVETWEB_VERSION_PATCH`** | The current patch version as number, e.g., (0) for version 1.9 or (1) for version 1.9.1. |
+
 
 ## Structures
 
@@ -23,6 +27,7 @@ the API can be found in [Embedding.md](Embedding.md).
 * [`struct mg_option;`](api/mg_option.md)
 * [`struct mg_request_info;`](api/mg_request_info.md)
 * [`struct mg_server_ports;`](api/mg_server_ports.md)
+
 
 ## Functions
 
