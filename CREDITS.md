@@ -44,6 +44,7 @@
 * Jordan Shelley
 * Joshua Boyd
 * Joshua D. Boyd
+* kakwa
 * kalphamon
 * Keith Kyzivat
 * Kevin Wojniak
@@ -67,6 +68,7 @@
 * No Face Press
 * Patrick Trinkle
 * Paul Sokolovsky
+* Paulo Brizolara
 * Perttu Ahola
 * Peter Foerster
 * Philipp Friedenberger
