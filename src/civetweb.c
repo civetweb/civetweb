@@ -4193,7 +4193,7 @@ mg_stat(const struct mg_connection *conn,
         struct mg_file tmp_file;
 		open_file_in_memory(conn, path, &tmp_file, MG_FOPEN_MODE_NONE);
         filep->size = tmp_file.stat.size;
-        filep->time = time(NULL);
+        filep->last_modified = time(NULL);
         filep->location = 2;
 		/* TODO: for 1.10: restructure how files in memory are handled */
 
