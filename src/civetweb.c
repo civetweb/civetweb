@@ -3666,7 +3666,7 @@ mg_stat(const struct mg_connection *conn,
 
 		/* Quick fix (for 1.9.x): */
 		/* mg_stat must fill all fields, also for files in memory */
-        struct mg_file tmp_file;
+        struct mg_file tmp_file = STRUCT_FILE_INITIALIZER;
 		open_file_in_memory(conn, path, &tmp_file, MG_FOPEN_MODE_NONE);
         filep->size = tmp_file.stat.size;
         filep->location = 2;
@@ -4190,7 +4190,7 @@ mg_stat(const struct mg_connection *conn,
 
 		/* Quick fix (for 1.9.x): */
 		/* mg_stat must fill all fields, also for files in memory */
-        struct mg_file tmp_file;
+        struct mg_file tmp_file = STRUCT_FILE_INITIALIZER;
 		open_file_in_memory(conn, path, &tmp_file, MG_FOPEN_MODE_NONE);
         filep->size = tmp_file.stat.size;
         filep->last_modified = time(NULL);
