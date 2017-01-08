@@ -1389,6 +1389,9 @@ struct ssl_func {
 #define ASN1_INTEGER_to_BN                                                     \
 	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn))crypto_sw[13].ptr)
 #define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[14].ptr)
+#define CRYPTO_free (*(void (*)(void *addr))crypto_sw[15].ptr)
+
+#define OPENSSL_free(a) CRYPTO_free(a)
 
 
 /* set_ssl_option() function updates this array.
@@ -1447,6 +1450,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
                                       {"BN_bn2hex", NULL},
                                       {"ASN1_INTEGER_to_BN", NULL},
                                       {"BN_free", NULL},
+                                      {"CRYPTO_free", NULL},
                                       {NULL, NULL}};
 #else
 
@@ -1540,7 +1544,9 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define ASN1_INTEGER_to_BN                                                     \
 	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn))crypto_sw[21].ptr)
 #define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[22].ptr)
+#define CRYPTO_free (*(void (*)(void *addr))crypto_sw[23].ptr)
 
+#define OPENSSL_free(a) CRYPTO_free(a)
 
 /* set_ssl_option() function updates this array.
  * It loads SSL library dynamically and changes NULLs to the actual addresses
@@ -1606,6 +1612,7 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"BN_bn2hex", NULL},
                                       {"ASN1_INTEGER_to_BN", NULL},
                                       {"BN_free", NULL},
+                                      {"CRYPTO_free", NULL},
                                       {NULL, NULL}};
 #endif /* OPENSSL_API_1_1 */
 #endif /* NO_SSL_DL */
@@ -12065,7 +12072,11 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 			/* TODO: write some OOM message */
 		}
 
-		mg_free(str_serial);
+		/* Strings returned from bn_bn2hex must be freed using OPENSSL_free,
+		 * see https://linux.die.net/man/3/bn_bn2hex */
+		OPENSSL_free(str_serial);
+
+		/* Free certificate memory */
 		X509_free(cert);
 	}
 }
