@@ -1272,9 +1272,9 @@ typedef struct x509 X509;
 #define SSL_CTRL_CLEAR_OPTIONS (77)
 #define SSL_CTRL_SET_ECDH_AUTO (94)
 
-#define OPENSSL_INIT_NO_LOAD_SSL_STRINGS    0x00100000L
-#define OPENSSL_INIT_LOAD_SSL_STRINGS       0x00200000L
-#define OPENSSL_INIT_LOAD_CRYPTO_STRINGS    0x00000002L
+#define OPENSSL_INIT_NO_LOAD_SSL_STRINGS 0x00100000L
+#define OPENSSL_INIT_LOAD_SSL_STRINGS 0x00200000L
+#define OPENSSL_INIT_LOAD_CRYPTO_STRINGS 0x00000002L
 
 #define SSL_VERIFY_NONE (0)
 #define SSL_VERIFY_PEER (1)
@@ -1319,7 +1319,9 @@ struct ssl_func {
 #define SSL_new (*(SSL * (*)(SSL_CTX *))ssl_sw[7].ptr)
 #define SSL_CTX_new (*(SSL_CTX * (*)(SSL_METHOD *))ssl_sw[8].ptr)
 #define TLS_server_method (*(SSL_METHOD * (*)(void))ssl_sw[9].ptr)
-#define OPENSSL_init_ssl (*(int (*)(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings))ssl_sw[10].ptr)
+#define OPENSSL_init_ssl                                                       \
+	(*(int (*)(uint64_t opts,                                                  \
+	           const OPENSSL_INIT_SETTINGS *settings))ssl_sw[10].ptr)
 #define SSL_CTX_use_PrivateKey_file                                            \
 	(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[11].ptr)
 #define SSL_CTX_use_certificate_file                                           \
@@ -1351,7 +1353,8 @@ struct ssl_func {
 #define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[29].ptr)
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[30].ptr)
-#define SSL_CTX_set_options (*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[31].ptr)
+#define SSL_CTX_set_options                                                    \
+	(*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[31].ptr)
 
 
 #define SSL_CTX_clear_options(ctx, op)                                         \
@@ -1383,8 +1386,9 @@ struct ssl_func {
 	           unsigned int *))crypto_sw[10].ptr)
 #define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[11].ptr)
 #define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[12].ptr)
-#define ASN1_INTEGER_to_BN (*(BIGNUM *(*)(const ASN1_INTEGER *ai, BIGNUM *bn))crypto_sw[13].ptr)
-#define BN_free (*(void(*)(const BIGNUM *a))crypto_sw[14].ptr)
+#define ASN1_INTEGER_to_BN                                                     \
+	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn))crypto_sw[13].ptr)
+#define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[14].ptr)
 
 
 /* set_ssl_option() function updates this array.
@@ -1428,8 +1432,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
 
 /* Similar array as ssl_sw. These functions could be located in different
  * lib. */
-static struct ssl_func crypto_sw[] = {
-                                      {"ERR_get_error", NULL},
+static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
                                       {"ERR_error_string", NULL},
                                       {"ERR_remove_state", NULL},
                                       {"CONF_modules_unload", NULL},
@@ -1534,8 +1537,9 @@ static struct ssl_func crypto_sw[] = {
 	           unsigned int *))crypto_sw[18].ptr)
 #define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[19].ptr)
 #define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[20].ptr)
-#define ASN1_INTEGER_to_BN (*(BIGNUM *(*)(const ASN1_INTEGER *ai, BIGNUM *bn))crypto_sw[21].ptr)
-#define BN_free (*(void(*)(const BIGNUM *a))crypto_sw[22].ptr)
+#define ASN1_INTEGER_to_BN                                                     \
+	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn))crypto_sw[21].ptr)
+#define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[22].ptr)
 
 
 /* set_ssl_option() function updates this array.
@@ -11915,8 +11919,8 @@ sslize(struct mg_connection *conn,
 		(void)err; /* TODO: set some error message */
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
-		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
-		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
+ * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 #ifndef OPENSSL_API_1_1
 		ERR_remove_state(0);
 #endif
@@ -11963,8 +11967,8 @@ sslize(struct mg_connection *conn,
 	if (ret != 1) {
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
-		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
-		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
+ * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 #ifndef OPENSSL_API_1_1
 		ERR_remove_state(0);
 #endif
@@ -12033,14 +12037,14 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		/* Get serial number */
 		ASN1_INTEGER *serial = X509_get_serialNumber(cert);
 
-		/* Translate subject and issuer to a string */
-		(void)X509_NAME_oneline(subj, str_subject, (int)sizeof(str_subject));
-		(void)X509_NAME_oneline(iss, str_issuer, (int)sizeof(str_issuer));
-
 		/* Translate serial number to a hex string */
 		BIGNUM *serial_bn = ASN1_INTEGER_to_BN(serial, NULL);
 		str_serial = BN_bn2hex(serial_bn);
 		BN_free(serial_bn);
+
+		/* Translate subject and issuer to a string */
+		(void)X509_NAME_oneline(subj, str_subject, (int)sizeof(str_subject));
+		(void)X509_NAME_oneline(iss, str_issuer, (int)sizeof(str_issuer));
 
 		/* Calculate SHA1 fingerprint and store as a hex string */
 		ulen = 0;
@@ -12061,7 +12065,7 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 			/* TODO: write some OOM message */
 		}
 
-        mg_free(str_serial);
+		mg_free(str_serial);
 		X509_free(cert);
 	}
 }
@@ -12154,7 +12158,7 @@ initialize_ssl(struct mg_context *ctx)
 		}
 	}
 #else
-    (void)ctx;
+	(void)ctx;
 #endif /* NO_SSL_DL */
 
 	if (mg_atomic_inc(&cryptolib_users) > 1) {
@@ -12173,7 +12177,7 @@ initialize_ssl(struct mg_context *ctx)
 		}
 	}
 #else
-    (void)ctx;
+	(void)ctx;
 #endif /* NO_SSL_DL */
 
 	if (mg_atomic_inc(&cryptolib_users) > 1) {
@@ -12326,8 +12330,9 @@ set_ssl_option(struct mg_context *ctx)
 #ifdef OPENSSL_API_1_1
 	/* Initialize SSL library */
 	OPENSSL_init_ssl(0, NULL);
-	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS \
-					| OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
+	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS
+	                     | OPENSSL_INIT_LOAD_CRYPTO_STRINGS,
+	                 NULL);
 
 	if ((ctx->ssl_ctx = SSL_CTX_new(TLS_server_method())) == NULL) {
 		mg_cry(fc(ctx), "SSL_CTX_new (server) error: %s", ssl_error());
@@ -12486,7 +12491,6 @@ uninitialize_ssl(struct mg_context *ctx)
 		mg_free(ssl_mutexes);
 		ssl_mutexes = NULL;
 #endif /* OPENSSL_API_1_1 */
-
 	}
 }
 #endif /* !NO_SSL */
@@ -12733,8 +12737,8 @@ close_connection(struct mg_connection *conn)
 		 */
 		SSL_shutdown(conn->ssl);
 		SSL_free(conn->ssl);
-		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
-		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
+ * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 #ifndef OPENSSL_API_1_1
 		ERR_remove_state(0);
 #endif
