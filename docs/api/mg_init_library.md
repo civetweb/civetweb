@@ -17,7 +17,7 @@
 ### Description
 
 The function `mg_init_library()` should be called from an application program before using any other function.
-It must be called only from one thread (it is not guaranteed to be thread save).
+It must be called only from one thread (it is not guaranteed to be thread safe).
 
 This function is new in version 1.9 (as dummy implementation) and effective only from version 1.10.
 For compatibility reasons, other functions (such as [`mg_start();`](mg_start.md)) will initialize the required features as well,
