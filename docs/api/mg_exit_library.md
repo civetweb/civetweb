@@ -15,7 +15,7 @@ none
 ### Description
 
 The function `mg_exit_library()` should be called from an application program, when the library should be unloaded.
-It must be called only from one thread (it is not guaranteed to be thread save).
+It must be called only from one thread (it is not guaranteed to be thread safe).
 
 Only use `mg_exit_library( );` when you used [`mg_init_library( feature );`](api/mg_init_library.md) before.
 
