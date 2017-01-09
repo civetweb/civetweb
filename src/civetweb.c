@@ -108,9 +108,11 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #endif /* __SYMBIAN32__ */
 
 
+#ifndef CIVETWEB_HEADER_INCLUDED
 /* Include the header file here, so the CivetWeb interface is defined for the
  * entire implementation, including the following forward definitions. */
 #include "civetweb.h"
+#endif
 
 
 #ifndef IGNORE_UNUSED_RESULT
