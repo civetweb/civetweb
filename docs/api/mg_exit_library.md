@@ -25,5 +25,5 @@ but they will no longer do a de-initialization, leaving a memory leak when the l
 
 ### See Also
 
-* [`mg_init_library( feature );`](api/mg_init_library.md)
-* [`mg_check_feature( feature );`](api/mg_check_feature.md)
+* [`mg_init_library( feature );`](mg_init_library.md)
+* [`mg_check_feature( feature );`](mg_check_feature.md)
