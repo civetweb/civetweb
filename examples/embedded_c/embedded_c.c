@@ -162,7 +162,7 @@ FooHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn,
 	          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>",
 	          req_info->request_method,
-	          req_info->uri,
+	          req_info->local_uri,
 	          req_info->http_version);
 	mg_printf(conn, "</body></html>\n");
 	return 1;
