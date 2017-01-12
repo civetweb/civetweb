@@ -15163,10 +15163,15 @@ mg_init_library(unsigned features)
 	/* Currently we do nothing here. This is planned for Version 1.10.
 	 * For now, we just add this function, so clients can be changed early. */
 	if (mg_init_library_called <= 0) {
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+		WSADATA data;
+		WSAStartup(MAKEWORD(2, 2), &data);
+#endif /* _WIN32 && !__SYMBIAN32__ */
 		mg_init_library_called = 1;
-		return mg_check_feature(features & 0xFFu);
+	} else {
+		mg_init_library_called++;
 	}
-	return 0;
+	return mg_check_feature(features & 0xFFu);
 }
 
 
@@ -15178,6 +15183,11 @@ mg_exit_library(void)
 		return 0;
 	}
 	mg_init_library_called--;
+	if (mg_init_library_called == 0) {
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+		(void)WSACleanup();
+#endif /* _WIN32 && !__SYMBIAN32__ */
+	}
 	return 1;
 }
 
