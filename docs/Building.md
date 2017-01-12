@@ -103,6 +103,33 @@ make build WITH_LUA=1
 Note that the WITH_* options used for *make* are not identical to the
 preprocessor defines in the source code - usually USE_* is used there.
 
+## Changing PREFIX
+
+To change the target destination pass the `PREFIX` option to the command `make install` (not `make build`). Example usage:
+
+```
+$ make build
+$ make -n install PREFIX=/opt/civetweb
+```
+Note: The `-n` corresponds to the `--dry-run` option (it does not make any changes): You can see where `make install` would install. Example output of the above command:
+
+```
+$ make -n install PREFIX=/opt/civetweb
+install -d -m 755  "/opt/civetweb/share/doc/civetweb"
+install -m 644 resources/itworks.html /opt/civetweb/share/doc/civetweb/index.html
+install -m 644 resources/civetweb_64x64.png /opt/civetweb/share/doc/civetweb/
+install -d -m 755  "/opt/civetweb/etc"
+install -m 644 resources/civetweb.conf  "/opt/civetweb/etc/"
+sed -i 's#^document_root.*$#document_root /opt/civetweb/share/doc/civetweb#' "/opt/civetweb/etc/civetweb.conf"
+sed -i 's#^listening_ports.*$#listening_ports 8080#' "/opt/civetweb/etc/civetweb.conf"
+install -d -m 755  "/opt/civetweb/share/doc/civetweb"
+install -m 644 *.md "/opt/civetweb/share/doc/civetweb"
+install -d -m 755 "/opt/civetweb/bin"
+install -m 755 civetweb "/opt/civetweb/bin/"
+```
+
+If the output looks good: Just remove the `-n` option to actually install the software on your system.
+
 ## Setting compile flags
 
 Compile flags can be set using the *COPT* make option like so.
