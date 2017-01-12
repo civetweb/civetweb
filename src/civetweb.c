@@ -1713,6 +1713,7 @@ enum {
 	CGI_INTERPRETER,
 	PROTECT_URI,
 	AUTHENTICATION_DOMAIN,
+	ENABLE_AUTH_DOMAIN_CHECK,
 	SSI_EXTENSIONS,
 	THROTTLE,
 	ACCESS_LOG_FILE,
@@ -1793,6 +1794,7 @@ static struct mg_option config_options[] = {
     {"cgi_interpreter", CONFIG_TYPE_FILE, NULL},
     {"protect_uri", CONFIG_TYPE_STRING, NULL},
     {"authentication_domain", CONFIG_TYPE_STRING, "mydomain.com"},
+    {"enable_auth_domain_check", CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssi_pattern", CONFIG_TYPE_EXT_PATTERN, "**.shtml$|**.shtm$"},
     {"throttle", CONFIG_TYPE_STRING, NULL},
     {"access_log_file", CONFIG_TYPE_FILE, NULL},
@@ -13108,16 +13110,18 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	size_t server_domain_len;
 	size_t request_domain_len = 0;
 	unsigned long port = 0;
-	int i;
+	int i, auth_domain_check_enabled;
 	const char *hostbegin = NULL;
 	const char *hostend = NULL;
 	const char *portbegin;
 	char *portend;
 
+	auth_domain_check_enabled =
+		!strcmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK],"yes");
 	/* DNS is case insensitive, so use case insensitive string compare here
 	 */
 	server_domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
-	if (!server_domain) {
+	if (!server_domain && auth_domain_check_enabled) {
 		return 0;
 	}
 	server_domain_len = strlen(server_domain);
@@ -13181,28 +13185,30 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	 * but do not allow substrings (like http://notmydomain.com/path/file.ext
 	 * or http://mydomain.com.fake/path/file.ext).
 	 */
-	if ((request_domain_len == server_domain_len)
-	    && (!memcmp(server_domain, hostbegin, server_domain_len))) {
-		/* Request is directed to this server - full name match. */
-	} else {
-		if (request_domain_len < (server_domain_len + 2)) {
-			/* Request is directed to another server: The server name is longer
-			 * than
-			 * the request name. Drop this case here to avoid overflows in the
-			 * following checks. */
-			return 0;
-		}
-		if (hostbegin[request_domain_len - server_domain_len - 1] != '.') {
-			/* Request is directed to another server: It could be a substring
-			 * like notmyserver.com */
-			return 0;
-		}
-		if (0 != memcmp(server_domain,
-		                hostbegin + request_domain_len - server_domain_len,
-		                server_domain_len)) {
-			/* Request is directed to another server:
-			 * The server name is different. */
-			return 0;
+	if (auth_domain_check_enabled) {
+		if ((request_domain_len == server_domain_len)
+				&& (!memcmp(server_domain, hostbegin, server_domain_len))) {
+			/* Request is directed to this server - full name match. */
+		} else {
+			if (request_domain_len < (server_domain_len + 2)) {
+				/* Request is directed to another server: The server name is longer
+				 * than
+				 * the request name. Drop this case here to avoid overflows in the
+				 * following checks. */
+				return 0;
+			}
+			if (hostbegin[request_domain_len - server_domain_len - 1] != '.') {
+				/* Request is directed to another server: It could be a substring
+				 * like notmyserver.com */
+				return 0;
+			}
+			if (0 != memcmp(server_domain,
+											hostbegin + request_domain_len - server_domain_len,
+											server_domain_len)) {
+				/* Request is directed to another server:
+				 * The server name is different. */
+				return 0;
+			}
 		}
 	}
 
