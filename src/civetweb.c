@@ -13117,7 +13117,7 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	char *portend;
 
 	auth_domain_check_enabled =
-		!strcmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK],"yes");
+	    !strcmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes");
 	/* DNS is case insensitive, so use case insensitive string compare here
 	 */
 	server_domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
@@ -13187,24 +13187,27 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	 */
 	if (auth_domain_check_enabled) {
 		if ((request_domain_len == server_domain_len)
-				&& (!memcmp(server_domain, hostbegin, server_domain_len))) {
+		    && (!memcmp(server_domain, hostbegin, server_domain_len))) {
 			/* Request is directed to this server - full name match. */
 		} else {
 			if (request_domain_len < (server_domain_len + 2)) {
-				/* Request is directed to another server: The server name is longer
+				/* Request is directed to another server: The server name is
+				 * longer
 				 * than
-				 * the request name. Drop this case here to avoid overflows in the
+				 * the request name. Drop this case here to avoid overflows in
+				 * the
 				 * following checks. */
 				return 0;
 			}
 			if (hostbegin[request_domain_len - server_domain_len - 1] != '.') {
-				/* Request is directed to another server: It could be a substring
+				/* Request is directed to another server: It could be a
+				 * substring
 				 * like notmyserver.com */
 				return 0;
 			}
 			if (0 != memcmp(server_domain,
-											hostbegin + request_domain_len - server_domain_len,
-											server_domain_len)) {
+			                hostbegin + request_domain_len - server_domain_len,
+			                server_domain_len)) {
 				/* Request is directed to another server:
 				 * The server name is different. */
 				return 0;

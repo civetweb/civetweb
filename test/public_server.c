@@ -3662,7 +3662,7 @@ START_TEST(test_large_file)
 	                     sizeof(client_err_buf),
 	                     "GET /large.file HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
 
-	ck_assert(ctx != NULL);
+	ck_assert(client != NULL);
 	ck_assert_str_eq(client_err_buf, "");
 
 	client_ri = mg_get_request_info(client);
@@ -3784,7 +3784,7 @@ START_TEST(test_file_in_memory)
 	                sizeof(client_err_buf),
 	                "GET /file_in_mem HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
 
-	ck_assert(ctx != NULL);
+	ck_assert(client != NULL);
 	ck_assert_str_eq(client_err_buf, "");
 
 	client_ri = mg_get_request_info(client);
@@ -3827,6 +3827,131 @@ START_TEST(test_file_in_memory)
 END_TEST
 
 
+static void
+minimal_http_client_impl(const char *server, uint16_t port, const char *uri)
+{
+	/* Client var */
+	struct mg_connection *client;
+	char client_err_buf[256];
+	char client_data_buf[256];
+	const struct mg_request_info *client_ri;
+	int64_t data_read;
+	int r, i;
+
+	client = mg_connect_client(
+	    server, port, 0, client_err_buf, sizeof(client_err_buf));
+
+	ck_assert(client != NULL);
+	ck_assert_str_eq(client_err_buf, "");
+
+	mg_printf(client, "GET /%s HTTP/1.0\r\n\r\n", uri);
+
+	r = mg_get_response(client, client_err_buf, sizeof(client_err_buf), 10000);
+	ck_assert_int_ge(r, 0);
+	ck_assert_str_eq(client_err_buf, "");
+
+	client_ri = mg_get_request_info(client);
+	ck_assert(client_ri != NULL);
+
+	/* e.g.: ck_assert_str_eq(client_ri->uri, "200"); */
+	r = (int)strlen(client_ri->uri);
+	ck_assert_int_eq(r, 3);
+
+	data_read = 0;
+	while (data_read < client_ri->content_length) {
+		r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+		if (r > 0) {
+			data_read += r;
+		}
+	}
+
+	/* Nothing left to read */
+	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+	ck_assert_int_eq(r, 0);
+
+	mg_close_connection(client);
+}
+
+
+START_TEST(test_minimal_client)
+{
+	/* Initialize the library */
+	mg_init_library(0);
+
+	/* Call a test client */
+	minimal_http_client_impl("192.30.253.113" /* www.github.com */,
+	                         80,
+	                         "civetweb/civetweb/");
+
+	/* Un-initialize the library */
+	mg_exit_library();
+}
+END_TEST
+
+
+static int
+minimal_test_request_handler(struct mg_connection *conn, void *cbdata)
+{
+	const char *msg = (const char *)cbdata;
+	unsigned long len = (unsigned long)strlen(msg);
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Length: %lu\r\n"
+	          "Content-Type: text/plain\r\n"
+	          "Connection: close\r\n\r\n",
+	          len);
+
+	mg_write(conn, msg, len);
+
+	return 200;
+}
+
+
+START_TEST(test_minimal_server_callback)
+{
+	/* This test should ensure the minimum server example in
+	 * docs/Embedding.md is still running. */
+
+	/* Server context handle */
+	struct mg_context *ctx;
+
+	/* Initialize the library */
+	mg_init_library(0);
+
+	/* Start the server */
+	ctx = test_mg_start(NULL, 0, NULL);
+	ck_assert(ctx != NULL);
+
+	/* Add some handler */
+	mg_set_request_handler(ctx,
+	                       "/hello",
+	                       minimal_test_request_handler,
+	                       "Hello world");
+	mg_set_request_handler(ctx,
+	                       "/8",
+	                       minimal_test_request_handler,
+	                       "Number eight");
+
+	/* Run the server for 15 seconds */
+	test_sleep(10);
+
+	/* Call a test client */
+	minimal_http_client_impl("127.0.0.1", 8080, "/hello");
+
+	/* Run the server for 15 seconds */
+	test_sleep(5);
+
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+
+	/* Un-initialize the library */
+	mg_exit_library();
+}
+END_TEST
+
+
 Suite *
 make_public_server_suite(void)
 {
@@ -3835,6 +3960,7 @@ make_public_server_suite(void)
 	TCase *const tcase_checktestenv = tcase_create("Check test environment");
 	TCase *const tcase_initlib = tcase_create("Init library");
 	TCase *const tcase_startthreads = tcase_create("Start threads");
+	TCase *const tcase_minimal = tcase_create("Minimal");
 	TCase *const tcase_startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const tcase_startstophttps = tcase_create("Start Stop HTTPS Server");
 	TCase *const tcase_serverandclienttls = tcase_create("TLS Server Client");
@@ -3859,6 +3985,11 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_startthreads, test_threading);
 	tcase_set_timeout(tcase_startthreads, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_startthreads);
+
+	tcase_add_test(tcase_minimal, test_threading);
+	tcase_set_timeout(tcase_minimal, test_minimal_client);
+	tcase_set_timeout(tcase_minimal, test_minimal_server_callback);
+	suite_add_tcase(suite, tcase_minimal);
 
 	tcase_add_test(tcase_startstophttp, test_mg_start_stop_http_server);
 	tcase_set_timeout(tcase_startstophttp, civetweb_min_test_timeout);
@@ -3925,6 +4056,9 @@ MAIN_PUBLIC_SERVER(void)
 
 	test_the_test_environment(0);
 	test_threading(0);
+
+	test_minimal_client(0);
+	test_minimal_server_callback(0);
 
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
