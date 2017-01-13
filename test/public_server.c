@@ -3836,7 +3836,7 @@ minimal_http_client_impl(const char *server, uint16_t port, const char *uri)
 	char client_data_buf[256];
 	const struct mg_request_info *client_ri;
 	int64_t data_read;
-	int r, i;
+	int r;
 
 	client = mg_connect_client(
 	    server, port, 0, client_err_buf, sizeof(client_err_buf));
@@ -3927,11 +3927,11 @@ START_TEST(test_minimal_server_callback)
 	mg_set_request_handler(ctx,
 	                       "/hello",
 	                       minimal_test_request_handler,
-	                       "Hello world");
+	                       (void*)"Hello world");
 	mg_set_request_handler(ctx,
 	                       "/8",
 	                       minimal_test_request_handler,
-	                       "Number eight");
+	                       (void*)"Number eight");
 
 	/* Run the server for 15 seconds */
 	test_sleep(10);
@@ -3986,9 +3986,9 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_startthreads, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_startthreads);
 
-	tcase_add_test(tcase_minimal, test_threading);
-	tcase_set_timeout(tcase_minimal, test_minimal_client);
-	tcase_set_timeout(tcase_minimal, test_minimal_server_callback);
+	tcase_add_test(tcase_minimal, test_minimal_client);
+	tcase_add_test(tcase_minimal, test_minimal_server_callback);
+	tcase_set_timeout(tcase_minimal, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_minimal);
 
 	tcase_add_test(tcase_startstophttp, test_mg_start_stop_http_server);
