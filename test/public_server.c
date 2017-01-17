@@ -3927,11 +3927,11 @@ START_TEST(test_minimal_server_callback)
 	mg_set_request_handler(ctx,
 	                       "/hello",
 	                       minimal_test_request_handler,
-	                       (void*)"Hello world");
+	                       (void *)"Hello world");
 	mg_set_request_handler(ctx,
 	                       "/8",
 	                       minimal_test_request_handler,
-	                       (void*)"Number eight");
+	                       (void *)"Number eight");
 
 	/* Run the server for 15 seconds */
 	test_sleep(10);

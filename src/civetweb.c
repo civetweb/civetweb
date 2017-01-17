@@ -3151,6 +3151,18 @@ send_static_cache_header(struct mg_connection *conn)
 }
 
 
+static int
+send_additional_header(struct mg_connection *conn)
+{
+	int i = 0;
+#if 0
+	i += mg_printf(conn, "Strict-Transport-Security: max-age=%u\r\n", 3600);
+#endif
+	i += mg_printf(conn, "X-Some-Test-Header: %u\r\n", 42);
+	return i;
+}
+
+
 static void handle_file_based_request(struct mg_connection *conn,
                                       const char *path,
                                       struct mg_file *filep);
@@ -3453,6 +3465,7 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 		conn->must_close = 1;
 		mg_printf(conn, "HTTP/1.1 %d %s\r\n", status, status_text);
 		send_no_cache_header(conn);
+		send_additional_header(conn);
 		if (has_body) {
 			mg_printf(conn,
 			          "%s",
@@ -6655,6 +6668,7 @@ send_authorization_request(struct mg_connection *conn)
 
 		mg_printf(conn, "HTTP/1.1 401 Unauthorized\r\n");
 		send_no_cache_header(conn);
+		send_additional_header(conn);
 		mg_printf(conn,
 		          "Date: %s\r\n"
 		          "Connection: %s\r\n"
@@ -7355,6 +7369,7 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	conn->must_close = 1;
 	mg_printf(conn, "HTTP/1.1 200 OK\r\n");
 	send_static_cache_header(conn);
+	send_additional_header(conn);
 	mg_printf(conn,
 	          "Date: %s\r\n"
 	          "Connection: close\r\n"
@@ -7683,6 +7698,7 @@ handle_static_file_request(struct mg_connection *conn,
 	                cors3,
 	                date);
 	send_static_cache_header(conn);
+	send_additional_header(conn);
 	(void)mg_printf(conn,
 	                "Last-Modified: %s\r\n"
 	                "Etag: %s\r\n"
@@ -7742,6 +7758,7 @@ handle_not_modified_static_file_request(struct mg_connection *conn,
 	                mg_get_response_code_text(conn, conn->status_code),
 	                date);
 	send_static_cache_header(conn);
+	send_additional_header(conn);
 	(void)mg_printf(conn,
 	                "Last-Modified: %s\r\n"
 	                "Etag: %s\r\n"
@@ -8913,6 +8930,7 @@ mkcol(struct mg_connection *conn, const char *path)
 		          conn->status_code,
 		          date);
 		send_static_cache_header(conn);
+		send_additional_header(conn);
 		mg_printf(conn,
 		          "Content-Length: 0\r\n"
 		          "Connection: %s\r\n\r\n",
@@ -8999,6 +9017,7 @@ put_file(struct mg_connection *conn, const char *path)
 		          conn->status_code,
 		          mg_get_response_code_text(NULL, conn->status_code));
 		send_no_cache_header(conn);
+		send_additional_header(conn);
 		mg_printf(conn,
 		          "Date: %s\r\n"
 		          "Content-Length: 0\r\n"
@@ -9072,6 +9091,7 @@ put_file(struct mg_connection *conn, const char *path)
 	          conn->status_code,
 	          mg_get_response_code_text(NULL, conn->status_code));
 	send_no_cache_header(conn);
+	send_additional_header(conn);
 	mg_printf(conn,
 	          "Date: %s\r\n"
 	          "Content-Length: 0\r\n"
@@ -9385,6 +9405,7 @@ handle_ssi_file_request(struct mg_connection *conn,
 		fclose_on_exec(&filep->access, conn);
 		mg_printf(conn, "HTTP/1.1 200 OK\r\n");
 		send_no_cache_header(conn);
+		send_additional_header(conn);
 		mg_printf(conn,
 		          "%s%s%s"
 		          "Date: %s\r\n"
@@ -9425,9 +9446,11 @@ send_options(struct mg_connection *conn)
 	          "Connection: %s\r\n"
 	          "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, "
 	          "PROPFIND, MKCOL\r\n"
-	          "DAV: 1\r\n\r\n",
+	          "DAV: 1\r\n",
 	          date,
 	          suggest_connection_header(conn));
+	send_additional_header(conn);
+	mg_printf(conn, "\r\n");
 }
 
 
@@ -9512,6 +9535,7 @@ handle_propfind(struct mg_connection *conn,
 	          "Date: %s\r\n",
 	          date);
 	send_static_cache_header(conn);
+	send_additional_header(conn);
 	mg_printf(conn,
 	          "Connection: %s\r\n"
 	          "Content-Type: text/xml; charset=utf-8\r\n\r\n",
@@ -11140,10 +11164,12 @@ handle_request(struct mg_connection *conn)
 		          "Date: %s\r\n"
 		          /* "Cache-Control: private\r\n" (= default) */
 		          "Content-Length: 0\r\n"
-		          "Connection: %s\r\n\r\n",
+		          "Connection: %s\r\n",
 		          ri->request_uri,
 		          date,
 		          suggest_connection_header(conn));
+		send_additional_header(conn);
+		mg_printf(conn, "\r\n");
 		return;
 	}
 
