@@ -1,10 +1,12 @@
 Release Notes v1.10 (work in progress)
 ===
-### Objectives:
+### Objectives: *OpenSSL 1.1 support + to be defined*
 
 Changes
 -------
 
+
+- Additional unit tests
 - OpenSSL 1.1 support
 - Update version number
 
@@ -350,6 +352,6 @@ Changes
 
 - Renamed Mongoose to Civetweb in the code and documentation.
 - Replaced copyrighted images with new images
-- Created a new code respository at https://github.com/bel2125/civetweb
+- Created a new code respository at https://github.com/civetweb/civetweb
 - Created a distribution site at https://sourceforge.net/projects/civetweb/
 - Basic build testing
