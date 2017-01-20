@@ -48,6 +48,12 @@ munmap(void *addr, int64_t length)
 static const char *LUASOCKET = "luasocket";
 static const char lua_regkey_ctx = 1;
 static const char lua_regkey_connlist = 2;
+static const char lua_regkey_lsp_include_depth = 3;
+
+#ifndef LSP_INCLUDE_MAX_DEPTH
+#define LSP_INCLUDE_MAX_DEPTH (32)
+#endif
+
 
 /* Forward declarations */
 static void handle_request(struct mg_connection *);
@@ -531,13 +537,32 @@ lsp_include(lua_State *L)
 	const char *filename = (num_args == 1) ? lua_tostring(L, 1) : NULL;
 
 	if (filename) {
-		if (handle_lsp_request(conn, filename, &file, L)) {
+		int depth;
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
+		lua_gettable(L, LUA_REGISTRYINDEX);
+		depth = lua_tointeger(L, -1);
+
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
+		lua_pushinteger(L, depth + 1);
+		lua_settable(L, LUA_REGISTRYINDEX);
+
+		if (depth >= ((int)(LSP_INCLUDE_MAX_DEPTH))) {
+			mg_cry(conn,
+			       "lsp max include depth of %i reached while including %s",
+			       (int)(LSP_INCLUDE_MAX_DEPTH),
+			       filename);
+		} else if (handle_lsp_request(conn, filename, &file, L)) {
 			/* handle_lsp_request returned an error code, meaning an error
-			occured in
-			the included page and mg.onerror returned non-zero. Stop processing.
+			* occured in the included page and mg.onerror returned non-zero.
+			* Stop processing.
 			*/
 			lsp_abort(L);
 		}
+
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
+		lua_pushinteger(L, depth);
+		lua_settable(L, LUA_REGISTRYINDEX);
+
 	} else {
 		/* Syntax error */
 		return luaL_error(L, "invalid include() call");
@@ -1381,6 +1406,14 @@ prepare_lua_environment(struct mg_context *ctx,
 	if (ws_conn_list != NULL) {
 		lua_pushlightuserdata(L, (void *)&lua_regkey_connlist);
 		lua_pushlightuserdata(L, (void *)ws_conn_list);
+		lua_settable(L, LUA_REGISTRYINDEX);
+	}
+
+	/* Lua server pages store the depth of mg.include, in order
+	 * to detect recursions and prevent stack overflows. */
+	if (lua_env_type == LUA_ENV_TYPE_LUA_SERVER_PAGE) {
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
+		lua_pushinteger(L, 0);
 		lua_settable(L, LUA_REGISTRYINDEX);
 	}
 

@@ -5,7 +5,7 @@ Release Notes v1.10 (work in progress)
 Changes
 -------
 
-
+- Limit depth of mg.include for Lua server pages
 - Additional unit tests
 - OpenSSL 1.1 support
 - Update version number
