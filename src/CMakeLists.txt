@@ -40,6 +40,7 @@ endif()
 
 # We need to link OpenSSL if not dynamically loading
 if (CIVETWEB_ENABLE_SSL)
+  include_directories(${OPENSSL_INCLUDE_DIR})
   if (CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING)
     find_package(LibDl)
     if (LIBDL_FOUND)
