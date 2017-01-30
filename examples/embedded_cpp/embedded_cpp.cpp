@@ -6,6 +6,7 @@
 // Simple example program on how to use Embedded C++ interface.
 
 #include "CivetServer.h"
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
