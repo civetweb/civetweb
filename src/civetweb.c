@@ -10775,7 +10775,7 @@ get_request_handler(struct mg_connection *conn,
  * This can be used if uploading files is possible not only for the server
  * admin, and the upload mechanism does not check the file extension.
  */
-int
+static int
 is_in_script_path(const struct mg_connection *conn, const char *path)
 {
 	/* TODO: Add config value for allowed script path.

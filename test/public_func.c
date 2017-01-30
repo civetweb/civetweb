@@ -45,7 +45,8 @@ START_TEST(test_mg_version)
 	unsigned expect_files = 0, expect_https = 0, expect_cgi = 0,
 	         expect_ipv6 = 0, expect_websocket = 0, expect_lua = 0,
 	         expect_duktape = 0, expect_caching = 0;
-	int ret;
+	int ret, len;
+	char *buf;
 
 	ck_assert(ver != NULL);
 	ck_assert_str_eq(ver, CIVETWEB_VERSION);
@@ -101,6 +102,17 @@ START_TEST(test_mg_version)
 	ck_assert_uint_eq(expect_lua, !!feature_lua);
 	ck_assert_uint_eq(expect_duktape, !!feature_duktape);
 	ck_assert_uint_eq(expect_caching, !!feature_caching);
+
+	/* get system information */
+	len = mg_get_system_info(NULL, 0);
+	ck_assert_int_gt(len, 0);
+	buf = (char *)malloc((unsigned)len + 1);
+	ck_assert_ptr_ne(buf, NULL);
+	ret = mg_get_system_info(buf, len + 1);
+	ck_assert_int_eq(len, ret);
+	ret = strlen(buf);
+	ck_assert_int_eq(len, ret);
+	free(buf);
 }
 END_TEST
 

@@ -818,6 +818,10 @@ websock_server_ready(struct mg_connection *conn, void *udata)
 }
 
 
+#define long_ws_buf_len (500)
+static char long_ws_buf[long_ws_buf_len];
+
+
 static int
 websock_server_data(struct mg_connection *conn,
                     int bits,
@@ -849,6 +853,14 @@ websock_server_data(struct mg_connection *conn,
 	} else if (data_len == 5 && !memcmp(data, "data3", 5)) {
 		mg_lock_connection(conn);
 		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok - 3", 6);
+		mg_unlock_connection(conn);
+	} else if (data_len == long_ws_buf_len
+	           && !memcmp(data, long_ws_buf, long_ws_buf_len)) {
+		mg_lock_connection(conn);
+		mg_websocket_write(conn,
+		                   WEBSOCKET_OPCODE_BINARY,
+		                   long_ws_buf,
+		                   long_ws_buf_len);
 		mg_unlock_connection(conn);
 	} else {
 
@@ -1295,7 +1307,7 @@ START_TEST(test_request_handlers)
 	    ebuf,
 	    sizeof(ebuf),
 	    "%s",
-	    "POST /cgi_test.cgi HTTP/1.0\r\nContent-Length: 3\r\n\r\nABC");
+	    "POST /cgi_test.cgi/x/y.z HTTP/1.0\r\nContent-Length: 3\r\n\r\nABC");
 	ck_assert(client_conn != NULL);
 	ri = mg_get_request_info(client_conn);
 
@@ -1737,6 +1749,12 @@ START_TEST(test_request_handlers)
 	free(ws_client3_data.data);
 	ws_client3_data.data = NULL;
 	ws_client3_data.len = 0;
+
+	/* Write long data */
+	mg_websocket_client_write(ws_client3_conn,
+	                          WEBSOCKET_OPCODE_BINARY,
+	                          long_ws_buf,
+	                          long_ws_buf_len);
 
 	/* Disconnect client 3 */
 	ck_assert(ws_client3_data.closed == 0);
@@ -3635,6 +3653,8 @@ START_TEST(test_large_file)
 	OPTIONS[opt_cnt++] = "8443s";
 	OPTIONS[opt_cnt++] = "ssl_certificate";
 	OPTIONS[opt_cnt++] = ssl_cert;
+	OPTIONS[opt_cnt++] = "ssl_protocol_version";
+	OPTIONS[opt_cnt++] = "4";
 	ck_assert(ssl_cert != NULL);
 #endif
 	OPTIONS[opt_cnt] = NULL;
