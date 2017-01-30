@@ -110,7 +110,7 @@ START_TEST(test_mg_version)
 	ck_assert_ptr_ne(buf, NULL);
 	ret = mg_get_system_info(buf, len + 1);
 	ck_assert_int_eq(len, ret);
-	ret = strlen(buf);
+	ret = (int)strlen(buf);
 	ck_assert_int_eq(len, ret);
 	free(buf);
 }
