@@ -5666,7 +5666,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	char gz_path[PATH_MAX];
 	char const *accept_encoding;
 	int truncated;
-#if !defined(NO_CGI) || defined(USE_LUA)
+#if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 	char *p;
 #endif
 #else
@@ -5762,7 +5762,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 			 * Requests that read or write from/to a resource, like GET and
 			 * POST requests, should call the script and return the
 			 * generated response. */
-			*is_script_resource = !*is_put_or_delete_request;
+			*is_script_resource = (!*is_put_or_delete_request);
 		}
 #endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
 		*is_found = 1;
@@ -10771,6 +10771,21 @@ get_request_handler(struct mg_connection *conn,
 }
 
 
+/* Check if the script file is in a path, allowed for script files.
+ * This can be used if uploading files is possible not only for the server
+ * admin, and the upload mechanism does not check the file extension.
+ */
+int
+is_in_script_path(const struct mg_connection *conn, const char *path)
+{
+	/* TODO: Add config value for allowed script path.
+	 * Default: All allowed. */
+	(void)conn;
+	(void)path;
+	return 1;
+}
+
+
 #if defined(USE_WEBSOCKET) && defined(MG_LEGACY_INTERFACE)
 static int
 deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
@@ -11070,16 +11085,22 @@ handle_request(struct mg_connection *conn)
 #if defined(USE_WEBSOCKET)
 	if (is_websocket_request) {
 		if (is_script_resource) {
-			/* Websocket Lua script */
-			handle_websocket_request(conn,
-			                         path,
-			                         0 /* Lua Script */,
-			                         NULL,
-			                         NULL,
-			                         NULL,
-			                         NULL,
-			                         NULL,
-			                         &conn->ctx->callbacks);
+
+			if (is_in_script_path(conn, path)) {
+				/* Websocket Lua script */
+				handle_websocket_request(conn,
+				                         path,
+				                         0 /* Lua Script */,
+				                         NULL,
+				                         NULL,
+				                         NULL,
+				                         NULL,
+				                         NULL,
+				                         &conn->ctx->callbacks);
+			} else {
+				/* Script was in an illegal path */
+				send_http_error(conn, 403, "%s", "Forbidden");
+			}
 		} else {
 #if defined(MG_LEGACY_INTERFACE)
 			handle_websocket_request(
@@ -11247,37 +11268,63 @@ handle_file_based_request(struct mg_connection *conn,
 	                        strlen(
 	                            conn->ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
 	                        path) > 0) {
-		/* Lua server page: an SSI like page containing mostly plain html
-		 * code
-		 * plus some tags with server generated contents. */
-		handle_lsp_request(conn, path, file, NULL);
+		if (is_in_script_path(conn, path)) {
+			/* Lua server page: an SSI like page containing mostly plain html
+			 * code
+			 * plus some tags with server generated contents. */
+			handle_lsp_request(conn, path, file, NULL);
+		} else {
+			/* Script was in an illegal path */
+			send_http_error(conn, 403, "%s", "Forbidden");
+		}
+
 	} else if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
 	                        strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
 	                        path) > 0) {
-		/* Lua in-server module script: a CGI like script used to generate
-		 * the
-		 * entire reply. */
-		mg_exec_lua_script(conn, path, NULL);
+		if (is_in_script_path(conn, path)) {
+			/* Lua in-server module script: a CGI like script used to generate
+			 * the
+			 * entire reply. */
+			mg_exec_lua_script(conn, path, NULL);
+		} else {
+			/* Script was in an illegal path */
+			send_http_error(conn, 403, "%s", "Forbidden");
+		}
 #endif
 #if defined(USE_DUKTAPE)
 	} else if (match_prefix(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
 	                        strlen(
 	                            conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
 	                        path) > 0) {
-		/* Call duktape to generate the page */
-		mg_exec_duktape_script(conn, path);
+		if (is_in_script_path(conn, path)) {
+			/* Call duktape to generate the page */
+			mg_exec_duktape_script(conn, path);
+		} else {
+			/* Script was in an illegal path */
+			send_http_error(conn, 403, "%s", "Forbidden");
+		}
 #endif
 #if !defined(NO_CGI)
 	} else if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
 	                        strlen(conn->ctx->config[CGI_EXTENSIONS]),
 	                        path) > 0) {
-		/* CGI scripts may support all HTTP methods */
-		handle_cgi_request(conn, path);
+		if (is_in_script_path(conn, path)) {
+			/* CGI scripts may support all HTTP methods */
+			handle_cgi_request(conn, path);
+		} else {
+			/* Script was in an illegal path */
+			send_http_error(conn, 403, "%s", "Forbidden");
+		}
 #endif /* !NO_CGI */
 	} else if (match_prefix(conn->ctx->config[SSI_EXTENSIONS],
 	                        strlen(conn->ctx->config[SSI_EXTENSIONS]),
 	                        path) > 0) {
-		handle_ssi_file_request(conn, path, file);
+		if (is_in_script_path(conn, path)) {
+			handle_ssi_file_request(conn, path, file);
+		} else {
+			/* Script was in an illegal path */
+			send_http_error(conn, 403, "%s", "Forbidden");
+		}
 #if !defined(NO_CACHING)
 	} else if ((!conn->in_error_handler)
 	           && is_not_modified(conn, &file->stat)) {
