@@ -316,7 +316,11 @@ START_TEST(test_mg_start_stop_http_server)
 		".",
 #endif
 		"listening_ports",
+#if defined(USE_IPV6)
+		"+8080",
+#else
 		"8080",
+#endif
 		NULL,
 	};
 	size_t ports_cnt;
@@ -364,7 +368,11 @@ START_TEST(test_mg_start_stop_http_server)
 
 	ret = mg_get_server_ports(ctx, 4, portinfo);
 	ck_assert_int_eq(ret, 1);
+#if defined(USE_IPV6)
+	ck_assert_int_eq(portinfo[0].protocol, 3);
+#else
 	ck_assert_int_eq(portinfo[0].protocol, 1);
+#endif
 	ck_assert_int_eq(portinfo[0].port, 8080);
 	ck_assert_int_eq(portinfo[0].is_ssl, 0);
 	ck_assert_int_eq(portinfo[0].is_redirect, 0);
@@ -378,7 +386,7 @@ START_TEST(test_mg_start_stop_http_server)
 	/* HTTP 1.0 GET request */
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	    mg_connect_client("localhost", 8080, 0, client_err, sizeof(client_err));
 	ck_assert(client_conn != NULL);
 	ck_assert_str_eq(client_err, "");
 	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
@@ -405,7 +413,7 @@ START_TEST(test_mg_start_stop_http_server)
 	/* HTTP 1.1 GET request */
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	    mg_connect_client("localhost", 8080, 0, client_err, sizeof(client_err));
 	ck_assert(client_conn != NULL);
 	ck_assert_str_eq(client_err, "");
 	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
@@ -435,7 +443,7 @@ START_TEST(test_mg_start_stop_http_server)
 	/* HTTP 1.7 GET request - this HTTP version does not exist  */
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	    mg_connect_client("localhost", 8080, 0, client_err, sizeof(client_err));
 	ck_assert(client_conn != NULL);
 	ck_assert_str_eq(client_err, "");
 	mg_printf(client_conn, "GET / HTTP/1.7\r\n");
@@ -460,7 +468,7 @@ START_TEST(test_mg_start_stop_http_server)
 	 * and must return "400 Bad Request" */
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	    mg_connect_client("localhost", 8080, 0, client_err, sizeof(client_err));
 	ck_assert(client_conn != NULL);
 	ck_assert_str_eq(client_err, "");
 	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
@@ -1019,6 +1027,7 @@ START_TEST(test_request_handlers)
 #endif
 
 	char cmd_buf[256];
+	char *cgi_env_opt;
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
@@ -1034,11 +1043,23 @@ START_TEST(test_request_handlers)
 	OPTIONS[opt_idx++] = "ssl_certificate";
 	OPTIONS[opt_idx++] = ssl_cert;
 #endif
+	OPTIONS[opt_idx++] = "cgi_environment";
+	cgi_env_opt = (char *)calloc(1, 4096 /* CGI_ENVIRONMENT_SIZE */);
+	ck_assert_ptr_ne(cgi_env_opt, NULL);
+	cgi_env_opt[0] = 'x';
+	cgi_env_opt[1] = '=';
+	memset(cgi_env_opt + 2, 'y', 4090); /* Add large env field, so the server
+	                                     * must reallocate buffers. */
+	OPTIONS[opt_idx++] = cgi_env_opt;
+
+
 	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
 	ctx = test_mg_start(NULL, &g_ctx, OPTIONS);
+
+	free(cgi_env_opt);
 
 	ck_assert(ctx != NULL);
 	g_ctx = ctx;
