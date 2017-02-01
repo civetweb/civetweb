@@ -813,7 +813,7 @@ static const size_t websocket_goodbye_msg_len =
     14 /* strlen(websocket_goodbye_msg) */;
 
 
-#define WS_TEST_TRACE()
+#define WS_TEST_TRACE(...)
 /* #define WS_TEST_TRACE ws_trace_func */
 
 
@@ -859,7 +859,7 @@ websock_server_ready(struct mg_connection *conn, void *udata)
 
 
 #define long_ws_buf_len_16 (500)
-#define long_ws_buf_len_64 (18000)
+#define long_ws_buf_len_64 (70000)
 static char long_ws_buf[long_ws_buf_len_64];
 
 
