@@ -201,6 +201,18 @@ struct mg_callbacks {
 	   mg_set_websocket_handler instead. */
 	void (*connection_close)(const struct mg_connection *);
 
+#if defined(MG_USE_OPEN_FILE)
+	/* Note: The "file in memory" feature is a deletion candidate, since
+	 * it complicates the code, and does not add any value compared to
+	 * "mg_add_request_handler".
+	 * See this discussion thread:
+	 * https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI
+	 * If you disagree, if there is any situation this is indeed useful
+	 * and cannot trivially be replaced by another existing feature,
+	 * please contribute to this discussion during the next 3 month
+	 * (till end of April 2017), otherwise this feature might be dropped
+	 * in future releases. */
+
 	/* Called when civetweb tries to open a file. Used to intercept file open
 	   calls, and serve file data from memory instead.
 	   Parameters:
@@ -214,6 +226,7 @@ struct mg_callbacks {
 	const char *(*open_file)(const struct mg_connection *,
 	                         const char *path,
 	                         size_t *data_len);
+#endif
 
 	/* Called when civetweb is about to serve Lua server page, if
 	   Lua support is enabled.
