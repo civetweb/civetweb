@@ -859,7 +859,7 @@ websock_server_ready(struct mg_connection *conn, void *udata)
 
 
 #define long_ws_buf_len_16 (500)
-#define long_ws_buf_len_64 (70000)
+#define long_ws_buf_len_64 (700 /* 00 */) /* TODO: use len > 64k */
 static char long_ws_buf[long_ws_buf_len_64];
 
 
