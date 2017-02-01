@@ -3841,6 +3841,7 @@ test_file_in_memory_open_file(const struct mg_connection *conn,
 
 START_TEST(test_file_in_memory)
 {
+#if defined(MG_USE_OPEN_FILE)
 #if !defined(NO_FILES)
 	/* Server var */
 	struct mg_context *ctx;
@@ -3945,6 +3946,9 @@ START_TEST(test_file_in_memory)
 #else
 	/* This test is not meaningful, if NO_FILES is set */
 	ck_assert_uint_eq(mg_check_feature(1), 0);
+#endif
+#else
+	mark_point();
 #endif
 }
 END_TEST
