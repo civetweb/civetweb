@@ -3760,8 +3760,15 @@ START_TEST(test_large_file)
 	OPTIONS[opt_cnt++] = "8443s";
 	OPTIONS[opt_cnt++] = "ssl_certificate";
 	OPTIONS[opt_cnt++] = ssl_cert;
+#ifdef __MACH__
+    /* The Apple builds on Travis CI seem to have problems with TLS1.2 */
+	OPTIONS[opt_cnt++] = "ssl_protocol_version";
+	OPTIONS[opt_cnt++] = "3";
+#else
+    /* The Linux builds on Travis CI work fine with TLS1.2 */
 	OPTIONS[opt_cnt++] = "ssl_protocol_version";
 	OPTIONS[opt_cnt++] = "4";
+#endif
 	ck_assert(ssl_cert != NULL);
 #endif
 	OPTIONS[opt_cnt] = NULL;
