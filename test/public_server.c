@@ -1122,10 +1122,14 @@ START_TEST(test_request_handlers)
 
 	opt = mg_get_option(ctx, "listening_ports");
 	ck_assert_str_eq(opt, HTTP_PORT);
+
 	opt = mg_get_option(ctx, "cgi_environment");
-	ck_assert_str_ne(opt, "");
+	ck_assert_ptr_ne(opt, cgi_env_opt);
+    ck_assert(strcmp(opt, cgi_env_opt) == 0);
+
 	opt = mg_get_option(ctx, "throttle");
 	ck_assert_str_eq(opt, "");
+
 	opt = mg_get_option(ctx, "unknown_option_name");
 	ck_assert(opt == NULL);
 
