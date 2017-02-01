@@ -138,7 +138,7 @@ wait_not_null(void *volatile *data)
 #pragma clang diagnostic ignored "-Wunreachable-code"
 #endif
 
-	ck_abort_msg("wait_not_null failed");
+	ck_abort_msg("wait_not_null failed (%i sec)", i);
 
 	return 0;
 
@@ -307,22 +307,14 @@ test_mg_stop(struct mg_context *ctx)
 }
 
 
-START_TEST(test_mg_start_stop_http_server)
+static void
+test_mg_start_stop_http_server_impl(int ipv6)
 {
 	struct mg_context *ctx;
-	const char *OPTIONS[] = {
-#if !defined(NO_FILES)
-		"document_root",
-		".",
-#endif
-		"listening_ports",
-#if defined(USE_IPV6)
-		"+8080",
-#else
-		"8080",
-#endif
-		NULL,
-	};
+	const char *OPTIONS[16];
+	int optcnt = 0;
+	const char *localhost_name = ((ipv6) ? "[::1]" : "127.0.0.1");
+
 	size_t ports_cnt;
 	int ports[16];
 	int ssl[16];
@@ -334,6 +326,14 @@ START_TEST(test_mg_start_stop_http_server)
 	const struct mg_request_info *client_ri;
 	int client_res, ret;
 	struct mg_server_ports portinfo[8];
+
+#if !defined(NO_FILES)
+	OPTIONS[optcnt++] = "document_root";
+	OPTIONS[optcnt++] = ".";
+#endif
+	OPTIONS[optcnt++] = "listening_ports";
+	OPTIONS[optcnt++] = ((ipv6) ? "+8080" : "8080");
+	OPTIONS[optcnt] = 0;
 
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
@@ -368,11 +368,11 @@ START_TEST(test_mg_start_stop_http_server)
 
 	ret = mg_get_server_ports(ctx, 4, portinfo);
 	ck_assert_int_eq(ret, 1);
-#if defined(USE_IPV6)
-	ck_assert_int_eq(portinfo[0].protocol, 3);
-#else
-	ck_assert_int_eq(portinfo[0].protocol, 1);
-#endif
+	if (ipv6) {
+		ck_assert_int_eq(portinfo[0].protocol, 3);
+	} else {
+		ck_assert_int_eq(portinfo[0].protocol, 1);
+	}
 	ck_assert_int_eq(portinfo[0].port, 8080);
 	ck_assert_int_eq(portinfo[0].is_ssl, 0);
 	ck_assert_int_eq(portinfo[0].is_redirect, 0);
@@ -385,8 +385,8 @@ START_TEST(test_mg_start_stop_http_server)
 
 	/* HTTP 1.0 GET request */
 	memset(client_err, 0, sizeof(client_err));
-	client_conn =
-	    mg_connect_client("localhost", 8080, 0, client_err, sizeof(client_err));
+	client_conn = mg_connect_client(
+	    localhost_name, 8080, 0, client_err, sizeof(client_err));
 	ck_assert(client_conn != NULL);
 	ck_assert_str_eq(client_err, "");
 	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
@@ -412,8 +412,8 @@ START_TEST(test_mg_start_stop_http_server)
 
 	/* HTTP 1.1 GET request */
 	memset(client_err, 0, sizeof(client_err));
-	client_conn =
-	    mg_connect_client("localhost", 8080, 0, client_err, sizeof(client_err));
+	client_conn = mg_connect_client(
+	    localhost_name, 8080, 0, client_err, sizeof(client_err));
 	ck_assert(client_conn != NULL);
 	ck_assert_str_eq(client_err, "");
 	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
@@ -442,8 +442,8 @@ START_TEST(test_mg_start_stop_http_server)
 
 	/* HTTP 1.7 GET request - this HTTP version does not exist  */
 	memset(client_err, 0, sizeof(client_err));
-	client_conn =
-	    mg_connect_client("localhost", 8080, 0, client_err, sizeof(client_err));
+	client_conn = mg_connect_client(
+	    localhost_name, 8080, 0, client_err, sizeof(client_err));
 	ck_assert(client_conn != NULL);
 	ck_assert_str_eq(client_err, "");
 	mg_printf(client_conn, "GET / HTTP/1.7\r\n");
@@ -467,8 +467,8 @@ START_TEST(test_mg_start_stop_http_server)
 	 * Multiline header are obsolete with RFC 7230 section-3.2.4
 	 * and must return "400 Bad Request" */
 	memset(client_err, 0, sizeof(client_err));
-	client_conn =
-	    mg_connect_client("localhost", 8080, 0, client_err, sizeof(client_err));
+	client_conn = mg_connect_client(
+	    localhost_name, 8080, 0, client_err, sizeof(client_err));
 	ck_assert(client_conn != NULL);
 	ck_assert_str_eq(client_err, "");
 	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
@@ -490,6 +490,23 @@ START_TEST(test_mg_start_stop_http_server)
 
 	/* End test */
 	test_mg_stop(ctx);
+}
+
+
+START_TEST(test_mg_start_stop_http_server)
+{
+	test_mg_start_stop_http_server_impl(0);
+}
+END_TEST
+
+
+START_TEST(test_mg_start_stop_http_server_ipv6)
+{
+#if defined(USE_IPV6)
+	test_mg_start_stop_http_server_impl(1);
+#else
+	mark_point();
+#endif
 }
 END_TEST
 
@@ -796,13 +813,28 @@ static const size_t websocket_goodbye_msg_len =
     14 /* strlen(websocket_goodbye_msg) */;
 
 
+#define WS_TEST_TRACE()
+/* #define WS_TEST_TRACE ws_trace_func */
+
+
+static void
+ws_trace_func(const char *f, ...)
+{
+	va_list l;
+	va_start(l, f);
+	vprintf(f, l);
+	va_end(l);
+}
+
+
 static int
 websock_server_connect(const struct mg_connection *conn, void *udata)
 {
 	(void)conn;
+	(void)ws_trace_func; /* Avoid "unused" warning */
 
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
-	printf("Server: Websocket connected\n");
+	WS_TEST_TRACE("Server: Websocket connected\n");
 
 	return 0; /* return 0 to accept every connection */
 }
@@ -812,7 +844,7 @@ static void
 websock_server_ready(struct mg_connection *conn, void *udata)
 {
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
-	printf("Server: Websocket ready\n");
+	WS_TEST_TRACE("Server: Websocket ready\n");
 
 	/* Send websocket welcome message */
 	mg_lock_connection(conn);
@@ -822,12 +854,13 @@ websock_server_ready(struct mg_connection *conn, void *udata)
 	                   websocket_welcome_msg_len);
 	mg_unlock_connection(conn);
 
-	printf("Server: Websocket ready X\n");
+	WS_TEST_TRACE("Server: Websocket ready X\n");
 }
 
 
-#define long_ws_buf_len (500)
-static char long_ws_buf[long_ws_buf_len];
+#define long_ws_buf_len_16 (500)
+#define long_ws_buf_len_64 (18000)
+static char long_ws_buf[long_ws_buf_len_64];
 
 
 static int
@@ -840,7 +873,7 @@ websock_server_data(struct mg_connection *conn,
 	(void)bits;
 
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
-	printf("Server: Got %u bytes from the client\n", (unsigned)data_len);
+	WS_TEST_TRACE("Server: Got %u bytes from the client\n", (unsigned)data_len);
 
 	if (data_len == 3 && !memcmp(data, "bye", 3)) {
 		/* Send websocket goodbye message */
@@ -862,13 +895,21 @@ websock_server_data(struct mg_connection *conn,
 		mg_lock_connection(conn);
 		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok - 3", 6);
 		mg_unlock_connection(conn);
-	} else if (data_len == long_ws_buf_len
-	           && !memcmp(data, long_ws_buf, long_ws_buf_len)) {
+	} else if (data_len == long_ws_buf_len_16) {
+		ck_assert(memcmp(data, long_ws_buf, long_ws_buf_len_16) == 0);
 		mg_lock_connection(conn);
 		mg_websocket_write(conn,
 		                   WEBSOCKET_OPCODE_BINARY,
 		                   long_ws_buf,
-		                   long_ws_buf_len);
+		                   long_ws_buf_len_16);
+		mg_unlock_connection(conn);
+	} else if (data_len == long_ws_buf_len_64) {
+		ck_assert(memcmp(data, long_ws_buf, long_ws_buf_len_64) == 0);
+		mg_lock_connection(conn);
+		mg_websocket_write(conn,
+		                   WEBSOCKET_OPCODE_BINARY,
+		                   long_ws_buf,
+		                   long_ws_buf_len_64);
 		mg_unlock_connection(conn);
 	} else {
 
@@ -903,10 +944,10 @@ websock_server_close(const struct mg_connection *conn, void *udata)
 	(void)conn;
 
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
-	printf("Server: Close connection\n");
+	WS_TEST_TRACE("Server: Close connection\n");
 
-	/* Can not send a websocket goodbye message here - the connection is already
-	 * closed */
+	/* Can not send a websocket goodbye message here -
+	 * the connection is already closed */
 }
 
 
@@ -935,11 +976,23 @@ websocket_client_data_handler(struct mg_connection *conn,
 	(void)user_data; /* TODO: check this */
 
 	ck_assert(pclient_data != NULL);
-	ck_assert_int_eq(flags, (int)(128 | 1));
+	ck_assert_int_gt(flags, 128);
+	ck_assert_int_lt(flags, 128 + 16);
+	ck_assert((flags == (int)(128 | WEBSOCKET_OPCODE_BINARY))
+	          || (flags == (int)(128 | WEBSOCKET_OPCODE_TEXT)));
 
-	printf("Client %i received data from server: ", pclient_data->clientId);
-	fwrite(data, 1, data_len, stdout);
-	printf("\n");
+	if (flags == (int)(128 | WEBSOCKET_OPCODE_TEXT)) {
+		WS_TEST_TRACE(
+		    "Client %i received %lu bytes text data from server: %.*s\n",
+		    pclient_data->clientId,
+		    (unsigned long)data_len,
+		    (int)data_len,
+		    data);
+	} else {
+		WS_TEST_TRACE("Client %i received %lu bytes binary data from\n",
+		              pclient_data->clientId,
+		              (unsigned long)data_len);
+	}
 
 	pclient_data->data = malloc(data_len);
 	ck_assert(pclient_data->data != NULL);
@@ -962,7 +1015,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 
 	ck_assert(pclient_data != NULL);
 
-	printf("Client %i: Close handler\n", pclient_data->clientId);
+	WS_TEST_TRACE("Client %i: Close handler\n", pclient_data->clientId);
 	pclient_data->closed++;
 }
 #endif
@@ -1052,6 +1105,9 @@ START_TEST(test_request_handlers)
 	                                     * must reallocate buffers. */
 	OPTIONS[opt_idx++] = cgi_env_opt;
 
+	OPTIONS[opt_idx++] = "num_threads";
+	OPTIONS[opt_idx++] = "2";
+
 
 	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
@@ -1067,6 +1123,8 @@ START_TEST(test_request_handlers)
 	opt = mg_get_option(ctx, "listening_ports");
 	ck_assert_str_eq(opt, HTTP_PORT);
 	opt = mg_get_option(ctx, "cgi_environment");
+	ck_assert_str_ne(opt, "");
+	opt = mg_get_option(ctx, "throttle");
 	ck_assert_str_eq(opt, "");
 	opt = mg_get_option(ctx, "unknown_option_name");
 	ck_assert(opt == NULL);
@@ -1771,11 +1829,35 @@ START_TEST(test_request_handlers)
 	ws_client3_data.data = NULL;
 	ws_client3_data.len = 0;
 
-	/* Write long data */
+	/* Write long data (16 bit size header) */
 	mg_websocket_client_write(ws_client3_conn,
 	                          WEBSOCKET_OPCODE_BINARY,
 	                          long_ws_buf,
-	                          long_ws_buf_len);
+	                          long_ws_buf_len_16);
+
+	/* Wait for the response */
+	wait_not_null(&(ws_client3_data.data));
+
+	ck_assert_int_eq((int)ws_client3_data.len, (int)long_ws_buf_len_16);
+	ck_assert(!memcmp(ws_client3_data.data, long_ws_buf, long_ws_buf_len_16));
+	free(ws_client3_data.data);
+	ws_client3_data.data = NULL;
+	ws_client3_data.len = 0;
+
+	/* Write long data (64 bit size header) */
+	mg_websocket_client_write(ws_client3_conn,
+	                          WEBSOCKET_OPCODE_BINARY,
+	                          long_ws_buf,
+	                          long_ws_buf_len_64);
+
+	/* Wait for the response */
+	wait_not_null(&(ws_client3_data.data));
+
+	ck_assert_int_eq((int)ws_client3_data.len, (int)long_ws_buf_len_64);
+	ck_assert(!memcmp(ws_client3_data.data, long_ws_buf, long_ws_buf_len_64));
+	free(ws_client3_data.data);
+	ws_client3_data.data = NULL;
+	ws_client3_data.len = 0;
 
 	/* Disconnect client 3 */
 	ck_assert(ws_client3_data.closed == 0);
@@ -4003,6 +4085,8 @@ make_public_server_suite(void)
 	TCase *const tcase_startthreads = tcase_create("Start threads");
 	TCase *const tcase_minimal = tcase_create("Minimal");
 	TCase *const tcase_startstophttp = tcase_create("Start Stop HTTP Server");
+	TCase *const tcase_startstophttp_ipv6 =
+	    tcase_create("Start Stop HTTP Server IPv6");
 	TCase *const tcase_startstophttps = tcase_create("Start Stop HTTPS Server");
 	TCase *const tcase_serverandclienttls = tcase_create("TLS Server Client");
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
@@ -4035,6 +4119,11 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_startstophttp, test_mg_start_stop_http_server);
 	tcase_set_timeout(tcase_startstophttp, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_startstophttp);
+
+	tcase_add_test(tcase_startstophttp_ipv6,
+	               test_mg_start_stop_http_server_ipv6);
+	tcase_set_timeout(tcase_startstophttp_ipv6, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_startstophttp_ipv6);
 
 	tcase_add_test(tcase_startstophttps, test_mg_start_stop_https_server);
 	tcase_set_timeout(tcase_startstophttps, civetweb_min_test_timeout);
