@@ -5019,8 +5019,8 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 			/* timeout */
 			if (timeout > 0.0) {
 				clock_gettime(CLOCK_MONOTONIC, &now);
-				dt = (now.tv_sec - start_time.tv_sec)
-				     + 1.0E-9 * (now.tv_nsec - start_time.tv_nsec);
+				dt = (double)(now.tv_sec - start_time.tv_sec)
+				     + 1.0E-9 * (double)(now.tv_nsec - start_time.tv_nsec);
 				if (dt < timeout) {
 					continue;
 				}
