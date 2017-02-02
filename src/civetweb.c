@@ -2296,12 +2296,12 @@ open_file_in_memory(const struct mg_connection *conn,
 	return (buf != NULL);
 
 #else
-    (void)conn;
-    (void)path;
-    (void)filep;
-    (void)mode;
+	(void)conn;
+	(void)path;
+	(void)filep;
+	(void)mode;
 
-    return 0;
+	return 0;
 
 #endif
 }
@@ -4829,9 +4829,17 @@ push_all(struct mg_context *ctx,
 
 
 /* Read from IO channel - opened file descriptor, socket, or SSL descriptor.
- * Return negative value on error, or number of bytes read on success. */
+ * Return value:
+ *  >=0 .. number of bytes successfully read
+ *   -1 .. timeout
+ *   -2 .. error
+ */
 static int
-pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
+pull_inner(FILE *fp,
+           struct mg_connection *conn,
+           char *buf,
+           int len,
+           double timeout)
 {
 	int nread, err = 0;
 
@@ -4840,6 +4848,11 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 #else
 	typedef size_t len_t;
 #endif
+
+	/* We need an additional wait loop around this, because in some cases
+	 * with TLSwe may get data from the socket but not from SSL_read.
+	 * In this case we need to repeat at least once.
+	 */
 
 	if (fp != NULL) {
 #if !defined(_WIN32_WCE)
@@ -4865,7 +4878,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 		pollres =
 		    mg_poll(pfd, 1, (int)(timeout * 1000.0), &(conn->ctx->stop_flag));
 		if (conn->ctx->stop_flag) {
-			return -1;
+			return -2;
 		}
 		if (pollres > 0) {
 			nread = SSL_read(conn->ssl, buf, len);
@@ -4878,7 +4891,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 					nread = 0;
 				} else {
 					DEBUG_TRACE("SSL_read() failed, error %d", err);
-					return -1;
+					return -2;
 				}
 			} else {
 				err = 0;
@@ -4886,7 +4899,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 
 		} else if (pollres < 0) {
 			/* Error */
-			return -1;
+			return -2;
 		} else {
 			/* pollres = 0 means timeout */
 			nread = 0;
@@ -4903,18 +4916,18 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 		pollres =
 		    mg_poll(pfd, 1, (int)(timeout * 1000.0), &(conn->ctx->stop_flag));
 		if (conn->ctx->stop_flag) {
-			return -1;
+			return -2;
 		}
 		if (pollres > 0) {
 			nread = (int)recv(conn->client.sock, buf, (len_t)len, 0);
 			err = (nread < 0) ? ERRNO : 0;
 			if (nread <= 0) {
 				/* shutdown of the socket at client side */
-				return -1;
+				return -2;
 			}
 		} else if (pollres < 0) {
 			/* error callint poll */
-			return -1;
+			return -2;
 		} else {
 			/* pollres = 0 means timeout */
 			nread = 0;
@@ -4922,7 +4935,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 	}
 
 	if (conn->ctx->stop_flag) {
-		return -1;
+		return -2;
 	}
 
 	if ((nread > 0) || (nread == 0 && len == 0)) {
@@ -4936,17 +4949,17 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 		if (err == WSAEWOULDBLOCK) {
 			/* TODO (low): check if this is still required */
 			/* standard case if called from close_socket_gracefully */
-			return -1;
+			return -2;
 		} else if (err == WSAETIMEDOUT) {
 			/* TODO (low): check if this is still required */
 			/* timeout is handled by the while loop  */
 			return 0;
 		} else if (err == WSAECONNABORTED) {
 			/* See https://www.chilkatsoft.com/p/p_299.asp */
-			return -1;
+			return -2;
 		} else {
 			DEBUG_TRACE("recv() failed, error %d", err);
-			return -1;
+			return -2;
 		}
 #else
 		/* TODO: POSIX returns either EAGAIN or EWOULDBLOCK in both cases,
@@ -4968,7 +4981,7 @@ pull(FILE *fp, struct mg_connection *conn, char *buf, int len, double timeout)
 			 * => stay in the while loop */
 		} else {
 			DEBUG_TRACE("recv() failed, error %d", err);
-			return -1;
+			return -2;
 		}
 #endif
 	}
@@ -4983,16 +4996,30 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 {
 	int n, nread = 0;
 	double timeout = -1.0;
+	double dt;
+	struct timespec start_time, now;
 
 	if (conn->ctx->config[REQUEST_TIMEOUT]) {
 		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+		clock_gettime(CLOCK_MONOTONIC, &start_time);
 	}
 
 	while (len > 0 && conn->ctx->stop_flag == 0) {
-		n = pull(fp, conn, buf + nread, len, timeout);
-		if (n < 0) {
+		n = pull_inner(fp, conn, buf + nread, len, timeout);
+		if (n == -2) {
 			if (nread == 0) {
-				nread = n; /* Propagate the error */
+				nread = -1; /* Propagate the error */
+			}
+			break;
+		} else if (n == -1) {
+			/* timeout */
+			if (timeout > 0.0) {
+				clock_gettime(CLOCK_MONOTONIC, &now);
+				dt = (now.tv_sec - start_time.tv_sec)
+				     + 1.0E-9 * (now.tv_nsec - start_time.tv_nsec);
+				if (dt < timeout) {
+					continue;
+				}
 			}
 			break;
 		} else if (n == 0) {
@@ -8135,13 +8162,18 @@ read_request(FILE *fp,
 			return -2;
 		}
 
-		n = pull(fp, conn, buf + *nread, bufsiz - *nread, request_timeout);
-		if (n < 0) {
+		n = pull_inner(
+		    fp, conn, buf + *nread, bufsiz - *nread, request_timeout);
+		if (n == -2) {
 			/* Receive error */
 			return -1;
 		}
-		*nread += n;
-		request_len = get_request_len(buf, *nread);
+		if (n > 0) {
+			*nread += n;
+			request_len = get_request_len(buf, *nread);
+		} else {
+			request_len = 0;
+		}
 
 		if ((request_len == 0) && (request_timeout >= 0)) {
 			if (mg_difftimespec(&last_action_time, &(conn->req_time))
@@ -8302,10 +8334,15 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 			if ((int64_t)to_read > conn->content_len - conn->consumed_content) {
 				to_read = (int)(conn->content_len - conn->consumed_content);
 			}
-			nread = pull(NULL, conn, buf, to_read, timeout);
-			if (nread <= 0
-			    || push_all(conn->ctx, fp, sock, ssl, buf, nread) != nread) {
+			nread = pull_inner(NULL, conn, buf, to_read, timeout);
+			if (nread == -2) {
+				/* error */
 				break;
+			}
+			if (nread > 0) {
+				if (push_all(conn->ctx, fp, sock, ssl, buf, nread) != nread) {
+					break;
+				}
 			}
 			conn->consumed_content += nread;
 		}
@@ -9752,16 +9789,20 @@ read_websocket(struct mg_connection *conn,
 				memcpy(data, buf + header_len, len);
 				error = 0;
 				while (len < data_len) {
-					n = pull(NULL,
-					         conn,
-					         (char *)(data + len),
-					         (int)(data_len - len),
-					         timeout);
-					if (n <= 0) {
+					n = pull_inner(NULL,
+					               conn,
+					               (char *)(data + len),
+					               (int)(data_len - len),
+					               timeout);
+					if (n <= -2) {
 						error = 1;
 						break;
+					} else if (n > 0) {
+						len += (size_t)n;
+					} else {
+						/* Timeout: should retry */
+						/* TODO: retry condition */
 					}
-					len += (size_t)n;
 				}
 				if (error) {
 					mg_cry(conn, "Websocket pull failed; closing connection");
@@ -9816,15 +9857,21 @@ read_websocket(struct mg_connection *conn,
 		} else {
 			/* Read from the socket into the next available location in the
 			 * message queue. */
-			if ((n = pull(NULL,
-			              conn,
-			              conn->buf + conn->data_len,
-			              conn->buf_size - conn->data_len,
-			              timeout)) <= 0) {
+			n = pull_inner(NULL,
+			               conn,
+			               conn->buf + conn->data_len,
+			               conn->buf_size - conn->data_len,
+			               timeout);
+			if (n <= -2) {
 				/* Error, no bytes read */
 				break;
 			}
-			conn->data_len += n;
+			if (n > 0) {
+				conn->data_len += n;
+			} else {
+				/* Timeout: should retry */
+				/* TODO: get timeout def */
+			}
 		}
 	}
 
@@ -12742,7 +12789,7 @@ close_socket_gracefully(struct mg_connection *conn)
 	 * when server decides to close the connection; then when client
 	 * does recv() it gets no data back. */
 	do {
-		n = pull(NULL, conn, buf, sizeof(buf), /* Timeout in s: */ 1.0);
+		n = pull_inner(NULL, conn, buf, sizeof(buf), /* Timeout in s: */ 1.0);
 	} while (n > 0);
 #endif
 
