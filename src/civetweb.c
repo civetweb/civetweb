@@ -1153,6 +1153,15 @@ mg_current_thread_id(void)
 }
 
 
+static uint64_t
+mg_get_current_time_ns()
+{
+	struct timespec tsnow;
+	clock_gettime(CLOCK_REALTIME, &tsnow);
+	return (((uint64_t)tsnow.tv_sec) * 1000000000) + (uint64_t)tsnow.tv_nsec;
+}
+
+
 #if defined(__GNUC__)
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic pop
@@ -1174,15 +1183,13 @@ static void
 DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 {
 	va_list args;
-	struct timespec tsnow;
 	uint64_t nsnow;
 	static uint64_t nslast;
 
 	/* Get some operating system independent thread id */
 	unsigned long thread_id = mg_current_thread_id();
 
-	clock_gettime(CLOCK_REALTIME, &tsnow);
-	nsnow = (((uint64_t)tsnow.tv_sec) * 1000000000) + (uint64_t)tsnow.tv_nsec;
+	msmow = mg_get_current_time();
 
 	flockfile(stdout);
 	printf("*** %lu.%09lu %12" INT64_FMT " %lu %s:%u: ",
@@ -3580,7 +3587,6 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 	struct mg_workerTLS **ptls,
 	    *tls = (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
 	int ok;
-	struct timespec tsnow;
 	int64_t nsnow, nswaitabs, nswaitrel;
 	DWORD mswaitrel;
 
@@ -3594,8 +3600,7 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 	LeaveCriticalSection(&cv->threadIdSec);
 
 	if (abstime) {
-		clock_gettime(CLOCK_REALTIME, &tsnow);
-		nsnow = (((int64_t)tsnow.tv_sec) * 1000000000) + tsnow.tv_nsec;
+		nsnow = mg_get_current_time_ns();
 		nswaitabs =
 		    (((int64_t)abstime->tv_sec) * 1000000000) + abstime->tv_nsec;
 		nswaitrel = nswaitabs - nsnow;
@@ -4601,18 +4606,12 @@ get_random(void)
 {
 	static uint64_t lfsr = 0; /* Linear feedback shift register */
 	static uint64_t lcg = 0;  /* Linear congruential generator */
-	struct timespec now;
-
-	memset(&now, 0, sizeof(now));
-	clock_gettime(CLOCK_MONOTONIC, &now);
 
 	if (lfsr == 0) {
 		/* lfsr will be only 0 if has not been initialized,
 		 * so this code is called only once. */
-		lfsr = (((uint64_t)now.tv_sec) << 21) ^ ((uint64_t)now.tv_nsec)
-		       ^ ((uint64_t)(ptrdiff_t)&now) ^ (((uint64_t)time(NULL)) << 33);
-		lcg = (((uint64_t)now.tv_sec) << 25) + (uint64_t)now.tv_nsec
-		      + (uint64_t)(ptrdiff_t)&now;
+		lfsr = mg_get_current_time_ns();
+		lcg = mg_get_current_time_ns();
 	} else {
 		/* Get the next step of both random number generators. */
 		lfsr = (lfsr >> 1)
@@ -4680,7 +4679,7 @@ push(struct mg_context *ctx,
      int len,
      double timeout)
 {
-	struct timespec start, now;
+	uint64_t start, now, timeout_ns;
 	int n, err;
 
 #ifdef _WIN32
@@ -4690,9 +4689,10 @@ push(struct mg_context *ctx,
 #endif
 
 	if (timeout > 0) {
-		memset(&start, 0, sizeof(start));
-		memset(&now, 0, sizeof(now));
-		clock_gettime(CLOCK_MONOTONIC, &start);
+		start = mg_get_current_time_ns();
+		timeout_ns = (uint64_t)(timeout * 1.0E9);
+	} else {
+		timeout_ns = 0;
 	}
 
 	if (ctx == NULL) {
@@ -4777,11 +4777,11 @@ push(struct mg_context *ctx,
 
 		/* Only in case n=0 (timeout), repeat calling the write function */
 
-		if (timeout > 0) {
-			clock_gettime(CLOCK_MONOTONIC, &now);
+		if (timeout >= 0) {
+			now = mg_get_current_time_ns();
 		}
 
-	} while ((timeout <= 0) || (mg_difftimespec(&now, &start) <= timeout));
+	} while ((timeout <= 0) || ((start - now) <= timeout_ns));
 
 	(void)err; /* Avoid unused warning if NO_SSL is set and DEBUG_TRACE is not
 	              used */
@@ -4996,16 +4996,18 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 {
 	int n, nread = 0;
 	double timeout = -1.0;
-	double dt;
-	struct timespec start_time, now;
+	uint64_t start_time, now, timeout_ns;
 
 	if (conn->ctx->config[REQUEST_TIMEOUT]) {
 		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
-		clock_gettime(CLOCK_MONOTONIC, &start_time);
+	}
+	if (timeout >= 0.0) {
+		start_time = mg_get_current_time_ns();
+		timeout_ns = (uint64_t)(timeout * 1.0E9);
 	} else {
 		/* The variable is not used, but if it is left uninitialized,
 		 * we get a spurious warning. */
-		memset(&start_time, 0, sizeof(start_time));
+		start_time = 0;
 	}
 
 	while (len > 0 && conn->ctx->stop_flag == 0) {
@@ -5017,11 +5019,9 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 			break;
 		} else if (n == -1) {
 			/* timeout */
-			if (timeout > 0.0) {
-				clock_gettime(CLOCK_MONOTONIC, &now);
-				dt = (double)(now.tv_sec - start_time.tv_sec)
-				     + 1.0E-9 * (double)(now.tv_nsec - start_time.tv_nsec);
-				if (dt < timeout) {
+			if (timeout >= 0.0) {
+				now = mg_get_current_time_ns();
+				if ((now - start_time) <= timeout_ns) {
 					continue;
 				}
 			}
