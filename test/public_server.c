@@ -3838,7 +3838,7 @@ START_TEST(test_large_file)
 END_TEST
 
 
-#if !defined(NO_FILES)
+#if defined(MG_USE_OPEN_FILE) && !defined(NO_FILES)
 
 #define FILE_IN_MEM_SIZE (1024 * 100)
 static char *file_in_mem_data;
@@ -3859,13 +3859,10 @@ test_file_in_memory_open_file(const struct mg_connection *conn,
 		return NULL;
 	}
 }
-#endif
 
 
 START_TEST(test_file_in_memory)
 {
-#if defined(MG_USE_OPEN_FILE)
-#if !defined(NO_FILES)
 	/* Server var */
 	struct mg_context *ctx;
 	struct mg_callbacks callbacks;
@@ -3966,15 +3963,18 @@ START_TEST(test_file_in_memory)
 	/* Free test data */
 	free(file_in_mem_data);
 	file_in_mem_data = NULL;
-#else
-	/* This test is not meaningful, if NO_FILES is set */
-	ck_assert_uint_eq(mg_check_feature(1), 0);
-#endif
-#else
-	mark_point();
-#endif
 }
 END_TEST
+
+#else /* defined(MG_USE_OPEN_FILE) */
+
+START_TEST(test_file_in_memory)
+{
+	mark_point();
+}
+END_TEST
+
+#endif
 
 
 static void
