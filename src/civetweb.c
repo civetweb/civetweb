@@ -5002,7 +5002,11 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 	if (conn->ctx->config[REQUEST_TIMEOUT]) {
 		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 		clock_gettime(CLOCK_MONOTONIC, &start_time);
-	}
+	} else {
+        /* The variable is not used, but if it is left uninitialized,
+         * we get a spurious warning. */
+        memset(&start_time, 0, sizeof(start_time));
+    }
 
 	while (len > 0 && conn->ctx->stop_flag == 0) {
 		n = pull_inner(fp, conn, buf + nread, len, timeout);
