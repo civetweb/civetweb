@@ -782,13 +782,22 @@ lsp_url_encode(lua_State *L)
 	int num_args = lua_gettop(L);
 	const char *text;
 	size_t text_len;
-	char dst[512 * 3];
+	char *dst;
+	int dst_len;
 
 	if (num_args == 1) {
 		text = lua_tolstring(L, 1, &text_len);
 		if (text) {
-			mg_url_encode(text, dst, sizeof(dst));
-			lua_pushstring(L, dst);
+			dst_len = 3*(int)text_len + 1;
+			dst = ((text_len < 0x2AAAAAAA) ? (char *)mg_malloc(dst_len)
+			                               : (char *)NULL);
+			if (dst) {
+				mg_url_encode(text, dst, dst_len);
+				lua_pushstring(L, dst);
+				mg_free(dst);
+			} else {
+				return luaL_error(L, "out of memory in url_decode() call");
+			}
 		} else {
 			lua_pushnil(L);
 		}
@@ -808,14 +817,23 @@ lsp_url_decode(lua_State *L)
 	const char *text;
 	size_t text_len;
 	int is_form;
-	char dst[512];
+	char *dst;
+	int dst_len;
 
 	if (num_args == 1 || (num_args == 2 && lua_isboolean(L, 2))) {
 		text = lua_tolstring(L, 1, &text_len);
 		is_form = (num_args == 2) ? lua_isboolean(L, 2) : 0;
 		if (text) {
-			mg_url_decode(text, (int)text_len, dst, (int)sizeof(dst), is_form);
-			lua_pushstring(L, dst);
+			dst_len = (int)text_len + 1;
+			dst = ((text_len < 0x7FFFFFFF) ? (char *)mg_malloc(dst_len)
+			                               : (char *)NULL);
+			if (dst) {
+				mg_url_decode(text, (int)text_len, dst, dst_len, is_form);
+				lua_pushstring(L, dst);
+				mg_free(dst);
+			} else {
+				return luaL_error(L, "out of memory in url_decode() call");
+			}
 		} else {
 			lua_pushnil(L);
 		}
