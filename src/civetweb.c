@@ -13711,7 +13711,7 @@ mg_connect_websocket_client(const char *host,
 	thread_data->conn = conn;
 	thread_data->data_handler = data_func;
 	thread_data->close_handler = close_func;
-	thread_data->callback_data = NULL;
+	thread_data->callback_data = user_data;
 
 	/* Start a thread to read the websocket client connection
 	 * This thread will automatically stop when mg_disconnect is
