@@ -788,7 +788,7 @@ lsp_url_encode(lua_State *L)
 	if (num_args == 1) {
 		text = lua_tolstring(L, 1, &text_len);
 		if (text) {
-			dst_len = 3*(int)text_len + 1;
+			dst_len = 3 * (int)text_len + 1;
 			dst = ((text_len < 0x2AAAAAAA) ? (char *)mg_malloc(dst_len)
 			                               : (char *)NULL);
 			if (dst) {
