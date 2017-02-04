@@ -13514,6 +13514,7 @@ mg_get_response(struct mg_connection *conn,
 		 *       2) here, ri.uri is the http response code */
 		conn->request_info.uri = conn->request_info.request_uri;
 #endif
+        conn->request_info.local_uri = conn->request_info.request_uri;
 
 		/* TODO (mid): Define proper return values - maybe return length?
 		 * For the first test use <0 for error and >0 for OK */
@@ -13560,6 +13561,7 @@ mg_download(const char *host,
 			 *       2) here, ri.uri is the http response code */
 			conn->request_info.uri = conn->request_info.request_uri;
 #endif
+            conn->request_info.local_uri = conn->request_info.request_uri;
 		}
 	}
 

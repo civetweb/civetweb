@@ -4003,8 +4003,9 @@ minimal_http_client_impl(const char *server, uint16_t port, const char *uri)
 	client_ri = mg_get_request_info(client);
 	ck_assert(client_ri != NULL);
 
-	/* e.g.: ck_assert_str_eq(client_ri->local_uri, "200"); */
-	r = (int)strlen(client_ri->local_uri);
+	/* e.g.: ck_assert_str_eq(client_ri->request_uri, "200"); */
+    ck_assert_ptr_ne(client_ri->request_uri, NULL);
+	r = (int)strlen(client_ri->request_uri);
 	ck_assert_int_eq(r, 3);
 
 	data_read = 0;
