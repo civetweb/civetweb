@@ -973,7 +973,7 @@ websocket_client_data_handler(struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-	ck_assert_ptr_eq(user_data, (void*)pclient_data);
+	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 
 	ck_assert(pclient_data != NULL);
 	ck_assert_int_gt(flags, 128);
@@ -1011,7 +1011,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-	ck_assert_ptr_eq(user_data, (void*)pclient_data);
+	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 
 	ck_assert(pclient_data != NULL);
 

@@ -4695,9 +4695,9 @@ push(struct mg_context *ctx,
 #else
 	typedef size_t len_t;
 #endif
-    
-	if (timeout > 0) {		
-        start = mg_get_current_time_ns();
+
+	if (timeout > 0) {
+		start = mg_get_current_time_ns();
 		timeout_ns = (uint64_t)(timeout * 1.0E9);
 	}
 
@@ -5002,7 +5002,7 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 {
 	int n, nread = 0;
 	double timeout = -1.0;
-	uint64_t start_time, now, timeout_ns;
+	uint64_t start_time = 0, now = 0, timeout_ns = 0;
 
 	if (conn->ctx->config[REQUEST_TIMEOUT]) {
 		timeout = atoi(conn->ctx->config[REQUEST_TIMEOUT]) / 1000.0;
@@ -5010,10 +5010,6 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 	if (timeout >= 0.0) {
 		start_time = mg_get_current_time_ns();
 		timeout_ns = (uint64_t)(timeout * 1.0E9);
-	} else {
-		/* The variable is not used, but if it is left uninitialized,
-		 * we get a spurious warning. */
-		start_time = 0;
 	}
 
 	while (len > 0 && conn->ctx->stop_flag == 0) {
