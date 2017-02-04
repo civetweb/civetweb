@@ -12688,8 +12688,10 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.request_method = NULL;
 	conn->request_info.request_uri = NULL;
 	conn->request_info.local_uri = NULL;
+#if defined(MG_LEGACY_INTERFACE)
 	conn->request_info.uri = NULL; /* TODO: cleanup uri,
 	                                * local_uri and request_uri */
+#endif
 	conn->request_info.http_version = NULL;
 	conn->request_info.num_headers = 0;
 	conn->data_len = 0;
@@ -13507,9 +13509,11 @@ mg_get_response(struct mg_connection *conn,
 		ret = getreq(conn, ebuf, ebuf_len, &err);
 		conn->ctx = octx;
 
+#if defined(MG_LEGACY_INTERFACE)
 		/* TODO: 1) uri is deprecated;
 		 *       2) here, ri.uri is the http response code */
 		conn->request_info.uri = conn->request_info.request_uri;
+#endif
 
 		/* TODO (mid): Define proper return values - maybe return length?
 		 * For the first test use <0 for error and >0 for OK */
@@ -13551,9 +13555,11 @@ mg_download(const char *host,
 		} else {
 			getreq(conn, ebuf, ebuf_len, &reqerr);
 
+#if defined(MG_LEGACY_INTERFACE)
 			/* TODO: 1) uri is deprecated;
 			 *       2) here, ri.uri is the http response code */
 			conn->request_info.uri = conn->request_info.request_uri;
+#endif
 		}
 	}
 
@@ -13815,8 +13821,10 @@ process_new_connection(struct mg_connection *conn)
 					break;
 				}
 
+#if defined(MG_LEGACY_INTERFACE)
 				/* TODO: cleanup uri, local_uri and request_uri */
 				conn->request_info.uri = conn->request_info.local_uri;
+#endif
 			}
 
 			DEBUG_TRACE("http: %s, error: %s",

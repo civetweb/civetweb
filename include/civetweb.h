@@ -83,13 +83,15 @@ struct mg_request_info {
 	const char *local_uri;      /* URL-decoded URI (relative). Can be NULL
 	                             * if the request_uri does not address a
 	                             * resource at the server host. */
-	const char *uri;            /* Deprecated: use local_uri instead */
-	const char *http_version;   /* E.g. "1.0", "1.1" */
-	const char *query_string;   /* URL part after '?', not including '?', or
-	                               NULL */
-	const char *remote_user;    /* Authenticated user, or NULL if no auth
-	                               used */
-	char remote_addr[48];       /* Client's IP address as a string. */
+#if defined(MG_LEGACY_INTERFACE)
+	const char *uri; /* Deprecated: use local_uri instead */
+#endif
+	const char *http_version; /* E.g. "1.0", "1.1" */
+	const char *query_string; /* URL part after '?', not including '?', or
+	                             NULL */
+	const char *remote_user;  /* Authenticated user, or NULL if no auth
+	                             used */
+	char remote_addr[48];     /* Client's IP address as a string. */
 
 #if defined(MG_LEGACY_INTERFACE)
 	long remote_ip; /* Client's IP address. Deprecated: use remote_addr instead
