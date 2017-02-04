@@ -142,7 +142,7 @@ BXHandler(struct mg_connection *conn, void *cbdata)
 	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn, "<h2>This is the BX handler %p!!!</h2>", cbdata);
-	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
+	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->local_uri);
 	mg_printf(conn, "</body></html>\n");
 	return 1;
 }
@@ -445,7 +445,7 @@ CookieHandler(struct mg_connection *conn, void *cbdata)
 
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn, "<h2>This is the CookieHandler.</h2>");
-	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
+	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->local_uri);
 
 	if (first_str[0] == 0) {
 		mg_printf(conn, "<p>This is the first time, you opened this page</p>");
