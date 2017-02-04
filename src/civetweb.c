@@ -1185,11 +1185,18 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	va_list args;
 	uint64_t nsnow;
 	static uint64_t nslast;
+	struct timespec tsnow;
 
 	/* Get some operating system independent thread id */
 	unsigned long thread_id = mg_current_thread_id();
 
-	msmow = mg_get_current_time();
+	clock_gettime(CLOCK_REALTIME, &tsnow);
+	nsnow = ((uint64_t)tsnow.tv_sec) * ((uint64_t)1000000000)
+	        + ((uint64_t)tsnow.tv_nsec);
+
+	if (!nslast) {
+		nslast = nsnow;
+	}
 
 	flockfile(stdout);
 	printf("*** %lu.%09lu %12" INT64_FMT " %lu %s:%u: ",
@@ -4606,6 +4613,7 @@ get_random(void)
 {
 	static uint64_t lfsr = 0; /* Linear feedback shift register */
 	static uint64_t lcg = 0;  /* Linear congruential generator */
+	uint64_t now = mg_get_current_time_ns();
 
 	if (lfsr == 0) {
 		/* lfsr will be only 0 if has not been initialized,
@@ -4623,7 +4631,7 @@ get_random(void)
 	/* Combining two pseudo-random number generators and a high resolution part
 	 * of the current server time will make it hard (impossible?) to guess the
 	 * next number. */
-	return (lfsr ^ lcg ^ (uint64_t)now.tv_nsec);
+	return (lfsr ^ lcg ^ now);
 }
 
 
