@@ -4687,7 +4687,7 @@ push(struct mg_context *ctx,
      int len,
      double timeout)
 {
-	uint64_t start, now, timeout_ns;
+	uint64_t start = 0, now = 0, timeout_ns = 0;
 	int n, err;
 
 #ifdef _WIN32
@@ -4695,12 +4695,10 @@ push(struct mg_context *ctx,
 #else
 	typedef size_t len_t;
 #endif
-
-	if (timeout > 0) {
-		start = mg_get_current_time_ns();
+    
+	if (timeout > 0) {		
+        start = mg_get_current_time_ns();
 		timeout_ns = (uint64_t)(timeout * 1.0E9);
-	} else {
-		timeout_ns = 0;
 	}
 
 	if (ctx == NULL) {
