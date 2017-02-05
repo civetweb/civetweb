@@ -1406,7 +1406,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 #endif
 
@@ -1469,7 +1469,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->uri, "404");
+	ck_assert_str_eq(ri->local_uri, "404");
 
 	(void)expected_cgi_result;
 	(void)cgi_script_content;
@@ -3934,7 +3934,7 @@ START_TEST(test_file_in_memory)
 	client_ri = mg_get_request_info(client);
 
 	ck_assert(client_ri != NULL);
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 
 	ck_assert_int_eq(client_ri->content_length, FILE_IN_MEM_SIZE);
 
