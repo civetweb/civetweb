@@ -4893,8 +4893,7 @@ pull_inner(FILE *fp,
 				if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
 					err = ERRNO;
 				} else if ((err == SSL_ERROR_WANT_READ)
-				           || (err == SSL_ERROR_WANT_WRITE)
-				           || (err == SSL_ERROR_ZERO_RETURN)) {
+				           || (err == SSL_ERROR_WANT_WRITE)) {
 					nread = 0;
 				} else {
 					DEBUG_TRACE("SSL_read() failed, error %d", err);
@@ -12091,8 +12090,8 @@ sslize(struct mg_connection *conn,
 			err = SSL_get_error(conn->ssl, ret);
 			if ((err == SSL_ERROR_WANT_CONNECT)
 			    || (err == SSL_ERROR_WANT_ACCEPT)
-			    || (err == SSL_ERROR_WANT_READ) || (err == SSL_ERROR_WANT_WRITE)
-			    || (err == SSL_ERROR_ZERO_RETURN)) {
+			    || (err == SSL_ERROR_WANT_READ)
+			    || (err == SSL_ERROR_WANT_WRITE)) {
 				/* Need to retry the function call "later".
 				 * See https://linux.die.net/man/3/ssl_get_error
 				 * This is typical for non-blocking sockets. */
