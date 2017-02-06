@@ -4004,7 +4004,7 @@ minimal_http_client_impl(const char *server, uint16_t port, const char *uri)
 	ck_assert(client_ri != NULL);
 
 	/* e.g.: ck_assert_str_eq(client_ri->request_uri, "200"); */
-    ck_assert_ptr_ne(client_ri->request_uri, NULL);
+	ck_assert_ptr_ne(client_ri->request_uri, NULL);
 	r = (int)strlen(client_ri->request_uri);
 	ck_assert_int_eq(r, 3);
 
