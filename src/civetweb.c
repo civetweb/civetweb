@@ -9754,15 +9754,20 @@ read_websocket(struct mg_connection *conn,
 			len = buf[1] & 127;
 			mask_len = (buf[1] & 128) ? 4 : 0;
 			if ((len < 126) && (body_len >= mask_len)) {
+				/* inline 7-bit length field */
 				data_len = len;
 				header_len = 2 + mask_len;
 			} else if ((len == 126) && (body_len >= (4 + mask_len))) {
+				/* 16-bit length field */
 				header_len = 4 + mask_len;
 				data_len = ((((size_t)buf[2]) << 8) + buf[3]);
 			} else if (body_len >= (10 + mask_len)) {
+				/* 64-bit length field */
+				uint32_t l1, l2;
+				memcpy(&l1, &buf[2], 4); /* Use memcpy for alignment */
+				memcpy(&l2, &buf[6], 4);
 				header_len = 10 + mask_len;
-				data_len = (((uint64_t)ntohl(*(uint32_t *)(void *)&buf[2]))
-				            << 32) + ntohl(*(uint32_t *)(void *)&buf[6]);
+				data_len = (((uint64_t)ntohl(l1)) << 32) + ntohl(l2);
 			}
 		}
 
