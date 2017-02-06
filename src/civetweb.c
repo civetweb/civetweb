@@ -4893,7 +4893,8 @@ pull_inner(FILE *fp,
 				if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
 					err = ERRNO;
 				} else if ((err == SSL_ERROR_WANT_READ)
-				           || (err == SSL_ERROR_WANT_WRITE)) {
+				           || (err == SSL_ERROR_WANT_WRITE)
+				           || (err == SSL_ERROR_ZERO_RETURN)) {
 					nread = 0;
 				} else {
 					DEBUG_TRACE("SSL_read() failed, error %d", err);
@@ -12085,8 +12086,8 @@ sslize(struct mg_connection *conn,
 			err = SSL_get_error(conn->ssl, ret);
 			if ((err == SSL_ERROR_WANT_CONNECT)
 			    || (err == SSL_ERROR_WANT_ACCEPT)
-			    || (err == SSL_ERROR_WANT_READ)
-			    || (err == SSL_ERROR_WANT_WRITE)) {
+			    || (err == SSL_ERROR_WANT_READ) || (err == SSL_ERROR_WANT_WRITE)
+			    || (err == SSL_ERROR_ZERO_RETURN)) {
 				/* Need to retry the function call "later".
 				 * See https://linux.die.net/man/3/ssl_get_error
 				 * This is typical for non-blocking sockets. */
@@ -13514,7 +13515,7 @@ mg_get_response(struct mg_connection *conn,
 		 *       2) here, ri.uri is the http response code */
 		conn->request_info.uri = conn->request_info.request_uri;
 #endif
-        conn->request_info.local_uri = conn->request_info.request_uri;
+		conn->request_info.local_uri = conn->request_info.request_uri;
 
 		/* TODO (mid): Define proper return values - maybe return length?
 		 * For the first test use <0 for error and >0 for OK */
@@ -13561,7 +13562,7 @@ mg_download(const char *host,
 			 *       2) here, ri.uri is the http response code */
 			conn->request_info.uri = conn->request_info.request_uri;
 #endif
-            conn->request_info.local_uri = conn->request_info.request_uri;
+			conn->request_info.local_uri = conn->request_info.request_uri;
 		}
 	}
 
