@@ -3756,6 +3756,7 @@ START_TEST(test_large_file)
 	const struct mg_request_info *client_ri;
 	int64_t data_read;
 	int r;
+	int retry, retry_ok_cnt, retry_fail_cnt;
 
 
 /* Set options and start server */
@@ -3792,45 +3793,69 @@ START_TEST(test_large_file)
 	ctx = test_mg_start(&callbacks, 0, OPTIONS);
 	ck_assert(ctx != NULL);
 
-	/* connect client */
-	memset(client_err_buf, 0, sizeof(client_err_buf));
-	memset(client_data_buf, 0, sizeof(client_data_buf));
+	/* Try downloading several times */
+	retry_ok_cnt = 0;
+	retry_fail_cnt = 0;
+	for (retry = 0; retry < 3; retry++) {
+		int fail = 0;
+		/* connect client */
+		memset(client_err_buf, 0, sizeof(client_err_buf));
+		memset(client_data_buf, 0, sizeof(client_data_buf));
 
-	client = mg_download("127.0.0.1",
+		client =
+		    mg_download("127.0.0.1",
 #if defined(NO_SSL)
-	                     8080,
-	                     0,
+		                8080,
+		                0,
 #else
-	                     8443,
-	                     1,
+		                8443,
+		                1,
 #endif
-	                     client_err_buf,
-	                     sizeof(client_err_buf),
-	                     "GET /large.file HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+		                client_err_buf,
+		                sizeof(client_err_buf),
+		                "GET /large.file HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
 
-	ck_assert(client != NULL);
-	ck_assert_str_eq(client_err_buf, "");
+		ck_assert(client != NULL);
+		ck_assert_str_eq(client_err_buf, "");
 
-	client_ri = mg_get_request_info(client);
+		client_ri = mg_get_request_info(client);
 
-	ck_assert(client_ri != NULL);
-	ck_assert_str_eq(client_ri->local_uri, "200");
+		ck_assert(client_ri != NULL);
+		ck_assert_str_eq(client_ri->local_uri, "200");
 
-	ck_assert_int_eq(client_ri->content_length, LARGE_FILE_SIZE);
+		ck_assert_int_eq(client_ri->content_length, LARGE_FILE_SIZE);
 
-	data_read = 0;
-	while (data_read < client_ri->content_length) {
+		data_read = 0;
+		while (data_read < client_ri->content_length) {
+			r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+			if (r < 0) {
+				fail = 1;
+				break;
+			};
+			data_read += r;
+		}
+
+		/* Nothing left to read */
 		r = mg_read(client, client_data_buf, sizeof(client_data_buf));
-		ck_assert_int_ge(r, 0);
-		data_read += r;
+		if (fail) {
+			ck_assert_int_eq(r, -1);
+			retry_fail_cnt++;
+		} else {
+			ck_assert_int_eq(r, 0);
+			retry_ok_cnt++;
+		}
+
+		/* Close the client connection */
+		mg_close_connection(client);
 	}
 
-	/* Nothing left to read */
-	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
-	ck_assert_int_eq(r, 0);
-
-	/* Close the client connection */
-	mg_close_connection(client);
+#if defined(_WIN32)
+	ck_assert_int_le(retry_fail_cnt, 1);
+	ck_assert_int_ge(retry_fail_cnt, 2);
+#else
+	ck_assert_int_eq(retry_fail_cnt, 3);
+	ck_assert_int_eq(retry_fail_cnt, 0);
+#endif
 
 	/* Stop the server */
 	test_mg_stop(ctx);
