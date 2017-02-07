@@ -11050,8 +11050,16 @@ handle_request(struct mg_connection *conn)
 				if (extention_matches_script(conn, path)) {
 					/* 5.2.5. Substitute file is a script file */
 					is_script_resource = 1;
+				} else {
+					/* 5.2.6. Substitute file is a regular file */
+					is_script_resource = 0;
+					if (mg_stat(conn, path, &file)) {
+						is_found = 1;
+					}
 				}
 			}
+			/* If there is no substitute file, the server could return
+			 * a directory listing in a later step */
 		}
 	}
 
@@ -11307,23 +11315,16 @@ handle_request(struct mg_connection *conn)
 
 	/* 14. directories */
 	if (file.stat.is_directory) {
-		if (substitute_index_file(conn, path, sizeof(path), &file)) {
-			/* 14.1. use a substitute file */
-			/* TODO (high): substitute index may be a script resource.
-			 * define what should be possible in this case. */
+		/* Substitute files have already been handled above. */
+		/* Here we can either generate and send a directory listing,
+		 * or send an "access denied" error. */
+		if (!mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING],
+		                   "yes")) {
+			handle_directory_request(conn, path);
 		} else {
-			/* 14.2. no substitute file */
-			if (!mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING],
-			                   "yes")) {
-				handle_directory_request(conn, path);
-			} else {
-				send_http_error(conn,
-				                403,
-				                "%s",
-				                "Error: Directory listing denied");
-			}
-			return;
+			send_http_error(conn, 403, "%s", "Error: Directory listing denied");
 		}
+		return;
 	}
 
 	handle_file_based_request(conn, path, &file);
