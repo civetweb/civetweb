@@ -5725,11 +5725,70 @@ extention_matches_script(
 }
 
 
+/* For given directory path, substitute it to valid index file.
+ * Return 1 if index file has been found, 0 if not found.
+ * If the file is found, it's stats is returned in stp. */
+static int
+substitute_index_file(struct mg_connection *conn,
+                      char *path,
+                      size_t path_len,
+                      struct mg_file_stat *filestat)
+{
+#if !defined(NO_FILES)
+	const char *list = conn->ctx->config[INDEX_FILES];
+	struct vec filename_vec;
+	size_t n = strlen(path);
+	int found = 0;
+
+	/* The 'path' given to us points to the directory. Remove all trailing
+	 * directory separator characters from the end of the path, and
+	 * then append single directory separator character. */
+	while (n > 0 && path[n - 1] == '/') {
+		n--;
+	}
+	path[n] = '/';
+
+	/* Traverse index files list. For each entry, append it to the given
+	 * path and see if the file exists. If it exists, break the loop */
+	while ((list = next_option(list, &filename_vec, NULL)) != NULL) {
+		/* Ignore too long entries that may overflow path buffer */
+		if (filename_vec.len > path_len - (n + 2)) {
+			continue;
+		}
+
+		/* Prepare full path to the index file */
+		mg_strlcpy(path + n + 1, filename_vec.ptr, filename_vec.len + 1);
+
+		/* Does it exist? */
+		if (mg_stat(conn, path, filestat)) {
+			/* Yes it does, break the loop */
+			found = 1;
+			break;
+		}
+	}
+
+	/* If no index file exists, restore directory path */
+	if (!found) {
+		path[n] = '\0';
+	}
+
+	return found;
+#else
+	(void)conn;
+	(void)path;
+	(void)path_len;
+	(void)filep;
+
+	return 0;
+#endif
+}
+
+
 static void
 interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
               char *filename,                /* out: filename */
               size_t filename_buf_len,       /* in: size of filename buffer */
-              struct mg_file_stat *filestat, /* out: file structure */
+              struct mg_file_stat *filestat, /* out: file status structure */
               int *is_found,                 /* out: file found (directly) */
               int *is_script_resource,       /* out: handled by a script? */
               int *is_websocket_request,     /* out: websocket connetion? */
@@ -5813,7 +5872,6 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	/* Local file path and name, corresponding to requested URI
 	 * is now stored in "filename" variable. */
 	if (mg_stat(conn, filename, filestat)) {
-#if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 		/* File exists. Check if it is a script type. */
 		if (extention_matches_script(conn, filename)) {
 			/* The request addresses a CGI script or a Lua script. The URI
@@ -5828,8 +5886,29 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 			 * generated response. */
 			*is_script_resource = (!*is_put_or_delete_request);
 		}
-#endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
+
 		*is_found = 1;
+
+		/* If the request target is a directory,
+		 * there could be a substitute file
+		 * (index.html, index.cgi, ...). */
+		if (filestat->is_directory) {
+			if (substitute_index_file(
+			        conn, filename, filename_buf_len, filestat)) {
+				/* Substitute file found. It could ba a script file */
+				if (extention_matches_script(conn, filename)) {
+					/* Substitute file is a script file */
+					*is_script_resource = 1;
+				} else {
+					/* Substitute file is a regular file */
+					*is_script_resource = 0;
+					*is_found = (mg_stat(conn, filename, filestat) ? 1 : 0);
+				}
+			}
+			/* If there is no substitute file, the server could return
+			 * a directory listing in a later step */
+		}
+
 		return;
 	}
 
@@ -8195,62 +8274,6 @@ read_request(FILE *fp,
 
 	return request_len;
 }
-
-#if !defined(NO_FILES)
-/* For given directory path, substitute it to valid index file.
- * Return 1 if index file has been found, 0 if not found.
- * If the file is found, it's stats is returned in stp. */
-static int
-substitute_index_file(struct mg_connection *conn,
-                      char *path,
-                      size_t path_len,
-                      struct mg_file *filep)
-{
-	if (conn && conn->ctx) {
-		const char *list = conn->ctx->config[INDEX_FILES];
-		struct mg_file file = STRUCT_FILE_INITIALIZER;
-		struct vec filename_vec;
-		size_t n = strlen(path);
-		int found = 0;
-
-		/* The 'path' given to us points to the directory. Remove all trailing
-		 * directory separator characters from the end of the path, and
-		 * then append single directory separator character. */
-		while (n > 0 && path[n - 1] == '/') {
-			n--;
-		}
-		path[n] = '/';
-
-		/* Traverse index files list. For each entry, append it to the given
-		 * path and see if the file exists. If it exists, break the loop */
-		while ((list = next_option(list, &filename_vec, NULL)) != NULL) {
-			/* Ignore too long entries that may overflow path buffer */
-			if (filename_vec.len > path_len - (n + 2)) {
-				continue;
-			}
-
-			/* Prepare full path to the index file */
-			mg_strlcpy(path + n + 1, filename_vec.ptr, filename_vec.len + 1);
-
-			/* Does it exist? */
-			if (mg_stat(conn, path, &file.stat)) {
-				/* Yes it does, break the loop */
-				*filep = file;
-				found = 1;
-				break;
-			}
-		}
-
-		/* If no index file exists, restore directory path */
-		if (!found) {
-			path[n] = '\0';
-		}
-
-		return found;
-	}
-	return 0;
-}
-#endif
 
 
 #if !defined(NO_CACHING)
@@ -11040,27 +11063,6 @@ handle_request(struct mg_connection *conn)
 		              &is_script_resource,
 		              &is_websocket_request,
 		              &is_put_or_delete_request);
-
-		/* 5.2.3. If the request target is a directory,
-		 * there could be a substitute file
-		 * (index.html, index.cgi, ...). */
-#if !defined(NO_FILES)
-		if (file.stat.is_directory) {
-			if (substitute_index_file(conn, path, sizeof(path), &file)) {
-				/* 5.2.4. Substitute file found. It could ba a script file */
-				if (extention_matches_script(conn, path)) {
-					/* 5.2.5. Substitute file is a script file */
-					is_script_resource = 1;
-				} else {
-					/* 5.2.6. Substitute file is a regular file */
-					is_script_resource = 0;
-					is_found = (mg_stat(conn, path, &(file.stat)) ? 1 : 0);
-				}
-			}
-			/* If there is no substitute file, the server could return
-			 * a directory listing in a later step */
-#endif
-		}
 	}
 
 	/* 6. authorization check */
