@@ -3850,8 +3850,8 @@ START_TEST(test_large_file)
 	}
 
 #if defined(_WIN32)
-	ck_assert_int_le(retry_fail_cnt, 1);
-	ck_assert_int_ge(retry_ok_cnt, 2);
+	ck_assert_int_le(retry_fail_cnt, 2);
+	ck_assert_int_ge(retry_ok_cnt, 1);
 #else
 	ck_assert_int_eq(retry_fail_cnt, 0);
 	ck_assert_int_eq(retry_ok_cnt, 3);
