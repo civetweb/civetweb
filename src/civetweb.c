@@ -5777,7 +5777,7 @@ substitute_index_file(struct mg_connection *conn,
 	(void)conn;
 	(void)path;
 	(void)path_len;
-	(void)filep;
+	(void)filestat;
 
 	return 0;
 #endif
@@ -5955,7 +5955,22 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 				                                           * trailing \0 */
 				p[1] = '/';
 				*is_script_resource = 1;
+				*is_found = 1;
 				break;
+			} else if (substitute_index_file(
+			               conn, filename, filename_buf_len, filestat)) {
+				/* some intermediate directory has an index file */
+				if (extention_matches_script(conn, filename)) {
+					/* this index file is a script */
+					*is_script_resource = 1;
+					*is_found = 1;
+					break;
+				} else {
+					/* non-script files will not have sub-resources */
+					*is_script_resource = 0;
+					*is_found = 0;
+					break;
+				}
 			} else {
 				*p = '/';
 			}
