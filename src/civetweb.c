@@ -11044,6 +11044,7 @@ handle_request(struct mg_connection *conn)
 		/* 5.2.3. If the request target is a directory,
 		 * there could be a substitute file
 		 * (index.html, index.cgi, ...). */
+#if !defined(NO_FILES)
 		if (file.stat.is_directory) {
 			if (substitute_index_file(conn, path, sizeof(path), &file)) {
 				/* 5.2.4. Substitute file found. It could ba a script file */
@@ -11053,13 +11054,12 @@ handle_request(struct mg_connection *conn)
 				} else {
 					/* 5.2.6. Substitute file is a regular file */
 					is_script_resource = 0;
-					if (mg_stat(conn, path, &file)) {
-						is_found = 1;
-					}
+					is_found = (mg_stat(conn, path, &(file.stat)) ? 1 : 0);
 				}
 			}
 			/* If there is no substitute file, the server could return
 			 * a directory listing in a later step */
+#endif
 		}
 	}
 
