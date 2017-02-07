@@ -5689,6 +5689,42 @@ is_put_or_delete_method(const struct mg_connection *conn)
 }
 
 
+static int
+extention_matches_script(
+    struct mg_connection *conn, /* in: request (must be valid) */
+    const char *filename        /* in: filename  (must be valid) */
+    )
+{
+#if !defined(NO_CGI)
+	if (match_prefix(conn->ctx->config[CGI_EXTENSIONS],
+	                 strlen(conn->ctx->config[CGI_EXTENSIONS]),
+	                 filename) > 0) {
+		return 1;
+	}
+#endif
+#if defined(USE_LUA)
+	if (match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
+	                 strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
+	                 filename) > 0) {
+		return 1;
+	}
+#endif
+#if defined(USE_DUKTAPE)
+	if (match_prefix(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+	                 strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
+	                 filename) > 0) {
+		return 1;
+	}
+#endif
+	/* filename and conn could be unused, if all preocessor conditions
+	 * are false (no script language supported). */
+	(void)filename;
+	(void)conn;
+
+	return 0;
+}
+
+
 static void
 interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
               char *filename,                /* out: filename */
@@ -5779,24 +5815,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	if (mg_stat(conn, filename, filestat)) {
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 		/* File exists. Check if it is a script type. */
-		if (0
-#if !defined(NO_CGI)
-		    || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-		                    strlen(conn->ctx->config[CGI_EXTENSIONS]),
-		                    filename) > 0
-#endif
-#if defined(USE_LUA)
-		    || match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-		                    strlen(conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
-		                    filename) > 0
-#endif
-#if defined(USE_DUKTAPE)
-		    || match_prefix(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
-		                    strlen(
-		                        conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-		                    filename) > 0
-#endif
-		    ) {
+		if (extention_matches_script(conn, filename)) {
 			/* The request addresses a CGI script or a Lua script. The URI
 			 * corresponds to the script itself (like /path/script.cgi),
 			 * and there is no additional resource path
@@ -5845,25 +5864,8 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	for (p = filename + strlen(filename); p > filename + 1; p--) {
 		if (*p == '/') {
 			*p = '\0';
-			if ((0
-#if !defined(NO_CGI)
-			     || match_prefix(conn->ctx->config[CGI_EXTENSIONS],
-			                     strlen(conn->ctx->config[CGI_EXTENSIONS]),
-			                     filename) > 0
-#endif
-#if defined(USE_LUA)
-			     || match_prefix(conn->ctx->config[LUA_SCRIPT_EXTENSIONS],
-			                     strlen(
-			                         conn->ctx->config[LUA_SCRIPT_EXTENSIONS]),
-			                     filename) > 0
-#endif
-#if defined(USE_DUKTAPE)
-			     || match_prefix(
-			            conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
-			            strlen(conn->ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-			            filename) > 0
-#endif
-			     ) && mg_stat(conn, filename, filestat)) {
+			if (extention_matches_script(conn, filename)
+			    && mg_stat(conn, filename, filestat)) {
 				/* Shift PATH_INFO block one character right, e.g.
 				 * "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
 				 * conn->path_info is pointing to the local variable "path"
@@ -11038,6 +11040,19 @@ handle_request(struct mg_connection *conn)
 		              &is_script_resource,
 		              &is_websocket_request,
 		              &is_put_or_delete_request);
+
+		/* 5.2.3. If the request target is a directory,
+		 * there could be a substitute file
+		 * (index.html, index.cgi, ...). */
+		if (file.stat.is_directory) {
+			if (substitute_index_file(conn, path, sizeof(path), &file)) {
+				/* 5.2.4. Substitute file found. It could ba a script file */
+				if (extention_matches_script(conn, path)) {
+					/* 5.2.5. Substitute file is a script file */
+					is_script_resource = 1;
+				}
+			}
+		}
 	}
 
 	/* 6. authorization check */
@@ -11205,7 +11220,7 @@ handle_request(struct mg_connection *conn)
 		return;
 	}
 
-	/* 10. File is handled by a script. */
+	/* 10. Request is handled by a script */
 	if (is_script_resource) {
 		handle_file_based_request(conn, path, &file);
 		return;
