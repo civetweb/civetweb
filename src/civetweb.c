@@ -5893,9 +5893,18 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 		 * there could be a substitute file
 		 * (index.html, index.cgi, ...). */
 		if (filestat->is_directory) {
+			/* Use a local copy here, since substitute_index_file will
+			 * change the content of the file status */
+			struct mg_file_stat tmp_filestat;
+			memset(&tmp_filestat, 0, sizeof(tmp_filestat));
+
 			if (substitute_index_file(
-			        conn, filename, filename_buf_len, filestat)) {
-				/* Substitute file found. It could ba a script file */
+			        conn, filename, filename_buf_len, &tmp_filestat)) {
+
+				/* Substitute file found. Copy stat to the output, then
+				 * check if the file is a script file */
+				*filestat = tmp_filestat;
+
 				if (extention_matches_script(conn, filename)) {
 					/* Substitute file is a script file */
 					*is_script_resource = 1;
@@ -5908,7 +5917,6 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 			/* If there is no substitute file, the server could return
 			 * a directory listing in a later step */
 		}
-
 		return;
 	}
 
