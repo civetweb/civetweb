@@ -5689,6 +5689,7 @@ is_put_or_delete_method(const struct mg_connection *conn)
 }
 
 
+#if !defined(NO_FILES)
 static int
 extention_matches_script(
     struct mg_connection *conn, /* in: request (must be valid) */
@@ -5734,7 +5735,6 @@ substitute_index_file(struct mg_connection *conn,
                       size_t path_len,
                       struct mg_file_stat *filestat)
 {
-#if !defined(NO_FILES)
 	const char *list = conn->ctx->config[INDEX_FILES];
 	struct vec filename_vec;
 	size_t n = strlen(path);
@@ -5773,15 +5773,8 @@ substitute_index_file(struct mg_connection *conn,
 	}
 
 	return found;
-#else
-	(void)conn;
-	(void)path;
-	(void)path_len;
-	(void)filestat;
-
-	return 0;
-#endif
 }
+#endif
 
 
 static void
