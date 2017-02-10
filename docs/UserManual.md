@@ -356,7 +356,11 @@ A pattern for the files to hide. Files that match the pattern will not
 show up in directory listing and return `404 Not Found` if requested. Pattern
 must be for a file name only, not including directory names. Example:
 
-    civetweb -hide_files_patterns secret.txt|*.hide
+    civetweb -hide_files_patterns secret.txt|**.hide
+
+Note: hide\_file\_patterns uses the pattern described above. If you want to
+hide all files with a certain extension, make sure to use **.extension
+(not just *.extension).
 
 ### request\_timeout\_ms `30000`
 Timeout for network read and network write operations, in milliseconds.
