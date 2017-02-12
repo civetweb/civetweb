@@ -16,7 +16,8 @@ rm civetweb_coverity_check.tgz
 make clean
 
 # new scan build
-../cov-analysis-linux64-8.7.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_LUA_SHARED=1
+../cov-analysis-linux64-8.7.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1
+#../cov-analysis-linux64-8.7.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_LUA_SHARED=1
 
 # pack build results for upload
 tar czvf civetweb_coverity_check.tgz cov-int
