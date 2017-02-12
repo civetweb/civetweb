@@ -166,7 +166,10 @@ timer_thread_run(void *thread_func_param)
 
 		d = timer_getcurrenttime();
 	}
+
+pthread_mutex_lock(&ctx->timers->mutex);
 	ctx->timers->timer_count = 0;
+pthread_mutex_unlock(&ctx->timers->mutex);
 }
 
 
@@ -207,7 +210,12 @@ timers_exit(struct mg_context *ctx)
 	if (ctx->timers) {
 		pthread_mutex_lock(&ctx->timers->mutex);
 		ctx->timers->timer_count = 0;
+		/* TODO: Do we really need to unlock the mutex, before 
+		 * destroying it, if it's destroyed by the thread currently
+		 * owning the mutex? */
+		pthread_mutex_unlock(&ctx->timers->mutex); 
 		(void)pthread_mutex_destroy(&ctx->timers->mutex);
 		mg_free(ctx->timers);
 	}
 }
+

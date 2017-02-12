@@ -13297,10 +13297,13 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 
 	auth_domain_check_enabled =
 	    !strcmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes");
-	/* DNS is case insensitive, so use case insensitive string compare here
-	 */
+
+	if (!auth_domain_check_enabled) {
+		return 0;
+	}
+
 	server_domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
-	if (!server_domain && auth_domain_check_enabled) {
+	if (!server_domain) {
 		return 0;
 	}
 	server_domain_len = strlen(server_domain);
@@ -13308,6 +13311,8 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 		return 0;
 	}
 
+	/* DNS is case insensitive, so use case insensitive string compare here
+	 */
 	for (i = 0; abs_uri_protocols[i].proto != NULL; i++) {
 		if (mg_strncasecmp(uri,
 		                   abs_uri_protocols[i].proto,
