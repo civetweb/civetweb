@@ -1,5 +1,6 @@
 #! /bin/sh
 
+# check if we use the correct directory
 ls src/civetweb.c
 if [ "$?" = "0" ]; then
 	echo "Building files for coverity check ..."
@@ -9,14 +10,18 @@ else
 	exit 1
 fi
 
+# remove last build
 rm -rf cov_int/
+rm civetweb_coverity_check.tgz
 make clean
 
-../cov-analysis-linux64-7.6.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_LUA_SHARED=1
+# new scan build
+../cov-analysis-linux64-8.7.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_LUA_SHARED=1
 
-rm civetweb_coverity_check.tgz
+# pack build results for upload
 tar czvf civetweb_coverity_check.tgz cov-int
 
+# check if the build was successful
 echo
 ls -la civetweb_coverity_check.tgz
 
@@ -29,5 +34,6 @@ else
 	exit 1
 fi
 
+# return "ok"
 exit 0
 
