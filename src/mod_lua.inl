@@ -654,15 +654,20 @@ lsp_get_var(lua_State *L)
 	const char *data, *var_name;
 	size_t data_len, occurrence;
 	int ret;
-	char dst[512];
 
 	if (num_args >= 2 && num_args <= 3) {
+		char *dst;
 		data = lua_tolstring(L, 1, &data_len);
 		var_name = lua_tostring(L, 2);
 		occurrence = (num_args > 2) ? (long)lua_tonumber(L, 3) : 0;
 
-		ret =
-		    mg_get_var2(data, data_len, var_name, dst, sizeof(dst), occurrence);
+		/* Allocate dynamically, so there is no internal limit for get_var */
+		dst = (char *)mg_malloc(data_len + 1);
+		if (!dst) {
+			return luaL_error(L, "out of memory in get_var() call");
+		}
+
+		ret = mg_get_var2(data, data_len, var_name, dst, data_len, occurrence);
 		if (ret >= 0) {
 			/* Variable found: return value to Lua */
 			lua_pushstring(L, dst);
@@ -670,6 +675,7 @@ lsp_get_var(lua_State *L)
 			/* Variable not found (TODO (mid): may be string too long) */
 			lua_pushnil(L);
 		}
+		mg_free(dst);
 	} else {
 		/* Syntax error */
 		return luaL_error(L, "invalid get_var() call");
@@ -721,22 +727,34 @@ lsp_get_cookie(lua_State *L)
 	const char *cookie;
 	const char *var_name;
 	int ret;
-	char dst[512];
 
 	if (num_args == 2) {
-		cookie = lua_tostring(L, 1);
+		/* Correct number of arguments */
+		size_t data_len;
+		char *dst;
+
+		cookie = lua_tolstring(L, 1, &data_len);
 		var_name = lua_tostring(L, 2);
-		if (cookie != NULL && var_name != NULL) {
-			ret = mg_get_cookie(cookie, var_name, dst, sizeof(dst));
-		} else {
-			ret = -1;
+
+		if (cookie == NULL || var_name == NULL) {
+			/* Syntax error */
+			return luaL_error(L, "invalid get_cookie() call");
 		}
+
+		dst = (char *)mg_malloc(data_len + 1);
+		if (!dst) {
+			return luaL_error(L, "out of memory in get_cookie() call");
+		}
+
+		ret = mg_get_cookie(cookie, var_name, dst, data_len);
 
 		if (ret >= 0) {
 			lua_pushlstring(L, dst, ret);
 		} else {
 			lua_pushnil(L);
 		}
+		mg_free(dst);
+
 	} else {
 		/* Syntax error */
 		return luaL_error(L, "invalid get_cookie() call");
