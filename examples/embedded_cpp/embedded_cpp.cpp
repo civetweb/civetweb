@@ -137,7 +137,7 @@ class FooHandler : public CivetHandler
 		mg_printf(conn,
 		          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>\n",
 		          req_info->request_method,
-		          req_info->uri,
+		          req_info->request_uri,
 		          req_info->http_version);
 		mg_printf(conn, "</body></html>\n");
 
@@ -162,7 +162,7 @@ class FooHandler : public CivetHandler
 		mg_printf(conn,
 		          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>\n",
 		          req_info->request_method,
-		          req_info->uri,
+		          req_info->request_uri,
 		          req_info->http_version);
 		mg_printf(conn, "<p>Content Length: %li</p>\n", (long)tlen);
 		mg_printf(conn, "<pre>\n");
