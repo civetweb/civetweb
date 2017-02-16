@@ -10968,10 +10968,6 @@ handle_request(struct mg_connection *conn)
 
 	path[0] = 0;
 
-	if (!ri) {
-		return;
-	}
-
 	/* 1. get the request url */
 	/* 1.1. split into url and query string */
 	if ((conn->request_info.query_string = strchr(ri->request_uri, '?'))
