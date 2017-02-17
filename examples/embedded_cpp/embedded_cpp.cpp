@@ -177,7 +177,7 @@ class FooHandler : public CivetHandler
 				break;
 			}
 			wlen = mg_write(conn, buf, (size_t)rlen);
-			if (rlen != rlen) {
+			if (wlen != rlen) {
 				break;
 			}
 			nlen += wlen;
@@ -244,7 +244,7 @@ class FooHandler : public CivetHandler
                     break;
                 }
                 wlen = fwrite(buf, 1, (size_t)rlen, f);
-                if (rlen != rlen) {
+                if (wlen != rlen) {
                     fail = 1;
                     break;
                 }
