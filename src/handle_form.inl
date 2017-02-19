@@ -90,7 +90,7 @@ url_encoded_field_get(const struct mg_connection *conn,
 {
 	char key_dec[1024];
 
-	char *value_dec = mg_malloc(value_len + 1);
+	char *value_dec = (char*)mg_malloc(value_len + 1);
 	int value_dec_len, ret;
 
 	if (!value_dec) {
@@ -521,8 +521,8 @@ mg_handle_form_request(struct mg_connection *conn,
 		size_t bl;
 		ptrdiff_t used;
 		struct mg_request_info part_header;
-		char *hbuf, *hend, *fbeg, *fend, *nbeg, *nend;
-		const char *content_disp;
+		char *hbuf;
+		const char *content_disp, *hend, *fbeg, *fend, *nbeg, *nend;
 		const char *next;
 
 		memset(&part_header, 0, sizeof(part_header));

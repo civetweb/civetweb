@@ -8565,7 +8565,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 			addenv(env, "SCRIPT_NAME=%s", conn->request_info.local_uri);
 		} else {
 			/* URI: /path_to_script/ ... using index.cgi */
-			char *index_file = strrchr(prog, '/');
+			const char *index_file = strrchr(prog, '/');
 			if (index_file) {
 				addenv(env,
 				       "SCRIPT_NAME=%s%s",
@@ -13195,7 +13195,8 @@ static int
 get_uri_type(const char *uri)
 {
 	int i;
-	char *hostend, *portbegin, *portend;
+	const char *hostend, *portbegin;
+	char *portend;
 	unsigned long port;
 
 	/* According to the HTTP standard
@@ -14904,7 +14905,7 @@ mg_start(const struct mg_callbacks *callbacks,
 
 	/* Start worker threads */
 	for (i = 0; i < ctx->cfg_worker_threads; i++) {
-		struct worker_thread_args *wta =
+		struct worker_thread_args *wta = (struct worker_thread_args *)
 		    mg_malloc(sizeof(struct worker_thread_args));
 		if (wta) {
 			wta->ctx = ctx;
