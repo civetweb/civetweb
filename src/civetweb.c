@@ -14905,8 +14905,8 @@ mg_start(const struct mg_callbacks *callbacks,
 
 	/* Start worker threads */
 	for (i = 0; i < ctx->cfg_worker_threads; i++) {
-		struct worker_thread_args *wta = (struct worker_thread_args *)
-		    mg_malloc(sizeof(struct worker_thread_args));
+		struct worker_thread_args *wta = (struct worker_thread_args *)mg_malloc(
+		    sizeof(struct worker_thread_args));
 		if (wta) {
 			wta->ctx = ctx;
 			wta->index = (int)i;
