@@ -11149,19 +11149,27 @@ handle_request(struct mg_connection *conn)
 			i = callback_handler(conn, callback_data);
 			if (i > 0) {
 				/* Do nothing, callback has served the request. Store
-				 * the
-				 * return value as status code for the log and discard
-				 * all
-				 * data from the client not used by the callback. */
+				 * then return value as status code for the log and discard
+				 * all data from the client not used by the callback. */
 				conn->status_code = i;
 				discard_unread_request_data(conn);
 			} else {
-				/* TODO (high): what if the handler did NOT handle the
-				 * request */
-				/* The last version did handle this as a file request,
-				 * but
-				 * since a file request is not always a script resource,
-				 * the authorization check might be different */
+				/* The handler did NOT handle the request. */
+				/* Some proper reactions would be:
+				 * a) close the connections without sending anything
+				 * b) send a 404 not found
+				 * c) try if there is a file matching the URI
+				 * It would be possible to do a, b or c in the callback
+				 * implementation, and return 1 - we cannot do anything
+				 * here, that is not possible in the callback.
+				 *
+				 * TODO: What would be the best reaction here?
+				 * (Note: The reaction may change, if there is a better idea.)
+				 */
+
+				/* For the moment, use option c: We look for a proper file,
+				 * but since a file request is not always a script resource,
+				 * the authorization check might be different. */
 				interpret_uri(conn,
 				              path,
 				              sizeof(path),
