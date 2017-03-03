@@ -2797,6 +2797,8 @@ START_TEST(test_http_auth)
 		"static_file_max_age",
 		"0",
 #endif
+		"put_delete_auth_file",
+		"put_delete_auth_file.csv",
 		NULL,
 	};
 	struct mg_context *ctx;
@@ -2843,6 +2845,13 @@ START_TEST(test_http_auth)
 	}
 
 	(void)remove(passwd_file);
+	(void)remove("put_delete_auth_file.csv");
+
+	client_res = mg_modify_passwords_file("put_delete_auth_file.csv",
+	                                      domain,
+	                                      "admin",
+	                                      "adminpass");
+	ck_assert_int_eq(client_res, 1);
 
 	/* Read file before a .htpasswd file has been created */
 	memset(client_err, 0, sizeof(client_err));
@@ -2959,7 +2968,7 @@ START_TEST(test_http_auth)
 	                    NULL);
 	ck_assert_ptr_eq(HA_md5_ret, HA_md5_buf);
 
-	/* Retry with Authorization */
+	/* Retry with authorization */
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
@@ -2999,6 +3008,41 @@ START_TEST(test_http_auth)
 
 	test_sleep(1);
 
+	/* Retry DELETE with authorization of a user not authorized for DELETE */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+	ck_assert(client_conn != NULL);
+	ck_assert_str_eq(client_err, "");
+	mg_printf(client_conn, "DELETE /%s HTTP/1.0\r\n", test_file);
+	mg_printf(client_conn,
+	          "Authorization: Digest "
+	          "username=\"%s\", "
+	          "realm=\"%s\", "
+	          "nonce=\"%s\", "
+	          "uri=\"/%s\", "
+	          "qop=auth, "
+	          "nc=%s, "
+	          "cnonce=\"%s\", "
+	          "response=\"%s\"\r\n\r\n",
+	          "user",
+	          domain,
+	          nonce,
+	          test_file,
+	          nc,
+	          cnonce,
+	          HA_md5_buf);
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->local_uri, "401");
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
 
 	/* Remove the user from the .htpasswd file again */
 	client_res = mg_modify_passwords_file(passwd_file, domain, "user", NULL);
@@ -3060,6 +3104,7 @@ START_TEST(test_http_auth)
 	test_mg_stop(ctx);
 	(void)remove(test_file);
 	(void)remove(passwd_file);
+	(void)remove("put_delete_auth_file.csv");
 
 #endif
 }
@@ -3864,6 +3909,153 @@ START_TEST(test_large_file)
 END_TEST
 
 
+static int test_mg_store_body_con_len = 20000;
+
+
+static int
+test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *_)
+{
+	char path[4096] = {0};
+	const struct mg_request_info *info = mg_get_request_info(conn);
+	long long rc;
+	int cerrno;
+
+	sprintf(path, "./%s", info->local_uri);
+	rc = mg_store_body(conn, path);
+
+	ck_assert_int_eq(test_mg_store_body_con_len, rc);
+
+	if (rc < 0) {
+		cerrno = errno;
+		mg_printf(conn,
+		          "HTTP/1.1 500 Internal Server Error\r\n"
+		          "Content-Type:text/plain;charset=UTF-8\r\n"
+		          "Connection:close\r\n\r\n"
+		          "%s (mg: %lld, errno: %d) - %s\n",
+		          path,
+		          rc,
+		          cerrno,
+		          strerror(cerrno));
+		mg_close_connection(conn);
+		return 500;
+	}
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Type:text/plain;charset=UTF-8\r\n"
+	          "Connection:close\r\n\r\n"
+	          "%s OK (%lld bytes saved)\n",
+	          path,
+	          rc);
+	mg_close_connection(conn);
+
+	return 200;
+}
+
+
+static int
+test_mg_store_body_begin_request_callback(struct mg_connection *conn)
+{
+	const struct mg_request_info *info = mg_get_request_info(conn);
+
+	if (strcmp(info->request_method, "PUT") == 0
+	    || strcmp(info->request_method, "DELETE") == 0) {
+		return test_mg_store_body_put_delete_handler(conn, NULL);
+	}
+	return 0;
+}
+
+
+START_TEST(test_mg_store_body)
+{
+	/* Client data */
+	char client_err_buf[256];
+	char client_data_buf[1024];
+	struct mg_connection *client;
+	const struct mg_request_info *client_ri;
+	int r;
+	char check_data[256];
+	char *check_ptr;
+
+
+	/* Server context handle */
+	struct mg_context *ctx;
+	struct mg_callbacks callbacks = {0};
+	const char *options[] = {"document_root",
+	                         "./",
+	                         "static_file_max_age",
+	                         "0",
+	                         "listening_ports",
+	                         "127.0.0.1:9001",
+	                         "num_threads",
+	                         "1",
+	                         NULL};
+
+	callbacks.begin_request = test_mg_store_body_begin_request_callback;
+
+	/* Initialize the library */
+	mg_init_library(0);
+
+	/* Start the server */
+	ctx = mg_start(&callbacks, NULL, options);
+	ck_assert(ctx != NULL);
+
+	/* Run the server for 15 seconds */
+	test_sleep(15);
+
+	/* Call a test client */
+	client = mg_connect_client(
+	    "127.0.0.1", 9001, 0, client_err_buf, sizeof(client_err_buf));
+
+	ck_assert(client != NULL);
+	ck_assert_str_eq(client_err_buf, "");
+
+	mg_printf(client,
+	          "PUT /%s HTTP/1.0\r\nContent-Length: %i\r\n\r\n",
+	          "test_file_name.txt",
+	          test_mg_store_body_con_len);
+
+	r = 0;
+	while (r < test_mg_store_body_con_len) {
+		int l = mg_write(client, "1234567890", 10);
+		ck_assert_int_eq(l, 10);
+		r += 10;
+	}
+
+	r = mg_get_response(client, client_err_buf, sizeof(client_err_buf), 10000);
+	ck_assert_int_ge(r, 0);
+	ck_assert_str_eq(client_err_buf, "");
+
+	client_ri = mg_get_request_info(client);
+	ck_assert(client_ri != NULL);
+
+	/* Response must be 200 OK  */
+	ck_assert_ptr_ne(client_ri->request_uri, NULL);
+	ck_assert_str_eq(client_ri->request_uri, "200");
+
+	/* Nothing left to read */
+	r = mg_read(client, client_data_buf, sizeof(client_data_buf) - 1);
+	ck_assert_int_eq(r, 0);
+	client_data_buf[r] = 0;
+
+	sprintf(check_data, "(%i bytes saved)", test_mg_store_body_con_len);
+	check_ptr = strstr(client_data_buf, check_data);
+	ck_assert_ptr_ne(check_ptr, NULL);
+
+	mg_close_connection(client);
+
+	/* Run the server for 5 seconds */
+	test_sleep(5);
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+
+	/* Un-initialize the library */
+	mg_exit_library();
+}
+END_TEST
+
+
 #if defined(MG_USE_OPEN_FILE) && !defined(NO_FILES)
 
 #define FILE_IN_MEM_SIZE (1024 * 100)
@@ -3906,14 +4098,12 @@ START_TEST(test_file_in_memory)
 	int64_t data_read;
 	int r, i;
 
-
 	/* Prepare test data */
 	file_in_mem_data = (char *)malloc(FILE_IN_MEM_SIZE);
 	ck_assert_ptr_ne(file_in_mem_data, NULL);
 	for (r = 0; r < FILE_IN_MEM_SIZE; r++) {
 		file_in_mem_data[r] = (char)(r);
 	}
-
 
 	/* Set options and start server */
 	OPTIONS[opt_cnt++] = "document_root";
@@ -4188,7 +4378,8 @@ make_public_server_suite(void)
 	suite_add_tcase(suite, tcase_serverandclienttls);
 
 	tcase_add_test(tcase_serverrequests, test_request_handlers);
-	tcase_set_timeout(tcase_serverrequests, 120);
+	tcase_add_test(tcase_serverrequests, test_mg_store_body);
+	tcase_set_timeout(tcase_serverrequests, 180);
 	suite_add_tcase(suite, tcase_serverrequests);
 
 	tcase_add_test(tcase_handle_form, test_handle_form);
@@ -4247,6 +4438,7 @@ MAIN_PUBLIC_SERVER(void)
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
 	test_request_handlers(0);
+	test_mg_store_body(0);
 	test_mg_server_and_client_tls(0);
 	test_handle_form(0);
 	test_http_auth(0);
