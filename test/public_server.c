@@ -3913,12 +3913,13 @@ static int test_mg_store_body_con_len = 20000;
 
 
 static int
-test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *_)
+test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *ignored)
 {
 	char path[4096] = {0};
 	const struct mg_request_info *info = mg_get_request_info(conn);
-	long long rc;
-	int cerrno;
+	int64_t rc;
+
+	(void)ignored;
 
 	sprintf(path, "./%s", info->local_uri);
 	rc = mg_store_body(conn, path);
@@ -3926,16 +3927,13 @@ test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *_)
 	ck_assert_int_eq(test_mg_store_body_con_len, rc);
 
 	if (rc < 0) {
-		cerrno = errno;
 		mg_printf(conn,
 		          "HTTP/1.1 500 Internal Server Error\r\n"
 		          "Content-Type:text/plain;charset=UTF-8\r\n"
 		          "Connection:close\r\n\r\n"
-		          "%s (mg: %lld, errno: %d) - %s\n",
+		          "%s (ret: %lld)\n",
 		          path,
-		          rc,
-		          cerrno,
-		          strerror(cerrno));
+		          rc);
 		mg_close_connection(conn);
 		return 500;
 	}
@@ -3980,7 +3978,7 @@ START_TEST(test_mg_store_body)
 
 	/* Server context handle */
 	struct mg_context *ctx;
-	struct mg_callbacks callbacks = {0};
+	struct mg_callbacks callbacks;
 	const char *options[] = {"document_root",
 	                         "./",
 	                         "static_file_max_age",
@@ -3991,6 +3989,7 @@ START_TEST(test_mg_store_body)
 	                         "1",
 	                         NULL};
 
+	memset(&callbacks, 0, sizeof(callbacks));
 	callbacks.begin_request = test_mg_store_body_begin_request_callback;
 
 	/* Initialize the library */
@@ -4035,7 +4034,7 @@ START_TEST(test_mg_store_body)
 
 	/* Nothing left to read */
 	r = mg_read(client, client_data_buf, sizeof(client_data_buf) - 1);
-	ck_assert_int_eq(r, 0);
+	ck_assert_int_gt(r, 0);
 	client_data_buf[r] = 0;
 
 	sprintf(check_data, "(%i bytes saved)", test_mg_store_body_con_len);
