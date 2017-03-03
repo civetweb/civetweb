@@ -5788,8 +5788,6 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
               int *is_put_or_delete_request  /* out: put/delete a file? */
               )
 {
-/* TODO (high / maintainability issue): Restructure this function */
-
 #if !defined(NO_FILES)
 	const char *uri = conn->request_info.local_uri;
 	const char *root = conn->ctx->config[DOCUMENT_ROOT];
@@ -5806,12 +5804,17 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	(void)filename_buf_len; /* unused if NO_FILES is defined */
 #endif
 
+	/* Step 1: Set all initially unknown outputs to zero */
 	memset(filestat, 0, sizeof(*filestat));
 	*filename = 0;
 	*is_found = 0;
 	*is_script_resource = 0;
+
+	/* Step 2: Check if the request attempts to modify the file system */
 	*is_put_or_delete_request = is_put_or_delete_method(conn);
 
+/* Step 3: Check if it is a websocket request, and modify the document
+ * root if required */
 #if defined(USE_WEBSOCKET)
 	*is_websocket_request = is_websocket_protocol(conn);
 #if !defined(NO_FILES)
@@ -5824,6 +5827,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 #endif /* USE_WEBSOCKET */
 
 #if !defined(NO_FILES)
+	/* Step 4: If there is no root directory, don't look for files. */
 	/* Note that root == NULL is a regular use case here. This occurs,
 	 * if all requests are handled by callbacks, so the WEBSOCKET_ROOT
 	 * config is not required. */
@@ -5833,9 +5837,10 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 		return;
 	}
 
-	/* Using buf_len - 1 because memmove() for PATH_INFO may shift part
-	 * of the path one byte on the right.
-	 * If document_root is NULL, leave the file empty. */
+	/* Step 5: Determine the local file path from the root path and the
+	 * request uri. */
+	/* Using filename_buf_len - 1 because memmove() for PATH_INFO may shift
+	 * part of the path one byte on the right. */
 	mg_snprintf(
 	    conn, &truncated, filename, filename_buf_len - 1, "%s%s", root, uri);
 
@@ -5843,6 +5848,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 		goto interpret_cleanup;
 	}
 
+	/* Step 6: URI rewriting */
 	rewrite = conn->ctx->config[REWRITE];
 	while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
 		if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
@@ -5862,15 +5868,20 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 		goto interpret_cleanup;
 	}
 
+	/* Step 7: Check if the file exists at the server */
 	/* Local file path and name, corresponding to requested URI
 	 * is now stored in "filename" variable. */
 	if (mg_stat(conn, filename, filestat)) {
-		/* File exists. Check if it is a script type. */
+		/* 7.1: File exists. */
+		*is_found = 1;
+
+		/* 7.2: Check if it is a script type. */
 		if (extention_matches_script(conn, filename)) {
-			/* The request addresses a CGI script or a Lua script. The URI
-			 * corresponds to the script itself (like /path/script.cgi),
-			 * and there is no additional resource path
-			 * (like /path/script.cgi/something).
+			/* The request addresses a CGI resource, Lua script or
+			 * server-side javascript.
+			 * The URI corresponds to the script itself (like
+			 * /path/script.cgi), and there is no additional resource
+			 * path (like /path/script.cgi/something).
 			 * Requests that modify (replace or delete) a resource, like
 			 * PUT and DELETE requests, should replace/delete the script
 			 * file.
@@ -5880,11 +5891,8 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 			*is_script_resource = (!*is_put_or_delete_request);
 		}
 
-		*is_found = 1;
-
-		/* If the request target is a directory,
-		 * there could be a substitute file
-		 * (index.html, index.cgi, ...). */
+		/* 7.3: If the request target is a directory, there could be
+		 * a substitute file (index.html, index.cgi, ...). */
 		if (filestat->is_directory) {
 			/* Use a local copy here, since substitute_index_file will
 			 * change the content of the file status */
@@ -5913,6 +5921,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 		return;
 	}
 
+	/* Step 8: Check for zipped files: */
 	/* If we can't find the actual file, look for the file
 	 * with the same name but a .gz extension. If we find it,
 	 * use that and set the gzipped flag in the file struct
@@ -5940,6 +5949,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	}
 
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
+	/* Step 9: Script resources may handle sub-resources */
 	/* Support PATH_INFO for CGI scripts. */
 	for (p = filename + strlen(filename); p > filename + 1; p--) {
 		if (*p == '/') {
