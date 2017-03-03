@@ -24,7 +24,7 @@ struct ttimers {
 };
 
 
-static double
+TIMER_API double
 timer_getcurrenttime(void)
 {
 #if defined(_WIN32)
@@ -51,7 +51,7 @@ timer_getcurrenttime(void)
 }
 
 
-static int
+TIMER_API int
 timer_add(struct mg_context *ctx,
           double next_time,
           double period,
@@ -189,7 +189,7 @@ timer_thread(void *thread_func_param)
 #endif /* _WIN32 */
 
 
-static int
+TIMER_API int
 timers_init(struct mg_context *ctx)
 {
 	ctx->timers = (struct ttimers *)mg_calloc(sizeof(struct ttimers), 1);
@@ -204,7 +204,7 @@ timers_init(struct mg_context *ctx)
 }
 
 
-static void
+TIMER_API void
 timers_exit(struct mg_context *ctx)
 {
 	if (ctx->timers) {

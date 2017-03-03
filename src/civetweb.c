@@ -9700,6 +9700,7 @@ mg_unlock_context(struct mg_context *ctx)
 }
 
 #if defined(USE_TIMERS)
+#define TIMER_API static
 #include "timer.inl"
 #endif /* USE_TIMERS */
 
