@@ -3931,9 +3931,9 @@ test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *ignored)
 		          "HTTP/1.1 500 Internal Server Error\r\n"
 		          "Content-Type:text/plain;charset=UTF-8\r\n"
 		          "Connection:close\r\n\r\n"
-		          "%s (ret: %lld)\n",
+		          "%s (ret: %ld)\n",
 		          path,
-		          rc);
+		          (long)rc);
 		mg_close_connection(conn);
 		return 500;
 	}
@@ -3942,9 +3942,9 @@ test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *ignored)
 	          "HTTP/1.1 200 OK\r\n"
 	          "Content-Type:text/plain;charset=UTF-8\r\n"
 	          "Connection:close\r\n\r\n"
-	          "%s OK (%lld bytes saved)\n",
+	          "%s OK (%ld bytes saved)\n",
 	          path,
-	          rc);
+	          (long)rc);
 	mg_close_connection(conn);
 
 	return 200;
