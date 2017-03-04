@@ -3912,6 +3912,7 @@ START_TEST(test_large_file)
 END_TEST
 
 
+#if !defined(NO_FILES)
 static int test_mg_store_body_con_len = 20000;
 
 
@@ -3965,10 +3966,12 @@ test_mg_store_body_begin_request_callback(struct mg_connection *conn)
 	}
 	return 0;
 }
+#endif
 
 
 START_TEST(test_mg_store_body)
 {
+#if !defined(NO_FILES)
 	/* Client data */
 	char client_err_buf[256];
 	char client_data_buf[1024];
@@ -4056,6 +4059,9 @@ START_TEST(test_mg_store_body)
 
 	/* Un-initialize the library */
 	mg_exit_library();
+#else
+	mark_point();
+#endif
 }
 END_TEST
 
