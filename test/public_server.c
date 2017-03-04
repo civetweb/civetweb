@@ -3912,7 +3912,7 @@ START_TEST(test_large_file)
 END_TEST
 
 
-#if !defined(NO_FILES)
+
 static int test_mg_store_body_con_len = 20000;
 
 
@@ -3966,7 +3966,6 @@ test_mg_store_body_begin_request_callback(struct mg_connection *conn)
 	}
 	return 0;
 }
-#endif
 
 
 START_TEST(test_mg_store_body)
@@ -3985,10 +3984,15 @@ START_TEST(test_mg_store_body)
 	/* Server context handle */
 	struct mg_context *ctx;
 	struct mg_callbacks callbacks;
-	const char *options[] = {"document_root",
+	const char *options[] = {
+#if !defined(NO_FILES)
+		                     "document_root",
 	                         ".",
+#endif
+#if !defined(NO_CACHING)
 	                         "static_file_max_age",
 	                         "0",
+#endif
 	                         "listening_ports",
 	                         "127.0.0.1:8082",
 	                         "num_threads",
@@ -4059,9 +4063,6 @@ START_TEST(test_mg_store_body)
 
 	/* Un-initialize the library */
 	mg_exit_library();
-#else
-	mark_point();
-#endif
 }
 END_TEST
 
