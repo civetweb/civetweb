@@ -3793,7 +3793,7 @@ START_TEST(test_large_file)
 #if !defined(NO_SSL)
 	const char *ssl_cert = locate_ssl_cert();
 #endif
-    char errmsg[256]={0};
+	char errmsg[256] = {0};
 
 	/* Client var */
 	struct mg_connection *client;
@@ -3835,10 +3835,10 @@ START_TEST(test_large_file)
 
 	memset(&callbacks, 0, sizeof(callbacks));
 	callbacks.begin_request = test_large_file_begin_request;
-    callbacks.log_message = log_msg_func;
+	callbacks.log_message = log_msg_func;
 
-	ctx = test_mg_start(&callbacks, (void*)errmsg, OPTIONS);
-    ck_assert_str_eq(errmsg, "");
+	ctx = test_mg_start(&callbacks, (void *)errmsg, OPTIONS);
+	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
 	/* Try downloading several times */
@@ -3912,7 +3912,6 @@ START_TEST(test_large_file)
 END_TEST
 
 
-
 static int test_mg_store_body_con_len = 20000;
 
 
@@ -3978,36 +3977,37 @@ START_TEST(test_mg_store_body)
 	int r;
 	char check_data[256];
 	char *check_ptr;
-    char errmsg[256]={0};
+	char errmsg[256] = {0};
 
 	/* Server context handle */
 	struct mg_context *ctx;
 	struct mg_callbacks callbacks;
 	const char *options[] = {
 #if !defined(NO_FILES)
-		                     "document_root",
-	                         ".",
+		"document_root",
+		".",
 #endif
 #if !defined(NO_CACHING)
-	                         "static_file_max_age",
-	                         "0",
+		"static_file_max_age",
+		"0",
 #endif
-	                         "listening_ports",
-	                         "127.0.0.1:8082",
-	                         "num_threads",
-	                         "1",
-	                         NULL};
+		"listening_ports",
+		"127.0.0.1:8082",
+		"num_threads",
+		"1",
+		NULL
+	};
 
 	memset(&callbacks, 0, sizeof(callbacks));
 	callbacks.begin_request = test_mg_store_body_begin_request_callback;
-    callbacks.log_message = log_msg_func;
-    
+	callbacks.log_message = log_msg_func;
+
 	/* Initialize the library */
 	mg_init_library(0);
 
 	/* Start the server */
-	ctx = mg_start(&callbacks, (void*)errmsg, options);
-    ck_assert_str_eq(errmsg, "");
+	ctx = mg_start(&callbacks, (void *)errmsg, options);
+	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
 	/* Run the server for 15 seconds */
