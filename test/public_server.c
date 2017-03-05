@@ -3970,7 +3970,6 @@ test_mg_store_body_begin_request_callback(struct mg_connection *conn)
 
 START_TEST(test_mg_store_body)
 {
-#if !defined(NO_FILES)
 	/* Client data */
 	char client_err_buf[256];
 	char client_data_buf[1024];
