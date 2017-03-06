@@ -1395,7 +1395,7 @@ struct ssl_func {
 #define EVP_get_digestbyname                                                   \
 	(*(const EVP_MD *(*)(const char *))crypto_sw[9].ptr)
 #define ASN1_digest                                                            \
-	(*(int (*)(int (*)(),                                                      \
+	(*(int (*)(int (*)(void *, unsigned char **),                              \
 	           const EVP_MD *,                                                 \
 	           char *,                                                         \
 	           unsigned char *,                                                \
@@ -12252,7 +12252,11 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 
 		/* Calculate SHA1 fingerprint and store as a hex string */
 		ulen = 0;
-		ASN1_digest((int (*)())i2d_X509, digest, (char *)cert, buf, &ulen);
+		ASN1_digest((int (*)(void *, unsigned char **))i2d_X509,
+		            digest,
+		            (char *)cert,
+		            buf,
+		            &ulen);
 		if (!hexdump2string(
 		        buf, (int)ulen, str_finger, (int)sizeof(str_finger))) {
 			*str_finger = 0;
