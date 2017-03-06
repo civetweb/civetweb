@@ -1,5 +1,7 @@
 # Civetweb Contributors
 
+* Abhishek Lekshmanan
+* Adam Bailey
 * Alex Kozlov
 * bel2125
 * Ben M. Ward
@@ -66,9 +68,13 @@
 * Nigel Stewart
 * nihildeb
 * No Face Press
+* palortoff
+* Patrick Drechsler
 * Patrick Trinkle
 * Paul Sokolovsky
 * Paulo Brizolara
+* pavel.pimenov
+* PavelVozenilek
 * Perttu Ahola
 * Peter Foerster
 * Philipp Friedenberger
@@ -79,6 +85,7 @@
 * Sangwhan Moon
 * Saumitra Vikram
 * Scott Nations
+* sgmesservey
 * shantanugadgil
 * SpaceLord
 * sunfch
