@@ -5,6 +5,13 @@ Release Notes v1.10 (work in progress)
 Changes
 -------
 
+- Allow to compile civetweb.c wih a C++ compiler
+- Lua: Remove internal length limits of encode/decode functions
+- Allow sub-resources of index script files
+- Remove deprecated "uri" member of the request from the interface
+- Improve documentation
+- Make auth domain check optional (configuration)
+- Update unit test framework to check 0.11.0
 - Limit depth of mg.include for Lua server pages
 - Additional unit tests
 - OpenSSL 1.1 support
