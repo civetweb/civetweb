@@ -5798,7 +5798,8 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	char const *accept_encoding;
 	int truncated;
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
-	char *p;
+	char *tmp_str;
+	size_t tmp_str_len, sep_pos;
 #endif
 #else
 	(void)filename_buf_len; /* unused if NO_FILES is defined */
@@ -5951,42 +5952,80 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 	/* Step 9: Script resources may handle sub-resources */
 	/* Support PATH_INFO for CGI scripts. */
-	for (p = filename + strlen(filename); p > filename + 1; p--) {
-		if (*p == '/') {
-			*p = '\0';
-			if (extention_matches_script(conn, filename)
-			    && mg_stat(conn, filename, filestat)) {
-				/* Shift PATH_INFO block one character right, e.g.
-				 * "/x.cgi/foo/bar\x00" => "/x.cgi\x00/foo/bar\x00"
-				 * conn->path_info is pointing to the local variable "path"
-				 * declared in handle_request(), so PATH_INFO is not valid
-				 * after handle_request returns. */
-				conn->path_info = p + 1;
-				memmove(p + 2, p + 1, strlen(p + 1) + 1); /* +1 is for
-				                                           * trailing \0 */
-				p[1] = '/';
+	tmp_str_len = strlen(filename);
+	tmp_str = mg_malloc(tmp_str_len + PATH_MAX + 1);
+	if (!tmp_str) {
+		/* Out of memory */
+		goto interpret_cleanup;
+	}
+	memcpy(tmp_str, filename, tmp_str_len + 1);
+
+	sep_pos = tmp_str_len;
+	while (sep_pos > 0) {
+		sep_pos--;
+		if (tmp_str[sep_pos] == '/') {
+			int is_script = 0, does_exist = 0;
+
+			tmp_str[sep_pos] = 0;
+			if (tmp_str[0]) {
+				is_script = extention_matches_script(conn, tmp_str);
+				does_exist = mg_stat(conn, tmp_str, filestat);
+			}
+
+			if (does_exist && is_script) {
+				filename[sep_pos] = 0;
+				memmove(filename + sep_pos + 2,
+				        filename + sep_pos + 1,
+				        strlen(filename + sep_pos + 1) + 1);
+				conn->path_info = filename + sep_pos + 1;
+				filename[sep_pos + 1] = '/';
 				*is_script_resource = 1;
 				*is_found = 1;
 				break;
-			} else if (substitute_index_file(
-			               conn, filename, filename_buf_len, filestat)) {
+			}
+			if (substitute_index_file(
+			        conn, tmp_str, tmp_str_len + PATH_MAX, filestat)) {
 				/* some intermediate directory has an index file */
-				if (extention_matches_script(conn, filename)) {
+				if (extention_matches_script(conn, tmp_str)) {
 					/* this index file is a script */
+
+					char *tmp_str2 = mg_strdup(filename + sep_pos + 1);
+					mg_snprintf(conn,
+					            &truncated,
+					            filename,
+					            filename_buf_len,
+					            "%s//%s",
+					            tmp_str,
+					            tmp_str2);
+					mg_free(tmp_str2);
+
+					if (truncated) {
+						mg_free(tmp_str);
+						tmp_str = NULL;
+						goto interpret_cleanup;
+					}
+					sep_pos = strlen(tmp_str);
+					filename[sep_pos] = 0;
+					conn->path_info = filename + sep_pos + 1;
 					*is_script_resource = 1;
 					*is_found = 1;
 					break;
 				} else {
 					/* non-script files will not have sub-resources */
+					filename[sep_pos] = 0;
+					conn->path_info;
 					*is_script_resource = 0;
 					*is_found = 0;
 					break;
 				}
-			} else {
-				*p = '/';
 			}
+
+			tmp_str[sep_pos] = '/';
 		}
 	}
+
+	mg_free(tmp_str);
+
 #endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
 #endif /* !defined(NO_FILES) */
 	return;
