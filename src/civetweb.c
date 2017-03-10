@@ -2870,6 +2870,87 @@ mg_get_request_info(const struct mg_connection *conn)
 }
 
 
+int
+mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
+{
+	if ((buflen < 1) || (buf == 0) || (conn == 0)) {
+		return -1;
+	} else {
+
+		int truncated = 0;
+		const struct mg_request_info *ri = &conn->request_info;
+
+		if (ri->local_uri == NULL) {
+			return -1;
+		}
+
+		if ((ri->request_uri != NULL)
+		    && strcmp(ri->local_uri, ri->request_uri)) {
+			mg_snprintf(conn,
+			            &truncated,
+			            buf,
+			            buflen,
+			            "%s%s://%s",
+			            (is_websocket_protocol(conn) ? "ws" : "http"),
+			            (ri->is_ssl ? "s" : ""),
+			            ri->request_uri);
+			if (truncated) {
+				return -1;
+			}
+			return 0;
+		} else {
+
+#if USE_IPV6
+			int is_ipv6 = (conn->client.lsa.sa.sa_family == AF_INET6);
+			int port = is_ipv6 ? htons(conn->client.lsa.sin6.sin6_port)
+			                   : htons(conn->client.lsa.sin.sin_port);
+#else
+			int port = htons(conn->client.lsa.sin.sin_port);
+#endif
+			int def_port = ri->is_ssl ? 443 : 80;
+			int auth_domain_check_enabled =
+			    conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK]
+			    && (!strcmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK],
+			                "yes"));
+			const char *server_domain =
+			    conn->ctx->config[AUTHENTICATION_DOMAIN];
+
+			char portstr[16];
+			char server_ip[48];
+
+			if (port != def_port) {
+				sprintf(portstr, ":%u", (unsigned)port);
+			} else {
+				portstr[0] = 0;
+			}
+
+			if (!auth_domain_check_enabled || !server_domain) {
+
+				sockaddr_to_string(server_ip,
+				                   sizeof(server_ip),
+				                   &conn->client.lsa);
+
+				server_domain = server_ip;
+			}
+
+			mg_snprintf(conn,
+			            &truncated,
+			            buf,
+			            buflen,
+			            "%s%s://%s%s%s",
+			            (is_websocket_protocol(conn) ? "ws" : "http"),
+			            (ri->is_ssl ? "s" : ""),
+			            server_domain,
+			            portstr,
+			            ri->local_uri);
+			if (truncated) {
+				return -1;
+			}
+			return 0;
+		}
+	}
+}
+
 /* Skip the characters until one of the delimiters characters found.
  * 0-terminate resulting word. Skip the delimiter and following whitespaces.
  * Advance pointer to buffer to the next word. Return found 0-terminated word.

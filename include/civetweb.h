@@ -432,7 +432,7 @@ CIVETWEB_API void mg_set_websocket_handler_with_subprotocols(
 
 /* mg_authorization_handler
 
-   Some description here
+   Callback function definition for mg_set_auth_handler
 
    Parameters:
       conn: current connection information.
@@ -482,6 +482,19 @@ CIVETWEB_API void mg_set_user_connection_data(struct mg_connection *conn,
 /* Get user data set for the current connection. */
 CIVETWEB_API void *
 mg_get_user_connection_data(const struct mg_connection *conn);
+
+
+/* Get a formatted link corresponding to the current request
+
+   Parameters:
+      conn: current connection information.
+      buf: string buffer (out)
+      buflen: length of the string buffer
+   Returns:
+      <0: error
+      >=0: ok */
+CIVETWEB_API int
+mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen);
 
 
 #if defined(MG_LEGACY_INTERFACE)

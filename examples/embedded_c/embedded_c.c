@@ -77,6 +77,9 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	          "<p>To see a page from the CookieHandler handler <a "
 	          "href=\"cookie\">click cookie</a></p>");
 	mg_printf(conn,
+	          "<p>To see a page from the PostResponser handler <a "
+	          "href=\"postresponse\">click post response</a></p>");
+	mg_printf(conn,
 	          "<p>To see an example for parsing files on the fly <a "
 	          "href=\"on_the_fly_form\">click form</a> (form for "
 	          "uploading files)</p>");
@@ -459,6 +462,99 @@ CookieHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
+static int
+send_chunk(struct mg_connection *conn,
+           const char *chunk,
+           unsigned int chunk_len)
+{
+	char lenbuf[16];
+	size_t lenbuf_len;
+	int ret;
+	int t;
+
+	/* First store the length information in a text buffer. */
+	sprintf(lenbuf, "%x\r\n", chunk_len);
+	lenbuf_len = strlen(lenbuf);
+
+	/* Then send length information, chunk and terminating \r\n. */
+	ret = mg_write(conn, lenbuf, lenbuf_len);
+	if (ret != (int)lenbuf_len) {
+		return -1;
+	}
+	t = ret;
+
+	ret = mg_write(conn, chunk, chunk_len);
+	if (ret != (int)chunk_len) {
+		return -1;
+	}
+	t += ret;
+
+	ret = mg_write(conn, "\r\n", 2);
+	if (ret != 2) {
+		return -1;
+	}
+	t += ret;
+
+	return t;
+}
+
+
+int
+PostResponser(struct mg_connection *conn, void *cbdata)
+{
+	long long r_total = 0;
+	int r, s;
+
+	char buf[2048];
+
+	const struct mg_request_info *ri = mg_get_request_info(conn);
+
+	if (strcmp(ri->request_method, "POST")) {
+		char buf[1024];
+		int ret = mg_get_request_link(conn, buf, sizeof(buf));
+
+		mg_printf(conn,
+		          "HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n");
+		mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+		mg_printf(conn,
+		          "%s method not allowed in the POST handler\n",
+		          ri->request_method);
+		if (ret >= 0) {
+			mg_printf(conn,
+			          "use a web tool to send a POST request to %s\n",
+			          buf);
+		}
+		return 1;
+	}
+
+	if (ri->content_length >= 0) {
+		/* We know the content length in advance */
+	} else {
+		/* We must read until we find the end (chunked encoding
+		 * or connection close), indicated my mg_read returning 0 */
+	}
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nConnection: "
+	          "close\r\nTransfer-Encoding: chunked\r\n");
+	mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+
+	r = mg_read(conn, buf, sizeof(buf));
+	while (r > 0) {
+		r_total += r;
+		s = send_chunk(conn, buf, r);
+		if (r != s) {
+			/* Send error */
+			break;
+		}
+		r = mg_read(conn, buf, sizeof(buf));
+	}
+	mg_printf(conn, "0\r\n");
+
+	return 1;
+}
+
+
 int
 WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 {
@@ -754,6 +850,8 @@ main(int argc, char *argv[])
 	    "DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256",
 #endif
 #endif
+	    "enable_auth_domain_check",
+	    "no",
 	    0};
 	struct mg_callbacks callbacks;
 	struct mg_context *ctx;
@@ -848,6 +946,9 @@ main(int argc, char *argv[])
 
 	/* Add handler for /cookie example */
 	mg_set_request_handler(ctx, "/cookie", CookieHandler, 0);
+
+	/* Add handler for /postresponse example */
+	mg_set_request_handler(ctx, "/postresponse", PostResponser, 0);
 
 	/* Add HTTP site to open a websocket connection */
 	mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);
