@@ -6013,7 +6013,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 				} else {
 					/* non-script files will not have sub-resources */
 					filename[sep_pos] = 0;
-					conn->path_info;
+					conn->path_info = 0;
 					*is_script_resource = 0;
 					*is_found = 0;
 					break;
