@@ -8178,6 +8178,11 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 static int
 is_valid_http_method(const char *method)
 {
+	/* Check if the method is known to the server. The list of all known
+	 * HTTP methods can be found here at
+	 * http://www.iana.org/assignments/http-methods/http-methods.xhtml
+	 */
+
 	return !strcmp(method, "GET")        /* HTTP (RFC 2616) */
 	       || !strcmp(method, "POST")    /* HTTP (RFC 2616) */
 	       || !strcmp(method, "HEAD")    /* HTTP (RFC 2616) */
@@ -8200,7 +8205,16 @@ is_valid_http_method(const char *method)
 	        * https://msdn.microsoft.com/en-us/library/aa142917.aspx */
 
 	       /* PATCH method only allowed for CGI/Lua/LSP and callbacks. */
-	       || !strcmp(method, "PATCH"); /* PATCH method (RFC 5789) */
+	       || !strcmp(method, "PATCH") /* PATCH method (RFC 5789) */
+
+	       /* REPORT method only allowed for CGI/Lua/LSP and callbacks. */
+	       /* It was defined for WEBDAV in RFC 3253, Sec. 3.6
+	        * (https://tools.ietf.org/html/rfc3253#section-3.6), but seems
+	        * to be useful for REST in case a "GET request with body" is
+	        * required. */
+	       || !strcmp(method, "REPORT") /* REPORT method (RFC 3253) */
+
+	    ;
 }
 
 
