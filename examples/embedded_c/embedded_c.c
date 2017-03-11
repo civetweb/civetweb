@@ -462,43 +462,6 @@ CookieHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-static int
-send_chunk(struct mg_connection *conn,
-           const char *chunk,
-           unsigned int chunk_len)
-{
-	char lenbuf[16];
-	size_t lenbuf_len;
-	int ret;
-	int t;
-
-	/* First store the length information in a text buffer. */
-	sprintf(lenbuf, "%x\r\n", chunk_len);
-	lenbuf_len = strlen(lenbuf);
-
-	/* Then send length information, chunk and terminating \r\n. */
-	ret = mg_write(conn, lenbuf, lenbuf_len);
-	if (ret != (int)lenbuf_len) {
-		return -1;
-	}
-	t = ret;
-
-	ret = mg_write(conn, chunk, chunk_len);
-	if (ret != (int)chunk_len) {
-		return -1;
-	}
-	t += ret;
-
-	ret = mg_write(conn, "\r\n", 2);
-	if (ret != 2) {
-		return -1;
-	}
-	t += ret;
-
-	return t;
-}
-
-
 int
 PostResponser(struct mg_connection *conn, void *cbdata)
 {
@@ -542,7 +505,7 @@ PostResponser(struct mg_connection *conn, void *cbdata)
 	r = mg_read(conn, buf, sizeof(buf));
 	while (r > 0) {
 		r_total += r;
-		s = send_chunk(conn, buf, r);
+		s = mg_send_chunk(conn, buf, r);
 		if (r != s) {
 			/* Send error */
 			break;

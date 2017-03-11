@@ -684,6 +684,14 @@ CIVETWEB_API int mg_printf(struct mg_connection *,
                            ...) PRINTF_ARGS(2, 3);
 
 
+/* Send a part of the message body, if chunked transfer encoding is set.
+ * Only use this function after sending a complete HTTP request or response
+ * header with "Transfer-Encoding: chunked" set. */
+CIVETWEB_API int mg_send_chunk(struct mg_connection *conn,
+                               const char *chunk,
+                               unsigned int chunk_len);
+
+
 /* Send contents of the entire file together with HTTP headers. */
 CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
 

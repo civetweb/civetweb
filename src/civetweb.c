@@ -5390,6 +5390,44 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 }
 
 
+/* Send a chunk, if "Transfer-Encoding: chunked" is used */
+int
+mg_send_chunk(struct mg_connection *conn,
+              const char *chunk,
+              unsigned int chunk_len)
+{
+	char lenbuf[16];
+	size_t lenbuf_len;
+	int ret;
+	int t;
+
+	/* First store the length information in a text buffer. */
+	sprintf(lenbuf, "%x\r\n", chunk_len);
+	lenbuf_len = strlen(lenbuf);
+
+	/* Then send length information, chunk and terminating \r\n. */
+	ret = mg_write(conn, lenbuf, lenbuf_len);
+	if (ret != (int)lenbuf_len) {
+		return -1;
+	}
+	t = ret;
+
+	ret = mg_write(conn, chunk, chunk_len);
+	if (ret != (int)chunk_len) {
+		return -1;
+	}
+	t += ret;
+
+	ret = mg_write(conn, "\r\n", 2);
+	if (ret != 2) {
+		return -1;
+	}
+	t += ret;
+
+	return t;
+}
+
+
 /* Alternative alloc_vprintf() for non-compliant C runtimes */
 static int
 alloc_vprintf2(char **buf, const char *fmt, va_list ap)
