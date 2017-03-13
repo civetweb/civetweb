@@ -695,6 +695,7 @@ CIVETWEB_API int mg_send_chunk(struct mg_connection *conn,
 /* Send contents of the entire file together with HTTP headers. */
 CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
 
+
 /* Send contents of the entire file together with HTTP headers.
    Parameters:
      conn: Current connection information.
@@ -705,6 +706,7 @@ CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
 CIVETWEB_API void mg_send_mime_file(struct mg_connection *conn,
                                     const char *path,
                                     const char *mime_type);
+
 
 /* Send contents of the entire file together with HTTP headers.
    Parameters:
@@ -721,6 +723,7 @@ CIVETWEB_API void mg_send_mime_file2(struct mg_connection *conn,
                                      const char *path,
                                      const char *mime_type,
                                      const char *additional_headers);
+
 
 /* Store body data into a file. */
 CIVETWEB_API long long mg_store_body(struct mg_connection *conn,

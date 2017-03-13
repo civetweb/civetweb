@@ -2917,7 +2917,9 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 
 			char portstr[16];
 			char server_ip[48];
-            const char * proto = (is_websocket_protocol(conn) ? (ri->is_ssl ? "wss" : "ws") : (ri->is_ssl ? "https" : "http"));
+			const char *proto =
+			    (is_websocket_protocol(conn) ? (ri->is_ssl ? "wss" : "ws")
+			                                 : (ri->is_ssl ? "https" : "http"));
 
 			if (port != def_port) {
 				sprintf(portstr, ":%u", (unsigned)port);
