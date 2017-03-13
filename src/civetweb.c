@@ -2880,6 +2880,24 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 		int truncated = 0;
 		const struct mg_request_info *ri = &conn->request_info;
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
+/* Depending on USE_WEBSOCKET and NO_SSL, some oft the protocols might be
+ * not supported. Clang raises an "unreachable code" warning for parts of ?:
+ * unreachable, but splitting into four different #ifdef clauses here is more
+ * complicated.
+ */
+#endif
+
+		const char *proto =
+		    (is_websocket_protocol(conn) ? (ri->is_ssl ? "wss" : "ws")
+		                                 : (ri->is_ssl ? "https" : "http"));
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 		if (ri->local_uri == NULL) {
 			return -1;
 		}
@@ -2890,9 +2908,8 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 			            &truncated,
 			            buf,
 			            buflen,
-			            "%s%s://%s",
-			            (is_websocket_protocol(conn) ? "ws" : "http"),
-			            (ri->is_ssl ? "s" : ""),
+			            "%s://%s",
+			            proto,
 			            ri->request_uri);
 			if (truncated) {
 				return -1;
@@ -2917,9 +2934,6 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 
 			char portstr[16];
 			char server_ip[48];
-			const char *proto =
-			    (is_websocket_protocol(conn) ? (ri->is_ssl ? "wss" : "ws")
-			                                 : (ri->is_ssl ? "https" : "http"));
 
 			if (port != def_port) {
 				sprintf(portstr, ":%u", (unsigned)port);
