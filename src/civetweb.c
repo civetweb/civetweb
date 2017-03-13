@@ -2900,7 +2900,7 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 			return 0;
 		} else {
 
-#if USE_IPV6
+#if defined(USE_IPV6)
 			int is_ipv6 = (conn->client.lsa.sa.sa_family == AF_INET6);
 			int port = is_ipv6 ? htons(conn->client.lsa.sin6.sin6_port)
 			                   : htons(conn->client.lsa.sin.sin_port);
@@ -2917,6 +2917,7 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 
 			char portstr[16];
 			char server_ip[48];
+            const char * proto = (is_websocket_protocol(conn) ? (ri->is_ssl ? "wss" : "ws") : (ri->is_ssl ? "https" : "http"));
 
 			if (port != def_port) {
 				sprintf(portstr, ":%u", (unsigned)port);
@@ -2937,9 +2938,8 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 			            &truncated,
 			            buf,
 			            buflen,
-			            "%s%s://%s%s%s",
-			            (is_websocket_protocol(conn) ? "ws" : "http"),
-			            (ri->is_ssl ? "s" : ""),
+			            "%s://%s%s%s",
+			            proto,
 			            server_domain,
 			            portstr,
 			            ri->local_uri);
