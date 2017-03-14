@@ -4951,6 +4951,9 @@ pull_inner(FILE *fp,
 #else
 	typedef size_t len_t;
 #endif
+#ifndef NO_SSL
+	int ssl_pending;
+#endif
 
 	/* We need an additional wait loop around this, because in some cases
 	 * with TLSwe may get data from the socket but not from SSL_read.
@@ -4971,14 +4974,15 @@ pull_inner(FILE *fp,
 		err = (nread < 0) ? ERRNO : 0;
 
 #ifndef NO_SSL
-	} else if (conn->ssl != NULL && SSL_pending(conn->ssl) > 0) {
+	} else if ((conn->ssl != NULL)
+	           && ((ssl_pending = SSL_pending(conn->ssl)) > 0)) {
 		/* We already know there is no more data buffered in conn->buf
 		 * but there is more available in the SSL layer. So don't poll
 		 * conn->client.sock yet. */
-		int this_len = SSL_pending(conn->ssl);
-		if (this_len > len)
-			this_len = len;
-		nread = SSL_read(conn->ssl, buf, this_len);
+		if (ssl_pending > len) {
+			ssl_pending = len;
+		}
+		nread = SSL_read(conn->ssl, buf, ssl_pending);
 		if (nread <= 0) {
 			err = SSL_get_error(conn->ssl, nread);
 			if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
@@ -4993,6 +4997,7 @@ pull_inner(FILE *fp,
 		} else {
 			err = 0;
 		}
+
 	} else if (conn->ssl != NULL) {
 
 		struct pollfd pfd[1];
@@ -5029,7 +5034,6 @@ pull_inner(FILE *fp,
 			/* pollres = 0 means timeout */
 			nread = 0;
 		}
-
 #endif
 
 	} else {
