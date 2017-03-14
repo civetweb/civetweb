@@ -7990,7 +7990,7 @@ handle_static_file_request(struct mg_connection *conn,
 		if (filep->stat.is_gzipped) {
 			mg_send_http_error(
 			    conn,
-			    501,
+			    416, /* 416 = Range Not Satisfiable */
 			    "%s",
 			    "Error: Range requests in gzipped files are not supported");
 			(void)mg_fclose(
