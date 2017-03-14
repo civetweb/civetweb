@@ -4971,6 +4971,28 @@ pull_inner(FILE *fp,
 		err = (nread < 0) ? ERRNO : 0;
 
 #ifndef NO_SSL
+	} else if (conn->ssl != NULL && SSL_pending(conn->ssl) > 0) {
+		/* We already know there is no more data buffered in conn->buf
+		 * but there is more available in the SSL layer. So don't poll
+		 * conn->client.sock yet. */
+		int this_len = SSL_pending(conn->ssl);
+		if (this_len > len)
+			this_len = len;
+		nread = SSL_read(conn->ssl, buf, this_len);
+		if (nread <= 0) {
+			err = SSL_get_error(conn->ssl, nread);
+			if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
+				err = ERRNO;
+			} else if ((err == SSL_ERROR_WANT_READ)
+			           || (err == SSL_ERROR_WANT_WRITE)) {
+				nread = 0;
+			} else {
+				DEBUG_TRACE("SSL_read() failed, error %d", err);
+				return -1;
+			}
+		} else {
+			err = 0;
+		}
 	} else if (conn->ssl != NULL) {
 
 		struct pollfd pfd[1];
