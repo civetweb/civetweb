@@ -14912,8 +14912,7 @@ mg_start(const struct mg_callbacks *callbacks,
 
 		if (0 != pthread_key_create(&sTlsKey, tls_dtor)) {
 			/* Fatal error - abort start. However, this situation should
-			 * never
-			 * occur in practice. */
+			 * never occur in practice. */
 			mg_atomic_dec(&sTlsInit);
 			mg_cry(fc(ctx), "Cannot initialize thread local storage");
 			mg_free(ctx);
@@ -14925,7 +14924,7 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif
 
 	} else {
-		/* TODO (low): istead of sleeping, check if sTlsKey is already
+		/* TODO (low): instead of sleeping, check if sTlsKey is already
 		 * initialized. */
 		mg_sleep(1);
 	}
