@@ -12527,7 +12527,13 @@ load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 	struct ssl_func *fp;
 
 	if ((dll_handle = dlopen(dll_name, RTLD_LAZY)) == NULL) {
-		mg_cry(fc(ctx), "%s: cannot load %s", __func__, dll_name);
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "%s: cannot load %s",
+		            __func__,
+		            dll_name);
 		return NULL;
 	}
 
