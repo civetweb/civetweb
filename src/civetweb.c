@@ -12517,7 +12517,7 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 
 #if !defined(NO_SSL_DL)
 static void *
-load_dll(struct mg_context *ctx, const char *dll_name, struct ssl_func *sw)
+load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 {
 	union {
 		void *p;
@@ -12542,11 +12542,14 @@ load_dll(struct mg_context *ctx, const char *dll_name, struct ssl_func *sw)
 		u.p = dlsym(dll_handle, fp->name);
 #endif /* _WIN32 */
 		if (u.fp == NULL) {
-			mg_cry(fc(ctx),
-			       "%s: %s: cannot find %s",
-			       __func__,
-			       dll_name,
-			       fp->name);
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s: %s: cannot find %s",
+			            __func__,
+			            dll_name,
+			            fp->name);
 			dlclose(dll_handle);
 			return NULL;
 		} else {
@@ -12572,19 +12575,20 @@ static int cryptolib_users = 0; /* Reference counter for crypto library. */
 
 
 static int
-initialize_ssl(struct mg_context *ctx)
+initialize_ssl(char *ebuf, size_t ebuf_len)
 {
+	if (ebuf_len > 0) {
+		ebuf[0] = 0;
+	}
 
 #ifdef OPENSSL_API_1_1
 #if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
-		cryptolib_dll_handle = load_dll(ctx, CRYPTO_LIB, crypto_sw);
+		cryptolib_dll_handle = load_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
 		if (!cryptolib_dll_handle) {
 			return 0;
 		}
 	}
-#else
-	(void)ctx;
 #endif /* NO_SSL_DL */
 
 	if (mg_atomic_inc(&cryptolib_users) > 1) {
@@ -12597,13 +12601,11 @@ initialize_ssl(struct mg_context *ctx)
 
 #if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
-		cryptolib_dll_handle = load_dll(ctx, CRYPTO_LIB, crypto_sw);
+		cryptolib_dll_handle = load_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
 		if (!cryptolib_dll_handle) {
 			return 0;
 		}
 	}
-#else
-	(void)ctx;
 #endif /* NO_SSL_DL */
 
 	if (mg_atomic_inc(&cryptolib_users) > 1) {
@@ -12619,10 +12621,14 @@ initialize_ssl(struct mg_context *ctx)
 	}
 	size = sizeof(pthread_mutex_t) * ((size_t)(i));
 	if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc(size)) == NULL) {
-		mg_cry(fc(ctx),
-		       "%s: cannot allocate mutexes: %s",
-		       __func__,
-		       ssl_error());
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "%s: cannot allocate mutexes: %s",
+		            __func__,
+		            ssl_error());
+
 		return 0;
 	}
 
@@ -12729,6 +12735,7 @@ set_ssl_option(struct mg_context *ctx)
 	md5_byte_t ssl_context_id[16];
 	md5_state_t md5state;
 	int protocol_ver;
+	char ebuf[128];
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
@@ -12740,14 +12747,16 @@ set_ssl_option(struct mg_context *ctx)
 		return 1;
 	}
 
-	if (!initialize_ssl(ctx)) {
+	if (!initialize_ssl(ebuf, sizeof(ebuf))) {
+		mg_cry(fc(ctx), "%s", ebuf);
 		return 0;
 	}
 
 #if !defined(NO_SSL_DL)
 	if (!ssllib_dll_handle) {
-		ssllib_dll_handle = load_dll(ctx, SSL_LIB, ssl_sw);
+		ssllib_dll_handle = load_dll(ebuf, sizeof(ebuf), SSL_LIB, ssl_sw);
 		if (!ssllib_dll_handle) {
+			mg_cry(fc(ctx), "%s", ebuf);
 			return 0;
 		}
 	}
@@ -12880,10 +12889,9 @@ set_ssl_option(struct mg_context *ctx)
 
 
 static void
-uninitialize_ssl(struct mg_context *ctx)
+uninitialize_ssl(void)
 {
 #ifdef OPENSSL_API_1_1
-	(void)ctx;
 
 	if (mg_atomic_dec(&cryptolib_users) == 0) {
 
@@ -12894,7 +12902,6 @@ uninitialize_ssl(struct mg_context *ctx)
 		CONF_modules_unload(1);
 #else
 	int i;
-	(void)ctx;
 
 	if (mg_atomic_dec(&cryptolib_users) == 0) {
 
@@ -14658,7 +14665,7 @@ master_thread_run(void *thread_func_param)
 
 #if !defined(NO_SSL)
 	if (ctx->ssl_ctx != NULL) {
-		uninitialize_ssl(ctx);
+		uninitialize_ssl();
 	}
 #endif
 	DEBUG_TRACE("%s", "exiting");
@@ -15594,14 +15601,36 @@ mg_get_system_info(char *buffer, int buflen)
 
 /* mg_init_library counter */
 static int mg_init_library_called = 0;
-
+static int mg_ssl_initialized = 0;
 
 /* Initialize this library. This function does not need to be thread safe. */
 unsigned
 mg_init_library(unsigned features)
 {
-	/* Currently we do nothing here. This is planned for Version 1.10.
-	 * For now, we just add this function, so clients can be changed early. */
+	char ebuf[128];
+
+	if (features & 2) {
+		if (mg_check_feature(2)) {
+			if (!mg_ssl_initialized) {
+				if (initialize_ssl(ebuf, sizeof(ebuf))) {
+					mg_ssl_initialized = 1;
+				} else {
+					(void)ebuf;
+					/* TODO: print error */
+					return 0;
+				}
+			} else {
+				/* ssl already initialized */
+			}
+		} else {
+			(void)ebuf;
+			/* Cannot initialize SSL, if it is not configured */
+			/* TODO: print error */
+			return 0;
+		}
+	}
+
+	/* Start Windows. */
 	if (mg_init_library_called <= 0) {
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 		WSADATA data;
@@ -15611,6 +15640,7 @@ mg_init_library(unsigned features)
 	} else {
 		mg_init_library_called++;
 	}
+
 	return mg_check_feature(features & 0xFFu);
 }
 
@@ -15627,6 +15657,10 @@ mg_exit_library(void)
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 		(void)WSACleanup();
 #endif /* _WIN32 && !__SYMBIAN32__ */
+		if (mg_ssl_initialized) {
+			uninitialize_ssl();
+			mg_ssl_initialized = 0;
+		}
 	}
 	return 1;
 }
