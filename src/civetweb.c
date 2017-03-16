@@ -15603,30 +15603,27 @@ mg_get_system_info(char *buffer, int buflen)
 static int mg_init_library_called = 0;
 static int mg_ssl_initialized = 0;
 
+
 /* Initialize this library. This function does not need to be thread safe. */
 unsigned
 mg_init_library(unsigned features)
 {
 	char ebuf[128];
 
-	if (features & 2) {
-		if (mg_check_feature(2)) {
-			if (!mg_ssl_initialized) {
-				if (initialize_ssl(ebuf, sizeof(ebuf))) {
-					mg_ssl_initialized = 1;
-				} else {
-					(void)ebuf;
-					/* TODO: print error */
-					return 0;
-				}
+	unsigned features_to_init = mg_check_feature(features & 0xFFu);
+	unsigned features_inited = features_to_init;
+
+	if (features_to_init & 2) {
+		if (!mg_ssl_initialized) {
+			if (initialize_ssl(ebuf, sizeof(ebuf))) {
+				mg_ssl_initialized = 1;
 			} else {
-				/* ssl already initialized */
+				(void)ebuf;
+				/* TODO: print error */
+				features_inited &= ~2;
 			}
 		} else {
-			(void)ebuf;
-			/* Cannot initialize SSL, if it is not configured */
-			/* TODO: print error */
-			return 0;
+			/* ssl already initialized */
 		}
 	}
 
@@ -15641,7 +15638,7 @@ mg_init_library(unsigned features)
 		mg_init_library_called++;
 	}
 
-	return mg_check_feature(features & 0xFFu);
+	return features_inited;
 }
 
 
