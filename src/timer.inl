@@ -210,6 +210,9 @@ timers_exit(struct mg_context *ctx)
 	if (ctx->timers) {
 		pthread_mutex_lock(&ctx->timers->mutex);
 		ctx->timers->timer_count = 0;
+
+		mg_join_thread(ctx->timers->threadid);
+
 		/* TODO: Do we really need to unlock the mutex, before
 		 * destroying it, if it's destroyed by the thread currently
 		 * owning the mutex? */
