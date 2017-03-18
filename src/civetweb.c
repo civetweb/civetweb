@@ -15607,7 +15607,10 @@ mg_get_system_info(char *buffer, int buflen)
 
 /* mg_init_library counter */
 static int mg_init_library_called = 0;
+
+#if !defined(NO_SSL)
 static int mg_ssl_initialized = 0;
+#endif
 
 
 /* Initialize this library. This function does not need to be thread safe. */
