@@ -282,7 +282,7 @@ main(int argc, char *argv[])
     }
 
 	// CivetServer server(options); // <-- C style start
-    CivetServer server(cpp_options); // <-- C++ style start
+	CivetServer server(cpp_options); // <-- C++ style start
 
 	ExampleHandler h_ex;
 	server.addHandler(EXAMPLE_URI, h_ex);
@@ -296,6 +296,9 @@ main(int argc, char *argv[])
 	ABHandler h_ab;
 	server.addHandler("/a/b", h_ab);
 
+	/* This handler will handle "everything else", including
+	 * requests to files. If this handler is installed,
+	 * NO_FILES should be set. */
 	FooHandler h_foo;
 	server.addHandler("", h_foo);
 
