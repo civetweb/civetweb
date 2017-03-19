@@ -1394,12 +1394,10 @@ struct ssl_func {
 #define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *))crypto_sw[8].ptr)
 #define EVP_get_digestbyname                                                   \
 	(*(const EVP_MD *(*)(const char *))crypto_sw[9].ptr)
-#define ASN1_digest                                                            \
-	(*(int (*)(int (*)(void *, unsigned char **),                              \
-	           const EVP_MD *,                                                 \
-	           char *,                                                         \
-	           unsigned char *,                                                \
-	           unsigned int *))crypto_sw[10].ptr)
+#define EVP_Digest                                                             \
+	(*(int (*)(                                                                \
+	    const void *, size_t, void *, unsigned int *, const EVP_MD *, void *)) \
+	      crypto_sw[10].ptr)
 #define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[11].ptr)
 #define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[12].ptr)
 #define ASN1_INTEGER_to_BN                                                     \
@@ -1461,7 +1459,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
                                       {"X509_NAME_oneline", NULL},
                                       {"X509_get_serialNumber", NULL},
                                       {"EVP_get_digestbyname", NULL},
-                                      {"ASN1_digest", NULL},
+                                      {"EVP_Digest", NULL},
                                       {"i2d_X509", NULL},
                                       {"BN_bn2hex", NULL},
                                       {"ASN1_INTEGER_to_BN", NULL},
@@ -1549,12 +1547,10 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 	(*(int (*)(ASN1_INTEGER *, unsigned char **))crypto_sw[16].ptr)
 #define EVP_get_digestbyname                                                   \
 	(*(const EVP_MD *(*)(const char *))crypto_sw[17].ptr)
-#define ASN1_digest                                                            \
-	(*(int (*)(int (*)(),                                                      \
-	           const EVP_MD *,                                                 \
-	           char *,                                                         \
-	           unsigned char *,                                                \
-	           unsigned int *))crypto_sw[18].ptr)
+#define EVP_Digest                                                             \
+	(*(int (*)(                                                                \
+	    const void *, size_t, void *, unsigned int *, const EVP_MD *, void *)) \
+	      crypto_sw[18].ptr)
 #define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[19].ptr)
 #define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[20].ptr)
 #define ASN1_INTEGER_to_BN                                                     \
@@ -1623,7 +1619,7 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"X509_get_serialNumber", NULL},
                                       {"i2c_ASN1_INTEGER", NULL},
                                       {"EVP_get_digestbyname", NULL},
-                                      {"ASN1_digest", NULL},
+                                      {"EVP_Digest", NULL},
                                       {"i2d_X509", NULL},
                                       {"BN_bn2hex", NULL},
                                       {"ASN1_INTEGER_to_BN", NULL},
@@ -12444,6 +12440,9 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		unsigned char buf[256];
 		char *str_serial = NULL;
 		unsigned int ulen;
+		int ilen;
+		unsigned char *tmp_buf;
+		unsigned char *tmp_p;
 
 		/* Handle to algorithm used for fingerprint */
 		const EVP_MD *digest = EVP_get_digestbyname("sha1");
@@ -12466,11 +12465,20 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 
 		/* Calculate SHA1 fingerprint and store as a hex string */
 		ulen = 0;
-		ASN1_digest((int (*)(void *, unsigned char **))i2d_X509,
-		            digest,
-		            (char *)cert,
-		            buf,
-		            &ulen);
+
+		/* ASN1_digest is deprecated. Do the calculation manually,
+		 * using EVP_Digest. */
+		ilen = i2d_X509((void *)cert, NULL);
+		tmp_buf = (unsigned char *)mg_malloc(ilen + 1);
+		if (tmp_buf) {
+			tmp_p = tmp_buf;
+			(void)i2d_X509((void *)cert, &tmp_p);
+			if (!EVP_Digest(tmp_buf, ilen, buf, &ulen, digest, NULL)) {
+				ulen = 0;
+			}
+			mg_free(tmp_buf);
+		}
+
 		if (!hexdump2string(
 		        buf, (int)ulen, str_finger, (int)sizeof(str_finger))) {
 			*str_finger = 0;
