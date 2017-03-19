@@ -12469,11 +12469,13 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		/* ASN1_digest is deprecated. Do the calculation manually,
 		 * using EVP_Digest. */
 		ilen = i2d_X509((void *)cert, NULL);
-		tmp_buf = (unsigned char *)mg_malloc(ilen + 1);
+		tmp_buf =
+		    (ilen > 0) ? (unsigned char *)mg_malloc((unsigned)ilen + 1) : NULL;
 		if (tmp_buf) {
 			tmp_p = tmp_buf;
 			(void)i2d_X509((void *)cert, &tmp_p);
-			if (!EVP_Digest(tmp_buf, ilen, buf, &ulen, digest, NULL)) {
+			if (!EVP_Digest(
+			        tmp_buf, (unsigned)ilen, buf, &ulen, digest, NULL)) {
 				ulen = 0;
 			}
 			mg_free(tmp_buf);
