@@ -12525,6 +12525,8 @@ load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 	} u;
 	void *dll_handle;
 	struct ssl_func *fp;
+	int ok;
+	int truncated = 0;
 
 	if ((dll_handle = dlopen(dll_name, RTLD_LAZY)) == NULL) {
 		mg_snprintf(NULL,
@@ -12537,6 +12539,7 @@ load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 		return NULL;
 	}
 
+	ok = 1;
 	for (fp = sw; fp->name != NULL; fp++) {
 #ifdef _WIN32
 		/* GetProcAddress() returns pointer to function */
@@ -12548,19 +12551,41 @@ load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 		u.p = dlsym(dll_handle, fp->name);
 #endif /* _WIN32 */
 		if (u.fp == NULL) {
-			mg_snprintf(NULL,
-			            NULL, /* No truncation check for ebuf */
-			            ebuf,
-			            ebuf_len,
-			            "%s: %s: cannot find %s",
-			            __func__,
-			            dll_name,
-			            fp->name);
-			dlclose(dll_handle);
-			return NULL;
+			if (ok) {
+				mg_snprintf(NULL,
+				            &truncated,
+				            ebuf,
+				            ebuf_len,
+				            "%s: %s: cannot find %s",
+				            __func__,
+				            dll_name,
+				            fp->name);
+				ok = 0;
+			} else {
+				size_t cur_len = strlen(ebuf);
+				if (!truncated) {
+					mg_snprintf(NULL,
+					            &truncated,
+					            ebuf + cur_len,
+					            ebuf_len - cur_len - 3,
+					            ", %s",
+					            fp->name);
+					if (truncated) {
+						/* If truncated, add "..." */
+						strcat(ebuf, "...");
+					}
+				}
+			}
+			/* Debug:
+			 * printf("Missing function: %s\n", fp->name); */
 		} else {
 			fp->ptr = u.fp;
 		}
+	}
+
+	if (!ok) {
+		(void)dlclose(dll_handle);
+		return NULL;
 	}
 
 	return dll_handle;
