@@ -4427,6 +4427,9 @@ make_public_server_suite(void)
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 /* Used to debug test cases without using the check framework */
+/* Build command for Linux:
+gcc test/public_server.c src/civetweb.c -I include/ -I test/ -l pthread -l dl -D LOCAL_TEST -D REPLACE_CHECK_FOR_LOCAL_DEBUGGING -D MAIN_PUBLIC_SERVER=main
+*/
 
 static int chk_ok = 0;
 static int chk_failed = 0;
