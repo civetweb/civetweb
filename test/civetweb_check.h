@@ -42,7 +42,9 @@
 #include "check.h"
 
 #if (CHECK_MINOR_VERSION < 11)
+#ifndef LOCAL_TEST
 #error "CivetWeb unit tests require at least check 0.11.0"
+#endif
 #endif
 
 #ifdef __clang__
