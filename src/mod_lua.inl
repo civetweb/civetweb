@@ -1657,7 +1657,7 @@ handle_lsp_request(struct mg_connection *conn,
 
 		/* File not found */
 		if (ls == NULL) {
-			send_http_error(conn, 500, "Error: File %s not found", path);
+			mg_send_http_error(conn, 500, "Error: File %s not found", path);
 		} else {
 			luaL_error(ls, "File [%s] not found", path);
 		}
@@ -1669,10 +1669,10 @@ handle_lsp_request(struct mg_connection *conn,
 
 		/* File not found or not accessible */
 		if (ls == NULL) {
-			send_http_error(conn,
-			                500,
-			                "Error: Cannot open script file %s",
-			                path);
+			mg_send_http_error(conn,
+			                   500,
+			                   "Error: Cannot open script file %s",
+			                   path);
 		} else {
 			luaL_error(ls, "Cannot  [%s] not found", path);
 		}
@@ -1696,7 +1696,7 @@ handle_lsp_request(struct mg_connection *conn,
 
 		/* mmap failed */
 		if (ls == NULL) {
-			send_http_error(
+			mg_send_http_error(
 			    conn,
 			    500,
 			    "Error: Cannot open script\nFile %s can not be mapped",
@@ -1718,7 +1718,7 @@ handle_lsp_request(struct mg_connection *conn,
 	} else {
 		L = lua_newstate(lua_allocator, NULL);
 		if (L == NULL) {
-			send_http_error(
+			mg_send_http_error(
 			    conn,
 			    500,
 			    "%s",

@@ -696,6 +696,13 @@ CIVETWEB_API int mg_send_chunk(struct mg_connection *conn,
 CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
 
 
+/* Send HTTP error reply. */
+CIVETWEB_API void mg_send_http_error(struct mg_connection *conn,
+                                     int status_code,
+                                     PRINTF_FORMAT_STRING(const char *fmt),
+                                     ...) PRINTF_ARGS(3, 4);
+
+
 /* Send contents of the entire file together with HTTP headers.
    Parameters:
      conn: Current connection information.
