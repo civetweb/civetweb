@@ -1646,25 +1646,12 @@ handle_lsp_request(struct mg_connection *conn,
 	void *p = NULL;
 	lua_State *L = NULL;
 	int error = 1;
-	struct mg_file filesize = STRUCT_FILE_INITIALIZER;
 
 	/* Assume the script does not support keep_alive. The script may change this
 	 * by calling mg.keep_alive(true). */
 	conn->must_close = 1;
 
-	/* We need both mg_stat to get file size, and mg_fopen to get fd */
-	if (!mg_stat(conn, path, &filesize.stat)) {
-
-		/* File not found */
-		if (ls == NULL) {
-			mg_send_http_error(conn, 500, "Error: File %s not found", path);
-		} else {
-			luaL_error(ls, "File [%s] not found", path);
-		}
-
-		goto cleanup_handle_lsp_request;
-	}
-
+	/* mg_fopen opens the file and sets the size accordingly */
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
 
 		/* File not found or not accessible */
@@ -1680,12 +1667,7 @@ handle_lsp_request(struct mg_connection *conn,
 		goto cleanup_handle_lsp_request;
 	}
 
-	/* TODO: Operations mg_fopen and mg_stat should do what their names
-	 * indicate. They should not fill in different members of the same
-	 * struct mg_file.
-	 * See Github issue #225 */
-	filep->stat.size = filesize.stat.size;
-
+	/* Map file in memory (size is known). */
 	if (filep->access.membuf == NULL
 	    && (p = mmap(NULL,
 	                 (size_t)filep->stat.size,

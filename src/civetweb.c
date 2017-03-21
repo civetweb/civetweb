@@ -2362,7 +2362,7 @@ mg_fopen(const struct mg_connection *conn,
 	if (!is_file_in_memory(conn, path)) {
 
 		/* filep is initialized in mg_stat: all fields with memset to,
-		* some fields like size and modification date with values */
+		 * some fields like size and modification date with values */
 		found = mg_stat(conn, path, &(filep->stat));
 
 		if ((mode == MG_FOPEN_MODE_READ) && (!found)) {
