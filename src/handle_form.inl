@@ -542,15 +542,30 @@ mg_handle_form_request(struct mg_connection *conn,
 		boundary = content_type + bl + 9;
 		bl = strlen(boundary);
 
+		if (boundary[0] == '"') {
+			/* RFC 2046 permits the boundary string to be quoted. */
+			hbuf = strchr(boundary + 1, '"');
+			if (*hbuf) {
+				*hbuf = 0;
+				boundary++;
+				bl = strlen(boundary);
+			}
+		}
+
 		if (bl + 800 > sizeof(buf)) {
 			/* Sanity check:  The algorithm can not work if bl >= sizeof(buf),
 			 * and it will not work effectively, if the buf is only a few byte
-			 * larger than bl, or it buf can not hold the multipart header
+			 * larger than bl, or if buf can not hold the multipart header
 			 * plus the boundary.
 			 * Check some reasonable number here, that should be fulfilled by
 			 * any reasonable request from every browser. If it is not
 			 * fulfilled, it might be a hand-made request, intended to
 			 * interfere with the algorithm. */
+			return -1;
+		}
+		if (bl < 4) {
+			/* Sanity check:  A boundary string of less than 4 bytes makes
+			 * no sense either. */
 			return -1;
 		}
 
