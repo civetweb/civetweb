@@ -635,23 +635,50 @@ mg_handle_form_request(struct mg_connection *conn,
 			/* Get the mandatory name="..." part of the Content-Disposition
 			 * header. */
 			nbeg = strstr(content_disp, "name=\"");
-			if (!nbeg) {
-				/* Malformed request */
-				return -1;
+			while ((nbeg != NULL) && (strcspn(nbeg - 1, ":,; \t") != 0)) {
+				/* It could be somethingname= instead of name= */
+				nbeg = strstr(nbeg + 1, "name=\"");
 			}
-			nbeg += 6;
-			nend = strchr(nbeg, '\"');
-			if (!nend) {
-				/* Malformed request */
-				return -1;
+
+			if (nbeg) {
+				nbeg += 6;
+				nend = strchr(nbeg, '\"');
+				if (!nend) {
+					/* Malformed request */
+					return -1;
+				}
+			} else {
+				/* name= without quotes is also allowed */
+				nbeg = strstr(content_disp, "name=");
+				while ((nbeg != NULL) && (strcspn(nbeg - 1, ":,; \t") != 0)) {
+					/* It could be somethingname= instead of name= */
+					nbeg = strstr(nbeg + 1, "name=");
+				}
+				if (!nbeg) {
+					/* Malformed request */
+					return -1;
+				}
+				/* RFC 2616 Sec. 2.2 defines a list of allowed
+				 * separators, but many of them make no sense
+				 * here, e.g. various brackets or slashes.
+				 * If they are used, probably someone is
+				 * trying to attack with curious hand made
+				 * requests. Only ; , space and tab seem to be
+				 * reasonable here. Ignore everything else. */
+				nend = nbeg + strcspn(nbeg, ",; \t");
 			}
 
 			/* Get the optional filename="..." part of the Content-Disposition
 			 * header. */
 			fbeg = strstr(content_disp, "filename=\"");
+			while ((fbeg != NULL) && (strcspn(fbeg - 1, ":,; \t") != 0)) {
+				/* It could be somethingfilename= instead of filename= */
+				fbeg = strstr(fbeg + 1, "filename=\"");
+			}
 			if (fbeg) {
 				fbeg += 10;
 				fend = strchr(fbeg, '\"');
+
 				if (!fend) {
 					/* Malformed request (the filename field is optional, but if
 					 * it exists, it needs to be terminated correctly). */
@@ -660,11 +687,32 @@ mg_handle_form_request(struct mg_connection *conn,
 
 				/* TODO: check Content-Type */
 				/* Content-Type: application/octet-stream */
+			}
+			if (!fbeg) {
+				/* Try the same without quotes */
+				fbeg = strstr(content_disp, "filename=");
+				while ((fbeg != NULL) && (strcspn(fbeg - 1, ":,; \t") != 0)) {
+					/* It could be somethingfilename= instead of filename= */
+					fbeg = strstr(fbeg + 1, "filename=");
+				}
 
-			} else {
-				fend = fbeg;
+				fend = fbeg + strcspn(nbeg, ",; \t");
+			}
+			if (!fbeg) {
+				fend = NULL;
 			}
 
+			/* In theory, it could be possible that someone crafts
+			 * a request like name=filename=xyz. Check if name and
+			 * filename do not overlap. */
+			if (!(((ptrdiff_t)fbeg > (ptrdiff_t)nend)
+			      || ((ptrdiff_t)nbeg > (ptrdiff_t)fend)
+
+			          )) {
+				return -1;
+			}
+
+			/* Call callback for new field */
 			memset(path, 0, sizeof(path));
 			field_count++;
 			field_storage = url_encoded_field_found(conn,
