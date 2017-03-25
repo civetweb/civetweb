@@ -658,6 +658,8 @@ mg_handle_form_request(struct mg_connection *conn,
 					/* Malformed request */
 					return -1;
 				}
+				nbeg += 5;
+
 				/* RFC 2616 Sec. 2.2 defines a list of allowed
 				 * separators, but many of them make no sense
 				 * here, e.g. various brackets or slashes.
@@ -695,8 +697,10 @@ mg_handle_form_request(struct mg_connection *conn,
 					/* It could be somethingfilename= instead of filename= */
 					fbeg = strstr(fbeg + 1, "filename=");
 				}
-
-				fend = fbeg + strcspn(nbeg, ",; \t");
+				if (fbeg) {
+					fbeg += 9;
+					fend = fbeg + strcspn(fbeg, ",; \t");
+				}
 			}
 			if (!fbeg) {
 				fend = NULL;
