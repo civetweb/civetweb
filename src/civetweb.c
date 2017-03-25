@@ -12663,7 +12663,10 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 		i = 0;
 	}
 	size = sizeof(pthread_mutex_t) * ((size_t)(i));
-	if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc(size)) == NULL) {
+
+	if (size == 0) {
+		ssl_mutexes = NULL;
+	} else if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc(size)) == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
