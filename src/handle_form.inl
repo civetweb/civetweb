@@ -640,6 +640,11 @@ mg_handle_form_request(struct mg_connection *conn,
 				nbeg = strstr(nbeg + 1, "name=\"");
 			}
 
+			/* This line is not required, but otherwise some compilers
+			 * generate spurious warnings. */
+			nend = nbeg;
+
+			/* If name=" is found, search for the closing " */
 			if (nbeg) {
 				nbeg += 6;
 				nend = strchr(nbeg, '\"');
@@ -677,6 +682,12 @@ mg_handle_form_request(struct mg_connection *conn,
 				/* It could be somethingfilename= instead of filename= */
 				fbeg = strstr(fbeg + 1, "filename=\"");
 			}
+
+			/* This line is not required, but otherwise some compilers
+			 * generate spurious warnings. */
+			fend = fbeg;
+
+			/* If filename=" is found, search for the closing " */
 			if (fbeg) {
 				fbeg += 10;
 				fend = strchr(fbeg, '\"');
@@ -710,9 +721,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			 * a request like name=filename=xyz. Check if name and
 			 * filename do not overlap. */
 			if (!(((ptrdiff_t)fbeg > (ptrdiff_t)nend)
-			      || ((ptrdiff_t)nbeg > (ptrdiff_t)fend)
-
-			          )) {
+			      || ((ptrdiff_t)nbeg > (ptrdiff_t)fend))) {
 				return -1;
 			}
 
