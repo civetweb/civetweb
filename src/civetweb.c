@@ -1737,6 +1737,7 @@ enum {
 	LISTENING_PORTS,
 	DOCUMENT_ROOT,
 	SSL_CERTIFICATE,
+	SSL_CERTIFICATE_CHAIN,
 	NUM_THREADS,
 	RUN_AS_USER,
 	REWRITE,
@@ -1825,6 +1826,7 @@ static struct mg_option config_options[] = {
     {"listening_ports", CONFIG_TYPE_STRING, "8080"},
     {"document_root", CONFIG_TYPE_DIRECTORY, NULL},
     {"ssl_certificate", CONFIG_TYPE_FILE, NULL},
+    {"ssl_certificate_chain", CONFIG_TYPE_FILE, NULL},
     {"num_threads", CONFIG_TYPE_NUMBER, "50"},
     {"run_as_user", CONFIG_TYPE_STRING, NULL},
     {"url_rewrite_patterns", CONFIG_TYPE_STRING, NULL},
@@ -12227,7 +12229,8 @@ tls_dtor(void *key)
 
 #if !defined(NO_SSL)
 
-static int ssl_use_pem_file(struct mg_context *ctx, const char *pem);
+static int
+ssl_use_pem_file(struct mg_context *ctx, const char *pem, const char *chain);
 static const char *ssl_error(void);
 
 
@@ -12240,13 +12243,21 @@ refresh_trust(struct mg_connection *conn)
 
 	struct stat cert_buf;
 	long int t;
-	char *pem;
+	const char *pem;
+	const char *chain;
 	int should_verify_peer;
 
 	if ((pem = conn->ctx->config[SSL_CERTIFICATE]) == NULL) {
 		/* If peem is NULL and conn->ctx->callbacks.init_ssl is not,
 		 * refresh_trust still can not work. */
 		return 0;
+	}
+	chain = conn->ctx->config[SSL_CERTIFICATE_CHAIN];
+	if (chain == NULL) {
+		chain = pem;
+	}
+	if (*chain == 0) {
+		chain = NULL;
 	}
 
 	t = data_check;
@@ -12280,7 +12291,7 @@ refresh_trust(struct mg_connection *conn)
 		}
 
 		if (1 == mg_atomic_inc(p_reload_lock)) {
-			if (ssl_use_pem_file(conn->ctx, pem) == 0) {
+			if (ssl_use_pem_file(conn->ctx, pem, chain) == 0) {
 				return 0;
 			}
 			*p_reload_lock = 0;
@@ -12691,7 +12702,7 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 
 
 static int
-ssl_use_pem_file(struct mg_context *ctx, const char *pem)
+ssl_use_pem_file(struct mg_context *ctx, const char *pem, const char *chain)
 {
 	if (SSL_CTX_use_certificate_file(ctx->ssl_ctx, pem, 1) == 0) {
 		mg_cry(fc(ctx),
@@ -12720,13 +12731,23 @@ ssl_use_pem_file(struct mg_context *ctx, const char *pem)
 		return 0;
 	}
 
-	if (SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem) == 0) {
-		mg_cry(fc(ctx),
-		       "%s: cannot use certificate chain file %s: %s",
-		       __func__,
-		       pem,
-		       ssl_error());
-		return 0;
+	/* In contrast to OpenSSL, wolfSSL does not support certificate
+	 * chain files that contain private keys and certificates in
+	 * SSL_CTX_use_certificate_chain_file.
+	 * The CivetWeb-Server used pem-Files that contained both information.
+	 * In order to make wolfSSL work, it is split in two files.
+	 * One file that contains key and certificate used by the server and
+	 * an optional chain file for the ssl stack.
+	 */
+	if (chain) {
+		if (SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, chain) == 0) {
+			mg_cry(fc(ctx),
+			       "%s: cannot use certificate chain file %s: %s",
+			       __func__,
+			       pem,
+			       ssl_error());
+			return 0;
+		}
 	}
 	return 1;
 }
@@ -12770,6 +12791,7 @@ static int
 set_ssl_option(struct mg_context *ctx)
 {
 	const char *pem;
+	const char *chain;
 	int callback_ret;
 	int should_verify_peer;
 	const char *ca_path;
@@ -12791,6 +12813,13 @@ set_ssl_option(struct mg_context *ctx)
 	if ((pem = ctx->config[SSL_CERTIFICATE]) == NULL
 	    && ctx->callbacks.init_ssl == NULL) {
 		return 1;
+	}
+	chain = ctx->config[SSL_CERTIFICATE_CHAIN];
+	if (chain == NULL) {
+		chain = pem;
+	}
+	if (*chain == 0) {
+		chain = NULL;
 	}
 
 	if (!initialize_ssl(ebuf, sizeof(ebuf))) {
@@ -12877,7 +12906,7 @@ set_ssl_option(struct mg_context *ctx)
 	                               sizeof(ssl_context_id));
 
 	if (pem != NULL) {
-		if (!ssl_use_pem_file(ctx, pem)) {
+		if (!ssl_use_pem_file(ctx, pem, chain)) {
 			return 0;
 		}
 	}
@@ -13387,7 +13416,9 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			 * SSL_VERIFY_PEER, verify_ssl_server); */
 
 			if (client_options->client_cert) {
-				if (!ssl_use_pem_file(&fake_ctx, client_options->client_cert)) {
+				if (!ssl_use_pem_file(&fake_ctx,
+				                      client_options->client_cert,
+				                      NULL)) {
 					mg_snprintf(NULL,
 					            NULL, /* No truncation check for ebuf */
 					            ebuf,
