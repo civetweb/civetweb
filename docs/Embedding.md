@@ -198,3 +198,52 @@ All accepted sockets have `SO_RCVTIMEO` and `SO_SNDTIMEO` socket options set
 (controlled by the `request_timeout_ms` CivetWeb option, 30 seconds default)
 which specifies a read/write timeout on client connections.
 
+
+A minimal example
+------
+
+Initializing a HTTP server
+```C
+{
+	/* Server context handle */
+	struct mg_context *ctx;
+
+    /* Initialize the library */
+    mg_init_library(0);
+
+    /* Start the server */
+	ctx = mg_start(NULL, 0, NULL);
+
+    /* Add some handler */
+    mg_set_request_handler(ctx, "/hello", handler, "Hello world");
+
+    ... Run the application ...
+    
+	/* Stop the server */
+	mg_stop(ctx);
+
+    /* Un-initialize the library */
+    mg_exit_library();
+}
+```
+
+A simple callback
+```C
+static int
+handler(struct mg_connection *conn, void *ignored)
+{
+	const char *msg = "Hello world";
+	unsigned long len = (unsigned long)strlen(msg);
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Length: %lu\r\n"
+	          "Content-Type: text/plain\r\n"
+	          "Connection: close\r\n\r\n",
+	          len);
+
+	mg_write(conn, msg, len);
+
+	return 200;
+}
+```

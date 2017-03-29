@@ -24,7 +24,7 @@ struct ttimers {
 };
 
 
-static double
+TIMER_API double
 timer_getcurrenttime(void)
 {
 #if defined(_WIN32)
@@ -51,7 +51,7 @@ timer_getcurrenttime(void)
 }
 
 
-static int
+TIMER_API int
 timer_add(struct mg_context *ctx,
           double next_time,
           double period,
@@ -166,7 +166,10 @@ timer_thread_run(void *thread_func_param)
 
 		d = timer_getcurrenttime();
 	}
+
+	pthread_mutex_lock(&ctx->timers->mutex);
 	ctx->timers->timer_count = 0;
+	pthread_mutex_unlock(&ctx->timers->mutex);
 }
 
 
@@ -186,7 +189,7 @@ timer_thread(void *thread_func_param)
 #endif /* _WIN32 */
 
 
-static int
+TIMER_API int
 timers_init(struct mg_context *ctx)
 {
 	ctx->timers = (struct ttimers *)mg_calloc(sizeof(struct ttimers), 1);
@@ -201,12 +204,19 @@ timers_init(struct mg_context *ctx)
 }
 
 
-static void
+TIMER_API void
 timers_exit(struct mg_context *ctx)
 {
 	if (ctx->timers) {
 		pthread_mutex_lock(&ctx->timers->mutex);
 		ctx->timers->timer_count = 0;
+
+		mg_join_thread(ctx->timers->threadid);
+
+		/* TODO: Do we really need to unlock the mutex, before
+		 * destroying it, if it's destroyed by the thread currently
+		 * owning the mutex? */
+		pthread_mutex_unlock(&ctx->timers->mutex);
 		(void)pthread_mutex_destroy(&ctx->timers->mutex);
 		mg_free(ctx->timers);
 	}

@@ -6,6 +6,7 @@
 // Simple example program on how to use Embedded C++ interface.
 
 #include "CivetServer.h"
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -136,7 +137,7 @@ class FooHandler : public CivetHandler
 		mg_printf(conn,
 		          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>\n",
 		          req_info->request_method,
-		          req_info->uri,
+		          req_info->request_uri,
 		          req_info->http_version);
 		mg_printf(conn, "</body></html>\n");
 
@@ -161,7 +162,7 @@ class FooHandler : public CivetHandler
 		mg_printf(conn,
 		          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>\n",
 		          req_info->request_method,
-		          req_info->uri,
+		          req_info->request_uri,
 		          req_info->http_version);
 		mg_printf(conn, "<p>Content Length: %li</p>\n", (long)tlen);
 		mg_printf(conn, "<pre>\n");
@@ -176,7 +177,7 @@ class FooHandler : public CivetHandler
 				break;
 			}
 			wlen = mg_write(conn, buf, (size_t)rlen);
-			if (rlen != rlen) {
+			if (wlen != rlen) {
 				break;
 			}
 			nlen += wlen;
@@ -243,7 +244,7 @@ class FooHandler : public CivetHandler
                     break;
                 }
                 wlen = fwrite(buf, 1, (size_t)rlen, f);
-                if (rlen != rlen) {
+                if (wlen != rlen) {
                     fail = 1;
                     break;
                 }
@@ -281,7 +282,7 @@ main(int argc, char *argv[])
     }
 
 	// CivetServer server(options); // <-- C style start
-    CivetServer server(cpp_options); // <-- C++ style start
+	CivetServer server(cpp_options); // <-- C++ style start
 
 	ExampleHandler h_ex;
 	server.addHandler(EXAMPLE_URI, h_ex);
@@ -295,6 +296,9 @@ main(int argc, char *argv[])
 	ABHandler h_ab;
 	server.addHandler("/a/b", h_ab);
 
+	/* This handler will handle "everything else", including
+	 * requests to files. If this handler is installed,
+	 * NO_FILES should be set. */
 	FooHandler h_foo;
 	server.addHandler("", h_foo);
 

@@ -48,6 +48,12 @@ munmap(void *addr, int64_t length)
 static const char *LUASOCKET = "luasocket";
 static const char lua_regkey_ctx = 1;
 static const char lua_regkey_connlist = 2;
+static const char lua_regkey_lsp_include_depth = 3;
+
+#ifndef LSP_INCLUDE_MAX_DEPTH
+#define LSP_INCLUDE_MAX_DEPTH (32)
+#endif
+
 
 /* Forward declarations */
 static void handle_request(struct mg_connection *);
@@ -531,13 +537,32 @@ lsp_include(lua_State *L)
 	const char *filename = (num_args == 1) ? lua_tostring(L, 1) : NULL;
 
 	if (filename) {
-		if (handle_lsp_request(conn, filename, &file, L)) {
+		int depth;
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
+		lua_gettable(L, LUA_REGISTRYINDEX);
+		depth = lua_tointeger(L, -1);
+
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
+		lua_pushinteger(L, depth + 1);
+		lua_settable(L, LUA_REGISTRYINDEX);
+
+		if (depth >= ((int)(LSP_INCLUDE_MAX_DEPTH))) {
+			mg_cry(conn,
+			       "lsp max include depth of %i reached while including %s",
+			       (int)(LSP_INCLUDE_MAX_DEPTH),
+			       filename);
+		} else if (handle_lsp_request(conn, filename, &file, L)) {
 			/* handle_lsp_request returned an error code, meaning an error
-			occured in
-			the included page and mg.onerror returned non-zero. Stop processing.
+			* occured in the included page and mg.onerror returned non-zero.
+			* Stop processing.
 			*/
 			lsp_abort(L);
 		}
+
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
+		lua_pushinteger(L, depth);
+		lua_settable(L, LUA_REGISTRYINDEX);
+
 	} else {
 		/* Syntax error */
 		return luaL_error(L, "invalid include() call");
@@ -629,15 +654,20 @@ lsp_get_var(lua_State *L)
 	const char *data, *var_name;
 	size_t data_len, occurrence;
 	int ret;
-	char dst[512];
 
 	if (num_args >= 2 && num_args <= 3) {
+		char *dst;
 		data = lua_tolstring(L, 1, &data_len);
 		var_name = lua_tostring(L, 2);
 		occurrence = (num_args > 2) ? (long)lua_tonumber(L, 3) : 0;
 
-		ret =
-		    mg_get_var2(data, data_len, var_name, dst, sizeof(dst), occurrence);
+		/* Allocate dynamically, so there is no internal limit for get_var */
+		dst = (char *)mg_malloc(data_len + 1);
+		if (!dst) {
+			return luaL_error(L, "out of memory in get_var() call");
+		}
+
+		ret = mg_get_var2(data, data_len, var_name, dst, data_len, occurrence);
 		if (ret >= 0) {
 			/* Variable found: return value to Lua */
 			lua_pushstring(L, dst);
@@ -645,6 +675,7 @@ lsp_get_var(lua_State *L)
 			/* Variable not found (TODO (mid): may be string too long) */
 			lua_pushnil(L);
 		}
+		mg_free(dst);
 	} else {
 		/* Syntax error */
 		return luaL_error(L, "invalid get_var() call");
@@ -696,22 +727,34 @@ lsp_get_cookie(lua_State *L)
 	const char *cookie;
 	const char *var_name;
 	int ret;
-	char dst[512];
 
 	if (num_args == 2) {
-		cookie = lua_tostring(L, 1);
+		/* Correct number of arguments */
+		size_t data_len;
+		char *dst;
+
+		cookie = lua_tolstring(L, 1, &data_len);
 		var_name = lua_tostring(L, 2);
-		if (cookie != NULL && var_name != NULL) {
-			ret = mg_get_cookie(cookie, var_name, dst, sizeof(dst));
-		} else {
-			ret = -1;
+
+		if (cookie == NULL || var_name == NULL) {
+			/* Syntax error */
+			return luaL_error(L, "invalid get_cookie() call");
 		}
+
+		dst = (char *)mg_malloc(data_len + 1);
+		if (!dst) {
+			return luaL_error(L, "out of memory in get_cookie() call");
+		}
+
+		ret = mg_get_cookie(cookie, var_name, dst, data_len);
 
 		if (ret >= 0) {
 			lua_pushlstring(L, dst, ret);
 		} else {
 			lua_pushnil(L);
 		}
+		mg_free(dst);
+
 	} else {
 		/* Syntax error */
 		return luaL_error(L, "invalid get_cookie() call");
@@ -757,13 +800,22 @@ lsp_url_encode(lua_State *L)
 	int num_args = lua_gettop(L);
 	const char *text;
 	size_t text_len;
-	char dst[512 * 3];
+	char *dst;
+	int dst_len;
 
 	if (num_args == 1) {
 		text = lua_tolstring(L, 1, &text_len);
 		if (text) {
-			mg_url_encode(text, dst, sizeof(dst));
-			lua_pushstring(L, dst);
+			dst_len = 3 * (int)text_len + 1;
+			dst = ((text_len < 0x2AAAAAAA) ? (char *)mg_malloc(dst_len)
+			                               : (char *)NULL);
+			if (dst) {
+				mg_url_encode(text, dst, dst_len);
+				lua_pushstring(L, dst);
+				mg_free(dst);
+			} else {
+				return luaL_error(L, "out of memory in url_decode() call");
+			}
 		} else {
 			lua_pushnil(L);
 		}
@@ -783,14 +835,23 @@ lsp_url_decode(lua_State *L)
 	const char *text;
 	size_t text_len;
 	int is_form;
-	char dst[512];
+	char *dst;
+	int dst_len;
 
 	if (num_args == 1 || (num_args == 2 && lua_isboolean(L, 2))) {
 		text = lua_tolstring(L, 1, &text_len);
 		is_form = (num_args == 2) ? lua_isboolean(L, 2) : 0;
 		if (text) {
-			mg_url_decode(text, (int)text_len, dst, (int)sizeof(dst), is_form);
-			lua_pushstring(L, dst);
+			dst_len = (int)text_len + 1;
+			dst = ((text_len < 0x7FFFFFFF) ? (char *)mg_malloc(dst_len)
+			                               : (char *)NULL);
+			if (dst) {
+				mg_url_decode(text, (int)text_len, dst, dst_len, is_form);
+				lua_pushstring(L, dst);
+				mg_free(dst);
+			} else {
+				return luaL_error(L, "out of memory in url_decode() call");
+			}
 		} else {
 			lua_pushnil(L);
 		}
@@ -1384,6 +1445,14 @@ prepare_lua_environment(struct mg_context *ctx,
 		lua_settable(L, LUA_REGISTRYINDEX);
 	}
 
+	/* Lua server pages store the depth of mg.include, in order
+	 * to detect recursions and prevent stack overflows. */
+	if (lua_env_type == LUA_ENV_TYPE_LUA_SERVER_PAGE) {
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
+		lua_pushinteger(L, 0);
+		lua_settable(L, LUA_REGISTRYINDEX);
+	}
+
 	/* Register mg module */
 	lua_newtable(L);
 
@@ -1577,33 +1646,20 @@ handle_lsp_request(struct mg_connection *conn,
 	void *p = NULL;
 	lua_State *L = NULL;
 	int error = 1;
-	struct mg_file filesize = STRUCT_FILE_INITIALIZER;
 
 	/* Assume the script does not support keep_alive. The script may change this
 	 * by calling mg.keep_alive(true). */
 	conn->must_close = 1;
 
-	/* We need both mg_stat to get file size, and mg_fopen to get fd */
-	if (!mg_stat(conn, path, &filesize.stat)) {
-
-		/* File not found */
-		if (ls == NULL) {
-			send_http_error(conn, 500, "Error: File %s not found", path);
-		} else {
-			luaL_error(ls, "File [%s] not found", path);
-		}
-
-		goto cleanup_handle_lsp_request;
-	}
-
+	/* mg_fopen opens the file and sets the size accordingly */
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
 
 		/* File not found or not accessible */
 		if (ls == NULL) {
-			send_http_error(conn,
-			                500,
-			                "Error: Cannot open script file %s",
-			                path);
+			mg_send_http_error(conn,
+			                   500,
+			                   "Error: Cannot open script file %s",
+			                   path);
 		} else {
 			luaL_error(ls, "Cannot  [%s] not found", path);
 		}
@@ -1611,12 +1667,7 @@ handle_lsp_request(struct mg_connection *conn,
 		goto cleanup_handle_lsp_request;
 	}
 
-	/* TODO: Operations mg_fopen and mg_stat should do what their names
-	 * indicate. They should not fill in different members of the same
-	 * struct mg_file.
-	 * See Github issue #225 */
-	filep->stat.size = filesize.stat.size;
-
+	/* Map file in memory (size is known). */
 	if (filep->access.membuf == NULL
 	    && (p = mmap(NULL,
 	                 (size_t)filep->stat.size,
@@ -1627,7 +1678,7 @@ handle_lsp_request(struct mg_connection *conn,
 
 		/* mmap failed */
 		if (ls == NULL) {
-			send_http_error(
+			mg_send_http_error(
 			    conn,
 			    500,
 			    "Error: Cannot open script\nFile %s can not be mapped",
@@ -1649,7 +1700,7 @@ handle_lsp_request(struct mg_connection *conn,
 	} else {
 		L = lua_newstate(lua_allocator, NULL);
 		if (L == NULL) {
-			send_http_error(
+			mg_send_http_error(
 			    conn,
 			    500,
 			    "%s",
@@ -1982,7 +2033,8 @@ lua_init_optional_libraries(void)
 {
 #if !defined(_WIN32)
 	lib_handle_uuid = dlopen("libuuid.so", RTLD_LAZY);
-	pf_uuid_generate.p = dlsym(lib_handle_uuid, "uuid_generate");
+	pf_uuid_generate.p =
+	    (lib_handle_uuid ? dlsym(lib_handle_uuid, "uuid_generate") : 0);
 #else
 	pf_uuid_generate.p = 0;
 #endif
@@ -1993,7 +2045,9 @@ static void
 lua_exit_optional_libraries(void)
 {
 #if !defined(_WIN32)
-	dlclose(lib_handle_uuid);
+	if (lib_handle_uuid) {
+		dlclose(lib_handle_uuid);
+	}
 #endif
 	pf_uuid_generate.p = 0;
 	lib_handle_uuid = NULL;

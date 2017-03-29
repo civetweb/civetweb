@@ -33,6 +33,7 @@ before_script:
   # Check some settings of the build server
   - uname -a
   - pwd
+  - if [[ "${BUILD_TYPE}" == "OSX_OPENSSL_1_1" ]]; then brew install openssl@1.1 ;fi
   # Generate the build scripts with CMake
   - mkdir output
   - gcc test/cgi_test.c -o output/cgi_test.cgi
@@ -48,6 +49,7 @@ before_script:
     -DCIVETWEB_DISABLE_CGI=${NO_CGI}
     -DCIVETWEB_SERVE_NO_FILES=${NO_FILES}
     -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=${ENABLE_SSL_DYNAMIC_LOADING}
+    -DCIVETWEB_SSL_OPENSSL_API_1_1=${OPENSSL_1_1}
     -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
     -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
     -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6}
@@ -57,6 +59,7 @@ before_script:
     -DCIVETWEB_DISABLE_CACHING=${NO_CACHING}
     -DCIVETWEB_C_STANDARD=${C_STANDARD}
     -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
+    ${ADDITIONAL_CMAKE_ARGS}
     ..
   - ls -la
 
@@ -88,6 +91,7 @@ matrix:
       N=ClangLinuxMinimal
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -110,6 +114,7 @@ matrix:
       N=GCCLinuxMinimal
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -132,6 +137,7 @@ matrix:
       N=ClangOSXMinimal
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -154,6 +160,7 @@ matrix:
       N=ClangLinuxMinNoCache
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -176,6 +183,7 @@ matrix:
       N=ClangLinuxMax
       BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -198,6 +206,7 @@ matrix:
       N=GCCLinuxMax
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -220,6 +229,7 @@ matrix:
       N=ClangOSXMax
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -236,12 +246,42 @@ matrix:
       NO_CACHING=YES
 
   -
+    os: osx
+    compiler: clang
+    env:
+      N=ClangOSXOpenSSL_1_1_NoDynLoad
+      BUILD_TYPE=OSX_OPENSSL_1_1
+      ENABLE_SSL_DYNAMIC_LOADING=NO
+      OPENSSL_1_1=YES
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+      LDFLAGS="-L${OPENSSL_ROOT_DIR}/lib"
+      CFLAGS="-I${OPENSSL_ROOT_DIR}/include"
+      ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DCMAKE_C_FLAGS=${CFLAGS}"
+      PATH="${OPENSSL_ROOT_DIR}/bin:$PATH"
+      DYLD_LIBRARY_PATH="${OPENSSL_ROOT_DIR}/lib:${DYLD_LIBRARY_PATH}"
+
+  -
     os: linux
     compiler: clang
     env:
       N=ClangLinuxDefault
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -264,6 +304,7 @@ matrix:
       N=GCCLinuxDefault
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -286,6 +327,7 @@ matrix:
       N=ClangOSXDefault
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -308,6 +350,7 @@ matrix:
       N=ClangLinuxDefaultShared
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -330,6 +373,7 @@ matrix:
       N=GCCLinuxDefaultShared
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -352,6 +396,7 @@ matrix:
       N=ClangOSXDefaultShared
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -374,6 +419,7 @@ matrix:
       N=OSX_Package
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -424,6 +470,7 @@ matrix:
 #      print("      N=C" .. tostring(i) .. "_")
 #      print("      BUILD_TYPE=Release")
 #      print("      ENABLE_SSL_DYNAMIC_LOADING=YES")
+#      print("      OPENSSL_1_1=NO")
 #      print("      ENABLE_CXX=NO")
 #      print("      C_STANDARD=auto")
 #      print("      CXX_STANDARD=auto")
@@ -450,6 +497,7 @@ matrix:
       N=C0_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -472,6 +520,7 @@ matrix:
       N=C1_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -494,6 +543,7 @@ matrix:
       N=C2_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -516,6 +566,7 @@ matrix:
       N=C3_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -538,6 +589,7 @@ matrix:
       N=C4_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -560,6 +612,7 @@ matrix:
       N=C5_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -582,6 +635,7 @@ matrix:
       N=C6_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -604,6 +658,7 @@ matrix:
       N=C7_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -626,6 +681,7 @@ matrix:
       N=C8_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -648,6 +704,7 @@ matrix:
       N=C9_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -670,6 +727,7 @@ matrix:
       N=C10_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -692,6 +750,7 @@ matrix:
       N=C11_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -714,6 +773,7 @@ matrix:
       N=C12_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -736,6 +796,7 @@ matrix:
       N=C13_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -758,6 +819,7 @@ matrix:
       N=C14_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -780,6 +842,7 @@ matrix:
       N=C15_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -802,6 +865,7 @@ matrix:
       N=C16_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -824,6 +888,7 @@ matrix:
       N=C17_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -846,6 +911,7 @@ matrix:
       N=C18_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -868,6 +934,7 @@ matrix:
       N=C19_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -890,6 +957,7 @@ matrix:
       N=C20_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -912,6 +980,7 @@ matrix:
       N=C21_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -934,6 +1003,7 @@ matrix:
       N=C22_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -956,6 +1026,7 @@ matrix:
       N=C23_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -978,6 +1049,7 @@ matrix:
       N=C24_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -1000,6 +1072,7 @@ matrix:
       N=C25_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -1022,6 +1095,7 @@ matrix:
       N=C26_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -1044,6 +1118,7 @@ matrix:
       N=C27_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -1066,6 +1141,7 @@ matrix:
       N=C28_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -1088,6 +1164,7 @@ matrix:
       N=C29_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -1110,6 +1187,7 @@ matrix:
       N=C30_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -1132,6 +1210,7 @@ matrix:
       N=C31_
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
@@ -1153,11 +1232,35 @@ matrix:
 
   -
     os: linux
+    compiler: clang
+    env:
+      N=NoSslDynamicLoading
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=NO
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
     compiler: gcc
     env:
       N=GCCLinuxDefault_Debug
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -1180,6 +1283,7 @@ matrix:
       N=GCCLinuxDefault_RelWithDebInfo
       BUILD_TYPE=RelWithDebInfo
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -1202,6 +1306,7 @@ matrix:
       N=GCCLinuxDefault_MinSizeRel
       BUILD_TYPE=MinSizeRel
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -1224,6 +1329,7 @@ matrix:
       N=GCCLinuxDefault_None
       BUILD_TYPE=None
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto

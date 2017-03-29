@@ -669,7 +669,7 @@ END_TEST
 START_TEST(test_sha1)
 {
 #ifdef SHA1_DIGEST_SIZE
-	SHA1_CTX sha_ctx;
+	SHA_CTX sha_ctx;
 	uint8_t digest[SHA1_DIGEST_SIZE] = {0};
 	char str[48] = {0};
 	int i;
@@ -680,7 +680,7 @@ START_TEST(test_sha1)
 
 	/* empty string */
 	SHA1_Init(&sha_ctx);
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
@@ -688,7 +688,7 @@ START_TEST(test_sha1)
 	/* empty string */
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (uint8_t *)"abc", 0);
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
@@ -696,7 +696,7 @@ START_TEST(test_sha1)
 	/* "abc" */
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (uint8_t *)"abc", 3);
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "a9993e364706816aba3e25717850c26c9cd0d89d");
@@ -705,7 +705,7 @@ START_TEST(test_sha1)
 	test_str = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (uint8_t *)test_str, (uint32_t)strlen(test_str));
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "84983e441c3bd26ebaae4aa1f95129e5e54670f1");
@@ -715,7 +715,7 @@ START_TEST(test_sha1)
 	for (i = 0; i < 1000000; i++) {
 		SHA1_Update(&sha_ctx, (uint8_t *)"a", 1);
 	}
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
@@ -725,7 +725,7 @@ START_TEST(test_sha1)
 	for (i = 0; i < 100000; i++) {
 		SHA1_Update(&sha_ctx, (uint8_t *)"aaaaaaaaaa", 10);
 	}
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "34aa973cd4c4daa4f61eeb2bdbad27316534016f");

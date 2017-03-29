@@ -23,10 +23,10 @@
 #ifndef CIVETWEB_HEADER_INCLUDED
 #define CIVETWEB_HEADER_INCLUDED
 
-#define CIVETWEB_VERSION "1.9.1"
+#define CIVETWEB_VERSION "1.10"
 #define CIVETWEB_VERSION_MAJOR (1)
-#define CIVETWEB_VERSION_MINOR (9)
-#define CIVETWEB_VERSION_PATCH (1)
+#define CIVETWEB_VERSION_MINOR (10)
+#define CIVETWEB_VERSION_PATCH (0)
 
 #ifndef CIVETWEB_API
 #if defined(_WIN32)
@@ -83,13 +83,15 @@ struct mg_request_info {
 	const char *local_uri;      /* URL-decoded URI (relative). Can be NULL
 	                             * if the request_uri does not address a
 	                             * resource at the server host. */
-	const char *uri;            /* Deprecated: use local_uri instead */
-	const char *http_version;   /* E.g. "1.0", "1.1" */
-	const char *query_string;   /* URL part after '?', not including '?', or
-	                               NULL */
-	const char *remote_user;    /* Authenticated user, or NULL if no auth
-	                               used */
-	char remote_addr[48];       /* Client's IP address as a string. */
+#if defined(MG_LEGACY_INTERFACE)
+	const char *uri; /* Deprecated: use local_uri instead */
+#endif
+	const char *http_version; /* E.g. "1.0", "1.1" */
+	const char *query_string; /* URL part after '?', not including '?', or
+	                             NULL */
+	const char *remote_user;  /* Authenticated user, or NULL if no auth
+	                             used */
+	char remote_addr[48];     /* Client's IP address as a string. */
 
 #if defined(MG_LEGACY_INTERFACE)
 	long remote_ip; /* Client's IP address. Deprecated: use remote_addr instead
@@ -201,6 +203,18 @@ struct mg_callbacks {
 	   mg_set_websocket_handler instead. */
 	void (*connection_close)(const struct mg_connection *);
 
+#if defined(MG_USE_OPEN_FILE)
+	/* Note: The "file in memory" feature is a deletion candidate, since
+	 * it complicates the code, and does not add any value compared to
+	 * "mg_add_request_handler".
+	 * See this discussion thread:
+	 * https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI
+	 * If you disagree, if there is any situation this is indeed useful
+	 * and cannot trivially be replaced by another existing feature,
+	 * please contribute to this discussion during the next 3 month
+	 * (till end of April 2017), otherwise this feature might be dropped
+	 * in future releases. */
+
 	/* Called when civetweb tries to open a file. Used to intercept file open
 	   calls, and serve file data from memory instead.
 	   Parameters:
@@ -214,6 +228,7 @@ struct mg_callbacks {
 	const char *(*open_file)(const struct mg_connection *,
 	                         const char *path,
 	                         size_t *data_len);
+#endif
 
 	/* Called when civetweb is about to serve Lua server page, if
 	   Lua support is enabled.
@@ -417,7 +432,7 @@ CIVETWEB_API void mg_set_websocket_handler_with_subprotocols(
 
 /* mg_authorization_handler
 
-   Some description here
+   Callback function definition for mg_set_auth_handler
 
    Parameters:
       conn: current connection information.
@@ -467,6 +482,19 @@ CIVETWEB_API void mg_set_user_connection_data(struct mg_connection *conn,
 /* Get user data set for the current connection. */
 CIVETWEB_API void *
 mg_get_user_connection_data(const struct mg_connection *conn);
+
+
+/* Get a formatted link corresponding to the current request
+
+   Parameters:
+      conn: current connection information.
+      buf: string buffer (out)
+      buflen: length of the string buffer
+   Returns:
+      <0: error
+      >=0: ok */
+CIVETWEB_API int
+mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen);
 
 
 #if defined(MG_LEGACY_INTERFACE)
@@ -656,8 +684,24 @@ CIVETWEB_API int mg_printf(struct mg_connection *,
                            ...) PRINTF_ARGS(2, 3);
 
 
+/* Send a part of the message body, if chunked transfer encoding is set.
+ * Only use this function after sending a complete HTTP request or response
+ * header with "Transfer-Encoding: chunked" set. */
+CIVETWEB_API int mg_send_chunk(struct mg_connection *conn,
+                               const char *chunk,
+                               unsigned int chunk_len);
+
+
 /* Send contents of the entire file together with HTTP headers. */
 CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
+
+
+/* Send HTTP error reply. */
+CIVETWEB_API void mg_send_http_error(struct mg_connection *conn,
+                                     int status_code,
+                                     PRINTF_FORMAT_STRING(const char *fmt),
+                                     ...) PRINTF_ARGS(3, 4);
+
 
 /* Send contents of the entire file together with HTTP headers.
    Parameters:
@@ -669,6 +713,7 @@ CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
 CIVETWEB_API void mg_send_mime_file(struct mg_connection *conn,
                                     const char *path,
                                     const char *mime_type);
+
 
 /* Send contents of the entire file together with HTTP headers.
    Parameters:
@@ -685,6 +730,7 @@ CIVETWEB_API void mg_send_mime_file2(struct mg_connection *conn,
                                      const char *path,
                                      const char *mime_type,
                                      const char *additional_headers);
+
 
 /* Store body data into a file. */
 CIVETWEB_API long long mg_store_body(struct mg_connection *conn,

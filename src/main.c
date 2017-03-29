@@ -175,7 +175,7 @@ enum { OPTION_TITLE, OPTION_ICON, OPTION_WEBPAGE, NUM_MAIN_OPTIONS };
 static struct mg_option main_config_options[] = {
     {"title", CONFIG_TYPE_STRING, NULL},
     {"icon", CONFIG_TYPE_STRING, NULL},
-	{"website", CONFIG_TYPE_STRING, NULL },
+    {"website", CONFIG_TYPE_STRING, NULL},
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -652,12 +652,11 @@ init_server_name(int argc, const char *argv[])
 	g_website = "http://civetweb.github.io/civetweb/";
 	for (i = 0; i < argc - 1; i++) {
 		if ((argv[i][0] == '-')
-			&& (0 == strcmp(argv[i] + 1,
-				main_config_options[OPTION_WEBPAGE].name))) {
+		    && (0 == strcmp(argv[i] + 1,
+		                    main_config_options[OPTION_WEBPAGE].name))) {
 			g_website = (const char *)(argv[i + 1]);
 		}
 	}
-
 }
 
 
@@ -1265,7 +1264,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 		/* Initialize the dialog elements */
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
-		title = malloc(strlen(g_server_name) + 16);
+		title = (char *)malloc(strlen(g_server_name) + 16);
 		if (title) {
 			strcpy(title, g_server_name);
 			strcat(title, " settings");
@@ -1411,8 +1410,8 @@ get_password(const char *user,
 	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
-		DLGTEMPLATE template; /* 18 bytes */
-		WORD menu, class;
+		DLGTEMPLATE dlg_template; /* 18 bytes */
+		WORD menu, dlg_class;
 		wchar_t caption[1];
 		WORD fontsiz;
 		wchar_t fontface[7];
@@ -1662,7 +1661,7 @@ add_control(unsigned char **mem,
 
 	dia->cdit++;
 
-	*mem = align(*mem, 3);
+	*mem = (unsigned char *)align(*mem, 3);
 	tp = (DLGITEMTEMPLATE *)*mem;
 
 	tp->id = id;
@@ -1673,7 +1672,7 @@ add_control(unsigned char **mem,
 	tp->cx = cx;
 	tp->cy = cy;
 
-	p = align(*mem + sizeof(*tp), 1);
+	p = (LPWORD)align(*mem + sizeof(*tp), 1);
 	*p++ = 0xffff;
 	*p++ = type;
 
@@ -1681,7 +1680,7 @@ add_control(unsigned char **mem,
 		*p++ = (WCHAR)*caption++;
 	}
 	*p++ = 0;
-	p = align(p, 1);
+	p = (LPWORD)align(p, 1);
 
 	*p++ = 0;
 	*mem = (unsigned char *)p;
@@ -1704,8 +1703,8 @@ show_settings_dialog()
 	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
-		DLGTEMPLATE template; /* 18 bytes */
-		WORD menu, class;
+		DLGTEMPLATE dlg_template; /* 18 bytes */
+		WORD menu, dlg_class;
 		wchar_t caption[1];
 		WORD fontsiz;
 		wchar_t fontface[7];
@@ -1890,8 +1889,8 @@ change_password_file()
 	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
-		DLGTEMPLATE template; /* 18 bytes */
-		WORD menu, class;
+		DLGTEMPLATE dlg_template; /* 18 bytes */
+		WORD menu, dlg_class;
 		wchar_t caption[1];
 		WORD fontsiz;
 		wchar_t fontface[7];
@@ -2102,8 +2101,8 @@ show_system_info()
 	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
-		DLGTEMPLATE template; /* 18 bytes */
-		WORD menu, class;
+		DLGTEMPLATE dlg_template; /* 18 bytes */
+		WORD menu, dlg_class;
 		wchar_t caption[1];
 		WORD fontsiz;
 		wchar_t fontface[7];
@@ -2315,12 +2314,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			break;
 		case ID_WEBSITE:
 			fprintf(stdout, "[%s]\n", g_website);
-			ShellExecute(NULL,
-				"open",
-				g_website,
-				NULL,
-				NULL,
-				SW_SHOW);
+			ShellExecute(NULL, "open", g_website, NULL, NULL, SW_SHOW);
 			break;
 		}
 		break;
@@ -2458,15 +2452,15 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	ShowWindow(hWnd, SW_HIDE);
 
 	if (g_icon_name) {
-		hIcon =
+		hIcon = (HICON)
 		    LoadImage(NULL, g_icon_name, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
 	} else {
-		hIcon = LoadImage(GetModuleHandle(NULL),
-		                  MAKEINTRESOURCE(ID_ICON),
-		                  IMAGE_ICON,
-		                  16,
-		                  16,
-		                  0);
+		hIcon = (HICON)LoadImage(GetModuleHandle(NULL),
+		                         MAKEINTRESOURCE(ID_ICON),
+		                         IMAGE_ICON,
+		                         16,
+		                         16,
+		                         0);
 	}
 
 	TrayIcon.cbSize = sizeof(TrayIcon);

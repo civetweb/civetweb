@@ -1,3 +1,23 @@
+Release Notes v1.10 (work in progress)
+===
+### Objectives: *OpenSSL 1.1 support + to be defined*
+
+Changes
+-------
+
+- Allow to compile civetweb.c wih a C++ compiler
+- Lua: Remove internal length limits of encode/decode functions
+- Allow sub-resources of index script files
+- Remove deprecated "uri" member of the request from the interface
+- Improve documentation
+- Make auth domain check optional (configuration)
+- Update unit test framework to check 0.11.0
+- Limit depth of mg.include for Lua server pages
+- Additional unit tests
+- OpenSSL 1.1 support
+- Update version number
+
+
 Release Notes v1.9.1
 ===
 ### Objectives: *Bug fix*
@@ -339,6 +359,6 @@ Changes
 
 - Renamed Mongoose to Civetweb in the code and documentation.
 - Replaced copyrighted images with new images
-- Created a new code respository at https://github.com/bel2125/civetweb
+- Created a new code respository at https://github.com/civetweb/civetweb
 - Created a distribution site at https://sourceforge.net/projects/civetweb/
 - Basic build testing
