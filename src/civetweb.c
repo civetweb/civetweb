@@ -503,6 +503,14 @@ typedef const void *SOCK_OPT_TYPE;
 typedef unsigned short int in_port_t;
 #endif
 
+#if defined(ANDROID)
+#include <android/log.h>
+#define  LOG_TAG    "civetweb"
+#define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
+#else
+#define  LOGD(...)
+#endif
+
 #include <pwd.h>
 #include <unistd.h>
 #include <grp.h>
@@ -7375,13 +7383,6 @@ handle_static_file_request(struct mg_connection *conn,
 		mime_vec.ptr = mime_type;
 		mime_vec.len = strlen(mime_type);
 	}
-	if (filep->stat.size > INT64_MAX) {
-		send_http_error(conn,
-		                500,
-		                "Error: File size is too large to send\n%" INT64_FMT,
-		                filep->stat.size);
-	}
-	cl = (int64_t)filep->stat.size;
 	conn->status_code = 200;
 	range[0] = '\0';
 
@@ -7413,6 +7414,14 @@ handle_static_file_request(struct mg_connection *conn,
 	}
 
 	fclose_on_exec(&filep->access, conn);
+
+	if (filep->stat.size > INT64_MAX) {
+		send_http_error(conn,
+		                500,
+		                "Error: File size is too large to send\n%" INT64_FMT,
+		                filep->stat.size);
+	}
+	cl = (int64_t)filep->stat.size;
 
 	/* If Range: header specified, act accordingly */
 	r1 = r2 = 0;
