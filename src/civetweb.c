@@ -2652,6 +2652,8 @@ mg_get_user_connection_data(const struct mg_connection *conn)
 }
 
 
+#if defined(MG_LEGACY_INTERFACE)
+/* Deprecated: Use mg_get_server_ports instead. */
 size_t
 mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 {
@@ -2671,6 +2673,7 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 	}
 	return i;
 }
+#endif
 
 
 int

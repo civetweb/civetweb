@@ -553,9 +553,11 @@ CIVETWEB_API int mg_get_server_ports(const struct mg_context *ctx,
                                      struct mg_server_ports *ports);
 
 
+#if defined(MG_LEGACY_INTERFACE)
 /* Deprecated: Use mg_get_server_ports instead. */
 CIVETWEB_API size_t
 mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl);
+#endif
 
 
 /* Add, edit or delete the entry in the passwords file.
