@@ -315,9 +315,11 @@ test_mg_start_stop_http_server_impl(int ipv6)
 	int optcnt = 0;
 	const char *localhost_name = ((ipv6) ? "[::1]" : "127.0.0.1");
 
+#if defined(MG_LEGACY_INTERFACE)
 	size_t ports_cnt;
 	int ports[16];
 	int ssl[16];
+#endif
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
@@ -335,8 +337,10 @@ test_mg_start_stop_http_server_impl(int ipv6)
 	OPTIONS[optcnt++] = ((ipv6) ? "+8080" : "8080");
 	OPTIONS[optcnt] = 0;
 
+#if defined(MG_LEGACY_INTERFACE)
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
+#endif
 	memset(portinfo, 0, sizeof(portinfo));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(errmsg, 0, sizeof(errmsg));
@@ -348,12 +352,14 @@ test_mg_start_stop_http_server_impl(int ipv6)
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
+#if defined(MG_LEGACY_INTERFACE)
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
 	ck_assert_uint_eq(ports_cnt, 1);
 	ck_assert_int_eq(ports[0], 8080);
 	ck_assert_int_eq(ssl[0], 0);
 	ck_assert_int_eq(ports[1], 0);
 	ck_assert_int_eq(ssl[1], 0);
+#endif
 
 	ret = mg_get_server_ports(ctx, 0, portinfo);
 	ck_assert_int_lt(ret, 0);
@@ -517,9 +523,11 @@ START_TEST(test_mg_start_stop_https_server)
 
 	struct mg_context *ctx;
 
+#if defined(MG_LEGACY_INTERFACE)
 	size_t ports_cnt;
 	int ports[16];
 	int ssl[16];
+#endif
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
@@ -549,8 +557,10 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
+#if defined(MG_LEGACY_INTERFACE)
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
+#endif
 	memset(portinfo, 0, sizeof(portinfo));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(errmsg, 0, sizeof(errmsg));
@@ -562,6 +572,7 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
+#if defined(MG_LEGACY_INTERFACE)
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
 	ck_assert_uint_eq(ports_cnt, 2);
 	ck_assert_int_eq(ports[0], 8080);
@@ -570,7 +581,7 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(ssl[1], 1);
 	ck_assert_int_eq(ports[2], 0);
 	ck_assert_int_eq(ssl[2], 0);
-
+#endif
 
 	ret = mg_get_server_ports(ctx, 0, portinfo);
 	ck_assert_int_lt(ret, 0);
