@@ -25,6 +25,7 @@
 * ehlertjd
 * Eric Tsau
 * Erik Beran
+* extergnoto
 * F-Secure Corporation
 * feneuilflo
 * Fernando G. Aranda
@@ -82,6 +83,7 @@
 * Philipp Hasper
 * Red54
 * Richard Screene
+* pkvamme
 * Sage Weil
 * Sangwhan Moon
 * Saumitra Vikram
