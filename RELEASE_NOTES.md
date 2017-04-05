@@ -5,6 +5,12 @@ Release Notes v1.10 (work in progress)
 Changes
 -------
 
+- Fix timeout error when sending larger files
+- Add mg_send_chunk interface function
+- Allow to separate server private key and certificate chain in two different files
+- Support for multipart requests without quotes (for some C# clients)
+- Initialize SSL in mg_init_library, so https client functions can be used when no server is running
+- Allow "REPORT" HTTP method for REST calls to scripts
 - Allow to compile civetweb.c wih a C++ compiler
 - Lua: Remove internal length limits of encode/decode functions
 - Allow sub-resources of index script files
