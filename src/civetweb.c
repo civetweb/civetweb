@@ -4880,7 +4880,7 @@ push(struct mg_context *ctx,
 			now = mg_get_current_time_ns();
 		}
 
-	} while ((timeout <= 0) || ((start - now) <= timeout_ns));
+	} while ((timeout <= 0) || ((now - start) <= timeout_ns));
 
 	(void)err; /* Avoid unused warning if NO_SSL is set and DEBUG_TRACE is not
 	              used */
