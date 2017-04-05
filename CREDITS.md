@@ -30,6 +30,7 @@
 * Fernando G. Aranda
 * Grahack
 * grenclave
+* grunk
 * hansipie
 * HariKamath Kamath
 * Jack
@@ -87,6 +88,7 @@
 * Scott Nations
 * sgmesservey
 * shantanugadgil
+* slidertom
 * SpaceLord
 * sunfch
 * thewaterymoon
@@ -95,7 +97,9 @@
 * Toni Wilk
 * Ulrich Hertlein
 * Walt Steverson
+* webxer
 * William Greathouse
+* xeoshow
 * xtne6f
 * Yehuda Sadeh
 
