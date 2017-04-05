@@ -12634,11 +12634,11 @@ static int cryptolib_users = 0; /* Reference counter for crypto library. */
 static int
 initialize_ssl(char *ebuf, size_t ebuf_len)
 {
+#ifdef OPENSSL_API_1_1
 	if (ebuf_len > 0) {
 		ebuf[0] = 0;
 	}
 
-#ifdef OPENSSL_API_1_1
 #if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
 		cryptolib_dll_handle = load_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
@@ -12652,9 +12652,13 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 		return 1;
 	}
 
-#else
+#else /* not OPENSSL_API_1_1 */
 	int i;
 	size_t size;
+
+	if (ebuf_len > 0) {
+		ebuf[0] = 0;
+	}
 
 #if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
