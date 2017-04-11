@@ -296,13 +296,20 @@ main(int argc, char *argv[])
 	ABHandler h_ab;
 	server.addHandler("/a/b", h_ab);
 
+#ifdef NO_FILES
 	/* This handler will handle "everything else", including
 	 * requests to files. If this handler is installed,
 	 * NO_FILES should be set. */
 	FooHandler h_foo;
 	server.addHandler("", h_foo);
 
+	printf("See a page from the \"all\" handler at http://localhost:%s/\n", PORT);
+#else
+	FooHandler h_foo;
+	server.addHandler("**.foo", h_foo);
 	printf("Browse files at http://localhost:%s/\n", PORT);
+#endif
+
 	printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
 	printf("Exit at http://localhost:%s%s\n", PORT, EXIT_URI);
 
