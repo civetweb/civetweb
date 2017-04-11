@@ -294,6 +294,7 @@ class WsStartHandler : public CivetHandler
 	mg_printf(conn, "<script>\n");
 	mg_printf(
 	    conn,
+	    "var i=0\n"
 	    "function load() {\n"
 	    "  var wsproto = (location.protocol === 'https:') ? 'wss:' : 'ws:';\n"
 	    "  connection = new WebSocket(wsproto + '//' + window.location.host + "
@@ -302,6 +303,8 @@ class WsStartHandler : public CivetHandler
 	    "document.getElementById('websock_text_field');\n"
 	    "  connection.onmessage = function (e) {\n"
 	    "    websock_text_field.innerHTML=e.data;\n"
+	    "    i=i+1;"
+	    "    connection.send(i);\n"
 	    "  }\n"
 	    "  connection.onerror = function (error) {\n"
 	    "    alert('WebSocket error');\n"
@@ -347,7 +350,12 @@ class WebSocketHandler : public CivetWebSocketHandler {
 	                        int bits,
 	                        char *data,
 	                        size_t data_len) {
-		printf("WS got %lu bytes\n", (long unsigned)data_len);
+		printf("WS got %lu bytes: ", (long unsigned)data_len);
+		fwrite(data, 1, data_len, stdout);
+		printf("\n");
+
+		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
+		return (data_len<4);
 	}
 
 	virtual void handleClose(CivetServer *server,
