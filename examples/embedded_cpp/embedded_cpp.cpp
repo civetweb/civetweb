@@ -45,6 +45,9 @@ class ExampleHandler : public CivetHandler
 		          "<p>To see a page from the *.foo handler <a "
 		          "href=\"xy.foo\">click here</a></p>\r\n");
 		mg_printf(conn,
+		          "<p>To see a page from the WebSocket handler <a "
+		          "href=\"ws\">click here</a></p>\r\n");
+		mg_printf(conn,
 		          "<p>To exit <a href=\"%s\">click here</a></p>\r\n",
 		          EXIT_URI);
 		mg_printf(conn, "</body></html>\r\n");
@@ -269,6 +272,91 @@ class FooHandler : public CivetHandler
     }
 };
 
+class WsStartHandler : public CivetHandler
+{
+  public:
+	bool
+	handleGet(CivetServer *server, struct mg_connection *conn)
+	{
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
+
+	mg_printf(conn, "<!DOCTYPE html>\n");
+	mg_printf(conn, "<html>\n<head>\n");
+	mg_printf(conn, "<meta charset=\"UTF-8\">\n");
+	mg_printf(conn, "<title>Embedded websocket example</title>\n");
+
+#ifdef USE_WEBSOCKET
+	/* mg_printf(conn, "<script type=\"text/javascript\"><![CDATA[\n"); ...
+	 * xhtml style */
+	mg_printf(conn, "<script>\n");
+	mg_printf(
+	    conn,
+	    "function load() {\n"
+	    "  var wsproto = (location.protocol === 'https:') ? 'wss:' : 'ws:';\n"
+	    "  connection = new WebSocket(wsproto + '//' + window.location.host + "
+	    "'/websocket');\n"
+	    "  websock_text_field = "
+	    "document.getElementById('websock_text_field');\n"
+	    "  connection.onmessage = function (e) {\n"
+	    "    websock_text_field.innerHTML=e.data;\n"
+	    "  }\n"
+	    "  connection.onerror = function (error) {\n"
+	    "    alert('WebSocket error');\n"
+	    "    connection.close();\n"
+	    "  }\n"
+	    "}\n");
+	/* mg_printf(conn, "]]></script>\n"); ... xhtml style */
+	mg_printf(conn, "</script>\n");
+	mg_printf(conn, "</head>\n<body onload=\"load()\">\n");
+	mg_printf(
+	    conn,
+	    "<div id='websock_text_field'>No websocket connection yet</div>\n");
+#else
+	mg_printf(conn, "</head>\n<body>\n");
+	mg_printf(conn, "Example not compiled with USE_WEBSOCKET\n");
+#endif
+	mg_printf(conn, "</body>\n</html>\n");
+
+	return 1;
+}
+};
+
+
+#ifdef USE_WEBSOCKET
+class WebSocketHandler : public CivetWebSocketHandler {
+
+	virtual bool handleConnection(CivetServer *server,
+	                              const struct mg_connection *conn) {
+		printf("WS connected\n");
+		return true;
+	}
+
+	virtual void handleReadyState(CivetServer *server,
+	                              struct mg_connection *conn) {
+		printf("WS ready\n");
+
+		const char *text = "Hello from the websocket ready handler";
+		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+	}
+
+	virtual bool handleData(CivetServer *server,
+	                        struct mg_connection *conn,
+	                        int bits,
+	                        char *data,
+	                        size_t data_len) {
+		printf("WS got %lu bytes\n", (long unsigned)data_len);
+	}
+
+	virtual void handleClose(CivetServer *server,
+	                         const struct mg_connection *conn) {
+		printf("WS closed\n");
+	}
+};
+#endif
+
 
 int
 main(int argc, char *argv[])
@@ -296,6 +384,9 @@ main(int argc, char *argv[])
 	ABHandler h_ab;
 	server.addHandler("/a/b", h_ab);
 
+	WsStartHandler h_ws;
+	server.addHandler("/ws", h_ws);
+
 #ifdef NO_FILES
 	/* This handler will handle "everything else", including
 	 * requests to files. If this handler is installed,
@@ -308,6 +399,12 @@ main(int argc, char *argv[])
 	FooHandler h_foo;
 	server.addHandler("**.foo", h_foo);
 	printf("Browse files at http://localhost:%s/\n", PORT);
+#endif
+
+#ifdef USE_WEBSOCKET
+	WebSocketHandler h_websocket;
+	server.addWebSocketHandler("/websocket", h_websocket);
+	printf("Run websocket example at http://localhost:%s/ws\n", PORT);
 #endif
 
 	printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
