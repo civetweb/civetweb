@@ -574,11 +574,20 @@ CivetServer::urlEncode(const char *src,
 std::vector<int>
 CivetServer::getListeningPorts()
 {
-	std::vector<int> ports(10);
-	std::vector<int> ssl(10);
-	size_t size = mg_get_ports(context, ports.size(), &ports[0], &ssl[0]);
+	std::vector<int> ports(50);
+	std::vector<struct mg_server_ports> server_ports(50);
+	int size =
+	    mg_get_server_ports(context, server_ports.size(), &server_ports[0]);
+	if (size <= 0) {
+		ports.resize(0);
+		return ports;
+	}
 	ports.resize(size);
-	ssl.resize(size);
+	server_ports.resize(size);
+	for (int i = 0; i < size; i++) {
+		ports[i] = server_ports[i].port;
+	}
+
 	return ports;
 }
 
