@@ -247,7 +247,7 @@ slib: lib$(CPROG).$(SHARED_LIB)
 
 clean:
 	$(RMRF) $(BUILD_DIR)
-	$(eval version=$(shell grep "define CIVETWEB_VERSION " include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
+	$(eval version=$(shell grep -w "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
 	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
 	$(RMRF) lib$(CPROG).a
 	$(RMRF) lib$(CPROG).so
@@ -269,7 +269,7 @@ lib$(CPROG).a: $(LIB_OBJECTS)
 
 lib$(CPROG).so: CFLAGS += -fPIC
 lib$(CPROG).so: $(LIB_OBJECTS)
-	$(eval version=$(shell grep "define CIVETWEB_VERSION " include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
+	$(eval version=$(shell grep -w "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
 	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
 	$(LCC) -shared -Wl,-soname,$@.$(major) -o $@.$(version).0 $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS)
 	ln -s -f $@.$(major) $@
