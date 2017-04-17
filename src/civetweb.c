@@ -12843,7 +12843,7 @@ set_ssl_option(struct mg_context *ctx)
 	if (chain == NULL) {
 		chain = pem;
 	}
-	if (*chain == 0) {
+	if ((chain != NULL) && (*chain == 0)) {
 		chain = NULL;
 	}
 
