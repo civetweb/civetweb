@@ -3281,8 +3281,8 @@ send_additional_header(struct mg_connection *conn)
 	int i = 0;
 #if 0
 	i += mg_printf(conn, "Strict-Transport-Security: max-age=%u\r\n", 3600);
-#endif
 	i += mg_printf(conn, "X-Some-Test-Header: %u\r\n", 42);
+#endif
 	return i;
 }
 
