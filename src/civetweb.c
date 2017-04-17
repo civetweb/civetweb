@@ -3976,7 +3976,12 @@ mg_stat(const struct mg_connection *conn,
 		filep->location = 2;
 		/* TODO: for 1.10: restructure how files in memory are handled */
 
-		filep->last_modified = time(NULL); /* xxxxxxxx */
+		/* The "file in memory" feature is a candidate for deletion.
+		 * Please join the discussion at
+		 * https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI 
+		 */
+
+		filep->last_modified = time(NULL); /* TODO */
 		/* last_modified = now ... assumes the file may change during runtime,
 		 * so every mg_fopen call may return different data */
 		/* last_modified = conn->ctx.start_time;
