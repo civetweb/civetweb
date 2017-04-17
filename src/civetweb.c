@@ -1834,7 +1834,10 @@ static struct mg_option config_options[] = {
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
     {"keep_alive_timeout_ms", CONFIG_TYPE_NUMBER, "500"},
     {"linger_timeout_ms", CONFIG_TYPE_NUMBER, NULL},
+
+    /* TODO(Feature): this is no longer a boolean, but yes/no/optional */
     {"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
+
     {"ssl_ca_path", CONFIG_TYPE_DIRECTORY, NULL},
     {"ssl_ca_file", CONFIG_TYPE_FILE, NULL},
     {"ssl_verify_depth", CONFIG_TYPE_NUMBER, "9"},
@@ -3282,6 +3285,7 @@ send_additional_header(struct mg_connection *conn)
 	(void)conn;
 
 #if 0
+	/* TODO (Feature): Configure additional response header */
 	i += mg_printf(conn, "Strict-Transport-Security: max-age=%u\r\n", 3600);
 	i += mg_printf(conn, "X-Some-Test-Header: %u\r\n", 42);
 #endif
@@ -3978,7 +3982,7 @@ mg_stat(const struct mg_connection *conn,
 
 		/* The "file in memory" feature is a candidate for deletion.
 		 * Please join the discussion at
-		 * https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI 
+		 * https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI
 		 */
 
 		filep->last_modified = time(NULL); /* TODO */
@@ -11122,7 +11126,7 @@ get_request_handler(struct mg_connection *conn,
 static int
 is_in_script_path(const struct mg_connection *conn, const char *path)
 {
-	/* TODO: Add config value for allowed script path.
+	/* TODO (Feature): Add config value for allowed script path.
 	 * Default: All allowed. */
 	(void)conn;
 	(void)path;
@@ -12278,10 +12282,16 @@ refresh_trust(struct mg_connection *conn)
 	if (data_check != t) {
 		data_check = t;
 
-		should_verify_peer =
-		    (conn->ctx->config[SSL_DO_VERIFY_PEER] != NULL)
-		    && (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER], "yes")
-		        == 0);
+		should_verify_peer = 0;
+		if (conn->ctx->config[SSL_DO_VERIFY_PEER] != NULL) {
+			if (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER], "yes")
+			    == 0) {
+				should_verify_peer = 1;
+			} else if (mg_strcasecmp(conn->ctx->config[SSL_DO_VERIFY_PEER],
+			                         "optional") == 0) {
+				should_verify_peer = 1;
+			}
+		}
 
 		if (should_verify_peer) {
 			char *ca_path = conn->ctx->config[SSL_CA_PATH];
@@ -12808,6 +12818,7 @@ set_ssl_option(struct mg_context *ctx)
 	const char *chain;
 	int callback_ret;
 	int should_verify_peer;
+	int peer_certificate_optional;
 	const char *ca_path;
 	const char *ca_file;
 	int use_default_verify_paths;
@@ -12925,9 +12936,22 @@ set_ssl_option(struct mg_context *ctx)
 		}
 	}
 
-	should_verify_peer =
-	    (ctx->config[SSL_DO_VERIFY_PEER] != NULL)
-	    && (mg_strcasecmp(ctx->config[SSL_DO_VERIFY_PEER], "yes") == 0);
+	/* Should we support client certificates? */
+	/* Default is "no". */
+	should_verify_peer = 0;
+	peer_certificate_optional = 0;
+	if (ctx->config[SSL_DO_VERIFY_PEER] != NULL) {
+		if (mg_strcasecmp(ctx->config[SSL_DO_VERIFY_PEER], "yes") == 0) {
+			/* Yes, they are mandatory */
+			should_verify_peer = 1;
+			peer_certificate_optional = 0;
+		} else if (mg_strcasecmp(ctx->config[SSL_DO_VERIFY_PEER], "optional")
+		           == 0) {
+			/* Yes, they are optional */
+			should_verify_peer = 1;
+			peer_certificate_optional = 1;
+		}
+	}
 
 	use_default_verify_paths =
 	    (ctx->config[SSL_DEFAULT_VERIFY_PATHS] != NULL)
@@ -12948,9 +12972,14 @@ set_ssl_option(struct mg_context *ctx)
 			return 0;
 		}
 
-		SSL_CTX_set_verify(ctx->ssl_ctx,
-		                   SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-		                   NULL);
+		if (peer_certificate_optional) {
+			SSL_CTX_set_verify(ctx->ssl_ctx, SSL_VERIFY_PEER, NULL);
+		} else {
+			SSL_CTX_set_verify(ctx->ssl_ctx,
+			                   SSL_VERIFY_PEER
+			                       | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+			                   NULL);
+		}
 
 		if (use_default_verify_paths
 		    && SSL_CTX_set_default_verify_paths(ctx->ssl_ctx) != 1) {
