@@ -545,10 +545,17 @@ mg_handle_form_request(struct mg_connection *conn,
 		if (boundary[0] == '"') {
 			/* RFC 2046 permits the boundary string to be quoted. */
 			hbuf = strchr(boundary + 1, '"');
+			if (!hbuf) {
+				/* Malformed request */
+				return -1;
+			}
 			if (*hbuf) {
 				*hbuf = 0;
 				boundary++;
 				bl = strlen(boundary);
+			} else {
+				/* Malformed request */
+				return -1;
 			}
 		}
 
