@@ -3279,6 +3279,8 @@ static int
 send_additional_header(struct mg_connection *conn)
 {
 	int i = 0;
+	(void)conn;
+
 #if 0
 	i += mg_printf(conn, "Strict-Transport-Security: max-age=%u\r\n", 3600);
 	i += mg_printf(conn, "X-Some-Test-Header: %u\r\n", 42);
@@ -13342,9 +13344,10 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	                    ebuf_len,
 	                    &sock,
 	                    &sa)) {
-		;
-	} else if ((conn = (struct mg_connection *)
-	                mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
+		return NULL;
+	}
+	if ((conn = (struct mg_connection *)
+	         mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -13352,11 +13355,13 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            "calloc(): %s",
 		            strerror(ERRNO));
 		closesocket(sock);
+		return NULL;
+	}
+
 #ifndef NO_SSL
 #ifdef OPENSSL_API_1_1
-	} else if (use_ssl
-	           && (conn->client_ssl_ctx = SSL_CTX_new(TLS_client_method()))
-	                  == NULL) {
+	if (use_ssl
+	    && (conn->client_ssl_ctx = SSL_CTX_new(TLS_client_method())) == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -13364,11 +13369,12 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            "SSL_CTX_new error");
 		closesocket(sock);
 		mg_free(conn);
-		conn = NULL;
+		return NULL;
+	}
 #else
-	} else if (use_ssl
-	           && (conn->client_ssl_ctx = SSL_CTX_new(SSLv23_client_method()))
-	                  == NULL) {
+	if (use_ssl
+	    && (conn->client_ssl_ctx = SSL_CTX_new(SSLv23_client_method()))
+	           == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -13376,98 +13382,91 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            "SSL_CTX_new error");
 		closesocket(sock);
 		mg_free(conn);
-		conn = NULL;
+		return NULL;
+	}
 #endif /* OPENSSL_API_1_1 */
 #endif /* NO_SSL */
 
-	} else {
 
 #ifdef USE_IPV6
-		socklen_t len = (sa.sa.sa_family == AF_INET)
-		                    ? sizeof(conn->client.rsa.sin)
-		                    : sizeof(conn->client.rsa.sin6);
-		struct sockaddr *psa =
-		    (sa.sa.sa_family == AF_INET)
-		        ? (struct sockaddr *)&(conn->client.rsa.sin)
-		        : (struct sockaddr *)&(conn->client.rsa.sin6);
+	socklen_t len = (sa.sa.sa_family == AF_INET)
+	                    ? sizeof(conn->client.rsa.sin)
+	                    : sizeof(conn->client.rsa.sin6);
+	struct sockaddr *psa = (sa.sa.sa_family == AF_INET)
+	                           ? (struct sockaddr *)&(conn->client.rsa.sin)
+	                           : (struct sockaddr *)&(conn->client.rsa.sin6);
 #else
-		socklen_t len = sizeof(conn->client.rsa.sin);
-		struct sockaddr *psa = (struct sockaddr *)&(conn->client.rsa.sin);
+	socklen_t len = sizeof(conn->client.rsa.sin);
+	struct sockaddr *psa = (struct sockaddr *)&(conn->client.rsa.sin);
 #endif
 
-		conn->buf_size = MAX_REQUEST_SIZE;
-		conn->buf = (char *)(conn + 1);
-		conn->ctx = &fake_ctx;
-		conn->client.sock = sock;
-		conn->client.lsa = sa;
+	conn->buf_size = MAX_REQUEST_SIZE;
+	conn->buf = (char *)(conn + 1);
+	conn->ctx = &fake_ctx;
+	conn->client.sock = sock;
+	conn->client.lsa = sa;
 
-		if (getsockname(sock, psa, &len) != 0) {
-			mg_cry(conn,
-			       "%s: getsockname() failed: %s",
-			       __func__,
-			       strerror(ERRNO));
-		}
+	if (getsockname(sock, psa, &len) != 0) {
+		mg_cry(conn, "%s: getsockname() failed: %s", __func__, strerror(ERRNO));
+	}
 
-		conn->client.is_ssl = use_ssl ? 1 : 0;
-		(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
+	conn->client.is_ssl = use_ssl ? 1 : 0;
+	(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 
 #ifndef NO_SSL
-		if (use_ssl) {
-			fake_ctx.ssl_ctx = conn->client_ssl_ctx;
+	if (use_ssl) {
+		fake_ctx.ssl_ctx = conn->client_ssl_ctx;
 
-			/* TODO: Check ssl_verify_peer and ssl_ca_path here.
-			 * SSL_CTX_set_verify call is needed to switch off server
-			 * certificate checking, which is off by default in OpenSSL and
-			 * on in yaSSL. */
-			/* TODO: SSL_CTX_set_verify(conn->client_ssl_ctx,
-			 * SSL_VERIFY_PEER, verify_ssl_server); */
+		/* TODO: Check ssl_verify_peer and ssl_ca_path here.
+		 * SSL_CTX_set_verify call is needed to switch off server
+		 * certificate checking, which is off by default in OpenSSL and
+		 * on in yaSSL. */
+		/* TODO: SSL_CTX_set_verify(conn->client_ssl_ctx,
+		 * SSL_VERIFY_PEER, verify_ssl_server); */
 
-			if (client_options->client_cert) {
-				if (!ssl_use_pem_file(&fake_ctx,
-				                      client_options->client_cert,
-				                      NULL)) {
-					mg_snprintf(NULL,
-					            NULL, /* No truncation check for ebuf */
-					            ebuf,
-					            ebuf_len,
-					            "Can not use SSL client certificate");
-					SSL_CTX_free(conn->client_ssl_ctx);
-					closesocket(sock);
-					mg_free(conn);
-					conn = NULL;
-				}
-			}
-
-			if (client_options->server_cert) {
-				SSL_CTX_load_verify_locations(conn->client_ssl_ctx,
-				                              client_options->server_cert,
-				                              NULL);
-				SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_PEER, NULL);
-			} else {
-				SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_NONE, NULL);
-			}
-
-			if (!sslize(conn,
-			            conn->client_ssl_ctx,
-			            SSL_connect,
-			            &(conn->ctx->stop_flag))) {
+		if (client_options->client_cert) {
+			if (!ssl_use_pem_file(&fake_ctx,
+			                      client_options->client_cert,
+			                      NULL)) {
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for ebuf */
 				            ebuf,
 				            ebuf_len,
-				            "SSL connection error");
+				            "Can not use SSL client certificate");
 				SSL_CTX_free(conn->client_ssl_ctx);
 				closesocket(sock);
 				mg_free(conn);
-				conn = NULL;
+				return NULL;
 			}
 		}
-#endif
-	}
 
-	if (conn) {
-		set_blocking_mode(sock, 0);
+		if (client_options->server_cert) {
+			SSL_CTX_load_verify_locations(conn->client_ssl_ctx,
+			                              client_options->server_cert,
+			                              NULL);
+			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_PEER, NULL);
+		} else {
+			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_NONE, NULL);
+		}
+
+		if (!sslize(conn,
+		            conn->client_ssl_ctx,
+		            SSL_connect,
+		            &(conn->ctx->stop_flag))) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "SSL connection error");
+			SSL_CTX_free(conn->client_ssl_ctx);
+			closesocket(sock);
+			mg_free(conn);
+			return NULL;
+		}
 	}
+#endif
+
+	set_blocking_mode(sock, 0);
 
 	return conn;
 }
