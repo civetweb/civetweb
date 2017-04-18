@@ -11,20 +11,34 @@ else
 fi
 
 # remove last build
-rm -rf cov_int/
-rm civetweb_coverity_check.tgz
-make clean
+rm -rf cov_build/
+
+# copy files to build folder
+mkdir cov_build
+mkdir cov_build/src
+mkdir cov_build/include
+mkdir cov_build/resources
+
+cp Makefile cov_build/
+cp src/*.c cov_build/src/
+cp src/*.inl cov_build/src/
+cp include/civetweb.h cov_build/include/
+cp resources/Makefile.in-os cov_build/resources/
+
+cd cov_build
 
 # new scan build
-../cov-analysis-linux64-8.7.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1
-#../cov-analysis-linux64-8.7.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_LUA_SHARED=1
+../../cov-analysis-linux64-8.7.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1
+
 
 # pack build results for upload
 tar czvf civetweb_coverity_check.tgz cov-int
 
+cd ..
+
 # check if the build was successful
 echo
-ls -la civetweb_coverity_check.tgz
+ls -la cov_build/civetweb_coverity_check.tgz
 
 if [ "$?" = "0" ]; then
 	echo "... done"
