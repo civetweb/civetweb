@@ -10226,6 +10226,12 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	 * but mongoose's mg_printf/mg_write is not (because of the loop in
 	 * push(), although that is only a problem if the packet is large or
 	 * outgoing buffer is full). */
+	/* TODO: Check if this lock should be moved to user land.
+	 * Currently the server sets this lock for websockets, but
+	 * not for any other connection. It must be set for every
+	 * conn read/written by more than one thread, no matter if
+	 * it is a websocket or regular connection. */
+	/* TODO: Prepare a list of interface changes. */
 	(void)mg_lock_connection(conn);
 	retval = mg_write(conn, header, headerLen);
 	if (dataLen > 0) {
