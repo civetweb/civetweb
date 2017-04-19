@@ -10231,7 +10231,6 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	 * not for any other connection. It must be set for every
 	 * conn read/written by more than one thread, no matter if
 	 * it is a websocket or regular connection. */
-	/* TODO: Prepare a list of interface changes. */
 	(void)mg_lock_connection(conn);
 	retval = mg_write(conn, header, headerLen);
 	if (dataLen > 0) {
