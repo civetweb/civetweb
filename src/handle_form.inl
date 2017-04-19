@@ -650,6 +650,8 @@ mg_handle_form_request(struct mg_connection *conn,
 			/* This line is not required, but otherwise some compilers
 			 * generate spurious warnings. */
 			nend = nbeg;
+			/* And others complain, the result is unused. */
+			(void)nend;
 
 			/* If name=" is found, search for the closing " */
 			if (nbeg) {

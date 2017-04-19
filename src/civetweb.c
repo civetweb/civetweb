@@ -12398,6 +12398,7 @@ sslize(struct mg_connection *conn,
 				/* This is an IO error. Look at errno. */
 				err = errno;
 				/* TODO: set some error message */
+				(void)err;
 				break;
 			} else {
 				/* This is an SSL specific error */
@@ -15378,6 +15379,13 @@ mg_get_system_info_impl(char *buffer, int buflen)
 #else
 	const char *eol = "\n";
 #endif
+
+	if (buffer == NULL) {
+		/* Avoid some warning (although, if some dillweed supplies
+		 * buffer==NULL combined with buflen>0, he deserves a crash).
+		 */
+		buflen = 0;
+	}
 
 	/* Server version */
 	{
