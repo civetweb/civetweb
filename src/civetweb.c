@@ -13361,6 +13361,8 @@ mg_close_connection(struct mg_connection *conn)
 		mg_free(client_ctx);
 		(void)pthread_mutex_destroy(&conn->mutex);
 		mg_free(conn);
+	} else if (conn->ctx->context_type == 0) {//Client
+		mg_free(conn);
 	}
 }
 
