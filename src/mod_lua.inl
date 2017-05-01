@@ -1129,12 +1129,16 @@ lwebsock_write(lua_State *L)
 		if (client) {
 			for (i = 0; i < ws->references; i++) {
 				if (client == ws->conn[i]) {
+					mg_lock_connection(ws->conn[i]);
 					mg_websocket_write(ws->conn[i], opcode, str, size);
+					mg_unlock_connection(ws->con[i]);
 				}
 			}
 		} else {
 			for (i = 0; i < ws->references; i++) {
+				mg_lock_connection(ws->conn[i]);
 				mg_websocket_write(ws->conn[i], opcode, str, size);
+				mg_unlock_connection(ws->con[i]);
 			}
 		}
 	} else {
@@ -2052,3 +2056,4 @@ lua_exit_optional_libraries(void)
 	pf_uuid_generate.p = 0;
 	lib_handle_uuid = NULL;
 }
+
