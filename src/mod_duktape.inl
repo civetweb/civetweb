@@ -248,3 +248,6 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 exec_duktape_finished:
 	duk_destroy_heap(ctx);
 }
+
+
+/* End of mod_duktape.inl */

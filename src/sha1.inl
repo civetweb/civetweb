@@ -321,3 +321,6 @@ SHA1_Final(unsigned char *digest, SHA_CTX *context)
 	memset(context, '\0', sizeof(*context));
 	memset(&finalcount, '\0', sizeof(finalcount));
 }
+
+
+/* End of sha1.inl */

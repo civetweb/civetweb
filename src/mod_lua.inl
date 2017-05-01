@@ -2057,3 +2057,5 @@ lua_exit_optional_libraries(void)
 	lib_handle_uuid = NULL;
 }
 
+
+/* End of mod_lua.inl */

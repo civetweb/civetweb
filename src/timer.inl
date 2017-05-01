@@ -221,3 +221,6 @@ timers_exit(struct mg_context *ctx)
 		mg_free(ctx->timers);
 	}
 }
+
+
+/* End of timer.inl */

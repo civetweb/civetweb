@@ -893,3 +893,6 @@ mg_handle_form_request(struct mg_connection *conn,
 	/* Unknown Content-Type */
 	return -1;
 }
+
+
+/* End of handle_form.inl */
