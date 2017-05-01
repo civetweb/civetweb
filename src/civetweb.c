@@ -3299,7 +3299,7 @@ static void handle_file_based_request(struct mg_connection *conn,
 
 
 const char *
-mg_get_response_code_text(struct mg_connection *conn, int response_code)
+mg_get_response_code_text(const struct mg_connection *conn, int response_code)
 {
 	/* See IANA HTTP status code assignment:
 	 * http://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
