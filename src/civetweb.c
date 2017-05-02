@@ -858,6 +858,7 @@ mg_atomic_dec(volatile int *addr)
 #endif
 
 
+#if defined(USE_SERVER_STATS)
 static int
 mg_atomic_add(volatile int *addr, int value)
 {
@@ -875,6 +876,7 @@ mg_atomic_add(volatile int *addr, int value)
 #endif
 	return ret;
 }
+#endif
 
 
 #if defined(__GNUC__)
