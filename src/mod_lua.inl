@@ -1131,14 +1131,14 @@ lwebsock_write(lua_State *L)
 				if (client == ws->conn[i]) {
 					mg_lock_connection(ws->conn[i]);
 					mg_websocket_write(ws->conn[i], opcode, str, size);
-					mg_unlock_connection(ws->con[i]);
+					mg_unlock_connection(ws->conn[i]);
 				}
 			}
 		} else {
 			for (i = 0; i < ws->references; i++) {
 				mg_lock_connection(ws->conn[i]);
 				mg_websocket_write(ws->conn[i], opcode, str, size);
-				mg_unlock_connection(ws->con[i]);
+				mg_unlock_connection(ws->conn[i]);
 			}
 		}
 	} else {
