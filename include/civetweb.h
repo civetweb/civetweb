@@ -1019,7 +1019,7 @@ CIVETWEB_API char *mg_md5(char buf[33], ...);
 
 /* Print error message to the opened error log stream.
    This utilizes the provided logging configuration.
-     conn: connection
+     conn: connection (not used for sending data, but to get perameters)
      fmt: format string without the line return
      ...: variable argument list
    Example:

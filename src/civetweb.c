@@ -846,25 +846,87 @@ mg_atomic_dec(volatile int *addr)
 }
 
 
-#if defined(MEMORY_DEBUGGING)
-static unsigned long mg_memory_debug_blockCount = 0;
-static unsigned long mg_memory_debug_totalMemUsed = 0;
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+#if defined(__clang__)
+/* Show no warning in case system functions are not used. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
+
+static int
+mg_atomic_add(volatile int *addr, int value)
+{
+	int ret;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+	/* Depending on the SDK, this function uses either
+	 * (volatile unsigned int *) or (volatile LONG *),
+	 * so whatever you use, the other SDK is likely to raise a warning. */
+	ret = InterlockedAdd((volatile long *)addr, (long)value);
+#elif defined(__GNUC__)                                                        \
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+	ret = __sync_add_and_fetch(addr, value);
+#else
+	ret = (++(*addr));
+#endif
+	return ret;
+}
+
+
+#if defined(__GNUC__)
+/* Show no warning in case system functions are not used. */
+#pragma GCC diagnostic pop
+#endif
+#if defined(__clang__)
+/* Show no warning in case system functions are not used. */
+#pragma clang diagnostic pop
+#endif
+
+
+#if defined(USE_SERVER_STATS)
+
+// static unsigned long mg_memory_debug_blockCount = 0;
+// static unsigned long mg_memory_debug_totalMemUsed = 0;
+
+volatile int mg_memory_debug_blockCount = 0;
+volatile int mg_memory_debug_totalMemUsed = 0;
+volatile int mg_memory_debug_maxMemUsed = 0;
 
 
 static void *
-mg_malloc_ex(size_t size, const char *file, unsigned line)
+mg_malloc_ex(size_t size,
+             struct mg_context *ctx,
+             const char *file,
+             unsigned line)
 {
 	void *data = malloc(size + sizeof(size_t));
 	void *memory = 0;
+
+#if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
+#endif
+
+	(void)ctx;
 
 	if (data) {
+		int mmem = mg_atomic_add(&mg_memory_debug_totalMemUsed, size);
+		if (mmem > mg_memory_debug_maxMemUsed) {
+			/* could use atomic compare exchange, but this
+			 * seems overkill for statistics data */
+			mg_memory_debug_maxMemUsed = mmem;
+		}
+
+
+		mg_atomic_inc(&mg_memory_debug_blockCount);
 		*(size_t *)data = size;
-		mg_memory_debug_totalMemUsed += size;
-		mg_memory_debug_blockCount++;
 		memory = (void *)(((char *)data) + sizeof(size_t));
 	}
 
+#if defined(MEMORY_DEBUGGING)
 	sprintf(mallocStr,
 	        "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n",
 	        memory,
@@ -878,15 +940,23 @@ mg_malloc_ex(size_t size, const char *file, unsigned line)
 #else
 	DEBUG_TRACE("%s", mallocStr);
 #endif
+#endif
 
 	return memory;
 }
 
 
 static void *
-mg_calloc_ex(size_t count, size_t size, const char *file, unsigned line)
+mg_calloc_ex(size_t count,
+             size_t size,
+             struct mg_context *ctx,
+             const char *file,
+             unsigned line)
 {
 	void *data = mg_malloc_ex(size * count, file, line);
+
+	(void)ctx;
+
 	if (data) {
 		memset(data, 0, size * count);
 	}
@@ -895,16 +965,24 @@ mg_calloc_ex(size_t count, size_t size, const char *file, unsigned line)
 
 
 static void
-mg_free_ex(void *memory, const char *file, unsigned line)
+mg_free_ex(void *memory,
+           struct mg_context *ctx,
+           const char *file,
+           unsigned line)
 {
+#if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
+#endif
 	void *data = (void *)(((char *)memory) - sizeof(size_t));
 	size_t size;
 
+	(void)ctx;
+
 	if (memory) {
 		size = *(size_t *)data;
-		mg_memory_debug_totalMemUsed -= size;
-		mg_memory_debug_blockCount--;
+		mg_atomic_add(&mg_memory_debug_totalMemUsed, -size);
+		mg_atomic_dec(&mg_memory_debug_blockCount);
+#if defined(MEMORY_DEBUGGING)
 		sprintf(mallocStr,
 		        "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n",
 		        memory,
@@ -918,19 +996,27 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 #else
 		DEBUG_TRACE("%s", mallocStr);
 #endif
-
+#endif
 		free(data);
 	}
 }
 
 
 static void *
-mg_realloc_ex(void *memory, size_t newsize, const char *file, unsigned line)
+mg_realloc_ex(void *memory,
+              size_t newsize,
+              struct mg_context *ctx,
+              const char *file,
+              unsigned line)
 {
+#if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
+#endif
 	void *data;
 	void *_realloc;
 	size_t oldsize;
+
+	(void)ctx;
 
 	if (newsize) {
 		if (memory) {
@@ -940,6 +1026,7 @@ mg_realloc_ex(void *memory, size_t newsize, const char *file, unsigned line)
 			if (_realloc) {
 				data = _realloc;
 				mg_memory_debug_totalMemUsed -= oldsize;
+#if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
 				        memory,
@@ -953,7 +1040,9 @@ mg_realloc_ex(void *memory, size_t newsize, const char *file, unsigned line)
 #else
 				DEBUG_TRACE("%s", mallocStr);
 #endif
+#endif
 				mg_memory_debug_totalMemUsed += newsize;
+#if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
 				        memory,
@@ -967,13 +1056,16 @@ mg_realloc_ex(void *memory, size_t newsize, const char *file, unsigned line)
 #else
 				DEBUG_TRACE("%s", mallocStr);
 #endif
+#endif
 				*(size_t *)data = newsize;
 				data = (void *)(((char *)data) + sizeof(size_t));
 			} else {
+#if defined(MEMORY_DEBUGGING)
 #if defined(_WIN32)
 				OutputDebugStringA("MEM: realloc failed\n");
 #else
 				DEBUG_TRACE("%s", "MEM: realloc failed\n");
+#endif
 #endif
 				return _realloc;
 			}
@@ -988,12 +1080,17 @@ mg_realloc_ex(void *memory, size_t newsize, const char *file, unsigned line)
 	return data;
 }
 
-#define mg_malloc(a) mg_malloc_ex(a, __FILE__, __LINE__)
-#define mg_calloc(a, b) mg_calloc_ex(a, b, __FILE__, __LINE__)
-#define mg_realloc(a, b) mg_realloc_ex(a, b, __FILE__, __LINE__)
-#define mg_free(a) mg_free_ex(a, __FILE__, __LINE__)
+#define mg_malloc(a) mg_malloc_ex(a, NULL, __FILE__, __LINE__)
+#define mg_calloc(a, b) mg_calloc_ex(a, b, NULL, __FILE__, __LINE__)
+#define mg_realloc(a, b) mg_realloc_ex(a, b, NULL, __FILE__, __LINE__)
+#define mg_free(a) mg_free_ex(a, NULL, __FILE__, __LINE__)
 
-#else
+#define mg_malloc_ctx(a, c) mg_malloc_ex(a, c, __FILE__, __LINE__)
+#define mg_calloc_ctx(a, b, c) mg_calloc_ex(a, b, c, __FILE__, __LINE__)
+#define mg_realloc_ctx(a, b, c) mg_realloc_ex(a, b, c, __FILE__, __LINE__)
+#define mg_free_ctx(a, c) mg_free_ex(a, c, __FILE__, __LINE__)
+
+#else /* USE_SERVER_STATS */
 
 static __inline void *
 mg_malloc(size_t a)
@@ -1019,7 +1116,12 @@ mg_free(void *a)
 	free(a);
 }
 
-#endif
+#define mg_malloc_ctx(a, c) mg_malloc(a)
+#define mg_calloc_ctx(a, b, c) mg_calloc(a, b)
+#define mg_realloc_ctx(a, b, c) mg_realloc(a, b)
+#define mg_free_ctx(a, c) mg_free(a)
+
+#endif /* USE_SERVER_STATS */
 
 
 static void mg_vsnprintf(const struct mg_connection *conn,
@@ -1978,6 +2080,13 @@ struct mg_context {
 
 #if defined(USE_LUA)
 	void *lua_background_state;
+#endif
+
+#if defined(USE_SERVER_STATS)
+	int active_connections;
+	int total_connections;
+	int total_requests;
+	int max_connections;
 #endif
 };
 
@@ -14173,6 +14282,16 @@ process_new_connection(struct mg_connection *conn)
 		const char *hostend;
 		int reqerr, uri_type;
 
+#if defined(USE_SERVER_STATS)
+		int mcon = mg_atomic_inc(&(conn->ctx->total_connections));
+		mg_atomic_inc(&(conn->ctx->active_connections));
+		if (mcon > (conn->ctx->max_connections)) {
+			/* could use atomic compare exchange, but this
+			 * seems overkill for statistics data */
+			conn->ctx->max_connections = mcon;
+		}
+#endif
+
 		keep_alive_enabled =
 		    !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
 
@@ -14318,6 +14437,11 @@ process_new_connection(struct mg_connection *conn)
 			conn->handled_requests++;
 
 		} while (keep_alive);
+
+#if defined(USE_SERVER_STATS)
+		mg_atomic_add(&(conn->ctx->total_requests), conn->handled_requests);
+		mg_atomic_dec(&(conn->ctx->active_connections));
+#endif
 	}
 }
 
