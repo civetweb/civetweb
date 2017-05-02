@@ -192,7 +192,8 @@ timer_thread(void *thread_func_param)
 TIMER_API int
 timers_init(struct mg_context *ctx)
 {
-	ctx->timers = (struct ttimers *)mg_calloc(sizeof(struct ttimers), 1);
+	ctx->timers =
+	    (struct ttimers *)mg_calloc_ctx(sizeof(struct ttimers), 1, ctx);
 	(void)pthread_mutex_init(&ctx->timers->mutex, NULL);
 
 	(void)timer_getcurrenttime();

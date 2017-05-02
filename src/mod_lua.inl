@@ -654,6 +654,11 @@ lsp_get_var(lua_State *L)
 	const char *data, *var_name;
 	size_t data_len, occurrence;
 	int ret;
+	struct mg_context *ctx;
+
+	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(L, -1);
 
 	if (num_args >= 2 && num_args <= 3) {
 		char *dst;
@@ -662,7 +667,7 @@ lsp_get_var(lua_State *L)
 		occurrence = (num_args > 2) ? (long)lua_tonumber(L, 3) : 0;
 
 		/* Allocate dynamically, so there is no internal limit for get_var */
-		dst = (char *)mg_malloc(data_len + 1);
+		dst = (char *)mg_malloc_ctx(data_len + 1, ctx);
 		if (!dst) {
 			return luaL_error(L, "out of memory in get_var() call");
 		}
@@ -727,6 +732,11 @@ lsp_get_cookie(lua_State *L)
 	const char *cookie;
 	const char *var_name;
 	int ret;
+	struct mg_context *ctx;
+
+	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(L, -1);
 
 	if (num_args == 2) {
 		/* Correct number of arguments */
@@ -741,7 +751,7 @@ lsp_get_cookie(lua_State *L)
 			return luaL_error(L, "invalid get_cookie() call");
 		}
 
-		dst = (char *)mg_malloc(data_len + 1);
+		dst = (char *)mg_malloc_ctx(data_len + 1, ctx);
 		if (!dst) {
 			return luaL_error(L, "out of memory in get_cookie() call");
 		}
@@ -802,12 +812,17 @@ lsp_url_encode(lua_State *L)
 	size_t text_len;
 	char *dst;
 	int dst_len;
+	struct mg_context *ctx;
+
+	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(L, -1);
 
 	if (num_args == 1) {
 		text = lua_tolstring(L, 1, &text_len);
 		if (text) {
 			dst_len = 3 * (int)text_len + 1;
-			dst = ((text_len < 0x2AAAAAAA) ? (char *)mg_malloc(dst_len)
+			dst = ((text_len < 0x2AAAAAAA) ? (char *)mg_malloc_ctx(dst_len, ctx)
 			                               : (char *)NULL);
 			if (dst) {
 				mg_url_encode(text, dst, dst_len);
@@ -837,13 +852,18 @@ lsp_url_decode(lua_State *L)
 	int is_form;
 	char *dst;
 	int dst_len;
+	struct mg_context *ctx;
+
+	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(L, -1);
 
 	if (num_args == 1 || (num_args == 2 && lua_isboolean(L, 2))) {
 		text = lua_tolstring(L, 1, &text_len);
 		is_form = (num_args == 2) ? lua_isboolean(L, 2) : 0;
 		if (text) {
 			dst_len = (int)text_len + 1;
-			dst = ((text_len < 0x7FFFFFFF) ? (char *)mg_malloc(dst_len)
+			dst = ((text_len < 0x7FFFFFFF) ? (char *)mg_malloc_ctx(dst_len, ctx)
 			                               : (char *)NULL);
 			if (dst) {
 				mg_url_decode(text, (int)text_len, dst, dst_len, is_form);
@@ -871,11 +891,16 @@ lsp_base64_encode(lua_State *L)
 	const char *text;
 	size_t text_len;
 	char *dst;
+	struct mg_context *ctx;
+
+	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(L, -1);
 
 	if (num_args == 1) {
 		text = lua_tolstring(L, 1, &text_len);
 		if (text) {
-			dst = (char *)mg_malloc(text_len * 8 / 6 + 4);
+			dst = (char *)mg_malloc_ctx(text_len * 8 / 6 + 4, ctx);
 			if (dst) {
 				base64_encode((const unsigned char *)text, (int)text_len, dst);
 				lua_pushstring(L, dst);
@@ -903,11 +928,16 @@ lsp_base64_decode(lua_State *L)
 	size_t text_len, dst_len;
 	int ret;
 	char *dst;
+	struct mg_context *ctx;
+
+	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(L, -1);
 
 	if (num_args == 1) {
 		text = lua_tolstring(L, 1, &text_len);
 		if (text) {
-			dst = (char *)mg_malloc(text_len);
+			dst = (char *)mg_malloc_ctx(text_len, ctx);
 			if (dst) {
 				ret = base64_decode((const unsigned char *)text,
 				                    (int)text_len,
@@ -1250,8 +1280,9 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 		timediff = (double)lua_tonumber(L, 2);
 		txt = lua_tostring(L, 1);
 		txt_len = strlen(txt);
-		arg = (struct laction_arg *)mg_malloc(sizeof(struct laction_arg)
-		                                      + txt_len + 10);
+		arg = (struct laction_arg *)mg_malloc_ctx(sizeof(struct laction_arg)
+		                                              + txt_len + 10,
+		                                          ctx);
 		arg->state = L;
 		arg->script = ws->script;
 		arg->pmutex = &(ws->ws_mutex);
@@ -1590,7 +1621,7 @@ lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
 		mg_free(ptr);
 		return NULL;
 	}
-	return mg_realloc(ptr, nsize);
+	return mg_realloc_ctx(ptr, nsize, ???);
 }
 
 
@@ -1767,8 +1798,9 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 
 	if (*shared_websock_list == NULL) {
 		/* add ws to list */
-		*shared_websock_list = (struct mg_shared_lua_websocket_list *)
-		    mg_calloc(sizeof(struct mg_shared_lua_websocket_list), 1);
+		*shared_websock_list =
+		    (struct mg_shared_lua_websocket_list *)mg_calloc_ctx(
+		        sizeof(struct mg_shared_lua_websocket_list), 1, conn->ctx);
 		if (*shared_websock_list == NULL) {
 			mg_unlock_context(conn->ctx);
 			mg_cry(conn, "Cannot create shared websocket struct, OOM");

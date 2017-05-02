@@ -22,14 +22,14 @@ static const char *civetweb_ctx_id = "\xFF"
 static void *
 mg_duk_mem_alloc(void *udata, duk_size_t size)
 {
-	return mg_malloc(size);
+	return mg_malloc_ctx(size, ???);
 }
 
 
 static void *
 mg_duk_mem_realloc(void *udata, void *ptr, duk_size_t newsize)
 {
-	return mg_realloc(ptr, newsize);
+	return mg_realloc_ctx(ptr, newsize, ???);
 }
 
 

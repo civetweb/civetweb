@@ -6232,7 +6232,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	/* Step 9: Script resources may handle sub-resources */
 	/* Support PATH_INFO for CGI scripts. */
 	tmp_str_len = strlen(filename);
-	tmp_str = mg_malloc(tmp_str_len + PATH_MAX + 1);
+	tmp_str = mg_malloc_ctx(tmp_str_len + PATH_MAX + 1, conn->ctx);
 	if (!tmp_str) {
 		/* Out of memory */
 		goto interpret_cleanup;
@@ -8800,7 +8800,7 @@ addenv(struct cgi_environment *env, const char *fmt, ...)
 		if (space <= n) {
 			/* Allocate new buffer */
 			n = env->buflen + CGI_ENVIRONMENT_SIZE;
-			added = (char *)mg_realloc(env->buf, n);
+			added = (char *)mg_realloc_ctx(env->buf, n, env->conn->ctx);
 			if (!added) {
 				/* Out of memory */
 				mg_cry(env->conn,
@@ -8867,10 +8867,10 @@ prepare_cgi_environment(struct mg_connection *conn,
 	env->conn = conn;
 	env->buflen = CGI_ENVIRONMENT_SIZE;
 	env->bufused = 0;
-	env->buf = (char *)mg_malloc(env->buflen);
+	env->buf = (char *)mg_malloc_ctx(env->buflen, conn->ctx);
 	env->varlen = MAX_CGI_ENVIR_VARS;
 	env->varused = 0;
-	env->var = (char **)mg_malloc(env->buflen * sizeof(char *));
+	env->var = (char **)mg_malloc_ctx(env->buflen * sizeof(char *), conn->ctx);
 
 	addenv(env, "SERVER_NAME=%s", conn->ctx->config[AUTHENTICATION_DOMAIN]);
 	addenv(env, "SERVER_ROOT=%s", conn->ctx->config[DOCUMENT_ROOT]);
@@ -9183,7 +9183,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	 * Do not send anything back to client, until we buffer in all
 	 * HTTP headers. */
 	data_len = 0;
-	buf = (char *)mg_malloc(buflen);
+	buf = (char *)mg_malloc_ctx(buflen, conn->ctx);
 	if (buf == NULL) {
 		mg_send_http_error(conn,
 		                   500,
@@ -10163,7 +10163,7 @@ read_websocket(struct mg_connection *conn,
 			/* Allocate space to hold websocket payload */
 			data = mem;
 			if (data_len > sizeof(mem)) {
-				data = (unsigned char *)mg_malloc(data_len);
+				data = (unsigned char *)mg_malloc_ctx(data_len, conn->ctx);
 				if (data == NULL) {
 					/* Allocation failed, exit the loop and then close the
 					 * connection */
@@ -10399,7 +10399,8 @@ mg_websocket_client_write(struct mg_connection *conn,
                           size_t dataLen)
 {
 	int retval = -1;
-	char *masked_data = (char *)mg_malloc(((dataLen + 7) / 4) * 4);
+	char *masked_data =
+	    (char *)mg_malloc_ctx(((dataLen + 7) / 4) * 4, conn->ctx);
 	uint32_t masking_key = (uint32_t)get_random();
 
 	if (masked_data == NULL) {
@@ -11014,7 +11015,9 @@ mg_set_handler_type(struct mg_context *ctx,
 	}
 
 	tmp_rh =
-	    (struct mg_handler_info *)mg_calloc(sizeof(struct mg_handler_info), 1);
+	    (struct mg_handler_info *)mg_calloc_ctx(sizeof(struct mg_handler_info),
+	                                            1,
+	                                            ctx);
 	if (tmp_rh == NULL) {
 		mg_unlock_context(ctx);
 		mg_cry(fc(ctx), "%s", "Cannot create new request handler struct, OOM");
@@ -12121,9 +12124,10 @@ set_ports_option(struct mg_context *ctx)
 		}
 
 		if ((ptr = (struct socket *)
-		         mg_realloc(ctx->listening_sockets,
-		                    (ctx->num_listening_sockets + 1)
-		                        * sizeof(ctx->listening_sockets[0]))) == NULL) {
+		         mg_realloc_ctx(ctx->listening_sockets,
+		                        (ctx->num_listening_sockets + 1)
+		                            * sizeof(ctx->listening_sockets[0]),
+		                        ctx)) == NULL) {
 
 			mg_cry(fc(ctx), "%s", "Out of memory");
 			closesocket(so.sock);
@@ -12131,10 +12135,11 @@ set_ports_option(struct mg_context *ctx)
 			continue;
 		}
 
-		if ((pfd = (struct pollfd *)mg_realloc(
-		         ctx->listening_socket_fds,
-		         (ctx->num_listening_sockets + 1)
-		             * sizeof(ctx->listening_socket_fds[0]))) == NULL) {
+		if ((pfd = (struct pollfd *)
+		         mg_realloc_ctx(ctx->listening_socket_fds,
+		                        (ctx->num_listening_sockets + 1)
+		                            * sizeof(ctx->listening_socket_fds[0]),
+		                        ctx)) == NULL) {
 
 			mg_cry(fc(ctx), "%s", "Out of memory");
 			closesocket(so.sock);
@@ -12624,7 +12629,9 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		 * using EVP_Digest. */
 		ilen = i2d_X509((void *)cert, NULL);
 		tmp_buf =
-		    (ilen > 0) ? (unsigned char *)mg_malloc((unsigned)ilen + 1) : NULL;
+		    (ilen > 0)
+		        ? (unsigned char *)mg_malloc_ctx((unsigned)ilen + 1, conn->ctx)
+		        : NULL;
 		if (tmp_buf) {
 			tmp_p = tmp_buf;
 			(void)i2d_X509((void *)cert, &tmp_p);
@@ -12641,7 +12648,8 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		}
 
 		conn->request_info.client_cert =
-		    (struct client_cert *)mg_malloc(sizeof(struct client_cert));
+		    (struct client_cert *)mg_malloc_ctx(sizeof(struct client_cert),
+		                                        conn->ctx);
 		if (conn->request_info.client_cert) {
 			conn->request_info.client_cert->subject = mg_strdup(str_subject);
 			conn->request_info.client_cert->issuer = mg_strdup(str_issuer);
@@ -13503,8 +13511,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	                    &sa)) {
 		return NULL;
 	}
-	if ((conn = (struct mg_connection *)
-	         mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
+	if ((conn = (struct mg_connection *)mg_calloc_ctx(
+	         1, sizeof(*conn) + MAX_REQUEST_SIZE, conn->ctx)) == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -14232,10 +14240,12 @@ mg_connect_websocket_client(const char *host,
 	newctx->context_type = 2;       /* ws/wss client context type */
 	newctx->cfg_worker_threads = 1; /* one worker thread will be created */
 	newctx->worker_threadids =
-	    (pthread_t *)mg_calloc(newctx->cfg_worker_threads, sizeof(pthread_t));
+	    (pthread_t *)mg_calloc_ctx(newctx->cfg_worker_threads,
+	                               sizeof(pthread_t),
+	                               newctx);
 	conn->ctx = newctx;
 	thread_data = (struct websocket_client_thread_data *)
-	    mg_calloc(sizeof(struct websocket_client_thread_data), 1);
+	    mg_calloc_ctx(sizeof(struct websocket_client_thread_data), 1, newctx);
 	thread_data->conn = conn;
 	thread_data->data_handler = data_func;
 	thread_data->close_handler = close_func;
@@ -14600,7 +14610,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 	/* Request buffers are not pre-allocated. They are private to the
 	 * request and do not contain any state information that might be
 	 * of interest to anyone observing a server status.  */
-	conn->buf = (char *)mg_malloc(MAX_REQUEST_SIZE);
+	conn->buf = (char *)mg_malloc_ctx(MAX_REQUEST_SIZE, conn->ctx);
 	if (conn->buf == NULL) {
 		mg_cry(fc(ctx),
 		       "Out of memory: Cannot allocate buffer for worker %i",
@@ -15329,8 +15339,9 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif /* !_WIN32 && !__SYMBIAN32__ */
 
 	ctx->cfg_worker_threads = ((unsigned int)(workerthreadcount));
-	ctx->worker_threadids =
-	    (pthread_t *)mg_calloc(ctx->cfg_worker_threads, sizeof(pthread_t));
+	ctx->worker_threadids = (pthread_t *)mg_calloc_ctx(ctx->cfg_worker_threads,
+	                                                   sizeof(pthread_t),
+	                                                   ctx);
 	if (ctx->worker_threadids == NULL) {
 		mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
 		free_context(ctx);
@@ -15338,8 +15349,9 @@ mg_start(const struct mg_callbacks *callbacks,
 		return NULL;
 	}
 	ctx->worker_connections =
-	    (struct mg_connection *)mg_calloc(ctx->cfg_worker_threads,
-	                                      sizeof(struct mg_connection));
+	    (struct mg_connection *)mg_calloc_ctx(ctx->cfg_worker_threads,
+	                                          sizeof(struct mg_connection),
+	                                          ctx);
 	if (ctx->worker_connections == NULL) {
 		mg_cry(fc(ctx), "Not enough memory for worker thread connection array");
 		free_context(ctx);
@@ -15349,8 +15361,9 @@ mg_start(const struct mg_callbacks *callbacks,
 
 
 #if defined(ALTERNATIVE_QUEUE)
-	ctx->client_wait_events =
-	    mg_calloc(sizeof(ctx->client_wait_events[0]), ctx->cfg_worker_threads);
+	ctx->client_wait_events = mg_calloc_ctx(sizeof(ctx->client_wait_events[0]),
+	                                        ctx->cfg_worker_threads,
+	                                        ctx);
 	if (ctx->client_wait_events == NULL) {
 		mg_cry(fc(ctx), "Not enough memory for worker event array");
 		mg_free(ctx->worker_threadids);
@@ -15359,8 +15372,9 @@ mg_start(const struct mg_callbacks *callbacks,
 		return NULL;
 	}
 
-	ctx->client_socks =
-	    mg_calloc(sizeof(ctx->client_socks[0]), ctx->cfg_worker_threads);
+	ctx->client_socks = mg_calloc_ctx(sizeof(ctx->client_socks[0]),
+	                                  ctx->cfg_worker_threads,
+	                                  ctx);
 	if (ctx->client_wait_events == NULL) {
 		mg_cry(fc(ctx), "Not enough memory for worker socket array");
 		mg_free(ctx->client_socks);
@@ -15409,8 +15423,8 @@ mg_start(const struct mg_callbacks *callbacks,
 
 	/* Start worker threads */
 	for (i = 0; i < ctx->cfg_worker_threads; i++) {
-		struct worker_thread_args *wta = (struct worker_thread_args *)mg_malloc(
-		    sizeof(struct worker_thread_args));
+		struct worker_thread_args *wta = (struct worker_thread_args *)
+		    mg_malloc_ctx(sizeof(struct worker_thread_args), ctx);
 		if (wta) {
 			wta->ctx = ctx;
 			wta->index = (int)i;
