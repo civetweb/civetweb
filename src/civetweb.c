@@ -955,9 +955,7 @@ mg_calloc_ex(size_t count,
              const char *file,
              unsigned line)
 {
-	void *data = mg_malloc_ex(size * count, file, line);
-
-	(void)ctx;
+	void *data = mg_malloc_ex(size * count, ctx, file, line);
 
 	if (data) {
 		memset(data, 0, size * count);
@@ -1018,8 +1016,6 @@ mg_realloc_ex(void *memory,
 	void *_realloc;
 	size_t oldsize;
 
-	(void)ctx;
-
 	if (newsize) {
 		if (memory) {
 			data = (void *)(((char *)memory) - sizeof(size_t));
@@ -1072,11 +1068,11 @@ mg_realloc_ex(void *memory,
 				return _realloc;
 			}
 		} else {
-			data = mg_malloc_ex(newsize, file, line);
+			data = mg_malloc_ex(newsize, ctx, file, line);
 		}
 	} else {
 		data = 0;
-		mg_free_ex(memory, file, line);
+		mg_free_ex(memory, ctx, file, line);
 	}
 
 	return data;
@@ -15493,6 +15489,9 @@ mg_check_feature(unsigned feature)
 #endif
 #if !defined(NO_CACHING)
 	                                    | 0x0080u
+#endif
+#if defined(USE_SERVER_STATS)
+	                                    | 0x0100u
 #endif
 
 /* Set some extra bits not defined in the API documentation.

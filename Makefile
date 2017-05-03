@@ -110,6 +110,16 @@ endif
 ifdef WITH_WEBSOCKET
   CFLAGS += -DUSE_WEBSOCKET
 endif
+ifdef WITH_WEBSOCKETS
+  CFLAGS += -DUSE_WEBSOCKET
+endif
+
+ifdef WITH_SERVER_STAT
+  CFLAGS += -DUSE_SERVER_STATS
+endif
+ifdef WITH_SERVER_STATS
+  CFLAGS += -DUSE_SERVER_STATS
+endif
 
 ifdef CONFIG_FILE
   CFLAGS += -DCONFIG_FILE=\"$(CONFIG_FILE)\"
@@ -180,6 +190,7 @@ help:
 	@echo "   WITH_DEBUG=1          build with GDB debug support"
 	@echo "   WITH_IPV6=1           with IPV6 support"
 	@echo "   WITH_WEBSOCKET=1      build with web socket support"
+	@echo "   WITH_SERVER_STATS=1   build includes support for server statistics"
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   CONFIG_FILE=file      use 'file' as the config file"
 	@echo "   CONFIG_FILE2=file     use 'file' as the backup config file"
