@@ -1614,14 +1614,13 @@ lua_error_handler(lua_State *L)
 static void *
 lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
 {
-	(void)ud;
 	(void)osize; /* not used */
 
 	if (nsize == 0) {
 		mg_free(ptr);
 		return NULL;
 	}
-	return mg_realloc_ctx(ptr, nsize, ???);
+	return mg_realloc_ctx(ptr, nsize, (struct mg_context *)ud);
 }
 
 
@@ -1638,7 +1637,8 @@ mg_exec_lua_script(struct mg_connection *conn,
 	conn->must_close = 1;
 
 	/* Execute a plain Lua script. */
-	if (path != NULL && (L = lua_newstate(lua_allocator, NULL)) != NULL) {
+	if (path != NULL
+	    && (L = lua_newstate(lua_allocator, (void *)(conn->ctx))) != NULL) {
 		prepare_lua_environment(
 		    conn->ctx, conn, NULL, L, path, LUA_ENV_TYPE_PLAIN_LUA_PAGE);
 		lua_pushcclosure(L, &lua_error_handler, 0);
@@ -1733,7 +1733,7 @@ handle_lsp_request(struct mg_connection *conn,
 	if (ls != NULL) {
 		L = ls;
 	} else {
-		L = lua_newstate(lua_allocator, NULL);
+		L = lua_newstate(lua_allocator, (void *)(conn->ctx));
 		if (L == NULL) {
 			mg_send_http_error(
 			    conn,
@@ -1811,7 +1811,7 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		ws->script = mg_strdup(script); /* TODO (low): handle OOM */
 		pthread_mutex_init(&(ws->ws_mutex), &pthread_mutex_attr);
 		(void)pthread_mutex_lock(&(ws->ws_mutex));
-		ws->state = lua_newstate(lua_allocator, NULL);
+		ws->state = lua_newstate(lua_allocator, (void *)(conn->ctx));
 		ws->conn[0] = conn;
 		ws->references = 1;
 		prepare_lua_environment(
