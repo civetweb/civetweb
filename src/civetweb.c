@@ -894,10 +894,13 @@ mg_atomic_add(volatile int *addr, int value)
 // static unsigned long mg_memory_debug_blockCount = 0;
 // static unsigned long mg_memory_debug_totalMemUsed = 0;
 
-volatile int mg_memory_debug_blockCount = 0;
-volatile int mg_memory_debug_totalMemUsed = 0;
-volatile int mg_memory_debug_maxMemUsed = 0;
+struct memory_debug {
+	volatile int blockCount;
+	volatile int totalMemUsed;
+	volatile int maxMemUsed;
+};
 
+static struct memory_debug mg_memory_debug = {0, 0, 0};
 
 static void *
 mg_malloc_ex(size_t size,
@@ -915,15 +918,15 @@ mg_malloc_ex(size_t size,
 	(void)ctx;
 
 	if (data) {
-		int mmem = mg_atomic_add(&mg_memory_debug_totalMemUsed, size);
-		if (mmem > mg_memory_debug_maxMemUsed) {
+		int mmem = mg_atomic_add(&mg_memory_debug.totalMemUsed, size);
+		if (mmem > mg_memory_debug.maxMemUsed) {
 			/* could use atomic compare exchange, but this
 			 * seems overkill for statistics data */
-			mg_memory_debug_maxMemUsed = mmem;
+			mg_memory_debug.maxMemUsed = mmem;
 		}
 
 
-		mg_atomic_inc(&mg_memory_debug_blockCount);
+		mg_atomic_inc(&mg_memory_debug.blockCount);
 		*(size_t *)data = size;
 		memory = (void *)(((char *)data) + sizeof(size_t));
 	}
@@ -933,8 +936,8 @@ mg_malloc_ex(size_t size,
 	        "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n",
 	        memory,
 	        (unsigned long)size,
-	        mg_memory_debug_totalMemUsed,
-	        mg_memory_debug_blockCount,
+	        mg_memory_debug.totalMemUsed,
+	        mg_memory_debug.blockCount,
 	        file,
 	        line);
 #if defined(_WIN32)
@@ -980,15 +983,15 @@ mg_free_ex(void *memory,
 
 	if (memory) {
 		size = *(size_t *)data;
-		mg_atomic_add(&mg_memory_debug_totalMemUsed, -size);
-		mg_atomic_dec(&mg_memory_debug_blockCount);
+		mg_atomic_add(&mg_memory_debug.totalMemUsed, -size);
+		mg_atomic_dec(&mg_memory_debug.blockCount);
 #if defined(MEMORY_DEBUGGING)
 		sprintf(mallocStr,
 		        "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n",
 		        memory,
 		        (unsigned long)size,
-		        mg_memory_debug_totalMemUsed,
-		        mg_memory_debug_blockCount,
+		        mg_memory_debug.totalMemUsed,
+		        mg_memory_debug.blockCount,
 		        file,
 		        line);
 #if defined(_WIN32)
@@ -1023,14 +1026,14 @@ mg_realloc_ex(void *memory,
 			_realloc = realloc(data, newsize + sizeof(size_t));
 			if (_realloc) {
 				data = _realloc;
-				mg_memory_debug_totalMemUsed -= oldsize;
+				mg_memory_debug.totalMemUsed -= oldsize;
 #if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
 				        memory,
 				        (unsigned long)oldsize,
-				        mg_memory_debug_totalMemUsed,
-				        mg_memory_debug_blockCount,
+				        mg_memory_debug.totalMemUsed,
+				        mg_memory_debug.blockCount,
 				        file,
 				        line);
 #if defined(_WIN32)
@@ -1039,14 +1042,14 @@ mg_realloc_ex(void *memory,
 				DEBUG_TRACE("%s", mallocStr);
 #endif
 #endif
-				mg_memory_debug_totalMemUsed += newsize;
+				mg_memory_debug.totalMemUsed += newsize;
 #if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
 				        memory,
 				        (unsigned long)newsize,
-				        mg_memory_debug_totalMemUsed,
-				        mg_memory_debug_blockCount,
+				        mg_memory_debug.totalMemUsed,
+				        mg_memory_debug.blockCount,
 				        file,
 				        line);
 #if defined(_WIN32)
