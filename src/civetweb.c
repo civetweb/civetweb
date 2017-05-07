@@ -891,16 +891,15 @@ mg_atomic_add(volatile int *addr, int value)
 
 #if defined(USE_SERVER_STATS)
 
-// static unsigned long mg_memory_debug_blockCount = 0;
-// static unsigned long mg_memory_debug_totalMemUsed = 0;
-
 struct mg_memory_stat {
 	volatile int blockCount;
 	volatile int totalMemUsed;
 	volatile int maxMemUsed;
 };
 
-static struct mg_memory_stat mg_common_memory = {0, 0, 0};
+
+static struct mg_memory_stat *get_memory_stat(struct mg_context *ctx);
+
 
 static void *
 mg_malloc_ex(size_t size,
@@ -910,7 +909,7 @@ mg_malloc_ex(size_t size,
 {
 	void *data = malloc(size + sizeof(size_t));
 	void *memory = 0;
-	struct mg_memory_stat *mstat = &mg_common_memory;
+	struct mg_memory_stat *mstat = get_memory_stat(ctx);
 
 #if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
@@ -918,8 +917,6 @@ mg_malloc_ex(size_t size,
 	(void)file;
 	(void)line;
 #endif
-
-	(void)ctx;
 
 	if (data) {
 		int mmem = mg_atomic_add(&mstat->totalMemUsed, size);
@@ -979,7 +976,7 @@ mg_free_ex(void *memory,
 {
 	void *data = (void *)(((char *)memory) - sizeof(size_t));
 	size_t size;
-	struct mg_memory_stat *mstat = &mg_common_memory;
+	struct mg_memory_stat *mstat = get_memory_stat(ctx);
 
 #if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
@@ -987,8 +984,6 @@ mg_free_ex(void *memory,
 	(void)file;
 	(void)line;
 #endif
-
-	(void)ctx;
 
 	if (memory) {
 		size = *(size_t *)data;
@@ -1024,7 +1019,7 @@ mg_realloc_ex(void *memory,
 	void *data;
 	void *_realloc;
 	size_t oldsize;
-	struct mg_memory_stat *mstat = &mg_common_memory;
+	struct mg_memory_stat *mstat = get_memory_stat(ctx);
 
 #if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
@@ -1032,8 +1027,6 @@ mg_realloc_ex(void *memory,
 	(void)file;
 	(void)line;
 #endif
-
-	(void)ctx;
 
 	if (newsize) {
 		if (memory) {
@@ -2104,8 +2097,23 @@ struct mg_context {
 	int total_connections;
 	int total_requests;
 	int max_connections;
+	struct mg_memory_stat ctx_memory;
 #endif
 };
+
+
+#if defined(USE_SERVER_STATS)
+static struct mg_memory_stat mg_common_memory = {0, 0, 0};
+
+static struct mg_memory_stat *
+get_memory_stat(struct mg_context *ctx)
+{
+	if (ctx) {
+		return &(ctx->ctx_memory);
+	}
+	return &mg_common_memory;
+}
+#endif
 
 
 struct mg_connection {
