@@ -907,7 +907,7 @@ mg_malloc_ex(size_t size,
              const char *file,
              unsigned line)
 {
-	void *data = malloc(size + sizeof(size_t));
+	void *data = malloc(size + 2 * sizeof(uintptr_t));
 	void *memory = 0;
 	struct mg_memory_stat *mstat = get_memory_stat(ctx);
 
@@ -926,10 +926,10 @@ mg_malloc_ex(size_t size,
 			mstat->maxMemUsed = mmem;
 		}
 
-
 		mg_atomic_inc(&mstat->blockCount);
-		*(size_t *)data = size;
-		memory = (void *)(((char *)data) + sizeof(size_t));
+		((uintptr_t *)data)[0] = size;
+        ((uintptr_t *)data)[1] = (uintptr_t)mstat;
+		memory = (void *)(((char *)data) + 2 * sizeof(uintptr_t));
 	}
 
 #if defined(MEMORY_DEBUGGING)
@@ -969,14 +969,10 @@ mg_calloc_ex(size_t count,
 
 
 static void
-mg_free_ex(void *memory,
-           struct mg_context *ctx,
-           const char *file,
-           unsigned line)
+mg_free_ex(void *memory, const char *file, unsigned line)
 {
-	void *data = (void *)(((char *)memory) - sizeof(size_t));
-	size_t size;
-	struct mg_memory_stat *mstat = get_memory_stat(ctx);
+	void *data = (void *)(((char *)memory) - 2 * sizeof(uintptr_t));
+
 
 #if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
@@ -986,7 +982,9 @@ mg_free_ex(void *memory,
 #endif
 
 	if (memory) {
-		size = *(size_t *)data;
+		uintptr_t size = ((uintptr_t *)data)[0];
+		struct mg_memory_stat *mstat =
+		    (struct mg_memory_stat *)(((uintptr_t *)data)[1]);
 		mg_atomic_add(&mstat->totalMemUsed, -size);
 		mg_atomic_dec(&mstat->blockCount);
 #if defined(MEMORY_DEBUGGING)
@@ -1018,8 +1016,7 @@ mg_realloc_ex(void *memory,
 {
 	void *data;
 	void *_realloc;
-	size_t oldsize;
-	struct mg_memory_stat *mstat = get_memory_stat(ctx);
+	uintptr_t oldsize;
 
 #if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
@@ -1030,12 +1027,15 @@ mg_realloc_ex(void *memory,
 
 	if (newsize) {
 		if (memory) {
-			data = (void *)(((char *)memory) - sizeof(size_t));
-			oldsize = *(size_t *)data;
-			_realloc = realloc(data, newsize + sizeof(size_t));
+			/* Reallocate existing block */
+			struct mg_memory_stat *mstat;
+			data = (void *)(((char *)memory) - 2 * sizeof(uintptr_t));
+			oldsize = ((uintptr_t *)data)[0];
+			mstat = (struct mg_memory_stat *)((uintptr_t *)data)[1];
+			_realloc = realloc(data, newsize + 2 * sizeof(uintptr_t));
 			if (_realloc) {
 				data = _realloc;
-				mstat->totalMemUsed -= oldsize;
+				mg_atomic_add(&mstat->totalMemUsed, -oldsize);
 #if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
@@ -1051,7 +1051,7 @@ mg_realloc_ex(void *memory,
 				DEBUG_TRACE("%s", mallocStr);
 #endif
 #endif
-				mstat->totalMemUsed += newsize;
+				mg_atomic_add(&mstat->totalMemUsed, newsize);
 #if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
@@ -1067,8 +1067,8 @@ mg_realloc_ex(void *memory,
 				DEBUG_TRACE("%s", mallocStr);
 #endif
 #endif
-				*(size_t *)data = newsize;
-				data = (void *)(((char *)data) + sizeof(size_t));
+				*(uintptr_t *)data = newsize;
+				data = (void *)(((char *)data) + 2 * sizeof(uintptr_t));
 			} else {
 #if defined(MEMORY_DEBUGGING)
 #if defined(_WIN32)
@@ -1080,11 +1080,13 @@ mg_realloc_ex(void *memory,
 				return _realloc;
 			}
 		} else {
+			/* Allocate new block */
 			data = mg_malloc_ex(newsize, ctx, file, line);
 		}
 	} else {
+		/* Free existing block */
 		data = 0;
-		mg_free_ex(memory, ctx, file, line);
+		mg_free_ex(memory, file, line);
 	}
 
 	return data;
@@ -1093,12 +1095,11 @@ mg_realloc_ex(void *memory,
 #define mg_malloc(a) mg_malloc_ex(a, NULL, __FILE__, __LINE__)
 #define mg_calloc(a, b) mg_calloc_ex(a, b, NULL, __FILE__, __LINE__)
 #define mg_realloc(a, b) mg_realloc_ex(a, b, NULL, __FILE__, __LINE__)
-#define mg_free(a) mg_free_ex(a, NULL, __FILE__, __LINE__)
+#define mg_free(a) mg_free_ex(a, __FILE__, __LINE__)
 
 #define mg_malloc_ctx(a, c) mg_malloc_ex(a, c, __FILE__, __LINE__)
 #define mg_calloc_ctx(a, b, c) mg_calloc_ex(a, b, c, __FILE__, __LINE__)
 #define mg_realloc_ctx(a, b, c) mg_realloc_ex(a, b, c, __FILE__, __LINE__)
-#define mg_free_ctx(a, c) mg_free_ex(a, c, __FILE__, __LINE__)
 
 #else /* USE_SERVER_STATS */
 
@@ -15975,3 +15976,20 @@ mg_exit_library(void)
 
 
 /* End of civetweb.c */
+
+#if 0
+// Just for test - TODO: add some interface
+void
+printctxinfo(struct mg_context *ctx)
+{
+	struct mg_memory_stat *ms = get_memory_stat(ctx);
+	printf("%10i %10i %10i | %10i %10i %10i | %10i\n",
+	       ms->blockCount,
+	       ms->totalMemUsed,
+	       ms->maxMemUsed,
+	       ctx->active_connections,
+	       ctx->total_connections,
+	       ctx->max_connections,
+	       ctx->total_requests);
+}
+#endif

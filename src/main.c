@@ -2611,6 +2611,9 @@ main(int argc, char *argv[])
 	        mg_get_option(g_ctx, "listening_ports"),
 	        mg_get_option(g_ctx, "document_root"));
 	while (g_exit_flag == 0) {
+        /* TODO: Add Interface - call it here just for test:
+         * printctxinfo(g_ctx);
+         */
 		sleep(1);
 	}
 	fprintf(stdout,
