@@ -1148,7 +1148,7 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
 CIVETWEB_API unsigned mg_check_feature(unsigned feature);
 
 
-/* Get information on the system. Useful, if in support requests.
+/* Get information on the system. Useful for support requests.
    Parameters:
      buffer: Store system information as string here.
      buflen: Length of buffer (including a byte required for a terminating 0).
@@ -1157,10 +1157,27 @@ CIVETWEB_API unsigned mg_check_feature(unsigned feature);
      The information is complete, if the return value is smaller than buflen.
    Note:
      It is possible to determine the required buflen, by first calling this
-     function with  buffer = NULL and buflen = NULL. The required buflen is
+     function with buffer = NULL and buflen = NULL. The required buflen is
      one byte more than the returned value.
 */
 CIVETWEB_API int mg_get_system_info(char *buffer, int buflen);
+
+
+/* Get context information. Useful for server diagnosis.
+   Parameters:
+     ctx: Context handle
+     buffer: Store context information here.
+     buflen: Length of buffer (including a byte required for a terminating 0).
+   Return:
+     Available size of system information, exluding a terminating 0.
+     The information is complete, if the return value is smaller than buflen.
+   Note:
+     It is possible to determine the required buflen, by first calling this
+     function with buffer = NULL and buflen = NULL. The required buflen is
+     one byte more than the returned value.
+*/
+CIVETWEB_API int
+mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen);
 
 #ifdef __cplusplus
 }

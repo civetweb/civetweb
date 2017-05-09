@@ -928,7 +928,7 @@ mg_malloc_ex(size_t size,
 
 		mg_atomic_inc(&mstat->blockCount);
 		((uintptr_t *)data)[0] = size;
-        ((uintptr_t *)data)[1] = (uintptr_t)mstat;
+		((uintptr_t *)data)[1] = (uintptr_t)mstat;
 		memory = (void *)(((char *)data) + 2 * sizeof(uintptr_t));
 	}
 
@@ -14319,8 +14319,8 @@ process_new_connection(struct mg_connection *conn)
 		int reqerr, uri_type;
 
 #if defined(USE_SERVER_STATS)
-		int mcon = mg_atomic_inc(&(conn->ctx->total_connections));
-		mg_atomic_inc(&(conn->ctx->active_connections));
+		int mcon = mg_atomic_inc(&(conn->ctx->active_connections));
+		mg_atomic_inc(&(conn->ctx->total_connections));
 		if (mcon > (conn->ctx->max_connections)) {
 			/* could use atomic compare exchange, but this
 			 * seems overkill for statistics data */
@@ -15854,7 +15854,6 @@ mg_get_system_info_impl(char *buffer, int buflen)
 #endif
 	}
 
-
 	/* Determine 32/64 bit data mode.
 	 * see https://en.wikipedia.org/wiki/64-bit_computing */
 	{
@@ -15887,6 +15886,116 @@ mg_get_system_info_impl(char *buffer, int buflen)
 }
 
 
+/* Get context information. It can be printed or stored by the caller.
+ * Return the size of available information. */
+static int
+mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
+
+{
+	char block[256];
+	int context_info_length = 0;
+
+#if defined(_WIN32)
+	const char *eol = "\r\n";
+#else
+	const char *eol = "\n";
+#endif
+	struct mg_memory_stat *ms = get_memory_stat(ctx);
+
+	if ((buffer == NULL) || (buflen < 10)) {
+		buflen = 0;
+	}
+
+	mg_snprintf(NULL, NULL, block, sizeof(block), "{%s", eol);
+	context_info_length += (int)strlen(block);
+	if (context_info_length < buflen) {
+		strcat(buffer, block);
+	}
+
+	/* Memory information */
+	if (ms) {
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"memory\" : {%s"
+		            "\"blocks\" : %i%s"
+		            "\"used\" : %i%s"
+		            "\"maxUsed\" : %i%s"
+		            "},%s",
+		            eol,
+		            ms->blockCount,
+		            eol,
+		            ms->totalMemUsed,
+		            eol,
+		            ms->maxMemUsed,
+		            eol,
+		            eol);
+
+		context_info_length += (int)strlen(block);
+		if (context_info_length < buflen) {
+			strcat(buffer, block);
+		}
+	}
+
+
+	/* Connections information */
+	if (ctx) {
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"connections\" : {%s"
+		            "\"active\" : %i%s"
+		            "\"maxActive\" : %i%s"
+		            "\"total\" : %i%s"
+		            "},%s",
+		            eol,
+		            ctx->active_connections,
+		            eol,
+		            ctx->max_connections,
+		            eol,
+		            ctx->total_connections,
+		            eol,
+		            eol);
+
+		context_info_length += (int)strlen(block);
+		if (context_info_length < buflen) {
+			strcat(buffer, block);
+		}
+	}
+
+	/* Requests information */
+	if (ctx) {
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"requests\" : {%s"
+		            "\"total\" : %i%s"
+		            "},%s",
+		            eol,
+		            ctx->total_requests,
+		            eol,
+		            eol);
+
+		context_info_length += (int)strlen(block);
+		if (context_info_length < buflen) {
+			strcat(buffer, block);
+		}
+	}
+
+	if ((buflen > 0) && buffer && buffer[0]) {
+		char *p = strrchr(buffer, ',');
+		if (p) {
+			*p = '}';
+		}
+	}
+
+	return context_info_length;
+}
+
+
 /* Get system information. It can be printed or stored by the caller.
  * Return the size of available information. */
 int
@@ -15898,6 +16007,21 @@ mg_get_system_info(char *buffer, int buflen)
 		/* Reset buffer, so we can always use strcat. */
 		buffer[0] = 0;
 		return mg_get_system_info_impl(buffer, buflen);
+	}
+}
+
+
+/* Get context information. It can be printed or stored by the caller.
+ * Return the size of available information. */
+int
+mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
+{
+	if ((buffer == NULL) || (buflen < 1)) {
+		return mg_get_context_info_impl(ctx, NULL, 0);
+	} else {
+		/* Reset buffer, so we can always use strcat. */
+		buffer[0] = 0;
+		return mg_get_context_info_impl(ctx, buffer, buflen);
 	}
 }
 
@@ -15976,20 +16100,3 @@ mg_exit_library(void)
 
 
 /* End of civetweb.c */
-
-#if 0
-// Just for test - TODO: add some interface
-void
-printctxinfo(struct mg_context *ctx)
-{
-	struct mg_memory_stat *ms = get_memory_stat(ctx);
-	printf("%10i %10i %10i | %10i %10i %10i | %10i\n",
-	       ms->blockCount,
-	       ms->totalMemUsed,
-	       ms->maxMemUsed,
-	       ctx->active_connections,
-	       ctx->total_connections,
-	       ctx->max_connections,
-	       ctx->total_requests);
-}
-#endif

@@ -2610,12 +2610,15 @@ main(int argc, char *argv[])
 	        g_server_name,
 	        mg_get_option(g_ctx, "listening_ports"),
 	        mg_get_option(g_ctx, "document_root"));
+
 	while (g_exit_flag == 0) {
-        /* TODO: Add Interface - call it here just for test:
-         * printctxinfo(g_ctx);
-         */
+		char buffer[1024];
+		mg_get_context_info(g_ctx, buffer, sizeof(buffer));
+		puts(buffer);
+
 		sleep(1);
 	}
+
 	fprintf(stdout,
 	        "Exiting on signal %d, waiting for all threads to finish...",
 	        g_exit_flag);
