@@ -2594,6 +2594,32 @@ mg_snprintf(const struct mg_connection *conn,
 }
 
 
+static void
+set_error(const struct mg_connection *conn,
+          struct mg_error *error,
+          int code,
+          const char *fmt,
+          ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    mg_vsnprintf(conn, NULL, error->buffer, error->buffer_size, fmt, ap);
+    va_end(ap);
+    error->code = code;
+}
+
+
+static void
+clear_error(struct mg_error *error)
+{
+    error->code = 0;
+    if (error->buffer_size > 0) {
+        error->buffer[0] = 0;
+    }
+}
+
+
 static int
 get_option_index(const char *name)
 {
@@ -7224,8 +7250,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
                const char *host,
                int port,
                int use_ssl,
-               char *ebuf,
-               size_t ebuf_len,
+               struct mg_error *error,
                SOCKET *sock /* output: socket, must not be NULL */,
                union usa *sa /* output: socket address, must not be NULL  */
                )
@@ -7234,27 +7259,23 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	*sock = INVALID_SOCKET;
 	memset(sa, 0, sizeof(*sa));
 
-	if (ebuf_len > 0) {
-		*ebuf = 0;
-	}
+    clear_error(error);
 
 	if (host == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s",
-		            "NULL host");
+        set_error(NULL,
+                  error,
+                  EINVAL,
+                  "%s",
+                  "NULL host");
 		return 0;
 	}
 
 	if (port <= 0 || !is_valid_port((unsigned)port)) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s",
-		            "invalid port");
+        set_error(NULL,
+                  error,
+                  EINVAL,
+                  "%s",
+                  "invalid port");
 		return 0;
 	}
 
@@ -7262,22 +7283,20 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 #if !defined(NO_SSL_DL)
 #ifdef OPENSSL_API_1_1
 	if (use_ssl && (TLS_client_method == NULL)) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s",
-		            "SSL is not initialized");
+        set_error(NULL,
+                  error,
+                  MG_ERR_SSL_UNINITIALIZED,
+                  "%s",
+                  "SSL is not initialized");
 		return 0;
 	}
 #else
 	if (use_ssl && (SSLv23_client_method == NULL)) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s",
-		            "SSL is not initialized");
+        set_error(NULL,
+                  error,
+                  MG_ERR_SSL_UNINITIALIZED,
+                  "%s",
+                  "SSL is not initialized");
 		return 0;
 	}
 
@@ -7313,12 +7332,11 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	}
 
 	if (ip_ver == 0) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s",
-		            "host not found");
+        set_error(NULL,
+                  error,
+                  ERRNO,
+                  "%s",
+                  "host not found");
 		return 0;
 	}
 
@@ -7332,12 +7350,11 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 #endif
 
 	if (*sock == INVALID_SOCKET) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "socket(): %s",
-		            strerror(ERRNO));
+        set_error(NULL,
+                  error,
+                  ERRNO,
+                  "socket(): %s",
+                  strerror(ERRNO));
 		return 0;
 	}
 
@@ -7362,14 +7379,13 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 #endif
 
 	/* Not connected */
-	mg_snprintf(NULL,
-	            NULL, /* No truncation check for ebuf */
-	            ebuf,
-	            ebuf_len,
-	            "connect(%s:%d): %s",
-	            host,
-	            port,
-	            strerror(ERRNO));
+    set_error(NULL,
+              error,
+              ERRNO,
+              "connect(%s:%d): %s",
+              host,
+              port,
+              strerror(ERRNO));
 	closesocket(*sock);
 	*sock = INVALID_SOCKET;
 
@@ -12570,7 +12586,7 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 
 #if !defined(NO_SSL_DL)
 static void *
-load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
+    load_dll(struct mg_error *error, const char *dll_name, struct ssl_func *sw)
 {
 	union {
 		void *p;
@@ -12582,13 +12598,13 @@ load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 	int truncated = 0;
 
 	if ((dll_handle = dlopen(dll_name, RTLD_LAZY)) == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s: cannot load %s",
-		            __func__,
-		            dll_name);
+        set_error(NULL,
+                  error,
+                  MG_ERR_LOADING_DLL,
+                  "%s: cannot load %s: %s",
+                  __func__,
+                  dll_name,
+                  dlerror());
 		return NULL;
 	}
 
@@ -12605,27 +12621,26 @@ load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 #endif /* _WIN32 */
 		if (u.fp == NULL) {
 			if (ok) {
-				mg_snprintf(NULL,
-				            &truncated,
-				            ebuf,
-				            ebuf_len,
-				            "%s: %s: cannot find %s",
-				            __func__,
-				            dll_name,
-				            fp->name);
+                set_error(NULL,
+                          error,
+                          MG_ERR_LOADING_DLL,
+                          "%s: %s: cannot find %s",
+                          __func__,
+                          dll_name,
+                          fp->name);
 				ok = 0;
 			} else {
-				size_t cur_len = strlen(ebuf);
+				size_t cur_len = strlen(error->buffer);
 				if (!truncated) {
 					mg_snprintf(NULL,
 					            &truncated,
-					            ebuf + cur_len,
-					            ebuf_len - cur_len - 3,
+					            error->buffer + cur_len,
+					            error->buffer_size - cur_len - 3,
 					            ", %s",
 					            fp->name);
 					if (truncated) {
 						/* If truncated, add "..." */
-						strcat(ebuf, "...");
+						strcat(error->buffer, "...");
 					}
 				}
 			}
@@ -12659,16 +12674,14 @@ static int cryptolib_users = 0; /* Reference counter for crypto library. */
 
 
 static int
-initialize_ssl(char *ebuf, size_t ebuf_len)
+    initialize_ssl(struct mg_error *error)
 {
 #ifdef OPENSSL_API_1_1
-	if (ebuf_len > 0) {
-		ebuf[0] = 0;
-	}
+    clear_error(error);
 
 #if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
-		cryptolib_dll_handle = load_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
+		cryptolib_dll_handle = load_dll(error, CRYPTO_LIB, crypto_sw);
 		if (!cryptolib_dll_handle) {
 			return 0;
 		}
@@ -12683,13 +12696,11 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	int i;
 	size_t size;
 
-	if (ebuf_len > 0) {
-		ebuf[0] = 0;
-	}
+    clear_error(error);
 
 #if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
-		cryptolib_dll_handle = load_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
+		cryptolib_dll_handle = load_dll(error, CRYPTO_LIB, crypto_sw);
 		if (!cryptolib_dll_handle) {
 			return 0;
 		}
@@ -12712,13 +12723,11 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	if (size == 0) {
 		ssl_mutexes = NULL;
 	} else if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc(size)) == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s: cannot allocate mutexes: %s",
-		            __func__,
-		            ssl_error());
+        set_error(NULL,
+                  error,
+                  ERRNO,
+                  "%s: cannot allocate mutexes",
+                  __func__);
 
 		return 0;
 	}
@@ -12839,6 +12848,7 @@ set_ssl_option(struct mg_context *ctx)
 	md5_state_t md5state;
 	int protocol_ver;
 	char ebuf[128];
+    struct mg_error error = {ebuf, sizeof(ebuf), 0};
 
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
@@ -12857,14 +12867,14 @@ set_ssl_option(struct mg_context *ctx)
 		chain = NULL;
 	}
 
-	if (!initialize_ssl(ebuf, sizeof(ebuf))) {
+	if (!initialize_ssl(&error)) {
 		mg_cry(fc(ctx), "%s", ebuf);
 		return 0;
 	}
 
 #if !defined(NO_SSL_DL)
 	if (!ssllib_dll_handle) {
-		ssllib_dll_handle = load_dll(ebuf, sizeof(ebuf), SSL_LIB, ssl_sw);
+		ssllib_dll_handle = load_dll(&error, SSL_LIB, ssl_sw);
 		if (!ssllib_dll_handle) {
 			mg_cry(fc(ctx), "%s", ebuf);
 			return 0;
@@ -13374,8 +13384,7 @@ mg_close_connection(struct mg_connection *conn)
 static struct mg_connection *
 mg_connect_client_impl(const struct mg_client_options *client_options,
                        int use_ssl,
-                       char *ebuf,
-                       size_t ebuf_len)
+                       struct mg_error *error)
 {
 	static struct mg_context fake_ctx;
 	struct mg_connection *conn = NULL;
@@ -13386,20 +13395,18 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	                    client_options->host,
 	                    client_options->port,
 	                    use_ssl,
-	                    ebuf,
-	                    ebuf_len,
+	                    error,
 	                    &sock,
 	                    &sa)) {
 		return NULL;
 	}
 	if ((conn = (struct mg_connection *)
 	         mg_calloc(1, sizeof(*conn) + MAX_REQUEST_SIZE)) == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "calloc(): %s",
-		            strerror(ERRNO));
+        set_error(NULL,
+                  error,
+                  ERRNO,
+                  "calloc(): %s",
+                  strerror(ERRNO));
 		closesocket(sock);
 		return NULL;
 	}
@@ -13408,11 +13415,10 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 #ifdef OPENSSL_API_1_1
 	if (use_ssl
 	    && (conn->client_ssl_ctx = SSL_CTX_new(TLS_client_method())) == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "SSL_CTX_new error");
+        set_error(NULL,
+                  error,
+                  MG_ERR_SSL,              //TODO: Put OpenSSL error code here
+                  "SSL_CTX_new error");
 		closesocket(sock);
 		mg_free(conn);
 		return NULL;
@@ -13421,11 +13427,10 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	if (use_ssl
 	    && (conn->client_ssl_ctx = SSL_CTX_new(SSLv23_client_method()))
 	           == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "SSL_CTX_new error");
+        set_error(NULL,
+                  error,
+                  MG_ERR_SSL,              //TODO: Put OpenSSL error code here
+                  "SSL_CTX_new error");
 		closesocket(sock);
 		mg_free(conn);
 		return NULL;
@@ -13474,11 +13479,10 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			if (!ssl_use_pem_file(&fake_ctx,
 			                      client_options->client_cert,
 			                      NULL)) {
-				mg_snprintf(NULL,
-				            NULL, /* No truncation check for ebuf */
-				            ebuf,
-				            ebuf_len,
-				            "Can not use SSL client certificate");
+                set_error(NULL,
+                          error,
+                          MG_ERR_INVALID_CERT,              //TODO: Put OpenSSL error code here
+                          "Can not use SSL client certificate");
 				SSL_CTX_free(conn->client_ssl_ctx);
 				closesocket(sock);
 				mg_free(conn);
@@ -13499,11 +13503,10 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            conn->client_ssl_ctx,
 		            SSL_connect,
 		            &(conn->ctx->stop_flag))) {
-			mg_snprintf(NULL,
-			            NULL, /* No truncation check for ebuf */
-			            ebuf,
-			            ebuf_len,
-			            "SSL connection error");
+            set_error(NULL,
+                      error,
+                      MG_ERR_SSL,              //TODO: Put OpenSSL error code here
+                      "SSL connection error");
 			SSL_CTX_free(conn->client_ssl_ctx);
 			closesocket(sock);
 			mg_free(conn);
@@ -13520,13 +13523,11 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 
 CIVETWEB_API struct mg_connection *
 mg_connect_client_secure(const struct mg_client_options *client_options,
-                         char *error_buffer,
-                         size_t error_buffer_size)
+                         struct mg_error *error)
 {
 	return mg_connect_client_impl(client_options,
 	                              1,
-	                              error_buffer,
-	                              error_buffer_size);
+	                              error);
 }
 
 
@@ -13534,8 +13535,7 @@ struct mg_connection *
 mg_connect_client(const char *host,
                   int port,
                   int use_ssl,
-                  char *error_buffer,
-                  size_t error_buffer_size)
+                  struct mg_error *error)
 {
 	struct mg_client_options opts;
 	memset(&opts, 0, sizeof(opts));
@@ -13543,8 +13543,7 @@ mg_connect_client(const char *host,
 	opts.port = port;
 	return mg_connect_client_impl(&opts,
 	                              use_ssl,
-	                              error_buffer,
-	                              error_buffer_size);
+	                              error);
 }
 
 
@@ -13775,24 +13774,21 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 
 
 static int
-getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
+getreq(struct mg_connection *conn, struct mg_error *error, int *err)
 {
 	const char *cl;
 
-	if (ebuf_len > 0) {
-		ebuf[0] = '\0';
-	}
+    clear_error(error);
 	*err = 0;
 
 	reset_per_request_attributes(conn);
 
 	if (!conn) {
-		mg_snprintf(conn,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s",
-		            "Internal error");
+        set_error(NULL,
+                  error,
+                  MG_ERR_INTERNAL,
+                  "%s",
+                  "Internal error");
 		*err = 500;
 		return 0;
 	}
@@ -13805,55 +13801,50 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	/* assert(conn->request_len < 0 || conn->data_len >= conn->request_len);
 	 */
 	if (conn->request_len >= 0 && conn->data_len < conn->request_len) {
-		mg_snprintf(conn,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s",
-		            "Invalid request size");
+        set_error(conn,
+                  error,
+                  MG_ERR_INVALID_REQUEST_SIZE,
+                  "%s",
+                  "Invalid request size");
 		*err = 500;
 		return 0;
 	}
 
 	if (conn->request_len == 0 && conn->data_len == conn->buf_size) {
-		mg_snprintf(conn,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s",
-		            "Request Too Large");
+        set_error(conn,
+                  error,
+                  MG_ERR_HTTP_STATUS_BASE + 413,
+                  "%s",
+                  "Request Too Large");
 		*err = 413;
 		return 0;
 	} else if (conn->request_len <= 0) {
 		if (conn->data_len > 0) {
-			mg_snprintf(conn,
-			            NULL, /* No truncation check for ebuf */
-			            ebuf,
-			            ebuf_len,
-			            "%s",
-			            "Client sent malformed request");
+            set_error(conn,
+                      error,
+                      MG_ERR_HTTP_STATUS_BASE + 400,
+                      "%s",
+                      "Client sent malformed request");
 			*err = 400;
 		} else {
 			/* Server did not recv anything -> just close the connection */
 			conn->must_close = 1;
-			mg_snprintf(conn,
-			            NULL, /* No truncation check for ebuf */
-			            ebuf,
-			            ebuf_len,
-			            "%s",
-			            "Client did not send a request");
+            set_error(conn,
+                      error,
+                      MG_ERR_HTTP_STATUS_BASE + 400,
+                      "%s",
+                      "Client did not send a request");
 			*err = 0;
 		}
 		return 0;
 	} else if (parse_http_message(conn->buf,
 	                              conn->buf_size,
 	                              &conn->request_info) <= 0) {
-		mg_snprintf(conn,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s",
-		            "Bad Request");
+        set_error(conn,
+                  error,
+                  MG_ERR_HTTP_STATUS_BASE + 400,
+                  "%s",
+                  "Bad Request");
 		*err = 400;
 		return 0;
 	} else {
@@ -13863,12 +13854,11 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			char *endptr = NULL;
 			conn->content_len = strtoll(cl, &endptr, 10);
 			if (endptr == cl) {
-				mg_snprintf(conn,
-				            NULL, /* No truncation check for ebuf */
-				            ebuf,
-				            ebuf_len,
-				            "%s",
-				            "Bad Request");
+                set_error(conn,
+                          error,
+                          MG_ERR_HTTP_STATUS_BASE + 411,
+                          "%s",
+                          "Bad Request");
 				*err = 411;
 				return 0;
 			}
@@ -13899,8 +13889,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 int
 mg_get_response(struct mg_connection *conn,
-                char *ebuf,
-                size_t ebuf_len,
+                struct mg_error *error,
                 int timeout)
 {
 	if (conn) {
@@ -13921,7 +13910,7 @@ mg_get_response(struct mg_connection *conn,
 		}
 
 		conn->ctx = &rctx;
-		ret = getreq(conn, ebuf, ebuf_len, &err);
+		ret = getreq(conn, error, &err);
 		conn->ctx = octx;
 
 #if defined(MG_LEGACY_INTERFACE)
@@ -13943,8 +13932,7 @@ struct mg_connection *
 mg_download(const char *host,
             int port,
             int use_ssl,
-            char *ebuf,
-            size_t ebuf_len,
+            struct mg_error *error,
             const char *fmt,
             ...)
 {
@@ -13954,22 +13942,21 @@ mg_download(const char *host,
 	int reqerr;
 
 	va_start(ap, fmt);
-	ebuf[0] = '\0';
+    clear_error(error);
 
 	/* open a connection */
-	conn = mg_connect_client(host, port, use_ssl, ebuf, ebuf_len);
+	conn = mg_connect_client(host, port, use_ssl, error);
 
 	if (conn != NULL) {
 		i = mg_vprintf(conn, fmt, ap);
 		if (i <= 0) {
-			mg_snprintf(conn,
-			            NULL, /* No truncation check for ebuf */
-			            ebuf,
-			            ebuf_len,
-			            "%s",
-			            "Error sending request");
+            set_error(conn,
+                      error,
+                      ERRNO,
+                      "%s",
+                      "Error sending request");
 		} else {
-			getreq(conn, ebuf, ebuf_len, &reqerr);
+			getreq(conn, error, &reqerr);
 
 #if defined(MG_LEGACY_INTERFACE)
 			/* TODO: 1) uri is deprecated;
@@ -13981,7 +13968,7 @@ mg_download(const char *host,
 	}
 
 	/* if an error occured, close the connection */
-	if (ebuf[0] != '\0' && conn != NULL) {
+	if (error->buffer[0] != '\0' && conn != NULL) {
 		mg_close_connection(conn);
 		conn = NULL;
 	}
@@ -14047,8 +14034,7 @@ struct mg_connection *
 mg_connect_websocket_client(const char *host,
                             int port,
                             int use_ssl,
-                            char *error_buffer,
-                            size_t error_buffer_size,
+                            struct mg_error *error,
                             const char *path,
                             const char *origin,
                             mg_websocket_data_handler data_func,
@@ -14086,8 +14072,7 @@ mg_connect_websocket_client(const char *host,
 	conn = mg_download(host,
 	                   port,
 	                   use_ssl,
-	                   error_buffer,
-	                   error_buffer_size,
+	                   error,
 	                   handshake_req,
 	                   path,
 	                   host,
@@ -14096,16 +14081,17 @@ mg_connect_websocket_client(const char *host,
 
 	/* Connection object will be null if something goes wrong */
 	if (conn == NULL || (strcmp(conn->request_info.request_uri, "101") != 0)) {
-		if (!*error_buffer) {
+		if (error->code == 0) {
 			/* if there is a connection, but it did not return 101,
-			 * error_buffer is not yet set */
-			mg_snprintf(conn,
-			            NULL, /* No truncation check for ebuf */
-			            error_buffer,
-			            error_buffer_size,
-			            "Unexpected server reply");
+			 * error is not yet set */
+            int status = strtol(conn->request_info.request_uri, NULL, 10);
+            set_error(conn,
+                      error,
+                      MG_ERR_HTTP_STATUS_BASE + status,
+                      "Unexpected response status %s",
+                      conn->request_info.request_uri);
 		}
-		DEBUG_TRACE("Websocket client connect error: %s\r\n", error_buffer);
+		DEBUG_TRACE("Websocket client connect error: %s\r\n", error->buffer);
 		if (conn != NULL) {
 			mg_free(conn);
 			conn = NULL;
@@ -14150,8 +14136,7 @@ mg_connect_websocket_client(const char *host,
 	(void)host;
 	(void)port;
 	(void)use_ssl;
-	(void)error_buffer;
-	(void)error_buffer_size;
+	(void)error;
 	(void)path;
 	(void)origin;
 	(void)user_data;
@@ -14170,6 +14155,7 @@ process_new_connection(struct mg_connection *conn)
 		struct mg_request_info *ri = &conn->request_info;
 		int keep_alive_enabled, keep_alive, discard_len;
 		char ebuf[100];
+        struct mg_error error = {ebuf, sizeof(ebuf), 0};
 		const char *hostend;
 		int reqerr, uri_type;
 
@@ -14185,7 +14171,7 @@ process_new_connection(struct mg_connection *conn)
 			DEBUG_TRACE("calling getreq (%i times for this connection)",
 			            conn->handled_requests + 1);
 
-			if (!getreq(conn, ebuf, sizeof(ebuf), &reqerr)) {
+			if (!getreq(conn, &error, &reqerr)) {
 				/* The request sent by the client could not be understood by
 				 * the server, or it was incomplete or a timeout. Send an
 				 * error message and close the connection. */
@@ -14195,13 +14181,12 @@ process_new_connection(struct mg_connection *conn)
 				}
 			} else if (strcmp(ri->http_version, "1.0")
 			           && strcmp(ri->http_version, "1.1")) {
-				mg_snprintf(conn,
-				            NULL, /* No truncation check for ebuf */
-				            ebuf,
-				            sizeof(ebuf),
-				            "Bad HTTP version: [%s]",
-				            ri->http_version);
-				mg_send_http_error(conn, 505, "%s", ebuf);
+                set_error(conn,
+                          &error,
+                          MG_ERR_HTTP_VERSION,
+                          "Bad HTTP version: [%s]",
+                          ri->http_version);
+				mg_send_http_error(conn, 505, "%s", error.buffer);
 			}
 
 			if (ebuf[0] == '\0') {
@@ -14228,12 +14213,11 @@ process_new_connection(struct mg_connection *conn)
 					}
 					break;
 				default:
-					mg_snprintf(conn,
-					            NULL, /* No truncation check for ebuf */
-					            ebuf,
-					            sizeof(ebuf),
-					            "Invalid URI");
-					mg_send_http_error(conn, 400, "%s", ebuf);
+                    set_error(conn,
+                              &error,
+                              MG_ERR_HTTP_STATUS_BASE + 400,
+                              "Invalid URI");
+					mg_send_http_error(conn, 400, "%s", error.buffer);
 					conn->request_info.local_uri = NULL;
 					break;
 				}
@@ -14246,9 +14230,9 @@ process_new_connection(struct mg_connection *conn)
 
 			DEBUG_TRACE("http: %s, error: %s",
 			            (ri->http_version ? ri->http_version : "none"),
-			            (ebuf[0] ? ebuf : "none"));
+			            (error.buffer[0] ? error.buffer : "none"));
 
-			if (ebuf[0] == '\0') {
+			if (error.buffer[0] == '\0') {
 				if (conn->request_info.local_uri) {
 					/* handle request to local server */
 					handle_request(conn);
@@ -15166,6 +15150,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	/* If a Lua background script has been configured, start it. */
 	if (ctx->config[LUA_BACKGROUND_SCRIPT] != NULL) {
 		char ebuf[256];
+        struct mg_error error = {0, ebuf, sizeof(ebuf)};
 		void *state = (void *)mg_prepare_lua_context_script(
 		    ctx->config[LUA_BACKGROUND_SCRIPT], ctx, ebuf, sizeof(ebuf));
 		if (!state) {
@@ -15749,6 +15734,7 @@ mg_init_library(unsigned features)
 {
 #if !defined(NO_SSL)
 	char ebuf[128];
+    struct mg_error error = {ebuf, sizeof(ebuf), 0};
 #endif
 
 	unsigned features_to_init = mg_check_feature(features & 0xFFu);
@@ -15757,10 +15743,9 @@ mg_init_library(unsigned features)
 #if !defined(NO_SSL)
 	if (features_to_init & 2) {
 		if (!mg_ssl_initialized) {
-			if (initialize_ssl(ebuf, sizeof(ebuf))) {
+			if (initialize_ssl(&error)) {
 				mg_ssl_initialized = 1;
 			} else {
-				(void)ebuf;
 				/* TODO: print error */
 				features_inited &= ~(2u);
 			}

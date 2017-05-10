@@ -836,6 +836,35 @@ CIVETWEB_API int mg_get_cookie(const char *cookie,
                                char *buf,
                                size_t buf_len);
 
+/* Placeholder for error information returned from a call.
+   buffer: on entry should point to a sufficiently large string buffer, which on return from a
+        failed call will be filled in with an error string.
+   buffer_size: on entry should be set to the capacity of the buffer.
+   code: on return will be set to the error code, which can be a platform error code (like an errno
+        value) or a custom error code defined in mg_custom_error_codes. */
+struct mg_error {
+    char *buffer;
+    size_t buffer_size;
+    int code;
+};
+
+
+/* Special values for mg_error.code, other than platform error codes (e.g. errno values.)
+   The codes starting from MG_ERR_HTTP_STATUS_BASE are HTTP status codes, so for example an HTTP 404
+   would be represented as (MG_ERR_HTTP_STATUS_BASE + 404). */
+enum {
+    MG_ERR_CIVETWEB_BASE          = 1000000,
+    MG_ERR_LOADING_DLL,
+    MG_ERR_SSL_UNINITIALIZED,
+    MG_ERR_SSL,
+    MG_ERR_INVALID_CERT,
+    MG_ERR_INTERNAL,
+    MG_ERR_INVALID_REQUEST_SIZE,
+    MG_ERR_HTTP_VERSION,
+
+    MG_ERR_HTTP_STATUS_BASE       = 2000000
+};
+
 
 /* Download data from the remote web server.
      host: host name to connect to, e.g. "foo.com", or "10.12.40.1".
@@ -856,10 +885,9 @@ CIVETWEB_API struct mg_connection *
 mg_download(const char *host,
             int port,
             int use_ssl,
-            char *error_buffer,
-            size_t error_buffer_size,
+            struct mg_error *error,
             PRINTF_FORMAT_STRING(const char *request_fmt),
-            ...) PRINTF_ARGS(6, 7);
+            ...) PRINTF_ARGS(5, 6);
 
 
 /* Close the connection opened by mg_download(). */
@@ -1056,8 +1084,7 @@ CIVETWEB_API struct mg_connection *
 mg_connect_websocket_client(const char *host,
                             int port,
                             int use_ssl,
-                            char *error_buffer,
-                            size_t error_buffer_size,
+                            struct mg_error *error,
                             const char *path,
                             const char *origin,
                             mg_websocket_data_handler data_func,
@@ -1080,8 +1107,7 @@ mg_connect_websocket_client(const char *host,
 CIVETWEB_API struct mg_connection *mg_connect_client(const char *host,
                                                      int port,
                                                      int use_ssl,
-                                                     char *error_buffer,
-                                                     size_t error_buffer_size);
+                                                     struct mg_error *error);
 
 
 struct mg_client_options {
@@ -1095,8 +1121,7 @@ struct mg_client_options {
 
 CIVETWEB_API struct mg_connection *
 mg_connect_client_secure(const struct mg_client_options *client_options,
-                         char *error_buffer,
-                         size_t error_buffer_size);
+                         struct mg_error *error);
 
 
 enum { TIMEOUT_INFINITE = -1 };
@@ -1114,8 +1139,7 @@ enum { TIMEOUT_INFINITE = -1 };
      On error/timeout, < 0
 */
 CIVETWEB_API int mg_get_response(struct mg_connection *conn,
-                                 char *ebuf,
-                                 size_t ebuf_len,
+                                 struct mg_error *error,
                                  int timeout);
 
 
