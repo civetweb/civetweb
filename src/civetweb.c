@@ -15886,6 +15886,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 }
 
 
+#if defined(USE_SERVER_STATS)
 /* Get context information. It can be printed or stored by the caller.
  * Return the size of available information. */
 static int
@@ -15994,6 +15995,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 
 	return context_info_length;
 }
+#endif
 
 
 /* Get system information. It can be printed or stored by the caller.
@@ -16016,6 +16018,7 @@ mg_get_system_info(char *buffer, int buflen)
 int
 mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 {
+#if defined(USE_SERVER_STATS)
 	if ((buffer == NULL) || (buflen < 1)) {
 		return mg_get_context_info_impl(ctx, NULL, 0);
 	} else {
@@ -16023,6 +16026,13 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		buffer[0] = 0;
 		return mg_get_context_info_impl(ctx, buffer, buflen);
 	}
+#else
+	(void)ctx;
+	if ((buffer != NULL) && (buflen > 0)) {
+		buffer[0] = 0;
+	}
+	return 0;
+#endif
 }
 
 
