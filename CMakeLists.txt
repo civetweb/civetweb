@@ -84,6 +84,10 @@ message(STATUS "IP Version 6 - ${CIVETWEB_ENABLE_IPV6}")
 option(CIVETWEB_ENABLE_WEBSOCKETS "Enable websockets connections" OFF)
 message(STATUS "Websockets support - ${CIVETWEB_ENABLE_WEBSOCKETS}")
 
+# Server statistics support
+option(CIVETWEB_ENABLE_SERVER_STATS "Enable server statistics" OFF)
+message(STATUS "Server statistics support - ${CIVETWEB_ENABLE_SERVER_STATS}")
+
 # Memory debugging
 option(CIVETWEB_ENABLE_MEMORY_DEBUGGING "Enable the memory debugging features" OFF)
 message(STATUS "Memory Debugging - ${CIVETWEB_ENABLE_MEMORY_DEBUGGING}")
@@ -372,6 +376,9 @@ if (CIVETWEB_ENABLE_IPV6)
 endif()
 if (CIVETWEB_ENABLE_WEBSOCKETS)
   add_definitions(-DUSE_WEBSOCKET)
+endif()
+if (CIVETWEB_ENABLE_SERVER_STATS)
+  add_definitions(-DUSE_SERVER_STATS)
 endif()
 if (CIVETWEB_SERVE_NO_FILES)
   add_definitions(-DNO_FILES)

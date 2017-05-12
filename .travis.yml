@@ -53,6 +53,7 @@ before_script:
     -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
     -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
     -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6}
+    -DCIVETWEB_ENABLE_SERVER_STATS=${ENABLE_SERVER_STATS}
     -DCIVETWEB_ENABLE_LUA=${ENABLE_LUA}
     -DCIVETWEB_ENABLE_LUA_SHARED=${ENABLE_LUA_SHARED}
     -DCIVETWEB_ENABLE_DUKTAPE=${ENABLE_DUKTAPE}
@@ -103,9 +104,11 @@ matrix:
       NO_CGI=YES
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
+
 
   -
     os: linux
@@ -126,6 +129,7 @@ matrix:
       NO_CGI=YES
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -149,6 +153,7 @@ matrix:
       NO_CGI=YES
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -172,6 +177,7 @@ matrix:
       NO_CGI=YES
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
@@ -195,6 +201,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
@@ -218,6 +225,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
@@ -241,6 +249,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
@@ -264,6 +273,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
@@ -293,6 +303,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -316,6 +327,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -339,6 +351,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -362,6 +375,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -385,6 +399,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -408,6 +423,7 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -431,10 +447,131 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
       MACOSX_PACKAGE=1
+
+
+### Test all build types:
+# According to CMakeLists, options are:
+# None Debug Release RelWithDebInfo MinSizeRel Coverage
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=NoSslDynamicLoading
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=NO
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      N=GCCLinuxDefault_Debug
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      N=GCCLinuxDefault_RelWithDebInfo
+      BUILD_TYPE=RelWithDebInfo
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      N=GCCLinuxDefault_MinSizeRel
+      BUILD_TYPE=MinSizeRel
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      N=GCCLinuxDefault_None
+      BUILD_TYPE=None
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
 
 
 #### Now all define combinations, but only for Linux clang
@@ -461,8 +598,8 @@ matrix:
 #      assert("ERROR in INV!")
 #    end
 #  end
-#  for i=0,31 do
-#    if true then -- (i~=0) and (i~=7) and (i~=31) then
+#  for i=0,511 do
+#    if (YN(i, 6)=="NO") and (YN(i, 7)=="NO") then
 #      print("  -")
 #      print("    os: linux")
 #      print("    compiler: clang")
@@ -484,7 +621,8 @@ matrix:
 #      print("      ENABLE_WEBSOCKETS=" .. YN(i, 5))
 #      print("      ENABLE_LUA=" .. YN(i, 6))
 #      print("      ENABLE_DUKTAPE=" .. YN(i, 7))
-#      print("      NO_CACHING=NO")
+#      print("      NO_CACHING=" .. INV(YN(i, 8)))
+#      print("      ENABLE_SERVER_STATS=" .. YN(i, 9))
 #      print("")
 #    end
 #  end
@@ -1226,121 +1364,3 @@ matrix:
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
 
-### Test all build types:
-# According to CMakeLists, options are:
-# None Debug Release RelWithDebInfo MinSizeRel Coverage
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=NoSslDynamicLoading
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=NO
-      OPENSSL_1_1=NO
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=31
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault_Debug
-      BUILD_TYPE=Debug
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault_RelWithDebInfo
-      BUILD_TYPE=RelWithDebInfo
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault_MinSizeRel
-      BUILD_TYPE=MinSizeRel
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault_None
-      BUILD_TYPE=None
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
