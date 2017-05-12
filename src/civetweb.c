@@ -860,14 +860,11 @@ mg_atomic_dec(volatile int *addr)
 
 #if defined(USE_SERVER_STATS)
 static int
-mg_atomic_add(volatile int *addr, int value)
+mg_atomic_add(volatile long long *addr, long long value)
 {
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-	/* Depending on the SDK, this function uses either
-	 * (volatile unsigned int *) or (volatile LONG *),
-	 * so whatever you use, the other SDK is likely to raise a warning. */
-	ret = InterlockedAdd((volatile long *)addr, (long)value);
+	ret = InterlockedAdd64(addr, value);
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
 	ret = __sync_add_and_fetch(addr, value);
@@ -892,9 +889,9 @@ mg_atomic_add(volatile int *addr, int value)
 #if defined(USE_SERVER_STATS)
 
 struct mg_memory_stat {
+	volatile long long totalMemUsed;
+	volatile long long maxMemUsed;
 	volatile int blockCount;
-	volatile int totalMemUsed;
-	volatile int maxMemUsed;
 };
 
 
@@ -15901,7 +15898,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 #else
 	const char *eol = "\n";
 #endif
-	struct mg_memory_stat *ms = get_memory_stat(ctx);
+	struct mg_memory_stat *ms = get_memory_stat((struct mg_context *)ctx);
 
 	if ((buffer == NULL) || (buflen < 10)) {
 		buflen = 0;
