@@ -628,6 +628,7 @@ matrix:
 #  end
 #
 
+
   -
     os: linux
     compiler: clang
@@ -649,7 +650,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -672,7 +674,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -695,7 +698,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -718,7 +722,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -741,7 +746,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -764,7 +770,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -787,7 +794,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -810,7 +818,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -833,7 +842,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -856,7 +866,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -879,7 +890,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -902,7 +914,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -925,7 +938,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -948,7 +962,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -971,7 +986,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -994,7 +1010,8 @@ matrix:
       ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1017,7 +1034,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1040,7 +1058,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1063,7 +1082,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1086,7 +1106,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1109,7 +1130,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1132,7 +1154,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1155,7 +1178,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1178,7 +1202,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1201,7 +1226,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1224,7 +1250,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1247,7 +1274,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1270,7 +1298,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1293,7 +1322,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1316,7 +1346,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1339,7 +1370,8 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
 
   -
     os: linux
@@ -1362,5 +1394,2310 @@ matrix:
       ENABLE_WEBSOCKETS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C128_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=128
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
       NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C129_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=129
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C130_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=130
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C131_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=131
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C132_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=132
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C133_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=133
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C134_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=134
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C135_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=135
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C136_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=136
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C137_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=137
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C138_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=138
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C139_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=139
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C140_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=140
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C141_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=141
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C142_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=142
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C143_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=143
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C144_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=144
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C145_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=145
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C146_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=146
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C147_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=147
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C148_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=148
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C149_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=149
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C150_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=150
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C151_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=151
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C152_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=152
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C153_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=153
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C154_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=154
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C155_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=155
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C156_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=156
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C157_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=157
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C158_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=158
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C159_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=159
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=NO
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C256_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=256
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C257_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=257
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C258_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=258
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C259_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=259
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C260_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=260
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C261_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=261
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C262_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=262
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C263_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=263
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C264_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=264
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C265_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=265
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C266_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=266
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C267_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=267
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C268_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=268
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C269_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=269
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C270_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=270
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C271_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=271
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C272_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=272
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C273_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=273
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C274_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=274
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C275_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=275
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C276_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=276
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C277_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=277
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C278_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=278
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C279_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=279
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C280_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=280
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C281_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=281
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C282_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=282
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C283_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=283
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C284_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=284
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C285_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=285
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C286_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=286
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C287_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=287
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C384_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=384
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C385_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=385
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C386_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=386
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C387_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=387
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C388_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=388
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C389_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=389
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C390_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=390
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C391_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=391
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C392_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=392
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C393_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=393
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C394_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=394
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C395_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=395
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C396_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=396
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C397_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=397
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C398_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=398
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C399_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=399
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C400_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=400
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C401_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=401
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C402_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=402
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C403_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=403
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C404_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=404
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C405_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=405
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C406_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=406
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C407_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=407
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C408_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=408
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C409_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=409
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C410_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=410
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C411_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=411
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=YES
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C412_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=412
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C413_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=413
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=NO
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C414_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=414
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      N=C415_
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=415
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ENABLE_SERVER_STATS=YES
 
