@@ -20,7 +20,7 @@ addons:
       - kubuntu-backports
 
 before_install:
-  - if [ -a "${TRAVIS_OS_NAME}" == "linux" ]; then
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
       mkdir $HOME/usr;
       export PATH="$HOME/usr/bin:$PATH";
       wget https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.sh;
