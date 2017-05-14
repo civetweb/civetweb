@@ -36,6 +36,7 @@ mg_duk_mem_realloc(void *udata, void *ptr, duk_size_t newsize)
 static void
 mg_duk_mem_free(void *udata, void *ptr)
 {
+	(void)udata;
 	mg_free(ptr);
 }
 
@@ -52,7 +53,7 @@ mg_duk_fatal_handler(duk_context *duk_ctx, duk_errcode_t code, const char *msg)
 	duk_get_prop_string(duk_ctx, -1, civetweb_conn_id);
 	conn = (struct mg_connection *)duk_to_pointer(duk_ctx, -1);
 
-	mg_cry(conn, "%s", msg);
+	mg_cry(conn, "JavaScript fatal (%u): %s", (unsigned)code, msg);
 }
 
 

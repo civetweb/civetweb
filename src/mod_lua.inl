@@ -1016,6 +1016,70 @@ lsp_random(lua_State *L)
 }
 
 
+/* mg.get_info */
+static int
+lsp_get_info(lua_State *L)
+{
+	int num_args = lua_gettop(L);
+	int type1;
+	const char *arg;
+	int len;
+	char *buf;
+
+	if (num_args == 1) {
+		type1 = lua_type(L, 1);
+		if (type1 == LUA_TSTRING) {
+			arg = lua_tostring(L, 1);
+			/* Get info according to argument */
+			if (!mg_strcasecmp(arg, "system")) {
+				/* Get system info */
+				len = mg_get_system_info(NULL, 0);
+				buf = mg_malloc(len + 64);
+				if (!buf) {
+					return luaL_error(L, "OOM in get_info() call");
+				}
+				len = mg_get_system_info(buf, len + 63);
+				lua_pushlstring(L, buf, len);
+				return 1;
+			}
+			if (!mg_strcasecmp(arg, "context")) {
+				/* Get context */
+				struct mg_context *ctx;
+				lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+				lua_gettable(L, LUA_REGISTRYINDEX);
+				ctx = (struct mg_context *)lua_touserdata(L, -1);
+
+				/* Get context info for server context */
+				len = mg_get_context_info(ctx, NULL, 0);
+				buf = mg_malloc(len + 64);
+				if (!buf) {
+					return luaL_error(L, "OOM in get_info() call");
+				}
+				len = mg_get_context_info(ctx, buf, len + 63);
+				lua_pushlstring(L, buf, len);
+				return 1;
+			}
+			if (!mg_strcasecmp(arg, "common")) {
+				/* Get context info for NULL context */
+				len = mg_get_context_info(NULL, NULL, 0);
+				buf = mg_malloc(len + 64);
+				if (!buf) {
+					return luaL_error(L, "OOM in get_info() call");
+				}
+				len = mg_get_context_info(NULL, buf, len + 63);
+				lua_pushlstring(L, buf, len);
+				return 1;
+			}
+			return 0;
+		}
+	}
+
+	/* Syntax error */
+	return luaL_error(L, "invalid get_info() call");
+}
+
+
+/* UUID library and function pointer */
 union {
 	void *p;
 	void (*f)(unsigned char uuid[16]);
@@ -1406,7 +1470,7 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 }
 
 
-void
+static void
 civetweb_open_lua_libs(lua_State *L)
 {
 	{
@@ -1537,6 +1601,7 @@ prepare_lua_environment(struct mg_context *ctx,
 	reg_function(L, "base64_decode", lsp_base64_decode);
 	reg_function(L, "get_response_code_text", lsp_get_response_code_text);
 	reg_function(L, "random", lsp_random);
+	reg_function(L, "get_info", lsp_get_info);
 	if (pf_uuid_generate.f) {
 		reg_function(L, "uuid", lsp_uuid);
 	}
@@ -1979,7 +2044,7 @@ lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 #endif
 
 
-lua_State *
+static lua_State *
 mg_prepare_lua_context_script(const char *file_name,
                               struct mg_context *ctx,
                               char *ebuf,
@@ -1988,6 +2053,8 @@ mg_prepare_lua_context_script(const char *file_name,
 	struct lua_State *L;
 	int lua_ret;
 	const char *lua_err_txt;
+
+	(void)ctx;
 
 	L = luaL_newstate();
 	if (L == NULL) {
@@ -2003,7 +2070,8 @@ mg_prepare_lua_context_script(const char *file_name,
 
 	lua_ret = luaL_loadfile(L, file_name);
 	if (lua_ret != LUA_OK) {
-		/* Error when loading the file (e.g. file not found, out of memory, ...)
+		/* Error when loading the file (e.g. file not found,
+		 * out of memory, ...)
 		 */
 		lua_err_txt = lua_tostring(L, -1);
 		mg_snprintf(NULL,

@@ -860,7 +860,7 @@ mg_atomic_dec(volatile int *addr)
 
 #if defined(USE_SERVER_STATS)
 static int
-mg_atomic_add(volatile long long *addr, long long value)
+mg_atomic_add(volatile int64_t *addr, int64_t value)
 {
 	int ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -889,8 +889,8 @@ mg_atomic_add(volatile long long *addr, long long value)
 #if defined(USE_SERVER_STATS)
 
 struct mg_memory_stat {
-	volatile long long totalMemUsed;
-	volatile long long maxMemUsed;
+	volatile int64_t totalMemUsed;
+	volatile int64_t maxMemUsed;
 	volatile int blockCount;
 };
 
@@ -934,8 +934,8 @@ mg_malloc_ex(size_t size,
 	        "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n",
 	        memory,
 	        (unsigned long)size,
-	        mstat->totalMemUsed,
-	        mstat->blockCount,
+	        (unsigned long)mstat->totalMemUsed,
+	        (unsigned long)mstat->blockCount,
 	        file,
 	        line);
 #if defined(_WIN32)
@@ -989,8 +989,8 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 		        "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n",
 		        memory,
 		        (unsigned long)size,
-		        mstat->totalMemUsed,
-		        mstat->blockCount,
+		        (unsigned long)mstat->totalMemUsed,
+		        (unsigned long)mstat->blockCount,
 		        file,
 		        line);
 #if defined(_WIN32)
@@ -1038,8 +1038,8 @@ mg_realloc_ex(void *memory,
 				        "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
 				        memory,
 				        (unsigned long)oldsize,
-				        mstat->totalMemUsed,
-				        mstat->blockCount,
+				        (unsigned long)mstat->totalMemUsed,
+				        (unsigned long)mstat->blockCount,
 				        file,
 				        line);
 #if defined(_WIN32)
@@ -1054,8 +1054,8 @@ mg_realloc_ex(void *memory,
 				        "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
 				        memory,
 				        (unsigned long)newsize,
-				        mstat->totalMemUsed,
-				        mstat->blockCount,
+				        (unsigned long)mstat->totalMemUsed,
+				        (unsigned long)mstat->blockCount,
 				        file,
 				        line);
 #if defined(_WIN32)
@@ -2092,9 +2092,9 @@ struct mg_context {
 
 #if defined(USE_SERVER_STATS)
 	int active_connections;
-	int total_connections;
-	int total_requests;
 	int max_connections;
+	int64_t total_connections;
+	int64_t total_requests;
 	struct mg_memory_stat ctx_memory;
 #endif
 };
@@ -14317,7 +14317,7 @@ process_new_connection(struct mg_connection *conn)
 
 #if defined(USE_SERVER_STATS)
 		int mcon = mg_atomic_inc(&(conn->ctx->active_connections));
-		mg_atomic_inc(&(conn->ctx->total_connections));
+		mg_atomic_add(&(conn->ctx->total_connections), 1);
 		if (mcon > (conn->ctx->max_connections)) {
 			/* could use atomic compare exchange, but this
 			 * seems overkill for statistics data */
@@ -15918,8 +15918,8 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		            sizeof(block),
 		            "\"memory\" : {%s"
 		            "\"blocks\" : %i%s"
-		            "\"used\" : %i%s"
-		            "\"maxUsed\" : %i%s"
+		            "\"used\" : %" INT64_FMT "%s"
+		            "\"maxUsed\" : %" INT64_FMT "%s"
 		            "},%s",
 		            eol,
 		            ms->blockCount,
@@ -15946,7 +15946,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		            "\"connections\" : {%s"
 		            "\"active\" : %i%s"
 		            "\"maxActive\" : %i%s"
-		            "\"total\" : %i%s"
+		            "\"total\" : %" INT64_FMT "%s"
 		            "},%s",
 		            eol,
 		            ctx->active_connections,
@@ -15970,7 +15970,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		            block,
 		            sizeof(block),
 		            "\"requests\" : {%s"
-		            "\"total\" : %i%s"
+		            "\"total\" : %" INT64_FMT "%s"
 		            "},%s",
 		            eol,
 		            ctx->total_requests,

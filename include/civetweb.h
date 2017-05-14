@@ -345,11 +345,10 @@ typedef int (*mg_request_handler)(struct mg_connection *conn, void *cbdata);
       ctx: server context
       uri: the URI (exact or pattern) for the handler
       handler: the callback handler to use when the URI is requested.
-               If NULL, an already registered handler for this URI will be
-   removed.
-               The URI used to remove a handler must match exactly the one used
-   to
-               register it (not only a pattern match).
+               If NULL, an already registered handler for this URI will
+               be removed.
+               The URI used to remove a handler must match exactly the
+               one used to register it (not only a pattern match).
       cbdata: the callback data to give to the handler when it is called. */
 CIVETWEB_API void mg_set_request_handler(struct mg_context *ctx,
                                          const char *uri,
@@ -724,8 +723,8 @@ CIVETWEB_API void mg_send_mime_file(struct mg_connection *conn,
      mime_type: Content-Type for file.  NULL will cause the type to be
                 looked up by the file extension.
      additional_headers: Additional custom header fields appended to the header.
-                         Each header must start with an X- to ensure it is not
-   included twice.
+                         Each header should start with an X-, to ensure it is
+                         not included twice.
                          NULL does not append anything.
 */
 CIVETWEB_API void mg_send_mime_file2(struct mg_connection *conn,
@@ -1137,8 +1136,9 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
         32  support Lua scripts and Lua server pages (USE_LUA is set)
         64  support server side JavaScript (USE_DUKTAPE is set)
        128  support caching (NO_CACHING not set)
+       256  support server statistics (USE_SERVER_STATS is set)
        The result is undefined, if bits are set that do not represent a
-       defined feature (currently: feature >= 256).
+       defined feature (currently: feature >= 512).
        The result is undefined, if no bit is set (feature == 0).
 
    Return:
@@ -1174,7 +1174,8 @@ CIVETWEB_API int mg_get_system_info(char *buffer, int buflen);
    Note:
      It is possible to determine the required buflen, by first calling this
      function with buffer = NULL and buflen = NULL. The required buflen is
-     one byte more than the returned value.
+     one byte more than the returned value. However, since the available
+     context information changes, you should allocate a few bytes more.
 */
 CIVETWEB_API int
 mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen);
