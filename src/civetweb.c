@@ -859,10 +859,10 @@ mg_atomic_dec(volatile int *addr)
 
 
 #if defined(USE_SERVER_STATS)
-static int
+static int64_t
 mg_atomic_add(volatile int64_t *addr, int64_t value)
 {
-	int ret;
+	int64_t ret;
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 	ret = InterlockedAdd64(addr, value);
 #elif defined(__GNUC__)                                                        \
@@ -916,7 +916,7 @@ mg_malloc_ex(size_t size,
 #endif
 
 	if (data) {
-		int mmem = mg_atomic_add(&mstat->totalMemUsed, size);
+		int mmem = mg_atomic_add(&mstat->totalMemUsed, (int64_t)size);
 		if (mmem > mstat->maxMemUsed) {
 			/* could use atomic compare exchange, but this
 			 * seems overkill for statistics data */
@@ -982,7 +982,7 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 		uintptr_t size = ((uintptr_t *)data)[0];
 		struct mg_memory_stat *mstat =
 		    (struct mg_memory_stat *)(((uintptr_t *)data)[1]);
-		mg_atomic_add(&mstat->totalMemUsed, -size);
+		mg_atomic_add(&mstat->totalMemUsed, -(int64_t)size);
 		mg_atomic_dec(&mstat->blockCount);
 #if defined(MEMORY_DEBUGGING)
 		sprintf(mallocStr,
@@ -1032,7 +1032,7 @@ mg_realloc_ex(void *memory,
 			_realloc = realloc(data, newsize + 2 * sizeof(uintptr_t));
 			if (_realloc) {
 				data = _realloc;
-				mg_atomic_add(&mstat->totalMemUsed, -oldsize);
+				mg_atomic_add(&mstat->totalMemUsed, -(int64_t)oldsize);
 #if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
@@ -1048,7 +1048,7 @@ mg_realloc_ex(void *memory,
 				DEBUG_TRACE("%s", mallocStr);
 #endif
 #endif
-				mg_atomic_add(&mstat->totalMemUsed, newsize);
+				mg_atomic_add(&mstat->totalMemUsed, (int64_t)newsize);
 #if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
