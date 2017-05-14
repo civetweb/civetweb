@@ -916,7 +916,7 @@ mg_malloc_ex(size_t size,
 #endif
 
 	if (data) {
-		int mmem = mg_atomic_add(&mstat->totalMemUsed, (int64_t)size);
+		int64_t mmem = mg_atomic_add(&mstat->totalMemUsed, (int64_t)size);
 		if (mmem > mstat->maxMemUsed) {
 			/* could use atomic compare exchange, but this
 			 * seems overkill for statistics data */
