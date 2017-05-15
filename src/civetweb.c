@@ -13511,18 +13511,20 @@ mg_close_connection(struct mg_connection *conn)
 }
 
 
+static struct mg_context common_client_context;
+
+
 static struct mg_connection *
 mg_connect_client_impl(const struct mg_client_options *client_options,
                        int use_ssl,
                        char *ebuf,
                        size_t ebuf_len)
 {
-	static struct mg_context fake_ctx;
 	struct mg_connection *conn = NULL;
 	SOCKET sock;
 	union usa sa;
 
-	if (!connect_socket(&fake_ctx,
+	if (!connect_socket(&common_client_context,
 	                    client_options->host,
 	                    client_options->port,
 	                    use_ssl,
@@ -13533,7 +13535,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 	if ((conn = (struct mg_connection *)mg_calloc_ctx(
-	         1, sizeof(*conn) + MAX_REQUEST_SIZE, conn->ctx)) == NULL) {
+	         1, sizeof(*conn) + MAX_REQUEST_SIZE, &common_client_context))
+	    == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -13588,7 +13591,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 
 	conn->buf_size = MAX_REQUEST_SIZE;
 	conn->buf = (char *)(conn + 1);
-	conn->ctx = &fake_ctx;
+	conn->ctx = &common_client_context;
 	conn->client.sock = sock;
 	conn->client.lsa = sa;
 
@@ -13601,7 +13604,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 
 #ifndef NO_SSL
 	if (use_ssl) {
-		fake_ctx.ssl_ctx = conn->client_ssl_ctx;
+		common_client_context.ssl_ctx = conn->client_ssl_ctx;
 
 		/* TODO: Check ssl_verify_peer and ssl_ca_path here.
 		 * SSL_CTX_set_verify call is needed to switch off server
@@ -13611,7 +13614,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		 * SSL_VERIFY_PEER, verify_ssl_server); */
 
 		if (client_options->client_cert) {
-			if (!ssl_use_pem_file(&fake_ctx,
+			if (!ssl_use_pem_file(&common_client_context,
 			                      client_options->client_cert,
 			                      NULL)) {
 				mg_snprintf(NULL,
