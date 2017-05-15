@@ -2612,10 +2612,6 @@ main(int argc, char *argv[])
 	        mg_get_option(g_ctx, "document_root"));
 
 	while (g_exit_flag == 0) {
-		char buffer[1024];
-		mg_get_context_info(g_ctx, buffer, sizeof(buffer));
-		puts(buffer);
-
 		sleep(1);
 	}
 
