@@ -473,6 +473,18 @@ This value should not exceed one year (RFC 2616, Section 14.21).
 A value of 0 will send "do not cache" headers for all static files.
 For values <0 and values >31622400, the behavior is undefined.
 
+### strict\_transport\_security\_max\_age
+
+Set the `Strict-Transport-Security` header, and set the `max-age` value.
+This instructs web browsers to interact with the server only using HTTPS,
+never by HTTP. If set, it will be sent for every request handled directly
+by the server, except scripts (CGI, Lua, ..) and callbacks. They must 
+send HTTP headers on their own.
+
+The time is specified in seconds. If this configuration is not set, 
+or set to -1, no `Strict-Transport-Security` header will be sent.
+For values <-1 and values >31622400, the behavior is undefined.
+
 ### decode\_url `yes`
 URL encoded request strings are decoded in the server, unless it is disabled
 by setting this option to `no`.

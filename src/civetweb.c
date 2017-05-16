@@ -1893,6 +1893,9 @@ enum {
 #if !defined(NO_CACHING)
 	STATIC_FILE_MAX_AGE,
 #endif
+#if !defined(NO_SSL)
+	STRICT_HTTPS_MAX_AGE,
+#endif
 #if defined(__linux__)
 	ALLOW_SENDFILE_CALL,
 #endif
@@ -1982,6 +1985,9 @@ static struct mg_option config_options[] = {
     {"tcp_nodelay", CONFIG_TYPE_NUMBER, "0"},
 #if !defined(NO_CACHING)
     {"static_file_max_age", CONFIG_TYPE_NUMBER, "3600"},
+#endif
+#if !defined(NO_SSL)
+    {"strict_transport_security_max_age", CONFIG_TYPE_NUMBER, NULL},
 #endif
 #if defined(__linux__)
     {"allow_sendfile_call", CONFIG_TYPE_BOOLEAN, "yes"},
@@ -3414,13 +3420,16 @@ static int
 send_additional_header(struct mg_connection *conn)
 {
 	int i = 0;
-	(void)conn;
 
-#if 0
-	/* TODO (Feature): Configure additional response header */
-	i += mg_printf(conn, "Strict-Transport-Security: max-age=%u\r\n", 3600);
-	i += mg_printf(conn, "X-Some-Test-Header: %u\r\n", 42);
-#endif
+	if (conn->ctx->config[STRICT_HTTPS_MAX_AGE]) {
+		int max_age = atoi(conn->ctx->config[STRICT_HTTPS_MAX_AGE]);
+		if (max_age >= 0) {
+			i += mg_printf(conn,
+			               "Strict-Transport-Security: max-age=%u\r\n",
+			               (unsigned)max_age);
+		}
+	}
+
 	return i;
 }
 
