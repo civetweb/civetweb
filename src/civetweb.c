@@ -5576,6 +5576,9 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 		                 (const char *)buf,
 		                 (int64_t)len);
 	}
+	if (total > 0) {
+		conn->num_bytes_sent += total;
+	}
 	return (int)total;
 }
 
@@ -7603,17 +7606,16 @@ print_dir_entry(struct de *de)
 		mod[sizeof(mod) - 1] = '\0';
 	}
 	mg_url_encode(de->file_name, href, sizeof(href));
-	de->conn->num_bytes_sent +=
-	    mg_printf(de->conn,
-	              "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
-	              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	              de->conn->request_info.local_uri,
-	              href,
-	              de->file.is_directory ? "/" : "",
-	              de->file_name,
-	              de->file.is_directory ? "/" : "",
-	              mod,
-	              size);
+	mg_printf(de->conn,
+	          "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
+	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
+	          de->conn->request_info.local_uri,
+	          href,
+	          de->file.is_directory ? "/" : "",
+	          de->file_name,
+	          de->file.is_directory ? "/" : "",
+	          mod,
+	          size);
 }
 
 
@@ -7875,32 +7877,29 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	          "Connection: close\r\n"
 	          "Content-Type: text/html; charset=utf-8\r\n\r\n",
 	          date);
-
-	conn->num_bytes_sent +=
-	    mg_printf(conn,
-	              "<html><head><title>Index of %s</title>"
-	              "<style>th {text-align: left;}</style></head>"
-	              "<body><h1>Index of %s</h1><pre><table cellpadding=\"0\">"
-	              "<tr><th><a href=\"?n%c\">Name</a></th>"
-	              "<th><a href=\"?d%c\">Modified</a></th>"
-	              "<th><a href=\"?s%c\">Size</a></th></tr>"
-	              "<tr><td colspan=\"3\"><hr></td></tr>",
-	              conn->request_info.local_uri,
-	              conn->request_info.local_uri,
-	              sort_direction,
-	              sort_direction,
-	              sort_direction);
+	mg_printf(conn,
+	          "<html><head><title>Index of %s</title>"
+	          "<style>th {text-align: left;}</style></head>"
+	          "<body><h1>Index of %s</h1><pre><table cellpadding=\"0\">"
+	          "<tr><th><a href=\"?n%c\">Name</a></th>"
+	          "<th><a href=\"?d%c\">Modified</a></th>"
+	          "<th><a href=\"?s%c\">Size</a></th></tr>"
+	          "<tr><td colspan=\"3\"><hr></td></tr>",
+	          conn->request_info.local_uri,
+	          conn->request_info.local_uri,
+	          sort_direction,
+	          sort_direction,
+	          sort_direction);
 
 	/* Print first entry - link to a parent directory */
-	conn->num_bytes_sent +=
-	    mg_printf(conn,
-	              "<tr><td><a href=\"%s%s\">%s</a></td>"
-	              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	              conn->request_info.local_uri,
-	              "..",
-	              "Parent directory",
-	              "-",
-	              "-");
+	mg_printf(conn,
+	          "<tr><td><a href=\"%s%s\">%s</a></td>"
+	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
+	          conn->request_info.local_uri,
+	          "..",
+	          "Parent directory",
+	          "-",
+	          "-");
 
 	/* Sort and print directory entries */
 	if (data.entries != NULL) {
@@ -7915,7 +7914,7 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 		mg_free(data.entries);
 	}
 
-	conn->num_bytes_sent += mg_printf(conn, "%s", "</table></body></html>");
+	mg_printf(conn, "%s", "</table></body></html>");
 	conn->status_code = 200;
 }
 
@@ -7966,7 +7965,6 @@ send_file_data(struct mg_connection *conn,
 				sf_sent =
 				    sendfile(conn->client.sock, sf_file, &sf_offs, sf_tosend);
 				if (sf_sent > 0) {
-					conn->num_bytes_sent += sf_sent;
 					len -= sf_sent;
 					offset += sf_sent;
 				} else if (loop_cnt == 0) {
@@ -8022,7 +8020,6 @@ send_file_data(struct mg_connection *conn,
 				}
 
 				/* Both read and were successful, adjust counters */
-				conn->num_bytes_sent += num_written;
 				len -= num_written;
 			}
 		}
@@ -9299,8 +9296,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	mg_write(conn, "\r\n", 2);
 
 	/* Send chunk of data that may have been read after the headers */
-	conn->num_bytes_sent +=
-	    mg_write(conn, buf + headers_len, (size_t)(data_len - headers_len));
+	mg_write(conn, buf + headers_len, (size_t)(data_len - headers_len));
 
 	/* Read the rest of CGI output and send to the client */
 	send_file_data(conn, &fout, 0, INT64_MAX);
@@ -9940,23 +9936,22 @@ print_props(struct mg_connection *conn,
 	}
 
 	gmt_time_string(mtime, sizeof(mtime), &filep->last_modified);
-	conn->num_bytes_sent +=
-	    mg_printf(conn,
-	              "<d:response>"
-	              "<d:href>%s</d:href>"
-	              "<d:propstat>"
-	              "<d:prop>"
-	              "<d:resourcetype>%s</d:resourcetype>"
-	              "<d:getcontentlength>%" INT64_FMT "</d:getcontentlength>"
-	              "<d:getlastmodified>%s</d:getlastmodified>"
-	              "</d:prop>"
-	              "<d:status>HTTP/1.1 200 OK</d:status>"
-	              "</d:propstat>"
-	              "</d:response>\n",
-	              uri,
-	              filep->is_directory ? "<d:collection/>" : "",
-	              filep->size,
-	              mtime);
+	mg_printf(conn,
+	          "<d:response>"
+	          "<d:href>%s</d:href>"
+	          "<d:propstat>"
+	          "<d:prop>"
+	          "<d:resourcetype>%s</d:resourcetype>"
+	          "<d:getcontentlength>%" INT64_FMT "</d:getcontentlength>"
+	          "<d:getlastmodified>%s</d:getlastmodified>"
+	          "</d:prop>"
+	          "<d:status>HTTP/1.1 200 OK</d:status>"
+	          "</d:propstat>"
+	          "</d:response>\n",
+	          uri,
+	          filep->is_directory ? "<d:collection/>" : "",
+	          filep->size,
+	          mtime);
 }
 
 
@@ -10014,10 +10009,9 @@ handle_propfind(struct mg_connection *conn,
 	          "Content-Type: text/xml; charset=utf-8\r\n\r\n",
 	          suggest_connection_header(conn));
 
-	conn->num_bytes_sent +=
-	    mg_printf(conn,
-	              "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-	              "<d:multistatus xmlns:d='DAV:'>\n");
+	mg_printf(conn,
+	          "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+	          "<d:multistatus xmlns:d='DAV:'>\n");
 
 	/* Print properties for the requested resource itself */
 	print_props(conn, conn->request_info.local_uri, filep);
@@ -10029,7 +10023,7 @@ handle_propfind(struct mg_connection *conn,
 		scan_directory(conn, path, conn, &print_dav_dir_entry);
 	}
 
-	conn->num_bytes_sent += mg_printf(conn, "%s\n", "</d:multistatus>");
+	mg_printf(conn, "%s\n", "</d:multistatus>");
 }
 #endif
 
