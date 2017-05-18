@@ -28,7 +28,7 @@ cp resources/Makefile.in-os cov_build/resources/
 cd cov_build
 
 # new scan build
-../../cov-analysis-linux64-8.7.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1
+../../cov-analysis-linux64-8.7.0/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_SERVER_STATS=1
 
 
 # pack build results for upload
@@ -42,6 +42,12 @@ ls -la cov_build/civetweb_coverity_check.tgz
 
 if [ "$?" = "0" ]; then
 	echo "... done"
+	echo
+        echo "submit to https://scan.coverity.com/projects/bel2125-civetweb"
+	echo
+	echo "last commit was"
+	git log -n 1
+        echo
         echo
 else
 	echo "No civetweb_coverity_check.tgz file" 1>&2
