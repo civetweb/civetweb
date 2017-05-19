@@ -1905,6 +1905,7 @@ enum {
 #if defined(USE_LUA)
 	LUA_BACKGROUND_SCRIPT,
 #endif
+	ADDITIONAL_HEADER,
 
 	NUM_OPTIONS
 };
@@ -1998,8 +1999,10 @@ static struct mg_option config_options[] = {
 #if defined(USE_LUA)
     {"lua_background_script", CONFIG_TYPE_FILE, NULL},
 #endif
+    {"additional_header", CONFIG_TYPE_STRING, NULL},
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
+
 
 /* Check if the config_options and the corresponding enum have compatible
  * sizes. */
@@ -2007,7 +2010,9 @@ mg_static_assert((sizeof(config_options) / sizeof(config_options[0]))
                      == (NUM_OPTIONS + 1),
                  "config_options and enum not sync");
 
+
 enum { REQUEST_HANDLER, WEBSOCKET_HANDLER, AUTH_HANDLER };
+
 
 struct mg_handler_info {
 	/* Name/Pattern of the URI. */
@@ -2038,6 +2043,7 @@ struct mg_handler_info {
 	/* next handler in a linked list */
 	struct mg_handler_info *next;
 };
+
 
 struct mg_context {
 	volatile int stop_flag;        /* Should we stop event loop */
@@ -3420,6 +3426,7 @@ static int
 send_additional_header(struct mg_connection *conn)
 {
 	int i = 0;
+	const char *header = conn->ctx->config[ADDITIONAL_HEADER];
 
 #if !defined(NO_SSL)
 	if (conn->ctx->config[STRICT_HTTPS_MAX_AGE]) {
@@ -3430,9 +3437,11 @@ send_additional_header(struct mg_connection *conn)
 			               (unsigned)max_age);
 		}
 	}
-#else
-	(void)conn; /* unused */
 #endif
+
+	if (header && header[0]) {
+		i += mg_printf(conn, "%s\r\n", header);
+	}
 
 	return i;
 }

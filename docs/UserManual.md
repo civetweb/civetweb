@@ -550,6 +550,13 @@ This option can be used to enable or disable the use of the Linux `sendfile` sys
 ### case\_sensitive `no`
 This option can be uset to enable case URLs for Windows servers. It is only available for Windows systems. Windows file systems are not case sensitive, but they still store the file name including case. If this option is set to `yes`, the comparison for URIs and Windows file names will be case sensitive.
 
+### additional\_header
+Send additional HTTP response header line for every request.
+The full header line including key and value must be specified, excluding the carriage return line feed.
+
+Example:
+"X-Frame-Options: SAMEORIGIN"
+
 
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
