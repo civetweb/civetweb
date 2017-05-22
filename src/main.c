@@ -357,6 +357,80 @@ sdup(const char *str)
 }
 
 
+static char *
+sdupesc(const char *str)
+{
+	char *p = sdup(str);
+
+	if (p) {
+		char *d;
+		while ((d = strchr(p, '\\')) != NULL) {
+			switch (d[1]) {
+			case 'a':
+				d[0] = '\a';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'b':
+				d[0] = '\b';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'e':
+				d[0] = 27;
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'f':
+				d[0] = '\f';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'n':
+				d[0] = '\n';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'r':
+				d[0] = '\r';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 't':
+				d[0] = '\t';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'v':
+				d[0] = '\v';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'z':
+				d[0] = 0;
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case '\\':
+				d[0] = '\\';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case '\'':
+				d[0] = '\'';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case '\"':
+				d[0] = '\"';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 0:
+				if (d == p) {
+					/* Line is only \ */
+					free(p);
+					return NULL;
+				}
+				/* no break */
+			}
+
+			if (d[1] == 'z') {
+			}
+		}
+	}
+	return p;
+}
+
+
 static const char *
 get_option(char **options, const char *option_name)
 {
@@ -437,12 +511,12 @@ set_option(char **options, const char *name, const char *value)
 	for (i = 0; i < MAX_OPTIONS; i++) {
 		if (options[2 * i] == NULL) {
 			options[2 * i] = sdup(name);
-			options[2 * i + 1] = sdup(value);
+			options[2 * i + 1] = sdupesc(value);
 			options[2 * i + 2] = NULL;
 			break;
 		} else if (!strcmp(options[2 * i], name)) {
 			free(options[2 * i + 1]);
-			options[2 * i + 1] = sdup(value);
+			options[2 * i + 1] = sdupesc(value);
 			break;
 		}
 	}
@@ -513,8 +587,9 @@ read_config_file(const char *config_file, char **options)
 
 			/* Trim additional spaces between option name and value - then
 			 * (line+j) contains the option value */
-			while (isspace(line[j]))
+			while (isspace(line[j])) {
 				j++;
+			}
 
 			/* Set option */
 			if (!set_option(options, line + i, line + j)) {
