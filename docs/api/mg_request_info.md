@@ -11,6 +11,7 @@
 |**`local_uri`**|`const char *`| The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL.  Example: "/path/to/file.ext" (even if the client used "http://mydomain.com:8080/path/to/file.ext" in the request) |
 |~~`uri`~~|`const char *`| *Deprecated. Use* `local_uri` *instead* |
 |**`http_version`**|`const char *`| The HTTP version as mentioned in the client request. This can be "1.0", "1.1", etc. |
+|**`query_string`**|`const char *`| The HTTP query string, defined as URL part after the first '?' character, not including '?'. NULL if there is no '?'. |
 |**`remote_user`**|`const char *`| The name of the authenticated remote user, or NULL if no authentication was used. Only used for HTTP (digest) authentication, not for cookie based authentication. |
 |**`remote addr`**|`char[48]`| The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address.  Example: "127.0.0.1" |
 |~~`remote_ip`~~|`long`| *Deprecated. Use* `remote_addr` *instead* |
