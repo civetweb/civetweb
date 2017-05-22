@@ -342,6 +342,21 @@ create_config_file(const struct mg_context *ctx, const char *path)
 #endif
 #endif
 
+static unsigned
+hex2dec(char x)
+{
+	if ((x >= '0') && (x <= '9')) {
+		return (unsigned)x - (unsigned)'0';
+	}
+	if ((x >= 'A') && (x <= 'F')) {
+		return (unsigned)x - (unsigned)'A' + 10u;
+	}
+	if ((x >= 'a') && (x <= 'f')) {
+		return (unsigned)x - (unsigned)'a' + 10u;
+	}
+	return 0;
+}
+
 
 static char *
 sdup(const char *str)
@@ -398,6 +413,16 @@ sdupesc(const char *str)
 				d[0] = '\v';
 				memmove(d + 1, d + 2, strlen(d + 1));
 				break;
+			case 'x':
+				if (isxdigit(d[2]) && isxdigit(d[3])) {
+					d[0] = (char)((unsigned char)(hex2dec(d[2]) * 16
+					                              + hex2dec(d[3])));
+					memmove(d + 1, d + 4, strlen(d + 3));
+				} else {
+					/* Invalid esc sequence */
+					/* TODO: define what to do */
+				}
+				break;
 			case 'z':
 				d[0] = 0;
 				memmove(d + 1, d + 2, strlen(d + 1));
@@ -420,10 +445,11 @@ sdupesc(const char *str)
 					free(p);
 					return NULL;
 				}
-				/* no break */
-			}
-
-			if (d[1] == 'z') {
+			/* no break */
+			default:
+				/* invalid ESC sequence */
+				/* TODO: define what to do */
+				break;
 			}
 		}
 	}
