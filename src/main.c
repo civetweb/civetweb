@@ -342,6 +342,7 @@ create_config_file(const struct mg_context *ctx, const char *path)
 #endif
 #endif
 
+
 static unsigned
 hex2dec(char x)
 {
@@ -408,6 +409,27 @@ sdupesc(const char *str)
 			case 't':
 				d[0] = '\t';
 				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'u':
+				if (isxdigit(d[2]) && isxdigit(d[3]) && isxdigit(d[4])
+				    && isxdigit(d[5])) {
+					unsigned short u = (unsigned short)(hex2dec(d[2]) * 4096
+					                                    + hex2dec(d[3]) * 256
+					                                    + hex2dec(d[4]) * 16
+					                                    + hex2dec(d[5]));
+					char mbc[16];
+					int mbl = wctomb(mbc, (wchar_t)u);
+					if ((mbl > 0) && (mbl < 6)) {
+						memcpy(d, mbc, mbl);
+						memmove(d + mbl, d + 6, strlen(d + 5));
+					} else {
+						/* Invalid multi byte character */
+						/* TODO: define what to do */
+					}
+				} else {
+					/* Invalid esc sequence */
+					/* TODO: define what to do */
+				}
 				break;
 			case 'v':
 				d[0] = '\v';
@@ -551,8 +573,11 @@ set_option(char **options, const char *name, const char *value)
 		die("Too many options specified");
 	}
 
-	if (options[2 * i] == NULL || options[2 * i + 1] == NULL) {
+	if (options[2 * i] == NULL) {
 		die("Out of memory");
+	}
+	if (options[2 * i + 1] == NULL) {
+		die("Illegal escape sequence, or out of memory");
 	}
 
 	/* option set correctly */
