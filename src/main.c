@@ -379,8 +379,8 @@ sdupesc(const char *str)
 	char *p = sdup(str);
 
 	if (p) {
-		char *d;
-		while ((d = strchr(p, '\\')) != NULL) {
+		char *d = p;
+		while ((d = strchr(d, '\\')) != NULL) {
 			switch (d[1]) {
 			case 'a':
 				d[0] = '\a';
@@ -420,8 +420,10 @@ sdupesc(const char *str)
 					char mbc[16];
 					int mbl = wctomb(mbc, (wchar_t)u);
 					if ((mbl > 0) && (mbl < 6)) {
-						memcpy(d, mbc, mbl);
+						memcpy(d, mbc, (unsigned)mbl);
 						memmove(d + mbl, d + 6, strlen(d + 5));
+						/* Advance mbl characters (+1 is below) */
+						d += (mbl - 1);
 					} else {
 						/* Invalid multi byte character */
 						/* TODO: define what to do */
@@ -473,6 +475,9 @@ sdupesc(const char *str)
 				/* TODO: define what to do */
 				break;
 			}
+
+			/* Advance to next character */
+			d++;
 		}
 	}
 	return p;
