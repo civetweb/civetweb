@@ -48,12 +48,6 @@ endif()
 # C++ wrappers
 option(CIVETWEB_ENABLE_THIRD_PARTY_OUTPUT "Shows the output of third party dependency processing" OFF)
 
-# Max Request Size
-set(CIVETWEB_MAX_REQUEST_SIZE 16384 CACHE STRING
-  "The largest amount of content bytes allowed in a request")
-set_property(CACHE CIVETWEB_MAX_REQUEST_SIZE PROPERTY VALUE ${CIVETWEB_MAX_REQUEST_SIZE})
-message(STATUS "Max Request Size - ${CIVETWEB_MAX_REQUEST_SIZE}")
-
 # Thread Stack Size
 set(CIVETWEB_THREAD_STACK_SIZE 102400 CACHE STRING
   "The stack size in bytes for each thread created")
@@ -414,7 +408,6 @@ if(CIVETWEB_SSL_OPENSSL_API_1_1)
   add_definitions(-DOPENSSL_API_1_1)
 endif()
 add_definitions(-DUSE_STACK_SIZE=${CIVETWEB_THREAD_STACK_SIZE})
-add_definitions(-DMAX_REQUEST_SIZE=${CIVETWEB_MAX_REQUEST_SIZE})
 
 # Build the targets
 add_subdirectory(src)

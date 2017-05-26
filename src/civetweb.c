@@ -638,13 +638,6 @@ static pthread_mutexattr_t pthread_mutex_attr;
 #define MAX_CGI_ENVIR_VARS (256)
 #define MG_BUF_LEN (8192)
 
-#ifndef MAX_REQUEST_SIZE
-#define MAX_REQUEST_SIZE (16384)
-#endif
-
-mg_static_assert(MAX_REQUEST_SIZE >= 256,
-                 "request size length must be a positive number");
-
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 
@@ -1906,6 +1899,7 @@ enum {
 	LUA_BACKGROUND_SCRIPT,
 #endif
 	ADDITIONAL_HEADER,
+	MAX_REQUEST_SIZE,
 
 	NUM_OPTIONS
 };
@@ -2000,6 +1994,7 @@ static struct mg_option config_options[] = {
     {"lua_background_script", CONFIG_TYPE_FILE, NULL},
 #endif
     {"additional_header", CONFIG_TYPE_STRING, NULL},
+    {"max_request_size", CONFIG_TYPE_NUMBER, "16384"},
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
@@ -2071,6 +2066,8 @@ struct mg_context {
 	pthread_cond_t sq_full;       /* Signaled when socket is produced */
 	pthread_cond_t sq_empty;      /* Signaled when socket is consumed */
 #endif
+
+	unsigned int max_request_size;	/* The max request size */
 
 	pthread_t masterthreadid; /* The master thread ID */
 	unsigned int
@@ -13539,6 +13536,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	struct mg_connection *conn = NULL;
 	SOCKET sock;
 	union usa sa;
+	int max_req_size = atoi(config_options[MAX_REQUEST_SIZE].default_value);
 
 	if (!connect_socket(&common_client_context,
 	                    client_options->host,
@@ -13551,7 +13549,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 	if ((conn = (struct mg_connection *)mg_calloc_ctx(
-	         1, sizeof(*conn) + MAX_REQUEST_SIZE, &common_client_context))
+	         1, sizeof(*conn) + max_req_size, &common_client_context))
 	    == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
@@ -13605,7 +13603,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	struct sockaddr *psa = (struct sockaddr *)&(conn->client.rsa.sin);
 #endif
 
-	conn->buf_size = MAX_REQUEST_SIZE;
+	conn->buf_size = max_req_size;
 	conn->buf = (char *)(conn + 1);
 	conn->ctx = &common_client_context;
 	conn->client.sock = sock;
@@ -14650,14 +14648,14 @@ worker_thread_run(struct worker_thread_args *thread_args)
 	/* Request buffers are not pre-allocated. They are private to the
 	 * request and do not contain any state information that might be
 	 * of interest to anyone observing a server status.  */
-	conn->buf = (char *)mg_malloc_ctx(MAX_REQUEST_SIZE, conn->ctx);
+	conn->buf = (char *)mg_malloc_ctx(ctx->max_request_size, conn->ctx);
 	if (conn->buf == NULL) {
 		mg_cry(fc(ctx),
 		       "Out of memory: Cannot allocate buffer for worker %i",
 		       (int)thread_args->index);
 		return NULL;
 	}
-	conn->buf_size = MAX_REQUEST_SIZE;
+	conn->buf_size = ctx->max_request_size;
 
 	conn->ctx = ctx;
 	conn->thread_index = thread_args->index;
@@ -15309,6 +15307,15 @@ mg_start(const struct mg_callbacks *callbacks,
 		if (ctx->config[i] == NULL && default_value != NULL) {
 			ctx->config[i] = mg_strdup(default_value);
 		}
+	}
+
+	ctx->max_request_size = atoi(ctx->config[MAX_REQUEST_SIZE]);
+
+	if (ctx->max_request_size < 256) {
+		mg_cry(fc(ctx), "max_request_size too small (< 256)");
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
 	}
 
 	workerthreadcount = atoi(ctx->config[NUM_THREADS]);
