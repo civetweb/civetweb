@@ -2067,7 +2067,7 @@ struct mg_context {
 	pthread_cond_t sq_empty;      /* Signaled when socket is consumed */
 #endif
 
-	unsigned int max_request_size;	/* The max request size */
+	unsigned int max_request_size; /* The max request size */
 
 	pthread_t masterthreadid; /* The master thread ID */
 	unsigned int
@@ -13536,7 +13536,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	struct mg_connection *conn = NULL;
 	SOCKET sock;
 	union usa sa;
-	int max_req_size = atoi(config_options[MAX_REQUEST_SIZE].default_value);
+	unsigned max_req_size =
+	    (unsigned)atoi(config_options[MAX_REQUEST_SIZE].default_value);
 
 	if (!connect_socket(&common_client_context,
 	                    client_options->host,
@@ -14655,7 +14656,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 		       (int)thread_args->index);
 		return NULL;
 	}
-	conn->buf_size = ctx->max_request_size;
+	conn->buf_size = (int)ctx->max_request_size;
 
 	conn->ctx = ctx;
 	conn->thread_index = thread_args->index;
@@ -15192,6 +15193,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	const char *name, *value, *default_value;
 	int idx, ok, workerthreadcount;
 	unsigned int i;
+	int itmp;
 	void (*exit_callback)(const struct mg_context *ctx) = 0;
 
 	struct mg_workerTLS tls;
@@ -15309,14 +15311,15 @@ mg_start(const struct mg_callbacks *callbacks,
 		}
 	}
 
-	ctx->max_request_size = atoi(ctx->config[MAX_REQUEST_SIZE]);
+	itmp = atoi(ctx->config[MAX_REQUEST_SIZE]);
 
-	if (ctx->max_request_size < 256) {
-		mg_cry(fc(ctx), "max_request_size too small (< 256)");
+	if (itmp < 1024) {
+		mg_cry(fc(ctx), "max_request_size too small");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
+	ctx->max_request_size = (unsigned)itmp;
 
 	workerthreadcount = atoi(ctx->config[NUM_THREADS]);
 
