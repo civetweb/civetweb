@@ -209,7 +209,6 @@ help:
 	@echo "   NO_SSL_DL             link against system libssl library"
 	@echo "   NO_FILES              do not serve files from a directory"
 	@echo "   NO_CACHING            disable caching (usefull for systems without timegm())"
-	@echo "   MAX_REQUEST_SIZE      maximum header size, default 16384"
 	@echo ""
 	@echo " Variables"
 	@echo "   TARGET_OS='$(TARGET_OS)'"
