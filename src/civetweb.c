@@ -13604,7 +13604,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	struct sockaddr *psa = (struct sockaddr *)&(conn->client.rsa.sin);
 #endif
 
-    conn->buf_size = (int)max_req_size;
+	conn->buf_size = (int)max_req_size;
 	conn->buf = (char *)(conn + 1);
 	conn->ctx = &common_client_context;
 	conn->client.sock = sock;

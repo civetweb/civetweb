@@ -565,15 +565,27 @@ set_option(char **options, const char *name, const char *value)
 
 	for (i = 0; i < MAX_OPTIONS; i++) {
 		if (options[2 * i] == NULL) {
-            /* Option not set yet. Add new option */
+			/* Option not set yet. Add new option */
 			options[2 * i] = sdup(name);
-            options[2 * i + 1] = sdup(value);
+			options[2 * i + 1] = sdup(value);
 			options[2 * i + 2] = NULL;
 			break;
 		} else if (!strcmp(options[2 * i], name)) {
-            /* Option already set. Overwrite */
-			free(options[2 * i + 1]);
-            options[2 * i + 1] = sdup(value);
+			if (!strcmp(name, "additional_header")) {
+				/* Option already set. Overwrite */
+				char *s =
+				    malloc(strlen(options[2 * i + 1]) + 3 + strlen(value));
+				if (!s) {
+					die("Out of memory");
+				}
+				sprintf(s, "%s\r\n%s", options[2 * i + 1], value);
+				free(options[2 * i + 1]);
+				options[2 * i + 1] = s;
+			} else {
+				/* Option already set. Overwrite */
+				free(options[2 * i + 1]);
+				options[2 * i + 1] = sdup(value);
+			}
 			break;
 		}
 	}
