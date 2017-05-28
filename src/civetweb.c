@@ -1843,7 +1843,7 @@ enum {
 	SSL_CERTIFICATE_CHAIN,
 	NUM_THREADS,
 	RUN_AS_USER,
-	REWRITE,
+	URL_REWRITE_PATTERN,
 	HIDE_FILES,
 	REQUEST_TIMEOUT,
 	KEEP_ALIVE_TIMEOUT,
@@ -1908,20 +1908,20 @@ enum {
 /* Config option name, config types, default value */
 static struct mg_option config_options[] = {
     {"cgi_pattern", CONFIG_TYPE_EXT_PATTERN, "**.cgi$|**.pl$|**.php$"},
-    {"cgi_environment", CONFIG_TYPE_STRING, NULL},
+    {"cgi_environment", CONFIG_TYPE_STRING_LIST, NULL},
     {"put_delete_auth_file", CONFIG_TYPE_FILE, NULL},
     {"cgi_interpreter", CONFIG_TYPE_FILE, NULL},
-    {"protect_uri", CONFIG_TYPE_STRING, NULL},
+    {"protect_uri", CONFIG_TYPE_STRING_LIST, NULL},
     {"authentication_domain", CONFIG_TYPE_STRING, "mydomain.com"},
     {"enable_auth_domain_check", CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssi_pattern", CONFIG_TYPE_EXT_PATTERN, "**.shtml$|**.shtm$"},
-    {"throttle", CONFIG_TYPE_STRING, NULL},
+    {"throttle", CONFIG_TYPE_STRING_LIST, NULL},
     {"access_log_file", CONFIG_TYPE_FILE, NULL},
     {"enable_directory_listing", CONFIG_TYPE_BOOLEAN, "yes"},
     {"error_log_file", CONFIG_TYPE_FILE, NULL},
     {"global_auth_file", CONFIG_TYPE_FILE, NULL},
     {"index_files",
-     CONFIG_TYPE_STRING,
+     CONFIG_TYPE_STRING_LIST,
 #ifdef USE_LUA
      "index.xhtml,index.html,index.htm,index.lp,index.lsp,index.lua,index.cgi,"
      "index.shtml,index.php"},
@@ -1929,15 +1929,15 @@ static struct mg_option config_options[] = {
      "index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php"},
 #endif
     {"enable_keep_alive", CONFIG_TYPE_BOOLEAN, "no"},
-    {"access_control_list", CONFIG_TYPE_STRING, NULL},
-    {"extra_mime_types", CONFIG_TYPE_STRING, NULL},
-    {"listening_ports", CONFIG_TYPE_STRING, "8080"},
+    {"access_control_list", CONFIG_TYPE_STRING_LIST, NULL},
+    {"extra_mime_types", CONFIG_TYPE_STRING_LIST, NULL},
+    {"listening_ports", CONFIG_TYPE_STRING_LIST, "8080"},
     {"document_root", CONFIG_TYPE_DIRECTORY, NULL},
     {"ssl_certificate", CONFIG_TYPE_FILE, NULL},
     {"ssl_certificate_chain", CONFIG_TYPE_FILE, NULL},
     {"num_threads", CONFIG_TYPE_NUMBER, "50"},
     {"run_as_user", CONFIG_TYPE_STRING, NULL},
-    {"url_rewrite_patterns", CONFIG_TYPE_STRING, NULL},
+    {"url_rewrite_patterns", CONFIG_TYPE_STRING_LIST, NULL},
     {"hide_files_patterns", CONFIG_TYPE_EXT_PATTERN, NULL},
     {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
     {"keep_alive_timeout_ms", CONFIG_TYPE_NUMBER, "500"},
@@ -1993,7 +1993,7 @@ static struct mg_option config_options[] = {
 #if defined(USE_LUA)
     {"lua_background_script", CONFIG_TYPE_FILE, NULL},
 #endif
-    {"additional_header", CONFIG_TYPE_STRING, NULL},
+    {"additional_header", CONFIG_TYPE_STRING_MULTILINE, NULL},
     {"max_request_size", CONFIG_TYPE_NUMBER, "16384"},
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
@@ -6172,7 +6172,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	}
 
 	/* Step 6: URI rewriting */
-	rewrite = conn->ctx->config[REWRITE];
+	rewrite = conn->ctx->config[URL_REWRITE_PATTERN];
 	while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
 		if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
 			mg_snprintf(conn,

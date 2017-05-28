@@ -515,6 +515,7 @@ set_option(char **options, const char *name, const char *value)
 {
 	int i, type;
 	const struct mg_option *default_options = mg_get_valid_options();
+	const char *multi_sep = NULL;
 
 	for (i = 0; main_config_options[i].name != NULL; i++) {
 		if (0 == strcmp(name, main_config_options[i].name)) {
@@ -535,7 +536,7 @@ set_option(char **options, const char *name, const char *value)
 		/* unknown option */
 		return 0;
 	case CONFIG_TYPE_NUMBER:
-		/* integer number > 0, e.g. number of threads */
+		/* integer number >= 0, e.g. number of threads */
 		if (atol(value) < 0) {
 			/* invalid number */
 			return 0;
@@ -543,6 +544,14 @@ set_option(char **options, const char *name, const char *value)
 		break;
 	case CONFIG_TYPE_STRING:
 		/* any text */
+		break;
+	case CONFIG_TYPE_STRING_LIST:
+		/* list of text items, separated by , */
+		multi_sep = ",";
+		break;
+	case CONFIG_TYPE_STRING_MULTILINE:
+		/* lines of text, separated by carriage return line feed */
+		multi_sep = "\r\n";
 		break;
 	case CONFIG_TYPE_BOOLEAN:
 		/* boolean value, yes or no */
@@ -557,7 +566,8 @@ set_option(char **options, const char *name, const char *value)
 		 * verify_existence later */
 		break;
 	case CONFIG_TYPE_EXT_PATTERN:
-		/* list of file extentions */
+		/* list of patterns, separated by | */
+		multi_sep = "|";
 		break;
 	default:
 		die("Unknown option type - option %s", name);
@@ -571,14 +581,14 @@ set_option(char **options, const char *name, const char *value)
 			options[2 * i + 2] = NULL;
 			break;
 		} else if (!strcmp(options[2 * i], name)) {
-			if (!strcmp(name, "additional_header")) {
+			if (multi_sep) {
 				/* Option already set. Overwrite */
-				char *s =
-				    malloc(strlen(options[2 * i + 1]) + 3 + strlen(value));
+				char *s = malloc(strlen(options[2 * i + 1]) + strlen(multi_sep)
+				                 + strlen(value) + 1);
 				if (!s) {
 					die("Out of memory");
 				}
-				sprintf(s, "%s\r\n%s", options[2 * i + 1], value);
+				sprintf(s, "%s%s%s", options[2 * i + 1], multi_sep, value);
 				free(options[2 * i + 1]);
 				options[2 * i + 1] = s;
 			} else {
