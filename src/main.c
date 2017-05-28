@@ -343,22 +343,6 @@ create_config_file(const struct mg_context *ctx, const char *path)
 #endif
 
 
-static unsigned
-hex2dec(char x)
-{
-	if ((x >= '0') && (x <= '9')) {
-		return (unsigned)x - (unsigned)'0';
-	}
-	if ((x >= 'A') && (x <= 'F')) {
-		return (unsigned)x - (unsigned)'A' + 10u;
-	}
-	if ((x >= 'a') && (x <= 'f')) {
-		return (unsigned)x - (unsigned)'a' + 10u;
-	}
-	return 0;
-}
-
-
 static char *
 sdup(const char *str)
 {
@@ -373,7 +357,23 @@ sdup(const char *str)
 }
 
 
-#if 0
+#if 0 /* Unused code from "string duplicate with escape" */
+static unsigned
+hex2dec(char x)
+{
+    if ((x >= '0') && (x <= '9')) {
+        return (unsigned)x - (unsigned)'0';
+    }
+    if ((x >= 'A') && (x <= 'F')) {
+        return (unsigned)x - (unsigned)'A' + 10u;
+    }
+    if ((x >= 'a') && (x <= 'f')) {
+        return (unsigned)x - (unsigned)'a' + 10u;
+    }
+    return 0;
+}
+
+
 static char *
 sdupesc(const char *str)
 {
