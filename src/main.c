@@ -373,6 +373,7 @@ sdup(const char *str)
 }
 
 
+#if 0
 static char *
 sdupesc(const char *str)
 {
@@ -482,6 +483,7 @@ sdupesc(const char *str)
 	}
 	return p;
 }
+#endif
 
 
 static const char *
@@ -563,13 +565,15 @@ set_option(char **options, const char *name, const char *value)
 
 	for (i = 0; i < MAX_OPTIONS; i++) {
 		if (options[2 * i] == NULL) {
+            /* Option not set yet. Add new option */
 			options[2 * i] = sdup(name);
-			options[2 * i + 1] = sdupesc(value);
+            options[2 * i + 1] = sdup(value);
 			options[2 * i + 2] = NULL;
 			break;
 		} else if (!strcmp(options[2 * i], name)) {
+            /* Option already set. Overwrite */
 			free(options[2 * i + 1]);
-			options[2 * i + 1] = sdupesc(value);
+            options[2 * i + 1] = sdup(value);
 			break;
 		}
 	}
