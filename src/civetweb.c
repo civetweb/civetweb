@@ -3203,6 +3203,21 @@ get_header(const struct mg_request_info *ri, const char *name)
 	return NULL;
 }
 
+/* Retrieve requested HTTP header multiple values, and return the number of found occurences */
+static int get_headers(const struct mg_request_info *ri, const char *name,
+		const char** output, int output_max_size) {
+	int i;
+	int cnt = 0;
+	if (ri) {
+		for (i = 0; i < ri->num_headers && cnt < output_max_size; i++) {
+			if (!mg_strcasecmp(name, ri->http_headers[i].name)) {
+				output[cnt++] = ri->http_headers[i].value;
+			}
+		}
+	}
+	return cnt;
+}
+
 
 const char *
 mg_get_header(const struct mg_connection *conn, const char *name)
@@ -10518,8 +10533,10 @@ handle_websocket_request(struct mg_connection *conn,
 	/* Step 2: If a callback is responsible, call it. */
 	if (is_callback_resource) {
 		/* Step 2.1 check and select subprotocol */
-		const char *protocol = mg_get_header(conn, "Sec-WebSocket-Protocol");
-		if (protocol && subprotocols) {
+		const char* protocols[64]; // max 64 headers
+		int nbSubprotocolHeader = get_headers(&conn->request_info, "Sec-WebSocket-Protocol", protocols, 64);
+		if (nbSubprotocolHeader > 0 && subprotocols) {
+			int cnt = 0;
 			int idx;
 			unsigned long len;
 			const char *sep, *curSubProtocol,
@@ -10528,34 +10545,36 @@ handle_websocket_request(struct mg_connection *conn,
 
 			/* look for matching subprotocol */
 			do {
-				sep = strchr(protocol, ',');
-				curSubProtocol = protocol;
-				len = sep ? (unsigned long)(sep - protocol)
-				          : (unsigned long)strlen(protocol);
-				while (sep && isspace(*++sep)) {
-					; /* ignore leading whitespaces */
-				}
-				protocol = sep;
+				const char *protocol = protocols[cnt];
+
+				do {
+					sep = strchr(protocol, ',');
+					curSubProtocol = protocol;
+					len = sep ? (unsigned long)(sep - protocol) : strlen(protocol);
+					while(sep && isspace(*++sep)); // ignore leading whitespaces
+					protocol = sep;
 
 
-				for (idx = 0; idx < subprotocols->nb_subprotocols; idx++) {
-					if ((strlen(subprotocols->subprotocols[idx]) == len)
-					    && (strncmp(curSubProtocol,
-					                subprotocols->subprotocols[idx],
-					                len) == 0)) {
-						acceptedWebSocketSubprotocol =
-						    subprotocols->subprotocols[idx];
-						break;
+					for (idx = 0; idx < subprotocols->nb_subprotocols; idx++) {
+						if ((strlen(subprotocols->subprotocols[idx]) == len)
+							&& (strncmp(curSubProtocol,
+										subprotocols->subprotocols[idx],
+										len) == 0)) {
+							acceptedWebSocketSubprotocol =
+								subprotocols->subprotocols[idx];
+							break;
+						}
 					}
-				}
-			} while (sep && !acceptedWebSocketSubprotocol);
+				} while (sep && !acceptedWebSocketSubprotocol);
+			} while (++cnt < nbSubprotocolHeader && !acceptedWebSocketSubprotocol);
 
 			conn->request_info.acceptedWebSocketSubprotocol =
 			    acceptedWebSocketSubprotocol;
-		} else if (protocol) {
+		} else if (nbSubprotocolHeader > 0) {
 			/* keep legacy behavior */
+			const char *protocol = protocols[0];
 
-			/* The protocol is a comma seperated list of names. */
+			/* The protocol is a comma separated list of names. */
 			/* The server must only return one value from this list. */
 			/* First check if it is a list or just a single value. */
 			const char *sep = strrchr(protocol, ',');
