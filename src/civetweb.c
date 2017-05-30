@@ -3203,9 +3203,16 @@ get_header(const struct mg_request_info *ri, const char *name)
 	return NULL;
 }
 
-/* Retrieve requested HTTP header multiple values, and return the number of found occurences */
-static int get_headers(const struct mg_request_info *ri, const char *name,
-		const char** output, int output_max_size) {
+
+#if defined(USE_WEBSOCKET)
+/* Retrieve requested HTTP header multiple values, and return the number of
+ * found occurences */
+static int
+get_headers(const struct mg_request_info *ri,
+            const char *name,
+            const char **output,
+            int output_max_size)
+{
 	int i;
 	int cnt = 0;
 	if (ri) {
@@ -3217,6 +3224,7 @@ static int get_headers(const struct mg_request_info *ri, const char *name,
 	}
 	return cnt;
 }
+#endif
 
 
 const char *
@@ -10533,8 +10541,11 @@ handle_websocket_request(struct mg_connection *conn,
 	/* Step 2: If a callback is responsible, call it. */
 	if (is_callback_resource) {
 		/* Step 2.1 check and select subprotocol */
-		const char* protocols[64]; // max 64 headers
-		int nbSubprotocolHeader = get_headers(&conn->request_info, "Sec-WebSocket-Protocol", protocols, 64);
+		const char *protocols[64]; // max 64 headers
+		int nbSubprotocolHeader = get_headers(&conn->request_info,
+		                                      "Sec-WebSocket-Protocol",
+		                                      protocols,
+		                                      64);
 		if (nbSubprotocolHeader > 0 && subprotocols) {
 			int cnt = 0;
 			int idx;
@@ -10550,23 +10561,26 @@ handle_websocket_request(struct mg_connection *conn,
 				do {
 					sep = strchr(protocol, ',');
 					curSubProtocol = protocol;
-					len = sep ? (unsigned long)(sep - protocol) : strlen(protocol);
-					while(sep && isspace(*++sep)); // ignore leading whitespaces
+					len = sep ? (unsigned long)(sep - protocol)
+					          : strlen(protocol);
+					while (sep && isspace(*++sep))
+						; // ignore leading whitespaces
 					protocol = sep;
 
 
 					for (idx = 0; idx < subprotocols->nb_subprotocols; idx++) {
 						if ((strlen(subprotocols->subprotocols[idx]) == len)
-							&& (strncmp(curSubProtocol,
-										subprotocols->subprotocols[idx],
-										len) == 0)) {
+						    && (strncmp(curSubProtocol,
+						                subprotocols->subprotocols[idx],
+						                len) == 0)) {
 							acceptedWebSocketSubprotocol =
-								subprotocols->subprotocols[idx];
+							    subprotocols->subprotocols[idx];
 							break;
 						}
 					}
 				} while (sep && !acceptedWebSocketSubprotocol);
-			} while (++cnt < nbSubprotocolHeader && !acceptedWebSocketSubprotocol);
+			} while (++cnt < nbSubprotocolHeader
+			         && !acceptedWebSocketSubprotocol);
 
 			conn->request_info.acceptedWebSocketSubprotocol =
 			    acceptedWebSocketSubprotocol;
@@ -11899,6 +11913,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 {
 	unsigned int a, b, c, d, port;
 	int ch, len;
+	char *cb;
 #if defined(USE_IPV6)
 	char buf[100] = {0};
 #endif
@@ -11910,6 +11925,11 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	so->lsa.sin.sin_family = AF_INET;
 	*ip_version = 0;
 
+	/* Initialize port and len as invalid. */
+	port = 0;
+	len = 0;
+
+	/* Test for different ways to format this string */
 	if (sscanf(vec->ptr, "%u.%u.%u.%u:%u%n", &a, &b, &c, &d, &port, &len)
 	    == 5) {
 		/* Bind to a specific IPv4 address, e.g. 192.168.1.5:8080 */
@@ -11952,10 +11972,49 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		so->lsa.sin.sin_port = htons((uint16_t)port);
 		*ip_version = 4;
 
+	} else if ((cb = strchr(vec->ptr, ':')) != NULL) {
+		/* Could be a hostname */
+		/* Will only work for RFC 952 compliant hostnames,
+		 * starting with a letter, containing only letters,
+		 * digits and hyphen ('-'). Newer specs may allow
+		 * more, but this is not guaranteed here, since it
+		 * may interfere with rules for port option lists. */
+		*cb = 0;
+		struct hostent *he = gethostbyname(vec->ptr);
+		*cb = ':';
+
+		if ((he != NULL) && (he->h_addrtype == AF_INET)) {
+			/* known IPv4 address */
+			*ip_version = 4;
+			so->lsa.sin.sin_family = AF_INET;
+			memcpy(&so->lsa.sin.sin_addr.s_addr, he->h_addr, 4);
+			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
+				so->lsa.sin.sin_port = htons(port);
+				len += (int)(cb - vec->ptr) + 1;
+			} else {
+				port = 0;
+				len = 0;
+			}
+
+#if defined(USE_IPV6)
+		} else if ((he != NULL) && (he->h_addrtype == AF_INET6)) {
+			/* known IPv6 address */
+			*ip_version = 6;
+			so->lsa.sin6.sin6_family = AF_INET6;
+			memcpy(&so->lsa.sin.sin_addr.s_addr, he->h_addr, 16);
+			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
+				so->lsa.sin.sin_port = htons(port);
+				len += (int)(cb - vec->ptr) + 1;
+			} else {
+				port = 0;
+				len = 0;
+			}
+
+#endif
+		}
+
 	} else {
-		/* Parsing failure. Make port invalid. */
-		port = 0;
-		len = 0;
+		/* Parsing failure. */
 	}
 
 	/* sscanf and the option splitting code ensure the following condition
