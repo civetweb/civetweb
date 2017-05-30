@@ -1,12 +1,12 @@
 /*
-* Copyright (c) 2013-2016 the CivetWeb developers
+* Copyright (c) 2013-2017 the CivetWeb developers
 * Copyright (c) 2013 No Face Press, LLC
 * License http://opensource.org/licenses/mit-license.php MIT License
 */
 
 /* Simple example program on how to use CivetWeb embedded into a C program. */
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif
@@ -21,15 +21,15 @@
 #define DOCUMENT_ROOT "."
 #ifdef NO_SSL
 #ifdef USE_IPV6
-#define PORT "[::]:8888"
+#define PORT "[::]:8888,8884"
 #else
-#define PORT "8888"
+#define PORT "8888,8884"
 #endif
 #else
 #ifdef USE_IPV6
 #define PORT "[::]:8888r,[::]:8843s,8884"
 #else
-#define PORT "8888r,8843s"
+#define PORT "8888r,8843s,8884"
 #endif
 #endif
 #define EXAMPLE_URI "/example"
@@ -76,6 +76,9 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn,
 	          "<p>To see a page from the CookieHandler handler <a "
 	          "href=\"cookie\">click cookie</a></p>");
+	mg_printf(conn,
+	          "<p>To see a page from the PostResponser handler <a "
+	          "href=\"postresponse\">click post response</a></p>");
 	mg_printf(conn,
 	          "<p>To see an example for parsing files on the fly <a "
 	          "href=\"on_the_fly_form\">click form</a> (form for "
@@ -142,7 +145,7 @@ BXHandler(struct mg_connection *conn, void *cbdata)
 	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn, "<h2>This is the BX handler %p!!!</h2>", cbdata);
-	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
+	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->local_uri);
 	mg_printf(conn, "</body></html>\n");
 	return 1;
 }
@@ -162,7 +165,7 @@ FooHandler(struct mg_connection *conn, void *cbdata)
 	mg_printf(conn,
 	          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>",
 	          req_info->request_method,
-	          req_info->uri,
+	          req_info->local_uri,
 	          req_info->http_version);
 	mg_printf(conn, "</body></html>\n");
 	return 1;
@@ -445,7 +448,7 @@ CookieHandler(struct mg_connection *conn, void *cbdata)
 
 	mg_printf(conn, "<html><body>");
 	mg_printf(conn, "<h2>This is the CookieHandler.</h2>");
-	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->uri);
+	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->local_uri);
 
 	if (first_str[0] == 0) {
 		mg_printf(conn, "<p>This is the first time, you opened this page</p>");
@@ -455,6 +458,62 @@ CookieHandler(struct mg_connection *conn, void *cbdata)
 	}
 
 	mg_printf(conn, "</body></html>\n");
+	return 1;
+}
+
+
+int
+PostResponser(struct mg_connection *conn, void *cbdata)
+{
+	long long r_total = 0;
+	int r, s;
+
+	char buf[2048];
+
+	const struct mg_request_info *ri = mg_get_request_info(conn);
+
+	if (strcmp(ri->request_method, "POST")) {
+		char buf[1024];
+		int ret = mg_get_request_link(conn, buf, sizeof(buf));
+
+		mg_printf(conn,
+		          "HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n");
+		mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+		mg_printf(conn,
+		          "%s method not allowed in the POST handler\n",
+		          ri->request_method);
+		if (ret >= 0) {
+			mg_printf(conn,
+			          "use a web tool to send a POST request to %s\n",
+			          buf);
+		}
+		return 1;
+	}
+
+	if (ri->content_length >= 0) {
+		/* We know the content length in advance */
+	} else {
+		/* We must read until we find the end (chunked encoding
+		 * or connection close), indicated my mg_read returning 0 */
+	}
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nConnection: "
+	          "close\r\nTransfer-Encoding: chunked\r\n");
+	mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+
+	r = mg_read(conn, buf, sizeof(buf));
+	while (r > 0) {
+		r_total += r;
+		s = mg_send_chunk(conn, buf, r);
+		if (r != s) {
+			/* Send error */
+			break;
+		}
+		r = mg_read(conn, buf, sizeof(buf));
+	}
+	mg_printf(conn, "0\r\n");
+
 	return 1;
 }
 
@@ -719,6 +778,14 @@ init_ssl(void *ssl_context, void *user_data)
 
 
 int
+log_message(const struct mg_connection *conn, const char *message)
+{
+	puts(message);
+	return 1;
+}
+
+
+int
 main(int argc, char *argv[])
 {
 	const char *options[] = {
@@ -746,6 +813,8 @@ main(int argc, char *argv[])
 	    "DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256",
 #endif
 #endif
+	    "enable_auth_domain_check",
+	    "no",
 	    0};
 	struct mg_callbacks callbacks;
 	struct mg_context *ctx;
@@ -788,7 +857,14 @@ main(int argc, char *argv[])
 #ifndef NO_SSL
 	callbacks.init_ssl = init_ssl;
 #endif
+	callbacks.log_message = log_message;
 	ctx = mg_start(&callbacks, 0, options);
+
+	/* Check return value: */
+	if (ctx == NULL) {
+		fprintf(stderr, "Cannot start CivetWeb - mg_start failed.\n");
+		return EXIT_FAILURE;
+	}
 
 	/* Add handler EXAMPLE_URI, to explain the example */
 	mg_set_request_handler(ctx, EXAMPLE_URI, ExampleHandler, 0);
@@ -833,6 +909,9 @@ main(int argc, char *argv[])
 
 	/* Add handler for /cookie example */
 	mg_set_request_handler(ctx, "/cookie", CookieHandler, 0);
+
+	/* Add handler for /postresponse example */
+	mg_set_request_handler(ctx, "/postresponse", PostResponser, 0);
 
 	/* Add HTTP site to open a websocket connection */
 	mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);

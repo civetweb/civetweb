@@ -1,4 +1,4 @@
-/* Copyright (c) 2016 the Civetweb developers
+/* Copyright (c) 2016-2017 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -90,7 +90,7 @@ url_encoded_field_get(const struct mg_connection *conn,
 {
 	char key_dec[1024];
 
-	char *value_dec = mg_malloc(value_len + 1);
+	char *value_dec = (char *)mg_malloc_ctx(value_len + 1, conn->ctx);
 	int value_dec_len, ret;
 
 	if (!value_dec) {
@@ -521,8 +521,8 @@ mg_handle_form_request(struct mg_connection *conn,
 		size_t bl;
 		ptrdiff_t used;
 		struct mg_request_info part_header;
-		char *hbuf, *hend, *fbeg, *fend, *nbeg, *nend;
-		const char *content_disp;
+		char *hbuf;
+		const char *content_disp, *hend, *fbeg, *fend, *nbeg, *nend;
 		const char *next;
 
 		memset(&part_header, 0, sizeof(part_header));
@@ -542,15 +542,37 @@ mg_handle_form_request(struct mg_connection *conn,
 		boundary = content_type + bl + 9;
 		bl = strlen(boundary);
 
+		if (boundary[0] == '"') {
+			/* RFC 2046 permits the boundary string to be quoted. */
+			hbuf = strchr(boundary + 1, '"');
+			if (!hbuf) {
+				/* Malformed request */
+				return -1;
+			}
+			if (*hbuf) {
+				*hbuf = 0;
+				boundary++;
+				bl = strlen(boundary);
+			} else {
+				/* Malformed request */
+				return -1;
+			}
+		}
+
 		if (bl + 800 > sizeof(buf)) {
 			/* Sanity check:  The algorithm can not work if bl >= sizeof(buf),
 			 * and it will not work effectively, if the buf is only a few byte
-			 * larger than bl, or it buf can not hold the multipart header
+			 * larger than bl, or if buf can not hold the multipart header
 			 * plus the boundary.
 			 * Check some reasonable number here, that should be fulfilled by
 			 * any reasonable request from every browser. If it is not
 			 * fulfilled, it might be a hand-made request, intended to
 			 * interfere with the algorithm. */
+			return -1;
+		}
+		if (bl < 4) {
+			/* Sanity check:  A boundary string of less than 4 bytes makes
+			 * no sense either. */
 			return -1;
 		}
 
@@ -620,23 +642,65 @@ mg_handle_form_request(struct mg_connection *conn,
 			/* Get the mandatory name="..." part of the Content-Disposition
 			 * header. */
 			nbeg = strstr(content_disp, "name=\"");
-			if (!nbeg) {
-				/* Malformed request */
-				return -1;
+			while ((nbeg != NULL) && (strcspn(nbeg - 1, ":,; \t") != 0)) {
+				/* It could be somethingname= instead of name= */
+				nbeg = strstr(nbeg + 1, "name=\"");
 			}
-			nbeg += 6;
-			nend = strchr(nbeg, '\"');
-			if (!nend) {
-				/* Malformed request */
-				return -1;
+
+			/* This line is not required, but otherwise some compilers
+			 * generate spurious warnings. */
+			nend = nbeg;
+			/* And others complain, the result is unused. */
+			(void)nend;
+
+			/* If name=" is found, search for the closing " */
+			if (nbeg) {
+				nbeg += 6;
+				nend = strchr(nbeg, '\"');
+				if (!nend) {
+					/* Malformed request */
+					return -1;
+				}
+			} else {
+				/* name= without quotes is also allowed */
+				nbeg = strstr(content_disp, "name=");
+				while ((nbeg != NULL) && (strcspn(nbeg - 1, ":,; \t") != 0)) {
+					/* It could be somethingname= instead of name= */
+					nbeg = strstr(nbeg + 1, "name=");
+				}
+				if (!nbeg) {
+					/* Malformed request */
+					return -1;
+				}
+				nbeg += 5;
+
+				/* RFC 2616 Sec. 2.2 defines a list of allowed
+				 * separators, but many of them make no sense
+				 * here, e.g. various brackets or slashes.
+				 * If they are used, probably someone is
+				 * trying to attack with curious hand made
+				 * requests. Only ; , space and tab seem to be
+				 * reasonable here. Ignore everything else. */
+				nend = nbeg + strcspn(nbeg, ",; \t");
 			}
 
 			/* Get the optional filename="..." part of the Content-Disposition
 			 * header. */
 			fbeg = strstr(content_disp, "filename=\"");
+			while ((fbeg != NULL) && (strcspn(fbeg - 1, ":,; \t") != 0)) {
+				/* It could be somethingfilename= instead of filename= */
+				fbeg = strstr(fbeg + 1, "filename=\"");
+			}
+
+			/* This line is not required, but otherwise some compilers
+			 * generate spurious warnings. */
+			fend = fbeg;
+
+			/* If filename=" is found, search for the closing " */
 			if (fbeg) {
 				fbeg += 10;
 				fend = strchr(fbeg, '\"');
+
 				if (!fend) {
 					/* Malformed request (the filename field is optional, but if
 					 * it exists, it needs to be terminated correctly). */
@@ -645,11 +709,32 @@ mg_handle_form_request(struct mg_connection *conn,
 
 				/* TODO: check Content-Type */
 				/* Content-Type: application/octet-stream */
-
-			} else {
-				fend = fbeg;
+			}
+			if (!fbeg) {
+				/* Try the same without quotes */
+				fbeg = strstr(content_disp, "filename=");
+				while ((fbeg != NULL) && (strcspn(fbeg - 1, ":,; \t") != 0)) {
+					/* It could be somethingfilename= instead of filename= */
+					fbeg = strstr(fbeg + 1, "filename=");
+				}
+				if (fbeg) {
+					fbeg += 9;
+					fend = fbeg + strcspn(fbeg, ",; \t");
+				}
+			}
+			if (!fbeg) {
+				fend = NULL;
 			}
 
+			/* In theory, it could be possible that someone crafts
+			 * a request like name=filename=xyz. Check if name and
+			 * filename do not overlap. */
+			if (!(((ptrdiff_t)fbeg > (ptrdiff_t)nend)
+			      || ((ptrdiff_t)nbeg > (ptrdiff_t)fend))) {
+				return -1;
+			}
+
+			/* Call callback for new field */
 			memset(path, 0, sizeof(path));
 			field_count++;
 			field_storage = url_encoded_field_found(conn,
@@ -808,3 +893,6 @@ mg_handle_form_request(struct mg_connection *conn,
 	/* Unknown Content-Type */
 	return -1;
 }
+
+
+/* End of handle_form.inl */

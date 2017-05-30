@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014 the Civetweb developers
+/* Copyright (c) 2013-2017 the Civetweb developers
  * Copyright (c) 2013 No Face Press, LLC
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
@@ -6,9 +6,10 @@
 // Simple example program on how to use Embedded C++ interface.
 
 #include "CivetServer.h"
+#include <cstring>
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif
@@ -43,6 +44,9 @@ class ExampleHandler : public CivetHandler
 		mg_printf(conn,
 		          "<p>To see a page from the *.foo handler <a "
 		          "href=\"xy.foo\">click here</a></p>\r\n");
+		mg_printf(conn,
+		          "<p>To see a page from the WebSocket handler <a "
+		          "href=\"ws\">click here</a></p>\r\n");
 		mg_printf(conn,
 		          "<p>To exit <a href=\"%s\">click here</a></p>\r\n",
 		          EXIT_URI);
@@ -136,7 +140,7 @@ class FooHandler : public CivetHandler
 		mg_printf(conn,
 		          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>\n",
 		          req_info->request_method,
-		          req_info->uri,
+		          req_info->request_uri,
 		          req_info->http_version);
 		mg_printf(conn, "</body></html>\n");
 
@@ -161,7 +165,7 @@ class FooHandler : public CivetHandler
 		mg_printf(conn,
 		          "<p>The request was:<br><pre>%s %s HTTP/%s</pre></p>\n",
 		          req_info->request_method,
-		          req_info->uri,
+		          req_info->request_uri,
 		          req_info->http_version);
 		mg_printf(conn, "<p>Content Length: %li</p>\n", (long)tlen);
 		mg_printf(conn, "<pre>\n");
@@ -176,7 +180,7 @@ class FooHandler : public CivetHandler
 				break;
 			}
 			wlen = mg_write(conn, buf, (size_t)rlen);
-			if (rlen != rlen) {
+			if (wlen != rlen) {
 				break;
 			}
 			nlen += wlen;
@@ -204,12 +208,29 @@ class FooHandler : public CivetHandler
 
 #ifdef _WIN32
         _snprintf(buf, sizeof(buf), "D:\\somewhere\\%s\\%s", req_info->remote_user, req_info->local_uri);
-        buf[sizeof(buf)-1] = 0; /* TODO: check overflow */
-        f = fopen_recursive(buf, "wb");
+        buf[sizeof(buf)-1] = 0;
+        if (strlen(buf)>255) {
+            /* Windows will not work with path > 260 (MAX_PATH), unless we use
+             * the unicode API. However, this is just an example code: A real
+             * code will probably never store anything to D:\\somewhere and
+             * must be adapted to the specific needs anyhow. */
+            fail = 1;
+            f = NULL;
+        } else {
+            f = fopen_recursive(buf, "wb");
+        }
 #else
         snprintf(buf, sizeof(buf), "~/somewhere/%s/%s", req_info->remote_user, req_info->local_uri);
-        buf[sizeof(buf)-1] = 0; /* TODO: check overflow */
-        f = fopen_recursive(buf, "w");
+        buf[sizeof(buf)-1] = 0;
+        if (strlen(buf)>1020) {
+            /* The string is too long and probably truncated. Make sure an
+             * UTF-8 string is never truncated between the UTF-8 code bytes.
+             * This example code must be adapted to the specific needs. */
+            fail = 1;
+            f = NULL;
+        } else {
+            f = fopen_recursive(buf, "w");
+        }
 #endif
 
         if (!f) {
@@ -226,7 +247,7 @@ class FooHandler : public CivetHandler
                     break;
                 }
                 wlen = fwrite(buf, 1, (size_t)rlen, f);
-                if (rlen != rlen) {
+                if (wlen != rlen) {
                     fail = 1;
                     break;
                 }
@@ -251,6 +272,99 @@ class FooHandler : public CivetHandler
     }
 };
 
+class WsStartHandler : public CivetHandler
+{
+  public:
+	bool
+	handleGet(CivetServer *server, struct mg_connection *conn)
+	{
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
+
+	mg_printf(conn, "<!DOCTYPE html>\n");
+	mg_printf(conn, "<html>\n<head>\n");
+	mg_printf(conn, "<meta charset=\"UTF-8\">\n");
+	mg_printf(conn, "<title>Embedded websocket example</title>\n");
+
+#ifdef USE_WEBSOCKET
+	/* mg_printf(conn, "<script type=\"text/javascript\"><![CDATA[\n"); ...
+	 * xhtml style */
+	mg_printf(conn, "<script>\n");
+	mg_printf(
+	    conn,
+	    "var i=0\n"
+	    "function load() {\n"
+	    "  var wsproto = (location.protocol === 'https:') ? 'wss:' : 'ws:';\n"
+	    "  connection = new WebSocket(wsproto + '//' + window.location.host + "
+	    "'/websocket');\n"
+	    "  websock_text_field = "
+	    "document.getElementById('websock_text_field');\n"
+	    "  connection.onmessage = function (e) {\n"
+	    "    websock_text_field.innerHTML=e.data;\n"
+	    "    i=i+1;"
+	    "    connection.send(i);\n"
+	    "  }\n"
+	    "  connection.onerror = function (error) {\n"
+	    "    alert('WebSocket error');\n"
+	    "    connection.close();\n"
+	    "  }\n"
+	    "}\n");
+	/* mg_printf(conn, "]]></script>\n"); ... xhtml style */
+	mg_printf(conn, "</script>\n");
+	mg_printf(conn, "</head>\n<body onload=\"load()\">\n");
+	mg_printf(
+	    conn,
+	    "<div id='websock_text_field'>No websocket connection yet</div>\n");
+#else
+	mg_printf(conn, "</head>\n<body>\n");
+	mg_printf(conn, "Example not compiled with USE_WEBSOCKET\n");
+#endif
+	mg_printf(conn, "</body>\n</html>\n");
+
+	return 1;
+}
+};
+
+
+#ifdef USE_WEBSOCKET
+class WebSocketHandler : public CivetWebSocketHandler {
+
+	virtual bool handleConnection(CivetServer *server,
+	                              const struct mg_connection *conn) {
+		printf("WS connected\n");
+		return true;
+	}
+
+	virtual void handleReadyState(CivetServer *server,
+	                              struct mg_connection *conn) {
+		printf("WS ready\n");
+
+		const char *text = "Hello from the websocket ready handler";
+		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+	}
+
+	virtual bool handleData(CivetServer *server,
+	                        struct mg_connection *conn,
+	                        int bits,
+	                        char *data,
+	                        size_t data_len) {
+		printf("WS got %lu bytes: ", (long unsigned)data_len);
+		fwrite(data, 1, data_len, stdout);
+		printf("\n");
+
+		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
+		return (data_len<4);
+	}
+
+	virtual void handleClose(CivetServer *server,
+	                         const struct mg_connection *conn) {
+		printf("WS closed\n");
+	}
+};
+#endif
+
 
 int
 main(int argc, char *argv[])
@@ -264,7 +378,7 @@ main(int argc, char *argv[])
     }
 
 	// CivetServer server(options); // <-- C style start
-    CivetServer server(cpp_options); // <-- C++ style start
+	CivetServer server(cpp_options); // <-- C++ style start
 
 	ExampleHandler h_ex;
 	server.addHandler(EXAMPLE_URI, h_ex);
@@ -278,10 +392,29 @@ main(int argc, char *argv[])
 	ABHandler h_ab;
 	server.addHandler("/a/b", h_ab);
 
+	WsStartHandler h_ws;
+	server.addHandler("/ws", h_ws);
+
+#ifdef NO_FILES
+	/* This handler will handle "everything else", including
+	 * requests to files. If this handler is installed,
+	 * NO_FILES should be set. */
 	FooHandler h_foo;
 	server.addHandler("", h_foo);
 
+	printf("See a page from the \"all\" handler at http://localhost:%s/\n", PORT);
+#else
+	FooHandler h_foo;
+	server.addHandler("**.foo", h_foo);
 	printf("Browse files at http://localhost:%s/\n", PORT);
+#endif
+
+#ifdef USE_WEBSOCKET
+	WebSocketHandler h_websocket;
+	server.addWebSocketHandler("/websocket", h_websocket);
+	printf("Run websocket example at http://localhost:%s/ws\n", PORT);
+#endif
+
 	printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
 	printf("Exit at http://localhost:%s%s\n", PORT, EXIT_URI);
 

@@ -1,10 +1,70 @@
-Release Notes v1.9 (work in progress)
+Release Notes v1.10 (work in progress)
 ===
-### Objectives: *Read client certificate information, bug fixes*
+### Objectives: *OpenSSL 1.1 support + to be defined*
 
 Changes
 -------
 
+- Fix timeout error when sending larger files
+- Add mg_send_chunk interface function
+- Allow to separate server private key and certificate chain in two different files
+- Support for multipart requests without quotes (for some C# clients)
+- Initialize SSL in mg_init_library, so https client functions can be used when no server is running
+- Allow "REPORT" HTTP method for REST calls to scripts
+- Allow to compile civetweb.c wih a C++ compiler
+- Lua: Remove internal length limits of encode/decode functions
+- Allow sub-resources of index script files
+- Remove deprecated "uri" member of the request from the interface
+- Improve documentation
+- Make auth domain check optional (configuration)
+- Update unit test framework to check 0.11.0
+- Limit depth of mg.include for Lua server pages
+- Additional unit tests
+- OpenSSL 1.1 support
+- Update version number
+
+
+Release Notes v1.9.1
+===
+### Objectives: *Bug fix*
+
+Changes
+-------
+
+- Add "open website" button for pre-built Windows binaries
+- Fix for connections closed prematurely
+- Update to a new check unit test framework and remove patches required for previous version
+- Update version number
+
+
+Release Notes v1.9
+===
+### Objectives: *Read SSI client certificate information, improve windows usability, use non-blocking sockets, bug fixes*
+
+Changes
+-------
+
+- Add library init/exit functions (call is now optional, but will be required in V1.10)
+- Windows: Show system information from the tray icon
+- Windows: Bring overlaid windows to top from the tray icon
+- Add Lua background script, running independent from server state
+- Move obsolete examples into separated directory
+- Change name of CMake generated C++ library to civetweb-cpp
+- Add option to set linger timeout
+- Update Duktape and Lua (third-party code)
+- Add continuous integration tests
+- Add API documentation
+- Limit recursions in .htpasswd files
+- Fix SCRIPT_NAME for CGI directory index files (index.php)
+- Use non-blocking sockets
+- stdint.h is now required and no longer optional
+- Rewrite connection close handling
+- Rewrite mg_fopen/mg_stat
+- Enhanced tray icon menu for Windows
+- Add subprotocol management for websocket connections
+- Partially rewrite timeout handling
+- Add option keep_alive_timeout_ms
+- Improve support for absolute URIs
 - Allow some additional compiler checks (higher warning level)
 - Add option for case sensitive file names for Windows
 - Short notation for listening_ports option when using IPv4 and IPv6 ports
@@ -14,6 +74,7 @@ Changes
 - Read client certificate information
 - Do not tolerate URIs with invalid characters
 - Fix mg_get_cookie to ignore substrings
+- Fix memory leak in form handling
 - Fix bug in timer logic (for Lua Websockets)
 - Updated version number
 
@@ -304,6 +365,6 @@ Changes
 
 - Renamed Mongoose to Civetweb in the code and documentation.
 - Replaced copyrighted images with new images
-- Created a new code respository at https://github.com/bel2125/civetweb
+- Created a new code respository at https://github.com/civetweb/civetweb
 - Created a distribution site at https://sourceforge.net/projects/civetweb/
 - Basic build testing

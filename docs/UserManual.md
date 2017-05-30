@@ -235,11 +235,18 @@ are additional default index files, ordered before `index.cgi`.
 ### enable\_keep\_alive `no`
 Enable connection keep alive, either `yes` or `no`.
 
-Experimental feature. Allows clients to reuse TCP connection for subsequent
-HTTP requests, which improves performance.
+Allows clients to reuse TCP connection for subsequent HTTP requests, 
+which improves performance.
 For this to work when using request handlers it is important to add the
 correct Content-Length HTTP header for each request. If this is forgotten the
 client will time out.
+
+Note: If you set keep\_alive to `yes`, you should set keep\_alive\_timeout\_ms
+to some value > 0 (e.g. 500). If you set keep\_alive to `no`, you should set
+keep\_alive\_timeout\_ms to 0. Currently, this is done as a default value,
+but this configuration is redundant. In a future version, the keep\_alive 
+configuration option might be removed and automatically set to `yes` if 
+a timeout > 0 is set.
 
 ### access\_control\_list
 An Access Control List (ACL) allows restrictions to be put on the list of IP
@@ -349,12 +356,46 @@ A pattern for the files to hide. Files that match the pattern will not
 show up in directory listing and return `404 Not Found` if requested. Pattern
 must be for a file name only, not including directory names. Example:
 
-    civetweb -hide_files_patterns secret.txt|*.hide
+    civetweb -hide_files_patterns secret.txt|**.hide
+
+Note: hide\_file\_patterns uses the pattern described above. If you want to
+hide all files with a certain extension, make sure to use **.extension
+(not just *.extension).
 
 ### request\_timeout\_ms `30000`
 Timeout for network read and network write operations, in milliseconds.
 If a client intends to keep long-running connection, either increase this
 value or (better) use keep-alive messages.
+
+### keep\_alive\_timeout\_ms `500` or `0`
+Idle timeout between two requests in one keep-alive connection.
+If keep alive is enabled, multiple requests using the same connection 
+are possible. This reduces the overhead for opening and closing connections
+when loading several resources from one server, but it also blocks one port
+and one thread at the server during the lifetime of this connection.
+Unfortunately, browsers do not close the keep-alive connection after loading
+all resources required to show a website.
+The server closes a keep-alive connection, if there is no additional request
+from the client during this timeout.
+
+Note: if enable\_keep\_alive is set to `no` the value of 
+keep\_alive\_timeout\_ms should be set to `0`, if enable\_keep\_alive is set 
+to `yes`, the value of keep\_alive\_timeout\_ms must be >0.
+Currently keep\_alive\_timeout\_ms is ignored if enable\_keep\_alive is no,
+but future versions my drop the enable\_keep\_alive configuration value and
+automatically use keep-alive if keep\_alive\_timeout\_ms is not 0.
+
+### linger\_timeout\_ms
+Set TCP socket linger timeout before closing sockets (SO\_LINGER option).
+The configured value is a timeout in milliseconds. Setting the value to 0
+will yield in abortive close (if the socket is closed from the server side).
+Setting the value to -1 will turn off linger.
+If the value is not set (or set to -2), CivetWeb will not set the linger
+option at all.
+
+Note: For consistency with other timeouts, the value is configured in
+milliseconds. However, the TCP socket layer usually only offers a timeout in 
+seconds, so the value should be an integer multiple of 1000.
 
 ### lua\_preload\_file
 This configuration option can be used to specify a Lua script file, which
@@ -376,6 +417,18 @@ In contrast to Lua scripts, the content of a Lua server pages is delivered
 directly to the client. Lua script parts are delimited from the standard
 content by including them between <? and ?> tags.
 An example can be found in the test directory.
+
+### lua\_background\_script
+Experimental feature, and subject to change.
+Run a Lua script in the background, independent from any connection.
+The script is started before network access to the server is available.
+It can be used to prepare the document root (e.g., update files, compress
+files, ...), check for external resources, remove old log files, etc.
+
+The Lua state remains open until the server is stopped.
+In the future, some callback functions will be available to notify the
+script on changes of the server state.
+
 
 ### websocket\_root
 In case civetweb is built with Lua and websocket support, Lua scripts may
@@ -419,6 +472,18 @@ A value >0 corresponds to a maximum allowed caching time in seconds.
 This value should not exceed one year (RFC 2616, Section 14.21).
 A value of 0 will send "do not cache" headers for all static files.
 For values <0 and values >31622400, the behavior is undefined.
+
+### strict\_transport\_security\_max\_age
+
+Set the `Strict-Transport-Security` header, and set the `max-age` value.
+This instructs web browsers to interact with the server only using HTTPS,
+never by HTTP. If set, it will be sent for every request handled directly
+by the server, except scripts (CGI, Lua, ..) and callbacks. They must 
+send HTTP headers on their own.
+
+The time is specified in seconds. If this configuration is not set, 
+or set to -1, no `Strict-Transport-Security` header will be sent.
+For values <-1 and values >31622400, the behavior is undefined.
 
 ### decode\_url `yes`
 URL encoded request strings are decoded in the server, unless it is disabled
@@ -484,6 +549,13 @@ This option can be used to enable or disable the use of the Linux `sendfile` sys
 
 ### case\_sensitive `no`
 This option can be uset to enable case URLs for Windows servers. It is only available for Windows systems. Windows file systems are not case sensitive, but they still store the file name including case. If this option is set to `yes`, the comparison for URIs and Windows file names will be case sensitive.
+
+### additional\_header
+Send additional HTTP response header line for every request.
+The full header line including key and value must be specified, excluding the carriage return line feed.
+
+Example:
+"X-Frame-Options: SAMEORIGIN"
 
 
 # Lua Scripts and Lua Server Pages
@@ -551,7 +623,7 @@ mg (table):
 
     mg.read()                  -- reads a chunk from POST data, returns it as a string
     mg.write(str)              -- writes string to the client
-    mg.include(path)           -- sources another Lua file
+    mg.include(filename)       -- include another Lua Page file (Lua Pages only)
     mg.redirect(uri)           -- internal redirect to a given URI
     mg.onerror(msg)            -- error handler, can be overridden
     mg.version                 -- a string that holds Civetweb version
@@ -599,10 +671,13 @@ connect (function):
     end
 
 
+All filename arguments are either absolute or relative to the civetweb working
+directory (not the document root or the Lua script/page file).
+    
 **IMPORTANT: Civetweb does not send HTTP headers for Lua pages. Therefore,
 every Lua Page must begin with a HTTP reply line and headers**, like this:
 
-    <? print('HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n') ?>
+    <? mg.write('HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n') ?>
     <html><body>
       ... the rest of the web page ...
 

@@ -26,7 +26,7 @@ include(CMakeDependentOption)
 
 # Set up the project
 project (civetweb)
-set(CIVETWEB_VERSION "1.7.0" CACHE STRING "The version of the civetweb library")
+set(CIVETWEB_VERSION "1.10.0" CACHE STRING "The version of the civetweb library")
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" CIVETWEB_VERSION_MATCH "${CIVETWEB_VERSION}")
 if ("${CIVETWEB_VERSION_MATCH}" STREQUAL "")
   message(FATAL_ERROR "Must specify a semantic version: major.minor.patch")
@@ -47,12 +47,6 @@ endif()
 
 # C++ wrappers
 option(CIVETWEB_ENABLE_THIRD_PARTY_OUTPUT "Shows the output of third party dependency processing" OFF)
-
-# Max Request Size
-set(CIVETWEB_MAX_REQUEST_SIZE 16384 CACHE STRING
-  "The largest amount of content bytes allowed in a request")
-set_property(CACHE CIVETWEB_MAX_REQUEST_SIZE PROPERTY VALUE ${CIVETWEB_MAX_REQUEST_SIZE})
-message(STATUS "Max Request Size - ${CIVETWEB_MAX_REQUEST_SIZE}")
 
 # Thread Stack Size
 set(CIVETWEB_THREAD_STACK_SIZE 102400 CACHE STRING
@@ -83,6 +77,10 @@ message(STATUS "IP Version 6 - ${CIVETWEB_ENABLE_IPV6}")
 # Websocket support
 option(CIVETWEB_ENABLE_WEBSOCKETS "Enable websockets connections" OFF)
 message(STATUS "Websockets support - ${CIVETWEB_ENABLE_WEBSOCKETS}")
+
+# Server statistics support
+option(CIVETWEB_ENABLE_SERVER_STATS "Enable server statistics" OFF)
+message(STATUS "Server statistics support - ${CIVETWEB_ENABLE_SERVER_STATS}")
 
 # Memory debugging
 option(CIVETWEB_ENABLE_MEMORY_DEBUGGING "Enable the memory debugging features" OFF)
@@ -187,6 +185,10 @@ message(STATUS "Duktape CGI support - ${CIVETWEB_ENABLE_DUKTAPE}")
 # SSL support
 option(CIVETWEB_ENABLE_SSL "Enables the secure socket layer" ON)
 message(STATUS "SSL support - ${CIVETWEB_ENABLE_SSL}")
+
+# OpenSSL 1.1 API
+option(CIVETWEB_SSL_OPENSSL_API_1_1 "Use the OpenSSL 1.1 API" OFF)
+message(STATUS "Compile for OpenSSL 1.1 API - ${CIVETWEB_SSL_OPENSSL_API_1_1}")
 
 # Dynamically load or link the SSL libraries
 cmake_dependent_option(
@@ -369,6 +371,9 @@ endif()
 if (CIVETWEB_ENABLE_WEBSOCKETS)
   add_definitions(-DUSE_WEBSOCKET)
 endif()
+if (CIVETWEB_ENABLE_SERVER_STATS)
+  add_definitions(-DUSE_SERVER_STATS)
+endif()
 if (CIVETWEB_SERVE_NO_FILES)
   add_definitions(-DNO_FILES)
 endif()
@@ -399,8 +404,10 @@ else()
     add_definitions(-DCRYPTO_LIB="${CIVETWEB_SSL_CRYPTO_LIB}")
   endif()
 endif()
+if(CIVETWEB_SSL_OPENSSL_API_1_1)
+  add_definitions(-DOPENSSL_API_1_1)
+endif()
 add_definitions(-DUSE_STACK_SIZE=${CIVETWEB_THREAD_STACK_SIZE})
-add_definitions(-DMAX_REQUEST_SIZE=${CIVETWEB_MAX_REQUEST_SIZE})
 
 # Build the targets
 add_subdirectory(src)
@@ -409,14 +416,16 @@ add_subdirectory(src)
 include(CTest)
 if (BUILD_TESTING)
   # Check unit testing framework Version
-  set(CIVETWEB_CHECK_VERSION 0.10.0 CACHE STRING
+  set(CIVETWEB_CHECK_VERSION 0.11.0 CACHE STRING
     "The version of Check unit testing framework to build and include statically")
   set_property(CACHE CIVETWEB_CHECK_VERSION PROPERTY VALUE ${CIVETWEB_CHECK_VERSION})
   message(STATUS "Check Unit Testing Framework Version - ${CIVETWEB_CHECK_VERSION}")
   mark_as_advanced(CIVETWEB_CHECK_VERSION)
 
   # Check unit testing framework Verification Hash
-  set(CIVETWEB_CHECK_MD5_HASH 67a34c40b5bc888737f4e5ae82e9939f CACHE STRING
+  # Hash for Check 0.10.0: 67a34c40b5bc888737f4e5ae82e9939f
+  # Hash for Check 0.11.0: 1b14ee307dca8e954a8219c34484d7c4
+  set(CIVETWEB_CHECK_MD5_HASH 1b14ee307dca8e954a8219c34484d7c4 CACHE STRING
     "The hash of Check unit testing framework archive to be downloaded")
   set_property(CACHE CIVETWEB_CHECK_MD5_HASH PROPERTY VALUE ${CIVETWEB_CHECK_MD5_HASH})
   mark_as_advanced(CIVETWEB_CHECK_MD5_HASH)

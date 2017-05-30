@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 the Civetweb developers
+/* Copyright (c) 2015-2017 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,18 @@
 #pragma warning(disable : 4127)
 #endif
 #include <stdint.h>
+
+/* All unit tests use the "check" framework.
+ * Download from https://libcheck.github.io/check/
+ */
 #include "check.h"
+
+#if (CHECK_MINOR_VERSION < 11)
+#ifndef LOCAL_TEST
+#error "CivetWeb unit tests require at least check 0.11.0"
+#endif
+#endif
+
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif

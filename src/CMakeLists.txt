@@ -39,13 +39,17 @@ if (CIVETWEB_ENABLE_WEBSOCKETS AND CIVETWEB_ENABLE_LUA AND LIBRT_FOUND)
 endif()
 
 # We need to link OpenSSL if not dynamically loading
-if (CIVETWEB_ENABLE_SLL AND NOT CIVETWEB_ENABLE_OPENSLL_DYNAMIC_LOADING)
-  find_package(OpenSSL)
-  target_link_libraries(c-library ${OPENSSL_LIBRARIES})
-else()
-  find_package(LibDl)
-  if (LIBDL_FOUND)
-    target_link_libraries(c-library -ldl)
+if (CIVETWEB_ENABLE_SSL)
+  if (CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING)
+    find_package(LibDl)
+    if (LIBDL_FOUND)
+      target_link_libraries(c-library -ldl)
+    endif()
+  else()
+    find_package(OpenSSL)
+    include_directories(${OPENSSL_INCLUDE_DIR})
+    message(STATUS "OpenSSL include directory: ${OPENSSL_INCLUDE_DIR}")
+    target_link_libraries(c-library ${OPENSSL_LIBRARIES})
   endif()
 endif()
 
@@ -266,26 +270,26 @@ endif()
 
 # The C++ API library
 if (CIVETWEB_ENABLE_CXX)
-  add_library(cxx-library CivetServer.cpp)
-  set_target_properties(cxx-library PROPERTIES
-    OUTPUT_NAME "cxx-library"
+  add_library(civetweb-cpp CivetServer.cpp)
+  set_target_properties(civetweb-cpp PROPERTIES
+    OUTPUT_NAME "civetweb-cpp"
     VERSION ${CIVETWEB_VERSION}
     SOVERSION ${CIVETWEB_VERSION}
   )
   if (BUILD_SHARED_LIBS)
-    target_compile_definitions(cxx-library PRIVATE CIVETWEB_DLL_EXPORTS)
+    target_compile_definitions(civetweb-cpp PRIVATE CIVETWEB_DLL_EXPORTS)
   endif()
   target_include_directories(
-    cxx-library PUBLIC
+    civetweb-cpp PUBLIC
     ${PROJECT_SOURCE_DIR}/include)
   install(
-    TARGETS cxx-library
+    TARGETS civetweb-cpp
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
-    COMPONENT cxx-library)
+    COMPONENT civetweb-cpp)
   install(FILES
     ${PROJECT_SOURCE_DIR}/include/CivetServer.h
     DESTINATION include
-    COMPONENT cxx-library)
+    COMPONENT civetweb-cpp)
 endif()

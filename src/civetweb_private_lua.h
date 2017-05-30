@@ -5,6 +5,7 @@
 #ifndef CIVETWEB_PRIVATE_LUA_H
 #define CIVETWEB_PRIVATE_LUA_H
 
-void civetweb_open_lua_libs(lua_State *L);
+int run_lua(const char *file_name);
+
 
 #endif

@@ -110,6 +110,16 @@ endif
 ifdef WITH_WEBSOCKET
   CFLAGS += -DUSE_WEBSOCKET
 endif
+ifdef WITH_WEBSOCKETS
+  CFLAGS += -DUSE_WEBSOCKET
+endif
+
+ifdef WITH_SERVER_STAT
+  CFLAGS += -DUSE_SERVER_STATS
+endif
+ifdef WITH_SERVER_STATS
+  CFLAGS += -DUSE_SERVER_STATS
+endif
 
 ifdef CONFIG_FILE
   CFLAGS += -DCONFIG_FILE=\"$(CONFIG_FILE)\"
@@ -180,6 +190,7 @@ help:
 	@echo "   WITH_DEBUG=1          build with GDB debug support"
 	@echo "   WITH_IPV6=1           with IPV6 support"
 	@echo "   WITH_WEBSOCKET=1      build with web socket support"
+	@echo "   WITH_SERVER_STATS=1   build includes support for server statistics"
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   CONFIG_FILE=file      use 'file' as the config file"
 	@echo "   CONFIG_FILE2=file     use 'file' as the backup config file"
@@ -198,7 +209,6 @@ help:
 	@echo "   NO_SSL_DL             link against system libssl library"
 	@echo "   NO_FILES              do not serve files from a directory"
 	@echo "   NO_CACHING            disable caching (usefull for systems without timegm())"
-	@echo "   MAX_REQUEST_SIZE      maximum header size, default 16384"
 	@echo ""
 	@echo " Variables"
 	@echo "   TARGET_OS='$(TARGET_OS)'"
@@ -247,7 +257,7 @@ slib: lib$(CPROG).$(SHARED_LIB)
 
 clean:
 	$(RMRF) $(BUILD_DIR)
-	$(eval version=$(shell grep "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
+	$(eval version=$(shell grep -w "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
 	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
 	$(RMRF) lib$(CPROG).a
 	$(RMRF) lib$(CPROG).so
@@ -269,7 +279,7 @@ lib$(CPROG).a: $(LIB_OBJECTS)
 
 lib$(CPROG).so: CFLAGS += -fPIC
 lib$(CPROG).so: $(LIB_OBJECTS)
-	$(eval version=$(shell grep "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
+	$(eval version=$(shell grep -w "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
 	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
 	$(LCC) -shared -Wl,-soname,$@.$(major) -o $@.$(version).0 $(CFLAGS) $(LDFLAGS) $(LIB_OBJECTS)
 	ln -s -f $@.$(major) $@
