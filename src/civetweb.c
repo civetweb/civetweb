@@ -7408,6 +7408,8 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
                )
 {
 	int ip_ver = 0;
+	struct hostent *he;
+
 	*sock = INVALID_SOCKET;
 	memset(sa, 0, sizeof(*sa));
 
@@ -7467,10 +7469,12 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 #endif /* !defined(NO_SSL) */
 
 	if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin))) {
+		sa->sin.sin_family = AF_INET;
 		sa->sin.sin_port = htons((uint16_t)port);
 		ip_ver = 4;
 #ifdef USE_IPV6
 	} else if (mg_inet_pton(AF_INET6, host, &sa->sin6, sizeof(sa->sin6))) {
+		sa->sin6.sin6_family = AF_INET6;
 		sa->sin6.sin6_port = htons((uint16_t)port);
 		ip_ver = 6;
 	} else if (host[0] == '[') {
@@ -7481,12 +7485,31 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		if (h) {
 			h[l - 1] = 0;
 			if (mg_inet_pton(AF_INET6, h, &sa->sin6, sizeof(sa->sin6))) {
+				sa->sin6.sin6_family = AF_INET6;
 				sa->sin6.sin6_port = htons((uint16_t)port);
 				ip_ver = 6;
 			}
 			mg_free(h);
 		}
 #endif
+	} else if ((he = gethostbyname(host)) != NULL) {
+
+		if (he->h_addrtype == AF_INET) {
+			/* known IPv4 address */
+			ip_ver = 4;
+			sa->sin.sin_family = AF_INET;
+			memcpy(&sa->sin.sin_addr.s_addr, he->h_addr, 4);
+			sa->sin.sin_port = htons(port);
+
+#if defined(USE_IPV6)
+		} else if (he->h_addrtype == AF_INET6) {
+			/* known IPv6 address */
+			ip_ver = 6;
+			sa->sin6.sin6_family = AF_INET6;
+			memcpy(&sa->sin.sin_addr.s_addr, he->h_addr, 16);
+			sa->sin6.sin6_port = htons(port);
+#endif
+		}
 	}
 
 	if (ip_ver == 0) {
