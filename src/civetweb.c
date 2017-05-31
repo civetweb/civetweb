@@ -7499,7 +7499,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 			ip_ver = 4;
 			sa->sin.sin_family = AF_INET;
 			memcpy(&sa->sin.sin_addr.s_addr, he->h_addr, 4);
-			sa->sin.sin_port = htons(port);
+			sa->sin.sin_port = htons((uint16_t)port);
 
 #if defined(USE_IPV6)
 		} else if (he->h_addrtype == AF_INET6) {
@@ -7507,7 +7507,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 			ip_ver = 6;
 			sa->sin6.sin6_family = AF_INET6;
 			memcpy(&sa->sin.sin_addr.s_addr, he->h_addr, 16);
-			sa->sin6.sin6_port = htons(port);
+			sa->sin6.sin6_port = htons((uint16_t)port);
 #endif
 		}
 	}
@@ -12012,7 +12012,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 			so->lsa.sin.sin_family = AF_INET;
 			memcpy(&so->lsa.sin.sin_addr.s_addr, he->h_addr, 4);
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
-				so->lsa.sin.sin_port = htons(port);
+				so->lsa.sin.sin_port = htons((uint16_t)port);
 				len += (int)(cb - vec->ptr) + 1;
 			} else {
 				port = 0;
@@ -12026,7 +12026,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 			so->lsa.sin6.sin6_family = AF_INET6;
 			memcpy(&so->lsa.sin.sin_addr.s_addr, he->h_addr, 16);
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
-				so->lsa.sin.sin_port = htons(port);
+				so->lsa.sin.sin_port = htons((uint16_t)port);
 				len += (int)(cb - vec->ptr) + 1;
 			} else {
 				port = 0;
