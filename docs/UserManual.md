@@ -145,6 +145,11 @@ Authorization realm used for HTTP digest authentication. This domain is
 used in the encoding of the `.htpasswd` authorization files as well.
 Changing the domain retroactively will render the existing passwords useless.
 
+### enable\_auth\_domain\_check `yes`
+When using absolute URLs, verify the host is identical to the authentication\_domain. If enabled, requests to absolute URLs will only be prozessed 
+if they are directed to the domain. If disabled, absolute URLs to any host
+will be accepted.
+
 ### ssi\_pattern `**.shtml$|**.shtm$`
 All files that match `ssi_pattern` are treated as Server Side Includes (SSI).
 
