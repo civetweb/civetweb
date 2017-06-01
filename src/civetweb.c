@@ -7408,8 +7408,6 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
                )
 {
 	int ip_ver = 0;
-	struct hostent *he;
-
 	*sock = INVALID_SOCKET;
 	memset(sa, 0, sizeof(*sa));
 
@@ -7492,24 +7490,6 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 			mg_free(h);
 		}
 #endif
-	} else if ((he = gethostbyname(host)) != NULL) {
-
-		if (he->h_addrtype == AF_INET) {
-			/* known IPv4 address */
-			ip_ver = 4;
-			sa->sin.sin_family = AF_INET;
-			memcpy(&sa->sin.sin_addr.s_addr, he->h_addr, 4);
-			sa->sin.sin_port = htons((uint16_t)port);
-
-#if defined(USE_IPV6)
-		} else if (he->h_addrtype == AF_INET6) {
-			/* known IPv6 address */
-			ip_ver = 6;
-			sa->sin6.sin6_family = AF_INET6;
-			memcpy(&sa->sin.sin_addr.s_addr, he->h_addr, 16);
-			sa->sin6.sin6_port = htons((uint16_t)port);
-#endif
-		}
 	}
 
 	if (ip_ver == 0) {
@@ -12003,39 +11983,34 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		 * more, but this is not guaranteed here, since it
 		 * may interfere with rules for port option lists. */
 		*cb = 0;
-		struct hostent *he = gethostbyname(vec->ptr);
-		*cb = ':';
-
-		if ((he != NULL) && (he->h_addrtype == AF_INET)) {
-			/* known IPv4 address */
-			*ip_version = 4;
-			so->lsa.sin.sin_family = AF_INET;
-			memcpy(&so->lsa.sin.sin_addr.s_addr, he->h_addr, 4);
+		if (mg_inet_pton(
+		        AF_INET, vec->ptr, &so->lsa.sin, sizeof(so->lsa.sin))) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
+				*ip_version = 4;
+				so->lsa.sin.sin_family = AF_INET;
 				so->lsa.sin.sin_port = htons((uint16_t)port);
 				len += (int)(cb - vec->ptr) + 1;
 			} else {
 				port = 0;
 				len = 0;
 			}
-
 #if defined(USE_IPV6)
-		} else if ((he != NULL) && (he->h_addrtype == AF_INET6)) {
-			/* known IPv6 address */
-			*ip_version = 6;
-			so->lsa.sin6.sin6_family = AF_INET6;
-			memcpy(&so->lsa.sin.sin_addr.s_addr, he->h_addr, 16);
+		} else if (mg_inet_pton(AF_INET6,
+		                        vec->ptr,
+		                        &so->lsa.sin6,
+		                        sizeof(so->lsa.sin6))) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
+				*ip_version = 6;
+				so->lsa.sin6.sin6_family = AF_INET6;
 				so->lsa.sin.sin_port = htons((uint16_t)port);
 				len += (int)(cb - vec->ptr) + 1;
 			} else {
 				port = 0;
 				len = 0;
 			}
-
 #endif
 		}
-
+		*cb = ':';
 	} else {
 		/* Parsing failure. */
 	}
