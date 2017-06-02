@@ -1040,6 +1040,7 @@ lsp_get_info(lua_State *L)
 				}
 				len = mg_get_system_info(buf, len + 63);
 				lua_pushlstring(L, buf, len);
+				mg_free(buf);
 				return 1;
 			}
 			if (!mg_strcasecmp(arg, "context")) {
@@ -1057,6 +1058,7 @@ lsp_get_info(lua_State *L)
 				}
 				len = mg_get_context_info(ctx, buf, len + 63);
 				lua_pushlstring(L, buf, len);
+				mg_free(buf);
 				return 1;
 			}
 			if (!mg_strcasecmp(arg, "common")) {
@@ -1068,6 +1070,7 @@ lsp_get_info(lua_State *L)
 				}
 				len = mg_get_context_info(NULL, buf, len + 63);
 				lua_pushlstring(L, buf, len);
+				mg_free(buf);
 				return 1;
 			}
 			return 0;

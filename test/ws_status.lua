@@ -59,8 +59,19 @@ if mg.lua_type ~= "websocket" then
 end
 
 
+function table.count(tab)
+  local count = 0
+  for _ in pairs(tab) do
+    count = count + 1
+  end
+  return count
+end
+
+
 -- table of all active connection
 allConnections = {}
+connCount = table.count(allConnections)
+
 
 -- function to get a client identification string
 function who(tab)
@@ -71,6 +82,7 @@ end
 -- Callback to accept or reject a connection
 function open(tab)
   allConnections[tab.client] = tab
+  connCount = table.count(allConnections)
   return true -- return true to accept the connection
 end
 
@@ -89,17 +101,29 @@ end
 -- Callback for "Websocket is closing"
 function close(tab)
     allConnections[tab.client] = nil
+    connCount = table.count(allConnections)
 end
 
 function senddata()
     local date = os.date('*t');
 
+    collectgarbage("collect"); -- Avoid adding uncollected Lua memory from this state
+
     mg.write(string.format([[
-{"Time": "%u:%02u:%02u", "Context": %s, "Common": %s, "System": \"%s\"}]], 
-date.hour, date.min, date.sec, 
+{"Time": "%u:%02u:%02u",
+ "Date": "%04u-%02u-%02u",
+ "Context": %s,
+ "Common": %s,
+ "System": \"%s\",
+ "ws_status": {"Memory": %u, "Connections": %u}
+}]],
+date.hour, date.min, date.sec,
+date.year, date.month, date.day,
 mg.get_info("context"), 
 mg.get_info("common"), 
-mg.get_info("system")
+mg.get_info("system"),
+collectgarbage("count")*1024,
+connCount
 ));
 
 end
