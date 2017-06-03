@@ -8136,6 +8136,7 @@ handle_static_file_request(struct mg_connection *conn,
 		                   500,
 		                   "Error: File size is too large to send\n%" INT64_FMT,
 		                   filep->stat.size);
+		return;
 	}
 	cl = (int64_t)filep->stat.size;
 	conn->status_code = 200;
