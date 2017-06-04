@@ -572,9 +572,10 @@ This option can be uset to enable case URLs for Windows servers. It is only avai
 Send additional HTTP response header line for every request.
 The full header line including key and value must be specified, excluding the carriage return line feed.
 
-Example:
-"X-Frame-Options: SAMEORIGIN"
+Example (used as command line option): 
+`-additional_header "X-Frame-Options: SAMEORIGIN"`
 
+This option can be specified multiple times. All specified header lines will be sent.
 
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
@@ -650,6 +651,7 @@ mg (table):
     mg.get_var(str, varname)   -- extract variable from (query) string
     mg.get_cookie(str, cookie) -- extract cookie from a string
     mg.get_mime_type(filename) -- get MIME type of a file
+    mg.get_info(infotype)      -- get server status information
     mg.send_file(filename)     -- send a file, including MIME type
     mg.url_encode(str)         -- URL encode a string
     mg.url_decode(str, [form]) -- URL decode a string. If form=true, replace + by space.
@@ -750,3 +752,4 @@ An example is shown in
 - Embedding with OpenSSL on Windows might fail because of calling convention.
   To force Civetweb to use `__stdcall` convention, add `/Gz` compilation
   flag in Visual Studio compiler.
+
