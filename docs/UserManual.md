@@ -300,14 +300,17 @@ all interfaces, both IPv4 and IPv6, use either the configuration
 `80,[::]:80` (create one socket for IPv4 and one for IPv6 only),
 or `+80` (create one socket for both, IPv4 and IPv6). 
 The `+`-notation to use IPv4 and IPv6 will only work in no network
-interface is specified. Depending on your IPv6 network environment,
-some configurations might not work (properly), so you have to test
-to find the configuration most suitable for your needs.
+interface is specified. Depending on your operating system version
+and IPv6 network environment, some configurations might not work
+as expected, so you have to test to find the configuration most 
+suitable for your needs. In case `+80` does not work for your
+environment, you need to use `80,[::]:80`.
 
 It is possible to use network interface addresses (e.g., `192.0.2.3:80`,
 `[2001:0db8::1234]:80`). To get a list of available network interface
 addresses, use `ipconfig` (in a `cmd` window in Windows) or `ifconfig` 
 (in a Linux shell).
+
 
 ### document\_root `.`
 A directory to serve. By default, the current working directory is served.
