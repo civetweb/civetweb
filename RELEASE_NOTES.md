@@ -5,6 +5,14 @@ Release Notes v1.10 (work in progress)
 Changes
 -------
 
+- Collect server status data
+- Allow hostname in listening_ports
+- Make maximum request size configurable
+- Allow multiple Sec-Websocket-Protocol
+- Add configuration option to send additional headers
+- Add configuration option for Strict-Transport-Security
+- Mark "file in memory" feature is a candidate for deletion
+- Improve examples
 - Fix timeout error when sending larger files
 - Add mg_send_chunk interface function
 - Allow to separate server private key and certificate chain in two different files
