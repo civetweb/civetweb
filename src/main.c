@@ -1904,26 +1904,26 @@ show_settings_dialog()
 		} else if (options[i].type == CONFIG_TYPE_BOOLEAN) {
 			cl = 0x80;
 			style |= BS_AUTOCHECKBOX;
-		}
-		else if ((options[i].type == CONFIG_TYPE_FILE)
-			|| (options[i].type == CONFIG_TYPE_DIRECTORY)) {
+		} else if ((options[i].type == CONFIG_TYPE_FILE)
+		           || (options[i].type == CONFIG_TYPE_DIRECTORY)) {
 			style |= WS_BORDER | ES_AUTOHSCROLL;
 			width -= 20;
 			cl = 0x81;
 			add_control(&p,
-				dia,
-				0x80,
-				ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA,
-				WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-				x + width + LABEL_WIDTH + 5,
-				y,
-				15,
-				12,
-				"...");
+			            dia,
+			            0x80,
+			            ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA,
+			            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+			            x + width + LABEL_WIDTH + 5,
+			            y,
+			            15,
+			            12,
+			            "...");
 		} else if (options[i].type == CONFIG_TYPE_STRING_MULTILINE) {
 			/* TODO: This is not really uer friendly */
 			cl = 0x81;
-			style |= WS_BORDER | ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN | ES_AUTOVSCROLL;
+			style |= WS_BORDER | ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN
+			         | ES_AUTOVSCROLL;
 		} else {
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL;
