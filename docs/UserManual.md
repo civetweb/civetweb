@@ -310,7 +310,17 @@ It is possible to use network interface addresses (e.g., `192.0.2.3:80`,
 `[2001:0db8::1234]:80`). To get a list of available network interface
 addresses, use `ipconfig` (in a `cmd` window in Windows) or `ifconfig` 
 (in a Linux shell).
-
+Alternatively, you could use the hostname for an interface. Check the 
+hosts file of your operating system for a proper hostname 
+(for Windows, usually found in C:\Windows\System32\drivers\etc\, 
+for most Linux distributions: /etc/hosts). E.g., to bind the IPv6 
+local host, you could use `ip6-localhost:80`. This translates to 
+`[::1]:80`. Beside the hosts file, there are several other name
+resolution services. Using your hostname might bind you to the
+localhost or an external interface. You could also try `hostname.local`,
+if the proper network services are installed (Zeroconf, mDNS, Bonjour, 
+Avahi). When using a hostname, you need to test in your particular network
+environment - in some cases, you might need to resort to a fixed IP address.
 
 ### document\_root `.`
 A directory to serve. By default, the current working directory is served.
