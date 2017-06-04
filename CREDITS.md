@@ -34,6 +34,7 @@
 * grunk
 * hansipie
 * HariKamath Kamath
+* Henry Chang
 * Jack
 * Jacob Skillin
 * Jan Willem Janssen
@@ -65,6 +66,7 @@
 * Matt Clarkson
 * mingodad
 * Morgan McGuire
+* mrdvlpr.xnu
 * Neil Jensen
 * Nick Hildebrant
 * Nigel Stewart
@@ -94,6 +96,7 @@
 * SpaceLord
 * sunfch
 * thewaterymoon
+* THILMANT, Bernard
 * Thomas Davis
 * tnoho
 * Toni Wilk
