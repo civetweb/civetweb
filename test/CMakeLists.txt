@@ -71,7 +71,6 @@ endif()
 target_include_directories(
   public-func-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(public-func-c-unit-tests c-library ${CHECK_LIBRARIES})
 add_dependencies(public-func-c-unit-tests check-unit-test-framework)
 
 add_library(public-server-c-unit-tests STATIC public_server.c)
@@ -81,14 +80,12 @@ endif()
 target_include_directories(
   public-server-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(public-server-c-unit-tests c-library ${CHECK_LIBRARIES})
 add_dependencies(public-server-c-unit-tests check-unit-test-framework)
 
 add_library(private-c-unit-tests STATIC private.c)
 target_include_directories(
   private-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(private-c-unit-tests ${CHECK_LIBRARIES})
 add_dependencies(private-c-unit-tests check-unit-test-framework)
 
 add_library(timer-c-unit-tests STATIC timertest.c)
@@ -105,7 +102,6 @@ endif()
 target_include_directories(
   exe-c-unit-tests PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(exe-c-unit-tests c-library ${CHECK_LIBRARIES})
 add_dependencies(exe-c-unit-tests check-unit-test-framework)
 
 add_executable(main-c-unit-test main.c)
