@@ -2408,7 +2408,7 @@ START_TEST(test_handle_form)
 	    "\r\n"
 	    "val1\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
-	    "Content-Disposition: form-data; name=\"radio2\"\r\n"
+	    "Content-Disposition: form-data; name=radio2\r\n"
 	    "\r\n"
 	    "val1\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
@@ -2473,7 +2473,7 @@ START_TEST(test_handle_form)
 	    "\r\n"
 	    "\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
-	    "Content-Disposition: form-data; name=\"filesin\"; filename=\"\"\r\n"
+	    "Content-Disposition: form-data; name=filesin; filename=\r\n"
 	    "Content-Type: application/octet-stream\r\n"
 	    "\r\n"
 	    "\r\n"
@@ -2534,6 +2534,53 @@ START_TEST(test_handle_form)
 	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
 	                "Transfer-Encoding: chunked\r\n"
 	                "\r\n");
+
+	ck_assert(client_conn != NULL);
+
+	body_len = strlen(multipart_body);
+	chunk_len = 1;
+	body_sent = 0;
+	while (body_len > body_sent) {
+		if (chunk_len > (body_len - body_sent)) {
+			chunk_len = body_len - body_sent;
+		}
+		ck_assert_int_gt((int)chunk_len, 0);
+		mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
+		mg_write(client_conn, multipart_body + body_sent, chunk_len);
+		mg_printf(client_conn, "\r\n");
+		body_sent += chunk_len;
+		chunk_len = (chunk_len % 40) + 1;
+	}
+	mg_printf(client_conn, "0\r\n");
+
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 1000) {
+			break;
+		}
+	}
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->local_uri, "200");
+	mg_close_connection(client_conn);
+
+	/* Handle form: "POST multipart/form-data" with chunked transfer
+	 * encoding, using a quoted boundary string */
+	client_conn = mg_download(
+	    "localhost",
+	    8884,
+	    0,
+	    ebuf,
+	    sizeof(ebuf),
+	    "%s",
+	    "POST /handle_form HTTP/1.1\r\n"
+	    "Host: localhost:8884\r\n"
+	    "Connection: close\r\n"
+	    "Content-Type: multipart/form-data; "
+	    "boundary=\"multipart-form-data-boundary--see-RFC-2388\"\r\n"
+	    "Transfer-Encoding: chunked\r\n"
+	    "\r\n");
 
 	ck_assert(client_conn != NULL);
 
