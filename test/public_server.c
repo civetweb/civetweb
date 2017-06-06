@@ -2487,7 +2487,7 @@ START_TEST(test_handle_form)
 	    "Text area default text.\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
 	body_len = strlen(multipart_body);
-	ck_assert_uint_eq(body_len, 2374); /* not required */
+	ck_assert_uint_eq(body_len, 2368); /* not required */
 
 	client_conn =
 	    mg_download("localhost",
