@@ -6346,7 +6346,6 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 
 					if (truncated) {
 						mg_free(tmp_str);
-						tmp_str = NULL;
 						goto interpret_cleanup;
 					}
 					sep_pos = strlen(tmp_str);
@@ -14879,7 +14878,6 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		sockaddr_to_string(src_addr, sizeof(src_addr), &so.rsa);
 		mg_cry(fc(ctx), "%s: %s is not allowed to connect", __func__, src_addr);
 		closesocket(so.sock);
-		so.sock = INVALID_SOCKET;
 	} else {
 		/* Put so socket structure into the queue */
 		DEBUG_TRACE("Accepted socket %d", (int)so.sock);
