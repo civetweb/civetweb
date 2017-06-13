@@ -8912,8 +8912,9 @@ addenv(struct cgi_environment *env, const char *fmt, ...)
 	env->varused++;
 }
 
+/* Return 0 on success, non-zero if an error occurs. */
 
-static void
+static int
 prepare_cgi_environment(struct mg_connection *conn,
                         const char *prog,
                         struct cgi_environment *env)
@@ -8924,16 +8925,28 @@ prepare_cgi_environment(struct mg_connection *conn,
 	int i, truncated, uri_len;
 
 	if (conn == NULL || prog == NULL || env == NULL) {
-		return;
+		return -1;
 	}
 
 	env->conn = conn;
 	env->buflen = CGI_ENVIRONMENT_SIZE;
 	env->bufused = 0;
 	env->buf = (char *)mg_malloc_ctx(env->buflen, conn->ctx);
+	if (env->buf == NULL) {
+		mg_cry(conn, "%s: Not enough memory for environmental buffer",
+		       __func__);
+		return -1;
+	}
 	env->varlen = MAX_CGI_ENVIR_VARS;
 	env->varused = 0;
 	env->var = (char **)mg_malloc_ctx(env->buflen * sizeof(char *), conn->ctx);
+	if (env->var == NULL) {
+		mg_cry(conn,
+		       "%s: Not enough memory for environmental variables",
+		       __func__);
+		mg_free(env->buf);
+		return -1;
+	}
 
 	addenv(env, "SERVER_NAME=%s", conn->ctx->config[AUTHENTICATION_DOMAIN]);
 	addenv(env, "SERVER_ROOT=%s", conn->ctx->config[DOCUMENT_ROOT]);
@@ -9091,6 +9104,8 @@ prepare_cgi_environment(struct mg_connection *conn,
 
 	env->var[env->varused] = NULL;
 	env->buf[env->bufused] = '\0';
+
+	return 0;
 }
 
 
@@ -9115,7 +9130,12 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 
 	buf = NULL;
 	buflen = 16384;
-	prepare_cgi_environment(conn, prog, &blk);
+	i = prepare_cgi_environment(conn, prog, &blk);
+	if (i != 0) {
+		blk.buf = NULL;
+		blk.var = NULL;
+		goto done;
+	}
 
 	/* CGI must be executed in its own directory. 'dir' must point to the
 	 * directory containing executable program, 'p' must point to the
