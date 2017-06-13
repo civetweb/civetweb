@@ -12192,6 +12192,8 @@ set_ports_option(struct mg_context *ctx)
 			mg_cry(fc(ctx),
 			       "cannot bind: address family not supported (entry %i)",
 			       portsTotal);
+			closesocket(so.sock);
+			so.sock = INVALID_SOCKET;
 			continue;
 		}
 
