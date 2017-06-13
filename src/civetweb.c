@@ -1257,7 +1257,7 @@ mg_current_thread_id(void)
 
 
 static uint64_t
-mg_get_current_time_ns()
+mg_get_current_time_ns(void)
 {
 	struct timespec tsnow;
 	clock_gettime(CLOCK_REALTIME, &tsnow);
@@ -13595,7 +13595,7 @@ mg_close_connection(struct mg_connection *conn)
 		mg_free(client_ctx);
 		(void)pthread_mutex_destroy(&conn->mutex);
 		mg_free(conn);
-	} else if (conn->ctx->context_type == 0) { // Client
+	} else if (conn->ctx->context_type == 0) { /* Client */
 		mg_free(conn);
 	}
 }
