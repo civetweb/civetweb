@@ -2684,6 +2684,9 @@ mg_vsnprintf(const struct mg_connection *conn,
 	int n, ok;
 
 	if (buflen == 0) {
+		if (truncated) {
+			*truncated = 1;
+		}
 		return;
 	}
 
