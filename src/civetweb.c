@@ -14982,6 +14982,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 
 		set_blocking_mode(so.sock, 0);
 
+		so.in_use = 0;
 		produce_socket(ctx, &so);
 	}
 }
