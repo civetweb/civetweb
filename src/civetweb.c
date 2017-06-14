@@ -6655,6 +6655,9 @@ get_mime_type(struct mg_context *ctx, const char *path, struct vec *vec)
 	path_len = strlen(path);
 
 	if (ctx == NULL || vec == NULL) {
+		if (vec != NULL) {
+			memset(vec, '\0', sizeof(struct vec));
+		}
 		return;
 	}
 
