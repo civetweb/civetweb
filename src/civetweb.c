@@ -7582,13 +7582,21 @@ mg_url_encode(const char *src, char *dst, size_t dst_len)
 	return (*src == '\0') ? (int)(pos - dst) : -1;
 }
 
+/* Return 0 on success, non-zero if an error occurs. */
 
-static void
+static int
 print_dir_entry(struct de *de)
 {
-	char size[64], mod[64], href[PATH_MAX * 3 /* worst case */];
+	size_t hrefsize;
+	char *href;
+	char size[64], mod[64];
 	struct tm *tm;
 
+	hrefsize = PATH_MAX * 3; /* worst case */
+	href = mg_malloc(hrefsize);
+	if (href == NULL) {
+		return -1;
+	}
 	if (de->file.is_directory) {
 		mg_snprintf(de->conn,
 		            NULL, /* Buffer is big enough */
@@ -7640,7 +7648,7 @@ print_dir_entry(struct de *de)
 		mg_strlcpy(mod, "01-Jan-1970 00:00", sizeof(mod));
 		mod[sizeof(mod) - 1] = '\0';
 	}
-	mg_url_encode(de->file_name, href, sizeof(href));
+	mg_url_encode(de->file_name, href, hrefsize);
 	mg_printf(de->conn,
 	          "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
 	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
@@ -7651,6 +7659,8 @@ print_dir_entry(struct de *de)
 	          de->file.is_directory ? "/" : "",
 	          mod,
 	          size);
+	mg_free(href);
+	return 0;
 }
 
 
@@ -7712,7 +7722,7 @@ static int
 scan_directory(struct mg_connection *conn,
                const char *dir,
                void *data,
-               void (*cb)(struct de *, void *))
+               int (*cb)(struct de *, void *))
 {
 	char path[PATH_MAX];
 	struct dirent *dp;
@@ -7851,7 +7861,7 @@ realloc2(void *ptr, size_t size)
 }
 
 
-static void
+static int
 dir_scan_callback(struct de *de, void *data)
 {
 	struct dir_scan_data *dsd = (struct dir_scan_data *)data;
@@ -7871,6 +7881,8 @@ dir_scan_callback(struct de *de, void *data)
 		dsd->entries[dsd->num_entries].conn = de->conn;
 		dsd->num_entries++;
 	}
+
+        return 0;
 }
 
 
@@ -10011,16 +10023,15 @@ print_props(struct mg_connection *conn,
 }
 
 
-static void
+static int
 print_dav_dir_entry(struct de *de, void *data)
 {
 	char href[PATH_MAX];
-	char href_encoded[PATH_MAX * 3 /* worst case */];
 	int truncated;
 
 	struct mg_connection *conn = (struct mg_connection *)data;
 	if (!de || !conn) {
-		return;
+		return -1;
 	}
 	mg_snprintf(conn,
 	            &truncated,
@@ -10031,9 +10042,20 @@ print_dav_dir_entry(struct de *de, void *data)
 	            de->file_name);
 
 	if (!truncated) {
-		mg_url_encode(href, href_encoded, PATH_MAX * 3);
+		size_t href_encoded_size;
+		char *href_encoded;
+
+		href_encoded_size = PATH_MAX * 3; /* worst case */
+		href_encoded = mg_malloc(href_encoded_size);
+		if (href_encoded == NULL) {
+			return -1;
+		}
+		mg_url_encode(href, href_encoded, href_encoded_size);
 		print_props(conn, href_encoded, &de->file);
+		mg_free(href_encoded);
 	}
+
+	return 0;
 }
 
 
