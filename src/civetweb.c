@@ -11486,9 +11486,9 @@ handle_request(struct mg_connection *conn)
 
 		/* Todo: check if cors_origin is in cors_orig_cfg.
 		 * Or, let the client check this. */
-		(void)cors_origin;
 
 		if ((cors_meth_cfg != NULL) && (*cors_meth_cfg != 0)
+		    && (cors_orig_cfg != NULL) && (*cors_orig_cfg != 0)
 		    && (cors_origin != NULL) && (cors_acrm != NULL)) {
 			/* This is a valid CORS preflight, and the server is configured to
 			 * handle it automatically. */
