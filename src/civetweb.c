@@ -1880,7 +1880,8 @@ enum {
 #endif
 
 	ACCESS_CONTROL_ALLOW_ORIGIN,
-	ACCESS_CONTROL_ALLOW_METHOD,
+	ACCESS_CONTROL_ALLOW_METHODS,
+	ACCESS_CONTROL_ALLOW_HEADERS,
 	ERROR_PAGES,
 	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
                          * socket option typedef TCP_NODELAY. */
@@ -1977,7 +1978,8 @@ static struct mg_option config_options[] = {
     {"lua_websocket_pattern", CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
 #endif
     {"access_control_allow_origin", CONFIG_TYPE_STRING, "*"},
-    {"access_control_allow_method", CONFIG_TYPE_STRING, "*"},
+    {"access_control_allow_methods", CONFIG_TYPE_STRING, "*"},
+    {"access_control_allow_headers", CONFIG_TYPE_STRING, "*"},
     {"error_pages", CONFIG_TYPE_DIRECTORY, NULL},
     {"tcp_nodelay", CONFIG_TYPE_NUMBER, "0"},
 #if !defined(NO_CACHING)
@@ -11473,14 +11475,20 @@ handle_request(struct mg_connection *conn)
 	 */
 	if (!strcmp(ri->request_method, "OPTIONS")) {
 		/* Send a response to CORS preflights only if
-		 * access_control_allow_method is not NULL and not an empty string.
+		 * access_control_allow_methods is not NULL and not an empty string.
 		 * In this case, scripts can still handle CORS. */
-		const char *cors_server_cfg =
-		    conn->ctx->config[ACCESS_CONTROL_ALLOW_METHOD];
+		const char *cors_meth_cfg =
+		    conn->ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
+		const char *cors_orig_cfg =
+		    conn->ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
 		const char *cors_origin = get_header(ri, "Origin");
 		const char *cors_acrm = get_header(ri, "Access-Control-Request-Method");
 
-		if ((cors_server_cfg != NULL) && (*cors_server_cfg != 0)
+		/* Todo: check if cors_origin is in cors_orig_cfg.
+		 * Or, let the client check this. */
+		(void)cors_origin;
+
+		if ((cors_meth_cfg != NULL) && (*cors_meth_cfg != 0)
 		    && (cors_origin != NULL) && (cors_acrm != NULL)) {
 			/* This is a valid CORS preflight, and the server is configured to
 			 * handle it automatically. */
@@ -11496,20 +11504,30 @@ handle_request(struct mg_connection *conn)
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n",
 			          date,
-			          cors_origin,
-			          ((cors_server_cfg[0] == '*') ? cors_acrm
-			                                       : cors_server_cfg),
+			          cors_orig_cfg,
+			          ((cors_meth_cfg[0] == '*') ? cors_acrm : cors_meth_cfg),
 			          suggest_connection_header(conn));
 
 			if (cors_acrh != NULL) {
-				mg_printf(conn,
-				          "Access-Control-Allow-Headers: %s\r\n",
-				          cors_acrh);
+				/* CORS request is asking for additional headers */
+				const char *cors_hdr_cfg =
+				    conn->ctx->config[ACCESS_CONTROL_ALLOW_HEADERS];
+
+				if ((cors_hdr_cfg != NULL) && (*cors_hdr_cfg != 0)) {
+					/* Allow only if access_control_allow_headers is
+					 * not NULL and not an empty string. If this
+					 * configuration is set to *, allow everything.
+					 * Otherwise this configuration must be a list
+					 * of allowed HTTP header names. */
+					mg_printf(conn,
+					          "Access-Control-Allow-Headers: %s\r\n",
+					          ((cors_hdr_cfg[0] == '*') ? cors_acrh
+					                                    : cors_hdr_cfg));
+				}
 			}
 			mg_printf(conn, "Access-Control-Max-Age: 60\r\n");
 
 			mg_printf(conn, "\r\n");
-
 			return;
 		}
 	}
