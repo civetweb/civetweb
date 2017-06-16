@@ -1257,7 +1257,7 @@ mg_current_thread_id(void)
 
 
 static uint64_t
-mg_get_current_time_ns()
+mg_get_current_time_ns(void)
 {
 	struct timespec tsnow;
 	clock_gettime(CLOCK_REALTIME, &tsnow);
@@ -2688,6 +2688,9 @@ mg_vsnprintf(const struct mg_connection *conn,
 	int n, ok;
 
 	if (buflen == 0) {
+		if (truncated) {
+			*truncated = 1;
+		}
 		return;
 	}
 
@@ -6350,7 +6353,6 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 
 					if (truncated) {
 						mg_free(tmp_str);
-						tmp_str = NULL;
 						goto interpret_cleanup;
 					}
 					sep_pos = strlen(tmp_str);
@@ -6657,6 +6659,9 @@ get_mime_type(struct mg_context *ctx, const char *path, struct vec *vec)
 	path_len = strlen(path);
 
 	if (ctx == NULL || vec == NULL) {
+		if (vec != NULL) {
+			memset(vec, '\0', sizeof(struct vec));
+		}
 		return;
 	}
 
@@ -7587,13 +7592,21 @@ mg_url_encode(const char *src, char *dst, size_t dst_len)
 	return (*src == '\0') ? (int)(pos - dst) : -1;
 }
 
+/* Return 0 on success, non-zero if an error occurs. */
 
-static void
+static int
 print_dir_entry(struct de *de)
 {
-	char size[64], mod[64], href[PATH_MAX * 3 /* worst case */];
+	size_t hrefsize;
+	char *href;
+	char size[64], mod[64];
 	struct tm *tm;
 
+	hrefsize = PATH_MAX * 3; /* worst case */
+	href = mg_malloc(hrefsize);
+	if (href == NULL) {
+		return -1;
+	}
 	if (de->file.is_directory) {
 		mg_snprintf(de->conn,
 		            NULL, /* Buffer is big enough */
@@ -7645,7 +7658,7 @@ print_dir_entry(struct de *de)
 		mg_strlcpy(mod, "01-Jan-1970 00:00", sizeof(mod));
 		mod[sizeof(mod) - 1] = '\0';
 	}
-	mg_url_encode(de->file_name, href, sizeof(href));
+	mg_url_encode(de->file_name, href, hrefsize);
 	mg_printf(de->conn,
 	          "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
 	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
@@ -7656,6 +7669,8 @@ print_dir_entry(struct de *de)
 	          de->file.is_directory ? "/" : "",
 	          mod,
 	          size);
+	mg_free(href);
+	return 0;
 }
 
 
@@ -7717,7 +7732,7 @@ static int
 scan_directory(struct mg_connection *conn,
                const char *dir,
                void *data,
-               void (*cb)(struct de *, void *))
+               int (*cb)(struct de *, void *))
 {
 	char path[PATH_MAX];
 	struct dirent *dp;
@@ -7856,7 +7871,7 @@ realloc2(void *ptr, size_t size)
 }
 
 
-static void
+static int
 dir_scan_callback(struct de *de, void *data)
 {
 	struct dir_scan_data *dsd = (struct dir_scan_data *)data;
@@ -7876,6 +7891,8 @@ dir_scan_callback(struct de *de, void *data)
 		dsd->entries[dsd->num_entries].conn = de->conn;
 		dsd->num_entries++;
 	}
+
+        return 0;
 }
 
 
@@ -8917,8 +8934,9 @@ addenv(struct cgi_environment *env, const char *fmt, ...)
 	env->varused++;
 }
 
+/* Return 0 on success, non-zero if an error occurs. */
 
-static void
+static int
 prepare_cgi_environment(struct mg_connection *conn,
                         const char *prog,
                         struct cgi_environment *env)
@@ -8929,16 +8947,28 @@ prepare_cgi_environment(struct mg_connection *conn,
 	int i, truncated, uri_len;
 
 	if (conn == NULL || prog == NULL || env == NULL) {
-		return;
+		return -1;
 	}
 
 	env->conn = conn;
 	env->buflen = CGI_ENVIRONMENT_SIZE;
 	env->bufused = 0;
 	env->buf = (char *)mg_malloc_ctx(env->buflen, conn->ctx);
+	if (env->buf == NULL) {
+		mg_cry(conn, "%s: Not enough memory for environmental buffer",
+		       __func__);
+		return -1;
+	}
 	env->varlen = MAX_CGI_ENVIR_VARS;
 	env->varused = 0;
 	env->var = (char **)mg_malloc_ctx(env->buflen * sizeof(char *), conn->ctx);
+	if (env->var == NULL) {
+		mg_cry(conn,
+		       "%s: Not enough memory for environmental variables",
+		       __func__);
+		mg_free(env->buf);
+		return -1;
+	}
 
 	addenv(env, "SERVER_NAME=%s", conn->ctx->config[AUTHENTICATION_DOMAIN]);
 	addenv(env, "SERVER_ROOT=%s", conn->ctx->config[DOCUMENT_ROOT]);
@@ -9096,6 +9126,8 @@ prepare_cgi_environment(struct mg_connection *conn,
 
 	env->var[env->varused] = NULL;
 	env->buf[env->bufused] = '\0';
+
+	return 0;
 }
 
 
@@ -9120,7 +9152,12 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 
 	buf = NULL;
 	buflen = 16384;
-	prepare_cgi_environment(conn, prog, &blk);
+	i = prepare_cgi_environment(conn, prog, &blk);
+	if (i != 0) {
+		blk.buf = NULL;
+		blk.var = NULL;
+		goto done;
+	}
 
 	/* CGI must be executed in its own directory. 'dir' must point to the
 	 * directory containing executable program, 'p' must point to the
@@ -9996,16 +10033,15 @@ print_props(struct mg_connection *conn,
 }
 
 
-static void
+static int
 print_dav_dir_entry(struct de *de, void *data)
 {
 	char href[PATH_MAX];
-	char href_encoded[PATH_MAX * 3 /* worst case */];
 	int truncated;
 
 	struct mg_connection *conn = (struct mg_connection *)data;
 	if (!de || !conn) {
-		return;
+		return -1;
 	}
 	mg_snprintf(conn,
 	            &truncated,
@@ -10016,9 +10052,20 @@ print_dav_dir_entry(struct de *de, void *data)
 	            de->file_name);
 
 	if (!truncated) {
-		mg_url_encode(href, href_encoded, PATH_MAX * 3);
+		size_t href_encoded_size;
+		char *href_encoded;
+
+		href_encoded_size = PATH_MAX * 3; /* worst case */
+		href_encoded = mg_malloc(href_encoded_size);
+		if (href_encoded == NULL) {
+			return -1;
+		}
+		mg_url_encode(href, href_encoded, href_encoded_size);
 		print_props(conn, href_encoded, &de->file);
+		mg_free(href_encoded);
 	}
+
+	return 0;
 }
 
 
@@ -11396,6 +11443,7 @@ handle_request(struct mg_connection *conn)
 	void *callback_data = NULL;
 	mg_authorization_handler auth_handler = NULL;
 	void *auth_callback_data = NULL;
+	int handler_type;
 	time_t curtime = time(NULL);
 	char date[64];
 
@@ -11536,11 +11584,15 @@ handle_request(struct mg_connection *conn)
 	 * protocol namespace or the websocket ws(s):// protocol namespace.
 	 */
 	is_websocket_request = is_websocket_protocol(conn);
-
+#if defined(USE_WEBSOCKET)
+	handler_type = is_websocket_request ? WEBSOCKET_HANDLER
+	                                    : REQUEST_HANDLER;
+#else
+	handler_type = REQUEST_HANDLER;
+#endif /* defined(USE_WEBSOCKET) */
 	/* 5.2. check if the request will be handled by a callback */
 	if (get_request_handler(conn,
-	                        is_websocket_request ? WEBSOCKET_HANDLER
-	                                             : REQUEST_HANDLER,
+	                        handler_type,
 	                        &callback_handler,
 	                        &subprotocols,
 	                        &ws_connect_handler,
@@ -12257,6 +12309,8 @@ set_ports_option(struct mg_context *ctx)
 			mg_cry(fc(ctx),
 			       "cannot bind: address family not supported (entry %i)",
 			       portsTotal);
+			closesocket(so.sock);
+			so.sock = INVALID_SOCKET;
 			continue;
 		}
 
@@ -13614,7 +13668,9 @@ close_connection(struct mg_connection *conn)
 void
 mg_close_connection(struct mg_connection *conn)
 {
+#if defined(USE_WEBSOCKET)
 	struct mg_context *client_ctx = NULL;
+#endif /* defined(USE_WEBSOCKET) */
 
 	if (conn == NULL) {
 		return;
@@ -13641,9 +13697,7 @@ mg_close_connection(struct mg_connection *conn)
 			}
 		}
 	}
-#else
-	(void)client_ctx;
-#endif
+#endif /* defined(USE_WEBSOCKET) */
 
 	close_connection(conn);
 
@@ -13653,15 +13707,21 @@ mg_close_connection(struct mg_connection *conn)
 	}
 #endif
 
+#if defined(USE_WEBSOCKET)
 	if (client_ctx != NULL) {
 		/* free context */
 		mg_free(client_ctx->worker_threadids);
 		mg_free(client_ctx);
 		(void)pthread_mutex_destroy(&conn->mutex);
 		mg_free(conn);
-	} else if (conn->ctx->context_type == 0) { // Client
+	} else if (conn->ctx->context_type == 0) { /* Client */
 		mg_free(conn);
 	}
+#else
+	if (conn->ctx->context_type == 0) { /* Client */
+		mg_free(conn);
+	}
+#endif /* defined(USE_WEBSOCKET) */
 }
 
 
@@ -14943,7 +15003,6 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		sockaddr_to_string(src_addr, sizeof(src_addr), &so.rsa);
 		mg_cry(fc(ctx), "%s: %s is not allowed to connect", __func__, src_addr);
 		closesocket(so.sock);
-		so.sock = INVALID_SOCKET;
 	} else {
 		/* Put so socket structure into the queue */
 		DEBUG_TRACE("Accepted socket %d", (int)so.sock);
@@ -14998,6 +15057,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 
 		set_blocking_mode(so.sock, 0);
 
+		so.in_use = 0;
 		produce_socket(ctx, &so);
 	}
 }
