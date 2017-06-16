@@ -1880,6 +1880,8 @@ enum {
 #endif
 
 	ACCESS_CONTROL_ALLOW_ORIGIN,
+	ACCESS_CONTROL_ALLOW_METHODS,
+	ACCESS_CONTROL_ALLOW_HEADERS,
 	ERROR_PAGES,
 	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
                          * socket option typedef TCP_NODELAY. */
@@ -1976,6 +1978,8 @@ static struct mg_option config_options[] = {
     {"lua_websocket_pattern", CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
 #endif
     {"access_control_allow_origin", CONFIG_TYPE_STRING, "*"},
+    {"access_control_allow_methods", CONFIG_TYPE_STRING, "*"},
+    {"access_control_allow_headers", CONFIG_TYPE_STRING, "*"},
     {"error_pages", CONFIG_TYPE_DIRECTORY, NULL},
     {"tcp_nodelay", CONFIG_TYPE_NUMBER, "0"},
 #if !defined(NO_CACHING)
@@ -11440,10 +11444,8 @@ handle_request(struct mg_connection *conn)
 	mg_authorization_handler auth_handler = NULL;
 	void *auth_callback_data = NULL;
 	int handler_type;
-#if !defined(NO_FILES)
 	time_t curtime = time(NULL);
 	char date[64];
-#endif
 
 	path[0] = 0;
 
@@ -11486,12 +11488,12 @@ handle_request(struct mg_connection *conn)
 	uri_len = (int)strlen(ri->local_uri);
 	DEBUG_TRACE("URL: %s", ri->local_uri);
 
-	/* 3. if this ip has limited speed, set it for this connection */
+	/* 2. if this ip has limited speed, set it for this connection */
 	conn->throttle = set_throttle(conn->ctx->config[THROTTLE],
 	                              get_remote_ip(conn),
 	                              ri->local_uri);
 
-	/* 4. call a "handle everything" callback, if registered */
+	/* 3. call a "handle everything" callback, if registered */
 	if (conn->ctx->callbacks.begin_request != NULL) {
 		/* Note that since V1.7 the "begin_request" function is called
 		 * before an authorization check. If an authorization check is
@@ -11513,6 +11515,68 @@ handle_request(struct mg_connection *conn)
 
 	/* request not yet handled by a handler or redirect, so the request
 	 * is processed here */
+
+	/* 4. Check for CORS preflight requests and handle them (if configured).
+	 * https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
+	 */
+	if (!strcmp(ri->request_method, "OPTIONS")) {
+		/* Send a response to CORS preflights only if
+		 * access_control_allow_methods is not NULL and not an empty string.
+		 * In this case, scripts can still handle CORS. */
+		const char *cors_meth_cfg =
+		    conn->ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
+		const char *cors_orig_cfg =
+		    conn->ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
+		const char *cors_origin = get_header(ri, "Origin");
+		const char *cors_acrm = get_header(ri, "Access-Control-Request-Method");
+
+		/* Todo: check if cors_origin is in cors_orig_cfg.
+		 * Or, let the client check this. */
+
+		if ((cors_meth_cfg != NULL) && (*cors_meth_cfg != 0)
+		    && (cors_orig_cfg != NULL) && (*cors_orig_cfg != 0)
+		    && (cors_origin != NULL) && (cors_acrm != NULL)) {
+			/* This is a valid CORS preflight, and the server is configured to
+			 * handle it automatically. */
+			const char *cors_acrh =
+			    get_header(ri, "Access-Control-Request-Headers");
+
+			gmt_time_string(date, sizeof(date), &curtime);
+			mg_printf(conn,
+			          "HTTP/1.1 200 OK\r\n"
+			          "Date: %s\r\n"
+			          "Access-Control-Allow-Origin: %s\r\n"
+			          "Access-Control-Allow-Methods: %s\r\n"
+			          "Content-Length: 0\r\n"
+			          "Connection: %s\r\n",
+			          date,
+			          cors_orig_cfg,
+			          ((cors_meth_cfg[0] == '*') ? cors_acrm : cors_meth_cfg),
+			          suggest_connection_header(conn));
+
+			if (cors_acrh != NULL) {
+				/* CORS request is asking for additional headers */
+				const char *cors_hdr_cfg =
+				    conn->ctx->config[ACCESS_CONTROL_ALLOW_HEADERS];
+
+				if ((cors_hdr_cfg != NULL) && (*cors_hdr_cfg != 0)) {
+					/* Allow only if access_control_allow_headers is
+					 * not NULL and not an empty string. If this
+					 * configuration is set to *, allow everything.
+					 * Otherwise this configuration must be a list
+					 * of allowed HTTP header names. */
+					mg_printf(conn,
+					          "Access-Control-Allow-Headers: %s\r\n",
+					          ((cors_hdr_cfg[0] == '*') ? cors_acrh
+					                                    : cors_hdr_cfg));
+				}
+			}
+			mg_printf(conn, "Access-Control-Max-Age: 60\r\n");
+
+			mg_printf(conn, "\r\n");
+			return;
+		}
+	}
 
 	/* 5. interpret the url to find out how the request must be handled
 	 */

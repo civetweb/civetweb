@@ -124,7 +124,7 @@ Support
 -------
 
 This project is very easy to install and use. Please read the [documentation](https://github.com/civetweb/civetweb/blob/master/docs/)
-and have a look at the [examples] (https://github.com/civetweb/civetweb/blob/master/examples/).
+and have a look at the [examples](https://github.com/civetweb/civetweb/blob/master/examples/).
 More information may be found on the [mailing list](https://groups.google.com/d/forum/civetweb).
 
 
