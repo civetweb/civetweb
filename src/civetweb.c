@@ -13599,7 +13599,9 @@ close_connection(struct mg_connection *conn)
 void
 mg_close_connection(struct mg_connection *conn)
 {
+#if defined(USE_WEBSOCKET)
 	struct mg_context *client_ctx = NULL;
+#endif /* defined(USE_WEBSOCKET) */
 
 	if (conn == NULL) {
 		return;
@@ -13626,9 +13628,7 @@ mg_close_connection(struct mg_connection *conn)
 			}
 		}
 	}
-#else
-	(void)client_ctx;
-#endif
+#endif /* defined(USE_WEBSOCKET) */
 
 	close_connection(conn);
 
@@ -13638,6 +13638,7 @@ mg_close_connection(struct mg_connection *conn)
 	}
 #endif
 
+#if defined(USE_WEBSOCKET)
 	if (client_ctx != NULL) {
 		/* free context */
 		mg_free(client_ctx->worker_threadids);
@@ -13647,6 +13648,11 @@ mg_close_connection(struct mg_connection *conn)
 	} else if (conn->ctx->context_type == 0) { /* Client */
 		mg_free(conn);
 	}
+#else
+	if (conn->ctx->context_type == 0) { /* Client */
+		mg_free(conn);
+	}
+#endif /* defined(USE_WEBSOCKET) */
 }
 
 
