@@ -11439,6 +11439,7 @@ handle_request(struct mg_connection *conn)
 	void *callback_data = NULL;
 	mg_authorization_handler auth_handler = NULL;
 	void *auth_callback_data = NULL;
+	int handler_type;
 #if !defined(NO_FILES)
 	time_t curtime = time(NULL);
 	char date[64];
@@ -11519,11 +11520,15 @@ handle_request(struct mg_connection *conn)
 	 * protocol namespace or the websocket ws(s):// protocol namespace.
 	 */
 	is_websocket_request = is_websocket_protocol(conn);
-
+#if defined(USE_WEBSOCKET)
+	handler_type = is_websocket_request ? WEBSOCKET_HANDLER
+	                                    : REQUEST_HANDLER;
+#else
+	handler_type = REQUEST_HANDLER;
+#endif /* defined(USE_WEBSOCKET) */
 	/* 5.2. check if the request will be handled by a callback */
 	if (get_request_handler(conn,
-	                        is_websocket_request ? WEBSOCKET_HANDLER
-	                                             : REQUEST_HANDLER,
+	                        handler_type,
 	                        &callback_handler,
 	                        &subprotocols,
 	                        &ws_connect_handler,
