@@ -11396,10 +11396,8 @@ handle_request(struct mg_connection *conn)
 	void *callback_data = NULL;
 	mg_authorization_handler auth_handler = NULL;
 	void *auth_callback_data = NULL;
-#if !defined(NO_FILES)
 	time_t curtime = time(NULL);
 	char date[64];
-#endif
 
 	path[0] = 0;
 

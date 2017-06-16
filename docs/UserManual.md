@@ -455,10 +455,43 @@ be used for websockets as well. Since websockets use a different URL scheme
 websockets may also be served from a different directory. By default,
 the document_root is used as websocket_root as well.
 
-### access\_control\_allow\_origin
+
+### access\_control\_allow\_origin `*`
 Access-Control-Allow-Origin header field, used for cross-origin resource
 sharing (CORS).
 See the [Wikipedia page on CORS](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
+
+
+### access\_control\_allow\_methods `*`
+Access-Control-Allow-Methods header field, used for cross-origin resource
+sharing (CORS) pre-flight requests.
+See the [Wikipedia page on CORS](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
+
+If set to an empty string, pre-flights will not be supported directly by the server,
+but scripts may still support pre-flights by handling the OPTIONS method properly.
+If set to "*", the pre-flight will allow whatever method has been requested.
+If set to a comma separated list of valid HTTP methods, the pre-flight will return
+exactly this list as allowed method.
+If set in any other way, the result is unspecified.
+
+
+### access\_control\_allow\_headers `*`
+Access-Control-Allow-Headers header field, used for cross-origin resource
+sharing (CORS) pre-flight requests.
+See the [Wikipedia page on CORS](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
+
+If set to an empty string, pre-flights will not allow additional headers.
+If set to "*", the pre-flight will allow whatever headers have been requested.
+If set to a comma separated list of valid HTTP headers, the pre-flight will return
+exactly this list as allowed headers.
+If set in any other way, the result is unspecified.
+
+
+### access\_control\_allow\_headers `*`
+Access-Control-Allow-Origin header field, used for cross-origin resource
+sharing (CORS).
+See the [Wikipedia page on CORS](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
+
 
 ### error\_pages
 This option may be used to specify a directory for user defined error pages.
