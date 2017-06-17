@@ -7892,7 +7892,7 @@ dir_scan_callback(struct de *de, void *data)
 		dsd->num_entries++;
 	}
 
-        return 0;
+	return 0;
 }
 
 
@@ -8955,7 +8955,8 @@ prepare_cgi_environment(struct mg_connection *conn,
 	env->bufused = 0;
 	env->buf = (char *)mg_malloc_ctx(env->buflen, conn->ctx);
 	if (env->buf == NULL) {
-		mg_cry(conn, "%s: Not enough memory for environmental buffer",
+		mg_cry(conn,
+		       "%s: Not enough memory for environmental buffer",
 		       __func__);
 		return -1;
 	}
@@ -11585,8 +11586,7 @@ handle_request(struct mg_connection *conn)
 	 */
 	is_websocket_request = is_websocket_protocol(conn);
 #if defined(USE_WEBSOCKET)
-	handler_type = is_websocket_request ? WEBSOCKET_HANDLER
-	                                    : REQUEST_HANDLER;
+	handler_type = is_websocket_request ? WEBSOCKET_HANDLER : REQUEST_HANDLER;
 #else
 	handler_type = REQUEST_HANDLER;
 #endif /* defined(USE_WEBSOCKET) */
