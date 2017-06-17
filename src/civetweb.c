@@ -9866,7 +9866,7 @@ send_ssi_file(struct mg_connection *conn,
 			if (len > (int)sizeof(buf)) {
 				break;
 			}
-			if (len < 6 || memcmp(buf, "<!--#", 5) != 0) {
+            if ((len < 6) || (memcmp(buf, "<!--#", 5) != 0)) {
 				/* Not an SSI tag, pass it */
 				(void)mg_write(conn, buf, (size_t)len);
 			} else {
@@ -10618,7 +10618,7 @@ handle_websocket_request(struct mg_connection *conn,
 					sep = strchr(protocol, ',');
 					curSubProtocol = protocol;
 					len = sep ? (unsigned long)(sep - protocol)
-					          : strlen(protocol);
+                              : (unsigned long)strlen(protocol);
 					while (sep && isspace(*++sep))
 						; // ignore leading whitespaces
 					protocol = sep;
