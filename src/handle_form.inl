@@ -851,24 +851,19 @@ mg_handle_form_request(struct mg_connection *conn,
 						       path);
 						mg_fclose(&fstore.access);
 						remove_bad_file(conn, path);
-					}
-					file_size += (int64_t)n;
-				}
-			}
-
-			if (field_storage == FORM_FIELD_STORAGE_STORE) {
-
-				if (fstore.access.fp) {
-					r = mg_fclose(&fstore.access);
-					if (r == 0) {
-						/* stored successfully */
-						field_stored(conn, path, file_size, fdh);
 					} else {
-						mg_cry(conn,
-						       "%s: Error saving file %s",
-						       __func__,
-						       path);
-						remove_bad_file(conn, path);
+						file_size += (int64_t)n;
+						r = mg_fclose(&fstore.access);
+						if (r == 0) {
+							/* stored successfully */
+							field_stored(conn, path, file_size, fdh);
+						} else {
+							mg_cry(conn,
+							       "%s: Error saving file %s",
+							       __func__,
+							       path);
+							remove_bad_file(conn, path);
+						}
 					}
 					fstore.access.fp = NULL;
 				}
