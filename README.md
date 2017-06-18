@@ -1,6 +1,10 @@
 ![CivetWeb](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
 =======
 
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![GitHub contributors](https://img.shields.io/github/contributors/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
+
+
 **The official home of CivetWeb is [https://github.com/civetweb/civetweb](https://github.com/civetweb/civetweb)**
 
 
@@ -14,12 +18,12 @@ Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/c
 
 Test coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb)) (currently in a setup phase):
 
+[![Coveralls](https://img.shields.io/coveralls/civetweb/civetweb.svg?maxAge=3600)]()
 [![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
 
 Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)):
 
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
-
 
 
 
