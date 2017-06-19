@@ -9852,63 +9852,91 @@ send_ssi_file(struct mg_connection *conn,
               int include_level)
 {
 	char buf[MG_BUF_LEN];
-	int ch, offset, len, in_ssi_tag;
+	int ch, offset, len, in_tag, in_ssi_tag;
 
 	if (include_level > 10) {
 		mg_cry(conn, "SSI #include level is too deep (%s)", path);
 		return;
 	}
 
-	in_ssi_tag = len = offset = 0;
+	in_tag = in_ssi_tag = len = offset = 0;
+
+	/* Read file, byte by byte, and look for SSI include tags */
 	while ((ch = mg_fgetc(filep, offset++)) != EOF) {
-		if (in_ssi_tag && (ch == '>')) {
-			in_ssi_tag = 0;
-			buf[len++] = (char)ch;
-			buf[len] = '\0';
-			/* assert(len <= (int) sizeof(buf)); */
-			if (len > (int)sizeof(buf)) {
-				break;
-			}
-			if ((len < 6) || (memcmp(buf, "<!--#", 5) != 0)) {
-				/* Not an SSI tag, pass it */
-				(void)mg_write(conn, buf, (size_t)len);
-			} else {
-				if (!memcmp(buf + 5, "include", 7)) {
-					do_ssi_include(conn, path, buf + 12, include_level);
+
+		if (in_tag) {
+			/* We are in a tag, either SSI tag or html tag */
+
+			if (ch == '>') {
+				/* Tag is closing */
+				buf[len++] = '>';
+
+				if (in_ssi_tag) {
+					/* Handle SSI tag */
+					buf[len] = 0;
+
+					if (!memcmp(buf + 5, "include", 7)) {
+						do_ssi_include(conn, path, buf + 12, include_level + 1);
 #if !defined(NO_POPEN)
-				} else if (!memcmp(buf + 5, "exec", 4)) {
-					do_ssi_exec(conn, buf + 9);
+					} else if (!memcmp(buf + 5, "exec", 4)) {
+						do_ssi_exec(conn, buf + 9);
 #endif /* !NO_POPEN */
+					} else {
+						mg_cry(conn,
+						       "%s: unknown SSI "
+						       "command: \"%s\"",
+						       path,
+						       buf);
+					}
+					len = 0;
+					in_ssi_tag = in_tag = 0;
+
 				} else {
-					mg_cry(conn,
-					       "%s: unknown SSI "
-					       "command: \"%s\"",
-					       path,
-					       buf);
+					/* Not an SSI tag */
+					/* Flush buffer */
+					(void)mg_write(conn, buf, (size_t)len);
+					len = 0;
+					in_tag = 0;
+				}
+
+			} else {
+				/* Tag is still open */
+				buf[len++] = (char)(ch & 0xff);
+
+				if ((len == 5) && !memcmp(buf, "<!--#", 5)) {
+					/* All SSI tags start with <!--# */
+					in_ssi_tag = 1;
+				}
+
+				if ((len + 2) > (int)sizeof(buf)) {
+					/* Tag to long for buffer */
+					mg_cry(conn, "%s: tag is too large", path);
+					len = 0;
+					return;
 				}
 			}
-			len = 0;
-		} else if (in_ssi_tag) {
-			if ((len == 5) && (memcmp(buf, "<!--#", 5) != 0)) {
-				/* Not an SSI tag */
-				in_ssi_tag = 0;
-			} else if (len == ((int)sizeof(buf) - 2)) {
-				mg_cry(conn, "%s: SSI tag is too large", path);
-				len = 0;
-			}
-			buf[len++] = (char)(ch & 0xff);
-		} else if (ch == '<') {
-			in_ssi_tag = 1;
-			if (len > 0) {
-				mg_write(conn, buf, (size_t)len);
-			}
-			len = 0;
-			buf[len++] = (char)(ch & 0xff);
+
 		} else {
-			buf[len++] = (char)(ch & 0xff);
-			if (len == (int)sizeof(buf)) {
-				mg_write(conn, buf, (size_t)len);
-				len = 0;
+			/* We are not in a tag yet. */
+
+			if (ch == '<') {
+				/* Tag is opening */
+				in_tag = 1;
+				/* Flush current buffer */
+				(void)mg_write(conn, buf, (size_t)len);
+				/* Store the < */
+				len = 1;
+				buf[0] = '<';
+
+			} else {
+				/* No Tag */
+				/* Add data to buffer */
+				buf[len++] = (char)(ch & 0xff);
+				/* Flush if buffer is full */
+				if (len == (int)sizeof(buf)) {
+					mg_write(conn, buf, (size_t)len);
+					len = 0;
+				}
 			}
 		}
 	}
