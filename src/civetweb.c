@@ -4963,18 +4963,24 @@ mg_poll(struct pollfd *pfd,
 
 
 /* Write data to the IO channel - opened file descriptor, socket or SSL
- * descriptor. Return number of bytes written. */
+ * descriptor.
+ * Return value:
+ *  >=0 .. number of bytes successfully written
+ *   -1 .. timeout
+ *   -2 .. error
+ */
 static int
-push(struct mg_context *ctx,
-     FILE *fp,
-     SOCKET sock,
-     SSL *ssl,
-     const char *buf,
-     int len,
-     double timeout)
+push_inner(struct mg_context *ctx,
+           FILE *fp,
+           SOCKET sock,
+           SSL *ssl,
+           const char *buf,
+           int len,
+           double timeout)
 {
 	uint64_t start = 0, now = 0, timeout_ns = 0;
 	int n, err;
+	int ms_wait = SOCKET_TIMEOUT_QUANTUM; /* Sleep quantum in ms */
 
 #ifdef _WIN32
 	typedef int len_t;
@@ -4988,12 +4994,12 @@ push(struct mg_context *ctx,
 	}
 
 	if (ctx == NULL) {
-		return -1;
+		return -2;
 	}
 
 #ifdef NO_SSL
 	if (ssl) {
-		return -1;
+		return -2;
 	}
 #endif
 
@@ -5011,7 +5017,7 @@ push(struct mg_context *ctx,
 					n = 0;
 				} else {
 					DEBUG_TRACE("SSL_write() failed, error %d", err);
-					return -1;
+					return -2;
 				}
 			} else {
 				err = 0;
@@ -5042,12 +5048,12 @@ push(struct mg_context *ctx,
 #endif
 			if (n < 0) {
 				/* shutdown of the socket at client side */
-				return -1;
+				return -2;
 			}
 		}
 
 		if (ctx->stop_flag) {
-			return -1;
+			return -2;
 		}
 
 		if ((n > 0) || ((n == 0) && (len == 0))) {
@@ -5064,10 +5070,14 @@ push(struct mg_context *ctx,
 			 * if there is a reproducible situation, it should be
 			 * investigated in detail.
 			 */
-			return -1;
+			return -2;
 		}
 
 		/* Only in case n=0 (timeout), repeat calling the write function */
+
+		/* Quick fix for #474 - TODO: use select to wait for send socket */
+		(void)ms_wait;
+		mg_sleep(1);
 
 		if (timeout >= 0) {
 			now = mg_get_current_time_ns();
@@ -5102,7 +5112,7 @@ push_all(struct mg_context *ctx,
 	}
 
 	while ((len > 0) && (ctx->stop_flag == 0)) {
-		n = push(ctx, fp, sock, ssl, buf + nwritten, (int)len, timeout);
+        n = push_inner(ctx, fp, sock, ssl, buf + nwritten, (int)len, timeout);
 		if (n < 0) {
 			if (nwritten == 0) {
 				nwritten = n; /* Propagate the error */
