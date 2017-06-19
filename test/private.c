@@ -68,6 +68,8 @@ START_TEST(test_parse_http_message)
 
 	char req10[] = "GET / HTTP/1.1\r\nA: foo bar\r\nB: bar\r\n\r\n";
 
+	char req11[] = "GET /\r\nError: X\r\n\r\n";
+
 	ck_assert_int_eq(sizeof(req9) - 1,
 	                 parse_http_message(req9, sizeof(req9), &ri));
 	ck_assert_int_eq(1, ri.num_headers);
@@ -98,6 +100,7 @@ START_TEST(test_parse_http_message)
 	ck_assert_str_eq("B", ri.http_headers[1].name);
 	ck_assert_str_eq("bar", ri.http_headers[1].value);
 
+	ck_assert_int_eq(-1, parse_http_message(req11, sizeof(req11), &ri));
 
 	ck_assert_int_eq(sizeof(req5) - 1,
 	                 parse_http_message(req5, sizeof(req5), &ri));
