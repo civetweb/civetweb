@@ -2201,7 +2201,9 @@ typedef struct tagTHREADNAME_INFO {
 
 #include <sys/prctl.h>
 #include <sys/sendfile.h>
+#ifdef ALTERNATIVE_QUEUE
 #include <sys/eventfd.h>
+#endif /* ALTERNATIVE_QUEUE */
 
 
 #if defined(ALTERNATIVE_QUEUE)
