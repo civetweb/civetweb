@@ -7408,7 +7408,7 @@ mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 	ressave = res;
 
 	while (res) {
-		if (dstlen >= res->ai_addrlen) {
+		if (dstlen >= (size_t) res->ai_addrlen) {
 			memcpy(dst, res->ai_addr, res->ai_addrlen);
 			func_ret = 1;
 		}
