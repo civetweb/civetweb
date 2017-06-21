@@ -52,6 +52,8 @@
 #define NO_RETURN [[noreturn]]
 #elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #define NO_RETURN _Noreturn
+#elif defined(__GNUC__)
+#define NO_RETURN __attribute((noreturn))
 #else
 #define NO_RETURN
 #endif

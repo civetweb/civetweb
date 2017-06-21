@@ -841,9 +841,13 @@ mg_atomic_dec(volatile int *addr)
 
 #if defined(__GNUC__) || defined(__MINGW32__)
 /* Show no warning in case system functions are not used. */
+#define GCC_VERSION \
+    (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION >= 40500
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-#endif
+#endif /* GCC_VERSION >= 40500 */
+#endif /* defined(__GNUC__) || defined(__MINGW32__) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
 #pragma clang diagnostic push
@@ -871,8 +875,10 @@ mg_atomic_add(volatile int64_t *addr, int64_t value)
 
 #if defined(__GNUC__)
 /* Show no warning in case system functions are not used. */
+#if GCC_VERSION >= 40500
 #pragma GCC diagnostic pop
-#endif
+#endif /* GCC_VERSION >= 40500 */
+#endif /* defined(__GNUC__) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
 #pragma clang diagnostic pop
@@ -1187,9 +1193,11 @@ struct mg_workerTLS {
 
 #if defined(__GNUC__) || defined(__MINGW32__)
 /* Show no warning in case system functions are not used. */
+#if GCC_VERSION >= 40500
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-#endif
+#endif /* GCC_VERSION >= 40500 */
+#endif /* defined(__GNUC__) || defined(__MINGW32__) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
 #pragma clang diagnostic push
@@ -1267,8 +1275,10 @@ mg_get_current_time_ns(void)
 
 #if defined(__GNUC__)
 /* Show no warning in case system functions are not used. */
+#if GCC_VERSION >= 40500
 #pragma GCC diagnostic pop
-#endif
+#endif /* GCC_VERSION >= 40500 */
+#endif /* defined(__GNUC__) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
 #pragma clang diagnostic pop
@@ -3166,15 +3176,19 @@ skip_quoted(char **buf,
 
 #if defined(__GNUC__) || defined(__MINGW32__)
 /* Disable spurious conversion warning for GCC */
+#if GCC_VERSION >= 40500
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
-#endif
+#endif /* GCC_VERSION >= 40500 */
+#endif /* defined(__GNUC__) || defined(__MINGW32__) */
 
 		end_whitespace = end_word + strspn(&end_word[1], whitespace) + 1;
 
 #if defined(__GNUC__) || defined(__MINGW32__)
+#if GCC_VERSION >= 40500
 #pragma GCC diagnostic pop
-#endif
+#endif /* GCC_VERSION >= 40500 */
+#endif /* defined(__GNUC__) || defined(__MINGW32__) */
 
 		for (p = end_word; p < end_whitespace; p++) {
 			*p = '\0';
@@ -4913,7 +4927,7 @@ get_random(void)
 		lfsr = (lfsr >> 1)
 		       | ((((lfsr >> 0) ^ (lfsr >> 1) ^ (lfsr >> 3) ^ (lfsr >> 4)) & 1)
 		          << 63);
-		lcg = lcg * 6364136223846793005 + 1442695040888963407;
+		lcg = lcg * 6364136223846793005LL + 1442695040888963407LL;
 	}
 
 	/* Combining two pseudo-random number generators and a high resolution part
