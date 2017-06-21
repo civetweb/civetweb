@@ -5114,7 +5114,7 @@ push_all(struct mg_context *ctx,
 	}
 
 	while ((len > 0) && (ctx->stop_flag == 0)) {
-        n = push_inner(ctx, fp, sock, ssl, buf + nwritten, (int)len, timeout);
+		n = push_inner(ctx, fp, sock, ssl, buf + nwritten, (int)len, timeout);
 		if (n < 0) {
 			if (nwritten == 0) {
 				nwritten = n; /* Propagate the error */
@@ -7408,7 +7408,7 @@ mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 	ressave = res;
 
 	while (res) {
-		if (dstlen >= (size_t) res->ai_addrlen) {
+		if (dstlen >= (size_t)res->ai_addrlen) {
 			memcpy(dst, res->ai_addr, res->ai_addrlen);
 			func_ret = 1;
 		}
@@ -8627,9 +8627,24 @@ parse_http_message(char *buf, int len, struct mg_request_info *ri)
 		while ((*buf != '\0') && isspace(*(unsigned char *)buf)) {
 			buf++;
 		}
+
+		/* Separate first line from the following lines.
+		 * "buf" will point to the next line afterwards and the \r\n at
+		 * the end of the line will be replaced by 0 */
 		start_line = skip(&buf, "\r\n");
+
+		/* Separate the first word in the first line from the rest.
+		 * For a HTTP request, this is the method (e.g. "GET").
+		 * The string will be terminated after the method by
+		 * replacing the space by a 0 character. */
 		ri->request_method = skip(&start_line, " ");
+
+		/* The second element in the first line is the URI,
+		 * again terminated by a space. */
 		ri->request_uri = skip(&start_line, " ");
+
+		/* Last element of the first line of a HTTP request
+		 * is the version string (e.g. "HTTP/1.0"). */
 		ri->http_version = start_line;
 
 		/* HTTP message could be either HTTP request:
