@@ -841,8 +841,8 @@ mg_atomic_dec(volatile int *addr)
 
 #if defined(__GNUC__) || defined(__MINGW32__)
 /* Show no warning in case system functions are not used. */
-#define GCC_VERSION \
-    (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#define GCC_VERSION                                                            \
+	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 #if GCC_VERSION >= 40500
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -8634,7 +8634,6 @@ parse_http_message(char *buf, int len, struct mg_request_info *ri)
 		ri->remote_user = ri->request_method = ri->request_uri =
 		    ri->http_version = NULL;
 		ri->num_headers = 0;
-
 		buf[request_length - 1] = '\0';
 
 		/* RFC says that all initial whitespaces should be ingored */
@@ -8668,14 +8667,28 @@ parse_http_message(char *buf, int len, struct mg_request_info *ri)
 		 * otherwise it is invalid.
 		 */
 		is_request = is_valid_http_method(ri->request_method);
-		if ((is_request && memcmp(ri->http_version, "HTTP/", 5) != 0)
-		    || (!is_request && memcmp(ri->request_method, "HTTP/", 5) != 0)) {
-			/* Not a valid request or response: invalid */
-			return -1;
-		}
 		if (is_request) {
+			if ((toupper(ri->http_version[0]) != 'H')
+			    || (toupper(ri->http_version[1]) != 'T')
+			    || (toupper(ri->http_version[2]) != 'T')
+			    || (toupper(ri->http_version[3]) != 'P')
+			    || (toupper(ri->http_version[4]) != '/')) {
+				/* Invalid request */
+				return -1;
+			}
 			ri->http_version += 5;
+		} else {
+			/* Response */
+			if ((toupper(ri->request_method[0]) != 'H')
+			    || (toupper(ri->request_method[1]) != 'T')
+			    || (toupper(ri->request_method[2]) != 'T')
+			    || (toupper(ri->request_method[3]) != 'P')
+			    || (toupper(ri->request_method[4]) != '/')) {
+				/* Invalid response */
+				return -1;
+			}
 		}
+
 		if (parse_http_headers(&buf, ri) < 0) {
 			/* Error while parsing headers */
 			return -1;
