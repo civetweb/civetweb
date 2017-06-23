@@ -8699,7 +8699,9 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	/* The first word has to be the HTTP method */
 	ri->request_method = buf;
 
-	skip_to_end_of_word_and_terminate(&buf, 0);
+	if (skip_to_end_of_word_and_terminate(&buf, 0) <= 0) {
+		return -1;
+	}
 
 	/* Check for a valid http method */
 	if (!is_valid_http_method(ri->request_method)) {
@@ -8708,14 +8710,20 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 
 	/* The second word is the URI */
 	ri->request_uri = buf;
-	skip_to_end_of_word_and_terminate(&buf, 0);
+
+	if (skip_to_end_of_word_and_terminate(&buf, 0) <= 0) {
+		return -1;
+	}
 
 	/* Next would be the HTTP version */
 	ri->http_version = buf;
-	skip_to_end_of_word_and_terminate(&buf, 0);
+
+	if (skip_to_end_of_word_and_terminate(&buf, 1) <= 0) {
+		return -1;
+	}
 
 	/* Check for a valid HTTP version key */
-	if (!strncmp(ri->http_version, "HTTP/", 5)) {
+	if (strncmp(ri->http_version, "HTTP/", 5) != 0) {
 		/* Invalid request */
 		return -1;
 	}
@@ -14298,7 +14306,9 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		            "Request Too Large");
 		*err = 413;
 		return 0;
-	} else if (conn->request_len <= 0) {
+	}
+
+	if (conn->request_len <= 0) {
 		if (conn->data_len > 0) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
@@ -14319,9 +14329,10 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			*err = 0;
 		}
 		return 0;
-	} else if (parse_http_request(conn->buf,
-	                              conn->buf_size,
-	                              &conn->request_info) <= 0) {
+	}
+
+	if (parse_http_request(conn->buf, conn->buf_size, &conn->request_info)
+	    <= 0) {
 		mg_snprintf(conn,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -14330,44 +14341,62 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		            "Bad Request");
 		*err = 400;
 		return 0;
-	} else {
-		/* Message is a valid request or response */
-		if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
-			/* Request/response has content length set */
-			char *endptr = NULL;
-			conn->content_len = strtoll(cl, &endptr, 10);
-			if (endptr == cl) {
-				mg_snprintf(conn,
-				            NULL, /* No truncation check for ebuf */
-				            ebuf,
-				            ebuf_len,
-				            "%s",
-				            "Bad Request");
-				*err = 411;
-				return 0;
-			}
-			/* Publish the content length back to the request info. */
-			conn->request_info.content_length = conn->content_len;
-		} else if ((cl = get_header(&conn->request_info, "Transfer-Encoding"))
-		               != NULL
-		           && !mg_strcasecmp(cl, "chunked")) {
-			conn->is_chunked = 1;
-		} else if (!mg_strcasecmp(conn->request_info.request_method, "POST")
-		           || !mg_strcasecmp(conn->request_info.request_method,
-		                             "PUT")) {
-			/* POST or PUT request without content length set */
-			conn->content_len = -1;
-		} else if (!mg_strncasecmp(conn->request_info.request_method,
-		                           "HTTP/",
-		                           5)) {
-			/* Response without content length set */
-			conn->content_len = -1;
-		} else {
-			/* Other request */
-			conn->content_len = 0;
-		}
 	}
+
+	/* Message is a valid request or response */
+	if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
+		/* Request/response has content length set */
+		char *endptr = NULL;
+		conn->content_len = strtoll(cl, &endptr, 10);
+		if (endptr == cl) {
+			mg_snprintf(conn,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s",
+			            "Bad Request");
+			*err = 411;
+			return 0;
+		}
+		/* Publish the content length back to the request info. */
+		conn->request_info.content_length = conn->content_len;
+	} else if ((cl = get_header(&conn->request_info, "Transfer-Encoding"))
+	               != NULL
+	           && !mg_strcasecmp(cl, "chunked")) {
+		conn->is_chunked = 1;
+	} else if (!mg_strcasecmp(conn->request_info.request_method, "POST")
+	           || !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
+		/* POST or PUT request without content length set */
+		conn->content_len = -1;
+	} else if (!mg_strncasecmp(conn->request_info.request_method, "HTTP/", 5)) {
+		/* Response without content length set */
+		conn->content_len = -1;
+	} else {
+		/* Other request */
+		conn->content_len = 0;
+	}
+
 	return 1;
+}
+
+
+/* conn is assumed to be valid in this internal function */
+static int
+get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
+{
+	reset_per_request_attributes(conn);
+
+	mg_snprintf(conn,
+	            NULL, /* No truncation check for ebuf */
+	            ebuf,
+	            ebuf_len,
+	            "%s",
+	            "Not yet implemented");
+	*err = 500;
+
+	/* TODO: Client implementation */
+
+	return 0;
 }
 
 
@@ -14377,39 +14406,50 @@ mg_get_response(struct mg_connection *conn,
                 size_t ebuf_len,
                 int timeout)
 {
-	if (conn) {
-		/* Implementation of API function for HTTP clients */
-		int err, ret;
-		struct mg_context *octx = conn->ctx;
-		struct mg_context rctx = *(conn->ctx);
-		char txt[32]; /* will not overflow */
+	if (ebuf_len > 0) {
+		ebuf[0] = '\0';
+	}
 
-		if (timeout >= 0) {
-			mg_snprintf(conn, NULL, txt, sizeof(txt), "%i", timeout);
-			rctx.config[REQUEST_TIMEOUT] = txt;
-			/* Not required for non-blocking sockets.
-			set_sock_timeout(conn->client.sock, timeout);
-			*/
-		} else {
-			rctx.config[REQUEST_TIMEOUT] = NULL;
-		}
+	if (!conn) {
+		mg_snprintf(conn,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "%s",
+		            "Parameter error");
+		return -1;
+	}
 
-		conn->ctx = &rctx;
-		ret = get_response(conn, ebuf, ebuf_len, &err);
-		conn->ctx = octx;
+	/* Implementation of API function for HTTP clients */
+	int err, ret;
+	struct mg_context *octx = conn->ctx;
+	struct mg_context rctx = *(conn->ctx);
+	char txt[32]; /* will not overflow */
+
+	if (timeout >= 0) {
+		mg_snprintf(conn, NULL, txt, sizeof(txt), "%i", timeout);
+		rctx.config[REQUEST_TIMEOUT] = txt;
+		/* Not required for non-blocking sockets.
+		set_sock_timeout(conn->client.sock, timeout);
+		*/
+	} else {
+		rctx.config[REQUEST_TIMEOUT] = NULL;
+	}
+
+	conn->ctx = &rctx;
+	ret = get_response(conn, ebuf, ebuf_len, &err);
+	conn->ctx = octx;
 
 #if defined(MG_LEGACY_INTERFACE)
-		/* TODO: 1) uri is deprecated;
-		 *       2) here, ri.uri is the http response code */
-		conn->request_info.uri = conn->request_info.request_uri;
+	/* TODO: 1) uri is deprecated;
+	 *       2) here, ri.uri is the http response code */
+	conn->request_info.uri = conn->request_info.request_uri;
 #endif
-		conn->request_info.local_uri = conn->request_info.request_uri;
+	conn->request_info.local_uri = conn->request_info.request_uri;
 
-		/* TODO (mid): Define proper return values - maybe return length?
-		 * For the first test use <0 for error and >0 for OK */
-		return (ret == 0) ? -1 : +1;
-	}
-	return -1;
+	/* TODO (mid): Define proper return values - maybe return length?
+	 * For the first test use <0 for error and >0 for OK */
+	return (ret == 0) ? -1 : +1;
 }
 
 
@@ -14426,6 +14466,10 @@ mg_download(const char *host,
 	va_list ap;
 	int i;
 	int reqerr;
+
+	if (ebuf_len > 0) {
+		ebuf[0] = '\0';
+	}
 
 	va_start(ap, fmt);
 	ebuf[0] = '\0';
@@ -14455,7 +14499,7 @@ mg_download(const char *host,
 	}
 
 	/* if an error occured, close the connection */
-	if (ebuf[0] != '\0' && conn != NULL) {
+	if ((ebuf[0] != '\0') && (conn != NULL)) {
 		mg_close_connection(conn);
 		conn = NULL;
 	}
