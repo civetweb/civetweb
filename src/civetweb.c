@@ -3201,15 +3201,6 @@ skip_quoted(char **buf,
 }
 
 
-/* Simplified version of skip_quoted without quote char
- * and whitespace == delimiters */
-static char *
-skip(char **buf, const char *delimiters)
-{
-	return skip_quoted(buf, delimiters, delimiters, 0);
-}
-
-
 /* Return HTTP header value, or NULL if not found. */
 static const char *
 get_header(const struct mg_request_info *ri, const char *name)
@@ -6424,31 +6415,39 @@ interpret_cleanup:
 
 
 /* Check whether full request is buffered. Return:
- * -1  if request is malformed
- *  0  if request is not yet fully buffered
+ * -1  if request or response is malformed
+ *  0  if request or response is not yet fully buffered
  * >0  actual request length, including last \r\n\r\n */
 static int
-get_request_len(const char *buf, int buflen)
+get_http_header_len(const char *buf, int buflen)
 {
-	const char *s, *e;
-	int len = 0;
+	int i;
+	for (i = 0; i < buflen - 1; i++) {
+		/* Do an unsigned comparison in some conditions below */
+		const unsigned char c = ((const unsigned char *)buf)[i];
 
-	for (s = buf, e = s + buflen - 1; (len <= 0) && (s < e); s++)
-		/* Control characters are not allowed but >=128 is. */
-		if (!isprint(*(const unsigned char *)s) && (*s != '\r') && (*s != '\n')
-		    && (*(const unsigned char *)s < 128)) {
-			len = -1;
-			break; /* [i_a] abort scan as soon as one malformed character is
-			        * found; */
-			/* don't let subsequent \r\n\r\n win us over anyhow */
-		} else if ((s[0] == '\n') && (s[1] == '\n')) {
-			len = (int)(s - buf) + 2;
-		} else if ((s[0] == '\n') && (&s[1] < e) && (s[1] == '\r')
-		           && (s[2] == '\n')) {
-			len = (int)(s - buf) + 3;
+		if ((c < 128) && ((char)c != '\r') && ((char)c != '\n')
+		    && !isprint(c)) {
+			/* abort scan as soon as one malformed character is found */
+			return -1;
 		}
 
-	return len;
+		if ((buf[i] == '\n') && (buf[i + 1] == '\n')) {
+			/* Two newline, no carriage return - not standard compliant, but it
+			 * should be accepted */
+			return i + 1;
+		}
+
+		if (i < buflen - 3) {
+			if ((buf[i] == '\r') && (buf[i + 1] == '\n') && (buf[i + 2] == '\r')
+			    && (buf[i + 3] == '\n')) {
+				/* Two \r\n - standard compliant */
+				return i + 3;
+			}
+		}
+	}
+
+	return 0;
 }
 
 
@@ -8508,6 +8507,51 @@ mg_store_body(struct mg_connection *conn, const char *path)
 }
 
 
+/* Parse a buffer:
+ * Forward the string pointer till the end of a word, then
+ * terminate it and forward till the begin of the next word.
+ */
+static int
+skip_to_end_of_word_and_terminate(char **ppw, int eol)
+{
+	/* Forward until a space is found - use isgraph here */
+	/* See http://www.cplusplus.com/reference/cctype/ */
+	while (isgraph(**ppw)) {
+		(*ppw)++;
+	}
+
+	/* Check end of word */
+	if (eol) {
+		/* must be a end of line */
+		if ((**ppw != '\r') && (**ppw != '\n')) {
+			return -1;
+		}
+	} else {
+		/* must be a end of a word, but not a line */
+		if (**ppw != ' ') {
+			return -1;
+		}
+	}
+
+	/* Terminate and forward to the next word */
+	do {
+		**ppw = 0;
+		(*ppw)++;
+	} while ((**ppw) && isspace(**ppw));
+
+	/* Check after term */
+	if (!eol) {
+		/* if it's not the end of line, there must be a next word */
+		if (!isgraph(**ppw)) {
+			return -1;
+		}
+	}
+
+	/* ok */
+	return 1;
+}
+
+
 /* Parse HTTP headers from the given buffer, advance buf pointer
  * to the point where parsing stopped.
  * All parameters must be valid pointers (not NULL).
@@ -8621,79 +8665,68 @@ is_valid_http_method(const char *method)
  * buf and ri must be valid pointers (not NULL), len>0.
  * Returns <0 on error. */
 static int
-parse_http_message(char *buf, int len, struct mg_request_info *ri)
+parse_http_request(char *buf, int len, struct mg_request_info *ri)
 {
-	int is_request, request_length;
-	char *start_line;
+	int request_length;
 
-	request_length = get_request_len(buf, len);
+	/* Reset attributes. DO NOT TOUCH is_ssl, remote_ip, remote_addr,
+	 * remote_port */
+	ri->remote_user = ri->request_method = ri->request_uri = ri->http_version =
+	    NULL;
+	ri->num_headers = 0;
 
-	if (request_length > 0) {
-		/* Reset attributes. DO NOT TOUCH is_ssl, remote_ip, remote_addr,
-		 * remote_port */
-		ri->remote_user = ri->request_method = ri->request_uri =
-		    ri->http_version = NULL;
-		ri->num_headers = 0;
-		buf[request_length - 1] = '\0';
-
-		/* RFC says that all initial whitespaces should be ingored */
-		while ((*buf != '\0') && isspace(*(unsigned char *)buf)) {
-			buf++;
-		}
-
-		/* Separate first line from the following lines.
-		 * "buf" will point to the next line afterwards and the \r\n at
-		 * the end of the line will be replaced by 0 */
-		start_line = skip(&buf, "\r\n");
-
-		/* Separate the first word in the first line from the rest.
-		 * For a HTTP request, this is the method (e.g. "GET").
-		 * The string will be terminated after the method by
-		 * replacing the space by a 0 character. */
-		ri->request_method = skip(&start_line, " ");
-
-		/* The second element in the first line is the URI,
-		 * again terminated by a space. */
-		ri->request_uri = skip(&start_line, " ");
-
-		/* Last element of the first line of a HTTP request
-		 * is the version string (e.g. "HTTP/1.0"). */
-		ri->http_version = start_line;
-
-		/* HTTP message could be either HTTP request:
-		 * "GET / HTTP/1.0 ..."
-		 * or a HTTP response:
-		 *  "HTTP/1.0 200 OK ..."
-		 * otherwise it is invalid.
-		 */
-		is_request = is_valid_http_method(ri->request_method);
-		if (is_request) {
-			if ((toupper(ri->http_version[0]) != 'H')
-			    || (toupper(ri->http_version[1]) != 'T')
-			    || (toupper(ri->http_version[2]) != 'T')
-			    || (toupper(ri->http_version[3]) != 'P')
-			    || (toupper(ri->http_version[4]) != '/')) {
-				/* Invalid request */
-				return -1;
-			}
-			ri->http_version += 5;
-		} else {
-			/* Response */
-			if ((toupper(ri->request_method[0]) != 'H')
-			    || (toupper(ri->request_method[1]) != 'T')
-			    || (toupper(ri->request_method[2]) != 'T')
-			    || (toupper(ri->request_method[3]) != 'P')
-			    || (toupper(ri->request_method[4]) != '/')) {
-				/* Invalid response */
-				return -1;
-			}
-		}
-
-		if (parse_http_headers(&buf, ri) < 0) {
-			/* Error while parsing headers */
-			return -1;
-		}
+	/* Ignore leading \r and \n */
+	while ((len > 0) && (*buf == '\r') && (*buf == '\n')) {
+		buf++;
+		len--;
 	}
+
+	/* Find end of HTTP header */
+	request_length = get_http_header_len(buf, len);
+	if (request_length <= 0) {
+		return request_length;
+	}
+	buf[request_length - 1] = '\0';
+
+	/* RFC says that all initial whitespaces should be ingored */
+	while ((*buf != '\0') && isspace(*(unsigned char *)buf)) {
+		buf++;
+	}
+	if ((*buf == 0) || (*buf == '\r') || (*buf == '\n')) {
+		return -1;
+	}
+
+	/* The first word has to be the HTTP method */
+	ri->request_method = buf;
+
+	skip_to_end_of_word_and_terminate(&buf, 0);
+
+	/* Check for a valid http method */
+	if (!is_valid_http_method(ri->request_method)) {
+		return -1;
+	}
+
+	/* The second word is the URI */
+	ri->request_uri = buf;
+	skip_to_end_of_word_and_terminate(&buf, 0);
+
+	/* Next would be the HTTP version */
+	ri->http_version = buf;
+	skip_to_end_of_word_and_terminate(&buf, 0);
+
+	/* Check for a valid HTTP version key */
+	if (!strncmp(ri->http_version, "HTTP/", 5)) {
+		/* Invalid request */
+		return -1;
+	}
+	ri->http_version += 5;
+
+	/* Parse all HTTP headers */
+	if (parse_http_headers(&buf, ri) < 0) {
+		/* Error while parsing headers */
+		return -1;
+	}
+
 	return request_length;
 }
 
@@ -8733,7 +8766,7 @@ read_request(FILE *fp,
 		}
 	}
 
-	request_len = get_request_len(buf, *nread);
+	request_len = get_http_header_len(buf, *nread);
 
 	/* first time reading from this connection */
 	clock_gettime(CLOCK_MONOTONIC, &last_action_time);
@@ -8758,7 +8791,7 @@ read_request(FILE *fp,
 		}
 		if (n > 0) {
 			*nread += n;
-			request_len = get_request_len(buf, *nread);
+			request_len = get_http_header_len(buf, *nread);
 		} else {
 			request_len = 0;
 		}
@@ -14216,7 +14249,7 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 
 
 static int
-getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
+get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
 	const char *cl;
 
@@ -14286,7 +14319,7 @@ getreq(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			*err = 0;
 		}
 		return 0;
-	} else if (parse_http_message(conn->buf,
+	} else if (parse_http_request(conn->buf,
 	                              conn->buf_size,
 	                              &conn->request_info) <= 0) {
 		mg_snprintf(conn,
@@ -14362,7 +14395,7 @@ mg_get_response(struct mg_connection *conn,
 		}
 
 		conn->ctx = &rctx;
-		ret = getreq(conn, ebuf, ebuf_len, &err);
+		ret = get_response(conn, ebuf, ebuf_len, &err);
 		conn->ctx = octx;
 
 #if defined(MG_LEGACY_INTERFACE)
@@ -14410,7 +14443,7 @@ mg_download(const char *host,
 			            "%s",
 			            "Error sending request");
 		} else {
-			getreq(conn, ebuf, ebuf_len, &reqerr);
+			get_response(conn, ebuf, ebuf_len, &reqerr);
 
 #if defined(MG_LEGACY_INTERFACE)
 			/* TODO: 1) uri is deprecated;
@@ -14636,10 +14669,10 @@ process_new_connection(struct mg_connection *conn)
 		conn->handled_requests = 0;
 		do {
 
-			DEBUG_TRACE("calling getreq (%i times for this connection)",
+			DEBUG_TRACE("calling get_request (%i times for this connection)",
 			            conn->handled_requests + 1);
 
-			if (!getreq(conn, ebuf, sizeof(ebuf), &reqerr)) {
+			if (!get_request(conn, ebuf, sizeof(ebuf), &reqerr)) {
 				/* The request sent by the client could not be understood by
 				 * the server, or it was incomplete or a timeout. Send an
 				 * error message and close the connection. */

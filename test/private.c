@@ -70,29 +70,50 @@ START_TEST(test_parse_http_message)
 
 	char req11[] = "GET /\r\nError: X\r\n\r\n";
 
-	ck_assert_int_eq(sizeof(req9) - 1,
-	                 parse_http_message(req9, sizeof(req9), &ri));
-	ck_assert_int_eq(1, ri.num_headers);
 
-	ck_assert_int_eq(sizeof(req1) - 1,
-	                 parse_http_message(req1, sizeof(req1), &ri));
+	ck_assert_int_eq(0, parse_http_request(empty, 0, &ri));
+
+
+	ck_assert_int_eq(strlen(req1), parse_http_request(req1, strlen(req1), &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(0, ri.num_headers);
 
-	ck_assert_int_eq(-1, parse_http_message(req2, sizeof(req2), &ri));
-	ck_assert_int_eq(0, parse_http_message(req3, sizeof(req3), &ri));
-	ck_assert_int_eq(0, parse_http_message(req6, sizeof(req6), &ri));
-	ck_assert_int_eq(0, parse_http_message(req7, sizeof(req7), &ri));
-	ck_assert_int_eq(0, parse_http_message(empty, 0, &ri));
-	ck_assert_int_eq(sizeof(req8) - 1,
-	                 parse_http_message(req8, sizeof(req8), &ri));
+
+	ck_assert_int_eq(-1, parse_http_request(req2, strlen(req2), &ri));
+
+
+	ck_assert_int_eq(0, parse_http_request(req3, strlen(req3), &ri));
+
 
 	/* Multiline header are obsolete, so return an error
 	 * (https://tools.ietf.org/html/rfc7230#section-3.2.4). */
-	ck_assert_int_eq(-1, parse_http_message(req4, sizeof(req4), &ri));
+	ck_assert_int_eq(-1, parse_http_request(req4, strlen(req4), &ri));
 
-	ck_assert_int_eq(sizeof(req10) - 1,
-	                 parse_http_message(req10, sizeof(req10), &ri));
+
+	ck_assert_int_eq(strlen(req5), parse_http_request(req5, strlen(req5), &ri));
+	ck_assert_str_eq("GET", ri.request_method);
+	ck_assert_str_eq("1.1", ri.http_version);
+
+
+	ck_assert_int_eq(0, parse_http_request(req6, strlen(req6), &ri));
+
+
+	ck_assert_int_eq(0, parse_http_request(req7, strlen(req7), &ri));
+
+
+	ck_assert_int_eq(-1, parse_http_request(req8, strlen(req8), &ri));
+	ck_assert_int_eq(strlen(req8),
+	                 parse_http_response(req8, strlen(req8), &ri));
+
+
+	ck_assert_int_eq(-1, parse_http_request(req9, strlen(req9), &ri));
+	ck_assert_int_eq(strlen(req9),
+	                 parse_http_response(req9, strlen(req9), &ri));
+	ck_assert_int_eq(1, ri.num_headers);
+
+
+	ck_assert_int_eq(strlen(req10),
+	                 parse_http_request(req10, strlen(req10), &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(2, ri.num_headers);
 	ck_assert_str_eq("A", ri.http_headers[0].name);
@@ -100,12 +121,8 @@ START_TEST(test_parse_http_message)
 	ck_assert_str_eq("B", ri.http_headers[1].name);
 	ck_assert_str_eq("bar", ri.http_headers[1].value);
 
-	ck_assert_int_eq(-1, parse_http_message(req11, sizeof(req11), &ri));
 
-	ck_assert_int_eq(sizeof(req5) - 1,
-	                 parse_http_message(req5, sizeof(req5), &ri));
-	ck_assert_str_eq("GET", ri.request_method);
-	ck_assert_str_eq("1.1", ri.http_version);
+	ck_assert_int_eq(-1, parse_http_request(req11, strlen(req11), &ri));
 }
 END_TEST
 
@@ -126,7 +143,7 @@ START_TEST(test_should_keep_alive)
 
 	memset(&conn, 0, sizeof(conn));
 	conn.ctx = &ctx;
-	ck_assert_int_eq(parse_http_message(req1, sizeof(req1), &conn.request_info),
+	ck_assert_int_eq(parse_http_request(req1, sizeof(req1), &conn.request_info),
 	                 sizeof(req1) - 1);
 
 	ctx.config[ENABLE_KEEP_ALIVE] = no;
@@ -139,13 +156,13 @@ START_TEST(test_should_keep_alive)
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
 	conn.must_close = 0;
-	parse_http_message(req2, sizeof(req2), &conn.request_info);
+	parse_http_request(req2, sizeof(req2), &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_message(req3, sizeof(req3), &conn.request_info);
+	parse_http_request(req3, sizeof(req3), &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_message(req4, sizeof(req4), &conn.request_info);
+	parse_http_request(req4, sizeof(req4), &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
 
 	conn.status_code = 401;
