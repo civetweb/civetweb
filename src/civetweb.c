@@ -13008,7 +13008,9 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 			conn->request_info.client_cert->serial = mg_strdup(str_serial);
 			conn->request_info.client_cert->finger = mg_strdup(str_finger);
 		} else {
-			/* TODO: write some OOM message */
+			mg_cry(
+			    conn,
+			    "Out of memory: Cannot allocate memory for client certificate");
 		}
 
 		/* Strings returned from bn_bn2hex must be freed using OPENSSL_free,
@@ -13568,8 +13570,8 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.request_uri = NULL;
 	conn->request_info.local_uri = NULL;
 #if defined(MG_LEGACY_INTERFACE)
-	conn->request_info.uri = NULL; /* TODO: cleanup uri,
-	                                * local_uri and request_uri */
+	/* Legacy before split into local_uri and request_uri */
+	conn->request_info.uri = NULL;
 #endif
 	conn->request_info.http_version = NULL;
 	conn->request_info.num_headers = 0;
@@ -14770,7 +14772,7 @@ process_new_connection(struct mg_connection *conn)
 				}
 
 #if defined(MG_LEGACY_INTERFACE)
-				/* TODO: cleanup uri, local_uri and request_uri */
+				/* Legacy before split into local_uri and request_uri */
 				conn->request_info.uri = conn->request_info.local_uri;
 #endif
 			}
