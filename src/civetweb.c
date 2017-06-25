@@ -8739,13 +8739,25 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 }
 
 
+static int
+parse_http_response(char *buf, int len, void *ri)
+{
+	/* TODO: Define mg_response_info and implement parsing */
+    (void)buf;
+    (void)len;
+    (void)ri;
+
+	return -1;
+}
+
+
 /* Keep reading the input (either opened file descriptor fd, or socket sock,
  * or SSL descriptor ssl) into buffer buf, until \r\n\r\n appears in the
  * buffer (which marks the end of HTTP request). Buffer buf may already
  * have some data. The length of the data is stored in nread.
  * Upon every read operation, increase nread by the number of bytes read. */
 static int
-read_request(FILE *fp,
+read_message(FILE *fp,
              struct mg_connection *conn,
              char *buf,
              int bufsiz,
@@ -9400,7 +9412,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		       (unsigned int)buflen);
 		goto done;
 	}
-	headers_len = read_request(out, conn, buf, (int)buflen, &data_len);
+	headers_len = read_message(out, conn, buf, (int)buflen, &data_len);
 	if (headers_len <= 0) {
 
 		/* Could not parse the CGI response. Check if some error message on
@@ -14259,10 +14271,8 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 
 
 static int
-get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
+get_message(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
-	const char *cl;
-
 	if (ebuf_len > 0) {
 		ebuf[0] = '\0';
 	}
@@ -14285,7 +14295,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	clock_gettime(CLOCK_MONOTONIC, &(conn->req_time));
 
 	conn->request_len =
-	    read_request(NULL, conn, conn->buf, conn->buf_size, &conn->data_len);
+	    read_message(NULL, conn, conn->buf, conn->buf_size, &conn->data_len);
 	/* assert(conn->request_len < 0 || conn->data_len >= conn->request_len);
 	 */
 	if ((conn->request_len >= 0) && (conn->data_len < conn->request_len)) {
@@ -14294,7 +14304,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		            ebuf,
 		            ebuf_len,
 		            "%s",
-		            "Invalid request size");
+		            "Invalid message size");
 		*err = 500;
 		return 0;
 	}
@@ -14305,7 +14315,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		            ebuf,
 		            ebuf_len,
 		            "%s",
-		            "Request Too Large");
+		            "Message too large");
 		*err = 413;
 		return 0;
 	}
@@ -14317,7 +14327,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			            ebuf,
 			            ebuf_len,
 			            "%s",
-			            "Client sent malformed request");
+			            "Malformed message");
 			*err = 400;
 		} else {
 			/* Server did not recv anything -> just close the connection */
@@ -14327,9 +14337,20 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			            ebuf,
 			            ebuf_len,
 			            "%s",
-			            "Client did not send a request");
+			            "No data received");
 			*err = 0;
 		}
+		return 0;
+	}
+	return 1;
+}
+
+
+static int
+get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
+{
+	const char *cl;
+	if (!get_message(conn, ebuf, ebuf_len, err)) {
 		return 0;
 	}
 
@@ -14340,12 +14361,12 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		            ebuf,
 		            ebuf_len,
 		            "%s",
-		            "Bad Request");
+		            "Bad request");
 		*err = 400;
 		return 0;
 	}
 
-	/* Message is a valid request or response */
+	/* Message is a valid request */
 	if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
 		/* Request/response has content length set */
 		char *endptr = NULL;
@@ -14356,7 +14377,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			            ebuf,
 			            ebuf_len,
 			            "%s",
-			            "Bad Request");
+			            "Bad request");
 			*err = 411;
 			return 0;
 		}
@@ -14386,19 +14407,47 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 static int
 get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
-	reset_per_request_attributes(conn);
+	const char *cl;
+	if (!get_message(conn, ebuf, ebuf_len, err)) {
+		return 0;
+	}
 
-	mg_snprintf(conn,
-	            NULL, /* No truncation check for ebuf */
-	            ebuf,
-	            ebuf_len,
-	            "%s",
-	            "Not yet implemented");
-	*err = 500;
+	if (parse_http_response(conn->buf, conn->buf_size, &conn->request_info)
+	    <= 0) {
+		mg_snprintf(conn,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "%s",
+		            "Bad response");
+		*err = 400;
+		return 0;
+	}
 
-	/* TODO: Client implementation */
+	/* Message is a valid response */
+	if ((cl = get_header(&conn->request_info, "Content-Length")) != NULL) {
+		/* Request/response has content length set */
+		char *endptr = NULL;
+		conn->content_len = strtoll(cl, &endptr, 10);
+		if (endptr == cl) {
+			mg_snprintf(conn,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s",
+			            "Bad request");
+			*err = 411;
+			return 0;
+		}
+		/* Publish the content length back to the request info. */
+		conn->request_info.content_length = conn->content_len;
+	} else if ((cl = get_header(&conn->request_info, "Transfer-Encoding"))
+	               != NULL
+	           && !mg_strcasecmp(cl, "chunked")) {
+		conn->is_chunked = 1;
+	}
 
-	return 0;
+	return 1;
 }
 
 
