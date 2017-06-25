@@ -75,6 +75,15 @@ struct mg_context;    /* Handle for the HTTP service itself */
 struct mg_connection; /* Handle for the individual connection */
 
 
+/* Maximum number of headers */
+#define MG_MAX_HEADERS (64)
+
+struct mg_header {
+	const char *name;  /* HTTP header name */
+	const char *value; /* HTTP header value */
+};
+
+
 /* This structure contains information about the HTTP request. */
 struct mg_request_info {
 	const char *request_method; /* "GET", "POST", etc */
@@ -106,15 +115,29 @@ struct mg_request_info {
 	void *conn_data;          /* Connection-specific user data */
 
 	int num_headers; /* Number of HTTP headers */
-	struct mg_header {
-		const char *name;  /* HTTP header name */
-		const char *value; /* HTTP header value */
-	} http_headers[64];    /* Maximum 64 headers */
+	struct mg_header
+	    http_headers[MG_MAX_HEADERS]; /* Allocate maximum headers */
 
 	struct client_cert *client_cert; /* Client certificate information */
 
 	const char *acceptedWebSocketSubprotocol; /* websocket subprotocol,
 	                                           * accepted during handshake */
+};
+
+
+/* This structure contains information about the HTTP request. */
+/* This structure may be extended in future versions. */
+struct mg_response_info {
+	int status_code;          /* E.g. 200 */
+	const char *status_text;  /* E.g. "OK" */
+	const char *http_version; /* E.g. "1.0", "1.1" */
+
+	long long content_length; /* Length (in bytes) of the request body,
+	                             can be -1 if no length was given. */
+
+	int num_headers; /* Number of HTTP headers */
+	struct mg_header
+	    http_headers[MG_MAX_HEADERS]; /* Allocate maximum headers */
 };
 
 

@@ -2139,6 +2139,8 @@ get_memory_stat(struct mg_context *ctx)
 
 struct mg_connection {
 	struct mg_request_info request_info;
+	struct mg_response_info response_info;
+
 	struct mg_context *ctx;
 	SSL *ssl;                 /* SSL descriptor */
 	SSL_CTX *client_ssl_ctx;  /* SSL context for client connections */
@@ -8557,13 +8559,12 @@ skip_to_end_of_word_and_terminate(char **ppw, int eol)
  * All parameters must be valid pointers (not NULL).
  * Return <0 on error. */
 static int
-parse_http_headers(char **buf, struct mg_request_info *ri)
+parse_http_headers(char **buf, struct mg_header hdr[MG_MAX_HEADERS])
 {
 	int i;
+	int num_headers = 0;
 
-	ri->num_headers = 0;
-
-	for (i = 0; i < (int)ARRAY_SIZE(ri->http_headers); i++) {
+	for (i = 0; i < (int)MG_MAX_HEADERS; i++) {
 		char *dp = *buf;
 		while ((*dp != ':') && (*dp >= 33) && (*dp <= 126)) {
 			dp++;
@@ -8580,20 +8581,19 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 		/* End of header key (*dp == ':') */
 		/* Truncate here and set the key name */
 		*dp = 0;
-		ri->http_headers[i].name = *buf;
+		hdr[i].name = *buf;
 		do {
 			dp++;
 		} while (*dp == ' ');
 
 		/* The rest of the line is the value */
-		ri->http_headers[i].value = dp;
+		hdr[i].value = dp;
 		*buf = dp + strcspn(dp, "\r\n");
 		if (((*buf)[0] != '\r') || ((*buf)[1] != '\n')) {
 			*buf = NULL;
 		}
 
-
-		ri->num_headers = i + 1;
+		num_headers = i + 1;
 		if (*buf) {
 			(*buf)[0] = 0;
 			(*buf)[1] = 0;
@@ -8608,7 +8608,7 @@ parse_http_headers(char **buf, struct mg_request_info *ri)
 			break;
 		}
 	}
-	return ri->num_headers;
+	return num_headers;
 }
 
 
@@ -8729,8 +8729,10 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	}
 	ri->http_version += 5;
 
+
 	/* Parse all HTTP headers */
-	if (parse_http_headers(&buf, ri) < 0) {
+	ri->num_headers = parse_http_headers(&buf, ri->http_headers);
+	if (ri->num_headers < 0) {
 		/* Error while parsing headers */
 		return -1;
 	}
@@ -8740,14 +8742,100 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 
 
 static int
-parse_http_response(char *buf, int len, void *ri)
+parse_http_response(char *buf, int len, struct mg_response_info *ri)
 {
-	/* TODO: Define mg_response_info and implement parsing */
-    (void)buf;
-    (void)len;
-    (void)ri;
+	int response_length;
+	char *tmp, *tmp2;
+	long l;
 
-	return -1;
+	/* Initialize elements. */
+	ri->http_version = ri->status_text = NULL;
+	ri->num_headers = ri->status_code = 0;
+
+	/* Ignore leading \r and \n */
+	while ((len > 0) && (*buf == '\r') && (*buf == '\n')) {
+		buf++;
+		len--;
+	}
+
+	/* Find end of HTTP header */
+	response_length = get_http_header_len(buf, len);
+	if (response_length <= 0) {
+		return response_length;
+	}
+	buf[response_length - 1] = '\0';
+
+
+	/* TODO: Define mg_response_info and implement parsing */
+	(void)buf;
+	(void)len;
+	(void)ri;
+
+	/* RFC says that all initial whitespaces should be ingored */
+	while ((*buf != '\0') && isspace(*(unsigned char *)buf)) {
+		buf++;
+	}
+	if ((*buf == 0) || (*buf == '\r') || (*buf == '\n')) {
+		return -1;
+	}
+
+	/* The first word is the HTTP version */
+	/* Check for a valid HTTP version key */
+	if (strncmp(buf, "HTTP/", 5) != 0) {
+		/* Invalid request */
+		return -1;
+	}
+	buf += 5;
+	if (!isgraph(buf[0])) {
+		/* Invalid request */
+		return -1;
+	}
+	ri->http_version = buf;
+
+	if (skip_to_end_of_word_and_terminate(&buf, 0) <= 0) {
+		return -1;
+	}
+
+	/* The second word is the status as a number */
+	tmp = buf;
+
+	if (skip_to_end_of_word_and_terminate(&buf, 0) <= 0) {
+		return -1;
+	}
+
+	l = strtol(tmp, &tmp2, 10);
+	if ((l < 100) || (l >= 1000) || ((tmp2 - tmp) != 3) || (*tmp2 != 0)) {
+		/* Everything else but a 3 digit code is invalid */
+		return -1;
+	}
+	ri->status_code = (int)l;
+
+	/* The rest of the line is the status text */
+	ri->status_text = buf;
+
+	/* Find end of status text */
+	/* isgraph or isspace = isprint */
+	while (isprint(*buf)) {
+		buf++;
+	}
+	if ((*buf != '\r') && (*buf != '\n')) {
+		return -1;
+	}
+	/* Terminate string and forward buf to next line */
+	do {
+		*buf = 0;
+		buf++;
+	} while ((*buf) && isspace(*buf));
+
+
+	/* Parse all HTTP headers */
+	ri->num_headers = parse_http_headers(&buf, ri->http_headers);
+	if (ri->num_headers < 0) {
+		/* Error while parsing headers */
+		return -1;
+	}
+
+	return response_length;
 }
 
 
@@ -9453,7 +9541,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	}
 	pbuf = buf;
 	buf[headers_len - 1] = '\0';
-	parse_http_headers(&pbuf, &ri);
+	ri.num_headers = parse_http_headers(&pbuf, ri.http_headers);
 
 	/* Make up and send the status line */
 	status_text = "OK";
@@ -14412,7 +14500,7 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		return 0;
 	}
 
-	if (parse_http_response(conn->buf, conn->buf_size, &conn->request_info)
+	if (parse_http_response(conn->buf, conn->buf_size, &conn->response_info)
 	    <= 0) {
 		mg_snprintf(conn,
 		            NULL, /* No truncation check for ebuf */

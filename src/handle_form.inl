@@ -622,7 +622,8 @@ mg_handle_form_request(struct mg_connection *conn,
 				return -1;
 			}
 
-			parse_http_headers(&hbuf, &part_header);
+			part_header.num_headers =
+			    parse_http_headers(&hbuf, part_header.http_headers);
 			if ((hend + 2) != hbuf) {
 				/* Malformed request */
 				return -1;
