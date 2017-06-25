@@ -602,9 +602,16 @@ CIVETWEB_API int mg_modify_passwords_file(const char *passwords_file_name,
                                           const char *password);
 
 
-/* Return information associated with the request. */
+/* Return information associated with the request.
+ * Use this function to implement a server and get data about a request
+ * from a HTTP/HTTPS client. */
 CIVETWEB_API const struct mg_request_info *
 mg_get_request_info(const struct mg_connection *);
+
+
+/* Return information associated with the request. */
+CIVETWEB_API const struct mg_response_info *
+mg_get_response_info(const struct mg_connection *);
 
 
 /* Send data to the client.
