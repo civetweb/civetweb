@@ -54,6 +54,7 @@ START_TEST(test_parse_http_message)
 	/* Copyright (c) 2013-2015 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	struct mg_request_info ri;
+	struct mg_response_info respi;
 	char empty[] = "";
 	char req1[] = "GET / HTTP/1.1\r\n\r\n";
 	char req2[] = "BLAH / HTTP/1.1\r\n\r\n";
@@ -74,7 +75,7 @@ START_TEST(test_parse_http_message)
 	ck_assert_int_eq(0, parse_http_request(empty, 0, &ri));
 
 
-	ck_assert_int_eq(strlen(req1), parse_http_request(req1, strlen(req1), &ri));
+	ck_assert_int_eq((int)strlen(req1), parse_http_request(req1, strlen(req1), &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(0, ri.num_headers);
 
@@ -90,7 +91,7 @@ START_TEST(test_parse_http_message)
 	ck_assert_int_eq(-1, parse_http_request(req4, strlen(req4), &ri));
 
 
-	ck_assert_int_eq(strlen(req5), parse_http_request(req5, strlen(req5), &ri));
+	ck_assert_int_eq((int)strlen(req5), parse_http_request(req5, strlen(req5), &ri));
 	ck_assert_str_eq("GET", ri.request_method);
 	ck_assert_str_eq("1.1", ri.http_version);
 
@@ -102,17 +103,17 @@ START_TEST(test_parse_http_message)
 
 
 	ck_assert_int_eq(-1, parse_http_request(req8, strlen(req8), &ri));
-	ck_assert_int_eq(strlen(req8),
-	                 parse_http_response(req8, strlen(req8), &ri));
+	ck_assert_int_eq((int)strlen(req8),
+	                 parse_http_response(req8, strlen(req8), &respi));
 
 
 	ck_assert_int_eq(-1, parse_http_request(req9, strlen(req9), &ri));
-	ck_assert_int_eq(strlen(req9),
-	                 parse_http_response(req9, strlen(req9), &ri));
-	ck_assert_int_eq(1, ri.num_headers);
+	ck_assert_int_eq((int)strlen(req9),
+	                 parse_http_response(req9, strlen(req9), &respi));
+	ck_assert_int_eq(1, respi.num_headers);
 
 
-	ck_assert_int_eq(strlen(req10),
+	ck_assert_int_eq((int)strlen(req10),
 	                 parse_http_request(req10, strlen(req10), &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(2, ri.num_headers);
