@@ -3044,8 +3044,11 @@ mg_get_request_info(const struct mg_connection *conn)
 	if (conn->connection_type == 2) {
 		static char txt[16];
 		sprintf(txt, "%03i", conn->response_info.status_code);
-		((struct mg_connection *)conn)->request_info.request_uri =
-		    txt; /* TODO: not thread safe */
+
+		((struct mg_connection *)conn)->request_info.local_uri =
+		    ((struct mg_connection *)conn)->request_info.request_uri =
+		        txt; /* TODO: not thread safe */
+
 		((struct mg_connection *)conn)->request_info.num_headers =
 		    conn->response_info.num_headers;
 		memcpy(((struct mg_connection *)conn)->request_info.http_headers,
