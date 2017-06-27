@@ -164,8 +164,10 @@ START_TEST(test_should_keep_alive)
 
 	memset(&conn, 0, sizeof(conn));
 	conn.ctx = &ctx;
-	ck_assert_int_eq(parse_http_request(req1, strlen(req1), &conn.request_info),
-	                 strlen(req1));
+	ck_assert_int_eq(parse_http_request(req1,
+	                                    (int)strlen(req1),
+	                                    &conn.request_info),
+	                 (int)strlen(req1));
 
 	ctx.config[ENABLE_KEEP_ALIVE] = no;
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
@@ -177,13 +179,13 @@ START_TEST(test_should_keep_alive)
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
 	conn.must_close = 0;
-	parse_http_request(req2, strlen(req2), &conn.request_info);
+	parse_http_request(req2, (int)strlen(req2), &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_request(req3, strlen(req3), &conn.request_info);
+	parse_http_request(req3, (int)strlen(req3), &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_request(req4, strlen(req4), &conn.request_info);
+	parse_http_request(req4, (int)strlen(req4), &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
 
 	conn.status_code = 401;
