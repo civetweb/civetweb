@@ -8740,7 +8740,7 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	ri->num_headers = 0;
 
 	/* Ignore leading \r and \n */
-	while ((len > 0) && (*buf == '\r') && (*buf == '\n')) {
+    while ((len > 0) && ((*buf == '\r') || (*buf == '\n'))) {
 		buf++;
 		len--;
 	}
@@ -8817,7 +8817,7 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 	ri->num_headers = ri->status_code = 0;
 
 	/* Ignore leading \r and \n */
-	while ((len > 0) && (*buf == '\r') && (*buf == '\n')) {
+    while ((len > 0) && ((*buf == '\r') || (*buf == '\n'))) {
 		buf++;
 		len--;
 	}
