@@ -8732,6 +8732,7 @@ static int
 parse_http_request(char *buf, int len, struct mg_request_info *ri)
 {
 	int request_length;
+	int init_skip = 0;
 
 	/* Reset attributes. DO NOT TOUCH is_ssl, remote_ip, remote_addr,
 	 * remote_port */
@@ -8743,6 +8744,7 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	while ((len > 0) && ((*buf == '\r') || (*buf == '\n'))) {
 		buf++;
 		len--;
+		init_skip++;
 	}
 
 	/* Find end of HTTP header */
@@ -8801,7 +8803,7 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 		return -1;
 	}
 
-	return request_length;
+	return request_length + init_skip;
 }
 
 
@@ -8809,6 +8811,7 @@ static int
 parse_http_response(char *buf, int len, struct mg_response_info *ri)
 {
 	int response_length;
+	int init_skip = 0;
 	char *tmp, *tmp2;
 	long l;
 
@@ -8820,6 +8823,7 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 	while ((len > 0) && ((*buf == '\r') || (*buf == '\n'))) {
 		buf++;
 		len--;
+		init_skip++;
 	}
 
 	/* Find end of HTTP header */
@@ -8899,7 +8903,7 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 		return -1;
 	}
 
-	return response_length;
+	return response_length + init_skip;
 }
 
 
