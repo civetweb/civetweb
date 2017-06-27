@@ -6501,14 +6501,14 @@ get_http_header_len(const char *buf, int buflen)
 		if ((buf[i] == '\n') && (buf[i + 1] == '\n')) {
 			/* Two newline, no carriage return - not standard compliant, but it
 			 * should be accepted */
-			return i + 1;
+            return i + 2;
 		}
 
 		if (i < buflen - 3) {
 			if ((buf[i] == '\r') && (buf[i + 1] == '\n') && (buf[i + 2] == '\r')
 			    && (buf[i + 3] == '\n')) {
 				/* Two \r\n - standard compliant */
-				return i + 3;
+                return i + 4;
 			}
 		}
 	}
