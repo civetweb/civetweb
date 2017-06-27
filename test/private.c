@@ -76,18 +76,21 @@ START_TEST(test_parse_http_message)
 	ck_assert_int_eq(0, parse_http_request(empty, 0, &ri));
 
 
-	ck_assert_int_eq((int)strlen(req1), get_http_header_len(req1, (int)strlen(req1)));
+	ck_assert_int_eq((int)strlen(req1),
+	                 get_http_header_len(req1, (int)strlen(req1)));
 	ck_assert_int_eq((int)strlen(req1),
 	                 parse_http_request(req1, (int)strlen(req1), &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(0, ri.num_headers);
 
 
-	ck_assert_int_eq((int)strlen(req2), get_http_header_len(req2, (int)strlen(req2)));
+	ck_assert_int_eq((int)strlen(req2),
+	                 get_http_header_len(req2, (int)strlen(req2)));
 	ck_assert_int_eq(-1, parse_http_request(req2, (int)strlen(req2), &ri));
 
 
-	ck_assert_int_eq((int)strlen(req3), get_http_header_len(req3, (int)strlen(req3)));
+	ck_assert_int_eq((int)strlen(req3),
+	                 get_http_header_len(req3, (int)strlen(req3)));
 	ck_assert_int_eq(0, parse_http_request(req3, (int)strlen(req3), &ri));
 
 
@@ -96,7 +99,8 @@ START_TEST(test_parse_http_message)
 	ck_assert_int_eq(-1, parse_http_request(req4, (int)strlen(req4), &ri));
 
 
-	ck_assert_int_eq((int)strlen(req5), get_http_header_len(req5, (int)strlen(req5)));
+	ck_assert_int_eq((int)strlen(req5),
+	                 get_http_header_len(req5, (int)strlen(req5)));
 	ck_assert_int_eq((int)strlen(req5),
 	                 parse_http_request(req5, (int)strlen(req5), &ri));
 	ck_assert_str_eq("GET", ri.request_method);
@@ -111,20 +115,23 @@ START_TEST(test_parse_http_message)
 	ck_assert_int_eq(0, parse_http_request(req7, (int)strlen(req7), &ri));
 
 
-	ck_assert_int_eq((int)strlen(req8), get_http_header_len(req8, (int)strlen(req8)));
+	ck_assert_int_eq((int)strlen(req8),
+	                 get_http_header_len(req8, (int)strlen(req8)));
 	ck_assert_int_eq(-1, parse_http_request(req8, (int)strlen(req8), &ri));
 	ck_assert_int_eq((int)strlen(req8),
 	                 parse_http_response(req8, (int)strlen(req8), &respi));
 
 
-	ck_assert_int_eq((int)strlen(req9), get_http_header_len(req9, (int)strlen(req9)));
+	ck_assert_int_eq((int)strlen(req9),
+	                 get_http_header_len(req9, (int)strlen(req9)));
 	ck_assert_int_eq(-1, parse_http_request(req9, (int)strlen(req9), &ri));
 	ck_assert_int_eq((int)strlen(req9),
 	                 parse_http_response(req9, (int)strlen(req9), &respi));
 	ck_assert_int_eq(1, respi.num_headers);
 
 
-	ck_assert_int_eq((int)strlen(req10), get_http_header_len(req10, (int)strlen(req10)));
+	ck_assert_int_eq((int)strlen(req10),
+	                 get_http_header_len(req10, (int)strlen(req10)));
 	ck_assert_int_eq((int)strlen(req10),
 	                 parse_http_request(req10, (int)strlen(req10), &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
