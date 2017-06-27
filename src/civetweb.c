@@ -14700,7 +14700,6 @@ mg_download(const char *host,
 	}
 
 	va_start(ap, fmt);
-	ebuf[0] = '\0';
 
 	/* open a connection */
 	conn = mg_connect_client(host, port, use_ssl, ebuf, ebuf_len);
