@@ -12917,9 +12917,10 @@ refresh_trust(struct mg_connection *conn)
 	}
 	chain = conn->ctx->config[SSL_CERTIFICATE_CHAIN];
 	if (chain == NULL) {
+        /* pem is not NULL here */
 		chain = pem;
 	}
-	if ((chain != NULL) && (*chain == 0)) {
+    if (*chain == 0) {
 		chain = NULL;
 	}
 
