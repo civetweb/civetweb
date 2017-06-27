@@ -58,7 +58,7 @@ START_TEST(test_parse_http_message)
 	char empty[] = "";
 	char req1[] = "GET / HTTP/1.1\r\n\r\n";
 	char req2[] = "BLAH / HTTP/1.1\r\n\r\n";
-	char req3[] = "GET / HTTP/1.1\r\nBah\r\n";
+	char req3[] = "GET / HTTP/1.1\nKey: Val\n\n";
 	char req4[] =
 	    "GET / HTTP/1.1\r\nA: foo bar\r\nB: bar\r\nskip\r\nbaz:\r\n\r\n";
 	char req5[] = "GET / HTTP/1.1\r\n\r\n";
@@ -76,6 +76,7 @@ START_TEST(test_parse_http_message)
 	ck_assert_int_eq(0, parse_http_request(empty, 0, &ri));
 
 
+	ck_assert_int_eq(0, get_http_header_len(req1, (int)strlen(req1) - 1));
 	ck_assert_int_eq((int)strlen(req1),
 	                 get_http_header_len(req1, (int)strlen(req1)));
 	ck_assert_int_eq((int)strlen(req1),
@@ -163,8 +164,8 @@ START_TEST(test_should_keep_alive)
 
 	memset(&conn, 0, sizeof(conn));
 	conn.ctx = &ctx;
-	ck_assert_int_eq(parse_http_request(req1, sizeof(req1), &conn.request_info),
-	                 sizeof(req1) - 1);
+	ck_assert_int_eq(parse_http_request(req1, strlen(req1), &conn.request_info),
+	                 strlen(req1));
 
 	ctx.config[ENABLE_KEEP_ALIVE] = no;
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
@@ -176,13 +177,13 @@ START_TEST(test_should_keep_alive)
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
 	conn.must_close = 0;
-	parse_http_request(req2, sizeof(req2), &conn.request_info);
+	parse_http_request(req2, strlen(req2), &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_request(req3, sizeof(req3), &conn.request_info);
+	parse_http_request(req3, strlen(req3), &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_request(req4, sizeof(req4), &conn.request_info);
+	parse_http_request(req4, strlen(req4), &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
 
 	conn.status_code = 401;
