@@ -61,10 +61,10 @@ START_TEST(test_parse_http_message)
 	char req3[] = "GET / HTTP/1.1\nKey: Val\n\n";
 	char req4[] =
 	    "GET / HTTP/1.1\r\nA: foo bar\r\nB: bar\r\nskip\r\nbaz:\r\n\r\n";
-	char req5[] = "GET / HTTP/1.1\r\n\r\n";
+	char req5[] = "GET / HTTP/1.0\n\n";
 	char req6[] = "G";
 	char req7[] = " blah ";
-	char req8[] = " HTTP/1.1 200 OK \n\n";
+	char req8[] = "HTTP/1.0 404 Not Found\n\n";
 	char req9[] = "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n";
 
 	char req10[] = "GET / HTTP/1.1\r\nA: foo bar\r\nB: bar\r\n\r\n";
@@ -90,21 +90,38 @@ START_TEST(test_parse_http_message)
 	int lenhdr12 = lenreq12 - 4; /* length without body */
 
 
+	/* An empty string is neither a complete request nor a complete
+	 * response, so it must return 0 */
 	ck_assert_int_eq(0, get_http_header_len(empty, 0));
 	ck_assert_int_eq(0, parse_http_request(empty, 0, &ri));
+	ck_assert_int_eq(0, parse_http_response(empty, 0, &ri));
 
+	/* Same is true for a leading space */
+	ck_assert_int_eq(0, get_http_header_len(" ", 0));
+	ck_assert_int_eq(0, parse_http_request(" ", 0, &ri));
+	ck_assert_int_eq(0, parse_http_response(" ", 0, &ri));
 
-	ck_assert_int_eq(0, get_http_header_len(req1, lenreq1 - 1));
+	/* req1 is a valid request */
 	ck_assert_int_eq(lenreq1, get_http_header_len(req1, lenreq1));
 	ck_assert_int_eq(lenreq1, parse_http_request(req1, lenreq1, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(0, ri.num_headers);
+	ck_assert_int_eq(-1, parse_http_response(req1, lenreq1, &respi));
+
+	/* req1 minus 1 byte at the end is incomplete */
+	ck_assert_int_eq(0, get_http_header_len(req1, lenreq1 - 1));
+
+	/* req1 minus 1 byte at the start is complete but invalid */
+	ck_assert_int_eq(lenreq1 - 1, get_http_header_len(req1 + 1, lenreq1 - 1));
+	ck_assert_int_eq(-1, parse_http_request(req1 + 1, lenreq1 - 1, &ri));
 
 
+	/* req2 is a complete, but invalid request */
 	ck_assert_int_eq(lenreq2, get_http_header_len(req2, lenreq2));
 	ck_assert_int_eq(-1, parse_http_request(req2, lenreq2, &ri));
 
 
+	/* req3 is a complete and valid request */
 	ck_assert_int_eq(lenreq3, get_http_header_len(req3, lenreq3));
 	ck_assert_int_eq(lenreq3, parse_http_request(req3, lenreq3, &ri));
 	ck_assert_int_eq(-1, parse_http_response(req3, lenreq3, &respi));
@@ -115,32 +132,39 @@ START_TEST(test_parse_http_message)
 	ck_assert_int_eq(-1, parse_http_request(req4, lenreq4, &ri));
 
 
+	/* req5 is a complete and valid request (also somewhat malformed,
+	 * since it uses \n\n instead of \r\n\r\n) */
 	ck_assert_int_eq(lenreq5, get_http_header_len(req5, lenreq5));
 	ck_assert_int_eq(lenreq5, parse_http_request(req5, lenreq5, &ri));
 	ck_assert_str_eq("GET", ri.request_method);
-	ck_assert_str_eq("1.1", ri.http_version);
+	ck_assert_str_eq("1.0", ri.http_version);
 	ck_assert_int_eq(-1, parse_http_response(req5, lenreq5, &respi));
 
 
+	/* req6 is incomplete */
 	ck_assert_int_eq(0, get_http_header_len(req6, lenreq6));
 	ck_assert_int_eq(0, parse_http_request(req6, lenreq6, &ri));
 
 
+	/* req7 is invalid, but not yet complete */
 	ck_assert_int_eq(0, get_http_header_len(req7, lenreq7));
 	ck_assert_int_eq(0, parse_http_request(req7, lenreq7, &ri));
 
 
+	/* req8 is a valid response */
 	ck_assert_int_eq(lenreq8, get_http_header_len(req8, lenreq8));
-	ck_assert_int_eq(lenreq8, parse_http_request(req8, lenreq8, &ri));
-	ck_assert_int_eq(-1, parse_http_response(req8, lenreq8, &respi));
+	ck_assert_int_eq(-1, parse_http_request(req8, lenreq8, &ri));
+	ck_assert_int_eq(lenreq8, parse_http_response(req8, lenreq8, &respi));
 
 
+	/* req9 is a valid response */
 	ck_assert_int_eq(lenreq9, get_http_header_len(req9, lenreq9));
 	ck_assert_int_eq(-1, parse_http_request(req9, lenreq9, &ri));
 	ck_assert_int_eq(lenreq9, parse_http_response(req9, lenreq9, &respi));
 	ck_assert_int_eq(1, respi.num_headers);
 
 
+	/* req10 is a valid request */
 	ck_assert_int_eq(lenreq10, get_http_header_len(req10, lenreq10));
 	ck_assert_int_eq(lenreq10, parse_http_request(req10, lenreq10, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
@@ -151,9 +175,11 @@ START_TEST(test_parse_http_message)
 	ck_assert_str_eq("bar", ri.http_headers[1].value);
 
 
+	/* req11 is a complete but valid request */
 	ck_assert_int_eq(-1, parse_http_request(req11, lenreq11, &ri));
 
 
+	/* req12 is a valid request with body data */
 	ck_assert_int_gt(lenreq12, lenhdr12);
 	ck_assert_int_eq(lenhdr12, get_http_header_len(req12, lenreq12));
 	ck_assert_int_eq(lenhdr12, parse_http_request(req12, lenreq12, &ri));
