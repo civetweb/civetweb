@@ -644,7 +644,31 @@ WebsocketDataHandler(struct mg_connection *conn,
 	ASSERT(client->conn == conn);
 	ASSERT(client->state >= 1);
 
-	fprintf(stdout, "Websocket got data:\r\n");
+	fprintf(stdout, "Websocket got %lu bytes of ", (unsigned long)len);
+	switch (((unsigned char)bit) & 0x0F) {
+	case WEBSOCKET_OPCODE_CONTINUATION:
+		fprintf(stdout, "continuation");
+		break;
+	case WEBSOCKET_OPCODE_TEXT:
+		fprintf(stdout, "text");
+		break;
+	case WEBSOCKET_OPCODE_BINARY:
+		fprintf(stdout, "binary");
+		break;
+	case WEBSOCKET_OPCODE_CONNECTION_CLOSE:
+		fprintf(stdout, "close");
+		break;
+	case WEBSOCKET_OPCODE_PING:
+		fprintf(stdout, "ping");
+		break;
+	case WEBSOCKET_OPCODE_PONG:
+		fprintf(stdout, "pong");
+		break;
+	default:
+		fprintf(stdout, "unknown(%1xh)", ((unsigned char)bit) & 0x0F);
+		break;
+	}
+	fprintf(stdout, " data:\r\n");
 	fwrite(data, len, 1, stdout);
 	fprintf(stdout, "\r\n\r\n");
 
