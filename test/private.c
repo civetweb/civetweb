@@ -107,6 +107,7 @@ START_TEST(test_parse_http_message)
 
 	ck_assert_int_eq(lenreq3, get_http_header_len(req3, lenreq3));
 	ck_assert_int_eq(lenreq3, parse_http_request(req3, lenreq3, &ri));
+	ck_assert_int_eq(-1, parse_http_response(req3, lenreq3, &respi));
 
 
 	/* Multiline header are obsolete, so return an error
@@ -118,9 +119,10 @@ START_TEST(test_parse_http_message)
 	ck_assert_int_eq(lenreq5, parse_http_request(req5, lenreq5, &ri));
 	ck_assert_str_eq("GET", ri.request_method);
 	ck_assert_str_eq("1.1", ri.http_version);
+	ck_assert_int_eq(-1, parse_http_response(req5, lenreq5, &respi));
 
 
-        ck_assert_int_eq(0, get_http_header_len(req6, lenreq6));
+	ck_assert_int_eq(0, get_http_header_len(req6, lenreq6));
 	ck_assert_int_eq(0, parse_http_request(req6, lenreq6, &ri));
 
 
@@ -129,8 +131,8 @@ START_TEST(test_parse_http_message)
 
 
 	ck_assert_int_eq(lenreq8, get_http_header_len(req8, lenreq8));
-	ck_assert_int_eq(-1, parse_http_request(req8, lenreq8, &ri));
-	ck_assert_int_eq(lenreq8, parse_http_response(req8, lenreq8, &respi));
+	ck_assert_int_eq(lenreq8, parse_http_request(req8, lenreq8, &ri));
+	ck_assert_int_eq(-1, parse_http_response(req8, lenreq8, &respi));
 
 
 	ck_assert_int_eq(lenreq9, get_http_header_len(req9, lenreq9));

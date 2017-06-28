@@ -8760,11 +8760,18 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	    NULL;
 	ri->num_headers = 0;
 
-	/* Ignore leading \r and \n */
-	while ((len > 0) && ((*buf == '\r') || (*buf == '\n'))) {
+	/* RFC says that all initial whitespaces should be ingored */
+	/* This included all leading \r and \n (isspace) */
+    /* See table: http://www.cplusplus.com/reference/cctype/ */
+	while ((len > 0) && isspace(*(unsigned char *)buf)) {
 		buf++;
 		len--;
 		init_skip++;
+	}
+
+	/* Control characters are not allowed, including zero */
+	if (iscntrl(*(unsigned char *)buf)) {
+		return -1;
 	}
 
 	/* Find end of HTTP header */
@@ -8774,10 +8781,6 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	}
 	buf[request_length - 1] = '\0';
 
-	/* RFC says that all initial whitespaces should be ingored */
-	while ((*buf != '\0') && isspace(*(unsigned char *)buf)) {
-		buf++;
-	}
 	if ((*buf == 0) || (*buf == '\r') || (*buf == '\n')) {
 		return -1;
 	}
@@ -8839,11 +8842,18 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 	ri->http_version = ri->status_text = NULL;
 	ri->num_headers = ri->status_code = 0;
 
-	/* Ignore leading \r and \n */
-	while ((len > 0) && ((*buf == '\r') || (*buf == '\n'))) {
+	/* RFC says that all initial whitespaces should be ingored */
+	/* This included all leading \r and \n (isspace) */
+    /* See table: http://www.cplusplus.com/reference/cctype/ */
+	while ((len > 0) && isspace(*(unsigned char *)buf)) {
 		buf++;
 		len--;
 		init_skip++;
+	}
+
+	/* Control characters are not allowed, including zero */
+	if (iscntrl(*(unsigned char *)buf)) {
+		return -1;
 	}
 
 	/* Find end of HTTP header */
