@@ -120,7 +120,7 @@ START_TEST(test_parse_http_message)
 	ck_assert_str_eq("1.1", ri.http_version);
 
 
-	ck_assert_int_eq(0, get_http_header_len(req8, lenreq8));
+        ck_assert_int_eq(0, get_http_header_len(req6, lenreq6));
 	ck_assert_int_eq(0, parse_http_request(req6, lenreq6, &ri));
 
 
