@@ -3446,18 +3446,38 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 static int
 should_keep_alive(const struct mg_connection *conn)
 {
-	if (conn != NULL) {
-		const char *http_version = get_http_version(conn);
-		const char *header = mg_get_header(conn, "Connection");
-		if (conn->must_close || (conn->status_code == 401)
-		    || mg_strcasecmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes") != 0
-		    || (header != NULL && !header_has_option(header, "keep-alive"))
-		    || (header == NULL && http_version
-		        && 0 != strcmp(http_version, "1.1"))) {
-			return 0;
+	const char *http_version;
+	const char *header;
+
+	/* First satisfy needs of the server */
+	if ((conn == NULL) || conn->must_close) {
+		/* Close, if civetweb framework needs to close */
+		return 0;
+	}
+
+	if (mg_strcasecmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes") != 0) {
+		/* Close, if keep alive is not enabled */
+		return 0;
+	}
+
+	/* Check explicit wish of the client */
+	header = mg_get_header(conn, "Connection");
+	if (header) {
+		/* If there is a connection header from the client, obey */
+		if (header_has_option(header, "keep-alive")) {
+			return 1;
 		}
+		return 0;
+	}
+
+	/* Use default of the standard */
+	http_version = get_http_version(conn);
+	if (http_version && (0 == strcmp(http_version, "1.1"))) {
+		/* HTTP 1.1 default is keep alive */
 		return 1;
 	}
+
+	/* HTTP 1.0 (and earlier) default is to close the connection */
 	return 0;
 }
 
