@@ -56,6 +56,7 @@ START_TEST(test_parse_http_message)
 	struct mg_request_info ri;
 	struct mg_response_info respi;
 	char empty[] = "";
+        char space[] = " \x00";
 	char req1[] = "GET / HTTP/1.1\r\n\r\n";
 	char req2[] = "BLAH / HTTP/1.1\r\n\r\n";
 	char req3[] = "GET / HTTP/1.1\nKey: Val\n\n";
@@ -94,12 +95,17 @@ START_TEST(test_parse_http_message)
 	 * response, so it must return 0 */
 	ck_assert_int_eq(0, get_http_header_len(empty, 0));
 	ck_assert_int_eq(0, parse_http_request(empty, 0, &ri));
-	ck_assert_int_eq(0, parse_http_response(empty, 0, &ri));
+        ck_assert_int_eq(0, parse_http_response(empty, 0, &respi));
 
 	/* Same is true for a leading space */
-	ck_assert_int_eq(0, get_http_header_len(" ", 0));
-	ck_assert_int_eq(0, parse_http_request(" ", 0, &ri));
-	ck_assert_int_eq(0, parse_http_response(" ", 0, &ri));
+        ck_assert_int_eq(0, get_http_header_len(space, 1));
+        ck_assert_int_eq(0, parse_http_request(space, 1, &ri));
+        ck_assert_int_eq(0, parse_http_response(space, 1, &respi));
+
+        /* But a control character (like 0) makes it invalid */
+        ck_assert_int_eq(-1, get_http_header_len(space, 2));
+        ck_assert_int_eq(-1, parse_http_request(space, 2, &ri));
+        ck_assert_int_eq(-1, parse_http_response(space, 2, &respi));
 
 	/* req1 is a valid request */
 	ck_assert_int_eq(lenreq1, get_http_header_len(req1, lenreq1));
