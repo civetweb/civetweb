@@ -4103,7 +4103,7 @@ START_TEST(test_mg_store_body)
 
 	/* Nothing left to read */
 	r = mg_read(client, client_data_buf, sizeof(client_data_buf) - 1);
-	ck_assert_int_gt(r, 0);
+        ck_assert_int_eq(r, 0); /* TODO: Check why this was _gt in prev version */
 	client_data_buf[r] = 0;
 
 	sprintf(check_data, "(%i bytes saved)", test_mg_store_body_con_len);

@@ -71,70 +71,70 @@ START_TEST(test_parse_http_message)
 
 	char req11[] = "GET /\r\nError: X\r\n\r\n";
 
+	int lenreq1 = (int)strlen(req1);
+	int lenreq2 = (int)strlen(req2);
+	int lenreq3 = (int)strlen(req3);
+	int lenreq4 = (int)strlen(req4);
+	int lenreq5 = (int)strlen(req5);
+	int lenreq6 = (int)strlen(req6);
+	int lenreq7 = (int)strlen(req7);
+	int lenreq8 = (int)strlen(req8);
+	int lenreq9 = (int)strlen(req9);
+	int lenreq10 = (int)strlen(req10);
+	int lenreq11 = (int)strlen(req11);
+
 
 	ck_assert_int_eq(0, get_http_header_len(empty, 0));
 	ck_assert_int_eq(0, parse_http_request(empty, 0, &ri));
 
 
-	ck_assert_int_eq(0, get_http_header_len(req1, (int)strlen(req1) - 1));
-	ck_assert_int_eq((int)strlen(req1),
-	                 get_http_header_len(req1, (int)strlen(req1)));
-	ck_assert_int_eq((int)strlen(req1),
-	                 parse_http_request(req1, (int)strlen(req1), &ri));
+	ck_assert_int_eq(0, get_http_header_len(req1, lenreq1 - 1));
+	ck_assert_int_eq(lenreq1, get_http_header_len(req1, lenreq1));
+	ck_assert_int_eq(lenreq1, parse_http_request(req1, lenreq1, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(0, ri.num_headers);
 
 
-	ck_assert_int_eq((int)strlen(req2),
-	                 get_http_header_len(req2, (int)strlen(req2)));
-	ck_assert_int_eq(-1, parse_http_request(req2, (int)strlen(req2), &ri));
+	ck_assert_int_eq(lenreq2, get_http_header_len(req2, lenreq2));
+	ck_assert_int_eq(-1, parse_http_request(req2, lenreq2, &ri));
 
 
-	ck_assert_int_eq((int)strlen(req3),
-	                 get_http_header_len(req3, (int)strlen(req3)));
-	ck_assert_int_eq(0, parse_http_request(req3, (int)strlen(req3), &ri));
+	ck_assert_int_eq(lenreq3, get_http_header_len(req3, lenreq3));
+	ck_assert_int_eq(0, parse_http_request(req3, lenreq3, &ri));
 
 
 	/* Multiline header are obsolete, so return an error
 	 * (https://tools.ietf.org/html/rfc7230#section-3.2.4). */
-	ck_assert_int_eq(-1, parse_http_request(req4, (int)strlen(req4), &ri));
+	ck_assert_int_eq(-1, parse_http_request(req4, lenreq4, &ri));
 
 
-	ck_assert_int_eq((int)strlen(req5),
-	                 get_http_header_len(req5, (int)strlen(req5)));
-	ck_assert_int_eq((int)strlen(req5),
-	                 parse_http_request(req5, (int)strlen(req5), &ri));
+	ck_assert_int_eq(lenreq5, get_http_header_len(req5, lenreq5));
+	ck_assert_int_eq(lenreq5, parse_http_request(req5, lenreq5, &ri));
 	ck_assert_str_eq("GET", ri.request_method);
 	ck_assert_str_eq("1.1", ri.http_version);
 
 
-	ck_assert_int_eq(0, get_http_header_len(req8, (int)strlen(req8)));
-	ck_assert_int_eq(0, parse_http_request(req6, (int)strlen(req6), &ri));
+	ck_assert_int_eq(0, get_http_header_len(req8, lenreq8));
+	ck_assert_int_eq(0, parse_http_request(req6, lenreq6, &ri));
 
 
-	ck_assert_int_eq(0, get_http_header_len(req7, (int)strlen(req7)));
-	ck_assert_int_eq(0, parse_http_request(req7, (int)strlen(req7), &ri));
+	ck_assert_int_eq(0, get_http_header_len(req7, lenreq7));
+	ck_assert_int_eq(0, parse_http_request(req7, lenreq7, &ri));
 
 
-	ck_assert_int_eq((int)strlen(req8),
-	                 get_http_header_len(req8, (int)strlen(req8)));
-	ck_assert_int_eq(-1, parse_http_request(req8, (int)strlen(req8), &ri));
-	ck_assert_int_eq((int)strlen(req8),
-	                 parse_http_response(req8, (int)strlen(req8), &respi));
+	ck_assert_int_eq(lenreq8, get_http_header_len(req8, lenreq8));
+	ck_assert_int_eq(-1, parse_http_request(req8, lenreq8, &ri));
+	ck_assert_int_eq(lenreq8, parse_http_response(req8, lenreq8, &respi));
 
 
-	ck_assert_int_eq((int)strlen(req9),
-	                 get_http_header_len(req9, (int)strlen(req9)));
-	ck_assert_int_eq(-1, parse_http_request(req9, (int)strlen(req9), &ri));
-	ck_assert_int_eq((int)strlen(req9),
-	                 parse_http_response(req9, (int)strlen(req9), &respi));
+	ck_assert_int_eq(lenreq9, get_http_header_len(req9, lenreq9));
+	ck_assert_int_eq(-1, parse_http_request(req9, lenreq9, &ri));
+	ck_assert_int_eq(lenreq9, parse_http_response(req9, lenreq9, &respi));
 	ck_assert_int_eq(1, respi.num_headers);
 
 
-	ck_assert_int_eq((int)strlen(req10),
-	                 get_http_header_len(req10, (int)strlen(req10)));
-	ck_assert_int_eq((int)strlen(req10),
-	                 parse_http_request(req10, (int)strlen(req10), &ri));
+	ck_assert_int_eq(lenreq10, get_http_header_len(req10, lenreq10));
+	ck_assert_int_eq(lenreq10, parse_http_request(req10, lenreq10, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(2, ri.num_headers);
 	ck_assert_str_eq("A", ri.http_headers[0].name);
@@ -143,7 +143,7 @@ START_TEST(test_parse_http_message)
 	ck_assert_str_eq("bar", ri.http_headers[1].value);
 
 
-	ck_assert_int_eq(-1, parse_http_request(req11, (int)strlen(req11), &ri));
+	ck_assert_int_eq(-1, parse_http_request(req11, lenreq11, &ri));
 }
 END_TEST
 
@@ -162,12 +162,16 @@ START_TEST(test_should_keep_alive)
 	char yes[] = "yes";
 	char no[] = "no";
 
+	int lenreq1 = (int)strlen(req1);
+	int lenreq2 = (int)strlen(req2);
+	int lenreq3 = (int)strlen(req3);
+	int lenreq4 = (int)strlen(req4);
+
+
 	memset(&conn, 0, sizeof(conn));
 	conn.ctx = &ctx;
-	ck_assert_int_eq(parse_http_request(req1,
-	                                    (int)strlen(req1),
-	                                    &conn.request_info),
-	                 (int)strlen(req1));
+	ck_assert_int_eq(parse_http_request(req1, lenreq1, &conn.request_info),
+	                 lenreq1);
 
 	ctx.config[ENABLE_KEEP_ALIVE] = no;
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
@@ -179,13 +183,13 @@ START_TEST(test_should_keep_alive)
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
 	conn.must_close = 0;
-	parse_http_request(req2, (int)strlen(req2), &conn.request_info);
+	parse_http_request(req2, lenreq2, &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_request(req3, (int)strlen(req3), &conn.request_info);
+	parse_http_request(req3, lenreq3, &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_request(req4, (int)strlen(req4), &conn.request_info);
+	parse_http_request(req4, lenreq4, &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
 
 	conn.status_code = 401;
