@@ -71,6 +71,10 @@ START_TEST(test_parse_http_message)
 
 	char req11[] = "GET /\r\nError: X\r\n\r\n";
 
+	char req12[] =
+	    "POST /a/b/c.d?e=f&g HTTP/1.1\r\nKey1: val1\r\nKey2: val2\r\n\r\nBODY";
+
+
 	int lenreq1 = (int)strlen(req1);
 	int lenreq2 = (int)strlen(req2);
 	int lenreq3 = (int)strlen(req3);
@@ -82,6 +86,8 @@ START_TEST(test_parse_http_message)
 	int lenreq9 = (int)strlen(req9);
 	int lenreq10 = (int)strlen(req10);
 	int lenreq11 = (int)strlen(req11);
+	int lenreq12 = (int)strlen(req12);
+	int lenhdr12 = lenreq12 - 4; /* length without body */
 
 
 	ck_assert_int_eq(0, get_http_header_len(empty, 0));
@@ -100,7 +106,7 @@ START_TEST(test_parse_http_message)
 
 
 	ck_assert_int_eq(lenreq3, get_http_header_len(req3, lenreq3));
-        ck_assert_int_eq(lenreq3, parse_http_request(req3, lenreq3, &ri));
+	ck_assert_int_eq(lenreq3, parse_http_request(req3, lenreq3, &ri));
 
 
 	/* Multiline header are obsolete, so return an error
@@ -144,6 +150,11 @@ START_TEST(test_parse_http_message)
 
 
 	ck_assert_int_eq(-1, parse_http_request(req11, lenreq11, &ri));
+
+
+	ck_assert_int_gt(lenreq12, lenhdr12);
+	ck_assert_int_eq(lenhdr12, get_http_header_len(req12, lenreq12));
+	ck_assert_int_eq(lenhdr12, parse_http_request(req12, lenreq12, &ri));
 }
 END_TEST
 

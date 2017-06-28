@@ -3996,6 +3996,10 @@ test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *ignored)
 		          path,
 		          (long)rc);
 		mg_close_connection(conn);
+
+		/* Debug output for tests */
+		printf("mg_store_body(%s) failed (ret: %ld)\n", path, (long)rc);
+
 		return 500;
 	}
 
@@ -4007,6 +4011,9 @@ test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *ignored)
 	          path,
 	          (long)rc);
 	mg_close_connection(conn);
+
+	/* Debug output for tests */
+	printf("mg_store_body(%s) OK (%ld bytes)\n", path, (long)rc);
 
 	return 200;
 }
@@ -4101,9 +4108,9 @@ START_TEST(test_mg_store_body)
 	ck_assert_ptr_ne(client_ri->request_uri, NULL);
 	ck_assert_str_eq(client_ri->request_uri, "200");
 
-	/* Nothing left to read */
+	/* Read PUT response */
 	r = mg_read(client, client_data_buf, sizeof(client_data_buf) - 1);
-        ck_assert_int_eq(r, 0); /* TODO: Check why this was _gt in prev version */
+	ck_assert_int_gt(r, 0);
 	client_data_buf[r] = 0;
 
 	sprintf(check_data, "(%i bytes saved)", test_mg_store_body_con_len);
