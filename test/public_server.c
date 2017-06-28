@@ -4024,8 +4024,12 @@ test_mg_store_body_begin_request_callback(struct mg_connection *conn)
 {
 	const struct mg_request_info *info = mg_get_request_info(conn);
 
-	if (strcmp(info->request_method, "PUT") == 0
-	    || strcmp(info->request_method, "DELETE") == 0) {
+	/* Debug output for tests */
+	printf("test_mg_store_body_begin_request_callback called (%s)\n",
+	       info->request_method);
+
+	if ((strcmp(info->request_method, "PUT") == 0)
+	    || (strcmp(info->request_method, "DELETE") == 0)) {
 		return test_mg_store_body_put_delete_handler(conn, NULL);
 	}
 	return 0;

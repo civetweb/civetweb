@@ -8762,11 +8762,16 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 
 	/* RFC says that all initial whitespaces should be ingored */
 	/* This included all leading \r and \n (isspace) */
-    /* See table: http://www.cplusplus.com/reference/cctype/ */
+	/* See table: http://www.cplusplus.com/reference/cctype/ */
 	while ((len > 0) && isspace(*(unsigned char *)buf)) {
 		buf++;
 		len--;
 		init_skip++;
+	}
+
+	if (len == 0) {
+		/* Incomplete request */
+		return 0;
 	}
 
 	/* Control characters are not allowed, including zero */
@@ -8844,11 +8849,16 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 
 	/* RFC says that all initial whitespaces should be ingored */
 	/* This included all leading \r and \n (isspace) */
-    /* See table: http://www.cplusplus.com/reference/cctype/ */
+	/* See table: http://www.cplusplus.com/reference/cctype/ */
 	while ((len > 0) && isspace(*(unsigned char *)buf)) {
 		buf++;
 		len--;
 		init_skip++;
+	}
+
+	if (len == 0) {
+		/* Incomplete request */
+		return 0;
 	}
 
 	/* Control characters are not allowed, including zero */
