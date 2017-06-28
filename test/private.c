@@ -100,7 +100,7 @@ START_TEST(test_parse_http_message)
 
 
 	ck_assert_int_eq(lenreq3, get_http_header_len(req3, lenreq3));
-	ck_assert_int_eq(0, parse_http_request(req3, lenreq3, &ri));
+        ck_assert_int_eq(lenreq3, parse_http_request(req3, lenreq3, &ri));
 
 
 	/* Multiline header are obsolete, so return an error
