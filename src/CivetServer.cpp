@@ -321,17 +321,16 @@ CivetServer::~CivetServer()
 void
 CivetServer::closeHandler(const struct mg_connection *conn)
 {
-	const struct mg_request_info *request_info = mg_get_request_info(conn);
-	assert(request_info != NULL);
-	CivetServer *me = (CivetServer *)(request_info->user_data);
+	CivetServer *me = (CivetServer *)mg_get_user_data(mg_get_context(conn));
 	assert(me != NULL);
 
 	// Happens when a request hits the server before the context is saved
 	if (me->context == NULL)
 		return;
 
-	if (me->userCloseHandler)
+	if (me->userCloseHandler) {
 		me->userCloseHandler(conn);
+	}
 	mg_lock_context(me->context);
 	me->connections.erase(const_cast<struct mg_connection *>(conn));
 	mg_unlock_context(me->context);
