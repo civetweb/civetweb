@@ -47,25 +47,22 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
+static char tmp_parse_buffer[1024];
 
 static int
 test_parse_http_response(char *buf, int len, struct mg_response_info *ri)
 {
-        char *s = (char*)malloc(len);
-        memcpy(s, buf, (size_t)len);
-	int r = parse_http_response(s, len, ri);
-        free(s);
-	return r;
+	ck_assert_int_lt(len, (int)sizeof(tmp_parse_buffer));
+	memcpy(tmp_parse_buffer, buf, (size_t)len);
+	return parse_http_response(tmp_parse_buffer, len, ri);
 }
 
 static int
 test_parse_http_request(char *buf, int len, struct mg_request_info *ri)
 {
-        char *s = (char*)malloc(len);
-        memcpy(s, buf, (size_t)len);
-	int r = parse_http_request(s, len, ri);
-        free(s);
-	return r;
+	ck_assert_int_lt(len, (int)sizeof(tmp_parse_buffer));
+	memcpy(tmp_parse_buffer, buf, (size_t)len);
+	return parse_http_request(tmp_parse_buffer, len, ri);
 }
 
 
@@ -129,27 +126,24 @@ START_TEST(test_parse_http_message)
 	ck_assert_int_eq(-1, test_parse_http_response(space, 2, &respi));
 
 
-        /* req1 minus 1 byte at the end is incomplete */
-        ck_assert_int_eq(0, get_http_header_len(req1, lenreq1 - 1));
+	/* req1 minus 1 byte at the end is incomplete */
+	ck_assert_int_eq(0, get_http_header_len(req1, lenreq1 - 1));
 
 
-        /* req1 minus 1 byte at the start is complete but invalid */
-        ck_assert_int_eq(lenreq1 - 1, get_http_header_len(req1 + 1, lenreq1 - 1));
-        ck_assert_int_eq(-1, test_parse_http_request(req1 + 1, lenreq1 - 1, &ri));
+	/* req1 minus 1 byte at the start is complete but invalid */
+	ck_assert_int_eq(lenreq1 - 1, get_http_header_len(req1 + 1, lenreq1 - 1));
+	ck_assert_int_eq(-1, test_parse_http_request(req1 + 1, lenreq1 - 1, &ri));
 
 
-        /* req1 is a valid request */
+	/* req1 is a valid request */
 	ck_assert_int_eq(lenreq1, get_http_header_len(req1, lenreq1));
-        ck_assert_int_eq(-1, test_parse_http_response(req1, lenreq1, &respi));
-        /* use "test_parse_*" to keep the req string unmodified, but then ri.*
-         * points to invalid memory. Use "parse_*" to access ri.*, but then
-         * the req string gets modified and can no longer be used */
-        ck_assert_int_eq(lenreq1, parse_http_request(req1, lenreq1, &ri));
+	ck_assert_int_eq(-1, test_parse_http_response(req1, lenreq1, &respi));
+	ck_assert_int_eq(lenreq1, test_parse_http_request(req1, lenreq1, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(0, ri.num_headers);
 
 
-        /* req2 is a complete, but invalid request */
+	/* req2 is a complete, but invalid request */
 	ck_assert_int_eq(lenreq2, get_http_header_len(req2, lenreq2));
 	ck_assert_int_eq(-1, test_parse_http_request(req2, lenreq2, &ri));
 
@@ -168,8 +162,8 @@ START_TEST(test_parse_http_message)
 	/* req5 is a complete and valid request (also somewhat malformed,
 	 * since it uses \n\n instead of \r\n\r\n) */
 	ck_assert_int_eq(lenreq5, get_http_header_len(req5, lenreq5));
-        ck_assert_int_eq(-1, test_parse_http_response(req5, lenreq5, &respi));
-        ck_assert_int_eq(lenreq5, parse_http_request(req5, lenreq5, &ri));
+	ck_assert_int_eq(-1, test_parse_http_response(req5, lenreq5, &respi));
+	ck_assert_int_eq(lenreq5, test_parse_http_request(req5, lenreq5, &ri));
 	ck_assert_str_eq("GET", ri.request_method);
 	ck_assert_str_eq("1.0", ri.http_version);
 
@@ -193,13 +187,13 @@ START_TEST(test_parse_http_message)
 	/* req9 is a valid response */
 	ck_assert_int_eq(lenreq9, get_http_header_len(req9, lenreq9));
 	ck_assert_int_eq(-1, test_parse_http_request(req9, lenreq9, &ri));
-        ck_assert_int_eq(lenreq9, parse_http_response(req9, lenreq9, &respi));
+	ck_assert_int_eq(lenreq9, test_parse_http_response(req9, lenreq9, &respi));
 	ck_assert_int_eq(1, respi.num_headers);
 
 
 	/* req10 is a valid request */
 	ck_assert_int_eq(lenreq10, get_http_header_len(req10, lenreq10));
-        ck_assert_int_eq(lenreq10, parse_http_request(req10, lenreq10, &ri));
+	ck_assert_int_eq(lenreq10, test_parse_http_request(req10, lenreq10, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(2, ri.num_headers);
 	ck_assert_str_eq("A", ri.http_headers[0].name);
