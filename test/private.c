@@ -48,6 +48,27 @@
  */
 
 
+static int
+test_parse_http_response(char *buf, int len, struct mg_response_info *ri)
+{
+	char *s = malloc(len);
+	memcpy(s, buf, len);
+	int r = parse_http_response(s, len, ri);
+	//	free(s); -- leak is intentional in the test
+	return r;
+}
+
+static int
+test_parse_http_request(char *buf, int len, struct mg_request_info *ri)
+{
+	char *s = malloc(len);
+	memcpy(s, buf, len);
+	int r = parse_http_request(s, len, ri);
+	//	free(s); -- leak is intentional in the test
+	return r;
+}
+
+
 START_TEST(test_parse_http_message)
 {
 	/* Adapted from unit_test.c */
@@ -56,7 +77,7 @@ START_TEST(test_parse_http_message)
 	struct mg_request_info ri;
 	struct mg_response_info respi;
 	char empty[] = "";
-        char space[] = " \x00";
+	char space[] = " \x00";
 	char req1[] = "GET / HTTP/1.1\r\n\r\n";
 	char req2[] = "BLAH / HTTP/1.1\r\n\r\n";
 	char req3[] = "GET / HTTP/1.1\nKey: Val\n\n";
@@ -94,85 +115,85 @@ START_TEST(test_parse_http_message)
 	/* An empty string is neither a complete request nor a complete
 	 * response, so it must return 0 */
 	ck_assert_int_eq(0, get_http_header_len(empty, 0));
-	ck_assert_int_eq(0, parse_http_request(empty, 0, &ri));
-        ck_assert_int_eq(0, parse_http_response(empty, 0, &respi));
+	ck_assert_int_eq(0, test_parse_http_request(empty, 0, &ri));
+	ck_assert_int_eq(0, test_parse_http_response(empty, 0, &respi));
 
 	/* Same is true for a leading space */
-        ck_assert_int_eq(0, get_http_header_len(space, 1));
-        ck_assert_int_eq(0, parse_http_request(space, 1, &ri));
-        ck_assert_int_eq(0, parse_http_response(space, 1, &respi));
+	ck_assert_int_eq(0, get_http_header_len(space, 1));
+	ck_assert_int_eq(0, test_parse_http_request(space, 1, &ri));
+	ck_assert_int_eq(0, test_parse_http_response(space, 1, &respi));
 
-        /* But a control character (like 0) makes it invalid */
-        ck_assert_int_eq(-1, get_http_header_len(space, 2));
-        ck_assert_int_eq(-1, parse_http_request(space, 2, &ri));
-        ck_assert_int_eq(-1, parse_http_response(space, 2, &respi));
+	/* But a control character (like 0) makes it invalid */
+	ck_assert_int_eq(-1, get_http_header_len(space, 2));
+	ck_assert_int_eq(-1, test_parse_http_request(space, 2, &ri));
+	ck_assert_int_eq(-1, test_parse_http_response(space, 2, &respi));
 
 	/* req1 is a valid request */
 	ck_assert_int_eq(lenreq1, get_http_header_len(req1, lenreq1));
-	ck_assert_int_eq(lenreq1, parse_http_request(req1, lenreq1, &ri));
+	ck_assert_int_eq(lenreq1, test_parse_http_request(req1, lenreq1, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(0, ri.num_headers);
-	ck_assert_int_eq(-1, parse_http_response(req1, lenreq1, &respi));
+	ck_assert_int_eq(-1, test_parse_http_response(req1, lenreq1, &respi));
 
 	/* req1 minus 1 byte at the end is incomplete */
 	ck_assert_int_eq(0, get_http_header_len(req1, lenreq1 - 1));
 
 	/* req1 minus 1 byte at the start is complete but invalid */
 	ck_assert_int_eq(lenreq1 - 1, get_http_header_len(req1 + 1, lenreq1 - 1));
-	ck_assert_int_eq(-1, parse_http_request(req1 + 1, lenreq1 - 1, &ri));
+	ck_assert_int_eq(-1, test_parse_http_request(req1 + 1, lenreq1 - 1, &ri));
 
 
 	/* req2 is a complete, but invalid request */
 	ck_assert_int_eq(lenreq2, get_http_header_len(req2, lenreq2));
-	ck_assert_int_eq(-1, parse_http_request(req2, lenreq2, &ri));
+	ck_assert_int_eq(-1, test_parse_http_request(req2, lenreq2, &ri));
 
 
 	/* req3 is a complete and valid request */
 	ck_assert_int_eq(lenreq3, get_http_header_len(req3, lenreq3));
-	ck_assert_int_eq(lenreq3, parse_http_request(req3, lenreq3, &ri));
-	ck_assert_int_eq(-1, parse_http_response(req3, lenreq3, &respi));
+	ck_assert_int_eq(lenreq3, test_parse_http_request(req3, lenreq3, &ri));
+	ck_assert_int_eq(-1, test_parse_http_response(req3, lenreq3, &respi));
 
 
 	/* Multiline header are obsolete, so return an error
 	 * (https://tools.ietf.org/html/rfc7230#section-3.2.4). */
-	ck_assert_int_eq(-1, parse_http_request(req4, lenreq4, &ri));
+	ck_assert_int_eq(-1, test_parse_http_request(req4, lenreq4, &ri));
 
 
 	/* req5 is a complete and valid request (also somewhat malformed,
 	 * since it uses \n\n instead of \r\n\r\n) */
 	ck_assert_int_eq(lenreq5, get_http_header_len(req5, lenreq5));
-	ck_assert_int_eq(lenreq5, parse_http_request(req5, lenreq5, &ri));
+	ck_assert_int_eq(lenreq5, test_parse_http_request(req5, lenreq5, &ri));
 	ck_assert_str_eq("GET", ri.request_method);
 	ck_assert_str_eq("1.0", ri.http_version);
-	ck_assert_int_eq(-1, parse_http_response(req5, lenreq5, &respi));
+	ck_assert_int_eq(-1, test_parse_http_response(req5, lenreq5, &respi));
 
 
 	/* req6 is incomplete */
 	ck_assert_int_eq(0, get_http_header_len(req6, lenreq6));
-	ck_assert_int_eq(0, parse_http_request(req6, lenreq6, &ri));
+	ck_assert_int_eq(0, test_parse_http_request(req6, lenreq6, &ri));
 
 
 	/* req7 is invalid, but not yet complete */
 	ck_assert_int_eq(0, get_http_header_len(req7, lenreq7));
-	ck_assert_int_eq(0, parse_http_request(req7, lenreq7, &ri));
+	ck_assert_int_eq(0, test_parse_http_request(req7, lenreq7, &ri));
 
 
 	/* req8 is a valid response */
 	ck_assert_int_eq(lenreq8, get_http_header_len(req8, lenreq8));
-	ck_assert_int_eq(-1, parse_http_request(req8, lenreq8, &ri));
-	ck_assert_int_eq(lenreq8, parse_http_response(req8, lenreq8, &respi));
+	ck_assert_int_eq(-1, test_parse_http_request(req8, lenreq8, &ri));
+	ck_assert_int_eq(lenreq8, test_parse_http_response(req8, lenreq8, &respi));
 
 
 	/* req9 is a valid response */
 	ck_assert_int_eq(lenreq9, get_http_header_len(req9, lenreq9));
-	ck_assert_int_eq(-1, parse_http_request(req9, lenreq9, &ri));
-	ck_assert_int_eq(lenreq9, parse_http_response(req9, lenreq9, &respi));
+	ck_assert_int_eq(-1, test_parse_http_request(req9, lenreq9, &ri));
+	ck_assert_int_eq(lenreq9, test_parse_http_response(req9, lenreq9, &respi));
 	ck_assert_int_eq(1, respi.num_headers);
 
 
 	/* req10 is a valid request */
 	ck_assert_int_eq(lenreq10, get_http_header_len(req10, lenreq10));
-	ck_assert_int_eq(lenreq10, parse_http_request(req10, lenreq10, &ri));
+	ck_assert_int_eq(lenreq10, test_parse_http_request(req10, lenreq10, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(2, ri.num_headers);
 	ck_assert_str_eq("A", ri.http_headers[0].name);
@@ -182,13 +203,13 @@ START_TEST(test_parse_http_message)
 
 
 	/* req11 is a complete but valid request */
-	ck_assert_int_eq(-1, parse_http_request(req11, lenreq11, &ri));
+	ck_assert_int_eq(-1, test_parse_http_request(req11, lenreq11, &ri));
 
 
 	/* req12 is a valid request with body data */
 	ck_assert_int_gt(lenreq12, lenhdr12);
 	ck_assert_int_eq(lenhdr12, get_http_header_len(req12, lenreq12));
-	ck_assert_int_eq(lenhdr12, parse_http_request(req12, lenreq12, &ri));
+	ck_assert_int_eq(lenhdr12, test_parse_http_request(req12, lenreq12, &ri));
 }
 END_TEST
 
@@ -215,7 +236,7 @@ START_TEST(test_should_keep_alive)
 
 	memset(&conn, 0, sizeof(conn));
 	conn.ctx = &ctx;
-	ck_assert_int_eq(parse_http_request(req1, lenreq1, &conn.request_info),
+	ck_assert_int_eq(test_parse_http_request(req1, lenreq1, &conn.request_info),
 	                 lenreq1);
 
 	ctx.config[ENABLE_KEEP_ALIVE] = no;
@@ -228,13 +249,13 @@ START_TEST(test_should_keep_alive)
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
 	conn.must_close = 0;
-	parse_http_request(req2, lenreq2, &conn.request_info);
+	test_parse_http_request(req2, lenreq2, &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_request(req3, lenreq3, &conn.request_info);
+	test_parse_http_request(req3, lenreq3, &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_request(req4, lenreq4, &conn.request_info);
+	test_parse_http_request(req4, lenreq4, &conn.request_info);
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
 
 	conn.status_code = 401;

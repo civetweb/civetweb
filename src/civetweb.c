@@ -6508,7 +6508,7 @@ static int
 get_http_header_len(const char *buf, int buflen)
 {
 	int i;
-	for (i = 0; i < buflen - 1; i++) {
+	for (i = 0; i < buflen; i++) {
 		/* Do an unsigned comparison in some conditions below */
 		const unsigned char c = ((const unsigned char *)buf)[i];
 
@@ -6518,10 +6518,13 @@ get_http_header_len(const char *buf, int buflen)
 			return -1;
 		}
 
-		if ((buf[i] == '\n') && (buf[i + 1] == '\n')) {
-			/* Two newline, no carriage return - not standard compliant, but it
-			 * should be accepted */
-			return i + 2;
+		if (i < buflen - 1) {
+			if ((buf[i] == '\n') && (buf[i + 1] == '\n')) {
+				/* Two newline, no carriage return - not standard compliant, but
+				 * it
+				 * should be accepted */
+				return i + 2;
+			}
 		}
 
 		if (i < buflen - 3) {
