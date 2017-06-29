@@ -3318,6 +3318,7 @@ get_http_version(const struct mg_connection *conn)
 	return NULL;
 }
 
+
 /* A helper function for traversing a comma separated list of values.
  * It returns a list pointer shifted to the next value, or NULL if the end
  * of the list found.
@@ -3376,6 +3377,7 @@ reparse:
 	return list;
 }
 
+
 /* A helper function for checking if a comma separated list of values contains
  * the given option (case insensitvely).
  * 'header' can be NULL, in which case false is returned. */
@@ -3385,8 +3387,10 @@ header_has_option(const char *header, const char *option)
 	struct vec opt_vec;
 	struct vec eq_vec;
 
+	/*
 	assert(option != NULL);
 	assert(option[0] != '\0');
+	*/
 
 	while ((header = next_option(header, &opt_vec, &eq_vec)) != NULL) {
 		if (mg_strncasecmp(option, opt_vec.ptr, opt_vec.len) == 0)
@@ -3395,6 +3399,7 @@ header_has_option(const char *header, const char *option)
 
 	return 0;
 }
+
 
 /* Perform case-insensitive match of string against pattern */
 static int

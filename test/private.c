@@ -234,10 +234,13 @@ START_TEST(test_should_keep_alive)
 	int lenreq4 = (int)strlen(req4);
 
 
+	memset(&ctx, 0, sizeof(ctx));
 	memset(&conn, 0, sizeof(conn));
 	conn.ctx = &ctx;
 	ck_assert_int_eq(test_parse_http_request(req1, lenreq1, &conn.request_info),
 	                 lenreq1);
+	conn.connection_type = 1; /* Valid request */
+	ck_assert_int_eq(conn.request_info.num_headers, 0);
 
 	ctx.config[ENABLE_KEEP_ALIVE] = no;
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
@@ -250,16 +253,25 @@ START_TEST(test_should_keep_alive)
 
 	conn.must_close = 0;
 	test_parse_http_request(req2, lenreq2, &conn.request_info);
+	conn.connection_type = 1; /* Valid request */
+	ck_assert_int_eq(conn.request_info.num_headers, 0);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
 	test_parse_http_request(req3, lenreq3, &conn.request_info);
+	conn.connection_type = 1; /* Valid request */
+	ck_assert_int_eq(conn.request_info.num_headers, 1);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
 	test_parse_http_request(req4, lenreq4, &conn.request_info);
+	conn.connection_type = 1; /* Valid request */
+	ck_assert_int_eq(conn.request_info.num_headers, 1);
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
 
-	conn.status_code = 401;
-	ck_assert_int_eq(should_keep_alive(&conn), 0);
+	/* No longer required. Server sets must_close if status is 401
+
+	    conn.status_code = 401;
+	    ck_assert_int_eq(should_keep_alive(&conn), 0);
+	*/
 
 	conn.status_code = 200;
 	conn.must_close = 1;
