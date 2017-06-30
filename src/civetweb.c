@@ -14667,14 +14667,21 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			*err = 411;
 			return 0;
 		}
-		/* Publish the content length back to the request info. */
+		/* Publish the content length back to the response info. */
+		conn->response_info.content_length = conn->content_len;
+
+		/* TODO: check if it is still used in response_info */
 		conn->request_info.content_length = conn->content_len;
+
 	} else if ((cl = get_header(conn->response_info.http_headers,
 	                            conn->response_info.num_headers,
 	                            "Transfer-Encoding")) != NULL
 	           && !mg_strcasecmp(cl, "chunked")) {
 		conn->is_chunked = 1;
+	} else {
+		conn->content_len = -1;
 	}
+
 
 	conn->connection_type = 2; /* Valid response */
 	return 1;

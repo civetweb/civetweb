@@ -267,14 +267,17 @@ START_TEST(test_should_keep_alive)
 	ck_assert_int_eq(conn.request_info.num_headers, 1);
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
 
-	/* No longer required. Server sets must_close if status is 401
-
-	    conn.status_code = 401;
-	    ck_assert_int_eq(should_keep_alive(&conn), 0);
-	*/
-
 	conn.status_code = 200;
 	conn.must_close = 1;
+	ck_assert_int_eq(should_keep_alive(&conn), 0);
+
+	conn.status_code = 200;
+	conn.must_close = 0;
+	ck_assert_int_eq(should_keep_alive(&conn), 1);
+
+	conn.status_code = 200;
+	conn.must_close = 0;
+	conn.connection_type = 0; /* invalid */
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 }
 END_TEST
