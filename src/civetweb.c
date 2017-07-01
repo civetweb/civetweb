@@ -14900,7 +14900,7 @@ mg_connect_websocket_client(const char *host,
 	                   origin);
 
 	/* Connection object will be null if something goes wrong */
-    if (conn == NULL) {
+	if (conn == NULL) {
 		if (!*error_buffer) {
 			/* There should be already an error message */
 			mg_snprintf(conn,

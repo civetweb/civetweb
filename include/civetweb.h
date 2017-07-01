@@ -604,12 +604,19 @@ CIVETWEB_API int mg_modify_passwords_file(const char *passwords_file_name,
 
 /* Return information associated with the request.
  * Use this function to implement a server and get data about a request
- * from a HTTP/HTTPS client. */
+ * from a HTTP/HTTPS client.
+ * Note: Before CivetWeb 1.10, this function could be used to read
+ * a response from a server, when implementing a client, although the
+ * values were never returned in appropriate mg_request_info elements.
+ * It is strongly advised to use mg_get_response_info for clients.
+ */
 CIVETWEB_API const struct mg_request_info *
 mg_get_request_info(const struct mg_connection *);
 
 
-/* Return information associated with the request. */
+/* Return information associated with a HTTP/HTTPS response.
+ * Use this function in a client, to check the response from
+ * the server. */
 CIVETWEB_API const struct mg_response_info *
 mg_get_response_info(const struct mg_connection *);
 

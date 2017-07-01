@@ -18,6 +18,11 @@
 
 The function `mg_get_request_info()` returns information about the request on a given connection. This information is returned as a pointer to a [`mg_request_info`](mg_request_info.md) structure. If an error occurs, a NULL pointer is returned instead.
 
+Use this function when implementing a server.
+
 ### See Also
 
 * [`struct mg_request_info;`](mg_request_info.md)
+* [`mg_get_response_info();`](mg_get_response_info.md)
+* [`struct mg_response_info;`](mg_response_info.md)
+
