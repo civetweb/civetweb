@@ -855,6 +855,7 @@ static void
 websock_server_ready(struct mg_connection *conn, void *udata)
 {
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
+	ck_assert_ptr_ne((void *)conn, (void *)NULL);
 	WS_TEST_TRACE("Server: Websocket ready\n");
 
 	/* Send websocket welcome message */

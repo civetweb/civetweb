@@ -14900,22 +14900,34 @@ mg_connect_websocket_client(const char *host,
 	                   origin);
 
 	/* Connection object will be null if something goes wrong */
-	if ((conn == NULL)
-	    || (strcmp(conn->request_info.request_uri, "101") != 0)) {
+	if (con == NULL) {
 		if (!*error_buffer) {
-			/* if there is a connection, but it did not return 101,
-			 * error_buffer is not yet set */
+			/* There should be already an error message */
+			mg_snprintf(conn,
+			            NULL, /* No truncation check for ebuf */
+			            error_buffer,
+			            error_buffer_size,
+			            "Unexpected error");
+		}
+		return NULL;
+	}
+
+	if (conn->response_info.status_code != 101) {
+		/* We sent an "upgrade" request. For a correct websocket
+		 * protocol handshake, we expect a "101 Continue" response.
+		 * Otherwise it is a protocol violation. Maybe the HTTP
+		 * Server does not know websockets. */
+		if (!*error_buffer) {
+			/* set an error, if not yet set */
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            error_buffer,
 			            error_buffer_size,
 			            "Unexpected server reply");
 		}
+
 		DEBUG_TRACE("Websocket client connect error: %s\r\n", error_buffer);
-		if (conn != NULL) {
-			mg_free(conn);
-			conn = NULL;
-		}
+		mg_free(conn);
 		return conn;
 	}
 
