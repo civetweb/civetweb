@@ -5173,9 +5173,29 @@ push_inner(struct mg_context *ctx,
 
 		/* Only in case n=0 (timeout), repeat calling the write function */
 
-		/* Quick fix for #474 - TODO: use select to wait for send socket */
+		/* Quick fix for #474 */
 		(void)ms_wait;
 		mg_sleep(1);
+
+		/* Alternatively, use select (TODO: test):
+		 * {
+		 * fd_set wfds;
+		 * struct timeval tv;
+		 * int sret;
+		 *
+		 * FD_ZERO(&wfds);
+		 * FD_SET(sock, &wfds);
+		 * tv.tv_sec = ms_wait / 1000;
+		 * tv.tv_usec = (ms_wait % 1000) * 1000;
+		 *
+		 * sret = select(sock+ 1, NULL, &wfds, NULL, &tv);
+		 *
+		 * if (sret > 0) {
+		 *     continue;
+		 * }
+		 *
+		 * }
+		 */
 
 		if (timeout >= 0) {
 			now = mg_get_current_time_ns();
