@@ -5078,7 +5078,7 @@ push_inner(struct mg_context *ctx,
 {
 	uint64_t start = 0, now = 0, timeout_ns = 0;
 	int n, err;
-	int ms_wait = SOCKET_TIMEOUT_QUANTUM; /* Sleep quantum in ms */
+	unsigned ms_wait = SOCKET_TIMEOUT_QUANTUM; /* Sleep quantum in ms */
 
 #ifdef _WIN32
 	typedef int len_t;
@@ -5186,14 +5186,14 @@ push_inner(struct mg_context *ctx,
 
 			FD_ZERO(&wfds);
 			FD_SET(sock, &wfds);
-			tv.tv_sec = ms_wait / 1000;
-			tv.tv_usec = (ms_wait % 1000) * 1000;
+			tv.tv_sec = (time_t)(ms_wait / 1000);
+			tv.tv_usec = (long)((ms_wait % 1000) * 1000);
 
 			sret = select(sock + 1, NULL, &wfds, NULL, &tv);
 
 			if (sret > 0) {
-                /* We got ready to write. Don't check the timeout
-                 * but directly go back to write again. */
+				/* We got ready to write. Don't check the timeout
+				 * but directly go back to write again. */
 				continue;
 			}
 		}
