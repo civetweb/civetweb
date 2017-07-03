@@ -5184,12 +5184,24 @@ push_inner(struct mg_context *ctx,
 			struct timeval tv;
 			int sret;
 
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* GCC seems to have a flaw with it's own socket macros:
+ * http://www.linuxquestions.org/questions/programming-9/impossible-to-use-gcc-with-wconversion-and-standard-socket-macros-841935/
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#endif
+
 			FD_ZERO(&wfds);
 			FD_SET(sock, &wfds);
 			tv.tv_sec = (time_t)(ms_wait / 1000);
 			tv.tv_usec = (long)((ms_wait % 1000) * 1000);
 
 			sret = select((int)sock + 1, NULL, &wfds, NULL, &tv);
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif
 
 			if (sret > 0) {
 				/* We got ready to write. Don't check the timeout
