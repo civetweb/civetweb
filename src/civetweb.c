@@ -5189,7 +5189,7 @@ push_inner(struct mg_context *ctx,
 			tv.tv_sec = (time_t)(ms_wait / 1000);
 			tv.tv_usec = (long)((ms_wait % 1000) * 1000);
 
-			sret = select(sock + 1, NULL, &wfds, NULL, &tv);
+			sret = select((int)sock + 1, NULL, &wfds, NULL, &tv);
 
 			if (sret > 0) {
 				/* We got ready to write. Don't check the timeout
