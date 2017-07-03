@@ -5173,29 +5173,30 @@ push_inner(struct mg_context *ctx,
 
 		/* Only in case n=0 (timeout), repeat calling the write function */
 
-		/* Quick fix for #474 */
-		(void)ms_wait;
-		mg_sleep(1);
+		/* If send failed, wait before retry */
+		if (fp != NULL) {
+			/* For files, just wait a fixed time,
+			 * maybe an average disk seek time. */
+			mg_sleep(ms_wait > 10 ? 10 : ms_wait);
+		} else {
+			/* For sockets, wait for the socket using select */
+			fd_set wfds;
+			struct timeval tv;
+			int sret;
 
-		/* Alternatively, use select (TODO: test):
-		 * {
-		 * fd_set wfds;
-		 * struct timeval tv;
-		 * int sret;
-		 *
-		 * FD_ZERO(&wfds);
-		 * FD_SET(sock, &wfds);
-		 * tv.tv_sec = ms_wait / 1000;
-		 * tv.tv_usec = (ms_wait % 1000) * 1000;
-		 *
-		 * sret = select(sock+ 1, NULL, &wfds, NULL, &tv);
-		 *
-		 * if (sret > 0) {
-		 *     continue;
-		 * }
-		 *
-		 * }
-		 */
+			FD_ZERO(&wfds);
+			FD_SET(sock, &wfds);
+			tv.tv_sec = ms_wait / 1000;
+			tv.tv_usec = (ms_wait % 1000) * 1000;
+
+			sret = select(sock + 1, NULL, &wfds, NULL, &tv);
+
+			if (sret > 0) {
+                /* We got ready to write. Don't check the timeout
+                 * but directly go back to write again. */
+				continue;
+			}
+		}
 
 		if (timeout >= 0) {
 			now = mg_get_current_time_ns();
