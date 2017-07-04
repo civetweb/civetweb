@@ -5189,7 +5189,7 @@ push_inner(struct mg_context *ctx,
  * http://www.linuxquestions.org/questions/programming-9/impossible-to-use-gcc-with-wconversion-and-standard-socket-macros-841935/
  */
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
 #endif
 
 			FD_ZERO(&wfds);
