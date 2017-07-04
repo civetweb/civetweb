@@ -524,6 +524,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		char *hbuf;
 		const char *content_disp, *hend, *fbeg, *fend, *nbeg, *nend;
 		const char *next;
+		unsigned part_no;
 
 		memset(&part_header, 0, sizeof(part_header));
 
@@ -576,7 +577,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			return -1;
 		}
 
-		for (;;) {
+		for (part_no = 0;; part_no++) {
 			size_t towrite, n;
 			int get_block;
 
@@ -592,6 +593,18 @@ mg_handle_form_request(struct mg_connection *conn,
 			if (buf_fill < 1) {
 				/* No data */
 				return -1;
+			}
+
+			if (part_no == 0) {
+				int d = 0;
+				while ((buf[d] != '-') && (d < buf_fill)) {
+					d++;
+				}
+				if ((d > 0) && (buf[d] == '-')) {
+					memmove(buf, buf + d, buf_fill - d);
+					buf_fill -= d;
+					buf[buf_fill] = 0;
+				}
 			}
 
 			if (buf[0] != '-' || buf[1] != '-') {
