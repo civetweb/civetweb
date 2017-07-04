@@ -645,7 +645,7 @@ WebsocketDataHandler(struct mg_connection *conn,
 	ASSERT(client->state >= 1);
 
 	fprintf(stdout, "Websocket got %lu bytes of ", (unsigned long)len);
-	switch (((unsigned char)bit) & 0x0F) {
+	switch (((unsigned char)bits) & 0x0F) {
 	case WEBSOCKET_OPCODE_CONTINUATION:
 		fprintf(stdout, "continuation");
 		break;
@@ -665,7 +665,7 @@ WebsocketDataHandler(struct mg_connection *conn,
 		fprintf(stdout, "pong");
 		break;
 	default:
-		fprintf(stdout, "unknown(%1xh)", ((unsigned char)bit) & 0x0F);
+		fprintf(stdout, "unknown(%1xh)", ((unsigned char)bits) & 0x0F);
 		break;
 	}
 	fprintf(stdout, " data:\r\n");
