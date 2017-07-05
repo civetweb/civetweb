@@ -1408,10 +1408,10 @@ START_TEST(test_request_handlers)
         if (stat(buf, &st) != 0) {
 		fprintf(stderr, "\nFile %s not found\n", cmd_buf);
 		fprintf(stderr, "This file needs to be compiled manually before "
-		                "starting the test\n", );
+                                "starting the test\n");
 		fprintf(stderr,
-		        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n", );
-		ck_abort_msg("Mandatory file %s must be built before starting the test",
+                        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n");
+                ck_abort_msg("Mandatory file %s must be built before starting the test",
 		             cmd_buf);
         }
 
