@@ -1405,7 +1405,7 @@ START_TEST(test_request_handlers)
 	sprintf(cmd_buf, "%s/cgi_test.cgi", locate_test_exes());
 #endif
         memset(&st, 0, sizeof(st));
-        if (stat(buf, &st) != 0) {
+        if (stat(cmd_buf, &st) != 0) {
 		fprintf(stderr, "\nFile %s not found\n", cmd_buf);
 		fprintf(stderr, "This file needs to be compiled manually before "
                                 "starting the test\n");
