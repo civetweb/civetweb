@@ -1400,7 +1400,7 @@ START_TEST(test_request_handlers)
 
 /* Check if CGI test executable exists */
 #if defined(_WIN32)
-        sprintf(cmd_buf, %s\\cgi_test.cgi", locate_test_exes());
+        sprintf(cmd_buf, "%s\\cgi_test.cgi", locate_test_exes());
 #else
 	sprintf(cmd_buf, "%s/cgi_test.cgi", locate_test_exes());
 #endif
