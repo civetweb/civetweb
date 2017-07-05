@@ -601,7 +601,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					d++;
 				}
 				if ((d > 0) && (buf[d] == '-')) {
-					memmove(buf, buf + d, buf_fill - d);
+                    memmove(buf, buf + d, (unsigned)buf_fill - (unsigned)d);
 					buf_fill -= d;
 					buf[buf_fill] = 0;
 				}
