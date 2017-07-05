@@ -1076,6 +1076,7 @@ START_TEST(test_request_handlers)
 	const char *cgi_script_content;
 	const char *expected_cgi_result;
 	int opt_idx = 0;
+	struct stat st;
 
 #if !defined(NO_SSL)
 	const char *ssl_cert = locate_ssl_cert();
@@ -1395,6 +1396,24 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, plain_file_content);
 #endif
 	mg_close_connection(client_conn);
+
+
+/* Check if CGI test executable exists */
+#if defined(_WIN32)
+        sprintf(cmd_buf, %s\\cgi_test.cgi", locate_test_exes());
+#else
+	sprintf(cmd_buf, "%s/cgi_test.cgi", locate_test_exes());
+#endif
+        memset(&st, 0, sizeof(st));
+        if (stat(buf, &st) != 0) {
+		fprintf(stderr, "\nFile %s not found\n", cmd_buf);
+		fprintf(stderr, "This file needs to be compiled manually before "
+		                "starting the test\n", );
+		fprintf(stderr,
+		        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n", );
+		ck_abort_msg("Mandatory file %s must be built before starting the test",
+		             cmd_buf);
+        }
 
 
 /* Test with CGI test executable */
