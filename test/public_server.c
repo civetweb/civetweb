@@ -1412,6 +1412,16 @@ START_TEST(test_request_handlers)
 		        "starting the test\n");
 		fprintf(stderr,
 		        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n");
+
+/* Print working directory, if file is not found */
+#if defined(_WIN32)
+		strcpy(cmd_buf, "cd && dir");
+#else
+		strcpy(cmd_buf, "pwd && ls -la");
+#endif
+		(void)system(cmd_buf);
+
+		/* Abort test with diagnostic message */
 		ck_abort_msg("Mandatory file %s must be built before starting the test",
 		             cmd_buf);
 	}
