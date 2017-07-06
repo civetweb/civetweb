@@ -1400,20 +1400,21 @@ START_TEST(test_request_handlers)
 
 /* Check if CGI test executable exists */
 #if defined(_WIN32)
-        sprintf(cmd_buf, "%s\\cgi_test.cgi", locate_test_exes());
+	sprintf(cmd_buf, "%scgi_test.cgi", locate_test_exes());
 #else
-	sprintf(cmd_buf, "%s/cgi_test.cgi", locate_test_exes());
+	sprintf(cmd_buf, "%scgi_test.cgi", locate_test_exes());
 #endif
-        memset(&st, 0, sizeof(st));
-        if (stat(cmd_buf, &st) != 0) {
+	memset(&st, 0, sizeof(st));
+	if (stat(cmd_buf, &st) != 0) {
 		fprintf(stderr, "\nFile %s not found\n", cmd_buf);
-		fprintf(stderr, "This file needs to be compiled manually before "
-                                "starting the test\n");
 		fprintf(stderr,
-                        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n");
-                ck_abort_msg("Mandatory file %s must be built before starting the test",
+		        "This file needs to be compiled manually before "
+		        "starting the test\n");
+		fprintf(stderr,
+		        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n");
+		ck_abort_msg("Mandatory file %s must be built before starting the test",
 		             cmd_buf);
-        }
+	}
 
 
 /* Test with CGI test executable */
