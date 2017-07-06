@@ -1400,31 +1400,25 @@ START_TEST(test_request_handlers)
 
 /* Check if CGI test executable exists */
 #if defined(_WIN32)
-	sprintf(cmd_buf, "%scgi_test.cgi", locate_test_exes());
+	/* TODO: not yet available */
+	sprintf(ebuf, "%scgi_test.cgi", locate_test_exes());
 #else
-	sprintf(cmd_buf, "%scgi_test.cgi", locate_test_exes());
-#endif
+	sprintf(ebuf, "%scgi_test.cgi", locate_test_exes());
+
 	memset(&st, 0, sizeof(st));
-	if (stat(cmd_buf, &st) != 0) {
-		fprintf(stderr, "\nFile %s not found\n", cmd_buf);
+	if (stat(ebuf, &st) != 0) {
+		fprintf(stderr, "\nFile %s not found\n", ebuf);
 		fprintf(stderr,
 		        "This file needs to be compiled manually before "
 		        "starting the test\n");
 		fprintf(stderr,
 		        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n");
 
-/* Print working directory, if file is not found */
-#if defined(_WIN32)
-		strcpy(cmd_buf, "cd && dir");
-#else
-		strcpy(cmd_buf, "pwd && ls -la");
-#endif
-		(void)system(cmd_buf);
-
 		/* Abort test with diagnostic message */
 		ck_abort_msg("Mandatory file %s must be built before starting the test",
-		             cmd_buf);
+		             ebuf);
 	}
+#endif
 
 
 /* Test with CGI test executable */
