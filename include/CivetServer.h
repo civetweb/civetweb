@@ -531,6 +531,10 @@ class CIVETWEB_API CivetServer
 	                      std::string &dst,
 	                      bool append = false);
 
+        // generic user context which can be set/read,
+        // the server does noting with this apart form keep it.
+        void *UserContext;
+        
   protected:
 	class CivetConnection
 	{
