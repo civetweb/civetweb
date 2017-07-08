@@ -227,9 +227,11 @@ class CIVETWEB_API CivetServer
 	 * @throws CivetException
 	 */
 	CivetServer(const char **options,
-	            const struct CivetCallbacks *callbacks = 0);
+	            const struct CivetCallbacks *callbacks = 0,
+                    const void *UserContext = 0);
 	CivetServer(std::vector<std::string> options,
-	            const struct CivetCallbacks *callbacks = 0);
+	            const struct CivetCallbacks *callbacks = 0,
+                    const void *UserContext = 0);
 
 	/**
 	 * Destructor
@@ -532,8 +534,11 @@ class CIVETWEB_API CivetServer
 	                      bool append = false);
 
         // generic user context which can be set/read,
-        // the server does noting with this apart form keep it.
-        void *UserContext;
+        // the server does nothing with this apart from keep it.
+	const void *getUserContext() const
+	{
+		return UserContext;
+	}
         
   protected:
 	class CivetConnection
@@ -548,6 +553,10 @@ class CIVETWEB_API CivetServer
 
 	struct mg_context *context;
 	std::map<struct mg_connection *, class CivetConnection> connections;
+
+        // generic user context which can be set/read,
+        // the server does nothing with this apart from keep it.
+        const void *UserContext;
 
   private:
 	/**
