@@ -275,8 +275,8 @@ CivetServer::CivetServer(const char **options,
 {
 	struct CivetCallbacks callbacks;
 
-        UserContext = UserContextIn;
-        
+	UserContext = UserContextIn;
+
 	if (_callbacks) {
 		callbacks = *_callbacks;
 		userCloseHandler = _callbacks->connection_close;
@@ -296,8 +296,8 @@ CivetServer::CivetServer(std::vector<std::string> options,
     : context(0)
 {
 	struct CivetCallbacks callbacks;
-        
-        UserContext = UserContextIn;
+
+	UserContext = UserContextIn;
 
 	if (_callbacks) {
 		callbacks = *_callbacks;
@@ -581,8 +581,9 @@ CivetServer::getListeningPorts()
 {
 	std::vector<int> ports(50);
 	std::vector<struct mg_server_ports> server_ports(50);
-	int size =
-	    mg_get_server_ports(context, (int)server_ports.size(), &server_ports[0]);
+	int size = mg_get_server_ports(context,
+	                               (int)server_ports.size(),
+	                               &server_ports[0]);
 	if (size <= 0) {
 		ports.resize(0);
 		return ports;
