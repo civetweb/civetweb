@@ -5087,7 +5087,8 @@ push_inner(struct mg_context *ctx,
 #endif
 
 	if (timeout > 0) {
-		start = mg_get_current_time_ns();
+		now = mg_get_current_time_ns();
+		start = now;
 		timeout_ns = (uint64_t)(timeout * 1.0E9);
 	}
 
@@ -5101,7 +5102,9 @@ push_inner(struct mg_context *ctx,
 	}
 #endif
 
-	do {
+	/* Try to read until it succeeds, fails, times out, or the server
+	 * shuts down. */
+	for (;;) {
 
 #ifndef NO_SSL
 		if (ssl != NULL) {
@@ -5210,11 +5213,14 @@ push_inner(struct mg_context *ctx,
 			}
 		}
 
-		if (timeout >= 0) {
+		if (timeout > 0) {
 			now = mg_get_current_time_ns();
+			if ((now - start) > timeout_ns) {
+				/* Timeout */
+				break;
+			}
 		}
-
-	} while ((timeout <= 0) || ((now - start) <= timeout_ns));
+	}
 
 	(void)err; /* Avoid unused warning if NO_SSL is set and DEBUG_TRACE is not
 	              used */
