@@ -10653,6 +10653,12 @@ read_websocket(struct mg_connection *conn,
 				memcpy(&l2, &buf[6], 4);
 				header_len = 10 + mask_len;
 				data_len = (((uint64_t)ntohl(l1)) << 32) + ntohl(l2);
+
+				if (data_len > (uint64_t)0x7FFF0000ul) {
+					/* no can do */
+					mg_cry(conn, "websocket out of memory; closing connection");
+					break;
+				}
 			}
 		}
 
