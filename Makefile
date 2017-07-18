@@ -320,3 +320,4 @@ indent:
 	astyle --suffix=none --style=linux --indent=spaces=4 --lineend=linux  include/*.h src/*.c src/*.cpp src/*.inl examples/*/*.c  examples/*/*.cpp
 
 .PHONY: all help build install clean lib so
+
