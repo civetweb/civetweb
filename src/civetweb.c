@@ -801,20 +801,38 @@ stat(const char *name, struct stat *st)
 #endif /* defined(_WIN32_WCE) */
 
 
+static pthread_mutex_t global_lock_mutex;
+
+static void
+mg_global_lock(void)
+{
+	(void)pthread_mutex_lock(&global_lock_mutex);
+}
+
+static void
+mg_global_unlock(void)
+{
+	(void)pthread_mutex_unlock(&global_lock_mutex);
+}
+
+
 static int
 mg_atomic_inc(volatile int *addr)
 {
 	int ret;
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
+#if defined(_WIN32) && !defined(__SYMBIAN32__) && !defined(NO_ATOMICS)
 	/* Depending on the SDK, this function uses either
 	 * (volatile unsigned int *) or (volatile LONG *),
 	 * so whatever you use, the other SDK is likely to raise a warning. */
 	ret = InterlockedIncrement((volatile long *)addr);
 #elif defined(__GNUC__)                                                        \
-    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
+    && !defined(NO_ATOMICS)
 	ret = __sync_add_and_fetch(addr, 1);
 #else
+	mg_global_lock();
 	ret = (++(*addr));
+	mg_global_unlock();
 #endif
 	return ret;
 }
@@ -824,16 +842,19 @@ static int
 mg_atomic_dec(volatile int *addr)
 {
 	int ret;
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
+#if defined(_WIN32) && !defined(__SYMBIAN32__) && !defined(NO_ATOMICS)
 	/* Depending on the SDK, this function uses either
 	 * (volatile unsigned int *) or (volatile LONG *),
 	 * so whatever you use, the other SDK is likely to raise a warning. */
 	ret = InterlockedDecrement((volatile long *)addr);
 #elif defined(__GNUC__)                                                        \
-    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
+    && !defined(NO_ATOMICS)
 	ret = __sync_sub_and_fetch(addr, 1);
 #else
+	mg_global_lock();
 	ret = (--(*addr));
+	mg_global_unlock();
 #endif
 	return ret;
 }
@@ -860,13 +881,17 @@ static int64_t
 mg_atomic_add(volatile int64_t *addr, int64_t value)
 {
 	int64_t ret;
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
+#if defined(_WIN32) && !defined(__SYMBIAN32__) && !defined(NO_ATOMICS)
 	ret = InterlockedAdd64(addr, value);
 #elif defined(__GNUC__)                                                        \
-    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
+    && !defined(NO_ATOMICS)
 	ret = __sync_add_and_fetch(addr, value);
 #else
-	ret = (++(*addr));
+	mg_global_lock();
+	*addr += value;
+	ret = (*addr);
+	mg_global_unlock();
 #endif
 	return ret;
 }
@@ -16791,6 +16816,13 @@ mg_init_library(unsigned features)
 	unsigned features_to_init = mg_check_feature(features & 0xFFu);
 	unsigned features_inited = features_to_init;
 
+	if (mg_init_library_called <= 0) {
+		/* Not initialized yet */
+		if (0 != pthread_mutex_init(&global_lock_mutex, NULL)) {
+			return 0;
+		}
+	}
+
 #if !defined(NO_SSL)
 	if (features_to_init & 2) {
 		if (!mg_ssl_initialized) {
@@ -16840,6 +16872,7 @@ mg_exit_library(void)
 			mg_ssl_initialized = 0;
 		}
 #endif
+		(void)pthread_mutex_destroy(&global_lock_mutex);
 	}
 	return 1;
 }
