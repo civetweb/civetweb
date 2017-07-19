@@ -812,7 +812,11 @@ mg_atomic_inc(volatile int *addr)
 	ret = InterlockedIncrement((volatile long *)addr);
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+#if defined(__i686) || !defined(__i386)
 	ret = __sync_add_and_fetch(addr, 1);
+#else
+	ret = (++(*addr));
+#endif /* defined(__i686) || !defined(__i386) */
 #else
 	ret = (++(*addr));
 #endif
@@ -831,7 +835,11 @@ mg_atomic_dec(volatile int *addr)
 	ret = InterlockedDecrement((volatile long *)addr);
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+#if defined(__i686) || !defined(__i386)
 	ret = __sync_sub_and_fetch(addr, 1);
+#else
+	ret = (--(*addr));
+#endif /* defined(__i686) || !defined(__i386) */
 #else
 	ret = (--(*addr));
 #endif
