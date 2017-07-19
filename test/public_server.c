@@ -1398,8 +1398,8 @@ START_TEST(test_request_handlers)
 	mg_close_connection(client_conn);
 
 
-/* Check if CGI test executable exists */
-        memset(&st, 0, sizeof(st));
+	/* Check if CGI test executable exists */
+	memset(&st, 0, sizeof(st));
 
 #if defined(_WIN32)
 	/* TODO: not yet available */
