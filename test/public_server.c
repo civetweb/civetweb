@@ -1399,13 +1399,14 @@ START_TEST(test_request_handlers)
 
 
 /* Check if CGI test executable exists */
+        memset(&st, 0, sizeof(st));
+
 #if defined(_WIN32)
 	/* TODO: not yet available */
 	sprintf(ebuf, "%scgi_test.cgi", locate_test_exes());
 #else
 	sprintf(ebuf, "%scgi_test.cgi", locate_test_exes());
 
-	memset(&st, 0, sizeof(st));
 	if (stat(ebuf, &st) != 0) {
 		fprintf(stderr, "\nFile %s not found\n", ebuf);
 		fprintf(stderr,
@@ -1459,7 +1460,6 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-
 	ck_assert_str_eq(ri->local_uri, "404");
 	mg_close_connection(client_conn);
 
