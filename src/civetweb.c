@@ -119,6 +119,13 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
+#if defined(__GNUC__) || defined(__MINGW32__)
+#define FUNCTION_MAY_BE_UNUSED __attribute__((unused))
+#else
+#define FUNCTION_MAY_BE_UNUSED
+#endif
+
+
 #ifndef _WIN32_WCE /* Some ANSI #includes are not available on Windows CE */
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -579,6 +586,8 @@ typedef int SOCKET;
 
 
 static CRITICAL_SECTION global_log_file_lock;
+
+FUNCTION_MAY_BE_UNUSED
 static DWORD
 pthread_self(void)
 {
@@ -586,6 +595,7 @@ pthread_self(void)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_key_create(
     pthread_key_t *key,
@@ -602,6 +612,7 @@ pthread_key_create(
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_key_delete(pthread_key_t key)
 {
@@ -609,6 +620,7 @@ pthread_key_delete(pthread_key_t key)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_setspecific(pthread_key_t key, void *value)
 {
@@ -616,6 +628,7 @@ pthread_setspecific(pthread_key_t key, void *value)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static void *
 pthread_getspecific(pthread_key_t key)
 {
@@ -651,6 +664,7 @@ static pthread_mutexattr_t pthread_mutex_attr;
 #endif
 
 
+FUNCTION_MAY_BE_UNUSED
 static time_t
 time(time_t *ptime)
 {
@@ -670,6 +684,7 @@ time(time_t *ptime)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static struct tm *
 localtime_s(const time_t *ptime, struct tm *ptm)
 {
@@ -700,6 +715,7 @@ localtime_s(const time_t *ptime, struct tm *ptm)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static struct tm *
 gmtime_s(const time_t *ptime, struct tm *ptm)
 {
@@ -713,6 +729,7 @@ static struct tm tm_array[MAX_WORKER_THREADS];
 static int tm_index = 0;
 
 
+FUNCTION_MAY_BE_UNUSED
 static struct tm *
 localtime(const time_t *ptime)
 {
@@ -721,6 +738,7 @@ localtime(const time_t *ptime)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static struct tm *
 gmtime(const time_t *ptime)
 {
@@ -729,6 +747,7 @@ gmtime(const time_t *ptime)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static size_t
 strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
 {
@@ -742,6 +761,8 @@ strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
 
 #define remove(f) mg_remove(NULL, f)
 
+
+FUNCTION_MAY_BE_UNUSED
 static int
 rename(const char *a, const char *b)
 {
@@ -753,11 +774,14 @@ rename(const char *a, const char *b)
 	return MoveFileW(wa, wb) ? 0 : -1;
 }
 
+
 struct stat {
 	int64_t st_size;
 	time_t st_mtime;
 };
 
+
+FUNCTION_MAY_BE_UNUSED
 static int
 stat(const char *name, struct stat *st)
 {
@@ -803,12 +827,32 @@ stat(const char *name, struct stat *st)
 
 static pthread_mutex_t global_lock_mutex;
 
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
+#define GCC_VERSION                                                            \
+	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION >= 40500
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif /* GCC_VERSION >= 40500 */
+#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+#if defined(__clang__)
+/* Show no warning in case system functions are not used. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
+
+FUNCTION_MAY_BE_UNUSED
 static void
 mg_global_lock(void)
 {
 	(void)pthread_mutex_lock(&global_lock_mutex);
 }
 
+
+FUNCTION_MAY_BE_UNUSED
 static void
 mg_global_unlock(void)
 {
@@ -816,6 +860,7 @@ mg_global_unlock(void)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 mg_atomic_inc(volatile int *addr)
 {
@@ -838,6 +883,7 @@ mg_atomic_inc(volatile int *addr)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 mg_atomic_dec(volatile int *addr)
 {
@@ -858,22 +904,6 @@ mg_atomic_dec(volatile int *addr)
 #endif
 	return ret;
 }
-
-
-#if defined(__GNUC__) || defined(__MINGW32__)
-/* Show no warning in case system functions are not used. */
-#define GCC_VERSION                                                            \
-	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#if GCC_VERSION >= 40500
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif /* GCC_VERSION >= 40500 */
-#endif /* defined(__GNUC__) || defined(__MINGW32__) */
-#if defined(__clang__)
-/* Show no warning in case system functions are not used. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#endif
 
 
 #if defined(USE_SERVER_STATS)
@@ -1246,6 +1276,7 @@ struct mg_workerTLS {
  * This function must match the signature required for SSL id callbacks:
  * CRYPTO_set_id_callback
  */
+FUNCTION_MAY_BE_UNUSED
 static unsigned long
 mg_current_thread_id(void)
 {
@@ -1295,6 +1326,7 @@ mg_current_thread_id(void)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static uint64_t
 mg_get_current_time_ns(void)
 {
@@ -3941,6 +3973,7 @@ mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 #endif
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
 {
@@ -3949,7 +3982,7 @@ pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
 	return (*mutex == NULL) ? -1 : 0;
 }
 
-
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
@@ -3957,6 +3990,7 @@ pthread_mutex_destroy(pthread_mutex_t *mutex)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_lock(pthread_mutex_t *mutex)
 {
@@ -3965,6 +3999,7 @@ pthread_mutex_lock(pthread_mutex_t *mutex)
 
 
 #ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
@@ -3979,6 +4014,7 @@ pthread_mutex_trylock(pthread_mutex_t *mutex)
 #endif
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
@@ -3986,6 +4022,7 @@ pthread_mutex_unlock(pthread_mutex_t *mutex)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_cond_init(pthread_cond_t *cv, const void *unused)
 {
@@ -3996,6 +4033,7 @@ pthread_cond_init(pthread_cond_t *cv, const void *unused)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_cond_timedwait(pthread_cond_t *cv,
                        pthread_mutex_t *mutex,
@@ -4055,6 +4093,7 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
 {
@@ -4062,6 +4101,7 @@ pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_cond_signal(pthread_cond_t *cv)
 {
@@ -4082,6 +4122,7 @@ pthread_cond_signal(pthread_cond_t *cv)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_cond_broadcast(pthread_cond_t *cv)
 {
@@ -4095,6 +4136,7 @@ pthread_cond_broadcast(pthread_cond_t *cv)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 pthread_cond_destroy(pthread_cond_t *cv)
 {
@@ -4108,6 +4150,7 @@ pthread_cond_destroy(pthread_cond_t *cv)
 
 
 #ifdef ALTERNATIVE_QUEUE
+FUNCTION_MAY_BE_UNUSED
 static void *
 event_create(void)
 {
@@ -4115,6 +4158,7 @@ event_create(void)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 event_wait(void *eventhdl)
 {
@@ -4123,6 +4167,7 @@ event_wait(void *eventhdl)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 event_signal(void *eventhdl)
 {
@@ -4130,6 +4175,7 @@ event_signal(void *eventhdl)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static void
 event_destroy(void *eventhdl)
 {
@@ -4369,6 +4415,7 @@ mg_mkdir(const struct mg_connection *conn, const char *path, int mode)
 
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
+FUNCTION_MAY_BE_UNUSED
 static DIR *
 mg_opendir(const struct mg_connection *conn, const char *name)
 {
@@ -4398,6 +4445,7 @@ mg_opendir(const struct mg_connection *conn, const char *name)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 mg_closedir(DIR *dir)
 {
@@ -4417,6 +4465,7 @@ mg_closedir(DIR *dir)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static struct dirent *
 mg_readdir(DIR *dir)
 {
@@ -4451,6 +4500,7 @@ mg_readdir(DIR *dir)
 
 
 #ifndef HAVE_POLL
+FUNCTION_MAY_BE_UNUSED
 static int
 poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 {
@@ -4584,6 +4634,7 @@ mg_join_thread(pthread_t threadid)
 #endif
 
 
+FUNCTION_MAY_BE_UNUSED
 static HANDLE
 dlopen(const char *dll_name, int flags)
 {
@@ -4594,6 +4645,7 @@ dlopen(const char *dll_name, int flags)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
 static int
 dlclose(void *handle)
 {
@@ -15939,14 +15991,6 @@ mg_start(const struct mg_callbacks *callbacks,
 	tls.pthread_cond_helper_mutex = NULL;
 #endif
 	pthread_setspecific(sTlsKey, &tls);
-
-	/* Dummy use this function - in some #ifdef combinations it's used,
-	 * while it's not used in others, but GCC seems to stupid to understand
-	 * #pragma GCC diagnostic ignored "-Wunused-function"
-	 * in cases the function is unused, and it also complains on
-	 * __attribute((unused))__ in cases it is used.
-	 * So dummy use it, to have our peace. */
-	(void)mg_current_thread_id();
 
 	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr);
 #if !defined(ALTERNATIVE_QUEUE)
