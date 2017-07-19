@@ -1201,8 +1201,14 @@ static void mg_snprintf(const struct mg_connection *conn,
 #endif
 
 
+/* mg_init_library counter */
+static int mg_init_library_called = 0;
+
+#if !defined(NO_SSL)
+static int mg_ssl_initialized = 0;
+#endif
+
 static pthread_key_t sTlsKey; /* Thread local storage index */
-static int sTlsInit = 0;
 static int thread_idx_max = 0;
 
 
@@ -15697,11 +15703,6 @@ master_thread_run(void *thread_func_param)
 	}
 #endif
 
-#if !defined(NO_SSL)
-	if (ctx->ssl_ctx != NULL) {
-		uninitialize_ssl();
-	}
-#endif
 	DEBUG_TRACE("%s", "exiting");
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -15802,22 +15803,6 @@ free_context(struct mg_context *ctx)
 	/* Deallocate worker thread ID array */
 	if (ctx->worker_connections != NULL) {
 		mg_free(ctx->worker_connections);
-	}
-
-	/* Deallocate the tls variable */
-	if (mg_atomic_dec(&sTlsInit) == 0) {
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
-		DeleteCriticalSection(&global_log_file_lock);
-#endif /* _WIN32 && !__SYMBIAN32__ */
-#if !defined(_WIN32)
-		pthread_mutexattr_destroy(&pthread_mutex_attr);
-#endif
-
-		pthread_key_delete(sTlsKey);
-
-#if defined(USE_LUA)
-		lua_exit_optional_libraries();
-#endif
 	}
 
 	/* deallocate system name string */
@@ -15942,33 +15927,10 @@ mg_start(const struct mg_callbacks *callbacks,
 	ctx->auth_nonce_mask =
 	    (uint64_t)get_random() ^ (uint64_t)(ptrdiff_t)(options);
 
-	if (mg_atomic_inc(&sTlsInit) == 1) {
-
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
-		InitializeCriticalSection(&global_log_file_lock);
-#endif /* _WIN32 && !__SYMBIAN32__ */
-#if !defined(_WIN32)
-		pthread_mutexattr_init(&pthread_mutex_attr);
-		pthread_mutexattr_settype(&pthread_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
-#endif
-
-		if (0 != pthread_key_create(&sTlsKey, tls_dtor)) {
-			/* Fatal error - abort start. However, this situation should
-			 * never occur in practice. */
-			mg_atomic_dec(&sTlsInit);
-			mg_cry(fc(ctx), "Cannot initialize thread local storage");
-			mg_free(ctx);
-			return NULL;
-		}
-
-#if defined(USE_LUA)
-		lua_init_optional_libraries();
-#endif
-
-	} else {
-		/* TODO (low): instead of sleeping, check if sTlsKey is already
-		 * initialized. */
-		mg_sleep(1);
+	if (mg_init_library_called == 0) {
+		/* Legacy INIT, if mg_start is called without mg_init_library.
+		 * Note: This may cause a memory leak */
+		mg_init_library(0);
 	}
 
 	tls.is_master = -1;
@@ -16797,15 +16759,8 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 }
 
 
-/* mg_init_library counter */
-static int mg_init_library_called = 0;
-
-#if !defined(NO_SSL)
-static int mg_ssl_initialized = 0;
-#endif
-
-
-/* Initialize this library. This function does not need to be thread safe. */
+/* Initialize this library. This function does not need to be thread safe.
+ */
 unsigned
 mg_init_library(unsigned features)
 {
@@ -16823,6 +16778,29 @@ mg_init_library(unsigned features)
 		}
 	}
 
+	mg_global_lock();
+
+	if (mg_init_library_called <= 0) {
+		if (0 != pthread_key_create(&sTlsKey, tls_dtor)) {
+			/* Fatal error - abort start. However, this situation should
+			 * never occur in practice. */
+			return 0;
+		}
+
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+		InitializeCriticalSection(&global_log_file_lock);
+#endif /* _WIN32 && !__SYMBIAN32__ */
+#if !defined(_WIN32)
+		pthread_mutexattr_init(&pthread_mutex_attr);
+		pthread_mutexattr_settype(&pthread_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
+#endif
+
+#if defined(USE_LUA)
+		lua_init_optional_libraries();
+#endif
+	}
+
+
 #if !defined(NO_SSL)
 	if (features_to_init & 2) {
 		if (!mg_ssl_initialized) {
@@ -16839,7 +16817,7 @@ mg_init_library(unsigned features)
 	}
 #endif
 
-	/* Start Windows. */
+	/* Start WinSock for Windows */
 	if (mg_init_library_called <= 0) {
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 		WSADATA data;
@@ -16849,6 +16827,8 @@ mg_init_library(unsigned features)
 	} else {
 		mg_init_library_called++;
 	}
+
+	mg_global_unlock();
 
 	return features_inited;
 }
@@ -16861,6 +16841,9 @@ mg_exit_library(void)
 	if (mg_init_library_called <= 0) {
 		return 0;
 	}
+
+	mg_global_lock();
+
 	mg_init_library_called--;
 	if (mg_init_library_called == 0) {
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -16872,8 +16855,26 @@ mg_exit_library(void)
 			mg_ssl_initialized = 0;
 		}
 #endif
+
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+		(void)DeleteCriticalSection(&global_log_file_lock);
+#endif /* _WIN32 && !__SYMBIAN32__ */
+#if !defined(_WIN32)
+		(void)pthread_mutexattr_destroy(&pthread_mutex_attr);
+#endif
+
+		(void)pthread_key_delete(sTlsKey);
+
+#if defined(USE_LUA)
+		lua_exit_optional_libraries();
+#endif
+
+		mg_global_unlock();
 		(void)pthread_mutex_destroy(&global_lock_mutex);
+		return 1;
 	}
+
+	mg_global_unlock();
 	return 1;
 }
 
