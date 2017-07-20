@@ -16794,7 +16794,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		            sizeof(block),
 		            "\"requests\" : {%s"
 		            "\"total\" : %" INT64_FMT "%s"
-		            "}%s",
+		            "},%s",
 		            eol,
 		            ctx->total_requests,
 		            eol,
@@ -16808,17 +16808,15 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 
 	/* Execution time information */
 	if (ctx) {
-		char time_str[128] = {0};
-		struct timespec tscpuusage;
-		double cpuusage = 0.0;
+		char start_time_str[64] = {0};
+		char now_str[64] = {0};
 		time_t start_time = ctx->start_time;
+		time_t now = time(NULL);
 
-		gmt_time_string(time_str, sizeof(time_str) - 1, &start_time);
-
-		if (0 == clock_gettime(CLOCK_PROCESS, &tscpuusage)) {
-			cpuusage =
-			    (double)tscpuusage.tv_sec + 1.0E-9 * (double)tscpuusage.tv_nsec;
-		}
+		gmt_time_string(start_time_str,
+		                sizeof(start_time_str) - 1,
+		                &start_time);
+		gmt_time_string(now_str, sizeof(now_str) - 1, &now);
 
 		mg_snprintf(NULL,
 		            NULL,
@@ -16827,14 +16825,14 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		            "\"time\" : {%s"
 		            "\"uptime\" : %.0f,%s"
 		            "\"start\" : \"%s\",%s"
-		            "\"cpuusage\" : %f%s"
+		            "\"now\" : \"%s\"%s"
 		            "}%s",
 		            eol,
-		            difftime(time(NULL), start_time),
+		            difftime(now, start_time),
 		            eol,
-		            time_str,
+		            start_time_str,
 		            eol,
-		            cpuusage,
+		            now_str,
 		            eol,
 		            eol);
 
