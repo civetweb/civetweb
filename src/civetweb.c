@@ -131,9 +131,23 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 #if defined(__GNUC__) || defined(__MINGW32__)
 
-#pragma GCC diagnostic ignored "-Wused-but-marked-unused"
+/* GCC unused function attribute seems fundamentally broken.
+ * Several attempts to tell the compiler "THIS FUNCTION MAY BE USED
+ * OR UNUSED" for individual functions failed.
+ * Either the compiler creates an "unused-function" warning if a
+ * function is not marked with __attribute__((unused)).
+ * On the other hand, if the function is marked with this attribute,
+ * but is used, the compiler raises a completely idiotic
+ * "used-but-marked-unused" warning - and
+ *   #pragma GCC diagnostic ignored "-Wused-but-marked-unused"
+ * raises error: unknown option after ‘#pragma GCC diagnostic’.
+ * Disable this warning completely, until the GCC guys sober up
+ * again.
+ */
 
-#define FUNCTION_MAY_BE_UNUSED __attribute__((unused))
+#pragma GCC diagnostic ignored "-Wunused-function"
+
+#define FUNCTION_MAY_BE_UNUSED /* __attribute__((unused)) */
 
 #else
 #define FUNCTION_MAY_BE_UNUSED
