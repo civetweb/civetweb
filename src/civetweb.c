@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017 the Civetweb developers
+﻿/* Copyright (c) 2013-2017 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -128,9 +128,13 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
+
 #if defined(__GNUC__) || defined(__MINGW32__)
-#define FUNCTION_MAY_BE_UNUSED __attribute__((unused))
+
 #pragma GCC diagnostic ignored "-Wused-but-marked-unused"
+
+#define FUNCTION_MAY_BE_UNUSED __attribute__((unused))
+
 #else
 #define FUNCTION_MAY_BE_UNUSED
 #endif
@@ -399,6 +403,13 @@ typedef DWORD clockid_t;
 #ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME (2)
 #endif
+#ifndef CLOCK_THREAD
+#define CLOCK_THREAD (3)
+#endif
+#ifndef CLOCK_PROCESS
+#define CLOCK_PROCESS (4)
+#endif
+
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
 #define _TIMESPEC_DEFINED
@@ -420,7 +431,7 @@ static int
 clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
 	FILETIME ft;
-	ULARGE_INTEGER li;
+	ULARGE_INTEGER li, li2;
 	BOOL ok = FALSE;
 	double d;
 	static double perfcnt_per_sec = 0.0;
@@ -448,10 +459,41 @@ clock_gettime(clockid_t clk_id, struct timespec *tp)
 				tp->tv_nsec = (long)(d * 1.0E9);
 				ok = TRUE;
 			}
+		} else if (clk_if == CLOCK_THREAD) {
+			FILETIME t_create, t_exit, t_kernel, t_user;
+			if (GetThreadTimes(GetCurrentThread()),
+			    &t_create,
+			    &t_exit,
+			    &t_kernel,
+			    &t_user))
+				{
+					li.LowPart = t_user.dwLowDateTime;
+					li.HighPart = t_user.dwHighDateTime;
+					li2.LowPart = t_kernel.dwLowDateTime;
+					li2.HighPart = t_kernel.dwHighDateTime;
+					li.QuadPart += li2.QuadPart;
+					tp->tv_sec = (time_t)(li.QuadPart / 10000000);
+					tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
+					ok = TRUE;
+				}
+		}
+	} else if (clk_if == CLOCK_PROCESS) {
+		FILETIME t_create, t_exit, t_kernel, t_user;
+		if (GetProcessTimes(
+		        GetCurrentProcess(), &t_create, &t_exit, &t_kernel, &t_user)) {
+			li.LowPart = t_user.dwLowDateTime;
+			li.HighPart = t_user.dwHighDateTime;
+			li2.LowPart = t_kernel.dwLowDateTime;
+			li2.HighPart = t_kernel.dwHighDateTime;
+			li.QuadPart += li2.QuadPart;
+			tp->tv_sec = (time_t)(li.QuadPart / 10000000);
+			tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
+			ok = TRUE;
 		}
 	}
+}
 
-	return ok ? 0 : -1;
+return ok ? 0 : -1;
 }
 #endif
 
@@ -2163,8 +2205,10 @@ struct mg_context {
 	struct mg_connection *worker_connections; /* The connection struct, pre-
 	                                           * allocated for each worker */
 
-	time_t start_time;        /* Server start time, used for authentication */
-	uint64_t auth_nonce_mask; /* Mask for all nonce values */
+	time_t start_time; /* Server start time, used for authentication
+	                    * and for diagnstics. */
+
+	uint64_t auth_nonce_mask;    /* Mask for all nonce values */
 	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
 	unsigned long nonce_count;   /* Used nonces, used for authentication */
 
@@ -16762,6 +16806,45 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		}
 	}
 
+	/* Execution time information */
+	if (ctx) {
+		char time_str[128] = {0};
+		struct timespec tscpuusage;
+		double cpuusage = 0.0;
+		time_t start_time = ctx->start_time;
+
+		gmt_time_string(time_str, sizeof(time_str) - 1, &start_time);
+
+		if (0 == clock_gettime(CLOCK_PROCESS, &tscpuusage)) {
+			cpuusage =
+			    (double)tscpuusage.tv_sec + 1.0E-9 * (double)tscpuusage.tv_nsec;
+		}
+
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"time\" : {%s"
+		            "\"uptime\" : %.0f,%s"
+		            "\"start\" : \"%s\",%s"
+		            "\"cpuusage\" : %f%s"
+		            "}%s",
+		            eol,
+		            difftime(time(NULL), start_time),
+		            eol,
+		            time_str,
+		            eol,
+		            cpuusage,
+		            eol,
+		            eol);
+
+		context_info_length += (int)strlen(block);
+		if (context_info_length + reserved_len < buflen) {
+			strcat(buffer, block);
+		}
+	}
+
+	/* Terminate string */
 	if ((buflen > 0) && buffer && buffer[0]) {
 		if (context_info_length < buflen) {
 			strcat(buffer, eoobj);
