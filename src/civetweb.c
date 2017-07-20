@@ -121,6 +121,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 #if defined(__GNUC__) || defined(__MINGW32__)
 #define FUNCTION_MAY_BE_UNUSED __attribute__((unused))
+#pragma GCC diagnostic ignored "-Wused-but-marked-unused"
 #else
 #define FUNCTION_MAY_BE_UNUSED
 #endif
