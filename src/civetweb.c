@@ -473,25 +473,24 @@ clock_gettime(clockid_t clk_id, struct timespec *tp)
 				tp->tv_nsec = (long)(d * 1.0E9);
 				ok = TRUE;
 			}
-		} else if (clk_if == CLOCK_THREAD) {
+		} else if (clk_id == CLOCK_THREAD) {
 			FILETIME t_create, t_exit, t_kernel, t_user;
-			if (GetThreadTimes(GetCurrentThread()),
-			    &t_create,
-			    &t_exit,
-			    &t_kernel,
-			    &t_user))
-				{
-					li.LowPart = t_user.dwLowDateTime;
-					li.HighPart = t_user.dwHighDateTime;
-					li2.LowPart = t_kernel.dwLowDateTime;
-					li2.HighPart = t_kernel.dwHighDateTime;
-					li.QuadPart += li2.QuadPart;
-					tp->tv_sec = (time_t)(li.QuadPart / 10000000);
-					tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
-					ok = TRUE;
-				}
+			if (GetThreadTimes(GetCurrentThread(),
+			                   &t_create,
+			                   &t_exit,
+			                   &t_kernel,
+			                   &t_user)) {
+				li.LowPart = t_user.dwLowDateTime;
+				li.HighPart = t_user.dwHighDateTime;
+				li2.LowPart = t_kernel.dwLowDateTime;
+				li2.HighPart = t_kernel.dwHighDateTime;
+				li.QuadPart += li2.QuadPart;
+				tp->tv_sec = (time_t)(li.QuadPart / 10000000);
+				tp->tv_nsec = (long)(li.QuadPart % 10000000) * 100;
+				ok = TRUE;
+			}
 		}
-	} else if (clk_if == CLOCK_PROCESS) {
+	} else if (clk_id == CLOCK_PROCESS) {
 		FILETIME t_create, t_exit, t_kernel, t_user;
 		if (GetProcessTimes(
 		        GetCurrentProcess(), &t_create, &t_exit, &t_kernel, &t_user)) {
@@ -891,9 +890,6 @@ stat(const char *name, struct stat *st)
 #endif /* defined(_WIN32_WCE) */
 
 
-static pthread_mutex_t global_lock_mutex;
-
-
 #if defined(__GNUC__) || defined(__MINGW32__)
 /* Show no warning in case system functions are not used. */
 #define GCC_VERSION                                                            \
@@ -907,6 +903,18 @@ static pthread_mutex_t global_lock_mutex;
 /* Show no warning in case system functions are not used. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
+static pthread_mutex_t global_lock_mutex;
+
+
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+/* Forward declaration for Windows */
+FUNCTION_MAY_BE_UNUSED
+static int pthread_mutex_lock(pthread_mutex_t *mutex);
+
+FUNCTION_MAY_BE_UNUSED
+static int pthread_mutex_unlock(pthread_mutex_t *mutex);
 #endif
 
 
