@@ -4462,24 +4462,26 @@ make_public_server_suite(void)
 
 	tcase_add_test(tcase_minimal, test_minimal_client);
 	tcase_add_test(tcase_minimal, test_minimal_server_callback);
-	tcase_set_timeout(tcase_minimal, civetweb_min_test_timeout);
+	tcase_set_timeout(tcase_minimal, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_minimal);
 
 	tcase_add_test(tcase_startstophttp, test_mg_start_stop_http_server);
-	tcase_set_timeout(tcase_startstophttp, civetweb_min_test_timeout);
+	tcase_set_timeout(tcase_startstophttp, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_startstophttp);
 
 	tcase_add_test(tcase_startstophttp_ipv6,
 	               test_mg_start_stop_http_server_ipv6);
-	tcase_set_timeout(tcase_startstophttp_ipv6, civetweb_min_test_timeout);
+	tcase_set_timeout(tcase_startstophttp_ipv6,
+	                  civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_startstophttp_ipv6);
 
 	tcase_add_test(tcase_startstophttps, test_mg_start_stop_https_server);
-	tcase_set_timeout(tcase_startstophttps, civetweb_min_test_timeout);
+	tcase_set_timeout(tcase_startstophttps, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_startstophttps);
 
 	tcase_add_test(tcase_serverandclienttls, test_mg_server_and_client_tls);
-	tcase_set_timeout(tcase_serverandclienttls, civetweb_min_test_timeout);
+	tcase_set_timeout(tcase_serverandclienttls,
+	                  civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_serverandclienttls);
 
 	tcase_add_test(tcase_serverrequests, test_request_handlers);
@@ -4492,7 +4494,7 @@ make_public_server_suite(void)
 	suite_add_tcase(suite, tcase_handle_form);
 
 	tcase_add_test(tcase_http_auth, test_http_auth);
-	tcase_set_timeout(tcase_http_auth, 60);
+	tcase_set_timeout(tcase_http_auth, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_http_auth);
 
 	tcase_add_test(tcase_keep_alive, test_keep_alive);
