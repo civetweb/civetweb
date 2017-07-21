@@ -14193,6 +14193,11 @@ close_connection(struct mg_connection *conn)
 		conn->ctx->callbacks.connection_close(conn);
 	}
 
+	/* Reset user data, after close callback is called.
+	 * Do not reuse it. If the user needs a destructor,
+	 * it must be done in the connection_close callback. */
+	mg_set_user_connection_data(conn, NULL);
+
 	mg_lock_connection(conn);
 
 	conn->must_close = 1;
