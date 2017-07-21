@@ -504,9 +504,8 @@ clock_gettime(clockid_t clk_id, struct timespec *tp)
 			ok = TRUE;
 		}
 	}
-}
 
-return ok ? 0 : -1;
+	return ok ? 0 : -1;
 }
 #endif
 
