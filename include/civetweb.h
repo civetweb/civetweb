@@ -219,11 +219,20 @@ struct mg_callbacks {
 #endif /* MG_LEGACY_INTERFACE */
 
 	/* Called when civetweb is closing a connection.  The per-context mutex is
-	   locked when this is invoked.  This is primarily useful for noting when
-	   a websocket is closing and removing it from any application-maintained
-	   list of clients.
+	   locked when this is invoked.
+
+	   Websockets:
+	   Before mg_set_websocket_handler has been added, it was primarily useful
+	   for noting when a websocket is closing, and used to remove it from any
+	   application-maintained list of clients.
 	   Using this callback for websocket connections is deprecated: Use
-	   mg_set_websocket_handler instead. */
+	   mg_set_websocket_handler instead.
+
+	   Connection specific data:
+	   If memory has been allocated for the connection specific user data
+	   (mg_request_info->conn_data, mg_get_user_connection_data),
+	   this is the last chance to free it.
+	*/
 	void (*connection_close)(const struct mg_connection *);
 
 #if defined(MG_USE_OPEN_FILE)
@@ -297,6 +306,21 @@ struct mg_callbacks {
 	   Parameters:
 	     ctx: context handle */
 	void (*exit_context)(const struct mg_context *ctx);
+
+	/* Called when initializing a new connection object.
+	 * Can be used to initialize the connection specific user data
+	 * (mg_request_info->conn_data, mg_get_user_connection_data).
+	 * When the callback is called, it is not yet known if a
+	 * valid HTTP(S) request will be made.
+	 * Parameters:
+	 *   conn: not yet fully initialized connection object
+	 *   conn_data: output parameter, set to initialize the
+	 *              connection specific user data
+	 * Return value:
+	 *   must be 0
+	 *   Otherwise, the result is undefined
+	 */
+	int (*init_connection)(const struct mg_connection *conn, void **conn_data);
 };
 
 

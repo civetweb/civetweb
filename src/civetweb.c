@@ -14260,6 +14260,9 @@ close_connection(struct mg_connection *conn)
 	}
 #endif
 
+	mg_lock_connection(conn);
+	conn->must_close = 1;
+
 	/* call the connection_close callback if assigned */
 	if ((conn->ctx->callbacks.connection_close != NULL)
 	    && (conn->ctx->context_type == 1)) {
@@ -14271,9 +14274,6 @@ close_connection(struct mg_connection *conn)
 	 * it must be done in the connection_close callback. */
 	mg_set_user_connection_data(conn, NULL);
 
-	mg_lock_connection(conn);
-
-	conn->must_close = 1;
 
 #ifndef NO_SSL
 	if (conn->ssl != NULL) {
@@ -15277,6 +15277,14 @@ init_connection(struct mg_connection *conn)
 	conn->data_len = 0;
 	conn->handled_requests = 0;
 	mg_set_user_connection_data(conn, NULL);
+
+	/* call the connection_close callback if assigned */
+	if ((conn->ctx->callbacks.init_connection != NULL)
+	    && (conn->ctx->context_type == 1)) {
+		void *conn_data = NULL;
+		conn->ctx->callbacks.init_connection(conn, &conn_data);
+		mg_set_user_connection_data(conn, conn_data);
+	}
 }
 
 
