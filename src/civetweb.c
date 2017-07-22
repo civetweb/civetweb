@@ -15260,6 +15260,26 @@ mg_connect_websocket_client(const char *host,
 }
 
 
+/* Prepare connection data structure */
+static void
+init_connection(struct mg_connection *conn)
+{
+	/* Is keep alive allowed by the server */
+	int keep_alive_enabled =
+	    !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
+
+	if (!keep_alive_enabled) {
+		conn->must_close = 1;
+	}
+
+	/* Important: on new connection, reset the receiving buffer. Credit
+	 * goes to crule42. */
+	conn->data_len = 0;
+	conn->handled_requests = 0;
+	mg_set_user_connection_data(conn, NULL);
+}
+
+
 /* Process a connection - may handle multiple requests
  * using the same connection.
  * Must be called with a valid connection (conn  and
@@ -15269,7 +15289,7 @@ static void
 process_new_connection(struct mg_connection *conn)
 {
 	struct mg_request_info *ri = &conn->request_info;
-	int keep_alive_enabled, keep_alive, discard_len;
+	int keep_alive, discard_len;
 	char ebuf[100];
 	const char *hostend;
 	int reqerr, uri_type;
@@ -15284,18 +15304,7 @@ process_new_connection(struct mg_connection *conn)
 	}
 #endif
 
-	/* Is keep alive allowed by the server */
-	keep_alive_enabled = !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
-
-	if (!keep_alive_enabled) {
-		conn->must_close = 1;
-	}
-
-	/* Important: on new connection, reset the receiving buffer. Credit
-	 * goes to crule42. */
-	conn->data_len = 0;
-	conn->handled_requests = 0;
-	mg_set_user_connection_data(conn, NULL);
+	init_connection(conn);
 
 	DEBUG_TRACE("Start processing connection from %s",
 	            conn->request_info.remote_addr);
@@ -15395,14 +15404,12 @@ process_new_connection(struct mg_connection *conn)
 		}
 
 		/* NOTE(lsm): order is important here. should_keep_alive() call
-		 * is
-		 * using parsed request, which will be invalid after memmove's
-		 * below.
+		 * is using parsed request, which will be invalid after
+		 * memmove's below.
 		 * Therefore, memorize should_keep_alive() result now for later
-		 * use
-		 * in loop exit condition. */
-		keep_alive = (conn->ctx->stop_flag == 0) && keep_alive_enabled
-		             && (conn->content_len >= 0) && should_keep_alive(conn);
+		 * use in loop exit condition. */
+		keep_alive = (conn->ctx->stop_flag == 0) && should_keep_alive(conn)
+		             && (conn->content_len >= 0);
 
 
 		/* Discard all buffered data for this request */
