@@ -14305,7 +14305,7 @@ mg_close_connection(struct mg_connection *conn)
 	struct mg_context *client_ctx = NULL;
 #endif /* defined(USE_WEBSOCKET) */
 
-    if ((conn == NULL) || (conn->ctx == NULL)) {
+	if ((conn == NULL) || (conn->ctx == NULL)) {
 		return;
 	}
 
@@ -15268,192 +15268,185 @@ mg_connect_websocket_client(const char *host,
 static void
 process_new_connection(struct mg_connection *conn)
 {
-		struct mg_request_info *ri = &conn->request_info;
-		int keep_alive_enabled, keep_alive, discard_len;
-		char ebuf[100];
-		const char *hostend;
-		int reqerr, uri_type;
+	struct mg_request_info *ri = &conn->request_info;
+	int keep_alive_enabled, keep_alive, discard_len;
+	char ebuf[100];
+	const char *hostend;
+	int reqerr, uri_type;
 
 #if defined(USE_SERVER_STATS)
-		int mcon = mg_atomic_inc(&(conn->ctx->active_connections));
-		mg_atomic_add(&(conn->ctx->total_connections), 1);
-		if (mcon > (conn->ctx->max_connections)) {
-			/* could use atomic compare exchange, but this
-			 * seems overkill for statistics data */
-			conn->ctx->max_connections = mcon;
-		}
+	int mcon = mg_atomic_inc(&(conn->ctx->active_connections));
+	mg_atomic_add(&(conn->ctx->total_connections), 1);
+	if (mcon > (conn->ctx->max_connections)) {
+		/* could use atomic compare exchange, but this
+		 * seems overkill for statistics data */
+		conn->ctx->max_connections = mcon;
+	}
 #endif
 
-        /* Is keep alive allowed by the server */
-		keep_alive_enabled =
-		    !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
+	/* Is keep alive allowed by the server */
+	keep_alive_enabled = !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
 
-        if (!keep_alive_enabled) {
-            conn->must_close = 1;
-        }
+	if (!keep_alive_enabled) {
+		conn->must_close = 1;
+	}
 
-        /* Important: on new connection, reset the receiving buffer. Credit
-		 * goes to crule42. */       
-        conn->data_len = 0;
-        conn->handled_requests = 0;
-        mg_set_user_connection_data(conn, NULL);
+	/* Important: on new connection, reset the receiving buffer. Credit
+	 * goes to crule42. */
+	conn->data_len = 0;
+	conn->handled_requests = 0;
+	mg_set_user_connection_data(conn, NULL);
 
-        DEBUG_TRACE("Start processing connection from %s",
-                    conn->request_info.remote_addr);
+	DEBUG_TRACE("Start processing connection from %s",
+	            conn->request_info.remote_addr);
 
-        /* Loop over multiple requests sent using the same connection
-         * (while "keep alive"). */
-        do {
+	/* Loop over multiple requests sent using the same connection
+	 * (while "keep alive"). */
+	do {
 
-			DEBUG_TRACE("calling get_request (%i times for this connection)",
-			            conn->handled_requests + 1);
+		DEBUG_TRACE("calling get_request (%i times for this connection)",
+		            conn->handled_requests + 1);
 
-			if (!get_request(conn, ebuf, sizeof(ebuf), &reqerr)) {
-				/* The request sent by the client could not be understood by
-				 * the server, or it was incomplete or a timeout. Send an
-				 * error message and close the connection. */
-				if (reqerr > 0) {
-					/*assert(ebuf[0] != '\0');*/
-					mg_send_http_error(conn, reqerr, "%s", ebuf);
+		if (!get_request(conn, ebuf, sizeof(ebuf), &reqerr)) {
+			/* The request sent by the client could not be understood by
+			 * the server, or it was incomplete or a timeout. Send an
+			 * error message and close the connection. */
+			if (reqerr > 0) {
+				/*assert(ebuf[0] != '\0');*/
+				mg_send_http_error(conn, reqerr, "%s", ebuf);
+			}
+		} else if (strcmp(ri->http_version, "1.0")
+		           && strcmp(ri->http_version, "1.1")) {
+			mg_snprintf(conn,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            sizeof(ebuf),
+			            "Bad HTTP version: [%s]",
+			            ri->http_version);
+			mg_send_http_error(conn, 505, "%s", ebuf);
+		}
+
+		if (ebuf[0] == '\0') {
+			uri_type = get_uri_type(conn->request_info.request_uri);
+			switch (uri_type) {
+			case 1:
+				/* Asterisk */
+				conn->request_info.local_uri = NULL;
+				break;
+			case 2:
+				/* relative uri */
+				conn->request_info.local_uri = conn->request_info.request_uri;
+				break;
+			case 3:
+			case 4:
+				/* absolute uri (with/without port) */
+				hostend = get_rel_url_at_current_server(
+				    conn->request_info.request_uri, conn);
+				if (hostend) {
+					conn->request_info.local_uri = hostend;
+				} else {
+					conn->request_info.local_uri = NULL;
 				}
-			} else if (strcmp(ri->http_version, "1.0")
-			           && strcmp(ri->http_version, "1.1")) {
+				break;
+			default:
 				mg_snprintf(conn,
 				            NULL, /* No truncation check for ebuf */
 				            ebuf,
 				            sizeof(ebuf),
-				            "Bad HTTP version: [%s]",
-				            ri->http_version);
-				mg_send_http_error(conn, 505, "%s", ebuf);
+				            "Invalid URI");
+				mg_send_http_error(conn, 400, "%s", ebuf);
+				conn->request_info.local_uri = NULL;
+				break;
 			}
-
-			if (ebuf[0] == '\0') {
-				uri_type = get_uri_type(conn->request_info.request_uri);
-				switch (uri_type) {
-				case 1:
-					/* Asterisk */
-					conn->request_info.local_uri = NULL;
-					break;
-				case 2:
-					/* relative uri */
-					conn->request_info.local_uri =
-					    conn->request_info.request_uri;
-					break;
-				case 3:
-				case 4:
-					/* absolute uri (with/without port) */
-					hostend = get_rel_url_at_current_server(
-					    conn->request_info.request_uri, conn);
-					if (hostend) {
-						conn->request_info.local_uri = hostend;
-					} else {
-						conn->request_info.local_uri = NULL;
-					}
-					break;
-				default:
-					mg_snprintf(conn,
-					            NULL, /* No truncation check for ebuf */
-					            ebuf,
-					            sizeof(ebuf),
-					            "Invalid URI");
-					mg_send_http_error(conn, 400, "%s", ebuf);
-					conn->request_info.local_uri = NULL;
-					break;
-				}
 
 #if defined(MG_LEGACY_INTERFACE)
-				/* Legacy before split into local_uri and request_uri */
-				conn->request_info.uri = conn->request_info.local_uri;
+			/* Legacy before split into local_uri and request_uri */
+			conn->request_info.uri = conn->request_info.local_uri;
 #endif
-			}
+		}
 
-			DEBUG_TRACE("http: %s, error: %s",
-			            (ri->http_version ? ri->http_version : "none"),
-			            (ebuf[0] ? ebuf : "none"));
+		DEBUG_TRACE("http: %s, error: %s",
+		            (ri->http_version ? ri->http_version : "none"),
+		            (ebuf[0] ? ebuf : "none"));
 
-			if (ebuf[0] == '\0') {
-				if (conn->request_info.local_uri) {
-					/* handle request to local server */
-					handle_request(conn);
-					DEBUG_TRACE("%s", "handle_request done");
-					if (conn->ctx->callbacks.end_request != NULL) {
-						conn->ctx->callbacks.end_request(conn,
-						                                 conn->status_code);
-						DEBUG_TRACE("%s", "end_request callback done");
-					}
-					log_access(conn);
-				} else {
-					/* TODO: handle non-local request (PROXY) */
-					conn->must_close = 1;
+		if (ebuf[0] == '\0') {
+			if (conn->request_info.local_uri) {
+				/* handle request to local server */
+				handle_request(conn);
+				DEBUG_TRACE("%s", "handle_request done");
+				if (conn->ctx->callbacks.end_request != NULL) {
+					conn->ctx->callbacks.end_request(conn, conn->status_code);
+					DEBUG_TRACE("%s", "end_request callback done");
 				}
+				log_access(conn);
 			} else {
+				/* TODO: handle non-local request (PROXY) */
 				conn->must_close = 1;
 			}
+		} else {
+			conn->must_close = 1;
+		}
 
-			if (ri->remote_user != NULL) {
-				mg_free((void *)ri->remote_user);
-				/* Important! When having connections with and without auth
-				 * would cause double free and then crash */
-				ri->remote_user = NULL;
-			}
+		if (ri->remote_user != NULL) {
+			mg_free((void *)ri->remote_user);
+			/* Important! When having connections with and without auth
+			 * would cause double free and then crash */
+			ri->remote_user = NULL;
+		}
 
-			/* NOTE(lsm): order is important here. should_keep_alive() call
-			 * is
-			 * using parsed request, which will be invalid after memmove's
-			 * below.
-			 * Therefore, memorize should_keep_alive() result now for later
-			 * use
-			 * in loop exit condition. */
-			keep_alive = (conn->ctx->stop_flag == 0) && keep_alive_enabled
-			             && (conn->content_len >= 0) && should_keep_alive(conn);
+		/* NOTE(lsm): order is important here. should_keep_alive() call
+		 * is
+		 * using parsed request, which will be invalid after memmove's
+		 * below.
+		 * Therefore, memorize should_keep_alive() result now for later
+		 * use
+		 * in loop exit condition. */
+		keep_alive = (conn->ctx->stop_flag == 0) && keep_alive_enabled
+		             && (conn->content_len >= 0) && should_keep_alive(conn);
 
 
-			/* Discard all buffered data for this request */
-			discard_len = ((conn->content_len >= 0) && (conn->request_len > 0)
-			               && ((conn->request_len + conn->content_len)
-			                   < (int64_t)conn->data_len))
-			                  ? (int)(conn->request_len + conn->content_len)
-			                  : conn->data_len;
-			/*assert(discard_len >= 0);*/
-			if (discard_len < 0) {
-				DEBUG_TRACE("internal error: discard_len = %li",
-				            (long int)discard_len);
-				break;
-			}
-			conn->data_len -= discard_len;
-			if (conn->data_len > 0) {
-				DEBUG_TRACE("discard_len = %lu", (long unsigned)discard_len);
-				memmove(conn->buf,
-				        conn->buf + discard_len,
-				        (size_t)conn->data_len);
-			}
+		/* Discard all buffered data for this request */
+		discard_len = ((conn->content_len >= 0) && (conn->request_len > 0)
+		               && ((conn->request_len + conn->content_len)
+		                   < (int64_t)conn->data_len))
+		                  ? (int)(conn->request_len + conn->content_len)
+		                  : conn->data_len;
+		/*assert(discard_len >= 0);*/
+		if (discard_len < 0) {
+			DEBUG_TRACE("internal error: discard_len = %li",
+			            (long int)discard_len);
+			break;
+		}
+		conn->data_len -= discard_len;
+		if (conn->data_len > 0) {
+			DEBUG_TRACE("discard_len = %lu", (long unsigned)discard_len);
+			memmove(conn->buf, conn->buf + discard_len, (size_t)conn->data_len);
+		}
 
-			/* assert(conn->data_len >= 0); */
-			/* assert(conn->data_len <= conn->buf_size); */
+		/* assert(conn->data_len >= 0); */
+		/* assert(conn->data_len <= conn->buf_size); */
 
-			if ((conn->data_len < 0) || (conn->data_len > conn->buf_size)) {
-				DEBUG_TRACE("internal error: data_len = %li, buf_size = %li",
-				            (long int)conn->data_len,
-				            (long int)conn->buf_size);
-				break;
-			}
+		if ((conn->data_len < 0) || (conn->data_len > conn->buf_size)) {
+			DEBUG_TRACE("internal error: data_len = %li, buf_size = %li",
+			            (long int)conn->data_len,
+			            (long int)conn->buf_size);
+			break;
+		}
 
-			conn->handled_requests++;
+		conn->handled_requests++;
 
-		} while (keep_alive);
+	} while (keep_alive);
 
-        DEBUG_TRACE("Done processing connection from %s (%f sec)",
-                    conn->request_info.remote_addr,
-                    difftime(time(NULL), conn->conn_birth_time));
+	DEBUG_TRACE("Done processing connection from %s (%f sec)",
+	            conn->request_info.remote_addr,
+	            difftime(time(NULL), conn->conn_birth_time));
 
-        close_connection(conn);
+	close_connection(conn);
 
 #if defined(USE_SERVER_STATS)
-		mg_atomic_add(&(conn->ctx->total_requests), conn->handled_requests);
-		mg_atomic_dec(&(conn->ctx->active_connections));
+	mg_atomic_add(&(conn->ctx->total_requests), conn->handled_requests);
+	mg_atomic_dec(&(conn->ctx->active_connections));
 #endif
-
-
 }
 
 
