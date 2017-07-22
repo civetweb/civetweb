@@ -14253,10 +14253,6 @@ close_socket_gracefully(struct mg_connection *conn)
 static void
 close_connection(struct mg_connection *conn)
 {
-	if (!conn || !conn->ctx) {
-		return;
-	}
-
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	if (conn->lua_websocket_state) {
 		lua_websocket_close(conn, conn->lua_websocket_state);
@@ -14309,7 +14305,7 @@ mg_close_connection(struct mg_connection *conn)
 	struct mg_context *client_ctx = NULL;
 #endif /* defined(USE_WEBSOCKET) */
 
-	if (conn == NULL) {
+    if ((conn == NULL) || (conn->ctx == NULL)) {
 		return;
 	}
 
@@ -15264,10 +15260,14 @@ mg_connect_websocket_client(const char *host,
 }
 
 
+/* Process a connection - may handle multiple requests
+ * using the same connection.
+ * Must be called with a valid connection (conn  and
+ * conn->ctx must be valid).
+ */
 static void
 process_new_connection(struct mg_connection *conn)
 {
-	if (conn && conn->ctx) {
 		struct mg_request_info *ri = &conn->request_info;
 		int keep_alive_enabled, keep_alive, discard_len;
 		char ebuf[100];
@@ -15284,14 +15284,26 @@ process_new_connection(struct mg_connection *conn)
 		}
 #endif
 
+        /* Is keep alive allowed by the server */
 		keep_alive_enabled =
 		    !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
 
-		/* Important: on new connection, reset the receiving buffer. Credit
-		 * goes to crule42. */
-		conn->data_len = 0;
-		conn->handled_requests = 0;
-		do {
+        if (!keep_alive_enabled) {
+            conn->must_close = 1;
+        }
+
+        /* Important: on new connection, reset the receiving buffer. Credit
+		 * goes to crule42. */       
+        conn->data_len = 0;
+        conn->handled_requests = 0;
+        mg_set_user_connection_data(conn, NULL);
+
+        DEBUG_TRACE("Start processing connection from %s",
+                    conn->request_info.remote_addr);
+
+        /* Loop over multiple requests sent using the same connection
+         * (while "keep alive"). */
+        do {
 
 			DEBUG_TRACE("calling get_request (%i times for this connection)",
 			            conn->handled_requests + 1);
@@ -15430,11 +15442,18 @@ process_new_connection(struct mg_connection *conn)
 
 		} while (keep_alive);
 
+        DEBUG_TRACE("Done processing connection from %s (%f sec)",
+                    conn->request_info.remote_addr,
+                    difftime(time(NULL), conn->conn_birth_time));
+
+        close_connection(conn);
+
 #if defined(USE_SERVER_STATS)
 		mg_atomic_add(&(conn->ctx->total_requests), conn->handled_requests);
 		mg_atomic_dec(&(conn->ctx->active_connections));
 #endif
-	}
+
+
 }
 
 
@@ -15675,12 +15694,6 @@ worker_thread_run(struct worker_thread_args *thread_args)
 			/* process HTTP connection */
 			process_new_connection(conn);
 		}
-
-		DEBUG_TRACE("Done processing connection from %s (%f sec)",
-		            conn->request_info.remote_addr,
-		            difftime(time(NULL), conn->conn_birth_time));
-
-		close_connection(conn);
 
 		DEBUG_TRACE("%s", "Connection closed");
 	}
