@@ -8522,6 +8522,7 @@ handle_static_file_request(struct mg_connection *conn,
 	char gz_path[PATH_MAX];
 	const char *encoding = "";
 	const char *cors1, *cors2, *cors3;
+	int allow_on_the_fly_compression = conn->accept_gzip;
 
 	if ((conn == NULL) || (conn->ctx == NULL) || (filep == NULL)) {
 		return;
@@ -8560,6 +8561,9 @@ handle_static_file_request(struct mg_connection *conn,
 
 		path = gz_path;
 		encoding = "Content-Encoding: gzip\r\n";
+
+		/* File is already compressed. No "on the fly" compression. */
+		allow_on_the_fly_compression = 0;
 	}
 
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
@@ -8602,6 +8606,9 @@ handle_static_file_request(struct mg_connection *conn,
 		            r1 + cl - 1,
 		            filep->stat.size);
 		msg = "Partial Content";
+
+		/* Do not compress ranges. */
+		allow_on_the_fly_compression = 0;
 	}
 
 	hdr = mg_get_header(conn, "Origin");
@@ -8618,13 +8625,25 @@ handle_static_file_request(struct mg_connection *conn,
 		cors1 = cors2 = cors3 = "";
 	}
 
-	/* Prepare Etag, Date, Last-Modified headers. Must be in UTC, according
-	 * to
+	/* Prepare Etag, Date, Last-Modified headers. Must be in UTC,
+	 * according to
 	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3 */
 	gmt_time_string(date, sizeof(date), &curtime);
 	gmt_time_string(lm, sizeof(lm), &filep->stat.last_modified);
 	construct_etag(etag, sizeof(etag), &filep->stat);
 
+	/* On the fly compression allowed */
+	if (allow_on_the_fly_compression) {
+		;
+		/* TODO: add interface to compression module */
+		/* e.g., def from https://zlib.net/zlib_how.html */
+		/* Check license (zlib has a permissive license, but */
+		/* is still not MIT) and use dynamic binding like */
+		/* done with OpenSSL */
+		/* See #199 (https://github.com/civetweb/civetweb/issues/199) */
+	}
+
+	/* Send header */
 	(void)mg_printf(conn,
 	                "HTTP/1.1 %d %s\r\n"
 	                "%s%s%s"
@@ -8637,6 +8656,7 @@ handle_static_file_request(struct mg_connection *conn,
 	                date);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
+
 	(void)mg_printf(conn,
 	                "Last-Modified: %s\r\n"
 	                "Etag: %s\r\n"
