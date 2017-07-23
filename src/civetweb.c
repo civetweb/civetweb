@@ -17004,6 +17004,103 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 #endif
 
 
+#ifdef MG_EXPERIMENTAL_INTERFACES
+/* Get connection information. It can be printed or stored by the caller.
+ * Return the size of available information. */
+static int
+mg_get_connection_info_impl(const struct mg_context *ctx,
+                            int idx,
+                            char *buffer,
+                            int buflen)
+{
+	const struct mg_connection *conn;
+	char block[256];
+	int connection_info_length = 0;
+
+#if defined(_WIN32)
+	const char *eol = "\r\n";
+#else
+	const char *eol = "\n";
+#endif
+
+	const char *eoobj = "}";
+	int reserved_len = (int)strlen(eoobj) + (int)strlen(eol);
+
+	if ((buffer == NULL) || (buflen < 10)) {
+		buflen = 0;
+	}
+
+	if ((ctx == NULL) || (idx < 0)) {
+		/* Parameter error */
+		return 0;
+	}
+
+	if ((unsigned)idx >= ctx->cfg_worker_threads) {
+		/* Out of range */
+		return 0;
+	}
+
+	/* Take connection [idx]. This connection is not locked in
+	 * any way, so some other thread might use it. */
+	conn = (ctx->worker_connections) + idx;
+
+	/* Initialize output string */
+	mg_snprintf(NULL, NULL, block, sizeof(block), "{%s", eol);
+	connection_info_length += (int)strlen(block);
+	if (connection_info_length < buflen) {
+		strcat(buffer, block);
+	}
+
+	/* Execution time information */
+	if (ctx) {
+		char start_time_str[64] = {0};
+		char now_str[64] = {0};
+		time_t start_time = conn->conn_birth_time;
+		time_t now = time(NULL);
+
+		gmt_time_string(start_time_str,
+		                sizeof(start_time_str) - 1,
+		                &start_time);
+		gmt_time_string(now_str, sizeof(now_str) - 1, &now);
+
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"time\" : {%s"
+		            "\"uptime\" : %.0f,%s"
+		            "\"start\" : \"%s\",%s"
+		            "\"now\" : \"%s\"%s"
+		            "}%s",
+		            eol,
+		            difftime(now, start_time),
+		            eol,
+		            start_time_str,
+		            eol,
+		            now_str,
+		            eol,
+		            eol);
+
+		connection_info_length += (int)strlen(block);
+		if (connection_info_length + reserved_len < buflen) {
+			strcat(buffer, block);
+		}
+	}
+
+	/* Terminate string */
+	if ((buflen > 0) && buffer && buffer[0]) {
+		if (connection_info_length < buflen) {
+			strcat(buffer, eoobj);
+			strcat(buffer, eol);
+			connection_info_length += reserved_len;
+		}
+	}
+
+	return connection_info_length;
+}
+#endif
+
+
 /* Get system information. It can be printed or stored by the caller.
  * Return the size of available information. */
 int
@@ -17040,6 +17137,24 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 	return 0;
 #endif
 }
+
+
+#ifdef MG_EXPERIMENTAL_INTERFACES
+int
+mg_get_connection_info(const struct mg_context *ctx,
+                       int idx,
+                       char *buffer,
+                       int buflen)
+{
+	if ((buffer == NULL) || (buflen < 1)) {
+		return mg_get_connection_info_impl(ctx, idx, NULL, 0);
+	} else {
+		/* Reset buffer, so we can always use strcat. */
+		buffer[0] = 0;
+		return mg_get_connection_info_impl(ctx, idx, buffer, buflen);
+	}
+}
+#endif
 
 
 /* Initialize this library. This function does not need to be thread safe.

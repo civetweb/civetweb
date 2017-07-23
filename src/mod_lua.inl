@@ -1021,17 +1021,18 @@ static int
 lsp_get_info(lua_State *L)
 {
 	int num_args = lua_gettop(L);
-	int type1;
-	const char *arg;
+	int type1, type2;
+	const char *arg1;
+	double arg2;
 	int len;
 	char *buf;
 
 	if (num_args == 1) {
 		type1 = lua_type(L, 1);
 		if (type1 == LUA_TSTRING) {
-			arg = lua_tostring(L, 1);
+			arg1 = lua_tostring(L, 1);
 			/* Get info according to argument */
-			if (!mg_strcasecmp(arg, "system")) {
+			if (!mg_strcasecmp(arg1, "system")) {
 				/* Get system info */
 				len = mg_get_system_info(NULL, 0);
 				buf = mg_malloc(len + 64);
@@ -1043,7 +1044,7 @@ lsp_get_info(lua_State *L)
 				mg_free(buf);
 				return 1;
 			}
-			if (!mg_strcasecmp(arg, "context")) {
+			if (!mg_strcasecmp(arg1, "context")) {
 				/* Get context */
 				struct mg_context *ctx;
 				lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
@@ -1061,7 +1062,7 @@ lsp_get_info(lua_State *L)
 				mg_free(buf);
 				return 1;
 			}
-			if (!mg_strcasecmp(arg, "common")) {
+			if (!mg_strcasecmp(arg1, "common")) {
 				/* Get context info for NULL context */
 				len = mg_get_context_info(NULL, NULL, 0);
 				buf = mg_malloc(len + 64);
@@ -1076,6 +1077,41 @@ lsp_get_info(lua_State *L)
 			return 0;
 		}
 	}
+
+#ifdef MG_EXPERIMENTAL_INTERFACES
+	if (num_args == 2) {
+		type1 = lua_type(L, 1);
+		type2 = lua_type(L, 2);
+		if ((type1 == LUA_TSTRING) && (type2 == LUA_TNUMBER)) {
+			arg1 = lua_tostring(L, 1);
+			arg2 = lua_tonumber(L, 2);
+
+			/* Get info according to argument */
+			if (!mg_strcasecmp(arg1, "connection")) {
+
+				/* Get context */
+				struct mg_context *ctx;
+				lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+				lua_gettable(L, LUA_REGISTRYINDEX);
+				ctx = (struct mg_context *)lua_touserdata(L, -1);
+
+				/* Get connection info for connection idx */
+				int idx = (int)(arg2 + 0.5);
+
+				len = mg_get_connection_info(ctx, idx, NULL, 0);
+				buf = mg_malloc(len + 64);
+				if (!buf) {
+					return luaL_error(L, "OOM in get_info() call");
+				}
+				len = mg_get_connection_info(ctx, idx, buf, len + 63);
+				lua_pushlstring(L, buf, len);
+				mg_free(buf);
+				return 1;
+			}
+			return 0;
+		}
+	}
+#endif
 
 	/* Syntax error */
 	return luaL_error(L, "invalid get_info() call");

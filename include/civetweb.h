@@ -1243,6 +1243,32 @@ CIVETWEB_API int mg_get_system_info(char *buffer, int buflen);
 CIVETWEB_API int
 mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen);
 
+
+#define MG_EXPERIMENTAL_INTERFACES
+
+#ifdef MG_EXPERIMENTAL_INTERFACES
+/* Get connection information. Useful for server diagnosis.
+   Parameters:
+     ctx: Context handle
+     idx: Connection index
+     buffer: Store context information here.
+     buflen: Length of buffer (including a byte required for a terminating 0).
+   Return:
+     Available size of system information, exluding a terminating 0.
+     The information is complete, if the return value is smaller than buflen.
+   Note:
+     It is possible to determine the required buflen, by first calling this
+     function with buffer = NULL and buflen = NULL. The required buflen is
+     one byte more than the returned value. However, since the available
+     context information changes, you should allocate a few bytes more.
+*/
+CIVETWEB_API int mg_get_connection_info(const struct mg_context *ctx,
+                                        int idx,
+                                        char *buffer,
+                                        int buflen);
+#endif
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

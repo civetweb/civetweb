@@ -7,5 +7,8 @@ mg.write("</p>\r\n<p>\r\n")
 mg.write(mg.get_info("context"))
 mg.write("</p>\r\n<p>\r\n")
 mg.write(mg.get_info("common"))
+for i=1,100 do
+  mg.write("</p>\r\n<p>\r\n")
+  mg.write(mg.get_info("connection", i))
+end
 mg.write("</p></body></html>\r\n")
-
