@@ -2330,6 +2330,7 @@ struct mg_connection {
 	char *path_info;          /* PATH_INFO part of the URL */
 
 	int must_close;            /* 1 if connection must be closed */
+	int accept_gzip;           /* 1 if gzip encoding is accepted */
 	int in_error_handler;      /* 1 if in handler for user defined error
 	                            * pages */
 	int handled_requests;      /* Number of requests handled by this connection
@@ -6487,9 +6488,9 @@ substitute_index_file(struct mg_connection *conn,
 
 
 static void
-interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
-              char *filename,                /* out: filename */
-              size_t filename_buf_len,       /* in: size of filename buffer */
+interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
+              char *filename,             /* out: filename */
+              size_t filename_buf_len,    /* in: size of filename buffer */
               struct mg_file_stat *filestat, /* out: file status structure */
               int *is_found,                 /* out: file found (directly) */
               int *is_script_resource,       /* out: handled by a script? */
@@ -6536,8 +6537,16 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 	*is_websocket_request = 0;
 #endif /* USE_WEBSOCKET */
 
+	/* Step 4: Check if gzip encoded response is allowed */
+	conn->accept_gzip = 0;
+	if ((accept_encoding = mg_get_header(conn, "Accept-Encoding")) != NULL) {
+		if (strstr(accept_encoding, "gzip") != NULL) {
+			conn->accept_gzip = 1;
+		}
+	}
+
 #if !defined(NO_FILES)
-	/* Step 4: If there is no root directory, don't look for files. */
+	/* Step 5: If there is no root directory, don't look for files. */
 	/* Note that root == NULL is a regular use case here. This occurs,
 	 * if all requests are handled by callbacks, so the WEBSOCKET_ROOT
 	 * config is not required. */
@@ -6547,7 +6556,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 		return;
 	}
 
-	/* Step 5: Determine the local file path from the root path and the
+	/* Step 6: Determine the local file path from the root path and the
 	 * request uri. */
 	/* Using filename_buf_len - 1 because memmove() for PATH_INFO may shift
 	 * part of the path one byte on the right. */
@@ -6558,7 +6567,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 		goto interpret_cleanup;
 	}
 
-	/* Step 6: URI rewriting */
+	/* Step 7: URI rewriting */
 	rewrite = conn->ctx->config[URL_REWRITE_PATTERN];
 	while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
 		if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
@@ -6578,14 +6587,14 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 		goto interpret_cleanup;
 	}
 
-	/* Step 7: Check if the file exists at the server */
+	/* Step 8: Check if the file exists at the server */
 	/* Local file path and name, corresponding to requested URI
 	 * is now stored in "filename" variable. */
 	if (mg_stat(conn, filename, filestat)) {
-		/* 7.1: File exists. */
+		/* 8.1: File exists. */
 		*is_found = 1;
 
-		/* 7.2: Check if it is a script type. */
+		/* 8.2: Check if it is a script type. */
 		if (extention_matches_script(conn, filename)) {
 			/* The request addresses a CGI resource, Lua script or
 			 * server-side javascript.
@@ -6601,7 +6610,7 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 			*is_script_resource = (!*is_put_or_delete_request);
 		}
 
-		/* 7.3: If the request target is a directory, there could be
+		/* 8.3: If the request target is a directory, there could be
 		 * a substitute file (index.html, index.cgi, ...). */
 		if (filestat->is_directory) {
 			/* Use a local copy here, since substitute_index_file will
@@ -6631,35 +6640,33 @@ interpret_uri(struct mg_connection *conn,    /* in: request (must be valid) */
 		return;
 	}
 
-	/* Step 8: Check for zipped files: */
+	/* Step 9: Check for zipped files: */
 	/* If we can't find the actual file, look for the file
 	 * with the same name but a .gz extension. If we find it,
 	 * use that and set the gzipped flag in the file struct
 	 * to indicate that the response need to have the content-
 	 * encoding: gzip header.
 	 * We can only do this if the browser declares support. */
-	if ((accept_encoding = mg_get_header(conn, "Accept-Encoding")) != NULL) {
-		if (strstr(accept_encoding, "gzip") != NULL) {
-			mg_snprintf(
-			    conn, &truncated, gz_path, sizeof(gz_path), "%s.gz", filename);
+	if (conn->accept_gzip) {
+		mg_snprintf(
+		    conn, &truncated, gz_path, sizeof(gz_path), "%s.gz", filename);
 
-			if (truncated) {
-				goto interpret_cleanup;
-			}
+		if (truncated) {
+			goto interpret_cleanup;
+		}
 
-			if (mg_stat(conn, gz_path, filestat)) {
-				if (filestat) {
-					filestat->is_gzipped = 1;
-					*is_found = 1;
-				}
-				/* Currently gz files can not be scripts. */
-				return;
+		if (mg_stat(conn, gz_path, filestat)) {
+			if (filestat) {
+				filestat->is_gzipped = 1;
+				*is_found = 1;
 			}
+			/* Currently gz files can not be scripts. */
+			return;
 		}
 	}
 
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
-	/* Step 9: Script resources may handle sub-resources */
+	/* Step 10: Script resources may handle sub-resources */
 	/* Support PATH_INFO for CGI scripts. */
 	tmp_str_len = strlen(filename);
 	tmp_str = mg_malloc_ctx(tmp_str_len + PATH_MAX + 1, conn->ctx);
@@ -14067,6 +14074,7 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->throttle = 0;
 	conn->data_len = 0;
 	conn->chunk_remainder = 0;
+	conn->accept_gzip = 0;
 
 	conn->response_info.content_length = conn->request_info.content_length = -1;
 	conn->response_info.http_version = conn->request_info.http_version = NULL;
