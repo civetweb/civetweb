@@ -6498,6 +6498,8 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
               int *is_put_or_delete_request  /* out: put/delete a file? */
               )
 {
+	char const *accept_encoding;
+
 #if !defined(NO_FILES)
 	const char *uri = conn->request_info.local_uri;
 	const char *root = conn->ctx->config[DOCUMENT_ROOT];
@@ -6505,7 +6507,6 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	struct vec a, b;
 	int match_len;
 	char gz_path[PATH_MAX];
-	char const *accept_encoding;
 	int truncated;
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 	char *tmp_str;
