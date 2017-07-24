@@ -2313,6 +2313,10 @@ struct mg_connection {
 
 	struct mg_context *ctx;
 
+#if defined(USE_SERVER_STATS)
+	int conn_state; /* 0 = undef, 1 = not used, 2 = init, 3 = ready, 9 = done */
+#endif
+
 	SSL *ssl;                 /* SSL descriptor */
 	SSL_CTX *client_ssl_ctx;  /* SSL context for client connections */
 	struct socket client;     /* Connected client */
@@ -14282,6 +14286,10 @@ close_socket_gracefully(struct mg_connection *conn)
 static void
 close_connection(struct mg_connection *conn)
 {
+#if defined(USE_SERVER_STATS)
+	conn->conn_state = 6; /* to close */
+#endif
+
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	if (conn->lua_websocket_state) {
 		lua_websocket_close(conn, conn->lua_websocket_state);
@@ -14304,6 +14312,10 @@ close_connection(struct mg_connection *conn)
 	mg_set_user_connection_data(conn, NULL);
 
 
+#if defined(USE_SERVER_STATS)
+	conn->conn_state = 7; /* closing */
+#endif
+
 #ifndef NO_SSL
 	if (conn->ssl != NULL) {
 		/* Run SSL_shutdown twice to ensure completly close SSL connection
@@ -14324,6 +14336,10 @@ close_connection(struct mg_connection *conn)
 	}
 
 	mg_unlock_connection(conn);
+
+#if defined(USE_SERVER_STATS)
+	conn->conn_state = 8; /* closed */
+#endif
 }
 
 
@@ -15307,6 +15323,10 @@ init_connection(struct mg_connection *conn)
 	conn->handled_requests = 0;
 	mg_set_user_connection_data(conn, NULL);
 
+#if defined(USE_SERVER_STATS)
+	conn->conn_state = 2; /* init */
+#endif
+
 	/* call the connection_close callback if assigned */
 	if ((conn->ctx->callbacks.init_connection != NULL)
 	    && (conn->ctx->context_type == 1)) {
@@ -15314,6 +15334,10 @@ init_connection(struct mg_connection *conn)
 		conn->ctx->callbacks.init_connection(conn, &conn_data);
 		mg_set_user_connection_data(conn, conn_data);
 	}
+
+#if defined(USE_SERVER_STATS)
+	conn->conn_state = 3; /* ready */
+#endif
 }
 
 
@@ -15663,6 +15687,10 @@ worker_thread_run(struct worker_thread_args *thread_args)
 	 */
 	(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 
+#if defined(USE_SERVER_STATS)
+	conn->conn_state = 1; /* not consumed */
+#endif
+
 	/* Call consume_socket() even when ctx->stop_flag > 0, to let it
 	 * signal sq_empty condvar to wake up the master waiting in
 	 * produce_socket() */
@@ -15746,6 +15774,10 @@ worker_thread_run(struct worker_thread_args *thread_args)
 	conn->buf_size = 0;
 	mg_free(conn->buf);
 	conn->buf = NULL;
+
+#if defined(USE_SERVER_STATS)
+	conn->conn_state = 9; /* done */
+#endif
 
 	DEBUG_TRACE("%s", "exiting");
 	return NULL;
@@ -17052,8 +17084,56 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 		strcat(buffer, block);
 	}
 
+	/* State */
+	{
+#if defined(USE_SERVER_STATS)
+		const char *state_str = "invalid";
+		int state = conn->conn_state;
+
+		switch (state) {
+		case 0:
+			state_str = "undefined";
+			break;
+		case 1:
+			state_str = "not used";
+			break;
+		case 2:
+			state_str = "init";
+			break;
+		case 3:
+			state_str = "ready";
+			break;
+		case 6:
+			state_str = "to close";
+			break;
+		case 7:
+			state_str = "closing";
+			break;
+		case 8:
+			state_str = "closed";
+			break;
+		case 9:
+			state_str = "done";
+			break;
+		}
+
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"state\" : \"%s\",%s",
+		            state_str,
+		            eol);
+
+		connection_info_length += (int)strlen(block);
+		if (connection_info_length + reserved_len < buflen) {
+			strcat(buffer, block);
+		}
+#endif
+	}
+
 	/* Execution time information */
-	if (ctx) {
+	{
 		char start_time_str[64] = {0};
 		char now_str[64] = {0};
 		time_t start_time = conn->conn_birth_time;
