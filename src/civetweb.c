@@ -10859,7 +10859,8 @@ read_websocket(struct mg_connection *conn,
 	 * len is the length of the current message
 	 * data_len is the length of the current message's data payload
 	 * header_len is the length of the current message's header */
-	size_t i, len, mask_len = 0, data_len = 0, header_len, body_len;
+	size_t i, mask_len = 0, header_len, body_len;
+	uint64_t len, data_len = 0;
 
 	/* "The masking key is a 32-bit value chosen at random by the client."
 	 * http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17#section-5
@@ -10919,8 +10920,9 @@ read_websocket(struct mg_connection *conn,
 		if ((header_len > 0) && (body_len >= header_len)) {
 			/* Allocate space to hold websocket payload */
 			data = mem;
-			if (data_len > sizeof(mem)) {
-				data = (unsigned char *)mg_malloc_ctx(data_len, conn->ctx);
+			if ((size_t)data_len > (size_t)sizeof(mem)) {
+				data =
+				    (unsigned char *)mg_malloc_ctx((size_t)data_len, conn->ctx);
 				if (data == NULL) {
 					/* Allocation failed, exit the loop and then close the
 					 * connection */
@@ -10939,13 +10941,13 @@ read_websocket(struct mg_connection *conn,
 			/* Read frame payload from the first message in the queue into
 			 * data and advance the queue by moving the memory in place. */
 			assert(body_len >= header_len);
-			if (data_len + header_len > body_len) {
+			if (data_len + (uint64_t)header_len > (uint64_t)body_len) {
 				mop = buf[0]; /* current mask and opcode */
 				/* Overflow case */
 				len = body_len - header_len;
 				memcpy(data, buf + header_len, len);
 				error = 0;
-				while (len < data_len) {
+				while ((uint64_t)len < data_len) {
 					n = pull_inner(NULL,
 					               conn,
 					               (char *)(data + len),
@@ -17103,6 +17105,7 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 		case 3:
 			state_str = "ready";
 			break;
+		/* TODO: in request - read/write */
 		case 6:
 			state_str = "to close";
 			break;
