@@ -67,4 +67,11 @@ mg_get_request_info, and getting the HTTP response code from the
 server by looking into the uri member of struct mg_request_info.
 
 
+### `size_t` in all interface
+
+Having `size_t` in interfaces while building for 32 and 64 bit
+complicates maintenance in an unnecessary way 
+(see [498](https://github.com/civetweb/civetweb/issues/498)).
+
+Replace all data sizes by 64 bit integers.
 
