@@ -75,3 +75,12 @@ complicates maintenance in an unnecessary way
 
 Replace all data sizes by 64 bit integers.
 
+
+### Pattern definition
+
+The current definition of pattern matching is problematic
+(see [499](https://github.com/civetweb/civetweb/issues/499)).
+
+Find and implement a new definition.
+
+
