@@ -10859,8 +10859,8 @@ read_websocket(struct mg_connection *conn,
 	 * len is the length of the current message
 	 * data_len is the length of the current message's data payload
 	 * header_len is the length of the current message's header */
-	size_t i, mask_len = 0, header_len, body_len;
-	uint64_t len, data_len = 0;
+	size_t i, len, mask_len = 0, header_len, body_len;
+	uint64_t data_len = 0;
 
 	/* "The masking key is a 32-bit value chosen at random by the client."
 	 * http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17#section-5
@@ -10972,8 +10972,10 @@ read_websocket(struct mg_connection *conn,
 				mop = buf[0]; /* current mask and opcode, overwritten by
 				               * memmove() */
 				/* Length of the message being read at the front of the
-				 * queue */
-				len = data_len + header_len;
+				                 * queue. Cast to 31 bit is OK, since we limited
+				 * data_len
+				                 * before. */
+				len = (size_t)data_len + header_len;
 
 				/* Copy the data payload into the data pointer for the
 				 * callback */
