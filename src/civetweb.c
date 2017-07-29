@@ -10971,15 +10971,16 @@ read_websocket(struct mg_connection *conn,
 			} else {
 				mop = buf[0]; /* current mask and opcode, overwritten by
 				               * memmove() */
+
 				/* Length of the message being read at the front of the
-				                 * queue. Cast to 31 bit is OK, since we limited
-				 * data_len
-				                 * before. */
+                                 * queue. Cast to 31 bit is OK, since we limited
+                                 * data_len before. */
 				len = (size_t)data_len + header_len;
 
 				/* Copy the data payload into the data pointer for the
-				 * callback */
-				memcpy(data, buf + header_len, data_len);
+                                 * callback. Cast to 31 bit is OK, since we
+                                 * limited data_len */
+				memcpy(data, buf + header_len, (size_t)data_len);
 
 				/* Move the queue forward len bytes */
 				memmove(buf, buf + len, body_len - len);
@@ -10990,7 +10991,7 @@ read_websocket(struct mg_connection *conn,
 
 			/* Apply mask if necessary */
 			if (mask_len > 0) {
-				for (i = 0; i < data_len; ++i) {
+				for (i = 0; i < (size_t)data_len; i++) {
 					data[i] ^= mask[i & 3];
 				}
 			}
