@@ -2056,7 +2056,7 @@ enum {
 	ACCESS_CONTROL_ALLOW_HEADERS,
 	ERROR_PAGES,
 	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
-                         * socket option typedef TCP_NODELAY. */
+                     * socket option typedef TCP_NODELAY. */
 #if !defined(NO_CACHING)
 	STATIC_FILE_MAX_AGE,
 #endif
@@ -10273,15 +10273,15 @@ delete_file(struct mg_connection *conn, const char *path)
 	}
 
 #if 0 /* Ignore if a file in memory is inside a folder */
-	if (de.access.membuf != NULL) {
-		/* the file is cached in memory */
-		mg_send_http_error(
-		    conn,
-		    405,
-		    "Error: Delete not possible\nDeleting %s is not supported",
-		    path);
-		return;
-	}
+        if (de.access.membuf != NULL) {
+                /* the file is cached in memory */
+                mg_send_http_error(
+                    conn,
+                    405,
+                    "Error: Delete not possible\nDeleting %s is not supported",
+                    path);
+                return;
+        }
 #endif
 
 	if (de.file.is_directory) {
@@ -10517,7 +10517,6 @@ send_ssi_file(struct mg_connection *conn,
 				if ((len + 2) > (int)sizeof(buf)) {
 					/* Tag to long for buffer */
 					mg_cry(conn, "%s: tag is too large", path);
-					len = 0;
 					return;
 				}
 			}
@@ -10872,7 +10871,6 @@ read_websocket(struct mg_connection *conn,
 	 * websocket_data callback.  This is either mem on the stack, or a
 	 * dynamically allocated buffer if it is too large. */
 	unsigned char mem[4096];
-	unsigned char *data = mem;
 	unsigned char mop; /* mask flag and opcode */
 	double timeout = -1.0;
 
@@ -10919,7 +10917,8 @@ read_websocket(struct mg_connection *conn,
 
 		if ((header_len > 0) && (body_len >= header_len)) {
 			/* Allocate space to hold websocket payload */
-			data = mem;
+			unsigned char *data = mem;
+
 			if ((size_t)data_len > (size_t)sizeof(mem)) {
 				data =
 				    (unsigned char *)mg_malloc_ctx((size_t)data_len, conn->ctx);
@@ -10965,21 +10964,27 @@ read_websocket(struct mg_connection *conn,
 				}
 				if (error) {
 					mg_cry(conn, "Websocket pull failed; closing connection");
+					if (data != mem) {
+						mg_free(data);
+					}
 					break;
 				}
+
 				conn->data_len = conn->request_len;
+
 			} else {
+
 				mop = buf[0]; /* current mask and opcode, overwritten by
 				               * memmove() */
 
 				/* Length of the message being read at the front of the
-                                 * queue. Cast to 31 bit is OK, since we limited
-                                 * data_len before. */
+				 * queue. Cast to 31 bit is OK, since we limited
+				 * data_len before. */
 				len = (size_t)data_len + header_len;
 
 				/* Copy the data payload into the data pointer for the
-                                 * callback. Cast to 31 bit is OK, since we
-                                 * limited data_len */
+				 * callback. Cast to 31 bit is OK, since we
+				 * limited data_len */
 				memcpy(data, buf + header_len, (size_t)data_len);
 
 				/* Move the queue forward len bytes */
@@ -14133,17 +14138,17 @@ reset_per_request_attributes(struct mg_connection *conn)
 static int
 set_sock_timeout(SOCKET sock, int milliseconds)
 {
-	int r0 = 0, r1, r2;
+        int r0 = 0, r1, r2;
 
 #ifdef _WIN32
-	/* Windows specific */
+        /* Windows specific */
 
-	DWORD tv = (DWORD)milliseconds;
+        DWORD tv = (DWORD)milliseconds;
 
 #else
-	/* Linux, ... (not Windows) */
+        /* Linux, ... (not Windows) */
 
-	struct timeval tv;
+        struct timeval tv;
 
 /* TCP_USER_TIMEOUT/RFC5482 (http://tools.ietf.org/html/rfc5482):
  * max. time waiting for the acknowledged of TCP data before the connection
@@ -14153,22 +14158,22 @@ set_sock_timeout(SOCKET sock, int milliseconds)
 /* #define TCP_USER_TIMEOUT (18) */
 
 #if defined(TCP_USER_TIMEOUT)
-	unsigned int uto = (unsigned int)milliseconds;
-	r0 = setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
+        unsigned int uto = (unsigned int)milliseconds;
+        r0 = setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
 #endif
 
-	memset(&tv, 0, sizeof(tv));
-	tv.tv_sec = milliseconds / 1000;
-	tv.tv_usec = (milliseconds * 1000) % 1000000;
+        memset(&tv, 0, sizeof(tv));
+        tv.tv_sec = milliseconds / 1000;
+        tv.tv_usec = (milliseconds * 1000) % 1000000;
 
 #endif /* _WIN32 */
 
-	r1 = setsockopt(
-	    sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE)&tv, sizeof(tv));
-	r2 = setsockopt(
-	    sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE)&tv, sizeof(tv));
+        r1 = setsockopt(
+            sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE)&tv, sizeof(tv));
+        r2 = setsockopt(
+            sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE)&tv, sizeof(tv));
 
-	return r0 || r1 || r2;
+        return r0 || r1 || r2;
 }
 #endif
 
@@ -15255,7 +15260,7 @@ mg_connect_websocket_client(const char *host,
 
 		DEBUG_TRACE("Websocket client connect error: %s\r\n", error_buffer);
 		mg_free(conn);
-		return conn;
+		return NULL;
 	}
 
 	/* For client connections, mg_context is fake. Since we need to set a
@@ -16546,6 +16551,15 @@ mg_check_feature(unsigned feature)
 }
 
 
+/* strcat with additional NULL check to avoid clang scan-build warning. */
+#define strcat0(a, b)                                                          \
+	{                                                                          \
+		if ((a != NULL) && (b != NULL)) {                                      \
+			strcat(a, b);                                                      \
+		}                                                                      \
+	}
+
+
 /* Get system information. It can be printed or stored by the caller.
  * Return the size of available information. */
 static int
@@ -16579,7 +16593,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 	}
 
@@ -16617,7 +16631,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 
 		mg_snprintf(NULL,
@@ -16631,14 +16645,14 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 
 #else
 		mg_snprintf(NULL, NULL, block, sizeof(block), "%s - Symbian%s", eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #endif
 #else
@@ -16658,7 +16672,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #endif
 	}
@@ -16683,7 +16697,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 
 #ifdef USE_LUA
@@ -16697,7 +16711,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #endif
 #if defined(USE_DUKTAPE)
@@ -16712,7 +16726,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #endif
 	}
@@ -16723,7 +16737,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		    NULL, NULL, block, sizeof(block), "Build: %s%s", __DATE__, eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 	}
 
@@ -16742,7 +16756,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #elif defined(__MINGW64__)
 		mg_snprintf(NULL,
@@ -16755,7 +16769,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 		mg_snprintf(NULL,
 		            NULL,
@@ -16767,7 +16781,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #elif defined(__MINGW32__)
 		mg_snprintf(NULL,
@@ -16780,7 +16794,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #elif defined(__clang__)
 		mg_snprintf(NULL,
@@ -16795,7 +16809,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #elif defined(__GNUC__)
 		mg_snprintf(NULL,
@@ -16809,7 +16823,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #elif defined(__INTEL_COMPILER)
 		mg_snprintf(NULL,
@@ -16821,7 +16835,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #elif defined(__BORLANDC__)
 		mg_snprintf(NULL,
@@ -16833,7 +16847,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #elif defined(__SUNPRO_C)
 		mg_snprintf(NULL,
@@ -16845,13 +16859,13 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #else
 		mg_snprintf(NULL, NULL, block, sizeof(block), "Other compiler%s", eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #endif
 	}
@@ -16880,7 +16894,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 	}
 
@@ -16915,7 +16929,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 	mg_snprintf(NULL, NULL, block, sizeof(block), "{%s", eol);
 	context_info_length += (int)strlen(block);
 	if (context_info_length < buflen) {
-		strcat(buffer, block);
+		strcat0(buffer, block);
 	}
 
 	/* Memory information */
@@ -16941,7 +16955,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 
 		context_info_length += (int)strlen(block);
 		if (context_info_length + reserved_len < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 	}
 
@@ -16968,7 +16982,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 
 		context_info_length += (int)strlen(block);
 		if (context_info_length + reserved_len < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 	}
 
@@ -16988,7 +17002,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 
 		context_info_length += (int)strlen(block);
 		if (context_info_length + reserved_len < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 	}
 
@@ -17024,18 +17038,18 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 
 		context_info_length += (int)strlen(block);
 		if (context_info_length + reserved_len < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 	}
 
 	/* Terminate string */
 	if ((buflen > 0) && buffer && buffer[0]) {
 		if (context_info_length < buflen) {
-			strcat(buffer, eoobj);
-			strcat(buffer, eol);
-			context_info_length += reserved_len;
+			strcat0(buffer, eoobj);
+			strcat0(buffer, eol);
 		}
 	}
+	context_info_length += reserved_len;
 
 	return context_info_length;
 }
@@ -17086,7 +17100,7 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 	mg_snprintf(NULL, NULL, block, sizeof(block), "{%s", eol);
 	connection_info_length += (int)strlen(block);
 	if (connection_info_length < buflen) {
-		strcat(buffer, block);
+		strcat0(buffer, block);
 	}
 
 	/* State */
@@ -17133,7 +17147,7 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 
 		connection_info_length += (int)strlen(block);
 		if (connection_info_length + reserved_len < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 #endif
 	}
@@ -17170,18 +17184,18 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 
 		connection_info_length += (int)strlen(block);
 		if (connection_info_length + reserved_len < buflen) {
-			strcat(buffer, block);
+			strcat0(buffer, block);
 		}
 	}
 
 	/* Terminate string */
 	if ((buflen > 0) && buffer && buffer[0]) {
 		if (connection_info_length < buflen) {
-			strcat(buffer, eoobj);
-			strcat(buffer, eol);
-			connection_info_length += reserved_len;
+			strcat0(buffer, eoobj);
+			strcat0(buffer, eol);
 		}
 	}
+	connection_info_length += reserved_len;
 
 	return connection_info_length;
 }

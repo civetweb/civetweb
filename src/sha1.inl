@@ -73,6 +73,7 @@ move public api to sha1.h
   remove unused #ifdef sections
   make endian independent
   align buffer to 4 bytes
+  remove unused variable assignments
 */
 
 /*
@@ -248,9 +249,6 @@ SHA1_Transform(uint32_t state[5], const uint8_t buffer[64])
 	state[2] += c;
 	state[3] += d;
 	state[4] += e;
-
-	/* Wipe variables */
-	a = b = c = d = e = 0;
 }
 
 
@@ -317,9 +315,7 @@ SHA1_Final(unsigned char *digest, SHA_CTX *context)
 	}
 
 	/* Wipe variables */
-	i = 0;
 	memset(context, '\0', sizeof(*context));
-	memset(&finalcount, '\0', sizeof(finalcount));
 }
 
 
