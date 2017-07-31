@@ -11005,8 +11005,11 @@ read_websocket(struct mg_connection *conn,
 			 * or "connection close" opcode received (client side). */
 			exit_by_callback = 0;
 			if ((ws_data_handler != NULL)
-			    && !ws_data_handler(
-			           conn, mop, (char *)data, data_len, callback_data)) {
+			    && !ws_data_handler(conn,
+			                        mop,
+			                        (char *)data,
+			                        (size_t)data_len,
+			                        callback_data)) {
 				exit_by_callback = 1;
 			}
 
