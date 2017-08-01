@@ -466,7 +466,7 @@ matrix:
     compiler: clang
     env:
       N=ClangLinux32Max
-      ARCH="x86"
+      ARCH=x86
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       OPENSSL_1_1=NO
@@ -488,10 +488,16 @@ matrix:
 
   -
     os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-6
     compiler: gcc
     env:
       N=GCCLinux32Max
-      ARCH="x86"
+      ARCH=x86
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
       OPENSSL_1_1=NO

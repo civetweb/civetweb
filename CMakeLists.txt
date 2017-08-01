@@ -90,6 +90,10 @@ message(STATUS "Memory Debugging - ${CIVETWEB_ENABLE_MEMORY_DEBUGGING}")
 option(CIVETWEB_ENABLE_ASAN "Enable ASAN in debug mode" ON)
 message(STATUS "ASAN in debug mode - ${CIVETWEB_ENABLE_ASAN}")
 
+# ARCH flag
+option(CIVETWEB_ARCH "Force 32/64 bit architecture" OFF)
+message(STATUS "Force x32 / x64 architecture - ${CIVETWEB_ARCH}")
+
 # LUA CGI support
 option(CIVETWEB_ENABLE_LUA "Enable Lua CGIs" OFF)
 message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
@@ -416,6 +420,15 @@ if(CIVETWEB_SSL_OPENSSL_API_1_1)
   add_definitions(-DOPENSSL_API_1_1)
 endif()
 add_definitions(-DUSE_STACK_SIZE=${CIVETWEB_THREAD_STACK_SIZE})
+
+# Set 32 or 64 bit environment
+if (${CMAKE_ARCH} MATCHES "[Xx]86")
+add_c_compiler_flag(-m32)
+endif()
+if (${CMAKE_ARCH} MATCHES "[Xx]64")
+add_c_compiler_flag(-m64)
+endif()
+# TODO: add support for -march
 
 # Build the targets
 add_subdirectory(src)
