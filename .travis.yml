@@ -488,12 +488,12 @@ matrix:
 
   -
     os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-6
+#    addons:
+#      apt:
+#        sources:
+#          - ubuntu-toolchain-r-test
+#        packages:
+#          - gcc-6
     compiler: gcc
     env:
       N=GCCLinux32Max
