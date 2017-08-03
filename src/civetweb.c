@@ -2314,7 +2314,9 @@ struct mg_connection {
 	struct mg_context *ctx;
 
 #if defined(USE_SERVER_STATS)
-	int conn_state; /* 0 = undef, 1 = not used, 2 = init, 3 = ready, 9 = done */
+	int conn_state; /* 0 = undef, numerical value may change in different
+	                 * versions. For the current definition, see
+	                 * mg_get_connection_info_impl */
 #endif
 
 	SSL *ssl;                 /* SSL descriptor */
@@ -15347,10 +15349,6 @@ init_connection(struct mg_connection *conn)
 		conn->ctx->callbacks.init_connection(conn, &conn_data);
 		mg_set_user_connection_data(conn, conn_data);
 	}
-
-#if defined(USE_SERVER_STATS)
-	conn->conn_state = 3; /* ready */
-#endif
 }
 
 
@@ -15389,6 +15387,10 @@ process_new_connection(struct mg_connection *conn)
 
 		DEBUG_TRACE("calling get_request (%i times for this connection)",
 		            conn->handled_requests + 1);
+
+#if defined(USE_SERVER_STATS)
+		conn->conn_state = 3; /* ready */
+#endif
 
 		if (!get_request(conn, ebuf, sizeof(ebuf), &reqerr)) {
 			/* The request sent by the client could not be understood by
@@ -15454,9 +15456,18 @@ process_new_connection(struct mg_connection *conn)
 
 		if (ebuf[0] == '\0') {
 			if (conn->request_info.local_uri) {
-				/* handle request to local server */
+
+/* handle request to local server */
+#if defined(USE_SERVER_STATS)
+				conn->conn_state = 4; /* processing */
+#endif
 				handle_request(conn);
+#if defined(USE_SERVER_STATS)
+				conn->conn_state = 5; /* processed */
+#endif
+
 				DEBUG_TRACE("%s", "handle_request done");
+
 				if (conn->ctx->callbacks.end_request != NULL) {
 					conn->ctx->callbacks.end_request(conn, conn->status_code);
 					DEBUG_TRACE("%s", "end_request callback done");
@@ -17125,7 +17136,12 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 		case 3:
 			state_str = "ready";
 			break;
-		/* TODO: in request - read/write */
+		case 4:
+			state_str = "processing";
+			break;
+		case 5:
+			state_str = "processed";
+			break;
 		case 6:
 			state_str = "to close";
 			break;
