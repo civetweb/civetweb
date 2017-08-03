@@ -3252,16 +3252,9 @@ mg_get_response_info(const struct mg_connection *conn)
 }
 
 
-int
-mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
+static const char *
+get_proto_name(const struct mg_connection *conn)
 {
-	if ((buflen < 1) || (buf == 0) || (conn == 0)) {
-		return -1;
-	} else {
-
-		int truncated = 0;
-		const struct mg_request_info *ri = &conn->request_info;
-
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
@@ -3272,13 +3265,31 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
  */
 #endif
 
-		const char *proto =
-		    (is_websocket_protocol(conn) ? (ri->is_ssl ? "wss" : "ws")
-		                                 : (ri->is_ssl ? "https" : "http"));
+	const struct mg_request_info *ri = &conn->request_info;
+
+	const char *proto =
+	    (is_websocket_protocol(conn) ? (ri->is_ssl ? "wss" : "ws")
+	                                 : (ri->is_ssl ? "https" : "http"));
+
+	return proto;
 
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
+}
+
+
+int
+mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
+{
+	if ((buflen < 1) || (buf == 0) || (conn == 0)) {
+		return -1;
+	} else {
+
+		int truncated = 0;
+		const struct mg_request_info *ri = &conn->request_info;
+
+		const char *proto = get_proto_name(conn);
 
 		if (ri->local_uri == NULL) {
 			return -1;
@@ -17080,8 +17091,11 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
                             int buflen)
 {
 	const struct mg_connection *conn;
+	const struct mg_request_info *ri;
 	char block[256];
 	int connection_info_length = 0;
+	int state;
+	const char *state_str = "unknown";
 
 #if defined(_WIN32)
 	const char *eol = "\r\n";
@@ -17117,62 +17131,109 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 		strcat0(buffer, block);
 	}
 
-	/* State */
-	{
+	/* Init variables */
+	state = conn->conn_state;
+	ri = &(conn->request_info);
+
+/* State as string */
 #if defined(USE_SERVER_STATS)
-		const char *state_str = "invalid";
-		int state = conn->conn_state;
+	switch (state) {
+	case 0:
+		state_str = "undefined";
+		break;
+	case 1:
+		state_str = "not used";
+		break;
+	case 2:
+		state_str = "init";
+		break;
+	case 3:
+		state_str = "ready";
+		break;
+	case 4:
+		state_str = "processing";
+		break;
+	case 5:
+		state_str = "processed";
+		break;
+	case 6:
+		state_str = "to close";
+		break;
+	case 7:
+		state_str = "closing";
+		break;
+	case 8:
+		state_str = "closed";
+		break;
+	case 9:
+		state_str = "done";
+		break;
+	}
+#endif
 
-		switch (state) {
-		case 0:
-			state_str = "undefined";
-			break;
-		case 1:
-			state_str = "not used";
-			break;
-		case 2:
-			state_str = "init";
-			break;
-		case 3:
-			state_str = "ready";
-			break;
-		case 4:
-			state_str = "processing";
-			break;
-		case 5:
-			state_str = "processed";
-			break;
-		case 6:
-			state_str = "to close";
-			break;
-		case 7:
-			state_str = "closing";
-			break;
-		case 8:
-			state_str = "closed";
-			break;
-		case 9:
-			state_str = "done";
-			break;
-		}
-
+	/* Connection info */
+	if ((state >= 3) && (state < 9)) {
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"state\" : \"%s\",%s",
-		            state_str,
+		            "\"connection\" : {%s"
+		            "\"remote\" : {%s"
+		            "\"protocol\" : \"%s\",%s"
+		            "\"addr\" : \"%s\",%s"
+		            "\"port\" : %u%s"
+		            "},%s"
+		            "\"handled_requests\" : %u%s"
+		            "},%s",
+		            eol,
+		            eol,
+		            get_proto_name(conn),
+		            eol,
+		            ri->remote_addr,
+		            eol,
+		            ri->remote_port,
+		            eol,
+		            eol,
+		            conn->handled_requests,
+		            eol,
 		            eol);
 
 		connection_info_length += (int)strlen(block);
 		if (connection_info_length + reserved_len < buflen) {
 			strcat0(buffer, block);
 		}
-#endif
+	}
+
+	/* Request info */
+	if ((state >= 4) && (state < 6)) {
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"request_info\" : {%s"
+		            "\"method\" : \"%s\",%s"
+		            "\"uri\" : \"%s\",%s"
+		            "\"query\" : %s%s%s%s"
+		            "},%s",
+		            eol,
+		            ri->request_method,
+		            eol,
+		            ri->request_uri,
+		            eol,
+		            ri->query_string ? "\"" : "",
+		            ri->query_string ? ri->query_string : "null",
+		            ri->query_string ? "\"" : "",
+		            eol,
+		            eol);
+
+		connection_info_length += (int)strlen(block);
+		if (connection_info_length + reserved_len < buflen) {
+			strcat0(buffer, block);
+		}
 	}
 
 	/* Execution time information */
-	{
+	if ((state >= 2) && (state < 9)) {
 		char start_time_str[64] = {0};
 		char now_str[64] = {0};
 		time_t start_time = conn->conn_birth_time;
@@ -17191,7 +17252,7 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 		            "\"uptime\" : %.0f,%s"
 		            "\"start\" : \"%s\",%s"
 		            "\"now\" : \"%s\"%s"
-		            "}%s",
+		            "},%s",
 		            eol,
 		            difftime(now, start_time),
 		            eol,
@@ -17205,6 +17266,63 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 		if (connection_info_length + reserved_len < buflen) {
 			strcat0(buffer, block);
 		}
+	}
+
+	/* Remote user name */
+	if ((ri->remote_user) && (state < 9)) {
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"user\" : {%s"
+		            "\"name\" : \"%s\",%s"
+		            "},%s",
+		            eol,
+		            ri->remote_user,
+		            eol,
+		            eol);
+
+		connection_info_length += (int)strlen(block);
+		if (connection_info_length + reserved_len < buflen) {
+			strcat0(buffer, block);
+		}
+	}
+
+	/* Data block */
+	if (state >= 3) {
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"data\" : {%s"
+		            "\"read\" : %" INT64_FMT ",%s"
+		            "\"written\" : %" INT64_FMT "%s"
+		            "},%s",
+		            eol,
+		            conn->consumed_content,
+		            eol,
+		            conn->num_bytes_sent,
+		            eol,
+		            eol);
+
+		connection_info_length += (int)strlen(block);
+		if (connection_info_length + reserved_len < buflen) {
+			strcat0(buffer, block);
+		}
+	}
+
+	/* State */
+	mg_snprintf(NULL,
+	            NULL,
+	            block,
+	            sizeof(block),
+	            "\"state\" : \"%s\"%s",
+	            state_str,
+	            eol);
+
+	connection_info_length += (int)strlen(block);
+	if (connection_info_length + reserved_len < buflen) {
+		strcat0(buffer, block);
 	}
 
 	/* Terminate string */

@@ -1098,6 +1098,9 @@ lsp_get_info(lua_State *L)
 				/* Get connection info for connection idx */
 				int idx = (int)(arg2 + 0.5);
 
+				/* Lua uses 1 based index, C uses 0 based index */
+				idx--;
+
 				len = mg_get_connection_info(ctx, idx, NULL, 0);
 				buf = mg_malloc(len + 64);
 				if (!buf) {
