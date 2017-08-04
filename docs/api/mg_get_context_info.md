@@ -23,4 +23,6 @@ The function `mg_get_context_info()` returns statistics information collected fo
 ### See Also
 
 * [`mg_get_system_info();`](mg_get_system_info.md)
+* [`mg_get_connection_info();`](mg_get_connection_info.md)
+
 

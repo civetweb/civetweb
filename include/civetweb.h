@@ -1244,8 +1244,6 @@ CIVETWEB_API int
 mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen);
 
 
-#define MG_EXPERIMENTAL_INTERFACES
-
 #ifdef MG_EXPERIMENTAL_INTERFACES
 /* Get connection information. Useful for server diagnosis.
    Parameters:
