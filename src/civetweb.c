@@ -17094,7 +17094,7 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 	const struct mg_request_info *ri;
 	char block[256];
 	int connection_info_length = 0;
-	int state;
+	int state = 0;
 	const char *state_str = "unknown";
 
 #if defined(_WIN32)
@@ -17132,11 +17132,12 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 	}
 
 	/* Init variables */
-	state = conn->conn_state;
 	ri = &(conn->request_info);
 
-/* State as string */
 #if defined(USE_SERVER_STATS)
+	state = conn->conn_state;
+
+	/* State as string */
 	switch (state) {
 	case 0:
 		state_str = "undefined";
