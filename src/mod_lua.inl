@@ -1157,6 +1157,25 @@ lsp_get_option(lua_State *L)
 	lua_gettable(L, LUA_REGISTRYINDEX);
 	ctx = (struct mg_context *)lua_touserdata(L, -1);
 
+	if (num_args == 0) {
+		const struct mg_option *opts = mg_get_valid_options();
+
+		if (!opts) {
+			return 0;
+		}
+
+		lua_newtable(L);
+		while (opts->name) {
+			data = mg_get_option(ctx, opts->name);
+			if (data) {
+				reg_string(L, opts->name, data);
+			}
+			opts++;
+		}
+
+		return 1;
+	}
+
 	if (num_args == 1) {
 		type1 = lua_type(L, 1);
 		if (type1 == LUA_TSTRING) {
