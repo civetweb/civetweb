@@ -20,9 +20,7 @@ end
 
 mg.write("{\r\n\"system\" :\r\n")
 
-mg.write("\"")
 mg.write(n(mg.get_info("system")))
-mg.write("\"")
 
 mg.write(",\r\n\"summary\" :\r\n")
 mg.write(n(mg.get_info("context")))

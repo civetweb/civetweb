@@ -16608,13 +16608,19 @@ mg_get_system_info_impl(char *buffer, int buflen)
 	const char *eol = "\n";
 #endif
 
+	const char *eoobj = "}";
+	int reserved_len = (int)strlen(eoobj) + (int)strlen(eol);
+
 	if ((buffer == NULL) || (buflen < 1)) {
-		/* Avoid some warning (although, if some dillweed supplies
-		 * buffer==NULL combined with buflen>0, he deserves a crash).
-		 */
 		buflen = 0;
 	} else {
 		*buffer = 0;
+	}
+
+	mg_snprintf(NULL, NULL, block, sizeof(block), "{%s", eol);
+	system_info_length += (int)strlen(block);
+	if (system_info_length < buflen) {
+		strcat0(buffer, block);
 	}
 
 	/* Server version */
@@ -16624,7 +16630,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "Server Version: %s%s",
+		            "\"version\" : \"%s\",%s",
 		            version,
 		            eol);
 		system_info_length += (int)strlen(block);
@@ -16661,7 +16667,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "Windows %u.%u%s",
+		            "\"os\" : \"Windows %u.%u\",%s",
 		            (unsigned)dwMajorVersion,
 		            (unsigned)dwMinorVersion,
 		            eol);
@@ -16674,7 +16680,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "CPU: type %u, cores %u, mask %x%s",
+		            "\"cpu\" : \"type %u, cores %u, mask %x\",%s",
 		            (unsigned)si.wProcessorArchitecture,
 		            (unsigned)si.dwNumberOfProcessors,
 		            (unsigned)si.dwActiveProcessorMask,
@@ -16700,7 +16706,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "%s %s (%s) - %s%s",
+		            "\"os\" : \"%s %s (%s) - %s\",%s",
 		            name.sysname,
 		            name.version,
 		            name.release,
@@ -16719,8 +16725,9 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "Features: %X%s%s%s%s%s%s%s%s%s%s",
-		            mg_check_feature(0xFFFFFFFFu),
+		            "\"features\" : %lu,%s"
+		            "\"feature_list\" : \"Server:%s%s%s%s%s%s%s%s\",%s",
+		            (unsigned long)mg_check_feature(0xFFFFFFFFu),
 		            eol,
 		            mg_check_feature(1) ? " Files" : "",
 		            mg_check_feature(2) ? " HTTPS" : "",
@@ -16741,7 +16748,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "Lua Version: %u (%s)%s",
+		            "\"lua_version\" : \"%u (%s)\",%s",
 		            (unsigned)LUA_VERSION_NUM,
 		            LUA_RELEASE,
 		            eol);
@@ -16755,7 +16762,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "JavaScript: Duktape %u.%u.%u%s",
+		            "\"javascript\" : \"Duktape %u.%u.%u\",%s",
 		            (unsigned)DUK_VERSION / 10000,
 		            ((unsigned)DUK_VERSION / 100) % 100,
 		            (unsigned)DUK_VERSION % 100,
@@ -16769,8 +16776,13 @@ mg_get_system_info_impl(char *buffer, int buflen)
 
 	/* Build date */
 	{
-		mg_snprintf(
-		    NULL, NULL, block, sizeof(block), "Build: %s%s", __DATE__, eol);
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"build\" : \"%s\",%s",
+		            __DATE__,
+		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
 			strcat0(buffer, block);
@@ -16786,7 +16798,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "MSC: %u (%u)%s",
+		            "\"compiler\" : \"MSC: %u (%u)\",%s",
 		            (unsigned)_MSC_VER,
 		            (unsigned)_MSC_FULL_VER,
 		            eol);
@@ -16799,7 +16811,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "MinGW64: %u.%u%s",
+		            "\"compiler\" : \"MinGW64: %u.%u\",%s",
 		            (unsigned)__MINGW64_VERSION_MAJOR,
 		            (unsigned)__MINGW64_VERSION_MINOR,
 		            eol);
@@ -16811,7 +16823,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "MinGW32: %u.%u%s",
+		            "\"compiler\" : \"MinGW32: %u.%u\",%s",
 		            (unsigned)__MINGW32_MAJOR_VERSION,
 		            (unsigned)__MINGW32_MINOR_VERSION,
 		            eol);
@@ -16824,7 +16836,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "MinGW32: %u.%u%s",
+		            "\"compiler\" : \"MinGW32: %u.%u\",%s",
 		            (unsigned)__MINGW32_MAJOR_VERSION,
 		            (unsigned)__MINGW32_MINOR_VERSION,
 		            eol);
@@ -16837,7 +16849,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "clang: %u.%u.%u (%s)%s",
+		            "\"compiler\" : \"clang: %u.%u.%u (%s)\",%s",
 		            __clang_major__,
 		            __clang_minor__,
 		            __clang_patchlevel__,
@@ -16852,7 +16864,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "gcc: %u.%u.%u%s",
+		            "\"compiler\" : \"gcc: %u.%u.%u\",%s",
 		            (unsigned)__GNUC__,
 		            (unsigned)__GNUC_MINOR__,
 		            (unsigned)__GNUC_PATCHLEVEL__,
@@ -16866,7 +16878,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "Intel C/C++: %u%s",
+		            "\"compiler\" : \"Intel C/C++: %u\",%s",
 		            (unsigned)__INTEL_COMPILER,
 		            eol);
 		system_info_length += (int)strlen(block);
@@ -16878,7 +16890,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "Borland C: 0x%x%s",
+		            "\"compiler\" : \"Borland C: 0x%x\",%s",
 		            (unsigned)__BORLANDC__,
 		            eol);
 		system_info_length += (int)strlen(block);
@@ -16890,7 +16902,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "Solaris: 0x%x%s",
+		            "\"compiler\" : \"Solaris: 0x%x\",%s",
 		            (unsigned)__SUNPRO_C,
 		            eol);
 		system_info_length += (int)strlen(block);
@@ -16898,7 +16910,12 @@ mg_get_system_info_impl(char *buffer, int buflen)
 			strcat0(buffer, block);
 		}
 #else
-		mg_snprintf(NULL, NULL, block, sizeof(block), "Other compiler%s", eol);
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"compiler\" : \"other\",%s",
+		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
 			strcat0(buffer, block);
@@ -16909,30 +16926,40 @@ mg_get_system_info_impl(char *buffer, int buflen)
 	/* Determine 32/64 bit data mode.
 	 * see https://en.wikipedia.org/wiki/64-bit_computing */
 	{
-		mg_snprintf(NULL,
-		            NULL,
-		            block,
-		            sizeof(block),
-		            "Data model: int:%u/%u/%u/%u, float:%u/%u/%u, char:%u/%u, "
-		            "ptr:%u, size:%u, time:%u%s",
-		            (unsigned)sizeof(short),
-		            (unsigned)sizeof(int),
-		            (unsigned)sizeof(long),
-		            (unsigned)sizeof(long long),
-		            (unsigned)sizeof(float),
-		            (unsigned)sizeof(double),
-		            (unsigned)sizeof(long double),
-		            (unsigned)sizeof(char),
-		            (unsigned)sizeof(wchar_t),
-		            (unsigned)sizeof(void *),
-		            (unsigned)sizeof(size_t),
-		            (unsigned)sizeof(time_t),
-		            eol);
+		mg_snprintf(
+		    NULL,
+		    NULL,
+		    block,
+		    sizeof(block),
+		    "\"data_model\" : \"int:%u/%u/%u/%u, float:%u/%u/%u, char:%u/%u, "
+		    "ptr:%u, size:%u, time:%u\"%s",
+		    (unsigned)sizeof(short),
+		    (unsigned)sizeof(int),
+		    (unsigned)sizeof(long),
+		    (unsigned)sizeof(long long),
+		    (unsigned)sizeof(float),
+		    (unsigned)sizeof(double),
+		    (unsigned)sizeof(long double),
+		    (unsigned)sizeof(char),
+		    (unsigned)sizeof(wchar_t),
+		    (unsigned)sizeof(void *),
+		    (unsigned)sizeof(size_t),
+		    (unsigned)sizeof(time_t),
+		    eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
 			strcat0(buffer, block);
 		}
 	}
+
+	/* Terminate string */
+	if ((buflen > 0) && buffer && buffer[0]) {
+		if (system_info_length < buflen) {
+			strcat0(buffer, eoobj);
+			strcat0(buffer, eol);
+		}
+	}
+	system_info_length += reserved_len;
 
 	return system_info_length;
 }
