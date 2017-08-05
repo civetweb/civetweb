@@ -2284,6 +2284,8 @@ struct mg_context {
 	int64_t total_connections;
 	int64_t total_requests;
 	struct mg_memory_stat ctx_memory;
+	int64_t total_data_read;
+	int64_t total_data_written;
 #endif
 };
 
@@ -14116,8 +14118,9 @@ reset_per_request_attributes(struct mg_connection *conn)
 	}
 	conn->connection_type = 0; /* Not yet a valid request/response */
 
-	conn->path_info = NULL;
 	conn->num_bytes_sent = conn->consumed_content = 0;
+
+	conn->path_info = NULL;
 	conn->status_code = -1;
 	conn->is_chunked = 0;
 	conn->must_close = 0;
@@ -15473,8 +15476,14 @@ process_new_connection(struct mg_connection *conn)
 				conn->conn_state = 4; /* processing */
 #endif
 				handle_request(conn);
+
 #if defined(USE_SERVER_STATS)
 				conn->conn_state = 5; /* processed */
+
+				mg_atomic_add(&(conn->ctx->total_data_read),
+				              conn->consumed_content);
+				mg_atomic_add(&(conn->ctx->total_data_written),
+				              conn->num_bytes_sent);
 #endif
 
 				DEBUG_TRACE("%s", "handle_request done");
@@ -16599,11 +16608,13 @@ mg_get_system_info_impl(char *buffer, int buflen)
 	const char *eol = "\n";
 #endif
 
-	if (buffer == NULL) {
+	if ((buffer == NULL) || (buflen < 1)) {
 		/* Avoid some warning (although, if some dillweed supplies
 		 * buffer==NULL combined with buflen>0, he deserves a crash).
 		 */
 		buflen = 0;
+	} else {
+		*buffer = 0;
 	}
 
 	/* Server version */
@@ -16947,8 +16958,10 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 	const char *eoobj = "}";
 	int reserved_len = (int)strlen(eoobj) + (int)strlen(eol);
 
-	if ((buffer == NULL) || (buflen < 10)) {
+	if ((buffer == NULL) || (buflen < 1)) {
 		buflen = 0;
+	} else {
+		*buffer = 0;
 	}
 
 	mg_snprintf(NULL, NULL, block, sizeof(block), "{%s", eol);
@@ -17022,6 +17035,29 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		            "},%s",
 		            eol,
 		            ctx->total_requests,
+		            eol,
+		            eol);
+
+		context_info_length += (int)strlen(block);
+		if (context_info_length + reserved_len < buflen) {
+			strcat0(buffer, block);
+		}
+	}
+
+	/* Data information */
+	if (ctx) {
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"data\" : {%s"
+		            "\"read\" : %" INT64_FMT "%s,"
+		            "\"written\" : %" INT64_FMT "%s"
+		            "},%s",
+		            eol,
+		            ctx->total_data_read,
+		            eol,
+		            ctx->total_data_written,
 		            eol,
 		            eol);
 
@@ -17106,8 +17142,10 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 	const char *eoobj = "}";
 	int reserved_len = (int)strlen(eoobj) + (int)strlen(eol);
 
-	if ((buffer == NULL) || (buflen < 10)) {
+	if ((buffer == NULL) || (buflen < 1)) {
 		buflen = 0;
+	} else {
+		*buffer = 0;
 	}
 
 	if ((ctx == NULL) || (idx < 0)) {

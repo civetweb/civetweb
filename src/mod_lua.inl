@@ -1035,13 +1035,17 @@ lsp_get_info(lua_State *L)
 			if (!mg_strcasecmp(arg1, "system")) {
 				/* Get system info */
 				len = mg_get_system_info(NULL, 0);
-				buf = mg_malloc(len + 64);
-				if (!buf) {
-					return luaL_error(L, "OOM in get_info() call");
+				if (len > 0) {
+					buf = mg_malloc(len + 64);
+					if (!buf) {
+						return luaL_error(L, "OOM in get_info() call");
+					}
+					len = mg_get_system_info(buf, len + 63);
+					lua_pushlstring(L, buf, len);
+					mg_free(buf);
+				} else {
+					lua_pushstring(L, "");
 				}
-				len = mg_get_system_info(buf, len + 63);
-				lua_pushlstring(L, buf, len);
-				mg_free(buf);
 				return 1;
 			}
 			if (!mg_strcasecmp(arg1, "context")) {
@@ -1053,32 +1057,39 @@ lsp_get_info(lua_State *L)
 
 				/* Get context info for server context */
 				len = mg_get_context_info(ctx, NULL, 0);
-				buf = mg_malloc(len + 64);
-				if (!buf) {
-					return luaL_error(L, "OOM in get_info() call");
+				if (len > 0) {
+					buf = mg_malloc(len + 64);
+					if (!buf) {
+						return luaL_error(L, "OOM in get_info() call");
+					}
+					len = mg_get_context_info(ctx, buf, len + 63);
+					lua_pushlstring(L, buf, len);
+					mg_free(buf);
+				} else {
+					lua_pushstring(L, "");
 				}
-				len = mg_get_context_info(ctx, buf, len + 63);
-				lua_pushlstring(L, buf, len);
-				mg_free(buf);
 				return 1;
 			}
 			if (!mg_strcasecmp(arg1, "common")) {
 				/* Get context info for NULL context */
 				len = mg_get_context_info(NULL, NULL, 0);
-				buf = mg_malloc(len + 64);
-				if (!buf) {
-					return luaL_error(L, "OOM in get_info() call");
+				if (len > 0) {
+					buf = mg_malloc(len + 64);
+					if (!buf) {
+						return luaL_error(L, "OOM in get_info() call");
+					}
+					len = mg_get_context_info(NULL, buf, len + 63);
+					lua_pushlstring(L, buf, len);
+					mg_free(buf);
+				} else {
+					lua_pushstring(L, "");
 				}
-				len = mg_get_context_info(NULL, buf, len + 63);
-				lua_pushlstring(L, buf, len);
-				mg_free(buf);
 				return 1;
 			}
 			return 0;
 		}
 	}
 
-#ifdef MG_EXPERIMENTAL_INTERFACES
 	if (num_args == 2) {
 		type1 = lua_type(L, 1);
 		type2 = lua_type(L, 2);
@@ -1101,23 +1112,67 @@ lsp_get_info(lua_State *L)
 				/* Lua uses 1 based index, C uses 0 based index */
 				idx--;
 
+#ifdef MG_EXPERIMENTAL_INTERFACES
 				len = mg_get_connection_info(ctx, idx, NULL, 0);
-				buf = mg_malloc(len + 64);
-				if (!buf) {
-					return luaL_error(L, "OOM in get_info() call");
+				if (len > 0) {
+					buf = mg_malloc(len + 64);
+					if (!buf) {
+						return luaL_error(L, "OOM in get_info() call");
+					}
+					len = mg_get_connection_info(ctx, idx, buf, len + 63);
+					lua_pushlstring(L, buf, len);
+					mg_free(buf);
+				} else {
+					lua_pushstring(L, "");
 				}
-				len = mg_get_connection_info(ctx, idx, buf, len + 63);
-				lua_pushlstring(L, buf, len);
-				mg_free(buf);
+#else
+				(void)ctx;
+				(void)idx;
+				lua_pushstring(L, "");
+#endif
+
 				return 1;
 			}
 			return 0;
 		}
 	}
-#endif
 
 	/* Syntax error */
 	return luaL_error(L, "invalid get_info() call");
+}
+
+
+/* mg.get_option */
+static int
+lsp_get_option(lua_State *L)
+{
+	int num_args = lua_gettop(L);
+	int type1;
+	const char *arg1;
+	const char *data;
+
+	/* Get context */
+	struct mg_context *ctx;
+	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(L, -1);
+
+	if (num_args == 1) {
+		type1 = lua_type(L, 1);
+		if (type1 == LUA_TSTRING) {
+			arg1 = lua_tostring(L, 1);
+			/* Get option according to argument */
+			data = mg_get_option(ctx, arg1);
+			if (data) {
+				lua_pushstring(L, data);
+				return 1;
+			}
+			return 0;
+		}
+	}
+
+	/* Syntax error */
+	return luaL_error(L, "invalid get_option() call");
 }
 
 
@@ -1644,6 +1699,8 @@ prepare_lua_environment(struct mg_context *ctx,
 	reg_function(L, "get_response_code_text", lsp_get_response_code_text);
 	reg_function(L, "random", lsp_random);
 	reg_function(L, "get_info", lsp_get_info);
+	reg_function(L, "get_option", lsp_get_option);
+
 	if (pf_uuid_generate.f) {
 		reg_function(L, "uuid", lsp_uuid);
 	}
