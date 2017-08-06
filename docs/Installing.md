@@ -13,6 +13,7 @@ Instructions for adding SSL support can be found in [https://github.com/civetweb
 1. In case the Visual C++ Redistributable are not already installed:
   32 Bit Version: Install the [Redistributable for Visual Studio 2010](http://www.microsoft.com/en-us/download/details.aspx?id=8328)
   64 Bit Version: Install the [Redistributable for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
+  Note: The required version of the Redistributables may vary, depending on the CivetWeb version.
 2. Download latest *civetweb-win.zip* from [SourceForge](https://sourceforge.net/projects/civetweb/files/)
 3. When started, Civetweb puts itself into the tray.
 
