@@ -1280,6 +1280,8 @@ struct dlg_proc_param {
 	const char *name;
 	char *buffer;
 	unsigned buflen;
+	int idRetry;
+	BOOL (*fRetry)(struct dlg_proc_param *data);
 };
 
 
@@ -1476,6 +1478,22 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 				/* There is no input line in this dialog. */
 				EndDialog(hDlg, IDOK);
 			}
+
+		} else if (ctrlId == IDRETRY) {
+
+			/* Get handle of input line */
+			hIn = GetDlgItem(hDlg, inBuf->idRetry);
+
+			if (hIn) {
+				/* Load current string */
+				GetWindowText(hIn, inBuf->buffer, (int)inBuf->buflen);
+				if (inBuf->fRetry) {
+					if (inBuf->fRetry(inBuf)) {
+						SetWindowText(hIn, inBuf->buffer);
+					}
+				}
+			}
+
 		} else if (ctrlId == IDCANCEL) {
 			EndDialog(hDlg, IDCANCEL);
 		}
@@ -1713,6 +1731,7 @@ get_password(const char *user,
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 
 	s_dlg_proc_param.name = "Modify password";
+	s_dlg_proc_param.fRetry = NULL;
 
 	ok =
 	    (IDOK == DialogBoxIndirectParam(
@@ -2022,6 +2041,8 @@ show_settings_dialog()
 
 	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
 
+	s_dlg_proc_param.fRetry = NULL;
+
 	DialogBoxIndirectParam(
 	    NULL, dia, NULL, SettingsDlgProc, (LPARAM)&s_dlg_proc_param);
 
@@ -2234,6 +2255,7 @@ change_password_file()
 		dia->cy = y + 20;
 
 		s_dlg_proc_param.name = path;
+		s_dlg_proc_param.fRetry = NULL;
 
 	} while ((IDOK == DialogBoxIndirectParam(NULL,
 	                                         dia,
@@ -2248,6 +2270,33 @@ change_password_file()
 #undef HEIGHT
 #undef WIDTH
 #undef LABEL_WIDTH
+}
+
+
+static BOOL
+sysinfo_reload(struct dlg_proc_param *prm)
+{
+	static char *buf = 0;
+	int cl, rl;
+
+	cl = mg_get_context_info(g_ctx, NULL, 0);
+	free(buf);
+	cl += 510;
+	buf = (char *)malloc(cl + 1);
+	rl = mg_get_context_info(g_ctx, buf, cl);
+	if ((rl > cl) || (rl <= 0)) {
+		if (g_ctx == NULL) {
+			prm->buffer = "Server not running";
+		} else if (rl <= 0) {
+			prm->buffer = "No server statistics available";
+		} else {
+			prm->buffer = "Please retry";
+		}
+	} else {
+		prm->buffer = buf;
+	}
+
+	return TRUE;
 }
 
 
@@ -2322,22 +2371,36 @@ show_system_info()
 	            g_system_info);
 
 	y += (WORD)(HEIGHT * 8);
+
+	add_control(&p,
+	            dia,
+	            0x80,
+	            IDRETRY,
+	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+	            WIDTH - 10 - 55 - 10 - 55,
+	            y,
+	            55,
+	            12,
+	            "Reload");
+
 	add_control(&p,
 	            dia,
 	            0x80,
 	            IDOK,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            (WIDTH - 55) / 2,
+	            WIDTH - 10 - 55,
 	            y,
 	            55,
 	            12,
-	            "Ok");
+	            "Close");
 
 	assert((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
 
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 
 	s_dlg_proc_param.name = "System information";
+	s_dlg_proc_param.fRetry = sysinfo_reload;
+	s_dlg_proc_param.idRetry = ID_CONTROLS + 1; /* Reload field with this ID */
 
 	ok =
 	    (IDOK == DialogBoxIndirectParam(

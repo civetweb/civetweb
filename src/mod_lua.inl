@@ -540,7 +540,7 @@ lsp_include(lua_State *L)
 		int depth;
 		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
 		lua_gettable(L, LUA_REGISTRYINDEX);
-		depth = lua_tointeger(L, -1);
+		depth = (int)(lua_tointeger(L, -1) + 0.5);
 
 		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
 		lua_pushinteger(L, depth + 1);
