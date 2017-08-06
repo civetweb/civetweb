@@ -101,6 +101,13 @@ the API can be found in [Embedding.md](Embedding.md).
 * [`mg_write( conn, buf, len );`](api/mg_write.md)
 
 
+## Diagnosis Functions
+
+* [`mg_get_system_info( buffer, buf_len );`](api/mg_get_system_info.md)
+* [`mg_get_context_info( ctx, buffer, buf_len );`](api/mg_get_context_info.md)
+* [`mg_get_connection_info( ctx, idx, buffer, buf_len );`](api/mg_get_context_info.md)
+
+
 ## Deprecated:
 
 * [~~`mg_get_valid_option_names();`~~](api/mg_get_valid_option_names.md)

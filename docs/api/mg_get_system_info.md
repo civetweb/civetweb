@@ -17,7 +17,12 @@
 
 ### Description
 
-The function `mg_get_system_info()` returns information collected for the system (operating system, compiler, version, ...). The string is in a human readable format - changes in the format are possible in future versions. This string should be included for support requests.
+The function `mg_get_system_info()` returns information collected for the system 
+(operating system, compiler, version, ...). 
+Currently this data is returned as string is in JSON format, but changes to the 
+format are possible in future versions.  The exact content of the JSON object may vary, 
+depending on the operating system and server version.
+This string should be included for support requests.
 
 ### See Also
 

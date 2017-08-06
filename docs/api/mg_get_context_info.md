@@ -18,7 +18,11 @@
 
 ### Description
 
-The function `mg_get_context_info()` returns statistics information collected for the server context. This may be empty if the server has not been built with statistics support (`#define USE_SERVER_STATS`). Otherwise the returned string is in JSON format.
+The function `mg_get_context_info()` returns statistics information collected for
+the server context.  This may be empty if the server has not been built with
+statistics support (`#define USE_SERVER_STATS`).
+If data is available, the returned string is in JSON format. The exact content may
+vary, depending on the server state and server version.
 
 ### See Also
 

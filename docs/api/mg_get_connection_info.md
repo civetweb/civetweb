@@ -19,7 +19,11 @@
 
 ### Description
 
-The function `mg_get_connection_info()` returns statistics information collected for a possible server connection. This may be empty if the server has not been built with statistics support (`#define USE_SERVER_STATS`). Otherwise the returned string is in JSON format.
+The function `mg_get_connection_info()` returns statistics information collected for 
+a server connection index.  This may be empty if the server has not been built with 
+statistics support (`#define USE_SERVER_STATS`). 
+If data is available, the returned string is in JSON format. The exact content may
+vary, depending on the connection state and server version.
 
 ### Note
 

@@ -1218,6 +1218,7 @@ CIVETWEB_API unsigned mg_check_feature(unsigned feature);
    Return:
      Available size of system information, exluding a terminating 0.
      The information is complete, if the return value is smaller than buflen.
+     The result is a JSON formatted string, the exact content may vary.
    Note:
      It is possible to determine the required buflen, by first calling this
      function with buffer = NULL and buflen = NULL. The required buflen is
@@ -1234,7 +1235,8 @@ CIVETWEB_API int mg_get_system_info(char *buffer, int buflen);
    Return:
      Available size of system information, exluding a terminating 0.
      The information is complete, if the return value is smaller than buflen.
-   Note:
+     The result is a JSON formatted string, the exact content may vary.
+     Note:
      It is possible to determine the required buflen, by first calling this
      function with buffer = NULL and buflen = NULL. The required buflen is
      one byte more than the returned value. However, since the available
@@ -1254,6 +1256,7 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen);
    Return:
      Available size of system information, exluding a terminating 0.
      The information is complete, if the return value is smaller than buflen.
+     The result is a JSON formatted string, the exact content may vary.
    Note:
      It is possible to determine the required buflen, by first calling this
      function with buffer = NULL and buflen = NULL. The required buflen is
