@@ -5,6 +5,14 @@ Release Notes v1.10 (work in progress)
 Changes
 -------
 
+- Add USE\_SERVER\_STATS define, so the server collects statistics data
+- Add experimental function to query the connection status
+- Add document on proposed future interface changes (for comments)
+- Officially drop Symbian support
+- Ignore leading blank lines in multipart messages (Android upload service)
+- Rewrite some functions, in particular request parsing
+- CORS preflight directly in the server, with additional config options
+- Solve some warnings from different static source code analysis tools
 - Collect server status data
 - Allow hostname in listening_ports
 - Make maximum request size configurable
