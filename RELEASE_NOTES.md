@@ -1,20 +1,21 @@
 Release Notes v1.10 (work in progress)
 ===
-### Objectives: *OpenSSL 1.1 support + to be defined*
+### Objectives: *OpenSSL 1.1 support, add server statistics and diagnostic data*
 
 Changes
 -------
 
 - Add USE\_SERVER\_STATS define, so the server collects statistics data
-- Add experimental function to query the connection status
+- Convert system\_info text output and all other diagnostic strings to JSON format
+- Add experimental function to query the connection status (may be dropped again)
 - Add document on proposed future interface changes (for comments)
 - Officially drop Symbian support
-- Ignore leading blank lines in multipart messages (Android upload service)
+- Ignore leading blank lines in multipart messages (for Android upload service)
 - Rewrite some functions, in particular request parsing
 - CORS preflight directly in the server, with additional config options
 - Solve some warnings from different static source code analysis tools
 - Collect server status data
-- Allow hostname in listening_ports
+- Allow hostname in listening\_ports
 - Make maximum request size configurable
 - Allow multiple Sec-Websocket-Protocol
 - Add configuration option to send additional headers
@@ -22,10 +23,10 @@ Changes
 - Mark "file in memory" feature is a candidate for deletion
 - Improve examples
 - Fix timeout error when sending larger files
-- Add mg_send_chunk interface function
+- Add mg\_send\_chunk interface function
 - Allow to separate server private key and certificate chain in two different files
 - Support for multipart requests without quotes (for some C# clients)
-- Initialize SSL in mg_init_library, so https client functions can be used when no server is running
+- Initialize SSL in mg\_init\_library, so https client functions can be used when no server is running
 - Allow "REPORT" HTTP method for REST calls to scripts
 - Allow to compile civetweb.c wih a C++ compiler
 - Lua: Remove internal length limits of encode/decode functions
