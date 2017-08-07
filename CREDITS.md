@@ -2,6 +2,7 @@
 
 * Abhishek Lekshmanan
 * Adam Bailey
+* Alan Somers
 * Alex Kozlov
 * bel2125
 * Ben M. Ward
@@ -92,6 +93,7 @@
 * Scott Nations
 * sgmesservey
 * shantanugadgil
+* Simon Hailes
 * slidertom
 * SpaceLord
 * sunfch
