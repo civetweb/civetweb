@@ -5,7 +5,8 @@ A C API is available to integrate the CivetWeb functionality in a larger
 codebase. A C++ wrapper is also available, although it is not guaranteed
 that all functionality available through the C API can also be accessed
 from C++. This document describes the public C API. Basic usage examples of
-the API can be found in [Embedding.md](Embedding.md).
+the API can be found in [Embedding.md](Embedding.md), as well as in the
+examples directory.
 
 ## Macros
 
@@ -16,6 +17,17 @@ the API can be found in [Embedding.md](Embedding.md).
 | **`CIVETWEB_VERSION_MINOR`** | The current minor version as number, e.g., (9) for version 1.9. |
 | **`CIVETWEB_VERSION_PATCH`** | The current patch version as number, e.g., (0) for version 1.9 or (1) for version 1.9.1. |
 
+## Handles
+
+* `struct mg_context *`
+Handle for one instance of the HTTP(S) server.
+All functions using `const struct mg_context *` as an argument do not modify a running server instance, but just query information. Functions using a non-const `struct mg_context *` as an argument may modify a server instance (e.g., register a new URI, stop the server, ...).
+
+* `struct mg_connection *`
+Handle for one individual client-server connection.
+Functions working with `const struct mg_connection *` operate on data already known to the server without reading data from or sending data to the client. Callbacks using a `const struct mg_connection *` argument are supposed to not call functions from the `mg_read()` and `mg_write()` family. To support a correct application, reading and writing functions require a non-const `struct mg_connection *` connection handle.
+
+The content of both structures is not defined in the interface - they are only used as opaque pointers (handles).
 
 ## Structures
 
@@ -112,3 +124,5 @@ the API can be found in [Embedding.md](Embedding.md).
 
 * [~~`mg_get_valid_option_names();`~~](api/mg_get_valid_option_names.md)
 * [~~`mg_upload( conn, destination_dir );`~~](api/mg_upload.md)
+
+
