@@ -49,6 +49,7 @@ static const char *LUASOCKET = "luasocket";
 static const char lua_regkey_ctx = 1;
 static const char lua_regkey_connlist = 2;
 static const char lua_regkey_lsp_include_depth = 3;
+static const char *LUABACKGROUNDPARAMS = "mg";
 
 #ifndef LSP_INCLUDE_MAX_DEPTH
 #define LSP_INCLUDE_MAX_DEPTH (32)
@@ -72,6 +73,21 @@ reg_lstring(struct lua_State *L,
 		lua_pushstring(L, name);
 		lua_pushlstring(L, (const char *)buffer, buflen);
 		lua_rawset(L, -3);
+	}
+}
+
+static void
+reg_llstring(struct lua_State *L,
+			 const void *buffer1,
+			 size_t buflen1,
+			 const void *buffer2,
+			 size_t buflen2 )
+{
+	if ( buffer1 != NULL && buffer2 != NULL )
+	{
+		lua_pushlstring( L, (const char *)buffer1, buflen1 );
+		lua_pushlstring( L, (const char *)buffer1, buflen2 );
+		lua_rawset( L, -3 );
 	}
 }
 

@@ -2081,6 +2081,7 @@ enum {
 #endif
 #if defined(USE_LUA)
 	LUA_BACKGROUND_SCRIPT,
+	LUA_BACKGROUND_SCRIPT_PARAMS,
 #endif
 	ADDITIONAL_HEADER,
 	MAX_REQUEST_SIZE,
@@ -2179,6 +2180,7 @@ static struct mg_option config_options[] = {
 #endif
 #if defined(USE_LUA)
     {"lua_background_script", CONFIG_TYPE_FILE, NULL},
+    {"lua_background_script_params", CONFIG_TYPE_STRING_LIST, NULL },
 #endif
     {"additional_header", CONFIG_TYPE_STRING_MULTILINE, NULL},
     {"max_request_size", CONFIG_TYPE_NUMBER, "16384"},
@@ -16039,7 +16041,14 @@ master_thread_run(void *thread_func_param)
 #if defined(USE_LUA)
 	/* Free Lua state of lua background task */
 	if (ctx->lua_background_state) {
-		lua_close((lua_State *)ctx->lua_background_state);
+		lua_State* lstate = ( lua_State * )ctx->lua_background_state;
+		lua_getglobal(lstate, LUABACKGROUNDPARAMS);
+		if (lua_istable(lstate, -1)) {
+			reg_boolean(lstate, "shutdown", 1);
+			lua_pop(lstate, 1);
+			mg_sleep( 2 );
+		}
+		lua_close(lstate);
 		ctx->lua_background_state = 0;
 	}
 #endif
@@ -16377,7 +16386,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	/* If a Lua background script has been configured, start it. */
 	if (ctx->config[LUA_BACKGROUND_SCRIPT] != NULL) {
 		char ebuf[256];
-		void *state = (void *)mg_prepare_lua_context_script(
+		lua_State *state = (void *)mg_prepare_lua_context_script(
 		    ctx->config[LUA_BACKGROUND_SCRIPT], ctx, ebuf, sizeof(ebuf));
 		if (!state) {
 			mg_cry(fc(ctx), "lua_background_script error: %s", ebuf);
@@ -16385,7 +16394,22 @@ mg_start(const struct mg_callbacks *callbacks,
 			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
 		}
-		ctx->lua_background_state = state;
+		ctx->lua_background_state = (void*)state;
+		
+		lua_newtable(state);
+		reg_boolean(state, "shutdown", 0 );
+		
+		struct vec opt_vec;
+		struct vec eq_vec;
+		const char* sparams = ctx->config[ LUA_BACKGROUND_SCRIPT_PARAMS ];
+		
+		while (( sparams = next_option( sparams, &opt_vec, &eq_vec)) != NULL) {
+			reg_llstring( state, opt_vec.ptr, opt_vec.len, eq_vec.ptr, eq_vec.len );
+			if ( mg_strncasecmp( sparams, opt_vec.ptr, opt_vec.len) == 0)
+				break;
+		}
+		lua_setglobal(state, LUABACKGROUNDPARAMS);
+
 	} else {
 		ctx->lua_background_state = 0;
 	}
