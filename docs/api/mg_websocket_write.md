@@ -19,11 +19,11 @@
 
 ### Description
 
-The function `mg_websocket_write()` sends data to a websocket client wrapped in a websocket frame. The function issues calls to [`mg_lock_connection()`](mg_lock_connection.md) and [`mg_unlock_connaction()`](mg_unlock_connection.md) to ensure that the transmission is not interrupted. Data corruption can otherwise happn if the application is proactively communicating and responding to a request simultaneously.
+The function `mg_websocket_write()` sends data to a websocket client wrapped in a websocket frame. The function issues calls to [`mg_lock_connection()`](mg_lock_connection.md) and [`mg_unlock_connection()`](mg_unlock_connection.md) to ensure that the transmission is not interrupted. Data corruption can otherwise happen if the application is proactively communicating and responding to a request simultaneously.
 
-The function is available only when Civetweb is compilet with the `-DUSE_WEBSOCKET` option.
+The function is available only when Civetweb is compiled with the `-DUSE_WEBSOCKET` option.
 
-The function returns the number of bytes written, **0** when the connection has been closed and **-1** if an error occured.
+The function returns the number of bytes written, **0** when the connection has been closed and **-1** if an error occurred.
 
 ### See Also
 
