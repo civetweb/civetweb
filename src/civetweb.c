@@ -96,6 +96,16 @@ mg_static_assert(sizeof(void *) == 4 || sizeof(void *) == 8,
 mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 
+/* Alternative queue is well tested and should be the new default */
+#ifdef NO_ALTERNATIVE_QUEUE
+#ifdef ALTERNATIVE_QUEUE
+#error "Define ALTERNATIVE_QUEUE or NO_ALTERNATIVE_QUEUE or none, but not both"
+#endif
+#else
+#define ALTERNATIVE_QUEUE
+#endif
+
+
 /* DTL -- including winsock2.h works better if lean and mean */
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
