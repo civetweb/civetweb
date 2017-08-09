@@ -7613,7 +7613,7 @@ read_auth_file(struct mg_file *filep,
 
 /* Authorize against the opened passwords file. Return 1 if authorized. */
 static int
-authorize(struct mg_connection *conn, struct mg_file *filep)
+authorize(struct mg_connection *conn, struct mg_file *filep, const char *realm)
 {
 	struct read_auth_file_struct workdata;
 	char buf[MG_BUF_LEN];
@@ -7628,9 +7628,37 @@ authorize(struct mg_connection *conn, struct mg_file *filep)
 	if (!parse_auth_header(conn, buf, sizeof(buf), &workdata.ah)) {
 		return 0;
 	}
-	workdata.domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
+
+	if (realm) {
+		workdata.domain = realm;
+	} else {
+		workdata.domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
+	}
 
 	return read_auth_file(filep, &workdata, INITIAL_DEPTH);
+}
+
+
+int
+mg_check_digest_access_authentication(struct mg_connection *conn,
+                                      const char *realm,
+                                      const char *filename)
+{
+	struct mg_file file = STRUCT_FILE_INITIALIZER;
+	int auth;
+
+	if (!conn || !filename) {
+		return -1;
+	}
+	if (!mg_fopen(conn, filename, MG_FOPEN_MODE_READ, &file)) {
+		return -2;
+	}
+
+	auth = authorize(conn, &file, realm);
+
+	mg_fclose(&file.access);
+
+	return auth;
 }
 
 
@@ -7676,7 +7704,7 @@ check_authorization(struct mg_connection *conn, const char *path)
 	}
 
 	if (is_file_opened(&file.access)) {
-		authorized = authorize(conn, &file);
+		authorized = authorize(conn, &file, NULL);
 		(void)mg_fclose(&file.access); /* ignore error on read only file */
 	}
 
@@ -7749,7 +7777,7 @@ is_authorized_for_put(struct mg_connection *conn)
 
 		if (passfile != NULL
 		    && mg_fopen(conn, passfile, MG_FOPEN_MODE_READ, &file)) {
-			ret = authorize(conn, &file);
+			ret = authorize(conn, &file, NULL);
 			(void)mg_fclose(&file.access); /* ignore error on read only file */
 		}
 

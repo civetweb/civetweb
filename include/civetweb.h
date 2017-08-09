@@ -782,6 +782,13 @@ mg_send_digest_access_authentication_request(struct mg_connection *conn,
                                              const char *realm);
 
 
+/* TODO: Test and document */
+CIVETWEB_API int
+mg_check_digest_access_authentication(struct mg_connection *conn,
+                                      const char *realm,
+                                      const char *filename);
+
+
 /* Send contents of the entire file together with HTTP headers.
  * Parameters:
  *   conn: Current connection handle.
