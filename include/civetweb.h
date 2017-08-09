@@ -774,6 +774,8 @@ CIVETWEB_API void mg_send_http_error(struct mg_connection *conn,
  *   conn: Current connection handle.
  *   realm: Authentication realm. If NULL is supplied, the sever domain
  *          set in the authentication_domain configuration is used.
+ * Return:
+ *   < 0   Error
  */
 CIVETWEB_API int
 mg_send_digest_access_authentication_request(struct mg_connection *conn,
