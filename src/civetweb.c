@@ -2416,12 +2416,25 @@ typedef struct tagTHREADNAME_INFO {
 static void *
 event_create(void)
 {
-	int ret = eventfd(0, EFD_CLOEXEC);
-	if (ret == -1) {
+	int evhdl = eventfd(0, EFD_CLOEXEC);
+	int *ret;
+
+	if (evhdl == -1) {
 		/* Linux uses -1 on error, Windows NULL. */
 		/* However, Linux does not return 0 on success either. */
 		return 0;
 	}
+	if (sizeof(int) == sizeof(void *)) {
+		ret = (void *)evhdl;
+	} else {
+		ret = (int *)mg_malloc(sizeof(int));
+		if (ret) {
+			*ret = evhdl;
+		} else {
+			(void)close(evhdl);
+		}
+	}
+
 	return (void *)ret;
 }
 
@@ -2430,7 +2443,19 @@ static int
 event_wait(void *eventhdl)
 {
 	uint64_t u;
-	int s = (int)read((int)eventhdl, &u, sizeof(u));
+	int evhdl;
+
+	if (sizeof(int) == sizeof(void *)) {
+		evhdl = (int)eventhdl;
+	} else {
+		if (!eventhdl) {
+			/* error */
+			return 0;
+		}
+		evhdl = *(int *)eventhdl;
+	}
+
+	int s = (int)read(evhdl, &u, sizeof(u));
 	if (s != sizeof(uint64_t)) {
 		/* error */
 		return 0;
@@ -2444,7 +2469,19 @@ static int
 event_signal(void *eventhdl)
 {
 	uint64_t u = 1;
-	int s = (int)write((int)eventhdl, &u, sizeof(u));
+	int evhdl;
+
+	if (sizeof(int) == sizeof(void *)) {
+		evhdl = (int)eventhdl;
+	} else {
+		if (!eventhdl) {
+			/* error */
+			return 0;
+		}
+		evhdl = *(int *)eventhdl;
+	}
+
+	int s = (int)write(evhdl, &u, sizeof(u));
 	if (s != sizeof(uint64_t)) {
 		/* error */
 		return 0;
@@ -2456,7 +2493,20 @@ event_signal(void *eventhdl)
 static void
 event_destroy(void *eventhdl)
 {
-	close((int)eventhdl);
+	int evhdl;
+
+	if (sizeof(int) == sizeof(void *)) {
+		evhdl = (int)eventhdl;
+		close(evhdl);
+	} else {
+		if (!eventhdl) {
+			/* error */
+			return;
+		}
+		evhdl = *(int *)eventhdl;
+		close(evhdl);
+		mg_free(eventhdl);
+	}
 }
 #endif
 
