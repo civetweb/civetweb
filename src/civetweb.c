@@ -7684,40 +7684,57 @@ check_authorization(struct mg_connection *conn, const char *path)
 }
 
 
+/* Internal function. Assumes conn is valid */
 static void
-send_authorization_request(struct mg_connection *conn)
+send_authorization_request(struct mg_connection *conn, const char *realm)
 {
 	char date[64];
 	time_t curtime = time(NULL);
+	uint64_t nonce = (uint64_t)(conn->ctx->start_time);
 
-	if (conn && conn->ctx) {
-		uint64_t nonce = (uint64_t)(conn->ctx->start_time);
-
-		(void)pthread_mutex_lock(&conn->ctx->nonce_mutex);
-		nonce += conn->ctx->nonce_count;
-		++conn->ctx->nonce_count;
-		(void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
-
-		nonce ^= conn->ctx->auth_nonce_mask;
-		conn->status_code = 401;
-		conn->must_close = 1;
-
-		gmt_time_string(date, sizeof(date), &curtime);
-
-		mg_printf(conn, "HTTP/1.1 401 Unauthorized\r\n");
-		send_no_cache_header(conn);
-		send_additional_header(conn);
-		mg_printf(conn,
-		          "Date: %s\r\n"
-		          "Connection: %s\r\n"
-		          "Content-Length: 0\r\n"
-		          "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", "
-		          "nonce=\"%" UINT64_FMT "\"\r\n\r\n",
-		          date,
-		          suggest_connection_header(conn),
-		          conn->ctx->config[AUTHENTICATION_DOMAIN],
-		          nonce);
+	if (!realm) {
+		realm = conn->ctx->config[AUTHENTICATION_DOMAIN];
 	}
+
+	(void)pthread_mutex_lock(&conn->ctx->nonce_mutex);
+	nonce += conn->ctx->nonce_count;
+	++conn->ctx->nonce_count;
+	(void)pthread_mutex_unlock(&conn->ctx->nonce_mutex);
+
+	nonce ^= conn->ctx->auth_nonce_mask;
+	conn->status_code = 401;
+	conn->must_close = 1;
+
+	gmt_time_string(date, sizeof(date), &curtime);
+
+	mg_printf(conn, "HTTP/1.1 401 Unauthorized\r\n");
+	send_no_cache_header(conn);
+	send_additional_header(conn);
+	mg_printf(conn,
+	          "Date: %s\r\n"
+	          "Connection: %s\r\n"
+	          "Content-Length: 0\r\n"
+	          "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", "
+	          "nonce=\"%" UINT64_FMT "\"\r\n\r\n",
+	          date,
+	          suggest_connection_header(conn),
+	          realm,
+	          nonce);
+}
+
+
+/* Interface function. Parameters are provided by the user, so do
+ * at least some basic checks.
+ */
+int
+mg_send_digest_access_authentication_request(struct mg_connection *conn,
+                                             const char *realm)
+{
+	if (conn && conn->ctx) {
+		send_authorization_request(conn, realm);
+		return 0;
+	}
+	return -1;
 }
 
 
@@ -12431,7 +12448,7 @@ handle_request(struct mg_connection *conn)
 		 * available.
 		 */
 		if (!is_authorized_for_put(conn)) {
-			send_authorization_request(conn);
+			send_authorization_request(conn, NULL);
 			return;
 		}
 #endif
@@ -12441,7 +12458,7 @@ handle_request(struct mg_connection *conn)
 		 * or it is a PUT or DELETE request to a resource that does not
 		 * correspond to a file. Check authorization. */
 		if (!check_authorization(conn, path)) {
-			send_authorization_request(conn);
+			send_authorization_request(conn, NULL);
 			return;
 		}
 	}

@@ -767,13 +767,26 @@ CIVETWEB_API void mg_send_http_error(struct mg_connection *conn,
                                      ...) PRINTF_ARGS(3, 4);
 
 
+/* Send HTTP digest access authentication request.
+ * Browsers will send a user name and password in their next request, showing
+ * an authentication dialog if the password is not stored.
+ * Parameters:
+ *   conn: Current connection handle.
+ *   realm: Authentication realm. If NULL is supplied, the sever domain
+ *          set in the authentication_domain configuration is used.
+ */
+CIVETWEB_API int
+mg_send_digest_access_authentication_request(struct mg_connection *conn,
+                                             const char *realm);
+
+
 /* Send contents of the entire file together with HTTP headers.
-   Parameters:
-     conn: Current connection information.
-     path: Full path to the file to send.
-     mime_type: Content-Type for file.  NULL will cause the type to be
-                looked up by the file extension.
-*/
+ * Parameters:
+ *   conn: Current connection handle.
+ *   path: Full path to the file to send.
+ *   mime_type: Content-Type for file.  NULL will cause the type to be
+ *              looked up by the file extension.
+ */
 CIVETWEB_API void mg_send_mime_file(struct mg_connection *conn,
                                     const char *path,
                                     const char *mime_type);
