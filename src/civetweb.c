@@ -2180,7 +2180,7 @@ static struct mg_option config_options[] = {
 #endif
 #if defined(USE_LUA)
     {"lua_background_script", CONFIG_TYPE_FILE, NULL},
-    {"lua_background_script_params", CONFIG_TYPE_STRING_LIST, NULL },
+    {"lua_background_script_params", CONFIG_TYPE_STRING_LIST, NULL},
 #endif
     {"additional_header", CONFIG_TYPE_STRING_MULTILINE, NULL},
     {"max_request_size", CONFIG_TYPE_NUMBER, "16384"},
@@ -2413,6 +2413,27 @@ typedef struct tagTHREADNAME_INFO {
 
 #if defined(ALTERNATIVE_QUEUE)
 
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
+/* For every system, "(sizeof(int) == sizeof(void *))" is either always
+ * true or always false. One of the two branches is unreachable in any case.
+ * Unfortunately the C standard does not define a way to check this at
+ * compile time, since the #if preprocessor conditions can not use the sizeof
+ * operator as an argument. */
+#endif
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* GCC does not realize one branch is unreachable, so it raises some
+ * pointer cast warning within the unreachable branch.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
+#endif
+
+
 static void *
 event_create(void)
 {
@@ -2508,6 +2529,16 @@ event_destroy(void *eventhdl)
 		mg_free(eventhdl);
 	}
 }
+
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 #endif
 
 #endif
@@ -16091,12 +16122,12 @@ master_thread_run(void *thread_func_param)
 #if defined(USE_LUA)
 	/* Free Lua state of lua background task */
 	if (ctx->lua_background_state) {
-		lua_State* lstate = ( lua_State * )ctx->lua_background_state;
+		lua_State *lstate = (lua_State *)ctx->lua_background_state;
 		lua_getglobal(lstate, LUABACKGROUNDPARAMS);
 		if (lua_istable(lstate, -1)) {
 			reg_boolean(lstate, "shutdown", 1);
 			lua_pop(lstate, 1);
-			mg_sleep( 2 );
+			mg_sleep(2);
 		}
 		lua_close(lstate);
 		ctx->lua_background_state = 0;
@@ -16444,18 +16475,19 @@ mg_start(const struct mg_callbacks *callbacks,
 			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
 		}
-		ctx->lua_background_state = (void*)state;
-		
+		ctx->lua_background_state = (void *)state;
+
 		lua_newtable(state);
-		reg_boolean(state, "shutdown", 0 );
-		
+		reg_boolean(state, "shutdown", 0);
+
 		struct vec opt_vec;
 		struct vec eq_vec;
-		const char* sparams = ctx->config[ LUA_BACKGROUND_SCRIPT_PARAMS ];
-		
-		while (( sparams = next_option( sparams, &opt_vec, &eq_vec)) != NULL) {
-			reg_llstring( state, opt_vec.ptr, opt_vec.len, eq_vec.ptr, eq_vec.len );
-			if ( mg_strncasecmp( sparams, opt_vec.ptr, opt_vec.len) == 0)
+		const char *sparams = ctx->config[LUA_BACKGROUND_SCRIPT_PARAMS];
+
+		while ((sparams = next_option(sparams, &opt_vec, &eq_vec)) != NULL) {
+			reg_llstring(
+			    state, opt_vec.ptr, opt_vec.len, eq_vec.ptr, eq_vec.len);
+			if (mg_strncasecmp(sparams, opt_vec.ptr, opt_vec.len) == 0)
 				break;
 		}
 		lua_setglobal(state, LUABACKGROUNDPARAMS);
