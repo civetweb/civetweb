@@ -26,3 +26,8 @@ If the password parameter is not `NULL` an entry is added to the password file. 
 The function returns 1 when successful and 0 if an error occurs.
 
 ### See Also
+
+* [`mg_check_digest_access_authentication();`](mg_check_digest_access_authentication.md)
+* [`mg_send_digest_access_authentication_request();`](mg_send_digest_access_authentication_request.md)
+
+

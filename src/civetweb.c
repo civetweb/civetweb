@@ -7639,6 +7639,7 @@ authorize(struct mg_connection *conn, struct mg_file *filep, const char *realm)
 }
 
 
+/* Public function to check http digest authentication header */
 int
 mg_check_digest_access_authentication(struct mg_connection *conn,
                                       const char *realm,

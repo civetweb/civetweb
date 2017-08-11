@@ -69,7 +69,10 @@ The content of both structures is not defined in the interface - they are only u
 * [`mg_get_context( conn );`](api/mg_get_context.md)
 
 * [`mg_send_http_error( conn, status_code, fmt, ... );`](api/mg_send_http_error.md)
+
 * [`mg_send_digest_access_authentication_request( conn, realm );`](api/mg_send_digest_access_authentication_request.md)
+* [`mg_check_digest_access_authentication( conn, realm, filename );`](api/mg_check_digest_access_authentication.md)
+* [`mg_modify_passwords_file( passwords_file_name, realm, user, password );`](api/mg_modify_passwords_file.md)
 
 
 ## Client API Functions
@@ -98,7 +101,6 @@ The content of both structures is not defined in the interface - they are only u
 * [`mg_handle_form_request( conn, fdh );`](api/mg_handle_form_request.md)
 * [`mg_lock_connection( conn );`](api/mg_lock_connection.md)
 * [`mg_md5( buf, ... );`](api/mg_md5.md)
-* [`mg_modify_passwords_file( passwords_file_name, domain, user, password );`](api/mg_modify_passwords_file.md)
 * [`mg_printf( conn, fmt, ... );`](api/mg_printf.md)
 * [`mg_read( conn, buf, len );`](api/mg_read.md)
 * [`mg_send_chunk( conn, buf, len );`](api/mg_send_chunk.md)
