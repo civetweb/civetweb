@@ -609,19 +609,25 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl);
 
 
 /* Add, edit or delete the entry in the passwords file.
-
-   This function allows an application to manipulate .htpasswd files on the
-   fly by adding, deleting and changing user records. This is one of the
-   several ways of implementing authentication on the server side. For another,
-   cookie-based way please refer to the examples/chat in the source tree.
-
-   If password is not NULL, entry is added (or modified if already exists).
-   If password is NULL, entry is deleted.
-
-   Return:
-     1 on success, 0 on error. */
+ *
+ * This function allows an application to manipulate .htpasswd files on the
+ * fly by adding, deleting and changing user records. This is one of the
+ * several ways of implementing authentication on the server side. For another,
+ * cookie-based way please refer to the examples/chat in the source tree.
+ *
+ * Parameter:
+ *   passwords_file_name: Path and name of a file storing multiple passwords
+ *   realm: HTTP authentication realm (authentication domain) name
+ *   user: User name
+ *   password:
+ *     If password is not NULL, entry modified or added.
+ *     If password is NULL, entry is deleted.
+ *
+ *  Return:
+ *    1 on success, 0 on error.
+ */
 CIVETWEB_API int mg_modify_passwords_file(const char *passwords_file_name,
-                                          const char *domain,
+                                          const char *realm,
                                           const char *user,
                                           const char *password);
 
