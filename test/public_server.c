@@ -228,7 +228,7 @@ START_TEST(test_the_test_environment)
 END_TEST
 
 
-static void *threading_data;
+static void *threading_data = 0;
 
 static void *
 test_thread_func_t(void *param)
@@ -245,6 +245,7 @@ START_TEST(test_threading)
 	int ok;
 
 	threading_data = NULL;
+	mark_point();
 
 	ok = mg_start_thread(test_thread_func_t, &threading_data);
 	ck_assert_int_eq(ok, 0);
@@ -268,6 +269,8 @@ log_msg_func(const struct mg_connection *conn, const char *message)
 
 	strncpy(ud, message, 255);
 	ud[255] = 0;
+	mark_point();
+
 	return 1;
 }
 
@@ -329,6 +332,8 @@ test_mg_start_stop_http_server_impl(int ipv6)
 	const struct mg_request_info *client_ri;
 	int client_res, ret;
 	struct mg_server_ports portinfo[8];
+
+	mark_point();
 
 #if !defined(NO_FILES)
 	OPTIONS[optcnt++] = "document_root";
@@ -497,23 +502,26 @@ test_mg_start_stop_http_server_impl(int ipv6)
 
 	/* End test */
 	test_mg_stop(ctx);
+	mark_point();
 }
 
 
 START_TEST(test_mg_start_stop_http_server)
 {
+	mark_point();
 	test_mg_start_stop_http_server_impl(0);
+	mark_point();
 }
 END_TEST
 
 
 START_TEST(test_mg_start_stop_http_server_ipv6)
 {
+	mark_point();
 #if defined(USE_IPV6)
 	test_mg_start_stop_http_server_impl(1);
-#else
-	mark_point();
 #endif
+	mark_point();
 }
 END_TEST
 
@@ -639,6 +647,7 @@ START_TEST(test_mg_start_stop_https_server)
 	test_sleep(1);
 
 	test_mg_stop(ctx);
+	mark_point();
 #endif
 }
 END_TEST
@@ -767,6 +776,7 @@ START_TEST(test_mg_server_and_client_tls)
 
 	test_mg_stop(ctx);
 #endif
+	mark_point();
 }
 END_TEST
 
@@ -809,6 +819,7 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	}
 
 	mg_printf(conn, "0\r\n\r\n");
+	mark_point();
 
 	return 1;
 }
@@ -846,6 +857,7 @@ websock_server_connect(const struct mg_connection *conn, void *udata)
 
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	WS_TEST_TRACE("Server: Websocket connected\n");
+	mark_point();
 
 	return 0; /* return 0 to accept every connection */
 }
@@ -867,6 +879,7 @@ websock_server_ready(struct mg_connection *conn, void *udata)
 	mg_unlock_connection(conn);
 
 	WS_TEST_TRACE("Server: Websocket ready X\n");
+	mark_point();
 }
 
 
@@ -946,6 +959,7 @@ websock_server_data(struct mg_connection *conn,
 #pragma GCC diagnostic pop
 #endif
 	}
+	mark_point();
 
 	return 1; /* return 1 to keep the connetion open */
 }
@@ -961,6 +975,8 @@ websock_server_close(const struct mg_connection *conn, void *udata)
 
 	/* Can not send a websocket goodbye message here -
 	 * the connection is already closed */
+
+	mark_point();
 }
 
 
@@ -1012,6 +1028,8 @@ websocket_client_data_handler(struct mg_connection *conn,
 	memcpy(pclient_data->data, data, data_len);
 	pclient_data->len = data_len;
 
+	mark_point();
+
 	return 1;
 }
 
@@ -1030,6 +1048,8 @@ websocket_client_close_handler(const struct mg_connection *conn,
 
 	WS_TEST_TRACE("Client %i: Close handler\n", pclient_data->clientId);
 	pclient_data->closed++;
+
+	mark_point();
 }
 #endif
 
@@ -1095,6 +1115,8 @@ START_TEST(test_request_handlers)
 
 	char cmd_buf[256];
 	char *cgi_env_opt;
+
+	mark_point();
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
@@ -1971,6 +1993,7 @@ START_TEST(test_request_handlers)
 
 	ck_assert_int_eq(ws_client4_data.closed, 1);
 #endif
+	mark_point();
 }
 END_TEST
 
@@ -2008,6 +2031,8 @@ field_found(const char *key,
 		strncpy(path, key, pathlen - 8);
 		strcat(path, ".txt");
 	}
+
+	mark_point();
 
 	return g_field_found_return;
 }
@@ -2149,6 +2174,7 @@ field_get(const char *key,
 	}
 
 	free(value);
+	mark_point();
 
 	return 0;
 }
@@ -2207,6 +2233,7 @@ field_store(const char *path, long long file_size, void *user_data)
 		ck_abort_msg("field_get called with g_field_step == %i",
 		             (int)g_field_step);
 	}
+	mark_point();
 
 	return 0;
 }
@@ -2235,6 +2262,8 @@ FormGet(struct mg_connection *conn, void *cbdata)
 	ck_assert_int_eq(g_field_step, 22);
 	mg_printf(conn, "%i\r\n", ret);
 	g_field_step = 1000;
+
+	mark_point();
 
 	return 1;
 }
@@ -2269,6 +2298,8 @@ FormStore(struct mg_connection *conn,
 	mg_printf(conn, "%i\r\n", ret);
 	g_field_step = 1000;
 
+	mark_point();
+
 	return 1;
 }
 
@@ -2276,6 +2307,7 @@ FormStore(struct mg_connection *conn,
 static int
 FormStore1(struct mg_connection *conn, void *cbdata)
 {
+	mark_point();
 	return FormStore(conn, cbdata, 3, 101);
 }
 
@@ -2283,6 +2315,7 @@ FormStore1(struct mg_connection *conn, void *cbdata)
 static int
 FormStore2(struct mg_connection *conn, void *cbdata)
 {
+	mark_point();
 	return FormStore(conn, cbdata, 4, 102);
 }
 
@@ -2295,6 +2328,8 @@ send_chunk_stringl(struct mg_connection *conn,
 	char lenbuf[16];
 	size_t lenbuf_len;
 	int ret;
+
+	mark_point();
 
 	/* First store the length information in a text buffer. */
 	sprintf(lenbuf, "%x\r\n", chunk_len);
@@ -2315,7 +2350,9 @@ send_chunk_stringl(struct mg_connection *conn,
 static void
 send_chunk_string(struct mg_connection *conn, const char *chunk)
 {
+	mark_point();
 	send_chunk_stringl(conn, chunk, (unsigned int)strlen(chunk));
+	mark_point();
 }
 
 
@@ -2332,6 +2369,8 @@ START_TEST(test_handle_form)
 	const char *boundary;
 	size_t body_len, body_sent, chunk_len;
 	int sleep_cnt;
+
+	mark_point();
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
@@ -2885,6 +2924,7 @@ START_TEST(test_http_auth)
 		"put_delete_auth_file.csv",
 		NULL,
 	};
+
 	struct mg_context *ctx;
 	struct mg_connection *client_conn;
 	char client_err[256], nonce[256];
@@ -2906,6 +2946,7 @@ START_TEST(test_http_auth)
 	const char *nc = "00000001";
 	const char *cnonce = "6789ABCD";
 
+	mark_point();
 
 	/* Start with default options */
 	ctx = test_mg_start(NULL, NULL, OPTIONS);
@@ -3191,6 +3232,7 @@ START_TEST(test_http_auth)
 	(void)remove("put_delete_auth_file.csv");
 
 #endif
+	mark_point();
 }
 END_TEST
 
@@ -3218,6 +3260,8 @@ START_TEST(test_keep_alive)
 	const struct mg_request_info *client_ri;
 	int client_res, i;
 	const char *connection_header;
+
+	mark_point();
 
 	ctx = test_mg_start(NULL, NULL, OPTIONS);
 
@@ -3265,6 +3309,8 @@ START_TEST(test_keep_alive)
 
 	/* Stop the server and clean up */
 	test_mg_stop(ctx);
+
+	mark_point();
 }
 END_TEST
 
@@ -3286,6 +3332,8 @@ START_TEST(test_error_handling)
 
 	const char *OPTIONS[32];
 	int opt_cnt = 0;
+
+	mark_point();
 
 #if !defined(NO_FILES)
 	OPTIONS[opt_cnt++] = "document_root";
@@ -3528,6 +3576,8 @@ START_TEST(test_error_handling)
 	ck_assert_str_ne(client_err, "");
 
 	test_sleep(1);
+
+	mark_point();
 }
 END_TEST
 
@@ -3549,6 +3599,8 @@ START_TEST(test_error_log_file)
 	FILE *f;
 	char buf[1024];
 	int len, ok;
+
+	mark_point();
 
 	/* Set options and start server */
 	OPTIONS[opt_cnt++] = "listening_ports";
@@ -3663,6 +3715,8 @@ START_TEST(test_error_log_file)
 	/* Remove log files */
 	(void)remove("error.log");
 	(void)remove("access.log");
+
+	mark_point();
 }
 END_TEST
 
@@ -3697,6 +3751,8 @@ test_throttle_begin_request(struct mg_connection *conn)
 	for (i = 0; i < len; i += blocklen) {
 		mg_write(conn, block, blocklen);
 	}
+
+	mark_point();
 
 	return 987; /* Not a valid HTTP response code,
 	             * but it should be written to the log and passed to
@@ -3743,6 +3799,8 @@ START_TEST(test_throttle)
 	int r, data_read;
 	time_t t0, t1;
 	double dt;
+
+	mark_point();
 
 
 /* Set options and start server */
@@ -3817,14 +3875,20 @@ START_TEST(test_throttle)
 
 	/* Stop the server */
 	test_mg_stop(ctx);
+
+	mark_point();
 }
 END_TEST
 
 
 START_TEST(test_init_library)
 {
-	unsigned f_avail = mg_check_feature(0xFF);
-	unsigned f_ret = mg_init_library(f_avail);
+	unsigned f_avail, f_ret;
+
+	mark_point();
+
+	f_avail = mg_check_feature(0xFF);
+	f_ret = mg_init_library(f_avail);
 	ck_assert_uint_eq(f_ret, f_avail);
 }
 END_TEST
@@ -3863,6 +3927,8 @@ test_large_file_begin_request(struct mg_connection *conn)
 		mg_write(conn, block, blocklen);
 	}
 
+	mark_point();
+
 	return 200;
 }
 
@@ -3888,6 +3954,7 @@ START_TEST(test_large_file)
 	int r;
 	int retry, retry_ok_cnt, retry_fail_cnt;
 
+	mark_point();
 
 /* Set options and start server */
 #if !defined(NO_FILES)
@@ -3992,6 +4059,8 @@ START_TEST(test_large_file)
 
 	/* Stop the server */
 	test_mg_stop(ctx);
+
+	mark_point();
 }
 END_TEST
 
@@ -4007,6 +4076,8 @@ test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *ignored)
 	int64_t rc;
 
 	(void)ignored;
+
+	mark_point();
 
 	sprintf(path, "./%s", info->local_uri);
 	rc = mg_store_body(conn, path);
@@ -4041,6 +4112,8 @@ test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *ignored)
 	/* Debug output for tests */
 	printf("mg_store_body(%s) OK (%ld bytes)\n", path, (long)rc);
 
+	mark_point();
+
 	return 200;
 }
 
@@ -4050,6 +4123,8 @@ test_mg_store_body_begin_request_callback(struct mg_connection *conn)
 {
 	const struct mg_request_info *info = mg_get_request_info(conn);
 
+	mark_point();
+
 	/* Debug output for tests */
 	printf("test_mg_store_body_begin_request_callback called (%s)\n",
 	       info->request_method);
@@ -4058,6 +4133,9 @@ test_mg_store_body_begin_request_callback(struct mg_connection *conn)
 	    || (strcmp(info->request_method, "DELETE") == 0)) {
 		return test_mg_store_body_put_delete_handler(conn, NULL);
 	}
+
+	mark_point();
+
 	return 0;
 }
 
@@ -4092,6 +4170,8 @@ START_TEST(test_mg_store_body)
 		"1",
 		NULL
 	};
+
+	mark_point();
 
 	memset(&callbacks, 0, sizeof(callbacks));
 	callbacks.begin_request = test_mg_store_body_begin_request_callback;
@@ -4157,6 +4237,8 @@ START_TEST(test_mg_store_body)
 
 	/* Un-initialize the library */
 	mg_exit_library();
+
+	mark_point();
 }
 END_TEST
 
@@ -4309,6 +4391,8 @@ minimal_http_client_impl(const char *server, uint16_t port, const char *uri)
 	int64_t data_read;
 	int r;
 
+	mark_point();
+
 	client = mg_connect_client(
 	    server, port, 0, client_err_buf, sizeof(client_err_buf));
 
@@ -4341,22 +4425,34 @@ minimal_http_client_impl(const char *server, uint16_t port, const char *uri)
 	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
 	ck_assert_int_eq(r, 0);
 
+	mark_point();
+
 	mg_close_connection(client);
+
+	mark_point();
 }
 
 
 START_TEST(test_minimal_client)
 {
+	mark_point();
+
 	/* Initialize the library */
 	mg_init_library(0);
+
+	mark_point();
 
 	/* Call a test client */
 	minimal_http_client_impl("192.30.253.113" /* www.github.com */,
 	                         80,
 	                         "civetweb/civetweb/");
 
+	mark_point();
+
 	/* Un-initialize the library */
 	mg_exit_library();
+
+	mark_point();
 }
 END_TEST
 
@@ -4367,6 +4463,8 @@ minimal_test_request_handler(struct mg_connection *conn, void *cbdata)
 	const char *msg = (const char *)cbdata;
 	unsigned long len = (unsigned long)strlen(msg);
 
+	mark_point();
+
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\n"
 	          "Content-Length: %lu\r\n"
@@ -4375,6 +4473,8 @@ minimal_test_request_handler(struct mg_connection *conn, void *cbdata)
 	          len);
 
 	mg_write(conn, msg, len);
+
+	mark_point();
 
 	return 200;
 }
@@ -4387,6 +4487,8 @@ START_TEST(test_minimal_server_callback)
 
 	/* Server context handle */
 	struct mg_context *ctx;
+
+	mark_point();
 
 	/* Initialize the library */
 	mg_init_library(0);
@@ -4420,6 +4522,8 @@ START_TEST(test_minimal_server_callback)
 
 	/* Un-initialize the library */
 	mg_exit_library();
+
+	mark_point();
 }
 END_TEST
 

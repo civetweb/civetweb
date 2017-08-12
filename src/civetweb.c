@@ -14409,9 +14409,9 @@ close_socket_gracefully(struct mg_connection *conn)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
-        /* Data type of linger structure elements may differ,
-         * so we don't know what cast we need here.
-         * Disable type conversion warnings. */
+		/* Data type of linger structure elements may differ,
+		 * so we don't know what cast we need here.
+		 * Disable type conversion warnings. */
 
 		linger.l_linger = (linger_timeout + 999) / 1000;
 
