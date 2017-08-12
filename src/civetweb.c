@@ -14400,14 +14400,28 @@ close_socket_gracefully(struct mg_connection *conn)
 		/* Set linger option to avoid socket hanging out after close. This
 		 * prevent ephemeral port exhaust problem under high QPS. */
 		linger.l_onoff = 1;
+
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#endif
+        /* Data type of linger structure elements may differ,
+         * so we don't know what cast we need here.
+         * Disable type conversion warnings. */
+
 		linger.l_linger = (linger_timeout + 999) / 1000;
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
 	} else {
 		linger.l_onoff = 0;
 		linger.l_linger = 0;
