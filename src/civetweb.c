@@ -4223,7 +4223,8 @@ FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-	return (WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0) ? 0 : -1;
+	return (WaitForSingleObject(*mutex, (DWORD)INFINITE) == WAIT_OBJECT_0) ? 0
+	                                                                       : -1;
 }
 
 
@@ -4293,7 +4294,7 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 		}
 		mswaitrel = (DWORD)(nswaitrel / 1000000);
 	} else {
-		mswaitrel = INFINITE;
+		mswaitrel = (DWORD)INFINITE;
 	}
 
 	pthread_mutex_unlock(mutex);
@@ -4312,7 +4313,8 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 		}
 		LeaveCriticalSection(&cv->threadIdSec);
 		if (ok) {
-			WaitForSingleObject(tls->pthread_cond_helper_mutex, INFINITE);
+			WaitForSingleObject(tls->pthread_cond_helper_mutex,
+			                    (DWORD)INFINITE);
 		}
 	}
 	/* This thread has been removed from cv's waiting list */
@@ -4391,7 +4393,7 @@ FUNCTION_MAY_BE_UNUSED
 static int
 event_wait(void *eventhdl)
 {
-	int res = WaitForSingleObject((HANDLE)eventhdl, INFINITE);
+	int res = WaitForSingleObject((HANDLE)eventhdl, (DWORD)INFINITE);
 	return (res == WAIT_OBJECT_0);
 }
 
@@ -4842,7 +4844,7 @@ mg_join_thread(pthread_t threadid)
 	DWORD dwevent;
 
 	result = -1;
-	dwevent = WaitForSingleObject(threadid, INFINITE);
+	dwevent = WaitForSingleObject(threadid, (DWORD)INFINITE);
 	if (dwevent == WAIT_FAILED) {
 		DEBUG_TRACE("WaitForSingleObject() failed, error %d", ERRNO);
 	} else {
@@ -7492,11 +7494,11 @@ mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p)
 struct read_auth_file_struct {
 	struct mg_connection *conn;
 	struct ah ah;
-	char *domain;
+	const char *domain;
 	char buf[256 + 256 + 40];
-	char *f_user;
-	char *f_domain;
-	char *f_ha1;
+	const char *f_user;
+	const char *f_domain;
+	const char *f_ha1;
 };
 
 
@@ -7580,7 +7582,7 @@ read_auth_file(struct mg_file *filep,
 			       workdata->buf);
 			continue;
 		}
-		*(workdata->f_domain) = 0;
+		*(char *)(workdata->f_domain) = 0;
 		(workdata->f_domain)++;
 
 		workdata->f_ha1 = strchr(workdata->f_domain, ':');
@@ -7591,7 +7593,7 @@ read_auth_file(struct mg_file *filep,
 			       workdata->buf);
 			continue;
 		}
-		*(workdata->f_ha1) = 0;
+		*(char *)(workdata->f_ha1) = 0;
 		(workdata->f_ha1)++;
 
 		if (!strcmp(workdata->ah.user, workdata->f_user)

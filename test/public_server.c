@@ -4486,7 +4486,7 @@ make_public_server_suite(void)
 
 	tcase_add_test(tcase_serverrequests, test_request_handlers);
 	tcase_add_test(tcase_serverrequests, test_mg_store_body);
-        tcase_set_timeout(tcase_serverrequests, 300);
+	tcase_set_timeout(tcase_serverrequests, 300);
 	suite_add_tcase(suite, tcase_serverrequests);
 
 	tcase_add_test(tcase_handle_form, test_handle_form);
