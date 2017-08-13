@@ -84,6 +84,7 @@ script:
 after_success:
   - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
       coveralls --include src --exclude src/main.c --exclude src/third_party --include include --gcov-options '\-lp' --root .. --build-root .;
+      bash <(curl -s https://codecov.io/bash);
     fi
 
 
