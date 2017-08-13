@@ -4536,13 +4536,15 @@ make_public_server_suite(void)
 	TCase *const tcase_checktestenv = tcase_create("Check test environment");
 	TCase *const tcase_initlib = tcase_create("Init library");
 	TCase *const tcase_startthreads = tcase_create("Start threads");
-	TCase *const tcase_minimal = tcase_create("Minimal");
+	TCase *const tcase_minimal_svr = tcase_create("Minimal Server");
+	TCase *const tcase_minimal_cli = tcase_create("Minimal Client");
 	TCase *const tcase_startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const tcase_startstophttp_ipv6 =
 	    tcase_create("Start Stop HTTP Server IPv6");
 	TCase *const tcase_startstophttps = tcase_create("Start Stop HTTPS Server");
 	TCase *const tcase_serverandclienttls = tcase_create("TLS Server Client");
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
+	TCase *const tcase_storebody = tcase_create("Store Body");
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
@@ -4564,10 +4566,13 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_startthreads, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_startthreads);
 
-	tcase_add_test(tcase_minimal, test_minimal_client);
-	tcase_add_test(tcase_minimal, test_minimal_server_callback);
-	tcase_set_timeout(tcase_minimal, civetweb_min_server_test_timeout);
-	suite_add_tcase(suite, tcase_minimal);
+	tcase_add_test(tcase_minimal_svr, test_minimal_server_callback);
+	tcase_set_timeout(tcase_minimal_svr, civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_minimal_svr);
+
+	tcase_add_test(tcase_minimal_cli, test_minimal_client);
+	tcase_set_timeout(tcase_minimal_cli, civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_minimal_cli);
 
 	tcase_add_test(tcase_startstophttp, test_mg_start_stop_http_server);
 	tcase_set_timeout(tcase_startstophttp, civetweb_min_server_test_timeout);
@@ -4589,12 +4594,15 @@ make_public_server_suite(void)
 	suite_add_tcase(suite, tcase_serverandclienttls);
 
 	tcase_add_test(tcase_serverrequests, test_request_handlers);
-	tcase_add_test(tcase_serverrequests, test_mg_store_body);
-	tcase_set_timeout(tcase_serverrequests, 300);
+	tcase_set_timeout(tcase_serverrequests, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_serverrequests);
 
+	tcase_add_test(tcase_storebody, test_mg_store_body);
+	tcase_set_timeout(tcase_storebody, civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_storebody);
+
 	tcase_add_test(tcase_handle_form, test_handle_form);
-	tcase_set_timeout(tcase_handle_form, 300);
+	tcase_set_timeout(tcase_handle_form, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_handle_form);
 
 	tcase_add_test(tcase_http_auth, test_http_auth);
@@ -4602,24 +4610,24 @@ make_public_server_suite(void)
 	suite_add_tcase(suite, tcase_http_auth);
 
 	tcase_add_test(tcase_keep_alive, test_keep_alive);
-	tcase_set_timeout(tcase_keep_alive, 300);
+	tcase_set_timeout(tcase_keep_alive, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_keep_alive);
 
 	tcase_add_test(tcase_error_handling, test_error_handling);
 	tcase_add_test(tcase_error_handling, test_error_log_file);
-	tcase_set_timeout(tcase_error_handling, 300);
+	tcase_set_timeout(tcase_error_handling, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_error_handling);
 
 	tcase_add_test(tcase_throttle, test_throttle);
-	tcase_set_timeout(tcase_throttle, 300);
+	tcase_set_timeout(tcase_throttle, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_throttle);
 
 	tcase_add_test(tcase_large_file, test_large_file);
-	tcase_set_timeout(tcase_large_file, 600);
+	tcase_set_timeout(tcase_large_file, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_large_file);
 
 	tcase_add_test(tcase_file_in_mem, test_file_in_memory);
-	tcase_set_timeout(tcase_file_in_mem, 300);
+	tcase_set_timeout(tcase_file_in_mem, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_file_in_mem);
 
 	return suite;

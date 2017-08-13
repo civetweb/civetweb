@@ -80,6 +80,10 @@
 #define civetweb_min_test_timeout (30)
 
 /* A minimal timeout for all tests starting a server. */
-#define civetweb_min_server_test_timeout (60)
+#define civetweb_min_server_test_timeout (civetweb_min_test_timeout + 30)
+
+/* A default timeout for all tests running multiple requests to a server. */
+#define civetweb_mid_server_test_timeout                                       \
+	(civetweb_min_server_test_timeout + 180)
 
 #endif /* TEST_CIVETWEB_CHECK_H_ */
