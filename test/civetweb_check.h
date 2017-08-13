@@ -26,6 +26,13 @@
 // FIXME: check uses GCC specific variadic macros that are non-standard
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
+#if defined(__MINGW__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+/* Disable warnings for defining _CRT_SECURE_NO_* (here) and
+ * _CHECK_CHECK_STDINT_H (in check.h)
+ */
+#pragma clang diagnostic ignored "-Wreserved-id-macro"
+#endif
 #ifdef _MSC_VER
 #undef pid_t
 #define pid_t int
@@ -63,6 +70,10 @@
  * in a release build configuration. Disable what is too much in
  * -Weverything. */
 #pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#endif
+
+#if defined(__MINGW__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 /* A minimal timeout used for all tests with the "check" framework. */
