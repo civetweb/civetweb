@@ -28,10 +28,11 @@
 #endif
 #if defined(__MINGW__) || defined(__GNUC__)
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wno-variadic-macros"
 /* Disable warnings for defining _CRT_SECURE_NO_* (here) and
  * _CHECK_CHECK_STDINT_H (in check.h)
  */
-#pragma clang diagnostic ignored "-Wreserved-id-macro"
+#pragma GCC diagnostic ignored "-Wreserved-id-macro"
 #endif
 #ifdef _MSC_VER
 #undef pid_t
