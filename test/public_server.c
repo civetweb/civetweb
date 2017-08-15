@@ -1043,6 +1043,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
 //	ck_assert_ptr_eq(user_data, (void *)pclient_data);
+            (void)user_data;
 
 //	ck_assert(pclient_data != NULL);
 
