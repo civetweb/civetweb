@@ -969,14 +969,15 @@ static void
 websock_server_close(const struct mg_connection *conn, void *udata)
 {
 	(void)conn;
+	(void)udata;
 
-	ck_assert_ptr_eq((void *)udata, (void *)7531);
+//	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	WS_TEST_TRACE("Server: Close connection\n");
 
 	/* Can not send a websocket goodbye message here -
 	 * the connection is already closed */
 
-	mark_point();
+//	mark_point();
 }
 
 
@@ -1043,7 +1044,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
 //	ck_assert_ptr_eq(user_data, (void *)pclient_data);
-            (void)user_data;
+	(void)user_data;
 
 //	ck_assert(pclient_data != NULL);
 
