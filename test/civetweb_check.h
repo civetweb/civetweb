@@ -30,14 +30,12 @@
 #if defined(__MINGW__) || defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
-/*
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wno-variadic-macros"
-*/
 /* Disable warnings for defining _CRT_SECURE_NO_* (here) and
  * _CHECK_CHECK_STDINT_H (in check.h)
  */
-/*
+/* Disable until Warning returns to Travis CI or AppVeyor
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wno-variadic-macros"
 #pragma GCC diagnostic ignored "-Wreserved-id-macro"
 */
 #endif
