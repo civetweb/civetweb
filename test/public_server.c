@@ -1042,14 +1042,14 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-	ck_assert_ptr_eq(user_data, (void *)pclient_data);
+//	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 
-	ck_assert(pclient_data != NULL);
+//	ck_assert(pclient_data != NULL);
 
 	WS_TEST_TRACE("Client %i: Close handler\n", pclient_data->clientId);
 	pclient_data->closed++;
 
-	mark_point();
+//	mark_point();
 }
 #endif
 
