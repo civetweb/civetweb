@@ -301,13 +301,13 @@ test_mg_start(const struct mg_callbacks *callbacks,
 static void
 test_mg_stop(struct mg_context *ctx)
 {
-	mark_point();
+//	mark_point();
 	test_sleep(SLEEP_BEFORE_MG_STOP);
-	mark_point();
+//	mark_point();
 	mg_stop(ctx);
-	mark_point();
+//	mark_point();
 	test_sleep(SLEEP_AFTER_MG_STOP);
-	mark_point();
+//	mark_point();
 }
 
 
