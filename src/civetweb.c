@@ -184,9 +184,11 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #ifdef __MACH__ /* Apple OSX section */
 
 #ifdef __clang__
-/* Avoid warnings for Xopen 7.00 and higher */
+#if (__clang_major__ == 3) && ((__clang_minor__ == 7) || (__clang_minor__ == 8))
+/* Avoid warnings for Xcode 7. It seems it does no longer exist in Xcode 8 */
 #pragma clang diagnostic ignored "-Wno-reserved-id-macro"
 #pragma clang diagnostic ignored "-Wno-keyword-macro"
+#endif
 #endif
 
 #define CLOCK_MONOTONIC (1)
