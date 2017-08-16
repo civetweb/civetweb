@@ -177,7 +177,7 @@ mg_handle_form_request(struct mg_connection *conn,
 {
 	const char *content_type;
 	char path[512];
-	char buf[1024];
+	char buf[1024]; /* Must not be smaller than ~900 - see sanity check */
 	int field_storage;
 	int buf_fill = 0;
 	int r;
@@ -517,7 +517,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		/* The form data is in the request body data, encoded as multipart
 		 * content (see https://www.ietf.org/rfc/rfc1867.txt,
 		 * https://www.ietf.org/rfc/rfc2388.txt). */
-		const char *boundary;
+		char *boundary;
 		size_t bl;
 		ptrdiff_t used;
 		struct mg_request_info part_header;
@@ -540,27 +540,57 @@ mg_handle_form_request(struct mg_connection *conn,
 			return -1;
 		}
 
-		boundary = content_type + bl + 9;
-		bl = strlen(boundary);
+		/* Copy boundary string to variable "boundary" */
+		fbeg = content_type + bl + 9;
+		bl = strlen(fbeg);
+		if (*fbeg == '\"') {
+			/* RFC 2046 permits the boundary string to be quoted. */
+			/* If the boundary is quoted, trim the quotes */
+			fbeg++;
+			bl--;
+		}
+		boundary = mg_malloc(bl + 1);
+		if (!boundary) {
+			/* Out of memory */
+			mg_cry(conn,
+			       "%s: Cannot allocate memory for boundary [%lu]",
+			       __func__,
+			       (unsigned long)bl);
+			return -1;
+		}
+		memcpy(boundary, fbeg, bl);
+		boundary[bl] = 0;
 
+
+		/* Trim, if string is quoted */
 		if (boundary[0] == '"') {
 			/* RFC 2046 permits the boundary string to be quoted. */
 			hbuf = strchr(boundary + 1, '"');
-			if (!hbuf) {
+			if ((!hbuf) || (*hbuf != '"')) {
 				/* Malformed request */
+				mg_free(boundary);
 				return -1;
 			}
-			if (*hbuf) {
-				*hbuf = 0;
-				boundary++;
-				bl = strlen(boundary);
-			} else {
-				/* Malformed request */
-				return -1;
-			}
+			*hbuf = 0;
+			memmove(boundary, boundary + 1, bl);
+			bl = strlen(boundary);
 		}
 
-		if (bl + 800 > sizeof(buf)) {
+		/* Do some sanity checks for boundary lengths */
+		if (bl > 70) {
+			/* From RFC 2046:
+			 * Boundary delimiters must not appear within the
+			 * encapsulated material, and must be no longer
+			 * than 70 characters, not counting the two
+			 * leading hyphens.
+			 */
+
+			/* The initial sanity check
+			 * (bl + 800 > sizeof(buf))
+			 * is no longer required, since sizeof(buf) == 1024
+			 *
+			 * Original comment:
+			 */
 			/* Sanity check:  The algorithm can not work if bl >= sizeof(buf),
 			 * and it will not work effectively, if the buf is only a few byte
 			 * larger than bl, or if buf can not hold the multipart header
@@ -569,11 +599,13 @@ mg_handle_form_request(struct mg_connection *conn,
 			 * any reasonable request from every browser. If it is not
 			 * fulfilled, it might be a hand-made request, intended to
 			 * interfere with the algorithm. */
+			mg_free(boundary);
 			return -1;
 		}
 		if (bl < 4) {
 			/* Sanity check:  A boundary string of less than 4 bytes makes
 			 * no sense either. */
+			mg_free(boundary);
 			return -1;
 		}
 
@@ -586,12 +618,14 @@ mg_handle_form_request(struct mg_connection *conn,
 			            sizeof(buf) - 1 - (size_t)buf_fill);
 			if (r < 0) {
 				/* read error */
+				mg_free(boundary);
 				return -1;
 			}
 			buf_fill += r;
 			buf[buf_fill] = 0;
 			if (buf_fill < 1) {
 				/* No data */
+				mg_free(boundary);
 				return -1;
 			}
 
@@ -609,10 +643,12 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			if (buf[0] != '-' || buf[1] != '-') {
 				/* Malformed request */
+				mg_free(boundary);
 				return -1;
 			}
 			if (strncmp(buf + 2, boundary, bl)) {
 				/* Malformed request */
+				mg_free(boundary);
 				return -1;
 			}
 			if (buf[bl + 2] != '\r' || buf[bl + 3] != '\n') {
@@ -621,6 +657,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				if (((size_t)buf_fill != (size_t)(bl + 6))
 				    || (strncmp(buf + bl + 2, "--\r\n", 4))) {
 					/* Malformed request */
+					mg_free(boundary);
 					return -1;
 				}
 				/* End of the request */
@@ -632,6 +669,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			hend = strstr(hbuf, "\r\n\r\n");
 			if (!hend) {
 				/* Malformed request */
+				mg_free(boundary);
 				return -1;
 			}
 
@@ -639,6 +677,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			    parse_http_headers(&hbuf, part_header.http_headers);
 			if ((hend + 2) != hbuf) {
 				/* Malformed request */
+				mg_free(boundary);
 				return -1;
 			}
 
@@ -652,6 +691,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			                          "Content-Disposition");
 			if (!content_disp) {
 				/* Malformed request */
+				mg_free(boundary);
 				return -1;
 			}
 
@@ -675,6 +715,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				nend = strchr(nbeg, '\"');
 				if (!nend) {
 					/* Malformed request */
+					mg_free(boundary);
 					return -1;
 				}
 			} else {
@@ -686,6 +727,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 				if (!nbeg) {
 					/* Malformed request */
+					mg_free(boundary);
 					return -1;
 				}
 				nbeg += 5;
@@ -720,6 +762,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				if (!fend) {
 					/* Malformed request (the filename field is optional, but if
 					 * it exists, it needs to be terminated correctly). */
+					mg_free(boundary);
 					return -1;
 				}
 
@@ -747,6 +790,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			 * filename do not overlap. */
 			if (!(((ptrdiff_t)fbeg > (ptrdiff_t)nend)
 			      || ((ptrdiff_t)nbeg > (ptrdiff_t)fend))) {
+				mg_free(boundary);
 				return -1;
 			}
 
@@ -830,12 +874,14 @@ mg_handle_form_request(struct mg_connection *conn,
 				            sizeof(buf) - 1 - (size_t)buf_fill);
 				if (r < 0) {
 					/* read error */
+					mg_free(boundary);
 					return -1;
 				}
 				buf_fill += r;
 				buf[buf_fill] = 0;
 				if (buf_fill < 1) {
 					/* No data */
+					mg_free(boundary);
 					return -1;
 				}
 
@@ -898,6 +944,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		}
 
 		/* All parts handled */
+		mg_free(boundary);
 		return field_count;
 	}
 
