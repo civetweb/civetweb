@@ -2631,7 +2631,7 @@ START_TEST(test_handle_form)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
-#if 0
+
 	/* Handle form: "POST multipart/form-data" with chunked transfer
 	 * encoding, using a quoted boundary string */
 	client_conn = mg_download(
@@ -2678,7 +2678,7 @@ START_TEST(test_handle_form)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
-#endif
+
 
 	/* Now test form_store */
 

@@ -543,12 +543,6 @@ mg_handle_form_request(struct mg_connection *conn,
 		/* Copy boundary string to variable "boundary" */
 		fbeg = content_type + bl + 9;
 		bl = strlen(fbeg);
-		if (*fbeg == '\"') {
-			/* RFC 2046 permits the boundary string to be quoted. */
-			/* If the boundary is quoted, trim the quotes */
-			fbeg++;
-			bl--;
-		}
 		boundary = mg_malloc(bl + 1);
 		if (!boundary) {
 			/* Out of memory */
@@ -561,10 +555,9 @@ mg_handle_form_request(struct mg_connection *conn,
 		memcpy(boundary, fbeg, bl);
 		boundary[bl] = 0;
 
-
-		/* Trim, if string is quoted */
+		/* RFC 2046 permits the boundary string to be quoted. */
+		/* If the boundary is quoted, trim the quotes */
 		if (boundary[0] == '"') {
-			/* RFC 2046 permits the boundary string to be quoted. */
 			hbuf = strchr(boundary + 1, '"');
 			if ((!hbuf) || (*hbuf != '"')) {
 				/* Malformed request */
