@@ -2631,7 +2631,7 @@ START_TEST(test_handle_form)
 	ck_assert(ri != NULL);
 	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
-
+#if 0
 	/* Handle form: "POST multipart/form-data" with chunked transfer
 	 * encoding, using a quoted boundary string */
 	client_conn = mg_download(
@@ -2666,7 +2666,7 @@ START_TEST(test_handle_form)
 		chunk_len = (chunk_len % 40) + 1;
 	}
 	mg_printf(client_conn, "0\r\n");
-
+#endif
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
 		if (g_field_step == 1000) {
