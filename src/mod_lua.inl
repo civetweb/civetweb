@@ -85,13 +85,24 @@ reg_llstring(struct lua_State *L,
 {
 	if (buffer1 != NULL && buffer2 != NULL) {
 		lua_pushlstring(L, (const char *)buffer1, buflen1);
-		lua_pushlstring(L, (const char *)buffer1, buflen2);
+		lua_pushlstring(L, (const char *)buffer2, buflen2);
 		lua_rawset(L, -3);
 	}
 }
 
 #define reg_string(L, name, val)                                               \
 	reg_lstring(L, name, val, val ? strlen(val) : 0)
+
+static void
+reg_ludata( struct lua_State *L, const char *name, void* val)
+{
+	if ( name != NULL )
+	{
+		lua_pushstring( L, name );
+		lua_pushlightuserdata( L, val );
+		lua_rawset( L, -3 );
+	}
+}
 
 static void
 reg_int(struct lua_State *L, const char *name, int val)
