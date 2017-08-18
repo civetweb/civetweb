@@ -98,6 +98,11 @@ message(STATUS "Force x32 / x64 architecture - ${CIVETWEB_ARCH}")
 option(CIVETWEB_ENABLE_LUA "Enable Lua CGIs" OFF)
 message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 
+# Enable installing CivetWeb executables
+option(CIVETWEB_INSTALL_EXECUTABLE "Enable installing CivetWeb executable" ON)
+mark_as_advanced(FORCE CIVETWEB_INSTALL_EXECUTABLE) # Advanced users can disable
+message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}") 
+
 # Allow builds to complete with warnings (do not set -Werror)
 if (LINUX)
 # CivetWeb Linux support is stable: Builds must be free from warnings.

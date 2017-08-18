@@ -233,12 +233,14 @@ add_executable(c-executable main.c)
 set_target_properties(c-executable PROPERTIES
   OUTPUT_NAME "civetweb"
 )
-install(
-  TARGETS c-executable
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-  COMPONENT server)
+if (CIVETWEB_INSTALL_EXECUTABLE)
+  install(
+    TARGETS c-executable
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+    COMPONENT server)
+endif()
 if (BUILD_SHARED_LIBS)
   target_compile_definitions(c-executable PRIVATE CIVETWEB_DLL_IMPORTS)
 endif()
@@ -265,7 +267,7 @@ if (CIVETWEB_ENABLE_LUA)
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
-    COMPONENT lua-library)  
+    COMPONENT lua-library)
 endif()
 
 # The C++ API library
