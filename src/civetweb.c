@@ -387,6 +387,7 @@ typedef long off_t;
 #define vsnprintf_impl _vsnprintf
 #define access _access
 #define mg_sleep(x) (Sleep(x))
+#define mg_yield() (SwitchToThread()) /* Sleep not preferred */
 
 #define pipe(x) _pipe(x, MG_BUF_LEN, _O_BINARY)
 #ifndef popen
@@ -641,6 +642,7 @@ typedef unsigned short int in_port_t;
 #define mg_mkdir(conn, path, mode) (mkdir(path, mode))
 #define mg_remove(conn, x) (remove(x))
 #define mg_sleep(x) (usleep((x)*1000))
+#define mg_yield() (pthread_yield())
 #define mg_opendir(conn, x) (opendir(x))
 #define mg_closedir(x) (closedir(x))
 #define mg_readdir(x) (readdir(x))
@@ -2289,7 +2291,8 @@ struct mg_context {
 #endif
 
 #if defined(USE_LUA)
-	void *lua_background_state;
+	pthread_t lua_background_thread;
+	int lua_background_terminated;
 #endif
 
 #if defined(USE_SERVER_STATS)
@@ -15824,6 +15827,11 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 }
 #endif /* ALTERNATIVE_QUEUE */
 
+#if defined(USE_LUA)
+struct lua_worker_thread_args {
+	struct     mg_context *ctx;
+};
+#endif
 
 struct worker_thread_args {
 	struct mg_context *ctx;
@@ -16008,6 +16016,156 @@ worker_thread(void *thread_func_param)
 #endif /* _WIN32 */
 
 
+#if defined(USE_LUA)
+
+/*	Lua background script worker thread
+ *	Threads have different return types on Windows and Unix.
+ */
+
+int
+lua_background_sleep ( lua_State* L ) {
+	if ( lua_gettop( L ) > 0 )
+		mg_sleep( lua_tointeger( L, 1 ) );
+	else
+		mg_yield();
+	return 0;
+}
+
+int
+lua_background_log( lua_State* L )
+{
+	if ( lua_gettop( L ) < 2 )
+		return 0;
+
+	struct mg_context *thread_context =
+		( struct mg_context * )lua_touserdata( L, 1);
+
+	if ( lua_type( L, 2 ) == LUA_TSTRING )
+		if ( thread_context->callbacks.log_access )
+			thread_context->callbacks.log_access( NULL, lua_tostring( L, 2 ) );
+	return 0;
+}
+
+int
+lua_background_isterminated( lua_State* L )
+{
+	struct mg_context *thread_context =
+		(struct mg_context *)lua_touserdata(L, 1);
+	lua_pushboolean(L, thread_context->lua_background_terminated);
+	return 1;
+}
+
+static void *
+lua_background_worker_thread_run( struct lua_worker_thread_args *thread_args )
+{
+		char ebuf[ 256 ];
+		int lua_ret;
+		const char *lua_err_txt;
+		lua_State* state;
+
+		state = luaL_newstate();
+		if ( state == NULL )
+		{
+			mg_snprintf( NULL,
+						 NULL, /* No truncation check for ebuf */
+						 ebuf,
+						 sizeof( ebuf ),
+						 "Error: %s",
+						 "Cannot create background lua state" );
+			return NULL;
+		}
+
+		civetweb_open_lua_libs( state );
+		lua_ret = luaL_loadfile( state, thread_args->ctx->config[ LUA_BACKGROUND_SCRIPT ] );
+
+		if ( lua_ret != LUA_OK )
+		{
+			/* Error when loading the file (e.g. file not found,
+			* out of memory, ...)
+			*/
+			lua_err_txt = lua_tostring( state, -1 );
+			mg_snprintf( NULL,
+						 NULL, /* No truncation check for ebuf */
+						 ebuf,
+						 sizeof( ebuf ),
+						 "Error loading background file %s: %s\n",
+						 thread_args->ctx->config[ LUA_BACKGROUND_SCRIPT ],
+						 lua_err_txt );
+			return 0;
+		}
+
+		/* Set mg functions */
+		lua_newtable( state );
+
+		reg_function( state, "log", lua_background_log );
+		reg_function( state, "isterminated", lua_background_isterminated );
+		reg_function( state, "sleep", lua_background_sleep );
+		reg_ludata( state, "handler", (void*)thread_args->ctx );
+		reg_string( state, "script", thread_args->ctx->config[ LUA_BACKGROUND_SCRIPT ] );
+		reg_string( state, "root", thread_args->ctx->config[ CONFIG_TYPE_DIRECTORY ] );
+
+		lua_pushstring( state, "params" );
+		lua_newtable( state );
+		struct vec opt_vec;
+		struct vec eq_vec;
+		const char *sparams = thread_args->ctx->config[ LUA_BACKGROUND_SCRIPT_PARAMS ];
+
+		while ( ( sparams = next_option( sparams, &opt_vec, &eq_vec ) ) != NULL )
+		{
+			reg_llstring(
+				state, opt_vec.ptr, opt_vec.len, eq_vec.ptr, eq_vec.len );
+			if ( mg_strncasecmp( sparams, opt_vec.ptr, opt_vec.len ) == 0 )
+				break;
+		}
+		lua_rawset( state, -3 );
+		
+		/* Create global mg table, and fill with params from configuration */
+		lua_setglobal( state, LUABACKGROUNDPARAMS );
+
+		/* The script file is loaded, now call it */
+		lua_ret = lua_pcall( state,
+							 /* no arguments */ 0,
+							 /* zero or one return value */ 1,
+							 /* errors as strint return value */ 0 );
+
+		if ( lua_ret != LUA_OK )
+		{
+			/* Error when executing the script */
+			lua_err_txt = lua_tostring( state, -1 );
+			mg_snprintf( NULL,
+						 NULL, /* No truncation check for ebuf */
+						 ebuf,
+						 sizeof( ebuf ),
+						 "Error running background file %s: %s\n",
+						 thread_args->ctx->config[ LUA_BACKGROUND_SCRIPT ],
+						 lua_err_txt );
+		}
+		lua_close( state );
+		mg_cry( NULL, "Lua background state closed" );
+		return NULL;
+}
+
+#ifdef _WIN32
+static unsigned __stdcall
+lua_background_worker_thread( void *thread_func_param ) {
+	struct lua_worker_thread_args *luathread =
+		( struct lua_worker_thread_args * )thread_func_param;
+	lua_background_worker_thread_run( luathread );
+	mg_free( thread_func_param );
+	return 0;
+}
+#else
+static void *
+lua_backgroud_worker_thread( void *thread_func_param ) {
+	struct lua_worker_thread_args *luathread =
+		( struct lua_worker_thread_args * )thread_func_param;
+	lua_background_worker_thread_run( luathread );
+	mg_free( thread_func_param );
+	return NULL;
+}
+#endif /* _WIN32 */
+#endif
+
 static void
 accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 {
@@ -16184,17 +16342,11 @@ master_thread_run(void *thread_func_param)
 	}
 
 #if defined(USE_LUA)
-	/* Free Lua state of lua background task */
-	if (ctx->lua_background_state) {
-		lua_State *lstate = (lua_State *)ctx->lua_background_state;
-		lua_getglobal(lstate, LUABACKGROUNDPARAMS);
-		if (lua_istable(lstate, -1)) {
-			reg_boolean(lstate, "shutdown", 1);
-			lua_pop(lstate, 1);
-			mg_sleep(2);
-		}
-		lua_close(lstate);
-		ctx->lua_background_state = 0;
+	if ( ctx->lua_background_thread )
+	{
+		ctx->lua_background_terminated = 1;
+		mg_sleep( 2000 );
+		mg_join_thread( ctx->lua_background_thread );
 	}
 #endif
 
@@ -16528,36 +16680,23 @@ mg_start(const struct mg_callbacks *callbacks,
 	get_system_name(&ctx->systemName);
 
 #if defined(USE_LUA)
+	ctx->lua_background_thread = NULL;
+	ctx->lua_background_terminated = 0;
+
 	/* If a Lua background script has been configured, start it. */
-	if (ctx->config[LUA_BACKGROUND_SCRIPT] != NULL) {
-		char ebuf[256];
-		lua_State *state = (void *)mg_prepare_lua_context_script(
-		    ctx->config[LUA_BACKGROUND_SCRIPT], ctx, ebuf, sizeof(ebuf));
-		if (!state) {
-			mg_cry(fc(ctx), "lua_background_script error: %s", ebuf);
-			free_context(ctx);
-			pthread_setspecific(sTlsKey, NULL);
-			return NULL;
-		}
-		ctx->lua_background_state = (void *)state;
+	if ( ctx->config[ LUA_BACKGROUND_SCRIPT ] != NULL )
+	{
+		struct lua_worker_thread_args* lua_worker_data =
+			( struct lua_worker_thread_args * )
+			mg_calloc( sizeof( struct lua_worker_thread_args ), 1 );
 
-		lua_newtable(state);
-		reg_boolean(state, "shutdown", 0);
+		/* lua_worker_data->ctx live while main thread closed */
+		lua_worker_data->ctx = ctx;
 
-		struct vec opt_vec;
-		struct vec eq_vec;
-		const char *sparams = ctx->config[LUA_BACKGROUND_SCRIPT_PARAMS];
-
-		while ((sparams = next_option(sparams, &opt_vec, &eq_vec)) != NULL) {
-			reg_llstring(
-			    state, opt_vec.ptr, opt_vec.len, eq_vec.ptr, eq_vec.len);
-			if (mg_strncasecmp(sparams, opt_vec.ptr, opt_vec.len) == 0)
-				break;
-		}
-		lua_setglobal(state, LUABACKGROUNDPARAMS);
-
-	} else {
-		ctx->lua_background_state = 0;
+		mg_start_thread_with_id(
+			lua_background_worker_thread,
+			lua_worker_data,
+			&ctx->lua_background_thread );
 	}
 #endif
 
