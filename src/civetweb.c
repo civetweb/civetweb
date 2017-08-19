@@ -642,7 +642,7 @@ typedef unsigned short int in_port_t;
 #define mg_mkdir(conn, path, mode) (mkdir(path, mode))
 #define mg_remove(conn, x) (remove(x))
 #define mg_sleep(x) (usleep((x)*1000))
-#define mg_yield() (pthread_yield())
+#define mg_yield() (mg_sleep(1))
 #define mg_opendir(conn, x) (opendir(x))
 #define mg_closedir(x) (closedir(x))
 #define mg_readdir(x) (readdir(x))
@@ -16156,7 +16156,7 @@ lua_background_worker_thread( void *thread_func_param ) {
 }
 #else
 static void *
-lua_backgroud_worker_thread( void *thread_func_param ) {
+lua_background_worker_thread( void *thread_func_param ) {
 	struct lua_worker_thread_args *luathread =
 		( struct lua_worker_thread_args * )thread_func_param;
 	lua_background_worker_thread_run( luathread );
