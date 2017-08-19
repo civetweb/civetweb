@@ -445,8 +445,15 @@ files, ...), check for external resources, remove old log files, etc.
 
 The Lua state remains open until the server is stopped.
 In the future, some callback functions will be available to notify the
-script on changes of the server state.
+script on changes of the server state. See example lua script :
+[background.lua](https://github.com/civetweb/civetweb/blob/master/test/background.lua).
 
+Additional functions available in background script :
+sleep, root path, script name, isterminated
+
+### lua\_background\_script\_params `param1=1,param2=2`
+Can add dynamic parameters to background script.
+Parameters mapped to global 'mg' table 'params' field.
 
 ### websocket\_root
 In case civetweb is built with Lua and websocket support, Lua scripts may
