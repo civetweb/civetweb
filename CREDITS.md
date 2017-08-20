@@ -6,8 +6,10 @@
 * Alex Kozlov
 * bel2125
 * Ben M. Ward
-* brett
+* BigJoe
 * Bjoern Petri
+* Braedy Kuzma
+* brett
 * Brian Lambert
 * Brian Spratke
 * cdbishop
@@ -53,6 +55,7 @@
 * kakwa
 * kalphamon
 * Keith Kyzivat
+* Kevin Branigan
 * Kevin Wojniak
 * Kimmo Mustonen
 * Lammert Bies
@@ -111,7 +114,7 @@
 * Yehuda Sadeh
 
 # Mongoose Contributors
-Civetweb is based on the Mongoose code.  The following users contributed to the original Mongoose release between 2010 and 2013.  This list was generated from the Mongoose GIT logs.  It does not contain contributions from the Mongoose mailing list.  There is no record for contributors prior to 2010.
+CivetWeb is based on the Mongoose code.  The following users contributed to the original Mongoose release between 2010 and 2013.  This list was generated from the Mongoose GIT logs.  It does not contain contributions from the Mongoose mailing list.  There is no record for contributors prior to 2010.
 
 * Sergey Lyubka
 * Arnout Vandecappelle (Essensium/Mind)
@@ -161,3 +164,4 @@ Civetweb is based on the Mongoose code.  The following users contributed to the 
 * tayS
 * test
 * valenok
+
