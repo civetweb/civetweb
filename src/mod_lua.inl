@@ -85,7 +85,7 @@ reg_llstring(struct lua_State *L,
 {
 	if (buffer1 != NULL && buffer2 != NULL) {
 		lua_pushlstring(L, (const char *)buffer1, buflen1);
-		lua_pushlstring(L, (const char *)buffer1, buflen2);
+        lua_pushlstring(L, (const char *)buffer2, buflen2);
 		lua_rawset(L, -3);
 	}
 }
