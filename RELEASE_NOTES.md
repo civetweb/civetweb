@@ -5,6 +5,10 @@ Release Notes v1.10 (work in progress)
 Changes
 -------
 
+- Add API function for HTTP digest authentication
+- Improved interface documentation
+- Support parameters for Lua background scripts
+- Use new connection queue implementation (previously ALTERNATIVE\_QUEUE) as default
 - Add USE\_SERVER\_STATS define, so the server collects statistics data
 - Convert system\_info text output and all other diagnostic strings to JSON format
 - Add experimental function to query the connection status (may be dropped again)
