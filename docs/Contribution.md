@@ -11,10 +11,11 @@ However, a pull request would be preferred.
 - Contributor names are listed in CREDITS.md, unless you explicitly state you don't want your name to be listed there. This file is occasionally updated, adding new contributors, using author names from git commits and GitHub comments.
 
 
-- In case your modifications
--- modify or extend the API
--- affect multi-threading
--- imply structural changes
--- have significant influence on maintenance
-please first create an issue on GitHub or create a thread on the CivetWeb discussion group, to discuss the planned changed.
-
+- In case your modifications either
+  1. modify or extend the API,
+  2. affect multi-threading,
+  3. imply structural changes,
+  or
+  4. have significant influence on maintenance,
+  
+  please first create an issue on GitHub or create a thread on the CivetWeb discussion group, to discuss the planned changed.
