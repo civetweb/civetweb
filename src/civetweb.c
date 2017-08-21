@@ -6786,7 +6786,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	/* Step 10: Script resources may handle sub-resources */
 	/* Support PATH_INFO for CGI scripts. */
 	tmp_str_len = strlen(filename);
-	tmp_str = mg_malloc_ctx(tmp_str_len + PATH_MAX + 1, conn->ctx);
+	tmp_str = (char *)mg_malloc_ctx(tmp_str_len + PATH_MAX + 1, conn->ctx);
 	if (!tmp_str) {
 		/* Out of memory */
 		goto interpret_cleanup;
@@ -8147,7 +8147,7 @@ print_dir_entry(struct de *de)
 	struct tm *tm;
 
 	hrefsize = PATH_MAX * 3; /* worst case */
-	href = mg_malloc(hrefsize);
+	href = (char *)mg_malloc(hrefsize);
 	if (href == NULL) {
 		return -1;
 	}
@@ -10851,7 +10851,7 @@ print_dav_dir_entry(struct de *de, void *data)
 		char *href_encoded;
 
 		href_encoded_size = PATH_MAX * 3; /* worst case */
-		href_encoded = mg_malloc(href_encoded_size);
+		href_encoded = (char *)mg_malloc(href_encoded_size);
 		if (href_encoded == NULL) {
 			return -1;
 		}
@@ -12855,7 +12855,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 {
 	unsigned int a, b, c, d, port;
 	int ch, len;
-	char *cb;
+	const char *cb;
 #if defined(USE_IPV6)
 	char buf[100] = {0};
 #endif
@@ -12921,7 +12921,10 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		 * digits and hyphen ('-'). Newer specs may allow
 		 * more, but this is not guaranteed here, since it
 		 * may interfere with rules for port option lists. */
-		*cb = 0;
+
+		*(char *)cb = 0; /* Use a const cast here and modify the string.
+		                  * We are going to restore the string later. */
+
 		if (mg_inet_pton(
 		        AF_INET, vec->ptr, &so->lsa.sin, sizeof(so->lsa.sin))) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
@@ -12949,7 +12952,9 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 			}
 #endif
 		}
-		*cb = ':';
+
+		*(char *)cb = ':'; /* restore the string */
+
 	} else {
 		/* Parsing failure. */
 	}
@@ -13679,14 +13684,14 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 
 		/* ASN1_digest is deprecated. Do the calculation manually,
 		 * using EVP_Digest. */
-		ilen = i2d_X509((void *)cert, NULL);
+		ilen = i2d_X509(cert, NULL);
 		tmp_buf =
 		    (ilen > 0)
 		        ? (unsigned char *)mg_malloc_ctx((unsigned)ilen + 1, conn->ctx)
 		        : NULL;
 		if (tmp_buf) {
 			tmp_p = tmp_buf;
-			(void)i2d_X509((void *)cert, &tmp_p);
+			(void)i2d_X509(cert, &tmp_p);
 			if (!EVP_Digest(
 			        tmp_buf, (unsigned)ilen, buf, &ulen, digest, NULL)) {
 				ulen = 0;
@@ -16606,9 +16611,10 @@ mg_start(const struct mg_callbacks *callbacks,
 
 
 #if defined(ALTERNATIVE_QUEUE)
-	ctx->client_wait_events = mg_calloc_ctx(sizeof(ctx->client_wait_events[0]),
-	                                        ctx->cfg_worker_threads,
-	                                        ctx);
+	ctx->client_wait_events =
+	    (void **)mg_calloc_ctx(sizeof(ctx->client_wait_events[0]),
+	                           ctx->cfg_worker_threads,
+	                           ctx);
 	if (ctx->client_wait_events == NULL) {
 		mg_cry(fc(ctx), "Not enough memory for worker event array");
 		mg_free(ctx->worker_threadids);
@@ -16617,9 +16623,10 @@ mg_start(const struct mg_callbacks *callbacks,
 		return NULL;
 	}
 
-	ctx->client_socks = mg_calloc_ctx(sizeof(ctx->client_socks[0]),
-	                                  ctx->cfg_worker_threads,
-	                                  ctx);
+	ctx->client_socks =
+	    (struct socket *)mg_calloc_ctx(sizeof(ctx->client_socks[0]),
+	                                   ctx->cfg_worker_threads,
+	                                   ctx);
 	if (ctx->client_wait_events == NULL) {
 		mg_cry(fc(ctx), "Not enough memory for worker socket array");
 		mg_free(ctx->client_socks);

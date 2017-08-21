@@ -543,7 +543,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		/* Copy boundary string to variable "boundary" */
 		fbeg = content_type + bl + 9;
 		bl = strlen(fbeg);
-		boundary = mg_malloc(bl + 1);
+		boundary = (char *)mg_malloc(bl + 1);
 		if (!boundary) {
 			/* Out of memory */
 			mg_cry(conn,
