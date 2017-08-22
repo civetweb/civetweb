@@ -8925,9 +8925,6 @@ mg_send_mime_file2(struct mg_connection *conn,
 
 	if (mg_stat(conn, path, &file.stat)) {
 		if (file.stat.is_directory) {
-			if (!conn) {
-				return;
-			}
 			if (!mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING],
 			                   "yes")) {
 				handle_directory_request(conn, path);
