@@ -8685,7 +8685,7 @@ handle_static_file_request(struct mg_connection *conn,
 	char gz_path[PATH_MAX];
 	const char *encoding = "";
 	const char *cors1, *cors2, *cors3;
-	int allow_on_the_fly_compression = conn->accept_gzip;
+	int allow_on_the_fly_compression;
 
 	if ((conn == NULL) || (conn->ctx == NULL) || (filep == NULL)) {
 		return;
@@ -8711,6 +8711,8 @@ handle_static_file_request(struct mg_connection *conn,
 	/* if this file is in fact a pre-gzipped file, rewrite its filename
 	 * it's important to rewrite the filename after resolving
 	 * the mime type from it, to preserve the actual file's type */
+	allow_on_the_fly_compression = conn->accept_gzip;
+
 	if (filep->stat.is_gzipped) {
 		mg_snprintf(conn, &truncated, gz_path, sizeof(gz_path), "%s.gz", path);
 
@@ -8915,6 +8917,12 @@ mg_send_mime_file2(struct mg_connection *conn,
                    const char *additional_headers)
 {
 	struct mg_file file = STRUCT_FILE_INITIALIZER;
+
+	if (!conn) {
+		/* No conn */
+		return;
+	}
+
 	if (mg_stat(conn, path, &file.stat)) {
 		if (file.stat.is_directory) {
 			if (!conn) {
