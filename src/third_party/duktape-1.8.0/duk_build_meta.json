@@ -1,0 +1,1349 @@
+{
+    "builtin_strings": [
+        "Undefined", 
+        "Null", 
+        "Arguments", 
+        "Object", 
+        "Function", 
+        "Array", 
+        "String", 
+        "Boolean", 
+        "Number", 
+        "Date", 
+        "RegExp", 
+        "Error", 
+        "Math", 
+        "JSON", 
+        "", 
+        "ArrayBuffer", 
+        "DataView", 
+        "Int8Array", 
+        "Uint8Array", 
+        "Uint8ClampedArray", 
+        "Int16Array", 
+        "Uint16Array", 
+        "Int32Array", 
+        "Uint32Array", 
+        "Float32Array", 
+        "Float64Array", 
+        "global", 
+        "ObjEnv", 
+        "DecEnv", 
+        "Buffer", 
+        "Pointer", 
+        "Thread", 
+        "eval", 
+        "defineProperty", 
+        "value", 
+        "writable", 
+        "configurable", 
+        "enumerable", 
+        "join", 
+        "toLocaleString", 
+        "valueOf", 
+        "toUTCString", 
+        "toISOString", 
+        "toGMTString", 
+        "source", 
+        "ignoreCase", 
+        "multiline", 
+        "lastIndex", 
+        "(?:)", 
+        "index", 
+        "prototype", 
+        "constructor", 
+        "message", 
+        "boolean", 
+        "number", 
+        "string", 
+        "object", 
+        "undefined", 
+        "NaN", 
+        "Infinity", 
+        "-Infinity", 
+        "-0", 
+        ",", 
+        " ", 
+        "\n    ", 
+        "[...]", 
+        "Invalid Date", 
+        "arguments", 
+        "callee", 
+        "caller", 
+        "has", 
+        "get", 
+        "deleteProperty", 
+        "enumerate", 
+        "ownKeys", 
+        "setPrototypeOf", 
+        "__proto__", 
+        "require", 
+        "id", 
+        "exports", 
+        "filename", 
+        "toString", 
+        "toJSON", 
+        "type", 
+        "data", 
+        "length", 
+        "byteLength", 
+        "byteOffset", 
+        "BYTES_PER_ELEMENT", 
+        "set", 
+        "stack", 
+        "pc", 
+        "lineNumber", 
+        "\u00ffTracedata", 
+        "name", 
+        "fileName", 
+        "buffer", 
+        "pointer", 
+        "\u00ffValue", 
+        "\u00ffNext", 
+        "\u00ffBytecode", 
+        "\u00ffFormals", 
+        "\u00ffVarmap", 
+        "\u00ffLexenv", 
+        "\u00ffVarenv", 
+        "\u00ffSource", 
+        "\u00ffPc2line", 
+        "\u00ffArgs", 
+        "\u00ffMap", 
+        "\u00ffFinalizer", 
+        "\u00ffHandler", 
+        "\u00ffCallee", 
+        "\u00ffThread", 
+        "\u00ffRegbase", 
+        "\u00ffTarget", 
+        "\u00ffThis", 
+        "compile", 
+        "input", 
+        "errCreate", 
+        "errThrow", 
+        "modSearch", 
+        "modLoaded", 
+        "env", 
+        "hex", 
+        "base64", 
+        "jx", 
+        "jc", 
+        "resume", 
+        "fmt", 
+        "raw", 
+        "trace", 
+        "debug", 
+        "info", 
+        "warn", 
+        "error", 
+        "fatal", 
+        "n", 
+        "l", 
+        "clog", 
+        "toLogString", 
+        "{\"_undef\":true}", 
+        "{\"_nan\":true}", 
+        "{\"_inf\":true}", 
+        "{\"_ninf\":true}", 
+        "{\"_func\":true}", 
+        "{_func:true}", 
+        "break", 
+        "case", 
+        "catch", 
+        "continue", 
+        "debugger", 
+        "default", 
+        "delete", 
+        "do", 
+        "else", 
+        "finally", 
+        "for", 
+        "function", 
+        "if", 
+        "in", 
+        "instanceof", 
+        "new", 
+        "return", 
+        "switch", 
+        "this", 
+        "throw", 
+        "try", 
+        "typeof", 
+        "var", 
+        "const", 
+        "void", 
+        "while", 
+        "with", 
+        "class", 
+        "enum", 
+        "export", 
+        "extends", 
+        "import", 
+        "super", 
+        "null", 
+        "true", 
+        "false", 
+        "implements", 
+        "interface", 
+        "let", 
+        "package", 
+        "private", 
+        "protected", 
+        "public", 
+        "static", 
+        "yield"
+    ], 
+    "builtin_strings_base64": [
+        "VW5kZWZpbmVk", 
+        "TnVsbA==", 
+        "QXJndW1lbnRz", 
+        "T2JqZWN0", 
+        "RnVuY3Rpb24=", 
+        "QXJyYXk=", 
+        "U3RyaW5n", 
+        "Qm9vbGVhbg==", 
+        "TnVtYmVy", 
+        "RGF0ZQ==", 
+        "UmVnRXhw", 
+        "RXJyb3I=", 
+        "TWF0aA==", 
+        "SlNPTg==", 
+        "", 
+        "QXJyYXlCdWZmZXI=", 
+        "RGF0YVZpZXc=", 
+        "SW50OEFycmF5", 
+        "VWludDhBcnJheQ==", 
+        "VWludDhDbGFtcGVkQXJyYXk=", 
+        "SW50MTZBcnJheQ==", 
+        "VWludDE2QXJyYXk=", 
+        "SW50MzJBcnJheQ==", 
+        "VWludDMyQXJyYXk=", 
+        "RmxvYXQzMkFycmF5", 
+        "RmxvYXQ2NEFycmF5", 
+        "Z2xvYmFs", 
+        "T2JqRW52", 
+        "RGVjRW52", 
+        "QnVmZmVy", 
+        "UG9pbnRlcg==", 
+        "VGhyZWFk", 
+        "ZXZhbA==", 
+        "ZGVmaW5lUHJvcGVydHk=", 
+        "dmFsdWU=", 
+        "d3JpdGFibGU=", 
+        "Y29uZmlndXJhYmxl", 
+        "ZW51bWVyYWJsZQ==", 
+        "am9pbg==", 
+        "dG9Mb2NhbGVTdHJpbmc=", 
+        "dmFsdWVPZg==", 
+        "dG9VVENTdHJpbmc=", 
+        "dG9JU09TdHJpbmc=", 
+        "dG9HTVRTdHJpbmc=", 
+        "c291cmNl", 
+        "aWdub3JlQ2FzZQ==", 
+        "bXVsdGlsaW5l", 
+        "bGFzdEluZGV4", 
+        "KD86KQ==", 
+        "aW5kZXg=", 
+        "cHJvdG90eXBl", 
+        "Y29uc3RydWN0b3I=", 
+        "bWVzc2FnZQ==", 
+        "Ym9vbGVhbg==", 
+        "bnVtYmVy", 
+        "c3RyaW5n", 
+        "b2JqZWN0", 
+        "dW5kZWZpbmVk", 
+        "TmFO", 
+        "SW5maW5pdHk=", 
+        "LUluZmluaXR5", 
+        "LTA=", 
+        "LA==", 
+        "IA==", 
+        "CiAgICA=", 
+        "Wy4uLl0=", 
+        "SW52YWxpZCBEYXRl", 
+        "YXJndW1lbnRz", 
+        "Y2FsbGVl", 
+        "Y2FsbGVy", 
+        "aGFz", 
+        "Z2V0", 
+        "ZGVsZXRlUHJvcGVydHk=", 
+        "ZW51bWVyYXRl", 
+        "b3duS2V5cw==", 
+        "c2V0UHJvdG90eXBlT2Y=", 
+        "X19wcm90b19f", 
+        "cmVxdWlyZQ==", 
+        "aWQ=", 
+        "ZXhwb3J0cw==", 
+        "ZmlsZW5hbWU=", 
+        "dG9TdHJpbmc=", 
+        "dG9KU09O", 
+        "dHlwZQ==", 
+        "ZGF0YQ==", 
+        "bGVuZ3Ro", 
+        "Ynl0ZUxlbmd0aA==", 
+        "Ynl0ZU9mZnNldA==", 
+        "QllURVNfUEVSX0VMRU1FTlQ=", 
+        "c2V0", 
+        "c3RhY2s=", 
+        "cGM=", 
+        "bGluZU51bWJlcg==", 
+        "/1RyYWNlZGF0YQ==", 
+        "bmFtZQ==", 
+        "ZmlsZU5hbWU=", 
+        "YnVmZmVy", 
+        "cG9pbnRlcg==", 
+        "/1ZhbHVl", 
+        "/05leHQ=", 
+        "/0J5dGVjb2Rl", 
+        "/0Zvcm1hbHM=", 
+        "/1Zhcm1hcA==", 
+        "/0xleGVudg==", 
+        "/1ZhcmVudg==", 
+        "/1NvdXJjZQ==", 
+        "/1BjMmxpbmU=", 
+        "/0FyZ3M=", 
+        "/01hcA==", 
+        "/0ZpbmFsaXplcg==", 
+        "/0hhbmRsZXI=", 
+        "/0NhbGxlZQ==", 
+        "/1RocmVhZA==", 
+        "/1JlZ2Jhc2U=", 
+        "/1RhcmdldA==", 
+        "/1RoaXM=", 
+        "Y29tcGlsZQ==", 
+        "aW5wdXQ=", 
+        "ZXJyQ3JlYXRl", 
+        "ZXJyVGhyb3c=", 
+        "bW9kU2VhcmNo", 
+        "bW9kTG9hZGVk", 
+        "ZW52", 
+        "aGV4", 
+        "YmFzZTY0", 
+        "ang=", 
+        "amM=", 
+        "cmVzdW1l", 
+        "Zm10", 
+        "cmF3", 
+        "dHJhY2U=", 
+        "ZGVidWc=", 
+        "aW5mbw==", 
+        "d2Fybg==", 
+        "ZXJyb3I=", 
+        "ZmF0YWw=", 
+        "bg==", 
+        "bA==", 
+        "Y2xvZw==", 
+        "dG9Mb2dTdHJpbmc=", 
+        "eyJfdW5kZWYiOnRydWV9", 
+        "eyJfbmFuIjp0cnVlfQ==", 
+        "eyJfaW5mIjp0cnVlfQ==", 
+        "eyJfbmluZiI6dHJ1ZX0=", 
+        "eyJfZnVuYyI6dHJ1ZX0=", 
+        "e19mdW5jOnRydWV9", 
+        "YnJlYWs=", 
+        "Y2FzZQ==", 
+        "Y2F0Y2g=", 
+        "Y29udGludWU=", 
+        "ZGVidWdnZXI=", 
+        "ZGVmYXVsdA==", 
+        "ZGVsZXRl", 
+        "ZG8=", 
+        "ZWxzZQ==", 
+        "ZmluYWxseQ==", 
+        "Zm9y", 
+        "ZnVuY3Rpb24=", 
+        "aWY=", 
+        "aW4=", 
+        "aW5zdGFuY2VvZg==", 
+        "bmV3", 
+        "cmV0dXJu", 
+        "c3dpdGNo", 
+        "dGhpcw==", 
+        "dGhyb3c=", 
+        "dHJ5", 
+        "dHlwZW9m", 
+        "dmFy", 
+        "Y29uc3Q=", 
+        "dm9pZA==", 
+        "d2hpbGU=", 
+        "d2l0aA==", 
+        "Y2xhc3M=", 
+        "ZW51bQ==", 
+        "ZXhwb3J0", 
+        "ZXh0ZW5kcw==", 
+        "aW1wb3J0", 
+        "c3VwZXI=", 
+        "bnVsbA==", 
+        "dHJ1ZQ==", 
+        "ZmFsc2U=", 
+        "aW1wbGVtZW50cw==", 
+        "aW50ZXJmYWNl", 
+        "bGV0", 
+        "cGFja2FnZQ==", 
+        "cHJpdmF0ZQ==", 
+        "cHJvdGVjdGVk", 
+        "cHVibGlj", 
+        "c3RhdGlj", 
+        "eWllbGQ="
+    ], 
+    "builtin_strings_info": [
+        {
+            "base64": "VW5kZWZpbmVk", 
+            "define": "DUK_STRIDX_UC_UNDEFINED", 
+            "plain": "Undefined"
+        }, 
+        {
+            "base64": "TnVsbA==", 
+            "define": "DUK_STRIDX_UC_NULL", 
+            "plain": "Null"
+        }, 
+        {
+            "base64": "QXJndW1lbnRz", 
+            "define": "DUK_STRIDX_UC_ARGUMENTS", 
+            "plain": "Arguments"
+        }, 
+        {
+            "base64": "T2JqZWN0", 
+            "define": "DUK_STRIDX_UC_OBJECT", 
+            "plain": "Object"
+        }, 
+        {
+            "base64": "RnVuY3Rpb24=", 
+            "define": "DUK_STRIDX_UC_FUNCTION", 
+            "plain": "Function"
+        }, 
+        {
+            "base64": "QXJyYXk=", 
+            "define": "DUK_STRIDX_ARRAY", 
+            "plain": "Array"
+        }, 
+        {
+            "base64": "U3RyaW5n", 
+            "define": "DUK_STRIDX_UC_STRING", 
+            "plain": "String"
+        }, 
+        {
+            "base64": "Qm9vbGVhbg==", 
+            "define": "DUK_STRIDX_UC_BOOLEAN", 
+            "plain": "Boolean"
+        }, 
+        {
+            "base64": "TnVtYmVy", 
+            "define": "DUK_STRIDX_UC_NUMBER", 
+            "plain": "Number"
+        }, 
+        {
+            "base64": "RGF0ZQ==", 
+            "define": "DUK_STRIDX_DATE", 
+            "plain": "Date"
+        }, 
+        {
+            "base64": "UmVnRXhw", 
+            "define": "DUK_STRIDX_REG_EXP", 
+            "plain": "RegExp"
+        }, 
+        {
+            "base64": "RXJyb3I=", 
+            "define": "DUK_STRIDX_UC_ERROR", 
+            "plain": "Error"
+        }, 
+        {
+            "base64": "TWF0aA==", 
+            "define": "DUK_STRIDX_MATH", 
+            "plain": "Math"
+        }, 
+        {
+            "base64": "SlNPTg==", 
+            "define": "DUK_STRIDX_JSON", 
+            "plain": "JSON"
+        }, 
+        {
+            "base64": "", 
+            "define": "DUK_STRIDX_EMPTY_STRING", 
+            "plain": ""
+        }, 
+        {
+            "base64": "QXJyYXlCdWZmZXI=", 
+            "define": "DUK_STRIDX_ARRAY_BUFFER", 
+            "plain": "ArrayBuffer"
+        }, 
+        {
+            "base64": "RGF0YVZpZXc=", 
+            "define": "DUK_STRIDX_DATA_VIEW", 
+            "plain": "DataView"
+        }, 
+        {
+            "base64": "SW50OEFycmF5", 
+            "define": "DUK_STRIDX_INT8_ARRAY", 
+            "plain": "Int8Array"
+        }, 
+        {
+            "base64": "VWludDhBcnJheQ==", 
+            "define": "DUK_STRIDX_UINT8_ARRAY", 
+            "plain": "Uint8Array"
+        }, 
+        {
+            "base64": "VWludDhDbGFtcGVkQXJyYXk=", 
+            "define": "DUK_STRIDX_UINT8_CLAMPED_ARRAY", 
+            "plain": "Uint8ClampedArray"
+        }, 
+        {
+            "base64": "SW50MTZBcnJheQ==", 
+            "define": "DUK_STRIDX_INT16_ARRAY", 
+            "plain": "Int16Array"
+        }, 
+        {
+            "base64": "VWludDE2QXJyYXk=", 
+            "define": "DUK_STRIDX_UINT16_ARRAY", 
+            "plain": "Uint16Array"
+        }, 
+        {
+            "base64": "SW50MzJBcnJheQ==", 
+            "define": "DUK_STRIDX_INT32_ARRAY", 
+            "plain": "Int32Array"
+        }, 
+        {
+            "base64": "VWludDMyQXJyYXk=", 
+            "define": "DUK_STRIDX_UINT32_ARRAY", 
+            "plain": "Uint32Array"
+        }, 
+        {
+            "base64": "RmxvYXQzMkFycmF5", 
+            "define": "DUK_STRIDX_FLOAT32_ARRAY", 
+            "plain": "Float32Array"
+        }, 
+        {
+            "base64": "RmxvYXQ2NEFycmF5", 
+            "define": "DUK_STRIDX_FLOAT64_ARRAY", 
+            "plain": "Float64Array"
+        }, 
+        {
+            "base64": "Z2xvYmFs", 
+            "define": "DUK_STRIDX_GLOBAL", 
+            "plain": "global"
+        }, 
+        {
+            "base64": "T2JqRW52", 
+            "define": "DUK_STRIDX_OBJ_ENV", 
+            "plain": "ObjEnv"
+        }, 
+        {
+            "base64": "RGVjRW52", 
+            "define": "DUK_STRIDX_DEC_ENV", 
+            "plain": "DecEnv"
+        }, 
+        {
+            "base64": "QnVmZmVy", 
+            "define": "DUK_STRIDX_UC_BUFFER", 
+            "plain": "Buffer"
+        }, 
+        {
+            "base64": "UG9pbnRlcg==", 
+            "define": "DUK_STRIDX_UC_POINTER", 
+            "plain": "Pointer"
+        }, 
+        {
+            "base64": "VGhyZWFk", 
+            "define": "DUK_STRIDX_UC_THREAD", 
+            "plain": "Thread"
+        }, 
+        {
+            "base64": "ZXZhbA==", 
+            "define": "DUK_STRIDX_EVAL", 
+            "plain": "eval"
+        }, 
+        {
+            "base64": "ZGVmaW5lUHJvcGVydHk=", 
+            "define": "DUK_STRIDX_DEFINE_PROPERTY", 
+            "plain": "defineProperty"
+        }, 
+        {
+            "base64": "dmFsdWU=", 
+            "define": "DUK_STRIDX_VALUE", 
+            "plain": "value"
+        }, 
+        {
+            "base64": "d3JpdGFibGU=", 
+            "define": "DUK_STRIDX_WRITABLE", 
+            "plain": "writable"
+        }, 
+        {
+            "base64": "Y29uZmlndXJhYmxl", 
+            "define": "DUK_STRIDX_CONFIGURABLE", 
+            "plain": "configurable"
+        }, 
+        {
+            "base64": "ZW51bWVyYWJsZQ==", 
+            "define": "DUK_STRIDX_ENUMERABLE", 
+            "plain": "enumerable"
+        }, 
+        {
+            "base64": "am9pbg==", 
+            "define": "DUK_STRIDX_JOIN", 
+            "plain": "join"
+        }, 
+        {
+            "base64": "dG9Mb2NhbGVTdHJpbmc=", 
+            "define": "DUK_STRIDX_TO_LOCALE_STRING", 
+            "plain": "toLocaleString"
+        }, 
+        {
+            "base64": "dmFsdWVPZg==", 
+            "define": "DUK_STRIDX_VALUE_OF", 
+            "plain": "valueOf"
+        }, 
+        {
+            "base64": "dG9VVENTdHJpbmc=", 
+            "define": "DUK_STRIDX_TO_UTC_STRING", 
+            "plain": "toUTCString"
+        }, 
+        {
+            "base64": "dG9JU09TdHJpbmc=", 
+            "define": "DUK_STRIDX_TO_ISO_STRING", 
+            "plain": "toISOString"
+        }, 
+        {
+            "base64": "dG9HTVRTdHJpbmc=", 
+            "define": "DUK_STRIDX_TO_GMT_STRING", 
+            "plain": "toGMTString"
+        }, 
+        {
+            "base64": "c291cmNl", 
+            "define": "DUK_STRIDX_SOURCE", 
+            "plain": "source"
+        }, 
+        {
+            "base64": "aWdub3JlQ2FzZQ==", 
+            "define": "DUK_STRIDX_IGNORE_CASE", 
+            "plain": "ignoreCase"
+        }, 
+        {
+            "base64": "bXVsdGlsaW5l", 
+            "define": "DUK_STRIDX_MULTILINE", 
+            "plain": "multiline"
+        }, 
+        {
+            "base64": "bGFzdEluZGV4", 
+            "define": "DUK_STRIDX_LAST_INDEX", 
+            "plain": "lastIndex"
+        }, 
+        {
+            "base64": "KD86KQ==", 
+            "define": "DUK_STRIDX_ESCAPED_EMPTY_REGEXP", 
+            "plain": "(?:)"
+        }, 
+        {
+            "base64": "aW5kZXg=", 
+            "define": "DUK_STRIDX_INDEX", 
+            "plain": "index"
+        }, 
+        {
+            "base64": "cHJvdG90eXBl", 
+            "define": "DUK_STRIDX_PROTOTYPE", 
+            "plain": "prototype"
+        }, 
+        {
+            "base64": "Y29uc3RydWN0b3I=", 
+            "define": "DUK_STRIDX_CONSTRUCTOR", 
+            "plain": "constructor"
+        }, 
+        {
+            "base64": "bWVzc2FnZQ==", 
+            "define": "DUK_STRIDX_MESSAGE", 
+            "plain": "message"
+        }, 
+        {
+            "base64": "Ym9vbGVhbg==", 
+            "define": "DUK_STRIDX_LC_BOOLEAN", 
+            "plain": "boolean"
+        }, 
+        {
+            "base64": "bnVtYmVy", 
+            "define": "DUK_STRIDX_LC_NUMBER", 
+            "plain": "number"
+        }, 
+        {
+            "base64": "c3RyaW5n", 
+            "define": "DUK_STRIDX_LC_STRING", 
+            "plain": "string"
+        }, 
+        {
+            "base64": "b2JqZWN0", 
+            "define": "DUK_STRIDX_LC_OBJECT", 
+            "plain": "object"
+        }, 
+        {
+            "base64": "dW5kZWZpbmVk", 
+            "define": "DUK_STRIDX_LC_UNDEFINED", 
+            "plain": "undefined"
+        }, 
+        {
+            "base64": "TmFO", 
+            "define": "DUK_STRIDX_NAN", 
+            "plain": "NaN"
+        }, 
+        {
+            "base64": "SW5maW5pdHk=", 
+            "define": "DUK_STRIDX_INFINITY", 
+            "plain": "Infinity"
+        }, 
+        {
+            "base64": "LUluZmluaXR5", 
+            "define": "DUK_STRIDX_MINUS_INFINITY", 
+            "plain": "-Infinity"
+        }, 
+        {
+            "base64": "LTA=", 
+            "define": "DUK_STRIDX_MINUS_ZERO", 
+            "plain": "-0"
+        }, 
+        {
+            "base64": "LA==", 
+            "define": "DUK_STRIDX_COMMA", 
+            "plain": ","
+        }, 
+        {
+            "base64": "IA==", 
+            "define": "DUK_STRIDX_SPACE", 
+            "plain": " "
+        }, 
+        {
+            "base64": "CiAgICA=", 
+            "define": "DUK_STRIDX_NEWLINE_4SPACE", 
+            "plain": "\n    "
+        }, 
+        {
+            "base64": "Wy4uLl0=", 
+            "define": "DUK_STRIDX_BRACKETED_ELLIPSIS", 
+            "plain": "[...]"
+        }, 
+        {
+            "base64": "SW52YWxpZCBEYXRl", 
+            "define": "DUK_STRIDX_INVALID_DATE", 
+            "plain": "Invalid Date"
+        }, 
+        {
+            "base64": "YXJndW1lbnRz", 
+            "define": "DUK_STRIDX_LC_ARGUMENTS", 
+            "plain": "arguments"
+        }, 
+        {
+            "base64": "Y2FsbGVl", 
+            "define": "DUK_STRIDX_CALLEE", 
+            "plain": "callee"
+        }, 
+        {
+            "base64": "Y2FsbGVy", 
+            "define": "DUK_STRIDX_CALLER", 
+            "plain": "caller"
+        }, 
+        {
+            "base64": "aGFz", 
+            "define": "DUK_STRIDX_HAS", 
+            "plain": "has"
+        }, 
+        {
+            "base64": "Z2V0", 
+            "define": "DUK_STRIDX_GET", 
+            "plain": "get"
+        }, 
+        {
+            "base64": "ZGVsZXRlUHJvcGVydHk=", 
+            "define": "DUK_STRIDX_DELETE_PROPERTY", 
+            "plain": "deleteProperty"
+        }, 
+        {
+            "base64": "ZW51bWVyYXRl", 
+            "define": "DUK_STRIDX_ENUMERATE", 
+            "plain": "enumerate"
+        }, 
+        {
+            "base64": "b3duS2V5cw==", 
+            "define": "DUK_STRIDX_OWN_KEYS", 
+            "plain": "ownKeys"
+        }, 
+        {
+            "base64": "c2V0UHJvdG90eXBlT2Y=", 
+            "define": "DUK_STRIDX_SET_PROTOTYPE_OF", 
+            "plain": "setPrototypeOf"
+        }, 
+        {
+            "base64": "X19wcm90b19f", 
+            "define": "DUK_STRIDX___PROTO__", 
+            "plain": "__proto__"
+        }, 
+        {
+            "base64": "cmVxdWlyZQ==", 
+            "define": "DUK_STRIDX_REQUIRE", 
+            "plain": "require"
+        }, 
+        {
+            "base64": "aWQ=", 
+            "define": "DUK_STRIDX_ID", 
+            "plain": "id"
+        }, 
+        {
+            "base64": "ZXhwb3J0cw==", 
+            "define": "DUK_STRIDX_EXPORTS", 
+            "plain": "exports"
+        }, 
+        {
+            "base64": "ZmlsZW5hbWU=", 
+            "define": "DUK_STRIDX_FILENAME", 
+            "plain": "filename"
+        }, 
+        {
+            "base64": "dG9TdHJpbmc=", 
+            "define": "DUK_STRIDX_TO_STRING", 
+            "plain": "toString"
+        }, 
+        {
+            "base64": "dG9KU09O", 
+            "define": "DUK_STRIDX_TO_JSON", 
+            "plain": "toJSON"
+        }, 
+        {
+            "base64": "dHlwZQ==", 
+            "define": "DUK_STRIDX_TYPE", 
+            "plain": "type"
+        }, 
+        {
+            "base64": "ZGF0YQ==", 
+            "define": "DUK_STRIDX_DATA", 
+            "plain": "data"
+        }, 
+        {
+            "base64": "bGVuZ3Ro", 
+            "define": "DUK_STRIDX_LENGTH", 
+            "plain": "length"
+        }, 
+        {
+            "base64": "Ynl0ZUxlbmd0aA==", 
+            "define": "DUK_STRIDX_BYTE_LENGTH", 
+            "plain": "byteLength"
+        }, 
+        {
+            "base64": "Ynl0ZU9mZnNldA==", 
+            "define": "DUK_STRIDX_BYTE_OFFSET", 
+            "plain": "byteOffset"
+        }, 
+        {
+            "base64": "QllURVNfUEVSX0VMRU1FTlQ=", 
+            "define": "DUK_STRIDX_BYTES_PER_ELEMENT", 
+            "plain": "BYTES_PER_ELEMENT"
+        }, 
+        {
+            "base64": "c2V0", 
+            "define": "DUK_STRIDX_SET", 
+            "plain": "set"
+        }, 
+        {
+            "base64": "c3RhY2s=", 
+            "define": "DUK_STRIDX_STACK", 
+            "plain": "stack"
+        }, 
+        {
+            "base64": "cGM=", 
+            "define": "DUK_STRIDX_PC", 
+            "plain": "pc"
+        }, 
+        {
+            "base64": "bGluZU51bWJlcg==", 
+            "define": "DUK_STRIDX_LINE_NUMBER", 
+            "plain": "lineNumber"
+        }, 
+        {
+            "base64": "/1RyYWNlZGF0YQ==", 
+            "define": "DUK_STRIDX_INT_TRACEDATA", 
+            "plain": "\u00ffTracedata"
+        }, 
+        {
+            "base64": "bmFtZQ==", 
+            "define": "DUK_STRIDX_NAME", 
+            "plain": "name"
+        }, 
+        {
+            "base64": "ZmlsZU5hbWU=", 
+            "define": "DUK_STRIDX_FILE_NAME", 
+            "plain": "fileName"
+        }, 
+        {
+            "base64": "YnVmZmVy", 
+            "define": "DUK_STRIDX_LC_BUFFER", 
+            "plain": "buffer"
+        }, 
+        {
+            "base64": "cG9pbnRlcg==", 
+            "define": "DUK_STRIDX_LC_POINTER", 
+            "plain": "pointer"
+        }, 
+        {
+            "base64": "/1ZhbHVl", 
+            "define": "DUK_STRIDX_INT_VALUE", 
+            "plain": "\u00ffValue"
+        }, 
+        {
+            "base64": "/05leHQ=", 
+            "define": "DUK_STRIDX_INT_NEXT", 
+            "plain": "\u00ffNext"
+        }, 
+        {
+            "base64": "/0J5dGVjb2Rl", 
+            "define": "DUK_STRIDX_INT_BYTECODE", 
+            "plain": "\u00ffBytecode"
+        }, 
+        {
+            "base64": "/0Zvcm1hbHM=", 
+            "define": "DUK_STRIDX_INT_FORMALS", 
+            "plain": "\u00ffFormals"
+        }, 
+        {
+            "base64": "/1Zhcm1hcA==", 
+            "define": "DUK_STRIDX_INT_VARMAP", 
+            "plain": "\u00ffVarmap"
+        }, 
+        {
+            "base64": "/0xleGVudg==", 
+            "define": "DUK_STRIDX_INT_LEXENV", 
+            "plain": "\u00ffLexenv"
+        }, 
+        {
+            "base64": "/1ZhcmVudg==", 
+            "define": "DUK_STRIDX_INT_VARENV", 
+            "plain": "\u00ffVarenv"
+        }, 
+        {
+            "base64": "/1NvdXJjZQ==", 
+            "define": "DUK_STRIDX_INT_SOURCE", 
+            "plain": "\u00ffSource"
+        }, 
+        {
+            "base64": "/1BjMmxpbmU=", 
+            "define": "DUK_STRIDX_INT_PC2LINE", 
+            "plain": "\u00ffPc2line"
+        }, 
+        {
+            "base64": "/0FyZ3M=", 
+            "define": "DUK_STRIDX_INT_ARGS", 
+            "plain": "\u00ffArgs"
+        }, 
+        {
+            "base64": "/01hcA==", 
+            "define": "DUK_STRIDX_INT_MAP", 
+            "plain": "\u00ffMap"
+        }, 
+        {
+            "base64": "/0ZpbmFsaXplcg==", 
+            "define": "DUK_STRIDX_INT_FINALIZER", 
+            "plain": "\u00ffFinalizer"
+        }, 
+        {
+            "base64": "/0hhbmRsZXI=", 
+            "define": "DUK_STRIDX_INT_HANDLER", 
+            "plain": "\u00ffHandler"
+        }, 
+        {
+            "base64": "/0NhbGxlZQ==", 
+            "define": "DUK_STRIDX_INT_CALLEE", 
+            "plain": "\u00ffCallee"
+        }, 
+        {
+            "base64": "/1RocmVhZA==", 
+            "define": "DUK_STRIDX_INT_THREAD", 
+            "plain": "\u00ffThread"
+        }, 
+        {
+            "base64": "/1JlZ2Jhc2U=", 
+            "define": "DUK_STRIDX_INT_REGBASE", 
+            "plain": "\u00ffRegbase"
+        }, 
+        {
+            "base64": "/1RhcmdldA==", 
+            "define": "DUK_STRIDX_INT_TARGET", 
+            "plain": "\u00ffTarget"
+        }, 
+        {
+            "base64": "/1RoaXM=", 
+            "define": "DUK_STRIDX_INT_THIS", 
+            "plain": "\u00ffThis"
+        }, 
+        {
+            "base64": "Y29tcGlsZQ==", 
+            "define": "DUK_STRIDX_COMPILE", 
+            "plain": "compile"
+        }, 
+        {
+            "base64": "aW5wdXQ=", 
+            "define": "DUK_STRIDX_INPUT", 
+            "plain": "input"
+        }, 
+        {
+            "base64": "ZXJyQ3JlYXRl", 
+            "define": "DUK_STRIDX_ERR_CREATE", 
+            "plain": "errCreate"
+        }, 
+        {
+            "base64": "ZXJyVGhyb3c=", 
+            "define": "DUK_STRIDX_ERR_THROW", 
+            "plain": "errThrow"
+        }, 
+        {
+            "base64": "bW9kU2VhcmNo", 
+            "define": "DUK_STRIDX_MOD_SEARCH", 
+            "plain": "modSearch"
+        }, 
+        {
+            "base64": "bW9kTG9hZGVk", 
+            "define": "DUK_STRIDX_MOD_LOADED", 
+            "plain": "modLoaded"
+        }, 
+        {
+            "base64": "ZW52", 
+            "define": "DUK_STRIDX_ENV", 
+            "plain": "env"
+        }, 
+        {
+            "base64": "aGV4", 
+            "define": "DUK_STRIDX_HEX", 
+            "plain": "hex"
+        }, 
+        {
+            "base64": "YmFzZTY0", 
+            "define": "DUK_STRIDX_BASE64", 
+            "plain": "base64"
+        }, 
+        {
+            "base64": "ang=", 
+            "define": "DUK_STRIDX_JX", 
+            "plain": "jx"
+        }, 
+        {
+            "base64": "amM=", 
+            "define": "DUK_STRIDX_JC", 
+            "plain": "jc"
+        }, 
+        {
+            "base64": "cmVzdW1l", 
+            "define": "DUK_STRIDX_RESUME", 
+            "plain": "resume"
+        }, 
+        {
+            "base64": "Zm10", 
+            "define": "DUK_STRIDX_FMT", 
+            "plain": "fmt"
+        }, 
+        {
+            "base64": "cmF3", 
+            "define": "DUK_STRIDX_RAW", 
+            "plain": "raw"
+        }, 
+        {
+            "base64": "dHJhY2U=", 
+            "define": "DUK_STRIDX_LC_TRACE", 
+            "plain": "trace"
+        }, 
+        {
+            "base64": "ZGVidWc=", 
+            "define": "DUK_STRIDX_LC_DEBUG", 
+            "plain": "debug"
+        }, 
+        {
+            "base64": "aW5mbw==", 
+            "define": "DUK_STRIDX_LC_INFO", 
+            "plain": "info"
+        }, 
+        {
+            "base64": "d2Fybg==", 
+            "define": "DUK_STRIDX_LC_WARN", 
+            "plain": "warn"
+        }, 
+        {
+            "base64": "ZXJyb3I=", 
+            "define": "DUK_STRIDX_LC_ERROR", 
+            "plain": "error"
+        }, 
+        {
+            "base64": "ZmF0YWw=", 
+            "define": "DUK_STRIDX_LC_FATAL", 
+            "plain": "fatal"
+        }, 
+        {
+            "base64": "bg==", 
+            "define": "DUK_STRIDX_LC_N", 
+            "plain": "n"
+        }, 
+        {
+            "base64": "bA==", 
+            "define": "DUK_STRIDX_LC_L", 
+            "plain": "l"
+        }, 
+        {
+            "base64": "Y2xvZw==", 
+            "define": "DUK_STRIDX_CLOG", 
+            "plain": "clog"
+        }, 
+        {
+            "base64": "dG9Mb2dTdHJpbmc=", 
+            "define": "DUK_STRIDX_TO_LOG_STRING", 
+            "plain": "toLogString"
+        }, 
+        {
+            "base64": "eyJfdW5kZWYiOnRydWV9", 
+            "define": "DUK_STRIDX_JSON_EXT_UNDEFINED", 
+            "plain": "{\"_undef\":true}"
+        }, 
+        {
+            "base64": "eyJfbmFuIjp0cnVlfQ==", 
+            "define": "DUK_STRIDX_JSON_EXT_NAN", 
+            "plain": "{\"_nan\":true}"
+        }, 
+        {
+            "base64": "eyJfaW5mIjp0cnVlfQ==", 
+            "define": "DUK_STRIDX_JSON_EXT_POSINF", 
+            "plain": "{\"_inf\":true}"
+        }, 
+        {
+            "base64": "eyJfbmluZiI6dHJ1ZX0=", 
+            "define": "DUK_STRIDX_JSON_EXT_NEGINF", 
+            "plain": "{\"_ninf\":true}"
+        }, 
+        {
+            "base64": "eyJfZnVuYyI6dHJ1ZX0=", 
+            "define": "DUK_STRIDX_JSON_EXT_FUNCTION1", 
+            "plain": "{\"_func\":true}"
+        }, 
+        {
+            "base64": "e19mdW5jOnRydWV9", 
+            "define": "DUK_STRIDX_JSON_EXT_FUNCTION2", 
+            "plain": "{_func:true}"
+        }, 
+        {
+            "base64": "YnJlYWs=", 
+            "define": "DUK_STRIDX_BREAK", 
+            "plain": "break"
+        }, 
+        {
+            "base64": "Y2FzZQ==", 
+            "define": "DUK_STRIDX_CASE", 
+            "plain": "case"
+        }, 
+        {
+            "base64": "Y2F0Y2g=", 
+            "define": "DUK_STRIDX_CATCH", 
+            "plain": "catch"
+        }, 
+        {
+            "base64": "Y29udGludWU=", 
+            "define": "DUK_STRIDX_CONTINUE", 
+            "plain": "continue"
+        }, 
+        {
+            "base64": "ZGVidWdnZXI=", 
+            "define": "DUK_STRIDX_DEBUGGER", 
+            "plain": "debugger"
+        }, 
+        {
+            "base64": "ZGVmYXVsdA==", 
+            "define": "DUK_STRIDX_DEFAULT", 
+            "plain": "default"
+        }, 
+        {
+            "base64": "ZGVsZXRl", 
+            "define": "DUK_STRIDX_DELETE", 
+            "plain": "delete"
+        }, 
+        {
+            "base64": "ZG8=", 
+            "define": "DUK_STRIDX_DO", 
+            "plain": "do"
+        }, 
+        {
+            "base64": "ZWxzZQ==", 
+            "define": "DUK_STRIDX_ELSE", 
+            "plain": "else"
+        }, 
+        {
+            "base64": "ZmluYWxseQ==", 
+            "define": "DUK_STRIDX_FINALLY", 
+            "plain": "finally"
+        }, 
+        {
+            "base64": "Zm9y", 
+            "define": "DUK_STRIDX_FOR", 
+            "plain": "for"
+        }, 
+        {
+            "base64": "ZnVuY3Rpb24=", 
+            "define": "DUK_STRIDX_LC_FUNCTION", 
+            "plain": "function"
+        }, 
+        {
+            "base64": "aWY=", 
+            "define": "DUK_STRIDX_IF", 
+            "plain": "if"
+        }, 
+        {
+            "base64": "aW4=", 
+            "define": "DUK_STRIDX_IN", 
+            "plain": "in"
+        }, 
+        {
+            "base64": "aW5zdGFuY2VvZg==", 
+            "define": "DUK_STRIDX_INSTANCEOF", 
+            "plain": "instanceof"
+        }, 
+        {
+            "base64": "bmV3", 
+            "define": "DUK_STRIDX_NEW", 
+            "plain": "new"
+        }, 
+        {
+            "base64": "cmV0dXJu", 
+            "define": "DUK_STRIDX_RETURN", 
+            "plain": "return"
+        }, 
+        {
+            "base64": "c3dpdGNo", 
+            "define": "DUK_STRIDX_SWITCH", 
+            "plain": "switch"
+        }, 
+        {
+            "base64": "dGhpcw==", 
+            "define": "DUK_STRIDX_THIS", 
+            "plain": "this"
+        }, 
+        {
+            "base64": "dGhyb3c=", 
+            "define": "DUK_STRIDX_THROW", 
+            "plain": "throw"
+        }, 
+        {
+            "base64": "dHJ5", 
+            "define": "DUK_STRIDX_TRY", 
+            "plain": "try"
+        }, 
+        {
+            "base64": "dHlwZW9m", 
+            "define": "DUK_STRIDX_TYPEOF", 
+            "plain": "typeof"
+        }, 
+        {
+            "base64": "dmFy", 
+            "define": "DUK_STRIDX_VAR", 
+            "plain": "var"
+        }, 
+        {
+            "base64": "Y29uc3Q=", 
+            "define": "DUK_STRIDX_CONST", 
+            "plain": "const"
+        }, 
+        {
+            "base64": "dm9pZA==", 
+            "define": "DUK_STRIDX_VOID", 
+            "plain": "void"
+        }, 
+        {
+            "base64": "d2hpbGU=", 
+            "define": "DUK_STRIDX_WHILE", 
+            "plain": "while"
+        }, 
+        {
+            "base64": "d2l0aA==", 
+            "define": "DUK_STRIDX_WITH", 
+            "plain": "with"
+        }, 
+        {
+            "base64": "Y2xhc3M=", 
+            "define": "DUK_STRIDX_CLASS", 
+            "plain": "class"
+        }, 
+        {
+            "base64": "ZW51bQ==", 
+            "define": "DUK_STRIDX_ENUM", 
+            "plain": "enum"
+        }, 
+        {
+            "base64": "ZXhwb3J0", 
+            "define": "DUK_STRIDX_EXPORT", 
+            "plain": "export"
+        }, 
+        {
+            "base64": "ZXh0ZW5kcw==", 
+            "define": "DUK_STRIDX_EXTENDS", 
+            "plain": "extends"
+        }, 
+        {
+            "base64": "aW1wb3J0", 
+            "define": "DUK_STRIDX_IMPORT", 
+            "plain": "import"
+        }, 
+        {
+            "base64": "c3VwZXI=", 
+            "define": "DUK_STRIDX_SUPER", 
+            "plain": "super"
+        }, 
+        {
+            "base64": "bnVsbA==", 
+            "define": "DUK_STRIDX_LC_NULL", 
+            "plain": "null"
+        }, 
+        {
+            "base64": "dHJ1ZQ==", 
+            "define": "DUK_STRIDX_TRUE", 
+            "plain": "true"
+        }, 
+        {
+            "base64": "ZmFsc2U=", 
+            "define": "DUK_STRIDX_FALSE", 
+            "plain": "false"
+        }, 
+        {
+            "base64": "aW1wbGVtZW50cw==", 
+            "define": "DUK_STRIDX_IMPLEMENTS", 
+            "plain": "implements"
+        }, 
+        {
+            "base64": "aW50ZXJmYWNl", 
+            "define": "DUK_STRIDX_INTERFACE", 
+            "plain": "interface"
+        }, 
+        {
+            "base64": "bGV0", 
+            "define": "DUK_STRIDX_LET", 
+            "plain": "let"
+        }, 
+        {
+            "base64": "cGFja2FnZQ==", 
+            "define": "DUK_STRIDX_PACKAGE", 
+            "plain": "package"
+        }, 
+        {
+            "base64": "cHJpdmF0ZQ==", 
+            "define": "DUK_STRIDX_PRIVATE", 
+            "plain": "private"
+        }, 
+        {
+            "base64": "cHJvdGVjdGVk", 
+            "define": "DUK_STRIDX_PROTECTED", 
+            "plain": "protected"
+        }, 
+        {
+            "base64": "cHVibGlj", 
+            "define": "DUK_STRIDX_PUBLIC", 
+            "plain": "public"
+        }, 
+        {
+            "base64": "c3RhdGlj", 
+            "define": "DUK_STRIDX_STATIC", 
+            "plain": "static"
+        }, 
+        {
+            "base64": "eWllbGQ=", 
+            "define": "DUK_STRIDX_YIELD", 
+            "plain": "yield"
+        }
+    ], 
+    "comment": "Metadata for Duktape build", 
+    "duk_version": 10800, 
+    "duk_version_string": "1.8.0", 
+    "git_describe": "v1.8.0"
+}

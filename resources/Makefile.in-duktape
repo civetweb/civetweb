@@ -21,6 +21,22 @@ ifeq ($(WITH_DUKTAPE_VERSION), 105)
   DUKTAPE_VERSION_KNOWN = 1
 endif
 
+ifeq ($(WITH_DUKTAPE_VERSION), 108)
+  $(info Duktape: Using version 1.8.0)
+  DUKTAPE_DIR = src/third_party/duktape-1.8.0/src
+  DUKTAPE_SHARED_LIB_FLAG = -lduktape1.8
+  DUKTAPE_CFLAGS = -DDUKTAPE_VERSION_MAKEFILE=108
+  DUKTAPE_VERSION_KNOWN = 1
+endif
+
+ifeq ($(WITH_DUKTAPE_VERSION), 201)
+  $(info Duktape: Using version 2.1.1)
+  DUKTAPE_DIR = src/third_party/duktape-2.1.1/src
+  DUKTAPE_SHARED_LIB_FLAG = -lduktape2.1
+  DUKTAPE_CFLAGS = -DDUKTAPE_VERSION_MAKEFILE=201
+  DUKTAPE_VERSION_KNOWN = 1
+endif
+
 ifneq ($(DUKTAPE_VERSION_KNOWN), 1)
   $(error Duktape: Unknwon version - $(WITH_DUKTAPE_VERSION))
 endif
