@@ -1591,6 +1591,10 @@ typedef struct x509 X509;
 #define SSL_OP_SINGLE_DH_USE (0x00100000L)
 #define SSL_OP_CIPHER_SERVER_PREFERENCE (0x00400000L)
 #define SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION (0x00010000L)
+#define SSL_OP_NO_COMPRESSION (0x00020000L)
+
+#define SSL_CB_HANDSHAKE_START (0x10)
+#define SSL_CB_HANDSHAKE_DONE (0x20)
 
 #define SSL_ERROR_NONE (0)
 #define SSL_ERROR_SSL (1)
@@ -1657,7 +1661,11 @@ struct ssl_func {
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[30].ptr)
 #define SSL_CTX_set_options                                                    \
 	(*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[31].ptr)
-
+#define SSL_CTX_set_info_callback                                              \
+	(*(void (*)(SSL_CTX * ctx,                                                 \
+	            void (*callback)(SSL * s, int, int)))ssl_sw[32].ptr)
+#define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
+#define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
 
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
@@ -1667,6 +1675,8 @@ struct ssl_func {
 #define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
 #define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
 
+#define SSL_set_app_data(s, arg) (SSL_set_ex_data(s, 0, (char *)arg))
+#define SSL_get_app_data(s) (SSL_get_ex_data(s, 0))
 
 #define ERR_get_error (*(unsigned long (*)(void))crypto_sw[0].ptr)
 #define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[1].ptr)
@@ -1730,6 +1740,9 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_ctrl", NULL},
                                    {"SSL_CTX_set_cipher_list", NULL},
                                    {"SSL_CTX_set_options", NULL},
+                                   {"SSL_CTX_set_info_callback", NULL},
+                                   {"SSL_get_ex_data", NULL},
+                                   {"SSL_set_ex_data", NULL},
                                    {NULL, NULL}};
 
 
@@ -1795,10 +1808,14 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define SSL_CTX_set_session_id_context                                         \
 	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
 #define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
-
-
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
+#define SSL_CTX_set_info_callback                                              \
+	(*(void (*)(SSL_CTX * ctx,                                                 \
+	            void (*callback)(SSL * s, int, int)))ssl_sw[32].ptr)
+#define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
+#define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
+
 #define SSL_CTX_set_options(ctx, op)                                           \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
 #define SSL_CTX_clear_options(ctx, op)                                         \
@@ -1806,9 +1823,12 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
 	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
 
+
 #define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
 #define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
 
+#define SSL_set_app_data(s, arg) (SSL_set_ex_data(s, 0, (char *)arg))
+#define SSL_get_app_data(s) (SSL_get_ex_data(s, 0))
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
@@ -1882,6 +1902,9 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_set_session_id_context", NULL},
                                    {"SSL_CTX_ctrl", NULL},
                                    {"SSL_CTX_set_cipher_list", NULL},
+                                   {"SSL_CTX_set_info_callback", NULL},
+                                   {"SSL_get_ex_data", NULL},
+                                   {"SSL_set_ex_data", NULL},
                                    {NULL, NULL}};
 
 
@@ -13546,6 +13569,7 @@ sslize(struct mg_connection *conn,
 	if (conn->ssl == NULL) {
 		return 0;
 	}
+	SSL_set_app_data(conn->ssl, (char *)conn);
 
 	ret = SSL_set_fd(conn->ssl, conn->client.sock);
 	if (ret != 1) {
@@ -14003,6 +14027,25 @@ ssl_get_protocol(int version_id)
 #endif /* OPENSSL_API_1_1 */
 
 
+/* SSL callback documentation:
+ * https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_info_callback.html
+ * https://linux.die.net/man/3/ssl_set_info_callback */
+static void
+ssl_info_callback(SSL *ssl, int what, int ret)
+{
+	(void)ret;
+
+	if (what & SSL_CB_HANDSHAKE_START) {
+		SSL_get_app_data(ssl);
+	}
+	if (what & SSL_CB_HANDSHAKE_DONE) {
+		/* TODO: check for openSSL 1.1 */
+		//#define SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS 0x0001
+		// ssl->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
+	}
+}
+
+
 /* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
 static int
 set_ssl_option(struct mg_context *ctx)
@@ -14084,9 +14127,13 @@ set_ssl_option(struct mg_context *ctx)
 	SSL_CTX_set_options(ctx->ssl_ctx, ssl_get_protocol(protocol_ver));
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
+	SSL_CTX_set_options(ctx->ssl_ctx,
+	                    SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
+	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_NO_COMPRESSION);
 #if !defined(NO_SSL_DL)
 	SSL_CTX_set_ecdh_auto(ctx->ssl_ctx, 1);
 #endif /* NO_SSL_DL */
+	SSL_CTX_set_info_callback(ctx->ssl_ctx, ssl_info_callback);
 
 	/* If a callback has been specified, call it. */
 	callback_ret =

@@ -4543,11 +4543,21 @@ START_TEST(test_minimal_http_server_callback)
 }
 END_TEST
 
-
 START_TEST(test_minimal_https_server_callback)
 {
-        /* This test should ensure the minimum server example in
-         * docs/Embedding.md is still running. */
+        /* This test should show a HTTPS server with enhanced
+         * security settings.
+         *
+         * Articles:
+         * https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+         *
+         * Scanners:
+         * https://securityheaders.io/
+         * https://www.htbridge.com/ssl/
+         * https://www.htbridge.com/websec/
+         * https://www.ssllabs.com/ssltest/
+         * https://www.qualys.com/forms/freescan/
+         */
 
         /* Server context handle */
         struct mg_context *ctx;
