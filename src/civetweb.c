@@ -15281,7 +15281,7 @@ mg_get_response(struct mg_connection *conn,
 	}
 
 	/* Implementation of API function for HTTP clients */
-	*octx = conn->ctx;
+	octx = conn->ctx;
 	rctx = *(conn->ctx);
 
 	if (timeout >= 0) {
