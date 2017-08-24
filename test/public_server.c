@@ -4511,11 +4511,13 @@ minimal_http_client_impl(const char *server, uint16_t port, const char *uri)
 }
 
 
+#if !defined(NO_SSL)
 static void
 minimal_https_client_impl(const char *server, uint16_t port, const char *uri)
 {
 	minimal_http_https_client_impl(server, port, 1, uri);
 }
+#endif
 
 
 START_TEST(test_minimal_client)
