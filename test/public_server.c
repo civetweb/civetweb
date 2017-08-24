@@ -271,6 +271,18 @@ log_msg_func(const struct mg_connection *conn, const char *message)
 	ud[255] = 0;
 	mark_point();
 
+	printf("LOG_MSG_FUNC: %s\n", message);
+	mark_point();
+
+	return 1;
+}
+
+
+static int
+test_log_message(const struct mg_connection *conn, const char *message)
+{
+	printf("LOG_MESSAGE: %s\n", message);
+	mark_point();
 	return 1;
 }
 
@@ -281,6 +293,15 @@ test_mg_start(const struct mg_callbacks *callbacks,
               const char **configuration_options)
 {
 	struct mg_context *ctx;
+	struct mg_callbacks cb;
+
+	memset(cb, 0, sizeof(cb));
+	if (!callbacks) {
+		callbacks = &cb;
+	}
+	if (callbacks->log_message == NULL) {
+		callbacks.log_message = test_log_message;
+	}
 
 	mark_point();
 	test_sleep(SLEEP_BEFORE_MG_START);
