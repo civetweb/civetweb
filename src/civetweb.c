@@ -2489,7 +2489,7 @@ static int
 event_wait(void *eventhdl)
 {
 	uint64_t u;
-	int evhdl;
+	int evhdl, s;
 
 	if (sizeof(int) == sizeof(void *)) {
 		evhdl = (int)eventhdl;
@@ -2501,7 +2501,7 @@ event_wait(void *eventhdl)
 		evhdl = *(int *)eventhdl;
 	}
 
-	int s = (int)read(evhdl, &u, sizeof(u));
+	s = (int)read(evhdl, &u, sizeof(u));
 	if (s != sizeof(uint64_t)) {
 		/* error */
 		return 0;
@@ -2515,7 +2515,7 @@ static int
 event_signal(void *eventhdl)
 {
 	uint64_t u = 1;
-	int evhdl;
+	int evhdl, s;
 
 	if (sizeof(int) == sizeof(void *)) {
 		evhdl = (int)eventhdl;
@@ -2527,7 +2527,7 @@ event_signal(void *eventhdl)
 		evhdl = *(int *)eventhdl;
 	}
 
-	int s = (int)write(evhdl, &u, sizeof(u));
+	s = (int)write(evhdl, &u, sizeof(u));
 	if (s != sizeof(uint64_t)) {
 		/* error */
 		return 0;
@@ -14659,6 +14659,9 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	struct mg_connection *conn = NULL;
 	SOCKET sock;
 	union usa sa;
+	struct sockaddr *psa;
+	socklen_t len;
+
 	unsigned max_req_size =
 	    (unsigned)atoi(config_options[MAX_REQUEST_SIZE].default_value);
 
@@ -14716,15 +14719,14 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 
 
 #ifdef USE_IPV6
-	socklen_t len = (sa.sa.sa_family == AF_INET)
-	                    ? sizeof(conn->client.rsa.sin)
-	                    : sizeof(conn->client.rsa.sin6);
-	struct sockaddr *psa = (sa.sa.sa_family == AF_INET)
-	                           ? (struct sockaddr *)&(conn->client.rsa.sin)
-	                           : (struct sockaddr *)&(conn->client.rsa.sin6);
+	len = (sa.sa.sa_family == AF_INET) ? sizeof(conn->client.rsa.sin)
+	                                   : sizeof(conn->client.rsa.sin6);
+	psa = (sa.sa.sa_family == AF_INET)
+	          ? (struct sockaddr *)&(conn->client.rsa.sin)
+	          : (struct sockaddr *)&(conn->client.rsa.sin6);
 #else
-	socklen_t len = sizeof(conn->client.rsa.sin);
-	struct sockaddr *psa = (struct sockaddr *)&(conn->client.rsa.sin);
+	len = sizeof(conn->client.rsa.sin);
+	psa = (struct sockaddr *)&(conn->client.rsa.sin);
 #endif
 
 	conn->buf_size = (int)max_req_size;
