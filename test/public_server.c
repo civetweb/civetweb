@@ -274,7 +274,7 @@ log_msg_func(const struct mg_connection *conn, const char *message)
 	printf("LOG_MSG_FUNC: %s\n", message);
 	mark_point();
 
-	return 1;
+	return 1; /* Return 1 means "already handled" */
 }
 
 
@@ -285,7 +285,8 @@ test_log_message(const struct mg_connection *conn, const char *message)
 
 	printf("LOG_MESSAGE: %s\n", message);
 	mark_point();
-	return 1;
+
+	return 0; /* Return 0 means "not yet handled" */
 }
 
 
