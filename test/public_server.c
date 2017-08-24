@@ -281,6 +281,8 @@ log_msg_func(const struct mg_connection *conn, const char *message)
 static int
 test_log_message(const struct mg_connection *conn, const char *message)
 {
+	(void)conn;
+
 	printf("LOG_MESSAGE: %s\n", message);
 	mark_point();
 	return 1;
@@ -295,12 +297,12 @@ test_mg_start(const struct mg_callbacks *callbacks,
 	struct mg_context *ctx;
 	struct mg_callbacks cb;
 
-	memset(cb, 0, sizeof(cb));
+	memset(&cb, 0, sizeof(cb));
 	if (!callbacks) {
 		callbacks = &cb;
 	}
 	if (callbacks->log_message == NULL) {
-		callbacks.log_message = test_log_message;
+		callbacks->log_message = test_log_message;
 	}
 
 	mark_point();
@@ -4256,7 +4258,7 @@ START_TEST(test_mg_store_body)
 	client = mg_connect_client(
 	    "127.0.0.1", 8082, 0, client_err_buf, sizeof(client_err_buf));
 
-	ck_assert_str_eq(client_err, "");
+	ck_assert_str_eq(client_err_buf, "");
 	ck_assert(client != NULL);
 
 	mg_printf(client,
