@@ -298,16 +298,20 @@ test_mg_start(const struct mg_callbacks *callbacks,
 }
 
 
+/* Deactivate some test points in different threads */
+#define T()
+
+
 static void
 test_mg_stop(struct mg_context *ctx)
 {
-//	mark_point();
+	T(mark_point)();
 	test_sleep(SLEEP_BEFORE_MG_STOP);
-//	mark_point();
+	T(mark_point)();
 	mg_stop(ctx);
-//	mark_point();
+	T(mark_point)();
 	test_sleep(SLEEP_AFTER_MG_STOP);
-//	mark_point();
+	T(mark_point)();
 }
 
 
@@ -971,13 +975,13 @@ websock_server_close(const struct mg_connection *conn, void *udata)
 	(void)conn;
 	(void)udata;
 
-//	ck_assert_ptr_eq((void *)udata, (void *)7531);
+	T(ck_assert_ptr_eq)((void *)udata, (void *)7531);
 	WS_TEST_TRACE("Server: Close connection\n");
 
 	/* Can not send a websocket goodbye message here -
 	 * the connection is already closed */
 
-//	mark_point();
+	T(mark_point)();
 }
 
 
@@ -1043,15 +1047,15 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-//	ck_assert_ptr_eq(user_data, (void *)pclient_data);
+	T(ck_assert_ptr_eq)(user_data, (void *)pclient_data);
 	(void)user_data;
 
-//	ck_assert(pclient_data != NULL);
+	T(ck_assert)(pclient_data != NULL);
 
 	WS_TEST_TRACE("Client %i: Close handler\n", pclient_data->clientId);
 	pclient_data->closed++;
 
-//	mark_point();
+	T(mark_point)();
 }
 #endif
 
@@ -4383,7 +4387,10 @@ END_TEST
 
 
 static void
-minimal_http_https_client_impl(const char *server, uint16_t port, int use_ssl, const char *uri)
+minimal_http_https_client_impl(const char *server,
+                               uint16_t port,
+                               int use_ssl,
+                               const char *uri)
 {
 	/* Client var */
 	struct mg_connection *client;
@@ -4396,7 +4403,7 @@ minimal_http_https_client_impl(const char *server, uint16_t port, int use_ssl, c
 	mark_point();
 
 	client = mg_connect_client(
-            server, port, use_ssl, client_err_buf, sizeof(client_err_buf));
+	    server, port, use_ssl, client_err_buf, sizeof(client_err_buf));
 
 	ck_assert(client != NULL);
 	ck_assert_str_eq(client_err_buf, "");
@@ -4436,16 +4443,22 @@ minimal_http_https_client_impl(const char *server, uint16_t port, int use_ssl, c
 
 
 static void
-minimal_http_client_impl(const char *server, uint16_t port, int use_ssl, const char *uri)
+minimal_http_client_impl(const char *server,
+                         uint16_t port,
+                         int use_ssl,
+                         const char *uri)
 {
-    minimal_http_https_client_impl(server, port, 0, uri);
+	minimal_http_https_client_impl(server, port, 0, uri);
 }
 
 
 static void
-minimal_https_client_impl(const char *server, uint16_t port, int use_ssl, const char *uri)
+minimal_https_client_impl(const char *server,
+                          uint16_t port,
+                          int use_ssl,
+                          const char *uri)
 {
-    minimal_http_https_client_impl(server, port, 1, uri);
+	minimal_http_https_client_impl(server, port, 1, uri);
 }
 
 
@@ -4545,87 +4558,87 @@ END_TEST
 
 START_TEST(test_minimal_https_server_callback)
 {
-        /* This test should show a HTTPS server with enhanced
-         * security settings.
-         *
-         * Articles:
-         * https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
-         *
-         * Scanners:
-         * https://securityheaders.io/
-         * https://www.htbridge.com/ssl/
-         * https://www.htbridge.com/websec/
-         * https://www.ssllabs.com/ssltest/
-         * https://www.qualys.com/forms/freescan/
-         */
+	/* This test should show a HTTPS server with enhanced
+	 * security settings.
+	 *
+	 * Articles:
+	 * https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+	 *
+	 * Scanners:
+	 * https://securityheaders.io/
+	 * https://www.htbridge.com/ssl/
+	 * https://www.htbridge.com/websec/
+	 * https://www.ssllabs.com/ssltest/
+	 * https://www.qualys.com/forms/freescan/
+	 */
 
-        /* Server context handle */
-        struct mg_context *ctx;
+	/* Server context handle */
+	struct mg_context *ctx;
 
-        /* Server start parameters for HTTPS */
-        const char *OPTIONS[32];
-        int opt_cnt = 0;
+	/* Server start parameters for HTTPS */
+	const char *OPTIONS[32];
+	int opt_cnt = 0;
 
-        /* HTTPS port - required */
-        OPTIONS[opt_idx++] = "listening_ports";
-        OPTIONS[opt_idx++] = "8443s";
+	/* HTTPS port - required */
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8443s";
 
-        /* path to certificate file - required */
-        OPTIONS[opt_idx++] = "ssl_certificate";
-        OPTIONS[opt_idx++] = locate_ssl_cert();
+	/* path to certificate file - required */
+	OPTIONS[opt_idx++] = "ssl_certificate";
+	OPTIONS[opt_idx++] = locate_ssl_cert();
 
-        /* set minimum SSL version to TLS 1.2 - recommended */
-        OPTIONS[opt_idx++] = "ssl_protocol_version";
-        OPTIONS[opt_idx++] = "4";
+	/* set minimum SSL version to TLS 1.2 - recommended */
+	OPTIONS[opt_idx++] = "ssl_protocol_version";
+	OPTIONS[opt_idx++] = "4";
 
-        /* set some modern ciphers - recommended */
-        OPTIONS[opt_idx++] = "ssl_cipher_list";
-        OPTIONS[opt_idx++] = "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS";
+	/* set some modern ciphers - recommended */
+	OPTIONS[opt_idx++] = "ssl_cipher_list";
+	OPTIONS[opt_idx++] = "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS";
 
-        /* set "HTTPS only" header - recommended */
-        OPTIONS[opt_idx++] = "strict_transport_security_max_age";
-        OPTIONS[opt_idx++] = "31622400";
+	/* set "HTTPS only" header - recommended */
+	OPTIONS[opt_idx++] = "strict_transport_security_max_age";
+	OPTIONS[opt_idx++] = "31622400";
 
-        /* end of options - required */
-        OPTIONS[opt_idx] = NULL;
+	/* end of options - required */
+	OPTIONS[opt_idx] = NULL;
 
-        mark_point();
+	mark_point();
 
-        /* Initialize the library */
-        mg_init_library(0);
-
-
-        /* Start the server */
-        ctx = test_mg_start(NULL, 0, OPTIONS);
-        ck_assert(ctx != NULL);
-
-        /* Add some handler */
-        mg_set_request_handler(ctx,
-                               "/hello",
-                               minimal_test_request_handler,
-                               (void *)"Hello world");
-        mg_set_request_handler(ctx,
-                               "/8",
-                               minimal_test_request_handler,
-                               (void *)"Number eight");
-
-        /* Run the server for 15 seconds */
-        test_sleep(10);
-
-        /* Call a test client */
-        minimal_https_client_impl("127.0.0.1", 8443, "/hello");
-
-        /* Run the server for 15 seconds */
-        test_sleep(5);
+	/* Initialize the library */
+	mg_init_library(0);
 
 
-        /* Stop the server */
-        test_mg_stop(ctx);
+	/* Start the server */
+	ctx = test_mg_start(NULL, 0, OPTIONS);
+	ck_assert(ctx != NULL);
 
-        /* Un-initialize the library */
-        mg_exit_library();
+	/* Add some handler */
+	mg_set_request_handler(ctx,
+	                       "/hello",
+	                       minimal_test_request_handler,
+	                       (void *)"Hello world");
+	mg_set_request_handler(ctx,
+	                       "/8",
+	                       minimal_test_request_handler,
+	                       (void *)"Number eight");
 
-        mark_point();
+	/* Run the server for 15 seconds */
+	test_sleep(10);
+
+	/* Call a test client */
+	minimal_https_client_impl("127.0.0.1", 8443, "/hello");
+
+	/* Run the server for 15 seconds */
+	test_sleep(5);
+
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+
+	/* Un-initialize the library */
+	mg_exit_library();
+
+	mark_point();
 }
 END_TEST
 
@@ -4668,9 +4681,9 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_startthreads, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_startthreads);
 
-        tcase_add_test(tcase_minimal_svr, test_minimal_http_server_callback);
-        tcase_add_test(tcase_minimal_svr, test_minimal_https_server_callback);
-        tcase_set_timeout(tcase_minimal_svr, civetweb_min_server_test_timeout);
+	tcase_add_test(tcase_minimal_svr, test_minimal_http_server_callback);
+	tcase_add_test(tcase_minimal_svr, test_minimal_https_server_callback);
+	tcase_set_timeout(tcase_minimal_svr, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_minimal_svr);
 
 	tcase_add_test(tcase_minimal_cli, test_minimal_client);
