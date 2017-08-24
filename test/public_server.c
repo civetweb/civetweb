@@ -298,24 +298,16 @@ test_mg_start(const struct mg_callbacks *callbacks,
 }
 
 
-void T_ignore(...)
-{
-}
-
-/* Deactivate some test points in different threads */
-#define T(x) T_ignore
-
-
 static void
 test_mg_stop(struct mg_context *ctx)
 {
-	T(mark_point)();
+        mark_point();
 	test_sleep(SLEEP_BEFORE_MG_STOP);
-	T(mark_point)();
+        mark_point();
 	mg_stop(ctx);
-	T(mark_point)();
+        mark_point();
 	test_sleep(SLEEP_AFTER_MG_STOP);
-	T(mark_point)();
+        mark_point();
 }
 
 
@@ -979,13 +971,13 @@ websock_server_close(const struct mg_connection *conn, void *udata)
 	(void)conn;
 	(void)udata;
 
-	T(ck_assert_ptr_eq)((void *)udata, (void *)7531);
+        ck_assert_ptr_eq((void *)udata, (void *)7531);
 	WS_TEST_TRACE("Server: Close connection\n");
 
 	/* Can not send a websocket goodbye message here -
 	 * the connection is already closed */
 
-	T(mark_point)();
+        mark_point();
 }
 
 
@@ -1051,15 +1043,15 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-	T(ck_assert_ptr_eq)(user_data, (void *)pclient_data);
+        ck_assert_ptr_eq(user_data, (void *)pclient_data);
 	(void)user_data;
 
-	T(ck_assert)(pclient_data != NULL);
+        ck_assert(pclient_data != NULL);
 
 	WS_TEST_TRACE("Client %i: Close handler\n", pclient_data->clientId);
 	pclient_data->closed++;
 
-	T(mark_point)();
+        mark_point();
 }
 #endif
 
