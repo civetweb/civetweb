@@ -420,8 +420,10 @@ test_mg_start_stop_http_server_impl(int ipv6)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn = mg_connect_client(
 	    localhost_name, 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -447,8 +449,10 @@ test_mg_start_stop_http_server_impl(int ipv6)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn = mg_connect_client(
 	    localhost_name, 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
 	mg_printf(client_conn, "Host: localhost:8080\r\n");
 	mg_printf(client_conn, "Connection: close\r\n\r\n");
@@ -477,8 +481,10 @@ test_mg_start_stop_http_server_impl(int ipv6)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn = mg_connect_client(
 	    localhost_name, 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.7\r\n");
 	mg_printf(client_conn, "Host: localhost:8080\r\n");
 	mg_printf(client_conn, "Connection: close\r\n\r\n");
@@ -502,8 +508,10 @@ test_mg_start_stop_http_server_impl(int ipv6)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn = mg_connect_client(
 	    localhost_name, 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
 	mg_printf(client_conn, "Host: localhost:8080\r\n");
 	mg_printf(client_conn, "X-Obsolete-Header: something\r\nfor nothing\r\n");
@@ -644,8 +652,10 @@ START_TEST(test_mg_start_stop_https_server)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -757,8 +767,9 @@ START_TEST(test_mg_server_and_client_tls)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
-	ck_assert(client_conn == NULL);
+
 	ck_assert_str_ne(client_err, "");
+	ck_assert(client_conn == NULL);
 
 	memset(client_err, 0, sizeof(client_err));
 	memset(&client_options, 0, sizeof(client_options));
@@ -770,8 +781,10 @@ START_TEST(test_mg_server_and_client_tls)
 	client_conn = mg_connect_client_secure(&client_options,
 	                                       client_err,
 	                                       sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -1644,8 +1657,9 @@ START_TEST(test_request_handlers)
 	memset(ebuf, 0, sizeof(ebuf));
 	client_conn =
 	    mg_connect_client("127.0.0.1", ipv4_port, 0, ebuf, sizeof(ebuf));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(ebuf, "");
+	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "%s", request);
 
@@ -1667,8 +1681,9 @@ START_TEST(test_request_handlers)
 	memset(ebuf, 0, sizeof(ebuf));
 	client_conn =
 	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(ebuf, "");
+	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn,
 	          "GET http://test.domain:%d/U7 HTTP/1.0\r\n\r\n",
@@ -1693,8 +1708,9 @@ START_TEST(test_request_handlers)
 	memset(ebuf, 0, sizeof(ebuf));
 	client_conn =
 	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(ebuf, "");
+	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn,
 	          "GET http://subdomain.test.domain:%d/U7 HTTP/1.0\r\n\r\n",
@@ -3005,8 +3021,10 @@ START_TEST(test_http_auth)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -3037,8 +3055,10 @@ START_TEST(test_http_auth)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -3120,8 +3140,10 @@ START_TEST(test_http_auth)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n", test_file);
 	mg_printf(client_conn,
 	          "Authorization: Digest "
@@ -3160,8 +3182,10 @@ START_TEST(test_http_auth)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "DELETE /%s HTTP/1.0\r\n", test_file);
 	mg_printf(client_conn,
 	          "Authorization: Digest "
@@ -3203,8 +3227,10 @@ START_TEST(test_http_auth)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -3228,8 +3254,10 @@ START_TEST(test_http_auth)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -3294,8 +3322,10 @@ START_TEST(test_keep_alive)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8081, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn,
 	          "GET / HTTP/1.1\r\nHost: "
 	          "localhost:8081\r\nConnection: keep-alive\r\n\r\n");
@@ -3452,6 +3482,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
@@ -3477,6 +3509,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
@@ -3507,6 +3541,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
@@ -3537,6 +3573,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
@@ -3561,6 +3599,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "Gimme some file!\r\n\r\n");
@@ -3595,6 +3635,7 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
 	ck_assert(client_conn == NULL);
 	ck_assert_str_ne(client_err, "");
 
@@ -4215,8 +4256,8 @@ START_TEST(test_mg_store_body)
 	client = mg_connect_client(
 	    "127.0.0.1", 8082, 0, client_err_buf, sizeof(client_err_buf));
 
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client != NULL);
-	ck_assert_str_eq(client_err_buf, "");
 
 	mg_printf(client,
 	          "PUT /%s HTTP/1.0\r\nContent-Length: %i\r\n\r\n",
@@ -4422,8 +4463,8 @@ minimal_http_https_client_impl(const char *server,
 	client = mg_connect_client(
 	    server, port, use_ssl, client_err_buf, sizeof(client_err_buf));
 
-	ck_assert(client != NULL);
 	ck_assert_str_eq(client_err_buf, "");
+	ck_assert(client != NULL);
 
 	mg_printf(client, "GET /%s HTTP/1.0\r\n\r\n", uri);
 
@@ -4567,8 +4608,10 @@ START_TEST(test_minimal_http_server_callback)
 }
 END_TEST
 
+
 START_TEST(test_minimal_https_server_callback)
 {
+#if !defined(NO_SSL)
 	/* This test should show a HTTPS server with enhanced
 	 * security settings.
 	 *
@@ -4648,7 +4691,7 @@ START_TEST(test_minimal_https_server_callback)
 
 	/* Un-initialize the library */
 	mg_exit_library();
-
+#endif
 	mark_point();
 }
 END_TEST
