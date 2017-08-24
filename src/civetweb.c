@@ -15261,6 +15261,11 @@ mg_get_response(struct mg_connection *conn,
                 size_t ebuf_len,
                 int timeout)
 {
+	int err, ret;
+	char txt[32]; /* will not overflow */
+	struct mg_context *octx;
+	struct mg_context rctx;
+
 	if (ebuf_len > 0) {
 		ebuf[0] = '\0';
 	}
@@ -15276,10 +15281,8 @@ mg_get_response(struct mg_connection *conn,
 	}
 
 	/* Implementation of API function for HTTP clients */
-	int err, ret;
-	struct mg_context *octx = conn->ctx;
-	struct mg_context rctx = *(conn->ctx);
-	char txt[32]; /* will not overflow */
+	*octx = conn->ctx;
+	rctx = *(conn->ctx);
 
 	if (timeout >= 0) {
 		mg_snprintf(conn, NULL, txt, sizeof(txt), "%i", timeout);
