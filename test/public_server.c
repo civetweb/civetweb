@@ -297,18 +297,20 @@ test_mg_start(const struct mg_callbacks *callbacks,
 	struct mg_context *ctx;
 	struct mg_callbacks cb;
 
-	memset(&cb, 0, sizeof(cb));
-	if (!callbacks) {
-		callbacks = &cb;
+	if (callbacks) {
+		memcpy(&cb, callbacks, sizeof(cb));
+	} else {
+		memset(&cb, 0, sizeof(cb));
 	}
-	if (callbacks->log_message == NULL) {
-		callbacks->log_message = test_log_message;
+
+	if (cb.log_message == NULL) {
+		cb.log_message = test_log_message;
 	}
 
 	mark_point();
 	test_sleep(SLEEP_BEFORE_MG_START);
 	mark_point();
-	ctx = mg_start(callbacks, user_data, configuration_options);
+	ctx = mg_start(&cb, user_data, configuration_options);
 	mark_point();
 	if (ctx) {
 		/* Give the server some time to start in the test VM */
