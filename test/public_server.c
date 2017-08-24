@@ -298,8 +298,12 @@ test_mg_start(const struct mg_callbacks *callbacks,
 }
 
 
+void T_ignore(...)
+{
+}
+
 /* Deactivate some test points in different threads */
-#define T()
+#define T(x) T_ignore
 
 
 static void
