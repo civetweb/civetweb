@@ -301,13 +301,13 @@ test_mg_start(const struct mg_callbacks *callbacks,
 static void
 test_mg_stop(struct mg_context *ctx)
 {
-        mark_point();
+	mark_point();
 	test_sleep(SLEEP_BEFORE_MG_STOP);
-        mark_point();
+	mark_point();
 	mg_stop(ctx);
-        mark_point();
+	mark_point();
 	test_sleep(SLEEP_AFTER_MG_STOP);
-        mark_point();
+	mark_point();
 }
 
 
@@ -971,13 +971,13 @@ websock_server_close(const struct mg_connection *conn, void *udata)
 	(void)conn;
 	(void)udata;
 
-        ck_assert_ptr_eq((void *)udata, (void *)7531);
+	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	WS_TEST_TRACE("Server: Close connection\n");
 
 	/* Can not send a websocket goodbye message here -
 	 * the connection is already closed */
 
-        mark_point();
+	mark_point();
 }
 
 
@@ -1043,15 +1043,15 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-        ck_assert_ptr_eq(user_data, (void *)pclient_data);
+	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 	(void)user_data;
 
-        ck_assert(pclient_data != NULL);
+	ck_assert(pclient_data != NULL);
 
 	WS_TEST_TRACE("Client %i: Close handler\n", pclient_data->clientId);
 	pclient_data->closed++;
 
-        mark_point();
+	mark_point();
 }
 #endif
 
@@ -4439,20 +4439,14 @@ minimal_http_https_client_impl(const char *server,
 
 
 static void
-minimal_http_client_impl(const char *server,
-                         uint16_t port,
-                         int use_ssl,
-                         const char *uri)
+minimal_http_client_impl(const char *server, uint16_t port, const char *uri)
 {
 	minimal_http_https_client_impl(server, port, 0, uri);
 }
 
 
 static void
-minimal_https_client_impl(const char *server,
-                          uint16_t port,
-                          int use_ssl,
-                          const char *uri)
+minimal_https_client_impl(const char *server, uint16_t port, const char *uri)
 {
 	minimal_http_https_client_impl(server, port, 1, uri);
 }
@@ -4573,7 +4567,7 @@ START_TEST(test_minimal_https_server_callback)
 
 	/* Server start parameters for HTTPS */
 	const char *OPTIONS[32];
-	int opt_cnt = 0;
+	int opt_idx = 0;
 
 	/* HTTPS port - required */
 	OPTIONS[opt_idx++] = "listening_ports";
