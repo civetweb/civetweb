@@ -4648,6 +4648,10 @@ START_TEST(test_minimal_https_server_callback)
 	OPTIONS[opt_idx++] = "ssl_certificate";
 	OPTIONS[opt_idx++] = locate_ssl_cert();
 
+#if defined(LOCAL_TEST) || defined(_WIN32)
+	/* Do not set this on Travis CI, since the build containers
+	 * contain older SSL libraries */
+
 	/* set minimum SSL version to TLS 1.2 - recommended */
 	OPTIONS[opt_idx++] = "ssl_protocol_version";
 	OPTIONS[opt_idx++] = "4";
@@ -4655,6 +4659,7 @@ START_TEST(test_minimal_https_server_callback)
 	/* set some modern ciphers - recommended */
 	OPTIONS[opt_idx++] = "ssl_cipher_list";
 	OPTIONS[opt_idx++] = "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS";
+#endif
 
 	/* set "HTTPS only" header - recommended */
 	OPTIONS[opt_idx++] = "strict_transport_security_max_age";
