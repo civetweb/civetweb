@@ -14133,7 +14133,28 @@ set_ssl_option(struct mg_context *ctx)
 #if !defined(NO_SSL_DL)
 	SSL_CTX_set_ecdh_auto(ctx->ssl_ctx, 1);
 #endif /* NO_SSL_DL */
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+#endif
+	/* Depending on the OpenSSL version, the callback may be
+	 * 'void (*)(SSL *, int, int)' or 'void (*)(const SSL *, int, int)'
+	 * yielding in an "incompatible-pointer-type" warning for the other
+	 * version. It seems to be "unclear" what is correct:
+	 * https://bugs.launchpad.net/ubuntu/+source/openssl/+bug/1147526
+	 * https://www.openssl.org/docs/man1.0.2/ssl/ssl.html
+	 * https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
+	 * https://github.com/openssl/openssl/blob/1d97c8435171a7af575f73c526d79e1ef0ee5960/ssl/ssl.h#L1173
+	 * Disable this warning here.
+	 * Alternative would be a version dependent ssl_info_callback and
+	 * a const-cast to call 'char *SSL_get_app_data(SSL *ssl)' there.
+	 */
 	SSL_CTX_set_info_callback(ctx->ssl_ctx, ssl_info_callback);
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif
 
 	/* If a callback has been specified, call it. */
 	callback_ret =
