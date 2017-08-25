@@ -19,12 +19,16 @@ include(ExternalProject)
 ExternalProject_Add(check-unit-test-framework
   DEPENDS c-library
 
-#  URL "https://codeload.github.com/libcheck/check/zip/${CIVETWEB_CHECK_VERSION}"
-#  DOWNLOAD_NAME "${CIVETWEB_CHECK_VERSION}.zip"
-#  URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
-
+if(0)
+# Use an official, released check version:
+  URL "https://codeload.github.com/libcheck/check/zip/${CIVETWEB_CHECK_VERSION}"
+  DOWNLOAD_NAME "${CIVETWEB_CHECK_VERSION}.zip"
+  URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
+else()
+# Use a civetweb specific patched version
 URL "https://github.com/civetweb/check/archive/master.zip"
 DOWNLOAD_NAME "master.zip"
+endif()
 
   PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
   BUILD_IN_SOURCE 1
