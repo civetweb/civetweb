@@ -118,6 +118,26 @@ environment:
       no_cgi: NO
       no_caching: NO
       configuration: Release
+    - id: 11
+      compiler: msvc-17-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+    - id: 12
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
 
 install:
   # Derive some extra information
