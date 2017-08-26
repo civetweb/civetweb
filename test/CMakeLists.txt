@@ -27,6 +27,7 @@ ExternalProject_Add(check-unit-test-framework
 ## Use a civetweb specific patched version
 URL "https://github.com/civetweb/check/archive/master.zip"
 DOWNLOAD_NAME "master.zip"
+# <Edit this file to flush AppVeyor build cache and force reloading check>
 
   PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
   BUILD_IN_SOURCE 1
