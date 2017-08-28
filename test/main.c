@@ -48,7 +48,14 @@ main(const int argc, char *argv[])
 	const size_t test_case_arg_size = strlen(test_case_arg);
 	const char *const test_dir_arg = "--test-dir=";
 	const size_t test_dir_arg_size = strlen(test_dir_arg);
-	for (int i = 1; i < argc; ++i) {
+
+	SRunner *const srunner;
+	int number_run = 0;
+	int number_failed = 0;
+
+	int i;
+
+	for (i = 1; i < argc; ++i) {
 		if (0 == strncmp(suite_arg, argv[i], suite_arg_size)
 		    && (strlen(argv[i]) > suite_arg_size)) {
 			suite = &argv[i][suite_arg_size];
@@ -75,7 +82,7 @@ main(const int argc, char *argv[])
 	}
 
 	/* Run up the tests */
-	SRunner *const srunner = srunner_create(make_public_func_suite());
+	srunner = srunner_create(make_public_func_suite());
 	srunner_add_suite(srunner, make_public_server_suite());
 	srunner_add_suite(srunner, make_private_suite());
 	srunner_add_suite(srunner, make_private_exe_suite());
@@ -88,8 +95,8 @@ main(const int argc, char *argv[])
 	/* CK_NORMAL offers not enough diagnosis during setup phase*/
 	srunner_run(srunner, suite, test_case, CK_VERBOSE);
 
-	const int number_run = srunner_ntests_run(srunner);
-	const int number_failed = srunner_ntests_failed(srunner);
+	number_run = srunner_ntests_run(srunner);
+	number_failed = srunner_ntests_failed(srunner);
 	srunner_free(srunner);
 	return (number_failed == 0) && (number_run != 0) ? EXIT_SUCCESS
 	                                                 : EXIT_FAILURE;
