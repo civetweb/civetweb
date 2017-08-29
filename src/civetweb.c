@@ -15200,6 +15200,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	                            "Transfer-Encoding")) != NULL
 	           && !mg_strcasecmp(cl, "chunked")) {
 		conn->is_chunked = 1;
+		conn->content_len = 0;
 	} else if (!mg_strcasecmp(conn->request_info.request_method, "POST")
 	           || !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
 		/* POST or PUT request without content length set */
