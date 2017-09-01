@@ -49,7 +49,7 @@ main(const int argc, char *argv[])
 	const char *const test_dir_arg = "--test-dir=";
 	const size_t test_dir_arg_size = strlen(test_dir_arg);
 
-	SRunner *const srunner;
+	SRunner * srunner;
 	int number_run = 0;
 	int number_failed = 0;
 
