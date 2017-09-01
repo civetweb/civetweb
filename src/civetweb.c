@@ -17109,19 +17109,13 @@ mg_get_system_info_impl(char *buffer, int buflen)
 
 	/* Build date */
 	{
-
-
-	error:
-		expansion of date
-		    or time macro
-		           is not reproducible[ -Werror, -Wdate - time ] mg_snprintf(
-		               NULL,
-		               NULL,
-		               block,
-		               sizeof(block),
-		               "\"build\" : \"%s\",%s",
-		               __DATE__,
-		               eol);
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            "\"build\" : \"%s\",%s",
+		            __DATE__,
+		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
 			strcat0(buffer, block);
