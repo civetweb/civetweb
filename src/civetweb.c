@@ -185,7 +185,13 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
  * an "expansion of date or time macro is not reproducible"
  * warning. That's exactly what was intended by using this macro.
  * Just disable this nonsense warning. */
-#pragma clang diagnostic ignored "-Wno-error=date-time"
+
+/* And disabling them does not work either:
+ * #pragma clang diagnostic ignored "-Wno-error=date-time"
+ * #pragma clang diagnostic ignored "-Wdate-time"
+ * So we just have to disable ALL warnings for some lines
+ * of code.
+ */
 #endif
 
 
@@ -17110,6 +17116,11 @@ mg_get_system_info_impl(char *buffer, int buflen)
 
 	/* Build date */
 	{
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+/* Disable bogus compiler warning -Wdate-time */
+#pragma GCC diagnostic ignored "-Wall"
+#endif
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
@@ -17117,6 +17128,11 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            "\"build\" : \"%s\",%s",
 		            __DATE__,
 		            eol);
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
 			strcat0(buffer, block);
