@@ -1105,8 +1105,10 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	pclient_data->closed++;
 
 	mark_point();
-#endif
+#endif /* __MACH__ */
 }
+
+#endif /* USE_WEBSOCKET */
 
 
 START_TEST(test_request_handlers)
