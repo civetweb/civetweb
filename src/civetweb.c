@@ -178,6 +178,13 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
  * in a release build configuration. Disable what is too much in
  * -Weverything. */
 #pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+
+/* Who on earth came to the conclusion, using __DATE__ should rise
+ * an "expansion of date or time macro is not reproducible"
+ * warning. That's exactly what was intended by using this macro.
+ * Just disable this nonsense warning. */
+#pragma clang diagnostic ignored "-Wdate-time"
+
 #endif
 
 
@@ -17102,13 +17109,19 @@ mg_get_system_info_impl(char *buffer, int buflen)
 
 	/* Build date */
 	{
-		mg_snprintf(NULL,
-		            NULL,
-		            block,
-		            sizeof(block),
-		            "\"build\" : \"%s\",%s",
-		            __DATE__,
-		            eol);
+
+
+	error:
+		expansion of date
+		    or time macro
+		           is not reproducible[ -Werror, -Wdate - time ] mg_snprintf(
+		               NULL,
+		               NULL,
+		               block,
+		               sizeof(block),
+		               "\"build\" : \"%s\",%s",
+		               __DATE__,
+		               eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
 			strcat0(buffer, block);
