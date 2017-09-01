@@ -17120,6 +17120,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 #pragma GCC diagnostic push
 /* Disable bogus compiler warning -Wdate-time */
 #pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Werror"
 #endif
 		mg_snprintf(NULL,
 		            NULL,
