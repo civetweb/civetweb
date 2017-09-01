@@ -5905,11 +5905,11 @@ mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 	/* If Content-Length is not set for a request with body data
 	 * (e.g., a PUT or POST request), we do not know in advance
 	 * how much data should be read. */
-	if ((conn->consumed_content == 0) && (conn->content_len == -1)) {
-		if (conn->is_chunked) {
-			conn->content_len = 0;
+	if (conn->consumed_content == 0) {
+		if (conn->is_chunked == 1) {
+			conn->content_len = len64;
 			conn->is_chunked = 2;
-		} else {
+		} else if (conn->content_len == -1) {
 			/* The body data is completed when the connection
 			 * is closed. */
 			conn->content_len = INT64_MAX;
@@ -5985,7 +5985,6 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 		size_t all_read = 0;
 
 		while (len > 0) {
-
 			if (conn->is_chunked == 3) {
 				/* No more data left to read */
 				return 0;
@@ -10122,7 +10121,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	setbuf(err, NULL);
 	fout.access.fp = out;
 
-	if ((conn->request_info.content_length > 0) || (conn->is_chunked)) {
+	if ((conn->request_info.content_length != 0) || (conn->is_chunked)) {
 		/* This is a POST/PUT request, or another request with body data. */
 		if (!forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
 			/* Error sending the body data */
@@ -14406,6 +14405,7 @@ reset_per_request_attributes(struct mg_connection *conn)
 
 	conn->path_info = NULL;
 	conn->status_code = -1;
+	conn->content_len = -1;
 	conn->is_chunked = 0;
 	conn->must_close = 0;
 	conn->request_len = 0;
@@ -15331,7 +15331,6 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	} else {
 		conn->content_len = -1; /* unknown content length */
 	}
-
 
 	conn->connection_type = 2; /* Valid response */
 	return 1;

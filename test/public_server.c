@@ -871,6 +871,7 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	return 1;
 }
 
+
 #ifdef USE_WEBSOCKET
 /****************************************************************************/
 /* WEBSOCKET SERVER                                                         */
