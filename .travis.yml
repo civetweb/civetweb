@@ -1,14 +1,13 @@
 language: c
 
-#sudo: false
-sudo: required
+#sudo: false      # dist=precise + sudo=false may be discontinued
+#sudo: required   # sudo is not required, keep the default
+
 dist: precise
 
 cache:
   directories:
   - $HOME/third-party
-
-
 
 osx_image: xcode8
 
@@ -22,7 +21,7 @@ addons:
 #      - clang-3.8
     sources:
       - kubuntu-backports
-      - ubuntu-toolchain-r-test
+#     - ubuntu-toolchain-r-test
 
 before_install:
   - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
