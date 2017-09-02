@@ -1010,9 +1010,6 @@ websock_server_data(struct mg_connection *conn,
 static void
 websock_server_close(const struct mg_connection *conn, void *udata)
 {
-	(void)conn;
-	(void)udata;
-
 #ifndef __MACH__
 	ck_assert_ptr_eq((void *)udata, (void *)7531);
 	WS_TEST_TRACE("Server: Close connection\n");
@@ -1022,6 +1019,9 @@ websock_server_close(const struct mg_connection *conn, void *udata)
 
 	mark_point();
 #endif
+
+	(void)conn;
+	(void)udata;
 }
 
 
@@ -1083,16 +1083,15 @@ static void
 websocket_client_close_handler(const struct mg_connection *conn,
                                void *user_data)
 {
-	(void)conn;
-	(void)user_data;
-
 #ifndef __MACH__
 	struct mg_context *ctx = mg_get_context(conn);
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-	ck_assert_ptr_eq(user_data, (void *)pclient_data);
+	(void)conn;
 	(void)user_data;
+
+	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 
 	ck_assert(pclient_data != NULL);
 
@@ -1100,6 +1099,9 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	pclient_data->closed++;
 
 	mark_point();
+#else
+	(void)conn;
+	(void)user_data;
 #endif /* __MACH__ */
 }
 
