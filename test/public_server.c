@@ -133,19 +133,13 @@ wait_not_null(void *volatile *data)
 #if defined(__MINGW32__) || defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunreachable-code"
-#endif
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code"
+#pragma GCC diagnostic ignored "-Wunreachable-code-return"
 #endif
 
 	ck_abort_msg("wait_not_null failed (%i sec)", i);
 
 	return 0;
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 #if defined(__MINGW32__) || defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
