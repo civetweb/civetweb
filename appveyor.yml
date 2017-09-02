@@ -5,9 +5,13 @@ build:
 # no automatic build in script mode
 
 
-platform:
-  - x86
-  - x64
+skip_commits:
+  # Builds just testing something on Travis CI don't need to be 
+  # done on AppVeyor
+  message: /\[Travis\]/
+  # Dont build, if only documentation was changed
+  files:
+  - '**/*.md'
 
 
 environment:
@@ -18,117 +22,31 @@ environment:
   c_standard: auto
   cxx_standard: auto
   matrix:
-    - id: 1
-      compiler: msvc-18-seh
+    # Use default values
+    - id: Default-x86
+      compiler: msvc-19-seh
       build_shared: NO
       no_files: NO
       enable_ipv6: NO
       enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      configuration: Release
-    - id: 2
-      compiler: msvc-18-seh
-      build_shared: YES
-      no_files: NO
-      enable_ipv6: NO
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      configuration: Release
-    - id: 3
-      compiler: msvc-18-seh
-      build_shared: YES
-      no_files: YES
-      enable_ipv6: NO
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      configuration: Release
-    - id: 4
-      compiler: gcc-5.1.0-posix
-      build_shared: NO
-      no_files: YES
-      enable_ipv6: NO
-      enable_ssl: NO
       enable_websockets: NO
-      no_cgi: YES
-      no_caching: YES
-      configuration: Release
-    - id: 5
-      compiler: gcc-5.1.0-posix
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
       no_cgi: NO
-      no_caching: YES
+      no_caching: NO
       configuration: Release
-    - id: 6
-      compiler: gcc-5.1.0-posix
+      platform: x86
+    - id: Default-x64
+      compiler: msvc-19-seh
       build_shared: NO
       no_files: NO
       enable_ipv6: NO
       enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: YES
-      configuration: Release
-    - id: 7
-      compiler: gcc-5.1.0-posix
-      build_shared: YES
-      no_files: NO
-      enable_ipv6: NO
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: YES
-      configuration: Release
-    - id: 8
-      compiler: gcc-5.1.0-posix
-      build_shared: YES
-      no_files: YES
-      enable_ipv6: NO
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: YES
-      configuration: Release
-    - id: 9
-      compiler: msvc-18-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      configuration: Debug
-    - id: 10
-      compiler: msvc-16-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
+      enable_websockets: NO
       no_cgi: NO
       no_caching: NO
       configuration: Release
-    - id: 11
-      compiler: msvc-17-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      configuration: Release
-    - id: 12
+      platform: x64
+    # Use default values
+    - id: Full-x86
       compiler: msvc-19-seh
       build_shared: NO
       no_files: NO
@@ -138,6 +56,161 @@ environment:
       no_cgi: NO
       no_caching: NO
       configuration: Release
+      platform: x86
+    - id: Full-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
+    # Minimum settings
+    - id: Minimal-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: YES
+      enable_ipv6: NO
+      enable_ssl: NO
+      enable_websockets: NO
+      no_cgi: YES
+      no_caching: YeS
+      configuration: Release
+      platform: x86
+    - id: Minimal-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: YES
+      enable_ipv6: NO
+      enable_ssl: NO
+      enable_websockets: NO
+      no_cgi: YES
+      no_caching: YeS
+      configuration: Release
+      platform: x64
+    # Test shared and debug build
+    - id: Shared-default-debug-x86
+      compiler: msvc-19-seh
+      build_shared: YES
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      configuration: Debug
+      platform: x86
+    - id: Shared-default-debug-x64
+      compiler: msvc-19-seh
+      build_shared: YES
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      configuration: Debug
+      platform: x64
+    # MinGW
+    - id: Full-GCC-x86
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    - id: Full-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
+    # Visual Studio 2010
+    - id: Full-VS2010-x86
+      compiler: msvc-16-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    # Visual Studio 2012
+    - id: Full-VS2012-x86
+      compiler: msvc-17-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    # Visual Studio 2013
+    - id: Full-VS2013-x86
+      compiler: msvc-18-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    - id: Full-VS2013-x64
+      compiler: msvc-18-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
+    # Visual Studio 2015 is default
+    # Visual Studio 2017 is not yet default
+    - id: Full-VS2017-x86
+      compiler: msvc-20-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    - id: Full-VS2017-x64
+      compiler: msvc-20-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
 
 install:
   # Derive some extra information
@@ -196,6 +269,7 @@ before_build:
   - if "%compiler_version%"=="17" (set "vs_version=11" & set "vs_year=2012")
   - if "%compiler_version%"=="18" (set "vs_version=12" & set "vs_year=2013")
   - if "%compiler_version%"=="19" (set "vs_version=14" & set "vs_year=2015")
+  - if "%compiler_version%"=="20" (set "vs_version=15" & set "vs_year=2017")
   - if "%compiler_name%"=="msvc" (set "generator=Visual Studio %vs_version% %vs_year%")
   - if "%compiler_name%"=="msvc" (
       if "%platform%"=="x64" (

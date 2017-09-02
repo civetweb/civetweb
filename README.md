@@ -52,8 +52,8 @@ Developers can contribute to CivetWeb via GitHub
 Trouble tickets should be filed on GitHub
 [https://github.com/civetweb/civetweb/issues](https://github.com/civetweb/civetweb/issues)
 
-Discussion/support group and announcements are at Google Groups
-[https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb)
+Announcements are at Google Groups
+[https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb). Some older support and discussion threads are there as well. However, recently support questions and discussions are usually [GitHub issues](https://github.com/civetweb/civetweb/issues).
 
 Source releases can be found on GitHub
 [https://github.com/civetweb/civetweb/releases](https://github.com/civetweb/civetweb/releases)

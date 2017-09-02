@@ -180,6 +180,20 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
 #endif
 
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* Who on earth came to the conclusion, using __DATE__ should rise
+ * an "expansion of date or time macro is not reproducible"
+ * warning. That's exactly what was intended by using this macro.
+ * Just disable this nonsense warning. */
+
+/* And disabling them does not work either:
+ * #pragma clang diagnostic ignored "-Wno-error=date-time"
+ * #pragma clang diagnostic ignored "-Wdate-time"
+ * So we just have to disable ALL warnings for some lines
+ * of code.
+ */
+#endif
+
 
 #ifdef __MACH__ /* Apple OSX section */
 
@@ -2368,8 +2382,12 @@ struct mg_connection {
 	int64_t num_bytes_sent;   /* Total bytes sent to client */
 	int64_t content_len;      /* Content-Length header value */
 	int64_t consumed_content; /* How many bytes of content have been read */
-	int is_chunked;           /* Transfer-Encoding is chunked: 0=no, 1=yes:
-	                           * data available, 2: all data read */
+	int is_chunked;           /* Transfer-Encoding is chunked:
+	                           * 0 = not chunked,
+	                           * 1 = chunked, do data read yet,
+	                           * 2 = chunked, some data read,
+	                           * 3 = chunked, all data read
+	                           */
 	size_t chunk_remainder;   /* Unread data from the last chunk */
 	char *buf;                /* Buffer for received data */
 	char *path_info;          /* PATH_INFO part of the URL */
@@ -5858,9 +5876,9 @@ discard_unread_request_data(struct mg_connection *conn)
 	to_read = sizeof(buf);
 
 	if (conn->is_chunked) {
-		/* Chunked encoding: 1=chunk not read completely, 2=chunk read
+		/* Chunked encoding: 3=chunk read completely
 		 * completely */
-		while (conn->is_chunked == 1) {
+		while (conn->is_chunked != 3) {
 			nread = mg_read(conn, buf, to_read);
 			if (nread <= 0) {
 				break;
@@ -5898,11 +5916,19 @@ mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 		return 0;
 	}
 
-	/* If Content-Length is not set for a PUT or POST request, read until
-	 * socket is closed */
-	if ((conn->consumed_content) == 0 && (conn->content_len == -1)) {
-		conn->content_len = INT64_MAX;
-		conn->must_close = 1;
+	/* If Content-Length is not set for a request with body data
+	 * (e.g., a PUT or POST request), we do not know in advance
+	 * how much data should be read. */
+	if (conn->consumed_content == 0) {
+		if (conn->is_chunked == 1) {
+			conn->content_len = len64;
+			conn->is_chunked = 2;
+		} else if (conn->content_len == -1) {
+			/* The body data is completed when the connection
+			 * is closed. */
+			conn->content_len = INT64_MAX;
+			conn->must_close = 1;
+		}
 	}
 
 	nread = 0;
@@ -5951,7 +5977,6 @@ mg_getc(struct mg_connection *conn)
 	if (conn == NULL) {
 		return 0;
 	}
-	conn->content_len++;
 	if (mg_read_inner(conn, &c, 1) <= 0) {
 		return (char)0;
 	}
@@ -5974,8 +5999,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 		size_t all_read = 0;
 
 		while (len > 0) {
-
-			if (conn->is_chunked == 2) {
+			if (conn->is_chunked == 3) {
 				/* No more data left to read */
 				return 0;
 			}
@@ -6003,8 +6027,10 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 				if (conn->chunk_remainder == 0) {
 					/* Add data bytes in the current chunk have been read,
 					 * so we are expecting \r\n now. */
-					char x1 = mg_getc(conn);
-					char x2 = mg_getc(conn);
+					char x1, x2;
+					conn->content_len += 2;
+					x1 = mg_getc(conn);
+					x2 = mg_getc(conn);
 					if ((x1 != '\r') || (x2 != '\n')) {
 						/* Protocol violation */
 						return -1;
@@ -6019,6 +6045,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 				unsigned long chunkSize = 0;
 
 				for (i = 0; i < ((int)sizeof(lenbuf) - 1); i++) {
+					conn->content_len++;
 					lenbuf[i] = mg_getc(conn);
 					if ((i > 0) && (lenbuf[i] == '\r')
 					    && (lenbuf[i - 1] != '\r')) {
@@ -6030,7 +6057,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 						chunkSize = strtoul(lenbuf, &end, 16);
 						if (chunkSize == 0) {
 							/* regular end of content */
-							conn->is_chunked = 2;
+							conn->is_chunked = 3;
 						}
 						break;
 					}
@@ -9176,47 +9203,96 @@ parse_http_headers(char **buf, struct mg_header hdr[MG_MAX_HEADERS])
 }
 
 
-static int
-is_valid_http_method(const char *method)
+struct mg_http_method_info {
+	const char *name;
+	int request_has_body;
+	int response_has_body;
+	int is_safe;
+	int is_idempotent;
+	int is_cacheable;
+};
+
+
+/* https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods */
+static struct mg_http_method_info http_methods[] = {
+    /* HTTP (RFC 2616) */
+    {"GET", 0, 1, 1, 1, 1},
+    {"POST", 1, 1, 0, 0, 0},
+    {"PUT", 1, 0, 0, 1, 0},
+    {"DELETE", 0, 0, 0, 1, 0},
+    {"HEAD", 0, 0, 1, 1, 1},
+    {"OPTIONS", 0, 0, 1, 1, 0},
+    {"CONNECT", 1, 1, 0, 0, 0},
+    /* TRACE method (RFC 2616) is not supported for security reasons */
+
+    /* PATCH method (RFC 5789) */
+    {"PATCH", 1, 0, 0, 0, 0},
+    /* PATCH method only allowed for CGI/Lua/LSP and callbacks. */
+
+    /* WEBDAV (RFC 2518) */
+    {"PROPFIND", 0, 1, 1, 1, 0},
+    /* http://www.webdav.org/specs/rfc4918.html, 9.1:
+     * Some PROPFIND results MAY be cached, with care,
+     * as there is no cache validation mechanism for
+     * most properties. This method is both safe and
+     * idempotent (see Section 9.1 of [RFC2616]). */
+    {"MKCOL", 0, 0, 0, 1, 0},
+    /* http://www.webdav.org/specs/rfc4918.html, 9.1:
+     * When MKCOL is invoked without a request body,
+     * the newly created collection SHOULD have no
+     * members. A MKCOL request message may contain
+     * a message body. The precise behavior of a MKCOL
+     * request when the body is present is undefined,
+     * ... ==> We do not support MKCOL with body data.
+     * This method is idempotent, but not safe (see
+     * Section 9.1 of [RFC2616]). Responses to this
+     * method MUST NOT be cached. */
+
+    /* Unsupported WEBDAV Methods: */
+    /* PROPPATCH, COPY, MOVE, LOCK, UNLOCK (RFC 2518) */
+    /* + 11 methods from RFC 3253 */
+    /* ORDERPATCH (RFC 3648) */
+    /* ACL (RFC 3744) */
+    /* SEARCH (RFC 5323) */
+    /* + MicroSoft extensions
+     * https://msdn.microsoft.com/en-us/library/aa142917.aspx */
+
+    /* REPORT method (RFC 3253) */
+    {"REPORT", 1, 1, 1, 1, 1},
+    /* REPORT method only allowed for CGI/Lua/LSP and callbacks. */
+    /* It was defined for WEBDAV in RFC 3253, Sec. 3.6
+     * (https://tools.ietf.org/html/rfc3253#section-3.6), but seems
+     * to be useful for REST in case a "GET request with body" is
+     * required. */
+
+    {NULL, 0, 0, 0, 0, 0}
+    /* end of list */
+};
+
+
+static const struct mg_http_method_info *
+get_http_method_info(const char *method)
 {
 	/* Check if the method is known to the server. The list of all known
 	 * HTTP methods can be found here at
 	 * http://www.iana.org/assignments/http-methods/http-methods.xhtml
 	 */
+	const struct mg_http_method_info *m = http_methods;
 
-	return !strcmp(method, "GET")        /* HTTP (RFC 2616) */
-	       || !strcmp(method, "POST")    /* HTTP (RFC 2616) */
-	       || !strcmp(method, "HEAD")    /* HTTP (RFC 2616) */
-	       || !strcmp(method, "PUT")     /* HTTP (RFC 2616) */
-	       || !strcmp(method, "DELETE")  /* HTTP (RFC 2616) */
-	       || !strcmp(method, "OPTIONS") /* HTTP (RFC 2616) */
-	       /* TRACE method (RFC 2616) is not supported for security reasons
-	          */
-	       || !strcmp(method, "CONNECT") /* HTTP (RFC 2616) */
+	while (m->name) {
+		if (!strcmp(m->name, method)) {
+			return m;
+		}
+		m++;
+	}
+	return NULL;
+}
 
-	       || !strcmp(method, "PROPFIND") /* WEBDAV (RFC 2518) */
-	       || !strcmp(method, "MKCOL")    /* WEBDAV (RFC 2518) */
 
-	       /* Unsupported WEBDAV Methods: */
-	       /* PROPPATCH, COPY, MOVE, LOCK, UNLOCK (RFC 2518) */
-	       /* + 11 methods from RFC 3253 */
-	       /* ORDERPATCH (RFC 3648) */
-	       /* ACL (RFC 3744) */
-	       /* SEARCH (RFC 5323) */
-	       /* + MicroSoft extensions
-	        * https://msdn.microsoft.com/en-us/library/aa142917.aspx */
-
-	       /* PATCH method only allowed for CGI/Lua/LSP and callbacks. */
-	       || !strcmp(method, "PATCH") /* PATCH method (RFC 5789) */
-
-	       /* REPORT method only allowed for CGI/Lua/LSP and callbacks. */
-	       /* It was defined for WEBDAV in RFC 3253, Sec. 3.6
-	        * (https://tools.ietf.org/html/rfc3253#section-3.6), but seems
-	        * to be useful for REST in case a "GET request with body" is
-	        * required. */
-	       || !strcmp(method, "REPORT") /* REPORT method (RFC 3253) */
-
-	    ;
+static int
+is_valid_http_method(const char *method)
+{
+	return (get_http_method_info(method) != NULL);
 }
 
 
@@ -9549,7 +9625,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 		return 0;
 	}
 
-	if ((conn->content_len == -1) && !conn->is_chunked) {
+	if ((conn->content_len == -1) && (!conn->is_chunked)) {
 		/* Content length is not specified by the client. */
 		mg_send_http_error(conn,
 		                   411,
@@ -10059,7 +10135,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	setbuf(err, NULL);
 	fout.access.fp = out;
 
-	if ((conn->request_info.content_length > 0) || conn->is_chunked) {
+	if ((conn->request_info.content_length != 0) || (conn->is_chunked)) {
 		/* This is a POST/PUT request, or another request with body data. */
 		if (!forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
 			/* Error sending the body data */
@@ -14343,6 +14419,7 @@ reset_per_request_attributes(struct mg_connection *conn)
 
 	conn->path_info = NULL;
 	conn->status_code = -1;
+	conn->content_len = -1;
 	conn->is_chunked = 0;
 	conn->must_close = 0;
 	conn->request_len = 0;
@@ -15200,17 +15277,14 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	                            "Transfer-Encoding")) != NULL
 	           && !mg_strcasecmp(cl, "chunked")) {
 		conn->is_chunked = 1;
-		conn->content_len = 0;
-	} else if (!mg_strcasecmp(conn->request_info.request_method, "POST")
-	           || !mg_strcasecmp(conn->request_info.request_method, "PUT")) {
+		conn->content_len = -1; /* unknown content length */
+	} else if (get_http_method_info(conn->request_info.request_method)
+	               ->request_has_body) {
 		/* POST or PUT request without content length set */
-		conn->content_len = -1;
-	} else if (!mg_strncasecmp(conn->request_info.request_method, "HTTP/", 5)) {
-		/* Response without content length set */
-		conn->content_len = -1;
+		conn->content_len = -1; /* unknown content length */
 	} else {
 		/* Other request */
-		conn->content_len = 0;
+		conn->content_len = 0; /* No content */
 	}
 
 	conn->connection_type = 1; /* Valid request */
@@ -15267,10 +15341,10 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	                            "Transfer-Encoding")) != NULL
 	           && !mg_strcasecmp(cl, "chunked")) {
 		conn->is_chunked = 1;
+		conn->content_len = -1; /* unknown content length */
 	} else {
-		conn->content_len = -1;
+		conn->content_len = -1; /* unknown content length */
 	}
-
 
 	conn->connection_type = 2; /* Valid response */
 	return 1;
@@ -17042,6 +17116,12 @@ mg_get_system_info_impl(char *buffer, int buflen)
 
 	/* Build date */
 	{
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+/* Disable bogus compiler warning -Wdate-time */
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Werror"
+#endif
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
@@ -17049,6 +17129,11 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            "\"build\" : \"%s\",%s",
 		            __DATE__,
 		            eol);
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
 			strcat0(buffer, block);
