@@ -115,17 +115,6 @@ environment:
       configuration: Debug
       platform: x64
     # MinGW
-    - id: Full-GCC-x86
-      compiler: gcc-5.1.0-posix
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      configuration: Release
-      platform: x86
     - id: Full-GCC-x64
       compiler: gcc-5.1.0-posix
       build_shared: NO
