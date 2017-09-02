@@ -48,7 +48,7 @@ munmap(void *addr, int64_t length)
 static const char *LUASOCKET = "luasocket";
 static const char lua_regkey_ctx = 1;
 static const char lua_regkey_connlist = 2;
-static const char lua_regkey_lsp_include_depth = 3;
+static const char lua_regkey_lsp_include_history = 3;
 static const char *LUABACKGROUNDPARAMS = "mg";
 
 #ifndef LSP_INCLUDE_MAX_DEPTH
@@ -389,11 +389,11 @@ lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 
 
 static int
-lsp(struct mg_connection *conn,
-    const char *path,
-    const char *p,
-    int64_t len,
-    lua_State *L)
+run_lsp(struct mg_connection *conn,
+        const char *path,
+        const char *p,
+        int64_t len,
+        lua_State *L)
 {
 	int i, j, pos = 0, lines = 1, lualines = 0, is_var, lua_ok;
 	char chunkname[MG_BUF_LEN];
@@ -541,6 +541,13 @@ lsp_keep_alive(lua_State *L)
 }
 
 
+/* Stack of includes */
+struct lsp_include_history {
+	int depth;
+	const char *script[LSP_INCLUDE_MAX_DEPTH + 1];
+};
+
+
 /* mg.include: Include another .lp file */
 static int
 lsp_include(lua_State *L)
@@ -549,34 +556,91 @@ lsp_include(lua_State *L)
 	    (struct mg_connection *)lua_touserdata(L, lua_upvalueindex(1));
 	int num_args = lua_gettop(L);
 	struct mg_file file = STRUCT_FILE_INITIALIZER;
-	const char *filename = (num_args == 1) ? lua_tostring(L, 1) : NULL;
+	const char *file_name = (num_args >= 1) ? lua_tostring(L, 1) : NULL;
+	const char *path_type = (num_args >= 2) ? lua_tostring(L, 2) : NULL;
+	struct lsp_include_history *include_history;
 
-	if (filename) {
-		int depth;
-		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
+	if ((file_name) && (num_args <= 2)) {
+
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_history);
 		lua_gettable(L, LUA_REGISTRYINDEX);
-		depth = (int)(lua_tointeger(L, -1) + 0.5);
+		include_history = (struct lsp_include_history *)lua_touserdata(L, -1);
 
-		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
-		lua_pushinteger(L, depth + 1);
-		lua_settable(L, LUA_REGISTRYINDEX);
-
-		if (depth >= ((int)(LSP_INCLUDE_MAX_DEPTH))) {
+		if (include_history->depth >= ((int)(LSP_INCLUDE_MAX_DEPTH))) {
 			mg_cry(conn,
 			       "lsp max include depth of %i reached while including %s",
 			       (int)(LSP_INCLUDE_MAX_DEPTH),
-			       filename);
-		} else if (handle_lsp_request(conn, filename, &file, L)) {
-			/* handle_lsp_request returned an error code, meaning an error
-			* occured in the included page and mg.onerror returned non-zero.
-			* Stop processing.
-			*/
-			lsp_abort(L);
-		}
+			       file_name);
+		} else {
+			char file_name_path[512];
+			char *p;
+			size_t len;
+			int truncated = 0;
 
-		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
-		lua_pushinteger(L, depth);
-		lua_settable(L, LUA_REGISTRYINDEX);
+			file_name_path[511] = 0;
+
+			if (path_type && (*path_type == 'v')) {
+				/* "virtual" = relative to document root. */
+				(void)mg_snprintf(conn,
+				                  &truncated,
+				                  file_name_path,
+				                  sizeof(file_name_path),
+				                  "%s/%s",
+				                  conn->ctx->config[DOCUMENT_ROOT],
+				                  file_name);
+
+			} else if ((path_type && (*path_type == 'a'))
+			           || (path_type == NULL)) {
+				/* "absolute" = file name is relative to the
+				 * webserver working directory
+				 * or it is absolute system path. */
+				/* path_type==NULL is the legacy use case with 1 argument */
+				(void)mg_snprintf(conn,
+				                  &truncated,
+				                  file_name_path,
+				                  sizeof(file_name_path),
+				                  "%s",
+				                  file_name);
+
+			} else if (path_type && (*path_type == 'r' || *path_type == 'f')) {
+				/* "relative" = file name is relative to the
+				 * currect document */
+				(void)mg_snprintf(
+				    conn,
+				    &truncated,
+				    file_name_path,
+				    sizeof(file_name_path),
+				    "%s",
+				    include_history->script[include_history->depth]);
+
+				if (!truncated) {
+					if ((p = strrchr(file_name_path, '/')) != NULL) {
+						p[1] = '\0';
+					}
+					len = strlen(file_name_path);
+					(void)mg_snprintf(conn,
+					                  &truncated,
+					                  file_name_path + len,
+					                  sizeof(file_name_path) - len,
+					                  "%s",
+					                  file_name);
+				}
+
+			} else {
+				return luaL_error(
+				    L,
+				    "invalid path_type in include(file_name, path_type) call");
+			}
+
+			if (handle_lsp_request(conn, file_name_path, &file, L)) {
+				/* handle_lsp_request returned an error code, meaning an error
+				* occured in the included page and mg.onerror returned non-zero.
+				* Stop processing.
+				*/
+
+				lsp_abort(L);
+			}
+		}
 
 	} else {
 		/* Syntax error */
@@ -1678,9 +1742,12 @@ prepare_lua_environment(struct mg_context *ctx,
 	/* Lua server pages store the depth of mg.include, in order
 	 * to detect recursions and prevent stack overflows. */
 	if (lua_env_type == LUA_ENV_TYPE_LUA_SERVER_PAGE) {
-		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_depth);
-		lua_pushinteger(L, 0);
+		struct lsp_include_history *h;
+		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_history);
+		h = (struct lsp_include_history *)
+		    lua_newuserdata(L, sizeof(struct lsp_include_history));
 		lua_settable(L, LUA_REGISTRYINDEX);
+		memset(h, 0, sizeof(struct lsp_include_history));
 	}
 
 	/* Register mg module */
@@ -1878,6 +1945,7 @@ handle_lsp_request(struct mg_connection *conn,
 {
 	void *p = NULL;
 	lua_State *L = NULL;
+	struct lsp_include_history *include_history;
 	int error = 1;
 
 	/* Assume the script does not support keep_alive. The script may change this
@@ -1894,7 +1962,7 @@ handle_lsp_request(struct mg_connection *conn,
 			                   "Error: Cannot open script file %s",
 			                   path);
 		} else {
-			luaL_error(ls, "Cannot  [%s] not found", path);
+			luaL_error(ls, "Cannot include [%s]: not found", path);
 		}
 
 		goto cleanup_handle_lsp_request;
@@ -1945,15 +2013,24 @@ handle_lsp_request(struct mg_connection *conn,
 		    conn->ctx, conn, NULL, L, path, LUA_ENV_TYPE_LUA_SERVER_PAGE);
 	}
 
+	/* Get LSP include history table */
+	lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_history);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	include_history = (struct lsp_include_history *)lua_touserdata(L, -1);
+
+	/* Store script name and increment depth */
+	include_history->depth++;
+	include_history->script[include_history->depth] = path;
+
 	/* Lua state is ready to use */
 	/* We're not sending HTTP headers here, Lua page must do it. */
-	error =
-	    lsp(conn,
-	        path,
-	        (filep->access.membuf == NULL) ? (const char *)p
-	                                       : (const char *)filep->access.membuf,
-	        filep->stat.size,
-	        L);
+	error = run_lsp(conn,
+	                path,
+	                (filep->access.membuf == NULL)
+	                    ? (const char *)p
+	                    : (const char *)filep->access.membuf,
+	                filep->stat.size,
+	                L);
 
 cleanup_handle_lsp_request:
 

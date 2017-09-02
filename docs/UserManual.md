@@ -682,7 +682,9 @@ mg (table):
 
     mg.read()                  -- reads a chunk from POST data, returns it as a string
     mg.write(str)              -- writes string to the client
-    mg.include(filename)       -- include another Lua Page file (Lua Pages only)
+    mg.include(filename, [pathtype]) -- include another Lua Page file (Lua Pages only)
+                               -- pathtype can be "abs", "rel"/"file" or "virt[ual]"
+                               -- like defined for SSI #include
     mg.redirect(uri)           -- internal redirect to a given URI
     mg.onerror(msg)            -- error handler, can be overridden
     mg.version                 -- a string that holds Civetweb version
