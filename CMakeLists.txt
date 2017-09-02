@@ -280,6 +280,7 @@ add_c_compiler_flag(-Wno-padded)
 add_c_compiler_flag(/Wd4820) # padding
 add_c_compiler_flag(-Wno-unused-macros)
 add_c_compiler_flag(-Wno-format-nonliteral)
+add_c_compiler_flag(-Wno-date-time)
 add_c_compiler_flag(-Wparentheses)
 if (MINGW)
   add_c_compiler_flag(-Wno-format)
