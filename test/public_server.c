@@ -1102,12 +1102,12 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	ck_assert(pclient_data != NULL);
 
 	WS_TEST_TRACE("Client %i: Close handler\n", pclient_data->clientId);
+	pclient_data->closed++;
 
 	mark_point();
 #else
 
 	(void)user_data;
-
 	pclient_data->closed++;
 
 #endif /* __MACH__ */
