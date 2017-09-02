@@ -16,8 +16,8 @@ addons:
       - cmake
       - openssl
       - libssl-dev
-      - gcc-4.6
-      - clang-3.4
+      - gcc-5.4
+      - clang-3.8
     sources:
       - kubuntu-backports
       - ubuntu-toolchain-r-test

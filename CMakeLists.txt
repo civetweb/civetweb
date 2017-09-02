@@ -105,10 +105,16 @@ message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}")
 
 # Allow builds to complete with warnings (do not set -Werror)
 if (LINUX)
-# CivetWeb Linux support is stable: Builds must be free from warnings.
-  option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
+# CivetWeb Linux support is stable:
+# Builds for GCC 4.6 and clang 3.4 are free from warnings.
+# However, GCC introduced a couple of new, partially idiotic warnings,
+# that can not be disabled using a #pragma directive.
+# It seems unreasonable to have all GCC versions warning free, but only
+# some selected ones.
+# For the moment, allow warnings.
+  option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
 else()
-# CivetWeb Linux support for other systems is in a setup phase.
+# CivetWeb support for OSX works, but is not free of warnings.
   option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
 endif()
 message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
