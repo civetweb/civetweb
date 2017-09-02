@@ -10,6 +10,15 @@ platform:
   - x64
 
 
+skip_commits:
+  # Builds just testing something on Travis CI don't need to be 
+  # done on AppVeyor
+  message: /\[Travis\]/
+  # Dont build, if only documentation was changed
+  files:
+  - '**/*.md'
+
+
 environment:
   enable_cxx: NO
   enable_ssl_dynamic_loading: YES
