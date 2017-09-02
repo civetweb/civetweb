@@ -275,19 +275,26 @@ if ("${CIVETWEB_C_STANDARD}" STREQUAL "auto")
 else()
   add_c_compiler_flag(-std=${CIVETWEB_C_STANDARD})
 endif()
+
+#Warnings: enable everything
 add_c_compiler_flag(-Wall)
 add_c_compiler_flag(-Wextra)
 add_c_compiler_flag(-Wshadow)
 add_c_compiler_flag(-Wconversion)
 add_c_compiler_flag(-Wmissing-prototypes)
 add_c_compiler_flag(-Weverything)
-add_c_compiler_flag(/W4)
-add_c_compiler_flag(-Wno-padded)
-add_c_compiler_flag(/Wd4820) # padding
-add_c_compiler_flag(-Wno-unused-macros)
-add_c_compiler_flag(-Wno-format-nonliteral)
-add_c_compiler_flag(-Wno-date-time)
 add_c_compiler_flag(-Wparentheses)
+add_c_compiler_flag(/W4) # VisualStudio highest warning level
+
+#Warnings: Disable some warnings
+add_c_compiler_flag(-Wno-padded) # padding in structures by compiler
+add_c_compiler_flag(-Wno-unused-macros) # so what?
+add_c_compiler_flag(-Wno-reserved-id-macros) # for system headers
+add_c_compiler_flag(-Wno-format-nonliteral) # printf(myFormatStringVar, ...)
+add_c_compiler_flag(-Wno-date-time) # using __DATE__ once
+add_c_compiler_flag(-Wno-cast-qual) # const cast
+add_c_compiler_flag(/Wd4820) # padding
+
 if (MINGW)
   add_c_compiler_flag(-Wno-format)
 endif()
