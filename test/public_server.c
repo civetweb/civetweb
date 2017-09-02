@@ -832,6 +832,7 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	const struct mg_request_info *ri;
 	struct mg_context *ctx;
 	void *ud, *cud;
+	void *dummy = malloc(1);
 
 	ctx = mg_get_context(conn);
 	ud = mg_get_user_data(ctx);
@@ -841,11 +842,19 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	ck_assert(ctx == g_ctx);
 	ck_assert(ud == &g_ctx);
 
-	mg_set_user_connection_data(conn, (void *)6543);
-	cud = mg_get_user_connection_data(conn);
-	ck_assert_ptr_eq((void *)cud, (void *)6543);
+	ck_assert(dummy != NULL);
 
-	ck_assert_ptr_eq((void *)cbdata, (void *)7);
+	mg_set_user_connection_data(conn, (void *)&dummy);
+	cud = mg_get_user_connection_data(conn);
+	ck_assert_ptr_eq((void *)cud, (void *)&dummy);
+
+	mg_set_user_connection_data(conn, (void *)NULL);
+	cud = mg_get_user_connection_data(conn);
+	ck_assert_ptr_eq((void *)cud, (void *)NULL);
+
+	free(dummy);
+
+	ck_assert_ptr_eq((void *)cbdata, (void *)(ptrdiff_t)7);
 	strcpy(chunk_data, "123456789A123456789B123456789C");
 
 	mg_printf(conn,
@@ -897,7 +906,7 @@ websock_server_connect(const struct mg_connection *conn, void *udata)
 {
 	(void)conn;
 
-	ck_assert_ptr_eq((void *)udata, (void *)7531);
+	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
 	WS_TEST_TRACE("Server: Websocket connected\n");
 	mark_point();
 
@@ -908,7 +917,7 @@ websock_server_connect(const struct mg_connection *conn, void *udata)
 static void
 websock_server_ready(struct mg_connection *conn, void *udata)
 {
-	ck_assert_ptr_eq((void *)udata, (void *)7531);
+	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
 	ck_assert_ptr_ne((void *)conn, (void *)NULL);
 	WS_TEST_TRACE("Server: Websocket ready\n");
 
@@ -939,7 +948,7 @@ websock_server_data(struct mg_connection *conn,
 {
 	(void)bits;
 
-	ck_assert_ptr_eq((void *)udata, (void *)7531);
+	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
 	WS_TEST_TRACE("Server: Got %u bytes from the client\n", (unsigned)data_len);
 
 	if (data_len == 3 && !memcmp(data, "bye", 3)) {
@@ -1011,7 +1020,7 @@ static void
 websock_server_close(const struct mg_connection *conn, void *udata)
 {
 #ifndef __MACH__
-	ck_assert_ptr_eq((void *)udata, (void *)7531);
+	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
 	WS_TEST_TRACE("Server: Close connection\n");
 
 	/* Can not send a websocket goodbye message here -
@@ -1083,25 +1092,24 @@ static void
 websocket_client_close_handler(const struct mg_connection *conn,
                                void *user_data)
 {
-#ifndef __MACH__
 	struct mg_context *ctx = mg_get_context(conn);
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-	(void)conn;
-	(void)user_data;
-
+#ifndef __MACH__
 	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 
 	ck_assert(pclient_data != NULL);
 
 	WS_TEST_TRACE("Client %i: Close handler\n", pclient_data->clientId);
-	pclient_data->closed++;
 
 	mark_point();
 #else
-	(void)conn;
+
 	(void)user_data;
+
+	pclient_data->closed++;
+
 #endif /* __MACH__ */
 }
 
@@ -1240,15 +1248,15 @@ START_TEST(test_request_handlers)
 	}
 	for (i = 500; i < 800; i++) {
 		sprintf(uri, "/U%u", i);
-		mg_set_request_handler(ctx, uri, NULL, (void *)1);
+		mg_set_request_handler(ctx, uri, NULL, (void *)(ptrdiff_t)1);
 	}
 	for (i = 600; i >= 0; i--) {
 		sprintf(uri, "/U%u", i);
-		mg_set_request_handler(ctx, uri, NULL, (void *)2);
+		mg_set_request_handler(ctx, uri, NULL, (void *)(ptrdiff_t)2);
 	}
 	for (i = 750; i <= 1000; i++) {
 		sprintf(uri, "/U%u", i);
-		mg_set_request_handler(ctx, uri, NULL, (void *)3);
+		mg_set_request_handler(ctx, uri, NULL, (void *)(ptrdiff_t)3);
 	}
 	for (i = 5; i < 9; i++) {
 		sprintf(uri, "/U%u", i);
@@ -1265,7 +1273,7 @@ START_TEST(test_request_handlers)
 	                         websock_server_ready,
 	                         websock_server_data,
 	                         websock_server_close,
-	                         (void *)7531);
+	                         (void *)(ptrdiff_t)7531);
 #endif
 
 	/* Try to load non existing file */
@@ -1882,11 +1890,14 @@ START_TEST(test_request_handlers)
 	ws_client1_data.data = NULL;
 	ws_client1_data.len = 0;
 
+	ck_assert(ws_client1_data.closed == 0); /* Not closed */
+
 	mg_close_connection(ws_client1_conn);
 
 	test_sleep(3); /* Won't get any message */
 
-	ck_assert(ws_client1_data.closed == 1);
+	ck_assert(ws_client1_data.closed == 1); /* Closed */
+
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client1_data.data == NULL);
 	ck_assert(ws_client1_data.len == 0);
@@ -2444,9 +2455,9 @@ START_TEST(test_handle_form)
 	opt = mg_get_option(ctx, "listening_ports");
 	ck_assert_str_eq(opt, "8884");
 
-	mg_set_request_handler(ctx, "/handle_form", FormGet, (void *)0);
-	mg_set_request_handler(ctx, "/handle_form_store", FormStore1, (void *)0);
-	mg_set_request_handler(ctx, "/handle_form_store2", FormStore2, (void *)0);
+	mg_set_request_handler(ctx, "/handle_form", FormGet, NULL);
+	mg_set_request_handler(ctx, "/handle_form_store", FormStore1, NULL);
+	mg_set_request_handler(ctx, "/handle_form_store2", FormStore2, NULL);
 
 	test_sleep(1);
 
