@@ -1,6 +1,8 @@
 language: c
 
-sudo: false
+#sudo: false
+sudo: required
+dist: precise
 
 cache:
   directories:
@@ -16,8 +18,8 @@ addons:
       - cmake
       - openssl
       - libssl-dev
-      - gcc-5
-      - clang-3.8
+#      - gcc-5
+#      - clang-3.8
     sources:
       - kubuntu-backports
       - ubuntu-toolchain-r-test
