@@ -130,6 +130,8 @@ Please read the [documentation](https://github.com/civetweb/civetweb/blob/master
 and have a look at the [examples](https://github.com/civetweb/civetweb/blob/master/examples/).
 More information may be found on the [mailing list](https://groups.google.com/d/forum/civetweb).
 
+Note: I do not take any liability or warranty for any linked contents.  Visit these pages and try the community support suggestions at your own risk.
+
 
 Contributions
 ---------------

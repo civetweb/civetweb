@@ -5,6 +5,8 @@ Release Notes v1.10 (work in progress)
 Changes
 -------
 
+- Add HTTPS server configuration example
+- Lua Pages: mg.include should support absolute, relative and virtual path types
 - Add API function for HTTP digest authentication
 - Improved interface documentation
 - Support parameters for Lua background scripts
