@@ -68,6 +68,29 @@ environment:
       no_caching: NO
       configuration: Release
       platform: x64
+   # Debug builds
+   - id: Full-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Debug
+      platform: x86
+    - id: Full-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Debug
+      platform: x64
     # Minimum settings
     - id: Minimal-x86
       compiler: msvc-19-seh
@@ -92,7 +115,7 @@ environment:
       configuration: Release
       platform: x64
     # Test shared and debug build
-    - id: Shared-default-debug-x86
+    - id: Shared-default-x86
       compiler: msvc-19-seh
       build_shared: YES
       no_files: NO
@@ -101,9 +124,9 @@ environment:
       enable_websockets: NO
       no_cgi: NO
       no_caching: NO
-      configuration: Debug
+      configuration: Release
       platform: x86
-    - id: Shared-default-debug-x64
+    - id: Shared-default-x64
       compiler: msvc-19-seh
       build_shared: YES
       no_files: NO
@@ -112,7 +135,7 @@ environment:
       enable_websockets: NO
       no_cgi: NO
       no_caching: NO
-      configuration: Debug
+      configuration: Release
       platform: x64
     # MinGW
     - id: Full-GCC-x64
@@ -340,12 +363,13 @@ after_test:
   - dir %output_path%
   - echo "Build directory:"
   - dir %build_path%
-  - echo "Install directory:"
-  - dir %install_path%
-  - dir %install_path%\bin
-  - dir %install_path%\include
-  - dir %install_path%\lib
-  - if "%build_type%"=="Release" (copy "%install_path%"\bin dist\)
+  - if "%build_type%"=="Release" (echo "Install directory:")
+  - if "%build_type%"=="Release" (dir %install_path%)
+  - if "%build_type%"=="Release" (dir %install_path%\bin)
+  - if "%build_type%"=="Release" (dir %install_path%\include)
+  - if "%build_type%"=="Release" (dir %install_path%\lib)
+  - if "%build_type%"=="Release" (copy "%install_path%"\include dist\)
+  - if "%build_type%"=="Release" (copy "%install_path%"\bin\*.exe dist\)
   - echo "Dist directory:"
   - dir dist\
 

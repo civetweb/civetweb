@@ -1,4 +1,4 @@
-Release Notes v1.10 (work in progress)
+Release Notes v1.10
 ===
 ### Objectives: *OpenSSL 1.1 support, add server statistics and diagnostic data*
 
@@ -40,7 +40,7 @@ Changes
 - Remove deprecated "uri" member of the request from the interface
 - Improve documentation
 - Make auth domain check optional (configuration)
-- Update unit test framework to check 0.11.0
+- Update unit test framework to check 0.11.0 (C89/C90 compilers still need a patched version)
 - Limit depth of mg.include for Lua server pages
 - Additional unit tests
 - OpenSSL 1.1 support
