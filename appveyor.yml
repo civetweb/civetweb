@@ -324,12 +324,26 @@ test_script:
   - cmd /c "%test%"
   - cd "%source_path%"
 
+  - set "output_path=%source_path%\output"
+  - set "build_path=%output_path%\build"
+  - set "install_path=%output_path%\install"
+  - set "third_party_dir=C:\third-party"
+
 after_test:
+  - echo "Current directory:"
   - cd
   - dir
   - md dist
   - if "%build_type%"=="Release" (cmake "-DCMAKE_INSTALL_PREFIX=%install_path%" -P "%build_path%/cmake_install.cmake")
-  - if "%build_type%"=="Release" (copy "%build_path%" dist\)
+  - dir dist\
+  - echo "Output directory:"
+  - dir %output_path%
+  - echo "Build directory:"
+  - dir %build_path%
+  - echo "Install directory:"
+  - dir %install_path%
+  - if "%build_type%"=="Release" (copy "%install_path%" dist\)
+  - echo "Dist directory:"
   - dir dist\
 
 matrix:
