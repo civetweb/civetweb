@@ -23,6 +23,10 @@ information, matching user and password encoded within the password file.
 If the authentication realm (also called authentication domain) is NULL, the parameter
 `authentication_domain` as specified in the server configuration (`mg_start()`) is used.
 
+A positive return value means, the user name, realm and a correct password hash have been
+found in the passwords file.
+A return of 0 means, reading the password file succeeded, but there was no matching user,
+realm and password.
 The function returns a negative number on errors.
 
 ### See Also

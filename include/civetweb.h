@@ -788,7 +788,24 @@ mg_send_digest_access_authentication_request(struct mg_connection *conn,
                                              const char *realm);
 
 
-/* TODO: Test and document */
+/* Check if the current request has a valid authentication token set.
+ * A file is used to provide a list of valid user names, realms and
+ * password hashes. The file can be created and modified using the
+ * mg_modify_passwords_file API function.
+ * Parameters:
+ *   conn: Current connection handle.
+ *   realm: Authentication realm. If NULL is supplied, the sever domain
+ *          set in the authentication_domain configuration is used.
+ *   filename: Path and name of a file storing multiple password hashes.
+ * Return:
+ *   > 0   Valid authentication
+ *   0     Invalid authentication
+ *   < 0   Error (all values < 0 should be considered as invalid
+ *         authentication, future error codes will have negative
+ *         numbers)
+ *   -1    Parameter error
+ *   -2    File not found
+ */
 CIVETWEB_API int
 mg_check_digest_access_authentication(struct mg_connection *conn,
                                       const char *realm,

@@ -86,9 +86,14 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 
 #ifdef USE_WEBSOCKET
 	mg_printf(conn,
-	          "<p>To test websocket handler <a href=\"/websocket\">click "
+	          "<p>To test the websocket handler <a href=\"/websocket\">click "
 	          "websocket</a></p>");
 #endif
+
+	mg_printf(conn,
+	          "<p>To test the authentication handler <a href=\"/auth\">click "
+	          "auth</a></p>");
+
 	mg_printf(conn, "<p>To exit <a href=\"%s\">click exit</a></p>", EXIT_URI);
 	mg_printf(conn, "</body></html>\n");
 	return 1;
@@ -519,6 +524,76 @@ PostResponser(struct mg_connection *conn, void *cbdata)
 
 
 int
+AuthStartHandler(struct mg_connection *conn, void *cbdata)
+{
+	static unsigned long long firstload = 0;
+	const char *passfile = "password_example_file.txt";
+	const char *realm = "password_example";
+	const char *user = "user";
+	char passwd[64];
+
+	if (firstload == 0) {
+
+		/* Set a random password (4 digit number - bad idea from a security
+		 * point of view, but this is an API demo, not a security tutorial),
+		 * and store it in some directory within the document root (extremely
+		 * bad idea, but this is still not a security tutorial).
+		 * The reason we create a new password every time the server starts
+		 * is just for demonstration - we don't want the browser to store the
+		 * password, so when we repeat the test we start with a new password.
+		 */
+		firstload = (unsigned long long)time(NULL);
+		sprintf(passwd, "%04u", (unsigned int)(firstload % 10000));
+		mg_modify_passwords_file(passfile, realm, user, passwd);
+
+		/* Just tell the user the new password generated for this test. */
+		mg_printf(conn,
+		          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+		          "close\r\n\r\n");
+
+		mg_printf(conn, "<!DOCTYPE html>\n");
+		mg_printf(conn, "<html>\n<head>\n");
+		mg_printf(conn, "<meta charset=\"UTF-8\">\n");
+		mg_printf(conn, "<title>Auth handlerexample</title>\n");
+		mg_printf(conn, "</head>\n");
+
+		mg_printf(conn, "<body>\n");
+		mg_printf(conn,
+		          "<p>The first time you visit this page, it's free!</p>\n");
+		mg_printf(conn,
+		          "<p>Next time, use username \"%s\" and password \"%s\"</p>\n",
+		          user,
+		          passwd);
+		mg_printf(conn, "</body>\n</html>\n");
+
+		return 1;
+	}
+
+	if (mg_check_digest_access_authentication(conn, realm, passfile) > 0) {
+		/* No valid authorization */
+		mg_send_digest_access_authentication_request(conn, realm);
+		return 1;
+	}
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+	          "close\r\n\r\n");
+
+	mg_printf(conn, "<!DOCTYPE html>\n");
+	mg_printf(conn, "<html>\n<head>\n");
+	mg_printf(conn, "<meta charset=\"UTF-8\">\n");
+	mg_printf(conn, "<title>Auth handlerexample</title>\n");
+	mg_printf(conn, "</head>\n");
+
+	mg_printf(conn, "<body>\n");
+	mg_printf(conn, "<p>This is the password protected contents</p>\n");
+	mg_printf(conn, "</body>\n</html>\n");
+
+	return 1;
+}
+
+
+int
 WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 {
 	mg_printf(conn,
@@ -939,6 +1014,10 @@ main(int argc, char *argv[])
 
 	/* Add HTTP site to open a websocket connection */
 	mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);
+
+	/* Add HTTP site with auth */
+	mg_set_request_handler(ctx, "/auth", AuthStartHandler, 0);
+
 
 #ifdef USE_WEBSOCKET
 	/* WS site for the websocket connection */

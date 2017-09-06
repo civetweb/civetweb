@@ -192,7 +192,7 @@ static NO_RETURN void
 die(const char *fmt, ...)
 {
 	va_list ap;
-    char msg[512] = "";
+	char msg[512] = "";
 
 	va_start(ap, fmt);
 	(void)vsnprintf(msg, sizeof(msg) - 1, fmt, ap);
