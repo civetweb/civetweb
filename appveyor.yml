@@ -68,8 +68,8 @@ environment:
       no_caching: NO
       configuration: Release
       platform: x64
-   # Debug builds
-   - id: Full-x86
+    # Debug builds
+    - id: Full-x86
       compiler: msvc-19-seh
       build_shared: NO
       no_files: NO
