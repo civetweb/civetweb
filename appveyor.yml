@@ -342,7 +342,10 @@ after_test:
   - dir %build_path%
   - echo "Install directory:"
   - dir %install_path%
-  - if "%build_type%"=="Release" (copy "%install_path%" dist\)
+  - dir %install_path%\bin
+  - dir %install_path%\include
+  - dir %install_path%\lib
+  - if "%build_type%"=="Release" (copy "%install_path%"\bin dist\)
   - echo "Dist directory:"
   - dir dist\
 
