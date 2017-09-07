@@ -77,6 +77,15 @@ else
   LCC = $(CC)
 endif
 
+ifdef WITH_ALL
+  WITH_WEBSOCKET = 1
+  WITH_IPV6 = 1
+  WITH_LUA = 1
+  WITH_DUKTAPE = 1
+  WITH_SERVER_STATS = 1
+  #WITH_CPP is not defined, ALL means only real features, not wrappers
+endif
+
 ifdef WITH_LUA_SHARED
   WITH_LUA = 1
 endif
