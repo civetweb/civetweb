@@ -1,9 +1,29 @@
-language: c
+##############################################################################
+# Travis version specific build environment specification
+##############################################################################
+
+# The "precise" build environment on Travis is in the process of being decommissioned
+# see https://blog.travis-ci.com/2017-08-31-trusty-as-default-status
+# The "precise=true"+"sudo=required" environment seems to lack IPv6 support
+#
+#dist: precise
+
+# The new dist is "trusty", but the new compiler introduce new warnings
+#
+dist: trusty
+env:
+  - ALLOW_WARNINGS=YES
+
 
 sudo: false      # dist=precise + sudo=false may be discontinued
 #sudo: required   # sudo is not required, keep the default
 
-dist: precise
+
+##############################################################################
+# Project specific settings
+##############################################################################
+
+language: c
 
 cache:
   directories:
@@ -78,6 +98,7 @@ before_script:
     -DCIVETWEB_DISABLE_CACHING=${NO_CACHING}
     -DCIVETWEB_C_STANDARD=${C_STANDARD}
     -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
+    -DCIVETWEB_ALLOW_WARNINGS=${ALLOW_WARNINGS}
     ${ADDITIONAL_CMAKE_ARGS}
     ..
   - ls -la
