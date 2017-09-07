@@ -1,6 +1,6 @@
 language: c
 
-#sudo: false      # dist=precise + sudo=false may be discontinued
+sudo: false      # dist=precise + sudo=false may be discontinued
 #sudo: required   # sudo is not required, keep the default
 
 dist: precise
@@ -42,9 +42,11 @@ install:
     fi
 
 before_script:
-  # Check some settings of the build server
+  # Check some settings of the build server (operating system, IPv6 availability, directory)
   - uname -a
+  - ifconfig
   - pwd
+  - ls -la
   - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
       apt-cache search gcc | grep "GNU C compiler";
       apt-cache search clang | grep compiler;
