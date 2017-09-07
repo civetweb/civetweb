@@ -104,19 +104,13 @@ mark_as_advanced(FORCE CIVETWEB_INSTALL_EXECUTABLE) # Advanced users can disable
 message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}") 
 
 # Allow builds to complete with warnings (do not set -Werror)
-if (LINUX)
 # CivetWeb Linux support is stable:
 # Builds for GCC 4.6 and clang 3.4 are free from warnings.
 # However, GCC introduced a couple of new, partially idiotic warnings,
 # that can not be disabled using a #pragma directive.
 # It seems unreasonable to have all GCC versions warning free, but only
 # some selected ones.
-# For the moment, allow warnings.
-  option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
-else()
-# CivetWeb support for OSX works, but is not free of warnings.
-  option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
-endif()
+option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
 message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
 
 # Link to the shared LUA library
