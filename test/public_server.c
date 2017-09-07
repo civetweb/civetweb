@@ -2060,6 +2060,10 @@ START_TEST(test_request_handlers)
 	}
 
 	ck_assert_int_eq(ws_client4_data.closed, 1);
+
+	/* Free data in ws_client4_conn */
+	mg_close_connection(ws_client4_conn);
+
 #endif
 	mark_point();
 }
@@ -3164,6 +3168,8 @@ START_TEST(test_http_auth)
 	                    HA2_md5_buf,
 	                    NULL);
 	ck_assert_ptr_eq(HA_md5_ret, HA_md5_buf);
+
+	mg_close_connection(client_conn);
 
 	/* Retry with authorization */
 	memset(client_err, 0, sizeof(client_err));

@@ -14773,9 +14773,12 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	                    &sa)) {
 		return NULL;
 	}
-	if ((conn = (struct mg_connection *)mg_calloc_ctx(
-	         1, sizeof(*conn) + max_req_size, &common_client_context))
-	    == NULL) {
+
+	conn = (struct mg_connection *)mg_calloc_ctx(1,
+	                                             sizeof(*conn) + max_req_size,
+	                                             &common_client_context);
+
+	if (conn == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
