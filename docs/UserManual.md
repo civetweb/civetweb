@@ -494,12 +494,6 @@ exactly this list as allowed headers.
 If set in any other way, the result is unspecified.
 
 
-### access\_control\_allow\_headers `*`
-Access-Control-Allow-Origin header field, used for cross-origin resource
-sharing (CORS).
-See the [Wikipedia page on CORS](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
-
-
 ### error\_pages
 This option may be used to specify a directory for user defined error pages.
 The error pages may be specified for an individual http status code (e.g.,
