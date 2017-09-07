@@ -17066,7 +17066,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            block,
 		            sizeof(block),
 		            "\"features\" : %lu,%s"
-		            "\"feature_list\" : \"Server:%s%s%s%s%s%s%s%s\",%s",
+		            "\"feature_list\" : \"Server:%s%s%s%s%s%s%s%s%s\",%s",
 		            (unsigned long)mg_check_feature(0xFFFFFFFFu),
 		            eol,
 		            mg_check_feature(1) ? " Files" : "",
@@ -17077,6 +17077,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            mg_check_feature(32) ? " Lua" : "",
 		            mg_check_feature(64) ? " JavaScript" : "",
 		            mg_check_feature(128) ? " Cache" : "",
+		            mg_check_feature(256) ? " Stats" : "",
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
