@@ -11,8 +11,6 @@
 # The new dist is "trusty", but the new compiler introduce new warnings
 #
 dist: trusty
-env:
-  - ALLOW_WARNINGS=YES
 
 
 sudo: false      # dist=precise + sudo=false may be discontinued
@@ -98,7 +96,7 @@ before_script:
     -DCIVETWEB_DISABLE_CACHING=${NO_CACHING}
     -DCIVETWEB_C_STANDARD=${C_STANDARD}
     -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
-    -DCIVETWEB_ALLOW_WARNINGS=${ALLOW_WARNINGS}
+    -DCIVETWEB_ALLOW_WARNINGS=YES
     ${ADDITIONAL_CMAKE_ARGS}
     ..
   - ls -la
