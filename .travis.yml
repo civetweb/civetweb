@@ -13,8 +13,8 @@
 dist: trusty
 
 
-sudo: false      # dist=precise + sudo=false may be discontinued
-#sudo: required   # sudo is not required, keep the default
+#sudo: false      # dist=precise + sudo=false may be discontinued
+sudo: required   # sudo is not required, keep the default
 
 
 ##############################################################################
