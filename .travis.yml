@@ -4,7 +4,11 @@
 
 # The "precise" build environment on Travis is in the process of being decommissioned
 # see https://blog.travis-ci.com/2017-08-31-trusty-as-default-status
-# The "precise=true"+"sudo=required" environment seems to lack IPv6 support
+# The "precise=true"+"sudo=required" environment seems to lack IPv6 support.
+# According to some tests, all "sudo=required" environments do not support IPv6, see 
+# https://github.com/travis-ci/travis-ci/issues/8361#issuecomment-327817604
+# The container environments for "sudo=false" support IPv6 localhost [::1] 
+# connections for server/client test. Thus, all tests with ENABLE_IPV6=YES
 #
 #dist: precise
 
@@ -13,8 +17,8 @@
 dist: trusty
 
 
-#sudo: false      # dist=precise + sudo=false may be discontinued
-sudo: required   # sudo is not required, keep the default
+sudo: false      # dist=precise + sudo=false may be discontinued
+#sudo: required   # sudo is not required, keep the default
 
 
 ##############################################################################
@@ -456,6 +460,58 @@ matrix:
       CXX_STANDARD=auto
       FEATURES=7
       BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
+    dist: precise
+    sudo: required
+    compiler: clang
+    env:
+      N=ClangLinuxDefault
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+
+  -
+    os: linux
+    compiler: gcc
+    dist: precise
+    sudo: required
+    env:
+      N=GCCLinuxDefault
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
       NO_CGI=NO
