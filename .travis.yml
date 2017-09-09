@@ -30,12 +30,8 @@ addons:
       - cmake
       - openssl
       - libssl-dev
-#      - gcc-5
-      - clang-3.8
     sources:
       - kubuntu-backports
-      - llvm-toolchain-precise-3.8
-
 
 
 before_install:
