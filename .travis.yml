@@ -156,7 +156,7 @@ matrix:
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
-      ALLOW_WARNINGS=NO
+      ALLOW_WARNINGS=YES
 
   - dist: trusty
     sudo: false
@@ -192,42 +192,7 @@ matrix:
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
       NO_CACHING=NO
-      ALLOW_WARNINGS=NO
-
-  - dist: trusty
-    sudo: false
-    os: linux
-    compiler: clang
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-          - llvm-toolchain-precise-3.8
-        packages:
-          - clang-3.8
-    env:
-      idx=2
-      N=Clang3.8-Linux-Default-Release
-      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_SERVER_STATS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-      ALLOW_WARNINGS=NO
+      ALLOW_WARNINGS=YES
 
   - dist: trusty
     sudo: false
@@ -242,6 +207,41 @@ matrix:
           - clang-3.8
     env:
       idx=3
+      N=Clang3.8-Linux-Default-Release
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+    env:
+      idx=4
       N=Clang3.8-Linux-Complete-NoLua-Release
       MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
       BUILD_TYPE=Release
@@ -262,7 +262,7 @@ matrix:
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
-      ALLOW_WARNINGS=NO
+      ALLOW_WARNINGS=YES
 
 
   - dist: trusty
@@ -276,7 +276,7 @@ matrix:
         packages:
           - g++-5
     env:
-      idx=4
+      idx=5
       N=GCC5-Linux-Complete-NoLua-Release
       MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
       BUILD_TYPE=Release
@@ -297,7 +297,7 @@ matrix:
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
-      ALLOW_WARNINGS=NO
+      ALLOW_WARNINGS=YES
 
   -
   - dist: trusty
@@ -312,7 +312,7 @@ matrix:
         packages:
           - clang-3.8
     env:
-      idx=5
+      idx=6
       N=Clang-Linux-Coverage
       BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
@@ -338,7 +338,7 @@ matrix:
     os: osx
     compiler: clang
     env:
-      idx=6
+      idx=7
       N=Clang-OSX-Complete-NoLua-Release
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
@@ -364,7 +364,7 @@ matrix:
     os: osx
     compiler: clang
     env:
-      idx=7
+      idx=8
       N=Clang-OSX-Complete-NoLua-Release-OpenSSL_1_1_NoDynLoad
       BUILD_TYPE=OSX_OPENSSL_1_1
       ENABLE_SSL_DYNAMIC_LOADING=NO
@@ -404,7 +404,7 @@ matrix:
         packages:
           - clang-5.0
     env:
-      idx=8
+      idx=9
       N=Clang50-Linux-Default-Shared
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
@@ -433,7 +433,7 @@ matrix:
     sudo: required
     compiler: clang
     env:
-      idx=9
+      idx=10
       N=Precise-Clang-Linux-Default
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
@@ -453,13 +453,13 @@ matrix:
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
-      ALLOW_WARNINGS=NO
+      ALLOW_WARNINGS=YES
 
   -
     os: osx
     compiler: clang
     env:
-      idx=10
+      idx=11
       N=OSX-Package
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
@@ -494,7 +494,7 @@ matrix:
         packages:
           - clang-3.8
     env:
-      idx=11
+      idx=12
       N=Clang-Linux-32bit-Complete-NoLua-Release
       ARCH=x86
       BUILD_TYPE=Release
@@ -515,7 +515,7 @@ matrix:
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
-      ALLOW_WARNINGS=NO
+      ALLOW_WARNINGS=YES
       MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
 
 
@@ -527,7 +527,7 @@ matrix:
     os: linux
     compiler: clang
     env:
-      idx=12
+      idx=13
       N=NoSslDynamicLoading
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=NO
@@ -553,7 +553,7 @@ matrix:
     os: linux
     compiler: gcc
     env:
-      idx=13
+      idx=14
       N=GCCLinuxDefault_Debug
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
@@ -578,7 +578,7 @@ matrix:
     os: linux
     compiler: gcc
     env:
-      idx=14
+      idx=15
       N=GCCLinuxDefault_RelWithDebInfo
       BUILD_TYPE=RelWithDebInfo
       ENABLE_SSL_DYNAMIC_LOADING=YES
@@ -603,7 +603,7 @@ matrix:
     os: linux
     compiler: gcc
     env:
-      idx=15
+      idx=16
       N=GCCLinuxDefault_MinSizeRel
       BUILD_TYPE=MinSizeRel
       ENABLE_SSL_DYNAMIC_LOADING=YES
@@ -628,7 +628,7 @@ matrix:
     os: linux
     compiler: gcc
     env:
-      idx=16
+      idx=17
       N=GCCLinuxDefault_None
       BUILD_TYPE=None
       ENABLE_SSL_DYNAMIC_LOADING=YES
