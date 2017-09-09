@@ -41,10 +41,11 @@ addons:
       - openssl
       - libssl-dev
 #      - gcc-5
-      - clang-3.8
+      - clang-3.6
     sources:
       - kubuntu-backports
-      - llvm-toolchain-precise-3.8
+      - llvm-toolchain-precise-3.6
+
 
 
 before_install:
