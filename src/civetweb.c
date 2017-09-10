@@ -1035,7 +1035,7 @@ static int64_t
 mg_atomic_add(volatile int64_t *addr, int64_t value)
 {
 	int64_t ret;
-#if defined(_WIN32) && !defined(__SYMBIAN32__) && !defined(NO_ATOMICS)
+#if defined(_WIN64) && !defined(__SYMBIAN32__) && !defined(NO_ATOMICS)
 	ret = InterlockedAdd64(addr, value);
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
