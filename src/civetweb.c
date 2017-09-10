@@ -10040,7 +10040,8 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	if ((p = strrchr(dir, '/')) != NULL) {
 		*p++ = '\0';
 	} else {
-		dir[0] = '.', dir[1] = '\0';
+        dir[0] = '.';
+        dir[1] = '\0';
 		p = (char *)prog;
 	}
 

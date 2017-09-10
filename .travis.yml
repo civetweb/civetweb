@@ -294,22 +294,12 @@ matrix:
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
       ALLOW_WARNINGS=YES
-
-  -
-  - dist: trusty
-    sudo: false
-    os: linux
-    compiler: clang
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-          - llvm-toolchain-precise-3.8
-        packages:
-          - clang-3.8
+  
+  - os: linux
+    compiler: gcc
     env:
       idx=6
-      N=Clang-Linux-Coverage
+      N=GCCAnyVersion-Linux-Coverage
       BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
       OPENSSL_1_1=NO
@@ -330,8 +320,7 @@ matrix:
       NO_CACHING=NO
       ALLOW_WARNINGS=YES
 
-  -
-    os: osx
+  - os: osx
     compiler: clang
     env:
       idx=7
