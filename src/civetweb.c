@@ -5120,12 +5120,18 @@ spawn_cleanup:
 
 
 static int
-set_blocking_mode(SOCKET sock, int blocking)
+set_blocking_mode(SOCKET sock)
 {
-	unsigned long non_blocking = !blocking;
+	unsigned long non_blocking = 0;
 	return ioctlsocket(sock, (long)FIONBIO, &non_blocking);
 }
 
+static int
+set_non_blocking_mode(SOCKET sock)
+{
+	unsigned long non_blocking = 1;
+	return ioctlsocket(sock, (long)FIONBIO, &non_blocking);
+}
 #else
 
 static int
@@ -5334,20 +5340,34 @@ spawn_process(struct mg_connection *conn,
 
 
 static int
-set_blocking_mode(SOCKET sock, int blocking)
+set_non_blocking_mode(SOCKET sock)
 {
-	int flags;
-
-	flags = fcntl(sock, F_GETFL, 0);
-	if (blocking) {
-		(void)fcntl(sock, F_SETFL, flags | O_NONBLOCK);
-	} else {
-		(void)fcntl(sock, F_SETFL, flags & (~(int)(O_NONBLOCK)));
+	int flags = fcntl(sock, F_GETFL, 0);
+	if (flags < 0) {
+		return -1;
 	}
 
+	if (fcntl(sock, F_SETFL, (flags | O_NONBLOCK)) < 0) {
+		return -1;
+	}
 	return 0;
 }
-#endif /* _WIN32 */
+
+static int
+set_blocking_mode(SOCKET sock)
+{
+	int flags = fcntl(sock, F_GETFL, 0);
+	if (flags < 0) {
+		return -1;
+	}
+
+	if (fcntl(sock, F_SETFL, flags & (~(int)(O_NONBLOCK))) < 0) {
+		return -1;
+	}
+	return 0;
+}
+#endif /* _WIN32 / else */
+
 /* End of initial operating system specific define block. */
 
 
@@ -8130,8 +8150,12 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	    && (connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin))
 	        == 0)) {
 		/* connected with IPv4 */
-		set_blocking_mode(*sock, 0);
-		return 1;
+		if (0 == set_non_blocking_mode(*sock)) {
+			/* Ok */
+			return 1;
+		}
+		/* failed */
+		/* TODO: specific error message */
 	}
 
 #ifdef USE_IPV6
@@ -8139,8 +8163,12 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	    && (connect(*sock, (struct sockaddr *)&sa->sin6, sizeof(sa->sin6))
 	        == 0)) {
 		/* connected with IPv6 */
-		set_blocking_mode(*sock, 0);
-		return 1;
+		if (0 == set_non_blocking_mode(*sock)) {
+			/* Ok */
+			return 1;
+		}
+		/* failed */
+		/* TODO: specific error message */
 	}
 #endif
 
@@ -10040,8 +10068,8 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	if ((p = strrchr(dir, '/')) != NULL) {
 		*p++ = '\0';
 	} else {
-        dir[0] = '.';
-        dir[1] = '\0';
+		dir[0] = '.';
+		dir[1] = '\0';
 		p = (char *)prog;
 	}
 
@@ -14531,7 +14559,7 @@ close_socket_gracefully(struct mg_connection *conn)
 	/* http://msdn.microsoft.com/en-us/library/ms739165(v=vs.85).aspx:
 	 * "Note that enabling a nonzero timeout on a nonblocking socket
 	 * is not recommended.", so set it to blocking now */
-	set_blocking_mode(conn->client.sock, 1);
+	set_blocking_mode(conn->client.sock);
 
 	/* Send FIN to the client */
 	shutdown(conn->client.sock, SHUTDOWN_WR);
@@ -14897,7 +14925,10 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	}
 #endif
 
-	set_blocking_mode(sock, 0);
+	if (0 != set_non_blocking_mode(sock)) {
+		/* TODO: handle error */
+		;
+	}
 
 	return conn;
 }
@@ -16240,7 +16271,10 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		 * set_sock_timeout(so.sock, timeout);
 		 * call is no longer required. */
 
-		set_blocking_mode(so.sock, 0);
+		/* The "non blocking" property should already be
+		 * inherited from the parent socket. Set it for
+		 * non-compliant socket implementations. */
+		set_non_blocking_mode(so.sock);
 
 		so.in_use = 0;
 		produce_socket(ctx, &so);
