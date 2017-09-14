@@ -4124,11 +4124,18 @@ mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 	conn->status_code = status;
 	if (conn->in_error_handler || (conn->ctx->callbacks.http_error == NULL)
 	    || conn->ctx->callbacks.http_error(conn, status)) {
-		if (!conn->in_error_handler) {
+
+		/* Check for recursion */
+		if (conn->in_error_handler) {
+			DEBUG_TRACE(
+			    "Recursion when handling error %u - fall back to default",
+			    status);
+		} else {
 			/* Send user defined error pages, if defined */
 			error_handler = conn->ctx->config[ERROR_PAGES];
 			error_page_file_ext = conn->ctx->config[INDEX_FILES];
 			page_handler_found = 0;
+
 			if (error_handler != NULL) {
 				for (scope = 1; (scope <= 3) && !page_handler_found; scope++) {
 					switch (scope) {
@@ -4163,10 +4170,8 @@ mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 					}
 
 					/* String truncation in buf may only occur if
-					 * error_handler
-					 * is too long. This string is from the config, not from
-					 * a
-					 * client. */
+					 * error_handler is too long. This string is
+					 * from the config, not from a client. */
 					(void)truncated;
 
 					len = (int)strlen(buf);
@@ -4179,10 +4184,14 @@ mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 						     i++)
 							buf[len + i - 1] = tstr[i];
 						buf[len + i - 1] = 0;
+
 						if (mg_stat(conn, buf, &error_page_file.stat)) {
+							DEBUG_TRACE("Check error page %s - found", buf);
 							page_handler_found = 1;
 							break;
 						}
+						DEBUG_TRACE("Check error page %s - not found", buf);
+
 						tstr = strchr(tstr + i, '.');
 					}
 				}
@@ -6888,10 +6897,15 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 			}
 			if (substitute_index_file(
 			        conn, tmp_str, tmp_str_len + PATH_MAX, filestat)) {
+
 				/* some intermediate directory has an index file */
 				if (extention_matches_script(conn, tmp_str)) {
-					/* this index file is a script */
 
+					DEBUG_TRACE("Substitute script %s serving path %s",
+					            tmp_str,
+					            filename);
+
+					/* this index file is a script */
 					char *tmp_str2 = mg_strdup(filename + sep_pos + 1);
 					mg_snprintf(conn,
 					            &truncated,
@@ -6912,7 +6926,13 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 					*is_script_resource = 1;
 					*is_found = 1;
 					break;
+
 				} else {
+
+					DEBUG_TRACE("Substitute file %s serving path %s",
+					            tmp_str,
+					            filename);
+
 					/* non-script files will not have sub-resources */
 					filename[sep_pos] = 0;
 					conn->path_info = 0;
