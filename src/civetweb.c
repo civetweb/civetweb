@@ -6903,12 +6903,14 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 				/* some intermediate directory has an index file */
 				if (extention_matches_script(conn, tmp_str)) {
 
+					char *tmp_str2;
+
 					DEBUG_TRACE("Substitute script %s serving path %s",
 					            tmp_str,
 					            filename);
 
 					/* this index file is a script */
-					char *tmp_str2 = mg_strdup(filename + sep_pos + 1);
+					tmp_str2 = mg_strdup(filename + sep_pos + 1);
 					mg_snprintf(conn,
 					            &truncated,
 					            filename,
