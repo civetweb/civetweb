@@ -3278,6 +3278,8 @@ mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 	va_end(ap);
 	buf[sizeof(buf) - 1] = 0;
 
+	DEBUG_TRACE("mg_cry: %s", buf);
+
 	if (!conn) {
 		puts(buf);
 		return;
@@ -10106,6 +10108,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		goto done;
 	}
 
+	DEBUG_TRACE("CGI: spawn %s %s\n", dir, p);
 	pid = spawn_process(conn, p, blk.buf, blk.var, fdin, fdout, fderr, dir);
 
 	if (pid == (pid_t)-1) {
@@ -10185,6 +10188,9 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	fout.access.fp = out;
 
 	if ((conn->request_info.content_length != 0) || (conn->is_chunked)) {
+		DEBUG_TRACE("CGI: send body data (%lli)\n",
+		            (signed long long)conn->request_info.content_length);
+
 		/* This is a POST/PUT request, or another request with body data. */
 		if (!forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
 			/* Error sending the body data */
@@ -10218,7 +10224,11 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		       (unsigned int)buflen);
 		goto done;
 	}
+
+	DEBUG_TRACE("CGI: %s", "wait for response");
 	headers_len = read_message(out, conn, buf, (int)buflen, &data_len);
+	DEBUG_TRACE("CGI: response: %li", (signed long)headers_len);
+
 	if (headers_len <= 0) {
 
 		/* Could not parse the CGI response. Check if some error message on
@@ -10257,6 +10267,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 
 		goto done;
 	}
+
 	pbuf = buf;
 	buf[headers_len - 1] = '\0';
 	ri.num_headers = parse_http_headers(&pbuf, ri.http_headers);
@@ -10282,6 +10293,9 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	if (!header_has_option(connection_state, "keep-alive")) {
 		conn->must_close = 1;
 	}
+
+	DEBUG_TRACE("CGI: response %u %s", conn->status_code, status_text);
+
 	(void)mg_printf(conn, "HTTP/1.1 %d %s\r\n", conn->status_code, status_text);
 
 	/* Send headers */
@@ -10298,6 +10312,8 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 
 	/* Read the rest of CGI output and send to the client */
 	send_file_data(conn, &fout, 0, INT64_MAX);
+
+	DEBUG_TRACE("CGI: %s", "all data sent");
 
 done:
 	mg_free(blk.var);
