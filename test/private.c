@@ -871,33 +871,65 @@ make_private_suite(void)
 	Suite *const suite = suite_create("Private");
 
 	TCase *const tcase_http_message = tcase_create("HTTP Message");
-	TCase *const tcase_url_parsing = tcase_create("URL Parsing");
-	TCase *const tcase_internal_parse = tcase_create("Internal Parsing");
+	TCase *const tcase_http_keep_alive = tcase_create("HTTP Keep Alive");
+	TCase *const tcase_url_parsing_1 = tcase_create("URL Parsing 1");
+	TCase *const tcase_url_parsing_2 = tcase_create("URL Parsing 2");
+	TCase *const tcase_url_parsing_3 = tcase_create("URL Parsing 3");
+	TCase *const tcase_internal_parse_1 = tcase_create("Internal Parsing 1");
+	TCase *const tcase_internal_parse_2 = tcase_create("Internal Parsing 2");
+	TCase *const tcase_internal_parse_3 = tcase_create("Internal Parsing 3");
+	TCase *const tcase_internal_parse_4 = tcase_create("Internal Parsing 4");
+	TCase *const tcase_internal_parse_5 = tcase_create("Internal Parsing 5");
+	TCase *const tcase_internal_parse_6 = tcase_create("Internal Parsing 6");
 	TCase *const tcase_encode_decode = tcase_create("Encode Decode");
 	TCase *const tcase_mask_data = tcase_create("Mask Data");
 	TCase *const tcase_parse_date_string = tcase_create("Date Parsing");
 	TCase *const tcase_sha1 = tcase_create("SHA1");
 
 	tcase_add_test(tcase_http_message, test_parse_http_message);
-	tcase_add_test(tcase_http_message, test_should_keep_alive);
 	tcase_set_timeout(tcase_http_message, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_http_message);
 
-	tcase_add_test(tcase_url_parsing, test_match_prefix);
-	tcase_add_test(tcase_url_parsing,
-	               test_remove_double_dots_and_double_slashes);
-	tcase_add_test(tcase_url_parsing, test_is_valid_uri);
-	tcase_set_timeout(tcase_url_parsing, civetweb_min_test_timeout);
-	suite_add_tcase(suite, tcase_url_parsing);
+	tcase_add_test(tcase_http_keep_alive, test_should_keep_alive);
+	tcase_set_timeout(tcase_http_keep_alive, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_http_keep_alive);
 
-	tcase_add_test(tcase_internal_parse, test_next_option);
-	tcase_add_test(tcase_internal_parse, test_skip_quoted);
-	tcase_add_test(tcase_internal_parse, test_mg_strcasestr);
-	tcase_add_test(tcase_internal_parse, test_alloc_vprintf);
-	tcase_add_test(tcase_internal_parse, test_mg_vsnprintf);
-	tcase_add_test(tcase_internal_parse, test_parse_port_string);
-	tcase_set_timeout(tcase_internal_parse, civetweb_min_test_timeout);
-	suite_add_tcase(suite, tcase_internal_parse);
+	tcase_add_test(tcase_url_parsing_1, test_match_prefix);
+	tcase_set_timeout(tcase_url_parsing_1, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_url_parsing_1);
+
+	tcase_add_test(tcase_url_parsing_2,
+	               test_remove_double_dots_and_double_slashes);
+	tcase_set_timeout(tcase_url_parsing_2, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_url_parsing_2);
+
+	tcase_add_test(tcase_url_parsing_3, test_is_valid_uri);
+	tcase_set_timeout(tcase_url_parsing_3, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_url_parsing_3);
+
+	tcase_add_test(tcase_internal_parse_1, test_next_option);
+	tcase_set_timeout(tcase_internal_parse_1, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_1);
+
+	tcase_add_test(tcase_internal_parse_2, test_skip_quoted);
+	tcase_set_timeout(tcase_internal_parse_2, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_2);
+
+	tcase_add_test(tcase_internal_parse_3, test_mg_strcasestr);
+	tcase_set_timeout(tcase_internal_parse_3, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_3);
+
+	tcase_add_test(tcase_internal_parse_4, test_alloc_vprintf);
+	tcase_set_timeout(tcase_internal_parse_4, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_4);
+
+	tcase_add_test(tcase_internal_parse_5, test_mg_vsnprintf);
+	tcase_set_timeout(tcase_internal_parse_5, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_5);
+
+	tcase_add_test(tcase_internal_parse_6, test_parse_port_string);
+	tcase_set_timeout(tcase_internal_parse_6, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_6);
 
 	tcase_add_test(tcase_encode_decode, test_encode_decode);
 	tcase_set_timeout(tcase_encode_decode, civetweb_min_test_timeout);

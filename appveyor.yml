@@ -69,7 +69,7 @@ environment:
       configuration: Release
       platform: x64
     # Debug builds
-    - id: Full-x86
+    - id: Full-x86-Debug
       compiler: msvc-19-seh
       build_shared: NO
       no_files: NO
@@ -80,7 +80,7 @@ environment:
       no_caching: NO
       configuration: Debug
       platform: x86
-    - id: Full-x64
+    - id: Full-x64-Debug
       compiler: msvc-19-seh
       build_shared: NO
       no_files: NO
