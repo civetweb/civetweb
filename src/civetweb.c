@@ -3662,44 +3662,44 @@ next_option(const char *list, struct vec *val, struct vec *eq_val)
 reparse:
 	if (val == NULL || list == NULL || *list == '\0') {
 		/* End of the list */
-		list = NULL;
+		return NULL;
+	}
+
+	/* Skip over leading LWS */
+	while (*list == ' ' || *list == '\t')
+		list++;
+
+	val->ptr = list;
+	if ((list = strchr(val->ptr, ',')) != NULL) {
+		/* Comma found. Store length and shift the list ptr */
+		val->len = ((size_t)(list - val->ptr));
+		list++;
 	} else {
-		/* Skip over leading LWS */
-		while (*list == ' ' || *list == '\t')
-			list++;
+		/* This value is the last one */
+		list = val->ptr + strlen(val->ptr);
+		val->len = ((size_t)(list - val->ptr));
+	}
 
-		val->ptr = list;
-		if ((list = strchr(val->ptr, ',')) != NULL) {
-			/* Comma found. Store length and shift the list ptr */
-			val->len = ((size_t)(list - val->ptr));
-			list++;
-		} else {
-			/* This value is the last one */
-			list = val->ptr + strlen(val->ptr);
-			val->len = ((size_t)(list - val->ptr));
-		}
+	/* Adjust length for trailing LWS */
+	end = (int)val->len - 1;
+	while (end >= 0 && ((val->ptr[end] == ' ') || (val->ptr[end] == '\t')))
+		end--;
+	val->len = (size_t)(end + 1);
 
-		/* Adjust length for trailing LWS */
-		end = (int)val->len - 1;
-		while (end >= 0 && ((val->ptr[end] == ' ') || (val->ptr[end] == '\t')))
-			end--;
-		val->len = (size_t)(end + 1);
+	if (val->len == 0) {
+		/* Ignore any empty entries. */
+		goto reparse;
+	}
 
-		if (val->len == 0) {
-			/* Ignore any empty entries. */
-			goto reparse;
-		}
-
-		if (eq_val != NULL) {
-			/* Value has form "x=y", adjust pointers and lengths
-			 * so that val points to "x", and eq_val points to "y". */
-			eq_val->len = 0;
-			eq_val->ptr = (const char *)memchr(val->ptr, '=', val->len);
-			if (eq_val->ptr != NULL) {
-				eq_val->ptr++; /* Skip over '=' character */
-				eq_val->len = ((size_t)(val->ptr - eq_val->ptr)) + val->len;
-				val->len = ((size_t)(eq_val->ptr - val->ptr)) - 1;
-			}
+	if (eq_val != NULL) {
+		/* Value has form "x=y", adjust pointers and lengths
+		 * so that val points to "x", and eq_val points to "y". */
+		eq_val->len = 0;
+		eq_val->ptr = (const char *)memchr(val->ptr, '=', val->len);
+		if (eq_val->ptr != NULL) {
+			eq_val->ptr++; /* Skip over '=' character */
+			eq_val->len = ((size_t)(val->ptr - eq_val->ptr)) + val->len;
+			val->len = ((size_t)(eq_val->ptr - val->ptr)) - 1;
 		}
 	}
 
