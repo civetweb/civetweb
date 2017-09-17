@@ -5418,14 +5418,14 @@ mg_poll(struct pollfd *pfd,
         int milliseconds,
         volatile int *stop_server)
 {
-	int ms_now, result;
-
 	/* Call poll, but only for a maximum time of a few seconds.
 	 * This will allow to stop the server after some seconds, instead
 	 * of having to wait for a long socket timeout. */
-	ms_now = SOCKET_TIMEOUT_QUANTUM; /* Sleep quantum in ms */
+	int ms_now = SOCKET_TIMEOUT_QUANTUM; /* Sleep quantum in ms */
 
 	do {
+		int result;
+
 		if (*stop_server) {
 			/* Shut down signal */
 			return -2;
@@ -5449,7 +5449,8 @@ mg_poll(struct pollfd *pfd,
 
 	} while (milliseconds != 0);
 
-	return result;
+	/* timeout: return 0 */
+	return 0;
 }
 
 
@@ -5701,6 +5702,10 @@ pull_inner(FILE *fp,
 		nread = (int)fread(buf, 1, (size_t)len, fp);
 #endif
 		err = (nread < 0) ? ERRNO : 0;
+		if ((nread == 0) && (len > 0)) {
+			/* Should get data, but got EOL */
+			return -2;
+		}
 
 #ifndef NO_SSL
 	} else if ((conn->ssl != NULL)
