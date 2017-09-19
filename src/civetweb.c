@@ -2124,6 +2124,7 @@ enum {
 #endif
 	ADDITIONAL_HEADER,
 	MAX_REQUEST_SIZE,
+	ALLOW_INDEX_SCRIPT_SUB_RES,
 
 	NUM_OPTIONS
 };
@@ -2147,8 +2148,8 @@ static struct mg_option config_options[] = {
     {"index_files",
      CONFIG_TYPE_STRING_LIST,
 #ifdef USE_LUA
-     "index.xhtml,index.html,index.htm,index.lp,index.lsp,index.lua,index."
-     "cgi,"
+     "index.xhtml,index.html,index.htm,"
+     "index.lp,index.lsp,index.lua,index.cgi,"
      "index.shtml,index.php"},
 #else
      "index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php"},
@@ -2223,6 +2224,7 @@ static struct mg_option config_options[] = {
 #endif
     {"additional_header", CONFIG_TYPE_STRING_MULTILINE, NULL},
     {"max_request_size", CONFIG_TYPE_NUMBER, "16384"},
+    {"allow_index_script_resource", CONFIG_TYPE_BOOLEAN, "no"},
 
     {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
 
@@ -3460,8 +3462,8 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 			int def_port = ri->is_ssl ? 443 : 80;
 			int auth_domain_check_enabled =
 			    conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK]
-			    && (!strcmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK],
-			                "yes"));
+			    && (!mg_strcasecmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK],
+			                       "yes"));
 			const char *server_domain =
 			    conn->ctx->config[AUTHENTICATION_DOMAIN];
 
@@ -6713,6 +6715,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 	char *tmp_str;
 	size_t tmp_str_len, sep_pos;
+	int allow_substitute_script_subresources;
 #endif
 #else
 	(void)filename_buf_len; /* unused if NO_FILES is defined */
@@ -6879,6 +6882,10 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	}
 	memcpy(tmp_str, filename, tmp_str_len + 1);
 
+	/* Check config, if index scripts may have sub-resources */
+	allow_substitute_script_subresources =
+	    !mg_strcasecmp(conn->ctx->config[ALLOW_INDEX_SCRIPT_SUB_RES], "yes");
+
 	sep_pos = tmp_str_len;
 	while (sep_pos > 0) {
 		sep_pos--;
@@ -6902,52 +6909,55 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 				*is_found = 1;
 				break;
 			}
-			if (substitute_index_file(
-			        conn, tmp_str, tmp_str_len + PATH_MAX, filestat)) {
 
-				/* some intermediate directory has an index file */
-				if (extention_matches_script(conn, tmp_str)) {
+			if (allow_substitute_script_subresources) {
+				if (substitute_index_file(
+				        conn, tmp_str, tmp_str_len + PATH_MAX, filestat)) {
 
-					char *tmp_str2;
+					/* some intermediate directory has an index file */
+					if (extention_matches_script(conn, tmp_str)) {
 
-					DEBUG_TRACE("Substitute script %s serving path %s",
-					            tmp_str,
-					            filename);
+						char *tmp_str2;
 
-					/* this index file is a script */
-					tmp_str2 = mg_strdup(filename + sep_pos + 1);
-					mg_snprintf(conn,
-					            &truncated,
-					            filename,
-					            filename_buf_len,
-					            "%s//%s",
-					            tmp_str,
-					            tmp_str2);
-					mg_free(tmp_str2);
+						DEBUG_TRACE("Substitute script %s serving path %s",
+						            tmp_str,
+						            filename);
 
-					if (truncated) {
-						mg_free(tmp_str);
-						goto interpret_cleanup;
+						/* this index file is a script */
+						tmp_str2 = mg_strdup(filename + sep_pos + 1);
+						mg_snprintf(conn,
+						            &truncated,
+						            filename,
+						            filename_buf_len,
+						            "%s//%s",
+						            tmp_str,
+						            tmp_str2);
+						mg_free(tmp_str2);
+
+						if (truncated) {
+							mg_free(tmp_str);
+							goto interpret_cleanup;
+						}
+						sep_pos = strlen(tmp_str);
+						filename[sep_pos] = 0;
+						conn->path_info = filename + sep_pos + 1;
+						*is_script_resource = 1;
+						*is_found = 1;
+						break;
+
+					} else {
+
+						DEBUG_TRACE("Substitute file %s serving path %s",
+						            tmp_str,
+						            filename);
+
+						/* non-script files will not have sub-resources */
+						filename[sep_pos] = 0;
+						conn->path_info = 0;
+						*is_script_resource = 0;
+						*is_found = 0;
+						break;
 					}
-					sep_pos = strlen(tmp_str);
-					filename[sep_pos] = 0;
-					conn->path_info = filename + sep_pos + 1;
-					*is_script_resource = 1;
-					*is_found = 1;
-					break;
-
-				} else {
-
-					DEBUG_TRACE("Substitute file %s serving path %s",
-					            tmp_str,
-					            filename);
-
-					/* non-script files will not have sub-resources */
-					filename[sep_pos] = 0;
-					conn->path_info = 0;
-					*is_script_resource = 0;
-					*is_found = 0;
-					break;
 				}
 			}
 
@@ -15126,7 +15136,7 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	char *portend;
 
 	auth_domain_check_enabled =
-	    !strcmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes");
+	    !mg_strcasecmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes");
 
 	if (!auth_domain_check_enabled) {
 		return 0;
@@ -15733,7 +15743,7 @@ init_connection(struct mg_connection *conn)
 {
 	/* Is keep alive allowed by the server */
 	int keep_alive_enabled =
-	    !strcmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
+	    !mg_strcasecmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes");
 
 	if (!keep_alive_enabled) {
 		conn->must_close = 1;

@@ -602,6 +602,29 @@ This option can be used to enable or disable the use of the Linux `sendfile` sys
 ### case\_sensitive `no`
 This option can be uset to enable case URLs for Windows servers. It is only available for Windows systems. Windows file systems are not case sensitive, but they still store the file name including case. If this option is set to `yes`, the comparison for URIs and Windows file names will be case sensitive.
 
+### allow\_index\_script\_resource `no`
+Index scripts (like `index.cgi` or `index.lua`) may have script handled resources.
+
+It this feature is activated, that /some/path/file.ext might be handled by:
+  1. /some/path/file.ext (with PATH\_INFO='/', if ext = cgi)
+  2. /some/path/index.lua with mg.request\_info.path\_info='/file.ext'
+  3. /some/path/index.cgi with PATH\_INFO='/file.ext'
+  4. /some/path/index.php with PATH\_INFO='/file.ext'
+  5. /some/index.lua with mg.request\_info.path\_info=='/path/file.ext'
+  6. /some/index.cgi with PATH\_INFO='/path/file.ext'
+  7. /some/index.php with PATH\_INFO='/path/file.ext'
+  8. /index.lua with mg.request\_info.path\_info=='/some/path/file.ext'
+  9. /index.cgi with PATH\_INFO='/some/path/file.ext'
+  10. /index.php with PATH\_INFO='/some/path/file.ext'
+
+Note: This example is valid, if the default configuration values for `index_files`, `cgi_pattern` and `lua_script_pattern` are used, and the server is built with CGI and Lua support enabled.
+
+If this feature is not activated, only the first file (/some/path/file.cgi) will be accepted.
+
+Note: This parameter affects only index scripts. A path like /here/script.cgi/handle/this.ext will call /here/script.cgi with PATH\_INFO='/handle/this.ext', no matter if this option is set to `yes` or `no`. 
+
+This feature can be used to completely hide the script extension from the URL.
+
 ### additional\_header
 Send additional HTTP response header line for every request.
 The full header line including key and value must be specified, excluding the carriage return line feed.

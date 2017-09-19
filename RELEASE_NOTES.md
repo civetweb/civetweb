@@ -37,6 +37,7 @@ Changes
 - Allow to compile civetweb.c wih a C++ compiler
 - Lua: Remove internal length limits of encode/decode functions
 - Allow sub-resources of index script files
+- Add config parameter allow\_index\_script\_resource the aforementioned feature
 - Remove deprecated "uri" member of the request from the interface
 - Improve documentation
 - Make auth domain check optional (configuration)
