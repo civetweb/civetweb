@@ -108,6 +108,7 @@ START_TEST(test_parse_http_message)
 	int lenreq12 = (int)strlen(req12);
 	int lenhdr12 = lenreq12 - 4; /* length without body */
 
+	mark_point();
 
 	/* An empty string is neither a complete request nor a complete
 	 * response, so it must return 0 */
@@ -233,6 +234,7 @@ START_TEST(test_should_keep_alive)
 	int lenreq3 = (int)strlen(req3);
 	int lenreq4 = (int)strlen(req4);
 
+	mark_point();
 
 	memset(&ctx, 0, sizeof(ctx));
 	memset(&conn, 0, sizeof(conn));
@@ -342,6 +344,8 @@ START_TEST(test_remove_double_dots_and_double_slashes)
 	};
 	size_t i;
 
+	mark_point();
+
 	for (i = 0; i < ARRAY_SIZE(data); i++) {
 		remove_double_dots_and_double_slashes(data[i].before);
 		ck_assert_str_eq(data[i].before, data[i].after);
@@ -377,6 +381,8 @@ START_TEST(test_next_option)
 	struct vec a, b;
 	int i;
 
+	mark_point();
+
 	ck_assert(next_option(NULL, &a, &b) == NULL);
 	for (i = 0, p = list; (p = next_option(p, &a, &b)) != NULL; i++) {
 		ck_assert(i != 0 || (a.ptr == list && a.len == 3 && b.len == 0));
@@ -395,6 +401,8 @@ START_TEST(test_skip_quoted)
 	/* Copyright (c) 2013-2015 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	char x[] = "a=1, b=2, c='hi \' there', d='here\\, there'", *s = x, *p;
+
+	mark_point();
 
 	p = skip_quoted(&s, ", ", ", ", 0);
 	ck_assert(p != NULL && !strcmp(p, "a=1"));
@@ -420,9 +428,13 @@ alloc_printf(char **buf, size_t size, const char *fmt, ...)
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	va_list ap;
 	int ret = 0;
+
+	mark_point();
+
 	va_start(ap, fmt);
 	ret = alloc_vprintf(buf, *buf, size, fmt, ap);
 	va_end(ap);
+
 	return ret;
 }
 
@@ -433,9 +445,13 @@ alloc_printf2(char **buf, const char *fmt, ...)
 	/* Test alternative implementation */
 	va_list ap;
 	int ret = 0;
+
+	mark_point();
+
 	va_start(ap, fmt);
 	ret = alloc_vprintf2(buf, fmt, ap);
 	va_end(ap);
+
 	return ret;
 }
 
@@ -446,6 +462,7 @@ START_TEST(test_alloc_vprintf)
 	/* Copyright (c) 2013-2015 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	char buf[MG_BUF_LEN], *p = buf;
+	mark_point();
 
 	ck_assert(alloc_printf(&p, sizeof(buf), "%s", "hi") == 2);
 	ck_assert(p == buf);
@@ -477,6 +494,7 @@ START_TEST(test_mg_vsnprintf)
 	int is_trunc;
 
 	memset(buf, 0, sizeof(buf));
+	mark_point();
 
 	is_trunc = 777;
 	mg_snprintf(NULL, &is_trunc, buf, 10, "%8i", 123);
@@ -516,6 +534,8 @@ START_TEST(test_mg_strcasestr)
 	/* Copyright (c) 2013-2015 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	static const char *big1 = "abcdef";
+	mark_point();
+
 	ck_assert(mg_strcasestr("Y", "X") == NULL);
 	ck_assert(mg_strcasestr("Y", "y") != NULL);
 	ck_assert(mg_strcasestr(big1, "X") == NULL);
@@ -551,6 +571,8 @@ START_TEST(test_parse_port_string)
 	struct vec vec;
 	int ip_family;
 	int i;
+
+	mark_point();
 
 	for (i = 0; valid[i] != NULL; i++) {
 		vec.ptr = valid[i];
@@ -593,6 +615,8 @@ START_TEST(test_encode_decode)
 	const char *alpha_b64_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
 	const char *nonalpha_b64_enc =
 	    "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
+
+	mark_point();
 
 	memset(buf, 77, sizeof(buf));
 	base64_encode((unsigned char *)"a", 1, buf);
