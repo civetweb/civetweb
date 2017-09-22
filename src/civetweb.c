@@ -14873,8 +14873,13 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	unsigned max_req_size =
 	    (unsigned)atoi(config_options[MAX_REQUEST_SIZE].default_value);
 
+	/* Size of structures, aligned to 8 bytes */
+	size_t conn_size = ((sizeof(struct mg_connection) + 7) >> 3) << 3;
+	size_t ctx_size = ((sizeof(struct mg_context) + 7) >> 3) << 3;
+
 	conn = (struct mg_connection *)mg_calloc_ctx(1,
-	                                             sizeof(*conn) + max_req_size,
+	                                             conn_size + ctx_size
+	                                                 + max_req_size,
 	                                             &common_client_context);
 
 	if (conn == NULL) {
@@ -14887,22 +14892,9 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 
-	conn->ctx =
-	    (struct mg_context *)mg_malloc_ctx(sizeof(common_client_context),
-	                                       &common_client_context);
-
-	if (conn == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "calloc(): %s",
-		            strerror(ERRNO));
-		mg_free(conn);
-		return NULL;
-	}
-
-	*(conn->ctx) = common_client_context;
+	conn->ctx = (struct mg_context *)(((char *)conn) + conn_size);
+	conn->buf = (((char *)conn) + conn_size + ctx_size);
+	conn->buf_size = (int)max_req_size;
 	conn->ctx->context_type = CONTEXT_HTTP_CLIENT;
 
 	if (!connect_socket(&common_client_context,
@@ -14915,7 +14907,6 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	                    &sa)) {
 		/* ebuf is set by connect_socket,
 		 * free all memory and return NULL; */
-		mg_free(conn->ctx);
 		mg_free(conn);
 		return NULL;
 	}
@@ -14961,8 +14952,6 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	psa = (struct sockaddr *)&(conn->client.rsa.sin);
 #endif
 
-	conn->buf_size = (int)max_req_size;
-	conn->buf = (char *)(conn + 1);
 	conn->client.sock = sock;
 	conn->client.lsa = sa;
 
