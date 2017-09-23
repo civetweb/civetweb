@@ -889,6 +889,7 @@ START_TEST(test_sha1)
 END_TEST
 
 
+#if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_private_suite(void)
 {
@@ -973,6 +974,7 @@ make_private_suite(void)
 
 	return suite;
 }
+#endif
 
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING

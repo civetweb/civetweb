@@ -491,6 +491,7 @@ START_TEST(test_mg_get_response_code_text)
 END_TEST
 
 
+#if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_func_suite(void)
 {
@@ -542,3 +543,4 @@ make_public_func_suite(void)
 
 	return suite;
 }
+#endif

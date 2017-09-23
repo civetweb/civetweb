@@ -4739,6 +4739,7 @@ START_TEST(test_minimal_https_server_callback)
 END_TEST
 
 
+#if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_server_suite(void)
 {
@@ -4844,6 +4845,7 @@ make_public_server_suite(void)
 
 	return suite;
 }
+#endif
 
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
@@ -4867,8 +4869,7 @@ MAIN_PUBLIC_SERVER(void)
 	test_the_test_environment(0);
 	test_threading(0);
 
-	test_minimal_client(0);
-	test_minimal_server_callback(0);
+	test_minimal_client(0);	
 
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
