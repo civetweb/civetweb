@@ -569,7 +569,7 @@ AuthStartHandler(struct mg_connection *conn, void *cbdata)
 		return 1;
 	}
 
-	if (mg_check_digest_access_authentication(conn, realm, passfile) > 0) {
+	if (mg_check_digest_access_authentication(conn, realm, passfile) <= 0) {
 		/* No valid authorization */
 		mg_send_digest_access_authentication_request(conn, realm);
 		return 1;
