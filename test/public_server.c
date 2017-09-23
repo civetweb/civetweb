@@ -4869,7 +4869,7 @@ MAIN_PUBLIC_SERVER(void)
 	test_the_test_environment(0);
 	test_threading(0);
 
-	test_minimal_client(0);	
+	test_minimal_client(0);
 
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
