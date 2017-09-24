@@ -506,16 +506,17 @@ START_TEST(test_mg_vsnprintf)
 	ck_assert_str_eq(buf, "      123");
 	ck_assert_int_eq(is_trunc, 0);
 /*
+//SegFault in debug build on AppVeyor (but not in local debugger) ???
 	is_trunc = 777;
 	mg_snprintf(NULL, &is_trunc, buf, 9, "%9i", 123);
 	ck_assert_str_eq(buf, "      12");
 	ck_assert_int_eq(is_trunc, 1);
-
+*/
 	is_trunc = 777;
 	mg_snprintf(NULL, &is_trunc, buf, 8, "%9i", 123);
 	ck_assert_str_eq(buf, "      1");
 	ck_assert_int_eq(is_trunc, 1);
-
+/*
 	is_trunc = 777;
 	mg_snprintf(NULL, &is_trunc, buf, 7, "%9i", 123);
 	ck_assert_str_eq(buf, "      ");
