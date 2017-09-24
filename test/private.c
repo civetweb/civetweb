@@ -493,6 +493,10 @@ START_TEST(test_mg_vsnprintf)
 	char buf[16];
 	int is_trunc;
 
+#if defined(_WIN32)
+	InitializeCriticalSection(&global_log_file_lock);
+#endif
+
 	memset(buf, 0, sizeof(buf));
 	mark_point();
 
