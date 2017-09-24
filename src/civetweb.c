@@ -3292,7 +3292,9 @@ mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 	va_end(ap);
 	buf[sizeof(buf) - 1] = 0;
 
+#if !defined(_WIN32)
 	DEBUG_TRACE("mg_cry: %s", buf);
+#endif
 
 	if (!conn) {
 		puts(buf);
