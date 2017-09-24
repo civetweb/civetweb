@@ -22,6 +22,52 @@ environment:
   c_standard: auto
   cxx_standard: auto
   matrix:
+    # Use default values
+    - id: Default-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    - id: Default-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
+    # Use default values
+    - id: Full-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    - id: Full-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
     # Debug builds
     - id: Full-x86-Debug
       compiler: msvc-19-seh
@@ -45,6 +91,137 @@ environment:
       no_caching: NO
       configuration: Debug
       platform: x64
+    # Minimum settings
+    - id: Minimal-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: YES
+      enable_ipv6: NO
+      enable_ssl: NO
+      enable_websockets: NO
+      no_cgi: YES
+      no_caching: YeS
+      configuration: Release
+      platform: x86
+    - id: Minimal-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: YES
+      enable_ipv6: NO
+      enable_ssl: NO
+      enable_websockets: NO
+      no_cgi: YES
+      no_caching: YeS
+      configuration: Release
+      platform: x64
+    # Test shared and debug build
+    - id: Shared-default-x86
+      compiler: msvc-19-seh
+      build_shared: YES
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    - id: Shared-default-x64
+      compiler: msvc-19-seh
+      build_shared: YES
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
+    # MinGW
+    - id: Full-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
+    # Visual Studio 2010
+    - id: Full-VS2010-x86
+      compiler: msvc-16-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    # Visual Studio 2012
+    - id: Full-VS2012-x86
+      compiler: msvc-17-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    # Visual Studio 2013
+    - id: Full-VS2013-x86
+      compiler: msvc-18-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+    - id: Full-VS2013-x64
+      compiler: msvc-18-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
+    # Visual Studio 2015 is default
+    # Visual Studio 2017 is not yet default
+    - id: Full-VS2017-x86
+      compiler: msvc-20-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x86
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    - id: Full-VS2017-x64
+      compiler: msvc-20-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      configuration: Release
+      platform: x64
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
 
 
 install:
