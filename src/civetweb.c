@@ -13905,9 +13905,8 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 			*str_finger = 0;
 		}
 
-		conn->request_info.client_cert =
-		    (struct client_cert *)mg_malloc_ctx(sizeof(struct client_cert),
-		                                        conn->ctx);
+		conn->request_info.client_cert = (struct mg_client_cert *)
+		    mg_malloc_ctx(sizeof(struct mg_client_cert), conn->ctx);
 		if (conn->request_info.client_cert) {
 			conn->request_info.client_cert->subject = mg_strdup(str_subject);
 			conn->request_info.client_cert->issuer = mg_strdup(str_issuer);

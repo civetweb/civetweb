@@ -118,7 +118,7 @@ struct mg_request_info {
 	struct mg_header
 	    http_headers[MG_MAX_HEADERS]; /* Allocate maximum headers */
 
-	struct client_cert *client_cert; /* Client certificate information */
+	struct mg_client_cert *client_cert; /* Client certificate information */
 
 	const char *acceptedWebSocketSubprotocol; /* websocket subprotocol,
 	                                           * accepted during handshake */
@@ -142,6 +142,15 @@ struct mg_response_info {
 
 
 /* Client certificate information (part of mg_request_info) */
+/* New nomenclature. */
+struct mg_client_cert {
+	const char *subject;
+	const char *issuer;
+	const char *serial;
+	const char *finger;
+};
+
+/* Old nomenclature. */
 struct client_cert {
 	const char *subject;
 	const char *issuer;
@@ -559,7 +568,7 @@ struct mg_option {
 	const char *default_value;
 };
 
-
+/* Old nomenclature */
 enum {
 	CONFIG_TYPE_UNKNOWN = 0x0,
 	CONFIG_TYPE_NUMBER = 0x1,
@@ -572,6 +581,18 @@ enum {
 	CONFIG_TYPE_STRING_MULTILINE = 0x8
 };
 
+/* New nomenclature */
+enum {
+	MG_CONFIG_TYPE_UNKNOWN = 0x0,
+	MG_CONFIG_TYPE_NUMBER = 0x1,
+	MG_CONFIG_TYPE_STRING = 0x2,
+	MG_CONFIG_TYPE_FILE = 0x3,
+	MG_CONFIG_TYPE_DIRECTORY = 0x4,
+	MG_CONFIG_TYPE_BOOLEAN = 0x5,
+	MG_CONFIG_TYPE_EXT_PATTERN = 0x6,
+	MG_CONFIG_TYPE_STRING_LIST = 0x7,
+	MG_CONFIG_TYPE_STRING_MULTILINE = 0x8
+};
 
 /* Return array of struct mg_option, representing all valid configuration
    options of civetweb.c.
@@ -717,6 +738,7 @@ CIVETWEB_API void mg_unlock_context(struct mg_context *ctx);
 
 
 /* Opcodes, from http://tools.ietf.org/html/rfc6455 */
+/* Old nomenclature */
 enum {
 	WEBSOCKET_OPCODE_CONTINUATION = 0x0,
 	WEBSOCKET_OPCODE_TEXT = 0x1,
@@ -726,6 +748,15 @@ enum {
 	WEBSOCKET_OPCODE_PONG = 0xa
 };
 
+/* New nomenclature */
+enum {
+	MG_WEBSOCKET_OPCODE_CONTINUATION = 0x0,
+	MG_WEBSOCKET_OPCODE_TEXT = 0x1,
+	MG_WEBSOCKET_OPCODE_BINARY = 0x2,
+	MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE = 0x8,
+	MG_WEBSOCKET_OPCODE_PING = 0x9,
+	MG_WEBSOCKET_OPCODE_PONG = 0xa
+};
 
 /* Macros for enabling compiler-specific checks for printf-like arguments. */
 #undef PRINTF_FORMAT_STRING
@@ -1052,6 +1083,7 @@ struct mg_form_data_handler {
 
 /* Return values definition for the "field_found" callback in
  * mg_form_data_handler. */
+/* Old nomenclature */
 enum {
 	/* Skip this field (neither get nor store it). Continue with the
      * next field. */
@@ -1064,6 +1096,18 @@ enum {
 	FORM_FIELD_STORAGE_ABORT = 0x10
 };
 
+/* New nomenclature */
+enum {
+	/* Skip this field (neither get nor store it). Continue with the
+     * next field. */
+	MG_FORM_FIELD_STORAGE_SKIP = 0x0,
+	/* Get the field value. */
+	MG_FORM_FIELD_STORAGE_GET = 0x1,
+	/* Store the field value into a file. */
+	MG_FORM_FIELD_STORAGE_STORE = 0x2,
+	/* Stop parsing this request. Skip the remaining fields. */
+	MG_FORM_FIELD_STORAGE_ABORT = 0x10
+};
 
 /* Process form data.
  * Returns the number of fields handled, or < 0 in case of an error.
@@ -1207,7 +1251,7 @@ mg_connect_client_secure(const struct mg_client_options *client_options,
 
 
 enum { TIMEOUT_INFINITE = -1 };
-
+enum { MG_TIMEOUT_INFINITE = -1 };
 
 /* Wait for a response from the server
    Parameters:

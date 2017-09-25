@@ -1,6 +1,6 @@
 # Civetweb API Reference
 
-### `struct client_cert;`
+### `struct mg_client_cert;`
 
 ### Fields
 

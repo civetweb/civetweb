@@ -31,7 +31,7 @@ The content of both structures is not defined in the interface - they are only u
 
 ## Structures
 
-* [`struct client_cert;`](api/client_cert.md)
+* [`struct mg_client_cert;`](api/mg_client_cert.md)
 * [`struct mg_client_options;`](api/mg_client_options.md)
 * [`struct mg_callbacks;`](api/mg_callbacks.md)
 * [`struct mg_form_data_handler;`](api/mg_form_data_handler.md)

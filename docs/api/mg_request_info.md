@@ -22,7 +22,7 @@
 |**`conn_data`**|`void *`| A pointer to connection specific user data |
 |**`num_headers`**|`int`| The number of HTTP request headers sent by the client (see http_headers) |
 |**`http_headers`**|`struct mg_header[64]`| Array of structures with the HTTP request headers sent by the client. For the number of filled header fields, ee num_headers. |
-|**`client_cert`**|`struct client_cert *`| Pointer to the client certificate information, when available. This field is only filled for https connections using client certificates. |
+|**`client_cert`**|`struct mg_client_cert *`| Pointer to the client certificate information, when available. This field is only filled for https connections using client certificates. |
 
 ### Description
 
@@ -30,6 +30,6 @@ The `mg_request_info` structure contains the client information of an existing c
 
 ### See Also
 
-* [`struct client_cert;`](client_cert.md)
+* [`struct mg_client_cert;`](mg_client_cert.md)
 * [`struct mg_header;`](mg_header.md)
 * [`mg_get_request_info();`](mg_get_request_info.md)
