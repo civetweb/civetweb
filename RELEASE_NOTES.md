@@ -5,6 +5,7 @@ Release Notes v1.10
 Changes
 -------
 
+- Add missing `mg_` or `MG_` to symbols in civetweb.h. Symbols without will be removed a future version.
 - Add HTTPS server configuration example
 - Lua Pages: mg.include should support absolute, relative and virtual path types
 - Add API function for HTTP digest authentication
