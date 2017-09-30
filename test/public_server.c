@@ -4575,6 +4575,32 @@ START_TEST(test_minimal_client)
 END_TEST
 
 
+START_TEST(test_minimal_tls_client)
+{
+	mark_point();
+
+#if !defined(NO_SSL)
+	/* Initialize the library */
+	mg_init_library(2);
+
+	mark_point();
+
+	/* Call a test client */
+	minimal_https_client_impl("192.30.253.113" /* www.github.com */,
+	                          443,
+	                          "civetweb/civetweb/");
+
+	mark_point();
+
+	/* Un-initialize the library */
+	mg_exit_library();
+#endif
+
+	mark_point();
+}
+END_TEST
+
+
 static int
 minimal_test_request_handler(struct mg_connection *conn, void *cbdata)
 {
@@ -4749,7 +4775,8 @@ make_public_server_suite(void)
 	TCase *const tcase_initlib = tcase_create("Init library");
 	TCase *const tcase_startthreads = tcase_create("Start threads");
 	TCase *const tcase_minimal_svr = tcase_create("Minimal Server");
-	TCase *const tcase_minimal_cli = tcase_create("Minimal Client");
+	TCase *const tcase_minimal_http_cli = tcase_create("Minimal HTTP Client");
+	TCase *const tcase_minimal_https_cli = tcase_create("Minimal HTTPS Client");
 	TCase *const tcase_startstophttp = tcase_create("Start Stop HTTP Server");
 	TCase *const tcase_startstophttp_ipv6 =
 	    tcase_create("Start Stop HTTP Server IPv6");
@@ -4783,9 +4810,14 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_minimal_svr, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_minimal_svr);
 
-	tcase_add_test(tcase_minimal_cli, test_minimal_client);
-	tcase_set_timeout(tcase_minimal_cli, civetweb_min_server_test_timeout);
-	suite_add_tcase(suite, tcase_minimal_cli);
+	tcase_add_test(tcase_minimal_http_cli, test_minimal_client);
+	tcase_set_timeout(tcase_minimal_http_cli, civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_minimal_http_cli);
+
+	tcase_add_test(tcase_minimal_https_cli, test_minimal_tls_client);
+	tcase_set_timeout(tcase_minimal_https_cli,
+	                  civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_minimal_https_cli);
 
 	tcase_add_test(tcase_startstophttp, test_mg_start_stop_http_server);
 	tcase_set_timeout(tcase_startstophttp, civetweb_min_server_test_timeout);
