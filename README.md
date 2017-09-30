@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![GitHub contributors](https://img.shields.io/github/contributors/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
 
-Continuous integration for Linux and OSX ([Travis CI](https://travis-ci.org/civetweb/civetweb)):
+Continuous integration for Linux and macOS ([Travis CI](https://travis-ci.org/civetweb/civetweb)):
 
 [![Travis Build Status](https://travis-ci.org/civetweb/civetweb.svg?branch=master)](https://travis-ci.org/civetweb/civetweb)
 
