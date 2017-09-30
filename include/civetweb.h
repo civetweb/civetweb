@@ -23,11 +23,10 @@
 #ifndef CIVETWEB_HEADER_INCLUDED
 #define CIVETWEB_HEADER_INCLUDED
 
-#define CIVETWEB_VERSION "1.10"
+#define CIVETWEB_VERSION "1.11"
 #define CIVETWEB_VERSION_MAJOR (1)
-#define CIVETWEB_VERSION_MINOR (10)
+#define CIVETWEB_VERSION_MINOR (11)
 #define CIVETWEB_VERSION_PATCH (0)
-#define CIVETWEB_VERSION_RELEASED
 
 #ifndef CIVETWEB_API
 #if defined(_WIN32)
@@ -53,11 +52,64 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Init Features */
+enum {
+	MG_FEATURES_DEFAULT = 0x0u,
+
+	/* Support files from local directories */
+	/* Will only work, if NO_FILES is not set. */
+	MG_FEATURES_FILES = 0x1u,
+
+	/* Support transport layer security (TLS). */
+	/* SSL is still often used synonymously for TLS. */
+	/* Will only work, if NO_SSL is not set. */
+	MG_FEATURES_TLS = 0x2u,
+	MG_FEATURES_SSL = 0x2u,
+
+	/* Support common gateway interface (CGI). */
+	/* Will only work, if NO_CGI is not set. */
+	MG_FEATURES_CGI = 0x4u,
+
+	/* Support IPv6. */
+	/* Will only work, if USE_IPV6 is set. */
+	MG_FEATURES_IPV6 = 0x8u,
+
+	/* Support WebSocket protocol. */
+	/* Will only work, if USE_WEBSOCKET is set. */
+	MG_FEATURES_WEBSOCKET = 0x10u,
+
+	/* Support server side Lua scripting. */
+	/* Will only work, if USE_LUA is set. */
+	MG_FEATURES_LUA = 0x20u,
+
+	/* Support server side JavaScript scripting. */
+	/* Will only work, if USE_DUKTAPE is set. */
+	MG_FEATURES_SSJS = 0x40u,
+
+	/* Provide data required for caching files. */
+	/* Will only work, if NO_CACHING is not set. */
+	MG_FEATURES_CACHE = 0x80u,
+
+	/* Collect server status information. */
+	/* Will only work, if USE_SERVER_STATS is set. */
+	MG_FEATURES_STATS = 0x100u,
+
+	/* Collect server status information. */
+	/* Will only work, if USE_SERVER_STATS is set. */
+	MG_FEATURES_ALL = 0xFFFFu
+};
+
+
 /* Initialize this library. This should be called once before any other
  * function from this library. This function is not guaranteed to be
  * thread safe.
  * Parameters:
  *   features: bit mask for features to be initialized.
+ *             Note: The TLS libraries (like OpenSSL) is initialized
+ *                   only if the MG_FEATURES_TLS bit is set.
+ *                   Currently the other bits do not influence
+ *                   initialization, but this may change in future
+ *                   versions.
  * Return value:
  *   initialized features
  *   0: error

@@ -1,3 +1,13 @@
+Release Notes v1.11
+===
+### Objectives: *To be defined*
+
+Changes
+-------
+
+- Update version number
+
+
 Release Notes v1.10
 ===
 ### Objectives: *OpenSSL 1.1 support, add server statistics and diagnostic data*
