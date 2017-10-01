@@ -13183,9 +13183,8 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 
 /* Is there any SSL port in use? */
 static int
-is_ssl_port_used(const struct mg_context *ctx)
+is_ssl_port_used(const char *ports)
 {
-	const char *ports = ctx->config[LISTENING_PORTS];
 	if (ports) {
 		if (strchr(ports, 's')) {
 			return 1;
@@ -14255,7 +14254,7 @@ set_ssl_option(struct mg_context *ctx)
 		return 0;
 	}
 
-	if (!is_ssl_port_used(ctx)) {
+	if (!is_ssl_port_used(ctx->config[LISTENING_PORTS])) {
 		/* No SSL port is set. No need to setup SSL. */
 		return 1;
 	}
@@ -16736,7 +16735,29 @@ mg_start(const struct mg_callbacks *callbacks,
 	if (mg_init_library_called == 0) {
 		/* Legacy INIT, if mg_start is called without mg_init_library.
 		 * Note: This may cause a memory leak */
-		mg_init_library(0);
+		const char *ports_option =
+		    config_options[LISTENING_PORTS].default_value;
+
+		if (options) {
+			const char **run_options = options;
+			const char *optname = config_options[LISTENING_PORTS].name;
+
+			/* Try to find the "listening_ports" option */
+			while (*run_options) {
+				if (!strcmp(*run_options, optname)) {
+					ports_option = run_options[1];
+				}
+				run_options += 2;
+			}
+		}
+
+		if (is_ssl_port_used(ports_option)) {
+			/* Initialize with SSL support */
+			mg_init_library(2);
+		} else {
+			/* Initialize without SSL support */
+			mg_init_library(0);
+		}
 	}
 
 	tls.is_master = -1;
