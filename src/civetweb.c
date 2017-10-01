@@ -13181,6 +13181,23 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 }
 
 
+/* Is there any SSL port in use? */
+static int
+is_ssl_port_used(const struct mg_context *ctx)
+{
+	const char *ports = ctx->config[LISTENING_PORTS];
+	if (ports) {
+		if (strchr(ports, 's')) {
+			return 1;
+		}
+		if (strchr(ports, 'r')) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
 static int
 set_ports_option(struct mg_context *ctx)
 {
@@ -13226,10 +13243,7 @@ set_ports_option(struct mg_context *ctx)
 #if !defined(NO_SSL)
 		if (so.is_ssl && ctx->ssl_ctx == NULL) {
 
-			mg_cry(fc(ctx),
-			       "Cannot add SSL socket (entry %i). Is -ssl_certificate "
-			       "option set?",
-			       portsTotal);
+			mg_cry(fc(ctx), "Cannot add SSL socket (entry %i)", portsTotal);
 			continue;
 		}
 #endif
@@ -14237,15 +14251,28 @@ set_ssl_option(struct mg_context *ctx)
 	int protocol_ver;
 	char ebuf[128];
 
-	/* If PEM file is not specified and the init_ssl callback
-	 * is not specified, skip SSL initialization. */
 	if (!ctx) {
 		return 0;
 	}
-	if ((pem = ctx->config[SSL_CERTIFICATE]) == NULL
-	    && ctx->callbacks.init_ssl == NULL) {
+
+	if (!is_ssl_port_used(ctx)) {
+		/* No SSL port is set. No need to setup SSL. */
 		return 1;
 	}
+
+	/* If PEM file is not specified and the init_ssl callback
+	 * is not specified, setup will fail. */
+	if (((pem = ctx->config[SSL_CERTIFICATE]) == NULL)
+	    && (ctx->callbacks.init_ssl == NULL)) {
+		/* No certificate and no callback:
+		 * Essential data to set up TLS is missing.
+		 */
+		mg_cry(fc(ctx),
+		       "Initializing SSL failed: -%s is not set",
+		       config_options[SSL_CERTIFICATE].name);
+		return 0;
+	}
+
 	chain = ctx->config[SSL_CERTIFICATE_CHAIN];
 	if (chain == NULL) {
 		chain = pem;
@@ -14341,9 +14368,7 @@ set_ssl_option(struct mg_context *ctx)
 		return 0;
 	}
 	if (callback_ret > 0) {
-		if (pem != NULL) {
-			(void)SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, pem);
-		}
+		/* Callback did everything. */
 		return 1;
 	}
 
