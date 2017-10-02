@@ -8082,6 +8082,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
                )
 {
 	int ip_ver = 0;
+	int conn_ret = -1;
 	*sock = INVALID_SOCKET;
 	memset(sa, 0, sizeof(*sa));
 
@@ -8195,47 +8196,56 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		return 0;
 	}
 
-	set_close_on_exec(*sock, fc(ctx));
-
-	if ((ip_ver == 4)
-	    && (connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin))
-	        == 0)) {
-		/* connected with IPv4 */
-		if (0 == set_non_blocking_mode(*sock)) {
-			/* Ok */
-			return 1;
-		}
-		/* failed */
-		/* TODO: specific error message */
+	if (0 != set_non_blocking_mode(*sock)) {
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "Cannot set socket to non-blocking: %s",
+		            strerror(ERRNO));
+		closesocket(*sock);
+		*sock = INVALID_SOCKET;
+		return 0;
 	}
 
+	set_close_on_exec(*sock, fc(ctx));
+
+	if (ip_ver == 4) {
+		/* connected with IPv4 */
+		conn_ret = connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin));
+	}
 #ifdef USE_IPV6
-	if ((ip_ver == 6)
-	    && (connect(*sock, (struct sockaddr *)&sa->sin6, sizeof(sa->sin6))
-	        == 0)) {
+	else if (ip_ver == 6) {
 		/* connected with IPv6 */
-		if (0 == set_non_blocking_mode(*sock)) {
-			/* Ok */
-			return 1;
-		}
-		/* failed */
-		/* TODO: specific error message */
+		conn_ret =
+		    connect(*sock, (struct sockaddr *)&sa->sin6, sizeof(sa->sin6));
 	}
 #endif
 
-	/* Not connected */
-	mg_snprintf(NULL,
-	            NULL, /* No truncation check for ebuf */
-	            ebuf,
-	            ebuf_len,
-	            "connect(%s:%d): %s",
-	            host,
-	            port,
-	            strerror(ERRNO));
-	closesocket(*sock);
-	*sock = INVALID_SOCKET;
+	if (conn_ret != 0) {
+		fd_set fdset;
+		struct timeval timeout;
+		FD_ZERO(&fdset);
+		FD_SET(*sock, &fdset);
+		timeout.tv_sec = 10; /* 10 second timeout */
+		timeout.tv_usec = 0;
 
-	return 0;
+		if (select(*sock + 1, NULL, &fdset, NULL, &timeout) != 1) {
+			/* Not connected */
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "connect(%s:%d): failed",
+			            host,
+			            port);
+			closesocket(*sock);
+			*sock = INVALID_SOCKET;
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 
@@ -11375,7 +11385,7 @@ read_websocket(struct mg_connection *conn,
 			}
 
 			if (exit_by_callback
-                || ((mop & 0xf) == MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE)) {
+			    || ((mop & 0xf) == MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE)) {
 				/* Opcode == 8, connection close */
 				break;
 			}
@@ -14061,6 +14071,14 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	if (!cryptolib_dll_handle) {
 		cryptolib_dll_handle = load_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
 		if (!cryptolib_dll_handle) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s: error loading library %s",
+			            __func__,
+			            CRYPTO_LIB);
+			DEBUG_TRACE("%s", ebuf);
 			return 0;
 		}
 	}
@@ -14082,6 +14100,14 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	if (!cryptolib_dll_handle) {
 		cryptolib_dll_handle = load_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
 		if (!cryptolib_dll_handle) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s: error loading library %s",
+			            __func__,
+			            CRYPTO_LIB);
+			DEBUG_TRACE("%s", ebuf);
 			return 0;
 		}
 	}
@@ -14110,7 +14136,7 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 		            "%s: cannot allocate mutexes: %s",
 		            __func__,
 		            ssl_error());
-
+		DEBUG_TRACE("%s", ebuf);
 		return 0;
 	}
 
@@ -14121,6 +14147,28 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	CRYPTO_set_locking_callback(&ssl_locking_callback);
 	CRYPTO_set_id_callback(&mg_current_thread_id);
 #endif /* OPENSSL_API_1_1 */
+
+#if !defined(NO_SSL_DL)
+	if (!ssllib_dll_handle) {
+		ssllib_dll_handle = load_dll(ebuf, sizeof(ebuf), SSL_LIB, ssl_sw);
+		if (!ssllib_dll_handle) {
+			DEBUG_TRACE("%s", ebuf);
+			return 0;
+		}
+	}
+#endif /* NO_SSL_DL */
+
+#ifdef OPENSSL_API_1_1
+	/* Initialize SSL library */
+	OPENSSL_init_ssl(0, NULL);
+	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS
+	                     | OPENSSL_INIT_LOAD_CRYPTO_STRINGS,
+	                 NULL);
+#else
+	/* Initialize SSL library */
+	SSL_library_init();
+	SSL_load_error_strings();
+#endif
 
 	return 1;
 }
@@ -14285,32 +14333,12 @@ set_ssl_option(struct mg_context *ctx)
 		return 0;
 	}
 
-#if !defined(NO_SSL_DL)
-	if (!ssllib_dll_handle) {
-		ssllib_dll_handle = load_dll(ebuf, sizeof(ebuf), SSL_LIB, ssl_sw);
-		if (!ssllib_dll_handle) {
-			mg_cry(fc(ctx), "%s", ebuf);
-			return 0;
-		}
-	}
-#endif /* NO_SSL_DL */
-
 #ifdef OPENSSL_API_1_1
-	/* Initialize SSL library */
-	OPENSSL_init_ssl(0, NULL);
-	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS
-	                     | OPENSSL_INIT_LOAD_CRYPTO_STRINGS,
-	                 NULL);
-
 	if ((ctx->ssl_ctx = SSL_CTX_new(TLS_server_method())) == NULL) {
 		mg_cry(fc(ctx), "SSL_CTX_new (server) error: %s", ssl_error());
 		return 0;
 	}
 #else
-	/* Initialize SSL library */
-	SSL_library_init();
-	SSL_load_error_strings();
-
 	if ((ctx->ssl_ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
 		mg_cry(fc(ctx), "SSL_CTX_new (server) error: %s", ssl_error());
 		return 0;
@@ -16753,10 +16781,10 @@ mg_start(const struct mg_callbacks *callbacks,
 
 		if (is_ssl_port_used(ports_option)) {
 			/* Initialize with SSL support */
-			mg_init_library(2);
+			mg_init_library(MG_FEATURES_TLS);
 		} else {
 			/* Initialize without SSL support */
-			mg_init_library(0);
+			mg_init_library(MG_FEATURES_DEFAULT);
 		}
 	}
 

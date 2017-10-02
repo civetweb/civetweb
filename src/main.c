@@ -529,47 +529,47 @@ set_option(char **options, const char *name, const char *value)
 		}
 	}
 
-    type = MG_CONFIG_TYPE_UNKNOWN;
+	type = MG_CONFIG_TYPE_UNKNOWN;
 	for (i = 0; default_options[i].name != NULL; i++) {
 		if (!strcmp(default_options[i].name, name)) {
 			type = default_options[i].type;
 		}
 	}
 	switch (type) {
-    case MG_CONFIG_TYPE_UNKNOWN:
+	case MG_CONFIG_TYPE_UNKNOWN:
 		/* unknown option */
 		return 0;
-    case MG_CONFIG_TYPE_NUMBER:
+	case MG_CONFIG_TYPE_NUMBER:
 		/* integer number >= 0, e.g. number of threads */
 		if (atol(value) < 0) {
 			/* invalid number */
 			return 0;
 		}
 		break;
-    case MG_CONFIG_TYPE_STRING:
+	case MG_CONFIG_TYPE_STRING:
 		/* any text */
 		break;
-    case MG_CONFIG_TYPE_STRING_LIST:
+	case MG_CONFIG_TYPE_STRING_LIST:
 		/* list of text items, separated by , */
 		multi_sep = ",";
 		break;
-    case MG_CONFIG_TYPE_STRING_MULTILINE:
+	case MG_CONFIG_TYPE_STRING_MULTILINE:
 		/* lines of text, separated by carriage return line feed */
 		multi_sep = "\r\n";
 		break;
-    case MG_CONFIG_TYPE_BOOLEAN:
+	case MG_CONFIG_TYPE_BOOLEAN:
 		/* boolean value, yes or no */
 		if ((0 != strcmp(value, "yes")) && (0 != strcmp(value, "no"))) {
 			/* invalid boolean */
 			return 0;
 		}
 		break;
-    case MG_CONFIG_TYPE_FILE:
-    case MG_CONFIG_TYPE_DIRECTORY:
+	case MG_CONFIG_TYPE_FILE:
+	case MG_CONFIG_TYPE_DIRECTORY:
 		/* TODO (low): check this option when it is set, instead of calling
 		 * verify_existence later */
 		break;
-    case MG_CONFIG_TYPE_EXT_PATTERN:
+	case MG_CONFIG_TYPE_EXT_PATTERN:
 		/* list of patterns, separated by | */
 		multi_sep = "|";
 		break;
@@ -991,20 +991,117 @@ finished:
 
 
 static int
-run_client(const char *url)
+run_client(const char *url_arg)
 {
+	/* connection data */
+	char *url = sdup(url_arg);
+	char *host;
+	char *resource;
 	int is_ssl = 0;
-	if (!strncmp(url, "http://", 7)) {
-		url += 7;
-	} else if (!strncmp(url, "https://", 8)) {
-		url += 8;
-		is_ssl = 1;
-	} else {
-		fprintf(stderr, "URL must start with http:// or https://\n");
+	unsigned long port = 0;
+	size_t sep;
+	char *endp = 0;
+
+	/* connection object */
+	struct mg_connection *conn;
+	char ebuf[1024] = {0};
+
+	/* Check parameter */
+	if (!url) {
+		fprintf(stderr, "Out of memory\n");
 		return 0;
 	}
 
+	if (!strncmp(url, "http://", 7)) {
+		host = url + 7;
+		port = 80;
+	} else if (!strncmp(url, "https://", 8)) {
+		host = url + 8;
+		is_ssl = 1;
+		port = 443;
+	} else {
+		fprintf(stderr, "URL must start with http:// or https://\n");
+		free(url);
+		return 0;
+	}
+	if ((host[0] <= 32) || (host[0] > 126) || (host[0] == '/')
+	    || (host[0] == ':')) {
+		fprintf(stderr, "Invalid host\n");
+		free(url);
+		return 0;
+	}
 
+	sep = strcspn(host, "/:");
+	switch (host[sep]) {
+	case 0:
+		resource = "";
+		break;
+	case '/':
+		host[sep] = 0;
+		resource = host + sep + 1;
+		break;
+	case ':':
+		host[sep] = 0;
+		port = strtoul(host + sep + 1, &endp, 10);
+		if (!endp || (*endp != '/' && *endp != 0) || (port < 1)
+		    || (port > 0xFFFF)) {
+			fprintf(stderr, "Invalid port\n");
+			free(url);
+			return 0;
+		}
+		if (*endp) {
+			*endp = 0;
+			resource = endp + 1;
+		} else {
+			resource = "";
+		}
+		break;
+	default:
+		fprintf(stderr, "Syntax error\n");
+		free(url);
+		return 0;
+	}
+
+	fprintf(stdout, "Protocol: %s\n", is_ssl ? "https" : "http");
+	fprintf(stdout, "Host: %s\n", host);
+	fprintf(stdout, "Port: %lu\n", port);
+	fprintf(stdout, "Resource: %s\n", resource);
+
+	/* Initialize library */
+	if (is_ssl) {
+		mg_init_library(MG_FEATURES_TLS);
+	} else {
+		mg_init_library(MG_FEATURES_DEFAULT);
+	}
+
+	/* Connect to host */
+	conn = mg_connect_client(host, (int)port, is_ssl, ebuf, sizeof(ebuf));
+	if (conn) {
+		char buf[1024] = {0};
+		int ret;
+
+		fprintf(stdout, "Connected to %s\n", host);
+		mg_printf(conn, "GET /%s HTTP/1.0\r\n\r\n", resource);
+
+		fprintf(stdout, "Reading from %s\n", host);
+		ret = mg_read(conn, buf, sizeof(buf));
+		fprintf(stdout, "ret=%i\n", ret);
+		while (ret > 0) {
+			ret = fwrite(buf, 1, ret, stdout);
+			fprintf(stdout, "wri=%i\n", ret);
+			ret = mg_read(conn, buf, sizeof(buf));
+			fprintf(stdout, "ret=%i\n", ret);
+		}
+
+		fprintf(stdout, "Closing connection to %s\n", host);
+		mg_close_connection(conn);
+	} else {
+		fprintf(stderr, "Error connecting to %s:\n%s\n", host, ebuf);
+	}
+
+	/* Free memory and exit library */
+	free(url);
+	mg_exit_library();
 	return 1;
 }
 
