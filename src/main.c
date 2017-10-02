@@ -175,10 +175,10 @@ static struct tuser_data
 enum { OPTION_TITLE, OPTION_ICON, OPTION_WEBPAGE, NUM_MAIN_OPTIONS };
 
 static struct mg_option main_config_options[] = {
-    {"title", CONFIG_TYPE_STRING, NULL},
-    {"icon", CONFIG_TYPE_STRING, NULL},
-    {"website", CONFIG_TYPE_STRING, NULL},
-    {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
+    {"title", MG_CONFIG_TYPE_STRING, NULL},
+    {"icon", MG_CONFIG_TYPE_STRING, NULL},
+    {"website", MG_CONFIG_TYPE_STRING, NULL},
+    {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 
 
 static void WINCDECL
@@ -241,6 +241,8 @@ show_usage_and_exit(const char *exeName)
 	fprintf(stderr, "  Start server with a set of options:\n");
 	fprintf(stderr, "    %s [config_file]\n", exeName);
 	fprintf(stderr, "    %s [-option value ...]\n", exeName);
+	fprintf(stderr, "  Run as client:\n");
+	fprintf(stderr, "    %s -C\n", exeName);
 	fprintf(stderr, "  Show system information:\n");
 	fprintf(stderr, "    %s -I\n", exeName);
 	fprintf(stderr, "  Add user/change password:\n");
@@ -277,7 +279,7 @@ show_usage_and_exit(const char *exeName)
 
 #if defined(_WIN32) || defined(USE_COCOA)
 static const char *config_file_top_comment =
-    "# Civetweb web server configuration file.\n"
+    "# CivetWeb web server configuration file.\n"
     "# For detailed description of every option, visit\n"
     "# https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md\n"
     "# Lines starting with '#' and empty lines are ignored.\n"
@@ -527,47 +529,47 @@ set_option(char **options, const char *name, const char *value)
 		}
 	}
 
-	type = CONFIG_TYPE_UNKNOWN;
+    type = MG_CONFIG_TYPE_UNKNOWN;
 	for (i = 0; default_options[i].name != NULL; i++) {
 		if (!strcmp(default_options[i].name, name)) {
 			type = default_options[i].type;
 		}
 	}
 	switch (type) {
-	case CONFIG_TYPE_UNKNOWN:
+    case MG_CONFIG_TYPE_UNKNOWN:
 		/* unknown option */
 		return 0;
-	case CONFIG_TYPE_NUMBER:
+    case MG_CONFIG_TYPE_NUMBER:
 		/* integer number >= 0, e.g. number of threads */
 		if (atol(value) < 0) {
 			/* invalid number */
 			return 0;
 		}
 		break;
-	case CONFIG_TYPE_STRING:
+    case MG_CONFIG_TYPE_STRING:
 		/* any text */
 		break;
-	case CONFIG_TYPE_STRING_LIST:
+    case MG_CONFIG_TYPE_STRING_LIST:
 		/* list of text items, separated by , */
 		multi_sep = ",";
 		break;
-	case CONFIG_TYPE_STRING_MULTILINE:
+    case MG_CONFIG_TYPE_STRING_MULTILINE:
 		/* lines of text, separated by carriage return line feed */
 		multi_sep = "\r\n";
 		break;
-	case CONFIG_TYPE_BOOLEAN:
+    case MG_CONFIG_TYPE_BOOLEAN:
 		/* boolean value, yes or no */
 		if ((0 != strcmp(value, "yes")) && (0 != strcmp(value, "no"))) {
 			/* invalid boolean */
 			return 0;
 		}
 		break;
-	case CONFIG_TYPE_FILE:
-	case CONFIG_TYPE_DIRECTORY:
+    case MG_CONFIG_TYPE_FILE:
+    case MG_CONFIG_TYPE_DIRECTORY:
 		/* TODO (low): check this option when it is set, instead of calling
 		 * verify_existence later */
 		break;
-	case CONFIG_TYPE_EXT_PATTERN:
+    case MG_CONFIG_TYPE_EXT_PATTERN:
 		/* list of patterns, separated by | */
 		multi_sep = "|";
 		break;
@@ -988,6 +990,25 @@ finished:
 #endif
 
 
+static int
+run_client(const char *url)
+{
+	int is_ssl = 0;
+	if (!strncmp(url, "http://", 7)) {
+		url += 7;
+	} else if (!strncmp(url, "https://", 8)) {
+		url += 8;
+		is_ssl = 1;
+	} else {
+		fprintf(stderr, "URL must start with http:// or https://\n");
+		return 0;
+	}
+
+
+	return 1;
+}
+
+
 static void
 start_civetweb(int argc, char *argv[])
 {
@@ -1031,6 +1052,15 @@ start_civetweb(int argc, char *argv[])
 		exit(mg_modify_passwords_file(argv[2], argv[3], argv[4], NULL)
 		         ? EXIT_SUCCESS
 		         : EXIT_FAILURE);
+	}
+
+	/* Client mode */
+	if (argc > 1 && !strcmp(argv[1], "-C")) {
+		if (argc != 3) {
+			show_usage_and_exit(argv[0]);
+		}
+
+		exit(run_client(argv[2]) ? EXIT_SUCCESS : EXIT_FAILURE);
 	}
 
 	/* Call Lua with additional CivetWeb specific Lua functions, if -L option

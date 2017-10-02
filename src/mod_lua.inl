@@ -1362,7 +1362,7 @@ lwebsock_write(lua_State *L)
 	if (num_args == 1) {
 		/* just one text: send it to all client */
 		if (lua_isstring(L, 1)) {
-			opcode = WEBSOCKET_OPCODE_TEXT;
+            opcode = MG_WEBSOCKET_OPCODE_TEXT;
 		}
 	} else if (num_args == 2) {
 		if (lua_isnumber(L, 1)) {
@@ -1372,21 +1372,21 @@ lwebsock_write(lua_State *L)
 			/* opcode string and message text */
 			str = lua_tostring(L, 1);
 			if (!mg_strncasecmp(str, "text", 4))
-				opcode = WEBSOCKET_OPCODE_TEXT;
+                opcode = MG_WEBSOCKET_OPCODE_TEXT;
 			else if (!mg_strncasecmp(str, "bin", 3))
-				opcode = WEBSOCKET_OPCODE_BINARY;
+                opcode = MG_WEBSOCKET_OPCODE_BINARY;
 			else if (!mg_strncasecmp(str, "close", 5))
-				opcode = WEBSOCKET_OPCODE_CONNECTION_CLOSE;
+                opcode = MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE;
 			else if (!mg_strncasecmp(str, "ping", 4))
-				opcode = WEBSOCKET_OPCODE_PING;
+                opcode = MG_WEBSOCKET_OPCODE_PING;
 			else if (!mg_strncasecmp(str, "pong", 4))
-				opcode = WEBSOCKET_OPCODE_PONG;
+                opcode = MG_WEBSOCKET_OPCODE_PONG;
 			else if (!mg_strncasecmp(str, "cont", 4))
-				opcode = WEBSOCKET_OPCODE_CONTINUATION;
+                opcode = MG_WEBSOCKET_OPCODE_CONTINUATION;
 		} else if (lua_isuserdata(L, 1)) {
 			/* client id and message text */
 			client = (struct mg_connection *)lua_touserdata(L, 1);
-			opcode = WEBSOCKET_OPCODE_TEXT;
+            opcode = MG_WEBSOCKET_OPCODE_TEXT;
 		}
 	} else if (num_args == 3) {
 		if (lua_isuserdata(L, 1)) {
@@ -1398,17 +1398,17 @@ lwebsock_write(lua_State *L)
 				/* client id, opcode string and message text */
 				str = lua_tostring(L, 2);
 				if (!mg_strncasecmp(str, "text", 4))
-					opcode = WEBSOCKET_OPCODE_TEXT;
+                    opcode = MG_WEBSOCKET_OPCODE_TEXT;
 				else if (!mg_strncasecmp(str, "bin", 3))
-					opcode = WEBSOCKET_OPCODE_BINARY;
+                    opcode = MG_WEBSOCKET_OPCODE_BINARY;
 				else if (!mg_strncasecmp(str, "close", 5))
-					opcode = WEBSOCKET_OPCODE_CONNECTION_CLOSE;
+                    opcode = MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE;
 				else if (!mg_strncasecmp(str, "ping", 4))
-					opcode = WEBSOCKET_OPCODE_PING;
+                    opcode = MG_WEBSOCKET_OPCODE_PING;
 				else if (!mg_strncasecmp(str, "pong", 4))
-					opcode = WEBSOCKET_OPCODE_PONG;
+                    opcode = MG_WEBSOCKET_OPCODE_PONG;
 				else if (!mg_strncasecmp(str, "cont", 4))
-					opcode = WEBSOCKET_OPCODE_CONTINUATION;
+                    opcode = MG_WEBSOCKET_OPCODE_CONTINUATION;
 			}
 		}
 	}

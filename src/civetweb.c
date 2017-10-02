@@ -2132,21 +2132,21 @@ enum {
 
 /* Config option name, config types, default value */
 static struct mg_option config_options[] = {
-    {"cgi_pattern", CONFIG_TYPE_EXT_PATTERN, "**.cgi$|**.pl$|**.php$"},
-    {"cgi_environment", CONFIG_TYPE_STRING_LIST, NULL},
-    {"put_delete_auth_file", CONFIG_TYPE_FILE, NULL},
-    {"cgi_interpreter", CONFIG_TYPE_FILE, NULL},
-    {"protect_uri", CONFIG_TYPE_STRING_LIST, NULL},
-    {"authentication_domain", CONFIG_TYPE_STRING, "mydomain.com"},
-    {"enable_auth_domain_check", CONFIG_TYPE_BOOLEAN, "yes"},
-    {"ssi_pattern", CONFIG_TYPE_EXT_PATTERN, "**.shtml$|**.shtm$"},
-    {"throttle", CONFIG_TYPE_STRING_LIST, NULL},
-    {"access_log_file", CONFIG_TYPE_FILE, NULL},
-    {"enable_directory_listing", CONFIG_TYPE_BOOLEAN, "yes"},
-    {"error_log_file", CONFIG_TYPE_FILE, NULL},
-    {"global_auth_file", CONFIG_TYPE_FILE, NULL},
+    {"cgi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.cgi$|**.pl$|**.php$"},
+    {"cgi_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"put_delete_auth_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"cgi_interpreter", MG_CONFIG_TYPE_FILE, NULL},
+    {"protect_uri", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"authentication_domain", MG_CONFIG_TYPE_STRING, "mydomain.com"},
+    {"enable_auth_domain_check", MG_CONFIG_TYPE_BOOLEAN, "yes"},
+    {"ssi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.shtml$|**.shtm$"},
+    {"throttle", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"access_log_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"enable_directory_listing", MG_CONFIG_TYPE_BOOLEAN, "yes"},
+    {"error_log_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"global_auth_file", MG_CONFIG_TYPE_FILE, NULL},
     {"index_files",
-     CONFIG_TYPE_STRING_LIST,
+     MG_CONFIG_TYPE_STRING_LIST,
 #ifdef USE_LUA
      "index.xhtml,index.html,index.htm,"
      "index.lp,index.lsp,index.lua,index.cgi,"
@@ -2154,79 +2154,79 @@ static struct mg_option config_options[] = {
 #else
      "index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php"},
 #endif
-    {"enable_keep_alive", CONFIG_TYPE_BOOLEAN, "no"},
-    {"access_control_list", CONFIG_TYPE_STRING_LIST, NULL},
-    {"extra_mime_types", CONFIG_TYPE_STRING_LIST, NULL},
-    {"listening_ports", CONFIG_TYPE_STRING_LIST, "8080"},
-    {"document_root", CONFIG_TYPE_DIRECTORY, NULL},
-    {"ssl_certificate", CONFIG_TYPE_FILE, NULL},
-    {"ssl_certificate_chain", CONFIG_TYPE_FILE, NULL},
-    {"num_threads", CONFIG_TYPE_NUMBER, "50"},
-    {"run_as_user", CONFIG_TYPE_STRING, NULL},
-    {"url_rewrite_patterns", CONFIG_TYPE_STRING_LIST, NULL},
-    {"hide_files_patterns", CONFIG_TYPE_EXT_PATTERN, NULL},
-    {"request_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
-    {"keep_alive_timeout_ms", CONFIG_TYPE_NUMBER, "500"},
-    {"linger_timeout_ms", CONFIG_TYPE_NUMBER, NULL},
+    {"enable_keep_alive", MG_CONFIG_TYPE_BOOLEAN, "no"},
+    {"access_control_list", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"extra_mime_types", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"listening_ports", MG_CONFIG_TYPE_STRING_LIST, "8080"},
+    {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
+    {"ssl_certificate", MG_CONFIG_TYPE_FILE, NULL},
+    {"ssl_certificate_chain", MG_CONFIG_TYPE_FILE, NULL},
+    {"num_threads", MG_CONFIG_TYPE_NUMBER, "50"},
+    {"run_as_user", MG_CONFIG_TYPE_STRING, NULL},
+    {"url_rewrite_patterns", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"hide_files_patterns", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
+    {"request_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
+    {"keep_alive_timeout_ms", MG_CONFIG_TYPE_NUMBER, "500"},
+    {"linger_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
 
     /* TODO(Feature): this is no longer a boolean, but yes/no/optional */
-    {"ssl_verify_peer", CONFIG_TYPE_BOOLEAN, "no"},
+    {"ssl_verify_peer", MG_CONFIG_TYPE_BOOLEAN, "no"},
 
-    {"ssl_ca_path", CONFIG_TYPE_DIRECTORY, NULL},
-    {"ssl_ca_file", CONFIG_TYPE_FILE, NULL},
-    {"ssl_verify_depth", CONFIG_TYPE_NUMBER, "9"},
-    {"ssl_default_verify_paths", CONFIG_TYPE_BOOLEAN, "yes"},
-    {"ssl_cipher_list", CONFIG_TYPE_STRING, NULL},
-    {"ssl_protocol_version", CONFIG_TYPE_NUMBER, "0"},
-    {"ssl_short_trust", CONFIG_TYPE_BOOLEAN, "no"},
+    {"ssl_ca_path", MG_CONFIG_TYPE_DIRECTORY, NULL},
+    {"ssl_ca_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"ssl_verify_depth", MG_CONFIG_TYPE_NUMBER, "9"},
+    {"ssl_default_verify_paths", MG_CONFIG_TYPE_BOOLEAN, "yes"},
+    {"ssl_cipher_list", MG_CONFIG_TYPE_STRING, NULL},
+    {"ssl_protocol_version", MG_CONFIG_TYPE_NUMBER, "0"},
+    {"ssl_short_trust", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #if defined(USE_WEBSOCKET)
-    {"websocket_timeout_ms", CONFIG_TYPE_NUMBER, "30000"},
+    {"websocket_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
 #endif
-    {"decode_url", CONFIG_TYPE_BOOLEAN, "yes"},
+    {"decode_url", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 
 #if defined(USE_LUA)
-    {"lua_preload_file", CONFIG_TYPE_FILE, NULL},
-    {"lua_script_pattern", CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
-    {"lua_server_page_pattern", CONFIG_TYPE_EXT_PATTERN, "**.lp$|**.lsp$"},
+    {"lua_preload_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"lua_script_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
+    {"lua_server_page_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lp$|**.lsp$"},
 #endif
 #if defined(USE_DUKTAPE)
     /* The support for duktape is still in alpha version state.
      * The name of this config option might change. */
-    {"duktape_script_pattern", CONFIG_TYPE_EXT_PATTERN, "**.ssjs$"},
+    {"duktape_script_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.ssjs$"},
 #endif
 
 #if defined(USE_WEBSOCKET)
-    {"websocket_root", CONFIG_TYPE_DIRECTORY, NULL},
+    {"websocket_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
 #endif
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
-    {"lua_websocket_pattern", CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
+    {"lua_websocket_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
 #endif
-    {"access_control_allow_origin", CONFIG_TYPE_STRING, "*"},
-    {"access_control_allow_methods", CONFIG_TYPE_STRING, "*"},
-    {"access_control_allow_headers", CONFIG_TYPE_STRING, "*"},
-    {"error_pages", CONFIG_TYPE_DIRECTORY, NULL},
-    {"tcp_nodelay", CONFIG_TYPE_NUMBER, "0"},
+    {"access_control_allow_origin", MG_CONFIG_TYPE_STRING, "*"},
+    {"access_control_allow_methods", MG_CONFIG_TYPE_STRING, "*"},
+    {"access_control_allow_headers", MG_CONFIG_TYPE_STRING, "*"},
+    {"error_pages", MG_CONFIG_TYPE_DIRECTORY, NULL},
+    {"tcp_nodelay", MG_CONFIG_TYPE_NUMBER, "0"},
 #if !defined(NO_CACHING)
-    {"static_file_max_age", CONFIG_TYPE_NUMBER, "3600"},
+    {"static_file_max_age", MG_CONFIG_TYPE_NUMBER, "3600"},
 #endif
 #if !defined(NO_SSL)
-    {"strict_transport_security_max_age", CONFIG_TYPE_NUMBER, NULL},
+    {"strict_transport_security_max_age", MG_CONFIG_TYPE_NUMBER, NULL},
 #endif
 #if defined(__linux__)
-    {"allow_sendfile_call", CONFIG_TYPE_BOOLEAN, "yes"},
+    {"allow_sendfile_call", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 #endif
 #if defined(_WIN32)
-    {"case_sensitive", CONFIG_TYPE_BOOLEAN, "no"},
+    {"case_sensitive", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
 #if defined(USE_LUA)
-    {"lua_background_script", CONFIG_TYPE_FILE, NULL},
-    {"lua_background_script_params", CONFIG_TYPE_STRING_LIST, NULL},
+    {"lua_background_script", MG_CONFIG_TYPE_FILE, NULL},
+    {"lua_background_script_params", MG_CONFIG_TYPE_STRING_LIST, NULL},
 #endif
-    {"additional_header", CONFIG_TYPE_STRING_MULTILINE, NULL},
-    {"max_request_size", CONFIG_TYPE_NUMBER, "16384"},
-    {"allow_index_script_resource", CONFIG_TYPE_BOOLEAN, "no"},
+    {"additional_header", MG_CONFIG_TYPE_STRING_MULTILINE, NULL},
+    {"max_request_size", MG_CONFIG_TYPE_NUMBER, "16384"},
+    {"allow_index_script_resource", MG_CONFIG_TYPE_BOOLEAN, "no"},
 
-    {NULL, CONFIG_TYPE_UNKNOWN, NULL}};
+    {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 
 
 /* Check if the config_options and the corresponding enum have compatible
@@ -11375,7 +11375,7 @@ read_websocket(struct mg_connection *conn,
 			}
 
 			if (exit_by_callback
-			    || ((mop & 0xf) == WEBSOCKET_OPCODE_CONNECTION_CLOSE)) {
+                || ((mop & 0xf) == MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE)) {
 				/* Opcode == 8, connection close */
 				break;
 			}
@@ -18036,7 +18036,7 @@ mg_init_library(unsigned features)
 				mg_ssl_initialized = 1;
 			} else {
 				(void)ebuf;
-				/* TODO: print error */
+				DEBUG_TRACE("Initializing SSL failed: %s", ebuf);
 				features_inited &= ~(2u);
 			}
 		} else {
