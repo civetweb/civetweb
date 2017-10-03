@@ -8225,20 +8225,39 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	if (conn_ret != 0) {
 		fd_set fdset;
 		struct timeval timeout;
+		int sockerr = -1;
+		socklen_t len = (socklen_t)sizeof(sockerr);
+
 		FD_ZERO(&fdset);
 		FD_SET(*sock, &fdset);
 		timeout.tv_sec = 10; /* 10 second timeout */
 		timeout.tv_usec = 0;
 
-        if (select((int)(*sock) + 1, NULL, &fdset, NULL, &timeout) != 1) {
+		if (select((int)(*sock) + 1, NULL, &fdset, NULL, &timeout) != 1) {
 			/* Not connected */
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
 			            ebuf_len,
-			            "connect(%s:%d): failed",
+			            "connect(%s:%d): timeout",
 			            host,
 			            port);
+			closesocket(*sock);
+			*sock = INVALID_SOCKET;
+			return 0;
+		}
+
+		getsockopt(*sock, SOL_SOCKET, SO_ERROR, &sockerr, &len);
+		if (sockerr != 0) {
+			/* Not connected */
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "connect(%s:%d): error %s",
+			            host,
+			            port,
+			            strerror(sockerr));
 			closesocket(*sock);
 			*sock = INVALID_SOCKET;
 			return 0;
