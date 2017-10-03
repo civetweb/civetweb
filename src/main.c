@@ -1077,25 +1077,49 @@ run_client(const char *url_arg)
 	/* Connect to host */
 	conn = mg_connect_client(host, (int)port, is_ssl, ebuf, sizeof(ebuf));
 	if (conn) {
+		/* Connecting to server worked */
 		char buf[1024] = {0};
 		int ret;
 
 		fprintf(stdout, "Connected to %s\n", host);
-		mg_printf(conn, "GET /%s HTTP/1.0\r\n\r\n", resource);
 
-		fprintf(stdout, "Reading from %s\n", host);
-		ret = mg_read(conn, buf, sizeof(buf));
-		fprintf(stdout, "ret=%i\n", ret);
-		while (ret > 0) {
-			ret = fwrite(buf, 1, ret, stdout);
-			fprintf(stdout, "wri=%i\n", ret);
+		/* Send GET request */
+		mg_printf(conn,
+		          "GET /%s HTTP/1.1\r\n"
+		          "Host: %s\r\n"
+		          "Connection: close\r\n"
+		          "\r\n",
+		          resource,
+		          host);
+
+		/* Wait for server to respond with a HTTP header */
+		ret = mg_get_response(conn, ebuf, sizeof(ebuf), 10000);
+
+		if (ret >= 0) {
+			const struct mg_response_info *ri = mg_get_response_info(conn);
+
+			fprintf(stdout,
+			        "Response info: %i %s\n",
+			        ri->status_code,
+			        ri->status_text);
+
+			/* Respond reader read. Read body (if any) */
 			ret = mg_read(conn, buf, sizeof(buf));
-			fprintf(stdout, "ret=%i\n", ret);
-		}
+			while (ret > 0) {
+				fwrite(buf, 1, ret, stdout);
+				ret = mg_read(conn, buf, sizeof(buf));
+			}
 
-		fprintf(stdout, "Closing connection to %s\n", host);
+			fprintf(stdout, "Closing connection to %s\n", host);
+
+		} else {
+			/* Server did not reply to HTTP request */
+			fprintf(stderr, "Got no response from %s:\n%s\n", host, ebuf);
+		}
 		mg_close_connection(conn);
+
 	} else {
+		/* Connecting to server failed */
 		fprintf(stderr, "Error connecting to %s:\n%s\n", host, ebuf);
 	}
 
