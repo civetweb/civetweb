@@ -4774,8 +4774,8 @@ make_public_server_suite(void)
 	TCase *const tcase_checktestenv = tcase_create("Check test environment");
 	TCase *const tcase_initlib = tcase_create("Init library");
 	TCase *const tcase_startthreads = tcase_create("Start threads");
-        TCase *const tcase_minimal_http_svr = tcase_create("Minimal HTTP Server");
-        TCase *const tcase_minimal_https_svr = tcase_create("Minimal HTTPS Server");
+	TCase *const tcase_minimal_http_svr = tcase_create("Minimal HTTP Server");
+	TCase *const tcase_minimal_https_svr = tcase_create("Minimal HTTPS Server");
 	TCase *const tcase_minimal_http_cli = tcase_create("Minimal HTTP Client");
 	TCase *const tcase_minimal_https_cli = tcase_create("Minimal HTTPS Client");
 	TCase *const tcase_startstophttp = tcase_create("Start Stop HTTP Server");
@@ -4789,7 +4789,7 @@ make_public_server_suite(void)
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
 	TCase *const tcase_error_handling = tcase_create("Error handling");
-        TCase *const tcase_error_log = tcase_create("Error logging");
+	TCase *const tcase_error_log = tcase_create("Error logging");
 	TCase *const tcase_throttle = tcase_create("Limit speed");
 	TCase *const tcase_large_file = tcase_create("Large file");
 	TCase *const tcase_file_in_mem = tcase_create("File in memory");
@@ -4807,15 +4807,16 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_startthreads, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_startthreads);
 
-        tcase_add_test(tcase_minimal_http_svr, test_minimal_http_server_callback);
-        tcase_set_timeout(tcase_minimal_http_svr, civetweb_min_server_test_timeout);
-        suite_add_tcase(suite, tcase_minimal_http_svr);
+	tcase_add_test(tcase_minimal_http_svr, test_minimal_http_server_callback);
+	tcase_set_timeout(tcase_minimal_http_svr, civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_minimal_http_svr);
 
-        tcase_add_test(tcase_minimal_https_svr, test_minimal_https_server_callback);
-        tcase_set_timeout(tcase_minimal_https_svr, civetweb_min_server_test_timeout);
-        suite_add_tcase(suite, tcase_minimal_https_svr);
+	tcase_add_test(tcase_minimal_https_svr, test_minimal_https_server_callback);
+	tcase_set_timeout(tcase_minimal_https_svr,
+	                  civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_minimal_https_svr);
 
-        tcase_add_test(tcase_minimal_http_cli, test_minimal_client);
+	tcase_add_test(tcase_minimal_http_cli, test_minimal_client);
 	tcase_set_timeout(tcase_minimal_http_cli, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_minimal_http_cli);
 
@@ -4867,11 +4868,11 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_error_handling, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_error_handling);
 
-        tcase_add_test(tcase_error_log, test_error_log_file);
-        tcase_set_timeout(tcase_error_log, civetweb_mid_server_test_timeout);
-        suite_add_tcase(suite, tcase_error_log);
+	tcase_add_test(tcase_error_log, test_error_log_file);
+	tcase_set_timeout(tcase_error_log, civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_error_log);
 
-        tcase_add_test(tcase_throttle, test_throttle);
+	tcase_add_test(tcase_throttle, test_throttle);
 	tcase_set_timeout(tcase_throttle, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_throttle);
 
