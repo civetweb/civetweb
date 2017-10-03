@@ -3779,7 +3779,7 @@ START_TEST(test_error_log_file)
 
 	/* Start server with bad options */
 	ck_assert_str_eq(OPTIONS[0], "listening_ports");
-	OPTIONS[1] = "bad port syntax";
+	OPTIONS[1] = "bad !"; /* no r or s in string */
 
 	ctx = test_mg_start(NULL, 0, OPTIONS);
 	ck_assert_msg(
