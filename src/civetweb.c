@@ -8230,7 +8230,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		timeout.tv_sec = 10; /* 10 second timeout */
 		timeout.tv_usec = 0;
 
-		if (select(*sock + 1, NULL, &fdset, NULL, &timeout) != 1) {
+        if (select((int)(*sock) + 1, NULL, &fdset, NULL, &timeout) != 1) {
 			/* Not connected */
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
