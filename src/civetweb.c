@@ -13609,41 +13609,49 @@ check_acl(struct mg_context *ctx, uint32_t remote_ip)
 static int
 set_uid_option(struct mg_context *ctx)
 {
-	struct passwd *pw;
-	if (ctx) {
-		const char *uid = ctx->config[RUN_AS_USER];
-		int success = 0;
+	int success = 0;
 
-		if (uid == NULL) {
+	if (ctx) {
+		/* We are currently running as curr_uid. */
+		const uid_t curr_uid = getuid();
+		/* If set, we want to run as run_as_user. */
+		const char *run_as_user = ctx->config[RUN_AS_USER];
+		const struct passwd *to_pw = NULL;
+
+		if (run_as_user != NULL && (to_pw = getpwnam(run_as_user)) == NULL) {
+			/* run_as_user does not exist on the system. We can't proceed further. */
+			mg_cry(fc(ctx), "%s: unknown user [%s]", __func__, run_as_user);
+		} else if (run_as_user == NULL || curr_uid == to_pw->pw_uid) {
+			/* There was either no request to change user, or we're already
+			 * running as run_as_user. Nothing else to do.
+			 */
 			success = 1;
 		} else {
-			if ((pw = getpwnam(uid)) == NULL) {
-				mg_cry(fc(ctx), "%s: unknown user [%s]", __func__, uid);
-			} else if (setgid(pw->pw_gid) == -1) {
+			/* Valid change request.  */
+			if (setgid(to_pw->pw_gid) == -1) {
 				mg_cry(fc(ctx),
 				       "%s: setgid(%s): %s",
 				       __func__,
-				       uid,
+				       run_as_user,
 				       strerror(errno));
-			} else if (setgroups(0, NULL)) {
+			} else if (setgroups(0, NULL) == -1) {
 				mg_cry(fc(ctx),
 				       "%s: setgroups(): %s",
 				       __func__,
 				       strerror(errno));
-			} else if (setuid(pw->pw_uid) == -1) {
+			} else if (setuid(to_pw->pw_uid) == -1) {
 				mg_cry(fc(ctx),
 				       "%s: setuid(%s): %s",
 				       __func__,
-				       uid,
+				       run_as_user,
 				       strerror(errno));
 			} else {
 				success = 1;
 			}
 		}
-
-		return success;
 	}
-	return 0;
+
+	return success;
 }
 #endif /* !_WIN32 */
 
