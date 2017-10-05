@@ -2085,21 +2085,21 @@ field_found(const char *key,
 	ck_assert_uint_gt(pathlen, 128);
 	ck_assert_ptr_eq(user_data, (void *)&g_field_found_return);
 
-	ck_assert((g_field_found_return == FORM_FIELD_STORAGE_GET)
-	          || (g_field_found_return == FORM_FIELD_STORAGE_STORE)
-	          || (g_field_found_return == FORM_FIELD_STORAGE_SKIP)
-	          || (g_field_found_return == FORM_FIELD_STORAGE_ABORT));
+	ck_assert((g_field_found_return == MG_FORM_FIELD_STORAGE_GET)
+	          || (g_field_found_return == MG_FORM_FIELD_STORAGE_STORE)
+	          || (g_field_found_return == MG_FORM_FIELD_STORAGE_SKIP)
+	          || (g_field_found_return == MG_FORM_FIELD_STORAGE_ABORT));
 
 	ck_assert_str_ne(key, "dontread");
 
 	if (!strcmp(key, "break_field_handler")) {
-		return FORM_FIELD_STORAGE_ABORT;
+		return MG_FORM_FIELD_STORAGE_ABORT;
 	}
 	if (!strcmp(key, "continue_field_handler")) {
-		return FORM_FIELD_STORAGE_SKIP;
+		return MG_FORM_FIELD_STORAGE_SKIP;
 	}
 
-	if (g_field_found_return == FORM_FIELD_STORAGE_STORE) {
+	if (g_field_found_return == MG_FORM_FIELD_STORAGE_STORE) {
 		strncpy(path, key, pathlen - 8);
 		strcat(path, ".txt");
 	}
@@ -2327,7 +2327,7 @@ FormGet(struct mg_connection *conn, void *cbdata)
 
 	/* Call the form handler */
 	g_field_step = 0;
-	g_field_found_return = FORM_FIELD_STORAGE_GET;
+	g_field_found_return = MG_FORM_FIELD_STORAGE_GET;
 	ret = mg_handle_form_request(conn, &fdh);
 	g_field_found_return = -888;
 	ck_assert_int_eq(ret, 22);
@@ -2363,7 +2363,7 @@ FormStore(struct mg_connection *conn,
 
 	/* Call the form handler */
 	g_field_step = 100;
-	g_field_found_return = FORM_FIELD_STORAGE_STORE;
+	g_field_found_return = MG_FORM_FIELD_STORAGE_STORE;
 	ret = mg_handle_form_request(conn, &fdh);
 	ck_assert_int_eq(ret, ret_expected);
 	ck_assert_int_eq(g_field_step, field_step_expected);

@@ -13619,7 +13619,8 @@ set_uid_option(struct mg_context *ctx)
 		const struct passwd *to_pw = NULL;
 
 		if (run_as_user != NULL && (to_pw = getpwnam(run_as_user)) == NULL) {
-			/* run_as_user does not exist on the system. We can't proceed further. */
+			/* run_as_user does not exist on the system. We can't proceed
+			 * further. */
 			mg_cry(fc(ctx), "%s: unknown user [%s]", __func__, run_as_user);
 		} else if (run_as_user == NULL || curr_uid == to_pw->pw_uid) {
 			/* There was either no request to change user, or we're already
