@@ -203,6 +203,7 @@ struct mg_client_cert {
 	const char *finger;
 };
 
+#if defined(MG_LEGACY_INTERFACE)
 /* Old nomenclature. */
 struct client_cert {
 	const char *subject;
@@ -210,6 +211,7 @@ struct client_cert {
 	const char *serial;
 	const char *finger;
 };
+#endif
 
 
 /* This structure needs to be passed to mg_start(), to let civetweb know
@@ -622,6 +624,7 @@ struct mg_option {
 };
 
 /* Old nomenclature */
+#if defined(MG_LEGACY_INTERFACE)
 enum {
 	CONFIG_TYPE_UNKNOWN = 0x0,
 	CONFIG_TYPE_NUMBER = 0x1,
@@ -633,6 +636,7 @@ enum {
 	CONFIG_TYPE_STRING_LIST = 0x7,
 	CONFIG_TYPE_STRING_MULTILINE = 0x8
 };
+#endif
 
 /* New nomenclature */
 enum {
@@ -791,7 +795,7 @@ CIVETWEB_API void mg_unlock_context(struct mg_context *ctx);
 
 
 /* Opcodes, from http://tools.ietf.org/html/rfc6455 */
-/* Old nomenclature */
+#if defined(MG_LEGACY_INTERFACE)
 enum {
 	WEBSOCKET_OPCODE_CONTINUATION = 0x0,
 	WEBSOCKET_OPCODE_TEXT = 0x1,
@@ -800,6 +804,7 @@ enum {
 	WEBSOCKET_OPCODE_PING = 0x9,
 	WEBSOCKET_OPCODE_PONG = 0xa
 };
+#endif
 
 /* New nomenclature */
 enum {
@@ -1136,7 +1141,7 @@ struct mg_form_data_handler {
 
 /* Return values definition for the "field_found" callback in
  * mg_form_data_handler. */
-/* Old nomenclature */
+#if defined(MG_LEGACY_INTERFACE)
 enum {
 	/* Skip this field (neither get nor store it). Continue with the
      * next field. */
@@ -1148,7 +1153,7 @@ enum {
 	/* Stop parsing this request. Skip the remaining fields. */
 	FORM_FIELD_STORAGE_ABORT = 0x10
 };
-
+#endif
 /* New nomenclature */
 enum {
 	/* Skip this field (neither get nor store it). Continue with the
