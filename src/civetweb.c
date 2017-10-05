@@ -8226,7 +8226,12 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		fd_set fdset;
 		struct timeval timeout;
 		int sockerr = -1;
+
+#if defined(_WIN32)
+		int len = (int)sizeof(sockerr);
+#else
 		socklen_t len = (socklen_t)sizeof(sockerr);
+#endif
 
 		FD_ZERO(&fdset);
 		FD_SET(*sock, &fdset);
@@ -8247,7 +8252,12 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 			return 0;
 		}
 
-		getsockopt((int)*sock, SOL_SOCKET, SO_ERROR, &sockerr, &len);
+#if defined(_WIN32)
+		getsockopt(*sock, SOL_SOCKET, SO_ERROR, (char *)&sockerr, &len);
+#else
+		getsockopt(*sock, SOL_SOCKET, SO_ERROR, (void *)&sockerr, &len);
+#endif
+
 		if (sockerr != 0) {
 			/* Not connected */
 			mg_snprintf(NULL,
