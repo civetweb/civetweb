@@ -924,7 +924,7 @@ websock_server_ready(struct mg_connection *conn, void *udata)
 	/* Send websocket welcome message */
 	mg_lock_connection(conn);
 	mg_websocket_write(conn,
-	                   WEBSOCKET_OPCODE_TEXT,
+	                   MG_WEBSOCKET_OPCODE_TEXT,
 	                   websocket_welcome_msg,
 	                   websocket_welcome_msg_len);
 	mg_unlock_connection(conn);
@@ -955,27 +955,27 @@ websock_server_data(struct mg_connection *conn,
 		/* Send websocket goodbye message */
 		mg_lock_connection(conn);
 		mg_websocket_write(conn,
-		                   WEBSOCKET_OPCODE_TEXT,
+		                   MG_WEBSOCKET_OPCODE_TEXT,
 		                   websocket_goodbye_msg,
 		                   websocket_goodbye_msg_len);
 		mg_unlock_connection(conn);
 	} else if (data_len == 5 && !memcmp(data, "data1", 5)) {
 		mg_lock_connection(conn);
-		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok1", 3);
+		mg_websocket_write(conn, MG_WEBSOCKET_OPCODE_TEXT, "ok1", 3);
 		mg_unlock_connection(conn);
 	} else if (data_len == 5 && !memcmp(data, "data2", 5)) {
 		mg_lock_connection(conn);
-		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok 2", 4);
+		mg_websocket_write(conn, MG_WEBSOCKET_OPCODE_TEXT, "ok 2", 4);
 		mg_unlock_connection(conn);
 	} else if (data_len == 5 && !memcmp(data, "data3", 5)) {
 		mg_lock_connection(conn);
-		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok - 3", 6);
+		mg_websocket_write(conn, MG_WEBSOCKET_OPCODE_TEXT, "ok - 3", 6);
 		mg_unlock_connection(conn);
 	} else if (data_len == long_ws_buf_len_16) {
 		ck_assert(memcmp(data, long_ws_buf, long_ws_buf_len_16) == 0);
 		mg_lock_connection(conn);
 		mg_websocket_write(conn,
-		                   WEBSOCKET_OPCODE_BINARY,
+		                   MG_WEBSOCKET_OPCODE_BINARY,
 		                   long_ws_buf,
 		                   long_ws_buf_len_16);
 		mg_unlock_connection(conn);
@@ -983,7 +983,7 @@ websock_server_data(struct mg_connection *conn,
 		ck_assert(memcmp(data, long_ws_buf, long_ws_buf_len_64) == 0);
 		mg_lock_connection(conn);
 		mg_websocket_write(conn,
-		                   WEBSOCKET_OPCODE_BINARY,
+		                   MG_WEBSOCKET_OPCODE_BINARY,
 		                   long_ws_buf,
 		                   long_ws_buf_len_64);
 		mg_unlock_connection(conn);
@@ -1061,10 +1061,10 @@ websocket_client_data_handler(struct mg_connection *conn,
 	ck_assert(pclient_data != NULL);
 	ck_assert_int_gt(flags, 128);
 	ck_assert_int_lt(flags, 128 + 16);
-	ck_assert((flags == (int)(128 | WEBSOCKET_OPCODE_BINARY))
-	          || (flags == (int)(128 | WEBSOCKET_OPCODE_TEXT)));
+	ck_assert((flags == (int)(128 | MG_WEBSOCKET_OPCODE_BINARY))
+	          || (flags == (int)(128 | MG_WEBSOCKET_OPCODE_TEXT)));
 
-	if (flags == (int)(128 | WEBSOCKET_OPCODE_TEXT)) {
+	if (flags == (int)(128 | MG_WEBSOCKET_OPCODE_TEXT)) {
 		WS_TEST_TRACE(
 		    "Client %i received %lu bytes text data from server: %.*s\n",
 		    pclient_data->clientId,
@@ -1791,7 +1791,7 @@ START_TEST(test_request_handlers)
 	ws_client1_data.len = 0;
 
 	mg_websocket_client_write(ws_client1_conn,
-	                          WEBSOCKET_OPCODE_TEXT,
+	                          MG_WEBSOCKET_OPCODE_TEXT,
 	                          "data1",
 	                          5);
 
@@ -1853,7 +1853,7 @@ START_TEST(test_request_handlers)
 	ws_client2_data.len = 0;
 
 	mg_websocket_client_write(ws_client1_conn,
-	                          WEBSOCKET_OPCODE_TEXT,
+	                          MG_WEBSOCKET_OPCODE_TEXT,
 	                          "data2",
 	                          5);
 
@@ -1872,7 +1872,10 @@ START_TEST(test_request_handlers)
 	ws_client1_data.data = NULL;
 	ws_client1_data.len = 0;
 
-	mg_websocket_client_write(ws_client1_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
+	mg_websocket_client_write(ws_client1_conn,
+	                          MG_WEBSOCKET_OPCODE_TEXT,
+	                          "bye",
+	                          3);
 
 	wait_not_null(
 	    &(ws_client1_data.data)); /* Wait for the websocket goodbye message */
@@ -1904,7 +1907,10 @@ START_TEST(test_request_handlers)
 	ck_assert(ws_client2_data.data == NULL);
 	ck_assert(ws_client2_data.len == 0);
 
-	mg_websocket_client_write(ws_client2_conn, WEBSOCKET_OPCODE_TEXT, "bye", 3);
+	mg_websocket_client_write(ws_client2_conn,
+	                          MG_WEBSOCKET_OPCODE_TEXT,
+	                          "bye",
+	                          3);
 
 	wait_not_null(
 	    &(ws_client2_data.data)); /* Wait for the websocket goodbye message */
@@ -1973,7 +1979,7 @@ START_TEST(test_request_handlers)
 
 	/* Write long data (16 bit size header) */
 	mg_websocket_client_write(ws_client3_conn,
-	                          WEBSOCKET_OPCODE_BINARY,
+	                          MG_WEBSOCKET_OPCODE_BINARY,
 	                          long_ws_buf,
 	                          long_ws_buf_len_16);
 
@@ -1988,7 +1994,7 @@ START_TEST(test_request_handlers)
 
 	/* Write long data (64 bit size header) */
 	mg_websocket_client_write(ws_client3_conn,
-	                          WEBSOCKET_OPCODE_BINARY,
+	                          MG_WEBSOCKET_OPCODE_BINARY,
 	                          long_ws_buf,
 	                          long_ws_buf_len_64);
 

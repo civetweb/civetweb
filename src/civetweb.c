@@ -8247,7 +8247,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 			return 0;
 		}
 
-		getsockopt(*sock, SOL_SOCKET, SO_ERROR, &sockerr, &len);
+		getsockopt((int)*sock, SOL_SOCKET, SO_ERROR, &sockerr, &len);
 		if (sockerr != 0) {
 			/* Not connected */
 			mg_snprintf(NULL,
