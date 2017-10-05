@@ -3638,7 +3638,7 @@ mg_get_header(const struct mg_connection *conn, const char *name)
 	}
 	if (conn->connection_type == CONNECTION_TYPE_RESPONSE) {
 		return get_header(conn->response_info.http_headers,
-		                  conn->request_info.num_headers,
+		                  conn->response_info.num_headers,
 		                  name);
 	}
 	return NULL;
