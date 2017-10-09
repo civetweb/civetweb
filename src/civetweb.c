@@ -14345,6 +14345,36 @@ set_ssl_option(struct mg_context *ctx)
 		return 1;
 	}
 
+	/* Check for external SSL_CTX */
+	SSL_CTX* ssl_ctx = 0;
+	callback_ret =
+	    (ctx->callbacks.get_external_ssl_ctx == NULL)
+	        ? 0
+	        : (ctx->callbacks.get_external_ssl_ctx(&ssl_ctx, ctx->user_data));
+
+	if (callback_ret < 0) {
+		mg_cry(fc(ctx), "get_external_ssl_ctx callback returned error: %i", callback_ret);
+		return 0;
+	}
+	else if (callback_ret > 0) {
+		ctx->ssl_ctx = ssl_ctx;
+		if (!initialize_ssl(ebuf, sizeof(ebuf))) {
+	 	   mg_cry(fc(ctx), "%s", ebuf);
+		   return 0;
+	    }
+#if !defined(NO_SSL_DL)
+		if (!ssllib_dll_handle) {
+			ssllib_dll_handle = load_dll(ebuf, sizeof(ebuf), SSL_LIB, ssl_sw);
+			if (!ssllib_dll_handle) {
+				mg_cry(fc(ctx), "%s", ebuf);
+				return 0;
+			}
+		}
+#endif /* NO_SSL_DL */
+		return 1;
+	}
+	/* else continue */	
+	
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, setup will fail. */
 	if (((pem = ctx->config[SSL_CERTIFICATE]) == NULL)
@@ -16662,7 +16692,16 @@ free_context(struct mg_context *ctx)
 #ifndef NO_SSL
 	/* Deallocate SSL context */
 	if (ctx->ssl_ctx != NULL) {
+	  SSL_CTX* ssl_ctx = 0;
+      int callback_ret =
+	    (ctx->callbacks.get_external_ssl_ctx == NULL)
+	        ? 0
+	        : (ctx->callbacks.get_external_ssl_ctx(&ssl_ctx, ctx->user_data));
+
+	  if (callback_ret == 0) {
 		SSL_CTX_free(ctx->ssl_ctx);
+	  }
+	  // else ignore error and ommit SSL_CTX_free in case callback_ret is 1
 	}
 #endif /* !NO_SSL */
 
