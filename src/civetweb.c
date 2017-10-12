@@ -1718,7 +1718,7 @@ struct ssl_func {
 #define OPENSSL_free(a) CRYPTO_free(a)
 
 
-/* set_ssl_option() function updates this array.
+/* init_ssl_ctx() function updates this array.
  * It loads SSL library dynamically and changes NULLs to the actual addresses
  * of respective functions. The macros above (like SSL_connect()) are really
  * just calling these functions indirectly via the pointer. */
@@ -1880,7 +1880,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 
 #define OPENSSL_free(a) CRYPTO_free(a)
 
-/* set_ssl_option() function updates this array.
+/* init_ssl_ctx() function updates this array.
  * It loads SSL library dynamically and changes NULLs to the actual addresses
  * of respective functions. The macros above (like SSL_connect()) are really
  * just calling these functions indirectly via the pointer. */
@@ -14316,9 +14316,9 @@ ssl_info_callback(SSL *ssl, int what, int ret)
 }
 
 
-/* Dynamically load SSL library. Set up ctx->ssl_ctx pointer. */
+/* Setup SSL CTX as required by CivetWeb */
 static int
-set_ssl_option(struct mg_context *ctx)
+init_ssl_ctx_impl(struct mg_context *ctx)
 {
 	const char *pem;
 	const char *chain;
@@ -14336,36 +14336,6 @@ set_ssl_option(struct mg_context *ctx)
 	int protocol_ver;
 	char ebuf[128];
 
-	if (!ctx) {
-		return 0;
-	}
-
-	if (!is_ssl_port_used(ctx->config[LISTENING_PORTS])) {
-		/* No SSL port is set. No need to setup SSL. */
-		return 1;
-	}
-
-	/* Check for external SSL_CTX */
-	void* ssl_ctx = 0;
-	callback_ret =
-	    (ctx->callbacks.external_ssl_ctx == NULL)
-	        ? 0
-	        : (ctx->callbacks.external_ssl_ctx(&ssl_ctx, ctx->user_data));
-
-	if (callback_ret < 0) {
-		mg_cry(fc(ctx), "external_ssl_ctx callback returned error: %i", callback_ret);
-		return 0;
-	}
-	else if (callback_ret > 0) {
-		ctx->ssl_ctx = (SSL_CTX*) ssl_ctx;
-		if (!initialize_ssl(ebuf, sizeof(ebuf))) {
-	 	   mg_cry(fc(ctx), "%s", ebuf);
-		   return 0;
-	    }
-		return 1;
-	}
-	/* else continue */	
-	
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, setup will fail. */
 	if (((pem = ctx->config[SSL_CERTIFICATE]) == NULL)
@@ -14546,6 +14516,49 @@ set_ssl_option(struct mg_context *ctx)
 	}
 
 	return 1;
+}
+
+
+/* Check if SSL is required.
+ * If so, dynamically load SSL library
+ * and set up ctx->ssl_ctx pointer. */
+static int
+init_ssl_ctx(struct mg_context *ctx)
+{
+	void *ssl_ctx = 0;
+	int callback_ret;
+
+	if (!ctx) {
+		return 0;
+	}
+
+	if (!is_ssl_port_used(ctx->config[LISTENING_PORTS])) {
+		/* No SSL port is set. No need to setup SSL. */
+		return 1;
+	}
+
+	/* Check for external SSL_CTX */
+	callback_ret =
+	    (ctx->callbacks.external_ssl_ctx == NULL)
+	        ? 0
+	        : (ctx->callbacks.external_ssl_ctx(&ssl_ctx, ctx->user_data));
+
+	if (callback_ret < 0) {
+		mg_cry(fc(ctx),
+		       "external_ssl_ctx callback returned error: %i",
+		       callback_ret);
+		return 0;
+	} else if (callback_ret > 0) {
+		char ebuf[128];
+		ctx->ssl_ctx = (SSL_CTX *)ssl_ctx;
+		if (!initialize_ssl(ebuf, sizeof(ebuf))) {
+			mg_cry(fc(ctx), "%s", ebuf);
+			return 0;
+		}
+		return 1;
+	}
+	/* else continue */
+	return init_ssl_ctx(ctx);
 }
 
 
@@ -16683,16 +16696,16 @@ free_context(struct mg_context *ctx)
 #ifndef NO_SSL
 	/* Deallocate SSL context */
 	if (ctx->ssl_ctx != NULL) {
-	  void* ssl_ctx = (void*) ctx->ssl_ctx;
-      int callback_ret =
-	    (ctx->callbacks.external_ssl_ctx == NULL)
-	        ? 0
-	        : (ctx->callbacks.external_ssl_ctx(&ssl_ctx, ctx->user_data));
+		void *ssl_ctx = (void *)ctx->ssl_ctx;
+		int callback_ret =
+		    (ctx->callbacks.external_ssl_ctx == NULL)
+		        ? 0
+		        : (ctx->callbacks.external_ssl_ctx(&ssl_ctx, ctx->user_data));
 
-	  if (callback_ret == 0) {
-		SSL_CTX_free(ctx->ssl_ctx);
-	  }
-	  // else ignore error and ommit SSL_CTX_free in case callback_ret is 1
+		if (callback_ret == 0) {
+			SSL_CTX_free(ctx->ssl_ctx);
+		}
+		// else ignore error and ommit SSL_CTX_free in case callback_ret is 1
 	}
 #endif /* !NO_SSL */
 
@@ -16993,7 +17006,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	 * be initialized before listening ports. UID must be set last. */
 	if (!set_gpass_option(ctx) ||
 #if !defined(NO_SSL)
-	    !set_ssl_option(ctx) ||
+	    !init_ssl_ctx(ctx) ||
 #endif
 	    !set_ports_option(ctx) ||
 #if !defined(_WIN32)

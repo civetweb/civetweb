@@ -256,14 +256,17 @@ struct mg_callbacks {
 
 	/* Called when civetweb is about to create or free a SSL_CTX.
 	Parameters:
-	   ssl_ctx: SSL_CTX pointer. NULL at creation time, Not NULL when mg_context will be freed
+	   ssl_ctx: SSL_CTX pointer. NULL at creation time, Not NULL when mg_context
+	will be freed
 	     user_data: parameter user_data passed when starting the server.
 	   Return value:
-	     0: civetweb will continue to create the context, just as if the callback would not be present. 
+	     0: civetweb will continue to create the context, just as if the
+	callback would not be present.
 	        The value in *ssl_ctx when the function returns is ignored.
-	     1: civetweb will copy the value from *ssl_ctx to the civetweb context and doesn't create its own.
+	     1: civetweb will copy the value from *ssl_ctx to the civetweb context
+	and doesn't create its own.
 	    -1: initializing ssl fails.*/
-	int (*external_ssl_ctx)( void **ssl_ctx, void *user_data );	
+	int (*external_ssl_ctx)(void **ssl_ctx, void *user_data);
 
 #if defined(MG_LEGACY_INTERFACE)
 	/* Called when websocket request is received, before websocket handshake.

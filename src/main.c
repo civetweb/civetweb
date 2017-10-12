@@ -1001,7 +1001,7 @@ run_client(const char *url_arg)
 	unsigned long port = 0;
 	size_t sep;
 	char *endp = 0;
-    char empty[] = "";
+	char empty[] = "";
 
 	/* connection object */
 	struct mg_connection *conn;
@@ -1035,7 +1035,7 @@ run_client(const char *url_arg)
 	sep = strcspn(host, "/:");
 	switch (host[sep]) {
 	case 0:
-        resource = empty;
+		resource = empty;
 		break;
 	case '/':
 		host[sep] = 0;
@@ -1054,7 +1054,7 @@ run_client(const char *url_arg)
 			*endp = 0;
 			resource = endp + 1;
 		} else {
-            resource = empty;
+			resource = empty;
 		}
 		break;
 	default:
