@@ -1620,6 +1620,12 @@ typedef struct x509 X509;
 #define SSL_ERROR_WANT_CONNECT (7)
 #define SSL_ERROR_WANT_ACCEPT (8)
 
+#define TLSEXT_TYPE_server_name (0)
+#define TLSEXT_NAMETYPE_host_name (0)
+#define SSL_TLSEXT_ERR_OK (0)
+#define SSL_TLSEXT_ERR_ALERT_WARNING (1)
+#define SSL_TLSEXT_ERR_ALERT_FATAL (2)
+#define SSL_TLSEXT_ERR_NOACK (3)
 
 struct ssl_func {
 	const char *name;  /* SSL function name */
@@ -1680,11 +1686,24 @@ struct ssl_func {
 	            void (*callback)(SSL * s, int, int)))ssl_sw[32].ptr)
 #define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
 #define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
+#define SSL_CTX_callback_ctrl                                                  \
+	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
+#define SSL_get_servername                                                     \
+	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
 
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
 #define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
 	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
+
+#define SSL_CTRL_SET_TLSEXT_SERVERNAME_CB 53
+#define SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG 54
+#define SSL_CTX_set_tlsext_servername_callback(ctx, cb)                        \
+	SSL_CTX_callback_ctrl(ctx,                                                 \
+	                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,                   \
+	                      (void (*)(void))cb)
+#define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
+	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
 
 #define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
 #define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
@@ -1757,6 +1776,8 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_set_info_callback", NULL},
                                    {"SSL_get_ex_data", NULL},
                                    {"SSL_set_ex_data", NULL},
+                                   {"SSL_CTX_callback_ctrl", NULL},
+                                   {"SSL_get_servername", NULL},
                                    {NULL, NULL}};
 
 
@@ -1825,10 +1846,13 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
 #define SSL_CTX_set_info_callback                                              \
-	(*(void (*)(SSL_CTX * ctx,                                                 \
-	            void (*callback)(SSL * s, int, int)))ssl_sw[32].ptr)
+	(*(void (*)(SSL_CTX *, void (*callback)(SSL * s, int, int)))ssl_sw[32].ptr)
 #define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
 #define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
+#define SSL_CTX_callback_ctrl                                                  \
+	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
+#define SSL_get_servername                                                     \
+	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
 
 #define SSL_CTX_set_options(ctx, op)                                           \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
@@ -1837,6 +1861,14 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
 	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
 
+#define SSL_CTRL_SET_TLSEXT_SERVERNAME_CB 53
+#define SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG 54
+#define SSL_CTX_set_tlsext_servername_callback(ctx, cb)                        \
+	SSL_CTX_callback_ctrl(ctx,                                                 \
+	                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,                   \
+	                      (void (*)(void))cb)
+#define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
+	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
 
 #define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
 #define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
@@ -1919,6 +1951,8 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_set_info_callback", NULL},
                                    {"SSL_get_ex_data", NULL},
                                    {"SSL_set_ex_data", NULL},
+                                   {"SSL_CTX_callback_ctrl", NULL},
+                                   {"SSL_get_servername", NULL},
                                    {NULL, NULL}};
 
 
@@ -14188,7 +14222,7 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 
 #if !defined(NO_SSL_DL)
 	if (!ssllib_dll_handle) {
-		ssllib_dll_handle = load_dll(ebuf, sizeof(ebuf), SSL_LIB, ssl_sw);
+		ssllib_dll_handle = load_dll(ebuf, ebuf_len, SSL_LIB, ssl_sw);
 		if (!ssllib_dll_handle) {
 			DEBUG_TRACE("%s", ebuf);
 			return 0;
@@ -14316,6 +14350,31 @@ ssl_info_callback(SSL *ssl, int what, int ret)
 }
 
 
+static int
+ssl_servername_callback(SSL *ssl, int *ad, void *arg)
+{
+	struct mg_context *ctx = (struct mg_context *)arg;
+	const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+
+	printf("servername = %s\n", servername);
+	/*
+	if (p->servername == NULL)
+	    return SSL_TLSEXT_ERR_NOACK;
+
+	if (servername != NULL) {
+	    if (strcasecmp(servername, p->servername))
+	        return p->extension_error;
+	    if (ctx2 != NULL) {
+	        BIO_printf(p->biodebug, "Switching server context.\n");
+	        SSL_set_SSL_CTX(ssl, ctx2);
+	    }
+	}
+	*/
+
+	return SSL_TLSEXT_ERR_OK;
+}
+
+
 /* Setup SSL CTX as required by CivetWeb */
 static int
 init_ssl_ctx_impl(struct mg_context *ctx)
@@ -14406,6 +14465,11 @@ init_ssl_ctx_impl(struct mg_context *ctx)
 	 */
 	SSL_CTX_set_info_callback(ctx->ssl_ctx, ssl_info_callback);
 
+
+	SSL_CTX_set_tlsext_servername_callback(ctx->ssl_ctx,
+	                                       ssl_servername_callback);
+	SSL_CTX_set_tlsext_servername_arg(ctx->ssl_ctx, &ctx);
+
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -14478,9 +14542,9 @@ init_ssl_ctx_impl(struct mg_context *ctx)
 			mg_cry(fc(ctx),
 			       "SSL_CTX_load_verify_locations error: %s "
 			       "ssl_verify_peer requires setting "
-			       "either ssl_ca_path or ssl_ca_file. Is any of them "
-			       "present in "
-			       "the .conf file?",
+			       "either ssl_ca_path or ssl_ca_file. "
+			       "Is any of them present in the "
+			       ".conf file?",
 			       ssl_error());
 			return 0;
 		}
@@ -14558,7 +14622,7 @@ init_ssl_ctx(struct mg_context *ctx)
 		return 1;
 	}
 	/* else continue */
-	return init_ssl_ctx(ctx);
+	return init_ssl_ctx_impl(ctx);
 }
 
 
