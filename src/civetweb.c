@@ -14369,7 +14369,7 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	 * Multiple HTTPS hosts on one IP+port are only possible
 	 * with a certificate containing all alternative names.
 	 */
-	if ((p->servername == NULL) || (*p->servername = 0)) {
+    if ((servername == NULL) || (*servername = 0)) {
 		DEBUG_TRACE("%s", "SSL connection not supporting SNI");
 		return SSL_TLSEXT_ERR_NOACK;
 	}
@@ -14383,7 +14383,7 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	 *   SSL_set_SSL_CTX(ssl, matching_ssl_ctx);
 	 * to use this certificate. A different document_root
 	 * may be required as well.
-	*/
+     */
 
 	return SSL_TLSEXT_ERR_OK;
 }
