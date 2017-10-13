@@ -1406,7 +1406,7 @@ save_config(HWND hDlg, FILE *fp)
 	options = mg_get_valid_options();
 	for (i = 0; options[i].name != NULL; i++) {
 		id = ID_CONTROLS + i;
-		if (options[i].type == CONFIG_TYPE_BOOLEAN) {
+		if (options[i].type == MG_CONFIG_TYPE_BOOLEAN) {
 			snprintf(value,
 			         sizeof(value) - 1,
 			         "%s",
@@ -1475,7 +1475,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 				value = default_options[i].default_value == NULL
 				            ? ""
 				            : default_options[i].default_value;
-				if (default_options[i].type == CONFIG_TYPE_BOOLEAN) {
+				if (default_options[i].type == MG_CONFIG_TYPE_BOOLEAN) {
 					CheckDlgButton(hDlg,
 					               ID_CONTROLS + i,
 					               !strcmp(value, "yes") ? BST_CHECKED
@@ -1499,7 +1499,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 				if (value == NULL) {
 					value = "";
 				}
-				if (default_options[i].type == CONFIG_TYPE_BOOLEAN) {
+				if (default_options[i].type == MG_CONFIG_TYPE_BOOLEAN) {
 					CheckDlgButton(hDlg,
 					               ID_CONTROLS + i,
 					               !strcmp(value, "yes") ? BST_CHECKED
@@ -1518,7 +1518,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 			for (i = 0; default_options[i].name != NULL; i++) {
 				name = default_options[i].name;
 				value = mg_get_option(g_ctx, name);
-				if (default_options[i].type == CONFIG_TYPE_BOOLEAN) {
+				if (default_options[i].type == MG_CONFIG_TYPE_BOOLEAN) {
 					CheckDlgButton(hDlg,
 					               ID_CONTROLS + i,
 					               !strcmp(value, "yes") ? BST_CHECKED
@@ -1534,8 +1534,8 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		for (i = 0; default_options[i].name != NULL; i++) {
 			name = default_options[i].name;
-			if (((default_options[i].type == CONFIG_TYPE_FILE)
-			     || (default_options[i].type == CONFIG_TYPE_DIRECTORY))
+			if (((default_options[i].type == MG_CONFIG_TYPE_FILE)
+			     || (default_options[i].type == MG_CONFIG_TYPE_DIRECTORY))
 			    && LOWORD(wParam) == ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA) {
 				OPENFILENAME of;
 				BROWSEINFO bi;
@@ -1555,7 +1555,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 				bi.lpszTitle = "Choose WWW root directory:";
 				bi.ulFlags = BIF_RETURNONLYFSDIRS;
 
-				if (default_options[i].type == CONFIG_TYPE_DIRECTORY) {
+				if (default_options[i].type == MG_CONFIG_TYPE_DIRECTORY) {
 					SHGetPathFromIDList(SHBrowseForFolder(&bi), path);
 				} else {
 					GetOpenFileName(&of);
@@ -2070,15 +2070,15 @@ show_settings_dialog()
 		x = 10 + (WIDTH / 2) * (nelems % 2);
 		y = (nelems / 2 + 1) * HEIGHT + 5;
 		width = WIDTH / 2 - 20 - LABEL_WIDTH;
-		if (options[i].type == CONFIG_TYPE_NUMBER) {
+		if (options[i].type == MG_CONFIG_TYPE_NUMBER) {
 			style |= ES_NUMBER;
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL;
-		} else if (options[i].type == CONFIG_TYPE_BOOLEAN) {
+		} else if (options[i].type == MG_CONFIG_TYPE_BOOLEAN) {
 			cl = 0x80;
 			style |= BS_AUTOCHECKBOX;
-		} else if ((options[i].type == CONFIG_TYPE_FILE)
-		           || (options[i].type == CONFIG_TYPE_DIRECTORY)) {
+		} else if ((options[i].type == MG_CONFIG_TYPE_FILE)
+		           || (options[i].type == MG_CONFIG_TYPE_DIRECTORY)) {
 			style |= WS_BORDER | ES_AUTOHSCROLL;
 			width -= 20;
 			cl = 0x81;
@@ -2092,7 +2092,7 @@ show_settings_dialog()
 			            15,
 			            12,
 			            "...");
-		} else if (options[i].type == CONFIG_TYPE_STRING_MULTILINE) {
+		} else if (options[i].type == MG_CONFIG_TYPE_STRING_MULTILINE) {
 			/* TODO: This is not really uer friendly */
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN

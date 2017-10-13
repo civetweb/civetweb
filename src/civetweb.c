@@ -2080,6 +2080,22 @@ struct socket {
  * "Private Config Options"
  */
 enum {
+	LISTENING_PORTS,
+	NUM_THREADS,
+	RUN_AS_USER,
+	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
+                         * socket option typedef TCP_NODELAY. */
+	MAX_REQUEST_SIZE,
+	LINGER_TIMEOUT,
+#if defined(__linux__)
+	ALLOW_SENDFILE_CALL,
+#endif
+#if defined(_WIN32)
+	CASE_SENSITIVE_FILES,
+#endif
+
+	DOCUMENT_ROOT,
+
 	CGI_EXTENSIONS,
 	CGI_ENVIRONMENT,
 	PUT_DELETE_PASSWORDS_FILE,
@@ -2097,17 +2113,12 @@ enum {
 	ENABLE_KEEP_ALIVE,
 	ACCESS_CONTROL_LIST,
 	EXTRA_MIME_TYPES,
-	LISTENING_PORTS,
-	DOCUMENT_ROOT,
 	SSL_CERTIFICATE,
 	SSL_CERTIFICATE_CHAIN,
-	NUM_THREADS,
-	RUN_AS_USER,
 	URL_REWRITE_PATTERN,
 	HIDE_FILES,
 	REQUEST_TIMEOUT,
 	KEEP_ALIVE_TIMEOUT,
-	LINGER_TIMEOUT,
 	SSL_DO_VERIFY_PEER,
 	SSL_CA_PATH,
 	SSL_CA_FILE,
@@ -2143,26 +2154,17 @@ enum {
 	ACCESS_CONTROL_ALLOW_METHODS,
 	ACCESS_CONTROL_ALLOW_HEADERS,
 	ERROR_PAGES,
-	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
-                     * socket option typedef TCP_NODELAY. */
 #if !defined(NO_CACHING)
 	STATIC_FILE_MAX_AGE,
 #endif
 #if !defined(NO_SSL)
 	STRICT_HTTPS_MAX_AGE,
 #endif
-#if defined(__linux__)
-	ALLOW_SENDFILE_CALL,
-#endif
-#if defined(_WIN32)
-	CASE_SENSITIVE_FILES,
-#endif
 #if defined(USE_LUA)
 	LUA_BACKGROUND_SCRIPT,
 	LUA_BACKGROUND_SCRIPT_PARAMS,
 #endif
 	ADDITIONAL_HEADER,
-	MAX_REQUEST_SIZE,
 	ALLOW_INDEX_SCRIPT_SUB_RES,
 
 	NUM_OPTIONS
@@ -2173,6 +2175,22 @@ enum {
  * Must be in the same order as the enum const above.
  */
 static struct mg_option config_options[] = {
+
+    {"listening_ports", MG_CONFIG_TYPE_STRING_LIST, "8080"},
+    {"num_threads", MG_CONFIG_TYPE_NUMBER, "50"},
+    {"run_as_user", MG_CONFIG_TYPE_STRING, NULL},
+    {"tcp_nodelay", MG_CONFIG_TYPE_NUMBER, "0"},
+    {"max_request_size", MG_CONFIG_TYPE_NUMBER, "16384"},
+    {"linger_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+#if defined(__linux__)
+    {"allow_sendfile_call", MG_CONFIG_TYPE_BOOLEAN, "yes"},
+#endif
+#if defined(_WIN32)
+    {"case_sensitive", MG_CONFIG_TYPE_BOOLEAN, "no"},
+#endif
+
+    {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
+
     {"cgi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.cgi$|**.pl$|**.php$"},
     {"cgi_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"put_delete_auth_file", MG_CONFIG_TYPE_FILE, NULL},
@@ -2198,17 +2216,12 @@ static struct mg_option config_options[] = {
     {"enable_keep_alive", MG_CONFIG_TYPE_BOOLEAN, "no"},
     {"access_control_list", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"extra_mime_types", MG_CONFIG_TYPE_STRING_LIST, NULL},
-    {"listening_ports", MG_CONFIG_TYPE_STRING_LIST, "8080"},
-    {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
     {"ssl_certificate", MG_CONFIG_TYPE_FILE, NULL},
     {"ssl_certificate_chain", MG_CONFIG_TYPE_FILE, NULL},
-    {"num_threads", MG_CONFIG_TYPE_NUMBER, "50"},
-    {"run_as_user", MG_CONFIG_TYPE_STRING, NULL},
     {"url_rewrite_patterns", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"hide_files_patterns", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
     {"request_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
     {"keep_alive_timeout_ms", MG_CONFIG_TYPE_NUMBER, "500"},
-    {"linger_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
 
     /* TODO(Feature): this is no longer a boolean, but yes/no/optional */
     {"ssl_verify_peer", MG_CONFIG_TYPE_BOOLEAN, "no"},
@@ -2246,25 +2259,17 @@ static struct mg_option config_options[] = {
     {"access_control_allow_methods", MG_CONFIG_TYPE_STRING, "*"},
     {"access_control_allow_headers", MG_CONFIG_TYPE_STRING, "*"},
     {"error_pages", MG_CONFIG_TYPE_DIRECTORY, NULL},
-    {"tcp_nodelay", MG_CONFIG_TYPE_NUMBER, "0"},
 #if !defined(NO_CACHING)
     {"static_file_max_age", MG_CONFIG_TYPE_NUMBER, "3600"},
 #endif
 #if !defined(NO_SSL)
     {"strict_transport_security_max_age", MG_CONFIG_TYPE_NUMBER, NULL},
 #endif
-#if defined(__linux__)
-    {"allow_sendfile_call", MG_CONFIG_TYPE_BOOLEAN, "yes"},
-#endif
-#if defined(_WIN32)
-    {"case_sensitive", MG_CONFIG_TYPE_BOOLEAN, "no"},
-#endif
 #if defined(USE_LUA)
     {"lua_background_script", MG_CONFIG_TYPE_FILE, NULL},
     {"lua_background_script_params", MG_CONFIG_TYPE_STRING_LIST, NULL},
 #endif
     {"additional_header", MG_CONFIG_TYPE_STRING_MULTILINE, NULL},
-    {"max_request_size", MG_CONFIG_TYPE_NUMBER, "16384"},
     {"allow_index_script_resource", MG_CONFIG_TYPE_BOOLEAN, "no"},
 
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
@@ -14369,7 +14374,7 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	 * Multiple HTTPS hosts on one IP+port are only possible
 	 * with a certificate containing all alternative names.
 	 */
-    if ((servername == NULL) || (*servername == 0)) {
+	if ((servername == NULL) || (*servername == 0)) {
 		DEBUG_TRACE("%s", "SSL connection not supporting SNI");
 		return SSL_TLSEXT_ERR_NOACK;
 	}
@@ -14383,7 +14388,7 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	 *   SSL_set_SSL_CTX(ssl, matching_ssl_ctx);
 	 * to use this certificate. A different document_root
 	 * may be required as well.
-     */
+	 */
 
 	return SSL_TLSEXT_ERR_OK;
 }
