@@ -14003,7 +14003,7 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		conn->request_info.client_cert = (struct mg_client_cert *)
 		    mg_malloc_ctx(sizeof(struct mg_client_cert), conn->ctx);
 		if (conn->request_info.client_cert) {
-			conn->request_info.client_cert->peer_cert = (void*) cert;
+			conn->request_info.client_cert->peer_cert = (void *)cert;
 			conn->request_info.client_cert->subject = mg_strdup(str_subject);
 			conn->request_info.client_cert->issuer = mg_strdup(str_issuer);
 			conn->request_info.client_cert->serial = mg_strdup(str_serial);
@@ -14354,19 +14354,28 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	struct mg_context *ctx = (struct mg_context *)arg;
 	const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 
-	printf("servername = %s\n", servername);
-	/*
-	if (p->servername == NULL)
-	    return SSL_TLSEXT_ERR_NOACK;
+	(void)ad;
 
-	if (servername != NULL) {
-	    if (strcasecmp(servername, p->servername))
-	        return p->extension_error;
-	    if (ctx2 != NULL) {
-	        BIO_printf(p->biodebug, "Switching server context.\n");
-	        SSL_set_SSL_CTX(ssl, ctx2);
-	    }
+	/* Old clients (Win XP) will not support SNI. Then, there
+	 * is no server name available in the request - we can
+	 * only work with the default certificate.
+	 * Multiple HTTPS hosts on one IP+port are only possible
+	 * with a certificate containing all alternative names.
+	 */
+	if ((p->servername == NULL) || (*p->servername = 0)) {
+		DEBUG_TRACE("%s", "SSL connection not supporting SNI");
+		return SSL_TLSEXT_ERR_NOACK;
 	}
+
+	DEBUG_TRACE("TLS connection to host %s", servername);
+
+	(void)ctx;
+	/* TODO for SNI: check all available server names.
+	 * For the matching server name get the matching_ssl_ctx
+	 * and call
+	 *   SSL_set_SSL_CTX(ssl, matching_ssl_ctx);
+	 * to use this certificate. A different document_root
+	 * may be required as well.
 	*/
 
 	return SSL_TLSEXT_ERR_OK;
@@ -16417,7 +16426,8 @@ worker_thread_run(struct worker_thread_args *thread_args)
 					mg_free((void *)(conn->request_info.client_cert->serial));
 					mg_free((void *)(conn->request_info.client_cert->finger));
 					/* Free certificate memory */
-					X509_free((X509*) conn->request_info.client_cert->peer_cert);
+					X509_free(
+					    (X509 *)conn->request_info.client_cert->peer_cert);
 					conn->request_info.client_cert->peer_cert = 0;
 					conn->request_info.client_cert->subject = 0;
 					conn->request_info.client_cert->issuer = 0;

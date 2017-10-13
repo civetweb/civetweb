@@ -197,7 +197,7 @@ struct mg_response_info {
 /* Client certificate information (part of mg_request_info) */
 /* New nomenclature. */
 struct mg_client_cert {
-	void       *peer_cert;
+	void *peer_cert;
 	const char *subject;
 	const char *issuer;
 	const char *serial;
