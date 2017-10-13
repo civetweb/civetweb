@@ -14003,6 +14003,7 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		conn->request_info.client_cert = (struct mg_client_cert *)
 		    mg_malloc_ctx(sizeof(struct mg_client_cert), conn->ctx);
 		if (conn->request_info.client_cert) {
+			conn->request_info.client_cert->peer_cert = (void*) cert;
 			conn->request_info.client_cert->subject = mg_strdup(str_subject);
 			conn->request_info.client_cert->issuer = mg_strdup(str_issuer);
 			conn->request_info.client_cert->serial = mg_strdup(str_serial);
@@ -14016,9 +14017,6 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		/* Strings returned from bn_bn2hex must be freed using OPENSSL_free,
 		 * see https://linux.die.net/man/3/bn_bn2hex */
 		OPENSSL_free(str_serial);
-
-		/* Free certificate memory */
-		X509_free(cert);
 	}
 }
 
@@ -16418,6 +16416,9 @@ worker_thread_run(struct worker_thread_args *thread_args)
 					mg_free((void *)(conn->request_info.client_cert->issuer));
 					mg_free((void *)(conn->request_info.client_cert->serial));
 					mg_free((void *)(conn->request_info.client_cert->finger));
+					/* Free certificate memory */
+					X509_free((X509*) conn->request_info.client_cert->peer_cert);
+					conn->request_info.client_cert->peer_cert = 0;
 					conn->request_info.client_cert->subject = 0;
 					conn->request_info.client_cert->issuer = 0;
 					conn->request_info.client_cert->serial = 0;
