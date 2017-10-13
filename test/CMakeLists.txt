@@ -164,6 +164,7 @@ civetweb_add_test(Private "Encode Decode")
 civetweb_add_test(Private "Mask Data")
 civetweb_add_test(Private "Date Parsing")
 civetweb_add_test(Private "SHA1")
+civetweb_add_test(Private "Config Options")
 
 # Public API function tests
 civetweb_add_test(PublicFunc "Version")

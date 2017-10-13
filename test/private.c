@@ -902,6 +902,140 @@ START_TEST(test_sha1)
 END_TEST
 
 
+START_TEST(test_config_options)
+{
+	/* Check size of config_options vs. number of options in enum. */
+	ck_assert_ptr_eq(NULL, config_options[NUM_OPTIONS].name);
+	ck_assert_int_eq((int)MG_CONFIG_TYPE_UNKNOWN,
+	                 config_options[NUM_OPTIONS].type);
+	ck_assert_uint_eq(sizeof(config_options) / sizeof(config_options[0]),
+	                  (size_t)(NUM_OPTIONS + 1));
+
+	/* Check option enums vs. option names. */
+	/* Check if the order in
+	 * static struct mg_option config_options[]
+	 * is the same as in the option enum
+	     * This test allows to reorder config_options and the enum,
+	     * and check if the order is still consistent. */
+	ck_assert_str_eq("cgi_pattern", config_options[CGI_EXTENSIONS].name);
+	ck_assert_str_eq("cgi_environment", config_options[CGI_ENVIRONMENT].name);
+	ck_assert_str_eq("put_delete_auth_file",
+	                 config_options[PUT_DELETE_PASSWORDS_FILE].name);
+	ck_assert_str_eq("cgi_interpreter", config_options[CGI_INTERPRETER].name);
+	ck_assert_str_eq("protect_uri", config_options[PROTECT_URI].name);
+	ck_assert_str_eq("authentication_domain",
+	                 config_options[AUTHENTICATION_DOMAIN].name);
+	ck_assert_str_eq("enable_auth_domain_check",
+	                 config_options[ENABLE_AUTH_DOMAIN_CHECK].name);
+	ck_assert_str_eq("ssi_pattern", config_options[SSI_EXTENSIONS].name);
+	ck_assert_str_eq("throttle", config_options[THROTTLE].name);
+	ck_assert_str_eq("access_log_file", config_options[ACCESS_LOG_FILE].name);
+	ck_assert_str_eq("enable_directory_listing",
+	                 config_options[ENABLE_DIRECTORY_LISTING].name);
+	ck_assert_str_eq("error_log_file", config_options[ERROR_LOG_FILE].name);
+	ck_assert_str_eq("global_auth_file",
+	                 config_options[GLOBAL_PASSWORDS_FILE].name);
+	ck_assert_str_eq("index_files", config_options[INDEX_FILES].name);
+	ck_assert_str_eq("enable_keep_alive",
+	                 config_options[ENABLE_KEEP_ALIVE].name);
+	ck_assert_str_eq("access_control_list",
+	                 config_options[ACCESS_CONTROL_LIST].name);
+	ck_assert_str_eq("extra_mime_types", config_options[EXTRA_MIME_TYPES].name);
+	ck_assert_str_eq("listening_ports", config_options[LISTENING_PORTS].name);
+	ck_assert_str_eq("document_root", config_options[DOCUMENT_ROOT].name);
+	ck_assert_str_eq("ssl_certificate", config_options[SSL_CERTIFICATE].name);
+	ck_assert_str_eq("ssl_certificate_chain",
+	                 config_options[SSL_CERTIFICATE_CHAIN].name);
+	ck_assert_str_eq("num_threads", config_options[NUM_THREADS].name);
+	ck_assert_str_eq("run_as_user", config_options[RUN_AS_USER].name);
+	ck_assert_str_eq("url_rewrite_patterns",
+	                 config_options[URL_REWRITE_PATTERN].name);
+	ck_assert_str_eq("hide_files_patterns", config_options[HIDE_FILES].name);
+	ck_assert_str_eq("request_timeout_ms",
+	                 config_options[REQUEST_TIMEOUT].name);
+	ck_assert_str_eq("keep_alive_timeout_ms",
+	                 config_options[KEEP_ALIVE_TIMEOUT].name);
+	ck_assert_str_eq("linger_timeout_ms", config_options[LINGER_TIMEOUT].name);
+	ck_assert_str_eq("ssl_verify_peer",
+	                 config_options[SSL_DO_VERIFY_PEER].name);
+	ck_assert_str_eq("ssl_ca_path", config_options[SSL_CA_PATH].name);
+	ck_assert_str_eq("ssl_ca_file", config_options[SSL_CA_FILE].name);
+	ck_assert_str_eq("ssl_verify_depth", config_options[SSL_VERIFY_DEPTH].name);
+	ck_assert_str_eq("ssl_default_verify_paths",
+	                 config_options[SSL_DEFAULT_VERIFY_PATHS].name);
+	ck_assert_str_eq("ssl_cipher_list", config_options[SSL_CIPHER_LIST].name);
+	ck_assert_str_eq("ssl_protocol_version",
+	                 config_options[SSL_PROTOCOL_VERSION].name);
+	ck_assert_str_eq("ssl_short_trust", config_options[SSL_SHORT_TRUST].name);
+
+#if defined(USE_WEBSOCKET)
+	ck_assert_str_eq("websocket_timeout_ms",
+	                 config_options[WEBSOCKET_TIMEOUT].name);
+#endif
+
+	ck_assert_str_eq("decode_url", config_options[DECODE_URL].name);
+
+#if defined(USE_LUA)
+	ck_assert_str_eq("lua_preload_file", config_options[LUA_PRELOAD_FILE].name);
+	ck_assert_str_eq("lua_script_pattern",
+	                 config_options[LUA_SCRIPT_EXTENSIONS].name);
+	ck_assert_str_eq("lua_server_page_pattern",
+	                 config_options[LUA_SERVER_PAGE_EXTENSIONS].name);
+#endif
+#if defined(USE_DUKTAPE)
+	ck_assert_str_eq("duktape_script_pattern",
+	                 config_options[DUKTAPE_SCRIPT_EXTENSIONS].name);
+#endif
+#if defined(USE_WEBSOCKET)
+	ck_assert_str_eq("websocket_root", config_options[WEBSOCKET_ROOT].name);
+#endif
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+	ck_assert_str_eq("lua_websocket_pattern",
+	                 config_options[LUA_WEBSOCKET_EXTENSIONS].name);
+#endif
+
+	ck_assert_str_eq("access_control_allow_origin",
+	                 config_options[ACCESS_CONTROL_ALLOW_ORIGIN].name);
+	ck_assert_str_eq("access_control_allow_methods",
+	                 config_options[ACCESS_CONTROL_ALLOW_METHODS].name);
+	ck_assert_str_eq("access_control_allow_headers",
+	                 config_options[ACCESS_CONTROL_ALLOW_HEADERS].name);
+	ck_assert_str_eq("error_pages", config_options[ERROR_PAGES].name);
+	ck_assert_str_eq("tcp_nodelay", config_options[CONFIG_TCP_NODELAY].name);
+
+
+#if !defined(NO_CACHING)
+	ck_assert_str_eq("static_file_max_age",
+	                 config_options[STATIC_FILE_MAX_AGE].name);
+#endif
+#if !defined(NO_SSL)
+	ck_assert_str_eq("strict_transport_security_max_age",
+	                 config_options[STRICT_HTTPS_MAX_AGE].name);
+#endif
+#if defined(__linux__)
+	ck_assert_str_eq("allow_sendfile_call",
+	                 config_options[ALLOW_SENDFILE_CALL].name);
+#endif
+#if defined(_WIN32)
+	ck_assert_str_eq("case_sensitive",
+	                 config_options[CASE_SENSITIVE_FILES].name);
+#endif
+#if defined(USE_LUA)
+	ck_assert_str_eq("lua_background_script",
+	                 config_options[LUA_BACKGROUND_SCRIPT].name);
+	ck_assert_str_eq("lua_background_script_params",
+	                 config_options[LUA_BACKGROUND_SCRIPT_PARAMS].name);
+#endif
+
+	ck_assert_str_eq("additional_header",
+	                 config_options[ADDITIONAL_HEADER].name);
+	ck_assert_str_eq("max_request_size", config_options[MAX_REQUEST_SIZE].name);
+	ck_assert_str_eq("allow_index_script_resource",
+	                 config_options[ALLOW_INDEX_SCRIPT_SUB_RES].name);
+}
+END_TEST
+
+
 #if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_private_suite(void)
@@ -923,6 +1057,7 @@ make_private_suite(void)
 	TCase *const tcase_mask_data = tcase_create("Mask Data");
 	TCase *const tcase_parse_date_string = tcase_create("Date Parsing");
 	TCase *const tcase_sha1 = tcase_create("SHA1");
+	TCase *const tcase_config_options = tcase_create("Config Options");
 
 	tcase_add_test(tcase_http_message, test_parse_http_message);
 	tcase_set_timeout(tcase_http_message, civetweb_min_test_timeout);
@@ -984,6 +1119,10 @@ make_private_suite(void)
 	tcase_add_test(tcase_sha1, test_sha1);
 	tcase_set_timeout(tcase_sha1, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_sha1);
+
+	tcase_add_test(tcase_config_options, test_config_options);
+	tcase_set_timeout(tcase_config_options, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_config_options);
 
 	return suite;
 }

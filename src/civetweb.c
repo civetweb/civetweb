@@ -2073,7 +2073,12 @@ struct socket {
 	unsigned char in_use;    /* Is valid */
 };
 
-/* NOTE(lsm): this enum shoulds be in sync with the config_options below. */
+
+/* Enum const for all options must be in sync with
+ * static struct mg_option config_options[]
+ * This is tested in the unit test (test/private.c)
+ * "Private Config Options"
+ */
 enum {
 	CGI_EXTENSIONS,
 	CGI_ENVIRONMENT,
@@ -2164,7 +2169,9 @@ enum {
 };
 
 
-/* Config option name, config types, default value */
+/* Config option name, config types, default value.
+ * Must be in the same order as the enum const above.
+ */
 static struct mg_option config_options[] = {
     {"cgi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.cgi$|**.pl$|**.php$"},
     {"cgi_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
