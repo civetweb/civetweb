@@ -113,6 +113,12 @@ message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}")
 option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
 message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
 
+if (NOT CIVETWEB_ALLOW_WARNINGS)
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    message(FATAL_ERROR "Cannot compile with warning as errors, until this GCC bug is solved: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431")
+  endif()
+endif()
+
 # Link to the shared LUA library
 cmake_dependent_option(
   CIVETWEB_ENABLE_LUA_SHARED  "Link to the shared LUA system library" OFF

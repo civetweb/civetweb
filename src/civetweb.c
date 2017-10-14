@@ -191,6 +191,8 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
  * #pragma clang diagnostic ignored "-Wdate-time"
  * So we just have to disable ALL warnings for some lines
  * of code.
+ * This seems to be a known GCC bug, not resolved since 2012:
+ * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
  */
 #endif
 
