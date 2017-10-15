@@ -3,7 +3,7 @@ Adding OpenSSL Support
 
 Civetweb supports *HTTPS* connections using the OpenSSL transport layer
 security (TLS) library. OpenSSL is a free, open source library (see
-http://www.openssl.org/).
+http://www.openssl.org/). While there are other TLS libraries beside OpenSSL (like gnuTLS and wolfSSL), new TLS features in CivetWeb are tested only using OpenSSL.
 
 
 Getting Started

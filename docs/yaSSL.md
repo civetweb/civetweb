@@ -6,7 +6,8 @@ you may wish to use the GPLv2 licensed CyaSSL library.  By using this
 library, the resulting binary may have to have the GPL license unless
 you buy a commercial license from [wolfSSL](http://www.yassl.com/).
 
-*Note: The following instructions have not been checked for the most recent versions of CivetWeb and wolfSSL. Some information might be outdated.*
+*Note: The following instructions have not been checked for the most recent versions of CivetWeb and wolfSSL. Some information might be outdated. All current versions of CivetWeb are tested using [OpenSSL](OpenSSL.md). CivetWeb uses the OpenSSL API functions - wolfSSL
+provides an OpenSSL compatibility layer. However, when new TLS features are added to CivetWeb, it is not checked if corresponding functions work the same, or even if they exist at all within this compatibility layer.*
 
 
 Getting Started
