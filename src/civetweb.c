@@ -1,4 +1,4 @@
-﻿/* Copyright (c) 2013-2017 the Civetweb developers
+/* Copyright (c) 2013-2017 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -150,7 +150,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
  * but is used, the compiler raises a completely idiotic
  * "used-but-marked-unused" warning - and
  *   #pragma GCC diagnostic ignored "-Wused-but-marked-unused"
- * raises error: unknown option after ‘#pragma GCC diagnostic’.
+ * raises error: unknown option after "#pragma GCC diagnostic".
  * Disable this warning completely, until the GCC guys sober up
  * again.
  */
