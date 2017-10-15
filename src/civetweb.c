@@ -14388,10 +14388,8 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 
 /* Setup SSL CTX as required by CivetWeb */
 static int
-init_ssl_ctx_impl(struct mg_context *ctx)
+init_ssl_ctx_impl(struct mg_context *ctx, const char *pem, const char *chain)
 {
-	const char *pem;
-	const char *chain;
 	int callback_ret;
 	int should_verify_peer;
 	int peer_certificate_optional;
@@ -14404,33 +14402,6 @@ init_ssl_ctx_impl(struct mg_context *ctx)
 	md5_byte_t ssl_context_id[16];
 	md5_state_t md5state;
 	int protocol_ver;
-	char ebuf[128];
-
-	/* If PEM file is not specified and the init_ssl callback
-	 * is not specified, setup will fail. */
-	if (((pem = ctx->config[SSL_CERTIFICATE]) == NULL)
-	    && (ctx->callbacks.init_ssl == NULL)) {
-		/* No certificate and no callback:
-		 * Essential data to set up TLS is missing.
-		 */
-		mg_cry(fc(ctx),
-		       "Initializing SSL failed: -%s is not set",
-		       config_options[SSL_CERTIFICATE].name);
-		return 0;
-	}
-
-	chain = ctx->config[SSL_CERTIFICATE_CHAIN];
-	if (chain == NULL) {
-		chain = pem;
-	}
-	if ((chain != NULL) && (*chain == 0)) {
-		chain = NULL;
-	}
-
-	if (!initialize_ssl(ebuf, sizeof(ebuf))) {
-		mg_cry(fc(ctx), "%s", ebuf);
-		return 0;
-	}
 
 #ifdef OPENSSL_API_1_1
 	if ((ctx->ssl_ctx = SSL_CTX_new(TLS_server_method())) == NULL) {
@@ -14602,6 +14573,9 @@ init_ssl_ctx(struct mg_context *ctx)
 {
 	void *ssl_ctx = 0;
 	int callback_ret;
+	const char *pem;
+	const char *chain;
+	char ebuf[128];
 
 	if (!ctx) {
 		return 0;
@@ -14624,7 +14598,6 @@ init_ssl_ctx(struct mg_context *ctx)
 		       callback_ret);
 		return 0;
 	} else if (callback_ret > 0) {
-		char ebuf[128];
 		ctx->ssl_ctx = (SSL_CTX *)ssl_ctx;
 		if (!initialize_ssl(ebuf, sizeof(ebuf))) {
 			mg_cry(fc(ctx), "%s", ebuf);
@@ -14632,8 +14605,36 @@ init_ssl_ctx(struct mg_context *ctx)
 		}
 		return 1;
 	}
-	/* else continue */
-	return init_ssl_ctx_impl(ctx);
+	/* else: external_ssl_ctx does not exist or returns 0,
+	 * CivetWeb should continue initializing SSL */
+
+	/* If PEM file is not specified and the init_ssl callback
+	 * is not specified, setup will fail. */
+	if (((pem = ctx->config[SSL_CERTIFICATE]) == NULL)
+	    && (ctx->callbacks.init_ssl == NULL)) {
+		/* No certificate and no callback:
+		 * Essential data to set up TLS is missing.
+		 */
+		mg_cry(fc(ctx),
+		       "Initializing SSL failed: -%s is not set",
+		       config_options[SSL_CERTIFICATE].name);
+		return 0;
+	}
+
+	chain = ctx->config[SSL_CERTIFICATE_CHAIN];
+	if (chain == NULL) {
+		chain = pem;
+	}
+	if ((chain != NULL) && (*chain == 0)) {
+		chain = NULL;
+	}
+
+	if (!initialize_ssl(ebuf, sizeof(ebuf))) {
+		mg_cry(fc(ctx), "%s", ebuf);
+		return 0;
+	}
+
+	return init_ssl_ctx_impl(ctx, pem, chain);
 }
 
 
