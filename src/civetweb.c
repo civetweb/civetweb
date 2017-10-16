@@ -6726,7 +6726,7 @@ substitute_index_file(struct mg_connection *conn,
 	 * path and see if the file exists. If it exists, break the loop */
 	while ((list = next_option(list, &filename_vec, NULL)) != NULL) {
 		/* Ignore too long entries that may overflow path buffer */
-		if (filename_vec.len > (path_len - (n + 2))) {
+		if ((filename_vec.len + 1) > (path_len - (n + 1))) {
 			continue;
 		}
 
@@ -9596,16 +9596,6 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 	}
 	buf[response_length - 1] = '\0';
 
-
-	/* TODO: Define mg_response_info and implement parsing */
-	(void)buf;
-	(void)len;
-	(void)ri;
-
-	/* RFC says that all initial whitespaces should be ingored */
-	while ((*buf != '\0') && isspace(*(unsigned char *)buf)) {
-		buf++;
-	}
 	if ((*buf == 0) || (*buf == '\r') || (*buf == '\n')) {
 		return -1;
 	}
