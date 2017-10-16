@@ -9596,16 +9596,6 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 	}
 	buf[response_length - 1] = '\0';
 
-
-	/* TODO: Define mg_response_info and implement parsing */
-	(void)buf;
-	(void)len;
-	(void)ri;
-
-	/* RFC says that all initial whitespaces should be ingored */
-	while ((*buf != '\0') && isspace(*(unsigned char *)buf)) {
-		buf++;
-	}
 	if ((*buf == 0) || (*buf == '\r') || (*buf == '\n')) {
 		return -1;
 	}
