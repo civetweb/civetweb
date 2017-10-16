@@ -6726,7 +6726,7 @@ substitute_index_file(struct mg_connection *conn,
 	 * path and see if the file exists. If it exists, break the loop */
 	while ((list = next_option(list, &filename_vec, NULL)) != NULL) {
 		/* Ignore too long entries that may overflow path buffer */
-		if (filename_vec.len > (path_len - (n + 2))) {
+		if ((filename_vec.len + 1) > (path_len - (n + 1))) {
 			continue;
 		}
 
