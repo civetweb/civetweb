@@ -15373,19 +15373,6 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	auth_domain_check_enabled =
 	    !mg_strcasecmp(conn->ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes");
 
-	if (!auth_domain_check_enabled) {
-		return 0;
-	}
-
-	server_domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
-	if (!server_domain) {
-		return 0;
-	}
-	server_domain_len = strlen(server_domain);
-	if (!server_domain_len) {
-		return 0;
-	}
-
 	/* DNS is case insensitive, so use case insensitive string compare here
 	 */
 	for (i = 0; abs_uri_protocols[i].proto != NULL; i++) {
@@ -15446,6 +15433,11 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	 * or http://mydomain.com.fake/path/file.ext).
 	 */
 	if (auth_domain_check_enabled) {
+		server_domain = conn->ctx->config[AUTHENTICATION_DOMAIN];
+		server_domain_len = strlen(server_domain);
+		if (!server_domain_len) {
+			return 0;
+		}
 		if ((request_domain_len == server_domain_len)
 		    && (!memcmp(server_domain, hostbegin, server_domain_len))) {
 			/* Request is directed to this server - full name match. */
