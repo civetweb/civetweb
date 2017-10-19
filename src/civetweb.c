@@ -2095,9 +2095,23 @@ enum {
 #if defined(_WIN32)
 	CASE_SENSITIVE_FILES,
 #endif
+	THROTTLE,
+	ACCESS_LOG_FILE,
+	ERROR_LOG_FILE,
+	ENABLE_KEEP_ALIVE,
+	REQUEST_TIMEOUT,
+	KEEP_ALIVE_TIMEOUT,
+#if defined(USE_WEBSOCKET)
+	WEBSOCKET_TIMEOUT,
+#endif
+	DECODE_URL,
+#if defined(USE_LUA)
+	LUA_BACKGROUND_SCRIPT,
+	LUA_BACKGROUND_SCRIPT_PARAMS,
+#endif
+
 
 	DOCUMENT_ROOT,
-
 	CGI_EXTENSIONS,
 	CGI_ENVIRONMENT,
 	PUT_DELETE_PASSWORDS_FILE,
@@ -2106,21 +2120,15 @@ enum {
 	AUTHENTICATION_DOMAIN,
 	ENABLE_AUTH_DOMAIN_CHECK,
 	SSI_EXTENSIONS,
-	THROTTLE,
-	ACCESS_LOG_FILE,
 	ENABLE_DIRECTORY_LISTING,
-	ERROR_LOG_FILE,
 	GLOBAL_PASSWORDS_FILE,
 	INDEX_FILES,
-	ENABLE_KEEP_ALIVE,
 	ACCESS_CONTROL_LIST,
 	EXTRA_MIME_TYPES,
 	SSL_CERTIFICATE,
 	SSL_CERTIFICATE_CHAIN,
 	URL_REWRITE_PATTERN,
 	HIDE_FILES,
-	REQUEST_TIMEOUT,
-	KEEP_ALIVE_TIMEOUT,
 	SSL_DO_VERIFY_PEER,
 	SSL_CA_PATH,
 	SSL_CA_FILE,
@@ -2129,12 +2137,6 @@ enum {
 	SSL_CIPHER_LIST,
 	SSL_PROTOCOL_VERSION,
 	SSL_SHORT_TRUST,
-
-#if defined(USE_WEBSOCKET)
-	WEBSOCKET_TIMEOUT,
-#endif
-
-	DECODE_URL,
 
 #if defined(USE_LUA)
 	LUA_PRELOAD_FILE,
@@ -2162,10 +2164,6 @@ enum {
 #if !defined(NO_SSL)
 	STRICT_HTTPS_MAX_AGE,
 #endif
-#if defined(USE_LUA)
-	LUA_BACKGROUND_SCRIPT,
-	LUA_BACKGROUND_SCRIPT_PARAMS,
-#endif
 	ADDITIONAL_HEADER,
 	ALLOW_INDEX_SCRIPT_SUB_RES,
 
@@ -2178,6 +2176,7 @@ enum {
  */
 static struct mg_option config_options[] = {
 
+    /* Once for each server */
     {"listening_ports", MG_CONFIG_TYPE_STRING_LIST, "8080"},
     {"num_threads", MG_CONFIG_TYPE_NUMBER, "50"},
     {"run_as_user", MG_CONFIG_TYPE_STRING, NULL},
@@ -2190,9 +2189,24 @@ static struct mg_option config_options[] = {
 #if defined(_WIN32)
     {"case_sensitive", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
+    {"throttle", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"access_log_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"error_log_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"enable_keep_alive", MG_CONFIG_TYPE_BOOLEAN, "no"},
+    {"request_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
+    {"keep_alive_timeout_ms", MG_CONFIG_TYPE_NUMBER, "500"},
+#if defined(USE_WEBSOCKET)
+    {"websocket_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
+#endif
+    {"decode_url", MG_CONFIG_TYPE_BOOLEAN, "yes"},
+#if defined(USE_LUA)
+    {"lua_background_script", MG_CONFIG_TYPE_FILE, NULL},
+    {"lua_background_script_params", MG_CONFIG_TYPE_STRING_LIST, NULL},
+#endif
 
+
+    /* Once for each domain */
     {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
-
     {"cgi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.cgi$|**.pl$|**.php$"},
     {"cgi_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"put_delete_auth_file", MG_CONFIG_TYPE_FILE, NULL},
@@ -2201,10 +2215,7 @@ static struct mg_option config_options[] = {
     {"authentication_domain", MG_CONFIG_TYPE_STRING, "mydomain.com"},
     {"enable_auth_domain_check", MG_CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.shtml$|**.shtm$"},
-    {"throttle", MG_CONFIG_TYPE_STRING_LIST, NULL},
-    {"access_log_file", MG_CONFIG_TYPE_FILE, NULL},
     {"enable_directory_listing", MG_CONFIG_TYPE_BOOLEAN, "yes"},
-    {"error_log_file", MG_CONFIG_TYPE_FILE, NULL},
     {"global_auth_file", MG_CONFIG_TYPE_FILE, NULL},
     {"index_files",
      MG_CONFIG_TYPE_STRING_LIST,
@@ -2215,15 +2226,12 @@ static struct mg_option config_options[] = {
 #else
      "index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php"},
 #endif
-    {"enable_keep_alive", MG_CONFIG_TYPE_BOOLEAN, "no"},
     {"access_control_list", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"extra_mime_types", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"ssl_certificate", MG_CONFIG_TYPE_FILE, NULL},
     {"ssl_certificate_chain", MG_CONFIG_TYPE_FILE, NULL},
     {"url_rewrite_patterns", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"hide_files_patterns", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
-    {"request_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
-    {"keep_alive_timeout_ms", MG_CONFIG_TYPE_NUMBER, "500"},
 
     /* TODO(Feature): this is no longer a boolean, but yes/no/optional */
     {"ssl_verify_peer", MG_CONFIG_TYPE_BOOLEAN, "no"},
@@ -2235,10 +2243,6 @@ static struct mg_option config_options[] = {
     {"ssl_cipher_list", MG_CONFIG_TYPE_STRING, NULL},
     {"ssl_protocol_version", MG_CONFIG_TYPE_NUMBER, "0"},
     {"ssl_short_trust", MG_CONFIG_TYPE_BOOLEAN, "no"},
-#if defined(USE_WEBSOCKET)
-    {"websocket_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
-#endif
-    {"decode_url", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 
 #if defined(USE_LUA)
     {"lua_preload_file", MG_CONFIG_TYPE_FILE, NULL},
@@ -2266,10 +2270,6 @@ static struct mg_option config_options[] = {
 #endif
 #if !defined(NO_SSL)
     {"strict_transport_security_max_age", MG_CONFIG_TYPE_NUMBER, NULL},
-#endif
-#if defined(USE_LUA)
-    {"lua_background_script", MG_CONFIG_TYPE_FILE, NULL},
-    {"lua_background_script_params", MG_CONFIG_TYPE_STRING_LIST, NULL},
 #endif
     {"additional_header", MG_CONFIG_TYPE_STRING_MULTILINE, NULL},
     {"allow_index_script_resource", MG_CONFIG_TYPE_BOOLEAN, "no"},
