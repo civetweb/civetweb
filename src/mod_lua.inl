@@ -1178,6 +1178,7 @@ lsp_get_info(lua_State *L)
 
 			/* Get info according to argument */
 			if (!mg_strcasecmp(arg1, "connection")) {
+				int idx;
 
 				/* Get context */
 				struct mg_context *ctx;
@@ -1186,7 +1187,7 @@ lsp_get_info(lua_State *L)
 				ctx = (struct mg_context *)lua_touserdata(L, -1);
 
 				/* Get connection info for connection idx */
-				int idx = (int)(arg2 + 0.5);
+				idx = (int)(arg2 + 0.5);
 
 				/* Lua uses 1 based index, C uses 0 based index */
 				idx--;

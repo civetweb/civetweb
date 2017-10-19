@@ -17043,6 +17043,9 @@ mg_start(const struct mg_callbacks *callbacks,
 	/* If a Lua background script has been configured, start it. */
 	if (ctx->config[LUA_BACKGROUND_SCRIPT] != NULL) {
 		char ebuf[256];
+		struct vec opt_vec;
+		struct vec eq_vec;
+		const char *sparams;
 		lua_State *state = (void *)mg_prepare_lua_context_script(
 		    ctx->config[LUA_BACKGROUND_SCRIPT], ctx, ebuf, sizeof(ebuf));
 		if (!state) {
@@ -17056,9 +17059,7 @@ mg_start(const struct mg_callbacks *callbacks,
 		lua_newtable(state);
 		reg_boolean(state, "shutdown", 0);
 
-		struct vec opt_vec;
-		struct vec eq_vec;
-		const char *sparams = ctx->config[LUA_BACKGROUND_SCRIPT_PARAMS];
+		sparams = ctx->config[LUA_BACKGROUND_SCRIPT_PARAMS];
 
 		while ((sparams = next_option(sparams, &opt_vec, &eq_vec)) != NULL) {
 			reg_llstring(
