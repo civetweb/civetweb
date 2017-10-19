@@ -564,6 +564,14 @@ set_option(char **options, const char *name, const char *value)
 			return 0;
 		}
 		break;
+	case MG_CONFIG_TYPE_YES_NO_OPTIONAL:
+		/* boolean value, yes or no */
+		if ((0 != strcmp(value, "yes")) && (0 != strcmp(value, "no"))
+		    && (0 != strcmp(value, "optional"))) {
+			/* invalid boolean */
+			return 0;
+		}
+		break;
 	case MG_CONFIG_TYPE_FILE:
 	case MG_CONFIG_TYPE_DIRECTORY:
 		/* TODO (low): check this option when it is set, instead of calling

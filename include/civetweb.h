@@ -663,7 +663,8 @@ enum {
 	MG_CONFIG_TYPE_BOOLEAN = 0x5,
 	MG_CONFIG_TYPE_EXT_PATTERN = 0x6,
 	MG_CONFIG_TYPE_STRING_LIST = 0x7,
-	MG_CONFIG_TYPE_STRING_MULTILINE = 0x8
+	MG_CONFIG_TYPE_STRING_MULTILINE = 0x8,
+	MG_CONFIG_TYPE_YES_NO_OPTIONAL = 0x9
 };
 
 /* Return array of struct mg_option, representing all valid configuration

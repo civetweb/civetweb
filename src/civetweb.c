@@ -2233,8 +2233,7 @@ static struct mg_option config_options[] = {
     {"url_rewrite_patterns", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"hide_files_patterns", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
 
-    /* TODO(Feature): this is no longer a boolean, but yes/no/optional */
-    {"ssl_verify_peer", MG_CONFIG_TYPE_BOOLEAN, "no"},
+    {"ssl_verify_peer", MG_CONFIG_TYPE_YES_NO_OPTIONAL, "no"},
 
     {"ssl_ca_path", MG_CONFIG_TYPE_DIRECTORY, NULL},
     {"ssl_ca_file", MG_CONFIG_TYPE_FILE, NULL},
