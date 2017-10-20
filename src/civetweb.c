@@ -2325,20 +2325,38 @@ enum {
 };
 
 
+// struct mg_phys_context {
 struct mg_context {
-	volatile int stop_flag;        /* Should we stop event loop */
-	SSL_CTX *ssl_ctx;              /* SSL context */
-	char *config[NUM_OPTIONS];     /* Civetweb configuration parameters */
-	struct mg_callbacks callbacks; /* User-defined callback function */
-	void *user_data;               /* User-defined data */
-	int context_type;              /* See CONTEXT_* above */
+
+	/* Connection related */
+	int context_type; /* See CONTEXT_* above */
 
 	struct socket *listening_sockets;
 	struct pollfd *listening_socket_fds;
 	unsigned int num_listening_sockets;
 
+	struct mg_connection *worker_connections; /* The connection struct, pre-
+	                                           * allocated for each worker */
+
+#if defined(USE_SERVER_STATS)
+	int active_connections;
+	int max_connections;
+	int64_t total_connections;
+	int64_t total_requests;
+	int64_t total_data_read;
+	int64_t total_data_written;
+#endif
+
+	/* Thread related */
+	volatile int stop_flag;       /* Should we stop event loop */
 	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
 
+	pthread_t masterthreadid; /* The master thread ID */
+	unsigned int
+	    cfg_worker_threads;      /* The number of configured worker threads. */
+	pthread_t *worker_threadids; /* The worker thread IDs */
+
+/* Connection to thread dispatching */
 #ifdef ALTERNATIVE_QUEUE
 	struct socket *client_socks;
 	void **client_wait_events;
@@ -2350,50 +2368,55 @@ struct mg_context {
 	pthread_cond_t sq_empty;      /* Signaled when socket is consumed */
 #endif
 
+	/* Memory related */
 	unsigned int max_request_size; /* The max request size */
 
-	pthread_t masterthreadid; /* The master thread ID */
-	unsigned int
-	    cfg_worker_threads;      /* The number of configured worker threads. */
-	pthread_t *worker_threadids; /* The worker thread IDs */
-	struct mg_connection *worker_connections; /* The connection struct, pre-
-	                                           * allocated for each worker */
+#if defined(USE_SERVER_STATS)
+	struct mg_memory_stat ctx_memory;
+#endif
 
+	/* Operating system related */
+	char *systemName;  /* What operating system is running */
 	time_t start_time; /* Server start time, used for authentication
 	                    * and for diagnstics. */
-
-	uint64_t auth_nonce_mask;    /* Mask for all nonce values */
-	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
-	unsigned long nonce_count;   /* Used nonces, used for authentication */
-
-	char *systemName; /* What operating system is running */
-
-	/* linked list of uri handlers */
-	struct mg_handler_info *handlers;
-
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
-	/* linked list of shared lua websockets */
-	struct mg_shared_lua_websocket_list *shared_lua_websockets;
-#endif
 
 #if defined(USE_TIMERS)
 	struct ttimers *timers;
 #endif
 
+/* Background operations */
 #if defined(USE_LUA)
 	void *lua_background_state;
 #endif
 
-#if defined(USE_SERVER_STATS)
-	int active_connections;
-	int max_connections;
-	int64_t total_connections;
-	int64_t total_requests;
-	struct mg_memory_stat ctx_memory;
-	int64_t total_data_read;
-	int64_t total_data_written;
+	/* Server nonce */
+	uint64_t auth_nonce_mask;    /* Mask for all nonce values */
+	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
+	unsigned long nonce_count;   /* Used nonces, used for authentication */
+
+	/* Unsorted yet */
+	SSL_CTX *ssl_ctx;                 /* SSL context */
+	char *config[NUM_OPTIONS];        /* Civetweb configuration parameters */
+	struct mg_callbacks callbacks;    /* User-defined callback function */
+	void *user_data;                  /* User-defined data */
+	struct mg_handler_info *handlers; /* linked list of uri handlers */
+
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+	/* linked list of shared lua websockets */
+	struct mg_shared_lua_websocket_list *shared_lua_websockets;
 #endif
 };
+
+
+#if 0
+struct mg_context_ {
+    /* Physical context: Threads, ports, timeouts, ... */
+    struct mg_phys_context pc;
+    /* Logical context: Hostname, certificate, doc-root, ... */
+    struct mg_log_context lc[256];
+    int num_log_contexts;
+};
+#endif
 
 
 #if defined(USE_SERVER_STATS)
