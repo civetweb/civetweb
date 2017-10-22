@@ -118,16 +118,17 @@ duk_itf_read(duk_context *duk_ctx)
 static duk_ret_t
 duk_itf_getoption(duk_context *duk_ctx)
 {
-	struct mg_context *cv_ctx;
+	struct mg_connection *cv_conn;
 	const char *ret;
+	int optidx;
 	duk_size_t len = 0;
 	const char *val = duk_require_lstring(duk_ctx, -1, &len);
 
 	duk_push_current_function(duk_ctx);
-	duk_get_prop_string(duk_ctx, -1, civetweb_ctx_id);
-	cv_ctx = (struct mg_context *)duk_to_pointer(duk_ctx, -1);
+	duk_get_prop_string(duk_ctx, -1, civetweb_conn_id);
+	cv_conn = (struct mg_connection *)duk_to_pointer(duk_ctx, -1);
 
-	if (!cv_ctx) {
+	if (!cv_conn) {
 		duk_error(duk_ctx,
 		          DUK_ERR_INTERNAL_ERROR,
 		          "function not available without connection object");
@@ -135,7 +136,12 @@ duk_itf_getoption(duk_context *duk_ctx)
 		return DUK_RET_INTERNAL_ERROR;
 	}
 
-	ret = mg_get_option(cv_ctx, val);
+	optidx = get_option_index(val);
+	if (optidx >= 0) {
+		ret = cv_conn->dom_ctx->config[optidx];
+	} else {
+		ret = NULL;
+	}
 	if (ret) {
 		duk_push_string(duk_ctx, ret);
 	} else {
@@ -158,7 +164,7 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 	duk_ctx = duk_create_heap(mg_duk_mem_alloc,
 	                          mg_duk_mem_realloc,
 	                          mg_duk_mem_free,
-	                          (void *)conn->ctx,
+	                          (void *)conn->phys_ctx,
 	                          mg_duk_fatal_handler);
 	if (!duk_ctx) {
 		mg_cry(conn, "Failed to create a Duktape heap.");
@@ -226,16 +232,16 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 	duk_push_string(duk_ctx, script_name);
 	duk_put_prop_string(duk_ctx, -2, "script_name");
 
-	if (conn->ctx != NULL) {
+	if (conn->phys_ctx != NULL) {
 		duk_push_c_function(duk_ctx, duk_itf_getoption, 1 /* 1 = nargs */);
-		duk_push_pointer(duk_ctx, (void *)(conn->ctx));
+		duk_push_pointer(duk_ctx, (void *)(conn->phys_ctx));
 		duk_put_prop_string(duk_ctx, -2, civetweb_ctx_id);
 		duk_put_prop_string(duk_ctx,
 		                    -2,
 		                    "getoption"); /* add function conn.write */
 
-		if (conn->ctx->systemName != NULL) {
-			duk_push_string(duk_ctx, conn->ctx->systemName);
+		if (conn->phys_ctx->systemName != NULL) {
+			duk_push_string(duk_ctx, conn->phys_ctx->systemName);
 			duk_put_prop_string(duk_ctx, -2, "system");
 		}
 	}

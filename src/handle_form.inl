@@ -90,7 +90,7 @@ url_encoded_field_get(const struct mg_connection *conn,
 {
 	char key_dec[1024];
 
-	char *value_dec = (char *)mg_malloc_ctx(value_len + 1, conn->ctx);
+	char *value_dec = (char *)mg_malloc_ctx(value_len + 1, conn->phys_ctx);
 	int value_dec_len, ret;
 
 	if (!value_dec) {
