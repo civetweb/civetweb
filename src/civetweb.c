@@ -14654,13 +14654,17 @@ init_ssl_ctx(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 	const char *chain;
 	char ebuf[128];
 
-	if (!phys_ctx || !dom_ctx) {
+	if (!phys_ctx) {
 		return 0;
 	}
 
 	if (!is_ssl_port_used(phys_ctx->dd.config[LISTENING_PORTS])) {
 		/* No SSL port is set. No need to setup SSL. */
 		return 1;
+	}
+
+	if (!dom_ctx) {
+		dom_ctx = &(phys_ctx->dd);
 	}
 
 	/* Check for external SSL_CTX */
