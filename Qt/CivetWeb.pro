@@ -32,3 +32,15 @@ LIBS += -lpthread -ldl -lm
 DEFINES += USE_IPV6
 DEFINES += USE_WEBSOCKET
 DEFINES += USE_SERVER_STATS
+
+
+INCLUDEPATH +=  \
+    ../src/third_party/ \
+    ../src/third_party/lua-5.2.4/src
+
+DEFINES += USE_LUA_SHARED
+
+#INCLUDEPATH +=  \
+#    ../src/third_party/duktape-1.8.0/src
+#
+#DEFINES += USE_DUKTAPE
