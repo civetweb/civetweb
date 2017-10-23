@@ -13405,7 +13405,7 @@ set_ports_option(struct mg_context *phys_ctx)
 		               sizeof(on)) != 0) {
 
 			/* Set reuse option, but don't abort on errors. */
-			mg_cry(fc(ctx),
+			mg_cry(fc(phys_ctx),
 			       "cannot set socket option SO_EXCLUSIVEADDRUSE (entry %i)",
 			       portsTotal);
 		}

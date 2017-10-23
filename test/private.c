@@ -238,16 +238,17 @@ START_TEST(test_should_keep_alive)
 
 	memset(&ctx, 0, sizeof(ctx));
 	memset(&conn, 0, sizeof(conn));
-	conn.ctx = &ctx;
+	conn.phys_ctx = &ctx;
+	conn.dom_ctx = &(ctx.dd);
 	ck_assert_int_eq(test_parse_http_request(req1, lenreq1, &conn.request_info),
 	                 lenreq1);
 	conn.connection_type = 1; /* Valid request */
 	ck_assert_int_eq(conn.request_info.num_headers, 0);
 
-	ctx.config[ENABLE_KEEP_ALIVE] = no;
+	ctx.dd.config[ENABLE_KEEP_ALIVE] = no;
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	ctx.config[ENABLE_KEEP_ALIVE] = yes;
+	ctx.dd.config[ENABLE_KEEP_ALIVE] = yes;
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
 
 	conn.must_close = 1;
