@@ -183,6 +183,13 @@ static unsigned __stdcall timer_thread(void *thread_func_param)
 static void *
 timer_thread(void *thread_func_param)
 {
+	struct sigaction sa;
+
+	/* Ignore SIGPIPE */
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sa, NULL);
+
 	timer_thread_run(thread_func_param);
 	return NULL;
 }

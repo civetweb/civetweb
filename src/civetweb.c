@@ -11300,6 +11300,8 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 		return 0;
 	}
 
+	DEBUG_TRACE("%s", "Send websocket handshake");
+
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
 	SHA1_Final((unsigned char *)sha, &sha_ctx);
@@ -11779,6 +11781,7 @@ handle_websocket_request(struct mg_connection *conn,
 
 			conn->request_info.acceptedWebSocketSubprotocol =
 			    acceptedWebSocketSubprotocol;
+
 		} else if (nbSubprotocolHeader > 0) {
 			/* keep legacy behavior */
 			const char *protocol = protocols[0];
@@ -11816,6 +11819,7 @@ handle_websocket_request(struct mg_connection *conn,
 			return;
 		}
 	}
+
 #if defined(USE_LUA)
 	/* Step 3: No callback. Check if Lua is responsible. */
 	else {
@@ -15883,6 +15887,15 @@ websocket_client_thread(void *data)
 	struct websocket_client_thread_data *cdata =
 	    (struct websocket_client_thread_data *)data;
 
+#if !defined(_WIN32)
+	struct sigaction sa;
+
+	/* Ignore SIGPIPE */
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sa, NULL);
+#endif
+
 	mg_set_thread_name("ws-clnt");
 
 	if (cdata->conn->phys_ctx) {
@@ -16573,6 +16586,13 @@ worker_thread(void *thread_func_param)
 {
 	struct worker_thread_args *pwta =
 	    (struct worker_thread_args *)thread_func_param;
+	struct sigaction sa;
+
+	/* Ignore SIGPIPE */
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sa, NULL);
+
 	worker_thread_run(pwta);
 	mg_free(thread_func_param);
 	return NULL;
@@ -16798,6 +16818,13 @@ static unsigned __stdcall master_thread(void *thread_func_param)
 static void *
 master_thread(void *thread_func_param)
 {
+	struct sigaction sa;
+
+	/* Ignore SIGPIPE */
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sa, NULL);
+
 	master_thread_run(thread_func_param);
 	return NULL;
 }
@@ -17184,16 +17211,11 @@ mg_start(const struct mg_callbacks *callbacks,
 		return NULL;
 	}
 
-#if !defined(_WIN32) && !defined(__SYMBIAN32__)
-	/* Ignore SIGPIPE signal, so if browser cancels the request, it
-	 * won't kill the whole process. */
-	(void)signal(SIGPIPE, SIG_IGN);
-#endif /* !_WIN32 && !__SYMBIAN32__ */
-
 	ctx->cfg_worker_threads = ((unsigned int)(workerthreadcount));
 	ctx->worker_threadids = (pthread_t *)mg_calloc_ctx(ctx->cfg_worker_threads,
 	                                                   sizeof(pthread_t),
 	                                                   ctx);
+
 	if (ctx->worker_threadids == NULL) {
 		mg_cry(fc(ctx), "Not enough memory for worker thread ID array");
 		free_context(ctx);

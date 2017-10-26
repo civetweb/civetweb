@@ -1716,6 +1716,8 @@ prepare_lua_environment(struct mg_context *ctx,
                         const char *script_name,
                         int lua_env_type)
 {
+	const char *preload_file_name = NULL;
+
 	civetweb_open_lua_libs(L);
 
 #if LUA_VERSION_NUM == 502
@@ -1850,13 +1852,17 @@ prepare_lua_environment(struct mg_context *ctx,
 	                  "mg.onerror = function(e) mg.write('\\nLua error:\\n', "
 	                  "debug.traceback(e, 1)) end"));
 
-	if (ctx != NULL) {
-		/* Preload */
-		if (conn->dom_ctx->config[LUA_PRELOAD_FILE] != NULL) {
-			IGNORE_UNUSED_RESULT(
-			    luaL_dofile(L, conn->dom_ctx->config[LUA_PRELOAD_FILE]));
-		}
+	/* Check if a preload file is available */
+	if ((conn != NULL) && (conn->dom_ctx != NULL)) {
+		preload_file_name = conn->dom_ctx->config[LUA_PRELOAD_FILE];
+	}
 
+	/* Preload file into new Lua environment */
+	if (preload_file_name) {
+		IGNORE_UNUSED_RESULT(luaL_dofile(L, preload_file_name));
+	}
+
+	if (ctx != NULL) {
 		if (ctx->callbacks.init_lua != NULL) {
 			ctx->callbacks.init_lua(conn, L);
 		}
@@ -2103,7 +2109,7 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		ws->conn[0] = conn;
 		ws->references = 1;
 		prepare_lua_environment(conn->phys_ctx,
-		                        NULL,
+		                        conn,
 		                        ws,
 		                        ws->state,
 		                        script,
