@@ -15185,6 +15185,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	conn->buf = (((char *)conn) + conn_size + ctx_size);
 	conn->buf_size = (int)max_req_size;
 	conn->phys_ctx->context_type = CONTEXT_HTTP_CLIENT;
+	conn->dom_ctx = &(conn->phys_ctx->dd);
 
 	if (!connect_socket(&common_client_context,
 	                    client_options->host,
