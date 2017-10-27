@@ -184,7 +184,7 @@ if (CIVETWEB_ENABLE_LUA)
 # An extended version is available at https://github.com/n1tehawk/LuaXML
 # but the last commit there was in 2015
 #
-    URL "https://github.com/n1tehawk/LuaXML/archive/v1.8.0.zip
+    URL "https://github.com/n1tehawk/LuaXML/archive/v1.8.0.zip"
     PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
 #
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
