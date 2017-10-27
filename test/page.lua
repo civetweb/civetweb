@@ -1,9 +1,9 @@
 mg.write("HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n")
 
-mg.write([[
-<html><body>
-<p>This is another example of a Lua script, creating a web page served by the
-<a href="https://github.com/civetweb/civetweb/">CivetWeb web server</a>.
+mg.write([[<html><body>
+<p>This is Lua script example 1, served by the
+<a href="https://github.com/civetweb/civetweb">CivetWeb web server</a>,
+version ]] .. mg.version .. [[.
 </p><p>
 The following features are available:
 <ul>
