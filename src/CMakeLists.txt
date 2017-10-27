@@ -174,9 +174,19 @@ if (CIVETWEB_ENABLE_LUA)
     message(FATAL_ERROR "The Lua XML archive filename is unknown for version ${CIVETWEB_LUA_XML_VERSION}")
   endif()
   ExternalProject_Add(luaxml
-    URL "http://viremo.eludi.net/LuaXML/${LUA_XML_FILENAME}"
-    URL_MD5 ${CIVETWEB_LUA_XML_MD5_HASH}
+# Old:
+#    URL "http://viremo.eludi.net/LuaXML/${LUA_XML_FILENAME}"
+#    URL_MD5 ${CIVETWEB_LUA_XML_MD5_HASH}
+#    PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
+#
+# TODO: find current sourde
+# viremo.eludi.net does no longer exist
+# An extended version is available at https://github.com/n1tehawk/LuaXML
+# but the last commit there was in 2015
+#
+    URL "https://github.com/n1tehawk/LuaXML/archive/v1.8.0.zip
     PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
+#
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
       "${CMAKE_CURRENT_SOURCE_DIR}/cmake/luaxml/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
