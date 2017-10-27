@@ -111,7 +111,7 @@ after_success:
 
 
 ##############################################################################
-# build matrix (auto generated)
+# build matrix
 ##############################################################################
 
 
@@ -635,60 +635,39 @@ matrix:
       ALLOW_WARNINGS=YES
 
 
-#### Now all define combinations, but only for Linux clang
-##### Generated with Lua:
-#
-#  function YN(i,b)
-#    local bits = {}
-#    while (i > 0.5) do
-#      i = math.floor(i)
-#      bits[#bits+1] = (math.mod(i, 2) == 1)
-#      i = i/2
-#    end
-#    if (bits[b]) then
-#      return "YES"
-#    end
-#    return "NO"
-#  end
-#  function INV(t)
-#    if t=="YES" then
-#      return "NO"
-#    elseif t=="NO" then
-#      return "YES"
-#    else
-#      assert("ERROR in INV!")
-#    end
-#  end
-#  for i=0,511 do
-#    if (YN(i, 6)=="NO") and (YN(i, 7)=="NO") then
-#      print("  -")
-#      print("    os: linux")
-#      print("    compiler: clang")
-#      print("    env:")
-#      print("      N=C" .. tostring(i) .. "_")
-#      print("      BUILD_TYPE=Release")
-#      print("      ENABLE_SSL_DYNAMIC_LOADING=YES")
-#      print("      OPENSSL_1_1=NO")
-#      print("      ENABLE_CXX=NO")
-#      print("      C_STANDARD=auto")
-#      print("      CXX_STANDARD=auto")
-#      print("      ENABLE_LUA_SHARED=NO")
-#      print("      FEATURES=" .. tostring(i))
-#      print("      BUILD_SHARED=NO")
-#      print("      NO_FILES=" .. INV(YN(i, 1)))
-#      print("      ENABLE_SSL=" .. YN(i, 2))
-#      print("      NO_CGI=" .. INV(YN(i, 3)))
-#      print("      ENABLE_IPV6=" .. YN(i, 4))
-#      print("      ENABLE_WEBSOCKETS=" .. YN(i, 5))
-#      print("      ENABLE_LUA=" .. YN(i, 6))
-#      print("      ENABLE_DUKTAPE=" .. YN(i, 7))
-#      print("      NO_CACHING=" .. INV(YN(i, 8)))
-#      print("      ENABLE_SERVER_STATS=" .. YN(i, 9))
-#      print("")
-#    end
-#  end
-#
-
-# TODO: Regenerate this matrix, once a stable Travis build is re-established
-
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+          - lua5.2
+    env:
+      idx=18
+      N=Clang3.8-Linux-Complete-WithLua-Debug
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=YES
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=63
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
 

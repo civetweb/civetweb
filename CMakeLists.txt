@@ -26,7 +26,7 @@ include(CMakeDependentOption)
 
 # Set up the project
 project (civetweb)
-set(CIVETWEB_VERSION "1.10.0" CACHE STRING "The version of the civetweb library")
+set(CIVETWEB_VERSION "1.11.0" CACHE STRING "The version of the civetweb library")
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" CIVETWEB_VERSION_MATCH "${CIVETWEB_VERSION}")
 if ("${CIVETWEB_VERSION_MATCH}" STREQUAL "")
   message(FATAL_ERROR "Must specify a semantic version: major.minor.patch")
@@ -395,6 +395,8 @@ endif()
 # Set up the definitions
 if (${CMAKE_BUILD_TYPE} MATCHES "[Dd]ebug")
   add_definitions(-DDEBUG)
+  add_definitions(-O0)
+  add_definitions(-g)
 endif()
 if (CIVETWEB_ENABLE_IPV6)
   add_definitions(-DUSE_IPV6)
@@ -477,7 +479,7 @@ endif()
 # Set up CPack
 include(InstallRequiredSystemLibraries)
 set(CPACK_PACKAGE_VENDOR "civetweb Contributors")
-set(CPACK_PACKAGE_CONTACT "civetweb@github.com")
+set(CPACK_PACKAGE_CONTACT "civetweb@users.noreply.github.com")
 set(CPACK_PACKAGE_VERSION_MAJOR "${CIVETWEB_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${CIVETWEB_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${CIVETWEB_VERSION_PATCH}")
@@ -506,3 +508,4 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_PACKAGE_DEPENDS}")
 
 # Finalize CPack settings
 include(CPack)
+
