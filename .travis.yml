@@ -671,3 +671,40 @@ matrix:
       NO_CACHING=YES
       ALLOW_WARNINGS=YES
 
+#Lua Build is allowed to fail
+allow_failures:
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+          - lua5.2
+    env:
+      idx=18
+      N=Clang3.8-Linux-Complete-WithLua-Debug
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=YES
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=63
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=YES
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
