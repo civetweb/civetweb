@@ -45,12 +45,22 @@ when using mg\_websocket\_write.
 
 #### S3: open\_file member of mg\_callbacks
 
-This member is going to be removed.
-It is superseeded by mg\_add\_request\_handler.
+Memory mapped files are a relic from before `mg_set_request_handler`
+was introduced in CivetWeb 1.4 (September 2013).
+Is "file in memory" still a useful feature or dead code? See this
+[discussion](https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI).
+Since it is not widely used, and a burden in maintenance, the
+"file in memory" should be completely removed, including removing
+the open\_file member of mg\_callbacks.
+
 
 **Compatibility considerations:**
-Current code using open\_file needs to be changed.
-Instructions how to do this will be provided.
+Removing "file in memory" will require code using open\_file to be changed.
+A possible replacement by mg\_set\_request\_handler is sketched in
+[this comment](https://github.com/civetweb/civetweb/issues/440#issuecomment-290531238).
+
+**Required Actions:**
+Modify code using open\_file by using request handlers.
 
 
 #### S4: Support multiple hostnames and SNI
