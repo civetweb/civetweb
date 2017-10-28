@@ -1615,12 +1615,6 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 	reg_string(L, "uri", conn->request_info.local_uri);
 	reg_string(L, "http_version", conn->request_info.http_version);
 	reg_string(L, "query_string", conn->request_info.query_string);
-#if defined(MG_LEGACY_INTERFACE)
-	reg_int(L, "remote_ip", conn->request_info.remote_ip); /* remote_ip is
-	                                                          deprecated, use
-	                                                          remote_addr
-	                                                          instead */
-#endif
 	reg_string(L, "remote_addr", conn->request_info.remote_addr);
 	/* TODO (high): ip version */
 	reg_int(L, "remote_port", conn->request_info.remote_port);

@@ -155,11 +155,6 @@ struct mg_request_info {
 	                             used */
 	char remote_addr[48];     /* Client's IP address as a string. */
 
-#if defined(MG_LEGACY_INTERFACE)
-	long remote_ip; /* Client's IP address. Deprecated: use remote_addr instead
-	                   */
-#endif
-
 	long long content_length; /* Length (in bytes) of the request body,
 	                             can be -1 if no length was given. */
 	int remote_port;          /* Client's port */

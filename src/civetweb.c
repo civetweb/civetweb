@@ -9520,7 +9520,7 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	int request_length;
 	int init_skip = 0;
 
-	/* Reset attributes. DO NOT TOUCH is_ssl, remote_ip, remote_addr,
+    /* Reset attributes. DO NOT TOUCH is_ssl, remote_addr,
 	 * remote_port */
 	ri->remote_user = ri->request_method = ri->request_uri = ri->http_version =
 	    NULL;
@@ -16501,12 +16501,6 @@ worker_thread_run(struct worker_thread_args *thread_args)
 
 		DEBUG_TRACE("Start processing connection from %s",
 		            conn->request_info.remote_addr);
-
-#if defined(MG_LEGACY_INTERFACE)
-		/* This legacy interface only works for the IPv4 case */
-		addr = ntohl(conn->client.rsa.sin.sin_addr.s_addr);
-		memcpy(&conn->request_info.remote_ip, &addr, 4);
-#endif
 
 		conn->request_info.is_ssl = conn->client.is_ssl;
 
