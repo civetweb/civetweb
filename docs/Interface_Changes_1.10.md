@@ -1,8 +1,9 @@
 # Interface changes
 
-## Proposed interface changes for 1.10
+## Proposed interface changes for future versions
 
-Status: To be discussed
+See [this GitHub issue](https://github.com/civetweb/civetweb/issues/544).
+
 
 ### Server interface
 
