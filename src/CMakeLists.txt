@@ -187,6 +187,7 @@ if (CIVETWEB_ENABLE_LUA)
     URL "https://github.com/n1tehawk/LuaXML/archive/v1.8.0.zip"
     PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
 #
+# TODO: fix this patch command (needs someone with deeper CMake know how)
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
       "${CMAKE_CURRENT_SOURCE_DIR}/cmake/luaxml/CMakeLists.txt" <SOURCE_DIR>/CMakeLists.txt
     CMAKE_ARGS
