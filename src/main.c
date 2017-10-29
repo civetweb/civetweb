@@ -1289,6 +1289,19 @@ start_civetweb(int argc, char *argv[])
 		    ((g_user_data.first_message == NULL) ? "unknown reason"
 		                                         : g_user_data.first_message));
 	}
+
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+	// XXX Just testing:
+	const char *xopts[] = {"authentication_domain",
+	                       "localhost",
+	                       "ssl_certificate",
+	                       "/scratch/civetweb/resources/cert/server_bkup.pem",
+	                       "document_root",
+	                       "/tmp",
+	                       NULL,
+	                       NULL};
+	mg_start_domain(g_ctx, xopts);
+#endif
 }
 
 

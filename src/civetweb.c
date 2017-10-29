@@ -1692,6 +1692,7 @@ struct ssl_func {
 	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
 #define SSL_get_servername                                                     \
 	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
+#define SSL_set_SSL_CTX (*(SSL_CTX * (*)(SSL *, SSL_CTX *))ssl_sw[37].ptr)
 
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
@@ -1780,6 +1781,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_set_ex_data", NULL},
                                    {"SSL_CTX_callback_ctrl", NULL},
                                    {"SSL_get_servername", NULL},
+                                   {"SSL_set_SSL_CTX", NULL},
                                    {NULL, NULL}};
 
 
@@ -1855,6 +1857,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
 #define SSL_get_servername                                                     \
 	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
+#define SSL_set_SSL_CTX (*(SSL_CTX * (*)(SSL *, SSL_CTX *))ssl_sw[37].ptr)
 
 #define SSL_CTX_set_options(ctx, op)                                           \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
@@ -1955,6 +1958,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_set_ex_data", NULL},
                                    {"SSL_CTX_callback_ctrl", NULL},
                                    {"SSL_get_servername", NULL},
+                                   {"SSL_set_SSL_CTX", NULL},
                                    {NULL, NULL}};
 
 
@@ -2338,6 +2342,9 @@ struct mg_domain_context {
 	/* linked list of shared lua websockets */
 	struct mg_shared_lua_websocket_list *shared_lua_websockets;
 #endif
+
+	/* Linked list of domains */
+	struct mg_domain_context *next;
 };
 
 
@@ -2421,10 +2428,10 @@ struct mg_context {
 	 * This holds hostname, TLS certificate, document root, ...
 	 * set for a domain hosted at the server.
 	 * There may be multiple domains hosted at one physical server.
+	 * The default domain "dd" is the first element of a list of
+	 * domains.
 	 */
 	struct mg_domain_context dd; /* default domain */
-	struct mg_domain_context *add_domains;
-	unsigned int num_add_domains;
 };
 
 
@@ -9520,7 +9527,7 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	int request_length;
 	int init_skip = 0;
 
-    /* Reset attributes. DO NOT TOUCH is_ssl, remote_addr,
+	/* Reset attributes. DO NOT TOUCH is_ssl, remote_addr,
 	 * remote_port */
 	ri->remote_user = ri->request_method = ri->request_uri = ri->http_version =
 	    NULL;
@@ -14427,9 +14434,16 @@ static int
 ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 {
 	struct mg_context *ctx = (struct mg_context *)arg;
+	struct mg_domain_context *dom =
+	    (struct mg_domain_context *)ctx ? &(ctx->dd) : NULL;
+	struct mg_connection *conn = (struct mg_connection *)SSL_get_app_data(ssl);
 	const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 
 	(void)ad;
+
+	if (conn->phys_ctx != ctx) {
+		printf("???\n"); /* XXX */
+	}
 
 	/* Old clients (Win XP) will not support SNI. Then, there
 	 * is no server name available in the request - we can
@@ -14444,15 +14458,17 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 
 	DEBUG_TRACE("TLS connection to host %s", servername);
 
-	(void)ctx;
-	/* TODO for SNI: check all available server names.
-	 * For the matching server name get the matching_ssl_ctx
-	 * and call
-	 *   SSL_set_SSL_CTX(ssl, matching_ssl_ctx);
-	 * to use this certificate. A different document_root
-	 * may be required as well.
-	 */
+	while (dom) {
+		if (!strcasecmp(servername, dom->config[AUTHENTICATION_DOMAIN])) {
+			/* Found matching domain */
+			SSL_set_SSL_CTX(ssl, dom->ssl_ctx);
+			conn->dom_ctx = dom;
+			return SSL_TLSEXT_ERR_OK;
+		}
+		dom = dom->next;
+	}
 
+	/* Default domain */
 	return SSL_TLSEXT_ERR_OK;
 }
 
@@ -14662,13 +14678,13 @@ init_ssl_ctx(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 		return 0;
 	}
 
-	if (!is_ssl_port_used(phys_ctx->dd.config[LISTENING_PORTS])) {
-		/* No SSL port is set. No need to setup SSL. */
-		return 1;
-	}
-
 	if (!dom_ctx) {
 		dom_ctx = &(phys_ctx->dd);
+	}
+
+	if (!is_ssl_port_used(dom_ctx->config[LISTENING_PORTS])) {
+		/* No SSL port is set. No need to setup SSL. */
+		return 1;
 	}
 
 	/* Check for external SSL_CTX */
@@ -16511,6 +16527,8 @@ worker_thread_run(struct worker_thread_args *thread_args)
 			           conn->dom_ctx->ssl_ctx,
 			           SSL_accept,
 			           &(conn->phys_ctx->stop_flag))) {
+				/* XXX TODO: Set conn->dom_ctx */
+
 				/* Get SSL client certificate information (if set) */
 				ssl_get_client_cert_info(conn);
 
@@ -17085,11 +17103,13 @@ mg_start(const struct mg_callbacks *callbacks,
 	}
 	ctx->user_data = user_data;
 	ctx->dd.handlers = NULL;
+	ctx->dd.next = NULL;
 
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
-	ctx->dd.shared_lua_websockets = 0;
+	ctx->dd.shared_lua_websockets = NULL;
 #endif
 
+	/* Store options */
 	while (options && (name = *options++) != NULL) {
 		if ((idx = get_option_index(name)) == -1) {
 			mg_cry(fc(ctx), "Invalid option: %s", name);
@@ -17118,8 +17138,8 @@ mg_start(const struct mg_callbacks *callbacks,
 		}
 	}
 
+	/* Request size option */
 	itmp = atoi(ctx->dd.config[MAX_REQUEST_SIZE]);
-
 	if (itmp < 1024) {
 		mg_cry(fc(ctx), "max_request_size too small");
 		free_context(ctx);
@@ -17128,6 +17148,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	}
 	ctx->max_request_size = (unsigned)itmp;
 
+	/* Worker thread count option */
 	workerthreadcount = atoi(ctx->dd.config[NUM_THREADS]);
 
 	if (workerthreadcount > MAX_WORKER_THREADS) {
@@ -17144,6 +17165,7 @@ mg_start(const struct mg_callbacks *callbacks,
 		return NULL;
 	}
 
+/* Document root */
 #if defined(NO_FILES)
 	if (ctx->dd.config[DOCUMENT_ROOT] != NULL) {
 		mg_cry(fc(ctx), "%s", "Document root must not be set");
@@ -17333,6 +17355,108 @@ mg_start(const struct mg_callbacks *callbacks,
 }
 
 
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+/* Add an additional domain to an already running web server. */
+int
+mg_start_domain(struct mg_context *ctx, const char **options)
+{
+	const char *name;
+	const char *value;
+	const char *default_value;
+	struct mg_domain_context *new_dom;
+	struct mg_domain_context *dom;
+	int idx, i;
+
+	if ((ctx == NULL) || (ctx->stop_flag != 0) || (options == NULL)) {
+		return -1;
+	}
+
+	new_dom = (struct mg_domain_context *)
+	    mg_calloc_ctx(1, sizeof(struct mg_domain_context), ctx);
+
+	if (!new_dom) {
+		/* Out of memory */
+		return -6;
+	}
+
+	/* Store options - TODO: unite duplicate code */
+	while (options && (name = *options++) != NULL) {
+		if ((idx = get_option_index(name)) == -1) {
+			mg_cry(fc(ctx), "Invalid option: %s", name);
+			mg_free(new_dom);
+			return -2;
+		} else if ((value = *options++) == NULL) {
+			mg_cry(fc(ctx), "%s: option value cannot be NULL", name);
+			mg_free(new_dom);
+			return -2;
+		}
+		if (new_dom->config[idx] != NULL) {
+			mg_cry(fc(ctx), "warning: %s: duplicate option", name);
+			mg_free(new_dom->config[idx]);
+		}
+		new_dom->config[idx] = mg_strdup(value);
+		DEBUG_TRACE("[%s] -> [%s]", name, value);
+	}
+
+	/* Authentication domain is mandatory */
+	/* TODO: Maybe use a new option hostname? */
+	if (!new_dom->config[AUTHENTICATION_DOMAIN]) {
+		return -4;
+	}
+
+	/* Set default value if needed. Take the config value from
+	 * ctx as a default value. */
+	for (i = 0; config_options[i].name != NULL; i++) {
+		default_value = ctx->dd.config[i];
+		if ((new_dom->config[i] == NULL) && (default_value != NULL)) {
+			new_dom->config[i] = mg_strdup(default_value);
+		}
+	}
+
+	new_dom->handlers = NULL;
+	new_dom->next = NULL;
+	new_dom->nonce_count = 0;
+	new_dom->auth_nonce_mask =
+	    (uint64_t)get_random() ^ ((uint64_t)get_random() << 31);
+
+#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+	new_dom->shared_lua_websockets = NULL;
+#endif
+
+	if (!init_ssl_ctx(ctx, new_dom)) {
+		/* Init SSL failed */
+		mg_free(new_dom);
+		return -3;
+	}
+
+	/* Add element to linked list. */
+	mg_lock_context(ctx);
+
+	dom = &(ctx->dd);
+	for (;;) {
+		if (!strcasecmp(new_dom->config[AUTHENTICATION_DOMAIN],
+		                dom->config[AUTHENTICATION_DOMAIN])) {
+			/* Domain collision */
+			mg_cry(fc(ctx),
+			       "domain %s already in use",
+			       new_dom->config[AUTHENTICATION_DOMAIN]);
+			mg_free(new_dom);
+			return -5;
+		}
+		if (dom->next == NULL) {
+			dom->next = new_dom;
+			break;
+		}
+		dom = dom->next;
+	}
+
+	mg_unlock_context(ctx);
+
+	return 0;
+}
+#endif
+
+
 /* Feature check API function */
 unsigned
 mg_check_feature(unsigned feature)
@@ -17374,8 +17498,11 @@ mg_check_feature(unsigned feature)
 #if defined(MG_LEGACY_INTERFACE)
 	                                    | 0x8000u
 #endif
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+	                                    | 0x4000u
+#endif
 #if defined(MEMORY_DEBUGGING)
-	                                    | 0x0100u
+	                                    | 0x1000u
 #endif
 #if defined(USE_TIMERS)
 	                                    | 0x0200u

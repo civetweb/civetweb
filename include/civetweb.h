@@ -139,14 +139,14 @@ struct mg_header {
 
 /* This structure contains information about the HTTP request. */
 struct mg_request_info {
-	const char *request_method; /* "GET", "POST", etc */
-	const char *request_uri;    /* URL-decoded URI (absolute or relative,
-	                             * as in the request) */
-	const char *local_uri;      /* URL-decoded URI (relative). Can be NULL
-	                             * if the request_uri does not address a
-	                             * resource at the server host. */
+	const char *request_method;  /* "GET", "POST", etc */
+	const char *request_uri;     /* URL-decoded URI (absolute or relative,
+	                              * as in the request) */
+	const char *local_uri;       /* URL-decoded URI (relative). Can be NULL
+	                              * if the request_uri does not address a
+	                              * resource at the server host. */
 #if defined(MG_LEGACY_INTERFACE) /* 2017-02-04, deprecated 2014-09-14 */
-	const char *uri; /* Deprecated: use local_uri instead */
+	const char *uri;             /* Deprecated: use local_uri instead */
 #endif
 	const char *http_version; /* E.g. "1.0", "1.1" */
 	const char *query_string; /* URL part after '?', not including '?', or
@@ -407,6 +407,22 @@ CIVETWEB_API struct mg_context *mg_start(const struct mg_callbacks *callbacks,
    release all associated resources. This function blocks until all Civetweb
    threads are stopped. Context pointer becomes invalid. */
 CIVETWEB_API void mg_stop(struct mg_context *);
+
+
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+/* Add an additional domain to an already running web server.
+ *
+ * Parameters:
+ *   ctx: Context handle of a server started by mg_start.
+ *   options: NULL terminated list of option_name, option_value pairs that
+ *            specify CivetWeb configuration parameters.
+ *
+ * Return:
+ *   to be defined
+ */
+CIVETWEB_API int mg_start_domain(struct mg_context *ctx,
+                                 const char **configuration_options);
+#endif
 
 
 /* mg_request_handler

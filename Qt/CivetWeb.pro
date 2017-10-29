@@ -3,6 +3,8 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
+DEFINES += MG_EXPERIMENTAL_INTERFACES
+
 SOURCES += \
     ../src/md5.inl \
     ../src/sha1.inl \
