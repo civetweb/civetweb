@@ -145,7 +145,7 @@ struct mg_request_info {
 	const char *local_uri;      /* URL-decoded URI (relative). Can be NULL
 	                             * if the request_uri does not address a
 	                             * resource at the server host. */
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2017-02-04, deprecated 2014-09-14 */
 	const char *uri; /* Deprecated: use local_uri instead */
 #endif
 	const char *http_version; /* E.g. "1.0", "1.1" */
@@ -199,7 +199,7 @@ struct mg_client_cert {
 	const char *finger;
 };
 
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2017-10-05 */
 /* Old nomenclature. */
 struct client_cert {
 	const char *subject;
@@ -264,7 +264,7 @@ struct mg_callbacks {
 	    -1: initializing ssl fails.*/
 	int (*external_ssl_ctx)(void **ssl_ctx, void *user_data);
 
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2015-08-19 */
 	/* Called when websocket request is received, before websocket handshake.
 	   Return value:
 	     0: civetweb proceeds with websocket handshake.
@@ -315,7 +315,7 @@ struct mg_callbacks {
 	     lua_context: "lua_State *" pointer. */
 	void (*init_lua)(const struct mg_connection *, void *lua_context);
 
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2016-05-14 */
 	/* Called when civetweb has uploaded a file to a temporary directory as a
 	   result of mg_upload() call.
 	   Note that mg_upload is deprecated. Use mg_handle_form_request instead.
@@ -590,7 +590,7 @@ CIVETWEB_API int
 mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen);
 
 
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2014-02-21 */
 /* Return array of strings that represent valid configuration options.
    For each option, option name and default value is returned, i.e. the
    number of entries in the array equals to number_of_options x 2.
@@ -607,7 +607,7 @@ struct mg_option {
 };
 
 /* Old nomenclature */
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2017-10-05 */
 enum {
 	CONFIG_TYPE_UNKNOWN = 0x0,
 	CONFIG_TYPE_NUMBER = 0x1,
@@ -663,7 +663,7 @@ CIVETWEB_API int mg_get_server_ports(const struct mg_context *ctx,
                                      struct mg_server_ports *ports);
 
 
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2017-04-02 */
 /* Deprecated: Use mg_get_server_ports instead. */
 CIVETWEB_API size_t
 mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl);
@@ -766,7 +766,7 @@ CIVETWEB_API void mg_lock_connection(struct mg_connection *conn);
 CIVETWEB_API void mg_unlock_connection(struct mg_connection *conn);
 
 
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2014-06-21 */
 #define mg_lock mg_lock_connection
 #define mg_unlock mg_unlock_connection
 #endif
@@ -779,7 +779,7 @@ CIVETWEB_API void mg_unlock_context(struct mg_context *ctx);
 
 
 /* Opcodes, from http://tools.ietf.org/html/rfc6455 */
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2017-10-05 */
 enum {
 	WEBSOCKET_OPCODE_CONTINUATION = 0x0,
 	WEBSOCKET_OPCODE_TEXT = 0x1,
@@ -1046,7 +1046,7 @@ mg_download(const char *host,
 CIVETWEB_API void mg_close_connection(struct mg_connection *conn);
 
 
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2016-05-14 */
 /* File upload functionality. Each uploaded file gets saved into a temporary
    file and MG_UPLOAD event is sent.
    Return number of uploaded files.
@@ -1125,7 +1125,7 @@ struct mg_form_data_handler {
 
 /* Return values definition for the "field_found" callback in
  * mg_form_data_handler. */
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_LEGACY_INTERFACE) /* 2017-10-05 */
 enum {
 	/* Skip this field (neither get nor store it). Continue with the
      * next field. */
