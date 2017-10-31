@@ -149,12 +149,23 @@ struct tuser_data {
 
 static int g_exit_flag = 0;         /* Main loop should exit */
 static char g_server_base_name[40]; /* Set by init_server_name() */
-static const char *g_server_name;   /* Set by init_server_name() */
-static const char *g_icon_name;     /* Set by init_server_name() */
-static const char *g_website;       /* Set by init_server_name() */
-static char *g_system_info;         /* Set by init_system_info() */
-static char g_config_file_name[PATH_MAX] =
-    "";                          /* Set by process_command_line_arguments() */
+
+static const char *g_server_name; /* Default from init_server_name,
+                                   * updated later from the server config */
+static const char *g_icon_name;   /* Default from init_server_name,
+                                   * updated later from the server config */
+static const char *g_website;     /* Default from init_server_name,
+                                   * updated later from the server config */
+static int g_num_add_domains;     /* Default from init_server_name,
+                                   * updated later from the server config */
+static const char **g_add_domain; /* Default from init_server_name,
+                                   * updated later from the server config */
+
+
+static char *g_system_info;                    /* Set by init_system_info() */
+static char g_config_file_name[PATH_MAX] = ""; /* Set by
+                                     *  process_command_line_arguments() */
+
 static struct mg_context *g_ctx; /* Set by start_civetweb() */
 static struct tuser_data
     g_user_data; /* Passed to mg_start() by start_civetweb() */
@@ -172,12 +183,19 @@ static struct tuser_data
 #define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
-enum { OPTION_TITLE, OPTION_ICON, OPTION_WEBPAGE, NUM_MAIN_OPTIONS };
+enum {
+	OPTION_TITLE,
+	OPTION_ICON,
+	OPTION_WEBPAGE,
+	OPTION_ADD_DOMAIN,
+	NUM_MAIN_OPTIONS
+};
 
 static struct mg_option main_config_options[] = {
     {"title", MG_CONFIG_TYPE_STRING, NULL},
     {"icon", MG_CONFIG_TYPE_STRING, NULL},
     {"website", MG_CONFIG_TYPE_STRING, NULL},
+    {"add_domain", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -354,9 +372,13 @@ sdup(const char *str)
 	char *p;
 
 	len = strlen(str) + 1;
-	if ((p = (char *)malloc(len)) != NULL) {
-		memcpy(p, str, len);
+	p = (char *)malloc(len);
+
+	if (p == NULL) {
+		die("Cannot allocate %u bytes", (unsigned)len);
 	}
+
+	memcpy(p, str, len);
 	return p;
 }
 
@@ -522,13 +544,45 @@ set_option(char **options, const char *name, const char *value)
 	const char *multi_sep = NULL;
 
 	for (i = 0; main_config_options[i].name != NULL; i++) {
-		if (0 == strcmp(name, main_config_options[i].name)) {
-			/* This option is evaluated by main.c, not civetweb.c - just skip it
-			 * and return OK */
+		/* These options are evaluated by main.c, not civetweb.c.
+		 * Do not add it to options, and return OK */
+		if (!strcmp(name, main_config_options[OPTION_TITLE].name)) {
+			g_server_name = sdup(value);
+			return 1;
+		}
+		if (!strcmp(name, main_config_options[OPTION_ICON].name)) {
+
+			g_icon_name = sdup(value);
+			return 1;
+		}
+		if (!strcmp(name, main_config_options[OPTION_WEBPAGE].name)) {
+			g_website = sdup(value);
+			return 1;
+		}
+		if (!strcmp(name, main_config_options[OPTION_ADD_DOMAIN].name)) {
+			if (g_num_add_domains > 0) {
+				g_add_domain =
+				    (const char **)realloc(g_add_domain,
+				                           sizeof(char *)
+				                               * (g_num_add_domains + 1));
+				if (!g_add_domain) {
+					die("Out of memory");
+				}
+				g_add_domain[g_num_add_domains] = sdup(value);
+				g_num_add_domains++;
+			} else {
+				g_add_domain = (const char **)malloc(sizeof(char *));
+				if (!g_add_domain) {
+					die("Out of memory");
+				}
+				g_add_domain[0] = sdup(value);
+				g_num_add_domains = 1;
+			}
 			return 1;
 		}
 	}
 
+	/* Not an option of main.c, so check if it is a CivetWeb server option */
 	type = MG_CONFIG_TYPE_UNKNOWN;
 	for (i = 0; default_options[i].name != NULL; i++) {
 		if (!strcmp(default_options[i].name, name)) {
@@ -789,47 +843,6 @@ process_command_line_arguments(int argc, char *argv[], char **options)
 
 
 static void
-init_server_name(int argc, const char *argv[])
-{
-	int i;
-	assert(sizeof(main_config_options) / sizeof(main_config_options[0])
-	       == NUM_MAIN_OPTIONS + 1);
-	assert((strlen(mg_version()) + 12) < sizeof(g_server_base_name));
-	snprintf(g_server_base_name,
-	         sizeof(g_server_base_name),
-	         "CivetWeb V%s",
-	         mg_version());
-
-	g_server_name = g_server_base_name;
-	for (i = 0; i < argc - 1; i++) {
-		if ((argv[i][0] == '-')
-		    && (0 == strcmp(argv[i] + 1,
-		                    main_config_options[OPTION_TITLE].name))) {
-			g_server_name = (const char *)(argv[i + 1]);
-		}
-	}
-
-	g_icon_name = NULL;
-	for (i = 0; i < argc - 1; i++) {
-		if ((argv[i][0] == '-')
-		    && (0 == strcmp(argv[i] + 1,
-		                    main_config_options[OPTION_ICON].name))) {
-			g_icon_name = (const char *)(argv[i + 1]);
-		}
-	}
-
-	g_website = "http://civetweb.github.io/civetweb/";
-	for (i = 0; i < argc - 1; i++) {
-		if ((argv[i][0] == '-')
-		    && (0 == strcmp(argv[i] + 1,
-		                    main_config_options[OPTION_WEBPAGE].name))) {
-			g_website = (const char *)(argv[i + 1]);
-		}
-	}
-}
-
-
-static void
 init_system_info(void)
 {
 	int len = mg_get_system_info(NULL, 0);
@@ -839,6 +852,24 @@ init_system_info(void)
 	} else {
 		g_system_info = sdup("Not available");
 	}
+}
+
+
+static void
+init_server_name()
+{
+	assert(sizeof(main_config_options) / sizeof(main_config_options[0])
+	       == NUM_MAIN_OPTIONS + 1);
+	assert((strlen(mg_version()) + 12) < sizeof(g_server_base_name));
+	snprintf(g_server_base_name,
+	         sizeof(g_server_base_name),
+	         "CivetWeb V%s",
+	         mg_version());
+	g_server_name = g_server_base_name;
+	g_icon_name = NULL;
+	g_website = "http://civetweb.github.io/civetweb/";
+	g_num_add_domains = 0;
+	g_add_domain = NULL;
 }
 
 
@@ -1138,6 +1169,33 @@ run_client(const char *url_arg)
 	return 1;
 }
 
+static void
+sanitize_options(char *options[] /* server options */,
+                 const char *arg0 /* argv[0] */)
+{
+	/* Make sure we have absolute paths for files and directories */
+	set_absolute_path(options, "document_root", arg0);
+	set_absolute_path(options, "put_delete_auth_file", arg0);
+	set_absolute_path(options, "cgi_interpreter", arg0);
+	set_absolute_path(options, "access_log_file", arg0);
+	set_absolute_path(options, "error_log_file", arg0);
+	set_absolute_path(options, "global_auth_file", arg0);
+#ifdef USE_LUA
+	set_absolute_path(options, "lua_preload_file", arg0);
+#endif
+	set_absolute_path(options, "ssl_certificate", arg0);
+
+	/* Make extra verification for certain options */
+	verify_existence(options, "document_root", 1);
+	verify_existence(options, "cgi_interpreter", 0);
+	verify_existence(options, "ssl_certificate", 0);
+	verify_existence(options, "ssl_ca_path", 1);
+	verify_existence(options, "ssl_ca_file", 0);
+#ifdef USE_LUA
+	verify_existence(options, "lua_preload_file", 0);
+#endif
+}
+
 
 static void
 start_civetweb(int argc, char *argv[])
@@ -1236,33 +1294,14 @@ start_civetweb(int argc, char *argv[])
 		show_usage_and_exit(argv[0]);
 	}
 
-	options[0] = NULL;
+	/* Initialize options structure */
+	memset(options, 0, sizeof(options));
 	set_option(options, "document_root", ".");
 
 	/* Update config based on command line arguments */
 	process_command_line_arguments(argc, argv, options);
 
-	/* Make sure we have absolute paths for files and directories */
-	set_absolute_path(options, "document_root", argv[0]);
-	set_absolute_path(options, "put_delete_auth_file", argv[0]);
-	set_absolute_path(options, "cgi_interpreter", argv[0]);
-	set_absolute_path(options, "access_log_file", argv[0]);
-	set_absolute_path(options, "error_log_file", argv[0]);
-	set_absolute_path(options, "global_auth_file", argv[0]);
-#ifdef USE_LUA
-	set_absolute_path(options, "lua_preload_file", argv[0]);
-#endif
-	set_absolute_path(options, "ssl_certificate", argv[0]);
-
-	/* Make extra verification for certain options */
-	verify_existence(options, "document_root", 1);
-	verify_existence(options, "cgi_interpreter", 0);
-	verify_existence(options, "ssl_certificate", 0);
-	verify_existence(options, "ssl_ca_path", 1);
-	verify_existence(options, "ssl_ca_file", 0);
-#ifdef USE_LUA
-	verify_existence(options, "lua_preload_file", 0);
-#endif
+	sanitize_options(options, argv[0]);
 
 	/* Setup signal handler: quit on Ctrl-C */
 	signal(SIGTERM, signal_handler);
@@ -1291,16 +1330,31 @@ start_civetweb(int argc, char *argv[])
 	}
 
 #if defined(MG_EXPERIMENTAL_INTERFACES)
-	// XXX Just testing:
-	const char *xopts[] = {"authentication_domain",
-	                       "localhost",
-	                       "ssl_certificate",
-	                       "/scratch/civetweb/resources/cert/server_bkup.pem",
-	                       "document_root",
-	                       "/tmp",
-	                       NULL,
-	                       NULL};
-	mg_start_domain(g_ctx, xopts);
+	for (i = 0; i < g_num_add_domains; i++) {
+
+		int j;
+		memset(options, 0, sizeof(options));
+		set_option(options, "document_root", ".");
+
+		if (0 == read_config_file(g_add_domain[i], options)) {
+			die("Cannot open config file %s: %s",
+			    g_add_domain[i],
+			    strerror(errno));
+		}
+
+		sanitize_options(options, argv[0]);
+
+		j = mg_start_domain(g_ctx, (const char **)options);
+		if (j < 0) {
+			die("Error loading domain file %s: %i", g_add_domain[i], j);
+		} else {
+			fprintf(stdout, "Domain file %s loaded\n", g_add_domain[i]);
+		}
+
+		for (j = 0; options[j] != NULL; j++) {
+			free(options[j]);
+		}
+	}
 #endif
 }
 
@@ -2655,25 +2709,30 @@ manage_service(int action)
 static LRESULT CALLBACK
 WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static SERVICE_TABLE_ENTRY service_table[2];
+
 	int service_installed;
-	char buf[200], *service_argv[2];
+	char buf[200];
 	POINT pt;
 	HMENU hMenu;
 	static UINT s_uTaskbarRestart; /* for taskbar creation */
 
-	service_argv[0] = __argv[0];
-	service_argv[1] = NULL;
-
-	memset(service_table, 0, sizeof(service_table));
-	service_table[0].lpServiceName = (LPSTR)g_server_name;
-	service_table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)ServiceMain;
-
 	switch (msg) {
 
 	case WM_CREATE:
-		if (__argv[1] != NULL && !strcmp(__argv[1], service_magic_argument)) {
+		if ((__argv[1] != NULL) && !strcmp(__argv[1], service_magic_argument)) {
+			static SERVICE_TABLE_ENTRY service_table[2];
+			char buf *service_argv[2];
+
+			service_argv[0] = __argv[0];
+			service_argv[1] = NULL;
+
 			start_civetweb(1, service_argv);
+
+			memset(service_table, 0, sizeof(service_table));
+			service_table[0].lpServiceName = (LPSTR)g_server_name;
+			service_table[0].lpServiceProc =
+			    (LPSERVICE_MAIN_FUNCTION)ServiceMain;
+
 			StartServiceCtrlDispatcher(service_table);
 			exit(EXIT_SUCCESS);
 		} else {

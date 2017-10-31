@@ -14459,7 +14459,7 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	DEBUG_TRACE("TLS connection to host %s", servername);
 
 	while (dom) {
-		if (!strcasecmp(servername, dom->config[AUTHENTICATION_DOMAIN])) {
+		if (!mg_strcasecmp(servername, dom->config[AUTHENTICATION_DOMAIN])) {
 			/* Found matching domain */
 			SSL_set_SSL_CTX(ssl, dom->ssl_ctx);
 			conn->dom_ctx = dom;
