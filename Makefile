@@ -83,6 +83,7 @@ ifdef WITH_ALL
   WITH_LUA = 1
   WITH_DUKTAPE = 1
   WITH_SERVER_STATS = 1
+  WITH_EXPERIMENTAL = 1
   #WITH_CPP is not defined, ALL means only real features, not wrappers
 endif
 
@@ -110,6 +111,10 @@ endif
 
 ifdef WITH_DUKTAPE
   include resources/Makefile.in-duktape
+endif
+
+ifdef WITH_EXPERIMENTAL
+  CFLAGS += -DMG_EXPERIMENTAL_INTERFACES
 endif
 
 ifdef WITH_IPV6
@@ -201,6 +206,7 @@ help:
 	@echo "   WITH_WEBSOCKET=1      build with web socket support"
 	@echo "   WITH_SERVER_STATS=1   build includes support for server statistics"
 	@echo "   WITH_CPP=1            build library with c++ classes"
+	@echo "   WITH_EXPERIMENTAL=1   build with experimental features"
 	@echo "   CONFIG_FILE=file      use 'file' as the config file"
 	@echo "   CONFIG_FILE2=file     use 'file' as the backup config file"
 	@echo "   DOCUMENT_ROOT=/path   document root override when installing"

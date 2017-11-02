@@ -562,7 +562,7 @@ set_option(char **options, const char *name, const char *value)
 		if (!strcmp(name, main_config_options[OPTION_ADD_DOMAIN].name)) {
 			if (g_num_add_domains > 0) {
 				g_add_domain =
-				    (const char **)realloc(g_add_domain,
+				    (const char **)realloc((void *)g_add_domain,
 				                           sizeof(char *)
 				                               * (g_num_add_domains + 1));
 				if (!g_add_domain) {
@@ -698,7 +698,7 @@ read_config_file(const char *config_file, char **options)
 
 	/* Load config file settings first */
 	if (fp != NULL) {
-		fprintf(stderr, "Loading config file %s\n", config_file);
+		fprintf(stdout, "Loading config file %s\n", config_file);
 
 		/* Loop over the lines in config file */
 		while (fgets(line, sizeof(line), fp) != NULL) {
@@ -2721,7 +2721,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_CREATE:
 		if ((__argv[1] != NULL) && !strcmp(__argv[1], service_magic_argument)) {
 			static SERVICE_TABLE_ENTRY service_table[2];
-			char buf *service_argv[2];
+			char *service_argv[2];
 
 			service_argv[0] = __argv[0];
 			service_argv[1] = NULL;
