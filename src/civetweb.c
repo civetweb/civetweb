@@ -14453,6 +14453,8 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	 */
 	if ((servername == NULL) || (*servername == 0)) {
 		DEBUG_TRACE("%s", "SSL connection not supporting SNI");
+		conn->dom_ctx = &(ctx->dd);
+		SSL_set_SSL_CTX(ssl, conn->dom_ctx->ssl_ctx);
 		return SSL_TLSEXT_ERR_NOACK;
 	}
 
@@ -14460,7 +14462,10 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 
 	while (dom) {
 		if (!mg_strcasecmp(servername, dom->config[AUTHENTICATION_DOMAIN])) {
+
 			/* Found matching domain */
+			DEBUG_TRACE("TLS domain %s found",
+			            dom->config[AUTHENTICATION_DOMAIN]);
 			SSL_set_SSL_CTX(ssl, dom->ssl_ctx);
 			conn->dom_ctx = dom;
 			return SSL_TLSEXT_ERR_OK;
@@ -14469,6 +14474,10 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	}
 
 	/* Default domain */
+	DEBUG_TRACE("TLS default domain %s used",
+	            ctx->dd.config[AUTHENTICATION_DOMAIN]);
+	conn->dom_ctx = &(ctx->dd);
+	SSL_set_SSL_CTX(ssl, conn->dom_ctx->ssl_ctx);
 	return SSL_TLSEXT_ERR_OK;
 }
 

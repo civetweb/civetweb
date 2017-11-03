@@ -7,6 +7,8 @@ The C++ wrapper only offers a subset of the full C API, thus the C example is mo
 
 In addition, there is one example how to configure a HTTPS server, to comply with modern security standards ([https](https://github.com/civetweb/civetweb/tree/master/examples/https)). It does not hold any source, but only a configuration file and some documentation how to use it.
 
+The [multidomain](https://github.com/civetweb/civetweb/tree/master/examples/multidomain) example demonstrates how to host multiple domains with different HTTPS certificates. It uses the standalone server (civetweb.c + main.c) and existing certificates.
+
 Some no longer maintained examples can be found in the ["obsolete"](https://github.com/civetweb/civetweb/tree/master/examples/_obsolete) folder. It is not guaranteed that they work in the current version - they are kept for reference, but might be removed in the future.
 
 All examples are subject to the MIT license (unless noted otherwise) - they come without warranty of any kind.
