@@ -9125,6 +9125,21 @@ handle_static_file_request(struct mg_connection *conn,
 
 
 #if !defined(NO_CACHING)
+/* Return True if we should reply 304 Not Modified. */
+static int
+is_not_modified(const struct mg_connection *conn,
+                const struct mg_file_stat *filestat)
+{
+	char etag[64];
+	const char *ims = mg_get_header(conn, "If-Modified-Since");
+	const char *inm = mg_get_header(conn, "If-None-Match");
+	construct_etag(etag, sizeof(etag), filestat);
+
+	return ((inm != NULL) && !mg_strcasecmp(etag, inm))
+	       || ((ims != NULL)
+	           && (filestat->last_modified <= parse_date_string(ims)));
+}
+
 static void
 handle_not_modified_static_file_request(struct mg_connection *conn,
                                         struct mg_file *filep)
@@ -9190,7 +9205,10 @@ mg_send_mime_file2(struct mg_connection *conn,
 	}
 
 	if (mg_stat(conn, path, &file.stat)) {
-		if (file.stat.is_directory) {
+		if (is_not_modified(conn, &file.stat)) {
+			/* Send 304 "Not Modified" - this must not send any body data */
+			handle_not_modified_static_file_request(conn, &file);
+		} else if (file.stat.is_directory) {
 			if (!mg_strcasecmp(conn->dom_ctx->config[ENABLE_DIRECTORY_LISTING],
 			                   "yes")) {
 				handle_directory_request(conn, path);
@@ -9787,24 +9805,6 @@ read_message(FILE *fp,
 
 	return request_len;
 }
-
-
-#if !defined(NO_CACHING)
-/* Return True if we should reply 304 Not Modified. */
-static int
-is_not_modified(const struct mg_connection *conn,
-                const struct mg_file_stat *filestat)
-{
-	char etag[64];
-	const char *ims = mg_get_header(conn, "If-Modified-Since");
-	const char *inm = mg_get_header(conn, "If-None-Match");
-	construct_etag(etag, sizeof(etag), filestat);
-
-	return ((inm != NULL) && !mg_strcasecmp(etag, inm))
-	       || ((ims != NULL)
-	           && (filestat->last_modified <= parse_date_string(ims)));
-}
-#endif /* !NO_CACHING */
 
 
 #if !defined(NO_CGI) || !defined(NO_FILES)
