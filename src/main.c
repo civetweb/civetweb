@@ -561,10 +561,9 @@ set_option(char **options, const char *name, const char *value)
 		}
 		if (!strcmp(name, main_config_options[OPTION_ADD_DOMAIN].name)) {
 			if (g_num_add_domains > 0) {
-				g_add_domain =
-				    (const char **)realloc((void *)g_add_domain,
-				                           sizeof(char *)
-				                               * (g_num_add_domains + 1));
+				g_add_domain = (const char **)realloc(
+				    (void *)g_add_domain,
+				    sizeof(char *) * ((unsigned)g_num_add_domains + 1u));
 				if (!g_add_domain) {
 					die("Out of memory");
 				}
@@ -856,7 +855,7 @@ init_system_info(void)
 
 
 static void
-init_server_name()
+init_server_name(void)
 {
 	assert(sizeof(main_config_options) / sizeof(main_config_options[0])
 	       == NUM_MAIN_OPTIONS + 1);
@@ -1146,7 +1145,7 @@ run_client(const char *url_arg)
 			/* Respond reader read. Read body (if any) */
 			ret = mg_read(conn, buf, sizeof(buf));
 			while (ret > 0) {
-				fwrite(buf, 1, ret, stdout);
+				fwrite(buf, 1, (unsigned)ret, stdout);
 				ret = mg_read(conn, buf, sizeof(buf));
 			}
 
@@ -2889,7 +2888,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	(void)cmdline;
 	(void)show;
 
-	init_server_name((int)__argc, (const char **)__argv);
+	init_server_name();
 	init_system_info();
 	memset(&cls, 0, sizeof(cls));
 	cls.lpfnWndProc = (WNDPROC)WindowProc;
@@ -2992,7 +2991,7 @@ main(int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-	init_server_name(argc, (const char **)argv);
+	init_server_name();
 	init_system_info();
 	start_civetweb(argc, argv);
 
@@ -3061,7 +3060,7 @@ main(int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-	init_server_name(argc, (const char **)argv);
+	init_server_name();
 	init_system_info();
 	start_civetweb(argc, argv);
 	fprintf(stdout,

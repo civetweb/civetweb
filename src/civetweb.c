@@ -9205,10 +9205,13 @@ mg_send_mime_file2(struct mg_connection *conn,
 	}
 
 	if (mg_stat(conn, path, &file.stat)) {
+#if !defined(NO_CACHING)
 		if (is_not_modified(conn, &file.stat)) {
 			/* Send 304 "Not Modified" - this must not send any body data */
 			handle_not_modified_static_file_request(conn, &file);
-		} else if (file.stat.is_directory) {
+		} else
+#endif /* NO_CACHING */
+		    if (file.stat.is_directory) {
 			if (!mg_strcasecmp(conn->dom_ctx->config[ENABLE_DIRECTORY_LISTING],
 			                   "yes")) {
 				handle_directory_request(conn, path);
@@ -14436,13 +14439,26 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	struct mg_context *ctx = (struct mg_context *)arg;
 	struct mg_domain_context *dom =
 	    (struct mg_domain_context *)ctx ? &(ctx->dd) : NULL;
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
+#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+
+	/* We used an aligned pointer in SSL_set_app_data */
 	struct mg_connection *conn = (struct mg_connection *)SSL_get_app_data(ssl);
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+
 	const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 
 	(void)ad;
 
 	if (conn->phys_ctx != ctx) {
-		printf("???\n"); /* XXX */
+		/* Cannot happen - TODO(low): ASSERT ? */
+		DEBUG_TRACE("Internal error: %p != %p", conn->phys_ctx, ctx);
 	}
 
 	/* Old clients (Win XP) will not support SNI. Then, there
@@ -15206,7 +15222,18 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
+#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+	/* conn_size is aligned to 8 bytes */
+
 	conn->phys_ctx = (struct mg_context *)(((char *)conn) + conn_size);
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+
 	conn->buf = (((char *)conn) + conn_size + ctx_size);
 	conn->buf_size = (int)max_req_size;
 	conn->phys_ctx->context_type = CONTEXT_HTTP_CLIENT;
