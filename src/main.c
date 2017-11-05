@@ -83,7 +83,6 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <ctype.h>
-#include <assert.h>
 
 #include "civetweb.h"
 
@@ -134,6 +133,22 @@ extern char *_getcwd(char *buf, size_t size);
 
 #endif /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include  \
           block */
+
+#if !defined(DEBUG_ASSERT)
+#if defined(DEBUG)
+#define DEBUG_ASSERT(cond)                                                     \
+	do {                                                                       \
+		if (!(cond)) {                                                         \
+			fprintf(stderr, "ASSERTION FAILED: %s", #cond);                    \
+			exit(2); /* Exit with error */                                     \
+		}                                                                      \
+	} while (0)
+#else
+#define DEBUG_ASSERT(cond)                                                     \
+	do {                                                                       \
+	} while (0)
+#endif /* DEBUG */
+#endif
 
 #ifndef PATH_MAX
 #define PATH_MAX (1024)
@@ -857,9 +872,9 @@ init_system_info(void)
 static void
 init_server_name(void)
 {
-	assert(sizeof(main_config_options) / sizeof(main_config_options[0])
-	       == NUM_MAIN_OPTIONS + 1);
-	assert((strlen(mg_version()) + 12) < sizeof(g_server_base_name));
+	DEBUG_ASSERT(sizeof(main_config_options) / sizeof(main_config_options[0])
+	             == NUM_MAIN_OPTIONS + 1);
+	DEBUG_ASSERT((strlen(mg_version()) + 12) < sizeof(g_server_base_name));
 	snprintf(g_server_base_name,
 	         sizeof(g_server_base_name),
 	         "CivetWeb V%s",
@@ -1740,9 +1755,9 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		if (hIn) {
 			/* This is an input dialog */
-			assert(inBuf != NULL);
-			assert((inBuf->buffer != NULL) && (inBuf->buflen != 0));
-			assert(strlen(inBuf->buffer) < inBuf->buflen);
+			DEBUG_ASSERT(inBuf != NULL);
+			DEBUG_ASSERT((inBuf->buffer != NULL) && (inBuf->buflen != 0));
+			DEBUG_ASSERT(strlen(inBuf->buffer) < inBuf->buflen);
 			SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
 			SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
 			SendMessage(hIn, EM_LIMITTEXT, inBuf->buflen - 1, 0);
@@ -1832,7 +1847,7 @@ get_password(const char *user,
 	                   8,
 	                   L"Tahoma"};
 
-	assert((user != NULL) && (realm != NULL) && (passwd != NULL));
+	DEBUG_ASSERT((user != NULL) && (realm != NULL) && (passwd != NULL));
 
 	/* Only allow one instance of this dialog to be open. */
 	if (s_dlg_proc_param.guard == 0) {
@@ -1952,7 +1967,7 @@ get_password(const char *user,
 	            12,
 	            "Cancel");
 
-	assert((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
+	DEBUG_ASSERT((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
 
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 
@@ -2197,7 +2212,7 @@ show_settings_dialog()
 		            "");
 		nelems++;
 
-		assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
+		DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 	}
 
 	y = (((nelems + 1) / 2 + 1) * HEIGHT + 5);
@@ -2263,7 +2278,7 @@ show_settings_dialog()
 	            12,
 	            g_server_base_name);
 
-	assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
+	DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
 
@@ -2414,7 +2429,7 @@ change_password_file()
 			            u);
 
 			nelems++;
-			assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
+			DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 		}
 		fclose(f);
 
@@ -2476,7 +2491,7 @@ change_password_file()
 		            12,
 		            g_server_base_name);
 
-		assert(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
+		DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
 		dia->cy = y + 20;
 
@@ -2620,7 +2635,7 @@ show_system_info()
 	            12,
 	            "Close");
 
-	assert((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
+	DEBUG_ASSERT((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
 
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 

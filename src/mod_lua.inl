@@ -2072,7 +2072,7 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 	struct lua_websock_data *ws;
 	int err, ok = 0;
 
-	assert(conn->lua_websocket_state == NULL);
+	DEBUG_ASSERT(conn->lua_websocket_state == NULL);
 
 	/* lock list (mg_context global) */
 	mg_lock_context(conn->phys_ctx);
@@ -2164,8 +2164,8 @@ lua_websocket_data(struct mg_connection *conn,
 	struct lua_websock_data *ws = (struct lua_websock_data *)(ws_arg);
 	int err, ok = 0;
 
-	assert(ws != NULL);
-	assert(ws->state != NULL);
+	DEBUG_ASSERT(ws != NULL);
+	DEBUG_ASSERT(ws->state != NULL);
 
 	(void)pthread_mutex_lock(&(ws->ws_mutex));
 
@@ -2205,8 +2205,8 @@ lua_websocket_ready(struct mg_connection *conn, void *ws_arg)
 	struct lua_websock_data *ws = (struct lua_websock_data *)(ws_arg);
 	int err, ok = 0;
 
-	assert(ws != NULL);
-	assert(ws->state != NULL);
+	DEBUG_ASSERT(ws != NULL);
+	DEBUG_ASSERT(ws->state != NULL);
 
 	(void)pthread_mutex_lock(&(ws->ws_mutex));
 
@@ -2240,8 +2240,8 @@ lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 	int err = 0;
 	unsigned i;
 
-	assert(ws != NULL);
-	assert(ws->state != NULL);
+	DEBUG_ASSERT(ws != NULL);
+	DEBUG_ASSERT(ws->state != NULL);
 
 	(void)pthread_mutex_lock(&(ws->ws_mutex));
 

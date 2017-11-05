@@ -215,7 +215,6 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #include <mach/clock.h>
 #include <mach/mach.h>
 #include <mach/mach_time.h>
-#include <assert.h>
 
 /* clock_gettime is not implemented on OSX prior to 10.12 */
 static int
@@ -240,12 +239,11 @@ _civet_clock_gettime(int clk_id, struct timespec *t)
 
 		if (clock_start_time == 0) {
 			kern_return_t mach_status = mach_timebase_info(&timebase_ifo);
-#if defined(DEBUG)
-			assert(mach_status == KERN_SUCCESS);
-#else
+			DEBUG_ASSERT(mach_status == KERN_SUCCESS);
+
 			/* appease "unused variable" warning for release builds */
 			(void)mach_status;
-#endif
+
 			clock_start_time = now;
 		}
 
@@ -284,7 +282,6 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #include <time.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <assert.h>
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
@@ -1527,6 +1524,22 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 #endif /* DEBUG */
 #endif /* DEBUG_TRACE */
 
+
+#if !defined(DEBUG_ASSERT)
+#if defined(DEBUG)
+#define DEBUG_ASSERT(cond)                                                     \
+	do {                                                                       \
+		if (!(cond)) {                                                         \
+			DEBUG_TRACE("ASSERTION FAILED: %s", #cond);                        \
+			exit(2); /* Exit with error */                                     \
+		}                                                                      \
+	} while (0)
+#else
+#define DEBUG_ASSERT(cond)                                                     \
+	do {                                                                       \
+	} while (0)
+#endif /* DEBUG */
+#endif
 
 #define MD5_STATIC static
 #include "md5.inl"
@@ -3821,10 +3834,8 @@ header_has_option(const char *header, const char *option)
 	struct vec opt_vec;
 	struct vec eq_vec;
 
-	/*
-	assert(option != NULL);
-	assert(option[0] != '\0');
-	*/
+	DEBUG_ASSERT(option != NULL);
+	DEBUG_ASSERT(option[0] != '\0');
 
 	while ((header = next_option(header, &opt_vec, &eq_vec)) != NULL) {
 		if (mg_strncasecmp(option, opt_vec.ptr, opt_vec.len) == 0)
@@ -4503,7 +4514,7 @@ pthread_cond_signal(pthread_cond_t *cv)
 		cv->waiting_thread = cv->waiting_thread->next_waiting_thread;
 
 		ok = SetEvent(wkup);
-		assert(ok);
+		DEBUG_ASSERT(ok);
 	}
 	LeaveCriticalSection(&cv->threadIdSec);
 
@@ -4530,7 +4541,7 @@ static int
 pthread_cond_destroy(pthread_cond_t *cv)
 {
 	EnterCriticalSection(&cv->threadIdSec);
-	assert(cv->waiting_thread == NULL);
+	DEBUG_ASSERT(cv->waiting_thread == NULL);
 	LeaveCriticalSection(&cv->threadIdSec);
 	DeleteCriticalSection(&cv->threadIdSec);
 
@@ -6528,7 +6539,7 @@ mg_get_var2(const char *data,
 				if (s == NULL) {
 					s = e;
 				}
-				/* assert(s >= p); */
+				DEBUG_ASSERT(s >= p);
 				if (s < p) {
 					return -3;
 				}
@@ -9828,7 +9839,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 	}
 
 	expect = mg_get_header(conn, "Expect");
-	/* assert(fp != NULL); */
+	DEBUG_ASSERT(fp != NULL);
 	if (!fp) {
 		mg_send_http_error(conn, 500, "%s", "Error: NULL File");
 		return 0;
@@ -9859,8 +9870,8 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 		buffered_len = (int64_t)(conn->data_len) - (int64_t)conn->request_len
 		               - conn->consumed_content;
 
-		/* assert(buffered_len >= 0); */
-		/* assert(conn->consumed_content == 0); */
+		DEBUG_ASSERT(buffered_len >= 0);
+		DEBUG_ASSERT(conn->consumed_content == 0);
 
 		if ((buffered_len < 0) || (conn->consumed_content != 0)) {
 			mg_send_http_error(conn, 500, "%s", "Error: Size mismatch");
@@ -11380,7 +11391,7 @@ read_websocket(struct mg_connection *conn,
 	 * callback, and waiting repeatedly until an error occurs. */
 	while (!conn->phys_ctx->stop_flag && !conn->must_close) {
 		header_len = 0;
-		assert(conn->data_len >= conn->request_len);
+		DEBUG_ASSERT(conn->data_len >= conn->request_len);
 		if ((body_len = (size_t)(conn->data_len - conn->request_len)) >= 2) {
 			len = buf[1] & 127;
 			mask_len = (buf[1] & 128) ? 4 : 0;
@@ -11432,7 +11443,7 @@ read_websocket(struct mg_connection *conn,
 
 			/* Read frame payload from the first message in the queue into
 			 * data and advance the queue by moving the memory in place. */
-			assert(body_len >= header_len);
+			DEBUG_ASSERT(body_len >= header_len);
 			if (data_len + (uint64_t)header_len > (uint64_t)body_len) {
 				mop = buf[0]; /* current mask and opcode */
 				/* Overflow case */
@@ -12193,12 +12204,13 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 	size_t urilen = strlen(uri);
 
 	if (handler_type == WEBSOCKET_HANDLER) {
-		/* assert(handler == NULL); */
-		/* assert(is_delete_request || connect_handler!=NULL ||
-		 *        ready_handler!=NULL || data_handler!=NULL ||
-		 *        close_handler!=NULL);
-		 */
-		/* assert(auth_handler == NULL); */
+		DEBUG_ASSERT(handler == NULL);
+		DEBUG_ASSERT(is_delete_request || connect_handler != NULL
+		             || ready_handler != NULL
+		             || data_handler != NULL
+		             || close_handler != NULL);
+
+		DEBUG_ASSERT(auth_handler == NULL);
 		if (handler != NULL) {
 			return;
 		}
@@ -12211,11 +12223,12 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 			return;
 		}
 	} else if (handler_type == REQUEST_HANDLER) {
-		/* assert(connect_handler==NULL && ready_handler==NULL &&
-		 *        data_handler==NULL && close_handler==NULL); */
-		/* assert(is_delete_request || (handler!=NULL));
-		 */
-		/* assert(auth_handler == NULL); */
+		DEBUG_ASSERT(connect_handler == NULL && ready_handler == NULL
+		             && data_handler == NULL
+		             && close_handler == NULL);
+		DEBUG_ASSERT(is_delete_request || (handler != NULL));
+		DEBUG_ASSERT(auth_handler == NULL);
+
 		if ((connect_handler != NULL) || (ready_handler != NULL)
 		    || (data_handler != NULL) || (close_handler != NULL)) {
 			return;
@@ -12227,10 +12240,11 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 			return;
 		}
 	} else { /* AUTH_HANDLER */
-		     /* assert(handler == NULL); */
-		     /* assert(connect_handler==NULL && ready_handler==NULL &&
-		      *        data_handler==NULL && close_handler==NULL); */
-		/* assert(auth_handler != NULL); */
+		DEBUG_ASSERT(handler == NULL);
+		DEBUG_ASSERT(connect_handler == NULL && ready_handler == NULL
+		             && data_handler == NULL
+		             && close_handler == NULL);
+		DEBUG_ASSERT(auth_handler != NULL);
 		if (handler != NULL) {
 			return;
 		}
@@ -14456,10 +14470,7 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 
 	(void)ad;
 
-	if (conn->phys_ctx != ctx) {
-		/* Cannot happen - TODO(low): ASSERT ? */
-		DEBUG_TRACE("Internal error: %p != %p", conn->phys_ctx, ctx);
-	}
+	DEBUG_ASSERT(conn->phys_ctx == ctx);
 
 	/* Old clients (Win XP) will not support SNI. Then, there
 	 * is no server name available in the request - we can
@@ -15643,8 +15654,7 @@ get_message(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	conn->request_len =
 	    read_message(NULL, conn, conn->buf, conn->buf_size, &conn->data_len);
-	/* assert(conn->request_len < 0 || conn->data_len >= conn->request_len);
-	 */
+	DEBUG_ASSERT(conn->request_len < 0 || conn->data_len >= conn->request_len);
 	if ((conn->request_len >= 0) && (conn->data_len < conn->request_len)) {
 		mg_snprintf(conn,
 		            NULL, /* No truncation check for ebuf */
@@ -16199,7 +16209,7 @@ process_new_connection(struct mg_connection *conn)
 			 * the server, or it was incomplete or a timeout. Send an
 			 * error message and close the connection. */
 			if (reqerr > 0) {
-				/*assert(ebuf[0] != '\0');*/
+				DEBUG_ASSERT(ebuf[0] != '\0');
 				mg_send_http_error(conn, reqerr, "%s", ebuf);
 			}
 		} else if (strcmp(ri->http_version, "1.0")
@@ -16312,7 +16322,7 @@ process_new_connection(struct mg_connection *conn)
 		                   < (int64_t)conn->data_len))
 		                  ? (int)(conn->request_len + conn->content_len)
 		                  : conn->data_len;
-		/*assert(discard_len >= 0);*/
+		DEBUG_ASSERT(discard_len >= 0);
 		if (discard_len < 0) {
 			DEBUG_TRACE("internal error: discard_len = %li",
 			            (long int)discard_len);
@@ -16324,8 +16334,8 @@ process_new_connection(struct mg_connection *conn)
 			memmove(conn->buf, conn->buf + discard_len, (size_t)conn->data_len);
 		}
 
-		/* assert(conn->data_len >= 0); */
-		/* assert(conn->data_len <= conn->buf_size); */
+		DEBUG_ASSERT(conn->data_len >= 0);
+		DEBUG_ASSERT(conn->data_len <= conn->buf_size);
 
 		if ((conn->data_len < 0) || (conn->data_len > conn->buf_size)) {
 			DEBUG_TRACE("internal error: data_len = %li, buf_size = %li",
