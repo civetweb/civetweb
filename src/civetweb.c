@@ -321,11 +321,11 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
 typedef const char *SOCK_OPT_TYPE;
 
 #if !defined(PATH_MAX)
-#define PATH_MAX (MAX_PATH)
-#endif
-
-#if !defined(PATH_MAX)
-#define PATH_MAX (4096)
+#define W_PATH_MAX (MAX_PATH)
+/* at most three UTF-8 chars per wchar_t */
+#define PATH_MAX (W_PATH_MAX * 3)
+#else
+#define W_PATH_MAX ((PATH_MAX + 2) / 3)
 #endif
 
 mg_static_assert(PATH_MAX >= 1, "path length must be a positive number");
@@ -880,8 +880,8 @@ FUNCTION_MAY_BE_UNUSED
 static int
 rename(const char *a, const char *b)
 {
-	wchar_t wa[PATH_MAX];
-	wchar_t wb[PATH_MAX];
+	wchar_t wa[W_PATH_MAX];
+	wchar_t wb[W_PATH_MAX];
 	path_to_unicode(NULL, a, wa, ARRAY_SIZE(wa));
 	path_to_unicode(NULL, b, wb, ARRAY_SIZE(wb));
 
@@ -899,7 +899,7 @@ FUNCTION_MAY_BE_UNUSED
 static int
 stat(const char *name, struct stat *st)
 {
-	wchar_t wbuf[PATH_MAX];
+	wchar_t wbuf[W_PATH_MAX];
 	WIN32_FILE_ATTRIBUTE_DATA attr;
 	time_t creation_time, write_time;
 
@@ -2970,7 +2970,7 @@ mg_fopen(const struct mg_connection *conn,
 
 #ifdef _WIN32
 		{
-			wchar_t wbuf[PATH_MAX];
+			wchar_t wbuf[W_PATH_MAX];
 			path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
 			switch (mode) {
 			case MG_FOPEN_MODE_READ:
@@ -4636,7 +4636,7 @@ path_to_unicode(const struct mg_connection *conn,
                 size_t wbuf_len)
 {
 	char buf[PATH_MAX], buf2[PATH_MAX];
-	wchar_t wbuf2[MAX_PATH + 1];
+	wchar_t wbuf2[W_PATH_MAX + 1];
 	DWORD long_len, err;
 	int (*fcompare)(const wchar_t *, const wchar_t *) = mg_wcscasecmp;
 
@@ -4717,7 +4717,7 @@ mg_stat(const struct mg_connection *conn,
         const char *path,
         struct mg_file_stat *filep)
 {
-	wchar_t wbuf[PATH_MAX];
+	wchar_t wbuf[W_PATH_MAX];
 	WIN32_FILE_ATTRIBUTE_DATA info;
 	time_t creation_time;
 
@@ -4792,7 +4792,7 @@ mg_stat(const struct mg_connection *conn,
 static int
 mg_remove(const struct mg_connection *conn, const char *path)
 {
-	wchar_t wbuf[PATH_MAX];
+	wchar_t wbuf[W_PATH_MAX];
 	path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
 	return DeleteFileW(wbuf) ? 0 : -1;
 }
@@ -4801,7 +4801,7 @@ mg_remove(const struct mg_connection *conn, const char *path)
 static int
 mg_mkdir(const struct mg_connection *conn, const char *path, int mode)
 {
-	wchar_t wbuf[PATH_MAX];
+	wchar_t wbuf[W_PATH_MAX];
 	(void)mode;
 	path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
 	return CreateDirectoryW(wbuf, NULL) ? 0 : -1;
@@ -4823,7 +4823,7 @@ static DIR *
 mg_opendir(const struct mg_connection *conn, const char *name)
 {
 	DIR *dir = NULL;
-	wchar_t wpath[PATH_MAX];
+	wchar_t wpath[W_PATH_MAX];
 	DWORD attrs;
 
 	if (name == NULL) {
@@ -5042,7 +5042,7 @@ FUNCTION_MAY_BE_UNUSED
 static HANDLE
 dlopen(const char *dll_name, int flags)
 {
-	wchar_t wbuf[PATH_MAX];
+	wchar_t wbuf[W_PATH_MAX];
 	(void)flags;
 	path_to_unicode(NULL, dll_name, wbuf, ARRAY_SIZE(wbuf));
 	return LoadLibraryW(wbuf);
