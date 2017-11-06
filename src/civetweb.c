@@ -4833,8 +4833,8 @@ mg_opendir(const struct mg_connection *conn, const char *name)
 	} else {
 		path_to_unicode(conn, name, wpath, ARRAY_SIZE(wpath));
 		attrs = GetFileAttributesW(wpath);
-		if (attrs != 0xFFFFFFFF && ((attrs & FILE_ATTRIBUTE_DIRECTORY)
-		                            == FILE_ATTRIBUTE_DIRECTORY)) {
+		if ((wcslen(wpath) + 2 < ARRAY_SIZE(wpath)) && (attrs != 0xFFFFFFFF)
+		    && ((attrs & FILE_ATTRIBUTE_DIRECTORY) != 0)) {
 			(void)wcscat(wpath, L"\\*");
 			dir->handle = FindFirstFileW(wpath, &dir->info);
 			dir->result.d_name[0] = '\0';
