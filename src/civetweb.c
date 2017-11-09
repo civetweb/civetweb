@@ -141,12 +141,14 @@ static void DEBUG_TRACE_FUNC(const char *func,
                              ...) PRINTF_ARGS(3, 4);
 
 #define DEBUG_TRACE(fmt, ...)                                                  \
-    DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
+	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
+
+#define NEED_DEBUG_TRACE_FUNC
 
 #else
 #define DEBUG_TRACE(fmt, ...)                                                  \
-    do {                                                                       \
-    } while (0)
+	do {                                                                       \
+	} while (0)
 #endif /* DEBUG */
 #endif /* DEBUG_TRACE */
 
@@ -154,16 +156,16 @@ static void DEBUG_TRACE_FUNC(const char *func,
 #if !defined(DEBUG_ASSERT)
 #if defined(DEBUG)
 #define DEBUG_ASSERT(cond)                                                     \
-    do {                                                                       \
-        if (!(cond)) {                                                         \
-            DEBUG_TRACE("ASSERTION FAILED: %s", #cond);                        \
-            exit(2); /* Exit with error */                                     \
-        }                                                                      \
-    } while (0)
+	do {                                                                       \
+		if (!(cond)) {                                                         \
+			DEBUG_TRACE("ASSERTION FAILED: %s", #cond);                        \
+			exit(2); /* Exit with error */                                     \
+		}                                                                      \
+	} while (0)
 #else
 #define DEBUG_ASSERT(cond)                                                     \
-    do {                                                                       \
-    } while (0)
+	do {                                                                       \
+	} while (0)
 #endif /* DEBUG */
 #endif
 
@@ -1505,8 +1507,7 @@ mg_get_current_time_ns(void)
 #endif
 
 
-#if !defined(DEBUG_TRACE)
-#if defined(DEBUG)
+#if defined(NEED_DEBUG_TRACE_FUNC)
 static void
 DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 {
@@ -1542,8 +1543,7 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	funlockfile(stdout);
 	nslast = nsnow;
 }
-#endif /* DEBUG */
-#endif /* DEBUG_TRACE */
+#endif /* NEED_DEBUG_TRACE_FUNC */
 
 
 #define MD5_STATIC static
@@ -2487,6 +2487,7 @@ struct mg_connection {
 	                 * mg_get_connection_info_impl */
 #endif
 
+	const char *host;         /* Host (HTTP/1.1 header or SNI) */
 	SSL *ssl;                 /* SSL descriptor */
 	SSL_CTX *client_ssl_ctx;  /* SSL context for client connections */
 	struct socket client;     /* Connected client */
@@ -3092,11 +3093,11 @@ mg_strcasecmp(const char *s1, const char *s2)
 
 
 static char *
-mg_strndup(const char *ptr, size_t len)
+mg_strndup_ctx(const char *ptr, size_t len, struct mg_context *ctx)
 {
 	char *p;
 
-	if ((p = (char *)mg_malloc(len + 1)) != NULL) {
+	if ((p = (char *)mg_malloc_ctx(len + 1, ctx)) != NULL) {
 		mg_strlcpy(p, ptr, len + 1);
 	}
 
@@ -3105,9 +3106,15 @@ mg_strndup(const char *ptr, size_t len)
 
 
 static char *
+mg_strdup_ctx(const char *str, struct mg_context *ctx)
+{
+	return mg_strndup_ctx(str, strlen(str), ctx);
+}
+
+static char *
 mg_strdup(const char *str)
 {
-	return mg_strndup(str, strlen(str));
+	return mg_strndup_ctx(str, strlen(str), NULL);
 }
 
 
@@ -7048,7 +7055,8 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 						            filename);
 
 						/* this index file is a script */
-						tmp_str2 = mg_strdup(filename + sep_pos + 1);
+						tmp_str2 = mg_strdup_ctx(filename + sep_pos + 1,
+						                         conn->phys_ctx);
 						mg_snprintf(conn,
 						            &truncated,
 						            filename,
@@ -7675,7 +7683,8 @@ parse_auth_header(struct mg_connection *conn,
 
 	/* CGI needs it as REMOTE_USER */
 	if (ah->user != NULL) {
-		conn->request_info.remote_user = mg_strdup(ah->user);
+		conn->request_info.remote_user =
+		    mg_strdup_ctx(ah->user, conn->phys_ctx);
 	} else {
 		return 0;
 	}
@@ -8268,7 +8277,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		/* While getaddrinfo on Windows will work with [::1],
 		 * getaddrinfo on Linux only works with ::1 (without []). */
 		size_t l = strlen(host + 1);
-		char *h = (l > 1) ? mg_strdup(host + 1) : NULL;
+		char *h = (l > 1) ? mg_strdup_ctx(host + 1, ctx) : NULL;
 		if (h) {
 			h[l - 1] = 0;
 			if (mg_inet_pton(AF_INET6, h, &sa->sin6, sizeof(sa->sin6))) {
@@ -12141,14 +12150,18 @@ get_first_ssl_listener_index(const struct mg_context *ctx)
 }
 
 
-static void
-redirect_to_https_port(struct mg_connection *conn, int ssl_index)
+/* Return host (without port) */
+/* Use mg_free to free the result */
+static const char *
+alloc_get_host(struct mg_connection *conn)
 {
 	char host[1025];
 	const char *host_header;
 	size_t hostlen;
 
-	host_header = mg_get_header(conn, "Host");
+	host_header = get_header(conn->request_info.http_headers,
+	                         conn->request_info.num_headers,
+	                         "Host");
 	hostlen = sizeof(host);
 	if (host_header != NULL) {
 		char *pos;
@@ -12159,19 +12172,26 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 		if (pos != NULL) {
 			*pos = '\0';
 		}
+		DEBUG_TRACE("Host: %s", host);
 	} else {
-		/* Cannot get host from the Host: header.
-		 * Fallback to our IP address. */
-		if (conn) {
-			sockaddr_to_string(host, hostlen, &conn->client.lsa);
-		}
+		sockaddr_to_string(host, hostlen, &conn->client.lsa);
+		DEBUG_TRACE("IP: %s", host);
 	}
 
+	return mg_strdup_ctx(host, conn->phys_ctx);
+}
+
+
+static void
+redirect_to_https_port(struct mg_connection *conn, int ssl_index)
+{
+	conn->must_close = 1;
+
 	/* Send host, port, uri and (if it exists) ?query_string */
-	if (conn) {
+	if (conn->host) {
 		mg_printf(conn,
 		          "HTTP/1.1 302 Found\r\nLocation: https://%s:%d%s%s%s\r\n\r\n",
-		          host,
+		          conn->host,
 #if defined(USE_IPV6)
 		          (conn->phys_ctx->listening_sockets[ssl_index].lsa.sa.sa_family
 		           == AF_INET6)
@@ -12318,7 +12338,7 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		       "Cannot create new request handler struct, OOM");
 		return;
 	}
-	tmp_rh->uri = mg_strdup(uri);
+	tmp_rh->uri = mg_strdup_ctx(uri, phys_ctx);
 	if (!tmp_rh->uri) {
 		mg_unlock_context(phys_ctx);
 		mg_free(tmp_rh);
@@ -14105,10 +14125,14 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 		    mg_malloc_ctx(sizeof(struct mg_client_cert), conn->phys_ctx);
 		if (conn->request_info.client_cert) {
 			conn->request_info.client_cert->peer_cert = (void *)cert;
-			conn->request_info.client_cert->subject = mg_strdup(str_subject);
-			conn->request_info.client_cert->issuer = mg_strdup(str_issuer);
-			conn->request_info.client_cert->serial = mg_strdup(str_serial);
-			conn->request_info.client_cert->finger = mg_strdup(str_finger);
+			conn->request_info.client_cert->subject =
+			    mg_strdup_ctx(str_subject, conn->phys_ctx);
+			conn->request_info.client_cert->issuer =
+			    mg_strdup_ctx(str_issuer, conn->phys_ctx);
+			conn->request_info.client_cert->serial =
+			    mg_strdup_ctx(str_serial, conn->phys_ctx);
+			conn->request_info.client_cert->finger =
+			    mg_strdup_ctx(str_finger, conn->phys_ctx);
 		} else {
 			mg_cry(conn,
 			       "Out of memory: Cannot allocate memory for client "
@@ -15122,6 +15146,11 @@ close_connection(struct mg_connection *conn)
 		conn->client.sock = INVALID_SOCKET;
 	}
 
+	if (conn->host) {
+		mg_free((void *)conn->host);
+		conn->host = NULL;
+	}
+
 	mg_unlock_connection(conn);
 
 #if defined(USE_SERVER_STATS)
@@ -15729,6 +15758,11 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	}
 
 	/* Message is a valid request */
+
+	/* Is there a "host" ? */
+	conn->host = alloc_get_host(conn);
+
+	/* Do we know the content length? */
 	if ((cl = get_header(conn->request_info.http_headers,
 	                     conn->request_info.num_headers,
 	                     "Content-Length")) != NULL) {
@@ -15789,6 +15823,8 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	}
 
 	/* Message is a valid response */
+
+	/* Do we know the content length? */
 	if ((cl = get_header(conn->response_info.http_headers,
 	                     conn->response_info.num_headers,
 	                     "Content-Length")) != NULL) {
@@ -16528,7 +16564,8 @@ worker_thread_run(struct worker_thread_args *thread_args)
 	conn->buf_size = (int)ctx->max_request_size;
 
 	conn->phys_ctx = ctx;
-	conn->dom_ctx = &(ctx->dd); /* Use default domain, until more is knwon */
+	conn->dom_ctx = &(ctx->dd); /* Use default domain and default host */
+	conn->host = NULL;          /* until we have more information. */
 
 	conn->thread_index = thread_args->index;
 	conn->request_info.user_data = ctx->user_data;
@@ -17177,7 +17214,7 @@ mg_start(const struct mg_callbacks *callbacks,
 			mg_cry(fc(ctx), "warning: %s: duplicate option", name);
 			mg_free(ctx->dd.config[idx]);
 		}
-		ctx->dd.config[idx] = mg_strdup(value);
+		ctx->dd.config[idx] = mg_strdup_ctx(value, ctx);
 		DEBUG_TRACE("[%s] -> [%s]", name, value);
 	}
 
@@ -17185,7 +17222,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	for (i = 0; config_options[i].name != NULL; i++) {
 		default_value = config_options[i].default_value;
 		if ((ctx->dd.config[i] == NULL) && (default_value != NULL)) {
-			ctx->dd.config[i] = mg_strdup(default_value);
+			ctx->dd.config[i] = mg_strdup_ctx(default_value, ctx);
 		}
 	}
 
@@ -17445,7 +17482,7 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 			mg_cry(fc(ctx), "warning: %s: duplicate option", name);
 			mg_free(new_dom->config[idx]);
 		}
-		new_dom->config[idx] = mg_strdup(value);
+		new_dom->config[idx] = mg_strdup_ctx(value, ctx);
 		DEBUG_TRACE("[%s] -> [%s]", name, value);
 	}
 
@@ -17460,7 +17497,7 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 	for (i = 0; config_options[i].name != NULL; i++) {
 		default_value = ctx->dd.config[i];
 		if ((new_dom->config[i] == NULL) && (default_value != NULL)) {
-			new_dom->config[i] = mg_strdup(default_value);
+			new_dom->config[i] = mg_strdup_ctx(default_value, ctx);
 		}
 	}
 

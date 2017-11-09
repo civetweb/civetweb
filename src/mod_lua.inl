@@ -2090,13 +2090,21 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		    (struct mg_shared_lua_websocket_list *)mg_calloc_ctx(
 		        sizeof(struct mg_shared_lua_websocket_list), 1, conn->phys_ctx);
 		if (*shared_websock_list == NULL) {
+			conn->must_close = 1;
 			mg_unlock_context(conn->phys_ctx);
 			mg_cry(conn, "Cannot create shared websocket struct, OOM");
 			return NULL;
 		}
 		/* init ws list element */
 		ws = &(*shared_websock_list)->ws;
-		ws->script = mg_strdup(script); /* TODO (low): handle OOM */
+		ws->script =
+		    mg_strdup_ctx(script, conn->phys_ctx); /* TODO (low): handle OOM */
+		if (!ws->script) {
+			conn->must_close = 1;
+			mg_unlock_context(conn->phys_ctx);
+			mg_cry(conn, "Cannot create shared websocket script, OOM");
+			return NULL;
+		}
 		pthread_mutex_init(&(ws->ws_mutex), &pthread_mutex_attr);
 		(void)pthread_mutex_lock(&(ws->ws_mutex));
 		ws->state = lua_newstate(lua_allocator, (void *)(conn->phys_ctx));
