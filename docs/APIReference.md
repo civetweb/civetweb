@@ -74,6 +74,13 @@ The content of both structures is not defined in the interface - they are only u
 * [`mg_check_digest_access_authentication( conn, realm, filename );`](api/mg_check_digest_access_authentication.md)
 * [`mg_modify_passwords_file( passwords_file_name, realm, user, password );`](api/mg_modify_passwords_file.md)
 
+* [`mg_get_request_info( conn );`](api/mg_get_request_info.md)
+* [`mg_handle_form_request( conn, fdh );`](api/mg_handle_form_request.md)
+
+* [`mg_send_file( conn, path );`](api/mg_send_file.md)
+* [`mg_send_mime_file( conn, path, mime_type );`](api/mg_send_mime_file.md)
+* [`mg_send_mime_file2( conn, path, mime_type, additional_headers );`](api/mg_send_mime_file2.md)
+* [`mg_websocket_write( conn, opcode, data, data_len );`](api/mg_websocket_write.md)
 
 ## Client API Functions
 
@@ -83,6 +90,8 @@ The content of both structures is not defined in the interface - they are only u
 
 * [`mg_download( host, port, use_ssl, error_buffer, error_buffer_size, fmt, ... );`](api/mg_download.md)
 
+* [`mg_get_response( conn, ebuf, ebuf_len, timeout );`](api/mg_get_response.md)
+
 
 ## Common API Functions
 
@@ -91,22 +100,16 @@ The content of both structures is not defined in the interface - they are only u
 
 * [`mg_get_cookie( cookie, var_name, buf, buf_len );`](api/mg_get_cookie.md)
 * [`mg_get_header( conn, name );`](api/mg_get_header.md)
-* [`mg_get_request_info( conn );`](api/mg_get_request_info.md)
-* [`mg_get_response( conn, ebuf, ebuf_len, timeout );`](api/mg_get_response.md)
 * [`mg_get_response_code_text( conn, response_code );`](api/mg_get_response_code_text.md)
 * [`mg_get_user_connection_data( conn );`](api/mg_get_user_connection_data.md)
 * [`mg_get_valid_options();`](api/mg_get_valid_options.md)
 * [`mg_get_var( data, data_len, var_name, dst, dst_len );`](api/mg_get_var.md)
 * [`mg_get_var2( data, data_len, var_name, dst, dst_len, occurrence );`](api/mg_get_var2.md)
-* [`mg_handle_form_request( conn, fdh );`](api/mg_handle_form_request.md)
 * [`mg_lock_connection( conn );`](api/mg_lock_connection.md)
 * [`mg_md5( buf, ... );`](api/mg_md5.md)
 * [`mg_printf( conn, fmt, ... );`](api/mg_printf.md)
 * [`mg_read( conn, buf, len );`](api/mg_read.md)
 * [`mg_send_chunk( conn, buf, len );`](api/mg_send_chunk.md)
-* [`mg_send_file( conn, path );`](api/mg_send_file.md)
-* [`mg_send_mime_file( conn, path, mime_type );`](api/mg_send_mime_file.md)
-* [`mg_send_mime_file2( conn, path, mime_type, additional_headers );`](api/mg_send_mime_file2.md)
 * [`mg_set_user_connection_data( conn, data );`](api/mg_set_user_connection_data.md)
 * [`mg_start_thread( f, p );`](api/mg_start_thread.md)
 * [`mg_store_body( conn, path );`](api/mg_store_body.md)
@@ -115,7 +118,6 @@ The content of both structures is not defined in the interface - they are only u
 * [`mg_unlock_connection( conn );`](api/mg_unlock_connection.md)
 * [`mg_url_decode( src, src_len, dst, dst_len, is_form_url_encoded );`](api/mg_url_decode.md)
 * [`mg_url_encode( src, dst, dst_len );`](api/mg_url_encode.md)
-* [`mg_websocket_write( conn, opcode, data, data_len );`](api/mg_websocket_write.md)
 * [`mg_write( conn, buf, len );`](api/mg_write.md)
 
 
