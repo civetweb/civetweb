@@ -81,7 +81,7 @@ before_script:
     -DCIVETWEB_SSL_OPENSSL_API_1_1=${OPENSSL_1_1}
     -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
     -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
-    -DCIVETWEB_ENABLE_IPV6=NO # ${ENABLE_IPV6} Disabled, see https://github.com/travis-ci/travis-ci/issues/8711#issuecomment-343658967
+    -DCIVETWEB_ENABLE_IPV6=NO
     -DCIVETWEB_ENABLE_SERVER_STATS=${ENABLE_SERVER_STATS}
     -DCIVETWEB_ENABLE_LUA=${ENABLE_LUA}
     -DCIVETWEB_ENABLE_LUA_SHARED=${ENABLE_LUA_SHARED}
@@ -93,6 +93,10 @@ before_script:
     ${ADDITIONAL_CMAKE_ARGS}
     ..
   - ls -la
+
+# Line removed / replaced by =NO
+# DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6} 
+# see https://github.com/travis-ci/travis-ci/issues/8711#issuecomment-343658967
 
 script:
   - if [ "${MACOSX_PACKAGE}" == "1" ]; then
