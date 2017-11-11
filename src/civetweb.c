@@ -3096,9 +3096,8 @@ static char *
 mg_strndup_ctx(const char *ptr, size_t len, struct mg_context *ctx)
 {
 	char *p;
-	(
-	    void)ctx; /* Avoid Visual Studio warning if USE_SERVER_STATS is not
-                   * defined */
+    (void)ctx; /* Avoid Visual Studio warning if USE_SERVER_STATS is not
+                * defined */
 
 	if ((p = (char *)mg_malloc_ctx(len + 1, ctx)) != NULL) {
 		mg_strlcpy(p, ptr, len + 1);
