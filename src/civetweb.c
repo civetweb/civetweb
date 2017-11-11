@@ -17554,31 +17554,31 @@ mg_check_feature(unsigned feature)
  * This bit mask is created at compile time, according to the active
  * preprocessor defines. It is a single const value at runtime. */
 #if !defined(NO_FILES)
-	                                    | 0x0001u
+	                                    | MG_FEATURES_FILES
 #endif
 #if !defined(NO_SSL)
-	                                    | 0x0002u
+	                                    | MG_FEATURES_SSL
 #endif
 #if !defined(NO_CGI)
-	                                    | 0x0004u
+	                                    | MG_FEATURES_CGI
 #endif
 #if defined(USE_IPV6)
-	                                    | 0x0008u
+	                                    | MG_FEATURES_IPV6
 #endif
 #if defined(USE_WEBSOCKET)
-	                                    | 0x0010u
+	                                    | MG_FEATURES_WEBSOCKET
 #endif
 #if defined(USE_LUA)
-	                                    | 0x0020u
+	                                    | MG_FEATURES_LUA
 #endif
 #if defined(USE_DUKTAPE)
-	                                    | 0x0040u
+	                                    | MG_FEATURES_SSJS
 #endif
 #if !defined(NO_CACHING)
-	                                    | 0x0080u
+	                                    | MG_FEATURES_CACHE
 #endif
 #if defined(USE_SERVER_STATS)
-	                                    | 0x0100u
+	                                    | MG_FEATURES_STATS
 #endif
 
 /* Set some extra bits not defined in the API documentation.
@@ -17750,15 +17750,16 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            "\"feature_list\" : \"Server:%s%s%s%s%s%s%s%s%s\",%s",
 		            (unsigned long)mg_check_feature(0xFFFFFFFFu),
 		            eol,
-		            mg_check_feature(1) ? " Files" : "",
-		            mg_check_feature(2) ? " HTTPS" : "",
-		            mg_check_feature(4) ? " CGI" : "",
-		            mg_check_feature(8) ? " IPv6" : "",
-		            mg_check_feature(16) ? " WebSockets" : "",
-		            mg_check_feature(32) ? " Lua" : "",
-		            mg_check_feature(64) ? " JavaScript" : "",
-		            mg_check_feature(128) ? " Cache" : "",
-		            mg_check_feature(256) ? " Stats" : "",
+		            mg_check_feature(MG_FEATURES_FILES) ? " Files" : "",
+		            mg_check_feature(MG_FEATURES_SSL) ? " HTTPS" : "",
+		            mg_check_feature(MG_FEATURES_CGI) ? " CGI" : "",
+		            mg_check_feature(MG_FEATURES_IPV6) ? " IPv6" : "",
+		            mg_check_feature(MG_FEATURES_WEBSOCKET) ? " WebSockets"
+		                                                    : "",
+		            mg_check_feature(MG_FEATURES_LUA) ? " Lua" : "",
+		            mg_check_feature(MG_FEATURES_SSJS) ? " JavaScript" : "",
+		            mg_check_feature(MG_FEATURES_CACHE) ? " Cache" : "",
+		            mg_check_feature(MG_FEATURES_STATS) ? " Stats" : "",
 		            eol);
 		system_info_length += (int)strlen(block);
 		if (system_info_length < buflen) {
@@ -18537,7 +18538,7 @@ mg_init_library(unsigned features)
 
 
 #if !defined(NO_SSL)
-	if (features_to_init & 2) {
+	if (features_to_init & MG_FEATURES_SSL) {
 		if (!mg_ssl_initialized) {
 			if (initialize_ssl(ebuf, sizeof(ebuf))) {
 				mg_ssl_initialized = 1;
