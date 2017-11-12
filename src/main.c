@@ -136,6 +136,12 @@ extern char *_getcwd(char *buf, size_t size);
 
 #if !defined(DEBUG_ASSERT)
 #if defined(DEBUG)
+
+#if defined(_MSC_VER)
+/* DEBUG_ASSERT has some const conditions */
+#pragma warning(disable : 4127)
+#endif
+
 #define DEBUG_ASSERT(cond)                                                     \
 	do {                                                                       \
 		if (!(cond)) {                                                         \
@@ -143,6 +149,7 @@ extern char *_getcwd(char *buf, size_t size);
 			exit(2); /* Exit with error */                                     \
 		}                                                                      \
 	} while (0)
+
 #else
 #define DEBUG_ASSERT(cond)                                                     \
 	do {                                                                       \
