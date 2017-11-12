@@ -12192,6 +12192,21 @@ alloc_get_host(struct mg_connection *conn)
 			DEBUG_TRACE("HTTPS Host: %s", host);
 
 		} else {
+			struct mg_domain_context *dom = &(conn->phys_ctx->dd);
+			while (dom) {
+				if (!mg_strcasecmp(host, dom->config[AUTHENTICATION_DOMAIN])) {
+
+					/* Found matching domain */
+					DEBUG_TRACE("HTTP domain %s found",
+					            dom->config[AUTHENTICATION_DOMAIN]);
+
+					/* TODO: Check if this is a HTTP or HTTPS domain */
+					conn->dom_ctx = dom;
+					break;
+				}
+				dom = dom->next;
+			}
+
 			DEBUG_TRACE("HTTP Host: %s", host);
 		}
 
