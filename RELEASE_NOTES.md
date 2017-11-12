@@ -5,6 +5,12 @@ Release Notes v1.11
 Changes
 -------
 
+- Remove remote\_ip request\_info member (it has been legacy since several versions)
+- Support multiple domains with different certificate files (TLS server name identification, SNI)
+- Provide client peer certificate (X509) in mg\_client\_cert structure
+- Add new callback (get\_external\_ssl\_ctx) to provide pre-initialized TLS context
+- Improve unit tests
+- Fix ssl init for HTTPS clients
 - Update version number
 
 
