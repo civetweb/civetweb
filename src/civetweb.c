@@ -12174,7 +12174,27 @@ alloc_get_host(struct mg_connection *conn)
 		if (pos != NULL) {
 			*pos = '\0';
 		}
-		DEBUG_TRACE("Host: %s", host);
+
+		if (conn->ssl) {
+			/* This is a HTTPS connection, maybe we have a hostname
+			 * from SNI (set in ssl_servername_callback). */
+			const char *sslhost = conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
+			if (sslhost && (conn->dom_ctx != &(conn->phys_ctx->dd))) {
+				/* We are not using the default domain */
+				if (mg_strcasecmp(host, sslhost)) {
+					/* Mismatch between SNI domain and HTTP domain */
+					DEBUG_TRACE("Host mismatch: SNI: %s, HTTPS: %s",
+					            sslhost,
+					            host);
+					return NULL;
+				}
+			}
+			DEBUG_TRACE("HTTPS Host: %s", host);
+
+		} else {
+			DEBUG_TRACE("HTTP Host: %s", host);
+		}
+
 	} else {
 		sockaddr_to_string(host, hostlen, &conn->client.lsa);
 		DEBUG_TRACE("IP: %s", host);
@@ -15763,6 +15783,16 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	/* Is there a "host" ? */
 	conn->host = alloc_get_host(conn);
+	if (!host) {
+		mg_snprintf(conn,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "%s",
+		            "Bad request: Host mismatch");
+		*err = 400;
+		return 0;
+	}
 
 	/* Do we know the content length? */
 	if ((cl = get_header(conn->request_info.http_headers,
