@@ -15783,7 +15783,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	/* Is there a "host" ? */
 	conn->host = alloc_get_host(conn);
-	if (!host) {
+	if (!conn->host) {
 		mg_snprintf(conn,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
