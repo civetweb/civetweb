@@ -1,6 +1,7 @@
 # Civetweb Contributors
 
 * Abhishek Lekshmanan
+* Abramo Bagnara
 * Adam Bailey
 * Alan Somers
 * Alex Kozlov
@@ -33,6 +34,7 @@
 * F-Secure Corporation
 * feneuilflo
 * Fernando G. Aranda
+* Frank Hilliger
 * Grahack
 * grenclave
 * grunk
@@ -55,6 +57,7 @@
 * Joshua D. Boyd
 * kakwa
 * kalphamon
+* Karol Mroz
 * Keith Kyzivat
 * Kevin Branigan
 * Kevin Wojniak
@@ -88,6 +91,7 @@
 * Peter Foerster
 * Philipp Friedenberger
 * Philipp Hasper
+* Radoslaw Zarzynski
 * Red54
 * Richard Screene
 * pkvamme
@@ -101,6 +105,7 @@
 * slidertom
 * SpaceLord
 * sunfch
+* suzukibitman
 * thewaterymoon
 * THILMANT, Bernard
 * Thomas Davis
