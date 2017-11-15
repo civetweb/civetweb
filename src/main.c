@@ -151,9 +151,7 @@ extern char *_getcwd(char *buf, size_t size);
 	} while (0)
 
 #else
-#define DEBUG_ASSERT(cond)                                                     \
-	do {                                                                       \
-	} while (0)
+#define DEBUG_ASSERT(cond)
 #endif /* DEBUG */
 #endif
 

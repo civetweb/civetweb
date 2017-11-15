@@ -163,9 +163,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 		}                                                                      \
 	} while (0)
 #else
-#define DEBUG_ASSERT(cond)                                                     \
-	do {                                                                       \
-	} while (0)
+#define DEBUG_ASSERT(cond)
 #endif /* DEBUG */
 #endif
 
