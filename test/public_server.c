@@ -4504,14 +4504,26 @@ minimal_http_https_client_impl(const char *server,
 	client = mg_connect_client(
 	    server, port, use_ssl, client_err_buf, sizeof(client_err_buf));
 
-	ck_assert_str_eq(client_err_buf, "");
-	ck_assert(client != NULL);
+	if ((client == NULL) || (0 != strcmp(client_err_buf, ""))) {
+		ck_abort_msg("%s connection to server [%s] port [%u] failed: [%s]",
+		             use_ssl ? "HTTPS" : "HTTP",
+		             server,
+		             port,
+		             client_err_buf);
+	}
 
 	mg_printf(client, "GET /%s HTTP/1.0\r\n\r\n", uri);
 
 	r = mg_get_response(client, client_err_buf, sizeof(client_err_buf), 10000);
-	ck_assert_int_ge(r, 0);
-	ck_assert_str_eq(client_err_buf, "");
+
+	if ((r < 0) || (0 != strcmp(client_err_buf, ""))) {
+		ck_abort_msg(
+		    "%s connection to server [%s] port [%u] did not respond: [%s]",
+		    use_ssl ? "HTTPS" : "HTTP",
+		    server,
+		    port,
+		    client_err_buf);
+	}
 
 	client_ri = mg_get_request_info(client);
 	ck_assert(client_ri != NULL);
