@@ -55,12 +55,13 @@ install:
 before_script:
   # Check some settings of the build server (operating system, IPv6 availability, directory)
   - uname -a
+  - lsb_release -a
   - ifconfig
   - cat /etc/network/interfaces
   - if [[ "${ENABLE_IPV6}" == "YES" ]]; then 
       echo "iface lo inet6 loopback" | sudo tee -a /etc/network/interfaces;
       cat /etc/network/interfaces;
-      sudo service network-manager restart;
+      sudo service networking restart;
       ifconfig;
     fi
   - pwd
