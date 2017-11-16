@@ -58,9 +58,9 @@ before_script:
   - ifconfig
   - cat /etc/network/interfaces
   - if [[ "${ENABLE_IPV6}" == "YES" ]]; then 
-      sudo echo "iface lo inet6 loopback" >> /etc/network/interfaces;
+      echo "iface lo inet6 loopback" | sudo tee -a /etc/network/interfaces;
       cat /etc/network/interfaces;
-      sudo /etc/init.d/networking restart;
+      sudo service network-manager restart;
       ifconfig;
     fi
   - pwd
@@ -88,7 +88,7 @@ before_script:
     -DCIVETWEB_SSL_OPENSSL_API_1_1=${OPENSSL_1_1}
     -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
     -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
-    -DCIVETWEB_ENABLE_IPV6=NO
+    -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6} 
     -DCIVETWEB_ENABLE_SERVER_STATS=${ENABLE_SERVER_STATS}
     -DCIVETWEB_ENABLE_LUA=${ENABLE_LUA}
     -DCIVETWEB_ENABLE_LUA_SHARED=${ENABLE_LUA_SHARED}
@@ -101,9 +101,10 @@ before_script:
     ..
   - ls -la
 
-# Line removed / replaced by =NO
-# DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6} 
-# see https://github.com/travis-ci/travis-ci/issues/8711#issuecomment-343658967
+# Modifications due to Travis IPv6 issues:
+# https://github.com/travis-ci/travis-ci/issues/8711
+# https://github.com/travis-ci/travis-ci/issues/8361
+# DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6} or =NO
 
 script:
   - if [ "${MACOSX_PACKAGE}" == "1" ]; then
@@ -237,7 +238,7 @@ matrix:
       ALLOW_WARNINGS=YES
 
   - dist: trusty
-    sudo: false
+    sudo: required
     os: linux
     compiler: clang
     addons:
@@ -273,7 +274,7 @@ matrix:
 
 
   - dist: trusty
-    sudo: false
+    sudo: required
     os: linux
     compiler: gcc
     addons:
@@ -307,6 +308,7 @@ matrix:
       ALLOW_WARNINGS=YES
   
   - os: linux
+    sudo: required
     compiler: gcc
     env:
       idx=6
@@ -332,6 +334,7 @@ matrix:
       ALLOW_WARNINGS=YES
 
   - os: osx
+    sudo: required
     compiler: clang
     env:
       idx=7
@@ -358,6 +361,7 @@ matrix:
 
   -
     os: osx
+    sudo: required
     compiler: clang
     env:
       idx=8
@@ -453,6 +457,7 @@ matrix:
 
   -
     os: osx
+    sudo: required
     compiler: clang
     env:
       idx=11
@@ -479,7 +484,7 @@ matrix:
       MACOSX_PACKAGE=1
 
   - dist: trusty
-    sudo: false
+    sudo: required
     os: linux
     compiler: clang
     addons:
@@ -521,6 +526,7 @@ matrix:
 
   -
     os: linux
+    sudo: required
     compiler: clang
     env:
       idx=13
@@ -649,7 +655,7 @@ matrix:
 # Remove Lua build, until someone knows how to fix the CMake files
 #
 #  - dist: trusty
-#    sudo: false
+#    sudo: required
 #    os: linux
 #    compiler: clang
 #    addons:
