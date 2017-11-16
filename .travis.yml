@@ -56,6 +56,7 @@ before_script:
   # Check some settings of the build server (operating system, IPv6 availability, directory)
   - uname -a
   - ifconfig
+  - cat /etc/sysctl.conf
   - pwd
   - ls -la
   - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
