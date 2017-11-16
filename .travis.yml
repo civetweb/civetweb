@@ -56,7 +56,13 @@ before_script:
   # Check some settings of the build server (operating system, IPv6 availability, directory)
   - uname -a
   - ifconfig
-  - cat /etc/sysctl.conf
+  - cat /etc/network/interfaces
+  - if [[ "${ENABLE_IPV6}" == "YES" ]]; then 
+      sudo echo "iface lo inet6 loopback" >> /etc/network/interfaces;
+      cat /etc/network/interfaces;
+      sudo /etc/init.d/networking restart;
+      ifconfig;
+    fi
   - pwd
   - ls -la
   - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
