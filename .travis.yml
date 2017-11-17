@@ -55,17 +55,17 @@ install:
 before_script:
   # Check some settings of the build server (operating system, IPv6 availability, directory)
   - uname -a
-  - lsb_release -a
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+      lsb_release -a;
+    fi
   - ifconfig
   - cat /etc/network/interfaces
   # Add an IPv6 config and restart network
   # https://askubuntu.com/questions/103171/editing-network-interfaces-without-system-rebooting
+  # For some failed tests already done, see
+  # https://github.com/travis-ci/travis-ci/issues/8361#issuecomment-345074513
   - if [[ "${ENABLE_IPV6}" == "YES" ]]; then 
-      echo "iface lo inet6 loopback" | sudo tee -a /etc/network/interfaces;
-      cat /etc/network/interfaces;
-      sudo ifdown lo;
-      sudo ifup lo;
-      ifconfig;
+      echo "IPv6 on Travis may fail";
     fi
   - pwd
   - ls -la
