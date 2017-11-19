@@ -418,7 +418,14 @@ CIVETWEB_API void mg_stop(struct mg_context *);
  *            specify CivetWeb configuration parameters.
  *
  * Return:
- *   to be defined
+ *   < 0 in case of an error
+ *    -1 for a parameter error
+ *    -2 invalid options
+ *    -3 initializing SSL failed
+ *    -4 mandatory domain option missing
+ *    -5 duplicate domain
+ *    -6 out of memory
+ *   > 0 index / handle of a new domain
  */
 CIVETWEB_API int mg_start_domain(struct mg_context *ctx,
                                  const char **configuration_options);

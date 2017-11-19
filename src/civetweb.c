@@ -17566,6 +17566,7 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 	/* Add element to linked list. */
 	mg_lock_context(ctx);
 
+	idx = 0;
 	dom = &(ctx->dd);
 	for (;;) {
 		if (!strcasecmp(new_dom->config[AUTHENTICATION_DOMAIN],
@@ -17577,6 +17578,10 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 			mg_free(new_dom);
 			return -5;
 		}
+
+		/* Count number of domains */
+		idx++;
+
 		if (dom->next == NULL) {
 			dom->next = new_dom;
 			break;
@@ -17586,7 +17591,8 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 
 	mg_unlock_context(ctx);
 
-	return 0;
+	/* Return domain number */
+	return idx;
 }
 #endif
 
