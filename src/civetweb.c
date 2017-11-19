@@ -14017,8 +14017,8 @@ sslize(struct mg_connection *conn,
 			err = SSL_get_error(conn->ssl, ret);
 			if ((err == SSL_ERROR_WANT_CONNECT)
 			    || (err == SSL_ERROR_WANT_ACCEPT)
-			    || (err == SSL_ERROR_WANT_READ)
-			    || (err == SSL_ERROR_WANT_WRITE)) {
+			    || (err == SSL_ERROR_WANT_READ) || (err == SSL_ERROR_WANT_WRITE)
+			    || (err == SSL_ERROR_WANT_X509_LOOKUP)) {
 				/* Need to retry the function call "later".
 				 * See https://linux.die.net/man/3/ssl_get_error
 				 * This is typical for non-blocking sockets. */
@@ -14034,9 +14034,10 @@ sslize(struct mg_connection *conn,
 				/* TODO: set some error message */
 				(void)err;
 				break;
+
 			} else {
-				/* This is an SSL specific error */
-				/* TODO: set some error message */
+				/* This is an SSL specific error, e.g. SSL_ERROR_SSL */
+				mg_cry(conn, "sslize error: %s", ssl_error());
 				break;
 			}
 
