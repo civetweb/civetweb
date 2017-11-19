@@ -57,9 +57,9 @@ before_script:
   - uname -a
   - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
       lsb_release -a;
+      cat /etc/network/interfaces;
     fi
   - ifconfig
-  - cat /etc/network/interfaces
   # Add an IPv6 config and restart network
   # https://askubuntu.com/questions/103171/editing-network-interfaces-without-system-rebooting
   # For some failed tests already done, see
@@ -92,7 +92,6 @@ before_script:
     -DCIVETWEB_SSL_OPENSSL_API_1_1=${OPENSSL_1_1}
     -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
     -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
-    -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6} 
     -DCIVETWEB_ENABLE_SERVER_STATS=${ENABLE_SERVER_STATS}
     -DCIVETWEB_ENABLE_LUA=${ENABLE_LUA}
     -DCIVETWEB_ENABLE_LUA_SHARED=${ENABLE_LUA_SHARED}
@@ -101,6 +100,7 @@ before_script:
     -DCIVETWEB_C_STANDARD=${C_STANDARD}
     -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
     -DCIVETWEB_ALLOW_WARNINGS=${ALLOW_WARNINGS}
+    -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6}
     ${ADDITIONAL_CMAKE_ARGS}
     ..
   - ls -la
