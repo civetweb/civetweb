@@ -2,9 +2,9 @@
 Overview
 =====
 
-Civetweb is small and easy to use web server.
+CivetWeb is small and easy to use web server.
 It may be embedded into C/C++ host applications or used as a stand-alone
-server. See `Embedding.md` for information on embedding civetweb into
+server. See `Embedding.md` for information on embedding CivetWeb into
 host applications.
 
 The stand-alone server is self-contained, and does not require any external
@@ -14,71 +14,71 @@ software to run. Some Windows users may need to install the
 Installation
 ----
 
-On Windows, UNIX and Mac, the civetweb stand-alone executable may be started
+On Windows, UNIX and Mac, the CivetWeb stand-alone executable may be started
 from the command line.
-Running `civetweb` in a terminal, optionally followed by configuration parameters
-(`civetweb [OPTIONS]`) or a configuration file name (`civetweb [config_file_name]`),
+Running `CivetWeb` in a terminal, optionally followed by configuration parameters
+(`CivetWeb [OPTIONS]`) or a configuration file name (`CivetWeb [config_file_name]`),
 starts the web server.
 
-For UNIX and Mac, civetweb does not detach from the terminal.
+For UNIX and Mac, CivetWeb does not detach from the terminal.
 Pressing `Ctrl-C` keys will stop the server.
 
-On Windows, civetweb iconifies itself to the system tray icon when started.
+On Windows, CivetWeb iconifies itself to the system tray icon when started.
 Right-click on the icon pops up a menu, where it is possible to stop
-civetweb, or configure it, or install it as Windows service.
+CivetWeb, or configure it, or install it as Windows service.
 
 When started without options, the server exposes the local directory at
 [http](http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol) port 8080.
-Thus, the easiest way to share a folder on Windows is to copy `civetweb.exe`
+Thus, the easiest way to share a folder on Windows is to copy `CivetWeb.exe`
 to this folder, double-click the exe, and launch a browser at
 [http://localhost:8080](http://localhost:8080). Note that 'localhost' should
 be changed to a machine's name if a folder is accessed from other computer.
 
-When started, civetweb first searches for the configuration file.
+When started, CivetWeb first searches for the configuration file.
 If configuration file is specified explicitly in the command line, i.e.
-`civetweb path_to_config_file`, then specified configuration file is used.
-Otherwise, civetweb would search for file `civetweb.conf` in the same directory
+`CivetWeb path_to_config_file`, then specified configuration file is used.
+Otherwise, CivetWeb would search for file `CivetWeb.conf` in the same directory
 the executable is located, and use it. This configuration file is optional.
 
 The configuration file is a sequence of lines, each line containing one
 command line argument name and the corresponding value.
 Empty lines, and lines beginning with `#`, are ignored.
-Here is the example of `civetweb.conf` file:
+Here is the example of `CivetWeb.conf` file:
 
     document_root c:\www
     listening_ports 80,443s
-    ssl_certificate c:\civetweb\ssl_cert.pem
+    ssl_certificate c:\CivetWeb\ssl_cert.pem
 
 When a configuration file is used, additional command line arguments may
 override the configuration file settings.
 All command line arguments must start with `-`.
 
-For example: The above `civetweb.conf` file is used, and civetweb started as
-`civetweb -document_root D:\web`. Then the `D:\web` directory will be served
+For example: The above `CivetWeb.conf` file is used, and CivetWeb started as
+`CivetWeb -document_root D:\web`. Then the `D:\web` directory will be served
 as document root, because command line options take priority over the
 configuration file. The configuration options section below provides a good
-overview of the Civetweb features.
+overview of the CivetWeb features.
 
 Note that configuration options on the command line must start with `-`,
 but their names are the same as in the config file. All option names are
 listed in the next section. Thus, the following two setups are equivalent:
 
     # Using command line arguments
-    $ civetweb -listening_ports 1234 -document_root /var/www
+    $ CivetWeb -listening_ports 1234 -document_root /var/www
 
     # Using config file
-    $ cat civetweb.conf
+    $ cat CivetWeb.conf
     listening_ports 1234
     document_root /var/www
-    $ civetweb
+    $ CivetWeb
 
-Civetweb can also be used to modify `.htpasswd` passwords files:
+CivetWeb can also be used to modify `.htpasswd` passwords files:
 
-    civetweb -A <htpasswd_file> <realm> <user> <passwd>
+    CivetWeb -A <htpasswd_file> <realm> <user> <passwd>
 
-Unlike other web servers, civetweb does not require CGI scripts to be located
+Unlike other web servers, CivetWeb does not require CGI scripts to be located
 in a special directory. CGI scripts can be anywhere. CGI (and SSI) files are
-recognized by the file name pattern. Civetweb uses shell-like glob
+recognized by the file name pattern. CivetWeb uses shell-like glob
 patterns. Pattern match starts at the beginning of the string, so essentially
 patterns are prefix patterns. Syntax is as follows:
 
@@ -96,9 +96,14 @@ All other characters in the pattern match themselves. Examples:
 
 # Configuration Options
 
-Below is a list of configuration options understood by Civetweb.
+Below is a list of configuration options understood by CivetWeb.
 Every option is followed by it's default value. If a default value is not
 present, then the default is empty.
+
+## Options from `civetweb.c`
+
+The following options are supported in `civetweb.c`. They can be used for
+the stand-alone executable as well as for applications embedding CivetWeb.
 
 ### cgi\_pattern `**.cgi$|**.pl$|**.php$`
 All files that match `cgi_pattern` are treated as CGI files. Default pattern
@@ -119,16 +124,16 @@ DELETE requests might still be handled by Lua scripts and CGI paged.
 ### cgi\_interpreter
 Path to an executable to use as CGI interpreter for __all__ CGI scripts
 regardless of the script file extension. If this option is not set (which is
-the default), Civetweb looks at first line of a CGI script,
+the default), CivetWeb looks at first line of a CGI script,
 [shebang line](http://en.wikipedia.org/wiki/Shebang_(Unix\)), for an
 interpreter (not only on Linux and Mac but also for Windows).
 
 For example, if both PHP and Perl CGIs are used, then
 `#!/path/to/php-cgi.exe` and `#!/path/to/perl.exe` must be first lines of the
 respective CGI scripts. Note that paths should be either full file paths,
-or file paths relative to the current working directory of the civetweb
-server. If civetweb is started by mouse double-click on Windows, the current
-working directory is the directory where the civetweb executable is located.
+or file paths relative to the current working directory of the CivetWeb
+server. If CivetWeb is started by mouse double-click on Windows, the current
+working directory is the directory where the CivetWeb executable is located.
 
 If all CGIs use the same interpreter, for example they are all PHP, it is
 more efficient to set `cgi_interpreter` to the path to `php-cgi.exe`.
@@ -163,7 +168,7 @@ should end with a special extension, by default the extension should be
 either `.shtml` or `.shtm`. These extentions may be changed using the
 `ssi_pattern` option.
 
-Unknown SSI directives are silently ignored by civetweb. Currently, two SSI
+Unknown SSI directives are silently ignored by CivetWeb. Currently, two SSI
 directives are supported, `<!--#include ...>` and
 `<!--#exec "command">`. Note that the `<!--#include ...>` directive supports
 three path specifications:
@@ -226,7 +231,7 @@ password in digest format:
     user:realm:digest
     test:test.com:ce0220efc2dd2fad6185e1f1af5a4327
 
-Password files may be generated using `civetweb -A` as explained above, or
+Password files may be generated using `CivetWeb -A` as explained above, or
 online tools e.g. [this generator](http://www.askapache.com/online-tools/htpasswd-generator).
 
 ### index\_files `index.xhtml,index.html,index.htm,index.cgi,index.shtml,index.php`
@@ -255,7 +260,7 @@ a timeout > 0 is set.
 
 ### access\_control\_list
 An Access Control List (ACL) allows restrictions to be put on the list of IP
-addresses which have access to the web server. In the case of the Civetweb
+addresses which have access to the web server. In the case of the CivetWeb
 web server, the ACL is a comma separated list of IP subnets, where each
 subnet is pre-pended by either a `-` or a `+` sign. A plus sign means allow,
 where a minus sign means deny. If a subnet mask is omitted, such as `-1.2.3.4`,
@@ -336,45 +341,45 @@ and it must have both, private key and certificate, see for example
 A description how to create a certificate can be found in doc/OpenSSL.md
 
 ### num\_threads `50`
-Number of worker threads. Civetweb handles each incoming connection in a
+Number of worker threads. CivetWeb handles each incoming connection in a
 separate thread. Therefore, the value of this option is effectively the number
-of concurrent HTTP connections Civetweb can handle.
+of concurrent HTTP connections CivetWeb can handle.
 
 ### run\_as\_user
 Switch to given user credentials after startup. Usually, this option is
-required when civetweb needs to bind on privileged ports on UNIX. To do
-that, civetweb needs to be started as root. From a security point of view,
+required when CivetWeb needs to bind on privileged ports on UNIX. To do
+that, CivetWeb needs to be started as root. From a security point of view,
 running as root is not advisable, therefore this option can be used to drop
 privileges. Example:
 
-    civetweb -listening_ports 80 -run_as_user webserver
+    CivetWeb -listening_ports 80 -run_as_user webserver
 
 ### url\_rewrite\_patterns
 Comma-separated list of URL rewrites in the form of
-`uri_pattern=file_or_directory_path`. When Civetweb receives any request,
+`uri_pattern=file_or_directory_path`. When CivetWeb receives any request,
 it constructs the file name to show by combining `document_root` and the URI.
 However, if the rewrite option is used and `uri_pattern` matches the
 requested URI, then `document_root` is ignored. Instead,
 `file_or_directory_path` is used, which should be a full path name or
 a path relative to the web server's current working directory. Note that
-`uri_pattern`, as all civetweb patterns, is a prefix pattern.
+`uri_pattern`, as all CivetWeb patterns, is a prefix pattern.
 
 This makes it possible to serve many directories outside from `document_root`,
 redirect all requests to scripts, and do other tricky things. For example,
 to redirect all accesses to `.doc` files to a special script, do:
 
-    civetweb -url_rewrite_patterns **.doc$=/path/to/cgi-bin/handle_doc.cgi
+    CivetWeb -url_rewrite_patterns **.doc$=/path/to/cgi-bin/handle_doc.cgi
 
 Or, to imitate support for user home directories, do:
 
-    civetweb -url_rewrite_patterns /~joe/=/home/joe/,/~bill=/home/bill/
+    CivetWeb -url_rewrite_patterns /~joe/=/home/joe/,/~bill=/home/bill/
 
 ### hide\_files\_patterns
 A pattern for the files to hide. Files that match the pattern will not
 show up in directory listing and return `404 Not Found` if requested. Pattern
 must be for a file name only, not including directory names. Example:
 
-    civetweb -hide_files_patterns secret.txt|**.hide
+    CivetWeb -hide_files_patterns secret.txt|**.hide
 
 Note: hide\_file\_patterns uses the pattern described above. If you want to
 hide all files with a certain extension, make sure to use **.extension
@@ -456,7 +461,7 @@ Can add dynamic parameters to background script.
 Parameters mapped to global 'mg' table 'params' field.
 
 ### websocket\_root
-In case civetweb is built with Lua and websocket support, Lua scripts may
+In case CivetWeb is built with Lua and websocket support, Lua scripts may
 be used for websockets as well. Since websockets use a different URL scheme
 (ws, wss) than other http pages (http, https), the Lua scripts used for
 websockets may also be served from a different directory. By default,
@@ -634,8 +639,36 @@ Example (used as command line option):
 
 This option can be specified multiple times. All specified header lines will be sent.
 
+## Options from `main.c`
+
+The following options are supported in `main.c`, the additional source file for
+the stand-alone executable. These options are not supported by other applications
+embedding `civetweb.c`, unless they are added explicitly.
+
+The options "title", "icon" and "website" are 
+
+### title
+Use the configured string as a server name.  For Windows, this will be shown as
+the window title.
+
+### icon
+For Windows, show this icon file in the systray, replacing the CivetWeb standard
+icon.  This option has no effect for Linux.
+
+### website
+For Windows, use this website as a link in the systray, replacing the default
+link for CivetWeb.
+
+### add\_domain
+Option to load an additional configuration file, specifying an additional domain
+to host.  To add multiple additional domains, use the add\_domain option 
+multiple times with one configuration file for each domain.  
+A domain configuration file may have the same options as the main server, with
+some exceptions.  The options are passed to the `mg_start_domain` API function.
+
+
 # Lua Scripts and Lua Server Pages
-Pre-built Windows and Mac civetweb binaries have built-in Lua scripting
+Pre-built Windows and Mac CivetWeb binaries have built-in Lua scripting
 support as well as support for Lua Server Pages.
 
 Lua scripts (default extension: *.lua) use plain Lua syntax.
@@ -660,7 +693,7 @@ page, one can write:
       URI is <?=mg.request_info.uri?>
     </p>
 
-Lua is known for it's speed and small size. Civetweb currently uses Lua
+Lua is known for it's speed and small size. CivetWeb currently uses Lua
 version 5.2.4. The documentation for it can be found in the
 [Lua 5.2 reference manual](http://www.lua.org/manual/5.2/).
 
@@ -670,7 +703,7 @@ web client. Using `mg.write()` is the way to generate web content from inside
 Lua code. In addition to `mg.write()`, all standard Lua library functions
 are accessible from the Lua code (please check the reference manual for
 details). Lua functions working on files (e.g., `io.open`) use a path
-relative to the working path of the civetweb process. The web server content
+relative to the working path of the CivetWeb process. The web server content
 is located in the path `mg.document_root`.
 Information on the request is available in the `mg.request_info`
 object, like the request method, all HTTP headers, etcetera.
@@ -683,17 +716,17 @@ is an example for a Lua Server Page.
 
 Both examples show the content of the `mg.request_info` object as the page
 content. Please refer to `struct mg_request_info` definition in
-[civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)
+[CivetWeb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)
 to see additional information on the elements of the `mg.request_info` object.
 
-Civetweb also provides access to the [SQlite3 database](http://www.sqlite.org/)
+CivetWeb also provides access to the [SQlite3 database](http://www.sqlite.org/)
 through the [LuaSQLite3 interface](http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki)
 in Lua. Examples are given in
 [page.lua](https://github.com/civetweb/civetweb/blob/master/test/page.lua) and
 [page.lp](https://github.com/civetweb/civetweb/blob/master/test/page.lp).
 
 
-Civetweb exports the following functions to Lua:
+CivetWeb exports the following functions to Lua:
 
 mg (table):
 
@@ -704,7 +737,7 @@ mg (table):
                                -- like defined for SSI #include
     mg.redirect(uri)           -- internal redirect to a given URI
     mg.onerror(msg)            -- error handler, can be overridden
-    mg.version                 -- a string that holds Civetweb version
+    mg.version                 -- a string that holds CivetWeb version
     mg.document_root           -- a string that holds the document root directory
     mg.auth_domain             -- a string that holds the HTTP authentication domain
     mg.get_var(str, varname)   -- extract variable from (query) string
@@ -750,23 +783,23 @@ connect (function):
     end
 
 
-All filename arguments are either absolute or relative to the civetweb working
+All filename arguments are either absolute or relative to the CivetWeb working
 directory (not the document root or the Lua script/page file).
     
-**IMPORTANT: Civetweb does not send HTTP headers for Lua pages. Therefore,
+**IMPORTANT: CivetWeb does not send HTTP headers for Lua pages. Therefore,
 every Lua Page must begin with a HTTP reply line and headers**, like this:
 
     <? mg.write('HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n') ?>
     <html><body>
       ... the rest of the web page ...
 
-To serve a Lua Page, civetweb creates a Lua context. That context is used for
+To serve a Lua Page, CivetWeb creates a Lua context. That context is used for
 all Lua blocks within the page. That means, all Lua blocks on the same page
 share the same context. If one block defines a variable, for example, that
 variable is visible in all block that follow.
 
 ## Websockets for Lua
-Civetweb offers support for websockets in Lua as well. In contrast to plain
+CivetWeb offers support for websockets in Lua as well. In contrast to plain
 Lua scripts and Lua server pages, Lua websocket scripts are shared by all clients.
 
 Lua websocket scripts must define a few functions:
@@ -791,7 +824,7 @@ An example is shown in
   reason for that is wrong paths to the interpreter. Remember that with PHP,
   the correct interpreter is `php-cgi.exe` (`php-cgi` on UNIX).
   Solution: specify the full path to the PHP interpreter, e.g.:
-    `civetweb -cgi_interpreter /full/path/to/php-cgi`
+    `CivetWeb -cgi_interpreter /full/path/to/php-cgi`
 
 - `php-cgi` is unavailable, for example on Mac OS X. As long as the `php` binary is installed, you can run CGI programs in command line mode (see the example below). Note that in this mode, `$_GET` and friends will be unavailable, and you'll have to parse the query string manually using [parse_str](http://php.net/manual/en/function.parse-str.php) and the `QUERY_STRING` environmental variable.
 
@@ -801,14 +834,14 @@ An example is shown in
         echo "Hello World!\n";
         ?>
 
-- Civetweb fails to start. If Civetweb exits immediately when started, this
+- CivetWeb fails to start. If CivetWeb exits immediately when started, this
   usually indicates a syntax error in the configuration file
-  (named `civetweb.conf` by default) or the command-line arguments.
-  Syntax checking is omitted from Civetweb to keep its size low. However,
+  (named `CivetWeb.conf` by default) or the command-line arguments.
+  Syntax checking is omitted from CivetWeb to keep its size low. However,
   the Manual should be of help. Note: the syntax changes from time to time,
   so updating the config file might be necessary after executable update.
 
 - Embedding with OpenSSL on Windows might fail because of calling convention.
-  To force Civetweb to use `__stdcall` convention, add `/Gz` compilation
+  To force CivetWeb to use `__stdcall` convention, add `/Gz` compilation
   flag in Visual Studio compiler.
 
