@@ -54,6 +54,9 @@ set(CIVETWEB_THREAD_STACK_SIZE 102400 CACHE STRING
 set_property(CACHE CIVETWEB_THREAD_STACK_SIZE PROPERTY VALUE ${CIVETWEB_THREAD_STACK_SIZE})
 message(STATUS "Thread Stack Size - ${CIVETWEB_THREAD_STACK_SIZE}")
 
+option(CIVETWEB_ENABLE_SERVER_EXECUTABLE "Enable building of the server executable" ON)
+message(STATUS "Disable server - ${CIVETWEB_ENABLE_SERVER_EXECUTABLE}")
+
 # Serve no files from the web server
 option(CIVETWEB_SERVE_NO_FILES "Configures the server to serve no static files" OFF)
 message(STATUS "Serve no static files - ${CIVETWEB_SERVE_NO_FILES}")
@@ -101,7 +104,7 @@ message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 # Enable installing CivetWeb executables
 option(CIVETWEB_INSTALL_EXECUTABLE "Enable installing CivetWeb executable" ON)
 mark_as_advanced(FORCE CIVETWEB_INSTALL_EXECUTABLE) # Advanced users can disable
-message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}") 
+message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}")
 
 # Allow builds to complete with warnings (do not set -Werror)
 # CivetWeb Linux support is stable:
@@ -456,7 +459,7 @@ add_subdirectory(src)
 
 # Enable the testing of the library/executable
 include(CTest)
-if (BUILD_TESTING)
+if (CIVETWEB_BUILD_TESTING)
   # Check unit testing framework Version
   set(CIVETWEB_CHECK_VERSION 0.11.0 CACHE STRING
     "The version of Check unit testing framework to build and include statically")
