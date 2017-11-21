@@ -45,6 +45,10 @@ elseif(NOT LINUX AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     SET(LINUX YES)
 endif()
 
+# CTest automation
+option(CIVETWEB_BUILD_TESTING "Enable automated testing of civetweb" ON)
+message(STATUS "Enabling tests in the build - ${CIVETWEB_BUILD_TESTING}")
+
 # C++ wrappers
 option(CIVETWEB_ENABLE_THIRD_PARTY_OUTPUT "Shows the output of third party dependency processing" OFF)
 
