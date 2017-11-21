@@ -240,7 +240,7 @@ if (CIVETWEB_ENABLE_LUA)
 endif()
 
 # The web server executable
-if (CIVETWEB_ENABLE_SERVER)
+if (CIVETWEB_ENABLE_SERVER_EXECUTABLE)
     add_executable(civetweb-c-executable main.c)
     set_target_properties(civetweb-c-executable PROPERTIES
         OUTPUT_NAME "civetweb"

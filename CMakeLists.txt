@@ -55,7 +55,7 @@ set_property(CACHE CIVETWEB_THREAD_STACK_SIZE PROPERTY VALUE ${CIVETWEB_THREAD_S
 message(STATUS "Thread Stack Size - ${CIVETWEB_THREAD_STACK_SIZE}")
 
 option(CIVETWEB_ENABLE_SERVER_EXECUTABLE "Enable building of the server executable" ON)
-message(STATUS "Disable server - ${CIVETWEB_ENABLE_SERVER_EXECUTABLE}")
+message(STATUS "Enabling server executable - ${CIVETWEB_ENABLE_SERVER_EXECUTABLE}")
 
 # Serve no files from the web server
 option(CIVETWEB_SERVE_NO_FILES "Configures the server to serve no static files" OFF)
