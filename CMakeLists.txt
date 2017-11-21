@@ -45,6 +45,10 @@ elseif(NOT LINUX AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     SET(LINUX YES)
 endif()
 
+# CTest automation
+option(CIVETWEB_BUILD_TESTING "Enable automated testing of civetweb" ON)
+message(STATUS "Enabling tests in the build - ${CIVETWEB_BUILD_TESTING}")
+
 # C++ wrappers
 option(CIVETWEB_ENABLE_THIRD_PARTY_OUTPUT "Shows the output of third party dependency processing" OFF)
 
@@ -53,6 +57,9 @@ set(CIVETWEB_THREAD_STACK_SIZE 102400 CACHE STRING
   "The stack size in bytes for each thread created")
 set_property(CACHE CIVETWEB_THREAD_STACK_SIZE PROPERTY VALUE ${CIVETWEB_THREAD_STACK_SIZE})
 message(STATUS "Thread Stack Size - ${CIVETWEB_THREAD_STACK_SIZE}")
+
+option(CIVETWEB_ENABLE_SERVER_EXECUTABLE "Enable building of the server executable" ON)
+message(STATUS "Enabling server executable - ${CIVETWEB_ENABLE_SERVER_EXECUTABLE}")
 
 # Serve no files from the web server
 option(CIVETWEB_SERVE_NO_FILES "Configures the server to serve no static files" OFF)
@@ -101,7 +108,7 @@ message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 # Enable installing CivetWeb executables
 option(CIVETWEB_INSTALL_EXECUTABLE "Enable installing CivetWeb executable" ON)
 mark_as_advanced(FORCE CIVETWEB_INSTALL_EXECUTABLE) # Advanced users can disable
-message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}") 
+message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}")
 
 # Allow builds to complete with warnings (do not set -Werror)
 # CivetWeb Linux support is stable:
@@ -456,7 +463,7 @@ add_subdirectory(src)
 
 # Enable the testing of the library/executable
 include(CTest)
-if (BUILD_TESTING)
+if (CIVETWEB_BUILD_TESTING)
   # Check unit testing framework Version
   set(CIVETWEB_CHECK_VERSION 0.11.0 CACHE STRING
     "The version of Check unit testing framework to build and include statically")
