@@ -6925,6 +6925,9 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	/* Local file path and name, corresponding to requested URI
 	 * is now stored in "filename" variable. */
 	if (mg_stat(conn, filename, filestat)) {
+		int uri_len = (int)strlen(uri);
+		int is_uri_end_slash = (uri_len > 0) && (uri[uri_len - 1] == '/');
+
 		/* 8.1: File exists. */
 		*is_found = 1;
 
@@ -6946,7 +6949,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 
 		/* 8.3: If the request target is a directory, there could be
 		 * a substitute file (index.html, index.cgi, ...). */
-		if (filestat->is_directory) {
+		if (filestat->is_directory && is_uri_end_slash) {
 			/* Use a local copy here, since substitute_index_file will
 			 * change the content of the file status */
 			struct mg_file_stat tmp_filestat;
@@ -12846,6 +12849,7 @@ handle_request(struct mg_connection *conn)
 		is_put_or_delete_request = is_put_or_delete_method(conn);
 	} else {
 	no_callback_resource:
+
 		/* 5.2.2. No callback is responsible for this request. The URI
 		 * addresses a file based resource (static content or Lua/cgi
 		 * scripts in the file system). */
