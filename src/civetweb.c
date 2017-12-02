@@ -12072,7 +12072,7 @@ mg_upload_field_found(const char *key,
 	            "%s/%s",
 	            fud->destination_dir,
 	            filename);
-	if (!truncated) {
+	if (truncated) {
 		mg_cry(fud->conn, "%s: File path too long", __func__);
 		return FORM_FIELD_STORAGE_ABORT;
 	}

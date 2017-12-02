@@ -473,6 +473,10 @@ mg_handle_form_request(struct mg_connection *conn,
 						r = mg_read(conn, buf + (size_t)buf_fill, to_read);
 						if (r < 0) {
 							/* read error */
+							if (fstore.access.fp) {
+								mg_fclose(&fstore.access);
+								remove_bad_file(conn, path);
+							}
 							return -1;
 						}
 						if (r != (int)to_read) {
@@ -869,6 +873,10 @@ mg_handle_form_request(struct mg_connection *conn,
 				            sizeof(buf) - 1 - (size_t)buf_fill);
 				if (r < 0) {
 					/* read error */
+					if (fstore.access.fp) {
+						mg_fclose(&fstore.access);
+						remove_bad_file(conn, path);
+					}
 					mg_free(boundary);
 					return -1;
 				}
@@ -876,6 +884,10 @@ mg_handle_form_request(struct mg_connection *conn,
 				buf[buf_fill] = 0;
 				if (buf_fill < 1) {
 					/* No data */
+					if (fstore.access.fp) {
+						mg_fclose(&fstore.access);
+						remove_bad_file(conn, path);
+					}
 					mg_free(boundary);
 					return -1;
 				}
