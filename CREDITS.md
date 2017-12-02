@@ -20,6 +20,7 @@
 * Christian Mauderer
 * Christopher Galas
 * cjh
+* Colden Cullen
 * Daniel Oaks
 * Daniel Rempel
 * Danny Al-Gaaf
@@ -42,6 +43,7 @@
 * HariKamath Kamath
 * Henry Chang
 * Jack
+* Jacob Repp
 * Jacob Skillin
 * Jan Willem Janssen
 * Jeremy Lin
@@ -76,6 +78,8 @@
 * Morgan McGuire
 * mrdvlpr.xnu
 * Neil Jensen
+* newsoft
+* nfrmtkr
 * Nick Hildebrant
 * Nigel Stewart
 * nihildeb
