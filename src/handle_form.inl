@@ -882,15 +882,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 				buf_fill += r;
 				buf[buf_fill] = 0;
-				if (buf_fill < 1) {
-					/* No data */
-					if (fstore.access.fp) {
-						mg_fclose(&fstore.access);
-						remove_bad_file(conn, path);
-					}
-					mg_free(boundary);
-					return -1;
-				}
+				/* buf_fill is at least 8 here */
 
 				/* Find boundary */
 				next = search_boundary(buf, (size_t)buf_fill, boundary, bl);

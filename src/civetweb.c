@@ -11621,7 +11621,6 @@ mg_websocket_write_exec(struct mg_connection *conn,
 		headerLen += 4;
 	}
 
-
 	/* Note that POSIX/Winsock's send() is threadsafe
 	 * http://stackoverflow.com/questions/1981372/are-parallel-calls-to-send-recv-on-the-same-socket-valid
 	 * but mongoose's mg_printf/mg_write is not (because of the loop in
@@ -14537,7 +14536,10 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 
 	(void)ad;
 
-	DEBUG_ASSERT(conn->phys_ctx == ctx);
+	if ((ctx == NULL) || (conn->phys_ctx == ctx)) {
+		DEBUG_TRACE("%s", "internal error - assertion failed");
+		return SSL_TLSEXT_ERR_NOACK;
+	}
 
 	/* Old clients (Win XP) will not support SNI. Then, there
 	 * is no server name available in the request - we can
