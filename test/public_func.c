@@ -47,6 +47,7 @@ START_TEST(test_mg_version)
 	         expect_duktape = 0, expect_caching = 0;
 	int ret, len;
 	char *buf;
+	struct mg_context *ctx = NULL;
 
 	ck_assert(ver != NULL);
 	ck_assert_str_eq(ver, CIVETWEB_VERSION);
@@ -113,6 +114,30 @@ START_TEST(test_mg_version)
 	ret = (int)strlen(buf);
 	ck_assert_int_eq(len, ret);
 	free(buf);
+
+	/* get context information for NULL */
+	len = mg_get_context_info(ctx, NULL, 0);
+	ck_assert_int_gt(len, 0);
+	buf = (char *)malloc((unsigned)len + 1);
+	ck_assert_ptr_ne(buf, NULL);
+	ret = mg_get_context_info(ctx, buf, len + 1);
+	ck_assert_int_eq(len, ret);
+	ret = (int)strlen(buf);
+	ck_assert_int_eq(len, ret);
+	free(buf);
+
+	/* get context information for simple ctx */
+	ctx = mg_start(NULL, NULL, NULL);
+	len = mg_get_context_info(ctx, NULL, 0);
+	ck_assert_int_gt(len, 0);
+	buf = (char *)malloc((unsigned)len + 1);
+	ck_assert_ptr_ne(buf, NULL);
+	ret = mg_get_context_info(ctx, buf, len + 1);
+	ck_assert_int_eq(len, ret);
+	ret = (int)strlen(buf);
+	ck_assert_int_eq(len, ret);
+	free(buf);
+	mg_stop(ctx);
 }
 END_TEST
 
