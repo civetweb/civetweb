@@ -115,6 +115,7 @@ START_TEST(test_mg_version)
 	ck_assert_int_eq(len, ret);
 	free(buf);
 
+#if defined(USE_SERVER_STATS)
 	/* get context information for NULL */
 	len = mg_get_context_info(ctx, NULL, 0);
 	ck_assert_int_gt(len, 0);
@@ -138,6 +139,10 @@ START_TEST(test_mg_version)
 	ck_assert_int_eq(len, ret);
 	free(buf);
 	mg_stop(ctx);
+#else
+    len = mg_get_context_info(ctx, NULL, 0);
+    ck_assert_int_eq(len, 0);
+#endif
 }
 END_TEST
 

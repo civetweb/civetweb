@@ -340,7 +340,7 @@ test_mg_stop(struct mg_context *ctx)
 
 
 static void
-test_mg_start_stop_http_server_impl(int ipv6)
+test_mg_start_stop_http_server_impl(int ipv6, int bound)
 {
 	struct mg_context *ctx;
 	const char *OPTIONS[16];
@@ -368,7 +368,19 @@ test_mg_start_stop_http_server_impl(int ipv6)
 	OPTIONS[optcnt++] = ".";
 #endif
 	OPTIONS[optcnt++] = "listening_ports";
-	OPTIONS[optcnt++] = ((ipv6) ? "+8080" : "8080");
+	if (bound) {
+		OPTIONS[optcnt++] = ((ipv6) ? "[::1]:+8080" : "127.0.0.1:8080");
+	} else {
+		OPTIONS[optcnt++] = ((ipv6) ? "+8080" : "8080");
+		/* Test also tcp_nodelay - this option is not related
+		 * to interface binding, it's just tested here in this
+		 * combination to keep the number of tests smaller and
+		 * the test duration shorter.
+		 */
+		OPTIONS[optcnt++] = "tcp_nodelay";
+		OPTIONS[optcnt++] = "1";
+	}
+
 	OPTIONS[optcnt] = 0;
 
 #if defined(MG_LEGACY_INTERFACE)
@@ -545,7 +557,9 @@ test_mg_start_stop_http_server_impl(int ipv6)
 START_TEST(test_mg_start_stop_http_server)
 {
 	mark_point();
-	test_mg_start_stop_http_server_impl(0);
+	test_mg_start_stop_http_server_impl(0, 0);
+	mark_point();
+	test_mg_start_stop_http_server_impl(0, 1);
 	mark_point();
 }
 END_TEST
@@ -555,7 +569,9 @@ START_TEST(test_mg_start_stop_http_server_ipv6)
 {
 	mark_point();
 #if defined(USE_IPV6)
-	test_mg_start_stop_http_server_impl(1);
+	test_mg_start_stop_http_server_impl(1, 0);
+	mark_point();
+	test_mg_start_stop_http_server_impl(1, 1);
 #endif
 	mark_point();
 }
