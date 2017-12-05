@@ -32,6 +32,7 @@ environment:
       enable_websockets: NO
       no_cgi: NO
       no_caching: NO
+      enable_stats: NO
       configuration: Release
       platform: x86
     - id: Default-x64
@@ -43,6 +44,7 @@ environment:
       enable_websockets: NO
       no_cgi: NO
       no_caching: NO
+      enable_stats: NO
       configuration: Release
       platform: x64
     # Use default values
@@ -55,6 +57,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Release
       platform: x86
     - id: Full-x64
@@ -66,6 +69,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Release
       platform: x64
     # Debug builds
@@ -78,6 +82,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Debug
       platform: x86
     - id: Full-x64-Debug
@@ -89,6 +94,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Debug
       platform: x64
     # Minimum settings
@@ -100,7 +106,8 @@ environment:
       enable_ssl: NO
       enable_websockets: NO
       no_cgi: YES
-      no_caching: YeS
+      no_caching: YES
+      enable_stats: NO
       configuration: Release
       platform: x86
     - id: Minimal-x64
@@ -112,6 +119,7 @@ environment:
       enable_websockets: NO
       no_cgi: YES
       no_caching: YeS
+      enable_stats: NO
       configuration: Release
       platform: x64
     # Test shared and debug build
@@ -124,6 +132,7 @@ environment:
       enable_websockets: NO
       no_cgi: NO
       no_caching: NO
+      enable_stats: NO
       configuration: Release
       platform: x86
     - id: Shared-default-x64
@@ -135,6 +144,7 @@ environment:
       enable_websockets: NO
       no_cgi: NO
       no_caching: NO
+      enable_stats: NO
       configuration: Release
       platform: x64
     # MinGW
@@ -147,6 +157,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Release
       platform: x64
     # Visual Studio 2010
@@ -159,6 +170,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Release
       platform: x86
     # Visual Studio 2012
@@ -171,6 +183,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Release
       platform: x86
     # Visual Studio 2013
@@ -183,6 +196,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Release
       platform: x86
     - id: Full-VS2013-x64
@@ -194,6 +208,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Release
       platform: x64
     # Visual Studio 2015 is default
@@ -207,6 +222,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Release
       platform: x86
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
@@ -219,6 +235,7 @@ environment:
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
+      enable_stats: YES
       configuration: Release
       platform: x64
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
@@ -326,6 +343,7 @@ before_build:
     -DCIVETWEB_ENABLE_CXX=%enable_cxx%
     -DCIVETWEB_ENABLE_LUA=%enable_lua%
     -DCIVETWEB_ENABLE_LUA_SHARED=%enable_lua_shared%
+    -DCIVETWEB_ENABLE_SERVER_STATS=%enable_stats%
     -DCIVETWEB_DISABLE_CACHING=%no_caching%
     -DCIVETWEB_C_STANDARD=%c_standard%
     -DCIVETWEB_CXX_STANDARD=%cxx_standard%
