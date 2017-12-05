@@ -119,11 +119,11 @@ START_TEST(test_mg_version)
 	/* get context information for NULL */
 	len = mg_get_context_info(ctx, NULL, 0);
 	ck_assert_int_gt(len, 0);
-	buf = (char *)malloc((unsigned)len + 1);
+	buf = (char *)malloc((unsigned)len + 100);
 	ck_assert_ptr_ne(buf, NULL);
-	ret = mg_get_context_info(ctx, buf, len + 1);
-	ck_assert_int_eq(len, ret);
-	ret = (int)strlen(buf);
+	ret = mg_get_context_info(ctx, buf, len + 100);
+	ck_assert_int_gt(ret, 0);
+	len = (int)strlen(buf);
 	ck_assert_int_eq(len, ret);
 	free(buf);
 
@@ -131,17 +131,17 @@ START_TEST(test_mg_version)
 	ctx = mg_start(NULL, NULL, NULL);
 	len = mg_get_context_info(ctx, NULL, 0);
 	ck_assert_int_gt(len, 0);
-	buf = (char *)malloc((unsigned)len + 1);
+	buf = (char *)malloc((unsigned)len + 100);
 	ck_assert_ptr_ne(buf, NULL);
-	ret = mg_get_context_info(ctx, buf, len + 1);
-	ck_assert_int_eq(len, ret);
-	ret = (int)strlen(buf);
+	ret = mg_get_context_info(ctx, buf, len + 100);
+	ck_assert_int_gt(ret, 0);
+	len = (int)strlen(buf);
 	ck_assert_int_eq(len, ret);
 	free(buf);
 	mg_stop(ctx);
 #else
-    len = mg_get_context_info(ctx, NULL, 0);
-    ck_assert_int_eq(len, 0);
+	len = mg_get_context_info(ctx, NULL, 0);
+	ck_assert_int_eq(len, 0);
 #endif
 }
 END_TEST
