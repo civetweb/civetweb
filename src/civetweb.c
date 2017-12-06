@@ -4230,8 +4230,8 @@ mg_get_response_code_text(const struct mg_connection *conn, int response_code)
 }
 
 
-void
-mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
+static void
+mg_send_http_error_va(struct mg_connection *conn, int status, const char *fmt, va_list args)
 {
 	char buf[MG_BUF_LEN];
 	va_list ap;
@@ -4241,6 +4241,7 @@ mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 	const char *error_handler = NULL;
 	struct mg_file error_page_file = STRUCT_FILE_INITIALIZER;
 	const char *error_page_file_ext, *tstr;
+	int handled_by_callback = 0;
 
 	const char *status_text = mg_get_response_code_text(conn, status);
 
@@ -4249,9 +4250,15 @@ mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 	}
 
 	conn->status_code = status;
-	if (conn->in_error_handler || (conn->phys_ctx->callbacks.http_error == NULL)
-	    || conn->phys_ctx->callbacks.http_error(conn, status)) {
+	if (!conn->in_error_handler
+	    && (conn->phys_ctx->callbacks.http_error != NULL)) {
+        /* va_start(ap, fmt); */
+		handled_by_callback =
+		    (conn->phys_ctx->callbacks.http_error(conn, status) == 0);
+        /* va_end(ap); */
+	}
 
+	if (!handled_by_callback) {
 		/* Check for recursion */
 		if (conn->in_error_handler) {
 			DEBUG_TRACE(
@@ -4370,6 +4377,17 @@ mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 		}
 	}
 }
+
+
+void
+mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    mg_send_http_error_va(conn, status, fmt, ap);
+    va_end(ap);
+}
+
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 /* Create substitutes for POSIX functions in Win32. */
