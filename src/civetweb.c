@@ -13629,7 +13629,7 @@ set_ports_option(struct mg_context *phys_ctx)
 				}
 			}
 #else
-			mg_cry_internal(fc(phys_ctx), "IPv6 not available");
+            mg_cry_internal(fc(phys_ctx), "%s", "IPv6 not available");
 			closesocket(so.sock);
 			so.sock = INVALID_SOCKET;
 			continue;
