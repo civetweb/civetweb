@@ -20,7 +20,7 @@ cache:
   directories:
   - $HOME/third-party
 
-osx_image: xcode8
+osx_image: xcode8.3
 
 addons:
   apt:
