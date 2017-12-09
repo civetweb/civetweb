@@ -53,7 +53,7 @@ mg_duk_fatal_handler(duk_context *duk_ctx, duk_errcode_t code, const char *msg)
 	duk_get_prop_string(duk_ctx, -1, civetweb_conn_id);
 	conn = (struct mg_connection *)duk_to_pointer(duk_ctx, -1);
 
-	mg_cry(conn, "JavaScript fatal (%u): %s", (unsigned)code, msg);
+	mg_cry_internal(conn, "JavaScript fatal (%u): %s", (unsigned)code, msg);
 }
 
 
@@ -167,7 +167,7 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 	                          (void *)conn->phys_ctx,
 	                          mg_duk_fatal_handler);
 	if (!duk_ctx) {
-		mg_cry(conn, "Failed to create a Duktape heap.");
+		mg_cry_internal(conn, "%s", "Failed to create a Duktape heap.");
 		goto exec_duktape_finished;
 	}
 
@@ -255,7 +255,7 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 	duk_put_prop_string(duk_ctx, -2, civetweb_conn_id);
 
 	if (duk_peval_file(duk_ctx, script_name) != 0) {
-		mg_cry(conn, "%s", duk_safe_to_string(duk_ctx, -1));
+		mg_cry_internal(conn, "%s", duk_safe_to_string(duk_ctx, -1));
 		goto exec_duktape_finished;
 	}
 	duk_pop(duk_ctx); /* ignore result */

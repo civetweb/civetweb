@@ -149,37 +149,41 @@ lua_cry(struct mg_connection *conn,
 	case LUA_YIELD:
 		break;
 	case LUA_ERRRUN:
-		mg_cry(conn,
-		       "%s: %s failed: runtime error: %s",
-		       lua_title,
-		       lua_operation,
-		       lua_tostring(L, -1));
+		mg_cry_internal(conn,
+		                "%s: %s failed: runtime error: %s",
+		                lua_title,
+		                lua_operation,
+		                lua_tostring(L, -1));
 		break;
 	case LUA_ERRSYNTAX:
-		mg_cry(conn,
-		       "%s: %s failed: syntax error: %s",
-		       lua_title,
-		       lua_operation,
-		       lua_tostring(L, -1));
+		mg_cry_internal(conn,
+		                "%s: %s failed: syntax error: %s",
+		                lua_title,
+		                lua_operation,
+		                lua_tostring(L, -1));
 		break;
 	case LUA_ERRMEM:
-		mg_cry(conn, "%s: %s failed: out of memory", lua_title, lua_operation);
+		mg_cry_internal(conn,
+		                "%s: %s failed: out of memory",
+		                lua_title,
+		                lua_operation);
 		break;
 	case LUA_ERRGCMM:
-		mg_cry(conn,
-		       "%s: %s failed: error during garbage collection",
-		       lua_title,
-		       lua_operation);
+		mg_cry_internal(conn,
+		                "%s: %s failed: error during garbage collection",
+		                lua_title,
+		                lua_operation);
 		break;
 	case LUA_ERRERR:
-		mg_cry(conn,
-		       "%s: %s failed: error in error handling: %s",
-		       lua_title,
-		       lua_operation,
-		       lua_tostring(L, -1));
+		mg_cry_internal(conn,
+		                "%s: %s failed: error in error handling: %s",
+		                lua_title,
+		                lua_operation,
+		                lua_tostring(L, -1));
 		break;
 	default:
-		mg_cry(conn, "%s: %s failed: error %i", lua_title, lua_operation, err);
+		mg_cry_internal(
+		    conn, "%s: %s failed: error %i", lua_title, lua_operation, err);
 		break;
 	}
 }
@@ -567,10 +571,11 @@ lsp_include(lua_State *L)
 		include_history = (struct lsp_include_history *)lua_touserdata(L, -1);
 
 		if (include_history->depth >= ((int)(LSP_INCLUDE_MAX_DEPTH))) {
-			mg_cry(conn,
-			       "lsp max include depth of %i reached while including %s",
-			       (int)(LSP_INCLUDE_MAX_DEPTH),
-			       file_name);
+			mg_cry_internal(
+			    conn,
+			    "lsp max include depth of %i reached while including %s",
+			    (int)(LSP_INCLUDE_MAX_DEPTH),
+			    file_name);
 		} else {
 			char file_name_path[512];
 			char *p;
@@ -660,7 +665,7 @@ lsp_cry(lua_State *L)
 	const char *text = (num_args == 1) ? lua_tostring(L, 1) : NULL;
 
 	if (text) {
-		mg_cry(conn, "%s", lua_tostring(L, -1));
+		mg_cry_internal(conn, "%s", lua_tostring(L, -1));
 	} else {
 		/* Syntax error */
 		return luaL_error(L, "invalid cry() call");
@@ -2092,7 +2097,9 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		if (*shared_websock_list == NULL) {
 			conn->must_close = 1;
 			mg_unlock_context(conn->phys_ctx);
-			mg_cry(conn, "Cannot create shared websocket struct, OOM");
+			mg_cry_internal(conn,
+			                "%s",
+			                "Cannot create shared websocket struct, OOM");
 			return NULL;
 		}
 		/* init ws list element */
@@ -2102,7 +2109,9 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		if (!ws->script) {
 			conn->must_close = 1;
 			mg_unlock_context(conn->phys_ctx);
-			mg_cry(conn, "Cannot create shared websocket script, OOM");
+			mg_cry_internal(conn,
+			                "%s",
+			                "Cannot create shared websocket script, OOM");
 			return NULL;
 		}
 		pthread_mutex_init(&(ws->ws_mutex), &pthread_mutex_attr);

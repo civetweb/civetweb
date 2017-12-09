@@ -53,7 +53,7 @@ url_encoded_field_found(const struct mg_connection *conn,
 		if (((size_t)filename_dec_len >= (size_t)sizeof(filename_dec))
 		    || (filename_dec_len < 0)) {
 			/* Log error message and skip this field. */
-			mg_cry(conn, "%s: Cannot decode filename", __func__);
+			mg_cry_internal(conn, "%s: Cannot decode filename", __func__);
 			return MG_FORM_FIELD_STORAGE_SKIP;
 		}
 	} else {
@@ -65,13 +65,17 @@ url_encoded_field_found(const struct mg_connection *conn,
 
 	if ((ret & 0xF) == MG_FORM_FIELD_STORAGE_GET) {
 		if (fdh->field_get == NULL) {
-			mg_cry(conn, "%s: Function \"Get\" not available", __func__);
+			mg_cry_internal(conn,
+			                "%s: Function \"Get\" not available",
+			                __func__);
 			return MG_FORM_FIELD_STORAGE_SKIP;
 		}
 	}
 	if ((ret & 0xF) == MG_FORM_FIELD_STORAGE_STORE) {
 		if (fdh->field_store == NULL) {
-			mg_cry(conn, "%s: Function \"Store\" not available", __func__);
+			mg_cry_internal(conn,
+			                "%s: Function \"Store\" not available",
+			                __func__);
 			return MG_FORM_FIELD_STORAGE_SKIP;
 		}
 	}
@@ -95,10 +99,10 @@ url_encoded_field_get(const struct mg_connection *conn,
 
 	if (!value_dec) {
 		/* Log error message and stop parsing the form data. */
-		mg_cry(conn,
-		       "%s: Not enough memory (required: %lu)",
-		       __func__,
-		       (unsigned long)(value_len + 1));
+		mg_cry_internal(conn,
+		                "%s: Not enough memory (required: %lu)",
+		                __func__,
+		                (unsigned long)(value_len + 1));
 		return MG_FORM_FIELD_STORAGE_ABORT;
 	}
 
@@ -279,10 +283,10 @@ mg_handle_form_request(struct mg_connection *conn,
 					size_t n = (size_t)
 					    fwrite(val, 1, (size_t)vallen, fstore.access.fp);
 					if ((n != (size_t)vallen) || (ferror(fstore.access.fp))) {
-						mg_cry(conn,
-						       "%s: Cannot write file %s",
-						       __func__,
-						       path);
+						mg_cry_internal(conn,
+						                "%s: Cannot write file %s",
+						                __func__,
+						                path);
 						(void)mg_fclose(&fstore.access);
 						remove_bad_file(conn, path);
 					}
@@ -294,17 +298,20 @@ mg_handle_form_request(struct mg_connection *conn,
 							/* stored successfully */
 							field_stored(conn, path, file_size, fdh);
 						} else {
-							mg_cry(conn,
-							       "%s: Error saving file %s",
-							       __func__,
-							       path);
+							mg_cry_internal(conn,
+							                "%s: Error saving file %s",
+							                __func__,
+							                path);
 							remove_bad_file(conn, path);
 						}
 						fstore.access.fp = NULL;
 					}
 
 				} else {
-					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+					mg_cry_internal(conn,
+					                "%s: Cannot create file %s",
+					                __func__,
+					                path);
 				}
 			}
 
@@ -411,7 +418,10 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 				file_size = 0;
 				if (!fstore.access.fp) {
-					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+					mg_cry_internal(conn,
+					                "%s: Cannot create file %s",
+					                __func__,
+					                path);
 				}
 			}
 
@@ -451,10 +461,10 @@ mg_handle_form_request(struct mg_connection *conn,
 					size_t n = (size_t)
 					    fwrite(val, 1, (size_t)vallen, fstore.access.fp);
 					if ((n != (size_t)vallen) || (ferror(fstore.access.fp))) {
-						mg_cry(conn,
-						       "%s: Cannot write file %s",
-						       __func__,
-						       path);
+						mg_cry_internal(conn,
+						                "%s: Cannot write file %s",
+						                __func__,
+						                path);
 						mg_fclose(&fstore.access);
 						remove_bad_file(conn, path);
 					}
@@ -504,7 +514,10 @@ mg_handle_form_request(struct mg_connection *conn,
 					/* stored successfully */
 					field_stored(conn, path, file_size, fdh);
 				} else {
-					mg_cry(conn, "%s: Error saving file %s", __func__, path);
+					mg_cry_internal(conn,
+					                "%s: Error saving file %s",
+					                __func__,
+					                path);
 					remove_bad_file(conn, path);
 				}
 				fstore.access.fp = NULL;
@@ -552,10 +565,10 @@ mg_handle_form_request(struct mg_connection *conn,
 		boundary = (char *)mg_malloc(bl + 1);
 		if (!boundary) {
 			/* Out of memory */
-			mg_cry(conn,
-			       "%s: Cannot allocate memory for boundary [%lu]",
-			       __func__,
-			       (unsigned long)bl);
+			mg_cry_internal(conn,
+			                "%s: Cannot allocate memory for boundary [%lu]",
+			                __func__,
+			                (unsigned long)bl);
 			return -1;
 		}
 		memcpy(boundary, fbeg, bl);
@@ -820,7 +833,10 @@ mg_handle_form_request(struct mg_connection *conn,
 				file_size = 0;
 
 				if (!fstore.access.fp) {
-					mg_cry(conn, "%s: Cannot create file %s", __func__, path);
+					mg_cry_internal(conn,
+					                "%s: Cannot create file %s",
+					                __func__,
+					                path);
 				}
 			}
 
@@ -852,10 +868,10 @@ mg_handle_form_request(struct mg_connection *conn,
 						/* Store the content of the buffer. */
 						n = (size_t)fwrite(hend, 1, towrite, fstore.access.fp);
 						if ((n != towrite) || (ferror(fstore.access.fp))) {
-							mg_cry(conn,
-							       "%s: Cannot write file %s",
-							       __func__,
-							       path);
+							mg_cry_internal(conn,
+							                "%s: Cannot write file %s",
+							                __func__,
+							                path);
 							mg_fclose(&fstore.access);
 							remove_bad_file(conn, path);
 						}
@@ -906,10 +922,10 @@ mg_handle_form_request(struct mg_connection *conn,
 				if (fstore.access.fp) {
 					n = (size_t)fwrite(hend, 1, towrite, fstore.access.fp);
 					if ((n != towrite) || (ferror(fstore.access.fp))) {
-						mg_cry(conn,
-						       "%s: Cannot write file %s",
-						       __func__,
-						       path);
+						mg_cry_internal(conn,
+						                "%s: Cannot write file %s",
+						                __func__,
+						                path);
 						mg_fclose(&fstore.access);
 						remove_bad_file(conn, path);
 					} else {
@@ -919,10 +935,10 @@ mg_handle_form_request(struct mg_connection *conn,
 							/* stored successfully */
 							field_stored(conn, path, file_size, fdh);
 						} else {
-							mg_cry(conn,
-							       "%s: Error saving file %s",
-							       __func__,
-							       path);
+							mg_cry_internal(conn,
+							                "%s: Error saving file %s",
+							                __func__,
+							                path);
 							remove_bad_file(conn, path);
 						}
 					}

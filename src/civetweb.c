@@ -2547,6 +2547,16 @@ static int is_websocket_protocol(const struct mg_connection *conn);
 #endif
 
 
+#define mg_cry_internal(conn, fmt, ...)                                        \
+	mg_cry_internal_wrap(conn, __func__, __LINE__, fmt, __VA_ARGS__)
+
+static void mg_cry_internal_wrap(const struct mg_connection *conn,
+                                 const char *func,
+                                 unsigned line,
+                                 const char *fmt,
+                                 ...) PRINTF_ARGS(4, 5);
+
+
 #if !defined(NO_THREAD_NAME)
 #if defined(_WIN32) && defined(_MSC_VER)
 /* Set the thread name for debugging purposes in Visual Studio
@@ -3174,10 +3184,10 @@ mg_vsnprintf(const struct mg_connection *conn,
 		if (truncated) {
 			*truncated = 1;
 		}
-		mg_cry_internal_internal(conn,
-		                         "truncating vsnprintf buffer: [%.*s]",
-		                         (int)((buflen > 200) ? 200 : (buflen - 1)),
-		                         buf);
+		mg_cry_internal(conn,
+		                "truncating vsnprintf buffer: [%.*s]",
+		                (int)((buflen > 200) ? 200 : (buflen - 1)),
+		                buf);
 		n = (int)buflen - 1;
 	}
 	buf[n] = '\0';
@@ -3401,11 +3411,15 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 	struct mg_file fi;
 	time_t timestamp;
 
+	/* Unused, in the RELEASE build */
+	(void)func;
+	(void)line;
+
 	IGNORE_UNUSED_RESULT(vsnprintf_impl(buf, sizeof(buf), fmt, ap));
 
 	buf[sizeof(buf) - 1] = 0;
 
-    DEBUG_TRACE("mg_cry called from %s:%u: %s", func, line, buf);
+	DEBUG_TRACE("mg_cry called from %s:%u: %s", func, line, buf);
 
 	if (!conn) {
 		puts(buf);
@@ -3458,8 +3472,6 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 	}
 }
 
-#define mg_cry_internal(conn, fmt, ...)                                        \
-	mg_cry_internal_wrap(conn, __func__, __LINE__, fmt, __VA_ARGS__)
 
 static void
 mg_cry_internal_wrap(const struct mg_connection *conn,
@@ -3474,14 +3486,16 @@ mg_cry_internal_wrap(const struct mg_connection *conn,
 	va_end(ap);
 }
 
+
 void
 mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	mg_cry_internal_impl(conn, "user", "0", fmt, ap);
+	mg_cry_internal_impl(conn, "user", 0, fmt, ap);
 	va_end(ap);
 }
+
 
 #define mg_cry DO_NOT_USE_THIS_FUNCTION__USE_mg_cry_internal
 
@@ -11498,7 +11512,9 @@ read_websocket(struct mg_connection *conn,
 				if (data_len > (uint64_t)0x7FFF0000ul) {
 					/* no can do */
 					mg_cry_internal(
-					    conn, "websocket out of memory; closing connection");
+					    conn,
+					    "%s",
+					    "websocket out of memory; closing connection");
 					break;
 				}
 			}
@@ -11515,7 +11531,9 @@ read_websocket(struct mg_connection *conn,
 					/* Allocation failed, exit the loop and then close the
 					 * connection */
 					mg_cry_internal(
-					    conn, "websocket out of memory; closing connection");
+					    conn,
+					    "%s",
+					    "websocket out of memory; closing connection");
 					break;
 				}
 			}
@@ -11554,7 +11572,9 @@ read_websocket(struct mg_connection *conn,
 				}
 				if (error) {
 					mg_cry_internal(
-					    conn, "Websocket pull failed; closing connection");
+					    conn,
+					    "%s",
+					    "Websocket pull failed; closing connection");
 					if (data != mem) {
 						mg_free(data);
 					}
@@ -11767,6 +11787,7 @@ mg_websocket_client_write(struct mg_connection *conn,
 	if (masked_data == NULL) {
 		/* Return -1 in an error case */
 		mg_cry_internal(conn,
+		                "%s",
 		                "Cannot allocate buffer for masked websocket response: "
 		                "Out of memory");
 		return -1;
@@ -12774,6 +12795,7 @@ handle_request(struct mg_connection *conn)
 			                   "%s",
 			                   "Error: SSL forward not configured properly");
 			mg_cry_internal(conn,
+			                "%s",
 			                "Can not redirect to SSL, no SSL port available");
 		}
 		return;
@@ -14252,6 +14274,7 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 			    mg_strdup_ctx(str_finger, conn->phys_ctx);
 		} else {
 			mg_cry_internal(conn,
+			                "%s",
 			                "Out of memory: Cannot allocate memory for client "
 			                "certificate");
 		}
@@ -17328,6 +17351,7 @@ mg_start(const struct mg_callbacks *callbacks,
 		/* Fatal error - abort start. However, this situation should never
 		 * occur in practice. */
 		mg_cry_internal(fc(ctx),
+		                "%s",
 		                "Cannot initialize thread synchronization objects");
 		mg_free(ctx);
 		pthread_setspecific(sTlsKey, NULL);
@@ -17379,7 +17403,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	/* Request size option */
 	itmp = atoi(ctx->dd.config[MAX_REQUEST_SIZE]);
 	if (itmp < 1024) {
-		mg_cry_internal(fc(ctx), "max_request_size too small");
+		mg_cry_internal(fc(ctx), "%s", "max_request_size too small");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -17390,14 +17414,14 @@ mg_start(const struct mg_callbacks *callbacks,
 	workerthreadcount = atoi(ctx->dd.config[NUM_THREADS]);
 
 	if (workerthreadcount > MAX_WORKER_THREADS) {
-		mg_cry_internal(fc(ctx), "Too many worker threads");
+		mg_cry_internal(fc(ctx), "%s", "Too many worker threads");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
 
 	if (workerthreadcount <= 0) {
-		mg_cry_internal(fc(ctx), "Invalid number of worker threads");
+		mg_cry_internal(fc(ctx), "%s", "Invalid number of worker threads");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -17473,6 +17497,7 @@ mg_start(const struct mg_callbacks *callbacks,
 
 	if (ctx->worker_threadids == NULL) {
 		mg_cry_internal(fc(ctx),
+		                "%s",
 		                "Not enough memory for worker thread ID array");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
@@ -17484,6 +17509,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	                                          ctx);
 	if (ctx->worker_connections == NULL) {
 		mg_cry_internal(fc(ctx),
+		                "%s",
 		                "Not enough memory for worker thread connection array");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
@@ -17497,7 +17523,9 @@ mg_start(const struct mg_callbacks *callbacks,
 	                           ctx->cfg_worker_threads,
 	                           ctx);
 	if (ctx->client_wait_events == NULL) {
-		mg_cry_internal(fc(ctx), "Not enough memory for worker event array");
+		mg_cry_internal(fc(ctx),
+		                "%s",
+		                "Not enough memory for worker event array");
 		mg_free(ctx->worker_threadids);
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
@@ -17509,7 +17537,9 @@ mg_start(const struct mg_callbacks *callbacks,
 	                                   ctx->cfg_worker_threads,
 	                                   ctx);
 	if (ctx->client_wait_events == NULL) {
-		mg_cry_internal(fc(ctx), "Not enough memory for worker socket array");
+		mg_cry_internal(fc(ctx),
+		                "%s",
+		                "Not enough memory for worker socket array");
 		mg_free(ctx->client_socks);
 		mg_free(ctx->worker_threadids);
 		free_context(ctx);
@@ -17537,7 +17567,7 @@ mg_start(const struct mg_callbacks *callbacks,
 
 #if defined(USE_TIMERS)
 	if (timers_init(ctx) != 0) {
-		mg_cry_internal(fc(ctx), "Error creating timers");
+		mg_cry_internal(fc(ctx), "%s", "Error creating timers");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
