@@ -17990,8 +17990,10 @@ mg_get_system_info_impl(char *buffer, int buflen)
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 /* Disable bogus compiler warning -Wdate-time */
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Werror"
+/* TODO: The obvious flags do not know:
+ * #pragma GCC diagnostic ignored "-Wdate-time"
+ * If someone knows other flags, please tell me. See also #561.
+ */
 #endif
 		mg_snprintf(NULL,
 		            NULL,
