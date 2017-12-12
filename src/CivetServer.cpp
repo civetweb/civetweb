@@ -546,6 +546,25 @@ CivetServer::getParam(const char *data,
 	return false;
 }
 
+std::string
+CivetServer::getPostData(struct mg_connection *conn)
+{
+	const struct mg_request_info *ri = mg_get_request_info(conn);
+	assert(ri != NULL);
+	CivetServer *me = (CivetServer *)(ri->user_data);
+	assert(me != NULL);
+	mg_lock_context(me->context);
+	CivetConnection &conobj = me->connections[conn];
+	mg_lock_connection(conn);
+	mg_unlock_context(me->context);
+	std::string postdata;
+	postdata.resize(conobj.postDataLen);
+	memcpy(&postdata[0],conobj.postData,conobj.postDataLen);
+	postdata += '\0';
+	mg_unlock_connection(conn);
+	return postdata;
+}
+
 void
 CivetServer::urlEncode(const char *src, std::string &dst, bool append)
 {
