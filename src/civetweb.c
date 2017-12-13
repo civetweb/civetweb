@@ -8515,7 +8515,7 @@ print_dir_entry(struct de *de)
 #ifdef REENTRANT_TIME
 	struct tm _tm;
 	struct tm *tm = &_tm;
-#elif
+#else
 	struct tm *tm;
 #endif
 
