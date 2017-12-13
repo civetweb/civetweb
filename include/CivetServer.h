@@ -450,6 +450,18 @@ class CIVETWEB_API CivetServer
 	                     size_t occurrence = 0);
 
 	/**
+	 * getPostData(struct mg_connection *)
+	 *
+	 * Returns response body from a request made as POST. Since the
+	 * connections map is protected, it can't be directly accessed.
+	 * This uses string to store post data to handle big posts.
+	 *
+	 * @param conn - connection from which post data will be read
+	 * @return Post data (empty if not avaliable).
+	 */
+     static std::string getPostData(struct mg_connection *conn);
+     
+	/**
 	 * urlDecode(const std::string &, std::string &, bool)
 	 *
 	 * @param src - string to be decoded
