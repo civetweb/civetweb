@@ -3378,17 +3378,24 @@ sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 static void
 gmt_time_string(char *buf, size_t buf_len, time_t *t)
 {
+#ifndef REENTRANT_TIME
 	struct tm *tm;
 
 	tm = ((t != NULL) ? gmtime(t) : NULL);
 	if (tm != NULL) {
+#else
+	struct tm _tm;
+	struct tm *tm = &_tm;
+
+	if (t != NULL) {
+		gmtime_r(t, tm);
+#endif
 		strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S GMT", tm);
 	} else {
 		mg_strlcpy(buf, "Thu, 01 Jan 1970 00:00:00 GMT", buf_len);
 		buf[buf_len - 1] = '\0';
 	}
 }
-
 
 /* difftime for struct timespec. Return value is in seconds. */
 static double
@@ -8505,7 +8512,12 @@ print_dir_entry(struct de *de)
 	size_t hrefsize;
 	char *href;
 	char size[64], mod[64];
+#ifdef REENTRANT_TIME
+	struct tm _tm;
+	struct tm *tm = &_tm;
+#elif
 	struct tm *tm;
+#endif
 
 	hrefsize = PATH_MAX * 3; /* worst case */
 	href = (char *)mg_malloc(hrefsize);
@@ -8553,10 +8565,14 @@ print_dir_entry(struct de *de)
 		}
 	}
 
-	/* Note: mg_snprintf will not cause a buffer overflow above.
-	 * So, string truncation checks are not required here. */
+/* Note: mg_snprintf will not cause a buffer overflow above.
+ * So, string truncation checks are not required here. */
 
+#ifdef REENTRANT_TIME
+	localtime_r(&de->file.last_modified, tm);
+#else
 	tm = localtime(&de->file.last_modified);
+#endif
 	if (tm != NULL) {
 		strftime(mod, sizeof(mod), "%d-%b-%Y %H:%M", tm);
 	} else {
@@ -13629,7 +13645,7 @@ set_ports_option(struct mg_context *phys_ctx)
 				}
 			}
 #else
-            mg_cry_internal(fc(phys_ctx), "%s", "IPv6 not available");
+			mg_cry_internal(fc(phys_ctx), "%s", "IPv6 not available");
 			closesocket(so.sock);
 			so.sock = INVALID_SOCKET;
 			continue;
