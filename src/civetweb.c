@@ -4288,7 +4288,8 @@ mg_send_http_error_impl(struct mg_connection *conn,
                         const char *fmt,
                         va_list args)
 {
-	char buf[MG_BUF_LEN];
+	char errmsg_buf[MG_BUF_LEN];
+	char path_buf[PATH_MAX];
 	va_list ap;
 	int len, i, page_handler_found, scope, truncated, has_body;
 	char date[64];
@@ -4302,6 +4303,16 @@ mg_send_http_error_impl(struct mg_connection *conn,
 
 	if (conn == NULL) {
 		return;
+	}
+
+	/* Prepare message in buf, if required */
+	if ((has_body && (fmt != NULL))
+	    || (!conn->in_error_handler
+	        && (conn->phys_ctx->callbacks.http_error != NULL))) {
+		va_copy(ap, args);
+		mg_vsnprintf(conn, NULL, errmsg_buf, sizeof(errmsg_buf), fmt, ap);
+		va_end(ap);
+		DEBUG_TRACE("Error %i - [%s]", status, errmsg_buf);
 	}
 
 	conn->status_code = status;
@@ -4331,8 +4342,8 @@ mg_send_http_error_impl(struct mg_connection *conn,
 					case 1: /* Handler for specific error, e.g. 404 error */
 						mg_snprintf(conn,
 						            &truncated,
-						            buf,
-						            sizeof(buf) - 32,
+						            path_buf,
+						            sizeof(path_buf) - 32,
 						            "%serror%03u.",
 						            error_handler,
 						            status);
@@ -4342,8 +4353,8 @@ mg_send_http_error_impl(struct mg_connection *conn,
 					         * for all server errors (500-599) */
 						mg_snprintf(conn,
 						            &truncated,
-						            buf,
-						            sizeof(buf) - 32,
+						            path_buf,
+						            sizeof(path_buf) - 32,
 						            "%serror%01uxx.",
 						            error_handler,
 						            status / 100);
@@ -4351,8 +4362,8 @@ mg_send_http_error_impl(struct mg_connection *conn,
 					default: /* Handler for all errors */
 						mg_snprintf(conn,
 						            &truncated,
-						            buf,
-						            sizeof(buf) - 32,
+						            path_buf,
+						            sizeof(path_buf) - 32,
 						            "%serror.",
 						            error_handler);
 						break;
@@ -4363,7 +4374,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 					 * from the config, not from a client. */
 					(void)truncated;
 
-					len = (int)strlen(buf);
+					len = (int)strlen(path_buf);
 
 					tstr = strchr(error_page_file_ext, '.');
 
@@ -4371,15 +4382,17 @@ mg_send_http_error_impl(struct mg_connection *conn,
 						for (i = 1;
 						     (i < 32) && (tstr[i] != 0) && (tstr[i] != ',');
 						     i++)
-							buf[len + i - 1] = tstr[i];
-						buf[len + i - 1] = 0;
+							path_buf[len + i - 1] = tstr[i];
+						path_buf[len + i - 1] = 0;
 
-						if (mg_stat(conn, buf, &error_page_file.stat)) {
-							DEBUG_TRACE("Check error page %s - found", buf);
+						if (mg_stat(conn, path_buf, &error_page_file.stat)) {
+							DEBUG_TRACE("Check error page %s - found",
+							            path_buf);
 							page_handler_found = 1;
 							break;
 						}
-						DEBUG_TRACE("Check error page %s - not found", buf);
+						DEBUG_TRACE("Check error page %s - not found",
+						            path_buf);
 
 						tstr = strchr(tstr + i, '.');
 					}
@@ -4388,7 +4401,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 
 			if (page_handler_found) {
 				conn->in_error_handler = 1;
-				handle_file_based_request(conn, buf, &error_page_file);
+				handle_file_based_request(conn, path_buf, &error_page_file);
 				conn->in_error_handler = 0;
 				return;
 			}
@@ -4419,11 +4432,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 			mg_printf(conn, "Error %d: %s\n", status, status_text);
 
 			if (fmt != NULL) {
-				va_copy(ap, args);
-				mg_vsnprintf(conn, NULL, buf, sizeof(buf), fmt, ap);
-				va_end(ap);
-				mg_write(conn, buf, strlen(buf));
-				DEBUG_TRACE("Error %i - [%s]", status, buf);
+				mg_write(conn, errmsg_buf, strlen(errmsg_buf));
 			}
 
 		} else {

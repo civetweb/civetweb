@@ -459,8 +459,8 @@ class CIVETWEB_API CivetServer
 	 * @param conn - connection from which post data will be read
 	 * @return Post data (empty if not avaliable).
 	 */
-     static std::string getPostData(struct mg_connection *conn);
-     
+	static std::string getPostData(struct mg_connection *conn);
+
 	/**
 	 * urlDecode(const std::string &, std::string &, bool)
 	 *
