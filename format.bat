@@ -15,19 +15,19 @@ clang-format -i src/third_party/civetweb_lua.h
 clang-format -i include/civetweb.h
 clang-format -i include/CivetServer.h
 
-clang-format -i test/public_func.h
-clang-format -i test/public_func.c
-clang-format -i test/public_server.h
-clang-format -i test/public_server.c
-clang-format -i test/private.h
-clang-format -i test/private.c
-clang-format -i test/private_exe.h
-clang-format -i test/private_exe.c
-clang-format -i test/shared.h
-clang-format -i test/shared.c
-clang-format -i test/timertest.h
-clang-format -i test/timertest.c
-clang-format -i test/civetweb_check.h
-clang-format -i test/main.c
+clang-format -i unittest/public_func.h
+clang-format -i unittest/public_func.c
+clang-format -i unittest/public_server.h
+clang-format -i unittest/public_server.c
+clang-format -i unittest/private.h
+clang-format -i unittest/private.c
+clang-format -i unittest/private_exe.h
+clang-format -i unittest/private_exe.c
+clang-format -i unittest/shared.h
+clang-format -i unittest/shared.c
+clang-format -i unittest/timertest.h
+clang-format -i unittest/timertest.c
+clang-format -i unittest/civetweb_check.h
+clang-format -i unittest/main.c
 
 clang-format -i examples/embedded_c/embedded_c.c

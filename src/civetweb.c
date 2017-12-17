@@ -4305,6 +4305,9 @@ mg_send_http_error_impl(struct mg_connection *conn,
 		return;
 	}
 
+	/* Set status (for log) */
+	conn->status_code = status;
+
 	/* Errors 1xx, 204 and 304 MUST NOT send a body */
 	has_body = ((status > 199) && (status != 204) && (status != 304));
 
@@ -4312,19 +4315,24 @@ mg_send_http_error_impl(struct mg_connection *conn,
 	if ((has_body && (fmt != NULL))
 	    || (!conn->in_error_handler
 	        && (conn->phys_ctx->callbacks.http_error != NULL))) {
+		/* Store error message in errmsg_buf */
 		va_copy(ap, args);
 		mg_vsnprintf(conn, NULL, errmsg_buf, sizeof(errmsg_buf), fmt, ap);
 		va_end(ap);
+		/* In a debug build, print all html errors */
 		DEBUG_TRACE("Error %i - [%s]", status, errmsg_buf);
 	}
 
-	conn->status_code = status;
+	/* If there is a http_error callback, call it.
+	 * But don't do it recursively, if callback calls mg_send_http_error again.
+	 */
 	if (!conn->in_error_handler
 	    && (conn->phys_ctx->callbacks.http_error != NULL)) {
-		/* va_copy(ap, args); */
+		/* Mark in_error_handler to avoid recursion and call user callback. */
+		conn->in_error_handler = 1;
 		handled_by_callback =
 		    (conn->phys_ctx->callbacks.http_error(conn, status) == 0);
-		/* va_end(ap); */
+		conn->in_error_handler = 0;
 	}
 
 	if (!handled_by_callback) {
@@ -4528,7 +4536,7 @@ FUNCTION_MAY_BE_UNUSED
 static int
 pthread_cond_timedwait(pthread_cond_t *cv,
                        pthread_mutex_t *mutex,
-                       const struct timespec *abstime)
+                       FUNCTION_MAY_BE_UNUSED const struct timespec *abstime)
 {
 	struct mg_workerTLS **ptls,
 	    *tls = (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
