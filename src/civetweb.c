@@ -4305,6 +4305,9 @@ mg_send_http_error_impl(struct mg_connection *conn,
 		return;
 	}
 
+	/* Errors 1xx, 204 and 304 MUST NOT send a body */
+	has_body = ((status > 199) && (status != 204) && (status != 304));
+
 	/* Prepare message in buf, if required */
 	if ((has_body && (fmt != NULL))
 	    || (!conn->in_error_handler
@@ -4409,9 +4412,6 @@ mg_send_http_error_impl(struct mg_connection *conn,
 
 		/* No custom error page. Send default error page. */
 		gmt_time_string(date, sizeof(date), &curtime);
-
-		/* Errors 1xx, 204 and 304 MUST NOT send a body */
-		has_body = ((status > 199) && (status != 204) && (status != 304));
 
 		conn->must_close = 1;
 		mg_printf(conn, "HTTP/1.1 %d %s\r\n", status, status_text);
