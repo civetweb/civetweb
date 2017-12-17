@@ -253,14 +253,14 @@ struct mg_callbacks {
 	/* Called when civetweb is about to create or free a SSL_CTX.
 	Parameters:
 	   ssl_ctx: SSL_CTX pointer. NULL at creation time, Not NULL when mg_context
-	will be freed
+	            will be freed
 	     user_data: parameter user_data passed when starting the server.
 	   Return value:
 	     0: civetweb will continue to create the context, just as if the
-	callback would not be present.
+	        callback would not be present.
 	        The value in *ssl_ctx when the function returns is ignored.
 	     1: civetweb will copy the value from *ssl_ctx to the civetweb context
-	and doesn't create its own.
+	        and doesn't create its own.
 	    -1: initializing ssl fails.*/
 	int (*external_ssl_ctx)(void **ssl_ctx, void *user_data);
 
@@ -312,8 +312,9 @@ struct mg_callbacks {
 	/* Called when civetweb is about to serve Lua server page, if
 	   Lua support is enabled.
 	   Parameters:
+	     conn: current connection.
 	     lua_context: "lua_State *" pointer. */
-	void (*init_lua)(const struct mg_connection *, void *lua_context);
+	void (*init_lua)(const struct mg_connection *conn, void *lua_context);
 
 #if defined(MG_LEGACY_INTERFACE) /* 2016-05-14 */
 	/* Called when civetweb has uploaded a file to a temporary directory as a
@@ -327,11 +328,15 @@ struct mg_callbacks {
 	/* Called when civetweb is about to send HTTP error to the client.
 	   Implementing this callback allows to create custom error pages.
 	   Parameters:
+	     conn: current connection.
 	     status: HTTP error status code.
+	     errmsg: error message text.
 	   Return value:
 	     1: run civetweb error handler.
 	     0: callback already handled the error. */
-	int (*http_error)(struct mg_connection *, int status);
+	int (*http_error)(struct mg_connection *conn,
+	                  int status,
+	                  const char *errmsg);
 
 	/* Called after civetweb context has been created, before requests
 	   are processed.

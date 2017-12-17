@@ -4331,7 +4331,8 @@ mg_send_http_error_impl(struct mg_connection *conn,
 		/* Mark in_error_handler to avoid recursion and call user callback. */
 		conn->in_error_handler = 1;
 		handled_by_callback =
-		    (conn->phys_ctx->callbacks.http_error(conn, status) == 0);
+		    (conn->phys_ctx->callbacks.http_error(conn, status, errmsg_buf)
+		     == 0);
 		conn->in_error_handler = 0;
 	}
 
