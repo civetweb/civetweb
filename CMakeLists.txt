@@ -480,7 +480,7 @@ if (CIVETWEB_BUILD_TESTING)
   mark_as_advanced(CIVETWEB_CHECK_MD5_HASH)
 
   # Build the testing
-  add_subdirectory(test)
+  add_subdirectory(unittest)
 endif()
 
 # Set up CPack

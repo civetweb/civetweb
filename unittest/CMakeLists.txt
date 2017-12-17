@@ -222,7 +222,7 @@ if (${CMAKE_BUILD_TYPE} MATCHES "[Cc]overage")
       COMMAND ${CTEST_EXECUTABLE} --force-new-ctest-process
       COMMAND ${LCOV_EXECUTABLE} -q --no-external -c -b "${CMAKE_SOURCE_DIR}" -d . -o after.lcov
       COMMAND ${LCOV_EXECUTABLE} -q -a before.lcov -a after.lcov --output-file final.lcov
-      COMMAND ${LCOV_EXECUTABLE} -q -r final.lcov "'${CMAKE_SOURCE_DIR}/test/*'" -o final.lcov
+      COMMAND ${LCOV_EXECUTABLE} -q -r final.lcov "'${CMAKE_SOURCE_DIR}/unittest/*'" -o final.lcov
       COMMAND ${GENHTML_EXECUTABLE} final.lcov -o lcov --demangle-cpp --sort -p "${CMAKE_SOURCE_DIR}" -t benchmark
       DEPENDS main-c-unit-test
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
