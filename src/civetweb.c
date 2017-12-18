@@ -16815,7 +16815,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 			           conn->dom_ctx->ssl_ctx,
 			           SSL_accept,
 			           &(conn->phys_ctx->stop_flag))) {
-				/* XXX TODO: Set conn->dom_ctx */
+                /* conn->dom_ctx is set in get_request */
 
 				/* Get SSL client certificate information (if set) */
 				ssl_get_client_cert_info(conn);
