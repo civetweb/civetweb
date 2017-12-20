@@ -16815,7 +16815,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 			           conn->dom_ctx->ssl_ctx,
 			           SSL_accept,
 			           &(conn->phys_ctx->stop_flag))) {
-                /* conn->dom_ctx is set in get_request */
+				/* conn->dom_ctx is set in get_request */
 
 				/* Get SSL client certificate information (if set) */
 				ssl_get_client_cert_info(conn);
@@ -18745,6 +18745,7 @@ mg_init_library(unsigned features)
 			/* Fatal error - abort start. However, this situation should
 			 * never occur in practice. */
 			return 0;
+			mg_global_unlock();
 		}
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
