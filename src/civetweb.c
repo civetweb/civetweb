@@ -16609,7 +16609,7 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
 	unsigned int i;
 
-	for (;;) {
+	while (!ctx->stop_flag) {
 		for (i = 0; i < ctx->cfg_worker_threads; i++) {
 			/* find a free worker slot and signal it */
 			if (ctx->client_socks[i].in_use == 0) {
@@ -16778,10 +16778,16 @@ worker_thread_run(struct worker_thread_args *thread_args)
 	conn->conn_state = 1; /* not consumed */
 #endif
 
+#if defined(ALTERNATIVE_QUEUE)
+	while ((ctx->stop_flag == 0)
+	       && consume_socket(ctx, &conn->client, conn->thread_index)) {
+#else
 	/* Call consume_socket() even when ctx->stop_flag > 0, to let it
 	 * signal sq_empty condvar to wake up the master waiting in
 	 * produce_socket() */
 	while (consume_socket(ctx, &conn->client, conn->thread_index)) {
+#endif
+
 		conn->conn_birth_time = time(NULL);
 
 /* Fill in IP, port info early so even if SSL setup below fails,
