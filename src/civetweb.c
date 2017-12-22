@@ -18750,8 +18750,8 @@ mg_init_library(unsigned features)
 		if (0 != pthread_key_create(&sTlsKey, tls_dtor)) {
 			/* Fatal error - abort start. However, this situation should
 			 * never occur in practice. */
-			return 0;
 			mg_global_unlock();
+			return 0;
 		}
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
@@ -18767,6 +18767,7 @@ mg_init_library(unsigned features)
 #endif
 	}
 
+	mg_global_unlock();
 
 #if !defined(NO_SSL)
 	if (features_to_init & MG_FEATURES_SSL) {
@@ -18785,6 +18786,7 @@ mg_init_library(unsigned features)
 #endif
 
 	/* Start WinSock for Windows */
+	mg_global_lock();
 	if (mg_init_library_called <= 0) {
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
 		WSADATA data;
@@ -18794,7 +18796,6 @@ mg_init_library(unsigned features)
 	} else {
 		mg_init_library_called++;
 	}
-
 	mg_global_unlock();
 
 	return features_inited;
