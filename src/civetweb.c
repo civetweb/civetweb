@@ -2615,7 +2615,7 @@ event_create(void)
 		return 0;
 	}
 	if (sizeof(int) == sizeof(void *)) {
-		ret = (void *)evhdl;
+		ret = (int *)evhdl;
 	} else {
 		ret = (int *)mg_malloc(sizeof(int));
 		if (ret) {
