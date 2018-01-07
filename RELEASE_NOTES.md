@@ -51,7 +51,7 @@ Changes
 - Support for multipart requests without quotes (for some C# clients)
 - Initialize SSL in mg\_init\_library, so https client functions can be used when no server is running
 - Allow "REPORT" HTTP method for REST calls to scripts
-- Allow to compile civetweb.c wih a C++ compiler
+- Allow to compile civetweb.c with a C++ compiler
 - Lua: Remove internal length limits of encode/decode functions
 - Allow sub-resources of index script files
 - Add config parameter allow\_index\_script\_resource the aforementioned feature
@@ -406,6 +406,6 @@ Changes
 
 - Renamed Mongoose to Civetweb in the code and documentation.
 - Replaced copyrighted images with new images
-- Created a new code respository at https://github.com/civetweb/civetweb
+- Created a new code repository at https://github.com/civetweb/civetweb
 - Created a distribution site at https://sourceforge.net/projects/civetweb/
 - Basic build testing

@@ -165,7 +165,7 @@ of code throughout a website, for example, headers and footers.
 
 In order for a webpage to recognize an SSI-enabled HTML file, the filename
 should end with a special extension, by default the extension should be
-either `.shtml` or `.shtm`. These extentions may be changed using the
+either `.shtml` or `.shtm`. These extensions may be changed using the
 `ssi_pattern` option.
 
 Unknown SSI directives are silently ignored by CivetWeb. Currently, two SSI
@@ -505,7 +505,7 @@ The error pages may be specified for an individual http status code (e.g.,
 404 - page requested by the client not found), a group of http status codes
 (e.g., 4xx - all client errors) or all errors. The corresponding error pages
 must be called error404.ext, error4xx.ext or error.ext, whereas the file
-extention may be one of the extentions specified for the index_files option.
+extension may be one of the extensions specified for the index_files option.
 See the [Wikipedia page on HTTP status codes](http://en.wikipedia.org/wiki/HTTP_status_code).
 
 ### tcp\_nodelay `0`

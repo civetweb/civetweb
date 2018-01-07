@@ -14,7 +14,7 @@
 
 ### Description
 
-The function `mg_get_valid_option_names()` is depricated. Use [`mg_get_valid_options()`](mg_get_valid_options.md) instead.
+The function `mg_get_valid_option_names()` is deprecated. Use [`mg_get_valid_options()`](mg_get_valid_options.md) instead.
 
 This function returns an array with option/value pairs describing the valid configuration options for Civetweb. En element value of NULL signals the end of the list.
 

@@ -765,7 +765,7 @@ WebSocketCloseHandler(const struct mg_connection *conn, void *cbdata)
 	mg_unlock_context(ctx);
 
 	fprintf(stdout,
-	        "Client droped from the set of webserver connections\r\n\r\n");
+	        "Client dropped from the set of webserver connections\r\n\r\n");
 }
 
 
@@ -978,10 +978,10 @@ main(int argc, char *argv[])
 	mg_set_request_handler(ctx, "/B/A$", BXHandler, (void *)1);
 	mg_set_request_handler(ctx, "/B/B$", BXHandler, (void *)2);
 
-	/* Add handler for all files with .foo extention */
+	/* Add handler for all files with .foo extension */
 	mg_set_request_handler(ctx, "**.foo$", FooHandler, 0);
 
-	/* Add handler for /close extention */
+	/* Add handler for /close extension */
 	mg_set_request_handler(ctx, "/close", CloseHandler, 0);
 
 	/* Add handler for /form  (serve a file outside the document root) */

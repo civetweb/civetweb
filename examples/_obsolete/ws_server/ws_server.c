@@ -214,7 +214,7 @@ static int websocket_data_handler(struct mg_connection *conn, int flags,
             /* If client initiated close, respond with close message in acknowlegement */
             if (!ws_conn[wsd].closing) {
                 mg_websocket_write(conn, WEBSOCKET_OPCODE_CONNECTION_CLOSE, data, data_len);
-                ws_conn[wsd].closing = 1; /* we should not send addional messages when close requested/acknowledged */
+                ws_conn[wsd].closing = 1; /* we should not send additional messages when close requested/acknowledged */
             }
             return 0; /* time to close the connection */
             break;

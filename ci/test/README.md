@@ -8,7 +8,7 @@ I have fixed and extended the travis configuration to build on the new sudo-less
 
 * On Check-in or Pull Requests clone the repo
 * Run make WITH_LUA=1 WITH_DEBUG=1 WITH_IPV6=1 WITH_WEBSOCKET=1
-* Build a standalone lua installation (seperate from civetweb or the OS)
+* Build a standalone lua installation (separate from civetweb or the OS)
 * Build LuaRocks in standalone installation
 * Install a few rocks into the standalone installation
 * Start the test script

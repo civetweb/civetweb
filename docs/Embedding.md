@@ -71,8 +71,8 @@ By default, the server will automatically serve up files like a normal HTTP serv
     Not all CivetWeb features available in C are also available in C++.
   - Create CivetHandlers for each URI.
   - Register the handlers with `CivetServer::addHandler()`
-  - `CivetServer` starts on contruction and stops on destruction.
-  - Use contructor *options* to select the port and document root among other things.
+  - `CivetServer` starts on construction and stops on destruction.
+  - Use constructor *options* to select the port and document root among other things.
   - Use constructor *callbacks* to add your own hooks.
 
 Alternative quick start: Have a look at the examples embedded\_c and embedded\_cpp

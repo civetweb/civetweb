@@ -13,7 +13,7 @@ mmap(void *addr, int64_t len, int prot, int flags, int fd, int offset)
 	 * Currently it is sufficient, but there are a lot of unused parameters.
 	 * Better use a function "mg_map" which only has the required parameters,
 	 * and implement it using mmap in Linux and CreateFileMapping in Windows.
-	 * Noone should expect a full mmap for Windows here.
+	 * No one should expect a full mmap for Windows here.
 	 */
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
 	HANDLE mh = CreateFileMapping(fh, 0, PAGE_READONLY, 0, 0, 0);
@@ -639,7 +639,7 @@ lsp_include(lua_State *L)
 
 			if (handle_lsp_request(conn, file_name_path, &file, L)) {
 				/* handle_lsp_request returned an error code, meaning an error
-				* occured in the included page and mg.onerror returned non-zero.
+				* occurred in the included page and mg.onerror returned non-zero.
 				* Stop processing.
 				*/
 
