@@ -140,7 +140,7 @@ Contributions are welcome provided all contributions carry the MIT license.
 
 DO NOT APPLY fixes copied from Mongoose to this project to prevent GPL tainting.
 Since 2013, CivetWeb and Mongoose are developed independently.
-By now the code base differs, so patches cannot be safely transfered in either direction.
+By now the code base differs, so patches cannot be safely transferred in either direction.
 
 Some guidelines can be found in [docs/Contribution.md](https://github.com/civetweb/civetweb/blob/master/docs/Contribution.md).
 

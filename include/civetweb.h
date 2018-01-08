@@ -1048,7 +1048,7 @@ CIVETWEB_API int mg_get_cookie(const char *cookie,
 /* Download data from the remote web server.
      host: host name to connect to, e.g. "foo.com", or "10.12.40.1".
      port: port number, e.g. 80.
-     use_ssl: wether to use SSL connection.
+     use_ssl: whether to use SSL connection.
      error_buffer, error_buffer_size: error message placeholder.
      request_fmt,...: HTTP request.
    Return:

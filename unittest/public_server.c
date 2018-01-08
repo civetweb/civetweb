@@ -2938,7 +2938,7 @@ START_TEST(test_handle_form)
 	send_chunk_string(client_conn, "\r\n");
 
 	/* send some kilobyte of data */
-	/* sending megabytes to localhost does not allways work in CI test
+	/* sending megabytes to localhost does not always work in CI test
 	 * environments (depending on the network stack) */
 	body_sent = 0;
 	do {
@@ -3511,7 +3511,7 @@ START_TEST(test_error_handling)
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
 	ck_assert(client_conn == NULL);
 
-	/* Error message detail may vary - it may not be empty ans should contain
+	/* Error message detail may vary - it may not be empty and should contain
 	 * some information "connect" failed */
 	ck_assert_str_ne(client_err, "");
 	ck_assert(strstr(client_err, "connect"));

@@ -25,6 +25,6 @@
 
 ### Description
 
-The function `mg_set_websocket_handler()` connects callback functions to a websocket URI. The callback functions are called when a state change is detected on the URI like an incomming connection or data received from a remote peer.
+The function `mg_set_websocket_handler()` connects callback functions to a websocket URI. The callback functions are called when a state change is detected on the URI like an incoming connection or data received from a remote peer.
 
 ### See Also

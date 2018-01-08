@@ -114,7 +114,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
  * Symbian is no longer maintained since 2014-01-01.
  * Recent versions of CivetWeb are no longer tested for Symbian.
  * It makes no sense, to support an abandoned operating system.
- * All remaining "#ifdef __SYMBIAN__" cases will be droped from
+ * All remaining "#ifdef __SYMBIAN__" cases will be dropped from
  * the code sooner or later.
  */
 #pragma message                                                                \
@@ -3766,7 +3766,7 @@ get_header(const struct mg_header *hdr, int num_hdr, const char *name)
 
 #if defined(USE_WEBSOCKET)
 /* Retrieve requested HTTP header multiple values, and return the number of
- * found occurences */
+ * found occurrences */
 static int
 get_req_headers(const struct mg_request_info *ri,
                 const char *name,
@@ -6057,7 +6057,7 @@ pull_inner(FILE *fp,
 			/* EAGAIN/EWOULDBLOCK:
 			 * standard case if called from close_socket_gracefully
 			 * => should return -1 */
-			/* or timeout occured
+			/* or timeout occurred
 			 * => the code must stay in the while loop */
 
 			/* EINTR can be generated on a socket with a timeout set even
@@ -6071,7 +6071,7 @@ pull_inner(FILE *fp,
 #endif
 	}
 
-	/* Timeout occured, but no data available. */
+	/* Timeout occurred, but no data available. */
 	return -1;
 }
 
@@ -15316,7 +15316,7 @@ close_connection(struct mg_connection *conn)
 
 #ifndef NO_SSL
 	if (conn->ssl != NULL) {
-		/* Run SSL_shutdown twice to ensure completly close SSL connection
+		/* Run SSL_shutdown twice to ensure completely close SSL connection
 		 */
 		SSL_shutdown(conn->ssl);
 		SSL_free(conn->ssl);
@@ -16161,7 +16161,7 @@ mg_download(const char *host,
 		}
 	}
 
-	/* if an error occured, close the connection */
+	/* if an error occurred, close the connection */
 	if ((ebuf[0] != '\0') && (conn != NULL)) {
 		mg_close_connection(conn);
 		conn = NULL;

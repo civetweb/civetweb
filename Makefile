@@ -223,7 +223,7 @@ help:
 	@echo "   NO_SSL                disable SSL functionality"
 	@echo "   NO_SSL_DL             link against system libssl library"
 	@echo "   NO_FILES              do not serve files from a directory"
-	@echo "   NO_CACHING            disable caching (usefull for systems without timegm())"
+	@echo "   NO_CACHING            disable caching (useful for systems without timegm())"
 	@echo ""
 	@echo " Variables"
 	@echo "   TARGET_OS='$(TARGET_OS)'"

@@ -9,7 +9,7 @@
 |**`begin_request`**|**`int (*begin_request)( struct mg_connection *conn );`**|
 | |The `begin_request()` callback function is called when CivetWeb has received a new HTTP request. If the callback function does not process the request, it should return 0. In that case CivetWeb will handle the request with the default callback routine. If the callback function returns a value between 1 and 999, CivetWeb does nothing and the callback function should do all the processing, including sending the proper HTTP headers etc. Starting at CivetWeb version 1.7, the function `begin_request()` is called before any authorization is done. If an authorization check is required, `request_handler()` should be used instead. The return value of the callback function is not only used to signal CivetWeb to not further process the request. The returned value is also stored as HTTP status code in the access log. |
 |**`connection_close`**|**`void (*connection_close)( const struct mg_connection *conn );`**|
-| |The callback function `connection_close()` is called when CivetWeb is closing a connection. The per-context mutex is locked when the callback function is invoked. The function is primarly useful for noting when a websocket is closing and removing it from any application-maintained list of clients. *Using this callback for websocket connections is deprecated. Use* `mg_set_websocket_handler()` *instead.*|
+| |The callback function `connection_close()` is called when CivetWeb is closing a connection. The per-context mutex is locked when the callback function is invoked. The function is primarily useful for noting when a websocket is closing and removing it from any application-maintained list of clients. *Using this callback for websocket connections is deprecated. Use* `mg_set_websocket_handler()` *instead.*|
 |**`end_request`**|**`void (*end_request)(const struct mg_connection *conn, int reply_status_code);`**|
 | |The callback function `end_request()` is called by CivetWeb when a request has been completely processed. It sends the reply status code which was sent to the client to the application.|
 |**`exit_context`**|**`void (*exit_context)( const struct mg_context *ctx );`**|
@@ -46,7 +46,7 @@
 | | **`data_len`** - The length of the received data block |
 | | If the application wants to keep the websocket open to receive more data, the callback function should return the value **1**. If the value **0** is returned by the callback function, CivetWeb will close the websocket connection and no more frames will be received.|
 |~~`websocket_ready`~~|**`int (*websocket_ready)( struct mg_connection *conn );`**|
-| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.* The callback function `websocket_ready()` is called after the handshake of a websocket connection has succeeded succesfully to signal the application that the connection is ready for use. |
+| |*Deprecated. Use* `mg_set_websocket_handler()` *instead.* The callback function `websocket_ready()` is called after the handshake of a websocket connection has succeeded successfully to signal the application that the connection is ready for use. |
 
 ### Description
 

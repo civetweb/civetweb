@@ -12,7 +12,7 @@
 
 | Type | Description |
 | :--- | :--- |
-|`const struct mg_request_info *`|Pointer to the requested info, or NULL if an error occured|
+|`const struct mg_request_info *`|Pointer to the requested info, or NULL if an error occurred|
 
 ### Description
 

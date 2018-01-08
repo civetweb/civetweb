@@ -19,7 +19,7 @@
 
 ### Description
 
-The function `mg_start_thread()` is a convenience function to create a detached thread. The function returns **0** when successful and another value if an error occured. A pointer to user supplied data can be passed which is then passed further on to the thread function as parameter.
+The function `mg_start_thread()` is a convenience function to create a detached thread. The function returns **0** when successful and another value if an error occurred. A pointer to user supplied data can be passed which is then passed further on to the thread function as parameter.
 
 ### See Also
 
