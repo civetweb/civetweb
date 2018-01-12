@@ -4303,7 +4303,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 
 	const char *status_text = mg_get_response_code_text(conn, status);
 
-	if (conn == NULL) {
+	if ((conn == NULL) || (fmt == NULL)) {
 		return;
 	}
 
@@ -4314,9 +4314,8 @@ mg_send_http_error_impl(struct mg_connection *conn,
 	has_body = ((status > 199) && (status != 204) && (status != 304));
 
 	/* Prepare message in buf, if required */
-	if ((has_body && (fmt != NULL))
-	    || (!conn->in_error_handler
-	        && (conn->phys_ctx->callbacks.http_error != NULL))) {
+	if (has_body || (!conn->in_error_handler
+	                 && (conn->phys_ctx->callbacks.http_error != NULL))) {
 		/* Store error message in errmsg_buf */
 		va_copy(ap, args);
 		mg_vsnprintf(conn, NULL, errmsg_buf, sizeof(errmsg_buf), fmt, ap);
@@ -16958,6 +16957,8 @@ worker_thread(void *thread_func_param)
 #endif /* _WIN32 */
 
 
+/* This is an internal function, thus all arguments are expected to be
+ * valid - a NULL check is not required. */
 static void
 accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 {
@@ -16965,10 +16966,6 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 	char src_addr[IP_ADDR_STR_LEN];
 	socklen_t len = sizeof(so.rsa);
 	int on = 1;
-
-	if (!listener) {
-		return;
-	}
 
 	if ((so.sock = accept(listener->sock, &so.rsa.sa, &len))
 	    == INVALID_SOCKET) {
@@ -17018,7 +17015,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		 * when HTTP 1.1 persistent connections are used and the responses
 		 * are relatively small (eg. less than 1400 bytes).
 		 */
-		if ((ctx != NULL) && (ctx->dd.config[CONFIG_TCP_NODELAY] != NULL)
+		if ((ctx->dd.config[CONFIG_TCP_NODELAY] != NULL)
 		    && (!strcmp(ctx->dd.config[CONFIG_TCP_NODELAY], "1"))) {
 			if (set_tcp_nodelay(so.sock, 1) != 0) {
 				mg_cry_internal(
