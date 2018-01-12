@@ -70,6 +70,7 @@
 * Lianghui
 * Maarten Fremouw
 * makrsmark
+* marco
 * Mark Lakata
 * Martin Gaida
 * Mateusz Gralka
@@ -113,7 +114,9 @@
 * thewaterymoon
 * THILMANT, Bernard
 * Thomas Davis
+* Thorsten Horstmann
 * tnoho
+* Tomas Andrle
 * Toni Wilk
 * Ulrich Hertlein
 * Walt Steverson
