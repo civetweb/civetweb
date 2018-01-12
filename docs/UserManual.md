@@ -416,9 +416,31 @@ Setting the value to -1 will turn off linger.
 If the value is not set (or set to -2), CivetWeb will not set the linger
 option at all.
 
-Note: For consistency with other timeouts, the value is configured in
-milliseconds. However, the TCP socket layer usually only offers a timeout in 
-seconds, so the value should be an integer multiple of 1000.
+Note: For consistency with other timeout configurations, the value is 
+configured in milliseconds. However, the TCP socket layer usually only
+offers a timeout in seconds, so the value should be an integer multiple
+of 1000.
+
+### websocket\_timeout\_ms
+Timeout for network read and network write operations for websockets, WS(S),
+in milliseconds. If this value is not set, the value of request\_timeout\_ms
+is used for HTTP(S) as well as for WS(S). In case websocket\_timeout\_ms is
+set, HTTP(S) and WS(S) can use different timeouts.
+
+Note: This configuration value only exists, if the server has been built 
+with websocket support enabled.
+
+### enable_websocket_ping_pong `no`
+If this configuration value is set to `yes`, the server will send a
+websocket PING message to a websocket client, once the timeout set by
+websocket\_timeout\_ms expires. Clients (Web browsers) supporting this
+feature will reply with a PONG message.
+
+If this configuration value is set to `no`, the websocket server will
+close the connection, once the timeout expires.
+
+Note: This configuration value only exists, if the server has been built 
+with websocket support enabled.
 
 ### lua\_preload\_file
 This configuration option can be used to specify a Lua script file, which
@@ -465,7 +487,7 @@ In case CivetWeb is built with Lua and websocket support, Lua scripts may
 be used for websockets as well. Since websockets use a different URL scheme
 (ws, wss) than other http pages (http, https), the Lua scripts used for
 websockets may also be served from a different directory. By default,
-the document_root is used as websocket_root as well.
+the document\_root is used as websocket\_root as well.
 
 
 ### access\_control\_allow\_origin `*`

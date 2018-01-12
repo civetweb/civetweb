@@ -2121,6 +2121,7 @@ enum {
 	KEEP_ALIVE_TIMEOUT,
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_TIMEOUT,
+	ENABLE_WEBSOCKET_PING_PONG,
 #endif
 	DECODE_URL,
 #if defined(USE_LUA)
@@ -2214,7 +2215,8 @@ static struct mg_option config_options[] = {
     {"request_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
     {"keep_alive_timeout_ms", MG_CONFIG_TYPE_NUMBER, "500"},
 #if defined(USE_WEBSOCKET)
-    {"websocket_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
+    {"websocket_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+    {"enable_websocket_ping_pong", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
     {"decode_url", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 #if defined(USE_LUA)
@@ -11507,7 +11509,12 @@ read_websocket(struct mg_connection *conn,
 	 * dynamically allocated buffer if it is too large. */
 	unsigned char mem[4096];
 	unsigned char mop; /* mask flag and opcode */
+
+
 	double timeout = -1.0;
+	int enable_ping_pong =
+	    !mg_strcasecmp(conn->dom_ctx->config[ENABLE_WEBSOCKET_PING_PONG],
+	                   "yes");
 
 	if (conn->dom_ctx->config[WEBSOCKET_TIMEOUT]) {
 		timeout = atoi(conn->dom_ctx->config[WEBSOCKET_TIMEOUT]) / 1000.0;
@@ -11646,18 +11653,26 @@ read_websocket(struct mg_connection *conn,
 				}
 			}
 
-			/* Exit the loop if callback signals to exit (server side),
-			 * or "connection close" opcode received (client side). */
 			exit_by_callback = 0;
-			if ((ws_data_handler != NULL)
-			    && !ws_data_handler(conn,
-			                        mop,
-			                        (char *)data,
-			                        (size_t)data_len,
-			                        callback_data)) {
-				exit_by_callback = 1;
+			if (enable_ping_pong && ((mop & 0xF) == MG_WEBSOCKET_OPCODE_PONG)) {
+				/* filter PONG messages */
+				DEBUG_TRACE("PONG from %s:%u",
+				            conn->request_info.remote_addr,
+				            conn->request_info.remote_port);
+			} else {
+				/* Exit the loop if callback signals to exit (server side),
+				 * or "connection close" opcode received (client side). */
+				if ((ws_data_handler != NULL)
+				    && !ws_data_handler(conn,
+				                        mop,
+				                        (char *)data,
+				                        (size_t)data_len,
+				                        callback_data)) {
+					exit_by_callback = 1;
+				}
 			}
 
+			/* It a buffer has been allocated, free it again */
 			if (data != mem) {
 				mg_free(data);
 			}
@@ -11684,6 +11699,25 @@ read_websocket(struct mg_connection *conn,
 			if (n > 0) {
 				conn->data_len += n;
 			} else {
+				if (!conn->phys_ctx->stop_flag && !conn->must_close) {
+					if (enable_ping_pong) {
+						int ret;
+
+						/* Send Websocket PING message */
+						DEBUG_TRACE("PING to %s:%u",
+						            conn->request_info.remote_addr,
+						            conn->request_info.remote_port);
+						ret = mg_websocket_write(conn,
+						                         MG_WEBSOCKET_OPCODE_PING,
+						                         NULL,
+						                         0);
+
+						if (ret <= 0) {
+							/* Error: send failed */
+							break;
+						}
+					}
+				}
 				/* Timeout: should retry */
 				/* TODO: get timeout def */
 			}
@@ -11703,9 +11737,8 @@ mg_websocket_write_exec(struct mg_connection *conn,
                         uint32_t masking_key)
 {
 	unsigned char header[14];
-	size_t headerLen = 1;
-
-	int retval = -1;
+	size_t headerLen;
+	int retval;
 
 #if defined(__GNUC__) || defined(__MINGW32__)
 /* Disable spurious conversion warning for GCC */
@@ -11761,11 +11794,17 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	(void)mg_lock_connection(conn);
 
 	retval = mg_write(conn, header, headerLen);
-	if (dataLen > 0) {
-		retval = mg_write(conn, data, dataLen);
+	if (retval != (int)headerLen) {
+		/* Did not send complete header */
+		retval = -1;
+	} else {
+		if (dataLen > 0) {
+			retval = mg_write(conn, data, dataLen);
+		}
+		/* if dataLen == 0, the header length (2) is returned */
 	}
 
-	/* TODO: Remove this unlock as well, when lock is moved. */
+	/* TODO: Remove this unlock as well, when lock is removed. */
 	mg_unlock_connection(conn);
 
 	return retval;
@@ -11816,7 +11855,7 @@ mg_websocket_client_write(struct mg_connection *conn,
 	int retval = -1;
 	char *masked_data =
 	    (char *)mg_malloc_ctx(((dataLen + 7) / 4) * 4, conn->phys_ctx);
-	uint32_t masking_key = (uint32_t)get_random();
+	uint32_t masking_key = 0;
 
 	if (masked_data == NULL) {
 		/* Return -1 in an error case */
@@ -11826,6 +11865,11 @@ mg_websocket_client_write(struct mg_connection *conn,
 		                "Out of memory");
 		return -1;
 	}
+
+	do {
+		/* Get a masking key - but not 0 */
+		masking_key = (uint32_t)get_random();
+	} while (masking_key == 0);
 
 	mask_data(data, dataLen, masking_key, masked_data);
 
