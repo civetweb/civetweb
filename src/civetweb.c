@@ -2638,7 +2638,7 @@ event_wait(void *eventhdl)
 	int evhdl, s;
 
 	if (sizeof(int) == sizeof(void *)) {
-		evhdl = (int)eventhdl;
+		evhdl = *(int *)eventhdl;
 	} else {
 		if (!eventhdl) {
 			/* error */
@@ -2664,7 +2664,7 @@ event_signal(void *eventhdl)
 	int evhdl, s;
 
 	if (sizeof(int) == sizeof(void *)) {
-		evhdl = (int)eventhdl;
+		evhdl = *(int *)eventhdl;
 	} else {
 		if (!eventhdl) {
 			/* error */
@@ -2688,7 +2688,7 @@ event_destroy(void *eventhdl)
 	int evhdl;
 
 	if (sizeof(int) == sizeof(void *)) {
-		evhdl = (int)eventhdl;
+		evhdl = *(int *)eventhdl;
 		close(evhdl);
 	} else {
 		if (!eventhdl) {
