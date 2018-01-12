@@ -14633,7 +14633,14 @@ ssl_get_protocol(int version_id)
 
 /* SSL callback documentation:
  * https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_info_callback.html
+ * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_info_callback(3)
  * https://linux.die.net/man/3/ssl_set_info_callback */
+/* Note: There is no "const" for the first argument in the documentation,
+ * however some (maybe most, but not all) headers of OpenSSL versions /
+ * OpenSSL compatibility layers have it. Having a different definition
+ * will cause a warning in C and an error in C++. With inconsitent
+ * definitions of this function, having a warning in one version or
+ * another is unavoidable. */
 static void
 ssl_info_callback(SSL *ssl, int what, int ret)
 {
