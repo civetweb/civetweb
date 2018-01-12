@@ -1,11 +1,17 @@
 Release Notes v1.11
 ===
-### Objectives: *To be defined*
+### Objectives: *Support multiple domains and certificates, support websocket ping-pong*
 
 Changes
 -------
 
+- Add server support for websocket ping pong protocol
+- Fix misspellings in source code and documentation
+- Add error msg to http_error callback
+- Move unit test to a new directory
 - Remove remote\_ip request\_info member (it has been legacy since several versions)
+- Use gmtime_r instead of gmtime, if available
+- Add some functions to C++ wrapper
 - Support multiple domains with different certificate files (TLS server name identification, SNI)
 - Provide client peer certificate (X509) in mg\_client\_cert structure
 - Add new callback (get\_external\_ssl\_ctx) to provide pre-initialized TLS context
