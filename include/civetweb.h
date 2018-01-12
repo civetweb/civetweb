@@ -596,6 +596,14 @@ CIVETWEB_API void *mg_get_user_data(const struct mg_context *ctx);
 
 
 /* Set user data for the current connection. */
+/* Note: This function is deprecated. Use the init_connection callback
+   instead to initialize the user connection data pointer. It is
+   reccomended to supply a pointer to some user defined data structure
+   as conn_data initializer in init_connection. In case it is required
+   to change some data after the init_connection call, store another
+   data pointer in the user defined data structure and modify that
+   pointer. In either case, after the init_connection callback, only
+   calls to mg_get_user_connection_data should be required. */
 CIVETWEB_API void mg_set_user_connection_data(struct mg_connection *conn,
                                               void *data);
 
