@@ -2584,27 +2584,6 @@ typedef struct tagTHREADNAME_INFO {
 
 #if defined(ALTERNATIVE_QUEUE)
 
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code"
-/* For every system, "(sizeof(int) == sizeof(void *))" is either always
- * true or always false. One of the two branches is unreachable in any case.
- * Unfortunately the C standard does not define a way to check this at
- * compile time, since the #if preprocessor conditions can not use the sizeof
- * operator as an argument. */
-#endif
-
-#if defined(__GNUC__) || defined(__MINGW32__)
-/* GCC does not realize one branch is unreachable, so it raises some
- * pointer cast warning within the unreachable branch.
- */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
-#endif
-
-
 static void *
 event_create(void)
 {
@@ -2616,15 +2595,12 @@ event_create(void)
 		/* However, Linux does not return 0 on success either. */
 		return 0;
 	}
-	if (sizeof(int) == sizeof(void *)) {
-		ret = (int *)evhdl;
+
+	ret = (int *)mg_malloc(sizeof(int));
+	if (ret) {
+		*ret = evhdl;
 	} else {
-		ret = (int *)mg_malloc(sizeof(int));
-		if (ret) {
-			*ret = evhdl;
-		} else {
-			(void)close(evhdl);
-		}
+		(void)close(evhdl);
 	}
 
 	return (void *)ret;
@@ -2637,18 +2613,14 @@ event_wait(void *eventhdl)
 	uint64_t u;
 	int evhdl, s;
 
-	if (sizeof(int) == sizeof(void *)) {
-		evhdl = (int)eventhdl;
-	} else {
-		if (!eventhdl) {
-			/* error */
-			return 0;
-		}
-		evhdl = *(int *)eventhdl;
+	if (!eventhdl) {
+		/* error */
+		return 0;
 	}
+	evhdl = *(int *)eventhdl;
 
 	s = (int)read(evhdl, &u, sizeof(u));
-	if (s != sizeof(uint64_t)) {
+	if (s != sizeof(u)) {
 		/* error */
 		return 0;
 	}
@@ -2663,18 +2635,14 @@ event_signal(void *eventhdl)
 	uint64_t u = 1;
 	int evhdl, s;
 
-	if (sizeof(int) == sizeof(void *)) {
-		evhdl = (int)eventhdl;
-	} else {
-		if (!eventhdl) {
-			/* error */
-			return 0;
-		}
-		evhdl = *(int *)eventhdl;
+	if (!eventhdl) {
+		/* error */
+		return 0;
 	}
+	evhdl = *(int *)eventhdl;
 
 	s = (int)write(evhdl, &u, sizeof(u));
-	if (s != sizeof(uint64_t)) {
+	if (s != sizeof(u)) {
 		/* error */
 		return 0;
 	}
@@ -2687,28 +2655,16 @@ event_destroy(void *eventhdl)
 {
 	int evhdl;
 
-	if (sizeof(int) == sizeof(void *)) {
-		evhdl = (int)eventhdl;
-		close(evhdl);
-	} else {
-		if (!eventhdl) {
-			/* error */
-			return;
-		}
-		evhdl = *(int *)eventhdl;
-		close(evhdl);
-		mg_free(eventhdl);
+	if (!eventhdl) {
+		/* error */
+		return;
 	}
+	evhdl = *(int *)eventhdl;
+
+	close(evhdl);
+	mg_free(eventhdl);
 }
 
-
-#if defined(__GNUC__) || defined(__MINGW32__)
-#pragma GCC diagnostic pop
-#endif
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 #endif
 
@@ -11503,17 +11459,20 @@ read_websocket(struct mg_connection *conn,
 	unsigned char mask[4];
 
 	/* data points to the place where the message is stored when passed to
-	 * the
-	 * websocket_data callback.  This is either mem on the stack, or a
+	 * the websocket_data callback.  This is either mem on the stack, or a
 	 * dynamically allocated buffer if it is too large. */
 	unsigned char mem[4096];
 	unsigned char mop; /* mask flag and opcode */
 
 
 	double timeout = -1.0;
-	int enable_ping_pong =
-	    !mg_strcasecmp(conn->dom_ctx->config[ENABLE_WEBSOCKET_PING_PONG],
-	                   "yes");
+	int enable_ping_pong = 0;
+
+	if (conn->dom_ctx->config[ENABLE_WEBSOCKET_PING_PONG]) {
+		enable_ping_pong =
+		    !mg_strcasecmp(conn->dom_ctx->config[ENABLE_WEBSOCKET_PING_PONG],
+		                   "yes");
+	}
 
 	if (conn->dom_ctx->config[WEBSOCKET_TIMEOUT]) {
 		timeout = atoi(conn->dom_ctx->config[WEBSOCKET_TIMEOUT]) / 1000.0;
