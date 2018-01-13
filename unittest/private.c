@@ -972,6 +972,8 @@ START_TEST(test_config_options)
 #if defined(USE_WEBSOCKET)
 	ck_assert_str_eq("websocket_timeout_ms",
 	                 config_options[WEBSOCKET_TIMEOUT].name);
+	ck_assert_str_eq("enable_websocket_ping_pong",
+	                 config_options[ENABLE_WEBSOCKET_PING_PONG].name);
 #endif
 
 	ck_assert_str_eq("decode_url", config_options[DECODE_URL].name);
