@@ -1,4 +1,4 @@
-Release Notes v1.11
+Release Notes v1.11 (work in progress)
 ===
 ### Objectives: *Support multiple domains and certificates, support websocket ping-pong*
 
