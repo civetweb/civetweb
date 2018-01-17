@@ -17493,7 +17493,7 @@ mg_start(const struct mg_callbacks *callbacks,
 		struct vec opt_vec;
 		struct vec eq_vec;
 		const char *sparams;
-		lua_State *state = (void *)mg_prepare_lua_context_script(
+		lua_State *state = mg_prepare_lua_context_script(
 		    ctx->dd.config[LUA_BACKGROUND_SCRIPT], ctx, ebuf, sizeof(ebuf));
 		if (!state) {
 			mg_cry_internal(fc(ctx), "lua_background_script error: %s", ebuf);

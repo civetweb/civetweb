@@ -1119,7 +1119,7 @@ lsp_get_info(lua_State *L)
 				/* Get system info */
 				len = mg_get_system_info(NULL, 0);
 				if (len > 0) {
-					buf = mg_malloc(len + 64);
+					buf = (char *)mg_malloc(len + 64);
 					if (!buf) {
 						return luaL_error(L, "OOM in get_info() call");
 					}
@@ -1141,7 +1141,7 @@ lsp_get_info(lua_State *L)
 				/* Get context info for server context */
 				len = mg_get_context_info(ctx, NULL, 0);
 				if (len > 0) {
-					buf = mg_malloc(len + 64);
+					buf = (char *)mg_malloc(len + 64);
 					if (!buf) {
 						return luaL_error(L, "OOM in get_info() call");
 					}
@@ -1157,7 +1157,7 @@ lsp_get_info(lua_State *L)
 				/* Get context info for NULL context */
 				len = mg_get_context_info(NULL, NULL, 0);
 				if (len > 0) {
-					buf = mg_malloc(len + 64);
+					buf = (char *)mg_malloc(len + 64);
 					if (!buf) {
 						return luaL_error(L, "OOM in get_info() call");
 					}
@@ -1199,7 +1199,7 @@ lsp_get_info(lua_State *L)
 #ifdef MG_EXPERIMENTAL_INTERFACES
 				len = mg_get_connection_info(ctx, idx, NULL, 0);
 				if (len > 0) {
-					buf = mg_malloc(len + 64);
+					buf = (char *)mg_malloc(len + 64);
 					if (!buf) {
 						return luaL_error(L, "OOM in get_info() call");
 					}
