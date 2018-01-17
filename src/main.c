@@ -668,7 +668,7 @@ set_option(char **options, const char *name, const char *value)
 		} else if (!strcmp(options[2 * i], name)) {
 			if (multi_sep) {
 				/* Option already set. Overwrite */
-				char *s = malloc(strlen(options[2 * i + 1]) + strlen(multi_sep)
+				char *s = (char *)malloc(strlen(options[2 * i + 1]) + strlen(multi_sep)
 				                 + strlen(value) + 1);
 				if (!s) {
 					die("Out of memory");
