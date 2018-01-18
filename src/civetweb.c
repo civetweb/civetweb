@@ -603,8 +603,6 @@ static void path_to_unicode(const struct mg_connection *conn,
 
 /* All file operations need to be rewritten to solve #246. */
 
-// #include "file_ops.inl"
-
 struct mg_file;
 
 static const char *
