@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017 the Civetweb developers
+/* Copyright (c) 2013-2018 the Civetweb developers
  * Copyright (c) 2013 No Face Press, LLC
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
@@ -342,7 +342,7 @@ class WebSocketHandler : public CivetWebSocketHandler {
 		printf("WS ready\n");
 
 		const char *text = "Hello from the websocket ready handler";
-		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+		mg_websocket_write(conn, MG_WEBSOCKET_OPCODE_TEXT, text, strlen(text));
 	}
 
 	virtual bool handleData(CivetServer *server,
@@ -354,7 +354,7 @@ class WebSocketHandler : public CivetWebSocketHandler {
 		fwrite(data, 1, data_len, stdout);
 		printf("\n");
 
-		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, data, data_len);
+		mg_websocket_write(conn, MG_WEBSOCKET_OPCODE_TEXT, data, data_len);
 		return (data_len<4);
 	}
 
