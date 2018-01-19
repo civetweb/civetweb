@@ -103,7 +103,11 @@ script:
     else
       CTEST_OUTPUT_ON_FAILURE=1 make all test;
     fi
-  - tree
+  - pwd
+  - ls
+  - ls output
+  - ls output/build
+  - ls output/build/unittest
 
 # Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
 after_success:
