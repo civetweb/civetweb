@@ -102,8 +102,9 @@ script:
       make -f Makefile.osx package;
     else
       CTEST_OUTPUT_ON_FAILURE=1 make all test;
-      cat test.log;
+#      cat test.log;
     fi
+  - tree
 
 # Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
 after_success:

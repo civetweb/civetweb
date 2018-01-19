@@ -364,7 +364,7 @@ test_script:
   - set CTEST_OUTPUT_ON_FAILURE=1
   - cmd /c "%test%" & set "test_ret=%ERRORLEVEL%"
   - echo "Test returned %test_ret%"
-  - echo test.log
+  - dir /s test.log
   - cd "%source_path%"
   - set "output_path=%source_path%\output"
   - set "build_path=%output_path%\build"
