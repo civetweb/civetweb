@@ -362,13 +362,15 @@ test_script:
   - cd "%build_path%"
   - appveyor AddMessage -Category Information "Test command '%build%'"
   - set CTEST_OUTPUT_ON_FAILURE=1
-  - cmd /c "%test%"
+  - cmd /c "%test%" & set "test_ret=%ERRORLEVEL%"
+  - echo "Test returned %test_ret%"
+  - echo test.log
   - cd "%source_path%"
-
   - set "output_path=%source_path%\output"
   - set "build_path=%output_path%\build"
   - set "install_path=%output_path%\install"
   - set "third_party_dir=C:\third-party"
+  - exit /B %ERRORLEVEL%
 
 after_test:
   - echo "Current directory:"
