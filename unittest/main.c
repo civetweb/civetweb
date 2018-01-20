@@ -34,12 +34,18 @@
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
  * http://check.sourceforge.net/doc/check_html/index.html
+ *
+ * Note: CivetWeb is tested using it's own fork:
+ * https://github.com/civetweb/check
+ * However, all required fixes from this fork are already available
+ * in the main repository:
+ * https://github.com/libcheck/check
  */
 
 int
 main(const int argc, char *argv[])
 {
-	// Determine what tests to run
+	/* Determine what tests to run */
 	const char *suite = NULL;
 	const char *const suite_arg = "--suite=";
 	const size_t suite_arg_size = strlen(suite_arg);
@@ -48,6 +54,7 @@ main(const int argc, char *argv[])
 	const size_t test_case_arg_size = strlen(test_case_arg);
 	const char *const test_dir_arg = "--test-dir=";
 	const size_t test_dir_arg_size = strlen(test_dir_arg);
+	const char *const help_arg = "--help";
 
 	SRunner *srunner;
 	int number_run = 0;
@@ -65,7 +72,7 @@ main(const int argc, char *argv[])
 		} else if (0 == strncmp(test_dir_arg, argv[i], test_dir_arg_size)
 		           && (strlen(argv[i]) > test_dir_arg_size)) {
 			set_test_directory(&argv[i][test_dir_arg_size]);
-		} else if (0 == strcmp("--help", argv[i])) {
+		} else if (0 == strcmp(help_arg, argv[i])) {
 			printf(
 			    "Usage: %s [options]\n"
 			    "  --suite=Suite            Determines the suite to run\n"
@@ -81,7 +88,7 @@ main(const int argc, char *argv[])
 		}
 	}
 
-	/* Run up the tests */
+	/* Register all tests to run them later */
 	srunner = srunner_create(make_public_func_suite());
 	srunner_add_suite(srunner, make_public_server_suite());
 	srunner_add_suite(srunner, make_private_suite());
@@ -92,9 +99,12 @@ main(const int argc, char *argv[])
 	srunner_set_log(srunner, "test.log");
 	srunner_set_xml(srunner, "test.xml");
 
-	/* CK_NORMAL offers not enough diagnosis during setup phase*/
+	/* Run tests, using log level CK_VERBOSE, since CK_NORMAL
+	 * offers not enough diagnosis to analyze failed tests.
+	 * see http://check.sourceforge.net/doc/check_html/check_3.html */
 	srunner_run(srunner, suite, test_case, CK_VERBOSE);
 
+	/* Check passed / failed */
 	number_run = srunner_ntests_run(srunner);
 	number_failed = srunner_ntests_failed(srunner);
 	srunner_free(srunner);
