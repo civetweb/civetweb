@@ -105,9 +105,8 @@ script:
     fi
   - pwd
   - ls
-  - ls output
-  - ls output/build
-  - ls output/build/unittest
+  - ls unittest
+  - cat unittest/test.log
 
 # Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
 after_success:

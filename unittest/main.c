@@ -35,9 +35,9 @@
  * The API documentation is available here:
  * http://check.sourceforge.net/doc/check_html/index.html
  *
- * Note: CivetWeb is tested using it's own fork:
+ * Note: CivetWeb is tested using it's own fork of check:
  * https://github.com/civetweb/check
- * However, all required fixes from this fork are already available
+ * Required fixes from this fork are already available
  * in the main repository:
  * https://github.com/libcheck/check
  */
