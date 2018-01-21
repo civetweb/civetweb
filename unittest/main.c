@@ -19,6 +19,10 @@
  * THE SOFTWARE.
  */
 
+#if defined(_MSC_VER)
+#define _CRT_SECURE_NO_WARNINGS /* Microsoft nonsense */
+#endif
+
 #include "civetweb_check.h"
 #include "shared.h"
 #include "public_func.h"
@@ -107,7 +111,7 @@ main(const int argc, char *argv[])
 	srunner_add_suite(srunner, make_timertest_suite());
 
 	/* Write test logs to a file */
-	if (test_log_prefix != NULL) {
+	if (test_log_prefix == NULL) {
 		/* Find the next free log name */
 		FILE *f;
 		for (i = 1;; i++) {

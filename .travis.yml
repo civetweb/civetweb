@@ -100,12 +100,16 @@ script:
   - if [ "${MACOSX_PACKAGE}" == "1" ]; then
       cd "${TRAVIS_BUILD_DIR}";
       make -f Makefile.osx package;
-      pwd;
-      ls -la unittest;
       cat unittest/test-*.log;
       cat unittest/test-*.xml;
     else
       CTEST_OUTPUT_ON_FAILURE=1 make all test;
+    fi
+  - pwd
+  - ls -la unittest
+  - if [ "${MACOSX_PACKAGE}" == "1" ]; then
+      cat unittest/test-*.log;
+      cat unittest/test-*.xml;
     fi
 
 # Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
