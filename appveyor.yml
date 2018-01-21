@@ -366,8 +366,14 @@ test_script:
   - echo "Test returned %test_ret%"
   - dir "%source_path%\output\build\unittest\"
   - echo "Show all test logs:"
-  - for /r %%i in ("%source_path%\output\build\unittest\test-*.log") do (echo %%i & type %%i)
-  - for /r %%i in ("%source_path%\output\build\unittest\test-*.xml") do (echo %%i & type %%i)
+  - for /r %%i in ("%source_path%\output\build\unittest\test-*.log") do (
+      echo %%i
+      type %%i
+    )
+  - for /r %%i in ("%source_path%\output\build\unittest\test-*.xml") do (
+      echo %%i
+      type %%i
+    )
   - cd "%source_path%"
   - set "output_path=%source_path%\output"
   - set "build_path=%output_path%\build"

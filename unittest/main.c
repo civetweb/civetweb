@@ -51,11 +51,9 @@
 int
 main(const int argc, char *argv[])
 {
-	/* Determine what tests to run */
-	const char *suite = NULL;
+	/* Supported command line arguments */
 	const char *const suite_arg = "--suite=";
 	const size_t suite_arg_size = strlen(suite_arg);
-	const char *test_case = NULL;
 	const char *const test_case_arg = "--test-case=";
 	const size_t test_case_arg_size = strlen(test_case_arg);
 	const char *const test_dir_arg = "--test-dir=";
@@ -64,6 +62,9 @@ main(const int argc, char *argv[])
 	const size_t test_log_arg_size = strlen(test_log_arg);
 	const char *const help_arg = "--help";
 
+	/* Test variables */
+	const char *suite = NULL;
+	const char *test_case = NULL;
 	SRunner *srunner;
 	int number_run = 0;
 	int number_failed = 0;
@@ -73,6 +74,7 @@ main(const int argc, char *argv[])
 
 	int i;
 
+	/* Check command line parameters for tests */
 	for (i = 1; i < argc; ++i) {
 		if (0 == strncmp(suite_arg, argv[i], suite_arg_size)
 		    && (strlen(argv[i]) > suite_arg_size)) {
@@ -118,14 +120,18 @@ main(const int argc, char *argv[])
 		/* Find the next free log name */
 		FILE *f;
 		for (i = 1;; i++) {
+			/* enumerate all log files (8.3 filename using 3 digits) */
 			sprintf(test_log_name, "test-%03i.log", i);
 			f = fopen(test_log_name, "r");
 			if (f) {
-				/* already exists */
+				/* file already exists */
 				fclose(f);
+				/* try next name */
 				continue;
 			}
+			/* file does not exist - use this name */
 			srunner_set_log(srunner, test_log_name);
+			/* use the same index for xml as for log */
 			sprintf(test_xml_name, "test-%03i.xml", i);
 			srunner_set_xml(srunner, test_xml_name);
 			break;
@@ -147,6 +153,6 @@ main(const int argc, char *argv[])
 	number_run = srunner_ntests_run(srunner);
 	number_failed = srunner_ntests_failed(srunner);
 	srunner_free(srunner);
-	return (number_failed == 0) && (number_run != 0) ? EXIT_SUCCESS
-	                                                 : EXIT_FAILURE;
+	return ((number_failed == 0) && (number_run != 0)) ? EXIT_SUCCESS
+	                                                   : EXIT_FAILURE;
 }
