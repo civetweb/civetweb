@@ -118,7 +118,7 @@ main(const int argc, char *argv[])
 		/* Find the next free log name */
 		FILE *f;
 		for (i = 1;; i++) {
-			sprintf(test_log_name, "test-%i.log", i);
+			sprintf(test_log_name, "test-%03i.log", i);
 			f = fopen(test_log_name, "r");
 			if (f) {
 				/* already exists */
@@ -126,7 +126,7 @@ main(const int argc, char *argv[])
 				continue;
 			}
 			srunner_set_log(srunner, test_log_name);
-			sprintf(test_xml_name, "test-%i.xml", i);
+			sprintf(test_xml_name, "test-%03i.xml", i);
 			srunner_set_xml(srunner, test_xml_name);
 			break;
 		}
