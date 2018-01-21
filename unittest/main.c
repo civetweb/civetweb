@@ -54,15 +54,15 @@ main(const int argc, char *argv[])
 	const size_t test_case_arg_size = strlen(test_case_arg);
 	const char *const test_dir_arg = "--test-dir=";
 	const size_t test_dir_arg_size = strlen(test_dir_arg);
-    const char *const test_log_arg = "--test-log=";
-    const size_t test_log_arg_size = strlen(test_log_arg);
-    const char *const help_arg = "--help";
+	const char *const test_log_arg = "--test-log=";
+	const size_t test_log_arg_size = strlen(test_log_arg);
+	const char *const help_arg = "--help";
 
 	SRunner *srunner;
 	int number_run = 0;
 	int number_failed = 0;
-    const char *test_log_prefix = NULL;
-    char test_log_name[128];
+	const char *test_log_prefix = NULL;
+	char test_log_name[128];
 
 	int i;
 
@@ -76,13 +76,13 @@ main(const int argc, char *argv[])
 		} else if (0 == strncmp(test_dir_arg, argv[i], test_dir_arg_size)
 		           && (strlen(argv[i]) > test_dir_arg_size)) {
 			set_test_directory(&argv[i][test_dir_arg_size]);
-        } else if (0 == strncmp(test_log_arg, argv[i], test_log_arg_size)
-                   && (strlen(argv[i]) > test_log_arg_size)) {
-            test_log_prefix = &argv[i][test_log_arg_size];
-            if (strlen(test_log_prefix) > (sizeof(test_log_name)-16)) {
-                fprintf(stderr, "Argument too long: %s\n", argv[i]);
-                exit(EXIT_FAILURE);
-            }
+		} else if (0 == strncmp(test_log_arg, argv[i], test_log_arg_size)
+		           && (strlen(argv[i]) > test_log_arg_size)) {
+			test_log_prefix = &argv[i][test_log_arg_size];
+			if (strlen(test_log_prefix) > (sizeof(test_log_name) - 16)) {
+				fprintf(stderr, "Argument too long: %s\n", argv[i]);
+				exit(EXIT_FAILURE);
+			}
 		} else if (0 == strcmp(help_arg, argv[i])) {
 			printf(
 			    "Usage: %s [options]\n"
@@ -107,29 +107,29 @@ main(const int argc, char *argv[])
 	srunner_add_suite(srunner, make_timertest_suite());
 
 	/* Write test logs to a file */
-    if (test_log_prefix != NULL) {
-        /* Find the next free log name */
-        FILE *f;
-        for (i=1;;i++) {
-            sprintf(test_log_name, "log-%i.log", i);
-            f = fopen(test_log_name, "r");
-            if (f) {
-                /* already exists */
-                fclose(f);
-                continue;
-            }
-            srunner_set_log(srunner, test_log_name);
-            sprintf(test_log_name, "log-%i.xml", i);
-            srunner_set_xml(srunner, test_log_name);
-            break;
-        }
-    } else {
-        /* We got a test log name from the command line */
-        sprintf(test_log_name, "%s.log", test_log_prefix);
-        srunner_set_log(srunner, test_log_name);
-        sprintf(test_log_name, "%s.xml", test_log_prefix);
-        srunner_set_xml(srunner, test_log_name);
-    }
+	if (test_log_prefix != NULL) {
+		/* Find the next free log name */
+		FILE *f;
+		for (i = 1;; i++) {
+			sprintf(test_log_name, "log-%i.log", i);
+			f = fopen(test_log_name, "r");
+			if (f) {
+				/* already exists */
+				fclose(f);
+				continue;
+			}
+			srunner_set_log(srunner, test_log_name);
+			sprintf(test_log_name, "log-%i.xml", i);
+			srunner_set_xml(srunner, test_log_name);
+			break;
+		}
+	} else {
+		/* We got a test log name from the command line */
+		sprintf(test_log_name, "%s.log", test_log_prefix);
+		srunner_set_log(srunner, test_log_name);
+		sprintf(test_log_name, "%s.xml", test_log_prefix);
+		srunner_set_xml(srunner, test_log_name);
+	}
 
 	/* Run tests, using log level CK_VERBOSE, since CK_NORMAL
 	 * offers not enough diagnosis to analyze failed tests.
