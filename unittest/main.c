@@ -46,6 +46,8 @@
  * https://github.com/libcheck/check
  */
 
+#define FILENAME_LEN (128)
+
 int
 main(const int argc, char *argv[])
 {
@@ -66,7 +68,8 @@ main(const int argc, char *argv[])
 	int number_run = 0;
 	int number_failed = 0;
 	const char *test_log_prefix = NULL;
-	char test_log_name[128];
+	char test_log_name[FILENAME_LEN];
+	char test_xml_name[FILENAME_LEN];
 
 	int i;
 
@@ -83,7 +86,7 @@ main(const int argc, char *argv[])
 		} else if (0 == strncmp(test_log_arg, argv[i], test_log_arg_size)
 		           && (strlen(argv[i]) > test_log_arg_size)) {
 			test_log_prefix = &argv[i][test_log_arg_size];
-			if (strlen(test_log_prefix) > (sizeof(test_log_name) - 16)) {
+			if ((strlen(test_log_prefix) + 16) > FILENAME_LEN) {
 				fprintf(stderr, "Argument too long: %s\n", argv[i]);
 				exit(EXIT_FAILURE);
 			}
@@ -115,7 +118,7 @@ main(const int argc, char *argv[])
 		/* Find the next free log name */
 		FILE *f;
 		for (i = 1;; i++) {
-			sprintf(test_log_name, "log-%i.log", i);
+			sprintf(test_log_name, "test-%i.log", i);
 			f = fopen(test_log_name, "r");
 			if (f) {
 				/* already exists */
@@ -123,16 +126,16 @@ main(const int argc, char *argv[])
 				continue;
 			}
 			srunner_set_log(srunner, test_log_name);
-			sprintf(test_log_name, "log-%i.xml", i);
-			srunner_set_xml(srunner, test_log_name);
+			sprintf(test_xml_name, "test-%i.xml", i);
+			srunner_set_xml(srunner, test_xml_name);
 			break;
 		}
 	} else {
 		/* We got a test log name from the command line */
 		sprintf(test_log_name, "%s.log", test_log_prefix);
 		srunner_set_log(srunner, test_log_name);
-		sprintf(test_log_name, "%s.xml", test_log_prefix);
-		srunner_set_xml(srunner, test_log_name);
+		sprintf(test_xml_name, "%s.xml", test_log_prefix);
+		srunner_set_xml(srunner, test_xml_name);
 	}
 
 	/* Run tests, using log level CK_VERBOSE, since CK_NORMAL
