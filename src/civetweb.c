@@ -18782,7 +18782,7 @@ mg_init_library(unsigned features)
 			} else {
 				(void)ebuf;
 				DEBUG_TRACE("Initializing SSL failed: %s", ebuf);
-				features_inited &= ~(2u);
+				features_inited &= ~((unsigned)(MG_FEATURES_SSL));
 			}
 		} else {
 			/* ssl already initialized */
