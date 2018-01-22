@@ -106,8 +106,10 @@ script:
   - pwd
   - ls -la unittest
   - echo "Show all test logs:"
-  - for f in unittest/test-*.log; do printf "\n$f:\n"; cat $f; done
-  - for f in unittest/test-*.xml; do printf "\n$f:\n"; cat $f; done
+  - if [ "${MACOSX_PACKAGE}" != "1" ]; then
+      for f in unittest/test-*.log; do printf "\n$f:\n"; cat $f; done;
+      for f in unittest/test-*.xml; do printf "\n$f:\n"; cat $f; done;
+    fi
   - echo "Build and test script DONE"
 
 # Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
