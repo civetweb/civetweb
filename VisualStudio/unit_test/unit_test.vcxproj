@@ -12,22 +12,22 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\civetweb.h" />
-    <ClInclude Include="..\..\test\civetweb_check.h" />
-    <ClInclude Include="..\..\test\private.h" />
-    <ClInclude Include="..\..\test\private_exe.h" />
-    <ClInclude Include="..\..\test\public_func.h" />
-    <ClInclude Include="..\..\test\public_server.h" />
-    <ClInclude Include="..\..\test\timertest.h" />
-    <ClInclude Include="..\..\test\shared.h" />
+    <ClInclude Include="..\..\unittest\civetweb_check.h" />
+    <ClInclude Include="..\..\unittest\private.h" />
+    <ClInclude Include="..\..\unittest\private_exe.h" />
+    <ClInclude Include="..\..\unittest\public_func.h" />
+    <ClInclude Include="..\..\unittest\public_server.h" />
+    <ClInclude Include="..\..\unittest\timertest.h" />
+    <ClInclude Include="..\..\unittest\shared.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\civetweb.c" />
-    <ClCompile Include="..\..\test\private.c" />
-    <ClCompile Include="..\..\test\private_exe.c" />
-    <ClCompile Include="..\..\test\public_func.c" />
-    <ClCompile Include="..\..\test\public_server.c" />
-    <ClInclude Include="..\..\test\timertest.c" />
-    <ClCompile Include="..\..\test\shared.c" />
+    <ClCompile Include="..\..\unittest\private.c" />
+    <ClCompile Include="..\..\unittest\private_exe.c" />
+    <ClCompile Include="..\..\unittest\public_func.c" />
+    <ClCompile Include="..\..\unittest\public_server.c" />
+    <ClInclude Include="..\..\unittest\timertest.c" />
+    <ClCompile Include="..\..\unittest\shared.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1AC4A7A6-0100-4287-97F4-B95807BE5607}</ProjectGuid>
