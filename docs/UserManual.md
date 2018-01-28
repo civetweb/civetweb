@@ -76,10 +76,12 @@ CivetWeb can also be used to modify `.htpasswd` passwords files:
 
     CivetWeb -A <htpasswd_file> <realm> <user> <passwd>
 
-Unlike other web servers, CivetWeb does not require CGI scripts to be located
-in a special directory. CGI scripts can be anywhere. CGI (and SSI) files are
-recognized by the file name pattern. CivetWeb uses shell-like glob
-patterns. Pattern match starts at the beginning of the string, so essentially
+
+# Pattern matching
+
+CivetWeb uses shell-like glob patterns for several configuration options,
+e.g., CGI, SSI and Lua script files are recognized by the file name pattern. 
+Pattern match starts at the beginning of the string, so essentially
 patterns are prefix patterns. Syntax is as follows:
 
      **      Matches everything
@@ -93,6 +95,7 @@ All other characters in the pattern match themselves. Examples:
     **.cgi$      Any string that ends with .cgi
     /foo         Any string that begins with /foo
     **a$|**b$    Any string that ends with a or b
+
 
 # Configuration Options
 
@@ -841,6 +844,41 @@ An example is shown in
 [websocket.lua](https://github.com/civetweb/civetweb/blob/master/test/websocket.lua).
 
 
+# Using CGI
+
+Unlike some other web servers, CivetWeb does not require CGI scripts to be located
+in a special directory. CGI scripts files are recognized by the file name pattern
+and can be anywhere.
+
+When using CGI, make sure your CGI file names match the `cgi\_pattern` parameter
+configured for the server.
+Furthermore, you must either configure a `cgi\_interpreter` to be used for all
+CGI scripts, or all scripts must start with `#!` followed by the CGI
+interpreter executable, e.g.: `#!/path/to/perl.exe` or `#!/bin/sh`.
+
+See `cgi\_pattern` and `cgi\_interpreter` for more details.
+
+It is possible to disable CGI completely by building the server with
+the `NO\_CGI` define. Setting this define is required for operating 
+systems not supporting `fork/exec` or `CreateProcess` (since CGI is
+based on creating child processes, it will not be available on such
+operating systems for principle reasons).
+
+Every CGI request will spawn a new child process. Data sent from the
+HTTP client to the server is passed to stdin of the child process,
+while data written to stdout by the child process is sent back to the
+HTTP client.
+
+In case a CGI script cannot handle a particular request, it might
+write a short error message to stderr instead of writing to stdout.
+This error message is added to the server error log.
+
+A script should not write to stderr after writing a reply header
+to stdout. In case CGI libraries are writing to stderr (e.g., for
+logging/debugging), the CGI script should redirect stderr to a 
+user defined log file at the beginning of the script.
+
+
 # Common Problems
 - PHP doesn't work - getting empty page, or 'File not found' error. The
   reason for that is wrong paths to the interpreter. Remember that with PHP,
@@ -858,7 +896,7 @@ An example is shown in
 
 - CivetWeb fails to start. If CivetWeb exits immediately when started, this
   usually indicates a syntax error in the configuration file
-  (named `CivetWeb.conf` by default) or the command-line arguments.
+  (named `civetweb.conf` by default) or the command-line arguments.
   Syntax checking is omitted from CivetWeb to keep its size low. However,
   the Manual should be of help. Note: the syntax changes from time to time,
   so updating the config file might be necessary after executable update.

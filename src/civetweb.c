@@ -10321,7 +10321,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	}
 
 	buf = NULL;
-	buflen = 16384;
+	buflen = conn->phys_ctx->max_request_size;
 	i = prepare_cgi_environment(conn, prog, &blk);
 	if (i != 0) {
 		blk.buf = NULL;
@@ -10432,7 +10432,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		                status);
 		mg_send_http_error(conn,
 		                   500,
-		                   "Error: CGI can not open fdout\nfopen: %s",
+		                   "Error: CGI can not open fderr\nfopen: %s",
 		                   status);
 		goto done;
 	}
@@ -10492,20 +10492,22 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		 * stderr. */
 		i = pull_all(err, conn, buf, (int)buflen);
 		if (i > 0) {
+			/* CGI program explicitly sent an error */
+			/* Write the error message to the internal log */
 			mg_cry_internal(conn,
 			                "Error: CGI program \"%s\" sent error "
 			                "message: [%.*s]",
 			                prog,
 			                i,
 			                buf);
+			/* Don't send the error message back to the client */
 			mg_send_http_error(conn,
 			                   500,
-			                   "Error: CGI program \"%s\" sent error "
-			                   "message: [%.*s]",
-			                   prog,
-			                   i,
-			                   buf);
+			                   "Error: CGI program \"%s\" failed.",
+			                   prog);
 		} else {
+			/* CGI program did not explicitly send an error, but a broken
+			 * respon header */
 			mg_cry_internal(conn,
 			                "Error: CGI program sent malformed or too big "
 			                "(>%u bytes) HTTP headers: [%.*s]",
@@ -10522,6 +10524,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 			                   buf);
 		}
 
+		/* in both cases, abort processing CGI */
 		goto done;
 	}
 
@@ -10568,8 +10571,8 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	mg_write(conn, buf + headers_len, (size_t)(data_len - headers_len));
 
 	/* Read the rest of CGI output and send to the client */
+	DEBUG_TRACE("CGI: %s", "forward all data");
 	send_file_data(conn, &fout, 0, INT64_MAX);
-
 	DEBUG_TRACE("CGI: %s", "all data sent");
 
 done:
