@@ -11618,6 +11618,23 @@ read_websocket(struct mg_connection *conn,
 				DEBUG_TRACE("PONG from %s:%u",
 				            conn->request_info.remote_addr,
 				            conn->request_info.remote_port);
+			} else if (enable_ping_pong
+			           && ((mop & 0xF) == MG_WEBSOCKET_OPCODE_PING)) {
+				/* reply PING messages */
+				DEBUG_TRACE("Reply PING from %s:%u",
+				            conn->request_info.remote_addr,
+				            conn->request_info.remote_port);
+				ret = mg_websocket_write(conn,
+				                         MG_WEBSOCKET_OPCODE_PONG,
+				                         (char *)data,
+				                         (size_t)data_len);
+				if (ret <= 0) {
+					/* Error: send failed */
+					DEBUG_TRACE("Reply PONG failed (%i)", ret);
+					break;
+				}
+
+
 			} else {
 				/* Exit the loop if callback signals to exit (server side),
 				 * or "connection close" opcode received (client side). */
@@ -11653,6 +11670,7 @@ read_websocket(struct mg_connection *conn,
 			               timeout);
 			if (n <= -2) {
 				/* Error, no bytes read */
+				DEBUG_TRACE("PULL failed (%i)", n);
 				break;
 			}
 			if (n > 0) {
@@ -11673,6 +11691,7 @@ read_websocket(struct mg_connection *conn,
 
 						if (ret <= 0) {
 							/* Error: send failed */
+							DEBUG_TRACE("Send PING failed (%i)", ret);
 							break;
 						}
 					}
