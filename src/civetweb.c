@@ -11483,6 +11483,10 @@ read_websocket(struct mg_connection *conn,
 		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 
+	/* Enter data processing loop */
+	DEBUG_TRACE("Websocket connection %s:%u start data processing loop",
+	            conn->request_info.remote_addr,
+	            conn->request_info.remote_port);
 	conn->in_websocket_handling = 1;
 	mg_set_thread_name("wsock");
 
@@ -11654,9 +11658,17 @@ read_websocket(struct mg_connection *conn,
 				mg_free(data);
 			}
 
-			if (exit_by_callback
-			    || ((mop & 0xf) == MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE)) {
+			if (exit_by_callback) {
+				DEBUG_TRACE("Callback requests to close connection from %s:%u",
+				            conn->request_info.remote_addr,
+				            conn->request_info.remote_port);
+				break;
+			}
+			if ((mop & 0xf) == MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE) {
 				/* Opcode == 8, connection close */
+				DEBUG_TRACE("Message requests to close connection from %s:%u",
+				            conn->request_info.remote_addr,
+				            conn->request_info.remote_port);
 				break;
 			}
 
@@ -11671,7 +11683,9 @@ read_websocket(struct mg_connection *conn,
 			               timeout);
 			if (n <= -2) {
 				/* Error, no bytes read */
-				DEBUG_TRACE("PULL failed (%i)", n);
+				DEBUG_TRACE("PULL from %s:%u failed",
+				            conn->request_info.remote_addr,
+				            conn->request_info.remote_port);
 				break;
 			}
 			if (n > 0) {
@@ -11701,8 +11715,12 @@ read_websocket(struct mg_connection *conn,
 		}
 	}
 
+	/* Leave data processing loop */
 	mg_set_thread_name("worker");
 	conn->in_websocket_handling = 0;
+	DEBUG_TRACE("Websocket connection %s:%u left data processing loop",
+	            conn->request_info.remote_addr,
+	            conn->request_info.remote_port);
 }
 
 
