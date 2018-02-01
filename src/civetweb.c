@@ -11446,6 +11446,7 @@ read_websocket(struct mg_connection *conn,
 	 * begins after it. */
 	unsigned char *buf = (unsigned char *)conn->buf + conn->request_len;
 	int n, error, exit_by_callback;
+	int ret;
 
 	/* body_len is the length of the entire queue in bytes
 	 * len is the length of the current message
@@ -11678,8 +11679,6 @@ read_websocket(struct mg_connection *conn,
 			} else {
 				if (!conn->phys_ctx->stop_flag && !conn->must_close) {
 					if (enable_ping_pong) {
-						int ret;
-
 						/* Send Websocket PING message */
 						DEBUG_TRACE("PING to %s:%u",
 						            conn->request_info.remote_addr,
