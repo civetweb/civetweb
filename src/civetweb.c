@@ -1402,6 +1402,9 @@ struct mg_workerTLS {
 	HANDLE pthread_cond_helper_mutex;
 	struct mg_workerTLS *next_waiting_thread;
 #endif
+#if defined(MG_LEGACY_INTERFACE)
+	char txtbuf[4];
+#endif
 };
 
 
@@ -3490,12 +3493,20 @@ mg_get_request_info(const struct mg_connection *conn)
 	}
 #if 1 /* TODO: deal with legacy */
 	if (conn->connection_type == CONNECTION_TYPE_RESPONSE) {
-		static char txt[16];
+		char txt[16];
+		struct mg_workerTLS *tls =
+		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+
 		sprintf(txt, "%03i", conn->response_info.status_code);
+		if (strlen(txt) == 3) {
+			memcpy(tls->txtbuf, txt, 4);
+		} else {
+			strcpy(tls->txtbuf, "ERR");
+		}
 
 		((struct mg_connection *)conn)->request_info.local_uri =
 		    ((struct mg_connection *)conn)->request_info.request_uri =
-		        txt; /* TODO: not thread safe */
+		        tls->txtbuf; /* use thread safe buffer */
 
 		((struct mg_connection *)conn)->request_info.num_headers =
 		    conn->response_info.num_headers;
@@ -5337,7 +5348,7 @@ mg_stat(const struct mg_connection *conn,
 		filep->size = tmp_file.stat.size;
 		filep->last_modified = time(NULL);
 		filep->location = 2;
-		/* TODO: for 1.10: restructure how files in memory are handled */
+		/* TODO: remove legacy "files in memory" feature */
 
 		return 1;
 	}
@@ -14173,7 +14184,7 @@ sslize(struct mg_connection *conn,
 	ret = SSL_set_fd(conn->ssl, conn->client.sock);
 	if (ret != 1) {
 		err = SSL_get_error(conn->ssl, ret);
-		(void)err; /* TODO: set some error message */
+		mg_cry(conn, "SSL error %i, destroying SSL context", err);
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
@@ -14207,8 +14218,7 @@ sslize(struct mg_connection *conn,
 			} else if (err == SSL_ERROR_SYSCALL) {
 				/* This is an IO error. Look at errno. */
 				err = errno;
-				/* TODO: set some error message */
-				(void)err;
+				mg_cry(conn, "SSL syscall error %i", err);
 				break;
 
 			} else {
@@ -15640,8 +15650,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 #endif
 
 	if (0 != set_non_blocking_mode(sock)) {
-		/* TODO: handle error */
-		;
+		mg_cry(conn, "Cannot set non-blocking mode for client");
 	}
 
 	return conn;

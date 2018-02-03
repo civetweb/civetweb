@@ -762,7 +762,7 @@ lsp_get_var(lua_State *L)
 			/* Variable found: return value to Lua */
 			lua_pushstring(L, dst);
 		} else {
-			/* Variable not found (TODO (mid): may be string too long) */
+			/* Variable not found */
 			lua_pushnil(L);
 		}
 		mg_free(dst);
@@ -1695,16 +1695,6 @@ civetweb_open_lua_libs(lua_State *L)
 		luaopen_lfs(L);
 	}
 #endif
-#ifdef USE_LUA_BINARY
-	{
-		/* TODO (low): Test if this could be used as a replacement for bit32.
-		 * Check again with Lua 5.3 later. */
-		extern int luaopen_binary(lua_State *);
-
-		luaL_requiref(L, "binary", luaopen_binary, 1);
-		lua_pop(L, 1);
-	}
-#endif
 }
 
 
@@ -2105,8 +2095,7 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		}
 		/* init ws list element */
 		ws = &(*shared_websock_list)->ws;
-		ws->script =
-		    mg_strdup_ctx(script, conn->phys_ctx); /* TODO (low): handle OOM */
+		ws->script = mg_strdup_ctx(script, conn->phys_ctx);
 		if (!ws->script) {
 			conn->must_close = 1;
 			mg_unlock_context(conn->phys_ctx);
