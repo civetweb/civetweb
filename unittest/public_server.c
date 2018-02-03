@@ -357,7 +357,7 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 
 	struct mg_connection *client_conn;
 	char client_err[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 	int client_res, ret;
 	struct mg_server_ports portinfo[8];
 
@@ -448,13 +448,13 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 #else
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
@@ -479,13 +479,13 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 #else
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
@@ -511,11 +511,11 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
 	/* Response must be 505 HTTP Version not supported */
-	ck_assert_str_eq(client_ri->local_uri, "505");
+	ck_assert_int_eq(client_ri->status_code, 505);
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
@@ -539,11 +539,11 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
 	/* Response must be 400 Bad Request */
-	ck_assert_str_eq(client_ri->local_uri, "400");
+	ck_assert_int_eq(client_ri->status_code, 400);
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
@@ -598,7 +598,7 @@ START_TEST(test_mg_start_stop_https_server)
 
 	struct mg_connection *client_conn;
 	char client_err[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 	int client_res, ret;
 	struct mg_server_ports portinfo[8];
 
@@ -684,13 +684,13 @@ START_TEST(test_mg_start_stop_https_server)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 #else
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
@@ -720,7 +720,7 @@ START_TEST(test_mg_server_and_client_tls)
 
 	struct mg_connection *client_conn;
 	char client_err[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 	int client_res;
 	struct mg_client_options client_options;
 
@@ -813,13 +813,13 @@ START_TEST(test_mg_server_and_client_tls)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 #else
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
@@ -1137,7 +1137,7 @@ START_TEST(test_request_handlers)
 	char ebuf[100];
 	struct mg_context *ctx;
 	struct mg_connection *client_conn;
-	const struct mg_request_info *ri;
+	const struct mg_response_info *client_ri;
 	char uri[64];
 	char buf[1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 8];
 	const char *expected =
@@ -1301,20 +1301,20 @@ START_TEST(test_request_handlers)
 	                          "%s",
 	                          "GET /file/not/found HTTP/1.0\r\n\r\n");
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "404");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 404);
 	mg_close_connection(client_conn);
 
 	/* Get data from callback */
 	client_conn = mg_download(
 	    "localhost", ipv4_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1325,10 +1325,10 @@ START_TEST(test_request_handlers)
 	client_conn = mg_download(
 	    "127.0.0.1", ipv4_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	if ((i >= 0) && ((size_t)i < sizeof(buf))) {
 		buf[i] = 0;
@@ -1350,10 +1350,10 @@ START_TEST(test_request_handlers)
 	client_conn =
 	    mg_download("[::1]", ipv6_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1366,10 +1366,10 @@ START_TEST(test_request_handlers)
 	client_conn = mg_download(
 	    "127.0.0.1", ipv4s_port, 1, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1380,10 +1380,10 @@ START_TEST(test_request_handlers)
 	client_conn = mg_download(
 	    "127.0.0.1", ipv4r_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "302");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 302);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, -1);
 	mg_close_connection(client_conn);
@@ -1394,10 +1394,10 @@ START_TEST(test_request_handlers)
 	client_conn =
 	    mg_download("[::1]", ipv6s_port, 1, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1408,10 +1408,10 @@ START_TEST(test_request_handlers)
 	client_conn =
 	    mg_download("[::1]", ipv6r_port, 0, ebuf, sizeof(ebuf), "%s", request);
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "302");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 302);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, -1);
 	mg_close_connection(client_conn);
@@ -1480,14 +1480,14 @@ START_TEST(test_request_handlers)
 	                          "%s",
 	                          "GET /test.txt HTTP/1.0\r\n\r\n");
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
+	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 #else
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, 17);
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
@@ -1541,10 +1541,10 @@ START_TEST(test_request_handlers)
 	    "%s",
 	    "POST /cgi_test.cgi/x/y.z HTTP/1.0\r\nContent-Length: 3\r\n\r\nABC");
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 #endif
 
@@ -1557,10 +1557,10 @@ START_TEST(test_request_handlers)
 	                          "%s",
 	                          "GET /test_gz.txt HTTP/1.0\r\n\r\n");
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "404");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 404);
 	mg_close_connection(client_conn);
 
 	/* Get zipped static data - with Accept-Encoding */
@@ -1573,20 +1573,20 @@ START_TEST(test_request_handlers)
 	    "%s",
 	    "GET /test_gz.txt HTTP/1.0\r\nAccept-Encoding: gzip\r\n\r\n");
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
+	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 #else
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, 52);
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
 		buf[i] = 0;
 	}
-	ck_assert_int_eq(ri->content_length, 52);
+	ck_assert_int_eq(client_ri->content_length, 52);
 	ck_assert_str_eq(buf, encoded_file_content);
 #endif
 	mg_close_connection(client_conn);
@@ -1601,12 +1601,12 @@ START_TEST(test_request_handlers)
 	                          "%s",
 	                          "GET /test.cgi HTTP/1.0\r\n\r\n");
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
+	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 
 	(void)expected_cgi_result;
 	(void)cgi_script_content;
@@ -1620,7 +1620,7 @@ START_TEST(test_request_handlers)
 	}
 	/* ck_assert_int_eq(i, (int)strlen(expected_cgi_result)); */
 	ck_assert_str_eq(buf, expected_cgi_result);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 #endif
 
@@ -1638,13 +1638,13 @@ START_TEST(test_request_handlers)
 	                          "%s",
 	                          "GET / HTTP/1.0\r\n\r\n");
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
+	ck_assert(client_ri != NULL);
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 #else
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert(i > 6);
 	buf[6] = 0;
@@ -1661,13 +1661,13 @@ START_TEST(test_request_handlers)
 	                          "%s",
 	                          "POST /test.txt HTTP/1.0\r\n\r\n");
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
+	ck_assert(client_ri != NULL);
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 #else
-	ck_assert_str_eq(ri->local_uri, "405");
+	ck_assert_int_eq(client_ri->status_code, 405);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert(i >= 29);
 	buf[29] = 0;
@@ -1684,13 +1684,13 @@ START_TEST(test_request_handlers)
 	                          "%s",
 	                          "PUT /test.txt HTTP/1.0\r\n\r\n");
 	ck_assert(client_conn != NULL);
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
+	ck_assert(client_ri != NULL);
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->local_uri, "405"); /* method not allowed */
+	ck_assert_int_eq(client_ri->status_code, 405); /* method not allowed */
 #else
-	ck_assert_str_eq(ri->local_uri, "401"); /* not authorized */
+	ck_assert_int_eq(client_ri->status_code, 401); /* not authorized */
 #endif
 	mg_close_connection(client_conn);
 
@@ -1709,10 +1709,10 @@ START_TEST(test_request_handlers)
 	ck_assert_int_ge(i, 0);
 	ck_assert_str_eq(ebuf, "");
 
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1735,10 +1735,10 @@ START_TEST(test_request_handlers)
 	ck_assert_int_ge(i, 0);
 	ck_assert_str_eq(ebuf, "");
 
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1762,10 +1762,10 @@ START_TEST(test_request_handlers)
 	ck_assert_int_ge(i, 0);
 	ck_assert_str_eq(ebuf, "");
 
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -2454,7 +2454,7 @@ START_TEST(test_handle_form)
 {
 	struct mg_context *ctx;
 	struct mg_connection *client_conn;
-	const struct mg_request_info *ri;
+	const struct mg_response_info *client_ri;
 	const char *OPTIONS[8];
 	const char *opt;
 	int opt_idx = 0;
@@ -2513,10 +2513,10 @@ START_TEST(test_handle_form)
 			break;
 		}
 	}
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST x-www-form-urlencoded" */
@@ -2546,10 +2546,10 @@ START_TEST(test_handle_form)
 			break;
 		}
 	}
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST multipart/form-data" */
@@ -2671,10 +2671,10 @@ START_TEST(test_handle_form)
 			break;
 		}
 	}
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
 
@@ -2718,10 +2718,10 @@ START_TEST(test_handle_form)
 			break;
 		}
 	}
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST multipart/form-data" with chunked transfer
@@ -2765,10 +2765,10 @@ START_TEST(test_handle_form)
 			break;
 		}
 	}
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
 
@@ -2798,10 +2798,10 @@ START_TEST(test_handle_form)
 			break;
 		}
 	}
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
 
@@ -2836,10 +2836,10 @@ START_TEST(test_handle_form)
 			break;
 		}
 	}
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST multipart/form-data", chunked, store */
@@ -2896,10 +2896,10 @@ START_TEST(test_handle_form)
 			break;
 		}
 	}
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
 
@@ -2987,10 +2987,10 @@ START_TEST(test_handle_form)
 			break;
 		}
 	}
-	ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 
-	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->local_uri, "200");
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
 
@@ -3022,7 +3022,7 @@ START_TEST(test_http_auth)
 	struct mg_context *ctx;
 	struct mg_connection *client_conn;
 	char client_err[256], nonce[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 	int client_res;
 	FILE *f;
 	const char *passwd_file = ".htpasswd";
@@ -3085,10 +3085,10 @@ START_TEST(test_http_auth)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
 	ck_assert_int_le(client_res, sizeof(client_err));
@@ -3119,10 +3119,10 @@ START_TEST(test_http_auth)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "401");
+	ck_assert_int_eq(client_ri->status_code, 401);
 
 	auth_request = NULL;
 	for (i = 0; i < client_ri->num_headers; i++) {
@@ -3223,10 +3223,10 @@ START_TEST(test_http_auth)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
 	ck_assert_int_le(client_res, sizeof(client_err));
@@ -3265,10 +3265,10 @@ START_TEST(test_http_auth)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "401");
+	ck_assert_int_eq(client_ri->status_code, 401);
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
@@ -3293,10 +3293,10 @@ START_TEST(test_http_auth)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "401");
+	ck_assert_int_eq(client_ri->status_code, 401);
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
@@ -3320,10 +3320,10 @@ START_TEST(test_http_auth)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
 	ck_assert_int_le(client_res, sizeof(client_err));
@@ -3365,7 +3365,7 @@ START_TEST(test_keep_alive)
 
 	struct mg_connection *client_conn;
 	char client_err[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 	int client_res, i;
 	const char *connection_header;
 
@@ -3390,13 +3390,13 @@ START_TEST(test_keep_alive)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 #else
-	ck_assert_str_eq(client_ri->local_uri, "403");
+	ck_assert_int_eq(client_ri->status_code, 403);
 #endif
 
 	connection_header = 0;
@@ -3437,7 +3437,7 @@ START_TEST(test_error_handling)
 
 	struct mg_connection *client_conn;
 	char client_err[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 	int client_res, i;
 
 	const char *OPTIONS[32];
@@ -3548,10 +3548,10 @@ START_TEST(test_error_handling)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 	mg_close_connection(client_conn);
 	test_sleep(1);
 
@@ -3575,10 +3575,10 @@ START_TEST(test_error_handling)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -3607,10 +3607,10 @@ START_TEST(test_error_handling)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -3639,10 +3639,10 @@ START_TEST(test_error_handling)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -3665,10 +3665,10 @@ START_TEST(test_error_handling)
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
 	ck_assert_str_eq(client_err, "");
-	client_ri = mg_get_request_info(client_conn);
+	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -3714,7 +3714,7 @@ START_TEST(test_error_log_file)
 	struct mg_connection *client;
 	char client_err_buf[256];
 	char client_data_buf[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 
 	/* File content check var */
 	FILE *f;
@@ -3758,10 +3758,10 @@ START_TEST(test_error_log_file)
 	ck_assert(ctx != NULL);
 	ck_assert_str_eq(client_err_buf, "");
 
-	client_ri = mg_get_request_info(client);
+	client_ri = mg_get_response_info(client);
 
 	ck_assert(client_ri != NULL);
-	ck_assert_str_eq(client_ri->local_uri, "404");
+	ck_assert_int_eq(client_ri->status_code, 404);
 
 	/* Close the client connection */
 	mg_close_connection(client);
@@ -3914,7 +3914,7 @@ START_TEST(test_throttle)
 	struct mg_connection *client;
 	char client_err_buf[256];
 	char client_data_buf[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 
 	/* timing test */
 	int r, data_read;
@@ -3957,10 +3957,10 @@ START_TEST(test_throttle)
 	ck_assert(ctx != NULL);
 	ck_assert_str_eq(client_err_buf, "");
 
-	client_ri = mg_get_request_info(client);
+	client_ri = mg_get_response_info(client);
 
 	ck_assert(client_ri != NULL);
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 
 	ck_assert_int_eq(client_ri->content_length, 1024 * 10);
 
@@ -4070,7 +4070,7 @@ START_TEST(test_large_file)
 	struct mg_connection *client;
 	char client_err_buf[256];
 	char client_data_buf[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 	int64_t data_read;
 	int r;
 	int retry, retry_ok_cnt, retry_fail_cnt;
@@ -4138,10 +4138,10 @@ START_TEST(test_large_file)
 		ck_assert(client != NULL);
 		ck_assert_str_eq(client_err_buf, "");
 
-		client_ri = mg_get_request_info(client);
+		client_ri = mg_get_response_info(client);
 
 		ck_assert(client_ri != NULL);
-		ck_assert_str_eq(client_ri->local_uri, "200");
+		ck_assert_int_eq(client_ri->status_code, 200);
 
 		ck_assert_int_eq(client_ri->content_length, LARGE_FILE_SIZE);
 
@@ -4267,7 +4267,7 @@ START_TEST(test_mg_store_body)
 	char client_err_buf[256];
 	char client_data_buf[1024];
 	struct mg_connection *client;
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 	int r;
 	char check_data[256];
 	char *check_ptr;
@@ -4332,12 +4332,11 @@ START_TEST(test_mg_store_body)
 	ck_assert_int_ge(r, 0);
 	ck_assert_str_eq(client_err_buf, "");
 
-	client_ri = mg_get_request_info(client);
+	client_ri = mg_get_response_info(client);
 	ck_assert(client_ri != NULL);
 
 	/* Response must be 200 OK  */
-	ck_assert_ptr_ne(client_ri->request_uri, NULL);
-	ck_assert_str_eq(client_ri->request_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 
 	/* Read PUT response */
 	r = mg_read(client, client_data_buf, sizeof(client_data_buf) - 1);
@@ -4455,10 +4454,10 @@ START_TEST(test_file_in_memory)
 	ck_assert(client != NULL);
 	ck_assert_str_eq(client_err_buf, "");
 
-	client_ri = mg_get_request_info(client);
+	client_ri = mg_get_response_info(client);
 
 	ck_assert(client_ri != NULL);
-	ck_assert_str_eq(client_ri->local_uri, "200");
+	ck_assert_int_eq(client_ri->status_code, 200);
 
 	ck_assert_int_eq(client_ri->content_length, FILE_IN_MEM_SIZE);
 
@@ -4511,7 +4510,7 @@ minimal_http_https_client_impl(const char *server,
 	struct mg_connection *client;
 	char client_err_buf[256];
 	char client_data_buf[256];
-	const struct mg_request_info *client_ri;
+	const struct mg_response_info *client_ri;
 	int64_t data_read;
 	int r;
 
@@ -4541,13 +4540,11 @@ minimal_http_https_client_impl(const char *server,
 		    client_err_buf);
 	}
 
-	client_ri = mg_get_request_info(client);
+	client_ri = mg_get_response_info(client);
 	ck_assert(client_ri != NULL);
 
-	/* e.g.: ck_assert_str_eq(client_ri->request_uri, "200"); */
-	ck_assert_ptr_ne(client_ri->request_uri, NULL);
-	r = (int)strlen(client_ri->request_uri);
-	ck_assert_int_eq(r, 3);
+	/* Check for status code 200 OK */
+	ck_assert_int_eq(client_ri->status_code, 200);
 
 	data_read = 0;
 	while (data_read < client_ri->content_length) {
