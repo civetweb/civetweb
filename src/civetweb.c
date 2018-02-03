@@ -1394,6 +1394,9 @@ static int mg_ssl_initialized = 0;
 static pthread_key_t sTlsKey; /* Thread local storage index */
 static int thread_idx_max = 0;
 
+#if defined(MG_LEGACY_INTERFACE)
+#define MG_ALLOW_USING_GET_REQUEST_INFO_FOR_RESPONSE
+#endif
 
 struct mg_workerTLS {
 	int is_master;
@@ -1402,7 +1405,7 @@ struct mg_workerTLS {
 	HANDLE pthread_cond_helper_mutex;
 	struct mg_workerTLS *next_waiting_thread;
 #endif
-#if defined(MG_LEGACY_INTERFACE)
+#if defined(MG_ALLOW_USING_GET_REQUEST_INFO_FOR_RESPONSE)
 	char txtbuf[4];
 #endif
 };
@@ -3491,7 +3494,7 @@ mg_get_request_info(const struct mg_connection *conn)
 	if (!conn) {
 		return NULL;
 	}
-#if 1 /* TODO: deal with legacy */
+#if MG_ALLOW_USING_GET_REQUEST_INFO_FOR_RESPONSE
 	if (conn->connection_type == CONNECTION_TYPE_RESPONSE) {
 		char txt[16];
 		struct mg_workerTLS *tls =
@@ -14184,7 +14187,7 @@ sslize(struct mg_connection *conn,
 	ret = SSL_set_fd(conn->ssl, conn->client.sock);
 	if (ret != 1) {
 		err = SSL_get_error(conn->ssl, ret);
-		mg_cry(conn, "SSL error %i, destroying SSL context", err);
+		mg_cry_internal(conn, "SSL error %i, destroying SSL context", err);
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
@@ -14218,7 +14221,7 @@ sslize(struct mg_connection *conn,
 			} else if (err == SSL_ERROR_SYSCALL) {
 				/* This is an IO error. Look at errno. */
 				err = errno;
-				mg_cry(conn, "SSL syscall error %i", err);
+				mg_cry_internal(conn, "SSL syscall error %i", err);
 				break;
 
 			} else {
@@ -15650,7 +15653,10 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 #endif
 
 	if (0 != set_non_blocking_mode(sock)) {
-		mg_cry(conn, "Cannot set non-blocking mode for client");
+		mg_cry_internal(conn,
+		                "Cannot set non-blocking mode for client %s:%i",
+		                client_options->host,
+		                client_options->port);
 	}
 
 	return conn;
