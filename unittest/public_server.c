@@ -4543,10 +4543,10 @@ minimal_http_https_client_impl(const char *server,
 	client_ri = mg_get_response_info(client);
 	ck_assert(client_ri != NULL);
 
-    /* Check for status code 200 OK or 30? moved */
-    if ((client_ri->status_code < 300) || (client_ri->status_code > 308)) {
-        ck_assert_int_eq(client_ri->status_code, 200);
-    }
+	/* Check for status code 200 OK or 30? moved */
+	if ((client_ri->status_code < 300) || (client_ri->status_code > 308)) {
+		ck_assert_int_eq(client_ri->status_code, 200);
+	}
 
 	data_read = 0;
 	while (data_read < client_ri->content_length) {

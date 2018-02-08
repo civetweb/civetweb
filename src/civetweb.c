@@ -2322,7 +2322,8 @@ struct mg_handler_info {
 	mg_request_handler handler;
 	unsigned int refcount;
 	pthread_mutex_t refcount_mutex; /* Protects refcount */
-	pthread_cond_t refcount_cond; /* Signaled when handler refcount is decremented */
+	pthread_cond_t
+	    refcount_cond; /* Signaled when handler refcount is decremented */
 
 	/* Handler for ws/wss (websocket) requests. */
 	mg_websocket_connect_handler connect_handler;
@@ -11452,6 +11453,16 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 }
 
 
+#if !defined(MG_MAX_UNANSWERED_PING)
+/* Configuration of the maximum number of websocket PINGs that might
+ * stay unanswered before the connection is considered broken.
+ * Note: The name of this define may still change (until it is
+ * defined as a compile parameter in a documentation).
+ */
+#define MG_MAX_UNANSWERED_PING (5)
+#endif
+
+
 static void
 read_websocket(struct mg_connection *conn,
                mg_websocket_data_handler ws_data_handler,
@@ -11484,8 +11495,10 @@ read_websocket(struct mg_connection *conn,
 	unsigned char mop; /* mask flag and opcode */
 
 
+	/* Variables used for connection monitoring */
 	double timeout = -1.0;
 	int enable_ping_pong = 0;
+	int ping_count = 0;
 
 	if (conn->dom_ctx->config[ENABLE_WEBSOCKET_PING_PONG]) {
 		enable_ping_pong =
@@ -11640,6 +11653,8 @@ read_websocket(struct mg_connection *conn,
 				DEBUG_TRACE("PONG from %s:%u",
 				            conn->request_info.remote_addr,
 				            conn->request_info.remote_port);
+				/* No unanwered PINGs left */
+				ping_count = 0;
 			} else if (enable_ping_pong
 			           && ((mop & 0xF) == MG_WEBSOCKET_OPCODE_PING)) {
 				/* reply PING messages */
@@ -11707,8 +11722,19 @@ read_websocket(struct mg_connection *conn,
 			}
 			if (n > 0) {
 				conn->data_len += n;
+				/* Reset open PING count */
+				ping_count = 0;
 			} else {
 				if (!conn->phys_ctx->stop_flag && !conn->must_close) {
+					if (ping_count > MG_MAX_UNANSWERED_PING) {
+						/* Stop sending PING */
+						DEBUG_TRACE("Too many (%i) unanswered ping from %s:%u "
+						            "- closing connection",
+						            ping_count,
+						            conn->request_info.remote_addr,
+						            conn->request_info.remote_port);
+						break;
+					}
 					if (enable_ping_pong) {
 						/* Send Websocket PING message */
 						DEBUG_TRACE("PING to %s:%u",
@@ -11724,6 +11750,7 @@ read_websocket(struct mg_connection *conn,
 							DEBUG_TRACE("Send PING failed (%i)", ret);
 							break;
 						}
+						ping_count++;
 					}
 				}
 				/* Timeout: should retry */
@@ -12427,14 +12454,16 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 	}
 }
 
-static void handler_info_acquire(struct mg_handler_info *handler_info)
+static void
+handler_info_acquire(struct mg_handler_info *handler_info)
 {
 	pthread_mutex_lock(&handler_info->refcount_mutex);
 	handler_info->refcount++;
 	pthread_mutex_unlock(&handler_info->refcount_mutex);
 }
 
-static void handler_info_release(struct mg_handler_info *handler_info)
+static void
+handler_info_release(struct mg_handler_info *handler_info)
 {
 	pthread_mutex_lock(&handler_info->refcount_mutex);
 	handler_info->refcount--;
@@ -12442,11 +12471,13 @@ static void handler_info_release(struct mg_handler_info *handler_info)
 	pthread_mutex_unlock(&handler_info->refcount_mutex);
 }
 
-static void handler_info_wait_unused(struct mg_handler_info *handler_info)
+static void
+handler_info_wait_unused(struct mg_handler_info *handler_info)
 {
 	pthread_mutex_lock(&handler_info->refcount_mutex);
 	while (handler_info->refcount) {
-		pthread_cond_wait(&handler_info->refcount_cond,&handler_info->refcount_mutex);
+		pthread_cond_wait(&handler_info->refcount_cond,
+		                  &handler_info->refcount_mutex);
 	}
 	pthread_mutex_unlock(&handler_info->refcount_mutex);
 }
@@ -12559,7 +12590,8 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 						/* Wait for end of use before removing */
 						handler_info_wait_unused(tmp_rh);
 
-						/* Ok, the handler is no more used -> Destroy resources */
+						/* Ok, the handler is no more used -> Destroy resources
+						 */
 						pthread_cond_destroy(&tmp_rh->refcount_cond);
 						pthread_mutex_destroy(&tmp_rh->refcount_mutex);
 					}
@@ -12607,18 +12639,14 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		if (0 != pthread_mutex_init(&tmp_rh->refcount_mutex, NULL)) {
 			mg_unlock_context(phys_ctx);
 			mg_free(tmp_rh);
-			mg_cry_internal(fc(phys_ctx),
-			                "%s",
-			                "Cannot init refcount mutex");
+			mg_cry_internal(fc(phys_ctx), "%s", "Cannot init refcount mutex");
 			return;
 		}
 		if (0 != pthread_cond_init(&tmp_rh->refcount_cond, NULL)) {
 			mg_unlock_context(phys_ctx);
 			pthread_mutex_destroy(&tmp_rh->refcount_mutex);
 			mg_free(tmp_rh);
-			mg_cry_internal(fc(phys_ctx),
-			                "%s",
-			                "Cannot init refcount cond");
+			mg_cry_internal(fc(phys_ctx), "%s", "Cannot init refcount cond");
 			return;
 		}
 		tmp_rh->refcount = 0;
