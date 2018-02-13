@@ -1586,6 +1586,13 @@ typedef struct SSL_CTX SSL_CTX;
 #include <openssl/dh.h>
 #include <openssl/bn.h>
 #include <openssl/opensslv.h>
+
+#ifdef WOLFSSL_VERSION
+/* Additional defines for WolfSSL, see
+ * https://github.com/civetweb/civetweb/issues/583 */
+#include "wolfssl_extras.inl"
+#endif
+
 #else
 
 /* SSL loaded dynamically from DLL.
