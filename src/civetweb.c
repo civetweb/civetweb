@@ -13810,7 +13810,7 @@ set_ports_option(struct mg_context *phys_ctx)
 
 		if (ip_version > 4) {
 #if defined(USE_IPV6)
-			if (ip_version == 6) {
+			if (ip_version > 6) {
 				if (so.lsa.sa.sa_family == AF_INET6
 				    && setsockopt(so.sock,
 				                  IPPROTO_IPV6,
