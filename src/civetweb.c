@@ -2070,16 +2070,22 @@ struct mg_file_in_memory {
 struct mg_file_access {
 	/* File properties filled by mg_fopen: */
 	FILE *fp;
-	/* TODO (low): Replace "membuf" implementation by a "file in memory"
-	 * support library. Use some struct mg_file_in_memory *mf; instead of
-	 * membuf char pointer. */
+#if defined(MG_USE_OPEN_FILE)
+	/* TODO (low): Remove obsolete "file in memory" implementation.
+	 * In an "early 2017" discussion at Google groups
+	 * https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI
+	 * we decided to get rid of this feature (after some fade-out
+	 * phase). */
 	const char *membuf;
+#endif
 };
 
 struct mg_file {
 	struct mg_file_stat stat;
 	struct mg_file_access access;
 };
+
+#if defined(MG_USE_OPEN_FILE)
 
 #define STRUCT_FILE_INITIALIZER                                                \
 	{                                                                          \
@@ -2091,6 +2097,22 @@ struct mg_file {
 			(FILE *) NULL, (const char *)NULL                                  \
 		}                                                                      \
 	}
+
+#else
+
+#define STRUCT_FILE_INITIALIZER                                                \
+	{                                                                          \
+		{                                                                      \
+			(uint64_t)0, (time_t)0, 0, 0, 0                                    \
+		}                                                                      \
+		,                                                                      \
+		{                                                                      \
+			(FILE *) NULL                                                      \
+		}                                                                      \
+	}
+
+#endif
+
 
 /* Describes listening socket, or socket which was accept()-ed by the master
  * thread and queued for future handling by the worker thread. */
@@ -2913,7 +2935,12 @@ is_file_opened(const struct mg_file_access *fileacc)
 	if (!fileacc) {
 		return 0;
 	}
+
+#if defined(MG_USE_OPEN_FILE)
 	return (fileacc->membuf != NULL) || (fileacc->fp != NULL);
+#else
+	return (fileacc->fp != NULL);
+#endif
 }
 
 
@@ -2940,7 +2967,9 @@ mg_fopen(const struct mg_connection *conn,
 		return 0;
 	}
 	filep->access.fp = NULL;
+#if defined(MG_USE_OPEN_FILE)
 	filep->access.membuf = NULL;
+#endif
 
 	if (!is_file_in_memory(conn, path)) {
 
@@ -2996,11 +3025,13 @@ mg_fopen(const struct mg_connection *conn,
 		return (filep->access.fp != NULL);
 
 	} else {
+#if defined(MG_USE_OPEN_FILE)
 		/* is_file_in_memory returned true */
 		if (open_file_in_memory(conn, path, filep, mode)) {
 			/* file is in memory */
 			return (filep->access.membuf != NULL);
 		}
+#endif
 	}
 
 	/* Open failed */
@@ -3016,8 +3047,10 @@ mg_fclose(struct mg_file_access *fileacc)
 	if (fileacc != NULL) {
 		if (fileacc->fp != NULL) {
 			ret = fclose(fileacc->fp);
+#if defined(MG_USE_OPEN_FILE)
 		} else if (fileacc->membuf != NULL) {
 			ret = 0;
+#endif
 		}
 		/* reset all members of fileacc */
 		memset(fileacc, 0, sizeof(*fileacc));
@@ -7771,14 +7804,17 @@ parse_auth_header(struct mg_connection *conn,
 static const char *
 mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p)
 {
+#if defined(MG_USE_OPEN_FILE)
 	const char *eof;
 	size_t len;
 	const char *memend;
+#endif
 
 	if (!filep) {
 		return NULL;
 	}
 
+#if defined(MG_USE_OPEN_FILE)
 	if ((filep->access.membuf != NULL) && (*p != NULL)) {
 		memend = (const char *)&filep->access.membuf[filep->stat.size];
 		/* Search for \n from p till the end of stream */
@@ -7794,7 +7830,9 @@ mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p)
 		buf[len] = '\0';
 		*p += len;
 		return len ? eof : NULL;
-	} else if (filep->access.fp != NULL) {
+	} else /* filep->access.fp block below */
+#endif
+	    if (filep->access.fp != NULL) {
 		return fgets(buf, (int)size, filep->access.fp);
 	} else {
 		return NULL;
@@ -7828,7 +7866,7 @@ read_auth_file(struct mg_file *filep,
                struct read_auth_file_struct *workdata,
                int depth)
 {
-	char *p;
+	char *p = NULL /* init if MG_USE_OPEN_FILE is not set */;
 	int is_authorized = 0;
 	struct mg_file fp;
 	size_t l;
@@ -7837,8 +7875,10 @@ read_auth_file(struct mg_file *filep,
 		return 0;
 	}
 
-	/* Loop over passwords file */
+/* Loop over passwords file */
+#if defined(MG_USE_OPEN_FILE)
 	p = (char *)filep->access.membuf;
+#endif
 	while (mg_fgets(workdata->buf, sizeof(workdata->buf), filep, &p) != NULL) {
 		l = strlen(workdata->buf);
 		while (l > 0) {
@@ -8915,13 +8955,16 @@ send_file_data(struct mg_connection *conn,
 	                                      : (int64_t)(filep->stat.size);
 	offset = (offset < 0) ? 0 : ((offset > size) ? size : offset);
 
+#if defined(MG_USE_OPEN_FILE)
 	if ((len > 0) && (filep->access.membuf != NULL) && (size > 0)) {
 		/* file stored in memory */
 		if (len > size - offset) {
 			len = size - offset;
 		}
 		mg_write(conn, filep->access.membuf + offset, (size_t)len);
-	} else if (len > 0 && filep->access.fp != NULL) {
+	} else /* else block below */
+#endif
+	    if (len > 0 && filep->access.fp != NULL) {
 /* file stored on disk */
 #if defined(__linux__)
 		/* sendfile is only available for Linux */
@@ -10745,9 +10788,10 @@ put_file(struct mg_connection *conn, const char *path)
 			rc = 0;
 
 		} else {
-			/* File exists and is not a directory. */
-			/* Can it be replaced? */
+/* File exists and is not a directory. */
+/* Can it be replaced? */
 
+#if defined(MG_USE_OPEN_FILE)
 			if (file.access.membuf != NULL) {
 				/* This is an "in-memory" file, that can not be replaced */
 				mg_send_http_error(conn,
@@ -10757,6 +10801,7 @@ put_file(struct mg_connection *conn, const char *path)
 				                   path);
 				return;
 			}
+#endif
 
 			/* Check if the server may write this file */
 			if (access(path, W_OK) == 0) {
@@ -11055,10 +11100,13 @@ mg_fgetc(struct mg_file *filep, int offset)
 	if (filep == NULL) {
 		return EOF;
 	}
+#if defined(MG_USE_OPEN_FILE)
 	if ((filep->access.membuf != NULL) && (offset >= 0)
 	    && (((unsigned int)(offset)) < filep->stat.size)) {
 		return ((const unsigned char *)filep->access.membuf)[offset];
-	} else if (filep->access.fp != NULL) {
+	} else /* else block below */
+#endif
+	    if (filep->access.fp != NULL) {
 		return fgetc(filep->access.fp);
 	} else {
 		return EOF;

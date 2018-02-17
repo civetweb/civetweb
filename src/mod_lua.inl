@@ -1956,6 +1956,7 @@ handle_lsp_request(struct mg_connection *conn,
 	lua_State *L = NULL;
 	struct lsp_include_history *include_history;
 	int error = 1;
+	void *file_in_memory; /* TODO(low): remove when removing "file in memory" */
 
 	/* Assume the script does not support keep_alive. The script may change this
 	 * by calling mg.keep_alive(true). */
@@ -1977,8 +1978,16 @@ handle_lsp_request(struct mg_connection *conn,
 		goto cleanup_handle_lsp_request;
 	}
 
+#if defined(MG_USE_OPEN_FILE)
+    /* The "file in memory" feature is going to be removed. For details see
+     * https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI */
+	file_in_memory = filep->access.membuf;
+#else
+	file_in_memory = NULL;
+#endif
+
 	/* Map file in memory (size is known). */
-	if (filep->access.membuf == NULL
+	if (file_in_memory == NULL
 	    && (p = mmap(NULL,
 	                 (size_t)filep->stat.size,
 	                 PROT_READ,
@@ -2035,9 +2044,8 @@ handle_lsp_request(struct mg_connection *conn,
 	/* We're not sending HTTP headers here, Lua page must do it. */
 	error = run_lsp(conn,
 	                path,
-	                (filep->access.membuf == NULL)
-	                    ? (const char *)p
-	                    : (const char *)filep->access.membuf,
+	                (file_in_memory == NULL) ? (const char *)p
+	                                         : (const char *)file_in_memory,
 	                filep->stat.size,
 	                L);
 
