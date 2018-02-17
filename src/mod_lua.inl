@@ -1979,8 +1979,8 @@ handle_lsp_request(struct mg_connection *conn,
 	}
 
 #if defined(MG_USE_OPEN_FILE)
-    /* The "file in memory" feature is going to be removed. For details see
-     * https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI */
+	/* The "file in memory" feature is going to be removed. For details see
+	 * https://groups.google.com/forum/#!topic/civetweb/h9HT4CmeYqI */
 	file_in_memory = filep->access.membuf;
 #else
 	file_in_memory = NULL;

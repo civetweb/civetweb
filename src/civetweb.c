@@ -3412,6 +3412,15 @@ mg_difftimespec(const struct timespec *ts_now, const struct timespec *ts_before)
 }
 
 
+#if defined(MG_EXTERNAL_FUNCTION_mg_cry_internal_impl)
+static void mg_cry_internal_impl(const struct mg_connection *conn,
+                                 const char *func,
+                                 unsigned line,
+                                 const char *fmt,
+                                 va_list ap);
+#include "external_mg_cry_internal_impl.inl"
+#else
+
 /* Print error message to the opened error log stream. */
 static void
 mg_cry_internal_impl(const struct mg_connection *conn,
@@ -3484,6 +3493,8 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 		}
 	}
 }
+
+#endif /* Externally provided function */
 
 
 static void
@@ -14031,6 +14042,11 @@ header_val(const struct mg_connection *conn, const char *header)
 }
 
 
+#if defined(MG_EXTERNAL_FUNCTION_log_access)
+static void log_access(const struct mg_connection *conn);
+#include "external_log_access.inl"
+#else
+
 static void
 log_access(const struct mg_connection *conn)
 {
@@ -14122,6 +14138,8 @@ log_access(const struct mg_connection *conn)
 		}
 	}
 }
+
+#endif /* Externally provided function */
 
 
 /* Verify given socket address against the ACL.
