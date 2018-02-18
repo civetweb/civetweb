@@ -20,6 +20,19 @@
  * THE SOFTWARE.
  */
 
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* Disable unused macros warnings - not all defines are required
+ * for all systems and all compilers. */
+#pragma GCC diagnostic ignored "-Wunused-macros"
+/* A padding warning is just plain useless */
+#pragma GCC diagnostic ignored "-Wpadded"
+/* We must set some flags for the headers we include. These flags
+ * are reserved ids according to C99, so we need to disable a
+ * warning for that. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreserved-id-macro"
+#endif
+
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
@@ -46,11 +59,20 @@
 #ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
 #endif
+#ifndef _DARWIN_UNLIMITED_SELECT
+#define _DARWIN_UNLIMITED_SELECT
+#endif
 #ifdef __sun
 #define __EXTENSIONS__  /* to expose flockfile and friends in stdio.h */
 #define __inline inline /* not recognized on older compiler versions */
 #endif
 #endif
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* Enable reserved-id-macro warning again. */
+#pragma GCC diagnostic pop
+#endif
+
 
 #if defined(USE_LUA)
 #define USE_TIMERS
@@ -1599,7 +1621,6 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 #ifdef NO_SOCKLEN_T
 typedef int socklen_t;
 #endif /* NO_SOCKLEN_T */
-#define _DARWIN_UNLIMITED_SELECT
 
 #define IP_ADDR_STR_LEN (50) /* IPv6 hex string is 46 chars */
 
@@ -3483,7 +3504,16 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 	(void)func;
 	(void)line;
 
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+
 	IGNORE_UNUSED_RESULT(vsnprintf_impl(buf, sizeof(buf), fmt, ap));
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif
 
 	buf[sizeof(buf) - 1] = 0;
 
@@ -3595,7 +3625,7 @@ mg_get_request_info(const struct mg_connection *conn)
 	if (!conn) {
 		return NULL;
 	}
-#if MG_ALLOW_USING_GET_REQUEST_INFO_FOR_RESPONSE
+#if defined(MG_ALLOW_USING_GET_REQUEST_INFO_FOR_RESPONSE)
 	if (conn->connection_type == CONNECTION_TYPE_RESPONSE) {
 		char txt[16];
 		struct mg_workerTLS *tls =
@@ -6511,6 +6541,14 @@ mg_send_chunk(struct mg_connection *conn,
 }
 
 
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* This block forwards format strings to printf implementations,
+ * so we need to disable the format-nonliteral warning. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+
+
 /* Alternative alloc_vprintf() for non-compliant C runtimes */
 static int
 alloc_vprintf2(char **buf, const char *fmt, va_list ap)
@@ -6600,6 +6638,12 @@ alloc_vprintf(char **out_buf,
 
 	return len;
 }
+
+
+#if defined(__GNUC__) || defined(__MINGW32__)
+/* Enable format-nonliteral warning again. */
+#pragma GCC diagnostic pop
+#endif
 
 
 static int
@@ -7865,6 +7909,8 @@ mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p)
 	const char *eof;
 	size_t len;
 	const char *memend;
+#else
+	(void)p; /* parameter is unused */
 #endif
 
 	if (!filep) {
@@ -11154,6 +11200,8 @@ do_ssi_exec(struct mg_connection *conn, char *tag)
 static int
 mg_fgetc(struct mg_file *filep, int offset)
 {
+	(void)offset; /* unused in case MG_USE_OPEN_FILE is set */
+
 	if (filep == NULL) {
 		return EOF;
 	}
@@ -16571,6 +16619,11 @@ mg_connect_websocket_client(const char *host,
 		                "\r\n";
 	}
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
+
 	/* Establish the client connection and request upgrade */
 	conn = mg_download(host,
 	                   port,
@@ -16582,6 +16635,10 @@ mg_connect_websocket_client(const char *host,
 	                   host,
 	                   magic,
 	                   origin);
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 	/* Connection object will be null if something goes wrong */
 	if (conn == NULL) {
@@ -18330,10 +18387,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 /* Disable bogus compiler warning -Wdate-time */
-/* TODO: The obvious flags do not know:
- * #pragma GCC diagnostic ignored "-Wdate-time"
- * If someone knows other flags, please tell me. See also #561.
- */
+#pragma GCC diagnostic ignored "-Wdate-time"
 #endif
 		mg_snprintf(NULL,
 		            NULL,
