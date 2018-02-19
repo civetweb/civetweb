@@ -117,8 +117,8 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 
 /* Alternative queue is well tested and should be the new default */
-#ifdef NO_ALTERNATIVE_QUEUE
-#ifdef ALTERNATIVE_QUEUE
+#if defined(NO_ALTERNATIVE_QUEUE)
+#if defined(ALTERNATIVE_QUEUE)
 #error "Define ALTERNATIVE_QUEUE or NO_ALTERNATIVE_QUEUE or none, but not both"
 #endif
 #else
@@ -227,7 +227,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 #endif /* !_WIN32_WCE */
 
 
-#ifdef __clang__
+#if defined(__clang__)
 /* When using -Weverything, clang does not accept it's own headers
  * in a release build configuration. Disable what is too much in
  * -Weverything. */
@@ -251,7 +251,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 #endif
 
 
-#ifdef __MACH__ /* Apple OSX section */
+#if defined(__MACH__) /* Apple OSX section */
 
 #ifdef __clang__
 #if (__clang_major__ == 3) && ((__clang_minor__ == 7) || (__clang_minor__ == 8))
@@ -5388,7 +5388,11 @@ spawn_process(struct mg_connection *conn,
 		}
 
 		if (mg_fopen(conn, cmdline, MG_FOPEN_MODE_READ, &file)) {
+#if defined(MG_USE_OPEN_FILE)
 			p = (char *)file.access.membuf;
+#else
+            p = (char *)NULL;
+#endif
 			mg_fgets(buf, sizeof(buf), &file, &p);
 			(void)mg_fclose(&file.access); /* ignore error on read only file */
 			buf[sizeof(buf) - 1] = '\0';
