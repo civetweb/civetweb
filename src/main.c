@@ -22,13 +22,13 @@
 
 #if defined(_WIN32)
 
-#ifndef _CRT_SECURE_NO_WARNINGS
+#if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
 #endif
-#ifndef _CRT_SECURE_NO_DEPRECATE
+#if !defined(_CRT_SECURE_NO_DEPRECATE)
 #define _CRT_SECURE_NO_DEPRECATE
 #endif
-#ifdef WIN32_LEAN_AND_MEAN
+#if defined(WIN32_LEAN_AND_MEAN)
 #undef WIN32_LEAN_AND_MEAN /* Required for some functions (tray icons, ...) */
 #endif
 
@@ -44,7 +44,7 @@
  */
 #endif
 
-#ifndef IGNORE_UNUSED_RESULT
+#if !defined(IGNORE_UNUSED_RESULT)
 #define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
@@ -59,16 +59,16 @@
 #endif
 
 /* Use same defines as in civetweb.c before including system headers. */
-#ifndef _LARGEFILE_SOURCE
+#if !defined(_LARGEFILE_SOURCE)
 #define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
 #endif
-#ifndef _FILE_OFFSET_BITS
+#if !defined(_FILE_OFFSET_BITS)
 #define _FILE_OFFSET_BITS 64 /* Use 64-bit file offsets by default */
 #endif
-#ifndef __STDC_FORMAT_MACROS
+#if !defined(__STDC_FORMAT_MACROS)
 #define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
 #endif
-#ifndef __STDC_LIMIT_MACROS
+#if !defined(__STDC_LIMIT_MACROS)
 #define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
 #endif
 
@@ -89,9 +89,8 @@
 #define printf                                                                 \
 	DO_NOT_USE_THIS_FUNCTION__USE_fprintf /* Required for unit testing */
 
-#if defined(_WIN32)                                                            \
-    && !defined(__SYMBIAN32__) /* WINDOWS / UNIX include block */
-#ifndef _WIN32_WINNT
+#if defined(_WIN32) && !defined(__SYMBIAN32__) /* WINDOWS include block */
+#if !defined(_WIN32_WINNT)
 #define _WIN32_WINNT 0x0501 /* for tdm-gcc so we can use getconsolewindow */
 #endif
 #undef UNICODE
@@ -105,11 +104,11 @@
 extern char *_getcwd(char *buf, size_t size);
 #endif
 
-#ifndef PATH_MAX
+#if !defined(PATH_MAX)
 #define PATH_MAX MAX_PATH
 #endif
 
-#ifndef S_ISDIR
+#if !defined(S_ISDIR)
 #define S_ISDIR(x) ((x)&_S_IFDIR)
 #endif
 
@@ -155,7 +154,7 @@ extern char *_getcwd(char *buf, size_t size);
 #endif /* DEBUG */
 #endif
 
-#ifndef PATH_MAX
+#if !defined(PATH_MAX)
 #define PATH_MAX (1024)
 #endif
 
@@ -247,7 +246,7 @@ die(const char *fmt, ...)
 }
 
 
-#ifdef WIN32
+#if defined(WIN32)
 static int MakeConsole(void);
 #endif
 
@@ -255,7 +254,7 @@ static int MakeConsole(void);
 static void
 show_server_name(void)
 {
-#ifdef WIN32
+#if defined(WIN32)
 	(void)MakeConsole();
 #endif
 
@@ -356,7 +355,7 @@ get_url_to_first_open_port(const struct mg_context *ctx)
 }
 
 
-#ifdef ENABLE_CREATE_CONFIG_FILE
+#if defined(ENABLE_CREATE_CONFIG_FILE)
 static void
 create_config_file(const struct mg_context *ctx, const char *path)
 {
@@ -780,7 +779,7 @@ process_command_line_arguments(int argc, char *argv[], char **options)
 {
 	char *p;
 	size_t i, cmd_line_opts_start = 1;
-#ifdef CONFIG_FILE2
+#if defined(CONFIG_FILE2)
 	FILE *fp = NULL;
 #endif
 
@@ -813,7 +812,7 @@ process_command_line_arguments(int argc, char *argv[], char **options)
 	}
 	g_config_file_name[sizeof(g_config_file_name) - 1] = 0;
 
-#ifdef CONFIG_FILE2
+#if defined(CONFIG_FILE2)
 	fp = fopen(g_config_file_name, "r");
 
 	/* try alternate config file */
@@ -919,7 +918,7 @@ log_message(const struct mg_connection *conn, const char *message)
 static int
 is_path_absolute(const char *path)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
 	return path != NULL
 	       && ((path[0] == '\\' && path[1] == '\\') || /* UNC path, e.g.
 	                                                      \\server\dir */
@@ -937,7 +936,7 @@ verify_existence(char **options, const char *option_name, int must_be_dir)
 	struct stat st;
 	const char *path = get_option(options, option_name);
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	wchar_t wbuf[1024];
 	char mbbuf[1024];
 	int len;
@@ -1007,14 +1006,14 @@ set_absolute_path(char *options[],
 }
 
 
-#ifdef USE_LUA
+#if defined(USE_LUA)
 
 #include "civetweb_private_lua.h"
 
 #endif
 
 
-#ifdef USE_DUKTAPE
+#if defined(USE_DUKTAPE)
 
 #include "duktape.h"
 
@@ -1200,7 +1199,7 @@ sanitize_options(char *options[] /* server options */,
 	set_absolute_path(options, "access_log_file", arg0);
 	set_absolute_path(options, "error_log_file", arg0);
 	set_absolute_path(options, "global_auth_file", arg0);
-#ifdef USE_LUA
+#if defined(USE_LUA)
 	set_absolute_path(options, "lua_preload_file", arg0);
 #endif
 	set_absolute_path(options, "ssl_certificate", arg0);
@@ -1211,7 +1210,7 @@ sanitize_options(char *options[] /* server options */,
 	verify_existence(options, "ssl_certificate", 0);
 	verify_existence(options, "ssl_ca_path", 1);
 	verify_existence(options, "ssl_ca_file", 0);
-#ifdef USE_LUA
+#if defined(USE_LUA)
 	verify_existence(options, "lua_preload_file", 0);
 #endif
 }
@@ -1229,7 +1228,7 @@ start_civetweb(int argc, char *argv[])
 	 * This is very useful for diagnosis. */
 	if (argc > 1 && !strcmp(argv[1], "-I")) {
 
-#ifdef WIN32
+#if defined(WIN32)
 		(void)MakeConsole();
 #endif
 		fprintf(stdout,
@@ -1275,11 +1274,11 @@ start_civetweb(int argc, char *argv[])
 	 * is specified */
 	if (argc > 1 && !strcmp(argv[1], "-L")) {
 
-#ifdef USE_LUA
+#if defined(USE_LUA)
 		if (argc != 3) {
 			show_usage_and_exit(argv[0]);
 		}
-#ifdef WIN32
+#if defined(WIN32)
 		(void)MakeConsole();
 #endif
 		exit(run_lua(argv[2]));
@@ -1293,11 +1292,11 @@ start_civetweb(int argc, char *argv[])
 	/* Call Duktape, if -E option is specified */
 	if (argc > 1 && !strcmp(argv[1], "-E")) {
 
-#ifdef USE_DUKTAPE
+#if defined(USE_DUKTAPE)
 		if (argc != 3) {
 			show_usage_and_exit(argv[0]);
 		}
-#ifdef WIN32
+#if defined(WIN32)
 		(void)MakeConsole();
 #endif
 		exit(run_duktape(argv[2]));
@@ -1388,7 +1387,7 @@ stop_civetweb(void)
 }
 
 
-#ifdef _WIN32
+#if defined(_WIN32)
 /* Win32 has a small GUI.
  * Define some GUI elements and Windows message handlers. */
 

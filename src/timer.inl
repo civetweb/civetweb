@@ -158,7 +158,7 @@ timer_thread_run(void *thread_func_param)
  * A faster loop (smaller sleep value) increases CPU load,
  * a slower loop (higher sleep value) decreases timer accuracy.
  */
-#ifdef _WIN32
+#if defined(_WIN32)
 		Sleep(10);
 #else
 		usleep(10000);
@@ -173,7 +173,7 @@ timer_thread_run(void *thread_func_param)
 }
 
 
-#ifdef _WIN32
+#if defined(_WIN32)
 static unsigned __stdcall timer_thread(void *thread_func_param)
 {
 	timer_thread_run(thread_func_param);

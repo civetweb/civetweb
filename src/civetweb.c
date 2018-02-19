@@ -37,7 +37,7 @@
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
 #endif
-#ifndef _WIN32_WINNT /* defined for tdm-gcc so we can use getnameinfo */
+#if !defined(_WIN32_WINNT) /* defined for tdm-gcc so we can use getnameinfo */
 #define _WIN32_WINNT 0x0501
 #endif
 #else
@@ -47,22 +47,22 @@
 #if defined(__linux__) && !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE 600 /* For flockfile() on Linux */
 #endif
-#ifndef _LARGEFILE_SOURCE
+#if !defined(_LARGEFILE_SOURCE)
 #define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
 #endif
-#ifndef _FILE_OFFSET_BITS
+#if !defined(_FILE_OFFSET_BITS)
 #define _FILE_OFFSET_BITS 64 /* Use 64-bit file offsets by default */
 #endif
-#ifndef __STDC_FORMAT_MACROS
+#if !defined(__STDC_FORMAT_MACROS)
 #define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
 #endif
-#ifndef __STDC_LIMIT_MACROS
+#if !defined(__STDC_LIMIT_MACROS)
 #define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
 #endif
-#ifndef _DARWIN_UNLIMITED_SELECT
+#if !defined(_DARWIN_UNLIMITED_SELECT)
 #define _DARWIN_UNLIMITED_SELECT
 #endif
-#ifdef __sun
+#if defined(__sun)
 #define __EXTENSIONS__  /* to expose flockfile and friends in stdio.h */
 #define __inline inline /* not recognized on older compiler versions */
 #endif
@@ -127,7 +127,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 
 /* DTL -- including winsock2.h works better if lean and mean */
-#ifndef WIN32_LEAN_AND_MEAN
+#if !defined(WIN32_LEAN_AND_MEAN)
 #define WIN32_LEAN_AND_MEAN
 #endif
 
@@ -147,7 +147,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #endif /* __SYMBIAN32__ */
 
 
-#ifndef CIVETWEB_HEADER_INCLUDED
+#if !defined(CIVETWEB_HEADER_INCLUDED)
 /* Include the header file here, so the CivetWeb interface is defined for the
  * entire implementation, including the following forward definitions. */
 #include "civetweb.h"
@@ -188,7 +188,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 #endif
 
 
-#ifndef IGNORE_UNUSED_RESULT
+#if !defined(IGNORE_UNUSED_RESULT)
 #define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
@@ -218,7 +218,8 @@ static void DEBUG_TRACE_FUNC(const char *func,
 #endif
 
 
-#ifndef _WIN32_WCE /* Some ANSI #includes are not available on Windows CE */
+/* Some ANSI #includes are not available on Windows CE */
+#if !defined(_WIN32_WCE)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -253,7 +254,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 
 #if defined(__MACH__) /* Apple OSX section */
 
-#ifdef __clang__
+#if defined(__clang__)
 #if (__clang_major__ == 3) && ((__clang_minor__ == 7) || (__clang_minor__ == 8))
 /* Avoid warnings for Xcode 7. It seems it does no longer exist in Xcode 8 */
 #pragma clang diagnostic ignored "-Wno-reserved-id-macro"
@@ -313,7 +314,7 @@ _civet_clock_gettime(int clk_id, struct timespec *t)
 }
 
 /* if clock_gettime is declared, then __CLOCK_AVAILABILITY will be defined */
-#ifdef __CLOCK_AVAILABILITY
+#if defined(__CLOCK_AVAILABILITY)
 /* If we compiled with Mac OSX 10.12 or later, then clock_gettime will be
  * declared but it may be NULL at runtime. So we need to check before using
  * it. */
@@ -343,16 +344,16 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #include <stdio.h>
 #include <stdint.h>
 
-#ifndef INT64_MAX
+#if !defined(INT64_MAX)
 #define INT64_MAX (9223372036854775807)
 #endif
 
 
-#ifndef MAX_WORKER_THREADS
+#if !defined(MAX_WORKER_THREADS)
 #define MAX_WORKER_THREADS (1024 * 64)
 #endif
 
-#ifndef SOCKET_TIMEOUT_QUANTUM /* in ms */
+#if !defined(SOCKET_TIMEOUT_QUANTUM) /* in ms */
 #define SOCKET_TIMEOUT_QUANTUM (2000)
 #endif
 
@@ -366,8 +367,7 @@ mg_static_assert(MAX_WORKER_THREADS >= 1,
 mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
                  "size_t data type size check");
 
-#if defined(_WIN32)                                                            \
-    && !defined(__SYMBIAN32__) /* WINDOWS / UNIX include block */
+#if defined(_WIN32) && !defined(__SYMBIAN32__) /* WINDOWS include block */
 #include <windows.h>
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
 #include <ws2tcpip.h>
@@ -384,13 +384,13 @@ typedef const char *SOCK_OPT_TYPE;
 
 mg_static_assert(PATH_MAX >= 1, "path length must be a positive number");
 
-#ifndef _IN_PORT_T
-#ifndef in_port_t
+#if !defined(_IN_PORT_T)
+#if !defined(in_port_t)
 #define in_port_t u_short
 #endif
 #endif
 
-#ifndef _WIN32_WCE
+#if !defined(_WIN32_WCE)
 #include <process.h>
 #include <direct.h>
 #include <io.h>
@@ -440,7 +440,7 @@ typedef long off_t;
 #endif
 
 #define O_NONBLOCK (0)
-#ifndef W_OK
+#if !defined(W_OK)
 #define W_OK (2) /* http://msdn.microsoft.com/en-us/library/1w06ktdy.aspx */
 #endif
 #if !defined(EWOULDBLOCK)
@@ -456,10 +456,10 @@ typedef long off_t;
 #define mg_sleep(x) (Sleep(x))
 
 #define pipe(x) _pipe(x, MG_BUF_LEN, _O_BINARY)
-#ifndef popen
+#if !defined(popen)
 #define popen(x, y) (_popen(x, y))
 #endif
-#ifndef pclose
+#if !defined(pclose)
 #define pclose(x) (_pclose(x))
 #endif
 #define close(x) (_close(x))
@@ -494,19 +494,19 @@ typedef struct {
 	struct mg_workerTLS *waiting_thread; /* The chain of threads */
 } pthread_cond_t;
 
-#ifndef __clockid_t_defined
+#if !defined(__clockid_t_defined)
 typedef DWORD clockid_t;
 #endif
-#ifndef CLOCK_MONOTONIC
+#if !defined(CLOCK_MONOTONIC)
 #define CLOCK_MONOTONIC (1)
 #endif
-#ifndef CLOCK_REALTIME
+#if !defined(CLOCK_REALTIME)
 #define CLOCK_REALTIME (2)
 #endif
-#ifndef CLOCK_THREAD
+#if !defined(CLOCK_THREAD)
 #define CLOCK_THREAD (3)
 #endif
-#ifndef CLOCK_PROCESS
+#if !defined(CLOCK_PROCESS)
 #define CLOCK_PROCESS (4)
 #endif
 
@@ -514,7 +514,7 @@ typedef DWORD clockid_t;
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
 #define _TIMESPEC_DEFINED
 #endif
-#ifndef _TIMESPEC_DEFINED
+#if !defined(_TIMESPEC_DEFINED)
 struct timespec {
 	time_t tv_sec; /* seconds */
 	long tv_nsec;  /* nanoseconds */
@@ -525,7 +525,7 @@ struct timespec {
 #define MUST_IMPLEMENT_CLOCK_GETTIME
 #endif
 
-#ifdef MUST_IMPLEMENT_CLOCK_GETTIME
+#if defined(MUST_IMPLEMENT_CLOCK_GETTIME)
 #define clock_gettime mg_clock_gettime
 static int
 clock_gettime(clockid_t clk_id, struct timespec *tp)
@@ -650,7 +650,7 @@ typedef struct DIR {
 } DIR;
 
 #if defined(_WIN32) && !defined(POLLIN)
-#ifndef HAVE_POLL
+#if !defined(HAVE_POLL)
 struct pollfd {
 	SOCKET fd;
 	short events;
@@ -706,7 +706,7 @@ typedef unsigned short int in_port_t;
 #define CRYPTO_LIB "libcrypto.so"
 #endif
 #endif
-#ifndef O_BINARY
+#if !defined(O_BINARY)
 #define O_BINARY (0)
 #endif /* O_BINARY */
 #define closesocket(a) (close(a))
@@ -725,7 +725,7 @@ typedef int SOCKET;
 
 #if defined(__hpux)
 /* HPUX 11 does not have monotonic, fall back to realtime */
-#ifndef CLOCK_MONOTONIC
+#if !defined(CLOCK_MONOTONIC)
 #define CLOCK_MONOTONIC CLOCK_REALTIME
 #endif
 
@@ -798,11 +798,11 @@ timegm(struct tm *tm)
 
 
 /* va_copy should always be a macro, C99 and C++11 - DTL */
-#ifndef va_copy
+#if !defined(va_copy)
 #define va_copy(x, y) ((x) = (y))
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32)
 /* Create substitutes for POSIX functions in Win32. */
 
 #if defined(__MINGW32__)
@@ -1438,22 +1438,22 @@ static void mg_snprintf(const struct mg_connection *conn,
 
 /* This following lines are just meant as a reminder to use the mg-functions
  * for memory management */
-#ifdef malloc
+#if defined(malloc)
 #undef malloc
 #endif
-#ifdef calloc
+#if defined(calloc)
 #undef calloc
 #endif
-#ifdef realloc
+#if defined(realloc)
 #undef realloc
 #endif
-#ifdef free
+#if defined(free)
 #undef free
 #endif
-#ifdef snprintf
+#if defined(snprintf)
 #undef snprintf
 #endif
-#ifdef vsnprintf
+#if defined(vsnprintf)
 #undef vsnprintf
 #endif
 #define malloc DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
@@ -1461,8 +1461,9 @@ static void mg_snprintf(const struct mg_connection *conn,
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
 #define free DO_NOT_USE_THIS_FUNCTION__USE_mg_free
 #define snprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_snprintf
-#ifdef _WIN32 /* vsnprintf must not be used in any system, * \ \ \             \
-               * but this define only works well for Windows. */
+#if defined(_WIN32)
+/* vsnprintf must not be used in any system,
+ * but this define only works well for Windows. */
 #define vsnprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_vsnprintf
 #endif
 
@@ -1522,11 +1523,11 @@ FUNCTION_MAY_BE_UNUSED
 static unsigned long
 mg_current_thread_id(void)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
 	return GetCurrentThreadId();
 #else
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 /* For every compiler, either "sizeof(pthread_t) > sizeof(unsigned long)"
@@ -1560,7 +1561,7 @@ mg_current_thread_id(void)
 		return ret;
 	}
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 
@@ -1633,7 +1634,7 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 #include "md5.inl"
 
 /* Darwin prior to 7.0 and Win32 do not have socklen_t */
-#ifdef NO_SOCKLEN_T
+#if defined(NO_SOCKLEN_T)
 typedef int socklen_t;
 #endif /* NO_SOCKLEN_T */
 
@@ -1669,7 +1670,7 @@ typedef struct SSL_CTX SSL_CTX;
 #include <openssl/bn.h>
 #include <openssl/opensslv.h>
 
-#ifdef WOLFSSL_VERSION
+#if defined(WOLFSSL_VERSION)
 /* Additional defines for WolfSSL, see
  * https://github.com/civetweb/civetweb/issues/583 */
 #include "wolfssl_extras.inl"
@@ -1742,7 +1743,7 @@ struct ssl_func {
 };
 
 
-#ifdef OPENSSL_API_1_1
+#if defined(OPENSSL_API_1_1)
 
 #define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
 #define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)
@@ -2354,7 +2355,7 @@ static struct mg_option config_options[] = {
     {"global_auth_file", MG_CONFIG_TYPE_FILE, NULL},
     {"index_files",
      MG_CONFIG_TYPE_STRING_LIST,
-#ifdef USE_LUA
+#if defined(USE_LUA)
      "index.xhtml,index.html,index.htm,"
      "index.lp,index.lsp,index.lua,index.cgi,"
      "index.shtml,index.php"},
@@ -2520,7 +2521,7 @@ struct mg_context {
 	pthread_t *worker_threadids; /* The worker thread IDs */
 
 /* Connection to thread dispatching */
-#ifdef ALTERNATIVE_QUEUE
+#if defined(ALTERNATIVE_QUEUE)
 	struct socket *client_socks;
 	void **client_wait_events;
 #else
@@ -2696,7 +2697,7 @@ typedef struct tagTHREADNAME_INFO {
 
 #include <sys/prctl.h>
 #include <sys/sendfile.h>
-#ifdef ALTERNATIVE_QUEUE
+#if defined(ALTERNATIVE_QUEUE)
 #include <sys/eventfd.h>
 #endif /* ALTERNATIVE_QUEUE */
 
@@ -3064,7 +3065,7 @@ mg_fopen(const struct mg_connection *conn,
 			return 0;
 		}
 
-#ifdef _WIN32
+#if defined(_WIN32)
 		{
 			wchar_t wbuf[W_PATH_MAX];
 			path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
@@ -3250,7 +3251,7 @@ mg_vsnprintf(const struct mg_connection *conn,
 		return;
 	}
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
 /* Using fmt as a non-literal is intended here, since it is mostly called
@@ -3260,7 +3261,7 @@ mg_vsnprintf(const struct mg_connection *conn,
 	n = (int)vsnprintf_impl(buf, buflen, fmt, ap);
 	ok = (n >= 0) && ((size_t)n < buflen);
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 
@@ -3466,7 +3467,7 @@ sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 static void
 gmt_time_string(char *buf, size_t buf_len, time_t *t)
 {
-#ifndef REENTRANT_TIME
+#if !defined(REENTRANT_TIME)
 	struct tm *tm;
 
 	tm = ((t != NULL) ? gmtime(t) : NULL);
@@ -3687,7 +3688,7 @@ mg_get_response_info(const struct mg_connection *conn)
 static const char *
 get_proto_name(const struct mg_connection *conn)
 {
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 /* Depending on USE_WEBSOCKET and NO_SSL, some oft the protocols might be
@@ -3705,7 +3706,7 @@ get_proto_name(const struct mg_connection *conn)
 
 	return proto;
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 }
@@ -4613,7 +4614,7 @@ pthread_mutex_lock(pthread_mutex_t *mutex)
 }
 
 
-#ifdef ENABLE_UNUSED_PTHREAD_FUNCTIONS
+#if defined(ENABLE_UNUSED_PTHREAD_FUNCTIONS)
 FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_trylock(pthread_mutex_t *mutex)
@@ -4765,7 +4766,7 @@ pthread_cond_destroy(pthread_cond_t *cv)
 }
 
 
-#ifdef ALTERNATIVE_QUEUE
+#if defined(ALTERNATIVE_QUEUE)
 FUNCTION_MAY_BE_UNUSED
 static void *
 event_create(void)
@@ -5118,7 +5119,7 @@ mg_readdir(DIR *dir)
 }
 
 
-#ifndef HAVE_POLL
+#if !defined(HAVE_POLL)
 FUNCTION_MAY_BE_UNUSED
 static int
 poll(struct pollfd *pfd, unsigned int n, int milliseconds)
@@ -5391,7 +5392,7 @@ spawn_process(struct mg_connection *conn,
 #if defined(MG_USE_OPEN_FILE)
 			p = (char *)file.access.membuf;
 #else
-            p = (char *)NULL;
+			p = (char *)NULL;
 #endif
 			mg_fgets(buf, sizeof(buf), &file, &p);
 			(void)mg_fclose(&file.access); /* ignore error on read only file */
@@ -5592,7 +5593,7 @@ mg_join_thread(pthread_t threadid)
 }
 
 
-#ifndef NO_CGI
+#if !defined(NO_CGI)
 static pid_t
 spawn_process(struct mg_connection *conn,
               const char *prog,
@@ -5811,7 +5812,7 @@ push_inner(struct mg_context *ctx,
 	int n, err;
 	unsigned ms_wait = SOCKET_TIMEOUT_QUANTUM; /* Sleep quantum in ms */
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	typedef int len_t;
 #else
 	typedef size_t len_t;
@@ -5827,7 +5828,7 @@ push_inner(struct mg_context *ctx,
 		return -2;
 	}
 
-#ifdef NO_SSL
+#if defined(NO_SSL)
 	if (ssl) {
 		return -2;
 	}
@@ -5837,7 +5838,7 @@ push_inner(struct mg_context *ctx,
 	 * shuts down. */
 	for (;;) {
 
-#ifndef NO_SSL
+#if !defined(NO_SSL)
 		if (ssl != NULL) {
 			n = SSL_write(ssl, buf, len);
 			if (n <= 0) {
@@ -5867,7 +5868,7 @@ push_inner(struct mg_context *ctx,
 		} else {
 			n = (int)send(sock, buf, (len_t)len, MSG_NOSIGNAL);
 			err = (n < 0) ? ERRNO : 0;
-#ifdef _WIN32
+#if defined(_WIN32)
 			if (err == WSAEWOULDBLOCK) {
 				err = 0;
 				n = 0;
@@ -6013,12 +6014,12 @@ pull_inner(FILE *fp,
 {
 	int nread, err = 0;
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	typedef int len_t;
 #else
 	typedef size_t len_t;
 #endif
-#ifndef NO_SSL
+#if !defined(NO_SSL)
 	int ssl_pending;
 #endif
 
@@ -6044,7 +6045,7 @@ pull_inner(FILE *fp,
 			return -2;
 		}
 
-#ifndef NO_SSL
+#if !defined(NO_SSL)
 	} else if ((conn->ssl != NULL)
 	           && ((ssl_pending = SSL_pending(conn->ssl)) > 0)) {
 		/* We already know there is no more data buffered in conn->buf
@@ -6149,7 +6150,7 @@ pull_inner(FILE *fp,
 
 	if (nread < 0) {
 /* socket error - check errno */
-#ifdef _WIN32
+#if defined(_WIN32)
 		if (err == WSAEWOULDBLOCK) {
 			/* TODO (low): check if this is still required */
 			/* standard case if called from close_socket_gracefully */
@@ -7742,7 +7743,7 @@ open_auth_file(struct mg_connection *conn,
 		if (gpass != NULL) {
 			/* Use global passwords file */
 			if (!mg_fopen(conn, gpass, MG_FOPEN_MODE_READ, filep)) {
-#ifdef DEBUG
+#if defined(DEBUG)
 				/* Use mg_cry_internal here, since gpass has been configured. */
 				mg_cry_internal(conn, "fopen(%s): %s", gpass, strerror(ERRNO));
 #endif
@@ -7763,7 +7764,7 @@ open_auth_file(struct mg_connection *conn,
 			            PASSWORDS_FILE_NAME);
 
 			if (truncated || !mg_fopen(conn, name, MG_FOPEN_MODE_READ, filep)) {
-#ifdef DEBUG
+#if defined(DEBUG)
 				/* Don't use mg_cry_internal here, but only a trace, since this
 				 * is
 				 * a typical case. It will occur for every directory
@@ -7788,7 +7789,7 @@ open_auth_file(struct mg_connection *conn,
 			            PASSWORDS_FILE_NAME);
 
 			if (truncated || !mg_fopen(conn, name, MG_FOPEN_MODE_READ, filep)) {
-#ifdef DEBUG
+#if defined(DEBUG)
 				/* Don't use mg_cry_internal here, but only a trace, since this
 				 * is
 				 * a typical case. It will occur for every directory
@@ -7872,7 +7873,7 @@ parse_auth_header(struct mg_connection *conn,
 		}
 	}
 
-#ifndef NO_NONCE_CHECK
+#if !defined(NO_NONCE_CHECK)
 	/* Read the nonce from the response. */
 	if (ah->nonce == NULL) {
 		return 0;
@@ -8472,7 +8473,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 
 #if !defined(NO_SSL)
 #if !defined(NO_SSL_DL)
-#ifdef OPENSSL_API_1_1
+#if defined(OPENSSL_API_1_1)
 	if (use_ssl && (TLS_client_method == NULL)) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
@@ -8505,7 +8506,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		sa->sin.sin_family = AF_INET;
 		sa->sin.sin_port = htons((uint16_t)port);
 		ip_ver = 4;
-#ifdef USE_IPV6
+#if defined(USE_IPV6)
 	} else if (mg_inet_pton(AF_INET6, host, &sa->sin6, sizeof(sa->sin6))) {
 		sa->sin6.sin6_family = AF_INET6;
 		sa->sin6.sin6_port = htons((uint16_t)port);
@@ -8540,7 +8541,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	if (ip_ver == 4) {
 		*sock = socket(PF_INET, SOCK_STREAM, 0);
 	}
-#ifdef USE_IPV6
+#if defined(USE_IPV6)
 	else if (ip_ver == 6) {
 		*sock = socket(PF_INET6, SOCK_STREAM, 0);
 	}
@@ -8574,7 +8575,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		/* connected with IPv4 */
 		conn_ret = connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin));
 	}
-#ifdef USE_IPV6
+#if defined(USE_IPV6)
 	else if (ip_ver == 6) {
 		/* connected with IPv6 */
 		conn_ret =
@@ -8672,7 +8673,7 @@ print_dir_entry(struct de *de)
 	size_t hrefsize;
 	char *href;
 	char size[64], mod[64];
-#ifdef REENTRANT_TIME
+#if defined(REENTRANT_TIME)
 	struct tm _tm;
 	struct tm *tm = &_tm;
 #else
@@ -8728,7 +8729,7 @@ print_dir_entry(struct de *de)
 /* Note: mg_snprintf will not cause a buffer overflow above.
  * So, string truncation checks are not required here. */
 
-#ifdef REENTRANT_TIME
+#if defined(REENTRANT_TIME)
 	localtime_r(&de->file.last_modified, tm);
 #else
 	tm = localtime(&de->file.last_modified);
@@ -9197,7 +9198,7 @@ static void
 fclose_on_exec(struct mg_file_access *filep, struct mg_connection *conn)
 {
 	if (filep != NULL && filep->fp != NULL) {
-#ifdef _WIN32
+#if defined(_WIN32)
 		(void)conn; /* Unused. */
 #else
 		if (fcntl(fileno(filep->fp), F_SETFD, FD_CLOEXEC) != 0) {
@@ -11578,11 +11579,11 @@ mg_unlock_context(struct mg_context *ctx)
 #include "timer.inl"
 #endif /* USE_TIMERS */
 
-#ifdef USE_LUA
+#if defined(USE_LUA)
 #include "mod_lua.inl"
 #endif /* USE_LUA */
 
-#ifdef USE_DUKTAPE
+#if defined(USE_DUKTAPE)
 #include "mod_duktape.inl"
 #endif /* USE_DUKTAPE */
 
@@ -13625,7 +13626,7 @@ handle_file_based_request(struct mg_connection *conn,
 	}
 
 	if (0) {
-#ifdef USE_LUA
+#if defined(USE_LUA)
 	} else if (match_prefix(
 	               conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS],
 	               strlen(conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
@@ -13944,7 +13945,7 @@ set_ports_option(struct mg_context *phys_ctx)
 			continue;
 		}
 
-#ifdef _WIN32
+#if defined(_WIN32)
 		/* Windows SO_REUSEADDR lets many procs binds to a
 		 * socket, SO_EXCLUSIVEADDRUSE makes the bind fail
 		 * if someone already has the socket -- DTL */
@@ -14452,7 +14453,7 @@ refresh_trust(struct mg_connection *conn)
 	return 1;
 }
 
-#ifdef OPENSSL_API_1_1
+#if defined(OPENSSL_API_1_1)
 #else
 static pthread_mutex_t *ssl_mutexes;
 #endif /* OPENSSL_API_1_1 */
@@ -14496,7 +14497,7 @@ sslize(struct mg_connection *conn,
 		conn->ssl = NULL;
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
  * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#ifndef OPENSSL_API_1_1
+#if !defined(OPENSSL_API_1_1)
 		ERR_remove_state(0);
 #endif
 		return 0;
@@ -14545,7 +14546,7 @@ sslize(struct mg_connection *conn,
 		conn->ssl = NULL;
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
  * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#ifndef OPENSSL_API_1_1
+#if !defined(OPENSSL_API_1_1)
 		ERR_remove_state(0);
 #endif
 		return 0;
@@ -14676,7 +14677,7 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 }
 
 
-#ifdef OPENSSL_API_1_1
+#if defined(OPENSSL_API_1_1)
 #else
 static void
 ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
@@ -14720,7 +14721,7 @@ load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 
 	ok = 1;
 	for (fp = sw; fp->name != NULL; fp++) {
-#ifdef _WIN32
+#if defined(_WIN32)
 		/* GetProcAddress() returns pointer to function */
 		u.fp = (void (*)(void))dlsym(dll_handle, fp->name);
 #else
@@ -14787,7 +14788,7 @@ static int cryptolib_users = 0; /* Reference counter for crypto library. */
 static int
 initialize_ssl(char *ebuf, size_t ebuf_len)
 {
-#ifdef OPENSSL_API_1_1
+#if defined(OPENSSL_API_1_1)
 	if (ebuf_len > 0) {
 		ebuf[0] = 0;
 	}
@@ -14883,7 +14884,7 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	}
 #endif /* NO_SSL_DL */
 
-#ifdef OPENSSL_API_1_1
+#if defined(OPENSSL_API_1_1)
 	/* Initialize SSL library */
 	OPENSSL_init_ssl(0, NULL);
 	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS
@@ -14954,7 +14955,7 @@ ssl_use_pem_file(struct mg_context *phys_ctx,
 }
 
 
-#ifdef OPENSSL_API_1_1
+#if defined(OPENSSL_API_1_1)
 static unsigned long
 ssl_get_protocol(int version_id)
 {
@@ -15098,7 +15099,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	md5_state_t md5state;
 	int protocol_ver;
 
-#ifdef OPENSSL_API_1_1
+#if defined(OPENSSL_API_1_1)
 	if ((dom_ctx->ssl_ctx = SSL_CTX_new(TLS_server_method())) == NULL) {
 		mg_cry_internal(fc(phys_ctx),
 		                "SSL_CTX_new (server) error: %s",
@@ -15128,7 +15129,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	SSL_CTX_set_ecdh_auto(dom_ctx->ssl_ctx, 1);
 #endif /* NO_SSL_DL */
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wincompatible-pointer-types"
 #endif
@@ -15151,7 +15152,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	                                       ssl_servername_callback);
 	SSL_CTX_set_tlsext_servername_arg(dom_ctx->ssl_ctx, phys_ctx);
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 
@@ -15354,7 +15355,7 @@ init_ssl_ctx(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 static void
 uninitialize_ssl(void)
 {
-#ifdef OPENSSL_API_1_1
+#if defined(OPENSSL_API_1_1)
 
 	if (mg_atomic_dec(&cryptolib_users) == 0) {
 
@@ -15473,7 +15474,7 @@ set_sock_timeout(SOCKET sock, int milliseconds)
 {
         int r0 = 0, r1, r2;
 
-#ifdef _WIN32
+#if defined(_WIN32)
         /* Windows specific */
 
         DWORD tv = (DWORD)milliseconds;
@@ -15677,7 +15678,7 @@ close_connection(struct mg_connection *conn)
 	conn->conn_state = 7; /* closing */
 #endif
 
-#ifndef NO_SSL
+#if !defined(NO_SSL)
 	if (conn->ssl != NULL) {
 		/* Run SSL_shutdown twice to ensure completely close SSL connection
 		 */
@@ -15685,7 +15686,7 @@ close_connection(struct mg_connection *conn)
 		SSL_free(conn->ssl);
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
  * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#ifndef OPENSSL_API_1_1
+#if !defined(OPENSSL_API_1_1)
 		ERR_remove_state(0);
 #endif
 		conn->ssl = NULL;
@@ -15755,7 +15756,7 @@ mg_close_connection(struct mg_connection *conn)
 
 	close_connection(conn);
 
-#ifndef NO_SSL
+#if !defined(NO_SSL)
 	if (conn->client_ssl_ctx != NULL) {
 		SSL_CTX_free((SSL_CTX *)conn->client_ssl_ctx);
 	}
@@ -15848,8 +15849,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 
-#ifndef NO_SSL
-#ifdef OPENSSL_API_1_1
+#if !defined(NO_SSL)
+#if defined(OPENSSL_API_1_1)
 	if (use_ssl
 	    && (conn->client_ssl_ctx = SSL_CTX_new(TLS_client_method())) == NULL) {
 		mg_snprintf(NULL,
@@ -15878,7 +15879,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 #endif /* NO_SSL */
 
 
-#ifdef USE_IPV6
+#if defined(USE_IPV6)
 	len = (sa.sa.sa_family == AF_INET) ? sizeof(conn->client.rsa.sin)
 	                                   : sizeof(conn->client.rsa.sin6);
 	psa = (sa.sa.sa_family == AF_INET)
@@ -15902,7 +15903,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	conn->client.is_ssl = use_ssl ? 1 : 0;
 	(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
 
-#ifndef NO_SSL
+#if !defined(NO_SSL)
 	if (use_ssl) {
 		common_client_context.dd.ssl_ctx = conn->client_ssl_ctx;
 
@@ -16546,7 +16547,7 @@ struct websocket_client_thread_data {
 
 
 #if defined(USE_WEBSOCKET)
-#ifdef _WIN32
+#if defined(_WIN32)
 static unsigned __stdcall websocket_client_thread(void *data)
 #else
 static void *
@@ -16590,7 +16591,7 @@ websocket_client_thread(void *data)
 
 	mg_free((void *)cdata);
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	return 0;
 #else
 	return NULL;
@@ -16638,7 +16639,7 @@ mg_connect_websocket_client(const char *host,
 		                "\r\n";
 	}
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
 #endif
@@ -16655,7 +16656,7 @@ mg_connect_websocket_client(const char *host,
 	                   magic,
 	                   origin);
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 
@@ -17189,7 +17190,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 		conn->request_info.is_ssl = conn->client.is_ssl;
 
 		if (conn->client.is_ssl) {
-#ifndef NO_SSL
+#if !defined(NO_SSL)
 			/* HTTPS connection */
 			if (sslize(conn,
 			           conn->dom_ctx->ssl_ctx,
@@ -17252,7 +17253,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 
 
 /* Threads have different return types on Windows and Unix. */
-#ifdef _WIN32
+#if defined(_WIN32)
 static unsigned __stdcall worker_thread(void *thread_func_param)
 {
 	struct worker_thread_args *pwta =
@@ -17492,7 +17493,7 @@ master_thread_run(void *thread_func_param)
 
 
 /* Threads have different return types on Windows and Unix. */
-#ifdef _WIN32
+#if defined(_WIN32)
 static unsigned __stdcall master_thread(void *thread_func_param)
 {
 	master_thread_run(thread_func_param);
@@ -17573,7 +17574,7 @@ free_context(struct mg_context *ctx)
 		mg_free(tmp_rh);
 	}
 
-#ifndef NO_SSL
+#if !defined(NO_SSL)
 	/* Deallocate SSL context */
 	if (ctx->dd.ssl_ctx != NULL) {
 		void *ssl_ctx = (void *)ctx->dd.ssl_ctx;
@@ -17657,13 +17658,13 @@ get_system_name(char **sysName)
 	DWORD dwBuild = 0;
 	BOOL wowRet, isWoW = FALSE;
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #pragma warning(push)
 /* GetVersion was declared deprecated */
 #pragma warning(disable : 4996)
 #endif
 	dwVersion = GetVersion();
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
@@ -18275,13 +18276,13 @@ mg_get_system_info_impl(char *buffer, int buflen)
 
 		GetSystemInfo(&si);
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #pragma warning(push)
 /* GetVersion was declared deprecated */
 #pragma warning(disable : 4996)
 #endif
 		dwVersion = GetVersion();
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
@@ -18370,7 +18371,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 			strcat0(buffer, block);
 		}
 
-#ifdef USE_LUA
+#if defined(USE_LUA)
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
@@ -18781,7 +18782,7 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 #endif
 
 
-#ifdef MG_EXPERIMENTAL_INTERFACES
+#if defined(MG_EXPERIMENTAL_INTERFACES)
 /* Get connection information. It can be printed or stored by the caller.
  * Return the size of available information. */
 static int
@@ -19080,7 +19081,7 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 }
 
 
-#ifdef MG_EXPERIMENTAL_INTERFACES
+#if defined(MG_EXPERIMENTAL_INTERFACES)
 int
 mg_get_connection_info(const struct mg_context *ctx,
                        int idx,

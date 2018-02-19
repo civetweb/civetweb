@@ -5,7 +5,7 @@
 #include "civetweb_lua.h"
 #include "civetweb_private_lua.h"
 
-#ifdef _WIN32
+#if defined(_WIN32)
 static void *
 mmap(void *addr, int64_t len, int prot, int flags, int fd, int offset)
 {
@@ -51,7 +51,7 @@ static const char lua_regkey_connlist = 2;
 static const char lua_regkey_lsp_include_history = 3;
 static const char *LUABACKGROUNDPARAMS = "mg";
 
-#ifndef LSP_INCLUDE_MAX_DEPTH
+#if !defined(LSP_INCLUDE_MAX_DEPTH)
 #define LSP_INCLUDE_MAX_DEPTH (32)
 #endif
 
@@ -1196,7 +1196,7 @@ lsp_get_info(lua_State *L)
 				/* Lua uses 1 based index, C uses 0 based index */
 				idx--;
 
-#ifdef MG_EXPERIMENTAL_INTERFACES
+#if defined(MG_EXPERIMENTAL_INTERFACES)
 				len = mg_get_connection_info(ctx, idx, NULL, 0);
 				if (len > 0) {
 					buf = (char *)mg_malloc(len + 64);
@@ -1339,7 +1339,7 @@ lsp_uuid(lua_State *L)
 }
 
 
-#ifdef USE_WEBSOCKET
+#if defined(USE_WEBSOCKET)
 struct lua_websock_data {
 	lua_State *state;
 	char *script;
@@ -1354,7 +1354,7 @@ struct lua_websock_data {
 static int
 lwebsock_write(lua_State *L)
 {
-#ifdef USE_WEBSOCKET
+#if defined(USE_WEBSOCKET)
 	int num_args = lua_gettop(L);
 	struct lua_websock_data *ws;
 	const char *str;
@@ -1677,19 +1677,19 @@ civetweb_open_lua_libs(lua_State *L)
 		luaL_openlibs(L);
 	}
 
-#ifdef USE_LUA_SQLITE3
+#if defined(USE_LUA_SQLITE3)
 	{
 		extern int luaopen_lsqlite3(lua_State *);
 		luaopen_lsqlite3(L);
 	}
 #endif
-#ifdef USE_LUA_LUAXML
+#if defined(USE_LUA_LUAXML)
 	{
 		extern int luaopen_LuaXML_lib(lua_State *);
 		luaopen_LuaXML_lib(L);
 	}
 #endif
-#ifdef USE_LUA_FILE_SYSTEM
+#if defined(USE_LUA_FILE_SYSTEM)
 	{
 		extern int luaopen_lfs(lua_State *);
 		luaopen_lfs(L);
@@ -1777,7 +1777,7 @@ prepare_lua_environment(struct mg_context *ctx,
 
 	if (lua_env_type == LUA_ENV_TYPE_LUA_WEBSOCKET) {
 		reg_function(L, "write", lwebsock_write);
-#ifdef USE_TIMERS
+#if defined(USE_TIMERS)
 		reg_function(L, "set_timeout", lwebsocket_set_timeout);
 		reg_function(L, "set_interval", lwebsocket_set_interval);
 #endif
@@ -2061,7 +2061,7 @@ cleanup_handle_lsp_request:
 }
 
 
-#ifdef USE_WEBSOCKET
+#if defined(USE_WEBSOCKET)
 struct mg_shared_lua_websocket_list {
 	struct lua_websock_data ws;
 	struct mg_shared_lua_websocket_list *next;
