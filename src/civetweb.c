@@ -473,53 +473,14 @@ typedef long off_t;
 #define funlockfile(x) (LeaveCriticalSection(&global_log_file_lock))
 #define sleep(x) (Sleep((x)*1000))
 #define rmdir(x) (_rmdir(x))
-#if defined(_WIN64)
+#if defined(_WIN64) || !defined(__MINGW32__)
+/* Only MinGW 32 bit is missing this function */
 #define timegm(x) (_mkgmtime(x))
 #else
-static inline int is_leap(int y) {
-  return (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
-}
-
-static inline int count_leap(int y) {
-  return (y - 1969) / 4 - (y - 1901) / 100 + (y - 1601) / 400;
-}
-
 time_t timegm(struct tm *tm);
-time_t timegm(struct tm *tm) {
-  static const unsigned short ydays[] = {
-    0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365
-  };
-  int year = tm->tm_year + 1900;
-  int mon = tm->tm_mon;
-  int mday = tm->tm_mday - 1;
-  int hour = tm->tm_hour;
-  int min = tm->tm_min;
-  int sec = tm->tm_sec;
+#define NEED_TIMEGM
+#endif
 
-  if (year < 1970
-      || mon < 0 || mon > 11
-      || mday < 0 || (mday >= ydays[mon + 1] - ydays[mon]
-                      + (mon == 1 && is_leap(year) ? 1 : 0))
-      || hour < 0 || hour > 23
-      || min < 0 || min > 59
-      || sec < 0 || sec > 60)
-  return -1;
-
-  time_t res = year - 1970;
-  res *= 365;
-  res += mday;
-  res += ydays[mon] + (mon > 1 && is_leap(year) ? 1 : 0);
-  res += count_leap(year);
-
-  res *= 24;
-  res += hour;
-  res *= 60;
-  res += min;
-  res *= 60;
-  res += sec;
-  return res;
-}
-#endif /* !_WIN64 */
 
 #if !defined(fileno)
 #define fileno(x) (_fileno(x))
@@ -781,6 +742,60 @@ typedef int SOCKET;
 
 #endif /* defined(_WIN32) && !defined(__SYMBIAN32__) -                         \
           WINDOWS / UNIX include block */
+
+
+/* In case our C library is missing "timegm", provide an implementation */
+#if defined(NEED_TIMEGM)
+static inline int
+is_leap(int y)
+{
+	return (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+}
+
+static inline int
+count_leap(int y)
+{
+	return (y - 1969) / 4 - (y - 1901) / 100 + (y - 1601) / 400;
+}
+
+time_t
+timegm(struct tm *tm)
+{
+	static const unsigned short ydays[] = {
+	    0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
+	int year = tm->tm_year + 1900;
+	int mon = tm->tm_mon;
+	int mday = tm->tm_mday - 1;
+	int hour = tm->tm_hour;
+	int min = tm->tm_min;
+	int sec = tm->tm_sec;
+
+	if (year < 1970 || mon < 0 || mon > 11 || mday < 0
+	    || (mday >= ydays[mon + 1] - ydays[mon]
+	                    + (mon == 1 && is_leap(year) ? 1 : 0)) || hour < 0
+	    || hour > 23
+	    || min < 0
+	    || min > 59
+	    || sec < 0
+	    || sec > 60)
+		return -1;
+
+	time_t res = year - 1970;
+	res *= 365;
+	res += mday;
+	res += ydays[mon] + (mon > 1 && is_leap(year) ? 1 : 0);
+	res += count_leap(year);
+
+	res *= 24;
+	res += hour;
+	res *= 60;
+	res += min;
+	res *= 60;
+	res += sec;
+	return res;
+}
+#endif /* NEED_TIMEGM */
+
 
 /* va_copy should always be a macro, C99 and C++11 - DTL */
 #ifndef va_copy
