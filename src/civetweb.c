@@ -9212,6 +9212,11 @@ fclose_on_exec(struct mg_file_access *filep, struct mg_connection *conn)
 }
 
 
+#if defined(MG_EXPERIMENTAL_INTERFACES) /* TODO: A new define */
+#include "mod_zlib.inl"
+#endif
+
+
 static void
 handle_static_file_request(struct mg_connection *conn,
                            const char *path,
@@ -9229,7 +9234,12 @@ handle_static_file_request(struct mg_connection *conn,
 	char gz_path[PATH_MAX];
 	const char *encoding = "";
 	const char *cors1, *cors2, *cors3;
-	int allow_on_the_fly_compression;
+#if defined(MG_EXPERIMENTAL_INTERFACES)   /* TODO: A new define */
+	int allow_on_the_fly_compression = 1; /* TODO: get from config */
+#else
+	int allow_on_the_fly_compression = 0; /* TODO: get from config */
+#endif
+	int is_head_request = !strcmp(conn->request_info.request_method, "HEAD");
 
 	if ((conn == NULL) || (conn->dom_ctx == NULL) || (filep == NULL)) {
 		return;
@@ -9255,7 +9265,9 @@ handle_static_file_request(struct mg_connection *conn,
 	/* if this file is in fact a pre-gzipped file, rewrite its filename
 	 * it's important to rewrite the filename after resolving
 	 * the mime type from it, to preserve the actual file's type */
-	allow_on_the_fly_compression = conn->accept_gzip;
+	if (!conn->accept_gzip) {
+		allow_on_the_fly_compression = 0;
+	}
 
 	if (filep->stat.is_gzipped) {
 		mg_snprintf(conn, &truncated, gz_path, sizeof(gz_path), "%s.gz", path);
@@ -9341,51 +9353,52 @@ handle_static_file_request(struct mg_connection *conn,
 	gmt_time_string(lm, sizeof(lm), &filep->stat.last_modified);
 	construct_etag(etag, sizeof(etag), &filep->stat);
 
-	/* On the fly compression allowed */
-	if (allow_on_the_fly_compression) {
-		;
-		/* TODO: add interface to compression module */
-		/* e.g., def from https://zlib.net/zlib_how.html */
-		/* Check license (zlib has a permissive license, but */
-		/* is still not MIT) and use dynamic binding like */
-		/* done with OpenSSL */
-		/* See #199 (https://github.com/civetweb/civetweb/issues/199) */
-	}
-
 	/* Send header */
 	(void)mg_printf(conn,
 	                "HTTP/1.1 %d %s\r\n"
-	                "%s%s%s"
-	                "Date: %s\r\n",
+	                "%s%s%s" /* CORS */
+	                "Date: %s\r\n"
+	                "Last-Modified: %s\r\n"
+	                "Etag: %s\r\n"
+	                "Content-Type: %.*s\r\n"
+	                "Connection: %s\r\n",
 	                conn->status_code,
 	                msg,
 	                cors1,
 	                cors2,
 	                cors3,
-	                date);
-	send_static_cache_header(conn);
-	send_additional_header(conn);
-
-	(void)mg_printf(conn,
-	                "Last-Modified: %s\r\n"
-	                "Etag: %s\r\n"
-	                "Content-Type: %.*s\r\n"
-	                "Content-Length: %" INT64_FMT "\r\n"
-	                "Connection: %s\r\n"
-	                "Accept-Ranges: bytes\r\n"
-	                "%s%s",
+	                date,
 	                lm,
 	                etag,
 	                (int)mime_vec.len,
 	                mime_vec.ptr,
-	                cl,
-	                suggest_connection_header(conn),
-	                range,
-	                encoding);
+	                suggest_connection_header(conn));
+	send_static_cache_header(conn);
+	send_additional_header(conn);
+
+	/* On the fly compression allowed */
+	if (allow_on_the_fly_compression) {
+		/* For on the fly compression, we don't know the content size in
+		 * advance, so we have to use chunked encoding */
+		(void)mg_printf(conn,
+		                "Content-Encoding: gzip\r\n"
+		                "Transfer-Encoding: chunked\r\n");
+	} else {
+		/* Without on-the-fly compression, we know the content-length
+		 * and we can use ranges (with on-the-fly compression we cannot).
+		 * So we send these response headers only in this case. */
+		(void)mg_printf(conn,
+		                "Content-Length: %" INT64_FMT "\r\n"
+		                "Accept-Ranges: bytes\r\n"
+		                "%s" /* range */
+		                "%s" /* encoding */,
+		                cl,
+		                range,
+		                encoding);
+	}
 
 	/* The previous code must not add any header starting with X- to make
 	 * sure no one of the additional_headers is included twice */
-
 	if (additional_headers != NULL) {
 		(void)mg_printf(conn,
 		                "%.*s\r\n\r\n",
@@ -9395,8 +9408,14 @@ handle_static_file_request(struct mg_connection *conn,
 		(void)mg_printf(conn, "\r\n");
 	}
 
-	if (strcmp(conn->request_info.request_method, "HEAD") != 0) {
-		send_file_data(conn, filep, r1, cl);
+	if (!is_head_request) {
+		if (allow_on_the_fly_compression) {
+			/* Compress and send */
+			send_compressed_data(conn, filep);
+		} else {
+			/* Send file directly */
+			send_file_data(conn, filep, r1, cl);
+		}
 	}
 	(void)mg_fclose(&filep->access); /* ignore error on read only file */
 }

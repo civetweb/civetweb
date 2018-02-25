@@ -115,6 +115,7 @@ endif
 
 ifdef WITH_EXPERIMENTAL
   CFLAGS += -DMG_EXPERIMENTAL_INTERFACES
+  LIBS += -lz
 endif
 
 ifdef WITH_IPV6

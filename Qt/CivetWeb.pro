@@ -13,7 +13,8 @@ SOURCES += \
     ../src/mod_duktape.inl \
     ../src/timer.inl \
     ../src/civetweb.c \
-    ../src/main.c
+    ../src/main.c \
+    ../src/mod_zlib.inl
 
 #include(deployment.pri)
 #qtcAddDeployment()
