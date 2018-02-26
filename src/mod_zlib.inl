@@ -1,4 +1,8 @@
 /* Experimental implementation for on-the-fly compression */
+#if !defined(USE_ZLIB)
+#error "This file must only be included, if USE_ZLIB is set"
+#endif
+
 #include "zconf.h"
 #include "zlib.h"
 

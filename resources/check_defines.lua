@@ -1,4 +1,4 @@
-
+#!/usr/bin/lua5.2
 
 usedlines = {c={}, n={}}
 useddefs = {c={}, n={}}
@@ -66,6 +66,7 @@ noifdef(path .. "src/main.c")
 noifdef(path .. "src/md5.inl")
 noifdef(path .. "src/mod_duktape.inl")
 noifdef(path .. "src/mod_lua.inl")
+noifdef(path .. "src/mod_zlib.inl")
 noifdef(path .. "src/sha1.inl")
 noifdef(path .. "src/timer.inl")
 noifdef(path .. "src/wolfssl_extras.inl")

@@ -26,6 +26,9 @@
 #pragma GCC diagnostic ignored "-Wunused-macros"
 /* A padding warning is just plain useless */
 #pragma GCC diagnostic ignored "-Wpadded"
+#endif
+
+#if defined(__clang__) /* GCC does not (yet) support this pragma */
 /* We must set some flags for the headers we include. These flags
  * are reserved ids according to C99, so we need to disable a
  * warning for that. */
@@ -68,7 +71,7 @@
 #endif
 #endif
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(__clang__)
 /* Enable reserved-id-macro warning again. */
 #pragma GCC diagnostic pop
 #endif
@@ -9212,7 +9215,7 @@ fclose_on_exec(struct mg_file_access *filep, struct mg_connection *conn)
 }
 
 
-#if defined(MG_EXPERIMENTAL_INTERFACES) /* TODO: A new define */
+#if defined(USE_ZLIB)
 #include "mod_zlib.inl"
 #endif
 
@@ -9234,16 +9237,16 @@ handle_static_file_request(struct mg_connection *conn,
 	char gz_path[PATH_MAX];
 	const char *encoding = "";
 	const char *cors1, *cors2, *cors3;
-#if defined(MG_EXPERIMENTAL_INTERFACES)   /* TODO: A new define */
+	int is_head_request;
+#if defined(USE_ZLIB)
 	int allow_on_the_fly_compression = 1; /* TODO: get from config */
-#else
-	int allow_on_the_fly_compression = 0; /* TODO: get from config */
 #endif
-	int is_head_request = !strcmp(conn->request_info.request_method, "HEAD");
 
 	if ((conn == NULL) || (conn->dom_ctx == NULL) || (filep == NULL)) {
 		return;
 	}
+
+	is_head_request = !strcmp(conn->request_info.request_method, "HEAD");
 
 	if (mime_type == NULL) {
 		get_mime_type(conn, path, &mime_vec);
@@ -9262,12 +9265,14 @@ handle_static_file_request(struct mg_connection *conn,
 	conn->status_code = 200;
 	range[0] = '\0';
 
+#if defined(USE_ZLIB)
 	/* if this file is in fact a pre-gzipped file, rewrite its filename
 	 * it's important to rewrite the filename after resolving
 	 * the mime type from it, to preserve the actual file's type */
 	if (!conn->accept_gzip) {
 		allow_on_the_fly_compression = 0;
 	}
+#endif
 
 	if (filep->stat.is_gzipped) {
 		mg_snprintf(conn, &truncated, gz_path, sizeof(gz_path), "%s.gz", path);
@@ -9283,8 +9288,10 @@ handle_static_file_request(struct mg_connection *conn,
 		path = gz_path;
 		encoding = "Content-Encoding: gzip\r\n";
 
+#if defined(USE_ZLIB)
 		/* File is already compressed. No "on the fly" compression. */
 		allow_on_the_fly_compression = 0;
+#endif
 	}
 
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
@@ -9328,8 +9335,10 @@ handle_static_file_request(struct mg_connection *conn,
 		            filep->stat.size);
 		msg = "Partial Content";
 
+#if defined(USE_ZLIB)
 		/* Do not compress ranges. */
 		allow_on_the_fly_compression = 0;
+#endif
 	}
 
 	hdr = mg_get_header(conn, "Origin");
@@ -9376,6 +9385,7 @@ handle_static_file_request(struct mg_connection *conn,
 	send_static_cache_header(conn);
 	send_additional_header(conn);
 
+#if defined(USE_ZLIB)
 	/* On the fly compression allowed */
 	if (allow_on_the_fly_compression) {
 		/* For on the fly compression, we don't know the content size in
@@ -9383,7 +9393,9 @@ handle_static_file_request(struct mg_connection *conn,
 		(void)mg_printf(conn,
 		                "Content-Encoding: gzip\r\n"
 		                "Transfer-Encoding: chunked\r\n");
-	} else {
+	} else
+#endif
+	{
 		/* Without on-the-fly compression, we know the content-length
 		 * and we can use ranges (with on-the-fly compression we cannot).
 		 * So we send these response headers only in this case. */
@@ -9409,10 +9421,13 @@ handle_static_file_request(struct mg_connection *conn,
 	}
 
 	if (!is_head_request) {
+#if defined(USE_ZLIB)
 		if (allow_on_the_fly_compression) {
 			/* Compress and send */
 			send_compressed_data(conn, filep);
-		} else {
+		} else
+#endif
+		{
 			/* Send file directly */
 			send_file_data(conn, filep, r1, cl);
 		}
@@ -18204,26 +18219,29 @@ mg_check_feature(unsigned feature)
 #if defined(USE_SERVER_STATS)
 	                                    | MG_FEATURES_STATS
 #endif
+#if defined(USE_ZLIB)
+	                                    | MG_FEATURES_COMPRESSION
+#endif
 
 /* Set some extra bits not defined in the API documentation.
  * These bits may change without further notice. */
 #if defined(MG_LEGACY_INTERFACE)
-	                                    | 0x8000u
+	                                    | 0x00008000u
 #endif
 #if defined(MG_EXPERIMENTAL_INTERFACES)
-	                                    | 0x4000u
+	                                    | 0x00004000u
 #endif
 #if defined(MEMORY_DEBUGGING)
-	                                    | 0x1000u
+	                                    | 0x00001000u
 #endif
 #if defined(USE_TIMERS)
-	                                    | 0x0200u
+	                                    | 0x00020000u
 #endif
 #if !defined(NO_NONCE_CHECK)
-	                                    | 0x0400u
+	                                    | 0x00040000u
 #endif
 #if !defined(NO_POPEN)
-	                                    | 0x0800u
+	                                    | 0x00080000u
 #endif
 	    ;
 	return (feature & feature_set);

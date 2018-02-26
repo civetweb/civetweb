@@ -162,6 +162,8 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | USE_DUKTAPE                | enable server-side JavaScript        |
 |                            | support by including Duktape         |
 | USE_SERVER_STATS           | enable server statistics support     |
+| USE_ZLIB                   | enable on-the-fly compression of     |
+|                            | static content by including zlib     |
 | MG_EXPERIMENTAL_INTERFACES | include experimental interfaces      |
 |                            |                                      |
 | NO_SSL_DL                  | link against system libssl library   |

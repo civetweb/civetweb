@@ -83,6 +83,7 @@ ifdef WITH_ALL
   WITH_LUA = 1
   WITH_DUKTAPE = 1
   WITH_SERVER_STATS = 1
+  WITH_ZLIB = 1
   WITH_EXPERIMENTAL = 1
   #WITH_CPP is not defined, ALL means only real features, not wrappers
 endif
@@ -113,9 +114,16 @@ ifdef WITH_DUKTAPE
   include resources/Makefile.in-duktape
 endif
 
+ifdef WITH_COMPRESSION
+  WITH_ZLIB = 1
+endif
+
+ifdef WITH_ZLIB
+  LIBS += -lz
+endif
+
 ifdef WITH_EXPERIMENTAL
   CFLAGS += -DMG_EXPERIMENTAL_INTERFACES
-  LIBS += -lz
 endif
 
 ifdef WITH_IPV6
@@ -206,6 +214,7 @@ help:
 	@echo "   WITH_IPV6=1           with IPV6 support"
 	@echo "   WITH_WEBSOCKET=1      build with web socket support"
 	@echo "   WITH_SERVER_STATS=1   build includes support for server statistics"
+	@echo "   WITH_ZLIB=1           build includes support for on-the-fly compression using zlib"
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   WITH_EXPERIMENTAL=1   build with experimental features"
 	@echo "   CONFIG_FILE=file      use 'file' as the config file"

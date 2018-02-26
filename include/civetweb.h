@@ -94,6 +94,10 @@ enum {
 	/* Will only work, if USE_SERVER_STATS is set. */
 	MG_FEATURES_STATS = 0x100u,
 
+	/* Support on-the-fly compression. */
+	/* Will only work, if USE_ZLIB is set. */
+	MG_FEATURES_COMPRESSION = 0x200u,
+
 	/* Collect server status information. */
 	/* Will only work, if USE_SERVER_STATS is set. */
 	MG_FEATURES_ALL = 0xFFFFu

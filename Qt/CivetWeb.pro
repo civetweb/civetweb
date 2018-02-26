@@ -48,6 +48,9 @@ INCLUDEPATH +=  \
 DEFINES += USE_LUA
 DEFINES += USE_LUA_SHARED
 LIBS += -llua5.2
+
+DEFINES += USE_ZLIB
+LIBS += -lz
 }
 
 #To build with duktape support:
