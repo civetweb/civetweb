@@ -3,6 +3,7 @@ civetweb
 civetweb_test
 libcivetweb.a
 libcivetweb.so
+libcivetweb.so.*
 *-cache
 out
 *.dmg
