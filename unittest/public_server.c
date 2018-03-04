@@ -4612,7 +4612,11 @@ START_TEST(test_minimal_tls_client)
 {
 	mark_point();
 
-#if !defined(NO_SSL)
+#if !defined(NO_SSL) /* dont run https test if SSL is not enabled */
+
+#if (!defined(__MACH__) || defined(LOCAL_TEST)) && !defined(OPENSSL_API_1_1)
+	/* dont run on Travis OSX worker with OpenSSL 1.0 */
+
 	/* Initialize the library */
 	mg_init_library(2);
 
@@ -4627,6 +4631,8 @@ START_TEST(test_minimal_tls_client)
 
 	/* Un-initialize the library */
 	mg_exit_library();
+
+#endif
 #endif
 
 	mark_point();
