@@ -17,13 +17,15 @@ BUILD_DIR = out
 
 # Installation directories by convention
 # http://www.gnu.org/prep/standards/html_node/Directory-Variables.html
-PREFIX = /usr/local
+PREFIX ?= /usr/local
 EXEC_PREFIX = $(PREFIX)
 BINDIR = $(EXEC_PREFIX)/bin
 DATAROOTDIR = $(PREFIX)/share
 DOCDIR = $(DATAROOTDIR)/doc/$(CPROG)
 SYSCONFDIR = $(PREFIX)/etc
 HTMLDIR = $(DOCDIR)
+INCLUDEDIR = $(DESTDIR)$(PREFIX)/include
+LIBDIR = $(DESTDIR)$(EXEC_PREFIX)/lib
 
 # build tools
 MKDIR = mkdir -p
@@ -48,6 +50,7 @@ UNIT_TEST_SOURCES = test/unit_test.c
 SOURCE_DIRS =
 
 OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o)
+HEADERS = include/civetweb.h
 BUILD_RESOURCES =
 
 # The unit tests include the source files directly to get visibility to the
@@ -72,6 +75,7 @@ endif
 
 ifdef WITH_CPP
   OBJECTS += src/CivetServer.o
+  HEADERS += include/CivetServer.h
   LCC = $(CXX)
 else
   LCC = $(CC)
@@ -199,8 +203,11 @@ help:
 	@echo "make build               compile"
 	@echo "make install             install on the system"
 	@echo "make clean               clean up the mess"
+	@echo "make install-headers     install headers"
 	@echo "make lib                 build a static library"
+	@echo "make install-lib         install the static library"
 	@echo "make slib                build a shared library"
+	@echo "make install-slib        install the shared library"
 	@echo "make unit_test           build unit tests executable"
 	@echo ""
 	@echo " Make Options"
@@ -253,6 +260,19 @@ install: $(HTMLDIR)/index.html $(SYSCONFDIR)/civetweb.conf
 	install -m 644 *.md "$(DOCDIR)"
 	install -d -m 755 "$(BINDIR)"
 	install -m 755 $(CPROG) "$(BINDIR)/"
+
+install-headers:
+	install -m 644 $(HEADERS) "$(INCLUDEDIR)"
+
+install-lib: lib$(CPROG).a
+	install -m 644 $< "$(LIBDIR)"
+
+install-slib: lib$(CPROG).so
+	$(eval version=$(shell grep -w "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
+	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
+	install -m 644 $< "$(LIBDIR)"
+	install -m 777 $<.$(major) "$(LIBDIR)"
+	install -m 777 $<.$(version).0 "$(LIBDIR)"
 
 # Install target we do not want to overwrite
 # as it may be an upgrade
