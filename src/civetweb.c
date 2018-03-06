@@ -538,6 +538,13 @@ clock_gettime(clockid_t clk_id, struct timespec *tp)
 	BOOL ok = FALSE;
 	double d;
 	static double perfcnt_per_sec = 0.0;
+	static BOOL initialized = FALSE;
+
+	if (!initialized) {
+		QueryPerformanceFrequency((LARGE_INTEGER *)&li);
+		perfcnt_per_sec = 1.0 / li.QuadPart;
+		initialized = TRUE;
+	}
 
 	if (tp) {
 		memset(tp, 0, sizeof(*tp));
@@ -557,18 +564,12 @@ clock_gettime(clockid_t clk_id, struct timespec *tp)
 		} else if (clk_id == CLOCK_MONOTONIC) {
 
 			/* BEGIN: CLOCK_MONOTONIC = stopwatch (time differences) */
-			if (perfcnt_per_sec == 0.0) {
-				QueryPerformanceFrequency((LARGE_INTEGER *)&li);
-				perfcnt_per_sec = 1.0 / li.QuadPart;
-			}
-			if (perfcnt_per_sec != 0.0) {
-				QueryPerformanceCounter((LARGE_INTEGER *)&li);
-				d = li.QuadPart * perfcnt_per_sec;
-				tp->tv_sec = (time_t)d;
-				d -= tp->tv_sec;
-				tp->tv_nsec = (long)(d * 1.0E9);
-				ok = TRUE;
-			}
+			QueryPerformanceCounter((LARGE_INTEGER *)&li);
+			d = li.QuadPart * perfcnt_per_sec;
+			tp->tv_sec = (time_t)d;
+			d -= (double)tp->tv_sec;
+			tp->tv_nsec = (long)(d * 1.0E9);
+			ok = TRUE;
 			/* END: CLOCK_MONOTONIC */
 
 		} else if (clk_id == CLOCK_THREAD) {
@@ -3732,7 +3733,10 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 		}
 
 		if ((ri->request_uri != NULL)
-		    && strcmp(ri->local_uri, ri->request_uri)) {
+		    && (0 != strcmp(ri->local_uri, ri->request_uri))) {
+			/* The request uri is different from the local uri.
+			 * This is usually if an absolute URI, including server
+			 * name has been provided. */
 			mg_snprintf(conn,
 			            &truncated,
 			            buf,
@@ -3744,7 +3748,11 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 				return -1;
 			}
 			return 0;
+
 		} else {
+
+/* The common case is a relative URI, so we have to
+ * construct an absolute URI from server name and port */
 
 #if defined(USE_IPV6)
 			int is_ipv6 = (conn->client.lsa.sa.sa_family == AF_INET6);
@@ -4042,7 +4050,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 		                                      str);
 	}
 
-	for (i = 0, j = 0; (i < pattern_len); i++, j++) {
+	for (i = 0, j = 0; (i < (int)pattern_len); i++, j++) {
 		if ((pattern[i] == '?') && (str[j] != '\0')) {
 			continue;
 		} else if (pattern[i] == '$') {
@@ -4512,8 +4520,15 @@ mg_send_http_error_impl(struct mg_connection *conn,
 					while (tstr) {
 						for (i = 1;
 						     (i < 32) && (tstr[i] != 0) && (tstr[i] != ',');
-						     i++)
+						     i++) {
+							/* buffer overrun is not possible here, since
+							 * (i < 32) && (len < sizeof(path_buf) - 32)
+							 * ==> (i + len) < sizeof(path_buf) */
 							path_buf[len + i - 1] = tstr[i];
+						}
+						/* buffer overrun is not possible here, since
+						 * (i <= 32) && (len < sizeof(path_buf) - 32)
+						 * ==> (i + len) <= sizeof(path_buf) */
 						path_buf[len + i - 1] = 0;
 
 						if (mg_stat(conn, path_buf, &error_page_file.stat)) {
@@ -4559,7 +4574,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 		if (has_body) {
 			mg_printf(conn, "Error %d: %s\n", status, status_text);
 
-			if (fmt != NULL) {
+			if (fmt != NULL) { /* <-- should be always true */
 				mg_write(conn, errmsg_buf, strlen(errmsg_buf));
 			}
 
@@ -5913,9 +5928,9 @@ push_inner(struct mg_context *ctx,
 
 		/* If send failed, wait before retry */
 		if (fp != NULL) {
-			/* For files, just wait a fixed time,
-			 * maybe an average disk seek time. */
-			mg_sleep(ms_wait > 10 ? 10 : ms_wait);
+			/* For files, just wait a fixed time.
+			 * Maybe it helps, maybe not. */
+			mg_sleep(5);
 		} else {
 			/* For sockets, wait for the socket using select */
 			fd_set wfds;
@@ -8576,13 +8591,16 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 
 	if (ip_ver == 4) {
 		/* connected with IPv4 */
-		conn_ret = connect(*sock, (struct sockaddr *)&sa->sin, sizeof(sa->sin));
+		conn_ret = connect(*sock,
+		                   (struct sockaddr *)((void *)&sa->sin),
+		                   sizeof(sa->sin));
 	}
 #if defined(USE_IPV6)
 	else if (ip_ver == 6) {
 		/* connected with IPv6 */
-		conn_ret =
-		    connect(*sock, (struct sockaddr *)&sa->sin6, sizeof(sa->sin6));
+		conn_ret = connect(*sock,
+		                   (struct sockaddr *)((void *)&sa->sin6),
+		                   sizeof(sa->sin6));
 	}
 #endif
 
@@ -8590,6 +8608,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		fd_set fdset;
 		struct timeval timeout;
 		int sockerr = -1;
+		void *psockerr = &sockerr;
 
 #if defined(_WIN32)
 		int len = (int)sizeof(sockerr);
@@ -8617,9 +8636,9 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		}
 
 #if defined(_WIN32)
-		getsockopt(*sock, SOL_SOCKET, SO_ERROR, (char *)&sockerr, &len);
+		getsockopt(*sock, SOL_SOCKET, SO_ERROR, (char *)psockerr, &len);
 #else
-		getsockopt(*sock, SOL_SOCKET, SO_ERROR, (void *)&sockerr, &len);
+		getsockopt(*sock, SOL_SOCKET, SO_ERROR, psockerr, &len);
 #endif
 
 		if (sockerr != 0) {
@@ -10608,11 +10627,11 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1
 	 */
 	set_close_on_exec((SOCKET)fdin[0], conn);  /* stdin read */
-	set_close_on_exec((SOCKET)fdout[1], conn); /* stdout write */
-	set_close_on_exec((SOCKET)fderr[1], conn); /* stderr write */
 	set_close_on_exec((SOCKET)fdin[1], conn);  /* stdin write */
 	set_close_on_exec((SOCKET)fdout[0], conn); /* stdout read */
+	set_close_on_exec((SOCKET)fdout[1], conn); /* stdout write */
 	set_close_on_exec((SOCKET)fderr[0], conn); /* stderr read */
+	set_close_on_exec((SOCKET)fderr[1], conn); /* stderr write */
 
 	/* Parent closes only one side of the pipes.
 	 * If we don't mark them as closed, close() attempt before
@@ -10903,7 +10922,7 @@ mkcol(struct mg_connection *conn, const char *path)
 		          "Content-Length: 0\r\n"
 		          "Connection: %s\r\n\r\n",
 		          suggest_connection_header(conn));
-	} else if (rc == -1) {
+	} else {
 		if (errno == EEXIST) {
 			mg_send_http_error(
 			    conn, 405, "Error: mkcol(%s): %s", path, strerror(ERRNO));
@@ -11565,7 +11584,7 @@ handle_propfind(struct mg_connection *conn,
 
 	/* If it is a directory, print directory entries too if Depth is not 0
 	 */
-	if (filep && filep->is_directory
+	if (filep->is_directory
 	    && !mg_strcasecmp(conn->dom_ctx->config[ENABLE_DIRECTORY_LISTING],
 	                      "yes")
 	    && ((depth == NULL) || (strcmp(depth, "0") != 0))) {
@@ -16215,7 +16234,7 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	if (auth_domain_check_enabled) {
 		server_domain = conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
 		server_domain_len = strlen(server_domain);
-		if (!server_domain_len) {
+		if ((server_domain_len == 0) || (hostbegin == NULL)) {
 			return 0;
 		}
 		if ((request_domain_len == server_domain_len)
@@ -16223,12 +16242,9 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 			/* Request is directed to this server - full name match. */
 		} else {
 			if (request_domain_len < (server_domain_len + 2)) {
-				/* Request is directed to another server: The server name is
-				 * longer
-				 * than
-				 * the request name. Drop this case here to avoid overflows
-				 * in
-				 * the
+				/* Request is directed to another server: The server name
+				 * is longer than the request name.
+				 * Drop this case here to avoid overflows in the
 				 * following checks. */
 				return 0;
 			}
@@ -16387,13 +16403,27 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	           && !mg_strcasecmp(cl, "chunked")) {
 		conn->is_chunked = 1;
 		conn->content_len = -1; /* unknown content length */
-	} else if (get_http_method_info(conn->request_info.request_method)
-	               ->request_has_body) {
-		/* POST or PUT request without content length set */
-		conn->content_len = -1; /* unknown content length */
 	} else {
-		/* Other request */
-		conn->content_len = 0; /* No content */
+		const struct mg_http_method_info *meth =
+		    get_http_method_info(conn->request_info.request_method);
+		if (!meth) {
+			/* No valid HTTP method */
+			mg_snprintf(conn,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s",
+			            "Bad request");
+			*err = 411;
+			return 0;
+		}
+		if (meth->request_has_body) {
+			/* POST or PUT request without content length set */
+			conn->content_len = -1; /* unknown content length */
+		} else {
+			/* Other request */
+			conn->content_len = 0; /* No content */
+		}
 	}
 
 	conn->connection_type = CONNECTION_TYPE_REQUEST; /* Valid request */
@@ -16729,6 +16759,12 @@ mg_connect_websocket_client(const char *host,
 	/* For client connections, mg_context is fake. Since we need to set a
 	 * callback function, we need to create a copy and modify it. */
 	newctx = (struct mg_context *)mg_malloc(sizeof(struct mg_context));
+	if (!newctx) {
+		DEBUG_TRACE("%s\r\n", "Out of memory");
+		mg_free(conn);
+		return NULL;
+	}
+
 	memcpy(newctx, conn->phys_ctx, sizeof(struct mg_context));
 	newctx->user_data = user_data;
 	newctx->context_type = CONTEXT_WS_CLIENT; /* ws/wss client context */
@@ -16743,6 +16779,13 @@ mg_connect_websocket_client(const char *host,
 
 	thread_data = (struct websocket_client_thread_data *)
 	    mg_calloc_ctx(sizeof(struct websocket_client_thread_data), 1, newctx);
+	if (!thread_data) {
+		DEBUG_TRACE("%s\r\n", "Out of memory");
+		mg_free(newctx);
+		mg_free(conn);
+		return NULL;
+	}
+
 	thread_data->conn = conn;
 	thread_data->data_handler = data_func;
 	thread_data->close_handler = close_func;
@@ -18672,8 +18715,8 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		strcat0(buffer, block);
 	}
 
-	/* Memory information */
-	if (ms) {
+	if (ms) { /* <-- should be always true */
+		/* Memory information */
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
@@ -18699,9 +18742,8 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		}
 	}
 
-
-	/* Connections information */
 	if (ctx) {
+		/* Connections information */
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
@@ -18724,10 +18766,8 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		if (context_info_length + reserved_len < buflen) {
 			strcat0(buffer, block);
 		}
-	}
 
-	/* Requests information */
-	if (ctx) {
+		/* Requests information */
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
@@ -18744,10 +18784,8 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		if (context_info_length + reserved_len < buflen) {
 			strcat0(buffer, block);
 		}
-	}
 
-	/* Data information */
-	if (ctx) {
+		/* Data information */
 		mg_snprintf(NULL,
 		            NULL,
 		            block,

@@ -564,7 +564,12 @@ lsp_include(lua_State *L)
 	const char *path_type = (num_args >= 2) ? lua_tostring(L, 2) : NULL;
 	struct lsp_include_history *include_history;
 
-	if ((file_name) && (num_args <= 2)) {
+	if (path_type == NULL) {
+		/* default to "absolute" */
+		path_type = "a";
+	}
+
+	if ((file_name != NULL) && (num_args <= 2)) {
 
 		lua_pushlightuserdata(L, (void *)&lua_regkey_lsp_include_history);
 		lua_gettable(L, LUA_REGISTRYINDEX);
@@ -584,7 +589,7 @@ lsp_include(lua_State *L)
 
 			file_name_path[511] = 0;
 
-			if (path_type && (*path_type == 'v')) {
+			if (*path_type == 'v') {
 				/* "virtual" = relative to document root. */
 				(void)mg_snprintf(conn,
 				                  &truncated,
@@ -594,8 +599,7 @@ lsp_include(lua_State *L)
 				                  conn->dom_ctx->config[DOCUMENT_ROOT],
 				                  file_name);
 
-			} else if ((path_type && (*path_type == 'a'))
-			           || (path_type == NULL)) {
+			} else if (*path_type == 'a') {
 				/* "absolute" = file name is relative to the
 				 * webserver working directory
 				 * or it is absolute system path. */
@@ -607,7 +611,7 @@ lsp_include(lua_State *L)
 				                  "%s",
 				                  file_name);
 
-			} else if (path_type && (*path_type == 'r' || *path_type == 'f')) {
+			} else if ((*path_type == 'r') || (*path_type == 'f')) {
 				/* "relative" = file name is relative to the
 				 * currect document */
 				(void)mg_snprintf(
@@ -1065,8 +1069,9 @@ lsp_get_response_code_text(lua_State *L)
 			   convert it to the corresponding text. */
 			code = lua_tonumber(L, 1);
 			text = mg_get_response_code_text(NULL, (int)code);
-			if (text)
+			if (text) { /* <-- should be always true */
 				lua_pushstring(L, text);
+			}
 			return text ? 1 : 0;
 		}
 	}
@@ -1243,7 +1248,7 @@ lsp_get_option(lua_State *L)
 	if (num_args == 0) {
 		const struct mg_option *opts = mg_get_valid_options();
 
-		if (!opts) {
+		if (!opts) { /* <-- should be always false */
 			return 0;
 		}
 
@@ -1552,6 +1557,10 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 		arg = (struct laction_arg *)mg_malloc_ctx(sizeof(struct laction_arg)
 		                                              + txt_len + 10,
 		                                          ctx);
+		if (!arg) {
+			return luaL_error(L, "out of memory");
+		}
+
 		arg->state = L;
 		arg->script = ws->script;
 		arg->pmutex = &(ws->ws_mutex);
@@ -1824,7 +1833,7 @@ prepare_lua_environment(struct mg_context *ctx,
 		}
 #endif
 
-		if (ctx->systemName != NULL) {
+		if ((ctx != NULL) && (ctx->systemName != NULL)) {
 			reg_string(L, "system", ctx->systemName);
 		}
 	}

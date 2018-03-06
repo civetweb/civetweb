@@ -716,60 +716,58 @@ read_config_file(const char *config_file, char **options)
 	}
 
 	/* Load config file settings first */
-	if (fp != NULL) {
-		fprintf(stdout, "Loading config file %s\n", config_file);
+	fprintf(stdout, "Loading config file %s\n", config_file);
 
-		/* Loop over the lines in config file */
-		while (fgets(line, sizeof(line), fp) != NULL) {
+	/* Loop over the lines in config file */
+	while (fgets(line, sizeof(line), fp) != NULL) {
 
-			if (!line_no && !memcmp(line, "\xEF\xBB\xBF", 3)) {
-				/* strip UTF-8 BOM */
-				p = line + 3;
-			} else {
-				p = line;
-			}
-			line_no++;
+		if (!line_no && !memcmp(line, "\xEF\xBB\xBF", 3)) {
+			/* strip UTF-8 BOM */
+			p = line + 3;
+		} else {
+			p = line;
+		}
+		line_no++;
 
-			/* Ignore empty lines and comments */
-			for (i = 0; isspace(*(unsigned char *)&line[i]);)
-				i++;
-			if (p[i] == '#' || p[i] == '\0') {
-				continue;
-			}
-
-			/* Skip spaces, \r and \n at the end of the line */
-			for (j = strlen(line) - 1;
-			     isspace(*(unsigned char *)&line[j])
-			         || iscntrl(*(unsigned char *)&line[j]);)
-				line[j--] = 0;
-
-			/* Find the space character between option name and value */
-			for (j = i; !isspace(*(unsigned char *)&line[j]) && (line[j] != 0);)
-				j++;
-
-			/* Terminate the string - then the string at (line+i) contains the
-			 * option name */
-			line[j] = 0;
-			j++;
-
-			/* Trim additional spaces between option name and value - then
-			 * (line+j) contains the option value */
-			while (isspace(line[j])) {
-				j++;
-			}
-
-			/* Set option */
-			if (!set_option(options, line + i, line + j)) {
-				fprintf(stderr,
-				        "%s: line %d is invalid, ignoring it:\n %s",
-				        config_file,
-				        (int)line_no,
-				        p);
-			}
+		/* Ignore empty lines and comments */
+		for (i = 0; isspace(*(unsigned char *)&line[i]);)
+			i++;
+		if (p[i] == '#' || p[i] == '\0') {
+			continue;
 		}
 
-		(void)fclose(fp);
+		/* Skip spaces, \r and \n at the end of the line */
+		for (j = strlen(line) - 1; isspace(*(unsigned char *)&line[j])
+		                               || iscntrl(*(unsigned char *)&line[j]);)
+			line[j--] = 0;
+
+		/* Find the space character between option name and value */
+		for (j = i; !isspace(*(unsigned char *)&line[j]) && (line[j] != 0);)
+			j++;
+
+		/* Terminate the string - then the string at (line+i) contains the
+		 * option name */
+		line[j] = 0;
+		j++;
+
+		/* Trim additional spaces between option name and value - then
+		 * (line+j) contains the option value */
+		while (isspace(line[j])) {
+			j++;
+		}
+
+		/* Set option */
+		if (!set_option(options, line + i, line + j)) {
+			fprintf(stderr,
+			        "%s: line %d is invalid, ignoring it:\n %s",
+			        config_file,
+			        (int)line_no,
+			        p);
+		}
 	}
+
+	(void)fclose(fp);
+
 	return 1;
 }
 
@@ -944,12 +942,8 @@ verify_existence(char **options, const char *option_name, int must_be_dir)
 	if (path) {
 		memset(wbuf, 0, sizeof(wbuf));
 		memset(mbbuf, 0, sizeof(mbbuf));
-		len = MultiByteToWideChar(CP_UTF8,
-		                          0,
-		                          path,
-		                          -1,
-		                          wbuf,
-		                          (int)sizeof(wbuf) / sizeof(wbuf[0]) - 1);
+		len = MultiByteToWideChar(
+		    CP_UTF8, 0, path, -1, wbuf, sizeof(wbuf) / sizeof(wbuf[0]) - 1);
 		wcstombs(mbbuf, wbuf, sizeof(mbbuf) - 1);
 		path = mbbuf;
 		(void)len;
@@ -1065,12 +1059,13 @@ run_client(const char *url_arg)
 	struct mg_connection *conn;
 	char ebuf[1024] = {0};
 
-	/* Check parameter */
+	/* Check out of memory */
 	if (!url) {
 		fprintf(stderr, "Out of memory\n");
 		return 0;
 	}
 
+	/* Check parameter */
 	if (!strncmp(url, "http://", 7)) {
 		host = url + 7;
 		port = 80;
@@ -1716,7 +1711,7 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (hIn) {
 				/* Get content of input line */
 				GetWindowText(hIn, inBuf->buffer, (int)inBuf->buflen);
-				if (strlen(inBuf->buffer) > 0) {
+				if (inBuf->buffer[0] != 0) {
 					/* Input dialog is not empty. */
 					EndDialog(hDlg, IDOK);
 				}
@@ -2355,7 +2350,8 @@ change_password_file()
 	of.lpstrInitialDir = mg_get_option(g_ctx, "document_root");
 	of.Flags = OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
 
-	if (IDOK != GetSaveFileName(&of)) {
+	if (!GetSaveFileName(&of)) {
+		/* Cancel/Close by user */
 		s_dlg_proc_param.guard = 0;
 		return;
 	}
@@ -2684,8 +2680,8 @@ manage_service(int action)
 	} else if (action == ID_INSTALL_SERVICE) {
 		path[sizeof(path) - 1] = 0;
 		GetModuleFileName(NULL, path, sizeof(path) - 1);
-		strncat(path, " ", sizeof(path) - 1);
-		strncat(path, service_magic_argument, sizeof(path) - 1);
+		strncat(path, " ", sizeof(path) - 1 - strlen(path));
+		strncat(path, service_magic_argument, sizeof(path) - 1 - strlen(path));
 		hService = CreateService(hSCM,
 		                         service_name,
 		                         service_name,
@@ -2878,6 +2874,9 @@ MakeConsole(void)
 
 		ok = (GetConsoleWindow() != NULL);
 		if (ok) {
+			/* Reopen console handles according to
+			 * https://stackoverflow.com/questions/9020790/using-stdin-with-an-allocconsole
+			 */
 			freopen("CONIN$", "r", stdin);
 			freopen("CONOUT$", "w", stdout);
 			freopen("CONOUT$", "w", stderr);
