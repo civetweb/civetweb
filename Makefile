@@ -92,6 +92,11 @@ ifdef WITH_ALL
   #WITH_CPP is not defined, ALL means only real features, not wrappers
 endif
 
+# Use Lua?
+ifdef WITH_LUA_VERSION
+  WITH_LUA = 1
+endif
+
 ifdef WITH_LUA_SHARED
   WITH_LUA = 1
 endif
@@ -106,7 +111,12 @@ ifdef WITH_LUA
   include resources/Makefile.in-lua
 endif
 
+# Use Duktape?
 ifdef WITH_SSJS
+  WITH_DUKTAPE = 1
+endif
+
+ifdef WITH_DUKTAPE_VERSION
   WITH_DUKTAPE = 1
 endif
 
@@ -118,6 +128,7 @@ ifdef WITH_DUKTAPE
   include resources/Makefile.in-duktape
 endif
 
+# Use zlib?
 ifdef WITH_COMPRESSION
   WITH_ZLIB = 1
 endif
@@ -126,6 +137,7 @@ ifdef WITH_ZLIB
   LIBS += -lz
 endif
 
+# Other features
 ifdef WITH_EXPERIMENTAL
   CFLAGS += -DMG_EXPERIMENTAL_INTERFACES
 endif
@@ -148,6 +160,7 @@ ifdef WITH_SERVER_STATS
   CFLAGS += -DUSE_SERVER_STATS
 endif
 
+# File names
 ifdef CONFIG_FILE
   CFLAGS += -DCONFIG_FILE=\"$(CONFIG_FILE)\"
 endif
@@ -216,7 +229,7 @@ help:
 	@echo "   WITH_LUA_VERSION=502  build with Lua 5.2.x (501 for Lua 5.1.x to 503 for 5.3.x)"
 	@echo "   WITH_DUKTAPE=1        build with Duktape support; include as static library"
 	@echo "   WITH_DUKTAPE_SHARED=1 build with Duktape support; use libduktape1.3.so"
-#	@echo "   WITH_DUKTAPE_VERSION=103 build with Duktape 1.3.x"
+	@echo "   WITH_DUKTAPE_VERSION=108 build with Duktape 1.8.x"
 	@echo "   WITH_DEBUG=1          build with GDB debug support"
 	@echo "   WITH_IPV6=1           with IPV6 support"
 	@echo "   WITH_WEBSOCKET=1      build with web socket support"

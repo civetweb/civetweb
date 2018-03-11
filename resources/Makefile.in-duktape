@@ -9,7 +9,7 @@ ifndef WITH_DUKTAPE
 endif
 
 # Duktape default version is 1.5.2 (105)
-WITH_DUKTAPE_VERSION ?= 105
+WITH_DUKTAPE_VERSION ?= 202
 DUKTAPE_VERSION_KNOWN = 0
 
 # Select src and header according to the Duktape version
@@ -34,6 +34,14 @@ ifeq ($(WITH_DUKTAPE_VERSION), 201)
   DUKTAPE_DIR = src/third_party/duktape-2.1.1/src
   DUKTAPE_SHARED_LIB_FLAG = -lduktape2.1
   DUKTAPE_CFLAGS = -DDUKTAPE_VERSION_MAKEFILE=201
+  DUKTAPE_VERSION_KNOWN = 1
+endif
+
+ifeq ($(WITH_DUKTAPE_VERSION), 202)
+  $(info Duktape: Using version 2.2.0)
+  DUKTAPE_DIR = src/third_party/duktape-2.2.0/src
+  DUKTAPE_SHARED_LIB_FLAG = -lduktape2.2
+  DUKTAPE_CFLAGS = -DDUKTAPE_VERSION_MAKEFILE=202
   DUKTAPE_VERSION_KNOWN = 1
 endif
 
