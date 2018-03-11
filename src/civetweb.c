@@ -4049,7 +4049,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 		                                      str);
 	}
 
-	for (i = 0, j = 0; (i < pattern_len); i++, j++) {
+	for (i = 0, j = 0; (i < (ssize_t)pattern_len); i++, j++) {
 		if ((pattern[i] == '?') && (str[j] != '\0')) {
 			continue;
 		} else if (pattern[i] == '$') {
@@ -4062,7 +4062,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 			} else {
 				len = strcspn(str + j, "/");
 			}
-			if (i == pattern_len) {
+			if (i == (ssize_t)pattern_len) {
 				return j + len;
 			}
 			do {
@@ -15149,7 +15149,6 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	const char *ca_file;
 	int use_default_verify_paths;
 	int verify_depth;
-	time_t now_rt = time(NULL);
 	struct timespec now_mt;
 	md5_byte_t ssl_context_id[16];
 	md5_state_t md5state;
