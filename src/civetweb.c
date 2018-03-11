@@ -4035,12 +4035,11 @@ header_has_option(const char *header, const char *option)
 
 
 /* Perform case-insensitive match of string against pattern */
-static int
+static ssize_t
 match_prefix(const char *pattern, size_t pattern_len, const char *str)
 {
 	const char *or_str;
-	size_t i;
-	int j, len, res;
+	ssize_t i, j, len, res;
 
 	if ((or_str = (const char *)memchr(pattern, '|', pattern_len)) != NULL) {
 		res = match_prefix(pattern, (size_t)(or_str - pattern), str);
@@ -4050,7 +4049,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 		                                      str);
 	}
 
-	for (i = 0, j = 0; (i < (int)pattern_len); i++, j++) {
+	for (i = 0, j = 0; (i < pattern_len); i++, j++) {
 		if ((pattern[i] == '?') && (str[j] != '\0')) {
 			continue;
 		} else if (pattern[i] == '$') {
@@ -4059,9 +4058,9 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 			i++;
 			if (pattern[i] == '*') {
 				i++;
-				len = (int)strlen(str + j);
+				len = strlen(str + j);
 			} else {
-				len = (int)strcspn(str + j, "/");
+				len = strcspn(str + j, "/");
 			}
 			if (i == pattern_len) {
 				return j + len;
@@ -4074,7 +4073,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 			return -1;
 		}
 	}
-	return j;
+	return (ssize_t)j;
 }
 
 
@@ -7081,7 +7080,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	const char *root = conn->dom_ctx->config[DOCUMENT_ROOT];
 	const char *rewrite;
 	struct vec a, b;
-	int match_len;
+	ssize_t match_len;
 	char gz_path[PATH_MAX];
 	int truncated;
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
@@ -11363,13 +11362,17 @@ send_ssi_file(struct mg_connection *conn,
 			}
 
 		} else {
-			/* We are not in a tag yet. */
 
+			/* We are not in a tag yet. */
 			if (ch == '<') {
 				/* Tag is opening */
 				in_tag = 1;
-				/* Flush current buffer */
-				(void)mg_write(conn, buf, (size_t)len);
+
+				if (len > 0) {
+					/* Flush current buffer.
+					 * Buffer is filled with "len" bytes. */
+					(void)mg_write(conn, buf, (size_t)len);
+				}
 				/* Store the < */
 				len = 1;
 				buf[0] = '<';
@@ -12166,7 +12169,7 @@ handle_websocket_request(struct mg_connection *conn,
 {
 	const char *websock_key = mg_get_header(conn, "Sec-WebSocket-Key");
 	const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
-	int lua_websock = 0;
+	ssize_t lua_websock = 0;
 
 #if !defined(USE_LUA)
 	(void)path;
@@ -15229,9 +15232,9 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 		return 1;
 	}
 
-	/* Use some UID as session context ID. */
+	/* Use some combination of start time, domain and port as a SSL
+	 * context ID. This should be unique on the current machine. */
 	md5_init(&md5state);
-	md5_append(&md5state, (const md5_byte_t *)&now_rt, sizeof(now_rt));
 	clock_gettime(CLOCK_MONOTONIC, &now_mt);
 	md5_append(&md5state, (const md5_byte_t *)&now_mt, sizeof(now_mt));
 	md5_append(&md5state,
@@ -15245,7 +15248,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	md5_finish(&md5state, ssl_context_id);
 
 	SSL_CTX_set_session_id_context(dom_ctx->ssl_ctx,
-	                               (const unsigned char *)&ssl_context_id,
+	                               (unsigned char *)ssl_context_id,
 	                               sizeof(ssl_context_id));
 
 	if (pem != NULL) {
@@ -15659,7 +15662,11 @@ close_socket_gracefully(struct mg_connection *conn)
 	} else if (getsockopt(conn->client.sock,
 	                      SOL_SOCKET,
 	                      SO_ERROR,
+#if defined(_WIN32) /* WinSock uses different data type here */
 	                      (char *)&error_code,
+#else
+	                      &error_code,
+#endif
 	                      &opt_len) != 0) {
 		/* Cannot determine if socket is already closed. This should
 		 * not occur and never did in a test. Log an error message
@@ -18805,10 +18812,8 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		if (context_info_length + reserved_len < buflen) {
 			strcat0(buffer, block);
 		}
-	}
 
-	/* Execution time information */
-	if (ctx) {
+		/* Execution time information */
 		char start_time_str[64] = {0};
 		char now_str[64] = {0};
 		time_t start_time = ctx->start_time;

@@ -207,7 +207,7 @@ mg_handle_form_request(struct mg_connection *conn,
 	if (!has_body_data) {
 		const char *data;
 
-		if (strcmp(conn->request_info.request_method, "GET")) {
+		if (0 != strcmp(conn->request_info.request_method, "GET")) {
 			/* No body data, but not a GET request.
 			 * This is not a valid form request. */
 			return -1;
@@ -622,7 +622,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		}
 
 		for (part_no = 0;; part_no++) {
-			size_t towrite, n;
+			size_t towrite, fnlen, n;
 			int get_block;
 
 			r = mg_read(conn,
@@ -658,7 +658,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				mg_free(boundary);
 				return -1;
 			}
-			if (strncmp(buf + 2, boundary, bl)) {
+			if (0 != strncmp(buf + 2, boundary, bl)) {
 				/* Malformed request */
 				mg_free(boundary);
 				return -1;
@@ -793,8 +793,12 @@ mg_handle_form_request(struct mg_connection *conn,
 					fend = fbeg + strcspn(fbeg, ",; \t");
 				}
 			}
+
 			if (!fbeg) {
 				fend = NULL;
+				fnlen = 0;
+			} else {
+				fnlen = (size_t)(fend - fbeg);
 			}
 
 			/* In theory, it could be possible that someone crafts
@@ -812,8 +816,8 @@ mg_handle_form_request(struct mg_connection *conn,
 			field_storage = url_encoded_field_found(conn,
 			                                        nbeg,
 			                                        (size_t)(nend - nbeg),
-			                                        fbeg,
-			                                        (size_t)(fend - fbeg),
+			                                        ((fnlen > 0) ? fbeg : NULL),
+			                                        fnlen,
 			                                        path,
 			                                        sizeof(path) - 1,
 			                                        fdh);

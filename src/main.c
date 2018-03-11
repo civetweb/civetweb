@@ -2856,8 +2856,9 @@ static int
 MakeConsole(void)
 {
 	DWORD err;
-	int ok = (GetConsoleWindow() != NULL);
-	if (!ok) {
+	HANDLE hConWnd = GetConsoleWindow();
+
+	if (hConWnd == NULL) {
 		if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
 			FreeConsole();
 			if (!AllocConsole()) {
@@ -2872,8 +2873,10 @@ MakeConsole(void)
 			AttachConsole(GetCurrentProcessId());
 		}
 
-		ok = (GetConsoleWindow() != NULL);
-		if (ok) {
+		/* Retry to get a console handle */
+		hConWnd = GetConsoleWindow();
+
+		if (hConWnd != NULL) {
 			/* Reopen console handles according to
 			 * https://stackoverflow.com/questions/9020790/using-stdin-with-an-allocconsole
 			 */
@@ -2883,11 +2886,11 @@ MakeConsole(void)
 		}
 	}
 
-	if (ok) {
+	if (hConWnd != NULL) {
 		SetConsoleTitle(g_server_name);
 	}
 
-	return ok;
+	return (hConWnd != NULL);
 }
 
 
