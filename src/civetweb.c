@@ -4035,11 +4035,11 @@ header_has_option(const char *header, const char *option)
 
 
 /* Perform case-insensitive match of string against pattern */
-static ssize_t
+static ptrdiff_t
 match_prefix(const char *pattern, size_t pattern_len, const char *str)
 {
 	const char *or_str;
-	ssize_t i, j, len, res;
+	ptrdiff_t i, j, len, res;
 
 	if ((or_str = (const char *)memchr(pattern, '|', pattern_len)) != NULL) {
 		res = match_prefix(pattern, (size_t)(or_str - pattern), str);
@@ -4049,7 +4049,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 		                                      str);
 	}
 
-	for (i = 0, j = 0; (i < (ssize_t)pattern_len); i++, j++) {
+	for (i = 0, j = 0; (i < (ptrdiff_t)pattern_len); i++, j++) {
 		if ((pattern[i] == '?') && (str[j] != '\0')) {
 			continue;
 		} else if (pattern[i] == '$') {
@@ -4062,7 +4062,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 			} else {
 				len = strcspn(str + j, "/");
 			}
-			if (i == (ssize_t)pattern_len) {
+			if (i == (ptrdiff_t)pattern_len) {
 				return j + len;
 			}
 			do {
@@ -4073,7 +4073,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 			return -1;
 		}
 	}
-	return (ssize_t)j;
+	return (ptrdiff_t)j;
 }
 
 
@@ -7080,7 +7080,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	const char *root = conn->dom_ctx->config[DOCUMENT_ROOT];
 	const char *rewrite;
 	struct vec a, b;
-	ssize_t match_len;
+	ptrdiff_t match_len;
 	char gz_path[PATH_MAX];
 	int truncated;
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
@@ -12169,7 +12169,7 @@ handle_websocket_request(struct mg_connection *conn,
 {
 	const char *websock_key = mg_get_header(conn, "Sec-WebSocket-Key");
 	const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
-	ssize_t lua_websock = 0;
+	ptrdiff_t lua_websock = 0;
 
 #if !defined(USE_LUA)
 	(void)path;
