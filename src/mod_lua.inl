@@ -362,6 +362,7 @@ struct lsp_var_reader_data {
 };
 
 
+/* Helper function to read the content of variable values */
 static const char *
 lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 {
@@ -369,24 +370,30 @@ lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 	const char *ret;
 	(void)(L); /* unused */
 
+	/* This reader is called multiple times, to fetch the full Lua script */
 	switch (reader->state) {
 	case 0:
+		/* First call: what function to call */
 		ret = "mg.write(";
 		*sz = strlen(ret);
 		break;
 	case 1:
+		/* Second call: forward variable name */
 		ret = reader->begin;
 		*sz = reader->len;
 		break;
 	case 2:
+		/* Third call: close function call */
 		ret = ")";
 		*sz = strlen(ret);
 		break;
 	default:
+		/* Forth/Final call: tell Lua we got the entire script */
 		ret = 0;
 		*sz = 0;
 	}
 
+	/* Step to the next state for the next call */
 	reader->state++;
 	return ret;
 }
@@ -402,44 +409,79 @@ run_lsp(struct mg_connection *conn,
 	int i, j, pos = 0, lines = 1, lualines = 0, is_var, lua_ok;
 	char chunkname[MG_BUF_LEN];
 	struct lsp_var_reader_data data;
+	const char lsp_mark1 = '?'; /* Use <? code ?> */
+	const char lsp_mark2 = '%'; /* Use <% code %> */
 
 	for (i = 0; i < len; i++) {
-		if (p[i] == '\n')
+		if (p[i] == '\n') {
 			lines++;
-		if (((i + 1) < len) && (p[i] == '<') && (p[i + 1] == '?')) {
+		}
 
-			/* <?= ?> means a variable is enclosed and its value should be
-			 * printed */
+		/* Lua pages are normal text, unless there is a "<?" or "<%" tag. */
+		if (((i + 1) < len) && (p[i] == '<')
+		    && ((p[i + 1] == lsp_mark1) || (p[i + 1] == lsp_mark2))) {
+
+			/* Opening tag way "<?" or "<%", closing tag must be the same. */
+			char lsp_mark_used = p[i + 1];
+
+			/* <?= var ?> or <%= var %> means a variable is enclosed and its
+			 * value should be printed */
+			if (0 == memcmp("lua", p + i + 1, 3)) {
+				/* Syntax: <?lua code ?> or <?lua= var ?> */
+				/* This is added for compatibility to other LSP syntax
+				 * definitions. */
+				/* Skip 3 letters ("lua"). */
+				i += 3;
+			}
+
+			/* Check for '=' in "<?= ..." or "<%= ..." or "<?lua= ..." */
 			is_var = (((i + 2) < len) && (p[i + 2] == '='));
 
-			if (is_var)
+			if (is_var) {
+				/* use variable value (print it later) */
 				j = i + 2;
-			else
+			} else {
+				/* execute script code */
 				j = i + 1;
+			}
 
 			while (j < len) {
-				if (p[j] == '\n')
+
+				if (p[j] == '\n') {
+					/* Add line (for line number offset) */
 					lualines++;
-				if (((j + 1) < len) && (p[j] == '?') && (p[j + 1] == '>')) {
+				}
+
+				/* Check for closing tag. */
+				if (((j + 1) < len) && (p[j] == lsp_mark_used)
+				    && (p[j + 1] == '>')) {
+
+					/* There was a closing tag. Print everything before
+					 * the opening tag. */
 					mg_write(conn, p + pos, i - pos);
 
+					/* Set a name for debugging purposes */
 					mg_snprintf(conn,
-					            NULL, /* name only used for debugging */
+					            NULL, /* ignore truncation for debugging */
 					            chunkname,
 					            sizeof(chunkname),
 					            "@%s+%i",
 					            path,
 					            lines);
+
+					/* Prepare data for Lua C functions */
 					lua_pushlightuserdata(L, conn);
 					lua_pushcclosure(L, lsp_error, 1);
 
 					if (is_var) {
+						/* For variables: Print the value */
 						data.begin = p + (i + 3);
 						data.len = j - (i + 3);
 						data.state = 0;
 						lua_ok = mg_lua_load(
 						    L, lsp_var_reader, &data, chunkname, NULL);
 					} else {
+						/* For scripts: Execute them */
 						lua_ok = luaL_loadbuffer(L,
 						                         p + (i + 2),
 						                         j - (i + 2),
@@ -1609,6 +1651,85 @@ lwebsocket_set_interval(lua_State *L)
 	return lwebsocket_set_timer(L, 1);
 }
 
+
+/* Debug hook */
+static void
+lua_debug_hook(lua_State *L, lua_Debug *ar)
+{
+	int i;
+	int stack_len = lua_gettop(L);
+
+	lua_getinfo(L, "nSlu", ar);
+
+	if (ar->event == LUA_HOOKCALL) {
+		printf("call\n");
+	} else if (ar->event == LUA_HOOKRET) {
+		printf("ret\n");
+#if defined(LUA_HOOKTAILRET)
+	} else if (ar->event == LUA_HOOKTAILRET) {
+		printf("tail ret\n");
+#endif
+#if defined(LUA_HOOKTAILCALL)
+	} else if (ar->event == LUA_HOOKTAILCALL) {
+		printf("tail call\n");
+#endif
+	} else if (ar->event == LUA_HOOKLINE) {
+		printf("line\n");
+	} else if (ar->event == LUA_HOOKCOUNT) {
+		printf("count\n");
+	} else {
+		printf("unknown (%i)\n", ar->event);
+	}
+
+	if (ar->currentline >= 0) {
+		printf("%s:%i\n", ar->source, ar->currentline);
+	}
+
+	printf("%s (%s)\n", ar->name, ar->namewhat);
+
+
+	for (i = 1; i <= stack_len; i++) { /* repeat for each level */
+		int val_type = lua_type(L, i);
+		const char *s;
+		size_t n;
+
+		switch (val_type) {
+
+		case LUA_TNIL:
+			/* nil value  on the stack */
+			printf("nil\n");
+			break;
+
+		case LUA_TBOOLEAN:
+			/* boolean (true / false) */
+			printf("boolean: %s\n", lua_toboolean(L, i) ? "true" : "false");
+			break;
+
+		case LUA_TNUMBER:
+			/* number */
+			printf("number: %g\n", lua_tonumber(L, i));
+			break;
+
+		case LUA_TSTRING:
+			/* string with limited length */
+			s = lua_tolstring(L, i, &n);
+			printf("string: '%.*s%s\n",
+			       (n > 30) ? 28 : s,
+			       (n > 30) ? ".." : "'");
+			break;
+
+		default:
+			/* other values */
+			printf("%s\n", lua_typename(L, val_type));
+			break;
+		}
+	}
+
+	printf("\n");
+}
+
+
+/* Lua Environment */
 enum {
 	LUA_ENV_TYPE_LUA_SERVER_PAGE = 0,
 	LUA_ENV_TYPE_PLAIN_LUA_PAGE = 1,
@@ -1716,8 +1837,14 @@ prepare_lua_environment(struct mg_context *ctx,
                         int lua_env_type)
 {
 	const char *preload_file_name = NULL;
+	const char *debug_params = NULL;
 
 	civetweb_open_lua_libs(L);
+
+	/* Check if debugging should be enabled */
+	if ((conn != NULL) && (conn->dom_ctx != NULL)) {
+		debug_params = conn->dom_ctx->config[LUA_DEBUG_PARAMS];
+	}
 
 #if LUA_VERSION_NUM == 502
 	/* Keep the "connect" method for compatibility,
@@ -1861,10 +1988,26 @@ prepare_lua_environment(struct mg_context *ctx,
 		IGNORE_UNUSED_RESULT(luaL_dofile(L, preload_file_name));
 	}
 
+	/* Call user init function */
 	if (ctx != NULL) {
 		if (ctx->callbacks.init_lua != NULL) {
 			ctx->callbacks.init_lua(conn, L);
 		}
+	}
+
+	/* If debugging is enabled, add a hook */
+	if (debug_params) {
+		int mask = 0;
+		if (0 != strchr(debug_params, "c")) {
+			mask |= LUA_MASKCALL;
+		}
+		if (0 != strchr(debug_params, "r")) {
+			mask |= LUA_MASKRET;
+		}
+		if (0 != strchr(debug_params, "l")) {
+			mask |= LUA_MASKLINE;
+		}
+		lua_sethook(L, lua_debug_hook, mask, 0);
 	}
 }
 

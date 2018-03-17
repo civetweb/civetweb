@@ -2281,6 +2281,9 @@ enum {
 	LUA_PRELOAD_FILE,
 	LUA_SCRIPT_EXTENSIONS,
 	LUA_SERVER_PAGE_EXTENSIONS,
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+	LUA_DEBUG_PARAMS,
+#endif
 #endif
 #if defined(USE_DUKTAPE)
 	DUKTAPE_SCRIPT_EXTENSIONS,
@@ -2387,6 +2390,9 @@ static struct mg_option config_options[] = {
     {"lua_preload_file", MG_CONFIG_TYPE_FILE, NULL},
     {"lua_script_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
     {"lua_server_page_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lp$|**.lsp$"},
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+    {"lua_debug", MG_CONFIG_TYPE_STRING, NULL},
+#endif
 #endif
 #if defined(USE_DUKTAPE)
     /* The support for duktape is still in alpha version state.
@@ -10386,7 +10392,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "SERVER_NAME=%s", conn->dom_ctx->config[AUTHENTICATION_DOMAIN]);
 	addenv(env, "SERVER_ROOT=%s", conn->dom_ctx->config[DOCUMENT_ROOT]);
 	addenv(env, "DOCUMENT_ROOT=%s", conn->dom_ctx->config[DOCUMENT_ROOT]);
-	addenv(env, "SERVER_SOFTWARE=%s/%s", "Civetweb", mg_version());
+	addenv(env, "SERVER_SOFTWARE=CivetWeb/%s", mg_version());
 
 	/* Prepare the environment block */
 	addenv(env, "%s", "GATEWAY_INTERFACE=CGI/1.1");
