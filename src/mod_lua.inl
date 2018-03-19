@@ -1841,10 +1841,12 @@ prepare_lua_environment(struct mg_context *ctx,
 
 	civetweb_open_lua_libs(L);
 
+#if defined(MG_EXPERIMENTAL_INTERFACES)
 	/* Check if debugging should be enabled */
 	if ((conn != NULL) && (conn->dom_ctx != NULL)) {
 		debug_params = conn->dom_ctx->config[LUA_DEBUG_PARAMS];
 	}
+#endif
 
 #if LUA_VERSION_NUM == 502
 	/* Keep the "connect" method for compatibility,
