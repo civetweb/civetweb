@@ -13934,11 +13934,17 @@ static int
 is_ssl_port_used(const char *ports)
 {
 	if (ports) {
-		if (strchr(ports, 's')) {
-			return 1;
-		}
-		if (strchr(ports, 'r')) {
-			return 1;
+		int portslen = (int)strlen(ports);
+		char prevIsNumber = 0;
+		for (int i = 0; i < portslen; i++) {
+			if (prevIsNumber && (ports[i] == 's' || ports[i] == 'r')) {
+				return 1;
+			}
+			if (ports[i] >= '0' && ports[i] <= '9') {
+				prevIsNumber = 1;
+			} else {
+				prevIsNumber = 0;
+			}
 		}
 	}
 	return 0;
