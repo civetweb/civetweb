@@ -13934,6 +13934,40 @@ static int
 is_ssl_port_used(const char *ports)
 {
 	if (ports) {
+		/* There are several different allowed syntax variants:
+		 * - "80" for a single port using every network interface
+		 * - "localhost:80" for a single port using only localhost
+		 * - "80,localhost:8080" for two ports, one bound to localhost
+		 * - "80,127.0.0.1:8084,[::1]:8086" for three ports, one bound
+		 *   to IPv4 localhost, one to IPv6 localhost
+		 * - "+80" use port 80 for IPv4 and IPv6
+		 * - "+80r,+443s" port 80 (HTTP) is a redirect to port 443 (HTTPS),
+		 *   for both: IPv4 and IPv4
+		 * - "+443s,localhost:8080" port 443 (HTTPS) for every interface,
+		 *   additionally port 8080 bound to localhost connections
+		 *
+		 * If we just look for 's' anywhere in the string, "localhost:80"
+		 * will be detected as SSL (false positive).
+		 * Looking for 's' after a digit may cause false positives in
+		 * "my24service:8080".
+		 * Looking from 's' backward if there are only ':' and numbers
+		 * before will not work for "24service:8080" (non SSL, port 8080)
+		 * or "24s" (SSL, port 24).
+		 *
+		 * Remark: Initially hostnames were not allowed to start with a
+		 * digit (according to RFC 952), this was allowed later (RFC 1123,
+		 * Section 2.1).
+		 *
+		 * To get this correct, the entire string must be parsed as a whole,
+		 * reading it as a list element for element and parsing with an
+		 * algorithm equivalent to parse_port_string.
+		 *
+		 * In fact, we use local interface names here, not arbitrary hostnames,
+		 * so in most cases the only name will be "localhost".
+		 *
+		 * So, for now, we use this simple algorithm, that may still return
+		 * a false positive in bizarre cases.
+		 */
 		int portslen = (int)strlen(ports);
 		char prevIsNumber = 0;
 		for (int i = 0; i < portslen; i++) {
