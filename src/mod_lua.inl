@@ -360,8 +360,8 @@ lsp_abort(lua_State *L)
 
 struct lsp_var_reader_data {
 	const char *begin;
-	unsigned len;
-	unsigned state;
+	int64_t len;
+	int64_t state;
 };
 
 
@@ -402,6 +402,86 @@ lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 }
 
 
+static const char *
+lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
+{
+	struct lsp_var_reader_data *reader = (struct lsp_var_reader_data *)ud;
+	const char *ret;
+	int64_t i;
+	int64_t left;
+	char end[4];
+
+	(void)(L); /* unused */
+
+	/* This reader is called multiple times, to fetch the full Lua script */
+	if (reader->state == -1) {
+		/* First call: what function to call */
+		ret = "mg.write([=======[";
+		*sz = strlen(ret);
+		reader->state = 0;
+		return ret;
+	}
+	if (reader->state == -2) {
+		*sz = 0;
+		return 0;
+	}
+
+	left = reader->len - reader->state;
+	if (left == 0) {
+		ret = "]=======]);\n";
+		*sz = strlen(ret);
+		reader->state = -2;
+		return ret;
+	}
+	if (left > MG_BUF_LEN / 100) {
+		left = MG_BUF_LEN / 100; /* TODO XXX */
+	}
+	i = 0;
+
+forward:
+	while ((i < left) && (reader->begin[i + reader->state] != '<'))
+		i++;
+	if (i > 0) {
+		int64_t j = reader->state;
+		reader->state += i;
+		*sz = (size_t)i; /* cast is ok, i is limited to MG_BUF_LEN */
+		return reader->begin + j;
+	}
+
+	/* assert (reader->begin[reader->state] == '<') */
+	/* assert (i == 0) */
+	if (0 == memcmp(reader->begin, "<?lua", 5)) {
+		i = 5;
+	} else if (0 == memcmp(reader->begin, "<%", 2)) {
+		i = 2;
+	} else {
+		i = 1;
+		goto forward;
+	}
+
+	end[0] = reader->begin[1];
+	end[1] = '>';
+	end[2] = 0;
+	/* here we have a <?lua or <% tag */
+
+	ret = "]=======]);\n";
+	*sz = strlen(ret);
+
+	printf("XXX end\n");
+
+	reader->state = reader->len;
+	return ret;
+}
+
+static const char *
+lsp_kepler_reader(lua_State *L, void *ud, size_t *sz)
+{
+	/* debugging */
+	const char *ret = lsp_kepler_reader_impl(L, ud, sz);
+	printf("%.*s", *sz, ret);
+	return ret;
+}
+
 static int
 run_lsp(struct mg_connection *conn,
         const char *path,
@@ -409,17 +489,57 @@ run_lsp(struct mg_connection *conn,
         int64_t len,
         lua_State *L)
 {
+
+	int lua_ok;
+	struct lsp_var_reader_data data;
+	char date[64];
+	time_t curtime = time(NULL);
+
+	gmt_time_string(date, sizeof(date), &curtime);
+
+	conn->must_close = 1;
+	mg_printf(conn, "HTTP/1.1 200 OK\r\n");
+	send_no_cache_header(conn);
+	send_additional_header(conn);
+	mg_printf(conn,
+	          "Date: %s\r\n"
+	          "Connection: close\r\n"
+	          "Content-Type: text/html; charset=utf-8\r\n\r\n",
+	          date);
+
+	data.begin = p;
+	data.len = len;
+	data.state = -1;
+	lua_ok = mg_lua_load(L, lsp_kepler_reader, &data, path, NULL);
+
+	if (lua_ok) {
+		/* Syntax error or OOM.
+		 * Error message is pushed on stack. */
+		lua_pcall(L, 1, 0, 0);
+		printf("XXX err\n");
+		lua_cry(conn, lua_ok, L, "LSP", "execute"); /* XXX TODO: everywhere ! */
+
+	} else {
+		/* Success loading chunk. Call it. */
+		lua_pcall(L, 0, 0, 1);
+		printf("XXX succ\n");
+	}
+	return 0;
+}
+
+
+static int
+run_lsp_classic(struct mg_connection *conn,
+                const char *path,
+                const char *p,
+                int64_t len,
+                lua_State *L)
+{
 	int i, j, s, pos = 0, lines = 1, lualines = 0, is_var, lua_ok;
 	char chunkname[MG_BUF_LEN];
 	struct lsp_var_reader_data data;
 	const char lsp_mark1 = '?'; /* Use <? code ?> */
 	const char lsp_mark2 = '%'; /* Use <% code %> */
-
-	static void *sp = 0;
-	if (!sp)
-		sp = &i;
-	else
-		printf("stack: %lli", (int64_t)sp - (int64_t)&i);
 
 	for (i = 0; i < len; i++) {
 		if (p[i] == '\n') {
