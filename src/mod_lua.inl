@@ -51,8 +51,11 @@ static const char lua_regkey_connlist = 2;
 static const char lua_regkey_lsp_include_history = 3;
 static const char *LUABACKGROUNDPARAMS = "mg";
 
+/* Limit nesting depth of mg.include.
+ * This takes a lot of stack (~10 kB per recursion),
+ * so do not use a too high limit. */
 #if !defined(LSP_INCLUDE_MAX_DEPTH)
-#define LSP_INCLUDE_MAX_DEPTH (32)
+#define LSP_INCLUDE_MAX_DEPTH (10)
 #endif
 
 
@@ -406,11 +409,17 @@ run_lsp(struct mg_connection *conn,
         int64_t len,
         lua_State *L)
 {
-	int i, j, pos = 0, lines = 1, lualines = 0, is_var, lua_ok;
+	int i, j, s, pos = 0, lines = 1, lualines = 0, is_var, lua_ok;
 	char chunkname[MG_BUF_LEN];
 	struct lsp_var_reader_data data;
 	const char lsp_mark1 = '?'; /* Use <? code ?> */
 	const char lsp_mark2 = '%'; /* Use <% code %> */
+
+	static void *sp = 0;
+	if (!sp)
+		sp = &i;
+	else
+		printf("stack: %lli", (int64_t)sp - (int64_t)&i);
 
 	for (i = 0; i < len; i++) {
 		if (p[i] == '\n') {
@@ -426,17 +435,19 @@ run_lsp(struct mg_connection *conn,
 
 			/* <?= var ?> or <%= var %> means a variable is enclosed and its
 			 * value should be printed */
-			if (0 == memcmp("lua", p + i + 1, 3)) {
+			if (0 == memcmp("lua", p + i + 2, 3)) {
 				/* Syntax: <?lua code ?> or <?lua= var ?> */
 				/* This is added for compatibility to other LSP syntax
 				 * definitions. */
 				/* Skip 3 letters ("lua"). */
-				i += 3;
+				s = 3;
+			} else {
+				/* no additional letters to skip, only "<?" */
+				s = 0;
 			}
 
 			/* Check for '=' in "<?= ..." or "<%= ..." or "<?lua= ..." */
-			is_var = (((i + 2) < len) && (p[i + 2] == '='));
-
+			is_var = (((i + s + 2) < len) && (p[i + s + 2] == '='));
 			if (is_var) {
 				/* use variable value (print it later) */
 				j = i + 2;
@@ -455,9 +466,9 @@ run_lsp(struct mg_connection *conn,
 				/* Check for closing tag. */
 				if (((j + 1) < len) && (p[j] == lsp_mark_used)
 				    && (p[j + 1] == '>')) {
+					/* We found the closing tag of the Lua tag. */
 
-					/* There was a closing tag. Print everything before
-					 * the opening tag. */
+					/* Print everything before the Lua opening tag. */
 					mg_write(conn, p + pos, i - pos);
 
 					/* Set a name for debugging purposes */
@@ -473,30 +484,35 @@ run_lsp(struct mg_connection *conn,
 					lua_pushlightuserdata(L, conn);
 					lua_pushcclosure(L, lsp_error, 1);
 
+					/* Distinguish between <? script ?> (is_var == 0)
+					 * and <?= expression ?> (is_var != 0). */
 					if (is_var) {
 						/* For variables: Print the value */
-						data.begin = p + (i + 3);
-						data.len = j - (i + 3);
+						/* Note: <?= expression ?> is equivalent to
+						 * <? mg.write( expression ) ?> */
+						data.begin = p + (i + 3 + s);
+						data.len = j - (i + 3 + s);
 						data.state = 0;
 						lua_ok = mg_lua_load(
 						    L, lsp_var_reader, &data, chunkname, NULL);
 					} else {
 						/* For scripts: Execute them */
 						lua_ok = luaL_loadbuffer(L,
-						                         p + (i + 2),
-						                         j - (i + 2),
+						                         p + (i + 2 + s),
+						                         j - (i + 2 + s),
 						                         chunkname);
 					}
 
 					if (lua_ok) {
-						/* Syntax error or OOM. Error message is pushed on
-						 * stack. */
+						/* Syntax error or OOM.
+						 * Error message is pushed on stack. */
 						lua_pcall(L, 1, 0, 0);
 					} else {
 						/* Success loading chunk. Call it. */
 						lua_pcall(L, 0, 0, 1);
 					}
 
+					/* Progress until after the Lua closing tag. */
 					pos = j + 2;
 					i = pos - 1;
 					break;
@@ -504,6 +520,7 @@ run_lsp(struct mg_connection *conn,
 				j++;
 			}
 
+			/* Line number for debugging/error logging. */
 			if (lualines > 0) {
 				lines += lualines;
 				lualines = 0;
@@ -511,6 +528,7 @@ run_lsp(struct mg_connection *conn,
 		}
 	}
 
+	/* Print everything after the last Lua closing tag. */
 	if (i > pos) {
 		mg_write(conn, p + pos, i - pos);
 	}

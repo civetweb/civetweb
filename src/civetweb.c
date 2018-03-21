@@ -13666,6 +13666,7 @@ handle_request(struct mg_connection *conn)
 		return;
 	}
 
+	/* 15. read a normal file with GET or HEAD */
 	handle_file_based_request(conn, path, &file);
 #endif /* !defined(NO_FILES) */
 
