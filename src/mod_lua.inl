@@ -361,7 +361,9 @@ lsp_abort(lua_State *L)
 struct lsp_var_reader_data {
 	const char *begin;
 	int64_t len;
-	int64_t state;
+	unsigned char state;
+	int64_t consumed;
+	char tag;
 };
 
 
@@ -377,6 +379,7 @@ lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 	switch (reader->state) {
 	case 0:
 		/* First call: what function to call */
+		reader->consumed = 0;
 		ret = "mg.write(";
 		*sz = strlen(ret);
 		break;
@@ -384,6 +387,7 @@ lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 		/* Second call: forward variable name */
 		ret = reader->begin;
 		*sz = reader->len;
+		reader->consumed += reader->len;
 		break;
 	case 2:
 		/* Third call: close function call */
@@ -414,23 +418,29 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 	(void)(L); /* unused */
 
 	/* This reader is called multiple times, to fetch the full Lua script */
-	if (reader->state == -1) {
-		/* First call: what function to call */
+
+	if (reader->state == 0) {
+		/* First call: Send opening tag - what function to call */
 		ret = "mg.write([=======[";
 		*sz = strlen(ret);
-		reader->state = 0;
+		reader->state = 1;
+		reader->consumed = 0;
 		return ret;
 	}
-	if (reader->state == -2) {
+
+	if (reader->state == 4) {
+		/* Final call: Tell Lua reader, we reached the end */
 		*sz = 0;
 		return 0;
 	}
 
-	left = reader->len - reader->state;
+	left = reader->len - reader->consumed;
 	if (left == 0) {
+		/* We reached the end of the file/available data. */
+		/* Send closing tag. */
 		ret = "]=======]);\n";
 		*sz = strlen(ret);
-		reader->state = -2;
+		reader->state = 4; /* Next will be the final call */
 		return ret;
 	}
 	if (left > MG_BUF_LEN / 100) {
@@ -438,39 +448,77 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 	}
 	i = 0;
 
-forward:
-	while ((i < left) && (reader->begin[i + reader->state] != '<'))
-		i++;
-	if (i > 0) {
-		int64_t j = reader->state;
-		reader->state += i;
-		*sz = (size_t)i; /* cast is ok, i is limited to MG_BUF_LEN */
-		return reader->begin + j;
+	if (reader->state == 1) {
+		/* State 1: plain text - put inside mg.write(...) */
+		for (;;) {
+			/* Find next tag */
+			while ((i < left) && (reader->begin[i + reader->state] != '<')) {
+				i++;
+			}
+			if (i > 0) {
+				/* Forward all data until the next tag */
+				int64_t j = reader->consumed;
+				reader->consumed += i;
+				*sz = (size_t)i; /* cast is ok, i is limited to MG_BUF_LEN */
+				return reader->begin + j;
+			}
+
+			/* assert (reader->begin[reader->state] == '<') */
+			/* assert (i == 0) */
+			if (0 == memcmp(reader->begin + reader->state, "<?lua", 5)) {
+				i = 5;
+				break;
+			} else if (0 == memcmp(reader->begin + reader->state, "<%", 2)) {
+				i = 2;
+				break;
+			} else {
+				i = 1;
+			}
+		}
+		/* We found an opening or closing tag, or we reached the end of the
+		 * file/data block */
+		ret = "]=======]);\n";
+		*sz = strlen(ret);
+		reader->state == 2;
+		reader->tag = reader->begin[1];
+		reader->consumed += i; /* length of <?lua or <% tag */
+		return ret;
 	}
 
-	/* assert (reader->begin[reader->state] == '<') */
-	/* assert (i == 0) */
-	if (0 == memcmp(reader->begin, "<?lua", 5)) {
-		i = 5;
-	} else if (0 == memcmp(reader->begin, "<%", 2)) {
-		i = 2;
-	} else {
-		i = 1;
-		goto forward;
+	/* State 2: Lua code - keep outside mg.write(...) */
+	for (;;) {
+		/* Find end tag */
+		while ((i < left)
+		       && (reader->begin[i + reader->state] != reader->tag)) {
+			i++;
+		}
+		if (i > 0) {
+			/* Check for closing tag */
+			if ((i + 1 < left) && (reader->begin[i + reader->state] == '>')) {
+				i--;                   /* don't send the tag */
+				reader->consumed += 2; /* but mark it as consumed */
+				reader->state = 3;
+			}
+
+			/* Forward all data inside the Lua script tag */
+			int64_t j = reader->consumed;
+			reader->consumed += i;
+			*sz = (size_t)i; /* cast is ok, i is limited to MG_BUF_LEN */
+			return reader->begin + j;
+		}
 	}
 
-	end[0] = reader->begin[1];
-	end[1] = '>';
-	end[2] = 0;
-	/* here we have a <?lua or <% tag */
+	if (reader->state == 3) {
+		/* State 3: Send a new opening tag */
+		ret = "\nmg.write([=======[";
+		*sz = strlen(ret);
+		reader->state = 1;
+		return ret;
+	}
 
-	ret = "]=======]);\n";
-	*sz = strlen(ret);
-
-	printf("XXX end\n");
-
-	reader->state = reader->len;
-	return ret;
+	/* Must never be reached */
+	*sz = 0;
+	return 0;
 }
 
 static const char *
@@ -509,7 +557,9 @@ run_lsp(struct mg_connection *conn,
 
 	data.begin = p;
 	data.len = len;
-	data.state = -1;
+	data.state = 0;
+	data.consumed = 0;
+	data.tag = 0;
 	lua_ok = mg_lua_load(L, lsp_kepler_reader, &data, path, NULL);
 
 	if (lua_ok) {
@@ -613,6 +663,8 @@ run_lsp_classic(struct mg_connection *conn,
 						data.begin = p + (i + 3 + s);
 						data.len = j - (i + 3 + s);
 						data.state = 0;
+						data.consumed = 0;
+						data.tag = 0;
 						lua_ok = mg_lua_load(
 						    L, lsp_var_reader, &data, chunkname, NULL);
 					} else {
