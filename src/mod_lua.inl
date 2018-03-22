@@ -452,7 +452,7 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 		/* State 1: plain text - put inside mg.write(...) */
 		for (;;) {
 			/* Find next tag */
-			while ((i < left) && (reader->begin[i + reader->state] != '<')) {
+			while ((i < left) && (reader->begin[i + reader->consumed] != '<')) {
 				i++;
 			}
 			if (i > 0) {
@@ -465,11 +465,13 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 
 			/* assert (reader->begin[reader->state] == '<') */
 			/* assert (i == 0) */
-			if (0 == memcmp(reader->begin + reader->state, "<?lua", 5)) {
+			if (0 == memcmp(reader->begin + reader->consumed, "<?lua", 5)) {
 				i = 5;
+				reader->tag = '?';
 				break;
-			} else if (0 == memcmp(reader->begin + reader->state, "<%", 2)) {
+			} else if (0 == memcmp(reader->begin + reader->consumed, "<%", 2)) {
 				i = 2;
+				reader->tag = '%';
 				break;
 			} else {
 				i = 1;
@@ -479,42 +481,52 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 		 * file/data block */
 		ret = "]=======]);\n";
 		*sz = strlen(ret);
-		reader->state == 2;
-		reader->tag = reader->begin[1];
+		reader->state = 2;
 		reader->consumed += i; /* length of <?lua or <% tag */
 		return ret;
 	}
 
-	/* State 2: Lua code - keep outside mg.write(...) */
-	for (;;) {
-		/* Find end tag */
-		while ((i < left)
-		       && (reader->begin[i + reader->state] != reader->tag)) {
-			i++;
-		}
-		if (i > 0) {
-			/* Check for closing tag */
-			if ((i + 1 < left) && (reader->begin[i + reader->state] == '>')) {
-				i--;                   /* don't send the tag */
-				reader->consumed += 2; /* but mark it as consumed */
-				reader->state = 3;
+	if (reader->state == 2) {
+		/* State 2: Lua code - keep outside mg.write(...) */
+
+		printf("XXXXXXXX search: [%c] xxxxxxxxxx\n", reader->tag);
+		for (;;) {
+			int close_tag_found = 0;
+
+			/* Find end tag */
+			while ((i < left)
+			       && (reader->begin[i + reader->consumed] != reader->tag)) {
+				i++;
+			}
+			if (i > 0) {
+				/* Forward all data inside the Lua script tag */
+				int64_t j = reader->consumed;
+				reader->consumed += i;
+				*sz = (size_t)i; /* cast is ok, i is limited to MG_BUF_LEN */
+
+				return reader->begin + j;
 			}
 
-			/* Forward all data inside the Lua script tag */
-			int64_t j = reader->consumed;
-			reader->consumed += i;
-			*sz = (size_t)i; /* cast is ok, i is limited to MG_BUF_LEN */
-			return reader->begin + j;
+			/* Is this the closing tag we are looking for? */
+			close_tag_found = ((i + 1 < left)
+			                   && (reader->begin[i + reader->consumed] == '>'));
+
+			if (close_tag_found) {
+				/* Drop close tag */
+				reader->consumed += 2;
+
+				/* Send a new opening tag to Lua */
+				ret = "\nmg.write([=======[";
+				*sz = strlen(ret);
+				reader->state = 1;
+				return ret;
+			} else {
+				/* Not a close tag, continue searching */
+				i++;
+			}
 		}
 	}
 
-	if (reader->state == 3) {
-		/* State 3: Send a new opening tag */
-		ret = "\nmg.write([=======[";
-		*sz = strlen(ret);
-		reader->state = 1;
-		return ret;
-	}
 
 	/* Must never be reached */
 	*sz = 0;
@@ -525,8 +537,9 @@ static const char *
 lsp_kepler_reader(lua_State *L, void *ud, size_t *sz)
 {
 	/* debugging */
+	struct lsp_var_reader_data *reader = (struct lsp_var_reader_data *)ud;
 	const char *ret = lsp_kepler_reader_impl(L, ud, sz);
-	printf("%.*s", *sz, ret);
+	printf("\n%.*s\n[%i]\n\n", *sz, ret, reader->state);
 	return ret;
 }
 
@@ -566,13 +579,11 @@ run_lsp(struct mg_connection *conn,
 		/* Syntax error or OOM.
 		 * Error message is pushed on stack. */
 		lua_pcall(L, 1, 0, 0);
-		printf("XXX err\n");
 		lua_cry(conn, lua_ok, L, "LSP", "execute"); /* XXX TODO: everywhere ! */
 
 	} else {
 		/* Success loading chunk. Call it. */
 		lua_pcall(L, 0, 0, 1);
-		printf("XXX succ\n");
 	}
 	return 0;
 }
