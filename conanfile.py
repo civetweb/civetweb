@@ -3,7 +3,7 @@ import os
 
 class civetwebConan(ConanFile):
     name = "civetweb"
-    version = "1.9.1"
+    version = "1.10"
     license = "MIT"
     url = "https://github.com/civetweb/civetweb"
     description = "Embedded C/C++ web server"
@@ -32,7 +32,10 @@ class civetwebConan(ConanFile):
 
     def parseOptionsToCMake(self):
         cmakeOpts = {
-            "CIVETWEB_BUILD_TESTING" : "OFF"
+            "CIVETWEB_BUILD_TESTING" : "OFF",
+            "CIVETWEB_ENABLE_LUA" : "OFF",
+            "CIVETWEB_ENABLE_SERVER_EXECUTABLE" : "OFF",
+            "CIVETWEB_INSTALL_EXECUTABLE" : "OFF"
         }
 
         cmakeOpts["BUILD_SHARED_LIBS"] = self.optionBool(self.options.shared)
