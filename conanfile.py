@@ -18,7 +18,7 @@ class civetwebConan(ConanFile):
         "enable_cxx"        : [True, False]
     }
     default_options = (
-        "shared=True",
+        "shared=False",
         "enable_ssl=True",
         "enable_websockets=True",
         "enable_cxx=True",
@@ -35,7 +35,8 @@ class civetwebConan(ConanFile):
             "CIVETWEB_BUILD_TESTING" : "OFF",
             "CIVETWEB_ENABLE_LUA" : "OFF",
             "CIVETWEB_ENABLE_SERVER_EXECUTABLE" : "OFF",
-            "CIVETWEB_INSTALL_EXECUTABLE" : "OFF"
+            "CIVETWEB_INSTALL_EXECUTABLE" : "OFF",
+            "CIVETWEB_ENABLE_ASAN" : "OFF"
         }
 
         cmakeOpts["BUILD_SHARED_LIBS"] = self.optionBool(self.options.shared)
