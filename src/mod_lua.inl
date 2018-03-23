@@ -407,7 +407,7 @@ lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 
 
 static const char *
-lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
+lsp_kepler_reader(lua_State *L, void *ud, size_t *sz)
 {
 	struct lsp_var_reader_data *reader = (struct lsp_var_reader_data *)ud;
 	const char *ret;
@@ -466,12 +466,19 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 			/* assert (reader->begin[reader->state] == '<') */
 			/* assert (i == 0) */
 			if (0 == memcmp(reader->begin + reader->consumed, "<?lua", 5)) {
+				/* kepler <?lua syntax */
 				i = 5;
 				reader->tag = '?';
 				break;
 			} else if (0 == memcmp(reader->begin + reader->consumed, "<%", 2)) {
+				/* kepler <% syntax */
 				i = 2;
 				reader->tag = '%';
+				break;
+			} else if (0 == memcmp(reader->begin + reader->consumed, "<?", 2)) {
+				/* civetweb <? syntax */
+				i = 2;
+				reader->tag = '?';
 				break;
 			} else {
 				i = 1;
@@ -547,27 +554,12 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 }
 
 
-static const char *
-lsp_kepler_reader(lua_State *L, void *ud, size_t *sz)
-{
-	/* debugging */
-	struct lsp_var_reader_data *reader = (struct lsp_var_reader_data *)ud;
-	if (reader->state == 0) {
-		printf("\n-------------------------------------------------------\n");
-		printf("\n\n\n");
-	}
-	const char *ret = lsp_kepler_reader_impl(L, ud, sz);
-	printf("%.*s", *sz, ret);
-	return ret;
-}
-
-
 static int
-run_lsp(struct mg_connection *conn,
-        const char *path,
-        const char *p,
-        int64_t len,
-        lua_State *L)
+run_lsp_kepler(struct mg_connection *conn,
+               const char *path,
+               const char *p,
+               int64_t len,
+               lua_State *L)
 {
 
 	int lua_ok;
@@ -609,11 +601,11 @@ run_lsp(struct mg_connection *conn,
 
 
 static int
-run_lsp_classic(struct mg_connection *conn,
-                const char *path,
-                const char *p,
-                int64_t len,
-                lua_State *L)
+run_lsp_civetweb(struct mg_connection *conn,
+                 const char *path,
+                 const char *p,
+                 int64_t len,
+                 lua_State *L)
 {
 	int i, j, s, pos = 0, lines = 1, lualines = 0, is_var, lua_ok;
 	char chunkname[MG_BUF_LEN];
@@ -2331,6 +2323,12 @@ handle_lsp_request(struct mg_connection *conn,
 	struct lsp_include_history *include_history;
 	int error = 1;
 	void *file_in_memory; /* TODO(low): remove when removing "file in memory" */
+	int (*run_lsp)(struct mg_connection *,
+	               const char *,
+	               const char *,
+	               int64_t,
+	               lua_State *);
+	const char *addr;
 
 	/* Assume the script does not support keep_alive. The script may change this
 	 * by calling mg.keep_alive(true). */
@@ -2369,14 +2367,17 @@ handle_lsp_request(struct mg_connection *conn,
 	                 fileno(filep->access.fp),
 	                 0)) == MAP_FAILED) {
 
-		/* mmap failed */
+		/* File was not already in memory, and mmap failed now.
+		 * Since wi have no data, show an error. */
 		if (ls == NULL) {
+			/* No open Lua state - use generic error function */
 			mg_send_http_error(
 			    conn,
 			    500,
 			    "Error: Cannot open script\nFile %s can not be mapped",
 			    path);
 		} else {
+			/* Lua state exists - use Lua error function */
 			luaL_error(ls,
 			           "mmap(%s, %zu, %d): %s",
 			           path,
@@ -2388,11 +2389,21 @@ handle_lsp_request(struct mg_connection *conn,
 		goto cleanup_handle_lsp_request;
 	}
 
+	/* File content is now memory mapped. Get mapping address */
+	addr = (file_in_memory == NULL) ? (const char *)p
+	                                : (const char *)file_in_memory;
+
+	/* Get a Lua state */
 	if (ls != NULL) {
+		/* We got a Lua state as argument. Use it! */
 		L = ls;
 	} else {
+		/* We need to create a Lua state. */
 		L = lua_newstate(lua_allocator, (void *)(conn->phys_ctx));
 		if (L == NULL) {
+			/* We neither got a Lua state from the command line,
+			 * nor did we succeed in creating our own state.
+			 * Show an error, and stop further processing of this request. */
 			mg_send_http_error(
 			    conn,
 			    500,
@@ -2401,6 +2412,8 @@ handle_lsp_request(struct mg_connection *conn,
 
 			goto cleanup_handle_lsp_request;
 		}
+
+		/* New Lua state needs CivetWeb functions (e.g., the "mg" library). */
 		prepare_lua_environment(
 		    conn->phys_ctx, conn, NULL, L, path, LUA_ENV_TYPE_LUA_SERVER_PAGE);
 	}
@@ -2414,14 +2427,51 @@ handle_lsp_request(struct mg_connection *conn,
 	include_history->depth++;
 	include_history->script[include_history->depth] = path;
 
-	/* Lua state is ready to use */
+	/* Lua state is ready to use now. */
+	/* Currently we have two different syntax options:
+	 * Either "classic" CivetWeb syntax:
+	 *    <? code ?>
+	 *    <?= expression ?>
+	 * Or "Kepler Syntax"
+	 * https://keplerproject.github.io/cgilua/manual.html#templates
+	 *    <?lua chunk ?>
+	 *    <?lua= expression ?>
+	 *    <% chunk %>
+	 *    <%= expression %>
+	 *
+	 * Two important differences are:
+	 * - In the "classic" CivetWeb syntax, the Lua Page had to send the HTTP
+	 *   response headers itself. So the first lines are usually something like
+	 *   HTTP/1.0 200 OK
+	 *   Content-Type: text/html
+	 *   followed by additional headers and an empty line, before the actual
+	 *   Lua page in HTML syntax with <? code ?> tags.
+	 *   The "Kepler"Syntax" does not send any HTTP header from the Lua Server
+	 *   Page, but starts directly with <html> code - so it cannot influence
+	 *   the HTTP response code, e.g., to send a 301 Moved Permanently.
+	 *   Due to this difference, the same *.lp file cannot be used with the
+	 *   same algorithm.
+	 * - The "Kepler Syntax" used to allow mixtures of Lua and HTML inside an
+	 *   incomplete Lua block, e.g.:
+	 *   <lua? for i=1,10 do ?><li><%= key %></li><lua? end ?>
+	 *   This was not provided in "classic" CivetWeb syntax, but you had to use
+	 *   <? for i=1,10 do mg.write("<li>"..i.."</li>") end ?>
+	 *   instead. The parsing algorithm for "Kepler syntax" is more complex
+	 *   than for "classic" CivetWeb syntax - TODO: check timing/performance.
+	 *
+	 * CivetWeb now can use both parsing methods, but needs to know what
+	 * parsing algorithm should be used.
+	 * Idea: Files starting with '<' are HTML files in "Kepler Syntax", except
+	 * "<?" which means "classic CivetWeb Syntax".
+	 *
+	 */
+	run_lsp = run_lsp_civetweb;
+	if ((addr[0] == '<') && (addr[1] != '?')) {
+		run_lsp = run_lsp_kepler;
+	}
+
 	/* We're not sending HTTP headers here, Lua page must do it. */
-	error = run_lsp(conn,
-	                path,
-	                (file_in_memory == NULL) ? (const char *)p
-	                                         : (const char *)file_in_memory,
-	                filep->stat.size,
-	                L);
+	error = run_lsp(conn, path, addr, filep->stat.size, L);
 
 cleanup_handle_lsp_request:
 
