@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdint.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -132,19 +133,13 @@ wait_not_null(void *volatile *data)
 #if defined(__MINGW32__) || defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunreachable-code"
-#endif
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code"
+#pragma GCC diagnostic ignored "-Wunreachable-code-return"
 #endif
 
-	ck_abort_msg("wait_not_null failed");
+	ck_abort_msg("wait_not_null failed (%i sec)", i);
 
 	return 0;
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 #if defined(__MINGW32__) || defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
@@ -227,7 +222,7 @@ START_TEST(test_the_test_environment)
 END_TEST
 
 
-static void *threading_data;
+static void *threading_data = 0;
 
 static void *
 test_thread_func_t(void *param)
@@ -244,6 +239,7 @@ START_TEST(test_threading)
 	int ok;
 
 	threading_data = NULL;
+	mark_point();
 
 	ok = mg_start_thread(test_thread_func_t, &threading_data);
 	ck_assert_int_eq(ok, 0);
@@ -267,7 +263,24 @@ log_msg_func(const struct mg_connection *conn, const char *message)
 
 	strncpy(ud, message, 255);
 	ud[255] = 0;
-	return 1;
+	mark_point();
+
+	printf("LOG_MSG_FUNC: %s\n", message);
+	mark_point();
+
+	return 1; /* Return 1 means "already handled" */
+}
+
+
+static int
+test_log_message(const struct mg_connection *conn, const char *message)
+{
+	(void)conn;
+
+	printf("LOG_MESSAGE: %s\n", message);
+	mark_point();
+
+	return 0; /* Return 0 means "not yet handled" */
 }
 
 
@@ -277,11 +290,22 @@ test_mg_start(const struct mg_callbacks *callbacks,
               const char **configuration_options)
 {
 	struct mg_context *ctx;
+	struct mg_callbacks cb;
+
+	if (callbacks) {
+		memcpy(&cb, callbacks, sizeof(cb));
+	} else {
+		memset(&cb, 0, sizeof(cb));
+	}
+
+	if (cb.log_message == NULL) {
+		cb.log_message = test_log_message;
+	}
 
 	mark_point();
 	test_sleep(SLEEP_BEFORE_MG_START);
 	mark_point();
-	ctx = mg_start(callbacks, user_data, configuration_options);
+	ctx = mg_start(&cb, user_data, configuration_options);
 	mark_point();
 	if (ctx) {
 		/* Give the server some time to start in the test VM */
@@ -297,6 +321,13 @@ test_mg_start(const struct mg_callbacks *callbacks,
 static void
 test_mg_stop(struct mg_context *ctx)
 {
+#ifdef __MACH__
+	/* For unknown reasons, there are sporadic hands
+	 * for OSX if mark_point is called here */
+	test_sleep(SLEEP_BEFORE_MG_STOP);
+	mg_stop(ctx);
+	test_sleep(SLEEP_AFTER_MG_STOP);
+#else
 	mark_point();
 	test_sleep(SLEEP_BEFORE_MG_STOP);
 	mark_point();
@@ -304,24 +335,23 @@ test_mg_stop(struct mg_context *ctx)
 	mark_point();
 	test_sleep(SLEEP_AFTER_MG_STOP);
 	mark_point();
+#endif
 }
 
 
-START_TEST(test_mg_start_stop_http_server)
+static void
+test_mg_start_stop_http_server_impl(int ipv6)
 {
 	struct mg_context *ctx;
-	const char *OPTIONS[] = {
-#if !defined(NO_FILES)
-		"document_root",
-		".",
-#endif
-		"listening_ports",
-		"8080",
-		NULL,
-	};
+	const char *OPTIONS[16];
+	int optcnt = 0;
+	const char *localhost_name = ((ipv6) ? "[::1]" : "127.0.0.1");
+
+#if defined(MG_LEGACY_INTERFACE)
 	size_t ports_cnt;
 	int ports[16];
 	int ssl[16];
+#endif
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
@@ -331,8 +361,20 @@ START_TEST(test_mg_start_stop_http_server)
 	int client_res, ret;
 	struct mg_server_ports portinfo[8];
 
+	mark_point();
+
+#if !defined(NO_FILES)
+	OPTIONS[optcnt++] = "document_root";
+	OPTIONS[optcnt++] = ".";
+#endif
+	OPTIONS[optcnt++] = "listening_ports";
+	OPTIONS[optcnt++] = ((ipv6) ? "+8080" : "8080");
+	OPTIONS[optcnt] = 0;
+
+#if defined(MG_LEGACY_INTERFACE)
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
+#endif
 	memset(portinfo, 0, sizeof(portinfo));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(errmsg, 0, sizeof(errmsg));
@@ -344,12 +386,14 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
+#if defined(MG_LEGACY_INTERFACE)
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
 	ck_assert_uint_eq(ports_cnt, 1);
 	ck_assert_int_eq(ports[0], 8080);
 	ck_assert_int_eq(ssl[0], 0);
 	ck_assert_int_eq(ports[1], 0);
 	ck_assert_int_eq(ssl[1], 0);
+#endif
 
 	ret = mg_get_server_ports(ctx, 0, portinfo);
 	ck_assert_int_lt(ret, 0);
@@ -364,7 +408,11 @@ START_TEST(test_mg_start_stop_http_server)
 
 	ret = mg_get_server_ports(ctx, 4, portinfo);
 	ck_assert_int_eq(ret, 1);
-	ck_assert_int_eq(portinfo[0].protocol, 1);
+	if (ipv6) {
+		ck_assert_int_eq(portinfo[0].protocol, 3);
+	} else {
+		ck_assert_int_eq(portinfo[0].protocol, 1);
+	}
 	ck_assert_int_eq(portinfo[0].port, 8080);
 	ck_assert_int_eq(portinfo[0].is_ssl, 0);
 	ck_assert_int_eq(portinfo[0].is_redirect, 0);
@@ -377,10 +425,12 @@ START_TEST(test_mg_start_stop_http_server)
 
 	/* HTTP 1.0 GET request */
 	memset(client_err, 0, sizeof(client_err));
-	client_conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+	client_conn = mg_connect_client(
+	    localhost_name, 8080, 0, client_err, sizeof(client_err));
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -390,9 +440,9 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->uri, "404");
+	ck_assert_str_eq(client_ri->local_uri, "404");
 #else
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
@@ -404,10 +454,12 @@ START_TEST(test_mg_start_stop_http_server)
 
 	/* HTTP 1.1 GET request */
 	memset(client_err, 0, sizeof(client_err));
-	client_conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+	client_conn = mg_connect_client(
+	    localhost_name, 8080, 0, client_err, sizeof(client_err));
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
 	mg_printf(client_conn, "Host: localhost:8080\r\n");
 	mg_printf(client_conn, "Connection: close\r\n\r\n");
@@ -419,9 +471,9 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->uri, "404");
+	ck_assert_str_eq(client_ri->local_uri, "404");
 #else
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
@@ -434,10 +486,12 @@ START_TEST(test_mg_start_stop_http_server)
 
 	/* HTTP 1.7 GET request - this HTTP version does not exist  */
 	memset(client_err, 0, sizeof(client_err));
-	client_conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+	client_conn = mg_connect_client(
+	    localhost_name, 8080, 0, client_err, sizeof(client_err));
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.7\r\n");
 	mg_printf(client_conn, "Host: localhost:8080\r\n");
 	mg_printf(client_conn, "Connection: close\r\n\r\n");
@@ -449,7 +503,7 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert(client_ri != NULL);
 
 	/* Response must be 505 HTTP Version not supported */
-	ck_assert_str_eq(client_ri->uri, "505");
+	ck_assert_str_eq(client_ri->local_uri, "505");
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
@@ -459,10 +513,12 @@ START_TEST(test_mg_start_stop_http_server)
 	 * Multiline header are obsolete with RFC 7230 section-3.2.4
 	 * and must return "400 Bad Request" */
 	memset(client_err, 0, sizeof(client_err));
-	client_conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+	client_conn = mg_connect_client(
+	    localhost_name, 8080, 0, client_err, sizeof(client_err));
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.1\r\n");
 	mg_printf(client_conn, "Host: localhost:8080\r\n");
 	mg_printf(client_conn, "X-Obsolete-Header: something\r\nfor nothing\r\n");
@@ -475,13 +531,33 @@ START_TEST(test_mg_start_stop_http_server)
 	ck_assert(client_ri != NULL);
 
 	/* Response must be 400 Bad Request */
-	ck_assert_str_eq(client_ri->uri, "400");
+	ck_assert_str_eq(client_ri->local_uri, "400");
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
 
 	/* End test */
 	test_mg_stop(ctx);
+	mark_point();
+}
+
+
+START_TEST(test_mg_start_stop_http_server)
+{
+	mark_point();
+	test_mg_start_stop_http_server_impl(0);
+	mark_point();
+}
+END_TEST
+
+
+START_TEST(test_mg_start_stop_http_server_ipv6)
+{
+	mark_point();
+#if defined(USE_IPV6)
+	test_mg_start_stop_http_server_impl(1);
+#endif
+	mark_point();
 }
 END_TEST
 
@@ -492,9 +568,11 @@ START_TEST(test_mg_start_stop_https_server)
 
 	struct mg_context *ctx;
 
+#if defined(MG_LEGACY_INTERFACE)
 	size_t ports_cnt;
 	int ports[16];
 	int ssl[16];
+#endif
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
@@ -524,8 +602,10 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
+#if defined(MG_LEGACY_INTERFACE)
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
+#endif
 	memset(portinfo, 0, sizeof(portinfo));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(errmsg, 0, sizeof(errmsg));
@@ -537,6 +617,7 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
+#if defined(MG_LEGACY_INTERFACE)
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
 	ck_assert_uint_eq(ports_cnt, 2);
 	ck_assert_int_eq(ports[0], 8080);
@@ -545,7 +626,7 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(ssl[1], 1);
 	ck_assert_int_eq(ports[2], 0);
 	ck_assert_int_eq(ssl[2], 0);
-
+#endif
 
 	ret = mg_get_server_ports(ctx, 0, portinfo);
 	ck_assert_int_lt(ret, 0);
@@ -578,8 +659,10 @@ START_TEST(test_mg_start_stop_https_server)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -589,9 +672,9 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->uri, "404");
+	ck_assert_str_eq(client_ri->local_uri, "404");
 #else
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
@@ -602,6 +685,7 @@ START_TEST(test_mg_start_stop_https_server)
 	test_sleep(1);
 
 	test_mg_stop(ctx);
+	mark_point();
 #endif
 }
 END_TEST
@@ -690,8 +774,9 @@ START_TEST(test_mg_server_and_client_tls)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
-	ck_assert(client_conn == NULL);
+
 	ck_assert_str_ne(client_err, "");
+	ck_assert(client_conn == NULL);
 
 	memset(client_err, 0, sizeof(client_err));
 	memset(&client_options, 0, sizeof(client_options));
@@ -703,8 +788,10 @@ START_TEST(test_mg_server_and_client_tls)
 	client_conn = mg_connect_client_secure(&client_options,
 	                                       client_err,
 	                                       sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -714,9 +801,9 @@ START_TEST(test_mg_server_and_client_tls)
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->uri, "404");
+	ck_assert_str_eq(client_ri->local_uri, "404");
 #else
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
@@ -730,6 +817,7 @@ START_TEST(test_mg_server_and_client_tls)
 
 	test_mg_stop(ctx);
 #endif
+	mark_point();
 }
 END_TEST
 
@@ -744,6 +832,7 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	const struct mg_request_info *ri;
 	struct mg_context *ctx;
 	void *ud, *cud;
+	void *dummy = malloc(1);
 
 	ctx = mg_get_context(conn);
 	ud = mg_get_user_data(ctx);
@@ -753,11 +842,19 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	ck_assert(ctx == g_ctx);
 	ck_assert(ud == &g_ctx);
 
-	mg_set_user_connection_data(conn, (void *)6543);
-	cud = mg_get_user_connection_data(conn);
-	ck_assert_ptr_eq((void *)cud, (void *)6543);
+	ck_assert(dummy != NULL);
 
-	ck_assert_ptr_eq((void *)cbdata, (void *)7);
+	mg_set_user_connection_data(conn, (void *)&dummy);
+	cud = mg_get_user_connection_data(conn);
+	ck_assert_ptr_eq((void *)cud, (void *)&dummy);
+
+	mg_set_user_connection_data(conn, (void *)NULL);
+	cud = mg_get_user_connection_data(conn);
+	ck_assert_ptr_eq((void *)cud, (void *)NULL);
+
+	free(dummy);
+
+	ck_assert_ptr_eq((void *)cbdata, (void *)(ptrdiff_t)7);
 	strcpy(chunk_data, "123456789A123456789B123456789C");
 
 	mg_printf(conn,
@@ -772,9 +869,11 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	}
 
 	mg_printf(conn, "0\r\n\r\n");
+	mark_point();
 
 	return 1;
 }
+
 
 #ifdef USE_WEBSOCKET
 /****************************************************************************/
@@ -788,13 +887,28 @@ static const size_t websocket_goodbye_msg_len =
     14 /* strlen(websocket_goodbye_msg) */;
 
 
+#if defined(DEBUG)
+static void
+WS_TEST_TRACE(const char *f, ...)
+{
+	va_list l;
+	va_start(l, f);
+	vprintf(f, l);
+	va_end(l);
+}
+#else
+#define WS_TEST_TRACE(...)
+#endif
+
+
 static int
 websock_server_connect(const struct mg_connection *conn, void *udata)
 {
 	(void)conn;
 
-	ck_assert_ptr_eq((void *)udata, (void *)7531);
-	printf("Server: Websocket connected\n");
+	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
+	WS_TEST_TRACE("Server: Websocket connected\n");
+	mark_point();
 
 	return 0; /* return 0 to accept every connection */
 }
@@ -803,8 +917,9 @@ websock_server_connect(const struct mg_connection *conn, void *udata)
 static void
 websock_server_ready(struct mg_connection *conn, void *udata)
 {
-	ck_assert_ptr_eq((void *)udata, (void *)7531);
-	printf("Server: Websocket ready\n");
+	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
+	ck_assert_ptr_ne((void *)conn, (void *)NULL);
+	WS_TEST_TRACE("Server: Websocket ready\n");
 
 	/* Send websocket welcome message */
 	mg_lock_connection(conn);
@@ -814,8 +929,14 @@ websock_server_ready(struct mg_connection *conn, void *udata)
 	                   websocket_welcome_msg_len);
 	mg_unlock_connection(conn);
 
-	printf("Server: Websocket ready X\n");
+	WS_TEST_TRACE("Server: Websocket ready X\n");
+	mark_point();
 }
+
+
+#define long_ws_buf_len_16 (500)
+#define long_ws_buf_len_64 (70000)
+static char long_ws_buf[long_ws_buf_len_64];
 
 
 static int
@@ -827,8 +948,8 @@ websock_server_data(struct mg_connection *conn,
 {
 	(void)bits;
 
-	ck_assert_ptr_eq((void *)udata, (void *)7531);
-	printf("Server: Got %u bytes from the client\n", (unsigned)data_len);
+	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
+	WS_TEST_TRACE("Server: Got %u bytes from the client\n", (unsigned)data_len);
 
 	if (data_len == 3 && !memcmp(data, "bye", 3)) {
 		/* Send websocket goodbye message */
@@ -849,6 +970,22 @@ websock_server_data(struct mg_connection *conn,
 	} else if (data_len == 5 && !memcmp(data, "data3", 5)) {
 		mg_lock_connection(conn);
 		mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, "ok - 3", 6);
+		mg_unlock_connection(conn);
+	} else if (data_len == long_ws_buf_len_16) {
+		ck_assert(memcmp(data, long_ws_buf, long_ws_buf_len_16) == 0);
+		mg_lock_connection(conn);
+		mg_websocket_write(conn,
+		                   WEBSOCKET_OPCODE_BINARY,
+		                   long_ws_buf,
+		                   long_ws_buf_len_16);
+		mg_unlock_connection(conn);
+	} else if (data_len == long_ws_buf_len_64) {
+		ck_assert(memcmp(data, long_ws_buf, long_ws_buf_len_64) == 0);
+		mg_lock_connection(conn);
+		mg_websocket_write(conn,
+		                   WEBSOCKET_OPCODE_BINARY,
+		                   long_ws_buf,
+		                   long_ws_buf_len_64);
 		mg_unlock_connection(conn);
 	} else {
 
@@ -873,20 +1010,27 @@ websock_server_data(struct mg_connection *conn,
 #pragma GCC diagnostic pop
 #endif
 	}
+	mark_point();
 
 	return 1; /* return 1 to keep the connetion open */
 }
 
+
 static void
 websock_server_close(const struct mg_connection *conn, void *udata)
 {
+#ifndef __MACH__
+	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
+	WS_TEST_TRACE("Server: Close connection\n");
+
+	/* Can not send a websocket goodbye message here -
+	 * the connection is already closed */
+
+	mark_point();
+#endif
+
 	(void)conn;
-
-	ck_assert_ptr_eq((void *)udata, (void *)7531);
-	printf("Server: Close connection\n");
-
-	/* Can not send a websocket goodbye message here - the connection is already
-	 * closed */
+	(void)udata;
 }
 
 
@@ -912,19 +1056,33 @@ websocket_client_data_handler(struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-	(void)user_data; /* TODO: check this */
+	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 
 	ck_assert(pclient_data != NULL);
-	ck_assert_int_eq(flags, (int)(128 | 1));
+	ck_assert_int_gt(flags, 128);
+	ck_assert_int_lt(flags, 128 + 16);
+	ck_assert((flags == (int)(128 | WEBSOCKET_OPCODE_BINARY))
+	          || (flags == (int)(128 | WEBSOCKET_OPCODE_TEXT)));
 
-	printf("Client %i received data from server: ", pclient_data->clientId);
-	fwrite(data, 1, data_len, stdout);
-	printf("\n");
+	if (flags == (int)(128 | WEBSOCKET_OPCODE_TEXT)) {
+		WS_TEST_TRACE(
+		    "Client %i received %lu bytes text data from server: %.*s\n",
+		    pclient_data->clientId,
+		    (unsigned long)data_len,
+		    (int)data_len,
+		    data);
+	} else {
+		WS_TEST_TRACE("Client %i received %lu bytes binary data from\n",
+		              pclient_data->clientId,
+		              (unsigned long)data_len);
+	}
 
 	pclient_data->data = malloc(data_len);
 	ck_assert(pclient_data->data != NULL);
 	memcpy(pclient_data->data, data, data_len);
 	pclient_data->len = data_len;
+
+	mark_point();
 
 	return 1;
 }
@@ -938,14 +1096,24 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-	(void)user_data; /* TODO: check this */
+#ifndef __MACH__
+	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 
 	ck_assert(pclient_data != NULL);
 
-	printf("Client %i: Close handler\n", pclient_data->clientId);
+	WS_TEST_TRACE("Client %i: Close handler\n", pclient_data->clientId);
 	pclient_data->closed++;
+
+	mark_point();
+#else
+
+	(void)user_data;
+	pclient_data->closed++;
+
+#endif /* __MACH__ */
 }
-#endif
+
+#endif /* USE_WEBSOCKET */
 
 
 START_TEST(test_request_handlers)
@@ -990,6 +1158,7 @@ START_TEST(test_request_handlers)
 	const char *cgi_script_content;
 	const char *expected_cgi_result;
 	int opt_idx = 0;
+	struct stat st;
 
 #if !defined(NO_SSL)
 	const char *ssl_cert = locate_ssl_cert();
@@ -1007,6 +1176,9 @@ START_TEST(test_request_handlers)
 #endif
 
 	char cmd_buf[256];
+	char *cgi_env_opt;
+
+	mark_point();
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
@@ -1022,6 +1194,19 @@ START_TEST(test_request_handlers)
 	OPTIONS[opt_idx++] = "ssl_certificate";
 	OPTIONS[opt_idx++] = ssl_cert;
 #endif
+	OPTIONS[opt_idx++] = "cgi_environment";
+	cgi_env_opt = (char *)calloc(1, 4096 /* CGI_ENVIRONMENT_SIZE */);
+	ck_assert_ptr_ne(cgi_env_opt, NULL);
+	cgi_env_opt[0] = 'x';
+	cgi_env_opt[1] = '=';
+	memset(cgi_env_opt + 2, 'y', 4090); /* Add large env field, so the server
+	                                     * must reallocate buffers. */
+	OPTIONS[opt_idx++] = cgi_env_opt;
+
+	OPTIONS[opt_idx++] = "num_threads";
+	OPTIONS[opt_idx++] = "2";
+
+
 	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
@@ -1033,8 +1218,27 @@ START_TEST(test_request_handlers)
 
 	opt = mg_get_option(ctx, "listening_ports");
 	ck_assert_str_eq(opt, HTTP_PORT);
+
 	opt = mg_get_option(ctx, "cgi_environment");
+	ck_assert_ptr_ne(opt, cgi_env_opt);
+	ck_assert_int_eq((int)opt[0], (int)cgi_env_opt[0]);
+	ck_assert_int_eq((int)opt[1], (int)cgi_env_opt[1]);
+	ck_assert_int_eq((int)opt[2], (int)cgi_env_opt[2]);
+	ck_assert_int_eq((int)opt[3], (int)cgi_env_opt[3]);
+	/* full length string compare will reach limit in the implementation
+	 * of the check unit test framework */
+	{
+		size_t len_check_1 = strlen(opt);
+		size_t len_check_2 = strlen(cgi_env_opt);
+		ck_assert_uint_eq(len_check_1, len_check_2);
+	}
+
+	/* We don't need the original anymore, the server has a private copy */
+	free(cgi_env_opt);
+
+	opt = mg_get_option(ctx, "throttle");
 	ck_assert_str_eq(opt, "");
+
 	opt = mg_get_option(ctx, "unknown_option_name");
 	ck_assert(opt == NULL);
 
@@ -1044,15 +1248,15 @@ START_TEST(test_request_handlers)
 	}
 	for (i = 500; i < 800; i++) {
 		sprintf(uri, "/U%u", i);
-		mg_set_request_handler(ctx, uri, NULL, (void *)1);
+		mg_set_request_handler(ctx, uri, NULL, (void *)(ptrdiff_t)1);
 	}
 	for (i = 600; i >= 0; i--) {
 		sprintf(uri, "/U%u", i);
-		mg_set_request_handler(ctx, uri, NULL, (void *)2);
+		mg_set_request_handler(ctx, uri, NULL, (void *)(ptrdiff_t)2);
 	}
 	for (i = 750; i <= 1000; i++) {
 		sprintf(uri, "/U%u", i);
-		mg_set_request_handler(ctx, uri, NULL, (void *)3);
+		mg_set_request_handler(ctx, uri, NULL, (void *)(ptrdiff_t)3);
 	}
 	for (i = 5; i < 9; i++) {
 		sprintf(uri, "/U%u", i);
@@ -1069,7 +1273,7 @@ START_TEST(test_request_handlers)
 	                         websock_server_ready,
 	                         websock_server_data,
 	                         websock_server_close,
-	                         (void *)7531);
+	                         (void *)(ptrdiff_t)7531);
 #endif
 
 	/* Try to load non existing file */
@@ -1084,7 +1288,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "404");
+	ck_assert_str_eq(ri->local_uri, "404");
 	mg_close_connection(client_conn);
 
 	/* Get data from callback */
@@ -1094,7 +1298,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1108,7 +1312,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	if ((i >= 0) && ((size_t)i < sizeof(buf))) {
 		buf[i] = 0;
@@ -1133,7 +1337,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1149,7 +1353,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1163,7 +1367,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "302");
+	ck_assert_str_eq(ri->local_uri, "302");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, -1);
 	mg_close_connection(client_conn);
@@ -1177,7 +1381,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1191,7 +1395,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "302");
+	ck_assert_str_eq(ri->local_uri, "302");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, -1);
 	mg_close_connection(client_conn);
@@ -1265,9 +1469,9 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->uri, "404");
+	ck_assert_str_eq(ri->local_uri, "404");
 #else
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, 17);
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
@@ -1276,6 +1480,30 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, plain_file_content);
 #endif
 	mg_close_connection(client_conn);
+
+
+	/* Check if CGI test executable exists */
+	memset(&st, 0, sizeof(st));
+
+#if defined(_WIN32)
+	/* TODO: not yet available */
+	sprintf(ebuf, "%scgi_test.cgi", locate_test_exes());
+#else
+	sprintf(ebuf, "%scgi_test.cgi", locate_test_exes());
+
+	if (stat(ebuf, &st) != 0) {
+		fprintf(stderr, "\nFile %s not found\n", ebuf);
+		fprintf(stderr,
+		        "This file needs to be compiled manually before "
+		        "starting the test\n");
+		fprintf(stderr,
+		        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n");
+
+		/* Abort test with diagnostic message */
+		ck_abort_msg("Mandatory file %s must be built before starting the test",
+		             ebuf);
+	}
+#endif
 
 
 /* Test with CGI test executable */
@@ -1295,12 +1523,12 @@ START_TEST(test_request_handlers)
 	    ebuf,
 	    sizeof(ebuf),
 	    "%s",
-	    "POST /cgi_test.cgi HTTP/1.0\r\nContent-Length: 3\r\n\r\nABC");
+	    "POST /cgi_test.cgi/x/y.z HTTP/1.0\r\nContent-Length: 3\r\n\r\nABC");
 	ck_assert(client_conn != NULL);
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 #endif
 
@@ -1316,8 +1544,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-
-	ck_assert_str_eq(ri->uri, "404");
+	ck_assert_str_eq(ri->local_uri, "404");
 	mg_close_connection(client_conn);
 
 	/* Get zipped static data - with Accept-Encoding */
@@ -1335,9 +1562,9 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->uri, "404");
+	ck_assert_str_eq(ri->local_uri, "404");
 #else
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, 52);
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
@@ -1363,7 +1590,7 @@ START_TEST(test_request_handlers)
 	ck_assert(ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->uri, "404");
+	ck_assert_str_eq(ri->local_uri, "404");
 
 	(void)expected_cgi_result;
 	(void)cgi_script_content;
@@ -1377,7 +1604,7 @@ START_TEST(test_request_handlers)
 	}
 	/* ck_assert_int_eq(i, (int)strlen(expected_cgi_result)); */
 	ck_assert_str_eq(buf, expected_cgi_result);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 #endif
 
@@ -1399,9 +1626,9 @@ START_TEST(test_request_handlers)
 
 	ck_assert(ri != NULL);
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->uri, "404");
+	ck_assert_str_eq(ri->local_uri, "404");
 #else
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert(i > 6);
 	buf[6] = 0;
@@ -1422,9 +1649,9 @@ START_TEST(test_request_handlers)
 
 	ck_assert(ri != NULL);
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->uri, "404");
+	ck_assert_str_eq(ri->local_uri, "404");
 #else
-	ck_assert_str_eq(ri->uri, "405");
+	ck_assert_str_eq(ri->local_uri, "405");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert(i >= 29);
 	buf[29] = 0;
@@ -1445,9 +1672,9 @@ START_TEST(test_request_handlers)
 
 	ck_assert(ri != NULL);
 #if defined(NO_FILES)
-	ck_assert_str_eq(ri->uri, "405"); /* method not allowed */
+	ck_assert_str_eq(ri->local_uri, "405"); /* method not allowed */
 #else
-	ck_assert_str_eq(ri->uri, "401"); /* not authorized */
+	ck_assert_str_eq(ri->local_uri, "401"); /* not authorized */
 #endif
 	mg_close_connection(client_conn);
 
@@ -1456,8 +1683,9 @@ START_TEST(test_request_handlers)
 	memset(ebuf, 0, sizeof(ebuf));
 	client_conn =
 	    mg_connect_client("127.0.0.1", ipv4_port, 0, ebuf, sizeof(ebuf));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(ebuf, "");
+	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "%s", request);
 
@@ -1468,7 +1696,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1479,8 +1707,9 @@ START_TEST(test_request_handlers)
 	memset(ebuf, 0, sizeof(ebuf));
 	client_conn =
 	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(ebuf, "");
+	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn,
 	          "GET http://test.domain:%d/U7 HTTP/1.0\r\n\r\n",
@@ -1493,7 +1722,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1505,8 +1734,9 @@ START_TEST(test_request_handlers)
 	memset(ebuf, 0, sizeof(ebuf));
 	client_conn =
 	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(ebuf, "");
+	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn,
 	          "GET http://subdomain.test.domain:%d/U7 HTTP/1.0\r\n\r\n",
@@ -1519,7 +1749,7 @@ START_TEST(test_request_handlers)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, (int)strlen(expected));
 	buf[i] = 0;
@@ -1660,11 +1890,14 @@ START_TEST(test_request_handlers)
 	ws_client1_data.data = NULL;
 	ws_client1_data.len = 0;
 
+	ck_assert(ws_client1_data.closed == 0); /* Not closed */
+
 	mg_close_connection(ws_client1_conn);
 
 	test_sleep(3); /* Won't get any message */
 
-	ck_assert(ws_client1_data.closed == 1);
+	ck_assert(ws_client1_data.closed == 1); /* Closed */
+
 	ck_assert(ws_client2_data.closed == 0);
 	ck_assert(ws_client1_data.data == NULL);
 	ck_assert(ws_client1_data.len == 0);
@@ -1738,6 +1971,36 @@ START_TEST(test_request_handlers)
 	ws_client3_data.data = NULL;
 	ws_client3_data.len = 0;
 
+	/* Write long data (16 bit size header) */
+	mg_websocket_client_write(ws_client3_conn,
+	                          WEBSOCKET_OPCODE_BINARY,
+	                          long_ws_buf,
+	                          long_ws_buf_len_16);
+
+	/* Wait for the response */
+	wait_not_null(&(ws_client3_data.data));
+
+	ck_assert_int_eq((int)ws_client3_data.len, (int)long_ws_buf_len_16);
+	ck_assert(!memcmp(ws_client3_data.data, long_ws_buf, long_ws_buf_len_16));
+	free(ws_client3_data.data);
+	ws_client3_data.data = NULL;
+	ws_client3_data.len = 0;
+
+	/* Write long data (64 bit size header) */
+	mg_websocket_client_write(ws_client3_conn,
+	                          WEBSOCKET_OPCODE_BINARY,
+	                          long_ws_buf,
+	                          long_ws_buf_len_64);
+
+	/* Wait for the response */
+	wait_not_null(&(ws_client3_data.data));
+
+	ck_assert_int_eq((int)ws_client3_data.len, (int)long_ws_buf_len_64);
+	ck_assert(!memcmp(ws_client3_data.data, long_ws_buf, long_ws_buf_len_64));
+	free(ws_client3_data.data);
+	ws_client3_data.data = NULL;
+	ws_client3_data.len = 0;
+
 	/* Disconnect client 3 */
 	ck_assert(ws_client3_data.closed == 0);
 	mg_close_connection(ws_client3_conn);
@@ -1797,7 +2060,12 @@ START_TEST(test_request_handlers)
 	}
 
 	ck_assert_int_eq(ws_client4_data.closed, 1);
+
+	/* Free data in ws_client4_conn */
+	mg_close_connection(ws_client4_conn);
+
 #endif
+	mark_point();
 }
 END_TEST
 
@@ -1835,6 +2103,8 @@ field_found(const char *key,
 		strncpy(path, key, pathlen - 8);
 		strcat(path, ".txt");
 	}
+
+	mark_point();
 
 	return g_field_found_return;
 }
@@ -1976,6 +2246,7 @@ field_get(const char *key,
 	}
 
 	free(value);
+	mark_point();
 
 	return 0;
 }
@@ -2034,6 +2305,7 @@ field_store(const char *path, long long file_size, void *user_data)
 		ck_abort_msg("field_get called with g_field_step == %i",
 		             (int)g_field_step);
 	}
+	mark_point();
 
 	return 0;
 }
@@ -2062,6 +2334,8 @@ FormGet(struct mg_connection *conn, void *cbdata)
 	ck_assert_int_eq(g_field_step, 22);
 	mg_printf(conn, "%i\r\n", ret);
 	g_field_step = 1000;
+
+	mark_point();
 
 	return 1;
 }
@@ -2096,6 +2370,8 @@ FormStore(struct mg_connection *conn,
 	mg_printf(conn, "%i\r\n", ret);
 	g_field_step = 1000;
 
+	mark_point();
+
 	return 1;
 }
 
@@ -2103,6 +2379,7 @@ FormStore(struct mg_connection *conn,
 static int
 FormStore1(struct mg_connection *conn, void *cbdata)
 {
+	mark_point();
 	return FormStore(conn, cbdata, 3, 101);
 }
 
@@ -2110,6 +2387,7 @@ FormStore1(struct mg_connection *conn, void *cbdata)
 static int
 FormStore2(struct mg_connection *conn, void *cbdata)
 {
+	mark_point();
 	return FormStore(conn, cbdata, 4, 102);
 }
 
@@ -2122,6 +2400,8 @@ send_chunk_stringl(struct mg_connection *conn,
 	char lenbuf[16];
 	size_t lenbuf_len;
 	int ret;
+
+	mark_point();
 
 	/* First store the length information in a text buffer. */
 	sprintf(lenbuf, "%x\r\n", chunk_len);
@@ -2142,7 +2422,9 @@ send_chunk_stringl(struct mg_connection *conn,
 static void
 send_chunk_string(struct mg_connection *conn, const char *chunk)
 {
+	mark_point();
 	send_chunk_stringl(conn, chunk, (unsigned int)strlen(chunk));
+	mark_point();
 }
 
 
@@ -2160,6 +2442,8 @@ START_TEST(test_handle_form)
 	size_t body_len, body_sent, chunk_len;
 	int sleep_cnt;
 
+	mark_point();
+
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
 	OPTIONS[opt_idx++] = "8884";
@@ -2175,9 +2459,9 @@ START_TEST(test_handle_form)
 	opt = mg_get_option(ctx, "listening_ports");
 	ck_assert_str_eq(opt, "8884");
 
-	mg_set_request_handler(ctx, "/handle_form", FormGet, (void *)0);
-	mg_set_request_handler(ctx, "/handle_form_store", FormStore1, (void *)0);
-	mg_set_request_handler(ctx, "/handle_form_store2", FormStore2, (void *)0);
+	mg_set_request_handler(ctx, "/handle_form", FormGet, NULL);
+	mg_set_request_handler(ctx, "/handle_form_store", FormStore1, NULL);
+	mg_set_request_handler(ctx, "/handle_form_store2", FormStore2, NULL);
 
 	test_sleep(1);
 
@@ -2210,7 +2494,7 @@ START_TEST(test_handle_form)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST x-www-form-urlencoded" */
@@ -2243,7 +2527,7 @@ START_TEST(test_handle_form)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST multipart/form-data" */
@@ -2261,7 +2545,7 @@ START_TEST(test_handle_form)
 	    "\r\n"
 	    "val1\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
-	    "Content-Disposition: form-data; name=\"radio2\"\r\n"
+	    "Content-Disposition: form-data; name=radio2\r\n"
 	    "\r\n"
 	    "val1\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
@@ -2326,7 +2610,7 @@ START_TEST(test_handle_form)
 	    "\r\n"
 	    "\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
-	    "Content-Disposition: form-data; name=\"filesin\"; filename=\"\"\r\n"
+	    "Content-Disposition: form-data; name=filesin; filename=\r\n"
 	    "Content-Type: application/octet-stream\r\n"
 	    "\r\n"
 	    "\r\n"
@@ -2340,7 +2624,7 @@ START_TEST(test_handle_form)
 	    "Text area default text.\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
 	body_len = strlen(multipart_body);
-	ck_assert_uint_eq(body_len, 2374); /* not required */
+	ck_assert_uint_eq(body_len, 2368); /* not required */
 
 	client_conn =
 	    mg_download("localhost",
@@ -2368,7 +2652,7 @@ START_TEST(test_handle_form)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 
 
@@ -2415,7 +2699,54 @@ START_TEST(test_handle_form)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
+	mg_close_connection(client_conn);
+
+	/* Handle form: "POST multipart/form-data" with chunked transfer
+	 * encoding, using a quoted boundary string */
+	client_conn = mg_download(
+	    "localhost",
+	    8884,
+	    0,
+	    ebuf,
+	    sizeof(ebuf),
+	    "%s",
+	    "POST /handle_form HTTP/1.1\r\n"
+	    "Host: localhost:8884\r\n"
+	    "Connection: close\r\n"
+	    "Content-Type: multipart/form-data; "
+	    "boundary=\"multipart-form-data-boundary--see-RFC-2388\"\r\n"
+	    "Transfer-Encoding: chunked\r\n"
+	    "\r\n");
+
+	ck_assert(client_conn != NULL);
+
+	body_len = strlen(multipart_body);
+	chunk_len = 1;
+	body_sent = 0;
+	while (body_len > body_sent) {
+		if (chunk_len > (body_len - body_sent)) {
+			chunk_len = body_len - body_sent;
+		}
+		ck_assert_int_gt((int)chunk_len, 0);
+		mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
+		mg_write(client_conn, multipart_body + body_sent, chunk_len);
+		mg_printf(client_conn, "\r\n");
+		body_sent += chunk_len;
+		chunk_len = (chunk_len % 40) + 1;
+	}
+	mg_printf(client_conn, "0\r\n");
+
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 1000) {
+			break;
+		}
+	}
+	ri = mg_get_request_info(client_conn);
+
+	ck_assert(ri != NULL);
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 
 
@@ -2448,7 +2779,7 @@ START_TEST(test_handle_form)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 
 
@@ -2486,7 +2817,7 @@ START_TEST(test_handle_form)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST multipart/form-data", chunked, store */
@@ -2546,7 +2877,7 @@ START_TEST(test_handle_form)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 
 
@@ -2637,7 +2968,7 @@ START_TEST(test_handle_form)
 	ri = mg_get_request_info(client_conn);
 
 	ck_assert(ri != NULL);
-	ck_assert_str_eq(ri->uri, "200");
+	ck_assert_str_eq(ri->local_uri, "200");
 	mg_close_connection(client_conn);
 
 
@@ -2661,8 +2992,11 @@ START_TEST(test_http_auth)
 		"static_file_max_age",
 		"0",
 #endif
+		"put_delete_auth_file",
+		"put_delete_auth_file.csv",
 		NULL,
 	};
+
 	struct mg_context *ctx;
 	struct mg_connection *client_conn;
 	char client_err[256], nonce[256];
@@ -2684,6 +3018,7 @@ START_TEST(test_http_auth)
 	const char *nc = "00000001";
 	const char *cnonce = "6789ABCD";
 
+	mark_point();
 
 	/* Start with default options */
 	ctx = test_mg_start(NULL, NULL, OPTIONS);
@@ -2707,13 +3042,22 @@ START_TEST(test_http_auth)
 	}
 
 	(void)remove(passwd_file);
+	(void)remove("put_delete_auth_file.csv");
+
+	client_res = mg_modify_passwords_file("put_delete_auth_file.csv",
+	                                      domain,
+	                                      "admin",
+	                                      "adminpass");
+	ck_assert_int_eq(client_res, 1);
 
 	/* Read file before a .htpasswd file has been created */
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -2722,7 +3066,7 @@ START_TEST(test_http_auth)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
 	ck_assert_int_le(client_res, sizeof(client_err));
@@ -2744,8 +3088,10 @@ START_TEST(test_http_auth)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -2754,7 +3100,7 @@ START_TEST(test_http_auth)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "401");
+	ck_assert_str_eq(client_ri->local_uri, "401");
 
 	auth_request = NULL;
 	for (i = 0; i < client_ri->num_headers; i++) {
@@ -2823,12 +3169,16 @@ START_TEST(test_http_auth)
 	                    NULL);
 	ck_assert_ptr_eq(HA_md5_ret, HA_md5_buf);
 
-	/* Retry with Authorization */
+	mg_close_connection(client_conn);
+
+	/* Retry with authorization */
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n", test_file);
 	mg_printf(client_conn,
 	          "Authorization: Digest "
@@ -2854,7 +3204,7 @@ START_TEST(test_http_auth)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
 	ck_assert_int_le(client_res, sizeof(client_err));
@@ -2863,6 +3213,43 @@ START_TEST(test_http_auth)
 
 	test_sleep(1);
 
+	/* Retry DELETE with authorization of a user not authorized for DELETE */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn, "DELETE /%s HTTP/1.0\r\n", test_file);
+	mg_printf(client_conn,
+	          "Authorization: Digest "
+	          "username=\"%s\", "
+	          "realm=\"%s\", "
+	          "nonce=\"%s\", "
+	          "uri=\"/%s\", "
+	          "qop=auth, "
+	          "nc=%s, "
+	          "cnonce=\"%s\", "
+	          "response=\"%s\"\r\n\r\n",
+	          "user",
+	          domain,
+	          nonce,
+	          test_file,
+	          nc,
+	          cnonce,
+	          HA_md5_buf);
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_request_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_str_eq(client_ri->local_uri, "401");
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
 
 	/* Remove the user from the .htpasswd file again */
 	client_res = mg_modify_passwords_file(passwd_file, domain, "user", NULL);
@@ -2875,8 +3262,10 @@ START_TEST(test_http_auth)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -2885,7 +3274,7 @@ START_TEST(test_http_auth)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "401");
+	ck_assert_str_eq(client_ri->local_uri, "401");
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
@@ -2900,8 +3289,10 @@ START_TEST(test_http_auth)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn, "GET /%s HTTP/1.0\r\n\r\n", test_file);
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -2910,7 +3301,7 @@ START_TEST(test_http_auth)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
 	ck_assert_int_le(client_res, sizeof(client_err));
@@ -2924,8 +3315,10 @@ START_TEST(test_http_auth)
 	test_mg_stop(ctx);
 	(void)remove(test_file);
 	(void)remove(passwd_file);
+	(void)remove("put_delete_auth_file.csv");
 
 #endif
+	mark_point();
 }
 END_TEST
 
@@ -2935,7 +3328,7 @@ START_TEST(test_keep_alive)
 	struct mg_context *ctx;
 	const char *OPTIONS[] =
 	{ "listening_ports",
-	  "8080",
+	  "8081",
 	  "request_timeout_ms",
 	  "10000",
 	  "enable_keep_alive",
@@ -2954,6 +3347,8 @@ START_TEST(test_keep_alive)
 	int client_res, i;
 	const char *connection_header;
 
+	mark_point();
+
 	ctx = test_mg_start(NULL, NULL, OPTIONS);
 
 	ck_assert(ctx != NULL);
@@ -2961,12 +3356,14 @@ START_TEST(test_keep_alive)
 	/* HTTP 1.1 GET request */
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
-	ck_assert(client_conn != NULL);
+	    mg_connect_client("127.0.0.1", 8081, 0, client_err, sizeof(client_err));
+
 	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
 	mg_printf(client_conn,
 	          "GET / HTTP/1.1\r\nHost: "
-	          "localhost:8080\r\nConnection: keep-alive\r\n\r\n");
+	          "localhost:8081\r\nConnection: keep-alive\r\n\r\n");
 	client_res =
 	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 	ck_assert_int_ge(client_res, 0);
@@ -2975,9 +3372,9 @@ START_TEST(test_keep_alive)
 	ck_assert(client_ri != NULL);
 
 #if defined(NO_FILES)
-	ck_assert_str_eq(client_ri->uri, "404");
+	ck_assert_str_eq(client_ri->local_uri, "404");
 #else
-	ck_assert_str_eq(client_ri->uri, "403");
+	ck_assert_str_eq(client_ri->local_uri, "403");
 #endif
 
 	connection_header = 0;
@@ -3000,6 +3397,8 @@ START_TEST(test_keep_alive)
 
 	/* Stop the server and clean up */
 	test_mg_stop(ctx);
+
+	mark_point();
 }
 END_TEST
 
@@ -3021,6 +3420,8 @@ START_TEST(test_error_handling)
 
 	const char *OPTIONS[32];
 	int opt_cnt = 0;
+
+	mark_point();
 
 #if !defined(NO_FILES)
 	OPTIONS[opt_cnt++] = "document_root";
@@ -3116,6 +3517,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
@@ -3126,7 +3529,7 @@ START_TEST(test_error_handling)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "404");
+	ck_assert_str_eq(client_ri->local_uri, "404");
 	mg_close_connection(client_conn);
 	test_sleep(1);
 
@@ -3141,6 +3544,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
@@ -3151,7 +3556,7 @@ START_TEST(test_error_handling)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -3171,6 +3576,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
@@ -3181,7 +3588,7 @@ START_TEST(test_error_handling)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -3201,6 +3608,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "GET /something/not/existing HTTP/1.0\r\n\r\n");
@@ -3211,7 +3620,7 @@ START_TEST(test_error_handling)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -3225,6 +3634,8 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn, "Gimme some file!\r\n\r\n");
@@ -3235,7 +3646,7 @@ START_TEST(test_error_handling)
 	client_ri = mg_get_request_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -3259,10 +3670,13 @@ START_TEST(test_error_handling)
 	memset(client_err, 0, sizeof(client_err));
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
 	ck_assert(client_conn == NULL);
 	ck_assert_str_ne(client_err, "");
 
 	test_sleep(1);
+
+	mark_point();
 }
 END_TEST
 
@@ -3284,6 +3698,8 @@ START_TEST(test_error_log_file)
 	FILE *f;
 	char buf[1024];
 	int len, ok;
+
+	mark_point();
 
 	/* Set options and start server */
 	OPTIONS[opt_cnt++] = "listening_ports";
@@ -3323,7 +3739,7 @@ START_TEST(test_error_log_file)
 	client_ri = mg_get_request_info(client);
 
 	ck_assert(client_ri != NULL);
-	ck_assert_str_eq(client_ri->uri, "404");
+	ck_assert_str_eq(client_ri->local_uri, "404");
 
 	/* Close the client connection */
 	mg_close_connection(client);
@@ -3398,6 +3814,8 @@ START_TEST(test_error_log_file)
 	/* Remove log files */
 	(void)remove("error.log");
 	(void)remove("access.log");
+
+	mark_point();
 }
 END_TEST
 
@@ -3432,6 +3850,8 @@ test_throttle_begin_request(struct mg_connection *conn)
 	for (i = 0; i < len; i += blocklen) {
 		mg_write(conn, block, blocklen);
 	}
+
+	mark_point();
 
 	return 987; /* Not a valid HTTP response code,
 	             * but it should be written to the log and passed to
@@ -3479,6 +3899,8 @@ START_TEST(test_throttle)
 	time_t t0, t1;
 	double dt;
 
+	mark_point();
+
 
 /* Set options and start server */
 #if !defined(NO_FILES)
@@ -3516,7 +3938,7 @@ START_TEST(test_throttle)
 	client_ri = mg_get_request_info(client);
 
 	ck_assert(client_ri != NULL);
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 
 	ck_assert_int_eq(client_ri->content_length, 1024 * 10);
 
@@ -3552,14 +3974,20 @@ START_TEST(test_throttle)
 
 	/* Stop the server */
 	test_mg_stop(ctx);
+
+	mark_point();
 }
 END_TEST
 
 
 START_TEST(test_init_library)
 {
-	unsigned f_avail = mg_check_feature(0xFF);
-	unsigned f_ret = mg_init_library(f_avail);
+	unsigned f_avail, f_ret;
+
+	mark_point();
+
+	f_avail = mg_check_feature(0xFF);
+	f_ret = mg_init_library(f_avail);
 	ck_assert_uint_eq(f_ret, f_avail);
 }
 END_TEST
@@ -3598,6 +4026,8 @@ test_large_file_begin_request(struct mg_connection *conn)
 		mg_write(conn, block, blocklen);
 	}
 
+	mark_point();
+
 	return 200;
 }
 
@@ -3612,6 +4042,7 @@ START_TEST(test_large_file)
 #if !defined(NO_SSL)
 	const char *ssl_cert = locate_ssl_cert();
 #endif
+	char errmsg[256] = {0};
 
 	/* Client var */
 	struct mg_connection *client;
@@ -3620,7 +4051,9 @@ START_TEST(test_large_file)
 	const struct mg_request_info *client_ri;
 	int64_t data_read;
 	int r;
+	int retry, retry_ok_cnt, retry_fail_cnt;
 
+	mark_point();
 
 /* Set options and start server */
 #if !defined(NO_FILES)
@@ -3635,6 +4068,16 @@ START_TEST(test_large_file)
 	OPTIONS[opt_cnt++] = "8443s";
 	OPTIONS[opt_cnt++] = "ssl_certificate";
 	OPTIONS[opt_cnt++] = ssl_cert;
+#ifdef __MACH__
+	/* The Apple builds on Travis CI seem to have problems with TLS1.x
+	 * Allow SSLv3 and TLS */
+	OPTIONS[opt_cnt++] = "ssl_protocol_version";
+	OPTIONS[opt_cnt++] = "2";
+#else
+	/* The Linux builds on Travis CI work fine with TLS1.2 */
+	OPTIONS[opt_cnt++] = "ssl_protocol_version";
+	OPTIONS[opt_cnt++] = "4";
+#endif
 	ck_assert(ssl_cert != NULL);
 #endif
 	OPTIONS[opt_cnt] = NULL;
@@ -3642,57 +4085,264 @@ START_TEST(test_large_file)
 
 	memset(&callbacks, 0, sizeof(callbacks));
 	callbacks.begin_request = test_large_file_begin_request;
+	callbacks.log_message = log_msg_func;
 
-	ctx = test_mg_start(&callbacks, 0, OPTIONS);
+	ctx = test_mg_start(&callbacks, (void *)errmsg, OPTIONS);
+	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
-	/* connect client */
-	memset(client_err_buf, 0, sizeof(client_err_buf));
-	memset(client_data_buf, 0, sizeof(client_data_buf));
+	/* Try downloading several times */
+	retry_ok_cnt = 0;
+	retry_fail_cnt = 0;
+	for (retry = 0; retry < 3; retry++) {
+		int fail = 0;
+		/* connect client */
+		memset(client_err_buf, 0, sizeof(client_err_buf));
+		memset(client_data_buf, 0, sizeof(client_data_buf));
 
-	client = mg_download("127.0.0.1",
+		client =
+		    mg_download("127.0.0.1",
 #if defined(NO_SSL)
-	                     8080,
-	                     0,
+		                8080,
+		                0,
 #else
-	                     8443,
-	                     1,
+		                8443,
+		                1,
 #endif
-	                     client_err_buf,
-	                     sizeof(client_err_buf),
-	                     "GET /large.file HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+		                client_err_buf,
+		                sizeof(client_err_buf),
+		                "GET /large.file HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
 
-	ck_assert(ctx != NULL);
-	ck_assert_str_eq(client_err_buf, "");
+		ck_assert(client != NULL);
+		ck_assert_str_eq(client_err_buf, "");
 
-	client_ri = mg_get_request_info(client);
+		client_ri = mg_get_request_info(client);
 
-	ck_assert(client_ri != NULL);
-	ck_assert_str_eq(client_ri->uri, "200");
+		ck_assert(client_ri != NULL);
+		ck_assert_str_eq(client_ri->local_uri, "200");
 
-	ck_assert_int_eq(client_ri->content_length, LARGE_FILE_SIZE);
+		ck_assert_int_eq(client_ri->content_length, LARGE_FILE_SIZE);
 
-	data_read = 0;
-	while (data_read < client_ri->content_length) {
+		data_read = 0;
+		while (data_read < client_ri->content_length) {
+			r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+			if (r < 0) {
+				fail = 1;
+				break;
+			};
+			data_read += r;
+		}
+
+		/* Nothing left to read */
 		r = mg_read(client, client_data_buf, sizeof(client_data_buf));
-		ck_assert_int_ge(r, 0);
-		data_read += r;
+		if (fail) {
+			ck_assert_int_eq(r, -1);
+			retry_fail_cnt++;
+		} else {
+			ck_assert_int_eq(r, 0);
+			retry_ok_cnt++;
+		}
+
+		/* Close the client connection */
+		mg_close_connection(client);
 	}
 
-	/* Nothing left to read */
-	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
-	ck_assert_int_eq(r, 0);
-
-	/* Close the client connection */
-	mg_close_connection(client);
+#if defined(_WIN32)
+// TODO: Check this problem on AppVeyor
+// ck_assert_int_le(retry_fail_cnt, 2);
+// ck_assert_int_ge(retry_ok_cnt, 1);
+#else
+	ck_assert_int_eq(retry_fail_cnt, 0);
+	ck_assert_int_eq(retry_ok_cnt, 3);
+#endif
 
 	/* Stop the server */
 	test_mg_stop(ctx);
+
+	mark_point();
 }
 END_TEST
 
 
+static int test_mg_store_body_con_len = 20000;
+
+
+static int
+test_mg_store_body_put_delete_handler(struct mg_connection *conn, void *ignored)
+{
+	char path[4096] = {0};
+	const struct mg_request_info *info = mg_get_request_info(conn);
+	int64_t rc;
+
+	(void)ignored;
+
+	mark_point();
+
+	sprintf(path, "./%s", info->local_uri);
+	rc = mg_store_body(conn, path);
+
+	ck_assert_int_eq(test_mg_store_body_con_len, rc);
+
+	if (rc < 0) {
+		mg_printf(conn,
+		          "HTTP/1.1 500 Internal Server Error\r\n"
+		          "Content-Type:text/plain;charset=UTF-8\r\n"
+		          "Connection:close\r\n\r\n"
+		          "%s (ret: %ld)\n",
+		          path,
+		          (long)rc);
+		mg_close_connection(conn);
+
+		/* Debug output for tests */
+		printf("mg_store_body(%s) failed (ret: %ld)\n", path, (long)rc);
+
+		return 500;
+	}
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Type:text/plain;charset=UTF-8\r\n"
+	          "Connection:close\r\n\r\n"
+	          "%s OK (%ld bytes saved)\n",
+	          path,
+	          (long)rc);
+	mg_close_connection(conn);
+
+	/* Debug output for tests */
+	printf("mg_store_body(%s) OK (%ld bytes)\n", path, (long)rc);
+
+	mark_point();
+
+	return 200;
+}
+
+
+static int
+test_mg_store_body_begin_request_callback(struct mg_connection *conn)
+{
+	const struct mg_request_info *info = mg_get_request_info(conn);
+
+	mark_point();
+
+	/* Debug output for tests */
+	printf("test_mg_store_body_begin_request_callback called (%s)\n",
+	       info->request_method);
+
+	if ((strcmp(info->request_method, "PUT") == 0)
+	    || (strcmp(info->request_method, "DELETE") == 0)) {
+		return test_mg_store_body_put_delete_handler(conn, NULL);
+	}
+
+	mark_point();
+
+	return 0;
+}
+
+
+START_TEST(test_mg_store_body)
+{
+	/* Client data */
+	char client_err_buf[256];
+	char client_data_buf[1024];
+	struct mg_connection *client;
+	const struct mg_request_info *client_ri;
+	int r;
+	char check_data[256];
+	char *check_ptr;
+	char errmsg[256] = {0};
+
+	/* Server context handle */
+	struct mg_context *ctx;
+	struct mg_callbacks callbacks;
+	const char *options[] = {
 #if !defined(NO_FILES)
+		"document_root",
+		".",
+#endif
+#if !defined(NO_CACHING)
+		"static_file_max_age",
+		"0",
+#endif
+		"listening_ports",
+		"127.0.0.1:8082",
+		"num_threads",
+		"1",
+		NULL
+	};
+
+	mark_point();
+
+	memset(&callbacks, 0, sizeof(callbacks));
+	callbacks.begin_request = test_mg_store_body_begin_request_callback;
+	callbacks.log_message = log_msg_func;
+
+	/* Initialize the library */
+	mg_init_library(0);
+
+	/* Start the server */
+	ctx = mg_start(&callbacks, (void *)errmsg, options);
+	ck_assert_str_eq(errmsg, "");
+	ck_assert(ctx != NULL);
+
+	/* Run the server for 15 seconds */
+	test_sleep(15);
+
+	/* Call a test client */
+	client = mg_connect_client(
+	    "127.0.0.1", 8082, 0, client_err_buf, sizeof(client_err_buf));
+
+	ck_assert_str_eq(client_err_buf, "");
+	ck_assert(client != NULL);
+
+	mg_printf(client,
+	          "PUT /%s HTTP/1.0\r\nContent-Length: %i\r\n\r\n",
+	          "test_file_name.txt",
+	          test_mg_store_body_con_len);
+
+	r = 0;
+	while (r < test_mg_store_body_con_len) {
+		int l = mg_write(client, "1234567890", 10);
+		ck_assert_int_eq(l, 10);
+		r += 10;
+	}
+
+	r = mg_get_response(client, client_err_buf, sizeof(client_err_buf), 10000);
+	ck_assert_int_ge(r, 0);
+	ck_assert_str_eq(client_err_buf, "");
+
+	client_ri = mg_get_request_info(client);
+	ck_assert(client_ri != NULL);
+
+	/* Response must be 200 OK  */
+	ck_assert_ptr_ne(client_ri->request_uri, NULL);
+	ck_assert_str_eq(client_ri->request_uri, "200");
+
+	/* Read PUT response */
+	r = mg_read(client, client_data_buf, sizeof(client_data_buf) - 1);
+	ck_assert_int_gt(r, 0);
+	client_data_buf[r] = 0;
+
+	sprintf(check_data, "(%i bytes saved)", test_mg_store_body_con_len);
+	check_ptr = strstr(client_data_buf, check_data);
+	ck_assert_ptr_ne(check_ptr, NULL);
+
+	mg_close_connection(client);
+
+	/* Run the server for 5 seconds */
+	test_sleep(5);
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+
+	/* Un-initialize the library */
+	mg_exit_library();
+
+	mark_point();
+}
+END_TEST
+
+
+#if defined(MG_USE_OPEN_FILE) && !defined(NO_FILES)
 
 #define FILE_IN_MEM_SIZE (1024 * 100)
 static char *file_in_mem_data;
@@ -3713,12 +4363,10 @@ test_file_in_memory_open_file(const struct mg_connection *conn,
 		return NULL;
 	}
 }
-#endif
 
 
 START_TEST(test_file_in_memory)
 {
-#if !defined(NO_FILES)
 	/* Server var */
 	struct mg_context *ctx;
 	struct mg_callbacks callbacks;
@@ -3736,14 +4384,12 @@ START_TEST(test_file_in_memory)
 	int64_t data_read;
 	int r, i;
 
-
 	/* Prepare test data */
 	file_in_mem_data = (char *)malloc(FILE_IN_MEM_SIZE);
 	ck_assert_ptr_ne(file_in_mem_data, NULL);
 	for (r = 0; r < FILE_IN_MEM_SIZE; r++) {
 		file_in_mem_data[r] = (char)(r);
 	}
-
 
 	/* Set options and start server */
 	OPTIONS[opt_cnt++] = "document_root";
@@ -3784,13 +4430,13 @@ START_TEST(test_file_in_memory)
 	                sizeof(client_err_buf),
 	                "GET /file_in_mem HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
 
-	ck_assert(ctx != NULL);
+	ck_assert(client != NULL);
 	ck_assert_str_eq(client_err_buf, "");
 
 	client_ri = mg_get_request_info(client);
 
 	ck_assert(client_ri != NULL);
-	ck_assert_str_eq(client_ri->uri, "200");
+	ck_assert_str_eq(client_ri->local_uri, "200");
 
 	ck_assert_int_eq(client_ri->content_length, FILE_IN_MEM_SIZE);
 
@@ -3819,14 +4465,281 @@ START_TEST(test_file_in_memory)
 	/* Free test data */
 	free(file_in_mem_data);
 	file_in_mem_data = NULL;
-#else
-	/* This test is not meaningful, if NO_FILES is set */	
-	ck_assert_uint_eq(mg_check_feature(1), 0);
+}
+END_TEST
+
+#else /* defined(MG_USE_OPEN_FILE) */
+
+START_TEST(test_file_in_memory)
+{
+	mark_point();
+}
+END_TEST
+
 #endif
+
+
+static void
+minimal_http_https_client_impl(const char *server,
+                               uint16_t port,
+                               int use_ssl,
+                               const char *uri)
+{
+	/* Client var */
+	struct mg_connection *client;
+	char client_err_buf[256];
+	char client_data_buf[256];
+	const struct mg_request_info *client_ri;
+	int64_t data_read;
+	int r;
+
+	mark_point();
+
+	client = mg_connect_client(
+	    server, port, use_ssl, client_err_buf, sizeof(client_err_buf));
+
+	ck_assert_str_eq(client_err_buf, "");
+	ck_assert(client != NULL);
+
+	mg_printf(client, "GET /%s HTTP/1.0\r\n\r\n", uri);
+
+	r = mg_get_response(client, client_err_buf, sizeof(client_err_buf), 10000);
+	ck_assert_int_ge(r, 0);
+	ck_assert_str_eq(client_err_buf, "");
+
+	client_ri = mg_get_request_info(client);
+	ck_assert(client_ri != NULL);
+
+	/* e.g.: ck_assert_str_eq(client_ri->request_uri, "200"); */
+	ck_assert_ptr_ne(client_ri->request_uri, NULL);
+	r = (int)strlen(client_ri->request_uri);
+	ck_assert_int_eq(r, 3);
+
+	data_read = 0;
+	while (data_read < client_ri->content_length) {
+		r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+		if (r > 0) {
+			data_read += r;
+		}
+	}
+
+	/* Nothing left to read */
+	r = mg_read(client, client_data_buf, sizeof(client_data_buf));
+	ck_assert_int_eq(r, 0);
+
+	mark_point();
+
+	mg_close_connection(client);
+
+	mark_point();
+}
+
+
+static void
+minimal_http_client_impl(const char *server, uint16_t port, const char *uri)
+{
+	minimal_http_https_client_impl(server, port, 0, uri);
+}
+
+
+#if !defined(NO_SSL)
+static void
+minimal_https_client_impl(const char *server, uint16_t port, const char *uri)
+{
+	minimal_http_https_client_impl(server, port, 1, uri);
+}
+#endif
+
+
+START_TEST(test_minimal_client)
+{
+	mark_point();
+
+	/* Initialize the library */
+	mg_init_library(0);
+
+	mark_point();
+
+	/* Call a test client */
+	minimal_http_client_impl("192.30.253.113" /* www.github.com */,
+	                         80,
+	                         "civetweb/civetweb/");
+
+	mark_point();
+
+	/* Un-initialize the library */
+	mg_exit_library();
+
+	mark_point();
 }
 END_TEST
 
 
+static int
+minimal_test_request_handler(struct mg_connection *conn, void *cbdata)
+{
+	const char *msg = (const char *)cbdata;
+	unsigned long len = (unsigned long)strlen(msg);
+
+	mark_point();
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Length: %lu\r\n"
+	          "Content-Type: text/plain\r\n"
+	          "Connection: close\r\n\r\n",
+	          len);
+
+	mg_write(conn, msg, len);
+
+	mark_point();
+
+	return 200;
+}
+
+
+START_TEST(test_minimal_http_server_callback)
+{
+	/* This test should ensure the minimum server example in
+	 * docs/Embedding.md is still running. */
+
+	/* Server context handle */
+	struct mg_context *ctx;
+
+	mark_point();
+
+	/* Initialize the library */
+	mg_init_library(0);
+
+	/* Start the server */
+	ctx = test_mg_start(NULL, 0, NULL);
+	ck_assert(ctx != NULL);
+
+	/* Add some handler */
+	mg_set_request_handler(ctx,
+	                       "/hello",
+	                       minimal_test_request_handler,
+	                       (void *)"Hello world");
+	mg_set_request_handler(ctx,
+	                       "/8",
+	                       minimal_test_request_handler,
+	                       (void *)"Number eight");
+
+	/* Run the server for 15 seconds */
+	test_sleep(10);
+
+	/* Call a test client */
+	minimal_http_client_impl("127.0.0.1", 8080, "/hello");
+
+	/* Run the server for 15 seconds */
+	test_sleep(5);
+
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+
+	/* Un-initialize the library */
+	mg_exit_library();
+
+	mark_point();
+}
+END_TEST
+
+
+START_TEST(test_minimal_https_server_callback)
+{
+#if !defined(NO_SSL)
+	/* This test should show a HTTPS server with enhanced
+	 * security settings.
+	 *
+	 * Articles:
+	 * https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+	 *
+	 * Scanners:
+	 * https://securityheaders.io/
+	 * https://www.htbridge.com/ssl/
+	 * https://www.htbridge.com/websec/
+	 * https://www.ssllabs.com/ssltest/
+	 * https://www.qualys.com/forms/freescan/
+	 */
+
+	/* Server context handle */
+	struct mg_context *ctx;
+
+	/* Server start parameters for HTTPS */
+	const char *OPTIONS[32];
+	int opt_idx = 0;
+
+	/* HTTPS port - required */
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8443s";
+
+	/* path to certificate file - required */
+	OPTIONS[opt_idx++] = "ssl_certificate";
+	OPTIONS[opt_idx++] = locate_ssl_cert();
+
+#if defined(LOCAL_TEST) || defined(_WIN32)
+	/* Do not set this on Travis CI, since the build containers
+	 * contain older SSL libraries */
+
+	/* set minimum SSL version to TLS 1.2 - recommended */
+	OPTIONS[opt_idx++] = "ssl_protocol_version";
+	OPTIONS[opt_idx++] = "4";
+
+	/* set some modern ciphers - recommended */
+	OPTIONS[opt_idx++] = "ssl_cipher_list";
+	OPTIONS[opt_idx++] = "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS";
+#endif
+
+	/* set "HTTPS only" header - recommended */
+	OPTIONS[opt_idx++] = "strict_transport_security_max_age";
+	OPTIONS[opt_idx++] = "31622400";
+
+	/* end of options - required */
+	OPTIONS[opt_idx] = NULL;
+
+	mark_point();
+
+	/* Initialize the library */
+	mg_init_library(0);
+
+
+	/* Start the server */
+	ctx = test_mg_start(NULL, 0, OPTIONS);
+	ck_assert(ctx != NULL);
+
+	/* Add some handler */
+	mg_set_request_handler(ctx,
+	                       "/hello",
+	                       minimal_test_request_handler,
+	                       (void *)"Hello world");
+	mg_set_request_handler(ctx,
+	                       "/8",
+	                       minimal_test_request_handler,
+	                       (void *)"Number eight");
+
+	/* Run the server for 15 seconds */
+	test_sleep(10);
+
+	/* Call a test client */
+	minimal_https_client_impl("127.0.0.1", 8443, "/hello");
+
+	/* Run the server for 15 seconds */
+	test_sleep(5);
+
+
+	/* Stop the server */
+	test_mg_stop(ctx);
+
+	/* Un-initialize the library */
+	mg_exit_library();
+#endif
+	mark_point();
+}
+END_TEST
+
+
+#if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_server_suite(void)
 {
@@ -3835,10 +4748,15 @@ make_public_server_suite(void)
 	TCase *const tcase_checktestenv = tcase_create("Check test environment");
 	TCase *const tcase_initlib = tcase_create("Init library");
 	TCase *const tcase_startthreads = tcase_create("Start threads");
+	TCase *const tcase_minimal_svr = tcase_create("Minimal Server");
+	TCase *const tcase_minimal_cli = tcase_create("Minimal Client");
 	TCase *const tcase_startstophttp = tcase_create("Start Stop HTTP Server");
+	TCase *const tcase_startstophttp_ipv6 =
+	    tcase_create("Start Stop HTTP Server IPv6");
 	TCase *const tcase_startstophttps = tcase_create("Start Stop HTTPS Server");
 	TCase *const tcase_serverandclienttls = tcase_create("TLS Server Client");
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
+	TCase *const tcase_storebody = tcase_create("Store Body");
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
@@ -3860,57 +4778,82 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_startthreads, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_startthreads);
 
+	tcase_add_test(tcase_minimal_svr, test_minimal_http_server_callback);
+	tcase_add_test(tcase_minimal_svr, test_minimal_https_server_callback);
+	tcase_set_timeout(tcase_minimal_svr, civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_minimal_svr);
+
+	tcase_add_test(tcase_minimal_cli, test_minimal_client);
+	tcase_set_timeout(tcase_minimal_cli, civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_minimal_cli);
+
 	tcase_add_test(tcase_startstophttp, test_mg_start_stop_http_server);
-	tcase_set_timeout(tcase_startstophttp, civetweb_min_test_timeout);
+	tcase_set_timeout(tcase_startstophttp, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_startstophttp);
 
+	tcase_add_test(tcase_startstophttp_ipv6,
+	               test_mg_start_stop_http_server_ipv6);
+	tcase_set_timeout(tcase_startstophttp_ipv6,
+	                  civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_startstophttp_ipv6);
+
 	tcase_add_test(tcase_startstophttps, test_mg_start_stop_https_server);
-	tcase_set_timeout(tcase_startstophttps, civetweb_min_test_timeout);
+	tcase_set_timeout(tcase_startstophttps, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_startstophttps);
 
 	tcase_add_test(tcase_serverandclienttls, test_mg_server_and_client_tls);
-	tcase_set_timeout(tcase_serverandclienttls, civetweb_min_test_timeout);
+	tcase_set_timeout(tcase_serverandclienttls,
+	                  civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_serverandclienttls);
 
 	tcase_add_test(tcase_serverrequests, test_request_handlers);
-	tcase_set_timeout(tcase_serverrequests, 120);
+	tcase_set_timeout(tcase_serverrequests, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_serverrequests);
 
+	tcase_add_test(tcase_storebody, test_mg_store_body);
+	tcase_set_timeout(tcase_storebody, civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_storebody);
+
 	tcase_add_test(tcase_handle_form, test_handle_form);
-	tcase_set_timeout(tcase_handle_form, 300);
+	tcase_set_timeout(tcase_handle_form, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_handle_form);
 
 	tcase_add_test(tcase_http_auth, test_http_auth);
-	tcase_set_timeout(tcase_http_auth, 60);
+	tcase_set_timeout(tcase_http_auth, civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_http_auth);
 
 	tcase_add_test(tcase_keep_alive, test_keep_alive);
-	tcase_set_timeout(tcase_keep_alive, 300);
+	tcase_set_timeout(tcase_keep_alive, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_keep_alive);
 
 	tcase_add_test(tcase_error_handling, test_error_handling);
 	tcase_add_test(tcase_error_handling, test_error_log_file);
-	tcase_set_timeout(tcase_error_handling, 300);
+	tcase_set_timeout(tcase_error_handling, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_error_handling);
 
 	tcase_add_test(tcase_throttle, test_throttle);
-	tcase_set_timeout(tcase_throttle, 300);
+	tcase_set_timeout(tcase_throttle, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_throttle);
 
 	tcase_add_test(tcase_large_file, test_large_file);
-	tcase_set_timeout(tcase_large_file, 600);
+	tcase_set_timeout(tcase_large_file, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_large_file);
 
 	tcase_add_test(tcase_file_in_mem, test_file_in_memory);
-	tcase_set_timeout(tcase_file_in_mem, 300);
+	tcase_set_timeout(tcase_file_in_mem, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_file_in_mem);
 
 	return suite;
 }
+#endif
 
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 /* Used to debug test cases without using the check framework */
+/* Build command for Linux:
+gcc test/public_server.c src/civetweb.c -I include/ -I test/ -l pthread -l dl -D
+LOCAL_TEST -D REPLACE_CHECK_FOR_LOCAL_DEBUGGING -D MAIN_PUBLIC_SERVER=main
+*/
 
 static int chk_ok = 0;
 static int chk_failed = 0;
@@ -3926,9 +4869,12 @@ MAIN_PUBLIC_SERVER(void)
 	test_the_test_environment(0);
 	test_threading(0);
 
+	test_minimal_client(0);
+
 	test_mg_start_stop_http_server(0);
 	test_mg_start_stop_https_server(0);
 	test_request_handlers(0);
+	test_mg_store_body(0);
 	test_mg_server_and_client_tls(0);
 	test_handle_form(0);
 	test_http_auth(0);

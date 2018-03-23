@@ -39,13 +39,17 @@ if (CIVETWEB_ENABLE_WEBSOCKETS AND CIVETWEB_ENABLE_LUA AND LIBRT_FOUND)
 endif()
 
 # We need to link OpenSSL if not dynamically loading
-if (CIVETWEB_ENABLE_SLL AND NOT CIVETWEB_ENABLE_OPENSLL_DYNAMIC_LOADING)
-  find_package(OpenSSL)
-  target_link_libraries(c-library ${OPENSSL_LIBRARIES})
-else()
-  find_package(LibDl)
-  if (LIBDL_FOUND)
-    target_link_libraries(c-library -ldl)
+if (CIVETWEB_ENABLE_SSL)
+  if (CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING)
+    find_package(LibDl)
+    if (LIBDL_FOUND)
+      target_link_libraries(c-library -ldl)
+    endif()
+  else()
+    find_package(OpenSSL)
+    include_directories(${OPENSSL_INCLUDE_DIR})
+    message(STATUS "OpenSSL include directory: ${OPENSSL_INCLUDE_DIR}")
+    target_link_libraries(c-library ${OPENSSL_LIBRARIES})
   endif()
 endif()
 
@@ -229,12 +233,14 @@ add_executable(c-executable main.c)
 set_target_properties(c-executable PROPERTIES
   OUTPUT_NAME "civetweb"
 )
-install(
-  TARGETS c-executable
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-  COMPONENT server)
+if (CIVETWEB_INSTALL_EXECUTABLE)
+  install(
+    TARGETS c-executable
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+    COMPONENT server)
+endif()
 if (BUILD_SHARED_LIBS)
   target_compile_definitions(c-executable PRIVATE CIVETWEB_DLL_IMPORTS)
 endif()
@@ -261,7 +267,7 @@ if (CIVETWEB_ENABLE_LUA)
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
-    COMPONENT lua-library)  
+    COMPONENT lua-library)
 endif()
 
 # The C++ API library

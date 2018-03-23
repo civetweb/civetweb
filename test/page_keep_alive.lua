@@ -5,7 +5,9 @@ if canKeepAlive then
     -- Create the entire response in a string variable first. Content-Length will be set to the length of this string.
     reply = [[
         <html><body>
-        <p>This is a Lua script supporting html keep-alive with the <a href="http://sourceforge.net/projects/civetweb/">Civetweb web server</a>.</p>
+        <p>This is a Lua script supporting html keep-alive with the 
+        <a href="https://github.com/civetweb/civetweb/">CivetWeb web server</a>.
+        </p>
         <p>It works by setting the Content-Length header field properly.
         </body></html>
     ]]

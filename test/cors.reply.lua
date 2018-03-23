@@ -1,6 +1,7 @@
 -- http://www.html5rocks.com/static/images/cors_server_flowchart.png
 
-if not mg.request_info.http_headers.Origin then
+if not mg.request_info.http_headers.Origin and not mg.request_info.http_headers.origin then
+
   mg.write("HTTP/1.0 200 OK\r\n")
   mg.write("Connection: close\r\n")
   mg.write("Content-Type: text/html; charset=utf-8\r\n")
@@ -10,6 +11,13 @@ if not mg.request_info.http_headers.Origin then
 end
 
 if mg.request_info.request_method == "OPTIONS" then
+
+  -- Note: This is a test example showing how a script could handle
+  -- a preflight request directly. However, now the server is able
+  -- to handle preflight requests, so scripts do no longer need to
+  -- do this - except it has been disabled in the server by setting
+  -- the access_control_allow_methods configuration parameter to
+  -- an empty string. 
 
   local acrm = mg.request_info.http_headers['Access-Control-Request-Method'];
   if (acrm) then
@@ -36,8 +44,10 @@ if mg.request_info.request_method == "OPTIONS" then
   end
 end
 
+
 -- actual request
 if mg.request_info.request_method == "GET" then
+
   mg.write("HTTP/1.0 200 OK\r\n")
   mg.write("Access-Control-Allow-Origin: *\r\n")
   mg.write("Connection: close\r\n")
@@ -54,6 +64,7 @@ end
 
 
 if mg.request_info.request_method == "PUT" then
+
   mg.write("HTTP/1.0 200 OK\r\n")
   mg.write("Access-Control-Allow-Origin: *\r\n")
   mg.write("Connection: close\r\n")
@@ -68,6 +79,8 @@ if mg.request_info.request_method == "PUT" then
   return
 end
 
+-- other HTTP method
 mg.write("HTTP/1.0 403 Forbidden\r\n")
 mg.write("Connection: close\r\n")
 mg.write("\r\n")
+

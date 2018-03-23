@@ -57,6 +57,10 @@ recurse(_G[libname])
 -- Print connect function
 print_if_available(connect, "connect function")
 
+-- Get all server options
+mg.write("<li>server options</li>\n")
+recurse(mg.get_option())
+
 mg.write("</ul></p>\n");
 mg.write("<p> Today is " .. os.date("%A") .. "</p>\n");
 

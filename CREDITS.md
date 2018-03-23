@@ -1,10 +1,15 @@
 # Civetweb Contributors
 
+* Abhishek Lekshmanan
+* Adam Bailey
+* Alan Somers
 * Alex Kozlov
 * bel2125
 * Ben M. Ward
-* brett
+* BigJoe
 * Bjoern Petri
+* Braedy Kuzma
+* brett
 * Brian Lambert
 * Brian Spratke
 * cdbishop
@@ -23,13 +28,16 @@
 * ehlertjd
 * Eric Tsau
 * Erik Beran
+* extergnoto
 * F-Secure Corporation
 * feneuilflo
 * Fernando G. Aranda
 * Grahack
 * grenclave
+* grunk
 * hansipie
 * HariKamath Kamath
+* Henry Chang
 * Jack
 * Jacob Skillin
 * Jan Willem Janssen
@@ -44,8 +52,10 @@
 * Jordan Shelley
 * Joshua Boyd
 * Joshua D. Boyd
+* kakwa
 * kalphamon
 * Keith Kyzivat
+* Kevin Branigan
 * Kevin Wojniak
 * Kimmo Mustonen
 * Lammert Bies
@@ -60,38 +70,51 @@
 * Matt Clarkson
 * mingodad
 * Morgan McGuire
+* mrdvlpr.xnu
 * Neil Jensen
 * Nick Hildebrant
 * Nigel Stewart
 * nihildeb
 * No Face Press
+* palortoff
+* Patrick Drechsler
 * Patrick Trinkle
 * Paul Sokolovsky
+* Paulo Brizolara
+* pavel.pimenov
+* PavelVozenilek
 * Perttu Ahola
 * Peter Foerster
 * Philipp Friedenberger
 * Philipp Hasper
 * Red54
 * Richard Screene
+* pkvamme
 * Sage Weil
 * Sangwhan Moon
 * Saumitra Vikram
 * Scott Nations
+* sgmesservey
 * shantanugadgil
+* Simon Hailes
+* slidertom
 * SpaceLord
 * sunfch
 * thewaterymoon
+* THILMANT, Bernard
 * Thomas Davis
 * tnoho
 * Toni Wilk
 * Ulrich Hertlein
 * Walt Steverson
+* webxer
 * William Greathouse
+* xeoshow
 * xtne6f
 * Yehuda Sadeh
 
 # Mongoose Contributors
-Civetweb is based on the Mongoose code.  The following users contributed to the original Mongoose release between 2010 and 2013.  This list was generated from the Mongoose GIT logs.  It does not contain contributions from the Mongoose mailing list.  There is no record for contributors prior to 2010.
+CivetWeb is based on the Mongoose code.  The following users contributed to the original Mongoose release between 2010 and 2013.  This list was generated from the Mongoose GIT logs.  It does not contain contributions from the Mongoose mailing list.  There is no record for contributors prior to 2010.
 
 * Sergey Lyubka
 * Arnout Vandecappelle (Essensium/Mind)
@@ -141,3 +164,4 @@ Civetweb is based on the Mongoose code.  The following users contributed to the 
 * tayS
 * test
 * valenok
+

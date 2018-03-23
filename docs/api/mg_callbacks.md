@@ -5,12 +5,12 @@
 ### Fields
 
 | Field | Description |
-| :--- | :--- | 
-|**`begin_request`**|**`int (*begin_request)( struct mg_connection * conn );`**|
+| :--- | :--- |
+|**`begin_request`**|**`int (*begin_request)( struct mg_connection *conn );`**|
 | |The `begin_request()` callback function is called when CivetWeb has received a new HTTP request. If the callback function does not process the request, it should return 0. In that case CivetWeb will handle the request with the default callback routine. If the callback function returns a value between 1 and 999, CivetWeb does nothing and the callback function should do all the processing, including sending the proper HTTP headers etc. Starting at CivetWeb version 1.7, the function `begin_request()` is called before any authorization is done. If an authorization check is required, `request_handler()` should be used instead. The return value of the callback function is not only used to signal CivetWeb to not further process the request. The returned value is also stored as HTTP status code in the access log. |
 |**`connection_close`**|**`void (*connection_close)( const struct mg_connection *conn );`**|
 | |The callback function `connection_close()` is called when CivetWeb is closing a connection. The per-context mutex is locked when the callback function is invoked. The function is primarly useful for noting when a websocket is closing and removing it from any application-maintained list of clients. *Using this callback for websocket connections is deprecated. Use* `mg_set_websocket_handler()` *instead.*|
-|**`end_request`**|**`void (*end_request)( const struct mg_connection * conn );`**|
+|**`end_request`**|**`void (*end_request)(const struct mg_connection *conn, int reply_status_code);`**|
 | |The callback function `end_request()` is called by CivetWeb when a request has been completely processed. It sends the reply status code which was sent to the client to the application.|
 |**`exit_context`**|**`void (*exit_context)( const struct mg_context *ctx );`**|
 | |The callback function `exit_context()` is called by CivetWeb when the server is stopped. It allows the application to do some cleanup on the application side.|
@@ -32,7 +32,7 @@
 |**`log_message`**|**`int (*log_message)( const struct mg_connection *conn, const char *message );`**|
 | |The callback function `log_message()` is called when CivetWeb is about to log a message. If the callback function returns 0, CivetWeb will use the default internal log routines to log the message. If a non-zero value is returned CivetWeb assumes that logging has already been done and no further action is performed.|
 |**`open_file`**|**`const char *(*open_file)( const struct mg_connection *conn, const char *path, size_t *data_len );`**|
-| |The callback function `open_file()` is called when a file is to be opened by CivetWeb. The callback can return a pointer to a memory location and set the memory block size in the variable pointed to by `data_len` to signal CivetWeb that the file should not be loaded from disk, but that instead a stored version in memory should be used. If the callback function returns NULL, CivetWeb will open the file from disk. This callback allows caching to be implementedi at the application side, or to serve specific files from static memory instead of from disk.|
+| |The callback function `open_file()` is called when a file is to be opened by CivetWeb. The callback can return a pointer to a memory location and set the memory block size in the variable pointed to by `data_len` to signal CivetWeb that the file should not be loaded from disk, but that instead a stored version in memory should be used. If the callback function returns NULL, CivetWeb will open the file from disk. This callback allows caching to be implemented at the application side, or to serve specific files from static memory instead of from disk.|
 |~~`upload`~~|**`void (*upload)( struct mg_connection * conn, const char *file_name );`**|
 | |*Deprecated. Use* `mg_handle_form_request()` *instead.* The callback function `upload()` is called when CivetWeb has uploaded a file to a temporary directory as result of a call to `mg_upload()`. The parameter `file_name` contains the full file name including path to the uploaded file.|
 |~~`websocket_connect`~~|**`int (*websocket_connect)( const struct mg_connection *conn );`**|

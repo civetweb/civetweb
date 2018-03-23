@@ -24,15 +24,19 @@ but all functions required to run a HTTP server.
   - C implementation
     - src/civetweb.c
     - src/md5.inl (MD5 calculation)
-    - src/handle_form.inl (HTML form handling functions)
+    - src/sha1.inl (SHA calculation)
+    - src/handle\_form.inl (HTML form handling functions)
+    - src/timer.inl (optional timer support)
   - Optional: C++ wrapper
     - include/CivetServer.h (C++ interface)
     - src/CivetServer.cpp (C++ wrapper implementation)
   - Optional: Third party components
-    - src/third_party/* (third party components, mainly used for the standalone server)
-    - src/mod_*.inl (modules to access third party components from civetweb)
+    - src/third\_party/* (third party components, mainly used for the standalone server)
+    - src/mod\_*.inl (modules to access third party components from civetweb)
 
-Note: The C++ wrapper uses the official C interface (civetweb.h) and does not add new features to the server. Some features available in the C interface might be missing in the C++ interface.
+
+Note: The C++ wrapper uses the official C interface (civetweb.h) and does not add new features to the server. Several features available in the C interface are missing in the C++ interface. While all features should be accessible using the C interface, this is not a design goal of the C++ interface.
+
 
 #### Additional Source Files for Executables
 
@@ -42,11 +46,12 @@ starting the HTTP server.
   - Stand-alone C Server
       - src/main.c
   - Reference embedded C Server
-      - examples/embedded_c/embedded_c.c
+      - examples/embedded\_c/embedded\_c.c
   - Reference embedded C++ Server
-      - examples/embedded_cpp/embedded_cpp.cpp
+      - examples/embedded\_cpp/embedded\_cpp.cpp
 
 Note: The "embedded" example is actively maintained, updated, extended and tested. Other examples in the examples/ folder might be outdated and remain there for reference.
+
 
 Quick Start
 ------
@@ -70,6 +75,9 @@ By default, the server will automatically serve up files like a normal HTTP serv
   - Use contructor *options* to select the port and document root among other things.
   - Use constructor *callbacks* to add your own hooks.
 
+Alternative quick start: Have a look at the examples embedded\_c and embedded\_cpp
+
+
 Lua Support
 ------
 
@@ -77,15 +85,15 @@ Lua is a server side include functionality.  Files ending in .lua will be proces
 
 ##### Add the following CFLAGS
 
-  - -DLUA_COMPAT_ALL
-  - -DUSE_LUA
-  - -DUSE_LUA_SQLITE3
-  - -DUSE_LUA_FILE_SYSTEM
+  - `-DLUA_COMPAT_ALL`
+  - `-DUSE_LUA`
+  - `-DUSE_LUA_SQLITE3`
+  - `-DUSE_LUA_FILE_SYSTEM`
 
 ##### Add the following sources
 
-  - src/mod_lua.inl
-  - src/third_party/lua-5.2.4/src
+  - src/mod\_lua.inl
+  - src/third\_party/lua-5.2.4/src
      + lapi.c
      + lauxlib.c
      + lbaselib.c
@@ -118,11 +126,11 @@ Lua is a server side include functionality.  Files ending in .lua will be proces
      + lundump.c
      + lvm.c
      + lzio.c
-  - src/third_party/sqlite3.c
-  - src/third_party/sqlite3.h
-  - src/third_party/lsqlite3.c
-  - src/third_party/lfs.c
-  - src/third_party/lfs.h
+  - src/third\_party/sqlite3.c
+  - src/third\_party/sqlite3.h
+  - src/third\_party/lsqlite3.c
+  - src/third\_party/lfs.c
+  - src/third\_party/lfs.h
 
 This build is valid for Lua version Lua 5.2. It is also possible to build with Lua 5.1 (including LuaJIT) or Lua 5.3.
 
@@ -156,8 +164,8 @@ is configurable via `num_threads` configuration option. That number puts a
 limit on number of simultaneous requests that can be handled by CivetWeb.
 If you embed CivetWeb into a program that uses SSL outside CivetWeb as well,
 you may need to initialize SSL before calling `mg_start()`, and set the pre-
-processor define SSL_ALREADY_INITIALIZED. This is not required if SSL is used
-only within CivetWeb.
+processor define `SSL_ALREADY_INITIALIZED`. This is not required if SSL is
+used only within CivetWeb.
 
 When master thread accepts new a connection, a new accepted socket (described
 by `struct socket`) it placed into the accepted sockets queue,
@@ -174,11 +182,13 @@ which is `SOMAXCONN` and depends on the platform.
 Worker threads are running in an infinite loop, which in a simplified form
 looks something like this:
 
+```C
     static void *worker_thread() {
       while (consume_socket()) {
         process_new_connection();
       }
     }
+```
 
 Function `consume_socket()` gets a new accepted socket from the CivetWeb socket
 queue, atomically removing it from the queue. If the queue is empty,
@@ -197,4 +207,54 @@ threads use blocking IO on accepted sockets for reading and writing data.
 All accepted sockets have `SO_RCVTIMEO` and `SO_SNDTIMEO` socket options set
 (controlled by the `request_timeout_ms` CivetWeb option, 30 seconds default)
 which specifies a read/write timeout on client connections.
+
+
+A minimal example
+------
+
+Initializing a HTTP server
+```C
+{
+    /* Server context handle */
+    struct mg_context *ctx;
+
+    /* Initialize the library */
+    mg_init_library(0);
+
+    /* Start the server */
+    ctx = mg_start(NULL, 0, NULL);
+
+    /* Add some handler */
+    mg_set_request_handler(ctx, "/hello", handler, "Hello world");
+
+    ... Run the application ...
+    
+    /* Stop the server */
+    mg_stop(ctx);
+
+    /* Un-initialize the library */
+    mg_exit_library();
+}
+```
+
+A simple callback
+```C
+static int
+handler(struct mg_connection *conn, void *ignored)
+{
+	const char *msg = "Hello world";
+	unsigned long len = (unsigned long)strlen(msg);
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Length: %lu\r\n"
+	          "Content-Type: text/plain\r\n"
+	          "Connection: close\r\n\r\n",
+	          len);
+
+	mg_write(conn, msg, len);
+
+	return 200;
+}
+```
 

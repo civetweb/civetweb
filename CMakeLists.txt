@@ -26,7 +26,7 @@ include(CMakeDependentOption)
 
 # Set up the project
 project (civetweb)
-set(CIVETWEB_VERSION "1.9.1" CACHE STRING "The version of the civetweb library")
+set(CIVETWEB_VERSION "1.10.0" CACHE STRING "The version of the civetweb library")
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" CIVETWEB_VERSION_MATCH "${CIVETWEB_VERSION}")
 if ("${CIVETWEB_VERSION_MATCH}" STREQUAL "")
   message(FATAL_ERROR "Must specify a semantic version: major.minor.patch")
@@ -47,12 +47,6 @@ endif()
 
 # C++ wrappers
 option(CIVETWEB_ENABLE_THIRD_PARTY_OUTPUT "Shows the output of third party dependency processing" OFF)
-
-# Max Request Size
-set(CIVETWEB_MAX_REQUEST_SIZE 16384 CACHE STRING
-  "The largest amount of content bytes allowed in a request")
-set_property(CACHE CIVETWEB_MAX_REQUEST_SIZE PROPERTY VALUE ${CIVETWEB_MAX_REQUEST_SIZE})
-message(STATUS "Max Request Size - ${CIVETWEB_MAX_REQUEST_SIZE}")
 
 # Thread Stack Size
 set(CIVETWEB_THREAD_STACK_SIZE 102400 CACHE STRING
@@ -84,22 +78,39 @@ message(STATUS "IP Version 6 - ${CIVETWEB_ENABLE_IPV6}")
 option(CIVETWEB_ENABLE_WEBSOCKETS "Enable websockets connections" OFF)
 message(STATUS "Websockets support - ${CIVETWEB_ENABLE_WEBSOCKETS}")
 
+# Server statistics support
+option(CIVETWEB_ENABLE_SERVER_STATS "Enable server statistics" OFF)
+message(STATUS "Server statistics support - ${CIVETWEB_ENABLE_SERVER_STATS}")
+
 # Memory debugging
 option(CIVETWEB_ENABLE_MEMORY_DEBUGGING "Enable the memory debugging features" OFF)
 message(STATUS "Memory Debugging - ${CIVETWEB_ENABLE_MEMORY_DEBUGGING}")
+
+# ASAN in debug mode (-fsanitize=address, etc)
+option(CIVETWEB_ENABLE_ASAN "Enable ASAN in debug mode" ON)
+message(STATUS "ASAN in debug mode - ${CIVETWEB_ENABLE_ASAN}")
+
+# ARCH flag
+option(CIVETWEB_ARCH "Force 32/64 bit architecture" OFF)
+message(STATUS "Force x32 / x64 architecture - ${CIVETWEB_ARCH}")
 
 # LUA CGI support
 option(CIVETWEB_ENABLE_LUA "Enable Lua CGIs" OFF)
 message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 
+# Enable installing CivetWeb executables
+option(CIVETWEB_INSTALL_EXECUTABLE "Enable installing CivetWeb executable" ON)
+mark_as_advanced(FORCE CIVETWEB_INSTALL_EXECUTABLE) # Advanced users can disable
+message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}") 
+
 # Allow builds to complete with warnings (do not set -Werror)
-if (LINUX)
-# CivetWeb Linux support is stable: Builds must be free from warnings.
-  option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" OFF)
-else()
-# CivetWeb Linux support for other systems is in a setup phase.
-  option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
-endif()
+# CivetWeb Linux support is stable:
+# Builds for GCC 4.6 and clang 3.4 are free from warnings.
+# However, GCC introduced a couple of new, partially idiotic warnings,
+# that can not be disabled using a #pragma directive.
+# It seems unreasonable to have all GCC versions warning free, but only
+# some selected ones.
+option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
 message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
 
 # Link to the shared LUA library
@@ -188,6 +199,10 @@ message(STATUS "Duktape CGI support - ${CIVETWEB_ENABLE_DUKTAPE}")
 option(CIVETWEB_ENABLE_SSL "Enables the secure socket layer" ON)
 message(STATUS "SSL support - ${CIVETWEB_ENABLE_SSL}")
 
+# OpenSSL 1.1 API
+option(CIVETWEB_SSL_OPENSSL_API_1_1 "Use the OpenSSL 1.1 API" OFF)
+message(STATUS "Compile for OpenSSL 1.1 API - ${CIVETWEB_SSL_OPENSSL_API_1_1}")
+
 # Dynamically load or link the SSL libraries
 cmake_dependent_option(
   CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING "Dynamically loads the SSL library rather than linking it" ON
@@ -254,18 +269,26 @@ if ("${CIVETWEB_C_STANDARD}" STREQUAL "auto")
 else()
   add_c_compiler_flag(-std=${CIVETWEB_C_STANDARD})
 endif()
+
+#Warnings: enable everything
 add_c_compiler_flag(-Wall)
 add_c_compiler_flag(-Wextra)
 add_c_compiler_flag(-Wshadow)
 add_c_compiler_flag(-Wconversion)
 add_c_compiler_flag(-Wmissing-prototypes)
 add_c_compiler_flag(-Weverything)
-add_c_compiler_flag(/W4)
-add_c_compiler_flag(-Wno-padded)
-add_c_compiler_flag(/Wd4820) # padding
-add_c_compiler_flag(-Wno-unused-macros)
-add_c_compiler_flag(-Wno-format-nonliteral)
 add_c_compiler_flag(-Wparentheses)
+add_c_compiler_flag(/W4) # VisualStudio highest warning level
+
+#Warnings: Disable some warnings
+add_c_compiler_flag(-Wno-padded) # padding in structures by compiler
+add_c_compiler_flag(-Wno-unused-macros) # so what?
+add_c_compiler_flag(-Wno-reserved-id-macros) # for system headers
+add_c_compiler_flag(-Wno-format-nonliteral) # printf(myFormatStringVar, ...)
+add_c_compiler_flag(-Wno-date-time) # using __DATE__ once
+add_c_compiler_flag(-Wno-cast-qual) # const cast
+add_c_compiler_flag(/Wd4820) # padding
+
 if (MINGW)
   add_c_compiler_flag(-Wno-format)
 endif()
@@ -277,10 +300,12 @@ add_c_compiler_flag(-pedantic-errors)
 add_c_compiler_flag(-fvisibility=hidden)
 add_c_compiler_flag(-fstack-protector-strong RELEASE)
 add_c_compiler_flag(-flto RELEASE)
+if (${CIVETWEB_ENABLE_ASAN})
 add_c_compiler_flag(-fsanitize=undefined DEBUG)
 add_c_compiler_flag(-fsanitize=address DEBUG)
 if (HAVE_C_FLAG_FSANITIZE_ADDRESS)
   add_c_compiler_flag(-static-asan DEBUG)
+endif()
 endif()
 add_c_compiler_flag(-fstack-protector-all DEBUG)
 if (MINGW)
@@ -344,10 +369,12 @@ if (CIVETWEB_ENABLE_CXX)
   add_cxx_compiler_flag(-fvisibility=hidden)
   add_cxx_compiler_flag(-fstack-protector-strong RELEASE)
   add_cxx_compiler_flag(-flto RELEASE)
+  if (${CIVETWEB_ENABLE_ASAN})
   add_cxx_compiler_flag(-fsanitize=undefined DEBUG)
   add_cxx_compiler_flag(-fsanitize=address DEBUG)
   if (HAVE_CXX_FLAG_FSANITIZE_ADDRESS)
     add_cxx_compiler_flag(-static-asan DEBUG)
+  endif()
   endif()
   add_cxx_compiler_flag(-fstack-protector-all DEBUG)
   if (MINGW)
@@ -368,6 +395,9 @@ if (CIVETWEB_ENABLE_IPV6)
 endif()
 if (CIVETWEB_ENABLE_WEBSOCKETS)
   add_definitions(-DUSE_WEBSOCKET)
+endif()
+if (CIVETWEB_ENABLE_SERVER_STATS)
+  add_definitions(-DUSE_SERVER_STATS)
 endif()
 if (CIVETWEB_SERVE_NO_FILES)
   add_definitions(-DNO_FILES)
@@ -399,8 +429,19 @@ else()
     add_definitions(-DCRYPTO_LIB="${CIVETWEB_SSL_CRYPTO_LIB}")
   endif()
 endif()
+if(CIVETWEB_SSL_OPENSSL_API_1_1)
+  add_definitions(-DOPENSSL_API_1_1)
+endif()
 add_definitions(-DUSE_STACK_SIZE=${CIVETWEB_THREAD_STACK_SIZE})
-add_definitions(-DMAX_REQUEST_SIZE=${CIVETWEB_MAX_REQUEST_SIZE})
+
+# Set 32 or 64 bit environment
+if (${CMAKE_ARCH} MATCHES "[Xx]86")
+add_c_compiler_flag(-m32)
+endif()
+if (${CMAKE_ARCH} MATCHES "[Xx]64")
+add_c_compiler_flag(-m64)
+endif()
+# TODO: add support for -march
 
 # Build the targets
 add_subdirectory(src)

@@ -7,7 +7,7 @@
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 |**`passwords_file_name`**|`const char *`|The path to the passwords file|
-|**`domain`**|`const char *`|The domain of the user record|
+|**`realm`**|`const char *`|The authentication realm (domain) of the user record|
 |**`user`**|`const char *`|Username of the record to be added, changed or deleted|
 |**`password`**|`const char *`|Password associated with the user or NULL if the record must be deleted|
 
@@ -26,3 +26,8 @@ If the password parameter is not `NULL` an entry is added to the password file. 
 The function returns 1 when successful and 0 if an error occurs.
 
 ### See Also
+
+* [`mg_check_digest_access_authentication();`](mg_check_digest_access_authentication.md)
+* [`mg_send_digest_access_authentication_request();`](mg_send_digest_access_authentication_request.md)
+
+

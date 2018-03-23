@@ -1,8 +1,10 @@
-![CivetWeb](https://raw.github.com/civetweb/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
+![CivetWeb](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/civetweb_64x64.png "CivetWeb") CivetWeb
 =======
 
 **The official home of CivetWeb is [https://github.com/civetweb/civetweb](https://github.com/civetweb/civetweb)**
 
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![GitHub contributors](https://img.shields.io/github/contributors/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
 
 Continuous integration for Linux and OSX ([Travis CI](https://travis-ci.org/civetweb/civetweb)):
 
@@ -12,14 +14,18 @@ Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/c
 
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/civetweb/civetweb?svg=true)](https://ci.appveyor.com/project/civetweb/civetweb/branch/master)
 
-Test coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb)) (currently in a setup phase):
+Test coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb), [codecov](https://codecov.io/gh/civetweb/civetweb/branch/master)) (currently in a setup and evaluation phase):
 
+[![Coveralls](https://img.shields.io/coveralls/civetweb/civetweb.svg?maxAge=3600)]()
 [![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
+
+[![codecov](https://codecov.io/gh/civetweb/civetweb/branch/master/graph/badge.svg)](https://codecov.io/gh/civetweb/civetweb)
+
+
 
 Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)):
 
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
-
 
 
 
@@ -37,7 +43,7 @@ It can also be used by end users as a stand-alone web server. It is available as
 Where to find the official version?
 -----------------------------------
 
-End users can download CivetWeb at SourceForge
+End users can download CivetWeb releases at SourceForge
 [https://sourceforge.net/projects/civetweb/](https://sourceforge.net/projects/civetweb/)
 
 Developers can contribute to CivetWeb via GitHub
@@ -46,11 +52,14 @@ Developers can contribute to CivetWeb via GitHub
 Trouble tickets should be filed on GitHub
 [https://github.com/civetweb/civetweb/issues](https://github.com/civetweb/civetweb/issues)
 
-Discussion/support group and announcements are at Google Groups
-[https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb)
+Announcements are at Google Groups
+[https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb). Some older support and discussion threads are there as well. However, recently support questions and discussions are usually [GitHub issues](https://github.com/civetweb/civetweb/issues).
 
 Source releases can be found on GitHub
 [https://github.com/civetweb/civetweb/releases](https://github.com/civetweb/civetweb/releases)
+
+A very brief overview can be found on GitHub Pages
+[http://civetweb.github.io/civetweb/](http://civetweb.github.io/civetweb/)
 
 
 Quick start documentation
@@ -100,32 +109,28 @@ simplicity by a carefully selected list of features:
 
 ### Optionally included software
 
-<a href="http://lua.org">
-![Lua](https://raw.github.com/civetweb/civetweb/master/resources/lua-logo.jpg "Lua Logo")
-</a>
-<a href="http://sqlite.org">
-![Sqlite3](https://raw.github.com/civetweb/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")
-</a>
-<a href="http://keplerproject.github.io/luafilesystem/">
-![LuaFileSystem](https://raw.github.com/civetweb/civetweb/master/resources/luafilesystem-logo.jpg "LuaFileSystem Logo")
-</a>
-<a href="http://lua.sqlite.org/index.cgi/index">
-![LuaSQLite3](https://raw.github.com/civetweb/civetweb/master/resources/luasqlite-logo.jpg "LuaSQLite3 Logo")
-</a>
-<a href="http://viremo.eludi.net/LuaXML/index.html">
-![LuaXML](https://raw.github.com/civetweb/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")
-</a>
-<a href="http://duktape.org">
-![Duktape](https://raw.github.com/civetweb/civetweb/master/resources/duktape-logo.png "Duktape Logo")
-</a>
+[![Lua](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/lua-logo.jpg "Lua Logo")](http://lua.org)
+
+[![Sqlite3](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/sqlite3-logo.jpg "Sqlite3 Logo")](http://sqlite.org)
+
+[![LuaFileSystem](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/luafilesystem-logo.jpg "LuaFileSystem Logo")](http://keplerproject.github.io/luafilesystem/)
+
+[![LuaSQLite3](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/luasqlite-logo.jpg "LuaSQLite3 Logo")](http://lua.sqlite.org/index.cgi/index)
+
+[![LuaXML](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")](http://viremo.eludi.net/LuaXML/index.html)
+
+[![Duktape](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/duktape-logo.png "Duktape Logo")](http://duktape.org)
 
 
 Support
 -------
 
-This project is very easy to install and use. Please read the [documentation](https://github.com/civetweb/civetweb/blob/master/docs/)
-and have a look at the [examples] (https://github.com/civetweb/civetweb/blob/master/examples/).
+This project is very easy to install and use. 
+Please read the [documentation](https://github.com/civetweb/civetweb/blob/master/docs/)
+and have a look at the [examples](https://github.com/civetweb/civetweb/blob/master/examples/).
 More information may be found on the [mailing list](https://groups.google.com/d/forum/civetweb).
+
+Note: I do not take any liability or warranty for any linked contents.  Visit these pages and try the community support suggestions at your own risk.
 
 
 Contributions
@@ -134,7 +139,7 @@ Contributions
 Contributions are welcome provided all contributions carry the MIT license.
 
 DO NOT APPLY fixes copied from Mongoose to this project to prevent GPL tainting.
-Since 2013 CivetWeb and Mongoose are developed independently.
+Since 2013, CivetWeb and Mongoose are developed independently.
 By now the code base differs, so patches cannot be safely transfered in either direction.
 
 Some guidelines can be found in [docs/Contribution.md](https://github.com/civetweb/civetweb/blob/master/docs/Contribution.md).
@@ -160,3 +165,4 @@ A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civet
 Using the CivetWeb project ensures the MIT licenses terms are applied and
 GPL cannot be imposed on any of this code, as long as it is sourced from
 here. This code will remain free with the MIT license protection.
+

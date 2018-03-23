@@ -10,10 +10,10 @@ Still 100% Public Domain
 
 Corrected a problem which generated improper hash values on 16 bit machines
 Routine SHA1Update changed from
-    void SHA1Update(SHA1_CTX* context, unsigned char* data, unsigned int
+    void SHA1Update(SHA_CTX* context, unsigned char* data, unsigned int
 len)
 to
-    void SHA1Update(SHA1_CTX* context, unsigned char* data, unsigned
+    void SHA1Update(SHA_CTX* context, unsigned char* data, unsigned
 long len)
 
 The 'len' parameter was declared an int which works fine on 32 bit machines.
@@ -73,6 +73,7 @@ move public api to sha1.h
   remove unused #ifdef sections
   make endian independent
   align buffer to 4 bytes
+  remove unused variable assignments
 */
 
 /*
@@ -92,7 +93,7 @@ typedef struct {
 	uint32_t state[5];
 	uint32_t count[2];
 	uint8_t buffer[64];
-} SHA1_CTX;
+} SHA_CTX;
 
 #define SHA1_DIGEST_SIZE 20
 
@@ -248,15 +249,12 @@ SHA1_Transform(uint32_t state[5], const uint8_t buffer[64])
 	state[2] += c;
 	state[3] += d;
 	state[4] += e;
-
-	/* Wipe variables */
-	a = b = c = d = e = 0;
 }
 
 
 /* SHA1Init - Initialize new context */
 SHA_API void
-SHA1_Init(SHA1_CTX *context)
+SHA1_Init(SHA_CTX *context)
 {
 	/* SHA1 initialization constants */
 	context->state[0] = 0x67452301;
@@ -269,7 +267,7 @@ SHA1_Init(SHA1_CTX *context)
 
 
 SHA_API void
-SHA1_Update(SHA1_CTX *context, const uint8_t *data, const uint32_t len)
+SHA1_Update(SHA_CTX *context, const uint8_t *data, const uint32_t len)
 {
 	uint32_t i, j;
 
@@ -296,7 +294,7 @@ SHA1_Update(SHA1_CTX *context, const uint8_t *data, const uint32_t len)
 
 /* Add padding and return the message digest. */
 SHA_API void
-SHA1_Final(SHA1_CTX *context, uint8_t digest[SHA1_DIGEST_SIZE])
+SHA1_Final(unsigned char *digest, SHA_CTX *context)
 {
 	uint32_t i;
 	uint8_t finalcount[8];
@@ -317,7 +315,8 @@ SHA1_Final(SHA1_CTX *context, uint8_t digest[SHA1_DIGEST_SIZE])
 	}
 
 	/* Wipe variables */
-	i = 0;
 	memset(context, '\0', sizeof(*context));
-	memset(&finalcount, '\0', sizeof(finalcount));
 }
+
+
+/* End of sha1.inl */

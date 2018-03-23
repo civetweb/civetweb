@@ -5,7 +5,7 @@ Content-Type: text/html
 
 
 <p>This is another example of a Lua server page, served by
-<a href="http://sourceforge.net/projects/civetweb/">Civetweb web server</a>.
+<a href="https://github.com/civetweb/civetweb/">CivetWeb web server</a>.
 </p><p>
 The following features are available:
 <ul>

@@ -52,6 +52,8 @@
 #define NO_RETURN [[noreturn]]
 #elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #define NO_RETURN _Noreturn
+#elif defined(__GNUC__)
+#define NO_RETURN __attribute((noreturn))
 #else
 #define NO_RETURN
 #endif
@@ -190,7 +192,7 @@ static NO_RETURN void
 die(const char *fmt, ...)
 {
 	va_list ap;
-	char msg[200] = "";
+	char msg[512] = "";
 
 	va_start(ap, fmt);
 	(void)vsnprintf(msg, sizeof(msg) - 1, fmt, ap);
@@ -357,6 +359,135 @@ sdup(const char *str)
 }
 
 
+#if 0 /* Unused code from "string duplicate with escape" */
+static unsigned
+hex2dec(char x)
+{
+    if ((x >= '0') && (x <= '9')) {
+        return (unsigned)x - (unsigned)'0';
+    }
+    if ((x >= 'A') && (x <= 'F')) {
+        return (unsigned)x - (unsigned)'A' + 10u;
+    }
+    if ((x >= 'a') && (x <= 'f')) {
+        return (unsigned)x - (unsigned)'a' + 10u;
+    }
+    return 0;
+}
+
+
+static char *
+sdupesc(const char *str)
+{
+	char *p = sdup(str);
+
+	if (p) {
+		char *d = p;
+		while ((d = strchr(d, '\\')) != NULL) {
+			switch (d[1]) {
+			case 'a':
+				d[0] = '\a';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'b':
+				d[0] = '\b';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'e':
+				d[0] = 27;
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'f':
+				d[0] = '\f';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'n':
+				d[0] = '\n';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'r':
+				d[0] = '\r';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 't':
+				d[0] = '\t';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'u':
+				if (isxdigit(d[2]) && isxdigit(d[3]) && isxdigit(d[4])
+				    && isxdigit(d[5])) {
+					unsigned short u = (unsigned short)(hex2dec(d[2]) * 4096
+					                                    + hex2dec(d[3]) * 256
+					                                    + hex2dec(d[4]) * 16
+					                                    + hex2dec(d[5]));
+					char mbc[16];
+					int mbl = wctomb(mbc, (wchar_t)u);
+					if ((mbl > 0) && (mbl < 6)) {
+						memcpy(d, mbc, (unsigned)mbl);
+						memmove(d + mbl, d + 6, strlen(d + 5));
+						/* Advance mbl characters (+1 is below) */
+						d += (mbl - 1);
+					} else {
+						/* Invalid multi byte character */
+						/* TODO: define what to do */
+					}
+				} else {
+					/* Invalid esc sequence */
+					/* TODO: define what to do */
+				}
+				break;
+			case 'v':
+				d[0] = '\v';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 'x':
+				if (isxdigit(d[2]) && isxdigit(d[3])) {
+					d[0] = (char)((unsigned char)(hex2dec(d[2]) * 16
+					                              + hex2dec(d[3])));
+					memmove(d + 1, d + 4, strlen(d + 3));
+				} else {
+					/* Invalid esc sequence */
+					/* TODO: define what to do */
+				}
+				break;
+			case 'z':
+				d[0] = 0;
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case '\\':
+				d[0] = '\\';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case '\'':
+				d[0] = '\'';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case '\"':
+				d[0] = '\"';
+				memmove(d + 1, d + 2, strlen(d + 1));
+				break;
+			case 0:
+				if (d == p) {
+					/* Line is only \ */
+					free(p);
+					return NULL;
+				}
+			/* no break */
+			default:
+				/* invalid ESC sequence */
+				/* TODO: define what to do */
+				break;
+			}
+
+			/* Advance to next character */
+			d++;
+		}
+	}
+	return p;
+}
+#endif
+
+
 static const char *
 get_option(char **options, const char *option_name)
 {
@@ -386,6 +517,7 @@ set_option(char **options, const char *name, const char *value)
 {
 	int i, type;
 	const struct mg_option *default_options = mg_get_valid_options();
+	const char *multi_sep = NULL;
 
 	for (i = 0; main_config_options[i].name != NULL; i++) {
 		if (0 == strcmp(name, main_config_options[i].name)) {
@@ -406,7 +538,7 @@ set_option(char **options, const char *name, const char *value)
 		/* unknown option */
 		return 0;
 	case CONFIG_TYPE_NUMBER:
-		/* integer number > 0, e.g. number of threads */
+		/* integer number >= 0, e.g. number of threads */
 		if (atol(value) < 0) {
 			/* invalid number */
 			return 0;
@@ -414,6 +546,14 @@ set_option(char **options, const char *name, const char *value)
 		break;
 	case CONFIG_TYPE_STRING:
 		/* any text */
+		break;
+	case CONFIG_TYPE_STRING_LIST:
+		/* list of text items, separated by , */
+		multi_sep = ",";
+		break;
+	case CONFIG_TYPE_STRING_MULTILINE:
+		/* lines of text, separated by carriage return line feed */
+		multi_sep = "\r\n";
 		break;
 	case CONFIG_TYPE_BOOLEAN:
 		/* boolean value, yes or no */
@@ -428,7 +568,8 @@ set_option(char **options, const char *name, const char *value)
 		 * verify_existence later */
 		break;
 	case CONFIG_TYPE_EXT_PATTERN:
-		/* list of file extentions */
+		/* list of patterns, separated by | */
+		multi_sep = "|";
 		break;
 	default:
 		die("Unknown option type - option %s", name);
@@ -436,13 +577,27 @@ set_option(char **options, const char *name, const char *value)
 
 	for (i = 0; i < MAX_OPTIONS; i++) {
 		if (options[2 * i] == NULL) {
+			/* Option not set yet. Add new option */
 			options[2 * i] = sdup(name);
 			options[2 * i + 1] = sdup(value);
 			options[2 * i + 2] = NULL;
 			break;
 		} else if (!strcmp(options[2 * i], name)) {
-			free(options[2 * i + 1]);
-			options[2 * i + 1] = sdup(value);
+			if (multi_sep) {
+				/* Option already set. Overwrite */
+				char *s = malloc(strlen(options[2 * i + 1]) + strlen(multi_sep)
+				                 + strlen(value) + 1);
+				if (!s) {
+					die("Out of memory");
+				}
+				sprintf(s, "%s%s%s", options[2 * i + 1], multi_sep, value);
+				free(options[2 * i + 1]);
+				options[2 * i + 1] = s;
+			} else {
+				/* Option already set. Overwrite */
+				free(options[2 * i + 1]);
+				options[2 * i + 1] = sdup(value);
+			}
 			break;
 		}
 	}
@@ -451,8 +606,11 @@ set_option(char **options, const char *name, const char *value)
 		die("Too many options specified");
 	}
 
-	if (options[2 * i] == NULL || options[2 * i + 1] == NULL) {
+	if (options[2 * i] == NULL) {
 		die("Out of memory");
+	}
+	if (options[2 * i + 1] == NULL) {
+		die("Illegal escape sequence, or out of memory");
 	}
 
 	/* option set correctly */
@@ -513,8 +671,9 @@ read_config_file(const char *config_file, char **options)
 
 			/* Trim additional spaces between option name and value - then
 			 * (line+j) contains the option value */
-			while (isspace(line[j]))
+			while (isspace(line[j])) {
 				j++;
+			}
 
 			/* Set option */
 			if (!set_option(options, line + i, line + j)) {
@@ -1121,6 +1280,8 @@ struct dlg_proc_param {
 	const char *name;
 	char *buffer;
 	unsigned buflen;
+	int idRetry;
+	BOOL (*fRetry)(struct dlg_proc_param *data);
 };
 
 
@@ -1264,7 +1425,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 		/* Initialize the dialog elements */
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
 		SendMessage(hDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
-		title = malloc(strlen(g_server_name) + 16);
+		title = (char *)malloc(strlen(g_server_name) + 16);
 		if (title) {
 			strcpy(title, g_server_name);
 			strcat(title, " settings");
@@ -1317,6 +1478,22 @@ InputDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 				/* There is no input line in this dialog. */
 				EndDialog(hDlg, IDOK);
 			}
+
+		} else if (ctrlId == IDRETRY) {
+
+			/* Get handle of input line */
+			hIn = GetDlgItem(hDlg, inBuf->idRetry);
+
+			if (hIn) {
+				/* Load current string */
+				GetWindowText(hIn, inBuf->buffer, (int)inBuf->buflen);
+				if (inBuf->fRetry) {
+					if (inBuf->fRetry(inBuf)) {
+						SetWindowText(hIn, inBuf->buffer);
+					}
+				}
+			}
+
 		} else if (ctrlId == IDCANCEL) {
 			EndDialog(hDlg, IDCANCEL);
 		}
@@ -1410,8 +1587,8 @@ get_password(const char *user,
 	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
-		DLGTEMPLATE template; /* 18 bytes */
-		WORD menu, class;
+		DLGTEMPLATE dlg_template; /* 18 bytes */
+		WORD menu, dlg_class;
 		wchar_t caption[1];
 		WORD fontsiz;
 		wchar_t fontface[7];
@@ -1554,6 +1731,7 @@ get_password(const char *user,
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 
 	s_dlg_proc_param.name = "Modify password";
+	s_dlg_proc_param.fRetry = NULL;
 
 	ok =
 	    (IDOK == DialogBoxIndirectParam(
@@ -1661,7 +1839,7 @@ add_control(unsigned char **mem,
 
 	dia->cdit++;
 
-	*mem = align(*mem, 3);
+	*mem = (unsigned char *)align(*mem, 3);
 	tp = (DLGITEMTEMPLATE *)*mem;
 
 	tp->id = id;
@@ -1672,7 +1850,7 @@ add_control(unsigned char **mem,
 	tp->cx = cx;
 	tp->cy = cy;
 
-	p = align(*mem + sizeof(*tp), 1);
+	p = (LPWORD)align(*mem + sizeof(*tp), 1);
 	*p++ = 0xffff;
 	*p++ = type;
 
@@ -1680,7 +1858,7 @@ add_control(unsigned char **mem,
 		*p++ = (WCHAR)*caption++;
 	}
 	*p++ = 0;
-	p = align(p, 1);
+	p = (LPWORD)align(p, 1);
 
 	*p++ = 0;
 	*mem = (unsigned char *)p;
@@ -1703,8 +1881,8 @@ show_settings_dialog()
 	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
-		DLGTEMPLATE template; /* 18 bytes */
-		WORD menu, class;
+		DLGTEMPLATE dlg_template; /* 18 bytes */
+		WORD menu, dlg_class;
 		wchar_t caption[1];
 		WORD fontsiz;
 		wchar_t fontface[7];
@@ -1762,6 +1940,11 @@ show_settings_dialog()
 			            15,
 			            12,
 			            "...");
+		} else if (options[i].type == CONFIG_TYPE_STRING_MULTILINE) {
+			/* TODO: This is not really uer friendly */
+			cl = 0x81;
+			style |= WS_BORDER | ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN
+			         | ES_AUTOVSCROLL;
 		} else {
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL;
@@ -1858,6 +2041,8 @@ show_settings_dialog()
 
 	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
 
+	s_dlg_proc_param.fRetry = NULL;
+
 	DialogBoxIndirectParam(
 	    NULL, dia, NULL, SettingsDlgProc, (LPARAM)&s_dlg_proc_param);
 
@@ -1889,8 +2074,8 @@ change_password_file()
 	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
-		DLGTEMPLATE template; /* 18 bytes */
-		WORD menu, class;
+		DLGTEMPLATE dlg_template; /* 18 bytes */
+		WORD menu, dlg_class;
 		wchar_t caption[1];
 		WORD fontsiz;
 		wchar_t fontface[7];
@@ -2070,6 +2255,7 @@ change_password_file()
 		dia->cy = y + 20;
 
 		s_dlg_proc_param.name = path;
+		s_dlg_proc_param.fRetry = NULL;
 
 	} while ((IDOK == DialogBoxIndirectParam(NULL,
 	                                         dia,
@@ -2087,6 +2273,33 @@ change_password_file()
 }
 
 
+static BOOL
+sysinfo_reload(struct dlg_proc_param *prm)
+{
+	static char *buf = 0;
+	int cl, rl;
+
+	cl = mg_get_context_info(g_ctx, NULL, 0);
+	free(buf);
+	cl += 510;
+	buf = (char *)malloc(cl + 1);
+	rl = mg_get_context_info(g_ctx, buf, cl);
+	if ((rl > cl) || (rl <= 0)) {
+		if (g_ctx == NULL) {
+			prm->buffer = "Server not running";
+		} else if (rl <= 0) {
+			prm->buffer = "No server statistics available";
+		} else {
+			prm->buffer = "Please retry";
+		}
+	} else {
+		prm->buffer = buf;
+	}
+
+	return TRUE;
+}
+
+
 int
 show_system_info()
 {
@@ -2101,8 +2314,8 @@ show_system_info()
 	static struct dlg_proc_param s_dlg_proc_param;
 
 	static struct {
-		DLGTEMPLATE template; /* 18 bytes */
-		WORD menu, class;
+		DLGTEMPLATE dlg_template; /* 18 bytes */
+		WORD menu, dlg_class;
 		wchar_t caption[1];
 		WORD fontsiz;
 		wchar_t fontface[7];
@@ -2158,22 +2371,36 @@ show_system_info()
 	            g_system_info);
 
 	y += (WORD)(HEIGHT * 8);
+
+	add_control(&p,
+	            dia,
+	            0x80,
+	            IDRETRY,
+	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+	            WIDTH - 10 - 55 - 10 - 55,
+	            y,
+	            55,
+	            12,
+	            "Reload");
+
 	add_control(&p,
 	            dia,
 	            0x80,
 	            IDOK,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            (WIDTH - 55) / 2,
+	            WIDTH - 10 - 55,
 	            y,
 	            55,
 	            12,
-	            "Ok");
+	            "Close");
 
 	assert((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
 
 	dia->cy = y + (WORD)(HEIGHT * 1.5);
 
 	s_dlg_proc_param.name = "System information";
+	s_dlg_proc_param.fRetry = sysinfo_reload;
+	s_dlg_proc_param.idRetry = ID_CONTROLS + 1; /* Reload field with this ID */
 
 	ok =
 	    (IDOK == DialogBoxIndirectParam(
@@ -2452,15 +2679,15 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	ShowWindow(hWnd, SW_HIDE);
 
 	if (g_icon_name) {
-		hIcon =
+		hIcon = (HICON)
 		    LoadImage(NULL, g_icon_name, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
 	} else {
-		hIcon = LoadImage(GetModuleHandle(NULL),
-		                  MAKEINTRESOURCE(ID_ICON),
-		                  IMAGE_ICON,
-		                  16,
-		                  16,
-		                  0);
+		hIcon = (HICON)LoadImage(GetModuleHandle(NULL),
+		                         MAKEINTRESOURCE(ID_ICON),
+		                         IMAGE_ICON,
+		                         16,
+		                         16,
+		                         0);
 	}
 
 	TrayIcon.cbSize = sizeof(TrayIcon);
@@ -2610,9 +2837,11 @@ main(int argc, char *argv[])
 	        g_server_name,
 	        mg_get_option(g_ctx, "listening_ports"),
 	        mg_get_option(g_ctx, "document_root"));
+
 	while (g_exit_flag == 0) {
 		sleep(1);
 	}
+
 	fprintf(stdout,
 	        "Exiting on signal %d, waiting for all threads to finish...",
 	        g_exit_flag);

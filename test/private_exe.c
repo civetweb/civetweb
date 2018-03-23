@@ -64,6 +64,8 @@ START_TEST(test_helper_funcs)
 }
 END_TEST
 
+
+#if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_private_exe_suite(void)
 {
@@ -77,3 +79,4 @@ make_private_exe_suite(void)
 
 	return suite;
 }
+#endif

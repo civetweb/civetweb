@@ -47,6 +47,24 @@
  * http://check.sourceforge.net/doc/check_html/index.html
  */
 
+static char tmp_parse_buffer[1024];
+
+static int
+test_parse_http_response(char *buf, int len, struct mg_response_info *ri)
+{
+	ck_assert_int_lt(len, (int)sizeof(tmp_parse_buffer));
+	memcpy(tmp_parse_buffer, buf, (size_t)len);
+	return parse_http_response(tmp_parse_buffer, len, ri);
+}
+
+static int
+test_parse_http_request(char *buf, int len, struct mg_request_info *ri)
+{
+	ck_assert_int_lt(len, (int)sizeof(tmp_parse_buffer));
+	memcpy(tmp_parse_buffer, buf, (size_t)len);
+	return parse_http_request(tmp_parse_buffer, len, ri);
+}
+
 
 START_TEST(test_parse_http_message)
 {
@@ -54,43 +72,129 @@ START_TEST(test_parse_http_message)
 	/* Copyright (c) 2013-2015 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	struct mg_request_info ri;
+	struct mg_response_info respi;
 	char empty[] = "";
+	char space[] = " \x00";
 	char req1[] = "GET / HTTP/1.1\r\n\r\n";
 	char req2[] = "BLAH / HTTP/1.1\r\n\r\n";
-	char req3[] = "GET / HTTP/1.1\r\nBah\r\n";
+	char req3[] = "GET / HTTP/1.1\nKey: Val\n\n";
 	char req4[] =
 	    "GET / HTTP/1.1\r\nA: foo bar\r\nB: bar\r\nskip\r\nbaz:\r\n\r\n";
-	char req5[] = "GET / HTTP/1.1\r\n\r\n";
+	char req5[] = "GET / HTTP/1.0\n\n";
 	char req6[] = "G";
 	char req7[] = " blah ";
-	char req8[] = " HTTP/1.1 200 OK \n\n";
+	char req8[] = "HTTP/1.0 404 Not Found\n\n";
 	char req9[] = "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n";
 
 	char req10[] = "GET / HTTP/1.1\r\nA: foo bar\r\nB: bar\r\n\r\n";
 
-	ck_assert_int_eq(sizeof(req9) - 1,
-	                 parse_http_message(req9, sizeof(req9), &ri));
-	ck_assert_int_eq(1, ri.num_headers);
+	char req11[] = "GET /\r\nError: X\r\n\r\n";
 
-	ck_assert_int_eq(sizeof(req1) - 1,
-	                 parse_http_message(req1, sizeof(req1), &ri));
+	char req12[] =
+	    "POST /a/b/c.d?e=f&g HTTP/1.1\r\nKey1: val1\r\nKey2: val2\r\n\r\nBODY";
+
+
+	int lenreq1 = (int)strlen(req1);
+	int lenreq2 = (int)strlen(req2);
+	int lenreq3 = (int)strlen(req3);
+	int lenreq4 = (int)strlen(req4);
+	int lenreq5 = (int)strlen(req5);
+	int lenreq6 = (int)strlen(req6);
+	int lenreq7 = (int)strlen(req7);
+	int lenreq8 = (int)strlen(req8);
+	int lenreq9 = (int)strlen(req9);
+	int lenreq10 = (int)strlen(req10);
+	int lenreq11 = (int)strlen(req11);
+	int lenreq12 = (int)strlen(req12);
+	int lenhdr12 = lenreq12 - 4; /* length without body */
+
+	mark_point();
+
+	/* An empty string is neither a complete request nor a complete
+	 * response, so it must return 0 */
+	ck_assert_int_eq(0, get_http_header_len(empty, 0));
+	ck_assert_int_eq(0, test_parse_http_request(empty, 0, &ri));
+	ck_assert_int_eq(0, test_parse_http_response(empty, 0, &respi));
+
+	/* Same is true for a leading space */
+	ck_assert_int_eq(0, get_http_header_len(space, 1));
+	ck_assert_int_eq(0, test_parse_http_request(space, 1, &ri));
+	ck_assert_int_eq(0, test_parse_http_response(space, 1, &respi));
+
+	/* But a control character (like 0) makes it invalid */
+	ck_assert_int_eq(-1, get_http_header_len(space, 2));
+	ck_assert_int_eq(-1, test_parse_http_request(space, 2, &ri));
+	ck_assert_int_eq(-1, test_parse_http_response(space, 2, &respi));
+
+
+	/* req1 minus 1 byte at the end is incomplete */
+	ck_assert_int_eq(0, get_http_header_len(req1, lenreq1 - 1));
+
+
+	/* req1 minus 1 byte at the start is complete but invalid */
+	ck_assert_int_eq(lenreq1 - 1, get_http_header_len(req1 + 1, lenreq1 - 1));
+	ck_assert_int_eq(-1, test_parse_http_request(req1 + 1, lenreq1 - 1, &ri));
+
+
+	/* req1 is a valid request */
+	ck_assert_int_eq(lenreq1, get_http_header_len(req1, lenreq1));
+	ck_assert_int_eq(-1, test_parse_http_response(req1, lenreq1, &respi));
+	ck_assert_int_eq(lenreq1, test_parse_http_request(req1, lenreq1, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(0, ri.num_headers);
 
-	ck_assert_int_eq(-1, parse_http_message(req2, sizeof(req2), &ri));
-	ck_assert_int_eq(0, parse_http_message(req3, sizeof(req3), &ri));
-	ck_assert_int_eq(0, parse_http_message(req6, sizeof(req6), &ri));
-	ck_assert_int_eq(0, parse_http_message(req7, sizeof(req7), &ri));
-	ck_assert_int_eq(0, parse_http_message(empty, 0, &ri));
-	ck_assert_int_eq(sizeof(req8) - 1,
-	                 parse_http_message(req8, sizeof(req8), &ri));
+
+	/* req2 is a complete, but invalid request */
+	ck_assert_int_eq(lenreq2, get_http_header_len(req2, lenreq2));
+	ck_assert_int_eq(-1, test_parse_http_request(req2, lenreq2, &ri));
+
+
+	/* req3 is a complete and valid request */
+	ck_assert_int_eq(lenreq3, get_http_header_len(req3, lenreq3));
+	ck_assert_int_eq(lenreq3, test_parse_http_request(req3, lenreq3, &ri));
+	ck_assert_int_eq(-1, test_parse_http_response(req3, lenreq3, &respi));
+
 
 	/* Multiline header are obsolete, so return an error
 	 * (https://tools.ietf.org/html/rfc7230#section-3.2.4). */
-	ck_assert_int_eq(-1, parse_http_message(req4, sizeof(req4), &ri));
+	ck_assert_int_eq(-1, test_parse_http_request(req4, lenreq4, &ri));
 
-	ck_assert_int_eq(sizeof(req10) - 1,
-	                 parse_http_message(req10, sizeof(req10), &ri));
+
+	/* req5 is a complete and valid request (also somewhat malformed,
+	 * since it uses \n\n instead of \r\n\r\n) */
+	ck_assert_int_eq(lenreq5, get_http_header_len(req5, lenreq5));
+	ck_assert_int_eq(-1, test_parse_http_response(req5, lenreq5, &respi));
+	ck_assert_int_eq(lenreq5, test_parse_http_request(req5, lenreq5, &ri));
+	ck_assert_str_eq("GET", ri.request_method);
+	ck_assert_str_eq("1.0", ri.http_version);
+
+
+	/* req6 is incomplete */
+	ck_assert_int_eq(0, get_http_header_len(req6, lenreq6));
+	ck_assert_int_eq(0, test_parse_http_request(req6, lenreq6, &ri));
+
+
+	/* req7 is invalid, but not yet complete */
+	ck_assert_int_eq(0, get_http_header_len(req7, lenreq7));
+	ck_assert_int_eq(0, test_parse_http_request(req7, lenreq7, &ri));
+
+
+	/* req8 is a valid response */
+	ck_assert_int_eq(lenreq8, get_http_header_len(req8, lenreq8));
+	ck_assert_int_eq(-1, test_parse_http_request(req8, lenreq8, &ri));
+	ck_assert_int_eq(lenreq8, test_parse_http_response(req8, lenreq8, &respi));
+
+
+	/* req9 is a valid response */
+	ck_assert_int_eq(lenreq9, get_http_header_len(req9, lenreq9));
+	ck_assert_int_eq(-1, test_parse_http_request(req9, lenreq9, &ri));
+	ck_assert_int_eq(lenreq9, test_parse_http_response(req9, lenreq9, &respi));
+	ck_assert_int_eq(1, respi.num_headers);
+
+
+	/* req10 is a valid request */
+	ck_assert_int_eq(lenreq10, get_http_header_len(req10, lenreq10));
+	ck_assert_int_eq(lenreq10, test_parse_http_request(req10, lenreq10, &ri));
 	ck_assert_str_eq("1.1", ri.http_version);
 	ck_assert_int_eq(2, ri.num_headers);
 	ck_assert_str_eq("A", ri.http_headers[0].name);
@@ -99,10 +203,14 @@ START_TEST(test_parse_http_message)
 	ck_assert_str_eq("bar", ri.http_headers[1].value);
 
 
-	ck_assert_int_eq(sizeof(req5) - 1,
-	                 parse_http_message(req5, sizeof(req5), &ri));
-	ck_assert_str_eq("GET", ri.request_method);
-	ck_assert_str_eq("1.1", ri.http_version);
+	/* req11 is a complete but valid request */
+	ck_assert_int_eq(-1, test_parse_http_request(req11, lenreq11, &ri));
+
+
+	/* req12 is a valid request with body data */
+	ck_assert_int_gt(lenreq12, lenhdr12);
+	ck_assert_int_eq(lenhdr12, get_http_header_len(req12, lenreq12));
+	ck_assert_int_eq(lenhdr12, test_parse_http_request(req12, lenreq12, &ri));
 }
 END_TEST
 
@@ -121,10 +229,20 @@ START_TEST(test_should_keep_alive)
 	char yes[] = "yes";
 	char no[] = "no";
 
+	int lenreq1 = (int)strlen(req1);
+	int lenreq2 = (int)strlen(req2);
+	int lenreq3 = (int)strlen(req3);
+	int lenreq4 = (int)strlen(req4);
+
+	mark_point();
+
+	memset(&ctx, 0, sizeof(ctx));
 	memset(&conn, 0, sizeof(conn));
 	conn.ctx = &ctx;
-	ck_assert_int_eq(parse_http_message(req1, sizeof(req1), &conn.request_info),
-	                 sizeof(req1) - 1);
+	ck_assert_int_eq(test_parse_http_request(req1, lenreq1, &conn.request_info),
+	                 lenreq1);
+	conn.connection_type = 1; /* Valid request */
+	ck_assert_int_eq(conn.request_info.num_headers, 0);
 
 	ctx.config[ENABLE_KEEP_ALIVE] = no;
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
@@ -136,20 +254,32 @@ START_TEST(test_should_keep_alive)
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
 	conn.must_close = 0;
-	parse_http_message(req2, sizeof(req2), &conn.request_info);
+	test_parse_http_request(req2, lenreq2, &conn.request_info);
+	conn.connection_type = 1; /* Valid request */
+	ck_assert_int_eq(conn.request_info.num_headers, 0);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_message(req3, sizeof(req3), &conn.request_info);
+	test_parse_http_request(req3, lenreq3, &conn.request_info);
+	conn.connection_type = 1; /* Valid request */
+	ck_assert_int_eq(conn.request_info.num_headers, 1);
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
-	parse_http_message(req4, sizeof(req4), &conn.request_info);
+	test_parse_http_request(req4, lenreq4, &conn.request_info);
+	conn.connection_type = 1; /* Valid request */
+	ck_assert_int_eq(conn.request_info.num_headers, 1);
 	ck_assert_int_eq(should_keep_alive(&conn), 1);
-
-	conn.status_code = 401;
-	ck_assert_int_eq(should_keep_alive(&conn), 0);
 
 	conn.status_code = 200;
 	conn.must_close = 1;
+	ck_assert_int_eq(should_keep_alive(&conn), 0);
+
+	conn.status_code = 200;
+	conn.must_close = 0;
+	ck_assert_int_eq(should_keep_alive(&conn), 1);
+
+	conn.status_code = 200;
+	conn.must_close = 0;
+	conn.connection_type = 0; /* invalid */
 	ck_assert_int_eq(should_keep_alive(&conn), 0);
 }
 END_TEST
@@ -214,6 +344,8 @@ START_TEST(test_remove_double_dots_and_double_slashes)
 	};
 	size_t i;
 
+	mark_point();
+
 	for (i = 0; i < ARRAY_SIZE(data); i++) {
 		remove_double_dots_and_double_slashes(data[i].before);
 		ck_assert_str_eq(data[i].before, data[i].after);
@@ -249,6 +381,8 @@ START_TEST(test_next_option)
 	struct vec a, b;
 	int i;
 
+	mark_point();
+
 	ck_assert(next_option(NULL, &a, &b) == NULL);
 	for (i = 0, p = list; (p = next_option(p, &a, &b)) != NULL; i++) {
 		ck_assert(i != 0 || (a.ptr == list && a.len == 3 && b.len == 0));
@@ -267,6 +401,8 @@ START_TEST(test_skip_quoted)
 	/* Copyright (c) 2013-2015 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	char x[] = "a=1, b=2, c='hi \' there', d='here\\, there'", *s = x, *p;
+
+	mark_point();
 
 	p = skip_quoted(&s, ", ", ", ", 0);
 	ck_assert(p != NULL && !strcmp(p, "a=1"));
@@ -292,9 +428,13 @@ alloc_printf(char **buf, size_t size, const char *fmt, ...)
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	va_list ap;
 	int ret = 0;
+
+	mark_point();
+
 	va_start(ap, fmt);
 	ret = alloc_vprintf(buf, *buf, size, fmt, ap);
 	va_end(ap);
+
 	return ret;
 }
 
@@ -305,9 +445,13 @@ alloc_printf2(char **buf, const char *fmt, ...)
 	/* Test alternative implementation */
 	va_list ap;
 	int ret = 0;
+
+	mark_point();
+
 	va_start(ap, fmt);
 	ret = alloc_vprintf2(buf, fmt, ap);
 	va_end(ap);
+
 	return ret;
 }
 
@@ -318,6 +462,7 @@ START_TEST(test_alloc_vprintf)
 	/* Copyright (c) 2013-2015 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	char buf[MG_BUF_LEN], *p = buf;
+	mark_point();
 
 	ck_assert(alloc_printf(&p, sizeof(buf), "%s", "hi") == 2);
 	ck_assert(p == buf);
@@ -348,7 +493,19 @@ START_TEST(test_mg_vsnprintf)
 	char buf[16];
 	int is_trunc;
 
+#if defined(_WIN32)
+	/* If the string is truncated, mg_snprintf calls mg_cry.
+	 * If DEBUG is defined, mg_cry calls DEBUG_TRACE.
+	 * In DEBUG_TRACE_FUNC, flockfile(stdout) is called.
+	 * For Windows, flockfile/funlockfile calls Enter-/
+	 * LeaveCriticalSection(&global_log_file_lock).
+	 * So, we need to initialize global_log_file_lock:
+	 */
+	InitializeCriticalSection(&global_log_file_lock);
+#endif
+
 	memset(buf, 0, sizeof(buf));
+	mark_point();
 
 	is_trunc = 777;
 	mg_snprintf(NULL, &is_trunc, buf, 10, "%8i", 123);
@@ -375,9 +532,11 @@ START_TEST(test_mg_vsnprintf)
 	ck_assert_str_eq(buf, "      ");
 	ck_assert_int_eq(is_trunc, 1);
 
+	is_trunc = 777;
 	strcpy(buf, "1234567890");
 	mg_snprintf(NULL, &is_trunc, buf, 0, "%i", 543);
 	ck_assert_str_eq(buf, "1234567890");
+	ck_assert_int_eq(is_trunc, 1);
 }
 END_TEST
 
@@ -388,6 +547,8 @@ START_TEST(test_mg_strcasestr)
 	/* Copyright (c) 2013-2015 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
 	static const char *big1 = "abcdef";
+	mark_point();
+
 	ck_assert(mg_strcasestr("Y", "X") == NULL);
 	ck_assert(mg_strcasestr("Y", "y") != NULL);
 	ck_assert(mg_strcasestr(big1, "X") == NULL);
@@ -423,6 +584,8 @@ START_TEST(test_parse_port_string)
 	struct vec vec;
 	int ip_family;
 	int i;
+
+	mark_point();
 
 	for (i = 0; valid[i] != NULL; i++) {
 		vec.ptr = valid[i];
@@ -465,6 +628,8 @@ START_TEST(test_encode_decode)
 	const char *alpha_b64_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
 	const char *nonalpha_b64_enc =
 	    "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
+
+	mark_point();
 
 	memset(buf, 77, sizeof(buf));
 	base64_encode((unsigned char *)"a", 1, buf);
@@ -669,7 +834,7 @@ END_TEST
 START_TEST(test_sha1)
 {
 #ifdef SHA1_DIGEST_SIZE
-	SHA1_CTX sha_ctx;
+	SHA_CTX sha_ctx;
 	uint8_t digest[SHA1_DIGEST_SIZE] = {0};
 	char str[48] = {0};
 	int i;
@@ -680,7 +845,7 @@ START_TEST(test_sha1)
 
 	/* empty string */
 	SHA1_Init(&sha_ctx);
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
@@ -688,7 +853,7 @@ START_TEST(test_sha1)
 	/* empty string */
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (uint8_t *)"abc", 0);
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
@@ -696,7 +861,7 @@ START_TEST(test_sha1)
 	/* "abc" */
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (uint8_t *)"abc", 3);
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "a9993e364706816aba3e25717850c26c9cd0d89d");
@@ -705,7 +870,7 @@ START_TEST(test_sha1)
 	test_str = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (uint8_t *)test_str, (uint32_t)strlen(test_str));
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "84983e441c3bd26ebaae4aa1f95129e5e54670f1");
@@ -715,7 +880,7 @@ START_TEST(test_sha1)
 	for (i = 0; i < 1000000; i++) {
 		SHA1_Update(&sha_ctx, (uint8_t *)"a", 1);
 	}
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
@@ -725,7 +890,7 @@ START_TEST(test_sha1)
 	for (i = 0; i < 100000; i++) {
 		SHA1_Update(&sha_ctx, (uint8_t *)"aaaaaaaaaa", 10);
 	}
-	SHA1_Final(&sha_ctx, digest);
+	SHA1_Final(digest, &sha_ctx);
 	bin2str(str, digest, sizeof(digest));
 	ck_assert_uint_eq(strlen(str), 40);
 	ck_assert_str_eq(str, "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
@@ -737,39 +902,72 @@ START_TEST(test_sha1)
 END_TEST
 
 
+#if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_private_suite(void)
 {
 	Suite *const suite = suite_create("Private");
 
 	TCase *const tcase_http_message = tcase_create("HTTP Message");
-	TCase *const tcase_url_parsing = tcase_create("URL Parsing");
-	TCase *const tcase_internal_parse = tcase_create("Internal Parsing");
+	TCase *const tcase_http_keep_alive = tcase_create("HTTP Keep Alive");
+	TCase *const tcase_url_parsing_1 = tcase_create("URL Parsing 1");
+	TCase *const tcase_url_parsing_2 = tcase_create("URL Parsing 2");
+	TCase *const tcase_url_parsing_3 = tcase_create("URL Parsing 3");
+	TCase *const tcase_internal_parse_1 = tcase_create("Internal Parsing 1");
+	TCase *const tcase_internal_parse_2 = tcase_create("Internal Parsing 2");
+	TCase *const tcase_internal_parse_3 = tcase_create("Internal Parsing 3");
+	TCase *const tcase_internal_parse_4 = tcase_create("Internal Parsing 4");
+	TCase *const tcase_internal_parse_5 = tcase_create("Internal Parsing 5");
+	TCase *const tcase_internal_parse_6 = tcase_create("Internal Parsing 6");
 	TCase *const tcase_encode_decode = tcase_create("Encode Decode");
 	TCase *const tcase_mask_data = tcase_create("Mask Data");
 	TCase *const tcase_parse_date_string = tcase_create("Date Parsing");
 	TCase *const tcase_sha1 = tcase_create("SHA1");
 
 	tcase_add_test(tcase_http_message, test_parse_http_message);
-	tcase_add_test(tcase_http_message, test_should_keep_alive);
 	tcase_set_timeout(tcase_http_message, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_http_message);
 
-	tcase_add_test(tcase_url_parsing, test_match_prefix);
-	tcase_add_test(tcase_url_parsing,
-	               test_remove_double_dots_and_double_slashes);
-	tcase_add_test(tcase_url_parsing, test_is_valid_uri);
-	tcase_set_timeout(tcase_url_parsing, civetweb_min_test_timeout);
-	suite_add_tcase(suite, tcase_url_parsing);
+	tcase_add_test(tcase_http_keep_alive, test_should_keep_alive);
+	tcase_set_timeout(tcase_http_keep_alive, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_http_keep_alive);
 
-	tcase_add_test(tcase_internal_parse, test_next_option);
-	tcase_add_test(tcase_internal_parse, test_skip_quoted);
-	tcase_add_test(tcase_internal_parse, test_mg_strcasestr);
-	tcase_add_test(tcase_internal_parse, test_alloc_vprintf);
-	tcase_add_test(tcase_internal_parse, test_mg_vsnprintf);
-	tcase_add_test(tcase_internal_parse, test_parse_port_string);
-	tcase_set_timeout(tcase_internal_parse, civetweb_min_test_timeout);
-	suite_add_tcase(suite, tcase_internal_parse);
+	tcase_add_test(tcase_url_parsing_1, test_match_prefix);
+	tcase_set_timeout(tcase_url_parsing_1, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_url_parsing_1);
+
+	tcase_add_test(tcase_url_parsing_2,
+	               test_remove_double_dots_and_double_slashes);
+	tcase_set_timeout(tcase_url_parsing_2, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_url_parsing_2);
+
+	tcase_add_test(tcase_url_parsing_3, test_is_valid_uri);
+	tcase_set_timeout(tcase_url_parsing_3, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_url_parsing_3);
+
+	tcase_add_test(tcase_internal_parse_1, test_next_option);
+	tcase_set_timeout(tcase_internal_parse_1, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_1);
+
+	tcase_add_test(tcase_internal_parse_2, test_skip_quoted);
+	tcase_set_timeout(tcase_internal_parse_2, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_2);
+
+	tcase_add_test(tcase_internal_parse_3, test_mg_strcasestr);
+	tcase_set_timeout(tcase_internal_parse_3, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_3);
+
+	tcase_add_test(tcase_internal_parse_4, test_alloc_vprintf);
+	tcase_set_timeout(tcase_internal_parse_4, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_4);
+
+	tcase_add_test(tcase_internal_parse_5, test_mg_vsnprintf);
+	tcase_set_timeout(tcase_internal_parse_5, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_5);
+
+	tcase_add_test(tcase_internal_parse_6, test_parse_port_string);
+	tcase_set_timeout(tcase_internal_parse_6, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_6);
 
 	tcase_add_test(tcase_encode_decode, test_encode_decode);
 	tcase_set_timeout(tcase_encode_decode, civetweb_min_test_timeout);
@@ -789,6 +987,7 @@ make_private_suite(void)
 
 	return suite;
 }
+#endif
 
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING

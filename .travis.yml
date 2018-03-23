@@ -1,12 +1,26 @@
-language: c
+##############################################################################
+# Travis version specific build environment specification
+##############################################################################
 
-sudo: false
+# The "precise" build environment on Travis is in the process of being decommissioned
+# see https://blog.travis-ci.com/2017-08-31-trusty-as-default-status
+# The "precise=true"+"sudo=required" environment seems to lack IPv6 support.
+# According to some tests, all "sudo=required" environments do not support IPv6, see 
+# https://github.com/travis-ci/travis-ci/issues/8361#issuecomment-328263113
+# The container environments for "sudo=false" support IPv6 localhost [::1] 
+# connections for server/client test. Thus, all tests with ENABLE_IPV6=YES
+#
+
+
+##############################################################################
+# Project specific settings
+##############################################################################
+
+language: c
 
 cache:
   directories:
   - $HOME/third-party
-
-
 
 osx_image: xcode8
 
@@ -19,8 +33,17 @@ addons:
     sources:
       - kubuntu-backports
 
+
 before_install:
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+      mkdir $HOME/usr;
+      export PATH="$HOME/usr/bin:$PATH";
+      wget https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.sh --no-check-certificate;
+      chmod +x cmake-3.7.2-Linux-x86_64.sh;
+      ./cmake-3.7.2-Linux-x86_64.sh --prefix=$HOME/usr --exclude-subdir --skip-license;
+    fi
   - cmake --version
+
 
 install:
   - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
@@ -30,9 +53,16 @@ install:
     fi
 
 before_script:
-  # Check some settings of the build server
+  # Check some settings of the build server (operating system, IPv6 availability, directory)
   - uname -a
+  - ifconfig
   - pwd
+  - ls -la
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+      apt-cache search gcc | grep "GNU C compiler";
+      apt-cache search clang | grep compiler;
+    fi
+  - if [[ "${BUILD_TYPE}" == "OSX_OPENSSL_1_1" ]]; then brew install openssl@1.1 ;fi
   # Generate the build scripts with CMake
   - mkdir output
   - gcc test/cgi_test.c -o output/cgi_test.cgi
@@ -48,15 +78,19 @@ before_script:
     -DCIVETWEB_DISABLE_CGI=${NO_CGI}
     -DCIVETWEB_SERVE_NO_FILES=${NO_FILES}
     -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=${ENABLE_SSL_DYNAMIC_LOADING}
+    -DCIVETWEB_SSL_OPENSSL_API_1_1=${OPENSSL_1_1}
     -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
     -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
     -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6}
+    -DCIVETWEB_ENABLE_SERVER_STATS=${ENABLE_SERVER_STATS}
     -DCIVETWEB_ENABLE_LUA=${ENABLE_LUA}
     -DCIVETWEB_ENABLE_LUA_SHARED=${ENABLE_LUA_SHARED}
     -DCIVETWEB_ENABLE_DUKTAPE=${ENABLE_DUKTAPE}
     -DCIVETWEB_DISABLE_CACHING=${NO_CACHING}
     -DCIVETWEB_C_STANDARD=${C_STANDARD}
     -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
+    -DCIVETWEB_ALLOW_WARNINGS=${ALLOW_WARNINGS}
+    ${ADDITIONAL_CMAKE_ARGS}
     ..
   - ls -la
 
@@ -72,22 +106,37 @@ script:
 after_success:
   - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
       coveralls --include src --exclude src/main.c --exclude src/third_party --include include --gcov-options '\-lp' --root .. --build-root .;
+      bash <(curl -s https://codecov.io/bash);
     fi
 
 
-###################################
+##############################################################################
+# build matrix (auto generated)
+##############################################################################
+
 
 matrix:
   fast_finish: false
   include:
 
-  -
+  - dist: trusty
+    sudo: false
     os: linux
     compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
     env:
-      N=ClangLinuxMinimal
+      idx=1
+      N=Clang3.8-Linux-Minimal-Debug
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -99,83 +148,161 @@ matrix:
       NO_CGI=YES
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
+      ALLOW_WARNINGS=YES
 
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxMinimal
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=0
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: osx
-    compiler: clang
-    env:
-      N=ClangOSXMinimal
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=0
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
+  - dist: trusty
+    sudo: false
     os: linux
     compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
     env:
-      N=ClangLinuxMinNoCache
-      BUILD_TYPE=Debug
+      idx=2
+      N=Clang3.8-Linux-Default-Release
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=0
+      FEATURES=7
       BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=YES
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+    env:
+      idx=3
+      N=Clang3.8-Linux-Default-Release
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+    env:
+      idx=4
+      N=Clang3.8-Linux-Complete-NoLua-Release
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
+      ALLOW_WARNINGS=YES
 
-  -
+
+  - dist: trusty
+    sudo: false
     os: linux
-    compiler: clang
+    compiler: gcc
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-5
     env:
-      N=ClangLinuxMax
+      idx=5
+      N=GCC5-Linux-Complete-NoLua-Release
+      MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
+  
+  - os: linux
+    compiler: gcc
+    env:
+      idx=6
+      N=GCCAnyVersion-Linux-Coverage
       BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -187,17 +314,20 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
-      NO_CACHING=YES
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
 
-  -
-    os: linux
-    compiler: gcc
+  - os: osx
+    compiler: clang
     env:
-      N=GCCLinuxMax
+      idx=7
+      N=Clang-OSX-Complete-NoLua-Release
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -209,17 +339,21 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
+      ALLOW_WARNINGS=YES
 
   -
     os: osx
     compiler: clang
     env:
-      N=ClangOSXMax
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
+      idx=8
+      N=Clang-OSX-Complete-NoLua-Release-OpenSSL_1_1_NoDynLoad
+      BUILD_TYPE=OSX_OPENSSL_1_1
+      ENABLE_SSL_DYNAMIC_LOADING=NO
+      OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -231,149 +365,90 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
+      ALLOW_WARNINGS=YES
+      OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+      LDFLAGS="-L${OPENSSL_ROOT_DIR}/lib"
+      CFLAGS="-I${OPENSSL_ROOT_DIR}/include"
+      ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DCMAKE_C_FLAGS=${CFLAGS}"
+      PATH="${OPENSSL_ROOT_DIR}/bin:$PATH"
+      DYLD_LIBRARY_PATH="${OPENSSL_ROOT_DIR}/lib:${DYLD_LIBRARY_PATH}"
 
-  -
+  - dist: trusty
+    sudo: false
     os: linux
     compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-5.0
+        packages:
+          - clang-5.0
     env:
-      N=ClangLinuxDefault
+      idx=9
+      N=Clang50-Linux-Default-Shared
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
       FEATURES=7
-      BUILD_SHARED=NO
+      BUILD_SHARED=YES
       NO_FILES=NO
       ENABLE_SSL=YES
       NO_CGI=NO
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
 
   -
     os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: osx
+    dist: precise
+    sudo: required
     compiler: clang
     env:
-      N=ClangOSXDefault
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=ClangLinuxDefaultShared
+      idx=10
+      N=Precise-Clang-Linux-Default
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
       FEATURES=7
-      BUILD_SHARED=YES
+      BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
       NO_CGI=NO
       ENABLE_IPV6=NO
       ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefaultShared
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=YES
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
 
   -
     os: osx
     compiler: clang
     env:
-      N=ClangOSXDefaultShared
+      idx=11
+      N=OSX-Package
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=YES
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: osx
-    compiler: clang
-    env:
-      N=OSX_Package
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -385,10 +460,179 @@ matrix:
       NO_CGI=NO
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
+      ALLOW_WARNINGS=YES
       MACOSX_PACKAGE=1
+
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-3.8
+        packages:
+          - clang-3.8
+    env:
+      idx=12
+      N=Clang-Linux-32bit-Complete-NoLua-Release
+      ARCH=x86
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+
+
+### Test all build types:
+# According to CMakeLists, options are:
+# None Debug Release RelWithDebInfo MinSizeRel Coverage
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      idx=13
+      N=NoSslDynamicLoading
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=NO
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      idx=14
+      N=GCCLinuxDefault_Debug
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      idx=15
+      N=GCCLinuxDefault_RelWithDebInfo
+      BUILD_TYPE=RelWithDebInfo
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      idx=16
+      N=GCCLinuxDefault_MinSizeRel
+      BUILD_TYPE=MinSizeRel
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      idx=17
+      N=GCCLinuxDefault_None
+      BUILD_TYPE=None
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=7
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
 
 
 #### Now all define combinations, but only for Linux clang
@@ -415,8 +659,8 @@ matrix:
 #      assert("ERROR in INV!")
 #    end
 #  end
-#  for i=0,31 do
-#    if true then -- (i~=0) and (i~=7) and (i~=31) then
+#  for i=0,511 do
+#    if (YN(i, 6)=="NO") and (YN(i, 7)=="NO") then
 #      print("  -")
 #      print("    os: linux")
 #      print("    compiler: clang")
@@ -424,6 +668,7 @@ matrix:
 #      print("      N=C" .. tostring(i) .. "_")
 #      print("      BUILD_TYPE=Release")
 #      print("      ENABLE_SSL_DYNAMIC_LOADING=YES")
+#      print("      OPENSSL_1_1=NO")
 #      print("      ENABLE_CXX=NO")
 #      print("      C_STANDARD=auto")
 #      print("      CXX_STANDARD=auto")
@@ -437,804 +682,13 @@ matrix:
 #      print("      ENABLE_WEBSOCKETS=" .. YN(i, 5))
 #      print("      ENABLE_LUA=" .. YN(i, 6))
 #      print("      ENABLE_DUKTAPE=" .. YN(i, 7))
-#      print("      NO_CACHING=NO")
+#      print("      NO_CACHING=" .. INV(YN(i, 8)))
+#      print("      ENABLE_SERVER_STATS=" .. YN(i, 9))
 #      print("")
 #    end
 #  end
 #
 
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C0_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=0
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
+# TODO: Regenerate this matrix, once a stable Travis build is re-established
 
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C1_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=1
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
 
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C2_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=2
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=YES
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C3_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=3
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C4_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=4
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C5_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=5
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C6_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=6
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C7_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C8_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=8
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C9_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=9
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C10_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=10
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=YES
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C11_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=11
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C12_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=12
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C13_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=13
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C14_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=14
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C15_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=15
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C16_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=16
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C17_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=17
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C18_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=18
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=YES
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C19_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=19
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=YES
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C20_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=20
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C21_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=21
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C22_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=22
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C23_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=23
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C24_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=24
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C25_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=25
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C26_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=26
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=YES
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C27_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=27
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=YES
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C28_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=28
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C29_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=29
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=NO
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C30_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=30
-      BUILD_SHARED=NO
-      NO_FILES=YES
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: clang
-    env:
-      N=C31_
-      BUILD_TYPE=Release
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      ENABLE_LUA_SHARED=NO
-      FEATURES=31
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=YES
-      ENABLE_WEBSOCKETS=YES
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-### Test all build types:
-# According to CMakeLists, options are:
-# None Debug Release RelWithDebInfo MinSizeRel Coverage
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault_Debug
-      BUILD_TYPE=Debug
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault_RelWithDebInfo
-      BUILD_TYPE=RelWithDebInfo
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault_MinSizeRel
-      BUILD_TYPE=MinSizeRel
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-
-  -
-    os: linux
-    compiler: gcc
-    env:
-      N=GCCLinuxDefault_None
-      BUILD_TYPE=None
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      FEATURES=7
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO

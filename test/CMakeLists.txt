@@ -18,9 +18,17 @@ include(ExternalProject)
 #endif()
 ExternalProject_Add(check-unit-test-framework
   DEPENDS c-library
-  URL "https://codeload.github.com/libcheck/check/zip/${CIVETWEB_CHECK_VERSION}"
-  DOWNLOAD_NAME "${CIVETWEB_CHECK_VERSION}.zip"
-  URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
+
+## Use an official, released check version:
+#  URL "https://codeload.github.com/libcheck/check/zip/${CIVETWEB_CHECK_VERSION}"
+#  DOWNLOAD_NAME "${CIVETWEB_CHECK_VERSION}.zip"
+#  URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
+
+## Use a civetweb specific patched version
+URL "https://github.com/civetweb/check/archive/master.zip"
+DOWNLOAD_NAME "master.zip"
+# <Edit this file to flush AppVeyor build cache and force reloading check>
+
   PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
   BUILD_IN_SOURCE 1
   PATCH_COMMAND ${CHECK_PATCH_COMMAND}
@@ -142,8 +150,16 @@ endmacro(civetweb_add_test)
 
 # Tests of private functions
 civetweb_add_test(Private "HTTP Message")
-civetweb_add_test(Private "URL Parsing")
-civetweb_add_test(Private "Internal Parsing")
+civetweb_add_test(Private "HTTP Keep Alive")
+civetweb_add_test(Private "URL Parsing 1")
+civetweb_add_test(Private "URL Parsing 2")
+civetweb_add_test(Private "URL Parsing 3")
+civetweb_add_test(Private "Internal Parsing 1")
+civetweb_add_test(Private "Internal Parsing 2")
+civetweb_add_test(Private "Internal Parsing 3")
+civetweb_add_test(Private "Internal Parsing 4")
+civetweb_add_test(Private "Internal Parsing 5")
+civetweb_add_test(Private "Internal Parsing 6")
 civetweb_add_test(Private "Encode Decode")
 civetweb_add_test(Private "Mask Data")
 civetweb_add_test(Private "Date Parsing")
@@ -163,10 +179,14 @@ civetweb_add_test(PublicFunc "Aux functions")
 civetweb_add_test(PublicServer "Check test environment")
 civetweb_add_test(PublicServer "Init library")
 civetweb_add_test(PublicServer "Start threads")
+civetweb_add_test(PublicServer "Minimal Server")
+civetweb_add_test(PublicServer "Minimal Client")
 civetweb_add_test(PublicServer "Start Stop HTTP Server")
+civetweb_add_test(PublicServer "Start Stop HTTP Server IPv6")
 civetweb_add_test(PublicServer "Start Stop HTTPS Server")
 civetweb_add_test(PublicServer "TLS Server Client")
 civetweb_add_test(PublicServer "Server Requests")
+civetweb_add_test(PublicServer "Store Body")
 civetweb_add_test(PublicServer "Handle Form")
 civetweb_add_test(PublicServer "HTTP Authentication")
 civetweb_add_test(PublicServer "HTTP Keep Alive")
