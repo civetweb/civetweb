@@ -236,9 +236,9 @@ field_found(const char *key,
 #else
 		snprintf(path, pathlen, "/tmp/%s", filename);
 #endif
-		return FORM_FIELD_STORAGE_STORE;
+		return MG_FORM_FIELD_STORAGE_STORE;
 	}
-	return FORM_FIELD_STORAGE_GET;
+	return MG_FORM_FIELD_STORAGE_GET;
 }
 
 
@@ -354,9 +354,9 @@ field_disp_read_on_the_fly(const char *key,
 		context->file[context->index - 1].name[127] = 0;
 		context->file[context->index - 1].length = 0;
 		md5_init(&(context->file[context->index - 1].chksum));
-		return FORM_FIELD_STORAGE_GET;
+		return MG_FORM_FIELD_STORAGE_GET;
 	}
-	return FORM_FIELD_STORAGE_ABORT;
+	return MG_FORM_FIELD_STORAGE_ABORT;
 }
 
 
@@ -699,7 +699,7 @@ WebSocketReadyHandler(struct mg_connection *conn, void *cbdata)
 	const char *text = "Hello from the websocket ready handler";
 	struct t_ws_client *client = mg_get_user_connection_data(conn);
 
-	mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, text, strlen(text));
+	mg_websocket_write(conn, MG_WEBSOCKET_OPCODE_TEXT, text, strlen(text));
 	fprintf(stdout, "Greeting message sent to websocket client\r\n\r\n");
 	ASSERT(client->conn == conn);
 	ASSERT(client->state == 1);
@@ -721,22 +721,22 @@ WebsocketDataHandler(struct mg_connection *conn,
 
 	fprintf(stdout, "Websocket got %lu bytes of ", (unsigned long)len);
 	switch (((unsigned char)bits) & 0x0F) {
-	case WEBSOCKET_OPCODE_CONTINUATION:
+	case MG_WEBSOCKET_OPCODE_CONTINUATION:
 		fprintf(stdout, "continuation");
 		break;
-	case WEBSOCKET_OPCODE_TEXT:
+	case MG_WEBSOCKET_OPCODE_TEXT:
 		fprintf(stdout, "text");
 		break;
-	case WEBSOCKET_OPCODE_BINARY:
+	case MG_WEBSOCKET_OPCODE_BINARY:
 		fprintf(stdout, "binary");
 		break;
-	case WEBSOCKET_OPCODE_CONNECTION_CLOSE:
+	case MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE:
 		fprintf(stdout, "close");
 		break;
-	case WEBSOCKET_OPCODE_PING:
+	case MG_WEBSOCKET_OPCODE_PING:
 		fprintf(stdout, "ping");
 		break;
-	case WEBSOCKET_OPCODE_PONG:
+	case MG_WEBSOCKET_OPCODE_PONG:
 		fprintf(stdout, "pong");
 		break;
 	default:
@@ -765,7 +765,7 @@ WebSocketCloseHandler(const struct mg_connection *conn, void *cbdata)
 	mg_unlock_context(ctx);
 
 	fprintf(stdout,
-	        "Client droped from the set of webserver connections\r\n\r\n");
+	        "Client dropped from the set of webserver connections\r\n\r\n");
 }
 
 
@@ -782,7 +782,7 @@ InformWebsockets(struct mg_context *ctx)
 	for (i = 0; i < MAX_WS_CLIENTS; i++) {
 		if (ws_clients[i].state == 2) {
 			mg_websocket_write(ws_clients[i].conn,
-			                   WEBSOCKET_OPCODE_TEXT,
+			                   MG_WEBSOCKET_OPCODE_TEXT,
 			                   text,
 			                   strlen(text));
 		}
@@ -978,10 +978,10 @@ main(int argc, char *argv[])
 	mg_set_request_handler(ctx, "/B/A$", BXHandler, (void *)1);
 	mg_set_request_handler(ctx, "/B/B$", BXHandler, (void *)2);
 
-	/* Add handler for all files with .foo extention */
+	/* Add handler for all files with .foo extension */
 	mg_set_request_handler(ctx, "**.foo$", FooHandler, 0);
 
-	/* Add handler for /close extention */
+	/* Add handler for /close extension */
 	mg_set_request_handler(ctx, "/close", CloseHandler, 0);
 
 	/* Add handler for /form  (serve a file outside the document root) */

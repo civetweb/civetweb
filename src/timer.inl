@@ -1,6 +1,6 @@
 /* This file is part of the CivetWeb web server.
  * See https://github.com/civetweb/civetweb/
- * (C) 2014-2017 by the CivetWeb authors, MIT license.
+ * (C) 2014-2018 by the CivetWeb authors, MIT license.
  */
 
 #if !defined(MAX_TIMERS)
@@ -158,7 +158,7 @@ timer_thread_run(void *thread_func_param)
  * A faster loop (smaller sleep value) increases CPU load,
  * a slower loop (higher sleep value) decreases timer accuracy.
  */
-#ifdef _WIN32
+#if defined(_WIN32)
 		Sleep(10);
 #else
 		usleep(10000);
@@ -173,7 +173,7 @@ timer_thread_run(void *thread_func_param)
 }
 
 
-#ifdef _WIN32
+#if defined(_WIN32)
 static unsigned __stdcall timer_thread(void *thread_func_param)
 {
 	timer_thread_run(thread_func_param);
@@ -183,6 +183,13 @@ static unsigned __stdcall timer_thread(void *thread_func_param)
 static void *
 timer_thread(void *thread_func_param)
 {
+	struct sigaction sa;
+
+	/* Ignore SIGPIPE */
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sa, NULL);
+
 	timer_thread_run(thread_func_param);
 	return NULL;
 }

@@ -26,7 +26,7 @@ include(CMakeDependentOption)
 
 # Set up the project
 project (civetweb)
-set(CIVETWEB_VERSION "1.10.0" CACHE STRING "The version of the civetweb library")
+set(CIVETWEB_VERSION "1.11.0" CACHE STRING "The version of the civetweb library")
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" CIVETWEB_VERSION_MATCH "${CIVETWEB_VERSION}")
 if ("${CIVETWEB_VERSION_MATCH}" STREQUAL "")
   message(FATAL_ERROR "Must specify a semantic version: major.minor.patch")
@@ -45,6 +45,10 @@ elseif(NOT LINUX AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     SET(LINUX YES)
 endif()
 
+# CTest automation
+option(CIVETWEB_BUILD_TESTING "Enable automated testing of civetweb" ON)
+message(STATUS "Enabling tests in the build - ${CIVETWEB_BUILD_TESTING}")
+
 # C++ wrappers
 option(CIVETWEB_ENABLE_THIRD_PARTY_OUTPUT "Shows the output of third party dependency processing" OFF)
 
@@ -53,6 +57,9 @@ set(CIVETWEB_THREAD_STACK_SIZE 102400 CACHE STRING
   "The stack size in bytes for each thread created")
 set_property(CACHE CIVETWEB_THREAD_STACK_SIZE PROPERTY VALUE ${CIVETWEB_THREAD_STACK_SIZE})
 message(STATUS "Thread Stack Size - ${CIVETWEB_THREAD_STACK_SIZE}")
+
+option(CIVETWEB_ENABLE_SERVER_EXECUTABLE "Enable building of the server executable" ON)
+message(STATUS "Enabling server executable - ${CIVETWEB_ENABLE_SERVER_EXECUTABLE}")
 
 # Serve no files from the web server
 option(CIVETWEB_SERVE_NO_FILES "Configures the server to serve no static files" OFF)
@@ -101,7 +108,7 @@ message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 # Enable installing CivetWeb executables
 option(CIVETWEB_INSTALL_EXECUTABLE "Enable installing CivetWeb executable" ON)
 mark_as_advanced(FORCE CIVETWEB_INSTALL_EXECUTABLE) # Advanced users can disable
-message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}") 
+message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}")
 
 # Allow builds to complete with warnings (do not set -Werror)
 # CivetWeb Linux support is stable:
@@ -112,6 +119,12 @@ message(STATUS "Executable installation - ${CIVETWEB_INSTALL_EXECUTABLE}")
 # some selected ones.
 option(CIVETWEB_ALLOW_WARNINGS "Do not stop build if there are warnings" ON)
 message(STATUS "Build if there are warnings - ${CIVETWEB_ALLOW_WARNINGS}")
+
+if (NOT CIVETWEB_ALLOW_WARNINGS)
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    message(FATAL_ERROR "Cannot compile with warning as errors, until this GCC bug is solved: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431")
+  endif()
+endif()
 
 # Link to the shared LUA library
 cmake_dependent_option(
@@ -294,8 +307,8 @@ if (MINGW)
 endif()
 if (NOT CIVETWEB_ALLOW_WARNINGS)
   add_c_compiler_flag(-Werror)
+  add_c_compiler_flag(/WX)
 endif()
-add_c_compiler_flag(/WX)
 add_c_compiler_flag(-pedantic-errors)
 add_c_compiler_flag(-fvisibility=hidden)
 add_c_compiler_flag(-fstack-protector-strong RELEASE)
@@ -363,8 +376,8 @@ if (CIVETWEB_ENABLE_CXX)
   endif()
   if (NOT CIVETWEB_ALLOW_WARNINGS)
     add_cxx_compiler_flag(-Werror)
+    add_cxx_compiler_flag(/WX)
   endif()
-  add_cxx_compiler_flag(/WX)
   add_cxx_compiler_flag(-pedantic-errors)
   add_cxx_compiler_flag(-fvisibility=hidden)
   add_cxx_compiler_flag(-fstack-protector-strong RELEASE)
@@ -389,6 +402,8 @@ endif()
 # Set up the definitions
 if (${CMAKE_BUILD_TYPE} MATCHES "[Dd]ebug")
   add_definitions(-DDEBUG)
+  add_definitions(-O0)
+  add_definitions(-g)
 endif()
 if (CIVETWEB_ENABLE_IPV6)
   add_definitions(-DUSE_IPV6)
@@ -448,7 +463,7 @@ add_subdirectory(src)
 
 # Enable the testing of the library/executable
 include(CTest)
-if (BUILD_TESTING)
+if (CIVETWEB_BUILD_TESTING)
   # Check unit testing framework Version
   set(CIVETWEB_CHECK_VERSION 0.11.0 CACHE STRING
     "The version of Check unit testing framework to build and include statically")
@@ -465,13 +480,13 @@ if (BUILD_TESTING)
   mark_as_advanced(CIVETWEB_CHECK_MD5_HASH)
 
   # Build the testing
-  add_subdirectory(test)
+  add_subdirectory(unittest)
 endif()
 
 # Set up CPack
 include(InstallRequiredSystemLibraries)
 set(CPACK_PACKAGE_VENDOR "civetweb Contributors")
-set(CPACK_PACKAGE_CONTACT "civetweb@github.com")
+set(CPACK_PACKAGE_CONTACT "civetweb@users.noreply.github.com")
 set(CPACK_PACKAGE_VERSION_MAJOR "${CIVETWEB_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${CIVETWEB_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${CIVETWEB_VERSION_PATCH}")
@@ -500,3 +515,4 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_PACKAGE_DEPENDS}")
 
 # Finalize CPack settings
 include(CPack)
+

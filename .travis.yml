@@ -1,16 +1,3 @@
-##############################################################################
-# Travis version specific build environment specification
-##############################################################################
-
-# The "precise" build environment on Travis is in the process of being decommissioned
-# see https://blog.travis-ci.com/2017-08-31-trusty-as-default-status
-# The "precise=true"+"sudo=required" environment seems to lack IPv6 support.
-# According to some tests, all "sudo=required" environments do not support IPv6, see 
-# https://github.com/travis-ci/travis-ci/issues/8361#issuecomment-328263113
-# The container environments for "sudo=false" support IPv6 localhost [::1] 
-# connections for server/client test. Thus, all tests with ENABLE_IPV6=YES
-#
-
 
 ##############################################################################
 # Project specific settings
@@ -53,8 +40,18 @@ install:
     fi
 
 before_script:
+  # Add an IPv6 config - see the corresponding Travis issue
+  # https://github.com/travis-ci/travis-ci/issues/8361
+  - if [ "${ENABLE_IPV6}" == "YES" -a "${TRAVIS_OS_NAME}" == "linux" ]; then 
+      echo "Activating IPv6 on Travis";
+      sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
+    fi
   # Check some settings of the build server (operating system, IPv6 availability, directory)
   - uname -a
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+      lsb_release -a;
+      cat /etc/network/interfaces;
+    fi
   - ifconfig
   - pwd
   - ls -la
@@ -62,10 +59,10 @@ before_script:
       apt-cache search gcc | grep "GNU C compiler";
       apt-cache search clang | grep compiler;
     fi
-  - if [[ "${BUILD_TYPE}" == "OSX_OPENSSL_1_1" ]]; then brew install openssl@1.1 ;fi
+  - if [[ "${BUILD_TYPE}" == "OSX_OPENSSL_1_1" ]]; then HOMEBREW_NO_AUTO_UPDATE=1 brew install openssl@1.1 ;fi
   # Generate the build scripts with CMake
   - mkdir output
-  - gcc test/cgi_test.c -o output/cgi_test.cgi
+  - gcc unittest/cgi_test.c -o output/cgi_test.cgi
   - cd output
   - cmake --version
   - cmake
@@ -81,7 +78,6 @@ before_script:
     -DCIVETWEB_SSL_OPENSSL_API_1_1=${OPENSSL_1_1}
     -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
     -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
-    -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6}
     -DCIVETWEB_ENABLE_SERVER_STATS=${ENABLE_SERVER_STATS}
     -DCIVETWEB_ENABLE_LUA=${ENABLE_LUA}
     -DCIVETWEB_ENABLE_LUA_SHARED=${ENABLE_LUA_SHARED}
@@ -90,9 +86,15 @@ before_script:
     -DCIVETWEB_C_STANDARD=${C_STANDARD}
     -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
     -DCIVETWEB_ALLOW_WARNINGS=${ALLOW_WARNINGS}
+    -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6}
     ${ADDITIONAL_CMAKE_ARGS}
     ..
   - ls -la
+
+# Modifications due to Travis IPv6 issues:
+# https://github.com/travis-ci/travis-ci/issues/8711
+# https://github.com/travis-ci/travis-ci/issues/8361
+# DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6} or =NO
 
 script:
   - if [ "${MACOSX_PACKAGE}" == "1" ]; then
@@ -101,6 +103,14 @@ script:
     else
       CTEST_OUTPUT_ON_FAILURE=1 make all test;
     fi
+  - pwd
+  - ls -la unittest
+  - echo "Show all test logs:"
+  - if [ "${MACOSX_PACKAGE}" != "1" ]; then
+      for f in unittest/test-*.log; do printf "\n$f:\n"; cat $f; done;
+      for f in unittest/test-*.xml; do printf "\n$f:\n"; cat $f; done;
+    fi
+  - echo "Build and test script DONE"
 
 # Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
 after_success:
@@ -111,7 +121,7 @@ after_success:
 
 
 ##############################################################################
-# build matrix (auto generated)
+# build matrix
 ##############################################################################
 
 
@@ -226,7 +236,7 @@ matrix:
       ALLOW_WARNINGS=YES
 
   - dist: trusty
-    sudo: false
+    sudo: required
     os: linux
     compiler: clang
     addons:
@@ -262,7 +272,7 @@ matrix:
 
 
   - dist: trusty
-    sudo: false
+    sudo: required
     os: linux
     compiler: gcc
     addons:
@@ -296,6 +306,7 @@ matrix:
       ALLOW_WARNINGS=YES
   
   - os: linux
+    sudo: required
     compiler: gcc
     env:
       idx=6
@@ -321,6 +332,7 @@ matrix:
       ALLOW_WARNINGS=YES
 
   - os: osx
+    sudo: required
     compiler: clang
     env:
       idx=7
@@ -347,6 +359,7 @@ matrix:
 
   -
     os: osx
+    sudo: required
     compiler: clang
     env:
       idx=8
@@ -442,6 +455,7 @@ matrix:
 
   -
     os: osx
+    sudo: required
     compiler: clang
     env:
       idx=11
@@ -468,7 +482,7 @@ matrix:
       MACOSX_PACKAGE=1
 
   - dist: trusty
-    sudo: false
+    sudo: required
     os: linux
     compiler: clang
     addons:
@@ -510,6 +524,7 @@ matrix:
 
   -
     os: linux
+    sudo: required
     compiler: clang
     env:
       idx=13
@@ -634,61 +649,69 @@ matrix:
       NO_CACHING=NO
       ALLOW_WARNINGS=YES
 
+  -
+    os: linux
+    compiler: clang
+    env:
+      idx=18
+      N=Clang3.8-Linux-Complete-NoLua-Debug
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=YES
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
 
-#### Now all define combinations, but only for Linux clang
-##### Generated with Lua:
+# Remove Lua build, until someone knows how to fix the CMake files
 #
-#  function YN(i,b)
-#    local bits = {}
-#    while (i > 0.5) do
-#      i = math.floor(i)
-#      bits[#bits+1] = (math.mod(i, 2) == 1)
-#      i = i/2
-#    end
-#    if (bits[b]) then
-#      return "YES"
-#    end
-#    return "NO"
-#  end
-#  function INV(t)
-#    if t=="YES" then
-#      return "NO"
-#    elseif t=="NO" then
-#      return "YES"
-#    else
-#      assert("ERROR in INV!")
-#    end
-#  end
-#  for i=0,511 do
-#    if (YN(i, 6)=="NO") and (YN(i, 7)=="NO") then
-#      print("  -")
-#      print("    os: linux")
-#      print("    compiler: clang")
-#      print("    env:")
-#      print("      N=C" .. tostring(i) .. "_")
-#      print("      BUILD_TYPE=Release")
-#      print("      ENABLE_SSL_DYNAMIC_LOADING=YES")
-#      print("      OPENSSL_1_1=NO")
-#      print("      ENABLE_CXX=NO")
-#      print("      C_STANDARD=auto")
-#      print("      CXX_STANDARD=auto")
-#      print("      ENABLE_LUA_SHARED=NO")
-#      print("      FEATURES=" .. tostring(i))
-#      print("      BUILD_SHARED=NO")
-#      print("      NO_FILES=" .. INV(YN(i, 1)))
-#      print("      ENABLE_SSL=" .. YN(i, 2))
-#      print("      NO_CGI=" .. INV(YN(i, 3)))
-#      print("      ENABLE_IPV6=" .. YN(i, 4))
-#      print("      ENABLE_WEBSOCKETS=" .. YN(i, 5))
-#      print("      ENABLE_LUA=" .. YN(i, 6))
-#      print("      ENABLE_DUKTAPE=" .. YN(i, 7))
-#      print("      NO_CACHING=" .. INV(YN(i, 8)))
-#      print("      ENABLE_SERVER_STATS=" .. YN(i, 9))
-#      print("")
-#    end
-#  end
-#
-
-# TODO: Regenerate this matrix, once a stable Travis build is re-established
+#  - dist: trusty
+#    sudo: required
+#    os: linux
+#    compiler: clang
+#    addons:
+#      apt:
+#        sources:
+#          - ubuntu-toolchain-r-test
+#          - llvm-toolchain-precise-3.8
+#        packages:
+#          - clang-3.8
+#          - lua5.2
+#    env:
+#      idx=19
+#      N=Clang3.8-Linux-Complete-WithLua-Debug
+#      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+#      BUILD_TYPE=Debug
+#      ENABLE_SSL_DYNAMIC_LOADING=YES
+#      OPENSSL_1_1=NO
+#      ENABLE_CXX=NO
+#      ENABLE_LUA_SHARED=YES
+#      C_STANDARD=auto
+#      CXX_STANDARD=auto
+#      FEATURES=63
+#      BUILD_SHARED=NO
+#      NO_FILES=NO
+#      ENABLE_SSL=YES
+#      NO_CGI=NO
+#      ENABLE_IPV6=YES
+#      ENABLE_WEBSOCKETS=YES
+#      ENABLE_SERVER_STATS=YES
+#      ENABLE_LUA=YES
+#      ENABLE_DUKTAPE=NO
+#      NO_CACHING=YES
+#      ALLOW_WARNINGS=YES
 
 

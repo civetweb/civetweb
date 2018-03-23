@@ -1,0 +1,15 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #eeeeee;
+}
+
+#canvas {
+  display: block;
+  margin: 0 auto;
+  border: 1px solid #aaaaaa;
+}
+

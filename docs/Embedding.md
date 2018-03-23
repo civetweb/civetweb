@@ -1,9 +1,11 @@
 Embedding CivetWeb
 =========
 
-CivetWeb is primarily designed so applications can easily add HTTP and HTTPS server as well as WebSocket functionality.  For example, an application server could use CivetWeb to enable a web service interface for automation or remote control.
+CivetWeb is primarily designed so applications can easily add HTTP and HTTPS server as well as WebSocket (WS and WSS) server functionality.
+For example, a C/C++ application could use CivetWeb to enable a web service and configuration interface, to add a HTML5 data visualization interface, for automation or remote control, as a protocol gateway or as a HTTP/WebSocket client for firewall traversal.
 
-However, it can also be used as a stand-alone executable. It can deliver static files and offers built-in server side Lua, JavaScript and CGI support. Some instructions how to build the stand-alone server can be found in [Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md).
+It can also be used as a stand-alone executable. It can deliver static files and offers built-in server side Lua, JavaScript and CGI support. Some instructions how to build the stand-alone server can be found in [Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md).
+
 
 Files
 ------
@@ -11,11 +13,12 @@ Files
 There is just a small set of files to compile in to the application,
 but if a library is desired, see [Building.md](https://github.com/CivetWeb/CivetWeb/blob/master/docs/Building.md)
 
+
 #### Regarding the INL file extension
 The *INL* file extension represents code that is statically included inline in a source file.  Slightly different from C++ where it means "inline" code which is technically not the same as static code. CivetWeb overloads this extension for the sake of clarity as opposed to having .c extensions on files that should not be directly compiled.
 
-#### HTTP Server Source Files
 
+#### HTTP Server Source Files
 These files constitute the CivetWeb library.  They do not contain a `main` function,
 but all functions required to run a HTTP server.
 
@@ -35,19 +38,18 @@ but all functions required to run a HTTP server.
     - src/mod\_*.inl (modules to access third party components from civetweb)
 
 
-Note: The C++ wrapper uses the official C interface (civetweb.h) and does not add new features to the server. Several features available in the C interface are missing in the C++ interface. While all features should be accessible using the C interface, this is not a design goal of the C++ interface.
+Note: The C++ wrapper uses the official C interface (civetweb.h) without adding any features to the server itself. Several features available in the C interface are missing in the C++ interface. While all features should be accessible using the C interface, this is not a design goal of the C++ interface.
 
 
 #### Additional Source Files for Executables
-
 These files can be used to build a server executable. They contain a `main` function
 starting the HTTP server.
 
-  - Stand-alone C Server
+  - Stand-alone C server
       - src/main.c
-  - Reference embedded C Server
+  - Reference embedded C server
       - examples/embedded\_c/embedded\_c.c
-  - Reference embedded C++ Server
+  - Reference embedded C++ server
       - examples/embedded\_cpp/embedded\_cpp.cpp
 
 Note: The "embedded" example is actively maintained, updated, extended and tested. Other examples in the examples/ folder might be outdated and remain there for reference.
@@ -71,11 +73,32 @@ By default, the server will automatically serve up files like a normal HTTP serv
     Not all CivetWeb features available in C are also available in C++.
   - Create CivetHandlers for each URI.
   - Register the handlers with `CivetServer::addHandler()`
-  - `CivetServer` starts on contruction and stops on destruction.
-  - Use contructor *options* to select the port and document root among other things.
+  - `CivetServer` starts on construction and stops on destruction.
+  - Use constructor *options* to select the port and document root among other things.
   - Use constructor *callbacks* to add your own hooks.
 
 Alternative quick start: Have a look at the examples embedded\_c and embedded\_cpp
+
+
+Feature selection
+------
+
+CivetWeb is highly customizable at build time, in addition to configuration at start time.
+
+##### start time options
+Start time options are passed to `mg_start`. They are documented in the [UserManual.md](https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md).
+
+##### callbacks
+Pointers to callback functions are passed to `mg_start` as well. They are documented in [civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h) and the callbacks [API documentation](https://github.com/civetweb/civetweb/blob/master/docs/api/mg_callbacks.md).
+
+##### compiler defines
+Several features can be turned "on" or "off" by setting compile defines. CivetWeb builds with a reasonable default feature set. Optional features not including in the default can be added by adding a `USE\_<feature>` define. Default features can be removed by adding a `NO_<feature>` define. E.g., to build with Lua support, set `#define USE_LUA` (-DUSE_LUA), to build without CGI support set `#define NO_CGI` (-DNO_CGI). A list of feature defines is available in [Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md) - some versions may have additional, undocumented feature defines. Undocumented defines may become unavailable in future versions without notice.
+
+##### externally provided functions
+In some special cases, it might be meaningful to completely replace an internal function in [civetweb.c](https://github.com/civetweb/civetweb/blob/master/src/civetweb.c) with your own implementation.
+Since CivetWeb is free and open source software covered by the MIT license, you can feel free to just edit civetweb.c according to your needs.
+However, this might be annoying when updating the server, pulling new features or bug fixes from the main repository. For some selected functions, it is possible to provide your own implementation using a `MG_EXTERNAL_FUNCTION_<internal_function_name>` define. For details on this mechanism, please look directly into the source code [civetweb.c](https://github.com/civetweb/civetweb/blob/master/src/civetweb.c). Interfaces and even names of internal functions may change without notice - when you use these defines, you have to check this every time you update CivetWeb. It might still be less effort than to apply your patches every time.
+This customization option is currently in an evaluation phase. In case you need additional function defines, please create an issue on GitHub explaining your use case, to discuss if this would be an appropriate solution - in general, other customization options are preferred.
 
 
 Lua Support

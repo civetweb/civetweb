@@ -1,3 +1,25 @@
+Release Notes v1.11 (work in progress)
+===
+### Objectives: *Support multiple domains and certificates, support websocket ping-pong*
+
+Changes
+-------
+
+- Add server support for websocket ping pong protocol
+- Fix misspellings in source code and documentation
+- Add error msg to http_error callback
+- Move unit test to a new directory
+- Remove remote\_ip request\_info member (it has been legacy since several versions)
+- Use gmtime_r instead of gmtime, if available
+- Add some functions to C++ wrapper
+- Support multiple domains with different certificate files (TLS server name identification, SNI)
+- Provide client peer certificate (X509) in mg\_client\_cert structure
+- Add new callback (get\_external\_ssl\_ctx) to provide pre-initialized TLS context
+- Improve unit tests
+- Fix ssl init for HTTPS clients
+- Update version number
+
+
 Release Notes v1.10
 ===
 ### Objectives: *OpenSSL 1.1 support, add server statistics and diagnostic data*
@@ -35,7 +57,7 @@ Changes
 - Support for multipart requests without quotes (for some C# clients)
 - Initialize SSL in mg\_init\_library, so https client functions can be used when no server is running
 - Allow "REPORT" HTTP method for REST calls to scripts
-- Allow to compile civetweb.c wih a C++ compiler
+- Allow to compile civetweb.c with a C++ compiler
 - Lua: Remove internal length limits of encode/decode functions
 - Allow sub-resources of index script files
 - Add config parameter allow\_index\_script\_resource the aforementioned feature
@@ -390,6 +412,6 @@ Changes
 
 - Renamed Mongoose to Civetweb in the code and documentation.
 - Replaced copyrighted images with new images
-- Created a new code respository at https://github.com/civetweb/civetweb
+- Created a new code repository at https://github.com/civetweb/civetweb
 - Created a distribution site at https://sourceforge.net/projects/civetweb/
 - Basic build testing

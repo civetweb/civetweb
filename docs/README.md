@@ -8,7 +8,7 @@ CivetWeb uses an [MIT license](https://github.com/civetweb/civetweb/blob/master/
 
 It can also be used by end users as a stand-alone web server. It is available as single executable, no installation is required.
 
-The current stable version is 1.9.1 - [release notes](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md)
+The current stable version is 1.10 - [release notes](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md)
 
 
 End users can download CivetWeb at SourceForge
@@ -28,6 +28,9 @@ While older support question and discussion threads have been at [Google groups]
 Source releases can be found on GitHub
 [https://github.com/civetweb/civetweb/releases](https://github.com/civetweb/civetweb/releases)
 
+CivetWeb is free of charge, however, donations for maintenance are welcome:
+[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=88ZLXZ6U77GJU)
+
 
 Documentation
 ---------------
@@ -40,3 +43,4 @@ Documentation
 - [API documentation](api) - Additional documentation on the civetweb application programming interface ([civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)).
 
 [Authors](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
+

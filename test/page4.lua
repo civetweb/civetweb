@@ -2,7 +2,7 @@
 -- get_var, get_cookie, md5, url_encode
 
 now = os.time()
-cookie_name = "civetweb-test-page4"
+cookie_name = "CivetWeb-test-page4"
 
 if mg.request_info.http_headers.Cookie then
    cookie_value = tonumber(mg.get_cookie(mg.request_info.http_headers.Cookie, cookie_name))
@@ -17,8 +17,8 @@ if not cookie_value then
 end
 mg.write("\r\n")
 
-mg.write("<html>\r\n<head><title>Civetweb Lua script test page 4</title></head>\r\n<body>\r\n")
-mg.write("<p>Test of Civetweb Lua Functions:</p>\r\n");
+mg.write("<html>\r\n<head><title>CivetWeb Lua script test page 4</title></head>\r\n<body>\r\n")
+mg.write("<p>Test of CivetWeb Lua Functions:</p>\r\n");
 mg.write("<pre>\r\n");
 
 -- get_var of query_string

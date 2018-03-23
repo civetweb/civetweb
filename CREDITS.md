@@ -1,9 +1,11 @@
 # Civetweb Contributors
 
 * Abhishek Lekshmanan
+* Abramo Bagnara
 * Adam Bailey
 * Alan Somers
 * Alex Kozlov
+* AndreyArsov
 * bel2125
 * Ben M. Ward
 * BigJoe
@@ -18,6 +20,7 @@
 * Christian Mauderer
 * Christopher Galas
 * cjh
+* Colden Cullen
 * Daniel Oaks
 * Daniel Rempel
 * Danny Al-Gaaf
@@ -32,6 +35,7 @@
 * F-Secure Corporation
 * feneuilflo
 * Fernando G. Aranda
+* Frank Hilliger
 * Grahack
 * grenclave
 * grunk
@@ -39,6 +43,7 @@
 * HariKamath Kamath
 * Henry Chang
 * Jack
+* Jacob Repp
 * Jacob Skillin
 * Jan Willem Janssen
 * Jeremy Lin
@@ -54,6 +59,7 @@
 * Joshua D. Boyd
 * kakwa
 * kalphamon
+* Karol Mroz
 * Keith Kyzivat
 * Kevin Branigan
 * Kevin Wojniak
@@ -64,6 +70,7 @@
 * Lianghui
 * Maarten Fremouw
 * makrsmark
+* marco
 * Mark Lakata
 * Martin Gaida
 * Mateusz Gralka
@@ -72,6 +79,8 @@
 * Morgan McGuire
 * mrdvlpr.xnu
 * Neil Jensen
+* newsoft
+* nfrmtkr
 * Nick Hildebrant
 * Nigel Stewart
 * nihildeb
@@ -87,6 +96,7 @@
 * Peter Foerster
 * Philipp Friedenberger
 * Philipp Hasper
+* Radoslaw Zarzynski
 * Red54
 * Richard Screene
 * pkvamme
@@ -100,10 +110,13 @@
 * slidertom
 * SpaceLord
 * sunfch
+* suzukibitman
 * thewaterymoon
 * THILMANT, Bernard
 * Thomas Davis
+* Thorsten Horstmann
 * tnoho
+* Tomas Andrle
 * Toni Wilk
 * Ulrich Hertlein
 * Walt Steverson

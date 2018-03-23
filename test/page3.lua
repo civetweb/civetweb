@@ -7,14 +7,14 @@ if not mg.request_info.query_string then
     mg.write("Connection: close\r\n")
     mg.write("Content-Type: text/html; charset=utf-8\r\n")
     mg.write("\r\n")
-    mg.write("<html><head><title>Civetweb Lua script test page 3</title></head>\r\n")
+    mg.write("<html><head><title>CivetWeb Lua script test page 3</title></head>\r\n")
     mg.write("<body>No query string!</body></html>\r\n")
 elseif mg.request_info.query_string:match("/") or mg.request_info.query_string:match("\\") then
     mg.write("HTTP/1.0 403 Forbidden\r\n")
     mg.write("Connection: close\r\n")
     mg.write("Content-Type: text/html; charset=utf-8\r\n")
     mg.write("\r\n")
-    mg.write("<html><head><title>Civetweb Lua script test page 3</title></head>\r\n")
+    mg.write("<html><head><title>CivetWeb Lua script test page 3</title></head>\r\n")
     mg.write("<body>No access!</body></html>\r\n")
 else
     file = mg.get_var(mg.request_info.query_string, "file");
@@ -23,7 +23,7 @@ else
         mg.write("Connection: close\r\n")
         mg.write("Content-Type: text/html; charset=utf-8\r\n")
         mg.write("\r\n")
-        mg.write("<html>\r\n<head><title>Civetweb Lua script test page 3</title></head>\r\n")
+        mg.write("<html>\r\n<head><title>CivetWeb Lua script test page 3</title></head>\r\n")
         mg.write("<body>\r\nQuery string does not contain a 'file' variable.<br>\r\n")
         mg.write("Try <a href=\"?file=page3.lua&somevar=something\">?file=page3.lua&somevar=something</a>\r\n")
         mg.write("</body>\r\n</html>\r\n")

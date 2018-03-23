@@ -6,10 +6,10 @@ See [Embedding.md](https://github.com/civetweb/civetweb/blob/master/docs/Embeddi
 
 #### Where to get the source code?
 
-The latest version can be found at
+The latest development version can be found at
 https://github.com/civetweb/civetweb
 
-Released versions can be found at
+Tested and released versions can be found at
 https://github.com/civetweb/civetweb/releases
 
 
@@ -74,6 +74,7 @@ make clean
 ```
 Clean up files generated during the build
 
+
 ## Setting build options
 
 Make options can be set on the command line with the make command like so.
@@ -86,10 +87,14 @@ make build WITH_LUA=1
 | ------------------------- | ----------------------------------------- |
 | WITH_LUA=1                | build with Lua support                    |
 | WITH_DUKTAPE=1            | build with server-side JavaScript support |
-| WITH_DEBUG=1              | build with GDB debug support              |
 | WITH_IPV6=1               | with IPV6 support                         |
 | WITH_WEBSOCKET=1          | build with web socket support             |
 | WITH_SERVER_STATS=1       | build with support for server statistics  |
+| WITH_EXPERIMENTAL=1       | include experimental features (depending  |
+|                           | on the version)                           |
+| WITH_ALL=1                | Include all of the above features         |
+|                           |                                           |
+| WITH_DEBUG=1              | build with GDB debug support              |
 | WITH_CPP=1                | build libraries with c++ classes          |
 | CONFIG_FILE=file          | use 'file' as the config file             |
 | CONFIG_FILE2=file         | use 'file' as the backup config file      |
@@ -104,6 +109,7 @@ make build WITH_LUA=1
 
 Note that the WITH_* options used for *make* are not identical to the
 preprocessor defines in the source code - usually USE_* is used there.
+
 
 ## Changing PREFIX
 
@@ -132,6 +138,7 @@ install -m 755 civetweb "/opt/civetweb/bin/"
 
 If the output looks good: Just remove the `-n` option to actually install the software on your system.
 
+
 ## Setting compile flags
 
 Compile flags can be set using the *COPT* make option like so.
@@ -139,17 +146,32 @@ Compile flags can be set using the *COPT* make option like so.
 make build COPT="-DNDEBUG -DNO_CGI"
 ```
 
-| Compile Flags             | Description                          |
-| ------------------------- | ------------------------------------ |
-| NDEBUG                    | strip off all debug code             |
-| DEBUG                     | build debug version (very noisy)     |
-| NO_CGI                    | disable CGI support                  |
-| NO_CACHING                | disable caching functionality        |
-| NO_SSL                    | disable SSL functionality            |
-| NO_SSL_DL                 | link against system libssl library   |
-| NO_FILES                  | do not serve files from a directory  |
-| SQLITE_DISABLE_LFS        | disables large files (Lua only)      |
-| SSL_ALREADY_INITIALIZED   | do not initialize libcrypto          |
+| Compile Flags              | Description                          |
+| -------------------------- | ------------------------------------ |
+| NDEBUG                     | strip off all debug code             |
+| DEBUG                      | build debug version (very noisy)     |
+|                            |                                      |
+| NO_FILES                   | do not serve files from a directory  |
+| NO_SSL                     | disable SSL functionality            |
+| NO_CGI                     | disable CGI support                  |
+| NO_CACHING                 | disable caching functionality        |
+|                            |                                      |
+| USE_IPV6                   | enable IPv6 support                  |
+| USE_WEBSOCKET              | enable websocket support             |
+| USE_LUA                    | enable Lua support                   |
+| USE_DUKTAPE                | enable server-side JavaScript        |
+|                            | support by including Duktape         |
+| USE_SERVER_STATS           | enable server statistics support     |
+| USE_ZLIB                   | enable on-the-fly compression of     |
+|                            | static content by including zlib     |
+| MG_EXPERIMENTAL_INTERFACES | include experimental interfaces      |
+|                            |                                      |
+| NO_SSL_DL                  | link against system libssl library   |
+| SQLITE_DISABLE_LFS         | disables large files (Lua only)      |
+| SSL_ALREADY_INITIALIZED    | do not initialize libcrypto          |
+
+Note: If `make` is used (with this [Makefile](https://github.com/civetweb/civetweb/blob/master/Makefile)), you should not pass the `USE_<feature>` flags using `COPT`, but use the `WITH_<feature>` syntax above, since additional features may also use additional source code files.
+
 
 ## Cross Compiling
 
