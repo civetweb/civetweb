@@ -479,15 +479,24 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 		}
 		/* We found an opening or closing tag, or we reached the end of the
 		 * file/data block */
-		ret = "]=======]);\n";
+		if (reader->begin[reader->consumed + i] == '=') {
+			/* Lua= tag - Lua expression to print */
+			ret = "]=======]);\nmg.write(";
+			reader->state = 3;
+			i++;
+		} else {
+			/* Normal Lua tag - Lua chunk */
+			ret = "]=======]);\n";
+			reader->state = 2;
+		}
 		*sz = strlen(ret);
-		reader->state = 2;
 		reader->consumed += i; /* length of <?lua or <% tag */
 		return ret;
 	}
 
-	if (reader->state == 2) {
-		/* State 2: Lua code - keep outside mg.write(...) */
+	if ((reader->state == 2) || (reader->state == 3)) {
+		/* State 2: Lua chunkg - keep outside mg.write(...) */
+		/* State 3: Lua expression - inside mg.write(...) */
 
 		for (;;) {
 			int close_tag_found = 0;
@@ -514,8 +523,13 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 			if (close_tag_found) {
 				/* Drop close tag */
 				reader->consumed += 2;
-				/* Send a new opening tag to Lua */
-				ret = ";\nmg.write([=======[";
+
+				if (reader->state == 2) {
+					/* Send a new opening tag to Lua */
+					ret = ";\nmg.write([=======[";
+				} else {
+					ret = ");\nmg.write([=======[";
+				}
 				*sz = strlen(ret);
 				reader->state = 1;
 				return ret;

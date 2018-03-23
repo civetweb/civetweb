@@ -44,8 +44,8 @@ the "Kepler syntax" uses <code>&lt;?lua chunk ?&gt;</code>, <code>&lt;?lua= expr
 <h2>Loops</h2>
 
 <ul>
-   <% for i, item in ipairs(list) do %>
-   <li><%= item %></li>
+   <% for key, value in pairs(mg.request_info) do %>
+   <li><%= key %>: <%= value %></li>
    <% end %>
 </ul>
 
