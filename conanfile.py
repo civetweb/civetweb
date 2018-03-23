@@ -21,7 +21,7 @@ class civetwebConan(ConanFile):
         "shared=True",
         "enable_ssl=True",
         "enable_websockets=True",
-        "enable_cxx=False",
+        "enable_cxx=True",
     )
 
     def optionBool(self, b):
