@@ -489,7 +489,6 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 	if (reader->state == 2) {
 		/* State 2: Lua code - keep outside mg.write(...) */
 
-		printf("XXXXXXXX search: [%c] xxxxxxxxxx\n", reader->tag);
 		for (;;) {
 			int close_tag_found = 0;
 
@@ -508,15 +507,15 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 			}
 
 			/* Is this the closing tag we are looking for? */
-			close_tag_found = ((i + 1 < left)
-			                   && (reader->begin[i + reader->consumed] == '>'));
+			close_tag_found =
+			    ((i + 1 < left)
+			     && (reader->begin[i + 1 + reader->consumed] == '>'));
 
 			if (close_tag_found) {
 				/* Drop close tag */
 				reader->consumed += 2;
-
 				/* Send a new opening tag to Lua */
-				ret = "\nmg.write([=======[";
+				ret = ";\nmg.write([=======[";
 				*sz = strlen(ret);
 				reader->state = 1;
 				return ret;
@@ -533,15 +532,21 @@ lsp_kepler_reader_impl(lua_State *L, void *ud, size_t *sz)
 	return 0;
 }
 
+
 static const char *
 lsp_kepler_reader(lua_State *L, void *ud, size_t *sz)
 {
 	/* debugging */
 	struct lsp_var_reader_data *reader = (struct lsp_var_reader_data *)ud;
+	if (reader->state == 0) {
+		printf("\n-------------------------------------------------------\n");
+		printf("\n\n\n");
+	}
 	const char *ret = lsp_kepler_reader_impl(L, ud, sz);
-	printf("\n%.*s\n[%i]\n\n", *sz, ret, reader->state);
+	printf("%.*s", *sz, ret);
 	return ret;
 }
+
 
 static int
 run_lsp(struct mg_connection *conn,
