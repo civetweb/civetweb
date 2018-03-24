@@ -96,8 +96,8 @@ function senddata()
     mg.write("text", string.format("%u:%02u:%02u", date.hour, date.min, date.sec));
 
     if (hand ~= lasthand) then
-        mg.write(1, string.format("-->h %u", hand*360/(12*60)));
-        mg.write(   string.format("-->m %u", date.min*360/60));
+        mg.write(1, string.format("-->h %f", hand*360/(12*60)));
+        mg.write(   string.format("-->m %f", date.min*360/60));
         lasthand = hand;
     end
 

@@ -13969,9 +13969,11 @@ is_ssl_port_used(const char *ports)
 		 * So, for now, we use this simple algorithm, that may still return
 		 * a false positive in bizarre cases.
 		 */
+		int i;
 		int portslen = (int)strlen(ports);
 		char prevIsNumber = 0;
-		for (int i = 0; i < portslen; i++) {
+
+		for (i = 0; i < portslen; i++) {
 			if (prevIsNumber && (ports[i] == 's' || ports[i] == 'r')) {
 				return 1;
 			}
@@ -18796,6 +18798,13 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 	}
 
 	if (ctx) {
+		/* Declare all variables at begin of the block, to comply
+		 * with old C standards. */
+		char start_time_str[64] = {0};
+		char now_str[64] = {0};
+		time_t start_time = ctx->start_time;
+		time_t now = time(NULL);
+
 		/* Connections information */
 		mg_snprintf(NULL,
 		            NULL,
@@ -18860,11 +18869,6 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 		}
 
 		/* Execution time information */
-		char start_time_str[64] = {0};
-		char now_str[64] = {0};
-		time_t start_time = ctx->start_time;
-		time_t now = time(NULL);
-
 		gmt_time_string(start_time_str,
 		                sizeof(start_time_str) - 1,
 		                &start_time);
