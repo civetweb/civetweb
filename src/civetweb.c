@@ -14920,7 +14920,7 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	}
 
 #else /* not OPENSSL_API_1_1 */
-	int i;
+	int i, num_locks;
 	size_t size;
 
 	if (ebuf_len > 0) {
@@ -14951,13 +14951,14 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	/* Initialize locking callbacks, needed for thread safety.
 	 * http://www.openssl.org/support/faq.html#PROG1
 	 */
-	i = CRYPTO_num_locks();
-	if (i < 0) {
-		i = 0;
+	num_locks = CRYPTO_num_locks();
+	if (num_locks < 0) {
+		num_locks = 0;
 	}
-	size = sizeof(pthread_mutex_t) * ((size_t)(i));
+	size = sizeof(pthread_mutex_t) * ((size_t)(num_locks));
 
-	if (size == 0) {
+	/* allocate mutex array, if required */
+	if (num_locks == 0) {
 		ssl_mutexes = NULL;
 	} else if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc(size)) == NULL) {
 		mg_snprintf(NULL,
@@ -14971,8 +14972,21 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 		return 0;
 	}
 
-	for (i = 0; i < CRYPTO_num_locks(); i++) {
-		pthread_mutex_init(&ssl_mutexes[i], &pthread_mutex_attr);
+	/* initialize required mutex array */
+	for (i = 0; i < num_locks; i++) {
+		if (0 != pthread_mutex_init(&ssl_mutexes[i], &pthread_mutex_attr)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s: error initializing mutex %i of %i",
+			            __func__,
+			            i,
+			            num_locks);
+			DEBUG_TRACE("%s", ebuf);
+			mg_free(ssl_mutexes);
+			return 0;
+		}
 	}
 
 	CRYPTO_set_locking_callback(&ssl_locking_callback);
@@ -14983,6 +14997,7 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	if (!ssllib_dll_handle) {
 		ssllib_dll_handle = load_dll(ebuf, ebuf_len, SSL_LIB, ssl_sw);
 		if (!ssllib_dll_handle) {
+			mg_free(ssl_mutexes);
 			DEBUG_TRACE("%s", ebuf);
 			return 0;
 		}
@@ -16009,7 +16024,20 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	}
 
 	conn->client.is_ssl = use_ssl ? 1 : 0;
-	(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
+	if (0 != pthread_mutex_init(&conn->mutex, &pthread_mutex_attr)) {
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "Can not create mutex");
+#if !defined(NO_SSL)
+		SSL_CTX_free(conn->client_ssl_ctx);
+#endif
+		closesocket(sock);
+		mg_free(conn);
+		return NULL;
+	}
+
 
 #if !defined(NO_SSL)
 	if (use_ssl) {
@@ -17279,7 +17307,11 @@ worker_thread_run(struct worker_thread_args *thread_args)
 	/* Allocate a mutex for this connection to allow communication both
 	 * within the request handler and from elsewhere in the application
 	 */
-	(void)pthread_mutex_init(&conn->mutex, &pthread_mutex_attr);
+	if (0 != pthread_mutex_init(&conn->mutex, &pthread_mutex_attr)) {
+		mg_free(conn->buf);
+		mg_cry_internal(fc(ctx), "%s", "Cannot create mutex");
+		return NULL;
+	}
 
 #if defined(USE_SERVER_STATS)
 	conn->conn_state = 1; /* not consumed */
@@ -17890,12 +17922,12 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif
 	pthread_setspecific(sTlsKey, &tls);
 
-	ok = 0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr);
+	ok = (0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr));
 #if !defined(ALTERNATIVE_QUEUE)
-	ok &= 0 == pthread_cond_init(&ctx->sq_empty, NULL);
-	ok &= 0 == pthread_cond_init(&ctx->sq_full, NULL);
+	ok &= (0 == pthread_cond_init(&ctx->sq_empty, NULL));
+	ok &= (0 == pthread_cond_init(&ctx->sq_full, NULL));
 #endif
-	ok &= 0 == pthread_mutex_init(&ctx->nonce_mutex, &pthread_mutex_attr);
+	ok &= (0 == pthread_mutex_init(&ctx->nonce_mutex, &pthread_mutex_attr));
 	if (!ok) {
 		/* Fatal error - abort start. However, this situation should never
 		 * occur in practice. */
@@ -18220,6 +18252,8 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 	/* Authentication domain is mandatory */
 	/* TODO: Maybe use a new option hostname? */
 	if (!new_dom->config[AUTHENTICATION_DOMAIN]) {
+		mg_cry_internal(fc(ctx), "%s", "authentication domain required");
+		mg_free(new_dom);
 		return -4;
 	}
 
