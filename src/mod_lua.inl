@@ -147,6 +147,8 @@ lua_cry(struct mg_connection *conn,
         const char *lua_title,
         const char *lua_operation)
 {
+	DEBUG_TRACE("lua_cry (err=%i): %s: %s", err, lua_title, lua_operation);
+
 	switch (err) {
 	case LUA_OK:
 	case LUA_YIELD:
@@ -338,6 +340,7 @@ lsp_connect(lua_State *L)
 static int
 lsp_error(lua_State *L)
 {
+	DEBUG_TRACE("%s", "lsp_error");
 	lua_getglobal(L, "mg");
 	lua_getfield(L, -1, "onerror");
 	lua_pushvalue(L, -3);
@@ -350,6 +353,7 @@ static void
 lsp_abort(lua_State *L)
 {
 	int top = lua_gettop(L);
+	DEBUG_TRACE("%s", "lsp_abort");
 	lua_getglobal(L, "mg");
 	lua_pushnil(L);
 	lua_setfield(L, -2, "onerror");

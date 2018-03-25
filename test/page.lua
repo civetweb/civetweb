@@ -1,6 +1,21 @@
 mg.write("HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n")
 
-mg.write([[<html><body>
+mg.write([[<html>
+<head>
+<title>Lua SQLite database test</title>
+<style>
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+    border-spacing: 5px;
+}
+th, td {
+    padding: 5px;
+    text-align: left;    
+}
+</style>
+</head>
+<body>
 <p>This is Lua script example 1, served by the
 <a href="https://github.com/civetweb/civetweb">CivetWeb web server</a>,
 version ]] .. mg.version .. [[.
@@ -22,7 +37,7 @@ mg.write("</ul></p>\r\n")
 mg.write("<p> Today is " .. os.date("%A") .. "</p>\r\n")
 mg.write("<p> URI is " .. mg.request_info.uri .. "</p>\r\n")
 
-mg.write("<p>Database example:\r\n<pre>\r\n")
+mg.write("<p>\r\n<pre>\r\n")
 
   -- Open database
   local db = sqlite3.open('requests.db')
@@ -39,27 +54,57 @@ mg.write("<p>Database example:\r\n<pre>\r\n")
       timestamp NOT NULL,
       method NOT NULL,
       uri NOT NULL,
-      addr
+      addr,
+      civetwebversion,
+      luaversion,
+      aux
     );
   ]])
 
+  -- Add colums to table created with older version
+  db:exec("ALTER TABLE requests ADD COLUMN civetwebversion;")
+  db:exec("ALTER TABLE requests ADD COLUMN luaversion;")
+  db:exec("ALTER TABLE requests ADD COLUMN aux;")
+
   -- Add entry about this request
   local stmt = db:prepare(
-    'INSERT INTO requests VALUES(NULL, datetime("now"), ?, ?, ?);');
+    'INSERT INTO requests VALUES(NULL, datetime("now"), ?, ?, ?, ?, ?, ?);');
   stmt:bind_values(mg.request_info.request_method,
                    mg.request_info.uri,
-                   mg.request_info.remote_port)
+                   mg.request_info.remote_port,
+                   mg.version,
+                   _VERSION,
+                   ""
+                   )
   stmt:step()
   stmt:finalize()
 
   -- Show all previous records
-  mg.write('Previous requests:\n')
+  mg.write('<table>\n')
+  mg.write("<tr>\n")
+  mg.write("<th>id</th>\n")
+  mg.write("<th>timestamp</th>\n")
+  mg.write("<th>method</th>\n")
+  mg.write("<th>uri</th>\n")
+  mg.write("<th>addr</th>\n")
+  mg.write("<th>civetweb</th>\n")
+  mg.write("<th>lua</th>\n")
+  mg.write("<th>aux</th>\n")
+  mg.write("</tr>\n")
+
   stmt = db:prepare('SELECT * FROM requests ORDER BY id DESC;')
   while stmt:step() == sqlite3.ROW do
     local v = stmt:get_values()
-    mg.write(v[1] .. ' ' .. v[2] .. ' ' .. v[3] .. ' '
-          .. v[4] .. ' ' .. v[5] .. '\n')
+    mg.write("<tr>\n")
+    local i = 1
+    while (v[i]) do
+      mg.write("<td>" .. v[i] .. "</td>\n")
+      i = i+1
+    end
+    mg.write("</tr>\n")
   end
+
+  mg.write("</table>\n")
 
   -- Close database
   db:close()
@@ -67,5 +112,7 @@ mg.write("<p>Database example:\r\n<pre>\r\n")
 mg.write([[
 </pre>
 </p>
-</body></html>
+</body>
+</html>
 ]])
+
