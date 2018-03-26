@@ -61,6 +61,10 @@
 /* Lua 5.3 detected */
 #define mg_lua_load lua_load
 
+#elif LUA_VERSION_NUM == 504
+/* Lua 5.4 detected */
+#define mg_lua_load lua_load
+
 #endif
 
 #ifdef LUA_VERSION_MAKEFILE
