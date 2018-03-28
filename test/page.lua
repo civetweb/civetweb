@@ -24,12 +24,12 @@ The following features are available:
 <ul>
 ]])
 
-  mg.write("<li>" .. _VERSION .. " server pages</li>")
+  mg.write('<li><a href="http://www.lua.org/docs.html">' .. _VERSION .. "</a> server pages</li>")
   if sqlite3 then
-    mg.write("<li>sqlite3 binding</li>")
+    mg.write('<li><a href="http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki">sqlite3</a> binding</li>')
   end
   if lfs then
-    mg.write("<li>lua file system</li>")
+    mg.write('<li><a href="https://keplerproject.github.io/luafilesystem/manual.html">lua file system</a></li>')
   end
 
   
@@ -39,8 +39,11 @@ mg.write("<p> URI is " .. mg.request_info.uri .. "</p>\r\n")
 
 mg.write("<p>\r\n<pre>\r\n")
 
-  -- Open database
-  local db = sqlite3.open('requests.db')
+-- Open database
+local db, errcode, errmsg = sqlite3.open('requests.db')
+
+if db then
+
   -- Note that the data base is located in the current working directory
   -- of the process if no other path is given here.
 
@@ -108,6 +111,14 @@ mg.write("<p>\r\n<pre>\r\n")
 
   -- Close database
   db:close()
+
+else
+
+  mg.write("DB error:\n")
+  mg.write("code = " .. tostring(errcode) .. "\n")
+  mg.write("msg = " .. tostring(msg) .. "\n")
+
+end
 
 mg.write([[
 </pre>
