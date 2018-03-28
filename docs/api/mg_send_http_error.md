@@ -27,6 +27,7 @@ A body of the error message, to explain the error in more detail, can be specifi
 
 ### See Also
 
+* [`mg_send_http_ok();`](mg_send_http_ok.md)
 * [`mg_printf();`](mg_printf.md)
 * [`mg_write();`](mg_write.md)
 
