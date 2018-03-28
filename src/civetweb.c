@@ -3496,6 +3496,7 @@ gmt_time_string(char *buf, size_t buf_len, time_t *t)
 	}
 }
 
+
 /* difftime for struct timespec. Return value is in seconds. */
 static double
 mg_difftimespec(const struct timespec *ts_now, const struct timespec *ts_before)
@@ -4598,6 +4599,39 @@ mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 	va_start(ap, fmt);
 	mg_send_http_error_impl(conn, status, fmt, ap);
 	va_end(ap);
+}
+
+
+int
+mg_send_http_ok(struct mg_connection *conn,
+                const char *mime_type,
+                long long content_length)
+{
+	char date[64];
+	time_t curtime = time(NULL);
+
+	gmt_time_string(date, sizeof(date), &curtime);
+
+	mg_printf(conn,
+	          "HTTP/1.1 200 OK\r\n"
+	          "Content-Type: %s\r\n"
+	          "Date: %s\r\n"
+	          "Connection: %s\r\n",
+	          mime_type,
+	          date,
+	          suggest_connection_header(conn));
+
+	send_no_cache_header(conn);
+	send_additional_header(conn);
+	if (content_length < 0) {
+		mg_printf(conn, "Transfer-Encoding: chunked\r\n\r\n");
+	} else {
+		mg_printf(conn,
+		          "Content-Length: %" INT64_FMT "\r\n\r\n",
+		          content_length);
+	}
+
+	return 0;
 }
 
 

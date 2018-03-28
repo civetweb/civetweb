@@ -885,6 +885,20 @@ CIVETWEB_API void mg_send_http_error(struct mg_connection *conn,
                                      PRINTF_FORMAT_STRING(const char *fmt),
                                      ...) PRINTF_ARGS(3, 4);
 
+/* Send "HTTP 200 OK" response header.
+ * Browsers will send a user name and password in their next request, showing
+ * an authentication dialog if the password is not stored.
+ * Parameters:
+ *   conn: Current connection handle.
+ *   mime_type: Set Content-Type for the following content.
+ *   content_length: Size of the following content, if content_length >= 0.
+ *                   Will set transfer-encoding to chunked, if set to -1.
+ * Return:
+ *   < 0   Error
+ */
+CIVETWEB_API int mg_send_http_ok(struct mg_connection *conn,
+                                 const char *mime_type,
+                                 long long content_length);
 
 /* Send HTTP digest access authentication request.
  * Browsers will send a user name and password in their next request, showing
