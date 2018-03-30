@@ -347,17 +347,71 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #include <stdio.h>
 #include <stdint.h>
 
+/********************************************************************/
+/* CivetWeb configuration defines */
+/********************************************************************/
+
+/* Maximum number of threads that can be configured.
+ * The number of threads actually created depends on the "num_threads"
+ * configuration parameter, but this is the upper limit. */
+#if !defined(MAX_WORKER_THREADS)
+#define MAX_WORKER_THREADS (1024 * 64) /* in threads (count) */
+#endif
+
+/* Timeout interval for select/poll calls.
+ * The timeouts depend on "*_timeout_ms" configuration values, but long
+ * timeouts are split into timouts as small as SOCKET_TIMEOUT_QUANTUM.
+ * This reduces the time required to stop the server. */
+#if !defined(SOCKET_TIMEOUT_QUANTUM)
+#define SOCKET_TIMEOUT_QUANTUM (2000) /* in ms */
+#endif
+
+/* Do not try to compress files smaller than this limit. */
+#if !defined(MG_FILE_COMPRESSION_SIZE_LIMIT)
+#define MG_FILE_COMPRESSION_SIZE_LIMIT (1024) /* in bytes */
+#endif
+
+#if !defined(PASSWORDS_FILE_NAME)
+#define PASSWORDS_FILE_NAME ".htpasswd"
+#endif
+
+/* Initial buffer size for all CGI environment variables. In case there is
+ * not enough space, another block is allocated. */
+#if !defined(CGI_ENVIRONMENT_SIZE)
+#define CGI_ENVIRONMENT_SIZE (4096) /* in bytes */
+#endif
+
+/* Maximum number of environment variables. */
+#if !defined(MAX_CGI_ENVIR_VARS)
+#define MAX_CGI_ENVIR_VARS (256) /* in variables (count) */
+#endif
+
+/* General purpose buffer size. */
+#if !defined(MG_BUF_LEN) /* in bytes */
+#define MG_BUF_LEN (1024 * 8)
+#endif
+
+/* Maximum queue length for pending connections. This value is passed as
+ * parameter to the "listen" socket call. */
+#if !defined(SOMAXCONN)
+#define SOMAXCONN (100) /* in pending connections (count) */
+#endif
+
+/* Size of the accepted socket queue (in case the old queue implementation
+ * is used). */
+#if !defined(MGSQLEN)
+#define MGSQLEN (20) /* count */
+#endif
+
+
+/********************************************************************/
+
+/* Helper makros */
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+
+/* Standard defines */
 #if !defined(INT64_MAX)
 #define INT64_MAX (9223372036854775807)
-#endif
-
-
-#if !defined(MAX_WORKER_THREADS)
-#define MAX_WORKER_THREADS (1024 * 64)
-#endif
-
-#if !defined(SOCKET_TIMEOUT_QUANTUM) /* in ms */
-#define SOCKET_TIMEOUT_QUANTUM (2000)
 #endif
 
 #define SHUTDOWN_RD (0)
@@ -435,11 +489,19 @@ typedef long off_t;
 #define NO_SOCKLEN_T
 
 #if defined(_WIN64) || defined(__MINGW64__)
+#if !defined(SSL_LIB)
 #define SSL_LIB "ssleay64.dll"
+#endif
+#if !defined(CRYPTO_LIB)
 #define CRYPTO_LIB "libeay64.dll"
+#endif
 #else
+#if !defined(SSL_LIB)
 #define SSL_LIB "ssleay32.dll"
+#endif
+#if !defined(CRYPTO_LIB)
 #define CRYPTO_LIB "libeay32.dll"
+#endif
 #endif
 
 #define O_NONBLOCK (0)
@@ -806,6 +868,7 @@ timegm(struct tm *tm)
 #define va_copy(x, y) ((x) = (y))
 #endif
 
+
 #if defined(_WIN32)
 /* Create substitutes for POSIX functions in Win32. */
 
@@ -875,14 +938,6 @@ static struct pthread_mutex_undefined_struct *pthread_mutex_attr = NULL;
 #else
 static pthread_mutexattr_t pthread_mutex_attr;
 #endif /* _WIN32 */
-
-
-#define PASSWORDS_FILE_NAME ".htpasswd"
-#define CGI_ENVIRONMENT_SIZE (4096)
-#define MAX_CGI_ENVIR_VARS (256)
-#define MG_BUF_LEN (8192)
-
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 
 #if defined(_WIN32_WCE)
@@ -1646,15 +1701,6 @@ typedef int socklen_t;
 
 #if !defined(MSG_NOSIGNAL)
 #define MSG_NOSIGNAL (0)
-#endif
-
-#if !defined(SOMAXCONN)
-#define SOMAXCONN (100)
-#endif
-
-/* Size of the accepted socket queue */
-#if !defined(MGSQLEN)
-#define MGSQLEN (20)
 #endif
 
 
@@ -9296,8 +9342,12 @@ handle_static_file_request(struct mg_connection *conn,
 	const char *encoding = "";
 	const char *cors1, *cors2, *cors3;
 	int is_head_request;
+
 #if defined(USE_ZLIB)
-	int allow_on_the_fly_compression = 1; /* TODO: get from config */
+	/* Compression is allowed, unless there is a reason not to use compression.
+	 * If the file is already compressed, too small or a "range" request was
+	 * made, on the fly compression is not possible. */
+	int allow_on_the_fly_compression = 1;
 #endif
 
 	if ((conn == NULL) || (conn->dom_ctx == NULL) || (filep == NULL)) {
@@ -9363,7 +9413,8 @@ handle_static_file_request(struct mg_connection *conn,
 
 	fclose_on_exec(&filep->access, conn);
 
-	/* If Range: header specified, act accordingly */
+	/* If "Range" request was made: parse header, send only selected part
+	 * of the file. */
 	r1 = r2 = 0;
 	hdr = mg_get_header(conn, "Range");
 	if ((hdr != NULL) && ((n = parse_range_header(hdr, &r1, &r2)) > 0)
@@ -9399,6 +9450,16 @@ handle_static_file_request(struct mg_connection *conn,
 #endif
 	}
 
+/* Do not compress small files. Small files do not benefit from file
+ * compression, but there is still some overhead. */
+#if defined(USE_ZLIB)
+	if (filep->stat.size < MG_FILE_COMPRESSION_SIZE_LIMIT) {
+		/* File is below the size limit. */
+		allow_on_the_fly_compression = 0;
+	}
+#endif
+
+	/* Standard CORS header */
 	hdr = mg_get_header(conn, "Origin");
 	if (hdr) {
 		/* Cross-origin resource sharing (CORS), see

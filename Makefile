@@ -135,6 +135,7 @@ endif
 
 ifdef WITH_ZLIB
   LIBS += -lz
+  CFLAGS += -DUSE_ZLIB
 endif
 
 # Other features
