@@ -279,7 +279,7 @@ show_usage_and_exit(const char *exeName)
 	fprintf(stderr, "    %s [config_file]\n", exeName);
 	fprintf(stderr, "    %s [-option value ...]\n", exeName);
 	fprintf(stderr, "  Run as client:\n");
-	fprintf(stderr, "    %s -C\n", exeName);
+	fprintf(stderr, "    %s -C url\n", exeName);
 	fprintf(stderr, "  Show system information:\n");
 	fprintf(stderr, "    %s -I\n", exeName);
 	fprintf(stderr, "  Add user/change password:\n");
