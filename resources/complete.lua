@@ -1,12 +1,27 @@
 #!/usr/bin/lua5.2
 
 -- CivetWeb command line completion for bash
---
--- To use it, create a file called "civetweb" in the completion folder
--- (/usr/share/bash-completion/completions/ or /etc/bash_completion)
--- This file has to contain just one line:
--- complete -C /path/to/civetweb/resources/complete.lua civetweb
---
+
+--[[ INSTALLING:
+
+To use auto-completion for bash, you need to define a command for the bash built-in
+[*complete*](https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html).
+
+Create a file called "civetweb" in the completion folder.
+Depending on Linux distribution and version, this might be
+/usr/share/bash-completion/completions/, /etc/bash_completion or another folder.
+
+The file has to contain just one line:
+complete -C /path/to/civetweb/resources/complete.lua civetweb
+
+The complete command script is implemented in this file.
+It needs Lua 5.2 to be installed (for Debian based systems: "sudo apt-get install lua5.2").
+In case lua5.2 is not located in /usr/bin/lua5.2 (see "which lua5.2"),
+the first line (#!) needs to be adapted accordingly.
+
+--]]
+
+---------------------------------------------------------------------------------------------------
 
 -- The bash "complete -C" has an awkward interface:
 -- see https://unix.stackexchange.com/questions/250262/how-to-use-bashs-complete-or-compgen-c-command-option
@@ -27,9 +42,11 @@ comp_type = os.getenv("COMP_TYPE") -- type:
 
 -- Debug-Print function (must use absolute path for log file)
 function dp(txt)
+  --[[ comment / uncomment to enable debugging
   local f = io.open("/tmp/complete.log", "a");
   f:write(txt .. "\n")
   f:close()
+  --]]
 end
 
 -- Helper function: Check if files exist
@@ -77,9 +94,20 @@ if (is_i) then
 end
 
 -- -A and -R require the password file as second argument
-htpasswd = ".htpasswd"
-if ((last == "-A") or (last == "-R")) and (this == htpasswd:sub(1,#this)) then
-  print(htpasswd)
+htpasswd_r = ".htpasswd <mydomain.com> <username>"
+htpasswd_a = htpasswd_r .. " <password>"
+if (last == "-A") and (this == htpasswd_a:sub(1,#this)) then
+  dp("Fill with option template for -A")
+  print(htpasswd_a)
+  os.exit(0)
+end
+if (last == "-R") and (this == htpasswd_r:sub(1,#this)) then
+  dp("Fill with option template for -R")
+  print(htpasswd_r)
+  os.exit(0)
+end
+if (is_a or is_r) then
+  dp("Options -A and -R have a fixed number of arguments")
   os.exit(0)
 end
 
@@ -96,13 +124,17 @@ if (last == "-C") and (this == http:sub(1,#this)) then
   print(http.. "localhost/")
   os.exit(0)
 end
+if (is_c) then
+  dp("Option -C has just one argument")
+  os.exit(0)
+end
 
 
 -- Take options directly from "--help" output of executable
 optfile = "/tmp/civetweb.options"
 if not fileexists(optfile) then
   dp("options file " .. optfile .. " missing")
-  os.execute(cmd .. " -h &> " .. optfile)
+  os.execute(cmd .. " --help > " .. optfile .. " 2>&1")
 else
   dp("options file " .. optfile .. " found")
 end
