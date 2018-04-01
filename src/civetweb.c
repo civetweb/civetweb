@@ -4462,7 +4462,7 @@ mg_get_response_code_text(const struct mg_connection *conn, int response_code)
 }
 
 
-static void
+static int
 mg_send_http_error_impl(struct mg_connection *conn,
                         int status,
                         const char *fmt,
@@ -4482,7 +4482,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 	const char *status_text = mg_get_response_code_text(conn, status);
 
 	if ((conn == NULL) || (fmt == NULL)) {
-		return;
+		return -2;
 	}
 
 	/* Set status (for log) */
@@ -4601,7 +4601,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 				conn->in_error_handler = 1;
 				handle_file_based_request(conn, path_buf, &error_page_file);
 				conn->in_error_handler = 0;
-				return;
+                return 0;
 			}
 		}
 
@@ -4635,16 +4635,21 @@ mg_send_http_error_impl(struct mg_connection *conn,
 			DEBUG_TRACE("Error %i", status);
 		}
 	}
+	return 0;
 }
 
 
-void
+int
 mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 {
 	va_list ap;
+	int ret;
+
 	va_start(ap, fmt);
-	mg_send_http_error_impl(conn, status, fmt, ap);
+	ret = mg_send_http_error_impl(conn, status, fmt, ap);
 	va_end(ap);
+
+	return ret;
 }
 
 
@@ -4655,6 +4660,11 @@ mg_send_http_ok(struct mg_connection *conn,
 {
 	char date[64];
 	time_t curtime = time(NULL);
+
+	if ((mime_type == NULL) || (*mime_type == 0)) {
+		/* Parameter error */
+		return -2;
+	}
 
 	gmt_time_string(date, sizeof(date), &curtime);
 
@@ -4673,11 +4683,67 @@ mg_send_http_ok(struct mg_connection *conn,
 		mg_printf(conn, "Transfer-Encoding: chunked\r\n\r\n");
 	} else {
 		mg_printf(conn,
-		          "Content-Length: %" INT64_FMT "\r\n\r\n",
-		          content_length);
+                  "Content-Length: %" UINT64_FMT "\r\n\r\n",
+                  (uint64_t)content_length);
 	}
 
 	return 0;
+}
+
+
+int
+mg_send_http_redirect(struct mg_connection *conn,
+                      const char *target_url,
+                      int redirect_code)
+{
+	/* Send a 30x redirect response.
+	 *
+	 * Redirect types (status codes):
+	 *
+	 * Status | Perm/Temp | Method              | Version
+	 *   301  | permanent | POST->GET undefined | HTTP/1.0
+	 *   302  | temporary | POST->GET undefined | HTTP/1.0
+	 *   303  | temporary | always use GET      | HTTP/1.1
+	 *   307  | temporary | always keep method  | HTTP/1.1
+	 *   308  | permanent | always keep method  | HTTP/1.1
+	 */
+	const char *resp;
+    int ret;
+
+	/* In case redirect_code=0, use 307. */
+	if (redirect_code == 0) {
+		redirect_code = 307;
+	}
+
+	/* In case redirect_code is none of the above, return error. */
+	if ((redirect_code != 301) && (redirect_code != 302)
+	    && (redirect_code != 303) && (redirect_code != 307)
+	    && (redirect_code != 308)) {
+		/* Parameter error */
+		return -2;
+	}
+
+	/* Get proper text for response code */
+	resp = mg_get_response_code_text(conn, redirect_code);
+
+	/* If target_url is not defined, redirect to "/". */
+	if ((target_url == NULL) || (*target_url == 0)) {
+		target_url = "/";
+	}
+
+	/* Do not send any additional header. For all other options,
+	 * including caching, there are suitable defaults. */
+	ret = mg_printf(conn,
+	                "HTTP/1.1 %i %s\r\n"
+	                "Location: %s\r\n"
+	                "Content-Length: 0\r\n"
+	                "Connection: %s\r\n\r\n",
+	                redirect_code,
+	                resp,
+	                target_url,
+	                suggest_connection_header(conn));
+
+	return (ret > 0) ? ret : -1;
 }
 
 
@@ -10888,7 +10954,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		}
 	} else if (get_header(ri.http_headers, ri.num_headers, "Location")
 	           != NULL) {
-		conn->status_code = 302;
+		conn->status_code = 307;
 	} else {
 		conn->status_code = 200;
 	}
@@ -12767,29 +12833,53 @@ alloc_get_host(struct mg_connection *conn)
 static void
 redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 {
+	char target_url[MG_BUF_LEN];
+	int truncated = 0;
+
 	conn->must_close = 1;
 
 	/* Send host, port, uri and (if it exists) ?query_string */
 	if (conn->host) {
-		mg_printf(conn,
-		          "HTTP/1.1 302 Found\r\nLocation: https://%s:%d%s%s%s\r\n\r\n",
-		          conn->host,
+
+		/* Use "308 Permanent Redirect" */
+		int redirect_code = 308;
+
+		/* Create target URL */
+		mg_snprintf(
+		    conn,
+		    &truncated,
+		    target_url,
+		    sizeof(target_url),
+		    "Location: https://%s:%d%s%s%s",
+
+		    conn->host,
 #if defined(USE_IPV6)
-		          (conn->phys_ctx->listening_sockets[ssl_index].lsa.sa.sa_family
-		           == AF_INET6)
-		              ? (int)ntohs(conn->phys_ctx->listening_sockets[ssl_index]
-		                               .lsa.sin6.sin6_port)
-		              :
+		    (conn->phys_ctx->listening_sockets[ssl_index].lsa.sa.sa_family
+		     == AF_INET6)
+		        ? (int)ntohs(conn->phys_ctx->listening_sockets[ssl_index]
+		                         .lsa.sin6.sin6_port)
+		        :
 #endif
-		              (int)ntohs(conn->phys_ctx->listening_sockets[ssl_index]
-		                             .lsa.sin.sin_port),
-		          conn->request_info.local_uri,
-		          (conn->request_info.query_string == NULL) ? "" : "?",
-		          (conn->request_info.query_string == NULL)
-		              ? ""
-		              : conn->request_info.query_string);
+		        (int)ntohs(conn->phys_ctx->listening_sockets[ssl_index]
+		                       .lsa.sin.sin_port),
+		    conn->request_info.local_uri,
+		    (conn->request_info.query_string == NULL) ? "" : "?",
+		    (conn->request_info.query_string == NULL)
+		        ? ""
+		        : conn->request_info.query_string);
+
+		/* Check overflow in location buffer (will not occur if MG_BUF_LEN
+		 * is used as buffer size) */
+		if (truncated) {
+			mg_send_http_error(conn, 500, "%s", "Redirect URL too long");
+			return;
+		}
+
+		/* Use redirect helper function */
+		mg_send_http_redirect(conn, target_url, redirect_code);
 	}
 }
+
 
 static void
 handler_info_acquire(struct mg_handler_info *handler_info)
@@ -12799,6 +12889,7 @@ handler_info_acquire(struct mg_handler_info *handler_info)
 	pthread_mutex_unlock(&handler_info->refcount_mutex);
 }
 
+
 static void
 handler_info_release(struct mg_handler_info *handler_info)
 {
@@ -12807,6 +12898,7 @@ handler_info_release(struct mg_handler_info *handler_info)
 	pthread_cond_signal(&handler_info->refcount_cond);
 	pthread_mutex_unlock(&handler_info->refcount_mutex);
 }
+
 
 static void
 handler_info_wait_unused(struct mg_handler_info *handler_info)
@@ -13764,13 +13856,6 @@ handle_request(struct mg_connection *conn)
 	/* 15. read a normal file with GET or HEAD */
 	handle_file_based_request(conn, path, &file);
 #endif /* !defined(NO_FILES) */
-
-#if 0
-            /* Perform redirect and auth checks before calling begin_request()
-             * handler.
-             * Otherwise, begin_request() would need to perform auth checks and
-             * redirects. */
-#endif
 }
 
 

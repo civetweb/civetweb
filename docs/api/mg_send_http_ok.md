@@ -1,6 +1,6 @@
 # Civetweb API Reference
 
-### `mg_send_http_ok( conn, mime_type, content_len, ... );`
+### `mg_send_http_ok( conn, mime_type, content_len );`
 
 ### Parameters
 
@@ -13,7 +13,7 @@
 ### Return Value
 
 | Type | Description |
-| :--- | :--- |
+|`int`| An integer indicating success (>=0) or failure (<0) |
 
 
 ### Description
@@ -26,7 +26,8 @@ The `content_len` specifies the size of the response body in bytes. If the size 
 
 ### See Also
 
-* [`mg_send_http_error();`](mg_send_http_ok.md)
+* [`mg_send_http_error();`](mg_send_http_error.md)
+* [`mg_send_http_redirect();`](mg_send_http_redirect.md)
 * [`mg_write();`](mg_write.md)
 * [`mg_send_chunk();`](mg_send_chunk.md)
 

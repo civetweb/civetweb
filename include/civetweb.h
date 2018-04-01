@@ -880,14 +880,15 @@ CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
 
 
 /* Send HTTP error reply. */
-CIVETWEB_API void mg_send_http_error(struct mg_connection *conn,
-                                     int status_code,
-                                     PRINTF_FORMAT_STRING(const char *fmt),
-                                     ...) PRINTF_ARGS(3, 4);
+CIVETWEB_API int mg_send_http_error(struct mg_connection *conn,
+                                    int status_code,
+                                    PRINTF_FORMAT_STRING(const char *fmt),
+                                    ...) PRINTF_ARGS(3, 4);
+
 
 /* Send "HTTP 200 OK" response header.
- * Browsers will send a user name and password in their next request, showing
- * an authentication dialog if the password is not stored.
+ * After calling this function, use mg_write or mg_send_chunk to send the
+ * response body.
  * Parameters:
  *   conn: Current connection handle.
  *   mime_type: Set Content-Type for the following content.
@@ -899,6 +900,22 @@ CIVETWEB_API void mg_send_http_error(struct mg_connection *conn,
 CIVETWEB_API int mg_send_http_ok(struct mg_connection *conn,
                                  const char *mime_type,
                                  long long content_length);
+
+
+/* Send "HTTP 30x" redirect response.
+ * The response has content-size zero: do not send any body data after calling
+ * this function.
+ * Parameters:
+ *   conn: Current connection handle.
+ *   target_url: New location.
+ *   redirect_code: HTTP redirect type. Could be 301, 302, 303, 307, 308.
+ * Return:
+ *   < 0   Error (-1 send error, -2 parameter error)
+ */
+CIVETWEB_API int mg_send_http_redirect(struct mg_connection *conn,
+                                       const char *target_url,
+                                       int redirect_code);
+
 
 /* Send HTTP digest access authentication request.
  * Browsers will send a user name and password in their next request, showing
