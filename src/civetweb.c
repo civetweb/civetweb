@@ -4601,7 +4601,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 				conn->in_error_handler = 1;
 				handle_file_based_request(conn, path_buf, &error_page_file);
 				conn->in_error_handler = 0;
-                return 0;
+				return 0;
 			}
 		}
 
@@ -4683,8 +4683,8 @@ mg_send_http_ok(struct mg_connection *conn,
 		mg_printf(conn, "Transfer-Encoding: chunked\r\n\r\n");
 	} else {
 		mg_printf(conn,
-                  "Content-Length: %" UINT64_FMT "\r\n\r\n",
-                  (uint64_t)content_length);
+		          "Content-Length: %" UINT64_FMT "\r\n\r\n",
+		          (uint64_t)content_length);
 	}
 
 	return 0;
@@ -4707,8 +4707,10 @@ mg_send_http_redirect(struct mg_connection *conn,
 	 *   307  | temporary | always keep method  | HTTP/1.1
 	 *   308  | permanent | always keep method  | HTTP/1.1
 	 */
-	const char *resp;
-    int ret;
+	const char *redirect_text;
+	int ret;
+	size_t content_len = 0;
+	char reply[MG_BUF_LEN];
 
 	/* In case redirect_code=0, use 307. */
 	if (redirect_code == 0) {
@@ -4724,24 +4726,68 @@ mg_send_http_redirect(struct mg_connection *conn,
 	}
 
 	/* Get proper text for response code */
-	resp = mg_get_response_code_text(conn, redirect_code);
+	redirect_text = mg_get_response_code_text(conn, redirect_code);
 
 	/* If target_url is not defined, redirect to "/". */
 	if ((target_url == NULL) || (*target_url == 0)) {
 		target_url = "/";
 	}
 
+#if 0
+    /* Prepare a response body with a hyperlink.
+     *
+	 * According to RFC2616 (and RFC1945 before):
+	 * Unless the request method was HEAD, the entity of the
+	 * response SHOULD contain a short hypertext note with a hyperlink to
+	 * the new URI(s).
+     *
+     * However, this response body is not useful in M2M communication.
+     * Probably the original reason in the RFC was, clients not supporting
+     * a 30x HTTP redirect could still show the HTML page and let the user
+     * press the link. Since current browsers support 30x HTTP, the additional
+     * HTML body does not seem to make sense anymore.
+     *
+     * The new RFC7231 (Section 6.4) does no longer recommend it ("SHOULD"),
+     * but it only notes:
+     * The server's response payload usually contains a short
+     * hypertext note with a hyperlink to the new URI(s).
+     *
+     * Keep it deactivated for now, if someone needs the 30x body: uncomment it.
+	 */
+	mg_snprintf(
+	    conn,
+	    NULL /* ignore truncation */,
+	    reply,
+	    sizeof(reply),
+	    "<html><head>%s</head><body><a href=\"%s\">%s</a></body></html>",
+	    redirect_text,
+	    target_url,
+	    target_url);
+	content_len = strlen(reply);
+#else
+	reply[0] = 0;
+#endif
+
 	/* Do not send any additional header. For all other options,
 	 * including caching, there are suitable defaults. */
 	ret = mg_printf(conn,
 	                "HTTP/1.1 %i %s\r\n"
 	                "Location: %s\r\n"
-	                "Content-Length: 0\r\n"
+	                "Content-Length: %u\r\n"
 	                "Connection: %s\r\n\r\n",
 	                redirect_code,
-	                resp,
+	                redirect_text,
 	                target_url,
+	                (unsigned int)content_len,
 	                suggest_connection_header(conn));
+
+	/* Send response body */
+	if ((ret > 0) && (content_len > 0)) {
+		/* ... unless it is a HEAD request */
+		if (0 != strcmp(conn->request_info.request_method, "HEAD")) {
+			ret = mg_write(conn, reply, content_len);
+		}
+	}
 
 	return (ret > 0) ? ret : -1;
 }
