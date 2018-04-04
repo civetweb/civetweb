@@ -1387,8 +1387,11 @@ START_TEST(test_request_handlers)
 	          || (client_ri->status_code == 303)
 	          || (client_ri->status_code == 307)
 	          || (client_ri->status_code == 308)); /* is a redirect code */
+	/*
+	// A redirect may have a body, or not
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, -1);
+	*/
 	mg_close_connection(client_conn);
 #endif
 
@@ -1418,8 +1421,11 @@ START_TEST(test_request_handlers)
 	          || (client_ri->status_code == 303)
 	          || (client_ri->status_code == 307)
 	          || (client_ri->status_code == 308)); /* is a redirect code */
+	/*
+	// A redirect may have a body, or not
 	i = mg_read(client_conn, buf, sizeof(buf));
 	ck_assert_int_eq(i, -1);
+	*/
 	mg_close_connection(client_conn);
 #endif
 
