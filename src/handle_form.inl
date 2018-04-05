@@ -436,6 +436,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				} else {
 					vallen = (ptrdiff_t)strlen(val);
 					next = val + vallen;
+					end_of_key_value_pair_found = all_data_read;
 				}
 
 				if (field_storage == MG_FORM_FIELD_STORAGE_GET) {
@@ -443,8 +444,6 @@ mg_handle_form_request(struct mg_connection *conn,
 					if (!end_of_key_value_pair_found && !all_data_read) {
 						/* This callback will deliver partial contents */
 					}
-#else
-					(void)all_data_read; /* avoid warning */
 #endif
 
 					/* Call callback */
@@ -476,6 +475,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					memmove(buf,
 					        buf + (size_t)used,
 					        sizeof(buf) - (size_t)used);
+					next = buf;
 					buf_fill -= (int)used;
 					if ((size_t)buf_fill < (sizeof(buf) - 1)) {
 
@@ -521,6 +521,11 @@ mg_handle_form_request(struct mg_connection *conn,
 					remove_bad_file(conn, path);
 				}
 				fstore.access.fp = NULL;
+			}
+
+			if (all_data_read && (buf_fill == 0)) {
+				/* nothing more to process */
+				break;
 			}
 
 			/* Proceed to next entry */
