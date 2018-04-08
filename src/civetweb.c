@@ -15185,33 +15185,40 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 
 	/* allocate mutex array, if required */
 	if (num_locks == 0) {
+		/* No mutex array required */
 		ssl_mutexes = NULL;
-	} else if ((ssl_mutexes = (pthread_mutex_t *)mg_malloc(size)) == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            ebuf,
-		            ebuf_len,
-		            "%s: cannot allocate mutexes: %s",
-		            __func__,
-		            ssl_error());
-		DEBUG_TRACE("%s", ebuf);
-		return 0;
-	}
+	} else {
+		/* Mutex array required - allocate it */
+		ssl_mutexes = (pthread_mutex_t *)mg_malloc(size);
 
-	/* initialize required mutex array */
-	for (i = 0; i < num_locks; i++) {
-		if (0 != pthread_mutex_init(&ssl_mutexes[i], &pthread_mutex_attr)) {
+		/* Check OOM */
+		if (ssl_mutexes == NULL) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
 			            ebuf_len,
-			            "%s: error initializing mutex %i of %i",
+			            "%s: cannot allocate mutexes: %s",
 			            __func__,
-			            i,
-			            num_locks);
+			            ssl_error());
 			DEBUG_TRACE("%s", ebuf);
-			mg_free(ssl_mutexes);
 			return 0;
+		}
+
+		/* initialize mutex array */
+		for (i = 0; i < num_locks; i++) {
+			if (0 != pthread_mutex_init(&ssl_mutexes[i], &pthread_mutex_attr)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for ebuf */
+				            ebuf,
+				            ebuf_len,
+				            "%s: error initializing mutex %i of %i",
+				            __func__,
+				            i,
+				            num_locks);
+				DEBUG_TRACE("%s", ebuf);
+				mg_free(ssl_mutexes);
+				return 0;
+			}
 		}
 	}
 
@@ -18343,11 +18350,11 @@ mg_start(const struct mg_callbacks *callbacks,
 	    (struct socket *)mg_calloc_ctx(sizeof(ctx->client_socks[0]),
 	                                   ctx->cfg_worker_threads,
 	                                   ctx);
-	if (ctx->client_wait_events == NULL) {
+	if (ctx->client_socks == NULL) {
 		mg_cry_internal(fc(ctx),
 		                "%s",
 		                "Not enough memory for worker socket array");
-		mg_free(ctx->client_socks);
+		mg_free(ctx->client_wait_events);
 		mg_free(ctx->worker_threadids);
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
@@ -18363,6 +18370,7 @@ mg_start(const struct mg_callbacks *callbacks,
 				event_destroy(ctx->client_wait_events[i]);
 			}
 			mg_free(ctx->client_socks);
+			mg_free(ctx->client_wait_events);
 			mg_free(ctx->worker_threadids);
 			free_context(ctx);
 			pthread_setspecific(sTlsKey, NULL);

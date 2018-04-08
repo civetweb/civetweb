@@ -799,7 +799,8 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 			}
 
-			if (!fbeg) {
+			if (!fbeg || !fend) {
+				fbeg = NULL;
 				fend = NULL;
 				fnlen = 0;
 			} else {

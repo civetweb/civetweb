@@ -199,10 +199,22 @@ timer_thread(void *thread_func_param)
 TIMER_API int
 timers_init(struct mg_context *ctx)
 {
+	/* Initialize timers data structure */
 	ctx->timers =
 	    (struct ttimers *)mg_calloc_ctx(sizeof(struct ttimers), 1, ctx);
-	(void)pthread_mutex_init(&ctx->timers->mutex, NULL);
 
+	if (!ctx->timers) {
+		return -1;
+	}
+
+	/* Initialize mutex */
+	if (0 != pthread_mutex_init(&ctx->timers->mutex, NULL)) {
+		mg_free((void *)(ctx->timers));
+		return -1;
+	}
+
+	/* For some systems timer_getcurrenttime does some initialization
+	 * during the first call. Call it once now, ignore the result. */
 	(void)timer_getcurrenttime();
 
 	/* Start timer thread */
