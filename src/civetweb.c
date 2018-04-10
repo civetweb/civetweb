@@ -15485,6 +15485,10 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wincompatible-pointer-types"
 #endif
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+#endif
 	/* Depending on the OpenSSL version, the callback may be
 	 * 'void (*)(SSL *, int, int)' or 'void (*)(const SSL *, int, int)'
 	 * yielding in an "incompatible-pointer-type" warning for the other
@@ -15504,6 +15508,9 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	                                       ssl_servername_callback);
 	SSL_CTX_set_tlsext_servername_arg(dom_ctx->ssl_ctx, phys_ctx);
 
+#if defined(__GNUC__) || defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
