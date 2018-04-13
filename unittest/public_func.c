@@ -149,15 +149,37 @@ END_TEST
 
 START_TEST(test_mg_get_valid_options)
 {
-	int i;
+	int i, j, len;
+	char c;
 	const struct mg_option *default_options = mg_get_valid_options();
 
 	ck_assert(default_options != NULL);
 
 	for (i = 0; default_options[i].name != NULL; i++) {
+
+		/* every option has a name */
 		ck_assert(default_options[i].name != NULL);
-		ck_assert(strlen(default_options[i].name) > 0);
+
+		/* every option has a valie type >0 and <= the highest currently known
+		 * option type (currently 9 = MG_CONFIG_TYPE_YES_NO_OPTIONAL) */
 		ck_assert(((int)default_options[i].type) > 0);
+		ck_assert(((int)default_options[i].type) < 10);
+
+		/* options start with a lowercase letter (a-z) */
+		c = default_options[i].name[0];
+		ck_assert((c >= 'a') && (c <= 'z'));
+
+		/* check some reasonable length (this is not a permanent spec
+		 * for min/max option name lengths) */
+		len = (int)strlen(default_options[i].name);
+		ck_assert_int_ge(len, 8);
+		ck_assert_int_lt(len, 40);
+
+		/* check valid characters (lower case or underscore) */
+		for (j = 0; j < len; j++) {
+			c = default_options[i].name[j];
+			ck_assert(((c >= 'a') && (c <= 'z')) || (c == '_'));
+		}
 	}
 
 	ck_assert(i > 0);

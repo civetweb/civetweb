@@ -562,52 +562,61 @@ END_TEST
 START_TEST(test_parse_port_string)
 {
 	/* Adapted from unit_test.c */
-	/* Copyright (c) 2013-2015 the Civetweb developers */
+	/* Copyright (c) 2013-2018 the Civetweb developers */
 	/* Copyright (c) 2004-2013 Sergey Lyubka */
-	static const char *valid[] =
-	{ "0",
-	  "1",
-	  "1s",
-	  "1r",
-	  "1.2.3.4:1",
-	  "1.2.3.4:1s",
-	  "1.2.3.4:1r",
+	struct t_test_parse_port_string {
+		const char *port_string;
+		int valid;
+		int ip_family;
+	};
+
+	static struct t_test_parse_port_string testdata[] =
+	{ {"0", 1, 4},
+	  {"1", 1, 4},
+	  {"1s", 1, 4},
+	  {"1r", 1, 4},
+	  {"1.2.3.4:1", 1, 4},
+	  {"1.2.3.4:1s", 1, 4},
+	  {"1.2.3.4:1r", 1, 4},
 #if defined(USE_IPV6)
-	  "[::1]:123",
-	  "[::]:80",
-	  "[3ffe:2a00:100:7031::1]:900",
-	  "+80",
+	  {"[::1]:123", 1, 6},
+	  {"[::]:80", 1, 6},
+	  {"[3ffe:2a00:100:7031::1]:900", 1, 6},
+	  {"+80", 1, 4 + 6},
+#else
+	  {"[::1]:123", 0, 0},
+	  {"[::]:80", 0, 0},
+	  {"[3ffe:2a00:100:7031::1]:900", 0, 0},
+	  {"+80", 0, 0},
 #endif
-	  NULL };
-	static const char *invalid[] = {
-	    "99999", "1k", "1.2.3", "1.2.3.4:", "1.2.3.4:2p", NULL};
+	  {"99999", 0, 0},
+	  {"1k", 0, 0},
+	  {"1.2.3", 0, 0},
+	  {"1.2.3.4:", 0, 0},
+	  {"1.2.3.4:2p", 0, 0},
+	  {NULL, 0, 0} };
+
 	struct socket so;
 	struct vec vec;
 	int ip_family;
-	int i;
+	int i, ret;
 
 	mark_point();
 
-	for (i = 0; valid[i] != NULL; i++) {
-		vec.ptr = valid[i];
+	for (i = 0; testdata[i].port_string != NULL; i++) {
+		vec.ptr = testdata[i].port_string;
 		vec.len = strlen(vec.ptr);
-		ip_family = 123;
-		ck_assert_int_ne(parse_port_string(&vec, &so, &ip_family), 0);
-		if (i < 7) {
-			ck_assert_int_eq(ip_family, 4);
-		} else if (i < 10) {
-			ck_assert_int_eq(ip_family, 6);
-		} else {
-			ck_assert_int_eq(ip_family, 4 + 6);
-		}
-	}
 
-	for (i = 0; invalid[i] != NULL; i++) {
-		vec.ptr = invalid[i];
-		vec.len = strlen(vec.ptr);
 		ip_family = 123;
-		ck_assert_int_eq(parse_port_string(&vec, &so, &ip_family), 0);
-		ck_assert_int_eq(ip_family, 0);
+		ret = parse_port_string(&vec, &so, &ip_family);
+
+		if (testdata[i].valid) {
+			ck_assert_int_ne(ret, 0);
+		} else {
+			ck_assert_int_eq(ret, 0);
+		}
+
+		ck_assert_int_eq(ip_family, testdata[i].ip_family);
 	}
 }
 END_TEST
@@ -794,12 +803,12 @@ START_TEST(test_parse_date_string)
 
 	sprintf(date,
 	        "%02u %s %04u %02u:%02u:%02u",
-	        tm->tm_mday,
+	        (unsigned int)tm->tm_mday,
 	        month_names[tm->tm_mon],
-	        tm->tm_year + 1900,
-	        tm->tm_hour,
-	        tm->tm_min,
-	        tm->tm_sec);
+	        (unsigned int)(tm->tm_year + 1900),
+	        (unsigned int)tm->tm_hour,
+	        (unsigned int)tm->tm_min,
+	        (unsigned int)tm->tm_sec);
 	ck_assert_uint_eq((uintmax_t)parse_date_string(date), (uintmax_t)now);
 
 	gmt_time_string(date, 1, NULL);
@@ -819,12 +828,12 @@ START_TEST(test_parse_date_string)
 		tm = gmtime(&now);
 		sprintf(date,
 		        "%02u-%s-%04u %02u:%02u:%02u",
-		        tm->tm_mday,
+		        (unsigned int)tm->tm_mday,
 		        month_names[tm->tm_mon],
-		        tm->tm_year + 1900,
-		        tm->tm_hour,
-		        tm->tm_min,
-		        tm->tm_sec);
+		        (unsigned int)(tm->tm_year + 1900),
+		        (unsigned int)tm->tm_hour,
+		        (unsigned int)tm->tm_min,
+		        (unsigned int)tm->tm_sec);
 		ck_assert_uint_eq((uintmax_t)parse_date_string(date), (uintmax_t)now);
 	}
 #endif

@@ -1874,7 +1874,8 @@ get_password(const char *user,
 
 	/* Create the dialog */
 	(void)memset(mem, 0, sizeof(mem));
-	(void)memcpy(mem, &dialog_header, sizeof(dialog_header));
+	p = mem;
+	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
 	p = mem + sizeof(dialog_header);
 
 	y = HEIGHT;
@@ -2150,7 +2151,8 @@ show_settings_dialog()
 	}
 
 	(void)memset(mem, 0, sizeof(mem));
-	(void)memcpy(mem, &dialog_header, sizeof(dialog_header));
+	p = mem;
+	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
 	p = mem + sizeof(dialog_header);
 
 	options = mg_get_valid_options();
@@ -2368,7 +2370,8 @@ change_password_file()
 	do {
 		s_dlg_proc_param.hWnd = NULL;
 		(void)memset(mem, 0, sizeof(mem));
-		(void)memcpy(mem, &dialog_header, sizeof(dialog_header));
+		p = mem;
+		(void)memcpy(p, &dialog_header, sizeof(dialog_header));
 		p = mem + sizeof(dialog_header);
 
 		f = fopen(path, "r+");
@@ -2586,7 +2589,8 @@ show_system_info()
 
 	/* Create the dialog */
 	(void)memset(mem, 0, sizeof(mem));
-	(void)memcpy(mem, &dialog_header, sizeof(dialog_header));
+	p = mem;
+	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
 	p = mem + sizeof(dialog_header);
 
 	y = HEIGHT;

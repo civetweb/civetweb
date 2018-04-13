@@ -1134,7 +1134,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 
 START_TEST(test_request_handlers)
 {
-	char ebuf[100];
+	char ebuf[1024];
 	struct mg_context *ctx;
 	struct mg_connection *client_conn;
 	const struct mg_response_info *client_ri;
@@ -1191,7 +1191,7 @@ START_TEST(test_request_handlers)
 	struct mg_connection *ws_client4_conn = NULL;
 #endif
 
-	char cmd_buf[256];
+	char cmd_buf[1024];
 	char *cgi_env_opt;
 
 	mark_point();
@@ -1212,7 +1212,7 @@ START_TEST(test_request_handlers)
 #endif
 	OPTIONS[opt_idx++] = "cgi_environment";
 	cgi_env_opt = (char *)calloc(1, 4096 /* CGI_ENVIRONMENT_SIZE */);
-	ck_assert_ptr_ne(cgi_env_opt, NULL);
+	ck_assert(cgi_env_opt != NULL);
 	cgi_env_opt[0] = 'x';
 	cgi_env_opt[1] = '=';
 	memset(cgi_env_opt + 2, 'y', 4090); /* Add large env field, so the server
@@ -2470,7 +2470,7 @@ START_TEST(test_handle_form)
 	const char *OPTIONS[8];
 	const char *opt;
 	int opt_idx = 0;
-	char ebuf[100];
+	char ebuf[1024];
 	const char *multipart_body;
 	const char *boundary;
 	size_t body_len, body_sent, chunk_len;
@@ -2954,10 +2954,11 @@ START_TEST(test_handle_form)
 	 * environments (depending on the network stack) */
 	body_sent = 0;
 	do {
+		size_t bound_len = strlen(boundary);
 		send_chunk_string(client_conn, "ignore\r\n");
 		body_sent += 8;
 		/* send some strings that are almost boundaries */
-		for (chunk_len = 1; chunk_len < strlen(boundary); chunk_len++) {
+		for (chunk_len = 1; chunk_len < bound_len; chunk_len++) {
 			/* chunks from 1 byte to strlen(boundary)-1 */
 			send_chunk_stringl(client_conn, boundary, (unsigned int)chunk_len);
 			body_sent += chunk_len;
@@ -3046,7 +3047,7 @@ START_TEST(test_http_auth)
 	const char *str;
 	size_t len;
 	int i;
-	char HA1[256], HA2[256], HA[256];
+	char HA1[256], HA2[256];
 	char HA1_md5_buf[33], HA2_md5_buf[33], HA_md5_buf[33];
 	char *HA1_md5_ret, *HA2_md5_ret, *HA_md5_ret;
 	const char *nc = "00000001";
@@ -3167,7 +3168,6 @@ START_TEST(test_http_auth)
 	       (size_t)((ptrdiff_t)(str) - (ptrdiff_t)(auth_request + len)));
 	memset(HA1, 0, sizeof(HA1));
 	memset(HA2, 0, sizeof(HA2));
-	memset(HA, 0, sizeof(HA));
 	memset(HA1_md5_buf, 0, sizeof(HA1_md5_buf));
 	memset(HA2_md5_buf, 0, sizeof(HA2_md5_buf));
 	memset(HA_md5_buf, 0, sizeof(HA_md5_buf));
@@ -3772,8 +3772,13 @@ START_TEST(test_error_log_file)
 
 	client_ri = mg_get_response_info(client);
 
+	/* Check status - should be 404 Not Found */
 	ck_assert(client_ri != NULL);
 	ck_assert_int_eq(client_ri->status_code, 404);
+
+	/* Get body data (could exist, but does not have to) */
+	len = mg_read(client, client_data_buf, sizeof(client_data_buf));
+	ck_assert_int_ge(len, 0);
 
 	/* Close the client connection */
 	mg_close_connection(client);

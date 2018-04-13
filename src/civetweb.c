@@ -2941,7 +2941,7 @@ mg_set_thread_name(const char *name)
 #elif defined(__MINGW32__)
 /* No option known to set thread name for MinGW */
 #endif
-#elif defined(_GNU_SOURCE) && defined(__GLIBC__)                                                       \
+#elif defined(_GNU_SOURCE) && defined(__GLIBC__)                               \
     && ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
 	/* pthread_setname_np first appeared in glibc in version 2.12*/
 	(void)pthread_setname_np(pthread_self(), threadName);
