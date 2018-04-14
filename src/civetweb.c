@@ -14090,15 +14090,26 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		*ip_version = 4;
 
 	} else if ((cb = strchr(vec->ptr, ':')) != NULL) {
-		/* Could be a hostname */
-		/* Will only work for RFC 952 compliant hostnames,
+		/* String could be a hostname. This check algotithm
+		 * will only work for RFC 952 compliant hostnames,
 		 * starting with a letter, containing only letters,
 		 * digits and hyphen ('-'). Newer specs may allow
 		 * more, but this is not guaranteed here, since it
 		 * may interfere with rules for port option lists. */
 
-		*(char *)cb = 0; /* Use a const cast here and modify the string.
-		                  * We are going to restore the string later. */
+		/* According to RFC 1035, hostnames are restricted to 255 characters
+		 * in total (63 between two dots). */
+		char hostname[256];
+		size_t hostnlen = (size_t)(cb - vec->ptr);
+
+		if (hostnlen >= sizeof(hostname)) {
+			/* This would be invalid in any case */
+			*ip_version = 0;
+			return 0;
+		}
+
+		memcpy(hostname, vec->ptr, hostnlen);
+		hostname[hostnlen] = 0;
 
 		if (mg_inet_pton(
 		        AF_INET, vec->ptr, &so->lsa.sin, sizeof(so->lsa.sin))) {
@@ -14106,7 +14117,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 				*ip_version = 4;
 				so->lsa.sin.sin_family = AF_INET;
 				so->lsa.sin.sin_port = htons((uint16_t)port);
-				len += (int)(cb - vec->ptr) + 1;
+				len += (int)(hostnlen + 1);
 			} else {
 				port = 0;
 				len = 0;
@@ -14120,7 +14131,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 				*ip_version = 6;
 				so->lsa.sin6.sin6_family = AF_INET6;
 				so->lsa.sin.sin_port = htons((uint16_t)port);
-				len += (int)(cb - vec->ptr) + 1;
+				len += (int)(hostnlen + 1);
 			} else {
 				port = 0;
 				len = 0;
@@ -14128,7 +14139,6 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 #endif
 		}
 
-		*(char *)cb = ':'; /* restore the string */
 
 	} else {
 		/* Parsing failure. */
@@ -14150,7 +14160,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		return 1;
 	}
 
-	/* Reset ip_version to 0 of there is an error */
+	/* Reset ip_version to 0 if there is an error */
 	*ip_version = 0;
 	return 0;
 }
