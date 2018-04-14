@@ -573,11 +573,27 @@ START_TEST(test_parse_port_string)
 	static struct t_test_parse_port_string testdata[] =
 	{ {"0", 1, 4},
 	  {"1", 1, 4},
+	  {"65535", 1, 4},
+	  {"65536", 0, 0},
+
 	  {"1s", 1, 4},
 	  {"1r", 1, 4},
+	  {"1k", 0, 0},
+
+	  {"1.2.3", 0, 0},
+	  {"1.2.3.", 0, 0},
+	  {"1.2.3.4", 0, 0},
+	  {"1.2.3.4:", 0, 0},
+
+	  {"1.2.3.4:0", 1, 4},
 	  {"1.2.3.4:1", 1, 4},
+	  {"1.2.3.4:65535", 0, 0},
+	  {"1.2.3.4:65536", 0, 0},
+
 	  {"1.2.3.4:1s", 1, 4},
 	  {"1.2.3.4:1r", 1, 4},
+	  {"1.2.3.4:1k", 0, 0},
+
 #if defined(USE_IPV6)
 	  {"[::1]:123", 1, 6},
 	  {"[::]:80", 1, 6},
@@ -589,11 +605,7 @@ START_TEST(test_parse_port_string)
 	  {"[3ffe:2a00:100:7031::1]:900", 0, 0},
 	  {"+80", 0, 0},
 #endif
-	  {"99999", 0, 0},
-	  {"1k", 0, 0},
-	  {"1.2.3", 0, 0},
-	  {"1.2.3.4:", 0, 0},
-	  {"1.2.3.4:2p", 0, 0},
+
 	  {NULL, 0, 0} };
 
 	struct socket so;
@@ -610,13 +622,17 @@ START_TEST(test_parse_port_string)
 		ip_family = 123;
 		ret = parse_port_string(&vec, &so, &ip_family);
 
-		if (testdata[i].valid) {
-			ck_assert_int_ne(ret, 0);
-		} else {
-			ck_assert_int_eq(ret, 0);
+		if ((ret != testdata[i].valid)
+		    || (ip_family != testdata[i].ip_family)) {
+			ck_abort_msg("Port string [%s]: "
+			             "expected valid=%i, family=%i; "
+			             "got valid=%i, family=%i",
+			             testdata[i].port_string,
+			             testdata[i].valid,
+			             testdata[i].ip_family,
+			             ret,
+			             ip_family);
 		}
-
-		ck_assert_int_eq(ip_family, testdata[i].ip_family);
 	}
 }
 END_TEST
