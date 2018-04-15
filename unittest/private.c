@@ -587,7 +587,7 @@ START_TEST(test_parse_port_string)
 
 	  {"1.2.3.4:0", 1, 4},
 	  {"1.2.3.4:1", 1, 4},
-	  {"1.2.3.4:65535", 0, 0},
+	  {"1.2.3.4:65535", 1, 4},
 	  {"1.2.3.4:65536", 0, 0},
 
 	  {"1.2.3.4:1s", 1, 4},
@@ -595,15 +595,21 @@ START_TEST(test_parse_port_string)
 	  {"1.2.3.4:1k", 0, 0},
 
 #if defined(USE_IPV6)
+	  /* IPv6 config */
 	  {"[::1]:123", 1, 6},
 	  {"[::]:80", 1, 6},
 	  {"[3ffe:2a00:100:7031::1]:900", 1, 6},
+
+	  /* IPv4 + IPv6 config */
 	  {"+80", 1, 4 + 6},
 #else
+	  /* IPv6 config: invalid if IPv6 is not activated */
 	  {"[::1]:123", 0, 0},
 	  {"[::]:80", 0, 0},
 	  {"[3ffe:2a00:100:7031::1]:900", 0, 0},
-	  {"+80", 0, 0},
+
+	  /* IPv4 + IPv6 config: only IPv4 if IPv6 is not activated */
+	  {"+80", 1, 4},
 #endif
 
 	  {NULL, 0, 0} };
