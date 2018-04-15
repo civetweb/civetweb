@@ -4731,26 +4731,28 @@ mg_send_http_redirect(struct mg_connection *conn,
 		target_url = "/";
 	}
 
-#if 0
-    /* Prepare a response body with a hyperlink.
-     *
+#if defined(MG_SEND_REDIRECT_BODY)
+	/* TODO: condition name? */
+
+	/* Prepare a response body with a hyperlink.
+	 *
 	 * According to RFC2616 (and RFC1945 before):
 	 * Unless the request method was HEAD, the entity of the
 	 * response SHOULD contain a short hypertext note with a hyperlink to
 	 * the new URI(s).
-     *
-     * However, this response body is not useful in M2M communication.
-     * Probably the original reason in the RFC was, clients not supporting
-     * a 30x HTTP redirect could still show the HTML page and let the user
-     * press the link. Since current browsers support 30x HTTP, the additional
-     * HTML body does not seem to make sense anymore.
-     *
-     * The new RFC7231 (Section 6.4) does no longer recommend it ("SHOULD"),
-     * but it only notes:
-     * The server's response payload usually contains a short
-     * hypertext note with a hyperlink to the new URI(s).
-     *
-     * Keep it deactivated for now, if someone needs the 30x body: uncomment it.
+	 *
+	 * However, this response body is not useful in M2M communication.
+	 * Probably the original reason in the RFC was, clients not supporting
+	 * a 30x HTTP redirect could still show the HTML page and let the user
+	 * press the link. Since current browsers support 30x HTTP, the additional
+	 * HTML body does not seem to make sense anymore.
+	 *
+	 * The new RFC7231 (Section 6.4) does no longer recommend it ("SHOULD"),
+	 * but it only notes:
+	 * The server's response payload usually contains a short
+	 * hypertext note with a hyperlink to the new URI(s).
+	 *
+	 * Deactivated by default. If you need the 30x body, set the define.
 	 */
 	mg_snprintf(
 	    conn,
@@ -4780,7 +4782,7 @@ mg_send_http_redirect(struct mg_connection *conn,
 	                suggest_connection_header(conn));
 
 	/* Send response body */
-	if ((ret > 0) && (content_len > 0)) {
+	if (ret > 0) {
 		/* ... unless it is a HEAD request */
 		if (0 != strcmp(conn->request_info.request_method, "HEAD")) {
 			ret = mg_write(conn, reply, content_len);
