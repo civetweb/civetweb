@@ -4622,13 +4622,11 @@ mg_send_http_error_impl(struct mg_connection *conn,
 		          "Connection: close\r\n\r\n",
 		          date);
 
-		/* Errors 1xx, 204 and 304 MUST NOT send a body */
+		/* HTTP responses 1xx, 204 and 304 MUST NOT send a body */
 		if (has_body) {
+			/* For other errors, send a generic error message. */
 			mg_printf(conn, "Error %d: %s\n", status, status_text);
-
-			if (fmt != NULL) { /* <-- should be always true */
-				mg_write(conn, errmsg_buf, strlen(errmsg_buf));
-			}
+			mg_write(conn, errmsg_buf, strlen(errmsg_buf));
 
 		} else {
 			/* No body allowed. Close the connection. */

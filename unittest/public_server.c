@@ -2473,7 +2473,7 @@ START_TEST(test_handle_form)
 	char ebuf[1024];
 	const char *multipart_body;
 	const char *boundary;
-	size_t body_len, body_sent, chunk_len;
+	size_t body_len, body_sent, chunk_len, bound_len;
 	int sleep_cnt;
 
 	mark_point();
@@ -2953,8 +2953,8 @@ START_TEST(test_handle_form)
 	/* sending megabytes to localhost does not always work in CI test
 	 * environments (depending on the network stack) */
 	body_sent = 0;
+	bound_len = strlen(boundary);
 	do {
-		size_t bound_len = strlen(boundary);
 		send_chunk_string(client_conn, "ignore\r\n");
 		body_sent += 8;
 		/* send some strings that are almost boundaries */

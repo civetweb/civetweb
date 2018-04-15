@@ -108,7 +108,7 @@ START_TEST(test_mg_version)
 	len = mg_get_system_info(NULL, 0);
 	ck_assert_int_gt(len, 0);
 	buf = (char *)malloc((unsigned)len + 1);
-	ck_assert_ptr_ne(buf, NULL);
+	ck_assert(buf != NULL);
 	ret = mg_get_system_info(buf, len + 1);
 	ck_assert_int_eq(len, ret);
 	ret = (int)strlen(buf);
@@ -120,7 +120,7 @@ START_TEST(test_mg_version)
 	len = mg_get_context_info(ctx, NULL, 0);
 	ck_assert_int_gt(len, 0);
 	buf = (char *)malloc((unsigned)len + 100);
-	ck_assert_ptr_ne(buf, NULL);
+	ck_assert(buf != NULL);
 	ret = mg_get_context_info(ctx, buf, len + 100);
 	ck_assert_int_gt(ret, 0);
 	len = (int)strlen(buf);
@@ -132,7 +132,7 @@ START_TEST(test_mg_version)
 	len = mg_get_context_info(ctx, NULL, 0);
 	ck_assert_int_gt(len, 0);
 	buf = (char *)malloc((unsigned)len + 100);
-	ck_assert_ptr_ne(buf, NULL);
+	ck_assert(buf != NULL);
 	ret = mg_get_context_info(ctx, buf, len + 100);
 	ck_assert_int_gt(ret, 0);
 	len = (int)strlen(buf);
@@ -202,11 +202,19 @@ END_TEST
 
 START_TEST(test_mg_strncasecmp)
 {
+	/* equal */
 	ck_assert(mg_strncasecmp("abc", "abc", 3) == 0);
+
+	/* equal, since only 3 letters are compared */
 	ck_assert(mg_strncasecmp("abc", "abcd", 3) == 0);
+
+	/* not equal, since now all 4 letters are compared */
 	ck_assert(mg_strncasecmp("abc", "abcd", 4) != 0);
+
+	/* equal, since we do not care about cases */
 	ck_assert(mg_strncasecmp("a", "A", 1) == 0);
 
+	/* a < b */
 	ck_assert(mg_strncasecmp("A", "B", 1) < 0);
 	ck_assert(mg_strncasecmp("A", "b", 1) < 0);
 	ck_assert(mg_strncasecmp("a", "B", 1) < 0);
@@ -487,25 +495,35 @@ START_TEST(test_mg_url_decode)
 	char buf[20];
 	int ret;
 
+	/* decode entire string */
 	ret = mg_url_decode("abc", 3, buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, 3);
 	ck_assert_str_eq(buf, "abc");
 
+	/* decode only a part of the string */
 	ret = mg_url_decode("abcdef", 3, buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, 3);
 	ck_assert_str_eq(buf, "abc");
 
+	/* a + remains a + in standard decoding */
 	ret = mg_url_decode("x+y", 3, buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, 3);
 	ck_assert_str_eq(buf, "x+y");
 
+	/* a + becomes a space in form decoding */
 	ret = mg_url_decode("x+y", 3, buf, sizeof(buf), 1);
 	ck_assert_int_eq(ret, 3);
 	ck_assert_str_eq(buf, "x y");
 
+	/* a %25 is a % character */
 	ret = mg_url_decode("%25", 3, buf, sizeof(buf), 1);
 	ck_assert_int_eq(ret, 1);
 	ck_assert_str_eq(buf, "%");
+
+	/* a %20 is space, %21 is ! */
+	ret = mg_url_decode("%20%21", 6, buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, 2);
+	ck_assert_str_eq(buf, " !");
 }
 END_TEST
 

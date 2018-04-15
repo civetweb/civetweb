@@ -1046,7 +1046,7 @@ static int
 run_client(const char *url_arg)
 {
 	/* connection data */
-	char *url = sdup(url_arg);
+	char *url = sdup(url_arg); /* OOM will cause program to exit */
 	char *host;
 	char *resource;
 	int is_ssl = 0;
@@ -1059,11 +1059,13 @@ run_client(const char *url_arg)
 	struct mg_connection *conn;
 	char ebuf[1024] = {0};
 
-	/* Check out of memory */
-	if (!url) {
-		fprintf(stderr, "Out of memory\n");
-		return 0;
-	}
+#if 0 /* Unreachable code, since sdup will never return NULL */
+    /* Check out of memory */
+    if (!url) {
+        fprintf(stderr, "Out of memory\n");
+        return 0;
+    }
+#endif
 
 	/* Check parameter */
 	if (!strncmp(url, "http://", 7)) {
