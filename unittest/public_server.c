@@ -1170,11 +1170,20 @@ START_TEST(test_request_handlers)
 	const char *opt;
 	FILE *f;
 	const char *plain_file_content;
-	const char *encoded_file_content;
 	const char *cgi_script_content;
 	const char *expected_cgi_result;
 	int opt_idx = 0;
 	struct stat st;
+
+	const char encoded_file_content[] = "\x1f\x8b\x08\x08\xf8"
+	                                    "\x9d\xcb\x55\x00\x00"
+	                                    "test_gz.txt"
+	                                    "\x00\x01\x11\x00\xee\xff"
+	                                    "zipped text file"
+	                                    "\x0a\x34\x5f\xcc\x49"
+	                                    "\x11\x00\x00\x00";
+	size_t encoded_file_content_len = sizeof(encoded_file_content);
+
 
 #if !defined(NO_SSL)
 	const char *ssl_cert = locate_ssl_cert();
@@ -1439,7 +1448,10 @@ START_TEST(test_request_handlers)
 	f = fopen("test.txt", "w");
 #endif
 	plain_file_content = "simple text file\n";
-	fwrite(plain_file_content, 17, 1, f);
+	i = (int)strlen(plain_file_content);
+	ck_assert_int_eq(i, 17);
+
+	fwrite(plain_file_content, i, 1, f);
 	fclose(f);
 
 #ifdef _WIN32
@@ -1447,12 +1459,9 @@ START_TEST(test_request_handlers)
 #else
 	f = fopen("test_gz.txt.gz", "w");
 #endif
-	encoded_file_content = "\x1f\x8b\x08\x08\xf8\x9d\xcb\x55\x00\x00"
-	                       "test_gz.txt"
-	                       "\x00\x01\x11\x00\xee\xff"
-	                       "zipped text file"
-	                       "\x0a\x34\x5f\xcc\x49\x11\x00\x00\x00";
-	fwrite(encoded_file_content, 1, 52, f);
+
+	ck_assert_uint_eq(encoded_file_content_len, 52);
+	fwrite(encoded_file_content, 1, encoded_file_content_len, f);
 	fclose(f);
 
 #ifdef _WIN32
@@ -2288,12 +2297,17 @@ field_get(const char *key,
 
 static const char *myfile_content = "Content of myfile.txt\r\n";
 static const int myfile_content_rep = 500;
+static int myfile_content_len = 23; /* (int)strlen(myfile_content); */
 
 
 static int
 field_store(const char *path, long long file_size, void *user_data)
 {
 	FILE *f;
+
+	ck_assert_int_eq(myfile_content_len, 23);
+	ck_assert_int_eq(myfile_content_len, (int)strlen(myfile_content));
+
 	ck_assert_ptr_eq(user_data, (void *)&g_field_found_return);
 	ck_assert_int_ge(g_field_step, 100);
 
@@ -2306,7 +2320,7 @@ field_store(const char *path, long long file_size, void *user_data)
 		ck_assert_ptr_ne(f, NULL);
 		if (f) {
 			char buf[32] = {0};
-			int i = (int)fread(buf, 1, 31, f);
+			int i = (int)fread(buf, 1, sizeof(buf) - 1, f);
 			ck_assert_int_eq(i, 9);
 			fclose(f);
 			ck_assert_str_eq(buf, "storetest");
@@ -2314,8 +2328,8 @@ field_store(const char *path, long long file_size, void *user_data)
 		break;
 	case 102:
 		ck_assert_str_eq(path, "file2store.txt");
-		ck_assert_uint_eq(23, strlen(myfile_content));
-		ck_assert_int_eq(file_size, 23 * myfile_content_rep);
+		ck_assert_int_eq(myfile_content_len, (int)strlen(myfile_content));
+		ck_assert_int_eq(file_size, myfile_content_len * myfile_content_rep);
 #ifdef _WIN32
 		f = fopen(path, "rb");
 #else
@@ -2326,11 +2340,11 @@ field_store(const char *path, long long file_size, void *user_data)
 			char buf[32] = {0};
 			int r, i;
 			for (r = 0; r < myfile_content_rep; r++) {
-				i = (int)fread(buf, 1, 23, f);
-				ck_assert_int_eq(i, 23);
+				i = (int)fread(buf, 1, myfile_content_len, f);
+				ck_assert_int_eq(i, myfile_content_len);
 				ck_assert_str_eq(buf, myfile_content);
 			}
-			i = (int)fread(buf, 1, 23, f);
+			i = (int)fread(buf, 1, myfile_content_len, f);
 			ck_assert_int_eq(i, 0);
 			fclose(f);
 		}
