@@ -417,7 +417,6 @@ lsp_kepler_reader(lua_State *L, void *ud, size_t *sz)
 	const char *ret;
 	int64_t i;
 	int64_t left;
-	char end[4];
 
 	(void)(L); /* unused */
 
@@ -2216,13 +2215,13 @@ prepare_lua_environment(struct mg_context *ctx,
 	/* If debugging is enabled, add a hook */
 	if (debug_params) {
 		int mask = 0;
-		if (0 != strchr(debug_params, "c")) {
+		if (0 != strchr(debug_params, 'c')) {
 			mask |= LUA_MASKCALL;
 		}
-		if (0 != strchr(debug_params, "r")) {
+		if (0 != strchr(debug_params, 'r')) {
 			mask |= LUA_MASKRET;
 		}
-		if (0 != strchr(debug_params, "l")) {
+		if (0 != strchr(debug_params, 'l')) {
 			mask |= LUA_MASKLINE;
 		}
 		lua_sethook(L, lua_debug_hook, mask, 0);
