@@ -1447,6 +1447,7 @@ START_TEST(test_request_handlers)
 #else
 	f = fopen("test.txt", "w");
 #endif
+	ck_assert(f != NULL);
 	plain_file_content = "simple text file\n";
 	i = (int)strlen(plain_file_content);
 	ck_assert_int_eq(i, 17);
@@ -1459,8 +1460,9 @@ START_TEST(test_request_handlers)
 #else
 	f = fopen("test_gz.txt.gz", "w");
 #endif
-
-	ck_assert_uint_eq(encoded_file_content_len, 52);
+	ck_assert(f != NULL);
+	ck_assert_uint_ge(encoded_file_content_len, 52);
+	encoded_file_content_len = 52;
 	fwrite(encoded_file_content, 1, encoded_file_content_len, f);
 	fclose(f);
 
