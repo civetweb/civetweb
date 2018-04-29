@@ -1527,7 +1527,7 @@ struct dlg_proc_param {
 	BOOL (*fRetry)(struct dlg_proc_param *data);
 };
 
-struct dlg_header_param{
+struct dlg_header_param {
 	DLGTEMPLATE dlg_template; /* 18 bytes */
 	WORD menu, dlg_class;
 	wchar_t caption[1];
@@ -1535,22 +1535,23 @@ struct dlg_header_param{
 	wchar_t fontface[7];
 };
 
-static struct dlg_header_param GetDlgHeader(unsigned pWidth)
+static struct dlg_header_param
+GetDlgHeader(unsigned pWidth)
 {
-	struct dlg_header_param
-		dialog_header = { { WS_CAPTION | WS_POPUP | WS_SYSMENU | WS_VISIBLE
-		| DS_SETFONT | WS_DLGFRAME,
-		WS_EX_TOOLWINDOW,
-		0,
-		200,
-		200,
-		pWidth,
-		0 },
-		0,
-		0,
-		L"",
-		8,
-		L"Tahoma" };
+	struct dlg_header_param dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU
+	                                              | WS_VISIBLE | DS_SETFONT
+	                                              | WS_DLGFRAME,
+	                                          WS_EX_TOOLWINDOW,
+	                                          0,
+	                                          200,
+	                                          200,
+	                                          pWidth,
+	                                          0},
+	                                         0,
+	                                         0,
+	                                         L"",
+	                                         8,
+	                                         L"Tahoma"};
 	return dialog_header;
 }
 
