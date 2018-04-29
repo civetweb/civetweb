@@ -6,6 +6,7 @@ clang-format -i src/civetweb_private_lua.h
 clang-format -i src/md5.inl
 clang-format -i src/sha1.inl
 clang-format -i src/mod_lua.inl
+clang-format -i src/mod_lua_shared.inl
 clang-format -i src/mod_duktape.inl
 clang-format -i src/mod_zlib.inl
 clang-format -i src/timer.inl

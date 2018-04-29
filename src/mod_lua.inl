@@ -2014,6 +2014,21 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 }
 
 
+static void *
+lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
+{
+	(void)osize; /* not used */
+
+	if (nsize == 0) {
+		mg_free(ptr);
+		return NULL;
+	}
+	return mg_realloc_ctx(ptr, nsize, (struct mg_context *)ud);
+}
+
+#include "mod_lua_shared.inl"
+
+
 static void
 civetweb_open_lua_libs(lua_State *L)
 {
@@ -2187,7 +2202,11 @@ prepare_lua_environment(struct mg_context *ctx,
 		prepare_lua_request_info(conn, L);
 	}
 
+	/* Store as global table "mg" */
 	lua_setglobal(L, "mg");
+
+	/* Register "shared" table */
+	lua_shared_register(L);
 
 	/* Register default mg.onerror function */
 	IGNORE_UNUSED_RESULT(
@@ -2250,19 +2269,6 @@ lua_error_handler(lua_State *L)
 	/* TODO(lsm, low): leave the stack balanced */
 
 	return 0;
-}
-
-
-static void *
-lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
-{
-	(void)osize; /* not used */
-
-	if (nsize == 0) {
-		mg_free(ptr);
-		return NULL;
-	}
-	return mg_realloc_ctx(ptr, nsize, (struct mg_context *)ud);
 }
 
 
@@ -2804,6 +2810,10 @@ static void *lib_handle_uuid = NULL;
 static void
 lua_init_optional_libraries(void)
 {
+	/* shared Lua state */
+	lua_shared_init();
+
+/* UUID library */
 #if !defined(_WIN32)
 	lib_handle_uuid = dlopen("libuuid.so", RTLD_LAZY);
 	pf_uuid_generate.p =
@@ -2817,6 +2827,7 @@ lua_init_optional_libraries(void)
 static void
 lua_exit_optional_libraries(void)
 {
+/* UUID library */
 #if !defined(_WIN32)
 	if (lib_handle_uuid) {
 		dlclose(lib_handle_uuid);
@@ -2824,6 +2835,9 @@ lua_exit_optional_libraries(void)
 #endif
 	pf_uuid_generate.p = 0;
 	lib_handle_uuid = NULL;
+
+	/* shared Lua state */
+	lua_shared_exit();
 }
 
 

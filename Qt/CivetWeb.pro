@@ -14,7 +14,8 @@ SOURCES += \
     ../src/timer.inl \
     ../src/civetweb.c \
     ../src/main.c \
-    ../src/mod_zlib.inl
+    ../src/mod_zlib.inl \
+    ../src/mod_lua_shared.inl
 
 #include(deployment.pri)
 #qtcAddDeployment()
