@@ -54,6 +54,7 @@ lua_shared_index(struct lua_State *L)
 {
 	void *ud = lua_touserdata(L, 1);
 	int key_type = lua_type(L, 2);
+	int val_type;
 
 	printf("lua_shared_index call (%p)\n", ud);
 
@@ -83,11 +84,24 @@ lua_shared_index(struct lua_State *L)
 
 	lua_rawget(L_shared, -2);
 
-	size_t len;
-	const char *s = lua_tolstring(L_shared, -1, &len);
-	printf("<%s>\n", s);
+	val_type = lua_type(L_shared, -1);
 
-	lua_pushlstring(L, s, len);
+	if (val_type == LUA_TNUMBER) {
+		double num = lua_tonumber(L_shared, -1);
+		printf("value: %G\n", num);
+		lua_pushnumber(L, num);
+	} else if (val_type == LUA_TBOOLEAN) {
+		int i = lua_toboolean(L_shared, -1);
+		printf("value: %s\n", i ? "true" : "false");
+		lua_pushboolean(L, i);
+	} else if (val_type == LUA_TNIL) {
+		lua_pushnil(L);
+	} else {
+		size_t len = 0;
+		const char *str = lua_tolstring(L_shared, -1, &len);
+		printf("value: %s\n", str);
+		lua_pushlstring(L, str, len);
+	}
 
 	lua_pop(L_shared, 2);
 
@@ -163,13 +177,15 @@ lua_shared_register(struct lua_State *L)
 {
 	lua_newuserdata(L, 0);
 	lua_newtable(L);
+
 	lua_pushliteral(L, "__index");
 	lua_pushcclosure(L, lua_shared_index, 0);
 	lua_rawset(L, -3);
+
 	lua_pushliteral(L, "__newindex");
 	lua_pushcclosure(L, lua_shared_newindex, 0);
 	lua_rawset(L, -3);
-	lua_setmetatable(L, -2);
 
+	lua_setmetatable(L, -2);
 	lua_setglobal(L, "shared");
 }
