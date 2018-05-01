@@ -24,31 +24,39 @@
 static lua_State *L_shared;
 static pthread_mutex_t lua_shared_lock;
 
+
+/* Library init.
+ * This function must be called before all other functions. Not thread-safe. */
 void
 lua_shared_init(void)
 {
+	/* Create a new Lua state to store all shared data.
+	 * In fact, this is used as a hashmap. */
 	L_shared = lua_newstate(lua_allocator, NULL);
-	printf("Lsh: %p\n", L_shared);
 
 	lua_newtable(L_shared);
 	lua_setglobal(L_shared, "shared");
 
+	/* Mutex for locking access to the shared state from different threads. */
 	pthread_mutex_init(&lua_shared_lock, &pthread_mutex_attr);
 }
 
 
+/* Library exit.
+ * This function should be called for cleanup. Not thread-safe. */
 void
 lua_shared_exit(void)
 {
-	printf("Lsh: %p\n", L_shared);
-
+	/* Destroy Lua state */
 	lua_close(L_shared);
 	L_shared = 0;
 
+	/* Destroy mutex. */
 	pthread_mutex_destroy(&lua_shared_lock);
 }
 
 
+/* Read access to shared element (x = shared.element) */
 static int
 lua_shared_index(struct lua_State *L)
 {
@@ -56,29 +64,39 @@ lua_shared_index(struct lua_State *L)
 	int key_type = lua_type(L, 2);
 	int val_type;
 
-	printf("lua_shared_index call (%p)\n", ud);
-
 	if ((key_type != LUA_TNUMBER) && (key_type != LUA_TSTRING)
 	    && (key_type != LUA_TBOOLEAN)) {
 		return luaL_error(L, "shared index must be string, number or boolean");
 	}
 
-	pthread_mutex_lock(&lua_shared_lock);
-
-	lua_getglobal(L_shared, "shared");
-
 	if (key_type == LUA_TNUMBER) {
 		double num = lua_tonumber(L, 2);
-		printf("index: %G\n", num);
+
+		pthread_mutex_lock(&lua_shared_lock);
+		lua_getglobal(L_shared, "shared");
 		lua_pushnumber(L_shared, num);
+
 	} else if (key_type == LUA_TBOOLEAN) {
 		int i = lua_toboolean(L, 2);
-		printf("index: %s\n", i ? "true" : "false");
+
+		pthread_mutex_lock(&lua_shared_lock);
+		lua_getglobal(L_shared, "shared");
 		lua_pushboolean(L_shared, i);
+
 	} else {
 		size_t len = 0;
 		const char *str = lua_tolstring(L, 2, &len);
-		printf("index: %s\n", str);
+
+		if ((len > 1) && (0 == memcmp(str, "__", 2))) {
+			/* Todo: return functions */
+
+			/* Unknown reserved index */
+			lua_pushnil(L);
+			return 1;
+		}
+
+		pthread_mutex_lock(&lua_shared_lock);
+		lua_getglobal(L_shared, "shared");
 		lua_pushlstring(L_shared, str, len);
 	}
 
@@ -88,18 +106,18 @@ lua_shared_index(struct lua_State *L)
 
 	if (val_type == LUA_TNUMBER) {
 		double num = lua_tonumber(L_shared, -1);
-		printf("value: %G\n", num);
 		lua_pushnumber(L, num);
+
 	} else if (val_type == LUA_TBOOLEAN) {
 		int i = lua_toboolean(L_shared, -1);
-		printf("value: %s\n", i ? "true" : "false");
 		lua_pushboolean(L, i);
+
 	} else if (val_type == LUA_TNIL) {
 		lua_pushnil(L);
+
 	} else {
 		size_t len = 0;
 		const char *str = lua_tolstring(L_shared, -1, &len);
-		printf("value: %s\n", str);
 		lua_pushlstring(L, str, len);
 	}
 
@@ -111,14 +129,13 @@ lua_shared_index(struct lua_State *L)
 }
 
 
+/* Write access to shared element (shared.element = x) */
 static int
 lua_shared_newindex(struct lua_State *L)
 {
 	void *ud = lua_touserdata(L, 1);
 	int key_type = lua_type(L, 2);
 	int val_type = lua_type(L, 3);
-
-	printf("lua_shared_newindex call (%p)\n", ud);
 
 	if ((key_type != LUA_TNUMBER) && (key_type != LUA_TSTRING)
 	    && (key_type != LUA_TBOOLEAN)) {
@@ -129,37 +146,44 @@ lua_shared_newindex(struct lua_State *L)
 		return luaL_error(L, "shared value must be string, number or boolean");
 	}
 
-	pthread_mutex_lock(&lua_shared_lock);
-
-	lua_getglobal(L_shared, "shared");
-
 	if (key_type == LUA_TNUMBER) {
 		double num = lua_tonumber(L, 2);
-		printf("index: %G\n", num);
+
+		pthread_mutex_lock(&lua_shared_lock);
+		lua_getglobal(L_shared, "shared");
 		lua_pushnumber(L_shared, num);
+
 	} else if (key_type == LUA_TBOOLEAN) {
 		int i = lua_toboolean(L, 2);
-		printf("index: %s\n", i ? "true" : "false");
+
+		pthread_mutex_lock(&lua_shared_lock);
+		lua_getglobal(L_shared, "shared");
 		lua_pushboolean(L_shared, i);
+
 	} else {
 		size_t len = 0;
 		const char *str = lua_tolstring(L, 2, &len);
-		printf("index: %s\n", str);
+
+		if ((len > 1) && (0 == memcmp(str, "__", 2))) {
+			return luaL_error(L, "shared index is reserved");
+		}
+
+		pthread_mutex_lock(&lua_shared_lock);
+		lua_getglobal(L_shared, "shared");
 		lua_pushlstring(L_shared, str, len);
 	}
 
 	if (val_type == LUA_TNUMBER) {
 		double num = lua_tonumber(L, 3);
-		printf("index: %G\n", num);
 		lua_pushnumber(L_shared, num);
+
 	} else if (val_type == LUA_TBOOLEAN) {
 		int i = lua_toboolean(L, 3);
-		printf("index: %s\n", i ? "true" : "false");
 		lua_pushboolean(L_shared, i);
+
 	} else {
 		size_t len = 0;
 		const char *str = lua_tolstring(L, 3, &len);
-		printf("index: %s\n", str);
 		lua_pushlstring(L_shared, str, len);
 	}
 
@@ -172,6 +196,8 @@ lua_shared_newindex(struct lua_State *L)
 }
 
 
+/* Register the "shared" library in a new Lua state.
+ * Call it once for every Lua state accessing "shared" elements. */
 void
 lua_shared_register(struct lua_State *L)
 {
