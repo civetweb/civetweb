@@ -44,7 +44,7 @@
 #define _WIN32_WINNT 0x0501
 #endif
 #else
-#if defined(__GNUC__) && !defined(_GNU_SOURCE)
+#if !defined(_GNU_SOURCE)
 #define _GNU_SOURCE /* for setgroups(), pthread_setname_np() */
 #endif
 #if defined(__linux__) && !defined(_XOPEN_SOURCE)
