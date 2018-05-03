@@ -56,6 +56,87 @@ lua_shared_exit(void)
 }
 
 
+double
+shared_locked_add(const char *name, size_t namlen, double value, int op)
+{
+	double ret;
+
+	pthread_mutex_lock(&lua_shared_lock);
+
+	lua_getglobal(L_shared, "shared");
+	lua_pushlstring(L_shared, name, namlen);
+	lua_rawget(L_shared, -2);
+	ret = lua_tonumber(L_shared, -1);
+
+	if (op > 0) {
+		ret += value;
+	} else {
+		ret = value;
+	}
+
+	lua_getglobal(L_shared, "shared");
+	lua_pushlstring(L_shared, name, namlen);
+	lua_pushnumber(L_shared, ret);
+	lua_rawset(L_shared, -3);
+
+	lua_pop(L_shared, 3);
+
+	pthread_mutex_unlock(&lua_shared_lock);
+
+	return ret;
+}
+
+
+static int
+lua_shared_add(struct lua_State *L)
+{
+	size_t symlen = 0;
+	const char *sym = lua_tolstring(L, 1, &symlen);
+	double num = lua_tonumber(L, 2);
+
+	double ret = shared_locked_add(sym, symlen, num, 1);
+	lua_pushnumber(L, ret);
+	return 1;
+}
+
+
+static int
+lua_shared_inc(struct lua_State *L)
+{
+	size_t symlen = 0;
+	const char *sym = lua_tolstring(L, 1, &symlen);
+
+	double ret = shared_locked_add(sym, symlen, +1.0, 1);
+	lua_pushnumber(L, ret);
+	return 1;
+}
+
+
+static int
+lua_shared_dec(struct lua_State *L)
+{
+	size_t symlen = 0;
+	const char *sym = lua_tolstring(L, 1, &symlen);
+
+	double ret = shared_locked_add(sym, symlen, -1.0, 1);
+	lua_pushnumber(L, ret);
+	return 1;
+}
+
+
+static int
+lua_shared_exchange(struct lua_State *L)
+{
+	size_t symlen = 0;
+	const char *sym = lua_tolstring(L, 1, &symlen);
+	double num = lua_tonumber(L, 2);
+
+	double ret = shared_locked_add(sym, symlen, -1.0, 0);
+	lua_pushnumber(L, ret);
+	return 1;
+}
+
+
 /* Read access to shared element (x = shared.element) */
 static int
 lua_shared_index(struct lua_State *L)
@@ -88,10 +169,19 @@ lua_shared_index(struct lua_State *L)
 		const char *str = lua_tolstring(L, 2, &len);
 
 		if ((len > 1) && (0 == memcmp(str, "__", 2))) {
-			/* Todo: return functions */
-
-			/* Unknown reserved index */
-			lua_pushnil(L);
+			/* Return functions */
+			if (0 == strcmp(str, "__add")) {
+				lua_pushcclosure(L, lua_shared_add, 0);
+			} else if (0 == strcmp(str, "__inc")) {
+				lua_pushcclosure(L, lua_shared_inc, 0);
+			} else if (0 == strcmp(str, "__dec")) {
+				lua_pushcclosure(L, lua_shared_dec, 0);
+			} else if (0 == strcmp(str, "__exchange")) {
+				lua_pushcclosure(L, lua_shared_exchange, 0);
+			} else {
+				/* Unknown reserved index */
+				lua_pushnil(L);
+			}
 			return 1;
 		}
 

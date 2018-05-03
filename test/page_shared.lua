@@ -81,4 +81,13 @@ mg.write("New elements are "
          .. tostring(x) .. " (type " .. type(x) .. ") / "
          .. tostring(y) .. " (type " .. type(y) .. ")\n")
 
+
+-- Test elements functions
+if not shared.x then
+  shared.x = 0
+  shared.y = 0
+end
+mg.write("__inc(x) = " .. shared.__inc("x") .. "\n")
+mg.write("__dec(y) = " .. shared.__dec("y") .. "\n")
+
 -- end
