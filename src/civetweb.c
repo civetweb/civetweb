@@ -2362,7 +2362,7 @@ enum {
 /* Config option name, config types, default value.
  * Must be in the same order as the enum const above.
  */
-static struct mg_option config_options[] = {
+static const struct mg_option config_options[] = {
 
     /* Once for each server */
     {"listening_ports", MG_CONFIG_TYPE_STRING_LIST, "8080"},
