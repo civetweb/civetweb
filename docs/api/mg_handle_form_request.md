@@ -7,7 +7,7 @@
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 |**`conn`**|`struct mg_connection *`|The connection on which form data must be processed|
-|**`fdh`**|`struct mg_form_data_handler`|Structure with callback functions to to the heavy work|
+|**`fdh`**|`struct mg_form_data_handler`|Structure with callback functions to do the heavy work|
 
 ### Return Value
 
