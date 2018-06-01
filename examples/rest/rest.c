@@ -19,21 +19,16 @@
 
 
 #ifdef NO_SSL
-#ifdef USE_IPV6
-#define PORT "[::]:8888,8884"
+#define PORT "8089"
+#define HOST_INFO "http://localhost:8089"
 #else
-#define PORT "8888,8884"
-#endif
-#else
-#ifdef USE_IPV6
-#define PORT "[::]:8888r,[::]:8843s,8884"
-#else
-#define PORT "8888r,8843s,8884"
-#endif
+#define PORT "8089r,8843s"
+#define HOST_INFO "https://localhost:8843"
 #endif
 
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
+
 int exitNow = 0;
 
 
@@ -56,22 +51,13 @@ SendJSON(struct mg_connection *conn, cJSON *json_obj)
 }
 
 
-int
-ExampleHandler(struct mg_connection *conn, void *cbdata)
+static unsigned request = 0; /* demo data: request counter */
+
+
+static int
+ExampleGET(struct mg_connection *conn)
 {
-	static unsigned request = 0;
-
-	const struct mg_request_info *ri = mg_get_request_info(conn);
-	cJSON *obj;
-
-	if (0 != strcmp(ri->request_method, "GET")) {
-		/* this is not a GET request */
-		mg_send_http_error(conn, 405, "Only GET method supported");
-		return 405;
-	}
-
-	
-	obj = cJSON_CreateObject();
+	cJSON *obj = cJSON_CreateObject();
 
 	if (!obj) {
 		/* insufficient memory? */
@@ -86,6 +72,116 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	cJSON_Delete(obj);
 
 	return 200;
+}
+
+
+static int
+ExampleDELETE(struct mg_connection *conn)
+{
+	request = 0;
+	mg_send_http_error(conn,
+	                   204,
+	                   "%s",
+	                   ""); /* Return "deleted" = "204 No Content" */
+
+	return 204;
+}
+
+
+static int
+ExamplePUT(struct mg_connection *conn)
+{
+	char buffer[1024];
+	int dlen = mg_read(conn, buffer, sizeof(buffer) - 1);
+	cJSON *obj, *elem;
+	unsigned newvalue;
+
+	if ((dlen < 1) || (dlen >= sizeof(buffer))) {
+		mg_send_http_error(conn, 400, "%s", "No request body data");
+		return 400;
+	}
+	buffer[dlen] = 0;
+
+	obj = cJSON_Parse(buffer);
+	if (obj == NULL) {
+		mg_send_http_error(conn, 400, "%s", "Invalid request body data");
+		return 400;
+	}
+
+	elem = cJSON_GetObjectItemCaseSensitive(obj, "request");
+
+	if (!cJSON_IsNumber(elem)) {
+		cJSON_Delete(obj);
+		mg_send_http_error(conn,
+		                   400,
+		                   "%s",
+		                   "No \"request\" number in body data");
+		return 400;
+	}
+
+	newvalue = (unsigned)elem->valuedouble;
+
+	if ((double)newvalue != elem->valuedouble) {
+		cJSON_Delete(obj);
+		mg_send_http_error(conn,
+		                   400,
+		                   "%s",
+		                   "Invalid \"request\" number in body data");
+		return 400;
+	}
+
+	request = newvalue;
+	cJSON_Delete(obj);
+
+	mg_send_http_error(conn, 201, "%s", ""); /* Return "201 Created" */
+
+	return 201;
+}
+
+
+static int
+ExamplePOST(struct mg_connection *conn)
+{
+	/* In this example, do the same for PUT and POST */
+	return ExamplePUT(conn);
+}
+
+
+static int
+ExamplePATCH(struct mg_connection *conn)
+{
+	/* In this example, do the same for PUT and PATCH */
+	return ExamplePUT(conn);
+}
+
+
+static int
+ExampleHandler(struct mg_connection *conn, void *cbdata)
+{
+
+	const struct mg_request_info *ri = mg_get_request_info(conn);
+	(void)cbdata; /* currently unused */
+
+	if (0 == strcmp(ri->request_method, "GET")) {
+		return ExampleGET(conn);
+	}
+	if (0 == strcmp(ri->request_method, "PUT")) {
+		return ExamplePUT(conn);
+	}
+	if (0 == strcmp(ri->request_method, "POST")) {
+		return ExamplePOST(conn);
+	}
+	if (0 == strcmp(ri->request_method, "DELETE")) {
+		return ExampleDELETE(conn);
+	}
+	if (0 == strcmp(ri->request_method, "PATCH")) {
+		return ExamplePATCH(conn);
+	}
+
+	/* this is not a GET request */
+	mg_send_http_error(
+	    conn, 405, "Only GET, PUT, POST, DELETE and PATCH method supported");
+	return 405;
 }
 
 
@@ -173,6 +269,10 @@ main(int argc, char *argv[])
 	/* Add handler EXAMPLE_URI, to explain the example */
 	mg_set_request_handler(ctx, EXAMPLE_URI, ExampleHandler, 0);
 	mg_set_request_handler(ctx, EXIT_URI, ExitHandler, 0);
+
+	/* Show sone info */
+	printf("Start example: %s%s\n", HOST_INFO, EXAMPLE_URI);
+	printf("Exit example:  %s%s\n", HOST_INFO, EXIT_URI);
 
 
 	/* Wait until the server should be closed */
