@@ -82,12 +82,31 @@ mg.write("New elements are "
          .. tostring(y) .. " (type " .. type(y) .. ")\n")
 
 
--- Test elements functions
+-- Check if experimental functions (starting with __) are available
+if not shared.__inc then
+  mg.write("\nExperimental functions not available\n")
+  return
+else
+  mg.write("\nTesting experimental functions\n")
+end
+
+
+-- Test __inc/__dec functions
 if not shared.x then
   shared.x = 0
   shared.y = 0
 end
 mg.write("__inc(x) = " .. shared.__inc("x") .. "\n")
 mg.write("__dec(y) = " .. shared.__dec("y") .. "\n")
+
+
+-- Test __add function
+if not shared.x then
+  shared.x = 0
+  shared.y = 0
+end
+mg.write("__add(x, 10) = " .. shared.__add("x", 10) .. "\n")
+mg.write("__add(y, -10) = " .. shared.__add("y", -10) .. "\n")
+
 
 -- end

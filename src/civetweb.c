@@ -6501,8 +6501,8 @@ mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 	int64_t n, buffered_len, nread;
 	int64_t len64 =
 	    (int64_t)((len > INT_MAX) ? INT_MAX : len); /* since the return value is
-	                                               * int, we may not read more
-	                                               * bytes */
+	                                                 * int, we may not read more
+	                                                 * bytes */
 	const char *body;
 
 	if (conn == NULL) {
