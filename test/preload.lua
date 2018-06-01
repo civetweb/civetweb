@@ -69,9 +69,20 @@ SAPI.Response.write = function(...)
 end
 
 
+-- Debug helper function to print a table
+function po(t)
+  print("Type: " .. type(t) .. ", Value: " .. tostring(t))
+  if type(t)=="table" then
+    for k,v in pairs(t) do
+      print(k,v)
+    end
+  end
+end
+
 -----------------------------------------------------
 
 
 -- Use cgilua interface
-require "cgilua"
+-- require "cgilua"
+
 
