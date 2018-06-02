@@ -39,6 +39,7 @@ RMRF = rm -rf
 # later becomes /.
 DOCUMENT_ROOT = $(HTMLDIR)
 PORTS = 8080
+USE_STACK_SIZE ?= 102400
 
 BUILD_DIRS = $(BUILD_DIR) $(BUILD_DIR)/src $(BUILD_DIR)/resources
 
@@ -63,7 +64,7 @@ BUILD_DIRS += $(BUILD_DIR)/test
 endif
 
 # only set main compile options if none were chosen
-CFLAGS += -Wall -Wextra -Wshadow -Wformat-security -Winit-self -Wmissing-prototypes -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=102400
+CFLAGS += -Wall -Wextra -Wshadow -Wformat-security -Winit-self -Wmissing-prototypes -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=$(USE_STACK_SIZE)
 
 LIBS = -lpthread -lm
 
