@@ -12814,22 +12814,42 @@ get_first_ssl_listener_index(const struct mg_context *ctx)
 static const char *
 alloc_get_host(struct mg_connection *conn)
 {
-	char host[1025];
-	const char *host_header;
-	size_t hostlen;
+	char buf[1025];
+	size_t buflen = sizeof(buf);
+	const char *host_header = get_header(conn->request_info.http_headers,
+	                                     conn->request_info.num_headers,
+	                                     "Host");
+	char *host;
 
-	host_header = get_header(conn->request_info.http_headers,
-	                         conn->request_info.num_headers,
-	                         "Host");
-	hostlen = sizeof(host);
 	if (host_header != NULL) {
 		char *pos;
 
-		mg_strlcpy(host, host_header, hostlen);
-		host[hostlen - 1] = '\0';
-		pos = strchr(host, ':');
-		if (pos != NULL) {
-			*pos = '\0';
+		/* Create a local copy of the "Host" header, since it might be
+		 * modified here. */
+		mg_strlcpy(buf, host_header, buflen);
+		buf[buflen - 1] = '\0';
+		host = buf;
+		while (isspace(*host)) {
+			host++;
+		}
+
+		/* If the "Host" is an IPv6 address, like [::1], parse until ]
+		 * is found. */
+		if (*host == '[') {
+			pos = strchr(host, ']');
+			if (!pos) {
+				/* Malformed hostname starts with '[', but no ']' found */
+				DEBUG_TRACE("%s", "Host name format error '[' without ']'");
+				return NULL;
+			}
+			/* terminate after ']' */
+			pos[1] = 0;
+		} else {
+
+			pos = strchr(host, ':');
+			if (pos != NULL) {
+				*pos = '\0';
+			}
 		}
 
 		if (conn->ssl) {
@@ -12868,7 +12888,9 @@ alloc_get_host(struct mg_connection *conn)
 		}
 
 	} else {
-		sockaddr_to_string(host, hostlen, &conn->client.lsa);
+		sockaddr_to_string(buf, buflen, &conn->client.lsa);
+		host = buf;
+
 		DEBUG_TRACE("IP: %s", host);
 	}
 
