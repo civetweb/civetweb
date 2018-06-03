@@ -12845,7 +12845,7 @@ alloc_get_host(struct mg_connection *conn)
 			/* terminate after ']' */
 			pos[1] = 0;
 		} else {
-
+			/* Otherwise, a ':' separates hostname and port number */
 			pos = strchr(host, ':');
 			if (pos != NULL) {
 				*pos = '\0';
