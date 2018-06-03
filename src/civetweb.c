@@ -5516,6 +5516,32 @@ kill(pid_t pid, int sig_num)
 	return 0;
 }
 
+#ifndef WNOHANG
+#define WNOHANG (1)
+#endif
+
+pid_t
+waitpid(pid_t pid, int *status, int flags)
+{
+	DWORD timeout = INFINITE;
+	DWORD waitres;
+
+	(void)status; /* Currently not used by any client here */
+
+	if ((flags | WNOHANG) == WNOHANG) {
+		timeout = 0;
+	}
+
+	waitres = WaitForSingleObject((HANDLE)pid, timeout);
+	if (waitres == WAIT_OBJECT_0) {
+		return pid;
+	}
+	if (waitres == WAIT_TIMEOUT) {
+		return 0;
+	}
+	return (pid_t)-1;
+}
+
 
 static void
 trim_trailing_whitespaces(char *s)
@@ -10757,6 +10783,38 @@ prepare_cgi_environment(struct mg_connection *conn,
 }
 
 
+#if defined(USE_TIMERS)
+
+#define TIMER_API static
+#include "timer.inl"
+
+static int
+abort_process(void *data)
+{
+	/* Waitpid checks for child status and won't work for a pid that does not
+	 * identify a child of the current process. Thus, if the pid is reused,
+	 * we will not affect a different process. */
+	pid_t pid = (pid_t)data;
+	int status = 0;
+	pid_t rpid = waitpid(pid, &status, WNOHANG);
+	if ((rpid != (pid_t)-1) && (status == 0)) {
+		/* Stop child process */
+		DEBUG_TRACE("CGI timer: Stop child process %p\n", pid);
+		kill(pid, SIGABRT);
+
+		/* Wait until process is terminated (don't leave zombies) */
+		while (waitpid(pid, &status, 0) != -1) /* nop */
+			;
+	} else {
+		DEBUG_TRACE("CGI timer: Child process %p already stopped in time\n",
+		            pid);
+	}
+	return 0;
+}
+
+#endif /* USE_TIMERS */
+
+
 static void
 handle_cgi_request(struct mg_connection *conn, const char *prog)
 {
@@ -10835,6 +10893,12 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		                   status);
 		goto done;
 	}
+
+#if defined(USE_TIMERS)
+	// TODO (#618): set a timeout
+	timer_add(
+	    conn->phys_ctx, /* one minute */ 60.0, 0.0, 1, abort_process, pid);
+#endif
 
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1
 	 */
@@ -11036,14 +11100,7 @@ done:
 	mg_free(blk.buf);
 
 	if (pid != (pid_t)-1) {
-		kill(pid, SIGKILL);
-#if !defined(_WIN32)
-		{
-			int st;
-			while (waitpid(pid, &st, 0) != -1)
-				; /* clean zombies */
-		}
-#endif
+		abort_process((void *)pid);
 	}
 	if (fdin[0] != -1) {
 		close(fdin[0]);
@@ -11843,10 +11900,6 @@ mg_unlock_context(struct mg_context *ctx)
 	}
 }
 
-#if defined(USE_TIMERS)
-#define TIMER_API static
-#include "timer.inl"
-#endif /* USE_TIMERS */
 
 #if defined(USE_LUA)
 #include "mod_lua.inl"
