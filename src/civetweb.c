@@ -10899,7 +10899,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 #if defined(USE_TIMERS)
 	// TODO (#618): set a timeout
 	timer_add(
-	    conn->phys_ctx, /* one minute */ 60.0, 0.0, 1, abort_process, pid);
+	    conn->phys_ctx, /* one minute */ 60.0, 0.0, 1, abort_process, (void*)pid);
 #endif
 
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1
