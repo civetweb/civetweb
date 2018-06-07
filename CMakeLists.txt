@@ -296,7 +296,10 @@ add_c_compiler_flag(/W4) # VisualStudio highest warning level
 #Warnings: Disable some warnings
 add_c_compiler_flag(-Wno-padded) # padding in structures by compiler
 add_c_compiler_flag(-Wno-unused-macros) # so what?
+Check_C_Compiler_Flag( HAVE_NO_RESERVED_ID_MACROS -Wno-reserved-id-macros)
+if (HAVE_NO_RESERVED_ID_MACROS)
 add_c_compiler_flag(-Wno-reserved-id-macros) # for system headers
+endif (HAVE_NO_RESERVED_ID_MACROS)
 add_c_compiler_flag(-Wno-format-nonliteral) # printf(myFormatStringVar, ...)
 add_c_compiler_flag(-Wno-date-time) # using __DATE__ once
 add_c_compiler_flag(-Wno-cast-qual) # const cast
