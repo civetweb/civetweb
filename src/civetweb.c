@@ -425,9 +425,9 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
                  "size_t data type size check");
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* WINDOWS include block */
-#include <windows.h>
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
 #include <ws2tcpip.h>
+#include <windows.h>
 
 typedef const char *SOCK_OPT_TYPE;
 
@@ -5520,6 +5520,7 @@ kill(pid_t pid, int sig_num)
 #define WNOHANG (1)
 #endif
 
+#if defined(USE_TIMERS)
 pid_t
 waitpid(pid_t pid, int *status, int flags)
 {
@@ -5541,6 +5542,7 @@ waitpid(pid_t pid, int *status, int flags)
 	}
 	return (pid_t)-1;
 }
+#endif /* USE_TIMERS */
 
 
 static void
@@ -15401,7 +15403,7 @@ ssl_use_pem_file(struct mg_context *phys_ctx,
 static unsigned long
 ssl_get_protocol(int version_id)
 {
-	long unsigned ret = SSL_OP_ALL;
+	long unsigned ret = (long unsigned)SSL_OP_ALL;
 	if (version_id > 0)
 		ret |= SSL_OP_NO_SSLv2;
 	if (version_id > 1)
@@ -15416,7 +15418,7 @@ ssl_get_protocol(int version_id)
 static long
 ssl_get_protocol(int version_id)
 {
-	long ret = SSL_OP_ALL;
+	long ret = (long)SSL_OP_ALL;
 	if (version_id > 0)
 		ret |= SSL_OP_NO_SSLv2;
 	if (version_id > 1)
