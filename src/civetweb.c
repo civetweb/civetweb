@@ -11099,9 +11099,11 @@ done:
 	mg_free(blk.var);
 	mg_free(blk.buf);
 
+#if defined(USE_TIMERS)
 	if (pid != (pid_t)-1) {
 		abort_process((void *)pid);
 	}
+#endif /* USE_TIMERS */
 	if (fdin[0] != -1) {
 		close(fdin[0]);
 	}
@@ -15315,7 +15317,9 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	if (!ssllib_dll_handle) {
 		ssllib_dll_handle = load_dll(ebuf, ebuf_len, SSL_LIB, ssl_sw);
 		if (!ssllib_dll_handle) {
+#if !defined(OPENSSL_API_1_1)
 			mg_free(ssl_mutexes);
+#endif
 			DEBUG_TRACE("%s", ebuf);
 			return 0;
 		}
