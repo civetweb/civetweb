@@ -11100,7 +11100,9 @@ done:
 	mg_free(blk.buf);
 
 	if (pid != (pid_t)-1) {
+#if defined(USE_TIMERS)
 		abort_process((void *)pid);
+#endif
 	}
 	if (fdin[0] != -1) {
 		close(fdin[0]);
