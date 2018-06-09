@@ -425,7 +425,7 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
                  "size_t data type size check");
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* WINDOWS include block */
-#include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
+#include <winsock2.h>                          /* DTL add for SO_EXCLUSIVE */
 #include <ws2tcpip.h>
 #include <windows.h>
 
@@ -5508,6 +5508,7 @@ dlclose(void *handle)
 #if !defined(NO_CGI)
 #define SIGKILL (0)
 
+
 static int
 kill(pid_t pid, int sig_num)
 {
@@ -5516,11 +5517,12 @@ kill(pid_t pid, int sig_num)
 	return 0;
 }
 
+
 #ifndef WNOHANG
 #define WNOHANG (1)
 #endif
 
-#if defined(USE_TIMERS)
+
 pid_t
 waitpid(pid_t pid, int *status, int flags)
 {
@@ -5542,7 +5544,6 @@ waitpid(pid_t pid, int *status, int flags)
 	}
 	return (pid_t)-1;
 }
-#endif /* USE_TIMERS */
 
 
 static void
@@ -5723,6 +5724,7 @@ set_non_blocking_mode(SOCKET sock)
 	unsigned long non_blocking = 1;
 	return ioctlsocket(sock, (long)FIONBIO, &non_blocking);
 }
+
 #else
 
 static int
@@ -10774,6 +10776,9 @@ prepare_cgi_environment(struct mg_connection *conn,
 #define TIMER_API static
 #include "timer.inl"
 
+#endif /* USE_TIMERS */
+
+
 static int
 abort_process(void *data)
 {
@@ -10797,8 +10802,6 @@ abort_process(void *data)
 	}
 	return 0;
 }
-
-#endif /* USE_TIMERS */
 
 
 static void
@@ -10882,8 +10885,12 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 
 #if defined(USE_TIMERS)
 	// TODO (#618): set a timeout
-	timer_add(
-	    conn->phys_ctx, /* one minute */ 60.0, 0.0, 1, abort_process, (void*)pid);
+	timer_add(conn->phys_ctx,
+	          /* one minute */ 60.0,
+	          0.0,
+	          1,
+	          abort_process,
+	          (void *)pid);
 #endif
 
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1
@@ -11085,13 +11092,10 @@ done:
 	mg_free(blk.var);
 	mg_free(blk.buf);
 
-#if defined(USE_TIMERS)
 	if (pid != (pid_t)-1) {
-#if defined(USE_TIMERS)
 		abort_process((void *)pid);
-#endif
 	}
-#endif /* USE_TIMERS */
+
 	if (fdin[0] != -1) {
 		close(fdin[0]);
 	}
