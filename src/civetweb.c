@@ -425,9 +425,9 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
                  "size_t data type size check");
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* WINDOWS include block */
-#include <windows.h>
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
 #include <ws2tcpip.h>
+#include <windows.h>
 
 typedef const char *SOCK_OPT_TYPE;
 
@@ -5520,6 +5520,7 @@ kill(pid_t pid, int sig_num)
 #define WNOHANG (1)
 #endif
 
+#if defined(USE_TIMERS)
 pid_t
 waitpid(pid_t pid, int *status, int flags)
 {
@@ -5541,6 +5542,7 @@ waitpid(pid_t pid, int *status, int flags)
 	}
 	return (pid_t)-1;
 }
+#endif /* USE_TIMERS */
 
 
 static void
@@ -10897,7 +10899,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 #if defined(USE_TIMERS)
 	// TODO (#618): set a timeout
 	timer_add(
-	    conn->phys_ctx, /* one minute */ 60.0, 0.0, 1, abort_process, pid);
+	    conn->phys_ctx, /* one minute */ 60.0, 0.0, 1, abort_process, (void*)pid);
 #endif
 
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1
@@ -11099,9 +11101,11 @@ done:
 	mg_free(blk.var);
 	mg_free(blk.buf);
 
+#if defined(USE_TIMERS)
 	if (pid != (pid_t)-1) {
 		abort_process((void *)pid);
 	}
+#endif /* USE_TIMERS */
 	if (fdin[0] != -1) {
 		close(fdin[0]);
 	}
@@ -15315,7 +15319,9 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	if (!ssllib_dll_handle) {
 		ssllib_dll_handle = load_dll(ebuf, ebuf_len, SSL_LIB, ssl_sw);
 		if (!ssllib_dll_handle) {
+#if !defined(OPENSSL_API_1_1)
 			mg_free(ssl_mutexes);
+#endif
 			DEBUG_TRACE("%s", ebuf);
 			return 0;
 		}
@@ -15397,7 +15403,7 @@ ssl_use_pem_file(struct mg_context *phys_ctx,
 static unsigned long
 ssl_get_protocol(int version_id)
 {
-	long unsigned ret = SSL_OP_ALL;
+	long unsigned ret = (long unsigned)SSL_OP_ALL;
 	if (version_id > 0)
 		ret |= SSL_OP_NO_SSLv2;
 	if (version_id > 1)
@@ -15412,7 +15418,7 @@ ssl_get_protocol(int version_id)
 static long
 ssl_get_protocol(int version_id)
 {
-	long ret = SSL_OP_ALL;
+	long ret = (long)SSL_OP_ALL;
 	if (version_id > 0)
 		ret |= SSL_OP_NO_SSLv2;
 	if (version_id > 1)
