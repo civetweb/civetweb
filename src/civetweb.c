@@ -11103,7 +11103,9 @@ done:
 
 #if defined(USE_TIMERS)
 	if (pid != (pid_t)-1) {
+#if defined(USE_TIMERS)
 		abort_process((void *)pid);
+#endif
 	}
 #endif /* USE_TIMERS */
 	if (fdin[0] != -1) {
