@@ -896,7 +896,7 @@ static int
 request_test_handler2(struct mg_connection *conn, void *cbdata)
 {
 	int i;
-	char chunk_data[32];
+	const char *chunk_data = "123456789A123456789B123456789C";
 	const struct mg_request_info *ri;
 	struct mg_context *ctx;
 	void *ud, *cud;
