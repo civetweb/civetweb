@@ -10474,6 +10474,15 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 }
 #endif
 
+
+#if defined(USE_TIMERS)
+
+#define TIMER_API static
+#include "timer.inl"
+
+#endif /* USE_TIMERS */
+
+
 #if !defined(NO_CGI)
 /* This structure helps to create an environment for the spawned CGI
  * program.
@@ -10769,14 +10778,6 @@ prepare_cgi_environment(struct mg_connection *conn,
 
 	return 0;
 }
-
-
-#if defined(USE_TIMERS)
-
-#define TIMER_API static
-#include "timer.inl"
-
-#endif /* USE_TIMERS */
 
 
 static int
