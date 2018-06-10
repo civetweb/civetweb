@@ -715,14 +715,13 @@ typedef struct DIR {
 	struct dirent result;
 } DIR;
 
-#if defined(_WIN32) && !defined(POLLIN)
+#if defined(_WIN32)
 #if !defined(HAVE_POLL)
 struct pollfd {
 	SOCKET fd;
 	short events;
 	short revents;
 };
-#define POLLIN (0x0300)
 #endif
 #endif
 
@@ -5335,12 +5334,17 @@ mg_readdir(DIR *dir)
 
 
 #if !defined(HAVE_POLL)
+#define POLLIN (1)  /* Data ready - read will not block. */
+#define POLLPRI (2) /* Priority data ready. */
+#define POLLOUT (4) /* Send queue not full - write will not block. */
+
 FUNCTION_MAY_BE_UNUSED
 static int
 poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 {
 	struct timeval tv;
-	fd_set set;
+	fd_set rset;
+	fd_set wset;
 	unsigned int i;
 	int result;
 	SOCKET maxfd = 0;
@@ -5348,10 +5352,15 @@ poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 	memset(&tv, 0, sizeof(tv));
 	tv.tv_sec = milliseconds / 1000;
 	tv.tv_usec = (milliseconds % 1000) * 1000;
-	FD_ZERO(&set);
+	FD_ZERO(&rset);
+	FD_ZERO(&wset);
 
 	for (i = 0; i < n; i++) {
-		FD_SET((SOCKET)pfd[i].fd, &set);
+		if (pfd[i].events & POLLIN) {
+			FD_SET((SOCKET)pfd[i].fd, &rset);
+		} else if (pfd[i].events & POLLOUT) {
+			FD_SET((SOCKET)pfd[i].fd, &wset);
+		}
 		pfd[i].revents = 0;
 
 		if (pfd[i].fd > maxfd) {
@@ -5359,10 +5368,13 @@ poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 		}
 	}
 
-	if ((result = select((int)maxfd + 1, &set, NULL, NULL, &tv)) > 0) {
+	if ((result = select((int)maxfd + 1, &rset, &wset, NULL, &tv)) > 0) {
 		for (i = 0; i < n; i++) {
-			if (FD_ISSET(pfd[i].fd, &set)) {
-				pfd[i].revents = POLLIN;
+			if (FD_ISSET(pfd[i].fd, &rset)) {
+				pfd[i].revents |= POLLIN;
+			}
+			if (FD_ISSET(pfd[i].fd, &wset)) {
+				pfd[i].revents |= POLLOUT;
 			}
 		}
 	}
@@ -8815,9 +8827,16 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	}
 #endif
 
+#if defined(_WIN32)
 	if (conn_ret != 0) {
-		fd_set fdset;
-		struct timeval timeout;
+		DWORD err = WSAGetLastError(); /* could return WSAEWOULDBLOCK */
+		conn_ret = (int)err;
+#define EINPROGRESS (WSAEWOULDBLOCK) /* Winsock equivalent */
+	}
+#endif
+
+	if ((conn_ret != 0) && (conn_ret != EINPROGRESS)) {
+		/* Data for getsockopt */
 		int sockerr = -1;
 		void *psockerr = &sockerr;
 
@@ -8827,12 +8846,21 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		socklen_t len = (socklen_t)sizeof(sockerr);
 #endif
 
-		FD_ZERO(&fdset);
-		FD_SET(*sock, &fdset);
-		timeout.tv_sec = 10; /* 10 second timeout */
-		timeout.tv_usec = 0;
+		/* Data for poll */
+		struct pollfd pfd[1];
+		int pollres;
+		int ms_wait = 10000; /* 10 second timeout */
 
-		if (select((int)(*sock) + 1, NULL, &fdset, NULL, &timeout) != 1) {
+		/* For a non-blocking socket, the connect sequence is:
+		 * 1) call connect (will not block)
+		 * 2) wait until the socket is ready for writing (select or poll)
+		 * 3) check connection state with getsockopt
+		 */
+		pfd[0].fd = *sock;
+		pfd[0].events = POLLOUT;
+		pollres = mg_poll(pfd, 1, (int)(ms_wait), &(ctx->stop_flag));
+
+		if (pollres != 1) {
 			/* Not connected */
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
