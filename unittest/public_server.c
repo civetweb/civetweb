@@ -891,6 +891,37 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 }
 
 
+/* Return the same as request_test_handler using new interfaces */
+static int
+request_test_handler2(struct mg_connection *conn, void *cbdata)
+{
+	int i;
+	char chunk_data[32];
+	const struct mg_request_info *ri;
+	struct mg_context *ctx;
+	void *ud, *cud;
+
+	ctx = mg_get_context(conn);
+	ud = mg_get_user_data(ctx);
+	ri = mg_get_request_info(conn);
+
+	ck_assert(ri != NULL);
+	ck_assert(ctx == g_ctx);
+	ck_assert(ud == &g_ctx);
+
+	mg_send_http_ok(conn, "text/plain", -1);
+
+	for (i = 1; i <= 10; i++) {
+		mg_send_chunk(conn, chunk_data, (unsigned)i);
+	}
+
+	mg_send_chunk(conn, 0, 0);
+	mark_point();
+
+	return 200;
+}
+
+
 #ifdef USE_WEBSOCKET
 /****************************************************************************/
 /* WEBSOCKET SERVER                                                         */
@@ -1290,6 +1321,8 @@ START_TEST(test_request_handlers)
 		                       request_test_handler,
 		                       (void *)(ptrdiff_t)i);
 	}
+
+	mg_set_request_handler(ctx, "/handler2", request_test_handler2, NULL);
 
 #ifdef USE_WEBSOCKET
 	mg_set_websocket_handler(ctx,
@@ -1795,6 +1828,32 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(client_conn);
 
+	/* Get data from handler2 */
+	client_conn =
+	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
+
+	ck_assert_str_eq(ebuf, "");
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn,
+	          "GET /handler HTTP/1.1\r\n"
+	          "Host: localhost\r\n"
+	          "\r\n",
+	          ipv4_port);
+
+	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(i, 0);
+	ck_assert_str_eq(ebuf, "");
+
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
+	i = mg_read(client_conn, buf, sizeof(buf));
+	ck_assert_int_eq(i, (int)strlen(expected));
+	buf[i] = 0;
+	ck_assert_str_eq(buf, expected);
+	mg_close_connection(client_conn);
 
 /* Websocket test */
 #ifdef USE_WEBSOCKET
