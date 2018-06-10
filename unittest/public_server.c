@@ -1836,7 +1836,7 @@ START_TEST(test_request_handlers)
 	ck_assert(client_conn != NULL);
 
 	mg_printf(client_conn,
-	          "GET /handler HTTP/1.1\r\n"
+	          "GET /handler2 HTTP/1.1\r\n"
 	          "Host: localhost\r\n"
 	          "\r\n",
 	          ipv4_port);
@@ -1854,6 +1854,56 @@ START_TEST(test_request_handlers)
 	buf[i] = 0;
 	ck_assert_str_eq(buf, expected);
 	mg_close_connection(client_conn);
+
+	/* Get data non existing handler (will return 404) */
+	client_conn =
+	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
+
+	ck_assert_str_eq(ebuf, "");
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn,
+	          "GET /unknown_url HTTP/1.1\r\n"
+	          "Host: localhost\r\n"
+	          "\r\n",
+	          ipv4_port);
+
+	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(i, 0);
+	ck_assert_str_eq(ebuf, "");
+
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 404);
+	mg_close_connection(client_conn);
+
+	/* Get data from handler2, but only read a part of it */
+	client_conn =
+	    mg_connect_client("localhost", ipv4_port, 0, ebuf, sizeof(ebuf));
+
+	ck_assert_str_eq(ebuf, "");
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn,
+	          "GET /handler2 HTTP/1.1\r\n"
+	          "Host: localhost\r\n"
+	          "\r\n",
+	          ipv4_port);
+
+	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(i, 0);
+	ck_assert_str_eq(ebuf, "");
+
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
+	i = mg_read(client_conn, buf, 7);
+	ck_assert_int_eq(i, 7);
+	ck_assert(0 == memcmp(buf, expected, 7));
+	mg_close_connection(client_conn);
+
 
 /* Websocket test */
 #ifdef USE_WEBSOCKET
