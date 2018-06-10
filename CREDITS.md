@@ -35,10 +35,10 @@
 * Eric Tsau
 * Erik Beran
 * extergnoto
-* F-Secure Corporation
 * feneuilflo
 * Fernando G. Aranda
 * Frank Hilliger
+* F-Secure Corporation
 * Grahack
 * grenclave
 * grunk
@@ -56,8 +56,8 @@
 * jmc-
 * Joakim L. Gilje
 * Jochen Scheib
-* Joe Mucchiello
 * Joel Gallant
+* Joe Mucchiello
 * Johan De Taeye
 * John Faith
 * Jordan
@@ -74,8 +74,8 @@
 * Kimmo Mustonen
 * Lammert Bies
 * Lawrence
-* Li Peng
 * Lianghui
+* Li Peng
 * Maarten Fremouw
 * makrsmark
 * marco
@@ -96,8 +96,8 @@
 * palortoff
 * Patrick Drechsler
 * Patrick Trinkle
-* Paul Sokolovsky
 * Paulo Brizolara
+* Paul Sokolovsky
 * pavel.pimenov
 * PavelVozenilek
 * Perttu Ahola
@@ -126,8 +126,8 @@
 * Thomas Davis
 * Thorsten Horstmann
 * tnoho
-* Tom Deblauwe
 * Tomas Andrle
+* Tom Deblauwe
 * Toni Wilk
 * Torben Jonas
 * Ulrich Hertlein
