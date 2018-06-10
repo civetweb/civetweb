@@ -5,6 +5,18 @@ Release Notes v1.11 (work in progress)
 Changes
 -------
 
+- Timeout for CGI scripts
+- Fix for requests using IPv6 addresses as hostname
+- Shared data for Lua scripts and Lua server pages
+- Add API function for 30x redirect
+- Script for Linux bash auto-completion
+- Add HTTP JSON C callback example
+- Add helper function for HTTP 200 OK response
+- Allow Kepler Syntax for Lua Server pages
+- Update duktape to 2.2.0 and Lua to 5.3.4
+- Optional support for on-the-fly compression (if zlib is available and USE_ZLIB is set)#
+- Add method to replace mg\_cry and log\_access by own implemention
+- Fixes for IPv6 support
 - Add server support for websocket ping pong protocol
 - Fix misspellings in source code and documentation
 - Add error msg to http_error callback
