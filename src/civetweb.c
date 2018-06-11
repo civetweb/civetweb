@@ -17736,6 +17736,11 @@ worker_thread_run(struct worker_thread_args *thread_args)
 					conn->request_info.client_cert = 0;
 				}
 			}
+			else
+			{
+				/* make sure the connection is cleaned up on SSL failure */
+				close_connection(conn);
+			}
 #endif
 		} else {
 			/* process HTTP connection */
