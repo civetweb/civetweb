@@ -899,7 +899,7 @@ request_test_handler2(struct mg_connection *conn, void *cbdata)
 	const char *chunk_data = "123456789A123456789B123456789C";
 	const struct mg_request_info *ri;
 	struct mg_context *ctx;
-	void *ud, *cud;
+	void *ud;
 
 	ctx = mg_get_context(conn);
 	ud = mg_get_user_data(ctx);
