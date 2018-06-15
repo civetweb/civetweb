@@ -11611,10 +11611,10 @@ send_ssi_file(struct mg_connection *conn,
 					/* Handle SSI tag */
 					buf[len] = 0;
 
-					if (!memcmp(buf + 5, "include", 7)) {
+					if ((len > 12) && !memcmp(buf + 5, "include", 7)) {
 						do_ssi_include(conn, path, buf + 12, include_level + 1);
 #if !defined(NO_POPEN)
-					} else if (!memcmp(buf + 5, "exec", 4)) {
+					} else if ((len > 9) && !memcmp(buf + 5, "exec", 4)) {
 						do_ssi_exec(conn, buf + 9);
 #endif /* !NO_POPEN */
 					} else {
