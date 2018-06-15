@@ -388,12 +388,6 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #define MG_BUF_LEN (1024 * 8)
 #endif
 
-/* Maximum queue length for pending connections. This value is passed as
- * parameter to the "listen" socket call. */
-#if !defined(SOMAXCONN)
-#define SOMAXCONN (100) /* in pending connections (count) */
-#endif
-
 /* Size of the accepted socket queue (in case the old queue implementation
  * is used). */
 #if !defined(MGSQLEN)
@@ -803,6 +797,12 @@ typedef int SOCKET;
 
 #endif /* defined(_WIN32) - WINDOWS vs UNIX include block */
 
+/* Maximum queue length for pending connections. This value is passed as
+ * parameter to the "listen" socket call. */
+#if !defined(SOMAXCONN)
+/* This symbol may be defined in winsock2.h so this must after that include */
+#define SOMAXCONN (100) /* in pending connections (count) */
+#endif
 
 /* In case our C library is missing "timegm", provide an implementation */
 #if defined(NEED_TIMEGM)
@@ -5530,7 +5530,7 @@ kill(pid_t pid, int sig_num)
 #endif
 
 
-pid_t
+static pid_t
 waitpid(pid_t pid, int *status, int flags)
 {
 	DWORD timeout = INFINITE;
@@ -8826,7 +8826,9 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	if (conn_ret != 0) {
 		DWORD err = WSAGetLastError(); /* could return WSAEWOULDBLOCK */
 		conn_ret = (int)err;
-#define EINPROGRESS (WSAEWOULDBLOCK) /* Winsock equivalent */
+#if !defined(EINPROGRESS)
+#	define EINPROGRESS (WSAEWOULDBLOCK) /* Winsock equivalent */
+#endif /* if !defined(EINPROGRESS) */
 	}
 #endif
 
@@ -10818,7 +10820,7 @@ abort_process(void *data)
 		kill(pid, SIGABRT);
 
 		/* Wait until process is terminated (don't leave zombies) */
-		while (waitpid(pid, &status, 0) != -1) /* nop */
+		while (waitpid(pid, &status, 0) != (pid_t)-1) /* nop */
 			;
 	} else {
 		DEBUG_TRACE("CGI timer: Child process %p already stopped in time\n",
