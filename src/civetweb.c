@@ -8827,8 +8827,8 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		DWORD err = WSAGetLastError(); /* could return WSAEWOULDBLOCK */
 		conn_ret = (int)err;
 #if !defined(EINPROGRESS)
-#	define EINPROGRESS (WSAEWOULDBLOCK) /* Winsock equivalent */
-#endif /* if !defined(EINPROGRESS) */
+#define EINPROGRESS (WSAEWOULDBLOCK) /* Winsock equivalent */
+#endif                               /* if !defined(EINPROGRESS) */
 	}
 #endif
 
@@ -17732,9 +17732,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 					mg_free(conn->request_info.client_cert);
 					conn->request_info.client_cert = 0;
 				}
-			}
-			else
-			{
+			} else {
 				/* make sure the connection is cleaned up on SSL failure */
 				close_connection(conn);
 			}
