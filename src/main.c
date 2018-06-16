@@ -1541,7 +1541,7 @@ GetDlgHeader(const short width)
 #if defined(_MSC_VER)
 /* disable MSVC warning C4204 (non-constant used to initialize structure) */
 #pragma warning(push)
-#pragma warning(disable:4204)
+#pragma warning(disable : 4204)
 #endif /* if defined(_MSC_VER) */
 	struct dlg_header_param dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU
 	                                              | WS_VISIBLE | DS_SETFONT

@@ -10805,27 +10805,42 @@ prepare_cgi_environment(struct mg_connection *conn,
 }
 
 
+/* Data for CGI process control: PID and number of references */
+struct process_control_data {
+	pid_t pid;
+	int references;
+};
+
 static int
 abort_process(void *data)
 {
 	/* Waitpid checks for child status and won't work for a pid that does not
 	 * identify a child of the current process. Thus, if the pid is reused,
 	 * we will not affect a different process. */
-	pid_t pid = (pid_t)data;
+	struct process_control_data *proc = (struct process_control_data *)data;
 	int status = 0;
-	pid_t rpid = waitpid(pid, &status, WNOHANG);
-	if ((rpid != (pid_t)-1) && (status == 0)) {
+	int refs;
+	pid_t ret_pid;
+
+	ret_pid = waitpid(proc->pid, &status, WNOHANG);
+	if ((ret_pid != (pid_t)-1) && (status == 0)) {
 		/* Stop child process */
-		DEBUG_TRACE("CGI timer: Stop child process %p\n", pid);
-		kill(pid, SIGABRT);
+		DEBUG_TRACE("CGI timer: Stop child process %p\n", proc->pid);
+		kill(proc->pid, SIGABRT);
 
 		/* Wait until process is terminated (don't leave zombies) */
-		while (waitpid(pid, &status, 0) != (pid_t)-1) /* nop */
+		while (waitpid(proc->pid, &status, 0) != (pid_t)-1) /* nop */
 			;
 	} else {
-		DEBUG_TRACE("CGI timer: Child process %p already stopped in time\n",
-		            pid);
+		DEBUG_TRACE("CGI timer: Child process %p already stopped\n", proc->pid);
 	}
+	/* Dec reference counter */
+	refs = mg_atomic_dec(&proc->references);
+	if (refs == 0) {
+		/* no more references - free data */
+		mg_free(data);
+	}
+
 	return 0;
 }
 
@@ -10844,6 +10859,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	FILE *in = NULL, *out = NULL, *err = NULL;
 	struct mg_file fout = STRUCT_FILE_INITIALIZER;
 	pid_t pid = (pid_t)-1;
+	struct process_control_data *proc = NULL;
 
 	if (conn == NULL) {
 		return;
@@ -10891,6 +10907,14 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		goto done;
 	}
 
+	proc = (struct process_control_data *)
+	    mg_malloc_ctx(sizeof(struct process_control_data), conn->phys_ctx);
+	if (proc == NULL) {
+		mg_cry_internal(conn, "Error: CGI program \"%s\": Out or memory", prog);
+		mg_send_http_error(conn, 500, "Error: Out of memory [%s]", prog);
+		goto done;
+	}
+
 	DEBUG_TRACE("CGI: spawn %s %s\n", dir, p);
 	pid = spawn_process(conn, p, blk.buf, blk.var, fdin, fdout, fderr, dir);
 
@@ -10906,17 +10930,26 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		                   "Error: Cannot spawn CGI process [%s]: %s",
 		                   prog,
 		                   status);
+		mg_free(proc);
+		proc = NULL;
 		goto done;
 	}
 
+	/* Store data in shared process_control_data */
+	proc->pid = pid;
+
 #if defined(USE_TIMERS)
-	// TODO (#618): set a timeout
+	proc->references = 2;
+
+	// Start a timer for CGI
 	timer_add(conn->phys_ctx,
-	          /* one minute */ 60.0,
+	          /* one minute. TODO: use config or define */ 60.0,
 	          0.0,
 	          1,
 	          abort_process,
-	          (void *)pid);
+	          (void *)proc);
+#else
+	proc->references = 1;
 #endif
 
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1
@@ -11119,7 +11152,7 @@ done:
 	mg_free(blk.buf);
 
 	if (pid != (pid_t)-1) {
-		abort_process((void *)pid);
+		abort_process((void *)proc);
 	}
 
 	if (fdin[0] != -1) {
