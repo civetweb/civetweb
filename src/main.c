@@ -1536,8 +1536,13 @@ struct dlg_header_param {
 };
 
 static struct dlg_header_param
-GetDlgHeader(unsigned pWidth)
+GetDlgHeader(const short width)
 {
+#if defined(_MSC_VER)
+/* disable MSVC warning C4204 (non-constant used to initialize structure) */
+#pragma warning(push)
+#pragma warning(disable:4204)
+#endif /* if defined(_MSC_VER) */
 	struct dlg_header_param dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU
 	                                              | WS_VISIBLE | DS_SETFONT
 	                                              | WS_DLGFRAME,
@@ -1545,13 +1550,16 @@ GetDlgHeader(unsigned pWidth)
 	                                          0,
 	                                          200,
 	                                          200,
-	                                          pWidth,
+	                                          width,
 	                                          0},
 	                                         0,
 	                                         0,
 	                                         L"",
 	                                         8,
 	                                         L"Tahoma"};
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif /* if defined(_MSC_VER) */
 	return dialog_header;
 }
 
