@@ -15,6 +15,11 @@
 #define UNUSED_PARAMETER(x) (void)(x)
 #endif
 
+#ifndef MAX_PARAM_BODY_LENGTH
+// Set a default limit for parameters in a form body: 10 kB
+#define MAX_PARAM_BODY_LENGTH (1024 * 10)
+#endif
+
 bool
 CivetHandler::handleGet(CivetServer *server, struct mg_connection *conn)
 {
@@ -471,12 +476,22 @@ CivetServer::getParam(struct mg_connection *conn,
 	mg_unlock_context(me->context);
 
 	if (conobj.postData != NULL) {
+		// check if form parameter are already stored
 		formParams = conobj.postData;
 	} else {
+		// otherwise, check if there is a request body
 		const char *con_len_str = mg_get_header(conn, "Content-Length");
 		if (con_len_str) {
-			unsigned long con_len = atoi(con_len_str);
-			if (con_len > 0) {
+			char *end = 0;
+			unsigned long con_len = strtoul(con_len_str, &end, 10);
+			if ((end == NULL) || (*end != 0)) {
+				// malformed header
+				return false;
+			}
+			if ((con_len > 0) && (con_len <= MAX_PARAM_BODY_LENGTH)) {
+				// Body is within a reasonable range
+
+				// Allocate memory:
 				// Add one extra character: in case the post-data is a text, it
 				// is required as 0-termination.
 				// Do not increment con_len, since the 0 terminating is not part
@@ -489,6 +504,10 @@ CivetServer::getParam(struct mg_connection *conn,
 					formParams = conobj.postData;
 					conobj.postDataLen = con_len;
 				}
+			}
+			if (conobj.postData == NULL) {
+				// we cannot store the body
+				return false;
 			}
 		}
 	}

@@ -36,8 +36,15 @@ class ExampleHandler : public CivetHandler
 		          "<p>To see a page from the A handler <a "
 		          "href=\"a\">click here</a></p>\r\n");
 		mg_printf(conn,
-		          "<p>To see a page from the A handler with a parameter "
-		          "<a href=\"a?param=1\">click here</a></p>\r\n");
+                  "<form action=\"a\" method=\"get\">"
+                  "To see a page from the A handler with a parameter "
+                  "<input type=\"submit\" value=\"click here\" "
+                  "name=\"param\" \\> (GET)</form>\r\n");
+        mg_printf(conn,
+                  "<form action=\"a\" method=\"post\">"
+                  "To see a page from the A handler with a parameter "
+                  "<input type=\"submit\" value=\"click here\" "
+                  "name=\"param\" \\> (POST)</form>\r\n");
 		mg_printf(conn,
 		          "<p>To see a page from the A/B handler <a "
 		          "href=\"a/b\">click here</a></p>\r\n");
