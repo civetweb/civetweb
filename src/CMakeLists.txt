@@ -1,5 +1,9 @@
 # The C API library
-add_library(civetweb-c-library civetweb.c)
+set( LIB_TYPE "STATIC" )
+if (BUILD_SHARED_LIBS)
+  set( LIB_TYPE "SHARED" )
+endif()
+add_library(civetweb-c-library ${LIB_TYPE} civetweb.c)
 set_target_properties(civetweb-c-library PROPERTIES
   OUTPUT_NAME "civetweb"
   VERSION ${CIVETWEB_VERSION}
@@ -285,7 +289,7 @@ endif()
 
 # The C++ API library
 if (CIVETWEB_ENABLE_CXX)
-  add_library(civetweb-cpp CivetServer.cpp)
+  add_library(civetweb-cpp ${LIB_TYPE} CivetServer.cpp)
   set_target_properties(civetweb-cpp PROPERTIES
     OUTPUT_NAME "civetweb-cpp"
     VERSION ${CIVETWEB_VERSION}
