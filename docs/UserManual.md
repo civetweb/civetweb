@@ -411,6 +411,11 @@ Currently keep\_alive\_timeout\_ms is ignored if enable\_keep\_alive is no,
 but future versions my drop the enable\_keep\_alive configuration value and
 automatically use keep-alive if keep\_alive\_timeout\_ms is not 0.
 
+### cgi\_timeout\_ms
+Maximum allowed runtime for CGI scripts.  CGI processes are terminated by
+the server after this time.  The default is "no timeout", so scripts may
+run or block for undefined time.
+
 ### linger\_timeout\_ms
 Set TCP socket linger timeout before closing sockets (SO\_LINGER option).
 The configured value is a timeout in milliseconds. Setting the value to 0

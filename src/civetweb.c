@@ -2260,6 +2260,7 @@ struct socket {
  * "Private Config Options"
  */
 enum {
+	/* Once for each server */
 	LISTENING_PORTS,
 	NUM_THREADS,
 	RUN_AS_USER,
@@ -2288,8 +2289,11 @@ enum {
 	LUA_BACKGROUND_SCRIPT,
 	LUA_BACKGROUND_SCRIPT_PARAMS,
 #endif
+#if defined(USE_TIMERS)
+	CGI_TIMEOUT,
+#endif
 
-
+	/* Once for each domain */
 	DOCUMENT_ROOT,
 	CGI_EXTENSIONS,
 	CGI_ENVIRONMENT,
@@ -2386,7 +2390,9 @@ static const struct mg_option config_options[] = {
     {"lua_background_script", MG_CONFIG_TYPE_FILE, NULL},
     {"lua_background_script_params", MG_CONFIG_TYPE_STRING_LIST, NULL},
 #endif
-
+#if defined(USE_TIMERS)
+    {"cgi_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+#endif
 
     /* Once for each domain */
     {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
@@ -10861,6 +10867,14 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	pid_t pid = (pid_t)-1;
 	struct process_control_data *proc = NULL;
 
+#if defined(USE_TIMERS)
+	double cgi_timeout = -1.0;
+	if (conn->dom_ctx->config[CGI_TIMEOUT]) {
+		/* Get timeout in seconds */
+		cgi_timeout = atof(conn->dom_ctx->config[CGI_TIMEOUT]) * 0.001;
+	}
+#endif
+
 	if (conn == NULL) {
 		return;
 	}
@@ -10937,23 +10951,23 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 
 	/* Store data in shared process_control_data */
 	proc->pid = pid;
+	proc->references = 1;
 
 #if defined(USE_TIMERS)
-	proc->references = 2;
+	if (cgi_timeout > 0.0) {
+		proc->references = 2;
 
-	// Start a timer for CGI
-	timer_add(conn->phys_ctx,
-	          /* one minute. TODO: use config or define */ 60.0,
-	          0.0,
-	          1,
-	          abort_process,
-	          (void *)proc);
-#else
-	proc->references = 1;
+		// Start a timer for CGI
+		timer_add(conn->phys_ctx,
+		          cgi_timeout /* in seconds */,
+		          0.0,
+		          1,
+		          abort_process,
+		          (void *)proc);
+	}
 #endif
 
-	/* Make sure child closes all pipe descriptors. It must dup them to 0,1
-	 */
+	/* Make sure child closes all pipe descriptors. It must dup them to 0,1 */
 	set_close_on_exec((SOCKET)fdin[0], conn);  /* stdin read */
 	set_close_on_exec((SOCKET)fdin[1], conn);  /* stdin write */
 	set_close_on_exec((SOCKET)fdout[0], conn); /* stdout read */
