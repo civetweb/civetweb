@@ -8686,6 +8686,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 {
 	int ip_ver = 0;
 	int conn_ret = -1;
+	int ret;
 	*sock = INVALID_SOCKET;
 	memset(sa, 0, sizeof(*sa));
 
@@ -8878,12 +8879,12 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		}
 
 #if defined(_WIN32)
-		getsockopt(*sock, SOL_SOCKET, SO_ERROR, (char *)psockerr, &len);
+		ret = getsockopt(*sock, SOL_SOCKET, SO_ERROR, (char *)psockerr, &len);
 #else
-		getsockopt(*sock, SOL_SOCKET, SO_ERROR, psockerr, &len);
+		ret = getsockopt(*sock, SOL_SOCKET, SO_ERROR, psockerr, &len);
 #endif
 
-		if (sockerr != 0) {
+		if ((ret != 0) || (sockerr != 0)) {
 			/* Not connected */
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
