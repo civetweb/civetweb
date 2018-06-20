@@ -723,10 +723,25 @@ page, one can write:
       URI is <?=mg.request_info.uri?>
     </p>
 
-Lua is known for it's speed and small size. CivetWeb currently uses Lua
-version 5.2.4. The documentation for it can be found in the
-[Lua 5.2 reference manual](http://www.lua.org/manual/5.2/).
+From version 1.11, CivetWeb supports "Kepler Syntax" in addition to the
+traditional Lua pages syntax of CivetWeb. Kepler Syntax uses `<?lua ?>`
+or `<% %>` blocks for script elements (corresponding to `<? ?>` above)
+and `<?lua= ?>` or `<%= %>` for variable content (corresponding to `<?= ?>`).
 
+    <ul>
+       <% for key, value in pairs(mg.request_info) do %>
+       <li> <%= key %>: <%= value %> </li>
+       <% end %>
+    </ul>
+    
+Currently the extended "Kepler Syntax" is available only for HTML (see 
+note on HTTP headers below).
+
+Lua is known for it's speed and small size. The default Lua version for
+CivetWeb is Lua 5.2.4. The documentation for it can be found in the
+[Lua 5.2 reference manual](http://www.lua.org/manual/5.2/). However,
+CivetWeb can be built with Lua 5.1, 5.2, 5.3, 5.4 (currently pre-release)
+and LuaJIT.
 
 Note that this example uses function `mg.write()`, which sends data to the
 web client. Using `mg.write()` is the way to generate web content from inside
@@ -744,7 +759,11 @@ is an example for a plain Lua script.
 [page2.lp](https://github.com/civetweb/civetweb/blob/master/test/page2.lp)
 is an example for a Lua Server Page.
 
-Both examples show the content of the `mg.request_info` object as the page
+[page4kepler.lp](https://github.com/civetweb/civetweb/blob/master/test/page4kepler.lp)
+is a Lua Server Page showing "Kepler Syntax" in addition to traditional CivetWeb
+Lua Server Pages syntax.
+
+These examples show the content of the `mg.request_info` object as the page
 content. Please refer to `struct mg_request_info` definition in
 [CivetWeb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)
 to see additional information on the elements of the `mg.request_info` object.
@@ -754,6 +773,7 @@ through the [LuaSQLite3 interface](http://lua.sqlite.org/index.cgi/doc/tip/doc/l
 in Lua. Examples are given in
 [page.lua](https://github.com/civetweb/civetweb/blob/master/test/page.lua) and
 [page.lp](https://github.com/civetweb/civetweb/blob/master/test/page.lp).
+
 
 
 CivetWeb exports the following functions to Lua:
@@ -816,17 +836,42 @@ connect (function):
 All filename arguments are either absolute or relative to the CivetWeb working
 directory (not the document root or the Lua script/page file).
     
-**IMPORTANT: CivetWeb does not send HTTP headers for Lua pages. Therefore,
-every Lua Page must begin with a HTTP reply line and headers**, like this:
+To serve a Lua Page, CivetWeb creates a Lua context. That context is used for
+all Lua blocks within the page. That means, all Lua blocks on the same page
+share the same context. If one block defines a variable, for example, that
+variable is visible in all blocks that follow.
+
+
+**Important note on HTTP headers:**
+
+Lua scripts MUST send HTTP headers themselves, e.g.:
+
+    mg.write('HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n')
+
+Lua Server Pages CAN send HTTP reply headers, like this:
+
+    HTTP/1.0 200 OK
+    Content-Type: text/html
+        
+    <html><body>
+      ... the rest of the web page ...
+
+or using Lua code:
 
     <? mg.write('HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n') ?>
     <html><body>
       ... the rest of the web page ...
 
-To serve a Lua Page, CivetWeb creates a Lua context. That context is used for
-all Lua blocks within the page. That means, all Lua blocks on the same page
-share the same context. If one block defines a variable, for example, that
-variable is visible in all block that follow.
+or Lua Server Pages generating HTML content MAY skip the HTTP header lines.
+In this case, CivetWeb automatically creates a "200 OK"/"Content-Type: text/html"
+reply header. In this case, the document should start with "<!DOCTYPE html>" 
+or "<html".
+
+Currently the extended "Kepler Syntax" is available only for text/html pages
+not sending their own HTTP headers. Thus, "Kepler Syntax" can only be used for
+HTML pages, while traditional CivetWeb syntax can be used to send a content-type
+header and generate any kind of file.
+
 
 ## Websockets for Lua
 CivetWeb offers support for websockets in Lua as well. In contrast to plain
