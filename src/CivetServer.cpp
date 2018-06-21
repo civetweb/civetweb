@@ -16,8 +16,8 @@
 #endif
 
 #ifndef MAX_PARAM_BODY_LENGTH
-// Set a default limit for parameters in a form body: 10 kB
-#define MAX_PARAM_BODY_LENGTH (1024 * 10)
+// Set a default limit for parameters in a form body: 2 MB
+#define MAX_PARAM_BODY_LENGTH (1024 * 1024 * 2)
 #endif
 
 bool
