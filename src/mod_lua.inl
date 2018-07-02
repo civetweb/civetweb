@@ -976,6 +976,28 @@ lsp_send_file(lua_State *L)
 }
 
 
+/* mg.mg_send_file_body */
+static int
+lsp_send_file_body(lua_State *L)
+{
+	struct mg_connection *conn =
+	    (struct mg_connection *)lua_touserdata(L, lua_upvalueindex(1));
+	int num_args = lua_gettop(L);
+	const char *filename = (num_args == 1) ? lua_tostring(L, 1) : NULL;
+	int ret;
+
+	if (filename) {
+		ret = mg_send_file_body(conn, filename);
+	} else {
+		/* Syntax error */
+		return luaL_error(L, "invalid send_file() call");
+	}
+
+	lua_pushboolean(L, ret >= 0);
+	return 1;
+}
+
+
 /* mg.get_time */
 static int
 lsp_get_time(lua_State *L)
@@ -2136,6 +2158,7 @@ prepare_lua_environment(struct mg_context *ctx,
 		reg_conn_function(L, "write", lsp_write, conn);
 		reg_conn_function(L, "keep_alive", lsp_keep_alive, conn);
 		reg_conn_function(L, "send_file", lsp_send_file, conn);
+		reg_conn_function(L, "send_file_body", lsp_send_file_body, conn);
 	}
 
 	if (lua_env_type == LUA_ENV_TYPE_LUA_SERVER_PAGE) {
@@ -2149,7 +2172,6 @@ prepare_lua_environment(struct mg_context *ctx,
 		reg_function(L, "set_timeout", lwebsocket_set_timeout);
 		reg_function(L, "set_interval", lwebsocket_set_interval);
 #endif
-		/* reg_conn_function(L, "send_file", lsp_send_file, conn); */
 	}
 
 	reg_conn_function(L, "get_mime_type", lsp_get_mime_type, conn);

@@ -780,38 +780,39 @@ CivetWeb exports the following functions to Lua:
 
 mg (table):
 
-    mg.read()                  -- reads a chunk from POST data, returns it as a string
-    mg.write(str)              -- writes string to the client
+    mg.read()                   -- reads a chunk from POST data, returns it as a string
+    mg.write(str)               -- writes string to the client
     mg.include(filename, [pathtype]) -- include another Lua Page file (Lua Pages only)
-                               -- pathtype can be "abs", "rel"/"file" or "virt[ual]"
-                               -- like defined for SSI #include
-    mg.redirect(uri)           -- internal redirect to a given URI
-    mg.onerror(msg)            -- error handler, can be overridden
-    mg.version                 -- a string that holds CivetWeb version
-    mg.document_root           -- a string that holds the document root directory
-    mg.auth_domain             -- a string that holds the HTTP authentication domain
-    mg.get_var(str, varname)   -- extract variable from (query) string
-    mg.get_cookie(str, cookie) -- extract cookie from a string
-    mg.get_mime_type(filename) -- get MIME type of a file
-    mg.get_info(infotype)      -- get server status information
-    mg.send_file(filename)     -- send a file, including MIME type
-    mg.url_encode(str)         -- URL encode a string
-    mg.url_decode(str, [form]) -- URL decode a string. If form=true, replace + by space.
-    mg.base64_encode(str)      -- BASE64 encode a string
-    mg.base64_decode(str)      -- BASE64 decode a string
-    mg.md5(str)                -- return the MD5 hash of a string
-    mg.keep_alive(bool)        -- allow/forbid to use http keep-alive for this request
-    mg.request_info            -- a table with the following request information
-         .remote_addr          -- IP address of the client as string
-         .remote_port          -- remote port number
-         .server_port          -- server port number
-         .request_method       -- HTTP method (e.g.: GET, POST)
-         .http_version         -- HTTP protocol version (e.g.: 1.1)
-         .uri                  -- resource name
-         .query_string         -- query string if present, nil otherwise
-         .script_name          -- name of the Lua script
-         .https                -- true if accessed by https://, false otherwise
-         .remote_user          -- user name if authenticated, nil otherwise
+                                -- pathtype can be "abs", "rel"/"file" or "virt[ual]"
+                                -- like defined for SSI #include
+    mg.redirect(uri)            -- internal redirect to a given URI
+    mg.onerror(msg)             -- error handler, can be overridden
+    mg.version                  -- a string that holds CivetWeb version
+    mg.document_root            -- a string that holds the document root directory
+    mg.auth_domain              -- a string that holds the HTTP authentication domain
+    mg.get_var(str, varname)    -- extract variable from (query) string
+    mg.get_cookie(str, cookie)  -- extract cookie from a string
+    mg.get_mime_type(filename)  -- get MIME type of a file
+    mg.get_info(infotype)       -- get server status information
+    mg.send_file(filename)      -- send a file, including all required HTTP headers
+    mg.send_file_body(filename) -- send a file, excluding HTTP headers
+    mg.url_encode(str)          -- URL encode a string
+    mg.url_decode(str, [form])  -- URL decode a string. If form=true, replace + by space.
+    mg.base64_encode(str)       -- BASE64 encode a string
+    mg.base64_decode(str)       -- BASE64 decode a string
+    mg.md5(str)                 -- return the MD5 hash of a string
+    mg.keep_alive(bool)         -- allow/forbid to use http keep-alive for this request
+    mg.request_info             -- a table with the following request information
+         .remote_addr           -- IP address of the client as string
+         .remote_port           -- remote port number
+         .server_port           -- server port number
+         .request_method        -- HTTP method (e.g.: GET, POST)
+         .http_version          -- HTTP protocol version (e.g.: 1.1)
+         .uri                   -- resource name
+         .query_string          -- query string if present, nil otherwise
+         .script_name           -- name of the Lua script
+         .https                 -- true if accessed by https://, false otherwise
+         .remote_user           -- user name if authenticated, nil otherwise
 
 connect (function):
 
