@@ -38,6 +38,7 @@ The content of both structures is not defined in the interface - they are only u
 * [`struct mg_header;`](api/mg_header.md)
 * [`struct mg_option;`](api/mg_option.md)
 * [`struct mg_request_info;`](api/mg_request_info.md)
+* [`struct mg_response_info;`](api/mg_response_info.md)
 * [`struct mg_server_ports;`](api/mg_server_ports.md)
 
 
@@ -69,12 +70,15 @@ The content of both structures is not defined in the interface - they are only u
 * [`mg_get_context( conn );`](api/mg_get_context.md)
 
 * [`mg_send_http_error( conn, status_code, fmt, ... );`](api/mg_send_http_error.md)
+* [`mg_send_http_ok( conn, mime_type, content_length );`](api/mg_send_http_ok.md)
+* [`mg_send_http_redirect( conn, target_url, redirect_code );`](api/mg_send_http_redirect.md)
 
 * [`mg_send_digest_access_authentication_request( conn, realm );`](api/mg_send_digest_access_authentication_request.md)
 * [`mg_check_digest_access_authentication( conn, realm, filename );`](api/mg_check_digest_access_authentication.md)
 * [`mg_modify_passwords_file( passwords_file_name, realm, user, password );`](api/mg_modify_passwords_file.md)
 
 * [`mg_get_request_info( conn );`](api/mg_get_request_info.md)
+* [`mg_get_request_link( conn, buf, buflen );`](api/mg_get_request_link.md)
 * [`mg_handle_form_request( conn, fdh );`](api/mg_handle_form_request.md)
 
 * [`mg_send_file( conn, path );`](api/mg_send_file.md)
@@ -85,13 +89,14 @@ The content of both structures is not defined in the interface - they are only u
 ## Client API Functions
 
 * [`mg_connect_client( host, port, use_ssl, error_buffer, error_buffer_size );`](api/mg_connect_client.md)
+* [`mg_connect_client_secure( client_options, error_buffer, error_buffer_size );`](api/mg_connect_client_secure.md)
 * [`mg_connect_websocket_client( host, port, use_ssl, error_buffer, error_buffer_size, path, origin, data_func, close_func, user_data);`](api/mg_connect_websocket_client.md)
 * [`mg_websocket_client_write( conn, opcode, data, data_len );`](api/mg_websocket_client_write.md)
 
 * [`mg_download( host, port, use_ssl, error_buffer, error_buffer_size, fmt, ... );`](api/mg_download.md)
 
 * [`mg_get_response( conn, ebuf, ebuf_len, timeout );`](api/mg_get_response.md)
-
+* [`mg_get_response_info( conn );`](api/mg_get_response_info.md)
 
 ## Common API Functions
 
@@ -126,12 +131,13 @@ The content of both structures is not defined in the interface - they are only u
 
 * [`mg_get_system_info( buffer, buf_len );`](api/mg_get_system_info.md)
 * [`mg_get_context_info( ctx, buffer, buf_len );`](api/mg_get_context_info.md)
-* [`mg_get_connection_info( ctx, idx, buffer, buf_len );`](api/mg_get_context_info.md)
+* [`mg_get_connection_info( ctx, idx, buffer, buf_len );`](api/mg_get_connection_info.md)
 
 
 ## Deprecated:
 
 * [~~`mg_get_valid_option_names();`~~](api/mg_get_valid_option_names.md)
 * [~~`mg_upload( conn, destination_dir );`~~](api/mg_upload.md)
+* [~~`mg_get_ports( ctx, size, ports, ssl);`~~](api/mg_get_ports.md)
 
 
