@@ -875,8 +875,27 @@ CIVETWEB_API int mg_send_chunk(struct mg_connection *conn,
                                unsigned int chunk_len);
 
 
-/* Send contents of the entire file together with HTTP headers. */
+/* Send contents of the entire file together with HTTP headers.
+ * Parameters:
+ *   conn: Current connection information.
+ *   path: Full path to the file to send.
+ * This function has been superseded by mg_send_mime_file
+ */
 CIVETWEB_API void mg_send_file(struct mg_connection *conn, const char *path);
+
+
+/* Send contents of the file without HTTP headers.
+ * The code must send a valid HTTP response header before using this function.
+ *
+ * Parameters:
+ *   conn: Current connection information.
+ *   path: Full path to the file to send.
+ *
+ * Return:
+ *   < 0   Error
+*/
+CIVETWEB_API int mg_send_file_body(struct mg_connection *conn,
+                                   const char *path);
 
 
 /* Send HTTP error reply. */

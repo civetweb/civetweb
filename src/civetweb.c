@@ -9713,6 +9713,20 @@ handle_static_file_request(struct mg_connection *conn,
 }
 
 
+int
+mg_send_file_body(struct mg_connection *conn, const char *path)
+{
+	struct mg_file file = STRUCT_FILE_INITIALIZER;
+	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, &file)) {
+		return -1;
+	}
+	fclose_on_exec(&file.access, conn);
+	send_file_data(conn, &file, 0, INT64_MAX);
+	(void)mg_fclose(&file.access); /* Ignore errors for readonly files */
+	return 0;                      /* >= 0 for OK */
+}
+
+
 #if !defined(NO_CACHING)
 /* Return True if we should reply 304 Not Modified. */
 static int
@@ -9767,7 +9781,7 @@ handle_not_modified_static_file_request(struct mg_connection *conn,
 void
 mg_send_file(struct mg_connection *conn, const char *path)
 {
-	mg_send_mime_file(conn, path, NULL);
+	mg_send_mime_file2(conn, path, NULL, NULL);
 }
 
 

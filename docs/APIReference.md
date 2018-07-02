@@ -110,6 +110,7 @@ The content of both structures is not defined in the interface - they are only u
 * [`mg_printf( conn, fmt, ... );`](api/mg_printf.md)
 * [`mg_read( conn, buf, len );`](api/mg_read.md)
 * [`mg_send_chunk( conn, buf, len );`](api/mg_send_chunk.md)
+* [`mg_send_file( conn, path );`](api/mg_send_file_body.md)
 * [`mg_set_user_connection_data( conn, data );`](api/mg_set_user_connection_data.md)
 * [`mg_start_thread( f, p );`](api/mg_start_thread.md)
 * [`mg_store_body( conn, path );`](api/mg_store_body.md)
