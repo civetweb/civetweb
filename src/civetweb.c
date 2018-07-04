@@ -188,6 +188,31 @@ static void DEBUG_TRACE_FUNC(const char *func,
 #endif
 
 
+#if defined(__GNUC__) && defined(DEBUG)
+void __cyg_profile_func_enter(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+
+void __cyg_profile_func_exit(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+
+void
+__cyg_profile_func_enter(void *this_fn, void *call_site)
+{
+	if (this_fn != printf) {
+		printf("E %p %p\n", this_fn, call_site);
+	}
+}
+
+void
+__cyg_profile_func_exit(void *this_fn, void *call_site)
+{
+	if (this_fn != printf) {
+		printf("X %p %p\n", this_fn, call_site);
+	}
+}
+#endif
+
+
 #if !defined(IGNORE_UNUSED_RESULT)
 #define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
