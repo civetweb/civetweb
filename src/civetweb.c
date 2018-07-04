@@ -13084,7 +13084,7 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 		    &truncated,
 		    target_url,
 		    sizeof(target_url),
-		    "Location: https://%s:%d%s%s%s",
+		    "https://%s:%d%s%s%s",
 
 		    conn->host,
 #if defined(USE_IPV6)
