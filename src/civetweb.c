@@ -1720,6 +1720,12 @@ typedef struct SSL_CTX SSL_CTX;
 #include "wolfssl_extras.inl"
 #endif
 
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+/* If OpenSSL headers are included, automatically select the API version */
+#define OPENSSL_API_1_1
+#endif
+
+
 #else
 
 /* SSL loaded dynamically from DLL.
