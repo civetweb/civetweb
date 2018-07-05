@@ -198,7 +198,7 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site)
 void
 __cyg_profile_func_enter(void *this_fn, void *call_site)
 {
-	if (this_fn != printf) {
+	if ((void *)this_fn != (void *)printf) {
 		printf("E %p %p\n", this_fn, call_site);
 	}
 }
@@ -206,7 +206,7 @@ __cyg_profile_func_enter(void *this_fn, void *call_site)
 void
 __cyg_profile_func_exit(void *this_fn, void *call_site)
 {
-	if (this_fn != printf) {
+	if ((void *)this_fn != (void *)printf) {
 		printf("X %p %p\n", this_fn, call_site);
 	}
 }
@@ -1747,7 +1747,9 @@ typedef struct SSL_CTX SSL_CTX;
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 /* If OpenSSL headers are included, automatically select the API version */
+#ifndef OPENSSL_API_1_1
 #define OPENSSL_API_1_1
+#endif
 #endif
 
 
