@@ -21,6 +21,15 @@
  */
 
 #if defined(__GNUC__) || defined(__MINGW32__)
+#define GCC_VERSION                                                            \
+	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION >= 40500
+/* gcc diagnostic pragmas available */
+#define GCC_DIAGNOSTIC
+#endif
+#endif
+
+#if defined(GCC_DIAGNOSTIC)
 /* Disable unused macros warnings - not all defines are required
  * for all systems and all compilers. */
 #pragma GCC diagnostic ignored "-Wunused-macros"
@@ -891,7 +900,7 @@ timegm(struct tm *tm)
 #if defined(_WIN32)
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -948,7 +957,7 @@ pthread_getspecific(pthread_key_t key)
 	return TlsGetValue(key);
 }
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
 #endif
@@ -962,7 +971,7 @@ static pthread_mutexattr_t pthread_mutex_attr;
 #if defined(_WIN32_WCE)
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -1122,7 +1131,7 @@ stat(const char *name, struct stat *st)
 #define EACCES 13
 #define ENOENT 2
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
 #endif
@@ -1130,15 +1139,11 @@ stat(const char *name, struct stat *st)
 #endif /* defined(_WIN32_WCE) */
 
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#define GCC_VERSION                                                            \
-	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#if GCC_VERSION >= 40500
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-#endif /* GCC_VERSION >= 40500 */
-#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
 #pragma clang diagnostic push
@@ -1242,12 +1247,10 @@ mg_atomic_add(volatile int64_t *addr, int64_t value)
 #endif
 
 
-#if defined(__GNUC__)
+#if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#if GCC_VERSION >= 40500
 #pragma GCC diagnostic pop
-#endif /* GCC_VERSION >= 40500 */
-#endif /* defined(__GNUC__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
 #pragma clang diagnostic pop
@@ -1573,13 +1576,11 @@ struct mg_workerTLS {
 };
 
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#if GCC_VERSION >= 40500
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-#endif /* GCC_VERSION >= 40500 */
-#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
 #pragma clang diagnostic push
@@ -1657,12 +1658,10 @@ mg_get_current_time_ns(void)
 }
 
 
-#if defined(__GNUC__)
+#if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#if GCC_VERSION >= 40500
 #pragma GCC diagnostic pop
-#endif /* GCC_VERSION >= 40500 */
-#endif /* defined(__GNUC__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
 #pragma clang diagnostic pop
@@ -3610,14 +3609,14 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 	(void)func;
 	(void)line;
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
 
 	IGNORE_UNUSED_RESULT(vsnprintf_impl(buf, sizeof(buf), fmt, ap));
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic pop
 #endif
 
@@ -3936,21 +3935,17 @@ skip_quoted(char **buf,
 		*buf = end_word;
 	} else {
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Disable spurious conversion warning for GCC */
-#if GCC_VERSION >= 40500
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
-#endif /* GCC_VERSION >= 40500 */
-#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 
 		end_whitespace = end_word + strspn(&end_word[1], whitespace) + 1;
 
-#if defined(__GNUC__) || defined(__MINGW32__)
-#if GCC_VERSION >= 40500
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic pop
-#endif /* GCC_VERSION >= 40500 */
-#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 
 		for (p = end_word; p < end_whitespace; p++) {
 			*p = '\0';
@@ -4829,7 +4824,7 @@ mg_send_http_redirect(struct mg_connection *conn,
 #if defined(_WIN32)
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -5049,7 +5044,7 @@ event_destroy(void *eventhdl)
 #endif
 
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
 #endif
@@ -5275,7 +5270,7 @@ mg_mkdir(const struct mg_connection *conn, const char *path, int mode)
 
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -5425,7 +5420,7 @@ poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 #endif /* HAVE_POLL */
 
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
 #endif
@@ -5509,7 +5504,7 @@ mg_join_thread(pthread_t threadid)
 /* If SSL is loaded dynamically, dlopen/dlclose is required. */
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -5543,7 +5538,7 @@ dlclose(void *handle)
 }
 
 
-#if defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
 #pragma GCC diagnostic pop
 #endif
@@ -6836,7 +6831,7 @@ mg_send_chunk(struct mg_connection *conn,
 }
 
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* This block forwards format strings to printf implementations,
  * so we need to disable the format-nonliteral warning. */
 #pragma GCC diagnostic push
@@ -6935,7 +6930,7 @@ alloc_vprintf(char **out_buf,
 }
 
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Enable format-nonliteral warning again. */
 #pragma GCC diagnostic pop
 #endif
@@ -12396,7 +12391,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	size_t headerLen;
 	int retval;
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 /* Disable spurious conversion warning for GCC */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
@@ -12404,7 +12399,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 
 	header[0] = 0x80u | (unsigned char)((unsigned)opcode & 0xf);
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic pop
 #endif
 
@@ -15576,17 +15571,17 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	struct mg_domain_context *dom =
 	    (struct mg_domain_context *)ctx ? &(ctx->dd) : NULL;
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
-#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 
 	/* We used an aligned pointer in SSL_set_app_data */
 	struct mg_connection *conn = (struct mg_connection *)SSL_get_app_data(ssl);
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic pop
-#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 
 	const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 
@@ -15687,7 +15682,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wincompatible-pointer-types"
 #endif
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 #endif
@@ -15710,7 +15705,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	                                       ssl_servername_callback);
 	SSL_CTX_set_tlsext_servername_arg(dom_ctx->ssl_ctx, phys_ctx);
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic pop
 #endif
 #if defined(__clang__)
@@ -16140,7 +16135,7 @@ close_socket_gracefully(struct mg_connection *conn)
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
@@ -16150,7 +16145,7 @@ close_socket_gracefully(struct mg_connection *conn)
 
 		linger.l_linger = (linger_timeout + 999) / 1000;
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic pop
 #endif
 #if defined(_MSC_VER)
@@ -16383,17 +16378,17 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
-#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 	/* conn_size is aligned to 8 bytes */
 
 	conn->phys_ctx = (struct mg_context *)(((char *)conn) + conn_size);
 
-#if defined(__GNUC__) || defined(__MINGW32__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic pop
-#endif /* defined(__GNUC__) || defined(__MINGW32__) */
+#endif /* defined(GCC_DIAGNOSTIC) */
 
 	conn->buf = (((char *)conn) + conn_size + ctx_size);
 	conn->buf_size = (int)max_req_size;
@@ -19010,7 +19005,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 
 	/* Build date */
 	{
-#if defined(__GNUC__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic push
 /* Disable bogus compiler warning -Wdate-time */
 #pragma GCC diagnostic ignored "-Wdate-time"
@@ -19023,7 +19018,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            __DATE__,
 		            eol);
 
-#if defined(__GNUC__)
+#if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic pop
 #endif
 
