@@ -47,11 +47,11 @@ function noifdef(f)
   end
 
   if changed then
-    local f = io.open(f, "w")
+    local fi = io.open(f, "w")
     for _,l in pairs(out) do
-      f:write(l .. "\n")
+      fi:write(l .. "\n")
     end
-    f:close()   
+    fi:close()   
     print(f .. " rewritten")
   end
 

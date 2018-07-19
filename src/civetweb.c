@@ -1746,7 +1746,7 @@ typedef struct SSL_CTX SSL_CTX;
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 /* If OpenSSL headers are included, automatically select the API version */
-#ifndef OPENSSL_API_1_1
+#if !defined(OPENSSL_API_1_1)
 #define OPENSSL_API_1_1
 #endif
 #endif
@@ -5559,7 +5559,7 @@ kill(pid_t pid, int sig_num)
 }
 
 
-#ifndef WNOHANG
+#if !defined(WNOHANG)
 #define WNOHANG (1)
 #endif
 
