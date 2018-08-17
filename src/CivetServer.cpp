@@ -466,6 +466,7 @@ CivetServer::getParam(struct mg_connection *conn,
                       size_t occurrence)
 {
 	const char *formParams = NULL;
+	const char *queryString = NULL;
 	const struct mg_request_info *ri = mg_get_request_info(conn);
 	assert(ri != NULL);
 	CivetServer *me = (CivetServer *)(ri->user_data);
@@ -511,18 +512,24 @@ CivetServer::getParam(struct mg_connection *conn,
 			}
 		}
 	}
-	if (formParams == NULL) {
+
+	if (ri->query_string != NULL) {
 		// get requests do store html <form> field values in the http
 		// query_string
-		formParams = ri->query_string;
+		queryString = ri->query_string;
 	}
+
 	mg_unlock_connection(conn);
 
-	if (formParams != NULL) {
-		return getParam(formParams, strlen(formParams), name, dst, occurrence);
+	bool get_param_success = false;
+	if (!get_param_success && formParams != NULL) {
+		get_param_success = getParam(formParams, strlen(formParams), name, dst, occurrence);
+	}
+	if (!get_param_success && queryString != NULL) {
+		get_param_success = getParam(queryString, strlen(formParams), name, dst, occurrence);
 	}
 
-	return false;
+	return get_param_success;
 }
 
 bool
