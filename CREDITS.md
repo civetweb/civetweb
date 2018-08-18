@@ -34,6 +34,7 @@
 * ehlertjd
 * Eric Tsau
 * Erik Beran
+* Erik Partridge
 * extergnoto
 * feneuilflo
 * Fernando G. Aranda
@@ -47,6 +48,7 @@
 * HariKamath Kamath
 * Henry Chang
 * Herve Codina
+* ImgBotApp
 * Jack
 * Jacob Repp
 * Jacob Skillin
@@ -107,6 +109,7 @@
 * pkvamme
 * Radoslaw Zarzynski
 * Red54
+* Retallack Mark mark.retallack
 * Richard Screene
 * ryankopf
 * Sage Weil
@@ -138,6 +141,7 @@
 * xtne6f
 * Yehuda Sadeh
 * Yury Z
+* zhen.wang
 
 # Mongoose Contributors
 CivetWeb is based on the Mongoose code.  The following users contributed to the original Mongoose release between 2010 and 2013.  This list was generated from the Mongoose GIT logs.  It does not contain contributions from the Mongoose mailing list.  There is no record for contributors prior to 2010.
