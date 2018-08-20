@@ -523,10 +523,12 @@ CivetServer::getParam(struct mg_connection *conn,
 
 	bool get_param_success = false;
 	if (!get_param_success && formParams != NULL) {
-		get_param_success = getParam(formParams, strlen(formParams), name, dst, occurrence);
+		get_param_success =
+		    getParam(formParams, strlen(formParams), name, dst, occurrence);
 	}
 	if (!get_param_success && queryString != NULL) {
-		get_param_success = getParam(queryString, strlen(formParams), name, dst, occurrence);
+		get_param_success =
+		    getParam(queryString, strlen(formParams), name, dst, occurrence);
 	}
 
 	return get_param_success;
