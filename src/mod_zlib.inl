@@ -91,10 +91,11 @@ send_compressed_data(struct mg_connection *conn, struct mg_file *filep)
 			}
 
 			bytes_avail = MG_BUF_LEN - zstream.avail_out;
-
-			if (mg_send_chunk(conn, (char *)out_buf, bytes_avail) < 0) {
-				zret = -98;
-				break;
+			if (bytes_avail) {
+				if (mg_send_chunk(conn, (char *)out_buf, bytes_avail) < 0) {
+					zret = -98;
+					break;
+				}
 			}
 
 		} while (zstream.avail_out == 0);
@@ -122,4 +123,7 @@ send_compressed_data(struct mg_connection *conn, struct mg_file *filep)
 	}
 
 	deflateEnd(&zstream);
+
+	/* Send "end of chunked data" marker */
+	mg_write(conn, "0\r\n\r\n", 5);
 }
