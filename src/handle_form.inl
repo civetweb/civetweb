@@ -181,7 +181,7 @@ mg_handle_form_request(struct mg_connection *conn,
 {
 	const char *content_type;
 	char path[512];
-	char buf[1024]; /* Must not be smaller than ~900 - see sanity check */
+	char buf[MG_BUF_LEN]; /* Must not be smaller than ~900 */
 	int field_storage;
 	int buf_fill = 0;
 	int r;
@@ -602,20 +602,10 @@ mg_handle_form_request(struct mg_connection *conn,
 			 * leading hyphens.
 			 */
 
-			/* The initial sanity check
-			 * (bl + 800 > sizeof(buf))
-			 * is no longer required, since sizeof(buf) == 1024
-			 *
-			 * Original comment:
-			 */
-			/* Sanity check:  The algorithm can not work if bl >= sizeof(buf),
-			 * and it will not work effectively, if the buf is only a few byte
-			 * larger than bl, or if buf can not hold the multipart header
-			 * plus the boundary.
-			 * Check some reasonable number here, that should be fulfilled by
-			 * any reasonable request from every browser. If it is not
-			 * fulfilled, it might be a hand-made request, intended to
-			 * interfere with the algorithm. */
+			/* The algorithm can not work if bl >= sizeof(buf), or if buf
+			 * can not hold the multipart header plus the boundary.
+			 * Requests with long boundaries are not RFC compliant, maybe they
+			 * are intended attacks to interfere with this algorithm. */
 			mg_free(boundary);
 			return -1;
 		}
