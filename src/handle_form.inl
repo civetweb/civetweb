@@ -270,8 +270,9 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			if (field_storage == MG_FORM_FIELD_STORAGE_GET) {
 				/* Call callback */
-				url_encoded_field_get(
+				r = url_encoded_field_get(
 				    conn, data, (size_t)keylen, val, (size_t)vallen, fdh);
+				/* TODO: return value */
 			}
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
@@ -296,7 +297,8 @@ mg_handle_form_request(struct mg_connection *conn,
 						r = mg_fclose(&fstore.access);
 						if (r == 0) {
 							/* stored successfully */
-							field_stored(conn, path, file_size, fdh);
+							r = field_stored(conn, path, file_size, fdh);
+							/* TODO: return value */
 						} else {
 							mg_cry_internal(conn,
 							                "%s: Error saving file %s",
@@ -447,14 +449,16 @@ mg_handle_form_request(struct mg_connection *conn,
 #endif
 
 					/* Call callback */
-					url_encoded_field_get(conn,
-					                      ((get_block > 0) ? NULL : buf),
-					                      ((get_block > 0) ? 0
-					                                       : (size_t)keylen),
-					                      val,
-					                      (size_t)vallen,
-					                      fdh);
+					r = url_encoded_field_get(conn,
+					                          ((get_block > 0) ? NULL : buf),
+					                          ((get_block > 0)
+					                               ? 0
+					                               : (size_t)keylen),
+					                          val,
+					                          (size_t)vallen,
+					                          fdh);
 					get_block++;
+					/* TODO: return value */
 				}
 				if (fstore.access.fp) {
 					size_t n = (size_t)
@@ -512,7 +516,8 @@ mg_handle_form_request(struct mg_connection *conn,
 				r = mg_fclose(&fstore.access);
 				if (r == 0) {
 					/* stored successfully */
-					field_stored(conn, path, file_size, fdh);
+					r = field_stored(conn, path, file_size, fdh);
+					/* TODO: return value */
 				} else {
 					mg_cry_internal(conn,
 					                "%s: Error saving file %s",
@@ -851,15 +856,16 @@ mg_handle_form_request(struct mg_connection *conn,
 				towrite -= bl + 4;
 
 				if (field_storage == MG_FORM_FIELD_STORAGE_GET) {
-					unencoded_field_get(conn,
-					                    ((get_block > 0) ? NULL : nbeg),
-					                    ((get_block > 0)
-					                         ? 0
-					                         : (size_t)(nend - nbeg)),
-					                    hend,
-					                    towrite,
-					                    fdh);
+					r = unencoded_field_get(conn,
+					                        ((get_block > 0) ? NULL : nbeg),
+					                        ((get_block > 0)
+					                             ? 0
+					                             : (size_t)(nend - nbeg)),
+					                        hend,
+					                        towrite,
+					                        fdh);
 					get_block++;
+					/* TODO: return value */
 				}
 
 				if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
@@ -908,13 +914,15 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			if (field_storage == MG_FORM_FIELD_STORAGE_GET) {
 				/* Call callback */
-				unencoded_field_get(conn,
-				                    ((get_block > 0) ? NULL : nbeg),
-				                    ((get_block > 0) ? 0
-				                                     : (size_t)(nend - nbeg)),
-				                    hend,
-				                    towrite,
-				                    fdh);
+				r = unencoded_field_get(conn,
+				                        ((get_block > 0) ? NULL : nbeg),
+				                        ((get_block > 0)
+				                             ? 0
+				                             : (size_t)(nend - nbeg)),
+				                        hend,
+				                        towrite,
+				                        fdh);
+				/* TODO: return value */
 			}
 
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
@@ -933,7 +941,8 @@ mg_handle_form_request(struct mg_connection *conn,
 						r = mg_fclose(&fstore.access);
 						if (r == 0) {
 							/* stored successfully */
-							field_stored(conn, path, file_size, fdh);
+							r = field_stored(conn, path, file_size, fdh);
+							/* TODO: return value */
 						} else {
 							mg_cry_internal(conn,
 							                "%s: Error saving file %s",
