@@ -1183,7 +1183,8 @@ struct mg_form_data_handler {
 	 *   user_data: Value of the member user_data of mg_form_data_handler
 	 *
 	 * Return value:
-	 *   TODO: Needs to be defined.
+	 *   The return code determines how the server should continue processing
+	 *   the current request (See MG_FORM_FIELD_HANDLE_*).
 	 */
 	int (*field_get)(const char *key,
 	                 const char *value,
@@ -1204,7 +1205,8 @@ struct mg_form_data_handler {
 	 *   user_data: Value of the member user_data of mg_form_data_handler
 	 *
 	 * Return value:
-	 *   TODO: Needs to be defined.
+	 *   The return code determines how the server should continue processing
+	 *   the current request (See MG_FORM_FIELD_HANDLE_*).
 	 */
 	int (*field_store)(const char *path, long long file_size, void *user_data);
 
@@ -1240,6 +1242,18 @@ enum {
 	/* Stop parsing this request. Skip the remaining fields. */
 	MG_FORM_FIELD_STORAGE_ABORT = 0x10
 };
+
+/* Return values for "field_get" and "field_store" */
+enum {
+	/* Only "field_get": If there is more data in this field, get the next
+     * chunk. Otherwise: handle the next field. */
+	MG_FORM_FIELD_HANDLE_GET = 0x1,
+	/* Handle the next field */
+	MG_FORM_FIELD_HANDLE_NEXT = 0x8,
+	/* Stop parsing this request */
+	MG_FORM_FIELD_HANDLE_ABORT = 0x10
+};
+
 
 /* Process form data.
  * Returns the number of fields handled, or < 0 in case of an error.

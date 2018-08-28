@@ -272,7 +272,14 @@ mg_handle_form_request(struct mg_connection *conn,
 				/* Call callback */
 				r = url_encoded_field_get(
 				    conn, data, (size_t)keylen, val, (size_t)vallen, fdh);
-				/* TODO: return value */
+				if (r == MG_FORM_FIELD_HANDLE_ABORT) {
+					/* Stop request handling */
+					break;
+				}
+				if (r == MG_FORM_FIELD_HANDLE_NEXT) {
+					/* Skip to next field */
+					field_storage = MG_FORM_FIELD_STORAGE_SKIP;
+				}
 			}
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
@@ -298,7 +305,11 @@ mg_handle_form_request(struct mg_connection *conn,
 						if (r == 0) {
 							/* stored successfully */
 							r = field_stored(conn, path, file_size, fdh);
-							/* TODO: return value */
+							if (r == MG_FORM_FIELD_HANDLE_ABORT) {
+								/* Stop request handling */
+								break;
+							}
+
 						} else {
 							mg_cry_internal(conn,
 							                "%s: Error saving file %s",
@@ -458,7 +469,14 @@ mg_handle_form_request(struct mg_connection *conn,
 					                          (size_t)vallen,
 					                          fdh);
 					get_block++;
-					/* TODO: return value */
+					if (r == MG_FORM_FIELD_HANDLE_ABORT) {
+						/* Stop request handling */
+						break;
+					}
+					if (r == MG_FORM_FIELD_HANDLE_NEXT) {
+						/* Skip to next field */
+						field_storage = MG_FORM_FIELD_STORAGE_SKIP;
+					}
 				}
 				if (fstore.access.fp) {
 					size_t n = (size_t)
@@ -517,7 +535,10 @@ mg_handle_form_request(struct mg_connection *conn,
 				if (r == 0) {
 					/* stored successfully */
 					r = field_stored(conn, path, file_size, fdh);
-					/* TODO: return value */
+					if (r == MG_FORM_FIELD_HANDLE_ABORT) {
+						/* Stop request handling */
+						break;
+					}
 				} else {
 					mg_cry_internal(conn,
 					                "%s: Error saving file %s",
@@ -865,7 +886,14 @@ mg_handle_form_request(struct mg_connection *conn,
 					                        towrite,
 					                        fdh);
 					get_block++;
-					/* TODO: return value */
+					if (r == MG_FORM_FIELD_HANDLE_ABORT) {
+						/* Stop request handling */
+						break;
+					}
+					if (r == MG_FORM_FIELD_HANDLE_NEXT) {
+						/* Skip to next field */
+						field_storage = MG_FORM_FIELD_STORAGE_SKIP;
+					}
 				}
 
 				if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
@@ -922,7 +950,14 @@ mg_handle_form_request(struct mg_connection *conn,
 				                        hend,
 				                        towrite,
 				                        fdh);
-				/* TODO: return value */
+				if (r == MG_FORM_FIELD_HANDLE_ABORT) {
+					/* Stop request handling */
+					break;
+				}
+				if (r == MG_FORM_FIELD_HANDLE_NEXT) {
+					/* Skip to next field */
+					field_storage = MG_FORM_FIELD_STORAGE_SKIP;
+				}
 			}
 
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
@@ -942,7 +977,10 @@ mg_handle_form_request(struct mg_connection *conn,
 						if (r == 0) {
 							/* stored successfully */
 							r = field_stored(conn, path, file_size, fdh);
-							/* TODO: return value */
+							if (r == MG_FORM_FIELD_HANDLE_ABORT) {
+								/* Stop request handling */
+								break;
+							}
 						} else {
 							mg_cry_internal(conn,
 							                "%s: Error saving file %s",
