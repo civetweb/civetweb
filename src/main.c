@@ -86,6 +86,7 @@
 
 #include "civetweb.h"
 
+#undef printf
 #define printf                                                                 \
 	DO_NOT_USE_THIS_FUNCTION__USE_fprintf /* Required for unit testing */
 
