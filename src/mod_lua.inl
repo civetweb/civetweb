@@ -1951,8 +1951,9 @@ lua_debug_hook(lua_State *L, lua_Debug *ar)
 			/* string with limited length */
 			s = lua_tolstring(L, i, &n);
 			printf("string: '%.*s%s\n",
-			       (n > 30) ? 28 : s,
-			       (n > 30) ? ".." : "'");
+			       ((n > 30) ? 28 : (int)n),
+			       s,
+			       ((n > 30) ? ".." : "'"));
 			break;
 
 		default:
