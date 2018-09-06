@@ -357,8 +357,12 @@ mg_handle_form_request(struct mg_connection *conn,
 	content_type = mg_get_header(conn, "Content-Type");
 
 	if (!content_type
-	    || !mg_strcasecmp(content_type, "APPLICATION/X-WWW-FORM-URLENCODED")
-	    || !mg_strcasecmp(content_type, "APPLICATION/WWW-FORM-URLENCODED")) {
+	    || !mg_strncasecmp(content_type,
+	                       "APPLICATION/X-WWW-FORM-URLENCODED",
+	                       33)
+	    || !mg_strncasecmp(content_type,
+	                       "APPLICATION/WWW-FORM-URLENCODED",
+	                       31)) {
 		/* The form data is in the request body data, encoded in key/value
 		 * pairs. */
 		int all_data_read = 0;
