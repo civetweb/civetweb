@@ -6,18 +6,18 @@
 
 #include "CivetServer.h"
 
-#include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 #include <stdexcept>
+#include <stdlib.h>
+#include <string.h>
 
 #ifndef UNUSED_PARAMETER
-#define UNUSED_PARAMETER(x) (void)(x)
+#	define UNUSED_PARAMETER(x) (void)(x)
 #endif
 
 #ifndef MAX_PARAM_BODY_LENGTH
 // Set a default limit for parameters in a form body: 2 MB
-#define MAX_PARAM_BODY_LENGTH (1024 * 1024 * 2)
+#	define MAX_PARAM_BODY_LENGTH (1024 * 1024 * 2)
 #endif
 
 bool

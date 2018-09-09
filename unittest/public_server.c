@@ -20,29 +20,29 @@
  */
 
 #ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
+#	ifndef _CRT_SECURE_NO_WARNINGS
+#		define _CRT_SECURE_NO_WARNINGS
+#	endif
 #endif
-#endif
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-#include <stdint.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 
 #include "public_server.h"
+
 #include <civetweb.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
 
 #if defined(_WIN32)
-#include <windows.h>
-#define test_sleep(x) (Sleep((x)*1000))
+#	include <windows.h>
+#	define test_sleep(x) (Sleep((x)*1000))
 #else
-#include <unistd.h>
-#define test_sleep(x) (sleep(x))
+#	include <unistd.h>
+#	define test_sleep(x) (sleep(x))
 #endif
 
 #define SLEEP_BEFORE_MG_START (1)
@@ -59,7 +59,7 @@
 /* Return codes of the tested functions are evaluated. Checking all other
  * functions, used only to prepare the test environment seems redundant.
  * If they fail, the test fails anyway. */
-#pragma GCC diagnostic ignored "-Wunused-result"
+#	pragma GCC diagnostic ignored "-Wunused-result"
 #endif
 
 static const char *
@@ -68,25 +68,25 @@ locate_path(const char *a_path)
 	static char r_path[256];
 
 #ifdef _WIN32
-#ifdef LOCAL_TEST
+#	ifdef LOCAL_TEST
 	sprintf(r_path, "%s\\", a_path);
-#else
+#	else
 	/* Appveyor */
 	sprintf(r_path, "..\\..\\..\\%s\\", a_path);
 /* TODO: the different paths
  * used in the different test
  * system is an unsolved
  * problem. */
-#endif
+#	endif
 #else
-#ifdef LOCAL_TEST
+#	ifdef LOCAL_TEST
 	sprintf(r_path, "%s/", a_path);
-#else
+#	else
 	/* Travis */
 	sprintf(r_path,
 	        "../../%s/",
 	        a_path); // TODO: fix path in CI test environment
-#endif
+#	endif
 #endif
 
 	return r_path;
@@ -131,9 +131,9 @@ wait_not_null(void *volatile *data)
 	}
 
 #if defined(__MINGW32__) || defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunreachable-code"
-#pragma GCC diagnostic ignored "-Wunreachable-code-return"
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wunreachable-code"
+#	pragma GCC diagnostic ignored "-Wunreachable-code-return"
 #endif
 
 	ck_abort_msg("wait_not_null failed (%i sec)", i);
@@ -141,7 +141,7 @@ wait_not_null(void *volatile *data)
 	return 0;
 
 #if defined(__MINGW32__) || defined(__GNUC__)
-#pragma GCC diagnostic pop
+#	pragma GCC diagnostic pop
 #endif
 }
 
@@ -205,18 +205,18 @@ START_TEST(test_the_test_environment)
 
 #ifdef _WIN32
 /* Try to copy the files required for AppVeyor */
-#if defined(_WIN64) || defined(__MINGW64__)
+#	if defined(_WIN64) || defined(__MINGW64__)
 	(void)system("cmd /c copy C:\\OpenSSL-Win64\\libeay32.dll libeay32.dll");
 	(void)system("cmd /c copy C:\\OpenSSL-Win64\\libssl32.dll libssl32.dll");
 	(void)system("cmd /c copy C:\\OpenSSL-Win64\\ssleay32.dll ssleay32.dll");
 	(void)system("cmd /c copy C:\\OpenSSL-Win64\\libeay32.dll libeay64.dll");
 	(void)system("cmd /c copy C:\\OpenSSL-Win64\\libssl32.dll libssl64.dll");
 	(void)system("cmd /c copy C:\\OpenSSL-Win64\\ssleay32.dll ssleay64.dll");
-#else
+#	else
 	(void)system("cmd /c copy C:\\OpenSSL-Win32\\libeay32.dll libeay32.dll");
 	(void)system("cmd /c copy C:\\OpenSSL-Win32\\libssl32.dll libssl32.dll");
 	(void)system("cmd /c copy C:\\OpenSSL-Win32\\ssleay32.dll ssleay32.dll");
-#endif
+#	endif
 #endif
 }
 END_TEST
@@ -584,11 +584,11 @@ START_TEST(test_mg_start_stop_https_server)
 
 	struct mg_context *ctx;
 
-#if defined(MG_LEGACY_INTERFACE)
+#	if defined(MG_LEGACY_INTERFACE)
 	size_t ports_cnt;
 	int ports[16];
 	int ssl[16];
-#endif
+#	endif
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
@@ -605,10 +605,10 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert(ssl_cert != NULL);
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
-#if !defined(NO_FILES)
+#	if !defined(NO_FILES)
 	OPTIONS[opt_idx++] = "document_root";
 	OPTIONS[opt_idx++] = ".";
-#endif
+#	endif
 	OPTIONS[opt_idx++] = "listening_ports";
 	OPTIONS[opt_idx++] = "8080r,8443s";
 	OPTIONS[opt_idx++] = "ssl_certificate";
@@ -618,10 +618,10 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
-#if defined(MG_LEGACY_INTERFACE)
+#	if defined(MG_LEGACY_INTERFACE)
 	memset(ports, 0, sizeof(ports));
 	memset(ssl, 0, sizeof(ssl));
-#endif
+#	endif
 	memset(portinfo, 0, sizeof(portinfo));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(errmsg, 0, sizeof(errmsg));
@@ -633,7 +633,7 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
 
-#if defined(MG_LEGACY_INTERFACE)
+#	if defined(MG_LEGACY_INTERFACE)
 	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
 	ck_assert_uint_eq(ports_cnt, 2);
 	ck_assert_int_eq(ports[0], 8080);
@@ -642,7 +642,7 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(ssl[1], 1);
 	ck_assert_int_eq(ports[2], 0);
 	ck_assert_int_eq(ssl[2], 0);
-#endif
+#	endif
 
 	ret = mg_get_server_ports(ctx, 0, portinfo);
 	ck_assert_int_lt(ret, 0);
@@ -687,15 +687,15 @@ START_TEST(test_mg_start_stop_https_server)
 	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-#if defined(NO_FILES)
+#	if defined(NO_FILES)
 	ck_assert_int_eq(client_ri->status_code, 404);
-#else
+#	else
 	ck_assert_int_eq(client_ri->status_code, 200);
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
 	ck_assert_int_le(client_res, sizeof(client_err));
-#endif
+#	endif
 	mg_close_connection(client_conn);
 
 	test_sleep(1);
@@ -733,19 +733,19 @@ START_TEST(test_mg_server_and_client_tls)
 	ck_assert(res_dir != NULL);
 	strcpy(server_cert, res_dir);
 	strcpy(client_cert, res_dir);
-#ifdef _WIN32
+#	ifdef _WIN32
 	strcat(server_cert, "cert\\server.pem");
 	strcat(client_cert, "cert\\client.pem");
-#else
+#	else
 	strcat(server_cert, "cert/server.pem");
 	strcat(client_cert, "cert/client.pem");
-#endif
+#	endif
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
-#if !defined(NO_FILES)
+#	if !defined(NO_FILES)
 	OPTIONS[opt_idx++] = "document_root";
 	OPTIONS[opt_idx++] = ".";
-#endif
+#	endif
 	OPTIONS[opt_idx++] = "listening_ports";
 	OPTIONS[opt_idx++] = "8080r,8443s";
 	OPTIONS[opt_idx++] = "ssl_certificate";
@@ -816,15 +816,15 @@ START_TEST(test_mg_server_and_client_tls)
 	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-#if defined(NO_FILES)
+#	if defined(NO_FILES)
 	ck_assert_int_eq(client_ri->status_code, 404);
-#else
+#	else
 	ck_assert_int_eq(client_ri->status_code, 200);
 	/* TODO: ck_assert_str_eq(client_ri->request_method, "HTTP/1.0"); */
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	ck_assert_int_gt(client_res, 0);
 	ck_assert_int_le(client_res, sizeof(client_err));
-#endif
+#	endif
 	mg_close_connection(client_conn);
 
 	/* TODO: A client API using a client certificate is missing */
@@ -934,7 +934,7 @@ static const size_t websocket_goodbye_msg_len =
     14 /* strlen(websocket_goodbye_msg) */;
 
 
-#if defined(DEBUG)
+#	if defined(DEBUG)
 static void
 WS_TEST_TRACE(const char *f, ...)
 {
@@ -943,9 +943,9 @@ WS_TEST_TRACE(const char *f, ...)
 	vprintf(f, l);
 	va_end(l);
 }
-#else
-#define WS_TEST_TRACE(...)
-#endif
+#	else
+#		define WS_TEST_TRACE(...)
+#	endif
 
 
 static int
@@ -981,8 +981,8 @@ websock_server_ready(struct mg_connection *conn, void *udata)
 }
 
 
-#define long_ws_buf_len_16 (500)
-#define long_ws_buf_len_64 (70000)
+#	define long_ws_buf_len_16 (500)
+#	define long_ws_buf_len_64 (70000)
 static char long_ws_buf[long_ws_buf_len_64];
 
 
@@ -1036,26 +1036,26 @@ websock_server_data(struct mg_connection *conn,
 		mg_unlock_connection(conn);
 	} else {
 
-#if defined(__MINGW32__) || defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunreachable-code"
-#endif
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code"
-#endif
+#	if defined(__MINGW32__) || defined(__GNUC__)
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wunreachable-code"
+#	endif
+#	ifdef __clang__
+#		pragma clang diagnostic push
+#		pragma clang diagnostic ignored "-Wunreachable-code"
+#	endif
 
 		ck_abort_msg("Got unexpected message from websocket client");
 
 
 		return 0;
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-#if defined(__MINGW32__) || defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
+#	ifdef __clang__
+#		pragma clang diagnostic pop
+#	endif
+#	if defined(__MINGW32__) || defined(__GNUC__)
+#		pragma GCC diagnostic pop
+#	endif
 	}
 	mark_point();
 
@@ -1066,7 +1066,7 @@ websock_server_data(struct mg_connection *conn,
 static void
 websock_server_close(const struct mg_connection *conn, void *udata)
 {
-#ifndef __MACH__
+#	ifndef __MACH__
 	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
 	WS_TEST_TRACE("Server: Close connection\n");
 
@@ -1074,7 +1074,7 @@ websock_server_close(const struct mg_connection *conn, void *udata)
 	 * the connection is already closed */
 
 	mark_point();
-#endif
+#	endif
 
 	(void)conn;
 	(void)udata;
@@ -1143,7 +1143,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-#ifndef __MACH__
+#	ifndef __MACH__
 	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 
 	ck_assert(pclient_data != NULL);
@@ -1152,12 +1152,12 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	pclient_data->closed++;
 
 	mark_point();
-#else
+#	else
 
 	(void)user_data;
 	pclient_data->closed++;
 
-#endif /* __MACH__ */
+#	endif /* __MACH__ */
 }
 
 #endif /* USE_WEBSOCKET */
@@ -1661,12 +1661,12 @@ START_TEST(test_request_handlers)
 
 	ck_assert(client_ri != NULL);
 
-#if defined(NO_FILES)
+#	if defined(NO_FILES)
 	ck_assert_int_eq(client_ri->status_code, 404);
 
 	(void)expected_cgi_result;
 	(void)cgi_script_content;
-#else
+#	else
 	i = mg_read(client_conn, buf, sizeof(buf));
 	if ((i >= 0) && (i < (int)sizeof(buf))) {
 		while ((i > 0) && ((buf[i - 1] == '\r') || (buf[i - 1] == '\n'))) {
@@ -1678,7 +1678,7 @@ START_TEST(test_request_handlers)
 	ck_assert_str_eq(buf, expected_cgi_result);
 	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
-#endif
+#	endif
 
 #else
 	(void)expected_cgi_result;
@@ -1943,9 +1943,8 @@ START_TEST(test_request_handlers)
 	                          "data1",
 	                          5);
 
-	wait_not_null(
-	    &(ws_client1_data
-	          .data)); /* Wait for the websocket acknowledge message */
+	wait_not_null(&(
+	    ws_client1_data.data)); /* Wait for the websocket acknowledge message */
 	ck_assert_int_eq(ws_client1_data.closed, 0);
 	ck_assert_int_eq(ws_client2_data.closed, 0);
 	ck_assert(ws_client2_data.data == NULL);
@@ -1958,7 +1957,7 @@ START_TEST(test_request_handlers)
 	ws_client1_data.len = 0;
 
 /* Now connect a second client */
-#ifdef USE_IPV6
+#	ifdef USE_IPV6
 	ws_client2_conn =
 	    mg_connect_websocket_client("[::1]",
 	                                ipv6_port,
@@ -1970,7 +1969,7 @@ START_TEST(test_request_handlers)
 	                                websocket_client_data_handler,
 	                                websocket_client_close_handler,
 	                                &ws_client2_data);
-#else
+#	else
 	ws_client2_conn =
 	    mg_connect_websocket_client("127.0.0.1",
 	                                ipv4_port,
@@ -1982,7 +1981,7 @@ START_TEST(test_request_handlers)
 	                                websocket_client_data_handler,
 	                                websocket_client_close_handler,
 	                                &ws_client2_data);
-#endif
+#	endif
 	ck_assert(ws_client2_conn != NULL);
 
 	wait_not_null(
@@ -2005,9 +2004,8 @@ START_TEST(test_request_handlers)
 	                          "data2",
 	                          5);
 
-	wait_not_null(
-	    &(ws_client1_data
-	          .data)); /* Wait for the websocket acknowledge message */
+	wait_not_null(&(
+	    ws_client1_data.data)); /* Wait for the websocket acknowledge message */
 
 	ck_assert(ws_client1_data.closed == 0);
 	ck_assert(ws_client2_data.closed == 0);
@@ -2090,13 +2088,13 @@ START_TEST(test_request_handlers)
 	/* Connect client 3 */
 	ws_client3_conn =
 	    mg_connect_websocket_client("localhost",
-#if defined(NO_SSL)
+#	if defined(NO_SSL)
 	                                ipv4_port,
 	                                0,
-#else
+#	else
 	                                ipv4s_port,
 	                                1,
-#endif
+#	endif
 	                                ebuf,
 	                                sizeof(ebuf),
 	                                "/websocket",
@@ -2163,13 +2161,13 @@ START_TEST(test_request_handlers)
 	/* Connect client 4 */
 	ws_client4_conn =
 	    mg_connect_websocket_client("localhost",
-#if defined(NO_SSL)
+#	if defined(NO_SSL)
 	                                ipv4_port,
 	                                0,
-#else
+#	else
 	                                ipv4s_port,
 	                                1,
-#endif
+#	endif
 	                                ebuf,
 	                                sizeof(ebuf),
 	                                "/websocket",
@@ -2195,7 +2193,7 @@ START_TEST(test_request_handlers)
 	ws_client4_data.data = NULL;
 	ws_client4_data.len = 0;
 
-/* stop the server without closing this connection */
+	/* stop the server without closing this connection */
 
 #endif
 
@@ -3148,10 +3146,10 @@ START_TEST(test_http_auth)
 		".",
 		"listening_ports",
 		"8080",
-#if !defined(NO_CACHING)
+#	if !defined(NO_CACHING)
 		"static_file_max_age",
 		"0",
-#endif
+#	endif
 		"put_delete_auth_file",
 		"put_delete_auth_file.csv",
 		NULL,
@@ -4232,16 +4230,16 @@ START_TEST(test_large_file)
 	OPTIONS[opt_cnt++] = "8443s";
 	OPTIONS[opt_cnt++] = "ssl_certificate";
 	OPTIONS[opt_cnt++] = ssl_cert;
-#ifdef __MACH__
+#	ifdef __MACH__
 	/* The Apple builds on Travis CI seem to have problems with TLS1.x
 	 * Allow SSLv3 and TLS */
 	OPTIONS[opt_cnt++] = "ssl_protocol_version";
 	OPTIONS[opt_cnt++] = "2";
-#else
+#	else
 	/* The Linux builds on Travis CI work fine with TLS1.2 */
 	OPTIONS[opt_cnt++] = "ssl_protocol_version";
 	OPTIONS[opt_cnt++] = "4";
-#endif
+#	endif
 	ck_assert(ssl_cert != NULL);
 #endif
 	OPTIONS[opt_cnt] = NULL;
@@ -4507,7 +4505,7 @@ END_TEST
 
 #if defined(MG_USE_OPEN_FILE) && !defined(NO_FILES)
 
-#define FILE_IN_MEM_SIZE (1024 * 100)
+#	define FILE_IN_MEM_SIZE (1024 * 100)
 static char *file_in_mem_data;
 
 static const char *
@@ -4535,9 +4533,9 @@ START_TEST(test_file_in_memory)
 	struct mg_callbacks callbacks;
 	const char *OPTIONS[32];
 	int opt_cnt = 0;
-#if !defined(NO_SSL)
+#	if !defined(NO_SSL)
 	const char *ssl_cert = locate_ssl_cert();
-#endif
+#	endif
 
 	/* Client var */
 	struct mg_connection *client;
@@ -4557,16 +4555,16 @@ START_TEST(test_file_in_memory)
 	/* Set options and start server */
 	OPTIONS[opt_cnt++] = "document_root";
 	OPTIONS[opt_cnt++] = ".";
-#if defined(NO_SSL)
+#	if defined(NO_SSL)
 	OPTIONS[opt_cnt++] = "listening_ports";
 	OPTIONS[opt_cnt++] = "8080";
-#else
+#	else
 	OPTIONS[opt_cnt++] = "listening_ports";
 	OPTIONS[opt_cnt++] = "8443s";
 	OPTIONS[opt_cnt++] = "ssl_certificate";
 	OPTIONS[opt_cnt++] = ssl_cert;
 	ck_assert(ssl_cert != NULL);
-#endif
+#	endif
 	OPTIONS[opt_cnt] = NULL;
 
 
@@ -4582,13 +4580,13 @@ START_TEST(test_file_in_memory)
 
 	client =
 	    mg_download("127.0.0.1",
-#if defined(NO_SSL)
+#	if defined(NO_SSL)
 	                8080,
 	                0,
-#else
+#	else
 	                8443,
 	                1,
-#endif
+#	endif
 	                client_err_buf,
 	                sizeof(client_err_buf),
 	                "GET /file_in_mem HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
@@ -4756,7 +4754,7 @@ START_TEST(test_minimal_tls_client)
 
 #if !defined(NO_SSL) /* dont run https test if SSL is not enabled */
 
-#if (!defined(__MACH__) || defined(LOCAL_TEST)) && !defined(OPENSSL_API_1_1)
+#	if (!defined(__MACH__) || defined(LOCAL_TEST)) && !defined(OPENSSL_API_1_1)
 	/* dont run on Travis OSX worker with OpenSSL 1.0 */
 
 	/* Initialize the library */
@@ -4774,7 +4772,7 @@ START_TEST(test_minimal_tls_client)
 	/* Un-initialize the library */
 	mg_exit_library();
 
-#endif
+#	endif
 #endif
 
 	mark_point();
@@ -4885,7 +4883,7 @@ START_TEST(test_minimal_https_server_callback)
 	OPTIONS[opt_idx++] = "ssl_certificate";
 	OPTIONS[opt_idx++] = locate_ssl_cert();
 
-#if defined(LOCAL_TEST) || defined(_WIN32)
+#	if defined(LOCAL_TEST) || defined(_WIN32)
 	/* Do not set this on Travis CI, since the build containers
 	 * contain older SSL libraries */
 
@@ -4896,7 +4894,7 @@ START_TEST(test_minimal_https_server_callback)
 	/* set some modern ciphers - recommended */
 	OPTIONS[opt_idx++] = "ssl_cipher_list";
 	OPTIONS[opt_idx++] = "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS";
-#endif
+#	endif
 
 	/* set "HTTPS only" header - recommended */
 	OPTIONS[opt_idx++] = "strict_transport_security_max_age";

@@ -21,90 +21,94 @@
  */
 
 #if defined(__GNUC__) || defined(__MINGW32__)
-#define GCC_VERSION                                                            \
-	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#if GCC_VERSION >= 40500
+#	define GCC_VERSION                                                        \
+		(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#	if GCC_VERSION >= 40500
 /* gcc diagnostic pragmas available */
-#define GCC_DIAGNOSTIC
-#endif
+#		define GCC_DIAGNOSTIC
+#	endif
 #endif
 
 #if defined(GCC_DIAGNOSTIC)
 /* Disable unused macros warnings - not all defines are required
  * for all systems and all compilers. */
-#pragma GCC diagnostic ignored "-Wunused-macros"
+#	pragma GCC diagnostic ignored "-Wunused-macros"
 /* A padding warning is just plain useless */
-#pragma GCC diagnostic ignored "-Wpadded"
+#	pragma GCC diagnostic ignored "-Wpadded"
 #endif
 
 #if defined(__clang__) /* GCC does not (yet) support this pragma */
 /* We must set some flags for the headers we include. These flags
  * are reserved ids according to C99, so we need to disable a
  * warning for that. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wreserved-id-macro"
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wreserved-id-macro"
 #endif
 
 #if defined(_WIN32)
-#if !defined(_CRT_SECURE_NO_WARNINGS)
-#define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
-#endif
-#if !defined(_WIN32_WINNT) /* defined for tdm-gcc so we can use getnameinfo */
-#define _WIN32_WINNT 0x0501
-#endif
+#	if !defined(_CRT_SECURE_NO_WARNINGS)
+#		define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in      \
+		                                    VS2005 */
+#	endif
+#	if !defined(                                                              \
+	    _WIN32_WINNT) /* defined for tdm-gcc so we can use getnameinfo */
+#		define _WIN32_WINNT 0x0501
+#	endif
 #else
-#if !defined(_GNU_SOURCE)
-#define _GNU_SOURCE /* for setgroups(), pthread_setname_np() */
-#endif
-#if defined(__linux__) && !defined(_XOPEN_SOURCE)
-#define _XOPEN_SOURCE 600 /* For flockfile() on Linux */
-#endif
-#if !defined(_LARGEFILE_SOURCE)
-#define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
-#endif
-#if !defined(_FILE_OFFSET_BITS)
-#define _FILE_OFFSET_BITS 64 /* Use 64-bit file offsets by default */
-#endif
-#if !defined(__STDC_FORMAT_MACROS)
-#define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
-#endif
-#if !defined(__STDC_LIMIT_MACROS)
-#define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
-#endif
-#if !defined(_DARWIN_UNLIMITED_SELECT)
-#define _DARWIN_UNLIMITED_SELECT
-#endif
-#if defined(__sun)
-#define __EXTENSIONS__  /* to expose flockfile and friends in stdio.h */
-#define __inline inline /* not recognized on older compiler versions */
-#endif
+#	if !defined(_GNU_SOURCE)
+#		define _GNU_SOURCE /* for setgroups(), pthread_setname_np() */
+#	endif
+#	if defined(__linux__) && !defined(_XOPEN_SOURCE)
+#		define _XOPEN_SOURCE 600 /* For flockfile() on Linux */
+#	endif
+#	if !defined(_LARGEFILE_SOURCE)
+#		define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
+#	endif
+#	if !defined(_FILE_OFFSET_BITS)
+#		define _FILE_OFFSET_BITS 64 /* Use 64-bit file offsets by default */
+#	endif
+#	if !defined(__STDC_FORMAT_MACROS)
+#		define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
+#	endif
+#	if !defined(__STDC_LIMIT_MACROS)
+#		define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
+#	endif
+#	if !defined(_DARWIN_UNLIMITED_SELECT)
+#		define _DARWIN_UNLIMITED_SELECT
+#	endif
+#	if defined(__sun)
+#		define __EXTENSIONS__  /* to expose flockfile and friends in stdio.h  \
+		                         */
+#		define __inline inline /* not recognized on older compiler versions   \
+		                         */
+#	endif
 #endif
 
 #if defined(__clang__)
 /* Enable reserved-id-macro warning again. */
-#pragma GCC diagnostic pop
+#	pragma GCC diagnostic pop
 #endif
 
 
 #if defined(USE_LUA)
-#define USE_TIMERS
+#	define USE_TIMERS
 #endif
 
 #if defined(_MSC_VER)
 /* 'type cast' : conversion from 'int' to 'HANDLE' of greater size */
-#pragma warning(disable : 4306)
+#	pragma warning(disable : 4306)
 /* conditional expression is constant: introduced by FD_SET(..) */
-#pragma warning(disable : 4127)
+#	pragma warning(disable : 4127)
 /* non-constant aggregate initializer: issued due to missing C99 support */
-#pragma warning(disable : 4204)
+#	pragma warning(disable : 4204)
 /* padding added after data member */
-#pragma warning(disable : 4820)
+#	pragma warning(disable : 4820)
 /* not defined as a preprocessor macro, replacing with '0' for '#if/#elif' */
-#pragma warning(disable : 4668)
+#	pragma warning(disable : 4668)
 /* no function prototype given: converting '()' to '(void)' */
-#pragma warning(disable : 4255)
+#	pragma warning(disable : 4255)
 /* function has been selected for automatic inline expansion */
-#pragma warning(disable : 4711)
+#	pragma warning(disable : 4711)
 #endif
 
 
@@ -112,13 +116,13 @@
  * Unfortunately some compilers still do not support it, so we have a
  * replacement function here. */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ > 201100L
-#define mg_static_assert _Static_assert
+#	define mg_static_assert _Static_assert
 #elif defined(__cplusplus) && __cplusplus >= 201103L
-#define mg_static_assert static_assert
+#	define mg_static_assert static_assert
 #else
 char static_assert_replacement[1];
-#define mg_static_assert(cond, txt)                                            \
-	extern char static_assert_replacement[(cond) ? 1 : -1]
+#	define mg_static_assert(cond, txt)                                        \
+		extern char static_assert_replacement[(cond) ? 1 : -1]
 #endif
 
 mg_static_assert(sizeof(int) == 4 || sizeof(int) == 8,
@@ -130,17 +134,18 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 /* Alternative queue is well tested and should be the new default */
 #if defined(NO_ALTERNATIVE_QUEUE)
-#if defined(ALTERNATIVE_QUEUE)
-#error "Define ALTERNATIVE_QUEUE or NO_ALTERNATIVE_QUEUE or none, but not both"
-#endif
+#	if defined(ALTERNATIVE_QUEUE)
+#		error                                                                  \
+		    "Define ALTERNATIVE_QUEUE or NO_ALTERNATIVE_QUEUE or none, but not both"
+#	endif
 #else
-#define ALTERNATIVE_QUEUE
+#	define ALTERNATIVE_QUEUE
 #endif
 
 
 /* DTL -- including winsock2.h works better if lean and mean */
 #if !defined(WIN32_LEAN_AND_MEAN)
-#define WIN32_LEAN_AND_MEAN
+#	define WIN32_LEAN_AND_MEAN
 #endif
 
 #if defined(__SYMBIAN32__)
@@ -149,51 +154,52 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
  * Recent versions of CivetWeb are no longer tested for Symbian.
  * It makes no sense, to support an abandoned operating system.
  */
-#error "Symbian is no longer maintained. CivetWeb no longer supports Symbian."
-#define NO_SSL /* SSL is not supported */
-#define NO_CGI /* CGI is not supported */
-#define PATH_MAX FILENAME_MAX
+#	error                                                                      \
+	    "Symbian is no longer maintained. CivetWeb no longer supports Symbian."
+#	define NO_SSL /* SSL is not supported */
+#	define NO_CGI /* CGI is not supported */
+#	define PATH_MAX FILENAME_MAX
 #endif /* __SYMBIAN32__ */
 
 
 #if !defined(CIVETWEB_HEADER_INCLUDED)
 /* Include the header file here, so the CivetWeb interface is defined for the
  * entire implementation, including the following forward definitions. */
-#include "civetweb.h"
+#	include "civetweb.h"
 #endif
 
 #if !defined(DEBUG_TRACE)
-#if defined(DEBUG)
+#	if defined(DEBUG)
 static void DEBUG_TRACE_FUNC(const char *func,
                              unsigned line,
                              PRINTF_FORMAT_STRING(const char *fmt),
                              ...) PRINTF_ARGS(3, 4);
 
-#define DEBUG_TRACE(fmt, ...)                                                  \
-	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
+#		define DEBUG_TRACE(fmt, ...)                                          \
+			DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
 
-#define NEED_DEBUG_TRACE_FUNC
+#		define NEED_DEBUG_TRACE_FUNC
 
-#else
-#define DEBUG_TRACE(fmt, ...)                                                  \
-	do {                                                                       \
-	} while (0)
-#endif /* DEBUG */
-#endif /* DEBUG_TRACE */
+#	else
+#		define DEBUG_TRACE(fmt, ...)                                          \
+			do {                                                               \
+			} while (0)
+#	endif /* DEBUG */
+#endif     /* DEBUG_TRACE */
 
 
 #if !defined(DEBUG_ASSERT)
-#if defined(DEBUG)
-#define DEBUG_ASSERT(cond)                                                     \
-	do {                                                                       \
-		if (!(cond)) {                                                         \
-			DEBUG_TRACE("ASSERTION FAILED: %s", #cond);                        \
-			exit(2); /* Exit with error */                                     \
-		}                                                                      \
-	} while (0)
-#else
-#define DEBUG_ASSERT(cond)
-#endif /* DEBUG */
+#	if defined(DEBUG)
+#		define DEBUG_ASSERT(cond)                                             \
+			do {                                                               \
+				if (!(cond)) {                                                 \
+					DEBUG_TRACE("ASSERTION FAILED: %s", #cond);                \
+					exit(2); /* Exit with error */                             \
+				}                                                              \
+			} while (0)
+#	else
+#		define DEBUG_ASSERT(cond)
+#	endif /* DEBUG */
 #endif
 
 
@@ -223,7 +229,7 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
 
 
 #if !defined(IGNORE_UNUSED_RESULT)
-#define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
+#	define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
 
@@ -243,22 +249,22 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
  * again.
  */
 
-#pragma GCC diagnostic ignored "-Wunused-function"
+#	pragma GCC diagnostic ignored "-Wunused-function"
 
-#define FUNCTION_MAY_BE_UNUSED /* __attribute__((unused)) */
+#	define FUNCTION_MAY_BE_UNUSED /* __attribute__((unused)) */
 
 #else
-#define FUNCTION_MAY_BE_UNUSED
+#	define FUNCTION_MAY_BE_UNUSED
 #endif
 
 
 /* Some ANSI #includes are not available on Windows CE */
 #if !defined(_WIN32_WCE)
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <signal.h>
-#include <fcntl.h>
+#	include <errno.h>
+#	include <fcntl.h>
+#	include <signal.h>
+#	include <sys/stat.h>
+#	include <sys/types.h>
 #endif /* !_WIN32_WCE */
 
 
@@ -266,7 +272,7 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
 /* When using -Weverything, clang does not accept it's own headers
  * in a release build configuration. Disable what is too much in
  * -Weverything. */
-#pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#	pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
 #endif
 
 #if defined(__GNUC__) || defined(__MINGW32__)
@@ -288,22 +294,23 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
 
 #if defined(__MACH__) /* Apple OSX section */
 
-#if defined(__clang__)
-#if (__clang_major__ == 3) && ((__clang_minor__ == 7) || (__clang_minor__ == 8))
+#	if defined(__clang__)
+#		if (__clang_major__ == 3)                                             \
+		    && ((__clang_minor__ == 7) || (__clang_minor__ == 8))
 /* Avoid warnings for Xcode 7. It seems it does no longer exist in Xcode 8 */
-#pragma clang diagnostic ignored "-Wno-reserved-id-macro"
-#pragma clang diagnostic ignored "-Wno-keyword-macro"
-#endif
-#endif
+#			pragma clang diagnostic ignored "-Wno-reserved-id-macro"
+#			pragma clang diagnostic ignored "-Wno-keyword-macro"
+#		endif
+#	endif
 
-#define CLOCK_MONOTONIC (1)
-#define CLOCK_REALTIME (2)
+#	define CLOCK_MONOTONIC (1)
+#	define CLOCK_REALTIME (2)
 
-#include <sys/errno.h>
-#include <sys/time.h>
-#include <mach/clock.h>
-#include <mach/mach.h>
-#include <mach/mach_time.h>
+#	include <mach/clock.h>
+#	include <mach/mach.h>
+#	include <mach/mach_time.h>
+#	include <sys/errno.h>
+#	include <sys/time.h>
 
 /* clock_gettime is not implemented on OSX prior to 10.12 */
 static int
@@ -348,7 +355,7 @@ _civet_clock_gettime(int clk_id, struct timespec *t)
 }
 
 /* if clock_gettime is declared, then __CLOCK_AVAILABILITY will be defined */
-#if defined(__CLOCK_AVAILABILITY)
+#	if defined(__CLOCK_AVAILABILITY)
 /* If we compiled with Mac OSX 10.12 or later, then clock_gettime will be
  * declared but it may be NULL at runtime. So we need to check before using
  * it. */
@@ -360,23 +367,23 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 	}
 	return _civet_clock_gettime(clk_id, t);
 }
-#define clock_gettime _civet_safe_clock_gettime
-#else
-#define clock_gettime _civet_clock_gettime
-#endif
+#		define clock_gettime _civet_safe_clock_gettime
+#	else
+#		define clock_gettime _civet_clock_gettime
+#	endif
 
 #endif
 
 
-#include <time.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
 #include <ctype.h>
 #include <limits.h>
+#include <stdarg.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 /********************************************************************/
 /* CivetWeb configuration defines */
@@ -386,7 +393,7 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
  * The number of threads actually created depends on the "num_threads"
  * configuration parameter, but this is the upper limit. */
 #if !defined(MAX_WORKER_THREADS)
-#define MAX_WORKER_THREADS (1024 * 64) /* in threads (count) */
+#	define MAX_WORKER_THREADS (1024 * 64) /* in threads (count) */
 #endif
 
 /* Timeout interval for select/poll calls.
@@ -394,38 +401,38 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
  * timeouts are split into timouts as small as SOCKET_TIMEOUT_QUANTUM.
  * This reduces the time required to stop the server. */
 #if !defined(SOCKET_TIMEOUT_QUANTUM)
-#define SOCKET_TIMEOUT_QUANTUM (2000) /* in ms */
+#	define SOCKET_TIMEOUT_QUANTUM (2000) /* in ms */
 #endif
 
 /* Do not try to compress files smaller than this limit. */
 #if !defined(MG_FILE_COMPRESSION_SIZE_LIMIT)
-#define MG_FILE_COMPRESSION_SIZE_LIMIT (1024) /* in bytes */
+#	define MG_FILE_COMPRESSION_SIZE_LIMIT (1024) /* in bytes */
 #endif
 
 #if !defined(PASSWORDS_FILE_NAME)
-#define PASSWORDS_FILE_NAME ".htpasswd"
+#	define PASSWORDS_FILE_NAME ".htpasswd"
 #endif
 
 /* Initial buffer size for all CGI environment variables. In case there is
  * not enough space, another block is allocated. */
 #if !defined(CGI_ENVIRONMENT_SIZE)
-#define CGI_ENVIRONMENT_SIZE (4096) /* in bytes */
+#	define CGI_ENVIRONMENT_SIZE (4096) /* in bytes */
 #endif
 
 /* Maximum number of environment variables. */
 #if !defined(MAX_CGI_ENVIR_VARS)
-#define MAX_CGI_ENVIR_VARS (256) /* in variables (count) */
+#	define MAX_CGI_ENVIR_VARS (256) /* in variables (count) */
 #endif
 
 /* General purpose buffer size. */
 #if !defined(MG_BUF_LEN) /* in bytes */
-#define MG_BUF_LEN (1024 * 8)
+#	define MG_BUF_LEN (1024 * 8)
 #endif
 
 /* Size of the accepted socket queue (in case the old queue implementation
  * is used). */
 #if !defined(MGSQLEN)
-#define MGSQLEN (20) /* count */
+#	define MGSQLEN (20) /* count */
 #endif
 
 
@@ -436,7 +443,7 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 
 /* Standard defines */
 #if !defined(INT64_MAX)
-#define INT64_MAX (9223372036854775807)
+#	define INT64_MAX (9223372036854775807)
 #endif
 
 #define SHUTDOWN_RD (0)
@@ -449,132 +456,133 @@ mg_static_assert(MAX_WORKER_THREADS >= 1,
 mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
                  "size_t data type size check");
 
-#if defined(_WIN32)   /* WINDOWS include block */
-#include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
-#include <ws2tcpip.h>
-#include <windows.h>
+#if defined(_WIN32) /* WINDOWS include block */
+#	include <windows.h>
+#	include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
+#	include <ws2tcpip.h>
 
 typedef const char *SOCK_OPT_TYPE;
 
-#if !defined(PATH_MAX)
-#define W_PATH_MAX (MAX_PATH)
+#	if !defined(PATH_MAX)
+#		define W_PATH_MAX (MAX_PATH)
 /* at most three UTF-8 chars per wchar_t */
-#define PATH_MAX (W_PATH_MAX * 3)
-#else
-#define W_PATH_MAX ((PATH_MAX + 2) / 3)
-#endif
+#		define PATH_MAX (W_PATH_MAX * 3)
+#	else
+#		define W_PATH_MAX ((PATH_MAX + 2) / 3)
+#	endif
 
 mg_static_assert(PATH_MAX >= 1, "path length must be a positive number");
 
-#if !defined(_IN_PORT_T)
-#if !defined(in_port_t)
-#define in_port_t u_short
-#endif
-#endif
+#	if !defined(_IN_PORT_T)
+#		if !defined(in_port_t)
+#			define in_port_t u_short
+#		endif
+#	endif
 
-#if !defined(_WIN32_WCE)
-#include <process.h>
-#include <direct.h>
-#include <io.h>
-#else            /* _WIN32_WCE */
-#define NO_CGI   /* WinCE has no pipes */
-#define NO_POPEN /* WinCE has no popen */
+#	if !defined(_WIN32_WCE)
+#		include <direct.h>
+#		include <io.h>
+#		include <process.h>
+#	else                /* _WIN32_WCE */
+#		define NO_CGI   /* WinCE has no pipes */
+#		define NO_POPEN /* WinCE has no popen */
 
 typedef long off_t;
 
-#define errno ((int)(GetLastError()))
-#define strerror(x) (_ultoa(x, (char *)_alloca(sizeof(x) * 3), 10))
-#endif /* _WIN32_WCE */
+#		define errno ((int)(GetLastError()))
+#		define strerror(x) (_ultoa(x, (char *)_alloca(sizeof(x) * 3), 10))
+#	endif /* _WIN32_WCE */
 
-#define MAKEUQUAD(lo, hi)                                                      \
-	((uint64_t)(((uint32_t)(lo)) | ((uint64_t)((uint32_t)(hi))) << 32))
-#define RATE_DIFF (10000000) /* 100 nsecs */
-#define EPOCH_DIFF (MAKEUQUAD(0xd53e8000, 0x019db1de))
-#define SYS2UNIX_TIME(lo, hi)                                                  \
-	((time_t)((MAKEUQUAD((lo), (hi)) - EPOCH_DIFF) / RATE_DIFF))
+#	define MAKEUQUAD(lo, hi)                                                  \
+		((uint64_t)(((uint32_t)(lo)) | ((uint64_t)((uint32_t)(hi))) << 32))
+#	define RATE_DIFF (10000000) /* 100 nsecs */
+#	define EPOCH_DIFF (MAKEUQUAD(0xd53e8000, 0x019db1de))
+#	define SYS2UNIX_TIME(lo, hi)                                              \
+		((time_t)((MAKEUQUAD((lo), (hi)) - EPOCH_DIFF) / RATE_DIFF))
 
 /* Visual Studio 6 does not know __func__ or __FUNCTION__
  * The rest of MS compilers use __FUNCTION__, not C99 __func__
  * Also use _strtoui64 on modern M$ compilers */
-#if defined(_MSC_VER)
-#if (_MSC_VER < 1300)
-#define STRX(x) #x
-#define STR(x) STRX(x)
-#define __func__ __FILE__ ":" STR(__LINE__)
-#define strtoull(x, y, z) ((unsigned __int64)_atoi64(x))
-#define strtoll(x, y, z) (_atoi64(x))
-#else
-#define __func__ __FUNCTION__
-#define strtoull(x, y, z) (_strtoui64(x, y, z))
-#define strtoll(x, y, z) (_strtoi64(x, y, z))
-#endif
-#endif /* _MSC_VER */
+#	if defined(_MSC_VER)
+#		if (_MSC_VER < 1300)
+#			define STRX(x) #            x
+#			define STR(x) STRX(x)
+#			define __func__ __FILE__ ":" STR(__LINE__)
+#			define strtoull(x, y, z) ((unsigned __int64)_atoi64(x))
+#			define strtoll(x, y, z) (_atoi64(x))
+#		else
+#			define __func__ __FUNCTION__
+#			define strtoull(x, y, z) (_strtoui64(x, y, z))
+#			define strtoll(x, y, z) (_strtoi64(x, y, z))
+#		endif
+#	endif /* _MSC_VER */
 
-#define ERRNO ((int)(GetLastError()))
-#define NO_SOCKLEN_T
+#	define ERRNO ((int)(GetLastError()))
+#	define NO_SOCKLEN_T
 
-#if defined(_WIN64) || defined(__MINGW64__)
-#if !defined(SSL_LIB)
-#define SSL_LIB "ssleay64.dll"
-#endif
-#if !defined(CRYPTO_LIB)
-#define CRYPTO_LIB "libeay64.dll"
-#endif
-#else
-#if !defined(SSL_LIB)
-#define SSL_LIB "ssleay32.dll"
-#endif
-#if !defined(CRYPTO_LIB)
-#define CRYPTO_LIB "libeay32.dll"
-#endif
-#endif
+#	if defined(_WIN64) || defined(__MINGW64__)
+#		if !defined(SSL_LIB)
+#			define SSL_LIB "ssleay64.dll"
+#		endif
+#		if !defined(CRYPTO_LIB)
+#			define CRYPTO_LIB "libeay64.dll"
+#		endif
+#	else
+#		if !defined(SSL_LIB)
+#			define SSL_LIB "ssleay32.dll"
+#		endif
+#		if !defined(CRYPTO_LIB)
+#			define CRYPTO_LIB "libeay32.dll"
+#		endif
+#	endif
 
-#define O_NONBLOCK (0)
-#if !defined(W_OK)
-#define W_OK (2) /* http://msdn.microsoft.com/en-us/library/1w06ktdy.aspx */
-#endif
-#if !defined(EWOULDBLOCK)
-#define EWOULDBLOCK WSAEWOULDBLOCK
-#endif /* !EWOULDBLOCK */
-#define _POSIX_
-#define INT64_FMT "I64d"
-#define UINT64_FMT "I64u"
+#	define O_NONBLOCK (0)
+#	if !defined(W_OK)
+#		define W_OK                                                           \
+			(2) /* http://msdn.microsoft.com/en-us/library/1w06ktdy.aspx */
+#	endif
+#	if !defined(EWOULDBLOCK)
+#		define EWOULDBLOCK WSAEWOULDBLOCK
+#	endif /* !EWOULDBLOCK */
+#	define _POSIX_
+#	define INT64_FMT "I64d"
+#	define UINT64_FMT "I64u"
 
-#define WINCDECL __cdecl
-#define vsnprintf_impl _vsnprintf
-#define access _access
-#define mg_sleep(x) (Sleep(x))
+#	define WINCDECL __cdecl
+#	define vsnprintf_impl _vsnprintf
+#	define access _access
+#	define mg_sleep(x) (Sleep(x))
 
-#define pipe(x) _pipe(x, MG_BUF_LEN, _O_BINARY)
-#if !defined(popen)
-#define popen(x, y) (_popen(x, y))
-#endif
-#if !defined(pclose)
-#define pclose(x) (_pclose(x))
-#endif
-#define close(x) (_close(x))
-#define dlsym(x, y) (GetProcAddress((HINSTANCE)(x), (y)))
-#define RTLD_LAZY (0)
-#define fseeko(x, y, z) ((_lseeki64(_fileno(x), (y), (z)) == -1) ? -1 : 0)
-#define fdopen(x, y) (_fdopen((x), (y)))
-#define write(x, y, z) (_write((x), (y), (unsigned)z))
-#define read(x, y, z) (_read((x), (y), (unsigned)z))
-#define flockfile(x) (EnterCriticalSection(&global_log_file_lock))
-#define funlockfile(x) (LeaveCriticalSection(&global_log_file_lock))
-#define sleep(x) (Sleep((x)*1000))
-#define rmdir(x) (_rmdir(x))
-#if defined(_WIN64) || !defined(__MINGW32__)
+#	define pipe(x) _pipe(x, MG_BUF_LEN, _O_BINARY)
+#	if !defined(popen)
+#		define popen(x, y) (_popen(x, y))
+#	endif
+#	if !defined(pclose)
+#		define pclose(x) (_pclose(x))
+#	endif
+#	define close(x) (_close(x))
+#	define dlsym(x, y) (GetProcAddress((HINSTANCE)(x), (y)))
+#	define RTLD_LAZY (0)
+#	define fseeko(x, y, z) ((_lseeki64(_fileno(x), (y), (z)) == -1) ? -1 : 0)
+#	define fdopen(x, y) (_fdopen((x), (y)))
+#	define write(x, y, z) (_write((x), (y), (unsigned)z))
+#	define read(x, y, z) (_read((x), (y), (unsigned)z))
+#	define flockfile(x) (EnterCriticalSection(&global_log_file_lock))
+#	define funlockfile(x) (LeaveCriticalSection(&global_log_file_lock))
+#	define sleep(x) (Sleep((x)*1000))
+#	define rmdir(x) (_rmdir(x))
+#	if defined(_WIN64) || !defined(__MINGW32__)
 /* Only MinGW 32 bit is missing this function */
-#define timegm(x) (_mkgmtime(x))
-#else
+#		define timegm(x) (_mkgmtime(x))
+#	else
 time_t timegm(struct tm *tm);
-#define NEED_TIMEGM
-#endif
+#		define NEED_TIMEGM
+#	endif
 
 
-#if !defined(fileno)
-#define fileno(x) (_fileno(x))
-#endif /* !fileno MINGW #defines fileno */
+#	if !defined(fileno)
+#		define fileno(x) (_fileno(x))
+#	endif /* !fileno MINGW #defines fileno */
 
 typedef HANDLE pthread_mutex_t;
 typedef DWORD pthread_key_t;
@@ -584,39 +592,39 @@ typedef struct {
 	struct mg_workerTLS *waiting_thread; /* The chain of threads */
 } pthread_cond_t;
 
-#if !defined(__clockid_t_defined)
+#	if !defined(__clockid_t_defined)
 typedef DWORD clockid_t;
-#endif
-#if !defined(CLOCK_MONOTONIC)
-#define CLOCK_MONOTONIC (1)
-#endif
-#if !defined(CLOCK_REALTIME)
-#define CLOCK_REALTIME (2)
-#endif
-#if !defined(CLOCK_THREAD)
-#define CLOCK_THREAD (3)
-#endif
-#if !defined(CLOCK_PROCESS)
-#define CLOCK_PROCESS (4)
-#endif
+#	endif
+#	if !defined(CLOCK_MONOTONIC)
+#		define CLOCK_MONOTONIC (1)
+#	endif
+#	if !defined(CLOCK_REALTIME)
+#		define CLOCK_REALTIME (2)
+#	endif
+#	if !defined(CLOCK_THREAD)
+#		define CLOCK_THREAD (3)
+#	endif
+#	if !defined(CLOCK_PROCESS)
+#		define CLOCK_PROCESS (4)
+#	endif
 
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
-#define _TIMESPEC_DEFINED
-#endif
-#if !defined(_TIMESPEC_DEFINED)
+#	if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#		define _TIMESPEC_DEFINED
+#	endif
+#	if !defined(_TIMESPEC_DEFINED)
 struct timespec {
 	time_t tv_sec; /* seconds */
 	long tv_nsec;  /* nanoseconds */
 };
-#endif
+#	endif
 
-#if !defined(WIN_PTHREADS_TIME_H)
-#define MUST_IMPLEMENT_CLOCK_GETTIME
-#endif
+#	if !defined(WIN_PTHREADS_TIME_H)
+#		define MUST_IMPLEMENT_CLOCK_GETTIME
+#	endif
 
-#if defined(MUST_IMPLEMENT_CLOCK_GETTIME)
-#define clock_gettime mg_clock_gettime
+#	if defined(MUST_IMPLEMENT_CLOCK_GETTIME)
+#		define clock_gettime mg_clock_gettime
 static int
 clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
@@ -709,10 +717,12 @@ clock_gettime(clockid_t clk_id, struct timespec *tp)
 
 	return ok ? 0 : -1;
 }
-#endif
+#	endif
 
 
-#define pid_t HANDLE /* MINGW typedefs pid_t to int. Using #define here. */
+#	define pid_t                                                              \
+		HANDLE /* MINGW typedefs pid_t to int. Using #define here.             \
+		        */
 
 static int pthread_mutex_lock(pthread_mutex_t *);
 static int pthread_mutex_unlock(pthread_mutex_t *);
@@ -740,83 +750,83 @@ typedef struct DIR {
 	struct dirent result;
 } DIR;
 
-#if defined(_WIN32)
-#if !defined(HAVE_POLL)
+#	if defined(_WIN32)
+#		if !defined(HAVE_POLL)
 struct pollfd {
 	SOCKET fd;
 	short events;
 	short revents;
 };
-#endif
-#endif
+#		endif
+#	endif
 
 /* Mark required libraries */
-#if defined(_MSC_VER)
-#pragma comment(lib, "Ws2_32.lib")
-#endif
+#	if defined(_MSC_VER)
+#		pragma comment(lib, "Ws2_32.lib")
+#	endif
 
 #else /* defined(_WIN32) - WINDOWS vs UNIX include block */
 
-#include <sys/wait.h>
-#include <sys/socket.h>
-#include <sys/poll.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/time.h>
-#include <sys/utsname.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <netdb.h>
-#include <netinet/tcp.h>
+#	include <arpa/inet.h>
+#	include <inttypes.h>
+#	include <netdb.h>
+#	include <netinet/in.h>
+#	include <netinet/tcp.h>
+#	include <stdint.h>
+#	include <sys/poll.h>
+#	include <sys/socket.h>
+#	include <sys/time.h>
+#	include <sys/utsname.h>
+#	include <sys/wait.h>
 typedef const void *SOCK_OPT_TYPE;
 
-#if defined(ANDROID)
+#	if defined(ANDROID)
 typedef unsigned short int in_port_t;
-#endif
+#	endif
 
-#include <pwd.h>
-#include <unistd.h>
-#include <grp.h>
-#include <dirent.h>
-#define vsnprintf_impl vsnprintf
+#	include <dirent.h>
+#	include <grp.h>
+#	include <pwd.h>
+#	include <unistd.h>
+#	define vsnprintf_impl vsnprintf
 
-#if !defined(NO_SSL_DL) && !defined(NO_SSL)
-#include <dlfcn.h>
-#endif
-#include <pthread.h>
-#if defined(__MACH__)
-#define SSL_LIB "libssl.dylib"
-#define CRYPTO_LIB "libcrypto.dylib"
-#else
-#if !defined(SSL_LIB)
-#define SSL_LIB "libssl.so"
-#endif
-#if !defined(CRYPTO_LIB)
-#define CRYPTO_LIB "libcrypto.so"
-#endif
-#endif
-#if !defined(O_BINARY)
-#define O_BINARY (0)
-#endif /* O_BINARY */
-#define closesocket(a) (close(a))
-#define mg_mkdir(conn, path, mode) (mkdir(path, mode))
-#define mg_remove(conn, x) (remove(x))
-#define mg_sleep(x) (usleep((x)*1000))
-#define mg_opendir(conn, x) (opendir(x))
-#define mg_closedir(x) (closedir(x))
-#define mg_readdir(x) (readdir(x))
-#define ERRNO (errno)
-#define INVALID_SOCKET (-1)
-#define INT64_FMT PRId64
-#define UINT64_FMT PRIu64
+#	if !defined(NO_SSL_DL) && !defined(NO_SSL)
+#		include <dlfcn.h>
+#	endif
+#	include <pthread.h>
+#	if defined(__MACH__)
+#		define SSL_LIB "libssl.dylib"
+#		define CRYPTO_LIB "libcrypto.dylib"
+#	else
+#		if !defined(SSL_LIB)
+#			define SSL_LIB "libssl.so"
+#		endif
+#		if !defined(CRYPTO_LIB)
+#			define CRYPTO_LIB "libcrypto.so"
+#		endif
+#	endif
+#	if !defined(O_BINARY)
+#		define O_BINARY (0)
+#	endif /* O_BINARY */
+#	define closesocket(a) (close(a))
+#	define mg_mkdir(conn, path, mode) (mkdir(path, mode))
+#	define mg_remove(conn, x) (remove(x))
+#	define mg_sleep(x) (usleep((x)*1000))
+#	define mg_opendir(conn, x) (opendir(x))
+#	define mg_closedir(x) (closedir(x))
+#	define mg_readdir(x) (readdir(x))
+#	define ERRNO (errno)
+#	define INVALID_SOCKET (-1)
+#	define INT64_FMT PRId64
+#	define UINT64_FMT PRIu64
 typedef int SOCKET;
-#define WINCDECL
+#	define WINCDECL
 
-#if defined(__hpux)
+#	if defined(__hpux)
 /* HPUX 11 does not have monotonic, fall back to realtime */
-#if !defined(CLOCK_MONOTONIC)
-#define CLOCK_MONOTONIC CLOCK_REALTIME
-#endif
+#		if !defined(CLOCK_MONOTONIC)
+#			define CLOCK_MONOTONIC CLOCK_REALTIME
+#		endif
 
 /* HPUX defines socklen_t incorrectly as size_t which is 64bit on
  * Itanium.  Without defining _XOPEN_SOURCE or _XOPEN_SOURCE_EXTENDED
@@ -826,8 +836,8 @@ typedef int SOCKET;
  * fails.  Since socklen_t is widely used below, just force replace
  * their typedef with int. - DTL
  */
-#define socklen_t int
-#endif /* hpux */
+#		define socklen_t int
+#	endif /* hpux */
 
 #endif /* defined(_WIN32) - WINDOWS vs UNIX include block */
 
@@ -835,7 +845,7 @@ typedef int SOCKET;
  * parameter to the "listen" socket call. */
 #if !defined(SOMAXCONN)
 /* This symbol may be defined in winsock2.h so this must after that include */
-#define SOMAXCONN (100) /* in pending connections (count) */
+#	define SOMAXCONN (100) /* in pending connections (count) */
 #endif
 
 /* In case our C library is missing "timegm", provide an implementation */
@@ -866,12 +876,8 @@ timegm(struct tm *tm)
 
 	if (year < 1970 || mon < 0 || mon > 11 || mday < 0
 	    || (mday >= ydays[mon + 1] - ydays[mon]
-	                    + (mon == 1 && is_leap(year) ? 1 : 0)) || hour < 0
-	    || hour > 23
-	    || min < 0
-	    || min > 59
-	    || sec < 0
-	    || sec > 60)
+	                    + (mon == 1 && is_leap(year) ? 1 : 0))
+	    || hour < 0 || hour > 23 || min < 0 || min > 59 || sec < 0 || sec > 60)
 		return -1;
 
 	time_t res = year - 1970;
@@ -893,18 +899,18 @@ timegm(struct tm *tm)
 
 /* va_copy should always be a macro, C99 and C++11 - DTL */
 #if !defined(va_copy)
-#define va_copy(x, y) ((x) = (y))
+#	define va_copy(x, y) ((x) = (y))
 #endif
 
 
 #if defined(_WIN32)
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(GCC_DIAGNOSTIC)
+#	if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wunused-function"
+#	endif
 
 
 static CRITICAL_SECTION global_log_file_lock;
@@ -922,7 +928,7 @@ static int
 pthread_key_create(
     pthread_key_t *key,
     void (*_ignored)(void *) /* destructor not supported for Windows */
-    )
+)
 {
 	(void)_ignored;
 
@@ -957,10 +963,10 @@ pthread_getspecific(pthread_key_t key)
 	return TlsGetValue(key);
 }
 
-#if defined(GCC_DIAGNOSTIC)
+#	if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
-#pragma GCC diagnostic pop
-#endif
+#		pragma GCC diagnostic pop
+#	endif
 
 static struct pthread_mutex_undefined_struct *pthread_mutex_attr = NULL;
 #else
@@ -971,11 +977,11 @@ static pthread_mutexattr_t pthread_mutex_attr;
 #if defined(_WIN32_WCE)
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(GCC_DIAGNOSTIC)
+#	if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wunused-function"
+#	endif
 
 
 FUNCTION_MAY_BE_UNUSED
@@ -1070,10 +1076,10 @@ strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
 	return 0;
 }
 
-#define _beginthreadex(psec, stack, func, prm, flags, ptid)                    \
-	(uintptr_t) CreateThread(psec, stack, func, prm, flags, ptid)
+#	define _beginthreadex(psec, stack, func, prm, flags, ptid)                \
+		(uintptr_t) CreateThread(psec, stack, func, prm, flags, ptid)
 
-#define remove(f) mg_remove(NULL, f)
+#	define remove(f) mg_remove(NULL, f)
 
 
 FUNCTION_MAY_BE_UNUSED
@@ -1123,31 +1129,31 @@ stat(const char *name, struct stat *st)
 	return 0;
 }
 
-#define access(x, a) 1 /* not required anyway */
+#	define access(x, a) 1 /* not required anyway */
 
 /* WinCE-TODO: define stat, remove, rename, _rmdir, _lseeki64 */
 /* Values from errno.h in Windows SDK (Visual Studio). */
-#define EEXIST 17
-#define EACCES 13
-#define ENOENT 2
+#	define EEXIST 17
+#	define EACCES 13
+#	define ENOENT 2
 
-#if defined(GCC_DIAGNOSTIC)
+#	if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
-#pragma GCC diagnostic pop
-#endif
+#		pragma GCC diagnostic pop
+#	endif
 
 #endif /* defined(_WIN32_WCE) */
 
 
 #if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wunused-function"
 #endif /* defined(GCC_DIAGNOSTIC) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
+#	pragma clang diagnostic push
+#	pragma clang diagnostic ignored "-Wunused-function"
 #endif
 
 static pthread_mutex_t global_lock_mutex;
@@ -1230,18 +1236,18 @@ static int64_t
 mg_atomic_add(volatile int64_t *addr, int64_t value)
 {
 	int64_t ret;
-#if defined(_WIN64) && !defined(NO_ATOMICS)
+#	if defined(_WIN64) && !defined(NO_ATOMICS)
 	ret = InterlockedAdd64(addr, value);
-#elif defined(__GNUC__)                                                        \
-    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
-    && !defined(NO_ATOMICS)
+#	elif defined(__GNUC__)                                                    \
+	    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))       \
+	    && !defined(NO_ATOMICS)
 	ret = __sync_add_and_fetch(addr, value);
-#else
+#	else
 	mg_global_lock();
 	*addr += value;
 	ret = (*addr);
 	mg_global_unlock();
-#endif
+#	endif
 	return ret;
 }
 #endif
@@ -1249,11 +1255,11 @@ mg_atomic_add(volatile int64_t *addr, int64_t value)
 
 #if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic pop
+#	pragma GCC diagnostic pop
 #endif /* defined(GCC_DIAGNOSTIC) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
-#pragma clang diagnostic pop
+#	pragma clang diagnostic pop
 #endif
 
 
@@ -1279,12 +1285,12 @@ mg_malloc_ex(size_t size,
 	void *memory = 0;
 	struct mg_memory_stat *mstat = get_memory_stat(ctx);
 
-#if defined(MEMORY_DEBUGGING)
+#	if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
-#else
+#	else
 	(void)file;
 	(void)line;
-#endif
+#	endif
 
 	if (data) {
 		int64_t mmem = mg_atomic_add(&mstat->totalMemUsed, (int64_t)size);
@@ -1300,7 +1306,7 @@ mg_malloc_ex(size_t size,
 		memory = (void *)(((char *)data) + 2 * sizeof(uintptr_t));
 	}
 
-#if defined(MEMORY_DEBUGGING)
+#	if defined(MEMORY_DEBUGGING)
 	sprintf(mallocStr,
 	        "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n",
 	        memory,
@@ -1309,12 +1315,12 @@ mg_malloc_ex(size_t size,
 	        (unsigned long)mstat->blockCount,
 	        file,
 	        line);
-#if defined(_WIN32)
+#		if defined(_WIN32)
 	OutputDebugStringA(mallocStr);
-#else
+#		else
 	DEBUG_TRACE("%s", mallocStr);
-#endif
-#endif
+#		endif
+#	endif
 
 	return memory;
 }
@@ -1342,12 +1348,12 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 	void *data = (void *)(((char *)memory) - 2 * sizeof(uintptr_t));
 
 
-#if defined(MEMORY_DEBUGGING)
+#	if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
-#else
+#	else
 	(void)file;
 	(void)line;
-#endif
+#	endif
 
 	if (memory) {
 		uintptr_t size = ((uintptr_t *)data)[0];
@@ -1355,7 +1361,7 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 		    (struct mg_memory_stat *)(((uintptr_t *)data)[1]);
 		mg_atomic_add(&mstat->totalMemUsed, -(int64_t)size);
 		mg_atomic_dec(&mstat->blockCount);
-#if defined(MEMORY_DEBUGGING)
+#	if defined(MEMORY_DEBUGGING)
 		sprintf(mallocStr,
 		        "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n",
 		        memory,
@@ -1364,12 +1370,12 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 		        (unsigned long)mstat->blockCount,
 		        file,
 		        line);
-#if defined(_WIN32)
+#		if defined(_WIN32)
 		OutputDebugStringA(mallocStr);
-#else
+#		else
 		DEBUG_TRACE("%s", mallocStr);
-#endif
-#endif
+#		endif
+#	endif
 		free(data);
 	}
 }
@@ -1386,12 +1392,12 @@ mg_realloc_ex(void *memory,
 	void *_realloc;
 	uintptr_t oldsize;
 
-#if defined(MEMORY_DEBUGGING)
+#	if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
-#else
+#	else
 	(void)file;
 	(void)line;
-#endif
+#	endif
 
 	if (newsize) {
 		if (memory) {
@@ -1404,7 +1410,7 @@ mg_realloc_ex(void *memory,
 			if (_realloc) {
 				data = _realloc;
 				mg_atomic_add(&mstat->totalMemUsed, -(int64_t)oldsize);
-#if defined(MEMORY_DEBUGGING)
+#	if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
 				        memory,
@@ -1413,14 +1419,14 @@ mg_realloc_ex(void *memory,
 				        (unsigned long)mstat->blockCount,
 				        file,
 				        line);
-#if defined(_WIN32)
+#		if defined(_WIN32)
 				OutputDebugStringA(mallocStr);
-#else
+#		else
 				DEBUG_TRACE("%s", mallocStr);
-#endif
-#endif
+#		endif
+#	endif
 				mg_atomic_add(&mstat->totalMemUsed, (int64_t)newsize);
-#if defined(MEMORY_DEBUGGING)
+#	if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
 				        memory,
@@ -1429,22 +1435,22 @@ mg_realloc_ex(void *memory,
 				        (unsigned long)mstat->blockCount,
 				        file,
 				        line);
-#if defined(_WIN32)
+#		if defined(_WIN32)
 				OutputDebugStringA(mallocStr);
-#else
+#		else
 				DEBUG_TRACE("%s", mallocStr);
-#endif
-#endif
+#		endif
+#	endif
 				*(uintptr_t *)data = newsize;
 				data = (void *)(((char *)data) + 2 * sizeof(uintptr_t));
 			} else {
-#if defined(MEMORY_DEBUGGING)
-#if defined(_WIN32)
+#	if defined(MEMORY_DEBUGGING)
+#		if defined(_WIN32)
 				OutputDebugStringA("MEM: realloc failed\n");
-#else
+#		else
 				DEBUG_TRACE("%s", "MEM: realloc failed\n");
-#endif
-#endif
+#		endif
+#	endif
 				return _realloc;
 			}
 		} else {
@@ -1460,14 +1466,14 @@ mg_realloc_ex(void *memory,
 	return data;
 }
 
-#define mg_malloc(a) mg_malloc_ex(a, NULL, __FILE__, __LINE__)
-#define mg_calloc(a, b) mg_calloc_ex(a, b, NULL, __FILE__, __LINE__)
-#define mg_realloc(a, b) mg_realloc_ex(a, b, NULL, __FILE__, __LINE__)
-#define mg_free(a) mg_free_ex(a, __FILE__, __LINE__)
+#	define mg_malloc(a) mg_malloc_ex(a, NULL, __FILE__, __LINE__)
+#	define mg_calloc(a, b) mg_calloc_ex(a, b, NULL, __FILE__, __LINE__)
+#	define mg_realloc(a, b) mg_realloc_ex(a, b, NULL, __FILE__, __LINE__)
+#	define mg_free(a) mg_free_ex(a, __FILE__, __LINE__)
 
-#define mg_malloc_ctx(a, c) mg_malloc_ex(a, c, __FILE__, __LINE__)
-#define mg_calloc_ctx(a, b, c) mg_calloc_ex(a, b, c, __FILE__, __LINE__)
-#define mg_realloc_ctx(a, b, c) mg_realloc_ex(a, b, c, __FILE__, __LINE__)
+#	define mg_malloc_ctx(a, c) mg_malloc_ex(a, c, __FILE__, __LINE__)
+#	define mg_calloc_ctx(a, b, c) mg_calloc_ex(a, b, c, __FILE__, __LINE__)
+#	define mg_realloc_ctx(a, b, c) mg_realloc_ex(a, b, c, __FILE__, __LINE__)
 
 #else /* USE_SERVER_STATS */
 
@@ -1495,10 +1501,10 @@ mg_free(void *a)
 	free(a);
 }
 
-#define mg_malloc_ctx(a, c) mg_malloc(a)
-#define mg_calloc_ctx(a, b, c) mg_calloc(a, b)
-#define mg_realloc_ctx(a, b, c) mg_realloc(a, b)
-#define mg_free_ctx(a, c) mg_free(a)
+#	define mg_malloc_ctx(a, c) mg_malloc(a)
+#	define mg_calloc_ctx(a, b, c) mg_calloc(a, b)
+#	define mg_realloc_ctx(a, b, c) mg_realloc(a, b)
+#	define mg_free_ctx(a, c) mg_free(a)
 
 #endif /* USE_SERVER_STATS */
 
@@ -1520,22 +1526,22 @@ static void mg_snprintf(const struct mg_connection *conn,
 /* This following lines are just meant as a reminder to use the mg-functions
  * for memory management */
 #if defined(malloc)
-#undef malloc
+#	undef malloc
 #endif
 #if defined(calloc)
-#undef calloc
+#	undef calloc
 #endif
 #if defined(realloc)
-#undef realloc
+#	undef realloc
 #endif
 #if defined(free)
-#undef free
+#	undef free
 #endif
 #if defined(snprintf)
-#undef snprintf
+#	undef snprintf
 #endif
 #if defined(vsnprintf)
-#undef vsnprintf
+#	undef vsnprintf
 #endif
 #define malloc DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
 #define calloc DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
@@ -1545,7 +1551,7 @@ static void mg_snprintf(const struct mg_connection *conn,
 #if defined(_WIN32)
 /* vsnprintf must not be used in any system,
  * but this define only works well for Windows. */
-#define vsnprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_vsnprintf
+#	define vsnprintf DO_NOT_USE_THIS_FUNCTION__USE_mg_vsnprintf
 #endif
 
 
@@ -1560,7 +1566,7 @@ static pthread_key_t sTlsKey; /* Thread local storage index */
 static int thread_idx_max = 0;
 
 #if defined(MG_LEGACY_INTERFACE)
-#define MG_ALLOW_USING_GET_REQUEST_INFO_FOR_RESPONSE
+#	define MG_ALLOW_USING_GET_REQUEST_INFO_FOR_RESPONSE
 #endif
 
 struct mg_workerTLS {
@@ -1578,13 +1584,13 @@ struct mg_workerTLS {
 
 #if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wunused-function"
 #endif /* defined(GCC_DIAGNOSTIC) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
+#	pragma clang diagnostic push
+#	pragma clang diagnostic ignored "-Wunused-function"
 #endif
 
 
@@ -1606,15 +1612,15 @@ mg_current_thread_id(void)
 	return GetCurrentThreadId();
 #else
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code"
+#	if defined(__clang__)
+#		pragma clang diagnostic push
+#		pragma clang diagnostic ignored "-Wunreachable-code"
 /* For every compiler, either "sizeof(pthread_t) > sizeof(unsigned long)"
  * or not, so one of the two conditions will be unreachable by construction.
  * Unfortunately the C standard does not define a way to check this at
  * compile time, since the #if preprocessor conditions can not use the sizeof
  * operator as an argument. */
-#endif
+#	endif
 
 	if (sizeof(pthread_t) > sizeof(unsigned long)) {
 		/* This is the problematic case for CRYPTO_set_id_callback:
@@ -1640,9 +1646,9 @@ mg_current_thread_id(void)
 		return ret;
 	}
 
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+#	if defined(__clang__)
+#		pragma clang diagnostic pop
+#	endif
 
 #endif
 }
@@ -1660,11 +1666,11 @@ mg_get_current_time_ns(void)
 
 #if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic pop
+#	pragma GCC diagnostic pop
 #endif /* defined(GCC_DIAGNOSTIC) */
 #if defined(__clang__)
 /* Show no warning in case system functions are not used. */
-#pragma clang diagnostic pop
+#	pragma clang diagnostic pop
 #endif
 
 
@@ -1718,7 +1724,7 @@ typedef int socklen_t;
 #define IP_ADDR_STR_LEN (50) /* IPv6 hex string is 46 chars */
 
 #if !defined(MSG_NOSIGNAL)
-#define MSG_NOSIGNAL (0)
+#	define MSG_NOSIGNAL (0)
 #endif
 
 
@@ -1726,33 +1732,33 @@ typedef int socklen_t;
 typedef struct SSL SSL; /* dummy for SSL argument to push/pull */
 typedef struct SSL_CTX SSL_CTX;
 #else
-#if defined(NO_SSL_DL)
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/crypto.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/engine.h>
-#include <openssl/conf.h>
-#include <openssl/dh.h>
-#include <openssl/bn.h>
-#include <openssl/opensslv.h>
+#	if defined(NO_SSL_DL)
+#		include <openssl/bn.h>
+#		include <openssl/conf.h>
+#		include <openssl/crypto.h>
+#		include <openssl/dh.h>
+#		include <openssl/engine.h>
+#		include <openssl/err.h>
+#		include <openssl/opensslv.h>
+#		include <openssl/pem.h>
+#		include <openssl/ssl.h>
+#		include <openssl/x509.h>
 
-#if defined(WOLFSSL_VERSION)
+#		if defined(WOLFSSL_VERSION)
 /* Additional defines for WolfSSL, see
  * https://github.com/civetweb/civetweb/issues/583 */
-#include "wolfssl_extras.inl"
-#endif
+#			include "wolfssl_extras.inl"
+#		endif
 
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#		if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 /* If OpenSSL headers are included, automatically select the API version */
-#if !defined(OPENSSL_API_1_1)
-#define OPENSSL_API_1_1
-#endif
-#endif
+#			if !defined(OPENSSL_API_1_1)
+#				define OPENSSL_API_1_1
+#			endif
+#		endif
 
 
-#else
+#	else
 
 /* SSL loaded dynamically from DLL.
  * I put the prototypes here to be independent from OpenSSL source
@@ -1770,48 +1776,48 @@ typedef struct evp_md EVP_MD;
 typedef struct x509 X509;
 
 
-#define SSL_CTRL_OPTIONS (32)
-#define SSL_CTRL_CLEAR_OPTIONS (77)
-#define SSL_CTRL_SET_ECDH_AUTO (94)
+#		define SSL_CTRL_OPTIONS (32)
+#		define SSL_CTRL_CLEAR_OPTIONS (77)
+#		define SSL_CTRL_SET_ECDH_AUTO (94)
 
-#define OPENSSL_INIT_NO_LOAD_SSL_STRINGS 0x00100000L
-#define OPENSSL_INIT_LOAD_SSL_STRINGS 0x00200000L
-#define OPENSSL_INIT_LOAD_CRYPTO_STRINGS 0x00000002L
+#		define OPENSSL_INIT_NO_LOAD_SSL_STRINGS 0x00100000L
+#		define OPENSSL_INIT_LOAD_SSL_STRINGS 0x00200000L
+#		define OPENSSL_INIT_LOAD_CRYPTO_STRINGS 0x00000002L
 
-#define SSL_VERIFY_NONE (0)
-#define SSL_VERIFY_PEER (1)
-#define SSL_VERIFY_FAIL_IF_NO_PEER_CERT (2)
-#define SSL_VERIFY_CLIENT_ONCE (4)
-#define SSL_OP_ALL ((long)(0x80000BFFUL))
-#define SSL_OP_NO_SSLv2 (0x01000000L)
-#define SSL_OP_NO_SSLv3 (0x02000000L)
-#define SSL_OP_NO_TLSv1 (0x04000000L)
-#define SSL_OP_NO_TLSv1_2 (0x08000000L)
-#define SSL_OP_NO_TLSv1_1 (0x10000000L)
-#define SSL_OP_SINGLE_DH_USE (0x00100000L)
-#define SSL_OP_CIPHER_SERVER_PREFERENCE (0x00400000L)
-#define SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION (0x00010000L)
-#define SSL_OP_NO_COMPRESSION (0x00020000L)
+#		define SSL_VERIFY_NONE (0)
+#		define SSL_VERIFY_PEER (1)
+#		define SSL_VERIFY_FAIL_IF_NO_PEER_CERT (2)
+#		define SSL_VERIFY_CLIENT_ONCE (4)
+#		define SSL_OP_ALL ((long)(0x80000BFFUL))
+#		define SSL_OP_NO_SSLv2 (0x01000000L)
+#		define SSL_OP_NO_SSLv3 (0x02000000L)
+#		define SSL_OP_NO_TLSv1 (0x04000000L)
+#		define SSL_OP_NO_TLSv1_2 (0x08000000L)
+#		define SSL_OP_NO_TLSv1_1 (0x10000000L)
+#		define SSL_OP_SINGLE_DH_USE (0x00100000L)
+#		define SSL_OP_CIPHER_SERVER_PREFERENCE (0x00400000L)
+#		define SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION (0x00010000L)
+#		define SSL_OP_NO_COMPRESSION (0x00020000L)
 
-#define SSL_CB_HANDSHAKE_START (0x10)
-#define SSL_CB_HANDSHAKE_DONE (0x20)
+#		define SSL_CB_HANDSHAKE_START (0x10)
+#		define SSL_CB_HANDSHAKE_DONE (0x20)
 
-#define SSL_ERROR_NONE (0)
-#define SSL_ERROR_SSL (1)
-#define SSL_ERROR_WANT_READ (2)
-#define SSL_ERROR_WANT_WRITE (3)
-#define SSL_ERROR_WANT_X509_LOOKUP (4)
-#define SSL_ERROR_SYSCALL (5) /* see errno */
-#define SSL_ERROR_ZERO_RETURN (6)
-#define SSL_ERROR_WANT_CONNECT (7)
-#define SSL_ERROR_WANT_ACCEPT (8)
+#		define SSL_ERROR_NONE (0)
+#		define SSL_ERROR_SSL (1)
+#		define SSL_ERROR_WANT_READ (2)
+#		define SSL_ERROR_WANT_WRITE (3)
+#		define SSL_ERROR_WANT_X509_LOOKUP (4)
+#		define SSL_ERROR_SYSCALL (5) /* see errno */
+#		define SSL_ERROR_ZERO_RETURN (6)
+#		define SSL_ERROR_WANT_CONNECT (7)
+#		define SSL_ERROR_WANT_ACCEPT (8)
 
-#define TLSEXT_TYPE_server_name (0)
-#define TLSEXT_NAMETYPE_host_name (0)
-#define SSL_TLSEXT_ERR_OK (0)
-#define SSL_TLSEXT_ERR_ALERT_WARNING (1)
-#define SSL_TLSEXT_ERR_ALERT_FATAL (2)
-#define SSL_TLSEXT_ERR_NOACK (3)
+#		define TLSEXT_TYPE_server_name (0)
+#		define TLSEXT_NAMETYPE_host_name (0)
+#		define SSL_TLSEXT_ERR_OK (0)
+#		define SSL_TLSEXT_ERR_ALERT_WARNING (1)
+#		define SSL_TLSEXT_ERR_ALERT_FATAL (2)
+#		define SSL_TLSEXT_ERR_NOACK (3)
 
 struct ssl_func {
 	const char *name;  /* SSL function name */
@@ -1819,109 +1825,141 @@ struct ssl_func {
 };
 
 
-#if defined(OPENSSL_API_1_1)
+#		if defined(OPENSSL_API_1_1)
 
-#define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
-#define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)
-#define SSL_connect (*(int (*)(SSL *))ssl_sw[2].ptr)
-#define SSL_read (*(int (*)(SSL *, void *, int))ssl_sw[3].ptr)
-#define SSL_write (*(int (*)(SSL *, const void *, int))ssl_sw[4].ptr)
-#define SSL_get_error (*(int (*)(SSL *, int))ssl_sw[5].ptr)
-#define SSL_set_fd (*(int (*)(SSL *, SOCKET))ssl_sw[6].ptr)
-#define SSL_new (*(SSL * (*)(SSL_CTX *))ssl_sw[7].ptr)
-#define SSL_CTX_new (*(SSL_CTX * (*)(SSL_METHOD *))ssl_sw[8].ptr)
-#define TLS_server_method (*(SSL_METHOD * (*)(void))ssl_sw[9].ptr)
-#define OPENSSL_init_ssl                                                       \
-	(*(int (*)(uint64_t opts,                                                  \
-	           const OPENSSL_INIT_SETTINGS *settings))ssl_sw[10].ptr)
-#define SSL_CTX_use_PrivateKey_file                                            \
-	(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[11].ptr)
-#define SSL_CTX_use_certificate_file                                           \
-	(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[12].ptr)
-#define SSL_CTX_set_default_passwd_cb                                          \
-	(*(void (*)(SSL_CTX *, mg_callback_t))ssl_sw[13].ptr)
-#define SSL_CTX_free (*(void (*)(SSL_CTX *))ssl_sw[14].ptr)
-#define SSL_CTX_use_certificate_chain_file                                     \
-	(*(int (*)(SSL_CTX *, const char *))ssl_sw[15].ptr)
-#define TLS_client_method (*(SSL_METHOD * (*)(void))ssl_sw[16].ptr)
-#define SSL_pending (*(int (*)(SSL *))ssl_sw[17].ptr)
-#define SSL_CTX_set_verify                                                     \
-	(*(void (*)(SSL_CTX *,                                                     \
-	            int,                                                           \
-	            int (*verify_callback)(int, X509_STORE_CTX *)))ssl_sw[18].ptr)
-#define SSL_shutdown (*(int (*)(SSL *))ssl_sw[19].ptr)
-#define SSL_CTX_load_verify_locations                                          \
-	(*(int (*)(SSL_CTX *, const char *, const char *))ssl_sw[20].ptr)
-#define SSL_CTX_set_default_verify_paths (*(int (*)(SSL_CTX *))ssl_sw[21].ptr)
-#define SSL_CTX_set_verify_depth (*(void (*)(SSL_CTX *, int))ssl_sw[22].ptr)
-#define SSL_get_peer_certificate (*(X509 * (*)(SSL *))ssl_sw[23].ptr)
-#define SSL_get_version (*(const char *(*)(SSL *))ssl_sw[24].ptr)
-#define SSL_get_current_cipher (*(SSL_CIPHER * (*)(SSL *))ssl_sw[25].ptr)
-#define SSL_CIPHER_get_name                                                    \
-	(*(const char *(*)(const SSL_CIPHER *))ssl_sw[26].ptr)
-#define SSL_CTX_check_private_key (*(int (*)(SSL_CTX *))ssl_sw[27].ptr)
-#define SSL_CTX_set_session_id_context                                         \
-	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[28].ptr)
-#define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[29].ptr)
-#define SSL_CTX_set_cipher_list                                                \
-	(*(int (*)(SSL_CTX *, const char *))ssl_sw[30].ptr)
-#define SSL_CTX_set_options                                                    \
-	(*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[31].ptr)
-#define SSL_CTX_set_info_callback                                              \
-	(*(void (*)(SSL_CTX * ctx,                                                 \
-	            void (*callback)(SSL * s, int, int)))ssl_sw[32].ptr)
-#define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
-#define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
-#define SSL_CTX_callback_ctrl                                                  \
-	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
-#define SSL_get_servername                                                     \
-	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
-#define SSL_set_SSL_CTX (*(SSL_CTX * (*)(SSL *, SSL_CTX *))ssl_sw[37].ptr)
+#			define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
+#			define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)
+#			define SSL_connect (*(int (*)(SSL *))ssl_sw[2].ptr)
+#			define SSL_read (*(int (*)(SSL *, void *, int))ssl_sw[3].ptr)
+#			define SSL_write                                                  \
+				(*(int (*)(SSL *, const void *, int))ssl_sw[4].ptr)
+#			define SSL_get_error (*(int (*)(SSL *, int))ssl_sw[5].ptr)
+#			define SSL_set_fd (*(int (*)(SSL *, SOCKET))ssl_sw[6].ptr)
+#			define SSL_new (*(SSL * (*)(SSL_CTX *)) ssl_sw[7].ptr)
+#			define SSL_CTX_new (*(SSL_CTX * (*)(SSL_METHOD *)) ssl_sw[8].ptr)
+#			define TLS_server_method (*(SSL_METHOD * (*)(void)) ssl_sw[9].ptr)
+#			define OPENSSL_init_ssl                                           \
+				(*(int (*)(uint64_t opts,                                      \
+				           const OPENSSL_INIT_SETTINGS *settings))ssl_sw[10]   \
+				      .ptr)
+#			define SSL_CTX_use_PrivateKey_file                                \
+				(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[11].ptr)
+#			define SSL_CTX_use_certificate_file                               \
+				(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[12].ptr)
+#			define SSL_CTX_set_default_passwd_cb                              \
+				(*(void (*)(SSL_CTX *, mg_callback_t))ssl_sw[13].ptr)
+#			define SSL_CTX_free (*(void (*)(SSL_CTX *))ssl_sw[14].ptr)
+#			define SSL_CTX_use_certificate_chain_file                         \
+				(*(int (*)(SSL_CTX *, const char *))ssl_sw[15].ptr)
+#			define TLS_client_method (*(SSL_METHOD * (*)(void)) ssl_sw[16].ptr)
+#			define SSL_pending (*(int (*)(SSL *))ssl_sw[17].ptr)
+#			define SSL_CTX_set_verify                                         \
+				(*(void (*)(SSL_CTX *,                                         \
+				            int,                                               \
+				            int (*verify_callback)(int, X509_STORE_CTX *)))    \
+				      ssl_sw[18]                                               \
+				          .ptr)
+#			define SSL_shutdown (*(int (*)(SSL *))ssl_sw[19].ptr)
+#			define SSL_CTX_load_verify_locations                              \
+				(*(int (*)(SSL_CTX *, const char *, const char *))ssl_sw[20]   \
+				      .ptr)
+#			define SSL_CTX_set_default_verify_paths                           \
+				(*(int (*)(SSL_CTX *))ssl_sw[21].ptr)
+#			define SSL_CTX_set_verify_depth                                   \
+				(*(void (*)(SSL_CTX *, int))ssl_sw[22].ptr)
+#			define SSL_get_peer_certificate                                   \
+				(*(X509 * (*)(SSL *)) ssl_sw[23].ptr)
+#			define SSL_get_version (*(const char *(*)(SSL *))ssl_sw[24].ptr)
+#			define SSL_get_current_cipher                                     \
+				(*(SSL_CIPHER * (*)(SSL *)) ssl_sw[25].ptr)
+#			define SSL_CIPHER_get_name                                        \
+				(*(const char *(*)(const SSL_CIPHER *))ssl_sw[26].ptr)
+#			define SSL_CTX_check_private_key                                  \
+				(*(int (*)(SSL_CTX *))ssl_sw[27].ptr)
+#			define SSL_CTX_set_session_id_context                             \
+				(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))    \
+				      ssl_sw[28]                                               \
+				          .ptr)
+#			define SSL_CTX_ctrl                                               \
+				(*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[29].ptr)
+#			define SSL_CTX_set_cipher_list                                    \
+				(*(int (*)(SSL_CTX *, const char *))ssl_sw[30].ptr)
+#			define SSL_CTX_set_options                                        \
+				(*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[31].ptr)
+#			define SSL_CTX_set_info_callback                                  \
+				(*(void (*)(SSL_CTX * ctx,                                     \
+				            void (*callback)(SSL * s, int, int))) ssl_sw[32]   \
+				      .ptr)
+#			define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
+#			define SSL_set_ex_data                                            \
+				(*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
+#			define SSL_CTX_callback_ctrl                                      \
+				(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
+#			define SSL_get_servername                                         \
+				(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
+#			define SSL_set_SSL_CTX                                            \
+				(*(SSL_CTX * (*)(SSL *, SSL_CTX *)) ssl_sw[37].ptr)
 
-#define SSL_CTX_clear_options(ctx, op)                                         \
-	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
-#define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
-	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
+#			define SSL_CTX_clear_options(ctx, op)                             \
+				SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
+#			define SSL_CTX_set_ecdh_auto(ctx, onoff)                          \
+				SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
 
-#define SSL_CTRL_SET_TLSEXT_SERVERNAME_CB 53
-#define SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG 54
-#define SSL_CTX_set_tlsext_servername_callback(ctx, cb)                        \
-	SSL_CTX_callback_ctrl(ctx,                                                 \
-	                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,                   \
-	                      (void (*)(void))cb)
-#define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
-	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
+#			define SSL_CTRL_SET_TLSEXT_SERVERNAME_CB 53
+#			define SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG 54
+#			define SSL_CTX_set_tlsext_servername_callback(ctx, cb)            \
+				SSL_CTX_callback_ctrl(ctx,                                     \
+				                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,       \
+				                      (void (*)(void))cb)
+#			define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                \
+				SSL_CTX_ctrl(ctx,                                              \
+				             SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG,               \
+				             0,                                                \
+				             (void *)arg)
 
-#define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
-#define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
+#			define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
+#			define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
 
-#define SSL_set_app_data(s, arg) (SSL_set_ex_data(s, 0, (char *)arg))
-#define SSL_get_app_data(s) (SSL_get_ex_data(s, 0))
+#			define SSL_set_app_data(s, arg)                                   \
+				(SSL_set_ex_data(s, 0, (char *)arg))
+#			define SSL_get_app_data(s) (SSL_get_ex_data(s, 0))
 
-#define ERR_get_error (*(unsigned long (*)(void))crypto_sw[0].ptr)
-#define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[1].ptr)
-#define ERR_remove_state (*(void (*)(unsigned long))crypto_sw[2].ptr)
-#define CONF_modules_unload (*(void (*)(int))crypto_sw[3].ptr)
-#define X509_free (*(void (*)(X509 *))crypto_sw[4].ptr)
-#define X509_get_subject_name (*(X509_NAME * (*)(X509 *))crypto_sw[5].ptr)
-#define X509_get_issuer_name (*(X509_NAME * (*)(X509 *))crypto_sw[6].ptr)
-#define X509_NAME_oneline                                                      \
-	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[7].ptr)
-#define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *))crypto_sw[8].ptr)
-#define EVP_get_digestbyname                                                   \
-	(*(const EVP_MD *(*)(const char *))crypto_sw[9].ptr)
-#define EVP_Digest                                                             \
-	(*(int (*)(                                                                \
-	    const void *, size_t, void *, unsigned int *, const EVP_MD *, void *)) \
-	      crypto_sw[10].ptr)
-#define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[11].ptr)
-#define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[12].ptr)
-#define ASN1_INTEGER_to_BN                                                     \
-	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn))crypto_sw[13].ptr)
-#define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[14].ptr)
-#define CRYPTO_free (*(void (*)(void *addr))crypto_sw[15].ptr)
+#			define ERR_get_error (*(unsigned long (*)(void))crypto_sw[0].ptr)
+#			define ERR_error_string                                           \
+				(*(char *(*)(unsigned long, char *))crypto_sw[1].ptr)
+#			define ERR_remove_state                                           \
+				(*(void (*)(unsigned long))crypto_sw[2].ptr)
+#			define CONF_modules_unload (*(void (*)(int))crypto_sw[3].ptr)
+#			define X509_free (*(void (*)(X509 *))crypto_sw[4].ptr)
+#			define X509_get_subject_name                                      \
+				(*(X509_NAME * (*)(X509 *)) crypto_sw[5].ptr)
+#			define X509_get_issuer_name                                       \
+				(*(X509_NAME * (*)(X509 *)) crypto_sw[6].ptr)
+#			define X509_NAME_oneline                                          \
+				(*(char *(*)(X509_NAME *, char *, int))crypto_sw[7].ptr)
+#			define X509_get_serialNumber                                      \
+				(*(ASN1_INTEGER * (*)(X509 *)) crypto_sw[8].ptr)
+#			define EVP_get_digestbyname                                       \
+				(*(const EVP_MD *(*)(const char *))crypto_sw[9].ptr)
+#			define EVP_Digest                                                 \
+				(*(int (*)(const void *,                                       \
+				           size_t,                                             \
+				           void *,                                             \
+				           unsigned int *,                                     \
+				           const EVP_MD *,                                     \
+				           void *))crypto_sw[10]                               \
+				      .ptr)
+#			define i2d_X509                                                   \
+				(*(int (*)(X509 *, unsigned char **))crypto_sw[11].ptr)
+#			define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[12].ptr)
+#			define ASN1_INTEGER_to_BN                                         \
+				(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn))           \
+				      crypto_sw[13]                                            \
+				          .ptr)
+#			define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[14].ptr)
+#			define CRYPTO_free (*(void (*)(void *addr))crypto_sw[15].ptr)
 
-#define OPENSSL_free(a) CRYPTO_free(a)
+#			define OPENSSL_free(a) CRYPTO_free(a)
 
 
 /* init_ssl_ctx() function updates this array.
@@ -1988,118 +2026,155 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
                                       {"BN_free", NULL},
                                       {"CRYPTO_free", NULL},
                                       {NULL, NULL}};
-#else
+#		else
 
-#define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
-#define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)
-#define SSL_connect (*(int (*)(SSL *))ssl_sw[2].ptr)
-#define SSL_read (*(int (*)(SSL *, void *, int))ssl_sw[3].ptr)
-#define SSL_write (*(int (*)(SSL *, const void *, int))ssl_sw[4].ptr)
-#define SSL_get_error (*(int (*)(SSL *, int))ssl_sw[5].ptr)
-#define SSL_set_fd (*(int (*)(SSL *, SOCKET))ssl_sw[6].ptr)
-#define SSL_new (*(SSL * (*)(SSL_CTX *))ssl_sw[7].ptr)
-#define SSL_CTX_new (*(SSL_CTX * (*)(SSL_METHOD *))ssl_sw[8].ptr)
-#define SSLv23_server_method (*(SSL_METHOD * (*)(void))ssl_sw[9].ptr)
-#define SSL_library_init (*(int (*)(void))ssl_sw[10].ptr)
-#define SSL_CTX_use_PrivateKey_file                                            \
-	(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[11].ptr)
-#define SSL_CTX_use_certificate_file                                           \
-	(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[12].ptr)
-#define SSL_CTX_set_default_passwd_cb                                          \
-	(*(void (*)(SSL_CTX *, mg_callback_t))ssl_sw[13].ptr)
-#define SSL_CTX_free (*(void (*)(SSL_CTX *))ssl_sw[14].ptr)
-#define SSL_load_error_strings (*(void (*)(void))ssl_sw[15].ptr)
-#define SSL_CTX_use_certificate_chain_file                                     \
-	(*(int (*)(SSL_CTX *, const char *))ssl_sw[16].ptr)
-#define SSLv23_client_method (*(SSL_METHOD * (*)(void))ssl_sw[17].ptr)
-#define SSL_pending (*(int (*)(SSL *))ssl_sw[18].ptr)
-#define SSL_CTX_set_verify                                                     \
-	(*(void (*)(SSL_CTX *,                                                     \
-	            int,                                                           \
-	            int (*verify_callback)(int, X509_STORE_CTX *)))ssl_sw[19].ptr)
-#define SSL_shutdown (*(int (*)(SSL *))ssl_sw[20].ptr)
-#define SSL_CTX_load_verify_locations                                          \
-	(*(int (*)(SSL_CTX *, const char *, const char *))ssl_sw[21].ptr)
-#define SSL_CTX_set_default_verify_paths (*(int (*)(SSL_CTX *))ssl_sw[22].ptr)
-#define SSL_CTX_set_verify_depth (*(void (*)(SSL_CTX *, int))ssl_sw[23].ptr)
-#define SSL_get_peer_certificate (*(X509 * (*)(SSL *))ssl_sw[24].ptr)
-#define SSL_get_version (*(const char *(*)(SSL *))ssl_sw[25].ptr)
-#define SSL_get_current_cipher (*(SSL_CIPHER * (*)(SSL *))ssl_sw[26].ptr)
-#define SSL_CIPHER_get_name                                                    \
-	(*(const char *(*)(const SSL_CIPHER *))ssl_sw[27].ptr)
-#define SSL_CTX_check_private_key (*(int (*)(SSL_CTX *))ssl_sw[28].ptr)
-#define SSL_CTX_set_session_id_context                                         \
-	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
-#define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
-#define SSL_CTX_set_cipher_list                                                \
-	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
-#define SSL_CTX_set_info_callback                                              \
-	(*(void (*)(SSL_CTX *, void (*callback)(SSL * s, int, int)))ssl_sw[32].ptr)
-#define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
-#define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
-#define SSL_CTX_callback_ctrl                                                  \
-	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
-#define SSL_get_servername                                                     \
-	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
-#define SSL_set_SSL_CTX (*(SSL_CTX * (*)(SSL *, SSL_CTX *))ssl_sw[37].ptr)
+#			define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
+#			define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)
+#			define SSL_connect (*(int (*)(SSL *))ssl_sw[2].ptr)
+#			define SSL_read (*(int (*)(SSL *, void *, int))ssl_sw[3].ptr)
+#			define SSL_write                                                  \
+				(*(int (*)(SSL *, const void *, int))ssl_sw[4].ptr)
+#			define SSL_get_error (*(int (*)(SSL *, int))ssl_sw[5].ptr)
+#			define SSL_set_fd (*(int (*)(SSL *, SOCKET))ssl_sw[6].ptr)
+#			define SSL_new (*(SSL * (*)(SSL_CTX *)) ssl_sw[7].ptr)
+#			define SSL_CTX_new (*(SSL_CTX * (*)(SSL_METHOD *)) ssl_sw[8].ptr)
+#			define SSLv23_server_method                                       \
+				(*(SSL_METHOD * (*)(void)) ssl_sw[9].ptr)
+#			define SSL_library_init (*(int (*)(void))ssl_sw[10].ptr)
+#			define SSL_CTX_use_PrivateKey_file                                \
+				(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[11].ptr)
+#			define SSL_CTX_use_certificate_file                               \
+				(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[12].ptr)
+#			define SSL_CTX_set_default_passwd_cb                              \
+				(*(void (*)(SSL_CTX *, mg_callback_t))ssl_sw[13].ptr)
+#			define SSL_CTX_free (*(void (*)(SSL_CTX *))ssl_sw[14].ptr)
+#			define SSL_load_error_strings (*(void (*)(void))ssl_sw[15].ptr)
+#			define SSL_CTX_use_certificate_chain_file                         \
+				(*(int (*)(SSL_CTX *, const char *))ssl_sw[16].ptr)
+#			define SSLv23_client_method                                       \
+				(*(SSL_METHOD * (*)(void)) ssl_sw[17].ptr)
+#			define SSL_pending (*(int (*)(SSL *))ssl_sw[18].ptr)
+#			define SSL_CTX_set_verify                                         \
+				(*(void (*)(SSL_CTX *,                                         \
+				            int,                                               \
+				            int (*verify_callback)(int, X509_STORE_CTX *)))    \
+				      ssl_sw[19]                                               \
+				          .ptr)
+#			define SSL_shutdown (*(int (*)(SSL *))ssl_sw[20].ptr)
+#			define SSL_CTX_load_verify_locations                              \
+				(*(int (*)(SSL_CTX *, const char *, const char *))ssl_sw[21]   \
+				      .ptr)
+#			define SSL_CTX_set_default_verify_paths                           \
+				(*(int (*)(SSL_CTX *))ssl_sw[22].ptr)
+#			define SSL_CTX_set_verify_depth                                   \
+				(*(void (*)(SSL_CTX *, int))ssl_sw[23].ptr)
+#			define SSL_get_peer_certificate                                   \
+				(*(X509 * (*)(SSL *)) ssl_sw[24].ptr)
+#			define SSL_get_version (*(const char *(*)(SSL *))ssl_sw[25].ptr)
+#			define SSL_get_current_cipher                                     \
+				(*(SSL_CIPHER * (*)(SSL *)) ssl_sw[26].ptr)
+#			define SSL_CIPHER_get_name                                        \
+				(*(const char *(*)(const SSL_CIPHER *))ssl_sw[27].ptr)
+#			define SSL_CTX_check_private_key                                  \
+				(*(int (*)(SSL_CTX *))ssl_sw[28].ptr)
+#			define SSL_CTX_set_session_id_context                             \
+				(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))    \
+				      ssl_sw[29]                                               \
+				          .ptr)
+#			define SSL_CTX_ctrl                                               \
+				(*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
+#			define SSL_CTX_set_cipher_list                                    \
+				(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
+#			define SSL_CTX_set_info_callback                                  \
+				(*(void (*)(SSL_CTX *, void (*callback)(SSL * s, int, int)))   \
+				      ssl_sw[32]                                               \
+				          .ptr)
+#			define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
+#			define SSL_set_ex_data                                            \
+				(*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
+#			define SSL_CTX_callback_ctrl                                      \
+				(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
+#			define SSL_get_servername                                         \
+				(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
+#			define SSL_set_SSL_CTX                                            \
+				(*(SSL_CTX * (*)(SSL *, SSL_CTX *)) ssl_sw[37].ptr)
 
-#define SSL_CTX_set_options(ctx, op)                                           \
-	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
-#define SSL_CTX_clear_options(ctx, op)                                         \
-	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
-#define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
-	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
+#			define SSL_CTX_set_options(ctx, op)                               \
+				SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
+#			define SSL_CTX_clear_options(ctx, op)                             \
+				SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
+#			define SSL_CTX_set_ecdh_auto(ctx, onoff)                          \
+				SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
 
-#define SSL_CTRL_SET_TLSEXT_SERVERNAME_CB 53
-#define SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG 54
-#define SSL_CTX_set_tlsext_servername_callback(ctx, cb)                        \
-	SSL_CTX_callback_ctrl(ctx,                                                 \
-	                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,                   \
-	                      (void (*)(void))cb)
-#define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
-	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
+#			define SSL_CTRL_SET_TLSEXT_SERVERNAME_CB 53
+#			define SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG 54
+#			define SSL_CTX_set_tlsext_servername_callback(ctx, cb)            \
+				SSL_CTX_callback_ctrl(ctx,                                     \
+				                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,       \
+				                      (void (*)(void))cb)
+#			define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                \
+				SSL_CTX_ctrl(ctx,                                              \
+				             SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG,               \
+				             0,                                                \
+				             (void *)arg)
 
-#define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
-#define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
+#			define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
+#			define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
 
-#define SSL_set_app_data(s, arg) (SSL_set_ex_data(s, 0, (char *)arg))
-#define SSL_get_app_data(s) (SSL_get_ex_data(s, 0))
+#			define SSL_set_app_data(s, arg)                                   \
+				(SSL_set_ex_data(s, 0, (char *)arg))
+#			define SSL_get_app_data(s) (SSL_get_ex_data(s, 0))
 
-#define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
-#define CRYPTO_set_locking_callback                                            \
-	(*(void (*)(void (*)(int, int, const char *, int)))crypto_sw[1].ptr)
-#define CRYPTO_set_id_callback                                                 \
-	(*(void (*)(unsigned long (*)(void)))crypto_sw[2].ptr)
-#define ERR_get_error (*(unsigned long (*)(void))crypto_sw[3].ptr)
-#define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[4].ptr)
-#define ERR_remove_state (*(void (*)(unsigned long))crypto_sw[5].ptr)
-#define ERR_free_strings (*(void (*)(void))crypto_sw[6].ptr)
-#define ENGINE_cleanup (*(void (*)(void))crypto_sw[7].ptr)
-#define CONF_modules_unload (*(void (*)(int))crypto_sw[8].ptr)
-#define CRYPTO_cleanup_all_ex_data (*(void (*)(void))crypto_sw[9].ptr)
-#define EVP_cleanup (*(void (*)(void))crypto_sw[10].ptr)
-#define X509_free (*(void (*)(X509 *))crypto_sw[11].ptr)
-#define X509_get_subject_name (*(X509_NAME * (*)(X509 *))crypto_sw[12].ptr)
-#define X509_get_issuer_name (*(X509_NAME * (*)(X509 *))crypto_sw[13].ptr)
-#define X509_NAME_oneline                                                      \
-	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[14].ptr)
-#define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *))crypto_sw[15].ptr)
-#define i2c_ASN1_INTEGER                                                       \
-	(*(int (*)(ASN1_INTEGER *, unsigned char **))crypto_sw[16].ptr)
-#define EVP_get_digestbyname                                                   \
-	(*(const EVP_MD *(*)(const char *))crypto_sw[17].ptr)
-#define EVP_Digest                                                             \
-	(*(int (*)(                                                                \
-	    const void *, size_t, void *, unsigned int *, const EVP_MD *, void *)) \
-	      crypto_sw[18].ptr)
-#define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[19].ptr)
-#define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[20].ptr)
-#define ASN1_INTEGER_to_BN                                                     \
-	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn))crypto_sw[21].ptr)
-#define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[22].ptr)
-#define CRYPTO_free (*(void (*)(void *addr))crypto_sw[23].ptr)
+#			define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
+#			define CRYPTO_set_locking_callback                                \
+				(*(void (*)(                                                   \
+				    void (*)(int, int, const char *, int)))crypto_sw[1]        \
+				      .ptr)
+#			define CRYPTO_set_id_callback                                     \
+				(*(void (*)(unsigned long (*)(void)))crypto_sw[2].ptr)
+#			define ERR_get_error (*(unsigned long (*)(void))crypto_sw[3].ptr)
+#			define ERR_error_string                                           \
+				(*(char *(*)(unsigned long, char *))crypto_sw[4].ptr)
+#			define ERR_remove_state                                           \
+				(*(void (*)(unsigned long))crypto_sw[5].ptr)
+#			define ERR_free_strings (*(void (*)(void))crypto_sw[6].ptr)
+#			define ENGINE_cleanup (*(void (*)(void))crypto_sw[7].ptr)
+#			define CONF_modules_unload (*(void (*)(int))crypto_sw[8].ptr)
+#			define CRYPTO_cleanup_all_ex_data                                 \
+				(*(void (*)(void))crypto_sw[9].ptr)
+#			define EVP_cleanup (*(void (*)(void))crypto_sw[10].ptr)
+#			define X509_free (*(void (*)(X509 *))crypto_sw[11].ptr)
+#			define X509_get_subject_name                                      \
+				(*(X509_NAME * (*)(X509 *)) crypto_sw[12].ptr)
+#			define X509_get_issuer_name                                       \
+				(*(X509_NAME * (*)(X509 *)) crypto_sw[13].ptr)
+#			define X509_NAME_oneline                                          \
+				(*(char *(*)(X509_NAME *, char *, int))crypto_sw[14].ptr)
+#			define X509_get_serialNumber                                      \
+				(*(ASN1_INTEGER * (*)(X509 *)) crypto_sw[15].ptr)
+#			define i2c_ASN1_INTEGER                                           \
+				(*(int (*)(ASN1_INTEGER *, unsigned char **))crypto_sw[16].ptr)
+#			define EVP_get_digestbyname                                       \
+				(*(const EVP_MD *(*)(const char *))crypto_sw[17].ptr)
+#			define EVP_Digest                                                 \
+				(*(int (*)(const void *,                                       \
+				           size_t,                                             \
+				           void *,                                             \
+				           unsigned int *,                                     \
+				           const EVP_MD *,                                     \
+				           void *))crypto_sw[18]                               \
+				      .ptr)
+#			define i2d_X509                                                   \
+				(*(int (*)(X509 *, unsigned char **))crypto_sw[19].ptr)
+#			define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[20].ptr)
+#			define ASN1_INTEGER_to_BN                                         \
+				(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn))           \
+				      crypto_sw[21]                                            \
+				          .ptr)
+#			define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[22].ptr)
+#			define CRYPTO_free (*(void (*)(void *addr))crypto_sw[23].ptr)
 
-#define OPENSSL_free(a) CRYPTO_free(a)
+#			define OPENSSL_free(a) CRYPTO_free(a)
 
 /* init_ssl_ctx() function updates this array.
  * It loads SSL library dynamically and changes NULLs to the actual addresses
@@ -2173,9 +2248,9 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"BN_free", NULL},
                                       {"CRYPTO_free", NULL},
                                       {NULL, NULL}};
-#endif /* OPENSSL_API_1_1 */
-#endif /* NO_SSL_DL */
-#endif /* NO_SSL */
+#		endif /* OPENSSL_API_1_1 */
+#	endif     /* NO_SSL_DL */
+#endif         /* NO_SSL */
 
 
 #if !defined(NO_CACHING)
@@ -2246,29 +2321,23 @@ struct mg_file {
 
 #if defined(MG_USE_OPEN_FILE)
 
-#define STRUCT_FILE_INITIALIZER                                                \
-	{                                                                          \
+#	define STRUCT_FILE_INITIALIZER                                            \
 		{                                                                      \
-			(uint64_t)0, (time_t)0, 0, 0, 0                                    \
-		}                                                                      \
-		,                                                                      \
-		{                                                                      \
-			(FILE *) NULL, (const char *)NULL                                  \
-		}                                                                      \
-	}
+			{(uint64_t)0, (time_t)0, 0, 0, 0},                                 \
+			{                                                                  \
+				(FILE *)NULL, (const char *)NULL                               \
+			}                                                                  \
+		}
 
 #else
 
-#define STRUCT_FILE_INITIALIZER                                                \
-	{                                                                          \
+#	define STRUCT_FILE_INITIALIZER                                            \
 		{                                                                      \
-			(uint64_t)0, (time_t)0, 0, 0, 0                                    \
-		}                                                                      \
-		,                                                                      \
-		{                                                                      \
-			(FILE *) NULL                                                      \
-		}                                                                      \
-	}
+			{(uint64_t)0, (time_t)0, 0, 0, 0},                                 \
+			{                                                                  \
+				(FILE *)NULL                                                   \
+			}                                                                  \
+		}
 
 #endif
 
@@ -2297,7 +2366,7 @@ enum {
 	NUM_THREADS,
 	RUN_AS_USER,
 	CONFIG_TCP_NODELAY, /* Prepended CONFIG_ to avoid conflict with the
-                         * socket option typedef TCP_NODELAY. */
+	                     * socket option typedef TCP_NODELAY. */
 	MAX_REQUEST_SIZE,
 	LINGER_TIMEOUT,
 #if defined(__linux__)
@@ -2357,9 +2426,9 @@ enum {
 	LUA_PRELOAD_FILE,
 	LUA_SCRIPT_EXTENSIONS,
 	LUA_SERVER_PAGE_EXTENSIONS,
-#if defined(MG_EXPERIMENTAL_INTERFACES)
+#	if defined(MG_EXPERIMENTAL_INTERFACES)
 	LUA_DEBUG_PARAMS,
-#endif
+#	endif
 #endif
 #if defined(USE_DUKTAPE)
 	DUKTAPE_SCRIPT_EXTENSIONS,
@@ -2468,9 +2537,9 @@ static const struct mg_option config_options[] = {
     {"lua_preload_file", MG_CONFIG_TYPE_FILE, NULL},
     {"lua_script_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
     {"lua_server_page_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lp$|**.lsp$"},
-#if defined(MG_EXPERIMENTAL_INTERFACES)
+#	if defined(MG_EXPERIMENTAL_INTERFACES)
     {"lua_debug", MG_CONFIG_TYPE_STRING, NULL},
-#endif
+#	endif
 #endif
 #if defined(USE_DUKTAPE)
     /* The support for duktape is still in alpha version state.
@@ -2722,7 +2791,7 @@ struct mg_connection {
 	int in_websocket_handling; /* 1 if in read_websocket */
 #endif
 	int handled_requests; /* Number of requests handled by this connection
-	                         */
+	                       */
 	int buf_size;         /* Buffer size */
 	int request_len;      /* Size of the request + headers in a buffer */
 	int data_len;         /* Total size of data in a buffer */
@@ -2753,7 +2822,7 @@ struct de {
 #if defined(USE_WEBSOCKET)
 static int is_websocket_protocol(const struct mg_connection *conn);
 #else
-#define is_websocket_protocol(conn) (0)
+#	define is_websocket_protocol(conn) (0)
 #endif
 
 
@@ -2768,29 +2837,29 @@ static void mg_cry_internal_wrap(const struct mg_connection *conn,
 
 
 #if !defined(NO_THREAD_NAME)
-#if defined(_WIN32) && defined(_MSC_VER)
+#	if defined(_WIN32) && defined(_MSC_VER)
 /* Set the thread name for debugging purposes in Visual Studio
  * http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
  */
-#pragma pack(push, 8)
+#		pragma pack(push, 8)
 typedef struct tagTHREADNAME_INFO {
 	DWORD dwType;     /* Must be 0x1000. */
 	LPCSTR szName;    /* Pointer to name (in user addr space). */
 	DWORD dwThreadID; /* Thread ID (-1=caller thread). */
 	DWORD dwFlags;    /* Reserved for future use, must be zero. */
 } THREADNAME_INFO;
-#pragma pack(pop)
+#		pragma pack(pop)
 
-#elif defined(__linux__)
+#	elif defined(__linux__)
 
-#include <sys/prctl.h>
-#include <sys/sendfile.h>
-#if defined(ALTERNATIVE_QUEUE)
-#include <sys/eventfd.h>
-#endif /* ALTERNATIVE_QUEUE */
+#		include <sys/prctl.h>
+#		include <sys/sendfile.h>
+#		if defined(ALTERNATIVE_QUEUE)
+#			include <sys/eventfd.h>
+#		endif /* ALTERNATIVE_QUEUE */
 
 
-#if defined(ALTERNATIVE_QUEUE)
+#		if defined(ALTERNATIVE_QUEUE)
 
 static void *
 event_create(void)
@@ -2874,12 +2943,12 @@ event_destroy(void *eventhdl)
 }
 
 
-#endif
+#		endif
 
-#endif
+#	endif
 
 
-#if !defined(__linux__) && !defined(_WIN32) && defined(ALTERNATIVE_QUEUE)
+#	if !defined(__linux__) && !defined(_WIN32) && defined(ALTERNATIVE_QUEUE)
 
 struct posix_event {
 	pthread_mutex_t mutex;
@@ -2940,7 +3009,7 @@ event_destroy(void *eventhdl)
 	pthread_mutex_destroy(&(ev->mutex));
 	mg_free(ev);
 }
-#endif
+#	endif
 
 
 static void
@@ -2951,11 +3020,10 @@ mg_set_thread_name(const char *name)
 	mg_snprintf(
 	    NULL, NULL, threadName, sizeof(threadName), "civetweb-%s", name);
 
-#if defined(_WIN32)
-#if defined(_MSC_VER)
+#	if defined(_WIN32)
+#		if defined(_MSC_VER)
 	/* Windows and Visual Studio Compiler */
-	__try
-	{
+	__try {
 		THREADNAME_INFO info;
 		info.dwType = 0x1000;
 		info.szName = threadName;
@@ -2966,26 +3034,24 @@ mg_set_thread_name(const char *name)
 		               0,
 		               sizeof(info) / sizeof(ULONG_PTR),
 		               (ULONG_PTR *)&info);
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
 	}
-	__except(EXCEPTION_EXECUTE_HANDLER)
-	{
-	}
-#elif defined(__MINGW32__)
+#		elif defined(__MINGW32__)
 /* No option known to set thread name for MinGW */
-#endif
-#elif defined(_GNU_SOURCE) && defined(__GLIBC__)                               \
-    && ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
+#		endif
+#	elif defined(_GNU_SOURCE) && defined(__GLIBC__)                           \
+	    && ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
 /* pthread_setname_np first appeared in glibc in version 2.12*/
-#if defined(__MACH__)
+#		if defined(__MACH__)
 	/* OS X only current thread name can be changed */
 	(void)pthread_setname_np(threadName);
-#else
+#		else
 	(void)pthread_setname_np(pthread_self(), threadName);
-#endif
-#elif defined(__linux__)
+#		endif
+#	elif defined(__linux__)
 	/* on linux we can use the old prctl function */
 	(void)prctl(PR_SET_NAME, threadName, 0, 0, 0);
-#endif
+#	endif
 }
 #else /* !defined(NO_THREAD_NAME) */
 void
@@ -3000,8 +3066,8 @@ const char **
 mg_get_valid_option_names(void)
 {
 	/* This function is deprecated. Use mg_get_valid_options instead. */
-	static const char *
-	    data[2 * sizeof(config_options) / sizeof(config_options[0])] = {0};
+	static const char
+	    *data[2 * sizeof(config_options) / sizeof(config_options[0])] = {0};
 	int i;
 
 	for (i = 0; config_options[i].name != NULL; i++) {
@@ -3345,8 +3411,8 @@ mg_vsnprintf(const struct mg_connection *conn,
 	}
 
 #if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#	pragma clang diagnostic push
+#	pragma clang diagnostic ignored "-Wformat-nonliteral"
 /* Using fmt as a non-literal is intended here, since it is mostly called
  * indirectly by mg_snprintf */
 #endif
@@ -3355,7 +3421,7 @@ mg_vsnprintf(const struct mg_connection *conn,
 	ok = (n >= 0) && ((size_t)n < buflen);
 
 #if defined(__clang__)
-#pragma clang diagnostic pop
+#	pragma clang diagnostic pop
 #endif
 
 	if (ok) {
@@ -3466,11 +3532,11 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 	for (i = 0; i < size && i < ctx->num_listening_sockets; i++) {
 		ssl[i] = ctx->listening_sockets[i].is_ssl;
 		ports[i] =
-#if defined(USE_IPV6)
+#	if defined(USE_IPV6)
 		    (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
 		        ? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
 		        :
-#endif
+#	endif
 		        ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
 	}
 	return i;
@@ -3595,7 +3661,7 @@ static void mg_cry_internal_impl(const struct mg_connection *conn,
                                  unsigned line,
                                  const char *fmt,
                                  va_list ap);
-#include "external_mg_cry_internal_impl.inl"
+#	include "external_mg_cry_internal_impl.inl"
 #else
 
 /* Print error message to the opened error log stream. */
@@ -3614,16 +3680,16 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 	(void)func;
 	(void)line;
 
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-#endif
+#	if defined(GCC_DIAGNOSTIC)
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#	endif
 
 	IGNORE_UNUSED_RESULT(vsnprintf_impl(buf, sizeof(buf), fmt, ap));
 
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
-#endif
+#	if defined(GCC_DIAGNOSTIC)
+#		pragma GCC diagnostic pop
+#	endif
 
 	buf[sizeof(buf) - 1] = 0;
 
@@ -3644,7 +3710,8 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 			if (mg_fopen(conn,
 			             conn->dom_ctx->config[ERROR_LOG_FILE],
 			             MG_FOPEN_MODE_APPEND,
-			             &fi) == 0) {
+			             &fi)
+			    == 0) {
 				fi.access.fp = NULL;
 			}
 		} else {
@@ -3783,8 +3850,8 @@ static const char *
 get_proto_name(const struct mg_connection *conn)
 {
 #if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code"
+#	pragma clang diagnostic push
+#	pragma clang diagnostic ignored "-Wunreachable-code"
 /* Depending on USE_WEBSOCKET and NO_SSL, some oft the protocols might be
  * not supported. Clang raises an "unreachable code" warning for parts of ?:
  * unreachable, but splitting into four different #ifdef clauses here is more
@@ -3801,7 +3868,7 @@ get_proto_name(const struct mg_connection *conn)
 	return proto;
 
 #if defined(__clang__)
-#pragma clang diagnostic pop
+#	pragma clang diagnostic pop
 #endif
 }
 
@@ -3841,8 +3908,8 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 
 		} else {
 
-/* The common case is a relative URI, so we have to
- * construct an absolute URI from server name and port */
+			/* The common case is a relative URI, so we have to
+			 * construct an absolute URI from server name and port */
 
 #if defined(USE_IPV6)
 			int is_ipv6 = (conn->client.lsa.sa.sa_family == AF_INET6);
@@ -3855,8 +3922,7 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 			int auth_domain_check_enabled =
 			    conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK]
 			    && (!mg_strcasecmp(
-			            conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK],
-			            "yes"));
+			           conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes"));
 			const char *server_domain =
 			    conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
 
@@ -3942,14 +4008,14 @@ skip_quoted(char **buf,
 
 #if defined(GCC_DIAGNOSTIC)
 /* Disable spurious conversion warning for GCC */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsign-conversion"
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wsign-conversion"
 #endif /* defined(GCC_DIAGNOSTIC) */
 
 		end_whitespace = end_word + strspn(&end_word[1], whitespace) + 1;
 
 #if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
+#	pragma GCC diagnostic pop
 #endif /* defined(GCC_DIAGNOSTIC) */
 
 		for (p = end_word; p < end_whitespace; p++) {
@@ -4129,10 +4195,11 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 
 	if ((or_str = (const char *)memchr(pattern, '|', pattern_len)) != NULL) {
 		res = match_prefix(pattern, (size_t)(or_str - pattern), str);
-		return (res > 0) ? res : match_prefix(or_str + 1,
-		                                      (size_t)((pattern + pattern_len)
-		                                               - (or_str + 1)),
-		                                      str);
+		return (res > 0) ? res
+		                 : match_prefix(or_str + 1,
+		                                (size_t)((pattern + pattern_len)
+		                                         - (or_str + 1)),
+		                                str);
 	}
 
 	for (i = 0, j = 0; (i < (ptrdiff_t)pattern_len); i++, j++) {
@@ -4329,7 +4396,7 @@ mg_get_response_code_text(const struct mg_connection *conn, int response_code)
 		return "Partial Content"; /* RFC2616 Section 10.2.7 */
 	case 207:
 		return "Multi-Status"; /* RFC2518 Section 10.2, RFC4918 Section 11.1
-		                          */
+		                        */
 	case 208:
 		return "Already Reported"; /* RFC5842 Section 7.1 */
 
@@ -4389,7 +4456,7 @@ mg_get_response_code_text(const struct mg_connection *conn, int response_code)
 		return "Unsupported Media Type"; /* RFC2616 Section 10.4.16 */
 	case 416:
 		return "Requested range not satisfiable"; /* RFC2616 Section 10.4.17
-		                                             */
+		                                           */
 	case 417:
 		return "Expectation Failed"; /* RFC2616 Section 10.4.18 */
 
@@ -4525,8 +4592,9 @@ mg_send_http_error_impl(struct mg_connection *conn,
 	has_body = ((status > 199) && (status != 204) && (status != 304));
 
 	/* Prepare message in buf, if required */
-	if (has_body || (!conn->in_error_handler
-	                 && (conn->phys_ctx->callbacks.http_error != NULL))) {
+	if (has_body
+	    || (!conn->in_error_handler
+	        && (conn->phys_ctx->callbacks.http_error != NULL))) {
 		/* Store error message in errmsg_buf */
 		va_copy(ap, args);
 		mg_vsnprintf(conn, NULL, errmsg_buf, sizeof(errmsg_buf), fmt, ap);
@@ -4829,11 +4897,11 @@ mg_send_http_redirect(struct mg_connection *conn,
 #if defined(_WIN32)
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(GCC_DIAGNOSTIC)
+#	if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wunused-function"
+#	endif
 
 
 FUNCTION_MAY_BE_UNUSED
@@ -4862,7 +4930,7 @@ pthread_mutex_lock(pthread_mutex_t *mutex)
 }
 
 
-#if defined(ENABLE_UNUSED_PTHREAD_FUNCTIONS)
+#	if defined(ENABLE_UNUSED_PTHREAD_FUNCTIONS)
 FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_trylock(pthread_mutex_t *mutex)
@@ -4875,7 +4943,7 @@ pthread_mutex_trylock(pthread_mutex_t *mutex)
 	}
 	return -1;
 }
-#endif
+#	endif
 
 
 FUNCTION_MAY_BE_UNUSED
@@ -5014,7 +5082,7 @@ pthread_cond_destroy(pthread_cond_t *cv)
 }
 
 
-#if defined(ALTERNATIVE_QUEUE)
+#	if defined(ALTERNATIVE_QUEUE)
 FUNCTION_MAY_BE_UNUSED
 static void *
 event_create(void)
@@ -5046,13 +5114,13 @@ event_destroy(void *eventhdl)
 {
 	CloseHandle((HANDLE)eventhdl);
 }
-#endif
+#	endif
 
 
-#if defined(GCC_DIAGNOSTIC)
+#	if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
-#pragma GCC diagnostic pop
-#endif
+#		pragma GCC diagnostic pop
+#	endif
 
 
 /* For Windows, change all slashes to backslashes in path names. */
@@ -5137,7 +5205,7 @@ path_to_unicode(const struct mg_connection *conn,
 	}
 	(void)conn; /* conn is currently unused */
 
-#if !defined(_WIN32_WCE)
+#	if !defined(_WIN32_WCE)
 	/* Only accept a full file path, not a Windows short (8.3) path. */
 	memset(wbuf2, 0, ARRAY_SIZE(wbuf2) * sizeof(wchar_t));
 	long_len = GetLongPathNameW(wbuf, wbuf2, ARRAY_SIZE(wbuf2) - 1);
@@ -5152,7 +5220,7 @@ path_to_unicode(const struct mg_connection *conn,
 		/* Short name is used. */
 		wbuf[0] = L'\0';
 	}
-#else
+#	else
 	(void)long_len;
 	(void)wbuf2;
 	(void)err;
@@ -5160,7 +5228,7 @@ path_to_unicode(const struct mg_connection *conn,
 	if (strchr(path, '~')) {
 		wbuf[0] = L'\0';
 	}
-#endif
+#	endif
 }
 
 
@@ -5275,11 +5343,11 @@ mg_mkdir(const struct mg_connection *conn, const char *path, int mode)
 
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(GCC_DIAGNOSTIC)
+#	if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wunused-function"
+#	endif
 
 
 /* Implementation of POSIX opendir/closedir/readdir for Windows. */
@@ -5367,10 +5435,10 @@ mg_readdir(DIR *dir)
 }
 
 
-#if !defined(HAVE_POLL)
-#define POLLIN (1)  /* Data ready - read will not block. */
-#define POLLPRI (2) /* Priority data ready. */
-#define POLLOUT (4) /* Send queue not full - write will not block. */
+#	if !defined(HAVE_POLL)
+#		define POLLIN (1)  /* Data ready - read will not block. */
+#		define POLLPRI (2) /* Priority data ready. */
+#		define POLLOUT (4) /* Send queue not full - write will not block. */
 
 FUNCTION_MAY_BE_UNUSED
 static int
@@ -5422,31 +5490,31 @@ poll(struct pollfd *pfd, unsigned int n, int milliseconds)
 
 	return result;
 }
-#endif /* HAVE_POLL */
+#	endif /* HAVE_POLL */
 
 
-#if defined(GCC_DIAGNOSTIC)
+#	if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
-#pragma GCC diagnostic pop
-#endif
+#		pragma GCC diagnostic pop
+#	endif
 
 
 static void
 set_close_on_exec(SOCKET sock, struct mg_connection *conn /* may be null */)
 {
 	(void)conn; /* Unused. */
-#if defined(_WIN32_WCE)
+#	if defined(_WIN32_WCE)
 	(void)sock;
-#else
+#	else
 	(void)SetHandleInformation((HANDLE)(intptr_t)sock, HANDLE_FLAG_INHERIT, 0);
-#endif
+#	endif
 }
 
 
 int
 mg_start_thread(mg_thread_func_t f, void *p)
 {
-#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+#	if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 	/* Compile-time option to control stack size, e.g.
 	 * -DUSE_STACK_SIZE=16384
 	 */
@@ -5454,12 +5522,12 @@ mg_start_thread(mg_thread_func_t f, void *p)
 	         == ((uintptr_t)(-1L)))
 	            ? -1
 	            : 0);
-#else
+#	else
 	return (
 	    (_beginthread((void(__cdecl *)(void *))f, 0, p) == ((uintptr_t)(-1L)))
 	        ? -1
 	        : 0);
-#endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
+#	endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
 }
 
 
@@ -5505,15 +5573,15 @@ mg_join_thread(pthread_t threadid)
 	return result;
 }
 
-#if !defined(NO_SSL_DL) && !defined(NO_SSL)
+#	if !defined(NO_SSL_DL) && !defined(NO_SSL)
 /* If SSL is loaded dynamically, dlopen/dlclose is required. */
 /* Create substitutes for POSIX functions in Win32. */
 
-#if defined(GCC_DIAGNOSTIC)
+#		if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
+#			pragma GCC diagnostic push
+#			pragma GCC diagnostic ignored "-Wunused-function"
+#		endif
 
 
 FUNCTION_MAY_BE_UNUSED
@@ -5543,16 +5611,16 @@ dlclose(void *handle)
 }
 
 
-#if defined(GCC_DIAGNOSTIC)
+#		if defined(GCC_DIAGNOSTIC)
 /* Enable unused function warning again */
-#pragma GCC diagnostic pop
-#endif
+#			pragma GCC diagnostic pop
+#		endif
 
-#endif
+#	endif
 
 
-#if !defined(NO_CGI)
-#define SIGKILL (0)
+#	if !defined(NO_CGI)
+#		define SIGKILL (0)
 
 
 static int
@@ -5564,9 +5632,9 @@ kill(pid_t pid, int sig_num)
 }
 
 
-#if !defined(WNOHANG)
-#define WNOHANG (1)
-#endif
+#		if !defined(WNOHANG)
+#			define WNOHANG (1)
+#		endif
 
 
 static pid_t
@@ -5679,11 +5747,11 @@ spawn_process(struct mg_connection *conn,
 		}
 
 		if (mg_fopen(conn, cmdline, MG_FOPEN_MODE_READ, &file)) {
-#if defined(MG_USE_OPEN_FILE)
+#		if defined(MG_USE_OPEN_FILE)
 			p = (char *)file.access.membuf;
-#else
+#		else
 			p = (char *)NULL;
-#endif
+#		endif
 			mg_fgets(buf, sizeof(buf), &file, &p);
 			(void)mg_fclose(&file.access); /* ignore error on read only file */
 			buf[sizeof(buf) - 1] = '\0';
@@ -5737,7 +5805,8 @@ spawn_process(struct mg_connection *conn,
 	                   envblk,
 	                   NULL,
 	                   &si,
-	                   &pi) == 0) {
+	                   &pi)
+	    == 0) {
 		mg_cry_internal(
 		    conn, "%s: CreateProcess(%s): %ld", __func__, cmdline, (long)ERRNO);
 		pi.hProcess = (pid_t)-1;
@@ -5754,7 +5823,7 @@ spawn_cleanup:
 
 	return (pid_t)pi.hProcess;
 }
-#endif /* !NO_CGI */
+#	endif /* !NO_CGI */
 
 
 static int
@@ -5833,11 +5902,11 @@ mg_start_thread(mg_thread_func_t func, void *param)
 	(void)pthread_attr_init(&attr);
 	(void)pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+#	if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 	/* Compile-time option to control stack size,
 	 * e.g. -DUSE_STACK_SIZE=16384 */
 	(void)pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
-#endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
+#	endif /* defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1) */
 
 	result = pthread_create(&thread_id, &attr, func, param);
 	pthread_attr_destroy(&attr);
@@ -5858,11 +5927,11 @@ mg_start_thread_with_id(mg_thread_func_t func,
 
 	(void)pthread_attr_init(&attr);
 
-#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+#	if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 	/* Compile-time option to control stack size,
 	 * e.g. -DUSE_STACK_SIZE=16384 */
 	(void)pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
-#endif /* defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1 */
+#	endif /* defined(USE_STACK_SIZE) && USE_STACK_SIZE > 1 */
 
 	result = pthread_create(&thread_id, &attr, func, param);
 	pthread_attr_destroy(&attr);
@@ -5884,7 +5953,7 @@ mg_join_thread(pthread_t threadid)
 }
 
 
-#if !defined(NO_CGI)
+#	if !defined(NO_CGI)
 static pid_t
 spawn_process(struct mg_connection *conn,
               const char *prog,
@@ -5976,7 +6045,7 @@ spawn_process(struct mg_connection *conn,
 
 	return pid;
 }
-#endif /* !NO_CGI */
+#	endif /* !NO_CGI */
 
 
 static int
@@ -6006,7 +6075,7 @@ set_blocking_mode(SOCKET sock)
 	}
 	return 0;
 }
-#endif /* _WIN32 / else */
+#endif     /* _WIN32 / else */
 
 /* End of initial operating system specific define block. */
 
@@ -6761,7 +6830,8 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 		                      conn->client.sock,
 		                      conn->ssl,
 		                      (const char *)buf,
-		                      (int64_t)allowed)) == allowed) {
+		                      (int64_t)allowed))
+		    == allowed) {
 			buf = (const char *)buf + total;
 			conn->last_throttle_bytes += total;
 			while ((total < (int64_t)len) && (conn->phys_ctx->stop_flag == 0)) {
@@ -6773,7 +6843,8 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 				                  conn->client.sock,
 				                  conn->ssl,
 				                  (const char *)buf,
-				                  (int64_t)allowed)) != allowed) {
+				                  (int64_t)allowed))
+				    != allowed) {
 					break;
 				}
 				sleep(1);
@@ -6839,8 +6910,8 @@ mg_send_chunk(struct mg_connection *conn,
 #if defined(GCC_DIAGNOSTIC)
 /* This block forwards format strings to printf implementations,
  * so we need to disable the format-nonliteral warning. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
 
 
@@ -6902,7 +6973,7 @@ alloc_vprintf(char **out_buf,
 		/* C runtime is not standard compliant, vsnprintf() returned -1.
 		 * Switch to alternative code path that uses incremental
 		 * allocations.
-		*/
+		 */
 		va_copy(ap_copy, ap);
 		len = alloc_vprintf2(out_buf, fmt, ap_copy);
 		va_end(ap_copy);
@@ -6937,7 +7008,7 @@ alloc_vprintf(char **out_buf,
 
 #if defined(GCC_DIAGNOSTIC)
 /* Enable format-nonliteral warning again. */
-#pragma GCC diagnostic pop
+#	pragma GCC diagnostic pop
 #endif
 
 
@@ -7225,8 +7296,9 @@ is_put_or_delete_method(const struct mg_connection *conn)
 {
 	if (conn) {
 		const char *s = conn->request_info.request_method;
-		return (s != NULL) && (!strcmp(s, "PUT") || !strcmp(s, "DELETE")
-		                       || !strcmp(s, "MKCOL") || !strcmp(s, "PATCH"));
+		return (s != NULL)
+		       && (!strcmp(s, "PUT") || !strcmp(s, "DELETE")
+		           || !strcmp(s, "MKCOL") || !strcmp(s, "PATCH"));
 	}
 	return 0;
 }
@@ -7237,29 +7309,32 @@ static int
 extention_matches_script(
     struct mg_connection *conn, /* in: request (must be valid) */
     const char *filename        /* in: filename  (must be valid) */
-    )
+)
 {
-#if !defined(NO_CGI)
+#	if !defined(NO_CGI)
 	if (match_prefix(conn->dom_ctx->config[CGI_EXTENSIONS],
 	                 strlen(conn->dom_ctx->config[CGI_EXTENSIONS]),
-	                 filename) > 0) {
+	                 filename)
+	    > 0) {
 		return 1;
 	}
-#endif
-#if defined(USE_LUA)
+#	endif
+#	if defined(USE_LUA)
 	if (match_prefix(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS],
 	                 strlen(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS]),
-	                 filename) > 0) {
+	                 filename)
+	    > 0) {
 		return 1;
 	}
-#endif
-#if defined(USE_DUKTAPE)
+#	endif
+#	if defined(USE_DUKTAPE)
 	if (match_prefix(conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
 	                 strlen(conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-	                 filename) > 0) {
+	                 filename)
+	    > 0) {
 		return 1;
 	}
-#endif
+#	endif
 	/* filename and conn could be unused, if all preocessor conditions
 	 * are false (no script language supported). */
 	(void)filename;
@@ -7329,7 +7404,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
               int *is_script_resource,       /* out: handled by a script? */
               int *is_websocket_request,     /* out: websocket connetion? */
               int *is_put_or_delete_request  /* out: put/delete a file? */
-              )
+)
 {
 	char const *accept_encoding;
 
@@ -7341,11 +7416,11 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	ptrdiff_t match_len;
 	char gz_path[PATH_MAX];
 	int truncated;
-#if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
+#	if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 	char *tmp_str;
 	size_t tmp_str_len, sep_pos;
 	int allow_substitute_script_subresources;
-#endif
+#	endif
 #else
 	(void)filename_buf_len; /* unused if NO_FILES is defined */
 #endif
@@ -7363,14 +7438,14 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
  * root if required */
 #if defined(USE_WEBSOCKET)
 	*is_websocket_request = is_websocket_protocol(conn);
-#if !defined(NO_FILES)
+#	if !defined(NO_FILES)
 	if (*is_websocket_request && conn->dom_ctx->config[WEBSOCKET_ROOT]) {
 		root = conn->dom_ctx->config[WEBSOCKET_ROOT];
 	}
-#endif /* !NO_FILES */
-#else  /* USE_WEBSOCKET */
+#	endif /* !NO_FILES */
+#else      /* USE_WEBSOCKET */
 	*is_websocket_request = 0;
-#endif /* USE_WEBSOCKET */
+#endif     /* USE_WEBSOCKET */
 
 	/* Step 4: Check if gzip encoded response is allowed */
 	conn->accept_gzip = 0;
@@ -7503,7 +7578,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 		}
 	}
 
-#if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
+#	if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 	/* Step 10: Script resources may handle sub-resources */
 	/* Support PATH_INFO for CGI scripts. */
 	tmp_str_len = strlen(filename);
@@ -7601,8 +7676,8 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 
 	mg_free(tmp_str);
 
-#endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
-#endif /* !defined(NO_FILES) */
+#	endif /* !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE) */
+#endif     /* !defined(NO_FILES) */
 	return;
 
 #if !defined(NO_FILES)
@@ -7692,14 +7767,17 @@ parse_date_string(const char *datetime)
 	            &year,
 	            &hour,
 	            &minute,
-	            &second) == 6) || (sscanf(datetime,
-	                                      "%d %3s %d %d:%d:%d",
-	                                      &day,
-	                                      month_str,
-	                                      &year,
-	                                      &hour,
-	                                      &minute,
-	                                      &second) == 6)
+	            &second)
+	     == 6)
+	    || (sscanf(datetime,
+	               "%d %3s %d %d:%d:%d",
+	               &day,
+	               month_str,
+	               &year,
+	               &hour,
+	               &minute,
+	               &second)
+	        == 6)
 	    || (sscanf(datetime,
 	               "%*3s, %d %3s %d %d:%d:%d",
 	               &day,
@@ -7707,14 +7785,17 @@ parse_date_string(const char *datetime)
 	               &year,
 	               &hour,
 	               &minute,
-	               &second) == 6) || (sscanf(datetime,
-	                                         "%d-%3s-%d %d:%d:%d",
-	                                         &day,
-	                                         month_str,
-	                                         &year,
-	                                         &hour,
-	                                         &minute,
-	                                         &second) == 6)) {
+	               &second)
+	        == 6)
+	    || (sscanf(datetime,
+	               "%d-%3s-%d %d:%d:%d",
+	               &day,
+	               month_str,
+	               &year,
+	               &hour,
+	               &minute,
+	               &second)
+	        == 6)) {
 		month = get_month_index(month_str);
 		if ((month >= 0) && (year >= 1970)) {
 			memset(&tm, 0, sizeof(tm));
@@ -8245,7 +8326,7 @@ mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p)
  */
 #define INITIAL_DEPTH 9
 #if INITIAL_DEPTH <= 0
-#error Bad INITIAL_DEPTH for recursion, set to at least 1
+#	error Bad INITIAL_DEPTH for recursion, set to at least 1
 #endif
 
 struct read_auth_file_struct {
@@ -8715,7 +8796,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
                size_t ebuf_len,
                SOCKET *sock /* output: socket, must not be NULL */,
                union usa *sa /* output: socket address, must not be NULL  */
-               )
+)
 {
 	int ip_ver = 0;
 	int conn_ret = -1;
@@ -8748,8 +8829,8 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	}
 
 #if !defined(NO_SSL)
-#if !defined(NO_SSL_DL)
-#if defined(OPENSSL_API_1_1)
+#	if !defined(NO_SSL_DL)
+#		if defined(OPENSSL_API_1_1)
 	if (use_ssl && (TLS_client_method == NULL)) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
@@ -8759,7 +8840,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		            "SSL is not initialized");
 		return 0;
 	}
-#else
+#		else
 	if (use_ssl && (SSLv23_client_method == NULL)) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
@@ -8770,10 +8851,10 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		return 0;
 	}
 
-#endif /* OPENSSL_API_1_1 */
-#else
+#		endif /* OPENSSL_API_1_1 */
+#	else
 	(void)use_ssl;
-#endif /* NO_SSL_DL */
+#	endif /* NO_SSL_DL */
 #else
 	(void)use_ssl;
 #endif /* !defined(NO_SSL) */
@@ -8866,9 +8947,9 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	if (conn_ret != 0) {
 		DWORD err = WSAGetLastError(); /* could return WSAEWOULDBLOCK */
 		conn_ret = (int)err;
-#if !defined(EINPROGRESS)
-#define EINPROGRESS (WSAEWOULDBLOCK) /* Winsock equivalent */
-#endif                               /* if !defined(EINPROGRESS) */
+#	if !defined(EINPROGRESS)
+#		define EINPROGRESS (WSAEWOULDBLOCK) /* Winsock equivalent */
+#	endif                                   /* if !defined(EINPROGRESS) */
 	}
 #endif
 
@@ -9024,8 +9105,8 @@ print_dir_entry(struct de *de)
 		}
 	}
 
-/* Note: mg_snprintf will not cause a buffer overflow above.
- * So, string truncation checks are not required here. */
+	/* Note: mg_snprintf will not cause a buffer overflow above.
+	 * So, string truncation checks are not required here. */
 
 #if defined(REENTRANT_TIME)
 	localtime_r(&de->file.last_modified, tm);
@@ -9511,7 +9592,7 @@ fclose_on_exec(struct mg_file_access *filep, struct mg_connection *conn)
 
 
 #if defined(USE_ZLIB)
-#include "mod_zlib.inl"
+#	include "mod_zlib.inl"
 #endif
 
 
@@ -9872,7 +9953,7 @@ mg_send_mime_file2(struct mg_connection *conn,
  * Return  1  if the path leads to a file.
  * Return -1  for if the path is too long.
  * Return -2  if path can not be created.
-*/
+ */
 static int
 put_dir(struct mg_connection *conn, const char *path)
 {
@@ -10556,8 +10637,8 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 
 #if defined(USE_TIMERS)
 
-#define TIMER_API static
-#include "timer.inl"
+#	define TIMER_API static
+#	include "timer.inl"
 
 #endif /* USE_TIMERS */
 
@@ -10708,11 +10789,11 @@ prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "%s", "SERVER_PROTOCOL=HTTP/1.1");
 	addenv(env, "%s", "REDIRECT_STATUS=200"); /* For PHP */
 
-#if defined(USE_IPV6)
+#	if defined(USE_IPV6)
 	if (conn->client.lsa.sa.sa_family == AF_INET6) {
 		addenv(env, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin6.sin6_port));
 	} else
-#endif
+#	endif
 	{
 		addenv(env, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin.sin_port));
 	}
@@ -10783,7 +10864,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 		addenv(env, "STATUS=%d", conn->status_code);
 	}
 
-#if defined(_WIN32)
+#	if defined(_WIN32)
 	if ((s = getenv("COMSPEC")) != NULL) {
 		addenv(env, "COMSPEC=%s", s);
 	}
@@ -10799,11 +10880,11 @@ prepare_cgi_environment(struct mg_connection *conn,
 	if ((s = getenv("ProgramFiles(x86)")) != NULL) {
 		addenv(env, "ProgramFiles(x86)=%s", s);
 	}
-#else
+#	else
 	if ((s = getenv("LD_LIBRARY_PATH")) != NULL) {
 		addenv(env, "LD_LIBRARY_PATH=%s", s);
 	}
-#endif /* _WIN32 */
+#	endif /* _WIN32 */
 
 	if ((s = getenv("PERLLIB")) != NULL) {
 		addenv(env, "PERLLIB=%s", s);
@@ -10915,13 +10996,13 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	pid_t pid = (pid_t)-1;
 	struct process_control_data *proc = NULL;
 
-#if defined(USE_TIMERS)
+#	if defined(USE_TIMERS)
 	double cgi_timeout = -1.0;
 	if (conn->dom_ctx->config[CGI_TIMEOUT]) {
 		/* Get timeout in seconds */
 		cgi_timeout = atof(conn->dom_ctx->config[CGI_TIMEOUT]) * 0.001;
 	}
-#endif
+#	endif
 
 	if (conn == NULL) {
 		return;
@@ -11001,7 +11082,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	proc->pid = pid;
 	proc->references = 1;
 
-#if defined(USE_TIMERS)
+#	if defined(USE_TIMERS)
 	if (cgi_timeout > 0.0) {
 		proc->references = 2;
 
@@ -11013,7 +11094,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		          abort_process,
 		          (void *)proc);
 	}
-#endif
+#	endif
 
 	/* Make sure child closes all pipe descriptors. It must dup them to 0,1 */
 	set_close_on_exec((SOCKET)fdin[0], conn);  /* stdin read */
@@ -11348,10 +11429,10 @@ put_file(struct mg_connection *conn, const char *path)
 			rc = 0;
 
 		} else {
-/* File exists and is not a directory. */
-/* Can it be replaced? */
+			/* File exists and is not a directory. */
+			/* Can it be replaced? */
 
-#if defined(MG_USE_OPEN_FILE)
+#	if defined(MG_USE_OPEN_FILE)
 			if (file.access.membuf != NULL) {
 				/* This is an "in-memory" file, that can not be replaced */
 				mg_send_http_error(conn,
@@ -11361,7 +11442,7 @@ put_file(struct mg_connection *conn, const char *path)
 				                   path);
 				return;
 			}
-#endif
+#	endif
 
 			/* Check if the server may write this file */
 			if (access(path, W_OK) == 0) {
@@ -11489,7 +11570,7 @@ delete_file(struct mg_connection *conn, const char *path)
 		return;
 	}
 
-#if 0 /* Ignore if a file in memory is inside a folder */
+#	if 0 /* Ignore if a file in memory is inside a folder */
         if (de.access.membuf != NULL) {
                 /* the file is cached in memory */
                 mg_send_http_error(
@@ -11499,7 +11580,7 @@ delete_file(struct mg_connection *conn, const char *path)
                     path);
                 return;
         }
-#endif
+#	endif
 
 	if (de.file.is_directory) {
 		if (remove_directory(conn, path)) {
@@ -11619,7 +11700,8 @@ do_ssi_include(struct mg_connection *conn,
 		fclose_on_exec(&file.access, conn);
 		if (match_prefix(conn->dom_ctx->config[SSI_EXTENSIONS],
 		                 strlen(conn->dom_ctx->config[SSI_EXTENSIONS]),
-		                 path) > 0) {
+		                 path)
+		    > 0) {
 			send_ssi_file(conn, path, &file, include_level + 1);
 		} else {
 			send_file_data(conn, &file, 0, INT64_MAX);
@@ -12017,19 +12099,19 @@ mg_unlock_context(struct mg_context *ctx)
 
 
 #if defined(USE_LUA)
-#include "mod_lua.inl"
+#	include "mod_lua.inl"
 #endif /* USE_LUA */
 
 #if defined(USE_DUKTAPE)
-#include "mod_duktape.inl"
+#	include "mod_duktape.inl"
 #endif /* USE_DUKTAPE */
 
 #if defined(USE_WEBSOCKET)
 
-#if !defined(NO_SSL_DL)
-#define SHA_API static
-#include "sha1.inl"
-#endif
+#	if !defined(NO_SSL_DL)
+#		define SHA_API static
+#		include "sha1.inl"
+#	endif
 
 static int
 send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
@@ -12070,14 +12152,14 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 }
 
 
-#if !defined(MG_MAX_UNANSWERED_PING)
+#	if !defined(MG_MAX_UNANSWERED_PING)
 /* Configuration of the maximum number of websocket PINGs that might
  * stay unanswered before the connection is considered broken.
  * Note: The name of this define may still change (until it is
  * defined as a compile parameter in a documentation).
  */
-#define MG_MAX_UNANSWERED_PING (5)
-#endif
+#		define MG_MAX_UNANSWERED_PING (5)
+#	endif
 
 
 static void
@@ -12102,7 +12184,7 @@ read_websocket(struct mg_connection *conn,
 
 	/* "The masking key is a 32-bit value chosen at random by the client."
 	 * http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17#section-5
-	*/
+	 */
 	unsigned char mask[4];
 
 	/* data points to the place where the message is stored when passed to
@@ -12396,17 +12478,17 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	size_t headerLen;
 	int retval;
 
-#if defined(GCC_DIAGNOSTIC)
+#	if defined(GCC_DIAGNOSTIC)
 /* Disable spurious conversion warning for GCC */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#endif
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wconversion"
+#	endif
 
 	header[0] = 0x80u | (unsigned char)((unsigned)opcode & 0xf);
 
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
-#endif
+#	if defined(GCC_DIAGNOSTIC)
+#		pragma GCC diagnostic pop
+#	endif
 
 	/* Frame format: http://tools.ietf.org/html/rfc6455#section-5.2 */
 	if (dataLen < 126) {
@@ -12552,9 +12634,9 @@ handle_websocket_request(struct mg_connection *conn,
 	const char *version = mg_get_header(conn, "Sec-WebSocket-Version");
 	ptrdiff_t lua_websock = 0;
 
-#if !defined(USE_LUA)
+#	if !defined(USE_LUA)
 	(void)path;
-#endif
+#	endif
 
 	/* Step 1: Check websocket protocol version. */
 	/* Step 1.1: Check Sec-WebSocket-Key. */
@@ -12631,7 +12713,8 @@ handle_websocket_request(struct mg_connection *conn,
 						if ((strlen(subprotocols->subprotocols[idx]) == len)
 						    && (strncmp(curSubProtocol,
 						                subprotocols->subprotocols[idx],
-						                len) == 0)) {
+						                len)
+						        == 0)) {
 							acceptedWebSocketSubprotocol =
 							    subprotocols->subprotocols[idx];
 							break;
@@ -12682,7 +12765,7 @@ handle_websocket_request(struct mg_connection *conn,
 		}
 	}
 
-#if defined(USE_LUA)
+#	if defined(USE_LUA)
 	/* Step 3: No callback. Check if Lua is responsible. */
 	else {
 		/* Step 3.1: Check if Lua is responsible. */
@@ -12702,7 +12785,7 @@ handle_websocket_request(struct mg_connection *conn,
 			}
 		}
 	}
-#endif
+#	endif
 
 	/* Step 4: Check if there is a responsible websocket handler. */
 	if (!is_callback_resource && !lua_websock) {
@@ -12725,22 +12808,22 @@ handle_websocket_request(struct mg_connection *conn,
 		if (ws_ready_handler != NULL) {
 			ws_ready_handler(conn, cbData);
 		}
-#if defined(USE_LUA)
+#	if defined(USE_LUA)
 	} else if (lua_websock) {
 		if (!lua_websocket_ready(conn, conn->lua_websocket_state)) {
 			/* the ready handler returned false */
 			return;
 		}
-#endif
+#	endif
 	}
 
 	/* Step 7: Enter the read loop */
 	if (is_callback_resource) {
 		read_websocket(conn, ws_data_handler, cbData);
-#if defined(USE_LUA)
+#	if defined(USE_LUA)
 	} else if (lua_websock) {
 		read_websocket(conn, lua_websocket_data, conn->lua_websocket_state);
-#endif
+#	endif
 	}
 
 	/* Step 8: Call the close handler */
@@ -12765,7 +12848,7 @@ is_websocket_protocol(const struct mg_connection *conn)
 	if (upgrade == NULL) {
 		return 0; /* fail early, don't waste time checking other header
 		           * fields
-		             */
+		           */
 	}
 	if (!mg_strcasestr(upgrade, "websocket")) {
 		return 0;
@@ -12829,8 +12912,9 @@ set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
 	while ((spec = next_option(spec, &vec, &val)) != NULL) {
 		mult = ',';
 		if ((val.ptr == NULL) || (sscanf(val.ptr, "%lf%c", &v, &mult) < 1)
-		    || (v < 0) || ((lowercase(&mult) != 'k')
-		                   && (lowercase(&mult) != 'm') && (mult != ','))) {
+		    || (v < 0)
+		    || ((lowercase(&mult) != 'k') && (lowercase(&mult) != 'm')
+		        && (mult != ','))) {
 			continue;
 		}
 		v *= (lowercase(&mult) == 'k')
@@ -13169,8 +13253,7 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 	if (handler_type == WEBSOCKET_HANDLER) {
 		DEBUG_ASSERT(handler == NULL);
 		DEBUG_ASSERT(is_delete_request || connect_handler != NULL
-		             || ready_handler != NULL
-		             || data_handler != NULL
+		             || ready_handler != NULL || data_handler != NULL
 		             || close_handler != NULL);
 
 		DEBUG_ASSERT(auth_handler == NULL);
@@ -13187,8 +13270,7 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		}
 	} else if (handler_type == REQUEST_HANDLER) {
 		DEBUG_ASSERT(connect_handler == NULL && ready_handler == NULL
-		             && data_handler == NULL
-		             && close_handler == NULL);
+		             && data_handler == NULL && close_handler == NULL);
 		DEBUG_ASSERT(is_delete_request || (handler != NULL));
 		DEBUG_ASSERT(auth_handler == NULL);
 
@@ -13205,8 +13287,7 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 	} else { /* AUTH_HANDLER */
 		DEBUG_ASSERT(handler == NULL);
 		DEBUG_ASSERT(connect_handler == NULL && ready_handler == NULL
-		             && data_handler == NULL
-		             && close_handler == NULL);
+		             && data_handler == NULL && close_handler == NULL);
 		DEBUG_ASSERT(auth_handler != NULL);
 		if (handler != NULL) {
 			return;
@@ -13954,7 +14035,7 @@ handle_request(struct mg_connection *conn)
 				mg_send_http_error(conn, 403, "%s", "Forbidden");
 			}
 		} else {
-#if defined(MG_LEGACY_INTERFACE)
+#	if defined(MG_LEGACY_INTERFACE)
 			handle_websocket_request(
 			    conn,
 			    path,
@@ -13965,9 +14046,9 @@ handle_request(struct mg_connection *conn)
 			    deprecated_websocket_data_wrapper,
 			    NULL,
 			    conn->phys_ctx->user_data);
-#else
+#	else
 			mg_send_http_error(conn, 404, "%s", "Not found");
-#endif
+#	endif
 		}
 		return;
 	} else
@@ -14109,7 +14190,8 @@ handle_file_based_request(struct mg_connection *conn,
 	} else if (match_prefix(
 	               conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS],
 	               strlen(conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
-	               path) > 0) {
+	               path)
+	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Lua server page: an SSI like page containing mostly plain
 			 * html
@@ -14124,7 +14206,8 @@ handle_file_based_request(struct mg_connection *conn,
 	} else if (match_prefix(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS],
 	                        strlen(
 	                            conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS]),
-	                        path) > 0) {
+	                        path)
+	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Lua in-server module script: a CGI like script used to
 			 * generate
@@ -14140,7 +14223,8 @@ handle_file_based_request(struct mg_connection *conn,
 	} else if (match_prefix(
 	               conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
 	               strlen(conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-	               path) > 0) {
+	               path)
+	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Call duktape to generate the page */
 			mg_exec_duktape_script(conn, path);
@@ -14152,7 +14236,8 @@ handle_file_based_request(struct mg_connection *conn,
 #if !defined(NO_CGI)
 	} else if (match_prefix(conn->dom_ctx->config[CGI_EXTENSIONS],
 	                        strlen(conn->dom_ctx->config[CGI_EXTENSIONS]),
-	                        path) > 0) {
+	                        path)
+	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* CGI scripts may support all HTTP methods */
 			handle_cgi_request(conn, path);
@@ -14163,7 +14248,8 @@ handle_file_based_request(struct mg_connection *conn,
 #endif /* !NO_CGI */
 	} else if (match_prefix(conn->dom_ctx->config[SSI_EXTENSIONS],
 	                        strlen(conn->dom_ctx->config[SSI_EXTENSIONS]),
-	                        path) > 0) {
+	                        path)
+	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			handle_ssi_file_request(conn, path, file);
 		} else {
@@ -14490,7 +14576,8 @@ set_ports_option(struct mg_context *phys_ctx)
 		               SOL_SOCKET,
 		               SO_EXCLUSIVEADDRUSE,
 		               (SOCK_OPT_TYPE)&on,
-		               sizeof(on)) != 0) {
+		               sizeof(on))
+		    != 0) {
 
 			/* Set reuse option, but don't abort on errors. */
 			mg_cry_internal(
@@ -14503,7 +14590,8 @@ set_ports_option(struct mg_context *phys_ctx)
 		               SOL_SOCKET,
 		               SO_REUSEADDR,
 		               (SOCK_OPT_TYPE)&on,
-		               sizeof(on)) != 0) {
+		               sizeof(on))
+		    != 0) {
 
 			/* Set reuse option, but don't abort on errors. */
 			mg_cry_internal(fc(phys_ctx),
@@ -14521,7 +14609,8 @@ set_ports_option(struct mg_context *phys_ctx)
 				                  IPPROTO_IPV6,
 				                  IPV6_V6ONLY,
 				                  (void *)&off,
-				                  sizeof(off)) != 0) {
+				                  sizeof(off))
+				           != 0) {
 
 					/* Set IPv6 only option, but don't abort on errors. */
 					mg_cry_internal(
@@ -14535,7 +14624,8 @@ set_ports_option(struct mg_context *phys_ctx)
 				                  IPPROTO_IPV6,
 				                  IPV6_V6ONLY,
 				                  (void *)&on,
-				                  sizeof(on)) != 0) {
+				                  sizeof(on))
+				           != 0) {
 
 					/* Set IPv6 only option, but don't abort on errors. */
 					mg_cry_internal(
@@ -14636,7 +14726,8 @@ set_ports_option(struct mg_context *phys_ctx)
 		         mg_realloc_ctx(phys_ctx->listening_sockets,
 		                        (phys_ctx->num_listening_sockets + 1)
 		                            * sizeof(phys_ctx->listening_sockets[0]),
-		                        phys_ctx)) == NULL) {
+		                        phys_ctx))
+		    == NULL) {
 
 			mg_cry_internal(fc(phys_ctx), "%s", "Out of memory");
 			closesocket(so.sock);
@@ -14648,7 +14739,8 @@ set_ports_option(struct mg_context *phys_ctx)
 		         mg_realloc_ctx(phys_ctx->listening_socket_fds,
 		                        (phys_ctx->num_listening_sockets + 1)
 		                            * sizeof(phys_ctx->listening_socket_fds[0]),
-		                        phys_ctx)) == NULL) {
+		                        phys_ctx))
+		    == NULL) {
 
 			mg_cry_internal(fc(phys_ctx), "%s", "Out of memory");
 			closesocket(so.sock);
@@ -14689,7 +14781,7 @@ header_val(const struct mg_connection *conn, const char *header)
 
 #if defined(MG_EXTERNAL_FUNCTION_log_access)
 static void log_access(const struct mg_connection *conn);
-#include "external_log_access.inl"
+#	include "external_log_access.inl"
 #else
 
 static void
@@ -14713,7 +14805,8 @@ log_access(const struct mg_connection *conn)
 		if (mg_fopen(conn,
 		             conn->dom_ctx->config[ACCESS_LOG_FILE],
 		             MG_FOPEN_MODE_APPEND,
-		             &fi) == 0) {
+		             &fi)
+		    == 0) {
 			fi.access.fp = NULL;
 		}
 	} else {
@@ -14945,7 +15038,8 @@ refresh_trust(struct mg_connection *conn)
 			    == 0) {
 				should_verify_peer = 1;
 			} else if (mg_strcasecmp(conn->dom_ctx->config[SSL_DO_VERIFY_PEER],
-			                         "optional") == 0) {
+			                         "optional")
+			           == 0) {
 				should_verify_peer = 1;
 			}
 		}
@@ -14955,7 +15049,8 @@ refresh_trust(struct mg_connection *conn)
 			char *ca_file = conn->dom_ctx->config[SSL_CA_FILE];
 			if (SSL_CTX_load_verify_locations(conn->dom_ctx->ssl_ctx,
 			                                  ca_file,
-			                                  ca_path) != 1) {
+			                                  ca_path)
+			    != 1) {
 				mg_cry_internal(
 				    fc(conn->phys_ctx),
 				    "SSL_CTX_load_verify_locations error: %s "
@@ -14984,10 +15079,10 @@ refresh_trust(struct mg_connection *conn)
 	return 1;
 }
 
-#if defined(OPENSSL_API_1_1)
-#else
+#	if defined(OPENSSL_API_1_1)
+#	else
 static pthread_mutex_t *ssl_mutexes;
-#endif /* OPENSSL_API_1_1 */
+#	endif /* OPENSSL_API_1_1 */
 
 static int
 sslize(struct mg_connection *conn,
@@ -15028,9 +15123,9 @@ sslize(struct mg_connection *conn,
 		conn->ssl = NULL;
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
  * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#if !defined(OPENSSL_API_1_1)
+#	if !defined(OPENSSL_API_1_1)
 		ERR_remove_state(0);
-#endif
+#	endif
 		return 0;
 	}
 
@@ -15077,9 +15172,9 @@ sslize(struct mg_connection *conn,
 		conn->ssl = NULL;
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
  * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#if !defined(OPENSSL_API_1_1)
+#	if !defined(OPENSSL_API_1_1)
 		ERR_remove_state(0);
-#endif
+#	endif
 		return 0;
 	}
 
@@ -15208,8 +15303,8 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 }
 
 
-#if defined(OPENSSL_API_1_1)
-#else
+#	if defined(OPENSSL_API_1_1)
+#	else
 static void
 ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 {
@@ -15223,10 +15318,10 @@ ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
 		(void)pthread_mutex_unlock(&ssl_mutexes[mutex_num]);
 	}
 }
-#endif /* OPENSSL_API_1_1 */
+#	endif /* OPENSSL_API_1_1 */
 
 
-#if !defined(NO_SSL_DL)
+#	if !defined(NO_SSL_DL)
 static void *
 load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 {
@@ -15252,15 +15347,15 @@ load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 
 	ok = 1;
 	for (fp = sw; fp->name != NULL; fp++) {
-#if defined(_WIN32)
+#		if defined(_WIN32)
 		/* GetProcAddress() returns pointer to function */
 		u.fp = (void (*)(void))dlsym(dll_handle, fp->name);
-#else
+#		else
 		/* dlsym() on UNIX returns void *. ISO C forbids casts of data
 		 * pointers to function pointers. We need to use a union to make a
 		 * cast. */
 		u.p = dlsym(dll_handle, fp->name);
-#endif /* _WIN32 */
+#		endif /* _WIN32 */
 		if (u.fp == NULL) {
 			if (ok) {
 				mg_snprintf(NULL,
@@ -15306,25 +15401,25 @@ load_dll(char *ebuf, size_t ebuf_len, const char *dll_name, struct ssl_func *sw)
 static void *ssllib_dll_handle;    /* Store the ssl library handle. */
 static void *cryptolib_dll_handle; /* Store the crypto library handle. */
 
-#endif /* NO_SSL_DL */
+#	endif /* NO_SSL_DL */
 
 
-#if defined(SSL_ALREADY_INITIALIZED)
+#	if defined(SSL_ALREADY_INITIALIZED)
 static int cryptolib_users = 1; /* Reference counter for crypto library. */
-#else
+#	else
 static int cryptolib_users = 0; /* Reference counter for crypto library. */
-#endif
+#	endif
 
 
 static int
 initialize_ssl(char *ebuf, size_t ebuf_len)
 {
-#if defined(OPENSSL_API_1_1)
+#	if defined(OPENSSL_API_1_1)
 	if (ebuf_len > 0) {
 		ebuf[0] = 0;
 	}
 
-#if !defined(NO_SSL_DL)
+#		if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
 		cryptolib_dll_handle = load_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
 		if (!cryptolib_dll_handle) {
@@ -15339,13 +15434,13 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 			return 0;
 		}
 	}
-#endif /* NO_SSL_DL */
+#		endif /* NO_SSL_DL */
 
 	if (mg_atomic_inc(&cryptolib_users) > 1) {
 		return 1;
 	}
 
-#else /* not OPENSSL_API_1_1 */
+#	else /* not OPENSSL_API_1_1 */
 	int i, num_locks;
 	size_t size;
 
@@ -15353,7 +15448,7 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 		ebuf[0] = 0;
 	}
 
-#if !defined(NO_SSL_DL)
+#		if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
 		cryptolib_dll_handle = load_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
 		if (!cryptolib_dll_handle) {
@@ -15368,7 +15463,7 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 			return 0;
 		}
 	}
-#endif /* NO_SSL_DL */
+#		endif /* NO_SSL_DL */
 
 	if (mg_atomic_inc(&cryptolib_users) > 1) {
 		return 1;
@@ -15424,32 +15519,32 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 
 	CRYPTO_set_locking_callback(&ssl_locking_callback);
 	CRYPTO_set_id_callback(&mg_current_thread_id);
-#endif /* OPENSSL_API_1_1 */
+#	endif     /* OPENSSL_API_1_1 */
 
-#if !defined(NO_SSL_DL)
+#	if !defined(NO_SSL_DL)
 	if (!ssllib_dll_handle) {
 		ssllib_dll_handle = load_dll(ebuf, ebuf_len, SSL_LIB, ssl_sw);
 		if (!ssllib_dll_handle) {
-#if !defined(OPENSSL_API_1_1)
+#		if !defined(OPENSSL_API_1_1)
 			mg_free(ssl_mutexes);
-#endif
+#		endif
 			DEBUG_TRACE("%s", ebuf);
 			return 0;
 		}
 	}
-#endif /* NO_SSL_DL */
+#	endif /* NO_SSL_DL */
 
-#if defined(OPENSSL_API_1_1)
+#	if defined(OPENSSL_API_1_1)
 	/* Initialize SSL library */
 	OPENSSL_init_ssl(0, NULL);
 	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS
 	                     | OPENSSL_INIT_LOAD_CRYPTO_STRINGS,
 	                 NULL);
-#else
+#	else
 	/* Initialize SSL library */
 	SSL_library_init();
 	SSL_load_error_strings();
-#endif
+#	endif
 
 	return 1;
 }
@@ -15510,7 +15605,7 @@ ssl_use_pem_file(struct mg_context *phys_ctx,
 }
 
 
-#if defined(OPENSSL_API_1_1)
+#	if defined(OPENSSL_API_1_1)
 static unsigned long
 ssl_get_protocol(int version_id)
 {
@@ -15525,7 +15620,7 @@ ssl_get_protocol(int version_id)
 		ret |= SSL_OP_NO_TLSv1_1;
 	return ret;
 }
-#else
+#	else
 static long
 ssl_get_protocol(int version_id)
 {
@@ -15540,7 +15635,7 @@ ssl_get_protocol(int version_id)
 		ret |= SSL_OP_NO_TLSv1_1;
 	return ret;
 }
-#endif /* OPENSSL_API_1_1 */
+#	endif /* OPENSSL_API_1_1 */
 
 
 /* SSL callback documentation:
@@ -15576,17 +15671,17 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	struct mg_domain_context *dom =
 	    (struct mg_domain_context *)ctx ? &(ctx->dd) : NULL;
 
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
-#endif /* defined(GCC_DIAGNOSTIC) */
+#	if defined(GCC_DIAGNOSTIC)
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wcast-align"
+#	endif /* defined(GCC_DIAGNOSTIC) */
 
 	/* We used an aligned pointer in SSL_set_app_data */
 	struct mg_connection *conn = (struct mg_connection *)SSL_get_app_data(ssl);
 
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
-#endif /* defined(GCC_DIAGNOSTIC) */
+#	if defined(GCC_DIAGNOSTIC)
+#		pragma GCC diagnostic pop
+#	endif /* defined(GCC_DIAGNOSTIC) */
 
 	const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 
@@ -15653,21 +15748,21 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	md5_state_t md5state;
 	int protocol_ver;
 
-#if defined(OPENSSL_API_1_1)
+#	if defined(OPENSSL_API_1_1)
 	if ((dom_ctx->ssl_ctx = SSL_CTX_new(TLS_server_method())) == NULL) {
 		mg_cry_internal(fc(phys_ctx),
 		                "SSL_CTX_new (server) error: %s",
 		                ssl_error());
 		return 0;
 	}
-#else
+#	else
 	if ((dom_ctx->ssl_ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
 		mg_cry_internal(fc(phys_ctx),
 		                "SSL_CTX_new (server) error: %s",
 		                ssl_error());
 		return 0;
 	}
-#endif /* OPENSSL_API_1_1 */
+#	endif /* OPENSSL_API_1_1 */
 
 	SSL_CTX_clear_options(dom_ctx->ssl_ctx,
 	                      SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
@@ -15679,18 +15774,18 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	SSL_CTX_set_options(dom_ctx->ssl_ctx,
 	                    SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
 	SSL_CTX_set_options(dom_ctx->ssl_ctx, SSL_OP_NO_COMPRESSION);
-#if !defined(NO_SSL_DL)
+#	if !defined(NO_SSL_DL)
 	SSL_CTX_set_ecdh_auto(dom_ctx->ssl_ctx, 1);
-#endif /* NO_SSL_DL */
+#	endif /* NO_SSL_DL */
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wincompatible-pointer-types"
-#endif
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
-#endif
+#	if defined(__clang__)
+#		pragma clang diagnostic push
+#		pragma clang diagnostic ignored "-Wincompatible-pointer-types"
+#	endif
+#	if defined(GCC_DIAGNOSTIC)
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+#	endif
 	/* Depending on the OpenSSL version, the callback may be
 	 * 'void (*)(SSL *, int, int)' or 'void (*)(const SSL *, int, int)'
 	 * yielding in an "incompatible-pointer-type" warning for the other
@@ -15710,12 +15805,12 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	                                       ssl_servername_callback);
 	SSL_CTX_set_tlsext_servername_arg(dom_ctx->ssl_ctx, phys_ctx);
 
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
-#endif
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+#	if defined(GCC_DIAGNOSTIC)
+#		pragma GCC diagnostic pop
+#	endif
+#	if defined(__clang__)
+#		pragma clang diagnostic pop
+#	endif
 
 	/* If a callback has been specified, call it. */
 	callback_ret = (phys_ctx->callbacks.init_ssl == NULL)
@@ -15772,7 +15867,8 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 			should_verify_peer = 1;
 			peer_certificate_optional = 0;
 		} else if (mg_strcasecmp(dom_ctx->config[SSL_DO_VERIFY_PEER],
-		                         "optional") == 0) {
+		                         "optional")
+		           == 0) {
 			/* Yes, they are optional */
 			should_verify_peer = 1;
 			peer_certificate_optional = 1;
@@ -15824,7 +15920,8 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 
 	if (dom_ctx->config[SSL_CIPHER_LIST] != NULL) {
 		if (SSL_CTX_set_cipher_list(dom_ctx->ssl_ctx,
-		                            dom_ctx->config[SSL_CIPHER_LIST]) != 1) {
+		                            dom_ctx->config[SSL_CIPHER_LIST])
+		    != 1) {
 			mg_cry_internal(fc(phys_ctx),
 			                "SSL_CTX_set_cipher_list error: %s",
 			                ssl_error());
@@ -15916,7 +16013,7 @@ init_ssl_ctx(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 static void
 uninitialize_ssl(void)
 {
-#if defined(OPENSSL_API_1_1)
+#	if defined(OPENSSL_API_1_1)
 
 	if (mg_atomic_dec(&cryptolib_users) == 0) {
 
@@ -15925,7 +16022,7 @@ uninitialize_ssl(void)
 		 * http://stackoverflow.com/questions/29845527/how-to-properly-uninitialize-openssl
 		 */
 		CONF_modules_unload(1);
-#else
+#	else
 	int i;
 
 	if (mg_atomic_dec(&cryptolib_users) == 0) {
@@ -15948,7 +16045,7 @@ uninitialize_ssl(void)
 		}
 		mg_free(ssl_mutexes);
 		ssl_mutexes = NULL;
-#endif /* OPENSSL_API_1_1 */
+#	endif /* OPENSSL_API_1_1 */
 	}
 }
 #endif /* !NO_SSL */
@@ -16035,12 +16132,12 @@ set_sock_timeout(SOCKET sock, int milliseconds)
 {
         int r0 = 0, r1, r2;
 
-#if defined(_WIN32)
+#	if defined(_WIN32)
         /* Windows specific */
 
         DWORD tv = (DWORD)milliseconds;
 
-#else
+#	else
         /* Linux, ... (not Windows) */
 
         struct timeval tv;
@@ -16052,16 +16149,16 @@ set_sock_timeout(SOCKET sock, int milliseconds)
 */
 /* #define TCP_USER_TIMEOUT (18) */
 
-#if defined(TCP_USER_TIMEOUT)
+#		if defined(TCP_USER_TIMEOUT)
         unsigned int uto = (unsigned int)milliseconds;
         r0 = setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
-#endif
+#		endif
 
         memset(&tv, 0, sizeof(tv));
         tv.tv_sec = milliseconds / 1000;
         tv.tv_usec = (milliseconds * 1000) % 1000000;
 
-#endif /* _WIN32 */
+#	endif /* _WIN32 */
 
         r1 = setsockopt(
             sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE)&tv, sizeof(tv));
@@ -16080,7 +16177,8 @@ set_tcp_nodelay(SOCKET sock, int nodelay_on)
 	               IPPROTO_TCP,
 	               TCP_NODELAY,
 	               (SOCK_OPT_TYPE)&nodelay_on,
-	               sizeof(nodelay_on)) != 0) {
+	               sizeof(nodelay_on))
+	    != 0) {
 		/* Error */
 		return 1;
 	}
@@ -16137,12 +16235,12 @@ close_socket_gracefully(struct mg_connection *conn)
 		linger.l_onoff = 1;
 
 #if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4244)
+#	pragma warning(push)
+#	pragma warning(disable : 4244)
 #endif
 #if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wconversion"
 #endif
 		/* Data type of linger structure elements may differ,
 		 * so we don't know what cast we need here.
@@ -16151,10 +16249,10 @@ close_socket_gracefully(struct mg_connection *conn)
 		linger.l_linger = (linger_timeout + 999) / 1000;
 
 #if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
+#	pragma GCC diagnostic pop
 #endif
 #if defined(_MSC_VER)
-#pragma warning(pop)
+#	pragma warning(pop)
 #endif
 
 	} else {
@@ -16172,7 +16270,8 @@ close_socket_gracefully(struct mg_connection *conn)
 #else
 	                      &error_code,
 #endif
-	                      &opt_len) != 0) {
+	                      &opt_len)
+	           != 0) {
 		/* Cannot determine if socket is already closed. This should
 		 * not occur and never did in a test. Log an error message
 		 * and continue. */
@@ -16190,7 +16289,8 @@ close_socket_gracefully(struct mg_connection *conn)
 		               SOL_SOCKET,
 		               SO_LINGER,
 		               (char *)&linger,
-		               sizeof(linger)) != 0) {
+		               sizeof(linger))
+		    != 0) {
 			mg_cry_internal(
 			    conn,
 			    "%s: setsockopt(SOL_SOCKET SO_LINGER(%i,%i)) failed: %s",
@@ -16251,9 +16351,9 @@ close_connection(struct mg_connection *conn)
 		SSL_free(conn->ssl);
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
  * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#if !defined(OPENSSL_API_1_1)
+#	if !defined(OPENSSL_API_1_1)
 		ERR_remove_state(0);
-#endif
+#	endif
 		conn->ssl = NULL;
 	}
 #endif
@@ -16368,10 +16468,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	size_t conn_size = ((sizeof(struct mg_connection) + 7) >> 3) << 3;
 	size_t ctx_size = ((sizeof(struct mg_context) + 7) >> 3) << 3;
 
-	conn = (struct mg_connection *)mg_calloc_ctx(1,
-	                                             conn_size + ctx_size
-	                                                 + max_req_size,
-	                                             &common_client_context);
+	conn = (struct mg_connection *)mg_calloc_ctx(
+	    1, conn_size + ctx_size + max_req_size, &common_client_context);
 
 	if (conn == NULL) {
 		mg_snprintf(NULL,
@@ -16384,15 +16482,15 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	}
 
 #if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wcast-align"
 #endif /* defined(GCC_DIAGNOSTIC) */
 	/* conn_size is aligned to 8 bytes */
 
 	conn->phys_ctx = (struct mg_context *)(((char *)conn) + conn_size);
 
 #if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
+#	pragma GCC diagnostic pop
 #endif /* defined(GCC_DIAGNOSTIC) */
 
 	conn->buf = (((char *)conn) + conn_size + ctx_size);
@@ -16415,7 +16513,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	}
 
 #if !defined(NO_SSL)
-#if defined(OPENSSL_API_1_1)
+#	if defined(OPENSSL_API_1_1)
 	if (use_ssl
 	    && (conn->client_ssl_ctx = SSL_CTX_new(TLS_client_method())) == NULL) {
 		mg_snprintf(NULL,
@@ -16427,7 +16525,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		mg_free(conn);
 		return NULL;
 	}
-#else
+#	else
 	if (use_ssl
 	    && (conn->client_ssl_ctx = SSL_CTX_new(SSLv23_client_method()))
 	           == NULL) {
@@ -16440,8 +16538,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		mg_free(conn);
 		return NULL;
 	}
-#endif /* OPENSSL_API_1_1 */
-#endif /* NO_SSL */
+#	endif /* OPENSSL_API_1_1 */
+#endif     /* NO_SSL */
 
 
 #if defined(USE_IPV6)
@@ -16656,7 +16754,8 @@ get_uri_type(const char *uri)
 	for (i = 0; abs_uri_protocols[i].proto != NULL; i++) {
 		if (mg_strncasecmp(uri,
 		                   abs_uri_protocols[i].proto,
-		                   abs_uri_protocols[i].proto_len) == 0) {
+		                   abs_uri_protocols[i].proto_len)
+		    == 0) {
 
 			hostend = strchr(uri + abs_uri_protocols[i].proto_len, '/');
 			if (!hostend) {
@@ -16702,7 +16801,8 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 	for (i = 0; abs_uri_protocols[i].proto != NULL; i++) {
 		if (mg_strncasecmp(uri,
 		                   abs_uri_protocols[i].proto,
-		                   abs_uri_protocols[i].proto_len) == 0) {
+		                   abs_uri_protocols[i].proto_len)
+		    == 0) {
 
 			hostbegin = uri + abs_uri_protocols[i].proto_len;
 			hostend = strchr(hostbegin, '/');
@@ -16779,9 +16879,10 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 				 * like notmyserver.com */
 				return 0;
 			}
-			if (0 != memcmp(server_domain,
-			                hostbegin + request_domain_len - server_domain_len,
-			                server_domain_len)) {
+			if (0
+			    != memcmp(server_domain,
+			              hostbegin + request_domain_len - server_domain_len,
+			              server_domain_len)) {
 				/* Request is directed to another server:
 				 * The server name is different. */
 				return 0;
@@ -16906,7 +17007,8 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	/* Do we know the content length? */
 	if ((cl = get_header(conn->request_info.http_headers,
 	                     conn->request_info.num_headers,
-	                     "Content-Length")) != NULL) {
+	                     "Content-Length"))
+	    != NULL) {
 		/* Request/response has content length set */
 		char *endptr = NULL;
 		conn->content_len = strtoll(cl, &endptr, 10);
@@ -16924,7 +17026,8 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		conn->request_info.content_length = conn->content_len;
 	} else if ((cl = get_header(conn->request_info.http_headers,
 	                            conn->request_info.num_headers,
-	                            "Transfer-Encoding")) != NULL
+	                            "Transfer-Encoding"))
+	               != NULL
 	           && !mg_strcasecmp(cl, "chunked")) {
 		conn->is_chunked = 1;
 		conn->content_len = -1; /* unknown content length */
@@ -16982,7 +17085,8 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	/* Do we know the content length? */
 	if ((cl = get_header(conn->response_info.http_headers,
 	                     conn->response_info.num_headers,
-	                     "Content-Length")) != NULL) {
+	                     "Content-Length"))
+	    != NULL) {
 		/* Request/response has content length set */
 		char *endptr = NULL;
 		conn->content_len = strtoll(cl, &endptr, 10);
@@ -17004,7 +17108,8 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	} else if ((cl = get_header(conn->response_info.http_headers,
 	                            conn->response_info.num_headers,
-	                            "Transfer-Encoding")) != NULL
+	                            "Transfer-Encoding"))
+	               != NULL
 	           && !mg_strcasecmp(cl, "chunked")) {
 		conn->is_chunked = 1;
 		conn->content_len = -1; /* unknown content length */
@@ -17136,24 +17241,24 @@ struct websocket_client_thread_data {
 
 
 #if defined(USE_WEBSOCKET)
-#if defined(_WIN32)
+#	if defined(_WIN32)
 static unsigned __stdcall websocket_client_thread(void *data)
-#else
+#	else
 static void *
 websocket_client_thread(void *data)
-#endif
+#	endif
 {
 	struct websocket_client_thread_data *cdata =
 	    (struct websocket_client_thread_data *)data;
 
-#if !defined(_WIN32)
+#	if !defined(_WIN32)
 	struct sigaction sa;
 
 	/* Ignore SIGPIPE */
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sa, NULL);
-#endif
+#	endif
 
 	mg_set_thread_name("ws-clnt");
 
@@ -17180,11 +17285,11 @@ websocket_client_thread(void *data)
 
 	mg_free((void *)cdata);
 
-#if defined(_WIN32)
+#	if defined(_WIN32)
 	return 0;
-#else
+#	else
 	return NULL;
-#endif
+#	endif
 }
 #endif
 
@@ -17228,10 +17333,10 @@ mg_connect_websocket_client(const char *host,
 		                "\r\n";
 	}
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
+#	if defined(__clang__)
+#		pragma clang diagnostic push
+#		pragma clang diagnostic ignored "-Wformat-nonliteral"
+#	endif
 
 	/* Establish the client connection and request upgrade */
 	conn = mg_download(host,
@@ -17245,9 +17350,9 @@ mg_connect_websocket_client(const char *host,
 	                   magic,
 	                   origin);
 
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+#	if defined(__clang__)
+#		pragma clang diagnostic pop
+#	endif
 
 	/* Connection object will be null if something goes wrong */
 	if (conn == NULL) {
@@ -17321,7 +17426,8 @@ mg_connect_websocket_client(const char *host,
 	 * called on the client connection */
 	if (mg_start_thread_with_id(websocket_client_thread,
 	                            (void *)thread_data,
-	                            newctx->worker_threadids) != 0) {
+	                            newctx->worker_threadids)
+	    != 0) {
 		mg_free((void *)thread_data);
 		mg_free((void *)newctx->worker_threadids);
 		mg_free((void *)newctx);
@@ -17620,7 +17726,7 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 static int
 consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 {
-#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
+#	define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
 
 	(void)thread_index;
 
@@ -17651,7 +17757,7 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	return !ctx->stop_flag;
-#undef QUEUE_SIZE
+#	undef QUEUE_SIZE
 }
 
 
@@ -17659,7 +17765,7 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 static void
 produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
-#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
+#	define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
 	if (!ctx) {
 		return;
 	}
@@ -17680,7 +17786,7 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 
 	(void)pthread_cond_signal(&ctx->sq_full);
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
-#undef QUEUE_SIZE
+#	undef QUEUE_SIZE
 }
 #endif /* ALTERNATIVE_QUEUE */
 
@@ -17934,7 +18040,8 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		               SOL_SOCKET,
 		               SO_KEEPALIVE,
 		               (SOCK_OPT_TYPE)&on,
-		               sizeof(on)) != 0) {
+		               sizeof(on))
+		    != 0) {
 			mg_cry_internal(
 			    fc(ctx),
 			    "%s: setsockopt(SOL_SOCKET SO_KEEPALIVE) failed: %s",
@@ -18165,7 +18272,7 @@ free_context(struct mg_context *ctx)
 	for (i = 0; i < NUM_OPTIONS; i++) {
 		if (ctx->dd.config[i] != NULL) {
 #if defined(_MSC_VER)
-#pragma warning(suppress : 6001)
+#	pragma warning(suppress : 6001)
 #endif
 			mg_free(ctx->dd.config[i]);
 		}
@@ -18256,10 +18363,10 @@ static void
 get_system_name(char **sysName)
 {
 #if defined(_WIN32)
-#if !defined(__SYMBIAN32__)
-#if defined(_WIN32_WCE)
+#	if !defined(__SYMBIAN32__)
+#		if defined(_WIN32_WCE)
 	*sysName = mg_strdup("WinCE");
-#else
+#		else
 	char name[128];
 	DWORD dwVersion = 0;
 	DWORD dwMajorVersion = 0;
@@ -18267,15 +18374,15 @@ get_system_name(char **sysName)
 	DWORD dwBuild = 0;
 	BOOL wowRet, isWoW = FALSE;
 
-#if defined(_MSC_VER)
-#pragma warning(push)
+#			if defined(_MSC_VER)
+#				pragma warning(push)
 /* GetVersion was declared deprecated */
-#pragma warning(disable : 4996)
-#endif
+#				pragma warning(disable : 4996)
+#			endif
 	dwVersion = GetVersion();
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
+#			if defined(_MSC_VER)
+#				pragma warning(pop)
+#			endif
 
 	dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
 	dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
@@ -18291,10 +18398,10 @@ get_system_name(char **sysName)
 	        (wowRet ? (isWoW ? " (WoW64)" : "") : " (?)"));
 
 	*sysName = mg_strdup(name);
-#endif
-#else
+#		endif
+#	else
 	*sysName = mg_strdup("Symbian");
-#endif
+#	endif
 #else
 	struct utsname name;
 	memset(&name, 0, sizeof(name));
@@ -18623,7 +18730,8 @@ mg_start(const struct mg_callbacks *callbacks,
 		if ((wta == NULL)
 		    || (mg_start_thread_with_id(worker_thread,
 		                                wta,
-		                                &ctx->worker_threadids[i]) != 0)) {
+		                                &ctx->worker_threadids[i])
+		        != 0)) {
 
 			/* thread was not created */
 			if (wta != NULL) {
@@ -18718,9 +18826,9 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 	new_dom->auth_nonce_mask =
 	    (uint64_t)get_random() ^ ((uint64_t)get_random() << 31);
 
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
+#	if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	new_dom->shared_lua_websockets = NULL;
-#endif
+#	endif
 
 	if (!init_ssl_ctx(ctx, new_dom)) {
 		/* Init SSL failed */
@@ -18890,15 +18998,15 @@ mg_get_system_info_impl(char *buffer, int buflen)
 
 		GetSystemInfo(&si);
 
-#if defined(_MSC_VER)
-#pragma warning(push)
+#	if defined(_MSC_VER)
+#		pragma warning(push)
 /* GetVersion was declared deprecated */
-#pragma warning(disable : 4996)
-#endif
+#		pragma warning(disable : 4996)
+#	endif
 		dwVersion = GetVersion();
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
+#	if defined(_MSC_VER)
+#		pragma warning(pop)
+#	endif
 
 		dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
 		dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
@@ -19011,9 +19119,9 @@ mg_get_system_info_impl(char *buffer, int buflen)
 	/* Build date */
 	{
 #if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic push
+#	pragma GCC diagnostic push
 /* Disable bogus compiler warning -Wdate-time */
-#pragma GCC diagnostic ignored "-Wdate-time"
+#	pragma GCC diagnostic ignored "-Wdate-time"
 #endif
 		mg_snprintf(NULL,
 		            NULL,
@@ -19024,7 +19132,7 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 
 #if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
+#	pragma GCC diagnostic pop
 #endif
 
 		system_info_length += (int)strlen(block);
@@ -19219,11 +19327,11 @@ mg_get_context_info_impl(const struct mg_context *ctx, char *buffer, int buflen)
 	char block[256];
 	int context_info_length = 0;
 
-#if defined(_WIN32)
+#	if defined(_WIN32)
 	const char *eol = "\r\n";
-#else
+#	else
 	const char *eol = "\n";
-#endif
+#	endif
 	struct mg_memory_stat *ms = get_memory_stat((struct mg_context *)ctx);
 
 	const char *eoobj = "}";
@@ -19399,11 +19507,11 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 	int state = 0;
 	const char *state_str = "unknown";
 
-#if defined(_WIN32)
+#	if defined(_WIN32)
 	const char *eol = "\r\n";
-#else
+#	else
 	const char *eol = "\n";
-#endif
+#	endif
 
 	const char *eoobj = "}";
 	int reserved_len = (int)strlen(eoobj) + (int)strlen(eol);
@@ -19438,7 +19546,7 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 	/* Init variables */
 	ri = &(conn->request_info);
 
-#if defined(USE_SERVER_STATS)
+#	if defined(USE_SERVER_STATS)
 	state = conn->conn_state;
 
 	/* State as string */
@@ -19474,7 +19582,7 @@ mg_get_connection_info_impl(const struct mg_context *ctx,
 		state_str = "done";
 		break;
 	}
-#endif
+#	endif
 
 	/* Connection info */
 	if ((state >= 3) && (state < 9)) {

@@ -4,7 +4,7 @@
  */
 
 #if !defined(MAX_TIMERS)
-#define MAX_TIMERS MAX_WORKER_THREADS
+#	define MAX_TIMERS MAX_WORKER_THREADS
 #endif
 
 typedef int (*taction)(void *arg);
@@ -79,7 +79,7 @@ timer_add(struct mg_context *ctx,
 	 *        if next_time < now then we set next_time = now.
 	 *        The first callback will be so fast as possible (now)
 	 *        but the next callback on period
-	*/
+	 */
 	if (is_relative) {
 		next_time += now;
 	}

@@ -24,22 +24,22 @@
  * static functions
  */
 #ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-#define CIVETWEB_API static
+#	ifndef _CRT_SECURE_NO_WARNINGS
+#		define _CRT_SECURE_NO_WARNINGS
+#	endif
+#	define CIVETWEB_API static
 #endif
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
-#undef MEMORY_DEBUGGING
+#	undef MEMORY_DEBUGGING
 #endif
+
+#include "private.h"
 
 #include "../src/civetweb.c"
 
 #include <stdlib.h>
 #include <time.h>
-
-#include "private.h"
 
 
 /* This unit test file uses the excellent Check unit testing library.
@@ -947,8 +947,8 @@ START_TEST(test_config_options)
 	/* Check if the order in
 	 * static struct mg_option config_options[]
 	 * is the same as in the option enum
-	     * This test allows to reorder config_options and the enum,
-	     * and check if the order is still consistent. */
+	 * This test allows to reorder config_options and the enum,
+	 * and check if the order is still consistent. */
 	ck_assert_str_eq("cgi_pattern", config_options[CGI_EXTENSIONS].name);
 	ck_assert_str_eq("cgi_environment", config_options[CGI_ENVIRONMENT].name);
 	ck_assert_str_eq("put_delete_auth_file",
@@ -1169,11 +1169,11 @@ make_private_suite(void)
 void
 MAIN_PRIVATE(void)
 {
-#if defined(_WIN32)
+#	if defined(_WIN32)
 	/* test_parse_port_string requires WSAStartup for IPv6 */
 	WSADATA data;
 	WSAStartup(MAKEWORD(2, 2), &data);
-#endif
+#	endif
 
 	test_alloc_vprintf(0);
 	test_mg_vsnprintf(0);
@@ -1183,9 +1183,9 @@ MAIN_PRIVATE(void)
 	test_parse_http_message(0);
 	test_sha1(0);
 
-#if defined(_WIN32)
+#	if defined(_WIN32)
 	WSACleanup();
-#endif
+#	endif
 }
 
 #endif

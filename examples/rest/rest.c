@@ -1,29 +1,29 @@
 /*
-* Copyright (c) 2018 the CivetWeb developers
-* MIT License
-*/
+ * Copyright (c) 2018 the CivetWeb developers
+ * MIT License
+ */
 
 /* Simple demo of a REST callback. */
 #ifdef _WIN32
-#include <windows.h>
+#	include <windows.h>
 #else
-#include <unistd.h>
+#	include <unistd.h>
 #endif
+
+#include "cJSON.h"
+#include "civetweb.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-#include "civetweb.h"
-#include "cJSON.h"
-
 
 #ifdef NO_SSL
-#define PORT "8089"
-#define HOST_INFO "http://localhost:8089"
+#	define PORT "8089"
+#	define HOST_INFO "http://localhost:8089"
 #else
-#define PORT "8089r,8843s"
-#define HOST_INFO "https://localhost:8843"
+#	define PORT "8089r,8843s"
+#	define HOST_INFO "https://localhost:8843"
 #endif
 
 #define EXAMPLE_URI "/example"

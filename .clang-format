@@ -24,9 +24,13 @@ BreakBeforeBraces: Linux
 DerivePointerAlignment: false
 MaxEmptyLinesToKeep: 2
 PenaltyBreakBeforeFirstCallParameter: 100
+ReflowComments: true
 
 SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
 SpacesInSquareBrackets: false
+
+IndentPPDirectives: AfterHash
+IncludeBlocks: Regroup
 
 DisableFormat: false

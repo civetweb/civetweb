@@ -216,7 +216,7 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 #else
 	                          mg_duk_fatal_handler
 #endif
-	                          );
+	);
 	if (!duk_ctx) {
 		mg_cry_internal(conn, "%s", "Failed to create a Duktape heap.");
 		goto exec_duktape_finished;

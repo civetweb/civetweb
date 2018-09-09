@@ -20,19 +20,19 @@
  */
 
 #if defined(_MSC_VER)
-#define _CRT_SECURE_NO_WARNINGS /* Microsoft nonsense */
+#	define _CRT_SECURE_NO_WARNINGS /* Microsoft nonsense */
 #endif
 
 #include "civetweb_check.h"
-#include "shared.h"
+#include "private.h"
+#include "private_exe.h"
 #include "public_func.h"
 #include "public_server.h"
-#include "private.h"
+#include "shared.h"
 #include "timertest.h"
-#include "private_exe.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* This unit test file uses the excellent Check unit testing library.

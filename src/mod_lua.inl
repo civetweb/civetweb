@@ -38,11 +38,11 @@ munmap(void *addr, int64_t length)
 	UnmapViewOfFile(addr);
 }
 
-#define MAP_FAILED (NULL)
-#define MAP_PRIVATE (0)
-#define PROT_READ (0)
+#	define MAP_FAILED (NULL)
+#	define MAP_PRIVATE (0)
+#	define PROT_READ (0)
 #else
-#include <sys/mman.h>
+#	include <sys/mman.h>
 #endif
 
 static const char *LUASOCKET = "luasocket";
@@ -55,7 +55,7 @@ static const char *LUABACKGROUNDPARAMS = "mg";
  * This takes a lot of stack (~10 kB per recursion),
  * so do not use a too high limit. */
 #if !defined(LSP_INCLUDE_MAX_DEPTH)
-#define LSP_INCLUDE_MAX_DEPTH (10)
+#	define LSP_INCLUDE_MAX_DEPTH (10)
 #endif
 
 
@@ -900,10 +900,10 @@ lsp_include(lua_State *L)
 
 			if (handle_lsp_request(conn, file_name_path, &file, L)) {
 				/* handle_lsp_request returned an error code, meaning an error
-				* occurred in the included page and mg.onerror returned
-				* non-zero.
-				* Stop processing.
-				*/
+				 * occurred in the included page and mg.onerror returned
+				 * non-zero.
+				 * Stop processing.
+				 */
 
 				lsp_abort(L);
 			}
@@ -1367,12 +1367,12 @@ lsp_random(lua_State *L)
 	int num_args = lua_gettop(L);
 	if (num_args == 0) {
 		/* The civetweb internal random number generator will generate
-		         * a 64 bit random number. */
+		 * a 64 bit random number. */
 		uint64_t r = get_random();
 		/* Lua "number" is a IEEE 754 double precission float:
- * https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+		 * https://en.wikipedia.org/wiki/Double-precision_floating-point_format
 		 * Thus, mask with 2^53-1 to get an integer with the maximum
- * precission available. */
+		 * precission available. */
 		r &= ((((uint64_t)1) << 53) - 1);
 		lua_pushnumber(L, (double)r);
 		return 1;
@@ -2400,7 +2400,8 @@ handle_lsp_request(struct mg_connection *conn,
 	                 PROT_READ,
 	                 MAP_PRIVATE,
 	                 fileno(filep->access.fp),
-	                 0)) == MAP_FAILED) {
+	                 0))
+	           == MAP_FAILED) {
 
 		/* File was not already in memory, and mmap failed now.
 		 * Since wi have no data, show an error. */

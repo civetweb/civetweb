@@ -35,7 +35,7 @@
  */
 
 #if !defined(md5_INCLUDED)
-#define md5_INCLUDED
+#	define md5_INCLUDED
 
 /*
  * This package supports both compile-time and run-time determination of CPU
@@ -57,9 +57,9 @@ typedef struct md5_state_s {
 	md5_byte_t buf[64];  /* accumulate block */
 } md5_state_t;
 
-#if defined(__cplusplus)
+#	if defined(__cplusplus)
 extern "C" {
-#endif
+#	endif
 
 /* Initialize the algorithm. */
 MD5_STATIC void md5_init(md5_state_t *pms);
@@ -71,9 +71,9 @@ md5_append(md5_state_t *pms, const md5_byte_t *data, size_t nbytes);
 /* Finish the message and return the digest. */
 MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
 
-#if defined(__cplusplus)
+#	if defined(__cplusplus)
 } /* end extern "C" */
-#endif
+#	endif
 
 #endif /* md5_INCLUDED */
 
@@ -131,14 +131,14 @@ MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
  */
 
 #if !defined(MD5_STATIC)
-#include <string.h>
+#	include <string.h>
 #endif
 
 #undef BYTE_ORDER /* 1 = big-endian, -1 = little-endian, 0 = unknown */
 #if defined(ARCH_IS_BIG_ENDIAN)
-#define BYTE_ORDER (ARCH_IS_BIG_ENDIAN ? 1 : -1)
+#	define BYTE_ORDER (ARCH_IS_BIG_ENDIAN ? 1 : -1)
 #else
-#define BYTE_ORDER (0)
+#	define BYTE_ORDER (0)
 #endif
 
 #define T_MASK ((md5_word_t)~0)
@@ -265,11 +265,11 @@ md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
 			const md5_byte_t *xp = data;
 			int i;
 
-#if BYTE_ORDER == 0
+#	if BYTE_ORDER == 0
 			X = xbuf; /* (dynamic only) */
-#else
-#define xbuf X /* (static only) */
-#endif
+#	else
+#		define xbuf X /* (static only) */
+#	endif
 			for (i = 0; i < 16; ++i, xp += 4)
 				xbuf[i] = (md5_word_t)(xp[0]) + (md5_word_t)(xp[1] << 8)
 				          + (md5_word_t)(xp[2] << 16)
@@ -309,7 +309,7 @@ md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
 
 /* Round 2. */
 /* Let [abcd k s i] denote the operation
-     a = b + ((a + G(b,c,d) + X[k] + T[i]) <<< s). */
+	 a = b + ((a + G(b,c,d) + X[k] + T[i]) <<< s). */
 #define G(x, y, z) (((x) & (z)) | ((y) & ~(z)))
 #define SET(a, b, c, d, k, s, Ti)                                              \
 	t = a + G(b, c, d) + X[k] + Ti;                                            \
@@ -336,7 +336,7 @@ md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
 
 /* Round 3. */
 /* Let [abcd k s t] denote the operation
-     a = b + ((a + H(b,c,d) + X[k] + T[i]) <<< s). */
+	 a = b + ((a + H(b,c,d) + X[k] + T[i]) <<< s). */
 #define H(x, y, z) ((x) ^ (y) ^ (z))
 #define SET(a, b, c, d, k, s, Ti)                                              \
 	t = a + H(b, c, d) + X[k] + Ti;                                            \
@@ -363,7 +363,7 @@ md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
 
 /* Round 4. */
 /* Let [abcd k s t] denote the operation
-     a = b + ((a + I(b,c,d) + X[k] + T[i]) <<< s). */
+	 a = b + ((a + I(b,c,d) + X[k] + T[i]) <<< s). */
 #define I(x, y, z) ((y) ^ ((x) | ~(z)))
 #define SET(a, b, c, d, k, s, Ti)                                              \
 	t = a + I(b, c, d) + X[k] + Ti;                                            \
