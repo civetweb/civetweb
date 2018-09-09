@@ -20,7 +20,7 @@
  */
 
 #if defined(_MSC_VER)
-#	define _CRT_SECURE_NO_WARNINGS /* Microsoft nonsense */
+#define _CRT_SECURE_NO_WARNINGS /* Microsoft nonsense */
 #endif
 
 #include "civetweb_check.h"

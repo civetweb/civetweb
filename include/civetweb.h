@@ -29,19 +29,19 @@
 #define CIVETWEB_VERSION_PATCH (0)
 
 #ifndef CIVETWEB_API
-#	if defined(_WIN32)
-#		if defined(CIVETWEB_DLL_EXPORTS)
-#			define CIVETWEB_API __declspec(dllexport)
-#		elif defined(CIVETWEB_DLL_IMPORTS)
-#			define CIVETWEB_API __declspec(dllimport)
-#		else
-#			define CIVETWEB_API
-#		endif
-#	elif __GNUC__ >= 4
-#		define CIVETWEB_API __attribute__((visibility("default")))
-#	else
-#		define CIVETWEB_API
-#	endif
+#if defined(_WIN32)
+#if defined(CIVETWEB_DLL_EXPORTS)
+#define CIVETWEB_API __declspec(dllexport)
+#elif defined(CIVETWEB_DLL_IMPORTS)
+#define CIVETWEB_API __declspec(dllimport)
+#else
+#define CIVETWEB_API
+#endif
+#elif __GNUC__ >= 4
+#define CIVETWEB_API __attribute__((visibility("default")))
+#else
+#define CIVETWEB_API
+#endif
 #endif
 
 #include <stddef.h>
@@ -809,8 +809,8 @@ CIVETWEB_API void mg_unlock_connection(struct mg_connection *conn);
 
 
 #if defined(MG_LEGACY_INTERFACE) /* 2014-06-21 */
-#	define mg_lock mg_lock_connection
-#	define mg_unlock mg_unlock_connection
+#define mg_lock mg_lock_connection
+#define mg_unlock mg_unlock_connection
 #endif
 
 
@@ -845,20 +845,20 @@ enum {
 /* Macros for enabling compiler-specific checks for printf-like arguments. */
 #undef PRINTF_FORMAT_STRING
 #if defined(_MSC_VER) && _MSC_VER >= 1400
-#	include <sal.h>
-#	if defined(_MSC_VER) && _MSC_VER > 1400
-#		define PRINTF_FORMAT_STRING(s) _Printf_format_string_ s
-#	else
-#		define PRINTF_FORMAT_STRING(s) __format_string s
-#	endif
+#include <sal.h>
+#if defined(_MSC_VER) && _MSC_VER > 1400
+#define PRINTF_FORMAT_STRING(s) _Printf_format_string_ s
 #else
-#	define PRINTF_FORMAT_STRING(s) s
+#define PRINTF_FORMAT_STRING(s) __format_string s
+#endif
+#else
+#define PRINTF_FORMAT_STRING(s) s
 #endif
 
 #ifdef __GNUC__
-#	define PRINTF_ARGS(x, y) __attribute__((format(printf, x, y)))
+#define PRINTF_ARGS(x, y) __attribute__((format(printf, x, y)))
 #else
-#	define PRINTF_ARGS(x, y)
+#define PRINTF_ARGS(x, y)
 #endif
 
 

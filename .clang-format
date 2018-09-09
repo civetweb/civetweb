@@ -30,7 +30,8 @@ SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
 SpacesInSquareBrackets: false
 
-IndentPPDirectives: AfterHash
-IncludeBlocks: Regroup
+IndentPPDirectives: None
+IncludeBlocks: Preserve
+
 
 DisableFormat: false

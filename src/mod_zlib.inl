@@ -1,13 +1,13 @@
 /* Experimental implementation for on-the-fly compression */
 #if !defined(USE_ZLIB)
-#	error "This file must only be included, if USE_ZLIB is set"
+#error "This file must only be included, if USE_ZLIB is set"
 #endif
 
 #include "zconf.h"
 #include "zlib.h"
 
 #if !defined(MEM_LEVEL)
-#	define MEM_LEVEL (8)
+#define MEM_LEVEL (8)
 #endif
 
 static void *

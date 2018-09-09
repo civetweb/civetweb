@@ -38,11 +38,11 @@ munmap(void *addr, int64_t length)
 	UnmapViewOfFile(addr);
 }
 
-#	define MAP_FAILED (NULL)
-#	define MAP_PRIVATE (0)
-#	define PROT_READ (0)
+#define MAP_FAILED (NULL)
+#define MAP_PRIVATE (0)
+#define PROT_READ (0)
 #else
-#	include <sys/mman.h>
+#include <sys/mman.h>
 #endif
 
 static const char *LUASOCKET = "luasocket";
@@ -55,7 +55,7 @@ static const char *LUABACKGROUNDPARAMS = "mg";
  * This takes a lot of stack (~10 kB per recursion),
  * so do not use a too high limit. */
 #if !defined(LSP_INCLUDE_MAX_DEPTH)
-#	define LSP_INCLUDE_MAX_DEPTH (10)
+#define LSP_INCLUDE_MAX_DEPTH (10)
 #endif
 
 

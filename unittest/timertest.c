@@ -24,25 +24,25 @@
  * static functions
  */
 #ifdef _MSC_VER
-#	ifndef _CRT_SECURE_NO_WARNINGS
-#		define _CRT_SECURE_NO_WARNINGS
-#	endif
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 #endif
 
 #if defined(__GNUC__)
-#	pragma GCC diagnostic push
-#	pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
 #define CIVETWEB_API static
 #define USE_TIMERS
 
-#include "timertest.h"
-
 #include "../src/civetweb.c"
 
 #include <stdlib.h>
 #include <time.h>
+
+#include "timertest.h"
 
 static int action_dec_ret;
 
@@ -326,10 +326,10 @@ TIMER_PRIVATE(void)
 	unsigned f_avail;
 	unsigned f_ret;
 
-#	if defined(_WIN32)
+#if defined(_WIN32)
 	WSADATA data;
 	WSAStartup(MAKEWORD(2, 2), &data);
-#	endif
+#endif
 
 	f_avail = mg_check_feature(0xFF);
 	f_ret = mg_init_library(f_avail);
@@ -342,9 +342,9 @@ TIMER_PRIVATE(void)
 
 	mg_exit_library();
 
-#	if defined(_WIN32)
+#if defined(_WIN32)
 	WSACleanup();
-#	endif
+#endif
 }
 
 #endif

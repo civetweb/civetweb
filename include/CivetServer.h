@@ -8,12 +8,11 @@
 #define _CIVETWEB_SERVER_H_
 #ifdef __cplusplus
 
-#	include "civetweb.h"
-
-#	include <map>
-#	include <stdexcept>
-#	include <string>
-#	include <vector>
+#include "civetweb.h"
+#include <map>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 // forward declaration
 class CivetServer;

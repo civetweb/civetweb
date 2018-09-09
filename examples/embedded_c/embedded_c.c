@@ -6,31 +6,31 @@
 
 /* Simple example program on how to use CivetWeb embedded into a C program. */
 #ifdef _WIN32
-#	include <windows.h>
+#include <windows.h>
 #else
-#	include <unistd.h>
+#include <unistd.h>
 #endif
-
-#include "civetweb.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#include "civetweb.h"
+
 
 #define DOCUMENT_ROOT "."
 #ifdef NO_SSL
-#	ifdef USE_IPV6
-#		define PORT "[::]:8888,8884"
-#	else
-#		define PORT "8888,8884"
-#	endif
+#ifdef USE_IPV6
+#define PORT "[::]:8888,8884"
 #else
-#	ifdef USE_IPV6
-#		define PORT "[::]:8888r,[::]:8843s,8884"
-#	else
-#		define PORT "8888r,8843s,8884"
-#	endif
+#define PORT "8888,8884"
+#endif
+#else
+#ifdef USE_IPV6
+#define PORT "[::]:8888r,[::]:8843s,8884"
+#else
+#define PORT "8888r,8843s,8884"
+#endif
 #endif
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
@@ -648,7 +648,7 @@ WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
  * it can be easily tested to connect more than MAX_WS_CLIENTS clients.
  * A real server should use a much higher number, or better use a dynamic list
  * of currently connected websocket clients. */
-#	define MAX_WS_CLIENTS (5)
+#define MAX_WS_CLIENTS (5)
 
 struct t_ws_client {
 	struct mg_connection *conn;
@@ -656,14 +656,14 @@ struct t_ws_client {
 } static ws_clients[MAX_WS_CLIENTS];
 
 
-#	define ASSERT(x)                                                          \
-		{                                                                      \
-			if (!(x)) {                                                        \
-				fprintf(stderr,                                                \
-				        "Assertion failed in line %u\n",                       \
-				        (unsigned)__LINE__);                                   \
-			}                                                                  \
-		}
+#define ASSERT(x)                                                              \
+	{                                                                          \
+		if (!(x)) {                                                            \
+			fprintf(stderr,                                                    \
+			        "Assertion failed in line %u\n",                           \
+			        (unsigned)__LINE__);                                       \
+		}                                                                      \
+	}
 
 
 int
@@ -793,11 +793,11 @@ InformWebsockets(struct mg_context *ctx)
 
 
 #ifdef USE_SSL_DH
-#	include "openssl/dh.h"
-#	include "openssl/ec.h"
-#	include "openssl/ecdsa.h"
-#	include "openssl/evp.h"
-#	include "openssl/ssl.h"
+#include "openssl/dh.h"
+#include "openssl/ec.h"
+#include "openssl/ecdsa.h"
+#include "openssl/evp.h"
+#include "openssl/ssl.h"
 
 DH *
 get_dh2236()
@@ -853,7 +853,7 @@ init_ssl(void *ssl_context, void *user_data)
 	/* Add application specific SSL initialization */
 	struct ssl_ctx_st *ctx = (struct ssl_ctx_st *)ssl_context;
 
-#	ifdef USE_SSL_DH
+#ifdef USE_SSL_DH
 	/* example from https://github.com/civetweb/civetweb/issues/347 */
 	DH *dh = get_dh2236();
 	if (!dh)
@@ -870,7 +870,7 @@ init_ssl(void *ssl_context, void *user_data)
 	EC_KEY_free(ecdh);
 
 	printf("ECDH ciphers initialized\n");
-#	endif
+#endif
 	return 0;
 }
 #endif
@@ -906,11 +906,11 @@ main(int argc, char *argv[])
 	    "ssl_protocol_version",
 	    "3",
 	    "ssl_cipher_list",
-#	ifdef USE_SSL_DH
+#ifdef USE_SSL_DH
 	    "ECDHE-RSA-AES256-GCM-SHA384:DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256",
-#	else
+#else
 	    "DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256",
-#	endif
+#endif
 #endif
 	    "enable_auth_domain_check",
 	    "no",

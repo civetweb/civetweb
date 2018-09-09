@@ -4,7 +4,7 @@
  */
 
 #if !defined(MAX_TIMERS)
-#	define MAX_TIMERS MAX_WORKER_THREADS
+#define MAX_TIMERS MAX_WORKER_THREADS
 #endif
 
 typedef int (*taction)(void *arg);

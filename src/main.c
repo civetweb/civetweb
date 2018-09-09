@@ -22,21 +22,19 @@
 
 #if defined(_WIN32)
 
-#	if !defined(_CRT_SECURE_NO_WARNINGS)
-#		define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in      \
-		                                    VS2005 */
-#	endif
-#	if !defined(_CRT_SECURE_NO_DEPRECATE)
-#		define _CRT_SECURE_NO_DEPRECATE
-#	endif
-#	if defined(WIN32_LEAN_AND_MEAN)
-#		undef WIN32_LEAN_AND_MEAN /* Required for some functions (tray icons, \
-		                               ...) */
-#	endif
+#if !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
+#endif
+#if !defined(_CRT_SECURE_NO_DEPRECATE)
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
+#if defined(WIN32_LEAN_AND_MEAN)
+#undef WIN32_LEAN_AND_MEAN /* Required for some functions (tray icons, ...) */
+#endif
 
 #else
 
-#	define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
+#define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
 /* This should also be sufficient for "realpath", according to
  * http://man7.org/linux/man-pages/man3/realpath.3.html, but in
  * reality it does not seem to work. */
@@ -47,34 +45,32 @@
 #endif
 
 #if !defined(IGNORE_UNUSED_RESULT)
-#	define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
+#define IGNORE_UNUSED_RESULT(a) ((void)((a) && 1))
 #endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
-#	define NO_RETURN [[noreturn]]
+#define NO_RETURN [[noreturn]]
 #elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
-#	define NO_RETURN _Noreturn
+#define NO_RETURN _Noreturn
 #elif defined(__GNUC__)
-#	define NO_RETURN __attribute((noreturn))
+#define NO_RETURN __attribute((noreturn))
 #else
-#	define NO_RETURN
+#define NO_RETURN
 #endif
 
 /* Use same defines as in civetweb.c before including system headers. */
 #if !defined(_LARGEFILE_SOURCE)
-#	define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
+#define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
 #endif
 #if !defined(_FILE_OFFSET_BITS)
-#	define _FILE_OFFSET_BITS 64 /* Use 64-bit file offsets by default */
+#define _FILE_OFFSET_BITS 64 /* Use 64-bit file offsets by default */
 #endif
 #if !defined(__STDC_FORMAT_MACROS)
-#	define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
+#define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
 #endif
 #if !defined(__STDC_LIMIT_MACROS)
-#	define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
+#define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
 #endif
-
-#include "civetweb.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -88,78 +84,79 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "civetweb.h"
+
 #undef printf
 #define printf                                                                 \
 	DO_NOT_USE_THIS_FUNCTION__USE_fprintf /* Required for unit testing */
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) /* WINDOWS include block */
-#	if !defined(_WIN32_WINNT)
-#		define _WIN32_WINNT                                                   \
-			0x0501 /* for tdm-gcc so we can use getconsolewindow */
-#	endif
-#	undef UNICODE
-#	include <io.h>
-#	include <shlobj.h>
-#	include <windows.h>
-#	include <winsvc.h>
+#if !defined(_WIN32_WINNT)
+#define _WIN32_WINNT 0x0501 /* for tdm-gcc so we can use getconsolewindow */
+#endif
+#undef UNICODE
+#include <io.h>
+#include <shlobj.h>
+#include <windows.h>
+#include <winsvc.h>
 
-#	define getcwd(a, b) (_getcwd(a, b))
-#	if !defined(__MINGW32__)
+#define getcwd(a, b) (_getcwd(a, b))
+#if !defined(__MINGW32__)
 extern char *_getcwd(char *buf, size_t size);
-#	endif
+#endif
 
-#	if !defined(PATH_MAX)
-#		define PATH_MAX MAX_PATH
-#	endif
+#if !defined(PATH_MAX)
+#define PATH_MAX MAX_PATH
+#endif
 
-#	if !defined(S_ISDIR)
-#		define S_ISDIR(x) ((x)&_S_IFDIR)
-#	endif
+#if !defined(S_ISDIR)
+#define S_ISDIR(x) ((x)&_S_IFDIR)
+#endif
 
-#	define DIRSEP '\\'
-#	define snprintf _snprintf
-#	define vsnprintf _vsnprintf
-#	define sleep(x) (Sleep((x)*1000))
-#	define WINCDECL __cdecl
-#	define abs_path(rel, abs, abs_size) (_fullpath((abs), (rel), (abs_size)))
+#define DIRSEP '\\'
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#define sleep(x) (Sleep((x)*1000))
+#define WINCDECL __cdecl
+#define abs_path(rel, abs, abs_size) (_fullpath((abs), (rel), (abs_size)))
 
 #else /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include   \
          block */
 
-#	include <sys/utsname.h>
-#	include <sys/wait.h>
-#	include <unistd.h>
+#include <sys/utsname.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-#	define DIRSEP '/'
-#	define WINCDECL
-#	define abs_path(rel, abs, abs_size) (realpath((rel), (abs)))
+#define DIRSEP '/'
+#define WINCDECL
+#define abs_path(rel, abs, abs_size) (realpath((rel), (abs)))
 
 #endif /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include  \
           block */
 
 #if !defined(DEBUG_ASSERT)
-#	if defined(DEBUG)
+#if defined(DEBUG)
 
-#		if defined(_MSC_VER)
+#if defined(_MSC_VER)
 /* DEBUG_ASSERT has some const conditions */
-#			pragma warning(disable : 4127)
-#		endif
+#pragma warning(disable : 4127)
+#endif
 
-#		define DEBUG_ASSERT(cond)                                             \
-			do {                                                               \
-				if (!(cond)) {                                                 \
-					fprintf(stderr, "ASSERTION FAILED: %s", #cond);            \
-					exit(2); /* Exit with error */                             \
-				}                                                              \
-			} while (0)
+#define DEBUG_ASSERT(cond)                                                     \
+	do {                                                                       \
+		if (!(cond)) {                                                         \
+			fprintf(stderr, "ASSERTION FAILED: %s", #cond);                    \
+			exit(2); /* Exit with error */                                     \
+		}                                                                      \
+	} while (0)
 
-#	else
-#		define DEBUG_ASSERT(cond)
-#	endif /* DEBUG */
+#else
+#define DEBUG_ASSERT(cond)
+#endif /* DEBUG */
 #endif
 
 #if !defined(PATH_MAX)
-#	define PATH_MAX (1024)
+#define PATH_MAX (1024)
 #endif
 
 #define MAX_OPTIONS (50)
@@ -195,16 +192,16 @@ static struct tuser_data
     g_user_data; /* Passed to mg_start() by start_civetweb() */
 
 #if !defined(CONFIG_FILE)
-#	define CONFIG_FILE "civetweb.conf"
+#define CONFIG_FILE "civetweb.conf"
 #endif /* !CONFIG_FILE */
 
 #if !defined(PASSWORDS_FILE_NAME)
-#	define PASSWORDS_FILE_NAME ".htpasswd"
+#define PASSWORDS_FILE_NAME ".htpasswd"
 #endif
 
 /* backup config file */
 #if !defined(CONFIG_FILE2) && defined(__linux__)
-#	define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
+#define CONFIG_FILE2 "/usr/local/etc/civetweb.conf"
 #endif
 
 enum {
@@ -360,7 +357,7 @@ get_url_to_first_open_port(const struct mg_context *ctx)
 }
 
 
-#	if defined(ENABLE_CREATE_CONFIG_FILE)
+#if defined(ENABLE_CREATE_CONFIG_FILE)
 static void
 create_config_file(const struct mg_context *ctx, const char *path)
 {
@@ -385,7 +382,7 @@ create_config_file(const struct mg_context *ctx, const char *path)
 		fclose(fp);
 	}
 }
-#	endif
+#endif
 #endif
 
 
@@ -1008,14 +1005,14 @@ set_absolute_path(char *options[],
 
 #if defined(USE_LUA)
 
-#	include "civetweb_private_lua.h"
+#include "civetweb_private_lua.h"
 
 #endif
 
 
 #if defined(USE_DUKTAPE)
 
-#	include "duktape.h"
+#include "duktape.h"
 
 static int
 run_duktape(const char *file_name)
@@ -1044,7 +1041,7 @@ finished:
 
 #if defined(__MINGW32__) || defined(__MINGW64__)
 /* For __MINGW32/64_MAJOR/MINOR_VERSION define */
-#	include <_mingw.h>
+#include <_mingw.h>
 #endif
 
 
@@ -1281,9 +1278,9 @@ start_civetweb(int argc, char *argv[])
 		if (argc != 3) {
 			show_usage_and_exit(argv[0]);
 		}
-#	if defined(WIN32)
+#if defined(WIN32)
 		(void)MakeConsole();
-#	endif
+#endif
 		exit(run_lua(argv[2]));
 #else
 		show_server_name();
@@ -1299,9 +1296,9 @@ start_civetweb(int argc, char *argv[])
 		if (argc != 3) {
 			show_usage_and_exit(argv[0]);
 		}
-#	if defined(WIN32)
+#if defined(WIN32)
 		(void)MakeConsole();
-#	endif
+#endif
 		exit(run_duktape(argv[2]));
 #else
 		show_server_name();
@@ -1545,11 +1542,11 @@ struct dlg_header_param {
 static struct dlg_header_param
 GetDlgHeader(const short width)
 {
-#	if defined(_MSC_VER)
+#if defined(_MSC_VER)
 /* disable MSVC warning C4204 (non-constant used to initialize structure) */
-#		pragma warning(push)
-#		pragma warning(disable : 4204)
-#	endif /* if defined(_MSC_VER) */
+#pragma warning(push)
+#pragma warning(disable : 4204)
+#endif /* if defined(_MSC_VER) */
 	struct dlg_header_param dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU
 	                                              | WS_VISIBLE | DS_SETFONT
 	                                              | WS_DLGFRAME,
@@ -1564,9 +1561,9 @@ GetDlgHeader(const short width)
 	                                         L"",
 	                                         8,
 	                                         L"Tahoma"};
-#	if defined(_MSC_VER)
-#		pragma warning(pop)
-#	endif /* if defined(_MSC_VER) */
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif /* if defined(_MSC_VER) */
 	return dialog_header;
 }
 
@@ -1861,9 +1858,9 @@ get_password(const char *user,
              char *passwd,
              unsigned passwd_len)
 {
-#	define HEIGHT (15)
-#	define WIDTH (280)
-#	define LABEL_WIDTH (90)
+#define HEIGHT (15)
+#define WIDTH (280)
+#define LABEL_WIDTH (90)
 
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
@@ -2010,9 +2007,9 @@ get_password(const char *user,
 
 	return ok;
 
-#	undef HEIGHT
-#	undef WIDTH
-#	undef LABEL_WIDTH
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
 }
 
 
@@ -2136,9 +2133,9 @@ add_control(unsigned char **mem,
 static void
 show_settings_dialog()
 {
-#	define HEIGHT (15)
-#	define WIDTH (460)
-#	define LABEL_WIDTH (90)
+#define HEIGHT (15)
+#define WIDTH (460)
+#define LABEL_WIDTH (90)
 
 	unsigned char mem[16 * 1024], *p;
 	const struct mg_option *options;
@@ -2300,18 +2297,18 @@ show_settings_dialog()
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
 
-#	undef HEIGHT
-#	undef WIDTH
-#	undef LABEL_WIDTH
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
 }
 
 
 static void
 change_password_file()
 {
-#	define HEIGHT (15)
-#	define WIDTH (320)
-#	define LABEL_WIDTH (90)
+#define HEIGHT (15)
+#define WIDTH (320)
+#define LABEL_WIDTH (90)
 
 	OPENFILENAME of;
 	char path[PATH_MAX] = PASSWORDS_FILE_NAME;
@@ -2501,9 +2498,9 @@ change_password_file()
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
 
-#	undef HEIGHT
-#	undef WIDTH
-#	undef LABEL_WIDTH
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
 }
 
 
@@ -2537,9 +2534,9 @@ sysinfo_reload(struct dlg_proc_param *prm)
 int
 show_system_info()
 {
-#	define HEIGHT (15)
-#	define WIDTH (320)
-#	define LABEL_WIDTH (50)
+#define HEIGHT (15)
+#define WIDTH (320)
+#define LABEL_WIDTH (50)
 
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
@@ -2628,9 +2625,9 @@ show_system_info()
 
 	return ok;
 
-#	undef HEIGHT
-#	undef WIDTH
-#	undef LABEL_WIDTH
+#undef HEIGHT
+#undef WIDTH
+#undef LABEL_WIDTH
 }
 
 
@@ -2876,9 +2873,9 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	HWND hWnd;
 	MSG msg;
 
-#	if defined(DEBUG)
+#if defined(DEBUG)
 	(void)MakeConsole();
-#	endif
+#endif
 
 	(void)hInst;
 	(void)hPrev;
@@ -2950,7 +2947,7 @@ main(int argc, char *argv[])
 
 
 #elif defined(USE_COCOA)
-#	import <Cocoa/Cocoa.h>
+#import <Cocoa/Cocoa.h>
 
 @interface Civetweb : NSObject <NSApplicationDelegate>
 - (void)openBrowser;

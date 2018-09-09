@@ -22,14 +22,14 @@
 #define TEST_CIVETWEB_CHECK_H_
 
 #ifdef __clang__
-#	pragma clang diagnostic push
+#pragma clang diagnostic push
 // FIXME: check uses GCC specific variadic macros that are non-standard
-#	pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 
 #if defined(__MINGW__) || defined(__GNUC__)
-#	pragma GCC diagnostic push
-#	pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 /* Disable warnings for defining _CRT_SECURE_NO_* (here) and
  * _CHECK_CHECK_STDINT_H (in check.h)
  */
@@ -41,12 +41,12 @@
 #endif
 
 #ifdef _MSC_VER
-#	undef pid_t
-#	define pid_t int
+#undef pid_t
+#define pid_t int
 /* Unreferenced formal parameter. START_TEST has _i */
-#	pragma warning(disable : 4100)
+#pragma warning(disable : 4100)
 /* conditional expression is constant . asserts use while(0) */
-#	pragma warning(disable : 4127)
+#pragma warning(disable : 4127)
 #endif
 #include <stdint.h>
 
@@ -56,31 +56,31 @@
 #include "check.h"
 
 #if (CHECK_MINOR_VERSION < 11)
-#	ifndef LOCAL_TEST
-#		error "CivetWeb unit tests require at least check 0.11.0"
-#	endif
+#ifndef LOCAL_TEST
+#error "CivetWeb unit tests require at least check 0.11.0"
+#endif
 #endif
 
 #ifdef __clang__
-#	pragma clang diagnostic pop
+#pragma clang diagnostic pop
 #endif
 
 #if !defined(_CRT_SECURE_NO_WARNINGS)
-#	define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
 #endif
 #if !defined(_CRT_SECURE_NO_DEPRECATE)
-#	define _CRT_SECURE_NO_DEPRECATE
+#define _CRT_SECURE_NO_DEPRECATE
 #endif
 
 #if defined(__MINGW__) || defined(__GNUC__)
-#	pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
 #endif
 
 #ifdef __clang__
 /* When using -Weverything, clang does not accept it's own headers
  * in a release build configuration. Disable what is too much in
  * -Weverything. */
-#	pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
 #endif
 
 /* A minimal timeout used for all tests with the "check" framework. */

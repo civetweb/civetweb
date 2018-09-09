@@ -20,16 +20,16 @@
  */
 
 #ifdef _MSC_VER
-#	ifndef _CRT_SECURE_NO_WARNINGS
-#		define _CRT_SECURE_NO_WARNINGS
-#	endif
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 #endif
 
-#include "public_func.h"
-
-#include <civetweb.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "public_func.h"
+#include <civetweb.h>
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:

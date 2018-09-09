@@ -32,46 +32,46 @@
 #include "lualib.h"
 
 #ifndef LUA_VERSION_NUM
-#	error "Unknown Lua version"
+#error "Unknown Lua version"
 
 #elif LUA_VERSION_NUM == 501
 /* Lua 5.1 detected */
-#	define LUA_OK 0
-#	define LUA_ERRGCMM 999 /* not supported */
-#	define mg_lua_load(a, b, c, d, e) lua_load(a, b, c, d)
-#	define lua_rawlen lua_objlen
-#	define lua_newstate(a, b)                                                 \
-		luaL_newstate() /* Must use luaL_newstate() for 64 bit target */
-#	define lua_pushinteger lua_pushnumber
-#	define luaL_newlib(L, t)                                                  \
-		{                                                                      \
-			luaL_Reg const *r = t;                                             \
-			while (r->name) {                                                  \
-				lua_register(L, r->name, r->func);                             \
-				r++;                                                           \
-			}                                                                  \
-		}
-#	define luaL_setfuncs(L, r, u) lua_register(L, r->name, r->func)
+#define LUA_OK 0
+#define LUA_ERRGCMM 999 /* not supported */
+#define mg_lua_load(a, b, c, d, e) lua_load(a, b, c, d)
+#define lua_rawlen lua_objlen
+#define lua_newstate(a, b)                                                     \
+	luaL_newstate() /* Must use luaL_newstate() for 64 bit target */
+#define lua_pushinteger lua_pushnumber
+#define luaL_newlib(L, t)                                                      \
+	{                                                                          \
+		luaL_Reg const *r = t;                                                 \
+		while (r->name) {                                                      \
+			lua_register(L, r->name, r->func);                                 \
+			r++;                                                               \
+		}                                                                      \
+	}
+#define luaL_setfuncs(L, r, u) lua_register(L, r->name, r->func)
 
 #elif LUA_VERSION_NUM == 502
 /* Lua 5.2 detected */
-#	define mg_lua_load lua_load
+#define mg_lua_load lua_load
 
 #elif LUA_VERSION_NUM == 503
 /* Lua 5.3 detected */
-#	define mg_lua_load lua_load
+#define mg_lua_load lua_load
 
 #elif LUA_VERSION_NUM == 504
 /* Lua 5.4 detected */
-#	define mg_lua_load lua_load
+#define mg_lua_load lua_load
 
 #endif
 
 #ifdef LUA_VERSION_MAKEFILE
-#	if LUA_VERSION_MAKEFILE != LUA_VERSION_NUM
-#		error                                                                  \
-		    "Mismatch between Lua version specified in Makefile and Lua version in lua.h"
-#	endif
+#if LUA_VERSION_MAKEFILE != LUA_VERSION_NUM
+#error                                                                         \
+    "Mismatch between Lua version specified in Makefile and Lua version in lua.h"
+#endif
 #endif
 
 #endif /* #ifndef CIVETWEB_LUA_H */
