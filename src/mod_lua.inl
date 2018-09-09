@@ -2049,6 +2049,9 @@ lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
 	return mg_realloc_ctx(ptr, nsize, (struct mg_context *)ud);
 }
 
+
+/* In CivetWeb, Lua-Shared is used as *.inl file */
+#define LUA_SHARED_INTERFACE static
 #include "mod_lua_shared.inl"
 
 

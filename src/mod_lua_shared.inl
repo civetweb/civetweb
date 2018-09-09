@@ -20,6 +20,14 @@
  */
 
 
+/* Interface functions */
+LUA_SHARED_INTERFACE void lua_shared_init(void);
+
+LUA_SHARED_INTERFACE void lua_shared_exit(void);
+
+LUA_SHARED_INTERFACE void lua_shared_register(struct lua_State *L);
+
+
 /* Shared data for all Lua states */
 static lua_State *L_shared;
 static pthread_mutex_t lua_shared_lock;
@@ -27,7 +35,7 @@ static pthread_mutex_t lua_shared_lock;
 
 /* Library init.
  * This function must be called before all other functions. Not thread-safe. */
-void
+LUA_SHARED_INTERFACE void
 lua_shared_init(void)
 {
 	/* Create a new Lua state to store all shared data.
@@ -44,7 +52,7 @@ lua_shared_init(void)
 
 /* Library exit.
  * This function should be called for cleanup. Not thread-safe. */
-void
+LUA_SHARED_INTERFACE void
 lua_shared_exit(void)
 {
 	/* Destroy Lua state */
@@ -56,7 +64,7 @@ lua_shared_exit(void)
 }
 
 #if defined(MG_EXPERIMENTAL_INTERFACES)
-double
+static double
 shared_locked_add(const char *name, size_t namlen, double value, int op)
 {
 	double ret;
@@ -127,11 +135,27 @@ lua_shared_dec(struct lua_State *L)
 static int
 lua_shared_exchange(struct lua_State *L)
 {
-	size_t symlen = 0;
-	const char *sym = lua_tolstring(L, 1, &symlen);
+	size_t namlen = 0;
+	const char *name = lua_tolstring(L, 1, &namlen);
 	double num = lua_tonumber(L, 2);
+	double ret;
 
-	double ret = shared_locked_add(sym, symlen, -1.0, 0);
+	pthread_mutex_lock(&lua_shared_lock);
+
+	lua_getglobal(L_shared, "shared");
+	lua_pushlstring(L_shared, name, namlen);
+	lua_rawget(L_shared, -2);
+	ret = lua_tonumber(L_shared, -1);
+
+	lua_getglobal(L_shared, "shared");
+	lua_pushlstring(L_shared, name, namlen);
+	lua_pushnumber(L_shared, num);
+	lua_rawset(L_shared, -3);
+
+	lua_pop(L_shared, 3);
+
+	pthread_mutex_unlock(&lua_shared_lock);
+
 	lua_pushnumber(L, ret);
 	return 1;
 }
@@ -181,7 +205,6 @@ lua_shared_push(struct lua_State *L)
 static int
 lua_shared_index(struct lua_State *L)
 {
-	void *ud = lua_touserdata(L, 1);
 	int key_type = lua_type(L, 2);
 	int val_type;
 
@@ -272,7 +295,6 @@ lua_shared_index(struct lua_State *L)
 static int
 lua_shared_newindex(struct lua_State *L)
 {
-	void *ud = lua_touserdata(L, 1);
 	int key_type = lua_type(L, 2);
 	int val_type = lua_type(L, 3);
 
@@ -340,7 +362,7 @@ lua_shared_newindex(struct lua_State *L)
 
 /* Register the "shared" library in a new Lua state.
  * Call it once for every Lua state accessing "shared" elements. */
-void
+LUA_SHARED_INTERFACE void
 lua_shared_register(struct lua_State *L)
 {
 	lua_newuserdata(L, 0);
