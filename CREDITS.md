@@ -73,11 +73,13 @@
 * Keith Kyzivat
 * Kevin Branigan
 * Kevin Wojniak
+* Khem Raj
 * Kimmo Mustonen
 * Lammert Bies
 * Lawrence
 * Lianghui
 * Li Peng
+* Luka Rahne
 * Maarten Fremouw
 * makrsmark
 * marco
