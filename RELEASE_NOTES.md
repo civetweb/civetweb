@@ -1,10 +1,14 @@
-Release Notes v1.11 (work in progress)
+Release Notes v1.11
 ===
-### Objectives: *Support multiple domains and certificates, support websocket ping-pong*
+### Objectives: *Support multiple domains and certificates, support websocket ping-pong, on-the-fly compression, additional API functions*
 
 Changes
 -------
 
+- Add API function to send file body for C and Lua
+- Fix several warnings from different compilers and static code analyzers
+- Drop Symbian support from the code
+- Improve examples
 - Timeout for CGI scripts
 - Fix for requests using IPv6 addresses as hostname
 - Shared data for Lua scripts and Lua server pages
@@ -14,7 +18,7 @@ Changes
 - Add helper function for HTTP 200 OK response
 - Allow Kepler Syntax for Lua Server pages
 - Update duktape to 2.2.0 and Lua to 5.3.4
-- Optional support for on-the-fly compression (if zlib is available and USE_ZLIB is set)#
+- Optional support for on-the-fly compression (if zlib is available and USE_ZLIB is set)
 - Add method to replace mg\_cry and log\_access by own implemention
 - Fixes for IPv6 support
 - Add server support for websocket ping pong protocol
