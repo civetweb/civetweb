@@ -1745,8 +1745,10 @@ typedef struct SSL_CTX SSL_CTX;
 #if !defined(OPENSSL_API_1_1)
 #define OPENSSL_API_1_1
 #endif
+#define OPENSSL_REMOVE_THREAD_STATE()
+#else
+#define OPENSSL_REMOVE_THREAD_STATE() ERR_remove_thread_state(NULL)
 #endif
-
 
 #else
 
@@ -1866,10 +1868,8 @@ struct ssl_func {
 #define SSL_CTX_set_options                                                    \
 	(*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[31].ptr)
 #define SSL_CTX_set_info_callback                                              \
-	(*(void (*)(SSL_CTX * ctx, void (*callback)(SSL * s, int, int)))           \
-	      ssl_sw[32]                                                           \
-	          .ptr)
-#define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
+	(*(void (*)(SSL_CTX * ctx, void (*callback)(const SSL *, int, int))) ssl_sw[32].ptr)
+#define SSL_get_ex_data (*(char *(*)(const SSL *, int))ssl_sw[33].ptr)
 #define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
 #define SSL_CTX_callback_ctrl                                                  \
 	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
@@ -1899,30 +1899,30 @@ struct ssl_func {
 
 #define ERR_get_error (*(unsigned long (*)(void))crypto_sw[0].ptr)
 #define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[1].ptr)
-#define ERR_remove_state (*(void (*)(unsigned long))crypto_sw[2].ptr)
-#define CONF_modules_unload (*(void (*)(int))crypto_sw[3].ptr)
-#define X509_free (*(void (*)(X509 *))crypto_sw[4].ptr)
-#define X509_get_subject_name (*(X509_NAME * (*)(X509 *)) crypto_sw[5].ptr)
-#define X509_get_issuer_name (*(X509_NAME * (*)(X509 *)) crypto_sw[6].ptr)
+#define CONF_modules_unload (*(void (*)(int))crypto_sw[2].ptr)
+#define X509_free (*(void (*)(X509 *))crypto_sw[3].ptr)
+#define X509_get_subject_name (*(X509_NAME * (*)(X509 *)) crypto_sw[4].ptr)
+#define X509_get_issuer_name (*(X509_NAME * (*)(X509 *)) crypto_sw[5].ptr)
 #define X509_NAME_oneline                                                      \
-	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[7].ptr)
-#define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *)) crypto_sw[8].ptr)
+	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[6].ptr)
+#define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *)) crypto_sw[7].ptr)
 #define EVP_get_digestbyname                                                   \
-	(*(const EVP_MD *(*)(const char *))crypto_sw[9].ptr)
+	(*(const EVP_MD *(*)(const char *))crypto_sw[8].ptr)
 #define EVP_Digest                                                             \
 	(*(int (*)(                                                                \
 	    const void *, size_t, void *, unsigned int *, const EVP_MD *, void *)) \
-	      crypto_sw[10]                                                        \
+	      crypto_sw[9]                                                        \
 	          .ptr)
-#define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[11].ptr)
-#define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[12].ptr)
+#define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[10].ptr)
+#define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[11].ptr)
 #define ASN1_INTEGER_to_BN                                                     \
-	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn)) crypto_sw[13].ptr)
-#define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[14].ptr)
-#define CRYPTO_free (*(void (*)(void *addr))crypto_sw[15].ptr)
+	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn)) crypto_sw[12].ptr)
+#define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[13].ptr)
+#define CRYPTO_free (*(void (*)(void *addr))crypto_sw[14].ptr)
 
 #define OPENSSL_free(a) CRYPTO_free(a)
 
+#define OPENSSL_REMOVE_THREAD_STATE()
 
 /* init_ssl_ctx() function updates this array.
  * It loads SSL library dynamically and changes NULLs to the actual addresses
@@ -1973,7 +1973,6 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
  * lib. */
 static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
                                       {"ERR_error_string", NULL},
-                                      {"ERR_remove_state", NULL},
                                       {"CONF_modules_unload", NULL},
                                       {"X509_free", NULL},
                                       {"X509_get_subject_name", NULL},
@@ -2035,8 +2034,8 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
 #define SSL_CTX_set_info_callback                                              \
-	(*(void (*)(SSL_CTX *, void (*callback)(SSL * s, int, int))) ssl_sw[32].ptr)
-#define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
+	(*(void (*)(SSL_CTX *, void (*callback)(const SSL *, int, int))) ssl_sw[32].ptr)
+#define SSL_get_ex_data (*(char *(*)(const SSL *, int))ssl_sw[33].ptr)
 #define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
 #define SSL_CTX_callback_ctrl                                                  \
 	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
@@ -2102,6 +2101,10 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define CRYPTO_free (*(void (*)(void *addr))crypto_sw[23].ptr)
 
 #define OPENSSL_free(a) CRYPTO_free(a)
+
+/* use here ERR_remove_state,
+ * while on some platforms function is not included into library due to deprication */
+#define OPENSSL_REMOVE_THREAD_STATE() ERR_remove_state(0)
 
 /* init_ssl_ctx() function updates this array.
  * It loads SSL library dynamically and changes NULLs to the actual addresses
@@ -15048,11 +15051,7 @@ sslize(struct mg_connection *conn,
 		mg_cry_internal(conn, "SSL error %i, destroying SSL context", err);
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
-/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
- * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#if !defined(OPENSSL_API_1_1)
-		ERR_remove_state(0);
-#endif
+		OPENSSL_REMOVE_THREAD_STATE();
 		return 0;
 	}
 
@@ -15097,11 +15096,7 @@ sslize(struct mg_connection *conn,
 	if (ret != 1) {
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
-/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
- * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#if !defined(OPENSSL_API_1_1)
-		ERR_remove_state(0);
-#endif
+		OPENSSL_REMOVE_THREAD_STATE();
 		return 0;
 	}
 
@@ -15569,14 +15564,13 @@ ssl_get_protocol(int version_id)
  * https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_info_callback.html
  * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_info_callback(3)
  * https://linux.die.net/man/3/ssl_set_info_callback */
-/* Note: There is no "const" for the first argument in the documentation,
+/* Note: There is no "const" for the first argument in the documentation examples,
  * however some (maybe most, but not all) headers of OpenSSL versions /
  * OpenSSL compatibility layers have it. Having a different definition
- * will cause a warning in C and an error in C++. With inconsitent
- * definitions of this function, having a warning in one version or
- * another is unavoidable. */
+ * will cause a warning in C and an error in C++. Use "const SSL *", while
+ * automatical conversion from "SSL *" works for all compilers, but not other way around */
 static void
-ssl_info_callback(SSL *ssl, int what, int ret)
+ssl_info_callback(const SSL *ssl, int what, int ret)
 {
 	(void)ret;
 
@@ -15705,39 +15699,23 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	SSL_CTX_set_ecdh_auto(dom_ctx->ssl_ctx, 1);
 #endif /* NO_SSL_DL */
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wincompatible-pointer-types"
-#endif
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
-#endif
-	/* Depending on the OpenSSL version, the callback may be
-	 * 'void (*)(SSL *, int, int)' or 'void (*)(const SSL *, int, int)'
-	 * yielding in an "incompatible-pointer-type" warning for the other
-	 * version. It seems to be "unclear" what is correct:
+	/* In SSL documentation examples callback defined without const specifier
+	 * 'void (*)(SSL *, int, int)'   See:
+    * https://www.openssl.org/docs/man1.0.2/ssl/ssl.html
+    * https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
+	 * But in the source code const SSL is used:
+	 * 'void (*)(const SSL *, int, int)' See:
+    * https://github.com/openssl/openssl/blob/1d97c8435171a7af575f73c526d79e1ef0ee5960/ssl/ssl.h#L1173
+	 * Problem about wrong documentation described, but not resolved:
 	 * https://bugs.launchpad.net/ubuntu/+source/openssl/+bug/1147526
-	 * https://www.openssl.org/docs/man1.0.2/ssl/ssl.html
-	 * https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
-	 * https://github.com/openssl/openssl/blob/1d97c8435171a7af575f73c526d79e1ef0ee5960/ssl/ssl.h#L1173
-	 * Disable this warning here.
-	 * Alternative would be a version dependent ssl_info_callback and
-	 * a const-cast to call 'char *SSL_get_app_data(SSL *ssl)' there.
+	 * Wrong const cast ignored on C or can be suppressed by compiler flags.
+	 * But when compiled with modern C++ compiler, correct const should be provided
 	 */
 	SSL_CTX_set_info_callback(dom_ctx->ssl_ctx, ssl_info_callback);
-
 
 	SSL_CTX_set_tlsext_servername_callback(dom_ctx->ssl_ctx,
 	                                       ssl_servername_callback);
 	SSL_CTX_set_tlsext_servername_arg(dom_ctx->ssl_ctx, phys_ctx);
-
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
-#endif
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 	/* If a callback has been specified, call it. */
 	callback_ret = (phys_ctx->callbacks.init_ssl == NULL)
@@ -15965,7 +15943,7 @@ uninitialize_ssl(void)
 		ERR_free_strings();
 		EVP_cleanup();
 		CRYPTO_cleanup_all_ex_data();
-		ERR_remove_state(0);
+		OPENSSL_REMOVE_THREAD_STATE();
 
 		for (i = 0; i < CRYPTO_num_locks(); i++) {
 			pthread_mutex_destroy(&ssl_mutexes[i]);
@@ -16276,11 +16254,7 @@ close_connection(struct mg_connection *conn)
 		 */
 		SSL_shutdown(conn->ssl);
 		SSL_free(conn->ssl);
-/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
- * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#if !defined(OPENSSL_API_1_1)
-		ERR_remove_state(0);
-#endif
+		OPENSSL_REMOVE_THREAD_STATE();
 		conn->ssl = NULL;
 	}
 #endif
