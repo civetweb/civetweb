@@ -1884,12 +1884,15 @@ struct ssl_func {
 
 #define SSL_CTRL_SET_TLSEXT_SERVERNAME_CB 53
 #define SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG 54
+#define SSL_CTRL_SET_TLSEXT_HOSTNAME 55
 #define SSL_CTX_set_tlsext_servername_callback(ctx, cb)                        \
 	SSL_CTX_callback_ctrl(ctx,                                                 \
 	                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,                   \
 	                      (void (*)(void))cb)
 #define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
 	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
+#define SSL_set_tlsext_host_name(ctx,arg)                                      \
+        SSL_ctrl(ctx,SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)arg)
 
 #define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
 #define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
@@ -2052,12 +2055,15 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 
 #define SSL_CTRL_SET_TLSEXT_SERVERNAME_CB 53
 #define SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG 54
+#define SSL_CTRL_SET_TLSEXT_HOSTNAME 55
 #define SSL_CTX_set_tlsext_servername_callback(ctx, cb)                        \
 	SSL_CTX_callback_ctrl(ctx,                                                 \
 	                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,                   \
 	                      (void (*)(void))cb)
 #define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
 	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
+#define SSL_set_tlsext_host_name(ctx,arg)                                      \
+        SSL_ctrl(ctx,SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)arg)
 
 #define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
 #define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
