@@ -1879,6 +1879,7 @@ struct ssl_func {
 #define SSL_get_servername                                                     \
 	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
 #define SSL_set_SSL_CTX (*(SSL_CTX * (*)(SSL *, SSL_CTX *)) ssl_sw[37].ptr)
+#define SSL_ctrl (*(long (*)(SSL *, int, long, void *))ssl_sw[38].ptr)
 
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
@@ -1972,6 +1973,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_callback_ctrl", NULL},
                                    {"SSL_get_servername", NULL},
                                    {"SSL_set_SSL_CTX", NULL},
+                                   {"SSL_ctrl", NULL},
                                    {NULL, NULL}};
 
 
@@ -2049,6 +2051,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define SSL_get_servername                                                     \
 	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
 #define SSL_set_SSL_CTX (*(SSL_CTX * (*)(SSL *, SSL_CTX *)) ssl_sw[37].ptr)
+#define SSL_ctrl (*(long (*)(SSL *, int, long, void *))ssl_sw[38].ptr)
 
 #define SSL_CTX_set_options(ctx, op)                                           \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
@@ -2159,6 +2162,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_callback_ctrl", NULL},
                                    {"SSL_get_servername", NULL},
                                    {"SSL_set_SSL_CTX", NULL},
+                                   {"SSL_ctrl", NULL},
                                    {NULL, NULL}};
 
 
@@ -15030,7 +15034,7 @@ sslize(struct mg_connection *conn,
        SSL_CTX *s,
        int (*func)(SSL *),
        volatile int *stop_server,
-	 const struct mg_client_options *client_options)
+       const struct mg_client_options *client_options)
 {
 	int ret, err;
 	int short_trust;
@@ -16541,7 +16545,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            conn->client_ssl_ctx,
 		            SSL_connect,
 		            &(conn->phys_ctx->stop_flag),
-					client_options)) {
+		            client_options)) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -17830,7 +17834,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 			           conn->dom_ctx->ssl_ctx,
 			           SSL_accept,
 			           &(conn->phys_ctx->stop_flag),
-					   NULL)) {
+			           NULL)) {
 				/* conn->dom_ctx is set in get_request */
 
 				/* Get SSL client certificate information (if set) */
