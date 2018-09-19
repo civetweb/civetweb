@@ -15576,7 +15576,7 @@ ssl_get_protocol(int version_id)
  * definitions of this function, having a warning in one version or
  * another is unavoidable. */
 static void
-ssl_info_callback(SSL *ssl, int what, int ret)
+ssl_info_callback(const SSL *ssl, int what, int ret)
 {
 	(void)ret;
 
@@ -15705,39 +15705,23 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	SSL_CTX_set_ecdh_auto(dom_ctx->ssl_ctx, 1);
 #endif /* NO_SSL_DL */
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wincompatible-pointer-types"
-#endif
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
-#endif
-	/* Depending on the OpenSSL version, the callback may be
-	 * 'void (*)(SSL *, int, int)' or 'void (*)(const SSL *, int, int)'
-	 * yielding in an "incompatible-pointer-type" warning for the other
-	 * version. It seems to be "unclear" what is correct:
+	/* In SSL documentation examples callback defined without const specifier
+	 * 'void (*)(SSL *, int, int)'   See:
+    * https://www.openssl.org/docs/man1.0.2/ssl/ssl.html
+    * https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
+	 * But in the source code const SSL is used:
+	 * 'void (*)(const SSL *, int, int)' See:
+    * https://github.com/openssl/openssl/blob/1d97c8435171a7af575f73c526d79e1ef0ee5960/ssl/ssl.h#L1173
+	 * Problem about wrong documentation described, but not resolved:
 	 * https://bugs.launchpad.net/ubuntu/+source/openssl/+bug/1147526
-	 * https://www.openssl.org/docs/man1.0.2/ssl/ssl.html
-	 * https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
-	 * https://github.com/openssl/openssl/blob/1d97c8435171a7af575f73c526d79e1ef0ee5960/ssl/ssl.h#L1173
-	 * Disable this warning here.
-	 * Alternative would be a version dependent ssl_info_callback and
-	 * a const-cast to call 'char *SSL_get_app_data(SSL *ssl)' there.
+	 * Wrong const cast ignored on C or can be suppressed by compiler flags.
+	 * But when compiled with modern C++ compiler, correct const should be provided
 	 */
 	SSL_CTX_set_info_callback(dom_ctx->ssl_ctx, ssl_info_callback);
-
 
 	SSL_CTX_set_tlsext_servername_callback(dom_ctx->ssl_ctx,
 	                                       ssl_servername_callback);
 	SSL_CTX_set_tlsext_servername_arg(dom_ctx->ssl_ctx, phys_ctx);
-
-#if defined(GCC_DIAGNOSTIC)
-#pragma GCC diagnostic pop
-#endif
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 	/* If a callback has been specified, call it. */
 	callback_ret = (phys_ctx->callbacks.init_ssl == NULL)
