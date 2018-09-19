@@ -1745,8 +1745,10 @@ typedef struct SSL_CTX SSL_CTX;
 #if !defined(OPENSSL_API_1_1)
 #define OPENSSL_API_1_1
 #endif
+#define OPENSSL_REMOVE_THREAD_STATE()
+#else
+#define OPENSSL_REMOVE_THREAD_STATE() ERR_remove_thread_state(NULL)
 #endif
-
 
 #else
 
@@ -1920,6 +1922,7 @@ struct ssl_func {
 
 #define OPENSSL_free(a) CRYPTO_free(a)
 
+#define OPENSSL_REMOVE_THREAD_STATE()
 
 /* init_ssl_ctx() function updates this array.
  * It loads SSL library dynamically and changes NULLs to the actual addresses
@@ -2069,7 +2072,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 	(*(void (*)(unsigned long (*)(void)))crypto_sw[2].ptr)
 #define ERR_get_error (*(unsigned long (*)(void))crypto_sw[3].ptr)
 #define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[4].ptr)
-#define ERR_remove_thread_state (*(void (*)(const void *))crypto_sw[5].ptr)
+#define ERR_remove_state (*(void (*)(unsigned long))crypto_sw[5].ptr)
 #define ERR_free_strings (*(void (*)(void))crypto_sw[6].ptr)
 #define ENGINE_cleanup (*(void (*)(void))crypto_sw[7].ptr)
 #define CONF_modules_unload (*(void (*)(int))crypto_sw[8].ptr)
@@ -2098,6 +2101,10 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define CRYPTO_free (*(void (*)(void *addr))crypto_sw[23].ptr)
 
 #define OPENSSL_free(a) CRYPTO_free(a)
+
+/* use here ERR_remove_state,
+ * while on some platforms function is not included into library due to deprication */
+#define OPENSSL_REMOVE_THREAD_STATE() ERR_remove_state(0)
 
 /* init_ssl_ctx() function updates this array.
  * It loads SSL library dynamically and changes NULLs to the actual addresses
@@ -2151,7 +2158,7 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"CRYPTO_set_id_callback", NULL},
                                       {"ERR_get_error", NULL},
                                       {"ERR_error_string", NULL},
-                                      {"ERR_remove_thread_state", NULL},
+                                      {"ERR_remove_state", NULL},
                                       {"ERR_free_strings", NULL},
                                       {"ENGINE_cleanup", NULL},
                                       {"CONF_modules_unload", NULL},
@@ -15044,11 +15051,7 @@ sslize(struct mg_connection *conn,
 		mg_cry_internal(conn, "SSL error %i, destroying SSL context", err);
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
-/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
- * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#if !defined(OPENSSL_API_1_1)
-		ERR_remove_thread_state(NULL);
-#endif
+		OPENSSL_REMOVE_THREAD_STATE();
 		return 0;
 	}
 
@@ -15093,11 +15096,7 @@ sslize(struct mg_connection *conn,
 	if (ret != 1) {
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
-/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
- * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#if !defined(OPENSSL_API_1_1)
-		ERR_remove_thread_state(NULL);
-#endif
+		OPENSSL_REMOVE_THREAD_STATE();
 		return 0;
 	}
 
@@ -15944,7 +15943,7 @@ uninitialize_ssl(void)
 		ERR_free_strings();
 		EVP_cleanup();
 		CRYPTO_cleanup_all_ex_data();
-		ERR_remove_thread_state(NULL);
+		OPENSSL_REMOVE_THREAD_STATE();
 
 		for (i = 0; i < CRYPTO_num_locks(); i++) {
 			pthread_mutex_destroy(&ssl_mutexes[i]);
@@ -16255,11 +16254,7 @@ close_connection(struct mg_connection *conn)
 		 */
 		SSL_shutdown(conn->ssl);
 		SSL_free(conn->ssl);
-/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
- * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
-#if !defined(OPENSSL_API_1_1)
-		ERR_remove_thread_state(NULL);
-#endif
+		OPENSSL_REMOVE_THREAD_STATE();
 		conn->ssl = NULL;
 	}
 #endif
