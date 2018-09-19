@@ -1868,7 +1868,9 @@ struct ssl_func {
 #define SSL_CTX_set_options                                                    \
 	(*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[31].ptr)
 #define SSL_CTX_set_info_callback                                              \
-	(*(void (*)(SSL_CTX * ctx, void (*callback)(const SSL *, int, int))) ssl_sw[32].ptr)
+	(*(void (*)(SSL_CTX * ctx, void (*callback)(const SSL *, int, int)))       \
+	      ssl_sw[32]                                                           \
+	          .ptr)
 #define SSL_get_ex_data (*(char *(*)(const SSL *, int))ssl_sw[33].ptr)
 #define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
 #define SSL_CTX_callback_ctrl                                                  \
@@ -1891,8 +1893,8 @@ struct ssl_func {
 	                      (void (*)(void))cb)
 #define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
 	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
-#define SSL_set_tlsext_host_name(ctx,arg)                                      \
-        SSL_ctrl(ctx,SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)arg)
+#define SSL_set_tlsext_host_name(ctx, arg)                                     \
+	SSL_ctrl(ctx, SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)arg)
 
 #define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
 #define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
@@ -1914,7 +1916,7 @@ struct ssl_func {
 #define EVP_Digest                                                             \
 	(*(int (*)(                                                                \
 	    const void *, size_t, void *, unsigned int *, const EVP_MD *, void *)) \
-	      crypto_sw[9]                                                        \
+	      crypto_sw[9]                                                         \
 	          .ptr)
 #define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[10].ptr)
 #define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[11].ptr)
@@ -2037,7 +2039,8 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
 #define SSL_CTX_set_info_callback                                              \
-	(*(void (*)(SSL_CTX *, void (*callback)(const SSL *, int, int))) ssl_sw[32].ptr)
+	(*(void (*)(SSL_CTX *, void (*callback)(const SSL *, int, int)))ssl_sw[32] \
+	      .ptr)
 #define SSL_get_ex_data (*(char *(*)(const SSL *, int))ssl_sw[33].ptr)
 #define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
 #define SSL_CTX_callback_ctrl                                                  \
@@ -2062,8 +2065,8 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 	                      (void (*)(void))cb)
 #define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
 	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
-#define SSL_set_tlsext_host_name(ctx,arg)                                      \
-        SSL_ctrl(ctx,SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)arg)
+#define SSL_set_tlsext_host_name(ctx, arg)                                     \
+	SSL_ctrl(ctx, SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)arg)
 
 #define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
 #define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
@@ -2109,7 +2112,8 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define OPENSSL_free(a) CRYPTO_free(a)
 
 /* use here ERR_remove_state,
- * while on some platforms function is not included into library due to deprication */
+ * while on some platforms function is not included into library due to
+ * deprication */
 #define OPENSSL_REMOVE_THREAD_STATE() ERR_remove_state(0)
 
 /* init_ssl_ctx() function updates this array.
@@ -15570,11 +15574,12 @@ ssl_get_protocol(int version_id)
  * https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_info_callback.html
  * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_info_callback(3)
  * https://linux.die.net/man/3/ssl_set_info_callback */
-/* Note: There is no "const" for the first argument in the documentation examples,
- * however some (maybe most, but not all) headers of OpenSSL versions /
- * OpenSSL compatibility layers have it. Having a different definition
- * will cause a warning in C and an error in C++. Use "const SSL *", while
- * automatical conversion from "SSL *" works for all compilers, but not other way around */
+/* Note: There is no "const" for the first argument in the documentation
+ * examples, however some (maybe most, but not all) headers of OpenSSL versions
+ * / OpenSSL compatibility layers have it. Having a different definition will
+ * cause a warning in C and an error in C++. Use "const SSL *", while
+ * automatical conversion from "SSL *" works for all compilers, but not other
+ * way around */
 static void
 ssl_info_callback(const SSL *ssl, int what, int ret)
 {
@@ -15707,15 +15712,16 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 
 	/* In SSL documentation examples callback defined without const specifier
 	 * 'void (*)(SSL *, int, int)'   See:
-    * https://www.openssl.org/docs/man1.0.2/ssl/ssl.html
-    * https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
+	 * https://www.openssl.org/docs/man1.0.2/ssl/ssl.html
+	 * https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
 	 * But in the source code const SSL is used:
 	 * 'void (*)(const SSL *, int, int)' See:
-    * https://github.com/openssl/openssl/blob/1d97c8435171a7af575f73c526d79e1ef0ee5960/ssl/ssl.h#L1173
+	 * https://github.com/openssl/openssl/blob/1d97c8435171a7af575f73c526d79e1ef0ee5960/ssl/ssl.h#L1173
 	 * Problem about wrong documentation described, but not resolved:
 	 * https://bugs.launchpad.net/ubuntu/+source/openssl/+bug/1147526
 	 * Wrong const cast ignored on C or can be suppressed by compiler flags.
-	 * But when compiled with modern C++ compiler, correct const should be provided
+	 * But when compiled with modern C++ compiler, correct const should be
+	 * provided
 	 */
 	SSL_CTX_set_info_callback(dom_ctx->ssl_ctx, ssl_info_callback);
 
