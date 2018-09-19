@@ -1,3 +1,13 @@
+Release Notes v1.12
+===
+### Objectives: *TO BE DEFINED*
+
+Changes
+-------
+
+- Update version number
+
+
 Release Notes v1.11
 ===
 ### Objectives: *Support multiple domains and certificates, support websocket ping-pong, on-the-fly compression, additional API functions*
@@ -19,7 +29,7 @@ Changes
 - Allow Kepler Syntax for Lua Server pages
 - Update duktape to 2.2.0 and Lua to 5.3.4
 - Optional support for on-the-fly compression (if zlib is available and USE_ZLIB is set)
-- Add method to replace mg\_cry and log\_access by own implemention
+- Add method to replace mg\_cry and log\_access by own implementation
 - Fixes for IPv6 support
 - Add server support for websocket ping pong protocol
 - Fix misspellings in source code and documentation
