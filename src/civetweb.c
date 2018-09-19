@@ -1899,7 +1899,8 @@ struct ssl_func {
 
 #define ERR_get_error (*(unsigned long (*)(void))crypto_sw[0].ptr)
 #define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[1].ptr)
-#define ERR_remove_state (*(void (*)(unsigned long))crypto_sw[2].ptr)
+// deprecated in OpenSLL 1.1.0 and should not be used, keep for a simplicity
+#define ERR_remove_thread_state (*(void (*)(const void *))crypto_sw[2].ptr)
 #define CONF_modules_unload (*(void (*)(int))crypto_sw[3].ptr)
 #define X509_free (*(void (*)(X509 *))crypto_sw[4].ptr)
 #define X509_get_subject_name (*(X509_NAME * (*)(X509 *)) crypto_sw[5].ptr)
@@ -1973,7 +1974,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
  * lib. */
 static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
                                       {"ERR_error_string", NULL},
-                                      {"ERR_remove_state", NULL},
+                                      {"ERR_remove_thread_state", NULL},
                                       {"CONF_modules_unload", NULL},
                                       {"X509_free", NULL},
                                       {"X509_get_subject_name", NULL},
@@ -2073,7 +2074,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 	(*(void (*)(unsigned long (*)(void)))crypto_sw[2].ptr)
 #define ERR_get_error (*(unsigned long (*)(void))crypto_sw[3].ptr)
 #define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[4].ptr)
-#define ERR_remove_state (*(void (*)(unsigned long))crypto_sw[5].ptr)
+#define ERR_remove_thread_state (*(void (*)(const void *))crypto_sw[5].ptr)
 #define ERR_free_strings (*(void (*)(void))crypto_sw[6].ptr)
 #define ENGINE_cleanup (*(void (*)(void))crypto_sw[7].ptr)
 #define CONF_modules_unload (*(void (*)(int))crypto_sw[8].ptr)
@@ -2155,7 +2156,7 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"CRYPTO_set_id_callback", NULL},
                                       {"ERR_get_error", NULL},
                                       {"ERR_error_string", NULL},
-                                      {"ERR_remove_state", NULL},
+                                      {"ERR_remove_thread_state", NULL},
                                       {"ERR_free_strings", NULL},
                                       {"ENGINE_cleanup", NULL},
                                       {"CONF_modules_unload", NULL},
@@ -15051,7 +15052,7 @@ sslize(struct mg_connection *conn,
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
  * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 #if !defined(OPENSSL_API_1_1)
-		ERR_remove_state(0);
+		ERR_remove_thread_state(NULL);
 #endif
 		return 0;
 	}
@@ -15100,7 +15101,7 @@ sslize(struct mg_connection *conn,
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
  * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 #if !defined(OPENSSL_API_1_1)
-		ERR_remove_state(0);
+		ERR_remove_thread_state(NULL);
 #endif
 		return 0;
 	}
@@ -15949,7 +15950,7 @@ uninitialize_ssl(void)
 		ERR_free_strings();
 		EVP_cleanup();
 		CRYPTO_cleanup_all_ex_data();
-		ERR_remove_state(0);
+		ERR_remove_thread_state(NULL);
 
 		for (i = 0; i < CRYPTO_num_locks(); i++) {
 			pthread_mutex_destroy(&ssl_mutexes[i]);
@@ -16263,7 +16264,7 @@ close_connection(struct mg_connection *conn)
 /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
  * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 #if !defined(OPENSSL_API_1_1)
-		ERR_remove_state(0);
+		ERR_remove_thread_state(NULL);
 #endif
 		conn->ssl = NULL;
 	}
