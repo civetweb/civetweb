@@ -13417,7 +13417,7 @@ mg_set_websocket_handler_with_subprotocols(
 void
 mg_set_auth_handler(struct mg_context *ctx,
                     const char *uri,
-                    mg_request_handler handler,
+                    mg_authorization_handler handler,
                     void *cbdata)
 {
 	mg_set_handler_type(ctx,
