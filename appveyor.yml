@@ -270,6 +270,7 @@ environment:
       image: Ubuntu1804
 
 matrix:
+  fast_finish: false
   allow_failures:
     # Experimental Ubuntu
     - id: Ubuntu1604-GCC-x64
@@ -464,8 +465,6 @@ after_test:
   - echo "Dist directory:"
   - dir dist\
 
-matrix:
-  fast_finish: false
 
 cache:
   - C:\mingw-builds -> mingw.cmd
