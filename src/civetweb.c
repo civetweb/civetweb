@@ -1732,6 +1732,7 @@ typedef struct SSL_CTX SSL_CTX;
 #include <openssl/opensslv.h>
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
+#include <openssl/tls1.h>
 #include <openssl/x509.h>
 
 #if defined(WOLFSSL_VERSION)
@@ -15028,7 +15029,8 @@ static int
 sslize(struct mg_connection *conn,
        SSL_CTX *s,
        int (*func)(SSL *),
-       volatile int *stop_server)
+       volatile int *stop_server,
+	 const struct mg_client_options *client_options)
 {
 	int ret, err;
 	int short_trust;
@@ -15063,6 +15065,12 @@ sslize(struct mg_connection *conn,
 		conn->ssl = NULL;
 		OPENSSL_REMOVE_THREAD_STATE();
 		return 0;
+	}
+
+	if (client_options) {
+		if (client_options->host_name) {
+			SSL_set_tlsext_host_name(conn->ssl, client_options->host_name);
+		}
 	}
 
 	/* SSL functions may fail and require to be called again:
@@ -16532,7 +16540,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		if (!sslize(conn,
 		            conn->client_ssl_ctx,
 		            SSL_connect,
-		            &(conn->phys_ctx->stop_flag))) {
+		            &(conn->phys_ctx->stop_flag),
+					client_options)) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -17820,7 +17829,8 @@ worker_thread_run(struct worker_thread_args *thread_args)
 			if (sslize(conn,
 			           conn->dom_ctx->ssl_ctx,
 			           SSL_accept,
-			           &(conn->phys_ctx->stop_flag))) {
+			           &(conn->phys_ctx->stop_flag),
+					   NULL)) {
 				/* conn->dom_ctx is set in get_request */
 
 				/* Get SSL client certificate information (if set) */

@@ -1388,6 +1388,7 @@ struct mg_client_options {
 	int port;
 	const char *client_cert;
 	const char *server_cert;
+	const char *host_name;
 	/* TODO: add more data */
 };
 
