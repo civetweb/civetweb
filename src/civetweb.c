@@ -1866,10 +1866,8 @@ struct ssl_func {
 #define SSL_CTX_set_options                                                    \
 	(*(unsigned long (*)(SSL_CTX *, unsigned long))ssl_sw[31].ptr)
 #define SSL_CTX_set_info_callback                                              \
-	(*(void (*)(SSL_CTX * ctx, void (*callback)(SSL * s, int, int)))           \
-	      ssl_sw[32]                                                           \
-	          .ptr)
-#define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
+	(*(void (*)(SSL_CTX * ctx, void (*callback)(const SSL *, int, int))) ssl_sw[32].ptr)
+#define SSL_get_ex_data (*(char *(*)(const SSL *, int))ssl_sw[33].ptr)
 #define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
 #define SSL_CTX_callback_ctrl                                                  \
 	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
@@ -1899,28 +1897,26 @@ struct ssl_func {
 
 #define ERR_get_error (*(unsigned long (*)(void))crypto_sw[0].ptr)
 #define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[1].ptr)
-// deprecated in OpenSLL 1.1.0 and should not be used, keep for a simplicity
-#define ERR_remove_thread_state (*(void (*)(const void *))crypto_sw[2].ptr)
-#define CONF_modules_unload (*(void (*)(int))crypto_sw[3].ptr)
-#define X509_free (*(void (*)(X509 *))crypto_sw[4].ptr)
-#define X509_get_subject_name (*(X509_NAME * (*)(X509 *)) crypto_sw[5].ptr)
-#define X509_get_issuer_name (*(X509_NAME * (*)(X509 *)) crypto_sw[6].ptr)
+#define CONF_modules_unload (*(void (*)(int))crypto_sw[2].ptr)
+#define X509_free (*(void (*)(X509 *))crypto_sw[3].ptr)
+#define X509_get_subject_name (*(X509_NAME * (*)(X509 *)) crypto_sw[4].ptr)
+#define X509_get_issuer_name (*(X509_NAME * (*)(X509 *)) crypto_sw[5].ptr)
 #define X509_NAME_oneline                                                      \
-	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[7].ptr)
-#define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *)) crypto_sw[8].ptr)
+	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[6].ptr)
+#define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *)) crypto_sw[7].ptr)
 #define EVP_get_digestbyname                                                   \
-	(*(const EVP_MD *(*)(const char *))crypto_sw[9].ptr)
+	(*(const EVP_MD *(*)(const char *))crypto_sw[8].ptr)
 #define EVP_Digest                                                             \
 	(*(int (*)(                                                                \
 	    const void *, size_t, void *, unsigned int *, const EVP_MD *, void *)) \
-	      crypto_sw[10]                                                        \
+	      crypto_sw[9]                                                        \
 	          .ptr)
-#define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[11].ptr)
-#define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[12].ptr)
+#define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[10].ptr)
+#define BN_bn2hex (*(char *(*)(const BIGNUM *a))crypto_sw[11].ptr)
 #define ASN1_INTEGER_to_BN                                                     \
-	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn)) crypto_sw[13].ptr)
-#define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[14].ptr)
-#define CRYPTO_free (*(void (*)(void *addr))crypto_sw[15].ptr)
+	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn)) crypto_sw[12].ptr)
+#define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[13].ptr)
+#define CRYPTO_free (*(void (*)(void *addr))crypto_sw[14].ptr)
 
 #define OPENSSL_free(a) CRYPTO_free(a)
 
@@ -1974,7 +1970,6 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
  * lib. */
 static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
                                       {"ERR_error_string", NULL},
-                                      {"ERR_remove_thread_state", NULL},
                                       {"CONF_modules_unload", NULL},
                                       {"X509_free", NULL},
                                       {"X509_get_subject_name", NULL},
@@ -2036,8 +2031,8 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 #define SSL_CTX_set_cipher_list                                                \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
 #define SSL_CTX_set_info_callback                                              \
-	(*(void (*)(SSL_CTX *, void (*callback)(SSL * s, int, int))) ssl_sw[32].ptr)
-#define SSL_get_ex_data (*(char *(*)(SSL *, int))ssl_sw[33].ptr)
+	(*(void (*)(SSL_CTX *, void (*callback)(const SSL *, int, int))) ssl_sw[32].ptr)
+#define SSL_get_ex_data (*(char *(*)(const SSL *, int))ssl_sw[33].ptr)
 #define SSL_set_ex_data (*(void (*)(SSL *, int, char *))ssl_sw[34].ptr)
 #define SSL_CTX_callback_ctrl                                                  \
 	(*(long (*)(SSL_CTX *, int, void (*)(void)))ssl_sw[35].ptr)
@@ -15570,12 +15565,11 @@ ssl_get_protocol(int version_id)
  * https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_info_callback.html
  * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_info_callback(3)
  * https://linux.die.net/man/3/ssl_set_info_callback */
-/* Note: There is no "const" for the first argument in the documentation,
+/* Note: There is no "const" for the first argument in the documentation examples,
  * however some (maybe most, but not all) headers of OpenSSL versions /
  * OpenSSL compatibility layers have it. Having a different definition
- * will cause a warning in C and an error in C++. With inconsitent
- * definitions of this function, having a warning in one version or
- * another is unavoidable. */
+ * will cause a warning in C and an error in C++. Use "const SSL *", while
+ * automatical conversion from "SSL *" works for all compilers, but not other way around */
 static void
 ssl_info_callback(const SSL *ssl, int what, int ret)
 {
