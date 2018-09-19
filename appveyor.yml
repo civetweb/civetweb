@@ -199,6 +199,7 @@ environment:
       enable_stats: YES
       configuration: Release
       platform: x86
+      image: Visual Studio 2013
     - id: Full-VS2013-x64
       compiler: msvc-18-seh
       build_shared: NO
@@ -211,6 +212,7 @@ environment:
       enable_stats: YES
       configuration: Release
       platform: x64
+      image: Visual Studio 2013
     # Visual Studio 2015 is default
     # Visual Studio 2017 is not yet default
     - id: Full-VS2017-x86
@@ -225,7 +227,7 @@ environment:
       enable_stats: YES
       configuration: Release
       platform: x86
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      image: Visual Studio 2017
     - id: Full-VS2017-x64
       compiler: msvc-20-seh
       build_shared: NO
@@ -238,7 +240,66 @@ environment:
       enable_stats: YES
       configuration: Release
       platform: x64
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      image: Visual Studio 2017
+    # Experimental Ubuntu
+    - id: Ubuntu1604-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Ubuntu1604
+    - id: Ubuntu1804-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Ubuntu1804
+
+matrix:
+  allow_failures:
+    # Experimental Ubuntu
+    - id: Ubuntu1604-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Ubuntu1604
+    - id: Ubuntu1804-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Ubuntu1804
+
+
 
 
 install:
