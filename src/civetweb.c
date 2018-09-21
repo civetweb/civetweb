@@ -19046,9 +19046,11 @@ mg_get_system_info_impl(char *buffer, int buflen)
 	/* Build date */
 	{
 #if defined(GCC_DIAGNOSTIC)
+#if GCC_VERSION >= 40900
 #pragma GCC diagnostic push
-/* Disable bogus compiler warning -Wdate-time */
+/* Disable bogus compiler warning -Wdate-time, appeared in gcc5 */
 #pragma GCC diagnostic ignored "-Wdate-time"
+#endif
 #endif
 		mg_snprintf(NULL,
 		            NULL,
@@ -19059,7 +19061,9 @@ mg_get_system_info_impl(char *buffer, int buflen)
 		            eol);
 
 #if defined(GCC_DIAGNOSTIC)
+#if GCC_VERSION >= 40900
 #pragma GCC diagnostic pop
+#endif
 #endif
 
 		system_info_length += (int)strlen(block);

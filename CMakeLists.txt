@@ -301,7 +301,6 @@ if (HAVE_NO_RESERVED_ID_MACROS)
 add_c_compiler_flag(-Wno-reserved-id-macros) # for system headers
 endif (HAVE_NO_RESERVED_ID_MACROS)
 add_c_compiler_flag(-Wno-format-nonliteral) # printf(myFormatStringVar, ...)
-add_c_compiler_flag(-Wno-date-time) # using __DATE__ once
 add_c_compiler_flag(-Wno-cast-qual) # const cast
 add_c_compiler_flag(/Wd4820) # padding
 
