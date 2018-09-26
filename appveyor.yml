@@ -227,7 +227,7 @@ environment:
       enable_stats: YES
       configuration: Release
       platform: x86
-      image: Visual Studio 2017
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     - id: Full-VS2017-x64
       compiler: msvc-20-seh
       build_shared: NO
@@ -240,7 +240,7 @@ environment:
       enable_stats: YES
       configuration: Release
       platform: x64
-      image: Visual Studio 2017
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     # Experimental Ubuntu
     - id: Ubuntu1604-GCC-x64
       compiler: gcc-5.1.0-posix
