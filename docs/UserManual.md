@@ -2,7 +2,7 @@
 Overview
 =====
 
-CivetWeb is small and easy to use web server.
+CivetWeb is a small and easy to use web server.
 It may be embedded into C/C++ host applications or used as a stand-alone
 server. See `Embedding.md` for information on embedding CivetWeb into
 host applications.
@@ -24,26 +24,26 @@ For UNIX and Mac, CivetWeb does not detach from the terminal.
 Pressing `Ctrl-C` keys will stop the server.
 
 On Windows, CivetWeb iconifies itself to the system tray icon when started.
-Right-click on the icon pops up a menu, where it is possible to stop
-CivetWeb, or configure it, or install it as Windows service.
+Right-clicking on the icon pops up a menu, where it is possible to stop
+CivetWeb, configure it, or install it as Windows service.
 
 When started without options, the server exposes the local directory at
 [http](http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol) port 8080.
 Thus, the easiest way to share a folder on Windows is to copy `CivetWeb.exe`
 to this folder, double-click the exe, and launch a browser at
 [http://localhost:8080](http://localhost:8080). Note that 'localhost' should
-be changed to a machine's name if a folder is accessed from other computer.
+be changed to a machine's name if a folder is accessed from another computer.
 
 When started, CivetWeb first searches for the configuration file.
-If configuration file is specified explicitly in the command line, i.e.
-`CivetWeb path_to_config_file`, then specified configuration file is used.
-Otherwise, CivetWeb would search for file `CivetWeb.conf` in the same directory
+If a configuration file is specified explicitly in the command line, i.e.
+`CivetWeb path_to_config_file`, then the specified configuration file is used.
+Otherwise, CivetWeb will search for the file `CivetWeb.conf` in the same directory that
 the executable is located, and use it. This configuration file is optional.
 
 The configuration file is a sequence of lines, each line containing one
 command line argument name and the corresponding value.
 Empty lines, and lines beginning with `#`, are ignored.
-Here is the example of `CivetWeb.conf` file:
+Here is the example of a `CivetWeb.conf` file:
 
     document_root c:\www
     listening_ports 80,443s
@@ -57,7 +57,7 @@ For example: The above `CivetWeb.conf` file is used, and CivetWeb started as
 `CivetWeb -document_root D:\web`. Then the `D:\web` directory will be served
 as document root, because command line options take priority over the
 configuration file. The configuration options section below provides a good
-overview of the CivetWeb features.
+overview of CivetWeb features.
 
 Note that configuration options on the command line must start with `-`,
 but their names are the same as in the config file. All option names are
@@ -109,9 +109,9 @@ The following options are supported in `civetweb.c`. They can be used for
 the stand-alone executable as well as for applications embedding CivetWeb.
 
 ### cgi\_pattern `**.cgi$|**.pl$|**.php$`
-All files that match `cgi_pattern` are treated as CGI files. Default pattern
+All files that match `cgi_pattern` are treated as CGI files. The default pattern
 allows CGI files be anywhere. To restrict CGIs to a certain directory,
-use `/path/to/cgi-bin/**.cgi` as pattern. Note that the full file path is
+use `/path/to/cgi-bin/**.cgi` as the pattern. Note that the full file path is
 matched against the pattern, not the URI.
 
 ### cgi\_environment
@@ -120,8 +120,8 @@ addition to standard ones. The list must be comma-separated list
 of name=value pairs, like this: `VARIABLE1=VALUE1,VARIABLE2=VALUE2`.
 
 ### put\_delete\_auth\_file
-Passwords file for PUT and DELETE requests. Without password file, it will not
-be possible to, PUT new files to the server or DELETE existing ones. PUT and
+Passwords file for PUT and DELETE requests. Without a password file, it will not
+be possible to PUT new files to the server or DELETE existing ones. PUT and
 DELETE requests might still be handled by Lua scripts and CGI paged.
 
 ### cgi\_interpreter
@@ -140,7 +140,7 @@ working directory is the directory where the CivetWeb executable is located.
 
 If all CGIs use the same interpreter, for example they are all PHP, it is
 more efficient to set `cgi_interpreter` to the path to `php-cgi.exe`.
-The  shebang line in the CGI scripts can be omitted in this case.
+The shebang line in the CGI scripts can be omitted in this case.
 Note that PHP scripts must use `php-cgi.exe` as executable, not `php.exe`.
 
 ### protect\_uri
@@ -162,7 +162,7 @@ will be accepted.
 All files that match `ssi_pattern` are treated as Server Side Includes (SSI).
 
 SSI is a simple interpreted server-side scripting language which is most
-commonly used to include the contents of another file into a web page.
+commonly used to include the contents of another file in a web page.
 It can be useful when it is desirable to include a common piece
 of code throughout a website, for example, headers and footers.
 
@@ -307,7 +307,7 @@ e.g. `[::1]:8080` for the IPv6 loopback interface.
 all interfaces, both IPv4 and IPv6, use either the configuration
 `80,[::]:80` (create one socket for IPv4 and one for IPv6 only),
 or `+80` (create one socket for both, IPv4 and IPv6). 
-The `+`-notation to use IPv4 and IPv6 will only work in no network
+The `+` notation to use IPv4 and IPv6 will only work if no network
 interface is specified. Depending on your operating system version
 and IPv6 network environment, some configurations might not work
 as expected, so you have to test to find the configuration most 
