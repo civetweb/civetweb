@@ -43,11 +43,11 @@ msgtypename(int flags)
 	case MG_WEBSOCKET_OPCODE_BINARY:
 		return "binary";
 	case MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE:
-		return "clonnection close";
+		return "connection close";
 	case MG_WEBSOCKET_OPCODE_PING:
 		return "PING";
 	case MG_WEBSOCKET_OPCODE_PONG:
-		return "PING";
+		return "PONG";
 	}
 	return "unknown";
 }
