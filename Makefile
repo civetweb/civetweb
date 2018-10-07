@@ -332,6 +332,8 @@ distclean: clean
 	$(RMF) $(CPROG) lib$(CPROG).so lib$(CPROG).a *.dmg *.msi *.exe lib$(CPROG).dll lib$(CPROG).dll.a
 	$(RMF) $(UNIT_TEST_PROG)
 
+$(LIB_OBJECTS): CFLAGS += -fPIC
+
 lib$(CPROG).a: CFLAGS += -fPIC
 lib$(CPROG).a: $(LIB_OBJECTS)
 	@$(RMF) $@
