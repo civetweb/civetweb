@@ -1327,6 +1327,31 @@ start_civetweb(int argc, char *argv[])
 	signal(SIGTERM, signal_handler);
 	signal(SIGINT, signal_handler);
 
+#if defined(DAEMONIZE)
+	/* Daemonize */
+	for (i = 0; options[i] != NULL; i++) {
+		if (strcmp(options[i],"daemonize") ==  0) {
+			if(options[i+1] != NULL) {
+				if(mg_strcasecmp(options[i+1], "yes") == 0) {
+					fprintf(stdout, "daemonize.\n");
+					if(daemon(0,0) != 0) {
+						fprintf(stdout, "Faild to daemonize main process.\n");
+						exit(EXIT_FAILURE);
+					}
+					FILE *fp;
+					if((fp=fopen(PID_FILE,"w")) == 0) {
+						fprintf(stdout, "Can not open %s.\n", PID_FILE);
+						exit(EXIT_FAILURE);
+					}
+					fprintf(fp,"%d",getpid());
+					fclose(fp);
+				}
+			}
+			break;
+		}
+	}
+#endif
+
 	/* Initialize user data */
 	memset(&g_user_data, 0, sizeof(g_user_data));
 

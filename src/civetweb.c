@@ -2400,6 +2400,9 @@ enum {
 #endif
 	ADDITIONAL_HEADER,
 	ALLOW_INDEX_SCRIPT_SUB_RES,
+#if defined(DAEMONIZE)
+	ENABLE_DAEMONIZE,
+#endif
 
 	NUM_OPTIONS
 };
@@ -2512,6 +2515,9 @@ static const struct mg_option config_options[] = {
 #endif
     {"additional_header", MG_CONFIG_TYPE_STRING_MULTILINE, NULL},
     {"allow_index_script_resource", MG_CONFIG_TYPE_BOOLEAN, "no"},
+#if defined(DAEMONIZE)
+    {"daemonize", MG_CONFIG_TYPE_BOOLEAN, "no"},
+#endif
 
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 

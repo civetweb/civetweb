@@ -22,10 +22,11 @@ EXEC_PREFIX = $(PREFIX)
 BINDIR = $(EXEC_PREFIX)/bin
 DATAROOTDIR = $(PREFIX)/share
 DOCDIR = $(DATAROOTDIR)/doc/$(CPROG)
-SYSCONFDIR = $(PREFIX)/etc
+SYSCONFDIR ?= $(PREFIX)/etc
 HTMLDIR = $(DOCDIR)
 INCLUDEDIR = $(DESTDIR)$(PREFIX)/include
 LIBDIR = $(DESTDIR)$(EXEC_PREFIX)/lib
+PID_FILE ?= /var/run/$(CPROG).pid
 
 # build tools
 MKDIR = mkdir -p
@@ -162,6 +163,10 @@ ifdef WITH_SERVER_STATS
   CFLAGS += -DUSE_SERVER_STATS
 endif
 
+ifdef WITH_DAEMONIZE
+  CFLAGS += -DDAEMONIZE -DPID_FILE=\"$(PID_FILE)\"
+endif
+
 # File names
 ifdef CONFIG_FILE
   CFLAGS += -DCONFIG_FILE=\"$(CONFIG_FILE)\"
@@ -239,6 +244,8 @@ help:
 	@echo "   WITH_ZLIB=1           build includes support for on-the-fly compression using zlib"
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   WITH_EXPERIMENTAL=1   build with experimental features"
+	@echo "   WITH_DAEMONIZE=1      build with daemonize."
+	@echo "   PID_FILE=/path        PID file path of daemon."
 	@echo "   CONFIG_FILE=file      use 'file' as the config file"
 	@echo "   CONFIG_FILE2=file     use 'file' as the backup config file"
 	@echo "   DOCUMENT_ROOT=/path   document root override when installing"
