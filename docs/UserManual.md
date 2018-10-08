@@ -531,6 +531,8 @@ If set in any other way, the result is unspecified.
 
 ### error\_pages
 This option may be used to specify a directory for user defined error pages.
+To specify a directory, make sure the name ends with a backslash (Windows) 
+or slash (Linux, MacOS, ...).
 The error pages may be specified for an individual http status code (e.g.,
 404 - page requested by the client not found), a group of http status codes
 (e.g., 4xx - all client errors) or all errors. The corresponding error pages
