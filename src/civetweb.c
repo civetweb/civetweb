@@ -15059,6 +15059,7 @@ sslize(struct mg_connection *conn,
 {
 	int ret, err;
 	int short_trust;
+	unsigned timeout=1024;
 	unsigned i;
 
 	if (!conn) {
@@ -15098,10 +15099,17 @@ sslize(struct mg_connection *conn,
 		}
 	}
 
+	/* Reuse the request timeout for the SSL_Accept/SSL_connect timeout  */
+	if (conn->dom_ctx->config[REQUEST_TIMEOUT]) {
+		/* NOTE: The loop below acts as a back-off, so we can end 
+		 * up sleeping for more (or less) than the REQUEST_TIMEOUT. */
+		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]);
+	}
+
 	/* SSL functions may fail and require to be called again:
 	 * see https://www.openssl.org/docs/manmaster/ssl/SSL_get_error.html
 	 * Here "func" could be SSL_connect or SSL_accept. */
-	for (i = 16; i <= 1024; i *= 2) {
+	for (i = 16; i <= timeout; i *= 2) {
 		ret = func(conn->ssl);
 		if (ret != 1) {
 			err = SSL_get_error(conn->ssl, ret);
