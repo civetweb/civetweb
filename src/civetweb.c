@@ -16947,6 +16947,9 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	/* Message is a valid request */
 
 	/* Is there a "host" ? */
+	if (conn->host!=NULL) {
+		mg_free((void *)conn->host);
+	}
 	conn->host = alloc_get_host(conn);
 	if (!conn->host) {
 		mg_snprintf(conn,
