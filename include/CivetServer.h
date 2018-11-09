@@ -14,13 +14,29 @@
 #include <string>
 #include <vector>
 
+#ifndef CIVETWEB_CXX_API
+#if defined(_WIN32)
+#if defined(CIVETWEB_CXX_DLL_EXPORTS)
+#define CIVETWEB_CXX_API __declspec(dllexport)
+#elif defined(CIVETWEB_CXX_DLL_IMPORTS)
+#define CIVETWEB_CXX_API __declspec(dllimport)
+#else
+#define CIVETWEB_CXX_API
+#endif
+#elif __GNUC__ >= 4
+#define CIVETWEB_CXX_API __attribute__((visibility("default")))
+#else
+#define CIVETWEB_CXX_API
+#endif
+#endif
+
 // forward declaration
 class CivetServer;
 
 /**
  * Exception class for thrown exceptions within the CivetHandler object.
  */
-class CIVETWEB_API CivetException : public std::runtime_error
+class CIVETWEB_CXX_API CivetException : public std::runtime_error
 {
   public:
 	CivetException(const std::string &msg) : std::runtime_error(msg)
@@ -32,7 +48,7 @@ class CIVETWEB_API CivetException : public std::runtime_error
  * Basic interface for a URI request handler.  Handlers implementations
  * must be reentrant.
  */
-class CIVETWEB_API CivetHandler
+class CIVETWEB_CXX_API CivetHandler
 {
   public:
 	/**
@@ -110,7 +126,7 @@ class CIVETWEB_API CivetHandler
  * Basic interface for a URI authorization handler.  Handler implementations
  * must be reentrant.
  */
-class CIVETWEB_API CivetAuthHandler
+class CIVETWEB_CXX_API CivetAuthHandler
 {
   public:
 	/**
@@ -135,7 +151,7 @@ class CIVETWEB_API CivetAuthHandler
  * Basic interface for a websocket handler.  Handlers implementations
  * must be reentrant.
  */
-class CIVETWEB_API CivetWebSocketHandler
+class CIVETWEB_CXX_API CivetWebSocketHandler
 {
   public:
 	/**
@@ -197,7 +213,7 @@ class CIVETWEB_API CivetWebSocketHandler
  *
  * wrapper for mg_callbacks
  */
-struct CIVETWEB_API CivetCallbacks : public mg_callbacks {
+struct CIVETWEB_CXX_API CivetCallbacks : public mg_callbacks {
 	CivetCallbacks();
 };
 
@@ -206,7 +222,7 @@ struct CIVETWEB_API CivetCallbacks : public mg_callbacks {
  *
  * Basic class for embedded web server.  This has an URL mapping built-in.
  */
-class CIVETWEB_API CivetServer
+class CIVETWEB_CXX_API CivetServer
 {
   public:
 	/**
