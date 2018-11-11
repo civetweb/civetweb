@@ -10,7 +10,7 @@ set_target_properties(civetweb-c-library PROPERTIES
   SOVERSION ${CIVETWEB_VERSION}
 )
 if (BUILD_SHARED_LIBS)
-  target_compile_definitions(civetweb-c-library PRIVATE CIVETWEB_DLL_EXPORTS)
+  target_compile_definitions(civetweb-c-library PRIVATE CIVETWEB_DLL_EXPORTS INTERFACE CIVETWEB_DLL_IMPORTS)
 endif()
 target_include_directories(
   civetweb-c-library PUBLIC
@@ -257,9 +257,6 @@ if (CIVETWEB_ENABLE_SERVER_EXECUTABLE)
             RUNTIME DESTINATION bin
             COMPONENT server)
     endif()
-    if (BUILD_SHARED_LIBS)
-        target_compile_definitions(civetweb-c-executable PRIVATE CIVETWEB_DLL_IMPORTS)
-    endif()
     target_include_directories(
         civetweb-c-executable PUBLIC
         ${PROJECT_SOURCE_DIR}/include)
@@ -296,8 +293,11 @@ if (CIVETWEB_ENABLE_CXX)
     SOVERSION ${CIVETWEB_VERSION}
   )
   if (BUILD_SHARED_LIBS)
-    target_compile_definitions(civetweb-cpp PRIVATE CIVETWEB_DLL_EXPORTS)
+    target_compile_definitions(civetweb-cpp PRIVATE CIVETWEB_CXX_DLL_EXPORTS INTERFACE CIVETWEB_CXX_DLL_IMPORTS)
   endif()
+  target_link_libraries(
+    civetweb-cpp PUBLIC
+	civetweb-c-library)
   target_include_directories(
     civetweb-cpp PUBLIC
     ${PROJECT_SOURCE_DIR}/include)
