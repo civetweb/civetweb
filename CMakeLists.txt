@@ -35,6 +35,7 @@ set(CIVETWEB_VERSION_MAJOR "${CMAKE_MATCH_1}")
 set(CIVETWEB_VERSION_MINOR "${CMAKE_MATCH_2}")
 set(CIVETWEB_VERSION_PATCH "${CMAKE_MATCH_3}")
 determine_target_architecture(CIVETWEB_ARCHITECTURE)
+include(GNUInstallDirs)
 
 # Detect the platform reliably
 if(NOT MACOSX AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
