@@ -15059,7 +15059,7 @@ sslize(struct mg_connection *conn,
 {
 	int ret, err;
 	int short_trust;
-	unsigned timeout=1024;
+	unsigned timeout = 1024;
 	unsigned i;
 
 	if (!conn) {
@@ -15101,7 +15101,7 @@ sslize(struct mg_connection *conn,
 
 	/* Reuse the request timeout for the SSL_Accept/SSL_connect timeout  */
 	if (conn->dom_ctx->config[REQUEST_TIMEOUT]) {
-		/* NOTE: The loop below acts as a back-off, so we can end 
+		/* NOTE: The loop below acts as a back-off, so we can end
 		 * up sleeping for more (or less) than the REQUEST_TIMEOUT. */
 		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]);
 	}
@@ -16947,7 +16947,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	/* Message is a valid request */
 
 	/* Is there a "host" ? */
-	if (conn->host!=NULL) {
+	if (conn->host != NULL) {
 		mg_free((void *)conn->host);
 	}
 	conn->host = alloc_get_host(conn);

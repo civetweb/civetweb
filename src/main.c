@@ -1330,20 +1330,20 @@ start_civetweb(int argc, char *argv[])
 #if defined(DAEMONIZE)
 	/* Daemonize */
 	for (i = 0; options[i] != NULL; i++) {
-		if (strcmp(options[i],"daemonize") ==  0) {
-			if(options[i+1] != NULL) {
-				if(mg_strcasecmp(options[i+1], "yes") == 0) {
+		if (strcmp(options[i], "daemonize") == 0) {
+			if (options[i + 1] != NULL) {
+				if (mg_strcasecmp(options[i + 1], "yes") == 0) {
 					fprintf(stdout, "daemonize.\n");
-					if(daemon(0,0) != 0) {
+					if (daemon(0, 0) != 0) {
 						fprintf(stdout, "Faild to daemonize main process.\n");
 						exit(EXIT_FAILURE);
 					}
 					FILE *fp;
-					if((fp=fopen(PID_FILE,"w")) == 0) {
+					if ((fp = fopen(PID_FILE, "w")) == 0) {
 						fprintf(stdout, "Can not open %s.\n", PID_FILE);
 						exit(EXIT_FAILURE);
 					}
-					fprintf(fp,"%d",getpid());
+					fprintf(fp, "%d", getpid());
 					fclose(fp);
 				}
 			}
@@ -2980,15 +2980,13 @@ main(int argc, char *argv[])
 @end
 
 @implementation Civetweb
-- (void)openBrowser
-{
+- (void)openBrowser {
 	[[NSWorkspace sharedWorkspace]
 	    openURL:[NSURL URLWithString:[NSString stringWithUTF8String:
 	                                               get_url_to_first_open_port(
 	                                                   g_ctx)]]];
 }
-- (void)editConfig
-{
+- (void)editConfig {
 	create_config_file(g_ctx, g_config_file_name);
 	NSString *path = [NSString stringWithUTF8String:g_config_file_name];
 	if (![[NSWorkspace sharedWorkspace] openFile:path
@@ -3001,8 +2999,7 @@ main(int argc, char *argv[])
 		(void)[alert runModal];
 	}
 }
-- (void)shutDown
-{
+- (void)shutDown {
 	[NSApp terminate:nil];
 }
 @end
