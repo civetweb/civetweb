@@ -382,13 +382,13 @@ mg_handle_form_request(struct mg_connection *conn,
 					/* read error */
 					return -1;
 				}
-				if (r != (int)to_read) {
+				if (r == 0) {
 					/* TODO: Create a function to get "all_data_read" from
 					 * the conn object. All data is read if the Content-Length
 					 * has been reached, or if chunked encoding is used and
 					 * the end marker has been read, or if the connection has
 					 * been closed. */
-					all_data_read = 1;
+					all_data_read = (buf_fill == 0);
 				}
 				buf_fill += r;
 				buf[buf_fill] = 0;
@@ -509,13 +509,13 @@ mg_handle_form_request(struct mg_connection *conn,
 							}
 							return -1;
 						}
-						if (r != (int)to_read) {
+						if (r == 0) {
 							/* TODO: Create a function to get "all_data_read"
 							 * from the conn object. All data is read if the
 							 * Content-Length has been reached, or if chunked
 							 * encoding is used and the end marker has been
 							 * read, or if the connection has been closed. */
-							all_data_read = 1;
+							all_data_read = (buf_fill == 0);
 						}
 						buf_fill += r;
 						buf[buf_fill] = 0;
@@ -652,8 +652,8 @@ mg_handle_form_request(struct mg_connection *conn,
 				mg_free(boundary);
 				return -1;
 			}
-			if (r != (int)to_read) {
-				all_data_read = 1;
+			if (r == 0) {
+				all_data_read = (buf_fill == 0);
 			}
 
 			buf_fill += r;
@@ -931,8 +931,8 @@ mg_handle_form_request(struct mg_connection *conn,
 					mg_free(boundary);
 					return -1;
 				}
-				if (r != (int)to_read) {
-					all_data_read = 1;
+				if (r == 0) {
+					all_data_read = (buf_fill == 0);
 				}
 
 				buf_fill += r;

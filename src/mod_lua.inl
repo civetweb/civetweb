@@ -390,7 +390,7 @@ lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 	case 1:
 		/* Second call: forward variable name */
 		ret = reader->begin;
-		*sz = reader->len;
+		*sz = (size_t)reader->len;
 		reader->consumed += reader->len;
 		break;
 	case 2:
