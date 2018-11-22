@@ -369,15 +369,25 @@ class CIVETWEB_CXX_API CivetServer
 	std::vector<int> getListeningPorts();
 
 	/**
+	 * getListeningPorts()
+	 *
+	 * Variant of getListeningPorts() returning the full port information
+	 * (protocol, SSL, ...)
+	 *
+	 * @return A vector of ports
+	 */
+	std::vector<struct mg_server_ports> getListeningPortsFull();
+
+	/**
 	 * getCookie(struct mg_connection *conn, const std::string &cookieName,
-	 *std::string &cookieValue)
+	 * std::string &cookieValue)
 	 *
 	 * Puts the cookie value string that matches the cookie name in the
-	 *cookieValue destinaton string.
+	 * cookieValue destination string.
 	 *
 	 * @param conn - the connection information
 	 * @param cookieName - cookie name to get the value from
-	 * @param cookieValue - cookie value is returned using thiis reference
+	 * @param cookieValue - cookie value is returned using this reference
 	 * @returns the size of the cookie value string read.
 	 */
 	static int getCookie(struct mg_connection *conn,
