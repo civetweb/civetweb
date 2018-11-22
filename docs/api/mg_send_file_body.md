@@ -16,7 +16,7 @@
 
 ### Description
 
-The function `mg_send_file_file()` sends the contents of a file over a connection to the remote peer without adding any HTTP headers. The code must send all required HTTP response headers before using this function.
+The function `mg_send_file_body()` sends the contents of a file over a connection to the remote peer without adding any HTTP headers. The code must send all required HTTP response headers before using this function.
 
 ### See Also
 

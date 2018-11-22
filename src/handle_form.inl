@@ -19,7 +19,6 @@
  * THE SOFTWARE.
  */
 
-
 static int
 url_encoded_field_found(const struct mg_connection *conn,
                         const char *key,
@@ -83,7 +82,6 @@ url_encoded_field_found(const struct mg_connection *conn,
 	return ret;
 }
 
-
 static int
 url_encoded_field_get(const struct mg_connection *conn,
                       const char *key,
@@ -121,7 +119,6 @@ url_encoded_field_get(const struct mg_connection *conn,
 	return ret;
 }
 
-
 static int
 unencoded_field_get(const struct mg_connection *conn,
                     const char *key,
@@ -138,7 +135,6 @@ unencoded_field_get(const struct mg_connection *conn,
 	return fdh->field_get(key_dec, value, value_len, fdh->user_data);
 }
 
-
 static int
 field_stored(const struct mg_connection *conn,
              const char *path,
@@ -151,7 +147,6 @@ field_stored(const struct mg_connection *conn,
 
 	return fdh->field_store(path, file_size, fdh->user_data);
 }
-
 
 static const char *
 search_boundary(const char *buf,
@@ -173,7 +168,6 @@ search_boundary(const char *buf,
 	}
 	return NULL;
 }
-
 
 int
 mg_handle_form_request(struct mg_connection *conn,
@@ -384,17 +378,17 @@ mg_handle_form_request(struct mg_connection *conn,
 
 				size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
 				r = mg_read(conn, buf + (size_t)buf_fill, to_read);
-				if (r < 0) {
+				if ((r < 0) || ((r == 0) && all_data_read)) {
 					/* read error */
 					return -1;
 				}
-				if (r != (int)to_read) {
+				if (r == 0) {
 					/* TODO: Create a function to get "all_data_read" from
 					 * the conn object. All data is read if the Content-Length
 					 * has been reached, or if chunked encoding is used and
 					 * the end marker has been read, or if the connection has
 					 * been closed. */
-					all_data_read = 1;
+					all_data_read = (buf_fill == 0);
 				}
 				buf_fill += r;
 				buf[buf_fill] = 0;
@@ -507,7 +501,7 @@ mg_handle_form_request(struct mg_connection *conn,
 
 						size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
 						r = mg_read(conn, buf + (size_t)buf_fill, to_read);
-						if (r < 0) {
+						if ((r < 0) || ((r == 0) && all_data_read)) {
 							/* read error */
 							if (fstore.access.fp) {
 								mg_fclose(&fstore.access);
@@ -515,13 +509,13 @@ mg_handle_form_request(struct mg_connection *conn,
 							}
 							return -1;
 						}
-						if (r != (int)to_read) {
+						if (r == 0) {
 							/* TODO: Create a function to get "all_data_read"
 							 * from the conn object. All data is read if the
 							 * Content-Length has been reached, or if chunked
 							 * encoding is used and the end marker has been
 							 * read, or if the connection has been closed. */
-							all_data_read = 1;
+							all_data_read = (buf_fill == 0);
 						}
 						buf_fill += r;
 						buf[buf_fill] = 0;
@@ -579,6 +573,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		const char *content_disp, *hend, *fbeg, *fend, *nbeg, *nend;
 		const char *next;
 		unsigned part_no;
+		int all_data_read = 0;
 
 		memset(&part_header, 0, sizeof(part_header));
 
@@ -649,15 +644,18 @@ mg_handle_form_request(struct mg_connection *conn,
 		for (part_no = 0;; part_no++) {
 			size_t towrite, fnlen, n;
 			int get_block;
+			size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
 
-			r = mg_read(conn,
-			            buf + (size_t)buf_fill,
-			            sizeof(buf) - 1 - (size_t)buf_fill);
-			if (r < 0) {
+			r = mg_read(conn, buf + (size_t)buf_fill, to_read);
+			if ((r < 0) || ((r == 0) && all_data_read)) {
 				/* read error */
 				mg_free(boundary);
 				return -1;
 			}
+			if (r == 0) {
+				all_data_read = (buf_fill == 0);
+			}
+
 			buf_fill += r;
 			buf[buf_fill] = 0;
 			if (buf_fill < 1) {
@@ -922,10 +920,9 @@ mg_handle_form_request(struct mg_connection *conn,
 				hend = buf;
 
 				/* Read new data */
-				r = mg_read(conn,
-				            buf + (size_t)buf_fill,
-				            sizeof(buf) - 1 - (size_t)buf_fill);
-				if (r < 0) {
+				to_read = sizeof(buf) - 1 - (size_t)buf_fill;
+				r = mg_read(conn, buf + (size_t)buf_fill, to_read);
+				if ((r < 0) || ((r == 0) && all_data_read)) {
 					/* read error */
 					if (fstore.access.fp) {
 						mg_fclose(&fstore.access);
@@ -934,6 +931,10 @@ mg_handle_form_request(struct mg_connection *conn,
 					mg_free(boundary);
 					return -1;
 				}
+				if (r == 0) {
+					all_data_read = (buf_fill == 0);
+				}
+
 				buf_fill += r;
 				buf[buf_fill] = 0;
 				/* buf_fill is at least 8 here */
@@ -1017,6 +1018,5 @@ mg_handle_form_request(struct mg_connection *conn,
 	/* Unknown Content-Type */
 	return -1;
 }
-
 
 /* End of handle_form.inl */

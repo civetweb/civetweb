@@ -390,7 +390,7 @@ lsp_var_reader(lua_State *L, void *ud, size_t *sz)
 	case 1:
 		/* Second call: forward variable name */
 		ret = reader->begin;
-		*sz = reader->len;
+		*sz = (size_t)reader->len;
 		reader->consumed += reader->len;
 		break;
 	case 2:
@@ -2163,11 +2163,11 @@ prepare_lua_environment(struct mg_context *ctx,
 		reg_conn_function(L, "keep_alive", lsp_keep_alive, conn);
 		reg_conn_function(L, "send_file", lsp_send_file, conn);
 		reg_conn_function(L, "send_file_body", lsp_send_file_body, conn);
+		reg_conn_function(L, "redirect", lsp_redirect, conn);
 	}
 
 	if (lua_env_type == LUA_ENV_TYPE_LUA_SERVER_PAGE) {
 		reg_conn_function(L, "include", lsp_include, conn);
-		reg_conn_function(L, "redirect", lsp_redirect, conn);
 	}
 
 	if (lua_env_type == LUA_ENV_TYPE_LUA_WEBSOCKET) {

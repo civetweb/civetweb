@@ -740,14 +740,14 @@ typedef struct DIR {
 	struct dirent result;
 } DIR;
 
-#if defined(_WIN32)
-#if !defined(HAVE_POLL)
-struct pollfd {
+#if defined(HAVE_POLL)
+#define mg_pollfd pollfd
+#else
+struct mg_pollfd {
 	SOCKET fd;
 	short events;
 	short revents;
 };
-#endif
 #endif
 
 /* Mark required libraries */
@@ -828,6 +828,8 @@ typedef int SOCKET;
  */
 #define socklen_t int
 #endif /* hpux */
+
+#define mg_pollfd pollfd
 
 #endif /* defined(_WIN32) - WINDOWS vs UNIX include block */
 
@@ -2398,6 +2400,9 @@ enum {
 #endif
 	ADDITIONAL_HEADER,
 	ALLOW_INDEX_SCRIPT_SUB_RES,
+#if defined(DAEMONIZE)
+	ENABLE_DAEMONIZE,
+#endif
 
 	NUM_OPTIONS
 };
@@ -2510,6 +2515,9 @@ static const struct mg_option config_options[] = {
 #endif
     {"additional_header", MG_CONFIG_TYPE_STRING_MULTILINE, NULL},
     {"allow_index_script_resource", MG_CONFIG_TYPE_BOOLEAN, "no"},
+#if defined(DAEMONIZE)
+    {"daemonize", MG_CONFIG_TYPE_BOOLEAN, "no"},
+#endif
 
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 
@@ -2598,7 +2606,7 @@ struct mg_context {
 	int context_type; /* See CONTEXT_* above */
 
 	struct socket *listening_sockets;
-	struct pollfd *listening_socket_fds;
+	struct mg_pollfd *listening_socket_fds;
 	unsigned int num_listening_sockets;
 
 	struct mg_connection *worker_connections; /* The connection struct, pre-
@@ -5387,13 +5395,16 @@ mg_readdir(DIR *dir)
 
 
 #if !defined(HAVE_POLL)
+#undef POLLIN
+#undef POLLPRI
+#undef POLLOUT
 #define POLLIN (1)  /* Data ready - read will not block. */
 #define POLLPRI (2) /* Priority data ready. */
 #define POLLOUT (4) /* Send queue not full - write will not block. */
 
 FUNCTION_MAY_BE_UNUSED
 static int
-poll(struct pollfd *pfd, unsigned int n, int milliseconds)
+poll(struct mg_pollfd *pfd, unsigned int n, int milliseconds)
 {
 	struct timeval tv;
 	fd_set rset;
@@ -6062,7 +6073,7 @@ get_random(void)
 
 
 static int
-mg_poll(struct pollfd *pfd,
+mg_poll(struct mg_pollfd *pfd,
         unsigned int n,
         int milliseconds,
         volatile int *stop_server)
@@ -6226,7 +6237,7 @@ push_inner(struct mg_context *ctx,
 			mg_sleep(5);
 		} else {
 			/* For sockets, wait for the socket using poll */
-			struct pollfd pfd[1];
+			struct mg_pollfd pfd[1];
 			int pollres;
 
 			pfd[0].fd = sock;
@@ -6367,7 +6378,7 @@ pull_inner(FILE *fp,
 
 	} else if (conn->ssl != NULL) {
 
-		struct pollfd pfd[1];
+		struct mg_pollfd pfd[1];
 		int pollres;
 
 		pfd[0].fd = conn->client.sock;
@@ -6406,7 +6417,7 @@ pull_inner(FILE *fp,
 #endif
 
 	} else {
-		struct pollfd pfd[1];
+		struct mg_pollfd pfd[1];
 		int pollres;
 
 		pfd[0].fd = conn->client.sock;
@@ -8916,7 +8927,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 #endif
 
 		/* Data for poll */
-		struct pollfd pfd[1];
+		struct mg_pollfd pfd[1];
 		int pollres;
 		int ms_wait = 10000; /* 10 second timeout */
 
@@ -9072,15 +9083,14 @@ print_dir_entry(struct de *de)
 	}
 	mg_url_encode(de->file_name, href, hrefsize);
 	mg_printf(de->conn,
-	          "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
-	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	          de->conn->request_info.local_uri,
-	          href,
-	          de->file.is_directory ? "/" : "",
-	          de->file_name,
-	          de->file.is_directory ? "/" : "",
-	          mod,
-	          size);
+              "<tr><td><a href=\"%s%s\">%s%s</a></td>"
+              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
+              href,
+              de->file.is_directory ? "/" : "",
+              de->file_name,
+              de->file.is_directory ? "/" : "",
+              mod,
+              size);
 	mg_free(href);
 	return 0;
 }
@@ -9362,13 +9372,12 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 
 	/* Print first entry - link to a parent directory */
 	mg_printf(conn,
-	          "<tr><td><a href=\"%s%s\">%s</a></td>"
-	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-	          conn->request_info.local_uri,
-	          "..",
-	          "Parent directory",
-	          "-",
-	          "-");
+              "<tr><td><a href=\"%s\">%s</a></td>"
+              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
+              "..",
+              "Parent directory",
+              "-",
+              "-");
 
 	/* Sort and print directory entries */
 	if (data.entries != NULL) {
@@ -14466,7 +14475,7 @@ set_ports_option(struct mg_context *phys_ctx)
 	struct vec vec;
 	struct socket so, *ptr;
 
-	struct pollfd *pfd;
+	struct mg_pollfd *pfd;
 	union usa usa;
 	socklen_t len;
 	int ip_version;
@@ -14690,7 +14699,7 @@ set_ports_option(struct mg_context *phys_ctx)
 			continue;
 		}
 
-		if ((pfd = (struct pollfd *)
+		if ((pfd = (struct mg_pollfd *)
 		         mg_realloc_ctx(phys_ctx->listening_socket_fds,
 		                        (phys_ctx->num_listening_sockets + 1)
 		                            * sizeof(phys_ctx->listening_socket_fds[0]),
@@ -15048,6 +15057,7 @@ sslize(struct mg_connection *conn,
 {
 	int ret, err;
 	int short_trust;
+	unsigned timeout = 1024;
 	unsigned i;
 
 	if (!conn) {
@@ -15087,10 +15097,17 @@ sslize(struct mg_connection *conn,
 		}
 	}
 
+	/* Reuse the request timeout for the SSL_Accept/SSL_connect timeout  */
+	if (conn->dom_ctx->config[REQUEST_TIMEOUT]) {
+		/* NOTE: The loop below acts as a back-off, so we can end
+		 * up sleeping for more (or less) than the REQUEST_TIMEOUT. */
+		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]);
+	}
+
 	/* SSL functions may fail and require to be called again:
 	 * see https://www.openssl.org/docs/manmaster/ssl/SSL_get_error.html
 	 * Here "func" could be SSL_connect or SSL_accept. */
-	for (i = 16; i <= 1024; i *= 2) {
+	for (i = 16; i <= timeout; i *= 2) {
 		ret = func(conn->ssl);
 		if (ret != 1) {
 			err = SSL_get_error(conn->ssl, ret);
@@ -16928,6 +16945,9 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	/* Message is a valid request */
 
 	/* Is there a "host" ? */
+	if (conn->host != NULL) {
+		mg_free((void *)conn->host);
+	}
 	conn->host = alloc_get_host(conn);
 	if (!conn->host) {
 		mg_snprintf(conn,
@@ -18047,7 +18067,7 @@ master_thread_run(void *thread_func_param)
 {
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	struct mg_workerTLS tls;
-	struct pollfd *pfd;
+	struct mg_pollfd *pfd;
 	unsigned int i;
 	unsigned int workerthreadcount;
 
