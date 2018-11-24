@@ -506,8 +506,15 @@ configure_package_config_file(
   PATH_VARS CMAKE_INSTALL_INCLUDEDIR
 )
 
+write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake
+  VERSION ${CIVETWEB_VERSION}
+  COMPATIBILITY AnyNewerVersion
+)
+
 install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
   COMPONENT civetweb-cmake-config
 )
