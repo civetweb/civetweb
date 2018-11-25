@@ -6,6 +6,7 @@ endif()
 add_library(civetweb-c-library ${LIB_TYPE} civetweb.c)
 set_target_properties(civetweb-c-library PROPERTIES
   OUTPUT_NAME "civetweb"
+  EXPORT_NAME "civetweb"
   VERSION ${CIVETWEB_VERSION}
   SOVERSION ${CIVETWEB_VERSION}
 )
@@ -14,16 +15,18 @@ if (BUILD_SHARED_LIBS)
 endif()
 target_include_directories(
   civetweb-c-library PUBLIC
-  ${PROJECT_SOURCE_DIR}/include)
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
 install(
   TARGETS civetweb-c-library
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-  COMPONENT civetweb-c-library)
+  EXPORT ${PROJECT_NAME}-targets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  COMPONENT civetweb-c-library
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES
   ${PROJECT_SOURCE_DIR}/include/civetweb.h
-  DESTINATION include
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   COMPONENT civetweb-c-library)
 
 # Need Windows sockets if available
@@ -247,19 +250,21 @@ endif()
 if (CIVETWEB_ENABLE_SERVER_EXECUTABLE)
     add_executable(civetweb-c-executable main.c)
     set_target_properties(civetweb-c-executable PROPERTIES
+        EXPORT_NAME "server"
         OUTPUT_NAME "civetweb"
     )
     if (CIVETWEB_INSTALL_EXECUTABLE)
         install(
             TARGETS civetweb-c-executable
-            ARCHIVE DESTINATION lib
-            LIBRARY DESTINATION lib
-            RUNTIME DESTINATION bin
+            EXPORT ${PROJECT_NAME}-targets
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
             COMPONENT server)
     endif()
     target_include_directories(
         civetweb-c-executable PUBLIC
-        ${PROJECT_SOURCE_DIR}/include)
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
     target_link_libraries(civetweb-c-executable civetweb-c-library)
     if (LIBRT_FOUND)
         target_link_libraries(civetweb-c-executable LIBRT::LIBRT)
@@ -275,19 +280,22 @@ if (CIVETWEB_ENABLE_LUA)
   )
   target_include_directories(
     lua-library PUBLIC
-    ${PROJECT_SOURCE_DIR}/src/third_party/lua-5.2.4)
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/third_party/lua-5.2.4>)
   install(
     TARGETS lua-library
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
-    COMPONENT lua-library)
+    EXPORT ${PROJECT_NAME}-targets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT lua-library
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
 
 # The C++ API library
 if (CIVETWEB_ENABLE_CXX)
   add_library(civetweb-cpp ${LIB_TYPE} CivetServer.cpp)
   set_target_properties(civetweb-cpp PROPERTIES
+    EXPORT_NAME "civetweb-cpp"
     OUTPUT_NAME "civetweb-cpp"
     VERSION ${CIVETWEB_VERSION}
     SOVERSION ${CIVETWEB_VERSION}
@@ -300,15 +308,17 @@ if (CIVETWEB_ENABLE_CXX)
 	civetweb-c-library)
   target_include_directories(
     civetweb-cpp PUBLIC
-    ${PROJECT_SOURCE_DIR}/include)
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
   install(
     TARGETS civetweb-cpp
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
-    COMPONENT civetweb-cpp)
+    EXPORT ${PROJECT_NAME}-targets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT civetweb-cpp
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(FILES
     ${PROJECT_SOURCE_DIR}/include/CivetServer.h
-    DESTINATION include
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT civetweb-cpp)
 endif()

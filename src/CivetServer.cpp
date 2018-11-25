@@ -582,9 +582,7 @@ CivetServer::getPostData(struct mg_connection *conn)
 	char buf[2048];
 	int r = mg_read(conn, buf, sizeof(buf));
 	while (r > 0) {
-		std::string p = std::string(buf);
-		p.resize(r);
-		postdata += p;
+		postdata += std::string(buf, r);
 		r = mg_read(conn, buf, sizeof(buf));
 	}
 	mg_unlock_connection(conn);
@@ -624,22 +622,29 @@ CivetServer::urlEncode(const char *src,
 std::vector<int>
 CivetServer::getListeningPorts()
 {
-	std::vector<int> ports(50);
+	std::vector<struct mg_server_ports> server_ports = getListeningPortsFull();
+
+	std::vector<int> ports(server_ports.size());
+	for (size_t i = 0; i < server_ports.size(); i++) {
+		ports[i] = server_ports[i].port;
+	}
+
+	return ports;
+}
+
+std::vector<struct mg_server_ports>
+CivetServer::getListeningPortsFull()
+{
 	std::vector<struct mg_server_ports> server_ports(50);
 	int size = mg_get_server_ports(context,
 	                               (int)server_ports.size(),
 	                               &server_ports[0]);
 	if (size <= 0) {
-		ports.resize(0);
-		return ports;
+		server_ports.resize(0);
+		return server_ports;
 	}
-	ports.resize(size);
 	server_ports.resize(size);
-	for (int i = 0; i < size; i++) {
-		ports[i] = server_ports[i].port;
-	}
-
-	return ports;
+	return server_ports;
 }
 
 CivetServer::CivetConnection::CivetConnection()

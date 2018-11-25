@@ -35,6 +35,7 @@ set(CIVETWEB_VERSION_MAJOR "${CMAKE_MATCH_1}")
 set(CIVETWEB_VERSION_MINOR "${CMAKE_MATCH_2}")
 set(CIVETWEB_VERSION_PATCH "${CMAKE_MATCH_3}")
 determine_target_architecture(CIVETWEB_ARCHITECTURE)
+include(GNUInstallDirs)
 
 # Detect the platform reliably
 if(NOT MACOSX AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -484,6 +485,39 @@ if (CIVETWEB_BUILD_TESTING)
   # Build the testing
   add_subdirectory(unittest)
 endif()
+
+# cmake config file
+
+include(CMakePackageConfigHelpers)
+
+install(
+  EXPORT ${PROJECT_NAME}-targets
+  NAMESPACE ${PROJECT_NAME}::
+  FILE ${PROJECT_NAME}-targets.cmake
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+  COMPONENT civetweb-cmake-config
+)
+
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}-config.cmake.in"
+  ${PROJECT_NAME}-config.cmake
+  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+  PATH_VARS CMAKE_INSTALL_INCLUDEDIR
+)
+
+write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake
+  VERSION ${CIVETWEB_VERSION}
+  COMPATIBILITY AnyNewerVersion
+)
+
+install(
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+  COMPONENT civetweb-cmake-config
+)
 
 # Set up CPack
 include(InstallRequiredSystemLibraries)
