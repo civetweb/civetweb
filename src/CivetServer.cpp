@@ -622,7 +622,7 @@ CivetServer::urlEncode(const char *src,
 std::vector<int>
 CivetServer::getListeningPorts()
 {
-	std::vector<struct mg_server_ports> server_ports = getListeningPortsFull();
+	std::vector<struct mg_server_port> server_ports = getListeningPortsFull();
 
 	std::vector<int> ports(server_ports.size());
 	for (size_t i = 0; i < server_ports.size(); i++) {
@@ -632,10 +632,10 @@ CivetServer::getListeningPorts()
 	return ports;
 }
 
-std::vector<struct mg_server_ports>
+std::vector<struct mg_server_port>
 CivetServer::getListeningPortsFull()
 {
-	std::vector<struct mg_server_ports> server_ports(50);
+	std::vector<struct mg_server_port> server_ports(50);
 	int size = mg_get_server_ports(context,
 	                               (int)server_ports.size(),
 	                               &server_ports[0]);

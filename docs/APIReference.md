@@ -39,7 +39,7 @@ The content of both structures is not defined in the interface - they are only u
 * [`struct mg_option;`](api/mg_option.md)
 * [`struct mg_request_info;`](api/mg_request_info.md)
 * [`struct mg_response_info;`](api/mg_response_info.md)
-* [`struct mg_server_ports;`](api/mg_server_ports.md)
+* [`struct mg_server_port;`](api/mg_server_port.md)
 
 
 ## Library API Functions

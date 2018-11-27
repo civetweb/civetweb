@@ -359,7 +359,7 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 	char client_err[256];
 	const struct mg_response_info *client_ri;
 	int client_res, ret;
-	struct mg_server_ports portinfo[8];
+	struct mg_server_port portinfo[8];
 
 	mark_point();
 
@@ -600,7 +600,7 @@ START_TEST(test_mg_start_stop_https_server)
 	char client_err[256];
 	const struct mg_response_info *client_ri;
 	int client_res, ret;
-	struct mg_server_ports portinfo[8];
+	struct mg_server_port portinfo[8];
 
 	ck_assert(ssl_cert != NULL);
 
@@ -714,7 +714,7 @@ START_TEST(test_mg_server_and_client_tls)
 	struct mg_context *ctx;
 
 	int ports_cnt;
-	struct mg_server_ports ports[16];
+	struct mg_server_port ports[16];
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 

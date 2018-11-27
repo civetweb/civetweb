@@ -376,7 +376,7 @@ class CIVETWEB_CXX_API CivetServer
 	 *
 	 * @return A vector of ports
 	 */
-	std::vector<struct mg_server_ports> getListeningPortsFull();
+	std::vector<struct mg_server_port> getListeningPortsFull();
 
 	/**
 	 * getCookie(struct mg_connection *conn, const std::string &cookieName,
