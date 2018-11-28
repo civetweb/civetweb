@@ -445,10 +445,10 @@ CivetServer::urlDecode(const char *src,
 	dst.clear();
 	for (i = j = 0; i < (int)src_len; i++, j++) {
 		if (i < (int)src_len - 2 && src[i] == '%'
-		    && isxdigit(*(const unsigned char *)(src + i + 1))
-		    && isxdigit(*(const unsigned char *)(src + i + 2))) {
-			a = tolower(*(const unsigned char *)(src + i + 1));
-			b = tolower(*(const unsigned char *)(src + i + 2));
+		    && isxdigit((unsigned char)src[i + 1])
+		    && isxdigit((unsigned char)src[i + 2])) {
+			a = tolower((unsigned char)src[i + 1]);
+			b = tolower((unsigned char)src[i + 2]);
 			dst.push_back((char)((HEXTOI(a) << 4) | HEXTOI(b)));
 			i += 2;
 		} else if (is_form_url_encoded && src[i] == '+') {
@@ -608,13 +608,13 @@ CivetServer::urlEncode(const char *src,
 		dst.clear();
 
 	for (; src_len > 0; src++, src_len--) {
-		if (isalnum(*(const unsigned char *)src)
-		    || strchr(dont_escape, *(const unsigned char *)src) != NULL) {
+		if (isalnum((unsigned char)*src)
+		    || strchr(dont_escape, *src) != NULL) {
 			dst.push_back(*src);
 		} else {
 			dst.push_back('%');
-			dst.push_back(hex[(*(const unsigned char *)src) >> 4]);
-			dst.push_back(hex[(*(const unsigned char *)src) & 0xf]);
+			dst.push_back(hex[(unsigned char)*src >> 4]);
+			dst.push_back(hex[(unsigned char)*src & 0xf]);
 		}
 	}
 }

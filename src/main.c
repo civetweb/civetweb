@@ -732,19 +732,19 @@ read_config_file(const char *config_file, char **options)
 		line_no++;
 
 		/* Ignore empty lines and comments */
-		for (i = 0; isspace(*(unsigned char *)&line[i]);)
+		for (i = 0; isspace((unsigned char)line[i]);)
 			i++;
 		if (p[i] == '#' || p[i] == '\0') {
 			continue;
 		}
 
 		/* Skip spaces, \r and \n at the end of the line */
-		for (j = strlen(line) - 1; isspace(*(unsigned char *)&line[j])
-		                           || iscntrl(*(unsigned char *)&line[j]);)
+		for (j = strlen(line) - 1; isspace((unsigned char)line[j])
+		                           || iscntrl((unsigned char)line[j]);)
 			line[j--] = 0;
 
 		/* Find the space character between option name and value */
-		for (j = i; !isspace(*(unsigned char *)&line[j]) && (line[j] != 0);)
+		for (j = i; !isspace((unsigned char)line[j]) && (line[j] != 0);)
 			j++;
 
 		/* Terminate the string - then the string at (line+i) contains the
@@ -754,7 +754,7 @@ read_config_file(const char *config_file, char **options)
 
 		/* Trim additional spaces between option name and value - then
 		 * (line+j) contains the option value */
-		while (isspace(line[j])) {
+		while (isspace((unsigned char)line[j])) {
 			j++;
 		}
 
@@ -922,7 +922,7 @@ is_path_absolute(const char *path)
 	return path != NULL
 	       && ((path[0] == '\\' && path[1] == '\\') || /* UNC path, e.g.
 	                                                      \\server\dir */
-	           (isalpha(path[0]) && path[1] == ':'
+	           (isalpha((unsigned char)path[0]) && path[1] == ':'
 	            && path[2] == '\\')); /* E.g. X:\dir */
 #else
 	return path != NULL && path[0] == '/';
