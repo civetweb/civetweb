@@ -941,6 +941,11 @@ mg_handle_form_request(struct mg_connection *conn,
 
 				/* Find boundary */
 				next = search_boundary(buf, (size_t)buf_fill, boundary, bl);
+
+				if (!next && (r == 0)) {
+					/* incomplete request */
+					all_data_read = 1;
+				}
 			}
 
 			towrite = (size_t)(next - hend);
