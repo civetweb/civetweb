@@ -4,6 +4,10 @@
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
 
+#ifdef NO_SSL
+#define TEST_WITHOUT_SSL
+#endif
+
 /* Simple example program on how to use CivetWeb embedded into a C program. */
 #ifdef _WIN32
 #include <windows.h>
@@ -846,7 +850,7 @@ get_dh2236()
 #endif
 
 
-#ifndef NO_SSL
+#ifndef TEST_WITHOUT_SSL
 int
 init_ssl(void *ssl_context, void *user_data)
 {
@@ -900,7 +904,7 @@ main(int argc, char *argv[])
 	    "websocket_timeout_ms",
 	    "3600000",
 #endif
-#ifndef NO_SSL
+#ifndef TEST_WITHOUT_SSL
 	    "ssl_certificate",
 	    "../../resources/cert/server.pem",
 	    "ssl_protocol_version",
@@ -938,7 +942,7 @@ main(int argc, char *argv[])
 		err = 1;
 	}
 #endif
-#ifndef NO_SSL
+#ifndef TEST_WITHOUT_SSL
 	if (!mg_check_feature(2)) {
 		fprintf(stderr,
 		        "Error: Embedded example built with SSL support, "
@@ -953,7 +957,7 @@ main(int argc, char *argv[])
 
 	/* Start CivetWeb web server */
 	memset(&callbacks, 0, sizeof(callbacks));
-#ifndef NO_SSL
+#ifndef TEST_WITHOUT_SSL
 	callbacks.init_ssl = init_ssl;
 #endif
 	callbacks.log_message = log_message;
