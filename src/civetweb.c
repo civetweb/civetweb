@@ -3273,7 +3273,7 @@ mg_strlcpy(register char *dst, register const char *src, size_t n)
 static int
 lowercase(const char *s)
 {
-	return tolower(*(const unsigned char *)s);
+	return tolower((unsigned char)*s);
 }
 
 
@@ -5110,10 +5110,11 @@ mg_wcscasecmp(const wchar_t *s1, const wchar_t *s2)
 	int diff;
 
 	do {
-		diff = tolower(*s1) - tolower(*s2);
+		diff = ((*s1 >= L'A') && (*s1 <= L'Z') ? (*s1 - L'A' + L'a') : *s1)
+		       - ((*s2 >= L'A') && (*s2 <= L'Z') ? (*s2 - L'A' + L'a') : *s2);
 		s1++;
 		s2++;
-	} while ((diff == 0) && (s1[-1] != '\0'));
+	} while ((diff == 0) && (s1[-1] != L'\0'));
 
 	return diff;
 }
@@ -5191,19 +5192,6 @@ path_to_unicode(const struct mg_connection *conn,
 }
 
 
-/* Windows happily opens files with some garbage at the end of file name.
- * For example, fopen("a.cgi    ", "r") on Windows successfully opens
- * "a.cgi", despite one would expect an error back.
- * This function returns non-0 if path ends with some garbage. */
-static int
-path_cannot_disclose_cgi(const char *path)
-{
-	static const char *allowed_last_characters = "_-";
-	int last = path[strlen(path) - 1];
-	return isalnum(last) || strchr(allowed_last_characters, last) != NULL;
-}
-
-
 static int
 mg_stat(const struct mg_connection *conn,
         const char *path,
@@ -5212,6 +5200,7 @@ mg_stat(const struct mg_connection *conn,
 	wchar_t wbuf[W_PATH_MAX];
 	WIN32_FILE_ATTRIBUTE_DATA info;
 	time_t creation_time;
+	size_t len;
 
 	if (!filep) {
 		return 0;
@@ -5248,7 +5237,12 @@ mg_stat(const struct mg_connection *conn,
 	}
 
 	path_to_unicode(conn, path, wbuf, ARRAY_SIZE(wbuf));
-	if (GetFileAttributesExW(wbuf, GetFileExInfoStandard, &info) != 0) {
+	/* Windows happily opens files with some garbage at the end of file name.
+	 * For example, fopen("a.cgi    ", "r") on Windows successfully opens
+	 * "a.cgi", despite one would expect an error back. */
+	len = strlen(path);
+	if ((len > 0) && (path[len - 1] != ' ') && (path[len - 1] != '.')
+	    && (GetFileAttributesExW(wbuf, GetFileExInfoStandard, &info) != 0)) {
 		filep->size = MAKEUQUAD(info.nFileSizeLow, info.nFileSizeHigh);
 		filep->last_modified =
 		    SYS2UNIX_TIME(info.ftLastWriteTime.dwLowDateTime,
@@ -5265,15 +5259,6 @@ mg_stat(const struct mg_connection *conn,
 		}
 
 		filep->is_directory = info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
-		/* If file name is fishy, reset the file structure and return
-		 * error.
-		 * Note it is important to reset, not just return the error, cause
-		 * functions like is_file_opened() check the struct. */
-		if (!filep->is_directory && !path_cannot_disclose_cgi(path)) {
-			memset(filep, 0, sizeof(*filep));
-			return 0;
-		}
-
 		return 1;
 	}
 
@@ -5625,9 +5610,9 @@ waitpid(pid_t pid, int *status, int flags)
 static void
 trim_trailing_whitespaces(char *s)
 {
-	char *e = s + strlen(s) - 1;
-	while ((e > s) && isspace(*(unsigned char *)e)) {
-		*e-- = '\0';
+	char *e = s + strlen(s);
+	while ((e > s) && isspace((unsigned char)e[-1])) {
+		*(--e) = '\0';
 	}
 }
 
@@ -6745,7 +6730,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 						}
 						break;
 					}
-					if (!isxdigit(lenbuf[i])) {
+					if (!isxdigit((unsigned char)lenbuf[i])) {
 						/* illegal character for chunk length */
 						return -1;
 					}
@@ -7018,10 +7003,10 @@ mg_url_decode(const char *src,
 
 	for (i = j = 0; (i < src_len) && (j < (dst_len - 1)); i++, j++) {
 		if ((i < src_len - 2) && (src[i] == '%')
-		    && isxdigit(*(const unsigned char *)(src + i + 1))
-		    && isxdigit(*(const unsigned char *)(src + i + 2))) {
-			a = tolower(*(const unsigned char *)(src + i + 1));
-			b = tolower(*(const unsigned char *)(src + i + 2));
+		    && isxdigit((unsigned char)src[i + 1])
+		    && isxdigit((unsigned char)src[i + 2])) {
+			a = tolower((unsigned char)src[i + 1]);
+			b = tolower((unsigned char)src[i + 2]);
 			dst[j] = (char)((HEXTOI(a) << 4) | HEXTOI(b));
 			i += 2;
 		} else if (is_form_url_encoded && (src[i] == '+')) {
@@ -7665,7 +7650,7 @@ get_http_header_len(const char *buf, int buflen)
 	int i;
 	for (i = 0; i < buflen; i++) {
 		/* Do an unsigned comparison in some conditions below */
-		const unsigned char c = ((const unsigned char *)buf)[i];
+		const unsigned char c = (unsigned char)buf[i];
 
 		if ((c < 128) && ((char)c != '\r') && ((char)c != '\n')
 		    && !isprint(c)) {
@@ -8154,7 +8139,7 @@ parse_auth_header(struct mg_connection *conn,
 	/* Parse authorization header */
 	for (;;) {
 		/* Gobble initial spaces */
-		while (isspace(*(unsigned char *)s)) {
+		while (isspace((unsigned char)*s)) {
 			s++;
 		}
 		name = skip_quoted(&s, "=", " ", 0);
@@ -8323,8 +8308,8 @@ read_auth_file(struct mg_file *filep,
 	while (mg_fgets(workdata->buf, sizeof(workdata->buf), filep, &p) != NULL) {
 		l = strlen(workdata->buf);
 		while (l > 0) {
-			if (isspace(workdata->buf[l - 1])
-			    || iscntrl(workdata->buf[l - 1])) {
+			if (isspace((unsigned char)workdata->buf[l - 1])
+			    || iscntrl((unsigned char)workdata->buf[l - 1])) {
 				l--;
 				workdata->buf[l] = 0;
 			} else
@@ -8629,7 +8614,7 @@ mg_modify_passwords_file(const char *fname,
 	/* Do not allow control characters like newline in user name and domain.
 	 * Do not allow excessively long names either. */
 	for (i = 0; ((i < 255) && (user[i] != 0)); i++) {
-		if (iscntrl(user[i])) {
+		if (iscntrl((unsigned char)user[i])) {
 			return 0;
 		}
 	}
@@ -8637,7 +8622,7 @@ mg_modify_passwords_file(const char *fname,
 		return 0;
 	}
 	for (i = 0; ((i < 255) && (domain[i] != 0)); i++) {
-		if (iscntrl(domain[i])) {
+		if (iscntrl((unsigned char)domain[i])) {
 			return 0;
 		}
 	}
@@ -8989,13 +8974,13 @@ mg_url_encode(const char *src, char *dst, size_t dst_len)
 	const char *end = dst + dst_len - 1;
 
 	for (; ((*src != '\0') && (pos < end)); src++, pos++) {
-		if (isalnum(*(const unsigned char *)src)
-		    || (strchr(dont_escape, *(const unsigned char *)src) != NULL)) {
+		if (isalnum((unsigned char)*src)
+		    || (strchr(dont_escape, *src) != NULL)) {
 			*pos = *src;
 		} else if (pos + 2 < end) {
 			pos[0] = '%';
-			pos[1] = hex[(*(const unsigned char *)src) >> 4];
-			pos[2] = hex[(*(const unsigned char *)src) & 0xf];
+			pos[1] = hex[(unsigned char)*src >> 4];
+			pos[2] = hex[(unsigned char)*src & 0xf];
 			pos += 2;
 		} else {
 			break;
@@ -10028,7 +10013,7 @@ skip_to_end_of_word_and_terminate(char **ppw, int eol)
 {
 	/* Forward until a space is found - use isgraph here */
 	/* See http://www.cplusplus.com/reference/cctype/ */
-	while (isgraph(**ppw)) {
+	while (isgraph((unsigned char)**ppw)) {
 		(*ppw)++;
 	}
 
@@ -10049,12 +10034,12 @@ skip_to_end_of_word_and_terminate(char **ppw, int eol)
 	do {
 		**ppw = 0;
 		(*ppw)++;
-	} while ((**ppw) && isspace(**ppw));
+	} while (isspace((unsigned char)**ppw));
 
 	/* Check after term */
 	if (!eol) {
 		/* if it's not the end of line, there must be a next word */
-		if (!isgraph(**ppw)) {
+		if (!isgraph((unsigned char)**ppw)) {
 			return -1;
 		}
 	}
@@ -10239,7 +10224,7 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	/* RFC says that all initial whitespaces should be ingored */
 	/* This included all leading \r and \n (isspace) */
 	/* See table: http://www.cplusplus.com/reference/cctype/ */
-	while ((len > 0) && isspace(*(unsigned char *)buf)) {
+	while ((len > 0) && isspace((unsigned char)*buf)) {
 		buf++;
 		len--;
 		init_skip++;
@@ -10251,7 +10236,7 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	}
 
 	/* Control characters are not allowed, including zero */
-	if (iscntrl(*(unsigned char *)buf)) {
+	if (iscntrl((unsigned char)*buf)) {
 		return -1;
 	}
 
@@ -10326,7 +10311,7 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 	/* RFC says that all initial whitespaces should be ingored */
 	/* This included all leading \r and \n (isspace) */
 	/* See table: http://www.cplusplus.com/reference/cctype/ */
-	while ((len > 0) && isspace(*(unsigned char *)buf)) {
+	while ((len > 0) && isspace((unsigned char)*buf)) {
 		buf++;
 		len--;
 		init_skip++;
@@ -10338,7 +10323,7 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 	}
 
 	/* Control characters are not allowed, including zero */
-	if (iscntrl(*(unsigned char *)buf)) {
+	if (iscntrl((unsigned char)*buf)) {
 		return -1;
 	}
 
@@ -10360,7 +10345,7 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 		return -1;
 	}
 	buf += 5;
-	if (!isgraph(buf[0])) {
+	if (!isgraph((unsigned char)buf[0])) {
 		/* Invalid request */
 		return -1;
 	}
@@ -10389,7 +10374,7 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 
 	/* Find end of status text */
 	/* isgraph or isspace = isprint */
-	while (isprint(*buf)) {
+	while (isprint((unsigned char)*buf)) {
 		buf++;
 	}
 	if ((*buf != '\r') && (*buf != '\n')) {
@@ -10399,7 +10384,7 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 	do {
 		*buf = 0;
 		buf++;
-	} while ((*buf) && isspace(*buf));
+	} while (isspace((unsigned char)*buf));
 
 
 	/* Parse all HTTP headers */
@@ -10880,7 +10865,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 			if (*p == '-') {
 				*p = '_';
 			}
-			*p = (char)toupper(*(unsigned char *)p);
+			*p = (char)toupper((unsigned char)*p);
 		}
 
 		addenv(env,
@@ -11215,7 +11200,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	    != NULL) {
 		conn->status_code = atoi(status);
 		status_text = status;
-		while (isdigit(*(const unsigned char *)status_text)
+		while (isdigit((unsigned char)*status_text)
 		       || *status_text == ' ') {
 			status_text++;
 		}
@@ -12668,7 +12653,7 @@ handle_websocket_request(struct mg_connection *conn,
 					curSubProtocol = protocol;
 					len = sep ? (unsigned long)(sep - protocol)
 					          : (unsigned long)strlen(protocol);
-					while (sep && isspace(*++sep))
+					while (sep && isspace((unsigned char)*++sep))
 						; // ignore leading whitespaces
 					protocol = sep;
 
@@ -12711,7 +12696,7 @@ handle_websocket_request(struct mg_connection *conn,
 				 * has
 				 * offered.
 				 */
-				while (isspace(*++sep)) {
+				while (isspace((unsigned char)*++sep)) {
 					; /* ignore leading whitespaces */
 				}
 				conn->request_info.acceptedWebSocketSubprotocol = sep;
@@ -13045,7 +13030,7 @@ alloc_get_host(struct mg_connection *conn)
 		mg_strlcpy(buf, host_header, buflen);
 		buf[buflen - 1] = '\0';
 		host = buf;
-		while (isspace(*host)) {
+		while (isspace((unsigned char)*host)) {
 			host++;
 		}
 
