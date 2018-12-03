@@ -739,8 +739,9 @@ read_config_file(const char *config_file, char **options)
 		}
 
 		/* Skip spaces, \r and \n at the end of the line */
-		for (j = strlen(p); (j > 0) && (isspace((unsigned char)p[j - 1])
-		                                || iscntrl((unsigned char)p[j - 1]));)
+		for (j = strlen(p); (j > 0)
+		                    && (isspace((unsigned char)p[j - 1])
+		                        || iscntrl((unsigned char)p[j - 1]));)
 			p[--j] = 0;
 
 		/* Find the space character between option name and value */

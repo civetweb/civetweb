@@ -5968,7 +5968,7 @@ spawn_process(struct mg_connection *conn,
 			 * values, with one exception of SIGCHLD. According to
 			 * POSIX.1-2001 and Linux's implementation, SIGCHLD's handler
 			 * will leave unchanged after exec if it was set to be ignored.
-			 * Restore it to default action. */		
+			 * Restore it to default action. */
 			memset(&sa, 0, sizeof(sa));
 			sa.sa_handler = SIG_DFL;
 			sigaction(SIGCHLD, &sa, NULL);
@@ -9072,14 +9072,14 @@ print_dir_entry(struct de *de)
 	}
 	mg_url_encode(de->file_name, href, hrefsize);
 	mg_printf(de->conn,
-              "<tr><td><a href=\"%s%s\">%s%s</a></td>"
-              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-              href,
-              de->file.is_directory ? "/" : "",
-              de->file_name,
-              de->file.is_directory ? "/" : "",
-              mod,
-              size);
+	          "<tr><td><a href=\"%s%s\">%s%s</a></td>"
+	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
+	          href,
+	          de->file.is_directory ? "/" : "",
+	          de->file_name,
+	          de->file.is_directory ? "/" : "",
+	          mod,
+	          size);
 	mg_free(href);
 	return 0;
 }
@@ -9361,12 +9361,12 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 
 	/* Print first entry - link to a parent directory */
 	mg_printf(conn,
-              "<tr><td><a href=\"%s\">%s</a></td>"
-              "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
-              "..",
-              "Parent directory",
-              "-",
-              "-");
+	          "<tr><td><a href=\"%s\">%s</a></td>"
+	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
+	          "..",
+	          "Parent directory",
+	          "-",
+	          "-");
 
 	/* Sort and print directory entries */
 	if (data.entries != NULL) {
@@ -11204,8 +11204,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	    != NULL) {
 		conn->status_code = atoi(status);
 		status_text = status;
-		while (isdigit((unsigned char)*status_text)
-		       || *status_text == ' ') {
+		while (isdigit((unsigned char)*status_text) || *status_text == ' ') {
 			status_text++;
 		}
 	} else if (get_header(ri.http_headers, ri.num_headers, "Location")

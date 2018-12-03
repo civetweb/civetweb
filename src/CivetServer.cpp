@@ -608,8 +608,7 @@ CivetServer::urlEncode(const char *src,
 		dst.clear();
 
 	for (; src_len > 0; src++, src_len--) {
-		if (isalnum((unsigned char)*src)
-		    || strchr(dont_escape, *src) != NULL) {
+		if (isalnum((unsigned char)*src) || strchr(dont_escape, *src) != NULL) {
 			dst.push_back(*src);
 		} else {
 			dst.push_back('%');
