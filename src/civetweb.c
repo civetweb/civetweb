@@ -5950,6 +5950,8 @@ spawn_process(struct mg_connection *conn,
 			                fderr[1],
 			                strerror(ERRNO));
 		} else {
+			struct sigaction sa;
+
 			/* Keep stderr and stdout in two different pipes.
 			 * Stdout will be sent back to the client,
 			 * stderr should go into a server error log. */
@@ -5966,8 +5968,10 @@ spawn_process(struct mg_connection *conn,
 			 * values, with one exception of SIGCHLD. According to
 			 * POSIX.1-2001 and Linux's implementation, SIGCHLD's handler
 			 * will leave unchanged after exec if it was set to be ignored.
-			 * Restore it to default action. */
-			signal(SIGCHLD, SIG_DFL);
+			 * Restore it to default action. */		
+			memset(&sa, 0, sizeof(sa));
+			sa.sa_handler = SIG_DFL;
+			sigaction(SIGCHLD, &sa, NULL);
 
 			interp = conn->dom_ctx->config[CGI_INTERPRETER];
 			if (interp == NULL) {
