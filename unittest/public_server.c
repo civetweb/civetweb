@@ -183,24 +183,7 @@ START_TEST(test_the_test_environment)
 	if (f) {
 		fclose(f);
 	} else {
-		fprintf(stderr, "%s not found", buf);
-		exit(1); /* some path is not correct --> test will not work */
-	}
-
-/* Check the test dir */
-#ifdef _WIN32
-	strcpy(buf, wd);
-	strcat(buf, "\\test");
-#else
-	strcpy(buf, wd);
-	strcat(buf, "/test");
-#endif
-
-	memset(&st, 0, sizeof(st));
-	ret = stat(buf, &st);
-
-	if (ret) {
-		fprintf(stderr, "%s not found", buf);
+		fprintf(stderr, "Certificate %s not found\n", buf);
 		exit(1); /* some path is not correct --> test will not work */
 	}
 
