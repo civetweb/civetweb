@@ -2,6 +2,9 @@
  * See https://github.com/civetweb/civetweb/
  */
 
+#if !defined(_WIN32)
+#include <dlfcn.h>
+#endif
 #include "civetweb_lua.h"
 #include "civetweb_private_lua.h"
 
