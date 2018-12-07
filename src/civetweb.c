@@ -5406,9 +5406,10 @@ poll(struct mg_pollfd *pfd, unsigned int n, int milliseconds)
 
 	for (i = 0; i < n; i++) {
 		if (pfd[i].events & POLLIN) {
-			FD_SET((SOCKET)pfd[i].fd, &rset);
-		} else if (pfd[i].events & POLLOUT) {
-			FD_SET((SOCKET)pfd[i].fd, &wset);
+			FD_SET(pfd[i].fd, &rset);
+		}
+		if (pfd[i].events & POLLOUT) {
+			FD_SET(pfd[i].fd, &wset);
 		}
 		pfd[i].revents = 0;
 
@@ -15095,7 +15096,7 @@ sslize(struct mg_connection *conn,
 	/* SSL functions may fail and require to be called again:
 	 * see https://www.openssl.org/docs/manmaster/ssl/SSL_get_error.html
 	 * Here "func" could be SSL_connect or SSL_accept. */
-	for (i = 16; i <= timeout; i *= 2) {
+	for (i = 0; i <= timeout; i += 50) {
 		ret = func(conn->ssl);
 		if (ret != 1) {
 			err = SSL_get_error(conn->ssl, ret);
@@ -15103,14 +15104,24 @@ sslize(struct mg_connection *conn,
 			    || (err == SSL_ERROR_WANT_ACCEPT)
 			    || (err == SSL_ERROR_WANT_READ) || (err == SSL_ERROR_WANT_WRITE)
 			    || (err == SSL_ERROR_WANT_X509_LOOKUP)) {
-				/* Need to retry the function call "later".
-				 * See https://linux.die.net/man/3/ssl_get_error
-				 * This is typical for non-blocking sockets. */
 				if (*stop_server) {
 					/* Don't wait if the server is going to be stopped. */
 					break;
 				}
-				mg_sleep(i);
+				if (err == SSL_ERROR_WANT_X509_LOOKUP) {
+					/* Simply retry the function call. */
+					mg_sleep(50);
+				} else {
+					/* Need to retry the function call "later".
+					 * See https://linux.die.net/man/3/ssl_get_error
+					 * This is typical for non-blocking sockets. */
+					struct mg_pollfd pfd;
+					pfd.fd = conn->client.sock;
+					pfd.events = ((err == SSL_ERROR_WANT_CONNECT)
+					              || (err == SSL_ERROR_WANT_WRITE)) ? POLLOUT
+					                                                : POLLIN;
+					mg_poll(&pfd, 1, 50, stop_server);
+				}
 
 			} else if (err == SSL_ERROR_SYSCALL) {
 				/* This is an IO error. Look at errno. */
