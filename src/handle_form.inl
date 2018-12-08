@@ -873,6 +873,14 @@ mg_handle_form_request(struct mg_connection *conn,
 				/* Set "towrite" to the number of bytes available
 				 * in the buffer */
 				towrite = (size_t)(buf - hend + buf_fill);
+
+				if (towrite < bl + 4) {
+					/* Not enough data stored. */
+					/* Incomplete request. */
+					mg_free(boundary);
+					return -1;
+				}
+
 				/* Subtract the boundary length, to deal with
 				 * cases the boundary is only partially stored
 				 * in the buffer. */
