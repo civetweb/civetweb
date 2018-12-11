@@ -9001,8 +9001,8 @@ mg_url_encode(const char *src, char *dst, size_t dst_len)
 static int
 print_dir_entry(struct de *de)
 {
-	size_t hrefsize;
-	char *href;
+	size_t namesize, escsize, i;
+	char *href, *esc, *p;
 	char size[64], mod[64];
 #if defined(REENTRANT_TIME)
 	struct tm _tm;
@@ -9011,11 +9011,30 @@ print_dir_entry(struct de *de)
 	struct tm *tm;
 #endif
 
-	hrefsize = PATH_MAX * 3; /* worst case */
-	href = (char *)mg_malloc(hrefsize);
+	/* Estimate worst case size for encoding and escaping */
+	namesize = strlen(de->file_name) + 1;
+	escsize = de->file_name[strcspn(de->file_name, "&<>")] ? namesize * 5 : 0;
+	href = (char *)mg_malloc(namesize * 3 + escsize);
 	if (href == NULL) {
 		return -1;
 	}
+	mg_url_encode(de->file_name, href, namesize * 3);
+	esc = NULL;
+	if (escsize > 0) {
+		/* HTML escaping needed */
+		esc = href + namesize * 3;
+		for (i = 0, p = esc; de->file_name[i]; i++, p += strlen(p)) {
+			mg_strlcpy(p, de->file_name + i, 2);
+			if (*p == '&') {
+				strcpy(p, "&amp;");
+			} else if (*p == '<') {
+				strcpy(p, "&lt;");
+			} else if (*p == '>') {
+				strcpy(p, "&gt;");
+			}
+		}
+	}
+
 	if (de->file.is_directory) {
 		mg_snprintf(de->conn,
 		            NULL, /* Buffer is big enough */
@@ -9071,13 +9090,12 @@ print_dir_entry(struct de *de)
 		mg_strlcpy(mod, "01-Jan-1970 00:00", sizeof(mod));
 		mod[sizeof(mod) - 1] = '\0';
 	}
-	mg_url_encode(de->file_name, href, hrefsize);
 	mg_printf(de->conn,
 	          "<tr><td><a href=\"%s%s\">%s%s</a></td>"
 	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
 	          href,
 	          de->file.is_directory ? "/" : "",
-	          de->file_name,
+	          esc ? esc : de->file_name,
 	          de->file.is_directory ? "/" : "",
 	          mod,
 	          size);
@@ -9314,7 +9332,8 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	unsigned int i;
 	int sort_direction;
 	struct dir_scan_data data = {NULL, 0, 128};
-	char date[64];
+	char date[64], *esc, *p;
+	const char *title;
 	time_t curtime = time(NULL);
 
 	if (!scan_directory(conn, dir, &data, dir_scan_callback)) {
@@ -9330,6 +9349,27 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 
 	if (!conn) {
 		return;
+	}
+
+	esc = NULL;
+	title = conn->request_info.local_uri;
+	if (title[strcspn(title, "&<>")]) {
+		/* HTML escaping needed */
+		esc = (char *)mg_malloc(strlen(title) * 5 + 1);
+		if (esc) {
+			for (i = 0, p = esc; title[i]; i++, p += strlen(p)) {
+				mg_strlcpy(p, title + i, 2);
+				if (*p == '&') {
+					strcpy(p, "&amp;");
+				} else if (*p == '<') {
+					strcpy(p, "&lt;");
+				} else if (*p == '>') {
+					strcpy(p, "&gt;");
+				}
+			}
+		} else {
+			title = "";
+		}
 	}
 
 	sort_direction = ((conn->request_info.query_string != NULL)
@@ -9355,11 +9395,12 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	          "<th><a href=\"?d%c\">Modified</a></th>"
 	          "<th><a href=\"?s%c\">Size</a></th></tr>"
 	          "<tr><td colspan=\"3\"><hr></td></tr>",
-	          conn->request_info.local_uri,
-	          conn->request_info.local_uri,
+	          esc ? esc : title,
+	          esc ? esc : title,
 	          sort_direction,
 	          sort_direction,
 	          sort_direction);
+	mg_free(esc);
 
 	/* Print first entry - link to a parent directory */
 	mg_printf(conn,
@@ -9383,7 +9424,7 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 		mg_free(data.entries);
 	}
 
-	mg_printf(conn, "%s", "</table></body></html>");
+	mg_printf(conn, "%s", "</table></pre></body></html>");
 	conn->status_code = 200;
 }
 
