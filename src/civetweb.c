@@ -11945,16 +11945,40 @@ send_options(struct mg_connection *conn)
 
 
 /* Writes PROPFIND properties for a collection element */
-static void
+static int
 print_props(struct mg_connection *conn,
             const char *uri,
+            const char *name,
             struct mg_file_stat *filep)
 {
-	char mtime[64];
+	size_t href_size, i, j;
+	int len;
+	char *href, mtime[64];
 
-	if ((conn == NULL) || (uri == NULL) || (filep == NULL)) {
-		return;
+	if ((conn == NULL) || (uri == NULL) || (name == NULL) || (filep == NULL)) {
+		return 0;
 	}
+	/* Estimate worst case size for encoding */
+	href_size = (strlen(uri) + strlen(name)) * 3 + 1;
+	href = (char *)mg_malloc(href_size);
+	if (href == NULL) {
+		return 0;
+	}
+	len = mg_url_encode(uri, href, href_size);
+	if (len >= 0) {
+		/* Append an extra string */
+		mg_url_encode(name, href + len, href_size - (size_t)len);
+	}
+	/* Directory separator should be preserved. */
+	for (i = j = 0; href[i]; j++) {
+		if (!strncmp(href + i, "%2f", 3)) {
+			href[j] = '/';
+			i += 3;
+		} else {
+			href[j] = href[i++];
+		}
+	}
+	href[j] = '\0';
 
 	gmt_time_string(mtime, sizeof(mtime), &filep->last_modified);
 	mg_printf(conn,
@@ -11969,45 +11993,23 @@ print_props(struct mg_connection *conn,
 	          "<d:status>HTTP/1.1 200 OK</d:status>"
 	          "</d:propstat>"
 	          "</d:response>\n",
-	          uri,
+	          href,
 	          filep->is_directory ? "<d:collection/>" : "",
 	          filep->size,
 	          mtime);
+	mg_free(href);
+	return 1;
 }
 
 
 static int
 print_dav_dir_entry(struct de *de, void *data)
 {
-	char href[PATH_MAX];
-	int truncated;
-
 	struct mg_connection *conn = (struct mg_connection *)data;
-	if (!de || !conn) {
+	if (!de || !conn || !print_props(conn, conn->request_info.local_uri,
+	                                 de->file_name, &de->file)) {
 		return -1;
 	}
-	mg_snprintf(conn,
-	            &truncated,
-	            href,
-	            sizeof(href),
-	            "%s%s",
-	            conn->request_info.local_uri,
-	            de->file_name);
-
-	if (!truncated) {
-		size_t href_encoded_size;
-		char *href_encoded;
-
-		href_encoded_size = PATH_MAX * 3; /* worst case */
-		href_encoded = (char *)mg_malloc(href_encoded_size);
-		if (href_encoded == NULL) {
-			return -1;
-		}
-		mg_url_encode(href, href_encoded, href_encoded_size);
-		print_props(conn, href_encoded, &de->file);
-		mg_free(href_encoded);
-	}
-
 	return 0;
 }
 
@@ -12045,7 +12047,7 @@ handle_propfind(struct mg_connection *conn,
 	          "<d:multistatus xmlns:d='DAV:'>\n");
 
 	/* Print properties for the requested resource itself */
-	print_props(conn, conn->request_info.local_uri, filep);
+	print_props(conn, conn->request_info.local_uri, "", filep);
 
 	/* If it is a directory, print directory entries too if Depth is not 0
 	 */
