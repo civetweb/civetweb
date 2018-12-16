@@ -565,7 +565,8 @@ run_lsp_kepler(struct mg_connection *conn,
                const char *path,
                const char *p,
                int64_t len,
-               lua_State *L)
+               lua_State *L,
+               int depth)
 {
 
 	int lua_ok;
@@ -575,15 +576,23 @@ run_lsp_kepler(struct mg_connection *conn,
 
 	gmt_time_string(date, sizeof(date), &curtime);
 
-	conn->must_close = 1;
-	mg_printf(conn, "HTTP/1.1 200 OK\r\n");
-	send_no_cache_header(conn);
-	send_additional_header(conn);
-	mg_printf(conn,
-	          "Date: %s\r\n"
-	          "Connection: close\r\n"
-	          "Content-Type: text/html; charset=utf-8\r\n\r\n",
-	          date);
+	if (depth == 1) {
+		/* Top level page assumes keep_alive is disabled.
+		 * Do not overwrite this setting for included pages. */
+		conn->must_close = 1;
+
+		/* Only send a HTML header, if this is the top level page.
+		 * If this page is included by some mg.include calls, do not add a
+		 * header. */
+		mg_printf(conn, "HTTP/1.1 200 OK\r\n");
+		send_no_cache_header(conn);
+		send_additional_header(conn);
+		mg_printf(conn,
+		          "Date: %s\r\n"
+		          "Connection: close\r\n"
+		          "Content-Type: text/html; charset=utf-8\r\n\r\n",
+		          date);
+	}
 
 	data.begin = p;
 	data.len = len;
@@ -611,13 +620,20 @@ run_lsp_civetweb(struct mg_connection *conn,
                  const char *path,
                  const char *p,
                  int64_t len,
-                 lua_State *L)
+                 lua_State *L,
+                 int depth)
 {
 	int i, j, s, pos = 0, lines = 1, lualines = 0, is_var, lua_ok;
 	char chunkname[MG_BUF_LEN];
 	struct lsp_var_reader_data data;
 	const char lsp_mark1 = '?'; /* Use <? code ?> */
 	const char lsp_mark2 = '%'; /* Use <% code %> */
+
+	if (depth == 1) {
+		/* Assume the script does not support keep_alive. The script may change
+		 * this by calling mg.keep_alive(true). */
+		conn->must_close = 1;
+	}
 
 	for (i = 0; i < len; i++) {
 		if (p[i] == '\n') {
@@ -2365,12 +2381,9 @@ handle_lsp_request(struct mg_connection *conn,
 	               const char *,
 	               const char *,
 	               int64_t,
-	               lua_State *);
+	               lua_State *,
+	               int);
 	const char *addr;
-
-	/* Assume the script does not support keep_alive. The script may change this
-	 * by calling mg.keep_alive(true). */
-	conn->must_close = 1;
 
 	/* mg_fopen opens the file and sets the size accordingly */
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
@@ -2510,7 +2523,8 @@ handle_lsp_request(struct mg_connection *conn,
 	}
 
 	/* We're not sending HTTP headers here, Lua page must do it. */
-	error = run_lsp(conn, path, addr, filep->stat.size, L);
+	error =
+	    run_lsp(conn, path, addr, filep->stat.size, L, include_history->depth);
 
 cleanup_handle_lsp_request:
 
