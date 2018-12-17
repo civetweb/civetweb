@@ -42,7 +42,7 @@ install:
 before_script:
   # Add an IPv6 config - see the corresponding Travis issue
   # https://github.com/travis-ci/travis-ci/issues/8361
-  - if [ "${ENABLE_IPV6}" == "YES" -a "${TRAVIS_OS_NAME}" == "linux" ]; then 
+  - if [ "${ENABLE_IPV6}" == "YES" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
       echo "Activating IPv6 on Travis";
       sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
     fi
@@ -119,6 +119,38 @@ after_success:
       bash <(curl -s https://codecov.io/bash);
     fi
 
+conan-linux: &conan-linux
+    os: linux
+    dist: xenial
+    language: python
+    python: "3.7"
+    services:
+      - docker
+    before_install:
+      - true
+    install:
+      - ./conan/travis/install.sh
+    before_script:
+      - true
+    script:
+      - ./conan/travis/build.sh
+    after_success:
+      - true
+
+conan-osx: &conan-osx
+    os: osx
+    language: generic
+    before_install:
+      - true
+    install:
+      - ./conan/travis/install.sh
+    before_script:
+      - true
+    script:
+      - ./conan/travis/build.sh
+    after_success:
+      - true
+
 
 ##############################################################################
 # build matrix
@@ -128,6 +160,37 @@ after_success:
 matrix:
   fast_finish: false
   include:
+
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=4.9 CONAN_DOCKER_IMAGE=conanio/gcc49
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=conanio/gcc5
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=6 CONAN_DOCKER_IMAGE=conanio/gcc6
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=7 CONAN_DOCKER_IMAGE=conanio/gcc7
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=8 CONAN_DOCKER_IMAGE=conanio/gcc8
+  - <<: *conan-linux
+    env: CONAN_CLANG_VERSIONS=3.9 CONAN_DOCKER_IMAGE=conanio/clang39
+  - <<: *conan-linux
+    env: CONAN_CLANG_VERSIONS=4.0 CONAN_DOCKER_IMAGE=conanio/clang40
+  - <<: *conan-linux
+    env: CONAN_CLANG_VERSIONS=5.0 CONAN_DOCKER_IMAGE=conanio/clang50
+  - <<: *conan-linux
+    env: CONAN_CLANG_VERSIONS=6.0 CONAN_DOCKER_IMAGE=conanio/clang60
+  - <<: *conan-osx
+    osx_image: xcode8.3
+    env: CONAN_APPLE_CLANG_VERSIONS=8.1
+  - <<: *conan-osx
+    osx_image: xcode9
+    env: CONAN_APPLE_CLANG_VERSIONS=9.0
+  - <<: *conan-osx
+    osx_image: xcode9.4
+    env: CONAN_APPLE_CLANG_VERSIONS=9.1
+  - <<: *conan-osx
+    osx_image: xcode10.1
+    env: CONAN_APPLE_CLANG_VERSIONS=10.0
 
   - dist: trusty
     sudo: false
@@ -304,7 +367,7 @@ matrix:
       ENABLE_DUKTAPE=NO
       NO_CACHING=YES
       ALLOW_WARNINGS=YES
-  
+
   - os: linux
     sudo: required
     compiler: gcc
