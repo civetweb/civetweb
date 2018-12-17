@@ -44,6 +44,7 @@ class civetwebConan(ConanFile):
         cmake.definitions["CIVETWEB_ENABLE_WEBSOCKETS"] = self.options.enable_websockets
         cmake.definitions["CIVETWEB_ENABLE_CXX"] = self.options.enable_cxx
         cmake.definitions["CIVETWEB_BUILD_TESTING"] = False
+        cmake.definitions["CIVETWEB_ENABLE_ASAN"] = False
         cmake.configure(build_dir="build_subfolder")
         return cmake
 
