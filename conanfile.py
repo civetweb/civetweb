@@ -1,61 +1,71 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
 from conans import ConanFile, tools, CMake
-import os
+
 
 class civetwebConan(ConanFile):
     name = "civetweb"
-    version = "1.10"
     license = "MIT"
     url = "https://github.com/civetweb/civetweb"
     description = "Embedded C/C++ web server"
-    settings = "os", "compiler", "build_type", "arch"
-    exports_sources = "*"
-    requires = "OpenSSL/1.0.2@conan/stable"
+    author = "Bernhard Lehner <bel2125@gmail.com>"
+    topics = ("conan", "civetweb", "web-server", "embedded")
+    exports = ("LICENSE.md", "README.md")
+    exports_sources = ("src/*", "cmake/*", "include/*", "CMakeLists.txt")
     generators = "cmake"
+    settings = "os", "compiler", "build_type", "arch"
     options = {
         "shared"            : [True, False],
+        "fPIC"              : [True, False],
         "enable_ssl"        : [True, False],
         "enable_websockets" : [True, False],
         "enable_cxx"        : [True, False]
     }
-    default_options = (
-        "shared=False",
-        "enable_ssl=True",
-        "enable_websockets=True",
-        "enable_cxx=True",
-    )
+    default_options = {
+        "shared"            : False,
+        "fPIC"              : True,
+        "enable_ssl"        : True,
+        "enable_websockets" : True,
+        "enable_cxx"        : True
+    }
+    requires = "OpenSSL/1.0.2q@conan/stable"
 
-    def optionBool(self, b):
-        if b:
-            return "ON"
-        else:
-            return "OFF"
+    def config_options(self):
+        if self.settings.os == 'Windows':
+            del self.options.fPIC
 
-    def parseOptionsToCMake(self):
-        cmakeOpts = {
-            "CIVETWEB_BUILD_TESTING" : "OFF",
-            "CIVETWEB_ENABLE_LUA" : "OFF",
-            "CIVETWEB_ENABLE_SERVER_EXECUTABLE" : "OFF",
-            "CIVETWEB_INSTALL_EXECUTABLE" : "OFF",
-            "CIVETWEB_ENABLE_ASAN" : "OFF"
-        }
+    def configure(self):
+        if not self.options.enable_cxx:
+            del self.settings.compiler.libcxx
 
-        cmakeOpts["BUILD_SHARED_LIBS"] = self.optionBool(self.options.shared)
-        cmakeOpts["CIVETWEB_ENABLE_SSL"] = self.optionBool(self.options.enable_ssl)
-        cmakeOpts["CIVETWEB_ENABLE_WEBSOCKETS"] = self.optionBool(self.options.enable_websockets)
-        cmakeOpts["CIVETWEB_ENABLE_CXX"] = self.optionBool(self.options.enable_cxx)
-
-        return cmakeOpts
+    def _configure_cmake(self):
+        cmake = CMake(self)
+        cmake.definitions["CIVETWEB_ENABLE_SSL"] = self.options.enable_ssl
+        cmake.definitions["CIVETWEB_ENABLE_WEBSOCKETS"] = self.options.enable_websockets
+        cmake.definitions["CIVETWEB_ENABLE_CXX"] = self.options.enable_cxx
+        cmake.definitions["CIVETWEB_BUILD_TESTING"] = False
+        cmake.configure(build_dir="build_subfolder")
+        return cmake
 
     def build(self):
-        cmake = CMake(self)
-        os.makedirs("./buildit")
-        cmake.configure(defs=self.parseOptionsToCMake(), build_dir="./buildit")
+        tools.replace_in_file(file_path="CMakeLists.txt",
+                              search="project (civetweb)",
+                              replace="""project (civetweb)
+                                 include(conanbuildinfo.cmake)
+                                 conan_basic_setup()""")
+        cmake = self._configure_cmake()
         cmake.build()
-        cmake.install()
 
     def package(self):
-        # nothing to do here now
-        pass
+        self.copy("LICENSE.md", dst="licenses")
+        cmake = self._configure_cmake()
+        cmake.install()
 
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
+        if self.settings.os == "Linux":
+            self.cpp_info.libs.append("pthread")
+            if self.options.enable_cxx:
+                self.cpp_info.libs.append("m")
+        elif self.settings.os == "Windows":
+            self.cpp_info.libs.append("Ws2_32")
