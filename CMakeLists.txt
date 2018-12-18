@@ -385,8 +385,8 @@ if (CIVETWEB_ENABLE_CXX)
   add_cxx_compiler_flag(-fvisibility=hidden)
   add_cxx_compiler_flag(-fstack-protector-strong RELEASE)
 
-  if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR \
-      "${BUILD_SHARED_LIBS}" STREQUAL "SHARED" OR \
+  if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
+      "${BUILD_SHARED_LIBS}" STREQUAL "SHARED" OR
       ${CMAKE_CXX_COMPILER_VERSION} GREATER 5)
     add_cxx_compiler_flag(-flto RELEASE)
   endif()
