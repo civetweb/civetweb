@@ -10605,8 +10605,8 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 				    != nread) {
 					break;
 				}
+				conn->consumed_content += nread;
 			}
-			conn->consumed_content += nread;
 		}
 
 		if (conn->consumed_content == conn->content_len) {
