@@ -25,3 +25,4 @@ class TestPackageConan(ConanFile):
             response = requests.get("http://localhost:8080/example")
             assert response.ok
             process.kill()
+            print("Finish Conan test package - SUCCESS!")

@@ -384,7 +384,12 @@ if (CIVETWEB_ENABLE_CXX)
   add_cxx_compiler_flag(-pedantic-errors)
   add_cxx_compiler_flag(-fvisibility=hidden)
   add_cxx_compiler_flag(-fstack-protector-strong RELEASE)
-  add_cxx_compiler_flag(-flto RELEASE)
+
+  if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR \
+      "${BUILD_SHARED_LIBS}" STREQUAL "SHARED" OR \
+      ${CMAKE_CXX_COMPILER_VERSION} GREATER 5)
+    add_cxx_compiler_flag(-flto RELEASE)
+  endif()
   if (${CIVETWEB_ENABLE_ASAN})
   add_cxx_compiler_flag(-fsanitize=undefined DEBUG)
   add_cxx_compiler_flag(-fsanitize=address DEBUG)
