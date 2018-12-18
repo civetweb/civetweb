@@ -23,11 +23,7 @@ matrix:
   - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     CONAN_VISUAL_VERSIONS: 15
     PYTHON: "C:\\Python37"
-  install:
-    - set PATH=%PATH%;%PYTHON%/Scripts/
-    - pip.exe install conan conan_package_tools
-  test_script:
-    - python build.py
+
 
 environment:
   enable_cxx: NO
@@ -36,6 +32,11 @@ environment:
   enable_lua_shared: NO
   c_standard: auto
   cxx_standard: auto
+  install:
+    - set PATH=%PATH%;%PYTHON%/Scripts/
+    - pip.exe install conan conan_package_tools
+  test_script:
+    - python build.py
   matrix:
     # Use default values
     - id: Default-x86
