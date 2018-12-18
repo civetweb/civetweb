@@ -6,13 +6,27 @@ build:
 
 
 skip_commits:
-  # Builds just testing something on Travis CI don't need to be 
+  # Builds just testing something on Travis CI don't need to be
   # done on AppVeyor
   message: /\[Travis\]/
   # Dont build, if only documentation was changed
   files:
   - '**/*.md'
 
+environment:
+  PYTHON: "C:\\Python37"
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 12
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 14
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CONAN_VISUAL_VERSIONS: 15
+  install:
+    - set PATH=%PATH%;%PYTHON%/Scripts/
+    - pip.exe install conan conan_package_tools
+  test_script:
+    - python build.py
 
 environment:
   enable_cxx: NO
