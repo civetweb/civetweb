@@ -13,18 +13,6 @@ skip_commits:
   files:
   - '**/*.md'
 
-matrix:
-  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-    CONAN_VISUAL_VERSIONS: 12
-    PYTHON: "C:\\Python37"
-  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-    CONAN_VISUAL_VERSIONS: 14
-    PYTHON: "C:\\Python37"
-  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-    CONAN_VISUAL_VERSIONS: 15
-    PYTHON: "C:\\Python37"
-
-
 environment:
   enable_cxx: NO
   enable_ssl_dynamic_loading: YES
@@ -288,6 +276,15 @@ environment:
 matrix:
   fast_finish: false
   allow_failures:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 12
+      PYTHON: "C:\\Python37"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 14
+      PYTHON: "C:\\Python37"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CONAN_VISUAL_VERSIONS: 15
+      PYTHON: "C:\\Python37"
     # Experimental Ubuntu
     - id: Ubuntu1604-GCC-x64
       compiler: gcc-5.1.0-posix
