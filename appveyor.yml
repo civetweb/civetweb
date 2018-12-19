@@ -444,45 +444,45 @@ artifacts:
 
 for:
   -
-  matrix:
-    only:
-      - configuration: Release
-    fast_finish: false
-    allow_failures:
-      # Experimental Ubuntu
-      - id: Ubuntu1604-GCC-x64
-        compiler: gcc-5.1.0-posix
-        build_shared: NO
-        no_files: NO
-        enable_ipv6: YES
-        enable_ssl: YES
-        enable_websockets: YES
-        no_cgi: NO
-        no_caching: NO
-        enable_stats: YES
-        configuration: Release
-        platform: x64
-        image: Ubuntu1604
-      - id: Ubuntu1804-GCC-x64
-        compiler: gcc-5.1.0-posix
-        build_shared: NO
-        no_files: NO
-        enable_ipv6: YES
-        enable_ssl: YES
-        enable_websockets: YES
-        no_cgi: NO
-        no_caching: NO
-        enable_stats: YES
-        configuration: Release
-        platform: x64
-        image: Ubuntu1804
-
-    -
     matrix:
       only:
-        - configuration: Debug
-    install:
-      - set PATH=%PATH%;%PYTHON%/Scripts/
-      - pip.exe install conan conan_package_tools
-    test_script:
-      - python build.py
+        - configuration: Release
+      fast_finish: false
+      allow_failures:
+        # Experimental Ubuntu
+        - id: Ubuntu1604-GCC-x64
+          compiler: gcc-5.1.0-posix
+          build_shared: NO
+          no_files: NO
+          enable_ipv6: YES
+          enable_ssl: YES
+          enable_websockets: YES
+          no_cgi: NO
+          no_caching: NO
+          enable_stats: YES
+          configuration: Release
+          platform: x64
+          image: Ubuntu1604
+        - id: Ubuntu1804-GCC-x64
+          compiler: gcc-5.1.0-posix
+          build_shared: NO
+          no_files: NO
+          enable_ipv6: YES
+          enable_ssl: YES
+          enable_websockets: YES
+          no_cgi: NO
+          no_caching: NO
+          enable_stats: YES
+          configuration: Release
+          platform: x64
+          image: Ubuntu1804
+
+    -
+      matrix:
+        only:
+          - configuration: Debug
+      install:
+        - set PATH=%PATH%;%PYTHON%/Scripts/
+        - pip.exe install conan conan_package_tools
+      test_script:
+        - python build.py
