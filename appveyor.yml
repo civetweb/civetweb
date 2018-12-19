@@ -21,6 +21,15 @@ environment:
   c_standard: auto
   cxx_standard: auto
   matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 12
+      PYTHON: "C:\\Python37"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 14
+      PYTHON: "C:\\Python37"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CONAN_VISUAL_VERSIONS: 15
+      PYTHON: "C:\\Python37"
     # Use default values
     - id: Default-x86
       compiler: msvc-19-seh
@@ -267,15 +276,6 @@ environment:
       configuration: Release
       platform: x64
       image: Ubuntu1804
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CONAN_VISUAL_VERSIONS: 12
-      PYTHON: "C:\\Python37"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CONAN_VISUAL_VERSIONS: 14
-      PYTHON: "C:\\Python37"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      CONAN_VISUAL_VERSIONS: 15
-      PYTHON: "C:\\Python37"
 
 install:
   # Derive some extra information
