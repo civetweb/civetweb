@@ -490,5 +490,7 @@ for:
     install:
       - set PATH=%PATH%;%PYTHON%/Scripts/
       - pip.exe install conan conan_package_tools
+    build: false
     test_script:
       - python build.py
+    after_test: false
