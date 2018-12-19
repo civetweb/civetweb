@@ -267,6 +267,15 @@ environment:
       configuration: Release
       platform: x64
       image: Ubuntu1804
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 12
+      PYTHON: "C:\\Python37"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 14
+      PYTHON: "C:\\Python37"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CONAN_VISUAL_VERSIONS: 15
+      PYTHON: "C:\\Python37"
 
 install:
   # Derive some extra information
@@ -439,8 +448,6 @@ cache:
 artifacts:
   - path: dist\*
 
-matrix:
-  - fast_finish: true
 for:
   -
     matrix:
@@ -479,16 +486,7 @@ for:
   -
     matrix:
       only:
-        - configuration: Release
-        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-          CONAN_VISUAL_VERSIONS: 12
-          PYTHON: "C:\\Python37"
-        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-          CONAN_VISUAL_VERSIONS: 14
-          PYTHON: "C:\\Python37"
-        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-          CONAN_VISUAL_VERSIONS: 15
-          PYTHON: "C:\\Python37"
+        - PYTHON: "C:\\Python37"
     install:
       - set PATH=%PATH%;%PYTHON%/Scripts/
       - pip.exe install conan conan_package_tools
