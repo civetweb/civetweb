@@ -480,7 +480,7 @@ for:
   -
     matrix:
       only:
-        - configuration: Debug
+        - configuration: Release
         - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
           CONAN_VISUAL_VERSIONS: 12
           PYTHON: "C:\\Python37"
