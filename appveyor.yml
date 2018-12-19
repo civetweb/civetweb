@@ -492,5 +492,5 @@ for:
       - pip.exe install conan conan_package_tools
     build: false
     test_script:
-      - python build.py
+      - python conan/build.py
     after_test: false
