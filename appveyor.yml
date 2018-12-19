@@ -268,46 +268,6 @@ environment:
       platform: x64
       image: Ubuntu1804
 
-matrix:
-  fast_finish: false
-  allow_failures:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CONAN_VISUAL_VERSIONS: 12
-      PYTHON: "C:\\Python37"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CONAN_VISUAL_VERSIONS: 14
-      PYTHON: "C:\\Python37"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      CONAN_VISUAL_VERSIONS: 15
-      PYTHON: "C:\\Python37"
-    # Experimental Ubuntu
-    - id: Ubuntu1604-GCC-x64
-      compiler: gcc-5.1.0-posix
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      enable_stats: YES
-      configuration: Release
-      platform: x64
-      image: Ubuntu1604
-    - id: Ubuntu1804-GCC-x64
-      compiler: gcc-5.1.0-posix
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      enable_stats: YES
-      configuration: Release
-      platform: x64
-      image: Ubuntu1804
-
 
 
 
@@ -482,9 +442,40 @@ cache:
 artifacts:
   - path: dist\*
 
-
 for:
   -
+  matrix:
+    fast_finish: false
+    allow_failures:
+      # Experimental Ubuntu
+      - id: Ubuntu1604-GCC-x64
+        compiler: gcc-5.1.0-posix
+        build_shared: NO
+        no_files: NO
+        enable_ipv6: YES
+        enable_ssl: YES
+        enable_websockets: YES
+        no_cgi: NO
+        no_caching: NO
+        enable_stats: YES
+        configuration: Release
+        platform: x64
+        image: Ubuntu1604
+      - id: Ubuntu1804-GCC-x64
+        compiler: gcc-5.1.0-posix
+        build_shared: NO
+        no_files: NO
+        enable_ipv6: YES
+        enable_ssl: YES
+        enable_websockets: YES
+        no_cgi: NO
+        no_caching: NO
+        enable_stats: YES
+        configuration: Release
+        platform: x64
+        image: Ubuntu1804
+
+    -
     matrix:
       only:
         - configuration: Release
