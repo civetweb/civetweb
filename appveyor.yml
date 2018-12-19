@@ -445,6 +445,8 @@ artifacts:
 for:
   -
   matrix:
+    only:
+      - configuration: Release
     fast_finish: false
     allow_failures:
       # Experimental Ubuntu
@@ -478,7 +480,7 @@ for:
     -
     matrix:
       only:
-        - configuration: Release
+        - configuration: Debug
     install:
       - set PATH=%PATH%;%PYTHON%/Scripts/
       - pip.exe install conan conan_package_tools
