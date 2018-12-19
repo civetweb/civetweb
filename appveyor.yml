@@ -477,12 +477,12 @@ for:
           platform: x64
           image: Ubuntu1804
 
-    -
-      matrix:
-        only:
-          - configuration: Debug
-      install:
-        - set PATH=%PATH%;%PYTHON%/Scripts/
-        - pip.exe install conan conan_package_tools
-      test_script:
-        - python build.py
+  -
+    matrix:
+      only:
+        - configuration: Debug
+    install:
+      - set PATH=%PATH%;%PYTHON%/Scripts/
+      - pip.exe install conan conan_package_tools
+    test_script:
+      - python build.py
