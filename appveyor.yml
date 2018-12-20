@@ -493,4 +493,3 @@ for:
     build: false
     test_script:
       - python conan/build.py
-    after_test: false

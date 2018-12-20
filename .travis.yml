@@ -161,6 +161,18 @@ matrix:
   fast_finish: false
   include:
 
+  - <<: *conan-osx
+    osx_image: xcode8.3
+    env: CONAN_APPLE_CLANG_VERSIONS=8.1
+  - <<: *conan-osx
+    osx_image: xcode9
+    env: CONAN_APPLE_CLANG_VERSIONS=9.0
+  - <<: *conan-osx
+    osx_image: xcode9.4
+    env: CONAN_APPLE_CLANG_VERSIONS=9.1
+  - <<: *conan-osx
+    osx_image: xcode10.1
+    env: CONAN_APPLE_CLANG_VERSIONS=10.0
   - <<: *conan-linux
     env: CONAN_GCC_VERSIONS=4.9 CONAN_DOCKER_IMAGE=conanio/gcc49 CONAN_DOCKER_32_IMAGES=1
   - <<: *conan-linux
@@ -179,18 +191,6 @@ matrix:
     env: CONAN_CLANG_VERSIONS=5.0 CONAN_DOCKER_IMAGE=conanio/clang50 CONAN_DOCKER_32_IMAGES=1
   - <<: *conan-linux
     env: CONAN_CLANG_VERSIONS=6.0 CONAN_DOCKER_IMAGE=conanio/clang60 CONAN_DOCKER_32_IMAGES=1
-  - <<: *conan-osx
-    osx_image: xcode8.3
-    env: CONAN_APPLE_CLANG_VERSIONS=8.1
-  - <<: *conan-osx
-    osx_image: xcode9
-    env: CONAN_APPLE_CLANG_VERSIONS=9.0
-  - <<: *conan-osx
-    osx_image: xcode9.4
-    env: CONAN_APPLE_CLANG_VERSIONS=9.1
-  - <<: *conan-osx
-    osx_image: xcode10.1
-    env: CONAN_APPLE_CLANG_VERSIONS=10.0
 
   - dist: trusty
     sudo: false
