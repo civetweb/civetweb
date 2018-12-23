@@ -960,7 +960,7 @@ main(int argc, char *argv[])
 	    0};
 	struct mg_callbacks callbacks;
 	struct mg_context *ctx;
-	struct mg_server_ports ports[32];
+	struct mg_server_port ports[32];
 	int port_cnt, n;
 	int err = 0;
 

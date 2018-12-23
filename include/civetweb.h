@@ -681,7 +681,7 @@ enum {
 CIVETWEB_API const struct mg_option *mg_get_valid_options(void);
 
 
-struct mg_server_ports {
+struct mg_server_port {
 	int protocol;    /* 1 = IPv4, 2 = IPv6, 3 = both */
 	int port;        /* port number */
 	int is_ssl;      /* https port: 0 = no, 1 = yes */
@@ -692,15 +692,18 @@ struct mg_server_ports {
 	int _reserved4;
 };
 
+// Legacy name
+#define mg_server_ports mg_server_port
+
 
 /* Get the list of ports that civetweb is listening on.
    The parameter size is the size of the ports array in elements.
    The caller is responsibility to allocate the required memory.
-   This function returns the number of struct mg_server_ports elements
+   This function returns the number of struct mg_server_port elements
    filled in, or <0 in case of an error. */
 CIVETWEB_API int mg_get_server_ports(const struct mg_context *ctx,
                                      int size,
-                                     struct mg_server_ports *ports);
+                                     struct mg_server_port *ports);
 
 
 #if defined(MG_LEGACY_INTERFACE) /* 2017-04-02 */

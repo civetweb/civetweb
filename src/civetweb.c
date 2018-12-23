@@ -3504,7 +3504,7 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 int
 mg_get_server_ports(const struct mg_context *ctx,
                     int size,
-                    struct mg_server_ports *ports)
+                    struct mg_server_port *ports)
 {
 	int i, cnt = 0;
 
