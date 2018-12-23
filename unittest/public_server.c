@@ -183,23 +183,8 @@ START_TEST(test_the_test_environment)
 	if (f) {
 		fclose(f);
 	} else {
-		fprintf(stderr, "%s not found", buf);
-	}
-
-/* Check the test dir */
-#ifdef _WIN32
-	strcpy(buf, wd);
-	strcat(buf, "\\test");
-#else
-	strcpy(buf, wd);
-	strcat(buf, "/test");
-#endif
-
-	memset(&st, 0, sizeof(st));
-	ret = stat(buf, &st);
-
-	if (ret) {
-		fprintf(stderr, "%s not found", buf);
+		fprintf(stderr, "Certificate %s not found\n", buf);
+		exit(1); /* some path is not correct --> test will not work */
 	}
 
 
@@ -5085,6 +5070,8 @@ MAIN_PUBLIC_SERVER(void)
 	unsigned f_avail = mg_check_feature(0xFF);
 	unsigned f_ret = mg_init_library(f_avail);
 	ck_assert_uint_eq(f_ret, f_avail);
+
+	test_handle_form(0);
 
 	test_the_test_environment(0);
 	test_threading(0);

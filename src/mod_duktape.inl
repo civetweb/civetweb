@@ -13,10 +13,10 @@
 
 /* Note: This is only experimental support, so the API may still change. */
 
-static const char *civetweb_conn_id = "\xFF"
-                                      "civetweb_conn";
-static const char *civetweb_ctx_id = "\xFF"
-                                     "civetweb_ctx";
+static const char *const civetweb_conn_id = "\xFF"
+                                            "civetweb_conn";
+static const char *const civetweb_ctx_id = "\xFF"
+                                           "civetweb_ctx";
 
 
 static void *

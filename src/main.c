@@ -732,34 +732,35 @@ read_config_file(const char *config_file, char **options)
 		line_no++;
 
 		/* Ignore empty lines and comments */
-		for (i = 0; isspace(*(unsigned char *)&line[i]);)
+		for (i = 0; isspace((unsigned char)p[i]);)
 			i++;
 		if (p[i] == '#' || p[i] == '\0') {
 			continue;
 		}
 
 		/* Skip spaces, \r and \n at the end of the line */
-		for (j = strlen(line) - 1; isspace(*(unsigned char *)&line[j])
-		                           || iscntrl(*(unsigned char *)&line[j]);)
-			line[j--] = 0;
+		for (j = strlen(p); (j > 0)
+		                    && (isspace((unsigned char)p[j - 1])
+		                        || iscntrl((unsigned char)p[j - 1]));)
+			p[--j] = 0;
 
 		/* Find the space character between option name and value */
-		for (j = i; !isspace(*(unsigned char *)&line[j]) && (line[j] != 0);)
+		for (j = i; !isspace((unsigned char)p[j]) && (p[j] != 0);)
 			j++;
 
-		/* Terminate the string - then the string at (line+i) contains the
+		/* Terminate the string - then the string at (p+i) contains the
 		 * option name */
-		line[j] = 0;
+		p[j] = 0;
 		j++;
 
 		/* Trim additional spaces between option name and value - then
-		 * (line+j) contains the option value */
-		while (isspace(line[j])) {
+		 * (p+j) contains the option value */
+		while (isspace((unsigned char)p[j])) {
 			j++;
 		}
 
 		/* Set option */
-		if (!set_option(options, line + i, line + j)) {
+		if (!set_option(options, p + i, p + j)) {
 			fprintf(stderr,
 			        "%s: line %d is invalid, ignoring it:\n %s",
 			        config_file,
@@ -922,7 +923,7 @@ is_path_absolute(const char *path)
 	return path != NULL
 	       && ((path[0] == '\\' && path[1] == '\\') || /* UNC path, e.g.
 	                                                      \\server\dir */
-	           (isalpha(path[0]) && path[1] == ':'
+	           (isalpha((unsigned char)path[0]) && path[1] == ':'
 	            && path[2] == '\\')); /* E.g. X:\dir */
 #else
 	return path != NULL && path[0] == '/';
