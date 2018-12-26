@@ -692,7 +692,7 @@ struct mg_server_port {
 	int _reserved4;
 };
 
-// Legacy name
+/* Legacy name */
 #define mg_server_ports mg_server_port
 
 
