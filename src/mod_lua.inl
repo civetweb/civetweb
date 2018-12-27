@@ -365,11 +365,12 @@ lsp_abort(lua_State *L)
 	lua_error(L);
 }
 
+
 struct lsp_var_reader_data {
-	const char *begin;
 	int64_t len;
-	unsigned char state;
 	int64_t consumed;
+	const char *begin;
+	unsigned char state;
 	char tag;
 };
 

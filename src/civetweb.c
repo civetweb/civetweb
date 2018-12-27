@@ -6972,7 +6972,7 @@ mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
 	if ((len = alloc_vprintf(&buf, mem, sizeof(mem), fmt, ap)) > 0) {
 		len = mg_write(conn, buf, (size_t)len);
 	}
-	if ((buf != mem) && (buf != NULL)) {
+	if (buf != mem) {
 		mg_free(buf);
 	}
 
@@ -11311,9 +11311,7 @@ done:
 		close(fderr[0]);
 	}
 
-	if (buf != NULL) {
-		mg_free(buf);
-	}
+	mg_free(buf);
 }
 #endif /* !NO_CGI */
 
@@ -18306,14 +18304,10 @@ free_context(struct mg_context *ctx)
 #endif /* !NO_SSL */
 
 	/* Deallocate worker thread ID array */
-	if (ctx->worker_threadids != NULL) {
-		mg_free(ctx->worker_threadids);
-	}
+	mg_free(ctx->worker_threadids);
 
 	/* Deallocate worker thread ID array */
-	if (ctx->worker_connections != NULL) {
-		mg_free(ctx->worker_connections);
-	}
+	mg_free(ctx->worker_connections);
 
 	/* deallocate system name string */
 	mg_free(ctx->systemName);

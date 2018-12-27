@@ -18,7 +18,11 @@
 #define PORT "8081"
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
-bool exitNow = false;
+
+
+/* Exit flag for main loop */
+volatile bool exitNow = false;
+
 
 class ExampleHandler : public CivetHandler
 {

@@ -487,6 +487,7 @@ CivetServer::getParam(struct mg_connection *conn,
 			unsigned long con_len = strtoul(con_len_str, &end, 10);
 			if ((end == NULL) || (*end != 0)) {
 				// malformed header
+				mg_unlock_connection(conn);
 				return false;
 			}
 			if ((con_len > 0) && (con_len <= MAX_PARAM_BODY_LENGTH)) {
@@ -508,6 +509,7 @@ CivetServer::getParam(struct mg_connection *conn,
 			}
 			if (conobj.postData == NULL) {
 				// we cannot store the body
+				mg_unlock_connection(conn);
 				return false;
 			}
 		}
@@ -522,7 +524,7 @@ CivetServer::getParam(struct mg_connection *conn,
 	mg_unlock_connection(conn);
 
 	bool get_param_success = false;
-	if (!get_param_success && formParams != NULL) {
+	if (formParams != NULL) {
 		get_param_success =
 		    getParam(formParams, strlen(formParams), name, dst, occurrence);
 	}
@@ -567,7 +569,7 @@ CivetServer::getParam(const char *data,
 			assert(s >= p);
 
 			// Decode variable into destination buffer
-			urlDecode(p, (int)(s - p), dst, true);
+			urlDecode(p, (s - p), dst, true);
 			return true;
 		}
 	}

@@ -153,7 +153,9 @@ BXHandler(struct mg_connection *conn, void *cbdata)
 	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
 	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn, "<h2>This is the BX handler %p!!!</h2>", cbdata);
+	mg_printf(conn,
+	          "<h2>This is the BX handler with argument %s.</h2>",
+	          cbdata);
 	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->local_uri);
 	mg_printf(conn, "</body></html>\n");
 	return 1;
@@ -296,6 +298,16 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 		bin2str(outputbuf, hash, sizeof(hash));
 		mg_printf(conn, "value md5 hash = %s\n", outputbuf);
 	}
+
+#if 0 /* for debugging */
+	if (!strcmp(key, "File")) {
+		FILE *f = fopen("test.txt", "wb");
+		if (f) {
+			fwrite(value, 1, valuelen, f);
+			fclose(f);
+		}
+	}
+#endif
 
 	return 0;
 }
@@ -520,7 +532,8 @@ PostResponser(struct mg_connection *conn, void *cbdata)
 
 	const struct mg_request_info *ri = mg_get_request_info(conn);
 
-	if (strcmp(ri->request_method, "POST")) {
+	if (0 != strcmp(ri->request_method, "POST")) {
+		/* Not a POST request */
 		char buf[1024];
 		int ret = mg_get_request_link(conn, buf, sizeof(buf));
 
@@ -817,9 +830,11 @@ InformWebsockets(struct mg_context *ctx)
 {
 	static unsigned long cnt = 0;
 	char text[32];
+	size_t textlen;
 	int i;
 
 	sprintf(text, "%lu", ++cnt);
+	textlen = strlen(text);
 
 	mg_lock_context(ctx);
 	for (i = 0; i < MAX_WS_CLIENTS; i++) {
@@ -827,7 +842,7 @@ InformWebsockets(struct mg_context *ctx)
 			mg_websocket_write(ws_clients[i].conn,
 			                   MG_WEBSOCKET_OPCODE_TEXT,
 			                   text,
-			                   strlen(text));
+			                   textlen);
 		}
 	}
 	mg_unlock_context(ctx);
@@ -1017,9 +1032,9 @@ main(int argc, char *argv[])
 	mg_set_request_handler(ctx, "/A/B", ABHandler, 0);
 
 	/* Add handler for /B, /B/A, /B/B but not for /B* */
-	mg_set_request_handler(ctx, "/B$", BXHandler, (void *)0);
-	mg_set_request_handler(ctx, "/B/A$", BXHandler, (void *)1);
-	mg_set_request_handler(ctx, "/B/B$", BXHandler, (void *)2);
+	mg_set_request_handler(ctx, "/B$", BXHandler, (void *)"alpha");
+	mg_set_request_handler(ctx, "/B/A$", BXHandler, (void *)"beta");
+	mg_set_request_handler(ctx, "/B/B$", BXHandler, (void *)"gamma");
 
 	/* Add handler for all files with .foo extension */
 	mg_set_request_handler(ctx, "**.foo$", FooHandler, 0);
