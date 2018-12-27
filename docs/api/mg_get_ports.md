@@ -27,5 +27,5 @@ The function returns the number of ports actually stored in the buffer.
 
 ### See Also
 
-* [`struct mg_server_ports;`](mg_server_ports.md)
+* [`struct mg_server_port;`](mg_server_port.md)
 * [`mg_get_server_ports();`](mg_get_server_ports.md)

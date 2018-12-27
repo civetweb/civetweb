@@ -2753,7 +2753,7 @@ struct mg_connection {
 	                       * throttle */
 
 	time_t last_throttle_time;   /* Last time throttled data was sent */
-	int64_t last_throttle_bytes; /* Bytes sent this second */
+	int last_throttle_bytes;     /* Bytes sent this second */
 	pthread_mutex_t mutex;       /* Used by mg_(un)lock_connection to ensure
 	                              * atomic transmissions for websockets */
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
@@ -3504,7 +3504,7 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 int
 mg_get_server_ports(const struct mg_context *ctx,
                     int size,
-                    struct mg_server_ports *ports)
+                    struct mg_server_port *ports)
 {
 	int i, cnt = 0;
 
@@ -6255,16 +6255,16 @@ push_inner(struct mg_context *ctx,
 }
 
 
-static int64_t
+static int
 push_all(struct mg_context *ctx,
          FILE *fp,
          SOCKET sock,
          SSL *ssl,
          const char *buf,
-         int64_t len)
+         int len)
 {
 	double timeout = -1.0;
-	int64_t n, nwritten = 0;
+	int n, nwritten = 0;
 
 	if (ctx == NULL) {
 		return -1;
@@ -6275,10 +6275,10 @@ push_all(struct mg_context *ctx,
 	}
 
 	while ((len > 0) && (ctx->stop_flag == 0)) {
-		n = push_inner(ctx, fp, sock, ssl, buf + nwritten, (int)len, timeout);
+		n = push_inner(ctx, fp, sock, ssl, buf + nwritten, len, timeout);
 		if (n < 0) {
 			if (nwritten == 0) {
-				nwritten = n; /* Propagate the error */
+				nwritten = -1; /* Propagate the error */
 			}
 			break;
 		} else if (n == 0) {
@@ -6760,10 +6760,13 @@ int
 mg_write(struct mg_connection *conn, const void *buf, size_t len)
 {
 	time_t now;
-	int64_t n, total, allowed;
+	int n, total, allowed;
 
 	if (conn == NULL) {
 		return 0;
+	}
+	if (len > INT_MAX) {
+		return -1;
 	}
 
 	if (conn->throttle > 0) {
@@ -6772,28 +6775,28 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 			conn->last_throttle_bytes = 0;
 		}
 		allowed = conn->throttle - conn->last_throttle_bytes;
-		if (allowed > (int64_t)len) {
-			allowed = (int64_t)len;
+		if (allowed > (int)len) {
+			allowed = (int)len;
 		}
 		if ((total = push_all(conn->phys_ctx,
 		                      NULL,
 		                      conn->client.sock,
 		                      conn->ssl,
 		                      (const char *)buf,
-		                      (int64_t)allowed))
+		                      allowed))
 		    == allowed) {
 			buf = (const char *)buf + total;
 			conn->last_throttle_bytes += total;
-			while ((total < (int64_t)len) && (conn->phys_ctx->stop_flag == 0)) {
-				allowed = (conn->throttle > ((int64_t)len - total))
-				              ? (int64_t)len - total
+			while ((total < (int)len) && (conn->phys_ctx->stop_flag == 0)) {
+				allowed = (conn->throttle > ((int)len - total))
+				              ? (int)len - total
 				              : conn->throttle;
 				if ((n = push_all(conn->phys_ctx,
 				                  NULL,
 				                  conn->client.sock,
 				                  conn->ssl,
 				                  (const char *)buf,
-				                  (int64_t)allowed))
+				                  allowed))
 				    != allowed) {
 					break;
 				}
@@ -6810,12 +6813,12 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 		                 conn->client.sock,
 		                 conn->ssl,
 		                 (const char *)buf,
-		                 (int64_t)len);
+		                 (int)len);
 	}
 	if (total > 0) {
 		conn->num_bytes_sent += total;
 	}
-	return (int)total;
+	return total;
 }
 
 
@@ -10529,7 +10532,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 	const char *expect, *body;
 	char buf[MG_BUF_LEN];
 	int to_read, nread, success = 0;
-	int64_t buffered_len;
+	int buffered_len;
 	double timeout = -1.0;
 
 	if (!conn) {
@@ -10568,8 +10571,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 			conn->status_code = 200;
 		}
 
-		buffered_len = (int64_t)(conn->data_len) - (int64_t)conn->request_len
-		               - conn->consumed_content;
+		buffered_len = conn->data_len - conn->request_len;
 
 		DEBUG_ASSERT(buffered_len >= 0);
 		DEBUG_ASSERT(conn->consumed_content == 0);
@@ -10583,9 +10585,8 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 			if ((int64_t)buffered_len > conn->content_len) {
 				buffered_len = (int)conn->content_len;
 			}
-			body = conn->buf + conn->request_len + conn->consumed_content;
-			push_all(
-			    conn->phys_ctx, fp, sock, ssl, body, (int64_t)buffered_len);
+			body = conn->buf + conn->request_len;
+			push_all(conn->phys_ctx, fp, sock, ssl, body, buffered_len);
 			conn->consumed_content += buffered_len;
 		}
 
@@ -10605,8 +10606,8 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 				    != nread) {
 					break;
 				}
+				conn->consumed_content += nread;
 			}
-			conn->consumed_content += nread;
 		}
 
 		if (conn->consumed_content == conn->content_len) {

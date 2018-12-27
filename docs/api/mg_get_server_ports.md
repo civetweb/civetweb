@@ -8,7 +8,7 @@
 | :--- | :--- | :--- |
 |**`ctx`**|`const struct mg_context *`|The context for which the server ports are requested|
 |**`size`**|`int`|The size of the buffer to store the port information|
-|**`ports`**|`struct mg_server_ports *`|Buffer to store the port information|
+|**`ports`**|`struct mg_server_port *`|Buffer to store the port information|
 
 ### Return Value
 
@@ -25,4 +25,4 @@ The function returns the number of items in the list, or a negative value if an 
 ### See Also
 
 * [~~`mg_get_ports();`~~](mg_get_ports.md)
-* [`struct mg_server_ports;`](mg_server_ports.md)
+* [`struct mg_server_port;`](mg_server_port.md)
