@@ -20,7 +20,7 @@
 #define HOST_INFO "http://localhost:8080"
 #define EXAMPLE_URI "/example"
 
-int exitNow = 0;
+static int exitNow = 0;
 
 static int
 ExampleGET(struct mg_connection* conn)
@@ -54,6 +54,9 @@ main(int argc, char *argv[])
 {
 	struct mg_callbacks callbacks;
 	struct mg_context *ctx;
+	time_t start_t;
+	time_t end_t;
+	double diff_t;
 	int err = 0;
 
 	mg_init_library(0);
@@ -79,12 +82,18 @@ main(int argc, char *argv[])
 
 
 	/* Wait until the server should be closed */
+	time(&start_t);
 	while (!exitNow) {
 #ifdef _WIN32
 		Sleep(1000);
 #else
 		sleep(1);
 #endif
+        time(&end_t);
+		diff_t = difftime(end_t, start_t);
+		if (diff_t > 3.0) {
+			break;
+		}
 	}
 
 	/* Stop the server */
