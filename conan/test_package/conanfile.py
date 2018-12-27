@@ -21,9 +21,11 @@ class TestPackageConan(ConanFile):
         bin_path = os.path.join("bin", "test_package")
         run_vars = RunEnvironment(self).vars
         with tools.environment_append(run_vars):
-            if self.settings.os == "Macos":
+            if self.settings.os == "Macos" or self.settings.os == "Linux":
                 run_vars["DYLD_LIBRARY_PATH"] = os.environ.get('DYLD_LIBRARY_PATH', '')
-            process = subprocess.Popen([bin_path], shell=True, env=run_vars)
+                process = subprocess.Popen([bin_path], shell=True, env=run_vars)
+            else:
+                process = subprocess.Popen([bin_path], shell=True)
             time.sleep(3)
             response = requests.get("http://localhost:8080/example")
             assert response.ok

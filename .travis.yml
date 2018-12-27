@@ -161,6 +161,8 @@ matrix:
   fast_finish: false
   include:
 
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=conanio/gcc5 CONAN_DOCKER_32_IMAGES=1
   - <<: *conan-osx
     osx_image: xcode8.3
     env: CONAN_APPLE_CLANG_VERSIONS=8.1
@@ -175,8 +177,6 @@ matrix:
     env: CONAN_APPLE_CLANG_VERSIONS=10.0
   - <<: *conan-linux
     env: CONAN_GCC_VERSIONS=4.9 CONAN_DOCKER_IMAGE=conanio/gcc49 CONAN_DOCKER_32_IMAGES=1
-  - <<: *conan-linux
-    env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=conanio/gcc5 CONAN_DOCKER_32_IMAGES=1
   - <<: *conan-linux
     env: CONAN_GCC_VERSIONS=6 CONAN_DOCKER_IMAGE=conanio/gcc6 CONAN_DOCKER_32_IMAGES=1
   - <<: *conan-linux
