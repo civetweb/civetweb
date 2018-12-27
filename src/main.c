@@ -167,7 +167,11 @@ struct tuser_data {
 };
 
 
-static int g_exit_flag = 0;         /* Main loop should exit */
+/* Exit flag for the main loop (read and writen by different threads, thus
+ * volatile). */
+volatile int g_exit_flag = 0; /* 0 = continue running main loop */
+
+
 static char g_server_base_name[40]; /* Set by init_server_name() */
 
 static const char *g_server_name; /* Default from init_server_name,

@@ -4098,7 +4098,7 @@ reparse:
 	end = (int)val->len - 1;
 	while (end >= 0 && ((val->ptr[end] == ' ') || (val->ptr[end] == '\t')))
 		end--;
-	val->len = (size_t)(end + 1);
+	val->len = (size_t)(end) + (size_t)(1);
 
 	if (val->len == 0) {
 		/* Ignore any empty entries. */
@@ -10972,6 +10972,7 @@ abort_process(void *data)
 }
 
 
+/* Local (static) function assumes all arguments are valid. */
 static void
 handle_cgi_request(struct mg_connection *conn, const char *prog)
 {
@@ -10995,10 +10996,6 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		cgi_timeout = atof(conn->dom_ctx->config[CGI_TIMEOUT]) * 0.001;
 	}
 #endif
-
-	if (conn == NULL) {
-		return;
-	}
 
 	buf = NULL;
 	buflen = conn->phys_ctx->max_request_size;
@@ -12004,8 +12001,9 @@ static int
 print_dav_dir_entry(struct de *de, void *data)
 {
 	struct mg_connection *conn = (struct mg_connection *)data;
-	if (!de || !conn || !print_props(conn, conn->request_info.local_uri,
-	                                 de->file_name, &de->file)) {
+	if (!de || !conn
+	    || !print_props(
+	           conn, conn->request_info.local_uri, de->file_name, &de->file)) {
 		return -1;
 	}
 	return 0;
@@ -15160,8 +15158,9 @@ sslize(struct mg_connection *conn,
 					struct mg_pollfd pfd;
 					pfd.fd = conn->client.sock;
 					pfd.events = ((err == SSL_ERROR_WANT_CONNECT)
-					              || (err == SSL_ERROR_WANT_WRITE)) ? POLLOUT
-					                                                : POLLIN;
+					              || (err == SSL_ERROR_WANT_WRITE))
+					                 ? POLLOUT
+					                 : POLLIN;
 					mg_poll(&pfd, 1, 50, stop_server);
 				}
 
@@ -17845,8 +17844,7 @@ worker_thread_run(struct mg_connection *conn)
 	/* Connection structure has been pre-allocated */
 	thread_index = (int)(conn - ctx->worker_connections);
 	if ((thread_index < 0)
-	    || ((unsigned)thread_index
-	        >= (unsigned)ctx->cfg_worker_threads)) {
+	    || ((unsigned)thread_index >= (unsigned)ctx->cfg_worker_threads)) {
 		mg_cry_internal(fc(ctx),
 		                "Internal error: Invalid worker index %i",
 		                thread_index);
@@ -18724,7 +18722,8 @@ mg_start(const struct mg_callbacks *callbacks,
 		ctx->worker_connections[i].phys_ctx = ctx;
 		if (mg_start_thread_with_id(worker_thread,
 		                            &ctx->worker_connections[i],
-		                            &ctx->worker_threadids[i]) != 0) {
+		                            &ctx->worker_threadids[i])
+		    != 0) {
 
 			/* thread was not created */
 			if (i > 0) {
