@@ -16097,7 +16097,6 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->must_close = 0;
 	conn->request_len = 0;
 	conn->throttle = 0;
-	conn->data_len = 0;
 	conn->chunk_remainder = 0;
 	conn->accept_gzip = 0;
 
@@ -17145,6 +17144,9 @@ mg_get_response(struct mg_connection *conn,
 		return -1;
 	}
 
+	/* Reset the previous responses */
+	conn->data_len = 0;
+
 	/* Implementation of API function for HTTP clients */
 	save_timeout = conn->dom_ctx->config[REQUEST_TIMEOUT];
 
@@ -17208,6 +17210,8 @@ mg_download(const char *host,
 			            "%s",
 			            "Error sending request");
 		} else {
+			/* make sure the buffer is clear */
+			conn->data_len = 0;
 			get_response(conn, ebuf, ebuf_len, &reqerr);
 
 #if defined(MG_LEGACY_INTERFACE)
