@@ -6538,38 +6538,15 @@ static void
 discard_unread_request_data(struct mg_connection *conn)
 {
 	char buf[MG_BUF_LEN];
-	size_t to_read;
-	int nread;
 
 	if (conn == NULL) {
 		return;
 	}
 
-	to_read = sizeof(buf);
-
-	if (conn->is_chunked) {
-		/* Chunked encoding: 3=chunk read completely
-		 * completely */
-		while (conn->is_chunked != 3) {
-			nread = mg_read(conn, buf, to_read);
-			if (nread <= 0) {
-				break;
-			}
-		}
-
-	} else {
-		/* Not chunked: content length is known */
-		while (conn->consumed_content < conn->content_len) {
-			if (to_read
-			    > (size_t)(conn->content_len - conn->consumed_content)) {
-				to_read = (size_t)(conn->content_len - conn->consumed_content);
-			}
-
-			nread = mg_read(conn, buf, to_read);
-			if (nread <= 0) {
-				break;
-			}
-		}
+	/* Chunked, or content length is known */
+	if (conn->is_chunked || (conn->content_len != -1)) {
+		while (mg_read(conn, buf, sizeof(buf)) > 0)
+			;
 	}
 }
 
@@ -10529,17 +10506,12 @@ read_message(FILE *fp,
 static int
 forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 {
-	const char *expect, *body;
+	const char *expect;
 	char buf[MG_BUF_LEN];
-	int to_read, nread, success = 0;
-	int buffered_len;
-	double timeout = -1.0;
+	int success = 0;
 
 	if (!conn) {
 		return 0;
-	}
-	if (conn->dom_ctx->config[REQUEST_TIMEOUT]) {
-		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 
 	expect = mg_get_header(conn, "Expect");
@@ -10571,47 +10543,22 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 			conn->status_code = 200;
 		}
 
-		buffered_len = conn->data_len - conn->request_len;
-
-		DEBUG_ASSERT(buffered_len >= 0);
 		DEBUG_ASSERT(conn->consumed_content == 0);
 
-		if ((buffered_len < 0) || (conn->consumed_content != 0)) {
+		if (conn->consumed_content != 0) {
 			mg_send_http_error(conn, 500, "%s", "Error: Size mismatch");
 			return 0;
 		}
 
-		if (buffered_len > 0) {
-			if ((int64_t)buffered_len > conn->content_len) {
-				buffered_len = (int)conn->content_len;
-			}
-			body = conn->buf + conn->request_len;
-			push_all(conn->phys_ctx, fp, sock, ssl, body, buffered_len);
-			conn->consumed_content += buffered_len;
-		}
-
-		nread = 0;
-		while (conn->consumed_content < conn->content_len) {
-			to_read = sizeof(buf);
-			if ((int64_t)to_read > conn->content_len - conn->consumed_content) {
-				to_read = (int)(conn->content_len - conn->consumed_content);
-			}
-			nread = pull_inner(NULL, conn, buf, to_read, timeout);
-			if (nread == -2) {
-				/* error */
+		for (;;) {
+			int nread = mg_read(conn, buf, sizeof(buf));
+			if (nread <= 0) {
+				success = (nread == 0);
 				break;
 			}
-			if (nread > 0) {
-				if (push_all(conn->phys_ctx, fp, sock, ssl, buf, nread)
-				    != nread) {
-					break;
-				}
-				conn->consumed_content += nread;
+			if (push_all(conn->phys_ctx, fp, sock, ssl, buf, nread) != nread) {
+				break;
 			}
-		}
-
-		if (conn->consumed_content == conn->content_len) {
-			success = (nread >= 0);
 		}
 
 		/* Each error code path in this function must send an error */
