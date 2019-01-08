@@ -80,8 +80,8 @@ build () {
   local output_dir="${src_dir}/output"
   while (( "$#" )); do
     case "$1" in
-      --debug) build_type=Release;;
-      --release) build_type=Debug;;
+      --debug) build_type=Debug;;
+      --release) build_type=Release;;
       --shared) shared=YES;;
       --static) shared=NO;;
       --output) shift; out="$1";;
