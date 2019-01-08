@@ -56,7 +56,7 @@ end
 
 local response_body = json.stringify(response_table)
 mg.write("HTTP/1.1 " .. http_status .. "\r\n")
-mg.write("Content-Type: application/javascript; charset=UTF-8\r\n")
+mg.write("Content-Type: application/json; charset=UTF-8\r\n")
 mg.write("Content-Length: ".. #response_body .."\r\n")
 mg.write("\r\n")
 mg.write(response_body)
