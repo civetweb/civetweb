@@ -10669,19 +10669,25 @@ static void addenv(struct cgi_environment *env,
 static void
 addenv(struct cgi_environment *env, const char *fmt, ...)
 {
-	size_t n, space;
+	size_t i, n, space;
 	int truncated = 0;
 	char *added;
 	va_list ap;
 
+	if ((env->varlen - env->varused) < 2) {
+		mg_cry_internal(env->conn,
+		                "%s: Cannot register CGI variable [%s]",
+		                __func__,
+		                fmt);
+		return;
+	}
+
 	/* Calculate how much space is left in the buffer */
 	space = (env->buflen - env->bufused);
 
-	/* Calculate an estimate for the required space */
-	n = strlen(fmt) + 2 + 128;
-
 	do {
-		if (space <= n) {
+		/* Space for "\0\0" is always needed. */
+		if (space <= 2) {
 			/* Allocate new buffer */
 			n = env->buflen + CGI_ENVIRONMENT_SIZE;
 			added = (char *)mg_realloc_ctx(env->buf, n, env->conn->phys_ctx);
@@ -10694,8 +10700,13 @@ addenv(struct cgi_environment *env, const char *fmt, ...)
 				    fmt);
 				return;
 			}
+			/* Retarget pointers */
 			env->buf = added;
 			env->buflen = n;
+			for (i = 0, n = 0; i < env->varused; i++) {
+				env->var[i] = added + n;
+				n += strlen(added + n) + 1;
+			}
 			space = (env->buflen - env->bufused);
 		}
 
@@ -10704,30 +10715,19 @@ addenv(struct cgi_environment *env, const char *fmt, ...)
 
 		/* Copy VARIABLE=VALUE\0 string into the free space */
 		va_start(ap, fmt);
-		mg_vsnprintf(env->conn, &truncated, added, (size_t)space, fmt, ap);
+		mg_vsnprintf(env->conn, &truncated, added, space - 1, fmt, ap);
 		va_end(ap);
 
 		/* Do not add truncated strings to the environment */
 		if (truncated) {
 			/* Reallocate the buffer */
 			space = 0;
-			n = 1;
 		}
 	} while (truncated);
 
 	/* Calculate number of bytes added to the environment */
 	n = strlen(added) + 1;
 	env->bufused += n;
-
-	/* Now update the variable index */
-	space = (env->varlen - env->varused);
-	if (space < 2) {
-		mg_cry_internal(env->conn,
-		                "%s: Cannot register CGI variable [%s]",
-		                __func__,
-		                fmt);
-		return;
-	}
 
 	/* Append a pointer to the added string into the envp array */
 	env->var[env->varused] = added;
@@ -10763,7 +10763,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 	env->varlen = MAX_CGI_ENVIR_VARS;
 	env->varused = 0;
 	env->var =
-	    (char **)mg_malloc_ctx(env->buflen * sizeof(char *), conn->phys_ctx);
+	    (char **)mg_malloc_ctx(env->varlen * sizeof(char *), conn->phys_ctx);
 	if (env->var == NULL) {
 		mg_cry_internal(conn,
 		                "%s: Not enough memory for environmental variables",
