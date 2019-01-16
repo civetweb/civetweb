@@ -536,6 +536,9 @@ typedef long off_t;
 #if !defined(EWOULDBLOCK)
 #define EWOULDBLOCK WSAEWOULDBLOCK
 #endif /* !EWOULDBLOCK */
+#if !defined(ECONNRESET)
+#define ECONNRESET WSAECONNRESET
+#endif /* !ECONNRESET */
 #define _POSIX_
 #define INT64_FMT "I64d"
 #define UINT64_FMT "I64u"
