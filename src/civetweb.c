@@ -18939,13 +18939,13 @@ mg_str_append(char **dst, char *end, const char *src)
 int
 mg_get_system_info(char *buffer, int buflen)
 {
-	char *end, block[256];
+	char *end, *append_eoobj = NULL, block[256];
 	size_t system_info_length = 0;
 
 #if defined(_WIN32)
-	const char *eol = "\r\n";
+	static const char eol[] = "\r\n", eoobj[] = "\r\n}\r\n";
 #else
-	const char *eol = "\n";
+	static const char eol[] = "\n", eoobj[] = "\n}\n";
 #endif
 
 	if ((buffer == NULL) || (buflen < 1)) {
@@ -18954,9 +18954,13 @@ mg_get_system_info(char *buffer, int buflen)
 		*buffer = 0;
 	}
 	end = buffer + buflen;
+	if (buflen > (int)(sizeof(eoobj) - 1)) {
+		/* has enough space to append eoobj */
+		append_eoobj = buffer;
+		end -= sizeof(eoobj) - 1;
+	}
 
-	mg_snprintf(NULL, NULL, block, sizeof(block), "{%s", eol);
-	system_info_length += mg_str_append(&buffer, end, block);
+	system_info_length += mg_str_append(&buffer, end, "{");
 
 	/* Server version */
 	{
@@ -18965,9 +18969,9 @@ mg_get_system_info(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"version\" : \"%s\",%s",
-		            version,
-		            eol);
+		            "%s\"version\" : \"%s\"",
+		            eol,
+		            version);
 		system_info_length += mg_str_append(&buffer, end, block);
 	}
 
@@ -18998,21 +19002,21 @@ mg_get_system_info(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"os\" : \"Windows %u.%u\",%s",
+		            ",%s\"os\" : \"Windows %u.%u\"",
+		            eol,
 		            (unsigned)dwMajorVersion,
-		            (unsigned)dwMinorVersion,
-		            eol);
+		            (unsigned)dwMinorVersion);
 		system_info_length += mg_str_append(&buffer, end, block);
 
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"cpu\" : \"type %u, cores %u, mask %x\",%s",
+		            ",%s\"cpu\" : \"type %u, cores %u, mask %x\"",
+		            eol,
 		            (unsigned)si.wProcessorArchitecture,
 		            (unsigned)si.dwNumberOfProcessors,
-		            (unsigned)si.dwActiveProcessorMask,
-		            eol);
+		            (unsigned)si.dwActiveProcessorMask);
 		system_info_length += mg_str_append(&buffer, end, block);
 #else
 		struct utsname name;
@@ -19023,12 +19027,12 @@ mg_get_system_info(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"os\" : \"%s %s (%s) - %s\",%s",
+		            ",%s\"os\" : \"%s %s (%s) - %s\"",
+		            eol,
 		            name.sysname,
 		            name.version,
 		            name.release,
-		            name.machine,
-		            eol);
+		            name.machine);
 		system_info_length += mg_str_append(&buffer, end, block);
 #endif
 	}
@@ -19039,8 +19043,9 @@ mg_get_system_info(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"features\" : %lu,%s"
-		            "\"feature_list\" : \"Server:%s%s%s%s%s%s%s%s%s\",%s",
+		            ",%s\"features\" : %lu"
+		            ",%s\"feature_list\" : \"Server:%s%s%s%s%s%s%s%s%s\"",
+		            eol,
 		            (unsigned long)mg_check_feature(0xFFFFFFFFu),
 		            eol,
 		            mg_check_feature(MG_FEATURES_FILES) ? " Files" : "",
@@ -19052,8 +19057,7 @@ mg_get_system_info(char *buffer, int buflen)
 		            mg_check_feature(MG_FEATURES_LUA) ? " Lua" : "",
 		            mg_check_feature(MG_FEATURES_SSJS) ? " JavaScript" : "",
 		            mg_check_feature(MG_FEATURES_CACHE) ? " Cache" : "",
-		            mg_check_feature(MG_FEATURES_STATS) ? " Stats" : "",
-		            eol);
+		            mg_check_feature(MG_FEATURES_STATS) ? " Stats" : "");
 		system_info_length += mg_str_append(&buffer, end, block);
 
 #if defined(USE_LUA)
@@ -19061,10 +19065,10 @@ mg_get_system_info(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"lua_version\" : \"%u (%s)\",%s",
+		            ",%s\"lua_version\" : \"%u (%s)\"",
+		            eol,
 		            (unsigned)LUA_VERSION_NUM,
-		            LUA_RELEASE,
-		            eol);
+		            LUA_RELEASE);
 		system_info_length += mg_str_append(&buffer, end, block);
 #endif
 #if defined(USE_DUKTAPE)
@@ -19072,11 +19076,11 @@ mg_get_system_info(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"javascript\" : \"Duktape %u.%u.%u\",%s",
+		            ",%s\"javascript\" : \"Duktape %u.%u.%u\"",
+		            eol,
 		            (unsigned)DUK_VERSION / 10000,
 		            ((unsigned)DUK_VERSION / 100) % 100,
-		            (unsigned)DUK_VERSION % 100,
-		            eol);
+		            (unsigned)DUK_VERSION % 100);
 		system_info_length += mg_str_append(&buffer, end, block);
 #endif
 	}
@@ -19094,9 +19098,9 @@ mg_get_system_info(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"build\" : \"%s\",%s",
-		            __DATE__,
-		            eol);
+		            ",%s\"build\" : \"%s\"",
+		            eol,
+		            __DATE__);
 
 #if defined(GCC_DIAGNOSTIC)
 #if GCC_VERSION >= 40900
@@ -19116,96 +19120,96 @@ mg_get_system_info(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"MSC: %u (%u)\",%s",
+		            ",%s\"compiler\" : \"MSC: %u (%u)\"",
+		            eol,
 		            (unsigned)_MSC_VER,
-		            (unsigned)_MSC_FULL_VER,
-		            eol);
+		            (unsigned)_MSC_FULL_VER);
 		system_info_length += mg_str_append(&buffer, end, block);
 #elif defined(__MINGW64__)
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"MinGW64: %u.%u\",%s",
+		            ",%s\"compiler\" : \"MinGW64: %u.%u\"",
+		            eol,
 		            (unsigned)__MINGW64_VERSION_MAJOR,
-		            (unsigned)__MINGW64_VERSION_MINOR,
-		            eol);
+		            (unsigned)__MINGW64_VERSION_MINOR);
 		system_info_length += mg_str_append(&buffer, end, block);
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"MinGW32: %u.%u\",%s",
+		            ",%s\"compiler\" : \"MinGW32: %u.%u\"",
+		            eol,
 		            (unsigned)__MINGW32_MAJOR_VERSION,
-		            (unsigned)__MINGW32_MINOR_VERSION,
-		            eol);
+		            (unsigned)__MINGW32_MINOR_VERSION);
 		system_info_length += mg_str_append(&buffer, end, block);
 #elif defined(__MINGW32__)
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"MinGW32: %u.%u\",%s",
+		            ",%s\"compiler\" : \"MinGW32: %u.%u\"",
+		            eol,
 		            (unsigned)__MINGW32_MAJOR_VERSION,
-		            (unsigned)__MINGW32_MINOR_VERSION,
-		            eol);
+		            (unsigned)__MINGW32_MINOR_VERSION);
 		system_info_length += mg_str_append(&buffer, end, block);
 #elif defined(__clang__)
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"clang: %u.%u.%u (%s)\",%s",
+		            ",%s\"compiler\" : \"clang: %u.%u.%u (%s)\"",
+		            eol,
 		            __clang_major__,
 		            __clang_minor__,
 		            __clang_patchlevel__,
-		            __clang_version__,
-		            eol);
+		            __clang_version__);
 		system_info_length += mg_str_append(&buffer, end, block);
 #elif defined(__GNUC__)
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"gcc: %u.%u.%u\",%s",
+		            ",%s\"compiler\" : \"gcc: %u.%u.%u\"",
+		            eol,
 		            (unsigned)__GNUC__,
 		            (unsigned)__GNUC_MINOR__,
-		            (unsigned)__GNUC_PATCHLEVEL__,
-		            eol);
+		            (unsigned)__GNUC_PATCHLEVEL__);
 		system_info_length += mg_str_append(&buffer, end, block);
 #elif defined(__INTEL_COMPILER)
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"Intel C/C++: %u\",%s",
-		            (unsigned)__INTEL_COMPILER,
-		            eol);
+		            ",%s\"compiler\" : \"Intel C/C++: %u\"",
+		            eol,
+		            (unsigned)__INTEL_COMPILER);
 		system_info_length += mg_str_append(&buffer, end, block);
 #elif defined(__BORLANDC__)
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"Borland C: 0x%x\",%s",
-		            (unsigned)__BORLANDC__,
-		            eol);
+		            ",%s\"compiler\" : \"Borland C: 0x%x\"",
+		            eol,
+		            (unsigned)__BORLANDC__);
 		system_info_length += mg_str_append(&buffer, end, block);
 #elif defined(__SUNPRO_C)
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"Solaris: 0x%x\",%s",
-		            (unsigned)__SUNPRO_C,
-		            eol);
+		            ",%s\"compiler\" : \"Solaris: 0x%x\"",
+		            eol,
+		            (unsigned)__SUNPRO_C);
 		system_info_length += mg_str_append(&buffer, end, block);
 #else
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"compiler\" : \"other\",%s",
+		            ",%s\"compiler\" : \"other\"",
 		            eol);
 		system_info_length += mg_str_append(&buffer, end, block);
 #endif
@@ -19218,9 +19222,10 @@ mg_get_system_info(char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"data_model\" : \"int:%u/%u/%u/%u, float:%u/%u/%u, "
+		            ",%s\"data_model\" : \"int:%u/%u/%u/%u, float:%u/%u/%u, "
 		            "char:%u/%u, "
-		            "ptr:%u, size:%u, time:%u\"%s",
+		            "ptr:%u, size:%u, time:%u\"",
+		            eol,
 		            (unsigned)sizeof(short),
 		            (unsigned)sizeof(int),
 		            (unsigned)sizeof(long),
@@ -19232,14 +19237,15 @@ mg_get_system_info(char *buffer, int buflen)
 		            (unsigned)sizeof(wchar_t),
 		            (unsigned)sizeof(void *),
 		            (unsigned)sizeof(size_t),
-		            (unsigned)sizeof(time_t),
-		            eol);
+		            (unsigned)sizeof(time_t));
 		system_info_length += mg_str_append(&buffer, end, block);
 	}
 
 	/* Terminate string */
-	mg_snprintf(NULL, NULL, block, sizeof(block), "}%s", eol);
-	system_info_length += mg_str_append(&buffer, end, block);
+	if (append_eoobj) {
+		strcat(append_eoobj, eoobj);
+	}
+	system_info_length += sizeof(eoobj) - 1;
 
 	return (int)system_info_length;
 }
@@ -19251,13 +19257,13 @@ int
 mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 {
 #if defined(USE_SERVER_STATS)
-	char *end, block[256];
+	char *end, *append_eoobj = NULL, block[256];
 	size_t context_info_length = 0;
 
 #if defined(_WIN32)
-	const char *eol = "\r\n";
+	static const char eol[] = "\r\n", eoobj[] = "\r\n}\r\n";
 #else
-	const char *eol = "\n";
+	static const char eol[] = "\n", eoobj[] = "\n}\n";
 #endif
 	struct mg_memory_stat *ms = get_memory_stat((struct mg_context *)ctx);
 
@@ -19267,9 +19273,13 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		*buffer = 0;
 	}
 	end = buffer + buflen;
+	if (buflen > (int)(sizeof(eoobj) - 1)) {
+		/* has enough space to append eoobj */
+		append_eoobj = buffer;
+		end -= sizeof(eoobj) - 1;
+	}
 
-	mg_snprintf(NULL, NULL, block, sizeof(block), "{%s", eol);
-	context_info_length += mg_str_append(&buffer, end, block);
+	context_info_length += mg_str_append(&buffer, end, "{");
 
 	if (ms) { /* <-- should be always true */
 		/* Memory information */
@@ -19277,21 +19287,19 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"memory\" : {%s"
+		            "%s\"memory\" : {%s"
 		            "\"blocks\" : %i,%s"
 		            "\"used\" : %" INT64_FMT ",%s"
 		            "\"maxUsed\" : %" INT64_FMT "%s"
-		            "}%s%s",
+		            "}",
+		            eol,
 		            eol,
 		            ms->blockCount,
 		            eol,
 		            ms->totalMemUsed,
 		            eol,
 		            ms->maxMemUsed,
-		            eol,
-		            (ctx ? "," : ""),
 		            eol);
-
 		context_info_length += mg_str_append(&buffer, end, block);
 	}
 
@@ -19308,20 +19316,19 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"connections\" : {%s"
+		            ",%s\"connections\" : {%s"
 		            "\"active\" : %i,%s"
 		            "\"maxActive\" : %i,%s"
 		            "\"total\" : %" INT64_FMT "%s"
-		            "},%s",
+		            "}",
+		            eol,
 		            eol,
 		            ctx->active_connections,
 		            eol,
 		            ctx->max_connections,
 		            eol,
 		            ctx->total_connections,
-		            eol,
 		            eol);
-
 		context_info_length += mg_str_append(&buffer, end, block);
 
 		/* Requests information */
@@ -19329,14 +19336,13 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"requests\" : {%s"
+		            ",%s\"requests\" : {%s"
 		            "\"total\" : %" INT64_FMT "%s"
-		            "},%s",
+		            "}",
+		            eol,
 		            eol,
 		            ctx->total_requests,
-		            eol,
 		            eol);
-
 		context_info_length += mg_str_append(&buffer, end, block);
 
 		/* Data information */
@@ -19344,17 +19350,16 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"data\" : {%s"
-		            "\"read\" : %" INT64_FMT "%s,"
+		            ",%s\"data\" : {%s"
+		            "\"read\" : %" INT64_FMT ",%s"
 		            "\"written\" : %" INT64_FMT "%s"
-		            "},%s",
+		            "}",
+		            eol,
 		            eol,
 		            ctx->total_data_read,
 		            eol,
 		            ctx->total_data_written,
-		            eol,
 		            eol);
-
 		context_info_length += mg_str_append(&buffer, end, block);
 
 		/* Execution time information */
@@ -19367,26 +19372,27 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"time\" : {%s"
+		            ",%s\"time\" : {%s"
 		            "\"uptime\" : %.0f,%s"
 		            "\"start\" : \"%s\",%s"
 		            "\"now\" : \"%s\"%s"
-		            "}%s",
+		            "}",
+		            eol,
 		            eol,
 		            difftime(now, start_time),
 		            eol,
 		            start_time_str,
 		            eol,
 		            now_str,
-		            eol,
 		            eol);
-
 		context_info_length += mg_str_append(&buffer, end, block);
 	}
 
 	/* Terminate string */
-	mg_snprintf(NULL, NULL, block, sizeof(block), "}%s", eol);
-	context_info_length += mg_str_append(&buffer, end, block);
+	if (append_eoobj) {
+		strcat(append_eoobj, eoobj);
+	}
+	context_info_length += sizeof(eoobj) - 1;
 
 	return (int)context_info_length;
 #else
@@ -19410,15 +19416,15 @@ mg_get_connection_info(const struct mg_context *ctx,
 {
 	const struct mg_connection *conn;
 	const struct mg_request_info *ri;
-	char *end, block[256];
+	char *end, *append_eoobj = NULL, block[256];
 	size_t connection_info_length = 0;
 	int state = 0;
 	const char *state_str = "unknown";
 
 #if defined(_WIN32)
-	const char *eol = "\r\n";
+	static const char eol[] = "\r\n", eoobj[] = "\r\n}\r\n";
 #else
-	const char *eol = "\n";
+	static const char eol[] = "\n", eoobj[] = "\n}\n";
 #endif
 
 	if ((buffer == NULL) || (buflen < 1)) {
@@ -19427,6 +19433,11 @@ mg_get_connection_info(const struct mg_context *ctx,
 		*buffer = 0;
 	}
 	end = buffer + buflen;
+	if (buflen > (int)(sizeof(eoobj) - 1)) {
+		/* has enough space to append eoobj */
+		append_eoobj = buffer;
+		end -= sizeof(eoobj) - 1;
+	}
 
 	if ((ctx == NULL) || (idx < 0)) {
 		/* Parameter error */
@@ -19443,8 +19454,7 @@ mg_get_connection_info(const struct mg_context *ctx,
 	conn = (ctx->worker_connections) + idx;
 
 	/* Initialize output string */
-	mg_snprintf(NULL, NULL, block, sizeof(block), "{%s", eol);
-	connection_info_length += mg_str_append(&buffer, end, block);
+	connection_info_length += mg_str_append(&buffer, end, "{");
 
 	/* Init variables */
 	ri = &(conn->request_info);
@@ -19493,14 +19503,15 @@ mg_get_connection_info(const struct mg_context *ctx,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"connection\" : {%s"
+		            "%s\"connection\" : {%s"
 		            "\"remote\" : {%s"
 		            "\"protocol\" : \"%s\",%s"
 		            "\"addr\" : \"%s\",%s"
 		            "\"port\" : %u%s"
 		            "},%s"
 		            "\"handled_requests\" : %u%s"
-		            "},%s",
+		            "}",
+		            eol,
 		            eol,
 		            eol,
 		            get_proto_name(conn),
@@ -19511,9 +19522,7 @@ mg_get_connection_info(const struct mg_context *ctx,
 		            eol,
 		            eol,
 		            conn->handled_requests,
-		            eol,
 		            eol);
-
 		connection_info_length += mg_str_append(&buffer, end, block);
 	}
 
@@ -19523,11 +19532,13 @@ mg_get_connection_info(const struct mg_context *ctx,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"request_info\" : {%s"
+		            "%s%s\"request_info\" : {%s"
 		            "\"method\" : \"%s\",%s"
 		            "\"uri\" : \"%s\",%s"
 		            "\"query\" : %s%s%s%s"
-		            "},%s",
+		            "}",
+		            (connection_info_length > 1 ? "," : ""),
+		            eol,
 		            eol,
 		            ri->request_method,
 		            eol,
@@ -19536,9 +19547,7 @@ mg_get_connection_info(const struct mg_context *ctx,
 		            ri->query_string ? "\"" : "",
 		            ri->query_string ? ri->query_string : "null",
 		            ri->query_string ? "\"" : "",
-		            eol,
 		            eol);
-
 		connection_info_length += mg_str_append(&buffer, end, block);
 	}
 
@@ -19558,20 +19567,20 @@ mg_get_connection_info(const struct mg_context *ctx,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"time\" : {%s"
+		            "%s%s\"time\" : {%s"
 		            "\"uptime\" : %.0f,%s"
 		            "\"start\" : \"%s\",%s"
 		            "\"now\" : \"%s\"%s"
-		            "},%s",
+		            "}",
+		            (connection_info_length > 1 ? "," : ""),
+		            eol,
 		            eol,
 		            difftime(now, start_time),
 		            eol,
 		            start_time_str,
 		            eol,
 		            now_str,
-		            eol,
 		            eol);
-
 		connection_info_length += mg_str_append(&buffer, end, block);
 	}
 
@@ -19581,14 +19590,14 @@ mg_get_connection_info(const struct mg_context *ctx,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"user\" : {%s"
+		            "%s%s\"user\" : {%s"
 		            "\"name\" : \"%s\",%s"
-		            "},%s",
+		            "}",
+		            (connection_info_length > 1 ? "," : ""),
+		            eol,
 		            eol,
 		            ri->remote_user,
-		            eol,
 		            eol);
-
 		connection_info_length += mg_str_append(&buffer, end, block);
 	}
 
@@ -19598,17 +19607,17 @@ mg_get_connection_info(const struct mg_context *ctx,
 		            NULL,
 		            block,
 		            sizeof(block),
-		            "\"data\" : {%s"
+		            "%s%s\"data\" : {%s"
 		            "\"read\" : %" INT64_FMT ",%s"
 		            "\"written\" : %" INT64_FMT "%s"
-		            "},%s",
+		            "}",
+		            (connection_info_length > 1 ? "," : ""),
+		            eol,
 		            eol,
 		            conn->consumed_content,
 		            eol,
 		            conn->num_bytes_sent,
-		            eol,
 		            eol);
-
 		connection_info_length += mg_str_append(&buffer, end, block);
 	}
 
@@ -19617,15 +19626,17 @@ mg_get_connection_info(const struct mg_context *ctx,
 	            NULL,
 	            block,
 	            sizeof(block),
-	            "\"state\" : \"%s\"%s",
-	            state_str,
-	            eol);
-
+	            "%s%s\"state\" : \"%s\"",
+	            (connection_info_length > 1 ? "," : ""),
+	            eol,
+	            state_str);
 	connection_info_length += mg_str_append(&buffer, end, block);
 
 	/* Terminate string */
-	mg_snprintf(NULL, NULL, block, sizeof(block), "}%s", eol);
-	connection_info_length += mg_str_append(&buffer, end, block);
+	if (append_eoobj) {
+		strcat(append_eoobj, eoobj);
+	}
+	connection_info_length += sizeof(eoobj) - 1;
 
 	return (int)connection_info_length;
 }
