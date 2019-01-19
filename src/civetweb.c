@@ -2719,7 +2719,6 @@ struct mg_connection {
 
 	const char *host;         /* Host (HTTP/1.1 header or SNI) */
 	SSL *ssl;                 /* SSL descriptor */
-	SSL_CTX *client_ssl_ctx;  /* SSL context for client connections */
 	struct socket client;     /* Connected client */
 	time_t conn_birth_time;   /* Time (wall clock) when connection was
 	                           * established */
@@ -16414,8 +16413,10 @@ mg_close_connection(struct mg_connection *conn)
 	close_connection(conn);
 
 #if !defined(NO_SSL)
-	if (conn->client_ssl_ctx != NULL) {
-		SSL_CTX_free((SSL_CTX *)conn->client_ssl_ctx);
+	if (((conn->phys_ctx->context_type == CONTEXT_HTTP_CLIENT)
+	     || (conn->phys_ctx->context_type == CONTEXT_WS_CLIENT))
+	    && (conn->phys_ctx->dd.ssl_ctx != NULL)) {
+		SSL_CTX_free(conn->phys_ctx->dd.ssl_ctx);
 	}
 #endif
 
@@ -16437,10 +16438,6 @@ mg_close_connection(struct mg_connection *conn)
 }
 
 
-/* Only for memory statistics */
-static struct mg_context common_client_context;
-
-
 static struct mg_connection *
 mg_connect_client_impl(const struct mg_client_options *client_options,
                        int use_ssl,
@@ -16460,8 +16457,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	size_t conn_size = ((sizeof(struct mg_connection) + 7) >> 3) << 3;
 	size_t ctx_size = ((sizeof(struct mg_context) + 7) >> 3) << 3;
 
-	conn = (struct mg_connection *)mg_calloc_ctx(
-	    1, conn_size + ctx_size + max_req_size, &common_client_context);
+	conn = (struct mg_connection *)mg_calloc(
+	    1, conn_size + ctx_size + max_req_size);
 
 	if (conn == NULL) {
 		mg_snprintf(NULL,
@@ -16490,7 +16487,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	conn->phys_ctx->context_type = CONTEXT_HTTP_CLIENT;
 	conn->dom_ctx = &(conn->phys_ctx->dd);
 
-	if (!connect_socket(&common_client_context,
+	if (!connect_socket(conn->phys_ctx,
 	                    client_options->host,
 	                    client_options->port,
 	                    use_ssl,
@@ -16507,7 +16504,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 #if !defined(NO_SSL)
 #if defined(OPENSSL_API_1_1)
 	if (use_ssl
-	    && (conn->client_ssl_ctx = SSL_CTX_new(TLS_client_method())) == NULL) {
+	    && (conn->dom_ctx->ssl_ctx = SSL_CTX_new(TLS_client_method()))
+	           == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -16520,7 +16518,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	}
 #else
 	if (use_ssl
-	    && (conn->client_ssl_ctx = SSL_CTX_new(SSLv23_client_method()))
+	    && (conn->dom_ctx->ssl_ctx = SSL_CTX_new(SSLv23_client_method()))
 	           == NULL) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
@@ -16565,7 +16563,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            ebuf_len,
 		            "Can not create mutex");
 #if !defined(NO_SSL)
-		SSL_CTX_free(conn->client_ssl_ctx);
+		SSL_CTX_free(conn->dom_ctx->ssl_ctx);
 #endif
 		closesocket(sock);
 		mg_free(conn);
@@ -16575,18 +16573,16 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 
 #if !defined(NO_SSL)
 	if (use_ssl) {
-		common_client_context.dd.ssl_ctx = conn->client_ssl_ctx;
-
 		/* TODO: Check ssl_verify_peer and ssl_ca_path here.
 		 * SSL_CTX_set_verify call is needed to switch off server
 		 * certificate checking, which is off by default in OpenSSL and
 		 * on in yaSSL. */
-		/* TODO: SSL_CTX_set_verify(conn->client_ssl_ctx,
+		/* TODO: SSL_CTX_set_verify(conn->dom_ctx,
 		 * SSL_VERIFY_PEER, verify_ssl_server); */
 
 		if (client_options->client_cert) {
-			if (!ssl_use_pem_file(&common_client_context,
-			                      &(common_client_context.dd),
+			if (!ssl_use_pem_file(conn->phys_ctx,
+			                      conn->dom_ctx,
 			                      client_options->client_cert,
 			                      NULL)) {
 				mg_snprintf(NULL,
@@ -16594,7 +16590,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 				            ebuf,
 				            ebuf_len,
 				            "Can not use SSL client certificate");
-				SSL_CTX_free(conn->client_ssl_ctx);
+				SSL_CTX_free(conn->dom_ctx->ssl_ctx);
 				closesocket(sock);
 				mg_free(conn);
 				return NULL;
@@ -16602,25 +16598,25 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		}
 
 		if (client_options->server_cert) {
-			if (SSL_CTX_load_verify_locations(conn->client_ssl_ctx,
+			if (SSL_CTX_load_verify_locations(conn->dom_ctx->ssl_ctx,
 			                                  client_options->server_cert,
 			                                  NULL)
 				!= 1) {
 				mg_cry_internal(conn,
 				                "SSL_CTX_load_verify_locations error: %s ",
 				                ssl_error());
-				SSL_CTX_free(conn->client_ssl_ctx);
+				SSL_CTX_free(conn->dom_ctx->ssl_ctx);
 				closesocket(sock);
 				mg_free(conn);
 				return NULL;
 			}
-			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_PEER, NULL);
+			SSL_CTX_set_verify(conn->dom_ctx->ssl_ctx, SSL_VERIFY_PEER, NULL);
 		} else {
-			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_NONE, NULL);
+			SSL_CTX_set_verify(conn->dom_ctx->ssl_ctx, SSL_VERIFY_NONE, NULL);
 		}
 
 		if (!sslize(conn,
-		            conn->client_ssl_ctx,
+		            conn->dom_ctx->ssl_ctx,
 		            SSL_connect,
 		            &(conn->phys_ctx->stop_flag),
 		            client_options)) {
@@ -16629,7 +16625,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			            ebuf,
 			            ebuf_len,
 			            "SSL connection error");
-			SSL_CTX_free(conn->client_ssl_ctx);
+			SSL_CTX_free(conn->dom_ctx->ssl_ctx);
 			closesocket(sock);
 			mg_free(conn);
 			return NULL;
