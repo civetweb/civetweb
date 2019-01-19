@@ -1780,14 +1780,18 @@ lua_action(struct laction_arg *arg)
 
 	err = luaL_loadstring(arg->state, arg->txt);
 	if (err != 0) {
-		lua_cry(fc(ctx), err, arg->state, arg->script, "timer");
+		struct mg_connection fc;
+		lua_cry(fake_connection(&fc, ctx), err, arg->state, arg->script,
+		        "timer");
 		(void)pthread_mutex_unlock(arg->pmutex);
 		mg_free(arg);
 		return 0;
 	}
 	err = lua_pcall(arg->state, 0, 1, 0);
 	if (err != 0) {
-		lua_cry(fc(ctx), err, arg->state, arg->script, "timer");
+		struct mg_connection fc;
+		lua_cry(fake_connection(&fc, ctx), err, arg->state, arg->script,
+		        "timer");
 		(void)pthread_mutex_unlock(arg->pmutex);
 		mg_free(arg);
 		return 0;
