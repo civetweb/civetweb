@@ -5848,7 +5848,7 @@ mg_stat(const struct mg_connection *conn,
 
 
 static void
-set_close_on_exec(SOCKET fd,
+set_close_on_exec(int fd,
                   const struct mg_connection *conn /* may be null */,
                   struct mg_context *ctx /* may be null */)
 {
@@ -5941,17 +5941,16 @@ spawn_process(struct mg_connection *conn,
 
 	(void)envblk;
 
-	if (conn == NULL) {
-		return 0;
-	}
-
 	if ((pid = fork()) == -1) {
 		/* Parent */
-		mg_send_http_error(conn,
-		                   500,
-		                   "Error: Creating CGI process\nfork(): %s",
-		                   strerror(ERRNO));
-	} else if (pid == 0) {
+		mg_cry_internal(conn, "%s: fork(): %s", __func__, strerror(ERRNO));
+	} else if (pid != 0) {
+		/* Make sure children close parent-side descriptors.
+		 * The caller will close the child-side immediately. */
+		set_close_on_exec(fdin[1], conn, NULL); /* stdin write */
+		set_close_on_exec(fdout[0], conn, NULL); /* stdout read */
+		set_close_on_exec(fderr[0], conn, NULL); /* stderr read */
+	} else {
 		/* Child */
 		if (chdir(dir) != 0) {
 			mg_cry_internal(
@@ -11063,14 +11062,6 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	}
 #endif
 
-	/* Make sure child closes all pipe descriptors. It must dup them to 0,1 */
-	set_close_on_exec((SOCKET)fdin[0], conn, NULL);  /* stdin read */
-	set_close_on_exec((SOCKET)fdin[1], conn, NULL);  /* stdin write */
-	set_close_on_exec((SOCKET)fdout[0], conn, NULL); /* stdout read */
-	set_close_on_exec((SOCKET)fdout[1], conn, NULL); /* stdout write */
-	set_close_on_exec((SOCKET)fderr[0], conn, NULL); /* stderr read */
-	set_close_on_exec((SOCKET)fderr[1], conn, NULL); /* stderr write */
-
 	/* Parent closes only one side of the pipes.
 	 * If we don't mark them as closed, close() attempt before
 	 * return from this function throws an exception on Windows.
@@ -11080,41 +11071,17 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	(void)close(fderr[1]);
 	fdin[0] = fdout[1] = fderr[1] = -1;
 
-	if ((in = fdopen(fdin[1], "wb")) == NULL) {
+	if (((in = fdopen(fdin[1], "wb")) == NULL)
+	    || ((out = fdopen(fdout[0], "rb")) == NULL)
+	    || ((err = fdopen(fderr[0], "rb")) == NULL)) {
 		status = strerror(ERRNO);
 		mg_cry_internal(conn,
-		                "Error: CGI program \"%s\": Can not open stdin: %s",
+		                "Error: CGI program \"%s\": Can not open fd: %s",
 		                prog,
 		                status);
 		mg_send_http_error(conn,
 		                   500,
-		                   "Error: CGI can not open fdin\nfopen: %s",
-		                   status);
-		goto done;
-	}
-
-	if ((out = fdopen(fdout[0], "rb")) == NULL) {
-		status = strerror(ERRNO);
-		mg_cry_internal(conn,
-		                "Error: CGI program \"%s\": Can not open stdout: %s",
-		                prog,
-		                status);
-		mg_send_http_error(conn,
-		                   500,
-		                   "Error: CGI can not open fdout\nfopen: %s",
-		                   status);
-		goto done;
-	}
-
-	if ((err = fdopen(fderr[0], "rb")) == NULL) {
-		status = strerror(ERRNO);
-		mg_cry_internal(conn,
-		                "Error: CGI program \"%s\": Can not open stderr: %s",
-		                prog,
-		                status);
-		mg_send_http_error(conn,
-		                   500,
-		                   "Error: CGI can not open fderr\nfopen: %s",
+		                   "Error: CGI can not open fd\nfdopen: %s",
 		                   status);
 		goto done;
 	}
@@ -11269,6 +11236,9 @@ done:
 	}
 	if (fdout[1] != -1) {
 		close(fdout[1]);
+	}
+	if (fderr[1] != -1) {
+		close(fderr[1]);
 	}
 
 	if (in != NULL) {
