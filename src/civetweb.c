@@ -16339,10 +16339,6 @@ close_connection(struct mg_connection *conn)
 void
 mg_close_connection(struct mg_connection *conn)
 {
-#if defined(USE_WEBSOCKET)
-	struct mg_context *client_ctx = NULL;
-#endif /* defined(USE_WEBSOCKET) */
-
 	if ((conn == NULL) || (conn->phys_ctx == NULL)) {
 		return;
 	}
@@ -16359,11 +16355,8 @@ mg_close_connection(struct mg_connection *conn)
 
 		unsigned int i;
 
-		/* ws/wss client */
-		client_ctx = conn->phys_ctx;
-
 		/* client context: loops must end */
-		client_ctx->stop_flag = 1;
+		conn->phys_ctx->stop_flag = 1;
 		conn->must_close = 1;
 
 		/* We need to get the client thread out of the select/recv call
@@ -16372,10 +16365,8 @@ mg_close_connection(struct mg_connection *conn)
 		 * timeouts, we will just wait a few seconds in mg_join_thread. */
 
 		/* join worker thread */
-		for (i = 0; i < client_ctx->cfg_worker_threads; i++) {
-			if (client_ctx->worker_threadids[i] != 0) {
-				mg_join_thread(client_ctx->worker_threadids[i]);
-			}
+		for (i = 0; i < conn->phys_ctx->cfg_worker_threads; i++) {
+			mg_join_thread(conn->phys_ctx->worker_threadids[i]);
 		}
 	}
 #endif /* defined(USE_WEBSOCKET) */
@@ -16391,10 +16382,8 @@ mg_close_connection(struct mg_connection *conn)
 #endif
 
 #if defined(USE_WEBSOCKET)
-	if (client_ctx != NULL) {
-		/* free context */
-		mg_free(client_ctx->worker_threadids);
-		mg_free(client_ctx);
+	if (conn->phys_ctx->context_type == CONTEXT_WS_CLIENT) {
+		mg_free(conn->phys_ctx->worker_threadids);
 		(void)pthread_mutex_destroy(&conn->mutex);
 		mg_free(conn);
 	} else if (conn->phys_ctx->context_type == CONTEXT_HTTP_CLIENT) {
@@ -17302,7 +17291,6 @@ mg_connect_websocket_client(const char *host,
 	struct mg_connection *conn = NULL;
 
 #if defined(USE_WEBSOCKET)
-	struct mg_context *newctx = NULL;
 	struct websocket_client_thread_data *thread_data;
 	static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
 	static const char *handshake_req;
@@ -17375,37 +17363,15 @@ mg_connect_websocket_client(const char *host,
 		}
 
 		DEBUG_TRACE("Websocket client connect error: %s\r\n", error_buffer);
-		mg_free(conn);
+		mg_close_connection(conn);
 		return NULL;
 	}
 
-	/* For client connections, mg_context is fake. Since we need to set a
-	 * callback function, we need to create a copy and modify it. */
-	newctx = (struct mg_context *)mg_malloc(sizeof(struct mg_context));
-	if (!newctx) {
-		DEBUG_TRACE("%s\r\n", "Out of memory");
-		mg_free(conn);
-		return NULL;
-	}
-
-	memcpy(newctx, conn->phys_ctx, sizeof(struct mg_context));
-	newctx->user_data = user_data;
-	newctx->context_type = CONTEXT_WS_CLIENT; /* ws/wss client context */
-	newctx->cfg_worker_threads = 1; /* one worker thread will be created */
-	newctx->worker_threadids =
-	    (pthread_t *)mg_calloc_ctx(newctx->cfg_worker_threads,
-	                               sizeof(pthread_t),
-	                               newctx);
-
-	conn->phys_ctx = newctx;
-	conn->dom_ctx = &(newctx->dd);
-
-	thread_data = (struct websocket_client_thread_data *)
-	    mg_calloc_ctx(sizeof(struct websocket_client_thread_data), 1, newctx);
+	thread_data = (struct websocket_client_thread_data *)mg_calloc_ctx(
+	    1, sizeof(struct websocket_client_thread_data), conn->phys_ctx);
 	if (!thread_data) {
 		DEBUG_TRACE("%s\r\n", "Out of memory");
-		mg_free(newctx);
-		mg_free(conn);
+		mg_close_connection(conn);
 		return NULL;
 	}
 
@@ -17414,17 +17380,30 @@ mg_connect_websocket_client(const char *host,
 	thread_data->close_handler = close_func;
 	thread_data->callback_data = user_data;
 
+	conn->phys_ctx->worker_threadids =
+	    (pthread_t *)mg_calloc_ctx(1, sizeof(pthread_t), conn->phys_ctx);
+	if (!conn->phys_ctx->worker_threadids) {
+		DEBUG_TRACE("%s\r\n", "Out of memory");
+		mg_free(thread_data);
+		mg_close_connection(conn);
+		return NULL;
+	}
+
+	/* Now upgrade to ws/wss client context */
+	conn->phys_ctx->user_data = user_data;
+	conn->phys_ctx->context_type = CONTEXT_WS_CLIENT;
+	conn->phys_ctx->cfg_worker_threads = 1; /* one worker thread */
+
 	/* Start a thread to read the websocket client connection
 	 * This thread will automatically stop when mg_disconnect is
 	 * called on the client connection */
 	if (mg_start_thread_with_id(websocket_client_thread,
-	                            (void *)thread_data,
-	                            newctx->worker_threadids)
+	                            thread_data,
+	                            conn->phys_ctx->worker_threadids)
 	    != 0) {
-		mg_free((void *)thread_data);
-		mg_free((void *)newctx->worker_threadids);
-		mg_free((void *)newctx);
-		mg_free((void *)conn);
+		conn->phys_ctx->cfg_worker_threads = 0;
+		mg_free(thread_data);
+		mg_close_connection(conn);
 		conn = NULL;
 		DEBUG_TRACE("%s",
 		            "Websocket client connect thread could not be started\r\n");
