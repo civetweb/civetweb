@@ -560,8 +560,8 @@ typedef long off_t;
 #define fdopen(x, y) (_fdopen((x), (y)))
 #define write(x, y, z) (_write((x), (y), (unsigned)z))
 #define read(x, y, z) (_read((x), (y), (unsigned)z))
-#define flockfile(x) (EnterCriticalSection(&global_log_file_lock))
-#define funlockfile(x) (LeaveCriticalSection(&global_log_file_lock))
+#define flockfile(x) ((void)pthread_mutex_lock(&global_log_file_lock))
+#define funlockfile(x) ((void)pthread_mutex_unlock(&global_log_file_lock))
 #define sleep(x) (Sleep((x)*1000))
 #define rmdir(x) (_rmdir(x))
 #if defined(_WIN64) || !defined(__MINGW32__)
@@ -577,11 +577,13 @@ time_t timegm(struct tm *tm);
 #define fileno(x) (_fileno(x))
 #endif /* !fileno MINGW #defines fileno */
 
-typedef HANDLE pthread_mutex_t;
+typedef struct {
+	CRITICAL_SECTION sec; /* Immovable */
+} pthread_mutex_t;
 typedef DWORD pthread_key_t;
 typedef HANDLE pthread_t;
 typedef struct {
-	CRITICAL_SECTION threadIdSec;
+	pthread_mutex_t threadIdSec;
 	struct mg_workerTLS *waiting_thread; /* The chain of threads */
 } pthread_cond_t;
 
@@ -906,7 +908,7 @@ timegm(struct tm *tm)
 #endif
 
 
-static CRITICAL_SECTION global_log_file_lock;
+static pthread_mutex_t global_log_file_lock;
 
 FUNCTION_MAY_BE_UNUSED
 static DWORD
@@ -1150,16 +1152,6 @@ stat(const char *name, struct stat *st)
 #endif
 
 static pthread_mutex_t global_lock_mutex;
-
-
-#if defined(_WIN32)
-/* Forward declaration for Windows */
-FUNCTION_MAY_BE_UNUSED
-static int pthread_mutex_lock(pthread_mutex_t *mutex);
-
-FUNCTION_MAY_BE_UNUSED
-static int pthread_mutex_unlock(pthread_mutex_t *mutex);
-#endif
 
 
 FUNCTION_MAY_BE_UNUSED
@@ -4895,53 +4887,37 @@ mg_send_http_redirect(struct mg_connection *conn,
 #endif
 
 
-FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
 {
 	(void)unused;
-	*mutex = CreateMutex(NULL, FALSE, NULL);
-	return (*mutex == NULL) ? -1 : 0;
+	/* Always initialize as PTHREAD_MUTEX_RECURSIVE */
+	InitializeCriticalSection(&mutex->sec);
+	return 0;
 }
 
-FUNCTION_MAY_BE_UNUSED
+
 static int
 pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
-	return (CloseHandle(*mutex) == 0) ? -1 : 0;
+	DeleteCriticalSection(&mutex->sec);
+	return 0;
 }
 
 
-FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-	return (WaitForSingleObject(*mutex, (DWORD)INFINITE) == WAIT_OBJECT_0) ? 0
-	                                                                       : -1;
+	EnterCriticalSection(&mutex->sec);
+	return 0;
 }
 
 
-#if defined(ENABLE_UNUSED_PTHREAD_FUNCTIONS)
-FUNCTION_MAY_BE_UNUSED
-static int
-pthread_mutex_trylock(pthread_mutex_t *mutex)
-{
-	switch (WaitForSingleObject(*mutex, 0)) {
-	case WAIT_OBJECT_0:
-		return 0;
-	case WAIT_TIMEOUT:
-		return -2; /* EBUSY */
-	}
-	return -1;
-}
-#endif
-
-
-FUNCTION_MAY_BE_UNUSED
 static int
 pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
-	return (ReleaseMutex(*mutex) == 0) ? -1 : 0;
+	LeaveCriticalSection(&mutex->sec);
+	return 0;
 }
 
 
@@ -4950,7 +4926,7 @@ static int
 pthread_cond_init(pthread_cond_t *cv, const void *unused)
 {
 	(void)unused;
-	InitializeCriticalSection(&cv->threadIdSec);
+	(void)pthread_mutex_init(&cv->threadIdSec, &pthread_mutex_attr);
 	cv->waiting_thread = NULL;
 	return 0;
 }
@@ -4968,14 +4944,14 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 	int64_t nsnow, nswaitabs, nswaitrel;
 	DWORD mswaitrel;
 
-	EnterCriticalSection(&cv->threadIdSec);
+	pthread_mutex_lock(&cv->threadIdSec);
 	/* Add this thread to cv's waiting list */
 	ptls = &cv->waiting_thread;
 	for (; *ptls != NULL; ptls = &(*ptls)->next_waiting_thread)
 		;
 	tls->next_waiting_thread = NULL;
 	*ptls = tls;
-	LeaveCriticalSection(&cv->threadIdSec);
+	pthread_mutex_unlock(&cv->threadIdSec);
 
 	if (abstime) {
 		nsnow = mg_get_current_time_ns();
@@ -4995,7 +4971,7 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 	      == WaitForSingleObject(tls->pthread_cond_helper_mutex, mswaitrel));
 	if (!ok) {
 		ok = 1;
-		EnterCriticalSection(&cv->threadIdSec);
+		pthread_mutex_lock(&cv->threadIdSec);
 		ptls = &cv->waiting_thread;
 		for (; *ptls != NULL; ptls = &(*ptls)->next_waiting_thread) {
 			if (*ptls == tls) {
@@ -5004,7 +4980,7 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 				break;
 			}
 		}
-		LeaveCriticalSection(&cv->threadIdSec);
+		pthread_mutex_unlock(&cv->threadIdSec);
 		if (ok) {
 			WaitForSingleObject(tls->pthread_cond_helper_mutex,
 			                    (DWORD)INFINITE);
@@ -5032,7 +5008,7 @@ pthread_cond_signal(pthread_cond_t *cv)
 	HANDLE wkup = NULL;
 	BOOL ok = FALSE;
 
-	EnterCriticalSection(&cv->threadIdSec);
+	pthread_mutex_lock(&cv->threadIdSec);
 	if (cv->waiting_thread) {
 		wkup = cv->waiting_thread->pthread_cond_helper_mutex;
 		cv->waiting_thread = cv->waiting_thread->next_waiting_thread;
@@ -5040,7 +5016,7 @@ pthread_cond_signal(pthread_cond_t *cv)
 		ok = SetEvent(wkup);
 		DEBUG_ASSERT(ok);
 	}
-	LeaveCriticalSection(&cv->threadIdSec);
+	pthread_mutex_unlock(&cv->threadIdSec);
 
 	return ok ? 0 : 1;
 }
@@ -5050,11 +5026,11 @@ FUNCTION_MAY_BE_UNUSED
 static int
 pthread_cond_broadcast(pthread_cond_t *cv)
 {
-	EnterCriticalSection(&cv->threadIdSec);
+	pthread_mutex_lock(&cv->threadIdSec);
 	while (cv->waiting_thread) {
 		pthread_cond_signal(cv);
 	}
-	LeaveCriticalSection(&cv->threadIdSec);
+	pthread_mutex_unlock(&cv->threadIdSec);
 
 	return 0;
 }
@@ -5064,10 +5040,10 @@ FUNCTION_MAY_BE_UNUSED
 static int
 pthread_cond_destroy(pthread_cond_t *cv)
 {
-	EnterCriticalSection(&cv->threadIdSec);
+	pthread_mutex_lock(&cv->threadIdSec);
 	DEBUG_ASSERT(cv->waiting_thread == NULL);
-	LeaveCriticalSection(&cv->threadIdSec);
-	DeleteCriticalSection(&cv->threadIdSec);
+	pthread_mutex_unlock(&cv->threadIdSec);
+	pthread_mutex_destroy(&cv->threadIdSec);
 
 	return 0;
 }
@@ -19735,9 +19711,8 @@ mg_init_library(unsigned features)
 		}
 
 #if defined(_WIN32)
-		InitializeCriticalSection(&global_log_file_lock);
-#endif
-#if !defined(_WIN32)
+		(void)pthread_mutex_init(&global_log_file_lock, &pthread_mutex_attr);
+#else
 		pthread_mutexattr_init(&pthread_mutex_attr);
 		pthread_mutexattr_settype(&pthread_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 #endif
@@ -19805,9 +19780,8 @@ mg_exit_library(void)
 #endif
 
 #if defined(_WIN32)
-		(void)DeleteCriticalSection(&global_log_file_lock);
-#endif /* _WIN32 */
-#if !defined(_WIN32)
+		(void)pthread_mutex_destroy(&global_log_file_lock);
+#else
 		(void)pthread_mutexattr_destroy(&pthread_mutex_attr);
 #endif
 
