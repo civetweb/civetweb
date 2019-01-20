@@ -533,12 +533,6 @@ typedef long off_t;
 #if !defined(W_OK)
 #define W_OK (2) /* http://msdn.microsoft.com/en-us/library/1w06ktdy.aspx */
 #endif
-#if !defined(EWOULDBLOCK)
-#define EWOULDBLOCK WSAEWOULDBLOCK
-#endif /* !EWOULDBLOCK */
-#if !defined(ECONNRESET)
-#define ECONNRESET WSAECONNRESET
-#endif /* !ECONNRESET */
 #define _POSIX_
 #define INT64_FMT "I64d"
 #define UINT64_FMT "I64u"
@@ -8756,7 +8750,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 {
 	int ip_ver = 0;
 	int conn_ret = -1;
-	int ret;
+	int sockerr = 0;
 	*sock = INVALID_SOCKET;
 	memset(sa, 0, sizeof(*sa));
 
@@ -8899,20 +8893,18 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	}
 #endif
 
-#if defined(_WIN32)
 	if (conn_ret != 0) {
-		DWORD err = WSAGetLastError(); /* could return WSAEWOULDBLOCK */
-		conn_ret = (int)err;
-#if !defined(EINPROGRESS)
-#define EINPROGRESS (WSAEWOULDBLOCK) /* Winsock equivalent */
-#endif                               /* if !defined(EINPROGRESS) */
+		sockerr = ERRNO;
 	}
-#endif
 
-	if ((conn_ret != 0) && (conn_ret != EINPROGRESS)) {
+#if defined(_WIN32)
+	if ((conn_ret != 0) && (sockerr == WSAEWOULDBLOCK)) {
+#else
+	if ((conn_ret != 0) && (sockerr == EINPROGRESS)) {
+#endif
 		/* Data for getsockopt */
-		int sockerr = -1;
 		void *psockerr = &sockerr;
+		int ret;
 
 #if defined(_WIN32)
 		int len = (int)sizeof(sockerr);
@@ -8955,20 +8947,24 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		ret = getsockopt(*sock, SOL_SOCKET, SO_ERROR, psockerr, &len);
 #endif
 
-		if ((ret != 0) || (sockerr != 0)) {
-			/* Not connected */
-			mg_snprintf(NULL,
-			            NULL, /* No truncation check for ebuf */
-			            ebuf,
-			            ebuf_len,
-			            "connect(%s:%d): error %s",
-			            host,
-			            port,
-			            strerror(sockerr));
-			closesocket(*sock);
-			*sock = INVALID_SOCKET;
-			return 0;
+		if ((ret == 0) && (sockerr == 0)) {
+			conn_ret = 0;
 		}
+	}
+
+	if (conn_ret != 0) {
+		/* Not connected */
+		mg_snprintf(NULL,
+		            NULL, /* No truncation check for ebuf */
+		            ebuf,
+		            ebuf_len,
+		            "connect(%s:%d): error %s",
+		            host,
+		            port,
+		            strerror(sockerr));
+		closesocket(*sock);
+		*sock = INVALID_SOCKET;
+		return 0;
 	}
 
 	return 1;
@@ -16278,7 +16274,11 @@ close_socket_gracefully(struct mg_connection *conn)
 		                "%s: getsockopt(SOL_SOCKET SO_ERROR) failed: %s",
 		                __func__,
 		                strerror(ERRNO));
+#if defined(_WIN32)
+	} else if (error_code == WSAECONNRESET) {
+#else
 	} else if (error_code == ECONNRESET) {
+#endif
 		/* Socket already closed by client/peer, close socket without linger
 		 */
 	} else {
