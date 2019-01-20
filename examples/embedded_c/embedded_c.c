@@ -23,19 +23,25 @@
 
 
 #define DOCUMENT_ROOT "."
-#ifndef TEST_WITHOUT_SSL
+#ifdef TEST_WITHOUT_SSL
+
 #ifdef USE_IPV6
 #define PORT "[::]:8888,8884"
 #else
 #define PORT "8888,8884"
 #endif
+
 #else
+
 #ifdef USE_IPV6
 #define PORT "[::]:8888r,[::]:8843s,8884"
 #else
 #define PORT "8888r,8843s,8884"
 #endif
+
 #endif
+
+
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
 int exitNow = 0;
