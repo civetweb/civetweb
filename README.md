@@ -62,6 +62,14 @@ A very brief overview can be found on GitHub Pages
 [http://civetweb.github.io/civetweb/](http://civetweb.github.io/civetweb/)
 
 
+Getting The Source
+------------------
+Download the source code by running the following code in your command prompt:
+
+$ git clone https://github.com/civetweb/civetweb.git
+or simply grab a copy of the source code as a Zip file.
+
+
 Quick start documentation
 --------------------------
 
