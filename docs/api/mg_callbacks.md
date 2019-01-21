@@ -15,7 +15,7 @@
 |**`exit_context`**|**`void (*exit_context)( const struct mg_context *ctx );`**|
 | |The callback function `exit_context()` is called by CivetWeb when the server is stopped. It allows the application to do some cleanup on the application side.|
 |**`http_error`**|**`int (*http_error)( struct mg_connection *conn, int status, const char *msg );`**|
-| |The callback function `http_error()` is called by CivetWeb just before an HTTP error is to be sent to the client. The function allows the application to send a custom error page. The status code of the error is provided as a parameter. If the application sends their own error page, it must return 1 to signal CivetWeb that no further processing is needed. If the returned value is 0, CivetWeb will send a built-in error page to the client.|
+| |The callback function `http_error()` is called by CivetWeb just before an HTTP error is to be sent to the client. The function allows the application to send a custom error page. The status code of the error is provided as a parameter. If the application sends their own error page, it must return 0 to signal CivetWeb that no further processing is needed. If the returned value is not 0, CivetWeb will send an error page to the client.|
 |**`init_context`**|**`void (*init_context)( const struct mg_context *ctx );`**|
 | |The callback function `init_context()` is called after the CivetWeb server has been started and initialized, but before any requests are served. This allowes the application to perform some initialization activities before the first requests are handled.|
 |**`init_lua`**|**`void (*init_lua)( const struct mg_connection *conn, void *lua_context );`**|
