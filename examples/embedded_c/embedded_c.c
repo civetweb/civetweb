@@ -268,7 +268,7 @@ field_found(const char *key,
 #else
 		snprintf(path, pathlen, "/tmp/%s", filename);
 #endif
-		return MG_FORM_FIELD_STORAGE_GET;
+		return MG_FORM_FIELD_STORAGE_STORE;
 	}
 	return MG_FORM_FIELD_STORAGE_GET;
 }
