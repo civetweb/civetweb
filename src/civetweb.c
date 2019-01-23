@@ -61,6 +61,7 @@
 #endif
 #if defined(__LSB_VERSION__)
 #define NEED_TIMEGM
+#define NO_THREAD_NAME
 #endif
 #if !defined(_LARGEFILE_SOURCE)
 #define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
@@ -2972,12 +2973,6 @@ event_destroy(void *eventhdl)
 #endif
 
 
-#if defined(__LSB_VERSION__)
-void
-mg_set_thread_name(const char *threadName)
-{
-}
-#else /* !defined(__LSB__) */
 static void
 mg_set_thread_name(const char *name)
 {
@@ -3019,7 +3014,6 @@ mg_set_thread_name(const char *name)
 	(void)prctl(PR_SET_NAME, threadName, 0, 0, 0);
 #endif
 }
-#endif
 #else /* !defined(NO_THREAD_NAME) */
 void
 mg_set_thread_name(const char *threadName)
