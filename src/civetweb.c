@@ -59,6 +59,10 @@
 #if defined(__linux__) && !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE 600 /* For flockfile() on Linux */
 #endif
+#if defined(__LSB_VERSION__)
+#define NEED_TIMEGM
+#define NO_THREAD_NAME
+#endif
 #if !defined(_LARGEFILE_SOURCE)
 #define _LARGEFILE_SOURCE /* For fseeko(), ftello() */
 #endif
