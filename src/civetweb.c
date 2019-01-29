@@ -2749,10 +2749,10 @@ struct mg_connection {
 	int throttle;         /* Throttling, bytes/sec. <= 0 means no
 	                       * throttle */
 
-	time_t last_throttle_time;   /* Last time throttled data was sent */
-	int last_throttle_bytes;     /* Bytes sent this second */
-	pthread_mutex_t mutex;       /* Used by mg_(un)lock_connection to ensure
-	                              * atomic transmissions for websockets */
+	time_t last_throttle_time; /* Last time throttled data was sent */
+	int last_throttle_bytes;   /* Bytes sent this second */
+	pthread_mutex_t mutex;     /* Used by mg_(un)lock_connection to ensure
+	                            * atomic transmissions for websockets */
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	void *lua_websocket_state; /* Lua_State for a websocket connection */
 #endif
@@ -18829,8 +18829,8 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 	idx = 0;
 	dom = &(ctx->dd);
 	for (;;) {
-		if (!strcasecmp(new_dom->config[AUTHENTICATION_DOMAIN],
-		                dom->config[AUTHENTICATION_DOMAIN])) {
+		if (!mg_strcasecmp(new_dom->config[AUTHENTICATION_DOMAIN],
+		                   dom->config[AUTHENTICATION_DOMAIN])) {
 			/* Domain collision */
 			mg_cry_internal(fc(ctx),
 			                "domain %s already in use",
