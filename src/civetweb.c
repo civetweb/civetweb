@@ -16519,7 +16519,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
 		            ebuf_len,
-		            "SSL_CTX_new error");
+		            "SSL_CTX_new error: %s",
+		            ssl_error());
 		closesocket(sock);
 		mg_free(conn);
 		return NULL;
@@ -16532,7 +16533,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
 		            ebuf_len,
-		            "SSL_CTX_new error");
+		            "SSL_CTX_new error: %s",
+			    ssl_error());
 		closesocket(sock);
 		mg_free(conn);
 		return NULL;
