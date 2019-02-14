@@ -6,17 +6,37 @@ import re
 from cpt.packager import ConanMultiPackager
 from cpt.ci_manager import CIManager
 from cpt.printer import Printer
+from cpt import tools
 
 
 class BuilderSettings(object):
+
+    def __init__(self):
+        self._ci_manager = CIManager(Printer(None))
 
     @property
     def branch(self):
         """ Get branch name
         """
-        printer = Printer(None)
-        ci_manager = CIManager(printer)
-        return ci_manager.get_branch()
+        return self._ci_manager.get_branch()
+
+    @property
+    def is_tag(self):
+        """ Is the current branch a tag
+        """
+        return self._ci_manager.is_tag()
+
+    @property
+    def commit_id(self):
+        """ Get current commit hash
+        """
+        return self._ci_manager.get_commit_id()[:7]
+
+    @property
+    def channel(self):
+        """ Get channel name
+        """
+        return "stable" if self.is_tag else "testing"
 
     @property
     def username(self):
@@ -28,18 +48,14 @@ class BuilderSettings(object):
     def upload(self):
         """ Set civetweb repository to be used on upload.
             The upload server address could be customized by env var
-            CONAN_UPLOAD. If not defined, the method will check the branch name.
-            Only master or CONAN_STABLE_BRANCH_PATTERN will be accepted.
-            The master branch will be pushed to testing channel, because it does
-            not match the stable pattern. Otherwise it will upload to stable
-            channel.
+            CONAN_UPLOAD. If not defined, the method will check if the
+            current branch is a tag.
         """
         if os.getenv("CONAN_UPLOAD", None) is not None:
             return os.getenv("CONAN_UPLOAD")
 
-        prog = re.compile(self.stable_branch_pattern)
-        if self.branch and prog.match(self.branch):
-            return "https://api.bintray.com/conan/civetweb/conan"
+        if self.is_tag:
+            return "https://api.bintray.com/conan/civetweb/civetweb"
 
         return None
 
@@ -47,21 +63,16 @@ class BuilderSettings(object):
     def upload_only_when_stable(self):
         """ Force to upload when match stable pattern branch
         """
-        return os.getenv("CONAN_UPLOAD_ONLY_WHEN_STABLE", True)
-
-    @property
-    def stable_branch_pattern(self):
-        """ Only upload the package the branch name is like a tag
-        """
-        return os.getenv("CONAN_STABLE_BRANCH_PATTERN", r"v(\d+\.\d+)")
+        return os.getenv("CONAN_UPLOAD_ONLY_WHEN_STABLE", "true").lower() in ["true", "1", "y", "yes"]
 
     @property
     def version(self):
-        regex = re.compile(self.stable_branch_pattern)
-        match = regex.match(self.branch)
-        if match:
-            return match.group(1)
-        return "latest"
+        """ Return the package version based on branch name or
+            the commit id if it is not a tag.
+        """
+        if self.is_tag:
+            return re.match(r"v(\d+\.\d+)", self.branch).group(1)
+        return self.commit_id
 
     @property
     def reference(self):
@@ -76,7 +87,7 @@ if __name__ == "__main__":
         username=settings.username,
         upload=settings.upload,
         upload_only_when_stable=settings.upload_only_when_stable,
-        stable_branch_pattern=settings.stable_branch_pattern,
+        channel=settings.channel,
         test_folder=os.path.join("conan", "test_package"))
     builder.add_common_builds(pure_c=False)
     builder.run()
