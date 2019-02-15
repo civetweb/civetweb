@@ -8,6 +8,7 @@
 * Alex Kozlov
 * AndreyArsov
 * Anton Te
+* beaver
 * bel2125
 * Ben M. Ward
 * BigJoe
@@ -18,12 +19,14 @@
 * Brian Spratke
 * cdbishop
 * celeron55
+* Chris Rehn
 * Charles Olivi
 * Christian Mauderer
 * Christopher Galas
 * cjh
 * Colden Cullen
 * Colm Sloan
+* Cortronic
 * Daniel Oaks
 * Daniel Rempel
 * Danny Al-Gaaf
@@ -31,23 +34,30 @@
 * David Arnold
 * David Loffredo
 * Dialga
+* duong2179
 * ehlertjd
 * Eric Tsau
+* Erick Vieyra
 * Erik Beran
 * Erik Partridge
 * extergnoto
+* Fabrice Fontaine
 * feneuilflo
 * Fernando G. Aranda
 * Frank Hilliger
 * F-Secure Corporation
 * Grahack
+* Gregor Jasny
 * grenclave
 * grunk
 * Guilherme Amadio
 * hansipie
 * HariKamath Kamath
 * Henry Chang
+* Herumb Shandilya
 * Herve Codina
+* Iain Morton
+* Ivan Dlugos
 * ImgBotApp
 * Jack
 * Jacob Repp
@@ -71,10 +81,12 @@
 * Karol Mroz
 * Keith Holman
 * Keith Kyzivat
+* Ken Walters
 * Kevin Branigan
 * Kevin Wojniak
 * Khem Raj
 * Kimmo Mustonen
+* Krzysztof Kozlowski
 * Lammert Bies
 * Lawrence
 * Lianghui
@@ -87,6 +99,8 @@
 * Martin Gaida
 * Mateusz Gralka
 * Matt Clarkson
+* Mellnik
+* Mike Crowe
 * mingodad
 * Morgan McGuire
 * mrdvlpr.xnu
@@ -118,6 +132,7 @@
 * Sangwhan Moon
 * Saumitra Vikram
 * Scott Nations
+* Sebastien Jodogne
 * Sergey Linev
 * sgmesservey
 * shantanugadgil
@@ -126,6 +141,7 @@
 * SpaceLord
 * sunfch
 * suzukibitman
+* Tamotsu Kanoh
 * thewaterymoon
 * THILMANT, Bernard
 * Thomas Davis
@@ -135,6 +151,7 @@
 * Tom Deblauwe
 * Toni Wilk
 * Torben Jonas
+* Uilian Ries
 * Ulrich Hertlein
 * Walt Steverson
 * webxer
