@@ -9602,13 +9602,15 @@ handle_static_file_request(struct mg_connection *conn,
 {
 	char date[64], lm[64], etag[64];
 	char range[128]; /* large enough, so there will be no overflow */
-	const char *msg = "OK", *hdr;
+	const char *msg = "OK";
+	const char *range_hdr;
 	time_t curtime = time(NULL);
 	int64_t cl, r1, r2;
 	struct vec mime_vec;
 	int n, truncated;
 	char gz_path[PATH_MAX];
 	const char *encoding = "";
+	const char *origin_hdr;
 	const char *cors_orig_cfg;
 	const char *cors1, *cors2, *cors3;
 	int is_head_request;
@@ -9652,6 +9654,10 @@ handle_static_file_request(struct mg_connection *conn,
 	}
 #endif
 
+	/* Check if there is a range header */
+	range_hdr = mg_get_header(conn, "Range");
+
+	/* For gzipped files, add *.gz */
 	if (filep->stat.is_gzipped) {
 		mg_snprintf(conn, &truncated, gz_path, sizeof(gz_path), "%s.gz", path);
 
@@ -9670,6 +9676,25 @@ handle_static_file_request(struct mg_connection *conn,
 		/* File is already compressed. No "on the fly" compression. */
 		allow_on_the_fly_compression = 0;
 #endif
+	} else if ((conn->accept_gzip) && (range_hdr == NULL)
+	           && (filep->stat.size >= MG_FILE_COMPRESSION_SIZE_LIMIT)) {
+		struct mg_file_stat file_stat;
+
+		mg_snprintf(conn, &truncated, gz_path, sizeof(gz_path), "%s.gz", path);
+
+		if (!truncated && mg_stat(conn, gz_path, &file_stat)
+		    && !file_stat.is_directory) {
+			file_stat.is_gzipped = 1;
+			filep->stat = file_stat;
+			cl = (int64_t)filep->stat.size;
+			path = gz_path;
+			encoding = "Content-Encoding: gzip\r\n";
+
+#if defined(USE_ZLIB)
+			/* File is already compressed. No "on the fly" compression. */
+			allow_on_the_fly_compression = 0;
+#endif
+		}
 	}
 
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
@@ -9686,9 +9711,9 @@ handle_static_file_request(struct mg_connection *conn,
 	/* If "Range" request was made: parse header, send only selected part
 	 * of the file. */
 	r1 = r2 = 0;
-	hdr = mg_get_header(conn, "Range");
-	if ((hdr != NULL) && ((n = parse_range_header(hdr, &r1, &r2)) > 0)
-	    && (r1 >= 0) && (r2 >= 0)) {
+	if ((range_hdr != NULL)
+	    && ((n = parse_range_header(range_hdr, &r1, &r2)) > 0) && (r1 >= 0)
+	    && (r2 >= 0)) {
 		/* actually, range requests don't play well with a pre-gzipped
 		 * file (since the range is specified in the uncompressed space) */
 		if (filep->stat.is_gzipped) {
@@ -9731,8 +9756,8 @@ handle_static_file_request(struct mg_connection *conn,
 
 	/* Standard CORS header */
 	cors_orig_cfg = conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
-	hdr = mg_get_header(conn, "Origin");
-	if (cors_orig_cfg && *cors_orig_cfg && hdr) {
+	origin_hdr = mg_get_header(conn, "Origin");
+	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr) {
 		/* Cross-origin resource sharing (CORS), see
 		 * http://www.html5rocks.com/en/tutorials/cors/,
 		 * http://www.html5rocks.com/static/images/cors_server_flowchart.png
