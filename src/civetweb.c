@@ -16544,7 +16544,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
 		            ebuf_len,
-		            "SSL_CTX_new error");
+		            "SSL_CTX_new error: %s",
+		            ssl_error());
 		closesocket(sock);
 		mg_free(conn);
 		return NULL;
@@ -16557,7 +16558,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
 		            ebuf_len,
-		            "SSL_CTX_new error");
+		            "SSL_CTX_new error: %s",
+			    ssl_error());
 		closesocket(sock);
 		mg_free(conn);
 		return NULL;
@@ -18983,10 +18985,11 @@ mg_get_system_info(char *buffer, int buflen)
 
 	if ((buffer == NULL) || (buflen < 1)) {
 		buflen = 0;
+		end = buffer;
 	} else {
 		*buffer = 0;
+		end = buffer + buflen;
 	}
-	end = buffer + buflen;
 	if (buflen > (int)(sizeof(eoobj) - 1)) {
 		/* has enough space to append eoobj */
 		append_eoobj = buffer;
@@ -19302,10 +19305,11 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 
 	if ((buffer == NULL) || (buflen < 1)) {
 		buflen = 0;
+		end = buffer;
 	} else {
 		*buffer = 0;
+		end = buffer + buflen;
 	}
-	end = buffer + buflen;
 	if (buflen > (int)(sizeof(eoobj) - 1)) {
 		/* has enough space to append eoobj */
 		append_eoobj = buffer;
@@ -19462,10 +19466,11 @@ mg_get_connection_info(const struct mg_context *ctx,
 
 	if ((buffer == NULL) || (buflen < 1)) {
 		buflen = 0;
+		end = buffer;
 	} else {
 		*buffer = 0;
+		end = buffer + buflen;
 	}
-	end = buffer + buflen;
 	if (buflen > (int)(sizeof(eoobj) - 1)) {
 		/* has enough space to append eoobj */
 		append_eoobj = buffer;
