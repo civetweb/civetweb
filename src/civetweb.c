@@ -1565,6 +1565,7 @@ static int thread_idx_max = 0;
 struct mg_workerTLS {
 	int is_master;
 	unsigned long thread_idx;
+	void *user_ptr;
 #if defined(_WIN32)
 	HANDLE pthread_cond_helper_mutex;
 	struct mg_workerTLS *next_waiting_thread;
@@ -3456,6 +3457,17 @@ void *
 mg_get_user_data(const struct mg_context *ctx)
 {
 	return (ctx == NULL) ? NULL : ctx->user_data;
+}
+
+
+void *
+mg_get_thread_pointer(const struct mg_connection *conn)
+{
+	(void)conn; /* ??? */
+
+	struct mg_workerTLS *tls =
+	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+	return tls->user_ptr;
 }
 
 
@@ -16559,7 +16571,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		            ebuf,
 		            ebuf_len,
 		            "SSL_CTX_new error: %s",
-			    ssl_error());
+		            ssl_error());
 		closesocket(sock);
 		mg_free(conn);
 		return NULL;
@@ -17281,6 +17293,8 @@ websocket_client_thread(void *data)
 	struct websocket_client_thread_data *cdata =
 	    (struct websocket_client_thread_data *)data;
 
+	void *user_thread_ptr = NULL;
+
 #if !defined(_WIN32)
 	struct sigaction sa;
 
@@ -17296,8 +17310,8 @@ websocket_client_thread(void *data)
 		if (cdata->conn->phys_ctx->callbacks.init_thread) {
 			/* 3 indicates a websocket client thread */
 			/* TODO: check if conn->phys_ctx can be set */
-			cdata->conn->phys_ctx->callbacks.init_thread(cdata->conn->phys_ctx,
-			                                             3);
+			user_thread_ptr = cdata->conn->phys_ctx->callbacks.init_thread(
+			    cdata->conn->phys_ctx, 3);
 		}
 	}
 
@@ -17312,6 +17326,12 @@ websocket_client_thread(void *data)
 	/* The websocket_client context has only this thread. If it runs out,
 	   set the stop_flag to 2 (= "stopped"). */
 	cdata->conn->phys_ctx->stop_flag = 2;
+
+	if (cdata->conn->phys_ctx->callbacks.exit_thread) {
+		cdata->conn->phys_ctx->callbacks.exit_thread(cdata->conn->phys_ctx,
+		                                             3,
+		                                             user_thread_ptr);
+	}
 
 	mg_free((void *)cdata);
 
@@ -17855,6 +17875,7 @@ worker_thread_run(struct mg_connection *conn)
 	struct mg_context *ctx = conn->phys_ctx;
 	int thread_index;
 	struct mg_workerTLS tls;
+
 #if defined(MG_LEGACY_INTERFACE)
 	uint32_t addr;
 #endif
@@ -17870,9 +17891,14 @@ worker_thread_run(struct mg_connection *conn)
 	/* Initialize thread local storage before calling any callback */
 	pthread_setspecific(sTlsKey, &tls);
 
+	/* Check if there is a user callback */
 	if (ctx->callbacks.init_thread) {
-		/* call init_thread for a worker thread (type 1) */
-		ctx->callbacks.init_thread(ctx, 1);
+		/* call init_thread for a worker thread (type 1), and store the return
+		 * value */
+		tls.user_ptr = ctx->callbacks.init_thread(ctx, 1);
+	} else {
+		/* No callback: set user pointer to NULL */
+		tls.user_ptr = NULL;
 	}
 
 	/* Connection structure has been pre-allocated */
@@ -17992,6 +18018,12 @@ worker_thread_run(struct mg_connection *conn)
 	}
 
 
+	/* Call exit thread user callback */
+	if (ctx->callbacks.exit_thread) {
+		ctx->callbacks.exit_thread(ctx, 1, tls.user_ptr);
+	}
+
+	/* delete thread local storage objects */
 	pthread_setspecific(sTlsKey, NULL);
 #if defined(_WIN32)
 	CloseHandle(tls.pthread_cond_helper_mutex);
@@ -18158,7 +18190,9 @@ master_thread_run(struct mg_context *ctx)
 
 	if (ctx->callbacks.init_thread) {
 		/* Callback for the master thread (type 0) */
-		ctx->callbacks.init_thread(ctx, 0);
+		tls.user_ptr = ctx->callbacks.init_thread(ctx, 0);
+	} else {
+		tls.user_ptr = NULL;
 	}
 
 	/* Server starts *now* */
@@ -18227,6 +18261,12 @@ master_thread_run(struct mg_context *ctx)
 #endif
 
 	DEBUG_TRACE("%s", "exiting");
+
+	/* call exit thread callback */
+	if (ctx->callbacks.exit_thread) {
+		/* Callback for the master thread (type 0) */
+		ctx->callbacks.init_thread(ctx, 0, tls.user_ptr);
+	}
 
 #if defined(_WIN32)
 	CloseHandle(tls.pthread_cond_helper_mutex);

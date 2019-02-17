@@ -349,14 +349,32 @@ struct mg_callbacks {
 	void (*init_context)(const struct mg_context *ctx);
 
 	/* Called when a new worker thread is initialized.
-	   Parameters:
-	     ctx: context handle
-	     thread_type:
-	       0 indicates the master thread
-	       1 indicates a worker thread handling client connections
-	       2 indicates an internal helper thread (timer thread)
-	       */
-	void (*init_thread)(const struct mg_context *ctx, int thread_type);
+	 * Parameters:
+	 *   ctx: context handle
+	 *   thread_type:
+	 *     0 indicates the master thread
+	 *     1 indicates a worker thread handling client connections
+	 *     2 indicates an internal helper thread (timer thread)
+	 * Return value:
+	 *   This function returns a user supplied pointer. The pointer is assigned
+	 *   to the thread and can be obtained from the mg_connection object using
+	 *   mg_get_thread_pointer in all server callbacks. Note: A connection and
+	 *   a thread are not directly related. Threads will serve several different
+	 *   connections, and data from a single connection may call different
+	 *   callbacks using different threads. The thread pointer can be obtained
+	 *   in a callback handler, but should not be stored beyond the scope of
+	 *   one call to one callback.
+	 */
+	void *(*init_thread)(const struct mg_context *ctx, int thread_type);
+
+	/* Called when a worker exits.
+	 * The parameters "ctx" and "thread_type" correspond to the "init_thread"
+	 * call. The  "thread_pointer" parameter is the value returned by
+	 * "init_thread".
+	 */
+	void (*exit_thread)(const struct mg_context *ctx,
+	                    int thread_type,
+	                    void *thread_pointer);
 
 	/* Called when civetweb context is deleted.
 	   Parameters:
@@ -597,6 +615,10 @@ mg_get_context(const struct mg_connection *conn);
 
 /* Get user data passed to mg_start from context. */
 CIVETWEB_API void *mg_get_user_data(const struct mg_context *ctx);
+
+
+/* Get user defined thread pointer for server threads (see init_thread). */
+CIVETWEB_API void *mg_get_thread_pointer(const struct mg_connection *conn);
 
 
 /* Set user data for the current connection. */
