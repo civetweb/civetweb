@@ -2761,6 +2761,9 @@ struct mg_connection {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	void *lua_websocket_state; /* Lua_State for a websocket connection */
 #endif
+
+	void *tls_user_ptr; /* User defined pointer in thread local storage,
+	                     * for quick access */
 };
 
 
@@ -3463,11 +3466,16 @@ mg_get_user_data(const struct mg_context *ctx)
 void *
 mg_get_thread_pointer(const struct mg_connection *conn)
 {
-	(void)conn; /* ??? */
-
-	struct mg_workerTLS *tls =
-	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
-	return tls->user_ptr;
+	/* both methods should return the same pointer */
+	if (conn) {
+		/* quick access, in case conn is known */
+		return conn->tls_user_ptr;
+	} else {
+		/* otherwise get pointer from thread local storage (TLS) */
+		struct mg_workerTLS *tls =
+		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+		return tls->user_ptr;
+	}
 }
 
 
@@ -17926,6 +17934,8 @@ worker_thread_run(struct mg_connection *conn)
 	conn->dom_ctx = &(ctx->dd); /* Use default domain and default host */
 	conn->host = NULL;          /* until we have more information. */
 
+	conn->tls_user_ptr = tls.user_ptr; /* store ptr for quick access */
+
 	conn->request_info.user_data = ctx->user_data;
 	/* Allocate a mutex for this connection to allow communication both
 	 * within the request handler and from elsewhere in the application
@@ -18265,7 +18275,7 @@ master_thread_run(struct mg_context *ctx)
 	/* call exit thread callback */
 	if (ctx->callbacks.exit_thread) {
 		/* Callback for the master thread (type 0) */
-		ctx->callbacks.init_thread(ctx, 0, tls.user_ptr);
+		ctx->callbacks.exit_thread(ctx, 0, tls.user_ptr);
 	}
 
 #if defined(_WIN32)
