@@ -22,11 +22,14 @@
 | |The callback function `init_lua()` is called just before a Lua server page is to be served. Lua page serving must have been enabled at compile time for this callback function to be called. The parameter `lua_context` is a `lua_State *` pointer.|
 |**`init_ssl`**|**`int (*init_ssl)( void *ssl_context, void *user_data );`**|
 | |The callback function `init_ssl()` is called when CivetWeb initializes the SSL library. The parameter `user_data` contains a pointer to the data which was provided to `mg_start()` when the server was started. The callback function can return 0 to signal that CivetWeb should setup the SSL certificate. With a return value of 1 the callback function signals CivetWeb that the certificate has already been setup and no further processing is necessary. The value -1 should be returned when the SSL initialization fails.|
-|**`init_thread`**|**`void (*init_thread)( const struct mg_context *ctx, int thread_type );`**|
+|**`init_thread`**|**`void * (*init_thread)( const struct mg_context *ctx, int thread_type );`**|
 | |The callback function `init_thread()` is called when a new thread is created by CivetWeb. The `thread_type` parameter indicates which type of thread has been created. following thread types are recognized:|
 | |**0** - The master thread is created |
 | |**1** - A worker thread which handles client connections has been created|
 | |**2** - An internal helper thread (timer thread) has been created|
+| |The returned `void *` is stored as user defined pointer in the thread local storage.|
+|**`exit_thread`**|**`void (*exit_thread)( const struct mg_context *ctx, int thread_type, void * user_ptr);`**|
+| |The callback function `exit_thread()` is called when a thread is about to exit. The parameters correspond to `init_thread`, with `user_ptr` being the return value.|
 |**`log_access`**|**`int (*log_access)( const struct mg_connection *conn, const char *message );`**|
 | |The callback function `log_access()` is called when CivetWeb is about to log a message. If the callback function returns 0, CivetWeb will use the default internal access log routines to log the access. If a non-zero value is returned, CivetWeb assumes that access logging has already been done and no further action is performed.|
 |**`log_message`**|**`int (*log_message)( const struct mg_connection *conn, const char *message );`**|

@@ -22,3 +22,5 @@ The function `mg_get_context()` returns the context associated with a connection
 
 * [`mg_start();`](mg_start.md)
 * [`mg_stop();`](mg_stop.md)
+* [`mg_get_user_data();`](mg_get_user_data.md)
+* [`mg_get_thread_pointer();`](mg_get_thread_pointer.md)
