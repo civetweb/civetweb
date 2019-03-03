@@ -351,7 +351,7 @@ struct mg_callbacks {
 	/* Called when civetweb context is deleted.
 	Parameters:
 	ctx: context handle */
-	void(*exit_context)(const struct mg_context *ctx);
+	void (*exit_context)(const struct mg_context *ctx);
 
 	/* Called when a new worker thread is initialized.
 	 * Parameters:
