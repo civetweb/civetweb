@@ -621,6 +621,10 @@ TLS1.0+TLS1.1+TLS1.2 | 2
 TLS1.1+TLS1.2 | 3
 TLS1.2 | 4
 
+More recent versions of OpenSSL include support for TLS version 1.3. 
+To use TLS1.3 only, set ssl\_protocol\_version to 5.
+
+
 ### ssl\_short\_trust `no`
 Enables the use of short lived certificates. This will allow for the certificates
 and keys specified in `ssl_certificate`, `ssl_ca_file` and `ssl_ca_path` to be
