@@ -225,6 +225,16 @@ if (CIVETWEB_ENABLE_SSL)
   message(STATUS "Dynamically load SSL libraries - ${CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING}")
 endif()
 
+# Link time optimization
+option(CIVETWEB_ENABLE_LTO "Enable link time optimization" OFF)
+if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
+    "${BUILD_SHARED_LIBS}" STREQUAL "SHARED" OR
+    ${CMAKE_CXX_COMPILER_VERSION} GREATER 5)
+  option(CIVETWEB_CXX_ENABLE_LTO "Enable link time optimization for the C++ wrapper library" ON)
+else()
+  option(CIVETWEB_CXX_ENABLE_LTO "Enable link time optimization for the C++ wrapper library" OFF)
+endif()
+
 # Third Party Download location
 set(CIVETWEB_THIRD_PARTY_DIR "${CMAKE_BINARY_DIR}/third_party" CACHE STRING
   "The location that third party code is downloaded, built and installed")
@@ -315,7 +325,9 @@ endif()
 add_c_compiler_flag(-pedantic-errors)
 add_c_compiler_flag(-fvisibility=hidden)
 add_c_compiler_flag(-fstack-protector-strong RELEASE)
-#add_c_compiler_flag(-flto RELEASE)
+if (${CIVETWEB_ENABLE_LTO})
+  add_c_compiler_flag(-flto RELEASE)
+endif()
 if (${CIVETWEB_ENABLE_ASAN})
 add_c_compiler_flag(-fsanitize=undefined DEBUG)
 add_c_compiler_flag(-fsanitize=address DEBUG)
@@ -385,9 +397,7 @@ if (CIVETWEB_ENABLE_CXX)
   add_cxx_compiler_flag(-fvisibility=hidden)
   add_cxx_compiler_flag(-fstack-protector-strong RELEASE)
 
-  if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
-      "${BUILD_SHARED_LIBS}" STREQUAL "SHARED" OR
-      ${CMAKE_CXX_COMPILER_VERSION} GREATER 5)
+  if (${CIVETWEB_CXX_ENABLE_LTO})
     add_cxx_compiler_flag(-flto RELEASE)
   endif()
   if (${CIVETWEB_ENABLE_ASAN})
