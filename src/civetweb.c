@@ -17259,17 +17259,15 @@ mg_get_response(struct mg_connection *conn,
 }
 
 
-struct mg_connection *
-mg_download(const char *host,
-            int port,
-            int use_ssl,
-            char *ebuf,
-            size_t ebuf_len,
-            const char *fmt,
-            ...)
+static struct mg_connection *
+mg_download_vfmt(const struct mg_client_options *client_options,
+                 int use_ssl,
+                 char *ebuf,
+                 size_t ebuf_len,
+                 const char *fmt,
+                 va_list ap)
 {
 	struct mg_connection *conn;
-	va_list ap;
 	int i;
 	int reqerr;
 
@@ -17277,10 +17275,11 @@ mg_download(const char *host,
 		ebuf[0] = '\0';
 	}
 
-	va_start(ap, fmt);
-
 	/* open a connection */
-	conn = mg_connect_client(host, port, use_ssl, ebuf, ebuf_len);
+	conn = mg_connect_client_impl(client_options,
+	                              use_ssl,
+	                              ebuf,
+	                              ebuf_len);
 
 	if (conn != NULL) {
 		i = mg_vprintf(conn, fmt, ap);
@@ -17309,7 +17308,48 @@ mg_download(const char *host,
 		conn = NULL;
 	}
 
+	return conn;
+}
+
+struct mg_connection *
+mg_download2(const struct mg_client_options *client_options,
+             int use_ssl,
+             char *ebuf,
+             size_t ebuf_len,
+             const char *fmt,
+             ...)
+{
+	struct mg_connection *conn;
+	va_list ap;
+
+	va_start(ap, fmt);
+	conn = mg_download_vfmt(client_options, use_ssl, ebuf, ebuf_len, fmt, ap);
 	va_end(ap);
+
+	return conn;
+}
+
+
+struct mg_connection *
+mg_download(const char *host,
+            int port,
+            int use_ssl,
+            char *ebuf,
+            size_t ebuf_len,
+            const char *fmt,
+            ...)
+{
+	struct mg_client_options opts;
+	struct mg_connection *conn;
+	va_list ap;
+
+	va_start(ap, fmt);
+	memset(&opts, 0, sizeof(opts));
+	opts.host = host;
+	opts.port = port;
+	conn = mg_download_vfmt(&opts, use_ssl, ebuf, ebuf_len, fmt, ap);
+	va_end(ap);
+
 	return conn;
 }
 
@@ -17385,16 +17425,15 @@ websocket_client_thread(void *data)
 
 
 struct mg_connection *
-mg_connect_websocket_client(const char *host,
-                            int port,
-                            int use_ssl,
-                            char *error_buffer,
-                            size_t error_buffer_size,
-                            const char *path,
-                            const char *origin,
-                            mg_websocket_data_handler data_func,
-                            mg_websocket_close_handler close_func,
-                            void *user_data)
+mg_connect_websocket_client2(const struct mg_client_options *client_options,
+                             int use_ssl,
+                             char *error_buffer,
+                             size_t error_buffer_size,
+                             const char *path,
+                             const char *origin,
+                             mg_websocket_data_handler data_func,
+                             mg_websocket_close_handler close_func,
+                             void *user_data)
 {
 	struct mg_connection *conn = NULL;
 
@@ -17429,16 +17468,15 @@ mg_connect_websocket_client(const char *host,
 #endif
 
 	/* Establish the client connection and request upgrade */
-	conn = mg_download(host,
-	                   port,
-	                   use_ssl,
-	                   error_buffer,
-	                   error_buffer_size,
-	                   handshake_req,
-	                   path,
-	                   host,
-	                   magic,
-	                   origin);
+	conn = mg_download2(client_options,
+	                    use_ssl,
+	                    error_buffer,
+	                    error_buffer_size,
+	                    handshake_req,
+	                    path,
+	                    client_options->host,
+	                    magic,
+	                    origin);
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
@@ -17529,8 +17567,7 @@ mg_connect_websocket_client(const char *host,
 
 #else
 	/* Appease "unused parameter" warnings */
-	(void)host;
-	(void)port;
+	(void)client_options;
 	(void)use_ssl;
 	(void)error_buffer;
 	(void)error_buffer_size;
@@ -17542,6 +17579,34 @@ mg_connect_websocket_client(const char *host,
 #endif
 
 	return conn;
+}
+
+
+struct mg_connection *
+mg_connect_websocket_client(const char *host,
+                            int port,
+                            int use_ssl,
+                            char *error_buffer,
+                            size_t error_buffer_size,
+                            const char *path,
+                            const char *origin,
+                            mg_websocket_data_handler data_func,
+                            mg_websocket_close_handler close_func,
+                            void *user_data)
+{
+	struct mg_client_options opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.host = host;
+	opts.port = port;
+	return mg_connect_websocket_client2(&opts,
+	                                    use_ssl,
+	                                    error_buffer,
+	                                    error_buffer_size,
+	                                    path,
+	                                    origin,
+	                                    data_func,
+	                                    close_func,
+	                                    user_data);
 }
 
 
