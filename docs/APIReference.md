@@ -91,9 +91,11 @@ The content of both structures is not defined in the interface - they are only u
 * [`mg_connect_client( host, port, use_ssl, error_buffer, error_buffer_size );`](api/mg_connect_client.md)
 * [`mg_connect_client_secure( client_options, error_buffer, error_buffer_size );`](api/mg_connect_client_secure.md)
 * [`mg_connect_websocket_client( host, port, use_ssl, error_buffer, error_buffer_size, path, origin, data_func, close_func, user_data);`](api/mg_connect_websocket_client.md)
+* [`mg_connect_websocket_client2( client_options, use_ssl, error_buffer, error_buffer_size, path, origin, data_func, close_func, user_data);`](api/mg_connect_websocket_client2.md)
 * [`mg_websocket_client_write( conn, opcode, data, data_len );`](api/mg_websocket_client_write.md)
 
 * [`mg_download( host, port, use_ssl, error_buffer, error_buffer_size, fmt, ... );`](api/mg_download.md)
+* [`mg_download2( client_options, use_ssl, error_buffer, error_buffer_size, fmt, ... );`](api/mg_download2.md)
 
 * [`mg_get_response( conn, ebuf, ebuf_len, timeout );`](api/mg_get_response.md)
 * [`mg_get_response_info( conn );`](api/mg_get_response_info.md)

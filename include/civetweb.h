@@ -214,6 +214,16 @@ struct client_cert {
 #endif
 
 
+struct mg_client_options {
+	const char *host;
+	int port;
+	const char *client_cert;
+	const char *server_cert;
+	const char *host_name;
+	/* TODO: add more data */
+};
+
+
 /* This structure needs to be passed to mg_start(), to let civetweb know
    which callbacks to invoke. For a detailed description, see
    https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md */
@@ -1159,6 +1169,14 @@ mg_download(const char *host,
             PRINTF_FORMAT_STRING(const char *request_fmt),
             ...) PRINTF_ARGS(6, 7);
 
+CIVETWEB_API struct mg_connection *
+mg_download2(const struct mg_client_options *client_options,
+             int use_ssl,
+             char *error_buffer,
+             size_t error_buffer_size,
+             PRINTF_FORMAT_STRING(const char *request_fmt),
+            ...) PRINTF_ARGS(5, 6);
+
 
 /* Close the connection opened by mg_download(). */
 CIVETWEB_API void mg_close_connection(struct mg_connection *conn);
@@ -1389,6 +1407,16 @@ mg_connect_websocket_client(const char *host,
                             mg_websocket_close_handler close_func,
                             void *user_data);
 
+CIVETWEB_API struct mg_connection *
+mg_connect_websocket_client2(const struct mg_client_options *client_options,
+                             int use_ssl,
+                             char *error_buffer,
+                             size_t error_buffer_size,
+                             const char *path,
+                             const char *origin,
+                             mg_websocket_data_handler data_func,
+                             mg_websocket_close_handler close_func,
+                             void *user_data);
 
 /* Connect to a TCP server as a client (can be used to connect to a HTTP server)
    Parameters:
@@ -1407,16 +1435,6 @@ CIVETWEB_API struct mg_connection *mg_connect_client(const char *host,
                                                      int use_ssl,
                                                      char *error_buffer,
                                                      size_t error_buffer_size);
-
-
-struct mg_client_options {
-	const char *host;
-	int port;
-	const char *client_cert;
-	const char *server_cert;
-	const char *host_name;
-	/* TODO: add more data */
-};
 
 
 CIVETWEB_API struct mg_connection *
