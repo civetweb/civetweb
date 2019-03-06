@@ -220,6 +220,8 @@ struct mg_client_options {
 	const char *client_cert;
 	const char *server_cert;
 	const char *host_name;
+	/* Timeout for connection in ms, value of 0 means use default */
+	unsigned int request_timeout;
 	/* TODO: add more data */
 };
 

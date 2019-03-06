@@ -15176,6 +15176,9 @@ sslize(struct mg_connection *conn,
 		if (client_options->host_name) {
 			SSL_set_tlsext_host_name(conn->ssl, client_options->host_name);
 		}
+		if (client_options->request_timeout) {
+			timeout = client_options->request_timeout;
+		}
 	}
 
 	/* Reuse the request timeout for the SSL_Accept/SSL_connect timeout  */
