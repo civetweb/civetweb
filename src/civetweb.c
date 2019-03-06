@@ -16675,9 +16675,18 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		}
 
 		if (client_options->server_cert) {
-			SSL_CTX_load_verify_locations(conn->client_ssl_ctx,
-			                              client_options->server_cert,
-			                              NULL);
+			if (SSL_CTX_load_verify_locations(conn->client_ssl_ctx,
+			                                  client_options->server_cert,
+			                                  NULL)
+				!= 1) {
+				mg_cry_internal(conn,
+				                "SSL_CTX_load_verify_locations error: %s ",
+				                ssl_error());
+				SSL_CTX_free(conn->client_ssl_ctx);
+				closesocket(sock);
+				mg_free(conn);
+				return NULL;
+			}
 			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_PEER, NULL);
 		} else {
 			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_NONE, NULL);
