@@ -6385,6 +6385,7 @@ pull_inner(FILE *fp,
 				DEBUG_TRACE("SSL_read() failed, error %d", err);
 				return -1;
 			}
+			ERR_clear_error();
 		} else {
 			err = 0;
 		}
@@ -6419,7 +6420,7 @@ pull_inner(FILE *fp,
 			} else {
 				err = 0;
 			}
-
+			ERR_clear_error();
 		} else if (pollres < 0) {
 			/* Error */
 			return -2;
@@ -15227,6 +15228,7 @@ sslize(struct mg_connection *conn,
 				mg_cry_internal(conn, "sslize error: %s", ssl_error());
 				break;
 			}
+			ERR_clear_error();
 
 		} else {
 			/* success */
