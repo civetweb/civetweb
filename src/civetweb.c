@@ -1934,6 +1934,7 @@ struct ssl_func {
 	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn)) crypto_sw[12].ptr)
 #define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[13].ptr)
 #define CRYPTO_free (*(void (*)(void *addr))crypto_sw[14].ptr)
+#define ERR_clear_error (*(void (*)(void))crypto_sw[15].ptr)
 
 #define OPENSSL_free(a) CRYPTO_free(a)
 
@@ -2002,6 +2003,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
                                       {"ASN1_INTEGER_to_BN", NULL},
                                       {"BN_free", NULL},
                                       {"CRYPTO_free", NULL},
+                                      {"ERR_clear_error", NULL},
                                       {NULL, NULL}};
 #else
 
@@ -2120,6 +2122,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 	(*(BIGNUM * (*)(const ASN1_INTEGER *ai, BIGNUM *bn)) crypto_sw[21].ptr)
 #define BN_free (*(void (*)(const BIGNUM *a))crypto_sw[22].ptr)
 #define CRYPTO_free (*(void (*)(void *addr))crypto_sw[23].ptr)
+#define ERR_clear_error (*(void (*)(void))crypto_sw[24].ptr)
 
 #define OPENSSL_free(a) CRYPTO_free(a)
 
@@ -2200,6 +2203,7 @@ static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
                                       {"ASN1_INTEGER_to_BN", NULL},
                                       {"BN_free", NULL},
                                       {"CRYPTO_free", NULL},
+                                      {"ERR_clear_error", NULL},
                                       {NULL, NULL}};
 #endif /* OPENSSL_API_1_1 */
 #endif /* NO_SSL_DL */
@@ -6385,6 +6389,8 @@ pull_inner(FILE *fp,
 				DEBUG_TRACE("SSL_read() failed, error %d", err);
 				return -1;
 			}
+
+			ERR_clear_error();
 		} else {
 			err = 0;
 		}
@@ -6419,7 +6425,7 @@ pull_inner(FILE *fp,
 			} else {
 				err = 0;
 			}
-
+			ERR_clear_error();
 		} else if (pollres < 0) {
 			/* Error */
 			return -2;
@@ -15227,6 +15233,7 @@ sslize(struct mg_connection *conn,
 				mg_cry_internal(conn, "sslize error: %s", ssl_error());
 				break;
 			}
+			ERR_clear_error();
 
 		} else {
 			/* success */
@@ -16675,9 +16682,18 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		}
 
 		if (client_options->server_cert) {
-			SSL_CTX_load_verify_locations(conn->client_ssl_ctx,
-			                              client_options->server_cert,
-			                              NULL);
+			if (SSL_CTX_load_verify_locations(conn->client_ssl_ctx,
+			                                  client_options->server_cert,
+			                                  NULL)
+				!= 1) {
+				mg_cry_internal(conn,
+				                "SSL_CTX_load_verify_locations error: %s ",
+				                ssl_error());
+				SSL_CTX_free(conn->client_ssl_ctx);
+				closesocket(sock);
+				mg_free(conn);
+				return NULL;
+			}
 			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_PEER, NULL);
 		} else {
 			SSL_CTX_set_verify(conn->client_ssl_ctx, SSL_VERIFY_NONE, NULL);
