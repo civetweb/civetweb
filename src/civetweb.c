@@ -2734,15 +2734,20 @@ struct mg_connection {
 	struct timespec req_time; /* Time (since system start) when the request
 	                           * was received */
 	int64_t num_bytes_sent;   /* Total bytes sent to client */
-	int64_t content_len;      /* Content-Length header value */
+	int64_t content_len;      /* How many bytes of content can be read
+	                           * !is_chunked: Content-Length header value
+	                           *              or -1 (until connection closed,
+	                           *                     not allowed for a request)
+	                           * is_chunked: >= 0, appended gradually
+	                           */
 	int64_t consumed_content; /* How many bytes of content have been read */
 	int is_chunked;           /* Transfer-Encoding is chunked:
 	                           * 0 = not chunked,
-	                           * 1 = chunked, do data read yet,
-	                           * 2 = chunked, some data read,
-	                           * 3 = chunked, all data read
+	                           * 1 = chunked, not yet, or some data read,
+	                           * 2 = chunked, has error,
+	                           * 3 = chunked, all data read except trailer,
+	                           * 4 = chunked, all data read
 	                           */
-	size_t chunk_remainder;   /* Unread data from the last chunk */
 	char *buf;                /* Buffer for received data */
 	char *path_info;          /* PATH_INFO part of the URL */
 
@@ -6555,7 +6560,6 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 		} else if (n == 0) {
 			break; /* No more data to read */
 		} else {
-			conn->consumed_content += n;
 			nread += n;
 			len -= n;
 		}
@@ -6569,46 +6573,16 @@ static void
 discard_unread_request_data(struct mg_connection *conn)
 {
 	char buf[MG_BUF_LEN];
-	size_t to_read;
-	int nread;
 
-	if (conn == NULL) {
-		return;
-	}
-
-	to_read = sizeof(buf);
-
-	if (conn->is_chunked) {
-		/* Chunked encoding: 3=chunk read completely
-		 * completely */
-		while (conn->is_chunked != 3) {
-			nread = mg_read(conn, buf, to_read);
-			if (nread <= 0) {
-				break;
-			}
-		}
-
-	} else {
-		/* Not chunked: content length is known */
-		while (conn->consumed_content < conn->content_len) {
-			if (to_read
-			    > (size_t)(conn->content_len - conn->consumed_content)) {
-				to_read = (size_t)(conn->content_len - conn->consumed_content);
-			}
-
-			nread = mg_read(conn, buf, to_read);
-			if (nread <= 0) {
-				break;
-			}
-		}
-	}
+	while (mg_read(conn, buf, sizeof(buf)) > 0)
+		;
 }
 
 
 static int
 mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 {
-	int64_t n, buffered_len, nread;
+	int64_t content_len, n, buffered_len, nread;
 	int64_t len64 =
 	    (int64_t)((len > INT_MAX) ? INT_MAX : len); /* since the return value is
 	                                                 * int, we may not read more
@@ -6619,25 +6593,18 @@ mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 		return 0;
 	}
 
-	/* If Content-Length is not set for a request with body data
-	 * (e.g., a PUT or POST request), we do not know in advance
-	 * how much data should be read. */
-	if (conn->consumed_content == 0) {
-		if (conn->is_chunked == 1) {
-			conn->content_len = len64;
-			conn->is_chunked = 2;
-		} else if (conn->content_len == -1) {
-			/* The body data is completed when the connection
-			 * is closed. */
-			conn->content_len = INT64_MAX;
-			conn->must_close = 1;
-		}
+	/* If Content-Length is not set for a response with body data,
+	 * we do not know in advance how much data should be read. */
+	content_len = conn->content_len;
+	if (content_len < 0) {
+		/* The body data is completed when the connection is closed. */
+		content_len = INT64_MAX;
 	}
 
 	nread = 0;
-	if (conn->consumed_content < conn->content_len) {
+	if (conn->consumed_content < content_len) {
 		/* Adjust number of bytes to read. */
-		int64_t left_to_read = conn->content_len - conn->consumed_content;
+		int64_t left_to_read = content_len - conn->consumed_content;
 		if (left_to_read < len64) {
 			/* Do not read more than the total content length of the
 			 * request.
@@ -6664,26 +6631,13 @@ mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 		 * socket.
 		 */
 		if ((n = pull_all(NULL, conn, (char *)buf, (int)len64)) >= 0) {
+			conn->consumed_content += n;
 			nread += n;
 		} else {
 			nread = ((nread > 0) ? nread : n);
 		}
 	}
 	return (int)nread;
-}
-
-
-static char
-mg_getc(struct mg_connection *conn)
-{
-	char c;
-	if (conn == NULL) {
-		return 0;
-	}
-	if (mg_read_inner(conn, &c, 1) <= 0) {
-		return (char)0;
-	}
-	return c;
 }
 
 
@@ -6702,54 +6656,54 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 		size_t all_read = 0;
 
 		while (len > 0) {
-			if (conn->is_chunked == 3) {
+			if (conn->is_chunked >= 3) {
 				/* No more data left to read */
 				return 0;
 			}
+			if (conn->is_chunked != 1) {
+				/* Has error */
+				return -1;
+			}
 
-			if (conn->chunk_remainder) {
-				/* copy from the remainder of the last received chunk */
-				long read_ret;
-				size_t read_now =
-				    ((conn->chunk_remainder > len) ? (len)
-				                                   : (conn->chunk_remainder));
-
-				conn->content_len += (int)read_now;
-				read_ret =
-				    mg_read_inner(conn, (char *)buf + all_read, read_now);
+			if (conn->consumed_content != conn->content_len) {
+				/* copy from the current chunk */
+				int read_ret = mg_read_inner(conn, (char *)buf + all_read,
+				                             len);
 
 				if (read_ret < 1) {
 					/* read error */
+					conn->is_chunked = 2;
 					return -1;
 				}
 
 				all_read += (size_t)read_ret;
-				conn->chunk_remainder -= (size_t)read_ret;
 				len -= (size_t)read_ret;
 
-				if (conn->chunk_remainder == 0) {
+				if (conn->consumed_content == conn->content_len) {
 					/* Add data bytes in the current chunk have been read,
 					 * so we are expecting \r\n now. */
-					char x1, x2;
+					char x[2];
 					conn->content_len += 2;
-					x1 = mg_getc(conn);
-					x2 = mg_getc(conn);
-					if ((x1 != '\r') || (x2 != '\n')) {
+					if ((mg_read_inner(conn, x, 2) != 2)
+					    || (x[0] != '\r') || (x[1] != '\n')) {
 						/* Protocol violation */
+						conn->is_chunked = 2;
 						return -1;
 					}
 				}
 
 			} else {
 				/* fetch a new chunk */
-				int i = 0;
+				size_t i;
 				char lenbuf[64];
-				char *end = 0;
+				char *end = NULL;
 				unsigned long chunkSize = 0;
 
-				for (i = 0; i < ((int)sizeof(lenbuf) - 1); i++) {
+				for (i = 0; i < (sizeof(lenbuf) - 1); i++) {
 					conn->content_len++;
-					lenbuf[i] = mg_getc(conn);
+					if (mg_read_inner(conn, lenbuf + i, 1) != 1) {
+						lenbuf[i] = 0;
+					}
 					if ((i > 0) && (lenbuf[i] == '\r')
 					    && (lenbuf[i - 1] != '\r')) {
 						continue;
@@ -6766,18 +6720,27 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 					}
 					if (!isxdigit((unsigned char)lenbuf[i])) {
 						/* illegal character for chunk length */
+						conn->is_chunked = 2;
 						return -1;
 					}
 				}
 				if ((end == NULL) || (*end != '\r')) {
 					/* chunksize not set correctly */
+					conn->is_chunked = 2;
 					return -1;
 				}
 				if (chunkSize == 0) {
+					/* try discarding trailer for keep-alive */
+					conn->content_len += 2;
+					if ((mg_read_inner(conn, lenbuf, 2) == 2)
+					    && (lenbuf[0] == '\r') && (lenbuf[1] == '\n')) {
+						conn->is_chunked = 4;
+					}
 					break;
 				}
 
-				conn->chunk_remainder = chunkSize;
+				/* append a new chunk */
+				conn->content_len += chunkSize;
 			}
 		}
 
@@ -10588,17 +10551,12 @@ read_message(FILE *fp,
 static int
 forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 {
-	const char *expect, *body;
+	const char *expect;
 	char buf[MG_BUF_LEN];
-	int to_read, nread, success = 0;
-	int buffered_len;
-	double timeout = -1.0;
+	int success = 0;
 
 	if (!conn) {
 		return 0;
-	}
-	if (conn->dom_ctx->config[REQUEST_TIMEOUT]) {
-		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 
 	expect = mg_get_header(conn, "Expect");
@@ -10608,14 +10566,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 		return 0;
 	}
 
-	if ((conn->content_len == -1) && (!conn->is_chunked)) {
-		/* Content length is not specified by the client. */
-		mg_send_http_error(conn,
-		                   411,
-		                   "%s",
-		                   "Error: Client did not specify content length");
-	} else if ((expect != NULL)
-	           && (mg_strcasecmp(expect, "100-continue") != 0)) {
+	if ((expect != NULL) && (mg_strcasecmp(expect, "100-continue") != 0)) {
 		/* Client sent an "Expect: xyz" header and xyz is not 100-continue.
 		 */
 		mg_send_http_error(conn,
@@ -10630,47 +10581,22 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 			conn->status_code = 200;
 		}
 
-		buffered_len = conn->data_len - conn->request_len;
-
-		DEBUG_ASSERT(buffered_len >= 0);
 		DEBUG_ASSERT(conn->consumed_content == 0);
 
-		if ((buffered_len < 0) || (conn->consumed_content != 0)) {
+		if (conn->consumed_content != 0) {
 			mg_send_http_error(conn, 500, "%s", "Error: Size mismatch");
 			return 0;
 		}
 
-		if (buffered_len > 0) {
-			if ((int64_t)buffered_len > conn->content_len) {
-				buffered_len = (int)conn->content_len;
-			}
-			body = conn->buf + conn->request_len;
-			push_all(conn->phys_ctx, fp, sock, ssl, body, buffered_len);
-			conn->consumed_content += buffered_len;
-		}
-
-		nread = 0;
-		while (conn->consumed_content < conn->content_len) {
-			to_read = sizeof(buf);
-			if ((int64_t)to_read > conn->content_len - conn->consumed_content) {
-				to_read = (int)(conn->content_len - conn->consumed_content);
-			}
-			nread = pull_inner(NULL, conn, buf, to_read, timeout);
-			if (nread == -2) {
-				/* error */
+		for (;;) {
+			int nread = mg_read(conn, buf, sizeof(buf));
+			if (nread <= 0) {
+				success = (nread == 0);
 				break;
 			}
-			if (nread > 0) {
-				if (push_all(conn->phys_ctx, fp, sock, ssl, buf, nread)
-				    != nread) {
-					break;
-				}
-				conn->consumed_content += nread;
+			if (push_all(conn->phys_ctx, fp, sock, ssl, buf, nread) != nread) {
+				break;
 			}
-		}
-
-		if (conn->consumed_content == conn->content_len) {
-			success = (nread >= 0);
 		}
 
 		/* Each error code path in this function must send an error */
@@ -11206,9 +11132,9 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	setbuf(err, NULL);
 	fout.access.fp = out;
 
-	if ((conn->request_info.content_length != 0) || (conn->is_chunked)) {
-		DEBUG_TRACE("CGI: send body data (%lli)\n",
-		            (signed long long)conn->request_info.content_length);
+	if ((conn->content_len != 0) || (conn->is_chunked)) {
+		DEBUG_TRACE("CGI: send body data (%" INT64_FMT ")\n",
+		            conn->content_len);
 
 		/* This is a POST/PUT request, or another request with body data. */
 		if (!forward_body_data(conn, in, INVALID_SOCKET, NULL)) {
@@ -16171,8 +16097,6 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->must_close = 0;
 	conn->request_len = 0;
 	conn->throttle = 0;
-	conn->data_len = 0;
-	conn->chunk_remainder = 0;
 	conn->accept_gzip = 0;
 
 	conn->response_info.content_length = conn->request_info.content_length = -1;
@@ -17091,15 +17015,29 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		return 0;
 	}
 
-	/* Do we know the content length? */
-	if ((cl = get_header(conn->request_info.http_headers,
-	                     conn->request_info.num_headers,
-	                     "Content-Length"))
-	    != NULL) {
-		/* Request/response has content length set */
+	if (((cl = get_header(conn->request_info.http_headers,
+	                      conn->request_info.num_headers,
+	                      "Transfer-Encoding")) != NULL)
+	    && mg_strcasecmp(cl, "identity")) {
+		if (mg_strcasecmp(cl, "chunked")) {
+			mg_snprintf(conn,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s",
+			            "Bad request");
+			*err = 400;
+			return 0;
+		}
+		conn->is_chunked = 1;
+		conn->content_len = 0; /* not yet read */
+	} else if ((cl = get_header(conn->request_info.http_headers,
+	                            conn->request_info.num_headers,
+	                            "Content-Length")) != NULL) {
+		/* Request has content length set */
 		char *endptr = NULL;
 		conn->content_len = strtoll(cl, &endptr, 10);
-		if (endptr == cl) {
+		if ((endptr == cl) || (conn->content_len < 0)) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -17111,34 +17049,9 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		}
 		/* Publish the content length back to the request info. */
 		conn->request_info.content_length = conn->content_len;
-	} else if ((cl = get_header(conn->request_info.http_headers,
-	                            conn->request_info.num_headers,
-	                            "Transfer-Encoding"))
-	               != NULL
-	           && !mg_strcasecmp(cl, "chunked")) {
-		conn->is_chunked = 1;
-		conn->content_len = -1; /* unknown content length */
 	} else {
-		const struct mg_http_method_info *meth =
-		    get_http_method_info(conn->request_info.request_method);
-		if (!meth) {
-			/* No valid HTTP method */
-			mg_snprintf(conn,
-			            NULL, /* No truncation check for ebuf */
-			            ebuf,
-			            ebuf_len,
-			            "%s",
-			            "Bad request");
-			*err = 411;
-			return 0;
-		}
-		if (meth->request_has_body) {
-			/* POST or PUT request without content length set */
-			conn->content_len = -1; /* unknown content length */
-		} else {
-			/* Other request */
-			conn->content_len = 0; /* No content */
-		}
+		/* There is no exception, see RFC7230. */
+		conn->content_len = 0;
 	}
 
 	conn->connection_type = CONNECTION_TYPE_REQUEST; /* Valid request */
@@ -17169,15 +17082,28 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	/* Message is a valid response */
 
-	/* Do we know the content length? */
-	if ((cl = get_header(conn->response_info.http_headers,
-	                     conn->response_info.num_headers,
-	                     "Content-Length"))
-	    != NULL) {
-		/* Request/response has content length set */
+	if (((cl = get_header(conn->response_info.http_headers,
+	                      conn->response_info.num_headers,
+	                      "Transfer-Encoding")) != NULL)
+	     && mg_strcasecmp(cl, "identity")) {
+		if (mg_strcasecmp(cl, "chunked")) {
+			mg_snprintf(conn,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s",
+			            "Bad request");
+			*err = 400;
+			return 0;
+		}
+		conn->is_chunked = 1;
+		conn->content_len = 0;  /* not yet read */
+	} else if ((cl = get_header(conn->response_info.http_headers,
+	                            conn->response_info.num_headers,
+	                            "Content-Length")) != NULL) {
 		char *endptr = NULL;
 		conn->content_len = strtoll(cl, &endptr, 10);
-		if (endptr == cl) {
+		if ((endptr == cl) || (conn->content_len < 0)) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -17193,15 +17119,20 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		/* TODO: check if it is still used in response_info */
 		conn->request_info.content_length = conn->content_len;
 
-	} else if ((cl = get_header(conn->response_info.http_headers,
-	                            conn->response_info.num_headers,
-	                            "Transfer-Encoding"))
-	               != NULL
-	           && !mg_strcasecmp(cl, "chunked")) {
-		conn->is_chunked = 1;
-		conn->content_len = -1; /* unknown content length */
+		/* TODO: we should also consider HEAD method */
+		if (conn->response_info.status_code == 304) {
+			conn->content_len = 0;
+		}
 	} else {
-		conn->content_len = -1; /* unknown content length */
+		/* TODO: we should also consider HEAD method */
+		if (((conn->response_info.status_code >= 100)
+		     && (conn->response_info.status_code <= 199))
+		    || (conn->response_info.status_code == 204)
+		    || (conn->response_info.status_code == 304)) {
+			conn->content_len = 0;
+		} else {
+			conn->content_len = -1; /* unknown content length */
+		}
 	}
 
 	conn->connection_type = CONNECTION_TYPE_RESPONSE; /* Valid response */
@@ -17233,6 +17164,9 @@ mg_get_response(struct mg_connection *conn,
 		            "Parameter error");
 		return -1;
 	}
+
+	/* Reset the previous responses */
+	conn->data_len = 0;
 
 	/* Implementation of API function for HTTP clients */
 	save_timeout = conn->dom_ctx->config[REQUEST_TIMEOUT];
@@ -17297,6 +17231,8 @@ mg_download(const char *host,
 			            "%s",
 			            "Error sending request");
 		} else {
+			/* make sure the buffer is clear */
+			conn->data_len = 0;
 			get_response(conn, ebuf, ebuf_len, &reqerr);
 
 #if defined(MG_LEGACY_INTERFACE)
@@ -17731,26 +17667,27 @@ process_new_connection(struct mg_connection *conn)
 		 * memmove's below.
 		 * Therefore, memorize should_keep_alive() result now for later
 		 * use in loop exit condition. */
+		/* Enable it only if this request is completely discardable. */
 		keep_alive = (conn->phys_ctx->stop_flag == 0) && should_keep_alive(conn)
-		             && (conn->content_len >= 0);
+		             && (conn->content_len >= 0) && (conn->request_len > 0)
+		             && ((conn->is_chunked == 4)
+		                 || (!conn->is_chunked
+		                     && ((conn->consumed_content == conn->content_len)
+		                         || ((conn->request_len + conn->content_len)
+		                             <= conn->data_len))));
 
-
-		/* Discard all buffered data for this request */
-		discard_len = ((conn->content_len >= 0) && (conn->request_len > 0)
-		               && ((conn->request_len + conn->content_len)
-		                   < (int64_t)conn->data_len))
-		                  ? (int)(conn->request_len + conn->content_len)
-		                  : conn->data_len;
-		DEBUG_ASSERT(discard_len >= 0);
-		if (discard_len < 0) {
-			DEBUG_TRACE("internal error: discard_len = %li",
-			            (long int)discard_len);
-			break;
-		}
-		conn->data_len -= discard_len;
-		if (conn->data_len > 0) {
-			DEBUG_TRACE("discard_len = %lu", (long unsigned)discard_len);
-			memmove(conn->buf, conn->buf + discard_len, (size_t)conn->data_len);
+		if (keep_alive) {
+			/* Discard all buffered data for this request */
+			discard_len = ((conn->request_len + conn->content_len)
+			               < conn->data_len)
+			                  ? (int)(conn->request_len + conn->content_len)
+			                  : conn->data_len;
+			conn->data_len -= discard_len;
+			if (conn->data_len > 0) {
+				DEBUG_TRACE("discard_len = %d", discard_len);
+				memmove(conn->buf, conn->buf + discard_len,
+				        (size_t)conn->data_len);
+			}
 		}
 
 		DEBUG_ASSERT(conn->data_len >= 0);

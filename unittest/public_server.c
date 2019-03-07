@@ -2830,7 +2830,7 @@ START_TEST(test_handle_form)
 		body_sent += chunk_len;
 		chunk_len = (chunk_len % 40) + 1;
 	}
-	mg_printf(client_conn, "0\r\n");
+	mg_printf(client_conn, "0\r\n\r\n");
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
@@ -2877,7 +2877,7 @@ START_TEST(test_handle_form)
 		body_sent += chunk_len;
 		chunk_len = (chunk_len % 40) + 1;
 	}
-	mg_printf(client_conn, "0\r\n");
+	mg_printf(client_conn, "0\r\n\r\n");
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
@@ -2948,7 +2948,7 @@ START_TEST(test_handle_form)
 	test_sleep(1);
 	send_chunk_string(client_conn, "eak_field_handler=abort&");
 	send_chunk_string(client_conn, "dontread=xyz");
-	mg_printf(client_conn, "0\r\n");
+	mg_printf(client_conn, "0\r\n\r\n");
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
@@ -3008,7 +3008,7 @@ START_TEST(test_handle_form)
 	send_chunk_string(client_conn, "xyz\r\n");
 	send_chunk_string(client_conn, "--multipart-form-data-boundary");
 	send_chunk_string(client_conn, "--see-RFC-2388--\r\n");
-	mg_printf(client_conn, "0\r\n");
+	mg_printf(client_conn, "0\r\n\r\n");
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
@@ -3100,7 +3100,7 @@ START_TEST(test_handle_form)
 	send_chunk_string(client_conn, "xyz\r\n");
 	send_chunk_string(client_conn, "--multipart-form-data-boundary");
 	send_chunk_string(client_conn, "--see-RFC-2388--\r\n");
-	mg_printf(client_conn, "0\r\n");
+	mg_printf(client_conn, "0\r\n\r\n");
 
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
