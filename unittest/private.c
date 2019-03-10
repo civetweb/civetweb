@@ -498,11 +498,11 @@ START_TEST(test_mg_vsnprintf)
 	/* If the string is truncated, mg_snprintf calls mg_cry.
 	 * If DEBUG is defined, mg_cry calls DEBUG_TRACE.
 	 * In DEBUG_TRACE_FUNC, flockfile(stdout) is called.
-	 * For Windows, flockfile/funlockfile calls Enter-/
-	 * LeaveCriticalSection(&global_log_file_lock).
+	 * For Windows, flockfile/funlockfile calls
+	 * pthread_mutex_lock/_unlock(&global_log_file_lock).
 	 * So, we need to initialize global_log_file_lock:
 	 */
-	InitializeCriticalSection(&global_log_file_lock);
+	pthread_mutex_init(&global_log_file_lock, &pthread_mutex_attr);
 #endif
 
 	memset(buf, 0, sizeof(buf));
