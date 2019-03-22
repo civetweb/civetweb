@@ -6382,8 +6382,9 @@ pull_inner(FILE *fp,
 			           || (err == SSL_ERROR_WANT_WRITE)) {
 				nread = 0;
 			} else {
+				/* All errors should return -2 */
 				DEBUG_TRACE("SSL_read() failed, error %d", err);
-				return -1;
+				return -2;
 			}
 
 			ERR_clear_error();
