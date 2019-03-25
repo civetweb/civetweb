@@ -826,17 +826,18 @@ connect (function):
     -- of simple socket interface. It returns a socket object with three
     -- methods: send, recv, close, which are synchronous (blocking).
     -- connect() throws an exception on connection error.
+    -- use_ssl is not implemented.
     connect(host, port, use_ssl)
 
     -- Example of using connect() interface:
-    local host = 'code.google.com'  -- IP address or domain name
-    local ok, sock = pcall(connect, host, 80, 1)
+    local host = 'www.example.com'  -- IP address or domain name
+    local ok, sock = pcall(connect, host, 80, 0)
     if ok then
-      sock:send('GET /p/civetweb/ HTTP/1.0\r\n' ..
+      sock:send('GET / HTTP/1.0\r\n' ..
                 'Host: ' .. host .. '\r\n\r\n')
       local reply = sock:recv()
       sock:close()
-      -- reply now contains the web page https://code.google.com/p/civetweb
+      -- reply now contains the web page http://www.example.com/
     end
 
 

@@ -327,6 +327,7 @@ lsp_connect(lua_State *L)
 		if (!ok) {
 			return luaL_error(L, ebuf);
 		} else {
+			set_blocking_mode(sock);
 			lua_newtable(L);
 			reg_lstring(L, "sock", (const char *)&sock, sizeof(SOCKET));
 			reg_string(L, "host", lua_tostring(L, -4));
@@ -2134,9 +2135,10 @@ prepare_lua_environment(struct mg_context *ctx,
 	 * TODO: Redesign the interface.
 	 */
 	luaL_newmetatable(L, LUASOCKET);
-	lua_pushliteral(L, "__index");
-	luaL_newlib(L, luasocket_methods);
-	lua_rawset(L, -3);
+	/* self.__index = self */
+	lua_pushvalue(L, -1);
+	lua_setfield(L, -2, "__index");
+	luaL_setfuncs(L, luasocket_methods, 0);
 	lua_pop(L, 1);
 	lua_register(L, "connect", lsp_connect);
 #endif
