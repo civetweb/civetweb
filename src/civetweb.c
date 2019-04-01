@@ -6470,6 +6470,7 @@ push_inner(struct mg_context *ctx,
 
 #if !defined(NO_SSL)
 		if (ssl != NULL) {
+			ERR_clear_error();
 			n = SSL_write(ssl, buf, len);
 			if (n <= 0) {
 				err = SSL_get_error(ssl, n);
@@ -6480,8 +6481,10 @@ push_inner(struct mg_context *ctx,
 					n = 0;
 				} else {
 					DEBUG_TRACE("SSL_write() failed, error %d", err);
+					ERR_clear_error();
 					return -2;
 				}
+				ERR_clear_error();
 			} else {
 				err = 0;
 			}
@@ -6633,9 +6636,6 @@ pull_inner(FILE *fp,
 #else
 	typedef size_t len_t;
 #endif
-#if !defined(NO_SSL)
-	int ssl_pending;
-#endif
 
 	/* We need an additional wait loop around this, because in some cases
 	 * with TLSwe may get data from the socket but not from SSL_read.
@@ -6660,49 +6660,34 @@ pull_inner(FILE *fp,
 		}
 
 #if !defined(NO_SSL)
-	} else if ((conn->ssl != NULL)
-	           && ((ssl_pending = SSL_pending(conn->ssl)) > 0)) {
-		/* We already know there is no more data buffered in conn->buf
-		 * but there is more available in the SSL layer. So don't poll
-		 * conn->client.sock yet. */
-		if (ssl_pending > len) {
-			ssl_pending = len;
-		}
-		nread = SSL_read(conn->ssl, buf, ssl_pending);
-		if (nread <= 0) {
-			err = SSL_get_error(conn->ssl, nread);
-			if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
-				err = ERRNO;
-			} else if ((err == SSL_ERROR_WANT_READ)
-			           || (err == SSL_ERROR_WANT_WRITE)) {
-				nread = 0;
-			} else {
-				/* All errors should return -2 */
-				DEBUG_TRACE("SSL_read() failed, error %d", err);
-				return -2;
-			}
-
-			ERR_clear_error();
-		} else {
-			err = 0;
-		}
-
 	} else if (conn->ssl != NULL) {
-
+		int ssl_pending;
 		struct mg_pollfd pfd[1];
 		int pollres;
 
-		pfd[0].fd = conn->client.sock;
-		pfd[0].events = POLLIN;
-		pollres = mg_poll(pfd,
-		                  1,
-		                  (int)(timeout * 1000.0),
-		                  &(conn->phys_ctx->stop_flag));
-		if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
-			return -2;
+		if ((ssl_pending = SSL_pending(conn->ssl)) > 0) {
+			/* We already know there is no more data buffered in conn->buf
+			 * but there is more available in the SSL layer. So don't poll
+			 * conn->client.sock yet. */
+			if (ssl_pending > len) {
+				ssl_pending = len;
+			}
+			pollres = 1;
+		} else {
+			pfd[0].fd = conn->client.sock;
+			pfd[0].events = POLLIN;
+			pollres = mg_poll(pfd,
+			                  1,
+			                  (int)(timeout * 1000.0),
+			                  &(conn->phys_ctx->stop_flag));
+			if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
+				return -2;
+			}
 		}
 		if (pollres > 0) {
-			nread = SSL_read(conn->ssl, buf, len);
+			ERR_clear_error();
+			nread = SSL_read(conn->ssl, buf,
+			                 (ssl_pending > 0) ? ssl_pending : len);
 			if (nread <= 0) {
 				err = SSL_get_error(conn->ssl, nread);
 				if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
@@ -6711,13 +6696,15 @@ pull_inner(FILE *fp,
 				           || (err == SSL_ERROR_WANT_WRITE)) {
 					nread = 0;
 				} else {
+					/* All errors should return -2 */
 					DEBUG_TRACE("SSL_read() failed, error %d", err);
+					ERR_clear_error();
 					return -2;
 				}
+				ERR_clear_error();
 			} else {
 				err = 0;
 			}
-			ERR_clear_error();
 		} else if (pollres < 0) {
 			/* Error */
 			return -2;
@@ -15728,14 +15715,15 @@ sslize(struct mg_connection *conn,
 
 	conn->ssl = SSL_new(s);
 	if (conn->ssl == NULL) {
+		mg_cry_internal(conn, "sslize error: %s", ssl_error());
+		OPENSSL_REMOVE_THREAD_STATE();
 		return 0;
 	}
 	SSL_set_app_data(conn->ssl, (char *)conn);
 
 	ret = SSL_set_fd(conn->ssl, conn->client.sock);
 	if (ret != 1) {
-		err = SSL_get_error(conn->ssl, ret);
-		mg_cry_internal(conn, "SSL error %i, destroying SSL context", err);
+		mg_cry_internal(conn, "sslize error: %s", ssl_error());
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
 		OPENSSL_REMOVE_THREAD_STATE();
@@ -15762,6 +15750,7 @@ sslize(struct mg_connection *conn,
 	 * see https://www.openssl.org/docs/manmaster/ssl/SSL_get_error.html
 	 * Here "func" could be SSL_connect or SSL_accept. */
 	for (i = 0; i <= timeout; i += 50) {
+		ERR_clear_error();
 		ret = func(conn->ssl);
 		if (ret != 1) {
 			err = SSL_get_error(conn->ssl, ret);
@@ -15797,8 +15786,7 @@ sslize(struct mg_connection *conn,
 
 			} else if (err == SSL_ERROR_SYSCALL) {
 				/* This is an IO error. Look at errno. */
-				err = errno;
-				mg_cry_internal(conn, "SSL syscall error %i", err);
+				mg_cry_internal(conn, "SSL syscall error %i", ERRNO);
 				break;
 
 			} else {
@@ -15806,13 +15794,13 @@ sslize(struct mg_connection *conn,
 				mg_cry_internal(conn, "sslize error: %s", ssl_error());
 				break;
 			}
-			ERR_clear_error();
 
 		} else {
 			/* success */
 			break;
 		}
 	}
+	ERR_clear_error();
 
 	if (ret != 1) {
 		SSL_free(conn->ssl);
