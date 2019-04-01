@@ -2733,6 +2733,7 @@ struct mg_domain_context {
 	SSL_CTX *ssl_ctx;                 /* SSL context */
 	char *config[NUM_OPTIONS];        /* Civetweb configuration parameters */
 	struct mg_handler_info *handlers; /* linked list of uri handlers */
+	int64_t ssl_cert_last_mtime;
 
 	/* Server nonce */
 	uint64_t auth_nonce_mask;  /* Mask for all nonce values */
@@ -2815,7 +2816,7 @@ struct mg_context {
 
 	/* Thread related */
 	stop_flag_t stop_flag;        /* Should we stop event loop */
-	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
+	pthread_mutex_t thread_mutex; /* Protects client_socks or queue */
 
 	pthread_t masterthreadid; /* The master thread ID */
 	unsigned int
@@ -2863,7 +2864,8 @@ struct mg_context {
 #endif
 
 	/* Server nonce */
-	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
+	pthread_mutex_t nonce_mutex; /* Protects ssl_ctx, ssl_cert_last_mtime,
+	                              * nonce_count, and next (linked list) */
 
 	/* Server callbacks */
 	struct mg_callbacks callbacks; /* User-defined callback function */
@@ -9041,10 +9043,10 @@ send_authorization_request(struct mg_connection *conn, const char *realm)
 		realm = conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
 	}
 
-	(void)pthread_mutex_lock(&conn->phys_ctx->nonce_mutex);
+	mg_lock_context(conn->phys_ctx);
 	nonce += conn->dom_ctx->nonce_count;
 	++conn->dom_ctx->nonce_count;
-	(void)pthread_mutex_unlock(&conn->phys_ctx->nonce_mutex);
+	mg_unlock_context(conn->phys_ctx);
 
 	nonce ^= conn->dom_ctx->auth_nonce_mask;
 	conn->status_code = 401;
@@ -12580,7 +12582,7 @@ mg_unlock_connection(struct mg_connection *conn)
 void
 mg_lock_context(struct mg_context *ctx)
 {
-	if (ctx) {
+	if (ctx && (ctx->context_type == CONTEXT_SERVER)) {
 		(void)pthread_mutex_lock(&ctx->nonce_mutex);
 	}
 }
@@ -12588,7 +12590,7 @@ mg_lock_context(struct mg_context *ctx)
 void
 mg_unlock_context(struct mg_context *ctx)
 {
-	if (ctx) {
+	if (ctx && (ctx->context_type == CONTEXT_SERVER)) {
 		(void)pthread_mutex_unlock(&ctx->nonce_mutex);
 	}
 }
@@ -13641,7 +13643,9 @@ alloc_get_host(struct mg_connection *conn)
 					conn->dom_ctx = dom;
 					break;
 				}
+				mg_lock_context(conn->phys_ctx);
 				dom = dom->next;
+				mg_unlock_context(conn->phys_ctx);
 			}
 
 			DEBUG_TRACE("HTTP Host: %s", host);
@@ -15598,12 +15602,8 @@ static const char *ssl_error(void);
 static int
 refresh_trust(struct mg_connection *conn)
 {
-	static int reload_lock = 0;
-	static long int data_check = 0;
-	volatile int *p_reload_lock = (volatile int *)&reload_lock;
-
 	struct stat cert_buf;
-	long int t;
+	int64_t t = 0;
 	const char *pem;
 	const char *chain;
 	int should_verify_peer;
@@ -15622,13 +15622,13 @@ refresh_trust(struct mg_connection *conn)
 		chain = NULL;
 	}
 
-	t = data_check;
 	if (stat(pem, &cert_buf) != -1) {
-		t = (long int)cert_buf.st_mtime;
+		t = (int64_t)cert_buf.st_mtime;
 	}
 
-	if (data_check != t) {
-		data_check = t;
+	mg_lock_context(conn->phys_ctx);
+	if ((t != 0) && (conn->dom_ctx->ssl_cert_last_mtime != t)) {
+		conn->dom_ctx->ssl_cert_last_mtime = t;
 
 		should_verify_peer = 0;
 		if (conn->dom_ctx->config[SSL_DO_VERIFY_PEER] != NULL) {
@@ -15649,6 +15649,7 @@ refresh_trust(struct mg_connection *conn)
 			                                  ca_file,
 			                                  ca_path)
 			    != 1) {
+				mg_unlock_context(conn->phys_ctx);
 				mg_cry_ctx_internal(
 				    conn->phys_ctx,
 				    "SSL_CTX_load_verify_locations error: %s "
@@ -15661,18 +15662,13 @@ refresh_trust(struct mg_connection *conn)
 			}
 		}
 
-		if (1 == mg_atomic_inc(p_reload_lock)) {
-			if (ssl_use_pem_file(conn->phys_ctx, conn->dom_ctx, pem, chain)
-			    == 0) {
-				return 0;
-			}
-			*p_reload_lock = 0;
+		if (ssl_use_pem_file(conn->phys_ctx, conn->dom_ctx, pem, chain)
+		    == 0) {
+			mg_unlock_context(conn->phys_ctx);
+			return 0;
 		}
 	}
-	/* lock while cert is reloading */
-	while (*p_reload_lock) {
-		sleep(1);
-	}
+	mg_unlock_context(conn->phys_ctx);
 
 	return 1;
 }
@@ -15684,9 +15680,7 @@ static pthread_mutex_t *ssl_mutexes;
 
 static int
 sslize(struct mg_connection *conn,
-       SSL_CTX *s,
        int (*func)(SSL *),
-       stop_flag_t *stop_flag,
        const struct mg_client_options *client_options)
 {
 	int ret, err;
@@ -15709,7 +15703,9 @@ sslize(struct mg_connection *conn,
 		}
 	}
 
-	conn->ssl = SSL_new(s);
+	mg_lock_context(conn->phys_ctx);
+	conn->ssl = SSL_new(conn->dom_ctx->ssl_ctx);
+	mg_unlock_context(conn->phys_ctx);
 	if (conn->ssl == NULL) {
 		mg_cry_internal(conn, "sslize error: %s", ssl_error());
 		OPENSSL_REMOVE_THREAD_STATE();
@@ -15747,6 +15743,7 @@ sslize(struct mg_connection *conn,
 	 * Here "func" could be SSL_connect or SSL_accept. */
 	for (i = 0; i <= timeout; i += 50) {
 		ERR_clear_error();
+		/* conn->dom_ctx may be changed here (see ssl_servername_callback) */
 		ret = func(conn->ssl);
 		if (ret != 1) {
 			err = SSL_get_error(conn->ssl, ret);
@@ -15754,7 +15751,7 @@ sslize(struct mg_connection *conn,
 			    || (err == SSL_ERROR_WANT_ACCEPT)
 			    || (err == SSL_ERROR_WANT_READ) || (err == SSL_ERROR_WANT_WRITE)
 			    || (err == SSL_ERROR_WANT_X509_LOOKUP)) {
-				if (!STOP_FLAG_IS_ZERO(&*stop_flag)) {
+				if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
 					/* Don't wait if the server is going to be stopped. */
 					break;
 				}
@@ -15772,7 +15769,8 @@ sslize(struct mg_connection *conn,
 					              || (err == SSL_ERROR_WANT_WRITE))
 					                 ? POLLOUT
 					                 : POLLIN;
-					pollres = mg_poll(&pfd, 1, 50, stop_flag);
+					pollres = mg_poll(&pfd, 1, 50,
+					                  &(conn->phys_ctx->stop_flag));
 					if (pollres < 0) {
 						/* Break if error occured (-1)
 						 * or server shutdown (-2) */
@@ -16355,7 +16353,9 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	 */
 	if ((servername == NULL) || (*servername == 0)) {
 		DEBUG_TRACE("%s", "SSL connection not supporting SNI");
+		mg_lock_context(conn->phys_ctx);
 		SSL_set_SSL_CTX(ssl, conn->dom_ctx->ssl_ctx);
+		mg_unlock_context(conn->phys_ctx);
 		return SSL_TLSEXT_ERR_NOACK;
 	}
 
@@ -16369,7 +16369,9 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 			            conn->dom_ctx->config[AUTHENTICATION_DOMAIN]);
 			break;
 		}
+		mg_lock_context(conn->phys_ctx);
 		conn->dom_ctx = conn->dom_ctx->next;
+		mg_unlock_context(conn->phys_ctx);
 	}
 
 	if (conn->dom_ctx == NULL) {
@@ -16378,7 +16380,9 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 		            conn->phys_ctx->dd.config[AUTHENTICATION_DOMAIN]);
 		conn->dom_ctx = &(conn->phys_ctx->dd);
 	}
+	mg_lock_context(conn->phys_ctx);
 	SSL_set_SSL_CTX(ssl, conn->dom_ctx->ssl_ctx);
+	mg_unlock_context(conn->phys_ctx);
 	return SSL_TLSEXT_ERR_OK;
 }
 
@@ -17369,9 +17373,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		}
 
 		if (!sslize(conn,
-		            conn->dom_ctx->ssl_ctx,
 		            SSL_connect,
-		            &(conn->phys_ctx->stop_flag),
 		            client_options)) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
@@ -18897,9 +18899,7 @@ worker_thread_run(struct mg_connection *conn)
 #if !defined(NO_SSL)
 			/* HTTPS connection */
 			if (sslize(conn,
-			           conn->dom_ctx->ssl_ctx,
 			           SSL_accept,
-			           &(conn->phys_ctx->stop_flag),
 			           NULL)) {
 				/* conn->dom_ctx is set in get_request */
 
