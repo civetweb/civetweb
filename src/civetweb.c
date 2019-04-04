@@ -15556,7 +15556,7 @@ ssl_use_pem_file(struct mg_context *phys_ctx,
 			mg_cry_ctx_internal(phys_ctx,
 			                    "%s: cannot use certificate chain file %s: %s",
 			                    __func__,
-			                    pem,
+			                    chain,
 			                    ssl_error());
 			return 0;
 		}
