@@ -98,6 +98,11 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 -----END RSA PRIVATE KEY-----
 </pre>
 
+Some additional useful OpenSSL commands can be found here: https://geekflare.com/openssl-commands-certificates/
+
+Certificates may contain [subject alternative names (SAN)](https://en.wikipedia.org/wiki/Subject_Alternative_Name) 
+to support multiple websites: https://geekflare.com/san-ssl-certificate/
+
 
 Including a certificate from a certificate authority
 ----
