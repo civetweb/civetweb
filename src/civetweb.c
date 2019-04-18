@@ -273,23 +273,6 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
 #pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
 #endif
 
-#if defined(__GNUC__) || defined(__MINGW32__)
-/* Who on earth came to the conclusion, using __DATE__ should rise
- * an "expansion of date or time macro is not reproducible"
- * warning. That's exactly what was intended by using this macro.
- * Just disable this nonsense warning. */
-
-/* And disabling them does not work either:
- * #pragma clang diagnostic ignored "-Wno-error=date-time"
- * #pragma clang diagnostic ignored "-Wdate-time"
- * So we just have to disable ALL warnings for some lines
- * of code.
- * This seems to be a known GCC bug, not resolved since 2012:
- * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
- */
-#endif
-
-
 #if defined(__MACH__) /* Apple OSX section */
 
 #if defined(__clang__)
@@ -19026,33 +19009,6 @@ mg_get_system_info(char *buffer, int buflen)
 		system_info_length += mg_str_append(&buffer, end, block);
 #endif
 	}
-
-	/* Build date */
-	{
-#if defined(GCC_DIAGNOSTIC)
-#if GCC_VERSION >= 40900
-#pragma GCC diagnostic push
-/* Disable bogus compiler warning -Wdate-time, appeared in gcc5 */
-#pragma GCC diagnostic ignored "-Wdate-time"
-#endif
-#endif
-		mg_snprintf(NULL,
-		            NULL,
-		            block,
-		            sizeof(block),
-		            ",%s\"build\" : \"%s\"",
-		            eol,
-		            __DATE__);
-
-#if defined(GCC_DIAGNOSTIC)
-#if GCC_VERSION >= 40900
-#pragma GCC diagnostic pop
-#endif
-#endif
-
-		system_info_length += mg_str_append(&buffer, end, block);
-	}
-
 
 	/* Compiler information */
 	/* http://sourceforge.net/p/predef/wiki/Compilers/ */
