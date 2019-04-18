@@ -7,8 +7,8 @@
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 |**`ctx`**|`struct mg_context *`|The server context handle|
-|**`buffer**|`char *`|A string buffer to store the information|
-|**`buflen**|`int`|Size of the string buffer (including space for a terminating 0)|
+|**`buffer`**|`char *`|A string buffer to store the information|
+|**`buflen`**|`int`|Size of the string buffer (including space for a terminating 0)|
 
 ### Return Value
 
