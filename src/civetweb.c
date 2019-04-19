@@ -15555,7 +15555,7 @@ ssl_use_pem_file(struct mg_context *phys_ctx,
 			mg_cry_ctx_internal(phys_ctx,
 			                    "%s: cannot use certificate chain file %s: %s",
 			                    __func__,
-			                    pem,
+			                    chain,
 			                    ssl_error());
 			return 0;
 		}
@@ -16082,55 +16082,6 @@ reset_per_request_attributes(struct mg_connection *conn)
 }
 
 
-#if 0
-/* Note: set_sock_timeout is not required for non-blocking sockets.
- * Leave this function here (commented out) for reference until
- * CivetWeb 1.9 is tested, and the tests confirme this function is
- * no longer required.
-*/
-static int
-set_sock_timeout(SOCKET sock, int milliseconds)
-{
-        int r0 = 0, r1, r2;
-
-#if defined(_WIN32)
-        /* Windows specific */
-
-        DWORD tv = (DWORD)milliseconds;
-
-#else
-        /* Linux, ... (not Windows) */
-
-        struct timeval tv;
-
-/* TCP_USER_TIMEOUT/RFC5482 (http://tools.ietf.org/html/rfc5482):
- * max. time waiting for the acknowledged of TCP data before the connection
- * will be forcefully closed and ETIMEDOUT is returned to the application.
- * If this option is not set, the default timeout of 20-30 minutes is used.
-*/
-/* #define TCP_USER_TIMEOUT (18) */
-
-#if defined(TCP_USER_TIMEOUT)
-        unsigned int uto = (unsigned int)milliseconds;
-        r0 = setsockopt(sock, 6, TCP_USER_TIMEOUT, (const void *)&uto, sizeof(uto));
-#endif
-
-        memset(&tv, 0, sizeof(tv));
-        tv.tv_sec = milliseconds / 1000;
-        tv.tv_usec = (milliseconds * 1000) % 1000000;
-
-#endif /* _WIN32 */
-
-        r1 = setsockopt(
-            sock, SOL_SOCKET, SO_RCVTIMEO, (SOCK_OPT_TYPE)&tv, sizeof(tv));
-        r2 = setsockopt(
-            sock, SOL_SOCKET, SO_SNDTIMEO, (SOCK_OPT_TYPE)&tv, sizeof(tv));
-
-        return r0 || r1 || r2;
-}
-#endif
-
-
 static int
 set_tcp_nodelay(SOCKET sock, int nodelay_on)
 {
@@ -16592,13 +16543,6 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		}
 	}
 #endif
-
-	if (0 != set_non_blocking_mode(sock)) {
-		mg_cry_internal(conn,
-		                "Cannot set non-blocking mode for client %s:%i",
-		                client_options->host,
-		                client_options->port);
-	}
 
 	return conn;
 }
@@ -17130,9 +17074,6 @@ mg_get_response(struct mg_connection *conn,
 	if (timeout >= 0) {
 		mg_snprintf(conn, NULL, txt, sizeof(txt), "%i", timeout);
 		new_timeout = txt;
-		/* Not required for non-blocking sockets.
-		set_sock_timeout(conn->client.sock, timeout);
-		*/
 	} else {
 		new_timeout = NULL;
 	}
@@ -18068,10 +18009,6 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 				    strerror(ERRNO));
 			}
 		}
-
-		/* We are using non-blocking sockets. Thus, the
-		 * set_sock_timeout(so.sock, timeout);
-		 * call is no longer required. */
 
 		/* The "non blocking" property should already be
 		 * inherited from the parent socket. Set it for
