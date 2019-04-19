@@ -10496,8 +10496,6 @@ read_message(FILE *fp,
 
 	request_len = get_http_header_len(buf, *nread);
 
-	clock_gettime(CLOCK_MONOTONIC, &last_action_time);
-
 	while (request_len == 0) {
 		/* Full request not yet received */
 		if (conn->phys_ctx->stop_flag != 0) {
@@ -10515,7 +10513,10 @@ read_message(FILE *fp,
 		if (n == -2) {
 			/* Receive error */
 			return -1;
-		}		
+		}
+
+		/* update clock after every read request */
+		clock_gettime(CLOCK_MONOTONIC, &last_action_time);
 
 		if (n > 0) {
 			*nread += n;
@@ -10530,7 +10531,6 @@ read_message(FILE *fp,
 				/* Timeout */
 				return -1;
 			}
-			clock_gettime(CLOCK_MONOTONIC, &last_action_time);
 		}
 	}
 
