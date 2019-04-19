@@ -17,11 +17,11 @@ struct ttimer {
 };
 
 struct ttimers {
-	pthread_t threadid;               /* Timer thread ID */
-	pthread_mutex_t mutex;            /* Protects timer lists */
-	struct ttimer *timers;            /* List of timers */
-	unsigned timer_count;             /* Current size of timer list */
-	unsigned timer_capacity;          /* Capacity of timer list */
+	pthread_t threadid;      /* Timer thread ID */
+	pthread_mutex_t mutex;   /* Protects timer lists */
+	struct ttimer *timers;   /* List of timers */
+	unsigned timer_count;    /* Current size of timer list */
+	unsigned timer_capacity; /* Capacity of timer list */
 #if defined(_WIN32)
 	DWORD last_tick;
 	uint64_t now_tick64;
@@ -102,8 +102,10 @@ timer_add(struct mg_context *ctx,
 		error = 1;
 	} else if (ctx->timers->timer_count == ctx->timers->timer_capacity) {
 		unsigned capacity = (ctx->timers->timer_capacity * 2) + 1;
-		struct ttimer *timers = (struct ttimer *)mg_realloc_ctx(
-		    ctx->timers->timers, capacity * sizeof(struct ttimer), ctx);
+		struct ttimer *timers =
+		    (struct ttimer *)mg_realloc_ctx(ctx->timers->timers,
+		                                    capacity * sizeof(struct ttimer),
+		                                    ctx);
 		if (timers) {
 			ctx->timers->timers = timers;
 			ctx->timers->timer_capacity = capacity;

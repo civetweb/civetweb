@@ -5947,7 +5947,7 @@ spawn_process(struct mg_connection *conn,
 	} else if (pid != 0) {
 		/* Make sure children close parent-side descriptors.
 		 * The caller will close the child-side immediately. */
-		set_close_on_exec(fdin[1], conn, NULL); /* stdin write */
+		set_close_on_exec(fdin[1], conn, NULL);  /* stdin write */
 		set_close_on_exec(fdout[0], conn, NULL); /* stdout read */
 		set_close_on_exec(fderr[0], conn, NULL); /* stderr read */
 	} else {
@@ -6659,8 +6659,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 
 			if (conn->consumed_content != conn->content_len) {
 				/* copy from the current chunk */
-				int read_ret = mg_read_inner(conn, (char *)buf + all_read,
-				                             len);
+				int read_ret = mg_read_inner(conn, (char *)buf + all_read, len);
 
 				if (read_ret < 1) {
 					/* read error */
@@ -6676,8 +6675,8 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 					 * so we are expecting \r\n now. */
 					char x[2];
 					conn->content_len += 2;
-					if ((mg_read_inner(conn, x, 2) != 2)
-					    || (x[0] != '\r') || (x[1] != '\n')) {
+					if ((mg_read_inner(conn, x, 2) != 2) || (x[0] != '\r')
+					    || (x[1] != '\n')) {
 						/* Protocol violation */
 						conn->is_chunked = 2;
 						return -1;
@@ -10497,7 +10496,6 @@ read_message(FILE *fp,
 
 	request_len = get_http_header_len(buf, *nread);
 
-	/* first time reading from this connection */
 	clock_gettime(CLOCK_MONOTONIC, &last_action_time);
 
 	while (request_len == 0) {
@@ -10517,7 +10515,8 @@ read_message(FILE *fp,
 		if (n == -2) {
 			/* Receive error */
 			return -1;
-		}
+		}		
+
 		if (n > 0) {
 			*nread += n;
 			request_len = get_http_header_len(buf, *nread);
@@ -14535,9 +14534,9 @@ set_ports_option(struct mg_context *phys_ctx)
 
 			/* Set reuse option, but don't abort on errors. */
 			mg_cry_ctx_internal(
-				phys_ctx,
-				"cannot set socket option SO_REUSEADDR (entry %i)",
-				portsTotal);
+			    phys_ctx,
+			    "cannot set socket option SO_REUSEADDR (entry %i)",
+			    portsTotal);
 		}
 #endif
 
@@ -16417,8 +16416,9 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	size_t conn_size = ((sizeof(struct mg_connection) + 7) >> 3) << 3;
 	size_t ctx_size = ((sizeof(struct mg_context) + 7) >> 3) << 3;
 
-	conn = (struct mg_connection *)mg_calloc(
-	    1, conn_size + ctx_size + max_req_size);
+	conn =
+	    (struct mg_connection *)mg_calloc(1,
+	                                      conn_size + ctx_size + max_req_size);
 
 	if (conn == NULL) {
 		mg_snprintf(NULL,
@@ -16561,7 +16561,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			if (SSL_CTX_load_verify_locations(conn->dom_ctx->ssl_ctx,
 			                                  client_options->server_cert,
 			                                  NULL)
-				!= 1) {
+			    != 1) {
 				mg_cry_internal(conn,
 				                "SSL_CTX_load_verify_locations error: %s ",
 				                ssl_error());
@@ -16969,7 +16969,8 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	if (((cl = get_header(conn->request_info.http_headers,
 	                      conn->request_info.num_headers,
-	                      "Transfer-Encoding")) != NULL)
+	                      "Transfer-Encoding"))
+	     != NULL)
 	    && mg_strcasecmp(cl, "identity")) {
 		if (mg_strcasecmp(cl, "chunked")) {
 			mg_snprintf(conn,
@@ -16985,7 +16986,8 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		conn->content_len = 0; /* not yet read */
 	} else if ((cl = get_header(conn->request_info.http_headers,
 	                            conn->request_info.num_headers,
-	                            "Content-Length")) != NULL) {
+	                            "Content-Length"))
+	           != NULL) {
 		/* Request has content length set */
 		char *endptr = NULL;
 		conn->content_len = strtoll(cl, &endptr, 10);
@@ -17036,8 +17038,9 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	if (((cl = get_header(conn->response_info.http_headers,
 	                      conn->response_info.num_headers,
-	                      "Transfer-Encoding")) != NULL)
-	     && mg_strcasecmp(cl, "identity")) {
+	                      "Transfer-Encoding"))
+	     != NULL)
+	    && mg_strcasecmp(cl, "identity")) {
 		if (mg_strcasecmp(cl, "chunked")) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
@@ -17049,10 +17052,11 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			return 0;
 		}
 		conn->is_chunked = 1;
-		conn->content_len = 0;  /* not yet read */
+		conn->content_len = 0; /* not yet read */
 	} else if ((cl = get_header(conn->response_info.http_headers,
 	                            conn->response_info.num_headers,
-	                            "Content-Length")) != NULL) {
+	                            "Content-Length"))
+	           != NULL) {
 		char *endptr = NULL;
 		conn->content_len = strtoll(cl, &endptr, 10);
 		if ((endptr == cl) || (conn->content_len < 0)) {
@@ -17620,14 +17624,15 @@ process_new_connection(struct mg_connection *conn)
 
 		if (keep_alive) {
 			/* Discard all buffered data for this request */
-			discard_len = ((conn->request_len + conn->content_len)
-			               < conn->data_len)
-			                  ? (int)(conn->request_len + conn->content_len)
-			                  : conn->data_len;
+			discard_len =
+			    ((conn->request_len + conn->content_len) < conn->data_len)
+			        ? (int)(conn->request_len + conn->content_len)
+			        : conn->data_len;
 			conn->data_len -= discard_len;
 			if (conn->data_len > 0) {
 				DEBUG_TRACE("discard_len = %d", discard_len);
-				memmove(conn->buf, conn->buf + discard_len,
+				memmove(conn->buf,
+				        conn->buf + discard_len,
 				        (size_t)conn->data_len);
 			}
 		}
@@ -17841,9 +17846,9 @@ worker_thread_run(struct mg_connection *conn)
 	conn->buf = (char *)mg_malloc_ctx(ctx->max_request_size, conn->phys_ctx);
 	if (conn->buf == NULL) {
 		mg_cry_ctx_internal(
-			ctx,
-			"Out of memory: Cannot allocate buffer for worker %i",
-			thread_index);
+		    ctx,
+		    "Out of memory: Cannot allocate buffer for worker %i",
+		    thread_index);
 		return;
 	}
 	conn->buf_size = (int)ctx->max_request_size;
@@ -18478,10 +18483,9 @@ mg_start(const struct mg_callbacks *callbacks,
 	if (!ok) {
 		/* Fatal error - abort start. However, this situation should never
 		 * occur in practice. */
-		mg_cry_ctx_internal(
-			ctx,
-			"%s",
-			"Cannot initialize thread synchronization objects");
+		mg_cry_ctx_internal(ctx,
+		                    "%s",
+		                    "Cannot initialize thread synchronization objects");
 		mg_free(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -18638,9 +18642,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	                                          ctx);
 	if (ctx->worker_connections == NULL) {
 		mg_cry_ctx_internal(
-			ctx,
-			"%s",
-			"Not enough memory for worker thread connection array");
+		    ctx, "%s", "Not enough memory for worker thread connection array");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
