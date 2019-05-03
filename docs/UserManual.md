@@ -148,13 +148,25 @@ Comma separated list of URI=PATH pairs, specifying that given
 URIs must be protected with password files specified by PATH.
 All Paths must be full file paths.
 
+### max\_request\_size `16384`
+Size limit for HTTP request headers and header data returned from CGI scripts, in Bytes.
+A buffer of the configured size is pre allocated for every worker thread.
+max\_request\_size limits the HTTP header, including query string and cookies,
+but it does not affect the HTTP body length.
+The server has to read the entire header from a client or from a CGI script,
+before it is able to process it. In case the header is longer than max\_request\_size, 
+the request is considered as invalid or as DoS attack.
+The configuration value is approximate, the real limit might be a few bytes off.
+The minimum is 1024 (1 kB).
+
 ### authentication\_domain `mydomain.com`
 Authorization realm used for HTTP digest authentication. This domain is
 used in the encoding of the `.htpasswd` authorization files as well.
 Changing the domain retroactively will render the existing passwords useless.
 
 ### enable\_auth\_domain\_check `yes`
-When using absolute URLs, verify the host is identical to the authentication\_domain. If enabled, requests to absolute URLs will only be processed 
+When using absolute URLs, verify the host is identical to the authentication\_domain.
+If enabled, requests to absolute URLs will only be processed 
 if they are directed to the domain. If disabled, absolute URLs to any host
 will be accepted.
 
