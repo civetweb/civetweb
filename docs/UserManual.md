@@ -77,7 +77,14 @@ CivetWeb can also be used to modify `.htpasswd` passwords files:
     CivetWeb -A <htpasswd_file> <realm> <user> <passwd>
 
 
-# Pattern matching
+Configuration Options
+----
+
+Below is a list of configuration options understood by CivetWeb.
+Every option is followed by it's default value. If a default value is not
+present, then the default is empty.
+
+## Pattern matching in configuration options
 
 CivetWeb uses shell-like glob patterns for several configuration options,
 e.g., CGI, SSI and Lua script files are recognized by the file name pattern. 
@@ -96,12 +103,6 @@ All other characters in the pattern match themselves. Examples:
     /foo         Any string that begins with /foo
     **a$|**b$    Any string that ends with a or b
 
-
-# Configuration Options
-
-Below is a list of configuration options understood by CivetWeb.
-Every option is followed by it's default value. If a default value is not
-present, then the default is empty.
 
 ## Options from `civetweb.c`
 
@@ -420,6 +421,9 @@ directly to the client. Lua script parts are delimited from the standard
 content by including them between <? and ?> tags.
 An example can be found in the test directory.
 
+### lua\_websocket\_pattern `"**.lua$`
+A pattern for websocket script files that are interpreted as Lua scripts by the server.
+
 ### listening\_ports `8080`
 Comma-separated list of ports to listen on. If the port is SSL, a
 letter `s` must be appended, for example, `80,443s` will open
@@ -557,6 +561,9 @@ one of the `listening\_ports` is SSL. The file must be in PEM format,
 and it must have both, private key and certificate, see for example
 [ssl_cert.pem](https://github.com/civetweb/civetweb/blob/master/resources/ssl_cert.pem)
 A description how to create a certificate can be found in doc/OpenSSL.md
+
+### ssl\_certificate\_chain
+Path to an SSL certificate chain file. As a default, the ssl\_certificate file is used.
 
 ### ssl\_cipher\_list
 List of ciphers to present to the client. Entries should be separated by
@@ -722,6 +729,9 @@ multiple times with one configuration file for each domain.
 A domain configuration file may have the same options as the main server, with
 some exceptions.  The options are passed to the `mg_start_domain` API function.
 
+
+Scripting
+----
 
 # Lua Scripts and Lua Server Pages
 Pre-built Windows and Mac CivetWeb binaries have built-in Lua scripting
@@ -955,6 +965,9 @@ to stdout. In case CGI libraries are writing to stderr (e.g., for
 logging/debugging), the CGI script should redirect stderr to a 
 user defined log file at the beginning of the script.
 
+
+FAQ
+----
 
 # Common Problems
 - PHP doesn't work - getting empty page, or 'File not found' error. The
