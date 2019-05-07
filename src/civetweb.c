@@ -10562,8 +10562,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 		 */
 		mg_send_http_error(conn,
 		                   417,
-		                   "Error: Can not fulfill expectation %s",
-		                   expect);
+		                   "Error: Can not fulfill expectation");
 	} else {
 		if (expect != NULL) {
 			(void)mg_printf(conn, "%s", "HTTP/1.1 100 Continue\r\n\r\n");
