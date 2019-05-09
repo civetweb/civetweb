@@ -94,17 +94,17 @@ simplicity by a carefully selected list of features:
 - Free from copy-left licenses, like GPL, because you should innovate without
   restrictions.
 - Forked from [Mongoose](https://code.google.com/p/mongoose/) in 2013, before
-  it changed the licence from MIT to commercial + GPL. A lot of enchancements
+  it changed the licence from MIT to commercial + GPL. A lot of enhancements
   have been added since that time, see
   [RELEASE_NOTES.md](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md).
 - Works on Windows, Mac, Linux, UNIX, iPhone, Android, Buildroot, and many
   other platforms.
-- Scripting and database support (Lua scipts, Lua Server Pages, CGI + SQLite
+- Scripting and database support (Lua scripts, Lua Server Pages, CGI + SQLite
   database, Server side javascript).
   This provides a ready to go, powerful web development platform in a one
   single-click executable with **no dependencies**.
 - Support for CGI, HTTPS (SSL/TLS), SSI, HTTP digest (MD5) authorization, Websocket,
-  WEbDAV.
+  WebDAV.
 - Optional support for authentication using client side X.509 certificates.
 - Resumed download, URL rewrite, file blacklist, IP-based ACL, Windows service.
 - Download speed limit based on client subnet or URI pattern.
