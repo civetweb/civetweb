@@ -1778,6 +1778,7 @@ lua_action(struct laction_arg *arg)
 	lua_pushlightuserdata(arg->state, (void *)&lua_regkey_ctx);
 	lua_gettable(arg->state, LUA_REGISTRYINDEX);
 	ctx = (struct mg_context *)lua_touserdata(arg->state, -1);
+	lua_pop(arg->state, 1);
 
 	err = luaL_loadstring(arg->state, arg->txt);
 	if (err != 0) {
