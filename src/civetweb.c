@@ -3156,6 +3156,7 @@ is_file_opened(const struct mg_file_access *fileacc)
 }
 
 
+#if !defined(NO_FILESYSTEMS)
 static int mg_stat(const struct mg_connection *conn,
                    const char *path,
                    struct mg_file_stat *filep);
@@ -3269,6 +3270,7 @@ mg_fclose(struct mg_file_access *fileacc)
 	}
 	return ret;
 }
+#endif /* NO_FILESYSTEMS */
 
 
 static void
@@ -3648,7 +3650,7 @@ static void mg_cry_internal_impl(const struct mg_connection *conn,
                                  const char *fmt,
                                  va_list ap);
 #include "external_mg_cry_internal_impl.inl"
-#else
+#elif !defined(NO_FILESYSTEMS)
 
 /* Print error message to the opened error log stream. */
 static void
@@ -3732,7 +3734,8 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 		}
 	}
 }
-
+#else
+#error Must either enable filesystems or provide a custom mg_cry_internal_impl implementation
 #endif /* Externally provided function */
 
 
@@ -4351,9 +4354,11 @@ send_additional_header(struct mg_connection *conn)
 }
 
 
+#if !defined(NO_FILESYSTEMS)
 static void handle_file_based_request(struct mg_connection *conn,
                                       const char *path,
                                       struct mg_file *filep);
+#endif /* NO_FILESYSTEMS */
 
 
 const char *
@@ -4562,14 +4567,17 @@ mg_send_http_error_impl(struct mg_connection *conn,
                         va_list args)
 {
 	char errmsg_buf[MG_BUF_LEN];
-	char path_buf[PATH_MAX];
 	va_list ap;
-	int len, i, page_handler_found, scope, truncated, has_body;
+	int has_body;
 	char date[64];
 	time_t curtime = time(NULL);
+#if !defined(NO_FILESYSTEMS)
+	char path_buf[PATH_MAX];
+	int len, i, page_handler_found, scope, truncated;
 	const char *error_handler = NULL;
 	struct mg_file error_page_file = STRUCT_FILE_INITIALIZER;
 	const char *error_page_file_ext, *tstr;
+#endif /* NO_FILESYSTEMS */
 	int handled_by_callback = 0;
 
 	const char *status_text = mg_get_response_code_text(conn, status);
@@ -4615,6 +4623,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 			DEBUG_TRACE(
 			    "Recursion when handling error %u - fall back to default",
 			    status);
+#if !defined(NO_FILESYSTEMS)
 		} else {
 			/* Send user defined error pages, if defined */
 			error_handler = conn->dom_ctx->config[ERROR_PAGES];
@@ -4697,6 +4706,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 				conn->in_error_handler = 0;
 				return 0;
 			}
+#endif /* NO_FILESYSTEMS */
 		}
 
 		/* No custom error page. Send default error page. */
@@ -5210,6 +5220,7 @@ path_to_unicode(const struct mg_connection *conn,
 }
 
 
+#if !defined(NO_FILESYSTEMS)
 static int
 mg_stat(const struct mg_connection *conn,
         const char *path,
@@ -5282,6 +5293,7 @@ mg_stat(const struct mg_connection *conn,
 
 	return 0;
 }
+#endif
 
 
 static int
@@ -5811,6 +5823,7 @@ set_non_blocking_mode(SOCKET sock)
 
 #else
 
+#if !defined(NO_FILESYSTEMS)
 static int
 mg_stat(const struct mg_connection *conn,
         const char *path,
@@ -5845,6 +5858,7 @@ mg_stat(const struct mg_connection *conn,
 
 	return 0;
 }
+#endif /* NO_FILESYSTEMS */
 
 
 static void
@@ -8021,6 +8035,7 @@ check_password(const char *method,
 }
 
 
+#if !defined(NO_FILESYSTEMS)
 /* Use the global passwords file, if specified by auth_gpass option,
  * or search for .htpasswd in the requested directory. */
 static void
@@ -8094,6 +8109,7 @@ open_auth_file(struct mg_connection *conn,
 		}
 	}
 }
+#endif /* NO_FILESYSTEMS */
 
 
 /* Parsed Authorization header */
@@ -8267,6 +8283,7 @@ mg_fgets(char *buf, size_t size, struct mg_file *filep, char **p)
 #error Bad INITIAL_DEPTH for recursion, set to at least 1
 #endif
 
+#if !defined(NO_FILESYSTEMS)
 struct read_auth_file_struct {
 	struct mg_connection *conn;
 	struct ah ah;
@@ -8441,12 +8458,14 @@ mg_check_digest_access_authentication(struct mg_connection *conn,
 
 	return auth;
 }
+#endif /* NO_FILESYSTEMS */
 
 
 /* Return 1 if request is authorised, 0 otherwise. */
 static int
 check_authorization(struct mg_connection *conn, const char *path)
 {
+#if !defined(NO_FILESYSTEMS)
 	char fname[PATH_MAX];
 	struct vec uri_vec, filename_vec;
 	const char *list;
@@ -8490,6 +8509,11 @@ check_authorization(struct mg_connection *conn, const char *path)
 	}
 
 	return authorized;
+#else
+	(void)conn;
+	(void)path;
+	return 1;
+#endif /* NO_FILESYSTEMS */
 }
 
 
@@ -9147,6 +9171,7 @@ must_hide_file(struct mg_connection *conn, const char *path)
 }
 
 
+#if !defined(NO_FILESYSTEMS)
 static int
 scan_directory(struct mg_connection *conn,
                const char *dir,
@@ -9200,6 +9225,7 @@ scan_directory(struct mg_connection *conn,
 	}
 	return 1;
 }
+#endif /* NO_FILESYSTEMS */
 
 
 #if !defined(NO_FILES)
@@ -9290,6 +9316,7 @@ realloc2(void *ptr, size_t size)
 }
 
 
+#if !defined(NO_FILESYSTEMS)
 static int
 dir_scan_callback(struct de *de, void *data)
 {
@@ -9416,6 +9443,7 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	mg_printf(conn, "%s", "</table></pre></body></html>");
 	conn->status_code = 200;
 }
+#endif /* NO_FILESYSTEMS */
 
 
 /* Send len bytes from the opened file to the client. */
@@ -9577,6 +9605,7 @@ fclose_on_exec(struct mg_file_access *filep, struct mg_connection *conn)
 #endif
 
 
+#if !defined(NO_FILESYSTEMS)
 static void
 handle_static_file_request(struct mg_connection *conn,
                            const char *path,
@@ -9847,6 +9876,7 @@ mg_send_file_body(struct mg_connection *conn, const char *path)
 	(void)mg_fclose(&file.access); /* Ignore errors for readonly files */
 	return 0;                      /* >= 0 for OK */
 }
+#endif /* NO_FILESYSTEMS */
 
 
 #if !defined(NO_CACHING)
@@ -9900,6 +9930,7 @@ handle_not_modified_static_file_request(struct mg_connection *conn,
 #endif
 
 
+#if !defined(NO_FILESYSTEMS)
 void
 mg_send_file(struct mg_connection *conn, const char *path)
 {
@@ -10063,6 +10094,7 @@ mg_store_body(struct mg_connection *conn, const char *path)
 
 	return len;
 }
+#endif /* NO_FILESYSTEMS */
 
 
 /* Parse a buffer:
@@ -11554,6 +11586,7 @@ delete_file(struct mg_connection *conn, const char *path)
 #endif /* !NO_FILES */
 
 
+#if !defined(NO_FILESYSTEMS)
 static void
 send_ssi_file(struct mg_connection *, const char *, struct mg_file *, int);
 
@@ -11850,6 +11883,7 @@ handle_ssi_file_request(struct mg_connection *conn,
 		(void)mg_fclose(&filep->access); /* Ignore errors for readonly files */
 	}
 }
+#endif /* NO_FILESYSTEMS */
 
 
 #if !defined(NO_FILES)
@@ -14114,6 +14148,7 @@ handle_request(struct mg_connection *conn)
 }
 
 
+#if !defined(NO_FILESYSTEMS)
 static void
 handle_file_based_request(struct mg_connection *conn,
                           const char *path,
@@ -14204,6 +14239,7 @@ handle_file_based_request(struct mg_connection *conn,
 		handle_static_file_request(conn, path, file, NULL, NULL);
 	}
 }
+#endif /* NO_FILESYSTEMS */
 
 
 static void
@@ -14721,7 +14757,7 @@ header_val(const struct mg_connection *conn, const char *header)
 #if defined(MG_EXTERNAL_FUNCTION_log_access)
 static void log_access(const struct mg_connection *conn);
 #include "external_log_access.inl"
-#else
+#elif !defined(NO_FILESYSTEMS)
 
 static void
 log_access(const struct mg_connection *conn)
@@ -14815,7 +14851,8 @@ log_access(const struct mg_connection *conn)
 		}
 	}
 }
-
+#else
+#error Must either enable filesystems or provide a custom log_access implementation
 #endif /* Externally provided function */
 
 
@@ -16011,6 +16048,7 @@ uninitialize_ssl(void)
 #endif /* !NO_SSL */
 
 
+#if !defined(NO_FILESYSTEMS)
 static int
 set_gpass_option(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 {
@@ -16034,6 +16072,7 @@ set_gpass_option(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 	}
 	return 0;
 }
+#endif /* NO_FILESYSTEMS */
 
 
 static int
@@ -18545,7 +18584,10 @@ mg_start(const struct mg_callbacks *callbacks,
 
 	/* NOTE(lsm): order is important here. SSL certificates must
 	 * be initialized before listening ports. UID must be set last. */
-	if (!set_gpass_option(ctx, NULL) ||
+	if (
+#if !defined(NO_FILESYSTEMS)
+	    !set_gpass_option(ctx, NULL) ||
+#endif
 #if !defined(NO_SSL)
 	    !init_ssl_ctx(ctx, NULL) ||
 #endif
