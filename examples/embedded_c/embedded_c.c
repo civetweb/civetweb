@@ -956,8 +956,10 @@ int
 main(int argc, char *argv[])
 {
 	const char *options[] = {
+#if !defined(NO_FILES)
 	    "document_root",
 	    DOCUMENT_ROOT,
+#endif
 	    "listening_ports",
 	    PORT,
 	    "request_timeout_ms",
