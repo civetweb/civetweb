@@ -184,6 +184,10 @@ mg_handle_form_request(struct mg_connection *conn,
 	int64_t file_size = 0; /* init here, to a avoid a false positive
 	                         "uninitialized variable used" warning */
 
+	/* Unused without filesystems */
+	(void) fstore;
+	(void) file_size;
+
 	int has_body_data =
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
 
@@ -275,6 +279,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					field_storage = MG_FORM_FIELD_STORAGE_SKIP;
 				}
 			}
+#if !defined(NO_FILESYSTEMS)
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
 				if (mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &fstore) == 0) {
@@ -321,6 +326,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					                path);
 				}
 			}
+#endif /* NO_FILESYSTEMS */
 
 			/* if (field_storage == MG_FORM_FIELD_STORAGE_READ) { */
 			/* The idea of "field_storage=read" is to let the API user read
@@ -423,6 +429,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				break;
 			}
 
+#if !defined(NO_FILESYSTEMS)
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
 				if (mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &fstore) == 0) {
 					fstore.access.fp = NULL;
@@ -435,6 +442,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					                path);
 				}
 			}
+#endif /* NO_FILESYSTEMS */
 
 			get_block = 0;
 			/* Loop to read values larger than sizeof(buf)-keylen-2 */
@@ -476,6 +484,7 @@ mg_handle_form_request(struct mg_connection *conn,
 						field_storage = MG_FORM_FIELD_STORAGE_SKIP;
 					}
 				}
+#if !defined(NO_FILESYSTEMS)
 				if (fstore.access.fp) {
 					size_t n = (size_t)
 					    fwrite(val, 1, (size_t)vallen, fstore.access.fp);
@@ -489,6 +498,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					}
 					file_size += (int64_t)n;
 				}
+#endif /* NO_FILESYSTEMS */
 
 				if (!end_of_key_value_pair_found) {
 					used = next - buf;
@@ -502,12 +512,14 @@ mg_handle_form_request(struct mg_connection *conn,
 						size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
 						r = mg_read(conn, buf + (size_t)buf_fill, to_read);
 						if ((r < 0) || ((r == 0) && all_data_read)) {
+#if !defined(NO_FILESYSTEMS)
 							/* read error */
 							if (fstore.access.fp) {
 								mg_fclose(&fstore.access);
 								remove_bad_file(conn, path);
 							}
 							return -1;
+#endif /* NO_FILESYSTEMS */
 						}
 						if (r == 0) {
 							/* TODO: Create a function to get "all_data_read"
@@ -528,6 +540,7 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			} while (!end_of_key_value_pair_found);
 
+#if !defined(NO_FILESYSTEMS)
 			if (fstore.access.fp) {
 				r = mg_fclose(&fstore.access);
 				if (r == 0) {
@@ -546,6 +559,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 				fstore.access.fp = NULL;
 			}
+#endif /* NO_FILESYSTEMS */
 
 			if (all_data_read && (buf_fill == 0)) {
 				/* nothing more to process */
@@ -645,6 +659,9 @@ mg_handle_form_request(struct mg_connection *conn,
 			size_t towrite, fnlen, n;
 			int get_block;
 			size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
+
+			/* Unused without filesystems */
+			(void) n;
 
 			r = mg_read(conn, buf + (size_t)buf_fill, to_read);
 			if ((r < 0) || ((r == 0) && all_data_read)) {
@@ -853,6 +870,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			                       boundary,
 			                       bl);
 
+#if !defined(NO_FILESYSTEMS)
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
 				if (mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &fstore) == 0) {
@@ -867,6 +885,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					                path);
 				}
 			}
+#endif /* NO_FILESYSTEMS */
 
 			get_block = 0;
 			while (!next) {
@@ -906,6 +925,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					}
 				}
 
+#if !defined(NO_FILESYSTEMS)
 				if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
 					if (fstore.access.fp) {
 
@@ -922,6 +942,7 @@ mg_handle_form_request(struct mg_connection *conn,
 						file_size += (int64_t)n;
 					}
 				}
+#endif /* NO_FILESYSTEMS */
 
 				memmove(buf, hend + towrite, bl + 4);
 				buf_fill = (int)(bl + 4);
@@ -931,11 +952,13 @@ mg_handle_form_request(struct mg_connection *conn,
 				to_read = sizeof(buf) - 1 - (size_t)buf_fill;
 				r = mg_read(conn, buf + (size_t)buf_fill, to_read);
 				if ((r < 0) || ((r == 0) && all_data_read)) {
+#if !defined(NO_FILESYSTEMS)
 					/* read error */
 					if (fstore.access.fp) {
 						mg_fclose(&fstore.access);
 						remove_bad_file(conn, path);
 					}
+#endif /* NO_FILESYSTEMS */
 					mg_free(boundary);
 					return -1;
 				}
@@ -978,6 +1001,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 			}
 
+#if !defined(NO_FILESYSTEMS)
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
 
 				if (fstore.access.fp) {
@@ -1010,6 +1034,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					fstore.access.fp = NULL;
 				}
 			}
+#endif /* NO_FILESYSTEMS */
 
 			if ((field_storage & MG_FORM_FIELD_STORAGE_ABORT)
 			    == MG_FORM_FIELD_STORAGE_ABORT) {

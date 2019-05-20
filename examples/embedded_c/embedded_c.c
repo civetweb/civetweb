@@ -220,6 +220,7 @@ CloseHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
+#if !defined(NO_FILESYSTEMS)
 int
 FileHandler(struct mg_connection *conn, void *cbdata)
 {
@@ -229,6 +230,7 @@ FileHandler(struct mg_connection *conn, void *cbdata)
 	mg_send_file(conn, fileName);
 	return 1;
 }
+#endif /* NO_FILESYSTEMS */
 
 
 #define MD5_STATIC static
@@ -585,6 +587,7 @@ PostResponser(struct mg_connection *conn, void *cbdata)
 }
 
 
+#if !defined(NO_FILESYSTEMS)
 int
 AuthStartHandler(struct mg_connection *conn, void *cbdata)
 {
@@ -653,6 +656,7 @@ AuthStartHandler(struct mg_connection *conn, void *cbdata)
 
 	return 1;
 }
+#endif /* NO_FILESYSTEMS */
 
 
 int
@@ -952,8 +956,10 @@ int
 main(int argc, char *argv[])
 {
 	const char *options[] = {
+#if !defined(NO_FILES)
 	    "document_root",
 	    DOCUMENT_ROOT,
+#endif
 	    "listening_ports",
 	    PORT,
 	    "request_timeout_ms",
@@ -1048,11 +1054,13 @@ main(int argc, char *argv[])
 	/* Add handler for /close extension */
 	mg_set_request_handler(ctx, "/close", CloseHandler, 0);
 
+#if !defined(NO_FILESYSTEMS)
 	/* Add handler for /form  (serve a file outside the document root) */
 	mg_set_request_handler(ctx,
 	                       "/form",
 	                       FileHandler,
 	                       (void *)"../../test/form.html");
+#endif /* NO_FILESYSTEMS */
 
 	/* Add handler for form data */
 	mg_set_request_handler(ctx,
@@ -1079,8 +1087,10 @@ main(int argc, char *argv[])
 	/* Add HTTP site to open a websocket connection */
 	mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);
 
+#if !defined(NO_FILESYSTEMS)
 	/* Add HTTP site with auth */
 	mg_set_request_handler(ctx, "/auth", AuthStartHandler, 0);
+#endif /* NO_FILESYSTEMS */
 
 
 #ifdef USE_WEBSOCKET
