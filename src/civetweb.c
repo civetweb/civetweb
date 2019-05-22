@@ -141,6 +141,9 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #define ALTERNATIVE_QUEUE
 #endif
 
+#if defined(NO_FILESYSTEMS) && !defined(NO_FILES)
+#error "Inconsistent build flags, NO_FILESYSTEMS requires NO_FILES"
+#endif
 
 /* DTL -- including winsock2.h works better if lean and mean */
 #if !defined(WIN32_LEAN_AND_MEAN)
