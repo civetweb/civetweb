@@ -184,12 +184,12 @@ mg_handle_form_request(struct mg_connection *conn,
 	int64_t file_size = 0; /* init here, to a avoid a false positive
 	                         "uninitialized variable used" warning */
 
+	int has_body_data =
+	    (conn->request_info.content_length > 0) || (conn->is_chunked);
+
 	/* Unused without filesystems */
 	(void) fstore;
 	(void) file_size;
-
-	int has_body_data =
-	    (conn->request_info.content_length > 0) || (conn->is_chunked);
 
 	/* There are three ways to encode data from a HTML form:
 	 * 1) method: GET (default)
