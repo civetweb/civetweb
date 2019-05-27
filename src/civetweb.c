@@ -439,7 +439,9 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 /********************************************************************/
 
 /* Helper makros */
+#if !defined(ARRAY_SIZE)
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#endif
 
 /* Standard defines */
 #if !defined(INT64_MAX)
