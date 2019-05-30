@@ -14,11 +14,13 @@
 * BigJoe
 * Bjoern Petri
 * Braedy Kuzma
+* Breno Ramalho Lemes
 * brett
 * Brian Lambert
 * Brian Spratke
 * cdbishop
 * celeron55
+* Chris Jones
 * Chris Rehn
 * Charles Olivi
 * Christian Mauderer
@@ -31,9 +33,11 @@
 * Daniel Rempel
 * Danny Al-Gaaf
 * Dave Brower
+* daveelton
 * David Arnold
 * David Loffredo
 * Dialga
+* Domenico Di Iorio
 * duong2179
 * ehlertjd
 * Eric Tsau
@@ -76,6 +80,7 @@
 * Jordan Shelley
 * Joshua Boyd
 * Joshua D. Boyd
+* k-mds
 * kakwa
 * kalphamon
 * Karol Mroz
@@ -145,6 +150,8 @@
 * thewaterymoon
 * THILMANT, Bernard
 * Thomas Davis
+* Thomas Klausner
+* Tomasz Gorochowik
 * Thorsten Horstmann
 * tnoho
 * Tomas Andrle
