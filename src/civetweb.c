@@ -10597,9 +10597,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 	if ((expect != NULL) && (mg_strcasecmp(expect, "100-continue") != 0)) {
 		/* Client sent an "Expect: xyz" header and xyz is not 100-continue.
 		 */
-		mg_send_http_error(conn,
-		                   417,
-		                   "Error: Can not fulfill expectation");
+		mg_send_http_error(conn, 417, "Error: Can not fulfill expectation");
 	} else {
 		if (expect != NULL) {
 			(void)mg_printf(conn, "%s", "HTTP/1.1 100 Continue\r\n\r\n");
@@ -15144,12 +15142,18 @@ sslize(struct mg_connection *conn,
 					 * See https://linux.die.net/man/3/ssl_get_error
 					 * This is typical for non-blocking sockets. */
 					struct mg_pollfd pfd;
+					int pollres;
 					pfd.fd = conn->client.sock;
 					pfd.events = ((err == SSL_ERROR_WANT_CONNECT)
 					              || (err == SSL_ERROR_WANT_WRITE))
 					                 ? POLLOUT
 					                 : POLLIN;
-					mg_poll(&pfd, 1, 50, stop_server);
+					pollres = mg_poll(&pfd, 1, 50, stop_server);
+					if (pollres < 0) {
+						/* Break if error occured (-1)
+						 * or server shutdown (-2) */
+						break;
+					}
 				}
 
 			} else if (err == SSL_ERROR_SYSCALL) {

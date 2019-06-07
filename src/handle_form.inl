@@ -188,8 +188,8 @@ mg_handle_form_request(struct mg_connection *conn,
 	    (conn->request_info.content_length > 0) || (conn->is_chunked);
 
 	/* Unused without filesystems */
-	(void) fstore;
-	(void) file_size;
+	(void)fstore;
+	(void)file_size;
 
 	/* There are three ways to encode data from a HTML form:
 	 * 1) method: GET (default)
@@ -661,7 +661,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
 
 			/* Unused without filesystems */
-			(void) n;
+			(void)n;
 
 			r = mg_read(conn, buf + (size_t)buf_fill, to_read);
 			if ((r < 0) || ((r == 0) && all_data_read)) {

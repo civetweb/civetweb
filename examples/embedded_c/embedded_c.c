@@ -957,34 +957,35 @@ main(int argc, char *argv[])
 {
 	const char *options[] = {
 #if !defined(NO_FILES)
-	    "document_root",
-	    DOCUMENT_ROOT,
+		"document_root",
+		DOCUMENT_ROOT,
 #endif
-	    "listening_ports",
-	    PORT,
-	    "request_timeout_ms",
-	    "10000",
-	    "error_log_file",
-	    "error.log",
+		"listening_ports",
+		PORT,
+		"request_timeout_ms",
+		"10000",
+		"error_log_file",
+		"error.log",
 #ifdef USE_WEBSOCKET
-	    "websocket_timeout_ms",
-	    "3600000",
+		"websocket_timeout_ms",
+		"3600000",
 #endif
 #ifndef TEST_WITHOUT_SSL
-	    "ssl_certificate",
-	    "../../resources/cert/server.pem",
-	    "ssl_protocol_version",
-	    "3",
-	    "ssl_cipher_list",
+		"ssl_certificate",
+		"../../resources/cert/server.pem",
+		"ssl_protocol_version",
+		"3",
+		"ssl_cipher_list",
 #ifdef USE_SSL_DH
-	    "ECDHE-RSA-AES256-GCM-SHA384:DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256",
+		"ECDHE-RSA-AES256-GCM-SHA384:DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256",
 #else
-	    "DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256",
+		"DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256",
 #endif
 #endif
-	    "enable_auth_domain_check",
-	    "no",
-	    0};
+		"enable_auth_domain_check",
+		"no",
+		0
+	};
 	struct mg_callbacks callbacks;
 	struct mg_context *ctx;
 	struct mg_server_port ports[32];

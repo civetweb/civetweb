@@ -2985,13 +2985,15 @@ main(int argc, char *argv[])
 @end
 
 @implementation Civetweb
-- (void)openBrowser {
+- (void)openBrowser
+{
 	[[NSWorkspace sharedWorkspace]
 	    openURL:[NSURL URLWithString:[NSString stringWithUTF8String:
 	                                               get_url_to_first_open_port(
 	                                                   g_ctx)]]];
 }
-- (void)editConfig {
+- (void)editConfig
+{
 	create_config_file(g_ctx, g_config_file_name);
 	NSString *path = [NSString stringWithUTF8String:g_config_file_name];
 	if (![[NSWorkspace sharedWorkspace] openFile:path
@@ -3004,7 +3006,8 @@ main(int argc, char *argv[])
 		(void)[alert runModal];
 	}
 }
-- (void)shutDown {
+- (void)shutDown
+{
 	[NSApp terminate:nil];
 }
 @end
