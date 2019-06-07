@@ -20,8 +20,11 @@ mkdir cov_build/include
 mkdir cov_build/resources
 
 cp Makefile cov_build/
-cp src/*.c cov_build/src/
-cp src/*.inl cov_build/src/
+cp src/civetweb.c cov_build/src/
+cp src/main.c cov_build/src/
+cp src/md5.inl cov_build/src/
+cp src/sha1.inl cov_build/src/
+cp src/handle_form.inl cov_build/src/
 cp include/civetweb.h cov_build/include/
 cp resources/Makefile.in-os cov_build/resources/
 
