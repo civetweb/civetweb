@@ -8,8 +8,8 @@ ifndef WITH_DUKTAPE
   $(error WITH_DUKTAPE is not defined)
 endif
 
-# Duktape default version is 1.5.2 (105)
-WITH_DUKTAPE_VERSION ?= 202
+# Duktape default version is 1.8.0 (108)
+WITH_DUKTAPE_VERSION ?= 108
 DUKTAPE_VERSION_KNOWN = 0
 
 # Select src and header according to the Duktape version
