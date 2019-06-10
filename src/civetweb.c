@@ -10159,6 +10159,8 @@ parse_http_headers(char **buf, struct mg_header hdr[MG_MAX_HEADERS])
 
 	for (i = 0; i < (int)MG_MAX_HEADERS; i++) {
 		char *dp = *buf;
+
+		/* Skip all ASCII characters (>SPACE, <127), to find a ':' */
 		while ((*dp != ':') && (*dp >= 33) && (*dp <= 126)) {
 			dp++;
 		}
@@ -10175,29 +10177,45 @@ parse_http_headers(char **buf, struct mg_header hdr[MG_MAX_HEADERS])
 		/* Truncate here and set the key name */
 		*dp = 0;
 		hdr[i].name = *buf;
+
+		/* Skip all spaces */
 		do {
 			dp++;
-		} while (*dp == ' ');
+		} while ((*dp == ' ') || (*dp == '\t'));
 
 		/* The rest of the line is the value */
 		hdr[i].value = dp;
-		*buf = dp + strcspn(dp, "\r\n");
-		if (((*buf)[0] != '\r') || ((*buf)[1] != '\n')) {
-			*buf = NULL;
+
+		/* Find end of line */
+		while ((*dp != 0) && (*dp != '\r') && (*dp != '\n')) {
+			dp++;
+		};
+
+		/* eliminate \r */
+		if (*dp == '\r') {
+			*dp = 0;
+			dp++;
+			if (*dp != '\n') {
+				/* This is not a valid line. */
+				return -1;
+			}
 		}
 
+		/* here *dp is either 0 or '\n' */
+		/* in any case, we have a new header */
 		num_headers = i + 1;
-		if (*buf) {
-			(*buf)[0] = 0;
-			(*buf)[1] = 0;
-			*buf += 2;
+
+		if (*dp) {
+			*dp = 0;
+			dp++;
+			*buf = dp;
+
+			if ((dp[0] == '\r') || (dp[0] == '\n')) {
+				/* This is the end of the header */
+				break;
+			}
 		} else {
 			*buf = dp;
-			break;
-		}
-
-		if ((*buf)[0] == '\r') {
-			/* This is the end of the header */
 			break;
 		}
 	}
@@ -11242,6 +11260,9 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 
 	/* Send headers */
 	for (i = 0; i < ri.num_headers; i++) {
+		DEBUG_TRACE("CGI header: %s: %s",
+		            ri.http_headers[i].name,
+		            ri.http_headers[i].value);
 		mg_printf(conn,
 		          "%s: %s\r\n",
 		          ri.http_headers[i].name,
