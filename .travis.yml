@@ -185,7 +185,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=0
       BUILD_SHARED=NO
       NO_FILES=YES
       ENABLE_SSL=NO
@@ -220,7 +219,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=7
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -256,7 +254,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=7
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -291,7 +288,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -326,7 +322,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -352,7 +347,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -378,7 +372,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -405,7 +398,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -445,7 +437,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=7
       BUILD_SHARED=YES
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -474,7 +465,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=7
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -501,7 +491,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -537,7 +526,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -570,7 +558,6 @@ matrix:
       C_STANDARD=auto
       CXX_STANDARD=auto
       ENABLE_LUA_SHARED=NO
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -596,7 +583,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=7
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -621,7 +607,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=7
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -646,7 +631,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=7
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -671,7 +655,6 @@ matrix:
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=7
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -697,7 +680,6 @@ matrix:
       ENABLE_LUA_SHARED=YES
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -727,12 +709,11 @@ matrix:
       MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=YES
       ENABLE_LUA_SHARED=YES
       C_STANDARD=auto
       CXX_STANDARD=auto
-      FEATURES=31
       BUILD_SHARED=NO
       NO_FILES=NO
       ENABLE_SSL=YES
@@ -740,6 +721,36 @@ matrix:
       ENABLE_IPV6=YES
       ENABLE_WEBSOCKETS=YES
       ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - libssl1.1
+    env:
+      idx=20
+      N=GCCLinuxDefault_OpenSSL11
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=YES
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
       ENABLE_LUA=NO
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
@@ -791,7 +802,7 @@ matrix:
 #          - clang-3.8
 #          - lua5.2
 #    env:
-#      idx=20
+#      idx=21
 #      N=Clang3.8-Linux-Complete-WithLua-Debug
 #      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
 #      BUILD_TYPE=Debug
@@ -801,7 +812,6 @@ matrix:
 #      ENABLE_LUA_SHARED=YES
 #      C_STANDARD=auto
 #      CXX_STANDARD=auto
-#      FEATURES=63
 #      BUILD_SHARED=NO
 #      NO_FILES=NO
 #      ENABLE_SSL=YES
