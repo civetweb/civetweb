@@ -12846,6 +12846,7 @@ is_websocket_protocol(const struct mg_connection *conn)
 		           * fields
 		           */
 	}
+	DEBUG_TRACE("Upgrade: %s", upgrade);
 	if (!mg_strcasestr(upgrade, "websocket")) {
 		return 0;
 	}

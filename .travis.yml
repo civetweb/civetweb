@@ -732,9 +732,11 @@ matrix:
     addons:
       apt:
         sources:
-          - ubuntu-toolchain-r-test
+          - sourceline: 'ppa:ondrej/nginx-mainline'
         packages:
           - libssl1.1
+          - openssl
+          - libssl-dev
     env:
       idx=20
       N=GCCLinuxDefault_OpenSSL11
