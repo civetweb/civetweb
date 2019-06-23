@@ -730,18 +730,12 @@ matrix:
     os: linux
     compiler: gcc
     dist: xenial
-    addons:
-      apt:
-        packages:
-          - libssl1.1
-          - openssl
-          - libssl-dev
     env:
       idx=20
-      N=GCCLinuxDefault_OpenSSL11
+      N=GCCLinuxDefault_xenial
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=YES
+      OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
