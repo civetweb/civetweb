@@ -729,10 +729,9 @@ matrix:
   -
     os: linux
     compiler: gcc
+    dist: xenial
     addons:
       apt:
-        sources:
-          - sourceline: 'ppa:ondrej/nginx-mainline'
         packages:
           - libssl1.1
           - openssl
