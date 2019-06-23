@@ -457,7 +457,7 @@ matrix:
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
       ALLOW_WARNINGS=YES
-      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
 
   -
     os: linux
@@ -710,6 +710,41 @@ matrix:
       NO_CACHING=YES
       ALLOW_WARNINGS=YES
 
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-5.0
+        packages:
+          - clang-5.0
+    env:
+      idx=19
+      N=Clang5.0-Linux-Complete-CXX-NoLua-Release
+      MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=YES
+      ENABLE_CXX=YES
+      ENABLE_LUA_SHARED=YES
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      FEATURES=31
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
   - <<: *conan-linux
     env: CONAN_GCC_VERSIONS=4.9 CONAN_DOCKER_IMAGE=conanio/gcc49 CONAN_DOCKER_32_IMAGES=1
   - <<: *conan-linux
@@ -756,7 +791,7 @@ matrix:
 #          - clang-3.8
 #          - lua5.2
 #    env:
-#      idx=19
+#      idx=20
 #      N=Clang3.8-Linux-Complete-WithLua-Debug
 #      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
 #      BUILD_TYPE=Debug
