@@ -13357,8 +13357,7 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 	}
 
 	tmp_rh =
-	    (struct mg_handler_info *)mg_calloc_ctx(sizeof(struct mg_handler_info),
-	                                            1,
+	    (struct mg_handler_info *)mg_calloc_ctx(1, sizeof(struct mg_handler_info),
 	                                            phys_ctx);
 	if (tmp_rh == NULL) {
 		mg_unlock_context(phys_ctx);
@@ -18660,8 +18659,8 @@ mg_start(const struct mg_callbacks *callbacks,
 
 #if defined(ALTERNATIVE_QUEUE)
 	ctx->client_wait_events =
-	    (void **)mg_calloc_ctx(sizeof(ctx->client_wait_events[0]),
-	                           ctx->cfg_worker_threads,
+	    (void **)mg_calloc_ctx(ctx->cfg_worker_threads,
+	                           sizeof(ctx->client_wait_events[0]),
 	                           ctx);
 	if (ctx->client_wait_events == NULL) {
 		mg_cry_ctx_internal(ctx,
@@ -18674,8 +18673,8 @@ mg_start(const struct mg_callbacks *callbacks,
 	}
 
 	ctx->client_socks =
-	    (struct socket *)mg_calloc_ctx(sizeof(ctx->client_socks[0]),
-	                                   ctx->cfg_worker_threads,
+	    (struct socket *)mg_calloc_ctx(ctx->cfg_worker_threads,
+	                                   sizeof(ctx->client_socks[0]),
 	                                   ctx);
 	if (ctx->client_socks == NULL) {
 		mg_cry_ctx_internal(ctx,
