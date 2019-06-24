@@ -14305,6 +14305,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	unsigned int a, b, c, d, port;
 	int ch, len;
 	const char *cb;
+	char *endptr;
 #if defined(USE_IPV6)
 	char buf[100] = {0};
 #endif
@@ -14358,7 +14359,9 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		*ip_version = 4;
 #endif
 
-	} else if (sscanf(vec->ptr, "%u%n", &port, &len) == 1) {
+	} else if (is_valid_port(port = strtoul(vec->ptr, &endptr, 0))
+		   && vec->ptr != endptr) {
+		len = endptr - vec->ptr;
 		/* If only port is specified, bind to IPv4, INADDR_ANY */
 		so->lsa.sin.sin_port = htons((uint16_t)port);
 		*ip_version = 4;
