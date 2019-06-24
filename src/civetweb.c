@@ -162,6 +162,39 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #define PATH_MAX FILENAME_MAX
 #endif /* __SYMBIAN32__ */
 
+#if defined(__ZEPHYR__)
+#include <time.h>
+
+#include <zephyr.h>
+#include <posix/time.h>
+#include <net/socket.h>
+#include <posix/pthread.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include <fcntl.h>
+
+#include <libc_extensions.h>
+
+/* Max worker threads is the max of pthreads minus the main application thread
+ * and minus the main civetweb thread, thus -2
+ */
+#define MAX_WORKER_THREADS	(CONFIG_MAX_PTHREAD_COUNT - 2)
+
+#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+#define ZEPHYR_STACK_SIZE	USE_STACK_SIZE
+#else
+#define ZEPHYR_STACK_SIZE	8096
+#endif
+
+K_THREAD_STACK_DEFINE(civetweb_main_stack, ZEPHYR_STACK_SIZE);
+K_THREAD_STACK_ARRAY_DEFINE(civetweb_worker_stacks, MAX_WORKER_THREADS, ZEPHYR_STACK_SIZE);
+
+static int zephyr_worker_stack_index;
+
+#endif
 
 #if !defined(CIVETWEB_HEADER_INCLUDED)
 /* Include the header file here, so the CivetWeb interface is defined for the
@@ -260,7 +293,7 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
 
 
 /* Some ANSI #includes are not available on Windows CE */
-#if !defined(_WIN32_WCE)
+#if !defined(_WIN32_WCE) && !defined(__ZEPHYR__)
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -374,16 +407,6 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 
 #endif
 
-
-#include <ctype.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 
 /********************************************************************/
 /* CivetWeb configuration defines */
@@ -765,33 +788,47 @@ struct mg_pollfd {
 
 #else /* defined(_WIN32) - WINDOWS vs UNIX include block */
 
-#include <arpa/inet.h>
 #include <inttypes.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <stdint.h>
-#include <sys/poll.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/utsname.h>
-#include <sys/wait.h>
+
 typedef const void *SOCK_OPT_TYPE;
 
 #if defined(ANDROID)
 typedef unsigned short int in_port_t;
 #endif
 
+#if !defined(__ZEPHYR__)
+#include <ctype.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/utsname.h>
+#include <sys/wait.h>
 #include <dirent.h>
 #include <grp.h>
 #include <pwd.h>
 #include <unistd.h>
+#include <pthread.h>
+#endif
+
 #define vsnprintf_impl vsnprintf
 
 #if !defined(NO_SSL_DL) && !defined(NO_SSL)
 #include <dlfcn.h>
 #endif
-#include <pthread.h>
+
 #if defined(__MACH__)
 #define SSL_LIB "libssl.dylib"
 #define CRYPTO_LIB "libcrypto.dylib"
@@ -5871,6 +5908,11 @@ set_close_on_exec(int fd,
                   const struct mg_connection *conn /* may be null */,
                   struct mg_context *ctx /* may be null */)
 {
+#if defined(__ZEPHYR__)
+	(void) fd;
+	(void) conn;
+	(void) ctx;
+#else
 	if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0) {
 		if (conn || ctx) {
 			struct mg_connection fc;
@@ -5880,6 +5922,7 @@ set_close_on_exec(int fd,
 			                strerror(ERRNO));
 		}
 	}
+#endif
 }
 
 
@@ -5893,7 +5936,9 @@ mg_start_thread(mg_thread_func_t func, void *param)
 	(void)pthread_attr_init(&attr);
 	(void)pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+#if defined(__ZEPHYR__)
+	pthread_attr_setstack(&attr, &civetweb_main_stack, ZEPHYR_STACK_SIZE);
+#elif defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 	/* Compile-time option to control stack size,
 	 * e.g. -DUSE_STACK_SIZE=16384 */
 	(void)pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
@@ -5918,7 +5963,11 @@ mg_start_thread_with_id(mg_thread_func_t func,
 
 	(void)pthread_attr_init(&attr);
 
-#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+#if defined(__ZEPHYR__)
+	pthread_attr_setstack(&attr,
+			      &civetweb_worker_stacks[zephyr_worker_stack_index++],
+			      ZEPHYR_STACK_SIZE);
+#elif defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 	/* Compile-time option to control stack size,
 	 * e.g. -DUSE_STACK_SIZE=16384 */
 	(void)pthread_attr_setstacksize(&attr, USE_STACK_SIZE);
@@ -14920,7 +14969,7 @@ check_acl(struct mg_context *phys_ctx, uint32_t remote_ip)
 }
 
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__ZEPHYR__)
 static int
 set_uid_option(struct mg_context *phys_ctx)
 {
@@ -16170,6 +16219,7 @@ set_tcp_nodelay(SOCKET sock, int nodelay_on)
 }
 
 
+#if !defined(__ZEPHYR__)
 static void
 close_socket_gracefully(struct mg_connection *conn)
 {
@@ -16292,6 +16342,7 @@ close_socket_gracefully(struct mg_connection *conn)
 	closesocket(conn->client.sock);
 	conn->client.sock = INVALID_SOCKET;
 }
+#endif
 
 
 static void
@@ -16341,7 +16392,11 @@ close_connection(struct mg_connection *conn)
 	}
 #endif
 	if (conn->client.sock != INVALID_SOCKET) {
+#if defined(__ZEPHYR__)
+		closesocket(conn->client.sock);
+#else
 		close_socket_gracefully(conn);
+#endif
 		conn->client.sock = INVALID_SOCKET;
 	}
 
@@ -17998,12 +18053,14 @@ static unsigned __stdcall worker_thread(void *thread_func_param)
 static void *
 worker_thread(void *thread_func_param)
 {
+#if !defined(__ZEPHYR__)
 	struct sigaction sa;
 
 	/* Ignore SIGPIPE */
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sa, NULL);
+#endif
 
 	worker_thread_run((struct mg_connection *)thread_func_param);
 	return NULL;
@@ -18019,7 +18076,9 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 	struct socket so;
 	char src_addr[IP_ADDR_STR_LEN];
 	socklen_t len = sizeof(so.rsa);
+#if !defined(__ZEPHYR__)
 	int on = 1;
+#endif
 
 	if ((so.sock = accept(listener->sock, &so.rsa.sa, &len))
 	    == INVALID_SOCKET) {
@@ -18043,6 +18102,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 			                    strerror(ERRNO));
 		}
 
+#if !defined(__ZEPHYR__)
 		/* Set TCP keep-alive. This is needed because if HTTP-level
 		 * keep-alive
 		 * is enabled, and client resets the connection, server won't get
@@ -18062,6 +18122,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 			    __func__,
 			    strerror(ERRNO));
 		}
+#endif
 
 		/* Disable TCP Nagle's algorithm. Normally TCP packets are coalesced
 		 * to effectively fill up the underlying IP packet payload and
@@ -18231,12 +18292,14 @@ static unsigned __stdcall master_thread(void *thread_func_param)
 static void *
 master_thread(void *thread_func_param)
 {
+#if !defined(__ZEPHYR__)
 	struct sigaction sa;
 
 	/* Ignore SIGPIPE */
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sa, NULL);
+#endif
 
 	master_thread_run((struct mg_context *)thread_func_param);
 	return NULL;
@@ -18410,6 +18473,8 @@ get_system_name(char **sysName)
 #else
 	*sysName = mg_strdup("Symbian");
 #endif
+#elif defined(__ZEPHYR__)
+	*sysName = mg_strdup("Zephyr OS");
 #else
 	struct utsname name;
 	memset(&name, 0, sizeof(name));
@@ -18625,7 +18690,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	    !init_ssl_ctx(ctx, NULL) ||
 #endif
 	    !set_ports_option(ctx) ||
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__ZEPHYR__)
 	    !set_uid_option(ctx) ||
 #endif
 	    !set_acl_option(ctx)) {
@@ -19035,6 +19100,16 @@ mg_get_system_info(char *buffer, int buflen)
 		            (unsigned)si.wProcessorArchitecture,
 		            (unsigned)si.dwNumberOfProcessors,
 		            (unsigned)si.dwActiveProcessorMask);
+		system_info_length += mg_str_append(&buffer, end, block);
+#elif defined(__ZEPHYR__)
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            ",%s\"os\" : \"%s %s\"",
+		            eol,
+		            "Zephyr OS",
+		            ZEPHYR_VERSION);
 		system_info_length += mg_str_append(&buffer, end, block);
 #else
 		struct utsname name;
