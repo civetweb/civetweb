@@ -466,6 +466,8 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
+#include <stdint.h>
+
 /* Standard defines */
 #if !defined(INT64_MAX)
 #define INT64_MAX (9223372036854775807)
@@ -481,10 +483,14 @@ mg_static_assert(MAX_WORKER_THREADS >= 1,
 mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
                  "size_t data type size check");
 
+
 #if defined(_WIN32) /* WINDOWS include block */
 #include <windows.h>
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
 #include <ws2tcpip.h>
+#include <time.h> /* struct timespec */
+#include <stdlib.h> /* *alloc( */
+#include <malloc.h> /* *alloc( */
 
 typedef const char *SOCK_OPT_TYPE;
 
@@ -789,7 +795,6 @@ struct mg_pollfd {
 #else /* defined(_WIN32) - WINDOWS vs UNIX include block */
 
 #include <inttypes.h>
-#include <stdint.h>
 
 typedef const void *SOCK_OPT_TYPE;
 
@@ -802,7 +807,6 @@ typedef unsigned short int in_port_t;
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
