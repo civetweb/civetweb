@@ -5,6 +5,24 @@ Release Notes v1.12
 Changes
 -------
 
+- Support for flawed CGI interpreters returning only <LF> instead of <CR><LF>
+- Add NO_FILESYSTEM flag for (embedded) system without any file system
+- Several fixes for server side Lua scripts
+- Disable SSL renegotiation for new OpenSSL version
+- Allow to force TLSv1.3 (disable TLSv1.2)
+- Prefer pre-compressed *.gz file, if it already exists
+- Fix some #include statements for various compilers / OS / SDK versions
+- Support for Linux Standard Base (LSB)
+- Fixes to mg_get_*_info() API functions
+- Fix some bugs/deficiencies in examples and tests
+- Fix some static source code analysis warnings
+- Add Conan package build
+- Fix include for Lua pages in "Kepler Syntax"
+- Replace some uses of deprecated Linux and OpenSSL API functions
+- Improved documentation and examples
+- Fixes for timeout handling
+- Fixes for the request queue (rare loss of requests)
+- Client side SNI
 - Update version number
 
 
