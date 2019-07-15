@@ -66,6 +66,7 @@
 * Jack
 * Jacob Repp
 * Jacob Skillin
+* Jan Kowalewski
 * Jan Willem Janssen
 * Jeremy Lin
 * Jim Evans
@@ -148,6 +149,7 @@
 * suzukibitman
 * Tamotsu Kanoh
 * thewaterymoon
+* Thiago Macedo
 * THILMANT, Bernard
 * Thomas Davis
 * Thomas Klausner
