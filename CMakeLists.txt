@@ -38,7 +38,7 @@ determine_target_architecture(CIVETWEB_ARCHITECTURE)
 include(GNUInstallDirs)
 
 # Detect the platform reliably
-if(${KERNEL_NAME} MATCHES "zephyr")
+if(ZEPHYR_BASE)
     SET(ZEPHYR YES)
 elseif(NOT MACOSX AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     SET(DARWIN YES)
@@ -421,6 +421,9 @@ if (NOT ZEPHYR)
   add_c_compiler_flag(-fstack-protector-strong RELEASE)
   add_c_compiler_flag(-fstack-protector-all DEBUG)
 else()
+  if (NOT CONFIG_CIVETWEB)
+    return()
+  endif()
   # This policy is needed to override options with variables
   cmake_policy(SET CMP0077 NEW)
 
