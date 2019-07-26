@@ -882,13 +882,6 @@ typedef int SOCKET;
 
 #endif /* defined(_WIN32) - WINDOWS vs UNIX include block */
 
-/* Maximum queue length for pending connections. This value is passed as
- * parameter to the "listen" socket call. */
-#if !defined(SOMAXCONN)
-/* This symbol may be defined in winsock2.h so this must after that include */
-#define SOMAXCONN (100) /* in pending connections (count) */
-#endif
-
 /* In case our C library is missing "timegm", provide an implementation */
 #if defined(NEED_TIMEGM)
 static inline int
@@ -2364,6 +2357,7 @@ enum {
 	                     * socket option typedef TCP_NODELAY. */
 	MAX_REQUEST_SIZE,
 	LINGER_TIMEOUT,
+	MAX_CONNECTIONS, 
 #if defined(__linux__)
 	ALLOW_SENDFILE_CALL,
 #endif
@@ -2468,6 +2462,7 @@ static const struct mg_option config_options[] = {
     {"tcp_nodelay", MG_CONFIG_TYPE_NUMBER, "0"},
     {"max_request_size", MG_CONFIG_TYPE_NUMBER, "16384"},
     {"linger_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+    {"max_connections", MG_CONFIG_TYPE_NUMBER, "100"}, 
 #if defined(__linux__)
     {"allow_sendfile_call", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 #endif
@@ -14739,7 +14734,16 @@ set_ports_option(struct mg_context *phys_ctx)
 			continue;
 		}
 
-		if (listen(so.sock, SOMAXCONN) != 0) {
+		const char* const p = phys_ctx->dd.config[MAX_CONNECTIONS];
+		const long opt_max_connections = strtol(p, NULL, 10);
+		if(opt_max_connections > INT_MAX || opt_max_connections < 1) {
+			mg_cry_ctx_internal(phys_ctx, 
+					    "max_connections value \"%s\" is invalid", 
+					    p);
+			continue;
+		}
+
+		if (listen(so.sock, (int)opt_max_connections) != 0) {
 
 			mg_cry_ctx_internal(phys_ctx,
 			                    "cannot listen to %.*s: %d (%s)",
