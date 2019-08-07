@@ -8,6 +8,23 @@ if (${CMAKE_VERSION} VERSION_GREATER 3.1 OR
   cmake_policy(SET CMP0054 NEW)
 endif()
 
+# Set up the project
+project (civetweb)
+
+# Detect the platform reliably
+if(ZEPHYR_BASE)
+    if (NOT CONFIG_CIVETWEB)
+      return()
+    endif()
+    SET(ZEPHYR YES)
+elseif(NOT MACOSX AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    SET(DARWIN YES)
+elseif(NOT BSD AND ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+    SET(FREEBSD YES)
+elseif(NOT LINUX AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    SET(LINUX YES)
+endif()
+
 # Do not allow in source builds
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
@@ -24,8 +41,6 @@ include(AddCXXCompilerFlag)
 include(DetermineTargetArchitecture)
 include(CMakeDependentOption)
 
-# Set up the project
-project (civetweb)
 set(CIVETWEB_VERSION "1.11.0" CACHE STRING "The version of the civetweb library")
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" CIVETWEB_VERSION_MATCH "${CIVETWEB_VERSION}")
 if ("${CIVETWEB_VERSION_MATCH}" STREQUAL "")
@@ -36,17 +51,6 @@ set(CIVETWEB_VERSION_MINOR "${CMAKE_MATCH_2}")
 set(CIVETWEB_VERSION_PATCH "${CMAKE_MATCH_3}")
 determine_target_architecture(CIVETWEB_ARCHITECTURE)
 include(GNUInstallDirs)
-
-# Detect the platform reliably
-if(ZEPHYR_BASE)
-    SET(ZEPHYR YES)
-elseif(NOT MACOSX AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    SET(DARWIN YES)
-elseif(NOT BSD AND ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-    SET(FREEBSD YES)
-elseif(NOT LINUX AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    SET(LINUX YES)
-endif()
 
 # CTest automation
 option(CIVETWEB_BUILD_TESTING "Enable automated testing of civetweb" ON)
@@ -421,9 +425,6 @@ if (NOT ZEPHYR)
   add_c_compiler_flag(-fstack-protector-strong RELEASE)
   add_c_compiler_flag(-fstack-protector-all DEBUG)
 else()
-  if (NOT CONFIG_CIVETWEB)
-    return()
-  endif()
   # This policy is needed to override options with variables
   cmake_policy(SET CMP0077 NEW)
 
