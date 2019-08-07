@@ -14734,7 +14734,7 @@ set_ports_option(struct mg_context *phys_ctx)
 			continue;
 		}
 
-		const char* const p = phys_ctx->dd.config[MAX_CONNECTIONS];
+		const char* p = phys_ctx->dd.config[MAX_CONNECTIONS];
 		const long opt_max_connections = strtol(p, NULL, 10);
 		if(opt_max_connections > INT_MAX || opt_max_connections < 1) {
 			mg_cry_ctx_internal(phys_ctx, 
