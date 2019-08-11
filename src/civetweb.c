@@ -165,14 +165,14 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #if defined(__ZEPHYR__)
 #include <time.h>
 
-#include <zephyr.h>
-#include <posix/time.h>
+#include <ctype.h>
 #include <net/socket.h>
 #include <posix/pthread.h>
-#include <string.h>
+#include <posix/time.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
+#include <string.h>
+#include <zephyr.h>
 
 #include <fcntl.h>
 
@@ -181,16 +181,18 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 /* Max worker threads is the max of pthreads minus the main application thread
  * and minus the main civetweb thread, thus -2
  */
-#define MAX_WORKER_THREADS	(CONFIG_MAX_PTHREAD_COUNT - 2)
+#define MAX_WORKER_THREADS (CONFIG_MAX_PTHREAD_COUNT - 2)
 
 #if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
-#define ZEPHYR_STACK_SIZE	USE_STACK_SIZE
+#define ZEPHYR_STACK_SIZE USE_STACK_SIZE
 #else
-#define ZEPHYR_STACK_SIZE	8096
+#define ZEPHYR_STACK_SIZE 8096
 #endif
 
 K_THREAD_STACK_DEFINE(civetweb_main_stack, ZEPHYR_STACK_SIZE);
-K_THREAD_STACK_ARRAY_DEFINE(civetweb_worker_stacks, MAX_WORKER_THREADS, ZEPHYR_STACK_SIZE);
+K_THREAD_STACK_ARRAY_DEFINE(civetweb_worker_stacks,
+                            MAX_WORKER_THREADS,
+                            ZEPHYR_STACK_SIZE);
 
 static int zephyr_worker_stack_index;
 
@@ -485,12 +487,12 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
 
 
 #if defined(_WIN32) /* WINDOWS include block */
+#include <malloc.h> /* *alloc( */
+#include <stdlib.h> /* *alloc( */
+#include <time.h>   /* struct timespec */
 #include <windows.h>
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
 #include <ws2tcpip.h>
-#include <time.h> /* struct timespec */
-#include <stdlib.h> /* *alloc( */
-#include <malloc.h> /* *alloc( */
 
 typedef const char *SOCK_OPT_TYPE;
 
@@ -803,28 +805,28 @@ typedef unsigned short int in_port_t;
 #endif
 
 #if !defined(__ZEPHYR__)
+#include <arpa/inet.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <grp.h>
 #include <limits.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <pthread.h>
+#include <pwd.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
-#include <dirent.h>
-#include <grp.h>
-#include <pwd.h>
+#include <time.h>
 #include <unistd.h>
-#include <pthread.h>
 #endif
 
 #define vsnprintf_impl vsnprintf
@@ -2357,7 +2359,7 @@ enum {
 	                     * socket option typedef TCP_NODELAY. */
 	MAX_REQUEST_SIZE,
 	LINGER_TIMEOUT,
-	MAX_CONNECTIONS, 
+	MAX_CONNECTIONS,
 #if defined(__linux__)
 	ALLOW_SENDFILE_CALL,
 #endif
@@ -2462,7 +2464,7 @@ static const struct mg_option config_options[] = {
     {"tcp_nodelay", MG_CONFIG_TYPE_NUMBER, "0"},
     {"max_request_size", MG_CONFIG_TYPE_NUMBER, "16384"},
     {"linger_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
-    {"max_connections", MG_CONFIG_TYPE_NUMBER, "100"}, 
+    {"max_connections", MG_CONFIG_TYPE_NUMBER, "100"},
 #if defined(__linux__)
     {"allow_sendfile_call", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 #endif
@@ -5908,9 +5910,9 @@ set_close_on_exec(int fd,
                   struct mg_context *ctx /* may be null */)
 {
 #if defined(__ZEPHYR__)
-	(void) fd;
-	(void) conn;
-	(void) ctx;
+	(void)fd;
+	(void)conn;
+	(void)ctx;
 #else
 	if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0) {
 		if (conn || ctx) {
@@ -5964,8 +5966,8 @@ mg_start_thread_with_id(mg_thread_func_t func,
 
 #if defined(__ZEPHYR__)
 	pthread_attr_setstack(&attr,
-			      &civetweb_worker_stacks[zephyr_worker_stack_index++],
-			      ZEPHYR_STACK_SIZE);
+	                      &civetweb_worker_stacks[zephyr_worker_stack_index++],
+	                      ZEPHYR_STACK_SIZE);
 #elif defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 	/* Compile-time option to control stack size,
 	 * e.g. -DUSE_STACK_SIZE=16384 */
@@ -13405,7 +13407,8 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 	}
 
 	tmp_rh =
-	    (struct mg_handler_info *)mg_calloc_ctx(1, sizeof(struct mg_handler_info),
+	    (struct mg_handler_info *)mg_calloc_ctx(1,
+	                                            sizeof(struct mg_handler_info),
 	                                            phys_ctx);
 	if (tmp_rh == NULL) {
 		mg_unlock_context(phys_ctx);
@@ -14408,7 +14411,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 #endif
 
 	} else if (is_valid_port(port = strtoul(vec->ptr, &endptr, 0))
-		   && vec->ptr != endptr) {
+	           && vec->ptr != endptr) {
 		len = endptr - vec->ptr;
 		/* If only port is specified, bind to IPv4, INADDR_ANY */
 		so->lsa.sin.sin_port = htons((uint16_t)port);
@@ -14568,7 +14571,7 @@ set_ports_option(struct mg_context *phys_ctx)
 	int portsTotal = 0;
 	int portsOk = 0;
 
-	const char* opt_txt;
+	const char *opt_txt;
 	long opt_max_connections;
 
 	if (!phys_ctx) {
@@ -14740,9 +14743,9 @@ set_ports_option(struct mg_context *phys_ctx)
 		opt_txt = phys_ctx->dd.config[MAX_CONNECTIONS];
 		opt_max_connections = strtol(opt_txt, NULL, 10);
 		if ((opt_max_connections > INT_MAX) || (opt_max_connections < 1)) {
-			mg_cry_ctx_internal(phys_ctx, 
-					    "max_connections value \"%s\" is invalid", 
-				opt_txt);
+			mg_cry_ctx_internal(phys_ctx,
+			                    "max_connections value \"%s\" is invalid",
+			                    opt_txt);
 			continue;
 		}
 
