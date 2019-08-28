@@ -299,6 +299,7 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif /* !_WIN32_WCE */
@@ -11031,14 +11032,14 @@ abort_process(void *data)
 	ret_pid = waitpid(proc->pid, &status, WNOHANG);
 	if ((ret_pid != (pid_t)-1) && (status == 0)) {
 		/* Stop child process */
-		DEBUG_TRACE("CGI timer: Stop child process %p\n", proc->pid);
+		DEBUG_TRACE("CGI timer: Stop child process %d\n", proc->pid);
 		kill(proc->pid, SIGABRT);
 
 		/* Wait until process is terminated (don't leave zombies) */
 		while (waitpid(proc->pid, &status, 0) != (pid_t)-1) /* nop */
 			;
 	} else {
-		DEBUG_TRACE("CGI timer: Child process %p already stopped\n", proc->pid);
+		DEBUG_TRACE("CGI timer: Child process %d already stopped\n", proc->pid);
 	}
 	/* Dec reference counter */
 	refs = mg_atomic_dec(&proc->references);
