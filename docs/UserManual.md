@@ -470,6 +470,11 @@ if the proper network services are installed (Zeroconf, mDNS, Bonjour,
 Avahi). When using a hostname, you need to test in your particular network
 environment - in some cases, you might need to resort to a fixed IP address.
 
+If you want to use an ephemeral port (i.e. let the operating system choose
+a port number), use `0` for the port number. This will make it necessary to 
+communicate the port number to clients via other means, for example mDNS 
+(or Zeroconf, Bonjour or Avahi).
+
 ### max\_request\_size `16384`
 Size limit for HTTP request headers and header data returned from CGI scripts, in Bytes.
 A buffer of the configured size is pre allocated for every worker thread.
