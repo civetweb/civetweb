@@ -4,8 +4,8 @@
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
 
-#ifndef _CIVETWEB_SERVER_H_
-#define _CIVETWEB_SERVER_H_
+#ifndef CIVETSERVER_HEADER_INCLUDED
+#define CIVETSERVER_HEADER_INCLUDED
 #ifdef __cplusplus
 
 #include "civetweb.h"
@@ -646,4 +646,4 @@ class CIVETWEB_CXX_API CivetServer
 };
 
 #endif /*  __cplusplus */
-#endif /* _CIVETWEB_SERVER_H_ */
+#endif /* CIVETSERVER_HEADER_INCLUDED */
