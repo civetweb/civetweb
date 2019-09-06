@@ -2050,6 +2050,7 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 		reg_int(L, "status", conn->status_code);
 	}
 
+	/* Table "HTTP headers" */
 	lua_pushstring(L, "http_headers");
 	lua_newtable(L);
 	for (i = 0; i < conn->request_info.num_headers; i++) {
@@ -2059,6 +2060,18 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 	}
 	lua_rawset(L, -3);
 
+	/* Table "Client Certificate" */
+	if (conn->request_info.client_cert) {
+		lua_pushstring(L, "client_cert");
+		lua_newtable(L);
+		reg_string(L, "subject", conn->request_info.client_cert->subject);
+		reg_string(L, "issuer", conn->request_info.client_cert->issuer);
+		reg_string(L, "serial", conn->request_info.client_cert->serial);
+		reg_string(L, "finger", conn->request_info.client_cert->finger);
+		lua_rawset(L, -3);
+	}
+
+	/* End of request_info */
 	lua_rawset(L, -3);
 }
 
