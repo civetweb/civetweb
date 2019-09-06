@@ -18499,6 +18499,33 @@ get_system_name(char **sysName)
 }
 
 
+static void legacy_init(const char **options) {
+		const char *ports_option =
+			config_options[LISTENING_PORTS].default_value;
+
+		if (options) {
+			const char **run_options = options;
+			const char *optname = config_options[LISTENING_PORTS].name;
+
+			/* Try to find the "listening_ports" option */
+			while (*run_options) {
+				if (!strcmp(*run_options, optname)) {
+					ports_option = run_options[1];
+				}
+				run_options += 2;
+			}
+		}
+
+		if (is_ssl_port_used(ports_option)) {
+			/* Initialize with SSL support */
+			mg_init_library(MG_FEATURES_TLS);
+		}
+		else {
+			/* Initialize without SSL support */
+			mg_init_library(MG_FEATURES_DEFAULT);
+		}
+}
+
 struct mg_context *
 mg_start(const struct mg_callbacks *callbacks,
          void *user_data,
@@ -18518,6 +18545,12 @@ mg_start(const struct mg_callbacks *callbacks,
 	WSAStartup(MAKEWORD(2, 2), &data);
 #endif /* _WIN32  */
 
+	if (mg_init_library_called == 0) {
+		/* Legacy INIT, if mg_start is called without mg_init_library.
+		* Note: This will cause a memory leak when unloading the library. */
+		legacy_init(options);
+	}
+
 	/* Allocate context and initialize reasonable general case defaults. */
 	if ((ctx = (struct mg_context *)mg_calloc(1, sizeof(*ctx))) == NULL) {
 		return NULL;
@@ -18526,34 +18559,6 @@ mg_start(const struct mg_callbacks *callbacks,
 	/* Random number generator will initialize at the first call */
 	ctx->dd.auth_nonce_mask =
 	    (uint64_t)get_random() ^ (uint64_t)(ptrdiff_t)(options);
-
-	if (mg_init_library_called == 0) {
-		/* Legacy INIT, if mg_start is called without mg_init_library.
-		 * Note: This may cause a memory leak */
-		const char *ports_option =
-		    config_options[LISTENING_PORTS].default_value;
-
-		if (options) {
-			const char **run_options = options;
-			const char *optname = config_options[LISTENING_PORTS].name;
-
-			/* Try to find the "listening_ports" option */
-			while (*run_options) {
-				if (!strcmp(*run_options, optname)) {
-					ports_option = run_options[1];
-				}
-				run_options += 2;
-			}
-		}
-
-		if (is_ssl_port_used(ports_option)) {
-			/* Initialize with SSL support */
-			mg_init_library(MG_FEATURES_TLS);
-		} else {
-			/* Initialize without SSL support */
-			mg_init_library(MG_FEATURES_DEFAULT);
-		}
-	}
 
 	tls.is_master = -1;
 	tls.thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
