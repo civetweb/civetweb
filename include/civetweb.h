@@ -1425,7 +1425,9 @@ mg_connect_client_secure(const struct mg_client_options *client_options,
                          size_t error_buffer_size);
 
 
+#if defined(MG_LEGACY_INTERFACE) /* 2019-11-02 */
 enum { TIMEOUT_INFINITE = -1 };
+#endif
 enum { MG_TIMEOUT_INFINITE = -1 };
 
 /* Wait for a response from the server
