@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018 the Civetweb developers
+/* Copyright (c) 2013-2019 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1466,13 +1466,17 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
         64  support server side JavaScript (USE_DUKTAPE is set)
        128  support caching (NO_CACHING not set)
        256  support server statistics (USE_SERVER_STATS is set)
+       512  support for on the fly compression (USE_ZLIB is set)
+
+       These values are defined as MG_FEATURES_*
+
        The result is undefined, if bits are set that do not represent a
-       defined feature (currently: feature >= 512).
+       defined feature (currently: feature >= 1024).
        The result is undefined, if no bit is set (feature == 0).
 
    Return:
-     If feature is available, the corresponding bit is set
-     If feature is not available, the bit is 0
+     If a feature is available, the corresponding bit is set
+     If a feature is not available, the bit is 0
 */
 CIVETWEB_API unsigned mg_check_feature(unsigned feature);
 
