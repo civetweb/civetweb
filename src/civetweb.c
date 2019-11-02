@@ -3962,7 +3962,7 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 			int auth_domain_check_enabled =
 			    conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK]
 			    && (!mg_strcasecmp(
-			           conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes"));
+			        conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes"));
 			const char *server_domain =
 			    conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
 
@@ -12057,7 +12057,7 @@ print_dav_dir_entry(struct de *de, void *data)
 	struct mg_connection *conn = (struct mg_connection *)data;
 	if (!de || !conn
 	    || !print_props(
-	           conn, conn->request_info.local_uri, de->file_name, &de->file)) {
+	        conn, conn->request_info.local_uri, de->file_name, &de->file)) {
 		return -1;
 	}
 	return 0;
@@ -14385,7 +14385,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 #if defined(USE_IPV6)
 	} else if (sscanf(vec->ptr, "[%49[^]]]:%u%n", buf, &port, &len) == 2
 	           && mg_inet_pton(
-	                  AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6))) {
+	               AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6))) {
 		/* IPv6 address, examples: see above */
 		/* so->lsa.sin6.sin6_family = AF_INET6; already set by mg_inet_pton
 		 */
@@ -18499,31 +18499,31 @@ get_system_name(char **sysName)
 }
 
 
-static void legacy_init(const char **options) {
-		const char *ports_option =
-			config_options[LISTENING_PORTS].default_value;
+static void
+legacy_init(const char **options)
+{
+	const char *ports_option = config_options[LISTENING_PORTS].default_value;
 
-		if (options) {
-			const char **run_options = options;
-			const char *optname = config_options[LISTENING_PORTS].name;
+	if (options) {
+		const char **run_options = options;
+		const char *optname = config_options[LISTENING_PORTS].name;
 
-			/* Try to find the "listening_ports" option */
-			while (*run_options) {
-				if (!strcmp(*run_options, optname)) {
-					ports_option = run_options[1];
-				}
-				run_options += 2;
+		/* Try to find the "listening_ports" option */
+		while (*run_options) {
+			if (!strcmp(*run_options, optname)) {
+				ports_option = run_options[1];
 			}
+			run_options += 2;
 		}
+	}
 
-		if (is_ssl_port_used(ports_option)) {
-			/* Initialize with SSL support */
-			mg_init_library(MG_FEATURES_TLS);
-		}
-		else {
-			/* Initialize without SSL support */
-			mg_init_library(MG_FEATURES_DEFAULT);
-		}
+	if (is_ssl_port_used(ports_option)) {
+		/* Initialize with SSL support */
+		mg_init_library(MG_FEATURES_TLS);
+	} else {
+		/* Initialize without SSL support */
+		mg_init_library(MG_FEATURES_DEFAULT);
+	}
 }
 
 struct mg_context *
@@ -18547,7 +18547,7 @@ mg_start(const struct mg_callbacks *callbacks,
 
 	if (mg_init_library_called == 0) {
 		/* Legacy INIT, if mg_start is called without mg_init_library.
-		* Note: This will cause a memory leak when unloading the library. */
+		 * Note: This will cause a memory leak when unloading the library. */
 		legacy_init(options);
 	}
 

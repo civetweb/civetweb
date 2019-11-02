@@ -1603,11 +1603,10 @@ lsp_trace(lua_State *L)
 	int firstarg = 1;
 	int i;
 
-	for (i=0; i<8; i++) {
+	for (i = 0; i < 8; i++) {
 		if (num_args >= (i + 1)) {
 			arg_type[i] = lua_type(L, (i + 1));
-		}
-		else {
+		} else {
 			arg_type[i] = LUA_TNIL;
 		}
 	}
@@ -1629,7 +1628,8 @@ lsp_trace(lua_State *L)
 	}
 
 	if (trace_level > s_lua_traceLevel) {
-		/* If this trace request has a higher trace level than the global trace level, do not trace. */
+		/* If this trace request has a higher trace level than the global trace
+		 * level, do not trace. */
 		lua_pushboolean(L, 0);
 		return 1;
 	}
@@ -2939,7 +2939,7 @@ lua_init_optional_libraries(void)
 {
 	/* Create logging mutex */
 	pthread_mutex_init(&s_lua_traceMutex, &pthread_mutex_attr);
-	
+
 	/* shared Lua state */
 	lua_shared_init();
 
