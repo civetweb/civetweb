@@ -618,6 +618,10 @@ mg_get_context(const struct mg_connection *conn);
 CIVETWEB_API void *mg_get_user_data(const struct mg_context *ctx);
 
 
+/* Get user data passed to mg_start from connection. */
+CIVETWEB_API void *mg_get_user_context_data(const struct mg_connection *conn);
+
+
 /* Get user defined thread pointer for server threads (see init_thread). */
 CIVETWEB_API void *mg_get_thread_pointer(const struct mg_connection *conn);
 

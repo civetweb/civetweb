@@ -3518,6 +3518,13 @@ mg_get_user_data(const struct mg_context *ctx)
 
 
 void *
+mg_get_user_context_data(const struct mg_connection *conn)
+{
+	return mg_get_user_data(mg_get_context(conn));
+}
+
+
+void *
 mg_get_thread_pointer(const struct mg_connection *conn)
 {
 	/* both methods should return the same pointer */
