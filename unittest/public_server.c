@@ -832,16 +832,18 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	char chunk_data[32];
 	const struct mg_request_info *ri;
 	struct mg_context *ctx;
-	void *ud, *cud;
+	void *ud, *cud, *ud2;
 	void *dummy = malloc(1);
 
 	ctx = mg_get_context(conn);
 	ud = mg_get_user_data(ctx);
+	ud2 = mg_get_user_context_data(conn);
 	ri = mg_get_request_info(conn);
 
 	ck_assert(ri != NULL);
 	ck_assert(ctx == g_ctx);
 	ck_assert(ud == &g_ctx);
+	ck_assert(ud == ud2);
 
 	ck_assert(dummy != NULL);
 
@@ -884,15 +886,17 @@ request_test_handler2(struct mg_connection *conn, void *cbdata)
 	const char *chunk_data = "123456789A123456789B123456789C";
 	const struct mg_request_info *ri;
 	struct mg_context *ctx;
-	void *ud;
+	void *ud, *ud2;
 
 	ctx = mg_get_context(conn);
 	ud = mg_get_user_data(ctx);
+	ud2 = mg_get_user_context_data(conn);
 	ri = mg_get_request_info(conn);
 
 	ck_assert(ri != NULL);
 	ck_assert(ctx == g_ctx);
 	ck_assert(ud == &g_ctx);
+	ck_assert(ud == ud2);
 
 	mg_send_http_ok(conn, "text/plain", -1);
 
