@@ -4355,13 +4355,14 @@ static int
 send_static_cache_header(struct mg_connection *conn)
 {
 #if !defined(NO_CACHING)
+	int max_age;
 	const char *cache_control = conn->dom_ctx->config[STATIC_FILE_CACHE_CONTROL];
 	if (cache_control != NULL) {
 		return mg_printf(conn, "Cache-Control: %s\r\n", cache_control);
 	}
 	/* Read the server config to check how long a file may be cached.
 	 * The configuration is in seconds. */
-	int max_age = atoi(conn->dom_ctx->config[STATIC_FILE_MAX_AGE]);
+	max_age = atoi(conn->dom_ctx->config[STATIC_FILE_MAX_AGE]);
 	if (max_age <= 0) {
 		/* 0 means "do not cache". All values <0 are reserved
 		 * and may be used differently in the future. */
