@@ -2439,6 +2439,7 @@ enum {
 	ERROR_PAGES,
 #if !defined(NO_CACHING)
 	STATIC_FILE_MAX_AGE,
+	STATIC_FILE_CACHE_CONTROL,
 #endif
 #if !defined(NO_SSL)
 	STRICT_HTTPS_MAX_AGE,
@@ -2555,6 +2556,7 @@ static const struct mg_option config_options[] = {
     {"error_pages", MG_CONFIG_TYPE_DIRECTORY, NULL},
 #if !defined(NO_CACHING)
     {"static_file_max_age", MG_CONFIG_TYPE_NUMBER, "3600"},
+	{"static_file_cache_control", MG_CONFIG_TYPE_STRING, NULL},
 #endif
 #if !defined(NO_SSL)
     {"strict_transport_security_max_age", MG_CONFIG_TYPE_NUMBER, NULL},
@@ -4353,6 +4355,10 @@ static int
 send_static_cache_header(struct mg_connection *conn)
 {
 #if !defined(NO_CACHING)
+	const char *cache_control = conn->dom_ctx->config[STATIC_FILE_CACHE_CONTROL];
+	if (cache_control != NULL) {
+		return mg_printf(conn, "Cache-Control: %s\r\n", cache_control);
+	}
 	/* Read the server config to check how long a file may be cached.
 	 * The configuration is in seconds. */
 	int max_age = atoi(conn->dom_ctx->config[STATIC_FILE_MAX_AGE]);

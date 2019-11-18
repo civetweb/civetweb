@@ -269,3 +269,9 @@ ci/lua
 
 # Conan test cache
 conan/test_package/build
+
+
+##########################
+## Visual Studio Code
+##########################
+.vscode
