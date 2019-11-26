@@ -622,10 +622,12 @@ Set the `Cache-Control` header of static files responses.
 The string value will be used directly.
 
 E.g. this config:
-static_file_cache_control no-cache, max-age=31536000
+
+`static_file_cache_control no-cache, max-age=31536000`
 
 Will result in this header being added:
-Cache-Control: no-cache, max-age=31536000
+
+`Cache-Control: no-cache, max-age=31536000`
 
 This will take precedence over the static\_file\_max\_age option.
 
