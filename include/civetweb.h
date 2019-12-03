@@ -268,7 +268,8 @@ struct mg_callbacks {
 	    -1: initializing ssl fails.*/
 	int (*external_ssl_ctx)(void **ssl_ctx, void *user_data);
 
-#if defined(MG_LEGACY_INTERFACE) /* 2015-08-19 */
+#if defined(MG_LEGACY_INTERFACE)           /* 2015-08-19 */                    \
+    || defined(MG_EXPERIMENTAL_INTERFACES) /* 2019-11-03 */
 	/* Called when websocket request is received, before websocket handshake.
 	   Return value:
 	     0: civetweb proceeds with websocket handshake.
@@ -380,7 +381,6 @@ struct mg_callbacks {
 	void (*exit_thread)(const struct mg_context *ctx,
 	                    int thread_type,
 	                    void *thread_pointer);
-
 
 	/* Called when initializing a new connection object.
 	 * Can be used to initialize the connection specific user data
@@ -1153,6 +1153,10 @@ CIVETWEB_API int mg_get_cookie(const char *cookie,
      struct mg_connection *conn;
      conn = mg_download("google.com", 80, 0, ebuf, sizeof(ebuf),
                         "%s", "GET / HTTP/1.0\r\nHost: google.com\r\n\r\n");
+
+   mg_download is equivalent to calling mg_connect_client followed by
+   mg_printf and mg_get_response. Using these three functions directly may
+   allow more control as compared to using mg_download.
  */
 CIVETWEB_API struct mg_connection *
 mg_download(const char *host,
@@ -1520,7 +1524,7 @@ CIVETWEB_API int
 mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen);
 
 
-#ifdef MG_EXPERIMENTAL_INTERFACES
+#if defined(MG_EXPERIMENTAL_INTERFACES)
 /* Get connection information. Useful for server diagnosis.
    Parameters:
      ctx: Context handle
@@ -1543,6 +1547,47 @@ CIVETWEB_API int mg_get_connection_info(const struct mg_context *ctx,
                                         int buflen);
 #endif
 
+
+/* New APIs for enhanced option and error handling.
+   These mg_*2 API functions have the same purpose as their original versions,
+   but provide additional options and/or provide improved error diagnostics.
+
+   Note: Experimental interfaces may change
+*/
+struct mg_error_data {
+	unsigned *code;          /* error code (number) */
+	char *text;              /* buffer for error text */
+	size_t text_buffer_size; /* size of buffer of "text" */
+};
+
+struct mg_init_data {
+	const struct mg_callbacks *callbacks; /* callback function pointer */
+	void *user_data;                      /* data */
+	const char **configuration_options;
+};
+
+
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+
+CIVETWEB_API struct mg_connection *
+mg_connect_client2(const char *host,
+                   const char *protocol,
+                   int port,
+                   const char *path,
+                   struct mg_init_data *init,
+                   struct mg_error_data *error);
+
+CIVETWEB_API int mg_get_response2(struct mg_connection *conn,
+                                  struct mg_error_data *error,
+                                  int timeout);
+
+CIVETWEB_API struct mg_context *mg_start2(struct mg_init_data *init,
+                                          struct mg_error_data *error);
+
+CIVETWEB_API int mg_start_domain2(struct mg_context *ctx,
+                                  const char **configuration_options,
+                                  struct mg_error_data *error);
+#endif
 
 #ifdef __cplusplus
 }

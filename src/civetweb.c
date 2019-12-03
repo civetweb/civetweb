@@ -13696,7 +13696,8 @@ is_in_script_path(const struct mg_connection *conn, const char *path)
 }
 
 
-#if defined(USE_WEBSOCKET) && defined(MG_LEGACY_INTERFACE)
+#if defined(USE_WEBSOCKET)                                                     \
+    && (defined(MG_LEGACY_INTERFACE) || defined(MG_EXPERIMENTAL_INTERFACES))
 static int
 deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
                                      void *cbdata)
@@ -13733,6 +13734,17 @@ deprecated_websocket_data_wrapper(struct mg_connection *conn,
 	}
 	/* No handler set - assume "OK" */
 	return 1;
+}
+
+
+static void
+deprecated_websocket_close_wrapper(const struct mg_connection *conn,
+                                   void *cbdata)
+{
+	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
+	if (pcallbacks->connection_close) {
+		pcallbacks->connection_close(conn);
+	}
 }
 #endif
 
@@ -14107,7 +14119,7 @@ handle_request(struct mg_connection *conn)
 			    deprecated_websocket_ready_wrapper,
 			    deprecated_websocket_data_wrapper,
 			    NULL,
-			    conn->phys_ctx->user_data);
+			    conn->phys_ctx->callbacks);
 #else
 			mg_send_http_error(conn, 404, "%s", "Not found");
 #endif
@@ -15011,14 +15023,14 @@ set_uid_option(struct mg_context *phys_ctx)
 		const char *run_as_user = phys_ctx->dd.config[RUN_AS_USER];
 		const struct passwd *to_pw = NULL;
 
-		if (run_as_user != NULL && (to_pw = getpwnam(run_as_user)) == NULL) {
+		if ((run_as_user != NULL) && (to_pw = getpwnam(run_as_user)) == NULL) {
 			/* run_as_user does not exist on the system. We can't proceed
 			 * further. */
 			mg_cry_ctx_internal(phys_ctx,
 			                    "%s: unknown user [%s]",
 			                    __func__,
 			                    run_as_user);
-		} else if (run_as_user == NULL || curr_uid == to_pw->pw_uid) {
+		} else if ((run_as_user == NULL) || (curr_uid == to_pw->pw_uid)) {
 			/* There was either no request to change user, or we're already
 			 * running as run_as_user. Nothing else to do.
 			 */
@@ -16731,6 +16743,96 @@ mg_connect_client(const char *host,
 	                              error_buffer,
 	                              error_buffer_size);
 }
+
+
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+struct mg_connection *
+mg_connect_client2(const char *host,
+                   const char *protocol,
+                   int port,
+                   const char *path,
+                   struct mg_init_data *init,
+                   struct mg_error_data *error)
+{
+	int is_ssl, is_ws;
+	void *user_data = (init != NULL) ? init->user_data : NULL;
+
+	if (error != NULL) {
+		error->code = 0;
+		if (error->text_buffer_size > 0) {
+			*error->text = 0;
+		}
+	}
+
+	if ((host == NULL) || (protocol == NULL)) {
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "Invalid parameters");
+		}
+		return NULL;
+	}
+
+	/* check all known protocolls */
+	if (!mg_strcasecmp(protocol, "http")) {
+		is_ssl = 0;
+		is_ws = 0;
+	} else if (!mg_strcasecmp(protocol, "https")) {
+		is_ssl = 1;
+		is_ws = 0;
+#if defined(USE_WEBSOCKET)
+	} else if (!mg_strcasecmp(protocol, "ws")) {
+		is_ssl = 0;
+		is_ws = 1;
+	} else if (!mg_strcasecmp(protocol, "wss")) {
+		is_ssl = 1;
+		is_ws = 1;
+#endif
+	} else {
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "Protocol %s not supported",
+			            protocol);
+		}
+		return NULL;
+	}
+
+	/* TODO: The current implementation here just calls the old implementations,
+	 * without using any new options. This is just a first step to test the new
+	 * interfaces. */
+#if defined(USE_WEBSOCKET)
+	if (is_ws) {
+		/* TODO: implement all options */
+		return mg_connect_websocket_client(host,
+		                                   port,
+		                                   is_ssl,
+		                                   error->text,
+		                                   error->text_buffer_size,
+		                                   (path ? path : ""),
+		                                   NULL /* TODO: origin */,
+		                                   deprecated_websocket_data_wrapper,
+		                                   deprecated_websocket_close_wrapper,
+		                                   (void *)init->callbacks);
+	}
+#endif
+
+	/* TODO: all additional options */
+	struct mg_client_options opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.host = host;
+	opts.port = port;
+	return mg_connect_client_impl(&opts,
+	                              is_ssl,
+	                              error->text,
+	                              error->text_buffer_size);
+}
+#endif
 
 
 static const struct {
@@ -18542,10 +18644,9 @@ legacy_init(const char **options)
 	}
 }
 
+
 struct mg_context *
-mg_start(const struct mg_callbacks *callbacks,
-         void *user_data,
-         const char **options)
+mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 {
 	struct mg_context *ctx;
 	const char *name, *value, *default_value;
@@ -18553,6 +18654,8 @@ mg_start(const struct mg_callbacks *callbacks,
 	unsigned int i;
 	int itmp;
 	void (*exit_callback)(const struct mg_context *ctx) = 0;
+	const char **options =
+	    ((init != NULL) ? (init->configuration_options) : (NULL));
 
 	struct mg_workerTLS tls;
 
@@ -18560,6 +18663,13 @@ mg_start(const struct mg_callbacks *callbacks,
 	WSADATA data;
 	WSAStartup(MAKEWORD(2, 2), &data);
 #endif /* _WIN32  */
+
+	if (error != NULL) {
+		error->code = 0;
+		if (error->text_buffer_size > 0) {
+			*error->text = 0;
+		}
+	}
 
 	if (mg_init_library_called == 0) {
 		/* Legacy INIT, if mg_start is called without mg_init_library.
@@ -18569,6 +18679,14 @@ mg_start(const struct mg_callbacks *callbacks,
 
 	/* Allocate context and initialize reasonable general case defaults. */
 	if ((ctx = (struct mg_context *)mg_calloc(1, sizeof(*ctx))) == NULL) {
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "Out of memory");
+		}
 		return NULL;
 	}
 
@@ -18576,7 +18694,7 @@ mg_start(const struct mg_callbacks *callbacks,
 	ctx->dd.auth_nonce_mask =
 	    (uint64_t)get_random() ^ (uint64_t)(ptrdiff_t)(options);
 
-	tls.is_master = -1;
+	tls.is_master = -1; /* Thread calling mg_start */
 	tls.thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
 #if defined(_WIN32)
 	tls.pthread_cond_helper_mutex = NULL;
@@ -18590,22 +18708,36 @@ mg_start(const struct mg_callbacks *callbacks,
 #endif
 	ok &= (0 == pthread_mutex_init(&ctx->nonce_mutex, &pthread_mutex_attr));
 	if (!ok) {
+		const char *err_msg =
+		    "Cannot initialize thread synchronization objects";
 		/* Fatal error - abort start. However, this situation should never
 		 * occur in practice. */
-		mg_cry_ctx_internal(ctx,
+
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
 		                    "%s",
-		                    "Cannot initialize thread synchronization objects");
+			            err_msg);
+		}
+
 		mg_free(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
 
-	if (callbacks) {
-		ctx->callbacks = *callbacks;
-		exit_callback = callbacks->exit_context;
+	if ((init != NULL) && (init->callbacks != NULL)) {
+		/* Set all callbacks except exit_context. */
+		ctx->callbacks = *init->callbacks;
+		exit_callback = init->callbacks->exit_context;
+		/* The exit callback is activated once the context is successfully
+		 * created. It should not be called, if an incomplete context object is
+		 * deleted during a failed initialization. */
 		ctx->callbacks.exit_context = 0;
 	}
-	ctx->user_data = user_data;
+	ctx->user_data = ((init != NULL) ? (init->user_data) : (NULL));
 	ctx->dd.handlers = NULL;
 	ctx->dd.next = NULL;
 
@@ -18617,16 +18749,34 @@ mg_start(const struct mg_callbacks *callbacks,
 	while (options && (name = *options++) != NULL) {
 		if ((idx = get_option_index(name)) == -1) {
 			mg_cry_ctx_internal(ctx, "Invalid option: %s", name);
+			if ((error != NULL) && (error->text_buffer_size > 0)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for error buffers */
+				            error->text,
+				            error->text_buffer_size,
+				            "Invalid configuration option: %s",
+				            name);
+			}
 			free_context(ctx);
 			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
 		} else if ((value = *options++) == NULL) {
 			mg_cry_ctx_internal(ctx, "%s: option value cannot be NULL", name);
+			if ((error != NULL) && (error->text_buffer_size > 0)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for error buffers */
+				            error->text,
+				            error->text_buffer_size,
+				            "Invalid configuration option value: %s",
+				            name);
+			}
 			free_context(ctx);
 			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
 		}
 		if (ctx->dd.config[idx] != NULL) {
+			/* A duplicate configuration option is not an error - the last
+			 * option value will be used. */
 			mg_cry_ctx_internal(ctx, "warning: %s: duplicate option", name);
 			mg_free(ctx->dd.config[idx]);
 		}
@@ -18646,6 +18796,14 @@ mg_start(const struct mg_callbacks *callbacks,
 	itmp = atoi(ctx->dd.config[MAX_REQUEST_SIZE]);
 	if (itmp < 1024) {
 		mg_cry_ctx_internal(ctx, "%s", "max_request_size too small");
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "Invalid configuration option value: %s",
+			            config_options[MAX_REQUEST_SIZE].name);
+		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -18655,15 +18813,20 @@ mg_start(const struct mg_callbacks *callbacks,
 	/* Worker thread count option */
 	workerthreadcount = atoi(ctx->dd.config[NUM_THREADS]);
 
-	if (workerthreadcount > MAX_WORKER_THREADS) {
-		mg_cry_ctx_internal(ctx, "%s", "Too many worker threads");
-		free_context(ctx);
-		pthread_setspecific(sTlsKey, NULL);
-		return NULL;
-	}
-
+	if ((workerthreadcount > MAX_WORKER_THREADS) || (workerthreadcount <= 0)) {
 	if (workerthreadcount <= 0) {
 		mg_cry_ctx_internal(ctx, "%s", "Invalid number of worker threads");
+		} else {
+			mg_cry_ctx_internal(ctx, "%s", "Too many worker threads");
+		}
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "Invalid configuration option value: %s",
+			            config_options[NUM_THREADS].name);
+		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -18673,6 +18836,14 @@ mg_start(const struct mg_callbacks *callbacks,
 #if defined(NO_FILES)
 	if (ctx->dd.config[DOCUMENT_ROOT] != NULL) {
 		mg_cry_ctx_internal(ctx, "%s", "Document root must not be set");
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "Invalid configuration option value: %s",
+			            config_options[DOCUMENT_ROOT].name);
+		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -18692,6 +18863,15 @@ mg_start(const struct mg_callbacks *callbacks,
 		    ctx->dd.config[LUA_BACKGROUND_SCRIPT], ctx, ebuf, sizeof(ebuf));
 		if (!state) {
 			mg_cry_ctx_internal(ctx, "lua_background_script error: %s", ebuf);
+			if ((error != NULL) && (error->text_buffer_size > 0)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for error buffers */
+				            error->text,
+				            error->text_buffer_size,
+				            "Error in script %s: %s",
+				            config_options[DOCUMENT_ROOT].name,
+				            ebuf);
+			}
 			free_context(ctx);
 			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
@@ -18716,20 +18896,99 @@ mg_start(const struct mg_callbacks *callbacks,
 	}
 #endif
 
-	/* NOTE(lsm): order is important here. SSL certificates must
-	 * be initialized before listening ports. UID must be set last. */
-	if (
+	/* Step by step initialization of ctx - depending on build options */
 #if !defined(NO_FILESYSTEMS)
-	    !set_gpass_option(ctx, NULL) ||
+	if (!set_gpass_option(ctx, NULL)) {
+		const char *err_msg = "Invalid global password file";
+		/* Fatal error - abort start. */
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            err_msg);
+		}
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
 #endif
+
 #if !defined(NO_SSL)
-	    !init_ssl_ctx(ctx, NULL) ||
+	if (!init_ssl_ctx(ctx, NULL)) {
+		const char *err_msg = "Error initializing SSL context";
+		/* Fatal error - abort start. */
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            err_msg);
+		}
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
 #endif
-	    !set_ports_option(ctx) ||
+
+	if (!set_ports_option(ctx)) {
+		const char *err_msg = "Failed to setup server ports";
+		/* Fatal error - abort start. */
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            err_msg);
+		}
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
+
+
 #if !defined(_WIN32) && !defined(__ZEPHYR__)
-	    !set_uid_option(ctx) ||
+	if (!set_uid_option(ctx)) {
+		const char *err_msg = "Failed to run as configured user";
+		/* Fatal error - abort start. */
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            err_msg);
+		}
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
 #endif
-	    !set_acl_option(ctx)) {
+
+	if (!set_acl_option(ctx)) {
+		const char *err_msg = "Failed to setup access control list";
+		/* Fatal error - abort start. */
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            err_msg);
+		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -18741,9 +19000,17 @@ mg_start(const struct mg_callbacks *callbacks,
 	                                                   ctx);
 
 	if (ctx->worker_threadids == NULL) {
-		mg_cry_ctx_internal(ctx,
+		const char *err_msg = "Not enough memory for worker thread ID array";
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
 		                    "%s",
-		                    "Not enough memory for worker thread ID array");
+			            err_msg);
+		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -18753,13 +19020,22 @@ mg_start(const struct mg_callbacks *callbacks,
 	                                          sizeof(struct mg_connection),
 	                                          ctx);
 	if (ctx->worker_connections == NULL) {
-		mg_cry_ctx_internal(
-		    ctx, "%s", "Not enough memory for worker thread connection array");
+		const char *err_msg =
+		    "Not enough memory for worker thread connection array";
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            err_msg);
+		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
-
 
 #if defined(ALTERNATIVE_QUEUE)
 	ctx->client_wait_events =
@@ -18767,10 +19043,18 @@ mg_start(const struct mg_callbacks *callbacks,
 	                           sizeof(ctx->client_wait_events[0]),
 	                           ctx);
 	if (ctx->client_wait_events == NULL) {
-		mg_cry_ctx_internal(ctx,
-		                    "%s",
-		                    "Not enough memory for worker event array");
+		const char *err_msg = "Not enough memory for worker event array";
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
 		mg_free(ctx->worker_threadids);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            err_msg);
+		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -18781,11 +19065,19 @@ mg_start(const struct mg_callbacks *callbacks,
 	                                   sizeof(ctx->client_socks[0]),
 	                                   ctx);
 	if (ctx->client_socks == NULL) {
-		mg_cry_ctx_internal(ctx,
-		                    "%s",
-		                    "Not enough memory for worker socket array");
+		const char *err_msg = "Not enough memory for worker socket array";
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
 		mg_free(ctx->client_wait_events);
 		mg_free(ctx->worker_threadids);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            err_msg);
+		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -18794,7 +19086,8 @@ mg_start(const struct mg_callbacks *callbacks,
 	for (i = 0; (unsigned)i < ctx->cfg_worker_threads; i++) {
 		ctx->client_wait_events[i] = event_create();
 		if (ctx->client_wait_events[i] == 0) {
-			mg_cry_ctx_internal(ctx, "Error creating worker event %i", i);
+			const char *err_msg = "Error creating worker event %i";
+			mg_cry_ctx_internal(ctx, err_msg, i);
 			while (i > 0) {
 				i--;
 				event_destroy(ctx->client_wait_events[i]);
@@ -18802,6 +19095,15 @@ mg_start(const struct mg_callbacks *callbacks,
 			mg_free(ctx->client_socks);
 			mg_free(ctx->client_wait_events);
 			mg_free(ctx->worker_threadids);
+
+			if ((error != NULL) && (error->text_buffer_size > 0)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for error buffers */
+				            error->text,
+				            error->text_buffer_size,
+				            err_msg,
+				            i);
+			}
 			free_context(ctx);
 			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
@@ -18809,10 +19111,19 @@ mg_start(const struct mg_callbacks *callbacks,
 	}
 #endif
 
-
 #if defined(USE_TIMERS)
 	if (timers_init(ctx) != 0) {
-		mg_cry_ctx_internal(ctx, "%s", "Error creating timers");
+		const char *err_msg = "Error creating timers";
+		mg_cry_ctx_internal(ctx, "%s", err_msg);
+
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            err_msg);
+		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -18823,6 +19134,9 @@ mg_start(const struct mg_callbacks *callbacks,
 	if (ctx->callbacks.init_context) {
 		ctx->callbacks.init_context(ctx);
 	}
+
+	/* From now, the context is successfully created.
+	 * When it is destroyed, the exit callback should be called. */
 	ctx->callbacks.exit_context = exit_callback;
 	ctx->context_type = CONTEXT_SERVER; /* server context */
 
@@ -18838,16 +19152,38 @@ mg_start(const struct mg_callbacks *callbacks,
 		                            &ctx->worker_threadids[i])
 		    != 0) {
 
+			long error_no = (long)ERRNO;
+
 			/* thread was not created */
 			if (i > 0) {
+				/* If the second, third, ... thread cannot be created, set a
+				 * warning, but keep running. */
 				mg_cry_ctx_internal(ctx,
 				                    "Cannot start worker thread %i: error %ld",
 				                    i + 1,
-				                    (long)ERRNO);
+				                    error_no);
+
+				/* If the server initialization should stop here, all threads
+				 * that have already been created must be stopped first, before
+				 * any free_context(ctx) call.
+				 */
+
 			} else {
+				/* If the first worker thread cannot be created, stop
+				 * initialization and free the entire server context. */
 				mg_cry_ctx_internal(ctx,
 				                    "Cannot create threads: error %ld",
-				                    (long)ERRNO);
+				                    error_no);
+
+				if ((error != NULL) && (error->text_buffer_size > 0)) {
+					mg_snprintf(
+					    NULL,
+					    NULL, /* No truncation check for error buffers */
+					    error->text,
+					    error->text_buffer_size,
+					    "Cannot create first worker thread: error %ld",
+					    error_no);
+				}
 				free_context(ctx);
 				pthread_setspecific(sTlsKey, NULL);
 				return NULL;
@@ -18861,10 +19197,26 @@ mg_start(const struct mg_callbacks *callbacks,
 }
 
 
+struct mg_context *
+mg_start(const struct mg_callbacks *callbacks,
+         void *user_data,
+         const char **options)
+{
+	struct mg_init_data init = {0};
+	init.callbacks = callbacks;
+	init.user_data = user_data;
+	init.configuration_options = options;
+
+	return mg_start2(&init, NULL);
+}
+
+
 #if defined(MG_EXPERIMENTAL_INTERFACES)
 /* Add an additional domain to an already running web server. */
 int
-mg_start_domain(struct mg_context *ctx, const char **options)
+mg_start_domain2(struct mg_context *ctx,
+                 const char **options,
+                 struct mg_error_data *error)
 {
 	const char *name;
 	const char *value;
@@ -18873,7 +19225,34 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 	struct mg_domain_context *dom;
 	int idx, i;
 
-	if ((ctx == NULL) || (ctx->stop_flag != 0) || (options == NULL)) {
+	if (error != NULL) {
+		error->code = 0;
+		if (error->text_buffer_size > 0) {
+			*error->text = 0;
+		}
+	}
+
+	if ((ctx == NULL) || (options == NULL)) {
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "Invalid parameters");
+		}
+		return -1;
+	}
+
+	if (ctx->stop_flag != 0) {
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "Server already stopped");
+		}
 		return -1;
 	}
 
@@ -18882,6 +19261,14 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 
 	if (!new_dom) {
 		/* Out of memory */
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "Out or memory");
+		}
 		return -6;
 	}
 
@@ -18889,14 +19276,31 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 	while (options && (name = *options++) != NULL) {
 		if ((idx = get_option_index(name)) == -1) {
 			mg_cry_ctx_internal(ctx, "Invalid option: %s", name);
+			if ((error != NULL) && (error->text_buffer_size > 0)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for error buffers */
+				            error->text,
+				            error->text_buffer_size,
+				            "Invalid option: %s",
+				            name);
+			}
 			mg_free(new_dom);
 			return -2;
 		} else if ((value = *options++) == NULL) {
 			mg_cry_ctx_internal(ctx, "%s: option value cannot be NULL", name);
+			if ((error != NULL) && (error->text_buffer_size > 0)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for error buffers */
+				            error->text,
+				            error->text_buffer_size,
+				            "Invalid option value: %s",
+				            name);
+			}
 			mg_free(new_dom);
 			return -2;
 		}
 		if (new_dom->config[idx] != NULL) {
+			/* Duplicate option: Later values overwrite earlier ones. */
 			mg_cry_ctx_internal(ctx, "warning: %s: duplicate option", name);
 			mg_free(new_dom->config[idx]);
 		}
@@ -18908,6 +19312,14 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 	/* TODO: Maybe use a new option hostname? */
 	if (!new_dom->config[AUTHENTICATION_DOMAIN]) {
 		mg_cry_ctx_internal(ctx, "%s", "authentication domain required");
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "Mandatory option %s missing",
+			            config_options[AUTHENTICATION_DOMAIN].name);
+		}
 		mg_free(new_dom);
 		return -4;
 	}
@@ -18933,6 +19345,14 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 
 	if (!init_ssl_ctx(ctx, new_dom)) {
 		/* Init SSL failed */
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "Initializing SSL context failed");
+		}
 		mg_free(new_dom);
 		return -3;
 	}
@@ -18949,6 +19369,15 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 			mg_cry_ctx_internal(ctx,
 			                    "domain %s already in use",
 			                    new_dom->config[AUTHENTICATION_DOMAIN]);
+			if ((error != NULL) && (error->text_buffer_size > 0)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for error buffers */
+				            error->text,
+				            error->text_buffer_size,
+				            "Domain %s specified by %s is already in use",
+				            new_dom->config[AUTHENTICATION_DOMAIN],
+				            config_options[AUTHENTICATION_DOMAIN].name);
+			}
 			mg_free(new_dom);
 			return -5;
 		}
@@ -18968,6 +19397,14 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 	/* Return domain number */
 	return idx;
 }
+
+
+int
+mg_start_domain(struct mg_context *ctx, const char **options)
+{
+	return mg_start_domain2(ctx, options, NULL);
+}
+
 #endif
 
 
