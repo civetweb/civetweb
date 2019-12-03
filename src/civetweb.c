@@ -18356,10 +18356,12 @@ free_context(struct mg_context *ctx)
 	(void)pthread_mutex_destroy(&ctx->thread_mutex);
 #if defined(ALTERNATIVE_QUEUE)
 	mg_free(ctx->client_socks);
-	for (i = 0; (unsigned)i < ctx->cfg_worker_threads; i++) {
-		event_destroy(ctx->client_wait_events[i]);
+	if (ctx->client_wait_events != NULL) {
+		for (i = 0; (unsigned)i < ctx->cfg_worker_threads; i++) {
+			event_destroy(ctx->client_wait_events[i]);
+		}
+		mg_free(ctx->client_wait_events);
 	}
-	mg_free(ctx->client_wait_events);
 #else
 	(void)pthread_cond_destroy(&ctx->sq_empty);
 	(void)pthread_cond_destroy(&ctx->sq_full);
