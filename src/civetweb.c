@@ -15923,7 +15923,8 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	/* If a callback has been specified, call it. */
 	callback_ret = (phys_ctx->callbacks.init_ssl == NULL)
 	                   ? 0
-	                   : (phys_ctx->callbacks.init_ssl(dom_ctx->ssl_ctx,
+	                   : (phys_ctx->callbacks.init_ssl(dom_ctx->config[AUTHENTICATION_DOMAIN],
+	                                                   dom_ctx->ssl_ctx,
 	                                                   phys_ctx->user_data));
 
 	/* If callback returns 0, civetweb sets up the SSL certificate.

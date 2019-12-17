@@ -247,12 +247,14 @@ struct mg_callbacks {
 
 	/* Called when civetweb initializes SSL library.
 	   Parameters:
+	     server_domain: authentication_domain from the domain config.
+	     ssl_ctx: SSL_CTX pointer.
 	     user_data: parameter user_data passed when starting the server.
 	   Return value:
 	     0: civetweb will set up the SSL certificate.
 	     1: civetweb assumes the callback already set up the certificate.
 	    -1: initializing ssl fails. */
-	int (*init_ssl)(void *ssl_context, void *user_data);
+	int (*init_ssl)(const char *server_domain, void *ssl_ctx, void *user_data);
 
 	/* Called when civetweb is about to create or free a SSL_CTX.
 	Parameters:
