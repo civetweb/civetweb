@@ -916,7 +916,7 @@ get_dh2236()
 
 #ifndef TEST_WITHOUT_SSL
 int
-init_ssl(const char *server_domain, void *ssl_ctx, void *user_data)
+init_ssl(void *ssl_ctx, void *user_data)
 {
 	/* Add application specific SSL initialization */
 	struct ssl_ctx_st *ctx = (struct ssl_ctx_st *)ssl_ctx;

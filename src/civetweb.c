@@ -15923,8 +15923,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	/* If a callback has been specified, call it. */
 	callback_ret = (phys_ctx->callbacks.init_ssl == NULL)
 	                   ? 0
-	                   : (phys_ctx->callbacks.init_ssl(dom_ctx->config[AUTHENTICATION_DOMAIN],
-	                                                   dom_ctx->ssl_ctx,
+	                   : (phys_ctx->callbacks.init_ssl(dom_ctx->ssl_ctx,
 	                                                   phys_ctx->user_data));
 
 	/* If callback returns 0, civetweb sets up the SSL certificate.
@@ -15938,6 +15937,27 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	}
 	if (callback_ret > 0) {
 		/* Callback did everything. */
+		return 1;
+	}
+
+	/* If a domain callback has been specified, call it. */
+	callback_ret = (phys_ctx->callbacks.init_ssl_domain == NULL)
+	                   ? 0
+	                   : (phys_ctx->callbacks.init_ssl_domain(dom_ctx->config[AUTHENTICATION_DOMAIN],
+	                                                          dom_ctx->ssl_ctx,
+	                                                          phys_ctx->user_data));
+
+	/* If domain callback returns 0, civetweb sets up the SSL certificate.
+	 * If it returns 1, civetweb assumes the calback already did this.
+	 * If it returns -1, initializing ssl fails. */
+	if (callback_ret < 0) {
+		mg_cry_ctx_internal(phys_ctx,
+		                    "Domain SSL callback returned error: %i",
+		                    callback_ret);
+		return 0;
+	}
+	if (callback_ret > 0) {
+		/* Domain callback did everything. */
 		return 1;
 	}
 
