@@ -7925,7 +7925,7 @@ remove_dot_segments(char *inout)
 			*in = 0;
 		}
 		/* otherwise */
-		/* Step 2d:
+		/* Step 2e:
 		 * move the first path segment in the input buffer to the end of
 		 * the output buffer, including the initial "/" character (if
 		 * any) and any subsequent characters up to, but not including,
@@ -7946,6 +7946,22 @@ remove_dot_segments(char *inout)
 	 */
 	/* Terminate output */
 	*out_end = 0;
+
+	/* For Windows, the files/folders "x" and "x." (with a dot but without
+	 * extension) are identical. Replace all "./" by "/" and remove a "." at the
+	 * end.
+	 */
+	out_end = out_begin;
+	while (*out_end) {
+		if ((*out_end == '.') && ((out_end[1] == '/') || (out_end[1] == 0))) {
+			char *r = out_end;
+			do {
+				r[0] = r[1];
+				r++;
+			} while (r[0]!=0);
+		}
+		out_end++;
+	}
 
 	/* Free temporary copies */
 	mg_free(in_copy);
