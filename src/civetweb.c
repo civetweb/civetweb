@@ -2556,7 +2556,7 @@ static const struct mg_option config_options[] = {
     {"error_pages", MG_CONFIG_TYPE_DIRECTORY, NULL},
 #if !defined(NO_CACHING)
     {"static_file_max_age", MG_CONFIG_TYPE_NUMBER, "3600"},
-	{"static_file_cache_control", MG_CONFIG_TYPE_STRING, NULL},
+    {"static_file_cache_control", MG_CONFIG_TYPE_STRING, NULL},
 #endif
 #if !defined(NO_SSL)
     {"strict_transport_security_max_age", MG_CONFIG_TYPE_NUMBER, NULL},
@@ -4356,7 +4356,8 @@ send_static_cache_header(struct mg_connection *conn)
 {
 #if !defined(NO_CACHING)
 	int max_age;
-	const char *cache_control = conn->dom_ctx->config[STATIC_FILE_CACHE_CONTROL];
+	const char *cache_control =
+	    conn->dom_ctx->config[STATIC_FILE_CACHE_CONTROL];
 	if (cache_control != NULL) {
 		return mg_printf(conn, "Cache-Control: %s\r\n", cache_control);
 	}
@@ -7836,18 +7837,19 @@ parse_date_string(const char *datetime)
 #endif /* !NO_CACHING */
 
 
-/* Pre-process URIs according to RFC + protect against directory disclosure attacks
- * by removing '..', excessive '/' and '\' characters */
+/* Pre-process URIs according to RFC + protect against directory disclosure
+ * attacks by removing '..', excessive '/' and '\' characters */
 static void
 remove_dot_segments(char *inout)
 {
-	/* Windows backend protection (https://tools.ietf.org/html/rfc3986#section-7.3):
-	 * Replace backslash in URI by slash */
+	/* Windows backend protection
+	 * (https://tools.ietf.org/html/rfc3986#section-7.3): Replace backslash in
+	 * URI by slash */
 	char *in_copy = mg_strdup(inout);
 	char *out_begin = inout;
 	char *out_end = inout;
 	char *in = in_copy;
-	
+
 	while (*in) {
 		if (*in == '\\') {
 			*in = '/';
@@ -7855,7 +7857,8 @@ remove_dot_segments(char *inout)
 		in++;
 	}
 
-	/* Algorithm "remove_dot_segments" from https://tools.ietf.org/html/rfc3986#section-5.2.4 */
+	/* Algorithm "remove_dot_segments" from
+	 * https://tools.ietf.org/html/rfc3986#section-5.2.4 */
 	/* Step 1:
 	 * The input buffer is initialized.
 	 * The output buffer is initialized to the empty string.
@@ -7872,10 +7875,9 @@ remove_dot_segments(char *inout)
 		 */
 		if (!strncmp(in, "../", 3)) {
 			in += 3;
-		} 
-		else if (!strncmp(in, "./", 2)) {
+		} else if (!strncmp(in, "./", 2)) {
 			in += 2;
-		} 
+		}
 		/* otherwise */
 		/* Step 2b:
 		 * if the input buffer begins with a prefix of "/./" or "/.",
@@ -7884,8 +7886,7 @@ remove_dot_segments(char *inout)
 		 */
 		else if (!strncmp(in, "/./", 3)) {
 			in += 2;
-		}
-		else if (!strcmp(in, "/.")) {
+		} else if (!strcmp(in, "/.")) {
 			in[1] = 0;
 		}
 		/* otherwise */
@@ -7905,8 +7906,7 @@ remove_dot_segments(char *inout)
 					*out_end = 0;
 				} while ((out_begin != out_end) && (*out_end != '/'));
 			}
-		}
-		else if (!strcmp(in, "/..")) {
+		} else if (!strcmp(in, "/..")) {
 			in[1] = 0;
 			if (out_begin != out_end) {
 				/* remove last segment */
@@ -7958,7 +7958,7 @@ remove_dot_segments(char *inout)
 			do {
 				r[0] = r[1];
 				r++;
-			} while (r[0]!=0);
+			} while (r[0] != 0);
 		}
 		out_end++;
 	}
@@ -16057,9 +16057,10 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	/* If a domain callback has been specified, call it. */
 	callback_ret = (phys_ctx->callbacks.init_ssl_domain == NULL)
 	                   ? 0
-	                   : (phys_ctx->callbacks.init_ssl_domain(dom_ctx->config[AUTHENTICATION_DOMAIN],
-	                                                          dom_ctx->ssl_ctx,
-	                                                          phys_ctx->user_data));
+	                   : (phys_ctx->callbacks.init_ssl_domain(
+	                       dom_ctx->config[AUTHENTICATION_DOMAIN],
+	                       dom_ctx->ssl_ctx,
+	                       phys_ctx->user_data));
 
 	/* If domain callback returns 0, civetweb sets up the SSL certificate.
 	 * If it returns 1, civetweb assumes the calback already did this.
@@ -16222,17 +16223,18 @@ init_ssl_ctx(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 	}
 
 	/* Check for external domain SSL_CTX */
-	callback_ret =
-	    (phys_ctx->callbacks.external_ssl_ctx_domain == NULL)
-	        ? 0
-	        : (phys_ctx->callbacks.external_ssl_ctx_domain(dom_ctx->config[AUTHENTICATION_DOMAIN],
-	                                                       &ssl_ctx,
-	                                                       phys_ctx->user_data));
+	callback_ret = (phys_ctx->callbacks.external_ssl_ctx_domain == NULL)
+	                   ? 0
+	                   : (phys_ctx->callbacks.external_ssl_ctx_domain(
+	                       dom_ctx->config[AUTHENTICATION_DOMAIN],
+	                       &ssl_ctx,
+	                       phys_ctx->user_data));
 
 	if (callback_ret < 0) {
-		mg_cry_ctx_internal(phys_ctx,
-		                    "external_ssl_ctx_domain callback returned error: %i",
-		                    callback_ret);
+		mg_cry_ctx_internal(
+		    phys_ctx,
+		    "external_ssl_ctx_domain callback returned error: %i",
+		    callback_ret);
 		return 0;
 	} else if (callback_ret > 0) {
 		dom_ctx->ssl_ctx = (SSL_CTX *)ssl_ctx;
@@ -18865,7 +18867,7 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
-		                    "%s",
+			            "%s",
 			            err_msg);
 		}
 
@@ -18960,8 +18962,8 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 	workerthreadcount = atoi(ctx->dd.config[NUM_THREADS]);
 
 	if ((workerthreadcount > MAX_WORKER_THREADS) || (workerthreadcount <= 0)) {
-	if (workerthreadcount <= 0) {
-		mg_cry_ctx_internal(ctx, "%s", "Invalid number of worker threads");
+		if (workerthreadcount <= 0) {
+			mg_cry_ctx_internal(ctx, "%s", "Invalid number of worker threads");
 		} else {
 			mg_cry_ctx_internal(ctx, "%s", "Too many worker threads");
 		}
@@ -19154,7 +19156,7 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
-		                    "%s",
+			            "%s",
 			            err_msg);
 		}
 		free_context(ctx);

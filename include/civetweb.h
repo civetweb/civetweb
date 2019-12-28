@@ -264,36 +264,34 @@ struct mg_callbacks {
 	     0: civetweb will set up the SSL certificate.
 	     1: civetweb assumes the callback already set up the certificate.
 	    -1: initializing ssl fails. */
-	int (*init_ssl_domain)(const char *server_domain, void *ssl_ctx, void *user_data);
+	int (*init_ssl_domain)(const char *server_domain,
+	                       void *ssl_ctx,
+	                       void *user_data);
 
 	/* Called when civetweb is about to create or free a SSL_CTX.
 	Parameters:
-	     ssl_ctx: SSL_CTX pointer. NULL at creation time, Not NULL when mg_context
-	              will be freed
-	     user_data: parameter user_data passed when starting the server.
-	   Return value:
-	     0: civetweb will continue to create the context, just as if the
-	        callback would not be present.
-	        The value in *ssl_ctx when the function returns is ignored.
-	     1: civetweb will copy the value from *ssl_ctx to the civetweb context
-	        and doesn't create its own.
-	    -1: initializing ssl fails.*/
+	     ssl_ctx: SSL_CTX pointer. NULL at creation time, Not NULL when
+	mg_context will be freed user_data: parameter user_data passed when starting
+	the server. Return value: 0: civetweb will continue to create the context,
+	just as if the callback would not be present. The value in *ssl_ctx when the
+	function returns is ignored. 1: civetweb will copy the value from *ssl_ctx
+	to the civetweb context and doesn't create its own. -1: initializing ssl
+	fails.*/
 	int (*external_ssl_ctx)(void **ssl_ctx, void *user_data);
 
 	/* Called when civetweb is about to create or free a SSL_CTX for a domain.
 	Parameters:
 	     server_domain: authentication_domain from the domain config.
-	     ssl_ctx: SSL_CTX pointer. NULL at creation time, Not NULL when mg_context
-	              will be freed
-	     user_data: parameter user_data passed when starting the server.
-	   Return value:
-	     0: civetweb will continue to create the context, just as if the
-	        callback would not be present.
-	        The value in *ssl_ctx when the function returns is ignored.
-	     1: civetweb will copy the value from *ssl_ctx to the civetweb context
-	        and doesn't create its own.
-	    -1: initializing ssl fails.*/
-	int (*external_ssl_ctx_domain)(const char *server_domain, void **ssl_ctx, void *user_data);
+	     ssl_ctx: SSL_CTX pointer. NULL at creation time, Not NULL when
+	mg_context will be freed user_data: parameter user_data passed when starting
+	the server. Return value: 0: civetweb will continue to create the context,
+	just as if the callback would not be present. The value in *ssl_ctx when the
+	function returns is ignored. 1: civetweb will copy the value from *ssl_ctx
+	to the civetweb context and doesn't create its own. -1: initializing ssl
+	fails.*/
+	int (*external_ssl_ctx_domain)(const char *server_domain,
+	                               void **ssl_ctx,
+	                               void *user_data);
 
 #if defined(MG_LEGACY_INTERFACE)           /* 2015-08-19 */                    \
     || defined(MG_EXPERIMENTAL_INTERFACES) /* 2019-11-03 */
