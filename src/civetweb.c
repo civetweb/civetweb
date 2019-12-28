@@ -7836,33 +7836,119 @@ parse_date_string(const char *datetime)
 #endif /* !NO_CACHING */
 
 
-/* Protect against directory disclosure attack by removing '..',
- * excessive '/' and '\' characters */
+/* Pre-process URIs according to RFC + protect against directory disclosure attacks
+ * by removing '..', excessive '/' and '\' characters */
 static void
-remove_double_dots_and_double_slashes(char *s)
+remove_dot_segments(char *inout)
 {
-	char *p = s;
-
-	while ((s[0] == '.') && (s[1] == '.')) {
-		s++;
+	/* Windows backend protection (https://tools.ietf.org/html/rfc3986#section-7.3):
+	 * Replace backslash in URI by slash */
+	char *in_copy = mg_strdup(inout);
+	char *out_begin = inout;
+	char *out_end = inout;
+	char *in = in_copy;
+	
+	while (*in) {
+		if (*in == '\\') {
+			*in = '/';
+		}
+		in++;
 	}
 
-	while (*s != '\0') {
-		*p++ = *s++;
-		if ((s[-1] == '/') || (s[-1] == '\\')) {
-			/* Skip all following slashes, backslashes and double-dots */
-			while (s[0] != '\0') {
-				if ((s[0] == '/') || (s[0] == '\\')) {
-					s++;
-				} else if ((s[0] == '.') && (s[1] == '.')) {
-					s += 2;
-				} else {
-					break;
-				}
+	/* Algorithm "remove_dot_segments" from https://tools.ietf.org/html/rfc3986#section-5.2.4 */
+	/* Step 1:
+	 * The input buffer is initialized.
+	 * The output buffer is initialized to the empty string.
+	 */
+	in = in_copy;
+
+	/* Step 2:
+	 * While the input buffer is not empty, loop as follows:
+	 */
+	while (*in) {
+		/* Step 2a:
+		 * If the input buffer begins with a prefix of "../" or "./",
+		 * then remove that prefix from the input buffer;
+		 */
+		if (!strncmp(in, "../", 3)) {
+			in += 3;
+		} 
+		else if (!strncmp(in, "./", 2)) {
+			in += 2;
+		} 
+		/* otherwise */
+		/* Step 2b:
+		 * if the input buffer begins with a prefix of "/./" or "/.",
+		 * where "." is a complete path segment, then replace that
+		 * prefix with "/" in the input buffer;
+		 */
+		else if (!strncmp(in, "/./", 3)) {
+			in += 2;
+		}
+		else if (!strcmp(in, "/.")) {
+			in[1] = 0;
+		}
+		/* otherwise */
+		/* Step 2c:
+		 * if the input buffer begins with a prefix of "/../" or "/..",
+		 * where ".." is a complete path segment, then replace that
+		 * prefix with "/" in the input buffer and remove the last
+		 * segment and its preceding "/" (if any) from the output
+		 * buffer;
+		 */
+		else if (!strncmp(in, "/../", 4)) {
+			in += 3;
+			if (out_begin != out_end) {
+				/* remove last segment */
+				do {
+					out_end--;
+					*out_end = 0;
+				} while ((out_begin != out_end) && (*out_end != '/'));
 			}
 		}
+		else if (!strcmp(in, "/..")) {
+			in[1] = 0;
+			if (out_begin != out_end) {
+				/* remove last segment */
+				do {
+					out_end--;
+					*out_end = 0;
+				} while ((out_begin != out_end) && (*out_end != '/'));
+			}
+		}
+		/* otherwise */
+		/* Step 2d:
+		 * if the input buffer consists only of "." or "..", then remove
+		 * that from the input buffer;
+		 */
+		else if (!strcmp(in, ".") || !strcmp(in, "..")) {
+			*in = 0;
+		}
+		/* otherwise */
+		/* Step 2d:
+		 * move the first path segment in the input buffer to the end of
+		 * the output buffer, including the initial "/" character (if
+		 * any) and any subsequent characters up to, but not including,
+		 * the next "/" character or the end of the input buffer.
+		 */
+		else {
+			do {
+				*out_end = *in;
+				out_end++;
+				in++;
+			} while ((*in != 0) && (*in != '/'));
+		}
 	}
-	*p = '\0';
+
+	/* Step 3:
+	 * Finally, the output buffer is returned as the result of
+	 * remove_dot_segments.
+	 */
+	/* Terminate output */
+	*out_end = 0;
+
+	/* Free temporary copies */
+	mg_free(in_copy);
 }
 
 
@@ -13814,7 +13900,7 @@ handle_request(struct mg_connection *conn)
 
 	/* 1.4. clean URIs, so a path like allowed_dir/../forbidden_file is
 	 * not possible */
-	remove_double_dots_and_double_slashes((char *)ri->local_uri);
+	remove_dot_segments((char *)ri->local_uri);
 
 	/* step 1. completed, the url is known now */
 	uri_len = (int)strlen(ri->local_uri);
