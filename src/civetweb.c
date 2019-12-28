@@ -15104,7 +15104,7 @@ refresh_trust(struct mg_connection *conn)
 	int should_verify_peer;
 
 	if ((pem = conn->dom_ctx->config[SSL_CERTIFICATE]) == NULL) {
-		/* If peem is NULL and conn->phys_ctx->callbacks.init_ssl is not,
+		/* If pem is NULL and conn->phys_ctx->callbacks.init_ssl is not,
 		 * refresh_trust still can not work. */
 		return 0;
 	}
@@ -15952,6 +15952,27 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 		return 1;
 	}
 
+	/* If a domain callback has been specified, call it. */
+	callback_ret = (phys_ctx->callbacks.init_ssl_domain == NULL)
+	                   ? 0
+	                   : (phys_ctx->callbacks.init_ssl_domain(dom_ctx->config[AUTHENTICATION_DOMAIN],
+	                                                          dom_ctx->ssl_ctx,
+	                                                          phys_ctx->user_data));
+
+	/* If domain callback returns 0, civetweb sets up the SSL certificate.
+	 * If it returns 1, civetweb assumes the calback already did this.
+	 * If it returns -1, initializing ssl fails. */
+	if (callback_ret < 0) {
+		mg_cry_ctx_internal(phys_ctx,
+		                    "Domain SSL callback returned error: %i",
+		                    callback_ret);
+		return 0;
+	}
+	if (callback_ret > 0) {
+		/* Domain callback did everything. */
+		return 1;
+	}
+
 	/* Use some combination of start time, domain and port as a SSL
 	 * context ID. This should be unique on the current machine. */
 	md5_init(&md5state);
@@ -16097,14 +16118,37 @@ init_ssl_ctx(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 		}
 		return 1;
 	}
-	/* else: external_ssl_ctx does not exist or returns 0,
+
+	/* Check for external domain SSL_CTX */
+	callback_ret =
+	    (phys_ctx->callbacks.external_ssl_ctx_domain == NULL)
+	        ? 0
+	        : (phys_ctx->callbacks.external_ssl_ctx_domain(dom_ctx->config[AUTHENTICATION_DOMAIN],
+	                                                       &ssl_ctx,
+	                                                       phys_ctx->user_data));
+
+	if (callback_ret < 0) {
+		mg_cry_ctx_internal(phys_ctx,
+		                    "external_ssl_ctx_domain callback returned error: %i",
+		                    callback_ret);
+		return 0;
+	} else if (callback_ret > 0) {
+		dom_ctx->ssl_ctx = (SSL_CTX *)ssl_ctx;
+		if (!initialize_ssl(ebuf, sizeof(ebuf))) {
+			mg_cry_ctx_internal(phys_ctx, "%s", ebuf);
+			return 0;
+		}
+		return 1;
+	}
+	/* else: external_ssl_ctx/external_ssl_ctx_domain do not exist or return 0,
 	 * CivetWeb should continue initializing SSL */
 
-	/* If PEM file is not specified and the init_ssl callback
-	 * is not specified, setup will fail. */
+	/* If PEM file is not specified and the init_ssl callbacks
+	 * are not specified, setup will fail. */
 	if (((pem = dom_ctx->config[SSL_CERTIFICATE]) == NULL)
-	    && (phys_ctx->callbacks.init_ssl == NULL)) {
-		/* No certificate and no callback:
+	    && (phys_ctx->callbacks.init_ssl == NULL)
+	    && (phys_ctx->callbacks.init_ssl_domain == NULL)) {
+		/* No certificate and no init_ssl callbacks:
 		 * Essential data to set up TLS is missing.
 		 */
 		mg_cry_ctx_internal(phys_ctx,
