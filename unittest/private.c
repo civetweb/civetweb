@@ -33,13 +33,19 @@
 #undef MEMORY_DEBUGGING
 #endif
 
+/* Test all interfaces, including experimental ones */
+#define MG_EXPERIMENTAL_INTERFACES
+
+#ifdef _MSC_VER
+/* Since the C file is included, declare all API functions as static,
+ * to avoid linker errors in the test (seems to be required for MS toolchain).
+ */
+#define CIVETWEB_API static
+#endif
+
 /* Include C File, so static functions can be called from here */
-#define MG_EXPERIMENTAL_INTERFACES /* Test all interfaces, including           \
-                                      experimental ones */
-#define CIVETWEB_API                                                           \
-	static /* Since the C file is included, declare all API functions as       \
-	        * static, to avoid linker errors in the test */
 #include "../src/civetweb.c"
+#include "civetweb.h"
 
 
 /* Standard includes for the test code below */
