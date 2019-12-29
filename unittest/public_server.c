@@ -151,8 +151,6 @@ START_TEST(test_the_test_environment)
 	char wd[300];
 	char buf[500];
 	FILE *f;
-	struct stat st;
-	int ret;
 	const char *ssl_cert = locate_ssl_cert();
 
 	memset(wd, 0, sizeof(wd));

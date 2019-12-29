@@ -326,6 +326,8 @@ END_TEST
 
 START_TEST(test_remove_dot_segments)
 {
+	int i;
+
 	struct {
 		const char *input;
 		const char *expected_output;
@@ -359,7 +361,7 @@ START_TEST(test_remove_dot_segments)
 
 	mark_point();
 
-	for (int i = 0; (tests[i].input != NULL); i++) {
+	for (i = 0; (tests[i].input != NULL); i++) {
 		char inout[256];
 		strcpy(inout, tests[i].input);
 		remove_dot_segments(inout);
