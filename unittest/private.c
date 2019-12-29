@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018 the Civetweb developers
+/* Copyright (c) 2015-2019 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,15 +27,22 @@
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 #endif
-#define CIVETWEB_API static
 #endif
 
 #ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 #undef MEMORY_DEBUGGING
 #endif
 
+/* Include C File, so static functions can be called from here */
+#define MG_EXPERIMENTAL_INTERFACES /* Test all interfaces, including           \
+                                      experimental ones */
+#define CIVETWEB_API                                                           \
+	static /* Since the C file is included, declare all API functions as       \
+	        * static, to avoid linker errors in the test */
 #include "../src/civetweb.c"
 
+
+/* Standard includes for the test code below */
 #include <stdlib.h>
 #include <time.h>
 
@@ -92,7 +99,6 @@ START_TEST(test_parse_http_message)
 
 	char req12[] =
 	    "POST /a/b/c.d?e=f&g HTTP/1.1\r\nKey1: val1\r\nKey2: val2\r\n\r\nBODY";
-
 
 	int lenreq1 = (int)strlen(req1);
 	int lenreq2 = (int)strlen(req2);
@@ -354,8 +360,7 @@ START_TEST(test_remove_dot_segments)
 	             {"/file.", "/file"},
 	             {"/path\\to.\\.\\file.", "/path/to/file"},
 
-	             {NULL, NULL}
-	};
+	             {NULL, NULL}};
 
 	mark_point();
 
