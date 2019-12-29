@@ -18793,6 +18793,9 @@ legacy_init(const char **options)
 }
 
 
+#if !defined(MG_EXPERIMENTAL_INTERFACES)
+static
+#endif
 struct mg_context *
 mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 {
