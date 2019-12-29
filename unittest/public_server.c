@@ -4656,7 +4656,7 @@ minimal_http_https_client_impl(const char *server,
 		             client_err_buf);
 	}
 
-	mg_printf(client, "GET /%s HTTP/1.0\r\n\r\n", uri);
+	mg_printf(client, "GET %s HTTP/1.0\r\n\r\n", uri);
 
 	r = mg_get_response(client, client_err_buf, sizeof(client_err_buf), 10000);
 
@@ -4673,8 +4673,14 @@ minimal_http_https_client_impl(const char *server,
 	ck_assert(client_ri != NULL);
 
 	/* Check for status code 200 OK or 30? moved */
-	if ((client_ri->status_code < 300) || (client_ri->status_code > 308)) {
-		ck_assert_int_eq(client_ri->status_code, 200);
+	if ((client_ri->status_code != 200) && (client_ri->status_code / 10 != 30)) {
+		ck_abort_msg(
+		    "Request to %s://%s:%u/%s: Status %u",
+		    use_ssl ? "HTTPS" : "HTTP",
+		    server,
+		    port,
+			uri,
+			client_ri->status_code);
 	}
 
 	data_read = 0;
@@ -4725,7 +4731,7 @@ START_TEST(test_minimal_client)
 	/* Call a test client */
 	minimal_http_client_impl("192.30.253.113" /* www.github.com */,
 	                         80,
-	                         "civetweb/civetweb/");
+	                         "/civetweb/civetweb/");
 
 	mark_point();
 
@@ -4754,7 +4760,7 @@ START_TEST(test_minimal_tls_client)
 	/* Call a test client */
 	minimal_https_client_impl("192.30.253.113" /* www.github.com */,
 	                          443,
-	                          "civetweb/civetweb/");
+	                          "/civetweb/civetweb/");
 
 	mark_point();
 
