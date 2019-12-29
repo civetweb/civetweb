@@ -19,31 +19,22 @@
  * THE SOFTWARE.
  */
 
-/**
- * We include the source file so that we have access to the internal private
- * static functions
+/**********************************************************************************/
+/*
+ * We include the civetweb.c source file so that we have access to the internal
+ * private static functions
  */
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-#endif
-
-#ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
-#undef MEMORY_DEBUGGING
-#endif
 
 #ifdef _MSC_VER
 /* Since the C file is included, declare all API functions as static,
  * to avoid linker errors in the test (seems to be required for MS
- * toolchain).
+ * toolchain only).
  */
 #define CIVETWEB_API static
 #endif
 
-/* Include C File, so static functions can be called from here */
-#include "civetweb.h"
 #include "../src/civetweb.c"
+/**********************************************************************************/
 
 
 /* Standard includes for the test code below */
