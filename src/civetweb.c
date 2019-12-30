@@ -7849,6 +7849,7 @@ remove_dot_segments(char *inout)
 	char *out_begin = inout;
 	char *out_end = inout;
 	char *in = in_copy;
+	int replaced;
 
 	while (*in) {
 		if (*in == '\\') {
@@ -7951,17 +7952,22 @@ remove_dot_segments(char *inout)
 	 * extension) are identical. Replace all "./" by "/" and remove a "." at the
 	 * end.
 	 */
-	out_end = out_begin;
-	while (*out_end) {
-		if ((*out_end == '.') && ((out_end[1] == '/') || (out_end[1] == 0))) {
-			char *r = out_end;
-			do {
-				r[0] = r[1];
-				r++;
-			} while (r[0] != 0);
+	do {
+		replaced = 0;
+		out_end = out_begin;
+		while (*out_end) {
+			if ((*out_end == '.')
+			    && ((out_end[1] == '/') || (out_end[1] == 0))) {
+				char *r = out_end;
+				do {
+					r[0] = r[1];
+					r++;
+					replaced = 1;
+				} while (r[0] != 0);
+			}
+			out_end++;
 		}
-		out_end++;
-	}
+	} while (replaced);
 
 	/* Free temporary copies */
 	mg_free(in_copy);
@@ -18796,8 +18802,8 @@ legacy_init(const char **options)
 #if !defined(MG_EXPERIMENTAL_INTERFACES)
 static
 #endif
-struct mg_context *
-mg_start2(struct mg_init_data *init, struct mg_error_data *error)
+    struct mg_context *
+    mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 {
 	struct mg_context *ctx;
 	const char *name, *value, *default_value;
