@@ -184,7 +184,8 @@ static int g_num_add_domains;     /* Default from init_server_name,
                                    * updated later from the server config */
 static const char **g_add_domain; /* Default from init_server_name,
                                    * updated later from the server config */
-
+static int g_hide_tray = 0;       /* Default = do not hide (0),
+                                   * updated later from the server config */
 
 static char *g_system_info; /* Set by init_system_info() */
 static char g_config_file_name[PATH_MAX] =
@@ -213,6 +214,7 @@ enum {
 	OPTION_ICON,
 	OPTION_WEBPAGE,
 	OPTION_ADD_DOMAIN,
+	OPTION_HIDE_TRAY,
 	NUM_MAIN_OPTIONS
 };
 
@@ -221,6 +223,7 @@ static struct mg_option main_config_options[] = {
     {"icon", MG_CONFIG_TYPE_STRING, NULL},
     {"website", MG_CONFIG_TYPE_STRING, NULL},
     {"add_domain", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"hide_tray", MG_CONFIG_TYPE_BOOLEAN, NULL},
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -582,6 +585,14 @@ set_option(char **options, const char *name, const char *value)
 		}
 		if (!strcmp(name, main_config_options[OPTION_WEBPAGE].name)) {
 			g_website = sdup(value);
+			return 1;
+		}
+		if (!strcmp(name, main_config_options[OPTION_HIDE_TRAY].name)) {
+			if (!strcmp(value, "yes")) {
+				g_hide_tray = 1;
+			} else if (!strcmp(value, "no")) {
+				g_hide_tray = 0;
+			}
 			return 1;
 		}
 		if (!strcmp(name, main_config_options[OPTION_ADD_DOMAIN].name)) {
@@ -2730,7 +2741,6 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	char buf[200];
 	POINT pt;
 	HMENU hMenu;
-	static UINT s_uTaskbarRestart; /* for taskbar creation */
 
 	switch (msg) {
 
@@ -2753,7 +2763,6 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			exit(EXIT_SUCCESS);
 		} else {
 			start_civetweb(__argc, __argv);
-			s_uTaskbarRestart = RegisterWindowMessage(TEXT("TaskbarCreated"));
 		}
 		break;
 
@@ -2761,7 +2770,9 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		switch (LOWORD(wParam)) {
 		case ID_QUIT:
 			stop_civetweb();
-			Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+			if (TrayIcon.cbSize) {
+				Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+			}
 			g_exit_flag = 1;
 			PostQuitMessage(0);
 			return 0;
@@ -2839,14 +2850,12 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_CLOSE:
 		stop_civetweb();
-		Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+		if (TrayIcon.cbSize) {
+			Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+		}
 		g_exit_flag = 1;
 		PostQuitMessage(0);
 		return 0; /* We've just sent our own quit message, with proper hwnd. */
-
-	default:
-		if (msg == s_uTaskbarRestart)
-			Shell_NotifyIcon(NIM_ADD, &TrayIcon);
 	}
 
 	return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -2932,6 +2941,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	                    NULL);
 	ShowWindow(hWnd, SW_HIDE);
 
+	/* Load icon for systray and other dialogs */
 	if (g_icon_name) {
 		hIcon = (HICON)
 		    LoadImage(NULL, g_icon_name, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
@@ -2944,15 +2954,21 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 		                         0);
 	}
 
-	TrayIcon.cbSize = sizeof(TrayIcon);
-	TrayIcon.uID = ID_ICON;
-	TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-	TrayIcon.hIcon = hIcon;
-	TrayIcon.hWnd = hWnd;
-	snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", g_server_name);
-	TrayIcon.uCallbackMessage = WM_USER;
-	Shell_NotifyIcon(NIM_ADD, &TrayIcon);
+	/* add icon to systray; tray icon is entry point to the menu */
+	if (!g_hide_tray) {
+		TrayIcon.cbSize = sizeof(TrayIcon);
+		TrayIcon.uID = ID_ICON;
+		TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+		TrayIcon.hIcon = hIcon;
+		TrayIcon.hWnd = hWnd;
+		snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", g_server_name);
+		TrayIcon.uCallbackMessage = WM_USER;
+		Shell_NotifyIcon(NIM_ADD, &TrayIcon);
+	} else {
+		TrayIcon.cbSize = 0;
+	}
 
+	/* Message loop */
 	while (GetMessage(&msg, hWnd, 0, 0) > 0) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
