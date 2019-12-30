@@ -350,12 +350,30 @@ START_TEST(test_remove_dot_segments)
 	             {".file.ext", ".file.ext"},
 	             {"..file.ext", "..file.ext"},
 	             {"file", "file"},
+	             {"/x/../", "/"},
+	             {"/x/../../", "/"},
+	             {"/x/.././", "/"},
+	             {"/./x/.././", "/"},
 
 	             /* Windows specific */
 	             {"\\file.ext", "/file.ext"},
 	             {"\\..\\file.ext", "/file.ext"},
 	             {"/file.", "/file"},
 	             {"/path\\to.\\.\\file.", "/path/to/file"},
+
+	             /* Multiple dots and slashes */
+	             {"\\//\\\\x", "/x"},
+	             {"//", "/"},
+	             {"/./", "/"},
+	             {"/../", "/"},
+	             {"/.../", "/"},
+	             {"/..../", "/"},
+	             {"/...../", "/"},
+	             {"/...../", "/"},
+	             {"/...//", "/"},
+	             {"/..././", "/"},
+	             {"/.../../", "/"},
+	             {"/.../.../", "/"},
 
 	             {NULL, NULL}};
 

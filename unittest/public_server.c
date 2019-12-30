@@ -4671,14 +4671,14 @@ minimal_http_https_client_impl(const char *server,
 	ck_assert(client_ri != NULL);
 
 	/* Check for status code 200 OK or 30? moved */
-	if ((client_ri->status_code != 200) && (client_ri->status_code / 10 != 30)) {
-		ck_abort_msg(
-		    "Request to %s://%s:%u/%s: Status %u",
-		    use_ssl ? "HTTPS" : "HTTP",
-		    server,
-		    port,
-			uri,
-			client_ri->status_code);
+	if ((client_ri->status_code != 200)
+	    && (client_ri->status_code / 10 != 30)) {
+		ck_abort_msg("Request to %s://%s:%u/%s: Status %u",
+		             use_ssl ? "HTTPS" : "HTTP",
+		             server,
+		             port,
+		             uri,
+		             client_ri->status_code);
 	}
 
 	data_read = 0;
