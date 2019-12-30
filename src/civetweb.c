@@ -7951,9 +7951,13 @@ remove_dot_segments(char *inout)
 	/* For Windows, the files/folders "x" and "x." (with a dot but without
 	 * extension) are identical. Replace all "./" by "/" and remove a "." at the
 	 * end.
+	 * Also replace all "//" by "/".
+	 * Repeat until there is no "./" or "//" anymore.
 	 */
 	do {
 		replaced = 0;
+
+		/* replace ./ by / */
 		out_end = out_begin;
 		while (*out_end) {
 			if ((*out_end == '.')
@@ -7967,6 +7971,21 @@ remove_dot_segments(char *inout)
 			}
 			out_end++;
 		}
+
+		/* replace ./ by / */
+		out_end = out_begin;
+		while (*out_end) {
+			if ((out_end[0] == '/') && (out_end[1] == '/')) {
+				char *c = out_end;
+				while (*c) {
+					c[0] = c[1];
+					c++;
+				}
+				replaced = 1;
+			}
+			out_end++;
+		}
+
 	} while (replaced);
 
 	/* Free temporary copies */
