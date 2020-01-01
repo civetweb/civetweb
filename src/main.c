@@ -2175,18 +2175,21 @@ static void
 show_settings_dialog()
 {
 #define HEIGHT (15)
-#define WIDTH (460)
-#define LABEL_WIDTH (90)
+
+#define BORDER_WIDTH (10)
+#define CELL_WIDTH (120)
+#define LABEL_WIDTH (120)
+#define DIALOG_WIDTH (4 * BORDER_WIDTH + 3 * CELL_WIDTH + 3 * LABEL_WIDTH)
 
 	unsigned char mem[16 * 1024], *p;
 	const struct mg_option *options;
 	DWORD style;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	WORD i, cl, nelems = 0;
-	short width, x, y;
+	short x, y;
 	static struct dlg_proc_param s_dlg_proc_param;
 
-	const struct dlg_header_param dialog_header = GetDlgHeader(WIDTH);
+	const struct dlg_header_param dialog_header = GetDlgHeader(DIALOG_WIDTH);
 
 	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
@@ -2204,9 +2207,11 @@ show_settings_dialog()
 	options = mg_get_valid_options();
 	for (i = 0; options[i].name != NULL; i++) {
 		style = WS_CHILD | WS_VISIBLE | WS_TABSTOP;
-		x = 10 + (WIDTH / 2) * (nelems % 2);
-		y = (nelems / 2 + 1) * HEIGHT + 5;
-		width = WIDTH / 2 - 20 - LABEL_WIDTH;
+
+		x = BORDER_WIDTH
+		    + (LABEL_WIDTH + CELL_WIDTH + BORDER_WIDTH) * (nelems % 3);
+		y = 5 + HEIGHT + HEIGHT * (nelems / 3);
+
 		if (options[i].type == MG_CONFIG_TYPE_NUMBER) {
 			style |= ES_NUMBER;
 			cl = 0x81;
@@ -2217,19 +2222,22 @@ show_settings_dialog()
 		} else if ((options[i].type == MG_CONFIG_TYPE_FILE)
 		           || (options[i].type == MG_CONFIG_TYPE_DIRECTORY)) {
 			style |= WS_BORDER | ES_AUTOHSCROLL;
-			width -= 20;
 			cl = 0x81;
+
+			/* Additional button for file dialog */
 			add_control(&p,
 			            dia,
 			            0x80,
 			            ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA,
 			            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-			            x + width + LABEL_WIDTH + 5,
+			            x + LABEL_WIDTH + 5,
 			            y,
 			            15,
-			            12,
+			            HEIGHT - 3,
 			            "...");
+
 		} else if (options[i].type == MG_CONFIG_TYPE_STRING_MULTILINE) {
+
 			/* TODO: This is not really uer friendly */
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN
@@ -2238,6 +2246,8 @@ show_settings_dialog()
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL;
 		}
+
+		/* Add label (static text) */
 		add_control(&p,
 		            dia,
 		            0x82,
@@ -2255,32 +2265,35 @@ show_settings_dialog()
 		            style,
 		            x + LABEL_WIDTH,
 		            y,
-		            width,
-		            12,
+		            CELL_WIDTH,
+		            HEIGHT - 3,
 		            "");
 		nelems++;
 
 		DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 	}
 
-	y = (((nelems + 1) / 2 + 1) * HEIGHT + 5);
+	/* "Settings" frame around all options */
+	y = ((nelems + 2) / 3 + 1) * HEIGHT;
 	add_control(&p,
 	            dia,
 	            0x80,
 	            ID_GROUP,
 	            WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-	            5,
-	            5,
-	            WIDTH - 10,
+	            BORDER_WIDTH / 2,
+	            BORDER_WIDTH / 2,
+	            DIALOG_WIDTH - BORDER_WIDTH,
 	            y,
 	            " Settings ");
-	y += 10;
+
+	/* Buttons below "Settings" frame */
+	y += 2 * HEIGHT;
 	add_control(&p,
 	            dia,
 	            0x80,
 	            ID_SAVE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 70,
+	            DIALOG_WIDTH - 70,
 	            y,
 	            65,
 	            12,
@@ -2290,7 +2303,7 @@ show_settings_dialog()
 	            0x80,
 	            ID_RESET_DEFAULTS,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 140,
+	            DIALOG_WIDTH - 140,
 	            y,
 	            65,
 	            12,
@@ -2300,7 +2313,7 @@ show_settings_dialog()
 	            0x80,
 	            ID_RESET_FILE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 210,
+	            DIALOG_WIDTH - 210,
 	            y,
 	            65,
 	            12,
@@ -2310,7 +2323,7 @@ show_settings_dialog()
 	            0x80,
 	            ID_RESET_ACTIVE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 280,
+	            DIALOG_WIDTH - 280,
 	            y,
 	            65,
 	            12,
@@ -2326,9 +2339,11 @@ show_settings_dialog()
 	            12,
 	            g_server_base_name);
 
+	/* Check befor every release */
 	DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
-	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
+	/* Calculate total height of the dialog */
+	dia->cy = y + HEIGHT;
 
 	s_dlg_proc_param.fRetry = NULL;
 
@@ -2338,9 +2353,12 @@ show_settings_dialog()
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
 
+	/* Undefine all size parameters defined above */
 #undef HEIGHT
-#undef WIDTH
+#undef BORDER_WIDTH
+#undef CELL_WIDTH
 #undef LABEL_WIDTH
+#undef DIALOG_WIDTH
 }
 
 
