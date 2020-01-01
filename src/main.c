@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018 the Civetweb developers
+/* Copyright (c) 2013-2020 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1588,15 +1588,16 @@ GetDlgHeader(const short width)
 #pragma warning(push)
 #pragma warning(disable : 4204)
 #endif /* if defined(_MSC_VER) */
+
 	struct dlg_header_param dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU
 	                                              | WS_VISIBLE | DS_SETFONT
 	                                              | WS_DLGFRAME,
 	                                          WS_EX_TOOLWINDOW,
 	                                          0,
-	                                          200,
-	                                          200,
+	                                          /* x */ 100,
+	                                          /* y */ 30,
 	                                          width,
-	                                          0},
+	                                          /* height: to be calculated */ 0},
 	                                         0,
 	                                         0,
 	                                         L"",
@@ -1899,10 +1900,12 @@ get_password(const char *user,
              char *passwd,
              unsigned passwd_len)
 {
-#define HEIGHT (15)
-#define WIDTH (280)
-#define LABEL_WIDTH (90)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short WIDTH = 280;
+	short LABEL_WIDTH = 90;
 
+	/* Other variables */
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	int ok;
@@ -2047,10 +2050,6 @@ get_password(const char *user,
 	s_dlg_proc_param.guard = 0;
 
 	return ok;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
@@ -2174,19 +2173,25 @@ add_control(unsigned char **mem,
 static void
 show_settings_dialog()
 {
-#define HEIGHT (15)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short BORDER_WIDTH = 10;
+	short CELL_WIDTH = 125;
+	short LABEL_WIDTH = 115;
+	short FILE_DIALOG_BUTTON_WIDTH = 15;
+	short NO_OF_COLUMNS = 3;
 
-#define BORDER_WIDTH (10)
-#define CELL_WIDTH (120)
-#define LABEL_WIDTH (120)
-#define DIALOG_WIDTH (4 * BORDER_WIDTH + 3 * CELL_WIDTH + 3 * LABEL_WIDTH)
+	/* Calculates size */
+	short COLUMN_WIDTH = LABEL_WIDTH + CELL_WIDTH + BORDER_WIDTH;
+	short DIALOG_WIDTH = BORDER_WIDTH + NO_OF_COLUMNS * COLUMN_WIDTH;
 
+	/* All other variables */
 	unsigned char mem[16 * 1024], *p;
 	const struct mg_option *options;
 	DWORD style;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	WORD i, cl, nelems = 0;
-	short x, y;
+	short x, y, next_cell_width;
 	static struct dlg_proc_param s_dlg_proc_param;
 
 	const struct dlg_header_param dialog_header = GetDlgHeader(DIALOG_WIDTH);
@@ -2208,9 +2213,9 @@ show_settings_dialog()
 	for (i = 0; options[i].name != NULL; i++) {
 		style = WS_CHILD | WS_VISIBLE | WS_TABSTOP;
 
-		x = BORDER_WIDTH
-		    + (LABEL_WIDTH + CELL_WIDTH + BORDER_WIDTH) * (nelems % 3);
-		y = 5 + HEIGHT + HEIGHT * (nelems / 3);
+		x = BORDER_WIDTH + COLUMN_WIDTH * (nelems % NO_OF_COLUMNS);
+		y = BORDER_WIDTH / 2 + HEIGHT + HEIGHT * (nelems / NO_OF_COLUMNS);
+		next_cell_width = CELL_WIDTH;
 
 		if (options[i].type == MG_CONFIG_TYPE_NUMBER) {
 			style |= ES_NUMBER;
@@ -2230,11 +2235,13 @@ show_settings_dialog()
 			            0x80,
 			            ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA,
 			            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-			            x + LABEL_WIDTH + 5,
+			            x + LABEL_WIDTH + CELL_WIDTH - FILE_DIALOG_BUTTON_WIDTH,
 			            y,
-			            15,
+			            FILE_DIALOG_BUTTON_WIDTH,
 			            HEIGHT - 3,
 			            "...");
+
+			next_cell_width -= FILE_DIALOG_BUTTON_WIDTH + BORDER_WIDTH / 2;
 
 		} else if (options[i].type == MG_CONFIG_TYPE_STRING_MULTILINE) {
 
@@ -2265,7 +2272,7 @@ show_settings_dialog()
 		            style,
 		            x + LABEL_WIDTH,
 		            y,
-		            CELL_WIDTH,
+		            next_cell_width,
 		            HEIGHT - 3,
 		            "");
 		nelems++;
@@ -2274,7 +2281,7 @@ show_settings_dialog()
 	}
 
 	/* "Settings" frame around all options */
-	y = ((nelems + 2) / 3 + 1) * HEIGHT;
+	y = ((nelems + NO_OF_COLUMNS - 1) / NO_OF_COLUMNS + 1) * HEIGHT;
 	add_control(&p,
 	            dia,
 	            0x80,
@@ -2287,7 +2294,7 @@ show_settings_dialog()
 	            " Settings ");
 
 	/* Buttons below "Settings" frame */
-	y += 2 * HEIGHT;
+	y += HEIGHT;
 	add_control(&p,
 	            dia,
 	            0x80,
@@ -2352,23 +2359,18 @@ show_settings_dialog()
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
-
-	/* Undefine all size parameters defined above */
-#undef HEIGHT
-#undef BORDER_WIDTH
-#undef CELL_WIDTH
-#undef LABEL_WIDTH
-#undef DIALOG_WIDTH
 }
 
 
 static void
 change_password_file()
 {
-#define HEIGHT (15)
-#define WIDTH (320)
-#define LABEL_WIDTH (90)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short WIDTH = 320;
+	short LABEL_WIDTH = 90;
 
+	/* Other variables */
 	OPENFILENAME of;
 	char path[PATH_MAX] = PASSWORDS_FILE_NAME;
 	char strbuf[256], u[256], d[256];
@@ -2555,10 +2557,6 @@ change_password_file()
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
@@ -2592,10 +2590,12 @@ sysinfo_reload(struct dlg_proc_param *prm)
 int
 show_system_info()
 {
-#define HEIGHT (15)
-#define WIDTH (320)
-#define LABEL_WIDTH (50)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short WIDTH = 320;
+	short LABEL_WIDTH = 50;
 
+	/* Other parameters */
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	int ok;
@@ -2682,10 +2682,6 @@ show_system_info()
 	s_dlg_proc_param.guard = 0;
 
 	return ok;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
