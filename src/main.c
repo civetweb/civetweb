@@ -1573,12 +1573,15 @@ struct dlg_proc_param {
 };
 
 struct dlg_header_param {
+	/* https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-dlgtemplate
+	 */
 	DLGTEMPLATE dlg_template; /* 18 bytes */
 	WORD menu, dlg_class;
 	wchar_t caption[1];
-	WORD fontsiz;
+	WORD fontsize;
 	wchar_t fontface[7];
 };
+
 
 static struct dlg_header_param
 GetDlgHeader(const short width)
@@ -1589,25 +1592,27 @@ GetDlgHeader(const short width)
 #pragma warning(disable : 4204)
 #endif /* if defined(_MSC_VER) */
 
-	struct dlg_header_param dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU
-	                                              | WS_VISIBLE | DS_SETFONT
-	                                              | WS_DLGFRAME,
-	                                          WS_EX_TOOLWINDOW,
-	                                          0,
-	                                          /* x */ 100,
-	                                          /* y */ 30,
-	                                          width,
-	                                          /* height: to be calculated */ 0},
-	                                         0,
-	                                         0,
-	                                         L"",
-	                                         8,
-	                                         L"Tahoma"};
+	struct dlg_header_param dialog_header = {
+	    /* DLGTEMPLATE */
+	    {/* style */ WS_CAPTION | WS_POPUP | WS_SYSMENU | WS_VISIBLE
+	         | DS_SETFONT | DS_CENTER | WS_DLGFRAME,
+	     /* extstyle */ WS_EX_TOOLWINDOW,
+	     /* cdit */ 0,
+	     /* x ignored by DS_CENTER */ 0,
+	     /* y ignored by DS_CENTER */ 0,
+	     width,
+	     /* height - to be calculated */ 0},
+	    /* menu */ 0,
+	    /* dlg_class */ 0,
+	    /* caption */ L"",
+	    /* fontsize */ 8,
+	    /* font */ L"Tahoma"};
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif /* if defined(_MSC_VER) */
 	return dialog_header;
 }
+
 
 /* Dialog proc for settings dialog */
 static INT_PTR CALLBACK
