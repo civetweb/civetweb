@@ -617,6 +617,20 @@ than the depth set here connection is refused.
 ### ssl\_verify\_peer `no`
 Enable client's certificate verification by the server.
 
+### static\_file\_cache\_control
+Set the `Cache-Control` header of static files responses.
+The string value will be used directly.
+
+E.g. this config:
+
+`static_file_cache_control no-cache, max-age=31536000`
+
+Will result in this header being added:
+
+`Cache-Control: no-cache, max-age=31536000`
+
+This will take precedence over the static\_file\_max\_age option.
+
 ### static\_file\_max\_age `3600`
 Set the maximum time (in seconds) a cache may store a static files.
 
@@ -626,7 +640,7 @@ must send cache control headers by themselves.
 
 A value >0 corresponds to a maximum allowed caching time in seconds.
 This value should not exceed one year (RFC 2616, Section 14.21).
-A value of 0 will send "do not cache" headers for all static files.
+A value of 0 will send "do not cache at all" headers for all static files.
 For values <0 and values >31622400, the behaviour is undefined.
 
 ### strict\_transport\_security\_max\_age

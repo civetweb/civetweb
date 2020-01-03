@@ -5,6 +5,16 @@ Release Notes v1.12
 Changes
 -------
 
+- Format configuration dialogs for Windows
+- Add option "hide_tray" to start without Windows systray icon
+- URI checking according to "remove_dot_segments" algorithm from RFC
+- Experimental support for a new server and client start API
+- Additional callbacks to initialize external SSL context
+- More cache control options for static files
+- Trace function for Lua server pages
+- Access to client certificate data for Lua pages
+- Allow to configure SOMAXCONN (max. number of waiting connections)
+- Include some build options for Zephyr
 - Support for flawed CGI interpreters returning only <LF> instead of <CR><LF>
 - Add NO_FILESYSTEM flag for (embedded) system without any file system
 - Several fixes for server side Lua scripts

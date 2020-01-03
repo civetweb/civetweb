@@ -151,8 +151,6 @@ START_TEST(test_the_test_environment)
 	char wd[300];
 	char buf[500];
 	FILE *f;
-	struct stat st;
-	int ret;
 	const char *ssl_cert = locate_ssl_cert();
 
 	memset(wd, 0, sizeof(wd));
@@ -832,16 +830,18 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	char chunk_data[32];
 	const struct mg_request_info *ri;
 	struct mg_context *ctx;
-	void *ud, *cud;
+	void *ud, *cud, *ud2;
 	void *dummy = malloc(1);
 
 	ctx = mg_get_context(conn);
 	ud = mg_get_user_data(ctx);
+	ud2 = mg_get_user_context_data(conn);
 	ri = mg_get_request_info(conn);
 
 	ck_assert(ri != NULL);
 	ck_assert(ctx == g_ctx);
 	ck_assert(ud == &g_ctx);
+	ck_assert(ud == ud2);
 
 	ck_assert(dummy != NULL);
 
@@ -884,15 +884,17 @@ request_test_handler2(struct mg_connection *conn, void *cbdata)
 	const char *chunk_data = "123456789A123456789B123456789C";
 	const struct mg_request_info *ri;
 	struct mg_context *ctx;
-	void *ud;
+	void *ud, *ud2;
 
 	ctx = mg_get_context(conn);
 	ud = mg_get_user_data(ctx);
+	ud2 = mg_get_user_context_data(conn);
 	ri = mg_get_request_info(conn);
 
 	ck_assert(ri != NULL);
 	ck_assert(ctx == g_ctx);
 	ck_assert(ud == &g_ctx);
+	ck_assert(ud == ud2);
 
 	mg_send_http_ok(conn, "text/plain", -1);
 
@@ -4652,7 +4654,7 @@ minimal_http_https_client_impl(const char *server,
 		             client_err_buf);
 	}
 
-	mg_printf(client, "GET /%s HTTP/1.0\r\n\r\n", uri);
+	mg_printf(client, "GET %s HTTP/1.0\r\n\r\n", uri);
 
 	r = mg_get_response(client, client_err_buf, sizeof(client_err_buf), 10000);
 
@@ -4669,8 +4671,14 @@ minimal_http_https_client_impl(const char *server,
 	ck_assert(client_ri != NULL);
 
 	/* Check for status code 200 OK or 30? moved */
-	if ((client_ri->status_code < 300) || (client_ri->status_code > 308)) {
-		ck_assert_int_eq(client_ri->status_code, 200);
+	if ((client_ri->status_code != 200)
+	    && (client_ri->status_code / 10 != 30)) {
+		ck_abort_msg("Request to %s://%s:%u/%s: Status %u",
+		             use_ssl ? "HTTPS" : "HTTP",
+		             server,
+		             port,
+		             uri,
+		             client_ri->status_code);
 	}
 
 	data_read = 0;
@@ -4721,7 +4729,7 @@ START_TEST(test_minimal_client)
 	/* Call a test client */
 	minimal_http_client_impl("192.30.253.113" /* www.github.com */,
 	                         80,
-	                         "civetweb/civetweb/");
+	                         "/civetweb/civetweb/");
 
 	mark_point();
 
@@ -4750,7 +4758,7 @@ START_TEST(test_minimal_tls_client)
 	/* Call a test client */
 	minimal_https_client_impl("192.30.253.113" /* www.github.com */,
 	                          443,
-	                          "civetweb/civetweb/");
+	                          "/civetweb/civetweb/");
 
 	mark_point();
 

@@ -11,6 +11,7 @@
 * beaver
 * bel2125
 * Ben M. Ward
+* Bernhard Lehner
 * BigJoe
 * Bjoern Petri
 * Braedy Kuzma
@@ -20,9 +21,9 @@
 * Brian Spratke
 * cdbishop
 * celeron55
+* Charles Olivi
 * Chris Jones
 * Chris Rehn
-* Charles Olivi
 * Christian Mauderer
 * Christopher Galas
 * cjh
@@ -38,6 +39,7 @@
 * David Loffredo
 * Dialga
 * Domenico Di Iorio
+* Drew Wells
 * duong2179
 * ehlertjd
 * Eric Tsau
@@ -45,11 +47,11 @@
 * Erik Beran
 * Erik Partridge
 * extergnoto
+* F-Secure Corporation
 * Fabrice Fontaine
 * feneuilflo
 * Fernando G. Aranda
 * Frank Hilliger
-* F-Secure Corporation
 * Grahack
 * Gregor Jasny
 * grenclave
@@ -61,20 +63,21 @@
 * Herumb Shandilya
 * Herve Codina
 * Iain Morton
-* Ivan Dlugos
 * ImgBotApp
+* Ivan Dlugos
 * Jack
 * Jacob Repp
 * Jacob Skillin
 * Jan Kowalewski
 * Jan Willem Janssen
 * Jeremy Lin
+* Jesse Williamson
 * Jim Evans
 * jmc-
 * Joakim L. Gilje
 * Jochen Scheib
-* Joel Gallant
 * Joe Mucchiello
+* Joel Gallant
 * Johan De Taeye
 * John Faith
 * Jordan
@@ -94,9 +97,10 @@
 * Kimmo Mustonen
 * Krzysztof Kozlowski
 * Lammert Bies
+* Lars Immisch
 * Lawrence
-* Lianghui
 * Li Peng
+* Lianghui
 * Luka Rahne
 * Maarten Fremouw
 * makrsmark
@@ -120,19 +124,22 @@
 * palortoff
 * Patrick Drechsler
 * Patrick Trinkle
-* Paulo Brizolara
 * Paul Sokolovsky
+* Paulo Brizolara
 * pavel.pimenov
 * PavelVozenilek
 * Perttu Ahola
 * Peter Foerster
 * Philipp Friedenberger
 * Philipp Hasper
+* Piotr Zierhoffer
 * pkvamme
 * Radoslaw Zarzynski
 * Red54
 * Retallack Mark mark.retallack
 * Richard Screene
+* Rimas Misevi-ìius
+* Rinat Dobrokhotov
 * ryankopf
 * Sage Weil
 * Sangwhan Moon
@@ -147,17 +154,18 @@
 * SpaceLord
 * sunfch
 * suzukibitman
+* Símal Rasmussen
 * Tamotsu Kanoh
 * thewaterymoon
 * Thiago Macedo
 * THILMANT, Bernard
 * Thomas Davis
 * Thomas Klausner
-* Tomasz Gorochowik
 * Thorsten Horstmann
 * tnoho
-* Tomas Andrle
 * Tom Deblauwe
+* Tomas Andrle
+* Tomasz Gorochowik
 * Toni Wilk
 * Torben Jonas
 * Uilian Ries

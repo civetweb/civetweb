@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018 the Civetweb developers
+/* Copyright (c) 2015-2019 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,23 +19,25 @@
  * THE SOFTWARE.
  */
 
-/**
- * We include the source file so that we have access to the internal private
- * static functions
+/**********************************************************************************/
+/*
+ * We include the civetweb.c source file so that we have access to the internal
+ * private static functions
  */
+
 #ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
+/* Since the C file is included, declare all API functions as static,
+ * to avoid linker errors in the test (seems to be required for MS
+ * toolchain only).
+ */
 #define CIVETWEB_API static
 #endif
 
-#ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
-#undef MEMORY_DEBUGGING
-#endif
-
 #include "../src/civetweb.c"
+/**********************************************************************************/
 
+
+/* Standard includes for the test code below */
 #include <stdlib.h>
 #include <time.h>
 
@@ -92,7 +94,6 @@ START_TEST(test_parse_http_message)
 
 	char req12[] =
 	    "POST /a/b/c.d?e=f&g HTTP/1.1\r\nKey1: val1\r\nKey2: val2\r\n\r\nBODY";
-
 
 	int lenreq1 = (int)strlen(req1);
 	int lenreq2 = (int)strlen(req2);
@@ -323,33 +324,66 @@ START_TEST(test_match_prefix)
 END_TEST
 
 
-START_TEST(test_remove_double_dots_and_double_slashes)
+START_TEST(test_remove_dot_segments)
 {
-	/* Adapted from unit_test.c */
-	/* Copyright (c) 2013-2015 the Civetweb developers */
-	/* Copyright (c) 2004-2013 Sergey Lyubka */
+	int i;
+
 	struct {
-		char before[20], after[20];
-	} data[] = {
-	    {"////a", "/a"},
-	    {"/.....", "/."},
-	    {"/......", "/"},
-	    {"..", "."},
-	    {"...", "."},
-	    {"/...///", "/./"},
-	    {"/a...///", "/a.../"},
-	    {"/.x", "/.x"},
-	    {"/\\", "/"},
-	    {"/a\\", "/a\\"},
-	    {"/a\\\\...", "/a\\."},
-	};
-	size_t i;
+		const char *input;
+		const char *expected_output;
+	} tests[] = {{"/path/to/file.ext", "/path/to/file.ext"},
+	             {"/file.ext", "/file.ext"},
+	             {"/path/../file.ext", "/file.ext"},
+	             {"/../to/file.ext", "/to/file.ext"},
+	             {"/../../file.ext", "/file.ext"},
+	             {"/./../file.ext", "/file.ext"},
+	             {"/.././file.ext", "/file.ext"},
+	             {"/././file.ext", "/file.ext"},
+	             {"/././file.ext", "/file.ext"},
+	             {"/path/.to/..file.ext", "/path/.to/..file.ext"},
+	             {"/file", "/file"},
+	             {"/path/", "/path/"},
+
+	             {"file.ext", "file.ext"},
+	             {"./file.ext", "file.ext"},
+	             {"../file.ext", "file.ext"},
+	             {".file.ext", ".file.ext"},
+	             {"..file.ext", "..file.ext"},
+	             {"file", "file"},
+	             {"/x/../", "/"},
+	             {"/x/../../", "/"},
+	             {"/x/.././", "/"},
+	             {"/./x/.././", "/"},
+
+	             /* Windows specific */
+	             {"\\file.ext", "/file.ext"},
+	             {"\\..\\file.ext", "/file.ext"},
+	             {"/file.", "/file"},
+	             {"/path\\to.\\.\\file.", "/path/to/file"},
+
+	             /* Multiple dots and slashes */
+	             {"\\//\\\\x", "/x"},
+	             {"//", "/"},
+	             {"/./", "/"},
+	             {"/../", "/"},
+	             {"/.../", "/"},
+	             {"/..../", "/"},
+	             {"/...../", "/"},
+	             {"/...../", "/"},
+	             {"/...//", "/"},
+	             {"/..././", "/"},
+	             {"/.../../", "/"},
+	             {"/.../.../", "/"},
+
+	             {NULL, NULL}};
 
 	mark_point();
 
-	for (i = 0; i < ARRAY_SIZE(data); i++) {
-		remove_double_dots_and_double_slashes(data[i].before);
-		ck_assert_str_eq(data[i].before, data[i].after);
+	for (i = 0; (tests[i].input != NULL); i++) {
+		char inout[256];
+		strcpy(inout, tests[i].input);
+		remove_dot_segments(inout);
+		ck_assert_str_eq(inout, tests[i].expected_output);
 	}
 }
 END_TEST
@@ -1106,8 +1140,7 @@ make_private_suite(void)
 	tcase_set_timeout(tcase_url_parsing_1, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_url_parsing_1);
 
-	tcase_add_test(tcase_url_parsing_2,
-	               test_remove_double_dots_and_double_slashes);
+	tcase_add_test(tcase_url_parsing_2, test_remove_dot_segments);
 	tcase_set_timeout(tcase_url_parsing_2, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_url_parsing_2);
 
@@ -1178,7 +1211,7 @@ MAIN_PRIVATE(void)
 
 	test_alloc_vprintf(0);
 	test_mg_vsnprintf(0);
-	test_remove_double_dots_and_double_slashes(0);
+	test_remove_dot_segments(0);
 	test_parse_date_string(0);
 	test_parse_port_string(0);
 	test_parse_http_message(0);

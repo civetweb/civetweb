@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018 the Civetweb developers
+/* Copyright (c) 2013-2020 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -184,7 +184,8 @@ static int g_num_add_domains;     /* Default from init_server_name,
                                    * updated later from the server config */
 static const char **g_add_domain; /* Default from init_server_name,
                                    * updated later from the server config */
-
+static int g_hide_tray = 0;       /* Default = do not hide (0),
+                                   * updated later from the server config */
 
 static char *g_system_info; /* Set by init_system_info() */
 static char g_config_file_name[PATH_MAX] =
@@ -213,6 +214,7 @@ enum {
 	OPTION_ICON,
 	OPTION_WEBPAGE,
 	OPTION_ADD_DOMAIN,
+	OPTION_HIDE_TRAY,
 	NUM_MAIN_OPTIONS
 };
 
@@ -221,6 +223,7 @@ static struct mg_option main_config_options[] = {
     {"icon", MG_CONFIG_TYPE_STRING, NULL},
     {"website", MG_CONFIG_TYPE_STRING, NULL},
     {"add_domain", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"hide_tray", MG_CONFIG_TYPE_BOOLEAN, NULL},
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -582,6 +585,14 @@ set_option(char **options, const char *name, const char *value)
 		}
 		if (!strcmp(name, main_config_options[OPTION_WEBPAGE].name)) {
 			g_website = sdup(value);
+			return 1;
+		}
+		if (!strcmp(name, main_config_options[OPTION_HIDE_TRAY].name)) {
+			if (!strcmp(value, "yes")) {
+				g_hide_tray = 1;
+			} else if (!strcmp(value, "no")) {
+				g_hide_tray = 0;
+			}
 			return 1;
 		}
 		if (!strcmp(name, main_config_options[OPTION_ADD_DOMAIN].name)) {
@@ -1562,12 +1573,15 @@ struct dlg_proc_param {
 };
 
 struct dlg_header_param {
+	/* https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-dlgtemplate
+	 */
 	DLGTEMPLATE dlg_template; /* 18 bytes */
 	WORD menu, dlg_class;
 	wchar_t caption[1];
-	WORD fontsiz;
+	WORD fontsize;
 	wchar_t fontface[7];
 };
+
 
 static struct dlg_header_param
 GetDlgHeader(const short width)
@@ -1577,25 +1591,28 @@ GetDlgHeader(const short width)
 #pragma warning(push)
 #pragma warning(disable : 4204)
 #endif /* if defined(_MSC_VER) */
-	struct dlg_header_param dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU
-	                                              | WS_VISIBLE | DS_SETFONT
-	                                              | WS_DLGFRAME,
-	                                          WS_EX_TOOLWINDOW,
-	                                          0,
-	                                          200,
-	                                          200,
-	                                          width,
-	                                          0},
-	                                         0,
-	                                         0,
-	                                         L"",
-	                                         8,
-	                                         L"Tahoma"};
+
+	struct dlg_header_param dialog_header = {
+	    /* DLGTEMPLATE */
+	    {/* style */ WS_CAPTION | WS_POPUP | WS_SYSMENU | WS_VISIBLE
+	         | DS_SETFONT | DS_CENTER | WS_DLGFRAME,
+	     /* extstyle */ WS_EX_TOOLWINDOW,
+	     /* cdit */ 0,
+	     /* x ignored by DS_CENTER */ 0,
+	     /* y ignored by DS_CENTER */ 0,
+	     width,
+	     /* height - to be calculated */ 0},
+	    /* menu */ 0,
+	    /* dlg_class */ 0,
+	    /* caption */ L"",
+	    /* fontsize */ 8,
+	    /* font */ L"Tahoma"};
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif /* if defined(_MSC_VER) */
 	return dialog_header;
 }
+
 
 /* Dialog proc for settings dialog */
 static INT_PTR CALLBACK
@@ -1888,10 +1905,12 @@ get_password(const char *user,
              char *passwd,
              unsigned passwd_len)
 {
-#define HEIGHT (15)
-#define WIDTH (280)
-#define LABEL_WIDTH (90)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short WIDTH = 280;
+	short LABEL_WIDTH = 90;
 
+	/* Other variables */
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	int ok;
@@ -2030,16 +2049,12 @@ get_password(const char *user,
 
 	ok = (IDOK
 	      == DialogBoxIndirectParam(
-	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	          NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
 
 	return ok;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
@@ -2163,19 +2178,28 @@ add_control(unsigned char **mem,
 static void
 show_settings_dialog()
 {
-#define HEIGHT (15)
-#define WIDTH (460)
-#define LABEL_WIDTH (90)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short BORDER_WIDTH = 10;
+	short CELL_WIDTH = 125;
+	short LABEL_WIDTH = 115;
+	short FILE_DIALOG_BUTTON_WIDTH = 15;
+	short NO_OF_COLUMNS = 3;
 
+	/* Calculates size */
+	short COLUMN_WIDTH = LABEL_WIDTH + CELL_WIDTH + BORDER_WIDTH;
+	short DIALOG_WIDTH = BORDER_WIDTH + NO_OF_COLUMNS * COLUMN_WIDTH;
+
+	/* All other variables */
 	unsigned char mem[16 * 1024], *p;
 	const struct mg_option *options;
 	DWORD style;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	WORD i, cl, nelems = 0;
-	short width, x, y;
+	short x, y, next_cell_width;
 	static struct dlg_proc_param s_dlg_proc_param;
 
-	const struct dlg_header_param dialog_header = GetDlgHeader(WIDTH);
+	const struct dlg_header_param dialog_header = GetDlgHeader(DIALOG_WIDTH);
 
 	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
@@ -2193,9 +2217,11 @@ show_settings_dialog()
 	options = mg_get_valid_options();
 	for (i = 0; options[i].name != NULL; i++) {
 		style = WS_CHILD | WS_VISIBLE | WS_TABSTOP;
-		x = 10 + (WIDTH / 2) * (nelems % 2);
-		y = (nelems / 2 + 1) * HEIGHT + 5;
-		width = WIDTH / 2 - 20 - LABEL_WIDTH;
+
+		x = BORDER_WIDTH + COLUMN_WIDTH * (nelems % NO_OF_COLUMNS);
+		y = BORDER_WIDTH / 2 + HEIGHT + HEIGHT * (nelems / NO_OF_COLUMNS);
+		next_cell_width = CELL_WIDTH;
+
 		if (options[i].type == MG_CONFIG_TYPE_NUMBER) {
 			style |= ES_NUMBER;
 			cl = 0x81;
@@ -2206,19 +2232,24 @@ show_settings_dialog()
 		} else if ((options[i].type == MG_CONFIG_TYPE_FILE)
 		           || (options[i].type == MG_CONFIG_TYPE_DIRECTORY)) {
 			style |= WS_BORDER | ES_AUTOHSCROLL;
-			width -= 20;
 			cl = 0x81;
+
+			/* Additional button for file dialog */
 			add_control(&p,
 			            dia,
 			            0x80,
 			            ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA,
 			            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-			            x + width + LABEL_WIDTH + 5,
+			            x + LABEL_WIDTH + CELL_WIDTH - FILE_DIALOG_BUTTON_WIDTH,
 			            y,
-			            15,
-			            12,
+			            FILE_DIALOG_BUTTON_WIDTH,
+			            HEIGHT - 3,
 			            "...");
+
+			next_cell_width -= FILE_DIALOG_BUTTON_WIDTH + BORDER_WIDTH / 2;
+
 		} else if (options[i].type == MG_CONFIG_TYPE_STRING_MULTILINE) {
+
 			/* TODO: This is not really uer friendly */
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN
@@ -2227,6 +2258,8 @@ show_settings_dialog()
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL;
 		}
+
+		/* Add label (static text) */
 		add_control(&p,
 		            dia,
 		            0x82,
@@ -2244,32 +2277,35 @@ show_settings_dialog()
 		            style,
 		            x + LABEL_WIDTH,
 		            y,
-		            width,
-		            12,
+		            next_cell_width,
+		            HEIGHT - 3,
 		            "");
 		nelems++;
 
 		DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 	}
 
-	y = (((nelems + 1) / 2 + 1) * HEIGHT + 5);
+	/* "Settings" frame around all options */
+	y = ((nelems + NO_OF_COLUMNS - 1) / NO_OF_COLUMNS + 1) * HEIGHT;
 	add_control(&p,
 	            dia,
 	            0x80,
 	            ID_GROUP,
 	            WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-	            5,
-	            5,
-	            WIDTH - 10,
+	            BORDER_WIDTH / 2,
+	            BORDER_WIDTH / 2,
+	            DIALOG_WIDTH - BORDER_WIDTH,
 	            y,
 	            " Settings ");
-	y += 10;
+
+	/* Buttons below "Settings" frame */
+	y += HEIGHT;
 	add_control(&p,
 	            dia,
 	            0x80,
 	            ID_SAVE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 70,
+	            DIALOG_WIDTH - 70,
 	            y,
 	            65,
 	            12,
@@ -2279,7 +2315,7 @@ show_settings_dialog()
 	            0x80,
 	            ID_RESET_DEFAULTS,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 140,
+	            DIALOG_WIDTH - 140,
 	            y,
 	            65,
 	            12,
@@ -2289,7 +2325,7 @@ show_settings_dialog()
 	            0x80,
 	            ID_RESET_FILE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 210,
+	            DIALOG_WIDTH - 210,
 	            y,
 	            65,
 	            12,
@@ -2299,7 +2335,7 @@ show_settings_dialog()
 	            0x80,
 	            ID_RESET_ACTIVE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 280,
+	            DIALOG_WIDTH - 280,
 	            y,
 	            65,
 	            12,
@@ -2315,9 +2351,11 @@ show_settings_dialog()
 	            12,
 	            g_server_base_name);
 
+	/* Check befor every release */
 	DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 
-	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
+	/* Calculate total height of the dialog */
+	dia->cy = y + HEIGHT;
 
 	s_dlg_proc_param.fRetry = NULL;
 
@@ -2326,20 +2364,18 @@ show_settings_dialog()
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
 static void
 change_password_file()
 {
-#define HEIGHT (15)
-#define WIDTH (320)
-#define LABEL_WIDTH (90)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short WIDTH = 320;
+	short LABEL_WIDTH = 90;
 
+	/* Other variables */
 	OPENFILENAME of;
 	char path[PATH_MAX] = PASSWORDS_FILE_NAME;
 	char strbuf[256], u[256], d[256];
@@ -2519,18 +2555,13 @@ change_password_file()
 		s_dlg_proc_param.name = path;
 		s_dlg_proc_param.fRetry = NULL;
 
-	} while (
-	    (IDOK
-	     == DialogBoxIndirectParam(
-	            NULL, dia, NULL, PasswordDlgProc, (LPARAM)&s_dlg_proc_param))
-	    && (!g_exit_flag));
+	} while ((IDOK
+	          == DialogBoxIndirectParam(
+	              NULL, dia, NULL, PasswordDlgProc, (LPARAM)&s_dlg_proc_param))
+	         && (!g_exit_flag));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
@@ -2564,10 +2595,12 @@ sysinfo_reload(struct dlg_proc_param *prm)
 int
 show_system_info()
 {
-#define HEIGHT (15)
-#define WIDTH (320)
-#define LABEL_WIDTH (50)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short WIDTH = 320;
+	short LABEL_WIDTH = 50;
 
+	/* Other parameters */
 	unsigned char mem[4096], *p;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	int ok;
@@ -2648,16 +2681,12 @@ show_system_info()
 
 	ok = (IDOK
 	      == DialogBoxIndirectParam(
-	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	          NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
 
 	return ok;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
@@ -2731,7 +2760,6 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	char buf[200];
 	POINT pt;
 	HMENU hMenu;
-	static UINT s_uTaskbarRestart; /* for taskbar creation */
 
 	switch (msg) {
 
@@ -2754,7 +2782,6 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			exit(EXIT_SUCCESS);
 		} else {
 			start_civetweb(__argc, __argv);
-			s_uTaskbarRestart = RegisterWindowMessage(TEXT("TaskbarCreated"));
 		}
 		break;
 
@@ -2762,7 +2789,9 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		switch (LOWORD(wParam)) {
 		case ID_QUIT:
 			stop_civetweb();
-			Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+			if (TrayIcon.cbSize) {
+				Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+			}
 			g_exit_flag = 1;
 			PostQuitMessage(0);
 			return 0;
@@ -2840,14 +2869,12 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_CLOSE:
 		stop_civetweb();
-		Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+		if (TrayIcon.cbSize) {
+			Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+		}
 		g_exit_flag = 1;
 		PostQuitMessage(0);
 		return 0; /* We've just sent our own quit message, with proper hwnd. */
-
-	default:
-		if (msg == s_uTaskbarRestart)
-			Shell_NotifyIcon(NIM_ADD, &TrayIcon);
 	}
 
 	return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -2933,6 +2960,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	                    NULL);
 	ShowWindow(hWnd, SW_HIDE);
 
+	/* Load icon for systray and other dialogs */
 	if (g_icon_name) {
 		hIcon = (HICON)
 		    LoadImage(NULL, g_icon_name, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
@@ -2945,15 +2973,21 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 		                         0);
 	}
 
-	TrayIcon.cbSize = sizeof(TrayIcon);
-	TrayIcon.uID = ID_ICON;
-	TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-	TrayIcon.hIcon = hIcon;
-	TrayIcon.hWnd = hWnd;
-	snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", g_server_name);
-	TrayIcon.uCallbackMessage = WM_USER;
-	Shell_NotifyIcon(NIM_ADD, &TrayIcon);
+	/* add icon to systray; tray icon is entry point to the menu */
+	if (!g_hide_tray) {
+		TrayIcon.cbSize = sizeof(TrayIcon);
+		TrayIcon.uID = ID_ICON;
+		TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+		TrayIcon.hIcon = hIcon;
+		TrayIcon.hWnd = hWnd;
+		snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", g_server_name);
+		TrayIcon.uCallbackMessage = WM_USER;
+		Shell_NotifyIcon(NIM_ADD, &TrayIcon);
+	} else {
+		TrayIcon.cbSize = 0;
+	}
 
+	/* Message loop */
 	while (GetMessage(&msg, hWnd, 0, 0) > 0) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
@@ -2985,13 +3019,15 @@ main(int argc, char *argv[])
 @end
 
 @implementation Civetweb
-- (void)openBrowser {
+- (void)openBrowser
+{
 	[[NSWorkspace sharedWorkspace]
 	    openURL:[NSURL URLWithString:[NSString stringWithUTF8String:
 	                                               get_url_to_first_open_port(
 	                                                   g_ctx)]]];
 }
-- (void)editConfig {
+- (void)editConfig
+{
 	create_config_file(g_ctx, g_config_file_name);
 	NSString *path = [NSString stringWithUTF8String:g_config_file_name];
 	if (![[NSWorkspace sharedWorkspace] openFile:path
@@ -3004,7 +3040,8 @@ main(int argc, char *argv[])
 		(void)[alert runModal];
 	}
 }
-- (void)shutDown {
+- (void)shutDown
+{
 	[NSApp terminate:nil];
 }
 @end

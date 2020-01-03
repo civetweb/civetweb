@@ -916,10 +916,10 @@ get_dh2236()
 
 #ifndef TEST_WITHOUT_SSL
 int
-init_ssl(void *ssl_context, void *user_data)
+init_ssl(void *ssl_ctx, void *user_data)
 {
 	/* Add application specific SSL initialization */
-	struct ssl_ctx_st *ctx = (struct ssl_ctx_st *)ssl_context;
+	struct ssl_ctx_st *ctx = (struct ssl_ctx_st *)ssl_ctx;
 
 #ifdef USE_SSL_DH
 	/* example from https://github.com/civetweb/civetweb/issues/347 */
