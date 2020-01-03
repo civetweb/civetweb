@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 the CivetWeb developers
+ * Copyright (c) 2018-2020 the CivetWeb developers
  * MIT License
  */
 

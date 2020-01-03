@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 the CivetWeb developers
+ * Copyright (c) 2013-2020 the CivetWeb developers
  * Copyright (c) 2013 No Face Press, LLC
  * License http://opensource.org/licenses/mit-license.php MIT License
  */

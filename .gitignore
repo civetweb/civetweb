@@ -15,7 +15,7 @@ out
 
 *.o
 
-#################
+################# //hash
 ## CMake
 #################
 /CMakeCache.txt
@@ -267,7 +267,9 @@ requests.db
 ci/lua
 
 
-# Conan test cache
+##########################
+## Conan test cache
+##########################
 conan/test_package/build
 
 
