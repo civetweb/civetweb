@@ -90,7 +90,7 @@
 #define printf                                                                 \
 	DO_NOT_USE_THIS_FUNCTION__USE_fprintf /* Required for unit testing */
 
-#if defined(_WIN32) && !defined(__SYMBIAN32__) /* WINDOWS include block */
+#if defined(_WIN32) /* WINDOWS include block */
 #if !defined(_WIN32_WINNT)
 #define _WIN32_WINNT 0x0501 /* for tdm-gcc so we can use getconsolewindow */
 #endif
@@ -120,7 +120,7 @@ extern char *_getcwd(char *buf, size_t size);
 #define WINCDECL __cdecl
 #define abs_path(rel, abs, abs_size) (_fullpath((abs), (rel), (abs_size)))
 
-#else /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include   \
+#else /* defined(_WIN32) - WINDOWS / UNIX include   \
          block */
 
 #include <sys/utsname.h>
@@ -131,7 +131,7 @@ extern char *_getcwd(char *buf, size_t size);
 #define WINCDECL
 #define abs_path(rel, abs, abs_size) (realpath((rel), (abs)))
 
-#endif /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include  \
+#endif /* defined(_WIN32) - WINDOWS / UNIX include  \
           block */
 
 #if !defined(DEBUG_ASSERT)

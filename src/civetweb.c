@@ -153,13 +153,9 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #if defined(__SYMBIAN32__)
 /* According to https://en.wikipedia.org/wiki/Symbian#History,
  * Symbian is no longer maintained since 2014-01-01.
- * Recent versions of CivetWeb are no longer tested for Symbian.
- * It makes no sense, to support an abandoned operating system.
+ * Support for Symbian has been removed from CivetWeb
  */
 #error "Symbian is no longer maintained. CivetWeb no longer supports Symbian."
-#define NO_SSL /* SSL is not supported */
-#define NO_CGI /* CGI is not supported */
-#define PATH_MAX FILENAME_MAX
 #endif /* __SYMBIAN32__ */
 
 #if defined(__ZEPHYR__)
@@ -18740,7 +18736,6 @@ static void
 get_system_name(char **sysName)
 {
 #if defined(_WIN32)
-#if !defined(__SYMBIAN32__)
 #if defined(_WIN32_WCE)
 	*sysName = mg_strdup("WinCE");
 #else
@@ -18776,9 +18771,7 @@ get_system_name(char **sysName)
 
 	*sysName = mg_strdup(name);
 #endif
-#else
-	*sysName = mg_strdup("Symbian");
-#endif
+
 #elif defined(__ZEPHYR__)
 	*sysName = mg_strdup("Zephyr OS");
 #else
