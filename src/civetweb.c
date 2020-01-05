@@ -132,16 +132,39 @@ mg_static_assert(sizeof(void *) == 4 || sizeof(void *) == 8,
 mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 
-/* Alternative queue is well tested and should be the new default */
-#if defined(NO_ALTERNATIVE_QUEUE)
-#if defined(ALTERNATIVE_QUEUE)
-#error "Define ALTERNATIVE_QUEUE or NO_ALTERNATIVE_QUEUE or none, but not both"
+/* Select queue implementation. Diagnosis features originally only implemented
+ * for the "ALTERNATIVE_QUEUE" have been ported to the previous queue
+ * implementation (NO_ALTERNATIVE_QUEUE) as well. The new configuration value
+ * "CONNECTION_QUEUE_SIZE" is only available for the previous queue
+ * implementation, since the queue length is independent from the number of
+ * worker threads there, while the new queue is one element per worker thread.
+ *
+ */
+#if defined(NO_ALTERNATIVE_QUEUE) && defined(ALTERNATIVE_QUEUE)
+/* The queues are exclusive or - only one can be used. */
+#error                                                                         \
+    "Define ALTERNATIVE_QUEUE or NO_ALTERNATIVE_QUEUE (or none of them), but not both"
 #endif
-#else
-#define ALTERNATIVE_QUEUE
+#if !defined(NO_ALTERNATIVE_QUEUE) && !defined(ALTERNATIVE_QUEUE)
+/* Use a default implementation */
+#define NO_ALTERNATIVE_QUEUE
 #endif
 
 #if defined(NO_FILESYSTEMS) && !defined(NO_FILES)
+/* File system access:
+ * NO_FILES = do not serve any files from the file system automatically.
+ * However, with NO_FILES CivetWeb may still write log files, read access
+ * control files, default error page files or use API functions like
+ * mg_send_file in callbacks to send files from the server local
+ * file system.
+ * NO_FILES only disables the automatic mapping between URLs and local
+ * file names.
+ * NO_FILESYSTEM = do not access any file at all. Useful for embedded
+ * devices without file system. Logging to files in not available
+ * (use callbacks instead) and API functions like mg_send_file are not
+ * available.
+ * If NO_FILESYSTEM is set, NO_FILES must be set as well.
+ */
 #error "Inconsistent build flags, NO_FILESYSTEMS requires NO_FILES"
 #endif
 
@@ -449,12 +472,6 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 /* General purpose buffer size. */
 #if !defined(MG_BUF_LEN) /* in bytes */
 #define MG_BUF_LEN (1024 * 8)
-#endif
-
-/* Size of the accepted socket queue (in case the old queue implementation
- * is used). */
-#if !defined(MGSQLEN)
-#define MGSQLEN (20) /* count */
 #endif
 
 
@@ -2356,6 +2373,7 @@ enum {
 	                     * socket option typedef TCP_NODELAY. */
 	MAX_REQUEST_SIZE,
 	LINGER_TIMEOUT,
+	CONNECTION_QUEUE_SIZE,
 	MAX_CONNECTIONS,
 #if defined(__linux__)
 	ALLOW_SENDFILE_CALL,
@@ -2462,6 +2480,7 @@ static const struct mg_option config_options[] = {
     {"tcp_nodelay", MG_CONFIG_TYPE_NUMBER, "0"},
     {"max_request_size", MG_CONFIG_TYPE_NUMBER, "16384"},
     {"linger_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+    {"connection_queue", MG_CONFIG_TYPE_NUMBER, "20"},
     {"max_connections", MG_CONFIG_TYPE_NUMBER, "100"},
 #if defined(__linux__)
     {"allow_sendfile_call", MG_CONFIG_TYPE_BOOLEAN, "yes"},
@@ -2658,7 +2677,7 @@ struct mg_context {
 
 #if defined(USE_SERVER_STATS)
 	int active_connections;
-	int max_connections;
+	int max_active_connections;
 	int64_t total_connections;
 	int64_t total_requests;
 	int64_t total_data_read;
@@ -2679,12 +2698,18 @@ struct mg_context {
 	struct socket *client_socks;
 	void **client_wait_events;
 #else
-	struct socket queue[MGSQLEN]; /* Accepted sockets */
-	volatile int sq_head;         /* Head of the socket queue */
-	volatile int sq_tail;         /* Tail of the socket queue */
-	pthread_cond_t sq_full;       /* Signaled when socket is produced */
-	pthread_cond_t sq_empty;      /* Signaled when socket is consumed */
-#endif
+	struct socket *squeue; /* Socket queue (sq) : accepted sockets waiting for a
+	                          worker thread */
+	volatile int sq_head;  /* Head of the socket queue */
+	volatile int sq_tail;  /* Tail of the socket queue */
+	pthread_cond_t sq_full;  /* Signaled when socket is produced */
+	pthread_cond_t sq_empty; /* Signaled when socket is consumed */
+	volatile int sq_blocked; /* Status information: sq is full */
+	int sq_size;             /* No of elements in socket queue */
+#if defined(USE_SERVER_STATS)
+	int sq_max_fill;
+#endif /* USE_SERVER_STATS */
+#endif /* ALTERNATIVE_QUEUE */
 
 	/* Memory related */
 	unsigned int max_request_size; /* The max request size */
@@ -2759,11 +2784,15 @@ struct mg_connection {
 	                 * mg_get_connection_info_impl */
 #endif
 
-	const char *host;         /* Host (HTTP/1.1 header or SNI) */
-	SSL *ssl;                 /* SSL descriptor */
-	struct socket client;     /* Connected client */
-	time_t conn_birth_time;   /* Time (wall clock) when connection was
-	                           * established */
+	const char *host;       /* Host (HTTP/1.1 header or SNI) */
+	SSL *ssl;               /* SSL descriptor */
+	struct socket client;   /* Connected client */
+	time_t conn_birth_time; /* Time (wall clock) when connection was
+	                         * established */
+#if defined(USE_SERVER_STATS)
+	time_t conn_close_time; /* Time (wall clock) when connection was
+	                         * closed (or 0 if still open) */
+#endif
 	struct timespec req_time; /* Time (since system start) when the request
 	                           * was received */
 	int64_t num_bytes_sent;   /* Total bytes sent to client */
@@ -3049,11 +3078,11 @@ mg_set_thread_name(const char *name)
 	} __except (EXCEPTION_EXECUTE_HANDLER) {
 	}
 #elif defined(__MINGW32__)
-/* No option known to set thread name for MinGW */
+/* No option known to set thread name for MinGW known */
 #endif
 #elif defined(_GNU_SOURCE) && defined(__GLIBC__)                               \
     && ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
-/* pthread_setname_np first appeared in glibc in version 2.12*/
+/* pthread_setname_np first appeared in glibc in version 2.12 */
 #if defined(__MACH__)
 	/* OS X only current thread name can be changed */
 	(void)pthread_setname_np(threadName);
@@ -3061,7 +3090,11 @@ mg_set_thread_name(const char *name)
 	(void)pthread_setname_np(pthread_self(), threadName);
 #endif
 #elif defined(__linux__)
-	/* on linux we can use the old prctl function */
+	/* On Linux we can use the prctl function.
+	 * When building for Linux Standard Base (LSB) use
+	 * NO_THREAD_NAME. However, thread names are a big
+	 * help for debugging, so the stadard is to set them.
+	 */
 	(void)prctl(PR_SET_NAME, threadName, 0, 0, 0);
 #endif
 }
@@ -17849,10 +17882,10 @@ process_new_connection(struct mg_connection *conn)
 #if defined(USE_SERVER_STATS)
 	int mcon = mg_atomic_inc(&(conn->phys_ctx->active_connections));
 	mg_atomic_add(&(conn->phys_ctx->total_connections), 1);
-	if (mcon > (conn->phys_ctx->max_connections)) {
+	if (mcon > (conn->phys_ctx->max_active_connections)) {
 		/* could use atomic compare exchange, but this
 		 * seems overkill for statistics data */
-		conn->phys_ctx->max_connections = mcon;
+		conn->phys_ctx->max_active_connections = mcon;
 	}
 #endif
 
@@ -18100,8 +18133,6 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 static int
 consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 {
-#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
-
 	(void)thread_index;
 
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
@@ -18115,15 +18146,15 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 	/* If we're stopping, sq_head may be equal to sq_tail. */
 	if (ctx->sq_head > ctx->sq_tail) {
 		/* Copy socket from the queue and increment tail */
-		*sp = ctx->queue[ctx->sq_tail % QUEUE_SIZE(ctx)];
+		*sp = ctx->squeue[ctx->sq_tail % ctx->sq_size];
 		ctx->sq_tail++;
 
 		DEBUG_TRACE("grabbed socket %d, going busy", sp ? sp->sock : -1);
 
 		/* Wrap pointers if needed */
-		while (ctx->sq_tail > QUEUE_SIZE(ctx)) {
-			ctx->sq_tail -= QUEUE_SIZE(ctx);
-			ctx->sq_head -= QUEUE_SIZE(ctx);
+		while (ctx->sq_tail > ctx->sq_size) {
+			ctx->sq_tail -= ctx->sq_size;
+			ctx->sq_head -= ctx->sq_size;
 		}
 	}
 
@@ -18131,7 +18162,6 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	return !ctx->stop_flag;
-#undef QUEUE_SIZE
 }
 
 
@@ -18139,28 +18169,39 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 static void
 produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
-#define QUEUE_SIZE(ctx) ((int)(ARRAY_SIZE(ctx->queue)))
-	if (!ctx) {
-		return;
-	}
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 
+	int queue_filled = ctx->sq_head - ctx->sq_tail;
+
 	/* If the queue is full, wait */
-	while ((ctx->stop_flag == 0)
-	       && (ctx->sq_head - ctx->sq_tail >= QUEUE_SIZE(ctx))) {
+	while ((ctx->stop_flag == 0) && (queue_filled >= ctx->sq_size)) {
+		ctx->sq_blocked = 1; /* Status information: All threads bussy */
+#if defined(USE_SERVER_STATS)
+		if (queue_filled > ctx->sq_max_fill) {
+			ctx->sq_max_fill = queue_filled;
+		}
+#endif
 		(void)pthread_cond_wait(&ctx->sq_empty, &ctx->thread_mutex);
+		ctx->sq_blocked = 0; /* Not blocked now */
+		queue_filled = ctx->sq_head - ctx->sq_tail;
 	}
 
-	if (ctx->sq_head - ctx->sq_tail < QUEUE_SIZE(ctx)) {
+	if (queue_filled < ctx->sq_size) {
 		/* Copy socket to the queue and increment head */
-		ctx->queue[ctx->sq_head % QUEUE_SIZE(ctx)] = *sp;
+		ctx->squeue[ctx->sq_head % ctx->sq_size] = *sp;
 		ctx->sq_head++;
 		DEBUG_TRACE("queued socket %d", sp ? sp->sock : -1);
 	}
 
+	queue_filled = ctx->sq_head - ctx->sq_tail;
+#if defined(USE_SERVER_STATS)
+	if (queue_filled > ctx->sq_max_fill) {
+		ctx->sq_max_fill = queue_filled;
+	}
+#endif
+
 	(void)pthread_cond_signal(&ctx->sq_full);
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
-#undef QUEUE_SIZE
 }
 #endif /* ALTERNATIVE_QUEUE */
 
@@ -18244,6 +18285,9 @@ worker_thread_run(struct mg_connection *conn)
 	 * produce_socket() */
 	while (consume_socket(ctx, &conn->client, thread_index)) {
 
+#if defined(USE_SERVER_STATS)
+		conn->conn_close_time = 0;
+#endif
 		conn->conn_birth_time = time(NULL);
 
 /* Fill in IP, port info early so even if SSL setup below fails,
@@ -18314,6 +18358,10 @@ worker_thread_run(struct mg_connection *conn)
 		}
 
 		DEBUG_TRACE("%s", "Connection closed");
+
+#if defined(USE_SERVER_STATS)
+		conn->conn_close_time = time(NULL);
+#endif
 	}
 
 
@@ -18625,6 +18673,7 @@ free_context(struct mg_context *ctx)
 	 * condvars
 	 */
 	(void)pthread_mutex_destroy(&ctx->thread_mutex);
+
 #if defined(ALTERNATIVE_QUEUE)
 	mg_free(ctx->client_socks);
 	if (ctx->client_wait_events != NULL) {
@@ -18636,6 +18685,7 @@ free_context(struct mg_context *ctx)
 #else
 	(void)pthread_cond_destroy(&ctx->sq_empty);
 	(void)pthread_cond_destroy(&ctx->sq_full);
+	mg_free(ctx->squeue);
 #endif
 
 	/* Destroy other context global data structures mutex */
@@ -18874,6 +18924,7 @@ static
 #if !defined(ALTERNATIVE_QUEUE)
 	ok &= (0 == pthread_cond_init(&ctx->sq_empty, NULL));
 	ok &= (0 == pthread_cond_init(&ctx->sq_full, NULL));
+	ctx->sq_blocked = 0;
 #endif
 	ok &= (0 == pthread_mutex_init(&ctx->nonce_mutex, &pthread_mutex_attr));
 	if (!ok) {
@@ -18964,7 +19015,9 @@ static
 	/* Request size option */
 	itmp = atoi(ctx->dd.config[MAX_REQUEST_SIZE]);
 	if (itmp < 1024) {
-		mg_cry_ctx_internal(ctx, "%s", "max_request_size too small");
+		mg_cry_ctx_internal(ctx,
+		                    "%s too small",
+		                    config_options[MAX_REQUEST_SIZE].name);
 		if ((error != NULL) && (error->text_buffer_size > 0)) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
@@ -18978,6 +19031,45 @@ static
 		return NULL;
 	}
 	ctx->max_request_size = (unsigned)itmp;
+
+	/* Queue length */
+#if !defined(ALTERNATIVE_QUEUE)
+	itmp = atoi(ctx->dd.config[CONNECTION_QUEUE_SIZE]);
+	if (itmp < 1) {
+		mg_cry_ctx_internal(ctx,
+		                    "%s too small",
+		                    config_options[CONNECTION_QUEUE_SIZE].name);
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "Invalid configuration option value: %s",
+			            config_options[CONNECTION_QUEUE_SIZE].name);
+		}
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
+	ctx->squeue = (struct socket *)mg_calloc(itmp, sizeof(struct socket));
+	if (ctx->squeue == NULL) {
+		mg_cry_ctx_internal(ctx,
+		                    "Out of memory: Cannot allocate %s",
+		                    config_options[CONNECTION_QUEUE_SIZE].name);
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "Out of memory: Cannot allocate %s",
+			            config_options[CONNECTION_QUEUE_SIZE].name);
+		}
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
+	ctx->sq_size = itmp;
+#endif
 
 	/* Worker thread count option */
 	workerthreadcount = atoi(ctx->dd.config[NUM_THREADS]);
@@ -20061,11 +20153,36 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            eol,
 		            ctx->active_connections,
 		            eol,
-		            ctx->max_connections,
+		            ctx->max_active_connections,
 		            eol,
 		            ctx->total_connections,
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
+
+		/* Queue information */
+#if !defined(ALTERNATIVE_QUEUE)
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            ",%s\"queue\" : {%s"
+		            "\"length\" : %i,%s"
+		            "\"filled\" : %i,%s"
+		            "\"maxFilled\" : %i,%s"
+		            "\"full\" : %s%s"
+		            "}",
+		            eol,
+		            eol,
+		            ctx->sq_size,
+		            eol,
+		            ctx->sq_head - ctx->sq_tail,
+		            eol,
+		            ctx->sq_max_fill,
+		            eol,
+		            (ctx->sq_blocked ? "true" : "false"),
+		            eol);
+		context_info_length += mg_str_append(&buffer, end, block);
+#endif
 
 		/* Requests information */
 		mg_snprintf(NULL,
@@ -20291,14 +20408,24 @@ mg_get_connection_info(const struct mg_context *ctx,
 	/* Execution time information */
 	if ((state >= 2) && (state < 9)) {
 		char start_time_str[64] = {0};
-		char now_str[64] = {0};
+		char close_time_str[64] = {0};
 		time_t start_time = conn->conn_birth_time;
-		time_t now = time(NULL);
+		time_t close_time = conn->conn_close_time;
+		double time_diff;
 
 		gmt_time_string(start_time_str,
 		                sizeof(start_time_str) - 1,
 		                &start_time);
-		gmt_time_string(now_str, sizeof(now_str) - 1, &now);
+		if (close_time != 0) {
+			time_diff = difftime(close_time, start_time);
+			gmt_time_string(close_time_str,
+			                sizeof(close_time_str) - 1,
+			                &close_time);
+		} else {
+			time_t now = time(NULL);
+			time_diff = difftime(now, start_time);
+			close_time_str[0] = 0; /* or use "now" ? */
+		}
 
 		mg_snprintf(NULL,
 		            NULL,
@@ -20307,16 +20434,16 @@ mg_get_connection_info(const struct mg_context *ctx,
 		            "%s%s\"time\" : {%s"
 		            "\"uptime\" : %.0f,%s"
 		            "\"start\" : \"%s\",%s"
-		            "\"now\" : \"%s\"%s"
+		            "\"closed\" : \"%s\"%s"
 		            "}",
 		            (connection_info_length > 1 ? "," : ""),
 		            eol,
 		            eol,
-		            difftime(now, start_time),
+		            time_diff,
 		            eol,
 		            start_time_str,
 		            eol,
-		            now_str,
+		            close_time_str,
 		            eol);
 		connection_info_length += mg_str_append(&buffer, end, block);
 	}

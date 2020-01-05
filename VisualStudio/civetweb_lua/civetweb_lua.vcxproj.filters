@@ -68,5 +68,8 @@
     <None Include="..\..\src\handle_form.inl">
       <Filter>inl files</Filter>
     </None>
+    <None Include="..\..\src\mod_lua_shared.inl">
+      <Filter>inl files</Filter>
+    </None>
   </ItemGroup>
 </Project>
