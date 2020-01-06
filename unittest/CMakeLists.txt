@@ -205,7 +205,7 @@ civetweb_add_test(Timer "Timer Periodic")
 civetweb_add_test(Timer "Timer Mixed")
 
 # Tests with main.c
-#civetweb_add_test(EXE "Helper funcs")
+civetweb_add_test(EXE "Helper funcs")
 
 
 # Add the coverage command(s)

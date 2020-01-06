@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018 the Civetweb developers
+/* Copyright (c) 2015-2020 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,12 @@ extern char *realpath(const char *path, char *resolved_path);
  * so this define will rename main in main.c */
 #define main exe_main
 
+/* Set this define, so all functions are included, that might be unused
+ * and excluded with the current compile options otherwise. */
+#define MAIN_C_UNIT_TEST
+
+/* Include the C file, so all static functions in main.c are available for
+ * unit testing */
 #include "../src/main.c"
 
 #include <stdlib.h>

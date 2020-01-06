@@ -323,20 +323,19 @@ show_usage_and_exit(const char *exeName)
 }
 
 
-#if defined(_WIN32) || defined(USE_COCOA)
+#if defined(_WIN32) || defined(USE_COCOA) || defined(MAIN_C_UNIT_TEST)
 static const char *config_file_top_comment =
     "# CivetWeb web server configuration file.\n"
     "# For detailed description of every option, visit\n"
     "# https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md\n"
     "# Lines starting with '#' and empty lines are ignored.\n"
-    "# To make a change, remove leading '#', modify option's value,\n"
-    "# save this file and then restart Civetweb.\n\n";
+    "# To make changes, remove leading '#', modify option values,\n"
+    "# save this file and then restart CivetWeb.\n\n";
 
 static const char *
-get_url_to_first_open_port(const struct mg_context *ctx)
+get_url_to_first_open_port(const char *open_ports)
 {
 	static char url[100];
-	const char *open_ports = mg_get_option(ctx, "listening_ports");
 	int a, b, c, d, port, n;
 
 	if (sscanf(open_ports, "%d.%d.%d.%d:%d%n", &a, &b, &c, &d, &port, &n)
@@ -364,7 +363,7 @@ get_url_to_first_open_port(const struct mg_context *ctx)
 }
 
 
-#if defined(ENABLE_CREATE_CONFIG_FILE)
+#if defined(ENABLE_CREATE_CONFIG_FILE) || defined(MAIN_C_UNIT_TEST)
 static void
 create_config_file(const struct mg_context *ctx, const char *path)
 {
@@ -2808,15 +2807,15 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case ID_REMOVE_SERVICE:
 			manage_service(LOWORD(wParam));
 			break;
-		case ID_CONNECT:
-			fprintf(stdout, "[%s]\n", get_url_to_first_open_port(g_ctx));
-			ShellExecute(NULL,
-			             "open",
-			             get_url_to_first_open_port(g_ctx),
-			             NULL,
-			             NULL,
-			             SW_SHOW);
-			break;
+		case ID_CONNECT: {
+			/* Get port from server configuration (listening_ports) and build
+			 * URL from port. */
+			const char *port_opts = mg_get_option(g_ctx, "listening_ports");
+			const char *url = get_url_to_first_open_port(port_opts);
+
+			/* Open URL with Windows default browser */
+			ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOW);
+		} break;
 		case ID_WEBSITE:
 			fprintf(stdout, "[%s]\n", g_website);
 			ShellExecute(NULL, "open", g_website, NULL, NULL, SW_SHOW);

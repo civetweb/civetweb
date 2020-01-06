@@ -71,6 +71,7 @@ main(const int argc, char *argv[])
 	const char *test_log_prefix = NULL;
 	char test_log_name[FILENAME_LEN];
 	char test_xml_name[FILENAME_LEN];
+	const char *test_dir = NULL;
 
 	int i;
 
@@ -114,6 +115,10 @@ main(const int argc, char *argv[])
 	srunner_add_suite(srunner, make_private_suite());
 	srunner_add_suite(srunner, make_private_exe_suite());
 	srunner_add_suite(srunner, make_timertest_suite());
+
+	/* Print test directory */
+	test_dir = get_test_directory();
+	printf("Test directory: %s\n", test_dir);
 
 	/* Write test logs to a file */
 	if (test_log_prefix == NULL) {
