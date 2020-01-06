@@ -333,31 +333,44 @@ static const char *config_file_top_comment =
     "# save this file and then restart CivetWeb.\n\n";
 
 static const char *
-get_url_to_first_open_port(const char *open_ports)
+get_url_to_first_open_port(const struct mg_context *ctx)
 {
-	static char url[100];
-	int a, b, c, d, port, n;
+	static char url[128];
 
-	if (sscanf(open_ports, "%d.%d.%d.%d:%d%n", &a, &b, &c, &d, &port, &n)
-	    == 5) {
-		snprintf(url,
-		         sizeof(url),
-		         "%s://%d.%d.%d.%d:%d",
-		         open_ports[n] == 's' ? "https" : "http",
-		         a,
-		         b,
-		         c,
-		         d,
-		         port);
-	} else if (sscanf(open_ports, "%d%n", &port, &n) == 1) {
-		snprintf(url,
-		         sizeof(url),
-		         "%s://localhost:%d",
-		         open_ports[n] == 's' ? "https" : "http",
-		         port);
-	} else {
-		snprintf(url, sizeof(url), "%s", "http://localhost:8080");
+#define MAX_PORT_COUNT (32)
+
+	struct mg_server_port ports[MAX_PORT_COUNT];
+	int portNum = mg_get_server_ports(ctx, MAX_PORT_COUNT, ports);
+	int i;
+
+	memset(url, 0, sizeof(url));
+
+	/* Prefer IPv4 http, ignore redirects */
+	for (i = 0; i < portNum; i++) {
+		if ((ports[i].protocol == 1) && (ports[i].is_redirect == 0)
+		    && (ports[i].is_ssl == 0)) {
+			snprintf(url, sizeof(url), "http://localhost:%d/", ports[i].port);
+			return url;
+		}
 	}
+	/* Use IPv4 https */
+	for (i = 0; i < portNum; i++) {
+		if ((ports[i].protocol == 1) && (ports[i].is_redirect == 0)
+		    && (ports[i].is_ssl == 1)) {
+			snprintf(url, sizeof(url), "https://localhost:%d/", ports[i].port);
+			return url;
+		}
+	}
+	/* Try IPv6 http, ignore redirects */
+	if (portNum > 0) {
+		snprintf(url,
+		         sizeof(url),
+		         "%s://localhost:%d/",
+		         (ports[0].is_ssl ? "https" : "http"),
+		         ports[0].port);
+	}
+
+#undef MAX_PORT_COUNT
 
 	return url;
 }
@@ -2810,8 +2823,7 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case ID_CONNECT: {
 			/* Get port from server configuration (listening_ports) and build
 			 * URL from port. */
-			const char *port_opts = mg_get_option(g_ctx, "listening_ports");
-			const char *url = get_url_to_first_open_port(port_opts);
+			const char *url = get_url_to_first_open_port(g_ctx);
 
 			/* Open URL with Windows default browser */
 			ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOW);
