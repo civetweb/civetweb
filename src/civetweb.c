@@ -16957,7 +16957,7 @@ mg_connect_client2(const char *host,
                    struct mg_error_data *error)
 {
 	int is_ssl, is_ws;
-	void *user_data = (init != NULL) ? init->user_data : NULL;
+	/* void *user_data = (init != NULL) ? init->user_data : NULL; -- TODO */
 
 	if (error != NULL) {
 		error->code = 0;
