@@ -18169,9 +18169,11 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 static void
 produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
+	int queue_filled;
+
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 
-	int queue_filled = ctx->sq_head - ctx->sq_tail;
+	queue_filled = ctx->sq_head - ctx->sq_tail;
 
 	/* If the queue is full, wait */
 	while ((ctx->stop_flag == 0) && (queue_filled >= ctx->sq_size)) {
