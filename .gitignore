@@ -10,6 +10,7 @@ out
 *.msi
 *.exe
 *.zip
+*.trace
 [oO]utput
 [tT]esting
 
