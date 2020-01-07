@@ -1726,31 +1726,42 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (((default_options[i].type == MG_CONFIG_TYPE_FILE)
 			     || (default_options[i].type == MG_CONFIG_TYPE_DIRECTORY))
 			    && LOWORD(wParam) == ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA) {
-				OPENFILENAME of;
-				BROWSEINFO bi;
+
+				/* Result of the Dialog: File/Folder selected by user */
 				char path[PATH_MAX] = "";
 
-				memset(&of, 0, sizeof(of));
-				of.lStructSize = sizeof(of);
-				of.hwndOwner = (HWND)hDlg;
-				of.lpstrFile = path;
-				of.nMaxFile = sizeof(path);
-				of.lpstrInitialDir = mg_get_option(g_ctx, "document_root");
-				of.Flags =
-				    OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
-
-				memset(&bi, 0, sizeof(bi));
-				bi.hwndOwner = (HWND)hDlg;
-				bi.lpszTitle = "Choose WWW root directory:";
-				bi.ulFlags = BIF_RETURNONLYFSDIRS;
-
 				if (default_options[i].type == MG_CONFIG_TYPE_DIRECTORY) {
+
+					BROWSEINFO bi;
+					memset(&bi, 0, sizeof(bi));
+					bi.hwndOwner = (HWND)hDlg;
+					bi.ulFlags = BIF_RETURNONLYFSDIRS;
+
+					/* Use option name as Window title */
+					bi.lpszTitle = name;
+
 					SHGetPathFromIDList(SHBrowseForFolder(&bi), path);
+
 				} else {
+
+					OPENFILENAME of;
+					memset(&of, 0, sizeof(of));
+					of.lStructSize = sizeof(of);
+					of.hwndOwner = (HWND)hDlg;
+					of.lpstrFile = path;
+					of.nMaxFile = sizeof(path);
+					of.lpstrInitialDir = mg_get_option(g_ctx, "document_root");
+					of.Flags =
+					    OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
+
+					/* Use option name as Window title */
+					of.lpstrTitle = name;
+
 					GetOpenFileName(&of);
 				}
 
 				if (path[0] != '\0') {
+					/* Something has been choosen */
 					SetWindowText(GetDlgItem(hDlg, ID_CONTROLS + i), path);
 				}
 			}
