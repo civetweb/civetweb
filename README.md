@@ -49,6 +49,9 @@ End users can download CivetWeb binaries / releases from SourceForge
 Developers can contribute to CivetWeb via GitHub
 [https://github.com/civetweb/civetweb](https://github.com/civetweb/civetweb)
 
+Due to a [bug in Git for Windows V2.24](https://github.com/git-for-windows/git/issues/2435)
+CivetWeb must be used with an earlier or later version (see also [here](https://github.com/civetweb/civetweb/issues/812)).
+
 Trouble tickets should be filed on GitHub
 [https://github.com/civetweb/civetweb/issues](https://github.com/civetweb/civetweb/issues)
 
