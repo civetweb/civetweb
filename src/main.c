@@ -1726,31 +1726,42 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (((default_options[i].type == MG_CONFIG_TYPE_FILE)
 			     || (default_options[i].type == MG_CONFIG_TYPE_DIRECTORY))
 			    && LOWORD(wParam) == ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA) {
-				OPENFILENAME of;
-				BROWSEINFO bi;
+
+				/* Result of the Dialog: File/Folder selected by user */
 				char path[PATH_MAX] = "";
 
-				memset(&of, 0, sizeof(of));
-				of.lStructSize = sizeof(of);
-				of.hwndOwner = (HWND)hDlg;
-				of.lpstrFile = path;
-				of.nMaxFile = sizeof(path);
-				of.lpstrInitialDir = mg_get_option(g_ctx, "document_root");
-				of.Flags =
-				    OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
-
-				memset(&bi, 0, sizeof(bi));
-				bi.hwndOwner = (HWND)hDlg;
-				bi.lpszTitle = "Choose WWW root directory:";
-				bi.ulFlags = BIF_RETURNONLYFSDIRS;
-
 				if (default_options[i].type == MG_CONFIG_TYPE_DIRECTORY) {
+
+					BROWSEINFO bi;
+					memset(&bi, 0, sizeof(bi));
+					bi.hwndOwner = (HWND)hDlg;
+					bi.ulFlags = BIF_RETURNONLYFSDIRS;
+
+					/* Use option name as Window title */
+					bi.lpszTitle = name;
+
 					SHGetPathFromIDList(SHBrowseForFolder(&bi), path);
+
 				} else {
+
+					OPENFILENAME of;
+					memset(&of, 0, sizeof(of));
+					of.lStructSize = sizeof(of);
+					of.hwndOwner = (HWND)hDlg;
+					of.lpstrFile = path;
+					of.nMaxFile = sizeof(path);
+					of.lpstrInitialDir = mg_get_option(g_ctx, "document_root");
+					of.Flags =
+					    OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
+
+					/* Use option name as Window title */
+					of.lpstrTitle = name;
+
 					GetOpenFileName(&of);
 				}
 
 				if (path[0] != '\0') {
+					/* Something has been choosen */
 					SetWindowText(GetDlgItem(hDlg, ID_CONTROLS + i), path);
 				}
 			}
@@ -2061,7 +2072,7 @@ get_password(const char *user,
 
 	ok = (IDOK
 	      == DialogBoxIndirectParam(
-	          NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
@@ -2567,10 +2578,11 @@ change_password_file()
 		s_dlg_proc_param.name = path;
 		s_dlg_proc_param.fRetry = NULL;
 
-	} while ((IDOK
-	          == DialogBoxIndirectParam(
-	              NULL, dia, NULL, PasswordDlgProc, (LPARAM)&s_dlg_proc_param))
-	         && (!g_exit_flag));
+	} while (
+	    (IDOK
+	     == DialogBoxIndirectParam(
+	            NULL, dia, NULL, PasswordDlgProc, (LPARAM)&s_dlg_proc_param))
+	    && (!g_exit_flag));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
@@ -2693,7 +2705,7 @@ show_system_info()
 
 	ok = (IDOK
 	      == DialogBoxIndirectParam(
-	          NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
@@ -3030,15 +3042,13 @@ main(int argc, char *argv[])
 @end
 
 @implementation Civetweb
-- (void)openBrowser
-{
+- (void)openBrowser {
 	[[NSWorkspace sharedWorkspace]
 	    openURL:[NSURL URLWithString:[NSString stringWithUTF8String:
 	                                               get_url_to_first_open_port(
 	                                                   g_ctx)]]];
 }
-- (void)editConfig
-{
+- (void)editConfig {
 	create_config_file(g_ctx, g_config_file_name);
 	NSString *path = [NSString stringWithUTF8String:g_config_file_name];
 	if (![[NSWorkspace sharedWorkspace] openFile:path
@@ -3051,8 +3061,7 @@ main(int argc, char *argv[])
 		(void)[alert runModal];
 	}
 }
-- (void)shutDown
-{
+- (void)shutDown {
 	[NSApp terminate:nil];
 }
 @end
