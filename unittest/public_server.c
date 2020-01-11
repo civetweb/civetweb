@@ -886,6 +886,7 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	return 1;
 }
 
+static char request_handler2_url_expected[128]={0};
 
 /* Return the same as request_test_handler using new interfaces */
 static int
@@ -896,6 +897,8 @@ request_test_handler2(struct mg_connection *conn, void *cbdata)
 	const struct mg_request_info *ri;
 	struct mg_context *ctx;
 	void *ud, *ud2;
+	int err_ret;
+	char url_buffer[128];
 
 	ctx = mg_get_context(conn);
 	ud = mg_get_user_data(ctx);
@@ -906,6 +909,18 @@ request_test_handler2(struct mg_connection *conn, void *cbdata)
 	ck_assert(ctx == g_ctx);
 	ck_assert(ud == &g_ctx);
 	ck_assert(ud == ud2);
+
+	err_ret = mg_get_request_link(NULL, url_buffer, sizeof(url_buffer)); /* param error */
+	ck_assert(err_ret < 0);
+	err_ret = mg_get_request_link(conn, NULL, sizeof(url_buffer)); /* param error */
+	ck_assert(err_ret < 0);
+	err_ret = mg_get_request_link(conn, url_buffer, 0); /* param error */
+	ck_assert(err_ret < 0);
+	err_ret = mg_get_request_link(conn, url_buffer, 5); /* buffer too small */
+	ck_assert(err_ret < 0);
+	err_ret = mg_get_request_link(conn, url_buffer, sizeof(url_buffer));
+	ck_assert(err_ret == 0);
+	ck_assert_str_eq(url_buffer, request_handler2_url_expected);
 
 	mg_send_http_ok(conn, "text/plain", -1);
 
@@ -1232,13 +1247,15 @@ START_TEST(test_request_handlers)
 	char cmd_buf[1024];
 	char *cgi_env_opt;
 
+	const char *server_host = "test.domain";
+
 	mark_point();
 
 	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
 	OPTIONS[opt_idx++] = "listening_ports";
 	OPTIONS[opt_idx++] = HTTP_PORT;
 	OPTIONS[opt_idx++] = "authentication_domain";
-	OPTIONS[opt_idx++] = "test.domain";
+	OPTIONS[opt_idx++] = server_host;
 #if !defined(NO_FILES)
 	OPTIONS[opt_idx++] = "document_root";
 	OPTIONS[opt_idx++] = ".";
@@ -1320,6 +1337,7 @@ START_TEST(test_request_handlers)
 		                       (void *)(ptrdiff_t)i);
 	}
 
+	sprintf(request_handler2_url_expected, "http://%s:%u/handler2", server_host, ipv4_port);
 	mg_set_request_handler(ctx, "/handler2", request_test_handler2, NULL);
 
 #ifdef USE_WEBSOCKET
@@ -1564,7 +1582,11 @@ START_TEST(test_request_handlers)
 	sprintf(ebuf, "%scgi_test.cgi", locate_test_exes());
 
 	if (stat(ebuf, &st) != 0) {
+		char cwd[512];
+		getcwd(cwd, sizeof(cwd));
+
 		fprintf(stderr, "\nFile %s not found\n", ebuf);
+		fprintf(stderr, "Working directory is %s\n", cwd);
 		fprintf(stderr,
 		        "This file needs to be compiled manually before "
 		        "starting the test\n");
@@ -1572,8 +1594,8 @@ START_TEST(test_request_handlers)
 		        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n");
 
 		/* Abort test with diagnostic message */
-		ck_abort_msg("Mandatory file %s must be built before starting the test",
-		             ebuf);
+		ck_abort_msg("Mandatory file %s must be built before starting the test (cwd: %s)",
+		             ebuf, cwd);
 	}
 #endif
 
@@ -1837,9 +1859,9 @@ START_TEST(test_request_handlers)
 
 	mg_printf(client_conn,
 	          "GET /handler2 HTTP/1.1\r\n"
-	          "Host: localhost\r\n"
+	          "Host: %s\r\n"
 	          "\r\n",
-	          ipv4_port);
+	          server_host);
 
 	i = mg_get_response(client_conn, ebuf, sizeof(ebuf), 10000);
 	ck_assert_int_ge(i, 0);
