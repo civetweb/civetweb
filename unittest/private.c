@@ -602,51 +602,52 @@ START_TEST(test_parse_port_string)
 		const char *port_string;
 		int valid;
 		int ip_family;
+		uint16_t port_num;
 	};
 
 	static struct t_test_parse_port_string testdata[] =
-	{ {"0", 1, 4},
-	  {"1", 1, 4},
-	  {"65535", 1, 4},
-	  {"65536", 0, 0},
+	{ {"0", 1, 4, 0},
+	  {"1", 1, 4, 1},
+	  {"65535", 1, 4, 65535},
+	  {"65536", 0, 0, 0},
 
-	  {"1s", 1, 4},
-	  {"1r", 1, 4},
-	  {"1k", 0, 0},
+	  {"1s", 1, 4, 1},
+	  {"1r", 1, 4, 1},
+	  {"1k", 0, 0, 0},
 
-	  {"1.2.3", 0, 0},
-	  {"1.2.3.", 0, 0},
-	  {"1.2.3.4", 0, 0},
-	  {"1.2.3.4:", 0, 0},
+	  {"1.2.3", 0, 0, 0},
+	  {"1.2.3.", 0, 0, 0},
+	  {"1.2.3.4", 0, 0, 0},
+	  {"1.2.3.4:", 0, 0, 0},
 
-	  {"1.2.3.4:0", 1, 4},
-	  {"1.2.3.4:1", 1, 4},
-	  {"1.2.3.4:65535", 1, 4},
-	  {"1.2.3.4:65536", 0, 0},
+	  {"1.2.3.4:0", 1, 4, 0},
+	  {"1.2.3.4:1", 1, 4, 1},
+	  {"1.2.3.4:65535", 1, 4, 65535},
+	  {"1.2.3.4:65536", 0, 0, 0},
 
-	  {"1.2.3.4:1s", 1, 4},
-	  {"1.2.3.4:1r", 1, 4},
-	  {"1.2.3.4:1k", 0, 0},
+	  {"1.2.3.4:1s", 1, 4, 1},
+	  {"1.2.3.4:1r", 1, 4, 1},
+	  {"1.2.3.4:1k", 0, 0, 0},
 
 #if defined(USE_IPV6)
 	  /* IPv6 config */
-	  {"[::1]:123", 1, 6},
-	  {"[::]:80", 1, 6},
-	  {"[3ffe:2a00:100:7031::1]:900", 1, 6},
+	  {"[::1]:123", 1, 6, 123},
+	  {"[::]:80", 1, 6, 80},
+	  {"[3ffe:2a00:100:7031::1]:900", 1, 6, 900},
 
 	  /* IPv4 + IPv6 config */
-	  {"+80", 1, 4 + 6},
+	  {"+80", 1, 4 + 6, 80},
 #else
 	  /* IPv6 config: invalid if IPv6 is not activated */
-	  {"[::1]:123", 0, 0},
-	  {"[::]:80", 0, 0},
-	  {"[3ffe:2a00:100:7031::1]:900", 0, 0},
+	  {"[::1]:123", 0, 0, 123},
+	  {"[::]:80", 0, 0, 80},
+	  {"[3ffe:2a00:100:7031::1]:900", 0, 0, 900},
 
 	  /* IPv4 + IPv6 config: only IPv4 if IPv6 is not activated */
-	  {"+80", 1, 4},
+	  {"+80", 1, 4, 80},
 #endif
 
-	  {NULL, 0, 0} };
+	  {NULL, 0, 0, 0} };
 
 	struct socket so;
 	struct vec vec;
@@ -672,6 +673,16 @@ START_TEST(test_parse_port_string)
 			             testdata[i].ip_family,
 			             ret,
 			             ip_family);
+		}
+		if (ip_family == 4) {
+			ck_assert_int_eq((int)so.lsa.sin.sin_family,(int)AF_INET);
+		}
+		if (ip_family == 6) {
+			ck_assert_int_eq((int)so.lsa.sin.sin_family,(int)AF_INET6);
+		}
+		if (ret) {
+			/* Test valid strings only */
+			ck_assert_int_eq(htons(so.lsa.sin.sin_port), testdata[i].port_num);
 		}
 	}
 }
