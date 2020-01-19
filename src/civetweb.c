@@ -14623,7 +14623,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		hostname[hostnlen] = 0;
 
 		if (mg_inet_pton(
-		        AF_INET, vec->ptr, &so->lsa.sin, sizeof(so->lsa.sin))) {
+		        AF_INET, hostname, &so->lsa.sin, sizeof(so->lsa.sin))) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
 				*ip_version = 4;
 				so->lsa.sin.sin_family = AF_INET;
@@ -14635,7 +14635,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 			}
 #if defined(USE_IPV6)
 		} else if (mg_inet_pton(AF_INET6,
-		                        vec->ptr,
+		                        hostname,
 		                        &so->lsa.sin6,
 		                        sizeof(so->lsa.sin6))) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
