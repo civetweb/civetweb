@@ -149,7 +149,7 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | `DEBUG`                      | build debug version (very noisy)                          |
 |                              |                                                           |
 | `NO_FILES`                   | do not serve files from a directory                       |
-| `NO_FILESYSTEMS`             | comletely disable filesystems usage (requires NO_FILES)   |
+| `NO_FILESYSTEMS`             | completely disable filesystems usage (requires NO_FILES)  |
 | `NO_SSL`                     | disable SSL functionality                                 |
 | `NO_CGI`                     | disable CGI support                                       |
 | `NO_CACHING`                 | disable caching functionality                             |
