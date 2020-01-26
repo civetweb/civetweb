@@ -10,19 +10,23 @@ The following features are available:
 <ul>
 ]])
 
-demo_data = {}
+demo_data_for_xml = {}
+demo_data_for_json = {}
 
 function print_if_available(tab, name)
   if tab then
     mg.write("<li>" .. name .. " available</li>\n")
 	if type(tab)=="table" then
-	  demo_data[name] = {}
-	  demo_data[name][0] = name
+	  demo_data_for_xml[name] = {}
+	  demo_data_for_xml[name][0] = name
+	  demo_data_for_json[name] = {}
 	  for nname,nval in pairs(tab) do
-	    demo_data[name][nname] = type(nval)
+	    demo_data_for_xml[name][nname] = type(nval)
+		demo_data_for_json[name][nname] = type(nval)
 	  end
 	else
-  	  demo_data[name] = type(tab)
+  	  demo_data_for_xml[name] = type(tab)
+	  demo_data_for_json[name] = type(tab)
 	end
   else
     mg.write("<li>" .. name .. " not available</li>\n")
@@ -95,15 +99,16 @@ if package and (type(package.loaded)=="table") then
   end
 end
 
--- Print preloaded packages known to Lua
-if xml then
-  mg.write("<li>xml</li>\n")
-  recurse(xml)
-end
+-- Load path
+mg.write("<li>Package search path: " .. package.path .. "</li>\n");
+
+-- End of list
+mg.write("</ul></p>\n");
+
 
 -- Current date/time
-mg.write("</ul></p>\n");
-mg.write("<p> Today is " .. os.date("%A") .. "</p>\n");
+mg.write("\n<hr/>\n")
+mg.write("<p>Today is " .. os.date("%A") .. "</p>\n");
 
 -- Request content
 mg.write("\n<hr/>\n")
@@ -113,7 +118,7 @@ if l then
   mg.write(mg.read())
   mg.write("\n</pre>\n</p>\n")
 else
-  mg.write("<p>not request content available</p>\n")
+  mg.write("<p>no request content available for " .. mg.request_info.request_method .. " method</p>\n")
 end
 
 -- Directory listing
@@ -155,7 +160,7 @@ function printTable(tab, indent)
       mg.write(string.rep("  ", indent) .. tostring(k) .. ":\n")
 	  printTable(v, indent + 1)
 	else
-      mg.write(string.rep("  ", indent) .. tostring(k) .. "\t" .. v .. "\n")
+      mg.write(string.rep("  ", indent) .. tostring(k) .. "\t" .. tostring(v) .. "\n")
 	end
   end
 end
@@ -178,9 +183,66 @@ mg.write(htmlEsc(xml.str(xmlev, 1, "xml")))
 mg.write("</pre>\n</p>\n")
 
 mg.write("<p>lua2xml:<br>\n<pre>\n");
-mg.write(htmlEsc(xml.str(demo_data, 1, "xml")))
+mg.write(htmlEsc(xml.str(demo_data_for_xml, 1, "xml")))
 mg.write("</pre>\n</p>\n")
 end
+
+
+-- json test
+current_script_path = mg.script_name:match("(.*[%/%\\]).*%.lua")
+script_search_path = current_script_path .. "?.lua"
+package.path = script_search_path .. ";" .. package.path
+json = require "json"
+mg.write("\n<hr/>\n")
+mg.write("<p>json2lua:<br>\n<pre>\n");
+-- JSON example from https://en.wikipedia.org/wiki/JSON#Example
+jsonstr = [[{
+  "firstName": "John",
+  "lastName": "Smith",
+  "isAlive": true,
+  "age": 27,
+  "address": {
+    "streetAddress": "21 2nd Street",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10021-3100"
+  },
+  "phoneNumbers": [
+    {
+      "type": "home",
+      "number": "212 555-1234"
+    },
+    {
+      "type": "office",
+      "number": "646 555-4567"
+    },
+    {
+      "type": "mobile",
+      "number": "123 456-7890"
+    }
+  ],
+  "children": [],
+  "spouse": null
+}]]
+jsonev = json.decode(jsonstr)
+mg.write(htmlEsc(jsonstr))
+mg.write("\n-->\n")
+mg.write(type(jsonev) .. ":\n")
+mg.write(printTable(jsonev, 1)) 
+mg.write("</pre>\n</p>\n")
+
+mg.write("<p>lua2json:<br>\n<pre>\n");
+mg.write(htmlEsc(json.encode(jsonev)))
+mg.write("</pre>\n</p>\n")
+
+mg.write("<p>lua2json:<br>\n<pre>\n");
+mg.write(htmlEsc(json.encode(demo_data_for_json)))
+mg.write("</pre>\n</p>\n")
+
+
+-- Next section ...
+mg.write("\n<hr/>\n")
+
 
 mg.write([[
 </body></html>
