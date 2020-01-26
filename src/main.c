@@ -630,34 +630,46 @@ set_option(char **options, const char *name, const char *value)
 	}
 
 	/* Not an option of main.c, so check if it is a CivetWeb server option */
-	type = MG_CONFIG_TYPE_UNKNOWN;
+	type = MG_CONFIG_TYPE_UNKNOWN; /* type "unknown" means "option not found" */
 	for (i = 0; default_options[i].name != NULL; i++) {
 		if (!strcmp(default_options[i].name, name)) {
 			type = default_options[i].type;
+			break; /* no need to search for another option */
 		}
 	}
+
 	switch (type) {
+
 	case MG_CONFIG_TYPE_UNKNOWN:
 		/* unknown option */
-		return 0;
+		return 0; /* return error */
+
 	case MG_CONFIG_TYPE_NUMBER:
 		/* integer number >= 0, e.g. number of threads */
-		if (atol(value) < 0) {
-			/* invalid number */
-			return 0;
+		{
+			char *chk = 0;
+			unsigned long num = strtoul(value, &chk, 10);
+			if ((chk == NULL) || (*chk != 0) || (chk == value)) {
+				/* invalid number */
+				return 0;
+			}
 		}
 		break;
+
 	case MG_CONFIG_TYPE_STRING:
 		/* any text */
 		break;
+
 	case MG_CONFIG_TYPE_STRING_LIST:
 		/* list of text items, separated by , */
 		multi_sep = ",";
 		break;
+
 	case MG_CONFIG_TYPE_STRING_MULTILINE:
 		/* lines of text, separated by carriage return line feed */
 		multi_sep = "\r\n";
 		break;
+
 	case MG_CONFIG_TYPE_BOOLEAN:
 		/* boolean value, yes or no */
 		if ((0 != strcmp(value, "yes")) && (0 != strcmp(value, "no"))) {
@@ -665,6 +677,7 @@ set_option(char **options, const char *name, const char *value)
 			return 0;
 		}
 		break;
+
 	case MG_CONFIG_TYPE_YES_NO_OPTIONAL:
 		/* boolean value, yes or no */
 		if ((0 != strcmp(value, "yes")) && (0 != strcmp(value, "no"))
@@ -673,15 +686,18 @@ set_option(char **options, const char *name, const char *value)
 			return 0;
 		}
 		break;
+
 	case MG_CONFIG_TYPE_FILE:
 	case MG_CONFIG_TYPE_DIRECTORY:
 		/* TODO (low): check this option when it is set, instead of calling
 		 * verify_existence later */
 		break;
+
 	case MG_CONFIG_TYPE_EXT_PATTERN:
 		/* list of patterns, separated by | */
 		multi_sep = "|";
 		break;
+
 	default:
 		die("Unknown option type - option %s", name);
 	}
@@ -695,7 +711,7 @@ set_option(char **options, const char *name, const char *value)
 			break;
 		} else if (!strcmp(options[2 * i], name)) {
 			if (multi_sep) {
-				/* Option already set. Overwrite */
+				/* Option already set. Append new value. */
 				char *s =
 				    (char *)malloc(strlen(options[2 * i + 1])
 				                   + strlen(multi_sep) + strlen(value) + 1);
@@ -2208,6 +2224,9 @@ show_settings_dialog()
 	short LABEL_WIDTH = 115;
 	short FILE_DIALOG_BUTTON_WIDTH = 15;
 	short NO_OF_COLUMNS = 3;
+	short NO_OF_OPTIONS = 0;       /* to be calculated */
+	short NO_OF_OPTION_SPACES = 0; /* to be calculated */
+	short NO_OF_ROWS = 0;          /* to be calculated */
 
 	/* Calculates size */
 	short COLUMN_WIDTH = LABEL_WIDTH + CELL_WIDTH + BORDER_WIDTH;
@@ -2215,12 +2234,14 @@ show_settings_dialog()
 
 	/* All other variables */
 	unsigned char mem[16 * 1024], *p;
-	const struct mg_option *options;
+	const struct mg_option *cv_options;
 	DWORD style;
 	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	WORD i, cl, nelems = 0;
-	short x, y, next_cell_width;
+	short x, y, next_cell_width, next_cell_height;
 	static struct dlg_proc_param s_dlg_proc_param;
+	short *option_index, *option_top, *option_bottom;
+	char text[64];
 
 	const struct dlg_header_param dialog_header = GetDlgHeader(DIALOG_WIDTH);
 
@@ -2237,23 +2258,95 @@ show_settings_dialog()
 	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
 	p = mem + sizeof(dialog_header);
 
-	options = mg_get_valid_options();
-	for (i = 0; options[i].name != NULL; i++) {
+	/* Determine space required for input fields */
+	cv_options = mg_get_valid_options();
+	for (i = 0; cv_options[i].name != NULL; i++) {
+		NO_OF_OPTIONS++;
+		if (cv_options[i].type == MG_CONFIG_TYPE_STRING_MULTILINE) {
+			/* Multiline input fields require double space */
+			NO_OF_OPTION_SPACES += 2;
+		} else {
+			/* All other option types require single space */
+			NO_OF_OPTION_SPACES++;
+		}
+	}
+	NO_OF_ROWS = (NO_OF_OPTION_SPACES + NO_OF_COLUMNS - 1) / NO_OF_COLUMNS;
+
+	/* All options should be displayed sorted. */
+	/* First allocate some memory to store option order: The array should store
+	 * 1) the option order of all options (NO_OF_OPTIONS), followed by
+	 * 2) the option index for the option name displayed on top of a column
+	 * 3) the option index for the option name displayed on bottom of a column
+	 */
+	option_index = (short *)calloc(NO_OF_OPTIONS + 2 * NO_OF_COLUMNS,
+	                               sizeof(short)); /* 1 */
+	option_top = option_index + NO_OF_OPTIONS;     /* 2 */
+	option_bottom = option_top + NO_OF_COLUMNS;    /* 3 */
+
+	/* Initialize option order */
+	for (i = 0; i < NO_OF_OPTIONS; i++) {
+		option_index[i] = i;
+	}
+	/* Sort all options */
+	for (;;) {
+		int swapped = 0;
+		for (i = 1; i < NO_OF_OPTIONS; i++) {
+			if (strcmp(cv_options[option_index[i - 1]].name,
+			           cv_options[option_index[i]].name)
+			    > 0) {
+				short swap = option_index[i];
+				option_index[i] = option_index[i - 1];
+				option_index[i - 1] = swap;
+				swapped = 1;
+			}
+		}
+		if (!swapped) {
+			break;
+		}
+	}
+
+	/* Create input fields for all options */
+	for (i = 0; i < NO_OF_OPTIONS; i++) {
+
+		/* Get option according to option order */
+		const struct mg_option *opt = &cv_options[option_index[i]];
+
+		/* Template style for all input fields (will be modified for specific
+		 * field types) */
 		style = WS_CHILD | WS_VISIBLE | WS_TABSTOP;
 
-		x = BORDER_WIDTH + COLUMN_WIDTH * (nelems % NO_OF_COLUMNS);
-		y = BORDER_WIDTH / 2 + HEIGHT + HEIGHT * (nelems / NO_OF_COLUMNS);
-		next_cell_width = CELL_WIDTH;
+		/* TODO: Bottom of a column must not be a MULTILINE input field.
+		 * If the last input field in a column would of multi-line type
+		 * (opt->type == MG_CONFIG_TYPE_STRING_MULTILINE), then
+		 * skip one field (nelems++).
+		 * But in this case, maybe one more ROW might be required. */
 
-		if (options[i].type == MG_CONFIG_TYPE_NUMBER) {
+		/* Position and size of the input field (will be modified) */
+		x = BORDER_WIDTH + COLUMN_WIDTH * (nelems / NO_OF_ROWS);
+		y = BORDER_WIDTH / 2 + HEIGHT + HEIGHT * (nelems % NO_OF_ROWS);
+		next_cell_width = CELL_WIDTH;
+		next_cell_height = HEIGHT - 3;
+
+		/* Determine top/bottom option for every column */
+		if ((nelems % NO_OF_ROWS) == 0) {
+			/* Set option on top of a new column once */
+			option_top[nelems / NO_OF_ROWS] = option_index[i];
+		}
+		/* Set/overwrite option on bottom of a column */
+		option_bottom[nelems / NO_OF_ROWS] = option_index[i];
+
+		/* Depending on option type: create suitable input field */
+		if (opt->type == MG_CONFIG_TYPE_NUMBER) {
 			style |= ES_NUMBER;
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL;
-		} else if (options[i].type == MG_CONFIG_TYPE_BOOLEAN) {
+
+		} else if (opt->type == MG_CONFIG_TYPE_BOOLEAN) {
 			cl = 0x80;
 			style |= BS_AUTOCHECKBOX;
-		} else if ((options[i].type == MG_CONFIG_TYPE_FILE)
-		           || (options[i].type == MG_CONFIG_TYPE_DIRECTORY)) {
+
+		} else if ((opt->type == MG_CONFIG_TYPE_FILE)
+		           || (opt->type == MG_CONFIG_TYPE_DIRECTORY)) {
 			style |= WS_BORDER | ES_AUTOHSCROLL;
 			cl = 0x81;
 
@@ -2261,7 +2354,7 @@ show_settings_dialog()
 			add_control(&p,
 			            dia,
 			            0x80,
-			            ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA,
+			            ID_CONTROLS + option_index[i] + ID_FILE_BUTTONS_DELTA,
 			            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
 			            x + LABEL_WIDTH + CELL_WIDTH - FILE_DIALOG_BUTTON_WIDTH,
 			            y,
@@ -2271,13 +2364,18 @@ show_settings_dialog()
 
 			next_cell_width -= FILE_DIALOG_BUTTON_WIDTH + BORDER_WIDTH / 2;
 
-		} else if (options[i].type == MG_CONFIG_TYPE_STRING_MULTILINE) {
+		} else if (opt->type == MG_CONFIG_TYPE_STRING_MULTILINE) {
 
-			/* TODO: This is not really uer friendly */
+			/* Multiline input */
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN
-			         | ES_AUTOVSCROLL;
+			         | WS_VSCROLL | ES_AUTOVSCROLL;
+			/* Add more space below */
+			nelems += 1;
+			next_cell_height += HEIGHT;
+
 		} else {
+			/* Standard text input field */
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL;
 		}
@@ -2292,16 +2390,18 @@ show_settings_dialog()
 		            y,
 		            LABEL_WIDTH,
 		            HEIGHT,
-		            options[i].name);
+		            opt->name);
+
+		/* Add input field */
 		add_control(&p,
 		            dia,
 		            cl,
-		            ID_CONTROLS + i,
+		            ID_CONTROLS + option_index[i],
 		            style,
 		            x + LABEL_WIDTH,
 		            y,
 		            next_cell_width,
-		            HEIGHT - 3,
+		            next_cell_height,
 		            "");
 		nelems++;
 
@@ -2310,16 +2410,23 @@ show_settings_dialog()
 
 	/* "Settings" frame around all options */
 	y = ((nelems + NO_OF_COLUMNS - 1) / NO_OF_COLUMNS + 1) * HEIGHT;
-	add_control(&p,
-	            dia,
-	            0x80,
-	            ID_GROUP,
-	            WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-	            BORDER_WIDTH / 2,
-	            BORDER_WIDTH / 2,
-	            DIALOG_WIDTH - BORDER_WIDTH,
-	            y,
-	            " Settings ");
+	for (i = 0; i < NO_OF_COLUMNS; i++) {
+		sprintf(text,
+		        " Settings %c - %c ",
+		        cv_options[option_top[i]].name[0],
+		        cv_options[option_bottom[i]].name[0]);
+		add_control(&p,
+		            dia,
+		            0x80,
+		            ID_GROUP,
+		            WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+		            BORDER_WIDTH / 2
+		                + i * (DIALOG_WIDTH - BORDER_WIDTH) / NO_OF_COLUMNS,
+		            BORDER_WIDTH / 2,
+		            (DIALOG_WIDTH - BORDER_WIDTH) / NO_OF_COLUMNS,
+		            y + 2,
+		            text);
+	}
 
 	/* Buttons below "Settings" frame */
 	y += HEIGHT;
@@ -2384,6 +2491,8 @@ show_settings_dialog()
 
 	DialogBoxIndirectParam(
 	    NULL, dia, NULL, SettingsDlgProc, (LPARAM)&s_dlg_proc_param);
+
+	free(option_index);
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
@@ -3042,13 +3151,15 @@ main(int argc, char *argv[])
 @end
 
 @implementation Civetweb
-- (void)openBrowser {
+- (void)openBrowser
+{
 	[[NSWorkspace sharedWorkspace]
 	    openURL:[NSURL URLWithString:[NSString stringWithUTF8String:
 	                                               get_url_to_first_open_port(
 	                                                   g_ctx)]]];
 }
-- (void)editConfig {
+- (void)editConfig
+{
 	create_config_file(g_ctx, g_config_file_name);
 	NSString *path = [NSString stringWithUTF8String:g_config_file_name];
 	if (![[NSWorkspace sharedWorkspace] openFile:path
@@ -3061,7 +3172,8 @@ main(int argc, char *argv[])
 		(void)[alert runModal];
 	}
 }
-- (void)shutDown {
+- (void)shutDown
+{
 	[NSApp terminate:nil];
 }
 @end
