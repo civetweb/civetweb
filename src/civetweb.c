@@ -2692,6 +2692,7 @@ struct mg_context {
 	unsigned int
 	    cfg_worker_threads;      /* The number of configured worker threads. */
 	pthread_t *worker_threadids; /* The worker thread IDs */
+    unsigned long starter_thread_idx; /* thread index which called mg_start */
 
 /* Connection to thread dispatching */
 #if defined(ALTERNATIVE_QUEUE)
@@ -4000,7 +4001,7 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 			int auth_domain_check_enabled =
 			    conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK]
 			    && (!mg_strcasecmp(
-			        conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes"));
+			           conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes"));
 			const char *server_domain =
 			    conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
 
@@ -12227,7 +12228,7 @@ print_dav_dir_entry(struct de *de, void *data)
 	struct mg_connection *conn = (struct mg_connection *)data;
 	if (!de || !conn
 	    || !print_props(
-	        conn, conn->request_info.local_uri, de->file_name, &de->file)) {
+	           conn, conn->request_info.local_uri, de->file_name, &de->file)) {
 		return -1;
 	}
 	return 0;
@@ -13467,6 +13468,8 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 {
 	struct mg_handler_info *tmp_rh, **lastref;
 	size_t urilen = strlen(uri);
+    struct mg_workerTLS tls;
+    int is_tls_set = 0;
 
 	if (handler_type == WEBSOCKET_HANDLER) {
 		DEBUG_ASSERT(handler == NULL);
@@ -13523,6 +13526,23 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		return;
 	}
 
+    /* Internal callbacks have their contexts set 
+     * if called from non-related thread, context must be set
+     * since internal function assumes it exists.
+     * For an example see how handler_info_wait_unused()
+     * waits for reference to become zero
+     */
+    if (NULL == pthread_getspecific(sTlsKey))
+    {
+        is_tls_set = 1;
+        tls.is_master = -1;
+        tls.thread_idx = phys_ctx->starter_thread_idx;
+#if defined(_WIN32)
+        tls.pthread_cond_helper_mutex = NULL;
+#endif
+        pthread_setspecific(sTlsKey, &tls);
+    }
+
 	mg_lock_context(phys_ctx);
 
 	/* first try to find an existing handler */
@@ -13564,6 +13584,9 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 					mg_free(tmp_rh);
 				}
 				mg_unlock_context(phys_ctx);
+                if (is_tls_set) {
+                    pthread_setspecific(sTlsKey, NULL);
+                }
 				return;
 			}
 		}
@@ -13574,6 +13597,9 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		/* no handler to set, this was a remove request to a non-existing
 		 * handler */
 		mg_unlock_context(phys_ctx);
+        if (is_tls_set) {
+            pthread_setspecific(sTlsKey, NULL);
+        }
 		return;
 	}
 
@@ -13586,6 +13612,9 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		mg_cry_ctx_internal(phys_ctx,
 		                    "%s",
 		                    "Cannot create new request handler struct, OOM");
+        if (is_tls_set) {
+            pthread_setspecific(sTlsKey, NULL);
+        }
 		return;
 	}
 	tmp_rh->uri = mg_strdup_ctx(uri, phys_ctx);
@@ -13595,6 +13624,9 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		mg_cry_ctx_internal(phys_ctx,
 		                    "%s",
 		                    "Cannot create new request handler struct, OOM");
+        if (is_tls_set) {
+            pthread_setspecific(sTlsKey, NULL);
+        }
 		return;
 	}
 	tmp_rh->uri_len = urilen;
@@ -13604,6 +13636,9 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 			mg_unlock_context(phys_ctx);
 			mg_free(tmp_rh);
 			mg_cry_ctx_internal(phys_ctx, "%s", "Cannot init refcount mutex");
+            if (is_tls_set) {
+                pthread_setspecific(sTlsKey, NULL);
+            }
 			return;
 		}
 		if (0 != pthread_cond_init(&tmp_rh->refcount_cond, NULL)) {
@@ -13611,6 +13646,9 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 			pthread_mutex_destroy(&tmp_rh->refcount_mutex);
 			mg_free(tmp_rh);
 			mg_cry_ctx_internal(phys_ctx, "%s", "Cannot init refcount cond");
+            if (is_tls_set) {
+                pthread_setspecific(sTlsKey, NULL);
+            }
 			return;
 		}
 		tmp_rh->refcount = 0;
@@ -13630,6 +13668,9 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 
 	*lastref = tmp_rh;
 	mg_unlock_context(phys_ctx);
+    if (is_tls_set) {
+        pthread_setspecific(sTlsKey, NULL);
+    }
 }
 
 
@@ -14567,7 +14608,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 #if defined(USE_IPV6)
 	} else if (sscanf(vec->ptr, "[%49[^]]]:%u%n", buf, &port, &len) == 2
 	           && mg_inet_pton(
-	               AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6))) {
+	                  AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6))) {
 		/* IPv6 address, examples: see above */
 		/* so->lsa.sin6.sin6_family = AF_INET6; already set by mg_inet_pton
 		 */
@@ -14623,7 +14664,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		hostname[hostnlen] = 0;
 
 		if (mg_inet_pton(
-		        AF_INET, vec->ptr, &so->lsa.sin, sizeof(so->lsa.sin))) {
+		        AF_INET, hostname, &so->lsa.sin, sizeof(so->lsa.sin))) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
 				*ip_version = 4;
 				so->lsa.sin.sin_family = AF_INET;
@@ -14635,7 +14676,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 			}
 #if defined(USE_IPV6)
 		} else if (mg_inet_pton(AF_INET6,
-		                        vec->ptr,
+		                        hostname,
 		                        &so->lsa.sin6,
 		                        sizeof(so->lsa.sin6))) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
@@ -16112,9 +16153,9 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	callback_ret = (phys_ctx->callbacks.init_ssl_domain == NULL)
 	                   ? 0
 	                   : (phys_ctx->callbacks.init_ssl_domain(
-	                       dom_ctx->config[AUTHENTICATION_DOMAIN],
-	                       dom_ctx->ssl_ctx,
-	                       phys_ctx->user_data));
+	                         dom_ctx->config[AUTHENTICATION_DOMAIN],
+	                         dom_ctx->ssl_ctx,
+	                         phys_ctx->user_data));
 
 	/* If domain callback returns 0, civetweb sets up the SSL certificate.
 	 * If it returns 1, civetweb assumes the calback already did this.
@@ -16280,9 +16321,9 @@ init_ssl_ctx(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 	callback_ret = (phys_ctx->callbacks.external_ssl_ctx_domain == NULL)
 	                   ? 0
 	                   : (phys_ctx->callbacks.external_ssl_ctx_domain(
-	                       dom_ctx->config[AUTHENTICATION_DOMAIN],
-	                       &ssl_ctx,
-	                       phys_ctx->user_data));
+	                         dom_ctx->config[AUTHENTICATION_DOMAIN],
+	                         &ssl_ctx,
+	                         phys_ctx->user_data));
 
 	if (callback_ret < 0) {
 		mg_cry_ctx_internal(
@@ -18915,8 +18956,12 @@ static
 	ctx->dd.auth_nonce_mask =
 	    (uint64_t)get_random() ^ (uint64_t)(ptrdiff_t)(options);
 
+    /* Save started thread index to reuse in other external API calls
+     * For the sake of thread synchronization all non-civetweb threads 
+     * can be considered as single external thread */
+    ctx->starter_thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
 	tls.is_master = -1; /* Thread calling mg_start */
-	tls.thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
+    tls.thread_idx = ctx->starter_thread_idx;
 #if defined(_WIN32)
 	tls.pthread_cond_helper_mutex = NULL;
 #endif

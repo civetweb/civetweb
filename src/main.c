@@ -2072,7 +2072,7 @@ get_password(const char *user,
 
 	ok = (IDOK
 	      == DialogBoxIndirectParam(
-	          NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
@@ -2578,10 +2578,11 @@ change_password_file()
 		s_dlg_proc_param.name = path;
 		s_dlg_proc_param.fRetry = NULL;
 
-	} while ((IDOK
-	          == DialogBoxIndirectParam(
-	              NULL, dia, NULL, PasswordDlgProc, (LPARAM)&s_dlg_proc_param))
-	         && (!g_exit_flag));
+	} while (
+	    (IDOK
+	     == DialogBoxIndirectParam(
+	            NULL, dia, NULL, PasswordDlgProc, (LPARAM)&s_dlg_proc_param))
+	    && (!g_exit_flag));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
@@ -2704,7 +2705,7 @@ show_system_info()
 
 	ok = (IDOK
 	      == DialogBoxIndirectParam(
-	          NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
@@ -3041,15 +3042,13 @@ main(int argc, char *argv[])
 @end
 
 @implementation Civetweb
-- (void)openBrowser
-{
+- (void)openBrowser {
 	[[NSWorkspace sharedWorkspace]
 	    openURL:[NSURL URLWithString:[NSString stringWithUTF8String:
 	                                               get_url_to_first_open_port(
 	                                                   g_ctx)]]];
 }
-- (void)editConfig
-{
+- (void)editConfig {
 	create_config_file(g_ctx, g_config_file_name);
 	NSString *path = [NSString stringWithUTF8String:g_config_file_name];
 	if (![[NSWorkspace sharedWorkspace] openFile:path
@@ -3062,8 +3061,7 @@ main(int argc, char *argv[])
 		(void)[alert runModal];
 	}
 }
-- (void)shutDown
-{
+- (void)shutDown {
 	[NSApp terminate:nil];
 }
 @end
