@@ -2173,6 +2173,8 @@ civetweb_open_lua_libs(lua_State *L)
 	{
 		extern int luaopen_LuaXML_lib(lua_State *);
 		luaopen_LuaXML_lib(L);
+		// lua_pushvalue(L, -1); to copy value
+		lua_setglobal(L, "xml");
 	}
 #endif
 #if defined(USE_LUA_FILE_SYSTEM)

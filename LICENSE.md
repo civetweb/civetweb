@@ -146,6 +146,11 @@ LuaXML License
 
 ### Included only if built with Lua and LuaXML support.
 
+Version 1.8.0 (Lua 5.2), 2013-06-10 by Gerald Franz, eludi.net
+
+Modified and extended 2015 by Bernhard Nortmann, https://github.com/n1tehawk/LuaXML – version 2.0.x, compatible with Lua 5.1 to 5.3 and LuaJIT.
+
+
 > LuaXML License
 >
 > LuaXml is licensed under the terms of the MIT license reproduced below,

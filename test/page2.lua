@@ -10,9 +10,20 @@ The following features are available:
 <ul>
 ]])
 
+demo_data = {}
+
 function print_if_available(tab, name)
   if tab then
     mg.write("<li>" .. name .. " available</li>\n")
+	if type(tab)=="table" then
+	  demo_data[name] = {}
+	  demo_data[name][0] = name
+	  for nname,nval in pairs(tab) do
+	    demo_data[name][nname] = type(nval)
+	  end
+	else
+  	  demo_data[name] = type(tab)
+	end
   else
     mg.write("<li>" .. name .. " not available</li>\n")
   end
@@ -46,8 +57,12 @@ for _,n in ipairs(libs) do
   print_if_available(_G[n], n);
 end
 mg.write("</ul>\n")
-print_if_available(sqlite3, "sqlite3 binding")
-print_if_available(lfs, "lua file system")
+print_if_available(sqlite3, "SQLite3 binding (sqlite3)")
+print_if_available(lfs, "LuaFileSystem (lfs)")
+print_if_available(json, "JSON binding (json)")
+print_if_available(xml, "LuaXML (xml)")
+print_if_available(shared, "Lua shared data (shared)")
+
 
 --recurse(_G)
 
@@ -122,9 +137,52 @@ else
   mg.write("</ul>\n")
   mg.write(string.format("<ul>%u files total</ul>\n", cnt))
 end
+mg.write("</p>\n")
+
+
+function htmlEsc(txt)
+  s = txt:gsub("%&", "&amp;")
+  s = s:gsub("%<", "&lt;")
+  s = s:gsub("%>", "&gt;")
+  return (s)
+end
+
+
+function printTable(tab, indent)
+  indent = indent or 0
+  for k,v in pairs(tab) do
+    if (type(v)=="table") then
+      mg.write(string.rep("  ", indent) .. tostring(k) .. ":\n")
+	  printTable(v, indent + 1)
+	else
+      mg.write(string.rep("  ", indent) .. tostring(k) .. "\t" .. v .. "\n")
+	end
+  end
+end
+
+
+-- xml test
+if (xml) then
+mg.write("\n<hr/>\n")
+mg.write("<p>xml2lua:<br>\n<pre>\n");
+xmlstr = [[<obj attr="a"><sub1 attr="suba">sub1val</sub1><sub2 attr="suba2" /><sub3></sub3><sub4><subsub>subsubval</subsub></sub4></obj>]]
+xmlev = xml.eval(xmlstr)
+mg.write(htmlEsc(xmlstr))
+mg.write("\n-->\n")
+mg.write(type(xmlev) .. ":\n")
+mg.write(printTable(xmlev, 1)) 
+mg.write("</pre>\n</p>\n")
+
+mg.write("<p>lua2xml:<br>\n<pre>\n");
+mg.write(htmlEsc(xml.str(xmlev, 1, "xml")))
+mg.write("</pre>\n</p>\n")
+
+mg.write("<p>lua2xml:<br>\n<pre>\n");
+mg.write(htmlEsc(xml.str(demo_data, 1, "xml")))
+mg.write("</pre>\n</p>\n")
+end
 
 mg.write([[
-</p>
 </body></html>
 ]])
 

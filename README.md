@@ -132,7 +132,7 @@ simplicity by a carefully selected list of features:
 
 [![LuaSQLite3](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/luasqlite-logo.jpg "LuaSQLite3 Logo")](http://lua.sqlite.org/index.cgi/index)
 
-[![LuaXML](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")](http://viremo.eludi.net/LuaXML/index.html)
+[![LuaXML](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/luaxml-logo.jpg "LuaXML Logo")](https://github.com/n1tehawk/LuaXML)
 
 [![Duktape](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/duktape-logo.png "Duktape Logo")](http://duktape.org)
 
