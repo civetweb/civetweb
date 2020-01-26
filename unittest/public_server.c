@@ -274,7 +274,7 @@ static struct mg_context *
 test_mg_start(const struct mg_callbacks *callbacks,
               void *user_data,
               const char **configuration_options,
-			  unsigned line)
+              unsigned line)
 {
 	struct mg_context *ctx;
 	struct mg_callbacks cb;
@@ -298,12 +298,12 @@ test_mg_start(const struct mg_callbacks *callbacks,
 		/* Give the server some time to start in the test VM. */
 		/* Don't need to do this if mg_start failed. */
 		test_sleep(SLEEP_AFTER_MG_START);
-	} else if (line>0) {
+	} else if (line > 0) {
 		/* mg_start is not supposed to fail anywhere, except for
 		 * special tests (for them, line is 0). */
 		ck_abort_msg("mg_start failed in line %u, message %s",
 		             line,
-					 (lastMessage ? lastMessage : "<NULL>"));
+		             (lastMessage ? lastMessage : "<NULL>"));
 	}
 	mark_point();
 
@@ -886,7 +886,7 @@ request_test_handler(struct mg_connection *conn, void *cbdata)
 	return 1;
 }
 
-static char request_handler2_url_expected[128]={0};
+static char request_handler2_url_expected[128] = {0};
 
 /* Return the same as request_test_handler using new interfaces */
 static int
@@ -910,9 +910,12 @@ request_test_handler2(struct mg_connection *conn, void *cbdata)
 	ck_assert(ud == &g_ctx);
 	ck_assert(ud == ud2);
 
-	err_ret = mg_get_request_link(NULL, url_buffer, sizeof(url_buffer)); /* param error */
+	err_ret = mg_get_request_link(NULL,
+	                              url_buffer,
+	                              sizeof(url_buffer)); /* param error */
 	ck_assert(err_ret < 0);
-	err_ret = mg_get_request_link(conn, NULL, sizeof(url_buffer)); /* param error */
+	err_ret =
+	    mg_get_request_link(conn, NULL, sizeof(url_buffer)); /* param error */
 	ck_assert(err_ret < 0);
 	err_ret = mg_get_request_link(conn, url_buffer, 0); /* param error */
 	ck_assert(err_ret < 0);
@@ -1337,7 +1340,10 @@ START_TEST(test_request_handlers)
 		                       (void *)(ptrdiff_t)i);
 	}
 
-	sprintf(request_handler2_url_expected, "http://%s:%u/handler2", server_host, ipv4_port);
+	sprintf(request_handler2_url_expected,
+	        "http://%s:%u/handler2",
+	        server_host,
+	        ipv4_port);
 	mg_set_request_handler(ctx, "/handler2", request_test_handler2, NULL);
 
 #ifdef USE_WEBSOCKET
@@ -1594,8 +1600,10 @@ START_TEST(test_request_handlers)
 		        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n");
 
 		/* Abort test with diagnostic message */
-		ck_abort_msg("Mandatory file %s must be built before starting the test (cwd: %s)",
-		             ebuf, cwd);
+		ck_abort_msg("Mandatory file %s must be built before starting the test "
+		             "(cwd: %s)",
+		             ebuf,
+		             cwd);
 	}
 #endif
 

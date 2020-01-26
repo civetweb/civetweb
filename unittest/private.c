@@ -675,10 +675,10 @@ START_TEST(test_parse_port_string)
 			             ip_family);
 		}
 		if (ip_family == 4) {
-			ck_assert_int_eq((int)so.lsa.sin.sin_family,(int)AF_INET);
+			ck_assert_int_eq((int)so.lsa.sin.sin_family, (int)AF_INET);
 		}
 		if (ip_family == 6) {
-			ck_assert_int_eq((int)so.lsa.sin.sin_family,(int)AF_INET6);
+			ck_assert_int_eq((int)so.lsa.sin.sin_family, (int)AF_INET6);
 		}
 		if (ret) {
 			/* Test valid strings only */
