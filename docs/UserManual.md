@@ -381,49 +381,6 @@ configured in milliseconds. However, the TCP socket layer usually only
 offers a timeout in seconds, so the value should be an integer multiple
 of 1000.
 
-### lua\_background\_script
-Experimental feature, and subject to change.
-Run a Lua script in the background, independent from any connection.
-The script is started before network access to the server is available.
-It can be used to prepare the document root (e.g., update files, compress
-files, ...), check for external resources, remove old log files, etc.
-
-The Lua state remains open until the server is stopped.
-In the future, some callback functions will be available to notify the
-script on changes of the server state. See example lua script :
-[background.lua](https://github.com/civetweb/civetweb/blob/master/test/background.lua).
-
-Additional functions available in background script :
-sleep, root path, script name, is terminated
-
-### lua\_background\_script\_params `param1=1,param2=2`
-Can add dynamic parameters to background script.
-Parameters mapped to global 'mg' table 'params' field.
-
-### lua\_preload\_file
-This configuration option can be used to specify a Lua script file, which
-is executed before the actual web page script (Lua script, Lua server page
-or Lua websocket). It can be used to modify the Lua environment of all web
-page scripts, e.g., by loading additional libraries or defining functions
-required by all scripts.
-It may be used to achieve backward compatibility by defining obsolete
-functions as well.
-
-### lua\_script\_pattern `"**.lua$`
-A pattern for files that are interpreted as Lua scripts by the server.
-In contrast to Lua server pages, Lua scripts use plain Lua syntax.
-An example can be found in the test directory.
-
-### lua\_server\_page\_pattern `**.lp$|**.lsp$`
-Files matching this pattern are treated as Lua server pages.
-In contrast to Lua scripts, the content of a Lua server pages is delivered
-directly to the client. Lua script parts are delimited from the standard
-content by including them between <? and ?> tags.
-An example can be found in the test directory.
-
-### lua\_websocket\_pattern `"**.lua$`
-A pattern for websocket script files that are interpreted as Lua scripts by the server.
-
 ### listening\_ports `8080`
 Comma-separated list of ports to listen on. If the port is SSL, a
 letter `s` must be appended, for example, `80,443s` will open
@@ -474,6 +431,49 @@ If you want to use an ephemeral port (i.e. let the operating system choose
 a port number), use `0` for the port number. This will make it necessary to
 communicate the port number to clients via other means, for example mDNS
 (or Zeroconf, Bonjour or Avahi).
+
+### lua\_background\_script
+Experimental feature, and subject to change.
+Run a Lua script in the background, independent from any connection.
+The script is started before network access to the server is available.
+It can be used to prepare the document root (e.g., update files, compress
+files, ...), check for external resources, remove old log files, etc.
+
+The Lua state remains open until the server is stopped.
+In the future, some callback functions will be available to notify the
+script on changes of the server state. See example lua script :
+[background.lua](https://github.com/civetweb/civetweb/blob/master/test/background.lua).
+
+Additional functions available in background script :
+sleep, root path, script name, is terminated
+
+### lua\_background\_script\_params `param1=1,param2=2`
+Can add dynamic parameters to background script.
+Parameters mapped to global 'mg' table 'params' field.
+
+### lua\_preload\_file
+This configuration option can be used to specify a Lua script file, which
+is executed before the actual web page script (Lua script, Lua server page
+or Lua websocket). It can be used to modify the Lua environment of all web
+page scripts, e.g., by loading additional libraries or defining functions
+required by all scripts.
+It may be used to achieve backward compatibility by defining obsolete
+functions as well.
+
+### lua\_script\_pattern `"**.lua$`
+A pattern for files that are interpreted as Lua scripts by the server.
+In contrast to Lua server pages, Lua scripts use plain Lua syntax.
+An example can be found in the test directory.
+
+### lua\_server\_page\_pattern `**.lp$|**.lsp$`
+Files matching this pattern are treated as Lua server pages.
+In contrast to Lua scripts, the content of a Lua server pages is delivered
+directly to the client. Lua script parts are delimited from the standard
+content by including them between <? and ?> tags.
+An example can be found in the test directory.
+
+### lua\_websocket\_pattern `"**.lua$`
+A pattern for websocket script files that are interpreted as Lua scripts by the server.
 
 ### max\_request\_size `16384`
 Size limit for HTTP request headers and header data returned from CGI scripts, in Bytes.
@@ -566,16 +566,16 @@ stdout (the terminal window) otherwise. Example:
 For more information on Server Side Includes, take a look at the Wikipedia:
 [Server Side Includes](http://en.wikipedia.org/wiki/Server_Side_Includes)
 
+### ssl\_ca\_file
+Path to a .pem file containing trusted certificates. The file may contain
+more than one certificate.
+
 ### ssl\_ca\_path
 Name of a directory containing trusted CA certificates. Each file in the
 directory must contain only a single CA certificate. The files must be named
 by the subject name’s hash and an extension of “.0”. If there is more than one
 certificate with the same subject name they should have extensions ".0", ".1",
 ".2" and so on respectively.
-
-### ssl\_ca\_file
-Path to a .pem file containing trusted certificates. The file may contain
-more than one certificate.
 
 ### ssl\_certificate
 Path to the SSL certificate file. This option is only required when at least
@@ -658,7 +658,7 @@ must send cache control headers by themselves.
 A value >0 corresponds to a maximum allowed caching time in seconds.
 This value should not exceed one year (RFC 2616, Section 14.21).
 A value of 0 will send "do not cache at all" headers for all static files.
-For values <0 and values >31622400, the behaviour is undefined.
+For values <0 and values >31622400 (366 days), the behaviour is undefined.
 
 ### strict\_transport\_security\_max\_age
 
@@ -757,13 +757,15 @@ icon.  This option has no effect for Linux.
 For Windows, use this website as a link in the systray, replacing the default
 link for CivetWeb.
 
-
 ### add\_domain
 Option to load an additional configuration file, specifying an additional domain
 to host.  To add multiple additional domains, use the add\_domain option
 multiple times with one configuration file for each domain.
 A domain configuration file may have the same options as the main server, with
 some exceptions.  The options are passed to the `mg_start_domain` API function.
+
+### hide\_tray `no`
+Do not show a tray icon. May be `yes` (hide) or `no` (show, default).
 
 
 Scripting
