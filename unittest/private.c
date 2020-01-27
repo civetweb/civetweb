@@ -1033,7 +1033,7 @@ START_TEST(test_config_options)
 	ck_assert_str_eq("keep_alive_timeout_ms",
 	                 config_options[KEEP_ALIVE_TIMEOUT].name);
 	ck_assert_str_eq("linger_timeout_ms", config_options[LINGER_TIMEOUT].name);
-	ck_assert_str_eq("max_connections", config_options[MAX_CONNECTIONS].name);
+	ck_assert_str_eq("listen_backlog", config_options[LISTEN_BACKLOG_SIZE].name);
 	ck_assert_str_eq("ssl_verify_peer",
 	                 config_options[SSL_DO_VERIFY_PEER].name);
 	ck_assert_str_eq("ssl_ca_path", config_options[SSL_CA_PATH].name);

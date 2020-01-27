@@ -2374,7 +2374,7 @@ enum {
 	MAX_REQUEST_SIZE,
 	LINGER_TIMEOUT,
 	CONNECTION_QUEUE_SIZE,
-	MAX_CONNECTIONS,
+	LISTEN_BACKLOG_SIZE,
 #if defined(__linux__)
 	ALLOW_SENDFILE_CALL,
 #endif
@@ -2481,7 +2481,7 @@ static const struct mg_option config_options[] = {
     {"max_request_size", MG_CONFIG_TYPE_NUMBER, "16384"},
     {"linger_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
     {"connection_queue", MG_CONFIG_TYPE_NUMBER, "20"},
-    {"max_connections", MG_CONFIG_TYPE_NUMBER, "100"},
+    {"listen_backlog", MG_CONFIG_TYPE_NUMBER, "200"},
 #if defined(__linux__)
     {"allow_sendfile_call", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 #endif
@@ -14795,7 +14795,7 @@ set_ports_option(struct mg_context *phys_ctx)
 	int portsOk = 0;
 
 	const char *opt_txt;
-	long opt_max_connections;
+	long opt_listen_backlog;
 
 	if (!phys_ctx) {
 		return 0;
@@ -14963,16 +14963,16 @@ set_ports_option(struct mg_context *phys_ctx)
 			continue;
 		}
 
-		opt_txt = phys_ctx->dd.config[MAX_CONNECTIONS];
-		opt_max_connections = strtol(opt_txt, NULL, 10);
-		if ((opt_max_connections > INT_MAX) || (opt_max_connections < 1)) {
+		opt_txt = phys_ctx->dd.config[LISTEN_BACKLOG_SIZE];
+		opt_listen_backlog = strtol(opt_txt, NULL, 10);
+		if ((opt_listen_backlog > INT_MAX) || (opt_listen_backlog < 1)) {
 			mg_cry_ctx_internal(phys_ctx,
 			                    "max_connections value \"%s\" is invalid",
 			                    opt_txt);
 			continue;
 		}
 
-		if (listen(so.sock, (int)opt_max_connections) != 0) {
+		if (listen(so.sock, (int)opt_listen_backlog) != 0) {
 
 			mg_cry_ctx_internal(phys_ctx,
 			                    "cannot listen to %.*s: %d (%s)",

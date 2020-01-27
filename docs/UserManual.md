@@ -87,7 +87,7 @@ present, then the default is empty.
 ## Pattern matching in configuration options
 
 CivetWeb uses shell-like glob patterns for several configuration options,
-e.g., CGI, SSI and Lua script files are recognized by the file name pattern. 
+e.g., CGI, SSI and Lua script files are recognized by the file name pattern.
 Pattern match starts at the beginning of the string, so essentially
 patterns are prefix patterns. Syntax is as follows:
 
@@ -165,7 +165,7 @@ working directory. If absent (default), then accesses are not logged.
 Send additional HTTP response header line for every request.
 The full header line including key and value must be specified, excluding the carriage return line feed.
 
-Example (used as command line option): 
+Example (used as command line option):
 `-additional_header "X-Frame-Options: SAMEORIGIN"`
 
 This option can be specified multiple times. All specified header lines will be sent.
@@ -186,21 +186,21 @@ It this feature is activated, that /some/path/file.ext might be handled by:
   10. /index.php with PATH\_INFO='/some/path/file.ext'
 
 Note: This example is valid, if the default configuration values for
-`index_files`, `cgi_pattern` and `lua_script_pattern` are used, 
+`index_files`, `cgi_pattern` and `lua_script_pattern` are used,
 and the server is built with CGI and Lua support enabled.
 
 If this feature is not activated, only the first file (/some/path/file.cgi) will be accepted.
 
 Note: This parameter affects only index scripts. A path like /here/script.cgi/handle/this.ext
-will call /here/script.cgi with PATH\_INFO='/handle/this.ext', no matter if this option is set to `yes` or `no`. 
+will call /here/script.cgi with PATH\_INFO='/handle/this.ext', no matter if this option is set to `yes` or `no`.
 
 This feature can be used to completely hide the script extension from the URL.
 
 ### allow\_sendfile\_call `yes`
-This option can be used to enable or disable the use of the Linux `sendfile` system call. 
-It is only available for Linux systems and only affecting HTTP (not HTTPS) connections 
-if `throttle` is not enabled. 
-While using the `sendfile` call will lead to a performance boost for HTTP connections, 
+This option can be used to enable or disable the use of the Linux `sendfile` system call.
+It is only available for Linux systems and only affecting HTTP (not HTTPS) connections
+if `throttle` is not enabled.
+While using the `sendfile` call will lead to a performance boost for HTTP connections,
 this call may be broken for some file systems and some operating system versions.
 
 ### authentication\_domain `mydomain.com`
@@ -209,8 +209,8 @@ used in the encoding of the `.htpasswd` authorization files as well.
 Changing the domain retroactively will render the existing passwords useless.
 
 ### case\_sensitive `no`
-This option can be uset to enable case URLs for Windows servers. 
-It is only available for Windows systems.  Windows file systems are not case sensitive, 
+This option can be uset to enable case URLs for Windows servers.
+It is only available for Windows systems.  Windows file systems are not case sensitive,
 but they still store the file name including case.
 If this option is set to `yes`, the comparison for URIs and Windows file names will be case sensitive.
 
@@ -256,12 +256,12 @@ by setting this option to `no`.
 ### document\_root `.`
 A directory to serve. By default, the current working directory is served.
 The current directory is commonly referenced as dot (`.`).
-It is recommended to use an absolute path for document\_root, in order to 
+It is recommended to use an absolute path for document\_root, in order to
 avoid accidentally serving the wrong directory.
 
 ### enable\_auth\_domain\_check `yes`
 When using absolute URLs, verify the host is identical to the authentication\_domain.
-If enabled, requests to absolute URLs will only be processed 
+If enabled, requests to absolute URLs will only be processed
 if they are directed to the domain. If disabled, absolute URLs to any host
 will be accepted.
 
@@ -271,7 +271,7 @@ Enable directory listing, either `yes` or `no`.
 ### enable\_keep\_alive `no`
 Enable connection keep alive, either `yes` or `no`.
 
-Allows clients to reuse TCP connection for subsequent HTTP requests, 
+Allows clients to reuse TCP connection for subsequent HTTP requests,
 which improves performance.
 For this to work when using request handlers it is important to add the
 correct Content-Length HTTP header for each request. If this is forgotten the
@@ -280,8 +280,8 @@ client will time out.
 Note: If you set keep\_alive to `yes`, you should set keep\_alive\_timeout\_ms
 to some value > 0 (e.g. 500). If you set keep\_alive to `no`, you should set
 keep\_alive\_timeout\_ms to 0. Currently, this is done as a default value,
-but this configuration is redundant. In a future version, the keep\_alive 
-configuration option might be removed and automatically set to `yes` if 
+but this configuration is redundant. In a future version, the keep\_alive
+configuration option might be removed and automatically set to `yes` if
 a timeout > 0 is set.
 
 ### enable\_websocket\_ping\_pong `no`
@@ -293,7 +293,7 @@ feature will reply with a PONG message.
 If this configuration value is set to `no`, the websocket server will
 close the connection, once the timeout expires.
 
-Note: This configuration value only exists, if the server has been built 
+Note: This configuration value only exists, if the server has been built
 with websocket support enabled.
 
 ### error\_log\_file
@@ -302,7 +302,7 @@ working directory. If absent (default), then errors are not logged.
 
 ### error\_pages
 This option may be used to specify a directory for user defined error pages.
-To specify a directory, make sure the name ends with a backslash (Windows) 
+To specify a directory, make sure the name ends with a backslash (Windows)
 or slash (Linux, MacOS, ...).
 The error pages may be specified for an individual http status code (e.g.,
 404 - page requested by the client not found), a group of http status codes
@@ -352,7 +352,7 @@ are additional default index files, ordered before `index.cgi`.
 
 ### keep\_alive\_timeout\_ms `500` or `0`
 Idle timeout between two requests in one keep-alive connection.
-If keep alive is enabled, multiple requests using the same connection 
+If keep alive is enabled, multiple requests using the same connection
 are possible. This reduces the overhead for opening and closing connections
 when loading several resources from one server, but it also blocks one port
 and one thread at the server during the lifetime of this connection.
@@ -361,8 +361,8 @@ all resources required to show a website.
 The server closes a keep-alive connection, if there is no additional request
 from the client during this timeout.
 
-Note: if enable\_keep\_alive is set to `no` the value of 
-keep\_alive\_timeout\_ms should be set to `0`, if enable\_keep\_alive is set 
+Note: if enable\_keep\_alive is set to `no` the value of
+keep\_alive\_timeout\_ms should be set to `0`, if enable\_keep\_alive is set
 to `yes`, the value of keep\_alive\_timeout\_ms must be >0.
 Currently keep\_alive\_timeout\_ms is ignored if enable\_keep\_alive is no,
 but future versions may drop the enable\_keep\_alive configuration value and
@@ -376,7 +376,7 @@ Setting the value to -1 will turn off linger.
 If the value is not set (or set to -2), CivetWeb will not set the linger
 option at all.
 
-Note: For consistency with other timeout configurations, the value is 
+Note: For consistency with other timeout configurations, the value is
 configured in milliseconds. However, the TCP socket layer usually only
 offers a timeout in seconds, so the value should be an integer multiple
 of 1000.
@@ -446,33 +446,33 @@ e.g. `[::1]:8080` for the IPv6 loopback interface.
 [::]:80 will bind to port 80 IPv6 only. In order to use port 80 for
 all interfaces, both IPv4 and IPv6, use either the configuration
 `80,[::]:80` (create one socket for IPv4 and one for IPv6 only),
-or `+80` (create one socket for both, IPv4 and IPv6). 
+or `+80` (create one socket for both, IPv4 and IPv6).
 The `+` notation to use IPv4 and IPv6 will only work if no network
 interface is specified. Depending on your operating system version
 and IPv6 network environment, some configurations might not work
-as expected, so you have to test to find the configuration most 
+as expected, so you have to test to find the configuration most
 suitable for your needs. In case `+80` does not work for your
 environment, you need to use `80,[::]:80`.
 
 It is possible to use network interface addresses (e.g., `192.0.2.3:80`,
 `[2001:0db8::1234]:80`). To get a list of available network interface
-addresses, use `ipconfig` (in a `cmd` window in Windows) or `ifconfig` 
+addresses, use `ipconfig` (in a `cmd` window in Windows) or `ifconfig`
 (in a Linux shell).
-Alternatively, you could use the hostname for an interface. Check the 
-hosts file of your operating system for a proper hostname 
-(for Windows, usually found in C:\Windows\System32\drivers\etc\, 
-for most Linux distributions: /etc/hosts). E.g., to bind the IPv6 
-local host, you could use `ip6-localhost:80`. This translates to 
+Alternatively, you could use the hostname for an interface. Check the
+hosts file of your operating system for a proper hostname
+(for Windows, usually found in C:\Windows\System32\drivers\etc\,
+for most Linux distributions: /etc/hosts). E.g., to bind the IPv6
+local host, you could use `ip6-localhost:80`. This translates to
 `[::1]:80`. Beside the hosts file, there are several other name
 resolution services. Using your hostname might bind you to the
 localhost or an external interface. You could also try `hostname.local`,
-if the proper network services are installed (Zeroconf, mDNS, Bonjour, 
+if the proper network services are installed (Zeroconf, mDNS, Bonjour,
 Avahi). When using a hostname, you need to test in your particular network
 environment - in some cases, you might need to resort to a fixed IP address.
 
 If you want to use an ephemeral port (i.e. let the operating system choose
-a port number), use `0` for the port number. This will make it necessary to 
-communicate the port number to clients via other means, for example mDNS 
+a port number), use `0` for the port number. This will make it necessary to
+communicate the port number to clients via other means, for example mDNS
 (or Zeroconf, Bonjour or Avahi).
 
 ### max\_request\_size `16384`
@@ -481,7 +481,7 @@ A buffer of the configured size is pre allocated for every worker thread.
 max\_request\_size limits the HTTP header, including query string and cookies,
 but it does not affect the HTTP body length.
 The server has to read the entire header from a client or from a CGI script,
-before it is able to process it. In case the header is longer than max\_request\_size, 
+before it is able to process it. In case the header is longer than max\_request\_size,
 the request is considered as invalid or as DoS attack.
 The configuration value is approximate, the real limit might be a few bytes off.
 The minimum is 1024 (1 kB).
@@ -490,6 +490,23 @@ The minimum is 1024 (1 kB).
 Number of worker threads. CivetWeb handles each incoming connection in a
 separate thread. Therefore, the value of this option is effectively the number
 of concurrent HTTP connections CivetWeb can handle.
+
+If there are more simultaneous requests (connection attempts), they are queued.
+Every connection attempt first needs to be accepted (up to a limit of
+`listen_backlog` waiting connections). Then it is accepted and queued for the next
+available worker thread (up to a limit of `connection_queue`). Finally a worker
+thread handles all requests received in a connection (up to `num_threads`).
+
+In case the clients are web browsers, it is recommended to use `num_threads` of
+at least 5, since browsers often establish multiple connections to load a single
+web page, including all linked documents (CSS, JavaScript, images, ...).
+
+### listen\_backlog `200`
+Maximum number of connections waiting to be accepted by the server operating system.
+Internally, this parameter is passed to the "listen" socket/system call.
+
+### connection\_queue `20`
+Maximum number of accepted connections waiting to be dispatched by a worker thread.
 
 ### protect\_uri
 Comma separated list of URI=PATH pairs, specifying that given
@@ -595,7 +612,7 @@ TLS1.0+TLS1.1+TLS1.2 | 2
 TLS1.1+TLS1.2 | 3
 TLS1.2 | 4
 
-More recent versions of OpenSSL include support for TLS version 1.3. 
+More recent versions of OpenSSL include support for TLS version 1.3.
 To use TLS1.3 only, set ssl\_protocol\_version to 5.
 
 ### ssl\_short\_trust `no`
@@ -648,10 +665,10 @@ For values <0 and values >31622400, the behaviour is undefined.
 Set the `Strict-Transport-Security` header, and set the `max-age` value.
 This instructs web browsers to interact with the server only using HTTPS,
 never by HTTP. If set, it will be sent for every request handled directly
-by the server, except scripts (CGI, Lua, ..) and callbacks. They must 
+by the server, except scripts (CGI, Lua, ..) and callbacks. They must
 send HTTP headers on their own.
 
-The time is specified in seconds. If this configuration is not set, 
+The time is specified in seconds. If this configuration is not set,
 or set to -1, no `Strict-Transport-Security` header will be sent.
 For values <-1 and values >31622400, the behaviour is undefined.
 
@@ -718,7 +735,7 @@ in milliseconds. If this value is not set, the value of request\_timeout\_ms
 is used for HTTP(S) as well as for WS(S). In case websocket\_timeout\_ms is
 set, HTTP(S) and WS(S) can use different timeouts.
 
-Note: This configuration value only exists, if the server has been built 
+Note: This configuration value only exists, if the server has been built
 with websocket support enabled.
 
 
@@ -743,8 +760,8 @@ link for CivetWeb.
 
 ### add\_domain
 Option to load an additional configuration file, specifying an additional domain
-to host.  To add multiple additional domains, use the add\_domain option 
-multiple times with one configuration file for each domain.  
+to host.  To add multiple additional domains, use the add\_domain option
+multiple times with one configuration file for each domain.
 A domain configuration file may have the same options as the main server, with
 some exceptions.  The options are passed to the `mg_start_domain` API function.
 
@@ -788,8 +805,8 @@ and `<?lua= ?>` or `<%= %>` for variable content (corresponding to `<?= ?>`).
        <li> <%= key %>: <%= value %> </li>
        <% end %>
     </ul>
-    
-Currently the extended "Kepler Syntax" is available only for HTML (see 
+
+Currently the extended "Kepler Syntax" is available only for HTML (see
 note on HTTP headers below).
 
 Lua is known for it's speed and small size. The default Lua version for
@@ -891,7 +908,7 @@ connect (function):
 
 All filename arguments are either absolute or relative to the CivetWeb working
 directory (not the document root or the Lua script/page file).
-    
+
 To serve a Lua Page, CivetWeb creates a Lua context. That context is used for
 all Lua blocks within the page. That means, all Lua blocks on the same page
 share the same context. If one block defines a variable, for example, that
@@ -908,7 +925,7 @@ Lua Server Pages CAN send HTTP reply headers, like this:
 
     HTTP/1.0 200 OK
     Content-Type: text/html
-        
+
     <html><body>
       ... the rest of the web page ...
 
@@ -920,7 +937,7 @@ or using Lua code:
 
 or Lua Server Pages generating HTML content MAY skip the HTTP header lines.
 In this case, CivetWeb automatically creates a "200 OK"/"Content-Type: text/html"
-reply header. In this case, the document should start with "<!DOCTYPE html>" 
+reply header. In this case, the document should start with "<!DOCTYPE html>"
 or "<html".
 
 Currently the extended "Kepler Syntax" is available only for text/html pages
@@ -965,7 +982,7 @@ interpreter executable, e.g.: `#!/path/to/perl.exe` or `#!/bin/sh`.
 See `cgi\_pattern` and `cgi\_interpreter` for more details.
 
 It is possible to disable CGI completely by building the server with
-the `NO\_CGI` define. Setting this define is required for operating 
+the `NO\_CGI` define. Setting this define is required for operating
 systems not supporting `fork/exec` or `CreateProcess` (since CGI is
 based on creating child processes, it will not be available on such
 operating systems for principle reasons).
@@ -981,7 +998,7 @@ This error message is added to the server error log.
 
 A script should not write to stderr after writing a reply header
 to stdout. In case CGI libraries are writing to stderr (e.g., for
-logging/debugging), the CGI script should redirect stderr to a 
+logging/debugging), the CGI script should redirect stderr to a
 user defined log file at the beginning of the script.
 
 
