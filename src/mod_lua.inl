@@ -1011,10 +1011,83 @@ lsp_send_file_body(lua_State *L)
 		ret = mg_send_file_body(conn, filename);
 	} else {
 		/* Syntax error */
-		return luaL_error(L, "invalid send_file() call");
+		return luaL_error(L, "invalid send_file_body() call");
 	}
 
 	lua_pushboolean(L, ret >= 0);
+	return 1;
+}
+
+
+/* mg.send_http_error */
+static int
+lsp_send_http_error(lua_State *L)
+{
+	struct mg_connection *conn =
+	    (struct mg_connection *)lua_touserdata(L, lua_upvalueindex(1));
+	int num_args = lua_gettop(L);
+	int status = (num_args >= 1) ? (int)lua_tonumber(L, 1) : -1;
+	const char *auxText = (num_args >= 2) ? lua_tostring(L, 2) : NULL;
+	int ret;
+
+	if ((status >= 100) && (status <= 999)) {
+		ret = mg_send_http_error(conn,
+		                         status,
+		                         (auxText != NULL) ? "%s" : "",
+		                         auxText);
+	} else {
+		/* Syntax error */
+		return luaL_error(L, "invalid send_http_error() call");
+	}
+
+	lua_pushnumber(L, ret);
+	return 1;
+}
+
+
+/* mg.send_http_error */
+static int
+lsp_send_http_ok(lua_State *L)
+{
+	struct mg_connection *conn =
+	    (struct mg_connection *)lua_touserdata(L, lua_upvalueindex(1));
+	int num_args = lua_gettop(L);
+	int type1, type2;
+	const char *content_type = NULL;
+	const char *content = NULL;
+	int64_t content_len = 0;
+	int ret;
+
+	if (num_args < 2) {
+		/* Syntax error */
+		return luaL_error(L, "invalid send_http_ok() call");
+	}
+	type1 = lua_type(L, 1);
+	type2 = lua_type(L, 2);
+	if (type1 == LUA_TSTRING) {
+		content_type = lua_tostring(L, 1);
+	} else if (type1 != LUA_TNIL) {
+		/* Syntax error */
+		return luaL_error(L, "invalid send_http_ok() call");
+	}
+	if (type2 == LUA_TSTRING) {
+		size_t len;
+		content = lua_tolstring(L, 2, &len);
+		content_len = (int64_t)len;
+	} else if (type2 == LUA_TNUMBER) {
+		content_len = (int64_t)lua_tonumber(L, 2);
+	} else {
+		/* Syntax error */
+		return luaL_error(L, "invalid send_http_ok() call");
+	}
+
+	ret = mg_send_http_ok(conn, content_type, content_len);
+
+	if ((ret == 0) && (content != NULL) && (content_len > 0)) {
+		mg_write(conn, content, (size_t)content_len);
+	}
+
+	lua_pushnumber(L, ret);
 	return 1;
 }
 
@@ -2266,6 +2339,8 @@ prepare_lua_environment(struct mg_context *ctx,
 		reg_conn_function(L, "keep_alive", lsp_keep_alive, conn);
 		reg_conn_function(L, "send_file", lsp_send_file, conn);
 		reg_conn_function(L, "send_file_body", lsp_send_file_body, conn);
+		reg_conn_function(L, "send_http_error", lsp_send_http_error, conn);
+		reg_conn_function(L, "send_http_ok", lsp_send_http_ok, conn);
 		reg_conn_function(L, "redirect", lsp_redirect, conn);
 	}
 

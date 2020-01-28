@@ -4853,8 +4853,8 @@ mg_send_http_ok(struct mg_connection *conn,
 	time_t curtime = time(NULL);
 
 	if ((mime_type == NULL) || (*mime_type == 0)) {
-		/* Parameter error */
-		return -2;
+		/* No content type defined: default to text/html */
+		mime_type = "text/html";
 	}
 
 	gmt_time_string(date, sizeof(date), &curtime);
@@ -14967,7 +14967,8 @@ set_ports_option(struct mg_context *phys_ctx)
 		opt_listen_backlog = strtol(opt_txt, NULL, 10);
 		if ((opt_listen_backlog > INT_MAX) || (opt_listen_backlog < 1)) {
 			mg_cry_ctx_internal(phys_ctx,
-			                    "max_connections value \"%s\" is invalid",
+			                    "%s value \"%s\" is invalid",
+			                    config_options[LISTEN_BACKLOG_SIZE].name,
 			                    opt_txt);
 			continue;
 		}
