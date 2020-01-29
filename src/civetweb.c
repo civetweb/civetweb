@@ -378,7 +378,9 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #include <string.h>
 #include <time.h>
 
+#if defined(MG_MBEDTLS)
 #include "mod_mbedtls.inl"
+#endif
 
 /********************************************************************/
 /* CivetWeb configuration defines */
@@ -6098,7 +6100,7 @@ static int
 push_inner(struct mg_context *ctx,
            FILE *fp,
            SOCKET sock,
-           mg_connection *conn,
+           struct mg_connection *conn,
            const char *buf,
            int len,
            double timeout)
@@ -6124,7 +6126,7 @@ push_inner(struct mg_context *ctx,
 	}
 
 #if defined(NO_SSL)
-	if (ssl) {
+	if (conn->ssl) {
 		return -2;
 	}
 #endif
@@ -6154,13 +6156,13 @@ push_inner(struct mg_context *ctx,
 
 #if defined(MG_MBEDTLS)
 			if (conn->mbed_ssl != NULL) {
-			n = mbed_ssl_write(conn->mbed_ssl, buf, len);
+			n = mbed_ssl_write(conn->mbed_ssl, (const unsigned char *)buf, len);
 			if (n <= 0) {
-				if ((n == SSL_ERROR_WANT_READ)
-				           || (n == SSL_ERROR_WANT_WRITE)) {
+				if ((n == MBEDTLS_ERR_SSL_WANT_READ)
+				           || (n == MBEDTLS_ERR_SSL_WANT_WRITE)) {
 					n = 0;
 				} else {
-					fprintf("SSL write failed, error %d", n);
+					fprintf(stderr, "SSL write failed, error %d\n", n);
 					return -2;
 				}
 			} else {
@@ -6261,7 +6263,7 @@ static int64_t
 push_all(struct mg_context *ctx,
          FILE *fp,
          SOCKET sock,
-         mg_connection *conn,
+         struct mg_connection *conn,
          const char *buf,
          int64_t len)
 {
@@ -6425,10 +6427,10 @@ pull_inner(FILE *fp,
 		}
 
 		if (pollres > 0) {
-			nread = mbed_ssl_read(conn->mbed_ssl, buf, len);
+			nread = mbed_ssl_read(conn->mbed_ssl, (unsigned char *)buf, len);
 			if (nread <= 0) {
-				if ((nread == SSL_ERROR_WANT_READ)
-					|| (nread == SSL_ERROR_WANT_WRITE)) {
+				if ((nread == MBEDTLS_ERR_SSL_WANT_READ)
+					|| (nread == MBEDTLS_ERR_SSL_WANT_WRITE)) {
 					nread = 0;
 				} else {
 					fprintf(stderr, "SSL read failed, error %d", nread);
@@ -10533,6 +10535,7 @@ read_message(FILE *fp,
 static int
 forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 {
+	(void)ssl;
 	const char *expect, *body;
 	char buf[MG_BUF_LEN];
 	int to_read, nread, success = 0;
@@ -10592,7 +10595,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 			}
 			body = conn->buf + conn->request_len + conn->consumed_content;
 			push_all(
-			    conn->phys_ctx, fp, sock, ssl, body, (int64_t)buffered_len);
+			    conn->phys_ctx, fp, sock, conn, body, (int64_t)buffered_len);
 			conn->consumed_content += buffered_len;
 		}
 
@@ -10608,7 +10611,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 				break;
 			}
 			if (nread > 0) {
-				if (push_all(conn->phys_ctx, fp, sock, ssl, buf, nread)
+				if (push_all(conn->phys_ctx, fp, sock, conn, buf, nread)
 				    != nread) {
 					break;
 				}
@@ -15940,37 +15943,6 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 }
 
 
-static int
-mg_ssl_ctx_init(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
-{
-	void *ssl_ctx = 0;
-	int callback_ret;
-	const char *pem;
-	const char *chain;
-	char ebuf[128];
-
-	if (!phys_ctx) {
-		return 0;
-	}
-
-	if (!dom_ctx) {
-		dom_ctx = &(phys_ctx->dd);
-	}
-
-	if (!is_ssl_port_used(dom_ctx->config[LISTENING_PORTS])) {
-		/* No SSL port is set. No need to setup SSL. */
-		fprintf(stdout, "no ssl port is set\n");
-		return 1;
-	}
-	
-	if ((dom_ctx->mbed_ctx = (struct mbed_context *)mg_calloc(1, sizeof(*dom_ctx->mbed_ctx))) == NULL) {
-		return 1;
-	}
-
-
-	return !mbed_ssl_init(dom_ctx->mbed_ctx);
-}
-
 /* Check if SSL is required.
  * If so, dynamically load SSL library
  * and set up ctx->ssl_ctx pointer. */
@@ -16110,7 +16082,7 @@ mg_sslctx_init(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 		return 1;
 	}
 
-	dom_ctx->mbed_ctx = mg_calloc(sizeof(*dom_ctx->mbed_ctx));	
+	dom_ctx->mbed_ctx = mg_calloc(1, sizeof(*dom_ctx->mbed_ctx));	
 	if (dom_ctx->mbed_ctx == NULL) {
 		fprintf(stderr, "mbed_ctx malloc failed\n");
 		return 0;
@@ -16413,9 +16385,9 @@ close_connection(struct mg_connection *conn)
 #endif
 
 #if defined(MG_MBEDTLS)
-	if (conn->mbed_ssl != NULL）{
+	if (conn->mbed_ssl != NULL) {
 		mbed_ssl_close(conn->mbed_ssl);
-		conn->mned_ssl = NULL;
+		conn->mbed_ssl = NULL;
 	}
 #endif
 
@@ -18382,9 +18354,9 @@ free_context(struct mg_context *ctx)
 
 #if defined(MG_MBEDTLS)
 	if (ctx->dd.mbed_ctx != NULL) {
-		mbed_sslctx_uninit(ctx->dd.mbedctx);
-		mg_free(ctx->dd.mbedctx);
-		ctx->dd.mbedctx = NULL;
+		mbed_sslctx_uninit(ctx->dd.mbed_ctx);
+		mg_free(ctx->dd.mbed_ctx);
+		ctx->dd.mbed_ctx = NULL;
 	}
 #endif
 
@@ -18987,7 +18959,7 @@ mg_check_feature(unsigned feature)
 #if !defined(NO_FILES)
 	                                    | MG_FEATURES_FILES
 #endif
-#if !defined(NO_SSL)
+#if !defined(NO_SSL) || defined(MG_MBEDTLS)
 	                                    | MG_FEATURES_SSL
 #endif
 #if !defined(NO_CGI)

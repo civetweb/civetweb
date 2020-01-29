@@ -1,12 +1,15 @@
-#if MG_MBEDTLS  // mbedtls 隔离宏, 和NO_SSL宏一起使用
+#if defined(MG_MBEDTLS)  // mbedtls 隔离宏, 和NO_SSL宏一起使用
 
 #include "mbedtls/certs.h"
 #include "mbedtls/ssl.h"
+#include "mbedtls/net.h"
 #include "mbedtls/x509.h"
-#include "mbedtls/ctr_drbg.h”
+#include "mbedtls/x509_crt.h"
+#include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
-#include "mbedtls/error.h“
-#include "mbedtls/sha256.h"
+#include "mbedtls/error.h"
+#include "mbedtls/debug.h"
+#include "mbedtls/platform.h"
 
 typedef struct {
     mbedtls_ssl_config          conf;           /* SSL configuration */
@@ -18,18 +21,18 @@ typedef struct {
 
 
 // public
-int mbed_sslctx_init(mbed_contex *ctx);
+int mbed_sslctx_init(mbed_context *ctx);
 void mbed_sslctx_uninit(mbed_context *ctx);
 void mbed_ssl_close(mbedtls_ssl_context *ssl);
 int mbed_ssl_accept(mbedtls_ssl_context **ssl, mbed_context *ssl_ctx, int *sock);
-int mbed_ssl_read(mbedtls_ssl_context *ssl, const char *buf, int len);
-int mbed_ssl_write(mbedtls_ssl_context *ssl, const char *buf, int len);
+int mbed_ssl_read(mbedtls_ssl_context *ssl, unsigned char *buf, int len);
+int mbed_ssl_write(mbedtls_ssl_context *ssl, const unsigned char *buf, int len);
 
-static void mbed_debug(void *context, int level, char *file, int line, char *str);
+static void mbed_debug(void *context, int level, const char *file, int line, const char *str);
 static int mbed_ssl_handshake(mbedtls_ssl_context *ssl);
 
 int
-mbed_sslctx_init(mbed_contex *ctx)
+mbed_sslctx_init(mbed_context *ctx)
 {
     mbedtls_ssl_config *conf;
     int rc;
@@ -66,7 +69,7 @@ mbed_sslctx_init(mbed_contex *ctx)
 
     // Load a PEM format certificate file
     if (mbedtls_x509_crt_parse_file(&ctx->cert, "./server.crt") != 0) {
-        fprintf(stderr, "parse crt file faied\n")
+        fprintf(stderr, "parse crt file faied\n");
     }
 
     if ((rc = mbedtls_ssl_config_defaults(conf,
@@ -105,7 +108,7 @@ mbed_sslctx_uninit(mbed_context *ctx)
 int
 mbed_ssl_accept(mbedtls_ssl_context **ssl, mbed_context *ssl_ctx, int *sock)
 {
-    *ssl = calloc(sizeof(**ssl));
+    *ssl = calloc(1, sizeof(**ssl));
     if (*ssl == NULL) {
         fprintf(stderr, "malloc ssl failed\n");
         return -1;
@@ -155,7 +158,7 @@ mbed_ssl_handshake(mbedtls_ssl_context *ssl)
 }
 
 int
-mbed_ssl_read(mbedtls_ssl_context *ssl, const char *buf, int len)
+mbed_ssl_read(mbedtls_ssl_context *ssl, unsigned char *buf, int len)
 {
     int rc = mbedtls_ssl_read(ssl, buf, len);
     fprintf(stdout, "mbedtls: mbedtls_ssl_read %d\n", rc);
@@ -163,7 +166,7 @@ mbed_ssl_read(mbedtls_ssl_context *ssl, const char *buf, int len)
 }
 
 int
-mbed_ssl_write(mbedtls_ssl_context *ssl, const char *buf, int len)
+mbed_ssl_write(mbedtls_ssl_context *ssl, const unsigned char *buf, int len)
 {
     int rc = mbedtls_ssl_write(ssl, buf, len);
     fprintf(stdout, "mbedtls: mbedtls_ssl_write:%d\n", rc);
@@ -171,8 +174,9 @@ mbed_ssl_write(mbedtls_ssl_context *ssl, const char *buf, int len)
 }
 
 static void
-mbed_debug(void *context, int level, char *file, int line, char *str)
+mbed_debug(void *context, int level, const char *file, int line, const char *str)
 {
+    (void)level;
     mbedtls_fprintf((FILE *)context, "file:%s line:%d str:%s\n", file, line, str);
 }
 

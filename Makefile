@@ -44,7 +44,7 @@ USE_STACK_SIZE ?= 102400
 BUILD_DIRS = $(BUILD_DIR) $(BUILD_DIR)/src $(BUILD_DIR)/resources
 
 LIB_SOURCES = src/civetweb.c
-LIB_INLINE  = src/mod_lua.inl src/md5.inl
+LIB_INLINE  = src/mod_lua.inl src/md5.inl src/mod_mbedtls.inl
 APP_SOURCES = src/main.c
 WINDOWS_RESOURCES = resources/res.rc
 UNIT_TEST_SOURCES = test/unit_test.c
@@ -66,7 +66,7 @@ endif
 # only set main compile options if none were chosen
 CFLAGS += -Wall -Wextra -Wshadow -Wformat-security -Winit-self -Wmissing-prototypes -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=$(USE_STACK_SIZE)
 
-LIBS = -lpthread -lm
+LIBS = -lpthread -lm -lmbedcrypto -lmbedtls -lmbedx509
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG
