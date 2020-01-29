@@ -30,7 +30,7 @@
 #include <stddef.h>
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -72,12 +72,6 @@ typedef enum {
 #define MBEDTLS_MD_MAX_SIZE         64  /* longest known is SHA512 */
 #else
 #define MBEDTLS_MD_MAX_SIZE         32  /* longest known is SHA256 or less */
-#endif
-
-#if defined(MBEDTLS_SHA512_C)
-#define MBEDTLS_MD_MAX_BLOCK_SIZE         128
-#else
-#define MBEDTLS_MD_MAX_BLOCK_SIZE         64
 #endif
 
 /**

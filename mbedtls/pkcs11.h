@@ -27,14 +27,14 @@
 #define MBEDTLS_PKCS11_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
 #if defined(MBEDTLS_PKCS11_C)
 
-#include "mbedtls/x509_crt.h"
+#include "x509_crt.h"
 
 #include <pkcs11-helper-1.0/pkcs11h-certificate.h>
 

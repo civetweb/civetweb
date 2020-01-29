@@ -25,7 +25,7 @@
 #define MBEDTLS_SSL_TICKET_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -36,11 +36,11 @@
  * secrecy, when MBEDTLS_HAVE_TIME is defined.
  */
 
-#include "mbedtls/ssl.h"
-#include "mbedtls/cipher.h"
+#include "ssl.h"
+#include "cipher.h"
 
 #if defined(MBEDTLS_THREADING_C)
-#include "mbedtls/threading.h"
+#include "threading.h"
 #endif
 
 #ifdef __cplusplus
@@ -117,14 +117,14 @@ int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
 /**
  * \brief           Implementation of the ticket write callback
  *
- * \note            See \c mbedtls_ssl_ticket_write_t for description
+ * \note            See \c mbedlts_ssl_ticket_write_t for description
  */
 mbedtls_ssl_ticket_write_t mbedtls_ssl_ticket_write;
 
 /**
  * \brief           Implementation of the ticket parse callback
  *
- * \note            See \c mbedtls_ssl_ticket_parse_t for description
+ * \note            See \c mbedlts_ssl_ticket_parse_t for description
  */
 mbedtls_ssl_ticket_parse_t mbedtls_ssl_ticket_parse;
 

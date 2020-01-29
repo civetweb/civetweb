@@ -25,7 +25,7 @@
 #define MBEDTLS_ASN1_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -33,7 +33,7 @@
 #include <stddef.h>
 
 #if defined(MBEDTLS_BIGNUM_C)
-#include "mbedtls/bignum.h"
+#include "bignum.h"
 #endif
 
 /**
@@ -52,7 +52,7 @@
 #define MBEDTLS_ERR_ASN1_UNEXPECTED_TAG                   -0x0062  /**< ASN1 tag was of an unexpected value. */
 #define MBEDTLS_ERR_ASN1_INVALID_LENGTH                   -0x0064  /**< Error when trying to determine the length or invalid length. */
 #define MBEDTLS_ERR_ASN1_LENGTH_MISMATCH                  -0x0066  /**< Actual length differs from expected length. */
-#define MBEDTLS_ERR_ASN1_INVALID_DATA                     -0x0068  /**< Data is invalid. */
+#define MBEDTLS_ERR_ASN1_INVALID_DATA                     -0x0068  /**< Data is invalid. (not used) */
 #define MBEDTLS_ERR_ASN1_ALLOC_FAILED                     -0x006A  /**< Memory allocation failed */
 #define MBEDTLS_ERR_ASN1_BUF_TOO_SMALL                    -0x006C  /**< Buffer too small when writing ASN.1 data structure. */
 
@@ -66,7 +66,7 @@
  * - 0x02 -- tag indicating INTEGER
  * - 0x01 -- length in octets
  * - 0x05 -- value
- * Such sequences are typically read into Mbed TLS's \c mbedtls_x509_buf.
+ * Such sequences are typically read into \c ::mbedtls_x509_buf.
  * \{
  */
 #define MBEDTLS_ASN1_BOOLEAN                 0x01
@@ -75,7 +75,6 @@
 #define MBEDTLS_ASN1_OCTET_STRING            0x04
 #define MBEDTLS_ASN1_NULL                    0x05
 #define MBEDTLS_ASN1_OID                     0x06
-#define MBEDTLS_ASN1_ENUMERATED              0x0A
 #define MBEDTLS_ASN1_UTF8_STRING             0x0C
 #define MBEDTLS_ASN1_SEQUENCE                0x10
 #define MBEDTLS_ASN1_SET                     0x11
@@ -177,220 +176,119 @@ mbedtls_asn1_named_data;
  * \brief       Get the length of an ASN.1 element.
  *              Updates the pointer to immediately behind the length.
  *
- * \param p     On entry, \c *p points to the first byte of the length,
- *              i.e. immediately after the tag.
- *              On successful completion, \c *p points to the first byte
- *              after the length, i.e. the first byte of the content.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param len   On successful completion, \c *len contains the length
- *              read from the ASN.1 input.
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param len   The variable that will receive the value
  *
- * \return      0 if successful.
- * \return      #MBEDTLS_ERR_ASN1_OUT_OF_DATA if the ASN.1 element
- *              would end beyond \p end.
- * \return      #MBEDTLS_ERR_ASN1_INVALID_LENGTH if the length is unparseable.
+ * \return      0 if successful, MBEDTLS_ERR_ASN1_OUT_OF_DATA on reaching
+ *              end of data, MBEDTLS_ERR_ASN1_INVALID_LENGTH if length is
+ *              unparseable.
  */
 int mbedtls_asn1_get_len( unsigned char **p,
-                          const unsigned char *end,
-                          size_t *len );
+                  const unsigned char *end,
+                  size_t *len );
 
 /**
- * \brief       Get the tag and length of the element.
- *              Check for the requested tag.
+ * \brief       Get the tag and length of the tag. Check for the requested tag.
  *              Updates the pointer to immediately behind the tag and length.
  *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p points to the first byte
- *              after the length, i.e. the first byte of the content.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param len   On successful completion, \c *len contains the length
- *              read from the ASN.1 input.
- * \param tag   The expected tag.
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param len   The variable that will receive the length
+ * \param tag   The expected tag
  *
- * \return      0 if successful.
- * \return      #MBEDTLS_ERR_ASN1_UNEXPECTED_TAG if the data does not start
- *              with the requested tag.
- * \return      #MBEDTLS_ERR_ASN1_OUT_OF_DATA if the ASN.1 element
- *              would end beyond \p end.
- * \return      #MBEDTLS_ERR_ASN1_INVALID_LENGTH if the length is unparseable.
+ * \return      0 if successful, MBEDTLS_ERR_ASN1_UNEXPECTED_TAG if tag did
+ *              not match requested tag, or another specific ASN.1 error code.
  */
 int mbedtls_asn1_get_tag( unsigned char **p,
-                          const unsigned char *end,
-                          size_t *len, int tag );
+                  const unsigned char *end,
+                  size_t *len, int tag );
 
 /**
  * \brief       Retrieve a boolean ASN.1 tag and its value.
  *              Updates the pointer to immediately behind the full tag.
  *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p points to the first byte
- *              beyond the ASN.1 element.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param val   On success, the parsed value (\c 0 or \c 1).
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param val   The variable that will receive the value
  *
- * \return      0 if successful.
- * \return      An ASN.1 error code if the input does not start with
- *              a valid ASN.1 BOOLEAN.
+ * \return      0 if successful or a specific ASN.1 error code.
  */
 int mbedtls_asn1_get_bool( unsigned char **p,
-                           const unsigned char *end,
-                           int *val );
+                   const unsigned char *end,
+                   int *val );
 
 /**
  * \brief       Retrieve an integer ASN.1 tag and its value.
  *              Updates the pointer to immediately behind the full tag.
  *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p points to the first byte
- *              beyond the ASN.1 element.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param val   On success, the parsed value.
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param val   The variable that will receive the value
  *
- * \return      0 if successful.
- * \return      An ASN.1 error code if the input does not start with
- *              a valid ASN.1 INTEGER.
- * \return      #MBEDTLS_ERR_ASN1_INVALID_LENGTH if the parsed value does
- *              not fit in an \c int.
+ * \return      0 if successful or a specific ASN.1 error code.
  */
 int mbedtls_asn1_get_int( unsigned char **p,
-                          const unsigned char *end,
-                          int *val );
-
-/**
- * \brief       Retrieve an enumerated ASN.1 tag and its value.
- *              Updates the pointer to immediately behind the full tag.
- *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p points to the first byte
- *              beyond the ASN.1 element.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param val   On success, the parsed value.
- *
- * \return      0 if successful.
- * \return      An ASN.1 error code if the input does not start with
- *              a valid ASN.1 ENUMERATED.
- * \return      #MBEDTLS_ERR_ASN1_INVALID_LENGTH if the parsed value does
- *              not fit in an \c int.
- */
-int mbedtls_asn1_get_enum( unsigned char **p,
-                           const unsigned char *end,
-                           int *val );
+                  const unsigned char *end,
+                  int *val );
 
 /**
  * \brief       Retrieve a bitstring ASN.1 tag and its value.
  *              Updates the pointer to immediately behind the full tag.
  *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p is equal to \p end.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param bs    On success, ::mbedtls_asn1_bitstring information about
- *              the parsed value.
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param bs    The variable that will receive the value
  *
- * \return      0 if successful.
- * \return      #MBEDTLS_ERR_ASN1_LENGTH_MISMATCH if the input contains
- *              extra data after a valid BIT STRING.
- * \return      An ASN.1 error code if the input does not start with
- *              a valid ASN.1 BIT STRING.
+ * \return      0 if successful or a specific ASN.1 error code.
  */
 int mbedtls_asn1_get_bitstring( unsigned char **p, const unsigned char *end,
-                                mbedtls_asn1_bitstring *bs );
+                        mbedtls_asn1_bitstring *bs);
 
 /**
  * \brief       Retrieve a bitstring ASN.1 tag without unused bits and its
  *              value.
  *              Updates the pointer to the beginning of the bit/octet string.
  *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p points to the first byte
- *              of the content of the BIT STRING.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param len   On success, \c *len is the length of the content in bytes.
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param len   Length of the actual bit/octect string in bytes
  *
- * \return      0 if successful.
- * \return      #MBEDTLS_ERR_ASN1_INVALID_DATA if the input starts with
- *              a valid BIT STRING with a nonzero number of unused bits.
- * \return      An ASN.1 error code if the input does not start with
- *              a valid ASN.1 BIT STRING.
+ * \return      0 if successful or a specific ASN.1 error code.
  */
-int mbedtls_asn1_get_bitstring_null( unsigned char **p,
-                                     const unsigned char *end,
-                                     size_t *len );
+int mbedtls_asn1_get_bitstring_null( unsigned char **p, const unsigned char *end,
+                             size_t *len );
 
 /**
- * \brief       Parses and splits an ASN.1 "SEQUENCE OF <tag>".
- *              Updates the pointer to immediately behind the full sequence tag.
+ * \brief       Parses and splits an ASN.1 "SEQUENCE OF <tag>"
+ *              Updated the pointer to immediately behind the full sequence tag.
  *
- * \note        On error, this function may return a partial list in \p cur.
- *              You must set `cur->next = NULL` before calling this function!
- *              Otherwise it is impossible to distinguish a previously non-null
- *              pointer from a pointer to an object allocated by this function.
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param cur   First variable in the chain to fill
+ * \param tag   Type of sequence
  *
- * \note        If the sequence is empty, this function does not modify
- *              \c *cur. If the sequence is valid and non-empty, this
- *              function sets `cur->buf.tag` to \p tag. This allows
- *              callers to distinguish between an empty sequence and
- *              a one-element sequence.
- *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p is equal to \p end.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param cur   A ::mbedtls_asn1_sequence which this function fills.
- *              When this function returns, \c *cur is the head of a linked
- *              list. Each node in this list is allocated with
- *              mbedtls_calloc() apart from \p cur itself, and should
- *              therefore be freed with mbedtls_free().
- *              The list describes the content of the sequence.
- *              The head of the list (i.e. \c *cur itself) describes the
- *              first element, `*cur->next` describes the second element, etc.
- *              For each element, `buf.tag == tag`, `buf.len` is the length
- *              of the content of the content of the element, and `buf.p`
- *              points to the first byte of the content (i.e. immediately
- *              past the length of the element).
- *              Note that list elements may be allocated even on error.
- * \param tag   Each element of the sequence must have this tag.
- *
- * \return      0 if successful.
- * \return      #MBEDTLS_ERR_ASN1_LENGTH_MISMATCH if the input contains
- *              extra data after a valid SEQUENCE OF \p tag.
- * \return      #MBEDTLS_ERR_ASN1_ALLOC_FAILED if a memory allocation failed.
- * \return      An ASN.1 error code if the input does not start with
- *              a valid ASN.1 BIT STRING.
+ * \return      0 if successful or a specific ASN.1 error code.
  */
 int mbedtls_asn1_get_sequence_of( unsigned char **p,
-                                  const unsigned char *end,
-                                  mbedtls_asn1_sequence *cur,
-                                  int tag );
+                          const unsigned char *end,
+                          mbedtls_asn1_sequence *cur,
+                          int tag);
 
 #if defined(MBEDTLS_BIGNUM_C)
 /**
- * \brief       Retrieve an integer ASN.1 tag and its value.
+ * \brief       Retrieve a MPI value from an integer ASN.1 tag.
  *              Updates the pointer to immediately behind the full tag.
  *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p points to the first byte
- *              beyond the ASN.1 element.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param X     On success, the parsed value.
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param X     The MPI that will receive the value
  *
- * \return      0 if successful.
- * \return      An ASN.1 error code if the input does not start with
- *              a valid ASN.1 INTEGER.
- * \return      #MBEDTLS_ERR_ASN1_INVALID_LENGTH if the parsed value does
- *              not fit in an \c int.
- * \return      An MPI error code if the parsed value is too large.
+ * \return      0 if successful or a specific ASN.1 or MPI error code.
  */
 int mbedtls_asn1_get_mpi( unsigned char **p,
-                          const unsigned char *end,
-                          mbedtls_mpi *X );
+                  const unsigned char *end,
+                  mbedtls_mpi *X );
 #endif /* MBEDTLS_BIGNUM_C */
 
 /**
@@ -398,14 +296,10 @@ int mbedtls_asn1_get_mpi( unsigned char **p,
  *              Updates the pointer to immediately behind the full
  *              AlgorithmIdentifier.
  *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p points to the first byte
- *              beyond the AlgorithmIdentifier element.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param alg   The buffer to receive the OID.
- * \param params The buffer to receive the parameters.
- *              This is zeroized if there are no parameters.
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param alg   The buffer to receive the OID
+ * \param params The buffer to receive the params (if any)
  *
  * \return      0 if successful or a specific ASN.1 or MPI error code.
  */
@@ -419,12 +313,9 @@ int mbedtls_asn1_get_alg( unsigned char **p,
  *              Updates the pointer to immediately behind the full
  *              AlgorithmIdentifier.
  *
- * \param p     On entry, \c *p points to the start of the ASN.1 element.
- *              On successful completion, \c *p points to the first byte
- *              beyond the AlgorithmIdentifier element.
- *              On error, the value of \c *p is undefined.
- * \param end   End of data.
- * \param alg   The buffer to receive the OID.
+ * \param p     The position in the ASN.1 data
+ * \param end   End of data
+ * \param alg   The buffer to receive the OID
  *
  * \return      0 if successful or a specific ASN.1 or MPI error code.
  */
@@ -448,19 +339,15 @@ mbedtls_asn1_named_data *mbedtls_asn1_find_named_data( mbedtls_asn1_named_data *
 /**
  * \brief       Free a mbedtls_asn1_named_data entry
  *
- * \param entry The named data entry to free.
- *              This function calls mbedtls_free() on
- *              `entry->oid.p` and `entry->val.p`.
+ * \param entry The named data entry to free
  */
 void mbedtls_asn1_free_named_data( mbedtls_asn1_named_data *entry );
 
 /**
- * \brief       Free all entries in a mbedtls_asn1_named_data list.
+ * \brief       Free all entries in a mbedtls_asn1_named_data list
+ *              Head will be set to NULL
  *
- * \param head  Pointer to the head of the list of named data entries to free.
- *              This function calls mbedtls_asn1_free_named_data() and
- *              mbedtls_free() on each list element and
- *              sets \c *head to \c NULL.
+ * \param head  Pointer to the head of the list of named data entries to free
  */
 void mbedtls_asn1_free_named_data_list( mbedtls_asn1_named_data **head );
 

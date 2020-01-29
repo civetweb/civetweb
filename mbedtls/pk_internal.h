@@ -26,12 +26,12 @@
 #define MBEDTLS_PK_WRAP_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include "mbedtls/pk.h"
+#include "pk.h"
 
 struct mbedtls_pk_info_t
 {
@@ -133,10 +133,6 @@ extern const mbedtls_pk_info_t mbedtls_ecdsa_info;
 
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
 extern const mbedtls_pk_info_t mbedtls_rsa_alt_info;
-#endif
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-extern const mbedtls_pk_info_t mbedtls_pk_opaque_info;
 #endif
 
 #endif /* MBEDTLS_PK_WRAP_H */

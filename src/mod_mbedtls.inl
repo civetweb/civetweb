@@ -3,6 +3,7 @@
 #include "mbedtls/certs.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/net.h"
+#include "mbedtls/pk.h"
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/ctr_drbg.h"

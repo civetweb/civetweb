@@ -6433,7 +6433,7 @@ pull_inner(FILE *fp,
 					|| (nread == MBEDTLS_ERR_SSL_WANT_WRITE)) {
 					nread = 0;
 				} else {
-					fprintf(stderr, "SSL read failed, error %d", nread);
+					fprintf(stderr, "SSL read failed, error %d\n", nread);
 					return -2;
 				}
 			} else {
@@ -13106,7 +13106,11 @@ alloc_get_host(struct mg_connection *conn)
 			}
 		}
 
+	#if defined(MG_MBEDTLS)
+		if (conn->mbed_ssl) {
+	#else
 		if (conn->ssl) {
+	#endif
 			/* This is a HTTPS connection, maybe we have a hostname
 			 * from SNI (set in ssl_servername_callback). */
 			const char *sslhost = conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
@@ -17955,7 +17959,7 @@ worker_thread_run(struct worker_thread_args *thread_args)
 				/* HTTPS connection */
 				if (mbed_ssl_accept(&conn->mbed_ssl,
 						conn->dom_ctx->mbed_ctx, &conn->client.sock
-						) != 0) {
+					) == 0) {
 					/* conn->dom_ctx is set in get_request */
 					/* process HTTPS connection */
 					process_new_connection(conn);

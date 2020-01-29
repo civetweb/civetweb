@@ -25,12 +25,12 @@
 #define MBEDTLS_X509_CRL_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include "mbedtls/x509.h"
+#include "x509.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -111,7 +111,7 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
 /**
  * \brief          Parse one or more CRLs and append them to the chained list
  *
- * \note           Multiple CRLs are accepted only if using PEM format
+ * \note           Mutliple CRLs are accepted only if using PEM format
  *
  * \param chain    points to the start of the chain
  * \param buf      buffer holding the CRL data in PEM or DER format
@@ -126,7 +126,7 @@ int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, s
 /**
  * \brief          Load one or more CRLs and append them to the chained list
  *
- * \note           Multiple CRLs are accepted only if using PEM format
+ * \note           Mutliple CRLs are accepted only if using PEM format
  *
  * \param chain    points to the start of the chain
  * \param path     filename to read the CRLs from (in PEM or DER encoding)
