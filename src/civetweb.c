@@ -16391,6 +16391,7 @@ close_connection(struct mg_connection *conn)
 #if defined(MG_MBEDTLS)
 	if (conn->mbed_ssl != NULL) {
 		mbed_ssl_close(conn->mbed_ssl);
+		mg_free(conn->mbed_ssl);
 		conn->mbed_ssl = NULL;
 	}
 #endif

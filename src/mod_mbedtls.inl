@@ -12,6 +12,7 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/platform.h"
 
+
 typedef struct {
     mbedtls_ssl_config          conf;           /* SSL configuration */
     mbedtls_x509_crt            cert;           /* Certificate (own) */
@@ -51,7 +52,7 @@ mbed_sslctx_init(mbed_context *ctx)
     mbedtls_pk_init(&ctx->pkey);
     mbedtls_ctr_drbg_init(&ctx->ctr);
     mbedtls_x509_crt_init(&ctx->cert);
-
+	
     if ((rc = mbedtls_ctr_drbg_seed(&ctx->ctr,
                                     mbedtls_entropy_func,
                                     &ctx->entropy,
@@ -81,6 +82,7 @@ mbed_sslctx_init(mbed_context *ctx)
         fprintf(stderr, "Cannot set mbedtls defaults\n");
         return -1;
     }
+
     mbedtls_ssl_conf_rng(conf, mbedtls_ctr_drbg_random, &ctx->ctr);
 
     // Set auth mode if peer cert should be verified
