@@ -569,19 +569,27 @@ typedef long off_t;
 
 #if defined(_WIN64) || defined(__MINGW64__)
 #if !defined(SSL_LIB)
+#if defined(OPENSSL_API_1_1)
+#define SSL_LIB "libssl-1_1-x64.dll"
+#else /* OPENSSL_API_1_1 */
 #define SSL_LIB "ssleay64.dll"
-#endif
+#endif /* OPENSSL_API_1_1 */
+#endif /* SSL_LIB */
 #if !defined(CRYPTO_LIB)
+#if defined(OPENSSL_API_1_1)
+#define CRYPTO_LIB "libcrypto-1_1-x64.dll"
+#else /* OPENSSL_API_1_1 */
 #define CRYPTO_LIB "libeay64.dll"
-#endif
-#else
+#endif /* OPENSSL_API_1_1 */
+#endif /* CRYPTO_LIB */
+#else /* defined(_WIN64) || defined(__MINGW64__) */
 #if !defined(SSL_LIB)
 #define SSL_LIB "ssleay32.dll"
-#endif
+#endif /* SSL_LIB */
 #if !defined(CRYPTO_LIB)
 #define CRYPTO_LIB "libeay32.dll"
-#endif
-#endif
+#endif /* CRYPTO_LIB */
+#endif /* defined(_WIN64) || defined(__MINGW64__) */
 
 #define O_NONBLOCK (0)
 #if !defined(W_OK)
