@@ -17,6 +17,19 @@ Instructions for adding SSL support can be found in [https://github.com/civetweb
 2. Download latest *civetweb-win.zip* from [SourceForge](https://sourceforge.net/projects/civetweb/files/)
 3. When started, Civetweb puts itself into the tray.
 
+Building civetweb - Using vcpkg
+---
+
+You can download and install civetweb using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
+
+    git clone https://github.com/Microsoft/vcpkg.git
+    cd vcpkg
+    ./bootstrap-vcpkg.sh
+    ./vcpkg integrate install
+    ./vcpkg install civetweb
+
+The civetweb port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
+
 OS X
 ---
 
