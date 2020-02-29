@@ -14039,7 +14039,9 @@ handle_request(struct mg_connection *conn)
 			/* callback already processed the request. Store the
 			   return value as a status code for the access log. */
 			conn->status_code = i;
-			discard_unread_request_data(conn);
+			if (!conn->must_close) {
+				discard_unread_request_data(conn);
+			}
 			return;
 		} else if (i == 0) {
 			/* civetweb should process the request */
@@ -14236,7 +14238,9 @@ handle_request(struct mg_connection *conn)
 				 * then return value as status code for the log and discard
 				 * all data from the client not used by the callback. */
 				conn->status_code = i;
-				discard_unread_request_data(conn);
+				if (!conn->must_close) {
+					discard_unread_request_data(conn);
+				}
 			} else {
 				/* The handler did NOT handle the request. */
 				/* Some proper reactions would be:
