@@ -10897,7 +10897,7 @@ forward_body_data(struct mg_connection *conn, FILE *fp, SOCKET sock, SSL *ssl)
 #if !defined(NO_CGI)
 /* This structure helps to create an environment for the spawned CGI
  * program.
- * Environment is an array of "VARIABLE=VALUE\0" ASCIIZ strings,
+ * Environment is an array of "VARIABLE=VALUE\0" ASCII strings,
  * last element must be NULL.
  * However, on Windows there is a requirement that all these
  * VARIABLE=VALUE\0
