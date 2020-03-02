@@ -1800,6 +1800,18 @@ typedef struct SSL_CTX SSL_CTX;
 #include "wolfssl_extras.inl"
 #endif
 
+#if defined(OPENSSL_IS_BORINGSSL)
+/* From boringssl/src/include/openssl/mem.h:
+ *
+ * OpenSSL has, historically, had a complex set of malloc debugging options.
+ * However, that was written in a time before Valgrind and ASAN. Since we now
+ * have those tools, the OpenSSL allocation functions are simply macros around
+ * the standard memory functions.
+ *
+ * #define OPENSSL_free free */
+#define free free
+#endif
+
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 /* If OpenSSL headers are included, automatically select the API version */
 #if !defined(OPENSSL_API_1_1)
