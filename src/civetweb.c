@@ -1812,6 +1812,7 @@ typedef struct SSL_CTX SSL_CTX;
 #define free free
 // disable for boringssl
 #define CONF_modules_unload(a) ((void)0)
+#define ENGINE_cleanup() ((void)0)
 #endif
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
@@ -16422,9 +16423,7 @@ uninitialize_ssl(void)
 		 */
 		CRYPTO_set_locking_callback(NULL);
 		CRYPTO_set_id_callback(NULL);
-#if !defined(OPENSSL_NO_ENGINE)
 		ENGINE_cleanup();
-#endif
 		CONF_modules_unload(1);
 		ERR_free_strings();
 		EVP_cleanup();
