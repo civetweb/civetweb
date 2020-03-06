@@ -1810,6 +1810,9 @@ typedef struct SSL_CTX SSL_CTX;
  *
  * #define OPENSSL_free free */
 #define free free
+// disable for boringssl
+#define CONF_modules_unload(a) ((void)0)
+#define ENGINE_cleanup() ((void)0)
 #endif
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
