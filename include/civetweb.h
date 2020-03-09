@@ -754,7 +754,7 @@ struct mg_server_port {
    This function returns the number of struct mg_server_port elements
    filled in, or <0 in case of an error. */
 CIVETWEB_API int mg_get_server_ports(const struct mg_context *ctx,
-                                     int size,
+                                     unsigned int size,
                                      struct mg_server_port *ports);
 
 

@@ -7,7 +7,7 @@
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 |**`ctx`**|`const struct mg_context *`|The context for which the server ports are requested|
-|**`size`**|`int`|The size of the buffer to store the port information|
+|**`size`**|`unsigned int`|The size of the buffer to store the port information|
 |**`ports`**|`struct mg_server_port *`|Buffer to store the port information|
 
 ### Return Value

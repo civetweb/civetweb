@@ -638,7 +638,7 @@ CivetServer::getListeningPortsFull()
 {
 	std::vector<struct mg_server_port> server_ports(50);
 	int size = mg_get_server_ports(context,
-	                               (int)server_ports.size(),
+	                               server_ports.size(),
 	                               &server_ports[0]);
 	if (size <= 0) {
 		server_ports.resize(0);
