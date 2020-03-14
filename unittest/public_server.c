@@ -785,8 +785,9 @@ START_TEST(test_mg_server_and_client_tls)
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
 
-	ck_assert_str_ne(client_err, "");
+	/* cannot connect without client certificate */
 	ck_assert(client_conn == NULL);
+	ck_assert_str_ne(client_err, "");
 
 	memset(client_err, 0, sizeof(client_err));
 	memset(&client_options, 0, sizeof(client_options));
