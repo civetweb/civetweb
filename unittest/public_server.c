@@ -786,6 +786,24 @@ START_TEST(test_mg_server_and_client_tls)
 	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
 
 	/* cannot connect without client certificate */
+#if defined(__MACH__)
+	/* except for Apple ????? - Maybe this is specific to TravisCI */
+	if (conn) {
+		mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
+		client_res =
+		    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+		ck_assert_int_ge(client_res, 0);
+		ck_assert_str_eq(client_err, "");
+		client_ri = mg_get_response_info(client_conn);
+		ck_assert(client_ri != NULL);
+		
+		ck_abort_msg("Connected to a host without valid client cert. Server response: %u", client_ri->status_code);
+		
+		mg_close_connection(client_conn);
+		client_conn == NULL;
+		strcpy(client_err, "OpenSSL on MacOS");
+	}
+#endif
 	ck_assert(client_conn == NULL);
 	ck_assert_str_ne(client_err, "");
 
