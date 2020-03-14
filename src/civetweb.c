@@ -234,6 +234,9 @@ static void DEBUG_TRACE_FUNC(const char *func,
 	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
 
 #define NEED_DEBUG_TRACE_FUNC
+#ifndef DEBUG_TRACE_STREAM
+# define DEBUG_TRACE_STREAM   stdout
+#endif
 
 #else
 #define DEBUG_TRACE(fmt, ...)                                                  \
@@ -1743,8 +1746,8 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 		nslast = nsnow;
 	}
 
-	flockfile(stdout);
-	printf("*** %lu.%09lu %12" INT64_FMT " %lu %s:%u: ",
+	flockfile(DEBUG_TRACE_STREAM);
+	fprintf( DEBUG_TRACE_STREAM,"*** %lu.%09lu %12" INT64_FMT " %lu %s:%u: ",
 	       (unsigned long)tsnow.tv_sec,
 	       (unsigned long)tsnow.tv_nsec,
 	       nsnow - nslast,
@@ -1752,11 +1755,11 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	       func,
 	       line);
 	va_start(args, fmt);
-	vprintf(fmt, args);
+	vfprintf(DEBUG_TRACE_STREAM, fmt, args);
 	va_end(args);
-	putchar('\n');
-	fflush(stdout);
-	funlockfile(stdout);
+	putc('\n', DEBUG_TRACE_STREAM);
+	fflush(DEBUG_TRACE_STREAM);
+	funlockfile(DEBUG_TRACE_STREAM);
 	nslast = nsnow;
 }
 #endif /* NEED_DEBUG_TRACE_FUNC */
