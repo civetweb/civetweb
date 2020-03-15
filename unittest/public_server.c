@@ -798,7 +798,7 @@ START_TEST(test_mg_server_and_client_tls)
 		ck_assert(client_ri == NULL);
 		
 		mg_close_connection(client_conn);
-		client_conn == NULL;
+		client_conn = NULL;
 		strcpy(client_err, "OpenSSL on MacOS allows to connect without a mandatory client certificate, but not data exchange");
 	}
 #endif
