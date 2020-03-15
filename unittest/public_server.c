@@ -787,12 +787,12 @@ START_TEST(test_mg_server_and_client_tls)
 
 	/* cannot connect without client certificate */
 #if defined(__MACH__)
-	/* except for Apple ????? - Maybe this is specific to TravisCI */
+	/* except for Apple (maybe this is specific to the MacOS container on TravisCI?) */
 	if (client_conn) {
 		mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 		client_res =
 		    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
-		ck_assert_int_ge(client_res, 0);
+		ck_assert_int_lt(client_res, 0); /* response is "error" (-1) */
 		ck_assert_str_eq(client_err, "");
 		client_ri = mg_get_response_info(client_conn);
 		ck_assert(client_ri != NULL);
