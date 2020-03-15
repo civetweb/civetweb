@@ -793,15 +793,13 @@ START_TEST(test_mg_server_and_client_tls)
 		client_res =
 		    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
 		ck_assert_int_lt(client_res, 0); /* response is "error" (-1) */
-		ck_assert_str_eq(client_err, "");
+		ck_assert_str_ne(client_err, "");
 		client_ri = mg_get_response_info(client_conn);
-		ck_assert(client_ri != NULL);
-		
-		ck_abort_msg("Connected to a host without valid client cert. Server response: %u", client_ri->status_code);
+		ck_assert(client_ri == NULL);
 		
 		mg_close_connection(client_conn);
 		client_conn == NULL;
-		strcpy(client_err, "OpenSSL on MacOS");
+		strcpy(client_err, "OpenSSL on MacOS allows to connect without a mandatory client certificate, but not data exchange");
 	}
 #endif
 	ck_assert(client_conn == NULL);
