@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018 the Civetweb developers
+/* Copyright (c) 2015-2020 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -788,7 +788,7 @@ START_TEST(test_mg_server_and_client_tls)
 	/* cannot connect without client certificate */
 #if defined(__MACH__)
 	/* except for Apple ????? - Maybe this is specific to TravisCI */
-	if (conn) {
+	if (client_conn) {
 		mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 		client_res =
 		    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
