@@ -31,7 +31,7 @@ cp resources/Makefile.in-os cov_build/resources/
 cd cov_build
 
 # new scan build
-../../cov-analysis-linux64-2017.07/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_SERVER_STATS=1 WITH_EXPERIMENTAL=1
+../../cov-analysis-linux64-2019.03/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_SERVER_STATS=1 WITH_EXPERIMENTAL=1
 
 
 # pack build results for upload

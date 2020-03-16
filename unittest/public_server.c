@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018 the Civetweb developers
+/* Copyright (c) 2015-2020 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -785,8 +785,25 @@ START_TEST(test_mg_server_and_client_tls)
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
 
-	ck_assert_str_ne(client_err, "");
+	/* cannot connect without client certificate */
+#if defined(__MACH__)
+	/* except for Apple (maybe this is specific to the MacOS container on TravisCI?) */
+	if (client_conn) {
+		mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
+		client_res =
+		    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+		ck_assert_int_lt(client_res, 0); /* response is "error" (-1) */
+		ck_assert_str_ne(client_err, "");
+		client_ri = mg_get_response_info(client_conn);
+		ck_assert(client_ri == NULL);
+		
+		mg_close_connection(client_conn);
+		client_conn = NULL;
+		strcpy(client_err, "OpenSSL on MacOS allows to connect without a mandatory client certificate, but not data exchange");
+	}
+#endif
 	ck_assert(client_conn == NULL);
+	ck_assert_str_ne(client_err, "");
 
 	memset(client_err, 0, sizeof(client_err));
 	memset(&client_options, 0, sizeof(client_options));
