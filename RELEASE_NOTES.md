@@ -1,10 +1,14 @@
 Release Notes v1.12
 ===
-### Objectives: *TO BE DEFINED*
+### Objectives: *Multiple improvements and extensions in various areas, including compatibility, Lua scripting, documentation*
 
 Changes
 -------
 
+- Updates/improvements for LuaXML
+- Updates and tests for JSON for Lua
+- BoringSSL support
+- Add Remark: Do not use Git for Windows V2.24 (but <= V2.23 or >= V2.25)
 - Format configuration dialogs for Windows
 - Add option "hide_tray" to start without Windows systray icon
 - URI checking according to "remove_dot_segments" algorithm from RFC
