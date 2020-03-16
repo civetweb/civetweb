@@ -9562,7 +9562,7 @@ static void *
 realloc2(void *ptr, size_t size)
 {
 	void *new_ptr = mg_realloc(ptr, size);
-	if (new_ptr == NULL) {
+	if ((new_ptr == NULL) && (size > 0)) {
 		mg_free(ptr);
 	}
 	return new_ptr;
@@ -17102,8 +17102,8 @@ mg_connect_client2(const char *host,
 	opts.port = port;
 	return mg_connect_client_impl(&opts,
 	                              is_ssl,
-	                              error->text,
-	                              error->text_buffer_size);
+	                              ((error != NULL) ? error->text : NULL),
+	                              ((error != NULL) ? error->text_buffer_size : 0));
 }
 #endif
 
@@ -19717,6 +19717,7 @@ mg_start_domain2(struct mg_context *ctx,
 				            config_options[AUTHENTICATION_DOMAIN].name);
 			}
 			mg_free(new_dom);
+			mg_unlock_context(ctx);
 			return -5;
 		}
 
