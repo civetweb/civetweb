@@ -2165,6 +2165,13 @@ add_control(struct dlg_complete *dlg,
 	LPWORD p;
 	WORD cap_len = caption ? (WORD)strlen(caption) : 0;
 	int i;
+	DWORD expected_size = sizeof(DLGITEMTEMPLATE) + 4 + (cap_len + 1) * 2 + 2;
+
+	if ((dlg->used + expected_size + /* alignment */ 16)
+	    >= sizeof(dlg->elements)) {
+		/* out if memory protection */
+		return;
+	}
 
 	/* Add one child element */
 	dlg->header.dlg_template.cdit++;
@@ -2193,9 +2200,10 @@ add_control(struct dlg_complete *dlg,
 
 	/* add title */
 	p = (LPWORD)(dlg->elements + dlg->used);
-	for (i = 0; i <= cap_len; i++) {
+	for (i = 0; i < cap_len; i++) {
 		p[i] = (WCHAR)caption[i];
 	}
+	p[cap_len] = 0;
 	dlg->used += (cap_len + 1) * sizeof(*p);
 
 	/* align to 2 bytes */
