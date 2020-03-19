@@ -683,7 +683,7 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			if (part_no == 0) {
 				int d = 0;
-				while ((buf[d] != '-') && (d < buf_fill)) {
+				while ((d < buf_fill) && (buf[d] != '-')) {
 					d++;
 				}
 				if ((d > 0) && (buf[d] == '-')) {
@@ -979,7 +979,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 			}
 
-			towrite = (size_t)(next - hend);
+			towrite = (next ? (size_t)(next - hend) : 0);
 
 			if (field_storage == MG_FORM_FIELD_STORAGE_GET) {
 				/* Call callback */

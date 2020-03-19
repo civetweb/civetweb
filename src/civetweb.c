@@ -5238,7 +5238,7 @@ change_slashes_to_backslashes(char *path)
 
 		/* remove double backslash (check i > 0 to preserve UNC paths,
 		 * like \\server\file.txt) */
-		if ((path[i] == '\\') && (i > 0)) {
+		if ((i > 0) && (path[i] == '\\')) {
 			while ((path[i + 1] == '\\') || (path[i + 1] == '/')) {
 				(void)memmove(path + i + 1, path + i + 2, strlen(path + i + 1));
 			}
@@ -7901,11 +7901,16 @@ remove_dot_segments(char *inout)
 	/* Windows backend protection
 	 * (https://tools.ietf.org/html/rfc3986#section-7.3): Replace backslash in
 	 * URI by slash */
-	char *in_copy = mg_strdup(inout);
+	char *in_copy = inout ? mg_strdup(inout) : NULL;
 	char *out_begin = inout;
 	char *out_end = inout;
 	char *in = in_copy;
 	int replaced;
+
+	if (!in) {
+		/* Param error or OOM. */
+		return;
+	}
 
 	while (*in) {
 		if (*in == '\\') {
@@ -19852,7 +19857,9 @@ mg_get_system_info(char *buffer, int buflen)
 	if (buflen > (int)(sizeof(eoobj) - 1)) {
 		/* has enough space to append eoobj */
 		append_eoobj = buffer;
-		end -= sizeof(eoobj) - 1;
+		if (end) {
+			end -= sizeof(eoobj) - 1;
+		}
 	}
 
 	system_info_length += mg_str_append(&buffer, end, "{");
