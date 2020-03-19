@@ -787,7 +787,8 @@ START_TEST(test_mg_server_and_client_tls)
 
 	/* cannot connect without client certificate */
 #if defined(__MACH__)
-	/* except for Apple (maybe this is specific to the MacOS container on TravisCI?) */
+	/* except for Apple (maybe this is specific to the MacOS container on
+	 * TravisCI?) */
 	if (client_conn) {
 		mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 		client_res =
@@ -796,10 +797,12 @@ START_TEST(test_mg_server_and_client_tls)
 		ck_assert_str_ne(client_err, "");
 		client_ri = mg_get_response_info(client_conn);
 		ck_assert(client_ri == NULL);
-		
+
 		mg_close_connection(client_conn);
 		client_conn = NULL;
-		strcpy(client_err, "OpenSSL on MacOS allows to connect without a mandatory client certificate, but not data exchange");
+		strcpy(client_err,
+		       "OpenSSL on MacOS allows to connect without a mandatory client "
+		       "certificate, but not data exchange");
 	}
 #endif
 	ck_assert(client_conn == NULL);

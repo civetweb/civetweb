@@ -235,7 +235,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 
 #define NEED_DEBUG_TRACE_FUNC
 #ifndef DEBUG_TRACE_STREAM
-# define DEBUG_TRACE_STREAM   stdout
+#define DEBUG_TRACE_STREAM stdout
 #endif
 
 #else
@@ -585,7 +585,7 @@ typedef long off_t;
 #define CRYPTO_LIB "libeay64.dll"
 #endif /* OPENSSL_API_1_1 */
 #endif /* CRYPTO_LIB */
-#else /* defined(_WIN64) || defined(__MINGW64__) */
+#else  /* defined(_WIN64) || defined(__MINGW64__) */
 #if !defined(SSL_LIB)
 #define SSL_LIB "ssleay32.dll"
 #endif /* SSL_LIB */
@@ -1747,13 +1747,14 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	}
 
 	flockfile(DEBUG_TRACE_STREAM);
-	fprintf( DEBUG_TRACE_STREAM,"*** %lu.%09lu %12" INT64_FMT " %lu %s:%u: ",
-	       (unsigned long)tsnow.tv_sec,
-	       (unsigned long)tsnow.tv_nsec,
-	       nsnow - nslast,
-	       thread_id,
-	       func,
-	       line);
+	fprintf(DEBUG_TRACE_STREAM,
+	        "*** %lu.%09lu %12" INT64_FMT " %lu %s:%u: ",
+	        (unsigned long)tsnow.tv_sec,
+	        (unsigned long)tsnow.tv_nsec,
+	        nsnow - nslast,
+	        thread_id,
+	        func,
+	        line);
 	va_start(args, fmt);
 	vfprintf(DEBUG_TRACE_STREAM, fmt, args);
 	va_end(args);
@@ -17087,16 +17088,17 @@ mg_connect_client2(const char *host,
 #if defined(USE_WEBSOCKET)
 	if (is_ws) {
 		/* TODO: implement all options */
-		return mg_connect_websocket_client(host,
-		                                   port,
-		                                   is_ssl,
-		                                   ((error != NULL) ? error->text : NULL),
-		                                   ((error != NULL) ? error->text_buffer_size : 0),
-		                                   (path ? path : ""),
-		                                   NULL /* TODO: origin */,
-		                                   deprecated_websocket_data_wrapper,
-		                                   deprecated_websocket_close_wrapper,
-		                                   (void *)init->callbacks);
+		return mg_connect_websocket_client(
+		    host,
+		    port,
+		    is_ssl,
+		    ((error != NULL) ? error->text : NULL),
+		    ((error != NULL) ? error->text_buffer_size : 0),
+		    (path ? path : ""),
+		    NULL /* TODO: origin */,
+		    deprecated_websocket_data_wrapper,
+		    deprecated_websocket_close_wrapper,
+		    (void *)init->callbacks);
 	}
 #endif
 
@@ -17108,7 +17110,8 @@ mg_connect_client2(const char *host,
 	return mg_connect_client_impl(&opts,
 	                              is_ssl,
 	                              ((error != NULL) ? error->text : NULL),
-	                              ((error != NULL) ? error->text_buffer_size : 0));
+	                              ((error != NULL) ? error->text_buffer_size
+	                                               : 0));
 }
 #endif
 

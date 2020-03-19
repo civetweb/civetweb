@@ -2196,7 +2196,7 @@ add_control(struct dlg_complete *dlg,
 	for (i = 0; i <= cap_len; i++) {
 		p[i] = (WCHAR)caption[i];
 	}
-	dlg->used += (cap_len+1) * sizeof(*p);
+	dlg->used += (cap_len + 1) * sizeof(*p);
 
 	/* align to 2 bytes */
 	while (dlg->used % 2) {
