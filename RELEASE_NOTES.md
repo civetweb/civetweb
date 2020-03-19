@@ -1,3 +1,13 @@
+Release Notes v1.13
+===
+### *work in progress*
+
+Changes
+-------
+
+- Update version number
+
+
 Release Notes v1.12
 ===
 ### Objectives: *Multiple improvements and extensions in various areas, including compatibility, Lua scripting, documentation*
