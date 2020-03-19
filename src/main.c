@@ -1548,16 +1548,6 @@ show_error(void)
 }
 
 
-static void *
-align(void *ptr, uintptr_t alig)
-{
-	uintptr_t ul = (uintptr_t)ptr;
-	ul += alig;
-	ul &= ~alig;
-	return ((void *)ul);
-}
-
-
 static void
 save_config(HWND hDlg, FILE *fp)
 {
@@ -1607,38 +1597,41 @@ struct dlg_header_param {
 	WORD menu, dlg_class;
 	wchar_t caption[1];
 	WORD fontsize;
-	wchar_t fontface[7];
+	wchar_t fontface[7]; /* L"Tahoma" = 6 characters + terminating zero */
+};
+
+/* complete data required to create a dialog including child elements */
+struct dlg_complete {
+	struct dlg_header_param header;
+	/* TODO: if sizeof(header)%4 is not 0, add some filling bytes here */
+	BYTE elements[4096 * 2];
+	int used;
 };
 
 
-static struct dlg_header_param
-GetDlgHeader(const short width)
+static void
+FillDialogHeader(struct dlg_complete *dlg, const short width)
 {
-#if defined(_MSC_VER)
-/* disable MSVC warning C4204 (non-constant used to initialize structure) */
-#pragma warning(push)
-#pragma warning(disable : 4204)
-#endif /* if defined(_MSC_VER) */
+	memset(dlg, 0, sizeof(*dlg));
 
-	struct dlg_header_param dialog_header = {
-	    /* DLGTEMPLATE */
-	    {/* style */ WS_CAPTION | WS_POPUP | WS_SYSMENU | WS_VISIBLE
-	         | DS_SETFONT | DS_CENTER | WS_DLGFRAME,
-	     /* extstyle */ WS_EX_TOOLWINDOW,
-	     /* cdit */ 0,
-	     /* x ignored by DS_CENTER */ 0,
-	     /* y ignored by DS_CENTER */ 0,
-	     width,
-	     /* height - to be calculated */ 0},
-	    /* menu */ 0,
-	    /* dlg_class */ 0,
-	    /* caption */ L"",
-	    /* fontsize */ 8,
-	    /* font */ L"Tahoma"};
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif /* if defined(_MSC_VER) */
-	return dialog_header;
+	dlg->header.dlg_template.style = WS_CAPTION | WS_POPUP | WS_SYSMENU
+	                                 | WS_VISIBLE | DS_SETFONT | DS_CENTER
+	                                 | WS_DLGFRAME;
+	dlg->header.dlg_template.dwExtendedStyle = WS_EX_TOOLWINDOW;
+	dlg->header.dlg_template.cdit = 0;
+	dlg->header.dlg_template.x = 0; /* ignored by DS_CENTER */
+	dlg->header.dlg_template.y = 0; /* ignored by DS_CENTER */
+	dlg->header.dlg_template.cx = width;
+	dlg->header.dlg_template.cy =
+	    0; /* to be calculated after adding elements */
+	dlg->header.menu = 0;
+	dlg->header.dlg_class = 0;
+	dlg->header.caption[0] = (wchar_t)0;
+	dlg->header.fontsize = 8;
+	wcscpy(dlg->header.fontface, L"Tahoma");
+
+	/* counting used bytes */
+	dlg->used = 0;
 }
 
 
@@ -1926,8 +1919,7 @@ suggest_passwd(char *passwd)
 }
 
 
-static void add_control(unsigned char **mem,
-                        DLGTEMPLATE *dia,
+static void add_control(struct dlg_complete *dlg,
                         WORD type,
                         WORD id,
                         DWORD style,
@@ -1950,13 +1942,10 @@ get_password(const char *user,
 	short LABEL_WIDTH = 90;
 
 	/* Other variables */
-	unsigned char mem[4096], *p;
-	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
+	struct dlg_complete dlg;
+	static struct dlg_proc_param s_dlg_proc_param;
 	int ok;
 	short y;
-	static struct dlg_proc_param s_dlg_proc_param;
-
-	const struct dlg_header_param dialog_header = GetDlgHeader(WIDTH);
 
 	DEBUG_ASSERT((user != NULL) && (realm != NULL) && (passwd != NULL));
 
@@ -1968,6 +1957,8 @@ get_password(const char *user,
 		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return 0;
 	}
+
+	FillDialogHeader(&dlg, WIDTH);
 
 	/* Do not open a password dialog, if the username is empty */
 	if (user[0] == 0) {
@@ -1984,14 +1975,8 @@ get_password(const char *user,
 	s_dlg_proc_param.buflen = passwd_len;
 
 	/* Create the dialog */
-	(void)memset(mem, 0, sizeof(mem));
-	p = mem;
-	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
-	p = mem + sizeof(dialog_header);
-
 	y = HEIGHT;
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_VISIBLE | WS_CHILD,
@@ -2000,8 +1985,7 @@ get_password(const char *user,
 	            LABEL_WIDTH,
 	            HEIGHT,
 	            "User:");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x81,
 	            ID_CONTROLS + 1,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2013,8 +1997,7 @@ get_password(const char *user,
 	            user);
 
 	y += HEIGHT;
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_VISIBLE | WS_CHILD,
@@ -2023,8 +2006,7 @@ get_password(const char *user,
 	            LABEL_WIDTH,
 	            HEIGHT,
 	            "Realm:");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x81,
 	            ID_CONTROLS + 2,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2036,8 +2018,7 @@ get_password(const char *user,
 	            realm);
 
 	y += HEIGHT;
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_VISIBLE | WS_CHILD,
@@ -2046,8 +2027,7 @@ get_password(const char *user,
 	            LABEL_WIDTH,
 	            HEIGHT,
 	            "Password:");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x81,
 	            ID_INPUT_LINE,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP,
@@ -2058,8 +2038,7 @@ get_password(const char *user,
 	            "");
 
 	y += (WORD)(HEIGHT * 2);
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            IDOK,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2068,8 +2047,7 @@ get_password(const char *user,
 	            55,
 	            12,
 	            "Ok");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            IDCANCEL,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2079,16 +2057,17 @@ get_password(const char *user,
 	            12,
 	            "Cancel");
 
-	DEBUG_ASSERT((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
-
-	dia->cy = y + (WORD)(HEIGHT * 1.5);
+	dlg.header.dlg_template.cy = y + (WORD)(HEIGHT * 1.5);
 
 	s_dlg_proc_param.name = "Modify password";
 	s_dlg_proc_param.fRetry = NULL;
 
 	ok = (IDOK
-	      == DialogBoxIndirectParam(
-	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	      == DialogBoxIndirectParam(NULL,
+	                                &dlg.header.dlg_template,
+	                                NULL,
+	                                InputDlgProc,
+	                                (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
@@ -2172,8 +2151,7 @@ PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 
 
 static void
-add_control(unsigned char **mem,
-            DLGTEMPLATE *dia,
+add_control(struct dlg_complete *dlg,
             WORD type,
             WORD id,
             DWORD style,
@@ -2185,12 +2163,19 @@ add_control(unsigned char **mem,
 {
 	DLGITEMTEMPLATE *tp;
 	LPWORD p;
+	WORD cap_len = caption ? (WORD)strlen(caption) : 0;
+	int i;
 
-	dia->cdit++;
+	/* Add one child element */
+	dlg->header.dlg_template.cdit++;
 
-	*mem = (unsigned char *)align(*mem, 3);
-	tp = (DLGITEMTEMPLATE *)*mem;
+	/* align to 4 bytes */
+	while (dlg->used % 4) {
+		dlg->used++;
+	}
 
+	/* start with DLGITEMTEMPLATE structure */
+	tp = (DLGITEMTEMPLATE *)(dlg->elements + dlg->used);
 	tp->id = id;
 	tp->style = style;
 	tp->dwExtendedStyle = 0;
@@ -2198,19 +2183,30 @@ add_control(unsigned char **mem,
 	tp->y = y;
 	tp->cx = cx;
 	tp->cy = cy;
+	dlg->used += sizeof(*tp);
 
-	p = (LPWORD)align(*mem + sizeof(*tp), 1);
-	*p++ = 0xffff;
-	*p++ = type;
+	/* add class */
+	p = (LPWORD)(dlg->elements + dlg->used);
+	p[0] = 0xffff;
+	p[1] = type;
+	dlg->used += 2 * sizeof(*p);
 
-	while (*caption != '\0') {
-		*p++ = (WCHAR)*caption++;
+	/* add title */
+	p = (LPWORD)(dlg->elements + dlg->used);
+	for (i = 0; i <= cap_len; i++) {
+		p[i] = (WCHAR)caption[i];
 	}
-	*p++ = 0;
-	p = (LPWORD)align(p, 1);
+	dlg->used += (cap_len+1) * sizeof(*p);
 
-	*p++ = 0;
-	*mem = (unsigned char *)p;
+	/* align to 2 bytes */
+	while (dlg->used % 2) {
+		dlg->used++;
+	}
+
+	/* add creation data */
+	p = (LPWORD)(dlg->elements + dlg->used);
+	*p = 0;
+	dlg->used += sizeof(*p);
 }
 
 
@@ -2220,6 +2216,7 @@ show_settings_dialog()
 	/* Parameter for size/format tuning of the dialog */
 	short HEIGHT = 15;
 	short BORDER_WIDTH = 10;
+	short BORDER_HEIGTH = BORDER_WIDTH / 2;
 	short CELL_WIDTH = 125;
 	short LABEL_WIDTH = 115;
 	short FILE_DIALOG_BUTTON_WIDTH = 15;
@@ -2233,17 +2230,14 @@ show_settings_dialog()
 	short DIALOG_WIDTH = BORDER_WIDTH + NO_OF_COLUMNS * COLUMN_WIDTH;
 
 	/* All other variables */
-	unsigned char mem[16 * 1024], *p;
 	const struct mg_option *cv_options;
 	DWORD style;
-	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	WORD i, cl, nelems = 0;
 	short x, y, next_cell_width, next_cell_height;
 	static struct dlg_proc_param s_dlg_proc_param;
 	short *option_index, *option_top, *option_bottom;
 	char text[64];
-
-	const struct dlg_header_param dialog_header = GetDlgHeader(DIALOG_WIDTH);
+	struct dlg_complete dlg;
 
 	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
@@ -2253,10 +2247,7 @@ show_settings_dialog()
 		return;
 	}
 
-	(void)memset(mem, 0, sizeof(mem));
-	p = mem;
-	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
-	p = mem + sizeof(dialog_header);
+	FillDialogHeader(&dlg, DIALOG_WIDTH);
 
 	/* Determine space required for input fields */
 	cv_options = mg_get_valid_options();
@@ -2280,8 +2271,12 @@ show_settings_dialog()
 	 */
 	option_index = (short *)calloc(NO_OF_OPTIONS + 2 * NO_OF_COLUMNS,
 	                               sizeof(short)); /* 1 */
-	option_top = option_index + NO_OF_OPTIONS;     /* 2 */
-	option_bottom = option_top + NO_OF_COLUMNS;    /* 3 */
+	if (!option_index) {
+		/* unlikely case of "out of memory" */
+		return;
+	}
+	option_top = option_index + NO_OF_OPTIONS;  /* 2 */
+	option_bottom = option_top + NO_OF_COLUMNS; /* 3 */
 
 	/* Initialize option order */
 	for (i = 0; i < NO_OF_OPTIONS; i++) {
@@ -2323,7 +2318,7 @@ show_settings_dialog()
 
 		/* Position and size of the input field (will be modified) */
 		x = BORDER_WIDTH + COLUMN_WIDTH * (nelems / NO_OF_ROWS);
-		y = BORDER_WIDTH / 2 + HEIGHT + HEIGHT * (nelems % NO_OF_ROWS);
+		y = BORDER_HEIGTH + HEIGHT + HEIGHT * (nelems % NO_OF_ROWS);
 		next_cell_width = CELL_WIDTH;
 		next_cell_height = HEIGHT - 3;
 
@@ -2351,8 +2346,7 @@ show_settings_dialog()
 			cl = 0x81;
 
 			/* Additional button for file dialog */
-			add_control(&p,
-			            dia,
+			add_control(&dlg,
 			            0x80,
 			            ID_CONTROLS + option_index[i] + ID_FILE_BUTTONS_DELTA,
 			            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
@@ -2381,8 +2375,7 @@ show_settings_dialog()
 		}
 
 		/* Add label (static text) */
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x82,
 		            ID_STATIC,
 		            WS_VISIBLE | WS_CHILD,
@@ -2393,8 +2386,7 @@ show_settings_dialog()
 		            opt->name);
 
 		/* Add input field */
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            cl,
 		            ID_CONTROLS + option_index[i],
 		            style,
@@ -2404,8 +2396,6 @@ show_settings_dialog()
 		            next_cell_height,
 		            "");
 		nelems++;
-
-		DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 	}
 
 	/* "Settings" frame around all options */
@@ -2415,8 +2405,7 @@ show_settings_dialog()
 		        " Settings %c - %c ",
 		        cv_options[option_top[i]].name[0],
 		        cv_options[option_bottom[i]].name[0]);
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x80,
 		            ID_GROUP,
 		            WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
@@ -2430,8 +2419,7 @@ show_settings_dialog()
 
 	/* Buttons below "Settings" frame */
 	y += HEIGHT;
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            ID_SAVE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2440,8 +2428,7 @@ show_settings_dialog()
 	            65,
 	            12,
 	            "Save Settings");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            ID_RESET_DEFAULTS,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2450,8 +2437,7 @@ show_settings_dialog()
 	            65,
 	            12,
 	            "Reset to defaults");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            ID_RESET_FILE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2460,8 +2446,7 @@ show_settings_dialog()
 	            65,
 	            12,
 	            "Reload from file");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            ID_RESET_ACTIVE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2470,8 +2455,7 @@ show_settings_dialog()
 	            65,
 	            12,
 	            "Reload active");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_CHILD | WS_VISIBLE | WS_DISABLED,
@@ -2481,16 +2465,16 @@ show_settings_dialog()
 	            12,
 	            g_server_base_name);
 
-	/* Check befor every release */
-	DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
-
 	/* Calculate total height of the dialog */
-	dia->cy = y + HEIGHT;
+	dlg.header.dlg_template.cy = y + HEIGHT;
 
 	s_dlg_proc_param.fRetry = NULL;
 
-	DialogBoxIndirectParam(
-	    NULL, dia, NULL, SettingsDlgProc, (LPARAM)&s_dlg_proc_param);
+	DialogBoxIndirectParam(NULL,
+	                       &dlg.header.dlg_template,
+	                       NULL,
+	                       SettingsDlgProc,
+	                       (LPARAM)&s_dlg_proc_param);
 
 	free(option_index);
 
@@ -2514,12 +2498,9 @@ change_password_file()
 	HWND hDlg = NULL;
 	FILE *f;
 	short y, nelems;
-	unsigned char mem[4096], *p;
-	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	const char *domain = mg_get_option(g_ctx, "authentication_domain");
 	static struct dlg_proc_param s_dlg_proc_param;
-
-	const struct dlg_header_param dialog_header = GetDlgHeader(WIDTH);
+	struct dlg_complete dlg;
 
 	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
@@ -2554,10 +2535,8 @@ change_password_file()
 
 	do {
 		s_dlg_proc_param.hWnd = NULL;
-		(void)memset(mem, 0, sizeof(mem));
-		p = mem;
-		(void)memcpy(p, &dialog_header, sizeof(dialog_header));
-		p = mem + sizeof(dialog_header);
+
+		FillDialogHeader(&dlg, WIDTH);
 
 		f = fopen(path, "r+");
 		if (!f) {
@@ -2574,8 +2553,7 @@ change_password_file()
 			u[255] = 0;
 			d[255] = 0;
 			y = (nelems + 1) * HEIGHT + 5;
-			add_control(&p,
-			            dia,
+			add_control(&dlg,
 			            0x80,
 			            ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA * 3,
 			            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2584,8 +2562,7 @@ change_password_file()
 			            65,
 			            12,
 			            "Modify password");
-			add_control(&p,
-			            dia,
+			add_control(&dlg,
 			            0x80,
 			            ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA * 2,
 			            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2594,8 +2571,7 @@ change_password_file()
 			            55,
 			            12,
 			            "Remove user");
-			add_control(&p,
-			            dia,
+			add_control(&dlg,
 			            0x81,
 			            ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA,
 			            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2605,8 +2581,7 @@ change_password_file()
 			            60,
 			            12,
 			            d);
-			add_control(&p,
-			            dia,
+			add_control(&dlg,
 			            0x81,
 			            ID_CONTROLS + nelems,
 			            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2618,13 +2593,11 @@ change_password_file()
 			            u);
 
 			nelems++;
-			DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 		}
 		fclose(f);
 
 		y = (nelems + 1) * HEIGHT + 10;
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x80,
 		            ID_ADD_USER,
 		            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2633,8 +2606,7 @@ change_password_file()
 		            55,
 		            12,
 		            "Add user");
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x81,
 		            ID_ADD_USER_NAME,
 		            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2644,8 +2616,7 @@ change_password_file()
 		            100,
 		            12,
 		            "");
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x81,
 		            ID_ADD_USER_REALM,
 		            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2657,8 +2628,7 @@ change_password_file()
 		            domain);
 
 		y = (nelems + 2) * HEIGHT + 10;
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x80,
 		            ID_GROUP,
 		            WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
@@ -2669,8 +2639,7 @@ change_password_file()
 		            " Users ");
 
 		y += HEIGHT;
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x82,
 		            ID_STATIC,
 		            WS_CHILD | WS_VISIBLE | WS_DISABLED,
@@ -2680,18 +2649,18 @@ change_password_file()
 		            12,
 		            g_server_base_name);
 
-		DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
-
-		dia->cy = y + 20;
+		dlg.header.dlg_template.cy = y + 20;
 
 		s_dlg_proc_param.name = path;
 		s_dlg_proc_param.fRetry = NULL;
 
-	} while (
-	    (IDOK
-	     == DialogBoxIndirectParam(
-	            NULL, dia, NULL, PasswordDlgProc, (LPARAM)&s_dlg_proc_param))
-	    && (!g_exit_flag));
+	} while ((IDOK
+	          == DialogBoxIndirectParam(NULL,
+	                                    &dlg.header.dlg_template,
+	                                    NULL,
+	                                    PasswordDlgProc,
+	                                    (LPARAM)&s_dlg_proc_param))
+	         && (!g_exit_flag));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
@@ -2734,13 +2703,10 @@ show_system_info()
 	short LABEL_WIDTH = 50;
 
 	/* Other parameters */
-	unsigned char mem[4096], *p;
-	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	int ok;
 	short y;
 	static struct dlg_proc_param s_dlg_proc_param;
-
-	const struct dlg_header_param dialog_header = GetDlgHeader(WIDTH);
+	struct dlg_complete dlg;
 
 	/* Only allow one instance of this dialog to be open. */
 	if (s_dlg_proc_param.guard == 0) {
@@ -2752,14 +2718,10 @@ show_system_info()
 	}
 
 	/* Create the dialog */
-	(void)memset(mem, 0, sizeof(mem));
-	p = mem;
-	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
-	p = mem + sizeof(dialog_header);
+	FillDialogHeader(&dlg, WIDTH);
 
 	y = HEIGHT;
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_VISIBLE | WS_CHILD,
@@ -2768,8 +2730,7 @@ show_system_info()
 	            LABEL_WIDTH,
 	            HEIGHT,
 	            "System Information:");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x81,
 	            ID_CONTROLS + 1,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2782,8 +2743,7 @@ show_system_info()
 
 	y += (WORD)(HEIGHT * 8);
 
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            IDRETRY,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2793,8 +2753,7 @@ show_system_info()
 	            12,
 	            "Reload");
 
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            IDOK,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2804,17 +2763,18 @@ show_system_info()
 	            12,
 	            "Close");
 
-	DEBUG_ASSERT((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
-
-	dia->cy = y + (WORD)(HEIGHT * 1.5);
+	dlg.header.dlg_template.cy = y + (WORD)(HEIGHT * 1.5);
 
 	s_dlg_proc_param.name = "System information";
 	s_dlg_proc_param.fRetry = sysinfo_reload;
 	s_dlg_proc_param.idRetry = ID_CONTROLS + 1; /* Reload field with this ID */
 
 	ok = (IDOK
-	      == DialogBoxIndirectParam(
-	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	      == DialogBoxIndirectParam(NULL,
+	                                &dlg.header.dlg_template,
+	                                NULL,
+	                                InputDlgProc,
+	                                (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
