@@ -8,8 +8,8 @@ CivetWeb uses an [MIT license](https://github.com/civetweb/civetweb/blob/master/
 
 It can also be used by end users as a stand-alone web server. It is available as single executable, no installation is required.
 
-The current stable version is 1.11 - [release notes](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md)
-1.12 is in a release candidate state
+The current stable version is 1.12 - [release notes](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md)
+1.13 is work in progress
 
 End users can download CivetWeb at SourceForge
 [https://sourceforge.net/projects/civetweb/](https://sourceforge.net/projects/civetweb/)
