@@ -1043,9 +1043,13 @@ mg_handle_form_request(struct mg_connection *conn,
 			}
 
 			/* Remove from the buffer */
-			used = next - buf + 2;
-			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
-			buf_fill -= (int)used;
+			if (next) {
+				used = next - buf + 2;
+				memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
+				buf_fill -= (int)used;
+			} else {
+				buf_fill = 0;
+			}
 		}
 
 		/* All parts handled */

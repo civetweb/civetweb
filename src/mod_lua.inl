@@ -2686,6 +2686,9 @@ handle_lsp_request(struct mg_connection *conn,
 	error =
 	    run_lsp(conn, path, addr, filep->stat.size, L, include_history->depth);
 
+	/* pop from stack */
+	include_history->depth--;
+
 cleanup_handle_lsp_request:
 
 	if (L != NULL && ls == NULL)
