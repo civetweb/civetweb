@@ -1122,7 +1122,7 @@ lsp_get_var(lua_State *L)
 	lua_gettable(L, LUA_REGISTRYINDEX);
 	ctx = (struct mg_context *)lua_touserdata(L, -1);
 
-	if (num_args >= 2 && num_args <= 3) {
+	if ((num_args >= 2) && (num_args <= 3)) {
 		char *dst;
 		data = lua_tolstring(L, 1, &data_len);
 		var_name = lua_tostring(L, 2);

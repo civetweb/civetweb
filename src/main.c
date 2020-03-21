@@ -649,6 +649,7 @@ set_option(char **options, const char *name, const char *value)
 		{
 			char *chk = 0;
 			unsigned long num = strtoul(value, &chk, 10);
+			(void)num; /* do not check value, only syntax */
 			if ((chk == NULL) || (*chk != 0) || (chk == value)) {
 				/* invalid number */
 				return 0;
@@ -2981,11 +2982,14 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 
+/* An executable with "Subsystem: Windows" does not have a Console.
+ * Create one manually, if required. */
 static int
 MakeConsole(void)
 {
 	DWORD err;
 	HANDLE hConWnd = GetConsoleWindow();
+	int ok = 1;
 
 	if (hConWnd == NULL) {
 		if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -2993,6 +2997,7 @@ MakeConsole(void)
 			if (!AllocConsole()) {
 				err = GetLastError();
 				if (err == ERROR_ACCESS_DENIED) {
+					ok = 0;
 					MessageBox(NULL,
 					           "Insufficient rights to create a console window",
 					           "Error",
@@ -3005,24 +3010,35 @@ MakeConsole(void)
 		/* Retry to get a console handle */
 		hConWnd = GetConsoleWindow();
 
-		if (hConWnd != NULL) {
+		if (hConWnd == NULL) {
+			ok = 0;
+		} else {
 			/* Reopen console handles according to
 			 * https://stackoverflow.com/questions/9020790/using-stdin-with-an-allocconsole
 			 */
-			freopen("CONIN$", "r", stdin);
-			freopen("CONOUT$", "w", stdout);
-			freopen("CONOUT$", "w", stderr);
+			if (NULL == freopen("CONIN$", "r", stdin)) {
+				ok = 0;
+			}
+			if (NULL == freopen("CONOUT$", "w", stdout)) {
+				ok = 0;
+			}
+			if (NULL == freopen("CONOUT$", "w", stderr)) {
+				ok = 0;
+			}
 		}
 	}
 
-	if (hConWnd != NULL) {
+	if (hConWnd == NULL) {
+		ok = 0;
+	} else {
 		SetConsoleTitle(g_server_name);
 	}
 
-	return (hConWnd != NULL);
+	return ok;
 }
 
 
+/* main() for Windows (Subsystem: Windows). */
 int WINAPI
 WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 {
@@ -3100,6 +3116,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 }
 
 
+/* main() for Windows (Subsystem: Console). */
 int
 main(int argc, char *argv[])
 {
@@ -3215,6 +3232,8 @@ main(int argc, char *argv[])
 
 #else
 
+
+/* main for Linux (and others) */
 int
 main(int argc, char *argv[])
 {

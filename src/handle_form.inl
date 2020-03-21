@@ -962,9 +962,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					mg_free(boundary);
 					return -1;
 				}
-				if (r == 0) {
-					all_data_read = (buf_fill == 0);
-				}
+				/* r==0 already handled, all_data_read is false here */
 
 				buf_fill += r;
 				buf[buf_fill] = 0;

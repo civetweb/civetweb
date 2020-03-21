@@ -44,7 +44,7 @@
 
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
-int exitNow = 0;
+volatile int exitNow = 0;
 
 
 int

@@ -4790,8 +4790,8 @@ mg_send_http_error_impl(struct mg_connection *conn,
 					 */
 					path_buf[sizeof(path_buf) - 32] = 0;
 					len = (int)strlen(path_buf);
-					if (len > sizeof(path_buf) - 32) {
-						len = sizeof(path_buf) - 32;
+					if (len > (int)sizeof(path_buf) - 32) {
+						len = (int)sizeof(path_buf) - 32;
 					}
 
 					/* Start with the file extenstion from the configuration. */
@@ -11694,7 +11694,6 @@ put_file(struct mg_connection *conn, const char *path)
 			/* Check if the server may write this file */
 			if (access(path, W_OK) == 0) {
 				/* Access granted */
-				conn->status_code = 200;
 				rc = 1;
 			} else {
 				mg_send_http_error(
@@ -16038,8 +16037,7 @@ static int
 ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 {
 	struct mg_context *ctx = (struct mg_context *)arg;
-	struct mg_domain_context *dom =
-	    (struct mg_domain_context *)ctx ? &(ctx->dd) : NULL;
+	struct mg_domain_context *dom = ((ctx != NULL) ? &(ctx->dd) : NULL);
 
 #if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic push
