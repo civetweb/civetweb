@@ -1458,6 +1458,17 @@ mg_connect_client_secure(const struct mg_client_options *client_options,
                          size_t error_buffer_size);
 
 
+CIVETWEB_API struct mg_connection *mg_connect_websocket_client_secure(
+    const struct mg_client_options *client_options,
+    char *error_buffer,
+    size_t error_buffer_size,
+    const char *path,
+    const char *origin,
+    mg_websocket_data_handler data_func,
+    mg_websocket_close_handler close_func,
+    void *user_data);
+
+
 #if defined(MG_LEGACY_INTERFACE) /* 2019-11-02 */
 enum { TIMEOUT_INFINITE = -1 };
 #endif

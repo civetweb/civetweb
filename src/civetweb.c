@@ -17784,6 +17784,7 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 
 	int port = client_options->port;
 	const char *host = client_options->host;
+	int i;
 
 	if (origin != NULL) {
 		handshake_req = "GET %s HTTP/1.1\r\n"
@@ -17810,16 +17811,32 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 #endif
 
 	/* Establish the client connection and request upgrade */
-	conn = mg_download(host,
-	                   port,
-	                   use_ssl,
-	                   error_buffer,
-	                   error_buffer_size,
-	                   handshake_req,
-	                   path,
-	                   host,
-	                   magic,
-	                   origin);
+	conn =
+	    mg_connect_client(host, port, use_ssl, error_buffer, error_buffer_size);
+
+	if (conn == NULL) {
+		/* error_buffer already filled */
+		return NULL;
+	}
+
+	i = mg_printf(conn, handshake_req, path, host, magic, origin);
+	if (i <= 0) {
+		mg_snprintf(conn,
+		            NULL, /* No truncation check for ebuf */
+		            error_buffer,
+		            error_buffer_size,
+		            "%s",
+		            "Error sending request");
+		mg_close_connection(conn);
+		return NULL;
+	}
+
+	conn->data_len = 0;
+	if (!get_response(conn, error_buffer, error_buffer_size, &i)) {
+		mg_close_connection(conn);
+		return NULL;
+	}
+	conn->request_info.local_uri = conn->request_info.request_uri;
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
