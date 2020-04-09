@@ -4319,15 +4319,17 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 			i++;
 			if (pattern[i] == '*') {
 				i++;
-				len = strlen(str + j);
+				len = (ptrdiff_t)strlen(str + j);
 			} else {
-				len = strcspn(str + j, "/");
+				len = (ptrdiff_t)strcspn(str + j, "/");
 			}
 			if (i == (ptrdiff_t)pattern_len) {
 				return j + len;
 			}
 			do {
-				res = match_prefix(pattern + i, pattern_len - i, str + j + len);
+				res = match_prefix(pattern + i,
+				                   (pattern_len - (size_t)i),
+				                   str + j + len);
 			} while (res == -1 && len-- > 0);
 			return (res == -1) ? -1 : j + res + len;
 		} else if (lowercase(&pattern[i]) != lowercase(&str[j])) {
@@ -6920,7 +6922,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 				}
 
 				/* append a new chunk */
-				conn->content_len += chunkSize;
+				conn->content_len += (int64_t)chunkSize;
 			}
 		}
 
@@ -14654,7 +14656,9 @@ close_all_listening_sockets(struct mg_context *ctx)
 static int
 parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 {
-	unsigned int a, b, c, d, port;
+	unsigned int a, b, c, d;
+	unsigned port;
+	unsigned long portUL;
 	int ch, len;
 	const char *cb;
 	char *endptr;
@@ -14711,9 +14715,10 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		*ip_version = 4;
 #endif
 
-	} else if (is_valid_port(port = strtoul(vec->ptr, &endptr, 0))
-	           && vec->ptr != endptr) {
-		len = endptr - vec->ptr;
+	} else if (is_valid_port(portUL = strtoul(vec->ptr, &endptr, 0))
+	           && (vec->ptr != endptr)) {
+		len = (int)(endptr - vec->ptr);
+		port = (uint16_t)portUL;
 		/* If only port is specified, bind to IPv4, INADDR_ANY */
 		so->lsa.sin.sin_port = htons((uint16_t)port);
 		*ip_version = 4;
@@ -19250,7 +19255,8 @@ static
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
 	}
-	ctx->squeue = (struct socket *)mg_calloc(itmp, sizeof(struct socket));
+	ctx->squeue =
+	    (struct socket *)mg_calloc((unsigned int)itmp, sizeof(struct socket));
 	if (ctx->squeue == NULL) {
 		mg_cry_ctx_internal(ctx,
 		                    "Out of memory: Cannot allocate %s",

@@ -920,6 +920,8 @@ request_test_handler2(struct mg_connection *conn, void *cbdata)
 	int err_ret;
 	char url_buffer[128];
 
+	(void)cbdata; /* unused */
+
 	ctx = mg_get_context(conn);
 	ud = mg_get_user_data(ctx);
 	ud2 = mg_get_user_context_data(conn);
@@ -1527,7 +1529,7 @@ START_TEST(test_request_handlers)
 	i = (int)strlen(plain_file_content);
 	ck_assert_int_eq(i, 17);
 
-	fwrite(plain_file_content, i, 1, f);
+	fwrite(plain_file_content, (size_t)i, 1, f);
 	fclose(f);
 
 #ifdef _WIN32
@@ -1617,7 +1619,7 @@ START_TEST(test_request_handlers)
 		        "This file needs to be compiled manually before "
 		        "starting the test\n");
 		fprintf(stderr,
-		        "e.g. by gcc test/cgi_test.c -o output/cgi_test.cgi\n\n");
+		        "e.g. by gcc unittest/cgi_test.c -o output/cgi_test.cgi\n\n");
 
 		/* Abort test with diagnostic message */
 		ck_abort_msg("Mandatory file %s must be built before starting the test "
@@ -1914,7 +1916,7 @@ START_TEST(test_request_handlers)
 
 	mg_printf(client_conn,
 	          "GET /unknown_url HTTP/1.1\r\n"
-	          "Host: localhost\r\n"
+	          "Host: localhost:%u\r\n"
 	          "\r\n",
 	          ipv4_port);
 
@@ -1937,7 +1939,7 @@ START_TEST(test_request_handlers)
 
 	mg_printf(client_conn,
 	          "GET /handler2 HTTP/1.1\r\n"
-	          "Host: localhost\r\n"
+	          "Host: localhost:%u\r\n"
 	          "\r\n",
 	          ipv4_port);
 
@@ -2499,11 +2501,11 @@ field_store(const char *path, long long file_size, void *user_data)
 			char buf[32] = {0};
 			int r, i;
 			for (r = 0; r < myfile_content_rep; r++) {
-				i = (int)fread(buf, 1, myfile_content_len, f);
+				i = (int)fread(buf, 1, (size_t)myfile_content_len, f);
 				ck_assert_int_eq(i, myfile_content_len);
 				ck_assert_str_eq(buf, myfile_content);
 			}
-			i = (int)fread(buf, 1, myfile_content_len, f);
+			i = (int)fread(buf, 1, (size_t)myfile_content_len, f);
 			ck_assert_int_eq(i, 0);
 			fclose(f);
 		}
@@ -4749,7 +4751,7 @@ minimal_http_https_client_impl(const char *server,
 	while (data_read < client_ri->content_length) {
 		r = mg_read(client,
 		            client_data_buf + data_read,
-		            sizeof(client_data_buf) - data_read);
+		            sizeof(client_data_buf) - (size_t)data_read);
 		if (r > 0) {
 			data_read += r;
 			ck_assert_int_lt(data_read, sizeof(client_data_buf));
