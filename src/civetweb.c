@@ -2433,6 +2433,7 @@ enum {
 	CGI_ENVIRONMENT,
 	PUT_DELETE_PASSWORDS_FILE,
 	CGI_INTERPRETER,
+	CGI_INTERPRETER_ARGS,
 	PROTECT_URI,
 	AUTHENTICATION_DOMAIN,
 	ENABLE_AUTH_DOMAIN_CHECK,
@@ -2540,6 +2541,7 @@ static const struct mg_option config_options[] = {
     {"cgi_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"put_delete_auth_file", MG_CONFIG_TYPE_FILE, NULL},
     {"cgi_interpreter", MG_CONFIG_TYPE_FILE, NULL},
+    {"cgi_interpreter_args", MG_CONFIG_TYPE_STRING, NULL},
     {"protect_uri", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"authentication_domain", MG_CONFIG_TYPE_STRING, "mydomain.com"},
     {"enable_auth_domain_check", MG_CONFIG_TYPE_BOOLEAN, "yes"},
@@ -5789,8 +5791,10 @@ spawn_process(struct mg_connection *conn,
               const char *dir)
 {
 	HANDLE me;
-	char *p, *interp, full_interp[PATH_MAX], full_dir[PATH_MAX],
-	    cmdline[PATH_MAX], buf[PATH_MAX];
+	char *p, *interp;
+	char *interp_arg = 0;
+	char full_interp[PATH_MAX], full_dir[PATH_MAX], cmdline[PATH_MAX],
+	    buf[PATH_MAX];
 	int truncated;
 	struct mg_file file = STRUCT_FILE_INITIALIZER;
 	STARTUPINFOA si;
@@ -5840,12 +5844,19 @@ spawn_process(struct mg_connection *conn,
 	                     HANDLE_FLAG_INHERIT,
 	                     0);
 
-	/* If CGI file is a script, try to read the interpreter line */
+	/* First check, if there is a CGI interpreter configured for all CGI
+	 * scripts. */
 	interp = conn->dom_ctx->config[CGI_INTERPRETER];
-	if (interp == NULL) {
+	if (interp != NULL) {
+		/* If there is a configured interpreter, check for additional arguments
+		 */
+		interp_arg = conn->domm_ctx->config[CGI_INTERPRETER_ARGS];
+	} else {
+		/* Otherwise, the interpreter must be stated in the first line of the
+		 * CGI script file, after a #! (shebang) mark. */
 		buf[0] = buf[1] = '\0';
 
-		/* Read the first line of the script into the buffer */
+		/* Get the full script path */
 		mg_snprintf(
 		    conn, &truncated, cmdline, sizeof(cmdline), "%s/%s", dir, prog);
 
@@ -5854,12 +5865,14 @@ spawn_process(struct mg_connection *conn,
 			goto spawn_cleanup;
 		}
 
+		/* Open the script file, to read the first line */
 		if (mg_fopen(conn, cmdline, MG_FOPEN_MODE_READ, &file)) {
 #if defined(MG_USE_OPEN_FILE)
 			p = (char *)file.access.membuf;
 #else
 			p = (char *)NULL;
 #endif
+			/* Read the first line of the script into the buffer */
 			mg_fgets(buf, sizeof(buf), &file, &p);
 			(void)mg_fclose(&file.access); /* ignore error on read only file */
 			buf[sizeof(buf) - 1] = '\0';
@@ -5880,15 +5893,29 @@ spawn_process(struct mg_connection *conn,
 	GetFullPathNameA(dir, sizeof(full_dir), full_dir, NULL);
 
 	if (interp[0] != '\0') {
-		mg_snprintf(conn,
-		            &truncated,
-		            cmdline,
-		            sizeof(cmdline),
-		            "\"%s\" \"%s\\%s\"",
-		            interp,
-		            full_dir,
-		            prog);
+		/* This is an interpreted script file. We must call the interpreter. */
+		if ((interp_arg != 0) && (interp_arg[0] != 0)) {
+			mg_snprintf(conn,
+			            &truncated,
+			            cmdline,
+			            sizeof(cmdline),
+			            "\"%s\" %s \"%s\\%s\"",
+			            interp,
+			            interp_arg,
+			            full_dir,
+			            prog);
+		} else {
+			mg_snprintf(conn,
+			            &truncated,
+			            cmdline,
+			            sizeof(cmdline),
+			            "\"%s\" \"%s\\%s\"",
+			            interp,
+			            full_dir,
+			            prog);
+		}
 	} else {
+		/* This is (probably) a compiled program. We call it directly. */
 		mg_snprintf(conn,
 		            &truncated,
 		            cmdline,
@@ -6152,6 +6179,7 @@ spawn_process(struct mg_connection *conn,
 
 			interp = conn->dom_ctx->config[CGI_INTERPRETER];
 			if (interp == NULL) {
+				/* no interpreter configured, call the programm directly */
 				(void)execle(prog, prog, NULL, envp);
 				mg_cry_internal(conn,
 				                "%s: execle(%s): %s",
@@ -6159,7 +6187,15 @@ spawn_process(struct mg_connection *conn,
 				                prog,
 				                strerror(ERRNO));
 			} else {
-				(void)execle(interp, interp, prog, NULL, envp);
+				/* call the configured interpreter */
+				const char *interp_args =
+				    conn->dom_ctx->config[CGI_INTERPRETER_ARGS];
+
+				if ((interp_args != NULL) && (interp_args[0] != 0)) {
+					(void)execle(interp, interp, interp_args, prog, NULL, envp);
+				} else {
+					(void)execle(interp, interp, prog, NULL, envp);
+				}
 				mg_cry_internal(conn,
 				                "%s: execle(%s %s): %s",
 				                __func__,
