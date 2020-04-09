@@ -5852,7 +5852,7 @@ spawn_process(struct mg_connection *conn,
 	if (interp != NULL) {
 		/* If there is a configured interpreter, check for additional arguments
 		 */
-		interp_arg = conn->domm_ctx->config[CGI_INTERPRETER_ARGS];
+		interp_arg = conn->dom_ctx->config[CGI_INTERPRETER_ARGS];
 	} else {
 		/* Otherwise, the interpreter must be stated in the first line of the
 		 * CGI script file, after a #! (shebang) mark. */
