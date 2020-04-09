@@ -5036,22 +5036,22 @@ START_TEST(test_minimal_https_server_callback)
 	test_sleep(10);
 
 	/* Call a test client */
-	minimal_https_client_impl("127.0.0.1", 8443, "/hello", "Hello world");
+	minimal_https_client_check("127.0.0.1", 8443, "/hello", "Hello world");
 
 	/* Run the server for 15 seconds */
 	test_sleep(1);
 
 	/* Call a test client */
-	minimal_https_client_impl("127.0.0.1", 8443, "/8", "Number eight");
+	minimal_https_client_check("127.0.0.1", 8443, "/8", "Number eight");
 
 	/* Run the server for 1 second */
 	test_sleep(1);
 
 	/* Call a test client */
-	minimal_https_client_impl("127.0.0.1",
-	                          8443,
-	                          "/8?Altenative=Response",
-	                          "Altenative=Response");
+	minimal_https_client_check("127.0.0.1",
+	                           8443,
+	                           "/8?Altenative=Response",
+	                           "Altenative=Response");
 
 	/* Run the server for 5 seconds */
 	test_sleep(5);
