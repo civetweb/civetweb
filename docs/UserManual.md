@@ -238,6 +238,11 @@ more efficient to set `cgi_interpreter` to the path to `php-cgi.exe`.
 The shebang line in the CGI scripts can be omitted in this case.
 Note that PHP scripts must use `php-cgi.exe` as executable, not `php.exe`.
 
+### cgi\_interpreter\_args
+Optional additional arguments passed to a Windows CGI interpreter program.
+
+(Currently experimental - https://github.com/civetweb/civetweb/issues/854)
+
 ### cgi\_pattern `**.cgi$|**.pl$|**.php$`
 All files that match `cgi_pattern` are treated as CGI files. The default pattern
 allows CGI files be anywhere. To restrict CGIs to a certain directory,
