@@ -75,6 +75,17 @@ else
   CFLAGS += -O2 -DNDEBUG
 endif
 
+ifdef NO_SSL
+  CFLAGS += -DNO_SSL
+endif
+ifdef NO_CGI
+  CFLAGS += -DNO_CGI
+endif
+ifdef NO_CACHING
+  CFLAGS += -DNO_CACHING
+endif
+
+
 ifdef WITH_CPP
   OBJECTS += src/CivetServer.o
   HEADERS += include/CivetServer.h
@@ -245,6 +256,9 @@ help:
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   WITH_EXPERIMENTAL=1   build with experimental features"
 	@echo "   WITH_DAEMONIZE=1      build with daemonize."
+	@echo "   NO_SSL=1              build without SSL support. Build will not need libcrypto/libssl."
+	@echo "   NO_CGI=1              build without CGI support."
+	@echo "   NO_CACHING=1          disable caching. Send no-cache/no-store headers."
 	@echo "   PID_FILE=/path        PID file path of daemon."
 	@echo "   CONFIG_FILE=file      use 'file' as the config file"
 	@echo "   CONFIG_FILE2=file     use 'file' as the backup config file"
@@ -271,6 +285,7 @@ help:
 	@echo "   LDFLAGS='$(LDFLAGS)'"
 	@echo "   CC='$(CC)'"
 	@echo "   CXX='$(CXX)'"
+	@echo ""
 
 build: $(CPROG) $(CXXPROG)
 

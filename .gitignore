@@ -13,7 +13,8 @@ out
 *.trace
 [oO]utput
 [tT]esting
-
+examples/embedded_c/embedded_c
+*.a
 *.o
 
 ################# //hash
