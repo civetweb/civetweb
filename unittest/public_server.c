@@ -4860,7 +4860,7 @@ static int
 minimal_test_request_handler(struct mg_connection *conn, void *cbdata)
 {
 	const char *msg = (const char *)cbdata;
-	unsigned long len = (unsigned long)strlen(msg);
+	unsigned long len = (unsigned long)strlen(msg)+1;
 	const struct mg_request_info *ri = mg_get_request_info(conn);
 
 	ck_assert(conn != NULL);
@@ -4877,7 +4877,7 @@ minimal_test_request_handler(struct mg_connection *conn, void *cbdata)
 
 	if (ri->query_string != NULL) {
 		msg = ri->query_string;
-		len = (unsigned long)strlen(msg);
+		len = (unsigned long)strlen(msg)+1;
 	}
 
 	mg_printf(conn,
