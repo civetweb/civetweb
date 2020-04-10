@@ -6,6 +6,7 @@
 
 #ifdef NO_SSL
 #define TEST_WITHOUT_SSL
+#undef USE_SSL_DH
 #endif
 
 /* Simple example program on how to use CivetWeb embedded into a C program. */
@@ -130,7 +131,7 @@ AHandler(struct mg_connection *conn, void *cbdata)
 	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
 	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn, "<h2>This is the A handler!!!</h2>");
+	mg_printf(conn, "<h2>This is the A handler.</h2>");
 	mg_printf(conn, "</body></html>\n");
 	return 1;
 }
@@ -139,11 +140,39 @@ AHandler(struct mg_connection *conn, void *cbdata)
 int
 ABHandler(struct mg_connection *conn, void *cbdata)
 {
+	const struct mg_request_info *ri = mg_get_request_info(conn);
+
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
 	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn, "<h2>This is the AB handler!!!</h2>");
+
+	mg_printf(conn, "<h2>This is the AB handler.</h2>");
+
+	mg_printf(conn, "<ul>\n");
+	mg_printf(conn, "<li>request_method = %s</li>\n", ri->request_method);
+	mg_printf(conn, "<li>request_uri = %s</li>\n", ri->request_uri);
+	mg_printf(conn, "<li>local_uri = %s</li>\n", ri->local_uri);
+	mg_printf(conn, "<li>http_version = %s</li>\n", ri->http_version);
+	mg_printf(conn, "<li>query_string = %s</li>\n", ri->query_string);
+	mg_printf(conn, "<li>remote_user = %s</li>\n", ri->remote_user);
+	mg_printf(conn, "<li>remote_addr = %s</li>\n", ri->remote_addr);
+	mg_printf(conn, "<li>remote_port = %u</li>\n", ri->remote_port);
+	mg_printf(conn, "<li>is_ssl = %i</li>\n", ri->is_ssl);
+	mg_printf(conn, "<li>num_headers = %i</li>\n", ri->num_headers);
+	if (ri->num_headers > 0) {
+		int i;
+		mg_printf(conn, "<ol>\n");
+		for (i = 0; i < ri->num_headers; i++) {
+			mg_printf(conn,
+			          "<li>%s = %s</li>\n",
+			          ri->http_headers[i].name,
+			          ri->http_headers[i].value);
+		}
+		mg_printf(conn, "</ol>\n");
+	}
+	mg_printf(conn, "</ul>\n");
+
 	mg_printf(conn, "</body></html>\n");
 	return 1;
 }
@@ -154,14 +183,13 @@ BXHandler(struct mg_connection *conn, void *cbdata)
 {
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
+	const char *text = (const char *)cbdata;
 
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
 	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn,
-	          "<h2>This is the BX handler with argument %s.</h2>",
-	          cbdata);
+	mg_printf(conn, "<h2>This is the BX handler with argument %s.</h2>", text);
 	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->local_uri);
 	mg_printf(conn, "</body></html>\n");
 	return 1;
@@ -291,7 +319,7 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 	if (key) {
 		mg_printf(conn, "key = %s\n", key);
 	}
-	mg_printf(conn, "valuelen = %u\n", valuelen);
+	mg_printf(conn, "valuelen = %lu\n", valuelen);
 
 	if (valuelen > 0) {
 		/* mg_write(conn, value, valuelen); */
