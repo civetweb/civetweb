@@ -7323,15 +7323,25 @@ mg_split_form_encoded(char *data,
 			break;
 		}
 		form_fields[num].name = data;
-		b = strchr(data, '=');
-		if (b == NULL) {
-			/* key without value */
+		
+		/* find & or = */
+		b = data;
+		while ((*b != 0) && (*b != '&') && (*b != '=')) { 
+			b++;
+		}
+
+		if (*b == 0) {
+			/* last key without value */
+			form_fields[num].value = NULL;
+		} else if (*b == '&') {
+			/* mid key without value */
 			form_fields[num].value = NULL;
 		} else {
 			/* terminate string */
 			*b = 0;
 			/* value starts after '=' */
-			form_fields[num].value = b + 1;
+			data = b + 1;
+			form_fields[num].value = data;
 		}
 
 		/* new field is stored */
@@ -7352,8 +7362,12 @@ mg_split_form_encoded(char *data,
 
 	/* Decode all values */
 	for (i = 0; i < num; i++) {
-		url_decode_in_place((char*)form_fields[num].name);
-		url_decode_in_place((char *)form_fields[num].value);
+		if (form_fields[i].name) {
+			url_decode_in_place((char *)form_fields[i].name);
+		}
+		if (form_fields[i].value) {
+			url_decode_in_place((char *)form_fields[i].value);
+		}
 	}
 
 	/* return number of fields found */
