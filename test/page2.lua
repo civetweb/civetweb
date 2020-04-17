@@ -1,7 +1,16 @@
 mg.write("HTTP/1.0 200 OK\r\n")
 mg.write("Content-Type: text/html\r\n")
 mg.write("\r\n")
-mg.write([[<html><body>
+mg.write([[<html>
+<head>
+<title>CivetWeb Lua test page2</title>
+<style>
+table, th, td {
+  border: 1px solid black;
+}
+</style>
+</head>
+<body>
 <p>This is Lua script example 2, served by the
 <a href="https://github.com/civetweb/civetweb">CivetWeb web server</a>,
 version ]] .. mg.version .. [[.
@@ -238,6 +247,27 @@ mg.write("</pre>\n</p>\n")
 mg.write("<p>lua2json:<br>\n<pre>\n");
 mg.write(htmlEsc(json.encode(demo_data_for_json)))
 mg.write("</pre>\n</p>\n")
+
+
+if mg.request_info.query_string then
+  qtab = mg.split_form_data(mg.request_info.query_string)
+  mg.write("<p>\nSplit form test:<br/>\n");
+  mg.write("<table>\n");
+  mg.write("<tr>\n");
+  mg.write("<th>#</th>\n");
+  mg.write("<th>name</th>\n");
+  mg.write("<th>value</th>\n");
+  mg.write("</tr>\n");
+  for n,t in pairs(qtab) do
+    mg.write("<tr>\n");
+    mg.write("<td>" .. n .. "</td>\n");
+    mg.write("<td>" .. tostring(t.name) .. "</td>\n");
+    mg.write("<td>" .. tostring(t.value) .. "</td>\n");
+    mg.write("</tr>\n");
+  end
+  mg.write("</table>\n");
+  mg.write("</p>\n");
+end
 
 
 -- Next section ...

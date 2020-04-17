@@ -7323,10 +7323,10 @@ mg_split_form_encoded(char *data,
 			break;
 		}
 		form_fields[num].name = data;
-		
+
 		/* find & or = */
 		b = data;
-		while ((*b != 0) && (*b != '&') && (*b != '=')) { 
+		while ((*b != 0) && (*b != '&') && (*b != '=')) {
 			b++;
 		}
 

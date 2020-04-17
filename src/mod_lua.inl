@@ -1151,6 +1151,71 @@ lsp_get_var(lua_State *L)
 }
 
 
+/* mg.split_form_data */
+static int
+lsp_split_form_data(lua_State *L)
+{
+	int num_args = lua_gettop(L);
+	const char *in;
+	size_t len;
+	char *buf;
+	struct mg_context *ctx;
+
+	struct mg_header form_fields[MG_MAX_FORM_FIELDS] = {0};
+	int ret, i;
+
+	if (num_args != 1) {
+		return luaL_error(L, "invalid split_form_data() call");
+	}
+
+	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(L, -1);
+
+	/* Get input (const string) */
+	in = lua_tolstring(L, 1, &len);
+
+	/* Create a modifyable copy */
+	buf = mg_malloc_ctx(len + 1, ctx);
+	if (buf == NULL) {
+		return luaL_error(L, "out of memory in invalid split_form_data() call");
+	}
+	memcpy(buf, in, len + 1);
+
+	/* mg_split_form_encoded does the real work */
+	ret = mg_split_form_encoded(buf, form_fields);
+
+	if (ret < 0) {
+		return luaL_error(L, "error in invalid split_form_data() call");
+	}
+
+	/* return a table */
+	lua_newtable(L);
+	for (i = 0; i < ret; i++) {
+
+		lua_newtable(L);
+		if (form_fields[i].name) {
+			lua_pushstring(L, form_fields[i].name);
+		} else {
+			lua_pushnil(L);
+		}
+		lua_setfield(L, -2, "name");
+		if (form_fields[i].value) {
+			lua_pushstring(L, form_fields[i].value);
+		} else {
+			lua_pushnil(L);
+		}
+		lua_setfield(L, -2, "value");
+
+		lua_rawseti(L, -2, i + 1);
+	}
+
+	mg_free(buf);
+
+	return 1;
+}
+
+
 /* mg.get_mime_type */
 static int
 lsp_get_mime_type(lua_State *L)
@@ -2361,6 +2426,7 @@ prepare_lua_environment(struct mg_context *ctx,
 
 	reg_function(L, "time", lsp_get_time);
 	reg_function(L, "get_var", lsp_get_var);
+	reg_function(L, "split_form_data", lsp_split_form_data);
 	reg_function(L, "get_cookie", lsp_get_cookie);
 	reg_function(L, "md5", lsp_md5);
 	reg_function(L, "url_encode", lsp_url_encode);
