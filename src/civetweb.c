@@ -19709,9 +19709,6 @@ static
 	ctx->callbacks.exit_context = exit_callback;
 	ctx->context_type = CONTEXT_SERVER; /* server context */
 
-	/* Start master (listening) thread */
-	mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid);
-
 	/* Start worker threads */
 	for (i = 0; i < ctx->cfg_worker_threads; i++) {
 		/* worker_thread sets up the other fields */
@@ -19760,6 +19757,9 @@ static
 			break;
 		}
 	}
+
+    /* Start master (listening) thread */
+    mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid);
 
 	pthread_setspecific(sTlsKey, NULL);
 	return ctx;
