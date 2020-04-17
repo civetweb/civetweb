@@ -804,6 +804,15 @@ START_TEST(test_encode_decode)
 	ck_assert_int_eq(ret, (int)strlen(nonalpha));
 	ck_assert_str_eq(buf, nonalpha);
 
+	/* Test url_decode_in_place */
+	strcpy(buf, "AbcDef");
+	url_decode_in_place(buf);
+	ck_assert_str_eq(buf, "AbcDef");
+
+	strcpy(buf, "A%20B+C");
+	url_decode_in_place(buf);
+	ck_assert_str_eq(buf, "A B C");
+
 	/* len could be unused, if base64_decode is not tested because USE_LUA is
 	 * not defined */
 	(void)len;

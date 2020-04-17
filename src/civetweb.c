@@ -7205,7 +7205,7 @@ mg_url_decode(const char *src,
 
 
 /* form url decoding of an entire string */
-void
+static void
 url_decode_in_place(char *buf)
 {
 	size_t len = strlen(buf);
@@ -7318,7 +7318,7 @@ mg_split_form_encoded(char *data,
 			/* skip initial spaces */
 			data++;
 		}
-		if (*data = 0) {
+		if (*data == 0) {
 			/* end of string reached */
 			break;
 		}
@@ -7352,8 +7352,8 @@ mg_split_form_encoded(char *data,
 
 	/* Decode all values */
 	for (i = 0; i < num; i++) {
-		url_decode_in_place(form_fields[num].name);
-		url_decode_in_place(form_fields[num].value);
+		url_decode_in_place((char*)form_fields[num].name);
+		url_decode_in_place((char *)form_fields[num].value);
 	}
 
 	/* return number of fields found */
