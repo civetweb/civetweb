@@ -141,6 +141,10 @@ struct mg_header {
 };
 
 
+/* Maximum number of form fields for mg_spit_form_encoded. */
+#define MG_MAX_FORM_FIELDS (64)
+
+
 /* This structure contains information about the HTTP request. */
 struct mg_request_info {
 	const char *request_method;  /* "GET", "POST", etc */
@@ -1123,10 +1127,9 @@ CIVETWEB_API int mg_get_var(const char *data,
      var_name: variable name to decode from the buffer
      dst: destination buffer for the decoded variable
      dst_len: length of the destination buffer
-     occurrence: which occurrence of the variable, 0 is the first, 1 the
-                 second...
-                this makes it possible to parse a query like
-                b=x&a=y&a=z which will have occurrence values b:0, a:0 and a:1
+     occurrence: which occurrence of the variable, 0 is the 1st, 1 the 2nd, ...
+                 this makes it possible to parse a query like
+                 b=x&a=y&a=z which will have occurrence values b:0, a:0 and a:1
 
    Return:
      On success, length of the decoded variable.
@@ -1143,6 +1146,35 @@ CIVETWEB_API int mg_get_var2(const char *data,
                              char *dst,
                              size_t dst_len,
                              size_t occurrence);
+
+
+/* Split form encoded data into a list of key value pairs.
+   A form encoded input might be a query string, the body of a
+   x-www-form-urlencoded POST request or any other data with this
+   structure: "keyName1=value1&keyName2=value2&keyName3=value3".
+   Values might be percent-encoded - this function will transform
+   them to the unencoded characters.
+   The input string is modified by this function: To split the
+   "query_string" member of struct request_info, create a copy first
+   (e.g., using strdup).
+   The function itself does not allocate memory. Thus, it is not
+   required to free any pointer returned from this function.
+   The output list of is limited to MG_MAX_FORM_FIELDS name-value-
+   pairs. The default value is reasonably oversized for typical
+   applications, however, for special purpose systems it might be
+   required to increase this value at compile time.
+
+   Parameters:
+     data: form encoded iput string. Will be modified by this function.
+     form_fields: output list of name/value-pairs.
+
+   Return:
+     On success: number of form_fields filled
+     On error:
+        -1 (parameter error). */
+CIVETWEB_API int
+mg_split_form_encoded(char *data,
+                      struct mg_header form_fields[MG_MAX_FORM_FIELDS]);
 
 
 /* Fetch value of certain cookie variable into the destination buffer.

@@ -7204,6 +7204,32 @@ mg_url_decode(const char *src,
 }
 
 
+/* form url decoding of an entire string */
+void
+url_decode_in_place(char *buf)
+{
+	size_t len = strlen(buf);
+	while (*buf) {
+		if (*buf == '%') {
+			if (isxdigit((unsigned char)buf[1])) {
+				if (isxdigit((unsigned char)buf[2])) {
+					int a = tolower((unsigned char)buf[1]);
+					int b = tolower((unsigned char)buf[2]);
+					char c = (char)((HEXTOI(a) << 4) | HEXTOI(b));
+					memmove(buf + 1, buf + 3, len - 2);
+					*buf = c;
+					len -= 2;
+				}
+			}
+		} else if (*buf == '+') {
+			*buf = ' ';
+		}
+		buf++;
+		len--;
+	}
+}
+
+
 int
 mg_get_var(const char *data,
            size_t data_len,
@@ -7269,6 +7295,69 @@ mg_get_var2(const char *data,
 	}
 
 	return len;
+}
+
+
+/* split a string "key1=val1&key2=val2" into key/value pairs */
+int
+mg_split_form_encoded(char *data,
+                      struct mg_header form_fields[MG_MAX_FORM_FIELDS])
+{
+	char *b;
+	int i;
+	int num = 0;
+
+	if ((data == NULL) || (form_fields == NULL)) {
+		/* parameter error */
+		return -1;
+	}
+
+	for (i = 0; i < MG_MAX_FORM_FIELDS; i++) {
+		/* extract key-value pairs from input data */
+		while ((*data == ' ') || (*data == '\t')) {
+			/* skip initial spaces */
+			data++;
+		}
+		if (*data = 0) {
+			/* end of string reached */
+			break;
+		}
+		form_fields[num].name = data;
+		b = strchr(data, '=');
+		if (b == NULL) {
+			/* key without value */
+			form_fields[num].value = NULL;
+		} else {
+			/* terminate string */
+			*b = 0;
+			/* value starts after '=' */
+			form_fields[num].value = b + 1;
+		}
+
+		/* new field is stored */
+		num++;
+
+		/* find a next key */
+		b = strchr(data, '&');
+		if (b == 0) {
+			/* no more data */
+			break;
+		} else {
+			/* terminate value of last field at '&' */
+			*b = 0;
+			/* next key-value-pairs starts after '&' */
+			data = b + 1;
+		}
+	}
+
+	/* Decode all values */
+	for (i = 0; i < num; i++) {
+		url_decode_in_place(form_fields[num].name);
+		url_decode_in_place(form_fields[num].value);
+	}
+
+	/* return number of fields found */
+	return num;
 }
 
 
