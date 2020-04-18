@@ -17,6 +17,8 @@ examples/embedded_c/embedded_c
 *.a
 *.o
 
+Install/
+
 ################# //hash
 ## CMake
 #################

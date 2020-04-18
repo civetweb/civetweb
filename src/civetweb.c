@@ -1922,6 +1922,7 @@ struct ssl_func {
 
 
 #if defined(OPENSSL_API_1_1)
+typedef int mg_callback_t(char *buf, int size, int rwflag, void *userdata);
 
 #define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
 #define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)
@@ -2000,6 +2001,7 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
 #define SSL_CTX_set_next_protos_advertised_cb                                  \
 	(*(void (*)(SSL_CTX *, tSSL_next_protos_advertised_cb, void *))ssl_sw[41]  \
 	      .ptr)
+#define SSL_CTX_set_default_passwd_cb_userdata (*(void (*)(SSL_CTX *, void *))ssl_sw[42].ptr)
 
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
@@ -2097,6 +2099,7 @@ static struct ssl_func ssl_sw[] = {
     {"SSL_CTX_set_alpn_protos", {TLS_ALPN}},
     {"SSL_CTX_set_alpn_select_cb", {TLS_ALPN}},
     {"SSL_CTX_set_next_protos_advertised_cb", {TLS_ALPN}},
+    {"SSL_CTX_set_default_passwd_cb_userdata", {TLS_ALPN}},
     {NULL, {TLS_END_OF_LIST}}};
 
 
@@ -2122,6 +2125,7 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", {TLS_Mandatory}},
                                       {"ERR_clear_error", {TLS_Mandatory}},
                                       {NULL, {TLS_END_OF_LIST}}};
 #else
+typedef int mg_callback_t(char *buf, int size, int rwflag, void *userdata);
 
 #define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
 #define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)
@@ -2196,6 +2200,7 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
 	(*(void (*)(SSL_CTX *, tSSL_next_protos_advertised_cb, void *))ssl_sw[41]  \
 	      .ptr)
 
+#define SSL_CTX_set_default_passwd_cb_userdata (*(void (*)(SSL_CTX *, void *))ssl_sw[42].ptr)
 
 #define SSL_CTX_set_options(ctx, op)                                           \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
@@ -2310,6 +2315,7 @@ static struct ssl_func ssl_sw[] = {
     {"SSL_CTX_set_alpn_protos", {TLS_ALPN}},
     {"SSL_CTX_set_alpn_select_cb", {TLS_ALPN}},
     {"SSL_CTX_set_next_protos_advertised_cb", {TLS_ALPN}},
+    {"SSL_CTX_set_default_passwd_cb_userdata", {TLS_ALPN}},
     {NULL, {TLS_END_OF_LIST}}};
 
 
@@ -2506,6 +2512,7 @@ enum {
 	ACCESS_CONTROL_LIST,
 	EXTRA_MIME_TYPES,
 	SSL_CERTIFICATE,
+	SSL_CERTIFICATE_PASS_PHRASE,
 	SSL_CERTIFICATE_CHAIN,
 	URL_REWRITE_PATTERN,
 	HIDE_FILES,
@@ -2622,6 +2629,7 @@ static const struct mg_option config_options[] = {
     {"access_control_list", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"extra_mime_types", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"ssl_certificate", MG_CONFIG_TYPE_FILE, NULL},
+    {"ssl_certificate_passphrase", MG_CONFIG_TYPE_STRING, NULL},
     {"ssl_certificate_chain", MG_CONFIG_TYPE_FILE, NULL},
     {"url_rewrite_patterns", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"hide_files_patterns", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
@@ -16076,6 +16084,14 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 	return 1;
 }
 
+static int
+ssl_set_password_for_pem_cb(char *buf, int size, int rwflag, void *u)
+{
+	strncpy(buf, (char *)u, size);
+	buf[size - 1] = '\0';
+	return strlen(buf);
+}
+
 
 static int
 ssl_use_pem_file(struct mg_context *phys_ctx,
@@ -16093,6 +16109,9 @@ ssl_use_pem_file(struct mg_context *phys_ctx,
 	}
 
 	/* could use SSL_CTX_set_default_passwd_cb_userdata */
+	SSL_CTX_set_default_passwd_cb_userdata(dom_ctx->ssl_ctx, dom_ctx->config[SSL_CERTIFICATE_PASS_PHRASE]);
+	SSL_CTX_set_default_passwd_cb(dom_ctx->ssl_ctx, ssl_set_password_for_pem_cb);
+
 	if (SSL_CTX_use_PrivateKey_file(dom_ctx->ssl_ctx, pem, 1) == 0) {
 		mg_cry_ctx_internal(phys_ctx,
 		                    "%s: cannot open private key file %s: %s",
@@ -17212,6 +17231,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		mg_free(conn);
 		return NULL;
 	}
+
 
 
 #if !defined(NO_SSL)

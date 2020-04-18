@@ -28,6 +28,10 @@ INCLUDEDIR = $(DESTDIR)$(PREFIX)/include
 LIBDIR = $(DESTDIR)$(EXEC_PREFIX)/lib
 PID_FILE ?= /var/run/$(CPROG).pid
 
+ASHIBA_WEB_ROOT = src/web_resources
+ASHIBA_SERVLET_DIR = src/web_servlets
+
+
 # build tools
 MKDIR = mkdir -p
 RMF = rm -f
@@ -293,8 +297,6 @@ unit_test: $(UNIT_TEST_PROG)
 
 ifeq ($(CAN_INSTALL),1)
 install: $(HTMLDIR)/index.html $(SYSCONFDIR)/civetweb.conf
-	install -d -m 755  "$(DOCDIR)"
-	install -m 644 *.md "$(DOCDIR)"
 	install -d -m 755 "$(BINDIR)"
 	install -m 755 $(CPROG) "$(BINDIR)/"
 
@@ -315,8 +317,11 @@ install-slib: lib$(CPROG).so
 # as it may be an upgrade
 $(HTMLDIR)/index.html:
 	install -d -m 755  "$(HTMLDIR)"
-	install -m 644 resources/itworks.html $(HTMLDIR)/index.html
-	install -m 644 resources/civetweb_64x64.png $(HTMLDIR)/
+	install -m 644 $(ASHIBA_WEB_ROOT)/* $(HTMLDIR)/
+#	install -d -m 755  "$(DOCDIR)"
+#	install -m 644 *.md "$(DOCDIR)"
+#	install -m 644 resources/itworks.html $(HTMLDIR)/index.html
+#	install -m 644 resources/civetweb_64x64.png $(HTMLDIR)/
 
 # Install target we do not want to overwrite
 # as it may be an upgrade
@@ -347,6 +352,7 @@ clean:
 	$(RMRF) lib$(CPROG).so.$(version).0
 	$(RMRF) $(CPROG)
 	$(RMF) $(UNIT_TEST_PROG)
+	$(RMRF) $(HTMLDIR)/*
 
 distclean: clean
 	@$(RMRF) VS2012/Debug VS2012/*/Debug  VS2012/*/*/Debug
