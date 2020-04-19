@@ -141,10 +141,6 @@ struct mg_header {
 };
 
 
-/* Maximum number of form fields for mg_spit_form_encoded. */
-#define MG_MAX_FORM_FIELDS (64)
-
-
 /* This structure contains information about the HTTP request. */
 struct mg_request_info {
 	const char *request_method;  /* "GET", "POST", etc */
@@ -1166,15 +1162,19 @@ CIVETWEB_API int mg_get_var2(const char *data,
 
    Parameters:
      data: form encoded iput string. Will be modified by this function.
-     form_fields: output list of name/value-pairs.
+     form_fields: output list of name/value-pairs. A buffer with a size
+                  specified by num_form_fields must be provided by the
+                  caller.
+     num_form_fields: Size of provided form_fields buffer in number of
+                      "struct mg_header" elements.
 
    Return:
      On success: number of form_fields filled
      On error:
         -1 (parameter error). */
-CIVETWEB_API int
-mg_split_form_urlencoded(char *data,
-                         struct mg_header form_fields[MG_MAX_FORM_FIELDS]);
+CIVETWEB_API int mg_split_form_urlencoded(char *data,
+                                          struct mg_header *form_fields,
+                                          unsigned num_form_fields);
 
 
 /* Fetch value of certain cookie variable into the destination buffer.

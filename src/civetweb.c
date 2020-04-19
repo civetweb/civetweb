@@ -7344,18 +7344,36 @@ mg_get_var2(const char *data,
 /* split a string "key1=val1&key2=val2" into key/value pairs */
 int
 mg_split_form_urlencoded(char *data,
-                         struct mg_header form_fields[MG_MAX_FORM_FIELDS])
+                         struct mg_header *form_fields,
+                         unsigned num_form_fields)
 {
 	char *b;
 	int i;
 	int num = 0;
 
-	if ((data == NULL) || (form_fields == NULL)) {
+	if ((form_fields == NULL) && (num_form_fields == 0)) {
+		/* determine the number of expected fields */
+		if (data[0] == 0) {
+			return 0;
+		}
+		/* count number of & to return the number of key-value-pairs */
+		num = 1;
+		while (*data) {
+			if (*data == '&') {
+				num++;
+			}
+			data++;
+		}
+		return num;
+	}
+
+	if ((data == NULL) || (form_fields == NULL)
+	    || ((int)num_form_fields <= 0)) {
 		/* parameter error */
 		return -1;
 	}
 
-	for (i = 0; i < MG_MAX_FORM_FIELDS; i++) {
+	for (i = 0; i < (int)num_form_fields; i++) {
 		/* extract key-value pairs from input data */
 		while ((*data == ' ') || (*data == '\t')) {
 			/* skip initial spaces */
@@ -18422,7 +18440,7 @@ process_new_connection(struct mg_connection *conn)
 #if defined(USE_HTTP2)
 		if (is_http2) {
 			if (!is_valid_http2_primer(conn)) {
-				/* Primer does not match expectation from RFC. 
+				/* Primer does not match expectation from RFC.
 				 * See https://tools.ietf.org/html/rfc7540#section-3.5 */
 				mg_snprintf(conn,
 				            NULL, /* No truncation check for ebuf */
@@ -18436,7 +18454,7 @@ process_new_connection(struct mg_connection *conn)
 			}
 		} else
 #endif
-		if (ebuf[0] == '\0') {
+		    if (ebuf[0] == '\0') {
 			if (conn->request_info.local_uri) {
 
 /* handle request to local server */

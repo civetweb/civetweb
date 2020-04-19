@@ -528,33 +528,35 @@ START_TEST(test_mg_url_decode)
 END_TEST
 
 
-START_TEST(test_mg_split_form_encoded)
+#define MG_MAX_FORM_FIELDS (64)
+
+START_TEST(test_mg_split_form_urlencoded)
 {
 	char buf[256] = {0};
 	struct mg_header form_fields[MG_MAX_FORM_FIELDS] = {0};
 	int ret;
 
-	ret = mg_split_form_encoded(NULL, form_fields);
+	ret = mg_split_form_urlencoded(NULL, form_fields, MG_MAX_FORM_FIELDS);
 	ck_assert_int_eq(ret, -1);
 
 	strcpy(buf, "");
-	ret = mg_split_form_encoded(buf, form_fields);
+	ret = mg_split_form_urlencoded(buf, form_fields, MG_MAX_FORM_FIELDS);
 	ck_assert_int_eq(ret, 0);
 
 	strcpy(buf, "test");
-	ret = mg_split_form_encoded(buf, form_fields);
+	ret = mg_split_form_urlencoded(buf, form_fields, MG_MAX_FORM_FIELDS);
 	ck_assert_int_eq(ret, 1);
 	ck_assert_str_eq(form_fields[0].name, "test");
 	ck_assert_ptr_eq(form_fields[0].value, NULL);
 
 	strcpy(buf, "key=val");
-	ret = mg_split_form_encoded(buf, form_fields);
+	ret = mg_split_form_urlencoded(buf, form_fields, MG_MAX_FORM_FIELDS);
 	ck_assert_int_eq(ret, 1);
 	ck_assert_str_eq(form_fields[0].name, "key");
 	ck_assert_str_eq(form_fields[0].value, "val");
 
 	strcpy(buf, "key=val&key2=val2");
-	ret = mg_split_form_encoded(buf, form_fields);
+	ret = mg_split_form_urlencoded(buf, form_fields, MG_MAX_FORM_FIELDS);
 	ck_assert_int_eq(ret, 2);
 	ck_assert_str_eq(form_fields[0].name, "key");
 	ck_assert_str_eq(form_fields[0].value, "val");
@@ -562,7 +564,7 @@ START_TEST(test_mg_split_form_encoded)
 	ck_assert_str_eq(form_fields[1].value, "val2");
 
 	strcpy(buf, "k1=v1&k2=v2&k3=&k4&k5=v5");
-	ret = mg_split_form_encoded(buf, form_fields);
+	ret = mg_split_form_urlencoded(buf, form_fields, MG_MAX_FORM_FIELDS);
 	ck_assert_int_eq(ret, 5);
 	ck_assert_str_eq(form_fields[0].name, "k1");
 	ck_assert_str_eq(form_fields[1].name, "k2");
@@ -576,7 +578,7 @@ START_TEST(test_mg_split_form_encoded)
 	ck_assert_str_eq(form_fields[4].value, "v5");
 
 	strcpy(buf, "key=v+l1&key2=v%20l2");
-	ret = mg_split_form_encoded(buf, form_fields);
+	ret = mg_split_form_urlencoded(buf, form_fields, MG_MAX_FORM_FIELDS);
 	ck_assert_int_eq(ret, 2);
 	ck_assert_str_eq(form_fields[0].name, "key");
 	ck_assert_str_eq(form_fields[0].value, "v l1");
@@ -653,7 +655,7 @@ make_public_func_suite(void)
 
 	tcase_add_test(tcase_urlencodingdecoding, test_mg_url_encode);
 	tcase_add_test(tcase_urlencodingdecoding, test_mg_url_decode);
-	tcase_add_test(tcase_urlencodingdecoding, test_mg_split_form_encoded);
+	tcase_add_test(tcase_urlencodingdecoding, test_mg_split_form_urlencoded);
 	tcase_set_timeout(tcase_urlencodingdecoding, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_urlencodingdecoding);
 

@@ -1151,6 +1151,8 @@ lsp_get_var(lua_State *L)
 }
 
 
+#define MG_MAX_FORM_FIELDS (64)
+
 /* mg.split_form_data */
 static int
 lsp_split_form_urlencoded(lua_State *L)
@@ -1182,8 +1184,8 @@ lsp_split_form_urlencoded(lua_State *L)
 	}
 	memcpy(buf, in, len + 1);
 
-	/* mg_split_form_encoded does the real work */
-	ret = mg_split_form_urlencoded(buf, form_fields);
+	/* mg_split_form_urlencoded does the real work */
+	ret = mg_split_form_urlencoded(buf, form_fields, MG_MAX_FORM_FIELDS);
 
 	if (ret < 0) {
 		return luaL_error(L, "error in invalid split_form_data() call");
