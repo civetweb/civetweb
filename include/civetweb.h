@@ -1173,8 +1173,8 @@ CIVETWEB_API int mg_get_var2(const char *data,
      On error:
         -1 (parameter error). */
 CIVETWEB_API int
-mg_split_form_encoded(char *data,
-                      struct mg_header form_fields[MG_MAX_FORM_FIELDS]);
+mg_split_form_urlencoded(char *data,
+                         struct mg_header form_fields[MG_MAX_FORM_FIELDS]);
 
 
 /* Fetch value of certain cookie variable into the destination buffer.

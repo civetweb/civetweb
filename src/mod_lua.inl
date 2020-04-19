@@ -1153,7 +1153,7 @@ lsp_get_var(lua_State *L)
 
 /* mg.split_form_data */
 static int
-lsp_split_form_data(lua_State *L)
+lsp_split_form_urlencoded(lua_State *L)
 {
 	int num_args = lua_gettop(L);
 	const char *in;
@@ -1183,7 +1183,7 @@ lsp_split_form_data(lua_State *L)
 	memcpy(buf, in, len + 1);
 
 	/* mg_split_form_encoded does the real work */
-	ret = mg_split_form_encoded(buf, form_fields);
+	ret = mg_split_form_urlencoded(buf, form_fields);
 
 	if (ret < 0) {
 		return luaL_error(L, "error in invalid split_form_data() call");
@@ -2426,7 +2426,7 @@ prepare_lua_environment(struct mg_context *ctx,
 
 	reg_function(L, "time", lsp_get_time);
 	reg_function(L, "get_var", lsp_get_var);
-	reg_function(L, "split_form_data", lsp_split_form_data);
+	reg_function(L, "split_form_data", lsp_split_form_urlencoded);
 	reg_function(L, "get_cookie", lsp_get_cookie);
 	reg_function(L, "md5", lsp_md5);
 	reg_function(L, "url_encode", lsp_url_encode);
