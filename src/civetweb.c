@@ -1962,6 +1962,23 @@ struct ssl_func {
 	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
 #define SSL_set_SSL_CTX (*(SSL_CTX * (*)(SSL *, SSL_CTX *)) ssl_sw[37].ptr)
 #define SSL_ctrl (*(long (*)(SSL *, int, long, void *))ssl_sw[38].ptr)
+#define SSL_CTX_set_alpn_protos                                                \
+	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned))ssl_sw[39].ptr)
+typedef int (*tSSL_alpn_select_cb)(SSL *ssl,
+                                   const unsigned char **out,
+                                   unsigned char *outlen,
+                                   const unsigned char *in,
+                                   unsigned int inlen,
+                                   void *arg);
+#define SSL_CTX_set_alpn_select_cb                                             \
+	(*(void (*)(SSL_CTX *, tSSL_alpn_select_cb, void *))ssl_sw[40].ptr)
+typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
+                                              const unsigned char **out,
+                                              unsigned int *outlen,
+                                              void *arg);
+#define SSL_CTX_set_next_protos_advertised_cb                                  \
+	(*(void (*)(SSL_CTX *, tSSL_next_protos_advertised_cb, void *))ssl_sw[41]  \
+	      .ptr)
 
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
@@ -2057,6 +2074,10 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_get_servername", NULL},
                                    {"SSL_set_SSL_CTX", NULL},
                                    {"SSL_ctrl", NULL},
+                                   {"SSL_CTX_set_alpn_protos", NULL},
+                                   {"SSL_CTX_set_alpn_select_cb", NULL},
+                                   {"SSL_CTX_set_next_protos_advertised_cb",
+                                    NULL},
                                    {NULL, NULL}};
 
 
@@ -2136,6 +2157,24 @@ static struct ssl_func crypto_sw[] = {{"ERR_get_error", NULL},
 	(*(const char *(*)(const SSL *, int type))ssl_sw[36].ptr)
 #define SSL_set_SSL_CTX (*(SSL_CTX * (*)(SSL *, SSL_CTX *)) ssl_sw[37].ptr)
 #define SSL_ctrl (*(long (*)(SSL *, int, long, void *))ssl_sw[38].ptr)
+#define SSL_CTX_set_alpn_protos                                                \
+	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned))ssl_sw[39].ptr)
+typedef int (*tSSL_alpn_select_cb)(SSL *ssl,
+                                   const unsigned char **out,
+                                   unsigned char *outlen,
+                                   const unsigned char *in,
+                                   unsigned int inlen,
+                                   void *arg);
+#define SSL_CTX_set_alpn_select_cb                                             \
+	(*(void (*)(SSL_CTX *, tSSL_alpn_select_cb, void *))ssl_sw[40].ptr)
+typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
+                                              const unsigned char **out,
+                                              unsigned int *outlen,
+                                              void *arg);
+#define SSL_CTX_set_next_protos_advertised_cb                                  \
+	(*(void (*)(SSL_CTX *, tSSL_next_protos_advertised_cb, void *))ssl_sw[41]  \
+	      .ptr)
+
 
 #define SSL_CTX_set_options(ctx, op)                                           \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
@@ -2248,6 +2287,10 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_get_servername", NULL},
                                    {"SSL_set_SSL_CTX", NULL},
                                    {"SSL_ctrl", NULL},
+                                   {"SSL_CTX_set_alpn_protos", NULL},
+                                   {"SSL_CTX_set_alpn_select_cb", NULL},
+                                   {"SSL_CTX_set_next_protos_advertised_cb",
+                                    NULL},
                                    {NULL, NULL}};
 
 
@@ -7300,8 +7343,8 @@ mg_get_var2(const char *data,
 
 /* split a string "key1=val1&key2=val2" into key/value pairs */
 int
-mg_split_form_encoded(char *data,
-                      struct mg_header form_fields[MG_MAX_FORM_FIELDS])
+mg_split_form_urlencoded(char *data,
+                         struct mg_header form_fields[MG_MAX_FORM_FIELDS])
 {
 	char *b;
 	int i;
@@ -7941,9 +7984,7 @@ get_http_header_len(const char *buf, int buflen)
 		if (i < buflen - 1) {
 			if ((buf[i] == '\n') && (buf[i + 1] == '\n')) {
 				/* Two newline, no carriage return - not standard compliant,
-				 * but
-				 * it
-				 * should be accepted */
+				 * but it should be accepted */
 				return i + 2;
 			}
 		}
@@ -10731,6 +10772,7 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 {
 	int request_length;
 	int init_skip = 0;
+	int is_http2 = 0;
 
 	/* Reset attributes. DO NOT TOUCH is_ssl, remote_addr,
 	 * remote_port */
@@ -10768,6 +10810,14 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 		return -1;
 	}
 
+#if defined(USE_HTTP2)
+	if (request_length >= http2_pri_hdr_line_len) {
+		if (0 == memcmp(buf, http2_pri, http2_pri_hdr_line_len)) {
+			is_http2 = 1;
+		}
+	}
+#endif
+
 	/* The first word has to be the HTTP method */
 	ri->request_method = buf;
 
@@ -10777,7 +10827,10 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 
 	/* Check for a valid http method */
 	if (!is_valid_http_method(ri->request_method)) {
-		return -1;
+		/* "PRI" is valid for HTTP/2 connection initialization */
+		if (!is_http2) {
+			return -1;
+		}
 	}
 
 	/* The second word is the URI */
@@ -14628,6 +14681,9 @@ handle_request(struct mg_connection *conn)
 #endif /* !defined(NO_FILES) */
 }
 
+#ifdef USE_HTTP2
+#include "mod_http2.inl"
+#endif
 
 #if !defined(NO_FILESYSTEMS)
 static void
@@ -16241,6 +16297,88 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 }
 
 
+#if defined(USE_HTTP2)
+static const char alpn_proto_list[] = "\x02h2\x08http/1.1\x08http/1.0";
+static const char *alpn_proto_order[] = {alpn_proto_list,
+                                         alpn_proto_list + 3,
+                                         alpn_proto_list + 3 + 8,
+                                         NULL};
+#else
+static const char alpn_proto_list[] = "\x08http/1.1\x08http/1.0";
+static const char *alpn_proto_order[] = {alpn_proto_list,
+                                         alpn_proto_list + 8,
+                                         NULL};
+#endif
+
+
+static int
+alpn_select_cb(SSL *ssl,
+               const unsigned char **out,
+               unsigned char *outlen,
+               const unsigned char *in,
+               unsigned int inlen,
+               void *arg)
+{
+	struct mg_domain_context *dom_ctx = (struct mg_domain_context *)arg;
+	unsigned int i, j;
+
+	(void)ssl;
+
+	for (j = 0; alpn_proto_order[j] != NULL; j++) {
+		/* check all accepted protocols in this order */
+		const char *alpn_proto = alpn_proto_order[j];
+		/* search input for matching protocol */
+		for (i = 0; i < inlen; i++) {
+			if (!memcmp(in + i, alpn_proto, alpn_proto[0])) {
+				*out = in + i + 1;
+				*outlen = in[i];
+				return SSL_TLSEXT_ERR_OK;
+			}
+		}
+	}
+
+	/* Nothing found */
+	return SSL_TLSEXT_ERR_NOACK;
+}
+
+
+static int
+next_protos_advertised_cb(SSL *ssl,
+                          const unsigned char **data,
+                          unsigned int *len,
+                          void *arg)
+{
+	struct mg_domain_context *dom_ctx = (struct mg_domain_context *)arg;
+	*data = (const unsigned char *)alpn_proto_list;
+	*len = (unsigned int)strlen((const char *)data);
+	return SSL_TLSEXT_ERR_OK;
+}
+
+
+static int
+init_alpn(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
+{
+	unsigned int alpn_len = (unsigned int)strlen((char *)alpn_proto_list);
+	int ret =
+	    SSL_CTX_set_alpn_protos(dom_ctx->ssl_ctx, alpn_proto_list, alpn_len);
+	if (ret != 0) {
+		mg_cry_ctx_internal(phys_ctx,
+		                    "SSL_CTX_set_alpn_protos error: %s",
+		                    ssl_error());
+	}
+
+	SSL_CTX_set_alpn_select_cb(dom_ctx->ssl_ctx,
+	                           alpn_select_cb,
+	                           (void *)dom_ctx);
+
+	SSL_CTX_set_next_protos_advertised_cb(dom_ctx->ssl_ctx,
+	                                      next_protos_advertised_cb,
+	                                      (void *)dom_ctx);
+
+	return ret;
+}
+
+
 /* Setup SSL CTX as required by CivetWeb */
 static int
 init_ssl_ctx_impl(struct mg_context *phys_ctx,
@@ -16449,6 +16587,10 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 			                    "SSL_CTX_set_cipher_list error: %s",
 			                    ssl_error());
 		}
+	}
+
+	if (1 /* TODO */) {
+		init_alpn(phys_ctx, dom_ctx);
 	}
 
 	return 1;
@@ -18178,6 +18320,7 @@ process_new_connection(struct mg_connection *conn)
 	char ebuf[100];
 	const char *hostend;
 	int reqerr, uri_type;
+	int is_http2 = 0;
 
 #if defined(USE_SERVER_STATS)
 	int mcon = mg_atomic_inc(&(conn->phys_ctx->active_connections));
@@ -18213,6 +18356,15 @@ process_new_connection(struct mg_connection *conn)
 				DEBUG_ASSERT(ebuf[0] != '\0');
 				mg_send_http_error(conn, reqerr, "%s", ebuf);
 			}
+
+#if defined(USE_HTTP2)
+		} else if ((0 == strcmp(ri->http_version, "2.0"))
+		           && (conn->handled_requests == 0)) {
+			/* Initialize */
+			is_http2 = 1;
+			conn->content_len = -1; /* content len is unknown */
+#endif
+
 		} else if (strcmp(ri->http_version, "1.0")
 		           && strcmp(ri->http_version, "1.1")) {
 			mg_snprintf(conn,
@@ -18224,12 +18376,13 @@ process_new_connection(struct mg_connection *conn)
 			mg_send_http_error(conn, 505, "%s", ebuf);
 		}
 
-		if (ebuf[0] == '\0') {
+		if ((ebuf[0] == '\0') && (!is_http2)) {
 			uri_type = get_uri_type(conn->request_info.request_uri);
 			switch (uri_type) {
 			case 1:
 				/* Asterisk */
-				conn->request_info.local_uri = NULL;
+				conn->request_info.local_uri = 0;
+				/* TODO: Deal with '*'. */
 				break;
 			case 2:
 				/* relative uri */
@@ -18266,7 +18419,23 @@ process_new_connection(struct mg_connection *conn)
 		DEBUG_TRACE("http: %s, error: %s",
 		            (ri->http_version ? ri->http_version : "none"),
 		            (ebuf[0] ? ebuf : "none"));
-
+#if defined(USE_HTTP2)
+		if (is_http2) {
+			if (!is_valid_http2_primer(conn)) {
+				/* Primer does not match expectation from RFC. 
+				 * See https://tools.ietf.org/html/rfc7540#section-3.5 */
+				mg_snprintf(conn,
+				            NULL, /* No truncation check for ebuf */
+				            ebuf,
+				            sizeof(ebuf),
+				            "Invalid HTTP/2 primer");
+				mg_send_http_error(conn, 400, "%s", ebuf);
+			} else {
+				/* Valid HTTP/2 primer received */
+				handle_http2(conn);
+			}
+		} else
+#endif
 		if (ebuf[0] == '\0') {
 			if (conn->request_info.local_uri) {
 
@@ -18293,6 +18462,7 @@ process_new_connection(struct mg_connection *conn)
 					DEBUG_TRACE("%s", "end_request callback done");
 				}
 				log_access(conn);
+
 			} else {
 				/* TODO: handle non-local request (PROXY) */
 				conn->must_close = 1;
@@ -18320,7 +18490,8 @@ process_new_connection(struct mg_connection *conn)
 		                 || (!conn->is_chunked
 		                     && ((conn->consumed_content == conn->content_len)
 		                         || ((conn->request_len + conn->content_len)
-		                             <= conn->data_len))));
+		                             <= conn->data_len))))
+		             && (!is_http2);
 
 		if (keep_alive) {
 			/* Discard all buffered data for this request */
@@ -18665,7 +18836,6 @@ worker_thread_run(struct mg_connection *conn)
 		conn->conn_close_time = time(NULL);
 #endif
 	}
-
 
 	/* Call exit thread user callback */
 	if (ctx->callbacks.exit_thread) {
@@ -19758,8 +19928,8 @@ static
 		}
 	}
 
-    /* Start master (listening) thread */
-    mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid);
+	/* Start master (listening) thread */
+	mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid);
 
 	pthread_setspecific(sTlsKey, NULL);
 	return ctx;
