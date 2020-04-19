@@ -10829,10 +10829,9 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	}
 
 #if defined(USE_HTTP2)
-	if (request_length >= http2_pri_hdr_line_len) {
-		if (0 == memcmp(buf, http2_pri, http2_pri_hdr_line_len)) {
-			is_http2 = 1;
-		}
+	static int is_http2_header(const char *buf, size_t buflen);
+	if (is_http2_header(buf, request_length)) {
+		is_http2 = 1;
 	}
 #endif
 
