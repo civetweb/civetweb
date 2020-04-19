@@ -15687,7 +15687,10 @@ sslize(struct mg_connection *conn,
 	if (conn->dom_ctx->config[REQUEST_TIMEOUT]) {
 		/* NOTE: The loop below acts as a back-off, so we can end
 		 * up sleeping for more (or less) than the REQUEST_TIMEOUT. */
-		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]);
+		int to = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]);
+		if (to >= 0) {
+			timeout = (unsigned)to;
+		}
 	}
 
 	/* SSL functions may fail and require to be called again:
@@ -16205,7 +16208,7 @@ ssl_get_protocol(int version_id)
 static long
 ssl_get_protocol(int version_id)
 {
-	long ret = (long)SSL_OP_ALL;
+	unsigned long ret = (unsigned long)SSL_OP_ALL;
 	if (version_id > 0)
 		ret |= SSL_OP_NO_SSLv2;
 	if (version_id > 1)
@@ -16220,7 +16223,7 @@ ssl_get_protocol(int version_id)
 	if (version_id > 5)
 		ret |= SSL_OP_NO_TLSv1_3;
 #endif
-	return ret;
+	return (long)ret;
 }
 #endif /* OPENSSL_API_1_1 */
 
@@ -16341,13 +16344,14 @@ alpn_select_cb(SSL *ssl,
 	unsigned int i, j;
 
 	(void)ssl;
+	(void)dom_ctx;
 
 	for (j = 0; alpn_proto_order[j] != NULL; j++) {
 		/* check all accepted protocols in this order */
 		const char *alpn_proto = alpn_proto_order[j];
 		/* search input for matching protocol */
 		for (i = 0; i < inlen; i++) {
-			if (!memcmp(in + i, alpn_proto, alpn_proto[0])) {
+			if (!memcmp(in + i, alpn_proto, (unsigned char)alpn_proto[0])) {
 				*out = in + i + 1;
 				*outlen = in[i];
 				return SSL_TLSEXT_ERR_OK;
@@ -16369,6 +16373,10 @@ next_protos_advertised_cb(SSL *ssl,
 	struct mg_domain_context *dom_ctx = (struct mg_domain_context *)arg;
 	*data = (const unsigned char *)alpn_proto_list;
 	*len = (unsigned int)strlen((const char *)data);
+
+	(void)ssl;
+	(void)dom_ctx;
+
 	return SSL_TLSEXT_ERR_OK;
 }
 
@@ -16377,8 +16385,9 @@ static int
 init_alpn(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 {
 	unsigned int alpn_len = (unsigned int)strlen((char *)alpn_proto_list);
-	int ret =
-	    SSL_CTX_set_alpn_protos(dom_ctx->ssl_ctx, alpn_proto_list, alpn_len);
+	int ret = SSL_CTX_set_alpn_protos(dom_ctx->ssl_ctx,
+	                                  (const unsigned char *)alpn_proto_list,
+	                                  alpn_len);
 	if (ret != 0) {
 		mg_cry_ctx_internal(phys_ctx,
 		                    "SSL_CTX_set_alpn_protos error: %s",
