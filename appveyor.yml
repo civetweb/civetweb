@@ -212,8 +212,34 @@ environment:
       configuration: Release
       platform: x64
       image: Visual Studio 2013
-    # Visual Studio 2015 is default
-    # Visual Studio 2017 is not yet default
+    # Visual Studio 2015
+   - id: Full-VS2015-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x86
+      image: Visual Studio 2015
+    - id: Full-VS2015-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Visual Studio 2015    
+    # Visual Studio 2017
     - id: Full-VS2017-x86
       compiler: msvc-20-seh
       build_shared: NO
@@ -240,6 +266,33 @@ environment:
       configuration: Release
       platform: x64
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    # Visual Studio 2019
+    - id: Full-VS2019-x86
+      compiler: msvc-21-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x86
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    - id: Full-VS2019-x64
+      compiler: msvc-21-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019      
     # Experimental Ubuntu
     - id: Ubuntu1604-GCC-x64
       compiler: gcc-5.1.0-posix

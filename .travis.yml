@@ -753,6 +753,81 @@ matrix:
       NO_CACHING=NO
       ALLOW_WARNINGS=YES
 
+  -
+    os: linux
+    compiler: gcc
+    dist: bionic
+    env:
+      idx=21
+      N=GCCLinuxDefault_bionic
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    dist: eoan
+    env:
+      idx=22
+      N=GCCLinuxDefault_eoan
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    dist: focal
+    env:
+      idx=23
+      N=GCCLinuxDefault_focal
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
   - <<: *conan-linux
     env: CONAN_GCC_VERSIONS=4.9 CONAN_DOCKER_IMAGE=conanio/gcc49 CONAN_DOCKER_32_IMAGES=1
   - <<: *conan-linux
@@ -799,7 +874,7 @@ matrix:
 #          - clang-3.8
 #          - lua5.2
 #    env:
-#      idx=21
+#      idx=99
 #      N=Clang3.8-Linux-Complete-WithLua-Debug
 #      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
 #      BUILD_TYPE=Debug
