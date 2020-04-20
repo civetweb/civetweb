@@ -16648,7 +16648,10 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	}
 
 	/* Initialize ALPN only of TLS library (OpenSSL version) supports ALPN */
-	if (!tls_feature_missing[TLS_ALPN]) {
+#if !defined(NO_SSL_DL)
+	if (!tls_feature_missing[TLS_ALPN])
+#endif
+	{
 		init_alpn(phys_ctx, dom_ctx);
 	}
 
