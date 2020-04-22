@@ -7365,6 +7365,11 @@ mg_split_form_urlencoded(char *data,
 	int i;
 	int num = 0;
 
+	if (data == NULL) {
+		/* parameter error */
+		return -1;
+	}
+
 	if ((form_fields == NULL) && (num_form_fields == 0)) {
 		/* determine the number of expected fields */
 		if (data[0] == 0) {
@@ -7381,8 +7386,7 @@ mg_split_form_urlencoded(char *data,
 		return num;
 	}
 
-	if ((data == NULL) || (form_fields == NULL)
-	    || ((int)num_form_fields <= 0)) {
+	if ((form_fields == NULL) || ((int)num_form_fields <= 0)) {
 		/* parameter error */
 		return -1;
 	}
