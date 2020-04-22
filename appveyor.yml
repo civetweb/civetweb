@@ -213,7 +213,7 @@ environment:
       platform: x64
       image: Visual Studio 2013
     # Visual Studio 2015
-   - id: Full-VS2015-x86
+    - id: Full-VS2015-x86
       compiler: msvc-19-seh
       build_shared: NO
       no_files: NO
