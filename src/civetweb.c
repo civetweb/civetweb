@@ -9338,8 +9338,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		return 0;
 	}
 
-	if (ip_ver
-	    == 4) { //-V547 - condition is always true, if USE_IPV6 is not set
+	if (ip_ver == 4) {
 		*sock = socket(PF_INET, SOCK_STREAM, 0);
 	}
 #if defined(USE_IPV6)
@@ -9372,8 +9371,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 
 	set_close_on_exec(*sock, NULL, ctx);
 
-	if (ip_ver
-	    == 4) { //-V547 - condition is always true, if USE_IPV6 is not set
+	if (ip_ver == 4) {
 		/* connected with IPv4 */
 		conn_ret = connect(*sock,
 		                   (struct sockaddr *)((void *)&sa->sin),
