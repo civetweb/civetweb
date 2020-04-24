@@ -33,6 +33,7 @@
 | |**0** - The master thread is created |
 | |**1** - A worker thread which handles client connections has been created|
 | |**2** - An internal helper thread (timer thread) has been created|
+| |**3** - A websocket client thread has been created|
 | |The returned `void *` is stored as user defined pointer in the thread local storage.|
 |**`exit_thread`**|**`void (*exit_thread)( const struct mg_context *ctx, int thread_type, void * user_ptr);`**|
 | |The callback function `exit_thread()` is called when a thread is about to exit. The parameters correspond to `init_thread`, with `user_ptr` being the return value.|
