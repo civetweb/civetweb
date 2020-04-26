@@ -1628,6 +1628,7 @@ struct mg_workerTLS {
 	HANDLE pthread_cond_helper_mutex;
 	struct mg_workerTLS *next_waiting_thread;
 #endif
+	const char *alpn_proto;
 #if defined(MG_ALLOW_USING_GET_REQUEST_INFO_FOR_RESPONSE)
 	char txtbuf[4];
 #endif
@@ -2856,8 +2857,15 @@ enum {
 	CONNECTION_TYPE_RESPONSE
 };
 
+enum {
+	PROTOCOL_TYPE_HTTP1 = 0,
+	PROTOCOL_TYPE_WEBSOCKET = 1,
+	PROTOCOL_TYPE_HTTP2 = 2
+};
+
 struct mg_connection {
 	int connection_type; /* see CONNECTION_TYPE_* above */
+	int protocol_type;   /* see PROTOCOL_TYPE_*: 0=http/1.x, 1=ws, 2=http/2 */
 
 	struct mg_request_info request_info;
 	struct mg_response_info response_info;
@@ -2935,13 +2943,6 @@ struct de {
 	char *file_name;
 	struct mg_file_stat file;
 };
-
-
-#if defined(USE_WEBSOCKET)
-static int is_websocket_protocol(const struct mg_connection *conn);
-#else
-#define is_websocket_protocol(conn) (0)
-#endif
 
 
 #define mg_cry_internal(conn, fmt, ...)                                        \
@@ -4026,9 +4027,9 @@ get_proto_name(const struct mg_connection *conn)
 
 	const struct mg_request_info *ri = &conn->request_info;
 
-	const char *proto =
-	    (is_websocket_protocol(conn) ? (ri->is_ssl ? "wss" : "ws")
-	                                 : (ri->is_ssl ? "https" : "http"));
+	const char *proto = ((conn->protocol_type == PROTOCOL_TYPE_WEBSOCKET)
+	                         ? (ri->is_ssl ? "wss" : "ws")
+	                         : (ri->is_ssl ? "https" : "http"));
 
 	return proto;
 
@@ -7748,7 +7749,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 /* Step 3: Check if it is a websocket request, and modify the document
  * root if required */
 #if defined(USE_WEBSOCKET)
-	*is_websocket_request = is_websocket_protocol(conn);
+	*is_websocket_request = (conn->protocol_type == PROTOCOL_TYPE_WEBSOCKET);
 #if !defined(NO_FILES)
 	if (*is_websocket_request && conn->dom_ctx->config[WEBSOCKET_ROOT]) {
 		root = conn->dom_ctx->config[WEBSOCKET_ROOT];
@@ -10806,7 +10807,6 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 {
 	int request_length;
 	int init_skip = 0;
-	int is_http2 = 0;
 
 	/* Reset attributes. DO NOT TOUCH is_ssl, remote_addr,
 	 * remote_port */
@@ -10844,26 +10844,11 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 		return -1;
 	}
 
-#if defined(USE_HTTP2)
-	static int is_http2_header(const char *buf, size_t buflen);
-	if (is_http2_header(buf, request_length)) {
-		is_http2 = 1;
-	}
-#endif
-
 	/* The first word has to be the HTTP method */
 	ri->request_method = buf;
 
 	if (skip_to_end_of_word_and_terminate(&buf, 0) <= 0) {
 		return -1;
-	}
-
-	/* Check for a valid http method */
-	if (!is_valid_http_method(ri->request_method)) {
-		/* "PRI" is valid for HTTP/2 connection initialization */
-		if (!is_http2) {
-			return -1;
-		}
 	}
 
 	/* The second word is the URI */
@@ -13311,10 +13296,17 @@ handle_websocket_request(struct mg_connection *conn,
 		ws_close_handler(conn, cbData);
 	}
 }
+#endif /* !USE_WEBSOCKET */
 
 
+/* Is upgrade request:
+ *   0 = regular HTTP/1.0 or HTTP/1.1 request
+ *   1 = upgrade to websocket
+ *   2 = upgrade to HTTP/2
+ * -1 = upgrade to unknown protocol
+ */
 static int
-is_websocket_protocol(const struct mg_connection *conn)
+should_switch_to_protocol(const struct mg_connection *conn)
 {
 	const char *upgrade, *connection;
 
@@ -13324,35 +13316,37 @@ is_websocket_protocol(const struct mg_connection *conn)
 	 * Upgrade: Websocket
 	 */
 
-	upgrade = mg_get_header(conn, "Upgrade");
-	if (upgrade == NULL) {
-		return 0; /* fail early, don't waste time checking other header
-		           * fields
-		           */
-	}
-	DEBUG_TRACE("Upgrade: %s", upgrade);
-	if (!mg_strcasestr(upgrade, "websocket")) {
-		return 0;
-	}
-
 	connection = mg_get_header(conn, "Connection");
 	if (connection == NULL) {
-		return 0;
+		return PROTOCOL_TYPE_HTTP1;
 	}
 	if (!mg_strcasestr(connection, "upgrade")) {
-		return 0;
+		return PROTOCOL_TYPE_HTTP1;
 	}
 
-	/* The headers "Host", "Sec-WebSocket-Key", "Sec-WebSocket-Protocol" and
-	 * "Sec-WebSocket-Version" are also required.
-	 * Don't check them here, since even an unsupported websocket protocol
-	 * request still IS a websocket request (in contrast to a standard HTTP
-	 * request). It will fail later in handle_websocket_request.
-	 */
+	upgrade = mg_get_header(conn, "Upgrade");
+	if (upgrade == NULL) {
+		/* "Connection: Upgrade" without "Upgrade" Header --> Error */
+		return -1;
+	}
 
-	return 1;
+	/* Upgrade to ... */
+	if (0 != mg_strcasestr(upgrade, "websocket")) {
+		/* The headers "Host", "Sec-WebSocket-Key", "Sec-WebSocket-Protocol" and
+		 * "Sec-WebSocket-Version" are also required.
+		 * Don't check them here, since even an unsupported websocket protocol
+		 * request still IS a websocket request (in contrast to a standard HTTP
+		 * request). It will fail later in handle_websocket_request.
+		 */
+		return PROTOCOL_TYPE_WEBSOCKET; /* Websocket */
+	}
+	if (0 != mg_strcasestr(upgrade, "h2")) {
+		return PROTOCOL_TYPE_HTTP2; /* Websocket */
+	}
+
+	/* Upgrade to another protocol */
+	return -1;
 }
-#endif /* !USE_WEBSOCKET */
 
 
 static int
@@ -14382,7 +14376,7 @@ handle_request(struct mg_connection *conn)
 	/* 5.1. first test, if the request targets the regular http(s)://
 	 * protocol namespace or the websocket ws(s):// protocol namespace.
 	 */
-	is_websocket_request = is_websocket_protocol(conn);
+	is_websocket_request = (conn->protocol_type == PROTOCOL_TYPE_WEBSOCKET);
 #if defined(USE_WEBSOCKET)
 	handler_type = is_websocket_request ? WEBSOCKET_HANDLER : REQUEST_HANDLER;
 #else
@@ -16376,8 +16370,18 @@ alpn_select_cb(SSL *ssl,
 	struct mg_domain_context *dom_ctx = (struct mg_domain_context *)arg;
 	unsigned int i, j;
 
+	struct mg_workerTLS *tls =
+	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+
 	(void)ssl;
 	(void)dom_ctx;
+
+
+	if (tls == NULL) {
+		/* Need to store protocol in Thread Local Storage */
+		/* If there is no Thread Local Storage, don't use ALPN */
+		return SSL_TLSEXT_ERR_NOACK;
+	}
 
 	for (j = 0; alpn_proto_order[j] != NULL; j++) {
 		/* check all accepted protocols in this order */
@@ -16387,6 +16391,7 @@ alpn_select_cb(SSL *ssl,
 			if (!memcmp(in + i, alpn_proto, (unsigned char)alpn_proto[0])) {
 				*out = in + i + 1;
 				*outlen = in[i];
+				tls->alpn_proto = alpn_proto;
 				return SSL_TLSEXT_ERR_OK;
 			}
 		}
@@ -18384,7 +18389,6 @@ process_new_connection(struct mg_connection *conn)
 	char ebuf[100];
 	const char *hostend;
 	int reqerr, uri_type;
-	int is_http2 = 0;
 
 #if defined(USE_SERVER_STATS)
 	int mcon = mg_atomic_inc(&(conn->phys_ctx->active_connections));
@@ -18421,16 +18425,9 @@ process_new_connection(struct mg_connection *conn)
 				mg_send_http_error(conn, reqerr, "%s", ebuf);
 			}
 
-#if defined(USE_HTTP2)
-		} else if ((0 == strcmp(ri->http_version, "2.0"))
-		           && (conn->handled_requests == 0)) {
-			/* Initialize */
-			is_http2 = 1;
-			conn->content_len = -1; /* content len is unknown */
-#endif
-
 		} else if (strcmp(ri->http_version, "1.0")
 		           && strcmp(ri->http_version, "1.1")) {
+			/* HTTP/2 is not allowed here */
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -18440,7 +18437,7 @@ process_new_connection(struct mg_connection *conn)
 			mg_send_http_error(conn, 505, "%s", ebuf);
 		}
 
-		if ((ebuf[0] == '\0') && (!is_http2)) {
+		if (ebuf[0] == '\0') {
 			uri_type = get_uri_type(conn->request_info.request_uri);
 			switch (uri_type) {
 			case 1:
@@ -18480,27 +18477,29 @@ process_new_connection(struct mg_connection *conn)
 #endif
 		}
 
+		if (ebuf[0] != '\0') {
+			conn->protocol_type = -1;
+
+		} else if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
+			/* HTTP/1 allows protocol upgrade */
+			conn->protocol_type = should_switch_to_protocol(conn);
+
+			if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {
+				/* This will occur, if a HTTP/1.1 request should be upgraded
+				 * to HTTP/2 - but not if HTTP/2 is negotiated using ALPN.
+				 * Since most (all?) major browsers only support HTTP/2 using
+				 * ALPN, this is hard to test and very low priority.
+				 * Deactivate it (at least for now).
+				 */
+				conn->protocol_type = PROTOCOL_TYPE_HTTP1;
+			}
+		}
+
 		DEBUG_TRACE("http: %s, error: %s",
 		            (ri->http_version ? ri->http_version : "none"),
 		            (ebuf[0] ? ebuf : "none"));
-#if defined(USE_HTTP2)
-		if (is_http2) {
-			if (!is_valid_http2_primer(conn)) {
-				/* Primer does not match expectation from RFC.
-				 * See https://tools.ietf.org/html/rfc7540#section-3.5 */
-				mg_snprintf(conn,
-				            NULL, /* No truncation check for ebuf */
-				            ebuf,
-				            sizeof(ebuf),
-				            "Invalid HTTP/2 primer");
-				mg_send_http_error(conn, 400, "%s", ebuf);
-			} else {
-				/* Valid HTTP/2 primer received */
-				handle_http2(conn);
-			}
-		} else
-#endif
-		    if (ebuf[0] == '\0') {
+
+		if (ebuf[0] == '\0') {
 			if (conn->request_info.local_uri) {
 
 /* handle request to local server */
@@ -18555,7 +18554,7 @@ process_new_connection(struct mg_connection *conn)
 		                     && ((conn->consumed_content == conn->content_len)
 		                         || ((conn->request_len + conn->content_len)
 		                             <= conn->data_len))))
-		             && (!is_http2);
+		             && (conn->protocol_type == PROTOCOL_TYPE_HTTP1);
 
 		if (keep_alive) {
 			/* Discard all buffered data for this request */
@@ -18822,6 +18821,9 @@ worker_thread_run(struct mg_connection *conn)
 	 * produce_socket() */
 	while (consume_socket(ctx, &conn->client, thread_index)) {
 
+		/* New connections must start with new protocol negotiation */
+		tls.alpn_proto = NULL;
+
 #if defined(USE_SERVER_STATS)
 		conn->conn_close_time = 0;
 #endif
@@ -18865,7 +18867,17 @@ worker_thread_run(struct mg_connection *conn)
 				ssl_get_client_cert_info(conn);
 
 				/* process HTTPS connection */
-				process_new_connection(conn);
+				if (!memcmp(tls.alpn_proto, "\x02h2", 3)) {
+					/* process HTTPS/2 connection */
+					conn->protocol_type = PROTOCOL_TYPE_HTTP2;
+					init_connection(conn);
+#ifdef USE_HTTP2
+					process_new_http2_connection(conn);
+#endif
+				} else {
+					/* process HTTPS/1.x or WEBSOCKET-SECURE connection */
+					process_new_connection(conn);
+				}
 
 				/* Free client certificate info */
 				if (conn->request_info.client_cert) {
