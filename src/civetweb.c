@@ -18869,8 +18869,11 @@ worker_thread_run(struct mg_connection *conn)
 				/* process HTTPS connection */
 				if (!memcmp(tls.alpn_proto, "\x02h2", 3)) {
 					/* process HTTPS/2 connection */
-					conn->protocol_type = PROTOCOL_TYPE_HTTP2;
 					init_connection(conn);
+					conn->connection_type = CONNECTION_TYPE_REQUEST;
+					conn->protocol_type = PROTOCOL_TYPE_HTTP2;
+					conn->content_len = -1;
+					conn->is_chunked = 0;
 #ifdef USE_HTTP2
 					process_new_http2_connection(conn);
 #endif
