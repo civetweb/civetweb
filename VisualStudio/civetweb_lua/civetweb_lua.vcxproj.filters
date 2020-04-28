@@ -71,5 +71,8 @@
     <None Include="..\..\src\mod_lua_shared.inl">
       <Filter>inl files</Filter>
     </None>
+    <None Include="..\..\src\mod_http2.inl">
+      <Filter>inl files</Filter>
+    </None>
   </ItemGroup>
 </Project>

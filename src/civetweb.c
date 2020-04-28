@@ -14708,9 +14708,15 @@ handle_request(struct mg_connection *conn)
 #endif /* !defined(NO_FILES) */
 }
 
+
+/* Include HTTP/2 modules */
 #ifdef USE_HTTP2
+#if defined(NO_SSL)
+#error "HTTP2 requires ALPN, APLN requires SSL/TLS"
+#endif
 #include "mod_http2.inl"
 #endif
+
 
 #if !defined(NO_FILESYSTEMS)
 static void
@@ -18867,17 +18873,19 @@ worker_thread_run(struct mg_connection *conn)
 				ssl_get_client_cert_info(conn);
 
 				/* process HTTPS connection */
-				if (!memcmp(tls.alpn_proto, "\x02h2", 3)) {
+#if defined(USE_HTTP2)
+				if ((tls.alpn_proto != NULL)
+				    && (!memcmp(tls.alpn_proto, "\x02h2", 3))) {
 					/* process HTTPS/2 connection */
 					init_connection(conn);
 					conn->connection_type = CONNECTION_TYPE_REQUEST;
 					conn->protocol_type = PROTOCOL_TYPE_HTTP2;
 					conn->content_len = -1;
 					conn->is_chunked = 0;
-#ifdef USE_HTTP2
 					process_new_http2_connection(conn);
+				} else
 #endif
-				} else {
+				{
 					/* process HTTPS/1.x or WEBSOCKET-SECURE connection */
 					process_new_connection(conn);
 				}
