@@ -380,6 +380,8 @@ class WebSocketHandler : public CivetWebSocketHandler {
 int
 main(int argc, char *argv[])
 {
+	mg_init_library(0);
+	
 	const char *options[] = {
 	    "document_root", DOCUMENT_ROOT, "listening_ports", PORT, 0};
     
@@ -438,6 +440,7 @@ main(int argc, char *argv[])
 	}
 
 	printf("Bye!\n");
+	mg_exit_library();
 
 	return 0;
 }

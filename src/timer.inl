@@ -151,7 +151,7 @@ timer_thread_run(void *thread_func_param)
 
 	d = timer_getcurrenttime(ctx);
 
-	while (ctx->stop_flag == 0) {
+	while (STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 		pthread_mutex_lock(&ctx->timers->mutex);
 		if ((ctx->timers->timer_count > 0)
 		    && (d >= ctx->timers->timers[0].time)) {
