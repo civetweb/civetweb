@@ -279,7 +279,7 @@ environment:
       enable_stats: YES
       configuration: Release
       platform: x86
-      image: Visual Studio 2019
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     - id: Full-VS2019-x64
       compiler: msvc-21-seh
       build_shared: NO
@@ -292,7 +292,7 @@ environment:
       enable_stats: YES
       configuration: Release
       platform: x64
-      image: Visual Studio 2019
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     # Experimental Ubuntu
     - id: Ubuntu1604-GCC-x64
       compiler: gcc-5.1.0-posix
