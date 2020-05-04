@@ -267,32 +267,32 @@ environment:
       platform: x64
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     # Visual Studio 2019
-    - id: Full-VS2019-x86
-      compiler: msvc-21-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      enable_stats: YES
-      configuration: Release
-      platform: x86
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    - id: Full-VS2019-x64
-      compiler: msvc-21-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      enable_stats: YES
-      configuration: Release
-      platform: x64
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+#    - id: Full-VS2019-x86
+#      compiler: msvc-21-seh
+#      build_shared: NO
+#      no_files: NO
+#      enable_ipv6: YES
+#      enable_ssl: YES
+#      enable_websockets: YES
+#      no_cgi: NO
+#      no_caching: NO
+#      enable_stats: YES
+#      configuration: Release
+#      platform: x86
+#      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+#    - id: Full-VS2019-x64
+#      compiler: msvc-21-seh
+#      build_shared: NO
+#      no_files: NO
+#      enable_ipv6: YES
+#      enable_ssl: YES
+#      enable_websockets: YES
+#      no_cgi: NO
+#      no_caching: NO
+#      enable_stats: YES
+#      configuration: Release
+#      platform: x64
+#      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     # Experimental Ubuntu
     - id: Ubuntu1604-GCC-x64
       compiler: gcc-5.1.0-posix
