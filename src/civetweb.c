@@ -7305,25 +7305,8 @@ mg_url_decode(const char *src,
 static void
 url_decode_in_place(char *buf)
 {
-	size_t len = strlen(buf);
-	while (*buf) {
-		if (*buf == '%') {
-			if (isxdigit((unsigned char)buf[1])) {
-				if (isxdigit((unsigned char)buf[2])) {
-					int a = tolower((unsigned char)buf[1]);
-					int b = tolower((unsigned char)buf[2]);
-					char c = (char)((HEXTOI(a) << 4) | HEXTOI(b));
-					memmove(buf + 1, buf + 3, len - 2);
-					*buf = c;
-					len -= 2;
-				}
-			}
-		} else if (*buf == '+') {
-			*buf = ' ';
-		}
-		buf++;
-		len--;
-	}
+	int len = (int)strlen(buf);
+	(void)mg_url_decode(buf, len, buf, len + 1, 1);
 }
 
 
@@ -10888,6 +10871,11 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	ri->request_method = buf;
 
 	if (skip_to_end_of_word_and_terminate(&buf, 0) <= 0) {
+		return -1;
+	}
+
+	/* Check for a valid http method */
+	if (!is_valid_http_method(ri->request_method)) {
 		return -1;
 	}
 
