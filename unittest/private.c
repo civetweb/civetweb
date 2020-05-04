@@ -331,51 +331,59 @@ START_TEST(test_remove_dot_segments)
 	struct {
 		const char *input;
 		const char *expected_output;
-	} tests[] = {{"/path/to/file.ext", "/path/to/file.ext"},
-	             {"/file.ext", "/file.ext"},
-	             {"/path/../file.ext", "/file.ext"},
-	             {"/../to/file.ext", "/to/file.ext"},
-	             {"/../../file.ext", "/file.ext"},
-	             {"/./../file.ext", "/file.ext"},
-	             {"/.././file.ext", "/file.ext"},
-	             {"/././file.ext", "/file.ext"},
-	             {"/././file.ext", "/file.ext"},
-	             {"/path/.to/..file.ext", "/path/.to/..file.ext"},
-	             {"/file", "/file"},
-	             {"/path/", "/path/"},
+	} tests[] = {
+	    {"/path/to/file.ext", "/path/to/file.ext"},
+	    {"/file.ext", "/file.ext"},
+	    {"/path/../file.ext", "/file.ext"},
+	    {"/../to/file.ext", "/to/file.ext"},
+	    {"/../../file.ext", "/file.ext"},
+	    {"/./../file.ext", "/file.ext"},
+	    {"/.././file.ext", "/file.ext"},
+	    {"/././file.ext", "/file.ext"},
+	    {"/././file.ext", "/file.ext"},
+	    {"/path/.to/..file.ext", "/path/.to/..file.ext"},
+	    {"/file", "/file"},
+	    {"/path/", "/path/"},
 
-	             {"file.ext", "file.ext"},
-	             {"./file.ext", "file.ext"},
-	             {"../file.ext", "file.ext"},
-	             {".file.ext", ".file.ext"},
-	             {"..file.ext", "..file.ext"},
-	             {"file", "file"},
-	             {"/x/../", "/"},
-	             {"/x/../../", "/"},
-	             {"/x/.././", "/"},
-	             {"/./x/.././", "/"},
+	    {"file.ext", "file.ext"},
+	    {"./file.ext", "file.ext"},
+	    {"../file.ext", "file.ext"},
+	    {".file.ext", ".file.ext"},
+	    {"..file.ext", "..file.ext"},
+	    {"file", "file"},
+	    {"/x/../", "/"},
+	    {"/x/../../", "/"},
+	    {"/x/.././", "/"},
+	    {"/./x/.././", "/"},
 
-	             /* Windows specific */
-	             {"\\file.ext", "/file.ext"},
-	             {"\\..\\file.ext", "/file.ext"},
-	             {"/file.", "/file"},
-	             {"/path\\to.\\.\\file.", "/path/to/file"},
+	    /* Windows specific */
+	    {"\\file.ext", "/file.ext"},
+	    {"\\..\\file.ext", "/file.ext"},
+	    {"/file.", "/file"},
+	    {"/path\\to.\\.\\file.", "/path/to/file"},
 
-	             /* Multiple dots and slashes */
-	             {"\\//\\\\x", "/x"},
-	             {"//", "/"},
-	             {"/./", "/"},
-	             {"/../", "/"},
-	             {"/.../", "/"},
-	             {"/..../", "/"},
-	             {"/...../", "/"},
-	             {"/...../", "/"},
-	             {"/...//", "/"},
-	             {"/..././", "/"},
-	             {"/.../../", "/"},
-	             {"/.../.../", "/"},
+	    /* Multiple dots and slashes */
+	    {"\\//\\\\x", "/x"},
+	    {"//", "/"},
+	    {"/./", "/"},
+	    {"/../", "/"},
+	    {"/.../", "/"},
+	    {"/..../", "/"},
+	    {"/...../", "/"},
+	    {"/...../", "/"},
+	    {"/...//", "/"},
+	    {"/..././", "/"},
+	    {"/.../../", "/"},
+	    {"/.../.../", "/"},
 
-	             {NULL, NULL}};
+	    /* Test cases from issues */
+	    {"/foo/bar/baz/../qux.txt", "/foo/bar/qux.txt"},
+	    {"/../alice/bob/../carol/david/frank/../../grace.ext/hugo/../irene.jpg",
+	     "/alice/carol/grace.ext/irene.jpg"},
+	    {"/a/b/..", "/a/"},
+	    {"/a/b/c/../d/../..", "/a/"},
+
+	    {NULL, NULL}};
 
 	mark_point();
 
