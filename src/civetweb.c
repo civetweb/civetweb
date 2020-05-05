@@ -8168,7 +8168,6 @@ remove_dot_segments(char *inout)
 	 * in URI by slash */
 	char *out_end = inout;
 	char *in = inout;
-	int replaced;
 
 	if (!in) {
 		/* Param error. */
@@ -8277,39 +8276,40 @@ remove_dot_segments(char *inout)
 	 * the end. Also replace all "//" by "/". Repeat until there is no "./"
 	 * or "//" anymore.
 	 */
-	do {
-		replaced = 0;
-
-		/* replace ./ by / */
-		out_end = inout;
-		while (*out_end) {
-			if ((*out_end == '.')
-			    && ((out_end[1] == '/') || (out_end[1] == 0))) {
-				char *r = out_end;
-				do {
-					r[0] = r[1];
-					r++;
-					replaced = 1;
-				} while (r[0] != 0);
-			}
-			out_end++;
-		}
-
-		/* replace // by / */
-		out_end = inout;
-		while (*out_end) {
-			if ((out_end[0] == '/') && (out_end[1] == '/')) {
-				char *c = out_end;
-				while (*c) {
-					c[0] = c[1];
-					c++;
+	out_end = in = inout;
+	while (*in) {
+		if (*in == '.') {
+			/* remove . at the end or preceding of / */
+			char *in_ahead = in;
+			do {
+				in_ahead++;
+			} while (*in_ahead == '.');
+			if (*in_ahead == '/') {
+				in = in_ahead;
+				if ((out_end != inout) && (out_end[-1] == '/')) {
+					/* remove generated // */
+					out_end--;
 				}
-				replaced = 1;
+			} else if (*in_ahead == 0) {
+				in = in_ahead;
+			} else {
+				do {
+					*out_end++ = '.';
+					in++;
+				} while (in != in_ahead);
 			}
-			out_end++;
+		} else if (*in == '/') {
+			/* replace // by / */
+			*out_end++ = '/';
+			do {
+				in++;
+			} while (*in == '/');
+		} else {
+			*out_end++ = *in;
+			in++;
 		}
-
-	} while (replaced);
+	}
+	*out_end = 0;
 }
 
 
