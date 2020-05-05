@@ -8166,14 +8166,12 @@ remove_dot_segments(char *inout)
 	/* Windows backend protection
 	 * (https://tools.ietf.org/html/rfc3986#section-7.3): Replace backslash
 	 * in URI by slash */
-	char *in_copy = inout ? mg_strdup(inout) : NULL;
-	char *out_begin = inout;
 	char *out_end = inout;
-	char *in = in_copy;
+	char *in = inout;
 	int replaced;
 
 	if (!in) {
-		/* Param error or OOM. */
+		/* Param error. */
 		return;
 	}
 
@@ -8190,11 +8188,13 @@ remove_dot_segments(char *inout)
 	 * The input buffer is initialized.
 	 * The output buffer is initialized to the empty string.
 	 */
-	in = in_copy;
+	in = inout;
 
 	/* Step 2:
 	 * While the input buffer is not empty, loop as follows:
 	 */
+	/* Less than out_end of the inout buffer is used as output, so keep
+	 * condition: out_end <= in */
 	while (*in) {
 		/* Step 2a:
 		 * If the input buffer begins with a prefix of "../" or "./",
@@ -8226,21 +8226,19 @@ remove_dot_segments(char *inout)
 		 */
 		else if (!strncmp(in, "/../", 4)) {
 			in += 3;
-			if (out_begin != out_end) {
+			if (inout != out_end) {
 				/* remove last segment */
 				do {
 					out_end--;
-				} while ((out_begin != out_end) && (*out_end != '/'));
-				*out_end = 0;
+				} while ((inout != out_end) && (*out_end != '/'));
 			}
 		} else if (!strcmp(in, "/..")) {
 			in[1] = 0;
-			if (out_begin != out_end) {
+			if (inout != out_end) {
 				/* remove last segment */
 				do {
 					out_end--;
-				} while ((out_begin != out_end) && (*out_end != '/'));
-				*out_end = 0;
+				} while ((inout != out_end) && (*out_end != '/'));
 			}
 		}
 		/* otherwise */
@@ -8283,7 +8281,7 @@ remove_dot_segments(char *inout)
 		replaced = 0;
 
 		/* replace ./ by / */
-		out_end = out_begin;
+		out_end = inout;
 		while (*out_end) {
 			if ((*out_end == '.')
 			    && ((out_end[1] == '/') || (out_end[1] == 0))) {
@@ -8297,8 +8295,8 @@ remove_dot_segments(char *inout)
 			out_end++;
 		}
 
-		/* replace ./ by / */
-		out_end = out_begin;
+		/* replace // by / */
+		out_end = inout;
 		while (*out_end) {
 			if ((out_end[0] == '/') && (out_end[1] == '/')) {
 				char *c = out_end;
@@ -8312,9 +8310,6 @@ remove_dot_segments(char *inout)
 		}
 
 	} while (replaced);
-
-	/* Free temporary copies */
-	mg_free(in_copy);
 }
 
 
