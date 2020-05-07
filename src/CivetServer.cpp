@@ -464,9 +464,9 @@ CivetServer::getParam(struct mg_connection *conn,
 	assert(me != NULL);
 	mg_lock_context(me->context);
 	CivetConnection &conobj = me->connections[conn];
-	mg_lock_connection(conn);
 	mg_unlock_context(me->context);
 
+	mg_lock_connection(conn);
 	if (conobj.postData.empty()) {
 		// check if there is a request body
 		for (;;) {

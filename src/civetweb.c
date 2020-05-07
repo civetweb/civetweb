@@ -2697,9 +2697,7 @@ struct mg_handler_info {
 	/* Handler for http/https or authorization requests. */
 	mg_request_handler handler;
 	unsigned int refcount;
-	pthread_mutex_t refcount_mutex; /* Protects refcount */
-	pthread_cond_t
-	    refcount_cond; /* Signaled when handler refcount is decremented */
+	int removing;
 
 	/* Handler for ws/wss (websocket) requests. */
 	mg_websocket_connect_handler connect_handler;
@@ -2864,8 +2862,9 @@ struct mg_context {
 #endif
 
 	/* Server nonce */
-	pthread_mutex_t nonce_mutex; /* Protects ssl_ctx, ssl_cert_last_mtime,
-	                              * nonce_count, and next (linked list) */
+	pthread_mutex_t nonce_mutex; /* Protects ssl_ctx, handlers,
+	                              * ssl_cert_last_mtime, nonce_count, and
+	                              * next (linked list) */
 
 	/* Server callbacks */
 	struct mg_callbacks callbacks; /* User-defined callback function */
@@ -13714,37 +13713,6 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 
 
 static void
-handler_info_acquire(struct mg_handler_info *handler_info)
-{
-	pthread_mutex_lock(&handler_info->refcount_mutex);
-	handler_info->refcount++;
-	pthread_mutex_unlock(&handler_info->refcount_mutex);
-}
-
-
-static void
-handler_info_release(struct mg_handler_info *handler_info)
-{
-	pthread_mutex_lock(&handler_info->refcount_mutex);
-	handler_info->refcount--;
-	pthread_cond_signal(&handler_info->refcount_cond);
-	pthread_mutex_unlock(&handler_info->refcount_mutex);
-}
-
-
-static void
-handler_info_wait_unused(struct mg_handler_info *handler_info)
-{
-	pthread_mutex_lock(&handler_info->refcount_mutex);
-	while (handler_info->refcount) {
-		pthread_cond_wait(&handler_info->refcount_cond,
-		                  &handler_info->refcount_mutex);
-	}
-	pthread_mutex_unlock(&handler_info->refcount_mutex);
-}
-
-
-static void
 mg_set_handler_type(struct mg_context *phys_ctx,
                     struct mg_domain_context *dom_ctx,
                     const char *uri,
@@ -13838,16 +13806,22 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 	mg_lock_context(phys_ctx);
 
 	/* first try to find an existing handler */
-	lastref = &(dom_ctx->handlers);
-	for (tmp_rh = dom_ctx->handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
-		if (tmp_rh->handler_type == handler_type) {
-			if ((urilen == tmp_rh->uri_len) && !strcmp(tmp_rh->uri, uri)) {
+	do {
+		lastref = &(dom_ctx->handlers);
+		for (tmp_rh = dom_ctx->handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
+			if (tmp_rh->handler_type == handler_type
+			    && (urilen == tmp_rh->uri_len) && !strcmp(tmp_rh->uri, uri)) {
 				if (!is_delete_request) {
 					/* update existing handler */
 					if (handler_type == REQUEST_HANDLER) {
 						/* Wait for end of use before updating */
-						handler_info_wait_unused(tmp_rh);
-
+						if (tmp_rh->refcount) {
+							mg_unlock_context(phys_ctx);
+							mg_sleep(1);
+							mg_lock_context(phys_ctx);
+							/* tmp_rh might have been freed, search again. */
+							break;
+						}
 						/* Ok, the handler is no more use -> Update it */
 						tmp_rh->handler = handler;
 					} else if (handler_type == WEBSOCKET_HANDLER) {
@@ -13864,13 +13838,15 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 					/* remove existing handler */
 					if (handler_type == REQUEST_HANDLER) {
 						/* Wait for end of use before removing */
-						handler_info_wait_unused(tmp_rh);
-
-						/* Ok, the handler is no more used -> Destroy
-						 * resources
-						 */
-						pthread_cond_destroy(&tmp_rh->refcount_cond);
-						pthread_mutex_destroy(&tmp_rh->refcount_mutex);
+						if (tmp_rh->refcount) {
+							tmp_rh->removing = 1;
+							mg_unlock_context(phys_ctx);
+							mg_sleep(1);
+							mg_lock_context(phys_ctx);
+							/* tmp_rh might have been freed, search again. */
+							break;
+						}
+						/* Ok, the handler is no more used */
 					}
 					*lastref = tmp_rh->next;
 					mg_free(tmp_rh->uri);
@@ -13882,9 +13858,9 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 				}
 				return;
 			}
+			lastref = &(tmp_rh->next);
 		}
-		lastref = &(tmp_rh->next);
-	}
+	} while (tmp_rh != NULL);
 
 	if (is_delete_request) {
 		/* no handler to set, this was a remove request to a non-existing
@@ -13924,27 +13900,8 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 	}
 	tmp_rh->uri_len = urilen;
 	if (handler_type == REQUEST_HANDLER) {
-		/* Init refcount mutex and condition */
-		if (0 != pthread_mutex_init(&tmp_rh->refcount_mutex, NULL)) {
-			mg_unlock_context(phys_ctx);
-			mg_free(tmp_rh);
-			mg_cry_ctx_internal(phys_ctx, "%s", "Cannot init refcount mutex");
-			if (is_tls_set) {
-				pthread_setspecific(sTlsKey, NULL);
-			}
-			return;
-		}
-		if (0 != pthread_cond_init(&tmp_rh->refcount_cond, NULL)) {
-			mg_unlock_context(phys_ctx);
-			pthread_mutex_destroy(&tmp_rh->refcount_mutex);
-			mg_free(tmp_rh);
-			mg_cry_ctx_internal(phys_ctx, "%s", "Cannot init refcount cond");
-			if (is_tls_set) {
-				pthread_setspecific(sTlsKey, NULL);
-			}
-			return;
-		}
 		tmp_rh->refcount = 0;
+		tmp_rh->removing = 0;
 		tmp_rh->handler = handler;
 	} else if (handler_type == WEBSOCKET_HANDLER) {
 		tmp_rh->subprotocols = subprotocols;
@@ -14079,6 +14036,7 @@ get_request_handler(struct mg_connection *conn,
 		const char *uri = request_info->local_uri;
 		size_t urilen = strlen(uri);
 		struct mg_handler_info *tmp_rh;
+		int step, matched;
 
 		if (!conn || !conn->phys_ctx || !conn->dom_ctx) {
 			return 0;
@@ -14086,64 +14044,29 @@ get_request_handler(struct mg_connection *conn,
 
 		mg_lock_context(conn->phys_ctx);
 
-		/* first try for an exact match */
-		for (tmp_rh = conn->dom_ctx->handlers; tmp_rh != NULL;
-		     tmp_rh = tmp_rh->next) {
-			if (tmp_rh->handler_type == handler_type) {
-				if ((urilen == tmp_rh->uri_len) && !strcmp(tmp_rh->uri, uri)) {
-					if (handler_type == WEBSOCKET_HANDLER) {
-						*subprotocols = tmp_rh->subprotocols;
-						*connect_handler = tmp_rh->connect_handler;
-						*ready_handler = tmp_rh->ready_handler;
-						*data_handler = tmp_rh->data_handler;
-						*close_handler = tmp_rh->close_handler;
-					} else if (handler_type == REQUEST_HANDLER) {
-						*handler = tmp_rh->handler;
-						/* Acquire handler and give it back */
-						handler_info_acquire(tmp_rh);
-						*handler_info = tmp_rh;
-					} else { /* AUTH_HANDLER */
-						*auth_handler = tmp_rh->auth_handler;
-					}
-					*cbdata = tmp_rh->cbdata;
-					mg_unlock_context(conn->phys_ctx);
-					return 1;
+		for (step = 0; step < 3; step++) {
+			for (tmp_rh = conn->dom_ctx->handlers; tmp_rh != NULL;
+			     tmp_rh = tmp_rh->next) {
+				if (tmp_rh->handler_type != handler_type) {
+					continue;
 				}
-			}
-		}
-
-		/* next try for a partial match, we will accept uri/something */
-		for (tmp_rh = conn->dom_ctx->handlers; tmp_rh != NULL;
-		     tmp_rh = tmp_rh->next) {
-			if (tmp_rh->handler_type == handler_type) {
-				if ((tmp_rh->uri_len < urilen) && (uri[tmp_rh->uri_len] == '/')
-				    && (memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0)) {
-					if (handler_type == WEBSOCKET_HANDLER) {
-						*subprotocols = tmp_rh->subprotocols;
-						*connect_handler = tmp_rh->connect_handler;
-						*ready_handler = tmp_rh->ready_handler;
-						*data_handler = tmp_rh->data_handler;
-						*close_handler = tmp_rh->close_handler;
-					} else if (handler_type == REQUEST_HANDLER) {
-						*handler = tmp_rh->handler;
-						/* Acquire handler and give it back */
-						handler_info_acquire(tmp_rh);
-						*handler_info = tmp_rh;
-					} else { /* AUTH_HANDLER */
-						*auth_handler = tmp_rh->auth_handler;
-					}
-					*cbdata = tmp_rh->cbdata;
-					mg_unlock_context(conn->phys_ctx);
-					return 1;
+				if (step == 0) {
+					/* first try for an exact match */
+					matched = (tmp_rh->uri_len == urilen)
+					           && (strcmp(tmp_rh->uri, uri) == 0);
+				} else if (step == 1) {
+					/* next try for a partial match, we will accept
+					   uri/something */
+					matched = (tmp_rh->uri_len < urilen)
+					           && (uri[tmp_rh->uri_len] == '/')
+					           && (memcmp(tmp_rh->uri, uri,
+					                      tmp_rh->uri_len) == 0);
+				} else {
+					/* finally try for pattern match */
+					matched = match_prefix(tmp_rh->uri,
+					                       tmp_rh->uri_len, uri) > 0;
 				}
-			}
-		}
-
-		/* finally try for pattern match */
-		for (tmp_rh = conn->dom_ctx->handlers; tmp_rh != NULL;
-		     tmp_rh = tmp_rh->next) {
-			if (tmp_rh->handler_type == handler_type) {
-				if (match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0) {
+				if (matched) {
 					if (handler_type == WEBSOCKET_HANDLER) {
 						*subprotocols = tmp_rh->subprotocols;
 						*connect_handler = tmp_rh->connect_handler;
@@ -14151,9 +14074,14 @@ get_request_handler(struct mg_connection *conn,
 						*data_handler = tmp_rh->data_handler;
 						*close_handler = tmp_rh->close_handler;
 					} else if (handler_type == REQUEST_HANDLER) {
+						if (tmp_rh->removing) {
+							/* Treat as none found */
+							step = 2;
+							break;
+						}
 						*handler = tmp_rh->handler;
 						/* Acquire handler and give it back */
-						handler_info_acquire(tmp_rh);
+						tmp_rh->refcount++;
 						*handler_info = tmp_rh;
 					} else { /* AUTH_HANDLER */
 						*auth_handler = tmp_rh->auth_handler;
@@ -14517,7 +14445,9 @@ handle_request(struct mg_connection *conn)
 			i = callback_handler(conn, callback_data);
 
 			/* Callback handler will not be used anymore. Release it */
-			handler_info_release(handler_info);
+			mg_lock_context(conn->phys_ctx);
+			handler_info->refcount--;
+			mg_unlock_context(conn->phys_ctx);
 
 			if (i > 0) {
 				/* Do nothing, callback has served the request. Store
@@ -19303,10 +19233,6 @@ free_context(struct mg_context *ctx)
 	while (ctx->dd.handlers) {
 		tmp_rh = ctx->dd.handlers;
 		ctx->dd.handlers = tmp_rh->next;
-		if (tmp_rh->handler_type == REQUEST_HANDLER) {
-			pthread_cond_destroy(&tmp_rh->refcount_cond);
-			pthread_mutex_destroy(&tmp_rh->refcount_mutex);
-		}
 		mg_free(tmp_rh->uri);
 		mg_free(tmp_rh);
 	}
