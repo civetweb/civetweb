@@ -587,10 +587,18 @@ typedef long off_t;
 #endif /* CRYPTO_LIB */
 #else  /* defined(_WIN64) || defined(__MINGW64__) */
 #if !defined(SSL_LIB)
+#if defined(OPENSSL_API_1_1)
+#define SSL_LIB "libssl-1_1.dll"
+#else
 #define SSL_LIB "ssleay32.dll"
+#endif
 #endif /* SSL_LIB */
 #if !defined(CRYPTO_LIB)
+#if defined(OPENSSL_API_1_1)
+#define CRYPTO_LIB "libcrypto-1_1.dll"
+#else
 #define CRYPTO_LIB "libeay32.dll"
+#endif
 #endif /* CRYPTO_LIB */
 #endif /* defined(_WIN64) || defined(__MINGW64__) */
 
