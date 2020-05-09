@@ -13729,8 +13729,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 {
 	struct mg_handler_info *tmp_rh, **lastref;
 	size_t urilen = strlen(uri);
-	struct mg_workerTLS tls;
-	int is_tls_set = 0;
 
 	if (handler_type == WEBSOCKET_HANDLER) {
 		DEBUG_ASSERT(handler == NULL);
@@ -13787,22 +13785,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		return;
 	}
 
-	/* Internal callbacks have their contexts set
-	 * if called from non-related thread, context must be set
-	 * since internal function assumes it exists.
-	 * For an example see how handler_info_wait_unused()
-	 * waits for reference to become zero
-	 */
-	if (NULL == pthread_getspecific(sTlsKey)) {
-		is_tls_set = 1;
-		tls.is_master = -1;
-		tls.thread_idx = phys_ctx->starter_thread_idx;
-#if defined(_WIN32)
-		tls.pthread_cond_helper_mutex = NULL;
-#endif
-		pthread_setspecific(sTlsKey, &tls);
-	}
-
 	mg_lock_context(phys_ctx);
 
 	/* first try to find an existing handler */
@@ -13853,9 +13835,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 					mg_free(tmp_rh);
 				}
 				mg_unlock_context(phys_ctx);
-				if (is_tls_set) {
-					pthread_setspecific(sTlsKey, NULL);
-				}
 				return;
 			}
 			lastref = &(tmp_rh->next);
@@ -13866,9 +13845,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		/* no handler to set, this was a remove request to a non-existing
 		 * handler */
 		mg_unlock_context(phys_ctx);
-		if (is_tls_set) {
-			pthread_setspecific(sTlsKey, NULL);
-		}
 		return;
 	}
 
@@ -13881,9 +13857,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		mg_cry_ctx_internal(phys_ctx,
 		                    "%s",
 		                    "Cannot create new request handler struct, OOM");
-		if (is_tls_set) {
-			pthread_setspecific(sTlsKey, NULL);
-		}
 		return;
 	}
 	tmp_rh->uri = mg_strdup_ctx(uri, phys_ctx);
@@ -13893,9 +13866,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		mg_cry_ctx_internal(phys_ctx,
 		                    "%s",
 		                    "Cannot create new request handler struct, OOM");
-		if (is_tls_set) {
-			pthread_setspecific(sTlsKey, NULL);
-		}
 		return;
 	}
 	tmp_rh->uri_len = urilen;
@@ -13918,9 +13888,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 
 	*lastref = tmp_rh;
 	mg_unlock_context(phys_ctx);
-	if (is_tls_set) {
-		pthread_setspecific(sTlsKey, NULL);
-	}
 }
 
 
