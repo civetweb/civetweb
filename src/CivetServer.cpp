@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <stdexcept>
-#include <stdlib.h>
 #include <string.h>
 
 #ifndef UNUSED_PARAMETER
@@ -295,7 +294,7 @@ CivetServer::CivetServer(const char **options,
 		                     "Possible problem binding to port.");
 }
 
-CivetServer::CivetServer(std::vector<std::string> options,
+CivetServer::CivetServer(const std::vector<std::string> &options,
                          const struct CivetCallbacks *_callbacks,
                          const void *UserContextIn)
     : context(0)
@@ -312,11 +311,11 @@ CivetServer::CivetServer(std::vector<std::string> options,
 	}
 	callbacks.connection_close = closeHandler;
 
-	std::vector<const char *> pointers(options.size());
+	std::vector<const char *> pointers(options.size() + 1);
 	for (size_t i = 0; i < options.size(); i++) {
 		pointers[i] = (options[i].c_str());
 	}
-	pointers.push_back(0);
+	pointers.back() = NULL;
 
 	context = mg_start(&callbacks, this, &pointers[0]);
 	if (context == NULL)
@@ -343,7 +342,7 @@ CivetServer::closeHandler(const struct mg_connection *conn)
 		me->userCloseHandler(conn);
 	}
 	mg_lock_context(me->context);
-	me->connections.erase(const_cast<struct mg_connection *>(conn));
+	me->connections.erase(conn);
 	mg_unlock_context(me->context);
 }
 
@@ -439,24 +438,16 @@ CivetServer::urlDecode(const char *src,
                        std::string &dst,
                        bool is_form_url_encoded)
 {
-	int i, j, a, b;
-#define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
-
-	dst.clear();
-	for (i = j = 0; i < (int)src_len; i++, j++) {
-		if (i < (int)src_len - 2 && src[i] == '%'
-		    && isxdigit((unsigned char)src[i + 1])
-		    && isxdigit((unsigned char)src[i + 2])) {
-			a = tolower((unsigned char)src[i + 1]);
-			b = tolower((unsigned char)src[i + 2]);
-			dst.push_back((char)((HEXTOI(a) << 4) | HEXTOI(b)));
-			i += 2;
-		} else if (is_form_url_encoded && src[i] == '+') {
-			dst.push_back(' ');
-		} else {
-			dst.push_back(src[i]);
-		}
+	// assign enough buffer
+	std::vector<char> buf(src_len + 1);
+	int r = mg_url_decode(src, static_cast<int>(src_len), &buf[0],
+	                      static_cast<int>(buf.size()), is_form_url_encoded);
+	if (r < 0) {
+		// never reach here
+		throw std::out_of_range("");
 	}
+	// dst can contain NUL characters
+	dst.assign(buf.begin(), buf.begin() + r);
 }
 
 bool
@@ -476,43 +467,30 @@ CivetServer::getParam(struct mg_connection *conn,
 	mg_lock_connection(conn);
 	mg_unlock_context(me->context);
 
-	if (conobj.postData != NULL) {
-		// check if form parameter are already stored
-		formParams = conobj.postData;
-	} else {
-		// otherwise, check if there is a request body
-		const char *con_len_str = mg_get_header(conn, "Content-Length");
-		if (con_len_str) {
-			char *end = 0;
-			unsigned long con_len = strtoul(con_len_str, &end, 10);
-			if ((end == NULL) || (*end != 0)) {
-				// malformed header
-				mg_unlock_connection(conn);
-				return false;
-			}
-			if ((con_len > 0) && (con_len <= MAX_PARAM_BODY_LENGTH)) {
-				// Body is within a reasonable range
-
-				// Allocate memory:
-				// Add one extra character: in case the post-data is a text, it
-				// is required as 0-termination.
-				// Do not increment con_len, since the 0 terminating is not part
-				// of the content (text or binary).
-				conobj.postData = (char *)malloc(con_len + 1);
-				if (conobj.postData != NULL) {
-					// malloc may fail for huge requests
-					mg_read(conn, conobj.postData, con_len);
-					conobj.postData[con_len] = 0;
-					formParams = conobj.postData;
-					conobj.postDataLen = con_len;
+	if (conobj.postData.empty()) {
+		// check if there is a request body
+		for (;;) {
+			char buf[2048];
+			int r = mg_read(conn, buf, sizeof(buf));
+			try {
+				if (r == 0) {
+					conobj.postData.push_back('\0');
+					break;
+				} else if ((r < 0) || ((conobj.postData.size() + r)
+				                       > MAX_PARAM_BODY_LENGTH)) {
+					conobj.postData.assign(1, '\0');
+					break;
 				}
-			}
-			if (conobj.postData == NULL) {
-				// we cannot store the body
-				mg_unlock_connection(conn);
-				return false;
+				conobj.postData.insert(conobj.postData.end(), buf, buf + r);
+			} catch (...) {
+				conobj.postData.clear();
+				break;
 			}
 		}
+	}
+	if (!conobj.postData.empty()) {
+		// check if form parameter are already stored
+		formParams = &conobj.postData[0];
 	}
 
 	if (ri->query_string != NULL) {
@@ -543,36 +521,29 @@ CivetServer::getParam(const char *data,
                       std::string &dst,
                       size_t occurrence)
 {
-	const char *p, *e, *s;
-	size_t name_len;
-
-	dst.clear();
-	if (data == NULL || name == NULL || data_len == 0) {
-		return false;
-	}
-	name_len = strlen(name);
-	e = data + data_len;
-
-	// data is "var1=val1&var2=val2...". Find variable first
-	for (p = data; p + name_len < e; p++) {
-		if ((p == data || p[-1] == '&') && p[name_len] == '='
-		    && !mg_strncasecmp(name, p, name_len) && 0 == occurrence--) {
-
-			// Point p to variable value
-			p += name_len + 1;
-
-			// Point s to the end of the value
-			s = (const char *)memchr(p, '&', (size_t)(e - p));
-			if (s == NULL) {
-				s = e;
+	char buf[256];
+	int r = mg_get_var2(data, data_len, name, buf, sizeof(buf), occurrence);
+	if (r >= 0) {
+		// dst can contain NUL characters
+		dst.assign(buf, r);
+		return true;
+	} else if (r == -2) {
+		// more buffer
+		std::vector<char> vbuf(sizeof(buf) * 2);
+		for (;;) {
+			r = mg_get_var2(data, data_len, name, &vbuf[0], vbuf.size(),
+			                occurrence);
+			if (r >= 0) {
+				dst.assign(vbuf.begin(), vbuf.begin() + r);
+				return true;
+			} else if (r != -2) {
+				break;
 			}
-			assert(s >= p);
-
-			// Decode variable into destination buffer
-			urlDecode(p, (s - p), dst, true);
-			return true;
+			// more buffer
+			vbuf.resize(vbuf.size() * 2);
 		}
 	}
+	dst.clear();
 	return false;
 }
 
@@ -603,19 +574,21 @@ CivetServer::urlEncode(const char *src,
                        std::string &dst,
                        bool append)
 {
-	static const char *dont_escape = "._-$,;~()";
-	static const char *hex = "0123456789abcdef";
-
 	if (!append)
 		dst.clear();
 
 	for (; src_len > 0; src++, src_len--) {
-		if (isalnum((unsigned char)*src) || strchr(dont_escape, *src) != NULL) {
+		if (*src == '\0') {
+			// src and dst can contain NUL characters without encoding
 			dst.push_back(*src);
 		} else {
-			dst.push_back('%');
-			dst.push_back(hex[(unsigned char)*src >> 4]);
-			dst.push_back(hex[(unsigned char)*src & 0xf]);
+			char buf[2] = {*src, '\0'};
+			char dst_buf[4];
+			if (mg_url_encode(buf, dst_buf, sizeof(dst_buf)) < 0) {
+				// never reach here
+				throw std::out_of_range("");
+			}
+			dst.append(dst_buf);
 		}
 	}
 }
@@ -636,25 +609,16 @@ CivetServer::getListeningPorts()
 std::vector<struct mg_server_port>
 CivetServer::getListeningPortsFull()
 {
-	std::vector<struct mg_server_port> server_ports(50);
-	int size = mg_get_server_ports(context,
-	                               (int)server_ports.size(),
-	                               &server_ports[0]);
-	if (size <= 0) {
-		server_ports.resize(0);
-		return server_ports;
+	std::vector<struct mg_server_port> server_ports(8);
+	for (;;) {
+		int size = mg_get_server_ports(context,
+		                               static_cast<int>(server_ports.size()),
+		                               &server_ports[0]);
+		if (size < static_cast<int>(server_ports.size())) {
+			server_ports.resize(size < 0 ? 0 : size);
+			break;
+		}
+		server_ports.resize(server_ports.size() * 2);
 	}
-	server_ports.resize(size);
 	return server_ports;
-}
-
-CivetServer::CivetConnection::CivetConnection()
-{
-	postData = NULL;
-	postDataLen = 0;
-}
-
-CivetServer::CivetConnection::~CivetConnection()
-{
-	free(postData);
 }
