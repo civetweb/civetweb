@@ -10754,7 +10754,7 @@ struct mg_http_method_info {
 
 
 /* https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods */
-static struct mg_http_method_info http_methods[] = {
+static const struct mg_http_method_info http_methods[] = {
     /* HTTP (RFC 2616) */
     {"GET", 0, 1, 1, 1, 1},
     {"POST", 1, 1, 0, 0, 0},
@@ -15858,14 +15858,13 @@ hexdump2string(void *mem, int memlen, char *buf, int buflen)
 }
 
 
-static void
-ssl_get_client_cert_info(struct mg_connection *conn)
+static int
+ssl_get_client_cert_info(const struct mg_connection *conn,
+                         struct mg_client_cert *client_cert)
 {
 	X509 *cert = SSL_get_peer_certificate(conn->ssl);
 	if (cert) {
-		char str_subject[1024];
-		char str_issuer[1024];
-		char str_finger[1024];
+		char str_buf[1024];
 		unsigned char buf[256];
 		char *str_serial = NULL;
 		unsigned int ulen;
@@ -15885,12 +15884,18 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 
 		/* Translate serial number to a hex string */
 		BIGNUM *serial_bn = ASN1_INTEGER_to_BN(serial, NULL);
-		str_serial = BN_bn2hex(serial_bn);
-		BN_free(serial_bn);
+		if (serial_bn) {
+			str_serial = BN_bn2hex(serial_bn);
+			BN_free(serial_bn);
+		}
+		client_cert->serial =
+		    str_serial ? mg_strdup_ctx(str_serial, conn->phys_ctx) : NULL;
 
 		/* Translate subject and issuer to a string */
-		(void)X509_NAME_oneline(subj, str_subject, (int)sizeof(str_subject));
-		(void)X509_NAME_oneline(iss, str_issuer, (int)sizeof(str_issuer));
+		(void)X509_NAME_oneline(subj, str_buf, (int)sizeof(str_buf));
+		client_cert->subject = mg_strdup_ctx(str_buf, conn->phys_ctx);
+		(void)X509_NAME_oneline(iss, str_buf, (int)sizeof(str_buf));
+		client_cert->issuer = mg_strdup_ctx(str_buf, conn->phys_ctx);
 
 		/* Calculate SHA1 fingerprint and store as a hex string */
 		ulen = 0;
@@ -15912,34 +15917,19 @@ ssl_get_client_cert_info(struct mg_connection *conn)
 			mg_free(tmp_buf);
 		}
 
-		if (!hexdump2string(
-		        buf, (int)ulen, str_finger, (int)sizeof(str_finger))) {
-			*str_finger = 0;
+		if (!hexdump2string(buf, (int)ulen, str_buf, (int)sizeof(str_buf))) {
+			*str_buf = 0;
 		}
+		client_cert->finger = mg_strdup_ctx(str_buf, conn->phys_ctx);
 
-		conn->request_info.client_cert = (struct mg_client_cert *)
-		    mg_malloc_ctx(sizeof(struct mg_client_cert), conn->phys_ctx);
-		if (conn->request_info.client_cert) {
-			conn->request_info.client_cert->peer_cert = (void *)cert;
-			conn->request_info.client_cert->subject =
-			    mg_strdup_ctx(str_subject, conn->phys_ctx);
-			conn->request_info.client_cert->issuer =
-			    mg_strdup_ctx(str_issuer, conn->phys_ctx);
-			conn->request_info.client_cert->serial =
-			    mg_strdup_ctx(str_serial, conn->phys_ctx);
-			conn->request_info.client_cert->finger =
-			    mg_strdup_ctx(str_finger, conn->phys_ctx);
-		} else {
-			mg_cry_internal(conn,
-			                "%s",
-			                "Out of memory: Cannot allocate memory for client "
-			                "certificate");
-		}
+		client_cert->peer_cert = (void *)cert;
 
 		/* Strings returned from bn_bn2hex must be freed using OPENSSL_free,
 		 * see https://linux.die.net/man/3/bn_bn2hex */
 		OPENSSL_free(str_serial);
+		return 1;
 	}
+	return 0;
 }
 
 
@@ -18188,7 +18178,7 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 #if defined(USE_WEBSOCKET)
 	struct websocket_client_thread_data *thread_data;
 	static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
-	static const char *handshake_req;
+	const char *handshake_req;
 
 	int port = client_options->port;
 	const char *host = client_options->host;
@@ -18920,7 +18910,10 @@ worker_thread_run(struct mg_connection *conn)
 				/* conn->dom_ctx is set in get_request */
 
 				/* Get SSL client certificate information (if set) */
-				ssl_get_client_cert_info(conn);
+				struct mg_client_cert client_cert;
+				if (ssl_get_client_cert_info(conn, &client_cert)) {
+					conn->request_info.client_cert = &client_cert;
+				}
 
 				/* process HTTPS connection */
 #if defined(USE_HTTP2)
@@ -18954,7 +18947,6 @@ worker_thread_run(struct mg_connection *conn)
 					conn->request_info.client_cert->issuer = 0;
 					conn->request_info.client_cert->serial = 0;
 					conn->request_info.client_cert->finger = 0;
-					mg_free(conn->request_info.client_cert);
 					conn->request_info.client_cert = 0;
 				}
 			} else {
