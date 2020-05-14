@@ -10754,7 +10754,7 @@ struct mg_http_method_info {
 
 
 /* https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods */
-static struct mg_http_method_info http_methods[] = {
+static const struct mg_http_method_info http_methods[] = {
     /* HTTP (RFC 2616) */
     {"GET", 0, 1, 1, 1, 1},
     {"POST", 1, 1, 0, 0, 0},
@@ -18188,7 +18188,7 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 #if defined(USE_WEBSOCKET)
 	struct websocket_client_thread_data *thread_data;
 	static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
-	static const char *handshake_req;
+	const char *handshake_req;
 
 	int port = client_options->port;
 	const char *host = client_options->host;
