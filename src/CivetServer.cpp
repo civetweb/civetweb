@@ -440,8 +440,11 @@ CivetServer::urlDecode(const char *src,
 {
 	// assign enough buffer
 	std::vector<char> buf(src_len + 1);
-	int r = mg_url_decode(src, static_cast<int>(src_len), &buf[0],
-	                      static_cast<int>(buf.size()), is_form_url_encoded);
+	int r = mg_url_decode(src,
+	                      static_cast<int>(src_len),
+	                      &buf[0],
+	                      static_cast<int>(buf.size()),
+	                      is_form_url_encoded);
 	if (r < 0) {
 		// never reach here
 		throw std::out_of_range("");
@@ -476,8 +479,9 @@ CivetServer::getParam(struct mg_connection *conn,
 				if (r == 0) {
 					conobj.postData.push_back('\0');
 					break;
-				} else if ((r < 0) || ((conobj.postData.size() + r)
-				                       > MAX_PARAM_BODY_LENGTH)) {
+				} else if ((r < 0)
+				           || ((conobj.postData.size() + r)
+				               > MAX_PARAM_BODY_LENGTH)) {
 					conobj.postData.assign(1, '\0');
 					break;
 				}
@@ -531,8 +535,8 @@ CivetServer::getParam(const char *data,
 		// more buffer
 		std::vector<char> vbuf(sizeof(buf) * 2);
 		for (;;) {
-			r = mg_get_var2(data, data_len, name, &vbuf[0], vbuf.size(),
-			                occurrence);
+			r = mg_get_var2(
+			    data, data_len, name, &vbuf[0], vbuf.size(), occurrence);
 			if (r >= 0) {
 				dst.assign(vbuf.begin(), vbuf.begin() + r);
 				return true;
