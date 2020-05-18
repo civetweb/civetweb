@@ -2013,8 +2013,6 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
 	SSL_CTX_callback_ctrl(ctx,                                                 \
 	                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,                   \
 	                      (void (*)(void))cb)
-#define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
-	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
 #define SSL_set_tlsext_host_name(ctx, arg)                                     \
 	SSL_ctrl(ctx, SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)arg)
 
@@ -2213,8 +2211,6 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
 	SSL_CTX_callback_ctrl(ctx,                                                 \
 	                      SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,                   \
 	                      (void (*)(void))cb)
-#define SSL_CTX_set_tlsext_servername_arg(ctx, arg)                            \
-	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, (void *)arg)
 #define SSL_set_tlsext_host_name(ctx, arg)                                     \
 	SSL_ctrl(ctx, SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)arg)
 
@@ -2701,9 +2697,7 @@ struct mg_handler_info {
 	/* Handler for http/https or authorization requests. */
 	mg_request_handler handler;
 	unsigned int refcount;
-	pthread_mutex_t refcount_mutex; /* Protects refcount */
-	pthread_cond_t
-	    refcount_cond; /* Signaled when handler refcount is decremented */
+	int removing;
 
 	/* Handler for ws/wss (websocket) requests. */
 	mg_websocket_connect_handler connect_handler;
@@ -2737,6 +2731,7 @@ struct mg_domain_context {
 	SSL_CTX *ssl_ctx;                 /* SSL context */
 	char *config[NUM_OPTIONS];        /* Civetweb configuration parameters */
 	struct mg_handler_info *handlers; /* linked list of uri handlers */
+	int64_t ssl_cert_last_mtime;
 
 	/* Server nonce */
 	uint64_t auth_nonce_mask;  /* Mask for all nonce values */
@@ -2819,7 +2814,7 @@ struct mg_context {
 
 	/* Thread related */
 	stop_flag_t stop_flag;        /* Should we stop event loop */
-	pthread_mutex_t thread_mutex; /* Protects (max|num)_threads */
+	pthread_mutex_t thread_mutex; /* Protects client_socks or queue */
 
 	pthread_t masterthreadid; /* The master thread ID */
 	unsigned int
@@ -2867,7 +2862,9 @@ struct mg_context {
 #endif
 
 	/* Server nonce */
-	pthread_mutex_t nonce_mutex; /* Protects nonce_count */
+	pthread_mutex_t nonce_mutex; /* Protects ssl_ctx, handlers,
+	                              * ssl_cert_last_mtime, nonce_count, and
+	                              * next (linked list) */
 
 	/* Server callbacks */
 	struct mg_callbacks callbacks; /* User-defined callback function */
@@ -6470,6 +6467,7 @@ push_inner(struct mg_context *ctx,
 
 #if !defined(NO_SSL)
 		if (ssl != NULL) {
+			ERR_clear_error();
 			n = SSL_write(ssl, buf, len);
 			if (n <= 0) {
 				err = SSL_get_error(ssl, n);
@@ -6480,8 +6478,10 @@ push_inner(struct mg_context *ctx,
 					n = 0;
 				} else {
 					DEBUG_TRACE("SSL_write() failed, error %d", err);
+					ERR_clear_error();
 					return -2;
 				}
+				ERR_clear_error();
 			} else {
 				err = 0;
 			}
@@ -6633,9 +6633,6 @@ pull_inner(FILE *fp,
 #else
 	typedef size_t len_t;
 #endif
-#if !defined(NO_SSL)
-	int ssl_pending;
-#endif
 
 	/* We need an additional wait loop around this, because in some cases
 	 * with TLSwe may get data from the socket but not from SSL_read.
@@ -6660,49 +6657,34 @@ pull_inner(FILE *fp,
 		}
 
 #if !defined(NO_SSL)
-	} else if ((conn->ssl != NULL)
-	           && ((ssl_pending = SSL_pending(conn->ssl)) > 0)) {
-		/* We already know there is no more data buffered in conn->buf
-		 * but there is more available in the SSL layer. So don't poll
-		 * conn->client.sock yet. */
-		if (ssl_pending > len) {
-			ssl_pending = len;
-		}
-		nread = SSL_read(conn->ssl, buf, ssl_pending);
-		if (nread <= 0) {
-			err = SSL_get_error(conn->ssl, nread);
-			if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
-				err = ERRNO;
-			} else if ((err == SSL_ERROR_WANT_READ)
-			           || (err == SSL_ERROR_WANT_WRITE)) {
-				nread = 0;
-			} else {
-				/* All errors should return -2 */
-				DEBUG_TRACE("SSL_read() failed, error %d", err);
-				return -2;
-			}
-
-			ERR_clear_error();
-		} else {
-			err = 0;
-		}
-
 	} else if (conn->ssl != NULL) {
-
+		int ssl_pending;
 		struct mg_pollfd pfd[1];
 		int pollres;
 
-		pfd[0].fd = conn->client.sock;
-		pfd[0].events = POLLIN;
-		pollres = mg_poll(pfd,
-		                  1,
-		                  (int)(timeout * 1000.0),
-		                  &(conn->phys_ctx->stop_flag));
-		if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
-			return -2;
+		if ((ssl_pending = SSL_pending(conn->ssl)) > 0) {
+			/* We already know there is no more data buffered in conn->buf
+			 * but there is more available in the SSL layer. So don't poll
+			 * conn->client.sock yet. */
+			if (ssl_pending > len) {
+				ssl_pending = len;
+			}
+			pollres = 1;
+		} else {
+			pfd[0].fd = conn->client.sock;
+			pfd[0].events = POLLIN;
+			pollres = mg_poll(pfd,
+			                  1,
+			                  (int)(timeout * 1000.0),
+			                  &(conn->phys_ctx->stop_flag));
+			if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
+				return -2;
+			}
 		}
 		if (pollres > 0) {
-			nread = SSL_read(conn->ssl, buf, len);
+			ERR_clear_error();
+			nread = SSL_read(conn->ssl, buf,
+			                 (ssl_pending > 0) ? ssl_pending : len);
 			if (nread <= 0) {
 				err = SSL_get_error(conn->ssl, nread);
 				if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
@@ -6711,13 +6693,15 @@ pull_inner(FILE *fp,
 				           || (err == SSL_ERROR_WANT_WRITE)) {
 					nread = 0;
 				} else {
+					/* All errors should return -2 */
 					DEBUG_TRACE("SSL_read() failed, error %d", err);
+					ERR_clear_error();
 					return -2;
 				}
+				ERR_clear_error();
 			} else {
 				err = 0;
 			}
-			ERR_clear_error();
 		} else if (pollres < 0) {
 			/* Error */
 			return -2;
@@ -9053,10 +9037,10 @@ send_authorization_request(struct mg_connection *conn, const char *realm)
 		realm = conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
 	}
 
-	(void)pthread_mutex_lock(&conn->phys_ctx->nonce_mutex);
+	mg_lock_context(conn->phys_ctx);
 	nonce += conn->dom_ctx->nonce_count;
 	++conn->dom_ctx->nonce_count;
-	(void)pthread_mutex_unlock(&conn->phys_ctx->nonce_mutex);
+	mg_unlock_context(conn->phys_ctx);
 
 	nonce ^= conn->dom_ctx->auth_nonce_mask;
 	conn->status_code = 401;
@@ -12592,7 +12576,7 @@ mg_unlock_connection(struct mg_connection *conn)
 void
 mg_lock_context(struct mg_context *ctx)
 {
-	if (ctx) {
+	if (ctx && (ctx->context_type == CONTEXT_SERVER)) {
 		(void)pthread_mutex_lock(&ctx->nonce_mutex);
 	}
 }
@@ -12600,7 +12584,7 @@ mg_lock_context(struct mg_context *ctx)
 void
 mg_unlock_context(struct mg_context *ctx)
 {
-	if (ctx) {
+	if (ctx && (ctx->context_type == CONTEXT_SERVER)) {
 		(void)pthread_mutex_unlock(&ctx->nonce_mutex);
 	}
 }
@@ -13653,7 +13637,9 @@ alloc_get_host(struct mg_connection *conn)
 					conn->dom_ctx = dom;
 					break;
 				}
+				mg_lock_context(conn->phys_ctx);
 				dom = dom->next;
+				mg_unlock_context(conn->phys_ctx);
 			}
 
 			DEBUG_TRACE("HTTP Host: %s", host);
@@ -13722,37 +13708,6 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 
 
 static void
-handler_info_acquire(struct mg_handler_info *handler_info)
-{
-	pthread_mutex_lock(&handler_info->refcount_mutex);
-	handler_info->refcount++;
-	pthread_mutex_unlock(&handler_info->refcount_mutex);
-}
-
-
-static void
-handler_info_release(struct mg_handler_info *handler_info)
-{
-	pthread_mutex_lock(&handler_info->refcount_mutex);
-	handler_info->refcount--;
-	pthread_cond_signal(&handler_info->refcount_cond);
-	pthread_mutex_unlock(&handler_info->refcount_mutex);
-}
-
-
-static void
-handler_info_wait_unused(struct mg_handler_info *handler_info)
-{
-	pthread_mutex_lock(&handler_info->refcount_mutex);
-	while (handler_info->refcount) {
-		pthread_cond_wait(&handler_info->refcount_cond,
-		                  &handler_info->refcount_mutex);
-	}
-	pthread_mutex_unlock(&handler_info->refcount_mutex);
-}
-
-
-static void
 mg_set_handler_type(struct mg_context *phys_ctx,
                     struct mg_domain_context *dom_ctx,
                     const char *uri,
@@ -13769,8 +13724,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 {
 	struct mg_handler_info *tmp_rh, **lastref;
 	size_t urilen = strlen(uri);
-	struct mg_workerTLS tls;
-	int is_tls_set = 0;
 
 	if (handler_type == WEBSOCKET_HANDLER) {
 		DEBUG_ASSERT(handler == NULL);
@@ -13827,35 +13780,25 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		return;
 	}
 
-	/* Internal callbacks have their contexts set
-	 * if called from non-related thread, context must be set
-	 * since internal function assumes it exists.
-	 * For an example see how handler_info_wait_unused()
-	 * waits for reference to become zero
-	 */
-	if (NULL == pthread_getspecific(sTlsKey)) {
-		is_tls_set = 1;
-		tls.is_master = -1;
-		tls.thread_idx = phys_ctx->starter_thread_idx;
-#if defined(_WIN32)
-		tls.pthread_cond_helper_mutex = NULL;
-#endif
-		pthread_setspecific(sTlsKey, &tls);
-	}
-
 	mg_lock_context(phys_ctx);
 
 	/* first try to find an existing handler */
-	lastref = &(dom_ctx->handlers);
-	for (tmp_rh = dom_ctx->handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
-		if (tmp_rh->handler_type == handler_type) {
-			if ((urilen == tmp_rh->uri_len) && !strcmp(tmp_rh->uri, uri)) {
+	do {
+		lastref = &(dom_ctx->handlers);
+		for (tmp_rh = dom_ctx->handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
+			if (tmp_rh->handler_type == handler_type
+			    && (urilen == tmp_rh->uri_len) && !strcmp(tmp_rh->uri, uri)) {
 				if (!is_delete_request) {
 					/* update existing handler */
 					if (handler_type == REQUEST_HANDLER) {
 						/* Wait for end of use before updating */
-						handler_info_wait_unused(tmp_rh);
-
+						if (tmp_rh->refcount) {
+							mg_unlock_context(phys_ctx);
+							mg_sleep(1);
+							mg_lock_context(phys_ctx);
+							/* tmp_rh might have been freed, search again. */
+							break;
+						}
 						/* Ok, the handler is no more use -> Update it */
 						tmp_rh->handler = handler;
 					} else if (handler_type == WEBSOCKET_HANDLER) {
@@ -13872,35 +13815,31 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 					/* remove existing handler */
 					if (handler_type == REQUEST_HANDLER) {
 						/* Wait for end of use before removing */
-						handler_info_wait_unused(tmp_rh);
-
-						/* Ok, the handler is no more used -> Destroy
-						 * resources
-						 */
-						pthread_cond_destroy(&tmp_rh->refcount_cond);
-						pthread_mutex_destroy(&tmp_rh->refcount_mutex);
+						if (tmp_rh->refcount) {
+							tmp_rh->removing = 1;
+							mg_unlock_context(phys_ctx);
+							mg_sleep(1);
+							mg_lock_context(phys_ctx);
+							/* tmp_rh might have been freed, search again. */
+							break;
+						}
+						/* Ok, the handler is no more used */
 					}
 					*lastref = tmp_rh->next;
 					mg_free(tmp_rh->uri);
 					mg_free(tmp_rh);
 				}
 				mg_unlock_context(phys_ctx);
-				if (is_tls_set) {
-					pthread_setspecific(sTlsKey, NULL);
-				}
 				return;
 			}
+			lastref = &(tmp_rh->next);
 		}
-		lastref = &(tmp_rh->next);
-	}
+	} while (tmp_rh != NULL);
 
 	if (is_delete_request) {
 		/* no handler to set, this was a remove request to a non-existing
 		 * handler */
 		mg_unlock_context(phys_ctx);
-		if (is_tls_set) {
-			pthread_setspecific(sTlsKey, NULL);
-		}
 		return;
 	}
 
@@ -13913,9 +13852,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		mg_cry_ctx_internal(phys_ctx,
 		                    "%s",
 		                    "Cannot create new request handler struct, OOM");
-		if (is_tls_set) {
-			pthread_setspecific(sTlsKey, NULL);
-		}
 		return;
 	}
 	tmp_rh->uri = mg_strdup_ctx(uri, phys_ctx);
@@ -13925,34 +13861,12 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		mg_cry_ctx_internal(phys_ctx,
 		                    "%s",
 		                    "Cannot create new request handler struct, OOM");
-		if (is_tls_set) {
-			pthread_setspecific(sTlsKey, NULL);
-		}
 		return;
 	}
 	tmp_rh->uri_len = urilen;
 	if (handler_type == REQUEST_HANDLER) {
-		/* Init refcount mutex and condition */
-		if (0 != pthread_mutex_init(&tmp_rh->refcount_mutex, NULL)) {
-			mg_unlock_context(phys_ctx);
-			mg_free(tmp_rh);
-			mg_cry_ctx_internal(phys_ctx, "%s", "Cannot init refcount mutex");
-			if (is_tls_set) {
-				pthread_setspecific(sTlsKey, NULL);
-			}
-			return;
-		}
-		if (0 != pthread_cond_init(&tmp_rh->refcount_cond, NULL)) {
-			mg_unlock_context(phys_ctx);
-			pthread_mutex_destroy(&tmp_rh->refcount_mutex);
-			mg_free(tmp_rh);
-			mg_cry_ctx_internal(phys_ctx, "%s", "Cannot init refcount cond");
-			if (is_tls_set) {
-				pthread_setspecific(sTlsKey, NULL);
-			}
-			return;
-		}
 		tmp_rh->refcount = 0;
+		tmp_rh->removing = 0;
 		tmp_rh->handler = handler;
 	} else if (handler_type == WEBSOCKET_HANDLER) {
 		tmp_rh->subprotocols = subprotocols;
@@ -13969,9 +13883,6 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 
 	*lastref = tmp_rh;
 	mg_unlock_context(phys_ctx);
-	if (is_tls_set) {
-		pthread_setspecific(sTlsKey, NULL);
-	}
 }
 
 
@@ -14087,6 +13998,7 @@ get_request_handler(struct mg_connection *conn,
 		const char *uri = request_info->local_uri;
 		size_t urilen = strlen(uri);
 		struct mg_handler_info *tmp_rh;
+		int step, matched;
 
 		if (!conn || !conn->phys_ctx || !conn->dom_ctx) {
 			return 0;
@@ -14094,64 +14006,29 @@ get_request_handler(struct mg_connection *conn,
 
 		mg_lock_context(conn->phys_ctx);
 
-		/* first try for an exact match */
-		for (tmp_rh = conn->dom_ctx->handlers; tmp_rh != NULL;
-		     tmp_rh = tmp_rh->next) {
-			if (tmp_rh->handler_type == handler_type) {
-				if ((urilen == tmp_rh->uri_len) && !strcmp(tmp_rh->uri, uri)) {
-					if (handler_type == WEBSOCKET_HANDLER) {
-						*subprotocols = tmp_rh->subprotocols;
-						*connect_handler = tmp_rh->connect_handler;
-						*ready_handler = tmp_rh->ready_handler;
-						*data_handler = tmp_rh->data_handler;
-						*close_handler = tmp_rh->close_handler;
-					} else if (handler_type == REQUEST_HANDLER) {
-						*handler = tmp_rh->handler;
-						/* Acquire handler and give it back */
-						handler_info_acquire(tmp_rh);
-						*handler_info = tmp_rh;
-					} else { /* AUTH_HANDLER */
-						*auth_handler = tmp_rh->auth_handler;
-					}
-					*cbdata = tmp_rh->cbdata;
-					mg_unlock_context(conn->phys_ctx);
-					return 1;
+		for (step = 0; step < 3; step++) {
+			for (tmp_rh = conn->dom_ctx->handlers; tmp_rh != NULL;
+			     tmp_rh = tmp_rh->next) {
+				if (tmp_rh->handler_type != handler_type) {
+					continue;
 				}
-			}
-		}
-
-		/* next try for a partial match, we will accept uri/something */
-		for (tmp_rh = conn->dom_ctx->handlers; tmp_rh != NULL;
-		     tmp_rh = tmp_rh->next) {
-			if (tmp_rh->handler_type == handler_type) {
-				if ((tmp_rh->uri_len < urilen) && (uri[tmp_rh->uri_len] == '/')
-				    && (memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0)) {
-					if (handler_type == WEBSOCKET_HANDLER) {
-						*subprotocols = tmp_rh->subprotocols;
-						*connect_handler = tmp_rh->connect_handler;
-						*ready_handler = tmp_rh->ready_handler;
-						*data_handler = tmp_rh->data_handler;
-						*close_handler = tmp_rh->close_handler;
-					} else if (handler_type == REQUEST_HANDLER) {
-						*handler = tmp_rh->handler;
-						/* Acquire handler and give it back */
-						handler_info_acquire(tmp_rh);
-						*handler_info = tmp_rh;
-					} else { /* AUTH_HANDLER */
-						*auth_handler = tmp_rh->auth_handler;
-					}
-					*cbdata = tmp_rh->cbdata;
-					mg_unlock_context(conn->phys_ctx);
-					return 1;
+				if (step == 0) {
+					/* first try for an exact match */
+					matched = (tmp_rh->uri_len == urilen)
+					           && (strcmp(tmp_rh->uri, uri) == 0);
+				} else if (step == 1) {
+					/* next try for a partial match, we will accept
+					   uri/something */
+					matched = (tmp_rh->uri_len < urilen)
+					           && (uri[tmp_rh->uri_len] == '/')
+					           && (memcmp(tmp_rh->uri, uri,
+					                      tmp_rh->uri_len) == 0);
+				} else {
+					/* finally try for pattern match */
+					matched = match_prefix(tmp_rh->uri,
+					                       tmp_rh->uri_len, uri) > 0;
 				}
-			}
-		}
-
-		/* finally try for pattern match */
-		for (tmp_rh = conn->dom_ctx->handlers; tmp_rh != NULL;
-		     tmp_rh = tmp_rh->next) {
-			if (tmp_rh->handler_type == handler_type) {
-				if (match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0) {
+				if (matched) {
 					if (handler_type == WEBSOCKET_HANDLER) {
 						*subprotocols = tmp_rh->subprotocols;
 						*connect_handler = tmp_rh->connect_handler;
@@ -14159,9 +14036,14 @@ get_request_handler(struct mg_connection *conn,
 						*data_handler = tmp_rh->data_handler;
 						*close_handler = tmp_rh->close_handler;
 					} else if (handler_type == REQUEST_HANDLER) {
+						if (tmp_rh->removing) {
+							/* Treat as none found */
+							step = 2;
+							break;
+						}
 						*handler = tmp_rh->handler;
 						/* Acquire handler and give it back */
-						handler_info_acquire(tmp_rh);
+						tmp_rh->refcount++;
 						*handler_info = tmp_rh;
 					} else { /* AUTH_HANDLER */
 						*auth_handler = tmp_rh->auth_handler;
@@ -14525,7 +14407,9 @@ handle_request(struct mg_connection *conn)
 			i = callback_handler(conn, callback_data);
 
 			/* Callback handler will not be used anymore. Release it */
-			handler_info_release(handler_info);
+			mg_lock_context(conn->phys_ctx);
+			handler_info->refcount--;
+			mg_unlock_context(conn->phys_ctx);
 
 			if (i > 0) {
 				/* Do nothing, callback has served the request. Store
@@ -15612,12 +15496,8 @@ static const char *ssl_error(void);
 static int
 refresh_trust(struct mg_connection *conn)
 {
-	static int reload_lock = 0;
-	static long int data_check = 0;
-	volatile int *p_reload_lock = (volatile int *)&reload_lock;
-
 	struct stat cert_buf;
-	long int t;
+	int64_t t = 0;
 	const char *pem;
 	const char *chain;
 	int should_verify_peer;
@@ -15636,13 +15516,13 @@ refresh_trust(struct mg_connection *conn)
 		chain = NULL;
 	}
 
-	t = data_check;
 	if (stat(pem, &cert_buf) != -1) {
-		t = (long int)cert_buf.st_mtime;
+		t = (int64_t)cert_buf.st_mtime;
 	}
 
-	if (data_check != t) {
-		data_check = t;
+	mg_lock_context(conn->phys_ctx);
+	if ((t != 0) && (conn->dom_ctx->ssl_cert_last_mtime != t)) {
+		conn->dom_ctx->ssl_cert_last_mtime = t;
 
 		should_verify_peer = 0;
 		if (conn->dom_ctx->config[SSL_DO_VERIFY_PEER] != NULL) {
@@ -15663,6 +15543,7 @@ refresh_trust(struct mg_connection *conn)
 			                                  ca_file,
 			                                  ca_path)
 			    != 1) {
+				mg_unlock_context(conn->phys_ctx);
 				mg_cry_ctx_internal(
 				    conn->phys_ctx,
 				    "SSL_CTX_load_verify_locations error: %s "
@@ -15675,18 +15556,13 @@ refresh_trust(struct mg_connection *conn)
 			}
 		}
 
-		if (1 == mg_atomic_inc(p_reload_lock)) {
-			if (ssl_use_pem_file(conn->phys_ctx, conn->dom_ctx, pem, chain)
-			    == 0) {
-				return 0;
-			}
-			*p_reload_lock = 0;
+		if (ssl_use_pem_file(conn->phys_ctx, conn->dom_ctx, pem, chain)
+		    == 0) {
+			mg_unlock_context(conn->phys_ctx);
+			return 0;
 		}
 	}
-	/* lock while cert is reloading */
-	while (*p_reload_lock) {
-		sleep(1);
-	}
+	mg_unlock_context(conn->phys_ctx);
 
 	return 1;
 }
@@ -15698,9 +15574,7 @@ static pthread_mutex_t *ssl_mutexes;
 
 static int
 sslize(struct mg_connection *conn,
-       SSL_CTX *s,
        int (*func)(SSL *),
-       stop_flag_t *stop_flag,
        const struct mg_client_options *client_options)
 {
 	int ret, err;
@@ -15723,16 +15597,19 @@ sslize(struct mg_connection *conn,
 		}
 	}
 
-	conn->ssl = SSL_new(s);
+	mg_lock_context(conn->phys_ctx);
+	conn->ssl = SSL_new(conn->dom_ctx->ssl_ctx);
+	mg_unlock_context(conn->phys_ctx);
 	if (conn->ssl == NULL) {
+		mg_cry_internal(conn, "sslize error: %s", ssl_error());
+		OPENSSL_REMOVE_THREAD_STATE();
 		return 0;
 	}
 	SSL_set_app_data(conn->ssl, (char *)conn);
 
 	ret = SSL_set_fd(conn->ssl, conn->client.sock);
 	if (ret != 1) {
-		err = SSL_get_error(conn->ssl, ret);
-		mg_cry_internal(conn, "SSL error %i, destroying SSL context", err);
+		mg_cry_internal(conn, "sslize error: %s", ssl_error());
 		SSL_free(conn->ssl);
 		conn->ssl = NULL;
 		OPENSSL_REMOVE_THREAD_STATE();
@@ -15759,6 +15636,8 @@ sslize(struct mg_connection *conn,
 	 * see https://www.openssl.org/docs/manmaster/ssl/SSL_get_error.html
 	 * Here "func" could be SSL_connect or SSL_accept. */
 	for (i = 0; i <= timeout; i += 50) {
+		ERR_clear_error();
+		/* conn->dom_ctx may be changed here (see ssl_servername_callback) */
 		ret = func(conn->ssl);
 		if (ret != 1) {
 			err = SSL_get_error(conn->ssl, ret);
@@ -15766,7 +15645,7 @@ sslize(struct mg_connection *conn,
 			    || (err == SSL_ERROR_WANT_ACCEPT)
 			    || (err == SSL_ERROR_WANT_READ) || (err == SSL_ERROR_WANT_WRITE)
 			    || (err == SSL_ERROR_WANT_X509_LOOKUP)) {
-				if (!STOP_FLAG_IS_ZERO(&*stop_flag)) {
+				if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
 					/* Don't wait if the server is going to be stopped. */
 					break;
 				}
@@ -15784,7 +15663,8 @@ sslize(struct mg_connection *conn,
 					              || (err == SSL_ERROR_WANT_WRITE))
 					                 ? POLLOUT
 					                 : POLLIN;
-					pollres = mg_poll(&pfd, 1, 50, stop_flag);
+					pollres = mg_poll(&pfd, 1, 50,
+					                  &(conn->phys_ctx->stop_flag));
 					if (pollres < 0) {
 						/* Break if error occured (-1)
 						 * or server shutdown (-2) */
@@ -15794,8 +15674,7 @@ sslize(struct mg_connection *conn,
 
 			} else if (err == SSL_ERROR_SYSCALL) {
 				/* This is an IO error. Look at errno. */
-				err = errno;
-				mg_cry_internal(conn, "SSL syscall error %i", err);
+				mg_cry_internal(conn, "SSL syscall error %i", ERRNO);
 				break;
 
 			} else {
@@ -15803,13 +15682,13 @@ sslize(struct mg_connection *conn,
 				mg_cry_internal(conn, "sslize error: %s", ssl_error());
 				break;
 			}
-			ERR_clear_error();
 
 		} else {
 			/* success */
 			break;
 		}
 	}
+	ERR_clear_error();
 
 	if (ret != 1) {
 		SSL_free(conn->ssl);
@@ -16327,9 +16206,6 @@ ssl_info_callback(const SSL *ssl, int what, int ret)
 static int
 ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 {
-	struct mg_context *ctx = (struct mg_context *)arg;
-	struct mg_domain_context *dom = ((ctx != NULL) ? &(ctx->dd) : NULL);
-
 #if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
@@ -16345,11 +16221,13 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 
 	(void)ad;
+	(void)arg;
 
-	if ((ctx == NULL) || (conn->phys_ctx == ctx)) {
-		DEBUG_TRACE("%s", "internal error - assertion failed");
+	if ((conn == NULL) || (conn->phys_ctx == NULL)) {
+		DEBUG_ASSERT(0);
 		return SSL_TLSEXT_ERR_NOACK;
 	}
+	conn->dom_ctx = &(conn->phys_ctx->dd);
 
 	/* Old clients (Win XP) will not support SNI. Then, there
 	 * is no server name available in the request - we can
@@ -16359,31 +16237,36 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 	 */
 	if ((servername == NULL) || (*servername == 0)) {
 		DEBUG_TRACE("%s", "SSL connection not supporting SNI");
-		conn->dom_ctx = &(ctx->dd);
+		mg_lock_context(conn->phys_ctx);
 		SSL_set_SSL_CTX(ssl, conn->dom_ctx->ssl_ctx);
+		mg_unlock_context(conn->phys_ctx);
 		return SSL_TLSEXT_ERR_NOACK;
 	}
 
 	DEBUG_TRACE("TLS connection to host %s", servername);
 
-	while (dom) {
-		if (!mg_strcasecmp(servername, dom->config[AUTHENTICATION_DOMAIN])) {
-
+	while (conn->dom_ctx) {
+		if (!mg_strcasecmp(servername,
+		                   conn->dom_ctx->config[AUTHENTICATION_DOMAIN])) {
 			/* Found matching domain */
 			DEBUG_TRACE("TLS domain %s found",
-			            dom->config[AUTHENTICATION_DOMAIN]);
-			SSL_set_SSL_CTX(ssl, dom->ssl_ctx);
-			conn->dom_ctx = dom;
-			return SSL_TLSEXT_ERR_OK;
+			            conn->dom_ctx->config[AUTHENTICATION_DOMAIN]);
+			break;
 		}
-		dom = dom->next;
+		mg_lock_context(conn->phys_ctx);
+		conn->dom_ctx = conn->dom_ctx->next;
+		mg_unlock_context(conn->phys_ctx);
 	}
 
-	/* Default domain */
-	DEBUG_TRACE("TLS default domain %s used",
-	            ctx->dd.config[AUTHENTICATION_DOMAIN]);
-	conn->dom_ctx = &(ctx->dd);
+	if (conn->dom_ctx == NULL) {
+		/* Default domain */
+		DEBUG_TRACE("TLS default domain %s used",
+		            conn->phys_ctx->dd.config[AUTHENTICATION_DOMAIN]);
+		conn->dom_ctx = &(conn->phys_ctx->dd);
+	}
+	mg_lock_context(conn->phys_ctx);
 	SSL_set_SSL_CTX(ssl, conn->dom_ctx->ssl_ctx);
+	mg_unlock_context(conn->phys_ctx);
 	return SSL_TLSEXT_ERR_OK;
 }
 
@@ -16558,7 +16441,6 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 
 	SSL_CTX_set_tlsext_servername_callback(dom_ctx->ssl_ctx,
 	                                       ssl_servername_callback);
-	SSL_CTX_set_tlsext_servername_arg(dom_ctx->ssl_ctx, phys_ctx);
 
 	/* If a callback has been specified, call it. */
 	callback_ret = (phys_ctx->callbacks.init_ssl == NULL)
@@ -17375,9 +17257,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		}
 
 		if (!sslize(conn,
-		            conn->dom_ctx->ssl_ctx,
 		            SSL_connect,
-		            &(conn->phys_ctx->stop_flag),
 		            client_options)) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
@@ -18903,9 +18783,7 @@ worker_thread_run(struct mg_connection *conn)
 #if !defined(NO_SSL)
 			/* HTTPS connection */
 			if (sslize(conn,
-			           conn->dom_ctx->ssl_ctx,
 			           SSL_accept,
-			           &(conn->phys_ctx->stop_flag),
 			           NULL)) {
 				/* conn->dom_ctx is set in get_request */
 
@@ -19311,10 +19189,6 @@ free_context(struct mg_context *ctx)
 	while (ctx->dd.handlers) {
 		tmp_rh = ctx->dd.handlers;
 		ctx->dd.handlers = tmp_rh->next;
-		if (tmp_rh->handler_type == REQUEST_HANDLER) {
-			pthread_cond_destroy(&tmp_rh->refcount_cond);
-			pthread_mutex_destroy(&tmp_rh->refcount_mutex);
-		}
 		mg_free(tmp_rh->uri);
 		mg_free(tmp_rh);
 	}

@@ -854,6 +854,16 @@ WebSocketCloseHandler(const struct mg_connection *conn, void *cbdata)
 	ASSERT(client->state >= 1);
 
 	mg_lock_context(ctx);
+	while (client->state == 3) {
+		/* "inform" state, wait a while */
+		mg_unlock_context(ctx);
+#ifdef _WIN32
+		Sleep(1);
+#else
+		usleep(1000);
+#endif
+		mg_lock_context(ctx);
+	}
 	client->state = 0;
 	client->conn = NULL;
 	mg_unlock_context(ctx);
@@ -874,16 +884,27 @@ InformWebsockets(struct mg_context *ctx)
 	sprintf(text, "%lu", ++cnt);
 	textlen = strlen(text);
 
-	mg_lock_context(ctx);
 	for (i = 0; i < MAX_WS_CLIENTS; i++) {
+		int inform = 0;
+
+		mg_lock_context(ctx);
 		if (ws_clients[i].state == 2) {
+			/* move to "inform" state */
+			ws_clients[i].state = 3;
+			inform = 1;
+		}
+		mg_unlock_context(ctx);
+
+		if (inform) {
 			mg_websocket_write(ws_clients[i].conn,
 			                   MG_WEBSOCKET_OPCODE_TEXT,
 			                   text,
 			                   textlen);
+			mg_lock_context(ctx);
+			ws_clients[i].state = 2;
+			mg_unlock_context(ctx);
 		}
 	}
-	mg_unlock_context(ctx);
 }
 #endif
 
