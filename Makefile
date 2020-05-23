@@ -223,6 +223,11 @@ ifdef WITH_LUA_SHARED
 endif
 endif
 
+ifdef WITH_ASHIBA_WEB
+  LIBS += -lashiba -lkitasuna
+  LDFLAGS += -L${LIBDIR}
+endif
+
 ifneq (, $(findstring mingw32, $(shell $(CC) -dumpmachine)))
   BUILD_RESOURCES = $(BUILD_DIR)/$(WINDOWS_RESOURCES:.rc=.o)
   LIBS += -lws2_32 -mwindows

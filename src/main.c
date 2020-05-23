@@ -3233,6 +3233,9 @@ main(int argc, char *argv[])
 #else
 
 
+/* For Ashiba Web */
+#include "web_servlets/servlets.h"
+
 /* main for Linux (and others) */
 int
 main(int argc, char *argv[])
@@ -3240,6 +3243,10 @@ main(int argc, char *argv[])
 	init_server_name();
 	init_system_info();
 	start_civetweb(argc, argv);
+
+	/* Register handlers for Ashiba Web */
+	register_ashiba_servlets(g_ctx);
+
 	fprintf(stdout,
 	        "%s started on port(s) %s with web root [%s]\n",
 	        g_server_name,
@@ -3249,6 +3256,9 @@ main(int argc, char *argv[])
 	while (g_exit_flag == 0) {
 		sleep(1);
 	}
+
+	/* Unregister handlers for Ashiba Web */
+	unregister_ashiba_servlets(g_ctx);
 
 	fprintf(stdout,
 	        "Exiting on signal %d, waiting for all threads to finish...",

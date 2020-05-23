@@ -16,6 +16,7 @@ out
 examples/embedded_c/embedded_c
 *.a
 *.o
+*.so
 
 Install/
 
