@@ -209,6 +209,7 @@
     <None Include="..\..\src\md5.inl" />
     <None Include="..\..\src\mod_http2.inl" />
     <None Include="..\..\src\mod_lua_shared.inl" />
+    <None Include="..\..\src\response.inl" />
     <None Include="..\..\src\sha1.inl" />
     <None Include="..\..\src\mod_duktape.inl" />
     <None Include="..\..\src\mod_lua.inl" />

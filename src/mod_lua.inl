@@ -63,11 +63,11 @@ static const char *const LUABACKGROUNDPARAMS = "mg";
 
 
 /* Forward declarations */
-static void handle_request(struct mg_connection *);
 static int handle_lsp_request(struct mg_connection *,
                               const char *,
                               struct mg_file *,
                               struct lua_State *);
+
 
 static void
 reg_lstring(struct lua_State *L,

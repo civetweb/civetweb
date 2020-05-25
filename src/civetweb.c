@@ -2633,7 +2633,16 @@ static const struct mg_option config_options[] = {
     {"ssl_verify_depth", MG_CONFIG_TYPE_NUMBER, "9"},
     {"ssl_default_verify_paths", MG_CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssl_cipher_list", MG_CONFIG_TYPE_STRING, NULL},
+
+#if defined(USE_HTTP2)
+    /* HTTP2 requires ALPN, and anyway TLS1.2 should be considered
+     * as a minimum in 2020 */
+    {"ssl_protocol_version", MG_CONFIG_TYPE_NUMBER, "4"},
+#else
+    /* Keep the default (compatibility) */
     {"ssl_protocol_version", MG_CONFIG_TYPE_NUMBER, "0"},
+#endif /* defined(USE_HTTP2) */
+
     {"ssl_short_trust", MG_CONFIG_TYPE_BOOLEAN, "no"},
 
 #if defined(USE_LUA)
@@ -2895,9 +2904,9 @@ get_memory_stat(struct mg_context *ctx)
 #endif
 
 enum {
-	CONNECTION_TYPE_INVALID,
-	CONNECTION_TYPE_REQUEST,
-	CONNECTION_TYPE_RESPONSE
+	CONNECTION_TYPE_INVALID = 0,
+	CONNECTION_TYPE_REQUEST = 1,
+	CONNECTION_TYPE_RESPONSE = 2
 };
 
 enum {
@@ -2906,9 +2915,28 @@ enum {
 	PROTOCOL_TYPE_HTTP2 = 2
 };
 
+
+#if defined(USE_HTTP2)
+#if !defined(HTTP2_DYN_TABLE_SIZE)
+#define HTTP2_DYN_TABLE_SIZE (256)
+#endif
+
+struct mg_http2_connection {
+	uint32_t stream_id;
+	uint32_t dyn_table_size;
+	struct mg_header dyn_table[HTTP2_DYN_TABLE_SIZE];
+};
+#endif
+
+
 struct mg_connection {
 	int connection_type; /* see CONNECTION_TYPE_* above */
 	int protocol_type;   /* see PROTOCOL_TYPE_*: 0=http/1.x, 1=ws, 2=http/2 */
+	int request_state;   /* 0: nothing sent, 1: header partially sent, 2: header
+	                        fully sent */
+#ifdef USE_HTTP2
+	struct mg_http2_connection http2;
+#endif
 
 	struct mg_request_info request_info;
 	struct mg_response_info response_info;
@@ -4501,28 +4529,43 @@ suggest_connection_header(const struct mg_connection *conn)
 }
 
 
-static int
+#include "response.inl"
+
+
+static void
 send_no_cache_header(struct mg_connection *conn)
 {
 	/* Send all current and obsolete cache opt-out directives. */
-	return mg_printf(conn,
-	                 "Cache-Control: no-cache, no-store, "
-	                 "must-revalidate, private, max-age=0\r\n"
-	                 "Pragma: no-cache\r\n"
-	                 "Expires: 0\r\n");
+	mg_response_add_header(conn,
+	                       "Cache-Control",
+	                       "no-cache, no-store, "
+	                       "must-revalidate, private, max-age=0",
+	                       -1);
+	mg_response_add_header(conn, "Expires", "0", -1);
+
+	if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
+		/* Obsolete, but still send it for HTTP/1.0 */
+		mg_response_add_header(conn, "Pragma", "no-cache", -1);
+	}
 }
 
 
-static int
+static void
 send_static_cache_header(struct mg_connection *conn)
 {
 #if !defined(NO_CACHING)
 	int max_age;
+	char val[64];
+
 	const char *cache_control =
 	    conn->dom_ctx->config[STATIC_FILE_CACHE_CONTROL];
+
+	/* If there is a full cache-control option configured,0 use it */
 	if (cache_control != NULL) {
-		return mg_printf(conn, "Cache-Control: %s\r\n", cache_control);
+		mg_response_add_header(conn, "Cache-Control", cache_control, -1);
+		return;
 	}
+
 	/* Read the server config to check how long a file may be cached.
 	 * The configuration is in seconds. */
 	max_age = atoi(conn->dom_ctx->config[STATIC_FILE_MAX_AGE]);
@@ -4531,7 +4574,8 @@ send_static_cache_header(struct mg_connection *conn)
 		 * and may be used differently in the future. */
 		/* If a file should not be cached, do not only send
 		 * max-age=0, but also pragmas and Expires headers. */
-		return send_no_cache_header(conn);
+		send_no_cache_header(conn);
+		return;
 	}
 
 	/* Use "Cache-Control: max-age" instead of "Expires" header.
@@ -4543,35 +4587,41 @@ send_static_cache_header(struct mg_connection *conn)
 	 * year to 31622400 seconds. For the moment, we just send whatever has
 	 * been configured, still the behavior for >1 year should be considered
 	 * as undefined. */
-	return mg_printf(conn, "Cache-Control: max-age=%u\r\n", (unsigned)max_age);
+	mg_snprintf(
+	    conn, NULL, val, sizeof(val), "max-age=%lu", (unsigned long)max_age);
+	mg_response_add_header(conn, "Cache-Control", val, -1);
+
 #else  /* NO_CACHING */
-	return send_no_cache_header(conn);
+
+	send_no_cache_header(conn);
 #endif /* !NO_CACHING */
 }
 
 
-static int
+static void
 send_additional_header(struct mg_connection *conn)
 {
-	int i = 0;
 	const char *header = conn->dom_ctx->config[ADDITIONAL_HEADER];
 
 #if !defined(NO_SSL)
 	if (conn->dom_ctx->config[STRICT_HTTPS_MAX_AGE]) {
-		int max_age = atoi(conn->dom_ctx->config[STRICT_HTTPS_MAX_AGE]);
+		long max_age = atol(conn->dom_ctx->config[STRICT_HTTPS_MAX_AGE]);
 		if (max_age >= 0) {
-			i += mg_printf(conn,
-			               "Strict-Transport-Security: max-age=%u\r\n",
-			               (unsigned)max_age);
+			char val[64];
+			mg_snprintf(conn,
+			            NULL,
+			            val,
+			            sizeof(val),
+			            "max-age=%lu",
+			            (unsigned long)max_age);
+			mg_response_add_header(conn, "Strict-Transport-Security", val, -1);
 		}
 	}
 #endif
 
 	if (header && header[0]) {
-		i += mg_printf(conn, "%s\r\n", header);
+		mg_response_add_headerlines(conn, header);
 	}
-
-	return i;
 }
 
 
@@ -4790,8 +4840,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 	char errmsg_buf[MG_BUF_LEN];
 	va_list ap;
 	int has_body;
-	char date[64];
-	time_t curtime = time(NULL);
+
 #if !defined(NO_FILESYSTEMS)
 	char path_buf[PATH_MAX];
 	int len, i, page_handler_found, scope, truncated;
@@ -4800,8 +4849,6 @@ mg_send_http_error_impl(struct mg_connection *conn,
 	const char *error_page_file_ext, *tstr;
 #endif /* NO_FILESYSTEMS */
 	int handled_by_callback = 0;
-
-	const char *status_text = mg_get_response_code_text(conn, status);
 
 	if ((conn == NULL) || (fmt == NULL)) {
 		return -2;
@@ -4942,25 +4989,22 @@ mg_send_http_error_impl(struct mg_connection *conn,
 		}
 
 		/* No custom error page. Send default error page. */
-		gmt_time_string(date, sizeof(date), &curtime);
-
 		conn->must_close = 1;
-		mg_printf(conn, "HTTP/1.1 %d %s\r\n", status, status_text);
+		mg_response_start(conn, status);
 		send_no_cache_header(conn);
 		send_additional_header(conn);
 		if (has_body) {
-			mg_printf(conn,
-			          "%s",
-			          "Content-Type: text/plain; charset=utf-8\r\n");
+			mg_response_add_header(conn,
+			                       "Content-Type",
+			                       "text/plain; charset=utf-8",
+			                       -1);
 		}
-		mg_printf(conn,
-		          "Date: %s\r\n"
-		          "Connection: close\r\n\r\n",
-		          date);
+		mg_response_send_headers(conn);
 
 		/* HTTP responses 1xx, 204 and 304 MUST NOT send a body */
 		if (has_body) {
 			/* For other errors, send a generic error message. */
+			const char *status_text = mg_get_response_code_text(conn, status);
 			mg_printf(conn, "Error %d: %s\n", status, status_text);
 			mg_write(conn, errmsg_buf, strlen(errmsg_buf));
 
@@ -4992,34 +5036,37 @@ mg_send_http_ok(struct mg_connection *conn,
                 const char *mime_type,
                 long long content_length)
 {
-	char date[64];
-	time_t curtime = time(NULL);
-
 	if ((mime_type == NULL) || (*mime_type == 0)) {
 		/* No content type defined: default to text/html */
 		mime_type = "text/html";
 	}
 
-	gmt_time_string(date, sizeof(date), &curtime);
-
-	mg_printf(conn,
-	          "HTTP/1.1 200 OK\r\n"
-	          "Content-Type: %s\r\n"
-	          "Date: %s\r\n"
-	          "Connection: %s\r\n",
-	          mime_type,
-	          date,
-	          suggest_connection_header(conn));
-
+	mg_response_start(conn, 200);
 	send_no_cache_header(conn);
 	send_additional_header(conn);
+	mg_response_add_header(conn, "Content-Type", mime_type, -1);
 	if (content_length < 0) {
-		mg_printf(conn, "Transfer-Encoding: chunked\r\n\r\n");
+		/* Size not known. Use chunked encoding (HTTP/1.x) */
+		if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
+			/* Only HTTP/1.x defines "chunked" encoding, HTTP/2 does not*/
+			mg_response_add_header(conn, "Transfer-Encoding", "chunked", -1);
+		}
 	} else {
-		mg_printf(conn,
-		          "Content-Length: %" UINT64_FMT "\r\n\r\n",
-		          (uint64_t)content_length);
+		char len[32];
+		int trunc = 0;
+		mg_snprintf(conn,
+		            &trunc,
+		            len,
+		            sizeof(len),
+		            "%" UINT64_FMT,
+		            (uint64_t)content_length);
+		if (!trunc) {
+			/* Since 32 bytes is enough to hold any 64 bit decimal number,
+			 * !trunc is always true */
+			mg_response_add_header(conn, "Content-Length", len, -1);
+		}
 	}
+	mg_response_send_headers(conn);
 
 	return 0;
 }
@@ -5896,8 +5943,7 @@ spawn_process(struct mg_connection *conn,
 	HANDLE me;
 	char *p, *interp;
 	char *interp_arg = 0;
-	char full_interp[PATH_MAX], full_dir[PATH_MAX], cmdline[PATH_MAX],
-	    buf[PATH_MAX];
+	char full_dir[PATH_MAX], cmdline[PATH_MAX], buf[PATH_MAX];
 	int truncated;
 	struct mg_file file = STRUCT_FILE_INITIALIZER;
 	STARTUPINFOA si;
@@ -5989,10 +6035,6 @@ spawn_process(struct mg_connection *conn,
 		interp = buf + 2;
 	}
 
-	if (interp[0] != '\0') {
-		GetFullPathNameA(interp, sizeof(full_interp), full_interp, NULL);
-		interp = full_interp;
-	}
 	GetFullPathNameA(dir, sizeof(full_dir), full_dir, NULL);
 
 	if (interp[0] != '\0') {
@@ -6071,6 +6113,7 @@ set_blocking_mode(SOCKET sock)
 	return ioctlsocket(sock, (long)FIONBIO, &non_blocking);
 }
 
+
 static int
 set_non_blocking_mode(SOCKET sock)
 {
@@ -6078,7 +6121,9 @@ set_non_blocking_mode(SOCKET sock)
 	return ioctlsocket(sock, (long)FIONBIO, &non_blocking);
 }
 
+
 #else
+
 
 #if !defined(NO_FILESYSTEMS)
 static int
@@ -6683,8 +6728,8 @@ pull_inner(FILE *fp,
 		}
 		if (pollres > 0) {
 			ERR_clear_error();
-			nread = SSL_read(conn->ssl, buf,
-			                 (ssl_pending > 0) ? ssl_pending : len);
+			nread =
+			    SSL_read(conn->ssl, buf, (ssl_pending > 0) ? ssl_pending : len);
 			if (nread <= 0) {
 				err = SSL_get_error(conn->ssl, nread);
 				if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
@@ -6912,6 +6957,28 @@ mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 }
 
 
+/* Forward declarations */
+static void handle_request(struct mg_connection *);
+
+
+#ifdef USE_HTTP2
+#if defined(NO_SSL)
+#error "HTTP2 requires ALPN, APLN requires SSL/TLS"
+#endif
+#include "mod_http2.inl"
+/* Not supported with HTTP/2 */
+#define HTTP1_only                                                             \
+	{                                                                          \
+		if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {                      \
+			http2_must_use_http1(conn);                                        \
+			return;                                                            \
+		}                                                                      \
+	}
+#else
+#define HTTP1_only
+#endif
+
+
 int
 mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
@@ -7033,6 +7100,14 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 		return -1;
 	}
 
+	/* Mark connection as "data sent" */
+	conn->request_state = 10;
+#ifdef USE_HTTP2
+	if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {
+		http2_data_frame_head(conn, len, 0);
+	}
+#endif
+
 	if (conn->throttle > 0) {
 		if ((now = time(NULL)) != conn->last_throttle_time) {
 			conn->last_throttle_time = now;
@@ -7042,13 +7117,16 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 		if (allowed > (int)len) {
 			allowed = (int)len;
 		}
-		if ((total = push_all(conn->phys_ctx,
-		                      NULL,
-		                      conn->client.sock,
-		                      conn->ssl,
-		                      (const char *)buf,
-		                      allowed))
-		    == allowed) {
+
+		total = push_all(conn->phys_ctx,
+		                 NULL,
+		                 conn->client.sock,
+		                 conn->ssl,
+		                 (const char *)buf,
+		                 allowed);
+
+		if (total == allowed) {
+
 			buf = (const char *)buf + total;
 			conn->last_throttle_bytes += total;
 			while ((total < (int)len)
@@ -7056,13 +7134,15 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 				allowed = (conn->throttle > ((int)len - total))
 				              ? (int)len - total
 				              : conn->throttle;
-				if ((n = push_all(conn->phys_ctx,
-				                  NULL,
-				                  conn->client.sock,
-				                  conn->ssl,
-				                  (const char *)buf,
-				                  allowed))
-				    != allowed) {
+
+				n = push_all(conn->phys_ctx,
+				             NULL,
+				             conn->client.sock,
+				             conn->ssl,
+				             (const char *)buf,
+				             allowed);
+
+				if (n != allowed) {
 					break;
 				}
 				sleep(1);
@@ -9012,9 +9092,9 @@ check_authorization(struct mg_connection *conn, const char *path)
 static void
 send_authorization_request(struct mg_connection *conn, const char *realm)
 {
-	char date[64];
-	time_t curtime = time(NULL);
 	uint64_t nonce = (uint64_t)(conn->phys_ctx->start_time);
+	int trunc = 0;
+	char buf[128];
 
 	if (!realm) {
 		realm = conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
@@ -9026,24 +9106,31 @@ send_authorization_request(struct mg_connection *conn, const char *realm)
 	mg_unlock_context(conn->phys_ctx);
 
 	nonce ^= conn->dom_ctx->auth_nonce_mask;
-	conn->status_code = 401;
 	conn->must_close = 1;
 
-	gmt_time_string(date, sizeof(date), &curtime);
-
-	mg_printf(conn, "HTTP/1.1 401 Unauthorized\r\n");
+	/* Create 401 response */
+	mg_response_start(conn, 401);
 	send_no_cache_header(conn);
 	send_additional_header(conn);
-	mg_printf(conn,
-	          "Date: %s\r\n"
-	          "Connection: %s\r\n"
-	          "Content-Length: 0\r\n"
-	          "WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", "
-	          "nonce=\"%" UINT64_FMT "\"\r\n\r\n",
-	          date,
-	          suggest_connection_header(conn),
-	          realm,
-	          nonce);
+	mg_response_add_header(conn, "Content-Length", "0", -1);
+
+	/* Content for "WWW-Authenticate" header */
+	mg_snprintf(conn,
+	            &trunc,
+	            buf,
+	            sizeof(buf),
+	            "Digest qop=\"auth\", realm=\"%s\", "
+	            "nonce=\"%" UINT64_FMT "\"",
+	            realm,
+	            nonce);
+
+	if (!trunc) {
+		/* !trunc should always be true */
+		mg_response_add_header(conn, "WWW-Authenticate", buf, -1);
+	}
+
+	/* Send all headers */
+	mg_response_send_headers(conn);
 }
 
 
@@ -9887,14 +9974,20 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	                     : 'd';
 
 	conn->must_close = 1;
-	mg_printf(conn, "HTTP/1.1 200 OK\r\n");
+
+	/* Create 200 OK response */
+	mg_response_start(conn, 200);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
-	mg_printf(conn,
-	          "Date: %s\r\n"
-	          "Connection: close\r\n"
-	          "Content-Type: text/html; charset=utf-8\r\n\r\n",
-	          date);
+	mg_response_add_header(conn,
+	                       "Content-Type",
+	                       "text/html; charset=utf-8",
+	                       -1);
+
+	/* Send all headers */
+	mg_response_send_headers(conn);
+
+	/* Body */
 	mg_printf(conn,
 	          "<html><head><title>Index of %s</title>"
 	          "<style>th {text-align: left;}</style></head>"
@@ -10105,7 +10198,7 @@ handle_static_file_request(struct mg_connection *conn,
                            const char *mime_type,
                            const char *additional_headers)
 {
-	char date[64], lm[64], etag[64];
+	char lm[64], etag[64];
 	char range[128]; /* large enough, so there will be no overflow */
 	const char *msg = "OK";
 	const char *range_hdr;
@@ -10114,10 +10207,10 @@ handle_static_file_request(struct mg_connection *conn,
 	struct vec mime_vec;
 	int n, truncated;
 	char gz_path[PATH_MAX];
-	const char *encoding = "";
+	const char *encoding = 0;
 	const char *origin_hdr;
 	const char *cors_orig_cfg;
-	const char *cors1, *cors2, *cors3;
+	const char *cors1, *cors2;
 	int is_head_request;
 
 #if defined(USE_ZLIB)
@@ -10175,7 +10268,7 @@ handle_static_file_request(struct mg_connection *conn,
 		}
 
 		path = gz_path;
-		encoding = "Content-Encoding: gzip\r\n";
+		encoding = "gzip";
 
 #if defined(USE_ZLIB)
 		/* File is already compressed. No "on the fly" compression. */
@@ -10193,7 +10286,7 @@ handle_static_file_request(struct mg_connection *conn,
 			filep->stat = file_stat;
 			cl = (int64_t)filep->stat.size;
 			path = gz_path;
-			encoding = "Content-Encoding: gzip\r\n";
+			encoding = "gzip";
 
 #if defined(USE_ZLIB)
 			/* File is already compressed. No "on the fly" compression. */
@@ -10237,7 +10330,7 @@ handle_static_file_request(struct mg_connection *conn,
 		            NULL, /* range buffer is big enough */
 		            range,
 		            sizeof(range),
-		            "Content-Range: bytes "
+		            "bytes "
 		            "%" INT64_FMT "-%" INT64_FMT "/%" INT64_FMT "\r\n",
 		            r1,
 		            r1 + cl - 1,
@@ -10268,77 +10361,73 @@ handle_static_file_request(struct mg_connection *conn,
 		 * http://www.html5rocks.com/static/images/cors_server_flowchart.png
 		 * -
 		 * preflight is not supported for files. */
-		cors1 = "Access-Control-Allow-Origin: ";
+		cors1 = "Access-Control-Allow-Origin";
 		cors2 = cors_orig_cfg;
-		cors3 = "\r\n";
 	} else {
-		cors1 = cors2 = cors3 = "";
+		cors1 = cors2 = "";
 	}
 
-	/* Prepare Etag, Date, Last-Modified headers. Must be in UTC,
-	 * according to
-	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3 */
-	gmt_time_string(date, sizeof(date), &curtime);
+	/* Prepare Etag, and Last-Modified headers. */
 	gmt_time_string(lm, sizeof(lm), &filep->stat.last_modified);
 	construct_etag(etag, sizeof(etag), &filep->stat);
 
-	/* Send header */
-	(void)mg_printf(conn,
-	                "HTTP/1.1 %d %s\r\n"
-	                "%s%s%s" /* CORS */
-	                "Date: %s\r\n"
-	                "Last-Modified: %s\r\n"
-	                "Etag: %s\r\n"
-	                "Content-Type: %.*s\r\n"
-	                "Connection: %s\r\n",
-	                conn->status_code,
-	                msg,
-	                cors1,
-	                cors2,
-	                cors3,
-	                date,
-	                lm,
-	                etag,
-	                (int)mime_vec.len,
-	                mime_vec.ptr,
-	                suggest_connection_header(conn));
+	/* Create 2xx (200, 206) response */
+	mg_response_start(conn, conn->status_code);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
+	mg_response_add_header(conn,
+	                       "Content-Type",
+	                       mime_vec.ptr,
+	                       (int)mime_vec.len);
+	if (cors1[0] != 0) {
+		mg_response_add_header(conn, cors1, cors2, -1);
+	}
+	mg_response_add_header(conn, "Last-Modified", lm, -1);
+	mg_response_add_header(conn, "Etag", etag, -1);
 
 #if defined(USE_ZLIB)
 	/* On the fly compression allowed */
 	if (allow_on_the_fly_compression) {
 		/* For on the fly compression, we don't know the content size in
 		 * advance, so we have to use chunked encoding */
-		(void)mg_printf(conn,
-		                "Content-Encoding: gzip\r\n"
-		                "Transfer-Encoding: chunked\r\n");
+		encoding = "gzip";
+		if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
+			/* HTTP/2 is always using "chunks" (frames) */
+			mg_response_add_header(conn, "Transfer-Encoding", "chunked", -1);
+		}
+
 	} else
 #endif
 	{
 		/* Without on-the-fly compression, we know the content-length
 		 * and we can use ranges (with on-the-fly compression we cannot).
 		 * So we send these response headers only in this case. */
-		(void)mg_printf(conn,
-		                "Content-Length: %" INT64_FMT "\r\n"
-		                "Accept-Ranges: bytes\r\n"
-		                "%s" /* range */
-		                "%s" /* encoding */,
-		                cl,
-		                range,
-		                encoding);
+		char len[32];
+		int trunc = 0;
+		mg_snprintf(conn, &trunc, len, sizeof(len), "%" INT64_FMT, cl);
+
+		if (!trunc) {
+			mg_response_add_header(conn, "Content-Length", len, -1);
+		}
+
+		mg_response_add_header(conn, "Accept-Ranges", "bytes", -1);
 	}
 
-	/* The previous code must not add any header starting with X- to make
-	 * sure no one of the additional_headers is included twice */
-	if (additional_headers != NULL) {
-		(void)mg_printf(conn,
-		                "%.*s\r\n\r\n",
-		                (int)strlen(additional_headers),
-		                additional_headers);
-	} else {
-		(void)mg_printf(conn, "\r\n");
+	if (encoding) {
+		mg_response_add_header(conn, "Content-Encoding", encoding, -1);
 	}
+	if (range[0] != 0) {
+		mg_response_add_header(conn, "Content-Range", range, -1);
+	}
+
+	/* The code above does not add any header starting with X- to make
+	 * sure no one of the additional_headers is included twice */
+	if ((additional_headers != NULL) && (*additional_headers != 0)) {
+		mg_response_add_headerlines(conn, additional_headers);
+	}
+
+	/* Send all headers */
+	mg_response_send_headers(conn);
 
 	if (!is_head_request) {
 #if defined(USE_ZLIB)
@@ -10387,37 +10476,29 @@ is_not_modified(const struct mg_connection *conn,
 	           && (filestat->last_modified <= parse_date_string(ims)));
 }
 
+
 static void
 handle_not_modified_static_file_request(struct mg_connection *conn,
                                         struct mg_file *filep)
 {
-	char date[64], lm[64], etag[64];
-	time_t curtime = time(NULL);
+	char lm[64], etag[64];
 
 	if ((conn == NULL) || (filep == NULL)) {
 		return;
 	}
-	conn->status_code = 304;
-	gmt_time_string(date, sizeof(date), &curtime);
+
 	gmt_time_string(lm, sizeof(lm), &filep->stat.last_modified);
 	construct_etag(etag, sizeof(etag), &filep->stat);
 
-	(void)mg_printf(conn,
-	                "HTTP/1.1 %d %s\r\n"
-	                "Date: %s\r\n",
-	                conn->status_code,
-	                mg_get_response_code_text(conn, conn->status_code),
-	                date);
+	/* Create 304 "not modified" response */
+	mg_response_start(conn, 304);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
-	(void)mg_printf(conn,
-	                "Last-Modified: %s\r\n"
-	                "Etag: %s\r\n"
-	                "Connection: %s\r\n"
-	                "\r\n",
-	                lm,
-	                etag,
-	                suggest_connection_header(conn));
+	mg_response_add_header(conn, "Last-Modified", lm, -1);
+	mg_response_add_header(conn, "Etag", etag, -1);
+
+	/* Send all headers */
+	mg_response_send_headers(conn);
 }
 #endif
 
@@ -10886,7 +10967,6 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 		return -1;
 	}
 	ri->http_version += 5;
-
 
 	/* Parse all HTTP headers */
 	ri->num_headers = parse_http_headers(&buf, ri->http_headers);
@@ -11571,11 +11651,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		    "Error: CGI program \"%s\": Can not spawn CGI process: %s",
 		    prog,
 		    status);
-		mg_send_http_error(conn,
-		                   500,
-		                   "Error: Cannot spawn CGI process [%s]: %s",
-		                   prog,
-		                   status);
+		mg_send_http_error(conn, 500, "Error: Cannot spawn CGI process");
 		mg_free(proc);
 		proc = NULL;
 		goto done;
@@ -11810,8 +11886,6 @@ mkcol(struct mg_connection *conn, const char *path)
 {
 	int rc, body_len;
 	struct de de;
-	char date[64];
-	time_t curtime = time(NULL);
 
 	if (conn == NULL) {
 		return;
@@ -11848,19 +11922,16 @@ mkcol(struct mg_connection *conn, const char *path)
 	rc = mg_mkdir(conn, path, 0755);
 
 	if (rc == 0) {
-		conn->status_code = 201;
-		gmt_time_string(date, sizeof(date), &curtime);
-		mg_printf(conn,
-		          "HTTP/1.1 %d Created\r\n"
-		          "Date: %s\r\n",
-		          conn->status_code,
-		          date);
+
+		/* Create 201 "Created" response */
+		mg_response_start(conn, 201);
 		send_static_cache_header(conn);
 		send_additional_header(conn);
-		mg_printf(conn,
-		          "Content-Length: 0\r\n"
-		          "Connection: %s\r\n\r\n",
-		          suggest_connection_header(conn));
+		mg_response_add_header(conn, "Content-Length", "0", -1);
+
+		/* Send all headers - there is no body */
+		mg_response_send_headers(conn);
+
 	} else {
 		if (errno == EEXIST) {
 			mg_send_http_error(
@@ -11886,8 +11957,6 @@ put_file(struct mg_connection *conn, const char *path)
 	const char *range;
 	int64_t r1, r2;
 	int rc;
-	char date[64];
-	time_t curtime = time(NULL);
 
 	if (conn == NULL) {
 		return;
@@ -11939,19 +12008,15 @@ put_file(struct mg_connection *conn, const char *path)
 
 	if (rc == 0) {
 		/* put_dir returns 0 if path is a directory */
-		gmt_time_string(date, sizeof(date), &curtime);
-		mg_printf(conn,
-		          "HTTP/1.1 %d %s\r\n",
-		          conn->status_code,
-		          mg_get_response_code_text(NULL, conn->status_code));
+
+		/* Create response */
+		mg_response_start(conn, conn->status_code);
 		send_no_cache_header(conn);
 		send_additional_header(conn);
-		mg_printf(conn,
-		          "Date: %s\r\n"
-		          "Content-Length: 0\r\n"
-		          "Connection: %s\r\n\r\n",
-		          date,
-		          suggest_connection_header(conn));
+		mg_response_add_header(conn, "Content-Length", "0", -1);
+
+		/* Send all headers - there is no body */
+		mg_response_send_headers(conn);
 
 		/* Request to create a directory has been fulfilled successfully.
 		 * No need to put a file. */
@@ -12013,19 +12078,14 @@ put_file(struct mg_connection *conn, const char *path)
 		conn->status_code = 507;
 	}
 
-	gmt_time_string(date, sizeof(date), &curtime);
-	mg_printf(conn,
-	          "HTTP/1.1 %d %s\r\n",
-	          conn->status_code,
-	          mg_get_response_code_text(NULL, conn->status_code));
+	/* Create response (status_code has been set before) */
+	mg_response_start(conn, conn->status_code);
 	send_no_cache_header(conn);
 	send_additional_header(conn);
-	mg_printf(conn,
-	          "Date: %s\r\n"
-	          "Content-Length: 0\r\n"
-	          "Connection: %s\r\n\r\n",
-	          date,
-	          suggest_connection_header(conn));
+	mg_response_add_header(conn, "Content-Length", "0", -1);
+
+	/* Send all headers - there is no body */
+	mg_response_send_headers(conn);
 }
 
 
@@ -12081,7 +12141,12 @@ delete_file(struct mg_connection *conn, const char *path)
 	/* Try to delete it. */
 	if (mg_remove(conn, path) == 0) {
 		/* Delete was successful: Return 204 without content. */
-		mg_send_http_error(conn, 204, "%s", "");
+		mg_response_start(conn, 204);
+		send_no_cache_header(conn);
+		send_additional_header(conn);
+		mg_response_add_header(conn, "Content-Length", "0", -1);
+		mg_response_send_headers(conn);
+
 	} else {
 		/* Delete not successful (file locked). */
 		mg_send_http_error(conn,
@@ -12346,7 +12411,7 @@ handle_ssi_file_request(struct mg_connection *conn,
 	char date[64];
 	time_t curtime = time(NULL);
 	const char *cors_orig_cfg;
-	const char *cors1, *cors2, *cors3;
+	const char *cors1, *cors2;
 
 	if ((conn == NULL) || (path == NULL) || (filep == NULL)) {
 		return;
@@ -12355,11 +12420,10 @@ handle_ssi_file_request(struct mg_connection *conn,
 	cors_orig_cfg = conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
 	if (cors_orig_cfg && *cors_orig_cfg && mg_get_header(conn, "Origin")) {
 		/* Cross-origin resource sharing (CORS). */
-		cors1 = "Access-Control-Allow-Origin: ";
+		cors1 = "Access-Control-Allow-Origin";
 		cors2 = cors_orig_cfg;
-		cors3 = "\r\n";
 	} else {
-		cors1 = cors2 = cors3 = "";
+		cors1 = cors2 = "";
 	}
 
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
@@ -12371,22 +12435,23 @@ handle_ssi_file_request(struct mg_connection *conn,
 		                   path,
 		                   strerror(ERRNO));
 	} else {
+		/* Set "must_close" for HTTP/1.x, since we do not know the
+		 * content length */
 		conn->must_close = 1;
 		gmt_time_string(date, sizeof(date), &curtime);
 		fclose_on_exec(&filep->access, conn);
-		mg_printf(conn, "HTTP/1.1 200 OK\r\n");
+
+		/* 200 OK response */
+		mg_response_start(conn, 200);
 		send_no_cache_header(conn);
 		send_additional_header(conn);
-		mg_printf(conn,
-		          "%s%s%s"
-		          "Date: %s\r\n"
-		          "Content-Type: text/html\r\n"
-		          "Connection: %s\r\n\r\n",
-		          cors1,
-		          cors2,
-		          cors3,
-		          date,
-		          suggest_connection_header(conn));
+		mg_response_add_header(conn, "Content-Type", "text/html", -1);
+		if (cors1[0]) {
+			mg_response_add_header(conn, cors1, cors2, -1);
+		}
+		mg_response_send_headers(conn);
+
+		/* Header sent, now send body */
 		send_ssi_file(conn, path, filep, 0);
 		(void)mg_fclose(&filep->access); /* Ignore errors for readonly files */
 	}
@@ -12398,31 +12463,30 @@ handle_ssi_file_request(struct mg_connection *conn,
 static void
 send_options(struct mg_connection *conn)
 {
-	char date[64];
-	time_t curtime = time(NULL);
-
 	if (!conn) {
 		return;
 	}
 
-	conn->status_code = 200;
-	conn->must_close = 1;
-	gmt_time_string(date, sizeof(date), &curtime);
-
 	/* We do not set a "Cache-Control" header here, but leave the default.
 	 * Since browsers do not send an OPTIONS request, we can not test the
 	 * effect anyway. */
-	mg_printf(conn,
-	          "HTTP/1.1 200 OK\r\n"
-	          "Date: %s\r\n"
-	          "Connection: %s\r\n"
-	          "Allow: GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, "
-	          "PROPFIND, MKCOL\r\n"
-	          "DAV: 1\r\n",
-	          date,
-	          suggest_connection_header(conn));
+
+	mg_response_start(conn, 200);
+	mg_response_add_header(conn, "Content-Type", "text/html", -1);
+	if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
+		/* Use the same as before */
+		mg_response_add_header(
+		    conn,
+		    "Allow",
+		    "GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, PROPFIND, MKCOL",
+		    -1);
+		mg_response_add_header(conn, "DAV", "1", -1);
+	} else {
+		/* TODO: Check this later for HTTP/2 */
+		mg_response_add_header(conn, "Allow", "GET, POST", -1);
+	}
 	send_additional_header(conn);
-	mg_printf(conn, "\r\n");
+	mg_response_send_headers(conn);
 }
 
 
@@ -12513,18 +12577,15 @@ handle_propfind(struct mg_connection *conn,
 	}
 
 	conn->must_close = 1;
-	conn->status_code = 207;
-	mg_printf(conn,
-	          "HTTP/1.1 207 Multi-Status\r\n"
-	          "Date: %s\r\n",
-	          date);
+
+	/* return 207 "Multi-Status" */
+	mg_response_start(conn, 207);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
-	mg_printf(conn,
-	          "Connection: %s\r\n"
-	          "Content-Type: text/xml; charset=utf-8\r\n\r\n",
-	          suggest_connection_header(conn));
+	mg_response_add_header(conn, "Content-Type", "text/xml; charset=utf-8", -1);
+	mg_response_send_headers(conn);
 
+	/* Content */
 	mg_printf(conn,
 	          "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
 	          "<d:multistatus xmlns:d='DAV:'>\n");
@@ -13773,7 +13834,8 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 	/* first try to find an existing handler */
 	do {
 		lastref = &(dom_ctx->handlers);
-		for (tmp_rh = dom_ctx->handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
+		for (tmp_rh = dom_ctx->handlers; tmp_rh != NULL;
+		     tmp_rh = tmp_rh->next) {
 			if (tmp_rh->handler_type == handler_type
 			    && (urilen == tmp_rh->uri_len) && !strcmp(tmp_rh->uri, uri)) {
 				if (!is_delete_request) {
@@ -14003,18 +14065,18 @@ get_request_handler(struct mg_connection *conn,
 				if (step == 0) {
 					/* first try for an exact match */
 					matched = (tmp_rh->uri_len == urilen)
-					           && (strcmp(tmp_rh->uri, uri) == 0);
+					          && (strcmp(tmp_rh->uri, uri) == 0);
 				} else if (step == 1) {
 					/* next try for a partial match, we will accept
 					   uri/something */
-					matched = (tmp_rh->uri_len < urilen)
-					           && (uri[tmp_rh->uri_len] == '/')
-					           && (memcmp(tmp_rh->uri, uri,
-					                      tmp_rh->uri_len) == 0);
+					matched =
+					    (tmp_rh->uri_len < urilen)
+					    && (uri[tmp_rh->uri_len] == '/')
+					    && (memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0);
 				} else {
 					/* finally try for pattern match */
-					matched = match_prefix(tmp_rh->uri,
-					                       tmp_rh->uri_len, uri) > 0;
+					matched =
+					    match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0;
 				}
 				if (matched) {
 					if (handler_type == WEBSOCKET_HANDLER) {
@@ -14146,6 +14208,9 @@ handle_request(struct mg_connection *conn)
 	char date[64];
 
 	path[0] = 0;
+
+	/* 0. Reset internal state (required for HTTP/2 proxy) */
+	conn->request_state = 0;
 
 	/* 1. get the request url */
 	/* 1.1. split into url and query string */
@@ -14297,6 +14362,11 @@ handle_request(struct mg_connection *conn)
 #else
 	handler_type = REQUEST_HANDLER;
 #endif /* defined(USE_WEBSOCKET) */
+
+	if (is_websocket_request) {
+		HTTP1_only;
+	}
+
 	/* 5.2. check if the request will be handled by a callback */
 	if (get_request_handler(conn,
 	                        handler_type,
@@ -14351,6 +14421,7 @@ handle_request(struct mg_connection *conn)
 		}
 	} else if (is_put_or_delete_request && !is_script_resource
 	           && !is_callback_resource) {
+		HTTP1_only;
 /* 6.2. this request is a PUT/DELETE to a real file */
 /* 6.2.1. thus, the server must have real files */
 #if defined(NO_FILES)
@@ -14391,6 +14462,7 @@ handle_request(struct mg_connection *conn)
 
 	/* 7. check if there are request handlers for this uri */
 	if (is_callback_resource) {
+		HTTP1_only;
 		if (!is_websocket_request) {
 			i = callback_handler(conn, callback_data);
 
@@ -14465,6 +14537,7 @@ handle_request(struct mg_connection *conn)
 /* 8. handle websocket requests */
 #if defined(USE_WEBSOCKET)
 	if (is_websocket_request) {
+		HTTP1_only;
 		if (is_script_resource) {
 
 			if (is_in_script_path(conn, path)) {
@@ -14520,12 +14593,14 @@ handle_request(struct mg_connection *conn)
 
 	/* 10. Request is handled by a script */
 	if (is_script_resource) {
+		HTTP1_only;
 		handle_file_based_request(conn, path, &file);
 		return;
 	}
 
 	/* 11. Handle put/delete/mkcol requests */
 	if (is_put_or_delete_request) {
+		HTTP1_only;
 		/* 11.1. PUT method */
 		if (!strcmp(ri->request_method, "PUT")) {
 			put_file(conn, path);
@@ -14561,19 +14636,17 @@ handle_request(struct mg_connection *conn)
 	/* 12. Directory uris should end with a slash */
 	if (file.stat.is_directory && (uri_len > 0)
 	    && (ri->local_uri[uri_len - 1] != '/')) {
-		gmt_time_string(date, sizeof(date), &curtime);
-		mg_printf(conn,
-		          "HTTP/1.1 301 Moved Permanently\r\n"
-		          "Location: %s/\r\n"
-		          "Date: %s\r\n"
-		          /* "Cache-Control: private\r\n" (= default) */
-		          "Content-Length: 0\r\n"
-		          "Connection: %s\r\n",
-		          ri->request_uri,
-		          date,
-		          suggest_connection_header(conn));
-		send_additional_header(conn);
-		mg_printf(conn, "\r\n");
+
+		size_t len = strlen(ri->request_uri);
+		char *new_path = mg_malloc_ctx(len + 2, conn->phys_ctx);
+		if (!new_path) {
+			mg_send_http_error(conn, 500, "out or memory");
+		} else {
+			memcpy(new_path, ri->request_uri, len);
+			new_path[len] = '/';
+			new_path[len + 1] = 0;
+			mg_send_http_redirect(conn, new_path, 301);
+		}
 		return;
 	}
 
@@ -14620,19 +14693,34 @@ handle_request(struct mg_connection *conn)
 		return;
 	}
 
-	/* 15. read a normal file with GET or HEAD */
-	handle_file_based_request(conn, path, &file);
+	/* 15. SSI files */
+	if (match_prefix(conn->dom_ctx->config[SSI_EXTENSIONS],
+	                 strlen(conn->dom_ctx->config[SSI_EXTENSIONS]),
+	                 path)
+	    > 0) {
+		if (is_in_script_path(conn, path)) {
+			handle_ssi_file_request(conn, path, &file);
+		} else {
+			/* Script was in an illegal path */
+			mg_send_http_error(conn, 403, "%s", "Forbidden");
+		}
+		return;
+	}
+
+	/* 16. Static file - maybe cached */
+#if !defined(NO_CACHING)
+	if ((!conn->in_error_handler) && is_not_modified(conn, &file.stat)) {
+		/* Send 304 "Not Modified" - this must not send any body data */
+		handle_not_modified_static_file_request(conn, &file);
+		return;
+	}
+#endif /* !NO_CACHING */
+
+	/* 17. Static file - not cached */
+	handle_static_file_request(conn, path, &file, NULL, NULL);
+
 #endif /* !defined(NO_FILES) */
 }
-
-
-/* Include HTTP/2 modules */
-#ifdef USE_HTTP2
-#if defined(NO_SSL)
-#error "HTTP2 requires ALPN, APLN requires SSL/TLS"
-#endif
-#include "mod_http2.inl"
-#endif
 
 
 #if !defined(NO_FILESYSTEMS)
@@ -14654,9 +14742,7 @@ handle_file_based_request(struct mg_connection *conn,
 	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Lua server page: an SSI like page containing mostly plain
-			 * html
-			 * code
-			 * plus some tags with server generated contents. */
+			 * html code plus some tags with server generated contents. */
 			handle_lsp_request(conn, path, file, NULL);
 		} else {
 			/* Script was in an illegal path */
@@ -15544,8 +15630,7 @@ refresh_trust(struct mg_connection *conn)
 			}
 		}
 
-		if (ssl_use_pem_file(conn->phys_ctx, conn->dom_ctx, pem, chain)
-		    == 0) {
+		if (ssl_use_pem_file(conn->phys_ctx, conn->dom_ctx, pem, chain) == 0) {
 			mg_unlock_context(conn->phys_ctx);
 			return 0;
 		}
@@ -15651,8 +15736,8 @@ sslize(struct mg_connection *conn,
 					              || (err == SSL_ERROR_WANT_WRITE))
 					                 ? POLLOUT
 					                 : POLLIN;
-					pollres = mg_poll(&pfd, 1, 50,
-					                  &(conn->phys_ctx->stop_flag));
+					pollres =
+					    mg_poll(&pfd, 1, 50, &(conn->phys_ctx->stop_flag));
 					if (pollres < 0) {
 						/* Break if error occured (-1)
 						 * or server shutdown (-2) */
@@ -17244,9 +17329,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			SSL_CTX_set_verify(conn->dom_ctx->ssl_ctx, SSL_VERIFY_NONE, NULL);
 		}
 
-		if (!sslize(conn,
-		            SSL_connect,
-		            client_options)) {
+		if (!sslize(conn, SSL_connect, client_options)) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -18770,9 +18853,7 @@ worker_thread_run(struct mg_connection *conn)
 		if (conn->client.is_ssl) {
 #if !defined(NO_SSL)
 			/* HTTPS connection */
-			if (sslize(conn,
-			           SSL_accept,
-			           NULL)) {
+			if (sslize(conn, SSL_accept, NULL)) {
 				/* conn->dom_ctx is set in get_request */
 
 				/* Get SSL client certificate information (if set) */
