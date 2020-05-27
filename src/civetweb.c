@@ -18908,6 +18908,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 #if !defined(__ZEPHYR__)
 	int on = 1;
 #endif
+	memset(&so, 0, sizeof(so));
 
 	if ((so.sock = accept(listener->sock, &so.rsa.sa, &len))
 	    == INVALID_SOCKET) {
