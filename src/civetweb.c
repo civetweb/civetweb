@@ -19386,6 +19386,17 @@ static
 		 */
 		legacy_init(options);
 	}
+	if (mg_init_library_called == 0) {
+		if ((error != NULL) && (error->text_buffer_size > 0)) {
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for error buffers */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "Library uninitialized");
+		}
+		return NULL;
+	}
 
 	/* Allocate context and initialize reasonable general case defaults. */
 	if ((ctx = (struct mg_context *)mg_calloc(1, sizeof(*ctx))) == NULL) {
@@ -21040,10 +21051,6 @@ mg_get_connection_info(const struct mg_context *ctx,
 unsigned
 mg_init_library(unsigned features)
 {
-#if !defined(NO_SSL)
-	char ebuf[128];
-#endif
-
 	unsigned features_to_init = mg_check_feature(features & 0xFFu);
 	unsigned features_inited = features_to_init;
 
@@ -21057,23 +21064,60 @@ mg_init_library(unsigned features)
 	mg_global_lock();
 
 	if (mg_init_library_called <= 0) {
-		if (0 != pthread_key_create(&sTlsKey, tls_dtor)) {
-			/* Fatal error - abort start. However, this situation should
-			 * never occur in practice. */
-			mg_global_unlock();
-			return 0;
+#if defined(_WIN32)
+		int file_mutex_init = 1;
+		int wsa = 1;
+#else
+		int mutexattr_init = 1;
+#endif
+		int failed = 1;
+		int key_create = pthread_key_create(&sTlsKey, tls_dtor);
+
+		if (key_create == 0) {
+#if defined(_WIN32)
+			file_mutex_init = pthread_mutex_init(&global_log_file_lock,
+			                                     &pthread_mutex_attr);
+			if (file_mutex_init == 0) {
+				/* Start WinSock */
+				WSADATA data;
+				failed = wsa = WSAStartup(MAKEWORD(2, 2), &data);
+			}
+#else
+			mutexattr_init = pthread_mutexattr_init(&pthread_mutex_attr);
+			if (mutexattr_init == 0) {
+				failed = pthread_mutexattr_settype(&pthread_mutex_attr,
+				                                   PTHREAD_MUTEX_RECURSIVE);
+			}
+#endif
 		}
 
-#if defined(_WIN32)
-		(void)pthread_mutex_init(&global_log_file_lock, &pthread_mutex_attr);
-#else
-		pthread_mutexattr_init(&pthread_mutex_attr);
-		pthread_mutexattr_settype(&pthread_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
+#if defined(USE_SERVER_STATS)
+		if (failed == 0) {
+			failed = pthread_mutex_init(&global_stats_mutex,
+			                            &pthread_mutex_attr);
+		}
 #endif
 
-#if defined(USE_SERVER_STATS)
-		(void)pthread_mutex_init(&global_stats_mutex, &pthread_mutex_attr);
+		if (failed) {
+#if defined(_WIN32)
+			if (wsa == 0) {
+				(void)WSACleanup();
+			}
+			if (file_mutex_init == 0) {
+				(void)pthread_mutex_destroy(&global_log_file_lock);
+			}
+#else
+			if (mutexattr_init == 0) {
+				(void)pthread_mutexattr_destroy(&pthread_mutex_attr);
+			}
 #endif
+			if (key_create == 0) {
+				(void)pthread_key_delete(sTlsKey);
+			}
+			mg_global_unlock();
+			(void)pthread_mutex_destroy(&global_lock_mutex);
+			return 0;
+		}
 
 #if defined(USE_LUA)
 		lua_init_optional_libraries();
@@ -21085,6 +21129,7 @@ mg_init_library(unsigned features)
 #if !defined(NO_SSL)
 	if (features_to_init & MG_FEATURES_SSL) {
 		if (!mg_ssl_initialized) {
+			char ebuf[128];
 			if (initialize_ssl(ebuf, sizeof(ebuf))) {
 				mg_ssl_initialized = 1;
 			} else {
@@ -21098,13 +21143,8 @@ mg_init_library(unsigned features)
 	}
 #endif
 
-	/* Start WinSock for Windows */
 	mg_global_lock();
 	if (mg_init_library_called <= 0) {
-#if defined(_WIN32)
-		WSADATA data;
-		WSAStartup(MAKEWORD(2, 2), &data);
-#endif /* _WIN32 */
 		mg_init_library_called = 1;
 	} else {
 		mg_init_library_called++;
@@ -21127,9 +21167,6 @@ mg_exit_library(void)
 
 	mg_init_library_called--;
 	if (mg_init_library_called == 0) {
-#if defined(_WIN32)
-		(void)WSACleanup();
-#endif /* _WIN32  */
 #if !defined(NO_SSL)
 		if (mg_ssl_initialized) {
 			uninitialize_ssl();
@@ -21146,6 +21183,7 @@ mg_exit_library(void)
 #endif
 
 #if defined(_WIN32)
+		(void)WSACleanup();
 		(void)pthread_mutex_destroy(&global_log_file_lock);
 #else
 		(void)pthread_mutexattr_destroy(&pthread_mutex_attr);
