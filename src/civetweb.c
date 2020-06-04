@@ -1290,28 +1290,6 @@ mg_atomic_dec(volatile int *addr)
 }
 
 
-#if defined(USE_SERVER_STATS)
-static int64_t
-mg_atomic_add(volatile int64_t *addr, int64_t value)
-{
-	int64_t ret;
-#if defined(_WIN64) && !defined(NO_ATOMICS)
-	ret = InterlockedAdd64(addr, value);
-#elif defined(__GNUC__)                                                        \
-    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
-    && !defined(NO_ATOMICS)
-	ret = __sync_add_and_fetch(addr, value);
-#else
-	mg_global_lock();
-	*addr += value;
-	ret = (*addr);
-	mg_global_unlock();
-#endif
-	return ret;
-}
-#endif
-
-
 #if defined(GCC_DIAGNOSTIC)
 /* Show no warning in case system functions are not used. */
 #pragma GCC diagnostic pop
@@ -1324,10 +1302,12 @@ mg_atomic_add(volatile int64_t *addr, int64_t value)
 
 #if defined(USE_SERVER_STATS)
 
+static pthread_mutex_t global_stats_mutex;
+
 struct mg_memory_stat {
-	volatile int64_t totalMemUsed;
-	volatile int64_t maxMemUsed;
-	volatile int blockCount;
+	int64_t totalMemUsed;
+	int64_t maxMemUsed;
+	int blockCount;
 };
 
 
@@ -1352,20 +1332,21 @@ mg_malloc_ex(size_t size,
 #endif
 
 	if (data) {
-		int64_t mmem = mg_atomic_add(&mstat->totalMemUsed, (int64_t)size);
-		if (mmem > mstat->maxMemUsed) {
-			/* could use atomic compare exchange, but this
-			 * seems overkill for statistics data */
-			mstat->maxMemUsed = mmem;
+		(void)pthread_mutex_lock(&global_stats_mutex);
+		mstat->totalMemUsed += (int64_t)size;
+		if (mstat->totalMemUsed > mstat->maxMemUsed) {
+			mstat->maxMemUsed = mstat->totalMemUsed;
 		}
+		mstat->blockCount++;
+		(void)pthread_mutex_unlock(&global_stats_mutex);
 
-		mg_atomic_inc(&mstat->blockCount);
 		((uintptr_t *)data)[0] = size;
 		((uintptr_t *)data)[1] = (uintptr_t)mstat;
 		memory = (void *)(((char *)data) + 2 * sizeof(uintptr_t));
 	}
 
 #if defined(MEMORY_DEBUGGING)
+	(void)pthread_mutex_lock(&global_stats_mutex);
 	sprintf(mallocStr,
 	        "MEM: %p %5lu alloc   %7lu %4lu --- %s:%u\n",
 	        memory,
@@ -1374,6 +1355,7 @@ mg_malloc_ex(size_t size,
 	        (unsigned long)mstat->blockCount,
 	        file,
 	        line);
+	(void)pthread_mutex_unlock(&global_stats_mutex);
 #if defined(_WIN32)
 	OutputDebugStringA(mallocStr);
 #else
@@ -1418,9 +1400,13 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 		uintptr_t size = ((uintptr_t *)data)[0];
 		struct mg_memory_stat *mstat =
 		    (struct mg_memory_stat *)(((uintptr_t *)data)[1]);
-		mg_atomic_add(&mstat->totalMemUsed, -(int64_t)size);
-		mg_atomic_dec(&mstat->blockCount);
+
+		(void)pthread_mutex_lock(&global_stats_mutex);
+		mstat->totalMemUsed -= (int64_t)size;
+		mstat->blockCount--;
+		(void)pthread_mutex_unlock(&global_stats_mutex);
 #if defined(MEMORY_DEBUGGING)
+		(void)pthread_mutex_lock(&global_stats_mutex);
 		sprintf(mallocStr,
 		        "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n",
 		        memory,
@@ -1429,6 +1415,7 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 		        (unsigned long)mstat->blockCount,
 		        file,
 		        line);
+		(void)pthread_mutex_unlock(&global_stats_mutex);
 #if defined(_WIN32)
 		OutputDebugStringA(mallocStr);
 #else
@@ -1468,8 +1455,12 @@ mg_realloc_ex(void *memory,
 			_realloc = realloc(data, newsize + 2 * sizeof(uintptr_t));
 			if (_realloc) {
 				data = _realloc;
-				mg_atomic_add(&mstat->totalMemUsed, -(int64_t)oldsize);
+
+				(void)pthread_mutex_lock(&global_stats_mutex);
+				mstat->totalMemUsed -= (int64_t)oldsize;
+				(void)pthread_mutex_unlock(&global_stats_mutex);
 #if defined(MEMORY_DEBUGGING)
+				(void)pthread_mutex_lock(&global_stats_mutex);
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
 				        memory,
@@ -1478,14 +1469,18 @@ mg_realloc_ex(void *memory,
 				        (unsigned long)mstat->blockCount,
 				        file,
 				        line);
+				(void)pthread_mutex_unlock(&global_stats_mutex);
 #if defined(_WIN32)
 				OutputDebugStringA(mallocStr);
 #else
 				DEBUG_TRACE("%s", mallocStr);
 #endif
 #endif
-				mg_atomic_add(&mstat->totalMemUsed, (int64_t)newsize);
+				(void)pthread_mutex_lock(&global_stats_mutex);
+				mstat->totalMemUsed += (int64_t)newsize;
+				(void)pthread_mutex_unlock(&global_stats_mutex);
 #if defined(MEMORY_DEBUGGING)
+				(void)pthread_mutex_lock(&global_stats_mutex);
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
 				        memory,
@@ -1494,6 +1489,7 @@ mg_realloc_ex(void *memory,
 				        (unsigned long)mstat->blockCount,
 				        file,
 				        line);
+				(void)pthread_mutex_unlock(&global_stats_mutex);
 #if defined(_WIN32)
 				OutputDebugStringA(mallocStr);
 #else
@@ -2829,13 +2825,14 @@ struct mg_context {
 #else
 	struct socket *squeue; /* Socket queue (sq) : accepted sockets waiting for a
 	                          worker thread */
-	volatile int sq_head;  /* Head of the socket queue */
-	volatile int sq_tail;  /* Tail of the socket queue */
+	int sq_head;           /* Head of the socket queue */
+	int sq_tail;           /* Tail of the socket queue */
 	pthread_cond_t sq_full;  /* Signaled when socket is produced */
 	pthread_cond_t sq_empty; /* Signaled when socket is consumed */
-	volatile int sq_blocked; /* Status information: sq is full */
 	int sq_size;             /* No of elements in socket queue */
 #if defined(USE_SERVER_STATS)
+	int sq_blocked;          /* Status information: sq is full */
+	int sq_filled;           /* Status information: sq_head - sq_tail */
 	int sq_max_fill;
 #endif /* USE_SERVER_STATS */
 #endif /* ALTERNATIVE_QUEUE */
@@ -18316,13 +18313,14 @@ process_new_connection(struct mg_connection *conn)
 	int reqerr, uri_type;
 
 #if defined(USE_SERVER_STATS)
-	int mcon = mg_atomic_inc(&(conn->phys_ctx->active_connections));
-	mg_atomic_add(&(conn->phys_ctx->total_connections), 1);
-	if (mcon > (conn->phys_ctx->max_active_connections)) {
-		/* could use atomic compare exchange, but this
-		 * seems overkill for statistics data */
-		conn->phys_ctx->max_active_connections = mcon;
+	(void)pthread_mutex_lock(&global_stats_mutex);
+	conn->phys_ctx->total_connections++;
+	if ((++conn->phys_ctx->active_connections)
+	    > (conn->phys_ctx->max_active_connections)) {
+		conn->phys_ctx->max_active_connections =
+		    conn->phys_ctx->active_connections;
 	}
+	(void)pthread_mutex_unlock(&global_stats_mutex);
 #endif
 
 	init_connection(conn);
@@ -18436,10 +18434,10 @@ process_new_connection(struct mg_connection *conn)
 #if defined(USE_SERVER_STATS)
 				conn->conn_state = 5; /* processed */
 
-				mg_atomic_add(&(conn->phys_ctx->total_data_read),
-				              conn->consumed_content);
-				mg_atomic_add(&(conn->phys_ctx->total_data_written),
-				              conn->num_bytes_sent);
+				(void)pthread_mutex_lock(&global_stats_mutex);
+				conn->phys_ctx->total_data_read += conn->consumed_content;
+				conn->phys_ctx->total_data_written += conn->num_bytes_sent;
+				(void)pthread_mutex_unlock(&global_stats_mutex);
 #endif
 
 				DEBUG_TRACE("%s", "handle_request done");
@@ -18518,8 +18516,10 @@ process_new_connection(struct mg_connection *conn)
 	close_connection(conn);
 
 #if defined(USE_SERVER_STATS)
-	mg_atomic_add(&(conn->phys_ctx->total_requests), conn->handled_requests);
-	mg_atomic_dec(&(conn->phys_ctx->active_connections));
+	(void)pthread_mutex_lock(&global_stats_mutex);
+	conn->phys_ctx->total_requests += conn->handled_requests;
+	conn->phys_ctx->active_connections--;
+	(void)pthread_mutex_unlock(&global_stats_mutex);
 #endif
 }
 
@@ -18617,6 +18617,11 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 			ctx->sq_tail -= ctx->sq_size;
 			ctx->sq_head -= ctx->sq_size;
 		}
+#if defined(USE_SERVER_STATS)
+		(void)pthread_mutex_lock(&global_stats_mutex);
+		ctx->sq_filled = ctx->sq_head - ctx->sq_tail;
+		(void)pthread_mutex_unlock(&global_stats_mutex);
+#endif
 	}
 
 	(void)pthread_cond_signal(&ctx->sq_empty);
@@ -18639,14 +18644,17 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 	/* If the queue is full, wait */
 	while (STOP_FLAG_IS_ZERO(&ctx->stop_flag)
 	       && (queue_filled >= ctx->sq_size)) {
-		ctx->sq_blocked = 1; /* Status information: All threads bussy */
 #if defined(USE_SERVER_STATS)
-		if (queue_filled > ctx->sq_max_fill) {
-			ctx->sq_max_fill = queue_filled;
-		}
+		(void)pthread_mutex_lock(&global_stats_mutex);
+		ctx->sq_blocked = 1; /* All threads busy */
+		(void)pthread_mutex_unlock(&global_stats_mutex);
 #endif
 		(void)pthread_cond_wait(&ctx->sq_empty, &ctx->thread_mutex);
+#if defined(USE_SERVER_STATS)
+		(void)pthread_mutex_lock(&global_stats_mutex);
 		ctx->sq_blocked = 0; /* Not blocked now */
+		(void)pthread_mutex_unlock(&global_stats_mutex);
+#endif
 		queue_filled = ctx->sq_head - ctx->sq_tail;
 	}
 
@@ -18659,9 +18667,12 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 
 	queue_filled = ctx->sq_head - ctx->sq_tail;
 #if defined(USE_SERVER_STATS)
+	(void)pthread_mutex_lock(&global_stats_mutex);
+	ctx->sq_filled = queue_filled;
 	if (queue_filled > ctx->sq_max_fill) {
 		ctx->sq_max_fill = queue_filled;
 	}
+	(void)pthread_mutex_unlock(&global_stats_mutex);
 #endif
 
 	(void)pthread_cond_signal(&ctx->sq_full);
@@ -19408,7 +19419,6 @@ static
 #if !defined(ALTERNATIVE_QUEUE)
 	ok &= (0 == pthread_cond_init(&ctx->sq_empty, NULL));
 	ok &= (0 == pthread_cond_init(&ctx->sq_full, NULL));
-	ctx->sq_blocked = 0;
 #endif
 	ok &= (0 == pthread_mutex_init(&ctx->nonce_mutex, &pthread_mutex_attr));
 	if (!ok) {
@@ -20598,6 +20608,15 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 	context_info_length += mg_str_append(&buffer, end, "{");
 
 	if (ms) { /* <-- should be always true */
+		int blockCount;
+		int64_t totalMemUsed, maxMemUsed;
+
+		(void)pthread_mutex_lock(&global_stats_mutex);
+		blockCount = ms->blockCount;
+		totalMemUsed = ms->totalMemUsed;
+		maxMemUsed = ms->maxMemUsed;
+		(void)pthread_mutex_unlock(&global_stats_mutex);
+
 		/* Memory information */
 		mg_snprintf(NULL,
 		            NULL,
@@ -20610,11 +20629,11 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            "}",
 		            eol,
 		            eol,
-		            ms->blockCount,
+		            blockCount,
 		            eol,
-		            ms->totalMemUsed,
+		            totalMemUsed,
 		            eol,
-		            ms->maxMemUsed,
+		            maxMemUsed,
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
 	}
@@ -20626,6 +20645,27 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		char now_str[64] = {0};
 		time_t start_time = ctx->start_time;
 		time_t now = time(NULL);
+		int active_connections, max_active_connections;
+		int64_t total_connections;
+		int64_t total_requests;
+		int64_t total_data_read, total_data_written;
+#if !defined(ALTERNATIVE_QUEUE)
+		int sq_filled, sq_max_fill, sq_blocked;
+#endif
+
+		(void)pthread_mutex_lock(&global_stats_mutex);
+		active_connections = ctx->active_connections;
+		max_active_connections = ctx->max_active_connections;
+		total_connections = ctx->total_connections;
+		total_requests = ctx->total_requests;
+		total_data_read = ctx->total_data_read;
+		total_data_written = ctx->total_data_written;
+#if !defined(ALTERNATIVE_QUEUE)
+		sq_filled = ctx->sq_filled;
+		sq_max_fill = ctx->sq_max_fill;
+		sq_blocked = ctx->sq_blocked;
+#endif
+		(void)pthread_mutex_unlock(&global_stats_mutex);
 
 		/* Connections information */
 		mg_snprintf(NULL,
@@ -20639,11 +20679,11 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            "}",
 		            eol,
 		            eol,
-		            ctx->active_connections,
+		            active_connections,
 		            eol,
-		            ctx->max_active_connections,
+		            max_active_connections,
 		            eol,
-		            ctx->total_connections,
+		            total_connections,
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
 
@@ -20663,11 +20703,11 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            eol,
 		            ctx->sq_size,
 		            eol,
-		            ctx->sq_head - ctx->sq_tail,
+		            sq_filled,
 		            eol,
-		            ctx->sq_max_fill,
+		            sq_max_fill,
 		            eol,
-		            (ctx->sq_blocked ? "true" : "false"),
+		            (sq_blocked ? "true" : "false"),
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
 #endif
@@ -20682,7 +20722,7 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            "}",
 		            eol,
 		            eol,
-		            ctx->total_requests,
+		            total_requests,
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
 
@@ -20697,9 +20737,9 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            "}",
 		            eol,
 		            eol,
-		            ctx->total_data_read,
+		            total_data_read,
 		            eol,
-		            ctx->total_data_written,
+		            total_data_written,
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
 
@@ -21031,6 +21071,10 @@ mg_init_library(unsigned features)
 		pthread_mutexattr_settype(&pthread_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 #endif
 
+#if defined(USE_SERVER_STATS)
+		(void)pthread_mutex_init(&global_stats_mutex, &pthread_mutex_attr);
+#endif
+
 #if defined(USE_LUA)
 		lua_init_optional_libraries();
 #endif
@@ -21093,6 +21137,14 @@ mg_exit_library(void)
 		}
 #endif
 
+#if defined(USE_LUA)
+		lua_exit_optional_libraries();
+#endif
+
+#if defined(USE_SERVER_STATS)
+		(void)pthread_mutex_destroy(&global_stats_mutex);
+#endif
+
 #if defined(_WIN32)
 		(void)pthread_mutex_destroy(&global_log_file_lock);
 #else
@@ -21100,10 +21152,6 @@ mg_exit_library(void)
 #endif
 
 		(void)pthread_key_delete(sTlsKey);
-
-#if defined(USE_LUA)
-		lua_exit_optional_libraries();
-#endif
 
 		mg_global_unlock();
 		(void)pthread_mutex_destroy(&global_lock_mutex);
