@@ -1113,7 +1113,7 @@ gmtime_s(const time_t *ptime, struct tm *ptm)
 }
 
 
-static int mg_atomic_inc(volatile int *addr);
+static int mg_atomic_inc(int *addr);
 static struct tm tm_array[MAX_WORKER_THREADS];
 static int tm_index = 0;
 
@@ -1246,7 +1246,7 @@ mg_global_unlock(void)
 
 FUNCTION_MAY_BE_UNUSED
 static int
-mg_atomic_inc(volatile int *addr)
+mg_atomic_inc(int *addr)
 {
 	int ret;
 #if defined(_WIN32) && !defined(NO_ATOMICS)
@@ -1269,7 +1269,7 @@ mg_atomic_inc(volatile int *addr)
 
 FUNCTION_MAY_BE_UNUSED
 static int
-mg_atomic_dec(volatile int *addr)
+mg_atomic_dec(int *addr)
 {
 	int ret;
 #if defined(_WIN32) && !defined(NO_ATOMICS)
@@ -1284,6 +1284,32 @@ mg_atomic_dec(volatile int *addr)
 #else
 	mg_global_lock();
 	ret = (--(*addr));
+	mg_global_unlock();
+#endif
+	return ret;
+}
+
+
+FUNCTION_MAY_BE_UNUSED
+static int
+mg_atomic_compare_and_swap(int *addr, int oldval, int newval)
+{
+	int ret;
+#if defined(_WIN32) && !defined(NO_ATOMICS)
+	/* Depending on the SDK, this function uses either
+	 * (volatile unsigned int *) or (volatile LONG *),
+	 * so whatever you use, the other SDK is likely to raise a warning. */
+	ret = InterlockedCompareExchange((volatile long *)addr, newval, oldval);
+#elif defined(__GNUC__)                                                        \
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
+    && !defined(NO_ATOMICS)
+	ret = __sync_val_compare_and_swap(addr, oldval, newval);
+#else
+	mg_global_lock();
+	ret = *addr;
+	if ((ret != newval) && (ret == oldval)) {
+		*addr = newval;
+	}
 	mg_global_unlock();
 #endif
 	return ret;
@@ -2733,42 +2759,27 @@ struct mg_domain_context {
 };
 
 
-/* Stop flag can be "volatile" or require a lock */
-typedef int volatile stop_flag_t;
-
-#ifdef STOP_FLAG_NEEDS_LOCK
-static int
-STOP_FLAG_IS_ZERO(stop_flag_t *f)
-{
-	int r;
-	mg_global_lock();
-	r = ((*f) == 0);
-	mg_global_unlock();
-	return r;
-}
-
-static int
-STOP_FLAG_IS_TWO(stop_flag_t *f)
-{
-	int r;
-	mg_global_lock();
-	r = ((*f) == 2);
-	mg_global_unlock();
-	return r;
-}
+/* Stop flag can be "volatile" or require atomic access */
+#if !defined(STOP_FLAG_NO_ATOMICS)
+typedef int stop_flag_t;
+#define STOP_FLAG_IS_ZERO(f) (mg_atomic_compare_and_swap((f), 0, 0) == 0)
+#define STOP_FLAG_IS_TWO(f) (mg_atomic_compare_and_swap((f), 0, 0) == 2)
 
 static void
 STOP_FLAG_ASSIGN(stop_flag_t *f, int v)
 {
-	mg_global_lock();
-	(*f) = v;
-	mg_global_unlock();
+	/* This only increments *f to v, never decrements. */
+	int i;
+	for (i = 0; i < v; i++) {
+		(void)mg_atomic_compare_and_swap(f, i, i + 1);
+	}
 }
-#else /* STOP_FLAG_NEEDS_LOCK */
+#else /* STOP_FLAG_NO_ATOMICS */
+typedef int volatile stop_flag_t;
 #define STOP_FLAG_IS_ZERO(f) ((*(f)) == 0)
 #define STOP_FLAG_IS_TWO(f) ((*(f)) == 2)
 #define STOP_FLAG_ASSIGN(f, v) ((*(f)) = (v))
-#endif /* STOP_FLAG_NEEDS_LOCK */
+#endif /* STOP_FLAG_NO_ATOMICS */
 
 
 struct mg_context {
@@ -6378,7 +6389,7 @@ mg_poll(struct mg_pollfd *pfd,
 	do {
 		int result;
 
-		if (!STOP_FLAG_IS_ZERO(&*stop_flag)) {
+		if (!STOP_FLAG_IS_ZERO(stop_flag)) {
 			/* Shut down signal */
 			return -2;
 		}
@@ -9423,8 +9434,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		struct mg_pollfd pfd[1];
 		int pollres;
 		int ms_wait = 10000; /* 10 second timeout */
-		stop_flag_t nonstop;
-		STOP_FLAG_ASSIGN(&nonstop, 0);
+		stop_flag_t nonstop = 0;
 
 		/* For a non-blocking socket, the connect sequence is:
 		 * 1) call connect (will not block)
@@ -18558,7 +18568,7 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index)
 
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 	*sp = ctx->client_socks[thread_index];
-	if (ctx->stop_flag) {
+	if (!STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 		if (sp->in_use == 1) {
 			/* must consume */
