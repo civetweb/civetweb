@@ -20078,6 +20078,7 @@ mg_start_domain2(struct mg_context *ctx,
 	new_dom->shared_lua_websockets = NULL;
 #endif
 
+#if !defined(NO_SSL)
 	if (!init_ssl_ctx(ctx, new_dom)) {
 		/* Init SSL failed */
 		if ((error != NULL) && (error->text_buffer_size > 0)) {
@@ -20091,6 +20092,7 @@ mg_start_domain2(struct mg_context *ctx,
 		mg_free(new_dom);
 		return -3;
 	}
+#endif
 
 	/* Add element to linked list. */
 	mg_lock_context(ctx);
