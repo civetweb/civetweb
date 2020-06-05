@@ -20887,12 +20887,15 @@ mg_get_connection_info(const struct mg_context *ctx,
 		char start_time_str[64] = {0};
 		char close_time_str[64] = {0};
 		time_t start_time = conn->conn_birth_time;
-		time_t close_time = conn->conn_close_time;
+		time_t close_time = 0;
 		double time_diff;
 
 		gmt_time_string(start_time_str,
 		                sizeof(start_time_str) - 1,
 		                &start_time);
+#if defined(USE_SERVER_STATS)
+		close_time = conn->conn_close_time;
+#endif
 		if (close_time != 0) {
 			time_diff = difftime(close_time, start_time);
 			gmt_time_string(close_time_str,
