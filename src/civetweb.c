@@ -10200,9 +10200,7 @@ handle_static_file_request(struct mg_connection *conn,
 {
 	char lm[64], etag[64];
 	char range[128]; /* large enough, so there will be no overflow */
-	const char *msg = "OK";
 	const char *range_hdr;
-	time_t curtime = time(NULL);
 	int64_t cl, r1, r2;
 	struct vec mime_vec;
 	int n, truncated;
@@ -10335,7 +10333,6 @@ handle_static_file_request(struct mg_connection *conn,
 		            r1,
 		            r1 + cl - 1,
 		            filep->stat.size);
-		msg = "Partial Content";
 
 #if defined(USE_ZLIB)
 		/* Do not compress ranges. */
@@ -13250,7 +13247,6 @@ handle_websocket_request(struct mg_connection *conn,
 					while (sep && isspace((unsigned char)*++sep))
 						; // ignore leading whitespaces
 					protocol = sep;
-
 
 					for (idx = 0; idx < subprotocols->nb_subprotocols; idx++) {
 						if ((strlen(subprotocols->subprotocols[idx]) == len)
@@ -18521,6 +18517,9 @@ process_new_connection(struct mg_connection *conn)
 					DEBUG_TRACE("%s", "end_request callback done");
 				}
 				log_access(conn);
+
+				/* Response complete. Free header buffer */
+				free_buffered_response_header_list(conn);
 
 			} else {
 				/* TODO: handle non-local request (PROXY) */

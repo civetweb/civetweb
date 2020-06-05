@@ -10,7 +10,7 @@
 
 /* Internal function to free header list */
 static void
-free_buffered_header_list(struct mg_connection *conn)
+free_buffered_response_header_list(struct mg_connection *conn)
 {
 	while (conn->response_info.num_headers > 0) {
 		conn->response_info.num_headers--;
@@ -56,7 +56,7 @@ mg_response_start(struct mg_connection *conn, int status)
 	}
 	conn->status_code = status;
 	conn->request_state = 1;
-	free_buffered_header_list(conn);
+	free_buffered_response_header_list(conn);
 
 	return 0;
 }
@@ -78,6 +78,8 @@ mg_response_add_header(struct mg_connection *conn,
                        const char *value,
                        int value_len)
 {
+	int hidx;
+
 	if ((conn == NULL) || (header == NULL) || (value == NULL)) {
 		/* Parameter error */
 		return -1;
@@ -92,13 +94,14 @@ mg_response_add_header(struct mg_connection *conn,
 		return -3;
 	}
 
-	if (conn->response_info.num_headers >= MG_MAX_HEADERS) {
+	hidx = conn->response_info.num_headers;
+	if (hidx >= MG_MAX_HEADERS) {
 		/* Too many headers */
 		return -4;
 	}
 
 	/* Alloc new element */
-	conn->response_info.http_headers[conn->response_info.num_headers].name =
+	conn->response_info.http_headers[hidx].name =
 	    mg_strdup_ctx(header, conn->phys_ctx);
 	if (value_len >= 0) {
 		char *hbuf = mg_malloc_ctx(value_len + 1, conn->phys_ctx);
@@ -106,29 +109,19 @@ mg_response_add_header(struct mg_connection *conn,
 			memcpy(hbuf, value, value_len);
 			hbuf[value_len] = 0;
 		}
-		conn->response_info.http_headers[conn->response_info.num_headers]
-		    .value = hbuf;
+		conn->response_info.http_headers[hidx].value = hbuf;
 	} else {
-		conn->response_info.http_headers[conn->response_info.num_headers]
-		    .value = mg_strdup_ctx(value, conn->phys_ctx);
+		conn->response_info.http_headers[hidx].value =
+		    mg_strdup_ctx(value, conn->phys_ctx);
 	}
 
-	if ((conn->response_info.http_headers[conn->response_info.num_headers].name
-	     == 0)
-	    || (conn->response_info.http_headers[conn->response_info.num_headers]
-	            .value
-	        == 0)) {
+	if ((conn->response_info.http_headers[hidx].name == 0)
+	    || (conn->response_info.http_headers[hidx].value == 0)) {
 		/* Out of memory */
-		mg_free((void *)conn->response_info
-		            .http_headers[conn->response_info.num_headers]
-		            .name);
-		conn->response_info.http_headers[conn->response_info.num_headers].name =
-		    0;
-		mg_free((void *)conn->response_info
-		            .http_headers[conn->response_info.num_headers]
-		            .value);
-		conn->response_info.http_headers[conn->response_info.num_headers]
-		    .value = 0;
+		mg_free((void *)conn->response_info.http_headers[hidx].name);
+		conn->response_info.http_headers[hidx].name = 0;
+		mg_free((void *)conn->response_info.http_headers[hidx].value);
+		conn->response_info.http_headers[hidx].value = 0;
 		return -5;
 	}
 
