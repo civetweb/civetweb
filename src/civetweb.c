@@ -20078,6 +20078,7 @@ mg_start_domain2(struct mg_context *ctx,
 	new_dom->shared_lua_websockets = NULL;
 #endif
 
+#if !defined(NO_SSL)
 	if (!init_ssl_ctx(ctx, new_dom)) {
 		/* Init SSL failed */
 		if ((error != NULL) && (error->text_buffer_size > 0)) {
@@ -20091,6 +20092,7 @@ mg_start_domain2(struct mg_context *ctx,
 		mg_free(new_dom);
 		return -3;
 	}
+#endif
 
 	/* Add element to linked list. */
 	mg_lock_context(ctx);
@@ -20887,12 +20889,15 @@ mg_get_connection_info(const struct mg_context *ctx,
 		char start_time_str[64] = {0};
 		char close_time_str[64] = {0};
 		time_t start_time = conn->conn_birth_time;
-		time_t close_time = conn->conn_close_time;
+		time_t close_time = 0;
 		double time_diff;
 
 		gmt_time_string(start_time_str,
 		                sizeof(start_time_str) - 1,
 		                &start_time);
+#if defined(USE_SERVER_STATS)
+		close_time = conn->conn_close_time;
+#endif
 		if (close_time != 0) {
 			time_diff = difftime(close_time, start_time);
 			gmt_time_string(close_time_str,
