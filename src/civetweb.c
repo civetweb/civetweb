@@ -9194,7 +9194,7 @@ is_valid_port(unsigned long port)
 
 
 static int
-mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
+mg_inet_pton(int af, const char *src, void *dst, size_t dstlen, int resolve_src)
 {
 	struct addrinfo hints, *res, *ressave;
 	int func_ret = 0;
@@ -9202,6 +9202,9 @@ mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = af;
+	if (!resolve_src) {
+		hints.ai_flags = AI_NUMERICHOST;
+	}
 
 	gai_ret = getaddrinfo(src, NULL, &hints, &res);
 	if (gai_ret != 0) {
@@ -9218,7 +9221,8 @@ mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 	ressave = res;
 
 	while (res) {
-		if (dstlen >= (size_t)res->ai_addrlen) {
+		if ((dstlen >= (size_t)res->ai_addrlen)
+		    && (res->ai_addr->sa_family == af)) {
 			memcpy(dst, res->ai_addr, res->ai_addrlen);
 			func_ret = 1;
 		}
@@ -9302,13 +9306,11 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	(void)use_ssl;
 #endif /* !defined(NO_SSL) */
 
-	if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin))) {
-		sa->sin.sin_family = AF_INET;
+	if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin), 1)) {
 		sa->sin.sin_port = htons((uint16_t)port);
 		ip_ver = 4;
 #if defined(USE_IPV6)
-	} else if (mg_inet_pton(AF_INET6, host, &sa->sin6, sizeof(sa->sin6))) {
-		sa->sin6.sin6_family = AF_INET6;
+	} else if (mg_inet_pton(AF_INET6, host, &sa->sin6, sizeof(sa->sin6), 1)) {
 		sa->sin6.sin6_port = htons((uint16_t)port);
 		ip_ver = 6;
 	} else if (host[0] == '[') {
@@ -9318,8 +9320,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		char *h = (l > 1) ? mg_strdup_ctx(host + 1, ctx) : NULL;
 		if (h) {
 			h[l - 1] = 0;
-			if (mg_inet_pton(AF_INET6, h, &sa->sin6, sizeof(sa->sin6))) {
-				sa->sin6.sin6_family = AF_INET6;
+			if (mg_inet_pton(AF_INET6, h, &sa->sin6, sizeof(sa->sin6), 0)) {
 				sa->sin6.sin6_port = htons((uint16_t)port);
 				ip_ver = 6;
 			}
@@ -14789,7 +14790,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 #if defined(USE_IPV6)
 	} else if (sscanf(vec->ptr, "[%49[^]]]:%u%n", buf, &port, &len) == 2
 	           && mg_inet_pton(
-	                  AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6))) {
+	                  AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6), 0)) {
 		/* IPv6 address, examples: see above */
 		/* so->lsa.sin6.sin6_family = AF_INET6; already set by mg_inet_pton
 		 */
@@ -14846,10 +14847,9 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		hostname[hostnlen] = 0;
 
 		if (mg_inet_pton(
-		        AF_INET, hostname, &so->lsa.sin, sizeof(so->lsa.sin))) {
+		        AF_INET, hostname, &so->lsa.sin, sizeof(so->lsa.sin), 1)) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
 				*ip_version = 4;
-				so->lsa.sin.sin_family = AF_INET;
 				so->lsa.sin.sin_port = htons((uint16_t)port);
 				len += (int)(hostnlen + 1);
 			} else {
@@ -14860,11 +14860,11 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		} else if (mg_inet_pton(AF_INET6,
 		                        hostname,
 		                        &so->lsa.sin6,
-		                        sizeof(so->lsa.sin6))) {
+		                        sizeof(so->lsa.sin6),
+		                        1)) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
 				*ip_version = 6;
-				so->lsa.sin6.sin6_family = AF_INET6;
-				so->lsa.sin.sin_port = htons((uint16_t)port);
+				so->lsa.sin6.sin6_port = htons((uint16_t)port);
 				len += (int)(hostnlen + 1);
 			} else {
 				port = 0;
