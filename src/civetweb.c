@@ -14774,7 +14774,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	so->lsa.sin.sin_family = AF_INET;
 	*ip_version = 0;
 
-	/* Initialize port and len as invalid. */
+	/* Initialize len as invalid. */
 	port = 0;
 	len = 0;
 
@@ -14789,6 +14789,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 
 #if defined(USE_IPV6)
 	} else if (sscanf(vec->ptr, "[%49[^]]]:%u%n", buf, &port, &len) == 2
+	           && ((size_t)len <= vec->len)
 	           && mg_inet_pton(
 	                  AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6), 0)) {
 		/* IPv6 address, examples: see above */
@@ -14837,14 +14838,13 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		char hostname[256];
 		size_t hostnlen = (size_t)(cb - vec->ptr);
 
-		if (hostnlen >= sizeof(hostname)) {
+		if ((hostnlen >= vec->len) || (hostnlen >= sizeof(hostname))) {
 			/* This would be invalid in any case */
 			*ip_version = 0;
 			return 0;
 		}
 
-		memcpy(hostname, vec->ptr, hostnlen);
-		hostname[hostnlen] = 0;
+		mg_strlcpy(hostname, vec->ptr, hostnlen + 1);
 
 		if (mg_inet_pton(
 		        AF_INET, hostname, &so->lsa.sin, sizeof(so->lsa.sin), 1)) {
@@ -14853,7 +14853,6 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 				so->lsa.sin.sin_port = htons((uint16_t)port);
 				len += (int)(hostnlen + 1);
 			} else {
-				port = 0;
 				len = 0;
 			}
 #if defined(USE_IPV6)
@@ -14867,31 +14866,29 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 				so->lsa.sin6.sin6_port = htons((uint16_t)port);
 				len += (int)(hostnlen + 1);
 			} else {
-				port = 0;
 				len = 0;
 			}
 #endif
+		} else {
+			len = 0;
 		}
-
 
 	} else {
 		/* Parsing failure. */
+		len = 0;
 	}
 
 	/* sscanf and the option splitting code ensure the following condition
-	 */
-	if ((len < 0) && ((unsigned)len > (unsigned)vec->len)) {
-		*ip_version = 0;
-		return 0;
-	}
-	ch = vec->ptr[len]; /* Next character after the port number */
-	so->is_ssl = (ch == 's');
-	so->ssl_redir = (ch == 'r');
-
-	/* Make sure the port is valid and vector ends with 's', 'r' or ',' */
-	if (is_valid_port(port)
-	    && ((ch == '\0') || (ch == 's') || (ch == 'r') || (ch == ','))) {
-		return 1;
+	 * Make sure the port is valid and vector ends with the port, 's' or 'r' */
+	if ((len > 0) && is_valid_port(port)
+	    && (((size_t)len == vec->len) || ((size_t)(len + 1) == vec->len))) {
+		/* Next character after the port number */
+		ch = ((size_t)len < vec->len) ? vec->ptr[len] : '\0';
+		so->is_ssl = (ch == 's');
+		so->ssl_redir = (ch == 'r');
+		if ((ch == '\0') || (ch == 's') || (ch == 'r')) {
+			return 1;
+		}
 	}
 
 	/* Reset ip_version to 0 if there is an error */
