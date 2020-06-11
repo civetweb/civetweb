@@ -13358,37 +13358,113 @@ should_switch_to_protocol(const struct mg_connection *conn)
 
 
 static int
-isbyte(int n)
+parse_match_net(const struct vec *vec, const union usa *sa, int no_strict)
 {
-	return (n >= 0) && (n <= 255);
-}
+	int n;
+	unsigned int a, b, c, d, slash;
 
-
-static int
-parse_net(const char *spec, uint32_t *net, uint32_t *mask)
-{
-	int n, a, b, c, d, slash = 32, len = 0;
-
-	if (((sscanf(spec, "%d.%d.%d.%d/%d%n", &a, &b, &c, &d, &slash, &n) == 5)
-	     || (sscanf(spec, "%d.%d.%d.%d%n", &a, &b, &c, &d, &n) == 4))
-	    && isbyte(a) && isbyte(b) && isbyte(c) && isbyte(d) && (slash >= 0)
-	    && (slash < 33)) {
-		len = n;
-		*net = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)c << 8)
-		       | (uint32_t)d;
-		*mask = slash ? (0xffffffffU << (32 - slash)) : 0;
+	if (sscanf(vec->ptr, "%u.%u.%u.%u/%u%n", &a, &b, &c, &d, &slash, &n) != 5) {
+		slash = 32;
+		if (sscanf(vec->ptr, "%u.%u.%u.%u%n", &a, &b, &c, &d, &n) != 4) {
+			n = 0;
+		}
 	}
 
-	return len;
+	if ((n > 0) && ((size_t)n == vec->len)) {
+		if ((a < 256) && (b < 256) && (c < 256) && (d < 256) && (slash < 33)) {
+			/* IPv4 format */
+			if (sa->sa.sa_family == AF_INET) {
+				uint32_t ip = (uint32_t)ntohl(sa->sin.sin_addr.s_addr);
+				uint32_t net = ((uint32_t)a << 24) | ((uint32_t)b << 16)
+				               | ((uint32_t)c << 8) | (uint32_t)d;
+				uint32_t mask = slash ? (0xFFFFFFFFu << (32 - slash)) : 0;
+				return (ip & mask) == net;
+			}
+			return 0;
+		}
+	}
+#if defined(USE_IPV6)
+	else {
+		char ad[50];
+		const char *p;
+
+		if (sscanf(vec->ptr, "[%49[^]]]/%u%n", ad, &slash, &n) != 2) {
+			slash = 128;
+			if (sscanf(vec->ptr, "[%49[^]]]%n", ad, &n) != 1) {
+				n = 0;
+			}
+		}
+
+		if ((n <= 0) && no_strict) {
+			/* no square brackets? */
+			p = strchr(vec->ptr, '/');
+			if (p && (p < (vec->ptr + vec->len))) {
+				if (((size_t)(p - vec->ptr) < sizeof(ad))
+				    && (sscanf(p, "/%u%n", &slash, &n) == 1)) {
+					n += (int)(p - vec->ptr);
+					mg_strlcpy(ad, vec->ptr, (size_t)(p - vec->ptr) + 1);
+				} else {
+					n = 0;
+				}
+			} else if (vec->len < sizeof(ad)) {
+				n = (int)vec->len;
+				slash = 128;
+				mg_strlcpy(ad, vec->ptr, vec->len + 1);
+			}
+		}
+
+		if ((n > 0) && ((size_t)n == vec->len) && (slash < 129)) {
+			p = ad;
+			c = 0;
+			/* zone indexes are unsupported, at least two colons are needed */
+			while (isxdigit((unsigned char)*p) || (*p == '.') || (*p == ':')) {
+				if (*(p++) == ':') {
+					c++;
+				}
+			}
+			if ((*p == '\0') && (c >= 2)) {
+				struct sockaddr_in6 sin6;
+				unsigned int i;
+
+				/* for strict validation, an actual IPv6 argument is needed */
+				if (sa->sa.sa_family != AF_INET6) {
+					return 0;
+				}
+				if (mg_inet_pton(AF_INET6, ad, &sin6, sizeof(sin6), 0)) {
+					/* IPv6 format */
+					for (i = 0; i < 16; i++) {
+						uint8_t ip = sa->sin6.sin6_addr.s6_addr[i];
+						uint8_t net = sin6.sin6_addr.s6_addr[i];
+						uint8_t mask = 0;
+
+						if (8 * i + 8 < slash) {
+							mask = 0xFFu;
+						} else if (8 * i < slash) {
+							mask = (uint8_t)(0xFFu << (8 * i + 8 - slash));
+						}
+						if ((ip & mask) != net) {
+							return 0;
+						}
+					}
+					return 1;
+				}
+			}
+		}
+	}
+#else
+	(void)no_strict;
+#endif
+
+	/* malformed */
+	return -1;
 }
 
 
 static int
-set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
+set_throttle(const char *spec, const union usa *rsa, const char *uri)
 {
 	int throttle = 0;
 	struct vec vec, val;
-	uint32_t net, mask;
 	char mult;
 	double v;
 
@@ -13405,26 +13481,20 @@ set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
 		         : ((lowercase(&mult) == 'm') ? 1048576 : 1);
 		if (vec.len == 1 && vec.ptr[0] == '*') {
 			throttle = (int)v;
-		} else if (parse_net(vec.ptr, &net, &mask) > 0) {
-			if ((remote_ip & mask) == net) {
+		} else {
+			int matched = parse_match_net(&vec, rsa, 0);
+			if (matched >= 0) {
+				/* a valid IP subnet */
+				if (matched) {
+					throttle = (int)v;
+				}
+			} else if (match_prefix(vec.ptr, vec.len, uri) > 0) {
 				throttle = (int)v;
 			}
-		} else if (match_prefix(vec.ptr, vec.len, uri) > 0) {
-			throttle = (int)v;
 		}
 	}
 
 	return throttle;
-}
-
-
-static uint32_t
-get_remote_ip(const struct mg_connection *conn)
-{
-	if (!conn) {
-		return 0;
-	}
-	return ntohl(*(const uint32_t *)&conn->client.rsa.sin.sin_addr);
 }
 
 
@@ -14182,7 +14252,7 @@ handle_request(struct mg_connection *conn)
 
 	/* 2. if this ip has limited speed, set it for this connection */
 	conn->throttle = set_throttle(conn->dom_ctx->config[THROTTLE],
-	                              get_remote_ip(conn),
+	                              &conn->client.rsa,
 	                              ri->local_uri);
 
 	/* 3. call a "handle everything" callback, if registered */
@@ -15356,10 +15426,9 @@ log_access(const struct mg_connection *conn)
  * Return -1 if ACL is malformed, 0 if address is disallowed, 1 if allowed.
  */
 static int
-check_acl(struct mg_context *phys_ctx, uint32_t remote_ip)
+check_acl(struct mg_context *phys_ctx, const union usa *sa)
 {
-	int allowed, flag;
-	uint32_t net, mask;
+	int allowed, flag, matched;
 	struct vec vec;
 
 	if (phys_ctx) {
@@ -15370,15 +15439,19 @@ check_acl(struct mg_context *phys_ctx, uint32_t remote_ip)
 
 		while ((list = next_option(list, &vec, NULL)) != NULL) {
 			flag = vec.ptr[0];
-			if ((flag != '+' && flag != '-')
-			    || (parse_net(&vec.ptr[1], &net, &mask) == 0)) {
+			matched = -1;
+			if ((vec.len > 0) && ((flag == '+') || (flag == '-'))) {
+				vec.ptr++;
+				vec.len--;
+				matched = parse_match_net(&vec, sa, 1);
+			}
+			if (matched < 0) {
 				mg_cry_ctx_internal(phys_ctx,
-				                    "%s: subnet must be [+|-]x.x.x.x[/x]",
+				                    "%s: subnet must be [+|-]IP-addr[/x]",
 				                    __func__);
 				return -1;
 			}
-
-			if (net == (remote_ip & mask)) {
+			if (matched) {
 				allowed = flag;
 			}
 		}
@@ -16739,7 +16812,14 @@ set_gpass_option(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 static int
 set_acl_option(struct mg_context *phys_ctx)
 {
-	return check_acl(phys_ctx, (uint32_t)0x7f000001UL) != -1;
+	union usa sa;
+	memset(&sa, 0, sizeof(sa));
+#if defined(USE_IPV6)
+	sa.sin6.sin6_family = AF_INET6;
+#else
+	sa.sin.sin_family = AF_INET;
+#endif
+	return check_acl(phys_ctx, &sa) != -1;
 }
 
 
@@ -18883,7 +18963,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 
 	if ((so.sock = accept(listener->sock, &so.rsa.sa, &len))
 	    == INVALID_SOCKET) {
-	} else if (!check_acl(ctx, ntohl(*(uint32_t *)&so.rsa.sin.sin_addr))) {
+	} else if (check_acl(ctx, &so.rsa) != 1) {
 		sockaddr_to_string(src_addr, sizeof(src_addr), &so.rsa);
 		mg_cry_ctx_internal(ctx,
 		                    "%s: %s is not allowed to connect",
