@@ -1113,16 +1113,16 @@ gmtime_s(const time_t *ptime, struct tm *ptm)
 }
 
 
-static int mg_atomic_inc(volatile int *addr);
-static struct tm tm_array[MAX_WORKER_THREADS];
-static int tm_index = 0;
+static ptrdiff_t mg_atomic_inc(volatile ptrdiff_t *addr);
+static struct tm tm_array[MAX_WORKER_THREADS]; /* Must be 2^n */
+static volatile ptrdiff_t tm_index = 0;
 
 
 FUNCTION_MAY_BE_UNUSED
 static struct tm *
 localtime(const time_t *ptime)
 {
-	int i = mg_atomic_inc(&tm_index) % (sizeof(tm_array) / sizeof(tm_array[0]));
+	ptrdiff_t i = mg_atomic_inc(&tm_index) % ARRAY_SIZE(tm_array);
 	return localtime_s(ptime, tm_array + i);
 }
 
@@ -1131,7 +1131,7 @@ FUNCTION_MAY_BE_UNUSED
 static struct tm *
 gmtime(const time_t *ptime)
 {
-	int i = mg_atomic_inc(&tm_index) % ARRAY_SIZE(tm_array);
+	ptrdiff_t i = mg_atomic_inc(&tm_index) % ARRAY_SIZE(tm_array);
 	return gmtime_s(ptime, tm_array + i);
 }
 
@@ -1244,16 +1244,27 @@ mg_global_unlock(void)
 }
 
 
+#if defined(_WIN64)
+mg_static_assert(SIZE_MAX == 0xFFFFFFFFFFFFFFFFu, "Mismatch for atomic types");
+#elif defined(_WIN32)
+mg_static_assert(SIZE_MAX == 0xFFFFFFFFu, "Mismatch for atomic types");
+#endif
+
+
+/* Atomic functions working on ptrdiff_t ("signed size_t").
+ * Operations: Increment, Decrement, Add, Maximum.
+ * Up to size_t, they do not an atomic "load" operation.
+ */
 FUNCTION_MAY_BE_UNUSED
-static int
-mg_atomic_inc(volatile int *addr)
+static ptrdiff_t
+mg_atomic_inc(volatile ptrdiff_t *addr)
 {
-	int ret;
-#if defined(_WIN32) && !defined(NO_ATOMICS)
-	/* Depending on the SDK, this function uses either
-	 * (volatile unsigned int *) or (volatile LONG *),
-	 * so whatever you use, the other SDK is likely to raise a warning. */
-	ret = InterlockedIncrement((volatile long *)addr);
+	ptrdiff_t ret;
+
+#if defined(_WIN64) && !defined(NO_ATOMICS)
+	ret = InterlockedIncrement64(addr);
+#elif defined(_WIN32) && !defined(NO_ATOMICS)
+	ret = InterlockedIncrement(addr);
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
     && !defined(NO_ATOMICS)
@@ -1268,15 +1279,15 @@ mg_atomic_inc(volatile int *addr)
 
 
 FUNCTION_MAY_BE_UNUSED
-static int
-mg_atomic_dec(volatile int *addr)
+static ptrdiff_t
+mg_atomic_dec(volatile ptrdiff_t *addr)
 {
-	int ret;
-#if defined(_WIN32) && !defined(NO_ATOMICS)
-	/* Depending on the SDK, this function uses either
-	 * (volatile unsigned int *) or (volatile LONG *),
-	 * so whatever you use, the other SDK is likely to raise a warning. */
-	ret = InterlockedDecrement((volatile long *)addr);
+	ptrdiff_t ret;
+
+#if defined(_WIN64) && !defined(NO_ATOMICS)
+	ret = InterlockedDecrement64(addr);
+#elif defined(_WIN32) && !defined(NO_ATOMICS)
+	ret = InterlockedDecrement(addr);
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
     && !defined(NO_ATOMICS)
@@ -1291,11 +1302,63 @@ mg_atomic_dec(volatile int *addr)
 
 
 #if defined(USE_SERVER_STATS)
+static ptrdiff_t
+mg_atomic_add(volatile ptrdiff_t *addr, ptrdiff_t value)
+{
+	ptrdiff_t ret;
+
+#if defined(_WIN64) && !defined(NO_ATOMICS)
+	ret = InterlockedAdd64(addr, value);
+#elif defined(_WIN32) && !defined(NO_ATOMICS)
+	ret = InterlockedAdd(addr, value);
+#elif defined(__GNUC__)                                                        \
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
+    && !defined(NO_ATOMICS)
+	ret = __sync_add_and_fetch(addr, value);
+#else
+	mg_global_lock();
+	*addr += value;
+	ret = (*addr);
+	mg_global_unlock();
+#endif
+	return ret;
+}
+
+
+static void
+mg_atomic_max(volatile ptrdiff_t *addr, ptrdiff_t value)
+{
+	ptrdiff_t register tmp = *addr;
+
+#if defined(_WIN64) && !defined(NO_ATOMICS)
+	while (tmp < value) {
+		tmp = InterlockedCompareExchange64(addr, value, tmp);
+	}
+#elif defined(_WIN32) && !defined(NO_ATOMICS)
+	while (tmp < value) {
+		tmp = InterlockedCompareExchange(addr, value, tmp);
+	}
+#elif defined(__GNUC__)                                                        \
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
+    && !defined(NO_ATOMICS)
+	while (tmp < value) {
+		tmp = __sync_val_compare_and_swap(addr, tmp, value);
+	}
+#else
+	mg_global_lock();
+	if (*addr < value) {
+		*addr = value;
+	}
+	mg_global_unlock();
+#endif
+}
+
 static int64_t
-mg_atomic_add(volatile int64_t *addr, int64_t value)
+mg_atomic_add64(volatile int64_t *addr, int64_t value)
 {
 	int64_t ret;
-#if defined(_WIN64) && !defined(NO_ATOMICS)
+
+#if (defined(_WIN64) || defined(_WIN32)) && !defined(NO_ATOMICS)
 	ret = InterlockedAdd64(addr, value);
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
@@ -1325,9 +1388,9 @@ mg_atomic_add(volatile int64_t *addr, int64_t value)
 #if defined(USE_SERVER_STATS)
 
 struct mg_memory_stat {
-	volatile int64_t totalMemUsed;
-	volatile int64_t maxMemUsed;
-	volatile int blockCount;
+	volatile ptrdiff_t totalMemUsed;
+	volatile ptrdiff_t maxMemUsed;
+	volatile ptrdiff_t blockCount;
 };
 
 
@@ -1352,12 +1415,8 @@ mg_malloc_ex(size_t size,
 #endif
 
 	if (data) {
-		int64_t mmem = mg_atomic_add(&mstat->totalMemUsed, (int64_t)size);
-		if (mmem > mstat->maxMemUsed) {
-			/* could use atomic compare exchange, but this
-			 * seems overkill for statistics data */
-			mstat->maxMemUsed = mmem;
-		}
+		ptrdiff_t mmem = mg_atomic_add(&mstat->totalMemUsed, (ptrdiff_t)size);
+		mg_atomic_max(&mstat->maxMemUsed, mmem);
 
 		mg_atomic_inc(&mstat->blockCount);
 		((uintptr_t *)data)[0] = size;
@@ -1418,7 +1477,7 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 		uintptr_t size = ((uintptr_t *)data)[0];
 		struct mg_memory_stat *mstat =
 		    (struct mg_memory_stat *)(((uintptr_t *)data)[1]);
-		mg_atomic_add(&mstat->totalMemUsed, -(int64_t)size);
+		mg_atomic_add(&mstat->totalMemUsed, -(ptrdiff_t)size);
 		mg_atomic_dec(&mstat->blockCount);
 #if defined(MEMORY_DEBUGGING)
 		sprintf(mallocStr,
@@ -1468,7 +1527,7 @@ mg_realloc_ex(void *memory,
 			_realloc = realloc(data, newsize + 2 * sizeof(uintptr_t));
 			if (_realloc) {
 				data = _realloc;
-				mg_atomic_add(&mstat->totalMemUsed, -(int64_t)oldsize);
+				mg_atomic_add(&mstat->totalMemUsed, -(ptrdiff_t)oldsize);
 #if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-free  %7lu %4lu --- %s:%u\n",
@@ -1484,7 +1543,7 @@ mg_realloc_ex(void *memory,
 				DEBUG_TRACE("%s", mallocStr);
 #endif
 #endif
-				mg_atomic_add(&mstat->totalMemUsed, (int64_t)newsize);
+				mg_atomic_add(&mstat->totalMemUsed, newsize);
 #if defined(MEMORY_DEBUGGING)
 				sprintf(mallocStr,
 				        "MEM: %p %5lu r-alloc %7lu %4lu --- %s:%u\n",
@@ -1622,7 +1681,7 @@ static int mg_ssl_initialized = 0;
 #endif
 
 static pthread_key_t sTlsKey; /* Thread local storage index */
-static int thread_idx_max = 0;
+static volatile ptrdiff_t thread_idx_max = 0;
 
 #if defined(MG_LEGACY_INTERFACE)
 #define MG_ALLOW_USING_GET_REQUEST_INFO_FOR_RESPONSE
@@ -2794,12 +2853,12 @@ struct mg_context {
 	                                           * allocated for each worker */
 
 #if defined(USE_SERVER_STATS)
-	int active_connections;
-	int max_active_connections;
-	int64_t total_connections;
-	int64_t total_requests;
-	int64_t total_data_read;
-	int64_t total_data_written;
+	volatile ptrdiff_t active_connections;
+	volatile ptrdiff_t max_active_connections;
+	volatile ptrdiff_t total_connections;
+	volatile ptrdiff_t total_requests;
+	volatile int64_t total_data_read;
+	volatile int64_t total_data_written;
 #endif
 
 	/* Thread related */
@@ -11439,7 +11498,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 /* Data for CGI process control: PID and number of references */
 struct process_control_data {
 	pid_t pid;
-	int references;
+	ptrdiff_t references;
 };
 
 static int
@@ -11450,7 +11509,7 @@ abort_process(void *data)
 	 * reused, we will not affect a different process. */
 	struct process_control_data *proc = (struct process_control_data *)data;
 	int status = 0;
-	int refs;
+	ptrdiff_t refs;
 	pid_t ret_pid;
 
 	ret_pid = waitpid(proc->pid, &status, WNOHANG);
@@ -15908,9 +15967,11 @@ static void *cryptolib_dll_handle; /* Store the crypto library handle. */
 
 
 #if defined(SSL_ALREADY_INITIALIZED)
-static int cryptolib_users = 1; /* Reference counter for crypto library. */
+static volatile ptrdiff_t cryptolib_users =
+    1; /* Reference counter for crypto library. */
 #else
-static int cryptolib_users = 0; /* Reference counter for crypto library. */
+static volatile ptrdiff_t cryptolib_users =
+    0; /* Reference counter for crypto library. */
 #endif
 
 
@@ -18294,13 +18355,9 @@ process_new_connection(struct mg_connection *conn)
 	int reqerr, uri_type;
 
 #if defined(USE_SERVER_STATS)
-	int mcon = mg_atomic_inc(&(conn->phys_ctx->active_connections));
+	ptrdiff_t mcon = mg_atomic_inc(&(conn->phys_ctx->active_connections));
 	mg_atomic_add(&(conn->phys_ctx->total_connections), 1);
-	if (mcon > (conn->phys_ctx->max_active_connections)) {
-		/* could use atomic compare exchange, but this
-		 * seems overkill for statistics data */
-		conn->phys_ctx->max_active_connections = mcon;
-	}
+	mg_atomic_max(&(conn->phys_ctx->max_active_connections), mcon);
 #endif
 
 	init_connection(conn);
@@ -18414,10 +18471,10 @@ process_new_connection(struct mg_connection *conn)
 #if defined(USE_SERVER_STATS)
 				conn->conn_state = 5; /* processed */
 
-				mg_atomic_add(&(conn->phys_ctx->total_data_read),
-				              conn->consumed_content);
-				mg_atomic_add(&(conn->phys_ctx->total_data_written),
-				              conn->num_bytes_sent);
+				mg_atomic_add64(&(conn->phys_ctx->total_data_read),
+				                conn->consumed_content);
+				mg_atomic_add64(&(conn->phys_ctx->total_data_written),
+				                conn->num_bytes_sent);
 #endif
 
 				DEBUG_TRACE("%s", "handle_request done");
@@ -20588,6 +20645,13 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 
 	if (ms) { /* <-- should be always true */
 		/* Memory information */
+		int blockCount = (int)ms->blockCount;
+		int64_t totalMemUsed = ms->totalMemUsed;
+		int64_t maxMemUsed = ms->maxMemUsed;
+		if (totalMemUsed > maxMemUsed) {
+			maxMemUsed = totalMemUsed;
+		}
+
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
@@ -20599,11 +20663,11 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            "}",
 		            eol,
 		            eol,
-		            ms->blockCount,
+		            blockCount,
 		            eol,
-		            ms->totalMemUsed,
+		            totalMemUsed,
 		            eol,
-		            ms->maxMemUsed,
+		            maxMemUsed,
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
 	}
@@ -20615,6 +20679,16 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		char now_str[64] = {0};
 		time_t start_time = ctx->start_time;
 		time_t now = time(NULL);
+		int64_t total_data_read, total_data_written;
+		int active_connections = ctx->active_connections;
+		int max_active_connections = ctx->max_active_connections;
+		int total_connections = ctx->total_connections;
+		if (active_connections > max_active_connections) {
+			max_active_connections = active_connections;
+		}
+		if (active_connections > total_connections) {
+			total_connections = active_connections;
+		}
 
 		/* Connections information */
 		mg_snprintf(NULL,
@@ -20624,15 +20698,15 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            ",%s\"connections\" : {%s"
 		            "\"active\" : %i,%s"
 		            "\"maxActive\" : %i,%s"
-		            "\"total\" : %" INT64_FMT "%s"
+		            "\"total\" : %i%s"
 		            "}",
 		            eol,
 		            eol,
-		            ctx->active_connections,
+		            active_connections,
 		            eol,
-		            ctx->max_active_connections,
+		            max_active_connections,
 		            eol,
-		            ctx->total_connections,
+		            total_connections,
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
 
@@ -20667,7 +20741,7 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            block,
 		            sizeof(block),
 		            ",%s\"requests\" : {%s"
-		            "\"total\" : %" INT64_FMT "%s"
+		            "\"total\" : %i%s"
 		            "}",
 		            eol,
 		            eol,
@@ -20676,6 +20750,8 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		context_info_length += mg_str_append(&buffer, end, block);
 
 		/* Data information */
+		total_data_read = mg_atomic_add64(&ctx->total_data_read, 0);
+		total_data_written = mg_atomic_add64(&ctx->total_data_written, 0);
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
@@ -20686,9 +20762,9 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            "}",
 		            eol,
 		            eol,
-		            ctx->total_data_read,
+		            total_data_read,
 		            eol,
-		            ctx->total_data_written,
+		            total_data_written,
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
 
