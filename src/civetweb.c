@@ -20758,9 +20758,9 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		time_t start_time = ctx->start_time;
 		time_t now = time(NULL);
 		int64_t total_data_read, total_data_written;
-		int active_connections = ctx->active_connections;
-		int max_active_connections = ctx->max_active_connections;
-		int total_connections = ctx->total_connections;
+		int active_connections = (int)ctx->active_connections;
+		int max_active_connections = (int)ctx->max_active_connections;
+		int total_connections = (int)ctx->total_connections;
 		if (active_connections > max_active_connections) {
 			max_active_connections = active_connections;
 		}
@@ -20828,8 +20828,10 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		context_info_length += mg_str_append(&buffer, end, block);
 
 		/* Data information */
-		total_data_read = mg_atomic_add64(&ctx->total_data_read, 0);
-		total_data_written = mg_atomic_add64(&ctx->total_data_written, 0);
+		total_data_read =
+		    mg_atomic_add64((volatile int64_t *)&ctx->total_data_read, 0);
+		total_data_written =
+		    mg_atomic_add64((volatile int64_t *)&ctx->total_data_written, 0);
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
