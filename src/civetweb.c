@@ -50,7 +50,7 @@
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
 #endif
 #if !defined(_WIN32_WINNT) /* defined for tdm-gcc so we can use getnameinfo */
-#define _WIN32_WINNT 0x0501
+#define _WIN32_WINNT 0x0502
 #endif
 #else
 #if !defined(_GNU_SOURCE)
@@ -1310,7 +1310,7 @@ mg_atomic_add(volatile ptrdiff_t *addr, ptrdiff_t value)
 #if defined(_WIN64) && !defined(NO_ATOMICS)
 	ret = InterlockedAdd64(addr, value);
 #elif defined(_WIN32) && !defined(NO_ATOMICS)
-	ret = InterlockedAdd(addr, value);
+	ret = InterlockedExchangeAdd(addr, value) + value;
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
     && !defined(NO_ATOMICS)
@@ -1358,8 +1358,10 @@ mg_atomic_add64(volatile int64_t *addr, int64_t value)
 {
 	int64_t ret;
 
-#if (defined(_WIN64) || defined(_WIN32)) && !defined(NO_ATOMICS)
+#if defined(_WIN64) && !defined(NO_ATOMICS)
 	ret = InterlockedAdd64(addr, value);
+#elif defined(_WIN32) && !defined(NO_ATOMICS)
+	ret = InterlockedExchangeAdd64(addr, value) + value;
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
     && !defined(NO_ATOMICS)
