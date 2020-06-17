@@ -628,7 +628,7 @@ hpack_getnum(const uint8_t *buf,
              uint8_t idx_mask,
              struct mg_context *ctx)
 {
-	uint64_t num = buf[*i] & idx_mask;
+	uint64_t num = (buf[*i] & idx_mask);
 
 	(void)ctx;
 

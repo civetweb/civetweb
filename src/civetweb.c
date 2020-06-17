@@ -2547,6 +2547,9 @@ enum {
 #if defined(USE_TIMERS)
 	CGI_TIMEOUT,
 #endif
+#if defined(USE_HTTP2)
+	ENABLE_HTTP2,
+#endif
 
 	/* Once for each domain */
 	DOCUMENT_ROOT,
@@ -2654,6 +2657,9 @@ static const struct mg_option config_options[] = {
 #endif
 #if defined(USE_TIMERS)
     {"cgi_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+#endif
+#if defined(USE_HTTP2)
+    {"enable_http2", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
 
     /* Once for each domain */
@@ -16401,19 +16407,16 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 }
 
 
-#if defined(USE_HTTP2)
 static const char alpn_proto_list[] = "\x02h2\x08http/1.1\x08http/1.0";
-static const char *alpn_proto_order[] = {alpn_proto_list,
-                                         alpn_proto_list + 3,
-                                         alpn_proto_list + 3 + 8,
-                                         NULL};
-#else
-static const char alpn_proto_list[] = "\x08http/1.1\x08http/1.0";
-static const char *alpn_proto_order[] = {alpn_proto_list,
-                                         alpn_proto_list + 8,
-                                         NULL};
+static const char *alpn_proto_order_http1[] = {alpn_proto_list + 3,
+                                               alpn_proto_list + 3 + 8,
+                                               NULL};
+#if defined(USE_HTTP2)
+static const char *alpn_proto_order_http2[] = {alpn_proto_list,
+                                               alpn_proto_list + 3,
+                                               alpn_proto_list + 3 + 8,
+                                               NULL};
 #endif
-
 
 static int
 alpn_select_cb(SSL *ssl,
@@ -16424,14 +16427,20 @@ alpn_select_cb(SSL *ssl,
                void *arg)
 {
 	struct mg_domain_context *dom_ctx = (struct mg_domain_context *)arg;
-	unsigned int i, j;
+	unsigned int i, j, enable_http2 = 0;
+	const char **alpn_proto_order = alpn_proto_order_http1;
 
 	struct mg_workerTLS *tls =
 	    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
 
 	(void)ssl;
-	(void)dom_ctx;
 
+#if defined(USE_HTTP2)
+	enable_http2 = (0 != strcmp(dom_ctx->config[ENABLE_HTTP2], "yes"));
+	if (enable_http2) {
+		alpn_proto_order = alpn_proto_order_http2;
+	}
+#endif
 
 	if (tls == NULL) {
 		/* Need to store protocol in Thread Local Storage */
