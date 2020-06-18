@@ -45,10 +45,15 @@
 #define test_sleep(x) (sleep(x))
 #endif
 
+
+/* Some environment configuration for the unit test */
 #define SLEEP_BEFORE_MG_START (1)
 #define SLEEP_AFTER_MG_START (3)
 #define SLEEP_BEFORE_MG_STOP (1)
 #define SLEEP_AFTER_MG_STOP (5)
+
+static const char *external_server_ip = "140.82.118.4"; /* github.com */
+
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
@@ -4808,7 +4813,7 @@ START_TEST(test_minimal_client)
 	mark_point();
 
 	/* Call a test client */
-	minimal_http_client_check("192.30.253.113" /* www.github.com */,
+	minimal_http_client_check(external_server_ip,
 	                          80,
 	                          "/civetweb/civetweb/",
 	                          NULL /* no check */);
@@ -4838,7 +4843,7 @@ START_TEST(test_minimal_tls_client)
 	mark_point();
 
 	/* Call a test client */
-	minimal_https_client_check("192.30.253.113" /* www.github.com */,
+	minimal_https_client_check(external_server_ip,
 	                           443,
 	                           "/civetweb/civetweb/",
 	                           NULL /* no check */);
