@@ -6673,8 +6673,8 @@ pull_inner(FILE *fp,
 		}
 		if (pollres > 0) {
 			ERR_clear_error();
-			nread = SSL_read(conn->ssl, buf,
-			                 (ssl_pending > 0) ? ssl_pending : len);
+			nread =
+			    SSL_read(conn->ssl, buf, (ssl_pending > 0) ? ssl_pending : len);
 			if (nread <= 0) {
 				err = SSL_get_error(conn->ssl, nread);
 				if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
@@ -13763,7 +13763,8 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 	/* first try to find an existing handler */
 	do {
 		lastref = &(dom_ctx->handlers);
-		for (tmp_rh = dom_ctx->handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
+		for (tmp_rh = dom_ctx->handlers; tmp_rh != NULL;
+		     tmp_rh = tmp_rh->next) {
 			if (tmp_rh->handler_type == handler_type
 			    && (urilen == tmp_rh->uri_len) && !strcmp(tmp_rh->uri, uri)) {
 				if (!is_delete_request) {
@@ -13993,18 +13994,18 @@ get_request_handler(struct mg_connection *conn,
 				if (step == 0) {
 					/* first try for an exact match */
 					matched = (tmp_rh->uri_len == urilen)
-					           && (strcmp(tmp_rh->uri, uri) == 0);
+					          && (strcmp(tmp_rh->uri, uri) == 0);
 				} else if (step == 1) {
 					/* next try for a partial match, we will accept
 					   uri/something */
-					matched = (tmp_rh->uri_len < urilen)
-					           && (uri[tmp_rh->uri_len] == '/')
-					           && (memcmp(tmp_rh->uri, uri,
-					                      tmp_rh->uri_len) == 0);
+					matched =
+					    (tmp_rh->uri_len < urilen)
+					    && (uri[tmp_rh->uri_len] == '/')
+					    && (memcmp(tmp_rh->uri, uri, tmp_rh->uri_len) == 0);
 				} else {
 					/* finally try for pattern match */
-					matched = match_prefix(tmp_rh->uri,
-					                       tmp_rh->uri_len, uri) > 0;
+					matched =
+					    match_prefix(tmp_rh->uri, tmp_rh->uri_len, uri) > 0;
 				}
 				if (matched) {
 					if (handler_type == WEBSOCKET_HANDLER) {
@@ -15534,8 +15535,7 @@ refresh_trust(struct mg_connection *conn)
 			}
 		}
 
-		if (ssl_use_pem_file(conn->phys_ctx, conn->dom_ctx, pem, chain)
-		    == 0) {
+		if (ssl_use_pem_file(conn->phys_ctx, conn->dom_ctx, pem, chain) == 0) {
 			mg_unlock_context(conn->phys_ctx);
 			return 0;
 		}
@@ -15641,8 +15641,8 @@ sslize(struct mg_connection *conn,
 					              || (err == SSL_ERROR_WANT_WRITE))
 					                 ? POLLOUT
 					                 : POLLIN;
-					pollres = mg_poll(&pfd, 1, 50,
-					                  &(conn->phys_ctx->stop_flag));
+					pollres =
+					    mg_poll(&pfd, 1, 50, &(conn->phys_ctx->stop_flag));
 					if (pollres < 0) {
 						/* Break if error occured (-1)
 						 * or server shutdown (-2) */
@@ -17236,9 +17236,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			SSL_CTX_set_verify(conn->dom_ctx->ssl_ctx, SSL_VERIFY_NONE, NULL);
 		}
 
-		if (!sslize(conn,
-		            SSL_connect,
-		            client_options)) {
+		if (!sslize(conn, SSL_connect, client_options)) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -18762,9 +18760,7 @@ worker_thread_run(struct mg_connection *conn)
 		if (conn->client.is_ssl) {
 #if !defined(NO_SSL)
 			/* HTTPS connection */
-			if (sslize(conn,
-			           SSL_accept,
-			           NULL)) {
+			if (sslize(conn, SSL_accept, NULL)) {
 				/* conn->dom_ctx is set in get_request */
 
 				/* Get SSL client certificate information (if set) */
@@ -21018,8 +21014,8 @@ mg_init_library(unsigned features)
 
 		if (key_create == 0) {
 #if defined(_WIN32)
-			file_mutex_init = pthread_mutex_init(&global_log_file_lock,
-			                                     &pthread_mutex_attr);
+			file_mutex_init =
+			    pthread_mutex_init(&global_log_file_lock, &pthread_mutex_attr);
 			if (file_mutex_init == 0) {
 				/* Start WinSock */
 				WSADATA data;
