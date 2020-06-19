@@ -2912,7 +2912,6 @@ struct mg_connection {
 	                 * mg_get_connection_info_impl */
 #endif
 
-	const char *host;       /* Host (HTTP/1.1 header or SNI) */
 	SSL *ssl;               /* SSL descriptor */
 	struct socket client;   /* Connected client */
 	time_t conn_birth_time; /* Time (wall clock) when connection was
@@ -4147,9 +4146,17 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 			            &truncated,
 			            buf,
 			            buflen,
+#if defined(USE_IPV6)
+			            "%s://%s%s%s%s%s",
+			            proto,
+			            (is_ipv6 && (server_domain == server_ip)) ? "[" : "",
+			            server_domain,
+			            (is_ipv6 && (server_domain == server_ip)) ? "]" : "",
+#else
 			            "%s://%s%s%s",
 			            proto,
 			            server_domain,
+#endif
 			            portstr,
 			            ri->local_uri);
 			if (truncated) {
@@ -13615,68 +13622,76 @@ get_first_ssl_listener_index(const struct mg_context *ctx)
 
 
 /* Return host (without port) */
-/* Use mg_free to free the result */
-static const char *
-alloc_get_host(struct mg_connection *conn)
+static void
+get_host_from_request_info(struct vec *host, const struct mg_request_info *ri)
 {
-	char buf[1025];
-	size_t buflen = sizeof(buf);
-	const char *host_header = get_header(conn->request_info.http_headers,
-	                                     conn->request_info.num_headers,
-	                                     "Host");
-	char *host;
+	const char *host_header =
+	    get_header(ri->http_headers, ri->num_headers, "Host");
+
+	host->ptr = NULL;
+	host->len = 0;
 
 	if (host_header != NULL) {
 		char *pos;
 
-		/* Create a local copy of the "Host" header, since it might be
-		 * modified here. */
-		mg_strlcpy(buf, host_header, buflen);
-		buf[buflen - 1] = '\0';
-		host = buf;
-		while (isspace((unsigned char)*host)) {
-			host++;
-		}
-
 		/* If the "Host" is an IPv6 address, like [::1], parse until ]
 		 * is found. */
-		if (*host == '[') {
-			pos = strchr(host, ']');
+		if (*host_header == '[') {
+			pos = strchr(host_header, ']');
 			if (!pos) {
 				/* Malformed hostname starts with '[', but no ']' found */
 				DEBUG_TRACE("%s", "Host name format error '[' without ']'");
-				return NULL;
+				return;
 			}
 			/* terminate after ']' */
-			pos[1] = 0;
+			host->ptr = host_header;
+			host->len = (size_t)(pos + 1 - host_header);
 		} else {
 			/* Otherwise, a ':' separates hostname and port number */
-			pos = strchr(host, ':');
+			pos = strchr(host_header, ':');
 			if (pos != NULL) {
-				*pos = '\0';
+				host->len = (size_t)(pos - host_header);
+			} else {
+				host->len = strlen(host_header);
 			}
+			host->ptr = host_header;
 		}
+	}
+}
 
+
+static int
+switch_domain_context(struct mg_connection *conn)
+{
+	struct vec host;
+
+	get_host_from_request_info(&host, &conn->request_info);
+
+	if (host.ptr) {
 		if (conn->ssl) {
 			/* This is a HTTPS connection, maybe we have a hostname
 			 * from SNI (set in ssl_servername_callback). */
 			const char *sslhost = conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
 			if (sslhost && (conn->dom_ctx != &(conn->phys_ctx->dd))) {
 				/* We are not using the default domain */
-				if (mg_strcasecmp(host, sslhost)) {
+				if ((strlen(sslhost) != host.len)
+				    || mg_strncasecmp(host.ptr, sslhost, host.len)) {
 					/* Mismatch between SNI domain and HTTP domain */
-					DEBUG_TRACE("Host mismatch: SNI: %s, HTTPS: %s",
+					DEBUG_TRACE("Host mismatch: SNI: %s, HTTPS: %.*s",
 					            sslhost,
-					            host);
-					return NULL;
+					            (int)host.len,
+					            host.ptr);
+					return 0;
 				}
 			}
-			DEBUG_TRACE("HTTPS Host: %s", host);
 
 		} else {
 			struct mg_domain_context *dom = &(conn->phys_ctx->dd);
 			while (dom) {
-				if (!mg_strcasecmp(host, dom->config[AUTHENTICATION_DOMAIN])) {
+				if ((strlen(dom->config[AUTHENTICATION_DOMAIN]) == host.len)
+				    && !mg_strncasecmp(host.ptr,
+				                       dom->config[AUTHENTICATION_DOMAIN],
+				                       host.len)) {
 
 					/* Found matching domain */
 					DEBUG_TRACE("HTTP domain %s found",
@@ -13690,31 +13705,33 @@ alloc_get_host(struct mg_connection *conn)
 				dom = dom->next;
 				mg_unlock_context(conn->phys_ctx);
 			}
-
-			DEBUG_TRACE("HTTP Host: %s", host);
 		}
 
 	} else {
-		sockaddr_to_string(buf, buflen, &conn->client.lsa);
-		host = buf;
-
-		DEBUG_TRACE("IP: %s", host);
+		DEBUG_TRACE("HTTP%s Host is not set", conn->ssl ? "S" : "");
+		return 1;
 	}
 
-	return mg_strdup_ctx(host, conn->phys_ctx);
+	DEBUG_TRACE("HTTP%s Host: %.*s",
+	            conn->ssl ? "S" : "",
+	            (int)host.len,
+	            host.ptr);
+	return 1;
 }
 
 
 static void
 redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 {
+	struct vec host;
 	char target_url[MG_BUF_LEN];
 	int truncated = 0;
 
 	conn->must_close = 1;
 
 	/* Send host, port, uri and (if it exists) ?query_string */
-	if (conn->host) {
+	get_host_from_request_info(&host, &conn->request_info);
+	if (host.ptr) {
 
 		/* Use "308 Permanent Redirect" */
 		int redirect_code = 308;
@@ -13725,9 +13742,10 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 		    &truncated,
 		    target_url,
 		    sizeof(target_url),
-		    "https://%s:%d%s%s%s",
+		    "https://%.*s:%d%s%s%s",
 
-		    conn->host,
+		    (int)host.len,
+		    host.ptr,
 #if defined(USE_IPV6)
 		    (conn->phys_ctx->listening_sockets[ssl_index].lsa.sa.sa_family
 		     == AF_INET6)
@@ -13752,6 +13770,8 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 
 		/* Use redirect helper function */
 		mg_send_http_redirect(conn, target_url, redirect_code);
+	} else {
+		mg_send_http_error(conn, 400, "%s", "Bad Request");
 	}
 }
 
@@ -17059,11 +17079,6 @@ close_connection(struct mg_connection *conn)
 		conn->client.sock = INVALID_SOCKET;
 	}
 
-	if (conn->host) {
-		mg_free((void *)conn->host);
-		conn->host = NULL;
-	}
-
 	mg_unlock_connection(conn);
 
 #if defined(USE_SERVER_STATS)
@@ -17770,12 +17785,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	/* Message is a valid request */
 
-	/* Is there a "host" ? */
-	if (conn->host != NULL) {
-		mg_free((void *)conn->host);
-	}
-	conn->host = alloc_get_host(conn);
-	if (!conn->host) {
+	if (!switch_domain_context(conn)) {
 		mg_snprintf(conn,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -18779,7 +18789,6 @@ worker_thread_run(struct mg_connection *conn)
 	conn->buf_size = (int)ctx->max_request_size;
 
 	conn->dom_ctx = &(ctx->dd); /* Use default domain and default host */
-	conn->host = NULL;          /* until we have more information. */
 
 	conn->tls_user_ptr = tls.user_ptr; /* store ptr for quick access */
 
