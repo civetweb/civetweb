@@ -2362,6 +2362,13 @@ union usa {
 #endif
 };
 
+#if defined(USE_IPV6)
+#define USA_IN_PORT_UNSAFE(s)                                                  \
+	(((s)->sa.sa_family == AF_INET6) ? (s)->sin6.sin6_port : (s)->sin.sin_port)
+#else
+#define USA_IN_PORT_UNSAFE(s) ((s)->sin.sin_port)
+#endif
+
 /* Describes a string (chunk of memory). */
 struct vec {
 	const char *ptr;
@@ -3721,13 +3728,7 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 	}
 	for (i = 0; i < size && i < ctx->num_listening_sockets; i++) {
 		ssl[i] = ctx->listening_sockets[i].is_ssl;
-		ports[i] =
-#if defined(USE_IPV6)
-		    (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
-		        ? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
-		        :
-#endif
-		        ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
+		ports[i] = ntohs(USA_IN_PORT_UNSAFE(&(ctx->listening_sockets[i].lsa)));
 	}
 	return i;
 }
@@ -3755,12 +3756,7 @@ mg_get_server_ports(const struct mg_context *ctx,
 	for (i = 0; (i < size) && (i < (int)ctx->num_listening_sockets); i++) {
 
 		ports[cnt].port =
-#if defined(USE_IPV6)
-		    (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
-		        ? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
-		        :
-#endif
-		        ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
+		    ntohs(USA_IN_PORT_UNSAFE(&(ctx->listening_sockets[i].lsa)));
 		ports[cnt].is_ssl = ctx->listening_sockets[i].is_ssl;
 		ports[cnt].is_redirect = ctx->listening_sockets[i].ssl_redir;
 
@@ -4111,11 +4107,8 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 
 #if defined(USE_IPV6)
 			int is_ipv6 = (conn->client.lsa.sa.sa_family == AF_INET6);
-			int port = is_ipv6 ? htons(conn->client.lsa.sin6.sin6_port)
-			                   : htons(conn->client.lsa.sin.sin_port);
-#else
-			int port = htons(conn->client.lsa.sin.sin_port);
 #endif
+			int port = htons(USA_IN_PORT_UNSAFE(&conn->client.lsa));
 			int def_port = ri->is_ssl ? 443 : 80;
 			int auth_domain_check_enabled =
 			    conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK]
@@ -11293,14 +11286,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "%s", "SERVER_PROTOCOL=HTTP/1.1");
 	addenv(env, "%s", "REDIRECT_STATUS=200"); /* For PHP */
 
-#if defined(USE_IPV6)
-	if (conn->client.lsa.sa.sa_family == AF_INET6) {
-		addenv(env, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin6.sin6_port));
-	} else
-#endif
-	{
-		addenv(env, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin.sin_port));
-	}
+	addenv(env, "SERVER_PORT=%d", ntohs(USA_IN_PORT_UNSAFE(&conn->client.lsa)));
 
 	sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
 	addenv(env, "REMOTE_ADDR=%s", src_addr);
@@ -13737,29 +13723,21 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 		int redirect_code = 308;
 
 		/* Create target URL */
-		mg_snprintf(
-		    conn,
-		    &truncated,
-		    target_url,
-		    sizeof(target_url),
-		    "https://%.*s:%d%s%s%s",
+		mg_snprintf(conn,
+		            &truncated,
+		            target_url,
+		            sizeof(target_url),
+		            "https://%.*s:%d%s%s%s",
 
-		    (int)host.len,
-		    host.ptr,
-#if defined(USE_IPV6)
-		    (conn->phys_ctx->listening_sockets[ssl_index].lsa.sa.sa_family
-		     == AF_INET6)
-		        ? (int)ntohs(conn->phys_ctx->listening_sockets[ssl_index]
-		                         .lsa.sin6.sin6_port)
-		        :
-#endif
-		        (int)ntohs(conn->phys_ctx->listening_sockets[ssl_index]
-		                       .lsa.sin.sin_port),
-		    conn->request_info.local_uri,
-		    (conn->request_info.query_string == NULL) ? "" : "?",
-		    (conn->request_info.query_string == NULL)
-		        ? ""
-		        : conn->request_info.query_string);
+		            (int)host.len,
+		            host.ptr,
+		            (int)ntohs(USA_IN_PORT_UNSAFE(
+		                &(conn->phys_ctx->listening_sockets[ssl_index].lsa))),
+		            conn->request_info.local_uri,
+		            (conn->request_info.query_string == NULL) ? "" : "?",
+		            (conn->request_info.query_string == NULL)
+		                ? ""
+		                : conn->request_info.query_string);
 
 		/* Check overflow in location buffer (will not occur if MG_BUF_LEN
 		 * is used as buffer size) */
@@ -17625,21 +17603,11 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 		return 0;
 	}
 
-/* Check if the request is directed to a different server. */
-/* First check if the port is the same (IPv4 and IPv6). */
-#if defined(USE_IPV6)
-	if (conn->client.lsa.sa.sa_family == AF_INET6) {
-		if (ntohs(conn->client.lsa.sin6.sin6_port) != port) {
-			/* Request is directed to a different port */
-			return 0;
-		}
-	} else
-#endif
-	{
-		if (ntohs(conn->client.lsa.sin.sin_port) != port) {
-			/* Request is directed to a different port */
-			return 0;
-		}
+	/* Check if the request is directed to a different server. */
+	/* First check if the port is the same. */
+	if (ntohs(USA_IN_PORT_UNSAFE(&conn->client.lsa)) != port) {
+		/* Request is directed to a different port */
+		return 0;
 	}
 
 	/* Finally check if the server corresponds to the authentication
@@ -18819,20 +18787,12 @@ worker_thread_run(struct mg_connection *conn)
 #endif
 		conn->conn_birth_time = time(NULL);
 
-/* Fill in IP, port info early so even if SSL setup below fails,
- * error handler would have the corresponding info.
- * Thanks to Johannes Winkelmann for the patch.
- */
-#if defined(USE_IPV6)
-		if (conn->client.rsa.sa.sa_family == AF_INET6) {
-			conn->request_info.remote_port =
-			    ntohs(conn->client.rsa.sin6.sin6_port);
-		} else
-#endif
-		{
-			conn->request_info.remote_port =
-			    ntohs(conn->client.rsa.sin.sin_port);
-		}
+		/* Fill in IP, port info early so even if SSL setup below fails,
+		 * error handler would have the corresponding info.
+		 * Thanks to Johannes Winkelmann for the patch.
+		 */
+		conn->request_info.remote_port =
+		    ntohs(USA_IN_PORT_UNSAFE(&conn->client.rsa));
 
 		sockaddr_to_string(conn->request_info.remote_addr,
 		                   sizeof(conn->request_info.remote_addr),
