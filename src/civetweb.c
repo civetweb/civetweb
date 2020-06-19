@@ -9701,7 +9701,10 @@ scan_directory(struct mg_connection *conn,
 				                strerror(ERRNO));
 			}
 			de.file_name = dp->d_name;
-			cb(&de, data);
+			if (cb(&de, data)) {
+				/* stopped */
+				break;
+			}
 		}
 		(void)mg_closedir(dirp);
 	}
@@ -9781,21 +9784,9 @@ remove_directory(struct mg_connection *conn, const char *dir)
 
 struct dir_scan_data {
 	struct de *entries;
-	unsigned int num_entries;
-	unsigned int arr_size;
+	size_t num_entries;
+	size_t arr_size;
 };
-
-
-/* Behaves like realloc(), but frees original pointer on failure */
-static void *
-realloc2(void *ptr, size_t size)
-{
-	void *new_ptr = mg_realloc(ptr, size);
-	if ((new_ptr == NULL) && (size > 0)) {
-		mg_free(ptr);
-	}
-	return new_ptr;
-}
 
 
 #if !defined(NO_FILESYSTEMS)
@@ -9803,22 +9794,27 @@ static int
 dir_scan_callback(struct de *de, void *data)
 {
 	struct dir_scan_data *dsd = (struct dir_scan_data *)data;
+	struct de *entries = dsd->entries;
 
-	if ((dsd->entries == NULL) || (dsd->num_entries >= dsd->arr_size)) {
+	if ((entries == NULL) || (dsd->num_entries >= dsd->arr_size)) {
+		entries =
+		    (struct de *)mg_realloc(entries,
+		                            dsd->arr_size * 2 * sizeof(entries[0]));
+		if (entries == NULL) {
+			/* stop scan */
+			return 1;
+		}
+		dsd->entries = entries;
 		dsd->arr_size *= 2;
-		dsd->entries =
-		    (struct de *)realloc2(dsd->entries,
-		                          dsd->arr_size * sizeof(dsd->entries[0]));
 	}
-	if (dsd->entries == NULL) {
-		/* TODO(lsm, low): propagate an error to the caller */
-		dsd->num_entries = 0;
-	} else {
-		dsd->entries[dsd->num_entries].file_name = mg_strdup(de->file_name);
-		dsd->entries[dsd->num_entries].file = de->file;
-		dsd->entries[dsd->num_entries].conn = de->conn;
-		dsd->num_entries++;
+	entries[dsd->num_entries].file_name = mg_strdup(de->file_name);
+	if (entries[dsd->num_entries].file_name == NULL) {
+		/* stop scan */
+		return 1;
 	}
+	entries[dsd->num_entries].file = de->file;
+	entries[dsd->num_entries].conn = de->conn;
+	dsd->num_entries++;
 
 	return 0;
 }
@@ -9827,12 +9823,16 @@ dir_scan_callback(struct de *de, void *data)
 static void
 handle_directory_request(struct mg_connection *conn, const char *dir)
 {
-	unsigned int i;
+	size_t i;
 	int sort_direction;
 	struct dir_scan_data data = {NULL, 0, 128};
 	char date[64], *esc, *p;
 	const char *title;
 	time_t curtime = time(NULL);
+
+	if (!conn) {
+		return;
+	}
 
 	if (!scan_directory(conn, dir, &data, dir_scan_callback)) {
 		mg_send_http_error(conn,
@@ -9844,10 +9844,6 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	}
 
 	gmt_time_string(date, sizeof(date), &curtime);
-
-	if (!conn) {
-		return;
-	}
 
 	esc = NULL;
 	title = conn->request_info.local_uri;
@@ -9912,7 +9908,7 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	/* Sort and print directory entries */
 	if (data.entries != NULL) {
 		qsort(data.entries,
-		      (size_t)data.num_entries,
+		      data.num_entries,
 		      sizeof(data.entries[0]),
 		      compare_dir_entries);
 		for (i = 0; i < data.num_entries; i++) {
@@ -12481,7 +12477,8 @@ print_dav_dir_entry(struct de *de, void *data)
 	if (!de || !conn
 	    || !print_props(
 	           conn, conn->request_info.local_uri, de->file_name, &de->file)) {
-		return -1;
+		/* stop scan */
+		return 1;
 	}
 	return 0;
 }
