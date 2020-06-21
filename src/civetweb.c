@@ -16437,18 +16437,18 @@ alpn_select_cb(SSL *ssl,
 
 	(void)ssl;
 
-#if defined(USE_HTTP2)
-	enable_http2 = (0 != strcmp(dom_ctx->config[ENABLE_HTTP2], "yes"));
-	if (enable_http2) {
-		alpn_proto_order = alpn_proto_order_http2;
-	}
-#endif
-
 	if (tls == NULL) {
 		/* Need to store protocol in Thread Local Storage */
 		/* If there is no Thread Local Storage, don't use ALPN */
 		return SSL_TLSEXT_ERR_NOACK;
 	}
+
+#if defined(USE_HTTP2)
+	enable_http2 = (0 == strcmp(dom_ctx->config[ENABLE_HTTP2], "yes"));
+	if (enable_http2) {
+		alpn_proto_order = alpn_proto_order_http2;
+	}
+#endif
 
 	for (j = 0; alpn_proto_order[j] != NULL; j++) {
 		/* check all accepted protocols in this order */
@@ -18460,8 +18460,6 @@ process_new_connection(struct mg_connection *conn)
 	mg_atomic_max(&(conn->phys_ctx->max_active_connections), mcon);
 #endif
 
-	init_connection(conn);
-
 	DEBUG_TRACE("Start processing connection from %s",
 	            conn->request_info.remote_addr);
 
@@ -18939,13 +18937,18 @@ worker_thread_run(struct mg_connection *conn)
 					init_connection(conn);
 					conn->connection_type = CONNECTION_TYPE_REQUEST;
 					conn->protocol_type = PROTOCOL_TYPE_HTTP2;
-					conn->content_len = -1;
-					conn->is_chunked = 0;
+					conn->content_len =
+					    -1;               /* content length is not predefined */
+					conn->is_chunked = 0; /* HTTP2 is never chunked */
 					process_new_http2_connection(conn);
 				} else
 #endif
 				{
 					/* process HTTPS/1.x or WEBSOCKET-SECURE connection */
+					init_connection(conn);
+					conn->connection_type = CONNECTION_TYPE_REQUEST;
+					/* Start with HTTP, WS will be an "upgrade" request later */
+					conn->protocol_type = PROTOCOL_TYPE_HTTP1;
 					process_new_connection(conn);
 				}
 
@@ -18972,6 +18975,10 @@ worker_thread_run(struct mg_connection *conn)
 #endif
 		} else {
 			/* process HTTP connection */
+			init_connection(conn);
+			conn->connection_type = CONNECTION_TYPE_REQUEST;
+			/* Start with HTTP, WS will be an "upgrade" request later */
+			conn->protocol_type = PROTOCOL_TYPE_HTTP1;
 			process_new_connection(conn);
 		}
 
