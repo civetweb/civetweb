@@ -19,6 +19,8 @@ examples/embedded_c/embedded_c
 *.so
 
 Install/
+src/web_servlets/
+
 
 ################# //hash
 ## CMake

@@ -2561,6 +2561,8 @@ enum {
 	ENABLE_DAEMONIZE,
 #endif
 
+	SQLITE_FILE_PATH,
+
 	NUM_OPTIONS
 };
 
@@ -2680,6 +2682,8 @@ static const struct mg_option config_options[] = {
 #if defined(DAEMONIZE)
     {"daemonize", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
+
+    {"sqlite_file_path", MG_CONFIG_TYPE_STRING, "./ashiba_web.db"},
 
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 

@@ -3245,7 +3245,7 @@ main(int argc, char *argv[])
 	start_civetweb(argc, argv);
 
 	/* Register handlers for Ashiba Web */
-	register_ashiba_servlets(g_ctx);
+	register_ashiba_servlets(g_ctx, mg_get_option(g_ctx, "sqlite_file_path"));
 
 	fprintf(stdout,
 	        "%s started on port(s) %s with web root [%s]\n",
