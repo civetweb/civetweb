@@ -1903,11 +1903,9 @@ enum ssl_func_category {
 static int tls_feature_missing[TLS_END_OF_LIST] = {0};
 
 struct ssl_func {
-	const char *name; /* SSL function name */
-	union {
-		enum ssl_func_category required; /* Mandatory or optional */
-		void (*ptr)(void);               /* Function pointer */
-	};
+	const char *name;                /* SSL function name */
+	enum ssl_func_category required; /* Mandatory or optional */
+	void (*ptr)(void);               /* Function pointer */
 };
 
 
@@ -2045,72 +2043,71 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
  * of respective functions. The macros above (like SSL_connect()) are really
  * just calling these functions indirectly via the pointer. */
 static struct ssl_func ssl_sw[] = {
-    {"SSL_free", {TLS_Mandatory}},
-    {"SSL_accept", {TLS_Mandatory}},
-    {"SSL_connect", {TLS_Mandatory}},
-    {"SSL_read", {TLS_Mandatory}},
-    {"SSL_write", {TLS_Mandatory}},
-    {"SSL_get_error", {TLS_Mandatory}},
-    {"SSL_set_fd", {TLS_Mandatory}},
-    {"SSL_new", {TLS_Mandatory}},
-    {"SSL_CTX_new", {TLS_Mandatory}},
-    {"TLS_server_method", {TLS_Mandatory}},
-    {"OPENSSL_init_ssl", {TLS_Mandatory}},
-    {"SSL_CTX_use_PrivateKey_file", {TLS_Mandatory}},
-    {"SSL_CTX_use_certificate_file", {TLS_Mandatory}},
-    {"SSL_CTX_set_default_passwd_cb", {TLS_Mandatory}},
-    {"SSL_CTX_free", {TLS_Mandatory}},
-    {"SSL_CTX_use_certificate_chain_file", {TLS_Mandatory}},
-    {"TLS_client_method", {TLS_Mandatory}},
-    {"SSL_pending", {TLS_Mandatory}},
-    {"SSL_CTX_set_verify", {TLS_Mandatory}},
-    {"SSL_shutdown", {TLS_Mandatory}},
-    {"SSL_CTX_load_verify_locations", {TLS_Mandatory}},
-    {"SSL_CTX_set_default_verify_paths", {TLS_Mandatory}},
-    {"SSL_CTX_set_verify_depth", {TLS_Mandatory}},
-    {"SSL_get_peer_certificate", {TLS_Mandatory}},
-    {"SSL_get_version", {TLS_Mandatory}},
-    {"SSL_get_current_cipher", {TLS_Mandatory}},
-    {"SSL_CIPHER_get_name", {TLS_Mandatory}},
-    {"SSL_CTX_check_private_key", {TLS_Mandatory}},
-    {"SSL_CTX_set_session_id_context", {TLS_Mandatory}},
-    {"SSL_CTX_ctrl", {TLS_Mandatory}},
-    {"SSL_CTX_set_cipher_list", {TLS_Mandatory}},
-    {"SSL_CTX_set_options", {TLS_Mandatory}},
-    {"SSL_CTX_set_info_callback", {TLS_Mandatory}},
-    {"SSL_get_ex_data", {TLS_Mandatory}},
-    {"SSL_set_ex_data", {TLS_Mandatory}},
-    {"SSL_CTX_callback_ctrl", {TLS_Mandatory}},
-    {"SSL_get_servername", {TLS_Mandatory}},
-    {"SSL_set_SSL_CTX", {TLS_Mandatory}},
-    {"SSL_ctrl", {TLS_Mandatory}},
-    {"SSL_CTX_set_alpn_protos", {TLS_ALPN}},
-    {"SSL_CTX_set_alpn_select_cb", {TLS_ALPN}},
-    {"SSL_CTX_set_next_protos_advertised_cb", {TLS_ALPN}},
-    {NULL, {TLS_END_OF_LIST}}};
+    {"SSL_free", TLS_Mandatory, NULL},
+    {"SSL_accept", TLS_Mandatory, NULL},
+    {"SSL_connect", TLS_Mandatory, NULL},
+    {"SSL_read", TLS_Mandatory, NULL},
+    {"SSL_write", TLS_Mandatory, NULL},
+    {"SSL_get_error", TLS_Mandatory, NULL},
+    {"SSL_set_fd", TLS_Mandatory, NULL},
+    {"SSL_new", TLS_Mandatory, NULL},
+    {"SSL_CTX_new", TLS_Mandatory, NULL},
+    {"TLS_server_method", TLS_Mandatory, NULL},
+    {"OPENSSL_init_ssl", TLS_Mandatory, NULL},
+    {"SSL_CTX_use_PrivateKey_file", TLS_Mandatory, NULL},
+    {"SSL_CTX_use_certificate_file", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_default_passwd_cb", TLS_Mandatory, NULL},
+    {"SSL_CTX_free", TLS_Mandatory, NULL},
+    {"SSL_CTX_use_certificate_chain_file", TLS_Mandatory, NULL},
+    {"TLS_client_method", TLS_Mandatory, NULL},
+    {"SSL_pending", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_verify", TLS_Mandatory, NULL},
+    {"SSL_shutdown", TLS_Mandatory, NULL},
+    {"SSL_CTX_load_verify_locations", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_default_verify_paths", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_verify_depth", TLS_Mandatory, NULL},
+    {"SSL_get_peer_certificate", TLS_Mandatory, NULL},
+    {"SSL_get_version", TLS_Mandatory, NULL},
+    {"SSL_get_current_cipher", TLS_Mandatory, NULL},
+    {"SSL_CIPHER_get_name", TLS_Mandatory, NULL},
+    {"SSL_CTX_check_private_key", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_session_id_context", TLS_Mandatory, NULL},
+    {"SSL_CTX_ctrl", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_cipher_list", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_options", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_info_callback", TLS_Mandatory, NULL},
+    {"SSL_get_ex_data", TLS_Mandatory, NULL},
+    {"SSL_set_ex_data", TLS_Mandatory, NULL},
+    {"SSL_CTX_callback_ctrl", TLS_Mandatory, NULL},
+    {"SSL_get_servername", TLS_Mandatory, NULL},
+    {"SSL_set_SSL_CTX", TLS_Mandatory, NULL},
+    {"SSL_ctrl", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_alpn_protos", TLS_ALPN, NULL},
+    {"SSL_CTX_set_alpn_select_cb", TLS_ALPN, NULL},
+    {"SSL_CTX_set_next_protos_advertised_cb", TLS_ALPN, NULL},
+    {NULL, TLS_END_OF_LIST, NULL}};
 
 
 /* Similar array as ssl_sw. These functions could be located in different
  * lib. */
-static struct ssl_func crypto_sw[] = {{"ERR_get_error", {TLS_Mandatory}},
-                                      {"ERR_error_string", {TLS_Mandatory}},
-                                      {"CONF_modules_unload", {TLS_Mandatory}},
-                                      {"X509_free", {TLS_Mandatory}},
-                                      {"X509_get_subject_name",
-                                       {TLS_Mandatory}},
-                                      {"X509_get_issuer_name", {TLS_Mandatory}},
-                                      {"X509_NAME_oneline", {TLS_Mandatory}},
-                                      {"X509_get_serialNumber",
-                                       {TLS_Mandatory}},
-                                      {"EVP_get_digestbyname", {TLS_Mandatory}},
-                                      {"EVP_Digest", {TLS_Mandatory}},
-                                      {"i2d_X509", {TLS_Mandatory}},
-                                      {"BN_bn2hex", {TLS_Mandatory}},
-                                      {"ASN1_INTEGER_to_BN", {TLS_Mandatory}},
-                                      {"BN_free", {TLS_Mandatory}},
-                                      {"CRYPTO_free", {TLS_Mandatory}},
-                                      {"ERR_clear_error", {TLS_Mandatory}},
-                                      {NULL, {TLS_END_OF_LIST}}};
+static struct ssl_func crypto_sw[] = {
+    {"ERR_get_error", TLS_Mandatory, NULL},
+    {"ERR_error_string", TLS_Mandatory, NULL},
+    {"CONF_modules_unload", TLS_Mandatory, NULL},
+    {"X509_free", TLS_Mandatory, NULL},
+    {"X509_get_subject_name", TLS_Mandatory, NULL},
+    {"X509_get_issuer_name", TLS_Mandatory, NULL},
+    {"X509_NAME_oneline", TLS_Mandatory, NULL},
+    {"X509_get_serialNumber", TLS_Mandatory, NULL},
+    {"EVP_get_digestbyname", TLS_Mandatory, NULL},
+    {"EVP_Digest", TLS_Mandatory, NULL},
+    {"i2d_X509", TLS_Mandatory, NULL},
+    {"BN_bn2hex", TLS_Mandatory, NULL},
+    {"ASN1_INTEGER_to_BN", TLS_Mandatory, NULL},
+    {"BN_free", TLS_Mandatory, NULL},
+    {"CRYPTO_free", TLS_Mandatory, NULL},
+    {"ERR_clear_error", TLS_Mandatory, NULL},
+    {NULL, TLS_END_OF_LIST, NULL}};
 #else
 
 #define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
@@ -2258,80 +2255,80 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
  * of respective functions. The macros above (like SSL_connect()) are really
  * just calling these functions indirectly via the pointer. */
 static struct ssl_func ssl_sw[] = {
-    {"SSL_free", {TLS_Mandatory}},
-    {"SSL_accept", {TLS_Mandatory}},
-    {"SSL_connect", {TLS_Mandatory}},
-    {"SSL_read", {TLS_Mandatory}},
-    {"SSL_write", {TLS_Mandatory}},
-    {"SSL_get_error", {TLS_Mandatory}},
-    {"SSL_set_fd", {TLS_Mandatory}},
-    {"SSL_new", {TLS_Mandatory}},
-    {"SSL_CTX_new", {TLS_Mandatory}},
-    {"SSLv23_server_method", {TLS_Mandatory}},
-    {"SSL_library_init", {TLS_Mandatory}},
-    {"SSL_CTX_use_PrivateKey_file", {TLS_Mandatory}},
-    {"SSL_CTX_use_certificate_file", {TLS_Mandatory}},
-    {"SSL_CTX_set_default_passwd_cb", {TLS_Mandatory}},
-    {"SSL_CTX_free", {TLS_Mandatory}},
-    {"SSL_load_error_strings", {TLS_Mandatory}},
-    {"SSL_CTX_use_certificate_chain_file", {TLS_Mandatory}},
-    {"SSLv23_client_method", {TLS_Mandatory}},
-    {"SSL_pending", {TLS_Mandatory}},
-    {"SSL_CTX_set_verify", {TLS_Mandatory}},
-    {"SSL_shutdown", {TLS_Mandatory}},
-    {"SSL_CTX_load_verify_locations", {TLS_Mandatory}},
-    {"SSL_CTX_set_default_verify_paths", {TLS_Mandatory}},
-    {"SSL_CTX_set_verify_depth", {TLS_Mandatory}},
-    {"SSL_get_peer_certificate", {TLS_Mandatory}},
-    {"SSL_get_version", {TLS_Mandatory}},
-    {"SSL_get_current_cipher", {TLS_Mandatory}},
-    {"SSL_CIPHER_get_name", {TLS_Mandatory}},
-    {"SSL_CTX_check_private_key", {TLS_Mandatory}},
-    {"SSL_CTX_set_session_id_context", {TLS_Mandatory}},
-    {"SSL_CTX_ctrl", {TLS_Mandatory}},
-    {"SSL_CTX_set_cipher_list", {TLS_Mandatory}},
-    {"SSL_CTX_set_info_callback", {TLS_Mandatory}},
-    {"SSL_get_ex_data", {TLS_Mandatory}},
-    {"SSL_set_ex_data", {TLS_Mandatory}},
-    {"SSL_CTX_callback_ctrl", {TLS_Mandatory}},
-    {"SSL_get_servername", {TLS_Mandatory}},
-    {"SSL_set_SSL_CTX", {TLS_Mandatory}},
-    {"SSL_ctrl", {TLS_Mandatory}},
-    {"SSL_CTX_set_alpn_protos", {TLS_ALPN}},
-    {"SSL_CTX_set_alpn_select_cb", {TLS_ALPN}},
-    {"SSL_CTX_set_next_protos_advertised_cb", {TLS_ALPN}},
-    {NULL, {TLS_END_OF_LIST}}};
+    {"SSL_free", TLS_Mandatory, NULL},
+    {"SSL_accept", TLS_Mandatory, NULL},
+    {"SSL_connect", TLS_Mandatory, NULL},
+    {"SSL_read", TLS_Mandatory, NULL},
+    {"SSL_write", TLS_Mandatory, NULL},
+    {"SSL_get_error", TLS_Mandatory, NULL},
+    {"SSL_set_fd", TLS_Mandatory, NULL},
+    {"SSL_new", TLS_Mandatory, NULL},
+    {"SSL_CTX_new", TLS_Mandatory, NULL},
+    {"SSLv23_server_method", TLS_Mandatory, NULL},
+    {"SSL_library_init", TLS_Mandatory, NULL},
+    {"SSL_CTX_use_PrivateKey_file", TLS_Mandatory, NULL},
+    {"SSL_CTX_use_certificate_file", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_default_passwd_cb", TLS_Mandatory, NULL},
+    {"SSL_CTX_free", TLS_Mandatory, NULL},
+    {"SSL_load_error_strings", TLS_Mandatory, NULL},
+    {"SSL_CTX_use_certificate_chain_file", TLS_Mandatory, NULL},
+    {"SSLv23_client_method", TLS_Mandatory, NULL},
+    {"SSL_pending", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_verify", TLS_Mandatory, NULL},
+    {"SSL_shutdown", TLS_Mandatory, NULL},
+    {"SSL_CTX_load_verify_locations", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_default_verify_paths", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_verify_depth", TLS_Mandatory, NULL},
+    {"SSL_get_peer_certificate", TLS_Mandatory, NULL},
+    {"SSL_get_version", TLS_Mandatory, NULL},
+    {"SSL_get_current_cipher", TLS_Mandatory, NULL},
+    {"SSL_CIPHER_get_name", TLS_Mandatory, NULL},
+    {"SSL_CTX_check_private_key", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_session_id_context", TLS_Mandatory, NULL},
+    {"SSL_CTX_ctrl", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_cipher_list", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_info_callback", TLS_Mandatory, NULL},
+    {"SSL_get_ex_data", TLS_Mandatory, NULL},
+    {"SSL_set_ex_data", TLS_Mandatory, NULL},
+    {"SSL_CTX_callback_ctrl", TLS_Mandatory, NULL},
+    {"SSL_get_servername", TLS_Mandatory, NULL},
+    {"SSL_set_SSL_CTX", TLS_Mandatory, NULL},
+    {"SSL_ctrl", TLS_Mandatory, NULL},
+    {"SSL_CTX_set_alpn_protos", TLS_ALPN, NULL},
+    {"SSL_CTX_set_alpn_select_cb", TLS_ALPN, NULL},
+    {"SSL_CTX_set_next_protos_advertised_cb", TLS_ALPN, NULL},
+    {NULL, TLS_END_OF_LIST, NULL}};
 
 
 /* Similar array as ssl_sw. These functions could be located in different
  * lib. */
 static struct ssl_func crypto_sw[] = {
-    {"CRYPTO_num_locks", {TLS_Mandatory}},
-    {"CRYPTO_set_locking_callback", {TLS_Mandatory}},
-    {"CRYPTO_set_id_callback", {TLS_Mandatory}},
-    {"ERR_get_error", {TLS_Mandatory}},
-    {"ERR_error_string", {TLS_Mandatory}},
-    {"ERR_remove_state", {TLS_Mandatory}},
-    {"ERR_free_strings", {TLS_Mandatory}},
-    {"ENGINE_cleanup", {TLS_Mandatory}},
-    {"CONF_modules_unload", {TLS_Mandatory}},
-    {"CRYPTO_cleanup_all_ex_data", {TLS_Mandatory}},
-    {"EVP_cleanup", {TLS_Mandatory}},
-    {"X509_free", {TLS_Mandatory}},
-    {"X509_get_subject_name", {TLS_Mandatory}},
-    {"X509_get_issuer_name", {TLS_Mandatory}},
-    {"X509_NAME_oneline", {TLS_Mandatory}},
-    {"X509_get_serialNumber", {TLS_Mandatory}},
-    {"i2c_ASN1_INTEGER", {TLS_Mandatory}},
-    {"EVP_get_digestbyname", {TLS_Mandatory}},
-    {"EVP_Digest", {TLS_Mandatory}},
-    {"i2d_X509", {TLS_Mandatory}},
-    {"BN_bn2hex", {TLS_Mandatory}},
-    {"ASN1_INTEGER_to_BN", {TLS_Mandatory}},
-    {"BN_free", {TLS_Mandatory}},
-    {"CRYPTO_free", {TLS_Mandatory}},
-    {"ERR_clear_error", {TLS_Mandatory}},
-    {NULL, {TLS_END_OF_LIST}}};
+    {"CRYPTO_num_locks", TLS_Mandatory, NULL},
+    {"CRYPTO_set_locking_callback", TLS_Mandatory, NULL},
+    {"CRYPTO_set_id_callback", TLS_Mandatory, NULL},
+    {"ERR_get_error", TLS_Mandatory, NULL},
+    {"ERR_error_string", TLS_Mandatory, NULL},
+    {"ERR_remove_state", TLS_Mandatory, NULL},
+    {"ERR_free_strings", TLS_Mandatory, NULL},
+    {"ENGINE_cleanup", TLS_Mandatory, NULL},
+    {"CONF_modules_unload", TLS_Mandatory, NULL},
+    {"CRYPTO_cleanup_all_ex_data", TLS_Mandatory, NULL},
+    {"EVP_cleanup", TLS_Mandatory, NULL},
+    {"X509_free", TLS_Mandatory, NULL},
+    {"X509_get_subject_name", TLS_Mandatory, NULL},
+    {"X509_get_issuer_name", TLS_Mandatory, NULL},
+    {"X509_NAME_oneline", TLS_Mandatory, NULL},
+    {"X509_get_serialNumber", TLS_Mandatory, NULL},
+    {"i2c_ASN1_INTEGER", TLS_Mandatory, NULL},
+    {"EVP_get_digestbyname", TLS_Mandatory, NULL},
+    {"EVP_Digest", TLS_Mandatory, NULL},
+    {"i2d_X509", TLS_Mandatory, NULL},
+    {"BN_bn2hex", TLS_Mandatory, NULL},
+    {"ASN1_INTEGER_to_BN", TLS_Mandatory, NULL},
+    {"BN_free", TLS_Mandatory, NULL},
+    {"CRYPTO_free", TLS_Mandatory, NULL},
+    {"ERR_clear_error", TLS_Mandatory, NULL},
+    {NULL, TLS_END_OF_LIST, NULL}};
 #endif /* OPENSSL_API_1_1 */
 #endif /* NO_SSL_DL */
 #endif /* NO_SSL */
@@ -15811,7 +15808,8 @@ static void *
 load_tls_dll(char *ebuf,
              size_t ebuf_len,
              const char *dll_name,
-             struct ssl_func *sw)
+             struct ssl_func *sw,
+             int *feature_missing)
 {
 	union {
 		void *p;
@@ -15835,8 +15833,6 @@ load_tls_dll(char *ebuf,
 
 	ok = 1;
 	for (fp = sw; fp->name != NULL; fp++) {
-		enum ssl_func_category req = fp->required;
-
 #if defined(_WIN32)
 		/* GetProcAddress() returns pointer to function */
 		u.fp = (void (*)(void))dlsym(dll_handle, fp->name);
@@ -15852,9 +15848,10 @@ load_tls_dll(char *ebuf,
 
 		if (u.fp == NULL) {
 			DEBUG_TRACE("Missing function: %s\n", fp->name);
-			tls_feature_missing[req]++;
-
-			if (req == TLS_Mandatory) {
+			if (feature_missing) {
+				feature_missing[fp->required]++;
+			}
+			if (fp->required == TLS_Mandatory) {
 				/* Mandatory function is missing */
 				if (ok) {
 					/* This is the first missing function.
@@ -15872,7 +15869,7 @@ load_tls_dll(char *ebuf,
 					/* This is yet anothermissing function.
 					 * Append existing error message. */
 					size_t cur_len = strlen(ebuf);
-					if (!truncated) {
+					if (!truncated && ((ebuf_len - cur_len) > 3)) {
 						mg_snprintf(NULL,
 						            &truncated,
 						            ebuf + cur_len,
@@ -15914,36 +15911,10 @@ static int cryptolib_users = 0; /* Reference counter for crypto library. */
 static int
 initialize_ssl(char *ebuf, size_t ebuf_len)
 {
-#if defined(OPENSSL_API_1_1)
-	if (ebuf_len > 0) {
-		ebuf[0] = 0;
-	}
-
-#if !defined(NO_SSL_DL)
-	if (!cryptolib_dll_handle) {
-		cryptolib_dll_handle =
-		    load_tls_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
-		if (!cryptolib_dll_handle) {
-			mg_snprintf(NULL,
-			            NULL, /* No truncation check for ebuf */
-			            ebuf,
-			            ebuf_len,
-			            "%s: error loading library %s",
-			            __func__,
-			            CRYPTO_LIB);
-			DEBUG_TRACE("%s", ebuf);
-			return 0;
-		}
-	}
-#endif /* NO_SSL_DL */
-
-	if (mg_atomic_inc(&cryptolib_users) > 1) {
-		return 1;
-	}
-
-#else /* not OPENSSL_API_1_1 */
+#if !defined(OPENSSL_API_1_1)
 	int i, num_locks;
 	size_t size;
+#endif
 
 	if (ebuf_len > 0) {
 		ebuf[0] = 0;
@@ -15951,8 +15922,9 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 
 #if !defined(NO_SSL_DL)
 	if (!cryptolib_dll_handle) {
-		cryptolib_dll_handle =
-		    load_tls_dll(ebuf, ebuf_len, CRYPTO_LIB, crypto_sw);
+		memset(tls_feature_missing, 0, sizeof(tls_feature_missing));
+		cryptolib_dll_handle = load_tls_dll(
+		    ebuf, ebuf_len, CRYPTO_LIB, crypto_sw, tls_feature_missing);
 		if (!cryptolib_dll_handle) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
@@ -15971,6 +15943,7 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 		return 1;
 	}
 
+#if !defined(OPENSSL_API_1_1)
 	/* Initialize locking callbacks, needed for thread safety.
 	 * http://www.openssl.org/support/faq.html#PROG1
 	 */
@@ -16025,7 +15998,8 @@ initialize_ssl(char *ebuf, size_t ebuf_len)
 
 #if !defined(NO_SSL_DL)
 	if (!ssllib_dll_handle) {
-		ssllib_dll_handle = load_tls_dll(ebuf, ebuf_len, SSL_LIB, ssl_sw);
+		ssllib_dll_handle =
+		    load_tls_dll(ebuf, ebuf_len, SSL_LIB, ssl_sw, tls_feature_missing);
 		if (!ssllib_dll_handle) {
 #if !defined(OPENSSL_API_1_1)
 			mg_free(ssl_mutexes);
