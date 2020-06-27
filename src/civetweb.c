@@ -2359,6 +2359,13 @@ union usa {
 #endif
 };
 
+#if defined(USE_IPV6)
+#define USA_IN_PORT_UNSAFE(s)                                                  \
+	(((s)->sa.sa_family == AF_INET6) ? (s)->sin6.sin6_port : (s)->sin.sin_port)
+#else
+#define USA_IN_PORT_UNSAFE(s) ((s)->sin.sin_port)
+#endif
+
 /* Describes a string (chunk of memory). */
 struct vec {
 	const char *ptr;
@@ -2909,7 +2916,6 @@ struct mg_connection {
 	                 * mg_get_connection_info_impl */
 #endif
 
-	const char *host;       /* Host (HTTP/1.1 header or SNI) */
 	SSL *ssl;               /* SSL descriptor */
 	struct socket client;   /* Connected client */
 	time_t conn_birth_time; /* Time (wall clock) when connection was
@@ -3719,13 +3725,7 @@ mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
 	}
 	for (i = 0; i < size && i < ctx->num_listening_sockets; i++) {
 		ssl[i] = ctx->listening_sockets[i].is_ssl;
-		ports[i] =
-#if defined(USE_IPV6)
-		    (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
-		        ? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
-		        :
-#endif
-		        ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
+		ports[i] = ntohs(USA_IN_PORT_UNSAFE(&(ctx->listening_sockets[i].lsa)));
 	}
 	return i;
 }
@@ -3753,12 +3753,7 @@ mg_get_server_ports(const struct mg_context *ctx,
 	for (i = 0; (i < size) && (i < (int)ctx->num_listening_sockets); i++) {
 
 		ports[cnt].port =
-#if defined(USE_IPV6)
-		    (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET6)
-		        ? ntohs(ctx->listening_sockets[i].lsa.sin6.sin6_port)
-		        :
-#endif
-		        ntohs(ctx->listening_sockets[i].lsa.sin.sin_port);
+		    ntohs(USA_IN_PORT_UNSAFE(&(ctx->listening_sockets[i].lsa)));
 		ports[cnt].is_ssl = ctx->listening_sockets[i].is_ssl;
 		ports[cnt].is_redirect = ctx->listening_sockets[i].ssl_redir;
 
@@ -4109,11 +4104,8 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 
 #if defined(USE_IPV6)
 			int is_ipv6 = (conn->client.lsa.sa.sa_family == AF_INET6);
-			int port = is_ipv6 ? htons(conn->client.lsa.sin6.sin6_port)
-			                   : htons(conn->client.lsa.sin.sin_port);
-#else
-			int port = htons(conn->client.lsa.sin.sin_port);
 #endif
+			int port = htons(USA_IN_PORT_UNSAFE(&conn->client.lsa));
 			int def_port = ri->is_ssl ? 443 : 80;
 			int auth_domain_check_enabled =
 			    conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK]
@@ -4144,9 +4136,17 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 			            &truncated,
 			            buf,
 			            buflen,
+#if defined(USE_IPV6)
+			            "%s://%s%s%s%s%s",
+			            proto,
+			            (is_ipv6 && (server_domain == server_ip)) ? "[" : "",
+			            server_domain,
+			            (is_ipv6 && (server_domain == server_ip)) ? "]" : "",
+#else
 			            "%s://%s%s%s",
 			            proto,
 			            server_domain,
+#endif
 			            portstr,
 			            ri->local_uri);
 			if (truncated) {
@@ -5031,7 +5031,9 @@ mg_send_http_redirect(struct mg_connection *conn,
 	const char *redirect_text;
 	int ret;
 	size_t content_len = 0;
+#if defined(MG_SEND_REDIRECT_BODY)
 	char reply[MG_BUF_LEN];
+#endif
 
 	/* In case redirect_code=0, use 307. */
 	if (redirect_code == 0) {
@@ -5087,8 +5089,6 @@ mg_send_http_redirect(struct mg_connection *conn,
 	    target_url,
 	    target_url);
 	content_len = strlen(reply);
-#else
-	reply[0] = 0;
 #endif
 
 	/* Do not send any additional header. For all other options,
@@ -5104,6 +5104,7 @@ mg_send_http_redirect(struct mg_connection *conn,
 	                (unsigned int)content_len,
 	                suggest_connection_header(conn));
 
+#if defined(MG_SEND_REDIRECT_BODY)
 	/* Send response body */
 	if (ret > 0) {
 		/* ... unless it is a HEAD request */
@@ -5111,6 +5112,7 @@ mg_send_http_redirect(struct mg_connection *conn,
 			ret = mg_write(conn, reply, content_len);
 		}
 	}
+#endif
 
 	return (ret > 0) ? ret : -1;
 }
@@ -9191,7 +9193,7 @@ is_valid_port(unsigned long port)
 
 
 static int
-mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
+mg_inet_pton(int af, const char *src, void *dst, size_t dstlen, int resolve_src)
 {
 	struct addrinfo hints, *res, *ressave;
 	int func_ret = 0;
@@ -9199,6 +9201,9 @@ mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = af;
+	if (!resolve_src) {
+		hints.ai_flags = AI_NUMERICHOST;
+	}
 
 	gai_ret = getaddrinfo(src, NULL, &hints, &res);
 	if (gai_ret != 0) {
@@ -9215,7 +9220,8 @@ mg_inet_pton(int af, const char *src, void *dst, size_t dstlen)
 	ressave = res;
 
 	while (res) {
-		if (dstlen >= (size_t)res->ai_addrlen) {
+		if ((dstlen >= (size_t)res->ai_addrlen)
+		    && (res->ai_addr->sa_family == af)) {
 			memcpy(dst, res->ai_addr, res->ai_addrlen);
 			func_ret = 1;
 		}
@@ -9299,13 +9305,11 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	(void)use_ssl;
 #endif /* !defined(NO_SSL) */
 
-	if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin))) {
-		sa->sin.sin_family = AF_INET;
+	if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin), 1)) {
 		sa->sin.sin_port = htons((uint16_t)port);
 		ip_ver = 4;
 #if defined(USE_IPV6)
-	} else if (mg_inet_pton(AF_INET6, host, &sa->sin6, sizeof(sa->sin6))) {
-		sa->sin6.sin6_family = AF_INET6;
+	} else if (mg_inet_pton(AF_INET6, host, &sa->sin6, sizeof(sa->sin6), 1)) {
 		sa->sin6.sin6_port = htons((uint16_t)port);
 		ip_ver = 6;
 	} else if (host[0] == '[') {
@@ -9315,8 +9319,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		char *h = (l > 1) ? mg_strdup_ctx(host + 1, ctx) : NULL;
 		if (h) {
 			h[l - 1] = 0;
-			if (mg_inet_pton(AF_INET6, h, &sa->sin6, sizeof(sa->sin6))) {
-				sa->sin6.sin6_family = AF_INET6;
+			if (mg_inet_pton(AF_INET6, h, &sa->sin6, sizeof(sa->sin6), 0)) {
 				sa->sin6.sin6_port = htons((uint16_t)port);
 				ip_ver = 6;
 			}
@@ -11278,14 +11281,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "%s", "SERVER_PROTOCOL=HTTP/1.1");
 	addenv(env, "%s", "REDIRECT_STATUS=200"); /* For PHP */
 
-#if defined(USE_IPV6)
-	if (conn->client.lsa.sa.sa_family == AF_INET6) {
-		addenv(env, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin6.sin6_port));
-	} else
-#endif
-	{
-		addenv(env, "SERVER_PORT=%d", ntohs(conn->client.lsa.sin.sin_port));
-	}
+	addenv(env, "SERVER_PORT=%d", ntohs(USA_IN_PORT_UNSAFE(&conn->client.lsa)));
 
 	sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
 	addenv(env, "REMOTE_ADDR=%s", src_addr);
@@ -13351,37 +13347,113 @@ should_switch_to_protocol(const struct mg_connection *conn)
 
 
 static int
-isbyte(int n)
+parse_match_net(const struct vec *vec, const union usa *sa, int no_strict)
 {
-	return (n >= 0) && (n <= 255);
-}
+	int n;
+	unsigned int a, b, c, d, slash;
 
-
-static int
-parse_net(const char *spec, uint32_t *net, uint32_t *mask)
-{
-	int n, a, b, c, d, slash = 32, len = 0;
-
-	if (((sscanf(spec, "%d.%d.%d.%d/%d%n", &a, &b, &c, &d, &slash, &n) == 5)
-	     || (sscanf(spec, "%d.%d.%d.%d%n", &a, &b, &c, &d, &n) == 4))
-	    && isbyte(a) && isbyte(b) && isbyte(c) && isbyte(d) && (slash >= 0)
-	    && (slash < 33)) {
-		len = n;
-		*net = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)c << 8)
-		       | (uint32_t)d;
-		*mask = slash ? (0xffffffffU << (32 - slash)) : 0;
+	if (sscanf(vec->ptr, "%u.%u.%u.%u/%u%n", &a, &b, &c, &d, &slash, &n) != 5) {
+		slash = 32;
+		if (sscanf(vec->ptr, "%u.%u.%u.%u%n", &a, &b, &c, &d, &n) != 4) {
+			n = 0;
+		}
 	}
 
-	return len;
+	if ((n > 0) && ((size_t)n == vec->len)) {
+		if ((a < 256) && (b < 256) && (c < 256) && (d < 256) && (slash < 33)) {
+			/* IPv4 format */
+			if (sa->sa.sa_family == AF_INET) {
+				uint32_t ip = (uint32_t)ntohl(sa->sin.sin_addr.s_addr);
+				uint32_t net = ((uint32_t)a << 24) | ((uint32_t)b << 16)
+				               | ((uint32_t)c << 8) | (uint32_t)d;
+				uint32_t mask = slash ? (0xFFFFFFFFu << (32 - slash)) : 0;
+				return (ip & mask) == net;
+			}
+			return 0;
+		}
+	}
+#if defined(USE_IPV6)
+	else {
+		char ad[50];
+		const char *p;
+
+		if (sscanf(vec->ptr, "[%49[^]]]/%u%n", ad, &slash, &n) != 2) {
+			slash = 128;
+			if (sscanf(vec->ptr, "[%49[^]]]%n", ad, &n) != 1) {
+				n = 0;
+			}
+		}
+
+		if ((n <= 0) && no_strict) {
+			/* no square brackets? */
+			p = strchr(vec->ptr, '/');
+			if (p && (p < (vec->ptr + vec->len))) {
+				if (((size_t)(p - vec->ptr) < sizeof(ad))
+				    && (sscanf(p, "/%u%n", &slash, &n) == 1)) {
+					n += (int)(p - vec->ptr);
+					mg_strlcpy(ad, vec->ptr, (size_t)(p - vec->ptr) + 1);
+				} else {
+					n = 0;
+				}
+			} else if (vec->len < sizeof(ad)) {
+				n = (int)vec->len;
+				slash = 128;
+				mg_strlcpy(ad, vec->ptr, vec->len + 1);
+			}
+		}
+
+		if ((n > 0) && ((size_t)n == vec->len) && (slash < 129)) {
+			p = ad;
+			c = 0;
+			/* zone indexes are unsupported, at least two colons are needed */
+			while (isxdigit((unsigned char)*p) || (*p == '.') || (*p == ':')) {
+				if (*(p++) == ':') {
+					c++;
+				}
+			}
+			if ((*p == '\0') && (c >= 2)) {
+				struct sockaddr_in6 sin6;
+				unsigned int i;
+
+				/* for strict validation, an actual IPv6 argument is needed */
+				if (sa->sa.sa_family != AF_INET6) {
+					return 0;
+				}
+				if (mg_inet_pton(AF_INET6, ad, &sin6, sizeof(sin6), 0)) {
+					/* IPv6 format */
+					for (i = 0; i < 16; i++) {
+						uint8_t ip = sa->sin6.sin6_addr.s6_addr[i];
+						uint8_t net = sin6.sin6_addr.s6_addr[i];
+						uint8_t mask = 0;
+
+						if (8 * i + 8 < slash) {
+							mask = 0xFFu;
+						} else if (8 * i < slash) {
+							mask = (uint8_t)(0xFFu << (8 * i + 8 - slash));
+						}
+						if ((ip & mask) != net) {
+							return 0;
+						}
+					}
+					return 1;
+				}
+			}
+		}
+	}
+#else
+	(void)no_strict;
+#endif
+
+	/* malformed */
+	return -1;
 }
 
 
 static int
-set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
+set_throttle(const char *spec, const union usa *rsa, const char *uri)
 {
 	int throttle = 0;
 	struct vec vec, val;
-	uint32_t net, mask;
 	char mult;
 	double v;
 
@@ -13398,26 +13470,20 @@ set_throttle(const char *spec, uint32_t remote_ip, const char *uri)
 		         : ((lowercase(&mult) == 'm') ? 1048576 : 1);
 		if (vec.len == 1 && vec.ptr[0] == '*') {
 			throttle = (int)v;
-		} else if (parse_net(vec.ptr, &net, &mask) > 0) {
-			if ((remote_ip & mask) == net) {
+		} else {
+			int matched = parse_match_net(&vec, rsa, 0);
+			if (matched >= 0) {
+				/* a valid IP subnet */
+				if (matched) {
+					throttle = (int)v;
+				}
+			} else if (match_prefix(vec.ptr, vec.len, uri) > 0) {
 				throttle = (int)v;
 			}
-		} else if (match_prefix(vec.ptr, vec.len, uri) > 0) {
-			throttle = (int)v;
 		}
 	}
 
 	return throttle;
-}
-
-
-static uint32_t
-get_remote_ip(const struct mg_connection *conn)
-{
-	if (!conn) {
-		return 0;
-	}
-	return ntohl(*(const uint32_t *)&conn->client.rsa.sin.sin_addr);
 }
 
 
@@ -13538,68 +13604,76 @@ get_first_ssl_listener_index(const struct mg_context *ctx)
 
 
 /* Return host (without port) */
-/* Use mg_free to free the result */
-static const char *
-alloc_get_host(struct mg_connection *conn)
+static void
+get_host_from_request_info(struct vec *host, const struct mg_request_info *ri)
 {
-	char buf[1025];
-	size_t buflen = sizeof(buf);
-	const char *host_header = get_header(conn->request_info.http_headers,
-	                                     conn->request_info.num_headers,
-	                                     "Host");
-	char *host;
+	const char *host_header =
+	    get_header(ri->http_headers, ri->num_headers, "Host");
+
+	host->ptr = NULL;
+	host->len = 0;
 
 	if (host_header != NULL) {
 		char *pos;
 
-		/* Create a local copy of the "Host" header, since it might be
-		 * modified here. */
-		mg_strlcpy(buf, host_header, buflen);
-		buf[buflen - 1] = '\0';
-		host = buf;
-		while (isspace((unsigned char)*host)) {
-			host++;
-		}
-
 		/* If the "Host" is an IPv6 address, like [::1], parse until ]
 		 * is found. */
-		if (*host == '[') {
-			pos = strchr(host, ']');
+		if (*host_header == '[') {
+			pos = strchr(host_header, ']');
 			if (!pos) {
 				/* Malformed hostname starts with '[', but no ']' found */
 				DEBUG_TRACE("%s", "Host name format error '[' without ']'");
-				return NULL;
+				return;
 			}
 			/* terminate after ']' */
-			pos[1] = 0;
+			host->ptr = host_header;
+			host->len = (size_t)(pos + 1 - host_header);
 		} else {
 			/* Otherwise, a ':' separates hostname and port number */
-			pos = strchr(host, ':');
+			pos = strchr(host_header, ':');
 			if (pos != NULL) {
-				*pos = '\0';
+				host->len = (size_t)(pos - host_header);
+			} else {
+				host->len = strlen(host_header);
 			}
+			host->ptr = host_header;
 		}
+	}
+}
 
+
+static int
+switch_domain_context(struct mg_connection *conn)
+{
+	struct vec host;
+
+	get_host_from_request_info(&host, &conn->request_info);
+
+	if (host.ptr) {
 		if (conn->ssl) {
 			/* This is a HTTPS connection, maybe we have a hostname
 			 * from SNI (set in ssl_servername_callback). */
 			const char *sslhost = conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
 			if (sslhost && (conn->dom_ctx != &(conn->phys_ctx->dd))) {
 				/* We are not using the default domain */
-				if (mg_strcasecmp(host, sslhost)) {
+				if ((strlen(sslhost) != host.len)
+				    || mg_strncasecmp(host.ptr, sslhost, host.len)) {
 					/* Mismatch between SNI domain and HTTP domain */
-					DEBUG_TRACE("Host mismatch: SNI: %s, HTTPS: %s",
+					DEBUG_TRACE("Host mismatch: SNI: %s, HTTPS: %.*s",
 					            sslhost,
-					            host);
-					return NULL;
+					            (int)host.len,
+					            host.ptr);
+					return 0;
 				}
 			}
-			DEBUG_TRACE("HTTPS Host: %s", host);
 
 		} else {
 			struct mg_domain_context *dom = &(conn->phys_ctx->dd);
 			while (dom) {
-				if (!mg_strcasecmp(host, dom->config[AUTHENTICATION_DOMAIN])) {
+				if ((strlen(dom->config[AUTHENTICATION_DOMAIN]) == host.len)
+				    && !mg_strncasecmp(host.ptr,
+				                       dom->config[AUTHENTICATION_DOMAIN],
+				                       host.len)) {
 
 					/* Found matching domain */
 					DEBUG_TRACE("HTTP domain %s found",
@@ -13613,58 +13687,53 @@ alloc_get_host(struct mg_connection *conn)
 				dom = dom->next;
 				mg_unlock_context(conn->phys_ctx);
 			}
-
-			DEBUG_TRACE("HTTP Host: %s", host);
 		}
 
 	} else {
-		sockaddr_to_string(buf, buflen, &conn->client.lsa);
-		host = buf;
-
-		DEBUG_TRACE("IP: %s", host);
+		DEBUG_TRACE("HTTP%s Host is not set", conn->ssl ? "S" : "");
+		return 1;
 	}
 
-	return mg_strdup_ctx(host, conn->phys_ctx);
+	DEBUG_TRACE("HTTP%s Host: %.*s",
+	            conn->ssl ? "S" : "",
+	            (int)host.len,
+	            host.ptr);
+	return 1;
 }
 
 
 static void
 redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 {
+	struct vec host;
 	char target_url[MG_BUF_LEN];
 	int truncated = 0;
 
 	conn->must_close = 1;
 
 	/* Send host, port, uri and (if it exists) ?query_string */
-	if (conn->host) {
+	get_host_from_request_info(&host, &conn->request_info);
+	if (host.ptr) {
 
 		/* Use "308 Permanent Redirect" */
 		int redirect_code = 308;
 
 		/* Create target URL */
-		mg_snprintf(
-		    conn,
-		    &truncated,
-		    target_url,
-		    sizeof(target_url),
-		    "https://%s:%d%s%s%s",
+		mg_snprintf(conn,
+		            &truncated,
+		            target_url,
+		            sizeof(target_url),
+		            "https://%.*s:%d%s%s%s",
 
-		    conn->host,
-#if defined(USE_IPV6)
-		    (conn->phys_ctx->listening_sockets[ssl_index].lsa.sa.sa_family
-		     == AF_INET6)
-		        ? (int)ntohs(conn->phys_ctx->listening_sockets[ssl_index]
-		                         .lsa.sin6.sin6_port)
-		        :
-#endif
-		        (int)ntohs(conn->phys_ctx->listening_sockets[ssl_index]
-		                       .lsa.sin.sin_port),
-		    conn->request_info.local_uri,
-		    (conn->request_info.query_string == NULL) ? "" : "?",
-		    (conn->request_info.query_string == NULL)
-		        ? ""
-		        : conn->request_info.query_string);
+		            (int)host.len,
+		            host.ptr,
+		            (int)ntohs(USA_IN_PORT_UNSAFE(
+		                &(conn->phys_ctx->listening_sockets[ssl_index].lsa))),
+		            conn->request_info.local_uri,
+		            (conn->request_info.query_string == NULL) ? "" : "?",
+		            (conn->request_info.query_string == NULL)
+		                ? ""
+		                : conn->request_info.query_string);
 
 		/* Check overflow in location buffer (will not occur if MG_BUF_LEN
 		 * is used as buffer size) */
@@ -13675,6 +13744,8 @@ redirect_to_https_port(struct mg_connection *conn, int ssl_index)
 
 		/* Use redirect helper function */
 		mg_send_http_redirect(conn, target_url, redirect_code);
+	} else {
+		mg_send_http_error(conn, 400, "%s", "Bad Request");
 	}
 }
 
@@ -14175,7 +14246,7 @@ handle_request(struct mg_connection *conn)
 
 	/* 2. if this ip has limited speed, set it for this connection */
 	conn->throttle = set_throttle(conn->dom_ctx->config[THROTTLE],
-	                              get_remote_ip(conn),
+	                              &conn->client.rsa,
 	                              ri->local_uri);
 
 	/* 3. call a "handle everything" callback, if registered */
@@ -14767,7 +14838,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	so->lsa.sin.sin_family = AF_INET;
 	*ip_version = 0;
 
-	/* Initialize port and len as invalid. */
+	/* Initialize len as invalid. */
 	port = 0;
 	len = 0;
 
@@ -14782,8 +14853,9 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 
 #if defined(USE_IPV6)
 	} else if (sscanf(vec->ptr, "[%49[^]]]:%u%n", buf, &port, &len) == 2
+	           && ((size_t)len <= vec->len)
 	           && mg_inet_pton(
-	                  AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6))) {
+	                  AF_INET6, buf, &so->lsa.sin6, sizeof(so->lsa.sin6), 0)) {
 		/* IPv6 address, examples: see above */
 		/* so->lsa.sin6.sin6_family = AF_INET6; already set by mg_inet_pton
 		 */
@@ -14830,62 +14902,57 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		char hostname[256];
 		size_t hostnlen = (size_t)(cb - vec->ptr);
 
-		if (hostnlen >= sizeof(hostname)) {
+		if ((hostnlen >= vec->len) || (hostnlen >= sizeof(hostname))) {
 			/* This would be invalid in any case */
 			*ip_version = 0;
 			return 0;
 		}
 
-		memcpy(hostname, vec->ptr, hostnlen);
-		hostname[hostnlen] = 0;
+		mg_strlcpy(hostname, vec->ptr, hostnlen + 1);
 
 		if (mg_inet_pton(
-		        AF_INET, hostname, &so->lsa.sin, sizeof(so->lsa.sin))) {
+		        AF_INET, hostname, &so->lsa.sin, sizeof(so->lsa.sin), 1)) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
 				*ip_version = 4;
-				so->lsa.sin.sin_family = AF_INET;
 				so->lsa.sin.sin_port = htons((uint16_t)port);
 				len += (int)(hostnlen + 1);
 			} else {
-				port = 0;
 				len = 0;
 			}
 #if defined(USE_IPV6)
 		} else if (mg_inet_pton(AF_INET6,
 		                        hostname,
 		                        &so->lsa.sin6,
-		                        sizeof(so->lsa.sin6))) {
+		                        sizeof(so->lsa.sin6),
+		                        1)) {
 			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
 				*ip_version = 6;
-				so->lsa.sin6.sin6_family = AF_INET6;
-				so->lsa.sin.sin_port = htons((uint16_t)port);
+				so->lsa.sin6.sin6_port = htons((uint16_t)port);
 				len += (int)(hostnlen + 1);
 			} else {
-				port = 0;
 				len = 0;
 			}
 #endif
+		} else {
+			len = 0;
 		}
-
 
 	} else {
 		/* Parsing failure. */
+		len = 0;
 	}
 
 	/* sscanf and the option splitting code ensure the following condition
-	 */
-	if ((len < 0) && ((unsigned)len > (unsigned)vec->len)) {
-		*ip_version = 0;
-		return 0;
-	}
-	ch = vec->ptr[len]; /* Next character after the port number */
-	so->is_ssl = (ch == 's');
-	so->ssl_redir = (ch == 'r');
-
-	/* Make sure the port is valid and vector ends with 's', 'r' or ',' */
-	if (is_valid_port(port)
-	    && ((ch == '\0') || (ch == 's') || (ch == 'r') || (ch == ','))) {
-		return 1;
+	 * Make sure the port is valid and vector ends with the port, 's' or 'r' */
+	if ((len > 0) && is_valid_port(port)
+	    && (((size_t)len == vec->len) || ((size_t)(len + 1) == vec->len))) {
+		/* Next character after the port number */
+		ch = ((size_t)len < vec->len) ? vec->ptr[len] : '\0';
+		so->is_ssl = (ch == 's');
+		so->ssl_redir = (ch == 'r');
+		if ((ch == '\0') || (ch == 's') || (ch == 'r')) {
+			return 1;
+		}
 	}
 
 	/* Reset ip_version to 0 if there is an error */
@@ -15353,10 +15420,9 @@ log_access(const struct mg_connection *conn)
  * Return -1 if ACL is malformed, 0 if address is disallowed, 1 if allowed.
  */
 static int
-check_acl(struct mg_context *phys_ctx, uint32_t remote_ip)
+check_acl(struct mg_context *phys_ctx, const union usa *sa)
 {
-	int allowed, flag;
-	uint32_t net, mask;
+	int allowed, flag, matched;
 	struct vec vec;
 
 	if (phys_ctx) {
@@ -15367,15 +15433,19 @@ check_acl(struct mg_context *phys_ctx, uint32_t remote_ip)
 
 		while ((list = next_option(list, &vec, NULL)) != NULL) {
 			flag = vec.ptr[0];
-			if ((flag != '+' && flag != '-')
-			    || (parse_net(&vec.ptr[1], &net, &mask) == 0)) {
+			matched = -1;
+			if ((vec.len > 0) && ((flag == '+') || (flag == '-'))) {
+				vec.ptr++;
+				vec.len--;
+				matched = parse_match_net(&vec, sa, 1);
+			}
+			if (matched < 0) {
 				mg_cry_ctx_internal(phys_ctx,
-				                    "%s: subnet must be [+|-]x.x.x.x[/x]",
+				                    "%s: subnet must be [+|-]IP-addr[/x]",
 				                    __func__);
 				return -1;
 			}
-
-			if (net == (remote_ip & mask)) {
+			if (matched) {
 				allowed = flag;
 			}
 		}
@@ -16713,7 +16783,14 @@ set_gpass_option(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 static int
 set_acl_option(struct mg_context *phys_ctx)
 {
-	return check_acl(phys_ctx, (uint32_t)0x7f000001UL) != -1;
+	union usa sa;
+	memset(&sa, 0, sizeof(sa));
+#if defined(USE_IPV6)
+	sa.sin6.sin6_family = AF_INET6;
+#else
+	sa.sin.sin_family = AF_INET;
+#endif
+	return check_acl(phys_ctx, &sa) != -1;
 }
 
 
@@ -16951,11 +17028,6 @@ close_connection(struct mg_connection *conn)
 		close_socket_gracefully(conn);
 #endif
 		conn->client.sock = INVALID_SOCKET;
-	}
-
-	if (conn->host) {
-		mg_free((void *)conn->host);
-		conn->host = NULL;
 	}
 
 	mg_unlock_connection(conn);
@@ -17504,21 +17576,11 @@ get_rel_url_at_current_server(const char *uri, const struct mg_connection *conn)
 		return 0;
 	}
 
-/* Check if the request is directed to a different server. */
-/* First check if the port is the same (IPv4 and IPv6). */
-#if defined(USE_IPV6)
-	if (conn->client.lsa.sa.sa_family == AF_INET6) {
-		if (ntohs(conn->client.lsa.sin6.sin6_port) != port) {
-			/* Request is directed to a different port */
-			return 0;
-		}
-	} else
-#endif
-	{
-		if (ntohs(conn->client.lsa.sin.sin_port) != port) {
-			/* Request is directed to a different port */
-			return 0;
-		}
+	/* Check if the request is directed to a different server. */
+	/* First check if the port is the same. */
+	if (ntohs(USA_IN_PORT_UNSAFE(&conn->client.lsa)) != port) {
+		/* Request is directed to a different port */
+		return 0;
 	}
 
 	/* Finally check if the server corresponds to the authentication
@@ -17664,12 +17726,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 
 	/* Message is a valid request */
 
-	/* Is there a "host" ? */
-	if (conn->host != NULL) {
-		mg_free((void *)conn->host);
-	}
-	conn->host = alloc_get_host(conn);
-	if (!conn->host) {
+	if (!switch_domain_context(conn)) {
 		mg_snprintf(conn,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -18673,7 +18730,6 @@ worker_thread_run(struct mg_connection *conn)
 	conn->buf_size = (int)ctx->max_request_size;
 
 	conn->dom_ctx = &(ctx->dd); /* Use default domain and default host */
-	conn->host = NULL;          /* until we have more information. */
 
 	conn->tls_user_ptr = tls.user_ptr; /* store ptr for quick access */
 
@@ -18704,20 +18760,12 @@ worker_thread_run(struct mg_connection *conn)
 #endif
 		conn->conn_birth_time = time(NULL);
 
-/* Fill in IP, port info early so even if SSL setup below fails,
- * error handler would have the corresponding info.
- * Thanks to Johannes Winkelmann for the patch.
- */
-#if defined(USE_IPV6)
-		if (conn->client.rsa.sa.sa_family == AF_INET6) {
-			conn->request_info.remote_port =
-			    ntohs(conn->client.rsa.sin6.sin6_port);
-		} else
-#endif
-		{
-			conn->request_info.remote_port =
-			    ntohs(conn->client.rsa.sin.sin_port);
-		}
+		/* Fill in IP, port info early so even if SSL setup below fails,
+		 * error handler would have the corresponding info.
+		 * Thanks to Johannes Winkelmann for the patch.
+		 */
+		conn->request_info.remote_port =
+		    ntohs(USA_IN_PORT_UNSAFE(&conn->client.rsa));
 
 		sockaddr_to_string(conn->request_info.remote_addr,
 		                   sizeof(conn->request_info.remote_addr),
@@ -18857,7 +18905,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 
 	if ((so.sock = accept(listener->sock, &so.rsa.sa, &len))
 	    == INVALID_SOCKET) {
-	} else if (!check_acl(ctx, ntohl(*(uint32_t *)&so.rsa.sin.sin_addr))) {
+	} else if (check_acl(ctx, &so.rsa) != 1) {
 		sockaddr_to_string(src_addr, sizeof(src_addr), &so.rsa);
 		mg_cry_ctx_internal(ctx,
 		                    "%s: %s is not allowed to connect",
@@ -19199,10 +19247,6 @@ mg_stop(struct mg_context *ctx)
 
 	mg_join_thread(mt);
 	free_context(ctx);
-
-#if defined(_WIN32)
-	(void)WSACleanup();
-#endif /* _WIN32 */
 }
 
 
@@ -19301,11 +19345,6 @@ static
 	    ((init != NULL) ? (init->configuration_options) : (NULL));
 
 	struct mg_workerTLS tls;
-
-#if defined(_WIN32)
-	WSADATA data;
-	WSAStartup(MAKEWORD(2, 2), &data);
-#endif /* _WIN32  */
 
 	if (error != NULL) {
 		error->code = 0;
