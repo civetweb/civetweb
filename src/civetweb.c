@@ -5034,7 +5034,9 @@ mg_send_http_redirect(struct mg_connection *conn,
 	const char *redirect_text;
 	int ret;
 	size_t content_len = 0;
+#if defined(MG_SEND_REDIRECT_BODY)
 	char reply[MG_BUF_LEN];
+#endif
 
 	/* In case redirect_code=0, use 307. */
 	if (redirect_code == 0) {
@@ -5090,8 +5092,6 @@ mg_send_http_redirect(struct mg_connection *conn,
 	    target_url,
 	    target_url);
 	content_len = strlen(reply);
-#else
-	reply[0] = 0;
 #endif
 
 	/* Do not send any additional header. For all other options,
@@ -5107,6 +5107,7 @@ mg_send_http_redirect(struct mg_connection *conn,
 	                (unsigned int)content_len,
 	                suggest_connection_header(conn));
 
+#if defined(MG_SEND_REDIRECT_BODY)
 	/* Send response body */
 	if (ret > 0) {
 		/* ... unless it is a HEAD request */
@@ -5114,6 +5115,7 @@ mg_send_http_redirect(struct mg_connection *conn,
 			ret = mg_write(conn, reply, content_len);
 		}
 	}
+#endif
 
 	return (ret > 0) ? ret : -1;
 }
