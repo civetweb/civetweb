@@ -18066,7 +18066,6 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 	static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
 	const char *handshake_req;
 
-	int port = client_options->port;
 	const char *host = client_options->host;
 	int i;
 
@@ -18096,7 +18095,7 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 
 	/* Establish the client connection and request upgrade */
 	conn =
-	    mg_connect_client(host, port, use_ssl, error_buffer, error_buffer_size);
+	    mg_connect_client_impl(client_options, use_ssl, error_buffer, error_buffer_size);
 
 	if (conn == NULL) {
 		/* error_buffer already filled */
