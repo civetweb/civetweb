@@ -6402,7 +6402,7 @@ mg_poll(struct mg_pollfd *pfd,
 			milliseconds -= ms_now;
 		}
 
-	} while (milliseconds != 0);
+	} while (milliseconds > 0);
 
 	/* timeout: return 0 */
 	return 0;
@@ -18615,7 +18615,7 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 	/* If the queue is full, wait */
 	while (STOP_FLAG_IS_ZERO(&ctx->stop_flag)
 	       && (queue_filled >= ctx->sq_size)) {
-		ctx->sq_blocked = 1; /* Status information: All threads bussy */
+		ctx->sq_blocked = 1; /* Status information: All threads busy */
 #if defined(USE_SERVER_STATS)
 		if (queue_filled > ctx->sq_max_fill) {
 			ctx->sq_max_fill = queue_filled;
