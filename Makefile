@@ -45,7 +45,7 @@ USE_STACK_SIZE ?= 102400
 BUILD_DIRS = $(BUILD_DIR) $(BUILD_DIR)/src $(BUILD_DIR)/resources
 
 LIB_SOURCES = src/civetweb.c
-LIB_INLINE  = src/mod_lua.inl src/md5.inl
+LIB_INLINE  = src/*.inl
 APP_SOURCES = src/main.c
 WINDOWS_RESOURCES = resources/res.rc
 UNIT_TEST_SOURCES = test/unit_test.c
@@ -71,6 +71,18 @@ LIBS = -lpthread -lm
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG
+else ifdef TEST_ASAN
+  CFLAGS += -g -fsanitize=address
+  CC = clang
+  CXX = clang++
+else ifdef TEST_FUZZ
+  CFLAGS += -g -fsanitize=address,fuzzer
+  CC = clang
+  CXX = clang++
+  BUILD_DIRS += $(BUILD_DIR)/fuzz
+  APP_SOURCES = fuzz/fuzzmain.c
+  OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o) 
+  CFLAGS += -DTEST_FUZZ$(TEST_FUZZ)
 else
   CFLAGS += -O2 -DNDEBUG
 endif
@@ -239,7 +251,7 @@ help:
 	@echo "make install-lib         install the static library"
 	@echo "make slib                build a shared library"
 	@echo "make install-slib        install the shared library"
-	@echo "make unit_test           build unit tests executable"
+	@echo "make unit_test           (obsolete - unit tests use cmake now)"
 	@echo ""
 	@echo " Make Options"
 	@echo "   WITH_LUA=1            build with Lua support; include Lua as static library"
