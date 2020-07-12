@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #if defined(_WIN32)
 #error "Currently not supported"
@@ -179,17 +180,33 @@ LLVMFuzzerTestOneInput_REQUEST(const uint8_t *data, size_t size)
 	}
 	call_count++;	
 	
+	int r;
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 6);
+	if (sock == -1) {
+		r = errno;
+		fprintf(stderr, "Error: Cannot create socket [%s]\n", strerror(r));
+		return 1;		
+	}
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sin.sin_port = htons(8080);
-	sin.sin_addr.s_addr = htonl(0x7F000001);
-	connect(sock, (struct sockaddr *)&sin, sizeof(sin));
+	r = connect(sock, (struct sockaddr *)&sin, sizeof(sin));
+	if (r != 0) {
+		r = errno;
+		fprintf(stderr, "Error: Cannot connect [%s]\n", strerror(r));
+		closesocket(sock);
+		return 1;
+	}
 	
 	char trash[1024];
-	send(sock, data, size, 0);
-	int r, data_read = 0; 
+	r = send(sock, data, size, 0);
+	if (r != size) {
+		fprintf(stderr, "Warning: %i bytes sent (TODO: Repeat)\n", r);
+	}
+
+	int data_read = 0; 
 	while ((r = recv(sock, trash, sizeof(trash), 0)) > 0) {
 		data_read += r;
 	};
@@ -204,8 +221,13 @@ LLVMFuzzerTestOneInput_REQUEST(const uint8_t *data, size_t size)
 	}
 }
 
-
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
+#if defined(TEST_FUZZ1)
+	return LLVMFuzzerTestOneInput_URI(data, size);
+#elif defined(TEST_FUZZ2)
 	return LLVMFuzzerTestOneInput_REQUEST(data, size);
+#else
+	#error "Unknown fuzz target"
+#endif
 }
