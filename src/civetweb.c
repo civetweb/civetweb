@@ -6582,6 +6582,9 @@ push_all(struct mg_context *ctx,
 	if (ctx->dd.config[REQUEST_TIMEOUT]) {
 		timeout = atoi(ctx->dd.config[REQUEST_TIMEOUT]) / 1000.0;
 	}
+	if (timeout <= 0.0) {
+		timeout = atof(config_options[REQUEST_TIMEOUT].default_value) / 1000.0;
+	}
 
 	while ((len > 0) && STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 		n = push_inner(ctx, fp, sock, ssl, buf + nwritten, len, timeout);
@@ -6796,10 +6799,11 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 	if (conn->dom_ctx->config[REQUEST_TIMEOUT]) {
 		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	}
-	if (timeout >= 0.0) {
-		start_time = mg_get_current_time_ns();
-		timeout_ns = (uint64_t)(timeout * 1.0E9);
+	if (timeout <= 0.0) {
+		timeout = atof(config_options[REQUEST_TIMEOUT].default_value) / 1000.0;
 	}
+	start_time = mg_get_current_time_ns();
+	timeout_ns = (uint64_t)(timeout * 1.0E9);
 
 	while ((len > 0) && STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
 		n = pull_inner(fp, conn, buf + nread, len, timeout);
@@ -11013,7 +11017,8 @@ read_message(FILE *fp,
 		/* value of request_timeout is in seconds, config in milliseconds */
 		request_timeout = atof(conn->dom_ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	} else {
-		request_timeout = -1.0;
+		request_timeout =
+		    atof(config_options[REQUEST_TIMEOUT].default_value) / 1000.0;
 	}
 	if (conn->handled_requests > 0) {
 		if (conn->dom_ctx->config[KEEP_ALIVE_TIMEOUT]) {
@@ -11483,11 +11488,15 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	struct process_control_data *proc = NULL;
 
 #if defined(USE_TIMERS)
-	double cgi_timeout = -1.0;
+	double cgi_timeout;
 	if (conn->dom_ctx->config[CGI_TIMEOUT]) {
 		/* Get timeout in seconds */
 		cgi_timeout = atof(conn->dom_ctx->config[CGI_TIMEOUT]) * 0.001;
+	} else {
+		cgi_timeout =
+		    atof(config_options[REQUEST_TIMEOUT].default_value) * 0.001;
 	}
+
 #endif
 
 	buf = NULL;
@@ -12670,6 +12679,9 @@ read_websocket(struct mg_connection *conn,
 	}
 	if ((timeout <= 0.0) && (conn->dom_ctx->config[REQUEST_TIMEOUT])) {
 		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+	}
+	if (timeout <= 0.0) {
+		timeout = atof(config_options[REQUEST_TIMEOUT].default_value) / 1000.0;
 	}
 
 	/* Enter data processing loop */
@@ -18094,8 +18106,10 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 #endif
 
 	/* Establish the client connection and request upgrade */
-	conn =
-	    mg_connect_client_impl(client_options, use_ssl, error_buffer, error_buffer_size);
+	conn = mg_connect_client_impl(client_options,
+	                              use_ssl,
+	                              error_buffer,
+	                              error_buffer_size);
 
 	if (conn == NULL) {
 		/* error_buffer already filled */
