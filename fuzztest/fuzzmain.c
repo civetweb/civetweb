@@ -1,20 +1,20 @@
 #include "civetweb.h"
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
 #include <errno.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if defined(_WIN32)
 #error "Currently not supported"
 #else
-	
+
 #include <unistd.h>
 #define test_sleep(x) (sleep(x))
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 typedef int SOCKET;
 #define closesocket(a) (close(a))
 
@@ -24,17 +24,14 @@ typedef int SOCKET;
 static uint64_t call_count = 0;
 
 static struct mg_context *ctx;
-static const char *OPTIONS[] = {
-	"listening_ports", "8080,8443s",
-#ifdef _WIN32
-	"document_root",   "fuzz\\docroot",
-	"ssl_certificate", "resources\\cert\\server.pem",
-#else
-	"document_root",   "fuzz/docroot",
-	"ssl_certificate", "resources/cert/server.pem",
-#endif
-	NULL, NULL
-};
+static const char *OPTIONS[] = {"listening_ports",
+                                "8080,8443s",
+                                "document_root",
+                                "fuzztest/docroot",
+                                "ssl_certificate",
+                                "resources/cert/server.pem",
+                                NULL,
+                                NULL};
 
 
 static void
@@ -44,7 +41,7 @@ init_civetweb(void)
 	memset(&callbacks, 0, sizeof(callbacks));
 
 	ctx = mg_start(&callbacks, 0, OPTIONS);
-	
+
 	if (!ctx) {
 		fprintf(stderr, "\nCivetWeb test server failed to start\n");
 		abort();
@@ -76,22 +73,23 @@ test_http_request(const char *server,
 	    server, port, use_ssl, client_err_buf, sizeof(client_err_buf));
 
 	if ((client == NULL) || (0 != strcmp(client_err_buf, ""))) {
-		fprintf(stderr, "%s connection to server [%s] port [%u] failed: [%s]\n",
-		             use_ssl ? "HTTPS" : "HTTP",
-		             server,
-		             port,
-		             client_err_buf);
+		fprintf(stderr,
+		        "%s connection to server [%s] port [%u] failed: [%s]\n",
+		        use_ssl ? "HTTPS" : "HTTP",
+		        server,
+		        port,
+		        client_err_buf);
 		if (client) {
 			mg_close_connection(client);
 		}
-		
+
 		/* In heavy fuzz testing, sometimes we run out of available sockets.
 		 * Wait for some seconds, and retry. */
 		test_sleep(5);
 
 		/* retry once */
 		client = mg_connect_client(
-			server, port, use_ssl, client_err_buf, sizeof(client_err_buf));
+		    server, port, use_ssl, client_err_buf, sizeof(client_err_buf));
 		if (!client) {
 			fprintf(stderr, "Retry: error\n");
 			return 1;
@@ -105,7 +103,7 @@ test_http_request(const char *server,
 
 	if ((r < 0) || (0 != strcmp(client_err_buf, ""))) {
 		mg_close_connection(client);
-		return 1;		
+		return 1;
 	}
 
 	client_ri = mg_get_response_info(client);
@@ -124,7 +122,7 @@ test_http_request(const char *server,
 		if (r > 0) {
 			data_read += r;
 		}
-		
+
 		/* buffer filled? */
 		if (sizeof(client_data_buf) == (size_t)data_read) {
 			/* ignore the rest */
@@ -165,7 +163,7 @@ LLVMFuzzerTestOneInput_URI(const uint8_t *data, size_t size)
 	} else {
 		return 1;
 	}
-	
+
 	printf("URI: %s\n", URI);
 
 	return test_http_request("127.0.0.1", 8080, 0, URI);
@@ -178,14 +176,14 @@ LLVMFuzzerTestOneInput_REQUEST(const uint8_t *data, size_t size)
 	if (call_count == 0) {
 		init_civetweb();
 	}
-	call_count++;	
-	
+	call_count++;
+
 	int r;
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 6);
 	if (sock == -1) {
 		r = errno;
 		fprintf(stderr, "Error: Cannot create socket [%s]\n", strerror(r));
-		return 1;		
+		return 1;
 	}
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
@@ -199,35 +197,43 @@ LLVMFuzzerTestOneInput_REQUEST(const uint8_t *data, size_t size)
 		closesocket(sock);
 		return 1;
 	}
-	
+
 	char trash[1024];
 	r = send(sock, data, size, 0);
 	if (r != size) {
 		fprintf(stderr, "Warning: %i bytes sent (TODO: Repeat)\n", r);
 	}
 
-	int data_read = 0; 
+	int data_read = 0;
 	while ((r = recv(sock, trash, sizeof(trash), 0)) > 0) {
 		data_read += r;
 	};
-	
+
 	shutdown(sock, SHUT_RDWR);
 	closesocket(sock);
-	
+
 	static int max_data_read = 0;
-	if (data_read>max_data_read) {
+	if (data_read > max_data_read) {
 		max_data_read = data_read;
 		printf("GOT data: %i\n", data_read);
 	}
 }
 
-int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
+int
+LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
 #if defined(TEST_FUZZ1)
+	/* fuzz target 1: different URI for HTTP/1 server */
 	return LLVMFuzzerTestOneInput_URI(data, size);
 #elif defined(TEST_FUZZ2)
+	/* fuzz target 2: different requests for HTTP/1 server */
 	return LLVMFuzzerTestOneInput_REQUEST(data, size);
 #else
-	#error "Unknown fuzz target"
+/* planned targets */
+/* fuzz target 3: different responses for HTTP/1 client */
+/* fuzz target 4: different requests for HTTP/2 server */
+/* fuzz target 5: calling an internal server test function,
+ *                bypassing network sockets */
+#error "Unknown fuzz target"
 #endif
 }

@@ -79,8 +79,8 @@ else ifdef TEST_FUZZ
   CFLAGS += -g -fsanitize=address,fuzzer
   CC = clang
   CXX = clang++
-  BUILD_DIRS += $(BUILD_DIR)/fuzz
-  APP_SOURCES = fuzz/fuzzmain.c
+  BUILD_DIRS += $(BUILD_DIR)/fuzztest
+  APP_SOURCES = fuzztest/fuzzmain.c
   OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o) 
   CFLAGS += -DTEST_FUZZ$(TEST_FUZZ)
 else
