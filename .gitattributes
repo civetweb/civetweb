@@ -1,3 +1,6 @@
+# Binary files
+*.bin    binary
+
 # Auto detect text files and perform LF normalization
 * -text
 
