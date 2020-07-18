@@ -3361,6 +3361,46 @@ static int mg_stat(const struct mg_connection *conn,
                    struct mg_file_stat *filep);
 
 
+/* Reject files with special characters */
+static int
+mg_path_suspicious(const struct mg_connection *conn, const char *path)
+{
+	const uint8_t *c = (const uint8_t *)path;
+	(void)conn; /* not used */
+
+	if ((c == NULL) || (c[0] == 0)) {
+		/* Null pointer or empty path --> suspicious */
+		return 1;
+	}
+
+	while (*c) {
+		if (*c <= 32) {
+			/* Control character or space */
+			return 0;
+		}
+		if ((*c == '>') || (*c == '<') || (*c == '|')) {
+			/* stdin/stdout redirection character */
+			return 0;
+		}
+#if defined(_WIN32)
+		if (*c == '\\') {
+			/* Windows backslash */
+			return 0;
+		}
+#else
+		if (*c == '&') {
+			/* Linux ampersand */
+			return 0;
+		}
+#endif
+		c++;
+	}
+
+	/* Nothing suspicious found */
+	return 0;
+}
+
+
 /* mg_fopen will open a file either in memory or on the disk.
  * The input parameter path is a string in UTF-8 encoding.
  * The input parameter mode is MG_FOPEN_MODE_*
@@ -3379,6 +3419,11 @@ mg_fopen(const struct mg_connection *conn,
 		return 0;
 	}
 	filep->access.fp = NULL;
+
+	if (mg_path_suspicious(conn, path)) {
+		return 0;
+	}
+
 #if defined(MG_USE_OPEN_FILE)
 	filep->access.membuf = NULL;
 #endif
@@ -4064,8 +4109,13 @@ get_proto_name(const struct mg_connection *conn)
 }
 
 
-int
-mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
+static int
+mg_construct_local_link(const struct mg_connection *conn,
+                        char *buf,
+                        size_t buflen,
+                        const char *define_proto,
+                        int define_port,
+                        const char *define_uri)
 {
 	if ((buflen < 1) || (buf == 0) || (conn == 0)) {
 		return -1;
@@ -4074,50 +4124,49 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 		int truncated = 0;
 		const struct mg_request_info *ri = &conn->request_info;
 
-		const char *proto = get_proto_name(conn);
+		const char *proto =
+		    (define_proto != NULL) ? define_proto : get_proto_name(conn);
+		const char *uri =
+		    (define_uri != NULL)
+		        ? define_uri
+		        : ((ri->request_uri != NULL) ? ri->request_uri : ri->local_uri);
+		int port = (define_port > 0)
+		               ? define_port
+		               : htons(USA_IN_PORT_UNSAFE(&conn->client.lsa));
+		int default_port = 80;
 
-		if (ri->local_uri == NULL) {
+		if (uri == NULL) {
 			return -1;
 		}
 
-		if ((ri->request_uri != NULL)
-		    && (0 != strcmp(ri->local_uri, ri->request_uri))) {
-			/* The request uri is different from the local uri.
-			 * This is usually if an absolute URI, including server
-			 * name has been provided. */
-			mg_snprintf(conn,
-			            &truncated,
-			            buf,
-			            buflen,
-			            "%s://%s",
-			            proto,
-			            ri->request_uri);
-			if (truncated) {
-				return -1;
+		if (define_proto) {
+			/* If we got a protocol name, use the default port accordingly. */
+			if ((0 == strcmp(define_proto, "https"))
+			    || (0 == strcmp(define_proto, "wss"))) {
+				default_port = 443;
 			}
-			return 0;
+		} else if (ri->is_ssl) {
+			/* If we did not get a protocol name, use TLS as default if it is
+			 * already used. */
+			default_port = 443;
+		}
 
-		} else {
-
-			/* The common case is a relative URI, so we have to
-			 * construct an absolute URI from server name and port */
-
+		{
 #if defined(USE_IPV6)
 			int is_ipv6 = (conn->client.lsa.sa.sa_family == AF_INET6);
 #endif
-			int port = htons(USA_IN_PORT_UNSAFE(&conn->client.lsa));
-			int def_port = ri->is_ssl ? 443 : 80;
 			int auth_domain_check_enabled =
 			    conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK]
 			    && (!mg_strcasecmp(
 			           conn->dom_ctx->config[ENABLE_AUTH_DOMAIN_CHECK], "yes"));
+
 			const char *server_domain =
 			    conn->dom_ctx->config[AUTHENTICATION_DOMAIN];
 
 			char portstr[16];
 			char server_ip[48];
 
-			if (port != def_port) {
+			if (port != default_port) {
 				sprintf(portstr, ":%u", (unsigned)port);
 			} else {
 				portstr[0] = 0;
@@ -4149,6 +4198,7 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 #endif
 			            portstr,
 			            ri->local_uri);
+
 			if (truncated) {
 				return -1;
 			}
@@ -4156,6 +4206,14 @@ mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 		}
 	}
 }
+
+
+int
+mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
+{
+	return mg_construct_local_link(conn, buf, buflen, NULL, -1, NULL);
+}
+
 
 /* Skip the characters until one of the delimiters characters found.
  * 0-terminate resulting word. Skip the delimiter and following whitespaces.
@@ -5442,6 +5500,7 @@ path_to_unicode(const struct mg_connection *conn,
 
 
 #if !defined(NO_FILESYSTEMS)
+/* Get file information, return 1 if file exists, 0 if not */
 static int
 mg_stat(const struct mg_connection *conn,
         const char *path,
@@ -5456,6 +5515,10 @@ mg_stat(const struct mg_connection *conn,
 		return 0;
 	}
 	memset(filep, 0, sizeof(*filep));
+
+	if (mg_path_suspicious(conn, path)) {
+		return 0;
+	}
 
 	if (conn && is_file_in_memory(conn, path)) {
 		/* filep->is_directory = 0; filep->gzipped = 0; .. already done by
@@ -13714,51 +13777,56 @@ switch_domain_context(struct mg_connection *conn)
 }
 
 
+static int mg_construct_local_link(const struct mg_connection *conn,
+                                   char *buf,
+                                   size_t buflen,
+                                   const char *define_proto,
+                                   int define_port,
+                                   const char *define_uri);
+
+
 static void
-redirect_to_https_port(struct mg_connection *conn, int ssl_index)
+redirect_to_https_port(struct mg_connection *conn, int port)
 {
-	struct vec host;
 	char target_url[MG_BUF_LEN];
 	int truncated = 0;
+	const char *expect_proto =
+	    (conn->protocol_type == PROTOCOL_TYPE_WEBSOCKET) ? "wss" : "https";
 
+	/* Use "308 Permanent Redirect" */
+	int redirect_code = 308;
+
+	/* In any case, close the current connection */
 	conn->must_close = 1;
 
 	/* Send host, port, uri and (if it exists) ?query_string */
-	get_host_from_request_info(&host, &conn->request_info);
-	if (host.ptr) {
-
-		/* Use "308 Permanent Redirect" */
-		int redirect_code = 308;
-
-		/* Create target URL */
-		mg_snprintf(conn,
-		            &truncated,
-		            target_url,
-		            sizeof(target_url),
-		            "https://%.*s:%d%s%s%s",
-
-		            (int)host.len,
-		            host.ptr,
-		            (int)ntohs(USA_IN_PORT_UNSAFE(
-		                &(conn->phys_ctx->listening_sockets[ssl_index].lsa))),
-		            conn->request_info.local_uri,
-		            (conn->request_info.query_string == NULL) ? "" : "?",
-		            (conn->request_info.query_string == NULL)
-		                ? ""
-		                : conn->request_info.query_string);
-
-		/* Check overflow in location buffer (will not occur if MG_BUF_LEN
-		 * is used as buffer size) */
-		if (truncated) {
-			mg_send_http_error(conn, 500, "%s", "Redirect URL too long");
-			return;
+	if (mg_construct_local_link(
+	        conn, target_url, sizeof(target_url), expect_proto, port, NULL)
+	    < 0) {
+		truncated = 1;
+	} else if (conn->request_info.query_string != NULL) {
+		size_t slen1 = strlen(target_url);
+		size_t slen2 = strlen(conn->request_info.query_string);
+		if ((slen1 + slen2 + 2) < sizeof(target_url)) {
+			target_url[slen1] = '?';
+			memcpy(target_url + slen1 + 1,
+			       conn->request_info.query_string,
+			       slen2);
+			target_url[slen1 + slen2 + 1] = 0;
+		} else {
+			truncated = 1;
 		}
-
-		/* Use redirect helper function */
-		mg_send_http_redirect(conn, target_url, redirect_code);
-	} else {
-		mg_send_http_error(conn, 400, "%s", "Bad Request");
 	}
+
+	/* Check overflow in location buffer (will not occur if MG_BUF_LEN
+	 * is used as buffer size) */
+	if (truncated) {
+		mg_send_http_error(conn, 500, "%s", "Redirect URL too long");
+		return;
+	}
+
+	/* Use redirect helper function */
+	mg_send_http_redirect(conn, target_url, redirect_code);
 }
 
 
@@ -14226,7 +14294,9 @@ handle_request(struct mg_connection *conn)
 	if (!conn->client.is_ssl && conn->client.ssl_redir) {
 		ssl_index = get_first_ssl_listener_index(conn->phys_ctx);
 		if (ssl_index >= 0) {
-			redirect_to_https_port(conn, ssl_index);
+			int port = (int)ntohs(USA_IN_PORT_UNSAFE(
+			    &(conn->phys_ctx->listening_sockets[ssl_index].lsa)));
+			redirect_to_https_port(conn, port);
 		} else {
 			/* A http to https forward port has been specified,
 			 * but no https port to forward to. */
@@ -14246,6 +14316,10 @@ handle_request(struct mg_connection *conn)
 	if (should_decode_url(conn)) {
 		mg_url_decode(
 		    ri->local_uri, uri_len, (char *)ri->local_uri, uri_len + 1, 0);
+
+		if (conn->request_info.query_string) {
+			url_decode_in_place((char *)conn->request_info.query_string);
+		}
 	}
 
 	/* 1.4. clean URIs, so a path like allowed_dir/../forbidden_file is
@@ -14310,8 +14384,7 @@ handle_request(struct mg_connection *conn)
 		    && (cors_orig_cfg != NULL) && (*cors_orig_cfg != 0)
 		    && (cors_origin != NULL) && (cors_acrm != NULL)) {
 			/* This is a valid CORS preflight, and the server is configured
-			 * to
-			 * handle it automatically. */
+			 * to handle it automatically. */
 			const char *cors_acrh =
 			    get_header(ri->http_headers,
 			               ri->num_headers,
@@ -14365,6 +14438,7 @@ handle_request(struct mg_connection *conn)
 #else
 	handler_type = REQUEST_HANDLER;
 #endif /* defined(USE_WEBSOCKET) */
+
 	/* 5.2. check if the request will be handled by a callback */
 	if (get_request_handler(conn,
 	                        handler_type,
@@ -14378,9 +14452,8 @@ handle_request(struct mg_connection *conn)
 	                        &callback_data,
 	                        &handler_info)) {
 		/* 5.2.1. A callback will handle this request. All requests
-		 * handled
-		 * by a callback have to be considered as requests to a script
-		 * resource. */
+		 * handled by a callback have to be considered as requests
+		 * to a script resource. */
 		is_callback_resource = 1;
 		is_script_resource = 1;
 		is_put_or_delete_request = is_put_or_delete_method(conn);
@@ -17476,26 +17549,7 @@ get_uri_type(const char *uri)
 			/* control characters and spaces are invalid */
 			return 0;
 		}
-		if (uri[i] > 126) {
-			/* non-ascii characters must be % encoded */
-			return 0;
-		} else {
-			switch (uri[i]) {
-			case '"':  /* 34 */
-			case '<':  /* 60 */
-			case '>':  /* 62 */
-			case '\\': /* 92 */
-			case '^':  /* 94 */
-			case '`':  /* 96 */
-			case '{':  /* 123 */
-			case '|':  /* 124 */
-			case '}':  /* 125 */
-				return 0;
-			default:
-				/* character is ok */
-				break;
-			}
-		}
+		/* Allow everything else here (See #894) */
 	}
 
 	/* A relative uri starts with a / character */

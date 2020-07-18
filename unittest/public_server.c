@@ -1474,10 +1474,13 @@ START_TEST(test_request_handlers)
 	client_ri = mg_get_response_info(client_conn);
 
 	ck_assert(client_ri != NULL);
-	ck_assert((client_ri->status_code == 301) || (client_ri->status_code == 302)
-	          || (client_ri->status_code == 303)
-	          || (client_ri->status_code == 307)
-	          || (client_ri->status_code == 308)); /* is a redirect code */
+	if ((client_ri->status_code != 301) && (client_ri->status_code != 302)
+	    && (client_ri->status_code != 303) && (client_ri->status_code != 307)
+	    && (client_ri->status_code != 308)) {
+		/* expect a 30x redirect code */
+		ck_abort_msg("Expected a redirect code, got %i",
+		             client_ri->status_code);
+	}
 	/*
 	// A redirect may have a body, or not
 	i = mg_read(client_conn, buf, sizeof(buf));
