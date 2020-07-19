@@ -380,6 +380,8 @@ struct mg_callbacks {
 	void (*exit_context)(const struct mg_context *ctx);
 
 	/* Called when a new worker thread is initialized.
+	 * It is always called from the newly created thread and can be used to
+	 * initialize thread local storage data.
 	 * Parameters:
 	 *   ctx: context handle
 	 *   thread_type:
