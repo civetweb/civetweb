@@ -29,7 +29,7 @@
 |**`init_ssl_domain`**|**`int (*init_ssl_domain)( const char *server_domain, void *ssl_ctx, void *user_data );`**|
 | |The callback function `init_ssl_domain()` is called when CivetWeb initializes the SSL library. The parameter `server_domain` is a pointer to the `authentication_domain` config parameter of the domain being configured. The `ssl_ctx` parameter is a pointer to the SSL context being configure. The parameter `user_data` contains a pointer to the data which was provided to `mg_start()` when the server was started. The callback function can return 0 to signal that CivetWeb should setup the SSL certificate. With a return value of 1 the callback function signals CivetWeb that the certificate has already been setup and no further processing is necessary. The value -1 should be returned when the SSL initialization fails.|
 |**`init_thread`**|**`void * (*init_thread)( const struct mg_context *ctx, int thread_type );`**|
-| |The callback function `init_thread()` is called when a new thread is created by CivetWeb. The `thread_type` parameter indicates which type of thread has been created. following thread types are recognized:|
+| |The callback function `init_thread()` is called when a new thread is created by CivetWeb. It is always called from the newly created thread and can be used to initialize thread local storage data. The `thread_type` parameter indicates which type of thread has been created. following thread types are recognized:|
 | |**0** - The master thread is created |
 | |**1** - A worker thread which handles client connections has been created|
 | |**2** - An internal helper thread (timer thread) has been created|
