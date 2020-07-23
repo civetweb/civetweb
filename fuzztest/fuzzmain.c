@@ -294,8 +294,6 @@ LLVMFuzzerTestOneInput_URI(const uint8_t *data, size_t size)
 		return 1;
 	}
 
-	printf("URI: %s\n", URI);
-
 	return test_http_request("127.0.0.1", 8080, 0, URI);
 }
 

@@ -16,7 +16,7 @@ Second fuzz target: vary HTTP1 request for HTTP1 server
 Third fuzz target: vary HTTP1 response for HTTP1 client API
 - make WITH_ALL=1 TEST_FUZZ=3
 - mv civetweb civetweb_fuzz3
-- sudo ./civetweb_fuzz2 -max_len=2048 -dict=fuzztest/http1.dict fuzztest/http1c/
+- sudo ./civetweb_fuzz3 -max_len=2048 -dict=fuzztest/http1.dict fuzztest/http1c/
 
 
 
