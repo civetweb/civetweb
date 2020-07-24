@@ -1374,11 +1374,7 @@ mg_malloc_ex(size_t size,
 	        (unsigned long)mstat->blockCount,
 	        file,
 	        line);
-#if defined(_WIN32)
-	OutputDebugStringA(mallocStr);
-#else
 	DEBUG_TRACE("%s", mallocStr);
-#endif
 #endif
 
 	return memory;
@@ -1404,9 +1400,6 @@ mg_calloc_ex(size_t count,
 static void
 mg_free_ex(void *memory, const char *file, unsigned line)
 {
-	void *data = (void *)(((char *)memory) - 2 * sizeof(uintptr_t));
-
-
 #if defined(MEMORY_DEBUGGING)
 	char mallocStr[256];
 #else
@@ -1415,11 +1408,13 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 #endif
 
 	if (memory) {
+		void *data = (void *)(((char *)memory) - 2 * sizeof(uintptr_t));
 		uintptr_t size = ((uintptr_t *)data)[0];
 		struct mg_memory_stat *mstat =
 		    (struct mg_memory_stat *)(((uintptr_t *)data)[1]);
 		mg_atomic_add(&mstat->totalMemUsed, -(int64_t)size);
 		mg_atomic_dec(&mstat->blockCount);
+
 #if defined(MEMORY_DEBUGGING)
 		sprintf(mallocStr,
 		        "MEM: %p %5lu free    %7lu %4lu --- %s:%u\n",
@@ -1429,11 +1424,7 @@ mg_free_ex(void *memory, const char *file, unsigned line)
 		        (unsigned long)mstat->blockCount,
 		        file,
 		        line);
-#if defined(_WIN32)
-		OutputDebugStringA(mallocStr);
-#else
 		DEBUG_TRACE("%s", mallocStr);
-#endif
 #endif
 		free(data);
 	}
@@ -1478,11 +1469,7 @@ mg_realloc_ex(void *memory,
 				        (unsigned long)mstat->blockCount,
 				        file,
 				        line);
-#if defined(_WIN32)
-				OutputDebugStringA(mallocStr);
-#else
 				DEBUG_TRACE("%s", mallocStr);
-#endif
 #endif
 				mg_atomic_add(&mstat->totalMemUsed, (int64_t)newsize);
 #if defined(MEMORY_DEBUGGING)
@@ -1494,21 +1481,13 @@ mg_realloc_ex(void *memory,
 				        (unsigned long)mstat->blockCount,
 				        file,
 				        line);
-#if defined(_WIN32)
-				OutputDebugStringA(mallocStr);
-#else
 				DEBUG_TRACE("%s", mallocStr);
-#endif
 #endif
 				*(uintptr_t *)data = newsize;
 				data = (void *)(((char *)data) + 2 * sizeof(uintptr_t));
 			} else {
 #if defined(MEMORY_DEBUGGING)
-#if defined(_WIN32)
-				OutputDebugStringA("MEM: realloc failed\n");
-#else
 				DEBUG_TRACE("%s", "MEM: realloc failed\n");
-#endif
 #endif
 				return _realloc;
 			}
@@ -1525,6 +1504,7 @@ mg_realloc_ex(void *memory,
 	return data;
 }
 
+
 #define mg_malloc(a) mg_malloc_ex(a, NULL, __FILE__, __LINE__)
 #define mg_calloc(a, b) mg_calloc_ex(a, b, NULL, __FILE__, __LINE__)
 #define mg_realloc(a, b) mg_realloc_ex(a, b, NULL, __FILE__, __LINE__)
@@ -1534,7 +1514,9 @@ mg_realloc_ex(void *memory,
 #define mg_calloc_ctx(a, b, c) mg_calloc_ex(a, b, c, __FILE__, __LINE__)
 #define mg_realloc_ctx(a, b, c) mg_realloc_ex(a, b, c, __FILE__, __LINE__)
 
+
 #else /* USE_SERVER_STATS */
+
 
 static __inline void *
 mg_malloc(size_t a)
