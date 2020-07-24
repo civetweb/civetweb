@@ -76,7 +76,7 @@ else ifdef TEST_ASAN
   CC = clang
   CXX = clang++
 else ifdef TEST_FUZZ
-  CFLAGS += -g -fsanitize=address,fuzzer
+  CFLAGS += -g -fsanitize=address,fuzzer,undefined -O0 -g -ggdb3 -fno-omit-frame-pointer -fsanitize-address-use-after-scope -fno-sanitize-recover=undefined
   CC = clang
   CXX = clang++
   BUILD_DIRS += $(BUILD_DIR)/fuzztest
