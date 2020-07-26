@@ -583,6 +583,13 @@ by the subject name’s hash and an extension of “.0”. If there is more than
 certificate with the same subject name they should have extensions ".0", ".1",
 ".2" and so on respectively.
 
+### ssl\_cache\_timeout `-1`
+Allow caching of SSL/TLS sessions, so HTTPS connection from the same client
+to the same server can be established faster. A configuration value >0 activates
+session caching. The configuration value is the maximum lifetime of a cached 
+session in seconds.
+The default is to deactivated session caching.
+
 ### ssl\_certificate
 Path to the SSL certificate file. This option is only required when at least
 one of the `listening\_ports` is SSL. The file must be in PEM format,
