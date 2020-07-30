@@ -1973,10 +1973,7 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
 	(*(void (*)(SSL_CTX *, tSSL_next_protos_advertised_cb, void *))ssl_sw[41]  \
 	      .ptr)
 
-#define SSL_CTX_set_session_cache_mode                                         \
-	(*(long (*)(SSL_CTX *, long))ssl_sw[42].ptr)
-#define SSL_CTX_sess_set_cache_size (*(long (*)(SSL_CTX *, long))ssl_sw[43].ptr)
-#define SSL_CTX_set_timeout (*(long (*)(SSL_CTX *, long))ssl_sw[44].ptr)
+#define SSL_CTX_set_timeout (*(long (*)(SSL_CTX *, long))ssl_sw[42].ptr)
 
 #define SSL_CTX_clear_options(ctx, op)                                         \
 	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
@@ -1998,6 +1995,11 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
 
 #define SSL_set_app_data(s, arg) (SSL_set_ex_data(s, 0, (char *)arg))
 #define SSL_get_app_data(s) (SSL_get_ex_data(s, 0))
+
+#define SSL_CTX_sess_set_cache_size(ctx, size) SSL_CTX_ctrl(ctx, 42, size, NULL)
+#define SSL_CTX_set_session_cache_mode(ctx, mode)                              \
+	SSL_CTX_ctrl(ctx, 44, mode, NULL)
+
 
 #define ERR_get_error (*(unsigned long (*)(void))crypto_sw[0].ptr)
 #define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[1].ptr)
@@ -2074,8 +2076,6 @@ static struct ssl_func ssl_sw[] = {
     {"SSL_CTX_set_alpn_protos", TLS_ALPN, NULL},
     {"SSL_CTX_set_alpn_select_cb", TLS_ALPN, NULL},
     {"SSL_CTX_set_next_protos_advertised_cb", TLS_ALPN, NULL},
-    {"SSL_CTX_set_session_cache_mode", TLS_Mandatory, NULL},
-    {"SSL_CTX_sess_set_cache_size", TLS_Mandatory, NULL},
     {"SSL_CTX_set_timeout", TLS_Mandatory, NULL},
     {NULL, TLS_END_OF_LIST, NULL}};
 
@@ -2175,10 +2175,7 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
 	(*(void (*)(SSL_CTX *, tSSL_next_protos_advertised_cb, void *))ssl_sw[41]  \
 	      .ptr)
 
-#define SSL_CTX_set_session_cache_mode                                         \
-	(*(long (*)(SSL_CTX *, long))ssl_sw[42].ptr)
-#define SSL_CTX_sess_set_cache_size (*(long (*)(SSL_CTX *, long))ssl_sw[43].ptr)
-#define SSL_CTX_set_timeout (*(long (*)(SSL_CTX *, long))ssl_sw[44].ptr)
+#define SSL_CTX_set_timeout (*(long (*)(SSL_CTX *, long))ssl_sw[42].ptr)
 
 
 #define SSL_CTX_set_options(ctx, op)                                           \
@@ -2203,6 +2200,11 @@ typedef int (*tSSL_next_protos_advertised_cb)(SSL *ssl,
 
 #define SSL_set_app_data(s, arg) (SSL_set_ex_data(s, 0, (char *)arg))
 #define SSL_get_app_data(s) (SSL_get_ex_data(s, 0))
+
+#define SSL_CTX_sess_set_cache_size(ctx, size) SSL_CTX_ctrl(ctx, 42, size, NULL)
+#define SSL_CTX_set_session_cache_mode(ctx, mode)                              \
+	SSL_CTX_ctrl(ctx, 44, mode, NULL)
+
 
 #define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
 #define CRYPTO_set_locking_callback                                            \
@@ -2294,8 +2296,6 @@ static struct ssl_func ssl_sw[] = {
     {"SSL_CTX_set_alpn_protos", TLS_ALPN, NULL},
     {"SSL_CTX_set_alpn_select_cb", TLS_ALPN, NULL},
     {"SSL_CTX_set_next_protos_advertised_cb", TLS_ALPN, NULL},
-    {"SSL_CTX_set_session_cache_mode", TLS_Mandatory, NULL},
-    {"SSL_CTX_sess_set_cache_size", TLS_Mandatory, NULL},
     {"SSL_CTX_set_timeout", TLS_Mandatory, NULL},
     {NULL, TLS_END_OF_LIST, NULL}};
 
@@ -16692,7 +16692,8 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	                         : 0);
 	if (ssl_cache_timeout > 0) {
 		SSL_CTX_set_session_cache_mode(dom_ctx->ssl_ctx, SSL_SESS_CACHE_BOTH);
-		/* SSL_CTX_sess_set_cache_size(dom_ctx->ssl_ctx, 10000);  ... use default */
+		/* SSL_CTX_sess_set_cache_size(dom_ctx->ssl_ctx, 10000);  ... use
+		 * default */
 		SSL_CTX_set_timeout(dom_ctx->ssl_ctx, (long)ssl_cache_timeout);
 	}
 
