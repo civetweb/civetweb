@@ -45,10 +45,15 @@
 #define test_sleep(x) (sleep(x))
 #endif
 
+
+/* Some environment configuration for the unit test */
 #define SLEEP_BEFORE_MG_START (1)
 #define SLEEP_AFTER_MG_START (3)
 #define SLEEP_BEFORE_MG_STOP (1)
 #define SLEEP_AFTER_MG_STOP (5)
+
+static const char *external_server_ip = "140.82.118.4"; /* github.com */
+
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
@@ -1469,10 +1474,13 @@ START_TEST(test_request_handlers)
 	client_ri = mg_get_response_info(client_conn);
 
 	ck_assert(client_ri != NULL);
-	ck_assert((client_ri->status_code == 301) || (client_ri->status_code == 302)
-	          || (client_ri->status_code == 303)
-	          || (client_ri->status_code == 307)
-	          || (client_ri->status_code == 308)); /* is a redirect code */
+	if ((client_ri->status_code != 301) && (client_ri->status_code != 302)
+	    && (client_ri->status_code != 303) && (client_ri->status_code != 307)
+	    && (client_ri->status_code != 308)) {
+		/* expect a 30x redirect code */
+		ck_abort_msg("Expected a redirect code, got %i",
+		             client_ri->status_code);
+	}
 	/*
 	// A redirect may have a body, or not
 	i = mg_read(client_conn, buf, sizeof(buf));
@@ -4808,7 +4816,7 @@ START_TEST(test_minimal_client)
 	mark_point();
 
 	/* Call a test client */
-	minimal_http_client_check("192.30.253.113" /* www.github.com */,
+	minimal_http_client_check(external_server_ip,
 	                          80,
 	                          "/civetweb/civetweb/",
 	                          NULL /* no check */);
@@ -4838,7 +4846,7 @@ START_TEST(test_minimal_tls_client)
 	mark_point();
 
 	/* Call a test client */
-	minimal_https_client_check("192.30.253.113" /* www.github.com */,
+	minimal_https_client_check(external_server_ip,
 	                           443,
 	                           "/civetweb/civetweb/",
 	                           NULL /* no check */);

@@ -34,6 +34,8 @@ clang-format -i unittest/timertest.c
 clang-format -i unittest/civetweb_check.h
 clang-format -i unittest/main.c
 
+clang-format -i fuzztest/fuzzmain.c
+
 clang-format -i examples/embedded_c/embedded_c.c
 clang-format -i examples/rest/rest.c
 

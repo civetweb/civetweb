@@ -148,11 +148,12 @@ subnet is pre-pended by either a `-` or a `+` sign. A plus sign means allow,
 where a minus sign means deny. If a subnet mask is omitted, such as `-1.2.3.4`,
 this means to deny only that single IP address.
 
-Subnet masks may vary from 0 to 32, inclusive. The default setting is to allow
-all accesses. On each request the full list is traversed, and
+If this value is not set, all accesses are allowed. Otherwise, the default
+setting is to deny all accesses. On each request the full list is traversed, and
 the last match wins. Examples:
 
-    -0.0.0.0/0,+192.168/16    deny all accesses, only allow 192.168/16 subnet
+    +192.168.0.0/16,+fe80::/64    deny all accesses, allow 192.168.0.0/16 and fe80::/64 subnet
+                                  (The second one is valid only if IPv6 support is enabled)
 
 To learn more about subnet masks, see the
 [Wikipedia page on Subnetwork](http://en.wikipedia.org/wiki/Subnetwork).
@@ -582,6 +583,13 @@ by the subject name’s hash and an extension of “.0”. If there is more than
 certificate with the same subject name they should have extensions ".0", ".1",
 ".2" and so on respectively.
 
+### ssl\_cache\_timeout `-1`
+Allow caching of SSL/TLS sessions, so HTTPS connection from the same client
+to the same server can be established faster. A configuration value >0 activates
+session caching. The configuration value is the maximum lifetime of a cached 
+session in seconds.
+The default is to deactivated session caching.
+
 ### ssl\_certificate
 Path to the SSL certificate file. This option is only required when at least
 one of the `listening\_ports` is SSL. The file must be in PEM format,
@@ -693,6 +701,7 @@ list of key=value pairs, where key could be:
 
     *                   limit speed for all connections
     x.x.x.x/mask        limit speed for specified subnet
+    [IPv6-addr]/mask    limit speed for specified IPv6 subnet (needs square brackets)
     uri_prefix_pattern  limit speed for given URIs
 
 The value is a floating-point number of bytes per second, optionally

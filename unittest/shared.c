@@ -42,7 +42,5 @@ get_test_directory(void)
 void
 set_test_directory(const char *const path)
 {
-	strncpy(s_test_directory,
-	        path,
-	        sizeof(s_test_directory) / sizeof(s_test_directory[0]));
+	strncpy(s_test_directory, path, sizeof(s_test_directory) - 1);
 }

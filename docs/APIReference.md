@@ -2,11 +2,17 @@
 
 CivetWeb is often used as HTTP and HTTPS library inside a larger application.
 A C API is available to integrate the CivetWeb functionality in a larger
-codebase. A C++ wrapper is also available, although it is not guaranteed
-that all functionality available through the C API can also be accessed
-from C++. This document describes the public C API. Basic usage examples of
+codebase.
+This document describes the public C API. Basic usage examples of
 the API can be found in [Embedding.md](Embedding.md), as well as in the
 examples directory.
+
+A C++ wrapper for some basic features is also available.
+Note that only a small subset of the functionality available through the
+C API can be accessed using this C++ wrapper. The C++ wrapper is not unit
+tested, and there is no C++ API documentation equivalent to this C API
+documentation.
+
 
 ## Macros
 

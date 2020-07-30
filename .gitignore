@@ -14,8 +14,12 @@ out
 [oO]utput
 [tT]esting
 examples/embedded_c/embedded_c
+examples/embedded_cpp/embedded_cpp
 *.a
 *.o
+VisualStudio/unit_test/*
+log.out
+
 
 ################# //hash
 ## CMake
@@ -279,3 +283,15 @@ conan/test_package/build
 ## Visual Studio Code
 ##########################
 .vscode
+
+
+##########################
+## Fuzz test corpus
+##########################
+fuzztest/http1/**
+fuzztest/http1c/**
+fuzztest/url/**
+crash-[0-9a-f]*
+leak-[0-9a-f]*
+slow-unit-[0-9a-f]*
+civetweb_fuzz?
