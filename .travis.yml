@@ -762,7 +762,7 @@ matrix:
       N=GCCLinuxDefault_bionic
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
+      OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -787,7 +787,7 @@ matrix:
       N=GCCLinuxDefault_eoan
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
+      OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -812,7 +812,7 @@ matrix:
       N=GCCLinuxDefault_focal
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
+      OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
