@@ -63,7 +63,7 @@ before_script:
   # Generate the build scripts with CMake
   - mkdir output
   - openssl version
-  - gcc --version 
+  - gcc --version
   - cmake --version
   - gcc unittest/cgi_test.c -o output/cgi_test.cgi
   - cd output
@@ -807,6 +807,10 @@ matrix:
     os: linux
     compiler: gcc
     dist: focal
+    addons:
+      apt:
+        packages:
+          - lsb-core
     env:
       idx=23
       N=GCCLinuxDefault_focal

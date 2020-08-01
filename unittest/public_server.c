@@ -790,11 +790,17 @@ START_TEST(test_mg_server_and_client_tls)
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
 
-	/* cannot connect without client certificate */
-#if defined(__MACH__)
-	/* except for Apple (maybe this is specific to the MacOS container on
-	 * TravisCI?) */
+	/* We tried to connect without client certificate:
+	 * Depending on ???, either mg_conn_client failed entirely, returning NULL.
+	 * or we do get a connection but get an error when we try to use it.
+	 *
+	 * MacOS (Version ?), Ubuntu Bionic and Ububtu Eoan allow to connect,
+	 * while Ubuntu Xenial, Ubuntu Trusty and Windows test containers at
+	 * Travis CI do not. Maybe it is OpenSSL version specific.
+	 */
+#if defined(OPENSSL_API_1_1)
 	if (client_conn) {
+		/* Connect succeeds, but the connection is unusable. */
 		mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 		client_res =
 		    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
