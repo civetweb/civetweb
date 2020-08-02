@@ -50,7 +50,7 @@ before_script:
   - uname -a
   - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
       lsb_release -a;
-      cat /etc/network/interfaces;
+      cat /etc/network/interfaces || true;
     fi
   - ifconfig
   - pwd
