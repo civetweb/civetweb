@@ -433,6 +433,15 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #endif
 
 
+#if !defined(_WIN32)
+/* Unix might return different error codes indicating to try again.
+ * For Linux EAGAIN==EWOULDBLOCK, maybe EAGAIN!=EWOULDBLOCK is history from
+ * decades ago, but better check both and let the compile optimize it. */
+#define ERROR_TRY_AGAIN(err)                                                   \
+	(((err) == EAGAIN) || ((err) == EWOULDBLOCK) || ((err) == EINTR))
+#endif
+
+
 /********************************************************************/
 /* CivetWeb configuration defines */
 /********************************************************************/
@@ -6386,7 +6395,7 @@ push_inner(struct mg_context *ctx,
 				n = 0;
 			}
 #else
-			if (err == EWOULDBLOCK) {
+			if (ERROR_TRY_AGAIN(err)) {
 				err = 0;
 				n = 0;
 			}
@@ -6658,7 +6667,7 @@ pull_inner(FILE *fp,
 		 * blocking in close_socket_gracefully, so we can not distinguish
 		 * here. We have to wait for the timeout in both cases for now.
 		 */
-		if ((err == EAGAIN) || (err == EWOULDBLOCK) || (err == EINTR)) {
+		if (ERROR_TRY_AGAIN(err)) {
 			/* TODO (low): check if this is still required */
 			/* EAGAIN/EWOULDBLOCK:
 			 * standard case if called from close_socket_gracefully
