@@ -319,9 +319,9 @@ install-lib: lib$(CPROG).a
 install-slib: lib$(CPROG).so
 	$(eval version=$(shell grep -w "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
 	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
-	install -m 644 $< "$(LIBDIR)"
-	install -m 777 $<.$(major) "$(LIBDIR)"
 	install -m 777 $<.$(version).0 "$(LIBDIR)"
+	cd "$(LIBDIR)" && ln -sfv $<.$(version).0 $<.$(major)
+	cd "$(LIBDIR)" && ln -sfv $<.$(version).0 $<
 
 # Install target we do not want to overwrite
 # as it may be an upgrade
