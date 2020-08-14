@@ -2461,17 +2461,24 @@ enum {
 	LUA_BACKGROUND_SCRIPT,
 	LUA_BACKGROUND_SCRIPT_PARAMS,
 #endif
-#if defined(USE_TIMERS)
-	CGI_TIMEOUT,
-#endif
 
 	/* Once for each domain */
 	DOCUMENT_ROOT,
+
 	CGI_EXTENSIONS,
+	CGI2_EXTENSIONS,
 	CGI_ENVIRONMENT,
-	PUT_DELETE_PASSWORDS_FILE,
+	CGI2_ENVIRONMENT,
 	CGI_INTERPRETER,
+	CGI2_INTERPRETER,
 	CGI_INTERPRETER_ARGS,
+	CGI2_INTERPRETER_ARGS,
+#if defined(USE_TIMERS)
+	CGI_TIMEOUT,
+	CGI2_TIMEOUT,
+#endif
+
+	PUT_DELETE_PASSWORDS_FILE,
 	PROTECT_URI,
 	AUTHENTICATION_DOMAIN,
 	ENABLE_AUTH_DOMAIN_CHECK,
@@ -2570,17 +2577,24 @@ static const struct mg_option config_options[] = {
     {"lua_background_script", MG_CONFIG_TYPE_FILE, NULL},
     {"lua_background_script_params", MG_CONFIG_TYPE_STRING_LIST, NULL},
 #endif
-#if defined(USE_TIMERS)
-    {"cgi_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
-#endif
 
     /* Once for each domain */
     {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
+
     {"cgi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.cgi$|**.pl$|**.php$"},
+    {"cgi2_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
     {"cgi_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
-    {"put_delete_auth_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"cgi2_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"cgi_interpreter", MG_CONFIG_TYPE_FILE, NULL},
+    {"cgi2_interpreter", MG_CONFIG_TYPE_FILE, NULL},
     {"cgi_interpreter_args", MG_CONFIG_TYPE_STRING, NULL},
+    {"cgi2_interpreter_args", MG_CONFIG_TYPE_STRING, NULL},
+#if defined(USE_TIMERS)
+    {"cgi_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+    {"cgi2_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+#endif
+
+    {"put_delete_auth_file", MG_CONFIG_TYPE_FILE, NULL},
     {"protect_uri", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"authentication_domain", MG_CONFIG_TYPE_STRING, "mydomain.com"},
     {"enable_auth_domain_check", MG_CONFIG_TYPE_BOOLEAN, "yes"},
@@ -4369,6 +4383,16 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 		}
 	}
 	return (ptrdiff_t)j;
+}
+
+
+static ptrdiff_t
+match_prefix_strlen(const char *pattern, const char *str)
+{
+	if (pattern == NULL) {
+		return -1;
+	}
+	return match_prefix(pattern, strlen(pattern), str);
 }
 
 
@@ -7533,25 +7557,25 @@ extention_matches_script(
 )
 {
 #if !defined(NO_CGI)
-	if (match_prefix(conn->dom_ctx->config[CGI_EXTENSIONS],
-	                 strlen(conn->dom_ctx->config[CGI_EXTENSIONS]),
-	                 filename)
+	if (match_prefix_strlen(conn->dom_ctx->config[CGI_EXTENSIONS], filename)
+	    > 0) {
+		return 1;
+	}
+	if (match_prefix_strlen(conn->dom_ctx->config[CGI2_EXTENSIONS], filename)
 	    > 0) {
 		return 1;
 	}
 #endif
 #if defined(USE_LUA)
-	if (match_prefix(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS],
-	                 strlen(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS]),
-	                 filename)
+	if (match_prefix_strlen(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS],
+	                        filename)
 	    > 0) {
 		return 1;
 	}
 #endif
 #if defined(USE_DUKTAPE)
-	if (match_prefix(conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
-	                 strlen(conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-	                 filename)
+	if (match_prefix_strlen(conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+	                        filename)
 	    > 0) {
 		return 1;
 	}
@@ -9521,9 +9545,8 @@ must_hide_file(struct mg_connection *conn, const char *path)
 	if (conn && conn->dom_ctx) {
 		const char *pw_pattern = "**" PASSWORDS_FILE_NAME "$";
 		const char *pattern = conn->dom_ctx->config[HIDE_FILES];
-		return (match_prefix(pw_pattern, strlen(pw_pattern), path) > 0)
-		       || ((pattern != NULL)
-		           && (match_prefix(pattern, strlen(pattern), path) > 0));
+		return (match_prefix_strlen(pw_pattern, path) > 0)
+		       || (match_prefix_strlen(pattern, path) > 0);
 	}
 	return 0;
 }
@@ -11999,9 +12022,7 @@ do_ssi_include(struct mg_connection *conn,
 		                strerror(ERRNO));
 	} else {
 		fclose_on_exec(&file.access, conn);
-		if (match_prefix(conn->dom_ctx->config[SSI_EXTENSIONS],
-		                 strlen(conn->dom_ctx->config[SSI_EXTENSIONS]),
-		                 path)
+		if (match_prefix_strlen(conn->dom_ctx->config[SSI_EXTENSIONS], path)
 		    > 0) {
 			send_ssi_file(conn, path, &file, include_level + 1);
 		} else {
@@ -13076,10 +13097,8 @@ handle_websocket_request(struct mg_connection *conn,
 	else {
 		/* Step 3.1: Check if Lua is responsible. */
 		if (conn->dom_ctx->config[LUA_WEBSOCKET_EXTENSIONS]) {
-			lua_websock = match_prefix(
-			    conn->dom_ctx->config[LUA_WEBSOCKET_EXTENSIONS],
-			    strlen(conn->dom_ctx->config[LUA_WEBSOCKET_EXTENSIONS]),
-			    path);
+			lua_websock = match_prefix_strlen(
+			    conn->dom_ctx->config[LUA_WEBSOCKET_EXTENSIONS], path);
 		}
 
 		if (lua_websock) {
@@ -14557,10 +14576,8 @@ handle_file_based_request(struct mg_connection *conn,
 
 	if (0) {
 #if defined(USE_LUA)
-	} else if (match_prefix(
-	               conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS],
-	               strlen(conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS]),
-	               path)
+	} else if (match_prefix_strlen(
+	               conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS], path)
 	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Lua server page: an SSI like page containing mostly plain
@@ -14573,10 +14590,8 @@ handle_file_based_request(struct mg_connection *conn,
 			mg_send_http_error(conn, 403, "%s", "Forbidden");
 		}
 
-	} else if (match_prefix(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS],
-	                        strlen(
-	                            conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS]),
-	                        path)
+	} else if (match_prefix_strlen(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS],
+	                               path)
 	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Lua in-server module script: a CGI like script used to
@@ -14590,10 +14605,8 @@ handle_file_based_request(struct mg_connection *conn,
 		}
 #endif
 #if defined(USE_DUKTAPE)
-	} else if (match_prefix(
-	               conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
-	               strlen(conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS]),
-	               path)
+	} else if (match_prefix_strlen(
+	               conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS], path)
 	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Call duktape to generate the page */
@@ -14604,9 +14617,7 @@ handle_file_based_request(struct mg_connection *conn,
 		}
 #endif
 #if !defined(NO_CGI)
-	} else if (match_prefix(conn->dom_ctx->config[CGI_EXTENSIONS],
-	                        strlen(conn->dom_ctx->config[CGI_EXTENSIONS]),
-	                        path)
+	} else if (match_prefix_strlen(conn->dom_ctx->config[CGI_EXTENSIONS], path)
 	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* CGI scripts may support all HTTP methods */
@@ -14616,9 +14627,7 @@ handle_file_based_request(struct mg_connection *conn,
 			mg_send_http_error(conn, 403, "%s", "Forbidden");
 		}
 #endif /* !NO_CGI */
-	} else if (match_prefix(conn->dom_ctx->config[SSI_EXTENSIONS],
-	                        strlen(conn->dom_ctx->config[SSI_EXTENSIONS]),
-	                        path)
+	} else if (match_prefix_strlen(conn->dom_ctx->config[SSI_EXTENSIONS], path)
 	           > 0) {
 		if (is_in_script_path(conn, path)) {
 			handle_ssi_file_request(conn, path, file);
