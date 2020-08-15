@@ -14424,7 +14424,7 @@ handle_request(struct mg_connection *conn)
 			    deprecated_websocket_ready_wrapper,
 			    deprecated_websocket_data_wrapper,
 			    NULL,
-			    conn->phys_ctx->callbacks);
+			    &conn->phys_ctx->callbacks);
 #else
 			mg_send_http_error(conn, 404, "%s", "Not found");
 #endif
@@ -18548,10 +18548,6 @@ worker_thread_run(struct mg_connection *conn)
 	struct mg_context *ctx = conn->phys_ctx;
 	int thread_index;
 	struct mg_workerTLS tls;
-
-#if defined(MG_LEGACY_INTERFACE)
-	uint32_t addr;
-#endif
 
 	mg_set_thread_name("worker");
 
