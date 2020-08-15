@@ -50,7 +50,7 @@ before_script:
   - uname -a
   - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
       lsb_release -a;
-      cat /etc/network/interfaces;
+      cat /etc/network/interfaces || true;
     fi
   - ifconfig
   - pwd
@@ -63,7 +63,7 @@ before_script:
   # Generate the build scripts with CMake
   - mkdir output
   - openssl version
-  - gcc --version 
+  - gcc --version
   - cmake --version
   - gcc unittest/cgi_test.c -o output/cgi_test.cgi
   - cd output
@@ -762,7 +762,7 @@ matrix:
       N=GCCLinuxDefault_bionic
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
+      OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -787,7 +787,7 @@ matrix:
       N=GCCLinuxDefault_eoan
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
+      OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -807,12 +807,16 @@ matrix:
     os: linux
     compiler: gcc
     dist: focal
+    addons:
+      apt:
+        packages:
+          - lsb-core
     env:
       idx=23
       N=GCCLinuxDefault_focal
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_1=NO
+      OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto

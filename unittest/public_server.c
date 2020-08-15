@@ -45,10 +45,15 @@
 #define test_sleep(x) (sleep(x))
 #endif
 
+
+/* Some environment configuration for the unit test */
 #define SLEEP_BEFORE_MG_START (1)
 #define SLEEP_AFTER_MG_START (3)
 #define SLEEP_BEFORE_MG_STOP (1)
 #define SLEEP_AFTER_MG_STOP (5)
+
+static const char *external_server_ip = "140.82.118.4"; /* github.com */
+
 
 /* This unit test file uses the excellent Check unit testing library.
  * The API documentation is available here:
@@ -785,11 +790,17 @@ START_TEST(test_mg_server_and_client_tls)
 	client_conn =
 	    mg_connect_client("127.0.0.1", 8443, 1, client_err, sizeof(client_err));
 
-	/* cannot connect without client certificate */
-#if defined(__MACH__)
-	/* except for Apple (maybe this is specific to the MacOS container on
-	 * TravisCI?) */
+	/* We tried to connect without client certificate:
+	 * Depending on ???, either mg_conn_client failed entirely, returning NULL.
+	 * or we do get a connection but get an error when we try to use it.
+	 *
+	 * MacOS (Version ?), Ubuntu Bionic and Ububtu Eoan allow to connect,
+	 * while Ubuntu Xenial, Ubuntu Trusty and Windows test containers at
+	 * Travis CI do not. Maybe it is OpenSSL version specific.
+	 */
+#if defined(OPENSSL_API_1_1)
 	if (client_conn) {
+		/* Connect succeeds, but the connection is unusable. */
 		mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
 		client_res =
 		    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
@@ -1469,10 +1480,13 @@ START_TEST(test_request_handlers)
 	client_ri = mg_get_response_info(client_conn);
 
 	ck_assert(client_ri != NULL);
-	ck_assert((client_ri->status_code == 301) || (client_ri->status_code == 302)
-	          || (client_ri->status_code == 303)
-	          || (client_ri->status_code == 307)
-	          || (client_ri->status_code == 308)); /* is a redirect code */
+	if ((client_ri->status_code != 301) && (client_ri->status_code != 302)
+	    && (client_ri->status_code != 303) && (client_ri->status_code != 307)
+	    && (client_ri->status_code != 308)) {
+		/* expect a 30x redirect code */
+		ck_abort_msg("Expected a redirect code, got %i",
+		             client_ri->status_code);
+	}
 	/*
 	// A redirect may have a body, or not
 	i = mg_read(client_conn, buf, sizeof(buf));
@@ -4808,7 +4822,7 @@ START_TEST(test_minimal_client)
 	mark_point();
 
 	/* Call a test client */
-	minimal_http_client_check("192.30.253.113" /* www.github.com */,
+	minimal_http_client_check(external_server_ip,
 	                          80,
 	                          "/civetweb/civetweb/",
 	                          NULL /* no check */);
@@ -4838,7 +4852,7 @@ START_TEST(test_minimal_tls_client)
 	mark_point();
 
 	/* Call a test client */
-	minimal_https_client_check("192.30.253.113" /* www.github.com */,
+	minimal_https_client_check(external_server_ip,
 	                           443,
 	                           "/civetweb/civetweb/",
 	                           NULL /* no check */);

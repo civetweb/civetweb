@@ -176,12 +176,16 @@ lua_cry(struct mg_connection *conn,
 		                lua_title,
 		                lua_operation);
 		break;
+#if LUA_VERSION_NUM < 504
+	/* LUA_ERRGCMM has been removed in Lua 5.4.
+	 * See https://www.lua.org/manual/5.4/manual.html#8.3 */
 	case LUA_ERRGCMM:
 		mg_cry_internal(conn,
 		                "%s: %s failed: error during garbage collection",
 		                lua_title,
 		                lua_operation);
 		break;
+#endif
 	case LUA_ERRERR:
 		mg_cry_internal(conn,
 		                "%s: %s failed: error in error handling: %s",
