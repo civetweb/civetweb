@@ -1756,7 +1756,7 @@ lsp_trace(lua_State *L)
 	}
 
 	if (arg_type[0] == LUA_TNUMBER) {
-		trace_level = lua_tointeger(L, 1);
+		trace_level = (int)lua_tointeger(L, 1);
 		if (num_args == 1) {
 			/* Set a new trace level, return the current one. */
 			lua_pushinteger(L, s_lua_traceLevel);
