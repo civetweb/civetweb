@@ -433,9 +433,9 @@ main(int argc, char *argv[])
 
 	while (!exitNow) {
 #ifdef _WIN32
-		Sleep(1000);
+		Sleep(1);
 #else
-		sleep(1);
+		sleep(1000);
 #endif
 	}
 
