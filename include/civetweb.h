@@ -339,12 +339,21 @@ struct mg_callbacks {
 	*/
 	void (*connection_close)(const struct mg_connection *);
 
-	/* Called when civetweb is about to serve Lua server page, if
-	   Lua support is enabled.
+	/* init_lua is called when civetweb is about to serve Lua server page.
+	   exit_lua is called when the Lua processing is complete.
+	   Both will work only if Lua support is enabled.
 	   Parameters:
 	     conn: current connection.
-	     lua_context: "lua_State *" pointer. */
-	void (*init_lua)(const struct mg_connection *conn, void *lua_context);
+	     lua_context: "lua_State *" pointer.
+	     context_flags: context type information as bitmask:
+	       context_flags & 0x0F: (0-15) Lua environment type
+	*/
+	void (*init_lua)(const struct mg_connection *conn,
+	                 void *lua_context,
+	                 unsigned context_flags);
+	void (*exit_lua)(const struct mg_connection *conn,
+	                 void *lua_context,
+	                 unsigned context_flags);
 
 #if defined(MG_LEGACY_INTERFACE) /* 2016-05-14 */
 	/* Called when civetweb has uploaded a file to a temporary directory as a

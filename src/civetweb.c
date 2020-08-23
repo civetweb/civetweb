@@ -19065,6 +19065,7 @@ free_context(struct mg_context *ctx)
 		return;
 	}
 
+	/* Call user callback */
 	if (ctx->callbacks.exit_context) {
 		ctx->callbacks.exit_context(ctx);
 	}
@@ -19090,10 +19091,6 @@ free_context(struct mg_context *ctx)
 
 	/* Destroy other context global data structures mutex */
 	(void)pthread_mutex_destroy(&ctx->nonce_mutex);
-
-#if defined(USE_TIMERS)
-	timers_exit(ctx);
-#endif
 
 	/* Deallocate config parameters */
 	for (i = 0; i < NUM_OPTIONS; i++) {
@@ -19164,12 +19161,25 @@ mg_stop(struct mg_context *ctx)
 	/* Set stop flag, so all threads know they have to exit. */
 	STOP_FLAG_ASSIGN(&ctx->stop_flag, 1);
 
+	/* Join timer thread */
+#if defined(USE_TIMERS)
+	timers_exit(ctx);
+#endif
+
 	/* Wait until everything has stopped. */
 	while (!STOP_FLAG_IS_TWO(&ctx->stop_flag)) {
 		(void)mg_sleep(10);
 	}
 
+	/* Wait to stop master thread */
 	mg_join_thread(mt);
+
+	/* Close remaining Lua states */
+#if defined(USE_LUA)
+	lua_ctx_exit(ctx);
+#endif
+
+	/* Free memory */
 	free_context(ctx);
 }
 
@@ -19364,8 +19374,8 @@ static
 	ctx->dd.handlers = NULL;
 	ctx->dd.next = NULL;
 
-#if defined(USE_LUA) && defined(USE_WEBSOCKET)
-	ctx->dd.shared_lua_websockets = NULL;
+#if defined(USE_LUA)
+	lua_ctx_init(ctx);
 #endif
 
 	/* Store options */

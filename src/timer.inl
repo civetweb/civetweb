@@ -1,10 +1,14 @@
 /* This file is part of the CivetWeb web server.
  * See https://github.com/civetweb/civetweb/
- * (C) 2014-2018 by the CivetWeb authors, MIT license.
+ * (C) 2014-2020 by the CivetWeb authors, MIT license.
  */
 
 #if !defined(MAX_TIMERS)
 #define MAX_TIMERS MAX_WORKER_THREADS
+#endif
+#if !defined(TIMER_RESOLUTION)
+/* Timer resolution in ms */
+#define TIMER_RESOLUTION (10)
 #endif
 
 typedef int (*taction)(void *arg);
@@ -139,7 +143,7 @@ timer_thread_run(void *thread_func_param)
 	struct mg_context *ctx = (struct mg_context *)thread_func_param;
 	double d;
 	unsigned u;
-	int re_schedule;
+	int action_res;
 	struct ttimer t;
 
 	mg_set_thread_name("timer");
@@ -149,38 +153,54 @@ timer_thread_run(void *thread_func_param)
 		ctx->callbacks.init_thread(ctx, 2);
 	}
 
+	/* Timer main loop */
 	d = timer_getcurrenttime(ctx);
-
 	while (STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 		pthread_mutex_lock(&ctx->timers->mutex);
 		if ((ctx->timers->timer_count > 0)
 		    && (d >= ctx->timers->timers[0].time)) {
+			/* Timer list is sorted. First action should run now. */
+			/* Store active timer in "t" */
 			t = ctx->timers->timers[0];
+
+			/* Shift all other timers */
 			for (u = 1; u < ctx->timers->timer_count; u++) {
 				ctx->timers->timers[u - 1] = ctx->timers->timers[u];
 			}
 			ctx->timers->timer_count--;
+
 			pthread_mutex_unlock(&ctx->timers->mutex);
-			re_schedule = t.action(t.arg);
-			if (re_schedule && (t.period > 0)) {
+
+			/* Call timer action */
+			action_res = t.action(t.arg);
+
+			/* action_res == 1: reschedule */
+			/* action_res == 0: do not reschedule, free(arg) */
+			if ((action_res > 0) && (t.period > 0)) {
+				/* Should schedule timer again */
 				timer_add(ctx, t.time + t.period, t.period, 0, t.action, t.arg);
+			} else {
+				/* Free timer argument */
+				mg_free(t.arg);
 			}
 			continue;
 		} else {
 			pthread_mutex_unlock(&ctx->timers->mutex);
 		}
 
-/* 10 ms seems reasonable.
- * A faster loop (smaller sleep value) increases CPU load,
- * a slower loop (higher sleep value) decreases timer accuracy.
- */
-#if defined(_WIN32)
-		Sleep(10);
-#else
-		usleep(10000);
-#endif
+		/* TIMER_RESOLUTION = 10 ms seems reasonable.
+		 * A faster loop (smaller sleep value) increases CPU load,
+		 * a slower loop (higher sleep value) decreases timer accuracy.
+		 */
+		mg_sleep(TIMER_RESOLUTION);
 
 		d = timer_getcurrenttime(ctx);
+	}
+
+	/* Remove remaining timers */
+	for (u = 0; u < ctx->timers->timer_count; u++) {
+		t = ctx->timers->timers[u];
+		mg_free(t.arg);
 	}
 }
 
