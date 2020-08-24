@@ -2038,6 +2038,13 @@ lua_action(struct laction_arg *arg)
 }
 
 
+static void
+lua_action_cancel(struct laction_arg *arg)
+{
+	mg_free(arg);
+}
+
+
 static int
 lwebsocket_set_timer(lua_State *L, int is_periodic)
 {
@@ -2089,8 +2096,13 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 		arg->txt[action_txt_len + 7] = ')';
 		arg->txt[action_txt_len + 8] = 0;
 		if (0
-		    == timer_add(
-		           ctx, timediff, is_periodic, 1, lua_action, (void *)arg)) {
+		    == timer_add(ctx,
+		                 timediff,
+		                 is_periodic,
+		                 1,
+		                 lua_action,
+		                 (void *)arg,
+		                 lua_action_cancel)) {
 			/* Timer added successfully */
 			ok = 1;
 		}

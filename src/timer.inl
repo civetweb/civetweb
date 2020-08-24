@@ -12,12 +12,14 @@
 #endif
 
 typedef int (*taction)(void *arg);
+typedef void (*tcancelaction)(void *arg);
 
 struct ttimer {
 	double time;
 	double period;
 	taction action;
 	void *arg;
+	tcancelaction cancel;
 };
 
 struct ttimers {
@@ -70,7 +72,8 @@ timer_add(struct mg_context *ctx,
           double period,
           int is_relative,
           taction action,
-          void *arg)
+          void *arg,
+          tcancelaction cancel)
 {
 	int error = 0;
 	double now;
@@ -130,6 +133,7 @@ timer_add(struct mg_context *ctx,
 		ctx->timers->timers[u].period = period;
 		ctx->timers->timers[u].action = action;
 		ctx->timers->timers[u].arg = arg;
+		ctx->timers->timers[u].cancel = cancel;
 		ctx->timers->timer_count++;
 	}
 	pthread_mutex_unlock(&ctx->timers->mutex);
@@ -178,10 +182,18 @@ timer_thread_run(void *thread_func_param)
 			/* action_res == 0: do not reschedule, free(arg) */
 			if ((action_res > 0) && (t.period > 0)) {
 				/* Should schedule timer again */
-				timer_add(ctx, t.time + t.period, t.period, 0, t.action, t.arg);
+				timer_add(ctx,
+				          t.time + t.period,
+				          t.period,
+				          0,
+				          t.action,
+				          t.arg,
+				          t.cancel);
 			} else {
-				/* Free timer argument */
-				mg_free(t.arg);
+				/* Allow user to free timer argument */
+				if (t.cancel != NULL) {
+					t.cancel(t.arg);
+				}
 			}
 			continue;
 		} else {
@@ -200,7 +212,9 @@ timer_thread_run(void *thread_func_param)
 	/* Remove remaining timers */
 	for (u = 0; u < ctx->timers->timer_count; u++) {
 		t = ctx->timers->timers[u];
-		mg_free(t.arg);
+		if (t.cancel != NULL) {
+			t.cancel(t.arg);
+		}
 	}
 }
 

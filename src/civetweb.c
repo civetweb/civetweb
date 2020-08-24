@@ -6083,6 +6083,10 @@ mg_stat(const struct mg_connection *conn,
 	}
 	memset(filep, 0, sizeof(*filep));
 
+	if (mg_path_suspicious(conn, path)) {
+		return 0;
+	}
+
 	if (0 == stat(path, &st)) {
 		filep->size = (uint64_t)(st.st_size);
 		filep->last_modified = st.st_mtime;
@@ -11385,7 +11389,7 @@ struct process_control_data {
 };
 
 static int
-abort_process(void *data)
+abort_cgi_process(void *data)
 {
 	/* Waitpid checks for child status and won't work for a pid that does
 	 * not identify a child of the current process. Thus, if the pid is
@@ -11530,8 +11534,9 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 		          cgi_timeout /* in seconds */,
 		          0.0,
 		          1,
-		          abort_process,
-		          (void *)proc);
+		          abort_cgi_process,
+		          (void *)proc,
+		          NULL);
 	}
 #endif
 
@@ -11704,7 +11709,7 @@ done:
 	mg_free(blk.buf);
 
 	if (pid != (pid_t)-1) {
-		abort_process((void *)proc);
+		abort_cgi_process((void *)proc);
 	}
 
 	if (fdin[0] != -1) {
