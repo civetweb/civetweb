@@ -56,6 +56,7 @@ static const char lua_regkey_ctx = 1;
 static const char lua_regkey_connlist = 2;
 static const char lua_regkey_lsp_include_history = 3;
 static const char lua_regkey_environment_type = 4;
+static const char lua_regkey_dtor = 5;
 static const char *const LUABACKGROUNDPARAMS = "mg";
 
 
@@ -2385,8 +2386,8 @@ lsp_mg_gc(lua_State *L)
 static void
 reg_gc(lua_State *L, void *conn)
 {
-	/* Key element (for a table defined outside this function) */
-	lua_pushlightuserdata(L, 0);
+	/* Key element */
+	lua_pushlightuserdata(L, &lua_regkey_dtor);
 
 	/* Value element (for a table defined outside this function) */
 	lua_newuserdata(L, 0);
@@ -2408,7 +2409,7 @@ reg_gc(lua_State *L, void *conn)
 	lua_setmetatable(L, -2);
 
 	/* Add key (lightuserdata) = value (userdata with metatable) */
-	lua_rawset(L, -3);
+	lua_settable(L, LUA_REGISTRYINDEX);
 }
 
 
@@ -2463,6 +2464,9 @@ prepare_lua_environment(struct mg_context *ctx,
 	lua_pushunsigned(L, (unsigned)lua_context_flags);
 	lua_settable(L, LUA_REGISTRYINDEX);
 
+	/* State close function */
+	reg_gc(L, conn);
+
 	/* Lua server pages store the depth of mg.include, in order
 	 * to detect recursions and prevent stack overflows. */
 	if (lua_env_type == LUA_ENV_TYPE_LUA_SERVER_PAGE) {
@@ -2476,9 +2480,6 @@ prepare_lua_environment(struct mg_context *ctx,
 
 	/* Register mg module */
 	lua_newtable(L);
-
-	/* State close function */
-	reg_gc(L, conn);
 
 	switch (lua_env_type) {
 	case LUA_ENV_TYPE_LUA_SERVER_PAGE:
