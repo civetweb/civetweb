@@ -67,6 +67,10 @@ endif
 # only set main compile options if none were chosen
 CFLAGS += -Wall -Wextra -Wshadow -Wformat-security -Winit-self -Wmissing-prototypes -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=$(USE_STACK_SIZE)
 
+ifdef WITH_CFLAGS
+  CFLAGS += $(WITH_CFLAGS)
+endif
+
 LIBS = -lpthread -lm
 
 ifdef WITH_DEBUG
@@ -81,7 +85,7 @@ else ifdef TEST_FUZZ
   CXX = clang++
   BUILD_DIRS += $(BUILD_DIR)/fuzztest
   APP_SOURCES = fuzztest/fuzzmain.c
-  OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o) 
+  OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o)
   CFLAGS += -DTEST_FUZZ$(TEST_FUZZ)
 else
   CFLAGS += -O2 -DNDEBUG
