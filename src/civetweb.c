@@ -7781,6 +7781,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	 * request uri. */
 	/* Using filename_buf_len - 1 because memmove() for PATH_INFO may shift
 	 * part of the path one byte on the right. */
+	truncated = 0;
 	mg_snprintf(
 	    conn, &truncated, filename, filename_buf_len - 1, "%s%s", root, uri);
 
@@ -7936,26 +7937,30 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 					/* some intermediate directory has an index file */
 					if (extention_matches_script(conn, tmp_str)) {
 
+						size_t script_name_len = strlen(tmp_str);
+
+						/* subres_name read before this memory locatio will be
+						        overwritten */
+						char *subres_name = filename + sep_pos;
+						size_t subres_name_len = strlen(subres_name);
+
 						DEBUG_TRACE("Substitute script %s serving path %s",
 						            tmp_str,
 						            filename);
 
 						/* this index file is a script */
-						mg_snprintf(conn,
-						            &truncated,
-						            filename,
-						            filename_buf_len,
-						            "%s//%s",
-						            tmp_str,
-						            filename + sep_pos + 1);
-
-						if (truncated) {
+						if ((script_name_len + subres_name_len + 2)
+						    >= filename_buf_len) {
 							mg_free(tmp_str);
 							goto interpret_cleanup;
 						}
-						sep_pos = strlen(tmp_str);
-						filename[sep_pos] = 0;
-						conn->path_info = filename + sep_pos + 1;
+
+						conn->path_info =
+						    filename + script_name_len + 1; /* new target */
+						memmove(conn->path_info, subres_name, subres_name_len);
+						conn->path_info[subres_name_len] = 0;
+						memcpy(filename, tmp_str, script_name_len + 1);
+
 						*is_script_resource = 1;
 						*is_found = 1;
 						break;
