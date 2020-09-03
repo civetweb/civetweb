@@ -2389,7 +2389,7 @@ reg_gc(lua_State *L, void *conn)
 	/* Key element */
 	lua_pushlightuserdata(L, &lua_regkey_dtor);
 
-	/* Value element (for a table defined outside this function) */
+	/* Value element */
 	lua_newuserdata(L, 0);
 
 	/* Prepare metatable for value element */

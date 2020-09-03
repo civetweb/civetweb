@@ -27,6 +27,9 @@
 #define CIVETWEB_LUA_H
 
 #define LUA_LIB
+#define LUA_COMPAT_LOG10
+#define LUA_COMPAT_APIINTCASTS
+
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
@@ -64,6 +67,9 @@
 #elif LUA_VERSION_NUM == 504
 /* Lua 5.4 detected */
 #define mg_lua_load lua_load
+
+#else
+#error "Lua version not supported (yet?)"
 
 #endif
 
