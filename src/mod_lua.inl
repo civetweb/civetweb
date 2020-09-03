@@ -1987,51 +1987,92 @@ lwebsock_write(lua_State *L)
 }
 
 
-struct laction_arg {
-	lua_State *state;
+struct laction_string_arg {
+	lua_State *L;
 	const char *script;
 	pthread_mutex_t *pmutex;
 	char txt[1];
 };
 
+struct laction_funcref_arg {
+	lua_State *L;
+	const char *script;
+	pthread_mutex_t *pmutex;
+	int funcref;
+};
+
 
 static int
-lua_action(struct laction_arg *arg)
+lua_action_string(struct laction_string_arg *arg)
 {
 	int err, ok;
 	struct mg_context *ctx;
 
 	(void)pthread_mutex_lock(arg->pmutex);
 
-	lua_pushlightuserdata(arg->state, (void *)&lua_regkey_ctx);
-	lua_gettable(arg->state, LUA_REGISTRYINDEX);
-	ctx = (struct mg_context *)lua_touserdata(arg->state, -1);
-	lua_pop(arg->state, 1);
+	lua_pushlightuserdata(arg->L, (void *)&lua_regkey_ctx);
+	lua_gettable(arg->L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(arg->L, -1);
+	lua_pop(arg->L, 1);
 
-	err = luaL_loadstring(arg->state, arg->txt);
+	err = luaL_loadstring(arg->L, arg->txt);
 	if (err != 0) {
 		struct mg_connection fc;
-		lua_cry(
-		    fake_connection(&fc, ctx), err, arg->state, arg->script, "timer");
+		lua_cry(fake_connection(&fc, ctx), err, arg->L, arg->script, "timer");
 		(void)pthread_mutex_unlock(arg->pmutex);
 		return 0;
 	}
-	err = lua_pcall(arg->state, 0, 1, 0);
+	err = lua_pcall(arg->L, 0, 1, 0);
 	if (err != 0) {
 		struct mg_connection fc;
-		lua_cry(
-		    fake_connection(&fc, ctx), err, arg->state, arg->script, "timer");
+		lua_cry(fake_connection(&fc, ctx), err, arg->L, arg->script, "timer");
 		(void)pthread_mutex_unlock(arg->pmutex);
 		return 0;
 	}
 
-	ok = lua_type(arg->state, -1);
-	if (lua_isboolean(arg->state, -1)) {
-		ok = lua_toboolean(arg->state, -1);
+	ok = lua_type(arg->L, -1);
+	if (lua_isboolean(arg->L, -1)) {
+		ok = lua_toboolean(arg->L, -1);
 	} else {
 		ok = 0;
 	}
-	lua_pop(arg->state, 1);
+	lua_pop(arg->L, 1);
+
+	(void)pthread_mutex_unlock(arg->pmutex);
+
+	return ok;
+}
+
+
+static int
+lua_action_funcref(struct laction_funcref_arg *arg)
+{
+	int err, ok;
+	struct mg_context *ctx;
+
+	(void)pthread_mutex_lock(arg->pmutex);
+
+	lua_pushlightuserdata(arg->L, (void *)&lua_regkey_ctx);
+	lua_gettable(arg->L, LUA_REGISTRYINDEX);
+	ctx = (struct mg_context *)lua_touserdata(arg->L, -1);
+	lua_pop(arg->L, 1);
+
+	lua_rawgeti(arg->L, LUA_REGISTRYINDEX, arg->funcref);
+	err = lua_pcall(arg->L, 0, 1, 0);
+	if (err != 0) {
+		struct mg_connection fc;
+		lua_cry(fake_connection(&fc, ctx), err, arg->L, arg->script, "timer");
+		(void)pthread_mutex_unlock(arg->pmutex);
+		return 0;
+	}
+
+	ok = lua_type(arg->L, -1);
+	if (lua_isboolean(arg->L, -1)) {
+		ok = lua_toboolean(arg->L, -1);
+	} else {
+		ok = 0;
+	}
+	lua_pop(arg->L, 1);
 
 	(void)pthread_mutex_unlock(arg->pmutex);
 
@@ -2040,8 +2081,16 @@ lua_action(struct laction_arg *arg)
 
 
 static void
-lua_action_cancel(struct laction_arg *arg)
+lua_action_string_cancel(struct laction_string_arg *arg)
 {
+	mg_free(arg);
+}
+
+
+static void
+lua_action_funcref_cancel(struct laction_funcref_arg *arg)
+{
+	luaL_unref(arg->L, LUA_REGISTRYINDEX, arg->funcref);
 	mg_free(arg);
 }
 
@@ -2052,12 +2101,9 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 #if defined(USE_TIMERS) && defined(USE_WEBSOCKET)
 	int num_args = lua_gettop(L);
 	struct lua_websock_data *ws;
-	int type1, type2, ok = 0;
-	double timediff;
+	int type1, type2, type3, ok = 0;
+	double delay, interval;
 	struct mg_context *ctx;
-	struct laction_arg *arg;
-	const char *action_txt;
-	size_t action_txt_len;
 
 	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
 	lua_gettable(L, LUA_REGISTRYINDEX);
@@ -2074,22 +2120,59 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 
 	type1 = lua_type(L, 1);
 	type2 = lua_type(L, 2);
+	type3 = lua_type(L, 3);
 
-	if ((num_args == 2) && (type1 == LUA_TSTRING) && (type2 == LUA_TNUMBER)) {
-		/* called with 2 args: action (string), time (number) */
+	/* Must have at least two arguments, ant the first one has to be some text
+	 */
+	if ((num_args < 2) || (num_args > 3)) {
+		return luaL_error(L, "invalid arguments for set_timer/interval() call");
+	}
+
+	/* Second argument is the delay (and interval) */
+	if (type2 != LUA_TNUMBER) {
+		return luaL_error(L, "invalid arguments for set_timer/interval() call");
+	}
+	delay = (double)lua_tonumber(L, 2);
+	interval = (is_periodic ? delay : 0.0);
+
+	/* Third argument (optional) could be an interval */
+	if (num_args > 2) {
+		if (is_periodic || (type3 != LUA_TNUMBER)) {
+			return luaL_error(
+			    L, "invalid arguments for set_timer/interval() call");
+		}
+		interval = (double)lua_tonumber(L, 3);
+	}
+
+	/* Check numbers */
+	if ((delay < 0.0) || (interval < 0.0)) {
+		return luaL_error(L, "invalid arguments for set_timer/interval() call");
+	}
+
+	/* First value specifies the action */
+	if (type1 == LUA_TSTRING) {
+
+		/* Action could be passed as a string value */
+		struct laction_string_arg *arg;
+		const char *action_txt;
+		size_t action_txt_len;
+
 		action_txt = lua_tostring(L, 1);
+		if ((action_txt == NULL) || (action_txt[0] == 0)) {
+			return luaL_error(
+			    L, "invalid arguments for set_timer/interval() call");
+		}
 		action_txt_len = strlen(action_txt);
-		timediff = (double)lua_tonumber(L, 2);
 
-		arg = (struct laction_arg *)mg_malloc_ctx(sizeof(struct laction_arg)
-		                                              + action_txt_len + 10,
-		                                          ctx);
+		/* Create timer data structure and schedule timer */
+		arg = (struct laction_string_arg *)mg_malloc_ctx(
+		    sizeof(struct laction_string_arg) + action_txt_len + 10, ctx);
 		if (!arg) {
 			return luaL_error(L, "out of memory");
 		}
 
 		/* Argument for timer */
-		arg->state = L;
+		arg->L = L;
 		arg->script = ws->script;
 		arg->pmutex = &(ws->ws_mutex);
 		memcpy(arg->txt, "return(", 7);
@@ -2098,21 +2181,47 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 		arg->txt[action_txt_len + 8] = 0;
 		if (0
 		    == timer_add(ctx,
-		                 timediff,
-		                 is_periodic,
+		                 delay,
+		                 interval,
 		                 1,
-		                 lua_action,
+		                 (taction)lua_action_string,
 		                 (void *)arg,
-		                 lua_action_cancel)) {
+		                 (tcancelaction)lua_action_string_cancel)) {
 			/* Timer added successfully */
 			ok = 1;
 		}
+	} else if (type1 == LUA_TFUNCTION) {
 
-	} else if ((num_args == 2) && (type1 == LUA_TFUNCTION)
-	           && (type2 == LUA_TNUMBER)) {
-		/* called with 2 args: action (function), time (number) */
-		/* TODO (mid): not implemented yet */
-		return luaL_error(L, "invalid arguments for set_timer/interval() call");
+		/* Action could be passed as a function */
+		int funcref;
+		struct laction_funcref_arg *arg;
+
+		lua_pushvalue(L, 1);
+		funcref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+		/* Create timer data structure and schedule timer */
+		arg = (struct laction_funcref_arg *)
+		    mg_malloc_ctx(sizeof(struct laction_funcref_arg), ctx);
+		if (!arg) {
+			return luaL_error(L, "out of memory");
+		}
+
+		/* Argument for timer */
+		arg->L = L;
+		arg->script = ws->script;
+		arg->pmutex = &(ws->ws_mutex);
+		arg->funcref = funcref;
+		if (0
+		    == timer_add(ctx,
+		                 delay,
+		                 interval,
+		                 1,
+		                 (taction)lua_action_funcref,
+		                 (void *)arg,
+		                 (tcancelaction)lua_action_funcref_cancel)) {
+			/* Timer added successfully */
+			ok = 1;
+		}
 	} else {
 		return luaL_error(L, "invalid arguments for set_timer/interval() call");
 	}
@@ -2387,7 +2496,7 @@ static void
 reg_gc(lua_State *L, void *conn)
 {
 	/* Key element */
-	lua_pushlightuserdata(L, &lua_regkey_dtor);
+	lua_pushlightuserdata(L, (void *)&lua_regkey_dtor);
 
 	/* Value element */
 	lua_newuserdata(L, 0);
