@@ -2960,6 +2960,23 @@ enum {
 	PROTOCOL_TYPE_HTTP2 = 2
 };
 
+#define mg_cry_internal(conn, fmt, ...)                                        \
+	mg_cry_internal_wrap(conn, NULL, __func__, __LINE__, fmt, __VA_ARGS__)
+
+#define mg_cry_ctx_internal(ctx, fmt, ...)                                     \
+	mg_cry_internal_wrap(NULL, ctx, __func__, __LINE__, fmt, __VA_ARGS__)
+
+static void mg_cry_internal_wrap(const struct mg_connection *conn,
+                                 struct mg_context *ctx,
+                                 const char *func,
+                                 unsigned line,
+                                 const char *fmt,
+                                 ...) PRINTF_ARGS(5, 6);
+
+#if defined(USE_ZLIB)
+#include "mod_zlib.inl"
+#endif
+
 struct mg_connection {
 	int connection_type; /* see CONNECTION_TYPE_* above */
 	int protocol_type;   /* see PROTOCOL_TYPE_*: 0=http/1.x, 1=ws, 2=http/2 */
@@ -3010,6 +3027,17 @@ struct mg_connection {
 	                       * pages */
 #if defined(USE_WEBSOCKET)
 	int in_websocket_handling; /* 1 if in read_websocket */
+#if defined(USE_ZLIB)
+	/* Parameters for websocket data compression according to https://tools.ietf.org/html/rfc7692 */
+    int websocket_deflate_server_max_windows_bits;
+    int websocket_deflate_client_max_windows_bits;
+    int websocket_deflate_server_no_context_takeover;
+    int websocket_deflate_client_no_context_takeover;
+    int websocket_deflate_initialized;
+    int websocket_deflate_flush;
+    z_stream websocket_deflate_state;
+    z_stream websocket_inflate_state;
+#endif
 #endif
 	int handled_requests; /* Number of requests handled by this connection
 	                       */
@@ -3039,20 +3067,6 @@ struct de {
 	char *file_name;
 	struct mg_file_stat file;
 };
-
-
-#define mg_cry_internal(conn, fmt, ...)                                        \
-	mg_cry_internal_wrap(conn, NULL, __func__, __LINE__, fmt, __VA_ARGS__)
-
-#define mg_cry_ctx_internal(ctx, fmt, ...)                                     \
-	mg_cry_internal_wrap(NULL, ctx, __func__, __LINE__, fmt, __VA_ARGS__)
-
-static void mg_cry_internal_wrap(const struct mg_connection *conn,
-                                 struct mg_context *ctx,
-                                 const char *func,
-                                 unsigned line,
-                                 const char *fmt,
-                                 ...) PRINTF_ARGS(5, 6);
 
 
 #if !defined(NO_THREAD_NAME)
@@ -4279,6 +4293,71 @@ get_req_headers(const struct mg_request_info *ri,
 		}
 	}
 	return cnt;
+}
+#endif
+
+
+#if defined(USE_WEBSOCKET) && defined(USE_ZLIB)
+int websocket_deflate_initialize(struct mg_connection *conn) {
+  fflush(stdout);
+  z_stream websocket_deflate_state;
+  int websocket_deflate_server_max_windows_bits;
+  int websocket_deflate_client_max_windows_bits;
+  int websocket_deflate_server_no_context_takeover;
+  int websocket_deflate_client_no_context_takeover;
+
+  uint8_t deflate_bits;
+  uint8_t inflate_bits;
+
+  // if (server)
+  deflate_bits = conn->websocket_deflate_server_max_windows_bits;
+  inflate_bits = conn->websocket_deflate_client_max_windows_bits;
+  /*
+      deflate_bits = conn->websocket_deflate_client_max_windows_bits;
+      inflate_bits = conn->websocket_deflate_server_max_windows_bits;
+      */
+
+  int ret = deflateInit2(&conn->websocket_deflate_state, Z_DEFAULT_COMPRESSION,
+                         Z_DEFLATED, -1 * deflate_bits,
+                         4,  // memory level 1-9
+                         Z_DEFAULT_STRATEGY);
+  if (ret != Z_OK) return ret;
+
+  ret = inflateInit2(&conn->websocket_inflate_state, -1 * inflate_bits);
+  if (ret != Z_OK) return ret;
+
+  /*
+  if ((m_server_no_context_takeover && is_server) ||
+      (m_client_no_context_takeover && !is_server)) {
+      */
+  conn->websocket_deflate_flush = Z_FULL_FLUSH;
+  //} else
+  //  conn->websocket_deflate_flush = Z_SYNC_FLUSH;
+
+  conn->websocket_deflate_initialized = 1;
+  return Z_OK;
+}
+
+void websocket_deflate_negotiate(struct mg_connection *conn) {
+  const char *extensions = mg_get_header(conn, "Sec-WebSocket-Extensions");
+  if (extensions && strstr(extensions, "permessage-deflate")) {
+    conn->accept_gzip = 1;
+    conn->websocket_deflate_client_max_windows_bits = 15;
+    conn->websocket_deflate_server_max_windows_bits = 15;
+  } else {
+    conn->accept_gzip = 0;
+    conn->websocket_deflate_client_max_windows_bits = 0;
+    conn->websocket_deflate_server_max_windows_bits = 0;
+  }
+  conn->websocket_deflate_initialized = 0;
+}
+
+void websocket_deflate_response(struct mg_connection *conn) {
+  if (conn->accept_gzip) {
+    mg_printf(conn,
+              "Sec-WebSocket-Extensions: permessage-deflate; "
+              "client_no_context_takeover; server_no_context_takeover\r\n");
+  };
 }
 #endif
 
@@ -10039,11 +10118,6 @@ fclose_on_exec(struct mg_file_access *filep, struct mg_connection *conn)
 }
 
 
-#if defined(USE_ZLIB)
-#include "mod_zlib.inl"
-#endif
-
-
 #if !defined(NO_FILESYSTEMS)
 static void
 handle_static_file_request(struct mg_connection *conn,
@@ -12534,6 +12608,12 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 	          "Connection: Upgrade\r\n"
 	          "Sec-WebSocket-Accept: %s\r\n",
 	          b64_sha);
+
+#if defined(USE_ZLIB)
+    // Send negotiated compression extension parameters
+    websocket_deflate_response(conn);
+#endif
+
 	if (conn->request_info.acceptedWebSocketSubprotocol) {
 		mg_printf(conn,
 		          "Sec-WebSocket-Protocol: %s\r\n\r\n",
@@ -12772,13 +12852,50 @@ read_websocket(struct mg_connection *conn,
 			} else {
 				/* Exit the loop if callback signals to exit (server side),
 				 * or "connection close" opcode received (client side). */
-				if ((ws_data_handler != NULL)
-				    && !ws_data_handler(conn,
+				if (ws_data_handler != NULL) {
+#if defined(USE_ZLIB)
+				  if (mop & 0x40) {
+					/* Inflate the data received if bit RSV1 is set. */
+					if (!conn->websocket_deflate_initialized) {
+					  if (websocket_deflate_initialize(conn) != Z_OK)
+						exit_by_callback = 1;
+					}
+					if (!exit_by_callback) {
+					  Bytef *inflated = mg_calloc(10 * 1024 * 1024, sizeof(Bytef));
+					  // Add trailing 0x00 0x00 0xff 0xff bytes
+					  data[data_len] = '\x00';
+					  data[data_len + 1] = '\x00';
+					  data[data_len + 2] = '\xff';
+					  data[data_len + 3] = '\xff';
+					  conn->websocket_inflate_state.avail_in = data_len + 4;
+					  conn->websocket_inflate_state.next_in = data;
+					  conn->websocket_inflate_state.avail_out = 10 * 1024 * 1024;
+					  conn->websocket_inflate_state.next_out = inflated;
+					  int ret = inflate(&conn->websocket_inflate_state, Z_SYNC_FLUSH);
+					  // TODO loop allocate bigger buffer if needed
+					  if (ret == Z_NEED_DICT || ret == Z_DATA_ERROR ||
+						  ret == Z_MEM_ERROR || ret < 0)
+						exit_by_callback = 1;
+					  inflated[10 * 1024 * 1024 -
+							   conn->websocket_inflate_state.avail_out] = '\0';
+					  // if (conn->websocket_inflate_state.avail_out == 0)
+					  //   TODO output buffer overflow
+					  if (!ws_data_handler(conn, mop, (char *)inflated,
+										   10 * 1024 * 1024 -
+											   conn->websocket_inflate_state.avail_out,
+										   callback_data)) {
+						exit_by_callback = 1;
+					  }
+					}
+				  } else
+#endif
+        	  if (!ws_data_handler(conn,
 				                        mop,
 				                        (char *)data,
 				                        (size_t)data_len,
 				                        callback_data)) {
 					exit_by_callback = 1;
+				}
 				}
 			}
 
@@ -12877,12 +12994,46 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	size_t headerLen;
 	int retval;
 
+#if defined(USE_ZLIB)
+    uLong deflated_size;
+    Bytef *deflated;
+    // Deflate websocket messages over 100kb
+    int use_deflate = dataLen > 100 * 1024 && conn->accept_gzip;
+#endif
+
 #if defined(GCC_DIAGNOSTIC)
 /* Disable spurious conversion warning for GCC */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
 
+	/* TODO: Check if this lock should be moved to user land.
+	 * Currently the server sets this lock for websockets, but
+	 * not for any other connection. It must be set for every
+	 * conn read/written by more than one thread, no matter if
+	 * it is a websocket or regular connection. */
+	(void)mg_lock_connection(conn);
+
+#if defined(USE_ZLIB)
+	if (use_deflate) {
+		if (!conn->websocket_deflate_initialized) {
+		  if (websocket_deflate_initialize(conn) != Z_OK) return 0;
+		}
+
+		// Deflating the message
+		header[0] = 0xC0u | (unsigned char)((unsigned)opcode & 0xf);
+		conn->websocket_deflate_state.avail_in = dataLen;
+		conn->websocket_deflate_state.next_in = (unsigned char *)data;
+		deflated_size = compressBound(dataLen);
+		deflated = mg_calloc(deflated_size, sizeof(Bytef));
+		conn->websocket_deflate_state.avail_out = deflated_size;
+		conn->websocket_deflate_state.next_out = deflated =
+			mg_calloc(deflated_size, sizeof(Bytef));
+		deflate(&conn->websocket_deflate_state, conn->websocket_deflate_flush);
+		dataLen = deflated_size - conn->websocket_deflate_state.avail_out -
+				  4;  // Strip trailing 0x00 0x00 0xff 0xff bytes
+	} else
+#endif
 	header[0] = 0x80u | (unsigned char)((unsigned)opcode & 0xf);
 
 #if defined(GCC_DIAGNOSTIC)
@@ -12923,20 +13074,19 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	 * push(), although that is only a problem if the packet is large or
 	 * outgoing buffer is full). */
 
-	/* TODO: Check if this lock should be moved to user land.
-	 * Currently the server sets this lock for websockets, but
-	 * not for any other connection. It must be set for every
-	 * conn read/written by more than one thread, no matter if
-	 * it is a websocket or regular connection. */
-	(void)mg_lock_connection(conn);
-
 	retval = mg_write(conn, header, headerLen);
 	if (retval != (int)headerLen) {
 		/* Did not send complete header */
 		retval = -1;
 	} else {
 		if (dataLen > 0) {
-			retval = mg_write(conn, data, dataLen);
+#if defined(USE_ZLIB)
+		  if (use_deflate) {
+			  retval = mg_write(conn, deflated, dataLen);
+			  mg_free(deflated);
+		  } else
+#endif
+			  retval = mg_write(conn, data, dataLen);
 		}
 		/* if dataLen == 0, the header length (2) is returned */
 	}
@@ -13152,6 +13302,10 @@ handle_websocket_request(struct mg_connection *conn,
 				conn->request_info.acceptedWebSocketSubprotocol = sep;
 			}
 		}
+
+#if defined(USE_ZLIB)
+        websocket_deflate_negotiate(conn);
+#endif
 
 		if ((ws_connect_handler != NULL)
 		    && (ws_connect_handler(conn, cbData) != 0)) {
