@@ -77,6 +77,7 @@ before_script:
     -DCIVETWEB_DISABLE_CGI=${NO_CGI}
     -DCIVETWEB_SERVE_NO_FILES=${NO_FILES}
     -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=${ENABLE_SSL_DYNAMIC_LOADING}
+    -DCIVETWEB_SSL_OPENSSL_API_1_0=${OPENSSL_1_0}
     -DCIVETWEB_SSL_OPENSSL_API_1_1=${OPENSSL_1_1}
     -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
     -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
@@ -182,6 +183,7 @@ matrix:
       MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=NO
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -216,6 +218,7 @@ matrix:
       MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -251,6 +254,7 @@ matrix:
       MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -285,6 +289,7 @@ matrix:
       MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -319,6 +324,7 @@ matrix:
       MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -344,6 +350,7 @@ matrix:
       N=GCCAnyVersion-Linux-Coverage
       BUILD_TYPE=Coverage
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -369,6 +376,7 @@ matrix:
       N=Clang-OSX-Complete-NoLua-Release
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -395,6 +403,7 @@ matrix:
       N=Clang-OSX-Complete-NoLua-Release-OpenSSL_1_1_NoDynLoad
       BUILD_TYPE=OSX_OPENSSL_1_1
       ENABLE_SSL_DYNAMIC_LOADING=NO
+      OPENSSL_1_0=NO
       OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -434,6 +443,7 @@ matrix:
       N=Clang50-Linux-Default-Shared
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -462,6 +472,7 @@ matrix:
       N=Precise-Clang-Linux-Default
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -488,6 +499,7 @@ matrix:
       N=OSX-Package
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -523,6 +535,7 @@ matrix:
       ARCH=x86
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -555,6 +568,7 @@ matrix:
       N=NoSslDynamicLoading
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=NO
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       C_STANDARD=auto
@@ -580,6 +594,7 @@ matrix:
       N=GCCLinuxDefault_Debug
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -604,6 +619,7 @@ matrix:
       N=GCCLinuxDefault_RelWithDebInfo
       BUILD_TYPE=RelWithDebInfo
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -628,6 +644,7 @@ matrix:
       N=GCCLinuxDefault_MinSizeRel
       BUILD_TYPE=MinSizeRel
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -652,6 +669,7 @@ matrix:
       N=GCCLinuxDefault_None
       BUILD_TYPE=None
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -677,6 +695,7 @@ matrix:
       MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=YES
@@ -711,6 +730,7 @@ matrix:
       MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=YES
       ENABLE_LUA_SHARED=YES
@@ -737,6 +757,7 @@ matrix:
       N=GCCLinuxDefault_xenial
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=YES
       OPENSSL_1_1=NO
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -762,6 +783,7 @@ matrix:
       N=GCCLinuxDefault_bionic
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=NO
       OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -787,6 +809,7 @@ matrix:
       N=GCCLinuxDefault_eoan
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=NO
       OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -816,6 +839,7 @@ matrix:
       N=GCCLinuxDefault_focal
       BUILD_TYPE=Release
       ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_0=NO
       OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
@@ -883,7 +907,8 @@ matrix:
 #      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
 #      BUILD_TYPE=Debug
 #      ENABLE_SSL_DYNAMIC_LOADING=YES
-#      OPENSSL_1_1=NO
+#      OPENSSL_1_0=NO
+#      OPENSSL_1_1=YES
 #      ENABLE_CXX=NO
 #      ENABLE_LUA_SHARED=YES
 #      C_STANDARD=auto
@@ -896,6 +921,7 @@ matrix:
 #      ENABLE_WEBSOCKETS=YES
 #      ENABLE_SERVER_STATS=YES
 #      ENABLE_LUA=YES
+#      ENABLE_LUA_SHARED=YES
 #      ENABLE_DUKTAPE=NO
 #      NO_CACHING=YES
 #      ALLOW_WARNINGS=YES

@@ -93,6 +93,9 @@ endif
 
 ifdef NO_SSL
   CFLAGS += -DNO_SSL
+else
+  #Use OpenSSL 1.1 API version as default
+  CFLAGS += -DOPENSSL_API_1_1
 endif
 ifdef NO_CGI
   CFLAGS += -DNO_CGI

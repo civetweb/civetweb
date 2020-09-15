@@ -579,37 +579,37 @@ typedef long off_t;
 #define ERRNO ((int)(GetLastError()))
 #define NO_SOCKLEN_T
 
+
 #if defined(_WIN64) || defined(__MINGW64__)
 #if !defined(SSL_LIB)
+
 #if defined(OPENSSL_API_1_1)
 #define SSL_LIB "libssl-1_1-x64.dll"
-#else /* OPENSSL_API_1_1 */
-#define SSL_LIB "ssleay64.dll"
-#endif /* OPENSSL_API_1_1 */
-#endif /* SSL_LIB */
-#if !defined(CRYPTO_LIB)
-#if defined(OPENSSL_API_1_1)
 #define CRYPTO_LIB "libcrypto-1_1-x64.dll"
-#else /* OPENSSL_API_1_1 */
-#define CRYPTO_LIB "libeay64.dll"
 #endif /* OPENSSL_API_1_1 */
-#endif /* CRYPTO_LIB */
-#else  /* defined(_WIN64) || defined(__MINGW64__) */
+
+#if defined(OPENSSL_API_1_0)
+#define SSL_LIB "ssleay64.dll"
+#define CRYPTO_LIB "libeay64.dll"
+#endif /* OPENSSL_API_1_0 */
+
+#endif
+#else /* defined(_WIN64) || defined(__MINGW64__) */
 #if !defined(SSL_LIB)
+
 #if defined(OPENSSL_API_1_1)
 #define SSL_LIB "libssl-1_1.dll"
-#else
-#define SSL_LIB "ssleay32.dll"
-#endif
-#endif /* SSL_LIB */
-#if !defined(CRYPTO_LIB)
-#if defined(OPENSSL_API_1_1)
 #define CRYPTO_LIB "libcrypto-1_1.dll"
-#else
+#endif /* OPENSSL_API_1_1 */
+
+#if defined(OPENSSL_API_1_0)
+#define SSL_LIB "ssleay32.dll"
 #define CRYPTO_LIB "libeay32.dll"
-#endif
-#endif /* CRYPTO_LIB */
+#endif /* OPENSSL_API_1_0 */
+
+#endif /* SSL_LIB */
 #endif /* defined(_WIN64) || defined(__MINGW64__) */
+
 
 #define O_NONBLOCK (0)
 #if !defined(W_OK)
@@ -1336,7 +1336,7 @@ mg_atomic_add(volatile ptrdiff_t *addr, ptrdiff_t value)
 static void
 mg_atomic_max(volatile ptrdiff_t *addr, ptrdiff_t value)
 {
-	ptrdiff_t register tmp = *addr;
+	register ptrdiff_t tmp = *addr;
 
 #if defined(_WIN64) && !defined(NO_ATOMICS)
 	while (tmp < value) {
@@ -1360,6 +1360,7 @@ mg_atomic_max(volatile ptrdiff_t *addr, ptrdiff_t value)
 	mg_global_unlock();
 #endif
 }
+
 
 static int64_t
 mg_atomic_add64(volatile int64_t *addr, int64_t value)
@@ -1671,7 +1672,17 @@ static int mg_init_library_called = 0;
 
 #if !defined(NO_SSL)
 static int mg_ssl_initialized = 0;
+
+
+/* TODO: Selection of SSL library and version */
+#if !defined(OPENSSL_API_1_0) && !defined(OPENSSL_API_1_1)
+#error "Please define OPENSSL_API_1_0 or OPENSSL_API_1_1"
 #endif
+#if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_1_1)
+#error "Multiple OPENSSL_API versions defined"
+#endif
+#endif /* NO_SSL */
+
 
 static pthread_key_t sTlsKey; /* Thread local storage index */
 static volatile ptrdiff_t thread_idx_max = 0;
@@ -1870,15 +1881,20 @@ typedef struct SSL_CTX SSL_CTX;
 #define ENGINE_cleanup() ((void)0)
 #endif
 
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+
 /* If OpenSSL headers are included, automatically select the API version */
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 #if !defined(OPENSSL_API_1_1)
 #define OPENSSL_API_1_1
 #endif
 #define OPENSSL_REMOVE_THREAD_STATE()
 #else
+#if !defined(OPENSSL_API_1_0)
+#define OPENSSL_API_1_0
+#endif
 #define OPENSSL_REMOVE_THREAD_STATE() ERR_remove_thread_state(NULL)
 #endif
+
 
 #else
 
@@ -20636,11 +20652,11 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 		            block,
 		            sizeof(block),
 		            ",%s\"requests\" : {%s"
-		            "\"total\" : %i%s"
+		            "\"total\" : %lu%s"
 		            "}",
 		            eol,
 		            eol,
-		            ctx->total_requests,
+		            (unsigned long)ctx->total_requests,
 		            eol);
 		context_info_length += mg_str_append(&buffer, end, block);
 

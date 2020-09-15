@@ -74,5 +74,8 @@
     <None Include="..\..\src\mod_http2.inl">
       <Filter>inl files</Filter>
     </None>
+    <None Include="..\..\src\mod_zlib.inl">
+      <Filter>inl files</Filter>
+    </None>
   </ItemGroup>
 </Project>
