@@ -39,9 +39,6 @@
     <ClInclude Include="..\..\unittest\civetweb_check.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\unittest\timertest.c">
-      <Filter>Quelldateien</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\unittest\public_server.c">
@@ -60,6 +57,9 @@
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\civetweb.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\unittest\timertest.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>

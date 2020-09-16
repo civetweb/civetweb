@@ -20,6 +20,9 @@ include $(TOP)/resources/Makefile.in-os
 ifeq ($(TARGET_OS),LINUX) 
 	LIBS += -ldl -lrt
 endif
+ifdef WITH_ZLIB
+	LIBS += -lz
+endif
 
 all: $(PROG)
 

@@ -36,7 +36,9 @@
 /*
 ** Lua 5.2
 */
+#ifndef lua_strlen
 #define lua_strlen lua_rawlen
+#endif
 /* luaL_typerror always used with arg at ndx == NULL */
 #define luaL_typerror(L,ndx,str) luaL_error(L,"bad argument %d (%s expected, got nil)",ndx,str)
 /* luaL_register used once, so below expansion is OK for this case */

@@ -438,6 +438,8 @@ before_build:
     -DCIVETWEB_DISABLE_CACHING=%no_caching%
     -DCIVETWEB_C_STANDARD=%c_standard%
     -DCIVETWEB_CXX_STANDARD=%cxx_standard%
+    -DCIVETWEB_SSL_OPENSSL_API_1_0=NO
+    -DCIVETWEB_SSL_OPENSSL_API_1_1=YES
     "%source_path%"
   - powershell Push-AppveyorArtifact CMakeCache.txt
   - cd "%source_path%"

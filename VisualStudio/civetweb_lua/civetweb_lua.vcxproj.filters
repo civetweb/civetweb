@@ -75,6 +75,7 @@
       <Filter>inl files</Filter>
     </None>
     <None Include="..\..\src\response.inl">
+    <None Include="..\..\src\mod_zlib.inl">
       <Filter>inl files</Filter>
     </None>
   </ItemGroup>

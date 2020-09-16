@@ -43,6 +43,26 @@ mg.write("      </tr>\r\n");
 end
 mg.write("    </table>\r\n");
 
+
+mg.write("  <h2>Info</h2>\r\n")
+
+info = {}
+info["path_info"] = mg.request_info.path_info
+info["query_string"] = mg.request_info.query_string
+
+mg.write("    <table>\r\n");
+mg.write("      <tr>\r\n");
+mg.write("        <th>Info</th>\r\n")
+mg.write("        <th>Value</th>\r\n")
+mg.write("      </tr>\r\n");
+for k,v in pairs(info) do
+  mg.write("      <tr>\r\n");
+  mg.write("        <td>" .. k .. "</td>\r\n")
+  mg.write("        <td>" .. v .. "</td>\r\n")
+end
+mg.write("      </tr>\r\n");
+mg.write("    </table>\r\n");
+
 mg.write("  <h2>Body</h2>\r\n")
 mg.write("<pre>\r\n");
 

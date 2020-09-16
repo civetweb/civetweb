@@ -67,6 +67,10 @@ endif
 # only set main compile options if none were chosen
 CFLAGS += -Wall -Wextra -Wshadow -Wformat-security -Winit-self -Wmissing-prototypes -D$(TARGET_OS) -Iinclude $(COPT) -DUSE_STACK_SIZE=$(USE_STACK_SIZE)
 
+ifdef WITH_CFLAGS
+  CFLAGS += $(WITH_CFLAGS)
+endif
+
 LIBS = -lpthread -lm
 
 ifdef WITH_DEBUG
@@ -81,7 +85,7 @@ else ifdef TEST_FUZZ
   CXX = clang++
   BUILD_DIRS += $(BUILD_DIR)/fuzztest
   APP_SOURCES = fuzztest/fuzzmain.c
-  OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o) 
+  OBJECTS = $(LIB_SOURCES:.c=.o) $(APP_SOURCES:.c=.o)
   CFLAGS += -DTEST_FUZZ$(TEST_FUZZ)
 else
   CFLAGS += -O2 -DNDEBUG
@@ -89,6 +93,9 @@ endif
 
 ifdef NO_SSL
   CFLAGS += -DNO_SSL
+else
+  #Use OpenSSL 1.1 API version as default
+  CFLAGS += -DOPENSSL_API_1_1
 endif
 ifdef NO_CGI
   CFLAGS += -DNO_CGI
@@ -325,9 +332,9 @@ install-lib: lib$(CPROG).a
 install-slib: lib$(CPROG).so
 	$(eval version=$(shell grep -w "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
 	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
-	install -m 644 $< "$(LIBDIR)"
-	install -m 777 $<.$(major) "$(LIBDIR)"
-	install -m 777 $<.$(version).0 "$(LIBDIR)"
+	install -m 755 $<.$(version).0 "$(LIBDIR)"
+	cd "$(LIBDIR)" && ln -sfv $<.$(version).0 $<.$(major)
+	cd "$(LIBDIR)" && ln -sfv $<.$(version).0 $<
 
 # Install target we do not want to overwrite
 # as it may be an upgrade

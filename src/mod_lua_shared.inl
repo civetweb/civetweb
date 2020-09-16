@@ -63,6 +63,7 @@ lua_shared_exit(void)
 	pthread_mutex_destroy(&lua_shared_lock);
 }
 
+
 #if defined(MG_EXPERIMENTAL_INTERFACES)
 static double
 shared_locked_add(const char *name, size_t namlen, double value, int op)
@@ -159,45 +160,6 @@ lua_shared_exchange(struct lua_State *L)
 	lua_pushnumber(L, ret);
 	return 1;
 }
-
-/*
-static int
-lua_shared_push(struct lua_State *L)
-{
-    int val_type = lua_type(L, 1);
-
-    if ((val_type != LUA_TNUMBER) && (val_type != LUA_TSTRING)
-        && (val_type != LUA_TBOOLEAN)) {
-        return luaL_error(L, "shared value must be string, number or boolean");
-    }
-
-    pthread_mutex_lock(&lua_shared_lock);
-
-    lua_getglobal(L_shared, "shared");
-    lua_pushnumber(L_shared, num);
-
-    if (val_type == LUA_TNUMBER) {
-        double num = lua_tonumber(L, 3);
-        lua_pushnumber(L_shared, num);
-
-    } else if (val_type == LUA_TBOOLEAN) {
-        int i = lua_toboolean(L, 3);
-        lua_pushboolean(L_shared, i);
-
-    } else {
-        size_t len = 0;
-        const char *str = lua_tolstring(L, 3, &len);
-        lua_pushlstring(L_shared, str, len);
-    }
-
-    lua_rawset(L_shared, -3);
-    lua_pop(L_shared, 1);
-
-    pthread_mutex_unlock(&lua_shared_lock);
-
-    return 0;
-}
-*/
 #endif
 
 
@@ -242,12 +204,6 @@ lua_shared_index(struct lua_State *L)
 				lua_pushcclosure(L, lua_shared_dec, 0);
 			} else if (0 == strcmp(str, "__exchange")) {
 				lua_pushcclosure(L, lua_shared_exchange, 0);
-				/*
-			} else if (0 == strcmp(str, "__push")) {
-				lua_pushcclosure(L, lua_shared_push, 0);
-			} else if (0 == strcmp(str, "__pop")) {
-				lua_pushcclosure(L, lua_shared_pop, 0);
-				*/
 			} else
 #endif
 			{

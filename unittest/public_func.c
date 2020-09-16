@@ -175,10 +175,15 @@ START_TEST(test_mg_get_valid_options)
 		ck_assert_int_ge(len, 8);
 		ck_assert_int_lt(len, 40);
 
-		/* check valid characters (lower case or underscore) */
-		for (j = 0; j < len; j++) {
+		/* check valid characters: */
+		/* Every option name must start with lower case letter */
+		c = default_options[i].name[0];
+		ck_assert((c >= 'a') && (c <= 'z'));
+		for (j = 1; j < len; j++) {
+			/* Followed by lower case letters, numbers or underscores */
 			c = default_options[i].name[j];
-			ck_assert(((c >= 'a') && (c <= 'z')) || (c == '_'));
+			ck_assert(((c >= 'a') && (c <= 'z')) || (c == '_')
+			          || ((c >= '0') && (c <= '9')));
 		}
 	}
 
