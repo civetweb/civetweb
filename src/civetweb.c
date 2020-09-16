@@ -1333,6 +1333,34 @@ mg_atomic_add(volatile ptrdiff_t *addr, ptrdiff_t value)
 }
 
 
+FUNCTION_MAY_BE_UNUSED
+static int
+mg_atomic_compare_and_swap(volatile ptrdiff_t *addr,
+                           ptrdiff_t oldval,
+                           ptrdiff_t newval)
+{
+	ptrdiff_t ret;
+
+#if defined(_WIN64) && !defined(NO_ATOMICS)
+	ret = InterlockedCompareExchange64(addr, newval, oldval);
+#elif defined(_WIN32) && !defined(NO_ATOMICS)
+	ret = InterlockedCompareExchange(addr, newval, oldval);
+#elif defined(__GNUC__)                                                        \
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
+    && !defined(NO_ATOMICS)
+	ret = __sync_val_compare_and_swap(addr, oldval, newval);
+#else
+	mg_global_lock();
+	ret = *addr;
+	if ((ret != newval) && (ret == oldval)) {
+		*addr = newval;
+	}
+	mg_global_unlock();
+#endif
+	return ret;
+}
+
+
 static void
 mg_atomic_max(volatile ptrdiff_t *addr, ptrdiff_t value)
 {
@@ -2817,41 +2845,43 @@ struct mg_domain_context {
 };
 
 
-/* Stop flag can be "volatile" or require a lock */
-typedef int volatile stop_flag_t;
-
+/* Stop flag can be "volatile" or require a lock.
+ * MSDN uses volatile for "Interlocked" operations, but also explicitly
+ * states a read operation for int is always atomic. */
 #ifdef STOP_FLAG_NEEDS_LOCK
+
+typedef ptrdiff_t volatile stop_flag_t;
+
 static int
 STOP_FLAG_IS_ZERO(stop_flag_t *f)
 {
-	int r;
-	mg_global_lock();
-	r = ((*f) == 0);
-	mg_global_unlock();
-	return r;
+	stop_flag_t sf = mg_atomic_add(f, 0);
+	return (sf == 0);
 }
 
 static int
 STOP_FLAG_IS_TWO(stop_flag_t *f)
 {
-	int r;
-	mg_global_lock();
-	r = ((*f) == 2);
-	mg_global_unlock();
-	return r;
+	stop_flag_t sf = mg_atomic_add(f, 0);
+	return (sf == 2);
 }
 
 static void
-STOP_FLAG_ASSIGN(stop_flag_t *f, int v)
+STOP_FLAG_ASSIGN(stop_flag_t *f, stop_flag_t v)
 {
-	mg_global_lock();
-	(*f) = v;
-	mg_global_unlock();
+	stop_flag_t sf;
+	do {
+		sf = mg_atomic_compare_and_swap(f, *f, v);
+	} while (sf != v);
 }
+
 #else /* STOP_FLAG_NEEDS_LOCK */
+
+typedef int volatile stop_flag_t;
 #define STOP_FLAG_IS_ZERO(f) ((*(f)) == 0)
 #define STOP_FLAG_IS_TWO(f) ((*(f)) == 2)
 #define STOP_FLAG_ASSIGN(f, v) ((*(f)) = (v))
+
 #endif /* STOP_FLAG_NEEDS_LOCK */
 
 
