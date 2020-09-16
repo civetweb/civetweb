@@ -7002,6 +7002,7 @@ static void handle_request(struct mg_connection *);
 #if defined(NO_SSL)
 #error "HTTP2 requires ALPN, APLN requires SSL/TLS"
 #endif
+#define USE_ALPN
 #include "mod_http2.inl"
 /* Not supported with HTTP/2 */
 #define HTTP1_only                                                             \
@@ -16359,6 +16360,7 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 }
 
 
+#ifdef USE_ALPN
 static const char alpn_proto_list[] = "\x02h2\x08http/1.1\x08http/1.0";
 static const char *alpn_proto_order_http1[] = {alpn_proto_list + 3,
                                                alpn_proto_list + 3 + 8,
@@ -16459,6 +16461,7 @@ init_alpn(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 
 	return ret;
 }
+#endif
 
 
 /* Setup SSL CTX as required by CivetWeb */
@@ -16682,6 +16685,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 		SSL_CTX_set_timeout(dom_ctx->ssl_ctx, (long)ssl_cache_timeout);
 	}
 
+#ifdef USE_ALPN
 	/* Initialize ALPN only of TLS library (OpenSSL version) supports ALPN */
 #if !defined(NO_SSL_DL)
 	if (!tls_feature_missing[TLS_ALPN])
@@ -16689,6 +16693,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	{
 		init_alpn(phys_ctx, dom_ctx);
 	}
+#endif
 
 	return 1;
 }
