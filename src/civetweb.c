@@ -12804,13 +12804,15 @@ read_websocket(struct mg_connection *conn,
 								exit_by_callback = 1;
 						}
 						if (!exit_by_callback) {
-							int inflate_buf_size_old = 0;
-							int inflate_buf_size =
-							    1024 * 1024; // Start with 1 MB and double the
-							                 // memory when needed
+							size_t inflate_buf_size_old = 0;
+							size_t inflate_buf_size =
+							    data_len
+							    * 4; // Initial guess of the inflated message
+							         // size. We double the memory when needed.
 							Bytef *inflated;
+							Bytef *new_mem;
 							conn->websocket_inflate_state.avail_in =
-							    data_len + 4;
+							    (uInt)(data_len + 4);
 							conn->websocket_inflate_state.next_in = data;
 							// Add trailing 0x00 0x00 0xff 0xff bytes
 							data[data_len] = '\x00';
@@ -12819,30 +12821,48 @@ read_websocket(struct mg_connection *conn,
 							data[data_len + 3] = '\xff';
 							do {
 								if (inflate_buf_size_old == 0) {
-									inflated = mg_calloc(inflate_buf_size,
-									                     sizeof(Bytef));
+									new_mem = mg_calloc(inflate_buf_size,
+									                    sizeof(Bytef));
 								} else {
 									inflate_buf_size *= 2;
-									inflated =
+									new_mem =
 									    mg_realloc(inflated, inflate_buf_size);
 								}
+								if (new_mem == NULL) {
+									mg_cry_internal(
+									    conn,
+									    "Out of memory: Cannot allocate "
+									    "inflate buffer");
+									exit_by_callback = 1;
+									break;
+								}
+								inflated = new_mem;
 								conn->websocket_inflate_state.avail_out =
-								    inflate_buf_size - inflate_buf_size_old;
+								    (uInt)(inflate_buf_size
+								           - inflate_buf_size_old);
 								conn->websocket_inflate_state.next_out =
 								    inflated + inflate_buf_size_old;
 								int ret =
 								    inflate(&conn->websocket_inflate_state,
 								            Z_SYNC_FLUSH);
 								if (ret == Z_NEED_DICT || ret == Z_DATA_ERROR
-								    || ret == Z_MEM_ERROR || ret < 0)
+								    || ret == Z_MEM_ERROR || ret < 0) {
+									mg_cry_internal(
+									    conn,
+									    "ZLIB inflate error: %i %s",
+									    ret,
+									    (conn->websocket_inflate_state.msg
+									         ? conn->websocket_inflate_state.msg
+									         : "<no error message>"));
 									exit_by_callback = 1;
+									break;
+								}
 								inflate_buf_size_old = inflate_buf_size;
-							} while (!exit_by_callback
-							         && conn->websocket_inflate_state.avail_out
-							                == 0);
+
+							} while (conn->websocket_inflate_state.avail_out
+							         == 0);
 							inflate_buf_size -=
 							    conn->websocket_inflate_state.avail_out;
-							inflated[inflate_buf_size] = '\0';
 							if (!ws_data_handler(conn,
 							                     mop,
 							                     (char *)inflated,
@@ -12979,7 +12999,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	(void)mg_lock_connection(conn);
 
 #if defined(USE_ZLIB) && defined(MG_EXPERIMENTAL_INTERFACES)
-	uLong deflated_size;
+	size_t deflated_size;
 	Bytef *deflated;
 	// Deflate websocket messages over 100kb
 	int use_deflate = dataLen > 100 * 1024 && conn->accept_gzip;
@@ -12992,13 +13012,18 @@ mg_websocket_write_exec(struct mg_connection *conn,
 
 		// Deflating the message
 		header[0] = 0xC0u | (unsigned char)((unsigned)opcode & 0xf);
-		conn->websocket_deflate_state.avail_in = dataLen;
+		conn->websocket_deflate_state.avail_in = (uInt)dataLen;
 		conn->websocket_deflate_state.next_in = (unsigned char *)data;
-		deflated_size = compressBound(dataLen);
+		deflated_size = compressBound((uLong)dataLen);
 		deflated = mg_calloc(deflated_size, sizeof(Bytef));
-		conn->websocket_deflate_state.avail_out = deflated_size;
-		conn->websocket_deflate_state.next_out = deflated =
-		    mg_calloc(deflated_size, sizeof(Bytef));
+		if (deflated == NULL) {
+			mg_cry_internal(conn,
+			                "Out of memory: Cannot allocate deflate buffer");
+			mg_unlock_connection(conn);
+			return -1;
+		}
+		conn->websocket_deflate_state.avail_out = (uInt)deflated_size;
+		conn->websocket_deflate_state.next_out = deflated;
 		deflate(&conn->websocket_deflate_state, conn->websocket_deflate_flush);
 		dataLen = deflated_size - conn->websocket_deflate_state.avail_out
 		          - 4; // Strip trailing 0x00 0x00 0xff 0xff bytes
