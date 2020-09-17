@@ -205,14 +205,15 @@ websocket_deflate_negotiate(struct mg_connection *conn)
 						val = val * 10 + (*extensions - '0');
 						++extensions;
 					}
-					if (val < 9 || val > 15)
+					if (val < 9 || val > 15) {
 						// The permessage-deflate spec specifies that a
 						// value of 8 is also allowed, but zlib doesn't accept
 						// that.
 						mg_cry_internal(conn,
 						                "server-max-window-bits must be "
-						                "between 9 and 15");
-					else
+						                "between 9 and 15. Got %i",
+						                val);
+					} else
 						conn->websocket_deflate_server_max_windows_bits = val;
 					if (*extensions == '"')
 						++extensions;
@@ -234,7 +235,8 @@ websocket_deflate_negotiate(struct mg_connection *conn)
 						// accept that.
 						mg_cry_internal(conn,
 						                "client-max-window-bits must be "
-						                "between 9 and 15");
+						                "between 9 and 15. Got %i",
+						                val);
 					else
 						conn->websocket_deflate_client_max_windows_bits = val;
 					if (*extensions == '"')
@@ -242,7 +244,8 @@ websocket_deflate_negotiate(struct mg_connection *conn)
 				}
 			} else {
 				mg_cry_internal(conn,
-				                "Unknown parameter for permessage-deflate");
+				                "Unknown parameter %s for permessage-deflate",
+				                extensions);
 				break;
 			}
 		}
