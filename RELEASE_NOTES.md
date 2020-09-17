@@ -1,10 +1,26 @@
 Release Notes v1.13
 ===
-### *work in progress*
+### Objectives: *Various updates and fixes*
 
 Changes
 -------
 
+- Add arguments for CGI interpreters
+- Support multiple CGi interpreters
+- Some new API functions
+- Fix some memory leaks
+- Extended use of atomic operations (e.g., for server stats)
+- Add fuzz tests
+- Set OpenSSL 1.1 API as default (from 1.0)
+- Add Lua 5.4 support and deprecate Lua 5.1
+- Provide additional Lua API functions
+- Fix Lua websocket memory leak when closing the server
+- Remove obsolete "file in memory" implementation
+- Improvements and fixes in documentation
+- Fixes from static source code analysis
+- Additional unit tests
+- Various small bugfixes
+- Experimental support for some HTTP2 features (not ready for production)
 - Update version number
 
 
