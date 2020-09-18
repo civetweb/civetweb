@@ -745,7 +745,24 @@ WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 #define MAX_WS_CLIENTS (5)
 
 struct t_ws_client {
+	/* Handle to the connection, used for mg_read/mg_write */
 	struct mg_connection *conn;
+
+	/*
+	    WebSocketConnectHandler sets state to 1 ("connected")
+	    the connect handler can accept or reject a connection, but it cannot
+	    send or receive any data at this state
+
+	    WebSocketReadyHandler sets state to 2 ("ready")
+	    reading and writing is possible now
+
+	    WebSocketCloseHandler sets state to 0
+	    the websocket is about to be closed, reading and writing is no longer
+	    possible this callback can be used to cleanup allocated resources
+
+	    InformWebsockets is called cyclic every second, and sends some data
+	    (a counter value) to all websockets in state 2
+	*/
 	int state;
 } static ws_clients[MAX_WS_CLIENTS];
 
