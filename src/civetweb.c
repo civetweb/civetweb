@@ -3370,25 +3370,6 @@ mg_set_thread_name(const char *threadName)
 #endif
 
 
-#if defined(MG_LEGACY_INTERFACE)
-const char **
-mg_get_valid_option_names(void)
-{
-	/* This function is deprecated. Use mg_get_valid_options instead. */
-	static const char
-	    *data[2 * sizeof(config_options) / sizeof(config_options[0])] = {0};
-	int i;
-
-	for (i = 0; config_options[i].name != NULL; i++) {
-		data[i * 2] = config_options[i].name;
-		data[i * 2 + 1] = config_options[i].default_value;
-	}
-
-	return data;
-}
-#endif
-
-
 const struct mg_option *
 mg_get_valid_options(void)
 {
@@ -13536,104 +13517,6 @@ set_throttle(const char *spec, const union usa *rsa, const char *uri)
 #include "handle_form.inl"
 
 
-#if defined(MG_LEGACY_INTERFACE)
-/* Implement the deprecated mg_upload function by calling the new
- * mg_handle_form_request function. While mg_upload could only handle
- * HTML forms sent as POST request in multipart/form-data format
- * containing only file input elements, mg_handle_form_request can
- * handle all form input elements and all standard request methods. */
-struct mg_upload_user_data {
-	struct mg_connection *conn;
-	const char *destination_dir;
-	int num_uploaded_files;
-};
-
-
-/* Helper function for deprecated mg_upload. */
-static int
-mg_upload_field_found(const char *key,
-                      const char *filename,
-                      char *path,
-                      size_t pathlen,
-                      void *user_data)
-{
-	int truncated = 0;
-	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
-	(void)key;
-
-	if (!filename) {
-		mg_cry_internal(fud->conn, "%s: No filename set", __func__);
-		return FORM_FIELD_STORAGE_ABORT;
-	}
-	mg_snprintf(fud->conn,
-	            &truncated,
-	            path,
-	            pathlen - 1,
-	            "%s/%s",
-	            fud->destination_dir,
-	            filename);
-	if (truncated) {
-		mg_cry_internal(fud->conn, "%s: File path too long", __func__);
-		return FORM_FIELD_STORAGE_ABORT;
-	}
-	return FORM_FIELD_STORAGE_STORE;
-}
-
-
-/* Helper function for deprecated mg_upload. */
-static int
-mg_upload_field_get(const char *key,
-                    const char *value,
-                    size_t value_size,
-                    void *user_data)
-{
-	/* Function should never be called */
-	(void)key;
-	(void)value;
-	(void)value_size;
-	(void)user_data;
-
-	return 0;
-}
-
-
-/* Helper function for deprecated mg_upload. */
-static int
-mg_upload_field_stored(const char *path, long long file_size, void *user_data)
-{
-	struct mg_upload_user_data *fud = (struct mg_upload_user_data *)user_data;
-	(void)file_size;
-
-	fud->num_uploaded_files++;
-	fud->conn->phys_ctx->callbacks.upload(fud->conn, path);
-
-	return 0;
-}
-
-
-/* Deprecated function mg_upload - use mg_handle_form_request instead. */
-int
-mg_upload(struct mg_connection *conn, const char *destination_dir)
-{
-	struct mg_upload_user_data fud = {conn, destination_dir, 0};
-	struct mg_form_data_handler fdh = {mg_upload_field_found,
-	                                   mg_upload_field_get,
-	                                   mg_upload_field_stored,
-	                                   0};
-	int ret;
-
-	fdh.user_data = (void *)&fud;
-	ret = mg_handle_form_request(conn, &fdh);
-
-	if (ret < 0) {
-		mg_cry_internal(conn, "%s: Error while parsing the request", __func__);
-	}
-
-	return fud.num_uploaded_files;
-}
-#endif
-
-
 static int
 get_first_ssl_listener_index(const struct mg_context *ctx)
 {
@@ -14170,37 +14053,13 @@ is_in_script_path(const struct mg_connection *conn, const char *path)
 }
 
 
-#if defined(USE_WEBSOCKET)                                                     \
-    && (defined(MG_LEGACY_INTERFACE) || defined(MG_EXPERIMENTAL_INTERFACES))
+#if defined(USE_WEBSOCKET) && defined(MG_EXPERIMENTAL_INTERFACES)
 static int
-deprecated_websocket_connect_wrapper(const struct mg_connection *conn,
-                                     void *cbdata)
-{
-	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
-	if (pcallbacks->websocket_connect) {
-		return pcallbacks->websocket_connect(conn);
-	}
-	/* No handler set - assume "OK" */
-	return 0;
-}
-
-
-static void
-deprecated_websocket_ready_wrapper(struct mg_connection *conn, void *cbdata)
-{
-	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
-	if (pcallbacks->websocket_ready) {
-		pcallbacks->websocket_ready(conn);
-	}
-}
-
-
-static int
-deprecated_websocket_data_wrapper(struct mg_connection *conn,
-                                  int bits,
-                                  char *data,
-                                  size_t len,
-                                  void *cbdata)
+experimental_websocket_client_data_wrapper(struct mg_connection *conn,
+                                           int bits,
+                                           char *data,
+                                           size_t len,
+                                           void *cbdata)
 {
 	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
 	if (pcallbacks->websocket_data) {
@@ -14212,8 +14071,8 @@ deprecated_websocket_data_wrapper(struct mg_connection *conn,
 
 
 static void
-deprecated_websocket_close_wrapper(const struct mg_connection *conn,
-                                   void *cbdata)
+experimental_websocket_client_close_wrapper(const struct mg_connection *conn,
+                                            void *cbdata)
 {
 	struct mg_callbacks *pcallbacks = (struct mg_callbacks *)cbdata;
 	if (pcallbacks->connection_close) {
@@ -14604,22 +14463,7 @@ handle_request(struct mg_connection *conn)
 				mg_send_http_error(conn, 403, "%s", "Forbidden");
 			}
 		} else {
-#if defined(MG_LEGACY_INTERFACE)
-			handle_websocket_request(
-			    conn,
-			    path,
-			    !is_script_resource /* could be deprecated global callback
-			                         */
-			    ,
-			    NULL,
-			    deprecated_websocket_connect_wrapper,
-			    deprecated_websocket_ready_wrapper,
-			    deprecated_websocket_data_wrapper,
-			    NULL,
-			    &conn->phys_ctx->callbacks);
-#else
 			mg_send_http_error(conn, 404, "%s", "Not found");
-#endif
 		}
 		return;
 	} else
@@ -17498,8 +17342,8 @@ mg_connect_client2(const char *host,
 		    ((error != NULL) ? error->text_buffer_size : 0),
 		    (path ? path : ""),
 		    NULL /* TODO: origin */,
-		    deprecated_websocket_data_wrapper,
-		    deprecated_websocket_close_wrapper,
+		    experimental_websocket_client_data_wrapper,
+		    experimental_websocket_client_close_wrapper,
 		    (void *)init->callbacks);
 	}
 #endif
