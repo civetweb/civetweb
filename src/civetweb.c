@@ -16743,8 +16743,6 @@ reset_per_request_attributes(struct mg_connection *conn)
 	if (!conn) {
 		return;
 	}
-	conn->connection_type =
-	    CONNECTION_TYPE_INVALID; /* Not yet a valid request/response */
 
 	conn->num_bytes_sent = conn->consumed_content = 0;
 
@@ -17632,6 +17630,10 @@ static int
 get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
 	const char *cl;
+
+	conn->connection_type =
+	    CONNECTION_TYPE_REQUEST; /* request (valid of not) */
+
 	if (!get_message(conn, ebuf, ebuf_len, err)) {
 		return 0;
 	}
@@ -17702,7 +17704,6 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		conn->content_len = 0;
 	}
 
-	conn->connection_type = CONNECTION_TYPE_REQUEST; /* Valid request */
 	return 1;
 }
 
@@ -17712,6 +17713,10 @@ static int
 get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
 	const char *cl;
+
+	conn->connection_type =
+	    CONNECTION_TYPE_RESPONSE; /* response (valid or not) */
+
 	if (!get_message(conn, ebuf, ebuf_len, err)) {
 		return 0;
 	}
@@ -17785,7 +17790,6 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		}
 	}
 
-	conn->connection_type = CONNECTION_TYPE_RESPONSE; /* Valid response */
 	return 1;
 }
 
