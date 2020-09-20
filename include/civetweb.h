@@ -1485,12 +1485,13 @@ enum { MG_TIMEOUT_INFINITE = -1 };
      On success, >= 0
      On error/timeout, < 0
 */
-CIVETWEB_API int 
-mg_get_response(struct mg_connection *conn,
-                char *ebuf,
-                size_t ebuf_len,
-                int timeout);
+CIVETWEB_API int mg_get_response(struct mg_connection *conn,
+                                 char *ebuf,
+                                 size_t ebuf_len,
+                                 int timeout);
 
+/* mg_response_header_* functions can be used from server callbacks,
+ */
 
 /* Initialize a new HTTP response
  * Parameters:
@@ -1502,8 +1503,8 @@ mg_get_response(struct mg_connection *conn,
  *  -2:    invalid connection type
  *  -3:    invalid connection status
  */
-CIVETWEB_API int
-mg_response_start(struct mg_connection *conn, int status);
+CIVETWEB_API int mg_response_header_start(struct mg_connection *conn,
+                                          int status);
 
 
 /* Add a new HTTP response header line
@@ -1511,27 +1512,28 @@ mg_response_start(struct mg_connection *conn, int status);
  *   conn: Current connection handle.
  *   header: Header name.
  *   value: Header value.
- *   value_len: Length of header value, excluding the terminating zero. 
- *              Use -1 for "strlen(value)". 
- * Return:  
- *   0:    ok 
- *  -1:    parameter error 
+ *   value_len: Length of header value, excluding the terminating zero.
+ *              Use -1 for "strlen(value)".
+ * Return:
+ *   0:    ok
+ *  -1:    parameter error
  *  -2:    invalid connection type
  *  -3:    invalid connection status
  *  -4:    too many headers
  *  -5:    out of memory
  */
-CIVETWEB_API int
-mg_response_add_header(struct mg_connection *conn,
-	const char *header,
-	const char *value,
-	int value_len);
+CIVETWEB_API int mg_response_header_add(struct mg_connection *conn,
+                                        const char *header,
+                                        const char *value,
+                                        int value_len);
 
 
 /* Add a complete header string (key + value).
+ * This function is less efficient as compared to mg_response_header_add,
+ * and should only be used to convert complete HTTP/1.x header lines.
  * Parameters:
  *   conn: Current connection handle.
- *   http1_headers: Header line(s) in the form "name: value".
+ *   http1_headers: Header line(s) in the form "name: value\r\n".
  * Return:
  *  >=0:   no error, number of header lines added
  *  -1:    parameter error
@@ -1540,9 +1542,8 @@ mg_response_add_header(struct mg_connection *conn,
  *  -4:    too many headers
  *  -5:    out of memory
  */
-CIVETWEB_API int
-mg_response_add_headerlines(struct mg_connection *conn,
-	const char *http1_headers);
+CIVETWEB_API int mg_response_header_add_lines(struct mg_connection *conn,
+                                              const char *http1_headers);
 
 
 /* Send http response
@@ -1554,8 +1555,7 @@ mg_response_add_headerlines(struct mg_connection *conn,
  *  -2:    invalid connection type
  *  -3:    invalid connection status
  */
-CIVETWEB_API int
-mg_response_send_headers(struct mg_connection *conn);
+CIVETWEB_API int mg_response_header_send(struct mg_connection *conn);
 
 
 /* Check which features where set when the civetweb library has been compiled.

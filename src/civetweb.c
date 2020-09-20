@@ -4586,16 +4586,16 @@ static void
 send_no_cache_header(struct mg_connection *conn)
 {
 	/* Send all current and obsolete cache opt-out directives. */
-	mg_response_add_header(conn,
+	mg_response_header_add(conn,
 	                       "Cache-Control",
 	                       "no-cache, no-store, "
 	                       "must-revalidate, private, max-age=0",
 	                       -1);
-	mg_response_add_header(conn, "Expires", "0", -1);
+	mg_response_header_add(conn, "Expires", "0", -1);
 
 	if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
 		/* Obsolete, but still send it for HTTP/1.0 */
-		mg_response_add_header(conn, "Pragma", "no-cache", -1);
+		mg_response_header_add(conn, "Pragma", "no-cache", -1);
 	}
 }
 
@@ -4612,7 +4612,7 @@ send_static_cache_header(struct mg_connection *conn)
 
 	/* If there is a full cache-control option configured,0 use it */
 	if (cache_control != NULL) {
-		mg_response_add_header(conn, "Cache-Control", cache_control, -1);
+		mg_response_header_add(conn, "Cache-Control", cache_control, -1);
 		return;
 	}
 
@@ -4639,7 +4639,7 @@ send_static_cache_header(struct mg_connection *conn)
 	 * as undefined. */
 	mg_snprintf(
 	    conn, NULL, val, sizeof(val), "max-age=%lu", (unsigned long)max_age);
-	mg_response_add_header(conn, "Cache-Control", val, -1);
+	mg_response_header_add(conn, "Cache-Control", val, -1);
 
 #else  /* NO_CACHING */
 
@@ -4664,13 +4664,13 @@ send_additional_header(struct mg_connection *conn)
 			            sizeof(val),
 			            "max-age=%lu",
 			            (unsigned long)max_age);
-			mg_response_add_header(conn, "Strict-Transport-Security", val, -1);
+			mg_response_header_add(conn, "Strict-Transport-Security", val, -1);
 		}
 	}
 #endif
 
 	if (header && header[0]) {
-		mg_response_add_headerlines(conn, header);
+		mg_response_header_add_lines(conn, header);
 	}
 }
 
@@ -5040,16 +5040,16 @@ mg_send_http_error_impl(struct mg_connection *conn,
 
 		/* No custom error page. Send default error page. */
 		conn->must_close = 1;
-		mg_response_start(conn, status);
+		mg_response_header_start(conn, status);
 		send_no_cache_header(conn);
 		send_additional_header(conn);
 		if (has_body) {
-			mg_response_add_header(conn,
+			mg_response_header_add(conn,
 			                       "Content-Type",
 			                       "text/plain; charset=utf-8",
 			                       -1);
 		}
-		mg_response_send_headers(conn);
+		mg_response_header_send(conn);
 
 		/* HTTP responses 1xx, 204 and 304 MUST NOT send a body */
 		if (has_body) {
@@ -5091,15 +5091,15 @@ mg_send_http_ok(struct mg_connection *conn,
 		mime_type = "text/html";
 	}
 
-	mg_response_start(conn, 200);
+	mg_response_header_start(conn, 200);
 	send_no_cache_header(conn);
 	send_additional_header(conn);
-	mg_response_add_header(conn, "Content-Type", mime_type, -1);
+	mg_response_header_add(conn, "Content-Type", mime_type, -1);
 	if (content_length < 0) {
 		/* Size not known. Use chunked encoding (HTTP/1.x) */
 		if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
 			/* Only HTTP/1.x defines "chunked" encoding, HTTP/2 does not*/
-			mg_response_add_header(conn, "Transfer-Encoding", "chunked", -1);
+			mg_response_header_add(conn, "Transfer-Encoding", "chunked", -1);
 		}
 	} else {
 		char len[32];
@@ -5113,10 +5113,10 @@ mg_send_http_ok(struct mg_connection *conn,
 		if (!trunc) {
 			/* Since 32 bytes is enough to hold any 64 bit decimal number,
 			 * !trunc is always true */
-			mg_response_add_header(conn, "Content-Length", len, -1);
+			mg_response_header_add(conn, "Content-Length", len, -1);
 		}
 	}
-	mg_response_send_headers(conn);
+	mg_response_header_send(conn);
 
 	return 0;
 }
@@ -9103,10 +9103,10 @@ send_authorization_request(struct mg_connection *conn, const char *realm)
 	conn->must_close = 1;
 
 	/* Create 401 response */
-	mg_response_start(conn, 401);
+	mg_response_header_start(conn, 401);
 	send_no_cache_header(conn);
 	send_additional_header(conn);
-	mg_response_add_header(conn, "Content-Length", "0", -1);
+	mg_response_header_add(conn, "Content-Length", "0", -1);
 
 	/* Content for "WWW-Authenticate" header */
 	mg_snprintf(conn,
@@ -9120,11 +9120,11 @@ send_authorization_request(struct mg_connection *conn, const char *realm)
 
 	if (!trunc) {
 		/* !trunc should always be true */
-		mg_response_add_header(conn, "WWW-Authenticate", buf, -1);
+		mg_response_header_add(conn, "WWW-Authenticate", buf, -1);
 	}
 
 	/* Send all headers */
-	mg_response_send_headers(conn);
+	mg_response_header_send(conn);
 }
 
 
@@ -9966,16 +9966,16 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 	conn->must_close = 1;
 
 	/* Create 200 OK response */
-	mg_response_start(conn, 200);
+	mg_response_header_start(conn, 200);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
-	mg_response_add_header(conn,
+	mg_response_header_add(conn,
 	                       "Content-Type",
 	                       "text/html; charset=utf-8",
 	                       -1);
 
 	/* Send all headers */
-	mg_response_send_headers(conn);
+	mg_response_header_send(conn);
 
 	/* Body */
 	mg_printf(conn,
@@ -10350,18 +10350,18 @@ handle_static_file_request(struct mg_connection *conn,
 	construct_etag(etag, sizeof(etag), &filep->stat);
 
 	/* Create 2xx (200, 206) response */
-	mg_response_start(conn, conn->status_code);
+	mg_response_header_start(conn, conn->status_code);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
-	mg_response_add_header(conn,
+	mg_response_header_add(conn,
 	                       "Content-Type",
 	                       mime_vec.ptr,
 	                       (int)mime_vec.len);
 	if (cors1[0] != 0) {
-		mg_response_add_header(conn, cors1, cors2, -1);
+		mg_response_header_add(conn, cors1, cors2, -1);
 	}
-	mg_response_add_header(conn, "Last-Modified", lm, -1);
-	mg_response_add_header(conn, "Etag", etag, -1);
+	mg_response_header_add(conn, "Last-Modified", lm, -1);
+	mg_response_header_add(conn, "Etag", etag, -1);
 
 #if defined(USE_ZLIB)
 	/* On the fly compression allowed */
@@ -10371,7 +10371,7 @@ handle_static_file_request(struct mg_connection *conn,
 		encoding = "gzip";
 		if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
 			/* HTTP/2 is always using "chunks" (frames) */
-			mg_response_add_header(conn, "Transfer-Encoding", "chunked", -1);
+			mg_response_header_add(conn, "Transfer-Encoding", "chunked", -1);
 		}
 
 	} else
@@ -10385,27 +10385,27 @@ handle_static_file_request(struct mg_connection *conn,
 		mg_snprintf(conn, &trunc, len, sizeof(len), "%" INT64_FMT, cl);
 
 		if (!trunc) {
-			mg_response_add_header(conn, "Content-Length", len, -1);
+			mg_response_header_add(conn, "Content-Length", len, -1);
 		}
 
-		mg_response_add_header(conn, "Accept-Ranges", "bytes", -1);
+		mg_response_header_add(conn, "Accept-Ranges", "bytes", -1);
 	}
 
 	if (encoding) {
-		mg_response_add_header(conn, "Content-Encoding", encoding, -1);
+		mg_response_header_add(conn, "Content-Encoding", encoding, -1);
 	}
 	if (range[0] != 0) {
-		mg_response_add_header(conn, "Content-Range", range, -1);
+		mg_response_header_add(conn, "Content-Range", range, -1);
 	}
 
 	/* The code above does not add any header starting with X- to make
 	 * sure no one of the additional_headers is included twice */
 	if ((additional_headers != NULL) && (*additional_headers != 0)) {
-		mg_response_add_headerlines(conn, additional_headers);
+		mg_response_header_add_lines(conn, additional_headers);
 	}
 
 	/* Send all headers */
-	mg_response_send_headers(conn);
+	mg_response_header_send(conn);
 
 	if (!is_head_request) {
 #if defined(USE_ZLIB)
@@ -10469,14 +10469,14 @@ handle_not_modified_static_file_request(struct mg_connection *conn,
 	construct_etag(etag, sizeof(etag), &filep->stat);
 
 	/* Create 304 "not modified" response */
-	mg_response_start(conn, 304);
+	mg_response_header_start(conn, 304);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
-	mg_response_add_header(conn, "Last-Modified", lm, -1);
-	mg_response_add_header(conn, "Etag", etag, -1);
+	mg_response_header_add(conn, "Last-Modified", lm, -1);
+	mg_response_header_add(conn, "Etag", etag, -1);
 
 	/* Send all headers */
-	mg_response_send_headers(conn);
+	mg_response_header_send(conn);
 }
 #endif
 
@@ -11901,13 +11901,13 @@ mkcol(struct mg_connection *conn, const char *path)
 	if (rc == 0) {
 
 		/* Create 201 "Created" response */
-		mg_response_start(conn, 201);
+		mg_response_header_start(conn, 201);
 		send_static_cache_header(conn);
 		send_additional_header(conn);
-		mg_response_add_header(conn, "Content-Length", "0", -1);
+		mg_response_header_add(conn, "Content-Length", "0", -1);
 
 		/* Send all headers - there is no body */
-		mg_response_send_headers(conn);
+		mg_response_header_send(conn);
 
 	} else {
 		if (errno == EEXIST) {
@@ -11975,13 +11975,13 @@ put_file(struct mg_connection *conn, const char *path)
 		/* put_dir returns 0 if path is a directory */
 
 		/* Create response */
-		mg_response_start(conn, conn->status_code);
+		mg_response_header_start(conn, conn->status_code);
 		send_no_cache_header(conn);
 		send_additional_header(conn);
-		mg_response_add_header(conn, "Content-Length", "0", -1);
+		mg_response_header_add(conn, "Content-Length", "0", -1);
 
 		/* Send all headers - there is no body */
-		mg_response_send_headers(conn);
+		mg_response_header_send(conn);
 
 		/* Request to create a directory has been fulfilled successfully.
 		 * No need to put a file. */
@@ -12044,13 +12044,13 @@ put_file(struct mg_connection *conn, const char *path)
 	}
 
 	/* Create response (status_code has been set before) */
-	mg_response_start(conn, conn->status_code);
+	mg_response_header_start(conn, conn->status_code);
 	send_no_cache_header(conn);
 	send_additional_header(conn);
-	mg_response_add_header(conn, "Content-Length", "0", -1);
+	mg_response_header_add(conn, "Content-Length", "0", -1);
 
 	/* Send all headers - there is no body */
-	mg_response_send_headers(conn);
+	mg_response_header_send(conn);
 }
 
 
@@ -12094,11 +12094,11 @@ delete_file(struct mg_connection *conn, const char *path)
 	/* Try to delete it. */
 	if (mg_remove(conn, path) == 0) {
 		/* Delete was successful: Return 204 without content. */
-		mg_response_start(conn, 204);
+		mg_response_header_start(conn, 204);
 		send_no_cache_header(conn);
 		send_additional_header(conn);
-		mg_response_add_header(conn, "Content-Length", "0", -1);
-		mg_response_send_headers(conn);
+		mg_response_header_add(conn, "Content-Length", "0", -1);
+		mg_response_header_send(conn);
 
 	} else {
 		/* Delete not successful (file locked). */
@@ -12386,14 +12386,14 @@ handle_ssi_file_request(struct mg_connection *conn,
 		fclose_on_exec(&filep->access, conn);
 
 		/* 200 OK response */
-		mg_response_start(conn, 200);
+		mg_response_header_start(conn, 200);
 		send_no_cache_header(conn);
 		send_additional_header(conn);
-		mg_response_add_header(conn, "Content-Type", "text/html", -1);
+		mg_response_header_add(conn, "Content-Type", "text/html", -1);
 		if (cors1[0]) {
-			mg_response_add_header(conn, cors1, cors2, -1);
+			mg_response_header_add(conn, cors1, cors2, -1);
 		}
-		mg_response_send_headers(conn);
+		mg_response_header_send(conn);
 
 		/* Header sent, now send body */
 		send_ssi_file(conn, path, filep, 0);
@@ -12415,22 +12415,22 @@ send_options(struct mg_connection *conn)
 	 * Since browsers do not send an OPTIONS request, we can not test the
 	 * effect anyway. */
 
-	mg_response_start(conn, 200);
-	mg_response_add_header(conn, "Content-Type", "text/html", -1);
+	mg_response_header_start(conn, 200);
+	mg_response_header_add(conn, "Content-Type", "text/html", -1);
 	if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
 		/* Use the same as before */
-		mg_response_add_header(
+		mg_response_header_add(
 		    conn,
 		    "Allow",
 		    "GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, PROPFIND, MKCOL",
 		    -1);
-		mg_response_add_header(conn, "DAV", "1", -1);
+		mg_response_header_add(conn, "DAV", "1", -1);
 	} else {
 		/* TODO: Check this later for HTTP/2 */
-		mg_response_add_header(conn, "Allow", "GET, POST", -1);
+		mg_response_header_add(conn, "Allow", "GET, POST", -1);
 	}
 	send_additional_header(conn);
-	mg_response_send_headers(conn);
+	mg_response_header_send(conn);
 }
 
 
@@ -12524,11 +12524,11 @@ handle_propfind(struct mg_connection *conn,
 	conn->must_close = 1;
 
 	/* return 207 "Multi-Status" */
-	mg_response_start(conn, 207);
+	mg_response_header_start(conn, 207);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
-	mg_response_add_header(conn, "Content-Type", "text/xml; charset=utf-8", -1);
-	mg_response_send_headers(conn);
+	mg_response_header_add(conn, "Content-Type", "text/xml; charset=utf-8", -1);
+	mg_response_header_send(conn);
 
 	/* Content */
 	mg_printf(conn,

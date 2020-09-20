@@ -39,7 +39,7 @@ free_buffered_response_header_list(struct mg_connection *conn)
  *  -3:    invalid connection status
  */
 int
-mg_response_start(struct mg_connection *conn, int status)
+mg_response_header_start(struct mg_connection *conn, int status)
 {
 	if ((conn == NULL) || (status < 100) || (status > 999)) {
 		/* Parameter error */
@@ -73,7 +73,7 @@ mg_response_start(struct mg_connection *conn, int status)
  * out of memory
  */
 int
-mg_response_add_header(struct mg_connection *conn,
+mg_response_header_add(struct mg_connection *conn,
                        const char *header,
                        const char *value,
                        int value_len)
@@ -90,7 +90,7 @@ mg_response_add_header(struct mg_connection *conn,
 		return -2;
 	}
 	if (conn->request_state != 1) {
-		/* only allowed if mg_response_start was called */
+		/* only allowed if mg_response_header_start has been called before */
 		return -3;
 	}
 
@@ -148,8 +148,8 @@ static int parse_http_headers(char **buf, struct mg_header hdr[MG_MAX_HEADERS]);
  *  -5:    out of memory
  */
 int
-mg_response_add_headerlines(struct mg_connection *conn,
-                            const char *http1_headers)
+mg_response_header_add_lines(struct mg_connection *conn,
+                             const char *http1_headers)
 {
 	struct mg_header add_hdr[MG_MAX_HEADERS];
 	int num_hdr, i, ret;
@@ -170,14 +170,14 @@ mg_response_add_headerlines(struct mg_connection *conn,
 
 	for (i = 0; i < num_hdr; i++) {
 		int lret =
-		    mg_response_add_header(conn, add_hdr[i].name, add_hdr[i].value, -1);
+		    mg_response_header_add(conn, add_hdr[i].name, add_hdr[i].value, -1);
 		if ((ret > 0) && (lret < 0)) {
 			/* Store error return value */
 			ret = lret;
 		}
 	}
 
-	/* mg_response_add_header created a copy, so we can free the original */
+	/* mg_response_header_add created a copy, so we can free the original */
 	mg_free(workbuffer);
 	return ret;
 }
@@ -198,7 +198,7 @@ static int http2_send_response_headers(struct mg_connection *conn);
  *  -3:    invalid connection status
  */
 int
-mg_response_send_headers(struct mg_connection *conn)
+mg_response_header_send(struct mg_connection *conn)
 {
 	const char *txt;
 	int i;
@@ -215,7 +215,7 @@ mg_response_send_headers(struct mg_connection *conn)
 		return -2;
 	}
 	if (conn->request_state != 1) {
-		/* only allowed if mg_response_start was called */
+		/* only allowed if mg_response_header_start has been called before */
 		return -3;
 	}
 
