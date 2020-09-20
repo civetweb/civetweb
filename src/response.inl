@@ -104,9 +104,9 @@ mg_response_add_header(struct mg_connection *conn,
 	conn->response_info.http_headers[hidx].name =
 	    mg_strdup_ctx(header, conn->phys_ctx);
 	if (value_len >= 0) {
-		char *hbuf = mg_malloc_ctx(value_len + 1, conn->phys_ctx);
+		char *hbuf = mg_malloc_ctx((unsigned)value_len + 1, conn->phys_ctx);
 		if (hbuf) {
-			memcpy(hbuf, value, value_len);
+			memcpy(hbuf, value, (unsigned)value_len);
 			hbuf[value_len] = 0;
 		}
 		conn->response_info.http_headers[hidx].value = hbuf;

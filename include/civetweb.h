@@ -1473,6 +1473,7 @@ enum { TIMEOUT_INFINITE = -1 };
 #endif
 enum { MG_TIMEOUT_INFINITE = -1 };
 
+
 /* Wait for a response from the server
    Parameters:
      conn: connection
@@ -1484,10 +1485,77 @@ enum { MG_TIMEOUT_INFINITE = -1 };
      On success, >= 0
      On error/timeout, < 0
 */
-CIVETWEB_API int mg_get_response(struct mg_connection *conn,
-                                 char *ebuf,
-                                 size_t ebuf_len,
-                                 int timeout);
+CIVETWEB_API int 
+mg_get_response(struct mg_connection *conn,
+                char *ebuf,
+                size_t ebuf_len,
+                int timeout);
+
+
+/* Initialize a new HTTP response
+ * Parameters:
+ *   conn: Current connection handle.
+ *   status: HTTP status code (e.g., 200 for "OK").
+ * Return:
+ *   0:    ok
+ *  -1:    parameter error
+ *  -2:    invalid connection type
+ *  -3:    invalid connection status
+ */
+CIVETWEB_API int
+mg_response_start(struct mg_connection *conn, int status);
+
+
+/* Add a new HTTP response header line
+ * Parameters:
+ *   conn: Current connection handle.
+ *   header: Header name.
+ *   value: Header value.
+ *   value_len: Length of header value, excluding the terminating zero. 
+ *              Use -1 for "strlen(value)". 
+ * Return:  
+ *   0:    ok 
+ *  -1:    parameter error 
+ *  -2:    invalid connection type
+ *  -3:    invalid connection status
+ *  -4:    too many headers
+ *  -5:    out of memory
+ */
+CIVETWEB_API int
+mg_response_add_header(struct mg_connection *conn,
+	const char *header,
+	const char *value,
+	int value_len);
+
+
+/* Add a complete header string (key + value).
+ * Parameters:
+ *   conn: Current connection handle.
+ *   http1_headers: Header line(s) in the form "name: value".
+ * Return:
+ *  >=0:   no error, number of header lines added
+ *  -1:    parameter error
+ *  -2:    invalid connection type
+ *  -3:    invalid connection status
+ *  -4:    too many headers
+ *  -5:    out of memory
+ */
+CIVETWEB_API int
+mg_response_add_headerlines(struct mg_connection *conn,
+	const char *http1_headers);
+
+
+/* Send http response
+ * Parameters:
+ *   conn: Current connection handle.
+ * Return:
+ *   0:    ok
+ *  -1:    parameter error
+ *  -2:    invalid connection type
+ *  -3:    invalid connection status
+ */
+CIVETWEB_API int
+mg_response_send_headers(struct mg_connection *conn);
 
 
 /* Check which features where set when the civetweb library has been compiled.
