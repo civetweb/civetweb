@@ -29,6 +29,7 @@ but all functions required to run a HTTP server.
     - src/md5.inl (MD5 calculation)
     - src/sha1.inl (SHA calculation)
     - src/handle\_form.inl (HTML form handling functions)
+    - src/response.inl (helper for generating HTTP response headers)
     - src/timer.inl (optional timer support)
   - Optional: C++ wrapper
     - include/CivetServer.h (C++ interface)
@@ -39,6 +40,7 @@ but all functions required to run a HTTP server.
 
 
 Note: The C++ wrapper uses the official C interface (civetweb.h) without adding any features to the server itself. Several features available in the C interface are missing in the C++ interface. While all features should be accessible using the C interface, this is not a design goal of the C++ interface.
+New code is advised to use the C interface, since this is unit tested and new API functions are often only added there.
 
 
 #### Additional Source Files for Executables
@@ -80,7 +82,7 @@ By default, the server will automatically serve up files like a normal HTTP serv
 Alternative quick start: Have a look at the examples embedded\_c and embedded\_cpp
 
 
-Feature selection
+Feature Selection
 ------
 
 CivetWeb is highly customizable at build time, in addition to configuration at start time.
@@ -99,6 +101,28 @@ In some special cases, it might be meaningful to completely replace an internal 
 Since CivetWeb is free and open source software covered by the MIT license, you can feel free to just edit civetweb.c according to your needs.
 However, this might be annoying when updating the server, pulling new features or bug fixes from the main repository. For some selected functions, it is possible to provide your own implementation using a `MG_EXTERNAL_FUNCTION_<internal_function_name>` define. For details on this mechanism, please look directly into the source code [civetweb.c](https://github.com/civetweb/civetweb/blob/master/src/civetweb.c). Interfaces and even names of internal functions may change without notice - when you use these defines, you have to check this every time you update CivetWeb. It might still be less effort than to apply your patches every time.
 This customization option is currently in an evaluation phase. In case you need additional function defines, please create an issue on GitHub explaining your use case, to discuss if this would be an appropriate solution - in general, other customization options are preferred.
+
+
+Stack Sizes
+------
+
+Stack sizes are usually nothing you need to worry about when running on a system with sufficient memory, such as a desktop PC running Windows or Linux.
+CivetWeb will use the default stack size on those system (typically 1 MB per Windows, up to 8 MB for Linux) - for each thread.
+CivetWeb uses one thread for each HTTP connection, so in case a request handler uses a blocking, only this connection will be blocked, while others are not affected.
+The number of threads can be configured (see [UserManual.md](https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md#num_threads-50)). 
+This number also defines the limit for the number of threads that can be handled simultaneously - additional requests can be queues, but are not processed.
+Since HTTP clients as web browsers tend to open multiple connections to the same server when loading one page, using less then five to ten threads may cause delays, even when there is only one user using one browser.
+The total amount of virtual memory required for all stacks is `num_threads` multiplied by the stack size per thread (e.g., 50 MB for 50 threads on Windows).
+This virtual memory (more precisely: reserved virtual address space) will only require "real" physical memory, when the stack is really used up to this level.
+If one stack in the entire process exceeds its virtual address space limit, the entire process crashes.
+Thus, for a system with sufficient resources, using large stacks with big reserves is advisable.
+
+However, for small embedded devices 50 MB may already be a lot, in particular if they immediately commit physical memory for all virtual memory allocations.
+To limit the stack size, the define `USE_STACK_SIZE` can be set.
+Note that stack (as all memory) comes in pages of 4096 bytes (for X86 CPUs and may others), so `USE_STACK_SIZE` must always be an integer multiple of this page size.
+In case no additional features are used, 4 pages (16 kB) of stack for each thread could be sufficient. 
+Using lower stack sizes may require to reduce some buffer sizes (e.g. `MG_BUF_LEN`).
+(Note: There is no warranty for these numbers, neither for this, nor for any past or future versions.)
 
 
 Lua Support
