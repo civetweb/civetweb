@@ -19,8 +19,10 @@ Changes
 - Improvements and fixes in documentation
 - Fixes from static source code analysis
 - Additional unit tests
-- Various small bugfixes
+- Various small bug fixes
 - Experimental support for some HTTP2 features (not ready for production)
+- Experimental support for websocket compression
+- Remove legacy interfaces declared obsolete since more than 3 years
 - Update version number
 
 
