@@ -113,6 +113,7 @@ else
   LCC = $(CC)
 endif
 
+
 ifdef WITH_ALL
   WITH_WEBSOCKET = 1
   WITH_IPV6 = 1
@@ -120,6 +121,7 @@ ifdef WITH_ALL
   WITH_DUKTAPE = 1
   WITH_SERVER_STATS = 1
   WITH_ZLIB = 1
+  WITH_HTTP2 = 1
   WITH_EXPERIMENTAL = 1
   #WITH_CPP is not defined, ALL means only real features, not wrappers
 endif
@@ -168,6 +170,10 @@ endif
 ifdef WITH_ZLIB
   LIBS += -lz
   CFLAGS += -DUSE_ZLIB
+endif
+
+ifdef WITH_HTTP2
+  CFLAGS += -DUSE_HTTP2
 endif
 
 # Other features

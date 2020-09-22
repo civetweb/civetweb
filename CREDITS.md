@@ -43,6 +43,7 @@
 * Drew Wells
 * duong2179
 * ehlertjd
+* Elan P. Kugelmass
 * eugene
 * Eric Tsau
 * Erick Vieyra
@@ -54,6 +55,8 @@
 * feneuilflo
 * Fernando G. Aranda
 * Frank Hilliger
+* Gábor Csárdi
+* goodmenzy
 * Grahack
 * Gregor Jasny
 * grenclave
@@ -139,6 +142,7 @@
 * Philipp Hasper
 * Piotr Zierhoffer
 * pkvamme
+* Ponnuvel Palaniyappan
 * Radoslaw Zarzynski
 * Red54
 * Retallack Mark mark.retallack
@@ -159,6 +163,7 @@
 * Simon Hailes
 * slidertom
 * SpaceLord
+* Stefan Codrescu
 * sunfch
 * suzukibitman
 * Símal Rasmussen
