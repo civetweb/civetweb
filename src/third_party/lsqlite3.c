@@ -1787,7 +1787,7 @@ static int db_exec_callback(void* user, int columns, char **data, char **names) 
         else
 #endif
         if (lua_isnumber(L, -1))
-            result = lua_tonumber(L, -1);
+            result = (int)lua_tonumber(L, -1);
     }
 
     lua_settop(L, top);

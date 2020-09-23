@@ -205,7 +205,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 #define ZEPHYR_STACK_SIZE USE_STACK_SIZE
 #else
-#define ZEPHYR_STACK_SIZE (1024*16)
+#define ZEPHYR_STACK_SIZE (1024 * 16)
 #endif
 
 K_THREAD_STACK_DEFINE(civetweb_main_stack, ZEPHYR_STACK_SIZE);
@@ -7786,6 +7786,27 @@ extention_matches_script(
 }
 
 
+static int
+extention_matches_template_text(
+    struct mg_connection *conn, /* in: request (must be valid) */
+    const char *filename        /* in: filename  (must be valid) */
+)
+{
+#if defined(USE_LUA)
+	if (match_prefix_strlen(conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS],
+	                        filename)
+	    > 0) {
+		return 1;
+	}
+#endif
+	if (match_prefix_strlen(conn->dom_ctx->config[SSI_EXTENSIONS], filename)
+	    > 0) {
+		return 1;
+	}
+	return 0;
+}
+
+
 /* For given directory path, substitute it to valid index file.
  * Return 1 if index file has been found, 0 if not found.
  * If the file is found, it's stats is returned in stp. */
@@ -7845,7 +7866,8 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
               int *is_found,                 /* out: file found (directly) */
               int *is_script_resource,       /* out: handled by a script? */
               int *is_websocket_request,     /* out: websocket connetion? */
-              int *is_put_or_delete_request  /* out: put/delete a file? */
+              int *is_put_or_delete_request, /* out: put/delete a file? */
+              int *is_template_text          /* out: SSI file or LSP file? */
 )
 {
 	char const *accept_encoding;
@@ -7872,6 +7894,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	*filename = 0;
 	*is_found = 0;
 	*is_script_resource = 0;
+	*is_template_text = 0;
 
 	/* Step 2: Check if the request attempts to modify the file system */
 	*is_put_or_delete_request = is_put_or_delete_method(conn);
@@ -7966,7 +7989,17 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 			*is_script_resource = (!*is_put_or_delete_request);
 		}
 
-		/* 8.3: If the request target is a directory, there could be
+		/* 8.3: Check for SSI and LSP files */
+		if (extention_matches_template_text(conn, filename)) {
+			/* Same as above, but for *.lsp and *.shtml files. */
+			/* A "template text" is a file delivered directly to the client,
+			 * but with some text tags replaced by dynamic content.
+			 * E.g. a Server Side Include (SSI) or Lua Page/Lua Server Page
+			 * (LP, LSP) file. */
+			*is_template_text = (!*is_put_or_delete_request);
+		}
+
+		/* 8.4: If the request target is a directory, there could be
 		 * a substitute file (index.html, index.cgi, ...). */
 		if (filestat->is_directory && is_uri_end_slash) {
 			/* Use a local copy here, since substitute_index_file will
@@ -7984,6 +8017,9 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 				if (extention_matches_script(conn, filename)) {
 					/* Substitute file is a script file */
 					*is_script_resource = 1;
+				} else if (extention_matches_template_text(conn, filename)) {
+					/* Substitute file is a LSP or SSI file */
+					*is_template_text = 1;
 				} else {
 					/* Substitute file is a regular file */
 					*is_script_resource = 0;
@@ -14247,7 +14283,8 @@ handle_request(struct mg_connection *conn)
 	char path[PATH_MAX];
 	int uri_len, ssl_index;
 	int is_found = 0, is_script_resource = 0, is_websocket_request = 0,
-	    is_put_or_delete_request = 0, is_callback_resource = 0;
+	    is_put_or_delete_request = 0, is_callback_resource = 0,
+	    is_template_text_file = 0;
 	int i;
 	struct mg_file file = STRUCT_FILE_INITIALIZER;
 	mg_request_handler callback_handler = NULL;
@@ -14461,7 +14498,8 @@ handle_request(struct mg_connection *conn)
 		              &is_found,
 		              &is_script_resource,
 		              &is_websocket_request,
-		              &is_put_or_delete_request);
+		              &is_put_or_delete_request,
+		              &is_template_text_file);
 	}
 
 	/* 6. authorization check */
@@ -14552,7 +14590,7 @@ handle_request(struct mg_connection *conn)
 				 *
 				 * TODO: What would be the best reaction here?
 				 * (Note: The reaction may change, if there is a better
-				 *idea.)
+				 * idea.)
 				 */
 
 				/* For the moment, use option c: We look for a proper file,
@@ -14565,7 +14603,8 @@ handle_request(struct mg_connection *conn)
 				              &is_found,
 				              &is_script_resource,
 				              &is_websocket_request,
-				              &is_put_or_delete_request);
+				              &is_put_or_delete_request,
+				              &is_template_text_file);
 				callback_handler = NULL;
 
 				/* Here we are at a dead end:
@@ -14739,17 +14778,10 @@ handle_request(struct mg_connection *conn)
 		return;
 	}
 
-	/* 15. SSI files */
-	if (match_prefix(conn->dom_ctx->config[SSI_EXTENSIONS],
-	                 strlen(conn->dom_ctx->config[SSI_EXTENSIONS]),
-	                 path)
-	    > 0) {
-		if (is_in_script_path(conn, path)) {
-			handle_ssi_file_request(conn, path, &file);
-		} else {
-			/* Script was in an illegal path */
-			mg_send_http_error(conn, 403, "%s", "Forbidden");
-		}
+	/* 15. Files with search/replace patterns: LSP and SSI */
+	if (is_template_text_file) {
+		HTTP1_only;
+		handle_file_based_request(conn, path, &file);
 		return;
 	}
 
