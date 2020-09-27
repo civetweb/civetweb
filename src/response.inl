@@ -67,10 +67,15 @@ mg_response_header_start(struct mg_connection *conn, int status)
  *   conn: Current connection handle.
  *   header: Header name.
  *   value: Header value.
- *   value_len: Length of header value, excluding the terminating zero. Use -1
- * for "strlen(value)". Return: 0:    ok -1:    parameter error -2:    invalid
- * connection type -3:    invalid connection status -4:    too many headers -5:
- * out of memory
+ *   value_len: Length of header value, excluding the terminating zero.
+ *              Use -1 for "strlen(value)".
+ * Return:
+ *    0:    ok
+ *   -1:    parameter error
+ *   -2:    invalid connection type
+ *   -3:    invalid connection status
+ *   -4:    too many headers
+ *   -5:    out of memory
  */
 int
 mg_response_header_add(struct mg_connection *conn,

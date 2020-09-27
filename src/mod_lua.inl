@@ -2252,6 +2252,88 @@ lwebsocket_set_interval(lua_State *L)
 }
 
 
+/* mg.response.send() */
+static int
+lsp_response_send(lua_State *L)
+{
+	int http_status;
+	int ret1, ret2, ret3;
+
+	struct mg_connection *conn =
+	    (struct mg_connection *)lua_touserdata(L, lua_upvalueindex(1));
+	int num_args = lua_gettop(L);
+
+	/* Get mg.response - table */
+	lua_getglobal(L, "mg");
+	if (!lua_istable(L, -1)) {
+		return luaL_error(L, "table mg not available");
+	}
+	lua_pushstring(L, "response");
+	lua_rawget(L, -2); /* rawget: no metatable */
+	if (!lua_istable(L, -1)) {
+		return luaL_error(L, "table mg.response not available");
+	}
+
+	/* Get element: status code  */
+	lua_pushstring(L, "status");
+	lua_gettable(L, -2); /* get .. could use metatable */
+	if (!lua_isnumber(L, -1)) {
+		return luaL_error(L, "number mg.response.status not available");
+	}
+	http_status = (int)lua_tonumber(L, -1);
+	lua_pop(L, 1); /* remove number "status" */
+
+	/* Get element: table of http response headers */
+	lua_pushstring(L, "http_headers");
+	lua_gettable(L, -2); /* get .. could use metatable */
+	if (!lua_istable(L, -1)) {
+		return luaL_error(L, "table mg.response.http_headers not available");
+	}
+
+	/* Parameter checks passed, initiate response */
+	ret1 = mg_response_header_start(conn, http_status);
+	if (ret1 != 0) {
+		lua_pushboolean(L, 0); /* false */
+		lua_pushinteger(L, ret1);
+		return 2;
+	}
+
+	/* Iterate table of http response headers */
+	ret2 = 0;
+	lua_pushnil(L);
+	while (lua_next(L, -2)) {
+		int retadd;
+		int key_type = lua_type(L, -2);
+		int value_type = lua_type(L, -1);
+		if ((key_type == LUA_TSTRING) && (value_type == LUA_TSTRING)) {
+			size_t key_len = 0, value_len = 0;
+			const char *key = lua_tolstring(L, -2, &key_len);
+			const char *value = lua_tolstring(L, -1, &value_len);
+			retadd = mg_response_header_add(conn, key, value, (int)value_len);
+		} else if ((key_type == LUA_TSTRING) && (value_type == LUA_TSTRING)) {
+			const char *value = lua_tostring(L, -1);
+			retadd = mg_response_header_add_lines(conn, value);
+		}
+		if ((retadd != 0) && (ret2 == 0)) {
+			/* Store first error */
+			ret2 = retadd;
+		}
+		lua_pop(L, 1);
+	}
+
+	/* Finalize */
+	ret3 = mg_response_header_send(conn);
+	if (ret3 == 0) {
+		lua_pushboolean(L, 1);    /* TRUE */
+		lua_pushinteger(L, ret2); /* Error/Warning from header_add */
+	} else {
+		lua_pushboolean(L, 0);    /* FALSE */
+		lua_pushinteger(L, ret3); /* Error from header_send */
+	}
+	return 2;
+}
+
+
 /* Debug hook */
 static void
 lua_debug_hook(lua_State *L, lua_Debug *ar)
@@ -2409,6 +2491,32 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 	}
 
 	/* End of request_info */
+	lua_rawset(L, -3);
+}
+
+
+static void
+prepare_lua_response_table(struct mg_connection *conn, lua_State *L)
+{
+	/* Export mg.request_info */
+	lua_pushstring(L, "response");
+	lua_newtable(L);
+
+	/* Add table elements */
+
+	/* HTTP status code (default to 200 OK) */
+	reg_int(L, "status", 200);
+
+	/* Table "HTTP headers" */
+	lua_pushstring(L, "http_headers");
+	lua_newtable(L);
+	/* Initially empty */
+	lua_rawset(L, -3);
+
+	/* mg_response_header_send wrapper */
+	reg_conn_function(L, "send", lsp_response_send, conn);
+
+	/* End of response table */
 	lua_rawset(L, -3);
 }
 
@@ -2676,7 +2784,13 @@ prepare_lua_environment(struct mg_context *ctx,
 
 	/* Export connection specific info */
 	if (conn != NULL) {
+		/* mg.request_info.* available for all environments */
 		prepare_lua_request_info(conn, L);
+
+		if (lua_env_type == LUA_ENV_TYPE_PLAIN_LUA_PAGE) {
+			/* mg.response.* available only for *.lua scripts */
+			prepare_lua_response_table(conn, L);
+		}
 	}
 
 	/* Store as global table "mg" */

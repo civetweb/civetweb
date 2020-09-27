@@ -1490,7 +1490,10 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
                                  size_t ebuf_len,
                                  int timeout);
 
-/* mg_response_header_* functions can be used from server callbacks,
+
+/* mg_response_header_* functions can be used from server callbacks
+ * to prepare HTTP server response headers. Using this function will
+ * allow a callback to work with HTTP/1.x and HTTP/2.
  */
 
 /* Initialize a new HTTP response
