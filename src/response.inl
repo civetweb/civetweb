@@ -7,11 +7,18 @@
  * This file is part of the CivetWeb project.
  */
 
+#define NO_RESPONSE_BUFFERING
+
+#if defined(NO_RESPONSE_BUFFERING) && defined(USE_HTTP2)
+#error "HTTP2 currently works only if NO_RESPONSE_BUFFERING is not set"
+#endif
+
 
 /* Internal function to free header list */
 static void
 free_buffered_response_header_list(struct mg_connection *conn)
 {
+#if !defined(NO_RESPONSE_BUFFERING)
 	while (conn->response_info.num_headers > 0) {
 		conn->response_info.num_headers--;
 		mg_free((void *)conn->response_info
@@ -25,6 +32,23 @@ free_buffered_response_header_list(struct mg_connection *conn)
 		conn->response_info.http_headers[conn->response_info.num_headers]
 		    .value = 0;
 	}
+#else
+	(void)conn; /* Nothing to do */
+#endif
+}
+
+
+/* Send first line of HTTP/1.x response */
+static void
+send_http1_response_status_line(struct mg_connection *conn)
+{
+	/* mg_get_response_code_text will never return NULL */
+	const char *txt = mg_get_response_code_text(conn, conn->status_code);
+	mg_printf(conn,
+	          "HTTP/%s %i %s\r\n",
+	          conn->request_info.http_version,
+	          conn->status_code,
+	          txt);
 }
 
 
@@ -56,7 +80,15 @@ mg_response_header_start(struct mg_connection *conn, int status)
 	}
 	conn->status_code = status;
 	conn->request_state = 1;
+
+	/* Buffered response is stored, unbuffered response will be sent directly,
+	 * but we can only send HTTP/1.x response here */
+#if !defined(NO_RESPONSE_BUFFERING)
 	free_buffered_response_header_list(conn);
+#else
+	send_http1_response_status_line(conn);
+	conn->request_state = 1; /* Reset from 10 to 1 */
+#endif
 
 	return 0;
 }
@@ -83,7 +115,9 @@ mg_response_header_add(struct mg_connection *conn,
                        const char *value,
                        int value_len)
 {
+#if !defined(NO_RESPONSE_BUFFERING)
 	int hidx;
+#endif
 
 	if ((conn == NULL) || (header == NULL) || (value == NULL)) {
 		/* Parameter error */
@@ -99,6 +133,7 @@ mg_response_header_add(struct mg_connection *conn,
 		return -3;
 	}
 
+#if !defined(NO_RESPONSE_BUFFERING)
 	hidx = conn->response_info.num_headers;
 	if (hidx >= MG_MAX_HEADERS) {
 		/* Too many headers */
@@ -132,6 +167,16 @@ mg_response_header_add(struct mg_connection *conn,
 
 	/* OK, header stored */
 	conn->response_info.num_headers++;
+
+#else
+	if (value_len >= 0) {
+		mg_printf(conn, "%s: %.*s\r\n", header, (int)value_len, value);
+	} else {
+		mg_printf(conn, "%s: %s\r\n", header, value);
+	}
+	conn->request_state = 1; /* Reset from 10 to 1 */
+#endif
+
 	return 0;
 }
 
@@ -205,10 +250,12 @@ static int http2_send_response_headers(struct mg_connection *conn);
 int
 mg_response_header_send(struct mg_connection *conn)
 {
+#if !defined(NO_RESPONSE_BUFFERING)
 	const char *txt;
 	int i;
 	int has_date = 0;
 	int has_connection = 0;
+#endif
 
 	if (conn == NULL) {
 		/* Parameter error */
@@ -226,6 +273,8 @@ mg_response_header_send(struct mg_connection *conn)
 
 	/* State: 2 */
 	conn->request_state = 2;
+
+#if !defined(NO_RESPONSE_BUFFERING)
 	if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {
 #if defined USE_HTTP2
 		int ret = http2_send_response_headers(conn);
@@ -236,12 +285,7 @@ mg_response_header_send(struct mg_connection *conn)
 	}
 
 	/* Send */
-	txt = mg_get_response_code_text(conn, conn->status_code);
-	mg_printf(conn,
-	          "HTTP/%s %i %s\r\n",
-	          conn->request_info.http_version,
-	          conn->status_code,
-	          txt);
+	send_http1_response_status_line(conn);
 	for (i = 0; i < conn->response_info.num_headers; i++) {
 		mg_printf(conn,
 		          "%s: %s\r\n",
@@ -267,6 +311,7 @@ mg_response_header_send(struct mg_connection *conn)
 	if (!has_connection) {
 		mg_printf(conn, "Connection: %s\r\n", suggest_connection_header(conn));
 	}
+#endif
 
 	mg_write(conn, "\r\n", 2);
 	conn->request_state = 3;

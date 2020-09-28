@@ -143,30 +143,39 @@ Compile flags can be set using the *COPT* make option like so.
 make build COPT="-DNDEBUG -DNO_CGI"
 ```
 
-| Compile Flags                | Description                                               |
-| ---------------------------- | --------------------------------------------------------- |
-| `NDEBUG`                     | strip off all debug code                                  |
-| `DEBUG`                      | build debug version (very noisy)                          |
-|                              |                                                           |
-| `NO_FILES`                   | do not serve files from a directory                       |
-| `NO_FILESYSTEMS`             | completely disable filesystems usage (requires NO_FILES)  |
-| `NO_SSL`                     | disable SSL functionality                                 |
-| `NO_CGI`                     | disable CGI support                                       |
-| `NO_CACHING`                 | disable caching functionality                             |
-|                              |                                                           |
-| `USE_IPV6`                   | enable IPv6 support                                       |
-| `USE_WEBSOCKET`              | enable websocket support                                  |
-| `USE_LUA`                    | enable Lua support                                        |
-| `USE_DUKTAPE`                | enable server-side JavaScript (using Duktape library)     |
-| `USE_SERVER_STATS`           | enable server statistics support                          |
-| `USE_ZLIB`                   | enable on-the-fly compression of files (using zlib)       |
-| `MG_EXPERIMENTAL_INTERFACES` | include experimental interfaces                           |
-| `MG_LEGACY_INTERFACE`        | include obsolete interfaces (candidates for deletion)     |
-|                              |                                                           |
-| `NO_SSL_DL`                  | link against system libssl library                        |
-| `SQLITE_DISABLE_LFS`         | disables large files (Lua only)                           |
-| `SSL_ALREADY_INITIALIZED`    | do not initialize libcrypto                               |
-| `OPENSSL_API_1_1`            | Use OpenSSL V1.1.x interface                              |
+| Compile Flags                | Description                                                         |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `NDEBUG`                     | strip off all debug code                                            |
+| `DEBUG`                      | build debug version (very noisy)                                    |
+|                              |                                                                     |
+| `NO_ATOMICS`                 | do not use atomic functions, use locks instead                      |
+| `NO_CACHING`                 | disable caching functionality                                       |
+| `NO_CGI`                     | disable CGI support                                                 |
+| `NO_FILES`                   | do not serve files from a directory                                 |
+| `NO_FILESYSTEMS`             | completely disable filesystems usage (requires NO_FILES)            |
+| `NO_NONCE_CHECK`             | disable nonce check for HTTP digest authentication                  |
+| `NO_RESPONSE_BUFFERING`      | send all mg_response_header_* immediately instead of buffering until the mg_response_header_send call |
+| `NO_SSL`                     | disable SSL functionality                                           |
+| `NO_SSL_DL`                  | link against system libssl library                                  |
+| `NO_THREAD_NAME`             | do not set a name for pthread                                       |
+|                              |                                                                     |
+| `USE_ALPN`                   | enable Application-Level-Protocol-Negotiation, required for HTTP2   |
+| `USE_DUKTAPE`                | enable server-side JavaScript (using Duktape library)               |
+| `USE_HTTP2`                  | enable HTTP2 support (experimental, not reccomended for production) |
+| `USE_IPV6`                   | enable IPv6 support                                                 |
+| `USE_LUA`                    | enable Lua support                                                  |
+| `USE_SERVER_STATS`           | enable server statistics support                                    |
+| `USE_STACK_SIZE`             | define stack size instead of using system default                   |
+| `USE_WEBSOCKET`              | enable websocket support                                            |
+| `USE_ZLIB`                   | enable on-the-fly compression of files (using zlib)                 |
+|                              |                                                                     |
+| `MG_EXPERIMENTAL_INTERFACES` | include experimental interfaces                                     |
+| `MG_LEGACY_INTERFACE`        | include obsolete interfaces (candidates for deletion)               |
+|                              |                                                                     |
+| `SQLITE_DISABLE_LFS`         | disables large files (Lua only)                                     |
+| `SSL_ALREADY_INITIALIZED`    | do not initialize libcrypto                                         |
+| `OPENSSL_API_1_0`            | Use OpenSSL V1.0.x interface                                        |
+| `OPENSSL_API_1_1`            | Use OpenSSL V1.1.x interface                                        |
 
 
 Note: If `make` is used (with this [Makefile](https://github.com/civetweb/civetweb/blob/master/Makefile)), you should not pass the `USE_<feature>` flags using `COPT`, but use the `WITH_<feature>` syntax above, since additional features may also use additional source code files.

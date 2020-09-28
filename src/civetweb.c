@@ -234,7 +234,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, __VA_ARGS__)
 
 #define NEED_DEBUG_TRACE_FUNC
-#ifndef DEBUG_TRACE_STREAM
+#if !defined(DEBUG_TRACE_STREAM)
 #define DEBUG_TRACE_STREAM stdout
 #endif
 
@@ -2868,7 +2868,7 @@ struct mg_domain_context {
 /* Stop flag can be "volatile" or require a lock.
  * MSDN uses volatile for "Interlocked" operations, but also explicitly
  * states a read operation for int is always atomic. */
-#ifdef STOP_FLAG_NEEDS_LOCK
+#if defined(STOP_FLAG_NEEDS_LOCK)
 
 typedef ptrdiff_t volatile stop_flag_t;
 
@@ -3045,7 +3045,7 @@ struct mg_connection {
 	int protocol_type;   /* see PROTOCOL_TYPE_*: 0=http/1.x, 1=ws, 2=http/2 */
 	int request_state;   /* 0: nothing sent, 1: header partially sent, 2: header
 	                        fully sent */
-#ifdef USE_HTTP2
+#if defined(USE_HTTP2)
 	struct mg_http2_connection http2;
 #endif
 
@@ -6996,7 +6996,7 @@ mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 static void handle_request(struct mg_connection *);
 
 
-#ifdef USE_HTTP2
+#if defined(USE_HTTP2)
 #if defined(NO_SSL)
 #error "HTTP2 requires ALPN, APLN requires SSL/TLS"
 #endif
@@ -7138,7 +7138,7 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 
 	/* Mark connection as "data sent" */
 	conn->request_state = 10;
-#ifdef USE_HTTP2
+#if defined(USE_HTTP2)
 	if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {
 		http2_data_frame_head(conn, len, 0);
 	}
@@ -16390,7 +16390,7 @@ ssl_servername_callback(SSL *ssl, int *ad, void *arg)
 }
 
 
-#ifdef USE_ALPN
+#if defined(USE_ALPN)
 static const char alpn_proto_list[] = "\x02h2\x08http/1.1\x08http/1.0";
 static const char *alpn_proto_order_http1[] = {alpn_proto_list + 3,
                                                alpn_proto_list + 3 + 8,
@@ -16715,7 +16715,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 		SSL_CTX_set_timeout(dom_ctx->ssl_ctx, (long)ssl_cache_timeout);
 	}
 
-#ifdef USE_ALPN
+#if defined(USE_ALPN)
 	/* Initialize ALPN only of TLS library (OpenSSL version) supports ALPN */
 #if !defined(NO_SSL_DL)
 	if (!tls_feature_missing[TLS_ALPN])
@@ -16938,6 +16938,7 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->is_chunked = 0;
 	conn->must_close = 0;
 	conn->request_len = 0;
+	conn->request_state = 0;
 	conn->throttle = 0;
 	conn->accept_gzip = 0;
 
