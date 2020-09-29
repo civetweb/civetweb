@@ -249,7 +249,6 @@ int
 mg_response_header_send(struct mg_connection *conn)
 {
 #if !defined(NO_RESPONSE_BUFFERING)
-	const char *txt;
 	int i;
 	int has_date = 0;
 	int has_connection = 0;

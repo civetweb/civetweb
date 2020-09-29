@@ -1339,7 +1339,7 @@ mg_atomic_add(volatile ptrdiff_t *addr, ptrdiff_t value)
 
 
 FUNCTION_MAY_BE_UNUSED
-static int
+static ptrdiff_t
 mg_atomic_compare_and_swap(volatile ptrdiff_t *addr,
                            ptrdiff_t oldval,
                            ptrdiff_t newval)

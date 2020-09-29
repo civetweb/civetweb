@@ -807,6 +807,14 @@ START_TEST(test_mg_server_and_client_tls)
 		ck_assert_int_lt(client_res, 0); /* response is "error" (-1) */
 		ck_assert_str_ne(client_err, "");
 		client_ri = mg_get_response_info(client_conn);
+		if (client_ri) {
+			/* client_ri == NULL is allowed. However, some versions seem to
+			 * return non-null, but all elements are NULL. */
+			ck_assert_int_eq(client_ri->status_code, 0);
+			ck_assert_int_eq(client_ri->num_headers, 0);
+			ck_assert_ptr_eq(client_ri->http_version, NULL);
+			client_ri = NULL;
+		}
 		ck_assert(client_ri == NULL);
 
 		mg_close_connection(client_conn);
