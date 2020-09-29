@@ -20535,13 +20535,14 @@ mg_get_system_info(char *buffer, int buflen)
 #pragma GCC diagnostic ignored "-Wdate-time"
 #endif
 #endif
-		mg_snprintf(NULL,
-		            NULL,
-		            block,
-		            sizeof(block),
-		            ",%s\"build\" : \"%s\"",
-		            eol,
-		            __DATE__);
+#ifdef BUILD_DATE
+		const char *bd = BUILD_DATE;
+#else
+		const char *bd = __DATE__;
+#endif
+
+		mg_snprintf(
+		    NULL, NULL, block, sizeof(block), ",%s\"build\" : \"%s\"", eol, bd);
 
 #if defined(GCC_DIAGNOSTIC)
 #if GCC_VERSION >= 40900

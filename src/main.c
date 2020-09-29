@@ -34,6 +34,14 @@
 
 #else
 
+#if defined(__clang__) /* GCC does not (yet) support this pragma */
+/* We must set some flags for the headers we include. These flags
+ * are reserved ids according to C99, so we need to disable a
+ * warning for that. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreserved-id-macro"
+#endif
+
 #define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
 /* This should also be sufficient for "realpath", according to
  * http://man7.org/linux/man-pages/man3/realpath.3.html, but in
@@ -70,6 +78,11 @@
 #endif
 #if !defined(__STDC_LIMIT_MACROS)
 #define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
+#endif
+
+#if defined(__clang__)
+/* Enable reserved-id-macro warning again. */
+#pragma GCC diagnostic pop
 #endif
 
 #include <ctype.h>
@@ -263,11 +276,16 @@ static int MakeConsole(void);
 static void
 show_server_name(void)
 {
+#ifdef BUILD_DATE
+	const char *bd = BUILD_DATE;
+#else
+	const char *bd = __DATE__;
+#endif
 #if defined(WIN32)
 	(void)MakeConsole();
 #endif
 
-	fprintf(stderr, "CivetWeb v%s, built on %s\n", mg_version(), __DATE__);
+	fprintf(stderr, "CivetWeb v%s, built on %s\n", mg_version(), bd);
 }
 
 
