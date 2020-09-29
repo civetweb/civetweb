@@ -1,13 +1,14 @@
 Release Notes v1.13
 ===
-### Objectives: *Various updates and fixes*
+### Objectives: *Various updates and fixes, additional API functions*
 
 Changes
 -------
 
 - Add arguments for CGI interpreters
 - Support multiple CGi interpreters
-- Some new API functions
+- Buffering HTTP response headers, including API functions mg_response_header_* in C and Lua
+- Additional C API functions
 - Fix some memory leaks
 - Extended use of atomic operations (e.g., for server stats)
 - Add fuzz tests

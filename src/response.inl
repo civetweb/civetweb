@@ -7,8 +7,6 @@
  * This file is part of the CivetWeb project.
  */
 
-#define NO_RESPONSE_BUFFERING
-
 #if defined(NO_RESPONSE_BUFFERING) && defined(USE_HTTP2)
 #error "HTTP2 currently works only if NO_RESPONSE_BUFFERING is not set"
 #endif
