@@ -991,7 +991,7 @@ static const size_t websocket_goodbye_msg_len =
     14 /* strlen(websocket_goodbye_msg) */;
 
 
-#if defined(DEBUG)
+#if defined(WS_DEBUG_TRACE)
 static void
 WS_TEST_TRACE(const char *f, ...)
 {

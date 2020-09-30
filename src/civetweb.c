@@ -18566,9 +18566,6 @@ process_new_connection(struct mg_connection *conn)
 				}
 				log_access(conn);
 
-				/* Response complete. Free header buffer */
-				free_buffered_response_header_list(conn);
-
 			} else {
 				/* TODO: handle non-local request (PROXY) */
 				conn->must_close = 1;
@@ -18576,6 +18573,9 @@ process_new_connection(struct mg_connection *conn)
 		} else {
 			conn->must_close = 1;
 		}
+
+		/* Response complete. Free header buffer */
+		free_buffered_response_header_list(conn);
 
 		if (ri->remote_user != NULL) {
 			mg_free((void *)ri->remote_user);
