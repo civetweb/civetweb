@@ -18214,8 +18214,17 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 	                              error_buffer,
 	                              error_buffer_size);
 
+	/* Connection object will be null if something goes wrong */
 	if (conn == NULL) {
-		/* error_buffer already filled */
+		/* error_buffer should be already filled ... */
+		if (!error_buffer[0]) {
+			/* ... if not add an error message */
+			mg_snprintf(conn,
+			            NULL, /* No truncation check for ebuf */
+			            error_buffer,
+			            error_buffer_size,
+			            "Unexpected error");
+		}
 		return NULL;
 	}
 
@@ -18241,19 +18250,6 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
-
-	/* Connection object will be null if something goes wrong */
-	if (conn == NULL) {
-		if (!*error_buffer) {
-			/* There should be already an error message */
-			mg_snprintf(conn,
-			            NULL, /* No truncation check for ebuf */
-			            error_buffer,
-			            error_buffer_size,
-			            "Unexpected error");
-		}
-		return NULL;
-	}
 
 	if (conn->response_info.status_code != 101) {
 		/* We sent an "upgrade" request. For a correct websocket
