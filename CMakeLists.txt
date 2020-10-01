@@ -84,9 +84,11 @@ message(STATUS "Disable caching support - ${CIVETWEB_DISABLE_CACHING}")
 option(CIVETWEB_ENABLE_CXX "Enables the C++ wrapper library" OFF)
 message(STATUS "C++ wrappers - ${CIVETWEB_ENABLE_CXX}")
 
-# IP Version 6
+# IP Version 6 And Version 4
 option(CIVETWEB_ENABLE_IPV6 "Enables the IP version 6 support" OFF)
+option (CIVETWEB_ENABLE_IPV4 "Enables the IP version 4 support"ON)
 message(STATUS "IP Version 6 - ${CIVETWEB_ENABLE_IPV6}")
+message(STATUS "IP Version 4 - ${CIVETWEB_ENABLE_IPV4}")
 
 # Websocket support
 option(CIVETWEB_ENABLE_WEBSOCKETS "Enable websockets connections" OFF)
