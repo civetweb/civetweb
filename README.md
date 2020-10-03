@@ -55,10 +55,11 @@ CivetWeb must be used with an earlier or later version (see also [here](https://
 Trouble tickets should be filed on GitHub
 [https://github.com/civetweb/civetweb/issues](https://github.com/civetweb/civetweb/issues)
 
-Announcements are at Google Groups
-[https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb). 
-Some older support and discussion threads are there as well. 
-However, recently support questions and discussions are usually [GitHub issues](https://github.com/civetweb/civetweb/issues).
+New releases are announced at Google Groups
+[https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb)
+
+Formerly some support question and discussion threads have been at [Google groups](https://groups.google.com/d/forum/civetweb).
+Recent questions and discussions use [GitHub issues](https://github.com/civetweb/civetweb/issues).
 
 Source releases can be found on GitHub
 [https://github.com/civetweb/civetweb/releases](https://github.com/civetweb/civetweb/releases)
@@ -140,12 +141,13 @@ simplicity by a carefully selected list of features:
 Support
 -------
 
-This project is very easy to install and use. 
+This project is very easy to install and use.
 Please read the [documentation](https://github.com/civetweb/civetweb/blob/master/docs/)
 and have a look at the [examples](https://github.com/civetweb/civetweb/blob/master/examples/).
 
-Some information may be found on the [mailing list](https://groups.google.com/d/forum/civetweb),
-However, since questions and discussions moved to [GitHub issues](https://github.com/civetweb/civetweb/issues), information there may be out of date.
+Recent questions and discussions usually use [GitHub issues](https://github.com/civetweb/civetweb/issues).
+Some old information may be found on the [mailing list](https://groups.google.com/d/forum/civetweb), 
+but this information may be outdated.
 
 Note: We do not take any liability or warranty for any linked contents.  Visit these pages and try the community support suggestions at your own risk.
 Any link provided in this project (including source and documentation) is provided in the hope that this information will be helpful.
