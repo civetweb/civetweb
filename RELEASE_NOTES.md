@@ -1,3 +1,13 @@
+Release Notes v1.14 (under construction)
+===
+### Objectives: *TO BE DEFINED*
+
+Changes
+-------
+
+- Update version number
+
+
 Release Notes v1.13
 ===
 ### Objectives: *Various updates and fixes, additional API functions*
@@ -212,6 +222,7 @@ Changes
 - Fix bug in timer logic (for Lua Websockets)
 - Updated version number
 
+
 Release Notes v1.8
 ===
 ### Objectives: *CMake integration and continuous integration tests, Support client certificates, bug fixes*
@@ -260,6 +271,7 @@ Changes
 - Add status badges to the GitHub project main page
 - Updated version number
 
+
 Release Notes v1.7
 ===
 ### Objectives: *Examples, documentation, additional API functions, some functions rewritten, bug fixes and updates*
@@ -307,6 +319,7 @@ Changes
 - Fix compiler warnings
 - Updated version number
 
+
 Release Notes v1.6
 ===
 ### Objectives: *Enhance Lua support, configuration dialog for windows, new examples, bug fixes and updates*
@@ -350,6 +363,7 @@ Changes
 - Fixed Posix locking functions for Windows (bel2125)
 - Updated version number
 
+
 Release Notes v1.5
 ===
 ### Objectives: *Bug fixes and updates, repository restoration*
@@ -383,6 +397,7 @@ Changes
 - Updated version numbers.
 - Added contributor credits file.
 
+
 Release Notes v1.4
 ===
 ### Objectives: *New URI handler interface, feature enhancements, C++ extensions*
@@ -408,6 +423,7 @@ Changes
 - Conformed source files to UNIX line endings for consistency.
 - Unified the coding style to improve reability.
 
+
 Release Notes v1.3
 ===
 ### Objectives: *Buildroot Integration*
@@ -419,6 +435,7 @@ Changes
 - Validated build without SQLITE3 large file support
 - Updated documentation
 - Updated Buildroot config example
+
 
 Release Notes v1.2
 ===
@@ -443,6 +460,7 @@ Known Issues
 -----
 
 - The prebuilt Window's version requires [Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
+
 
 Release Notes v1.1
 ===
@@ -487,6 +505,7 @@ Known Issues
     + Need to find out what is actually in demand.
 - Build changes may impact current users.
     + As with any change of this type, changes may impact some users.
+
 
 Release Notes v1.0
 ===
