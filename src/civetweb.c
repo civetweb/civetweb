@@ -9941,6 +9941,8 @@ dir_scan_callback(struct de *de, void *data)
 	struct de *entries = dsd->entries;
 
 	if ((entries == NULL) || (dsd->num_entries >= dsd->arr_size)) {
+		/* Here "entries" is a temporary pointer and can be replaced,
+		 * "dsd->entries" is the original pointer */
 		entries =
 		    (struct de *)mg_realloc(entries,
 		                            dsd->arr_size * 2 * sizeof(entries[0]));
@@ -15043,7 +15045,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	/* sscanf and the option splitting code ensure the following condition
 	 * Make sure the port is valid and vector ends with the port, 's' or 'r' */
 	if ((len > 0) && is_valid_port(port)
-	    && (((size_t)len == vec->len) || ((size_t)(len + 1) == vec->len))) {
+	    && (((size_t)len == vec->len) || (((size_t)len + 1) == vec->len))) {
 		/* Next character after the port number */
 		ch = ((size_t)len < vec->len) ? vec->ptr[len] : '\0';
 		so->is_ssl = (ch == 's');
