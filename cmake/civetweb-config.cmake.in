@@ -3,4 +3,24 @@ include(CMakeFindDependencyMacro)
 
 set_and_check(civetweb_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
 
+find_dependency(Threads)
+
+set(CIVETWEB_SAVED_MODULE_PATH ${CMAKE_MODULE_PATH})
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+
+if(@LOOKUP_LIBDL@)
+  find_dependency(LibDl)
+endif()
+
+if(@LOOKUP_LIBRT@)
+  find_dependency(LibRt)
+endif()
+
+if(@LOOKUP_WINSOCK@)
+  find_dependency(WinSock)
+endif()
+
+set(CMAKE_MODULE_PATH ${CIVETWEB_SAVED_MODULE_PATH})
+unset(CIVETWEB_SAVED_MODULE_PATH)
+
 include("${CMAKE_CURRENT_LIST_DIR}/civetweb-targets.cmake")

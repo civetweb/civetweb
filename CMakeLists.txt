@@ -603,6 +603,9 @@ install(
   FILES
     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibDL.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibRt.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindWinSock.cmake"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
   COMPONENT civetweb-cmake-config
 )

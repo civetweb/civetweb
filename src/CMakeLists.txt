@@ -322,3 +322,23 @@ if (CIVETWEB_ENABLE_CXX)
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT civetweb-cpp)
 endif()
+
+# Configure lookup behavior in civetweb config
+
+if(LIBDL_FOUND)
+  set(LOOKUP_LIBDL TRUE PARENT_SCOPE)
+else()
+  set(LOOKUP_LIBDL FALSE PARENT_SCOPE)
+endif()
+
+if(LIBRT_FOUND)
+  set(LOOKUP_LIBRT TRUE PARENT_SCOPE)
+else()
+  set(LOOKUP_LIBRT FALSE PARENT_SCOPE)
+endif()
+
+if(WINSOCK_FOUND)
+  set(LOOKUP_WINSOCK TRUE PARENT_SCOPE)
+else()
+  set(LOOKUP_WINSOCK FALSE PARENT_SCOPE)
+endif()
