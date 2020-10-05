@@ -12960,7 +12960,7 @@ read_websocket(struct mg_connection *conn,
 									mg_cry_internal(
 									    conn,
 									    "Out of memory: Cannot allocate "
-									    "inflate buffer of %i bytes",
+									    "inflate buffer of %zu bytes",
 									    inflate_buf_size);
 									exit_by_callback = 1;
 									break;
@@ -13148,7 +13148,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 		if (deflated == NULL) {
 			mg_cry_internal(
 			    conn,
-			    "Out of memory: Cannot allocate deflate buffer of %i bytes",
+			    "Out of memory: Cannot allocate deflate buffer of %zu bytes",
 			    deflated_size);
 			mg_unlock_connection(conn);
 			return -1;
