@@ -18172,36 +18172,17 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
                                  const char *origin,
                                  mg_websocket_data_handler data_func,
                                  mg_websocket_close_handler close_func,
-                                 void *user_data)
+                                 void *user_data,
+                                 const char *extensions)
 {
 	struct mg_connection *conn = NULL;
 
 #if defined(USE_WEBSOCKET)
 	struct websocket_client_thread_data *thread_data;
 	static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
-	const char *handshake_req;
 
 	const char *host = client_options->host;
 	int i;
-
-	if (origin != NULL) {
-		handshake_req = "GET %s HTTP/1.1\r\n"
-		                "Host: %s\r\n"
-		                "Upgrade: websocket\r\n"
-		                "Connection: Upgrade\r\n"
-		                "Sec-WebSocket-Key: %s\r\n"
-		                "Sec-WebSocket-Version: 13\r\n"
-		                "Origin: %s\r\n"
-		                "\r\n";
-	} else {
-		handshake_req = "GET %s HTTP/1.1\r\n"
-		                "Host: %s\r\n"
-		                "Upgrade: websocket\r\n"
-		                "Connection: Upgrade\r\n"
-		                "Sec-WebSocket-Key: %s\r\n"
-		                "Sec-WebSocket-Version: 13\r\n"
-		                "\r\n";
-	}
 
 #if defined(__clang__)
 #pragma clang diagnostic push
@@ -18228,7 +18209,68 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 
-	i = mg_printf(conn, handshake_req, path, host, magic, origin);
+	if (origin != NULL) {
+		if (extensions != NULL) {
+			i = mg_printf(conn,
+			              "GET %s HTTP/1.1\r\n"
+			              "Host: %s\r\n"
+			              "Upgrade: websocket\r\n"
+			              "Connection: Upgrade\r\n"
+			              "Sec-WebSocket-Key: %s\r\n"
+			              "Sec-WebSocket-Version: 13\r\n"
+			              "Sec-WebSocket-Extensions: %s\r\n"
+			              "Origin: %s\r\n"
+			              "\r\n",
+			              path,
+			              host,
+			              magic,
+			              extensions,
+			              origin);
+		} else {
+			i = mg_printf(conn,
+			              "GET %s HTTP/1.1\r\n"
+			              "Host: %s\r\n"
+			              "Upgrade: websocket\r\n"
+			              "Connection: Upgrade\r\n"
+			              "Sec-WebSocket-Key: %s\r\n"
+			              "Sec-WebSocket-Version: 13\r\n"
+			              "Origin: %s\r\n"
+			              "\r\n",
+			              path,
+			              host,
+			              magic,
+			              origin);
+		}
+	} else {
+
+		if (extensions != NULL) {
+			i = mg_printf(conn,
+			              "GET %s HTTP/1.1\r\n"
+			              "Host: %s\r\n"
+			              "Upgrade: websocket\r\n"
+			              "Connection: Upgrade\r\n"
+			              "Sec-WebSocket-Key: %s\r\n"
+			              "Sec-WebSocket-Version: 13\r\n"
+			              "Sec-WebSocket-Extensions: %s\r\n"
+			              "\r\n",
+			              path,
+			              host,
+			              magic,
+			              extensions);
+		} else {
+			i = mg_printf(conn,
+			              "GET %s HTTP/1.1\r\n"
+			              "Host: %s\r\n"
+			              "Upgrade: websocket\r\n"
+			              "Connection: Upgrade\r\n"
+			              "Sec-WebSocket-Key: %s\r\n"
+			              "Sec-WebSocket-Version: 13\r\n"
+			              "\r\n",
+			              path,
+			              host,
+			              magic);
+		}
+	}
 	if (i <= 0) {
 		mg_snprintf(conn,
 		            NULL, /* No truncation check for ebuf */
@@ -18354,7 +18396,8 @@ mg_connect_websocket_client(const char *host,
 	                                        origin,
 	                                        data_func,
 	                                        close_func,
-	                                        user_data);
+	                                        user_data,
+	                                        NULL);
 }
 
 
@@ -18380,9 +18423,66 @@ mg_connect_websocket_client_secure(
 	                                        origin,
 	                                        data_func,
 	                                        close_func,
-	                                        user_data);
+	                                        user_data,
+	                                        NULL);
 }
 
+struct mg_connection *
+mg_connect_websocket_client_extensions(const char *host,
+                                       int port,
+                                       int use_ssl,
+                                       char *error_buffer,
+                                       size_t error_buffer_size,
+                                       const char *path,
+                                       const char *origin,
+                                       mg_websocket_data_handler data_func,
+                                       mg_websocket_close_handler close_func,
+                                       void *user_data,
+                                       const char *extensions)
+{
+	struct mg_client_options client_options;
+	memset(&client_options, 0, sizeof(client_options));
+	client_options.host = host;
+	client_options.port = port;
+
+	return mg_connect_websocket_client_impl(&client_options,
+	                                        use_ssl,
+	                                        error_buffer,
+	                                        error_buffer_size,
+	                                        path,
+	                                        origin,
+	                                        data_func,
+	                                        close_func,
+	                                        user_data,
+	                                        extensions);
+}
+
+struct mg_connection *
+mg_connect_websocket_client_secure_extensions(
+    const struct mg_client_options *client_options,
+    char *error_buffer,
+    size_t error_buffer_size,
+    const char *path,
+    const char *origin,
+    mg_websocket_data_handler data_func,
+    mg_websocket_close_handler close_func,
+    void *user_data,
+    const char *extensions)
+{
+	if (!client_options) {
+		return NULL;
+	}
+	return mg_connect_websocket_client_impl(client_options,
+	                                        1,
+	                                        error_buffer,
+	                                        error_buffer_size,
+	                                        path,
+	                                        origin,
+	                                        data_func,
+	                                        close_func,
+	                                        user_data,
+	                                        extensions);
+}
 
 /* Prepare connection data structure */
 static void
