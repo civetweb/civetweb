@@ -194,7 +194,7 @@ websocket_deflate_negotiate(struct mg_connection *conn)
 			} else if (!strncmp(extensions, "client_no_context_takeover", 26)) {
 				extensions += 26;
 				conn->websocket_deflate_client_no_context_takeover = 1;
-			} else if (!strncmp(extensions, "server-max-window-bits", 22)) {
+			} else if (!strncmp(extensions, "server_max_window_bits", 22)) {
 				extensions += 22;
 				if (*extensions == '=') {
 					++extensions;
@@ -218,7 +218,7 @@ websocket_deflate_negotiate(struct mg_connection *conn)
 					if (*extensions == '"')
 						++extensions;
 				}
-			} else if (!strncmp(extensions, "client-max-window-bits", 22)) {
+			} else if (!strncmp(extensions, "client_max_window_bits", 22)) {
 				extensions += 22;
 				if (*extensions == '=') {
 					++extensions;
