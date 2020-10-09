@@ -12935,8 +12935,8 @@ read_websocket(struct mg_connection *conn,
 							size_t inflate_buf_size_old = 0;
 							size_t inflate_buf_size =
 							    data_len
-							    * 4; // Initial guess of the inflated message
-							         // size. We double the memory when needed.
+							    * 10; // Initial guess of the inflated message
+							          // size. We double the memory when needed.
 							Bytef *inflated;
 							Bytef *new_mem;
 							conn->websocket_inflate_state.avail_in =
@@ -12975,7 +12975,7 @@ read_websocket(struct mg_connection *conn,
 								    inflate(&conn->websocket_inflate_state,
 								            Z_SYNC_FLUSH);
 								if (ret == Z_NEED_DICT || ret == Z_DATA_ERROR
-								    || ret == Z_MEM_ERROR || ret < 0) {
+								    || ret == Z_MEM_ERROR) {
 									mg_cry_internal(
 									    conn,
 									    "ZLIB inflate error: %i %s",
