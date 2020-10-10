@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017 the Civetweb developers
+/* Copyright (c) 2013-2020 the Civetweb developers
  * Copyright (c) 2013 No Face Press, LLC
  *
  * License http://opensource.org/licenses/mit-license.php MIT License
@@ -28,11 +28,13 @@ CivetHandler::handleGet(CivetServer *server, struct mg_connection *conn)
 }
 
 bool
-CivetHandler::handleGet(CivetServer *server, struct mg_connection *conn, int *status_code)
+CivetHandler::handleGet(CivetServer *server,
+                        struct mg_connection *conn,
+                        int *status_code)
 {
 	UNUSED_PARAMETER(server);
 	UNUSED_PARAMETER(conn);
-	if(status_code){
+	if (status_code) {
 		*status_code = -1;
 	}
 	return false;
@@ -47,11 +49,13 @@ CivetHandler::handlePost(CivetServer *server, struct mg_connection *conn)
 }
 
 bool
-CivetHandler::handlePost(CivetServer *server, struct mg_connection *conn, int *status_code)
+CivetHandler::handlePost(CivetServer *server,
+                         struct mg_connection *conn,
+                         int *status_code)
 {
 	UNUSED_PARAMETER(server);
 	UNUSED_PARAMETER(conn);
-	if(status_code){
+	if (status_code) {
 		*status_code = -1;
 	}
 	return false;
@@ -66,11 +70,13 @@ CivetHandler::handleHead(CivetServer *server, struct mg_connection *conn)
 }
 
 bool
-CivetHandler::handleHead(CivetServer *server, struct mg_connection *conn, int *status_code)
+CivetHandler::handleHead(CivetServer *server,
+                         struct mg_connection *conn,
+                         int *status_code)
 {
 	UNUSED_PARAMETER(server);
 	UNUSED_PARAMETER(conn);
-		if(status_code){
+	if (status_code) {
 		*status_code = -1;
 	}
 	return false;
@@ -85,11 +91,13 @@ CivetHandler::handlePut(CivetServer *server, struct mg_connection *conn)
 }
 
 bool
-CivetHandler::handlePut(CivetServer *server, struct mg_connection *conn, int *status_code)
+CivetHandler::handlePut(CivetServer *server,
+                        struct mg_connection *conn,
+                        int *status_code)
 {
 	UNUSED_PARAMETER(server);
 	UNUSED_PARAMETER(conn);
-	if(status_code){
+	if (status_code) {
 		*status_code = -1;
 	}
 	return false;
@@ -104,11 +112,13 @@ CivetHandler::handlePatch(CivetServer *server, struct mg_connection *conn)
 }
 
 bool
-CivetHandler::handlePatch(CivetServer *server, struct mg_connection *conn, int *status_code)
+CivetHandler::handlePatch(CivetServer *server,
+                          struct mg_connection *conn,
+                          int *status_code)
 {
 	UNUSED_PARAMETER(server);
 	UNUSED_PARAMETER(conn);
-	if(status_code){
+	if (status_code) {
 		*status_code = -1;
 	}
 	return false;
@@ -123,11 +133,13 @@ CivetHandler::handleDelete(CivetServer *server, struct mg_connection *conn)
 }
 
 bool
-CivetHandler::handleDelete(CivetServer *server, struct mg_connection *conn, int *status_code)
+CivetHandler::handleDelete(CivetServer *server,
+                           struct mg_connection *conn,
+                           int *status_code)
 {
 	UNUSED_PARAMETER(server);
 	UNUSED_PARAMETER(conn);
-	if(status_code){
+	if (status_code) {
 		*status_code = -1;
 	}
 	return false;
@@ -142,14 +154,16 @@ CivetHandler::handleOptions(CivetServer *server, struct mg_connection *conn)
 }
 
 bool
-CivetHandler::handleOptions(CivetServer *server, struct mg_connection *conn, int *status_code)
+CivetHandler::handleOptions(CivetServer *server,
+                            struct mg_connection *conn,
+                            int *status_code)
 {
 	UNUSED_PARAMETER(server);
 	UNUSED_PARAMETER(conn);
-	if(status_code){
+	if (status_code) {
 		*status_code = -1;
 	}
-	return -1;
+	return false;
 }
 
 bool
@@ -216,44 +230,44 @@ CivetServer::requestHandler(struct mg_connection *conn, void *cbdata)
 
 	if (handler) {
 		if (strcmp(request_info->request_method, "GET") == 0) {
-			status_ok = handler->handleGet(me, conn,&http_status_code);
-			if(http_status_code < 0){
+			status_ok = handler->handleGet(me, conn, &http_status_code);
+			if (http_status_code < 0) {
 				status_ok = handler->handleGet(me, conn);
 			}
 		} else if (strcmp(request_info->request_method, "POST") == 0) {
-			status_ok = handler->handlePost(me, conn,&http_status_code);
-			if(http_status_code < 0){
+			status_ok = handler->handlePost(me, conn, &http_status_code);
+			if (http_status_code < 0) {
 				status_ok = handler->handlePost(me, conn);
 			}
 		} else if (strcmp(request_info->request_method, "HEAD") == 0) {
-			status_ok = handler->handleHead(me, conn,&http_status_code);
-			if(http_status_code < 0){
+			status_ok = handler->handleHead(me, conn, &http_status_code);
+			if (http_status_code < 0) {
 				status_ok = handler->handleHead(me, conn);
 			}
 		} else if (strcmp(request_info->request_method, "PUT") == 0) {
-			status_ok = handler->handlePut(me, conn,&http_status_code);
-			if(http_status_code < 0){
+			status_ok = handler->handlePut(me, conn, &http_status_code);
+			if (http_status_code < 0) {
 				status_ok = handler->handlePut(me, conn);
 			}
 		} else if (strcmp(request_info->request_method, "DELETE") == 0) {
-			status_ok = handler->handleDelete(me, conn,&http_status_code);
-			if(http_status_code < 0){
+			status_ok = handler->handleDelete(me, conn, &http_status_code);
+			if (http_status_code < 0) {
 				status_ok = handler->handleDelete(me, conn);
 			}
 		} else if (strcmp(request_info->request_method, "OPTIONS") == 0) {
-			status_ok = handler->handleOptions(me, conn,&http_status_code);
-			if(http_status_code < 0){
+			status_ok = handler->handleOptions(me, conn, &http_status_code);
+			if (http_status_code < 0) {
 				status_ok = handler->handleOptions(me, conn);
 			}
 		} else if (strcmp(request_info->request_method, "PATCH") == 0) {
-			status_ok = handler->handlePatch(me, conn,&http_status_code);
-			if(http_status_code < 0){
+			status_ok = handler->handlePatch(me, conn, &http_status_code);
+			if (http_status_code < 0) {
 				status_ok = handler->handlePatch(me, conn);
 			}
 		}
 	}
 
-	if(http_status_code < 0){
+	if (http_status_code < 0) {
 		http_status_code = status_ok ? 1 : 0;
 	}
 
