@@ -32,14 +32,12 @@ Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)
 Project Mission
 -----------------
 
-Project mission is to provide easy to use, powerful, C (C/C++) embeddable web server with optional CGI, SSL and Lua support.
-CivetWeb has a MIT license so you can innovate without restrictions.
+Project undertaking is to offer clean to apply, powerful, C (C/C++) embeddable internet server with elective CGI, SSL and Lua aid.
+CivetWeb has a MIT license so that you can innovate without restrictions.
 
-CivetWeb can be used by developers as a library, to add web server functionality to an existing application.
+CivetWeb may be utilized by builders as a library, to feature net server capability to an existing application.
 
-It can also be used by end users as a stand-alone web server running on a Windows or Linux PC. It is available as single executable, no installation is required.
-
-
+It also can be used by stop users as a stand-on my own web server going for walks on a Windows or Linux PC. It is to be had as unmarried executable, no installation is needed.
 Where to find the official version?
 -----------------------------------
 
