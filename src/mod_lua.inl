@@ -3359,6 +3359,7 @@ mg_prepare_lua_context_script(const char *file_name,
 		            "Error loading file %s: %s\n",
 		            file_name,
 		            lua_err_txt);
+		lua_close(L);
 		return 0;
 	}
 
@@ -3378,10 +3379,11 @@ mg_prepare_lua_context_script(const char *file_name,
 		            "Error running file %s: %s\n",
 		            file_name,
 		            lua_err_txt);
+		lua_close(L);
 		return 0;
 	}
-	/*	lua_close(L); must be done somewhere else */
 
+	/*	lua_close(L); must be done somewhere else */
 	return L;
 }
 

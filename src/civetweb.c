@@ -3781,9 +3781,13 @@ mg_get_thread_pointer(const struct mg_connection *conn)
 
 
 void
-mg_set_user_connection_data(struct mg_connection *conn, void *data)
+mg_set_user_connection_data(const struct mg_connection *const_conn, void *data)
 {
-	if (conn != NULL) {
+	if (const_conn != NULL) {
+		/* Const cast, since "const struct mg_connection *" does not mean
+		 * the connection object is not modified. Here "const" is used,
+		 * to indicate mg_read/mg_write/mg_send/.. must not be called. */
+		struct mg_connection *conn = (struct mg_connection *)const_conn;
 		conn->request_info.conn_data = data;
 	}
 }
@@ -18172,10 +18176,10 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
                                  size_t error_buffer_size,
                                  const char *path,
                                  const char *origin,
+                                 const char *extensions,
                                  mg_websocket_data_handler data_func,
                                  mg_websocket_close_handler close_func,
-                                 void *user_data,
-                                 const char *extensions)
+                                 void *user_data)
 {
 	struct mg_connection *conn = NULL;
 
@@ -18396,10 +18400,10 @@ mg_connect_websocket_client(const char *host,
 	                                        error_buffer_size,
 	                                        path,
 	                                        origin,
+	                                        NULL,
 	                                        data_func,
 	                                        close_func,
-	                                        user_data,
-	                                        NULL);
+	                                        user_data);
 }
 
 
@@ -18423,10 +18427,10 @@ mg_connect_websocket_client_secure(
 	                                        error_buffer_size,
 	                                        path,
 	                                        origin,
+	                                        NULL,
 	                                        data_func,
 	                                        close_func,
-	                                        user_data,
-	                                        NULL);
+	                                        user_data);
 }
 
 struct mg_connection *
@@ -18437,10 +18441,10 @@ mg_connect_websocket_client_extensions(const char *host,
                                        size_t error_buffer_size,
                                        const char *path,
                                        const char *origin,
+                                       const char *extensions,
                                        mg_websocket_data_handler data_func,
                                        mg_websocket_close_handler close_func,
-                                       void *user_data,
-                                       const char *extensions)
+                                       void *user_data)
 {
 	struct mg_client_options client_options;
 	memset(&client_options, 0, sizeof(client_options));
@@ -18453,10 +18457,10 @@ mg_connect_websocket_client_extensions(const char *host,
 	                                        error_buffer_size,
 	                                        path,
 	                                        origin,
+	                                        extensions,
 	                                        data_func,
 	                                        close_func,
-	                                        user_data,
-	                                        extensions);
+	                                        user_data);
 }
 
 struct mg_connection *
@@ -18466,10 +18470,10 @@ mg_connect_websocket_client_secure_extensions(
     size_t error_buffer_size,
     const char *path,
     const char *origin,
+    const char *extensions,
     mg_websocket_data_handler data_func,
     mg_websocket_close_handler close_func,
-    void *user_data,
-    const char *extensions)
+    void *user_data)
 {
 	if (!client_options) {
 		return NULL;
@@ -18480,10 +18484,10 @@ mg_connect_websocket_client_secure_extensions(
 	                                        error_buffer_size,
 	                                        path,
 	                                        origin,
+	                                        extensions,
 	                                        data_func,
 	                                        close_func,
-	                                        user_data,
-	                                        extensions);
+	                                        user_data);
 }
 
 /* Prepare connection data structure */

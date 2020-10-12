@@ -643,7 +643,14 @@ CIVETWEB_API void *mg_get_thread_pointer(const struct mg_connection *conn);
 
 
 /* Set user data for the current connection. */
-/* Note: This function is deprecated. Use the init_connection callback
+/* Note: CivetWeb callbacks use "struct mg_connection *conn" as input
+   when mg_read/mg_write callbacks are allowed in the callback,
+   while "const struct mg_connection *conn" is used as input in case
+   calling mg_read/mg_write is not allowed.
+   Setting the user connection data will modify the connection
+   object represented by mg_connection *, but it will not read from
+   or write to the connection. */
+/* Note: An alternative is to use the init_connection callback
    instead to initialize the user connection data pointer. It is
    reccomended to supply a pointer to some user defined data structure
    as conn_data initializer in init_connection. In case it is required
@@ -651,7 +658,7 @@ CIVETWEB_API void *mg_get_thread_pointer(const struct mg_connection *conn);
    data pointer in the user defined data structure and modify that
    pointer. In either case, after the init_connection callback, only
    calls to mg_get_user_connection_data should be required. */
-CIVETWEB_API void mg_set_user_connection_data(struct mg_connection *conn,
+CIVETWEB_API void mg_set_user_connection_data(const struct mg_connection *conn,
                                               void *data);
 
 
@@ -1429,10 +1436,10 @@ mg_connect_websocket_client_extensions(const char *host,
                                        size_t error_buffer_size,
                                        const char *path,
                                        const char *origin,
+                                       const char *extensions,
                                        mg_websocket_data_handler data_func,
                                        mg_websocket_close_handler close_func,
-                                       void *user_data,
-                                       const char *extensions);
+                                       void *user_data);
 
 
 /* Connect to a TCP server as a client (can be used to connect to a HTTP server)
@@ -1487,10 +1494,10 @@ mg_connect_websocket_client_secure_extensions(
     size_t error_buffer_size,
     const char *path,
     const char *origin,
+    const char *extensions,
     mg_websocket_data_handler data_func,
     mg_websocket_close_handler close_func,
-    void *user_data,
-    const char *extensions);
+    void *user_data);
 
 #if defined(MG_LEGACY_INTERFACE) /* 2019-11-02 */
 enum { TIMEOUT_INFINITE = -1 };
