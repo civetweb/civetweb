@@ -57,7 +57,6 @@ static const char lua_regkey_connlist = 2;
 static const char lua_regkey_lsp_include_history = 3;
 static const char lua_regkey_environment_type = 4;
 static const char lua_regkey_dtor = 5;
-static const char *const LUABACKGROUNDPARAMS = "mg";
 
 
 /* Limit nesting depth of mg.include.
@@ -2172,8 +2171,8 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 
 		/* Argument for timer */
 		arg->L = L;
-		arg->script = ws->script;
-		arg->pmutex = &(ws->ws_mutex);
+		arg->script = (ws ? ws->script : NULL);
+		arg->pmutex = (ws ? &(ws->ws_mutex) : NULL);
 		memcpy(arg->txt, "return(", 7);
 		memcpy(arg->txt + 7, action_txt, action_txt_len);
 		arg->txt[action_txt_len + 7] = ')';
@@ -2207,8 +2206,8 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 
 		/* Argument for timer */
 		arg->L = L;
-		arg->script = ws->script;
-		arg->pmutex = &(ws->ws_mutex);
+		arg->script = (ws ? ws->script : NULL);
+		arg->pmutex = (ws ? &(ws->ws_mutex) : NULL);
 		arg->funcref = funcref;
 		if (0
 		    == timer_add(ctx,
@@ -2414,9 +2413,10 @@ lua_debug_hook(lua_State *L, lua_Debug *ar)
 
 /* Lua Environment */
 enum {
-	LUA_ENV_TYPE_LUA_SERVER_PAGE = 0,
-	LUA_ENV_TYPE_PLAIN_LUA_PAGE = 1,
-	LUA_ENV_TYPE_LUA_WEBSOCKET = 2,
+	LUA_ENV_TYPE_LUA_SERVER_PAGE = 0, /* page.lp */
+	LUA_ENV_TYPE_PLAIN_LUA_PAGE = 1,  /* script.lua */
+	LUA_ENV_TYPE_LUA_WEBSOCKET = 2,   /* websock.lua */
+	LUA_ENV_TYPE_BACKGROUND = 9 /* Lua backgrond script or exec from cmdline */
 };
 
 
@@ -2708,10 +2708,13 @@ prepare_lua_environment(struct mg_context *ctx,
 	case LUA_ENV_TYPE_LUA_WEBSOCKET:
 		reg_string(L, "lua_type", "websocket");
 		break;
+	case LUA_ENV_TYPE_BACKGROUND:
+		reg_string(L, "lua_type", "background");
+		break;
 	}
 
-	if (lua_env_type == LUA_ENV_TYPE_LUA_SERVER_PAGE
-	    || lua_env_type == LUA_ENV_TYPE_PLAIN_LUA_PAGE) {
+	if ((lua_env_type == LUA_ENV_TYPE_LUA_SERVER_PAGE)
+	    || (lua_env_type == LUA_ENV_TYPE_PLAIN_LUA_PAGE)) {
 		reg_conn_function(L, "cry", lsp_cry, conn);
 		reg_conn_function(L, "read", lsp_read, conn);
 		reg_conn_function(L, "write", lsp_write, conn);
@@ -2729,7 +2732,11 @@ prepare_lua_environment(struct mg_context *ctx,
 
 	if (lua_env_type == LUA_ENV_TYPE_LUA_WEBSOCKET) {
 		reg_function(L, "write", lwebsock_write);
+	}
+
 #if defined(USE_TIMERS)
+	if ((lua_env_type == LUA_ENV_TYPE_LUA_WEBSOCKET)
+	    || (lua_env_type == LUA_ENV_TYPE_BACKGROUND)) {
 		reg_function(L, "set_timeout", lwebsocket_set_timeout);
 		reg_function(L, "set_interval", lwebsocket_set_interval);
 #endif
@@ -3323,7 +3330,7 @@ lua_websocket_close(struct mg_connection *conn, void *ws_arg)
 
 
 static lua_State *
-mg_prepare_lua_context_script(const char *file_name,
+mg_lua_context_script_prepare(const char *file_name,
                               struct mg_context *ctx,
                               char *ebuf,
                               size_t ebuf_len)
@@ -3331,8 +3338,6 @@ mg_prepare_lua_context_script(const char *file_name,
 	struct lua_State *L;
 	int lua_ret;
 	const char *lua_err_txt;
-
-	(void)ctx;
 
 	L = luaL_newstate();
 	if (L == NULL) {
@@ -3344,8 +3349,16 @@ mg_prepare_lua_context_script(const char *file_name,
 		            "Cannot create Lua state");
 		return 0;
 	}
-	civetweb_open_lua_libs(L);
 
+	/* Add all libraries */
+	prepare_lua_environment(ctx,
+	                        NULL /* conn */,
+	                        NULL /* WS list*/,
+	                        L,
+	                        file_name,
+	                        LUA_ENV_TYPE_BACKGROUND);
+
+	/* Load lua script file */
 	lua_ret = luaL_loadfile(L, file_name);
 	if (lua_ret != LUA_OK) {
 		/* Error when loading the file (e.g. file not found,
@@ -3362,12 +3375,28 @@ mg_prepare_lua_context_script(const char *file_name,
 		lua_close(L);
 		return 0;
 	}
+	/*	lua_close(L); must be done somewhere else */
+	return L;
+}
+
+
+static lua_State *
+mg_lua_context_script_run(lua_State *L,
+                          const char *file_name,
+                          struct mg_context *ctx,
+                          char *ebuf,
+                          size_t ebuf_len)
+{
+	int lua_ret;
+	const char *lua_err_txt;
+
+	(void)ctx;
 
 	/* The script file is loaded, now call it */
 	lua_ret = lua_pcall(L,
 	                    /* no arguments */ 0,
 	                    /* zero or one return value */ 1,
-	                    /* errors as strint return value */ 0);
+	                    /* errors as string return value */ 0);
 
 	if (lua_ret != LUA_OK) {
 		/* Error when executing the script */
@@ -3381,6 +3410,17 @@ mg_prepare_lua_context_script(const char *file_name,
 		            lua_err_txt);
 		lua_close(L);
 		return 0;
+	}
+
+	/* Check optional return value */
+	if (lua_isboolean(L, -1)) {
+		/* A boolean return value false indicates failure */
+		int ret = lua_toboolean(L, -1);
+		if (ret == 0) {
+			/* Script returned false */
+			lua_close(L);
+			return 0;
+		}
 	}
 
 	/*	lua_close(L); must be done somewhere else */
@@ -3420,13 +3460,19 @@ lua_ctx_exit(struct mg_context *ctx)
 }
 
 
+/* Execute Lua script from main */
 int
 run_lua(const char *file_name)
 {
 	int func_ret = EXIT_FAILURE;
 	char ebuf[512] = {0};
 	lua_State *L =
-	    mg_prepare_lua_context_script(file_name, NULL, ebuf, sizeof(ebuf));
+	    mg_lua_context_script_prepare(file_name, NULL, ebuf, sizeof(ebuf));
+
+	if (L) {
+		L = mg_lua_context_script_run(L, file_name, NULL, ebuf, sizeof(ebuf));
+	}
+
 	if (L) {
 		/* Script executed */
 		if (lua_type(L, -1) == LUA_TNUMBER) {

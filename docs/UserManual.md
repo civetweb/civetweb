@@ -448,14 +448,12 @@ files, ...), check for external resources, remove old log files, etc.
 The Lua state remains open until the server is stopped.
 In the future, some callback functions will be available to notify the
 script on changes of the server state. See example lua script :
-[background.lua](https://github.com/civetweb/civetweb/blob/master/test/background.lua).
+[background.lua](https://github.com/civetweb/civetweb/blob/master/test/lua_backbround_script_timer.lua).
 
-Additional functions available in background script :
-sleep, root path, script name, is terminated
-
-### lua\_background\_script\_params `param1=1,param2=2`
+### lua\_background\_script\_params
 Can add dynamic parameters to background script.
-Parameters mapped to global 'mg' table 'params' field.
+Parameters mapped into 'mg.params' as table.
+Example: `paramName1=paramValue1,paramName2=2`
 
 ### lua\_preload\_file
 This configuration option can be used to specify a Lua script file, which
@@ -953,7 +951,7 @@ or using Lua code:
 
 or Lua Server Pages generating HTML content MAY skip the HTTP header lines.
 In this case, CivetWeb automatically creates a "200 OK"/"Content-Type: text/html"
-reply header. In this case, the document should start with "<!DOCTYPE html>"
+reply header. In this case, the document must start with "<!DOCTYPE html>"
 or "<html".
 
 Currently the extended "Kepler Syntax" is available only for text/html pages
@@ -981,6 +979,8 @@ Lua websocket pages do support single shot (timeout) and interval timers.
 
 An example is shown in
 [websocket.lua](https://github.com/civetweb/civetweb/blob/master/test/websocket.lua).
+
+##Lua background script
 
 
 # Using CGI
