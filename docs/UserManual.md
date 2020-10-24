@@ -584,7 +584,7 @@ certificate with the same subject name they should have extensions ".0", ".1",
 ### ssl\_cache\_timeout `-1`
 Allow caching of SSL/TLS sessions, so HTTPS connection from the same client
 to the same server can be established faster. A configuration value >0 activates
-session caching. The configuration value is the maximum lifetime of a cached 
+session caching. The configuration value is the maximum lifetime of a cached
 session in seconds.
 The default is to deactivated session caching.
 
@@ -964,8 +964,7 @@ header and generate any kind of file.
 CivetWeb offers support for websockets in Lua as well. In contrast to plain
 Lua scripts and Lua server pages, Lua websocket scripts are shared by all clients.
 
-Lua websocket scripts must define a few functions:
-    open(arg)    -- callback to accept or reject a connection
+Lua websocket scripts must define the following functions:
     ready(arg)   -- called after a connection has been established
     data(arg)    -- called when the server receives data from the client
     close(arg)   -- called when a websocket connection is closed
@@ -981,6 +980,23 @@ An example is shown in
 [websocket.lua](https://github.com/civetweb/civetweb/blob/master/test/websocket.lua).
 
 ##Lua background script
+The Lua background script is loaded when the server is starting,
+before any client is able to connect. It can be used for preparation and
+maintenance tasks, e.g., for preparing the web contents, cleaning log files,
+etc.
+
+The Name of the script file including path is configured as `lua_background_script`. 
+Additional parameters can be supplied using `lua_background_script_params`.
+
+The background script is loaded before the server is ready to start.
+It may return a boolean value. If "false" in returned, the server will
+not be started. Since the server is not fully initialized when the script is loaded,
+some features of the "mg" library are not available yet. Use the "start()" callbacks
+function instead.
+
+A Lua background script may define the following functions:
+    start()      -- called wnen the server is started
+    stop()       -- called when the server is stopped
 
 
 # Using CGI

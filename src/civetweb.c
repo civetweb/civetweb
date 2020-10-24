@@ -2468,6 +2468,7 @@ static const char month_names[][4] = {"Jan",
                                       "Dec"};
 #endif /* !NO_CACHING */
 
+
 /* Unified socket address. For IPv6 support, add IPv6 address structure in
  * the union u. */
 union usa {
@@ -2477,6 +2478,7 @@ union usa {
 	struct sockaddr_in6 sin6;
 #endif
 };
+
 
 #if defined(USE_IPV6)
 #define USA_IN_PORT_UNSAFE(s)                                                  \
@@ -4164,7 +4166,6 @@ mg_construct_local_link(const struct mg_connection *conn,
 	if ((buflen < 1) || (buf == 0) || (conn == 0)) {
 		return -1;
 	} else {
-
 		int truncated = 0;
 		const struct mg_request_info *ri = &conn->request_info;
 
@@ -15301,6 +15302,7 @@ set_ports_option(struct mg_context *phys_ctx)
 			}
 		}
 #endif
+
 		else {
 			mg_cry_ctx_internal(
 			    phys_ctx,
@@ -19240,10 +19242,20 @@ master_thread_run(struct mg_context *ctx)
 		tls.user_ptr = NULL;
 	}
 
+	/* Lua background script "start" event */
+#if defined(USE_LUA)
+	if (ctx->lua_background_state) {
+		lua_State *lstate = (lua_State *)ctx->lua_background_state;
+		/* call "start()" in Lua */
+		lua_getglobal(lstate, "start");
+		(void)lua_pcall(lstate, /* args */ 0, /* results */ 0, 0);
+	}
+#endif
+
 	/* Server starts *now* */
 	ctx->start_time = time(NULL);
 
-	/* Start the server */
+	/* Server accept loop */
 	pfd = ctx->listening_socket_fds;
 	while (STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 		for (i = 0; i < ctx->num_listening_sockets; i++) {
@@ -19295,12 +19307,9 @@ master_thread_run(struct mg_context *ctx)
 	/* Free Lua state of lua background task */
 	if (ctx->lua_background_state) {
 		lua_State *lstate = (lua_State *)ctx->lua_background_state;
-		lua_getglobal(lstate, LUABACKGROUNDPARAMS);
-		if (lua_istable(lstate, -1)) {
-			reg_boolean(lstate, "shutdown", 1);
-			lua_pop(lstate, 1);
-			mg_sleep(2);
-		}
+		/* call "stop()" in Lua */
+		lua_getglobal(lstate, "stop");
+		(void)lua_pcall(lstate, /* args */ 0, /* results */ 0, 0);
 		lua_close(lstate);
 		ctx->lua_background_state = 0;
 	}
@@ -19831,10 +19840,14 @@ static
 		struct vec opt_vec;
 		struct vec eq_vec;
 		const char *sparams;
-		lua_State *state = mg_prepare_lua_context_script(
+
+		/* Create a Lua state, load all standard libraries and the mg table */
+		lua_State *state = mg_lua_context_script_prepare(
 		    ctx->dd.config[LUA_BACKGROUND_SCRIPT], ctx, ebuf, sizeof(ebuf));
 		if (!state) {
-			mg_cry_ctx_internal(ctx, "lua_background_script error: %s", ebuf);
+			mg_cry_ctx_internal(ctx,
+			                    "lua_background_script load error: %s",
+			                    ebuf);
 			if ((error != NULL) && (error->text_buffer_size > 0)) {
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
@@ -19848,20 +19861,51 @@ static
 			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
 		}
-		ctx->lua_background_state = (void *)state;
 
-		lua_newtable(state);
-		reg_boolean(state, "shutdown", 0);
-
+		/* Add a table with parameters into mg.params */
 		sparams = ctx->dd.config[LUA_BACKGROUND_SCRIPT_PARAMS];
+		if (sparams && sparams[0]) {
+			lua_getglobal(state, "mg");
+			lua_pushstring(state, "params");
+			lua_newtable(state);
 
-		while ((sparams = next_option(sparams, &opt_vec, &eq_vec)) != NULL) {
-			reg_llstring(
-			    state, opt_vec.ptr, opt_vec.len, eq_vec.ptr, eq_vec.len);
-			if (mg_strncasecmp(sparams, opt_vec.ptr, opt_vec.len) == 0)
-				break;
+			while ((sparams = next_option(sparams, &opt_vec, &eq_vec))
+			       != NULL) {
+				reg_llstring(
+				    state, opt_vec.ptr, opt_vec.len, eq_vec.ptr, eq_vec.len);
+				if (mg_strncasecmp(sparams, opt_vec.ptr, opt_vec.len) == 0)
+					break;
+			}
+			lua_rawset(state, -3);
+			lua_pop(state, 1);
 		}
-		lua_setglobal(state, LUABACKGROUNDPARAMS);
+
+		/* Call script */
+		state = mg_lua_context_script_run(state,
+		                                  ctx->dd.config[LUA_BACKGROUND_SCRIPT],
+		                                  ctx,
+		                                  ebuf,
+		                                  sizeof(ebuf));
+		if (!state) {
+			mg_cry_ctx_internal(ctx,
+			                    "lua_background_script start error: %s",
+			                    ebuf);
+			if ((error != NULL) && (error->text_buffer_size > 0)) {
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for error buffers */
+				            error->text,
+				            error->text_buffer_size,
+				            "Error in script %s: %s",
+				            config_options[DOCUMENT_ROOT].name,
+				            ebuf);
+			}
+			free_context(ctx);
+			pthread_setspecific(sTlsKey, NULL);
+			return NULL;
+		}
+
+		/* state remains valid */
+		ctx->lua_background_state = (void *)state;
 
 	} else {
 		ctx->lua_background_state = 0;
