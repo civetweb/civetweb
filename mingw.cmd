@@ -1,4 +1,4 @@
-:: Make sure the extensions are enabled
+:: Please Make sure the extensions are enabled
 @verify other 2>nul
 @setlocal EnableExtensions EnableDelayedExpansion
 @if errorlevel 1 (
