@@ -122,6 +122,7 @@ ifdef WITH_ALL
   WITH_SERVER_STATS = 1
   WITH_ZLIB = 1
   WITH_HTTP2 = 1
+  WITH_X_DOM_SOCKET = 1
   WITH_EXPERIMENTAL = 1
   #WITH_CPP is not defined, ALL means only real features, not wrappers
 endif
@@ -190,6 +191,12 @@ ifdef WITH_WEBSOCKET
 endif
 ifdef WITH_WEBSOCKETS
   CFLAGS += -DUSE_WEBSOCKET
+endif
+ifdef WITH_X_DOM_SOCKET
+  CFLAGS += -DUSE_X_DOM_SOCKET
+endif
+ifdef WITH_X_DOM_SOCKETS
+  CFLAGS += -DUSE_X_DOM_SOCKET
 endif
 
 ifdef WITH_SERVER_STAT

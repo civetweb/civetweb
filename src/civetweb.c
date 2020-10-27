@@ -873,6 +873,9 @@ typedef unsigned short int in_port_t;
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#if defined(USE_X_DOM_SOCKET)
+#include <sys/un.h>
+#endif
 #endif
 
 #define vsnprintf_impl vsnprintf
@@ -2477,9 +2480,24 @@ union usa {
 #if defined(USE_IPV6)
 	struct sockaddr_in6 sin6;
 #endif
+#if defined(USE_X_DOM_SOCKET)
+	struct sockaddr_un sun;
+#endif
 };
 
-
+#if defined(USE_X_DOM_SOCKET)
+static unsigned short
+USA_IN_PORT_UNSAFE(union usa *s)
+{
+	if (s->sa.sa_family == AF_INET)
+		return s->sin.sin_port;
+#if defined(USE_IPV6)
+	if (s->sa.sa_family == AF_INET6)
+		return s->sin6.sin6_port;
+#endif
+	return 0;
+}
+#endif
 #if defined(USE_IPV6)
 #define USA_IN_PORT_UNSAFE(s)                                                  \
 	(((s)->sa.sa_family == AF_INET6) ? (s)->sin6.sin6_port : (s)->sin.sin_port)
@@ -3863,6 +3881,10 @@ mg_get_server_ports(const struct mg_context *ctx,
 }
 
 
+#if defined(USE_X_DOM_SOCKET) && !defined(UNIX_DOMAIN_SOCKET_SERVER_NAME)
+#define UNIX_DOMAIN_SOCKET_SERVER_NAME "*"
+#endif
+
 static void
 sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 {
@@ -3890,6 +3912,22 @@ sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 		            NULL,
 		            0,
 		            NI_NUMERICHOST);
+	}
+#endif
+#if defined(USE_X_DOM_SOCKET)
+	else if (usa->sa.sa_family == AF_UNIX) {
+		/* TODO: Define a remote address for unix domain sockets.
+		 * This code will always return "localhost", identical to http+tcp:
+		getnameinfo(&usa->sa,
+		    sizeof(usa->sun),
+		    buf,
+		    (unsigned)len,
+		    NULL,
+		    0,
+		    NI_NUMERICHOST);
+		 */
+		strncpy(buf, UNIX_DOMAIN_SOCKET_SERVER_NAME, len);
+		buf[len] = 0;
 	}
 #endif
 }
@@ -4183,6 +4221,31 @@ mg_construct_local_link(const struct mg_connection *conn,
 		if (uri == NULL) {
 			return -1;
 		}
+
+#if defined(USE_X_DOM_SOCKET)
+		if (conn->client.lsa.sa.sa_family == AF_UNIX) {
+			/* TODO: Define and document a link for UNIX domain sockets. */
+			/* There seems to be no official standard for this.
+			 * Common uses seem to be "httpunix://", "http.unix://" or
+			 * "http+unix://" as a protocol definition string, followed by
+			 * "localhost" or "127.0.0.1" or "/tmp/unix/path" or
+			 * "%2Ftmp%2Funix%2Fpath" (url % encoded) or
+			 * "localhost:%2Ftmp%2Funix%2Fpath" (domain socket path as port) or
+			 * "" (completely skipping the server name part). In any case, the
+			 * last part is the server local path. */
+			const char *server_name = UNIX_DOMAIN_SOCKET_SERVER_NAME;
+			mg_snprintf(conn,
+			            &truncated,
+			            buf,
+			            buflen,
+			            "%s.unix://%s%s",
+			            proto,
+			            server_name,
+			            ri->local_uri);
+			default_port = 0;
+			return 0;
+		}
+#endif
 
 		if (define_proto) {
 			/* If we got a protocol name, use the default port accordingly. */
@@ -9495,6 +9558,13 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	else if (ip_ver == 6) {
 		*sock = socket(PF_INET6, SOCK_STREAM, 0);
 	}
+#endif
+#if 0 /* Not available as client */
+#if defined(USE_X_DOM_SOCKET)
+	else if (ip_ver == 99) {
+		*sock = socket(AF_UNIX, SOCK_STREAM, 0);
+	}
+#endif
 #endif
 
 	if (*sock == INVALID_SOCKET) {
@@ -14900,6 +14970,18 @@ close_all_listening_sockets(struct mg_context *ctx)
 
 	for (i = 0; i < ctx->num_listening_sockets; i++) {
 		closesocket(ctx->listening_sockets[i].sock);
+#if defined(USE_X_DOM_SOCKET)
+		/* For unix domain sockets, the socket name represents a file that has
+		 * to be deleted. */
+		/* See
+		 * https://stackoverflow.com/questions/15716302/so-reuseaddr-and-af-unix
+		 */
+		if ((ctx->listening_sockets[i].lsa.sin.sin_family == AF_UNIX)
+		    && (ctx->listening_sockets[i].sock != INVALID_SOCKET)) {
+			IGNORE_UNUSED_RESULT(
+			    remove(ctx->listening_sockets[i].lsa.sun.sun_path));
+		}
+#endif
 		ctx->listening_sockets[i].sock = INVALID_SOCKET;
 	}
 	mg_free(ctx->listening_sockets);
@@ -15042,6 +15124,23 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 			len = 0;
 		}
 
+#if defined(USE_X_DOM_SOCKET)
+
+	} else if (vec->ptr[0] == 'x') {
+		/* unix (linux) domain socket */
+		if (vec->len < sizeof(so->lsa.sun.sun_path)) {
+			len = vec->len;
+			so->lsa.sun.sun_family = AF_UNIX;
+			memset(so->lsa.sun.sun_path, 0, sizeof(so->lsa.sun.sun_path));
+			memcpy(so->lsa.sun.sun_path, (char *)vec->ptr + 1, vec->len - 1);
+			port = 0;
+			*ip_version = 99;
+		} else {
+			/* String too long */
+			len = 0;
+		}
+#endif
+
 	} else {
 		/* Parsing failure. */
 		len = 0;
@@ -15179,8 +15278,14 @@ set_ports_option(struct mg_context *phys_ctx)
 			continue;
 		}
 #endif
-
-		if ((so.sock = socket(so.lsa.sa.sa_family, SOCK_STREAM, 6))
+		/* Create socket. */
+		/* For a list of protocol numbers (e.g., TCP==6) see:
+		 * https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
+		 */
+		if ((so.sock =
+		         socket(so.lsa.sa.sa_family,
+		                SOCK_STREAM,
+		                (ip_version == 99) ? (/* LOCAL */ 0) : (/* TCP */ 6)))
 		    == INVALID_SOCKET) {
 
 			mg_cry_ctx_internal(phys_ctx,
@@ -15228,7 +15333,13 @@ set_ports_option(struct mg_context *phys_ctx)
 		}
 #endif
 
-		if (ip_version > 4) {
+#if defined(USE_X_DOM_SOCKET)
+		if (ip_version == 99) {
+			/* Unix domain socket */
+		} else
+#endif
+
+		    if (ip_version > 4) {
 /* Could be 6 for IPv6 onlyor 10 (4+6) for IPv4+IPv6 */
 #if defined(USE_IPV6)
 			if (ip_version > 6) {
@@ -15302,7 +15413,22 @@ set_ports_option(struct mg_context *phys_ctx)
 			}
 		}
 #endif
+#if defined(USE_X_DOM_SOCKET)
+		else if (so.lsa.sa.sa_family == AF_UNIX) {
 
+			len = sizeof(so.lsa.sun);
+			if (bind(so.sock, &so.lsa.sa, len) != 0) {
+				mg_cry_ctx_internal(phys_ctx,
+				                    "cannot bind to unix socket %s: %d (%s)",
+				                    so.lsa.sun.sun_path,
+				                    (int)ERRNO,
+				                    strerror(errno));
+				closesocket(so.sock);
+				so.sock = INVALID_SOCKET;
+				continue;
+			}
+		}
+#endif
 		else {
 			mg_cry_ctx_internal(
 			    phys_ctx,
@@ -16969,16 +17095,20 @@ reset_per_request_attributes(struct mg_connection *conn)
 
 
 static int
-set_tcp_nodelay(SOCKET sock, int nodelay_on)
+set_tcp_nodelay(const struct socket *so, int nodelay_on)
 {
-	if (setsockopt(sock,
-	               IPPROTO_TCP,
-	               TCP_NODELAY,
-	               (SOCK_OPT_TYPE)&nodelay_on,
-	               sizeof(nodelay_on))
-	    != 0) {
-		/* Error */
-		return 1;
+	if ((so->lsa.sa.sa_family == AF_INET)
+	    || (so->lsa.sa.sa_family == AF_INET6)) {
+		/* Only for TCP sockets */
+		if (setsockopt(so->sock,
+		               IPPROTO_TCP,
+		               TCP_NODELAY,
+		               (SOCK_OPT_TYPE)&nodelay_on,
+		               sizeof(nodelay_on))
+		    != 0) {
+			/* Error */
+			return 1;
+		}
 	}
 	/* OK */
 	return 0;
@@ -19149,24 +19279,27 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		}
 
 #if !defined(__ZEPHYR__)
-		/* Set TCP keep-alive. This is needed because if HTTP-level
-		 * keep-alive
-		 * is enabled, and client resets the connection, server won't get
-		 * TCP FIN or RST and will keep the connection open forever. With
-		 * TCP keep-alive, next keep-alive handshake will figure out that
-		 * the client is down and will close the server end.
-		 * Thanks to Igor Klopov who suggested the patch. */
-		if (setsockopt(so.sock,
-		               SOL_SOCKET,
-		               SO_KEEPALIVE,
-		               (SOCK_OPT_TYPE)&on,
-		               sizeof(on))
-		    != 0) {
-			mg_cry_ctx_internal(
-			    ctx,
-			    "%s: setsockopt(SOL_SOCKET SO_KEEPALIVE) failed: %s",
-			    __func__,
-			    strerror(ERRNO));
+		if ((so.lsa.sa.sa_family == AF_INET)
+		    || (so.lsa.sa.sa_family == AF_INET6)) {
+			/* Set TCP keep-alive for TCP sockets (IPv4 and IPv6).
+			 * This is needed because if HTTP-level keep-alive
+			 * is enabled, and client resets the connection, server won't get
+			 * TCP FIN or RST and will keep the connection open forever. With
+			 * TCP keep-alive, next keep-alive handshake will figure out that
+			 * the client is down and will close the server end.
+			 * Thanks to Igor Klopov who suggested the patch. */
+			if (setsockopt(so.sock,
+			               SOL_SOCKET,
+			               SO_KEEPALIVE,
+			               (SOCK_OPT_TYPE)&on,
+			               sizeof(on))
+			    != 0) {
+				mg_cry_ctx_internal(
+				    ctx,
+				    "%s: setsockopt(SOL_SOCKET SO_KEEPALIVE) failed: %s",
+				    __func__,
+				    strerror(ERRNO));
+			}
 		}
 #endif
 
@@ -19179,7 +19312,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		 */
 		if ((ctx->dd.config[CONFIG_TCP_NODELAY] != NULL)
 		    && (!strcmp(ctx->dd.config[CONFIG_TCP_NODELAY], "1"))) {
-			if (set_tcp_nodelay(so.sock, 1) != 0) {
+			if (set_tcp_nodelay(&so, 1) != 0) {
 				mg_cry_ctx_internal(
 				    ctx,
 				    "%s: setsockopt(IPPROTO_TCP TCP_NODELAY) failed: %s",
@@ -20681,7 +20814,7 @@ mg_get_system_info(char *buffer, int buflen)
 #pragma GCC diagnostic ignored "-Wdate-time"
 #endif
 #endif
-#ifdef BUILD_DATE
+#if defined(BUILD_DATE)
 		const char *bd = BUILD_DATE;
 #else
 		const char *bd = __DATE__;

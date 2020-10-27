@@ -295,7 +295,7 @@ static int MakeConsole(void);
 static void
 show_server_name(void)
 {
-#ifdef BUILD_DATE
+#if defined(BUILD_DATE)
 	const char *bd = BUILD_DATE;
 #else
 	const char *bd = __DATE__;
