@@ -2444,6 +2444,13 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 		reg_string(L, "path_info", conn->path_info);
 	}
 
+	{
+		char buf[2048];
+		if (0 == mg_get_request_link(conn, buf, sizeof(buf))) {
+			reg_string(L, "request_link", buf);
+		}
+	}
+
 	if (conn->request_info.content_length >= 0) {
 		/* reg_int64: content_length */
 		lua_pushstring(L, "content_length");

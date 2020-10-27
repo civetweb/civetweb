@@ -98,8 +98,13 @@ enum {
 	/* Will only work, if USE_ZLIB is set. */
 	MG_FEATURES_COMPRESSION = 0x200u,
 
-	/* Collect server status information. */
-	/* Will only work, if USE_SERVER_STATS is set. */
+	/* HTTP/2 support enabled. */
+	MG_FEATURES_HTTP2 = 0x400u,
+
+	/* Support unix domain sockets. */
+	MG_FEATURES_X_DOMAIN_SOCKET = 0x800u,
+
+	/* Bit mask for all feature defines. */
 	MG_FEATURES_ALL = 0xFFFFu
 };
 

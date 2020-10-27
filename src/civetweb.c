@@ -20598,26 +20598,26 @@ mg_check_feature(unsigned feature)
 #if defined(USE_ZLIB)
 	                                    | MG_FEATURES_COMPRESSION
 #endif
+#if defined(USE_HTTP2)
+	                                    | MG_FEATURES_HTTP2
+#endif
+#if defined(USE_X_DOM_SOCKET)
+	                                    | MG_FEATURES_X_DOMAIN_SOCKET
+#endif
 
 /* Set some extra bits not defined in the API documentation.
  * These bits may change without further notice. */
 #if defined(MG_LEGACY_INTERFACE)
-	                                    | 0x00008000u
+	                                    | 0x80000000u
 #endif
 #if defined(MG_EXPERIMENTAL_INTERFACES)
-	                                    | 0x00004000u
+	                                    | 0x40000000u
+#endif
+#if !defined(NO_RESPONSE_BUFFERING)
+	                                    | 0x20000000u
 #endif
 #if defined(MEMORY_DEBUGGING)
-	                                    | 0x00001000u
-#endif
-#if defined(USE_TIMERS)
-	                                    | 0x00020000u
-#endif
-#if !defined(NO_NONCE_CHECK)
-	                                    | 0x00040000u
-#endif
-#if !defined(NO_POPEN)
-	                                    | 0x00080000u
+	                                    | 0x10000000u
 #endif
 	    ;
 	return (feature & feature_set);

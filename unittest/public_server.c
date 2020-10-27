@@ -979,7 +979,7 @@ request_test_handler2(struct mg_connection *conn, void *cbdata)
 }
 
 
-#ifdef USE_WEBSOCKET
+#if defined(USE_WEBSOCKET)
 /****************************************************************************/
 /* WEBSOCKET SERVER                                                         */
 /****************************************************************************/
@@ -1387,7 +1387,7 @@ START_TEST(test_request_handlers)
 	        ipv4_port);
 	mg_set_request_handler(ctx, "/handler2", request_test_handler2, NULL);
 
-#ifdef USE_WEBSOCKET
+#if defined(USE_WEBSOCKET)
 	mg_set_websocket_handler(ctx,
 	                         "/websocket",
 	                         websock_server_connect,
@@ -1980,7 +1980,7 @@ START_TEST(test_request_handlers)
 
 
 /* Websocket test */
-#ifdef USE_WEBSOCKET
+#if defined(USE_WEBSOCKET)
 	/* Then connect a first client */
 	ws_client1_conn =
 	    mg_connect_websocket_client("localhost",
@@ -2031,7 +2031,7 @@ START_TEST(test_request_handlers)
 	ws_client1_data.len = 0;
 
 /* Now connect a second client */
-#ifdef USE_IPV6
+#if defined(USE_IPV6)
 	ws_client2_conn =
 	    mg_connect_websocket_client("[::1]",
 	                                ipv6_port,
@@ -2276,7 +2276,7 @@ START_TEST(test_request_handlers)
 	test_mg_stop(ctx, __LINE__);
 	mark_point();
 
-#ifdef USE_WEBSOCKET
+#if defined(USE_WEBSOCKET)
 	for (i = 0; i < 100; i++) {
 		test_sleep(1);
 		if (ws_client3_data.closed != 0) {
@@ -3698,7 +3698,7 @@ START_TEST(test_error_handling)
 	ck_assert_str_eq(errmsg, "Invalid number of worker threads");
 
 /* Set to a number - but use a number above the limit */
-#ifdef MAX_WORKER_THREADS
+#if defined(MAX_WORKER_THREADS)
 	sprintf(bad_thread_num, "%u", MAX_WORKER_THREADS + 1);
 #else
 	sprintf(bad_thread_num, "%lu", 1000000000lu);
