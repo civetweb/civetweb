@@ -41,7 +41,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreserved-id-macro"
 #endif
-
+#if !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
 /* This should also be sufficient for "realpath", according to
  * http://man7.org/linux/man-pages/man3/realpath.3.html, but in
@@ -50,6 +50,7 @@
  * #pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
  * #pragma clang diagnostic ignored "-Wimplicit-function-declaration"
  */
+#endif
 #endif
 
 #if !defined(IGNORE_UNUSED_RESULT)
