@@ -1317,7 +1317,7 @@ mg_atomic_dec(volatile ptrdiff_t *addr)
 }
 
 
-#if defined(USE_SERVER_STATS)
+#if defined(USE_SERVER_STATS) || defined(STOP_FLAG_NEEDS_LOCK)
 static ptrdiff_t
 mg_atomic_add(volatile ptrdiff_t *addr, ptrdiff_t value)
 {
