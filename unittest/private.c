@@ -1421,7 +1421,7 @@ make_private_suite(void)
 	TCase *const tcase_internal_parse_4 = tcase_create("Internal Parsing 4");
 	TCase *const tcase_internal_parse_5 = tcase_create("Internal Parsing 5");
 	TCase *const tcase_internal_parse_6 = tcase_create("Internal Parsing 6");
-	TCase *const tcase_internal_parse_6 = tcase_create("Internal Parsing 7");
+	TCase *const tcase_internal_parse_7 = tcase_create("Internal Parsing 7");
 	TCase *const tcase_encode_decode = tcase_create("Encode Decode");
 	TCase *const tcase_mask_data = tcase_create("Mask Data");
 	TCase *const tcase_parse_date_string = tcase_create("Date Parsing");
