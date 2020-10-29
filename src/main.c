@@ -3318,3 +3318,4 @@ main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 #endif /* _WIN32 */
+#undef printf
