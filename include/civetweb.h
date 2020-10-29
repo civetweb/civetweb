@@ -564,7 +564,7 @@ typedef void (*mg_websocket_close_handler)(const struct mg_connection *,
  */
 struct mg_websocket_subprotocols {
 	int nb_subprotocols;
-	char **subprotocols;
+	const char **subprotocols;
 };
 
 /* mg_set_websocket_handler

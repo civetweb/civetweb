@@ -436,7 +436,23 @@ environment - in some cases, you might need to resort to a fixed IP address.
 If you want to use an ephemeral port (i.e. let the operating system choose
 a port number), use `0` for the port number. This will make it necessary to
 communicate the port number to clients via other means, for example mDNS
-(or Zeroconf, Bonjour or Avahi).
+(Zeroconf, Bonjour, Avahi).
+
+In case the server has been built with the `USE_X_DOM_SOCKET` option set,
+it can listen to unix domain sockets as well. They are specified by a
+lower case `x` followed by the domain socket path, e.g. `x/tmp/sockname`.
+Domain sockets do not require a port number, always use HTTP (not HTTPS) 
+and never redirect. Thus `:` is not allowed, while `r` or `s` at the end 
+of the configuration is interpreted as part of the domain socket path.
+The domain sochet path must be a valid path to a non-existing file on a 
+Unix/Linux system. The CivetWeb process needs write/create access rights
+to create the domain socket in the Unix/Linux file system. 
+Use only alphanumerical characters, underscore and `/` in a domain socket
+path (in particular, `,;:` must be avoided).
+
+All socket/protocol types may be combined, separated by `,`.
+E.g.: `127.0.0.1:80,[::1]:80,x/tmp/sockname` will listen to localhost
+http connections using IPv4, IPv6 and the domain socket `/tmp/sockname`.
 
 ### lua\_background\_script
 Experimental feature, and subject to change.
@@ -446,9 +462,9 @@ It can be used to prepare the document root (e.g., update files, compress
 files, ...), check for external resources, remove old log files, etc.
 
 The Lua state remains open until the server is stopped.
-In the future, some callback functions will be available to notify the
-script on changes of the server state. See example lua script :
-[background.lua](https://github.com/civetweb/civetweb/blob/master/test/lua_backbround_script_timer.lua).
+
+For a detailed descriotion of available Lua callbacks see section 
+"Lua background script" below. 
 
 ### lua\_background\_script\_params
 Can add dynamic parameters to background script.
@@ -979,7 +995,7 @@ Lua websocket pages do support single shot (timeout) and interval timers.
 An example is shown in
 [websocket.lua](https://github.com/civetweb/civetweb/blob/master/test/websocket.lua).
 
-##Lua background script
+## Lua background script
 The Lua background script is loaded when the server is starting,
 before any client is able to connect. It can be used for preparation and
 maintenance tasks, e.g., for preparing the web contents, cleaning log files,
@@ -998,6 +1014,9 @@ A Lua background script may define the following functions:
     start()      -- called wnen the server is started
     stop()       -- called when the server is stopped
 
+
+See example Lua script :
+[background.lua](https://github.com/civetweb/civetweb/blob/master/test/lua_backbround_script_timer.lua).
 
 # Using CGI
 

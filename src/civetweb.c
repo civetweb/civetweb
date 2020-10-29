@@ -10844,6 +10844,12 @@ parse_http_headers(char **buf, struct mg_header hdr[MG_MAX_HEADERS])
 			/* End of headers reached. */
 			break;
 		}
+
+		/* Drop all spaces after header name before : */
+		while (*dp == ' ') {
+			*dp = 0;
+			dp++;
+		}
 		if (*dp != ':') {
 			/* This is not a valid field. */
 			return -1;

@@ -707,6 +707,266 @@ START_TEST(test_parse_port_string)
 END_TEST
 
 
+START_TEST(test_parse_http_headers)
+{
+	char buf[2048];
+	char *ptr;
+	int ret;
+	struct mg_header hdr[MG_MAX_HEADERS];
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 0);
+	ck_assert_ptr_eq(ptr, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].name, NULL);
+	ck_assert_ptr_eq(hdr[0].value, NULL);
+	ck_assert_ptr_eq(hdr[1].name, NULL);
+	ck_assert_ptr_eq(hdr[1].value, NULL);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 0);
+	ck_assert_ptr_eq(ptr, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].name, NULL);
+	ck_assert_ptr_eq(hdr[0].value, NULL);
+	ck_assert_ptr_eq(hdr[1].name, NULL);
+	ck_assert_ptr_eq(hdr[1].value, NULL);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, -1);
+	ck_assert_ptr_eq(ptr, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].name, NULL);
+	ck_assert_ptr_eq(hdr[0].value, NULL);
+	ck_assert_ptr_eq(hdr[1].name, NULL);
+	ck_assert_ptr_eq(hdr[1].value, NULL);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a:b");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_ptr_eq(ptr, &buf[3]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[2]);
+	ck_assert_ptr_eq(hdr[1].name, NULL);
+	ck_assert_ptr_eq(hdr[1].value, NULL);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a:b\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_ptr_eq(ptr, &buf[5]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[2]);
+	ck_assert_ptr_eq(hdr[1].name, NULL);
+	ck_assert_ptr_eq(hdr[1].value, NULL);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a:b\r\n\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_ptr_eq(ptr, &buf[5]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[2]);
+	ck_assert_ptr_eq(hdr[1].name, NULL);
+	ck_assert_ptr_eq(hdr[1].value, NULL);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a: b\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_ptr_eq(ptr, &buf[6]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[3]);
+	ck_assert_ptr_eq(hdr[1].name, NULL);
+	ck_assert_ptr_eq(hdr[1].value, NULL);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a :b\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_ptr_eq(ptr, &buf[6]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[3]);
+	ck_assert_ptr_eq(hdr[1].name, NULL);
+	ck_assert_ptr_eq(hdr[1].value, NULL);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a : b\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 1);
+	ck_assert_ptr_eq(ptr, &buf[7]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[4]);
+	ck_assert_ptr_eq(hdr[1].name, NULL);
+	ck_assert_ptr_eq(hdr[1].value, NULL);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a: b\r\nc: d\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 2);
+	ck_assert_ptr_eq(ptr, &buf[12]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_str_eq(hdr[1].name, "c");
+	ck_assert_str_eq(hdr[1].value, "d");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[3]);
+	ck_assert_ptr_eq(hdr[1].name, &buf[6]);
+	ck_assert_ptr_eq(hdr[1].value, &buf[9]);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a: b\r\nc: d\r\n\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 2);
+	ck_assert_ptr_eq(ptr, &buf[12]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_str_eq(hdr[1].name, "c");
+	ck_assert_str_eq(hdr[1].value, "d");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[3]);
+	ck_assert_ptr_eq(hdr[1].name, &buf[6]);
+	ck_assert_ptr_eq(hdr[1].value, &buf[9]);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a: b\r\nc: d\r\n\r\ne: f\r\n");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 2);
+	ck_assert_ptr_eq(ptr, &buf[12]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_str_eq(hdr[1].name, "c");
+	ck_assert_str_eq(hdr[1].value, "d");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[3]);
+	ck_assert_ptr_eq(hdr[1].name, &buf[6]);
+	ck_assert_ptr_eq(hdr[1].value, &buf[9]);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a: b\r\nc: d");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 2);
+	ck_assert_ptr_eq(ptr, &buf[10]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_str_eq(hdr[1].name, "c");
+	ck_assert_str_eq(hdr[1].value, "d");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[3]);
+	ck_assert_ptr_eq(hdr[1].name, &buf[6]);
+	ck_assert_ptr_eq(hdr[1].value, &buf[9]);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a: b\r\nc: d\r\ne");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, -1);
+	/* The following could be undefined, since ret == -1 */
+	ck_assert_ptr_eq(ptr, &buf[12]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_str_eq(hdr[1].name, "c");
+	ck_assert_str_eq(hdr[1].value, "d");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[3]);
+	ck_assert_ptr_eq(hdr[1].name, &buf[6]);
+	ck_assert_ptr_eq(hdr[1].value, &buf[9]);
+	ck_assert_ptr_eq(hdr[2].name, NULL);
+	ck_assert_ptr_eq(hdr[2].value, NULL);
+
+	memset(hdr, 0, sizeof(hdr));
+	memset(buf, 0, sizeof(buf));
+	strcpy(buf, "a: b\r\nc: d\r\nefg:");
+	ptr = &buf[0];
+	ret = parse_http_headers(&ptr, hdr);
+	ck_assert_int_eq(ret, 3);
+	ck_assert_ptr_eq(ptr, &buf[16]);
+	ck_assert_str_eq(hdr[0].name, "a");
+	ck_assert_str_eq(hdr[0].value, "b");
+	ck_assert_str_eq(hdr[1].name, "c");
+	ck_assert_str_eq(hdr[1].value, "d");
+	ck_assert_str_eq(hdr[2].name, "efg");
+	ck_assert_str_eq(hdr[2].value, "");
+	ck_assert_ptr_eq(hdr[0].name, &buf[0]);
+	ck_assert_ptr_eq(hdr[0].value, &buf[3]);
+	ck_assert_ptr_eq(hdr[1].name, &buf[6]);
+	ck_assert_ptr_eq(hdr[1].value, &buf[9]);
+	ck_assert_ptr_eq(hdr[2].name, &buf[12]);
+	ck_assert_ptr_eq(hdr[2].value, &buf[16]);
+
+	int bp = 1;
+}
+END_TEST
+
+
 START_TEST(test_encode_decode)
 {
 	char buf[128];
@@ -1161,6 +1421,7 @@ make_private_suite(void)
 	TCase *const tcase_internal_parse_4 = tcase_create("Internal Parsing 4");
 	TCase *const tcase_internal_parse_5 = tcase_create("Internal Parsing 5");
 	TCase *const tcase_internal_parse_6 = tcase_create("Internal Parsing 6");
+	TCase *const tcase_internal_parse_6 = tcase_create("Internal Parsing 7");
 	TCase *const tcase_encode_decode = tcase_create("Encode Decode");
 	TCase *const tcase_mask_data = tcase_create("Mask Data");
 	TCase *const tcase_parse_date_string = tcase_create("Date Parsing");
@@ -1211,6 +1472,10 @@ make_private_suite(void)
 	tcase_set_timeout(tcase_internal_parse_6, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_internal_parse_6);
 
+	tcase_add_test(tcase_internal_parse_7, test_parse_http_headers);
+	tcase_set_timeout(tcase_internal_parse_7, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_internal_parse_7);
+
 	tcase_add_test(tcase_encode_decode, test_encode_decode);
 	tcase_set_timeout(tcase_encode_decode, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_encode_decode);
@@ -1254,6 +1519,7 @@ MAIN_PRIVATE(void)
 	test_parse_date_string(0);
 	test_parse_port_string(0);
 	test_parse_http_message(0);
+	test_parse_http_headers(0);
 	test_sha1(0);
 
 #if defined(_WIN32)

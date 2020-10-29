@@ -39,7 +39,9 @@ but all functions required to run a HTTP server.
     - src/mod\_*.inl (modules to access third party components from civetweb)
 
 
-Note: The C++ wrapper uses the official C interface (civetweb.h) without adding any features to the server itself. Several features available in the C interface are missing in the C++ interface. While all features should be accessible using the C interface, this is not a design goal of the C++ interface.
+Note: The C++ wrapper uses the official C interface (civetweb.h) without adding any features to the server itself. 
+Several features available in the C interface are missing in the C++ interface. 
+While all features should be accessible using the C interface, this is not a design goal of the C++ interface.
 New code is advised to use the C interface, since this is unit tested and new API functions are often only added there.
 
 
@@ -179,7 +181,7 @@ Lua is a server side include functionality.  Files ending in .lua will be proces
   - src/third\_party/lfs.c
   - src/third\_party/lfs.h
 
-This build is valid for Lua version Lua 5.2. It is also possible to build with Lua 5.1 (including LuaJIT) or Lua 5.3.
+This build is valid for Lua version Lua 5.2. It is also possible to build with Lua 5.1 (including LuaJIT), Lua 5.3 or Lua 5.4.
 
 
 JavaScript Support
@@ -284,7 +286,23 @@ Initializing a HTTP server
 }
 ```
 
-A simple callback
+A simple callback (HTTP/1.x and HTTP/2):
+```C
+static int
+handler(struct mg_connection *conn, void *ignored)
+{
+	const char *msg = "Hello world";
+	unsigned long len = (unsigned long)strlen(msg);
+
+    mg_send_ok(conn, "text/plain", len);
+
+	mg_write(conn, msg, len);
+
+	return 200; /* HTTP state 200 = OK */
+}
+```
+
+A simple callback supporting HTTP/1.x only:
 ```C
 static int
 handler(struct mg_connection *conn, void *ignored)
@@ -304,4 +322,3 @@ handler(struct mg_connection *conn, void *ignored)
 	return 200;
 }
 ```
-

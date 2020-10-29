@@ -49,8 +49,10 @@ Get a list of all supported make option
 
 ```
 make build
+make WITH_ALL=1
 ```
-compile the code
+Compile the code.
+Using the option "WITH_ALL=1" enables all optional features.
 
 ```
 make install
@@ -58,11 +60,10 @@ make install
 Install on the system, Linux only.
 
 ```
-make lib WITH_CPP=1 WITH_IPV6=1
-make clean slib WITH_CPP=1 WITH_LUA=1 WITH_WEBSOCKET=1
+make lib WITH_IPV6=1
+make clean slib WITH_LUA=1 WITH_WEBSOCKET=1
 ```
 Build the static and shared libraries.
-The *WITH_CPP* make option is to include the CivetServer class.
 The additional make options configure the library just as it would the application.
 
 The *slib* option should be done on a separate clean build as position
@@ -89,6 +90,7 @@ make build WITH_LUA=1
 | `WITH_DUKTAPE=1`            | build with server-side JavaScript support         |
 | `WITH_IPV6=1`               | with IPV6 support                                 |
 | `WITH_WEBSOCKET=1`          | build with web socket support                     |
+| `WITH_X_DOM_SOCKET=1`       | build with unix domain socket support             |
 | `WITH_SERVER_STATS=1`       | build with support for server statistics          |
 | `WITH_EXPERIMENTAL=1`       | include experimental features (version depending) |
 | `WITH_ALL=1`                | Include all of the above features                 |
@@ -167,6 +169,7 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | `USE_SERVER_STATS`           | enable server statistics support                                    |
 | `USE_STACK_SIZE`             | define stack size instead of using system default                   |
 | `USE_WEBSOCKET`              | enable websocket support                                            |
+| `USE_X_DOM_SOCKET`           | enable unix domain socket support                                   |
 | `USE_ZLIB`                   | enable on-the-fly compression of files (using zlib)                 |
 |                              |                                                                     |
 | `MG_EXPERIMENTAL_INTERFACES` | include experimental interfaces                                     |
