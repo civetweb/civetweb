@@ -179,6 +179,9 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | `SSL_ALREADY_INITIALIZED`    | do not initialize libcrypto                                         |
 | `OPENSSL_API_1_0`            | Use OpenSSL V1.0.x interface                                        |
 | `OPENSSL_API_1_1`            | Use OpenSSL V1.1.x interface                                        |
+|                              |                                                                     |
+| `BUILD_DATE`                 | define as a string to be used as build id instead of __DATE__       |
+|                              |                                                                     |
 
 
 Note: If `make` is used (with this [Makefile](https://github.com/civetweb/civetweb/blob/master/Makefile)), you should not pass the `USE_<feature>` flags using `COPT`, but use the `WITH_<feature>` syntax above, since additional features may also use additional source code files.

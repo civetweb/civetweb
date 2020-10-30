@@ -20811,29 +20811,30 @@ mg_get_system_info(char *buffer, int buflen)
 #endif
 	}
 
-	/* Build date */
+	/* Build identifier. If BUILD_DATE is not set, __DATE__ will be used. */
 	{
-#if defined(GCC_DIAGNOSTIC)
-#if GCC_VERSION >= 40900
-#pragma GCC diagnostic push
-/* Disable bogus compiler warning -Wdate-time, appeared in gcc5 */
-#pragma GCC diagnostic ignored "-Wdate-time"
-#endif
-#endif
 #if defined(BUILD_DATE)
 		const char *bd = BUILD_DATE;
 #else
-		const char *bd = __DATE__;
+#if defined(GCC_DIAGNOSTIC)
+#if GCC_VERSION >= 40900
+#pragma GCC diagnostic push
+		/* Disable idiotic compiler warning -Wdate-time, appeared in gcc5. This does not
+		* work in some versions. If "BUILD_DATE" is defined to some string, it is used
+		* instead of __DATE__. */
+#pragma GCC diagnostic ignored "-Wdate-time"
 #endif
-
-		mg_snprintf(
-		    NULL, NULL, block, sizeof(block), ",%s\"build\" : \"%s\"", eol, bd);
-
+#endif
+		const char *bd = __DATE__;
 #if defined(GCC_DIAGNOSTIC)
 #if GCC_VERSION >= 40900
 #pragma GCC diagnostic pop
 #endif
 #endif
+#endif
+
+		mg_snprintf(
+		    NULL, NULL, block, sizeof(block), ",%s\"build\" : \"%s\"", eol, bd);
 
 		system_info_length += mg_str_append(&buffer, end, block);
 	}
