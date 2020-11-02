@@ -166,8 +166,11 @@ struct mg_request_info {
 
 	long long content_length; /* Length (in bytes) of the request body,
 	                             can be -1 if no length was given. */
-	int remote_port;          /* Client's port */
-	int is_ssl;               /* 1 if SSL-ed, 0 if not */
+	int remote_port;          /* Port at client side */
+	int server_port;          /* Port at server side (one of the listening
+	                             ports) */
+	int is_ssl;               /* 1 if HTTPS or WS is used (SSL/TLS used),
+	                             0 if not */
 	void *user_data;          /* User data pointer passed to mg_start() */
 	void *conn_data;          /* Connection-specific user data */
 

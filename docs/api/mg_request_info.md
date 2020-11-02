@@ -16,7 +16,8 @@
 |**`remote addr`**|`char[48]`| The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address.  Example: "127.0.0.1" |
 |~~`remote_ip`~~|`long`| *Deprecated. Use* `remote_addr` *instead* |
 |**`content_length`**|`long long`| The content length of the request body. This value can be -1 if no content length was provided. The request may still have body data, but the server cannot determine the length until all data has arrived (e.g. when the client closes the connection, or the final chunk of a chunked request has been received). |
-|**`remote_port`**|`int`| The port number at the client's side (an integer number between 1 and 65535). |
+|**`remote_port`**|`int`| The port number at the client side (an integer number between 1 and 65535). |
+|**`server_port`**|`int`| The port number at the server side (an integer number between 0 and 65535). |
 |**`is_ssl`**|`int`| 1 if the connection is over SSL (https), and 0 if it is a plain connection (http) |
 |**`user_data`**|`void *`| A pointer to the `user_data` information which was provided as a parameter to `mg_start()`. |
 |**`conn_data`**|`void *`| A pointer to connection specific user data |

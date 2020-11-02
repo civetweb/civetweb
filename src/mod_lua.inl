@@ -2437,8 +2437,8 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 	reg_string(L, "remote_addr", conn->request_info.remote_addr);
 	/* TODO (high): ip version */
 	reg_int(L, "remote_port", conn->request_info.remote_port);
+	reg_int(L, "server_port", conn->request_info.server_port);
 	reg_int(L, "num_headers", conn->request_info.num_headers);
-	reg_int(L, "server_port", ntohs(conn->client.lsa.sin.sin_port));
 
 	if (conn->path_info != NULL) {
 		reg_string(L, "path_info", conn->path_info);

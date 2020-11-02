@@ -4213,9 +4213,7 @@ mg_construct_local_link(const struct mg_connection *conn,
 		    (define_uri != NULL)
 		        ? define_uri
 		        : ((ri->request_uri != NULL) ? ri->request_uri : ri->local_uri);
-		int port = (define_port > 0)
-		               ? define_port
-		               : htons(USA_IN_PORT_UNSAFE(&conn->client.lsa));
+		int port = (define_port > 0) ? define_port : ri->server_port;
 		int default_port = 80;
 
 		if (uri == NULL) {
@@ -11490,7 +11488,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "%s", "SERVER_PROTOCOL=HTTP/1.1");
 	addenv(env, "%s", "REDIRECT_STATUS=200"); /* For PHP */
 
-	addenv(env, "SERVER_PORT=%d", ntohs(USA_IN_PORT_UNSAFE(&conn->client.lsa)));
+	addenv(env, "SERVER_PORT=%d", conn->request_info.server_port);
 
 	sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
 	addenv(env, "REMOTE_ADDR=%s", src_addr);
@@ -19116,6 +19114,9 @@ worker_thread_run(struct mg_connection *conn)
 		 */
 		conn->request_info.remote_port =
 		    ntohs(USA_IN_PORT_UNSAFE(&conn->client.rsa));
+
+		conn->request_info.server_port =
+		    ntohs(USA_IN_PORT_UNSAFE(&conn->client.lsa));
 
 		sockaddr_to_string(conn->request_info.remote_addr,
 		                   sizeof(conn->request_info.remote_addr),
