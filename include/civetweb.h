@@ -1669,6 +1669,15 @@ CIVETWEB_API int
 mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen);
 
 
+/* Disable HTTP keep-alive on a per-connection basis.
+   Reference: https://github.com/civetweb/civetweb/issues/727
+   Parameters:
+     conn: Current connection handle.
+*/
+CIVETWEB_API void
+mg_disable_connection_keep_alive(struct mg_connection *conn);
+
+
 #if defined(MG_EXPERIMENTAL_INTERFACES)
 /* Get connection information. Useful for server diagnosis.
    Parameters:

@@ -21186,6 +21186,15 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 }
 
 
+void mg_disable_connection_keep_alive(struct mg_connection *conn)
+{
+  /* https://github.com/civetweb/civetweb/issues/727 */
+  if (conn != NULL) {
+    conn->must_close = 1;
+  }
+}
+
+
 #if defined(MG_EXPERIMENTAL_INTERFACES)
 /* Get connection information. It can be printed or stored by the caller.
  * Return the size of available information. */
