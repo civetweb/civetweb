@@ -10948,8 +10948,13 @@ static const struct mg_http_method_info http_methods[] = {
      * Section 9.1 of [RFC2616]). Responses to this
      * method MUST NOT be cached. */
 
+    /* Methods for write access to files on WEBDAV (RFC 2518) */
+    {"LOCK", 1, 1, 0, 0, 0},
+    {"UNLOCK", 1, 0, 0, 0, 0},
+    {"PROPPATCH", 1, 1, 0, 0, 0},
+
     /* Unsupported WEBDAV Methods: */
-    /* PROPPATCH, COPY, MOVE, LOCK, UNLOCK (RFC 2518) */
+    /* COPY, MOVE (RFC 2518) */
     /* + 11 methods from RFC 3253 */
     /* ORDERPATCH (RFC 3648) */
     /* ACL (RFC 3744) */
@@ -21178,6 +21183,15 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 	}
 	return 0;
 #endif
+}
+
+
+void mg_disable_connection_keep_alive(struct mg_connection *conn)
+{
+  /* https://github.com/civetweb/civetweb/issues/727 */
+  if (conn != NULL) {
+    conn->must_close = 1;
+  }
 }
 
 
