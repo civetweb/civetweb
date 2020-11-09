@@ -51,7 +51,7 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
     mbedtls_ssl_config_init(conf);
 
     // set debug level
-    mbedtls_debug_set_threshold(1);
+    mbedtls_debug_set_threshold(2);
     mbedtls_ssl_conf_dbg(conf, mbed_debug, stdout);
     mbedtls_pk_init(&ctx->pkey);
     mbedtls_ctr_drbg_init(&ctx->ctr);
@@ -126,12 +126,16 @@ mbed_ssl_accept(mbedtls_ssl_context **ssl, SSL_CTX *ssl_ctx, int *sock)
         fprintf(stderr, "handshake failed\n");
         return -1;
     }
-    return 0;
+
+	fprintf(stdout, "mbedtls mbed_ssl_accept state:%d\n", (*ssl)->state);
+
+	return 0;
 }
 
 void
 mbed_ssl_close(mbedtls_ssl_context *ssl)
 {
+	fprintf(stdout, "mbedtls close\n");
     mbedtls_ssl_close_notify(ssl);
     mbedtls_ssl_free(ssl);
     ssl = NULL;
