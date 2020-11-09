@@ -527,15 +527,41 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
 
 typedef const char *SOCK_OPT_TYPE;
 
-#if !defined(PATH_MAX)
-#define W_PATH_MAX (MAX_PATH)
-/* at most three UTF-8 chars per wchar_t */
-#define PATH_MAX (W_PATH_MAX * 3)
-#else
-#define W_PATH_MAX ((PATH_MAX + 2) / 3)
+
+#if defined(_WIN32)
+/* The Microsoft Visual Studio SDK defines MAX_PATH, but not PATH_MAX.
+* Linux defines PATH_MAX but not MAX_PATH. MinGW defines both.
+* Linux uses UTF-8 filenames, and (typically) defines PATH_MAX as 4096
+* (see https://eklitzke.org/path-max-is-tricky).
+* Windows cannot handle UTF-8 directly but uses UCS-2 (UTF-16 without checking
+* surrogate pairs in the file API).
+* CivetWeb internally uses UTF-8 on every system, thus it needs to convert
+* all filen ames for Windows.
+* Windows has an internal limit of 259 UCS-2 characters (plus termination).
+*/
+/* PATH_MAX is used in CivetWeb as char[] buffer size for UTF-8 name
+* representations. Every character in the BMP (Basic Multilingual Plane)
+* encoded as UTF-8 requires 1, 2 or 3 bytes. A BMP character encoded as
+* UTF-16 always requires one 16-bit word. A character outside the BMP
+* requires 4 bytes in UTF-8 and two 16-bit words in UTF-16 (a surrogate
+* pair).
+* Thus, a 3*259+1 bytes buffer for UTF-8 encoded text will allways be
+* sufficent to hold a 295+1 word UTF-16 encoded text.
+* We do not need 4*259+1 bytes for the UTF-8 text buffer, since none BMP
+* characters would require two words in UTF-16 and hit the UCS-2 length
+* limit of the Windows file API.
+*/
+/* See also https://github.com/civetweb/civetweb/issues/937 */
+/* W_PATH_MAX is a char buffer size for 259 BMP characters in UTF-8 plus
+* null termination, rounded up to the next 4 bytes boundary */
+#define PATH_MAX (3 * 260)
+/* W_PATH_MAX is the wchar_t buffer size required for 259 BMP characters
+* plus termination. (Note: wchar_t is 16 bit on Windows) */
+#define W_PATH_MAX (260)
 #endif
 
-mg_static_assert(PATH_MAX >= 1, "path length must be a positive number");
+mg_static_assert(PATH_MAX >= 12, "path length must be a positive number");
+
 
 #if !defined(_IN_PORT_T)
 #if !defined(in_port_t)
