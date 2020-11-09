@@ -1674,8 +1674,7 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen);
    Parameters:
      conn: Current connection handle.
 */
-CIVETWEB_API void
-mg_disable_connection_keep_alive(struct mg_connection *conn);
+CIVETWEB_API void mg_disable_connection_keep_alive(struct mg_connection *conn);
 
 
 #if defined(MG_EXPERIMENTAL_INTERFACES)
