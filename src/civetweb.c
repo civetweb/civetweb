@@ -20820,9 +20820,9 @@ mg_get_system_info(char *buffer, int buflen)
 #if defined(GCC_DIAGNOSTIC)
 #if GCC_VERSION >= 40900
 #pragma GCC diagnostic push
-		/* Disable idiotic compiler warning -Wdate-time, appeared in gcc5. This does not
-		* work in some versions. If "BUILD_DATE" is defined to some string, it is used
-		* instead of __DATE__. */
+		/* Disable idiotic compiler warning -Wdate-time, appeared in gcc5. This
+		 * does not work in some versions. If "BUILD_DATE" is defined to some
+		 * string, it is used instead of __DATE__. */
 #pragma GCC diagnostic ignored "-Wdate-time"
 #endif
 #endif
