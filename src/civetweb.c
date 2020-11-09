@@ -1879,11 +1879,11 @@ typedef int socklen_t;
 #endif
 
 
-#if defined(NO_SSL) 
-   #if !defined(USE_MBEDTLS)
-   typedef struct SSL SSL; /* dummy for SSL argument to push/pull */
-   typedef struct SSL_CTX SSL_CTX;
-   #endif
+#if defined(NO_SSL)
+#if !defined(USE_MBEDTLS)
+typedef struct SSL SSL; /* dummy for SSL argument to push/pull */
+typedef struct SSL_CTX SSL_CTX;
+#endif
 #else
 #if defined(NO_SSL_DL)
 #include <openssl/bn.h>
@@ -6570,11 +6570,12 @@ push_inner(struct mg_context *ctx,
 #endif
 
 #if defined(USE_MBEDTLS)
-		if (ssl != NULL) {
+		    if (ssl != NULL) {
 			n = mbed_ssl_write(ssl, (const unsigned char *)buf, len);
 			if (n <= 0) {
 				if ((n == MBEDTLS_ERR_SSL_WANT_READ)
-				           || (n == MBEDTLS_ERR_SSL_WANT_WRITE) || n == MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS) {
+				    || (n == MBEDTLS_ERR_SSL_WANT_WRITE)
+				    || n == MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS) {
 					n = 0;
 				} else {
 					fprintf(stderr, "SSL write failed, error %d\n", n);
@@ -6834,7 +6835,8 @@ pull_inner(FILE *fp,
 			nread = mbed_ssl_read(conn->ssl, (unsigned char *)buf, len);
 			if (nread <= 0) {
 				if ((nread == MBEDTLS_ERR_SSL_WANT_READ)
-					|| (nread == MBEDTLS_ERR_SSL_WANT_WRITE)|| nread == MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS) {
+				    || (nread == MBEDTLS_ERR_SSL_WANT_WRITE)
+				    || nread == MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS) {
 					nread = 0;
 				} else {
 					fprintf(stderr, "SSL read failed, error %d\n", nread);
@@ -16963,13 +16965,16 @@ mg_sslctx_init(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 		return 1;
 	}
 
-	dom_ctx->ssl_ctx = mg_calloc(1, sizeof(*dom_ctx->ssl_ctx));	
+	dom_ctx->ssl_ctx = mg_calloc(1, sizeof(*dom_ctx->ssl_ctx));
 	if (dom_ctx->ssl_ctx == NULL) {
 		fprintf(stderr, "ssl_ctx malloc failed\n");
 		return 0;
 	}
 
-	return mbed_sslctx_init(dom_ctx->ssl_ctx, dom_ctx->config[SSL_CERTIFICATE]) == 0 ? 1 : 0;
+	return mbed_sslctx_init(dom_ctx->ssl_ctx, dom_ctx->config[SSL_CERTIFICATE])
+	               == 0
+	           ? 1
+	           : 0;
 }
 #endif /* USE_MBEDTLS */
 
@@ -18985,7 +18990,9 @@ worker_thread_run(struct mg_connection *conn)
 #if defined(USE_MBEDTLS)
 			/* HTTPS connection */
 			if (mbed_ssl_accept(&conn->ssl,
-				conn->dom_ctx->ssl_ctx, &conn->client.sock) == 0) {
+			                    conn->dom_ctx->ssl_ctx,
+			                    &conn->client.sock)
+			    == 0) {
 				/* conn->dom_ctx is set in get_request */
 				/* process HTTPS connection */
 				process_new_connection(conn);

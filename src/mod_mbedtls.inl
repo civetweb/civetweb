@@ -155,7 +155,7 @@ int
 mbed_ssl_read(mbedtls_ssl_context *ssl, unsigned char *buf, int len)
 {
     int rc = mbedtls_ssl_read(ssl, buf, len);
-    fprintf(stdout, "mbedtls: mbedtls_ssl_read %d\n", rc);
+    //fprintf(stdout, "mbedtls: mbedtls_ssl_read %d\n", rc);
     return rc;
 }
 
@@ -163,7 +163,7 @@ int
 mbed_ssl_write(mbedtls_ssl_context *ssl, const unsigned char *buf, int len)
 {
     int rc = mbedtls_ssl_write(ssl, buf, len);
-    fprintf(stdout, "mbedtls: mbedtls_ssl_write:%d\n", rc);
+    //fprintf(stdout, "mbedtls: mbedtls_ssl_write:%d\n", rc);
     return rc;
 }
 

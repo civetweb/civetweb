@@ -55,11 +55,7 @@ send_http1_response_status_line(struct mg_connection *conn)
 	/* mg_get_response_code_text will never return NULL */
 	status_txt = mg_get_response_code_text(conn, conn->status_code);
 
-	mg_printf(conn,
-	          "HTTP/%s %i %s\r\n",
-	          http_version,
-	          status_code,
-	          status_txt);
+	mg_printf(conn, "HTTP/%s %i %s\r\n", http_version, status_code, status_txt);
 }
 
 
