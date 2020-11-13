@@ -14021,6 +14021,7 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		if (auth_handler != NULL) {
 			return;
 		}
+
 	} else if (handler_type == REQUEST_HANDLER) {
 		DEBUG_ASSERT(connect_handler == NULL && ready_handler == NULL
 		             && data_handler == NULL && close_handler == NULL);
@@ -14037,11 +14038,12 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		if (auth_handler != NULL) {
 			return;
 		}
-	} else { /* AUTH_HANDLER */
+
+	} else if (handler_type == AUTH_HANDLER) {
 		DEBUG_ASSERT(handler == NULL);
 		DEBUG_ASSERT(connect_handler == NULL && ready_handler == NULL
 		             && data_handler == NULL && close_handler == NULL);
-		DEBUG_ASSERT(auth_handler != NULL);
+		DEBUG_ASSERT(!is_delete_request && (auth_handler != NULL));
 		if (handler != NULL) {
 			return;
 		}
@@ -14052,9 +14054,13 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		if (!is_delete_request && (auth_handler == NULL)) {
 			return;
 		}
+	} else {
+		/* Unknown handler type. */
+		return;
 	}
 
 	if (!phys_ctx || !dom_ctx) {
+		/* no context available */
 		return;
 	}
 
