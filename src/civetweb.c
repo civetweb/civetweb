@@ -5401,7 +5401,8 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 	struct mg_workerTLS **ptls,
 	    *tls = (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
 	int ok;
-	int64_t nsnow, nswaitabs, nswaitrel;
+	uint64_t nsnow, nswaitabs;
+	int64_t nswaitrel;
 	DWORD mswaitrel;
 
 	pthread_mutex_lock(&cv->threadIdSec);
@@ -5416,7 +5417,7 @@ pthread_cond_timedwait(pthread_cond_t *cv,
 	if (abstime) {
 		nsnow = mg_get_current_time_ns();
 		nswaitabs =
-		    (((int64_t)abstime->tv_sec) * 1000000000) + abstime->tv_nsec;
+		    (((uint64_t)abstime->tv_sec) * 1000000000) + abstime->tv_nsec;
 		nswaitrel = nswaitabs - nsnow;
 		if (nswaitrel < 0) {
 			nswaitrel = 0;

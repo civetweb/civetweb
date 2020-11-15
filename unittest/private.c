@@ -961,8 +961,6 @@ START_TEST(test_parse_http_headers)
 	ck_assert_ptr_eq(hdr[1].value, &buf[9]);
 	ck_assert_ptr_eq(hdr[2].name, &buf[12]);
 	ck_assert_ptr_eq(hdr[2].value, &buf[16]);
-
-	int bp = 1;
 }
 END_TEST
 
