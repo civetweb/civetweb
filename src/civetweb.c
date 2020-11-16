@@ -14826,13 +14826,19 @@ handle_request(struct mg_connection *conn)
 	    && (ri->local_uri[uri_len - 1] != '/')) {
 
 		size_t len = strlen(ri->request_uri);
-		char *new_path = mg_malloc_ctx(len + 2, conn->phys_ctx);
+		size_t lenQS = ri->query_string ? strlen(ri->query_string) + 1 : 0;
+		char *new_path = mg_malloc_ctx(len + lenQS + 2, conn->phys_ctx);
 		if (!new_path) {
 			mg_send_http_error(conn, 500, "out or memory");
 		} else {
 			memcpy(new_path, ri->request_uri, len);
 			new_path[len] = '/';
 			new_path[len + 1] = 0;
+			if (ri->query_string) {
+				new_path[len + 1] = '?';
+				/* Copy query string including terminating zero */
+				memcpy(new_path + len + 2, ri->query_string, lenQS);
+			}
 			mg_send_http_redirect(conn, new_path, 301);
 		}
 		return;
