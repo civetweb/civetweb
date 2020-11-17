@@ -527,10 +527,8 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
 
 typedef const char *SOCK_OPT_TYPE;
 
-
-#if defined(_WIN32)
-/* For a detailed description of these defines, see
- * https://github.com/civetweb/civetweb/issues/937 (Nov 15, 2020). */
+/* For a detailed description of these *_PATH_MAX defines, see
+ * https://github.com/civetweb/civetweb/issues/937. */
 
 /* UTF8_PATH_MAX is a char buffer size for 259 BMP characters in UTF-8 plus
  * null termination, rounded up to the next 4 bytes boundary */
@@ -538,13 +536,6 @@ typedef const char *SOCK_OPT_TYPE;
 /* UTF16_PATH_MAX is the 16-bit wchar_t buffer size required for 259 BMP
  * characters plus termination. (Note: wchar_t is 16 bit on Windows) */
 #define UTF16_PATH_MAX (260)
-#else
-/* Linux & co. already use UTF-8 */
-#define UTF8_PATH_MAX (PATH_MAX)
-#endif
-
-mg_static_assert(UTF8_PATH_MAX >= 12, "path length must be a positive number");
-
 
 #if !defined(_IN_PORT_T)
 #if !defined(in_port_t)
@@ -852,6 +843,9 @@ struct mg_pollfd {
 #else /* defined(_WIN32) - WINDOWS vs UNIX include block */
 
 #include <inttypes.h>
+
+/* Linux & co. internally use UTF8 */
+#define UTF8_PATH_MAX (PATH_MAX)
 
 typedef const void *SOCK_OPT_TYPE;
 
