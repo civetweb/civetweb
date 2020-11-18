@@ -1557,6 +1557,7 @@ static SERVICE_STATUS ss;
 static SERVICE_STATUS_HANDLE hStatus;
 static const char *service_magic_argument = "--";
 static NOTIFYICONDATA TrayIcon;
+static UINT msg_taskbar_created;
 
 static void WINAPI
 ControlHandler(DWORD code)
@@ -2909,6 +2910,25 @@ manage_service(int action)
 }
 
 
+static void
+add_icon_to_systray(HWND hWnd)
+{
+	/* tray icon is entry point to the menu */
+	if (!g_hide_tray) {
+		TrayIcon.cbSize = sizeof(TrayIcon);
+		TrayIcon.uID = ID_ICON;
+		TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+		TrayIcon.hIcon = hIcon;
+		TrayIcon.hWnd = hWnd;
+		snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", g_server_name);
+		TrayIcon.uCallbackMessage = WM_USER;
+		Shell_NotifyIcon(NIM_ADD, &TrayIcon);
+	} else {
+		TrayIcon.cbSize = 0;
+	}
+}
+
+
 /* Window proc for taskbar icon */
 static LRESULT CALLBACK
 WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -3032,6 +3052,12 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		g_exit_flag = 1;
 		PostQuitMessage(0);
 		return 0; /* We've just sent our own quit message, with proper hwnd. */
+
+	default:
+		if (msg == msg_taskbar_created) {
+			add_icon_to_systray(hWnd);
+		}
+		break;
 	}
 
 	return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -3113,8 +3139,11 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 
 	init_server_name();
 	init_system_info();
+	msg_taskbar_created = RegisterWindowMessage("TaskbarCreated");
+
 	memset(&cls, 0, sizeof(cls));
-	cls.lpfnWndProc = (WNDPROC)WindowProc;
+	cls.lpfnWndProc = WindowProc;
+	cls.hInstance = GetModuleHandle(NULL);
 	cls.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	cls.lpszClassName = g_server_base_name;
 
@@ -3128,7 +3157,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	                    0,
 	                    NULL,
 	                    NULL,
-	                    NULL,
+	                    cls.hInstance,
 	                    NULL);
 	ShowWindow(hWnd, SW_HIDE);
 
@@ -3145,19 +3174,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 		                         0);
 	}
 
-	/* add icon to systray; tray icon is entry point to the menu */
-	if (!g_hide_tray) {
-		TrayIcon.cbSize = sizeof(TrayIcon);
-		TrayIcon.uID = ID_ICON;
-		TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-		TrayIcon.hIcon = hIcon;
-		TrayIcon.hWnd = hWnd;
-		snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", g_server_name);
-		TrayIcon.uCallbackMessage = WM_USER;
-		Shell_NotifyIcon(NIM_ADD, &TrayIcon);
-	} else {
-		TrayIcon.cbSize = 0;
-	}
+	add_icon_to_systray(hWnd);
 
 	/* Message loop */
 	while (GetMessage(&msg, hWnd, 0, 0) > 0) {
