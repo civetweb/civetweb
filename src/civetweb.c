@@ -3447,7 +3447,7 @@ static int mg_stat(const struct mg_connection *conn,
                    struct mg_file_stat *filep);
 
 
-/* Reject files with special characters */
+/* Reject files with special characters (for Windows) */
 static int
 mg_path_suspicious(const struct mg_connection *conn, const char *path)
 {
@@ -3459,28 +3459,35 @@ mg_path_suspicious(const struct mg_connection *conn, const char *path)
 		return 1;
 	}
 
+#if defined(_WIN32)
 	while (*c) {
 		if (*c <= 32) {
 			/* Control character or space */
-			return 0;
+			return 1;
 		}
 		if ((*c == '>') || (*c == '<') || (*c == '|')) {
 			/* stdin/stdout redirection character */
-			return 0;
+			return 1;
 		}
-#if defined(_WIN32)
 		if (*c == '\\') {
 			/* Windows backslash */
-			return 0;
+			return 1;
 		}
-#else
-		if (*c == '&') {
-			/* Linux ampersand */
-			return 0;
+		if (*c == ':') {
+			/* Windows drive letter */
+			return 1;
 		}
-#endif
+		if ((*c == '*') || (*c == '?')) {
+			/* Wildcard character */
+			return 1;
+		}
+		if (*c == '"') {
+			/* Windows drive letter */
+			return 1;
+		}
 		c++;
 	}
+#endif
 
 	/* Nothing suspicious found */
 	return 0;
