@@ -18285,7 +18285,7 @@ websocket_client_thread(void *data)
 
 	void *user_thread_ptr = NULL;
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__ZEPHYR__)
 	struct sigaction sa;
 
 	/* Ignore SIGPIPE */
