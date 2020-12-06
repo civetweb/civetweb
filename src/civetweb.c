@@ -8531,11 +8531,17 @@ static const struct {
     /* IANA registered MIME types
      * (http://www.iana.org/assignments/media-types)
      * application types */
+    {".bin", 4, "application/octet-stream"},
+    {".deb", 4, "application/octet-stream"},
+    {".dmg", 4, "application/octet-stream"},
+    {".dll", 4, "application/octet-stream"},
     {".doc", 4, "application/msword"},
     {".eps", 4, "application/postscript"},
     {".exe", 4, "application/octet-stream"},
+    {".iso", 4, "application/octet-stream"},
     {".js", 3, "application/javascript"},
     {".json", 5, "application/json"},
+    {".msi", 4, "application/octet-stream"},
     {".pdf", 4, "application/pdf"},
     {".ps", 3, "application/postscript"},
     {".rtf", 4, "application/rtf"},
