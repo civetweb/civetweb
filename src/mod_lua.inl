@@ -1069,7 +1069,7 @@ lsp_send_http_error(lua_State *L)
 }
 
 
-/* mg.send_http_error */
+/* mg.send_http_ok */
 static int
 lsp_send_http_ok(lua_State *L)
 {
@@ -1110,6 +1110,44 @@ lsp_send_http_ok(lua_State *L)
 	if ((ret == 0) && (content != NULL) && (content_len > 0)) {
 		mg_write(conn, content, (size_t)content_len);
 	}
+
+	lua_pushnumber(L, ret);
+	return 1;
+}
+
+
+/* mg.mg_send_http_redirect */
+static int
+lsp_send_http_redirect(lua_State *L)
+{
+	struct mg_connection *conn =
+	    (struct mg_connection *)lua_touserdata(L, lua_upvalueindex(1));
+	int num_args = lua_gettop(L);
+	int type1, type2;
+	const char *target_url = NULL;
+	int redirect_code = 300;
+	int ret;
+
+	if (num_args < 2) {
+		/* Syntax error */
+		return luaL_error(L, "invalid send_http_redirect() call");
+	}
+	type1 = lua_type(L, 1);
+	type2 = lua_type(L, 2);
+	if (type1 == LUA_TSTRING) {
+		target_url = lua_tostring(L, 1);
+	} else if (type1 != LUA_TNIL) {
+		/* Syntax error */
+		return luaL_error(L, "invalid send_http_redirect() call");
+	}
+	if (type2 == LUA_TNUMBER) {
+		redirect_code = (int)lua_tonumber(L, 2);
+	} else {
+		/* Syntax error */
+		return luaL_error(L, "invalid send_http_redirect() call");
+	}
+
+	ret = mg_send_http_redirect(conn, target_url, redirect_code);
 
 	lua_pushnumber(L, ret);
 	return 1;

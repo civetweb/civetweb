@@ -18533,6 +18533,7 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 	(void)error_buffer_size;
 	(void)path;
 	(void)origin;
+	(void)extensions;
 	(void)user_data;
 	(void)data_func;
 	(void)close_func;
