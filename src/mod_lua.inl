@@ -2298,7 +2298,6 @@ lsp_response_send(lua_State *L)
 
 	struct mg_connection *conn =
 	    (struct mg_connection *)lua_touserdata(L, lua_upvalueindex(1));
-	int num_args = lua_gettop(L);
 
 	/* Get mg.response - table */
 	lua_getglobal(L, "mg");
@@ -2339,7 +2338,7 @@ lsp_response_send(lua_State *L)
 	ret2 = 0;
 	lua_pushnil(L);
 	while (lua_next(L, -2)) {
-		int retadd;
+		int retadd = 0;
 		int key_type = lua_type(L, -2);
 		int value_type = lua_type(L, -1);
 		if ((key_type == LUA_TSTRING) && (value_type == LUA_TSTRING)) {
@@ -2347,7 +2346,7 @@ lsp_response_send(lua_State *L)
 			const char *key = lua_tolstring(L, -2, &key_len);
 			const char *value = lua_tolstring(L, -1, &value_len);
 			retadd = mg_response_header_add(conn, key, value, (int)value_len);
-		} else if ((key_type == LUA_TSTRING) && (value_type == LUA_TSTRING)) {
+		} else if ((key_type == LUA_TNUMBER) && (value_type == LUA_TSTRING)) {
 			const char *value = lua_tostring(L, -1);
 			retadd = mg_response_header_add_lines(conn, value);
 		}
@@ -2622,7 +2621,7 @@ civetweb_open_lua_libs(lua_State *L)
 static int
 lsp_mg_gc(lua_State *L)
 {
-	unsigned context_flags;
+	int context_flags;
 	struct mg_context *ctx;
 	struct mg_connection *conn =
 	    (struct mg_connection *)lua_touserdata(L, lua_upvalueindex(1));
@@ -2633,11 +2632,11 @@ lsp_mg_gc(lua_State *L)
 
 	lua_pushlightuserdata(L, (void *)&lua_regkey_environment_type);
 	lua_gettable(L, LUA_REGISTRYINDEX);
-	context_flags = lua_tounsigned(L, -1);
+	context_flags = lua_tointeger(L, -1);
 
 	if (ctx != NULL) {
 		if (ctx->callbacks.exit_lua != NULL) {
-			ctx->callbacks.exit_lua(conn, L, context_flags);
+			ctx->callbacks.exit_lua(conn, L, (unsigned)context_flags);
 		}
 	}
 
@@ -2686,7 +2685,7 @@ prepare_lua_environment(struct mg_context *ctx,
 	const char *preload_file_name = NULL;
 	const char *debug_params = NULL;
 
-	unsigned lua_context_flags = (unsigned)lua_env_type;
+	int lua_context_flags = lua_env_type;
 
 	civetweb_open_lua_libs(L);
 
@@ -2723,7 +2722,7 @@ prepare_lua_environment(struct mg_context *ctx,
 		lua_settable(L, LUA_REGISTRYINDEX);
 	}
 	lua_pushlightuserdata(L, (void *)&lua_regkey_environment_type);
-	lua_pushunsigned(L, (unsigned)lua_context_flags);
+	lua_pushinteger(L, lua_context_flags);
 	lua_settable(L, LUA_REGISTRYINDEX);
 
 	/* State close function */
