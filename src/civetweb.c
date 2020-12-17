@@ -14035,7 +14035,7 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 		DEBUG_ASSERT(handler == NULL);
 		DEBUG_ASSERT(connect_handler == NULL && ready_handler == NULL
 		             && data_handler == NULL && close_handler == NULL);
-		DEBUG_ASSERT(!is_delete_request && (auth_handler != NULL));
+		DEBUG_ASSERT(is_delete_request || (auth_handler != NULL));
 		if (handler != NULL) {
 			return;
 		}
