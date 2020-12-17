@@ -476,8 +476,11 @@ endif()
 
 
 # Set up the definitions
+option(CIVETWEB_ENABLE_DEBUG_TOOLS "For Debug builds enable verbose logging and assertions" ON)
 if (${CMAKE_BUILD_TYPE} MATCHES "[Dd]ebug")
-  add_definitions(-DDEBUG)
+  if(CIVETWEB_ENABLE_DEBUG_TOOLS)
+    add_definitions(-DDEBUG)
+  endif()
   add_definitions(-O0)
   add_definitions(-g)
 endif()
