@@ -93,6 +93,10 @@ endif
 
 ifdef NO_SSL
   CFLAGS += -DNO_SSL
+else ifdef WITH_OPENSSL_API_1_0
+  CFLAGS += -DOPENSSL_API_1_0
+else ifdef WITH_OPENSSL_API_1_1
+  CFLAGS += -DOPENSSL_API_1_1
 else
   #Use OpenSSL 1.1 API version as default
   CFLAGS += -DOPENSSL_API_1_1
@@ -288,6 +292,8 @@ help:
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   WITH_EXPERIMENTAL=1   build with experimental features"
 	@echo "   WITH_DAEMONIZE=1      build with daemonize."
+	@echo "   WITH_OPENSSL_API_1_0=1 build with OpenSSL 1.0.x support."
+	@echo "   WITH_OPENSSL_API_1_1=1 build with OpenSSL 1.1.x support."
 	@echo "   NO_SSL=1              build without SSL support. Build will not need libcrypto/libssl."
 	@echo "   NO_CGI=1              build without CGI support."
 	@echo "   NO_CACHING=1          disable caching. Send no-cache/no-store headers."
