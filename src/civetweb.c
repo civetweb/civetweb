@@ -14337,6 +14337,21 @@ experimental_websocket_client_close_wrapper(const struct mg_connection *conn,
 #endif
 
 
+/* Decrement recount of handler. conn must not be NULL, handler_info may be NULL
+ */
+static void
+release_handler_ref(struct mg_connection *conn,
+                    struct mg_handler_info *handler_info)
+{
+	if (handler_info != NULL) {
+		/* Use context lock for ref counter */
+		mg_lock_context(conn->phys_ctx);
+		handler_info->refcount--;
+		mg_unlock_context(conn->phys_ctx);
+	}
+}
+
+
 /* This is the heart of the Civetweb's logic.
  * This function is called when the request is read, parsed and validated,
  * and Civetweb must decide what action to take: serve a file, or
@@ -14581,6 +14596,10 @@ handle_request(struct mg_connection *conn)
 	                        &auth_callback_data,
 	                        NULL)) {
 		if (!auth_handler(conn, auth_callback_data)) {
+
+			/* Callback handler will not be used anymore. Release it */
+			release_handler_ref(conn, handler_info);
+
 			return;
 		}
 	} else if (is_put_or_delete_request && !is_script_resource
@@ -14593,6 +14612,9 @@ handle_request(struct mg_connection *conn)
 #else
 		if (conn->dom_ctx->config[DOCUMENT_ROOT] == NULL) {
 #endif
+			/* This code path will not be called for request handlers */
+			DEBUG_ASSERT(handler_info == NULL);
+
 			/* This server does not have any real files, thus the
 			 * PUT/DELETE methods are not valid. */
 			mg_send_http_error(conn,
@@ -14618,6 +14640,10 @@ handle_request(struct mg_connection *conn)
 		 * correspond to a file. Check authorization. */
 		if (!check_authorization(conn, path)) {
 			send_authorization_request(conn, NULL);
+
+			/* Callback handler will not be used anymore. Release it */
+			release_handler_ref(conn, handler_info);
+
 			return;
 		}
 	}
@@ -14631,9 +14657,7 @@ handle_request(struct mg_connection *conn)
 			i = callback_handler(conn, callback_data);
 
 			/* Callback handler will not be used anymore. Release it */
-			mg_lock_context(conn->phys_ctx);
-			handler_info->refcount--;
-			mg_unlock_context(conn->phys_ctx);
+			release_handler_ref(conn, handler_info);
 
 			if (i > 0) {
 				/* Do nothing, callback has served the request. Store
