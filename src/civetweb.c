@@ -10456,7 +10456,7 @@ handle_static_file_request(struct mg_connection *conn,
 		            range,
 		            sizeof(range),
 		            "bytes "
-		            "%" INT64_FMT "-%" INT64_FMT "/%" INT64_FMT "\r\n",
+		            "%" INT64_FMT "-%" INT64_FMT "/%" INT64_FMT,
 		            r1,
 		            r1 + cl - 1,
 		            filep->stat.size);
