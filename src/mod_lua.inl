@@ -1058,8 +1058,8 @@ lsp_send_http_error(lua_State *L)
 	if ((status >= 100) && (status <= 999)) {
 		ret = mg_send_http_error(conn,
 		                         status,
-		                         (auxText != NULL) ? "%s" : "",
-		                         auxText);
+								 "%s",
+		                         (auxText != NULL) ? auxText : "");
 	} else {
 		/* Syntax error */
 		return luaL_error(L, "invalid send_http_error() call");
