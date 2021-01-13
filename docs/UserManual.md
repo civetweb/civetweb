@@ -904,14 +904,19 @@ mg (table):
     mg.md5(str)                 -- return the MD5 hash of a string
     mg.keep_alive(bool)         -- allow/forbid to use http keep-alive for this request
     mg.request_info             -- a table with the following request information
+         .request_link          -- Requested link
+         .request_uri           -- Request URI
+         .uri                   -- Request URI
+         .path_info             -- Request URI, nil otherwise
          .remote_addr           -- IP address of the client as string
          .remote_port           -- remote port number
          .server_port           -- server port number
          .request_method        -- HTTP method (e.g.: GET, POST)
          .http_version          -- HTTP protocol version (e.g.: 1.1)
-         .uri                   -- resource name
+         .http_headers          -- Table of HTTP headers
+         .num_headers           -- Number of headers
          .query_string          -- query string if present, nil otherwise
-         .script_name           -- name of the Lua script
+         .script_name           -- name of the Lua script, nil otherwise
          .https                 -- true if accessed by https://, false otherwise
          .remote_user           -- user name if authenticated, nil otherwise
 
