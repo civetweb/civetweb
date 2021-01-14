@@ -6815,24 +6815,39 @@ pull_inner(FILE *fp,
 
 #if defined(USE_MBEDTLS)
 	} else if (conn->ssl != NULL) {
-		/* We already know there is no more data buffered in conn->buf
-		 * but there is more available in the SSL layer. So don't poll
-		 * conn->client.sock yet. */
 		struct pollfd pfd[1];
+		int to_read;
 		int pollres;
 
-		pfd[0].fd = conn->client.sock;
-		pfd[0].events = POLLIN;
-		pollres = mg_poll(pfd,
-		                  1,
-		                  (int)(timeout * 1000.0),
-		                  &(conn->phys_ctx->stop_flag));
-		if (conn->phys_ctx->stop_flag) {
-			return -2;
+		to_read = mbedtls_ssl_get_bytes_avail(conn->ssl);
+
+		if (to_read > 0) {
+			/* We already know there is no more data buffered in conn->buf
+			 * but there is more available in the SSL layer. So don't poll
+			 * conn->client.sock yet. */
+
+			pollres = 1;
+			if (to_read > len)
+				to_read = len;
+		}
+		else {
+			pfd[0].fd = conn->client.sock;
+			pfd[0].events = POLLIN;
+
+			to_read = len;
+
+			pollres = mg_poll(pfd,
+			                  1,
+			                  (int)(timeout * 1000.0),
+			                  &(conn->phys_ctx->stop_flag));
+
+			if (conn->phys_ctx->stop_flag) {
+				return -2;
+			}
 		}
 
 		if (pollres > 0) {
-			nread = mbed_ssl_read(conn->ssl, (unsigned char *)buf, len);
+			nread = mbed_ssl_read(conn->ssl, (unsigned char *)buf, to_read);
 			if (nread <= 0) {
 				if ((nread == MBEDTLS_ERR_SSL_WANT_READ)
 				    || (nread == MBEDTLS_ERR_SSL_WANT_WRITE)
