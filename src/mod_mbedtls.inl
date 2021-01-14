@@ -175,7 +175,7 @@ static void
 mbed_debug(void *context, int level, const char *file, int line, const char *str)
 {
     (void)level;
-    mbedtls_fprintf((FILE *)context, "file:%s line:%d str:%s\n", file, line, str);
+    mbedtls_fprintf((FILE *)context, "file:%s line:%d str:%s", file, line, str);
 }
 
 #endif /* USE_MBEDTLS */
