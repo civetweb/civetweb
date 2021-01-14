@@ -51,8 +51,10 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
     mbedtls_ssl_config_init(conf);
 
     // set debug level
+#if defined(CONFIG_MBEDTLS_DEBUG)
     mbedtls_debug_set_threshold(2);
     mbedtls_ssl_conf_dbg(conf, mbed_debug, stdout);
+#endif
     mbedtls_pk_init(&ctx->pkey);
     mbedtls_ctr_drbg_init(&ctx->ctr);
     mbedtls_x509_crt_init(&ctx->cert);
