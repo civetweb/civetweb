@@ -1418,7 +1418,7 @@ lsp_url_encode(lua_State *L)
 				lua_pushstring(L, dst);
 				mg_free(dst);
 			} else {
-				return luaL_error(L, "out of memory in url_decode() call");
+				return luaL_error(L, "out of memory in url_encode() call");
 			}
 		} else {
 			lua_pushnil(L);
