@@ -883,31 +883,50 @@ mg (table):
 
     mg.read()                   -- reads a chunk from POST data, returns it as a string
     mg.write(str)               -- writes string to the client
+    mg.cry(str)                 -- logs error string to stderr
     mg.include(filename, [pathtype]) -- include another Lua Page file (Lua Pages only)
                                 -- pathtype can be "abs", "rel"/"file" or "virt[ual]"
                                 -- like defined for SSI #include
-    mg.redirect(uri)            -- internal redirect to a given URI
+    mg.redirect(uri)            -- redirect to internal URI
     mg.onerror(msg)             -- error handler, can be overridden
-    mg.version                  -- a string that holds CivetWeb version
-    mg.document_root            -- a string that holds the document root directory
     mg.auth_domain              -- a string that holds the HTTP authentication domain
-    mg.get_var(str, varname)    -- extract variable from (query) string
+    mg.document_root            -- a string that holds the document root directory
+    mg.lua_type                 -- a string that holds the lua script type
+    mg.system                   -- a string that holds the operating system name
+    mg.version                  -- a string that holds CivetWeb version
     mg.get_cookie(str, cookie)  -- extract cookie from a string
-    mg.get_mime_type(filename)  -- get MIME type of a file
     mg.get_info(infotype)       -- get server status information
+    mg.get_mime_type(filename)  -- get MIME type of a file
+    mg.get_option(name)         -- get configuration option value from name
+    mg.get_response_code_text(n)-- get response code text for n, nil otherwise
+    mg.get_var(str, varname, [occurance])  -- extract the first occurance of variable from (query) string
+                                --     otherwise the nth occurance if supplied, nil if not found
     mg.send_file(filename)      -- send a file, including all required HTTP headers
     mg.send_file_body(filename) -- send a file, excluding HTTP headers
+    mg.send_http_error(n,str)   -- send http error code n with string body
+    mg.send_http_ok(mime,body)  -- send http 200 OK with content-type mime and string body
+    mg.send_http_ok(mime,length)-- send http 200 OK with content-type mime and integer content-length length
+    mg.send_http_redirect(url,n)-- redirect to url with status code n
+    mg.split_form_data(form)    -- returns a table of the split form data
     mg.url_encode(str)          -- URL encode a string
     mg.url_decode(str, [form])  -- URL decode a string. If form=true, replace + by space.
     mg.base64_encode(str)       -- BASE64 encode a string
     mg.base64_decode(str)       -- BASE64 decode a string
     mg.md5(str)                 -- return the MD5 hash of a string
     mg.keep_alive(bool)         -- allow/forbid to use http keep-alive for this request
+    mg.time([bool])             -- get the current unix timestamp with milliseconds
+                                --     if bool is true then it is the time since startup
+    mg.trace(n,message,...)     -- trace level n messages into tracefile
+    mg.uuid()                   -- generate a uuid
+    mg.random()                 -- get a random floating point number
     mg.request_info             -- a table with the following request information
+         .content_length        -- Request content-length as a float
+         .content_type          -- Request content-type, nil otherwise
          .request_link          -- Requested link
          .request_uri           -- Request URI
-         .uri                   -- Request URI
+         .uri                   -- Local request URI
          .path_info             -- Request URI, nil otherwise
+         .status                -- Request status code, nil otherwise
          .remote_addr           -- IP address of the client as string
          .remote_port           -- remote port number
          .server_port           -- server port number
@@ -919,6 +938,18 @@ mg (table):
          .script_name           -- name of the Lua script, nil otherwise
          .https                 -- true if accessed by https://, false otherwise
          .remote_user           -- user name if authenticated, nil otherwise
+         .auth_type             -- Digest
+         .client_cert           -- Table with ssl certificate infomation
+              .subject          -- Certificate subject
+              .issuer           -- Certificate issuer
+              .serial           -- Certificate serial number
+              .finger           -- Certificate finger
+
+If websocket and timers support is enabled then the following is also available:
+
+    mg.set_timeout(fn,delay,[interval])  -- call function after delay at an interval
+    mg.set_interval(fn,delay,[interval]) -- call function after delay at an interval
+    mg.websocket_root                    -- a string that holds the websocket root
 
 connect (function):
 
