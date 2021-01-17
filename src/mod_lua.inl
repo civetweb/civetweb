@@ -1904,7 +1904,7 @@ lsp_uuid(lua_State *L)
 	}
 
 	/* Syntax error */
-	return luaL_error(L, "invalid random() call");
+	return luaL_error(L, "invalid uuid() call");
 }
 
 
