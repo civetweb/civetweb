@@ -8508,8 +8508,9 @@ remove_dot_segments(char *inout)
 					in++;
 				} while (in != in_ahead);
 			}
-		} else if (*in == '/') {
-			/* replace // by / */
+		} else if (*in == '/' && ((out_end != inout) && (out_end[-1] != ':'))) {
+			/* Replace // by / if not preseeded by `:` (there may be
+			 * a protocol specifier in the URL) */
 			*out_end++ = '/';
 			do {
 				in++;
