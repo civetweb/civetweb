@@ -18746,6 +18746,7 @@ process_new_connection(struct mg_connection *conn)
 			        ? (int)(conn->request_len + conn->content_len)
 			        : conn->data_len;
 			conn->data_len -= discard_len;
+
 			if (conn->data_len > 0) {
 				DEBUG_TRACE("discard_len = %d", discard_len);
 				memmove(conn->buf,
@@ -18763,9 +18764,7 @@ process_new_connection(struct mg_connection *conn)
 			            (long int)conn->buf_size);
 			break;
 		}
-
 		conn->handled_requests++;
-
 	} while (keep_alive);
 
 	DEBUG_TRACE("Done processing connection from %s (%f sec)",
@@ -19034,6 +19033,9 @@ worker_thread_run(struct mg_connection *conn)
 			    == 0) {
 				/* conn->dom_ctx is set in get_request */
 				/* process HTTPS connection */
+				init_connection(conn);
+				conn->connection_type = CONNECTION_TYPE_REQUEST;
+				conn->protocol_type = PROTOCOL_TYPE_HTTP1;
 				process_new_connection(conn);
 			} else {
 				/* make sure the connection is cleaned up on SSL failure */
