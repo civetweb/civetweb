@@ -5,6 +5,12 @@ Release Notes v1.14 (under construction)
 Changes
 -------
 
+- Improve documentation
+- Fix HTTP range requests
+- All some functions for Lua scripts/LSP
+- Build system specific fixes (CMake, MinGW)
+- Update 3rd party components (Lua, lfs, sqlite)
+- Allow Lua background scripts to use timers
 - Update version number
 
 

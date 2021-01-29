@@ -11,7 +11,7 @@ Civetweb License
 
 ### Included with all features.
 
-> Copyright (c) 2013-2020 The CivetWeb developers ([CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md))
+> Copyright (c) 2013-2021 The CivetWeb developers ([CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md))
 >
 > Copyright (c) 2004-2013 Sergey Lyubka
 >
@@ -45,7 +45,7 @@ Lua License
 
 http://www.lua.org/license.html
 
-> Copyright (C) 1994-2015 Lua.org, PUC-Rio.
+> Copyright (C) 1994-2020 Lua.org, PUC-Rio.
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
@@ -120,7 +120,7 @@ Lua File System License
 
 https://github.com/keplerproject/luafilesystem/blob/master/LICENSE
 
-> Copyright © 2003-2014 Kepler Project.
+> Copyright © 2003-2020 Kepler Project.
 >
 > Permission is hereby granted, free of charge, to any person
 > obtaining a copy of this software and associated documentation

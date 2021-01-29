@@ -3,9 +3,11 @@
 * Abhishek Lekshmanan
 * Abramo Bagnara
 * Adam Bailey
+* Adam Hunyadi
 * Alan Somers
 * Alberto Bignotti
 * Alex Kozlov
+* Alexander Kozhinov
 * AndreyArsov
 * Anton Te
 * beaver
@@ -44,11 +46,11 @@
 * duong2179
 * ehlertjd
 * Elan P. Kugelmass
-* eugene
 * Eric Tsau
 * Erick Vieyra
 * Erik Beran
 * Erik Partridge
+* eugene
 * extergnoto
 * F-Secure Corporation
 * Fabrice Fontaine
@@ -101,6 +103,7 @@
 * Kevin Wojniak
 * Khem Raj
 * Kimmo Mustonen
+* krpano
 * Krzysztof Kozlowski
 * Lammert Bies
 * Lars Immisch
@@ -140,10 +143,12 @@
 * Peter Foerster
 * Philipp Friedenberger
 * Philipp Hasper
+* Pieter Cardoen
 * Piotr Zierhoffer
 * pkvamme
 * Ponnuvel Palaniyappan
 * qinch
+* qinchao
 * Radoslaw Zarzynski
 * Red54
 * Retallack Mark mark.retallack
@@ -175,6 +180,7 @@
 * Thomas Davis
 * Thomas Klausner
 * Thorsten Horstmann
+* Tim Gates
 * tnoho
 * Tom Deblauwe
 * Tomas Andrle
