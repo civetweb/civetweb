@@ -1,6 +1,6 @@
 /* This file is part of the CivetWeb web server.
  * See https://github.com/civetweb/civetweb/
- * (C) 2014-2020 by the CivetWeb authors, MIT license.
+ * (C) 2014-2021 by the CivetWeb authors, MIT license.
  */
 
 #if !defined(MAX_TIMERS)

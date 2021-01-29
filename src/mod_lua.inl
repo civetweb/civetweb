@@ -2767,7 +2767,10 @@ prepare_lua_environment(struct mg_context *ctx,
 		reg_conn_function(L, "send_file_body", lsp_send_file_body, conn);
 		reg_conn_function(L, "send_http_error", lsp_send_http_error, conn);
 		reg_conn_function(L, "send_http_ok", lsp_send_http_ok, conn);
-		reg_conn_function(L, "send_http_redirect", lsp_send_http_redirect, conn);
+		reg_conn_function(L,
+		                  "send_http_redirect",
+		                  lsp_send_http_redirect,
+		                  conn);
 		reg_conn_function(L, "redirect", lsp_redirect, conn);
 	}
 

@@ -183,8 +183,6 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\civetweb.h" />
     <ClInclude Include="..\..\src\third_party\civetweb_lua.h" />
-    <ClInclude Include="..\..\src\third_party\lua-5.2.4\src\lauxlib.h" />
-    <ClInclude Include="..\..\src\third_party\lua-5.2.4\src\lua.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\civetweb.c" />
