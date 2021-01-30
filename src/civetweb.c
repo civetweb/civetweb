@@ -446,9 +446,6 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #include "zlib.h"
 #endif
 
-#if defined(USE_MBEDTLS)
-#include "mod_mbedtls.inl"
-#endif
 
 /********************************************************************/
 /* CivetWeb configuration defines */
@@ -1880,7 +1877,9 @@ typedef int socklen_t;
 
 
 #if defined(NO_SSL)
-#if !defined(USE_MBEDTLS)
+#if defined(USE_MBEDTLS)
+#include "mod_mbedtls.inl"
+#else
 typedef struct SSL SSL; /* dummy for SSL argument to push/pull */
 typedef struct SSL_CTX SSL_CTX;
 #endif
@@ -17277,7 +17276,6 @@ close_connection(struct mg_connection *conn)
 #if defined(USE_MBEDTLS)
 	if (conn->ssl != NULL) {
 		mbed_ssl_close(conn->ssl);
-		mg_free(conn->ssl);
 		conn->ssl = NULL;
 	}
 #endif
@@ -19029,7 +19027,8 @@ worker_thread_run(struct mg_connection *conn)
 			/* HTTPS connection */
 			if (mbed_ssl_accept(&conn->ssl,
 			                    conn->dom_ctx->ssl_ctx,
-			                    &conn->client.sock)
+			                    &conn->client.sock,
+			                    conn->phys_ctx)
 			    == 0) {
 				/* conn->dom_ctx is set in get_request */
 				/* process HTTPS connection */
