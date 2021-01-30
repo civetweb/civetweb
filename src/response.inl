@@ -40,13 +40,22 @@ free_buffered_response_header_list(struct mg_connection *conn)
 static void
 send_http1_response_status_line(struct mg_connection *conn)
 {
+	const char *status_txt;
+	const char *http_version = conn->request_info.http_version;
+	int status_code = conn->status_code;
+
+	if ((status_code < 100) || (status_code > 999)) {
+		/* Set invalid status code to "500 Internal Server Error" */
+		status_code = 500;
+	}
+	if (!http_version) {
+		http_version = "1.0";
+	}
+
 	/* mg_get_response_code_text will never return NULL */
-	const char *txt = mg_get_response_code_text(conn, conn->status_code);
-	mg_printf(conn,
-	          "HTTP/%s %i %s\r\n",
-	          conn->request_info.http_version,
-	          conn->status_code,
-	          txt);
+	status_txt = mg_get_response_code_text(conn, conn->status_code);
+
+	mg_printf(conn, "HTTP/%s %i %s\r\n", http_version, status_code, status_txt);
 }
 
 
