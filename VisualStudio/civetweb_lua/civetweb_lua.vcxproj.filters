@@ -25,5 +25,6 @@
     <None Include="..\..\src\mod_duktape.inl" />
     <None Include="..\..\src\mod_lua.inl" />
     <None Include="..\..\src\timer.inl" />
+    <None Include="..\..\src\mod_mbedtls.inl" />
   </ItemGroup>
 </Project>

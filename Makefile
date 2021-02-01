@@ -71,7 +71,7 @@ ifdef WITH_CFLAGS
   CFLAGS += $(WITH_CFLAGS)
 endif
 
-LIBS = -lpthread -lm
+LIBS = -lpthread -lm $(LOPT)
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG
@@ -306,6 +306,7 @@ help:
 	@echo "   CRYPTO_LIB=libcrypto.so.0 system versioned CRYPTO library"
 	@echo "   PREFIX=/usr/local     sets the install directory"
 	@echo "   COPT='-DNO_SSL'       method to insert compile flags"
+	@echo "   LOPT='-lxxx'          method to link xxx library"
 	@echo ""
 	@echo " Compile Flags"
 	@echo "   NDEBUG                strip off all debug code"

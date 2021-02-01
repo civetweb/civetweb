@@ -41,6 +41,10 @@
 #include <windows.h>
 #define test_sleep(x) (Sleep((x)*1000))
 #else
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #define test_sleep(x) (sleep(x))
 #endif
@@ -52,7 +56,48 @@
 #define SLEEP_BEFORE_MG_STOP (1)
 #define SLEEP_AFTER_MG_STOP (5)
 
-static const char *external_server_ip = "140.82.118.4"; /* github.com */
+
+/* Try to communicate with an external http server. */
+static const char *
+get_external_server_ip(void)
+{
+#define no_of_testhosts (4)
+	const char *testhost[no_of_testhosts] = {"github.com",
+	                                         "google.com",
+	                                         "sourceforge.net",
+	                                         "microsoft.com"};
+	static char external_ip[64] = {0};
+	int testhostidx;
+
+	if (external_ip[0]) {
+		/* Get IP of external server only once, then reuse it */
+		return external_ip;
+	}
+	mark_point();
+
+	for (testhostidx = 0; testhostidx < no_of_testhosts; testhostidx++) {
+		struct hostent *hostentry;
+		struct in_addr **in_addr_list;
+		const char *ip;
+
+		hostentry = gethostbyname(testhost[testhostidx]);
+
+		if (hostentry != NULL) {
+			in_addr_list = (struct in_addr **)hostentry->h_addr_list;
+			if (in_addr_list[0] != NULL) {
+				ip = inet_ntoa(*in_addr_list[0]);
+				if (ip != NULL) {
+					mark_point();
+					strcpy(external_ip, ip);
+					return external_ip;
+				}
+			}
+		}
+	}
+
+	ck_abort_msg("Could not determine IP of any external server");
+	return "0.0.0.0";
+}
 
 
 /* This unit test file uses the excellent Check unit testing library.
@@ -4822,6 +4867,9 @@ minimal_https_client_check(const char *server,
 
 START_TEST(test_minimal_client)
 {
+	const char *external_server_ip;
+	mark_point();
+	external_server_ip = get_external_server_ip();
 	mark_point();
 
 	/* Initialize the library */
@@ -4847,6 +4895,9 @@ END_TEST
 
 START_TEST(test_minimal_tls_client)
 {
+	const char *external_server_ip;
+	mark_point();
+	external_server_ip = get_external_server_ip();
 	mark_point();
 
 #if !defined(NO_SSL) /* dont run https test if SSL is not enabled */
