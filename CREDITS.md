@@ -40,6 +40,7 @@
 * daveelton
 * David Arnold
 * David Loffredo
+* DavidKorczynski
 * Dialga
 * Domenico Di Iorio
 * Drew Wells

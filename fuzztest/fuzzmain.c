@@ -22,11 +22,19 @@ typedef int SOCKET;
 #endif
 
 
+/* Port configuration */
+#define PORT_NUM_HTTP 8081
+#define PORT_STR_HTTPHTTPS "8081,8443s"
+
+
+#define TESTabort() {fprintf(stderr, "!!! aborting fuzz test in line %u !!!", __LINE__); abort();}
+
+
 static uint64_t call_count = 0;
 
 static struct mg_context *ctx;
 static const char *OPTIONS[] = {"listening_ports",
-                                "8080,8443s",
+                                PORT_STR_HTTPHTTPS,
                                 "document_root",
                                 "fuzztest/docroot",
                                 "ssl_certificate",
@@ -45,7 +53,7 @@ init_civetweb(void)
 
 	if (!ctx) {
 		fprintf(stderr, "\nCivetWeb test server failed to start\n");
-		abort();
+		TESTabort();
 	}
 
 	/* Give server 5 seconds to start, before flooding with requests.
@@ -134,19 +142,19 @@ init_tcp(void)
 	if (sock == -1) {
 		r = errno;
 		fprintf(stderr, "Error: Cannot create socket [%s]\n", strerror(r));
-		abort();
+		TESTabort();
 	}
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
 	sin.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sin.sin_port = htons(8080);
+	sin.sin_port = htons(PORT_NUM_HTTP);
 	r = bind(sock, (struct sockaddr *)&sin, sizeof(sin));
 	if (r != 0) {
 		r = errno;
 		fprintf(stderr, "Error: Cannot bind [%s]\n", strerror(r));
 		closesocket(sock);
-		abort();
+		TESTabort();
 	}
 
 	r = listen(sock, 128);
@@ -154,7 +162,7 @@ init_tcp(void)
 		r = errno;
 		fprintf(stderr, "Error: Cannot listen [%s]\n", strerror(r));
 		closesocket(sock);
-		abort();
+		TESTabort();
 	}
 
 	pthread_t thread_id;
@@ -166,7 +174,7 @@ init_tcp(void)
 	if (!thread_prm) {
 		fprintf(stderr, "Error: Out of memory\n");
 		closesocket(sock);
-		abort();
+		TESTabort();
 	}
 	thread_prm->sock = sock;
 
@@ -178,7 +186,7 @@ init_tcp(void)
 		r = errno;
 		fprintf(stderr, "Error: Cannot create thread [%s]\n", strerror(r));
 		closesocket(sock);
-		abort();
+		TESTabort();
 	}
 
 	test_sleep(5);
@@ -294,7 +302,7 @@ LLVMFuzzerTestOneInput_URI(const uint8_t *data, size_t size)
 		return 1;
 	}
 
-	return test_http_request("127.0.0.1", 8080, 0, URI);
+	return test_http_request("127.0.0.1", PORT_NUM_HTTP, 0, URI);
 }
 
 
@@ -317,7 +325,7 @@ LLVMFuzzerTestOneInput_REQUEST(const uint8_t *data, size_t size)
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
 	sin.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sin.sin_port = htons(8080);
+	sin.sin_port = htons(PORT_NUM_HTTP);
 	r = connect(sock, (struct sockaddr *)&sin, sizeof(sin));
 	if (r != 0) {
 		r = errno;
@@ -366,7 +374,7 @@ LLVMFuzzerTestOneInput_RESPONSE(const uint8_t *data, size_t size)
 	char errbuf[256];
 
 	struct mg_connection *conn =
-	    mg_connect_client("127.0.0.1", 8080, 0, errbuf, sizeof(errbuf));
+	    mg_connect_client("127.0.0.1", PORT_NUM_HTTP, 0, errbuf, sizeof(errbuf));
 	if (!conn) {
 		printf("Connect error: %s\n", errbuf);
 		test_sleep(1);
