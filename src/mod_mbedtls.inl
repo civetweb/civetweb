@@ -162,6 +162,7 @@ mbed_ssl_accept(mbedtls_ssl_context **ssl,
 	rc = mbed_ssl_handshake(*ssl);
 	if (rc != 0) {
 		DEBUG_TRACE("TLS handshake failed (%i)", rc);
+		mbedtls_ssl_free(*ssl);
 		mg_free(*ssl);
 		*ssl = NULL;
 		return -1;
