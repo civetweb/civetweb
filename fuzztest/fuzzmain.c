@@ -27,7 +27,7 @@ typedef int SOCKET;
 #define PORT_STR_HTTPHTTPS "8081,8443s"
 
 
-#define TESTabort() {fprintf(stderr, "!!! aborting fuzz test in line %u !!!", __LINE__); abort();}
+#define TESTabort() {fprintf(stderr, "!!! aborting fuzz test in line %u !!!", __LINE__); system("netstat -taupn"); abort();}
 
 
 static uint64_t call_count = 0;
