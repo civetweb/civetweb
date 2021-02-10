@@ -23,11 +23,11 @@ typedef int SOCKET;
 
 
 /* Port configuration */
-#define PORT_NUM_HTTP 8081
+unsigned short PORT_NUM_HTTP = 8000;
 #define PORT_STR_HTTPHTTPS "8081,8443s"
 
 
-#define TESTabort() {fprintf(stderr, "!!! aborting fuzz test in line %u !!!", __LINE__); system("netstat -taupn"); abort();}
+#define TESTabort() {fprintf(stderr, "!!! aborting fuzz test in line %u !!!", __LINE__); system("netstat -tlpn"); abort();}
 
 
 static uint64_t call_count = 0;
@@ -138,21 +138,31 @@ static void
 init_tcp(void)
 {
 	int r;
+	int bind_success = 0;
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 6);
 	if (sock == -1) {
 		r = errno;
 		fprintf(stderr, "Error: Cannot create socket [%s]\n", strerror(r));
 		TESTabort();
 	}
-	struct sockaddr_in sin;
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sin.sin_port = htons(PORT_NUM_HTTP);
-	r = bind(sock, (struct sockaddr *)&sin, sizeof(sin));
-	if (r != 0) {
+	
+	for (PORT_NUM_HTTP = 1024; PORT_NUM_HTTP != 0; PORT_NUM_HTTP++) {
+		struct sockaddr_in sin;
+		memset(&sin, 0, sizeof(sin));
+		sin.sin_family = AF_INET;
+		sin.sin_addr.s_addr = inet_addr("127.0.0.1");
+		sin.sin_port = htons(PORT_NUM_HTTP);
+		r = bind(sock, (struct sockaddr *)&sin, sizeof(sin));
+		if (r == 0) {
+			bind_success = 1;
+			break;
+		}
 		r = errno;
-		fprintf(stderr, "Error: Cannot bind [%s]\n", strerror(r));
+		fprintf(stderr, "Warning: Cannot bind [%s]\n", strerror(r));
+	}
+	
+	if (!bind_success) {
+		fprintf(stderr, "Error: Cannot bind to any port\n");		
 		closesocket(sock);
 		TESTabort();
 	}
