@@ -23,22 +23,23 @@ typedef int SOCKET;
 
 
 /* Port configuration */
-unsigned short PORT_NUM_HTTP = 8000;
-#define PORT_STR_HTTPHTTPS "8081,8443s"
+unsigned short PORT_NUM_HTTP = 0; /* set dynamically */
 
 
-#define TESTabort() {fprintf(stderr, "!!! aborting fuzz test in line %u !!!", __LINE__); system("netstat -tlpn"); abort();}
+#define TESTabort()                                                            \
+	{                                                                          \
+		fprintf(stderr, "!!! aborting fuzz test in line %u !!!", __LINE__);    \
+		abort();                                                               \
+	}
 
 
 static uint64_t call_count = 0;
 
 static struct mg_context *ctx;
 static const char *OPTIONS[] = {"listening_ports",
-                                PORT_STR_HTTPHTTPS,
+                                "0", /* port: auto */
                                 "document_root",
                                 "fuzztest/docroot",
-                                "ssl_certificate",
-                                "resources/cert/server.pem",
                                 NULL,
                                 NULL};
 
@@ -47,7 +48,10 @@ static void
 init_civetweb(void)
 {
 	struct mg_callbacks callbacks;
+	struct mg_server_port ports[8];
 	memset(&callbacks, 0, sizeof(callbacks));
+	memset(&ports, 0, sizeof(ports));
+
 
 	ctx = mg_start(&callbacks, 0, OPTIONS);
 
@@ -55,6 +59,22 @@ init_civetweb(void)
 		fprintf(stderr, "\nCivetWeb test server failed to start\n");
 		TESTabort();
 	}
+
+	int ret = mg_get_server_ports(ctx, 8, ports);
+	if (ret != 1) {
+		fprintf(stderr,
+		        "\nCivetWeb test server: cannot determine port number\n");
+		TESTabort();
+	}
+	if (ports[0].is_ssl != 0) {
+		fprintf(stderr,
+		        "\nCivetWeb fuzz test works on HTTP, not HTTPS.\n"
+		        "TLS librarys should be fuzzed separately.\n");
+		TESTabort();
+	}
+	PORT_NUM_HTTP = ports[0].port;
+
+	printf("CivetWeb server running on port %i\n", (int)PORT_NUM_HTTP);
 
 	/* Give server 5 seconds to start, before flooding with requests.
 	 * Don't know if this is required for fuzz-tests, but it was helpful
@@ -79,9 +99,16 @@ static void *
 tcp_func(void *arg)
 {
 	char req[1024 * 16];
-	struct tcp_func_prm *ptcp_func_prm = (struct tcp_func_prm *)arg;
-	SOCKET svr = ptcp_func_prm->sock;
-	printf("Server ready, sock %i\n", svr);
+	SOCKET svr = (SOCKET)(-1);
+
+	/* Get thread parameters and free arg */
+	{
+		struct tcp_func_prm *ptcp_func_prm = (struct tcp_func_prm *)arg;
+		svr = ptcp_func_prm->sock;
+		free(arg);
+	}
+
+	printf("MOCK server ready, sock %i\n", svr);
 
 next_request : {
 	struct sockaddr_in cliadr;
@@ -129,8 +156,6 @@ next_request : {
 	/* done */
 	goto next_request;
 }
-
-	free(arg);
 }
 
 
@@ -145,7 +170,7 @@ init_tcp(void)
 		fprintf(stderr, "Error: Cannot create socket [%s]\n", strerror(r));
 		TESTabort();
 	}
-	
+
 	for (PORT_NUM_HTTP = 1024; PORT_NUM_HTTP != 0; PORT_NUM_HTTP++) {
 		struct sockaddr_in sin;
 		memset(&sin, 0, sizeof(sin));
@@ -160,12 +185,14 @@ init_tcp(void)
 		r = errno;
 		fprintf(stderr, "Warning: Cannot bind [%s]\n", strerror(r));
 	}
-	
+
 	if (!bind_success) {
-		fprintf(stderr, "Error: Cannot bind to any port\n");		
+		fprintf(stderr, "Error: Cannot bind to any port\n");
 		closesocket(sock);
 		TESTabort();
 	}
+
+	printf("MOCK server running on port %i\n", (int)PORT_NUM_HTTP);
 
 	r = listen(sock, 128);
 	if (r != 0) {
@@ -383,8 +410,8 @@ LLVMFuzzerTestOneInput_RESPONSE(const uint8_t *data, size_t size)
 
 	char errbuf[256];
 
-	struct mg_connection *conn =
-	    mg_connect_client("127.0.0.1", PORT_NUM_HTTP, 0, errbuf, sizeof(errbuf));
+	struct mg_connection *conn = mg_connect_client(
+	    "127.0.0.1", PORT_NUM_HTTP, 0, errbuf, sizeof(errbuf));
 	if (!conn) {
 		printf("Connect error: %s\n", errbuf);
 		test_sleep(1);
