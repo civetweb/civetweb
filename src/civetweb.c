@@ -248,6 +248,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 
 #if !defined(DEBUG_ASSERT)
 #if defined(DEBUG)
+#include <stdlib.h>
 #define DEBUG_ASSERT(cond)                                                     \
 	do {                                                                       \
 		if (!(cond)) {                                                         \
