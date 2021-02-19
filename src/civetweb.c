@@ -3465,20 +3465,12 @@ mg_path_suspicious(const struct mg_connection *conn, const char *path)
 
 #if defined(_WIN32)
 	while (*c) {
-		if (*c <= 32) {
-			/* Control character or space */
+		if (*c < 32) {
+			/* Control character */
 			return 1;
 		}
 		if ((*c == '>') || (*c == '<') || (*c == '|')) {
 			/* stdin/stdout redirection character */
-			return 1;
-		}
-		if (*c == '\\') {
-			/* Windows backslash */
-			return 1;
-		}
-		if (*c == ':') {
-			/* Windows drive letter */
 			return 1;
 		}
 		if ((*c == '*') || (*c == '?')) {
@@ -3486,7 +3478,7 @@ mg_path_suspicious(const struct mg_connection *conn, const char *path)
 			return 1;
 		}
 		if (*c == '"') {
-			/* Windows drive letter */
+			/* Windows quotation */
 			return 1;
 		}
 		c++;
@@ -13971,10 +13963,10 @@ switch_domain_context(struct mg_connection *conn)
 		} else {
 			struct mg_domain_context *dom = &(conn->phys_ctx->dd);
 			while (dom) {
-				if ((strlen(dom->config[AUTHENTICATION_DOMAIN]) == host.len)
-				    && !mg_strncasecmp(host.ptr,
-				                       dom->config[AUTHENTICATION_DOMAIN],
-				                       host.len)) {
+				const char *domName = dom->config[AUTHENTICATION_DOMAIN];
+				size_t domNameLen = strlen(domName);
+				if ((domNameLen == host.len)
+				    && !mg_strncasecmp(host.ptr, domName, host.len)) {
 
 					/* Found matching domain */
 					DEBUG_TRACE("HTTP domain %s found",
@@ -13990,15 +13982,16 @@ switch_domain_context(struct mg_connection *conn)
 			}
 		}
 
+		DEBUG_TRACE("HTTP%s Host: %.*s",
+		            conn->ssl ? "S" : "",
+		            (int)host.len,
+		            host.ptr);
+
 	} else {
 		DEBUG_TRACE("HTTP%s Host is not set", conn->ssl ? "S" : "");
 		return 1;
 	}
 
-	DEBUG_TRACE("HTTP%s Host: %.*s",
-	            conn->ssl ? "S" : "",
-	            (int)host.len,
-	            host.ptr);
 	return 1;
 }
 
