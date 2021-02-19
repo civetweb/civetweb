@@ -1,3 +1,14 @@
+/********************************************************/
+/*                                                      */
+/*   FUZZ TEST for civetweb.c                           */
+/*                                                      */
+/*   Copyright (c) 2015-2020 the CivetWeb developers    */
+/*                                                      */
+/*   This file contains test code for fuzz tests.       */
+/*   It should not be used in production code.          */
+/*                                                      */
+/********************************************************/
+
 #include "civetweb.h"
 #include <errno.h>
 #include <stdint.h>
@@ -84,7 +95,7 @@ civetweb_init(void)
 	if (ports[0].is_ssl != 0) {
 		fprintf(stderr,
 		        "\nCivetWeb fuzz test works on HTTP, not HTTPS.\n"
-		        "TLS librarys should be fuzzed separately.\n");
+		        "TLS library should be fuzzed separately.\n");
 		TESTabort();
 	}
 	PORT_NUM_HTTP = ports[0].port;
