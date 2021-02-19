@@ -9,9 +9,8 @@
 
 2 Build civetweb
 
- - make build COPT="-DNO_SSL -DUSE_MBEDTLS" LOPT="-lmbedcrypto -lmbedtls -lmbedx509"
+ - make build WITH_MBEDTLS=1
 
 3 Run civetweb
  - export LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH
- - ./civetweb -listening_ports 888,2221s -ssl_certificate  resources/cert/server.pem -document_root ./test/htmldir/ 
-
+ - ./civetweb  -listening_ports 8443s  -ssl_certificate resources/cert/server.pem  -document_root ./test/htmldir/
