@@ -9,6 +9,7 @@ clang-format -i src/mod_lua.inl
 clang-format -i src/mod_lua_shared.inl
 clang-format -i src/mod_duktape.inl
 clang-format -i src/mod_zlib.inl
+clang-format -i src/openssl_dl.inl
 clang-format -i src/timer.inl
 clang-format -i src/handle_form.inl
 clang-format -i src/response.inl

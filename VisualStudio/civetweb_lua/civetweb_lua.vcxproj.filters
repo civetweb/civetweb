@@ -26,5 +26,6 @@
     <None Include="..\..\src\mod_lua.inl" />
     <None Include="..\..\src\timer.inl" />
     <None Include="..\..\src\mod_mbedtls.inl" />
+    <None Include="..\..\src\openssl_dl.inl" />
   </ItemGroup>
 </Project>

@@ -208,6 +208,7 @@
     <None Include="..\..\src\mod_http2.inl" />
     <None Include="..\..\src\mod_lua_shared.inl" />
     <None Include="..\..\src\mod_mbedtls.inl" />
+    <None Include="..\..\src\openssl_dl.inl" />
     <None Include="..\..\src\response.inl" />
     <None Include="..\..\src\mod_zlib.inl" />
     <None Include="..\..\src\sha1.inl" />
