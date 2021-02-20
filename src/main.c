@@ -2276,6 +2276,32 @@ add_control(struct dlg_complete *dlg,
 }
 
 
+static int
+optioncmp(const char *o1, const char *o2)
+{
+	/* string compare for option names */
+	while (*o1 || *o2) {
+		int c1 = 256 * (int)*o1;
+		int c2 = 256 * (int)*o2;
+		if (isalpha(*o1))
+			c1 = toupper(*o1);
+		else if (*o1 == '_')
+			c1 = 1;
+		if (isalpha(*o2))
+			c2 = toupper(*o2);
+		else if (*o2 == '_')
+			c2 = 1;
+		if (c1 < c2)
+			return -1;
+		if (c1 > c2)
+			return +1;
+		o1++;
+		o2++;
+	}
+	return 0;
+}
+
+
 static void
 show_settings_dialog()
 {
@@ -2352,8 +2378,8 @@ show_settings_dialog()
 	for (;;) {
 		int swapped = 0;
 		for (i = 1; i < NO_OF_OPTIONS; i++) {
-			if (strcmp(cv_options[option_index[i - 1]].name,
-			           cv_options[option_index[i]].name)
+			if (optioncmp(cv_options[option_index[i - 1]].name,
+			              cv_options[option_index[i]].name)
 			    > 0) {
 				short swap = option_index[i];
 				option_index[i] = option_index[i - 1];

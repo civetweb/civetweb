@@ -250,6 +250,13 @@ allows CGI files be anywhere. To restrict CGIs to a certain directory,
 use `/path/to/cgi-bin/**.cgi` as the pattern. Note that the full file path is
 matched against the pattern, not the URI.
 
+Depending on the build configuration, additional patterns `cgi2_pattern`,
+`cgi3_pattern` and `cgi4_pattern` may be available.
+This allows to use different cgi interpreter programs (`cgi2_interpreter`,
+...), environments (`cgi2_environment` ...) and interpreter arguments
+(`cgi2_interpreter_argument`, ...). The default for all additional CGI file
+patterns is empty - they are not used unless they are configured explicitly.
+
 ### cgi\_timeout\_ms
 Maximum allowed runtime for CGI scripts.  CGI processes are terminated by
 the server after this time.  The default is "no timeout", so scripts may
@@ -441,12 +448,12 @@ communicate the port number to clients via other means, for example mDNS
 In case the server has been built with the `USE_X_DOM_SOCKET` option set,
 it can listen to unix domain sockets as well. They are specified by a
 lower case `x` followed by the domain socket path, e.g. `x/tmp/sockname`.
-Domain sockets do not require a port number, always use HTTP (not HTTPS) 
-and never redirect. Thus `:` is not allowed, while `r` or `s` at the end 
+Domain sockets do not require a port number, always use HTTP (not HTTPS)
+and never redirect. Thus `:` is not allowed, while `r` or `s` at the end
 of the configuration is interpreted as part of the domain socket path.
-The domain sochet path must be a valid path to a non-existing file on a 
+The domain sochet path must be a valid path to a non-existing file on a
 Unix/Linux system. The CivetWeb process needs write/create access rights
-to create the domain socket in the Unix/Linux file system. 
+to create the domain socket in the Unix/Linux file system.
 Use only alphanumerical characters, underscore and `/` in a domain socket
 path (in particular, `,;:` must be avoided).
 
@@ -463,8 +470,8 @@ files, ...), check for external resources, remove old log files, etc.
 
 The Lua state remains open until the server is stopped.
 
-For a detailed descriotion of available Lua callbacks see section 
-"Lua background script" below. 
+For a detailed descriotion of available Lua callbacks see section
+"Lua background script" below.
 
 ### lua\_background\_script\_params
 Can add dynamic parameters to background script.
@@ -1037,7 +1044,7 @@ before any client is able to connect. It can be used for preparation and
 maintenance tasks, e.g., for preparing the web contents, cleaning log files,
 etc.
 
-The Name of the script file including path is configured as `lua_background_script`. 
+The Name of the script file including path is configured as `lua_background_script`.
 Additional parameters can be supplied using `lua_background_script_params`.
 
 The background script is loaded before the server is ready to start.

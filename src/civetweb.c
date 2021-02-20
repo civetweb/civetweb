@@ -2099,19 +2099,40 @@ enum {
 	DOCUMENT_ROOT,
 
 	CGI_EXTENSIONS,
-	CGI2_EXTENSIONS,
 	CGI_ENVIRONMENT,
-	CGI2_ENVIRONMENT,
 	CGI_INTERPRETER,
-	CGI2_INTERPRETER,
 	CGI_INTERPRETER_ARGS,
-	CGI2_INTERPRETER_ARGS,
 #if defined(USE_TIMERS)
 	CGI_TIMEOUT,
+#endif
+
+	CGI2_EXTENSIONS,
+	CGI2_ENVIRONMENT,
+	CGI2_INTERPRETER,
+	CGI2_INTERPRETER_ARGS,
+#if defined(USE_TIMERS)
 	CGI2_TIMEOUT,
 #endif
 
-	PUT_DELETE_PASSWORDS_FILE,
+#if defined(USE_4_CGI)
+	CGI3_EXTENSIONS,
+	CGI3_ENVIRONMENT,
+	CGI3_INTERPRETER,
+	CGI3_INTERPRETER_ARGS,
+#if defined(USE_TIMERS)
+	CGI3_TIMEOUT,
+#endif
+
+	CGI4_EXTENSIONS,
+	CGI4_ENVIRONMENT,
+	CGI4_INTERPRETER,
+	CGI4_INTERPRETER_ARGS,
+#if defined(USE_TIMERS)
+	CGI4_TIMEOUT,
+#endif
+#endif
+
+	PUT_DELETE_PASSWORDS_FILE, /* must follow CGI_* */
 	PROTECT_URI,
 	AUTHENTICATION_DOMAIN,
 	ENABLE_AUTH_DOMAIN_CHECK,
@@ -2218,16 +2239,37 @@ static const struct mg_option config_options[] = {
     {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
 
     {"cgi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.cgi$|**.pl$|**.php$"},
-    {"cgi2_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
     {"cgi_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
-    {"cgi2_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"cgi_interpreter", MG_CONFIG_TYPE_FILE, NULL},
-    {"cgi2_interpreter", MG_CONFIG_TYPE_FILE, NULL},
     {"cgi_interpreter_args", MG_CONFIG_TYPE_STRING, NULL},
-    {"cgi2_interpreter_args", MG_CONFIG_TYPE_STRING, NULL},
 #if defined(USE_TIMERS)
     {"cgi_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+#endif
+
+    {"cgi2_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
+    {"cgi2_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"cgi2_interpreter", MG_CONFIG_TYPE_FILE, NULL},
+    {"cgi2_interpreter_args", MG_CONFIG_TYPE_STRING, NULL},
+#if defined(USE_TIMERS)
     {"cgi2_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+#endif
+
+#if defined(USE_4_CGI)
+    {"cgi3_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
+    {"cgi3_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"cgi3_interpreter", MG_CONFIG_TYPE_FILE, NULL},
+    {"cgi3_interpreter_args", MG_CONFIG_TYPE_STRING, NULL},
+#if defined(USE_TIMERS)
+    {"cgi3_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+#endif
+
+    {"cgi2_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
+    {"cgi4_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"cgi4_interpreter", MG_CONFIG_TYPE_FILE, NULL},
+    {"cgi4_interpreter_args", MG_CONFIG_TYPE_STRING, NULL},
+#if defined(USE_TIMERS)
+    {"cgi4_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
+#endif
 #endif
 
     {"put_delete_auth_file", MG_CONFIG_TYPE_FILE, NULL},
@@ -5548,7 +5590,8 @@ spawn_process(struct mg_connection *conn,
               int fdin[2],
               int fdout[2],
               int fderr[2],
-              const char *dir)
+              const char *dir,
+              unsigned char cgi_config_idx)
 {
 	HANDLE me;
 	char *interp;
@@ -5605,11 +5648,12 @@ spawn_process(struct mg_connection *conn,
 
 	/* First check, if there is a CGI interpreter configured for all CGI
 	 * scripts. */
-	interp = conn->dom_ctx->config[CGI_INTERPRETER];
+	interp = conn->dom_ctx->config[CGI_INTERPRETER + cgi_config_idx];
 	if (interp != NULL) {
 		/* If there is a configured interpreter, check for additional arguments
 		 */
-		interp_arg = conn->dom_ctx->config[CGI_INTERPRETER_ARGS];
+		interp_arg =
+		    conn->dom_ctx->config[CGI_INTERPRETER_ARGS + cgi_config_idx];
 	} else {
 		/* Otherwise, the interpreter must be stated in the first line of the
 		 * CGI script file, after a #! (shebang) mark. */
@@ -5858,7 +5902,8 @@ spawn_process(struct mg_connection *conn,
               int fdin[2],
               int fdout[2],
               int fderr[2],
-              const char *dir)
+              const char *dir,
+              unsigned char cgi_config_idx)
 {
 	pid_t pid;
 	const char *interp;
@@ -5921,7 +5966,7 @@ spawn_process(struct mg_connection *conn,
 			sa.sa_handler = SIG_DFL;
 			sigaction(SIGCHLD, &sa, NULL);
 
-			interp = conn->dom_ctx->config[CGI_INTERPRETER];
+			interp = conn->dom_ctx->config[CGI_INTERPRETER + cgi_config_idx];
 			if (interp == NULL) {
 				/* no interpreter configured, call the programm directly */
 				(void)execle(prog, prog, NULL, envp);
@@ -5933,7 +5978,8 @@ spawn_process(struct mg_connection *conn,
 			} else {
 				/* call the configured interpreter */
 				const char *interp_args =
-				    conn->dom_ctx->config[CGI_INTERPRETER_ARGS];
+				    conn->dom_ctx
+				        ->config[CGI_INTERPRETER_ARGS + cgi_config_idx];
 
 				if ((interp_args != NULL) && (interp_args[0] != 0)) {
 					(void)execle(interp, interp, interp_args, prog, NULL, envp);
@@ -7391,15 +7437,9 @@ extention_matches_script(
 )
 {
 #if !defined(NO_CGI)
-	if (match_prefix_strlen(conn->dom_ctx->config[CGI_EXTENSIONS], filename)
-	    > 0) {
-		return 1;
-	}
-	if (match_prefix_strlen(conn->dom_ctx->config[CGI2_EXTENSIONS], filename)
-	    > 0) {
-		return 1;
-	}
+	unsigned char cgi_config_idx, inc, max;
 #endif
+
 #if defined(USE_LUA)
 	if (match_prefix_strlen(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS],
 	                        filename)
@@ -7412,6 +7452,19 @@ extention_matches_script(
 	                        filename)
 	    > 0) {
 		return 1;
+	}
+#endif
+#if !defined(NO_CGI)
+	inc = CGI2_EXTENSIONS - CGI_EXTENSIONS;
+	max = PUT_DELETE_PASSWORDS_FILE - CGI_EXTENSIONS;
+	for (cgi_config_idx = 0; cgi_config_idx < max; cgi_config_idx += inc) {
+		if ((conn->dom_ctx->config[CGI_EXTENSIONS + cgi_config_idx] != NULL)
+		    && (match_prefix_strlen(
+		            conn->dom_ctx->config[CGI_EXTENSIONS + cgi_config_idx],
+		            filename)
+		        > 0)) {
+			return 1;
+		}
 	}
 #endif
 	/* filename and conn could be unused, if all preocessor conditions
@@ -11023,7 +11076,8 @@ addenv(struct cgi_environment *env, const char *fmt, ...)
 static int
 prepare_cgi_environment(struct mg_connection *conn,
                         const char *prog,
-                        struct cgi_environment *env)
+                        struct cgi_environment *env,
+                        unsigned char cgi_config_idx)
 {
 	const char *s;
 	struct vec var_vec;
@@ -11198,7 +11252,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 	}
 
 	/* Add user-specified variables */
-	s = conn->dom_ctx->config[CGI_ENVIRONMENT];
+	s = conn->dom_ctx->config[CGI_ENVIRONMENT + cgi_config_idx];
 	while ((s = next_option(s, &var_vec, NULL)) != NULL) {
 		addenv(env, "%.*s", (int)var_vec.len, var_vec.ptr);
 	}
@@ -11252,7 +11306,9 @@ abort_cgi_process(void *data)
 
 /* Local (static) function assumes all arguments are valid. */
 static void
-handle_cgi_request(struct mg_connection *conn, const char *prog)
+handle_cgi_request(struct mg_connection *conn,
+                   const char *prog,
+                   unsigned char cgi_config_idx)
 {
 	char *buf;
 	size_t buflen;
@@ -11269,9 +11325,10 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 
 #if defined(USE_TIMERS)
 	double cgi_timeout;
-	if (conn->dom_ctx->config[CGI_TIMEOUT]) {
+	if (conn->dom_ctx->config[CGI_TIMEOUT + cgi_config_idx]) {
 		/* Get timeout in seconds */
-		cgi_timeout = atof(conn->dom_ctx->config[CGI_TIMEOUT]) * 0.001;
+		cgi_timeout =
+		    atof(conn->dom_ctx->config[CGI_TIMEOUT + cgi_config_idx]) * 0.001;
 	} else {
 		cgi_timeout =
 		    atof(config_options[REQUEST_TIMEOUT].default_value) * 0.001;
@@ -11281,7 +11338,7 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 
 	buf = NULL;
 	buflen = conn->phys_ctx->max_request_size;
-	i = prepare_cgi_environment(conn, prog, &blk);
+	i = prepare_cgi_environment(conn, prog, &blk, cgi_config_idx);
 	if (i != 0) {
 		blk.buf = NULL;
 		blk.var = NULL;
@@ -11330,7 +11387,8 @@ handle_cgi_request(struct mg_connection *conn, const char *prog)
 	}
 
 	DEBUG_TRACE("CGI: spawn %s %s\n", dir, p);
-	pid = spawn_process(conn, p, blk.buf, blk.var, fdin, fdout, fderr, dir);
+	pid = spawn_process(
+	    conn, p, blk.buf, blk.var, fdin, fdout, fderr, dir, cgi_config_idx);
 
 	if (pid == (pid_t)-1) {
 		status = strerror(ERRNO);
@@ -14502,15 +14560,18 @@ handle_file_based_request(struct mg_connection *conn,
                           const char *path,
                           struct mg_file *file)
 {
+#if !defined(NO_CGI)
+	unsigned char cgi_config_idx, inc, max;
+#endif
+
 	if (!conn || !conn->dom_ctx) {
 		return;
 	}
 
-	if (0) {
 #if defined(USE_LUA)
-	} else if (match_prefix_strlen(
-	               conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS], path)
-	           > 0) {
+	if (match_prefix_strlen(conn->dom_ctx->config[LUA_SERVER_PAGE_EXTENSIONS],
+	                        path)
+	    > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Lua server page: an SSI like page containing mostly plain
 			 * html code plus some tags with server generated contents. */
@@ -14519,25 +14580,27 @@ handle_file_based_request(struct mg_connection *conn,
 			/* Script was in an illegal path */
 			mg_send_http_error(conn, 403, "%s", "Forbidden");
 		}
+		return;
+	}
 
-	} else if (match_prefix_strlen(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS],
-	                               path)
-	           > 0) {
+	if (match_prefix_strlen(conn->dom_ctx->config[LUA_SCRIPT_EXTENSIONS], path)
+	    > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Lua in-server module script: a CGI like script used to
-			 * generate
-			 * the
-			 * entire reply. */
+			 * generate the entire reply. */
 			mg_exec_lua_script(conn, path, NULL);
 		} else {
 			/* Script was in an illegal path */
 			mg_send_http_error(conn, 403, "%s", "Forbidden");
 		}
+		return;
+	}
 #endif
+
 #if defined(USE_DUKTAPE)
-	} else if (match_prefix_strlen(
-	               conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS], path)
-	           > 0) {
+	if (match_prefix_strlen(conn->dom_ctx->config[DUKTAPE_SCRIPT_EXTENSIONS],
+	                        path)
+	    > 0) {
 		if (is_in_script_path(conn, path)) {
 			/* Call duktape to generate the page */
 			mg_exec_duktape_script(conn, path);
@@ -14545,35 +14608,51 @@ handle_file_based_request(struct mg_connection *conn,
 			/* Script was in an illegal path */
 			mg_send_http_error(conn, 403, "%s", "Forbidden");
 		}
+		return;
+	}
 #endif
+
 #if !defined(NO_CGI)
-	} else if (match_prefix_strlen(conn->dom_ctx->config[CGI_EXTENSIONS], path)
-	           > 0) {
-		if (is_in_script_path(conn, path)) {
-			/* CGI scripts may support all HTTP methods */
-			handle_cgi_request(conn, path);
-		} else {
-			/* Script was in an illegal path */
-			mg_send_http_error(conn, 403, "%s", "Forbidden");
+	inc = CGI2_EXTENSIONS - CGI_EXTENSIONS;
+	max = PUT_DELETE_PASSWORDS_FILE - CGI_EXTENSIONS;
+	for (cgi_config_idx = 0; cgi_config_idx < max; cgi_config_idx += inc) {
+		if (conn->dom_ctx->config[CGI_EXTENSIONS + cgi_config_idx] != NULL) {
+			if (match_prefix_strlen(
+			        conn->dom_ctx->config[CGI_EXTENSIONS + cgi_config_idx],
+			        path)
+			    > 0) {
+				if (is_in_script_path(conn, path)) {
+					/* CGI scripts may support all HTTP methods */
+					handle_cgi_request(conn, path, 0);
+				} else {
+					/* Script was in an illegal path */
+					mg_send_http_error(conn, 403, "%s", "Forbidden");
+				}
+				return;
+			}
 		}
+	}
 #endif /* !NO_CGI */
-	} else if (match_prefix_strlen(conn->dom_ctx->config[SSI_EXTENSIONS], path)
-	           > 0) {
+
+	if (match_prefix_strlen(conn->dom_ctx->config[SSI_EXTENSIONS], path) > 0) {
 		if (is_in_script_path(conn, path)) {
 			handle_ssi_file_request(conn, path, file);
 		} else {
 			/* Script was in an illegal path */
 			mg_send_http_error(conn, 403, "%s", "Forbidden");
 		}
+		return;
+	}
+
 #if !defined(NO_CACHING)
-	} else if ((!conn->in_error_handler)
-	           && is_not_modified(conn, &file->stat)) {
+	if ((!conn->in_error_handler) && is_not_modified(conn, &file->stat)) {
 		/* Send 304 "Not Modified" - this must not send any body data */
 		handle_not_modified_static_file_request(conn, file);
-#endif /* !NO_CACHING */
-	} else {
-		handle_static_file_request(conn, path, file, NULL, NULL);
+		return;
 	}
+#endif /* !NO_CACHING */
+
+	handle_static_file_request(conn, path, file, NULL, NULL);
 }
 #endif /* NO_FILESYSTEMS */
 
