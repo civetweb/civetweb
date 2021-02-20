@@ -21214,7 +21214,7 @@ mg_init_library(unsigned features)
 
 	mg_global_unlock();
 
-#if defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)
+#if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)) && !defined(NO_SSL)
 	if (features_to_init & MG_FEATURES_SSL) {
 		if (!mg_openssl_initialized) {
 			char ebuf[128];
@@ -21255,7 +21255,7 @@ mg_exit_library(void)
 
 	mg_init_library_called--;
 	if (mg_init_library_called == 0) {
-#if defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)
+#if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)) && !defined(NO_SSL)
 		if (mg_openssl_initialized) {
 			uninitialize_openssl();
 			mg_openssl_initialized = 0;
