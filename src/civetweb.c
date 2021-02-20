@@ -6344,7 +6344,7 @@ pull_inner(FILE *fp,
 			                  (int)(timeout * 1000.0),
 			                  &(conn->phys_ctx->stop_flag));
 
-			if (conn->phys_ctx->stop_flag) {
+			if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
 				return -2;
 			}
 		}
@@ -12787,8 +12787,8 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	(void)mg_lock_connection(conn);
 
 #if defined(USE_ZLIB) && defined(MG_EXPERIMENTAL_INTERFACES)
-	size_t deflated_size;
-	Bytef *deflated;
+	size_t deflated_size = 0;
+	Bytef *deflated = 0;
 	// Deflate websocket messages over 100kb
 	int use_deflate = dataLen > 100 * 1024 && conn->accept_gzip;
 

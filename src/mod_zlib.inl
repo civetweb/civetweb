@@ -12,6 +12,7 @@ zalloc(void *opaque, uInt items, uInt size)
 {
 	struct mg_connection *conn = (struct mg_connection *)opaque;
 	void *ret = mg_calloc_ctx(items, size, conn->phys_ctx);
+	(void)conn; /* mg_calloc_ctx makro might not need it */
 
 	return ret;
 }
@@ -125,8 +126,9 @@ send_compressed_data(struct mg_connection *conn, struct mg_file *filep)
 	mg_write(conn, "0\r\n\r\n", 5);
 }
 
+
 #if defined(USE_WEBSOCKET) && defined(MG_EXPERIMENTAL_INTERFACES)
-int
+static int
 websocket_deflate_initialize(struct mg_connection *conn, int server)
 {
 	int zret =
@@ -173,7 +175,8 @@ websocket_deflate_initialize(struct mg_connection *conn, int server)
 	return Z_OK;
 }
 
-void
+
+static void
 websocket_deflate_negotiate(struct mg_connection *conn)
 {
 	const char *extensions = mg_get_header(conn, "Sec-WebSocket-Extensions");
@@ -255,7 +258,8 @@ websocket_deflate_negotiate(struct mg_connection *conn)
 	conn->websocket_deflate_initialized = 0;
 }
 
-void
+
+static void
 websocket_deflate_response(struct mg_connection *conn)
 {
 	if (conn->accept_gzip) {

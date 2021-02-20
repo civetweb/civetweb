@@ -1240,7 +1240,7 @@ lsp_split_form_urlencoded(lua_State *L)
 	in = lua_tolstring(L, 1, &len);
 
 	/* Create a modifyable copy */
-	buf = mg_malloc_ctx(len + 1, ctx);
+	buf = (char *)mg_malloc_ctx(len + 1, ctx);
 	if (buf == NULL) {
 		return luaL_error(L, "out of memory in invalid split_form_data() call");
 	}

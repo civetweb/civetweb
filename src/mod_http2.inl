@@ -673,7 +673,7 @@ hpack_decode(const uint8_t *buf, int *i, struct mg_context *ctx)
 	/* Now read the string */
 	if (!is_huff) {
 		/* Not huffman encoded: Copy directly */
-		char *result = mg_malloc_ctx(byte_len + 1, ctx);
+		char *result = (char *)mg_malloc_ctx(byte_len + 1, ctx);
 		if (result) {
 			memcpy(result, buf + (*i), byte_len);
 			result[byte_len] = 0;
@@ -1156,25 +1156,13 @@ http2_must_use_http1(struct mg_connection *conn)
 static int mem_h_count = 0;
 static int mem_d_count = 0;
 #define CHECK_LEAK_HDR_ALLOC(ptr)                                              \
-	DEBUG_TRACE("H NEW %08x (%i): %s",                                         \
-	            (uint32_t)ptr,                                                 \
-	            ++mem_h_count,                                                 \
-	            (const char *)ptr)
+	DEBUG_TRACE("H NEW %p (%i): %s", ptr, ++mem_h_count, (const char *)ptr)
 #define CHECK_LEAK_HDR_FREE(ptr)                                               \
-	DEBUG_TRACE("H DEL %08x (%i): %s",                                         \
-	            (uint32_t)ptr,                                                 \
-	            --mem_h_count,                                                 \
-	            (const char *)ptr)
+	DEBUG_TRACE("H DEL %p (%i): %s", ptr, --mem_h_count, (const char *)ptr)
 #define CHECK_LEAK_DYN_ALLOC(ptr)                                              \
-	DEBUG_TRACE("D NEW %08x (%i): %s",                                         \
-	            (uint32_t)ptr,                                                 \
-	            ++mem_d_count,                                                 \
-	            (const char *)ptr)
+	DEBUG_TRACE("D NEW %p (%i): %s", ptr, ++mem_d_count, (const char *)ptr)
 #define CHECK_LEAK_DYN_FREE(ptr)                                               \
-	DEBUG_TRACE("D DEL %08x (%i): %s",                                         \
-	            (uint32_t)ptr,                                                 \
-	            --mem_d_count,                                                 \
-	            (const char *)ptr)
+	DEBUG_TRACE("D DEL %p (%i): %s", ptr, --mem_d_count, (const char *)ptr)
 #else
 #define CHECK_LEAK_HDR_ALLOC(ptr)
 #define CHECK_LEAK_HDR_FREE(ptr)
