@@ -53,14 +53,18 @@ THE SOFTWARE.
 #if LUA_VERSION_NUM >= 502
 
 // lua_compare() has replaced lua_equal()
+#if !defined(lua_equal)
 #define lua_equal(L, index1, index2) lua_compare(L, index1, index2, LUA_OPEQ)
+#endif
 
 #endif
 /* API changes for 5.3+ */
 #if LUA_VERSION_NUM >= 503
 
 // luaL_optinteger() has replaced luaL_optint()
+#if !defined(luaL_optint)
 #define luaL_optint(L, arg, d) luaL_optinteger(L, arg, d)
+#endif
 
 #endif
 
@@ -253,7 +257,7 @@ typedef struct Tokenizer_s {
 	enum whitespace_mode mode;
 } Tokenizer;
 
-Tokenizer *
+static Tokenizer *
 Tokenizer_new(const char *str, size_t str_size, enum whitespace_mode mode)
 {
 	Tokenizer *tok = calloc(1, sizeof(Tokenizer));
@@ -263,7 +267,7 @@ Tokenizer_new(const char *str, size_t str_size, enum whitespace_mode mode)
 	return tok;
 }
 
-void
+static void
 Tokenizer_delete(Tokenizer *tok)
 {
 	free(tok->m_token);
@@ -271,7 +275,7 @@ Tokenizer_delete(Tokenizer *tok)
 }
 
 #if LUAXML_DEBUG
-void
+static void
 Tokenizer_print(Tokenizer *tok)
 {
 	printf("  @%u %s\n",
@@ -315,7 +319,7 @@ Tokenizer_append(Tokenizer *tok, char ch)
 	tok->m_token[++tok->m_token_size] = 0;
 }
 
-const char *
+static const char *
 Tokenizer_next(Tokenizer *tok)
 {
 	// NUL-terminated strings for the special tokens
@@ -475,7 +479,7 @@ should ever change).
 its tag changed); otherwise the result will be the current tag of `var`
 (normally a string).
 */
-int
+static int
 Xml_tag(lua_State *L)
 {
 	// the function will only operate on tables
@@ -520,7 +524,7 @@ or _(2)_ the tag of the new LuaXML object
 @return  LuaXML object, either newly created or the conversion of `arg`;
 optionally tagged as requested
 */
-int
+static int
 Xml_new(lua_State *L)
 {
 	if (!lua_istable(L, 1)) {
@@ -550,7 +554,7 @@ optionally sets tag
 @tparam ?string tag  the tag of the appended LuaXML object
 @return  appended LuaXML object, or `nil` in case of errors
 */
-int
+static int
 Xml_append(lua_State *L)
 {
 	if (lua_type(L, 1) == LUA_TTABLE) {
@@ -684,7 +688,7 @@ defaults to `WS_TRIM` (compatible to previous LuaXML versions)
 
 @return  a LuaXML object containing the XML data, or `nil` in case of errors
 */
-int
+static int
 Xml_eval(lua_State *L)
 {
 	enum whitespace_mode mode = luaL_optint(L, 2, WHITESPACE_TRIM);
@@ -783,7 +787,7 @@ Basically, this is just calling `eval` on the given file's content.
 @tparam ?number mode  whitespace handling mode, defaults to `WS_TRIM`
 @return  a Lua table representing the XML data, or `nil` in case of errors
 */
-int
+static int
 Xml_load(lua_State *L)
 {
 	const char *filename = luaL_checkstring(L, 1);
@@ -828,7 +832,7 @@ by explictly registering a `nil` value: `registerCode(decoded, nil)`.
 @tparam string encoded  the character entity to be used in XML
 @see encode, decode
 */
-int
+static int
 Xml_registerCode(lua_State *L)
 {
 	// We require the "decoded" string, but allow `nil` as argument #2.
@@ -856,7 +860,7 @@ print(xml.encode("<->")) -- "&lt;-&gt;"
 @treturn string  the XML-encoded string
 @see decode, registerCode
 */
-int
+static int
 Xml_encode(lua_State *L)
 {
 	luaL_checkstring(L, 1); // make sure arg #1 is a string
@@ -876,7 +880,7 @@ print((xml.decode("&lt;-&gt;")) -- "<->"
 @treturn string  the decoded string
 @see encode, registerCode
 */
-int
+static int
 Xml_decode(lua_State *L)
 {
 	size_t size;
@@ -904,7 +908,7 @@ Mainly for internal use.
 @treturn string
 an XML string, or `nil` in case of errors.
 */
-int
+static int
 Xml_str(lua_State *L)
 {
 	// Note:
@@ -1108,7 +1112,7 @@ This allows you to either make direct use of the matched LuaXML object, or to
 use the return value in a boolean test (`if xml.match(...)`), which is a common
 Lua idiom.
 */
-int
+static int
 Xml_match(lua_State *L)
 {
 	if (lua_type(L, 1) == LUA_TTABLE) {
@@ -1174,7 +1178,7 @@ from the callback.
 
 @see match
 */
-int
+static int
 Xml_iterate(lua_State *L)
 {
 	lua_settop(L, 8);
@@ -1246,7 +1250,7 @@ the logic involved with testing for` tag`, `key` and `value`.
 @return  the first (sub-)table that satisfies the search condition,
 or `nil` for no match
 */
-int
+static int
 Xml_find(lua_State *L)
 {
 	lua_settop(L, 4); // accept at most four parameters for this function
