@@ -326,13 +326,19 @@ struct mg_callbacks {
 	   application-maintained list of clients.
 	   Using this callback for websocket connections is deprecated: Use
 	   mg_set_websocket_handler instead.
+	*/
+	void (*connection_close)(const struct mg_connection *);
+
+       /* Called after civetweb has closed a connection.  The per-context mutex is
+          locked when this is invoked.
 
 	   Connection specific data:
 	   If memory has been allocated for the connection specific user data
 	   (mg_request_info->conn_data, mg_get_user_connection_data),
 	   this is the last chance to free it.
 	*/
-	void (*connection_close)(const struct mg_connection *);
+	void (*connection_closed)(const struct mg_connection *);
+
 
 	/* init_lua is called when civetweb is about to serve Lua server page.
 	   exit_lua is called when the Lua processing is complete.

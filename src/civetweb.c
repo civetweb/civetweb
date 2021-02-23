@@ -17030,6 +17030,13 @@ close_connection(struct mg_connection *conn)
 		conn->client.sock = INVALID_SOCKET;
 	}
 
+	/* call the connection_closed callback if assigned */
+	if (conn->phys_ctx->callbacks.connection_closed != NULL) {
+		if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+			conn->phys_ctx->callbacks.connection_closed(conn);
+		}
+	}
+
 	mg_unlock_connection(conn);
 
 #if defined(USE_SERVER_STATS)
