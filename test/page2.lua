@@ -184,7 +184,7 @@ xmlev = xml.eval(xmlstr)
 mg.write(htmlEsc(xmlstr))
 mg.write("\n-->\n")
 mg.write(type(xmlev) .. ":\n")
-mg.write(printTable(xmlev, 1)) 
+mg.write(printTable(xmlev, 1))
 mg.write("</pre>\n</p>\n")
 
 mg.write("<p>lua2xml:<br>\n<pre>\n");
@@ -237,7 +237,7 @@ jsonev = json.decode(jsonstr)
 mg.write(htmlEsc(jsonstr))
 mg.write("\n-->\n")
 mg.write(type(jsonev) .. ":\n")
-mg.write(printTable(jsonev, 1)) 
+mg.write(printTable(jsonev, 1))
 mg.write("</pre>\n</p>\n")
 
 mg.write("<p>lua2json:<br>\n<pre>\n");
@@ -270,11 +270,21 @@ if mg.request_info.query_string then
 end
 
 
--- Next section ...
+-- Test timer from Lua background script
 mg.write("\n<hr/>\n")
 
+mg.write("<p>\nLua shared.timer ");
+if (shared and shared.timer) then
+  mg.write(tostring(shared.timer))
+  mg.write([[ <button onClick="window.location.reload();">Refresh Page</button>]])
+else
+  mg.write("not available")
+end
+mg.write("\n</p>\n")
+
+-- Next section ...
+mg.write("\n<hr/>\n")
 
 mg.write([[
 </body></html>
 ]])
-

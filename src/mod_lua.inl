@@ -2210,7 +2210,7 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 		/* Argument for timer */
 		arg->L = L;
 		arg->script = (ws ? ws->script : NULL);
-		arg->pmutex = (ws ? &(ws->ws_mutex) : NULL);
+		arg->pmutex = (ws ? &(ws->ws_mutex) : &(ctx->lua_bg_mutex));
 		memcpy(arg->txt, "return(", 7);
 		memcpy(arg->txt + 7, action_txt, action_txt_len);
 		arg->txt[action_txt_len + 7] = ')';
@@ -2245,7 +2245,7 @@ lwebsocket_set_timer(lua_State *L, int is_periodic)
 		/* Argument for timer */
 		arg->L = L;
 		arg->script = (ws ? ws->script : NULL);
-		arg->pmutex = (ws ? &(ws->ws_mutex) : NULL);
+		arg->pmutex = (ws ? &(ws->ws_mutex) : &(ctx->lua_bg_mutex));
 		arg->funcref = funcref;
 		if (0
 		    == timer_add(ctx,
@@ -3466,6 +3466,12 @@ mg_lua_context_script_run(lua_State *L,
 		int ret = lua_toboolean(L, -1);
 		if (ret == 0) {
 			/* Script returned false */
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "Script %s returned false\n",
+			            file_name);
 			lua_close(L);
 			return 0;
 		}

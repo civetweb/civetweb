@@ -2540,6 +2540,7 @@ struct mg_context {
 	/* Lua specific: Background operations and shared websockets */
 #if defined(USE_LUA)
 	void *lua_background_state;
+	pthread_mutex_t lua_bg_mutex; /* Protect background state */
 #endif
 
 	/* Server nonce */
@@ -19135,9 +19136,11 @@ master_thread_run(struct mg_context *ctx)
 #if defined(USE_LUA)
 	if (ctx->lua_background_state) {
 		lua_State *lstate = (lua_State *)ctx->lua_background_state;
+		pthread_mutex_lock(&ctx->lua_bg_mutex);
 		/* call "start()" in Lua */
 		lua_getglobal(lstate, "start");
 		(void)lua_pcall(lstate, /* args */ 0, /* results */ 0, 0);
+		pthread_mutex_unlock(&ctx->lua_bg_mutex);
 	}
 #endif
 
@@ -19197,10 +19200,12 @@ master_thread_run(struct mg_context *ctx)
 	if (ctx->lua_background_state) {
 		lua_State *lstate = (lua_State *)ctx->lua_background_state;
 		/* call "stop()" in Lua */
+		pthread_mutex_lock(&ctx->lua_bg_mutex);
 		lua_getglobal(lstate, "stop");
 		(void)lua_pcall(lstate, /* args */ 0, /* results */ 0, 0);
 		lua_close(lstate);
 		ctx->lua_background_state = 0;
+		pthread_mutex_unlock(&ctx->lua_bg_mutex);
 	}
 #endif
 
@@ -19286,6 +19291,10 @@ free_context(struct mg_context *ctx)
 
 	/* Destroy other context global data structures mutex */
 	(void)pthread_mutex_destroy(&ctx->nonce_mutex);
+
+#if defined(USE_LUA)
+	(void)pthread_mutex_destroy(&ctx->lua_bg_mutex);
+#endif
 
 	/* Deallocate config parameters */
 	for (i = 0; i < NUM_OPTIONS; i++) {
@@ -19542,6 +19551,9 @@ static
 	ctx->sq_blocked = 0;
 #endif
 	ok &= (0 == pthread_mutex_init(&ctx->nonce_mutex, &pthread_mutex_attr));
+#if defined(USE_LUA)
+	ok &= (0 == pthread_mutex_init(&ctx->lua_bg_mutex, &pthread_mutex_attr));
+#endif
 	if (!ok) {
 		const char *err_msg =
 		    "Cannot initialize thread synchronization objects";
@@ -19737,6 +19749,9 @@ static
 		struct vec eq_vec;
 		const char *sparams;
 
+		memset(ebuf, 0, sizeof(ebuf));
+		pthread_mutex_lock(&ctx->lua_bg_mutex);
+
 		/* Create a Lua state, load all standard libraries and the mg table */
 		lua_State *state = mg_lua_context_script_prepare(
 		    ctx->dd.config[LUA_BACKGROUND_SCRIPT], ctx, ebuf, sizeof(ebuf));
@@ -19753,6 +19768,8 @@ static
 				            config_options[DOCUMENT_ROOT].name,
 				            ebuf);
 			}
+			pthread_mutex_unlock(&ctx->lua_bg_mutex);
+
 			free_context(ctx);
 			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
@@ -19795,6 +19812,8 @@ static
 				            config_options[DOCUMENT_ROOT].name,
 				            ebuf);
 			}
+			pthread_mutex_unlock(&ctx->lua_bg_mutex);
+
 			free_context(ctx);
 			pthread_setspecific(sTlsKey, NULL);
 			return NULL;
@@ -19802,6 +19821,7 @@ static
 
 		/* state remains valid */
 		ctx->lua_background_state = (void *)state;
+		pthread_mutex_unlock(&ctx->lua_bg_mutex);
 
 	} else {
 		ctx->lua_background_state = 0;
