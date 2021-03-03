@@ -329,14 +329,14 @@ struct mg_callbacks {
 	*/
 	void (*connection_close)(const struct mg_connection *);
 
-       /* Called after civetweb has closed a connection.  The per-context mutex is
-          locked when this is invoked.
+	/* Called after civetweb has closed a connection.  The per-context mutex is
+	   locked when this is invoked.
 
-	   Connection specific data:
-	   If memory has been allocated for the connection specific user data
-	   (mg_request_info->conn_data, mg_get_user_connection_data),
-	   this is the last chance to free it.
-	*/
+	Connection specific data:
+	If memory has been allocated for the connection specific user data
+	(mg_request_info->conn_data, mg_get_user_connection_data),
+	this is the last chance to free it.
+ */
 	void (*connection_closed)(const struct mg_connection *);
 
 

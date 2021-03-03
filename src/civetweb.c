@@ -317,7 +317,7 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
 #endif
 
 
-/* Some ANSI #includes are not available on Windows CE */
+/* Some ANSI #includes are not available on Windows CE and Zephyr */
 #if !defined(_WIN32_WCE) && !defined(__ZEPHYR__)
 #include <errno.h>
 #include <fcntl.h>
@@ -20620,7 +20620,7 @@ mg_get_system_info(char *buffer, int buflen)
 		const char *bd = BUILD_DATE;
 #else
 #if defined(GCC_DIAGNOSTIC)
-#if GCC_VERSION >= 40900c
+#if GCC_VERSION >= 40900
 #pragma GCC diagnostic push
 		/* Disable idiotic compiler warning -Wdate-time, appeared in gcc5. This
 		 * does not work in some versions. If "BUILD_DATE" is defined to some
