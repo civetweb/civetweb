@@ -3119,7 +3119,7 @@ mg_fclose(struct mg_file_access *fileacc)
 
 
 static void
-mg_strlcpy(register char *dst, register const char *src, size_t n)
+mg_strlcpy(char *dst, const char *src, size_t n)
 {
 	for (; *src != '\0' && n > 1; n--) {
 		*dst++ = *src++;
@@ -6366,7 +6366,7 @@ pull_inner(FILE *fp,
 
 #if defined(USE_MBEDTLS)
 	} else if (conn->ssl != NULL) {
-		struct pollfd pfd[1];
+		struct mg_pollfd pfd[1];
 		int to_read;
 		int pollres;
 
@@ -13449,7 +13449,7 @@ get_host_from_request_info(struct vec *host, const struct mg_request_info *ri)
 	host->len = 0;
 
 	if (host_header != NULL) {
-		char *pos;
+		const char *pos;
 
 		/* If the "Host" is an IPv6 address, like [::1], parse until ]
 		 * is found. */
@@ -14472,7 +14472,7 @@ handle_request(struct mg_connection *conn)
 
 		size_t len = strlen(ri->request_uri);
 		size_t lenQS = ri->query_string ? strlen(ri->query_string) + 1 : 0;
-		char *new_path = mg_malloc_ctx(len + lenQS + 2, conn->phys_ctx);
+		char *new_path = (char *)mg_malloc_ctx(len + lenQS + 2, conn->phys_ctx);
 		if (!new_path) {
 			mg_send_http_error(conn, 500, "out or memory");
 		} else {
@@ -15476,7 +15476,7 @@ mg_sslctx_init(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 		return 1;
 	}
 
-	dom_ctx->ssl_ctx = mg_calloc(1, sizeof(*dom_ctx->ssl_ctx));
+	dom_ctx->ssl_ctx = (SSL_CTX *)mg_calloc(1, sizeof(*dom_ctx->ssl_ctx));
 	if (dom_ctx->ssl_ctx == NULL) {
 		fprintf(stderr, "ssl_ctx malloc failed\n");
 		return 0;
@@ -17028,6 +17028,13 @@ close_connection(struct mg_connection *conn)
 		close_socket_gracefully(conn);
 #endif
 		conn->client.sock = INVALID_SOCKET;
+	}
+
+	/* call the connection_closed callback if assigned */
+	if (conn->phys_ctx->callbacks.connection_closed != NULL) {
+		if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+			conn->phys_ctx->callbacks.connection_closed(conn);
+		}
 	}
 
 	mg_unlock_connection(conn);
@@ -18863,7 +18870,7 @@ worker_thread_run(struct mg_connection *conn)
 			/* HTTPS connection */
 			if (mbed_ssl_accept(&(conn->ssl),
 			                    conn->dom_ctx->ssl_ctx,
-			                    &(conn->client.sock),
+			                    (int *)&(conn->client.sock),
 			                    conn->phys_ctx)
 			    == 0) {
 				/* conn->dom_ctx is set in get_request */
@@ -20294,7 +20301,7 @@ mg_start_domain2(struct mg_context *ctx,
 	new_dom->shared_lua_websockets = NULL;
 #endif
 
-#if !defined(NO_SSL)
+#if !defined(NO_SSL) && !defined(USE_MBEDTLS)
 	if (!init_ssl_ctx(ctx, new_dom)) {
 		/* Init SSL failed */
 		if ((error != NULL) && (error->text_buffer_size > 0)) {
@@ -20613,7 +20620,7 @@ mg_get_system_info(char *buffer, int buflen)
 		const char *bd = BUILD_DATE;
 #else
 #if defined(GCC_DIAGNOSTIC)
-#if GCC_VERSION >= 40900
+#if GCC_VERSION >= 40900c
 #pragma GCC diagnostic push
 		/* Disable idiotic compiler warning -Wdate-time, appeared in gcc5. This
 		 * does not work in some versions. If "BUILD_DATE" is defined to some
