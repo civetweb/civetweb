@@ -149,7 +149,7 @@ mbed_ssl_accept(mbedtls_ssl_context **ssl,
 
 	DEBUG_TRACE("TLS accept processing %p", ssl);
 
-	*ssl = mg_calloc_ctx(1, sizeof(mbedtls_ssl_context), phys_ctx);
+	*ssl = (mbedtls_ssl_context*)mg_calloc_ctx(1, sizeof(mbedtls_ssl_context), phys_ctx);
 	if (*ssl == NULL) {
 		DEBUG_TRACE("TLS accept: malloc ssl failed (%i)",
 		            (int)sizeof(mbedtls_ssl_context));
