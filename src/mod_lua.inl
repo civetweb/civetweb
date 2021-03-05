@@ -2674,6 +2674,30 @@ reg_gc(lua_State *L, void *conn)
 }
 
 
+static int
+lua_error_handler(lua_State *L)
+{
+	const char *error_msg = lua_isstring(L, -1) ? lua_tostring(L, -1) : "?\n";
+
+	lua_getglobal(L, "mg");
+	if (!lua_isnil(L, -1)) {
+		lua_getfield(L, -1, "write"); /* call mg.write() */
+		lua_pushstring(L, error_msg);
+		lua_pushliteral(L, "\n");
+		lua_call(L, 2, 0);
+		IGNORE_UNUSED_RESULT(
+		    luaL_dostring(L, "mg.write(debug.traceback(), '\\n')"));
+	} else {
+		printf("Lua error: [%s]\n", error_msg);
+		IGNORE_UNUSED_RESULT(
+		    luaL_dostring(L, "print(debug.traceback(), '\\n')"));
+	}
+	/* TODO(lsm, low): leave the stack balanced */
+
+	return 0;
+}
+
+
 static void
 prepare_lua_environment(struct mg_context *ctx,
                         struct mg_connection *conn,
@@ -2865,15 +2889,20 @@ prepare_lua_environment(struct mg_context *ctx,
 		preload_file_name = conn->dom_ctx->config[LUA_PRELOAD_FILE];
 	}
 
-	/* Preload file into new Lua environment */
-	if (preload_file_name) {
-		IGNORE_UNUSED_RESULT(luaL_dofile(L, preload_file_name));
-	}
-
 	/* Call user init function */
 	if (ctx != NULL) {
 		if (ctx->callbacks.init_lua != NULL) {
 			ctx->callbacks.init_lua(conn, L, lua_context_flags);
+		}
+	}
+
+	/* Preload file into new Lua environment */
+	if (preload_file_name) {
+		int ret = luaL_loadfile(L, preload_file_name);
+		if (ret != 0) {
+			lua_error_handler(L);
+		} else {
+			ret = lua_pcall(L, 0, 1, 0);
 		}
 	}
 
@@ -2891,30 +2920,6 @@ prepare_lua_environment(struct mg_context *ctx,
 		}
 		lua_sethook(L, lua_debug_hook, mask, 0);
 	}
-}
-
-
-static int
-lua_error_handler(lua_State *L)
-{
-	const char *error_msg = lua_isstring(L, -1) ? lua_tostring(L, -1) : "?\n";
-
-	lua_getglobal(L, "mg");
-	if (!lua_isnil(L, -1)) {
-		lua_getfield(L, -1, "write"); /* call mg.write() */
-		lua_pushstring(L, error_msg);
-		lua_pushliteral(L, "\n");
-		lua_call(L, 2, 0);
-		IGNORE_UNUSED_RESULT(
-		    luaL_dostring(L, "mg.write(debug.traceback(), '\\n')"));
-	} else {
-		printf("Lua error: [%s]\n", error_msg);
-		IGNORE_UNUSED_RESULT(
-		    luaL_dostring(L, "print(debug.traceback(), '\\n')"));
-	}
-	/* TODO(lsm, low): leave the stack balanced */
-
-	return 0;
 }
 
 
@@ -2960,8 +2965,9 @@ mg_exec_lua_script(struct mg_connection *conn,
 
 		if (luaL_loadfile(L, path) != 0) {
 			lua_error_handler(L);
+		} else {
+			lua_pcall(L, 0, 0, -2);
 		}
-		lua_pcall(L, 0, 0, -2);
 		lua_close(L);
 	}
 }
