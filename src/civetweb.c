@@ -3677,8 +3677,9 @@ mg_get_request_info(const struct mg_connection *conn)
 		}
 
 		((struct mg_connection *)conn)->request_info.local_uri =
-		    ((struct mg_connection *)conn)->request_info.request_uri =
-		        tls->txtbuf; /* use thread safe buffer */
+		    ((struct mg_connection *)conn)->request_info.local_uri_raw =
+		        ((struct mg_connection *)conn)->request_info.request_uri =
+		            tls->txtbuf; /* use thread safe buffer */
 
 		((struct mg_connection *)conn)->request_info.num_headers =
 		    conn->response_info.num_headers;
@@ -14084,10 +14085,14 @@ handle_request(struct mg_connection *conn)
 		}
 	}
 
-	/* 1.4. clean URIs, so a path like allowed_dir/../forbidden_file is
-	 * not possible */
-	ri->local_uri_raw = mg_strdup(ri->local_uri);
-	remove_dot_segments((char *)ri->local_uri);
+	/* 1.4. clean URIs, so a path like allowed_dir/../forbidden_file is not
+	 * possible. The fact that we cleaned the URI is stored in that the
+	 * pointer to ri->local_ur and ri->local_uri_raw are now different.
+	 * ri->local_uri_raw still points to memory allocated in
+	 * worker_thread_run(). ri->local_uri is private to the request so we
+	 * don't have to use preallocated memory here. */
+	ri->local_uri = mg_strdup(ri->local_uri_raw);
+	remove_dot_segments(ri->local_uri);
 
 	/* step 1. completed, the url is known now */
 	uri_len = (int)strlen(ri->local_uri);
@@ -16815,14 +16820,14 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.remote_user = NULL;
 	conn->request_info.request_method = NULL;
 	conn->request_info.request_uri = NULL;
-	conn->request_info.local_uri = NULL;
 
-	/* Free local URI in raw form (if any) */
-	if(conn->request_info.local_uri_raw != NULL)
+	/* Free cleaned local URI (if any) */
+	if(conn->request_info.local_uri != conn->request_info.local_uri_raw)
 	{
-		mg_free(conn->request_info.local_uri_raw);
-		conn->request_info.local_uri_raw = NULL;
+		mg_free(conn->request_info.local_uri);
+		conn->request_info.local_uri = NULL;
 	}
+	conn->request_info.local_uri = NULL;
 
 #if defined(MG_LEGACY_INTERFACE)
 	/* Legacy before split into local_uri and request_uri */
@@ -17915,7 +17920,8 @@ mg_get_response(struct mg_connection *conn,
 	 *       2) here, ri.uri is the http response code */
 	conn->request_info.uri = conn->request_info.request_uri;
 #endif
-	conn->request_info.local_uri = conn->request_info.request_uri;
+	conn->request_info.local_uri_raw = conn->request_info.request_uri;
+	conn->request_info.local_uri = (char*)conn->request_info.local_uri_raw;
 
 	/* TODO (mid): Define proper return values - maybe return length?
 	 * For the first test use <0 for error and >0 for OK */
@@ -17965,7 +17971,7 @@ mg_download(const char *host,
 			 *       2) here, ri.uri is the http response code */
 			conn->request_info.uri = conn->request_info.request_uri;
 #endif
-			conn->request_info.local_uri = conn->request_info.request_uri;
+			conn->request_info.local_uri = (char*)conn->request_info.request_uri;
 		}
 	}
 
@@ -18174,7 +18180,8 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 		mg_close_connection(conn);
 		return NULL;
 	}
-	conn->request_info.local_uri = conn->request_info.request_uri;
+	conn->request_info.local_uri_raw = conn->request_info.request_uri;
+	conn->request_info.local_uri = (char*)conn->request_info.local_uri_raw;
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
@@ -18465,12 +18472,12 @@ process_new_connection(struct mg_connection *conn)
 			switch (uri_type) {
 			case 1:
 				/* Asterisk */
-				conn->request_info.local_uri = 0;
+				conn->request_info.local_uri_raw = 0;
 				/* TODO: Deal with '*'. */
 				break;
 			case 2:
 				/* relative uri */
-				conn->request_info.local_uri = conn->request_info.request_uri;
+				conn->request_info.local_uri_raw = conn->request_info.request_uri;
 				break;
 			case 3:
 			case 4:
@@ -18478,9 +18485,9 @@ process_new_connection(struct mg_connection *conn)
 				hostend = get_rel_url_at_current_server(
 				    conn->request_info.request_uri, conn);
 				if (hostend) {
-					conn->request_info.local_uri = hostend;
+					conn->request_info.local_uri_raw = hostend;
 				} else {
-					conn->request_info.local_uri = NULL;
+					conn->request_info.local_uri_raw = NULL;
 				}
 				break;
 			default:
@@ -18490,9 +18497,10 @@ process_new_connection(struct mg_connection *conn)
 				            sizeof(ebuf),
 				            "Invalid URI");
 				mg_send_http_error(conn, 400, "%s", ebuf);
-				conn->request_info.local_uri = NULL;
+				conn->request_info.local_uri_raw = NULL;
 				break;
 			}
+			conn->request_info.local_uri = (char*)conn->request_info.local_uri_raw;
 
 #if defined(MG_LEGACY_INTERFACE)
 			/* Legacy before split into local_uri and request_uri */
@@ -18981,11 +18989,11 @@ worker_thread_run(struct mg_connection *conn)
 	mg_free(conn->buf);
 	conn->buf = NULL;
 
-	/* Free local URI in raw form (if any) */
-	if(conn->request_info.local_uri_raw != NULL)
+	/* Free cleaned URI (if any) */
+	if(conn->request_info.local_uri != conn->request_info.local_uri_raw)
 	{
-		mg_free(conn->request_info.local_uri_raw);
-		conn->request_info.local_uri_raw = NULL;
+		mg_free(conn->request_info.local_uri);
+		conn->request_info.local_uri = NULL;
 	}
 
 #if defined(USE_SERVER_STATS)

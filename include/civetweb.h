@@ -151,10 +151,10 @@ struct mg_request_info {
 	const char *request_method;  /* "GET", "POST", etc */
 	const char *request_uri;     /* URL-decoded URI (absolute or relative,
 	                              * as in the request) */
-	char *local_uri_raw;         /* URL-decoded URI (relative). Can be NULL
+	const char *local_uri_raw;   /* URL-decoded URI (relative). Can be NULL
 	                              * if the request_uri does not address a
 	                              * resource at the server host. */
-	const char *local_uri;       /* Same as local_uri_raw, however, cleaned
+	char *local_uri;             /* Same as local_uri_raw, however, cleaned
 	                              * so a path like
 	                              *   allowed_dir/../forbidden_file
 	                              * is not possible */
