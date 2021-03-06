@@ -8,7 +8,8 @@
 | :--- | :--- | :--- |
 |**`request_method`**|`const char *`| The request method used by the client for the connection this can be **GET**, **POST** or one of the other common HTTP request methods |
 |**`request_uri`**|`const char *`| The absolute, relative or URL-encoded URI as it was sent in the request.  Example: "http://mydomain.com:8080/path/to/file.ext" or "/path/to/file.ext", depending on the client. |
-|**`local_uri`**|`const char *`| The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL.  Example: "/path/to/file.ext" (even if the client used "http://mydomain.com:8080/path/to/file.ext" in the request) |
+|**`local_uri_raw`**|`const char *`| The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL.  Example: "/path/to/file.ext" (even if the client used "http://mydomain.com:8080/path/to/file.ext" in the request) |
+|**`local_uri`**|`const char *`| The `local_uri_raw` cleaned, so it does not allow a path like "allowed_dir/../forbidden_file". Files served by CivetWeb are selected based on this `local_uri`. |
 |~~`uri`~~|`const char *`| *Deprecated. Use* `local_uri` *instead* |
 |**`http_version`**|`const char *`| The HTTP version as mentioned in the client request. This can be "1.0", "1.1", etc. |
 |**`query_string`**|`const char *`| The HTTP query string, defined as URL part after the first '?' character, not including '?'. NULL if there is no '?'. |

@@ -3677,9 +3677,11 @@ mg_get_request_info(const struct mg_connection *conn)
 		}
 
 		((struct mg_connection *)conn)->request_info.local_uri =
-		    ((struct mg_connection *)conn)->request_info.local_uri_raw =
-		        ((struct mg_connection *)conn)->request_info.request_uri =
-		            tls->txtbuf; /* use thread safe buffer */
+		    tls->txtbuf; /* use thread safe buffer */
+		((struct mg_connection *)conn)->request_info.local_uri_raw =
+		    tls->txtbuf; /* use the same thread safe buffer */
+		((struct mg_connection *)conn)->request_info.request_uri =
+		    tls->txtbuf; /* use  the same thread safe buffer */
 
 		((struct mg_connection *)conn)->request_info.num_headers =
 		    conn->response_info.num_headers;
@@ -14041,6 +14043,7 @@ handle_request(struct mg_connection *conn)
 	int handler_type;
 	time_t curtime = time(NULL);
 	char date[64];
+	char *tmp;
 
 	path[0] = 0;
 
@@ -14092,8 +14095,13 @@ handle_request(struct mg_connection *conn)
 	 * ri->local_uri_raw still points to memory allocated in
 	 * worker_thread_run(). ri->local_uri is private to the request so we
 	 * don't have to use preallocated memory here. */
-	ri->local_uri = mg_strdup(ri->local_uri_raw);
-	remove_dot_segments(ri->local_uri);
+	tmp = mg_strdup(ri->local_uri_raw);
+	if (!tmp) {
+		/* Out of memory. We cannot do anything reasonable here. */
+		return;
+	}
+	remove_dot_segments(tmp);
+	ri->local_uri = tmp;
 
 	/* step 1. completed, the url is known now */
 	uri_len = (int)strlen(ri->local_uri);
@@ -16823,9 +16831,8 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.request_uri = NULL;
 
 	/* Free cleaned local URI (if any) */
-	if(conn->request_info.local_uri != conn->request_info.local_uri_raw)
-	{
-		mg_free(conn->request_info.local_uri);
+	if (conn->request_info.local_uri != conn->request_info.local_uri_raw) {
+		mg_free((void *)conn->request_info.local_uri);
 		conn->request_info.local_uri = NULL;
 	}
 	conn->request_info.local_uri = NULL;
@@ -17922,7 +17929,7 @@ mg_get_response(struct mg_connection *conn,
 	conn->request_info.uri = conn->request_info.request_uri;
 #endif
 	conn->request_info.local_uri_raw = conn->request_info.request_uri;
-	conn->request_info.local_uri = (char*)conn->request_info.local_uri_raw;
+	conn->request_info.local_uri = conn->request_info.local_uri_raw;
 
 	/* TODO (mid): Define proper return values - maybe return length?
 	 * For the first test use <0 for error and >0 for OK */
@@ -17972,7 +17979,7 @@ mg_download(const char *host,
 			 *       2) here, ri.uri is the http response code */
 			conn->request_info.uri = conn->request_info.request_uri;
 #endif
-			conn->request_info.local_uri = (char*)conn->request_info.request_uri;
+			conn->request_info.local_uri = conn->request_info.request_uri;
 		}
 	}
 
@@ -18182,7 +18189,7 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 	conn->request_info.local_uri_raw = conn->request_info.request_uri;
-	conn->request_info.local_uri = (char*)conn->request_info.local_uri_raw;
+	conn->request_info.local_uri = conn->request_info.local_uri_raw;
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
@@ -18478,7 +18485,8 @@ process_new_connection(struct mg_connection *conn)
 				break;
 			case 2:
 				/* relative uri */
-				conn->request_info.local_uri_raw = conn->request_info.request_uri;
+				conn->request_info.local_uri_raw =
+				    conn->request_info.request_uri;
 				break;
 			case 3:
 			case 4:
@@ -18501,7 +18509,8 @@ process_new_connection(struct mg_connection *conn)
 				conn->request_info.local_uri_raw = NULL;
 				break;
 			}
-			conn->request_info.local_uri = (char*)conn->request_info.local_uri_raw;
+			conn->request_info.local_uri =
+			    (char *)conn->request_info.local_uri_raw;
 
 #if defined(MG_LEGACY_INTERFACE)
 			/* Legacy before split into local_uri and request_uri */
@@ -18991,9 +19000,8 @@ worker_thread_run(struct mg_connection *conn)
 	conn->buf = NULL;
 
 	/* Free cleaned URI (if any) */
-	if(conn->request_info.local_uri != conn->request_info.local_uri_raw)
-	{
-		mg_free(conn->request_info.local_uri);
+	if (conn->request_info.local_uri != conn->request_info.local_uri_raw) {
+		mg_free((void *)conn->request_info.local_uri);
 		conn->request_info.local_uri = NULL;
 	}
 
