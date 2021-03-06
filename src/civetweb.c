@@ -11132,6 +11132,7 @@ prepare_cgi_environment(struct mg_connection *conn,
 
 	addenv(env, "REQUEST_URI=%s", conn->request_info.request_uri);
 	addenv(env, "LOCAL_URI=%s", conn->request_info.local_uri);
+	addenv(env, "LOCAL_URI_RAW=%s", conn->request_info.local_uri_raw);
 
 	/* SCRIPT_NAME */
 	uri_len = (int)strlen(conn->request_info.local_uri);
