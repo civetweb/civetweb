@@ -2469,6 +2469,7 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 	reg_string(L, "request_method", conn->request_info.request_method);
 	reg_string(L, "request_uri", conn->request_info.request_uri);
 	reg_string(L, "uri", conn->request_info.local_uri);
+	reg_string(L, "uri_raw", conn->request_info.local_uri_raw);
 	reg_string(L, "http_version", conn->request_info.http_version);
 	reg_string(L, "query_string", conn->request_info.query_string);
 	reg_string(L, "remote_addr", conn->request_info.remote_addr);
