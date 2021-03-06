@@ -14086,6 +14086,7 @@ handle_request(struct mg_connection *conn)
 
 	/* 1.4. clean URIs, so a path like allowed_dir/../forbidden_file is
 	 * not possible */
+	ri->local_uri_raw = mg_strdup(ri->local_uri);
 	remove_dot_segments((char *)ri->local_uri);
 
 	/* step 1. completed, the url is known now */
@@ -16816,6 +16817,13 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_info.request_uri = NULL;
 	conn->request_info.local_uri = NULL;
 
+	/* Free local URI in raw form (if any) */
+	if(conn->request_info.local_uri_raw != NULL)
+	{
+		mg_free(conn->request_info.local_uri_raw);
+		conn->request_info.local_uri_raw = NULL;
+	}
+
 #if defined(MG_LEGACY_INTERFACE)
 	/* Legacy before split into local_uri and request_uri */
 	conn->request_info.uri = NULL;
@@ -18972,6 +18980,13 @@ worker_thread_run(struct mg_connection *conn)
 	conn->buf_size = 0;
 	mg_free(conn->buf);
 	conn->buf = NULL;
+
+	/* Free local URI in raw form (if any) */
+	if(conn->request_info.local_uri_raw != NULL)
+	{
+		mg_free(conn->request_info.local_uri_raw);
+		conn->request_info.local_uri_raw = NULL;
+	}
 
 #if defined(USE_SERVER_STATS)
 	conn->conn_state = 9; /* done */
