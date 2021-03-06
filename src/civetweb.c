@@ -15333,7 +15333,13 @@ log_access(const struct mg_connection *conn)
 	            user_agent);
 
 	if (conn->phys_ctx->callbacks.log_access) {
-		conn->phys_ctx->callbacks.log_access(conn, buf);
+		if (conn->phys_ctx->callbacks.log_access(conn, buf)) {
+			/* do not log if callack returns non-zero */
+			if (fi.access.fp) {
+				mg_fclose(&fi.access);
+			}
+			return;
+		}
 	}
 
 	if (fi.access.fp) {
