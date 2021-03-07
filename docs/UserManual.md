@@ -1058,9 +1058,9 @@ CivetWeb offers support for websockets in Lua as well. In contrast to plain
 Lua scripts and Lua server pages, Lua websocket scripts are shared by all clients.
 
 Lua websocket scripts must define the following functions:
-    ready(arg)   -- called after a connection has been established
-    data(arg)    -- called when the server receives data from the client
-    close(arg)   -- called when a websocket connection is closed
+    `ready(arg)`   -- called after a connection has been established
+    `data(arg)`    -- called when the server receives data from the client
+    `close(arg)`   -- called when a websocket connection is closed
 All function are called with one argument of type table with at least one field
 "client" to identify the client. When "open" is called, the argument table additionally
 contains the "request_info" table as defined above. For the "data" handler, an
@@ -1088,9 +1088,15 @@ some features of the "mg" library are not available yet. Use the "start()" callb
 function instead.
 
 A Lua background script may define the following functions:
-    start()      -- called wnen the server is started
-    stop()       -- called when the server is stopped
-    log()        -- called when an access log entry is created
+    `start()`      -- called wnen the server is started
+    `stop()`       -- called when the server is stopped
+    `log(request_info)`  -- called when an access log entry is created
+
+The optional function `log` may be used to filter or format access log file entries.
+The `request_info` table is supplied as first argument (content of this table: see above).
+The function can return a boolean value: true if the entry should be logged or false if not.
+Alternatively it can return a string: this will be used as log message
+(empty strings will not be logged).
 
 See example Lua script :
 [background.lua](https://github.com/civetweb/civetweb/blob/master/test/lua_backbround_script_timer.lua).
