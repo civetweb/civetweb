@@ -2535,8 +2535,9 @@ struct mg_context {
 
 	/* Lua specific: Background operations and shared websockets */
 #if defined(USE_LUA)
-	void *lua_background_state;
+	void *lua_background_state;   /* lua_State (here as void *) */
 	pthread_mutex_t lua_bg_mutex; /* Protect background state */
+	int lua_bg_log_available;     /* Use Lua background state for access log */
 #endif
 
 	/* Server nonce */
@@ -15271,11 +15272,56 @@ log_access(const struct mg_connection *conn)
 	const char *referer;
 	const char *user_agent;
 
-	char buf[4096];
+	char log_buf[4096];
 
 	if (!conn || !conn->dom_ctx) {
 		return;
 	}
+
+	/* Set log message to "empty" */
+	log_buf[0] = 0;
+
+#if defined(USE_LUA)
+	if (conn->phys_ctx->lua_bg_log_available) {
+		int ret;
+		struct mg_context *ctx = conn->phys_ctx;
+		lua_State *lstate = (lua_State *)ctx->lua_background_state;
+		pthread_mutex_lock(&ctx->lua_bg_mutex);
+		/* call "log()" in Lua */
+		lua_getglobal(lstate, "log");
+		prepare_lua_request_info_inner(conn, lstate);
+
+		ret = lua_pcall(lstate, /* args */ 1, /* results */ 1, 0);
+		if (ret == 0) {
+			int t = lua_type(lstate, -1);
+			if (t == LUA_TBOOLEAN) {
+				if (lua_toboolean(lstate, -1) == 0) {
+					/* log() returned false: do not log */
+					pthread_mutex_unlock(&ctx->lua_bg_mutex);
+					return;
+				}
+				/* log returned true: continue logging */
+			} else if (t == LUA_TSTRING) {
+				size_t len;
+				const char *txt = lua_tolstring(lstate, -1, &len);
+				if ((len == 0) || (*txt == 0)) {
+					/* log() returned empty string: do not log */
+					pthread_mutex_unlock(&ctx->lua_bg_mutex);
+					return;
+				}
+				/* Copy test from Lua into log_buf */
+				if (len >= sizeof(log_buf)) {
+					len = sizeof(log_buf) - 1;
+				}
+				memcpy(log_buf, txt, len);
+				log_buf[len] = 0;
+			}
+		} else {
+			lua_cry(conn, ret, lstate, "lua_background_script", "log");
+		}
+		pthread_mutex_unlock(&ctx->lua_bg_mutex);
+	}
+#endif
 
 	if (conn->dom_ctx->config[ACCESS_LOG_FILE] != NULL) {
 		if (mg_fopen(conn,
@@ -15296,40 +15342,45 @@ log_access(const struct mg_connection *conn)
 		return;
 	}
 
-	tm = localtime(&conn->conn_birth_time);
-	if (tm != NULL) {
-		strftime(date, sizeof(date), "%d/%b/%Y:%H:%M:%S %z", tm);
-	} else {
-		mg_strlcpy(date, "01/Jan/1970:00:00:00 +0000", sizeof(date));
-		date[sizeof(date) - 1] = '\0';
+	/* If we did not get a log message from Lua, create it here. */
+	if (!log_buf[0]) {
+		tm = localtime(&conn->conn_birth_time);
+		if (tm != NULL) {
+			strftime(date, sizeof(date), "%d/%b/%Y:%H:%M:%S %z", tm);
+		} else {
+			mg_strlcpy(date, "01/Jan/1970:00:00:00 +0000", sizeof(date));
+			date[sizeof(date) - 1] = '\0';
+		}
+
+		ri = &conn->request_info;
+
+		sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
+		referer = header_val(conn, "Referer");
+		user_agent = header_val(conn, "User-Agent");
+
+		mg_snprintf(conn,
+		            NULL, /* Ignore truncation in access log */
+		            log_buf,
+		            sizeof(log_buf),
+		            "%s - %s [%s] \"%s %s%s%s HTTP/%s\" %d %" INT64_FMT
+		            " %s %s",
+		            src_addr,
+		            (ri->remote_user == NULL) ? "-" : ri->remote_user,
+		            date,
+		            ri->request_method ? ri->request_method : "-",
+		            ri->request_uri ? ri->request_uri : "-",
+		            ri->query_string ? "?" : "",
+		            ri->query_string ? ri->query_string : "",
+		            ri->http_version,
+		            conn->status_code,
+		            conn->num_bytes_sent,
+		            referer,
+		            user_agent);
 	}
 
-	ri = &conn->request_info;
-
-	sockaddr_to_string(src_addr, sizeof(src_addr), &conn->client.rsa);
-	referer = header_val(conn, "Referer");
-	user_agent = header_val(conn, "User-Agent");
-
-	mg_snprintf(conn,
-	            NULL, /* Ignore truncation in access log */
-	            buf,
-	            sizeof(buf),
-	            "%s - %s [%s] \"%s %s%s%s HTTP/%s\" %d %" INT64_FMT " %s %s",
-	            src_addr,
-	            (ri->remote_user == NULL) ? "-" : ri->remote_user,
-	            date,
-	            ri->request_method ? ri->request_method : "-",
-	            ri->request_uri ? ri->request_uri : "-",
-	            ri->query_string ? "?" : "",
-	            ri->query_string ? ri->query_string : "",
-	            ri->http_version,
-	            conn->status_code,
-	            conn->num_bytes_sent,
-	            referer,
-	            user_agent);
-
+	/* Here we have a log message in log_buf. Call the callback */
 	if (conn->phys_ctx->callbacks.log_access) {
-		if (conn->phys_ctx->callbacks.log_access(conn, buf)) {
+		if (conn->phys_ctx->callbacks.log_access(conn, log_buf)) {
 			/* do not log if callack returns non-zero */
 			if (fi.access.fp) {
 				mg_fclose(&fi.access);
@@ -15338,10 +15389,11 @@ log_access(const struct mg_connection *conn)
 		}
 	}
 
+	/* Store in file */
 	if (fi.access.fp) {
 		int ok = 1;
 		flockfile(fi.access.fp);
-		if (fprintf(fi.access.fp, "%s\n", buf) < 1) {
+		if (fprintf(fi.access.fp, "%s\n", log_buf) < 1) {
 			ok = 0;
 		}
 		if (fflush(fi.access.fp) != 0) {
@@ -15359,7 +15411,7 @@ log_access(const struct mg_connection *conn)
 	}
 }
 #else
-#error Must either enable filesystems or provide a custom log_access implementation
+#error "Either enable filesystems or provide a custom log_access implementation"
 #endif /* Externally provided function */
 
 
@@ -19178,9 +19230,30 @@ master_thread_run(struct mg_context *ctx)
 	if (ctx->lua_background_state) {
 		lua_State *lstate = (lua_State *)ctx->lua_background_state;
 		pthread_mutex_lock(&ctx->lua_bg_mutex);
+
 		/* call "start()" in Lua */
 		lua_getglobal(lstate, "start");
-		(void)lua_pcall(lstate, /* args */ 0, /* results */ 0, 0);
+		if (lua_type(lstate, -1) == LUA_TFUNCTION) {
+			int ret = lua_pcall(lstate, /* args */ 0, /* results */ 0, 0);
+			if (ret != 0) {
+				struct mg_connection fc;
+				lua_cry(fake_connection(&fc, ctx),
+				        ret,
+				        lstate,
+				        "lua_background_script",
+				        "start");
+			}
+		} else {
+			lua_pop(lstate, 1);
+		}
+
+		/* determine if there is a "log()" function in Lua background script */
+		lua_getglobal(lstate, "log");
+		if (lua_type(lstate, -1) == LUA_TFUNCTION) {
+			ctx->lua_bg_log_available = 1;
+		}
+		lua_pop(lstate, 1);
+
 		pthread_mutex_unlock(&ctx->lua_bg_mutex);
 	}
 #endif
@@ -19240,11 +19313,24 @@ master_thread_run(struct mg_context *ctx)
 	/* Free Lua state of lua background task */
 	if (ctx->lua_background_state) {
 		lua_State *lstate = (lua_State *)ctx->lua_background_state;
+		ctx->lua_bg_log_available = 0;
+
 		/* call "stop()" in Lua */
 		pthread_mutex_lock(&ctx->lua_bg_mutex);
 		lua_getglobal(lstate, "stop");
-		(void)lua_pcall(lstate, /* args */ 0, /* results */ 0, 0);
+		if (lua_type(lstate, -1) == LUA_TFUNCTION) {
+			int ret = lua_pcall(lstate, /* args */ 0, /* results */ 0, 0);
+			if (ret != 0) {
+				struct mg_connection fc;
+				lua_cry(fake_connection(&fc, ctx),
+				        ret,
+				        lstate,
+				        "lua_background_script",
+				        "stop");
+			}
+		}
 		lua_close(lstate);
+
 		ctx->lua_background_state = 0;
 		pthread_mutex_unlock(&ctx->lua_bg_mutex);
 	}
@@ -19784,6 +19870,7 @@ static
 
 #if defined(USE_LUA)
 	/* If a Lua background script has been configured, start it. */
+	ctx->lua_bg_log_available = 0;
 	if (ctx->dd.config[LUA_BACKGROUND_SCRIPT] != NULL) {
 		char ebuf[256];
 		struct vec opt_vec;
@@ -19806,7 +19893,7 @@ static
 				            error->text,
 				            error->text_buffer_size,
 				            "Error in script %s: %s",
-				            config_options[DOCUMENT_ROOT].name,
+				            config_options[LUA_BACKGROUND_SCRIPT].name,
 				            ebuf);
 			}
 			pthread_mutex_unlock(&ctx->lua_bg_mutex);

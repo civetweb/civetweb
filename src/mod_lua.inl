@@ -156,7 +156,7 @@ reg_function(struct lua_State *L, const char *name, lua_CFunction func)
 
 
 static void
-lua_cry(struct mg_connection *conn,
+lua_cry(const struct mg_connection *conn,
         int err,
         lua_State *L,
         const char *lua_title,
@@ -2458,13 +2458,11 @@ enum {
 
 
 static void
-prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
+prepare_lua_request_info_inner(const struct mg_connection *conn, lua_State *L)
 {
 	const char *s;
 	int i;
 
-	/* Export mg.request_info */
-	lua_pushstring(L, "request_info");
 	lua_newtable(L);
 	reg_string(L, "request_method", conn->request_info.request_method);
 	reg_string(L, "request_uri", conn->request_info.request_uri);
@@ -2534,6 +2532,15 @@ prepare_lua_request_info(struct mg_connection *conn, lua_State *L)
 		reg_string(L, "finger", conn->request_info.client_cert->finger);
 		lua_rawset(L, -3);
 	}
+}
+
+
+static void
+prepare_lua_request_info(const struct mg_connection *conn, lua_State *L)
+{
+	/* Export mg.request_info */
+	lua_pushstring(L, "request_info");
+	prepare_lua_request_info_inner(conn, L);
 
 	/* End of request_info */
 	lua_rawset(L, -3);

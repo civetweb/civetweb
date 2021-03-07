@@ -1090,7 +1090,7 @@ function instead.
 A Lua background script may define the following functions:
     start()      -- called wnen the server is started
     stop()       -- called when the server is stopped
-
+    log()        -- called when an access log entry is created
 
 See example Lua script :
 [background.lua](https://github.com/civetweb/civetweb/blob/master/test/lua_backbround_script_timer.lua).
