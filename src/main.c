@@ -229,6 +229,10 @@ enum {
 	OPTION_WEBPAGE,
 	OPTION_ADD_DOMAIN,
 	OPTION_HIDE_TRAY,
+#if defined(DAEMONIZE)
+	ENABLE_DAEMONIZE,
+#endif
+
 	NUM_MAIN_OPTIONS
 };
 
@@ -238,6 +242,10 @@ static struct mg_option main_config_options[] = {
     {"website", MG_CONFIG_TYPE_STRING, NULL},
     {"add_domain", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"hide_tray", MG_CONFIG_TYPE_BOOLEAN, NULL},
+#if defined(DAEMONIZE)
+    {"daemonize", MG_CONFIG_TYPE_BOOLEAN, "no"},
+#endif
+
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 
 

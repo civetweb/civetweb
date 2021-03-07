@@ -281,6 +281,11 @@ will be accepted.
 ### enable\_directory\_listing `yes`
 Enable directory listing, either `yes` or `no`.
 
+### enable\_http2 `no`
+Enable HTTP2 protocol.  Note: This option is only available, if the server has been
+compiled with the `USE_HTTP2` define.  The CivetWeb server supports only a subset of
+all HTTP2 features.
+
 ### enable\_keep\_alive `no`
 Enable connection keep alive, either `yes` or `no`.
 
@@ -640,14 +645,14 @@ Sets the minimal accepted version of SSL/TLS protocol according to the table:
 
 Protocols | Value
 ------------ | -------------
-SSL2+SSL3+TLS1.0+TLS1.1+TLS1.2  | 0
-SSL3+TLS1.0+TLS1.1+TLS1.2  | 1
-TLS1.0+TLS1.1+TLS1.2 | 2
-TLS1.1+TLS1.2 | 3
-TLS1.2 | 4
+SSL2+SSL3+TLS1.0+TLS1.1+TLS1.2+TLS1.3 | 0
+SSL3+TLS1.0+TLS1.1+TLS1.2+TLS1.3  | 1
+TLS1.0+TLS1.1+TLS1.2+TLS1.3 | 2
+TLS1.1+TLS1.2+TLS1.3 | 3
+TLS1.2+TLS1.3 | 4
+TLS1.3 | 5
 
-More recent versions of OpenSSL include support for TLS version 1.3.
-To use TLS1.3 only, set ssl\_protocol\_version to 5.
+TLS version 1.3 is only available if you are using an up-to-date TLS libary.
 
 ### ssl\_short\_trust `no`
 Enables the use of short lived certificates. This will allow for the certificates
@@ -778,7 +783,7 @@ with websocket support enabled.
 
 The following options are supported in `main.c`, the additional source file for
 the stand-alone executable. These options are not supported by other applications
-embedding `civetweb.c`, unless they are added explicitly.
+embedding `civetweb.c`, unless they are added to the embedding application.
 
 ### title
 Use the configured string as a server name.  For Windows, this will be shown as
@@ -792,15 +797,44 @@ icon.  This option has no effect for Linux.
 For Windows, use this website as a link in the systray, replacing the default
 link for CivetWeb.
 
+### hide\_tray `no`
+For Windows: Do not show a tray icon. May be `yes` (hide) or `no` (show, default).
+
+### daemonize `no`
+This option is only available for Linux, if the server has been build with the
+`DAEMONIZE` compile options.  Call (deprecated) `daemon()` BSD function to
+detach the server process from the controlling terminal and run it in the
+background as a system daemon.
+
 ### add\_domain
 Option to load an additional configuration file, specifying an additional domain
 to host.  To add multiple additional domains, use the add\_domain option
 multiple times with one configuration file for each domain.
-A domain configuration file may have the same options as the main server, with
-some exceptions.  The options are passed to the `mg_start_domain` API function.
+This option is available for Windows and Linux operating systems.
 
-### hide\_tray `no`
-Do not show a tray icon. May be `yes` (hide) or `no` (show, default).
+Internally, the options are passed to the `mg_start_domain` API function.
+If you are not using `main.c`, you need to call this API function to activate
+and additional domain.
+
+Every domain configuration file may contain a subset of the options available for
+the main server configuration files, with some exceptions.   Some configurations
+are per server while others are available for each domain.
+
+All port, socket, process and thread specific parameters are per server:
+`allow_sendfile_call`, `case_sensitive`, `connection_queue`, `decode_url`,
+`enable_http2`, `enable_keep_alive`, `enable_websocket_ping_pong`,
+`keep_alive_timeout_ms`, `linger_timeout_ms`, `listen_backlog`,
+`listening_ports`, `lua_background_script`, `lua_background_script_params`,
+`max_request_size`, `num_threads`, `request_timeout_ms`, `run_as_user`,
+`tcp_nodelay`, `throttle`, `websocket_timeout_ms` + all options from `main.c`.
+
+All other options can be set per domain. In particular
+`authentication_domain`, `document_root` and (for HTTPS) `ssl_certificate`
+must be set for each additional domain.
+
+While some options like `error_log_file` are per domain, the setting of the
+initial (main) domain may be used if the server could not determine the
+correct domain for a specific request.
 
 
 Scripting

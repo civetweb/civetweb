@@ -2077,8 +2077,6 @@ enum {
 	CASE_SENSITIVE_FILES,
 #endif
 	THROTTLE,
-	ACCESS_LOG_FILE,
-	ERROR_LOG_FILE,
 	ENABLE_KEEP_ALIVE,
 	REQUEST_TIMEOUT,
 	KEEP_ALIVE_TIMEOUT,
@@ -2097,6 +2095,9 @@ enum {
 
 	/* Once for each domain */
 	DOCUMENT_ROOT,
+
+	ACCESS_LOG_FILE,
+	ERROR_LOG_FILE,
 
 	CGI_EXTENSIONS,
 	CGI_ENVIRONMENT,
@@ -2188,9 +2189,6 @@ enum {
 #endif
 	ADDITIONAL_HEADER,
 	ALLOW_INDEX_SCRIPT_SUB_RES,
-#if defined(DAEMONIZE)
-	ENABLE_DAEMONIZE,
-#endif
 
 	NUM_OPTIONS
 };
@@ -2217,8 +2215,6 @@ static const struct mg_option config_options[] = {
     {"case_sensitive", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
     {"throttle", MG_CONFIG_TYPE_STRING_LIST, NULL},
-    {"access_log_file", MG_CONFIG_TYPE_FILE, NULL},
-    {"error_log_file", MG_CONFIG_TYPE_FILE, NULL},
     {"enable_keep_alive", MG_CONFIG_TYPE_BOOLEAN, "no"},
     {"request_timeout_ms", MG_CONFIG_TYPE_NUMBER, "30000"},
     {"keep_alive_timeout_ms", MG_CONFIG_TYPE_NUMBER, "500"},
@@ -2237,6 +2233,9 @@ static const struct mg_option config_options[] = {
 
     /* Once for each domain */
     {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
+
+    {"access_log_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"error_log_file", MG_CONFIG_TYPE_FILE, NULL},
 
     {"cgi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.cgi$|**.pl$|**.php$"},
     {"cgi_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
@@ -2348,9 +2347,6 @@ static const struct mg_option config_options[] = {
 #endif
     {"additional_header", MG_CONFIG_TYPE_STRING_MULTILINE, NULL},
     {"allow_index_script_resource", MG_CONFIG_TYPE_BOOLEAN, "no"},
-#if defined(DAEMONIZE)
-    {"daemonize", MG_CONFIG_TYPE_BOOLEAN, "no"},
-#endif
 
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 
