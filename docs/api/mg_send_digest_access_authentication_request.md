@@ -31,5 +31,5 @@ The function returns a negative number on errors.
 * [`mg_modify_passwords_file();`](mg_modify_passwords_file.md)
 * [`mg_send_http_error();`](mg_send_http_error.md)
 * [`mg_write();`](mg_write.md)
-* [`mg_printf();`](mg_print.md)
+* [`mg_printf();`](mg_printf.md)
 
