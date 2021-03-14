@@ -544,19 +544,14 @@ typedef const char *SOCK_OPT_TYPE;
 #endif
 #endif
 
-#if !defined(_WIN32_WCE)
+#if defined(_WIN32_WCE)
+#error "WinCE support has ended"
+#endif
+
 #include <direct.h>
 #include <io.h>
 #include <process.h>
-#else            /* _WIN32_WCE */
-#define NO_CGI   /* WinCE has no pipes */
-#define NO_POPEN /* WinCE has no popen */
 
-typedef long off_t;
-
-#define errno ((int)(GetLastError()))
-#define strerror(x) (_ultoa(x, (char *)_alloca(sizeof(x) * 3), 10))
-#endif /* _WIN32_WCE */
 
 #define MAKEUQUAD(lo, hi)                                                      \
 	((uint64_t)(((uint32_t)(lo)) | ((uint64_t)((uint32_t)(hi))) << 32))
@@ -1061,177 +1056,6 @@ static struct pthread_mutex_undefined_struct *pthread_mutex_attr = NULL;
 #else
 static pthread_mutexattr_t pthread_mutex_attr;
 #endif /* _WIN32 */
-
-
-#if defined(_WIN32_WCE)
-/* Create substitutes for POSIX functions in Win32. */
-
-#if defined(GCC_DIAGNOSTIC)
-/* Show no warning in case system functions are not used. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
-
-
-FUNCTION_MAY_BE_UNUSED
-static time_t
-time(time_t *ptime)
-{
-	time_t t;
-	SYSTEMTIME st;
-	FILETIME ft;
-
-	GetSystemTime(&st);
-	SystemTimeToFileTime(&st, &ft);
-	t = SYS2UNIX_TIME(ft.dwLowDateTime, ft.dwHighDateTime);
-
-	if (ptime != NULL) {
-		*ptime = t;
-	}
-
-	return t;
-}
-
-
-FUNCTION_MAY_BE_UNUSED
-static struct tm *
-localtime_s(const time_t *ptime, struct tm *ptm)
-{
-	int64_t t = ((int64_t)*ptime) * RATE_DIFF + EPOCH_DIFF;
-	FILETIME ft, lft;
-	SYSTEMTIME st;
-	TIME_ZONE_INFORMATION tzinfo;
-
-	if (ptm == NULL) {
-		return NULL;
-	}
-
-	*(int64_t *)&ft = t;
-	FileTimeToLocalFileTime(&ft, &lft);
-	FileTimeToSystemTime(&lft, &st);
-	ptm->tm_year = st.wYear - 1900;
-	ptm->tm_mon = st.wMonth - 1;
-	ptm->tm_wday = st.wDayOfWeek;
-	ptm->tm_mday = st.wDay;
-	ptm->tm_hour = st.wHour;
-	ptm->tm_min = st.wMinute;
-	ptm->tm_sec = st.wSecond;
-	ptm->tm_yday = 0; /* hope nobody uses this */
-	ptm->tm_isdst =
-	    (GetTimeZoneInformation(&tzinfo) == TIME_ZONE_ID_DAYLIGHT) ? 1 : 0;
-
-	return ptm;
-}
-
-
-FUNCTION_MAY_BE_UNUSED
-static struct tm *
-gmtime_s(const time_t *ptime, struct tm *ptm)
-{
-	/* FIXME(lsm): fix this. */
-	return localtime_s(ptime, ptm);
-}
-
-
-static ptrdiff_t mg_atomic_inc(volatile ptrdiff_t *addr);
-static struct tm tm_array[MAX_WORKER_THREADS]; /* Must be 2^n */
-static volatile ptrdiff_t tm_index = 0;
-
-
-FUNCTION_MAY_BE_UNUSED
-static struct tm *
-localtime(const time_t *ptime)
-{
-	ptrdiff_t i = mg_atomic_inc(&tm_index) % ARRAY_SIZE(tm_array);
-	return localtime_s(ptime, tm_array + i);
-}
-
-
-FUNCTION_MAY_BE_UNUSED
-static struct tm *
-gmtime(const time_t *ptime)
-{
-	ptrdiff_t i = mg_atomic_inc(&tm_index) % ARRAY_SIZE(tm_array);
-	return gmtime_s(ptime, tm_array + i);
-}
-
-
-FUNCTION_MAY_BE_UNUSED
-static size_t
-strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm)
-{
-	/* TODO: (void)mg_snprintf(NULL, dst, dst_size, "implement strftime()
-	 * for WinCE"); */
-	return 0;
-}
-
-#define _beginthreadex(psec, stack, func, prm, flags, ptid)                    \
-	(uintptr_t) CreateThread(psec, stack, func, prm, flags, ptid)
-
-#define remove(f) mg_remove(NULL, f)
-
-
-FUNCTION_MAY_BE_UNUSED
-static int
-rename(const char *a, const char *b)
-{
-	wchar_t wa[UTF16_PATH_MAX];
-	wchar_t wb[UTF16_PATH_MAX];
-	path_to_unicode(NULL, a, wa, ARRAY_SIZE(wa));
-	path_to_unicode(NULL, b, wb, ARRAY_SIZE(wb));
-
-	return MoveFileW(wa, wb) ? 0 : -1;
-}
-
-
-struct stat {
-	int64_t st_size;
-	time_t st_mtime;
-};
-
-
-FUNCTION_MAY_BE_UNUSED
-static int
-stat(const char *name, struct stat *st)
-{
-	wchar_t wbuf[UTF16_PATH_MAX];
-	WIN32_FILE_ATTRIBUTE_DATA attr;
-	time_t creation_time, write_time;
-
-	path_to_unicode(NULL, name, wbuf, ARRAY_SIZE(wbuf));
-	memset(&attr, 0, sizeof(attr));
-
-	GetFileAttributesExW(wbuf, GetFileExInfoStandard, &attr);
-	st->st_size =
-	    (((int64_t)attr.nFileSizeHigh) << 32) + (int64_t)attr.nFileSizeLow;
-
-	write_time = SYS2UNIX_TIME(attr.ftLastWriteTime.dwLowDateTime,
-	                           attr.ftLastWriteTime.dwHighDateTime);
-	creation_time = SYS2UNIX_TIME(attr.ftCreationTime.dwLowDateTime,
-	                              attr.ftCreationTime.dwHighDateTime);
-
-	if (creation_time > write_time) {
-		st->st_mtime = creation_time;
-	} else {
-		st->st_mtime = write_time;
-	}
-	return 0;
-}
-
-#define access(x, a) 1 /* not required anyway */
-
-/* WinCE-TODO: define stat, remove, rename, _rmdir, _lseeki64 */
-/* Values from errno.h in Windows SDK (Visual Studio). */
-#define EEXIST 17
-#define EACCES 13
-#define ENOENT 2
-
-#if defined(GCC_DIAGNOSTIC)
-/* Enable unused function warning again */
-#pragma GCC diagnostic pop
-#endif
-
-#endif /* defined(_WIN32_WCE) */
 
 
 #if defined(GCC_DIAGNOSTIC)
@@ -5150,7 +4974,6 @@ path_to_unicode(const struct mg_connection *conn,
 	}
 	(void)conn; /* conn is currently unused */
 
-#if !defined(_WIN32_WCE)
 	/* Only accept a full file path, not a Windows short (8.3) path. */
 	memset(wbuf2, 0, ARRAY_SIZE(wbuf2) * sizeof(wchar_t));
 	long_len = GetLongPathNameW(wbuf, wbuf2, ARRAY_SIZE(wbuf2) - 1);
@@ -5165,15 +4988,6 @@ path_to_unicode(const struct mg_connection *conn,
 		/* Short name is used. */
 		wbuf[0] = L'\0';
 	}
-#else
-	(void)long_len;
-	(void)wbuf2;
-	(void)err;
-
-	if (strchr(path, '~')) {
-		wbuf[0] = L'\0';
-	}
-#endif
 }
 
 
@@ -5417,11 +5231,8 @@ set_close_on_exec(SOCKET sock,
 {
 	(void)conn; /* Unused. */
 	(void)ctx;
-#if defined(_WIN32_WCE)
-	(void)sock;
-#else
+
 	(void)SetHandleInformation((HANDLE)(intptr_t)sock, HANDLE_FLAG_INHERIT, 0);
-#endif
 }
 
 
@@ -6349,16 +6160,12 @@ pull_inner(FILE *fp,
 	 */
 
 	if (fp != NULL) {
-#if !defined(_WIN32_WCE)
 		/* Use read() instead of fread(), because if we're reading from the
 		 * CGI pipe, fread() may block until IO buffer is filled up. We
 		 * cannot afford to block and must pass all read bytes immediately
 		 * to the client. */
 		nread = (int)read(fileno(fp), buf, (size_t)len);
-#else
-		/* WinCE does not support CGI pipes */
-		nread = (int)fread(buf, 1, (size_t)len, fp);
-#endif
+
 		err = (nread < 0) ? ERRNO : 0;
 		if ((nread == 0) && (len > 0)) {
 			/* Should get data, but got EOL */
@@ -19545,9 +19352,6 @@ static void
 get_system_name(char **sysName)
 {
 #if defined(_WIN32)
-#if defined(_WIN32_WCE)
-	*sysName = mg_strdup("WinCE");
-#else
 	char name[128];
 	DWORD dwVersion = 0;
 	DWORD dwMajorVersion = 0;
@@ -19579,7 +19383,7 @@ get_system_name(char **sysName)
 	        (wowRet ? (isWoW ? " (WoW64)" : "") : " (?)"));
 
 	*sysName = mg_strdup(name);
-#endif
+
 
 #elif defined(__ZEPHYR__)
 	*sysName = mg_strdup("Zephyr OS");
