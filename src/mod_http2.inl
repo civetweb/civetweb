@@ -1272,6 +1272,10 @@ handle_http2(struct mg_connection *conn)
 		int frame_is_padded = 0;
 		int frame_is_priority = 0;
 
+#if defined(USE_SERVER_STATS)
+		conn->conn_state = 3; /* HTTP/2 ready */
+#endif
+
 		bytes_read = mg_read(conn, http2_frame_head, sizeof(http2_frame_head));
 		if (bytes_read != sizeof(http2_frame_head)) {
 			/* TODO: errormsg */
@@ -1332,6 +1336,9 @@ handle_http2(struct mg_connection *conn)
 			uint32_t dependency = 0;
 			uint8_t weight = 0;
 			uint8_t exclusive = 0;
+
+			/* Request start time */
+			clock_gettime(CLOCK_MONOTONIC, &(conn->req_time));
 
 			if (frame_is_padded) {
 				padding = buf[i];
@@ -1569,7 +1576,7 @@ handle_http2(struct mg_connection *conn)
 			/* header parsed */
 			DEBUG_TRACE("HTTP2 handle_request (stream %u)",
 			            http2_frame_stream_id);
-			handle_request(conn);
+			handle_request_stat_log(conn);
 
 			/* Send "final" frame */
 			DEBUG_TRACE("HTTP2 handle_request done (stream %u)",

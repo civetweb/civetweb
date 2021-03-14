@@ -2627,6 +2627,7 @@ struct mg_connection {
 #if defined(USE_SERVER_STATS)
 	time_t conn_close_time; /* Time (wall clock) when connection was
 	                         * closed (or 0 if still open) */
+	double processing_time; /* Procesing time for one request. */
 #endif
 	struct timespec req_time; /* Time (since system start) when the request
 	                           * was received */
@@ -6678,6 +6679,40 @@ mg_read_inner(struct mg_connection *conn, void *buf, size_t len)
 
 /* Forward declarations */
 static void handle_request(struct mg_connection *);
+static void log_access(const struct mg_connection *);
+
+
+/* Handle request, update statistics and call access log */
+static void
+handle_request_stat_log(struct mg_connection *conn)
+{
+#if defined(USE_SERVER_STATS)
+	struct timespec tnow;
+	conn->conn_state = 4; /* processing */
+#endif
+
+	handle_request(conn);
+
+
+#if defined(USE_SERVER_STATS)
+	conn->conn_state = 5; /* processed */
+
+	mg_clock_gettime(CLOCK_MONOTONIC, &tnow);
+	conn->processing_time = mg_difftimespec(&tnow, &(conn->req_time));
+
+	mg_atomic_add64(&(conn->phys_ctx->total_data_read), conn->consumed_content);
+	mg_atomic_add64(&(conn->phys_ctx->total_data_written),
+	                conn->num_bytes_sent);
+#endif
+
+	DEBUG_TRACE("%s", "handle_request done");
+
+	if (conn->phys_ctx->callbacks.end_request != NULL) {
+		conn->phys_ctx->callbacks.end_request(conn, conn->status_code);
+		DEBUG_TRACE("%s", "end_request callback done");
+	}
+	log_access(conn);
+}
 
 
 #if defined(USE_HTTP2)
@@ -15257,7 +15292,6 @@ header_val(const struct mg_connection *conn, const char *header)
 
 
 #if defined(MG_EXTERNAL_FUNCTION_log_access)
-static void log_access(const struct mg_connection *conn);
 #include "external_log_access.inl"
 #elif !defined(NO_FILESYSTEMS)
 
@@ -15290,8 +15324,9 @@ log_access(const struct mg_connection *conn)
 		/* call "log()" in Lua */
 		lua_getglobal(lstate, "log");
 		prepare_lua_request_info_inner(conn, lstate);
+		push_lua_response_log_data(conn, lstate);
 
-		ret = lua_pcall(lstate, /* args */ 1, /* results */ 1, 0);
+		ret = lua_pcall(lstate, /* args */ 2, /* results */ 1, 0);
 		if (ret == 0) {
 			int t = lua_type(lstate, -1);
 			if (t == LUA_TBOOLEAN) {
@@ -16891,6 +16926,10 @@ reset_per_request_attributes(struct mg_connection *conn)
 	}
 	conn->request_info.local_uri = NULL;
 
+#if defined(USE_SERVER_STATS)
+	conn->processing_time = 0;
+#endif
+
 #if defined(MG_LEGACY_INTERFACE)
 	/* Legacy before split into local_uri and request_uri */
 	conn->request_info.uri = NULL;
@@ -17712,6 +17751,7 @@ get_message(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		*err = 500;
 		return 0;
 	}
+
 	/* Set the time the request was received. This value should be used for
 	 * timeouts. */
 	clock_gettime(CLOCK_MONOTONIC, &(conn->req_time));
@@ -18598,28 +18638,7 @@ process_new_connection(struct mg_connection *conn)
 			if (conn->request_info.local_uri) {
 
 				/* handle request to local server */
-#if defined(USE_SERVER_STATS)
-				conn->conn_state = 4; /* processing */
-#endif
-				handle_request(conn);
-
-#if defined(USE_SERVER_STATS)
-				conn->conn_state = 5; /* processed */
-
-				mg_atomic_add64(&(conn->phys_ctx->total_data_read),
-				                conn->consumed_content);
-				mg_atomic_add64(&(conn->phys_ctx->total_data_written),
-				                conn->num_bytes_sent);
-#endif
-
-				DEBUG_TRACE("%s", "handle_request done");
-
-				if (conn->phys_ctx->callbacks.end_request != NULL) {
-					conn->phys_ctx->callbacks.end_request(conn,
-					                                      conn->status_code);
-					DEBUG_TRACE("%s", "end_request callback done");
-				}
-				log_access(conn);
+				handle_request_stat_log(conn);
 
 			} else {
 				/* TODO: handle non-local request (PROXY) */

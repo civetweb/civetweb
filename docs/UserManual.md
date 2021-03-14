@@ -1088,12 +1088,18 @@ some features of the "mg" library are not available yet. Use the "start()" callb
 function instead.
 
 A Lua background script may define the following functions:
-    `start()`      -- called wnen the server is started
-    `stop()`       -- called when the server is stopped
-    `log(request_info)`  -- called when an access log entry is created
+    `start()`        -- called wnen the server is started
+    `stop()`         -- called when the server is stopped
+    `log(req, res)`  -- called when an access log entry is created
 
 The optional function `log` may be used to filter or format access log file entries.
 The `request_info` table is supplied as first argument (content of this table: see above).
+The second argument is the request processing result. It contains the number of bytes
+`read` and `written` (incl. header information), the `processing_time` in seconds, 
+the `protocol` ("http", "https", "ws" or "wss"). For internally generated response and
+response generated using the `mg_response_*()` API, it will contain the http `status` 
+code and a the response `http_headers` table (CGI response will not have all headers).
+
 The function can return a boolean value: true if the entry should be logged or false if not.
 Alternatively it can return a string: this will be used as log message
 (empty strings will not be logged).

@@ -8,7 +8,7 @@
  */
 
 #if defined(NO_RESPONSE_BUFFERING) && defined(USE_HTTP2)
-#error "HTTP2 currently works only if NO_RESPONSE_BUFFERING is not set"
+#error "HTTP2 works only if NO_RESPONSE_BUFFERING is not set"
 #endif
 
 
@@ -241,7 +241,7 @@ mg_response_header_add_lines(struct mg_connection *conn,
 }
 
 
-#if defined USE_HTTP2
+#if defined(USE_HTTP2)
 static int http2_send_response_headers(struct mg_connection *conn);
 #endif
 
@@ -282,14 +282,12 @@ mg_response_header_send(struct mg_connection *conn)
 	conn->request_state = 2;
 
 #if !defined(NO_RESPONSE_BUFFERING)
+#if defined(USE_HTTP2)
 	if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {
-#if defined USE_HTTP2
 		int ret = http2_send_response_headers(conn);
 		return ret ? 0 : 0; /* todo */
-#else
-		return -2;
-#endif
 	}
+#endif
 
 	/* Send */
 	send_http1_response_status_line(conn);

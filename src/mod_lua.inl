@@ -119,6 +119,34 @@ reg_int(struct lua_State *L, const char *name, int val)
 
 
 static void
+reg_i64(struct lua_State *L, const char *name, int64_t val)
+{
+	if (name == NULL) {
+		return;
+	}
+	lua_pushstring(L, name);
+	if (sizeof(lua_Integer) >= sizeof(val)) {
+		lua_pushinteger(L, (lua_Integer)val);
+	} else {
+		double d = (double)val;
+		lua_pushnumber(L, d);
+	}
+	lua_rawset(L, -3);
+}
+
+
+static void
+reg_double(struct lua_State *L, const char *name, double val)
+{
+	if (name != NULL) {
+		lua_pushstring(L, name);
+		lua_pushnumber(L, val);
+		lua_rawset(L, -3);
+	}
+}
+
+
+static void
 reg_boolean(struct lua_State *L, const char *name, int val)
 {
 	if (name != NULL) {
@@ -2455,6 +2483,45 @@ enum {
 	LUA_ENV_TYPE_LUA_WEBSOCKET = 2,   /* websock.lua */
 	LUA_ENV_TYPE_BACKGROUND = 9 /* Lua backgrond script or exec from cmdline */
 };
+
+
+static void
+push_lua_response_log_data(const struct mg_connection *conn, lua_State *L)
+{
+	int i;
+	const char *s;
+
+	lua_newtable(L);
+
+	/* request status */
+	reg_int(L, "status", conn->status_code);
+
+	/* protocol (http, https, ws, wss) */
+	s = get_proto_name(conn);
+	reg_string(L, "protocol", s);
+
+	/* request counter */
+	reg_int(L, "handled_requests", conn->handled_requests);
+
+	/* data read and written */
+	reg_i64(L, "read", conn->consumed_content);
+	reg_i64(L, "written", conn->num_bytes_sent);
+
+#if !defined(NO_RESPONSE_BUFFERING)
+	lua_pushstring(L, "http_headers");
+	lua_newtable(L);
+	for (i = 0; i < conn->response_info.num_headers; i++) {
+		reg_string(L,
+		           conn->response_info.http_headers[i].name,
+		           conn->response_info.http_headers[i].value);
+	}
+	lua_rawset(L, -3);
+#endif
+
+#if defined(USE_SERVER_STATS)
+	reg_double(L, "processing_time", conn->processing_time);
+#endif
+}
 
 
 static void
