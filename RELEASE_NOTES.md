@@ -1,16 +1,23 @@
 Release Notes v1.14 (under construction)
 ===
-### Objectives: *TO BE DEFINED*
+### Objectives: *mbedTLS, log filtering*
 
 Changes
 -------
 
+- Add local_uri_raw field (not sanitized URI) to request_info
+- Additional API functions and a callback after closing connections
+- Allow mbedTLS as OpenSSL alternative (basic functionality)
+- Support UNIX/Linux domain sockets
+- Fuzz tests and ossfuzz integration
+- Compression for websockets
+- Restructure some source files
 - Improve documentation
 - Fix HTTP range requests
-- All some functions for Lua scripts/LSP
+- Add some functions for Lua scripts/LSP
 - Build system specific fixes (CMake, MinGW)
 - Update 3rd party components (Lua, lfs, sqlite)
-- Allow Lua background scripts to use timers
+- Allow Lua background script to use timers, format and filter logs
 - Update version number
 
 
