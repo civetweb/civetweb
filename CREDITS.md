@@ -42,7 +42,9 @@
 * David Loffredo
 * DavidKorczynski
 * Dialga
+* DL6ER
 * Domenico Di Iorio
+* dprandle
 * Drew Wells
 * duong2179
 * ehlertjd
@@ -74,10 +76,12 @@
 * Iain Morton
 * ImgBotApp
 * Ivan Dlugos
+* IZI
 * Jack
 * Jacob Repp
 * Jacob Skillin
 * Jan Kowalewski
+* Jan Pohanka
 * Jan Willem Janssen
 * Jeremy Lin
 * Jesse Williamson
@@ -111,6 +115,7 @@
 * Lawrence
 * Li Peng
 * Lianghui
+* Lorenzo Canepa
 * Luka Rahne
 * Lukas Martanovic
 * Maarten Fremouw
@@ -194,6 +199,7 @@
 * wangli28
 * webxer
 * William Greathouse
+* Wolfram Rösler
 * xeoshow
 * xtne6f
 * Yehuda Sadeh
