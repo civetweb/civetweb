@@ -6697,7 +6697,7 @@ handle_request_stat_log(struct mg_connection *conn)
 #if defined(USE_SERVER_STATS)
 	conn->conn_state = 5; /* processed */
 
-	mg_clock_gettime(CLOCK_MONOTONIC, &tnow);
+	clock_gettime(CLOCK_MONOTONIC, &tnow);
 	conn->processing_time = mg_difftimespec(&tnow, &(conn->req_time));
 
 	mg_atomic_add64(&(conn->phys_ctx->total_data_read), conn->consumed_content);
