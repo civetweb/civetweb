@@ -640,7 +640,7 @@ OpenSSL documentation for full list of options and additional examples.
 ### ssl\_default\_verify\_paths `yes`
 Loads default trusted certificates locations set at openssl compile time.
 
-### ssl\_protocol\_version `0`
+### ssl\_protocol\_version `4`
 Sets the minimal accepted version of SSL/TLS protocol according to the table:
 
 Protocols | Value
@@ -653,6 +653,7 @@ TLS1.2+TLS1.3 | 4
 TLS1.3 | 5
 
 TLS version 1.3 is only available if you are using an up-to-date TLS libary.
+The default setting has been changed from 0 to 4 in CivetWeb 1.14.
 
 ### ssl\_short\_trust `no`
 Enables the use of short lived certificates. This will allow for the certificates

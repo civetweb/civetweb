@@ -5,6 +5,7 @@ Release Notes v1.14 (under construction)
 Changes
 -------
 
+- Change SSL default setting to use TLS 1.2 as minimum (set config if you need an earlier version)
 - Add local_uri_raw field (not sanitized URI) to request_info
 - Additional API functions and a callback after closing connections
 - Allow mbedTLS as OpenSSL alternative (basic functionality)

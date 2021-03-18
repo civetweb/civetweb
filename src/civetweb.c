@@ -2127,14 +2127,9 @@ static const struct mg_option config_options[] = {
     {"ssl_default_verify_paths", MG_CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssl_cipher_list", MG_CONFIG_TYPE_STRING, NULL},
 
-#if defined(USE_HTTP2)
     /* HTTP2 requires ALPN, and anyway TLS1.2 should be considered
      * as a minimum in 2020 */
     {"ssl_protocol_version", MG_CONFIG_TYPE_NUMBER, "4"},
-#else
-    /* Keep the default (compatibility) */
-    {"ssl_protocol_version", MG_CONFIG_TYPE_NUMBER, "0"},
-#endif /* defined(USE_HTTP2) */
 
     {"ssl_short_trust", MG_CONFIG_TYPE_BOOLEAN, "no"},
 
