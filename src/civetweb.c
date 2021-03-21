@@ -16299,9 +16299,17 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	}
 #endif /* OPENSSL_API_1_1 */
 
+#if defined(SSL_OP_NO_TLSv1_3)
 	SSL_CTX_clear_options(dom_ctx->ssl_ctx,
 	                      SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
-	                          | SSL_OP_NO_TLSv1_1);
+	                          | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2
+	                          | SSL_OP_NO_TLSv1_3);
+#else
+	SSL_CTX_clear_options(dom_ctx->ssl_ctx,
+	                      SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
+	                          | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2);
+#endif
+
 	protocol_ver = atoi(dom_ctx->config[SSL_PROTOCOL_VERSION]);
 	SSL_CTX_set_options(dom_ctx->ssl_ctx, ssl_get_protocol(protocol_ver));
 	SSL_CTX_set_options(dom_ctx->ssl_ctx, SSL_OP_SINGLE_DH_USE);
