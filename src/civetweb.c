@@ -584,6 +584,11 @@ typedef const char *SOCK_OPT_TYPE;
 #if defined(_WIN64) || defined(__MINGW64__)
 #if !defined(SSL_LIB)
 
+#if defined(OPENSSL_API_3_0)
+#define SSL_LIB "libssl-3-x64.dll"
+#define CRYPTO_LIB "libcrypto-3-x64.dll"
+#endif
+
 #if defined(OPENSSL_API_1_1)
 #define SSL_LIB "libssl-1_1-x64.dll"
 #define CRYPTO_LIB "libcrypto-1_1-x64.dll"
@@ -597,6 +602,11 @@ typedef const char *SOCK_OPT_TYPE;
 #endif
 #else /* defined(_WIN64) || defined(__MINGW64__) */
 #if !defined(SSL_LIB)
+
+#if defined(OPENSSL_API_3_0)
+#define SSL_LIB "libssl-3.dll"
+#define CRYPTO_LIB "libcrypto-3.dll"
+#endif
 
 #if defined(OPENSSL_API_1_1)
 #define SSL_LIB "libssl-1_1.dll"
@@ -1535,18 +1545,18 @@ static void mg_snprintf(const struct mg_connection *conn,
 static int mg_init_library_called = 0;
 
 #if !defined(NO_SSL)
-#if defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)
+#if defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) 
 static int mg_openssl_initialized = 0;
 #endif
-#if !defined(OPENSSL_API_1_0) && !defined(OPENSSL_API_1_1)                     \
-    && !defined(USE_MBEDTLS)
+#if !defined(OPENSSL_API_1_0) && !defined(OPENSSL_API_1_1)                      \
+    && !defined(OPENSSL_API_3_0) && !defined(USE_MBEDTLS)
 #error "Please define OPENSSL_API_1_0 or OPENSSL_API_1_1"
 #endif
-#if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_1_1)
+#if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_1_1) && defined(OPENSSL_API_3_0)
 #error "Multiple OPENSSL_API versions defined"
 #endif
 #if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1))                     \
-    && defined(USE_MBEDTLS)
+    || defined(OPENSSL_API_3_0) && defined(USE_MBEDTLS)
 #error "Multiple SSL libraries defined"
 #endif
 #endif
@@ -1757,6 +1767,11 @@ typedef struct SSL_CTX SSL_CTX;
 #endif
 
 /* If OpenSSL headers are included, automatically select the API version */
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+#if !defined(OPENSSL_API_3_0)
+#define OPENSSL_API_3_0
+#endif
+#else
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 #if !defined(OPENSSL_API_1_1)
 #define OPENSSL_API_1_1
@@ -1767,6 +1782,7 @@ typedef struct SSL_CTX SSL_CTX;
 #define OPENSSL_API_1_0
 #endif
 #define OPENSSL_REMOVE_THREAD_STATE() ERR_remove_thread_state(NULL)
+#endif
 #endif
 
 
@@ -8955,7 +8971,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	}
 
 #if !defined(NO_SSL) && !defined(USE_MBEDTLS) && !defined(NO_SSL_DL)
-#if defined(OPENSSL_API_1_1)
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
 	if (use_ssl && (TLS_client_method == NULL)) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
@@ -8975,7 +8991,7 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		            "SSL is not initialized");
 		return 0;
 	}
-#endif /* OPENSSL_API_1_1 */
+#endif /* OPENSSL_API_1_1 || OPENSSL_API_3_0*/
 #else
 	(void)use_ssl;
 #endif /* NO SSL */
@@ -15850,7 +15866,7 @@ static volatile ptrdiff_t cryptolib_users =
 static int
 initialize_openssl(char *ebuf, size_t ebuf_len)
 {
-#if !defined(OPENSSL_API_1_1)
+#if !defined(OPENSSL_API_1_1) && !defined(OPENSSL_API_3_0)
 	int i, num_locks;
 	size_t size;
 #endif
@@ -15882,7 +15898,7 @@ initialize_openssl(char *ebuf, size_t ebuf_len)
 		return 1;
 	}
 
-#if !defined(OPENSSL_API_1_1)
+#if !defined(OPENSSL_API_1_1) && !defined(OPENSSL_API_3_0)
 	/* Initialize locking callbacks, needed for thread safety.
 	 * http://www.openssl.org/support/faq.html#PROG1
 	 */
@@ -15933,7 +15949,7 @@ initialize_openssl(char *ebuf, size_t ebuf_len)
 
 	CRYPTO_set_locking_callback(&ssl_locking_callback);
 	CRYPTO_set_id_callback(&mg_current_thread_id);
-#endif /* OPENSSL_API_1_1 */
+#endif /* OPENSSL_API_1_1 || OPENSSL_API_3_0 */
 
 #if !defined(NO_SSL_DL)
 	if (!ssllib_dll_handle) {
@@ -15949,7 +15965,7 @@ initialize_openssl(char *ebuf, size_t ebuf_len)
 	}
 #endif /* NO_SSL_DL */
 
-#if defined(OPENSSL_API_1_1)
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
 	/* Initialize SSL library */
 	OPENSSL_init_ssl(0, NULL);
 	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS
@@ -16283,7 +16299,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	int protocol_ver;
 	int ssl_cache_timeout;
 
-#if defined(OPENSSL_API_1_1)
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) 
 	if ((dom_ctx->ssl_ctx = SSL_CTX_new(TLS_server_method())) == NULL) {
 		mg_cry_ctx_internal(phys_ctx,
 		                    "SSL_CTX_new (server) error: %s",
@@ -16297,7 +16313,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 		                    ssl_error());
 		return 0;
 	}
-#endif /* OPENSSL_API_1_1 */
+#endif /* OPENSSL_API_1_1 || OPENSSL_API_3_0 */
 
 #if defined(SSL_OP_NO_TLSv1_3)
 	SSL_CTX_clear_options(dom_ctx->ssl_ctx,
@@ -16621,7 +16637,7 @@ init_ssl_ctx(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 static void
 uninitialize_openssl(void)
 {
-#if defined(OPENSSL_API_1_1)
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) 
 
 	if (mg_atomic_dec(&cryptolib_users) == 0) {
 
@@ -16653,7 +16669,7 @@ uninitialize_openssl(void)
 		}
 		mg_free(ssl_mutexes);
 		ssl_mutexes = NULL;
-#endif /* OPENSSL_API_1_1 */
+#endif /* OPENSSL_API_1_1 || OPENSSL_API_3_0 */
 	}
 }
 #endif /* !defined(NO_SSL) && !defined(USE_MBEDTLS) */
@@ -17097,7 +17113,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	}
 
 #if !defined(NO_SSL) && !defined(USE_MBEDTLS) // TODO: mbedTLS client
-#if defined(OPENSSL_API_1_1)
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
 	if (use_ssl
 	    && (conn->dom_ctx->ssl_ctx = SSL_CTX_new(TLS_client_method()))
 	           == NULL) {
@@ -17125,7 +17141,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		mg_free(conn);
 		return NULL;
 	}
-#endif /* OPENSSL_API_1_1 */
+#endif /* OPENSSL_API_1_1 || OPENSSL_API_3_0 */
 #endif /* NO_SSL */
 
 
@@ -21266,7 +21282,7 @@ mg_init_library(unsigned features)
 
 	mg_global_unlock();
 
-#if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)) && !defined(NO_SSL)
+#if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)) && !defined(NO_SSL)
 	if (features_to_init & MG_FEATURES_SSL) {
 		if (!mg_openssl_initialized) {
 			char ebuf[128];
