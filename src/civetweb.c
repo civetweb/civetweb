@@ -1545,18 +1545,21 @@ static void mg_snprintf(const struct mg_connection *conn,
 static int mg_init_library_called = 0;
 
 #if !defined(NO_SSL)
-#if defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) 
+#if defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)                       \
+    || defined(OPENSSL_API_3_0)
 static int mg_openssl_initialized = 0;
 #endif
-#if !defined(OPENSSL_API_1_0) && !defined(OPENSSL_API_1_1)                      \
+#if !defined(OPENSSL_API_1_0) && !defined(OPENSSL_API_1_1)                     \
     && !defined(OPENSSL_API_3_0) && !defined(USE_MBEDTLS)
 #error "Please define OPENSSL_API_1_0 or OPENSSL_API_1_1"
 #endif
-#if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_1_1) && defined(OPENSSL_API_3_0)
+#if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_1_1)                       \
+    && defined(OPENSSL_API_3_0)
 #error "Multiple OPENSSL_API versions defined"
 #endif
-#if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)                     \
-    || defined(OPENSSL_API_3_0)) && defined(USE_MBEDTLS)
+#if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)                      \
+     || defined(OPENSSL_API_3_0))                                              \
+    && defined(USE_MBEDTLS)
 #error "Multiple SSL libraries defined"
 #endif
 #endif
@@ -16299,7 +16302,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	int protocol_ver;
 	int ssl_cache_timeout;
 
-#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) 
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
 	if ((dom_ctx->ssl_ctx = SSL_CTX_new(TLS_server_method())) == NULL) {
 		mg_cry_ctx_internal(phys_ctx,
 		                    "SSL_CTX_new (server) error: %s",
@@ -16637,7 +16640,7 @@ init_ssl_ctx(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 static void
 uninitialize_openssl(void)
 {
-#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) 
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
 
 	if (mg_atomic_dec(&cryptolib_users) == 0) {
 
@@ -21282,7 +21285,9 @@ mg_init_library(unsigned features)
 
 	mg_global_unlock();
 
-#if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)) && !defined(NO_SSL)
+#if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)                      \
+     || defined(OPENSSL_API_3_0))                                              \
+    && !defined(NO_SSL)
 	if (features_to_init & MG_FEATURES_SSL) {
 		if (!mg_openssl_initialized) {
 			char ebuf[128];

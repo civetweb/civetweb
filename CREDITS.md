@@ -187,6 +187,7 @@
 * Thomas Klausner
 * Thorsten Horstmann
 * Tim Gates
+* Tim Hudson
 * tnoho
 * Tom Deblauwe
 * Tomas Andrle
