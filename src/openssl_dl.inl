@@ -98,7 +98,7 @@ struct ssl_func {
 };
 
 
-#if defined(OPENSSL_API_1_1)
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
 
 #define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
 #define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)
@@ -262,7 +262,11 @@ static struct ssl_func ssl_sw[] = {
     {"SSL_CTX_load_verify_locations", TLS_Mandatory, NULL},
     {"SSL_CTX_set_default_verify_paths", TLS_Mandatory, NULL},
     {"SSL_CTX_set_verify_depth", TLS_Mandatory, NULL},
+#if defined(OPENSSL_API_3_0)
+    {"SSL_get1_peer_certificate", TLS_Mandatory, NULL},
+#else
     {"SSL_get_peer_certificate", TLS_Mandatory, NULL},
+#endif
     {"SSL_get_version", TLS_Mandatory, NULL},
     {"SSL_get_current_cipher", TLS_Mandatory, NULL},
     {"SSL_CIPHER_get_name", TLS_Mandatory, NULL},
