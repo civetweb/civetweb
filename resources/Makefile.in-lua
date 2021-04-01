@@ -36,8 +36,8 @@ ifeq ($(WITH_LUA_VERSION), 503)
   LUA_VERSION_KNOWN = 1
 endif
 ifeq ($(WITH_LUA_VERSION), 504)
-  $(info Lua: Using version 5.4.1)
-  LUA_DIR = src/third_party/lua-5.4.1/src
+  $(info Lua: Using version 5.4.3)
+  LUA_DIR = src/third_party/lua-5.4.3/src
   LUA_SHARED_LIB_FLAG = -llua5.4
   LUA_CFLAGS = -DLUA_COMPAT_5_2 -DLUA_VERSION_MAKEFILE=504
   LUA_VERSION_KNOWN = 1
