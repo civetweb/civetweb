@@ -9,6 +9,7 @@ Changes
 - Add local_uri_raw field (not sanitized URI) to request_info
 - Additional API functions and a callback after closing connections
 - Allow mbedTLS as OpenSSL alternative (basic functionality)
+- Add OpenSSL 3.0 support (OpenSSL 3.0 Alpha 13)
 - Support UNIX/Linux domain sockets
 - Fuzz tests and ossfuzz integration
 - Compression for websockets
@@ -19,6 +20,7 @@ Changes
 - Build system specific fixes (CMake, MinGW)
 - Update 3rd party components (Lua, lfs, sqlite)
 - Allow Lua background script to use timers, format and filter logs
+- Remove WinCE code
 - Update version number
 
 
