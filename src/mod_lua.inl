@@ -248,7 +248,7 @@ lsp_sock_close(lua_State *L)
 	size_t s;
 	SOCKET *psock;
 
-	if ((num_args == 1) && lua_istable(L, -1)) {
+	if ((num_args == 1) && lua_istable(L, 1)) {
 		lua_getfield(L, -1, "sock");
 		psock = (SOCKET *)lua_tolstring(L, -1, &s);
 		if (s != sizeof(SOCKET)) {
@@ -272,7 +272,7 @@ lsp_sock_recv(lua_State *L)
 	size_t s;
 	SOCKET *psock;
 
-	if ((num_args == 1) && lua_istable(L, -1)) {
+	if ((num_args == 1) && lua_istable(L, 1)) {
 		lua_getfield(L, -1, "sock");
 		psock = (SOCKET *)lua_tolstring(L, -1, &s);
 		if (s != sizeof(SOCKET)) {
@@ -330,9 +330,9 @@ lsp_sock_gc(lua_State *L)
 	size_t s;
 	SOCKET *psock;
 
-	if ((num_args == 1) && lua_istable(L, -1)) {
+	if ((num_args == 1) && lua_istable(L, 1)) {
 		lua_getfield(L, -1, "sock");
-		psock = (SOCKET *)lua_tolstring(L, -1, &s);
+		psock = (SOCKET *)lua_tolstring(L, 1, &s);
 		if (s != sizeof(SOCKET)) {
 			return luaL_error(
 			    L,
@@ -364,12 +364,17 @@ lsp_connect(lua_State *L)
 	union usa sa;
 	int ok;
 
-	if ((num_args == 3) && lua_isstring(L, -3) && lua_isnumber(L, -2)
-	    && lua_isnumber(L, -1)) {
+	if ((num_args == 3) && lua_isstring(L, 1) && lua_isnumber(L, 2)
+	    && lua_isnumber(L, 3)) {
+
+		const char *host = lua_tostring(L, 1);
+		const int port = lua_tostring(L, 2);
+		const int is_ssl = lua_tostring(L, 3);
+
 		ok = connect_socket(NULL,
-		                    lua_tostring(L, -3),
-		                    (int)lua_tonumber(L, -2),
-		                    (int)lua_tonumber(L, -1),
+		                    host,
+		                    port,
+		                    is_ssl,
 		                    ebuf,
 		                    sizeof(ebuf),
 		                    &sock,

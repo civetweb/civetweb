@@ -99,7 +99,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>LUA_COMPAT_ALL;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LUA_COMPAT_ALL;LUA_UCID;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -133,7 +133,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>LUA_COMPAT_ALL;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LUA_COMPAT_ALL;LUA_UCID;THREADSAFE=1;SQLITE_ENABLE_FTS3;SQLITE_ENABLE_FTS3_PARENTHESIS;WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
