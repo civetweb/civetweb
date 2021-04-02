@@ -8935,8 +8935,8 @@ mg_inet_pton(int af, const char *src, void *dst, size_t dstlen, int resolve_src)
 static int
 connect_socket(struct mg_context *ctx /* may be NULL */,
                const char *host,
-               int port,
-               int use_ssl,
+               int port, /* 1..65535, or -99 for domain sockets (may be changed) */
+               int use_ssl, /* 0 or 1 */
                char *ebuf,
                size_t ebuf_len,
                SOCKET *sock /* output: socket, must not be NULL */,
@@ -8963,6 +8963,21 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		return 0;
 	}
 
+#if defined(USE_X_DOM_SOCKET)
+	if (port == -99) {
+		/* Unix domain socket */
+		size_t hostlen = strlen(host);
+		if (hostlen >= sizeof(sa->lsa.sun.sun_path)) {
+			mg_snprintf(NULL,
+				NULL, /* No truncation check for ebuf */
+				ebuf,
+				ebuf_len,
+				"%s",
+				"host length exceeds limit");
+			return 0;
+		}
+	} else
+#endif
 	if ((port <= 0) || !is_valid_port((unsigned)port)) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
@@ -8999,6 +9014,17 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 	(void)use_ssl;
 #endif /* NO SSL */
 
+
+#if defined(USE_X_DOM_SOCKET)
+	if (port == -99) {
+		size_t hostlen = strlen(host);
+		/* check (hostlen < sizeof(sun.sun_path)) already passed above */
+		ip_ver = -99;
+		sa->sun.sun_family = AF_UNIX;
+		memset(sa->sun.sun_path, 0, sizeof(sa->lsa.sun.sun_path));
+		memcpy(sa->sun.sun_path, host, hostlen);
+} else
+#endif
 	if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin), 1)) {
 		sa->sin.sin_port = htons((uint16_t)port);
 		ip_ver = 4;
@@ -9040,12 +9066,10 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		*sock = socket(PF_INET6, SOCK_STREAM, 0);
 	}
 #endif
-#if 0 /* Not available as client */
 #if defined(USE_X_DOM_SOCKET)
-	else if (ip_ver == 99) {
+	else if (ip_ver == -99) {
 		*sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	}
-#endif
 #endif
 
 	if (*sock == INVALID_SOCKET) {
@@ -9084,6 +9108,14 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		conn_ret = connect(*sock,
 		                   (struct sockaddr *)((void *)&sa->sin6),
 		                   sizeof(sa->sin6));
+	}
+#endif
+#if defined(USE_X_DOM_SOCKET)
+	else if (ip_ver == -99) {
+		/* connected to domain socket */
+		conn_ret = connect(*sock,
+		                   (struct sockaddr *)((void *)&sa->sun),
+		                   sizeof(sa->sun));
 	}
 #endif
 
