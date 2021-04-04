@@ -18850,9 +18850,10 @@ worker_thread_run(struct mg_connection *conn)
 				/* conn->dom_ctx is set in get_request */
 
 				/* Get SSL client certificate information (if set) */
-				struct mg_client_cert client_cert;
-				if (ssl_get_client_cert_info(conn, &client_cert)) {
-					conn->request_info.client_cert = &client_cert;
+				struct mg_client_cert* client_cert = 
+					 (struct mg_client_cert *)mg_malloc(sizeof(struct mg_client_cert));
+				if (ssl_get_client_cert_info(conn, client_cert)) {
+					conn->request_info.client_cert = client_cert;
 				}
 
 				/* process HTTPS connection */
@@ -18887,12 +18888,13 @@ worker_thread_run(struct mg_connection *conn)
 					/* Free certificate memory */
 					X509_free(
 					    (X509 *)conn->request_info.client_cert->peer_cert);
-					conn->request_info.client_cert->peer_cert = 0;
-					conn->request_info.client_cert->subject = 0;
-					conn->request_info.client_cert->issuer = 0;
-					conn->request_info.client_cert->serial = 0;
-					conn->request_info.client_cert->finger = 0;
-					conn->request_info.client_cert = 0;
+					conn->request_info.client_cert->peer_cert = NULL;
+					conn->request_info.client_cert->subject = NULL;
+					conn->request_info.client_cert->issuer = NULL;
+					conn->request_info.client_cert->serial = NULL;
+					conn->request_info.client_cert->finger = NULL;
+					mg_free((void *)(conn->request_info.client_cert));
+					conn->request_info.client_cert = NULL;
 				}
 			} else {
 				/* make sure the connection is cleaned up on SSL failure */
