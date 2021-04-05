@@ -160,9 +160,14 @@ Recent questions and discussions usually use [GitHub issues](https://github.com/
 Some old information may be found on the [mailing list](https://groups.google.com/d/forum/civetweb), 
 but this information may be outdated.
 
+Feel free to create a GitHub issue for bugs, feature requests, questions, suggestions or if you want to share tips and tricks.
+When creating an issues for a bug, add enough description to reproduce the issue - at least add CivetWeb version and operating system.
+Please see also the guidelines for [Contributions](https://github.com/civetweb/civetweb/blob/master/docs/Contribution.md) and the [Security Policy](https://github.com/civetweb/civetweb/blob/master/SECURITY.md)
+
 Note: We do not take any liability or warranty for any linked contents.  Visit these pages and try the community support suggestions at your own risk.
 Any link provided in this project (including source and documentation) is provided in the hope that this information will be helpful.
 However, we cannot accept any responsibility for any content on an external page.
+
 
 
 Contributions
