@@ -1,7 +1,9 @@
-Civetweb Install Guide
+CivetWeb Install Guide
 ====
 
-This guide covers the distributions for CivetWeb.  The latest source code is available at [https://github.com/civetweb/civetweb](https://github.com/civetweb/civetweb).
+This guide covers the pre-built binary distributions of CivetWeb.  
+The latest source code version is available at [https://github.com/civetweb/civetweb](https://github.com/civetweb/civetweb).
+
 
 Windows
 ---
@@ -10,17 +12,18 @@ This pre-built version comes pre-built wit Lua support. Libraries for SSL suppor
 however, users may add an SSL library themselves.
 Instructions for adding SSL support can be found in [https://github.com/civetweb/civetweb/tree/master/docs](https://github.com/civetweb/civetweb/tree/master/docs)
 
-1. In case the Visual C++ Redistributable are not already installed:
-  32 Bit Version: Install the [Redistributable for Visual Studio 2010](http://www.microsoft.com/en-us/download/details.aspx?id=8328)
-  64 Bit Version: Install the [Redistributable for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
-  Note: The required version of the Redistributables may vary, depending on the CivetWeb version.
+1. The "Visual C++ Redistributables" are already installed on most Windows PCs.
+   In case they are missing, you will see a "msvcr###.dll missing" error message when starting the server.
+   You need to download and install the [Redistributable for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
+   Note: The required version of the Redistributables may vary, depending on the CivetWeb version.
 2. Download latest *civetweb-win.zip* from [SourceForge](https://sourceforge.net/projects/civetweb/files/)
-3. When started, Civetweb puts itself into the tray.
+3. When started, CivetWeb puts itself into the tray.
 
-Building civetweb - Using vcpkg
+
+Building CivetWeb - Using vcpkg
 ---
 
-You can download and install civetweb using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
+You can download and install CivetWeb using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
 
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
@@ -28,17 +31,8 @@ You can download and install civetweb using the [vcpkg](https://github.com/Micro
     ./vcpkg integrate install
     ./vcpkg install civetweb
 
-The civetweb port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
+The CivetWeb port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 
-OS X
----
-
-This pre-built version comes with Lua, IPV6 and SSL support.
-
-1. Download the latest *Civetweb.dmg* from [SourceForge](https://sourceforge.net/projects/civetweb/files/)
-2. Click on the it and look for the attachment in the finder.
-4. Drag Civetweb to the Applications folder.
-5. When started, Civetweb puts itself into top menu.
 
 Linux
 ---
@@ -50,5 +44,5 @@ Linux
 5. make install
 6. Run the program ```/usr/local/bin/civetweb```, it will use the configuration file */usr/local/etc/civetweb.conf*.
 
-Most Linux systems support auto completion of command line arguments.  To enable bash auto completion for the civetweb stand-alone executable, set *resources/complete.lua* as complete command.  See comments in that file for further instructions.
+Most Linux systems support auto completion of command line arguments.  To enable bash auto completion for the CivetWeb stand-alone executable, set *resources/complete.lua* as complete command.  See comments in that file for further instructions.
 

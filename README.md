@@ -86,6 +86,7 @@ Quick start documentation
 - [docs/OpenSSL.md](https://github.com/civetweb/civetweb/blob/master/docs/OpenSSL.md) - Adding HTTPS (SSL/TLS) support using OpenSSL.
 - [API documentation](https://github.com/civetweb/civetweb/tree/master/docs/api) - Additional documentation on the civetweb application programming interface ([civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)).
 - [RELEASE_NOTES.md](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
+- [SECURITY.md](https://github.com/civetweb/civetweb/blob/master/SECURITY.md) - Security Policy
 - [LICENSE.md](https://github.com/civetweb/civetweb/blob/master/LICENSE.md) - Copyright License
 
 
@@ -108,7 +109,7 @@ simplicity by a carefully selected list of features:
 - Scripting and database support (CGI, SQLite database, Lua Server Pages,
   Server side Lua scripts, Server side JavaScript).
   This provides a ready to go, powerful web development platform in a one
-  single-click executable with **no dependencies**.
+  single-click executable with **no dependencies**.0
 - Support for CGI, SSI, HTTP digest (MD5) authorization, WebSocket,
   WebDAV.
 - HTTPS (SSL/TLS) support using [OpenSSL](https://www.openssl.org/).
@@ -138,6 +139,16 @@ simplicity by a carefully selected list of features:
 [![Duktape](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/duktape-logo.png "Duktape Logo")](http://duktape.org)
 
 
+### Optional depencencies
+
+[![zlib](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/zlib3d-b1.png "zlib Logo")](https://zlib.net)
+
+[![OpenSSL](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/OpenSSL_logo.png "OpenSSL Logo")](https://www.openssl.org/)
+
+[![Mbed TLS](https://raw.githubusercontent.com/civetweb/civetweb/master/resources/mbedTLS_logo.png "mbedTLS Logo")](https://github.com/ARMmbed/mbedtls)
+
+
+
 Support
 -------
 
@@ -155,7 +166,7 @@ However, we cannot accept any responsibility for any content on an external page
 
 
 Contributions
----------------
+-------------
 
 Contributions are welcome provided all contributions carry the MIT license.
 
@@ -166,7 +177,8 @@ By now the code base differs, so patches cannot be safely transferred in either 
 Some guidelines can be found in [docs/Contribution.md](https://github.com/civetweb/civetweb/blob/master/docs/Contribution.md).
 
 
-### Authors
+Authors
+-------
 
 CivetWeb has been forked from the last MIT version of Mongoose in 2013.
 Since then, CivetWeb has seen many improvements from various authors
