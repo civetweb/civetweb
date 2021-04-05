@@ -1,6 +1,6 @@
-Release Notes v1.14 (under construction)
+Release Notes v1.14
 ===
-### Objectives: *mbedTLS, log filtering*
+### Objectives: *mbedTLS, Lua API enhancements, log filtering*
 
 Changes
 -------
