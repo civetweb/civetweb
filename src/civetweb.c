@@ -8933,14 +8933,15 @@ mg_inet_pton(int af, const char *src, void *dst, size_t dstlen, int resolve_src)
 
 
 static int
-connect_socket(struct mg_context *ctx /* may be NULL */,
-               const char *host,
-               int port, /* 1..65535, or -99 for domain sockets (may be changed) */
-               int use_ssl, /* 0 or 1 */
-               char *ebuf,
-               size_t ebuf_len,
-               SOCKET *sock /* output: socket, must not be NULL */,
-               union usa *sa /* output: socket address, must not be NULL  */
+connect_socket(
+    struct mg_context *ctx /* may be NULL */,
+    const char *host,
+    int port,    /* 1..65535, or -99 for domain sockets (may be changed) */
+    int use_ssl, /* 0 or 1 */
+    char *ebuf,
+    size_t ebuf_len,
+    SOCKET *sock /* output: socket, must not be NULL */,
+    union usa *sa /* output: socket address, must not be NULL  */
 )
 {
 	int ip_ver = 0;
@@ -8969,16 +8970,16 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		size_t hostlen = strlen(host);
 		if (hostlen >= sizeof(sa->lsa.sun.sun_path)) {
 			mg_snprintf(NULL,
-				NULL, /* No truncation check for ebuf */
-				ebuf,
-				ebuf_len,
-				"%s",
-				"host length exceeds limit");
+			            NULL, /* No truncation check for ebuf */
+			            ebuf,
+			            ebuf_len,
+			            "%s",
+			            "host length exceeds limit");
 			return 0;
 		}
 	} else
 #endif
-	if ((port <= 0) || !is_valid_port((unsigned)port)) {
+	    if ((port <= 0) || !is_valid_port((unsigned)port)) {
 		mg_snprintf(NULL,
 		            NULL, /* No truncation check for ebuf */
 		            ebuf,
@@ -9023,9 +9024,9 @@ connect_socket(struct mg_context *ctx /* may be NULL */,
 		sa->sun.sun_family = AF_UNIX;
 		memset(sa->sun.sun_path, 0, sizeof(sa->lsa.sun.sun_path));
 		memcpy(sa->sun.sun_path, host, hostlen);
-} else
+	} else
 #endif
-	if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin), 1)) {
+	    if (mg_inet_pton(AF_INET, host, &sa->sin, sizeof(sa->sin), 1)) {
 		sa->sin.sin_port = htons((uint16_t)port);
 		ip_ver = 4;
 #if defined(USE_IPV6)
@@ -14385,6 +14386,7 @@ handle_request(struct mg_connection *conn)
 				memcpy(new_path + len + 2, ri->query_string, lenQS);
 			}
 			mg_send_http_redirect(conn, new_path, 301);
+			mg_free(new_path);
 		}
 		return;
 	}

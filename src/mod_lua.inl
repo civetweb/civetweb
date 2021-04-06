@@ -371,14 +371,8 @@ lsp_connect(lua_State *L)
 		const int port = lua_tostring(L, 2);
 		const int is_ssl = lua_tostring(L, 3);
 
-		ok = connect_socket(NULL,
-		                    host,
-		                    port,
-		                    is_ssl,
-		                    ebuf,
-		                    sizeof(ebuf),
-		                    &sock,
-		                    &sa);
+		ok = connect_socket(
+		    NULL, host, port, is_ssl, ebuf, sizeof(ebuf), &sock, &sa);
 		if (!ok) {
 			return luaL_error(L, ebuf);
 		} else {
