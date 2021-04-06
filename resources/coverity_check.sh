@@ -27,6 +27,7 @@ cp src/sha1.inl cov_build/src/
 cp src/response.inl cov_build/src/
 cp src/timer.inl cov_build/src/
 cp src/handle_form.inl cov_build/src/
+cp src/openssl_dl.inl cov_build/src/
 cp include/civetweb.h cov_build/include/
 cp resources/Makefile.in-os cov_build/resources/
 
