@@ -8027,6 +8027,7 @@ static const struct {
     {".sil", 4, "application/font-sfnt"},
     {".pfr", 4, "application/font-tdpfr"},
     {".woff", 5, "application/font-woff"},
+    {".woff2", 6, "application/font-woff2"},
 
     /* audio */
     {".mp3", 4, "audio/mpeg"},
@@ -8083,6 +8084,7 @@ static const struct {
     {".aac",
      4,
      "audio/aac"}, /* http://en.wikipedia.org/wiki/Advanced_Audio_Coding */
+    {".flac", 5, "audio/flac"},
     {".aif", 4, "audio/x-aif"},
     {".m3u", 4, "audio/x-mpegurl"},
     {".mid", 4, "audio/x-midi"},
@@ -17707,6 +17709,15 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		return 0;
 	}
 
+#if USE_ZLIB
+	if (((cl = get_header(conn->request_info.http_headers,
+	                      conn->request_info.num_headers,
+	                      "Accept-Encoding"))
+	     != NULL)
+	    && strstr(cl, "gzip")) {
+		conn->accept_gzip = 1;
+	}
+#endif
 	if (((cl = get_header(conn->request_info.http_headers,
 	                      conn->request_info.num_headers,
 	                      "Transfer-Encoding"))
