@@ -1,3 +1,13 @@
+Release Notes v1.15 (work in progress)
+===
+### Objectives: *TBD*
+
+Changes
+-------
+
+- Update version number
+
+
 Release Notes v1.14
 ===
 ### Objectives: *mbedTLS, Lua API enhancements, log filtering*
