@@ -12547,8 +12547,8 @@ read_websocket(struct mg_connection *conn,
 							    data_len
 							    * 4; // Initial guess of the inflated message
 							         // size. We double the memory when needed.
-							Bytef *inflated;
-							Bytef *new_mem;
+							Bytef *inflated = NULL;
+							Bytef *new_mem = NULL;
 							conn->websocket_inflate_state.avail_in =
 							    (uInt)(data_len + 4);
 							conn->websocket_inflate_state.next_in = data;
@@ -12559,12 +12559,14 @@ read_websocket(struct mg_connection *conn,
 							data[data_len + 3] = '\xff';
 							do {
 								if (inflate_buf_size_old == 0) {
-									new_mem = mg_calloc(inflate_buf_size,
-									                    sizeof(Bytef));
+									new_mem =
+									    (Bytef *)mg_calloc(inflate_buf_size,
+									                       sizeof(Bytef));
 								} else {
 									inflate_buf_size *= 2;
 									new_mem =
-									    mg_realloc(inflated, inflate_buf_size);
+									    (Bytef *)mg_realloc(inflated,
+									                        inflate_buf_size);
 								}
 								if (new_mem == NULL) {
 									mg_cry_internal(
@@ -12752,7 +12754,7 @@ mg_websocket_write_exec(struct mg_connection *conn,
 		header[0] = 0xC0u | (unsigned char)((unsigned)opcode & 0xf);
 		conn->websocket_deflate_state.avail_in = (uInt)dataLen;
 		conn->websocket_deflate_state.next_in = (unsigned char *)data;
-		deflated_size = compressBound((uLong)dataLen);
+		deflated_size = (Bytef *)compressBound((uLong)dataLen);
 		deflated = mg_calloc(deflated_size, sizeof(Bytef));
 		if (deflated == NULL) {
 			mg_cry_internal(
