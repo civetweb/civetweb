@@ -8970,7 +8970,7 @@ connect_socket(
 	if (port == -99) {
 		/* Unix domain socket */
 		size_t hostlen = strlen(host);
-		if (hostlen >= sizeof(sa->lsa.sun.sun_path)) {
+		if (hostlen >= sizeof(sa->sun.sun_path)) {
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -9024,7 +9024,7 @@ connect_socket(
 		/* check (hostlen < sizeof(sun.sun_path)) already passed above */
 		ip_ver = -99;
 		sa->sun.sun_family = AF_UNIX;
-		memset(sa->sun.sun_path, 0, sizeof(sa->lsa.sun.sun_path));
+		memset(sa->sun.sun_path, 0, sizeof(sa->sun.sun_path));
 		memcpy(sa->sun.sun_path, host, hostlen);
 	} else
 #endif
