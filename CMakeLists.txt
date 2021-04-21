@@ -112,6 +112,10 @@ message(STATUS "Force x32 / x64 architecture - ${CIVETWEB_ARCH}")
 option(CIVETWEB_ENABLE_LUA "Enable Lua CGIs" OFF)
 message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
 
+# zlib compression support
+option(CIVETWEB_ENABLE_ZLIB "Enables zlib compression support" OFF)
+message(STATUS "zlib support - ${CIVETWEB_ENABLE_ZLIB}")
+
 # Enable installing CivetWeb executables
 option(CIVETWEB_INSTALL_EXECUTABLE "Enable installing CivetWeb executable" ON)
 mark_as_advanced(FORCE CIVETWEB_INSTALL_EXECUTABLE) # Advanced users can disable
@@ -507,6 +511,9 @@ if (CIVETWEB_DISABLE_CACHING)
 endif()
 if (CIVETWEB_ENABLE_LUA)
   add_definitions(-DUSE_LUA)
+endif()
+if (CIVETWEB_ENABLE_ZLIB)
+  add_definitions(-DUSE_ZLIB)
 endif()
 if (CIVETWEB_ENABLE_DUKTAPE)
   add_definitions(-DUSE_DUKTAPE)
