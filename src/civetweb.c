@@ -5174,9 +5174,11 @@ mg_readdir(DIR *dir)
 #undef POLLIN
 #undef POLLPRI
 #undef POLLOUT
+#undef POLLERR
 #define POLLIN (1)  /* Data ready - read will not block. */
 #define POLLPRI (2) /* Priority data ready. */
 #define POLLOUT (4) /* Send queue not full - write will not block. */
+#define POLLERR (8) /* Error event */
 
 FUNCTION_MAY_BE_UNUSED
 static int
@@ -5185,6 +5187,7 @@ poll(struct mg_pollfd *pfd, unsigned int n, int milliseconds)
 	struct timeval tv;
 	fd_set rset;
 	fd_set wset;
+	fd_set eset;
 	unsigned int i;
 	int result;
 	SOCKET maxfd = 0;
@@ -5194,6 +5197,7 @@ poll(struct mg_pollfd *pfd, unsigned int n, int milliseconds)
 	tv.tv_usec = (milliseconds % 1000) * 1000;
 	FD_ZERO(&rset);
 	FD_ZERO(&wset);
+	FD_ZERO(&eset);
 
 	for (i = 0; i < n; i++) {
 		if (pfd[i].events & POLLIN) {
@@ -5202,6 +5206,7 @@ poll(struct mg_pollfd *pfd, unsigned int n, int milliseconds)
 		if (pfd[i].events & POLLOUT) {
 			FD_SET(pfd[i].fd, &wset);
 		}
+                FD_SET(pfd[i].fd, &eset);
 		pfd[i].revents = 0;
 
 		if (pfd[i].fd > maxfd) {
@@ -5209,13 +5214,16 @@ poll(struct mg_pollfd *pfd, unsigned int n, int milliseconds)
 		}
 	}
 
-	if ((result = select((int)maxfd + 1, &rset, &wset, NULL, &tv)) > 0) {
+	if ((result = select((int)maxfd + 1, &rset, &wset, &eset, &tv)) > 0) {
 		for (i = 0; i < n; i++) {
 			if (FD_ISSET(pfd[i].fd, &rset)) {
 				pfd[i].revents |= POLLIN;
 			}
 			if (FD_ISSET(pfd[i].fd, &wset)) {
 				pfd[i].revents |= POLLOUT;
+			}
+			if (FD_ISSET(pfd[i].fd, &eset)) {
+				pfd[i].revents |= POLLERR;
 			}
 		}
 	}
