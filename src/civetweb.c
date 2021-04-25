@@ -5206,7 +5206,9 @@ poll(struct mg_pollfd *pfd, unsigned int n, int milliseconds)
 		if (pfd[i].events & POLLOUT) {
 			FD_SET(pfd[i].fd, &wset);
 		}
-                FD_SET(pfd[i].fd, &eset);
+		if (pfd[i].events & POLLERR) {
+			FD_SET(pfd[i].fd, &eset);
+		}
 		pfd[i].revents = 0;
 
 		if (pfd[i].fd > maxfd) {
@@ -19172,7 +19174,11 @@ master_thread_run(struct mg_context *ctx)
 			pfd[i].events = POLLIN;
 		}
 
-		if (poll(pfd, ctx->num_listening_sockets, 200) > 0) {
+		if (mg_poll(pfd,
+		            ctx->num_listening_sockets,
+		            SOCKET_TIMEOUT_QUANTUM,
+		            &(ctx->stop_flag))
+		    > 0) {
 			for (i = 0; i < ctx->num_listening_sockets; i++) {
 				/* NOTE(lsm): on QNX, poll() returns POLLRDNORM after the
 				 * successful poll, and POLLIN is defined as
