@@ -5912,6 +5912,13 @@ mg_poll(struct mg_pollfd *pfd,
 	 * of having to wait for a long socket timeout. */
 	int ms_now = SOCKET_TIMEOUT_QUANTUM; /* Sleep quantum in ms */
 
+	int check_pollerr = 0;
+	if ((n == 1) && ((pfd[0].events & POLLERR) == 0)) {
+		/* If we wait for only one file descriptor, wait on error as well */
+		pfd[0].events |= POLLERR;
+		check_pollerr = 1;
+	}
+
 	do {
 		int result;
 
@@ -5928,6 +5935,12 @@ mg_poll(struct mg_pollfd *pfd,
 		if (result != 0) {
 			/* Poll returned either success (1) or error (-1).
 			 * Forward both to the caller. */
+			if ((check_pollerr)
+			    && ((pfd[0].revents & (POLLIN | POLLOUT | POLLERR))
+			        == POLLERR)) {
+				/* One and only file descriptor returned error */
+				return -1;
+			}
 			return result;
 		}
 
