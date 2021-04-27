@@ -488,6 +488,13 @@ class CIVETWEB_CXX_API CivetServer
 	                             const std::string &headerName);
 
 	/**
+	 * getMethod(struct mg_connection *conn)
+	 * @param conn - the connection information
+	 * @returns method of HTTP request
+	 */
+	static const char *getMethod(struct mg_connection *conn);
+
+	/**
 	 * getParam(struct mg_connection *conn, const char *, std::string &, size_t)
 	 *
 	 * Returns a query which contained in the supplied buffer.  The
