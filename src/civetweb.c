@@ -5200,13 +5200,14 @@ poll(struct mg_pollfd *pfd, unsigned int n, int milliseconds)
 	FD_ZERO(&eset);
 
 	for (i = 0; i < n; i++) {
-		if (pfd[i].events & POLLIN) {
-			FD_SET(pfd[i].fd, &rset);
-		}
-		if (pfd[i].events & POLLOUT) {
-			FD_SET(pfd[i].fd, &wset);
-		}
-		if (pfd[i].events & POLLERR) {
+		if (pfd[i].events & (POLLIN | POLLOUT | POLLERR)) {
+			if (pfd[i].events & POLLIN) {
+				FD_SET(pfd[i].fd, &rset);
+			}
+			if (pfd[i].events & POLLOUT) {
+				FD_SET(pfd[i].fd, &wset);
+			}
+			/* Check for errors for any FD in the set */
 			FD_SET(pfd[i].fd, &eset);
 		}
 		pfd[i].revents = 0;
