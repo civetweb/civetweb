@@ -294,7 +294,7 @@ handler(struct mg_connection *conn, void *ignored)
 	const char *msg = "Hello world";
 	unsigned long len = (unsigned long)strlen(msg);
 
-    mg_send_ok(conn, "text/plain", len);
+	mg_send_http_ok(conn, "text/plain", len);
 
 	mg_write(conn, msg, len);
 
