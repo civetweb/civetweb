@@ -140,13 +140,25 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 		return -1;
 	}
 
-	rc = mbedtls_pk_parse_keyfile(&ctx->pkey, crt, NULL);
+	// TODO Maybe add Zephyr specific implementation of mbedtls_x509_crt_parse_file
+#if defined(__ZEPHYR__)
+	rc = mbedtls_pk_parse_key(&ctx->pkey, crt, strlen(crt) + 1, NULL, 0 );
+#else
+    rc = mbedtls_pk_parse_keyfile(&ctx->pkey, crt, NULL);
+#endif // defined(__ZEPHYR__)
+
 	if (rc != 0) {
 		DEBUG_TRACE("TLS parse key file failed (%i)", rc);
-		return -1;
+		//return -1; TODO
 	}
 
+	// TODO Maybe add Zephyr specific implementation of mbedtls_x509_crt_parse_file
+#if defined(__ZEPHYR__)
+	rc = mbedtls_x509_crt_parse(&ctx->cert, crt, strlen(crt)+1);
+#else
 	rc = mbedtls_x509_crt_parse_file(&ctx->cert, crt);
+#endif
+
 	if (rc != 0) {
 		DEBUG_TRACE("TLS parse crt file failed (%i)", rc);
 		return -1;
