@@ -199,6 +199,39 @@ mbed_sslctx_uninit(SSL_CTX *ctx)
 	mbedtls_ssl_config_free(&ctx->conf);
 }
 
+static int tls_tx(void *ctx, const unsigned char *buf, size_t len)
+{
+	int sock = *((int*)ctx);
+	ssize_t sent;
+
+	sent = zsock_sendto(sock, buf, len, 0, NULL, 0);
+	if (sent < 0) {
+		if (errno == EAGAIN) {
+			return MBEDTLS_ERR_SSL_WANT_WRITE;
+		}
+
+		return MBEDTLS_ERR_NET_SEND_FAILED;
+	}
+
+	return sent;
+}
+
+static int tls_rx(void *ctx, unsigned char *buf, size_t len)
+{
+	int sock = *((int*)ctx);
+	ssize_t received;
+
+	received = zsock_recvfrom(sock, buf, len, 0, NULL, 0);
+	if (received < 0) {
+		if (errno == EAGAIN) {
+			return MBEDTLS_ERR_SSL_WANT_READ;
+		}
+
+		return MBEDTLS_ERR_NET_RECV_FAILED;
+	}
+
+	return received;
+}
 
 int
 mbed_ssl_accept(mbedtls_ssl_context **ssl,
@@ -222,7 +255,7 @@ mbed_ssl_accept(mbedtls_ssl_context **ssl,
 
 	mbedtls_ssl_init(*ssl);
 	mbedtls_ssl_setup(*ssl, &ssl_ctx->conf);
-	mbedtls_ssl_set_bio(*ssl, sock, mbedtls_net_send, mbedtls_net_recv, NULL);
+	mbedtls_ssl_set_bio(*ssl, sock, tls_tx, tls_rx, NULL);
 	rc = mbed_ssl_handshake(*ssl);
 	if (rc != 0) {
 		DEBUG_TRACE("TLS handshake failed (%i)", rc);
