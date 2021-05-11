@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 
+
 #if defined(__GNUC__) || defined(__MINGW32__)
 #define GCC_VERSION                                                            \
 	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
@@ -196,6 +197,10 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #include <fcntl.h>
 
 #include <libc_extensions.h>
+
+#ifdef CONFIG_USE_MBEDTLS
+#define USE_MBEDTLS
+#endif
 
 /* Max worker threads is the max of pthreads minus the main application thread
  * and minus the main civetweb thread, thus -2
