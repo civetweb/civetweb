@@ -11,6 +11,9 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
+
+#include <drivers/entropy.h>
+
 #include <string.h>
 
 typedef mbedtls_ssl_context SSL;
@@ -42,6 +45,42 @@ static void mbed_debug(void *context,
                        const char *str);
 static int mbed_ssl_handshake(mbedtls_ssl_context *ssl);
 
+#if defined(CONFIG_ENTROPY_HAS_DRIVER)
+static const struct device *entropy_dev;
+#endif
+
+
+#if defined(CONFIG_ENTROPY_HAS_DRIVER)
+static int tls_entropy_func(void *ctx, unsigned char *buf, size_t len)
+{
+	ARG_UNUSED(ctx);
+
+	return entropy_get_entropy(entropy_dev, buf, len);
+}
+#else
+static int tls_entropy_func(void *ctx, unsigned char *buf, size_t len)
+{
+	ARG_UNUSED(ctx);
+
+	size_t i = len / 4;
+	uint32_t val;
+
+	while (i--) {
+		val = sys_rand32_get();
+		UNALIGNED_PUT(val, (uint32_t *)buf);
+		buf += 4;
+	}
+
+	i = len & 0x3;
+	val = sys_rand32_get();
+	while (i--) {
+		*buf++ = val;
+		val >>= 8;
+	}
+
+	return 0;
+}
+#endif /* defined(CONFIG_ENTROPY_HAS_DRIVER) */
 
 int
 mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
@@ -54,7 +93,7 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 	}
 
 	DEBUG_TRACE("%s", "Initializing MbedTLS SSL");
-	mbedtls_entropy_init(&ctx->entropy);
+	//mbedtls_entropy_init(&ctx->entropy);
 
 	conf = &ctx->conf;
 	mbedtls_ssl_config_init(conf);
@@ -75,14 +114,25 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 	mbedtls_ssl_conf_dbg(conf, mbed_debug, (void *)ctx);
 #endif
 
+	#if defined(CONFIG_ENTROPY_HAS_DRIVER)
+	entropy_dev = device_get_binding(DT_CHOSEN_ZEPHYR_ENTROPY_LABEL);
+	if (!entropy_dev) {
+		DEBUG_TRACE("Failed to obtain entropy device");
+		return -ENODEV;
+	}
+#else
+	DEBUG_TRACE("No entropy device on the system, "
+		 "TLS communication may be insecure!");
+#endif /* defined(CONFIG_ENTROPY_HAS_DRIVER) */
+
 	/* Initialize TLS key and cert */
 	mbedtls_pk_init(&ctx->pkey);
 	mbedtls_ctr_drbg_init(&ctx->ctr);
 	mbedtls_x509_crt_init(&ctx->cert);
 
 	rc = mbedtls_ctr_drbg_seed(&ctx->ctr,
-	                           mbedtls_entropy_func,
-	                           &ctx->entropy,
+	                           tls_entropy_func,
+	                           NULL/*&ctx->entropy*/,
 	                           (unsigned char *)"CivetWeb",
 	                           strlen("CivetWeb"));
 	if (rc != 0) {
@@ -133,7 +183,7 @@ mbed_sslctx_uninit(SSL_CTX *ctx)
 	mbedtls_ctr_drbg_free(&ctx->ctr);
 	mbedtls_pk_free(&ctx->pkey);
 	mbedtls_x509_crt_free(&ctx->cert);
-	mbedtls_entropy_free(&ctx->entropy);
+	//mbedtls_entropy_free(&ctx->entropy);
 	mbedtls_ssl_config_free(&ctx->conf);
 }
 
