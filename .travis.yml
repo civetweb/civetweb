@@ -37,6 +37,8 @@ install:
       PATH=~/.local/bin:${PATH};
       pip install --user --upgrade pip;
       pip install --user cpp-coveralls;
+      pip install --user codecov;
+      pip install --user coverage;
     fi
 
 before_script:
@@ -144,7 +146,6 @@ script:
 after_success:
   - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
       echo "Preparing coverage tests";
-      pip install coverage;
       echo "Creating coveralls coverage report";
       coveralls --include src --exclude src/main.c --exclude src/third_party --include include --gcov-options '\-lp' --root .. --build-root .;
       echo "Creating codecov coverage report";
@@ -374,7 +375,7 @@ matrix:
 
   - os: linux
     sudo: required
-    compiler: gcc
+    compiler: clang
     env:
       idx=6
       N=GCCAnyVersion-Linux-Coverage
