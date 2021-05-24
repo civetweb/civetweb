@@ -143,8 +143,13 @@ script:
 # Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
 after_success:
   - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
+      echo "Preparing coverage tests";
+      pip install coverage;
+      echo "Creating coveralls coverage report";
       coveralls --include src --exclude src/main.c --exclude src/third_party --include include --gcov-options '\-lp' --root .. --build-root .;
+      echo "Creating codecov coverage report";
       bash <(curl -s https://codecov.io/bash);
+      echo "All coverage reports created";
     fi
 
 conan-linux: &conan-linux
