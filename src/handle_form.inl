@@ -100,7 +100,7 @@ url_encoded_field_get(const struct mg_connection *conn,
 		mg_cry_internal(conn,
 		                "%s: Not enough memory (required: %lu)",
 		                __func__,
-		                (unsigned long)(value_len + 1));
+		                (unsigned long)(*value_len + 1));
 		return MG_FORM_FIELD_STORAGE_ABORT;
 	}
 
