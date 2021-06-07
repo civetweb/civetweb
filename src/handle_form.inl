@@ -87,12 +87,12 @@ url_encoded_field_get(const struct mg_connection *conn,
                       const char *key,
                       size_t key_len,
                       const char *value,
-                      size_t value_len,
+                      size_t *value_len,
                       struct mg_form_data_handler *fdh)
 {
 	char key_dec[1024];
 
-	char *value_dec = (char *)mg_malloc_ctx(value_len + 1, conn->phys_ctx);
+	char *value_dec = (char *)mg_malloc_ctx(*value_len + 1, conn->phys_ctx);
 	int value_dec_len, ret;
 
 	if (!value_dec) {
@@ -100,14 +100,18 @@ url_encoded_field_get(const struct mg_connection *conn,
 		mg_cry_internal(conn,
 		                "%s: Not enough memory (required: %lu)",
 		                __func__,
-		                (unsigned long)(value_len + 1));
+		                (unsigned long)(*value_len + 1));
 		return MG_FORM_FIELD_STORAGE_ABORT;
 	}
 
 	mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 
+	if (*value_len >= 2 && value[*value_len - 2] == '%')
+		*value_len -= 2;
+	else if (*value_len >= 1 && value[*value_len - 1] == '%')
+		(*value_len)--;
 	value_dec_len =
-	    mg_url_decode(value, (int)value_len, value_dec, (int)value_len + 1, 1);
+	    mg_url_decode(value, (int)*value_len, value_dec, ((int)*value_len) + 1, 1);
 
 	ret = fdh->field_get(key_dec,
 	                     value_dec,
@@ -258,18 +262,15 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			val++;
 			next = strchr(val, '&');
-			if (next) {
+			if (next)
 				vallen = next - val;
-				next++;
-			} else {
+			else
 				vallen = (ptrdiff_t)strlen(val);
-				next = val + vallen;
-			}
 
 			if (field_storage == MG_FORM_FIELD_STORAGE_GET) {
 				/* Call callback */
 				r = url_encoded_field_get(
-				    conn, data, (size_t)keylen, val, (size_t)vallen, fdh);
+				    conn, data, (size_t)keylen, val, (size_t*)&vallen, fdh);
 				if (r == MG_FORM_FIELD_HANDLE_ABORT) {
 					/* Stop request handling */
 					break;
@@ -279,6 +280,11 @@ mg_handle_form_request(struct mg_connection *conn,
 					field_storage = MG_FORM_FIELD_STORAGE_SKIP;
 				}
 			}
+
+			if (next)
+				next++;
+			else
+				next = val + vallen;
 #if !defined(NO_FILESYSTEMS)
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
 				/* Store the content to a file */
@@ -450,11 +456,9 @@ mg_handle_form_request(struct mg_connection *conn,
 				next = strchr(val, '&');
 				if (next) {
 					vallen = next - val;
-					next++;
 					end_of_key_value_pair_found = 1;
 				} else {
 					vallen = (ptrdiff_t)strlen(val);
-					next = val + vallen;
 					end_of_key_value_pair_found = all_data_read;
 				}
 
@@ -472,7 +476,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					                               ? 0
 					                               : (size_t)keylen),
 					                          val,
-					                          (size_t)vallen,
+					                          (size_t*)&vallen,
 					                          fdh);
 					get_block++;
 					if (r == MG_FORM_FIELD_HANDLE_ABORT) {
@@ -484,6 +488,11 @@ mg_handle_form_request(struct mg_connection *conn,
 						field_storage = MG_FORM_FIELD_STORAGE_SKIP;
 					}
 				}
+
+				if (next)
+					next++;
+				else
+					next = val + vallen;
 #if !defined(NO_FILESYSTEMS)
 				if (fstore.access.fp) {
 					size_t n = (size_t)
