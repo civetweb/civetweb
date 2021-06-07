@@ -83,12 +83,14 @@ url_encoded_field_found(const struct mg_connection *conn,
 }
 
 static int
-url_encoded_field_get(const struct mg_connection *conn,
-                      const char *key,
-                      size_t key_len,
-                      const char *value,
-                      size_t *value_len,
-                      struct mg_form_data_handler *fdh)
+url_encoded_field_get(
+    const struct mg_connection *conn,
+    const char *key,
+    size_t key_len,
+    const char *value,
+    size_t *value_len, /* IN: number of bytes available in "value", OUT: number
+                          of bytes processed */
+    struct mg_form_data_handler *fdh)
 {
 	char key_dec[1024];
 
@@ -285,6 +287,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			if (next) {
 				next++;
 			} else {
+				/* vallen may have been modified by url_encoded_field_get */
 				next = val + vallen;
 			}
 
@@ -492,10 +495,13 @@ mg_handle_form_request(struct mg_connection *conn,
 					}
 				}
 
-				if (next)
+				if (next) {
 					next++;
-				else
+				} else {
+					/* vallen may have been modified by url_encoded_field_get */
 					next = val + vallen;
+				}
+
 #if !defined(NO_FILESYSTEMS)
 				if (fstore.access.fp) {
 					size_t n = (size_t)
