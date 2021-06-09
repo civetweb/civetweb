@@ -494,34 +494,6 @@ matrix:
       MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
 
   -
-    os: linux
-    dist: precise
-    sudo: required
-    compiler: clang
-    env:
-      idx=10
-      N=Precise-Clang-Linux-Default
-      BUILD_TYPE=Debug
-      ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_0=YES
-      OPENSSL_1_1=NO
-      ENABLE_CXX=NO
-      ENABLE_LUA_SHARED=NO
-      C_STANDARD=auto
-      CXX_STANDARD=auto
-      BUILD_SHARED=NO
-      NO_FILES=NO
-      ENABLE_SSL=YES
-      NO_CGI=NO
-      ENABLE_IPV6=NO
-      ENABLE_WEBSOCKETS=NO
-      ENABLE_SERVER_STATS=NO
-      ENABLE_LUA=NO
-      ENABLE_DUKTAPE=NO
-      NO_CACHING=NO
-      ALLOW_WARNINGS=YES
-
-  -
     os: osx
     sudo: required
     compiler: clang
