@@ -16030,7 +16030,7 @@ initialize_openssl(char *ebuf, size_t ebuf_len)
 	}
 #endif /* NO_SSL_DL */
 
-#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
+#if ( defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) ) && !defined(NO_SSL_DL)
 	/* Initialize SSL library */
 	OPENSSL_init_ssl(0, NULL);
 	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS
@@ -16364,7 +16364,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	int protocol_ver;
 	int ssl_cache_timeout;
 
-#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
+#if ( defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) ) && !defined(NO_SSL_DL)
 	if ((dom_ctx->ssl_ctx = SSL_CTX_new(TLS_server_method())) == NULL) {
 		mg_cry_ctx_internal(phys_ctx,
 		                    "SSL_CTX_new (server) error: %s",
@@ -17178,7 +17178,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	}
 
 #if !defined(NO_SSL) && !defined(USE_MBEDTLS) // TODO: mbedTLS client
-#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
+#if ( defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) ) && !defined(NO_SSL_DL)
 	if (use_ssl
 	    && (conn->dom_ctx->ssl_ctx = SSL_CTX_new(TLS_client_method()))
 	           == NULL) {
