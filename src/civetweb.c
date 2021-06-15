@@ -8798,14 +8798,15 @@ is_authorized_for_put(struct mg_connection *conn)
 #endif
 
 
-int
-mg_modify_passwords_file(const char *fname,
-                         const char *domain,
-                         const char *user,
-                         const char *pass)
+static int
+modify_passwords_file(const char *fname,
+                      const char *domain,
+                      const char *user,
+                      const char *pass,
+                      const char *ha1)
 {
 	int found, i;
-	char line[512], u[512] = "", d[512] = "", ha1[33], tmp[UTF8_PATH_MAX + 8];
+	char line[512], u[512] = "", d[512] = "", ha1buf[33], tmp[UTF8_PATH_MAX + 8];
 	FILE *fp, *fp2;
 
 	found = 0;
@@ -8884,7 +8885,9 @@ mg_modify_passwords_file(const char *fname,
 		if (!strcmp(u, user) && !strcmp(d, domain)) {
 			found++;
 			if (pass != NULL) {
-				mg_md5(ha1, user, ":", domain, ":", pass, NULL);
+				mg_md5(ha1buf, user, ":", domain, ":", pass, NULL);
+				fprintf(fp2, "%s:%s:%s\n", user, domain, ha1buf);
+			} else if (ha1 != NULL) {
 				fprintf(fp2, "%s:%s:%s\n", user, domain, ha1);
 			}
 		} else {
@@ -8893,9 +8896,14 @@ mg_modify_passwords_file(const char *fname,
 	}
 
 	/* If new user, just add it */
-	if (!found && (pass != NULL)) {
-		mg_md5(ha1, user, ":", domain, ":", pass, NULL);
-		fprintf(fp2, "%s:%s:%s\n", user, domain, ha1);
+	if (!found) {
+		if (pass != NULL) {
+			mg_md5(ha1buf, user, ":", domain, ":", pass, NULL);
+			fprintf(fp2, "%s:%s:%s\n", user, domain, ha1buf);
+		}
+		else if (ha1 != NULL) {
+			fprintf(fp2, "%s:%s:%s\n", user, domain, ha1);
+		}
 	}
 
 	/* Close files */
@@ -8907,6 +8915,26 @@ mg_modify_passwords_file(const char *fname,
 	IGNORE_UNUSED_RESULT(rename(tmp, fname));
 
 	return 1;
+}
+
+
+int
+mg_modify_passwords_file(const char *fname,
+                         const char *domain,
+                         const char *user,
+                         const char *pass)
+{
+	return modify_passwords_file(fname, domain, user, pass, NULL);
+}
+
+
+int
+mg_modify_passwords_file_ha1(const char *fname,
+                         const char *domain,
+                         const char *user,
+                         const char *ha1)
+{
+	return modify_passwords_file(fname, domain, user, NULL, ha1);
 }
 
 

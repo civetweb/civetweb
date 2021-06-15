@@ -88,6 +88,7 @@ The content of both structures is not defined in the interface - they are only u
 * [`mg_send_digest_access_authentication_request( conn, realm );`](api/mg_send_digest_access_authentication_request.md)
 * [`mg_check_digest_access_authentication( conn, realm, filename );`](api/mg_check_digest_access_authentication.md)
 * [`mg_modify_passwords_file( passwords_file_name, realm, user, password );`](api/mg_modify_passwords_file.md)
+* [`mg_modify_passwords_file_ha1( passwords_file_name, realm, user, ha1 );`](api/mg_modify_passwords_file_ha1.md)
 
 * [`mg_get_request_info( conn );`](api/mg_get_request_info.md)
 * [`mg_get_request_link( conn, buf, buflen );`](api/mg_get_request_link.md)
