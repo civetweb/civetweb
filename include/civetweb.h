@@ -797,6 +797,21 @@ CIVETWEB_API int mg_modify_passwords_file(const char *passwords_file_name,
                                           const char *password);
 
 
+/* Same as mg_modify_passwords_file, but instead of the plain-text
+ * password, the HA1 hash is specified. The plain-text password is
+ * not made known to civetweb.
+ *
+ * The HA1 hash is the MD5 checksum of a "user:realm:password" string
+ * in lower-case hex format. For example, if the user name is "myuser",
+ * the realm is "myrealm", and the password is "secret", then the HA1 is
+ * e67fd3248b58975c3e89ff18ecb75e2f.
+ */
+CIVETWEB_API int mg_modify_passwords_file_ha1(const char *passwords_file_name,
+                                              const char *realm,
+                                              const char *user,
+                                              const char *ha1);
+
+
 /* Return information associated with the request.
  * Use this function to implement a server and get data about a request
  * from a HTTP/HTTPS client.

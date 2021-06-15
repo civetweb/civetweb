@@ -27,6 +27,7 @@ The function returns 1 when successful and 0 if an error occurs.
 
 ### See Also
 
+* [`mg_modify_passwords_file_ha1();`](mg_modify_passwords_file_ha1.md)
 * [`mg_check_digest_access_authentication();`](mg_check_digest_access_authentication.md)
 * [`mg_send_digest_access_authentication_request();`](mg_send_digest_access_authentication_request.md)
 
