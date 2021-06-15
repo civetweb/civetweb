@@ -201,6 +201,14 @@ UpgradeLog*.htm
 App_Data/*.mdf
 App_Data/*.ldf
 
+
+#################
+## Other IDEs
+#################
+
+*.kdev4
+
+
 #############
 ## Windows detritus
 #############
