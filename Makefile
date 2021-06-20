@@ -295,7 +295,7 @@ help:
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   WITH_EXPERIMENTAL=1   build with experimental features"
 	@echo "   WITH_DAEMONIZE=1      build with daemonize."
-	@echo "   WITH_MBEDTLS=1        build with mbedTLS support.
+	@echo "   WITH_MBEDTLS=1        build with mbedTLS support."
 	@echo "   WITH_OPENSSL_API_1_0=1  build with OpenSSL 1.0.x support."
 	@echo "   WITH_OPENSSL_API_1_1=1  build with OpenSSL 1.1.x support."
 	@echo "   NO_SSL=1              build without SSL support. Build will not need libcrypto/libssl."
