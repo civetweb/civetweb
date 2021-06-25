@@ -5906,7 +5906,7 @@ static int
 mg_poll(struct mg_pollfd *pfd,
         unsigned int n,
         int milliseconds,
-        stop_flag_t *stop_flag)
+        const stop_flag_t *stop_flag)
 {
 	/* Call poll, but only for a maximum time of a few seconds.
 	 * This will allow to stop the server after some seconds, instead
@@ -6149,7 +6149,7 @@ push_all(struct mg_context *ctx,
 		timeout = atoi(ctx->dd.config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 	if (timeout <= 0.0) {
-		timeout = atof(config_options[REQUEST_TIMEOUT].default_value) / 1000.0;
+		timeout = strtod(config_options[REQUEST_TIMEOUT].default_value, NULL) / 1000.0;
 	}
 
 	while ((len > 0) && STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
@@ -6417,7 +6417,7 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 	if (timeout <= 0.0) {
-		timeout = atof(config_options[REQUEST_TIMEOUT].default_value) / 1000.0;
+		timeout = strtod(config_options[REQUEST_TIMEOUT].default_value, NULL) / 1000.0;
 	}
 	start_time = mg_get_current_time_ns();
 	timeout_ns = (uint64_t)(timeout * 1.0E9);
@@ -9827,7 +9827,7 @@ send_file_data(struct mg_connection *conn,
 static int
 parse_range_header(const char *header, int64_t *a, int64_t *b)
 {
-	return sscanf(header, "bytes=%" INT64_FMT "-%" INT64_FMT, a, b);
+	return sscanf(header, "bytes=%" INT64_FMT "-%" INT64_FMT, a, b); // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
 }
 
 
@@ -10792,15 +10792,15 @@ read_message(FILE *fp,
 
 	if (conn->dom_ctx->config[REQUEST_TIMEOUT]) {
 		/* value of request_timeout is in seconds, config in milliseconds */
-		request_timeout = atof(conn->dom_ctx->config[REQUEST_TIMEOUT]) / 1000.0;
+		request_timeout = strtod(conn->dom_ctx->config[REQUEST_TIMEOUT], NULL) / 1000.0;
 	} else {
 		request_timeout =
-		    atof(config_options[REQUEST_TIMEOUT].default_value) / 1000.0;
+		    strtod(config_options[REQUEST_TIMEOUT].default_value, NULL) / 1000.0;
 	}
 	if (conn->handled_requests > 0) {
 		if (conn->dom_ctx->config[KEEP_ALIVE_TIMEOUT]) {
 			request_timeout =
-			    atof(conn->dom_ctx->config[KEEP_ALIVE_TIMEOUT]) / 1000.0;
+			    strtod(conn->dom_ctx->config[KEEP_ALIVE_TIMEOUT], NULL) / 1000.0;
 		}
 	}
 
@@ -13231,9 +13231,9 @@ parse_match_net(const struct vec *vec, const union usa *sa, int no_strict)
 	int n;
 	unsigned int a, b, c, d, slash;
 
-	if (sscanf(vec->ptr, "%u.%u.%u.%u/%u%n", &a, &b, &c, &d, &slash, &n) != 5) {
+	if (sscanf(vec->ptr, "%u.%u.%u.%u/%u%n", &a, &b, &c, &d, &slash, &n) != 5) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
 		slash = 32;
-		if (sscanf(vec->ptr, "%u.%u.%u.%u%n", &a, &b, &c, &d, &n) != 4) {
+		if (sscanf(vec->ptr, "%u.%u.%u.%u%n", &a, &b, &c, &d, &n) != 4) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
 			n = 0;
 		}
 	}
@@ -13242,7 +13242,7 @@ parse_match_net(const struct vec *vec, const union usa *sa, int no_strict)
 		if ((a < 256) && (b < 256) && (c < 256) && (d < 256) && (slash < 33)) {
 			/* IPv4 format */
 			if (sa->sa.sa_family == AF_INET) {
-				uint32_t ip = (uint32_t)ntohl(sa->sin.sin_addr.s_addr);
+				uint32_t ip = ntohl(sa->sin.sin_addr.s_addr);
 				uint32_t net = ((uint32_t)a << 24) | ((uint32_t)b << 16)
 				               | ((uint32_t)c << 8) | (uint32_t)d;
 				uint32_t mask = slash ? (0xFFFFFFFFu << (32 - slash)) : 0;
@@ -13338,7 +13338,7 @@ set_throttle(const char *spec, const union usa *rsa, const char *uri)
 
 	while ((spec = next_option(spec, &vec, &val)) != NULL) {
 		mult = ',';
-		if ((val.ptr == NULL) || (sscanf(val.ptr, "%lf%c", &v, &mult) < 1)
+		if ((val.ptr == NULL) || (sscanf(val.ptr, "%lf%c", &v, &mult) < 1) // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
 		    || (v < 0)
 		    || ((lowercase(&mult) != 'k') && (lowercase(&mult) != 'm')
 		        && (mult != ','))) {
@@ -13482,14 +13482,6 @@ switch_domain_context(struct mg_connection *conn)
 
 	return 1;
 }
-
-
-static int mg_construct_local_link(const struct mg_connection *conn,
-                                   char *buf,
-                                   size_t buflen,
-                                   const char *define_proto,
-                                   int define_port,
-                                   const char *define_uri);
 
 
 static void
@@ -14046,7 +14038,6 @@ handle_request(struct mg_connection *conn)
 	ri->local_uri = tmp;
 
 	/* step 1. completed, the url is known now */
-	uri_len = (int)strlen(ri->local_uri);
 	DEBUG_TRACE("URL: %s", ri->local_uri);
 
 	/* 2. if this ip has limited speed, set it for this connection */
@@ -14686,7 +14677,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	len = 0;
 
 	/* Test for different ways to format this string */
-	if (sscanf(vec->ptr, "%u.%u.%u.%u:%u%n", &a, &b, &c, &d, &port, &len)
+	if (sscanf(vec->ptr, "%u.%u.%u.%u:%u%n", &a, &b, &c, &d, &port, &len) // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
 	    == 5) {
 		/* Bind to a specific IPv4 address, e.g. 192.168.1.5:8080 */
 		so->lsa.sin.sin_addr.s_addr =
@@ -14707,7 +14698,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 #endif
 
 	} else if ((vec->ptr[0] == '+')
-	           && (sscanf(vec->ptr + 1, "%u%n", &port, &len) == 1)) {
+	           && (sscanf(vec->ptr + 1, "%u%n", &port, &len) == 1)) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
 
 		/* Port is specified with a +, bind to IPv6 and IPv4, INADDR_ANY */
 		/* Add 1 to len for the + character we skipped before */
@@ -14755,7 +14746,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 
 		if (mg_inet_pton(
 		        AF_INET, hostname, &so->lsa.sin, sizeof(so->lsa.sin), 1)) {
-			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) {
+			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
 				*ip_version = 4;
 				so->lsa.sin.sin_port = htons((uint16_t)port);
 				len += (int)(hostnlen + 1);
@@ -18089,7 +18080,7 @@ websocket_client_thread(void *data)
 static struct mg_connection *
 mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
                                  int use_ssl,
-                                 char *error_buffer,
+                                 const char *error_buffer,
                                  size_t error_buffer_size,
                                  const char *path,
                                  const char *origin,
