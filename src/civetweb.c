@@ -1774,6 +1774,7 @@ typedef struct SSL_CTX SSL_CTX;
 #if !defined(OPENSSL_API_3_0)
 #define OPENSSL_API_3_0
 #endif
+#define OPENSSL_REMOVE_THREAD_STATE()
 #else
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 #if !defined(OPENSSL_API_1_1)
