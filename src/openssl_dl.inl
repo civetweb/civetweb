@@ -98,7 +98,8 @@ struct ssl_func {
 };
 
 
-#if ( defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) ) && !defined(NO_SSL_DL)
+#if (defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0))                     \
+    && !defined(NO_SSL_DL)
 
 #define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
 #define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)

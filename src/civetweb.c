@@ -6150,7 +6150,8 @@ push_all(struct mg_context *ctx,
 		timeout = atoi(ctx->dd.config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 	if (timeout <= 0.0) {
-		timeout = strtod(config_options[REQUEST_TIMEOUT].default_value, NULL) / 1000.0;
+		timeout = strtod(config_options[REQUEST_TIMEOUT].default_value, NULL)
+		          / 1000.0;
 	}
 
 	while ((len > 0) && STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
@@ -6418,7 +6419,8 @@ pull_all(FILE *fp, struct mg_connection *conn, char *buf, int len)
 		timeout = atoi(conn->dom_ctx->config[REQUEST_TIMEOUT]) / 1000.0;
 	}
 	if (timeout <= 0.0) {
-		timeout = strtod(config_options[REQUEST_TIMEOUT].default_value, NULL) / 1000.0;
+		timeout = strtod(config_options[REQUEST_TIMEOUT].default_value, NULL)
+		          / 1000.0;
 	}
 	start_time = mg_get_current_time_ns();
 	timeout_ns = (uint64_t)(timeout * 1.0E9);
@@ -8807,7 +8809,8 @@ modify_passwords_file(const char *fname,
                       const char *ha1)
 {
 	int found, i;
-	char line[512], u[512] = "", d[512] = "", ha1buf[33], tmp[UTF8_PATH_MAX + 8];
+	char line[512], u[512] = "", d[512] = "", ha1buf[33],
+	                tmp[UTF8_PATH_MAX + 8];
 	FILE *fp, *fp2;
 
 	found = 0;
@@ -8901,8 +8904,7 @@ modify_passwords_file(const char *fname,
 		if (pass != NULL) {
 			mg_md5(ha1buf, user, ":", domain, ":", pass, NULL);
 			fprintf(fp2, "%s:%s:%s\n", user, domain, ha1buf);
-		}
-		else if (ha1 != NULL) {
+		} else if (ha1 != NULL) {
 			fprintf(fp2, "%s:%s:%s\n", user, domain, ha1);
 		}
 	}
@@ -8931,9 +8933,9 @@ mg_modify_passwords_file(const char *fname,
 
 int
 mg_modify_passwords_file_ha1(const char *fname,
-                         const char *domain,
-                         const char *user,
-                         const char *ha1)
+                             const char *domain,
+                             const char *user,
+                             const char *ha1)
 {
 	return modify_passwords_file(fname, domain, user, NULL, ha1);
 }
@@ -9828,7 +9830,12 @@ send_file_data(struct mg_connection *conn,
 static int
 parse_range_header(const char *header, int64_t *a, int64_t *b)
 {
-	return sscanf(header, "bytes=%" INT64_FMT "-%" INT64_FMT, a, b); // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
+	return sscanf(header,
+	              "bytes=%" INT64_FMT "-%" INT64_FMT,
+	              a,
+	              b); // NOLINT(cert-err34-c) 'sscanf' used to convert a string
+	                  // to an integer value, but function will not report
+	                  // conversion errors; consider using 'strtol' instead
 }
 
 
@@ -10793,15 +10800,18 @@ read_message(FILE *fp,
 
 	if (conn->dom_ctx->config[REQUEST_TIMEOUT]) {
 		/* value of request_timeout is in seconds, config in milliseconds */
-		request_timeout = strtod(conn->dom_ctx->config[REQUEST_TIMEOUT], NULL) / 1000.0;
+		request_timeout =
+		    strtod(conn->dom_ctx->config[REQUEST_TIMEOUT], NULL) / 1000.0;
 	} else {
 		request_timeout =
-		    strtod(config_options[REQUEST_TIMEOUT].default_value, NULL) / 1000.0;
+		    strtod(config_options[REQUEST_TIMEOUT].default_value, NULL)
+		    / 1000.0;
 	}
 	if (conn->handled_requests > 0) {
 		if (conn->dom_ctx->config[KEEP_ALIVE_TIMEOUT]) {
 			request_timeout =
-			    strtod(conn->dom_ctx->config[KEEP_ALIVE_TIMEOUT], NULL) / 1000.0;
+			    strtod(conn->dom_ctx->config[KEEP_ALIVE_TIMEOUT], NULL)
+			    / 1000.0;
 		}
 	}
 
@@ -13232,9 +13242,15 @@ parse_match_net(const struct vec *vec, const union usa *sa, int no_strict)
 	int n;
 	unsigned int a, b, c, d, slash;
 
-	if (sscanf(vec->ptr, "%u.%u.%u.%u/%u%n", &a, &b, &c, &d, &slash, &n) != 5) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
+	if (sscanf(vec->ptr, "%u.%u.%u.%u/%u%n", &a, &b, &c, &d, &slash, &n)
+	    != 5) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an
+		        // integer value, but function will not report conversion
+		        // errors; consider using 'strtol' instead
 		slash = 32;
-		if (sscanf(vec->ptr, "%u.%u.%u.%u%n", &a, &b, &c, &d, &n) != 4) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
+		if (sscanf(vec->ptr, "%u.%u.%u.%u%n", &a, &b, &c, &d, &n)
+		    != 4) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to
+			        // an integer value, but function will not report conversion
+			        // errors; consider using 'strtol' instead
 			n = 0;
 		}
 	}
@@ -13339,7 +13355,11 @@ set_throttle(const char *spec, const union usa *rsa, const char *uri)
 
 	while ((spec = next_option(spec, &vec, &val)) != NULL) {
 		mult = ',';
-		if ((val.ptr == NULL) || (sscanf(val.ptr, "%lf%c", &v, &mult) < 1) // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
+		if ((val.ptr == NULL)
+		    || (sscanf(val.ptr, "%lf%c", &v, &mult)
+		        < 1) // NOLINT(cert-err34-c) 'sscanf' used to convert a string
+		             // to an integer value, but function will not report
+		             // conversion errors; consider using 'strtol' instead
 		    || (v < 0)
 		    || ((lowercase(&mult) != 'k') && (lowercase(&mult) != 'm')
 		        && (mult != ','))) {
@@ -14678,7 +14698,16 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	len = 0;
 
 	/* Test for different ways to format this string */
-	if (sscanf(vec->ptr, "%u.%u.%u.%u:%u%n", &a, &b, &c, &d, &port, &len) // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
+	if (sscanf(vec->ptr,
+	           "%u.%u.%u.%u:%u%n",
+	           &a,
+	           &b,
+	           &c,
+	           &d,
+	           &port,
+	           &len) // NOLINT(cert-err34-c) 'sscanf' used to convert a string
+	                 // to an integer value, but function will not report
+	                 // conversion errors; consider using 'strtol' instead
 	    == 5) {
 		/* Bind to a specific IPv4 address, e.g. 192.168.1.5:8080 */
 		so->lsa.sin.sin_addr.s_addr =
@@ -14699,7 +14728,11 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 #endif
 
 	} else if ((vec->ptr[0] == '+')
-	           && (sscanf(vec->ptr + 1, "%u%n", &port, &len) == 1)) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
+	           && (sscanf(vec->ptr + 1, "%u%n", &port, &len)
+	               == 1)) { // NOLINT(cert-err34-c) 'sscanf' used to convert a
+		                    // string to an integer value, but function will not
+		                    // report conversion errors; consider using 'strtol'
+		                    // instead
 
 		/* Port is specified with a +, bind to IPv6 and IPv4, INADDR_ANY */
 		/* Add 1 to len for the + character we skipped before */
@@ -14747,7 +14780,11 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 
 		if (mg_inet_pton(
 		        AF_INET, hostname, &so->lsa.sin, sizeof(so->lsa.sin), 1)) {
-			if (sscanf(cb + 1, "%u%n", &port, &len) == 1) { // NOLINT(cert-err34-c) 'sscanf' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead
+			if (sscanf(cb + 1, "%u%n", &port, &len)
+			    == 1) { // NOLINT(cert-err34-c) 'sscanf' used to convert a
+				        // string to an integer value, but function will not
+				        // report conversion errors; consider using 'strtol'
+				        // instead
 				*ip_version = 4;
 				so->lsa.sin.sin_port = htons((uint16_t)port);
 				len += (int)(hostnlen + 1);
@@ -16050,7 +16087,8 @@ initialize_openssl(char *ebuf, size_t ebuf_len)
 	}
 #endif /* NO_SSL_DL */
 
-#if ( defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) ) && !defined(NO_SSL_DL)
+#if (defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0))                     \
+    && !defined(NO_SSL_DL)
 	/* Initialize SSL library */
 	OPENSSL_init_ssl(0, NULL);
 	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS
@@ -16384,7 +16422,8 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	int protocol_ver;
 	int ssl_cache_timeout;
 
-#if ( defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) ) && !defined(NO_SSL_DL)
+#if (defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0))                     \
+    && !defined(NO_SSL_DL)
 	if ((dom_ctx->ssl_ctx = SSL_CTX_new(TLS_server_method())) == NULL) {
 		mg_cry_ctx_internal(phys_ctx,
 		                    "SSL_CTX_new (server) error: %s",
@@ -17198,7 +17237,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	}
 
 #if !defined(NO_SSL) && !defined(USE_MBEDTLS) // TODO: mbedTLS client
-#if ( defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) ) && !defined(NO_SSL_DL)
+#if (defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0))                     \
+    && !defined(NO_SSL_DL)
 	if (use_ssl
 	    && (conn->dom_ctx->ssl_ctx = SSL_CTX_new(TLS_client_method()))
 	           == NULL) {
