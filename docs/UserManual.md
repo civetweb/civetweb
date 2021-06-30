@@ -635,6 +635,12 @@ colons, commas or spaces.
 
 See [this entry](https://www.openssl.org/docs/manmaster/apps/ciphers.html) in
 OpenSSL documentation for full list of options and additional examples.
+The OpenSSL cipher string uses different cipher names than IANA 
+(see [this mapping](https://testssl.sh/openssl-iana.mapping.html)).
+
+In case CivetWeb is built with a TLS library other than OpenSSL 
+(e.g., [mbedTLS](https://tls.mbed.org/supported-ssl-ciphersuites)), 
+the cipher names may be different.
 
 ### ssl\_default\_verify\_paths `yes`
 Loads default trusted certificates locations set at openssl compile time.
