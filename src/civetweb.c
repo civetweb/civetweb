@@ -18121,7 +18121,7 @@ websocket_client_thread(void *data)
 static struct mg_connection *
 mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
                                  int use_ssl,
-                                 const char *error_buffer,
+                                 char *error_buffer,
                                  size_t error_buffer_size,
                                  const char *path,
                                  const char *origin,

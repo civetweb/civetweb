@@ -302,26 +302,27 @@ field_found(const char *key,
 		 * path information present in the filename. Drop all "/" (and "\" for
 		 * Windows).
 		 */
-		char *sep = strrchr(filename, '/');
+		const char *fname = filename;
+		const char *sep = strrchr(fname, '/');
 		if (sep) {
-			memmove(filename, sep + 1, strlen(sep));
+			fname = sep + 1;
 		}
 
 #ifdef _WIN32
-		sep = strrchr(filename, '\\');
+		sep = strrchr(fname, '\\');
 		if (sep) {
-			memmove(filename, sep + 1, strlen(sep));
+			fname = sep + 1;
 		}
 
 		/* For Windows: Find the directory for temporary files */
 		temppathlen = GetTempPathA(sizeof(temppath), temppath);
 		if (temppathlen > 0) {
-			_snprintf(path, pathlen, "%s\\%s", temppath, filename);
+			_snprintf(path, pathlen, "%s\\%s", temppath, fname);
 		} else {
-			_snprintf(path, pathlen, "C:\\tmp\\%s", filename);
+			_snprintf(path, pathlen, "C:\\tmp\\%s", fname);
 		}
 #else
-		snprintf(path, pathlen, "/tmp/%s", filename);
+		snprintf(path, pathlen, "/tmp/%s", fname);
 #endif
 
 		/* According to https://datatracker.ietf.org/doc/html/rfc7578#section-7:
