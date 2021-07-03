@@ -286,17 +286,64 @@ field_found(const char *key,
             size_t pathlen,
             void *user_data)
 {
+#ifdef _WIN32
+	char temppath[MAX_PATH + 2];
+	DWORD temppathlen;
+#endif
+
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
 	mg_printf(conn, "\r\n\r\n%s:\r\n", key);
 
 	if (filename && *filename) {
+
+		/* According to
+		 * https://datatracker.ietf.org/doc/html/rfc7578#section-4.2: Do not use
+		 * path information present in the filename. Drop all "/" (and "\" for
+		 * Windows).
+		 */
+		char *sep = strrchr(filename, '/');
+		if (sep) {
+			memmove(filename, sep + 1, strlen(sep));
+		}
+
 #ifdef _WIN32
-		_snprintf(path, pathlen, "D:\\tmp\\%s", filename);
+		sep = strrchr(filename, '\\');
+		if (sep) {
+			memmove(filename, sep + 1, strlen(sep));
+		}
+
+		/* For Windows: Find the directory for temporary files */
+		temppathlen = GetTempPathA(sizeof(temppath), temppath);
+		if (temppathlen > 0) {
+			_snprintf(path, pathlen, "%s\\%s", temppath, filename);
+		} else {
+			_snprintf(path, pathlen, "C:\\tmp\\%s", filename);
+		}
 #else
 		snprintf(path, pathlen, "/tmp/%s", filename);
 #endif
-		return MG_FORM_FIELD_STORAGE_STORE;
+
+		/* According to https://datatracker.ietf.org/doc/html/rfc7578#section-7:
+		 * Do not overwrite existing files.
+		 */
+		{
+			FILE *ftest = fopen(path, "r");
+			if (!ftest) {
+				return MG_FORM_FIELD_STORAGE_STORE;
+			}
+			fclose(ftest);
+			/* This is just simple demo code. More sophisticated code could add
+			 * numbers to the file name to make filenames unique. However, most
+			 * likely file upload will not end up in the temporary path, but in
+			 * a user directory - multiple directories for multiple users that
+			 * are logged into the web service. In this case, users might want
+			 * to overwrite their own code. You need to adapt this example to
+			 * your needs.
+			 */
+		}
+
+		return MG_FORM_FIELD_STORAGE_SKIP;
 	}
 	return MG_FORM_FIELD_STORAGE_GET;
 }
