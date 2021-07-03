@@ -55,6 +55,8 @@ url_encoded_field_found(const struct mg_connection *conn,
 			mg_cry_internal(conn, "%s: Cannot decode filename", __func__);
 			return MG_FORM_FIELD_STORAGE_SKIP;
 		}
+		remove_dot_segments(filename_dec);
+
 	} else {
 		filename_dec[0] = 0;
 	}
