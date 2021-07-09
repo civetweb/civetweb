@@ -263,9 +263,7 @@ if (CIVETWEB_ENABLE_SERVER_EXECUTABLE)
         install(
             TARGETS civetweb-c-executable
             EXPORT ${PROJECT_NAME}-targets
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            DESTINATION ${CMAKE_INSTALL_BINDIR}
             COMPONENT server)
     endif()
     target_include_directories(
