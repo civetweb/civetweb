@@ -210,7 +210,8 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 #define ZEPHYR_STACK_SIZE USE_STACK_SIZE
 #else
-#define ZEPHYR_STACK_SIZE (1024 * 16)
+// SHOULD BE MULTIPLE OF 4 KB, see Readme.MD
+#define ZEPHYR_STACK_SIZE (1024 * 4)
 #endif
 
 K_THREAD_STACK_DEFINE(civetweb_main_stack, ZEPHYR_STACK_SIZE);
@@ -494,7 +495,7 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 
 /* General purpose buffer size. */
 #if !defined(MG_BUF_LEN) /* in bytes */
-#define MG_BUF_LEN (1024 * 8)
+#define MG_BUF_LEN (1024)
 #endif
 
 
