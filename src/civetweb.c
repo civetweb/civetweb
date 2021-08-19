@@ -10637,11 +10637,6 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 		return -1;
 	}
 
-	/* Check for a valid http method */
-	if (!is_valid_http_method(ri->request_method)) {
-		return -1;
-	}
-
 	/* The second word is the URI */
 	ri->request_uri = buf;
 
@@ -10662,6 +10657,11 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 		return -1;
 	}
 	ri->http_version += 5;
+	
+	/* Check for a valid http method */
+	if (!is_valid_http_method(ri->request_method)) {
+		return -1;
+	}
 
 	/* Parse all HTTP headers */
 	ri->num_headers = parse_http_headers(&buf, ri->http_headers);
