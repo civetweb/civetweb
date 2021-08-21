@@ -1340,6 +1340,8 @@ START_TEST(test_config_options)
 #endif
 
 	ck_assert_str_eq("decode_url", config_options[DECODE_URL].name);
+	ck_assert_str_eq("decode_query_string",
+	                 config_options[DECODE_QUERY_STRING].name);
 
 #if defined(USE_LUA)
 	ck_assert_str_eq("lua_preload_file", config_options[LUA_PRELOAD_FILE].name);

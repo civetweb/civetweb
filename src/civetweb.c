@@ -1929,6 +1929,7 @@ enum {
 	ENABLE_WEBSOCKET_PING_PONG,
 #endif
 	DECODE_URL,
+	DECODE_QUERY_STRING,
 #if defined(USE_LUA)
 	LUA_BACKGROUND_SCRIPT,
 	LUA_BACKGROUND_SCRIPT_PARAMS,
@@ -2067,6 +2068,7 @@ static const struct mg_option config_options[] = {
     {"enable_websocket_ping_pong", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
     {"decode_url", MG_CONFIG_TYPE_BOOLEAN, "yes"},
+    {"decode_query_string", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #if defined(USE_LUA)
     {"lua_background_script", MG_CONFIG_TYPE_FILE, NULL},
     {"lua_background_script_params", MG_CONFIG_TYPE_STRING_LIST, NULL},
@@ -4033,6 +4035,18 @@ should_decode_url(const struct mg_connection *conn)
 	}
 
 	return (mg_strcasecmp(conn->dom_ctx->config[DECODE_URL], "yes") == 0);
+}
+
+
+static int
+should_decode_query_string(const struct mg_connection *conn)
+{
+	if (!conn || !conn->dom_ctx) {
+		return 0;
+	}
+
+	return (mg_strcasecmp(conn->dom_ctx->config[DECODE_QUERY_STRING], "yes")
+	        == 0);
 }
 
 
@@ -14038,6 +14052,13 @@ handle_request(struct mg_connection *conn)
 	if (should_decode_url(conn)) {
 		mg_url_decode(
 		    ri->local_uri, uri_len, (char *)ri->local_uri, uri_len + 1, 0);
+	}
+
+	/* URL decode the query-string only if explicity set in the configuration */
+	if (conn->request_info.query_string) {
+		if (should_decode_query_string(conn)) {
+			url_decode_in_place((char *)conn->request_info.query_string);
+		}
 	}
 
 	/* 1.4. clean URIs, so a path like allowed_dir/../forbidden_file is not

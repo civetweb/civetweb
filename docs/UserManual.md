@@ -260,9 +260,19 @@ Maximum allowed runtime for CGI scripts.  CGI processes are terminated by
 the server after this time.  The default is "no timeout", so scripts may
 run or block for undefined time.
 
+### decode\_query\_string `no`
+URL decode all query strings in the server. 
+If you set this option to `yes`, all callbacks and scripts will only see the already
+decoded query string. If this option is set to `no`, all callbacks and scripts have to decode
+the query strings on their own, if they need to. Note that setting this option to `yes` is not
+compatible with submitting form data using "GET" requests (but it is compatible with submitting
+form data using the "POST" method; using "POST" is recommended for most use cases).
+
 ### decode\_url `yes`
-URL encoded request strings are decoded in the server, unless it is disabled
-by setting this option to `no`.
+The server should decode the URL, according to the HTTP standard.
+This means, `http://mydomain.com/this%20file.txt` will be decoded to `this file.txt` 
+(%20 corresponds to the URL encoding of the space character).
+Set this option to `no` only if you are using callbacks exclusively and need access to the encoded URLs.
 
 ### document\_root `.`
 A directory to serve. By default, the current working directory is served.
