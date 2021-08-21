@@ -10657,7 +10657,7 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 		return -1;
 	}
 	ri->http_version += 5;
-	
+
 	/* Check for a valid http method */
 	if (!is_valid_http_method(ri->request_method)) {
 		return -1;
@@ -14038,10 +14038,6 @@ handle_request(struct mg_connection *conn)
 	if (should_decode_url(conn)) {
 		mg_url_decode(
 		    ri->local_uri, uri_len, (char *)ri->local_uri, uri_len + 1, 0);
-
-		if (conn->request_info.query_string) {
-			url_decode_in_place((char *)conn->request_info.query_string);
-		}
 	}
 
 	/* 1.4. clean URIs, so a path like allowed_dir/../forbidden_file is not
