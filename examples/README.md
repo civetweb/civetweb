@@ -11,7 +11,6 @@ The [multidomain](https://github.com/civetweb/civetweb/tree/master/examples/mult
 
 The [ws_client](https://github.com/civetweb/civetweb/tree/master/examples/ws_client) example shows how to use the websocket client interface to communicate with an (external) websocket server. It uses the "echo demo" of [websocket.org](http://websocket.org/echo.html), and only works if this server is reachable.
 
-Some no longer maintained examples can be found in the ["obsolete"](https://github.com/civetweb/civetweb/tree/master/examples/_obsolete) folder. It is not guaranteed that they work in the current version - they are kept for reference, but might be removed in the future.
-
 All examples are subject to the MIT license (unless noted otherwise) - they come without warranty of any kind.
 
+Note that the examples are only meant as a demonstration how to use CivetWeb.  The example codes are omitting some error checking and input validation for better readability of the source.  They are not as actively maintained and continuously developed as main source of the project (include/civetweb.h, src/civetweb.c, src/*.inl).  Example codes undergo less quality management than the main source files of this project.  Examples are not checked and updated with every new version.  There are no repeated security assessment for the example codes, settings are not updated on a regular basis.  Contributions to examples code are welcome, under the same conditions as contributions to the main source code ([Contribution.md](https://github.com/civetweb/civetweb/blob/master/Contribution.md)).

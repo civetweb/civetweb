@@ -1,12 +1,14 @@
 Release Notes v1.15 (work in progress)
 ===
-### Objectives: *TBD*
+### Objectives: *various fixes, domain sockets*
 
 Changes
 -------
 
 - New configuraton for URL decoding
 - Sanitize filenames in handle form
+- Example "embedded_c.c": Do not overwrite files (possible security issue) 
+- Remove obsolete examples
 - Unix domain socket support fixed
 - Fixes for NO_SSL_DL
 - Fixes for some warnings / static code analysis

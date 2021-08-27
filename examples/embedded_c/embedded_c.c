@@ -1,8 +1,12 @@
 /*
- * Copyright (c) 2013-2020 the CivetWeb developers
+ * Copyright (c) 2013-2021 the CivetWeb developers
  * Copyright (c) 2013 No Face Press, LLC
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
+
+/* Note: This example ommits some error checking and input validation for a better 
+ * clarity/readability of the code. Example codes undergo less quality management 
+ * than the main source files of this project. */
 
 #ifdef NO_SSL
 #define TEST_WITHOUT_SSL
