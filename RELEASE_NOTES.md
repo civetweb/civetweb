@@ -5,6 +5,11 @@ Release Notes v1.15 (work in progress)
 Changes
 -------
 
+- New configuraton for URL decoding
+- Sanitize filenames in handle form
+- Unix domain socket support fixed
+- Fixes for NO_SSL_DL
+- Fixes for some warnings / static code analysis
 - Update version number
 
 
