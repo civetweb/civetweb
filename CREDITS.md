@@ -42,6 +42,7 @@
 * David Loffredo
 * DavidKorczynski
 * Dialga
+* dennis
 * DL6ER
 * Domenico Di Iorio
 * dprandle
@@ -61,6 +62,7 @@
 * Fernando G. Aranda
 * Frank Hilliger
 * Gábor Csárdi
+* Girish Joshi
 * goodmenzy
 * Grahack
 * Gregor Jasny
@@ -68,6 +70,7 @@
 * grunk
 * guangqing.chen
 * Guilherme Amadio
+* Gustavo Romero
 * hansipie
 * HariKamath Kamath
 * Henry Chang
@@ -83,6 +86,7 @@
 * Jan Kowalewski
 * Jan Pohanka
 * Jan Willem Janssen
+* Jens Wallgren
 * Jeremy Lin
 * Jesse Williamson
 * Jim Evans
@@ -97,6 +101,7 @@
 * Jordan Shelley
 * Joshua Boyd
 * Joshua D. Boyd
+* Justin Standring
 * k-mds
 * kakwa
 * kalphamon
@@ -108,6 +113,7 @@
 * Kevin Wojniak
 * Khem Raj
 * Kimmo Mustonen
+* Kjeld Flarup
 * krpano
 * Krzysztof Kozlowski
 * Lammert Bies
@@ -174,6 +180,7 @@
 * shreyajaggi8
 * Simon Hailes
 * slidertom
+* SpaceIm
 * SpaceLord
 * Stefan Codrescu
 * sunfch
