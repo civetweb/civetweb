@@ -282,7 +282,7 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     # Experimental Ubuntu
     - id: Ubuntu1604-GCC-x64
-      compiler: gcc-5.1.0-posix
+      compiler: gcc-5.5.0-posix
       build_shared: NO
       no_files: NO
       enable_ipv6: YES
@@ -295,7 +295,7 @@ environment:
       platform: x64
       image: Ubuntu1604
     - id: Ubuntu1804-GCC-x64
-      compiler: gcc-5.1.0-posix
+      compiler: gcc-8.4.0-posix
       build_shared: NO
       no_files: NO
       enable_ipv6: YES
@@ -307,6 +307,19 @@ environment:
       configuration: Release
       platform: x64
       image: Ubuntu1804
+    - id: Ubuntu2004-GCC-x64
+      compiler: gcc-9.3.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Ubuntu2004
     # Conan builds
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       CONAN_VISUAL_VERSIONS: 12
@@ -378,9 +391,17 @@ before_build:
   - if "%compiler_version%"=="20" (set "vs_version=15" & set "vs_year=2017")
   - if "%compiler_version%"=="21" (set "vs_version=16" & set "vs_year=2019")
   - if "%compiler_name%"=="msvc" (set "generator=Visual Studio %vs_version% %vs_year%")
+  - set "arch_arg= "
   - if "%compiler_name%"=="msvc" (
-      if "%platform%"=="x64" (
-        set "generator=%generator% Win64"
+      if "%compiler_version%"=="21" (
+          set "arch_arg=-A Win64"
+      )
+    )
+  - if "%compiler_name%"=="msvc" (
+      if not "%compiler_version%"=="21" (
+        if "%platform%"=="x64" (
+          set "generator=%generator% Win64"
+        )
       )
     )
   - if %compiler_version% gtr 9 (set platform=%platform:x86=Win32%)
@@ -406,9 +427,10 @@ before_build:
   - mkdir "%build_path%"
   - cd "%build_path%"
   - cmake --version
+  - echo %generator%
   - appveyor AddMessage -Category Information "Generating '%generator%'"
   - cmake
-    -G "%generator%"
+    -G "%generator%" %arch_arg%
     -DCMAKE_BUILD_TYPE=%build_type%
     -DBUILD_SHARED_LIBS=%build_shared%
     -DCIVETWEB_SERVE_NO_FILES=%no_files%
@@ -501,7 +523,7 @@ for:
       allow_failures:
         # Experimental Ubuntu
         - id: Ubuntu1604-GCC-x64
-          compiler: gcc-5.1.0-posix
+          compiler: gcc-5.5.0-posix
           build_shared: NO
           no_files: NO
           enable_ipv6: YES
@@ -514,7 +536,7 @@ for:
           platform: x64
           image: Ubuntu1604
         - id: Ubuntu1804-GCC-x64
-          compiler: gcc-5.1.0-posix
+          compiler: gcc-8.4.0-posix
           build_shared: NO
           no_files: NO
           enable_ipv6: YES
@@ -526,6 +548,19 @@ for:
           configuration: Release
           platform: x64
           image: Ubuntu1804
+        - id: Ubuntu2004-GCC-x64
+          compiler: gcc-9.3.0-posix
+          build_shared: NO
+          no_files: NO
+          enable_ipv6: YES
+          enable_ssl: YES
+          enable_websockets: YES
+          no_cgi: NO
+          no_caching: NO
+          enable_stats: YES
+          configuration: Release
+          platform: x64
+          image: Ubuntu2004
         # Visual Studio 2019
         - id: Full-VS2019-x64
           compiler: msvc-21-seh
