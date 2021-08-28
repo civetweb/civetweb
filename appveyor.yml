@@ -280,9 +280,9 @@ environment:
       configuration: Release
       platform: x64
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    # Experimental Ubuntu
+    # Ubuntu
     - id: Ubuntu1604-GCC-x64
-      compiler: gcc-5.5.0-posix
+      compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: NO
       enable_ipv6: YES
@@ -295,7 +295,7 @@ environment:
       platform: x64
       image: Ubuntu1604
     - id: Ubuntu1804-GCC-x64
-      compiler: gcc-8.4.0-posix
+      compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: NO
       enable_ipv6: YES
@@ -308,7 +308,7 @@ environment:
       platform: x64
       image: Ubuntu1804
     - id: Ubuntu2004-GCC-x64
-      compiler: gcc-9.3.0-posix
+      compiler: gcc-5.1.0-posix
       build_shared: NO
       no_files: NO
       enable_ipv6: YES
@@ -394,7 +394,7 @@ before_build:
   - set "arch_arg= "
   - if "%compiler_name%"=="msvc" (
       if "%compiler_version%"=="21" (
-          set "arch_arg=-A Win64"
+          set "arch_arg= -A x64 "
       )
     )
   - if "%compiler_name%"=="msvc" (
@@ -428,8 +428,9 @@ before_build:
   - cd "%build_path%"
   - cmake --version
   - echo %generator%
+  - echo %arch_arg%
   - appveyor AddMessage -Category Information "Generating '%generator%'"
-  - cmake
+  - echo cmake
     -G "%generator%" %arch_arg%
     -DCMAKE_BUILD_TYPE=%build_type%
     -DBUILD_SHARED_LIBS=%build_shared%
@@ -450,6 +451,27 @@ before_build:
     -DCIVETWEB_SSL_OPENSSL_API_1_0=NO
     -DCIVETWEB_SSL_OPENSSL_API_1_1=YES
     "%source_path%"
+  - cmake
+    -G "%generator%" %arch_arg%
+    -DCMAKE_BUILD_TYPE=%build_type%
+    -DBUILD_SHARED_LIBS=%build_shared%
+    -DCIVETWEB_SERVE_NO_FILES=%no_files%
+    "-DCIVETWEB_THIRD_PARTY_DIR=%third_party_dir:\=\\%"
+    -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES
+    -DCIVETWEB_ENABLE_SSL=%enable_ssl%
+    -DCIVETWEB_DISABLE_CGI=%no_cgi%
+    -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=%enable_ssl_dynamic_loading%
+    -DCIVETWEB_ENABLE_WEBSOCKETS=%enable_websockets%
+    -DCIVETWEB_ENABLE_CXX=%enable_cxx%
+    -DCIVETWEB_ENABLE_LUA=%enable_lua%
+    -DCIVETWEB_ENABLE_LUA_SHARED=%enable_lua_shared%
+    -DCIVETWEB_ENABLE_SERVER_STATS=%enable_stats%
+    -DCIVETWEB_DISABLE_CACHING=%no_caching%
+    -DCIVETWEB_C_STANDARD=%c_standard%
+    -DCIVETWEB_CXX_STANDARD=%cxx_standard%
+    -DCIVETWEB_SSL_OPENSSL_API_1_0=NO
+    -DCIVETWEB_SSL_OPENSSL_API_1_1=YES
+    "%source_path%"    
   - powershell Push-AppveyorArtifact CMakeCache.txt
   - cd "%source_path%"
 
@@ -521,46 +543,6 @@ for:
         - configuration: Release
       fast_finish: false
       allow_failures:
-        # Experimental Ubuntu
-        - id: Ubuntu1604-GCC-x64
-          compiler: gcc-5.5.0-posix
-          build_shared: NO
-          no_files: NO
-          enable_ipv6: YES
-          enable_ssl: YES
-          enable_websockets: YES
-          no_cgi: NO
-          no_caching: NO
-          enable_stats: YES
-          configuration: Release
-          platform: x64
-          image: Ubuntu1604
-        - id: Ubuntu1804-GCC-x64
-          compiler: gcc-8.4.0-posix
-          build_shared: NO
-          no_files: NO
-          enable_ipv6: YES
-          enable_ssl: YES
-          enable_websockets: YES
-          no_cgi: NO
-          no_caching: NO
-          enable_stats: YES
-          configuration: Release
-          platform: x64
-          image: Ubuntu1804
-        - id: Ubuntu2004-GCC-x64
-          compiler: gcc-9.3.0-posix
-          build_shared: NO
-          no_files: NO
-          enable_ipv6: YES
-          enable_ssl: YES
-          enable_websockets: YES
-          no_cgi: NO
-          no_caching: NO
-          enable_stats: YES
-          configuration: Release
-          platform: x64
-          image: Ubuntu2004
         # Visual Studio 2019
         - id: Full-VS2019-x64
           compiler: msvc-21-seh
