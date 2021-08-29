@@ -698,9 +698,13 @@ START_TEST(test_parse_port_string)
 	vec.ptr = "localhost:123";
 	vec.len = strlen(vec.ptr);
 	ret = parse_port_string(&vec, &so, &ip_family);
-	ck_assert_int_eq(ret, 1);
+	if (ret != 1) {
+		ck_abort_msg("IP of localhost seems to be unknown on this system (%i)",
+		             (int)ret);
+	}
 	if ((ip_family != 4) && (ip_family != 6)) {
-		ck_abort_msg("IP family must be 4 or 6 but is %i", (int)ip_family);
+		ck_abort_msg("IP family for localhost must be 4 or 6 but is %i",
+		             (int)ip_family);
 	}
 	ck_assert_int_eq((int)htons(so.lsa.sin.sin_port), (int)123);
 }
