@@ -328,6 +328,12 @@ test_mg_start(const struct mg_callbacks *callbacks,
 {
 	struct mg_context *ctx;
 	struct mg_callbacks cb;
+	struct mg_init_data init;
+	struct mg_error_data error;
+	char error_buffer[256];
+
+	memset(&init, 0, sizeof(init));
+	memset(&error, 0, sizeof(error));
 
 	if (callbacks) {
 		memcpy(&cb, callbacks, sizeof(cb));
@@ -339,21 +345,33 @@ test_mg_start(const struct mg_callbacks *callbacks,
 		cb.log_message = test_log_message;
 	}
 
+	init.callbacks = &cb;
+	init.user_data = user_data;
+	init.configuration_options = configuration_options;
+
+	error.text = error_buffer;
+	error.text_buffer_size = sizeof(error_buffer);
+
 	mark_point();
 	test_sleep(SLEEP_BEFORE_MG_START);
 	mark_point();
-	ctx = mg_start(&cb, user_data, configuration_options);
+	ctx = mg_start2(&init, &error);
 	mark_point();
 	if (ctx) {
 		/* Give the server some time to start in the test VM. */
 		/* Don't need to do this if mg_start failed. */
 		test_sleep(SLEEP_AFTER_MG_START);
+		ck_assert_int_eq(error.code, 0);
+		ck_assert_str_eq(error.text, "");
 	} else if (line > 0) {
 		/* mg_start is not supposed to fail anywhere, except for
 		 * special tests (for them, line is 0). */
-		ck_abort_msg("mg_start failed in line %u, message %s",
-		             line,
-		             (lastMessage ? lastMessage : "<NULL>"));
+		ck_abort_msg(
+		    "mg_start failed in line %u\nerror %u: %s\nlast message %s\n",
+		    line,
+		    error.code,
+		    error.text,
+		    (lastMessage ? lastMessage : "<NULL>"));
 	}
 	mark_point();
 
@@ -391,11 +409,6 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 	int optcnt = 0;
 	const char *localhost_name = ((ipv6) ? "[::1]" : "127.0.0.1");
 
-#if defined(MG_LEGACY_INTERFACE)
-	size_t ports_cnt;
-	int ports[16];
-	int ssl[16];
-#endif
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
@@ -427,10 +440,6 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 
 	OPTIONS[optcnt] = 0;
 
-#if defined(MG_LEGACY_INTERFACE)
-	memset(ports, 0, sizeof(ports));
-	memset(ssl, 0, sizeof(ssl));
-#endif
 	memset(portinfo, 0, sizeof(portinfo));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(errmsg, 0, sizeof(errmsg));
@@ -441,15 +450,6 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
-
-#if defined(MG_LEGACY_INTERFACE)
-	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
-	ck_assert_uint_eq(ports_cnt, 1);
-	ck_assert_int_eq(ports[0], 8080);
-	ck_assert_int_eq(ssl[0], 0);
-	ck_assert_int_eq(ports[1], 0);
-	ck_assert_int_eq(ssl[1], 0);
-#endif
 
 	ret = mg_get_server_ports(ctx, 0, portinfo);
 	ck_assert_int_lt(ret, 0);
@@ -628,11 +628,6 @@ START_TEST(test_mg_start_stop_https_server)
 
 	struct mg_context *ctx;
 
-#if defined(MG_LEGACY_INTERFACE)
-	size_t ports_cnt;
-	int ports[16];
-	int ssl[16];
-#endif
 	struct mg_callbacks callbacks;
 	char errmsg[256];
 
@@ -662,10 +657,6 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
 	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 2] == NULL);
 
-#if defined(MG_LEGACY_INTERFACE)
-	memset(ports, 0, sizeof(ports));
-	memset(ssl, 0, sizeof(ssl));
-#endif
 	memset(portinfo, 0, sizeof(portinfo));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(errmsg, 0, sizeof(errmsg));
@@ -676,17 +667,6 @@ START_TEST(test_mg_start_stop_https_server)
 
 	ck_assert_str_eq(errmsg, "");
 	ck_assert(ctx != NULL);
-
-#if defined(MG_LEGACY_INTERFACE)
-	ports_cnt = mg_get_ports(ctx, 16, ports, ssl);
-	ck_assert_uint_eq(ports_cnt, 2);
-	ck_assert_int_eq(ports[0], 8080);
-	ck_assert_int_eq(ssl[0], 0);
-	ck_assert_int_eq(ports[1], 8443);
-	ck_assert_int_eq(ssl[1], 1);
-	ck_assert_int_eq(ports[2], 0);
-	ck_assert_int_eq(ssl[2], 0);
-#endif
 
 	ret = mg_get_server_ports(ctx, 0, portinfo);
 	ck_assert_int_lt(ret, 0);

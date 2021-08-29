@@ -1,14 +1,17 @@
 Release Notes v1.15 (work in progress)
 ===
-### Objectives: *various fixes, domain sockets*
+### Objectives: *bug fixes, remove legacy interfaces*
 
 Changes
 -------
 
-- New configuraton for URL decoding
+- New configuration for URL decoding
 - Sanitize filenames in handle form
 - Example "embedded_c.c": Do not overwrite files (possible security issue) 
 - Remove obsolete examples
+- Remove "experimental" label for some features
+- Remove MG_LEGACY_INTERFACE that have been declared obsolete in 2017 or earlier
+- Modifications to build scripts, required due to changes in the test environment
 - Unix domain socket support fixed
 - Fixes for NO_SSL_DL
 - Fixes for some warnings / static code analysis

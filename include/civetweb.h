@@ -148,25 +148,22 @@ struct mg_header {
 
 /* This structure contains information about the HTTP request. */
 struct mg_request_info {
-	const char *request_method;  /* "GET", "POST", etc */
-	const char *request_uri;     /* URL-decoded URI (absolute or relative,
-	                              * as in the request) */
-	const char *local_uri_raw;   /* URL-decoded URI (relative). Can be NULL
-	                              * if the request_uri does not address a
-	                              * resource at the server host. */
-	const char *local_uri;       /* Same as local_uri_raw, however, cleaned
-	                              * so a path like
-	                              *   allowed_dir/../forbidden_file
-	                              * is not possible. */
-#if defined(MG_LEGACY_INTERFACE) /* 2017-02-04, deprecated 2014-09-14 */
-	const char *uri;             /* Deprecated: use local_uri instead */
-#endif
-	const char *http_version; /* E.g. "1.0", "1.1" */
-	const char *query_string; /* URL part after '?', not including '?', or
-	                             NULL */
-	const char *remote_user;  /* Authenticated user, or NULL if no auth
-	                             used */
-	char remote_addr[48];     /* Client's IP address as a string. */
+	const char *request_method; /* "GET", "POST", etc */
+	const char *request_uri;    /* URL-decoded URI (absolute or relative,
+	                             * as in the request) */
+	const char *local_uri_raw;  /* URL-decoded URI (relative). Can be NULL
+	                             * if the request_uri does not address a
+	                             * resource at the server host. */
+	const char *local_uri;      /* Same as local_uri_raw, however, cleaned
+	                             * so a path like
+	                             *   allowed_dir/../forbidden_file
+	                             * is not possible. */
+	const char *http_version;   /* E.g. "1.0", "1.1" */
+	const char *query_string;   /* URL part after '?', not including '?', or
+	                               NULL */
+	const char *remote_user;    /* Authenticated user, or NULL if no auth
+	                               used */
+	char remote_addr[48];       /* Client's IP address as a string. */
 
 	long long content_length; /* Length (in bytes) of the request body,
 	                             can be -1 if no length was given. */
@@ -206,7 +203,6 @@ struct mg_response_info {
 
 
 /* Client certificate information (part of mg_request_info) */
-/* New nomenclature. */
 struct mg_client_cert {
 	void *peer_cert;
 	const char *subject;
@@ -214,16 +210,6 @@ struct mg_client_cert {
 	const char *serial;
 	const char *finger;
 };
-
-#if defined(MG_LEGACY_INTERFACE) /* 2017-10-05 */
-/* Old nomenclature. */
-struct client_cert {
-	const char *subject;
-	const char *issuer;
-	const char *serial;
-	const char *finger;
-};
-#endif
 
 
 /* This structure needs to be passed to mg_start(), to let civetweb know
@@ -470,7 +456,6 @@ CIVETWEB_API struct mg_context *mg_start(const struct mg_callbacks *callbacks,
 CIVETWEB_API void mg_stop(struct mg_context *);
 
 
-#if defined(MG_EXPERIMENTAL_INTERFACES)
 /* Add an additional domain to an already running web server.
  *
  * Parameters:
@@ -490,7 +475,6 @@ CIVETWEB_API void mg_stop(struct mg_context *);
  */
 CIVETWEB_API int mg_start_domain(struct mg_context *ctx,
                                  const char **configuration_options);
-#endif
 
 
 /* mg_request_handler
@@ -704,22 +688,8 @@ struct mg_option {
 	const char *default_value;
 };
 
-/* Old nomenclature */
-#if defined(MG_LEGACY_INTERFACE) /* 2017-10-05 */
-enum {
-	CONFIG_TYPE_UNKNOWN = 0x0,
-	CONFIG_TYPE_NUMBER = 0x1,
-	CONFIG_TYPE_STRING = 0x2,
-	CONFIG_TYPE_FILE = 0x3,
-	CONFIG_TYPE_DIRECTORY = 0x4,
-	CONFIG_TYPE_BOOLEAN = 0x5,
-	CONFIG_TYPE_EXT_PATTERN = 0x6,
-	CONFIG_TYPE_STRING_LIST = 0x7,
-	CONFIG_TYPE_STRING_MULTILINE = 0x8
-};
-#endif
 
-/* New nomenclature */
+/* Configuration types */
 enum {
 	MG_CONFIG_TYPE_UNKNOWN = 0x0,
 	MG_CONFIG_TYPE_NUMBER = 0x1,
@@ -762,15 +732,6 @@ struct mg_server_port {
 CIVETWEB_API int mg_get_server_ports(const struct mg_context *ctx,
                                      int size,
                                      struct mg_server_port *ports);
-
-
-#if defined(MG_LEGACY_INTERFACE) /* 2017-04-02 */
-/* Deprecated: Use mg_get_server_ports instead. */
-CIVETWEB_API size_t mg_get_ports(const struct mg_context *ctx,
-                                 size_t size,
-                                 int *ports,
-                                 int *ssl);
-#endif
 
 
 /* Add, edit or delete the entry in the passwords file.
@@ -892,19 +853,7 @@ CIVETWEB_API void mg_lock_context(struct mg_context *ctx);
 CIVETWEB_API void mg_unlock_context(struct mg_context *ctx);
 
 
-/* Opcodes, from http://tools.ietf.org/html/rfc6455 */
-#if defined(MG_LEGACY_INTERFACE) /* 2017-10-05 */
-enum {
-	WEBSOCKET_OPCODE_CONTINUATION = 0x0,
-	WEBSOCKET_OPCODE_TEXT = 0x1,
-	WEBSOCKET_OPCODE_BINARY = 0x2,
-	WEBSOCKET_OPCODE_CONNECTION_CLOSE = 0x8,
-	WEBSOCKET_OPCODE_PING = 0x9,
-	WEBSOCKET_OPCODE_PONG = 0xa
-};
-#endif
-
-/* New nomenclature */
+/* WebSocket OpcCodes, from http://tools.ietf.org/html/rfc6455 */
 enum {
 	MG_WEBSOCKET_OPCODE_CONTINUATION = 0x0,
 	MG_WEBSOCKET_OPCODE_TEXT = 0x1,
@@ -913,6 +862,7 @@ enum {
 	MG_WEBSOCKET_OPCODE_PING = 0x9,
 	MG_WEBSOCKET_OPCODE_PONG = 0xa
 };
+
 
 /* Macros for enabling compiler-specific checks for printf-like arguments. */
 #undef PRINTF_FORMAT_STRING
@@ -1317,20 +1267,6 @@ struct mg_form_data_handler {
 
 /* Return values definition for the "field_found" callback in
  * mg_form_data_handler. */
-#if defined(MG_LEGACY_INTERFACE) /* 2017-10-05 */
-enum {
-	/* Skip this field (neither get nor store it). Continue with the
-	 * next field. */
-	FORM_FIELD_STORAGE_SKIP = 0x0,
-	/* Get the field value. */
-	FORM_FIELD_STORAGE_GET = 0x1,
-	/* Store the field value into a file. */
-	FORM_FIELD_STORAGE_STORE = 0x2,
-	/* Stop parsing this request. Skip the remaining fields. */
-	FORM_FIELD_STORAGE_ABORT = 0x10
-};
-#endif
-/* New nomenclature */
 enum {
 	/* Skip this field (neither get nor store it). Continue with the
 	 * next field. */
@@ -1758,6 +1694,8 @@ mg_connect_client2(const char *host,
 CIVETWEB_API int mg_get_response2(struct mg_connection *conn,
                                   struct mg_error_data *error,
                                   int timeout);
+#endif
+
 
 CIVETWEB_API struct mg_context *mg_start2(struct mg_init_data *init,
                                           struct mg_error_data *error);
@@ -1765,7 +1703,7 @@ CIVETWEB_API struct mg_context *mg_start2(struct mg_init_data *init,
 CIVETWEB_API int mg_start_domain2(struct mg_context *ctx,
                                   const char **configuration_options,
                                   struct mg_error_data *error);
-#endif
+
 
 #ifdef __cplusplus
 }

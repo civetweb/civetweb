@@ -3203,24 +3203,6 @@ mg_get_user_connection_data(const struct mg_connection *conn)
 }
 
 
-#if defined(MG_LEGACY_INTERFACE)
-/* Deprecated: Use mg_get_server_ports instead. */
-size_t
-mg_get_ports(const struct mg_context *ctx, size_t size, int *ports, int *ssl)
-{
-	size_t i;
-	if (!ctx) {
-		return 0;
-	}
-	for (i = 0; i < size && i < ctx->num_listening_sockets; i++) {
-		ssl[i] = ctx->listening_sockets[i].is_ssl;
-		ports[i] = ntohs(USA_IN_PORT_UNSAFE(&(ctx->listening_sockets[i].lsa)));
-	}
-	return i;
-}
-#endif
-
-
 int
 mg_get_server_ports(const struct mg_context *ctx,
                     int size,
@@ -16896,11 +16878,6 @@ reset_per_request_attributes(struct mg_connection *conn)
 #if defined(USE_SERVER_STATS)
 	conn->processing_time = 0;
 #endif
-
-#if defined(MG_LEGACY_INTERFACE)
-	/* Legacy before split into local_uri and request_uri */
-	conn->request_info.uri = NULL;
-#endif
 }
 
 
@@ -17994,11 +17971,7 @@ mg_get_response(struct mg_connection *conn,
 	ret = get_response(conn, ebuf, ebuf_len, &err);
 	conn->dom_ctx->config[REQUEST_TIMEOUT] = save_timeout;
 
-#if defined(MG_LEGACY_INTERFACE)
-	/* TODO: 1) uri is deprecated;
-	 *       2) here, ri.uri is the http response code */
-	conn->request_info.uri = conn->request_info.request_uri;
-#endif
+	/* TODO: here, the URI is the http response code */
 	conn->request_info.local_uri_raw = conn->request_info.request_uri;
 	conn->request_info.local_uri = conn->request_info.local_uri_raw;
 
@@ -18045,11 +18018,7 @@ mg_download(const char *host,
 			conn->data_len = 0;
 			get_response(conn, ebuf, ebuf_len, &reqerr);
 
-#if defined(MG_LEGACY_INTERFACE)
-			/* TODO: 1) uri is deprecated;
-			 *       2) here, ri.uri is the http response code */
-			conn->request_info.uri = conn->request_info.request_uri;
-#endif
+			/* TODO: here, the URI is the http response code */
 			conn->request_info.local_uri = conn->request_info.request_uri;
 		}
 	}
@@ -18582,11 +18551,6 @@ process_new_connection(struct mg_connection *conn)
 			}
 			conn->request_info.local_uri =
 			    (char *)conn->request_info.local_uri_raw;
-
-#if defined(MG_LEGACY_INTERFACE)
-			/* Legacy before split into local_uri and request_uri */
-			conn->request_info.uri = conn->request_info.local_uri;
-#endif
 		}
 
 		if (ebuf[0] != '\0') {
@@ -19598,11 +19562,8 @@ legacy_init(const char **options)
 }
 
 
-#if !defined(MG_EXPERIMENTAL_INTERFACES)
-static
-#endif
-    struct mg_context *
-    mg_start2(struct mg_init_data *init, struct mg_error_data *error)
+struct mg_context *
+mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 {
 	struct mg_context *ctx;
 	const char *name, *value, *default_value;
@@ -20287,7 +20248,6 @@ mg_start(const struct mg_callbacks *callbacks,
 }
 
 
-#if defined(MG_EXPERIMENTAL_INTERFACES)
 /* Add an additional domain to an already running web server. */
 int
 mg_start_domain2(struct mg_context *ctx,
@@ -20483,8 +20443,6 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 {
 	return mg_start_domain2(ctx, options, NULL);
 }
-
-#endif
 
 
 /* Feature check API function */

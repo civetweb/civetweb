@@ -2,7 +2,7 @@
 
 
 if test -f "./unittest/build_and_test_minimal.sh" ; then
-  echo "Unit test will run on a local Debian system."
+  echo "Unit test (minimal features) will run on a local Debian system."
   rm -rf output
 else
   echo "This script must be started from the civetweb root directory using ./unittest/build_and_test_minimal.sh"
