@@ -1,11 +1,11 @@
 #!/bin/bash
 
 
-if test -f "./unittest/build_and_run.sh" ; then
-  echo "Unit test will run on a local Debian system."
+if test -f "./unittest/build_and_test_default.sh" ; then
+  echo "Unit test (default settings) will run on a local Debian system."
   rm -rf output
 else
-  echo "This script must be started from the civetweb root directory using ./unittest/build_and_run.sh"
+  echo "This script must be started from the civetweb root directory using ./unittest/build_and_test_default.sh"
   exit
 fi
 
