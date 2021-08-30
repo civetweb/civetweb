@@ -348,20 +348,13 @@ matrix:
   - sudo: false
     os: linux
     compiler: clang
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-          - llvm-toolchain-trusty-5.0
-        packages:
-          - clang-5.0
     env:
       idx=9
-      N=Clang50-Linux-Default-Shared
+      N=Clang-Linux-Default-Shared
       BUILD_TYPE=Debug
       ENABLE_SSL_DYNAMIC_LOADING=YES
-      OPENSSL_1_0=YES
-      OPENSSL_1_1=NO
+      OPENSSL_1_0=NO
+      OPENSSL_1_1=YES
       ENABLE_CXX=NO
       ENABLE_LUA_SHARED=NO
       C_STANDARD=auto
@@ -377,7 +370,6 @@ matrix:
       ENABLE_DUKTAPE=NO
       NO_CACHING=NO
       ALLOW_WARNINGS=YES
-      MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
 
 
 #########################################################################################
