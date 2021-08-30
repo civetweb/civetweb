@@ -1,4 +1,4 @@
-Release Notes v1.15 (work in progress)
+Release Notes v1.15
 ===
 ### Objectives: *bug fixes, remove legacy interfaces*
 
