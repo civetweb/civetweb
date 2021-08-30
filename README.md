@@ -6,9 +6,9 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![GitHub contributors](https://img.shields.io/github/contributors/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
 
-Continuous integration for Linux and macOS ([Travis CI](https://travis-ci.org/civetweb/civetweb)):
+Continuous integration for Linux and macOS ([Travis CI](https://app.travis-ci.com/github/civetweb/civetweb)):
 
-[![Travis Build Status](https://travis-ci.org/civetweb/civetweb.svg?branch=master)](https://travis-ci.org/civetweb/civetweb)
+[![Travis Build Status](https://api.travis-ci.com/civetweb/civetweb.svg?branch=master)](https://app.travis-ci.com/github/civetweb/civetweb)
 
 Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)):
 

@@ -24,7 +24,12 @@ Open issues:
  * Need "sudo" for container? (ASAN seems to needs it on WSL test)
  * let "make" create "civetweb_fuzz#" instead of "mv"
  * useful initial corpus and directory
- * Planned additional fuzz test: 
+ * Planned additional fuzz test:
   * vary HTTP2 request for HTTP2 server (in HTTP2 feature branch)
   * use internal function to bypass socket (bottleneck)
  * where to put fuzz corpus?
+
+Note:
+This test first starts a server, then launches an attack to this local server.
+If you run this test on a system with endpoint protection software or some web traffic inspector installed,
+this protection software may detect thousands of alarms during this test.
