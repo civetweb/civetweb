@@ -320,16 +320,6 @@ environment:
       configuration: Release
       platform: x64
       image: Ubuntu2004
-    # Conan builds
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CONAN_VISUAL_VERSIONS: 12
-      PYTHON: "C:\\Python37"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CONAN_VISUAL_VERSIONS: 14
-      PYTHON: "C:\\Python37"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      CONAN_VISUAL_VERSIONS: 15
-      PYTHON: "C:\\Python37"
 
 install:
   # Derive some extra information
@@ -471,7 +461,7 @@ before_build:
     -DCIVETWEB_CXX_STANDARD=%cxx_standard%
     -DCIVETWEB_SSL_OPENSSL_API_1_0=NO
     -DCIVETWEB_SSL_OPENSSL_API_1_1=YES
-    "%source_path%"    
+    "%source_path%"
   - powershell Push-AppveyorArtifact CMakeCache.txt
   - cd "%source_path%"
 
@@ -542,14 +532,3 @@ for:
       only:
         - configuration: Release
       fast_finish: false
-  -
-    matrix:
-      only:
-        - PYTHON: "C:\\Python37"
-    skip_non_tags: true
-    install:
-      - set PATH=%PATH%;%PYTHON%/Scripts/
-      - pip.exe install conan conan_package_tools
-    build: false
-    test_script:
-      - python conan/build.py
