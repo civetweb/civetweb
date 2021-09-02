@@ -1,3 +1,13 @@
+Release Notes v1.16
+===
+### Objectives: *to be defined*
+
+Changes
+-------
+
+- Update version number
+
+
 Release Notes v1.15
 ===
 ### Objectives: *bug fixes, remove legacy interfaces*
