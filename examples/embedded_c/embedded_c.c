@@ -655,7 +655,7 @@ PostResponser(struct mg_connection *conn, void *cbdata)
 	while (r > 0) {
 		r_total += r;
 		s = mg_send_chunk(conn, buf, r);
-		if (r != s) {
+		if (s <= 0) {
 			/* Send error */
 			break;
 		}
