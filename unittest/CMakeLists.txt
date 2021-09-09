@@ -7,16 +7,6 @@ endif()
 
 # We use the check unit testing framework for our C unit tests
 include(ExternalProject)
-if(NOT WIN32)
-  # Apply the patch to check to fix CMake building on OS X
-  set(CHECK_PATCH_COMMAND patch
-     ${CIVETWEB_THIRD_PARTY_DIR}/src/check-unit-test-framework/src/check_run.c
-     ${CMAKE_SOURCE_DIR}/cmake/check/check_run.patch
-   )
-else()
-  set(CHECK_PATCH_COMMAND "")
-endif()
-
 IF (DEFINED ENV{CHECK_URL})
 SET (CHECK_URL $ENV{CHECK_URL})
 ELSE()
@@ -39,7 +29,6 @@ DOWNLOAD_NAME "master.zip"
 
   PREFIX "${CIVETWEB_THIRD_PARTY_DIR}"
   BUILD_IN_SOURCE 1
-  PATCH_COMMAND ${CHECK_PATCH_COMMAND}
   CMAKE_ARGS
     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
