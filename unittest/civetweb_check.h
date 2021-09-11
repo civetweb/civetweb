@@ -50,9 +50,7 @@
 #endif
 #include <stdint.h>
 
-/* All unit tests use the "check" framework.
- * Download from https://libcheck.github.io/check/
- */
+/* All unit tests use the "check" unit test framework. */
 #include "check.h"
 
 #if (CHECK_MINOR_VERSION < 11)

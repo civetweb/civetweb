@@ -41,9 +41,6 @@
  *
  * Note: CivetWeb is tested using it's own fork of check:
  * https://github.com/civetweb/check
- * Required fixes from this fork are already available
- * in the main repository:
- * https://github.com/libcheck/check
  */
 
 #define FILENAME_LEN (128)

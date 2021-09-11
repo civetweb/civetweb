@@ -17,13 +17,8 @@ ENDIF()
 ExternalProject_Add(check-unit-test-framework
   DEPENDS civetweb-c-library
 
-## Use an official, released check version:
-#  URL "https://codeload.github.com/libcheck/check/zip/${CIVETWEB_CHECK_VERSION}"
-#  DOWNLOAD_NAME "${CIVETWEB_CHECK_VERSION}.zip"
-#  URL_MD5 ${CIVETWEB_CHECK_MD5_HASH}
-
-## Use a civetweb specific patched version
-
+## Print what version of the CHECK unit test framework we are using
+message(STATUS "Using check unit test framework:\n ${CHECK_URL}\n")
 URL ${CHECK_URL}
 DOWNLOAD_NAME "master.zip"
 
