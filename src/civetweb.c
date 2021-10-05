@@ -17406,6 +17406,9 @@ mg_connect_client2(const char *host,
                    struct mg_init_data *init,
                    struct mg_error_data *error)
 {
+    (void)path;
+    (void)init;
+
 	int is_ssl, is_ws;
 	/* void *user_data = (init != NULL) ? init->user_data : NULL; -- TODO */
 
@@ -17473,6 +17476,8 @@ mg_connect_client2(const char *host,
 		    experimental_websocket_client_close_wrapper,
 		    (void *)init->callbacks);
 	}
+#else
+    (void)is_ws;
 #endif
 
 	/* TODO: all additional options */
@@ -20377,7 +20382,7 @@ mg_start_domain2(struct mg_context *ctx,
 	new_dom->next = NULL;
 	new_dom->nonce_count = 0;
 	new_dom->auth_nonce_mask =
-	    (uint64_t)get_random() ^ ((uint64_t)get_random() << 31);
+	    get_random() ^ (get_random() << 31);
 
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	new_dom->shared_lua_websockets = NULL;

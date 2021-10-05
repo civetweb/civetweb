@@ -622,7 +622,6 @@ PostResponser(struct mg_connection *conn, void *cbdata)
 
 	if (0 != strcmp(ri->request_method, "POST")) {
 		/* Not a POST request */
-		char buf[1024];
 		int ret = mg_get_request_link(conn, buf, sizeof(buf));
 
 		mg_printf(conn,
