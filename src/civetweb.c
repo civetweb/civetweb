@@ -7152,7 +7152,7 @@ mg_split_form_urlencoded(char *data,
 }
 
 
-/* HCP24: some changes to compare hole var_name */
+/* HCP24: some changes to compare whole var_name */
 int
 mg_get_cookie(const char *cookie_header,
               const char *var_name,
