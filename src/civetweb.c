@@ -479,6 +479,9 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #if !defined(PASSWORDS_FILE_NAME)
 #define PASSWORDS_FILE_NAME ".htpasswd"
 #endif
+#if !defined(MODIFY_PASSWORD_TEMP_EXT)
+#define MODIFY_PASSWORD_TEMP_EXT ".htpasswd_tmp"
+#endif
 
 /* Initial buffer size for all CGI environment variables. In case there is
  * not enough space, another block is allocated. */
@@ -8856,13 +8859,13 @@ modify_passwords_file(const char *fname,
 	}
 
 	/* The maximum length of the path to the password file is limited */
-	if ((strlen(fname) + 4) >= UTF8_PATH_MAX) {
+	if ((strlen(fname) + strlen(MODIFY_PASSWORD_TEMP_EXT)) >= UTF8_PATH_MAX) {
 		return 0;
 	}
 
 	/* Create a temporary file name. Length has been checked before. */
 	strcpy(tmp, fname);
-	strcat(tmp, ".tmp");
+	strcat(tmp, MODIFY_PASSWORD_TEMP_EXT);
 
 	/* Create the file if does not exist */
 	/* Use of fopen here is OK, since fname is only ASCII */
@@ -9435,8 +9438,10 @@ must_hide_file(struct mg_connection *conn, const char *path)
 {
 	if (conn && conn->dom_ctx) {
 		const char *pw_pattern = "**" PASSWORDS_FILE_NAME "$";
+		const char *pw_temp_pattern = "**" MODIFY_PASSWORD_TEMP_EXT "$";
 		const char *pattern = conn->dom_ctx->config[HIDE_FILES];
 		return (match_prefix_strlen(pw_pattern, path) > 0)
+		       || (match_prefix_strlen(pw_temp_pattern, path) > 0)
 		       || (match_prefix_strlen(pattern, path) > 0);
 	}
 	return 0;
@@ -17406,8 +17411,8 @@ mg_connect_client2(const char *host,
                    struct mg_init_data *init,
                    struct mg_error_data *error)
 {
-    (void)path;
-    (void)init;
+	(void)path;
+	(void)init;
 
 	int is_ssl, is_ws;
 	/* void *user_data = (init != NULL) ? init->user_data : NULL; -- TODO */
@@ -17477,7 +17482,7 @@ mg_connect_client2(const char *host,
 		    (void *)init->callbacks);
 	}
 #else
-    (void)is_ws;
+	(void)is_ws;
 #endif
 
 	/* TODO: all additional options */
@@ -20381,8 +20386,7 @@ mg_start_domain2(struct mg_context *ctx,
 	new_dom->handlers = NULL;
 	new_dom->next = NULL;
 	new_dom->nonce_count = 0;
-	new_dom->auth_nonce_mask =
-	    get_random() ^ (get_random() << 31);
+	new_dom->auth_nonce_mask = get_random() ^ (get_random() << 31);
 
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	new_dom->shared_lua_websockets = NULL;
