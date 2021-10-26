@@ -5,6 +5,8 @@ else()
   set(THIRD_PARTY_LOGGING 1)
 endif()
 
+message(STATUS "CMAKE UNIT TEST LINE 8")
+
 # We use the check unit testing framework for our C unit tests
 include(ExternalProject)
 IF (DEFINED ENV{CHECK_URL})
@@ -13,12 +15,12 @@ ELSE()
 SET (CHECK_URL "https://github.com/civetweb/check/archive/master.zip")
 ENDIF()
 
+## Print what version of the CHECK unit test framework we are using
+message(STATUS "Using check unit test framework from ${CHECK_URL}")
 
 ExternalProject_Add(check-unit-test-framework
   DEPENDS civetweb-c-library
 
-## Print what version of the CHECK unit test framework we are using
-message(STATUS "Using check unit test framework:\n ${CHECK_URL}\n")
 URL ${CHECK_URL}
 DOWNLOAD_NAME "master.zip"
 
@@ -34,7 +36,8 @@ DOWNLOAD_NAME "master.zip"
   LOG_BUILD ${THIRD_PARTY_LOGGING}
   LOG_TEST ${THIRD_PARTY_LOGGING}
   LOG_INSTALL ${THIRD_PARTY_LOGGING})
-
+  
+  
 ExternalProject_Get_Property(check-unit-test-framework INSTALL_DIR)
 set(CHECK_INSTALL_DIR ${INSTALL_DIR})
 unset(INSTALL_DIR)
