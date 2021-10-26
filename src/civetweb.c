@@ -210,8 +210,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 #define ZEPHYR_STACK_SIZE USE_STACK_SIZE
 #else
-// SHOULD BE MULTIPLE OF 4 KB, see Readme.MD
-#define ZEPHYR_STACK_SIZE (1024 * 4)
+#define ZEPHYR_STACK_SIZE (1024 * 8)
 #endif
 
 K_THREAD_STACK_DEFINE(civetweb_main_stack, ZEPHYR_STACK_SIZE);
