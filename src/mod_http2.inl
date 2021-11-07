@@ -1546,6 +1546,7 @@ handle_http2(struct mg_connection *conn)
 					} else if (!strcmp(":path", key)) {
 						conn->request_info.local_uri = val;
 						conn->request_info.request_uri = val;
+						conn->request_info.local_raw = val;
 					} else if (!strcmp(":status", key)) {
 						conn->status_code = atoi(val);
 					}

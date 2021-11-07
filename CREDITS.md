@@ -62,6 +62,7 @@
 * Fernando G. Aranda
 * Frank Hilliger
 * Gábor Csárdi
+* gajanak
 * Girish Joshi
 * goodmenzy
 * Grahack
