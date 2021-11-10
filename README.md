@@ -7,6 +7,7 @@
 [![GitHub contributors](https://img.shields.io/github/contributors/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
 [![Stargazers](https://img.shields.io/github/stars/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/stargazers)
 [![Forks](https://img.shields.io/github/forks/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/network/members)
+[![Latest Release](https://img.shields.io/github/v/release/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/releases)
 
 Continuous integration for Linux and macOS ([Travis CI](https://app.travis-ci.com/github/civetweb/civetweb)):
 
@@ -22,9 +23,9 @@ Test coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb),
 [![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
 [![codecov](https://codecov.io/gh/civetweb/civetweb/branch/master/graph/badge.svg)](https://codecov.io/gh/civetweb/civetweb)
 
-Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)):
+Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)): [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
 
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
+CodeQL semantic code analysis: [![CodeQL](https://github.com/civetweb/civetweb/workflows/CodeQL/badge.svg)](https://github.com/civetweb/civetweb/actions/workflows/codeql-analysis.yml)
 
 
 Project Mission
