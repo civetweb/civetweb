@@ -396,7 +396,6 @@ CivetServer::CivetServer(const char **options,
     : context(0)
 {
 	struct CivetCallbacks callbacks;
-	memset(&callbacks, 0, sizeof(callbacks));
 
 	UserContext = UserContextIn;
 
@@ -420,7 +419,6 @@ CivetServer::CivetServer(const std::vector<std::string> &options,
     : context(0)
 {
 	struct CivetCallbacks callbacks;
-	memset(&callbacks, 0, sizeof(callbacks));
 
 	UserContext = UserContextIn;
 
