@@ -41,4 +41,5 @@ clang-format -i fuzztest/fuzzmain.c
 clang-format -i examples/embedded_c/embedded_c.c
 clang-format -i examples/rest/rest.c
 clang-format -i examples/embed_certificate/ec_example.c
+clang-format -i examples/ws_server/ws_server.c
 

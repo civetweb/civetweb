@@ -13035,28 +13035,35 @@ handle_websocket_request(struct mg_connection *conn,
 		                                          "Sec-WebSocket-Protocol",
 		                                          protocols,
 		                                          64);
+
 		if ((nbSubprotocolHeader > 0) && subprotocols) {
-			int cnt = 0;
-			int idx;
-			unsigned long len;
+
+			int headerNo, idx;
+			size_t len;
 			const char *sep, *curSubProtocol,
 			    *acceptedWebSocketSubprotocol = NULL;
 
-
 			/* look for matching subprotocol */
-			do {
-				const char *protocol = protocols[cnt];
+			for (headerNo = 0; headerNo < nbSubprotocolHeader; headerNo++) {
+				/* There might be multiple headers ... */
+				const char *protocol = protocols[headerNo];
+				curSubProtocol = protocol;
 
-				do {
-					sep = strchr(protocol, ',');
-					curSubProtocol = protocol;
-					len = sep ? (unsigned long)(sep - protocol)
-					          : (unsigned long)strlen(protocol);
-					while (sep && isspace((unsigned char)*++sep))
-						; // ignore leading whitespaces
-					protocol = sep;
+				/* ... and in every header there might be a , separated list */
+				while (!acceptedWebSocketSubprotocol && (*curSubProtocol)) {
+
+					while ((*curSubProtocol == ' ') || (*curSubProtocol == ','))
+						curSubProtocol++;
+					sep = strchr(curSubProtocol, ',');
+					if (sep) {
+						len = (size_t)(sep - curSubProtocol);
+					} else {
+						len = strlen(curSubProtocol);
+					}
 
 					for (idx = 0; idx < subprotocols->nb_subprotocols; idx++) {
+						// COMPARE: curSubProtocol ==
+						// subprotocols->subprotocols[idx]
 						if ((strlen(subprotocols->subprotocols[idx]) == len)
 						    && (strncmp(curSubProtocol,
 						                subprotocols->subprotocols[idx],
@@ -13067,38 +13074,12 @@ handle_websocket_request(struct mg_connection *conn,
 							break;
 						}
 					}
-				} while (sep && !acceptedWebSocketSubprotocol);
-			} while (++cnt < nbSubprotocolHeader
-			         && !acceptedWebSocketSubprotocol);
+					curSubProtocol += len;
+				}
+			}
 
 			conn->request_info.acceptedWebSocketSubprotocol =
 			    acceptedWebSocketSubprotocol;
-
-		} else if (nbSubprotocolHeader > 0) {
-			/* keep legacy behavior */
-			const char *protocol = protocols[0];
-
-			/* The protocol is a comma separated list of names. */
-			/* The server must only return one value from this list. */
-			/* First check if it is a list or just a single value. */
-			const char *sep = strrchr(protocol, ',');
-			if (sep == NULL) {
-				/* Just a single protocol -> accept it. */
-				conn->request_info.acceptedWebSocketSubprotocol = protocol;
-			} else {
-				/* Multiple protocols -> accept the last one. */
-				/* This is just a quick fix if the client offers multiple
-				 * protocols. The handler should have a list of accepted
-				 * protocols on his own
-				 * and use it to select one protocol among those the client
-				 * has
-				 * offered.
-				 */
-				while (isspace((unsigned char)*++sep)) {
-					; /* ignore leading whitespaces */
-				}
-				conn->request_info.acceptedWebSocketSubprotocol = sep;
-			}
 		}
 
 #if defined(USE_ZLIB) && defined(MG_EXPERIMENTAL_INTERFACES)
