@@ -208,7 +208,7 @@
   <ItemGroup>
     <None Include="..\..\src\handle_form.inl" />
     <None Include="..\..\src\md5.inl" />
-    <None Include="..\..\src\mod_http2.inl" />
+    <None Include="..\..\src\http2.inl" />
     <None Include="..\..\src\mod_lua_shared.inl" />
     <None Include="..\..\src\mod_mbedtls.inl" />
     <None Include="..\..\src\openssl_dl.inl" />

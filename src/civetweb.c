@@ -6571,7 +6571,7 @@ handle_request_stat_log(struct mg_connection *conn)
 #error "HTTP2 requires ALPN, APLN requires SSL/TLS"
 #endif
 #define USE_ALPN
-#include "mod_http2.inl"
+#include "http2.inl"
 /* Not supported with HTTP/2 */
 #define HTTP1_only                                                             \
 	{                                                                          \

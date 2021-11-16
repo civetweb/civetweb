@@ -13,7 +13,7 @@ clang-format -i src/openssl_dl.inl
 clang-format -i src/timer.inl
 clang-format -i src/handle_form.inl
 clang-format -i src/response.inl
-clang-format -i src/mod_http2.inl
+clang-format -i src/http2.inl
 clang-format -i src/mod_mbedtls.inl
 
 clang-format -i src/third_party/civetweb_lua.h
