@@ -15,7 +15,8 @@ none
 ### Description
 
 The function `mg_exit_library()` should be called from an application program, when the library should be unloaded.
-It must be called only from one thread (it is not guaranteed to be thread safe).
+It can be called multiple times (`mg_init_library` and `mg_exit_library` are reference counting).
+However, the caller must make sure it is not called in parallel (it is not guaranteed to be thread safe).
 
 Only use `mg_exit_library( );` when you used [`mg_init_library( feature );`](api/mg_init_library.md) before.
 
