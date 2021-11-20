@@ -8939,9 +8939,13 @@ mg_modify_passwords_file_ha1(const char *fname,
 		return 0;
 	}
 
+#if !defined(_WIN32)
+	/* On Linux & co., restrict file read/write permissions to the owner */
 	if (fchmod(fileno(fp), S_IRUSR | S_IWUSR) != 0) {
 		result = 0;
 	}
+#endif
+
 	if ((temp_file != NULL) && (temp_file_offs > 0)) {
 		/* Store buffered content of old file */
 		if (fwrite(temp_file, 1, temp_file_offs, fp)
