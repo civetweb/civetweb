@@ -8873,9 +8873,10 @@ mg_modify_passwords_file_ha1(const char *fname,
 
 	/* Check if the file exists, and get file size */
 	if (0 == stat(fname, &st)) {
+		int temp_buf_len = (int)st.st_size + 1024;
 
 		/* Allocate memory (instead of using a temporary file) */
-		temp_file = (char *)mg_calloc(st.st_size + 1024, 1);
+		temp_file = (char *)mg_calloc(temp_buf_len, 1);
 		if (!temp_file) {
 			/* Out of memory */
 			return 0;
@@ -8890,7 +8891,9 @@ mg_modify_passwords_file_ha1(const char *fname,
 		}
 
 		/* Read content and store in memory */
-		while (fgets(line, sizeof(line), fp) != NULL) {
+		while ((fgets(line, sizeof(line), fp) != NULL)
+		       && ((temp_file_offs + 600) < temp_buf_len)) {
+			/* file format is "user:domain:hash\n" */
 			if (sscanf(line, "%255[^:]:%255[^:]:%255s", u, d, h) != 3) {
 				continue;
 			}
@@ -8899,7 +8902,8 @@ mg_modify_passwords_file_ha1(const char *fname,
 			h[255] = 0;
 
 			if (!strcmp(u, user) && !strcmp(d, domain)) {
-				/* Found the user: change the password hash or drop the user */
+				/* Found the user: change the password hash or drop the user
+				 */
 				if ((ha1 != NULL) && (!found)) {
 					i = sprintf(temp_file + temp_file_offs,
 					            "%s:%s:%s\n",
