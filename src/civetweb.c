@@ -479,9 +479,6 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 #if !defined(PASSWORDS_FILE_NAME)
 #define PASSWORDS_FILE_NAME ".htpasswd"
 #endif
-#if !defined(MODIFY_PASSWORD_TEMP_EXT)
-#define MODIFY_PASSWORD_TEMP_EXT ".htpasswd_tmp"
-#endif
 
 /* Initial buffer size for all CGI environment variables. In case there is
  * not enough space, another block is allocated. */
@@ -6910,6 +6907,20 @@ alloc_vprintf(char **out_buf,
 }
 
 
+static int
+alloc_printf(char **out_buf, const char *fmt, ...)
+{
+	va_list ap;
+	int result;
+
+	va_start(ap, fmt);
+	result = alloc_vprintf(out_buf, NULL, 0, fmt, ap);
+	va_end(ap);
+
+	return result;
+}
+
+
 #if defined(GCC_DIAGNOSTIC)
 /* Enable format-nonliteral warning again. */
 #pragma GCC diagnostic pop
@@ -8804,24 +8815,22 @@ is_authorized_for_put(struct mg_connection *conn)
 #endif
 
 
-static int
-modify_passwords_file(const char *fname,
-                      const char *domain,
-                      const char *user,
-                      const char *pass,
-                      const char *ha1)
+int
+mg_modify_passwords_file_ha1(const char *fname,
+                             const char *domain,
+                             const char *user,
+                             const char *ha1)
 {
-	int found, i;
-	char line[512], u[512] = "", d[512] = "", ha1buf[33],
-	                tmp[UTF8_PATH_MAX + 8];
-	FILE *fp, *fp2;
-
-	found = 0;
-	fp = fp2 = NULL;
+	int found = 0, i, result = 1;
+	char line[512], u[256], d[256], h[256];
+	struct stat st = {0};
+	FILE *fp = NULL;
+	char *temp_file = NULL;
+	int temp_file_offs = 0;
 
 	/* Regard empty password as no password - remove user record. */
-	if ((pass != NULL) && (pass[0] == '\0')) {
-		pass = NULL;
+	if ((ha1 != NULL) && (ha1[0] == '\0')) {
+		ha1 = NULL;
 	}
 
 	/* Other arguments must not be empty */
@@ -8830,8 +8839,7 @@ modify_passwords_file(const char *fname,
 	}
 
 	/* Using the given file format, user name and domain must not contain
-	 * ':'
-	 */
+	 * the ':' character */
 	if (strchr(user, ':') != NULL) {
 		return 0;
 	}
@@ -8847,7 +8855,7 @@ modify_passwords_file(const char *fname,
 		}
 	}
 	if (user[i]) {
-		return 0;
+		return 0; /* user name too long */
 	}
 	for (i = 0; ((i < 255) && (domain[i] != 0)); i++) {
 		if (iscntrl((unsigned char)domain[i])) {
@@ -8855,72 +8863,103 @@ modify_passwords_file(const char *fname,
 		}
 	}
 	if (domain[i]) {
-		return 0;
+		return 0; /* domain name too long */
 	}
 
 	/* The maximum length of the path to the password file is limited */
-	if ((strlen(fname) + strlen(MODIFY_PASSWORD_TEMP_EXT)) >= UTF8_PATH_MAX) {
+	if (strlen(fname) >= UTF8_PATH_MAX) {
 		return 0;
 	}
 
-	/* Create a temporary file name. Length has been checked before. */
-	strcpy(tmp, fname);
-	strcat(tmp, MODIFY_PASSWORD_TEMP_EXT);
+	/* Check if the file exists, and get file size */
+	if (0 == stat(fname, &st)) {
 
-	/* Create the file if does not exist */
-	/* Use of fopen here is OK, since fname is only ASCII */
-	if ((fp = fopen(fname, "a+")) != NULL) {
-		(void)fclose(fp);
-	}
-
-	/* Open the given file and temporary file */
-	if ((fp = fopen(fname, "r")) == NULL) {
-		return 0;
-	} else if ((fp2 = fopen(tmp, "w+")) == NULL) {
-		fclose(fp);
-		return 0;
-	}
-
-	/* Copy the stuff to temporary file */
-	while (fgets(line, sizeof(line), fp) != NULL) {
-		if (sscanf(line, "%255[^:]:%255[^:]:%*s", u, d) != 2) {
-			continue;
+		/* Allocate memory (instead of using a temporary file) */
+		temp_file = (char *)mg_calloc(st.st_size + 1024, 1);
+		if (!temp_file) {
+			/* Out of memory */
+			return 0;
 		}
-		u[255] = 0;
-		d[255] = 0;
 
-		if (!strcmp(u, user) && !strcmp(d, domain)) {
-			found++;
-			if (pass != NULL) {
-				mg_md5(ha1buf, user, ":", domain, ":", pass, NULL);
-				fprintf(fp2, "%s:%s:%s\n", user, domain, ha1buf);
-			} else if (ha1 != NULL) {
-				fprintf(fp2, "%s:%s:%s\n", user, domain, ha1);
+		/* File exists. Read it into a memory buffer. */
+		fp = fopen(fname, "r");
+		if (fp == NULL) {
+			/* Cannot read file. No permission? */
+			mg_free(temp_file);
+			return 0;
+		}
+
+		/* Read content and store in memory */
+		while (fgets(line, sizeof(line), fp) != NULL) {
+			if (sscanf(line, "%255[^:]:%255[^:]:%255s", u, d, h) != 3) {
+				continue;
 			}
-		} else {
-			fprintf(fp2, "%s", line);
+			u[255] = 0;
+			d[255] = 0;
+			h[255] = 0;
+
+			if (!strcmp(u, user) && !strcmp(d, domain)) {
+				/* Found the user: change the password hash or drop the user */
+				if ((ha1 != NULL) && (!found)) {
+					i = sprintf(temp_file + temp_file_offs,
+					            "%s:%s:%s\n",
+					            user,
+					            domain,
+					            ha1);
+					if (i < 1) {
+						fclose(fp);
+						mg_free(temp_file);
+						return 0;
+					}
+					temp_file_offs += i;
+				}
+				found = 1;
+			} else {
+				/* Copy existing user, including password hash */
+				i = sprintf(temp_file + temp_file_offs, "%s:%s:%s\n", u, d, h);
+				if (i < 1) {
+					fclose(fp);
+					mg_free(temp_file);
+					return 0;
+				}
+				temp_file_offs += i;
+			}
+		}
+		fclose(fp);
+	}
+
+	/* Create new file */
+	fp = fopen(fname, "w");
+	if (!fp) {
+		mg_free(temp_file);
+		return 0;
+	}
+
+	if (fchmod(fileno(fp), S_IRUSR | S_IWUSR) != 0) {
+		result = 0;
+	}
+	if ((temp_file != NULL) && (temp_file_offs > 0)) {
+		/* Store buffered content of old file */
+		if (fwrite(temp_file, 1, temp_file_offs, fp)
+		    != (size_t)temp_file_offs) {
+			result = 0;
 		}
 	}
 
 	/* If new user, just add it */
-	if (!found) {
-		if (pass != NULL) {
-			mg_md5(ha1buf, user, ":", domain, ":", pass, NULL);
-			fprintf(fp2, "%s:%s:%s\n", user, domain, ha1buf);
-		} else if (ha1 != NULL) {
-			fprintf(fp2, "%s:%s:%s\n", user, domain, ha1);
+	if ((ha1 != NULL) && (!found)) {
+		if (fprintf(fp, "%s:%s:%s\n", user, domain, ha1) < 6) {
+			result = 0;
 		}
 	}
 
-	/* Close files */
-	fclose(fp);
-	fclose(fp2);
+	/* All data written */
+	if (fclose(fp) != 0) {
+		result = 0;
+	}
 
-	/* Put the temp file in place of real file */
-	IGNORE_UNUSED_RESULT(remove(fname));
-	IGNORE_UNUSED_RESULT(rename(tmp, fname));
-
-	return 1;
+	mg_free(temp_file);
+	return result;
 }
 
 
@@ -8930,17 +8969,16 @@ mg_modify_passwords_file(const char *fname,
                          const char *user,
                          const char *pass)
 {
-	return modify_passwords_file(fname, domain, user, pass, NULL);
-}
+	char ha1buf[33];
+	if ((fname == NULL) || (domain == NULL) || (user == NULL)) {
+		return 0;
+	}
+	if ((pass == NULL) || (pass[0] == 0)) {
+		return mg_modify_passwords_file_ha1(fname, domain, user, NULL);
+	}
 
-
-int
-mg_modify_passwords_file_ha1(const char *fname,
-                             const char *domain,
-                             const char *user,
-                             const char *ha1)
-{
-	return modify_passwords_file(fname, domain, user, NULL, ha1);
+	mg_md5(ha1buf, user, ":", domain, ":", pass, NULL);
+	return mg_modify_passwords_file_ha1(fname, domain, user, ha1buf);
 }
 
 
@@ -9438,10 +9476,8 @@ must_hide_file(struct mg_connection *conn, const char *path)
 {
 	if (conn && conn->dom_ctx) {
 		const char *pw_pattern = "**" PASSWORDS_FILE_NAME "$";
-		const char *pw_temp_pattern = "**" MODIFY_PASSWORD_TEMP_EXT "$";
 		const char *pattern = conn->dom_ctx->config[HIDE_FILES];
 		return (match_prefix_strlen(pw_pattern, path) > 0)
-		       || (match_prefix_strlen(pw_temp_pattern, path) > 0)
 		       || (match_prefix_strlen(pattern, path) > 0);
 	}
 	return 0;
