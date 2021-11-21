@@ -7216,13 +7216,26 @@ mg_get_cookie(const char *cookie_header,
 }
 
 
-#if defined(USE_WEBSOCKET) || defined(USE_LUA)
-static void
-base64_encode(const unsigned char *src, int src_len, char *dst)
+static int
+base64_encode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
 {
 	static const char *b64 =
 	    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	int i, j, a, b, c;
+
+	if (dst_len != NULL) {
+		/* Expected length including 0 termination: */
+		/* IN 1 -> OUT 5, IN 2 -> OUT 5, IN 3 -> OUT 5, IN 4 -> OUT 9,
+		 * IN 5 -> OUT 9, IN 6 -> OUT 9, IN 7 -> OUT 13, etc. */
+		size_t expected_len = ((src_len + 2) / 3) * 4 + 1;
+		if (*dst_len < expected_len) {
+			if (*dst_len > 0) {
+				dst[0] = '\0';
+			}
+			*dst_len = expected_len;
+			return 0;
+		}
+	}
 
 	for (i = j = 0; i < src_len; i += 3) {
 		a = src[i];
@@ -7242,11 +7255,16 @@ base64_encode(const unsigned char *src, int src_len, char *dst)
 		dst[j++] = '=';
 	}
 	dst[j++] = '\0';
+
+	if (dst_len != NULL) {
+		*dst_len = (size_t)j;
+	}
+
+	/* Return -1 for "OK" */
+	return -1;
 }
-#endif
 
 
-#if defined(USE_LUA)
 static unsigned char
 b64reverse(char letter)
 {
@@ -7277,10 +7295,16 @@ base64_decode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
 {
 	int i;
 	unsigned char a, b, c, d;
+	size_t dst_len_limit = (size_t)-1;
+	size_t dst_len_used = 0;
 
-	*dst_len = 0;
+	if (dst_len != NULL) {
+		dst_len_limit = *dst_len;
+		*dst_len = 0;
+	}
 
 	for (i = 0; i < src_len; i += 4) {
+		/* Read 4 characters from BASE64 string */
 		a = b64reverse(src[i]);
 		if (a >= 254) {
 			return i;
@@ -7301,17 +7325,44 @@ base64_decode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
 			return i + 3;
 		}
 
-		dst[(*dst_len)++] = (a << 2) + (b >> 4);
+		/* Add first (of 3) decoded character */
+		if (dst_len_used < dst_len_limit) {
+			dst[dst_len_used] = (a << 2) + (b >> 4);
+		}
+		dst_len_used++;
+
 		if (c != 255) {
-			dst[(*dst_len)++] = (b << 4) + (c >> 2);
+			if (dst_len_used < dst_len_limit) {
+
+				dst[dst_len_used] = (b << 4) + (c >> 2);
+			}
+			dst_len_used++;
 			if (d != 255) {
-				dst[(*dst_len)++] = (c << 6) + d;
+				if (dst_len_used < dst_len_limit) {
+					dst[dst_len_used] = (c << 6) + d;
+				}
+				dst_len_used++;
 			}
 		}
 	}
+
+	/* Add terminating zero */
+	if (dst_len_used < dst_len_limit) {
+		dst[dst_len_used] = '\0';
+	}
+	dst_len_used++;
+	if (dst_len != NULL) {
+		*dst_len = dst_len_used;
+	}
+
+	if (dst_len_used > dst_len_limit) {
+		/* Out of memory */
+		return 0;
+	}
+
+	/* Return -1 for "OK" */
 	return -1;
 }
-#endif
 
 
 static int
@@ -12379,6 +12430,7 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 {
 	static const char *magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 	char buf[100], sha[20], b64_sha[sizeof(sha) * 2];
+	size_t dst_len = sizeof(b64_sha);
 	SHA_CTX sha_ctx;
 	int truncated;
 
@@ -12394,7 +12446,7 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
 	SHA1_Final((unsigned char *)sha, &sha_ctx);
-	base64_encode((unsigned char *)sha, sizeof(sha), b64_sha);
+	base64_encode((unsigned char *)sha, sizeof(sha), b64_sha, &dst_len);
 	mg_printf(conn,
 	          "HTTP/1.1 101 Switching Protocols\r\n"
 	          "Upgrade: websocket\r\n"

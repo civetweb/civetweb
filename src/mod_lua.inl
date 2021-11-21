@@ -1506,7 +1506,6 @@ lsp_base64_encode(lua_State *L)
 	int num_args = lua_gettop(L);
 	const char *text;
 	size_t text_len;
-	char *dst;
 	struct mg_context *ctx;
 
 	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
@@ -1516,10 +1515,15 @@ lsp_base64_encode(lua_State *L)
 	if (num_args == 1) {
 		text = lua_tolstring(L, 1, &text_len);
 		if (text) {
-			dst = (char *)mg_malloc_ctx(text_len * 8 / 6 + 4, ctx);
+			/* Base 64 encodes 8 bits into 6 */
+			size_t dst_len = text_len * 8 / 6 + 4;
+			char *dst = (char *)mg_malloc_ctx(dst_len, ctx);
 			if (dst) {
-				base64_encode((const unsigned char *)text, (int)text_len, dst);
-				lua_pushstring(L, dst);
+				base64_encode((const unsigned char *)text,
+				              (int)text_len,
+				              dst,
+				              &dst_len);
+				lua_pushlstring(L, dst, dst_len);
 				mg_free(dst);
 			} else {
 				return luaL_error(L, "out of memory in base64_encode() call");
