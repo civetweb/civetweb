@@ -533,6 +533,93 @@ START_TEST(test_mg_url_decode)
 END_TEST
 
 
+START_TEST(test_mg_base64)
+{
+	char buf[128];
+	const char *alpha = "abcdefghijklmnopqrstuvwxyz";
+	const char *nonalpha = " !\"#$%&'()*+,-./0123456789:;<=>?@";
+	int ret;
+	size_t len;
+
+	const char *alpha_b64_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
+	const char *nonalpha_b64_enc =
+	    "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
+
+	mark_point();
+
+	memset(buf, 77, sizeof(buf));
+	mg_base64_encode((unsigned char *)"a", 1, buf, NULL);
+	ck_assert_str_eq(buf, "YQ==");
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	mg_base64_encode((unsigned char *)"ab", 1, buf, &len);
+	ck_assert_str_eq(buf, "YQ==");
+	ck_assert_int_eq((int)len, 5);
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	mg_base64_encode((unsigned char *)"ab", 2, buf, &len);
+	ck_assert_str_eq(buf, "YWI=");
+	ck_assert_int_eq((int)len, 5);
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	mg_base64_encode((unsigned char *)alpha, 3, buf, &len);
+	ck_assert_str_eq(buf, "YWJj");
+	ck_assert_int_eq((int)len, 5);
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	mg_base64_encode((unsigned char *)alpha, 4, buf, &len);
+	ck_assert_str_eq(buf, "YWJjZA==");
+	ck_assert_int_eq((int)len, 9);
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	mg_base64_encode((unsigned char *)alpha, 5, buf, &len);
+	ck_assert_str_eq(buf, "YWJjZGU=");
+	ck_assert_int_eq((int)len, 9);
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	mg_base64_encode((unsigned char *)alpha, 6, buf, &len);
+	ck_assert_str_eq(buf, "YWJjZGVm");
+	ck_assert_int_eq((int)len, 9);
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	mg_base64_encode((unsigned char *)alpha, (int)strlen(alpha), buf, &len);
+	ck_assert_str_eq(buf, alpha_b64_enc);
+	ck_assert_int_eq((int)len, (int)strlen(alpha_b64_enc) + 1);
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	mg_base64_encode((unsigned char *)nonalpha,
+	                 (int)strlen(nonalpha),
+	                 buf,
+	                 &len);
+	ck_assert_str_eq(buf, nonalpha_b64_enc);
+	ck_assert_int_eq((int)len, (int)strlen(nonalpha_b64_enc) + 1);
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	ret = mg_base64_decode((unsigned char *)alpha_b64_enc,
+	                       (int)strlen(alpha_b64_enc),
+	                       buf,
+	                       &len);
+	ck_assert_int_eq(ret, -1);
+	ck_assert_int_eq((int)len, (int)strlen(alpha) + 1);
+	ck_assert_str_eq(buf, alpha);
+
+	memset(buf, 77, sizeof(buf));
+	len = 9999;
+	ret = mg_base64_decode((unsigned char *)"AAA*AAA", 7, buf, &len);
+	ck_assert_int_eq(ret, 3);
+}
+END_TEST
+
+
 #define MG_MAX_FORM_FIELDS (64)
 
 START_TEST(test_mg_split_form_urlencoded)
@@ -638,6 +725,8 @@ make_public_func_suite(void)
 	TCase *const tcase_strncasecmp = tcase_create("strcasecmp");
 	TCase *const tcase_urlencodingdecoding =
 	    tcase_create("URL encoding decoding");
+	TCase *const tcase_base64encodingdecoding =
+	    tcase_create("BASE64 encoding decoding");
 	TCase *const tcase_cookies = tcase_create("Cookies and variables");
 	TCase *const tcase_md5 = tcase_create("MD5");
 	TCase *const tcase_aux = tcase_create("Aux functions");
@@ -663,6 +752,11 @@ make_public_func_suite(void)
 	tcase_add_test(tcase_urlencodingdecoding, test_mg_split_form_urlencoded);
 	tcase_set_timeout(tcase_urlencodingdecoding, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_urlencodingdecoding);
+
+	tcase_add_test(tcase_base64encodingdecoding, test_mg_base64);
+	tcase_set_timeout(tcase_base64encodingdecoding, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_base64encodingdecoding);
+	suite_add_tcase(suite, tcase_base64encodingdecoding);
 
 	tcase_add_test(tcase_cookies, test_mg_get_cookie);
 	tcase_add_test(tcase_cookies, test_mg_get_var);

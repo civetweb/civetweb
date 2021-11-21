@@ -1341,6 +1341,22 @@ CIVETWEB_API int mg_url_decode(const char *src,
 CIVETWEB_API int mg_url_encode(const char *src, char *dst, size_t dst_len);
 
 
+/* BASE64-encode input buffer into destination buffer.
+   returns -1 on OK. */
+CIVETWEB_API int mg_base64_encode(const unsigned char *src,
+                                  size_t src_len,
+                                  char *dst,
+                                  size_t *dst_len);
+
+
+/* BASE64-decode input buffer into destination buffer.
+   returns -1 on OK. */
+CIVETWEB_API int mg_base64_decode(const char *src,
+                                  size_t src_len,
+                                  unsigned char *dst,
+                                  size_t *dst_len);
+
+
 /* MD5 hash given strings.
    Buffer 'buf' must be 33 bytes long. Varargs is a NULL terminated list of
    ASCIIz strings. When function returns, buf will contain human-readable

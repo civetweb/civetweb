@@ -1519,10 +1519,10 @@ lsp_base64_encode(lua_State *L)
 			size_t dst_len = text_len * 8 / 6 + 4;
 			char *dst = (char *)mg_malloc_ctx(dst_len, ctx);
 			if (dst) {
-				base64_encode((const unsigned char *)text,
-				              (int)text_len,
-				              dst,
-				              &dst_len);
+				mg_base64_encode((const unsigned char *)text,
+				                 (int)text_len,
+				                 dst,
+				                 &dst_len);
 				lua_pushlstring(L, dst, dst_len);
 				mg_free(dst);
 			} else {
@@ -1547,7 +1547,7 @@ lsp_base64_decode(lua_State *L)
 	const char *text;
 	size_t text_len, dst_len;
 	int ret;
-	char *dst;
+	unsigned char *dst;
 	struct mg_context *ctx;
 
 	lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
@@ -1557,18 +1557,15 @@ lsp_base64_decode(lua_State *L)
 	if (num_args == 1) {
 		text = lua_tolstring(L, 1, &text_len);
 		if (text) {
-			dst = (char *)mg_malloc_ctx(text_len, ctx);
+			dst = (unsigned char *)mg_malloc_ctx(text_len, ctx);
 			if (dst) {
-				ret = base64_decode((const unsigned char *)text,
-				                    (int)text_len,
-				                    dst,
-				                    &dst_len);
+				ret = mg_base64_decode(text, (int)text_len, dst, &dst_len);
 				if (ret != -1) {
 					mg_free(dst);
 					return luaL_error(
 					    L, "illegal character in lsp_base64_decode() call");
 				} else {
-					lua_pushlstring(L, dst, dst_len);
+					lua_pushlstring(L, (char *)dst, dst_len);
 					mg_free(dst);
 				}
 			} else {

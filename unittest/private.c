@@ -964,78 +964,7 @@ START_TEST(test_encode_decode)
 	int ret;
 	size_t len;
 
-	const char *alpha_b64_enc = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=";
-	const char *nonalpha_b64_enc =
-	    "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9A";
-
 	mark_point();
-
-	memset(buf, 77, sizeof(buf));
-	base64_encode((unsigned char *)"a", 1, buf, NULL);
-	ck_assert_str_eq(buf, "YQ==");
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	base64_encode((unsigned char *)"ab", 1, buf, &len);
-	ck_assert_str_eq(buf, "YQ==");
-	ck_assert_int_eq((int)len, 5);
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	base64_encode((unsigned char *)"ab", 2, buf, &len);
-	ck_assert_str_eq(buf, "YWI=");
-	ck_assert_int_eq((int)len, 5);
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	base64_encode((unsigned char *)alpha, 3, buf, &len);
-	ck_assert_str_eq(buf, "YWJj");
-	ck_assert_int_eq((int)len, 5);
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	base64_encode((unsigned char *)alpha, 4, buf, &len);
-	ck_assert_str_eq(buf, "YWJjZA==");
-	ck_assert_int_eq((int)len, 9);
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	base64_encode((unsigned char *)alpha, 5, buf, &len);
-	ck_assert_str_eq(buf, "YWJjZGU=");
-	ck_assert_int_eq((int)len, 9);
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	base64_encode((unsigned char *)alpha, 6, buf, &len);
-	ck_assert_str_eq(buf, "YWJjZGVm");
-	ck_assert_int_eq((int)len, 9);
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	base64_encode((unsigned char *)alpha, (int)strlen(alpha), buf, &len);
-	ck_assert_str_eq(buf, alpha_b64_enc);
-	ck_assert_int_eq((int)len, (int)strlen(alpha_b64_enc) + 1);
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	base64_encode((unsigned char *)nonalpha, (int)strlen(nonalpha), buf, &len);
-	ck_assert_str_eq(buf, nonalpha_b64_enc);
-	ck_assert_int_eq((int)len, (int)strlen(nonalpha_b64_enc) + 1);
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	ret = base64_decode((unsigned char *)alpha_b64_enc,
-	                    (int)strlen(alpha_b64_enc),
-	                    buf,
-	                    &len);
-	ck_assert_int_eq(ret, -1);
-	ck_assert_int_eq((int)len, (int)strlen(alpha) + 1);
-	ck_assert_str_eq(buf, alpha);
-
-	memset(buf, 77, sizeof(buf));
-	len = 9999;
-	ret = base64_decode((unsigned char *)"AAA*AAA", 7, buf, &len);
-	ck_assert_int_eq(ret, 3);
 
 	memset(buf, 77, sizeof(buf));
 	ret = mg_url_encode(alpha, buf, sizeof(buf));

@@ -7216,12 +7216,16 @@ mg_get_cookie(const char *cookie_header,
 }
 
 
-static int
-base64_encode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
+int
+mg_base64_encode(const unsigned char *src,
+                 size_t src_len,
+                 char *dst,
+                 size_t *dst_len)
 {
 	static const char *b64 =
 	    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	int i, j, a, b, c;
+	size_t i, j;
+	int a, b, c;
 
 	if (dst_len != NULL) {
 		/* Expected length including 0 termination: */
@@ -7290,10 +7294,13 @@ b64reverse(char letter)
 }
 
 
-static int
-base64_decode(const unsigned char *src, int src_len, char *dst, size_t *dst_len)
+int
+mg_base64_decode(const char *src,
+                 size_t src_len,
+                 unsigned char *dst,
+                 size_t *dst_len)
 {
-	int i;
+	size_t i;
 	unsigned char a, b, c, d;
 	size_t dst_len_limit = (size_t)-1;
 	size_t dst_len_used = 0;
@@ -12446,7 +12453,7 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 	SHA1_Init(&sha_ctx);
 	SHA1_Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
 	SHA1_Final((unsigned char *)sha, &sha_ctx);
-	base64_encode((unsigned char *)sha, sizeof(sha), b64_sha, &dst_len);
+	mg_base64_encode((unsigned char *)sha, sizeof(sha), b64_sha, &dst_len);
 	mg_printf(conn,
 	          "HTTP/1.1 101 Switching Protocols\r\n"
 	          "Upgrade: websocket\r\n"
