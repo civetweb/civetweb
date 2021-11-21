@@ -464,7 +464,7 @@ END_TEST
 
 
 static int
-alloc_printf(char **buf, size_t size, const char *fmt, ...)
+alloc_vprintf_wrapper(char **buf, size_t size, const char *fmt, ...)
 {
 	/* Test helper function - adapted from unit_test.c */
 	/* Copyright (c) 2013-2015 the Civetweb developers */
@@ -482,23 +482,6 @@ alloc_printf(char **buf, size_t size, const char *fmt, ...)
 }
 
 
-static int
-alloc_printf2(char **buf, const char *fmt, ...)
-{
-	/* Test alternative implementation */
-	va_list ap;
-	int ret = 0;
-
-	mark_point();
-
-	va_start(ap, fmt);
-	ret = alloc_vprintf2(buf, fmt, ap);
-	va_end(ap);
-
-	return ret;
-}
-
-
 START_TEST(test_alloc_vprintf)
 {
 	/* Adapted from unit_test.c */
@@ -507,23 +490,23 @@ START_TEST(test_alloc_vprintf)
 	char buf[MG_BUF_LEN], *p = buf;
 	mark_point();
 
-	ck_assert(alloc_printf(&p, sizeof(buf), "%s", "hi") == 2);
+	ck_assert(alloc_vprintf_wrapper(&p, sizeof(buf), "%s", "hi") == 2);
 	ck_assert(p == buf);
 
-	ck_assert(alloc_printf(&p, sizeof(buf), "%s", "") == 0);
+	ck_assert(alloc_vprintf_wrapper(&p, sizeof(buf), "%s", "") == 0);
 	ck_assert(p == buf);
 
-	ck_assert(alloc_printf(&p, sizeof(buf), "") == 0);
+	ck_assert(alloc_vprintf_wrapper(&p, sizeof(buf), "") == 0);
 	ck_assert(p == buf);
 
 	/* Pass small buffer, make sure alloc_printf allocates */
-	ck_assert(alloc_printf(&p, 1, "%s", "hello") == 5);
+	ck_assert(alloc_vprintf_wrapper(&p, 1, "%s", "hello") == 5);
 	ck_assert(p != buf);
 	mg_free(p);
 	p = buf;
 
-	/* Test alternative implementation */
-	ck_assert(alloc_printf2(&p, "%s", "hello") == 5);
+	/* Test new wrapper implementation */
+	ck_assert(alloc_printf(&p, "%s", "hello") == 5);
 	ck_assert(p != buf);
 	mg_free(p);
 	p = buf;
