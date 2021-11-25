@@ -14528,7 +14528,7 @@ handle_request(struct mg_connection *conn)
 	}
 
 	/* 12. Directory uris should end with a slash */
-	if (file.stat.is_directory && (uri_len > 0)
+	if (file.stat.is_directory && ((uri_len = (int) strlen(ri->local_uri)) > 0)
 	    && (ri->local_uri[uri_len - 1] != '/')) {
 
 		size_t len = strlen(ri->request_uri);
