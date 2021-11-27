@@ -2214,7 +2214,7 @@ struct mg_handler_info {
 	/* handler type */
 	int handler_type;
 
-	/* Handler for http/https or authorization requests. */
+	/* Handler for http/https or requests. */
 	mg_request_handler handler;
 	unsigned int refcount;
 	int removing;
@@ -7377,9 +7377,14 @@ is_put_or_delete_method(const struct mg_connection *conn)
 {
 	if (conn) {
 		const char *s = conn->request_info.request_method;
-		return (s != NULL)
-		       && (!strcmp(s, "PUT") || !strcmp(s, "DELETE")
-		           || !strcmp(s, "MKCOL") || !strcmp(s, "PATCH"));
+		if (s != NULL) {
+			/* PUT, DELETE, MKCOL, PATCH, LOCK, UNLOCK, PROPPATCH, MOVE, COPY */
+			return (!strcmp(s, "PUT") || !strcmp(s, "DELETE")
+			        || !strcmp(s, "MKCOL") || !strcmp(s, "PATCH")
+			        || !strcmp(s, "LOCK") || !strcmp(s, "UNLOCK")
+			        || !strcmp(s, "PROPPATCH") || !strcmp(s, "MOVE")
+			        || !strcmp(s, "COPY"));
+		}
 	}
 	return 0;
 }
@@ -10637,9 +10642,10 @@ static const struct mg_http_method_info http_methods[] = {
     {"LOCK", 1, 1, 0, 0, 0},
     {"UNLOCK", 1, 0, 0, 0, 0},
     {"PROPPATCH", 1, 1, 0, 0, 0},
+    {"COPY", 1, 0, 0, 0, 0},
+    {"MOVE", 1, 1, 0, 0, 0},
 
     /* Unsupported WEBDAV Methods: */
-    /* COPY, MOVE (RFC 2518) */
     /* + 11 methods from RFC 3253 */
     /* ORDERPATCH (RFC 3648) */
     /* ACL (RFC 3744) */
@@ -11692,7 +11698,7 @@ done:
 
 #if !defined(NO_FILES)
 static void
-mkcol(struct mg_connection *conn, const char *path)
+dav_mkcol(struct mg_connection *conn, const char *path)
 {
 	int rc, body_len;
 	struct de de;
@@ -11730,9 +11736,7 @@ mkcol(struct mg_connection *conn, const char *path)
 	}
 
 	rc = mg_mkdir(conn, path, 0755);
-
 	if (rc == 0) {
-
 		/* Create 201 "Created" response */
 		mg_response_header_start(conn, 201);
 		send_static_cache_header(conn);
@@ -11741,21 +11745,170 @@ mkcol(struct mg_connection *conn, const char *path)
 
 		/* Send all headers - there is no body */
 		mg_response_header_send(conn);
-
 	} else {
-		if (errno == EEXIST) {
-			mg_send_http_error(
-			    conn, 405, "Error: mkcol(%s): %s", path, strerror(ERRNO));
-		} else if (errno == EACCES) {
-			mg_send_http_error(
-			    conn, 403, "Error: mkcol(%s): %s", path, strerror(ERRNO));
-		} else if (errno == ENOENT) {
-			mg_send_http_error(
-			    conn, 409, "Error: mkcol(%s): %s", path, strerror(ERRNO));
-		} else {
-			mg_send_http_error(
-			    conn, 500, "fopen(%s): %s", path, strerror(ERRNO));
+		int http_status = 500;
+		switch (errno) {
+		case EEXIST:
+			http_status = 405;
+			break;
+		case EACCES:
+			http_status = 403;
+			break;
+		case ENOENT:
+			http_status = 409;
+			break;
 		}
+
+		mg_send_http_error(conn,
+		                   http_status,
+		                   "Error processing %s: %s",
+		                   path,
+		                   strerror(ERRNO));
+	}
+}
+
+
+/* Forward decrlaration */
+static int get_uri_type(const char *uri);
+static const char *
+get_rel_url_at_current_server(const char *uri,
+                              const struct mg_connection *conn);
+
+
+static void
+dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
+{
+	const char *overwrite;
+	const char *destination;
+	const char *root;
+	int rc, dest_uri_type;
+	int http_status = 400;
+	int do_override = 0;
+	int destination_ok = 0;
+	char dest_path[UTF8_PATH_MAX];
+
+	if (conn == NULL) {
+		return;
+	}
+
+	root = conn->dom_ctx->config[DOCUMENT_ROOT];
+	overwrite = mg_get_header(conn, "Overwrite");
+	destination = mg_get_header(conn, "Destination");
+	if ((overwrite != NULL) && (toupper(overwrite[0]) == 'T')) {
+		do_override = 1;
+	}
+
+	if ((destination == NULL) || (destination[0] == 0)) {
+		mg_send_http_error(conn, 400, "%s", "Missing destination");
+		return;
+	}
+
+	if (root != NULL) {
+		char *local_dest = NULL;
+		dest_uri_type = get_uri_type(destination);
+		if (dest_uri_type == 2) {
+			local_dest = mg_strdup_ctx(destination, conn->phys_ctx);
+		} else if ((dest_uri_type == 3) || (dest_uri_type == 4)) {
+			const char *h = get_rel_url_at_current_server(destination, conn);
+			if (h) {
+				local_dest = mg_strdup_ctx(h, conn->phys_ctx);
+			}
+		}
+		if (local_dest != NULL) {
+			remove_dot_segments(local_dest);
+			if (local_dest[0] == '/') {
+				int trunc_check = 0;
+				mg_snprintf(conn,
+				            &trunc_check,
+				            dest_path,
+				            sizeof(dest_path),
+				            "%s/%s",
+				            root,
+				            local_dest);
+				if (trunc_check == 0) {
+					destination_ok = 1;
+				}
+			}
+			mg_free(local_dest);
+		}
+	}
+
+	if (!destination_ok) {
+		mg_send_http_error(conn, 502, "%s", "Illegal destination");
+		return;
+	}
+
+
+#if defined(_WIN32)
+	{
+		wchar_t wSource[UTF16_PATH_MAX];
+		wchar_t wDest[UTF16_PATH_MAX];
+		BOOL ok;
+
+		path_to_unicode(conn, path, wSource, ARRAY_SIZE(wSource));
+		path_to_unicode(conn, dest_path, wDest, ARRAY_SIZE(wDest));
+		if (do_copy) {
+			ok = CopyFileW(wSource, wDest, do_override ? FALSE : TRUE);
+		} else {
+			ok = MoveFileExW(wSource,
+			                 wDest,
+			                 do_override ? MOVEFILE_REPLACE_EXISTING : 0);
+		}
+		if (ok) {
+			rc = 0;
+		} else {
+			DWORD lastErr = GetLastError();
+			if (lastErr == ERROR_ALREADY_EXISTS) {
+				http_status = 412;
+			}
+			rc = -1;
+		}
+	}
+
+#else
+
+	if (do_copy) {
+		/* TODO: COPY for Linux. */
+		mg_send_http_error(conn, 403, "%s", "COPY forbidden");
+		return;
+	}
+
+	/* Linux is already UTF-8 */
+	rc = rename(path, dest_path);
+	if (rc) {
+		switch (errno) {
+		case EEXIST:
+			http_status = 412;
+			break;
+		case EACCES:
+			http_status = 403;
+			break;
+		case ENOENT:
+			http_status = 409;
+			break;
+		}
+	}
+#endif
+
+	if (rc == 0) {
+		/* Create 201 "Created" response */
+		mg_response_header_start(conn, 201);
+		send_static_cache_header(conn);
+		send_additional_header(conn);
+		mg_response_header_add(conn, "Content-Length", "0", -1);
+
+		/* Send all headers - there is no body */
+		mg_response_header_send(conn);
+	} else if (http_status == 412) {
+		mg_send_http_error(conn,
+		                   412,
+		                   "Destination already exists: %s",
+		                   dest_path);
+	} else {
+		mg_send_http_error(conn,
+		                   http_status,
+		                   "Operation failed with code %i",
+		                   rc);
 	}
 }
 
@@ -12240,6 +12393,9 @@ handle_ssi_file_request(struct mg_connection *conn,
 static void
 send_options(struct mg_connection *conn)
 {
+	int i;
+	char methods[256] = {0};
+
 	if (!conn) {
 		return;
 	}
@@ -12250,13 +12406,19 @@ send_options(struct mg_connection *conn)
 
 	mg_response_header_start(conn, 200);
 	mg_response_header_add(conn, "Content-Type", "text/html", -1);
+
+	for (i = 0; http_methods[i].name != NULL; i++) {
+		if (i > 0) {
+			strcat(methods, ", ");
+			strcat(methods, http_methods[i].name);
+		} else {
+			strcpy(methods, http_methods[i].name);
+		}
+	}
+
 	if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
 		/* Use the same as before */
-		mg_response_header_add(
-		    conn,
-		    "Allow",
-		    "GET, POST, HEAD, CONNECT, PUT, DELETE, OPTIONS, PROPFIND, MKCOL",
-		    -1);
+		mg_response_header_add(conn, "Allow", methods, -1);
 		mg_response_header_add(conn, "DAV", "1", -1);
 	} else {
 		/* TODO: Check this later for HTTP/2 */
@@ -12339,28 +12501,40 @@ print_dav_dir_entry(struct de *de, void *data)
 }
 
 
+#define NUM_WEBDAV_LOCKS 10
+uint64_t dav_lock_counter = 0;
+struct tdav_lock {
+	uint64_t counter;
+	char token[33];
+	char path[UTF8_PATH_MAX * 2];
+	char user[UTF8_PATH_MAX * 2];
+} dav_lock[NUM_WEBDAV_LOCKS];
+
+
 static void
 handle_propfind(struct mg_connection *conn,
                 const char *path,
                 struct mg_file_stat *filep)
 {
+	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
 	const char *depth = mg_get_header(conn, "Depth");
-	char date[64];
-	time_t curtime = time(NULL);
-
-	gmt_time_string(date, sizeof(date), &curtime);
+	int i;
 
 	if (!conn || !path || !filep || !conn->dom_ctx) {
 		return;
 	}
 
-	conn->must_close = 1;
+	mg_get_request_link(conn, link_buf, sizeof(link_buf));
 
 	/* return 207 "Multi-Status" */
+	conn->must_close = 1;
 	mg_response_header_start(conn, 207);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
-	mg_response_header_add(conn, "Content-Type", "text/xml; charset=utf-8", -1);
+	mg_response_header_add(conn,
+	                       "Content-Type",
+	                       "application/xml; charset=utf-8",
+	                       -1);
 	mg_response_header_send(conn);
 
 	/* Content */
@@ -12380,8 +12554,239 @@ handle_propfind(struct mg_connection *conn,
 		scan_directory(conn, path, conn, &print_dav_dir_entry);
 	}
 
+	/* add lock discovery data */
+	if (!filep->is_directory) {
+		mg_printf(conn,
+		          "<d:response>"
+		          "<d:href>%s</d:href>"
+		          "<d:propstat>"
+		          "<d:prop>"
+		          "<d:lockdiscovery>\n",
+		          link_buf);
+
+		for (i = 0; i < NUM_WEBDAV_LOCKS; i++) {
+			if (!strcmp(dav_lock[i].path, link_buf)) {
+				mg_printf(conn,
+				          "<d:activelock>"
+				          "<d:locktype><d:write/></d:locktype>"
+				          "<d:lockscope><d:exclusive/></d:lockscope>"
+				          "<d:depth>0</d:depth>"
+				          "<d:owner>%s</d:owner>"
+				          "<d:timeout>Second-60</d:timeout>"
+				          "<d:locktoken>"
+				          "<d:href>%s</d:href>"
+				          "</d:locktoken>"
+				          "</d:activelock>\n",
+				          dav_lock[i].user,
+				          dav_lock[i].token);
+			}
+		}
+
+		mg_printf(conn,
+		          "</d:lockdiscovery>"
+		          "</d:prop>"
+		          "<d:status>HTTP/1.1 200 OK</d:status>"
+		          "</d:propstat>"
+		          "</d:response>\n");
+	}
+
 	mg_printf(conn, "%s\n", "</d:multistatus>");
 }
+
+
+static void
+dav_lock_file(struct mg_connection *conn, const char *path)
+{
+	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
+	int lock_index = -1;
+	int i;
+	if (!conn || !path || !conn->dom_ctx || !conn->request_info.remote_user) {
+		return;
+	}
+	mg_get_request_link(conn, link_buf, sizeof(link_buf));
+
+	/* const char *refresh = mg_get_header(conn, "If"); */
+	/* Link refresh should have an "If" header:
+	 * http://www.webdav.org/specs/rfc2518.html#n-example---refreshing-a-write-lock
+	 * But it seems Windows Explorer does not send them.
+	 */
+
+	mg_lock_context(conn->phys_ctx);
+	/* find existing lock */
+	for (i = 0; i < NUM_WEBDAV_LOCKS; i++) {
+		if (!strcmp(dav_lock[i].path, link_buf)) {
+			if (!strcmp(conn->request_info.remote_user, dav_lock[i].user)) {
+				/* locked by the same user */
+				dav_lock_counter++;
+				dav_lock[i].counter = dav_lock_counter;
+				lock_index = i;
+				break;
+			} else {
+				/* already locked by someone else */
+				mg_unlock_context(conn->phys_ctx);
+				mg_send_http_error(conn, 423, "%s", "Already locked");
+				return;
+			}
+		}
+	}
+
+	/* create new lock token */
+	for (i = 0; i < NUM_WEBDAV_LOCKS; i++) {
+		if (dav_lock[i].path[0] == 0) {
+			char s[32];
+			dav_lock_counter++;
+			dav_lock[i].counter = dav_lock_counter;
+			sprintf(s, "%" UINT64_FMT, (uint64_t)dav_lock_counter);
+			mg_md5(dav_lock[i].token,
+			       link_buf,
+			       "\x01",
+			       s,
+			       "\x01",
+			       conn->request_info.remote_user,
+			       NULL);
+			strncpy(dav_lock[i].path, link_buf, sizeof(dav_lock[i].path) - 1);
+			strncpy(dav_lock[i].user,
+			        conn->request_info.remote_user,
+			        sizeof(dav_lock[i].user) - 1);
+			lock_index = i;
+			break;
+		}
+	}
+	if (lock_index < 0) {
+		char s[32];
+		/* too many locks. Find oldest lock */
+		uint64_t oldest_counter = dav_lock[0].counter;
+		lock_index = 0;
+		for (i = 1; i < NUM_WEBDAV_LOCKS; i++) {
+			if (dav_lock[i].counter < oldest_counter) {
+				oldest_counter = dav_lock[i].counter;
+				lock_index = i;
+			}
+		}
+		/* invalidate oldest lock */
+		dav_lock[lock_index].path[0] = 0;
+
+		/* Reuse it (TODO: remove code duplication) */
+		dav_lock_counter++;
+		dav_lock[lock_index].counter = dav_lock_counter;
+		sprintf(s, "%" UINT64_FMT, (uint64_t)dav_lock_counter);
+		mg_md5(dav_lock[lock_index].token,
+		       link_buf,
+		       "\x01",
+		       s,
+		       "\x01",
+		       conn->request_info.remote_user,
+		       NULL);
+		strncpy(dav_lock[lock_index].path,
+		        link_buf,
+		        sizeof(dav_lock[lock_index].path) - 1);
+		strncpy(dav_lock[lock_index].user,
+		        conn->request_info.remote_user,
+		        sizeof(dav_lock[lock_index].user) - 1);
+	}
+	mg_unlock_context(conn->phys_ctx);
+
+	/* return 200 "OK" */
+	conn->must_close = 1;
+	mg_response_header_start(conn, 200);
+	send_static_cache_header(conn);
+	send_additional_header(conn);
+	mg_response_header_add(conn,
+	                       "Content-Type",
+	                       "application/xml; charset=utf-8",
+	                       -1);
+	mg_response_header_add(conn, "Lock-Token", dav_lock[lock_index].token, -1);
+	mg_response_header_send(conn);
+
+	/* Content */
+	mg_printf(conn,
+	          "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+	          "<d:prop xmlns:d=\"DAV:\">\n"
+	          "     <d:lockdiscovery>\n"
+	          "       <d:activelock>\n"
+	          "         <d:lockscope><d:exclusive/></d:lockscope>\n"
+	          "         <d:locktype><d:write/></d:locktype>\n"
+	          "         <d:owner>\n"
+	          "           <d:href>user</d:href>\n"
+	          "         </d:owner>\n"
+	          "         <d:timeout>Second-60</d:timeout>\n"
+	          "         <d:locktoken><d:href>%s</d:href></d:locktoken>\n"
+	          "         <d:lockroot>\n"
+	          "           <d:href>%s</d:href>\n"
+	          "         </d:lockroot>\n"
+	          "       </d:activelock>\n"
+	          "     </d:lockdiscovery>\n"
+	          "   </d:prop>\n",
+	          dav_lock[lock_index].token,
+	          dav_lock[lock_index].path);
+}
+
+
+static void
+dav_unlock_file(struct mg_connection *conn, const char *path)
+{
+	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
+	int lock_index;
+	if (!conn || !path || !conn->dom_ctx || !conn->request_info.remote_user) {
+		return;
+	}
+	mg_get_request_link(conn, link_buf, sizeof(link_buf));
+
+	mg_lock_context(conn->phys_ctx);
+	/* find existing lock */
+	for (lock_index = 0; lock_index < NUM_WEBDAV_LOCKS; lock_index++) {
+		if (!strcmp(dav_lock[lock_index].path, link_buf)) {
+			/* Success: return 204 "No Content" */
+			mg_unlock_context(conn->phys_ctx);
+			conn->must_close = 1;
+			mg_response_header_start(conn, 204);
+			mg_response_header_send(conn);
+			return;
+		}
+	}
+	mg_unlock_context(conn->phys_ctx);
+
+	/* Error: Cannot unlock a resource that is not locked */
+	mg_send_http_error(conn, 423, "%s", "Lock not found");
+}
+
+
+static void
+dav_proppatch(struct mg_connection *conn, const char *path)
+{
+	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
+
+	if (!conn || !path || !conn->dom_ctx) {
+		return;
+	}
+
+	/* return 207 "Multi-Status" */
+	conn->must_close = 1;
+	mg_response_header_start(conn, 207);
+	send_static_cache_header(conn);
+	send_additional_header(conn);
+	mg_response_header_add(conn,
+	                       "Content-Type",
+	                       "application/xml; charset=utf-8",
+	                       -1);
+	mg_response_header_send(conn);
+
+
+	mg_get_request_link(conn, link_buf, sizeof(link_buf));
+
+	/* Content */
+	mg_printf(conn,
+	          "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+	          "<d:multistatus xmlns:d='DAV:'>\n"
+	          "<d:response>\n<d:href>%s</d:href>\n",
+	          link_buf);
+	mg_printf(conn,
+	          "<d:propstat><d:status>HTTP/1.1 403 "
+	          "Forbidden</d:status></d:propstat>\n");
+	mg_printf(conn, "%s\n", "</d:response></d:multistatus>");
+}
+
+
 #endif
 
 void
@@ -14151,7 +14556,7 @@ handle_request(struct mg_connection *conn)
 	ri->local_uri = tmp;
 
 	/* step 1. completed, the url is known now */
-	DEBUG_TRACE("URL: %s", ri->local_uri);
+	DEBUG_TRACE("REQUEST: %s %s", ri->request_method, ri->local_uri);
 
 	/* 2. if this ip has limited speed, set it for this connection */
 	conn->throttle = set_throttle(conn->dom_ctx->config[THROTTLE],
@@ -14507,10 +14912,34 @@ handle_request(struct mg_connection *conn)
 		}
 		/* 11.3. MKCOL method */
 		if (!strcmp(ri->request_method, "MKCOL")) {
-			mkcol(conn, path);
+			dav_mkcol(conn, path);
 			return;
 		}
-		/* 11.4. PATCH method
+		/* 11.4. MOVE method */
+		if (!strcmp(ri->request_method, "MOVE")) {
+			dav_move_file(conn, path, 0);
+			return;
+		}
+		if (!strcmp(ri->request_method, "COPY")) {
+			dav_move_file(conn, path, 1);
+			return;
+		}
+		/* 11.5. LOCK method */
+		if (!strcmp(ri->request_method, "LOCK")) {
+			dav_lock_file(conn, path);
+			return;
+		}
+		/* 11.6. UNLOCK method */
+		if (!strcmp(ri->request_method, "UNLOCK")) {
+			dav_unlock_file(conn, path);
+			return;
+		}
+		/* 11.7. PROPPATCH method */
+		if (!strcmp(ri->request_method, "PROPPATCH")) {
+			dav_proppatch(conn, path);
+			return;
+		}
+		/* 11.8. Other methods, e.g.: PATCH
 		 * This method is not supported for static resources,
 		 * only for scripts (Lua, CGI) and callbacks. */
 		mg_send_http_error(conn,
@@ -21415,6 +21844,47 @@ mg_get_connection_info(const struct mg_context *ctx,
 
 	return (int)connection_info_length;
 }
+
+#if 0
+/* Get handler information. It can be printed or stored by the caller.
+ * Return the size of available information. */
+int
+mg_get_handler_info(struct mg_context *ctx,
+                       char *buffer,
+                       int buflen)
+{
+    int handler_info_len = 0;
+    struct mg_handler_info *tmp_rh;
+    mg_lock_context(ctx);
+
+    for (tmp_rh = ctx->dd.handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
+                
+        if (buflen > handler_info_len+ tmp_rh->uri_len) {
+        memcpy(buffer+handler_info_len, tmp_rh->uri, tmp_rh->uri_len);
+        }
+        handler_info_len += tmp_rh->uri_len;
+        
+        switch (tmp_rh->handler_type) {
+            case REQUEST_HANDLER:
+                (void)tmp_rh->handler;
+            break;
+            case WEBSOCKET_HANDLER:
+        (void)tmp_rh->connect_handler;
+       (void) tmp_rh->ready_handler;
+       (void) tmp_rh->data_handler;
+       (void) tmp_rh->close_handler; 
+            break;
+            case AUTH_HANDLER:
+             (void) tmp_rh->auth_handler; 
+            break;
+        }      
+        (void)cbdata;
+    }
+
+    mg_unlock_context(ctx);
+    return handler_info_len;
+}
+#endif
 #endif
 
 
