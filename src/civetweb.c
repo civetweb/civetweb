@@ -12535,13 +12535,14 @@ print_dav_dir_entry(struct de *de, void *data)
 
 
 #define NUM_WEBDAV_LOCKS 10
-uint64_t dav_lock_counter = 0;
 struct tdav_lock {
-	uint64_t counter;
+	uint64_t locktime;
 	char token[33];
 	char path[UTF8_PATH_MAX * 2];
 	char user[UTF8_PATH_MAX * 2];
-} dav_lock[NUM_WEBDAV_LOCKS];
+};
+static uint32_t LOCK_DURATION_S = 60;
+static struct tdav_lock dav_lock[NUM_WEBDAV_LOCKS];
 
 
 static void
@@ -12605,12 +12606,13 @@ handle_propfind(struct mg_connection *conn,
 				          "<d:lockscope><d:exclusive/></d:lockscope>"
 				          "<d:depth>0</d:depth>"
 				          "<d:owner>%s</d:owner>"
-				          "<d:timeout>Second-60</d:timeout>"
+				          "<d:timeout>Second-%u</d:timeout>"
 				          "<d:locktoken>"
 				          "<d:href>%s</d:href>"
 				          "</d:locktoken>"
 				          "</d:activelock>\n",
 				          dav_lock[i].user,
+				          LOCK_DURATION_S,
 				          dav_lock[i].token);
 			}
 		}
@@ -12631,8 +12633,11 @@ static void
 dav_lock_file(struct mg_connection *conn, const char *path)
 {
 	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
+	uint64_t new_locktime;
 	int lock_index = -1;
 	int i;
+	uint64_t LOCK_DURATION_NS = LOCK_DURATION_S * (int64_t)1000000000;
+
 	if (!conn || !path || !conn->dom_ctx || !conn->request_info.remote_user) {
 		return;
 	}
@@ -12645,77 +12650,70 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 	 */
 
 	mg_lock_context(conn->phys_ctx);
-	/* find existing lock */
-	for (i = 0; i < NUM_WEBDAV_LOCKS; i++) {
-		if (!strcmp(dav_lock[i].path, link_buf)) {
-			if (!strcmp(conn->request_info.remote_user, dav_lock[i].user)) {
-				/* locked by the same user */
-				dav_lock_counter++;
-				dav_lock[i].counter = dav_lock_counter;
+	new_locktime = mg_get_current_time_ns();
+
+	/* Find a slot for a lock */
+	while (lock_index < 0) {
+		/* find existing lock */
+		for (i = 0; i < NUM_WEBDAV_LOCKS; i++) {
+			if (!strcmp(dav_lock[i].path, link_buf)) {
+				if (!strcmp(conn->request_info.remote_user, dav_lock[i].user)) {
+					/* locked by the same user */
+					dav_lock[i].locktime = new_locktime;
+					lock_index = i;
+					break;
+				} else {
+					/* already locked by someone else */
+					if (new_locktime
+					    > (dav_lock[i].locktime + LOCK_DURATION_NS)) {
+						/* Lock expired */
+						dav_lock[i].path[0] = 0;
+					} else {
+						/* Lock still valid */
+						mg_unlock_context(conn->phys_ctx);
+						mg_send_http_error(conn, 423, "%s", "Already locked");
+						return;
+					}
+				}
+			}
+		}
+
+		/* create new lock token */
+		for (i = 0; i < NUM_WEBDAV_LOCKS; i++) {
+			if (dav_lock[i].path[0] == 0) {
+				char s[32];
+				dav_lock[i].locktime = mg_get_current_time_ns();
+				sprintf(s, "%" UINT64_FMT, (uint64_t)dav_lock[i].locktime);
+				mg_md5(dav_lock[i].token,
+				       link_buf,
+				       "\x01",
+				       s,
+				       "\x01",
+				       conn->request_info.remote_user,
+				       NULL);
+				strncpy(dav_lock[i].path,
+				        link_buf,
+				        sizeof(dav_lock[i].path) - 1);
+				strncpy(dav_lock[i].user,
+				        conn->request_info.remote_user,
+				        sizeof(dav_lock[i].user) - 1);
 				lock_index = i;
 				break;
-			} else {
-				/* already locked by someone else */
-				mg_unlock_context(conn->phys_ctx);
-				mg_send_http_error(conn, 423, "%s", "Already locked");
-				return;
 			}
 		}
-	}
-
-	/* create new lock token */
-	for (i = 0; i < NUM_WEBDAV_LOCKS; i++) {
-		if (dav_lock[i].path[0] == 0) {
-			char s[32];
-			dav_lock_counter++;
-			dav_lock[i].counter = dav_lock_counter;
-			sprintf(s, "%" UINT64_FMT, (uint64_t)dav_lock_counter);
-			mg_md5(dav_lock[i].token,
-			       link_buf,
-			       "\x01",
-			       s,
-			       "\x01",
-			       conn->request_info.remote_user,
-			       NULL);
-			strncpy(dav_lock[i].path, link_buf, sizeof(dav_lock[i].path) - 1);
-			strncpy(dav_lock[i].user,
-			        conn->request_info.remote_user,
-			        sizeof(dav_lock[i].user) - 1);
-			lock_index = i;
-			break;
-		}
-	}
-	if (lock_index < 0) {
-		char s[32];
-		/* too many locks. Find oldest lock */
-		uint64_t oldest_counter = dav_lock[0].counter;
-		lock_index = 0;
-		for (i = 1; i < NUM_WEBDAV_LOCKS; i++) {
-			if (dav_lock[i].counter < oldest_counter) {
-				oldest_counter = dav_lock[i].counter;
-				lock_index = i;
+		if (lock_index < 0) {
+			/* too many locks. Find oldest lock */
+			uint64_t oldest_locktime = dav_lock[0].locktime;
+			lock_index = 0;
+			for (i = 1; i < NUM_WEBDAV_LOCKS; i++) {
+				if (dav_lock[i].locktime < oldest_locktime) {
+					oldest_locktime = dav_lock[i].locktime;
+					lock_index = i;
+				}
 			}
+			/* invalidate oldest lock */
+			dav_lock[lock_index].path[0] = 0;
 		}
-		/* invalidate oldest lock */
-		dav_lock[lock_index].path[0] = 0;
-
-		/* Reuse it (TODO: remove code duplication) */
-		dav_lock_counter++;
-		dav_lock[lock_index].counter = dav_lock_counter;
-		sprintf(s, "%" UINT64_FMT, (uint64_t)dav_lock_counter);
-		mg_md5(dav_lock[lock_index].token,
-		       link_buf,
-		       "\x01",
-		       s,
-		       "\x01",
-		       conn->request_info.remote_user,
-		       NULL);
-		strncpy(dav_lock[lock_index].path,
-		        link_buf,
-		        sizeof(dav_lock[lock_index].path) - 1);
-		strncpy(dav_lock[lock_index].user,
-		        conn->request_info.remote_user,
-		        sizeof(dav_lock[lock_index].user) - 1);
 	}
 	mg_unlock_context(conn->phys_ctx);
 
@@ -12740,9 +12738,9 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 	          "         <d:lockscope><d:exclusive/></d:lockscope>\n"
 	          "         <d:locktype><d:write/></d:locktype>\n"
 	          "         <d:owner>\n"
-	          "           <d:href>user</d:href>\n"
+	          "           <d:href>%s</d:href>\n"
 	          "         </d:owner>\n"
-	          "         <d:timeout>Second-60</d:timeout>\n"
+	          "         <d:timeout>Second-%u</d:timeout>\n"
 	          "         <d:locktoken><d:href>%s</d:href></d:locktoken>\n"
 	          "         <d:lockroot>\n"
 	          "           <d:href>%s</d:href>\n"
@@ -12750,6 +12748,8 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 	          "       </d:activelock>\n"
 	          "     </d:lockdiscovery>\n"
 	          "   </d:prop>\n",
+	          dav_lock[lock_index].user,
+	          LOCK_DURATION_S,
 	          dav_lock[lock_index].token,
 	          dav_lock[lock_index].path);
 }
@@ -12818,9 +12818,8 @@ dav_proppatch(struct mg_connection *conn, const char *path)
 	          "Forbidden</d:status></d:propstat>\n");
 	mg_printf(conn, "%s\n", "</d:response></d:multistatus>");
 }
-
-
 #endif
+
 
 void
 mg_lock_connection(struct mg_connection *conn)
@@ -12830,6 +12829,7 @@ mg_lock_connection(struct mg_connection *conn)
 	}
 }
 
+
 void
 mg_unlock_connection(struct mg_connection *conn)
 {
@@ -12838,6 +12838,7 @@ mg_unlock_connection(struct mg_connection *conn)
 	}
 }
 
+
 void
 mg_lock_context(struct mg_context *ctx)
 {
@@ -12845,6 +12846,7 @@ mg_lock_context(struct mg_context *ctx)
 		(void)pthread_mutex_lock(&ctx->nonce_mutex);
 	}
 }
+
 
 void
 mg_unlock_context(struct mg_context *ctx)
@@ -14998,7 +15000,7 @@ handle_request(struct mg_connection *conn)
 	}
 
 	/* 12. Directory uris should end with a slash */
-	if (file.stat.is_directory && ((uri_len = (int) strlen(ri->local_uri)) > 0)
+	if (file.stat.is_directory && ((uri_len = (int)strlen(ri->local_uri)) > 0)
 	    && (ri->local_uri[uri_len - 1] != '/')) {
 
 		size_t len = strlen(ri->request_uri);
