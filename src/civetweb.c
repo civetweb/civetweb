@@ -2275,9 +2275,9 @@ struct mg_domain_context {
 typedef ptrdiff_t volatile stop_flag_t;
 
 static int
-STOP_FLAG_IS_ZERO(stop_flag_t *f)
+STOP_FLAG_IS_ZERO(const stop_flag_t *f)
 {
-	stop_flag_t sf = mg_atomic_add(f, 0);
+	stop_flag_t sf = mg_atomic_add((stop_flag_t *)f, 0);
 	return (sf == 0);
 }
 
@@ -7390,6 +7390,27 @@ is_put_or_delete_method(const struct mg_connection *conn)
 }
 
 
+static int
+is_civetweb_webdav_method(const struct mg_connection *conn)
+{
+	/* Note: Here we only have to identify the WebDav methods that need special
+	 * handling in the CivetWeb code - not all methods used in WebDav. In
+	 * particular, methods used on directories (when using Windows Explorer as
+	 * WebDav client).
+	 */
+	if (conn) {
+		const char *s = conn->request_info.request_method;
+		if (s != NULL) {
+			/* These are the civetweb builtin DAV methods */
+			return (!strcmp(s, "PROPFIND") || !strcmp(s, "PROPPATCH")
+			        || !strcmp(s, "LOCK") || !strcmp(s, "UNLOCK")
+			        || !strcmp(s, "MOVE") || !strcmp(s, "COPY"));
+		}
+	}
+	return 0;
+}
+
+
 #if !defined(NO_FILES)
 static int
 extention_matches_script(
@@ -7518,6 +7539,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
               int *is_script_resource,       /* out: handled by a script? */
               int *is_websocket_request,     /* out: websocket connetion? */
               int *is_put_or_delete_request, /* out: put/delete a file? */
+              int *is_webdav_request,        /* out: webdav request? */
               int *is_template_text          /* out: SSI file or LSP file? */
 )
 {
@@ -7547,15 +7569,19 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	*is_script_resource = 0;
 	*is_template_text = 0;
 
-	/* Step 2: Check if the request attempts to modify the file system */
+	/* Step 2: Classify the request method */
+	/* Step 2a: Check if the request attempts to modify the file system */
 	*is_put_or_delete_request = is_put_or_delete_method(conn);
+	/* Step 2b: Check if the request uses WebDav method that requires special
+	 * handling */
+	*is_webdav_request = is_civetweb_webdav_method(conn);
 
 	/* Step 3: Check if it is a websocket request, and modify the document
 	 * root if required */
 #if defined(USE_WEBSOCKET)
 	*is_websocket_request = (conn->protocol_type == PROTOCOL_TYPE_WEBSOCKET);
 #if !defined(NO_FILES)
-	if (*is_websocket_request && conn->dom_ctx->config[WEBSOCKET_ROOT]) {
+	if ((*is_websocket_request) && conn->dom_ctx->config[WEBSOCKET_ROOT]) {
 		root = conn->dom_ctx->config[WEBSOCKET_ROOT];
 	}
 #endif /* !NO_FILES */
@@ -7652,7 +7678,9 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 
 		/* 8.4: If the request target is a directory, there could be
 		 * a substitute file (index.html, index.cgi, ...). */
-		if (filestat->is_directory && is_uri_end_slash) {
+		/* But do not substitute a directory for a WebDav request */
+		if (filestat->is_directory && is_uri_end_slash
+		    && (!*is_webdav_request)) {
 			/* Use a local copy here, since substitute_index_file will
 			 * change the content of the file status */
 			struct mg_file_stat tmp_filestat;
@@ -7724,6 +7752,11 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	allow_substitute_script_subresources =
 	    !mg_strcasecmp(conn->dom_ctx->config[ALLOW_INDEX_SCRIPT_SUB_RES],
 	                   "yes");
+	if (*is_webdav_request) {
+		/* TO BE DEFINED: Should scripts handle special WebDAV methods lile
+		 * PROPFIND fo their subresources? */
+		/* allow_substitute_script_subresources = 0; */
+	}
 
 	sep_pos = tmp_str_len;
 	while (sep_pos > 0) {
@@ -14476,7 +14509,7 @@ handle_request(struct mg_connection *conn)
 	int uri_len, ssl_index;
 	int is_found = 0, is_script_resource = 0, is_websocket_request = 0,
 	    is_put_or_delete_request = 0, is_callback_resource = 0,
-	    is_template_text_file = 0;
+	    is_template_text_file = 0, is_webdav_request = 0;
 	int i;
 	struct mg_file file = STRUCT_FILE_INITIALIZER;
 	mg_request_handler callback_handler = NULL;
@@ -14689,6 +14722,9 @@ handle_request(struct mg_connection *conn)
 		is_callback_resource = 1;
 		is_script_resource = 1;
 		is_put_or_delete_request = is_put_or_delete_method(conn);
+		/* Never handle a C callback according to File WebDav rules,
+		 * even if it is a webdav method */
+		is_webdav_request = 0; /* is_civetweb_webdav_method(conn); */
 	} else {
 	no_callback_resource:
 
@@ -14704,7 +14740,21 @@ handle_request(struct mg_connection *conn)
 		              &is_script_resource,
 		              &is_websocket_request,
 		              &is_put_or_delete_request,
+		              &is_webdav_request,
 		              &is_template_text_file);
+	}
+
+	/* 5.3. A webdav request (PROPFIND/PROPPATCH/LOCK/UNLOCK) */
+	if (is_webdav_request) {
+		/* TODO: Do we need a config option? */
+		int webdav_not_allowed = 0;
+		if (webdav_not_allowed) {
+			mg_send_http_error(conn,
+			                   405,
+			                   "%s method not allowed",
+			                   conn->request_info.request_method);
+			return;
+		}
 	}
 
 	/* 6. authorization check */
@@ -14810,15 +14860,6 @@ handle_request(struct mg_connection *conn)
 				/* For the moment, use option c: We look for a proper file,
 				 * but since a file request is not always a script resource,
 				 * the authorization check might be different. */
-				interpret_uri(conn,
-				              path,
-				              sizeof(path),
-				              &file.stat,
-				              &is_found,
-				              &is_script_resource,
-				              &is_websocket_request,
-				              &is_put_or_delete_request,
-				              &is_template_text_file);
 				callback_handler = NULL;
 
 				/* Here we are at a dead end:
