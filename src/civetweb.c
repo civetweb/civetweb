@@ -2307,6 +2307,22 @@ typedef int volatile stop_flag_t;
 #endif /* STOP_FLAG_NEEDS_LOCK */
 
 
+#if !defined(NUM_WEBDAV_LOCKS)
+#define NUM_WEBDAV_LOCKS 10
+#endif
+#if !defined(LOCK_DURATION_S)
+#define LOCK_DURATION_S 60
+#endif
+
+
+struct twebdav_lock {
+	uint64_t locktime;
+	char token[33];
+	char path[UTF8_PATH_MAX * 2];
+	char user[UTF8_PATH_MAX * 2];
+};
+
+
 struct mg_context {
 
 	/* Part 1 - Physical context:
@@ -2368,6 +2384,9 @@ struct mg_context {
 #if defined(USE_SERVER_STATS)
 	struct mg_memory_stat ctx_memory;
 #endif
+
+	/* WebDAV lock structures */
+	struct twebdav_lock webdav_lock[NUM_WEBDAV_LOCKS];
 
 	/* Operating system related */
 	char *systemName;  /* What operating system is running */
@@ -2537,7 +2556,6 @@ struct mg_connection {
 
 /* Directory entry */
 struct de {
-	struct mg_connection *conn;
 	char *file_name;
 	struct mg_file_stat file;
 };
@@ -9430,7 +9448,7 @@ mg_url_encode(const char *src, char *dst, size_t dst_len)
 /* Return 0 on success, non-zero if an error occurs. */
 
 static int
-print_dir_entry(struct de *de)
+print_dir_entry(struct mg_connection *conn, struct de *de)
 {
 	size_t namesize, escsize, i;
 	char *href, *esc, *p;
@@ -9467,7 +9485,7 @@ print_dir_entry(struct de *de)
 	}
 
 	if (de->file.is_directory) {
-		mg_snprintf(de->conn,
+		mg_snprintf(conn,
 		            NULL, /* Buffer is big enough */
 		            size,
 		            sizeof(size),
@@ -9477,28 +9495,28 @@ print_dir_entry(struct de *de)
 		/* We use (signed) cast below because MSVC 6 compiler cannot
 		 * convert unsigned __int64 to double. Sigh. */
 		if (de->file.size < 1024) {
-			mg_snprintf(de->conn,
+			mg_snprintf(conn,
 			            NULL, /* Buffer is big enough */
 			            size,
 			            sizeof(size),
 			            "%d",
 			            (int)de->file.size);
 		} else if (de->file.size < 0x100000) {
-			mg_snprintf(de->conn,
+			mg_snprintf(conn,
 			            NULL, /* Buffer is big enough */
 			            size,
 			            sizeof(size),
 			            "%.1fk",
 			            (double)de->file.size / 1024.0);
 		} else if (de->file.size < 0x40000000) {
-			mg_snprintf(de->conn,
+			mg_snprintf(conn,
 			            NULL, /* Buffer is big enough */
 			            size,
 			            sizeof(size),
 			            "%.1fM",
 			            (double)de->file.size / 1048576);
 		} else {
-			mg_snprintf(de->conn,
+			mg_snprintf(conn,
 			            NULL, /* Buffer is big enough */
 			            size,
 			            sizeof(size),
@@ -9521,7 +9539,7 @@ print_dir_entry(struct de *de)
 		mg_strlcpy(mod, "01-Jan-1970 00:00", sizeof(mod));
 		mod[sizeof(mod) - 1] = '\0';
 	}
-	mg_printf(de->conn,
+	mg_printf(conn,
 	          "<tr><td><a href=\"%s%s\">%s%s</a></td>"
 	          "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
 	          href,
@@ -9540,11 +9558,10 @@ print_dir_entry(struct de *de)
  * On windows, __cdecl specification is needed in case if project is built
  * with __stdcall convention. qsort always requires __cdels callback. */
 static int WINCDECL
-compare_dir_entries(const void *p1, const void *p2)
+compare_dir_entries(const void *p1, const void *p2, const char *query_string)
 {
 	if (p1 && p2) {
 		const struct de *a = (const struct de *)p1, *b = (const struct de *)p2;
-		const char *query_string = a->conn->request_info.query_string;
 		int cmp_result = 0;
 
 		if ((query_string == NULL) || (query_string[0] == '\0')) {
@@ -9604,7 +9621,6 @@ scan_directory(struct mg_connection *conn,
 	if ((dirp = mg_opendir(conn, dir)) == NULL) {
 		return 0;
 	} else {
-		de.conn = conn;
 
 		while ((dp = mg_readdir(dirp)) != NULL) {
 			/* Do not show current dir and hidden files */
@@ -9662,7 +9678,6 @@ remove_directory(struct mg_connection *conn, const char *dir)
 	if ((dirp = mg_opendir(conn, dir)) == NULL) {
 		return 0;
 	} else {
-		de.conn = conn;
 
 		while ((dp = mg_readdir(dirp)) != NULL) {
 			/* Do not show current dir (but show hidden files as they will
@@ -9750,7 +9765,6 @@ dir_scan_callback(struct de *de, void *data)
 		return 1;
 	}
 	entries[dsd->num_entries].file = de->file;
-	entries[dsd->num_entries].conn = de->conn;
 	dsd->num_entries++;
 
 	return 0;
@@ -9850,12 +9864,13 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 
 	/* Sort and print directory entries */
 	if (data.entries != NULL) {
-		qsort(data.entries,
-		      data.num_entries,
-		      sizeof(data.entries[0]),
-		      compare_dir_entries);
+		qsort_s(data.entries,
+		        data.num_entries,
+		        sizeof(data.entries[0]),
+		        compare_dir_entries,
+		        conn->request_info.query_string);
 		for (i = 0; i < data.num_entries; i++) {
-			print_dir_entry(&data.entries[i]);
+			print_dir_entry(conn, &data.entries[i]);
 			mg_free(data.entries[i].file_name);
 		}
 		mg_free(data.entries);
@@ -11811,38 +11826,40 @@ get_rel_url_at_current_server(const char *uri,
 static void
 dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
 {
-	const char *overwrite;
-	const char *destination;
+	const char *overwrite_hdr;
+	const char *destination_hdr;
 	const char *root;
 	int rc, dest_uri_type;
 	int http_status = 400;
-	int do_override = 0;
+	int do_overwrite = 0;
 	int destination_ok = 0;
 	char dest_path[UTF8_PATH_MAX];
+	struct mg_file_stat ignored;
 
 	if (conn == NULL) {
 		return;
 	}
 
 	root = conn->dom_ctx->config[DOCUMENT_ROOT];
-	overwrite = mg_get_header(conn, "Overwrite");
-	destination = mg_get_header(conn, "Destination");
-	if ((overwrite != NULL) && (toupper(overwrite[0]) == 'T')) {
-		do_override = 1;
+	overwrite_hdr = mg_get_header(conn, "Overwrite");
+	destination_hdr = mg_get_header(conn, "Destination");
+	if ((overwrite_hdr != NULL) && (toupper(overwrite_hdr[0]) == 'T')) {
+		do_overwrite = 1;
 	}
 
-	if ((destination == NULL) || (destination[0] == 0)) {
+	if ((destination_hdr == NULL) || (destination_hdr[0] == 0)) {
 		mg_send_http_error(conn, 400, "%s", "Missing destination");
 		return;
 	}
 
 	if (root != NULL) {
 		char *local_dest = NULL;
-		dest_uri_type = get_uri_type(destination);
+		dest_uri_type = get_uri_type(destination_hdr);
 		if (dest_uri_type == 2) {
-			local_dest = mg_strdup_ctx(destination, conn->phys_ctx);
+			local_dest = mg_strdup_ctx(destination_hdr, conn->phys_ctx);
 		} else if ((dest_uri_type == 3) || (dest_uri_type == 4)) {
-			const char *h = get_rel_url_at_current_server(destination, conn);
+			const char *h =
+			    get_rel_url_at_current_server(destination_hdr, conn);
 			if (h) {
 				local_dest = mg_strdup_ctx(h, conn->phys_ctx);
 			}
@@ -11871,9 +11888,26 @@ dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
 		return;
 	}
 
+	/* Check now if this file exists */
+	if (mg_stat(conn, dest_path, &ignored)) {
+		/* File exists */
+		if (do_overwrite) {
+			/* Overwrite allowed: delete the file first */
+			remove(dest_path);
+		} else {
+			/* No overwrite: return error */
+			mg_send_http_error(conn,
+			                   412,
+			                   "Destination already exists: %s",
+			                   dest_path);
+			return;
+		}
+	}
 
+	/* Copy / Move / Rename operation. */
 #if defined(_WIN32)
 	{
+		/* For Windows, we need to convert from UTF-8 to UTF-16 first. */
 		wchar_t wSource[UTF16_PATH_MAX];
 		wchar_t wDest[UTF16_PATH_MAX];
 		BOOL ok;
@@ -11881,67 +11915,64 @@ dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
 		path_to_unicode(conn, path, wSource, ARRAY_SIZE(wSource));
 		path_to_unicode(conn, dest_path, wDest, ARRAY_SIZE(wDest));
 		if (do_copy) {
-			ok = CopyFileW(wSource, wDest, do_override ? FALSE : TRUE);
+			ok = CopyFileW(wSource, wDest, do_overwrite ? FALSE : TRUE);
 		} else {
 			ok = MoveFileExW(wSource,
 			                 wDest,
-			                 do_override ? MOVEFILE_REPLACE_EXISTING : 0);
+			                 do_overwrite ? MOVEFILE_REPLACE_EXISTING : 0);
 		}
 		if (ok) {
 			rc = 0;
 		} else {
 			DWORD lastErr = GetLastError();
 			if (lastErr == ERROR_ALREADY_EXISTS) {
-				http_status = 412;
+				mg_send_http_error(conn,
+				                   412,
+				                   "Destination already exists: %s",
+				                   dest_path);
+				return;
 			}
 			rc = -1;
+			http_status = 400;
 		}
 	}
 
 #else
+	{
+		/* Linux uses already UTF-8, we don't need to convert file names. */
 
-	if (do_copy) {
-		/* TODO: COPY for Linux. */
-		mg_send_http_error(conn, 403, "%s", "COPY forbidden");
-		return;
-	}
+		if (do_copy) {
+			/* TODO: COPY for Linux. */
+			mg_send_http_error(conn, 403, "%s", "COPY forbidden");
+			return;
+		}
 
-	/* Linux is already UTF-8 */
-	rc = rename(path, dest_path);
-	if (rc) {
-		switch (errno) {
-		case EEXIST:
-			http_status = 412;
-			break;
-		case EACCES:
-			http_status = 403;
-			break;
-		case ENOENT:
-			http_status = 409;
-			break;
+		rc = rename(path, dest_path);
+		if (rc) {
+			switch (errno) {
+			case EEXIST:
+				http_status = 412;
+				break;
+			case EACCES:
+				http_status = 403;
+				break;
+			case ENOENT:
+				http_status = 409;
+				break;
+			}
 		}
 	}
 #endif
 
 	if (rc == 0) {
-		/* Create 201 "Created" response */
-		mg_response_header_start(conn, 201);
-		send_static_cache_header(conn);
-		send_additional_header(conn);
+		/* Create 204 "No Content" response */
+		mg_response_header_start(conn, 204);
 		mg_response_header_add(conn, "Content-Length", "0", -1);
 
 		/* Send all headers - there is no body */
 		mg_response_header_send(conn);
-	} else if (http_status == 412) {
-		mg_send_http_error(conn,
-		                   412,
-		                   "Destination already exists: %s",
-		                   dest_path);
 	} else {
-		mg_send_http_error(conn,
-		                   http_status,
-		                   "Operation failed with code %i",
-		                   rc);
+		mg_send_http_error(conn, http_status, "Operation failed");
 	}
 }
 
@@ -12534,17 +12565,6 @@ print_dav_dir_entry(struct de *de, void *data)
 }
 
 
-#define NUM_WEBDAV_LOCKS 10
-struct tdav_lock {
-	uint64_t locktime;
-	char token[33];
-	char path[UTF8_PATH_MAX * 2];
-	char user[UTF8_PATH_MAX * 2];
-};
-static uint32_t LOCK_DURATION_S = 60;
-static struct tdav_lock dav_lock[NUM_WEBDAV_LOCKS];
-
-
 static void
 handle_propfind(struct mg_connection *conn,
                 const char *path,
@@ -12552,6 +12572,7 @@ handle_propfind(struct mg_connection *conn,
 {
 	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
 	const char *depth = mg_get_header(conn, "Depth");
+	struct twebdav_lock *dav_lock = conn->phys_ctx->webdav_lock;
 	int i;
 
 	if (!conn || !path || !filep || !conn->dom_ctx) {
@@ -12590,6 +12611,7 @@ handle_propfind(struct mg_connection *conn,
 
 	/* add lock discovery data */
 	if (!filep->is_directory) {
+		/* Lock information*/
 		mg_printf(conn,
 		          "<d:response>"
 		          "<d:href>%s</d:href>"
@@ -12612,7 +12634,7 @@ handle_propfind(struct mg_connection *conn,
 				          "</d:locktoken>"
 				          "</d:activelock>\n",
 				          dav_lock[i].user,
-				          LOCK_DURATION_S,
+				          (unsigned)LOCK_DURATION_S,
 				          dav_lock[i].token);
 			}
 		}
@@ -12636,7 +12658,9 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 	uint64_t new_locktime;
 	int lock_index = -1;
 	int i;
-	uint64_t LOCK_DURATION_NS = LOCK_DURATION_S * (int64_t)1000000000;
+	uint64_t LOCK_DURATION_NS =
+	    (uint64_t)(LOCK_DURATION_S) * (uint64_t)1000000000;
+	struct twebdav_lock *dav_lock = conn->phys_ctx->webdav_lock;
 
 	if (!conn || !path || !conn->dom_ctx || !conn->request_info.remote_user) {
 		return;
@@ -12749,7 +12773,7 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 	          "     </d:lockdiscovery>\n"
 	          "   </d:prop>\n",
 	          dav_lock[lock_index].user,
-	          LOCK_DURATION_S,
+	          (LOCK_DURATION_S),
 	          dav_lock[lock_index].token,
 	          dav_lock[lock_index].path);
 }
@@ -12759,6 +12783,7 @@ static void
 dav_unlock_file(struct mg_connection *conn, const char *path)
 {
 	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
+	struct twebdav_lock *dav_lock = conn->phys_ctx->webdav_lock;
 	int lock_index;
 	if (!conn || !path || !conn->dom_ctx || !conn->request_info.remote_user) {
 		return;
@@ -14592,6 +14617,12 @@ handle_request(struct mg_connection *conn)
 
 	/* step 1. completed, the url is known now */
 	DEBUG_TRACE("REQUEST: %s %s", ri->request_method, ri->local_uri);
+
+	/*
+	char req_str[1024];
+	sprintf(req_str, "REQUEST: %s %s\n", ri->request_method, ri->local_uri);
+	OutputDebugStringA(req_str);
+	/**/
 
 	/* 2. if this ip has limited speed, set it for this connection */
 	conn->throttle = set_throttle(conn->dom_ctx->config[THROTTLE],
