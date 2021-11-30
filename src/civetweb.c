@@ -579,6 +579,7 @@ typedef const char *SOCK_OPT_TYPE;
 #define strtoull(x, y, z) (_strtoui64(x, y, z))
 #define strtoll(x, y, z) (_strtoi64(x, y, z))
 #endif
+#define qsort_r(base, num, with, comp, arg) qsort_s(base, num, with, comp, arg)
 #endif /* _MSC_VER */
 
 #define ERRNO ((int)(GetLastError()))
@@ -9558,8 +9559,9 @@ print_dir_entry(struct mg_connection *conn, struct de *de)
  * On windows, __cdecl specification is needed in case if project is built
  * with __stdcall convention. qsort always requires __cdels callback. */
 static int WINCDECL
-compare_dir_entries(const void *p1, const void *p2, const char *query_string)
+compare_dir_entries(const void *p1, const void *p2, void *arg)
 {
+	const char *query_string = (const char *)(arg != NULL ? arg : "");
 	if (p1 && p2) {
 		const struct de *a = (const struct de *)p1, *b = (const struct de *)p2;
 		int cmp_result = 0;
@@ -9864,11 +9866,11 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 
 	/* Sort and print directory entries */
 	if (data.entries != NULL) {
-		qsort_s(data.entries,
+		qsort_r(data.entries,
 		        data.num_entries,
 		        sizeof(data.entries[0]),
 		        compare_dir_entries,
-		        conn->request_info.query_string);
+		        (void *)conn->request_info.query_string);
 		for (i = 0; i < data.num_entries; i++) {
 			print_dir_entry(conn, &data.entries[i]);
 			mg_free(data.entries[i].file_name);
