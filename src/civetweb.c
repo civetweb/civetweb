@@ -207,16 +207,33 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
  */
 #define MAX_WORKER_THREADS (CONFIG_MAX_PTHREAD_COUNT - 2)
 
-#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
-#define ZEPHYR_STACK_SIZE USE_STACK_SIZE
-#else
-#define ZEPHYR_STACK_SIZE (1024 * 8)
+#if !defined(CONFIG_ZEPHYR_MAIN_STACK_SIZE) || (CONFIG_ZEPHYR_MAIN_STACK_SIZE <= 1)
+#define CONFIG_ZEPHYR_MAIN_STACK_SIZE (0)
 #endif
 
-K_THREAD_STACK_DEFINE(civetweb_main_stack, ZEPHYR_STACK_SIZE);
+#if !defined(CONFIG_ZEPHYR_MASTER_STACK_SIZE) || (CONFIG_ZEPHYR_MASTER_STACK_SIZE <= 1)
+#define CONFIG_ZEPHYR_MASTER_STACK_SIZE (1024)
+#endif
+
+#if !defined(CONFIG_ZEPHYR_WORKER_STACK_SIZE) || (CONFIG_ZEPHYR_WORKER_STACK_SIZE <= 1)
+#define CONFIG_ZEPHYR_WORKER_STACK_SIZE (8 * 1024)
+#endif
+
+#if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
+#define ZEPHYR_MAIN_STACK_SIZE USE_STACK_SIZE
+#define ZEPHYR_MASTER_STACK_SIZE USE_STACK_SIZE
+#define ZEPHYR_WORKER_STACK_SIZE USE_STACK_SIZE
+#else
+#define ZEPHYR_MAIN_STACK_SIZE CONFIG_ZEPHYR_MAIN_STACK_SIZE
+#define ZEPHYR_MASTER_STACK_SIZE CONFIG_ZEPHYR_MASTER_STACK_SIZE
+#define ZEPHYR_WORKER_STACK_SIZE CONFIG_ZEPHYR_WORKER_STACK_SIZE
+#endif
+
+K_THREAD_STACK_DEFINE(civetweb_main_stack, ZEPHYR_MAIN_STACK_SIZE);
+K_THREAD_STACK_DEFINE(civetweb_master_stack, ZEPHYR_MASTER_STACK_SIZE);
 K_THREAD_STACK_ARRAY_DEFINE(civetweb_worker_stacks,
                             MAX_WORKER_THREADS,
-                            ZEPHYR_STACK_SIZE);
+                            ZEPHYR_WORKER_STACK_SIZE);
 
 static int zephyr_worker_stack_index;
 
@@ -5686,7 +5703,7 @@ mg_start_thread(mg_thread_func_t func, void *param)
 	(void)pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 #if defined(__ZEPHYR__)
-	pthread_attr_setstack(&attr, &civetweb_main_stack, ZEPHYR_STACK_SIZE);
+	pthread_attr_setstack(&attr, &civetweb_main_stack, ZEPHYR_MAIN_STACK_SIZE);
 #elif defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 	/* Compile-time option to control stack size,
 	 * e.g. -DUSE_STACK_SIZE=16384 */
@@ -5704,7 +5721,7 @@ mg_start_thread(mg_thread_func_t func, void *param)
 static int
 mg_start_thread_with_id(mg_thread_func_t func,
                         void *param,
-                        pthread_t *threadidptr)
+                        pthread_t *threadidptr, const bool master_thread)
 {
 	pthread_t thread_id;
 	pthread_attr_t attr;
@@ -5713,9 +5730,15 @@ mg_start_thread_with_id(mg_thread_func_t func,
 	(void)pthread_attr_init(&attr);
 
 #if defined(__ZEPHYR__)
-	pthread_attr_setstack(&attr,
+	if (master_thread) {
+		pthread_attr_setstack(&attr,
+	                      &civetweb_master_stack,
+	                      ZEPHYR_MASTER_STACK_SIZE);
+	} else {
+		pthread_attr_setstack(&attr,
 	                      &civetweb_worker_stacks[zephyr_worker_stack_index++],
-	                      ZEPHYR_STACK_SIZE);
+	                      ZEPHYR_WORKER_STACK_SIZE);
+	}
 #elif defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
 	/* Compile-time option to control stack size,
 	 * e.g. -DUSE_STACK_SIZE=16384 */
@@ -20156,7 +20179,7 @@ static
 		ctx->worker_connections[i].phys_ctx = ctx;
 		if (mg_start_thread_with_id(worker_thread,
 		                            &ctx->worker_connections[i],
-		                            &ctx->worker_threadids[i])
+		                            &ctx->worker_threadids[i], false)
 		    != 0) {
 
 			long error_no = (long)ERRNO;
@@ -20200,7 +20223,7 @@ static
 	}
 
 	/* Start master (listening) thread */
-	mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid);
+	mg_start_thread_with_id(master_thread, ctx, &ctx->masterthreadid, true);
 
 	pthread_setspecific(sTlsKey, NULL);
 	return ctx;
