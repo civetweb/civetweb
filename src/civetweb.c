@@ -4648,10 +4648,10 @@ mg_send_http_redirect(struct mg_connection *conn,
 	 *   307  | temporary | always keep method  | HTTP/1.1
 	 *   308  | permanent | always keep method  | HTTP/1.1
 	 */
-	size_t content_len = 0;
 
 #if defined(MG_SEND_REDIRECT_BODY)
 	char redirect_body[MG_BUF_LEN];
+	size_t content_len = 0;
 	char content_len_text[32];
 #endif
 
@@ -4706,11 +4706,10 @@ mg_send_http_redirect(struct mg_connection *conn,
 	    target_url,
 	    target_url);
 	content_len = strlen(reply);
+	sprintf(content_len_text, "%lu", (unsigned long)content_len);
 #endif
 
-	/* Do not send a cache header, there are suitable defaults.
-	 * Thus, send_(no)_cache_header is not called here.xxxxxx
-	 */
+	/* Send all required headers */
 	mg_response_header_start(conn, redirect_code);
 	mg_response_header_add(conn, "Location", target_url, -1);
 	if ((redirect_code == 301) || (redirect_code == 308)) {
@@ -4724,7 +4723,6 @@ mg_send_http_redirect(struct mg_connection *conn,
 	send_cors_header(conn);
 #if defined(MG_SEND_REDIRECT_BODY)
 	mg_response_header_add(conn, "Content-Type", "text/html", -1);
-	sprintf(content_len_text, "%lu", (unsigned long)content_len_text);
 	mg_response_header_add(conn, "Content-Length", content_len_text, -1);
 #else
 	mg_response_header_add(conn, "Content-Length", "0", 1);
