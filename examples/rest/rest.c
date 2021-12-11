@@ -17,14 +17,8 @@
 #include "cJSON.h"
 #include "civetweb.h"
 
-
-#ifdef NO_SSL
 #define PORT "8089"
 #define HOST_INFO "http://localhost:8089"
-#else
-#define PORT "8089r,8843s"
-#define HOST_INFO "https://localhost:8843"
-#endif
 
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
@@ -64,7 +58,6 @@ ExampleGET(struct mg_connection *conn)
 		mg_send_http_error(conn, 500, "Server error");
 		return 500;
 	}
-
 
 	cJSON_AddStringToObject(obj, "version", CIVETWEB_VERSION);
 	cJSON_AddNumberToObject(obj, "request", ++request);
@@ -140,22 +133,6 @@ ExamplePUT(struct mg_connection *conn)
 
 
 static int
-ExamplePOST(struct mg_connection *conn)
-{
-	/* In this example, do the same for PUT and POST */
-	return ExamplePUT(conn);
-}
-
-
-static int
-ExamplePATCH(struct mg_connection *conn)
-{
-	/* In this example, do the same for PUT and PATCH */
-	return ExamplePUT(conn);
-}
-
-
-static int
 ExampleHandler(struct mg_connection *conn, void *cbdata)
 {
 
@@ -165,17 +142,14 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	if (0 == strcmp(ri->request_method, "GET")) {
 		return ExampleGET(conn);
 	}
-	if (0 == strcmp(ri->request_method, "PUT")) {
+	if ((0 == strcmp(ri->request_method, "PUT"))
+	    || (0 == strcmp(ri->request_method, "POST"))
+	    || (0 == strcmp(ri->request_method, "PATCH"))) {
+		/* In this example, do the same for PUT, POST and PATCH */
 		return ExamplePUT(conn);
-	}
-	if (0 == strcmp(ri->request_method, "POST")) {
-		return ExamplePOST(conn);
 	}
 	if (0 == strcmp(ri->request_method, "DELETE")) {
 		return ExampleDELETE(conn);
-	}
-	if (0 == strcmp(ri->request_method, "PATCH")) {
-		return ExamplePATCH(conn);
 	}
 
 	/* this is not a GET request */
@@ -231,27 +205,8 @@ main(int argc, char *argv[])
 	struct mg_context *ctx;
 	int err = 0;
 
-/* Check if libcivetweb has been built with all required features. */
-#ifndef NO_SSL
-	if (!mg_check_feature(2)) {
-		fprintf(stderr,
-		        "Error: Embedded example built with SSL support, "
-		        "but civetweb library build without.\n");
-		err = 1;
-	}
-
-
-	mg_init_library(MG_FEATURES_SSL);
-
-#else
+	/* Check if libcivetweb has been built with all required features. */
 	mg_init_library(0);
-
-#endif
-	if (err) {
-		fprintf(stderr, "Cannot start CivetWeb - inconsistent build.\n");
-		return EXIT_FAILURE;
-	}
-
 
 	/* Callback will print error messages to console */
 	memset(&callbacks, 0, sizeof(callbacks));
