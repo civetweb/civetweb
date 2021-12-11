@@ -579,7 +579,12 @@ typedef const char *SOCK_OPT_TYPE;
 #define strtoull(x, y, z) (_strtoui64(x, y, z))
 #define strtoll(x, y, z) (_strtoi64(x, y, z))
 #endif
-#define qsort_r(base, num, with, comp, arg) qsort_s(base, num, with, comp, arg)
+#define qsort_r(base, num, with, comp, arg)                                    \
+	qsort_s(base,                                                              \
+	        num,                                                               \
+	        with,                                                              \
+	        (int(__cdecl *)(void *, const void *, const void *))comp,          \
+	        arg)
 #endif /* _MSC_VER */
 
 #define ERRNO ((int)(GetLastError()))
@@ -4158,6 +4163,26 @@ send_additional_header(struct mg_connection *conn)
 }
 
 
+static void
+send_cors_header(struct mg_connection *conn)
+{
+	const char *origin_hdr = mg_get_header(conn, "Origin");
+	const char *cors_orig_cfg =
+	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
+
+	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr && *origin_hdr) {
+		/* Cross-origin resource sharing (CORS), see
+		 * http://www.html5rocks.com/en/tutorials/cors/,
+		 * http://www.html5rocks.com/static/images/cors_server_flowchart.png
+		 * CORS preflight is not supported for files. */
+		mg_response_header_add(conn,
+		                       "Access-Control-Allow-Origin",
+		                       cors_orig_cfg,
+		                       -1);
+	}
+}
+
+
 #if !defined(NO_FILESYSTEMS)
 static void handle_file_based_request(struct mg_connection *conn,
                                       const char *path,
@@ -4526,6 +4551,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 		mg_response_header_start(conn, status);
 		send_no_cache_header(conn);
 		send_additional_header(conn);
+		send_cors_header(conn);
 		if (has_body) {
 			mg_response_header_add(conn,
 			                       "Content-Type",
@@ -4577,6 +4603,7 @@ mg_send_http_ok(struct mg_connection *conn,
 	mg_response_header_start(conn, 200);
 	send_no_cache_header(conn);
 	send_additional_header(conn);
+	send_cors_header(conn);
 	mg_response_header_add(conn, "Content-Type", mime_type, -1);
 	if (content_length < 0) {
 		/* Size not known. Use chunked encoding (HTTP/1.x) */
@@ -4621,11 +4648,11 @@ mg_send_http_redirect(struct mg_connection *conn,
 	 *   307  | temporary | always keep method  | HTTP/1.1
 	 *   308  | permanent | always keep method  | HTTP/1.1
 	 */
-	const char *redirect_text;
-	int ret;
 	size_t content_len = 0;
+
 #if defined(MG_SEND_REDIRECT_BODY)
-	char reply[MG_BUF_LEN];
+	char redirect_body[MG_BUF_LEN];
+	char content_len_text[32];
 #endif
 
 	/* In case redirect_code=0, use 307. */
@@ -4640,9 +4667,6 @@ mg_send_http_redirect(struct mg_connection *conn,
 		/* Parameter error */
 		return -2;
 	}
-
-	/* Get proper text for response code */
-	redirect_text = mg_get_response_code_text(conn, redirect_code);
 
 	/* If target_url is not defined, redirect to "/". */
 	if ((target_url == NULL) || (*target_url == 0)) {
@@ -4675,8 +4699,8 @@ mg_send_http_redirect(struct mg_connection *conn,
 	mg_snprintf(
 	    conn,
 	    NULL /* ignore truncation */,
-	    reply,
-	    sizeof(reply),
+	    redirect_body,
+	    sizeof(redirect_body),
 	    "<html><head>%s</head><body><a href=\"%s\">%s</a></body></html>",
 	    redirect_text,
 	    target_url,
@@ -4684,30 +4708,39 @@ mg_send_http_redirect(struct mg_connection *conn,
 	content_len = strlen(reply);
 #endif
 
-	/* Do not send any additional header. For all other options,
-	 * including caching, there are suitable defaults. */
-	ret = mg_printf(conn,
-	                "HTTP/1.1 %i %s\r\n"
-	                "Location: %s\r\n"
-	                "Content-Length: %u\r\n"
-	                "Connection: %s\r\n\r\n",
-	                redirect_code,
-	                redirect_text,
-	                target_url,
-	                (unsigned int)content_len,
-	                suggest_connection_header(conn));
+	/* Do not send a cache header, there are suitable defaults.
+	 * Thus, send_(no)_cache_header is not called here.xxxxxx
+	 */
+	mg_response_header_start(conn, redirect_code);
+	mg_response_header_add(conn, "Location", target_url, -1);
+	if ((redirect_code == 301) || (redirect_code == 308)) {
+		/* Permanent redirect */
+		send_static_cache_header(conn);
+	} else {
+		/* Temporary redirect */
+		send_no_cache_header(conn);
+	}
+	send_additional_header(conn);
+	send_cors_header(conn);
+#if defined(MG_SEND_REDIRECT_BODY)
+	mg_response_header_add(conn, "Content-Type", "text/html", -1);
+	sprintf(content_len_text, "%lu", (unsigned long)content_len_text);
+	mg_response_header_add(conn, "Content-Length", content_len_text, -1);
+#else
+	mg_response_header_add(conn, "Content-Length", "0", 1);
+#endif
+	mg_response_header_send(conn);
+
 
 #if defined(MG_SEND_REDIRECT_BODY)
 	/* Send response body */
-	if (ret > 0) {
-		/* ... unless it is a HEAD request */
-		if (0 != strcmp(conn->request_info.request_method, "HEAD")) {
-			ret = mg_write(conn, reply, content_len);
-		}
+	/* ... unless it is a HEAD request */
+	if (0 != strcmp(conn->request_info.request_method, "HEAD")) {
+		ret = mg_write(conn, redirect_body, content_len);
 	}
 #endif
 
-	return (ret > 0) ? ret : -1;
+	return 1;
 }
 
 
@@ -10055,9 +10088,6 @@ handle_static_file_request(struct mg_connection *conn,
 	int n, truncated;
 	char gz_path[UTF8_PATH_MAX];
 	const char *encoding = 0;
-	const char *origin_hdr;
-	const char *cors_orig_cfg;
-	const char *cors1, *cors2;
 	int is_head_request;
 
 #if defined(USE_ZLIB)
@@ -10198,21 +10228,6 @@ handle_static_file_request(struct mg_connection *conn,
 	}
 #endif
 
-	/* Standard CORS header */
-	cors_orig_cfg = conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
-	origin_hdr = mg_get_header(conn, "Origin");
-	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr) {
-		/* Cross-origin resource sharing (CORS), see
-		 * http://www.html5rocks.com/en/tutorials/cors/,
-		 * http://www.html5rocks.com/static/images/cors_server_flowchart.png
-		 * -
-		 * preflight is not supported for files. */
-		cors1 = "Access-Control-Allow-Origin";
-		cors2 = cors_orig_cfg;
-	} else {
-		cors1 = cors2 = "";
-	}
-
 	/* Prepare Etag, and Last-Modified headers. */
 	gmt_time_string(lm, sizeof(lm), &filep->stat.last_modified);
 	construct_etag(etag, sizeof(etag), &filep->stat);
@@ -10221,13 +10236,11 @@ handle_static_file_request(struct mg_connection *conn,
 	mg_response_header_start(conn, conn->status_code);
 	send_static_cache_header(conn);
 	send_additional_header(conn);
+	send_cors_header(conn);
 	mg_response_header_add(conn,
 	                       "Content-Type",
 	                       mime_vec.ptr,
 	                       (int)mime_vec.len);
-	if (cors1[0] != 0) {
-		mg_response_header_add(conn, cors1, cors2, -1);
-	}
 	mg_response_header_add(conn, "Last-Modified", lm, -1);
 	mg_response_header_add(conn, "Etag", etag, -1);
 
@@ -12406,20 +12419,9 @@ handle_ssi_file_request(struct mg_connection *conn,
 {
 	char date[64];
 	time_t curtime = time(NULL);
-	const char *cors_orig_cfg;
-	const char *cors1, *cors2;
 
 	if ((conn == NULL) || (path == NULL) || (filep == NULL)) {
 		return;
-	}
-
-	cors_orig_cfg = conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
-	if (cors_orig_cfg && *cors_orig_cfg && mg_get_header(conn, "Origin")) {
-		/* Cross-origin resource sharing (CORS). */
-		cors1 = "Access-Control-Allow-Origin";
-		cors2 = cors_orig_cfg;
-	} else {
-		cors1 = cors2 = "";
 	}
 
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_READ, filep)) {
@@ -12441,10 +12443,8 @@ handle_ssi_file_request(struct mg_connection *conn,
 		mg_response_header_start(conn, 200);
 		send_no_cache_header(conn);
 		send_additional_header(conn);
+		send_cors_header(conn);
 		mg_response_header_add(conn, "Content-Type", "text/html", -1);
-		if (cors1[0]) {
-			mg_response_header_add(conn, cors1, cors2, -1);
-		}
 		mg_response_header_send(conn);
 
 		/* Header sent, now send body */
