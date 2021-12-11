@@ -597,16 +597,16 @@ START_TEST(test_mg_base64)
 	len = 9999;
 	mg_base64_encode((unsigned char *)nonalpha,
 	                 (int)strlen(nonalpha),
-	                 buf,
+	                 (unsigned char *)buf,
 	                 &len);
 	ck_assert_str_eq(buf, nonalpha_b64_enc);
 	ck_assert_int_eq((int)len, (int)strlen(nonalpha_b64_enc) + 1);
 
 	memset(buf, 77, sizeof(buf));
 	len = 9999;
-	ret = mg_base64_decode((unsigned char *)alpha_b64_enc,
+	ret = mg_base64_decode((char *)alpha_b64_enc,
 	                       (int)strlen(alpha_b64_enc),
-	                       buf,
+	                       (unsigned char *)buf,
 	                       &len);
 	ck_assert_int_eq(ret, -1);
 	ck_assert_int_eq((int)len, (int)strlen(alpha) + 1);
@@ -614,7 +614,7 @@ START_TEST(test_mg_base64)
 
 	memset(buf, 77, sizeof(buf));
 	len = 9999;
-	ret = mg_base64_decode((unsigned char *)"AAA*AAA", 7, buf, &len);
+	ret = mg_base64_decode((char *)"AAA*AAA", 7, (unsigned char *)buf, &len);
 	ck_assert_int_eq(ret, 3);
 }
 END_TEST

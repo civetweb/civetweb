@@ -361,7 +361,7 @@ test_mg_start(const struct mg_callbacks *callbacks,
 		/* Give the server some time to start in the test VM. */
 		/* Don't need to do this if mg_start failed. */
 		test_sleep(SLEEP_AFTER_MG_START);
-		ck_assert_int_eq(error.code, 0);
+		ck_assert_uint_eq(error.code, 0);
 		ck_assert_str_eq(error.text, "");
 	} else if (line > 0) {
 		/* mg_start is not supposed to fail anywhere, except for

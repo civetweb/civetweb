@@ -14624,7 +14624,7 @@ handle_request(struct mg_connection *conn)
 	char req_str[1024];
 	sprintf(req_str, "REQUEST: %s %s\n", ri->request_method, ri->local_uri);
 	OutputDebugStringA(req_str);
-	/**/
+	*/
 
 	/* 2. if this ip has limited speed, set it for this connection */
 	conn->throttle = set_throttle(conn->dom_ctx->config[THROTTLE],
