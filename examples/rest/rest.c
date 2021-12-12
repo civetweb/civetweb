@@ -10,6 +10,7 @@
 #include <unistd.h>
 #endif
 
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -20,7 +21,7 @@
 #define PORT "8089"
 #define HOST_INFO "http://localhost:8089"
 
-#define EXAMPLE_URI "/example"
+#define EXAMPLE_URI "/res/*/*"
 #define EXIT_URI "/exit"
 
 int exitNow = 0;
@@ -32,11 +33,15 @@ SendJSON(struct mg_connection *conn, cJSON *json_obj)
 	char *json_str = cJSON_PrintUnformatted(json_obj);
 	size_t json_str_len = strlen(json_str);
 
-	/* Send HTTP message header */
-	mg_send_http_ok(conn, "application/json; charset=utf-8", json_str_len);
+	/* Send HTTP message header (+1 for \n) */
+	mg_send_http_ok(conn, "application/json; charset=utf-8", json_str_len + 1);
 
 	/* Send HTTP message content */
 	mg_write(conn, json_str, json_str_len);
+
+	/* Add a newline. This is not required, but the result is more
+	 * human-readable in a debuger. */
+	mg_write(conn, "\n", 1);
 
 	/* Free string allocated by cJSON_Print* */
 	cJSON_free(json_str);
@@ -49,7 +54,7 @@ static unsigned request = 0; /* demo data: request counter */
 
 
 static int
-ExampleGET(struct mg_connection *conn)
+ExampleGET(struct mg_connection *conn, const char *p1, const char *p2)
 {
 	cJSON *obj = cJSON_CreateObject();
 
@@ -59,7 +64,10 @@ ExampleGET(struct mg_connection *conn)
 		return 500;
 	}
 
+	printf("GET %s/%s\n", p1, p2);
 	cJSON_AddStringToObject(obj, "version", CIVETWEB_VERSION);
+	cJSON_AddStringToObject(obj, "path1", p1);
+	cJSON_AddStringToObject(obj, "path2", p2);
 	cJSON_AddNumberToObject(obj, "request", ++request);
 	SendJSON(conn, obj);
 	cJSON_Delete(obj);
@@ -69,9 +77,9 @@ ExampleGET(struct mg_connection *conn)
 
 
 static int
-ExampleDELETE(struct mg_connection *conn)
+ExampleDELETE(struct mg_connection *conn, const char *p1, const char *p2)
 {
-	request = 0;
+	printf("DELETE %s/%s\n", p1, p2);
 	mg_send_http_error(conn,
 	                   204,
 	                   "%s",
@@ -82,13 +90,14 @@ ExampleDELETE(struct mg_connection *conn)
 
 
 static int
-ExamplePUT(struct mg_connection *conn)
+ExamplePUT(struct mg_connection *conn, const char *p1, const char *p2)
 {
 	char buffer[1024];
 	int dlen = mg_read(conn, buffer, sizeof(buffer) - 1);
 	cJSON *obj, *elem;
 	unsigned newvalue;
 
+	printf("PUT %s/%s\n", p1, p2);
 	if ((dlen < 1) || (dlen >= sizeof(buffer))) {
 		mg_send_http_error(conn, 400, "%s", "No request body data");
 		return 400;
@@ -133,23 +142,79 @@ ExamplePUT(struct mg_connection *conn)
 
 
 static int
+mg_vsplit(const char *url, const char *pattern, va_list va)
+{
+	int ret = 0;
+	while (*url && *pattern) {
+		if (*url == *pattern) {
+			url++;
+			pattern++;
+		} else if (*pattern == '*') {
+			char *p = va_arg(va, char *);
+			size_t l = va_arg(va, size_t);
+			if (p == NULL || l == 0) {
+				return 0;
+			}
+			while ((*url != '/') && (*url != 0)) {
+				if (l == 0) {
+					return 0;
+				}
+				l--;
+				*p = *url;
+				p++;
+				url++;
+			}
+			*p = 0;
+			pattern++;
+			ret++;
+		} else {
+			return 0;
+		}
+	}
+	return ret;
+}
+
+
+static int
+mg_split(const char *url, const char *pattern, ...)
+{
+	int ret;
+	va_list va;
+	va_start(va, pattern);
+	ret = mg_vsplit(url, pattern, va);
+	va_end(va);
+	return ret;
+}
+
+
+static int
 ExampleHandler(struct mg_connection *conn, void *cbdata)
 {
-
+	char path1[1024], path2[1024];
 	const struct mg_request_info *ri = mg_get_request_info(conn);
+	const char *url = ri->local_uri;
 	(void)cbdata; /* currently unused */
 
+	/* Pattern matching */
+	if (2
+	    != mg_split(
+	           url, EXAMPLE_URI, path1, sizeof(path1), path2, sizeof(path2))) {
+		mg_send_http_error(conn, 404, "Invalid path: %s\n", url);
+		return 404;
+	}
+
+	/* According to method */
 	if (0 == strcmp(ri->request_method, "GET")) {
-		return ExampleGET(conn);
+		return ExampleGET(conn, path1, path2);
 	}
 	if ((0 == strcmp(ri->request_method, "PUT"))
 	    || (0 == strcmp(ri->request_method, "POST"))
 	    || (0 == strcmp(ri->request_method, "PATCH"))) {
 		/* In this example, do the same for PUT, POST and PATCH */
-		return ExamplePUT(conn);
+		return ExamplePUT(conn, path1, path2);
 	}
 	if (0 == strcmp(ri->request_method, "DELETE")) {
-		return ExampleDELETE(conn);
+		return ExampleDELETE(conn, path1, path2);
 	}
 
 	/* this is not a GET request */
@@ -159,7 +224,7 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-int
+static int
 ExitHandler(struct mg_connection *conn, void *cbdata)
 {
 	mg_printf(conn,
@@ -172,7 +237,7 @@ ExitHandler(struct mg_connection *conn, void *cbdata)
 }
 
 
-int
+static int
 log_message(const struct mg_connection *conn, const char *message)
 {
 	puts(message);
@@ -189,23 +254,13 @@ main(int argc, char *argv[])
 	                         "10000",
 	                         "error_log_file",
 	                         "error.log",
-#ifndef NO_SSL
-	                         "ssl_certificate",
-	                         "../../resources/cert/server.pem",
-	                         "ssl_protocol_version",
-	                         "3",
-	                         "ssl_cipher_list",
-	                         "DES-CBC3-SHA:AES128-SHA:AES128-GCM-SHA256",
-#endif
-	                         "enable_auth_domain_check",
-	                         "no",
 	                         0};
 
 	struct mg_callbacks callbacks;
 	struct mg_context *ctx;
 	int err = 0;
 
-	/* Check if libcivetweb has been built with all required features. */
+	/* Init libcivetweb. */
 	mg_init_library(0);
 
 	/* Callback will print error messages to console */
@@ -225,10 +280,9 @@ main(int argc, char *argv[])
 	mg_set_request_handler(ctx, EXAMPLE_URI, ExampleHandler, 0);
 	mg_set_request_handler(ctx, EXIT_URI, ExitHandler, 0);
 
-	/* Show sone info */
+	/* Show some info */
 	printf("Start example: %s%s\n", HOST_INFO, EXAMPLE_URI);
 	printf("Exit example:  %s%s\n", HOST_INFO, EXIT_URI);
-
 
 	/* Wait until the server should be closed */
 	while (!exitNow) {
