@@ -37,8 +37,11 @@ main(int argc, char *argv[])
 	/* Connect client */
 	char errbuf[256] = {0};
 	struct mg_client_options opt = {0};
-	opt.host = argv[1];
-	opt.port = 443;
+	opt.host = argv[1]; /* Host name from command line */
+	opt.port = 443;     /* Default HTTPS port */
+	opt.client_cert = NULL;   /* Client certificate, if required */
+	opt.server_cert = NULL;   /* Server certificate to verify */
+	opt.host_name = opt.host; /* Host name for SNI */
 	struct mg_connection *cli =
 	    mg_connect_client_secure(&opt, errbuf, sizeof(errbuf));
 
@@ -97,7 +100,7 @@ main(int argc, char *argv[])
 			cont -= ret;
 			fwrite(buf, 1, ret, stdout);
 		}
-	} else if (is_chunked) {
+	} else {
 		/* Read chunked content (or content without content length) */
 		char buf[1024];
 		for (;;) {
