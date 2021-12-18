@@ -260,6 +260,16 @@ Maximum allowed runtime for CGI scripts.  CGI processes are terminated by
 the server after this time.  The default is "no timeout", so scripts may
 run or block for undefined time.
 
+### cgi\_buffering `yes`
+Allow buffering response of CGI program before sending to the client.
+When buffering is enabled content created by CGI scripts is collected in 
+a buffer and forwarded to the client in larger blocks, improving efficiency.
+If partial content has to be sent to the client, try setting 
+`cgi_buffering` to `no`, `allow_sendfile_call` to `no` 
+and `tcp_nodelay` to `1`. This will cost some performance, but not guarantee
+there is no buffering between CGI program and client code, since intermediate 
+proxies or browsers may also buffer data.
+
 ### decode\_query\_string `no`
 URL decode all query strings in the server. 
 If you set this option to `yes`, all callbacks and scripts will only see the already

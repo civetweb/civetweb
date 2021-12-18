@@ -10003,7 +10003,16 @@ send_file_data(struct mg_connection *conn,
 			    "Error: Unable to access file at requested position.");
 		} else {
 			while (len > 0) {
-				/* Calculate how much to read from the file into the buffer */
+				/* Calculate how much to read from the file into the buffer. */
+				/* If no_buffering is set, we should not wait until the
+				 * CGI->Server buffer is filled, but send everything
+				 * immediately. In theory buffering could be turned off using
+				 * setbuf(filep->access.fp, NULL);
+				 * setvbuf(filep->access.fp, NULL, _IONBF, 0);
+				 * but in practice this does not work. A "Linux only" solution
+				 * may be to use select(). The only portable way is to read byte
+				 * by byte, but this is quite inefficient from a performance
+				 * point of view. */
 				to_read = no_buffering ? 1 : sizeof(buf);
 				if ((int64_t)to_read > len) {
 					to_read = (int)len;
