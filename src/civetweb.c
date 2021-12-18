@@ -17982,6 +17982,9 @@ mg_connect_client(const char *host,
 	memset(&opts, 0, sizeof(opts));
 	opts.host = host;
 	opts.port = port;
+	if (use_ssl) {
+		opts.host_name = host;
+	}
 	return mg_connect_client_impl(&opts,
 	                              use_ssl,
 	                              error_buffer,
