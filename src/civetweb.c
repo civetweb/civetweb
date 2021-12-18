@@ -1961,6 +1961,7 @@ enum {
 #if defined(USE_TIMERS)
 	CGI_TIMEOUT,
 #endif
+	CGI_BUFFERING,
 
 	CGI2_EXTENSIONS,
 	CGI2_ENVIRONMENT,
@@ -1969,6 +1970,7 @@ enum {
 #if defined(USE_TIMERS)
 	CGI2_TIMEOUT,
 #endif
+	CGI2_BUFFERING,
 
 #if defined(USE_4_CGI)
 	CGI3_EXTENSIONS,
@@ -1978,6 +1980,7 @@ enum {
 #if defined(USE_TIMERS)
 	CGI3_TIMEOUT,
 #endif
+	CGI3_BUFFERING,
 
 	CGI4_EXTENSIONS,
 	CGI4_ENVIRONMENT,
@@ -1986,6 +1989,7 @@ enum {
 #if defined(USE_TIMERS)
 	CGI4_TIMEOUT,
 #endif
+	CGI4_BUFFERING,
 #endif
 
 	PUT_DELETE_PASSWORDS_FILE, /* must follow CGI_* */
@@ -2100,6 +2104,7 @@ static const struct mg_option config_options[] = {
 #if defined(USE_TIMERS)
     {"cgi_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
 #endif
+    {"cgi_buffering", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 
     {"cgi2_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
     {"cgi2_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
@@ -2108,6 +2113,7 @@ static const struct mg_option config_options[] = {
 #if defined(USE_TIMERS)
     {"cgi2_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
 #endif
+    {"cgi2_buffering", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 
 #if defined(USE_4_CGI)
     {"cgi3_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
@@ -2117,6 +2123,7 @@ static const struct mg_option config_options[] = {
 #if defined(USE_TIMERS)
     {"cgi3_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
 #endif
+    {"cgi3_buffering", MG_CONFIG_TYPE_BOOLEAN, "yes"},
 
     {"cgi4_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
     {"cgi4_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
@@ -2125,6 +2132,8 @@ static const struct mg_option config_options[] = {
 #if defined(USE_TIMERS)
     {"cgi4_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
 #endif
+    {"cgi4_buffering", MG_CONFIG_TYPE_BOOLEAN, "yes"},
+
 #endif
 
     {"put_delete_auth_file", MG_CONFIG_TYPE_FILE, NULL},
@@ -9920,7 +9929,8 @@ static void
 send_file_data(struct mg_connection *conn,
                struct mg_file *filep,
                int64_t offset,
-               int64_t len)
+               int64_t len,
+               int no_buffering)
 {
 	char buf[MG_BUF_LEN];
 	int to_read, num_read, num_written;
@@ -9993,8 +10003,8 @@ send_file_data(struct mg_connection *conn,
 			    "Error: Unable to access file at requested position.");
 		} else {
 			while (len > 0) {
-				/* Calculate how much to read from the file in the buffer */
-				to_read = sizeof(buf);
+				/* Calculate how much to read from the file into the buffer */
+				to_read = no_buffering ? 1 : sizeof(buf);
 				if ((int64_t)to_read > len) {
 					to_read = (int)len;
 				}
@@ -10295,7 +10305,7 @@ handle_static_file_request(struct mg_connection *conn,
 #endif
 		{
 			/* Send file directly */
-			send_file_data(conn, filep, r1, cl);
+			send_file_data(conn, filep, r1, cl, 0); /* send static file */
 		}
 	}
 	(void)mg_fclose(&filep->access); /* ignore error on read only file */
@@ -10310,7 +10320,7 @@ mg_send_file_body(struct mg_connection *conn, const char *path)
 		return -1;
 	}
 	fclose_on_exec(&file.access, conn);
-	send_file_data(conn, &file, 0, INT64_MAX);
+	send_file_data(conn, &file, 0, INT64_MAX, 0); /* send static file */
 	(void)mg_fclose(&file.access); /* Ignore errors for readonly files */
 	return 0;                      /* >= 0 for OK */
 }
@@ -11452,6 +11462,8 @@ handle_cgi_request(struct mg_connection *conn,
 	struct mg_file fout = STRUCT_FILE_INITIALIZER;
 	pid_t pid = (pid_t)-1;
 	struct process_control_data *proc = NULL;
+	char *cfg_buffering = conn->dom_ctx->config[CGI_BUFFERING + cgi_config_idx];
+	int no_buffering = 0;
 
 #if defined(USE_TIMERS)
 	double cgi_timeout;
@@ -11463,8 +11475,12 @@ handle_cgi_request(struct mg_connection *conn,
 		cgi_timeout =
 		    atof(config_options[REQUEST_TIMEOUT].default_value) * 0.001;
 	}
-
 #endif
+	if (cfg_buffering != NULL) {
+		if (!mg_strcasecmp(cfg_buffering, "no")) {
+			no_buffering = 1;
+		}
+	}
 
 	buf = NULL;
 	buflen = conn->phys_ctx->max_request_size;
@@ -11713,7 +11729,7 @@ handle_cgi_request(struct mg_connection *conn,
 
 	/* Read the rest of CGI output and send to the client */
 	DEBUG_TRACE("CGI: %s", "forward all data");
-	send_file_data(conn, &fout, 0, INT64_MAX);
+	send_file_data(conn, &fout, 0, INT64_MAX, no_buffering); /* send CGI data */
 	DEBUG_TRACE("CGI: %s", "all data sent");
 
 done:
@@ -12257,7 +12273,7 @@ do_ssi_include(struct mg_connection *conn,
 		    > 0) {
 			send_ssi_file(conn, path, &file, include_level + 1);
 		} else {
-			send_file_data(conn, &file, 0, INT64_MAX);
+			send_file_data(conn, &file, 0, INT64_MAX, 0); /* send static file */
 		}
 		(void)mg_fclose(&file.access); /* Ignore errors for readonly files */
 	}
@@ -12281,7 +12297,7 @@ do_ssi_exec(struct mg_connection *conn, char *tag)
 			                cmd,
 			                strerror(ERRNO));
 		} else {
-			send_file_data(conn, &file, 0, INT64_MAX);
+			send_file_data(conn, &file, 0, INT64_MAX, 0); /* send static file */
 			pclose(file.access.fp);
 		}
 	}
@@ -15189,7 +15205,7 @@ handle_file_based_request(struct mg_connection *conn,
 			    > 0) {
 				if (is_in_script_path(conn, path)) {
 					/* CGI scripts may support all HTTP methods */
-					handle_cgi_request(conn, path, 0);
+					handle_cgi_request(conn, path, cgi_config_idx);
 				} else {
 					/* Script was in an illegal path */
 					mg_send_http_error(conn, 403, "%s", "Forbidden");
