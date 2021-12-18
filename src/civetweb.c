@@ -2118,7 +2118,7 @@ static const struct mg_option config_options[] = {
     {"cgi3_timeout_ms", MG_CONFIG_TYPE_NUMBER, NULL},
 #endif
 
-    {"cgi2_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
+    {"cgi4_pattern", MG_CONFIG_TYPE_EXT_PATTERN, NULL},
     {"cgi4_environment", MG_CONFIG_TYPE_STRING_LIST, NULL},
     {"cgi4_interpreter", MG_CONFIG_TYPE_FILE, NULL},
     {"cgi4_interpreter_args", MG_CONFIG_TYPE_STRING, NULL},
