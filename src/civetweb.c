@@ -3606,6 +3606,7 @@ mg_construct_local_link(const struct mg_connection *conn,
 	if ((buflen < 1) || (buf == 0) || (conn == 0)) {
 		return -1;
 	} else {
+		int i, j;
 		int truncated = 0;
 		const struct mg_request_info *ri = &conn->request_info;
 
@@ -3617,10 +3618,30 @@ mg_construct_local_link(const struct mg_connection *conn,
 		        : ((ri->request_uri != NULL) ? ri->request_uri : ri->local_uri);
 		int port = (define_port > 0) ? define_port : ri->server_port;
 		int default_port = 80;
+		char *uri_encoded;
 
 		if (uri == NULL) {
 			return -1;
 		}
+
+		size_t uri_encoded_len = strlen(uri) * 3 + 1;
+		uri_encoded = (char *)mg_malloc_ctx(uri_encoded_len, conn->phys_ctx);
+		if (uri_encoded == NULL) {
+			return -1;
+		}
+		mg_url_encode(uri, uri_encoded, uri_encoded_len);
+
+		/* Directory separator should be preserved. */
+		for (i = j = 0; uri_encoded[i]; j++) {
+			if (!strncmp(uri_encoded + i, "%2f", 3)) {
+				uri_encoded[j] = '/';
+				i += 3;
+			} else {
+				uri_encoded[j] = uri_encoded[i++];
+			}
+		}
+		uri_encoded[j] = '\0';
+
 
 #if defined(USE_X_DOM_SOCKET)
 		if (conn->client.lsa.sa.sa_family == AF_UNIX) {
@@ -3705,7 +3726,7 @@ mg_construct_local_link(const struct mg_connection *conn,
 			            server_domain,
 #endif
 			            portstr,
-			            ri->local_uri);
+			            uri_encoded);
 
 			if (truncated) {
 				return -1;
@@ -12525,39 +12546,27 @@ print_props(struct mg_connection *conn,
             const char *name,
             struct mg_file_stat *filep)
 {
-	size_t href_size, i, j;
-	int len;
-	char *href, mtime[64];
+	size_t href_size, i;
+	int truncated = 0;
+	char mtime[64];
 	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
 
 	if ((conn == NULL) || (uri == NULL) || (name == NULL) || (filep == NULL)) {
 		return 0;
 	}
 
-	/* Estimate worst case size for encoding */
-	href_size = (strlen(uri) + strlen(name)) * 3 + 1;
-	href = (char *)mg_malloc(href_size);
-	if (href == NULL) {
-		return 0;
-	}
-	len = mg_url_encode(uri, href, href_size);
-	if (len >= 0) {
-		/* Append an extra string */
-		mg_url_encode(name, href + len, href_size - (size_t)len);
-	}
-	/* Directory separator should be preserved. */
-	for (i = j = 0; href[i]; j++) {
-		if (!strncmp(href + i, "%2f", 3)) {
-			href[j] = '/';
-			i += 3;
-		} else {
-			href[j] = href[i++];
-		}
-	}
-	href[j] = '\0';
-
 	/* Get full link used in request */
 	mg_construct_local_link(conn, link_buf, sizeof(link_buf), NULL, 0, uri);
+	href_size = strlen(link_buf);
+	mg_snprintf(conn,
+	            &truncated,
+	            link_buf + href_size,
+	            sizeof(link_buf) - href_size,
+	            "%s",
+	            name);
+	if (truncated) {
+		return 0;
+	}
 
 	gmt_time_string(mtime, sizeof(mtime), &filep->last_modified);
 	mg_printf(conn,
@@ -12569,7 +12578,7 @@ print_props(struct mg_connection *conn,
 	          "<d:getcontentlength>%" INT64_FMT "</d:getcontentlength>"
 	          "<d:getlastmodified>%s</d:getlastmodified>"
 	          "<d:lockdiscovery>",
-	          href,
+	          link_buf,
 	          filep->is_directory ? "<d:collection/>" : "",
 	          filep->size,
 	          mtime);
@@ -12600,7 +12609,7 @@ print_props(struct mg_connection *conn,
 	          "<d:status>HTTP/1.1 200 OK</d:status>"
 	          "</d:propstat>"
 	          "</d:response>\n");
-	mg_free(href);
+
 	return 1;
 }
 
