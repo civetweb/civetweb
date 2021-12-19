@@ -7373,22 +7373,22 @@ mg_base64_decode(const char *src,
 		/* Read 4 characters from BASE64 string */
 		a = b64reverse(src[i]);
 		if (a >= 254) {
-			return i;
+			return (int)i;
 		}
 
 		b = b64reverse(((i + 1) >= src_len) ? 0 : src[i + 1]);
 		if (b >= 254) {
-			return i + 1;
+			return (int)i + 1;
 		}
 
 		c = b64reverse(((i + 2) >= src_len) ? 0 : src[i + 2]);
 		if (c == 254) {
-			return i + 2;
+			return (int)i + 2;
 		}
 
 		d = b64reverse(((i + 3) >= src_len) ? 0 : src[i + 3]);
 		if (d == 254) {
-			return i + 3;
+			return (int)i + 3;
 		}
 
 		/* Add first (of 3) decoded character */
@@ -12528,10 +12528,12 @@ print_props(struct mg_connection *conn,
 	size_t href_size, i, j;
 	int len;
 	char *href, mtime[64];
+	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
 
 	if ((conn == NULL) || (uri == NULL) || (name == NULL) || (filep == NULL)) {
 		return 0;
 	}
+
 	/* Estimate worst case size for encoding */
 	href_size = (strlen(uri) + strlen(name)) * 3 + 1;
 	href = (char *)mg_malloc(href_size);
@@ -12554,6 +12556,9 @@ print_props(struct mg_connection *conn,
 	}
 	href[j] = '\0';
 
+	/* Get full link used in request */
+	mg_construct_local_link(conn, link_buf, sizeof(link_buf), NULL, 0, uri);
+
 	gmt_time_string(mtime, sizeof(mtime), &filep->last_modified);
 	mg_printf(conn,
 	          "<d:response>"
@@ -12563,14 +12568,38 @@ print_props(struct mg_connection *conn,
 	          "<d:resourcetype>%s</d:resourcetype>"
 	          "<d:getcontentlength>%" INT64_FMT "</d:getcontentlength>"
 	          "<d:getlastmodified>%s</d:getlastmodified>"
-	          "</d:prop>"
-	          "<d:status>HTTP/1.1 200 OK</d:status>"
-	          "</d:propstat>"
-	          "</d:response>\n",
+	          "<d:lockdiscovery>",
 	          href,
 	          filep->is_directory ? "<d:collection/>" : "",
 	          filep->size,
 	          mtime);
+
+	for (i = 0; i < NUM_WEBDAV_LOCKS; i++) {
+		struct twebdav_lock *dav_lock = conn->phys_ctx->webdav_lock;
+		if (!strcmp(dav_lock[i].path, link_buf)) {
+			mg_printf(conn,
+			          "<d:activelock>"
+			          "<d:locktype><d:write/></d:locktype>"
+			          "<d:lockscope><d:exclusive/></d:lockscope>"
+			          "<d:depth>0</d:depth>"
+			          "<d:owner>%s</d:owner>"
+			          "<d:timeout>Second-%u</d:timeout>"
+			          "<d:locktoken>"
+			          "<d:href>%s</d:href>"
+			          "</d:locktoken>"
+			          "</d:activelock>\n",
+			          dav_lock[i].user,
+			          (unsigned)LOCK_DURATION_S,
+			          dav_lock[i].token);
+		}
+	}
+
+	mg_printf(conn,
+	          "</d:lockdiscovery>"
+	          "</d:prop>"
+	          "<d:status>HTTP/1.1 200 OK</d:status>"
+	          "</d:propstat>"
+	          "</d:response>\n");
 	mg_free(href);
 	return 1;
 }
@@ -12597,8 +12626,6 @@ handle_propfind(struct mg_connection *conn,
 {
 	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
 	const char *depth = mg_get_header(conn, "Depth");
-	struct twebdav_lock *dav_lock = conn->phys_ctx->webdav_lock;
-	int i;
 
 	if (!conn || !path || !filep || !conn->dom_ctx) {
 		return;
@@ -12632,44 +12659,6 @@ handle_propfind(struct mg_connection *conn,
 	                      "yes")
 	    && ((depth == NULL) || (strcmp(depth, "0") != 0))) {
 		scan_directory(conn, path, conn, &print_dav_dir_entry);
-	}
-
-	/* add lock discovery data */
-	if (!filep->is_directory) {
-		/* Lock information*/
-		mg_printf(conn,
-		          "<d:response>"
-		          "<d:href>%s</d:href>"
-		          "<d:propstat>"
-		          "<d:prop>"
-		          "<d:lockdiscovery>\n",
-		          link_buf);
-
-		for (i = 0; i < NUM_WEBDAV_LOCKS; i++) {
-			if (!strcmp(dav_lock[i].path, link_buf)) {
-				mg_printf(conn,
-				          "<d:activelock>"
-				          "<d:locktype><d:write/></d:locktype>"
-				          "<d:lockscope><d:exclusive/></d:lockscope>"
-				          "<d:depth>0</d:depth>"
-				          "<d:owner>%s</d:owner>"
-				          "<d:timeout>Second-%u</d:timeout>"
-				          "<d:locktoken>"
-				          "<d:href>%s</d:href>"
-				          "</d:locktoken>"
-				          "</d:activelock>\n",
-				          dav_lock[i].user,
-				          (unsigned)LOCK_DURATION_S,
-				          dav_lock[i].token);
-			}
-		}
-
-		mg_printf(conn,
-		          "</d:lockdiscovery>"
-		          "</d:prop>"
-		          "<d:status>HTTP/1.1 200 OK</d:status>"
-		          "</d:propstat>"
-		          "</d:response>\n");
 	}
 
 	mg_printf(conn, "%s\n", "</d:multistatus>");
