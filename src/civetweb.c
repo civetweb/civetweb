@@ -11920,7 +11920,9 @@ dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
 			const char *h =
 			    get_rel_url_at_current_server(destination_hdr, conn);
 			if (h) {
-				local_dest = mg_strdup_ctx(h, conn->phys_ctx);
+				int len = (int)strlen(h);
+				local_dest = mg_malloc_ctx(len + 1, conn->phys_ctx);
+				mg_url_decode(h, len, local_dest, len + 1, 0);
 			}
 		}
 		if (local_dest != NULL) {
@@ -12546,27 +12548,37 @@ print_props(struct mg_connection *conn,
             const char *name,
             struct mg_file_stat *filep)
 {
-	size_t href_size, i;
-	int truncated = 0;
+	size_t i;
 	char mtime[64];
 	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
+	char *link_concat;
+	size_t link_concat_len;
 
 	if ((conn == NULL) || (uri == NULL) || (name == NULL) || (filep == NULL)) {
 		return 0;
 	}
 
-	/* Get full link used in request */
-	mg_construct_local_link(conn, link_buf, sizeof(link_buf), NULL, 0, uri);
-	href_size = strlen(link_buf);
-	mg_snprintf(conn,
-	            &truncated,
-	            link_buf + href_size,
-	            sizeof(link_buf) - href_size,
-	            "%s",
-	            name);
-	if (truncated) {
+	link_concat_len = strlen(uri) + strlen(name) + 1;
+	link_concat = mg_malloc_ctx(link_concat_len, conn->phys_ctx);
+	if (!link_concat) {
 		return 0;
 	}
+	strcpy(link_concat, uri);
+	strcat(link_concat, name);
+
+	/* Get full link used in request */
+	mg_construct_local_link(
+	    conn, link_buf, sizeof(link_buf), NULL, 0, link_concat);
+
+	/*
+	OutputDebugStringA("print_props:\n  uri: ");
+	OutputDebugStringA(uri);
+	OutputDebugStringA("\n  name: ");
+	OutputDebugStringA(name);
+	OutputDebugStringA("\n  link: ");
+	OutputDebugStringA(link_buf);
+	OutputDebugStringA("\n");
+	*/
 
 	gmt_time_string(mtime, sizeof(mtime), &filep->last_modified);
 	mg_printf(conn,
@@ -12610,6 +12622,7 @@ print_props(struct mg_connection *conn,
 	          "</d:propstat>"
 	          "</d:response>\n");
 
+	mg_free(link_concat);
 	return 1;
 }
 
@@ -12633,14 +12646,11 @@ handle_propfind(struct mg_connection *conn,
                 const char *path,
                 struct mg_file_stat *filep)
 {
-	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
 	const char *depth = mg_get_header(conn, "Depth");
 
 	if (!conn || !path || !filep || !conn->dom_ctx) {
 		return;
 	}
-
-	mg_get_request_link(conn, link_buf, sizeof(link_buf));
 
 	/* return 207 "Multi-Status" */
 	conn->must_close = 1;
@@ -14579,6 +14589,14 @@ handle_request(struct mg_connection *conn)
 
 	path[0] = 0;
 
+	/*
+	OutputDebugStringA("REQUEST: ");
+	OutputDebugStringA(ri->request_method);
+	OutputDebugStringA(" ");
+	OutputDebugStringA(ri->request_uri);
+	OutputDebugStringA("\n");
+	*/
+
 	/* 0. Reset internal state (required for HTTP/2 proxy) */
 	conn->request_state = 0;
 
@@ -14613,8 +14631,7 @@ handle_request(struct mg_connection *conn)
 
 	/* 1.3. decode url (if config says so) */
 	if (should_decode_url(conn)) {
-		mg_url_decode(
-		    ri->local_uri, uri_len, (char *)ri->local_uri, uri_len + 1, 0);
+		url_decode_in_place((char *)ri->local_uri);
 	}
 
 	/* URL decode the query-string only if explicity set in the configuration */
@@ -14640,12 +14657,6 @@ handle_request(struct mg_connection *conn)
 
 	/* step 1. completed, the url is known now */
 	DEBUG_TRACE("REQUEST: %s %s", ri->request_method, ri->local_uri);
-
-	/*
-	char req_str[1024];
-	sprintf(req_str, "REQUEST: %s %s\n", ri->request_method, ri->local_uri);
-	OutputDebugStringA(req_str);
-	*/
 
 	/* 2. if this ip has limited speed, set it for this connection */
 	conn->throttle = set_throttle(conn->dom_ctx->config[THROTTLE],
@@ -15057,19 +15068,21 @@ handle_request(struct mg_connection *conn)
 	if (file.stat.is_directory && ((uri_len = (int)strlen(ri->local_uri)) > 0)
 	    && (ri->local_uri[uri_len - 1] != '/')) {
 
-		size_t len = strlen(ri->request_uri);
-		size_t lenQS = ri->query_string ? strlen(ri->query_string) + 1 : 0;
-		char *new_path = (char *)mg_malloc_ctx(len + lenQS + 2, conn->phys_ctx);
+		/* Path + server root */
+		size_t buflen = UTF8_PATH_MAX * 2 + 2;
+		if (ri->query_string) {
+			buflen += strlen(ri->query_string);
+		}
+		char *new_path = (char *)mg_malloc_ctx(buflen, conn->phys_ctx);
 		if (!new_path) {
 			mg_send_http_error(conn, 500, "out or memory");
 		} else {
-			memcpy(new_path, ri->request_uri, len);
-			new_path[len] = '/';
-			new_path[len + 1] = 0;
+			mg_get_request_link(conn, new_path, buflen - 1);
+			strcat(new_path, "/");
 			if (ri->query_string) {
-				new_path[len + 1] = '?';
-				/* Copy query string including terminating zero */
-				memcpy(new_path + len + 2, ri->query_string, lenQS);
+				/* Append ? and query string */
+				strcat(new_path, "?");
+				strcat(new_path, ri->query_string);
 			}
 			mg_send_http_redirect(conn, new_path, 301);
 			mg_free(new_path);

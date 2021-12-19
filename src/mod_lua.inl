@@ -368,8 +368,8 @@ lsp_connect(lua_State *L)
 	    && lua_isnumber(L, 3)) {
 
 		const char *host = lua_tostring(L, 1);
-		const int port = lua_tointeger(L, 2);
-		const int is_ssl = lua_tointeger(L, 3);
+		const int port = (int)lua_tointeger(L, 2);
+		const int is_ssl = (int)lua_tointeger(L, 3);
 
 		ok = connect_socket(
 		    NULL, host, port, is_ssl, ebuf, sizeof(ebuf), &sock, &sa);
@@ -2707,7 +2707,7 @@ lsp_mg_gc(lua_State *L)
 
 	lua_pushlightuserdata(L, (void *)&lua_regkey_environment_type);
 	lua_gettable(L, LUA_REGISTRYINDEX);
-	context_flags = lua_tointeger(L, -1);
+	context_flags = (int)lua_tointeger(L, -1);
 
 	if (ctx != NULL) {
 		if (ctx->callbacks.exit_lua != NULL) {
