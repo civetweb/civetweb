@@ -316,7 +316,11 @@ request_handler(struct mg_connection *conn, void *cbdata)
 int
 main(int argc, char *argv[])
 {
-	mg_init_library(MG_FEATURES_TLS);
+	int ret = mg_init_library(MG_FEATURES_TLS);
+	if (ret != MG_FEATURES_TLS) {
+		printf("Initializing SSL libraries failed\n");
+		return 1;
+	}
 
 	printf("Starting example server at https://localhost:443/\n");
 	struct mg_init_data init = {0};
