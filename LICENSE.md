@@ -66,6 +66,10 @@ http://www.lua.org/license.html
 > THE SOFTWARE.
 
 
+Additional components Copyright (C) Lua.org, PUC-Rio, with MIT license: 
+http://www.inf.puc-rio.br/~roberto/struct/
+
+
 SQLite3 License
 ------
 

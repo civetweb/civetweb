@@ -145,6 +145,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\third_party\lfs.c" />
+    <ClCompile Include="..\..\src\third_party\lsh.c" />
     <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lapi.c" />
     <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lauxlib.c" />
     <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lbaselib.c" />
@@ -179,6 +180,7 @@
     <ClCompile Include="..\..\src\third_party\lua-5.2.4\src\lzio.c" />
     <ClCompile Include="..\..\src\third_party\lsqlite3.c" />
     <ClCompile Include="..\..\src\third_party\LuaXML_lib.c" />
+    <ClCompile Include="..\..\src\third_party\lua_struct.c" />
     <ClCompile Include="..\..\src\third_party\sqlite3.c" />
   </ItemGroup>
   <ItemGroup>

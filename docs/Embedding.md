@@ -182,6 +182,8 @@ Lua is a server side include functionality.  Files ending in .lua will be proces
   - src/third\_party/lsqlite3.c
   - src/third\_party/lfs.c
   - src/third\_party/lfs.h
+  - src/third\_party/lua_struct.c
+  
 
 This build is valid for Lua version Lua 5.2. It is also possible to build with Lua 5.1 (including LuaJIT), Lua 5.3 or Lua 5.4.
 

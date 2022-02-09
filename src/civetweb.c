@@ -6654,7 +6654,7 @@ handle_request_stat_log(struct mg_connection *conn)
 	{                                                                          \
 		if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {                      \
 			http2_must_use_http1(conn);                                        \
-			DEBUG_TRACE("%s", "must use HTTP/1.x")                             \
+			DEBUG_TRACE("%s", "must use HTTP/1.x");                            \
 			return;                                                            \
 		}                                                                      \
 	}

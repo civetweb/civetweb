@@ -2666,7 +2666,6 @@ civetweb_open_lua_libs(lua_State *L)
 		extern void luaL_openlibs(lua_State *);
 		luaL_openlibs(L);
 	}
-
 #if defined(USE_LUA_SQLITE3)
 	{
 		extern int luaopen_lsqlite3(lua_State *);
@@ -2677,7 +2676,6 @@ civetweb_open_lua_libs(lua_State *L)
 	{
 		extern int luaopen_LuaXML_lib(lua_State *);
 		luaopen_LuaXML_lib(L);
-		// lua_pushvalue(L, -1); to copy value
 		lua_setglobal(L, "xml");
 	}
 #endif
@@ -2685,6 +2683,18 @@ civetweb_open_lua_libs(lua_State *L)
 	{
 		extern int luaopen_lfs(lua_State *);
 		luaopen_lfs(L);
+	}
+#endif
+#if defined(USE_LUA_STRUCT)
+	{
+		int luaopen_struct(lua_State *L);
+		luaopen_struct(L);
+	}
+#endif
+#if defined(USE_LUA_SHARED_MEMORY)
+	{
+		extern int luaopen_lsh(lua_State *);
+		luaopen_lsh(L);
 	}
 #endif
 }

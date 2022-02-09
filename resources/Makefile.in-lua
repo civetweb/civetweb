@@ -1,6 +1,6 @@
 #
 # Copyright (c) 2013 No Face Press, LLC
-# Copyright (c) 2014-2017 the Civetweb developers
+# Copyright (c) 2014-2022 the Civetweb developers
 #
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
@@ -148,6 +148,17 @@ OBJECTS += $(LFS_OBJECTS)
 CFLAGS += $(LFS_CFLAGS)
 CFLAGS += -DUSE_LUA_FILE_SYSTEM
 #SOURCE_DIRS = $(LFS_DIR)
+
+
+LXX_DIR = src/third_party
+LXX_SOURCE_FILES = lua_struct.c
+LXX_SOURCES = $(addprefix $(LXX_DIR)/, $(LXX_SOURCE_FILES))
+LXX_OBJECTS = $(LXX_SOURCES:.c=.o)
+LXX_CFLAGS = -I$(LXX_DIR)
+OBJECTS += $(LXX_OBJECTS)
+CFLAGS += $(LXX_CFLAGS)
+CFLAGS += -DUSE_LUA_STRUCT
+#SOURCE_DIRS = $(LXX_DIR)
 
 
 ifneq ($(WITH_LUA_VERSION), 501)
