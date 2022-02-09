@@ -6654,6 +6654,7 @@ handle_request_stat_log(struct mg_connection *conn)
 	{                                                                          \
 		if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {                      \
 			http2_must_use_http1(conn);                                        \
+			DEBUG_TRACE("%s", "must use HTTP/1.x")                             \
 			return;                                                            \
 		}                                                                      \
 	}
@@ -8973,20 +8974,21 @@ mg_send_digest_access_authentication_request(struct mg_connection *conn,
 static int
 is_authorized_for_put(struct mg_connection *conn)
 {
+	int ret = 0;
+
 	if (conn) {
 		struct mg_file file = STRUCT_FILE_INITIALIZER;
 		const char *passfile = conn->dom_ctx->config[PUT_DELETE_PASSWORDS_FILE];
-		int ret = 0;
 
 		if (passfile != NULL
 		    && mg_fopen(conn, passfile, MG_FOPEN_MODE_READ, &file)) {
 			ret = authorize(conn, &file, NULL);
 			(void)mg_fclose(&file.access); /* ignore error on read only file */
 		}
-
-		return ret;
 	}
-	return 0;
+
+	DEBUG_TRACE("file write autorization: %i", ret);
+	return ret;
 }
 #endif
 
@@ -11843,6 +11845,7 @@ dav_mkcol(struct mg_connection *conn, const char *path)
 	}
 
 	rc = mg_mkdir(conn, path, 0755);
+	DEBUG_TRACE("mkdir %s: %i", path, rc);
 	if (rc == 0) {
 		/* Create 201 "Created" response */
 		mg_response_header_start(conn, 201);
@@ -11966,6 +11969,7 @@ dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
 	}
 
 	/* Copy / Move / Rename operation. */
+	DEBUG_TRACE("%s %s to %s", (do_copy ? "copy" : "move"), path, dest_path);
 #if defined(_WIN32)
 	{
 		/* For Windows, we need to convert from UTF-8 to UTF-16 first. */
@@ -12049,6 +12053,8 @@ put_file(struct mg_connection *conn, const char *path)
 	if (conn == NULL) {
 		return;
 	}
+
+	DEBUG_TRACE("store %s", path);
 
 	if (mg_stat(conn, path, &file.stat)) {
 		/* File already exists */
@@ -12178,6 +12184,8 @@ delete_file(struct mg_connection *conn, const char *path)
 		                   path);
 		return;
 	}
+
+	DEBUG_TRACE("delete %s", path);
 
 	if (de.file.is_directory) {
 		if (remove_directory(conn, path)) {
@@ -14589,14 +14597,6 @@ handle_request(struct mg_connection *conn)
 
 	path[0] = 0;
 
-	/*
-	OutputDebugStringA("REQUEST: ");
-	OutputDebugStringA(ri->request_method);
-	OutputDebugStringA(" ");
-	OutputDebugStringA(ri->request_uri);
-	OutputDebugStringA("\n");
-	*/
-
 	/* 0. Reset internal state (required for HTTP/2 proxy) */
 	conn->request_state = 0;
 
@@ -14676,11 +14676,13 @@ handle_request(struct mg_connection *conn)
 			if (!conn->must_close) {
 				discard_unread_request_data(conn);
 			}
+			DEBUG_TRACE("%s", "begin_request handled request");
 			return;
 		} else if (i == 0) {
 			/* civetweb should process the request */
 		} else {
 			/* unspecified - may change with the next version */
+			DEBUG_TRACE("%s", "done (undocumented behavior)");
 			return;
 		}
 	}
@@ -14749,8 +14751,8 @@ handle_request(struct mg_connection *conn)
 				}
 			}
 			mg_printf(conn, "Access-Control-Max-Age: 60\r\n");
-
 			mg_printf(conn, "\r\n");
+			DEBUG_TRACE("%s", "OPTIONS done");
 			return;
 		}
 	}
@@ -14820,6 +14822,7 @@ handle_request(struct mg_connection *conn)
 			                   405,
 			                   "%s method not allowed",
 			                   conn->request_info.request_method);
+			DEBUG_TRACE("%s", "webdav rejected");
 			return;
 		}
 	}
@@ -14841,7 +14844,7 @@ handle_request(struct mg_connection *conn)
 
 			/* Callback handler will not be used anymore. Release it */
 			release_handler_ref(conn, handler_info);
-
+			DEBUG_TRACE("%s", "auth handler rejected request");
 			return;
 		}
 	} else if (is_put_or_delete_request && !is_script_resource
@@ -14863,6 +14866,7 @@ handle_request(struct mg_connection *conn)
 			                   405,
 			                   "%s method not allowed",
 			                   conn->request_info.request_method);
+			DEBUG_TRACE("%s", "all file based requests rejected");
 			return;
 		}
 
@@ -14872,6 +14876,7 @@ handle_request(struct mg_connection *conn)
 		 */
 		if (!is_authorized_for_put(conn)) {
 			send_authorization_request(conn, NULL);
+			DEBUG_TRACE("%s", "file write needs authorization");
 			return;
 		}
 #endif
@@ -14885,7 +14890,7 @@ handle_request(struct mg_connection *conn)
 
 			/* Callback handler will not be used anymore. Release it */
 			release_handler_ref(conn, handler_info);
-
+			DEBUG_TRACE("%s", "access authorization required");
 			return;
 		}
 	}
@@ -14953,6 +14958,7 @@ handle_request(struct mg_connection *conn)
 			                         callback_data);
 #endif
 		}
+		DEBUG_TRACE("%s", "websocket handling done");
 		return;
 	}
 
@@ -14980,6 +14986,7 @@ handle_request(struct mg_connection *conn)
 		} else {
 			mg_send_http_error(conn, 404, "%s", "Not found");
 		}
+		DEBUG_TRACE("%s", "websocket script done");
 		return;
 	} else
 #endif
@@ -14995,6 +15002,7 @@ handle_request(struct mg_connection *conn)
 	 * by a script file. Thus, a DOCUMENT_ROOT must exist. */
 	if (conn->dom_ctx->config[DOCUMENT_ROOT] == NULL) {
 		mg_send_http_error(conn, 404, "%s", "Not Found");
+		DEBUG_TRACE("%s", "no document root available");
 		return;
 	}
 
@@ -15002,8 +15010,12 @@ handle_request(struct mg_connection *conn)
 	if (is_script_resource) {
 		HTTP1_only;
 		handle_file_based_request(conn, path, &file);
+		DEBUG_TRACE("%s", "script handling done");
 		return;
 	}
+
+	/* Request was not handled by a callback or script. It will be
+	 * handled by a server internal method. */
 
 	/* 11. Handle put/delete/mkcol requests */
 	if (is_put_or_delete_request) {
@@ -15011,40 +15023,64 @@ handle_request(struct mg_connection *conn)
 		/* 11.1. PUT method */
 		if (!strcmp(ri->request_method, "PUT")) {
 			put_file(conn, path);
+			DEBUG_TRACE("handling %s request to %s done",
+			            ri->request_method,
+			            path);
 			return;
 		}
 		/* 11.2. DELETE method */
 		if (!strcmp(ri->request_method, "DELETE")) {
 			delete_file(conn, path);
+			DEBUG_TRACE("handling %s request to %s done",
+			            ri->request_method,
+			            path);
 			return;
 		}
 		/* 11.3. MKCOL method */
 		if (!strcmp(ri->request_method, "MKCOL")) {
 			dav_mkcol(conn, path);
+			DEBUG_TRACE("handling %s request to %s done",
+			            ri->request_method,
+			            path);
 			return;
 		}
 		/* 11.4. MOVE method */
 		if (!strcmp(ri->request_method, "MOVE")) {
 			dav_move_file(conn, path, 0);
+			DEBUG_TRACE("handling %s request to %s done",
+			            ri->request_method,
+			            path);
 			return;
 		}
 		if (!strcmp(ri->request_method, "COPY")) {
 			dav_move_file(conn, path, 1);
+			DEBUG_TRACE("handling %s request to %s done",
+			            ri->request_method,
+			            path);
 			return;
 		}
 		/* 11.5. LOCK method */
 		if (!strcmp(ri->request_method, "LOCK")) {
 			dav_lock_file(conn, path);
+			DEBUG_TRACE("handling %s request to %s done",
+			            ri->request_method,
+			            path);
 			return;
 		}
 		/* 11.6. UNLOCK method */
 		if (!strcmp(ri->request_method, "UNLOCK")) {
 			dav_unlock_file(conn, path);
+			DEBUG_TRACE("handling %s request to %s done",
+			            ri->request_method,
+			            path);
 			return;
 		}
 		/* 11.7. PROPPATCH method */
 		if (!strcmp(ri->request_method, "PROPPATCH")) {
 			dav_proppatch(conn, path);
+			DEBUG_TRACE("handling %s request to %s done",
+			            ri->request_method,
+			            path);
 			return;
 		}
 		/* 11.8. Other methods, e.g.: PATCH
@@ -15054,6 +15090,9 @@ handle_request(struct mg_connection *conn)
 		                   405,
 		                   "%s method not allowed",
 		                   conn->request_info.request_method);
+		DEBUG_TRACE("method %s on %s is not supported",
+		            ri->request_method,
+		            path);
 		return;
 	}
 
@@ -15061,6 +15100,9 @@ handle_request(struct mg_connection *conn)
 	 * hidden */
 	if (!is_found || (must_hide_file(conn, path))) {
 		mg_send_http_error(conn, 404, "%s", "Not found");
+		DEBUG_TRACE("handling %s request to %s: file not found",
+		            ri->request_method,
+		            path);
 		return;
 	}
 
@@ -15087,6 +15129,9 @@ handle_request(struct mg_connection *conn)
 			mg_send_http_redirect(conn, new_path, 301);
 			mg_free(new_path);
 		}
+		DEBUG_TRACE("%s request to %s: directory redirection sent",
+		            ri->request_method,
+		            path);
 		return;
 	}
 
@@ -15094,6 +15139,7 @@ handle_request(struct mg_connection *conn)
 	/* 13.1. Handle PROPFIND */
 	if (!strcmp(ri->request_method, "PROPFIND")) {
 		handle_propfind(conn, path, &file.stat);
+		DEBUG_TRACE("handling %s request to %s done", ri->request_method, path);
 		return;
 	}
 	/* 13.2. Handle OPTIONS for files */
@@ -15104,6 +15150,7 @@ handle_request(struct mg_connection *conn)
 		 * Lua and CGI scripts may fully support CORS this way (including
 		 * preflights). */
 		send_options(conn);
+		DEBUG_TRACE("handling %s request to %s done", ri->request_method, path);
 		return;
 	}
 	/* 13.3. everything but GET and HEAD (e.g. POST) */
@@ -15113,6 +15160,7 @@ handle_request(struct mg_connection *conn)
 		                   405,
 		                   "%s method not allowed",
 		                   conn->request_info.request_method);
+		DEBUG_TRACE("handling %s request to %s done", ri->request_method, path);
 		return;
 	}
 
@@ -15130,6 +15178,7 @@ handle_request(struct mg_connection *conn)
 			                   "%s",
 			                   "Error: Directory listing denied");
 		}
+		DEBUG_TRACE("handling %s request to %s done", ri->request_method, path);
 		return;
 	}
 
@@ -15137,6 +15186,9 @@ handle_request(struct mg_connection *conn)
 	if (is_template_text_file) {
 		HTTP1_only;
 		handle_file_based_request(conn, path, &file);
+		DEBUG_TRACE("handling %s request to %s done (template)",
+		            ri->request_method,
+		            path);
 		return;
 	}
 
@@ -15145,12 +15197,18 @@ handle_request(struct mg_connection *conn)
 	if ((!conn->in_error_handler) && is_not_modified(conn, &file.stat)) {
 		/* Send 304 "Not Modified" - this must not send any body data */
 		handle_not_modified_static_file_request(conn, &file);
+		DEBUG_TRACE("handling %s request to %s done (not modified)",
+		            ri->request_method,
+		            path);
 		return;
 	}
 #endif /* !NO_CACHING */
 
 	/* 17. Static file - not cached */
 	handle_static_file_request(conn, path, &file, NULL, NULL);
+	DEBUG_TRACE("handling %s request to %s done (static)",
+	            ri->request_method,
+	            path);
 
 #endif /* !defined(NO_FILES) */
 }
