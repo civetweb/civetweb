@@ -39,6 +39,7 @@ endmacro(REMOVE_DUPLICATE_PATHS)
 
 set(WINSOCK_INCLUDE_PATHS "${WINSOCK_ROOT}/include/")
 if(MINGW)
+  file(TOUCH ${CMAKE_BINARY_DIR}/nul)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} -xc -E -v -
     RESULT_VARIABLE RESULT
@@ -71,7 +72,9 @@ if(MINGW)
   )
   if (NOT RESULT)
     string(REGEX MATCH "libraries: =([^\r\n]*)" OUT "${OUT}")
-    list(APPEND WINSOCK_LIBRARY_PATHS "${CMAKE_MATCH_1}")
+    string(REPLACE ":" ";" _WINSOCK_LIBRARY_PATH "${CMAKE_MATCH_1}")
+    list(APPEND WINSOCK_LIBRARY_PATHS "${_WINSOCK_LIBRARY_PATH}")
+    unset(_WINSOCK_LIBRARY_PATH)
   endif()
 endif()
 if ("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "AMD64" AND "${CMAKE_SIZEOF_VOID_P}" EQUAL 4)
