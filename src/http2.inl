@@ -654,7 +654,7 @@ hpack_getnum(const uint8_t *buf,
  * the encoded string.
  */
 static char *
-hpack_decode(const uint8_t *buf, int *i, struct mg_context *ctx)
+hpack_decode(const uint8_t *buf, int *i, int max_i, struct mg_context *ctx)
 {
 	uint64_t byte_len64;
 	int byte_len;
@@ -669,6 +669,11 @@ hpack_decode(const uint8_t *buf, int *i, struct mg_context *ctx)
 	}
 	byte_len = (int)byte_len64;
 	bit_len = byte_len * 8;
+
+	/* check size */
+	if ((*i) + byte_len > max_i) {
+		return NULL;
+	}
 
 	/* Now read the string */
 	if (!is_huff) {
@@ -717,6 +722,10 @@ hpack_decode(const uint8_t *buf, int *i, struct mg_context *ctx)
 					bytesStored++;
 					break;
 				}
+			}
+			if (bytesStored == sizeof(str)) {
+				/* too long */
+				return 0;
 			}
 		}
 	}
@@ -1420,8 +1429,13 @@ handle_http2(struct mg_connection *conn)
 				/* Get Header name "key" */
 				if (idx == 0) {
 					/* Index 0: Header name encoded in following bytes */
-					key = hpack_decode(buf, &i, conn->phys_ctx);
+					key =
+					    hpack_decode(buf, &i, (int)bytes_read, conn->phys_ctx);
 					CHECK_LEAK_HDR_ALLOC(key);
+					if (!key) {
+						DEBUG_TRACE("HTTP2 key decoding error");
+						goto clean_http2;
+					}
 				} else if (/*(idx >= 15) &&*/ (idx <= 61)) {
 					/* Take key name from predefined header table */
 					key = mg_strdup_ctx(hpack_predefined[idx].name,
@@ -1480,8 +1494,16 @@ handle_http2(struct mg_connection *conn)
 
 				} else {
 					/* Read value from HTTP2 stream */
-					val = hpack_decode(buf, &i, conn->phys_ctx); /* leak? */
+					val = hpack_decode(buf,
+					                   &i,
+					                   (int)bytes_read,
+					                   conn->phys_ctx); /* leak? */
 					CHECK_LEAK_HDR_ALLOC(val);
+					if (!val) {
+						DEBUG_TRACE("HTTP2 value decoding error");
+						mg_free((void *)key);
+						goto clean_http2;
+					}
 
 					if (indexing) {
 						/* Add to index */
