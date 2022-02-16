@@ -2687,7 +2687,7 @@ civetweb_open_lua_libs(lua_State *L)
 #endif
 #if defined(USE_LUA_STRUCT)
 	{
-		int luaopen_struct(lua_State *L);
+		int luaopen_struct(lua_State * L);
 		luaopen_struct(L);
 	}
 #endif
