@@ -26,6 +26,7 @@ cp src/md5.inl cov_build/src/
 cp src/sha1.inl cov_build/src/
 cp src/response.inl cov_build/src/
 cp src/timer.inl cov_build/src/
+cp src/http2.inl cov_build/src/
 cp src/handle_form.inl cov_build/src/
 cp src/openssl_dl.inl cov_build/src/
 cp include/civetweb.h cov_build/include/
@@ -34,7 +35,7 @@ cp resources/Makefile.in-os cov_build/resources/
 cd cov_build
 
 # new scan build
-~/cov-analysis-linux64-2019.03/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_SERVER_STATS=1 WITH_EXPERIMENTAL=1
+~/cov-analysis-linux64-2021.12.1/bin/cov-build  --dir cov-int make WITH_IPV6=1 WITH_WEBSOCKET=1 WITH_SERVER_STATS=1 WITH_HTTP2=1 WITH_EXPERIMENTAL=1
 
 
 # pack build results for upload

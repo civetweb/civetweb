@@ -3664,6 +3664,7 @@ mg_construct_local_link(const struct mg_connection *conn,
 			            server_name,
 			            ri->local_uri);
 			default_port = 0;
+			mg_free(uri_encoded);
 			return 0;
 		}
 #endif
@@ -3728,6 +3729,7 @@ mg_construct_local_link(const struct mg_connection *conn,
 			            portstr,
 			            uri_encoded);
 
+			mg_free(uri_encoded);
 			if (truncated) {
 				return -1;
 			}
@@ -11957,7 +11959,14 @@ dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
 		/* File exists */
 		if (do_overwrite) {
 			/* Overwrite allowed: delete the file first */
-			remove(dest_path);
+			if (0 != remove(dest_path)) {
+				/* No overwrite: return error */
+				mg_send_http_error(conn,
+				                   403,
+				                   "Cannot overwrite file: %s",
+				                   dest_path);
+				return;
+			}
 		} else {
 			/* No overwrite: return error */
 			mg_send_http_error(conn,
@@ -12143,7 +12152,13 @@ put_file(struct mg_connection *conn, const char *path)
 	r1 = r2 = 0;
 	if ((range != NULL) && parse_range_header(range, &r1, &r2) > 0) {
 		conn->status_code = 206; /* Partial content */
-		fseeko(file.access.fp, r1, SEEK_SET);
+		if (0 != fseeko(file.access.fp, r1, SEEK_SET)) {
+			mg_send_http_error(conn,
+			                   500,
+			                   "Error: Internal error processing file %s",
+			                   path);
+			return;
+		}
 	}
 
 	if (!forward_body_data(conn, file.access.fp, INVALID_SOCKET, NULL)) {
@@ -12823,12 +12838,15 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 static void
 dav_unlock_file(struct mg_connection *conn, const char *path)
 {
+	/* internal function - therefore conn is assumed to be valid */
 	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
 	struct twebdav_lock *dav_lock = conn->phys_ctx->webdav_lock;
 	int lock_index;
-	if (!conn || !path || !conn->dom_ctx || !conn->request_info.remote_user) {
+
+	if (!path || !conn->dom_ctx || !conn->request_info.remote_user) {
 		return;
 	}
+
 	mg_get_request_link(conn, link_buf, sizeof(link_buf));
 
 	mg_lock_context(conn->phys_ctx);

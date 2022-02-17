@@ -838,12 +838,8 @@ static int
 is_valid_http2_primer(struct mg_connection *conn)
 {
 	size_t pri_len = http2_pri_len;
-	char buf[32];
+	char buf[32]; /* Buffer must hold 24 bytes primer */
 
-	if (pri_len > sizeof(buf)) {
-		/* Should never be reached - the RFC primer has 24 bytes */
-		return 0;
-	}
 	int read_pri_len = mg_read(conn, buf, pri_len);
 	if ((read_pri_len != (int)pri_len)
 	    || (0 != memcmp(buf, http2_pri, pri_len))) {
