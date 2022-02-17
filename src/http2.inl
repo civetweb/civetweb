@@ -829,7 +829,7 @@ hpack_encode(uint8_t *store, const char *load, int lower)
 
 
 static const char http2_pri[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
-static unsigned char http2_pri_len = 24; /* = strlen(http2_pri) */
+static const unsigned char http2_pri_len = 24; /* = strlen(http2_pri) */
 
 
 /* Read and check the HTTP/2 primer/preface:
@@ -841,10 +841,16 @@ is_valid_http2_primer(struct mg_connection *conn)
 	char buf[32]; /* Buffer must hold 24 bytes primer */
 
 	int read_pri_len = mg_read(conn, buf, pri_len);
-	if ((read_pri_len != (int)pri_len)
-	    || (0 != memcmp(buf, http2_pri, pri_len))) {
+	if (read_pri_len != (int)pri_len) {
+		/* Size does not match.
+		 * This includes cases where mg_read returns error codes */
 		return 0;
 	}
+	if (0 != memcmp(buf, http2_pri, pri_len)) {
+		/* Primer does not match */
+		return 0;
+	}
+	/* Primer does match */
 	return 1;
 }
 
