@@ -1521,6 +1521,7 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
  *  -1:    parameter error
  *  -2:    invalid connection type
  *  -3:    invalid connection status
+ *  -4:    network error (only if built with NO_RESPONSE_BUFFERING)
  */
 CIVETWEB_API int mg_response_header_start(struct mg_connection *conn,
                                           int status);
@@ -1573,6 +1574,7 @@ CIVETWEB_API int mg_response_header_add_lines(struct mg_connection *conn,
  *  -1:    parameter error
  *  -2:    invalid connection type
  *  -3:    invalid connection status
+ *  -4:    sending failed (network error)
  */
 CIVETWEB_API int mg_response_header_send(struct mg_connection *conn);
 

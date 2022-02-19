@@ -10771,6 +10771,10 @@ static const struct mg_http_method_info http_methods[] = {
 };
 
 
+/* All method names */
+static char *all_methods = NULL; /* Built by mg_init_library */
+
+
 static const struct mg_http_method_info *
 get_http_method_info(const char *method)
 {
@@ -12528,10 +12532,7 @@ handle_ssi_file_request(struct mg_connection *conn,
 static void
 send_options(struct mg_connection *conn)
 {
-	int i;
-	char methods[256] = {0};
-
-	if (!conn) {
+	if (!conn || !all_methods) {
 		return;
 	}
 
@@ -12542,18 +12543,9 @@ send_options(struct mg_connection *conn)
 	mg_response_header_start(conn, 200);
 	mg_response_header_add(conn, "Content-Type", "text/html", -1);
 
-	for (i = 0; http_methods[i].name != NULL; i++) {
-		if (i > 0) {
-			strcat(methods, ", ");
-			strcat(methods, http_methods[i].name);
-		} else {
-			strcpy(methods, http_methods[i].name);
-		}
-	}
-
 	if (conn->protocol_type == PROTOCOL_TYPE_HTTP1) {
 		/* Use the same as before */
-		mg_response_header_add(conn, "Allow", methods, -1);
+		mg_response_header_add(conn, "Allow", all_methods, -1);
 		mg_response_header_add(conn, "DAV", "1", -1);
 	} else {
 		/* TODO: Check this later for HTTP/2 */
@@ -12710,6 +12702,7 @@ handle_propfind(struct mg_connection *conn,
 static void
 dav_lock_file(struct mg_connection *conn, const char *path)
 {
+	/* internal function - therefore conn is assumed to be valid */
 	char link_buf[UTF8_PATH_MAX * 2]; /* Path + server root */
 	uint64_t new_locktime;
 	int lock_index = -1;
@@ -12718,7 +12711,7 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 	    (uint64_t)(LOCK_DURATION_S) * (uint64_t)1000000000;
 	struct twebdav_lock *dav_lock = conn->phys_ctx->webdav_lock;
 
-	if (!conn || !path || !conn->dom_ctx || !conn->request_info.remote_user) {
+	if (!path || !conn->dom_ctx || !conn->request_info.remote_user) {
 		return;
 	}
 	mg_get_request_link(conn, link_buf, sizeof(link_buf));
@@ -22095,6 +22088,8 @@ mg_init_library(unsigned features)
 	mg_global_lock();
 
 	if (mg_init_library_called <= 0) {
+		int i, len;
+
 #if defined(_WIN32)
 		int file_mutex_init = 1;
 		int wsa = 1;
@@ -22147,13 +22142,35 @@ mg_init_library(unsigned features)
 #if defined(USE_LUA)
 		lua_init_optional_libraries();
 #endif
-	}
 
-	mg_global_unlock();
+		len = 1;
+		for (i = 0; http_methods[i].name != NULL; i++) {
+			size_t sl = strlen(http_methods[i].name);
+			len += (int)sl;
+			if (i > 0) {
+				len += 2;
+			}
+		}
+		all_methods = mg_malloc(len);
+		if (!all_methods) {
+			/* Must never happen */
+			return 0;
+		}
+		all_methods[0] = 0;
+		for (i = 0; http_methods[i].name != NULL; i++) {
+			if (i > 0) {
+				strcat(all_methods, ", ");
+				strcat(all_methods, http_methods[i].name);
+			} else {
+				strcpy(all_methods, http_methods[i].name);
+			}
+		}
+	}
 
 #if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)                      \
      || defined(OPENSSL_API_3_0))                                              \
     && !defined(NO_SSL)
+
 	if (features_to_init & MG_FEATURES_SSL) {
 		if (!mg_openssl_initialized) {
 			char ebuf[128];
@@ -22168,9 +22185,9 @@ mg_init_library(unsigned features)
 			/* ssl already initialized */
 		}
 	}
+
 #endif
 
-	mg_global_lock();
 	if (mg_init_library_called <= 0) {
 		mg_init_library_called = 1;
 	} else {
@@ -22213,6 +22230,8 @@ mg_exit_library(void)
 #if defined(USE_LUA)
 		lua_exit_optional_libraries();
 #endif
+		mg_free(all_methods);
+		all_methods = NULL;
 
 		mg_global_unlock();
 		(void)pthread_mutex_destroy(&global_lock_mutex);

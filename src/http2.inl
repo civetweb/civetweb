@@ -960,7 +960,7 @@ http2_send_response_headers(struct mg_connection *conn)
 	uint16_t header_len = 0;
 	int has_date = 0;
 	int has_connection_header = 0;
-	int i;
+	int i, ok;
 
 	if ((conn->status_code < 100) || (conn->status_code > 999)) {
 		/* Invalid status: Set status to "Internal Server Error" */
@@ -1069,16 +1069,23 @@ http2_send_response_headers(struct mg_connection *conn)
 	http2_header_frame[8] = (conn->http2.stream_id & 0xFFu);
 
 	/* Send header frame */
-	mg_xwrite(conn, http2_header_frame, 9);
-	mg_xwrite(conn, header_bin, header_len);
-
-	DEBUG_TRACE("HTTP2 response header sent: stream %u", conn->http2.stream_id);
-
+	ok = 1;
+	if (mg_xwrite(conn, http2_header_frame, 9) != 9) {
+		ok = 0;
+	} else if (mg_xwrite(conn, header_bin, header_len) != header_len) {
+		ok = 0;
+	}
+	if (ok) {
+		DEBUG_TRACE("HTTP2 response header sent: stream %u",
+		            conn->http2.stream_id);
+	} else {
+		DEBUG_TRACE("HTTP2 response header sending error: stream %u",
+		            conn->http2.stream_id);
+	}
 
 	(void)has_connection_header; /* ignore for the moment */
 
-
-	return 42; /* TODO */
+	return ok;
 }
 
 
