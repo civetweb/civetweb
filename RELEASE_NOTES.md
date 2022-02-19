@@ -418,7 +418,7 @@ Changes
 -------
 
 - Corrected bad mask flag/opcode passing to websocket callback (William Greathouse)
-- Moved CEVITWEB_VERSION define into civetweb.h
+- Moved CIVETWEB_VERSION define into civetweb.h
 - Added new simple zip deployment build for Windows.
 - Removed windows install package build.
 - Fixes page violation in mod_lua.inl (apkbox)
