@@ -1998,6 +1998,7 @@ enum {
 	ENABLE_AUTH_DOMAIN_CHECK,
 	SSI_EXTENSIONS,
 	ENABLE_DIRECTORY_LISTING,
+	ENABLE_WEBDAV,
 	GLOBAL_PASSWORDS_FILE,
 	INDEX_FILES,
 	ACCESS_CONTROL_LIST,
@@ -2142,7 +2143,8 @@ static const struct mg_option config_options[] = {
     {"enable_auth_domain_check", MG_CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.shtml$|**.shtm$"},
     {"enable_directory_listing", MG_CONFIG_TYPE_BOOLEAN, "yes"},
-    {"global_auth_file", MG_CONFIG_TYPE_FILE, NULL},
+	{"enable_webdav", MG_CONFIG_TYPE_BOOLEAN, "no" },
+	{"global_auth_file", MG_CONFIG_TYPE_FILE, NULL},
     {"index_files",
      MG_CONFIG_TYPE_STRING_LIST,
 #if defined(USE_LUA)
@@ -14827,8 +14829,8 @@ handle_request(struct mg_connection *conn)
 	/* 5.3. A webdav request (PROPFIND/PROPPATCH/LOCK/UNLOCK) */
 	if (is_webdav_request) {
 		/* TODO: Do we need a config option? */
-		int webdav_not_allowed = 0;
-		if (webdav_not_allowed) {
+		const char *webdav_enable = conn->dom_ctx->config[ENABLE_WEBDAV];
+		if (webdav_enable[0]!='y') {
 			mg_send_http_error(conn,
 			                   405,
 			                   "%s method not allowed",

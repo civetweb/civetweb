@@ -320,6 +320,11 @@ but this configuration is redundant. In a future version, the keep\_alive
 configuration option might be removed and automatically set to `yes` if
 a timeout > 0 is set.
 
+### enable\_webdav `no`
+Set this configuration option to `yes` to handle WebDAV specific HTTP methods:
+PROPFIND, PROPPATCH, LOCK, UNLOCK, MOVE, COPY.
+These methods are not allowed if the configuration option is set to `no`.
+
 ### enable\_websocket\_ping\_pong `no`
 If this configuration value is set to `yes`, the server will send a
 websocket PING message to a websocket client, once the timeout set by
