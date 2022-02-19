@@ -17,6 +17,7 @@ addons:
       - cmake
       - openssl
       - libssl-dev
+      - gdb
     sources:
       - kubuntu-backports
 
@@ -120,6 +121,12 @@ before_script:
     ${ADDITIONAL_CMAKE_ARGS}
     ..
   - ls -la
+  - ulimit -c unlimited -S
+
+after_failure:
+  - COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1) # find core file
+  - if [[ -f "$COREFILE" ]]; then gdb -c "$COREFILE" example -ex "thread apply all bt" -ex "set pagination 0" -batch; fi
+
 
 # Modifications due to Travis IPv6 issues:
 # https://github.com/travis-ci/travis-ci/issues/8711
