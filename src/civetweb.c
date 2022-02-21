@@ -581,21 +581,6 @@ typedef const char *SOCK_OPT_TYPE;
 #endif
 #endif /* _MSC_VER */
 
-/* mg_qsort */
-#if defined(_MSC_VER)
-/* Windoes uses qsort_s instead of qsort_r */
-#define mg_qsort(base, num, with, comp, arg)                                   \
-	qsort_s(base,                                                              \
-	        num,                                                               \
-	        with,                                                              \
-	        (int(__cdecl *)(void *, const void *, const void *))comp,          \
-	        arg)
-#elif defined(__linux__)
-#define mg_qsort(base, num, with, comp, arg) qsort_r(base, num, with, comp, arg)
-#else
-#define mg_qsort(base, num, with, comp, arg)
-#endif
-
 
 #define ERRNO ((int)(GetLastError()))
 #define NO_SOCKLEN_T
@@ -9850,6 +9835,25 @@ dir_scan_callback(struct de *de, void *data)
 }
 
 
+typedef void (*tsortfunc)(const void *data1, const void *data2, void *userarg);
+
+static void
+mg_sort(void *data,
+        size_t elemcount,
+        size_t elemsize,
+        tsortfunc sortfunc,
+        void *userarg)
+{
+	/* Do nothing and check if this is the reason for our MacOS crash. This
+	 * could be because of a different order of arguments for qsort_r between
+	 * Linux and MacOS:
+	 * https://stackoverflow.com/questions/39560773/different-declarations-of-qsort-r-on-mac-and-linux
+	 * Anyway: Why sort at server side if this could be done on client side in
+	 * Javascript as well?
+	 */
+}
+
+
 static void
 handle_directory_request(struct mg_connection *conn, const char *dir)
 {
@@ -9943,11 +9947,11 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 
 	/* Sort and print directory entries */
 	if (data.entries != NULL) {
-		mg_qsort(data.entries,
-		         data.num_entries,
-		         sizeof(data.entries[0]),
-		         compare_dir_entries,
-		         (void *)conn->request_info.query_string);
+		mg_sort(data.entries,
+		        data.num_entries,
+		        sizeof(data.entries[0]),
+		        compare_dir_entries,
+		        (void *)conn->request_info.query_string);
 		for (i = 0; i < data.num_entries; i++) {
 			print_dir_entry(conn, &data.entries[i]);
 			mg_free(data.entries[i].file_name);
