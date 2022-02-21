@@ -591,8 +591,8 @@ typedef const char *SOCK_OPT_TYPE;
 	        (int(__cdecl *)(void *, const void *, const void *))comp,          \
 	        arg)
 #elif defined(__linux__)
-#define mg_qsort(base, num, with, comp, arg)                                   \
-	qsort_r(base, num, with, comp, arg) #else
+#define mg_qsort(base, num, with, comp, arg) qsort_r(base, num, with, comp, arg)
+#else
 #define mg_qsort(base, num, with, comp, arg)
 #endif
 
