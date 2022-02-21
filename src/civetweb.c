@@ -579,13 +579,23 @@ typedef const char *SOCK_OPT_TYPE;
 #define strtoull(x, y, z) (_strtoui64(x, y, z))
 #define strtoll(x, y, z) (_strtoi64(x, y, z))
 #endif
-#define qsort_r(base, num, with, comp, arg)                                    \
+#endif /* _MSC_VER */
+
+/* mg_qsort */
+#if defined(_MSC_VER)
+/* Windoes uses qsort_s instead of qsort_r */
+#define mg_qsort(base, num, with, comp, arg)                                   \
 	qsort_s(base,                                                              \
 	        num,                                                               \
 	        with,                                                              \
 	        (int(__cdecl *)(void *, const void *, const void *))comp,          \
 	        arg)
-#endif /* _MSC_VER */
+#elif defined(__linux__)
+#define mg_qsort(base, num, with, comp, arg)                                   \
+	qsort_r(base, num, with, comp, arg) #else
+#define mg_qsort(base, num, with, comp, arg)
+#endif
+
 
 #define ERRNO ((int)(GetLastError()))
 #define NO_SOCKLEN_T
@@ -2143,8 +2153,8 @@ static const struct mg_option config_options[] = {
     {"enable_auth_domain_check", MG_CONFIG_TYPE_BOOLEAN, "yes"},
     {"ssi_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.shtml$|**.shtm$"},
     {"enable_directory_listing", MG_CONFIG_TYPE_BOOLEAN, "yes"},
-	{"enable_webdav", MG_CONFIG_TYPE_BOOLEAN, "no" },
-	{"global_auth_file", MG_CONFIG_TYPE_FILE, NULL},
+    {"enable_webdav", MG_CONFIG_TYPE_BOOLEAN, "no"},
+    {"global_auth_file", MG_CONFIG_TYPE_FILE, NULL},
     {"index_files",
      MG_CONFIG_TYPE_STRING_LIST,
 #if defined(USE_LUA)
@@ -9933,11 +9943,11 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 
 	/* Sort and print directory entries */
 	if (data.entries != NULL) {
-		qsort_r(data.entries,
-		        data.num_entries,
-		        sizeof(data.entries[0]),
-		        compare_dir_entries,
-		        (void *)conn->request_info.query_string);
+		mg_qsort(data.entries,
+		         data.num_entries,
+		         sizeof(data.entries[0]),
+		         compare_dir_entries,
+		         (void *)conn->request_info.query_string);
 		for (i = 0; i < data.num_entries; i++) {
 			print_dir_entry(conn, &data.entries[i]);
 			mg_free(data.entries[i].file_name);
@@ -14830,7 +14840,7 @@ handle_request(struct mg_connection *conn)
 	if (is_webdav_request) {
 		/* TODO: Do we need a config option? */
 		const char *webdav_enable = conn->dom_ctx->config[ENABLE_WEBDAV];
-		if (webdav_enable[0]!='y') {
+		if (webdav_enable[0] != 'y') {
 			mg_send_http_error(conn,
 			                   405,
 			                   "%s method not allowed",

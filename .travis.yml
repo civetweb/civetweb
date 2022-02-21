@@ -139,7 +139,7 @@ script:
       make -f Makefile.osx package;
     fi
   - if [ "${RUN_UNITTEST}" == "1" ]; then
-      CTEST_OUTPUT_ON_FAILURE=1  CK_FORK=no  make all test;
+      CTEST_OUTPUT_ON_FAILURE=1  CK_FORK=yes  make all test;
     fi
   - pwd
   - ls -la unittest
