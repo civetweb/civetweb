@@ -1687,10 +1687,78 @@ CIVETWEB_API int mg_get_connection_info(const struct mg_context *ctx,
    Note: Experimental interfaces may change
 */
 struct mg_error_data {
-	unsigned *code;          /* error code (number) */
+	unsigned *code;          /* buffer for error code (number) */
 	char *text;              /* buffer for error text */
 	size_t text_buffer_size; /* size of buffer of "text" */
 };
+
+
+/* Error codes in mg_error_data */
+enum {
+	/* No error */
+	MG_ERROR_DATA_CODE_OK = 0u,
+
+	/* Caller provided invalid parameter */
+	MG_ERROR_DATA_CODE_INVALID_PARAM = 1u,
+
+	/* "configuration_option" contains invalid element */
+	MG_ERROR_DATA_CODE_INVALID_OPTION = 2u,
+
+	/* Initializen TLS / SSL library failed */
+	MG_ERROR_DATA_CODE_INIT_TLS_FAILED = 3u,
+
+	/* Mandatory "configuration_option" missing */
+	MG_ERROR_DATA_CODE_MISSING_OPTION = 4u,
+
+	/* Duplicate "authentication_domain" option */
+	MG_ERROR_DATA_CODE_DUPLICATE_DOMAIN = 5u,
+
+	/* Not enough memory */
+	MG_ERROR_DATA_CODE_OUT_OF_MEMORY = 6u,
+
+	/* Server already stopped */
+	MG_ERROR_DATA_CODE_SERVER_STOPPED = 7u,
+
+	/* mg_init_library must be called first */
+	MG_ERROR_DATA_CODE_INIT_LIBRARY_FAILED = 8u,
+
+	/* Operating system function failed */
+	MG_ERROR_DATA_CODE_OS_ERROR = 9u,
+
+	/* Failed to bind to server ports */
+	MG_ERROR_DATA_CODE_INIT_PORTS_FAILED = 10u,
+
+	/* Failed to switch user (option "run_as_user") */
+	MG_ERROR_DATA_CODE_INIT_USER_FAILED = 11u,
+
+	/* Access Control List error */
+	MG_ERROR_DATA_CODE_INIT_ACL_FAILED = 12u,
+
+	/* Global password file error */
+	MG_ERROR_DATA_CODE_INVALID_PASS_FILE = 13u,
+
+	/* Lua background script init error */
+	MG_ERROR_DATA_CODE_SCRIPT_ERROR = 14u,
+
+	/* Client: Host not found, invalid IP to connect */
+	MG_ERROR_DATA_CODE_HOST_NOT_FOUND = 15u,
+
+	/* Client: TCP connect timeout */
+	MG_ERROR_DATA_CODE_CONNECT_TIMEOUT = 16u,
+
+	/* Client: TCP connect failed */
+	MG_ERROR_DATA_CODE_CONNECT_FAILED = 17u,
+
+	/* Error using TLS client certificate */
+	MG_ERROR_DATA_CODE_TLS_CLIENT_CERT_ERROR = 18u,
+
+	/* Error setting trusted TLS server certificate for client connection */
+	MG_ERROR_DATA_CODE_TLS_SERVER_CERT_ERROR = 19u,
+
+	/* Error establishing TLS connection to HTTPS server */
+	MG_ERROR_DATA_CODE_TLS_CONNECT_ERROR = 20u
+};
+
 
 struct mg_init_data {
 	const struct mg_callbacks *callbacks; /* callback function pointer */
@@ -1707,20 +1775,20 @@ mg_connect_client2(const char *host,
                    int port,
                    const char *path,
                    struct mg_init_data *init,
-                   struct mg_error_data *error);
+                   const struct mg_error_data *error);
 
 CIVETWEB_API int mg_get_response2(struct mg_connection *conn,
-                                  struct mg_error_data *error,
+                                  const struct mg_error_data *error,
                                   int timeout);
 #endif
 
 
 CIVETWEB_API struct mg_context *mg_start2(struct mg_init_data *init,
-                                          struct mg_error_data *error);
+                                          const struct mg_error_data *error);
 
 CIVETWEB_API int mg_start_domain2(struct mg_context *ctx,
                                   const char **configuration_options,
-                                  struct mg_error_data *error);
+                                  const struct mg_error_data *error);
 
 
 #ifdef __cplusplus

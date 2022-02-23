@@ -359,10 +359,15 @@ static int
 lsp_connect(lua_State *L)
 {
 	int num_args = lua_gettop(L);
-	char ebuf[100];
+	struct mg_error_data error;
+	char ebuf[128];
 	SOCKET sock;
 	union usa sa;
 	int ok;
+
+	memset(&error, 0, sizeof(error));
+	error.text = ebuf;
+	error.text_buffer_size = sizeof(ebuf);
 
 	if ((num_args == 3) && lua_isstring(L, 1) && lua_isnumber(L, 2)
 	    && lua_isnumber(L, 3)) {
@@ -371,10 +376,9 @@ lsp_connect(lua_State *L)
 		const int port = (int)lua_tointeger(L, 2);
 		const int is_ssl = (int)lua_tointeger(L, 3);
 
-		ok = connect_socket(
-		    NULL, host, port, is_ssl, ebuf, sizeof(ebuf), &sock, &sa);
+		ok = connect_socket(NULL, host, port, is_ssl, &error, &sock, &sa);
 		if (!ok) {
-			return luaL_error(L, ebuf);
+			return luaL_error(L, error.text);
 		} else {
 			set_blocking_mode(sock);
 			lua_newtable(L);

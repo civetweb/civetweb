@@ -861,7 +861,7 @@ is_valid_http2_primer(struct mg_connection *conn)
 	         (conn)->client.sock,                                              \
 	         (conn)->ssl,                                                      \
 	         (const char *)(data),                                             \
-	         (int)(len));
+	         (int)(len))
 
 
 static void
