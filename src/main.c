@@ -177,14 +177,12 @@ extern char *_getcwd(char *buf, size_t size);
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
 struct tuser_data {
-	char *first_message;
+	int _unused;
 };
 
-
-/* Exit flag for the main loop (read and writen by different threads, thus
+/* Exit flag for the main loop (read and written by different threads, thus
  * volatile). */
 volatile int g_exit_flag = 0; /* 0 = continue running main loop */
-
 
 static char g_server_base_name[40]; /* Set by init_server_name() */
 
@@ -260,7 +258,7 @@ static NO_RETURN void
 die(const char *fmt, ...)
 {
 	va_list ap;
-	char msg[512] = "";
+	char msg[1024] = "";
 
 	va_start(ap, fmt);
 	(void)vsnprintf(msg, sizeof(msg) - 1, fmt, ap);
@@ -268,7 +266,7 @@ die(const char *fmt, ...)
 	va_end(ap);
 
 #if defined(_WIN32)
-	MessageBox(NULL, msg, "Error", MB_OK);
+	MessageBox(NULL, msg, "Error", MB_ICONERROR | MB_OK);
 #else
 	fprintf(stderr, "%s\n", msg);
 #endif
@@ -467,135 +465,6 @@ sdup(const char *str)
 	memcpy(p, str, len);
 	return p;
 }
-
-
-#if 0 /* Unused code from "string duplicate with escape" */
-static unsigned
-hex2dec(char x)
-{
-    if ((x >= '0') && (x <= '9')) {
-        return (unsigned)x - (unsigned)'0';
-    }
-    if ((x >= 'A') && (x <= 'F')) {
-        return (unsigned)x - (unsigned)'A' + 10u;
-    }
-    if ((x >= 'a') && (x <= 'f')) {
-        return (unsigned)x - (unsigned)'a' + 10u;
-    }
-    return 0;
-}
-
-
-static char *
-sdupesc(const char *str)
-{
-	char *p = sdup(str);
-
-	if (p) {
-		char *d = p;
-		while ((d = strchr(d, '\\')) != NULL) {
-			switch (d[1]) {
-			case 'a':
-				d[0] = '\a';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'b':
-				d[0] = '\b';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'e':
-				d[0] = 27;
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'f':
-				d[0] = '\f';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'n':
-				d[0] = '\n';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'r':
-				d[0] = '\r';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 't':
-				d[0] = '\t';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'u':
-				if (isxdigit(d[2]) && isxdigit(d[3]) && isxdigit(d[4])
-				    && isxdigit(d[5])) {
-					unsigned short u = (unsigned short)(hex2dec(d[2]) * 4096
-					                                    + hex2dec(d[3]) * 256
-					                                    + hex2dec(d[4]) * 16
-					                                    + hex2dec(d[5]));
-					char mbc[16];
-					int mbl = wctomb(mbc, (wchar_t)u);
-					if ((mbl > 0) && (mbl < 6)) {
-						memcpy(d, mbc, (unsigned)mbl);
-						memmove(d + mbl, d + 6, strlen(d + 5));
-						/* Advance mbl characters (+1 is below) */
-						d += (mbl - 1);
-					} else {
-						/* Invalid multi byte character */
-						/* TODO: define what to do */
-					}
-				} else {
-					/* Invalid esc sequence */
-					/* TODO: define what to do */
-				}
-				break;
-			case 'v':
-				d[0] = '\v';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'x':
-				if (isxdigit(d[2]) && isxdigit(d[3])) {
-					d[0] = (char)((unsigned char)(hex2dec(d[2]) * 16
-					                              + hex2dec(d[3])));
-					memmove(d + 1, d + 4, strlen(d + 3));
-				} else {
-					/* Invalid esc sequence */
-					/* TODO: define what to do */
-				}
-				break;
-			case 'z':
-				d[0] = 0;
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case '\\':
-				d[0] = '\\';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case '\'':
-				d[0] = '\'';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case '\"':
-				d[0] = '\"';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 0:
-				if (d == p) {
-					/* Line is only \ */
-					free(p);
-					return NULL;
-				}
-			/* no break */
-			default:
-				/* invalid ESC sequence */
-				/* TODO: define what to do */
-				break;
-			}
-
-			/* Advance to next character */
-			d++;
-		}
-	}
-	return p;
-}
-#endif
 
 
 static const char *
@@ -991,22 +860,6 @@ free_system_info(void)
 
 
 static int
-log_message(const struct mg_connection *conn, const char *message)
-{
-	const struct mg_context *ctx = mg_get_context(conn);
-	struct tuser_data *ud = (struct tuser_data *)mg_get_user_data(ctx);
-
-	fprintf(stderr, "%s\n", message);
-
-	if (ud->first_message == NULL) {
-		ud->first_message = sdup(message);
-	}
-
-	return 0;
-}
-
-
-static int
 is_path_absolute(const char *path)
 {
 #if defined(_WIN32)
@@ -1318,11 +1171,19 @@ sanitize_options(char *options[] /* server options */,
 }
 
 
+/* Forward declaration: */
+static void show_settings_dialog(void);
+
+
 static void
 start_civetweb(int argc, char *argv[])
 {
 	struct mg_callbacks callbacks;
 	char *options[2 * MAX_OPTIONS + 1];
+	struct mg_init_data init;
+	struct mg_error_data error;
+	char error_text[256];
+	unsigned error_code;
 	int i;
 
 	/* Start option -I:
@@ -1460,10 +1321,20 @@ start_civetweb(int argc, char *argv[])
 	/* Initialize user data */
 	memset(&g_user_data, 0, sizeof(g_user_data));
 
-	/* Start Civetweb */
 	memset(&callbacks, 0, sizeof(callbacks));
-	callbacks.log_message = &log_message;
-	g_ctx = mg_start(&callbacks, &g_user_data, (const char **)options);
+
+	memset(&init, 0, sizeof(init));
+	init.callbacks = &callbacks;
+	init.configuration_options = options;
+	init.user_data = &g_user_data;
+
+	memset(&error, 0, sizeof(error));
+	error.text = error_text;
+	error.text_buffer_size = sizeof(error_text);
+	error.code = &error_code;
+
+	/* Start Civetweb */
+	g_ctx = mg_start2(&init, &error);
 
 	/* mg_start copies all options to an internal buffer.
 	 * The options data field here is not required anymore. */
@@ -1473,11 +1344,31 @@ start_civetweb(int argc, char *argv[])
 
 	/* If mg_start fails, it returns NULL */
 	if (g_ctx == NULL) {
-		die("Failed to start %s:\n%s",
+#ifdef _WIN32
+		/* On Windows: provide option to edit configuration file. */
+		char errtxt[1024];
+		int ret;
+		sprintf(errtxt,
+		        "Failed to start %s with code %u:\n%s\n\nEdit settings?",
+		        g_server_name,
+		        error_code,
+		        error_text);
+		ret = MessageBox(NULL, errtxt, "Error", MB_ICONERROR | MB_YESNOCANCEL);
+		if (ret == IDYES) {
+			show_settings_dialog();
+
+			/* Hitting "save" will also restart the server. */
+			if (g_ctx != NULL) {
+				return;
+			}
+		}
+		exit(EXIT_FAILURE);
+#else
+		die("Failed to start %s with code %u:\n%s",
 		    g_server_name,
-		    ((g_user_data.first_message == NULL) ? "unknown reason"
-		                                         : g_user_data.first_message));
-		/* TODO: Edit file g_config_file_name */
+		    error_code,
+		    error_text);
+#endif
 	}
 
 #if defined(MG_EXPERIMENTAL_INTERFACES)
@@ -1517,8 +1408,6 @@ static void
 stop_civetweb(void)
 {
 	mg_stop(g_ctx);
-	free(g_user_data.first_message);
-	g_user_data.first_message = NULL;
 }
 
 
