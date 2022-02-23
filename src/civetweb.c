@@ -3972,43 +3972,66 @@ header_has_option(const char *header, const char *option)
 static ptrdiff_t
 match_prefix(const char *pattern, size_t pattern_len, const char *str)
 {
-	const char *or_str;
+	const char *or_str = (const char *)memchr(pattern, '|', pattern_len);
 	ptrdiff_t i, j, len, res;
 
-	if ((or_str = (const char *)memchr(pattern, '|', pattern_len)) != NULL) {
+	if (or_str != NULL) {
+		/* Split at | for alternative match */
 		res = match_prefix(pattern, (size_t)(or_str - pattern), str);
-		return (res > 0) ? res
-		                 : match_prefix(or_str + 1,
-		                                (size_t)((pattern + pattern_len)
-		                                         - (or_str + 1)),
-		                                str);
+		if (res > 0) {
+			return res;
+		}
+		return match_prefix(or_str + 1,
+		                    (size_t)((pattern + pattern_len) - (or_str + 1)),
+		                    str);
 	}
 
-	for (i = 0, j = 0; (i < (ptrdiff_t)pattern_len); i++, j++) {
-		if ((pattern[i] == '?') && (str[j] != '\0')) {
+	/* Parse string */
+	i = 0; /* index of pattern */
+	j = 0; /* index of str */
+	while (i < (ptrdiff_t)pattern_len) {
+		/* Pattern ? matches one character, except / */
+		if ((pattern[i] == '?') && (str[j] != '\0') && (str[j] != '/')) {
+			i++;
+			j++;
 			continue;
-		} else if (pattern[i] == '$') {
+		}
+
+		/* Pattern $ matches end of string */
+		if (pattern[i] == '$') {
 			return (str[j] == '\0') ? j : -1;
-		} else if (pattern[i] == '*') {
+		}
+
+		/* Pattern * or ** matches multiple characters */
+		if (pattern[i] == '*') {
 			i++;
 			if (pattern[i] == '*') {
+				/* Pattern ** matches all */
 				i++;
 				len = (ptrdiff_t)strlen(str + j);
 			} else {
+				/* Pattern * matches all except / character */
 				len = (ptrdiff_t)strcspn(str + j, "/");
 			}
+
 			if (i == (ptrdiff_t)pattern_len) {
+				/* End of pattern reached */
 				return j + len;
 			}
 			do {
 				res = match_prefix(pattern + i,
 				                   (pattern_len - (size_t)i),
 				                   str + j + len);
-			} while (res == -1 && len-- > 0);
-			return (res == -1) ? -1 : j + res + len;
+			} while ((res == -1) && (len-- > 0));
+
+			return (res == -1) ? -1 : (j + res + len);
+
 		} else if (lowercase(&pattern[i]) != lowercase(&str[j])) {
+			/* case insensitive compare: mismatch */
 			return -1;
 		}
+		i++;
+		j++;
 	}
 	return (ptrdiff_t)j;
 }
@@ -13777,7 +13800,7 @@ handle_websocket_request(struct mg_connection *conn,
 			    conn->dom_ctx->config[LUA_WEBSOCKET_EXTENSIONS], path);
 		}
 
-		if (lua_websock) {
+		if (lua_websock > 0) {
 			/* Step 3.2: Lua is responsible: call it. */
 			conn->lua_websocket_state = lua_websocket_new(path, conn);
 			if (!conn->lua_websocket_state) {

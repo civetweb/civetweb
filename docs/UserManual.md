@@ -92,16 +92,22 @@ Pattern match starts at the beginning of the string, so essentially
 patterns are prefix patterns. Syntax is as follows:
 
      **      Matches everything
-     *       Matches everything but slash character, '/'
-     ?       Matches any character
+     *       Matches everything but the slash character ('/')
+     ?       Matches any character but the slash character ('/')
      $       Matches the end of the string
      |       Matches if pattern on the left side or the right side matches.
 
 All other characters in the pattern match themselves. Examples:
 
-    **.cgi$      Any string that ends with .cgi
-    /foo         Any string that begins with /foo
-    **a$|**b$    Any string that ends with a or b
+    **.cgi$          Any string that ends with .cgi
+    /foo             Any string that begins with /foo
+    **a$|**b$        Any string that ends with a or b
+    
+    /data/????.css$  Matches css files with 4 letter names in "/data" folder.
+    /data/*.js$      Matches all js file names in "/data" folder.
+    /api/*/*.cgi$    Matches "/api/resourcetype/resourcename.cgi"
+    /*.jpg$|/*.jpeg$ JPG and JPEG files in root folder
+    **.jpg$|**.jpeg$ JPG and JPEG files anywhere
 
 
 ## Options from `civetweb.c`

@@ -324,6 +324,129 @@ START_TEST(test_match_prefix)
 END_TEST
 
 
+START_TEST(test_match_prefix_strlen)
+{
+	/* Copyright (c) 2022 the CivetWeb developers */
+	ck_assert_int_eq(5, match_prefix_strlen("/Test", "/test"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/Test", "/my/test"));
+	ck_assert_int_eq(3, match_prefix_strlen("/my", "/my/test"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/my$", "/my/test"));
+	ck_assert_int_eq(8, match_prefix_strlen("/*/Test", "/my/test"));
+
+	ck_assert_int_eq(17,
+	                 match_prefix_strlen("/api/*/*.cgi", "/api/obj/prop.cgi"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/abc/*/*.cgi", "/api/obj/prop.cgi"));
+	ck_assert_int_eq(18,
+	                 match_prefix_strlen("/api/*/*.cgi", "/api/obj/other.cgi"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/api/*/*.cgi",
+	                                     "/api/obj/too/deep.cgi"));
+	ck_assert_int_eq(17,
+	                 match_prefix_strlen("/api/*/*.cgi$", "/api/obj/prop.cgi"));
+	ck_assert_int_eq(18,
+	                 match_prefix_strlen("/api/*/*.cgi$",
+	                                     "/api/obj/other.cgi"));
+	ck_assert_int_eq(17,
+	                 match_prefix_strlen("/api/*/*.cgi",
+	                                     "/api/obj/prop.cgiZZZ"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/api/*/*.cgi$",
+	                                     "/api/obj/prop.cgiZZZ"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/*/*.cgi", "/api/obj/prop.cgi"));
+
+	ck_assert_int_eq(7, match_prefix_strlen("I????IT", "ItestIT"));
+	ck_assert_int_eq(-1, match_prefix_strlen("I????IT", "IseeIT"));
+	ck_assert_int_eq(23, match_prefix_strlen("**$", "EveryThing/matches this"));
+	ck_assert_int_eq(23,
+	                 match_prefix_strlen("?**$", "EveryThing/matches this"));
+	ck_assert_int_eq(23,
+	                 match_prefix_strlen("**?$", "EveryThing/matches this"));
+	ck_assert_int_eq(0, match_prefix_strlen("**$", ""));
+	ck_assert_int_eq(-1, match_prefix_strlen("?**$", ""));
+	ck_assert_int_eq(-1, match_prefix_strlen("**?$", ""));
+	ck_assert_int_eq(-1, match_prefix_strlen("/**?$", "/"));
+	ck_assert_int_eq(1, match_prefix_strlen("/**$", "/"));
+	ck_assert_int_eq(-1, match_prefix_strlen("//", "/"));
+	ck_assert_int_eq(1, match_prefix_strlen("/", "//"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/$", "//"));
+
+	/* ? pattern should not match / character */
+	ck_assert_int_eq(-1, match_prefix_strlen("/?", "//"));
+	ck_assert_int_eq(3, match_prefix_strlen("/?/$", "/a/"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/?/$", "///"));
+
+	/* Pattern From UserManual.md */
+	ck_assert_int_eq(20,
+	                 match_prefix_strlen("**.cgi$", "anywhere/anyname.cgi"));
+	ck_assert_int_eq(-1, match_prefix_strlen("**.cgi$", "name.cgi.not.at.end"));
+	ck_assert_int_eq(4, match_prefix_strlen("/foo", "/foo"));
+	ck_assert_int_eq(4, match_prefix_strlen("/foo", "/foobar"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/foo", "not.at.start./foo"));
+	ck_assert_int_eq(1, match_prefix_strlen("**a$|**b$", "a"));
+	ck_assert_int_eq(2, match_prefix_strlen("**a$|**b$", "xb"));
+	ck_assert_int_eq(-1, match_prefix_strlen("**a$|**b$", "abc"));
+
+	ck_assert_int_eq(14,
+	                 match_prefix_strlen("/data/????.css$", "/data/12.4.css"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/????.css$", "/data/12/4.css"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/????.css$", "/data/../4.css"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/????.css$", "/else/12.4.css"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/????.css$", "/data/1234.cssx"));
+	ck_assert_int_eq(13, match_prefix_strlen("/data/*.js$", "/data/1234.js"));
+	ck_assert_int_eq(17,
+	                 match_prefix_strlen("/data/*.js$", "/data/12345678.js"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/data/*.js$", "/else/1234.js"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/*.js$", "/data/../some.js"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/data/*.js$", "/data//x.js"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/data/*.js$", "/data/./x.js"));
+	ck_assert_int_eq(34,
+	                 match_prefix_strlen("/api/*/*.cgi$",
+	                                     "/api/resourcetype/resourcename.cgi"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/api/*/*.cgi$",
+	                                     "/api/resourcename.cgi"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$",
+	                                     "/somewhere/something.txt"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$", "/something.txt"));
+	ck_assert_int_eq(10, match_prefix_strlen("/*.jpg$|/*.jpeg$", "/image.jpg"));
+	ck_assert_int_eq(11,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$", "/image.jpeg"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$",
+	                                     "/image.jpeg.exe"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$", "/sub/image.jpg"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$",
+	                                     "/sub/image.jpeg"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$",
+	                                     "/somewhere/something.txt"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$", "/something.txt"));
+	ck_assert_int_eq(10, match_prefix_strlen("**.jpg$|**.jpeg$", "/image.jpg"));
+	ck_assert_int_eq(11,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$", "/image.jpeg"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$",
+	                                     "/image.jpeg.exe"));
+	ck_assert_int_eq(14,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$", "/sub/image.jpg"));
+	ck_assert_int_eq(15,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$",
+	                                     "/sub/image.jpeg"));
+}
+END_TEST
+
+
 START_TEST(test_remove_dot_segments)
 {
 	int i;
@@ -1365,6 +1488,7 @@ make_private_suite(void)
 	suite_add_tcase(suite, tcase_http_keep_alive);
 
 	tcase_add_test(tcase_url_parsing_1, test_match_prefix);
+	tcase_add_test(tcase_url_parsing_1, test_match_prefix_strlen);
 	tcase_set_timeout(tcase_url_parsing_1, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_url_parsing_1);
 
