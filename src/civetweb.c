@@ -9244,7 +9244,7 @@ connect_socket(
     const char *host,
     int port,    /* 1..65535, or -99 for domain sockets (may be changed) */
     int use_ssl, /* 0 or 1 */
-    const struct mg_error_data *error,
+    struct mg_error_data *error,
     SOCKET *sock /* output: socket, must not be NULL */,
     union usa *sa /* output: socket address, must not be NULL  */
 )
@@ -9256,16 +9256,15 @@ connect_socket(
 	memset(sa, 0, sizeof(*sa));
 
 	if (host == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "%s",
-		            "NULL host");
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "NULL host");
 		}
-
 		return 0;
 	}
 
@@ -9274,28 +9273,28 @@ connect_socket(
 		/* Unix domain socket */
 		size_t hostlen = strlen(host);
 		if (hostlen >= sizeof(sa->sun.sun_path)) {
-			mg_snprintf(NULL,
-			            NULL, /* No truncation check for ebuf */
-			            error->text,
-			            error->text_buffer_size,
-			            "%s",
-			            "host length exceeds limit");
-			if ((error != NULL) && (error->code != NULL)) {
-				*error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for ebuf */
+				            error->text,
+				            error->text_buffer_size,
+				            "%s",
+				            "host length exceeds limit");
 			}
 			return 0;
 		}
 	} else
 #endif
 	    if ((port <= 0) || !is_valid_port((unsigned)port)) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "%s",
-		            "invalid port");
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "invalid port");
 		}
 		return 0;
 	}
@@ -9303,27 +9302,27 @@ connect_socket(
 #if !defined(NO_SSL) && !defined(USE_MBEDTLS) && !defined(NO_SSL_DL)
 #if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
 	if (use_ssl && (TLS_client_method == NULL)) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "%s",
-		            "SSL is not initialized");
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_INIT_LIBRARY_FAILED;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_LIBRARY_FAILED;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "SSL is not initialized");
 		}
 		return 0;
 	}
 #else
 	if (use_ssl && (SSLv23_client_method == NULL)) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "%s",
-		            "SSL is not initialized");
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_INIT_LIBRARY_FAILED;
+		if (error != 0) {
+			error->code = MG_ERROR_DATA_CODE_INIT_LIBRARY_FAILED;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "SSL is not initialized");
 		}
 		return 0;
 	}
@@ -9367,14 +9366,14 @@ connect_socket(
 	}
 
 	if (ip_ver == 0) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "%s",
-		            "host not found");
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_HOST_NOT_FOUND;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_HOST_NOT_FOUND;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "%s",
+			            "host not found");
 		}
 		return 0;
 	}
@@ -9394,27 +9393,29 @@ connect_socket(
 #endif
 
 	if (*sock == INVALID_SOCKET) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "socket(): %s",
-		            strerror(ERRNO));
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+			error->code_sub = ERRNO;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "socket(): %s",
+			            strerror(ERRNO));
 		}
 		return 0;
 	}
 
 	if (0 != set_non_blocking_mode(*sock)) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "Cannot set socket to non-blocking: %s",
-		            strerror(ERRNO));
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+			error->code_sub = ERRNO;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "Cannot set socket to non-blocking: %s",
+			            strerror(ERRNO));
 		}
 		closesocket(*sock);
 		*sock = INVALID_SOCKET;
@@ -9483,15 +9484,15 @@ connect_socket(
 
 		if (pollres != 1) {
 			/* Not connected */
-			mg_snprintf(NULL,
-			            NULL, /* No truncation check for ebuf */
-			            error->text,
-			            error->text_buffer_size,
-			            "connect(%s:%d): timeout",
-			            host,
-			            port);
-			if ((error != NULL) && (error->code != NULL)) {
-				*error->code = MG_ERROR_DATA_CODE_CONNECT_TIMEOUT;
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_CONNECT_TIMEOUT;
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for ebuf */
+				            error->text,
+				            error->text_buffer_size,
+				            "connect(%s:%d): timeout",
+				            host,
+				            port);
 			}
 			closesocket(*sock);
 			*sock = INVALID_SOCKET;
@@ -9511,16 +9512,17 @@ connect_socket(
 
 	if (conn_ret != 0) {
 		/* Not connected */
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "connect(%s:%d): error %s",
-		            host,
-		            port,
-		            strerror(sockerr));
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_CONNECT_FAILED;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_CONNECT_FAILED;
+			error->code_sub = ERRNO;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "connect(%s:%d): error %s",
+			            host,
+			            port,
+			            strerror(sockerr));
 		}
 		closesocket(*sock);
 		*sock = INVALID_SOCKET;
@@ -17971,7 +17973,7 @@ static struct mg_connection *
 mg_connect_client_impl(const struct mg_client_options *client_options,
                        int use_ssl,
                        struct mg_init_data *init,
-                       const struct mg_error_data *error)
+                       struct mg_error_data *error)
 {
 	struct mg_connection *conn = NULL;
 	SOCKET sock;
@@ -17985,31 +17987,28 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	/* Size of structures, aligned to 8 bytes */
 	size_t conn_size = ((sizeof(struct mg_connection) + 7) >> 3) << 3;
 	size_t ctx_size = ((sizeof(struct mg_context) + 7) >> 3) << 3;
+	size_t alloc_size = conn_size + ctx_size + max_req_size;
 
-	conn =
-	    (struct mg_connection *)mg_calloc(1,
-	                                      conn_size + ctx_size + max_req_size);
+	conn = (struct mg_connection *)mg_calloc(1, alloc_size);
 
 	if (error != NULL) {
+		error->code = MG_ERROR_DATA_CODE_OK;
+		error->code_sub = 0;
 		if (error->text_buffer_size > 0) {
 			error->text[0] = 0;
-		}
-		if (error->code != NULL) {
-			*error->code = MG_ERROR_DATA_CODE_OK;
 		}
 	}
 
 	if (conn == NULL) {
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
+			error->code_sub = (unsigned)alloc_size;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            error->text,
 			            error->text_buffer_size,
 			            "calloc(): %s",
 			            strerror(ERRNO));
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
 		}
 		return NULL;
 	}
@@ -18051,14 +18050,14 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	if (use_ssl
 	    && (conn->dom_ctx->ssl_ctx = SSL_CTX_new(TLS_client_method()))
 	           == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "SSL_CTX_new error: %s",
-		            ssl_error());
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "SSL_CTX_new error: %s",
+			            ssl_error());
 		}
 
 		closesocket(sock);
@@ -18071,14 +18070,14 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	if (use_ssl
 	    && (conn->dom_ctx->ssl_ctx = SSL_CTX_new(SSLv23_client_method()))
 	           == NULL) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "SSL_CTX_new error: %s",
-		            ssl_error());
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "SSL_CTX_new error: %s",
+			            ssl_error());
 		}
 
 		closesocket(sock);
@@ -18112,13 +18111,14 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 
 	conn->client.is_ssl = use_ssl ? 1 : 0;
 	if (0 != pthread_mutex_init(&conn->mutex, &pthread_mutex_attr)) {
-		mg_snprintf(NULL,
-		            NULL, /* No truncation check for ebuf */
-		            error->text,
-		            error->text_buffer_size,
-		            "Can not create mutex");
-		if ((error != NULL) && (error->code != NULL)) {
-			*error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+			error->code_sub = (unsigned)ERRNO;
+			mg_snprintf(NULL,
+			            NULL, /* No truncation check for ebuf */
+			            error->text,
+			            error->text_buffer_size,
+			            "Can not create mutex");
 		}
 #if !defined(NO_SSL) && !defined(USE_MBEDTLS) // TODO: mbedTLS client
 		SSL_CTX_free(conn->dom_ctx->ssl_ctx);
@@ -18143,13 +18143,13 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			                      conn->dom_ctx,
 			                      client_options->client_cert,
 			                      NULL)) {
-				mg_snprintf(NULL,
-				            NULL, /* No truncation check for ebuf */
-				            error->text,
-				            error->text_buffer_size,
-				            "Can not use SSL client certificate");
-				if ((error != NULL) && (error->code != NULL)) {
-					*error->code = MG_ERROR_DATA_CODE_TLS_CLIENT_CERT_ERROR;
+				if (error != NULL) {
+					error->code = MG_ERROR_DATA_CODE_TLS_CLIENT_CERT_ERROR;
+					mg_snprintf(NULL,
+					            NULL, /* No truncation check for ebuf */
+					            error->text,
+					            error->text_buffer_size,
+					            "Can not use SSL client certificate");
 				}
 
 				SSL_CTX_free(conn->dom_ctx->ssl_ctx);
@@ -18164,14 +18164,14 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			                                  client_options->server_cert,
 			                                  NULL)
 			    != 1) {
-				mg_snprintf(NULL,
-				            NULL, /* No truncation check for ebuf */
-				            error->text,
-				            error->text_buffer_size,
-				            "SSL_CTX_load_verify_locations error: %s",
-				            ssl_error());
-				if ((error != NULL) && (error->code != NULL)) {
-					*error->code = MG_ERROR_DATA_CODE_TLS_SERVER_CERT_ERROR;
+				if (error != NULL) {
+					error->code = MG_ERROR_DATA_CODE_TLS_SERVER_CERT_ERROR;
+					mg_snprintf(NULL,
+					            NULL, /* No truncation check for ebuf */
+					            error->text,
+					            error->text_buffer_size,
+					            "SSL_CTX_load_verify_locations error: %s",
+					            ssl_error());
 				}
 				SSL_CTX_free(conn->dom_ctx->ssl_ctx);
 				closesocket(sock);
@@ -18184,13 +18184,13 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		}
 
 		if (!sslize(conn, SSL_connect, client_options)) {
-			mg_snprintf(NULL,
-			            NULL, /* No truncation check for ebuf */
-			            error->text,
-			            error->text_buffer_size,
-			            "SSL connection error");
-			if ((error != NULL) && (error->code != NULL)) {
-				*error->code = MG_ERROR_DATA_CODE_TLS_CONNECT_ERROR;
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_TLS_CONNECT_ERROR;
+				mg_snprintf(NULL,
+				            NULL, /* No truncation check for ebuf */
+				            error->text,
+				            error->text_buffer_size,
+				            "SSL connection error");
 			}
 			SSL_CTX_free(conn->dom_ctx->ssl_ctx);
 			closesocket(sock);
@@ -18255,7 +18255,7 @@ mg_connect_client2(const char *host,
                    int port,
                    const char *path,
                    struct mg_init_data *init,
-                   const struct mg_error_data *error)
+                   struct mg_error_data *error)
 {
 	(void)path;
 	(void)init;
@@ -18264,26 +18264,22 @@ mg_connect_client2(const char *host,
 	/* void *user_data = (init != NULL) ? init->user_data : NULL; -- TODO */
 
 	if (error != NULL) {
-		if (error->code != NULL) {
-			*error->code = 0;
-		}
+		error->code = MG_ERROR_DATA_CODE_OK;
+		error->code_sub = 0;
 		if (error->text_buffer_size > 0) {
 			*error->text = 0;
 		}
 	}
 
 	if ((host == NULL) || (protocol == NULL)) {
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            "Invalid parameters");
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
 		}
 		return NULL;
 	}
@@ -18304,17 +18300,14 @@ mg_connect_client2(const char *host,
 		is_ws = 1;
 #endif
 	} else {
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "Protocol %s not supported",
 			            protocol);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
 		}
 		return NULL;
 	}
@@ -20439,7 +20432,7 @@ legacy_init(const char **options)
 
 
 struct mg_context *
-mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
+mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 {
 	struct mg_context *ctx;
 	const char *name, *value, *default_value;
@@ -20453,9 +20446,8 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 	struct mg_workerTLS tls;
 
 	if (error != NULL) {
-		if (error->code != NULL) {
-			*error->code = 0;
-		}
+		error->code = MG_ERROR_DATA_CODE_OK;
+		error->code_sub = 0;
 		if (error->text_buffer_size > 0) {
 			*error->text = 0;
 		}
@@ -20468,7 +20460,8 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		legacy_init(options);
 	}
 	if (mg_init_library_called == 0) {
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_LIBRARY_FAILED;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
@@ -20476,27 +20469,21 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 			            "%s",
 			            "Library uninitialized");
 		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for data is provided */
-			*error->code = MG_ERROR_DATA_CODE_INIT_LIBRARY_FAILED;
-		}
 		return NULL;
 	}
 
 	/* Allocate context and initialize reasonable general case defaults. */
 	ctx = (struct mg_context *)mg_calloc(1, sizeof(*ctx));
 	if (ctx == NULL) {
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
+			error->code_sub = (unsigned)sizeof(*ctx);
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            "Out of memory");
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
 		}
 		return NULL;
 	}
@@ -20527,23 +20514,22 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 	ok &= (0 == pthread_mutex_init(&ctx->lua_bg_mutex, &pthread_mutex_attr));
 #endif
 	if (!ok) {
+		unsigned error_id = (unsigned)ERRNO;
 		const char *err_msg =
 		    "Cannot initialize thread synchronization objects";
 		/* Fatal error - abort start. However, this situation should never
 		 * occur in practice. */
 
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+			error->code_sub = error_id;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_OS_ERROR;
 		}
 
 		mg_free(ctx);
@@ -20570,19 +20556,18 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 
 	/* Store options */
 	while (options && (name = *options++) != NULL) {
-		if ((idx = get_option_index(name)) == -1) {
+		idx = get_option_index(name);
+		if (idx == -1) {
 			mg_cry_ctx_internal(ctx, "Invalid option: %s", name);
-			if ((error != NULL) && (error->text_buffer_size > 0)) {
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
+				error->code_sub = (unsigned)-1;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
 				            error->text_buffer_size,
 				            "Invalid configuration option: %s",
 				            name);
-			}
-			if ((error != NULL) && (error->code != NULL)) {
-				/* Set error code if pointer for error code is provided */
-				*error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
 			}
 
 			free_context(ctx);
@@ -20591,17 +20576,15 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 
 		} else if ((value = *options++) == NULL) {
 			mg_cry_ctx_internal(ctx, "%s: option value cannot be NULL", name);
-			if ((error != NULL) && (error->text_buffer_size > 0)) {
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
+				error->code_sub = (unsigned)idx;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
 				            error->text_buffer_size,
 				            "Invalid configuration option value: %s",
 				            name);
-			}
-			if ((error != NULL) && (error->code != NULL)) {
-				/* Set error code if pointer for error code is provided */
-				*error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
 			}
 
 			free_context(ctx);
@@ -20632,17 +20615,15 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		mg_cry_ctx_internal(ctx,
 		                    "%s too small",
 		                    config_options[MAX_REQUEST_SIZE].name);
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
+			error->code_sub = (unsigned)MAX_REQUEST_SIZE;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "Invalid configuration option value: %s",
 			            config_options[MAX_REQUEST_SIZE].name);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
 		}
 
 		free_context(ctx);
@@ -20658,17 +20639,15 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		mg_cry_ctx_internal(ctx,
 		                    "%s too small",
 		                    config_options[CONNECTION_QUEUE_SIZE].name);
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
+			error->code_sub = CONNECTION_QUEUE_SIZE;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "Invalid configuration option value: %s",
 			            config_options[CONNECTION_QUEUE_SIZE].name);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
 		}
 
 		free_context(ctx);
@@ -20681,17 +20660,15 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		mg_cry_ctx_internal(ctx,
 		                    "Out of memory: Cannot allocate %s",
 		                    config_options[CONNECTION_QUEUE_SIZE].name);
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
+			error->code_sub = (unsigned)itmp * (unsigned)sizeof(struct socket);
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "Out of memory: Cannot allocate %s",
 			            config_options[CONNECTION_QUEUE_SIZE].name);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
 		}
 
 		free_context(ctx);
@@ -20710,17 +20687,15 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		} else {
 			mg_cry_ctx_internal(ctx, "%s", "Too many worker threads");
 		}
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
+			error->code_sub = NUM_THREADS;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "Invalid configuration option value: %s",
 			            config_options[NUM_THREADS].name);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
 		}
 
 		free_context(ctx);
@@ -20732,17 +20707,15 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 #if defined(NO_FILES)
 	if (ctx->dd.config[DOCUMENT_ROOT] != NULL) {
 		mg_cry_ctx_internal(ctx, "%s", "Document root must not be set");
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
+			error->code_sub = (unsigned)DOCUMENT_ROOT;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "Invalid configuration option value: %s",
 			            config_options[DOCUMENT_ROOT].name);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
 		}
 
 		free_context(ctx);
@@ -20772,7 +20745,8 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 			mg_cry_ctx_internal(ctx,
 			                    "lua_background_script load error: %s",
 			                    ebuf);
-			if ((error != NULL) && (error->text_buffer_size > 0)) {
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_SCRIPT_ERROR;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
@@ -20780,10 +20754,6 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 				            "Error in script %s: %s",
 				            config_options[LUA_BACKGROUND_SCRIPT].name,
 				            ebuf);
-			}
-			if ((error != NULL) && (error->code != NULL)) {
-				/* Set error code if pointer for error code is provided */
-				*error->code = MG_ERROR_DATA_CODE_SCRIPT_ERROR;
 			}
 
 			pthread_mutex_unlock(&ctx->lua_bg_mutex);
@@ -20821,7 +20791,8 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 			mg_cry_ctx_internal(ctx,
 			                    "lua_background_script start error: %s",
 			                    ebuf);
-			if ((error != NULL) && (error->text_buffer_size > 0)) {
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_SCRIPT_ERROR;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
@@ -20829,10 +20800,6 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 				            "Error in script %s: %s",
 				            config_options[DOCUMENT_ROOT].name,
 				            ebuf);
-			}
-			if ((error != NULL) && (error->code != NULL)) {
-				/* Set error code if pointer for error code is provided */
-				*error->code = MG_ERROR_DATA_CODE_SCRIPT_ERROR;
 			}
 			pthread_mutex_unlock(&ctx->lua_bg_mutex);
 
@@ -20857,17 +20824,14 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		/* Fatal error - abort start. */
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_PASS_FILE;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INVALID_PASS_FILE;
 		}
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
@@ -20881,17 +20845,14 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		/* Fatal error - abort start. */
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
 		}
 
 		free_context(ctx);
@@ -20905,17 +20866,14 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		/* Fatal error - abort start. */
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
 		}
 
 		free_context(ctx);
@@ -20929,17 +20887,14 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		/* Fatal error - abort start. */
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_PORTS_FAILED;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INIT_PORTS_FAILED;
 		}
 
 		free_context(ctx);
@@ -20954,17 +20909,14 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		/* Fatal error - abort start. */
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_USER_FAILED;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INIT_USER_FAILED;
 		}
 
 		free_context(ctx);
@@ -20978,17 +20930,14 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		/* Fatal error - abort start. */
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_ACL_FAILED;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_INIT_ACL_FAILED;
 		}
 
 		free_context(ctx);
@@ -21005,17 +20954,16 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		const char *err_msg = "Not enough memory for worker thread ID array";
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
+			error->code_sub =
+			    (unsigned)ctx->cfg_worker_threads * (unsigned)sizeof(pthread_t);
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
 		}
 
 		free_context(ctx);
@@ -21031,17 +20979,16 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		    "Not enough memory for worker thread connection array";
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
+			error->code_sub = (unsigned)ctx->cfg_worker_threads
+			                  * (unsigned)sizeof(struct mg_connection);
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
 		}
 
 		free_context(ctx);
@@ -21059,17 +21006,16 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 		mg_free(ctx->worker_threadids);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
+			error->code_sub = (unsigned)ctx->cfg_worker_threads
+			                  * (unsigned)sizeof(ctx->client_wait_events[0]);
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
 		}
 
 		free_context(ctx);
@@ -21087,17 +21033,16 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		mg_free(ctx->client_wait_events);
 		mg_free(ctx->worker_threadids);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
+			error->code_sub = (unsigned)ctx->cfg_worker_threads
+			                  * (unsigned)sizeof(ctx->client_socks[0]);
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
 		}
 
 		free_context(ctx);
@@ -21118,17 +21063,15 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 			mg_free(ctx->client_wait_events);
 			mg_free(ctx->worker_threadids);
 
-			if ((error != NULL) && (error->text_buffer_size > 0)) {
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+				error->code_sub = ERRNO;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
 				            error->text_buffer_size,
 				            err_msg,
 				            i);
-			}
-			if ((error != NULL) && (error->code != NULL)) {
-				/* Set error code if pointer for error code is provided */
-				*error->code = MG_ERROR_DATA_CODE_OS_ERROR;
 			}
 
 			free_context(ctx);
@@ -21143,17 +21086,15 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 		const char *err_msg = "Error creating timers";
 		mg_cry_ctx_internal(ctx, "%s", err_msg);
 
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+			error->code_sub = ERRNO;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            err_msg);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for error code is provided */
-			*error->code = MG_ERROR_DATA_CODE_OS_ERROR;
 		}
 
 		free_context(ctx);
@@ -21204,7 +21145,9 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 				                    "Cannot create threads: error %ld",
 				                    error_no);
 
-				if ((error != NULL) && (error->text_buffer_size > 0)) {
+				if (error != NULL) {
+					error->code = MG_ERROR_DATA_CODE_OS_ERROR;
+					error->code_sub = (unsigned)error_no;
 					mg_snprintf(
 					    NULL,
 					    NULL, /* No truncation check for error buffers */
@@ -21212,10 +21155,6 @@ mg_start2(struct mg_init_data *init, const struct mg_error_data *error)
 					    error->text_buffer_size,
 					    "Cannot create first worker thread: error %ld",
 					    error_no);
-				}
-				if ((error != NULL) && (error->code != NULL)) {
-					/* Set error code if pointer for error code is provided */
-					*error->code = MG_ERROR_DATA_CODE_OS_ERROR;
 				}
 
 				free_context(ctx);
@@ -21252,7 +21191,7 @@ mg_start(const struct mg_callbacks *callbacks,
 int
 mg_start_domain2(struct mg_context *ctx,
                  const char **options,
-                 const struct mg_error_data *error)
+                 struct mg_error_data *error)
 {
 	const char *name;
 	const char *value;
@@ -21262,16 +21201,16 @@ mg_start_domain2(struct mg_context *ctx,
 	int idx, i;
 
 	if (error != NULL) {
-		if (error->code != NULL) {
-			*error->code = 0;
-		}
+		error->code = MG_ERROR_DATA_CODE_OK;
+		error->code_sub = 0;
 		if (error->text_buffer_size > 0) {
 			*error->text = 0;
 		}
 	}
 
 	if ((ctx == NULL) || (options == NULL)) {
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
@@ -21279,25 +21218,18 @@ mg_start_domain2(struct mg_context *ctx,
 			            "%s",
 			            "Invalid parameters");
 		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Invalid parameter */
-			*error->code = MG_ERROR_DATA_CODE_INVALID_PARAM;
-		}
 		return -1;
 	}
 
 	if (!STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_SERVER_STOPPED;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            "Server already stopped");
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for data is provided */
-			*error->code = MG_ERROR_DATA_CODE_SERVER_STOPPED;
 		}
 		return -7;
 	}
@@ -21307,7 +21239,9 @@ mg_start_domain2(struct mg_context *ctx,
 
 	if (!new_dom) {
 		/* Out of memory */
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
+			error->code_sub = (unsigned)sizeof(struct mg_domain_context);
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
@@ -21315,18 +21249,17 @@ mg_start_domain2(struct mg_context *ctx,
 			            "%s",
 			            "Out or memory");
 		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for data is provided */
-			*error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
-		}
 		return -6;
 	}
 
 	/* Store options - TODO: unite duplicate code */
 	while (options && (name = *options++) != NULL) {
-		if ((idx = get_option_index(name)) == -1) {
+		idx = get_option_index(name);
+		if (idx == -1) {
 			mg_cry_ctx_internal(ctx, "Invalid option: %s", name);
-			if ((error != NULL) && (error->text_buffer_size > 0)) {
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
+				error->code_sub = (unsigned)-1;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
@@ -21334,25 +21267,19 @@ mg_start_domain2(struct mg_context *ctx,
 				            "Invalid option: %s",
 				            name);
 			}
-			if ((error != NULL) && (error->code != NULL)) {
-				/* Set error code if pointer for data is provided */
-				*error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
-			}
 			mg_free(new_dom);
 			return -2;
 		} else if ((value = *options++) == NULL) {
 			mg_cry_ctx_internal(ctx, "%s: option value cannot be NULL", name);
-			if ((error != NULL) && (error->text_buffer_size > 0)) {
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
+				error->code_sub = idx;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
 				            error->text_buffer_size,
 				            "Invalid option value: %s",
 				            name);
-			}
-			if ((error != NULL) && (error->code != NULL)) {
-				/* Set error code if pointer for data is provided */
-				*error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
 			}
 			mg_free(new_dom);
 			return -2;
@@ -21370,17 +21297,15 @@ mg_start_domain2(struct mg_context *ctx,
 	/* TODO: Maybe use a new option hostname? */
 	if (!new_dom->config[AUTHENTICATION_DOMAIN]) {
 		mg_cry_ctx_internal(ctx, "%s", "authentication domain required");
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_MISSING_OPTION;
+			error->code_sub = AUTHENTICATION_DOMAIN;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "Mandatory option %s missing",
 			            config_options[AUTHENTICATION_DOMAIN].name);
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for data is provided */
-			*error->code = MG_ERROR_DATA_CODE_MISSING_OPTION;
 		}
 		mg_free(new_dom);
 		return -4;
@@ -21407,17 +21332,14 @@ mg_start_domain2(struct mg_context *ctx,
 #if !defined(NO_SSL) && !defined(USE_MBEDTLS)
 	if (!init_ssl_ctx(ctx, new_dom)) {
 		/* Init SSL failed */
-		if ((error != NULL) && (error->text_buffer_size > 0)) {
+		if (error != NULL) {
+			error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
 			            error->text_buffer_size,
 			            "%s",
 			            "Initializing SSL context failed");
-		}
-		if ((error != NULL) && (error->code != NULL)) {
-			/* Set error code if pointer for data is provided */
-			*error->code = MG_ERROR_DATA_CODE_INIT_TLS_FAILED;
 		}
 		mg_free(new_dom);
 		return -3;
@@ -21436,7 +21358,8 @@ mg_start_domain2(struct mg_context *ctx,
 			mg_cry_ctx_internal(ctx,
 			                    "domain %s already in use",
 			                    new_dom->config[AUTHENTICATION_DOMAIN]);
-			if ((error != NULL) && (error->text_buffer_size > 0)) {
+			if (error != NULL) {
+				error->code = MG_ERROR_DATA_CODE_DUPLICATE_DOMAIN;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
@@ -21444,10 +21367,6 @@ mg_start_domain2(struct mg_context *ctx,
 				            "Domain %s specified by %s is already in use",
 				            new_dom->config[AUTHENTICATION_DOMAIN],
 				            config_options[AUTHENTICATION_DOMAIN].name);
-			}
-			if ((error != NULL) && (error->code != NULL)) {
-				/* Set error code if pointer for data is provided */
-				*error->code = MG_ERROR_DATA_CODE_DUPLICATE_DOMAIN;
 			}
 			mg_free(new_dom);
 			mg_unlock_context(ctx);

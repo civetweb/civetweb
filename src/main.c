@@ -173,7 +173,7 @@ extern char *_getcwd(char *buf, size_t size);
 #define PATH_MAX (1024)
 #endif
 
-#define MAX_OPTIONS (50)
+#define MAX_OPTIONS (100) /* TODO: Read from civetweb.c ? */
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
 struct tuser_data {
@@ -1171,8 +1171,10 @@ sanitize_options(char *options[] /* server options */,
 }
 
 
-/* Forward declaration: */
+#ifdef _WIN32
+/* Forward declaration for Windows only */
 static void show_settings_dialog(void);
+#endif
 
 
 static void
@@ -1183,7 +1185,6 @@ start_civetweb(int argc, char *argv[])
 	struct mg_init_data init;
 	struct mg_error_data error;
 	char error_text[256];
-	unsigned error_code;
 	int i;
 
 	/* Start option -I:
@@ -1331,7 +1332,6 @@ start_civetweb(int argc, char *argv[])
 	memset(&error, 0, sizeof(error));
 	error.text = error_text;
 	error.text_buffer_size = sizeof(error_text);
-	error.code = &error_code;
 
 	/* Start Civetweb */
 	g_ctx = mg_start2(&init, &error);
@@ -1346,14 +1346,15 @@ start_civetweb(int argc, char *argv[])
 	if (g_ctx == NULL) {
 #ifdef _WIN32
 		/* On Windows: provide option to edit configuration file. */
-		char errtxt[1024];
+		char msgboxtxt[1024];
 		int ret;
-		sprintf(errtxt,
+		sprintf(msgboxtxt,
 		        "Failed to start %s with code %u:\n%s\n\nEdit settings?",
 		        g_server_name,
-		        error_code,
+		        error.code,
 		        error_text);
-		ret = MessageBox(NULL, errtxt, "Error", MB_ICONERROR | MB_YESNOCANCEL);
+		ret =
+		    MessageBox(NULL, msgboxtxt, "Error", MB_ICONERROR | MB_YESNOCANCEL);
 		if (ret == IDYES) {
 			show_settings_dialog();
 
@@ -1366,7 +1367,7 @@ start_civetweb(int argc, char *argv[])
 #else
 		die("Failed to start %s with code %u:\n%s",
 		    g_server_name,
-		    error_code,
+		    error.code,
 		    error_text);
 #endif
 	}
@@ -2200,7 +2201,7 @@ optioncmp(const char *o1, const char *o2)
 
 
 static void
-show_settings_dialog()
+show_settings_dialog(void)
 {
 	/* Parameter for size/format tuning of the dialog */
 	short HEIGHT = 15;

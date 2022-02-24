@@ -1687,13 +1687,14 @@ CIVETWEB_API int mg_get_connection_info(const struct mg_context *ctx,
    Note: Experimental interfaces may change
 */
 struct mg_error_data {
-	unsigned *code;          /* buffer for error code (number) */
+	unsigned code;           /* error code (number) */
+	unsigned code_sub;       /* error sub code (number) */
 	char *text;              /* buffer for error text */
 	size_t text_buffer_size; /* size of buffer of "text" */
 };
 
 
-/* Error codes in mg_error_data */
+/* Values for error "code" in mg_error_data */
 enum {
 	/* No error */
 	MG_ERROR_DATA_CODE_OK = 0u,
@@ -1775,20 +1776,20 @@ mg_connect_client2(const char *host,
                    int port,
                    const char *path,
                    struct mg_init_data *init,
-                   const struct mg_error_data *error);
+                   struct mg_error_data *error);
 
 CIVETWEB_API int mg_get_response2(struct mg_connection *conn,
-                                  const struct mg_error_data *error,
+                                  struct mg_error_data *error,
                                   int timeout);
 #endif
 
 
 CIVETWEB_API struct mg_context *mg_start2(struct mg_init_data *init,
-                                          const struct mg_error_data *error);
+                                          struct mg_error_data *error);
 
 CIVETWEB_API int mg_start_domain2(struct mg_context *ctx,
                                   const char **configuration_options,
-                                  const struct mg_error_data *error);
+                                  struct mg_error_data *error);
 
 
 #ifdef __cplusplus
