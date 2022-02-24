@@ -17994,10 +17994,9 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		if (error->text_buffer_size > 0) {
 			error->text[0] = 0;
 		}
-		if (error->code != NULL))
-			{
-				*error->code = MG_ERROR_DATA_CODE_OK;
-			}
+		if (error->code != NULL) {
+			*error->code = MG_ERROR_DATA_CODE_OK;
+		}
 	}
 
 	if (conn == NULL) {
