@@ -3616,12 +3616,13 @@ mg_construct_local_link(const struct mg_connection *conn,
 		int port = (define_port > 0) ? define_port : ri->server_port;
 		int default_port = 80;
 		char *uri_encoded;
+		size_t uri_encoded_len;
 
 		if (uri == NULL) {
 			return -1;
 		}
 
-		size_t uri_encoded_len = strlen(uri) * 3 + 1;
+		uri_encoded_len = strlen(uri) * 3 + 1;
 		uri_encoded = (char *)mg_malloc_ctx(uri_encoded_len, conn->phys_ctx);
 		if (uri_encoded == NULL) {
 			return -1;
@@ -15225,10 +15226,12 @@ handle_request(struct mg_connection *conn)
 
 		/* Path + server root */
 		size_t buflen = UTF8_PATH_MAX * 2 + 2;
+		char *new_path;
+
 		if (ri->query_string) {
 			buflen += strlen(ri->query_string);
 		}
-		char *new_path = (char *)mg_malloc_ctx(buflen, conn->phys_ctx);
+		new_path = (char *)mg_malloc_ctx(buflen, conn->phys_ctx);
 		if (!new_path) {
 			mg_send_http_error(conn, 500, "out or memory");
 		} else {
