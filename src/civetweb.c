@@ -2815,14 +2815,14 @@ mg_set_thread_name(const char *name)
 #endif
 }
 #else /* !defined(NO_THREAD_NAME) */
-void
+static void
 mg_set_thread_name(const char *threadName)
 {
 }
 #endif
 
 
-const struct mg_option *
+CIVETWEB_API const struct mg_option *
 mg_get_valid_options(void)
 {
 	return config_options;
@@ -3008,7 +3008,7 @@ lowercase(const char *s)
 }
 
 
-int
+CIVETWEB_API int
 mg_strncasecmp(const char *s1, const char *s2, size_t len)
 {
 	int diff = 0;
@@ -3023,7 +3023,7 @@ mg_strncasecmp(const char *s1, const char *s2, size_t len)
 }
 
 
-int
+CIVETWEB_API int
 mg_strcasecmp(const char *s1, const char *s2)
 {
 	int diff;
@@ -3162,7 +3162,7 @@ get_option_index(const char *name)
 }
 
 
-const char *
+CIVETWEB_API const char *
 mg_get_option(const struct mg_context *ctx, const char *name)
 {
 	int i;
@@ -3177,28 +3177,28 @@ mg_get_option(const struct mg_context *ctx, const char *name)
 
 #define mg_get_option DO_NOT_USE_THIS_FUNCTION_INTERNALLY__access_directly
 
-struct mg_context *
+CIVETWEB_API struct mg_context *
 mg_get_context(const struct mg_connection *conn)
 {
 	return (conn == NULL) ? (struct mg_context *)NULL : (conn->phys_ctx);
 }
 
 
-void *
+CIVETWEB_API void *
 mg_get_user_data(const struct mg_context *ctx)
 {
 	return (ctx == NULL) ? NULL : ctx->user_data;
 }
 
 
-void *
+CIVETWEB_API void *
 mg_get_user_context_data(const struct mg_connection *conn)
 {
 	return mg_get_user_data(mg_get_context(conn));
 }
 
 
-void *
+CIVETWEB_API void *
 mg_get_thread_pointer(const struct mg_connection *conn)
 {
 	/* both methods should return the same pointer */
@@ -3214,7 +3214,7 @@ mg_get_thread_pointer(const struct mg_connection *conn)
 }
 
 
-void
+CIVETWEB_API void
 mg_set_user_connection_data(const struct mg_connection *const_conn, void *data)
 {
 	if (const_conn != NULL) {
@@ -3227,7 +3227,7 @@ mg_set_user_connection_data(const struct mg_connection *const_conn, void *data)
 }
 
 
-void *
+CIVETWEB_API void *
 mg_get_user_connection_data(const struct mg_connection *conn)
 {
 	if (conn != NULL) {
@@ -3237,7 +3237,7 @@ mg_get_user_connection_data(const struct mg_connection *conn)
 }
 
 
-int
+CIVETWEB_API int
 mg_get_server_ports(const struct mg_context *ctx,
                     int size,
                     struct mg_server_port *ports)
@@ -3492,7 +3492,7 @@ mg_cry_internal_wrap(const struct mg_connection *conn,
 }
 
 
-void
+CIVETWEB_API void
 mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 {
 	va_list ap;
@@ -3505,14 +3505,14 @@ mg_cry(const struct mg_connection *conn, const char *fmt, ...)
 #define mg_cry DO_NOT_USE_THIS_FUNCTION__USE_mg_cry_internal
 
 
-const char *
+CIVETWEB_API const char *
 mg_version(void)
 {
 	return CIVETWEB_VERSION;
 }
 
 
-const struct mg_request_info *
+CIVETWEB_API const struct mg_request_info *
 mg_get_request_info(const struct mg_connection *conn)
 {
 	if (!conn) {
@@ -3552,7 +3552,7 @@ mg_get_request_info(const struct mg_connection *conn)
 }
 
 
-const struct mg_response_info *
+CIVETWEB_API const struct mg_response_info *
 mg_get_response_info(const struct mg_connection *conn)
 {
 	if (!conn) {
@@ -3639,7 +3639,6 @@ mg_construct_local_link(const struct mg_connection *conn,
 			}
 		}
 		uri_encoded[j] = '\0';
-
 
 #if defined(USE_X_DOM_SOCKET)
 		if (conn->client.lsa.sa.sa_family == AF_UNIX) {
@@ -3737,7 +3736,7 @@ mg_construct_local_link(const struct mg_connection *conn,
 }
 
 
-int
+CIVETWEB_API int
 mg_get_request_link(const struct mg_connection *conn, char *buf, size_t buflen)
 {
 	return mg_construct_local_link(conn, buf, buflen, NULL, -1, NULL);
@@ -3850,7 +3849,7 @@ get_req_headers(const struct mg_request_info *ri,
 #endif
 
 
-const char *
+CIVETWEB_API const char *
 mg_get_header(const struct mg_connection *conn, const char *name)
 {
 	if (!conn) {
@@ -4243,7 +4242,7 @@ static void handle_file_based_request(struct mg_connection *conn,
 #endif /* NO_FILESYSTEMS */
 
 
-const char *
+CIVETWEB_API const char *
 mg_get_response_code_text(const struct mg_connection *conn, int response_code)
 {
 	/* See IANA HTTP status code assignment:
@@ -4629,7 +4628,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 }
 
 
-int
+CIVETWEB_API int
 mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 {
 	va_list ap;
@@ -4643,7 +4642,7 @@ mg_send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 }
 
 
-int
+CIVETWEB_API int
 mg_send_http_ok(struct mg_connection *conn,
                 const char *mime_type,
                 long long content_length)
@@ -4685,7 +4684,7 @@ mg_send_http_ok(struct mg_connection *conn,
 }
 
 
-int
+CIVETWEB_API int
 mg_send_http_redirect(struct mg_connection *conn,
                       const char *target_url,
                       int redirect_code)
@@ -4781,7 +4780,6 @@ mg_send_http_redirect(struct mg_connection *conn,
 	mg_response_header_add(conn, "Content-Length", "0", 1);
 #endif
 	mg_response_header_send(conn);
-
 
 #if defined(MG_SEND_REDIRECT_BODY)
 	/* Send response body */
@@ -5365,7 +5363,7 @@ set_close_on_exec(SOCKET sock,
 }
 
 
-int
+CIVETWEB_API int
 mg_start_thread(mg_thread_func_t f, void *p)
 {
 #if defined(USE_STACK_SIZE) && (USE_STACK_SIZE > 1)
@@ -5768,7 +5766,7 @@ set_close_on_exec(int fd,
 }
 
 
-int
+CIVETWEB_API int
 mg_start_thread(mg_thread_func_t func, void *param)
 {
 	pthread_t thread_id;
@@ -6686,7 +6684,7 @@ handle_request_stat_log(struct mg_connection *conn)
 #endif
 
 
-int
+CIVETWEB_API int
 mg_read(struct mg_connection *conn, void *buf, size_t len)
 {
 	if (len > INT_MAX) {
@@ -6794,7 +6792,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 }
 
 
-int
+CIVETWEB_API int
 mg_write(struct mg_connection *conn, const void *buf, size_t len)
 {
 	time_t now;
@@ -6875,7 +6873,7 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 
 
 /* Send a chunk, if "Transfer-Encoding: chunked" is used */
-int
+CIVETWEB_API int
 mg_send_chunk(struct mg_connection *conn,
               const char *chunk,
               unsigned int chunk_len)
@@ -7049,7 +7047,7 @@ mg_vprintf(struct mg_connection *conn, const char *fmt, va_list ap)
 }
 
 
-int
+CIVETWEB_API int
 mg_printf(struct mg_connection *conn, const char *fmt, ...)
 {
 	va_list ap;
@@ -7063,7 +7061,7 @@ mg_printf(struct mg_connection *conn, const char *fmt, ...)
 }
 
 
-int
+CIVETWEB_API int
 mg_url_decode(const char *src,
               int src_len,
               char *dst,
@@ -7103,7 +7101,7 @@ url_decode_in_place(char *buf)
 }
 
 
-int
+CIVETWEB_API int
 mg_get_var(const char *data,
            size_t data_len,
            const char *name,
@@ -7114,7 +7112,7 @@ mg_get_var(const char *data,
 }
 
 
-int
+CIVETWEB_API int
 mg_get_var2(const char *data,
             size_t data_len,
             const char *name,
@@ -7172,7 +7170,7 @@ mg_get_var2(const char *data,
 
 
 /* split a string "key1=val1&key2=val2" into key/value pairs */
-int
+CIVETWEB_API int
 mg_split_form_urlencoded(char *data,
                          struct mg_header *form_fields,
                          unsigned num_form_fields)
@@ -7271,7 +7269,7 @@ mg_split_form_urlencoded(char *data,
 
 
 /* HCP24: some changes to compare whole var_name */
-int
+CIVETWEB_API int
 mg_get_cookie(const char *cookie_header,
               const char *var_name,
               char *dst,
@@ -7320,7 +7318,7 @@ mg_get_cookie(const char *cookie_header,
 }
 
 
-int
+CIVETWEB_API int
 mg_base64_encode(const unsigned char *src,
                  size_t src_len,
                  char *dst,
@@ -7398,7 +7396,7 @@ b64reverse(char letter)
 }
 
 
-int
+CIVETWEB_API int
 mg_base64_decode(const char *src,
                  size_t src_len,
                  unsigned char *dst,
@@ -8344,7 +8342,7 @@ static const struct {
     {NULL, 0, NULL}};
 
 
-const char *
+CIVETWEB_API const char *
 mg_get_builtin_mime_type(const char *path)
 {
 	const char *ext;
@@ -8416,7 +8414,7 @@ bin2str(char *to, const unsigned char *p, size_t len)
 
 /* Return stringified MD5 hash for list of strings. Buffer must be 33 bytes.
  */
-char *
+CIVETWEB_API char *
 mg_md5(char buf[33], ...)
 {
 	md5_byte_t hash[16];
@@ -8852,7 +8850,7 @@ authorize(struct mg_connection *conn, struct mg_file *filep, const char *realm)
 
 
 /* Public function to check http digest authentication header */
-int
+CIVETWEB_API int
 mg_check_digest_access_authentication(struct mg_connection *conn,
                                       const char *realm,
                                       const char *filename)
@@ -8981,7 +8979,7 @@ send_authorization_request(struct mg_connection *conn, const char *realm)
 /* Interface function. Parameters are provided by the user, so do
  * at least some basic checks.
  */
-int
+CIVETWEB_API int
 mg_send_digest_access_authentication_request(struct mg_connection *conn,
                                              const char *realm)
 {
@@ -9016,7 +9014,7 @@ is_authorized_for_put(struct mg_connection *conn)
 #endif
 
 
-int
+CIVETWEB_API int
 mg_modify_passwords_file_ha1(const char *fname,
                              const char *domain,
                              const char *user,
@@ -9172,7 +9170,7 @@ mg_modify_passwords_file_ha1(const char *fname,
 }
 
 
-int
+CIVETWEB_API int
 mg_modify_passwords_file(const char *fname,
                          const char *domain,
                          const char *user,
@@ -9331,7 +9329,6 @@ connect_socket(
 #else
 	(void)use_ssl;
 #endif /* NO SSL */
-
 
 #if defined(USE_X_DOM_SOCKET)
 	if (port == -99) {
@@ -9534,7 +9531,7 @@ connect_socket(
 }
 
 
-int
+CIVETWEB_API int
 mg_url_encode(const char *src, char *dst, size_t dst_len)
 {
 	static const char *dont_escape = "._-$,;~()";
@@ -10449,7 +10446,7 @@ handle_static_file_request(struct mg_connection *conn,
 }
 
 
-int
+CIVETWEB_API int
 mg_send_file_body(struct mg_connection *conn, const char *path)
 {
 	struct mg_file file = STRUCT_FILE_INITIALIZER;
@@ -10508,14 +10505,14 @@ handle_not_modified_static_file_request(struct mg_connection *conn,
 
 
 #if !defined(NO_FILESYSTEMS)
-void
+CIVETWEB_API void
 mg_send_file(struct mg_connection *conn, const char *path)
 {
 	mg_send_mime_file2(conn, path, NULL, NULL);
 }
 
 
-void
+CIVETWEB_API void
 mg_send_mime_file(struct mg_connection *conn,
                   const char *path,
                   const char *mime_type)
@@ -10524,7 +10521,7 @@ mg_send_mime_file(struct mg_connection *conn,
 }
 
 
-void
+CIVETWEB_API void
 mg_send_mime_file2(struct mg_connection *conn,
                    const char *path,
                    const char *mime_type,
@@ -10620,7 +10617,7 @@ remove_bad_file(const struct mg_connection *conn, const char *path)
 }
 
 
-long long
+CIVETWEB_API long long
 mg_store_body(struct mg_connection *conn, const char *path)
 {
 	char buf[MG_BUF_LEN];
@@ -11088,7 +11085,6 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 		*buf = 0;
 		buf++;
 	} while (isspace((unsigned char)*buf));
-
 
 	/* Parse all HTTP headers */
 	ri->num_headers = parse_http_headers(&buf, ri->http_headers);
@@ -12984,7 +12980,6 @@ dav_proppatch(struct mg_connection *conn, const char *path)
 	                       -1);
 	mg_response_header_send(conn);
 
-
 	mg_get_request_link(conn, link_buf, sizeof(link_buf));
 
 	/* Content */
@@ -13001,7 +12996,7 @@ dav_proppatch(struct mg_connection *conn, const char *path)
 #endif
 
 
-void
+CIVETWEB_API void
 mg_lock_connection(struct mg_connection *conn)
 {
 	if (conn) {
@@ -13010,7 +13005,7 @@ mg_lock_connection(struct mg_connection *conn)
 }
 
 
-void
+CIVETWEB_API void
 mg_unlock_connection(struct mg_connection *conn)
 {
 	if (conn) {
@@ -13019,7 +13014,7 @@ mg_unlock_connection(struct mg_connection *conn)
 }
 
 
-void
+CIVETWEB_API void
 mg_lock_context(struct mg_context *ctx)
 {
 	if (ctx && (ctx->context_type == CONTEXT_SERVER)) {
@@ -13028,7 +13023,7 @@ mg_lock_context(struct mg_context *ctx)
 }
 
 
-void
+CIVETWEB_API void
 mg_unlock_context(struct mg_context *ctx)
 {
 	if (ctx && (ctx->context_type == CONTEXT_SERVER)) {
@@ -13138,7 +13133,6 @@ read_websocket(struct mg_connection *conn,
 	 * dynamically allocated buffer if it is too large. */
 	unsigned char mem[4096];
 	unsigned char mop; /* mask flag and opcode */
-
 
 	/* Variables used for connection monitoring */
 	double timeout = -1.0;
@@ -13319,7 +13313,6 @@ read_websocket(struct mg_connection *conn,
 					DEBUG_TRACE("Reply PONG failed (%i)", ret);
 					break;
 				}
-
 
 			} else {
 				/* Exit the loop if callback signals to exit (server side),
@@ -13619,7 +13612,8 @@ mg_websocket_write_exec(struct mg_connection *conn,
 	return retval;
 }
 
-int
+
+CIVETWEB_API int
 mg_websocket_write(struct mg_connection *conn,
                    int opcode,
                    const char *data,
@@ -13655,7 +13649,7 @@ mask_data(const char *in, size_t in_len, uint32_t masking_key, char *out)
 }
 
 
-int
+CIVETWEB_API int
 mg_websocket_client_write(struct mg_connection *conn,
                           int opcode,
                           const char *data,
@@ -14445,7 +14439,7 @@ mg_set_handler_type(struct mg_context *phys_ctx,
 }
 
 
-void
+CIVETWEB_API void
 mg_set_request_handler(struct mg_context *ctx,
                        const char *uri,
                        mg_request_handler handler,
@@ -14467,7 +14461,7 @@ mg_set_request_handler(struct mg_context *ctx,
 }
 
 
-void
+CIVETWEB_API void
 mg_set_websocket_handler(struct mg_context *ctx,
                          const char *uri,
                          mg_websocket_connect_handler connect_handler,
@@ -14487,7 +14481,7 @@ mg_set_websocket_handler(struct mg_context *ctx,
 }
 
 
-void
+CIVETWEB_API void
 mg_set_websocket_handler_with_subprotocols(
     struct mg_context *ctx,
     const char *uri,
@@ -14517,7 +14511,7 @@ mg_set_websocket_handler_with_subprotocols(
 }
 
 
-void
+CIVETWEB_API void
 mg_set_auth_handler(struct mg_context *ctx,
                     const char *uri,
                     mg_authorization_handler handler,
@@ -17733,7 +17727,6 @@ close_socket_gracefully(struct mg_connection *conn)
 	/* Send FIN to the client */
 	shutdown(conn->client.sock, SHUTDOWN_WR);
 
-
 #if defined(_WIN32)
 	/* Read and discard pending incoming data. If we do not do that and
 	 * close
@@ -17865,7 +17858,6 @@ close_connection(struct mg_connection *conn)
 	 * it must be done in the connection_close callback. */
 	mg_set_user_connection_data(conn, NULL);
 
-
 #if defined(USE_SERVER_STATS)
 	conn->conn_state = 7; /* closing */
 #endif
@@ -17909,7 +17901,7 @@ close_connection(struct mg_connection *conn)
 }
 
 
-void
+CIVETWEB_API void
 mg_close_connection(struct mg_connection *conn)
 {
 	if ((conn == NULL) || (conn->phys_ctx == NULL)) {
@@ -18131,7 +18123,6 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 
-
 #if !defined(NO_SSL) && !defined(USE_MBEDTLS) // TODO: mbedTLS client
 	if (use_ssl) {
 		/* TODO: Check ssl_verify_peer and ssl_ca_path here.
@@ -18252,7 +18243,7 @@ mg_connect_client(const char *host,
 
 
 #if defined(MG_EXPERIMENTAL_INTERFACES)
-struct mg_connection *
+CIVETWEB_API struct mg_connection *
 mg_connect_client2(const char *host,
                    const char *protocol,
                    int port,
@@ -18793,7 +18784,7 @@ get_response(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 }
 
 
-int
+CIVETWEB_API int
 mg_get_response(struct mg_connection *conn,
                 char *ebuf,
                 size_t ebuf_len,
@@ -18845,7 +18836,7 @@ mg_get_response(struct mg_connection *conn,
 }
 
 
-struct mg_connection *
+CIVETWEB_API struct mg_connection *
 mg_download(const char *host,
             int port,
             int use_ssl,
@@ -19183,7 +19174,7 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 }
 
 
-struct mg_connection *
+CIVETWEB_API struct mg_connection *
 mg_connect_websocket_client(const char *host,
                             int port,
                             int use_ssl,
@@ -19213,7 +19204,7 @@ mg_connect_websocket_client(const char *host,
 }
 
 
-struct mg_connection *
+CIVETWEB_API struct mg_connection *
 mg_connect_websocket_client_secure(
     const struct mg_client_options *client_options,
     char *error_buffer,
@@ -19240,7 +19231,7 @@ mg_connect_websocket_client_secure(
 }
 
 
-struct mg_connection *
+CIVETWEB_API struct mg_connection *
 mg_connect_websocket_client_extensions(const char *host,
                                        int port,
                                        int use_ssl,
@@ -19271,7 +19262,7 @@ mg_connect_websocket_client_extensions(const char *host,
 }
 
 
-struct mg_connection *
+CIVETWEB_API struct mg_connection *
 mg_connect_websocket_client_secure_extensions(
     const struct mg_client_options *client_options,
     char *error_buffer,
@@ -20315,7 +20306,7 @@ free_context(struct mg_context *ctx)
 }
 
 
-void
+CIVETWEB_API void
 mg_stop(struct mg_context *ctx)
 {
 	pthread_t mt;
@@ -20394,7 +20385,6 @@ get_system_name(char **sysName)
 
 	*sysName = mg_strdup(name);
 
-
 #elif defined(__ZEPHYR__)
 	*sysName = mg_strdup("Zephyr OS");
 #else
@@ -20434,7 +20424,7 @@ legacy_init(const char **options)
 }
 
 
-struct mg_context *
+CIVETWEB_API struct mg_context *
 mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 {
 	struct mg_context *ctx;
@@ -20905,7 +20895,6 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 		return NULL;
 	}
 
-
 #if !defined(_WIN32) && !defined(__ZEPHYR__)
 	if (!set_uid_option(ctx)) {
 		const char *err_msg = "Failed to run as configured user";
@@ -21176,7 +21165,7 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 }
 
 
-struct mg_context *
+CIVETWEB_API struct mg_context *
 mg_start(const struct mg_callbacks *callbacks,
          void *user_data,
          const char **options)
@@ -21191,7 +21180,7 @@ mg_start(const struct mg_callbacks *callbacks,
 
 
 /* Add an additional domain to an already running web server. */
-int
+CIVETWEB_API int
 mg_start_domain2(struct mg_context *ctx,
                  const char **options,
                  struct mg_error_data *error)
@@ -21393,7 +21382,7 @@ mg_start_domain2(struct mg_context *ctx,
 }
 
 
-int
+CIVETWEB_API int
 mg_start_domain(struct mg_context *ctx, const char **options)
 {
 	return mg_start_domain2(ctx, options, NULL);
@@ -21401,7 +21390,7 @@ mg_start_domain(struct mg_context *ctx, const char **options)
 
 
 /* Feature check API function */
-unsigned
+CIVETWEB_API unsigned
 mg_check_feature(unsigned feature)
 {
 	static const unsigned feature_set = 0
@@ -21483,7 +21472,7 @@ mg_str_append(char **dst, char *end, const char *src)
 
 /* Get system information. It can be printed or stored by the caller.
  * Return the size of available information. */
-int
+CIVETWEB_API int
 mg_get_system_info(char *buffer, int buflen)
 {
 	char *end, *append_eoobj = NULL, block[256];
@@ -21673,7 +21662,6 @@ mg_get_system_info(char *buffer, int buflen)
 		system_info_length += mg_str_append(&buffer, end, block);
 	}
 
-
 	/* Compiler information */
 	/* http://sourceforge.net/p/predef/wiki/Compilers/ */
 	{
@@ -21815,7 +21803,7 @@ mg_get_system_info(char *buffer, int buflen)
 
 /* Get context information. It can be printed or stored by the caller.
  * Return the size of available information. */
-int
+CIVETWEB_API int
 mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 {
 #if defined(USE_SERVER_STATS)
@@ -22014,7 +22002,7 @@ mg_get_context_info(const struct mg_context *ctx, char *buffer, int buflen)
 }
 
 
-void
+CIVETWEB_API void
 mg_disable_connection_keep_alive(struct mg_connection *conn)
 {
 	/* https://github.com/civetweb/civetweb/issues/727 */
@@ -22027,7 +22015,7 @@ mg_disable_connection_keep_alive(struct mg_connection *conn)
 #if defined(MG_EXPERIMENTAL_INTERFACES)
 /* Get connection information. It can be printed or stored by the caller.
  * Return the size of available information. */
-int
+CIVETWEB_API int
 mg_get_connection_info(const struct mg_context *ctx,
                        int idx,
                        char *buffer,
@@ -22277,7 +22265,7 @@ mg_get_connection_info(const struct mg_context *ctx,
 #if 0
 /* Get handler information. It can be printed or stored by the caller.
  * Return the size of available information. */
-int
+CIVETWEB_API int
 mg_get_handler_info(struct mg_context *ctx,
                        char *buffer,
                        int buflen)
@@ -22319,7 +22307,7 @@ mg_get_handler_info(struct mg_context *ctx,
 
 /* Initialize this library. This function does not need to be thread safe.
  */
-unsigned
+CIVETWEB_API unsigned
 mg_init_library(unsigned features)
 {
 	unsigned features_to_init = mg_check_feature(features & 0xFFu);
@@ -22363,7 +22351,6 @@ mg_init_library(unsigned features)
 			}
 #endif
 		}
-
 
 		if (failed) {
 #if defined(_WIN32)
@@ -22447,7 +22434,7 @@ mg_init_library(unsigned features)
 
 
 /* Un-initialize this library. */
-unsigned
+CIVETWEB_API unsigned
 mg_exit_library(void)
 {
 	if (mg_init_library_called <= 0) {
