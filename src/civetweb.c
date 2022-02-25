@@ -4005,7 +4005,7 @@ match_prefix(const char *pattern, size_t pattern_len, const char *str)
 		/* Pattern * or ** matches multiple characters */
 		if (pattern[i] == '*') {
 			i++;
-			if (pattern[i] == '*') {
+			if ((pattern[i] == '*') && (i < (ptrdiff_t)pattern_len)) {
 				/* Pattern ** matches all */
 				i++;
 				len = (ptrdiff_t)strlen(str + j);
