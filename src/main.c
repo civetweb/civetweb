@@ -468,7 +468,7 @@ sdup(const char *str)
 
 
 static const char *
-get_option(char **options, const char *option_name)
+get_option(const char **options, const char *option_name)
 {
 	int i = 0;
 	const char *opt_value = NULL;
@@ -492,7 +492,7 @@ get_option(char **options, const char *option_name)
 
 
 static int
-set_option(char **options, const char *name, const char *value)
+set_option(const char **options, const char *name, const char *value)
 {
 	int i, type;
 	const struct mg_option *default_options = mg_get_valid_options();
@@ -635,11 +635,11 @@ set_option(char **options, const char *name, const char *value)
 					die("Out of memory");
 				}
 				sprintf(s, "%s%s%s", options[2 * i + 1], multi_sep, value);
-				free(options[2 * i + 1]);
+				free((char *)options[2 * i + 1]);
 				options[2 * i + 1] = s;
 			} else {
 				/* Option already set. Overwrite */
-				free(options[2 * i + 1]);
+				free((char *)options[2 * i + 1]);
 				options[2 * i + 1] = sdup(value);
 			}
 			break;
@@ -663,7 +663,7 @@ set_option(char **options, const char *name, const char *value)
 
 
 static int
-read_config_file(const char *config_file, char **options)
+read_config_file(const char *config_file, const char **options)
 {
 	char line[MAX_CONF_FILE_LINE_SIZE], *p;
 	FILE *fp = NULL;
@@ -735,7 +735,7 @@ read_config_file(const char *config_file, char **options)
 
 
 static void
-process_command_line_arguments(int argc, char *argv[], char **options)
+process_command_line_arguments(int argc, char *argv[], const char **options)
 {
 	char *p;
 	size_t i, cmd_line_opts_start = 1;
@@ -875,7 +875,7 @@ is_path_absolute(const char *path)
 
 
 static int
-verify_existence(char **options, const char *option_name, int must_be_dir)
+verify_existence(const char **options, const char *option_name, int must_be_dir)
 {
 	struct stat st;
 	const char *path = get_option(options, option_name);
@@ -911,7 +911,7 @@ verify_existence(char **options, const char *option_name, int must_be_dir)
 
 
 static void
-set_absolute_path(char *options[],
+set_absolute_path(const char *options[],
                   const char *option_name,
                   const char *path_to_civetweb_exe)
 {
@@ -1136,7 +1136,7 @@ run_client(const char *url_arg)
 
 
 static int
-sanitize_options(char *options[] /* server options */,
+sanitize_options(const char *options[] /* server options */,
                  const char *arg0 /* argv[0] */)
 {
 	int ok = 1;
@@ -1181,7 +1181,7 @@ static void
 start_civetweb(int argc, char *argv[])
 {
 	struct mg_callbacks callbacks;
-	char *options[2 * MAX_OPTIONS + 1];
+	const char *options[2 * MAX_OPTIONS + 1];
 	struct mg_init_data init;
 	struct mg_error_data error;
 	char error_text[256];
@@ -1339,7 +1339,7 @@ start_civetweb(int argc, char *argv[])
 	/* mg_start copies all options to an internal buffer.
 	 * The options data field here is not required anymore. */
 	for (i = 0; options[i] != NULL; i++) {
-		free(options[i]);
+		free((char *)options[i]);
 	}
 
 	/* If mg_start fails, it returns NULL */
