@@ -652,6 +652,66 @@ START_TEST(test_match_prefix_fuzz)
 END_TEST
 
 
+START_TEST(test_mg_match)
+{
+	/* Copyright (c) 2022 the CivetWeb developers */
+	struct mg_match_context mcx;
+
+	ck_assert_int_eq(4, mg_match("a*D", 3, "abcde", NULL));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 0;
+	ck_assert_int_eq(4, mg_match("a*D", 3, "abcde", &mcx));
+	ck_assert_int_eq(1, (int)mcx.num_matches);
+	ck_assert_int_eq(2, (int)mcx.match_len[0]);
+	ck_assert(!memcmp(mcx.match_str[0], "bc", 2));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(-1, mg_match("a*D", 3, "abcde", &mcx));
+	ck_assert_int_eq(0, (int)mcx.num_matches);
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(4, mg_match("a??d", 4, "abcde", &mcx));
+	ck_assert_int_eq(1, (int)mcx.num_matches);
+	ck_assert_int_eq(2, (int)mcx.match_len[0]);
+	ck_assert(!memcmp(mcx.match_str[0], "bc", 2));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(5, mg_match("a??d*", 5, "abcde", &mcx));
+	ck_assert_int_eq(2, (int)mcx.num_matches);
+	ck_assert_int_eq(2, (int)mcx.match_len[0]);
+	ck_assert(!memcmp(mcx.match_str[0], "bc", 2));
+	ck_assert_int_eq(1, (int)mcx.match_len[1]);
+	ck_assert(!memcmp(mcx.match_str[1], "e", 1));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(4, mg_match("a??d*", 5, "abcd", &mcx));
+	ck_assert_int_eq(2, (int)mcx.num_matches);
+	ck_assert_int_eq(2, (int)mcx.match_len[0]);
+	ck_assert(!memcmp(mcx.match_str[0], "bc", 2));
+	ck_assert_int_eq(0, (int)mcx.match_len[1]);
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 0;
+	ck_assert_int_eq(2, mg_match("a?|?B", 5, "ABC", &mcx));
+	ck_assert_int_eq(1, (int)mcx.num_matches);
+	ck_assert_int_eq(1, (int)mcx.match_len[0]);
+	ck_assert(!memcmp(mcx.match_str[0], "B", 1));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(2, mg_match("a?|?B", 5, "ABC", &mcx));
+	ck_assert_int_eq(1, (int)mcx.num_matches);
+	ck_assert_int_eq(1, (int)mcx.match_len[0]);
+	ck_assert(!memcmp(mcx.match_str[0], "A", 1));
+}
+END_TEST
+
+
 START_TEST(test_remove_dot_segments)
 {
 	int i;
@@ -1695,6 +1755,7 @@ make_private_suite(void)
 	tcase_add_test(tcase_url_parsing_1, test_match_prefix);
 	tcase_add_test(tcase_url_parsing_1, test_match_prefix_strlen);
 	tcase_add_test(tcase_url_parsing_1, test_match_prefix_fuzz);
+	tcase_add_test(tcase_url_parsing_1, test_mg_match);
 	tcase_set_timeout(tcase_url_parsing_1, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_url_parsing_1);
 

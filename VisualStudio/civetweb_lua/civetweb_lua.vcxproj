@@ -207,6 +207,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\handle_form.inl" />
+    <None Include="..\..\src\match.inl" />
     <None Include="..\..\src\md5.inl" />
     <None Include="..\..\src\http2.inl" />
     <None Include="..\..\src\mod_lua_shared.inl" />

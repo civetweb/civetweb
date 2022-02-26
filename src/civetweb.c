@@ -3968,83 +3968,8 @@ header_has_option(const char *header, const char *option)
 }
 
 
-/* Perform case-insensitive match of string against pattern */
-static ptrdiff_t
-match_prefix(const char *pattern, size_t pattern_len, const char *str)
-{
-	const char *or_str = (const char *)memchr(pattern, '|', pattern_len);
-	ptrdiff_t i, j, len, res;
-
-	if (or_str != NULL) {
-		/* Split at | for alternative match */
-		res = match_prefix(pattern, (size_t)(or_str - pattern), str);
-		if (res > 0) {
-			return res;
-		}
-		return match_prefix(or_str + 1,
-		                    (size_t)((pattern + pattern_len) - (or_str + 1)),
-		                    str);
-	}
-
-	/* Parse string */
-	i = 0; /* index of pattern */
-	j = 0; /* index of str */
-	while (i < (ptrdiff_t)pattern_len) {
-		/* Pattern ? matches one character, except / */
-		if ((pattern[i] == '?') && (str[j] != '\0') && (str[j] != '/')) {
-			i++;
-			j++;
-			continue;
-		}
-
-		/* Pattern $ matches end of string */
-		if (pattern[i] == '$') {
-			return (str[j] == '\0') ? j : -1;
-		}
-
-		/* Pattern * or ** matches multiple characters */
-		if (pattern[i] == '*') {
-			i++;
-			if ((pattern[i] == '*') && (i < (ptrdiff_t)pattern_len)) {
-				/* Pattern ** matches all */
-				i++;
-				len = (ptrdiff_t)strlen(str + j);
-			} else {
-				/* Pattern * matches all except / character */
-				len = (ptrdiff_t)strcspn(str + j, "/");
-			}
-
-			if (i == (ptrdiff_t)pattern_len) {
-				/* End of pattern reached */
-				return j + len;
-			}
-			do {
-				res = match_prefix(pattern + i,
-				                   (pattern_len - (size_t)i),
-				                   str + j + len);
-			} while ((res == -1) && (len-- > 0));
-
-			return (res == -1) ? -1 : (j + res + len);
-
-		} else if (lowercase(&pattern[i]) != lowercase(&str[j])) {
-			/* case insensitive compare: mismatch */
-			return -1;
-		}
-		i++;
-		j++;
-	}
-	return (ptrdiff_t)j;
-}
-
-
-static ptrdiff_t
-match_prefix_strlen(const char *pattern, const char *str)
-{
-	if (pattern == NULL) {
-		return -1;
-	}
-	return match_prefix(pattern, strlen(pattern), str);
-}
+/* Pattern matching has been reimplemented in a new file */
+#include "match.inl"
 
 
 /* HTTP 1.1 assumes keep alive if "Connection:" header is not set
@@ -17984,6 +17909,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	size_t ctx_size = ((sizeof(struct mg_context) + 7) >> 3) << 3;
 	size_t alloc_size = conn_size + ctx_size + max_req_size;
 
+	(void)init; /* TODO: Implement required options */
+
 	conn = (struct mg_connection *)mg_calloc(1, alloc_size);
 
 	if (error != NULL) {
@@ -18252,7 +18179,6 @@ mg_connect_client2(const char *host,
                    struct mg_error_data *error)
 {
 	(void)path;
-	(void)init;
 
 	int is_ssl, is_ws;
 	/* void *user_data = (init != NULL) ? init->user_data : NULL; -- TODO */

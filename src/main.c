@@ -1279,7 +1279,7 @@ start_civetweb(int argc, char *argv[])
 	}
 
 	/* Initialize options structure */
-	memset(options, 0, sizeof(options));
+	memset((void *)options, 0, sizeof(options));
 	set_option(options, "document_root", ".");
 
 	/* Update config based on command line arguments */
