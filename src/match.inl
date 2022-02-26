@@ -7,12 +7,25 @@
 #define MG_MATCH_CONTEXT_MAX_MATCHES (32)
 #endif
 
+struct mg_match_element {
+	const char *str;
+	size_t len;
+};
+
 struct mg_match_context {
 	int case_sensitive;
 	size_t num_matches;
-	const char *match_str[MG_MATCH_CONTEXT_MAX_MATCHES];
-	size_t match_len[MG_MATCH_CONTEXT_MAX_MATCHES];
+	struct mg_match_element match[MG_MATCH_CONTEXT_MAX_MATCHES];
 };
+
+
+/* Initialize structure with 0 matches */
+static void
+match_context_reset(struct mg_match_context *mcx)
+{
+	mcx->num_matches = 0;
+	memset(mcx->match, 0, sizeof(mcx->match));
+}
 
 
 /* Add a new match to the list of matches */
@@ -20,8 +33,8 @@ static void
 match_context_push(const char *str, size_t len, struct mg_match_context *mcx)
 {
 	if (mcx->num_matches < MG_MATCH_CONTEXT_MAX_MATCHES) {
-		mcx->match_str[mcx->num_matches] = str;
-		mcx->match_len[mcx->num_matches] = len;
+		mcx->match[mcx->num_matches].str = str;
+		mcx->match[mcx->num_matches].len = len;
 		mcx->num_matches++;
 	}
 }
@@ -136,6 +149,11 @@ mg_match_alternatives(const char *pat,
                       struct mg_match_context *mcx)
 {
 	const char *match_alternative = (const char *)memchr(pat, '|', pat_len);
+
+	if (mcx != NULL) {
+		match_context_reset(mcx);
+	}
+
 	while (match_alternative != NULL) {
 		/* Split at | for alternative match */
 		size_t left_size = (size_t)(match_alternative - pat);
@@ -145,6 +163,11 @@ mg_match_alternatives(const char *pat,
 		if (ret >= 0) {
 			/* A 0-byte match is also valid */
 			return ret;
+		}
+
+		/* Reset possible incomplete match data */
+		if (mcx != NULL) {
+			match_context_reset(mcx);
 		}
 
 		/* If no match: try right side */
@@ -158,6 +181,20 @@ mg_match_alternatives(const char *pat,
 }
 
 
+static int
+match_compare(const void *p1, const void *p2, void *user)
+{
+	(void)user;
+	const struct mg_match_element *e1 = (const struct mg_match_element *)p1;
+	const struct mg_match_element *e2 = (const struct mg_match_element *)p2;
+	if (e1->str > e2->str)
+		return +1;
+	if (e1->str < e2->str)
+		return -1;
+	return 0;
+}
+
+
 /* Export as public API? */
 static ptrdiff_t
 mg_match(const char *pat,
@@ -165,20 +202,46 @@ mg_match(const char *pat,
          const char *str,
          struct mg_match_context *mcx)
 {
-	ptrdiff_t ret;
-	if (mcx != NULL) {
-		mcx->num_matches = 0;
-		memset((void *)(mcx->match_str), 0, sizeof(mcx->match_str));
-		memset(mcx->match_len, 0, sizeof(mcx->match_len));
-	}
-	ret = mg_match_alternatives(pat, pat_len, str, mcx);
+	ptrdiff_t ret = mg_match_alternatives(pat, pat_len, str, mcx);
 	if (mcx != NULL) {
 		if (ret < 0) {
-			mcx->num_matches = 0;
-			memset((void *)(mcx->match_str), 0, sizeof(mcx->match_str));
-			memset(mcx->match_len, 0, sizeof(mcx->match_len));
+			/* Remove possible incomplete data */
+			match_context_reset(mcx);
 		} else {
-			/* TODO: Join matches */
+			/* Join "?*" to one pattern. */
+			size_t i, j;
+
+			/* Use difference of two array elements instead of sizeof, since
+			 * there may be some additional padding bytes. */
+			size_t elmsize =
+			    (size_t)(&mcx->match[1]) - (size_t)(&mcx->match[0]);
+
+			/* First sort the matches by address ("str" begin to end) */
+			mg_sort(mcx->match, mcx->num_matches, elmsize, match_compare, NULL);
+
+			/* Join consecutive matches */
+			i = 1;
+			while (i < mcx->num_matches) {
+				if ((mcx->match[i - 1].str + mcx->match[i - 1].len)
+				    == mcx->match[i].str) {
+					/* Two matches are consecutive. Join length. */
+					mcx->match[i - 1].len += mcx->match[i].len;
+
+					/* Shift all list elements. */
+					for (j = i + 1; j < mcx->num_matches; j++) {
+						mcx->match[j - 1].len = mcx->match[j].len;
+						mcx->match[j - 1].str = mcx->match[j].str;
+					}
+
+					/* Remove/blank last list element. */
+					mcx->num_matches--;
+					mcx->match[mcx->num_matches].str = NULL;
+					mcx->match[mcx->num_matches].len = 0;
+
+				} else {
+					i++;
+				}
+			}
 		}
 	}
 	return ret;
