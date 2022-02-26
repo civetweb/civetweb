@@ -657,57 +657,57 @@ START_TEST(test_mg_match)
 	/* Copyright (c) 2022 the CivetWeb developers */
 	struct mg_match_context mcx;
 
-	ck_assert_int_eq(4, mg_match("a*D", 3, "abcde", NULL));
+	ck_assert_int_eq(4, mg_match_alternatives("a*D", 3, "abcde", NULL));
 
 	memset(&mcx, 0, sizeof(mcx));
 	mcx.case_sensitive = 0;
-	ck_assert_int_eq(4, mg_match("a*D", 3, "abcde", &mcx));
+	ck_assert_int_eq(4, mg_match_alternatives("a*D", 3, "abcde", &mcx));
 	ck_assert_int_eq(1, (int)mcx.num_matches);
-	ck_assert_int_eq(2, (int)mcx.match_len[0]);
-	ck_assert(!memcmp(mcx.match_str[0], "bc", 2));
+	ck_assert_int_eq(2, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "bc", 2));
 
 	memset(&mcx, 0, sizeof(mcx));
 	mcx.case_sensitive = 1;
-	ck_assert_int_eq(-1, mg_match("a*D", 3, "abcde", &mcx));
+	ck_assert_int_eq(-1, mg_match_alternatives("a*D", 3, "abcde", &mcx));
 	ck_assert_int_eq(0, (int)mcx.num_matches);
 
 	memset(&mcx, 0, sizeof(mcx));
 	mcx.case_sensitive = 1;
-	ck_assert_int_eq(4, mg_match("a??d", 4, "abcde", &mcx));
+	ck_assert_int_eq(4, mg_match_alternatives("a??d", 4, "abcde", &mcx));
 	ck_assert_int_eq(1, (int)mcx.num_matches);
-	ck_assert_int_eq(2, (int)mcx.match_len[0]);
-	ck_assert(!memcmp(mcx.match_str[0], "bc", 2));
+	ck_assert_int_eq(2, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "bc", 2));
 
 	memset(&mcx, 0, sizeof(mcx));
 	mcx.case_sensitive = 1;
-	ck_assert_int_eq(5, mg_match("a??d*", 5, "abcde", &mcx));
+	ck_assert_int_eq(5, mg_match_alternatives("a??d*", 5, "abcde", &mcx));
 	ck_assert_int_eq(2, (int)mcx.num_matches);
-	ck_assert_int_eq(2, (int)mcx.match_len[0]);
-	ck_assert(!memcmp(mcx.match_str[0], "bc", 2));
-	ck_assert_int_eq(1, (int)mcx.match_len[1]);
-	ck_assert(!memcmp(mcx.match_str[1], "e", 1));
+	ck_assert_int_eq(2, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "bc", 2));
+	ck_assert_int_eq(1, (int)mcx.match[1].len);
+	ck_assert(!memcmp(mcx.match[1].str, "e", 1));
 
 	memset(&mcx, 0, sizeof(mcx));
 	mcx.case_sensitive = 1;
-	ck_assert_int_eq(4, mg_match("a??d*", 5, "abcd", &mcx));
+	ck_assert_int_eq(4, mg_match_alternatives("a??d*", 5, "abcd", &mcx));
 	ck_assert_int_eq(2, (int)mcx.num_matches);
-	ck_assert_int_eq(2, (int)mcx.match_len[0]);
-	ck_assert(!memcmp(mcx.match_str[0], "bc", 2));
-	ck_assert_int_eq(0, (int)mcx.match_len[1]);
+	ck_assert_int_eq(2, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "bc", 2));
+	ck_assert_int_eq(0, (int)mcx.match[1].len);
 
 	memset(&mcx, 0, sizeof(mcx));
 	mcx.case_sensitive = 0;
-	ck_assert_int_eq(2, mg_match("a?|?B", 5, "ABC", &mcx));
+	ck_assert_int_eq(2, mg_match_alternatives("a?|?B", 5, "ABC", &mcx));
 	ck_assert_int_eq(1, (int)mcx.num_matches);
-	ck_assert_int_eq(1, (int)mcx.match_len[0]);
-	ck_assert(!memcmp(mcx.match_str[0], "B", 1));
+	ck_assert_int_eq(1, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "B", 1));
 
 	memset(&mcx, 0, sizeof(mcx));
 	mcx.case_sensitive = 1;
-	ck_assert_int_eq(2, mg_match("a?|?B", 5, "ABC", &mcx));
+	ck_assert_int_eq(2, mg_match_alternatives("a?|?B", 5, "ABC", &mcx));
 	ck_assert_int_eq(1, (int)mcx.num_matches);
-	ck_assert_int_eq(1, (int)mcx.match_len[0]);
-	ck_assert(!memcmp(mcx.match_str[0], "A", 1));
+	ck_assert_int_eq(1, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "A", 1));
 }
 END_TEST
 

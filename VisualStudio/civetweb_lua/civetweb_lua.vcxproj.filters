@@ -28,5 +28,6 @@
     <None Include="..\..\src\mod_mbedtls.inl" />
     <None Include="..\..\src\openssl_dl.inl" />
     <None Include="..\..\src\match.inl" />
+    <None Include="..\..\src\sort.inl" />
   </ItemGroup>
 </Project>

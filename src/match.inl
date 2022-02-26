@@ -3,21 +3,6 @@
  * See https://github.com/civetweb/civetweb/
  */
 
-#if !defined(MG_MATCH_CONTEXT_MAX_MATCHES)
-#define MG_MATCH_CONTEXT_MAX_MATCHES (32)
-#endif
-
-struct mg_match_element {
-	const char *str;
-	size_t len;
-};
-
-struct mg_match_context {
-	int case_sensitive;
-	size_t num_matches;
-	struct mg_match_element match[MG_MATCH_CONTEXT_MAX_MATCHES];
-};
-
 
 /* Initialize structure with 0 matches */
 static void
@@ -195,13 +180,15 @@ match_compare(const void *p1, const void *p2, void *user)
 }
 
 
-/* Export as public API? */
-static ptrdiff_t
-mg_match(const char *pat,
-         size_t pat_len,
-         const char *str,
-         struct mg_match_context *mcx)
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+CIVETWEB_API
+#else
+static
+#endif
+ptrdiff_t
+mg_match(const char *pat, const char *str, struct mg_match_context *mcx)
 {
+	size_t pat_len = strlen(pat);
 	ptrdiff_t ret = mg_match_alternatives(pat, pat_len, str, mcx);
 	if (mcx != NULL) {
 		if (ret < 0) {

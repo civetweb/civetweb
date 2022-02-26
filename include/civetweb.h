@@ -1366,16 +1366,50 @@ CIVETWEB_API int mg_base64_decode(const char *src,
 CIVETWEB_API char *mg_md5(char buf[33], ...);
 
 
-/* Print error message to the opened error log stream.
-   This utilizes the provided logging configuration.
-     conn: connection (not used for sending data, but to get perameters)
-     fmt: format string without the line return
-     ...: variable argument list
-   Example:
-     mg_cry(conn,"i like %s", "logging"); */
-CIVETWEB_API void mg_cry(const struct mg_connection *conn,
-                         PRINTF_FORMAT_STRING(const char *fmt),
-                         ...) PRINTF_ARGS(2, 3);
+#if !defined(MG_MATCH_CONTEXT_MAX_MATCHES)
+#define MG_MATCH_CONTEXT_MAX_MATCHES (32)
+#endif
+
+struct mg_match_element {
+	const char *str; /* First character matching wildcard */
+	size_t len;      /* Number of character matching wildcard */
+};
+
+struct mg_match_context {
+	int case_sensitive; /* Input: 1 (case sensitive) or 0 (insensitive) */
+	size_t num_matches; /* Output: Number of wildcard matches returned. */
+	struct mg_match_element match[MG_MATCH_CONTEXT_MAX_MATCHES]; /* Output */
+};
+
+
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+/* Pattern matching and extraction function.
+   Parameters:
+     pat: Pattern string (see UserManual.md)
+     str: String to search for match patterns.
+     mcx: Match context (optional, can be NULL).
+
+   Return:
+     Number of characters matched.
+     -1 if no valid match was found.
+     Note: 0 characters might be a valid match for some patterns.
+*/
+CIVETWEB_API ptrdiff_t mg_match(const char *pat,
+                                const char *str,
+                                struct mg_match_context *mcx)
+#endif
+
+
+    /* Print error message to the opened error log stream.
+       This utilizes the provided logging configuration.
+         conn: connection (not used for sending data, but to get perameters)
+         fmt: format string without the line return
+         ...: variable argument list
+       Example:
+         mg_cry(conn,"i like %s", "logging"); */
+    CIVETWEB_API void mg_cry(const struct mg_connection *conn,
+                             PRINTF_FORMAT_STRING(const char *fmt),
+                             ...) PRINTF_ARGS(2, 3);
 
 
 /* utility methods to compare two buffers, case insensitive. */
