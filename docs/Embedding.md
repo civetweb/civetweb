@@ -31,6 +31,7 @@ but all functions required to run a HTTP server.
     - src/sha1.inl (SHA calculation)
     - src/handle\_form.inl (HTML form handling functions)
     - src/response.inl (helper for generating HTTP response headers)
+    - src/match.inl (pattern matching)
     - src/timer.inl (optional timer support)
     - src/http2.inl (optional HTTP2 support)
   - Optional: C++ wrapper
