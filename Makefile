@@ -336,36 +336,32 @@ unit_test: $(UNIT_TEST_PROG)
 
 ifeq ($(CAN_INSTALL),1)
 install: $(HTMLDIR)/index.html $(SYSCONFDIR)/civetweb.conf
-	install -d -m 755  "$(DOCDIR)"
-	install -m 644 *.md "$(DOCDIR)"
-	install -d -m 755 "$(BINDIR)"
-	install -m 755 $(CPROG) "$(BINDIR)/"
+	install -D -m 644 -t "$(DOCDIR)/" *.md
+	install -D -m 755 -t "$(BINDIR)/" $(CPROG)
 
 install-headers:
-	install -m 644 $(HEADERS) "$(INCLUDEDIR)"
+	install -D -m 644 -t "$(INCLUDEDIR)/" $(HEADERS)
 
 install-lib: lib$(CPROG).a
-	install -m 644 $< "$(LIBDIR)"
+	install -D -m 644 -t "$(LIBDIR)/" $<
 
 install-slib: lib$(CPROG).so
 	$(eval version=$(shell grep -w "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
 	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
-	install -m 755 $<.$(version).0 "$(LIBDIR)"
+	install -D -m 755 -t "$(LIBDIR)" $<.$(version).0
 	cd "$(LIBDIR)" && ln -sfv $<.$(version).0 $<.$(major)
 	cd "$(LIBDIR)" && ln -sfv $<.$(version).0 $<
 
 # Install target we do not want to overwrite
 # as it may be an upgrade
 $(HTMLDIR)/index.html:
-	install -d -m 755  "$(HTMLDIR)"
-	install -m 644 resources/itworks.html $(HTMLDIR)/index.html
-	install -m 644 resources/civetweb_64x64.png $(HTMLDIR)/
+	install -D -m 644 resources/itworks.html $(HTMLDIR)/index.html
+	install -D -m 644 -t "$(HTMLDIR)/" resources/civetweb_64x64.png
 
 # Install target we do not want to overwrite
 # as it may be an upgrade
 $(SYSCONFDIR)/civetweb.conf:
-	install -d -m 755  "$(SYSCONFDIR)"
-	install -m 644 resources/civetweb.conf  "$(SYSCONFDIR)/"
+	install -D -m 644 -t "$(SYSCONFDIR)/" resources/civetweb.conf
 	@sed -i 's#^document_root.*$$#document_root $(DOCUMENT_ROOT)#' "$(SYSCONFDIR)/civetweb.conf"
 	@sed -i 's#^listening_ports.*$$#listening_ports $(PORTS)#' "$(SYSCONFDIR)/civetweb.conf"
 
