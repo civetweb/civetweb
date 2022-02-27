@@ -1396,20 +1396,20 @@ struct mg_match_context {
 */
 CIVETWEB_API ptrdiff_t mg_match(const char *pat,
                                 const char *str,
-                                struct mg_match_context *mcx)
+                                struct mg_match_context *mcx);
 #endif
 
 
-    /* Print error message to the opened error log stream.
-       This utilizes the provided logging configuration.
-         conn: connection (not used for sending data, but to get perameters)
-         fmt: format string without the line return
-         ...: variable argument list
-       Example:
-         mg_cry(conn,"i like %s", "logging"); */
-    CIVETWEB_API void mg_cry(const struct mg_connection *conn,
-                             PRINTF_FORMAT_STRING(const char *fmt),
-                             ...) PRINTF_ARGS(2, 3);
+/* Print error message to the opened error log stream.
+   This utilizes the provided logging configuration.
+     conn: connection (not used for sending data, but to get perameters)
+     fmt: format string without the line return
+     ...: variable argument list
+   Example:
+     mg_cry(conn,"i like %s", "logging"); */
+CIVETWEB_API void mg_cry(const struct mg_connection *conn,
+                         PRINTF_FORMAT_STRING(const char *fmt),
+                         ...) PRINTF_ARGS(2, 3);
 
 
 /* utility methods to compare two buffers, case insensitive. */

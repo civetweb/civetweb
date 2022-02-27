@@ -1398,7 +1398,7 @@ start_civetweb(int argc, char *argv[])
 		}
 
 		for (j = 0; options[j] != NULL; j++) {
-			free(options[j]);
+			free((void *)options[j]);
 		}
 	}
 #endif

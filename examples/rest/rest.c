@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018 the CivetWeb developers
+ * Revisited version: Copyright (c) 2022 the CivetWeb developers
  * MIT License
  */
 
@@ -141,6 +142,7 @@ ExamplePUT(struct mg_connection *conn, const char *p1, const char *p2)
 }
 
 
+#if 0 /* Old version: User code had to split the url. */
 static int
 mg_vsplit(const char *url, const char *pattern, va_list va)
 {
@@ -185,6 +187,7 @@ mg_split(const char *url, const char *pattern, ...)
 	va_end(va);
 	return ret;
 }
+#endif
 
 
 static int
@@ -193,15 +196,37 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	char path1[1024], path2[1024];
 	const struct mg_request_info *ri = mg_get_request_info(conn);
 	const char *url = ri->local_uri;
-	(void)cbdata; /* currently unused */
+	size_t url_len = strlen(url);
 
 	/* Pattern matching */
+#if 0 /* Old version: User code had to split the url. */
 	if (2
 	    != mg_split(
 	           url, EXAMPLE_URI, path1, sizeof(path1), path2, sizeof(path2))) {
 		mg_send_http_error(conn, 404, "Invalid path: %s\n", url);
 		return 404;
 	}
+#else /* New version: User mg_match. */
+	struct mg_match_context mcx;
+	mcx.case_sensitive = 0;
+	ptrdiff_t ret = mg_match(EXAMPLE_URI, url, &mcx);
+	if ((ret != url_len) || (mcx.num_matches != 2)) {
+		/* Note: Could have done this with a $ at the end of the match
+		 * pattern as well. Then we would have to check for a return value
+		 * of -1 only. Here we use this version as minumum modification
+		 * of the existing code. */
+		printf("Match ret: %i\n", (int)ret);
+		mg_send_http_error(conn, 404, "Invalid path: %s\n", url);
+		return 404;
+	}
+	memcpy(path1, mcx.match[0].str, mcx.match[0].len);
+	path1[mcx.match[0].len] = 0;
+	memcpy(path2, mcx.match[1].str, mcx.match[1].len);
+	path2[mcx.match[1].len] = 0;
+#endif
+
+
+	(void)cbdata; /* currently unused */
 
 	/* According to method */
 	if (0 == strcmp(ri->request_method, "GET")) {
