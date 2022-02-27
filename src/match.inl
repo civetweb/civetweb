@@ -169,13 +169,18 @@ mg_match_alternatives(const char *pat,
 static int
 match_compare(const void *p1, const void *p2, void *user)
 {
-	(void)user;
 	const struct mg_match_element *e1 = (const struct mg_match_element *)p1;
 	const struct mg_match_element *e2 = (const struct mg_match_element *)p2;
-	if (e1->str > e2->str)
+
+	/* unused */
+	(void)user;
+
+	if (e1->str > e2->str) {
 		return +1;
-	if (e1->str < e2->str)
+	}
+	if (e1->str < e2->str) {
 		return -1;
+	}
 	return 0;
 }
 
