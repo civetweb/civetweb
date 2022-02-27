@@ -63,7 +63,7 @@ mg_match_impl(const char *pat,
 
 		/* Pattern $ matches end of string */
 		if (pat[i_pat] == '$') {
-			return (str[i_str] == '\0') ? i_str : -1;
+			return (str[i_str] == '\0') ? (ptrdiff_t)i_str : -1;
 		}
 
 		/* Pattern * or ** matches multiple characters */
