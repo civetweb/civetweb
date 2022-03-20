@@ -21,8 +21,10 @@
  */
 
 #if defined(__GNUC__) || defined(__MINGW32__)
+#ifndef GCC_VERSION
 #define GCC_VERSION                                                            \
 	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#endif
 #if GCC_VERSION >= 40500
 /* gcc diagnostic pragmas available */
 #define GCC_DIAGNOSTIC
@@ -182,20 +184,18 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #endif /* __SYMBIAN32__ */
 
 #if defined(__ZEPHYR__)
-#include <time.h>
-
 #include <ctype.h>
-#include <net/socket.h>
-#include <posix/pthread.h>
-#include <posix/time.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <poll.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <time.h>
+
 #include <zephyr.h>
-
-#include <fcntl.h>
-
-#include <libc_extensions.h>
 
 /* Max worker threads is the max of pthreads minus the main application thread
  * and minus the main civetweb thread, thus -2
