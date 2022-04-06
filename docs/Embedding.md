@@ -308,7 +308,8 @@ handler(struct mg_connection *conn, void *ignored)
 }
 ```
 
-A simple callback (old structure supporting HTTP/1.x only):
+A simple callback (deprecated structure supporting HTTP/1.x only):
+(Note: While some older examples use this pattern, it is not recommended to it in new code.)
 ```C
 static int
 handler(struct mg_connection *conn, void *ignored)
