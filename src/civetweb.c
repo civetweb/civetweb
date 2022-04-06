@@ -3763,8 +3763,7 @@ skip_quoted(char **buf,
 	if (end_word > begin_word) {
 		p = end_word - 1;
 		while (*p == quotechar) {
-			/* While the delimiter is quoted, look for the next delimiter.
-			 */
+			/* While the delimiter is quoted, look for the next delimiter. */
 			/* This happens, e.g., in calls from parse_auth_header,
 			 * if the user name contains a " character. */
 
@@ -8366,14 +8365,14 @@ mg_md5(char buf[33], ...)
 
 /* Check the user's password, return 1 if OK */
 static int
-check_password(const char *method,
-               const char *ha1,
-               const char *uri,
-               const char *nonce,
-               const char *nc,
-               const char *cnonce,
-               const char *qop,
-               const char *response)
+check_password_digest(const char *method,
+                      const char *ha1,
+                      const char *uri,
+                      const char *nonce,
+                      const char *nc,
+                      const char *cnonce,
+                      const char *qop,
+                      const char *response)
 {
 	char ha2[32 + 1], expected_response[32 + 1];
 
@@ -8485,7 +8484,10 @@ open_auth_file(struct mg_connection *conn,
 
 /* Parsed Authorization header */
 struct ah {
-	char *user, *uri, *cnonce, *response, *qop, *nc, *nonce;
+	char *user;
+	int type;             /* 1 = basic, 2 = digest */
+	char *plain_password; /* Basic only */
+	char *uri, *cnonce, *response, *qop, *nc, *nonce; /* Digest only */
 };
 
 
@@ -8505,8 +8507,43 @@ parse_auth_header(struct mg_connection *conn,
 	}
 
 	(void)memset(ah, 0, sizeof(*ah));
-	if (((auth_header = mg_get_header(conn, "Authorization")) == NULL)
-	    || mg_strncasecmp(auth_header, "Digest ", 7) != 0) {
+	auth_header = mg_get_header(conn, "Authorization");
+
+	if (auth_header == NULL) {
+		/* No Authorization header at all */
+		return 0;
+	}
+	if (0 == mg_strncasecmp(auth_header, "Basic ", 6)) {
+		/* Basic Auth (we never asked for this, but some client may send it) */
+		char *split;
+		const char *userpw_b64 = auth_header + 6;
+		size_t userpw_b64_len = strlen(userpw_b64);
+		size_t buf_len_r = buf_size;
+		if (mg_base64_decode(userpw_b64, userpw_b64_len, buf, &buf_len_r)
+		    != -1) {
+			return 0; /* decode error */
+		}
+		split = strchr(buf, ':');
+		if (!split) {
+			return 0; /* Format error */
+		}
+
+		/* Separate string at ':' */
+		*split = 0;
+
+		/* User name is before ':', Password is after ':'  */
+		ah->user = buf;
+		ah->type = 1;
+		ah->plain_password = split + 1;
+
+		return 1;
+
+	} else if (0 == mg_strncasecmp(auth_header, "Digest ", 7)) {
+		/* Digest Auth ... implemented below */
+		ah->type = 2;
+
+	} else {
+		/* Unknown or invalid Auth method */
 		return 0;
 	}
 
@@ -8591,15 +8628,7 @@ parse_auth_header(struct mg_connection *conn,
 	(void)nonce;
 #endif
 
-	/* CGI needs it as REMOTE_USER */
-	if (ah->user != NULL) {
-		conn->request_info.remote_user =
-		    mg_strdup_ctx(ah->user, conn->phys_ctx);
-	} else {
-		return 0;
-	}
-
-	return 1;
+	return (ah->user != NULL);
 }
 
 
@@ -8734,14 +8763,36 @@ read_auth_file(struct mg_file *filep,
 
 		if (!strcmp(workdata->ah.user, workdata->f_user)
 		    && !strcmp(workdata->domain, workdata->f_domain)) {
-			return check_password(workdata->conn->request_info.request_method,
-			                      workdata->f_ha1,
-			                      workdata->ah.uri,
-			                      workdata->ah.nonce,
-			                      workdata->ah.nc,
-			                      workdata->ah.cnonce,
-			                      workdata->ah.qop,
-			                      workdata->ah.response);
+			switch (workdata->ah.type) {
+			case 1: /* Basic */
+			{
+				size_t mlen = strlen(workdata->f_user)
+				              + strlen(workdata->domain)
+				              + strlen(workdata->ah.plain_password) + 3;
+				char md5[33];
+
+				mg_md5(md5,
+				       workdata->f_user,
+				       ":",
+				       workdata->domain,
+				       ":",
+				       workdata->ah.plain_password,
+				       NULL);
+				return 0 == memcmp(workdata->f_ha1, md5, 33);
+			}
+			case 2: /* Digest */
+				return check_password_digest(
+				    workdata->conn->request_info.request_method,
+				    workdata->f_ha1,
+				    workdata->ah.uri,
+				    workdata->ah.nonce,
+				    workdata->ah.nc,
+				    workdata->ah.cnonce,
+				    workdata->ah.qop,
+				    workdata->ah.response);
+			default: /* None/Other/Unknown */
+				return 0;
+			}
 		}
 	}
 
@@ -8766,6 +8817,10 @@ authorize(struct mg_connection *conn, struct mg_file *filep, const char *realm)
 	if (!parse_auth_header(conn, buf, sizeof(buf), &workdata.ah)) {
 		return 0;
 	}
+
+	/* CGI needs it as REMOTE_USER */
+	conn->request_info.remote_user =
+	    mg_strdup_ctx(workdata.ah.user, conn->phys_ctx);
 
 	if (realm) {
 		workdata.domain = realm;
