@@ -21,8 +21,10 @@
  */
 
 #if defined(__GNUC__) || defined(__MINGW32__)
+#ifndef GCC_VERSION
 #define GCC_VERSION                                                            \
 	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#endif
 #if GCC_VERSION >= 40500
 /* gcc diagnostic pragmas available */
 #define GCC_DIAGNOSTIC
@@ -182,20 +184,18 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #endif /* __SYMBIAN32__ */
 
 #if defined(__ZEPHYR__)
-#include <time.h>
-
 #include <ctype.h>
-#include <net/socket.h>
-#include <posix/pthread.h>
-#include <posix/time.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <poll.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <time.h>
+
 #include <zephyr.h>
-
-#include <fcntl.h>
-
-#include <libc_extensions.h>
 
 /* Max worker threads is the max of pthreads minus the main application thread
  * and minus the main civetweb thread, thus -2
@@ -15978,7 +15978,12 @@ log_access(const struct mg_connection *conn)
 	const struct mg_request_info *ri;
 	struct mg_file fi;
 	char date[64], src_addr[IP_ADDR_STR_LEN];
+#if defined(REENTRANT_TIME)
+	struct tm _tm;
+	struct tm *tm = &_tm;
+#else
 	struct tm *tm;
+#endif
 
 	const char *referer;
 	const char *user_agent;
@@ -16056,7 +16061,11 @@ log_access(const struct mg_connection *conn)
 
 	/* If we did not get a log message from Lua, create it here. */
 	if (!log_buf[0]) {
+#if defined(REENTRANT_TIME)
+		localtime_r(&conn->conn_birth_time, tm);
+#else
 		tm = localtime(&conn->conn_birth_time);
+#endif
 		if (tm != NULL) {
 			strftime(date, sizeof(date), "%d/%b/%Y:%H:%M:%S %z", tm);
 		} else {

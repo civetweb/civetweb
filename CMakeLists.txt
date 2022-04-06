@@ -596,7 +596,31 @@ configure_package_config_file(
   ${PROJECT_NAME}-config.cmake
   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
   NO_CHECK_REQUIRED_COMPONENTS_MACRO
-  PATH_VARS CMAKE_INSTALL_INCLUDEDIR
+  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR CIVETWEB_ENABLE_CXX
+)
+
+configure_file(
+  cmake/${PROJECT_NAME}.pc.in
+  ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc
+  @ONLY
+)
+
+configure_file(
+  cmake/${PROJECT_NAME}-cpp.pc.in
+  ${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc
+  @ONLY
+)
+
+install(
+  FILES 
+    "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig"
+)
+
+install(
+  FILES 
+    "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig"
 )
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake
