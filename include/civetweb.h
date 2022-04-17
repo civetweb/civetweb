@@ -1353,7 +1353,7 @@ CIVETWEB_API int mg_base64_encode(const unsigned char *src,
    returns -1 on OK. */
 CIVETWEB_API int mg_base64_decode(const char *src,
                                   size_t src_len,
-                                  unsigned char *dst,
+                                  char *dst,
                                   size_t *dst_len);
 
 
