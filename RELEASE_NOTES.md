@@ -1,10 +1,109 @@
-Release Notes v1.12
+Release Notes v1.16
 ===
-### Objectives: *TO BE DEFINED*
+### Objectives: *to be defined*
 
 Changes
 -------
 
+- Update version number
+
+
+Release Notes v1.15
+===
+### Objectives: *bug fixes, remove legacy interfaces*
+
+Changes
+-------
+
+- New configuration for URL decoding
+- Sanitize filenames in handle form
+- Example "embedded_c.c": Do not overwrite files (possible security issue) 
+- Remove obsolete examples
+- Remove "experimental" label for some features
+- Remove MG_LEGACY_INTERFACE that have been declared obsolete in 2017 or earlier
+- Modifications to build scripts, required due to changes in the test environment
+- Unix domain socket support fixed
+- Fixes for NO_SSL_DL
+- Fixes for some warnings / static code analysis
+- Update version number
+
+
+Release Notes v1.14
+===
+### Objectives: *mbedTLS, Lua API enhancements, log filtering*
+
+Changes
+-------
+
+- Change SSL default setting to use TLS 1.2 as minimum (set config if you need an earlier version)
+- Add local_uri_raw field (not sanitized URI) to request_info
+- Additional API functions and a callback after closing connections
+- Allow mbedTLS as OpenSSL alternative (basic functionality)
+- Add OpenSSL 3.0 support (OpenSSL 3.0 Alpha 13)
+- Support UNIX/Linux domain sockets
+- Fuzz tests and ossfuzz integration
+- Compression for websockets
+- Restructure some source files
+- Improve documentation
+- Fix HTTP range requests
+- Add some functions for Lua scripts/LSP
+- Build system specific fixes (CMake, MinGW)
+- Update 3rd party components (Lua, lfs, sqlite)
+- Allow Lua background script to use timers, format and filter logs
+- Remove WinCE code
+- Update version number
+
+
+Release Notes v1.13
+===
+### Objectives: *Various updates and fixes, additional API functions*
+
+Changes
+-------
+
+- Add arguments for CGI interpreters
+- Support multiple CGi interpreters
+- Buffering HTTP response headers, including API functions mg_response_header_* in C and Lua
+- Additional C API functions
+- Fix some memory leaks
+- Extended use of atomic operations (e.g., for server stats)
+- Add fuzz tests
+- Set OpenSSL 1.1 API as default (from 1.0)
+- Add Lua 5.4 support and deprecate Lua 5.1
+- Provide additional Lua API functions
+- Fix Lua websocket memory leak when closing the server
+- Remove obsolete "file in memory" implementation
+- Improvements and fixes in documentation
+- Fixes from static source code analysis
+- Additional unit tests
+- Various small bug fixes
+- Experimental support for some HTTP2 features (not ready for production)
+- Experimental support for websocket compression
+- Remove legacy interfaces declared obsolete since more than 3 years
+- Update version number
+
+
+Release Notes v1.12
+===
+### Objectives: *Multiple improvements and extensions in various areas, including compatibility, Lua scripting, documentation*
+
+Changes
+-------
+
+- Updates/improvements for LuaXML
+- Updates and tests for JSON for Lua
+- BoringSSL support
+- Add Remark: Do not use Git for Windows V2.24 (but <= V2.23 or >= V2.25)
+- Format configuration dialogs for Windows
+- Add option "hide_tray" to start without Windows systray icon
+- URI checking according to "remove_dot_segments" algorithm from RFC
+- Experimental support for a new server and client start API
+- Additional callbacks to initialize external SSL context
+- More cache control options for static files
+- Trace function for Lua server pages
+- Access to client certificate data for Lua pages
+- Allow to configure SOMAXCONN (max. number of waiting connections)
+- Include some build options for Zephyr
 - Support for flawed CGI interpreters returning only <LF> instead of <CR><LF>
 - Add NO_FILESYSTEM flag for (embedded) system without any file system
 - Several fixes for server side Lua scripts
@@ -169,6 +268,7 @@ Changes
 - Fix bug in timer logic (for Lua Websockets)
 - Updated version number
 
+
 Release Notes v1.8
 ===
 ### Objectives: *CMake integration and continuous integration tests, Support client certificates, bug fixes*
@@ -217,6 +317,7 @@ Changes
 - Add status badges to the GitHub project main page
 - Updated version number
 
+
 Release Notes v1.7
 ===
 ### Objectives: *Examples, documentation, additional API functions, some functions rewritten, bug fixes and updates*
@@ -264,6 +365,7 @@ Changes
 - Fix compiler warnings
 - Updated version number
 
+
 Release Notes v1.6
 ===
 ### Objectives: *Enhance Lua support, configuration dialog for windows, new examples, bug fixes and updates*
@@ -307,6 +409,7 @@ Changes
 - Fixed Posix locking functions for Windows (bel2125)
 - Updated version number
 
+
 Release Notes v1.5
 ===
 ### Objectives: *Bug fixes and updates, repository restoration*
@@ -315,7 +418,7 @@ Changes
 -------
 
 - Corrected bad mask flag/opcode passing to websocket callback (William Greathouse)
-- Moved CEVITWEB_VERSION define into civetweb.h
+- Moved CIVETWEB_VERSION define into civetweb.h
 - Added new simple zip deployment build for Windows.
 - Removed windows install package build.
 - Fixes page violation in mod_lua.inl (apkbox)
@@ -339,6 +442,7 @@ Changes
 - Travis automated build testing support added (Daniel Oaks)
 - Updated version numbers.
 - Added contributor credits file.
+
 
 Release Notes v1.4
 ===
@@ -365,6 +469,7 @@ Changes
 - Conformed source files to UNIX line endings for consistency.
 - Unified the coding style to improve reability.
 
+
 Release Notes v1.3
 ===
 ### Objectives: *Buildroot Integration*
@@ -376,6 +481,7 @@ Changes
 - Validated build without SQLITE3 large file support
 - Updated documentation
 - Updated Buildroot config example
+
 
 Release Notes v1.2
 ===
@@ -400,6 +506,7 @@ Known Issues
 -----
 
 - The prebuilt Window's version requires [Visual C++ Redistributable for Visual Studio 2012](http://www.microsoft.com/en-us/download/details.aspx?id=30679)
+
 
 Release Notes v1.1
 ===
@@ -444,6 +551,7 @@ Known Issues
     + Need to find out what is actually in demand.
 - Build changes may impact current users.
     + As with any change of this type, changes may impact some users.
+
 
 Release Notes v1.0
 ===

@@ -8,8 +8,8 @@ CivetWeb uses an [MIT license](https://github.com/civetweb/civetweb/blob/master/
 
 It can also be used by end users as a stand-alone web server. It is available as single executable, no installation is required.
 
-The current stable version is 1.10 - [release notes](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md)
-
+To find the latest stable release, visit [https://github.com/civetweb/civetweb/releases](https://github.com/civetweb/civetweb/releases).
+A list of selected changes can be found in the [release notes](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md).
 
 End users can download CivetWeb at SourceForge
 [https://sourceforge.net/projects/civetweb/](https://sourceforge.net/projects/civetweb/)
@@ -20,13 +20,16 @@ Developers can contribute to CivetWeb via GitHub
 Trouble tickets should be filed on GitHub
 [https://github.com/civetweb/civetweb/issues](https://github.com/civetweb/civetweb/issues)
 
-Announcements are at Google Groups
+New releases are announced at Google Groups
 [https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb)
 
-While older support question and discussion threads have been at [Google groups](https://groups.google.com/d/forum/civetweb), most newer ones are [GitHub issues](https://github.com/civetweb/civetweb/issues).
+Formerly some support question and discussion threads have been at [Google groups](https://groups.google.com/d/forum/civetweb).
+Recent questions and discussions use [GitHub issues](https://github.com/civetweb/civetweb/issues).
 
 Source releases can be found on GitHub
 [https://github.com/civetweb/civetweb/releases](https://github.com/civetweb/civetweb/releases)
+
+A security policy can be found in [SECURITY.md](https://github.com/civetweb/civetweb/blob/master/SECURITY.md).
 
 CivetWeb is free of charge, however, donations for maintenance are welcome:
 [![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=88ZLXZ6U77GJU)

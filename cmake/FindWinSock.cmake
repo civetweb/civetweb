@@ -39,6 +39,7 @@ endmacro(REMOVE_DUPLICATE_PATHS)
 
 set(WINSOCK_INCLUDE_PATHS "${WINSOCK_ROOT}/include/")
 if(MINGW)
+  file(TOUCH ${CMAKE_BINARY_DIR}/nul)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} -xc -E -v -
     RESULT_VARIABLE RESULT
@@ -71,10 +72,19 @@ if(MINGW)
   )
   if (NOT RESULT)
     string(REGEX MATCH "libraries: =([^\r\n]*)" OUT "${OUT}")
-    list(APPEND WINSOCK_LIBRARY_PATHS "${CMAKE_MATCH_1}")
+    if(CMAKE_HOST_WIN32)
+      message(STATUS "not replacing ${_SEARCH_PATHS}")
+      list(APPEND WINSOCK_LIBRARY_PATHS "${CMAKE_MATCH_1}")
+    else()
+      # On Unix-like host systems, search dirs are separated by ':'.
+      # Thus we need to replace ':' with ';' to make a valid cmake list.
+      string(REPLACE ":" ";" _SEARCH_PATHS "${CMAKE_MATCH_1}")
+      list(APPEND WINSOCK_LIBRARY_PATHS "${_SEARCH_PATHS}")
+      unset(_SEARCH_PATHS)
+    endif()
   endif()
 endif()
-if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64" AND ${CMAKE_SIZEOF_VOID_P} EQUAL 4)
+if ("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "AMD64" AND "${CMAKE_SIZEOF_VOID_P}" EQUAL 4)
   list(APPEND WINSOCK_LIBRARY_PATHS "C:/Windows/SysWOW64")
 endif()
 list(APPEND WINSOCK_LIBRARY_PATHS "C:/Windows/System32")

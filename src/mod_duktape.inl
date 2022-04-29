@@ -262,7 +262,7 @@ mg_exec_duktape_script(struct mg_connection *conn, const char *script_name)
 	duk_push_int(duk_ctx, conn->request_info.remote_port);
 	duk_put_prop_string(duk_ctx, -2, "remote_port");
 
-	duk_push_int(duk_ctx, ntohs(conn->client.lsa.sin.sin_port));
+	duk_push_int(duk_ctx, conn->request_info.server_port);
 	duk_put_prop_string(duk_ctx, -2, "server_port");
 
 	duk_push_object(duk_ctx); /* subfolder "conn.http_headers" */

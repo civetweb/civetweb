@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2018 the Civetweb developers
+/* Copyright (c) 2016-2020 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,9 @@
 
 #include "timertest.h"
 
+#define TIMERS_IN_TEST 10
 static int action_dec_ret;
+
 
 static int
 action_dec(void *arg)
@@ -58,6 +60,23 @@ action_dec(void *arg)
 	}
 
 	return (*p >= -3) ? action_dec_ret : 0;
+}
+
+
+static void
+action_cancel(void *arg)
+{
+	int *p = (int *)arg;
+
+	/* test convention: store cancel counter after timer counter */
+	p += TIMERS_IN_TEST;
+
+	if (*p != 0) {
+		ck_abort_msg("Double call of timer cancel action");
+		/* return 0 here would be unreachable code */
+	}
+
+	(*p)++;
 }
 
 
@@ -79,7 +98,7 @@ action_dec_to_0(void *arg)
 START_TEST(test_timer_cyclic)
 {
 	struct mg_context ctx;
-	int c[10];
+	int c[TIMERS_IN_TEST * 2];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
@@ -91,11 +110,11 @@ START_TEST(test_timer_cyclic)
 	mark_point();
 
 	c[0] = 100;
-	timer_add(&ctx, 0.05, 0.1, 1, action_dec, c + 0);
+	timer_add(&ctx, 0.05, 0.1, 1, action_dec, c + 0, action_cancel);
 	c[2] = 20;
-	timer_add(&ctx, 0.25, 0.5, 1, action_dec, c + 2);
+	timer_add(&ctx, 0.25, 0.5, 1, action_dec, c + 2, action_cancel);
 	c[1] = 50;
-	timer_add(&ctx, 0.1, 0.2, 1, action_dec, c + 1);
+	timer_add(&ctx, 0.1, 0.2, 1, action_dec, c + 1, action_cancel);
 
 	mark_point();
 
@@ -113,6 +132,10 @@ START_TEST(test_timer_cyclic)
 
 	mark_point();
 
+	mg_sleep(2000); /* Sleep 2 second - timers will not run */
+
+	mark_point();
+
 	/* If this test runs in a virtual environment, like the CI unit test
 	 * containers, there might be some timing deviations, so check the
 	 * counter with some tolerance. */
@@ -123,6 +146,11 @@ START_TEST(test_timer_cyclic)
 	ck_assert_int_le(c[1], +1);
 	ck_assert_int_ge(c[2], -1);
 	ck_assert_int_le(c[2], +1);
+
+	/* Every cancel action must be called once */
+	ck_assert_int_eq(c[0 + TIMERS_IN_TEST], 1);
+	ck_assert_int_eq(c[1 + TIMERS_IN_TEST], 1);
+	ck_assert_int_eq(c[2 + TIMERS_IN_TEST], 1);
 }
 END_TEST
 
@@ -130,7 +158,7 @@ END_TEST
 START_TEST(test_timer_oneshot_by_callback_retval)
 {
 	struct mg_context ctx;
-	int c[10];
+	int c[TIMERS_IN_TEST * 2];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
@@ -142,11 +170,11 @@ START_TEST(test_timer_oneshot_by_callback_retval)
 	mark_point();
 
 	c[0] = 10;
-	timer_add(&ctx, 0, 0.1, 1, action_dec, c + 0);
+	timer_add(&ctx, 0, 0.1, 1, action_dec, c + 0, action_cancel);
 	c[2] = 2;
-	timer_add(&ctx, 0, 0.5, 1, action_dec, c + 2);
+	timer_add(&ctx, 0, 0.5, 1, action_dec, c + 2, action_cancel);
 	c[1] = 5;
-	timer_add(&ctx, 0, 0.2, 1, action_dec, c + 1);
+	timer_add(&ctx, 0, 0.2, 1, action_dec, c + 1, action_cancel);
 
 	mark_point();
 
@@ -163,11 +191,20 @@ START_TEST(test_timer_oneshot_by_callback_retval)
 	timers_exit(&ctx);
 
 	mark_point();
-	mg_sleep(100);
 
+	mg_sleep(2000); /* Sleep 2 second - timers will not run */
+
+	mark_point();
+
+	/* Every decrement action must be called once */
 	ck_assert_int_eq(c[0], 9);
 	ck_assert_int_eq(c[1], 4);
 	ck_assert_int_eq(c[2], 1);
+
+	/* Every cancel action must be called once */
+	ck_assert_int_eq(c[0 + TIMERS_IN_TEST], 1);
+	ck_assert_int_eq(c[1 + TIMERS_IN_TEST], 1);
+	ck_assert_int_eq(c[2 + TIMERS_IN_TEST], 1);
 }
 END_TEST
 
@@ -175,7 +212,7 @@ END_TEST
 START_TEST(test_timer_oneshot_by_timer_add)
 {
 	struct mg_context ctx;
-	int c[10];
+	int c[TIMERS_IN_TEST * 2];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
@@ -187,11 +224,11 @@ START_TEST(test_timer_oneshot_by_timer_add)
 	mark_point();
 
 	c[0] = 10;
-	timer_add(&ctx, 0, 0, 1, action_dec, c + 0);
+	timer_add(&ctx, 0, 0, 1, action_dec, c + 0, action_cancel);
 	c[2] = 2;
-	timer_add(&ctx, 0, 0, 1, action_dec, c + 2);
+	timer_add(&ctx, 0, 0, 1, action_dec, c + 2, action_cancel);
 	c[1] = 5;
-	timer_add(&ctx, 0, 0, 1, action_dec, c + 1);
+	timer_add(&ctx, 0, 0, 1, action_dec, c + 1, action_cancel);
 
 	mark_point();
 
@@ -208,11 +245,20 @@ START_TEST(test_timer_oneshot_by_timer_add)
 	timers_exit(&ctx);
 
 	mark_point();
-	mg_sleep(100);
 
+	mg_sleep(2000); /* Sleep 2 second - timers will not run */
+
+	mark_point();
+
+	/* Every decrement action was called once */
 	ck_assert_int_eq(c[0], 9);
 	ck_assert_int_eq(c[1], 4);
 	ck_assert_int_eq(c[2], 1);
+
+	/* Every cancel action must be called once */
+	ck_assert_int_eq(c[0 + TIMERS_IN_TEST], 1);
+	ck_assert_int_eq(c[1 + TIMERS_IN_TEST], 1);
+	ck_assert_int_eq(c[2 + TIMERS_IN_TEST], 1);
 }
 END_TEST
 
@@ -220,7 +266,7 @@ END_TEST
 START_TEST(test_timer_mixed)
 {
 	struct mg_context ctx;
-	int c[10];
+	int c[TIMERS_IN_TEST];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
@@ -231,35 +277,35 @@ START_TEST(test_timer_mixed)
 
 	/* 3 --> 2, because it is a single shot timer */
 	c[0] = 3;
-	timer_add(&ctx, 0, 0, 1, action_dec_to_0, &c[0]);
+	timer_add(&ctx, 0, 0, 1, action_dec_to_0, &c[0], NULL);
 
 	/* 3 --> 0, because it will run until c[1] = 0 and then stop */
 	c[1] = 3;
-	timer_add(&ctx, 0, 0.2, 1, action_dec_to_0, &c[1]);
+	timer_add(&ctx, 0, 0.2, 1, action_dec_to_0, &c[1], NULL);
 
 	/* 3 --> 1, with 750 ms period, it will run once at start,
 	 * then once 750 ms later, but not 1500 ms later, since the
 	 * timer is already stopped then. */
 	c[2] = 3;
-	timer_add(&ctx, 0, 0.75, 1, action_dec_to_0, &c[2]);
+	timer_add(&ctx, 0, 0.75, 1, action_dec_to_0, &c[2], NULL);
 
 	/* 3 --> 2, will run at start, but no cyclic in 1 second */
 	c[3] = 3;
-	timer_add(&ctx, 0, 2.5, 1, action_dec_to_0, &c[3]);
+	timer_add(&ctx, 0, 2.5, 1, action_dec_to_0, &c[3], NULL);
 
 	/* 3 --> 3, will not run at start */
 	c[4] = 3;
-	timer_add(&ctx, 2.5, 0.1, 1, action_dec_to_0, &c[4]);
+	timer_add(&ctx, 2.5, 0.1, 1, action_dec_to_0, &c[4], NULL);
 
 	/* 3 --> 2, an absolute timer in the past (-123.456) will still
 	 * run once at start, and then with the period */
 	c[5] = 3;
-	timer_add(&ctx, -123.456, 2.5, 0, action_dec_to_0, &c[5]);
+	timer_add(&ctx, -123.456, 2.5, 0, action_dec_to_0, &c[5], NULL);
 
 	/* 3 --> 1, an absolute timer in the past (-123.456) will still
 	 * run once at start, and then with the period */
 	c[6] = 3;
-	timer_add(&ctx, -123.456, 0.75, 0, action_dec_to_0, &c[6]);
+	timer_add(&ctx, -123.456, 0.75, 0, action_dec_to_0, &c[6], NULL);
 
 	mark_point();
 
@@ -276,7 +322,10 @@ START_TEST(test_timer_mixed)
 	timers_exit(&ctx);
 
 	mark_point();
-	mg_sleep(100);
+
+	mg_sleep(2000); /* Sleep 2 second - timers will not run */
+
+	mark_point();
 
 	ck_assert_int_eq(c[0], 2);
 	ck_assert_int_eq(c[1], 0);
@@ -314,14 +363,12 @@ make_timertest_suite(void)
 
 	return suite;
 }
-#endif
 
+#else
 
-#ifdef REPLACE_CHECK_FOR_LOCAL_DEBUGGING
 /* Used to debug test cases without using the check framework */
-
 void
-TIMER_PRIVATE(void)
+MAIN_TIMER_PRIVATE(void)
 {
 	unsigned f_avail;
 	unsigned f_ret;

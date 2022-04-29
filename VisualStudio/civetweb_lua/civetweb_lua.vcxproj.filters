@@ -1,72 +1,33 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="inl files">
-      <UniqueIdentifier>{1ef3413b-2315-48f2-ad22-57af6b4f7aca}</UniqueIdentifier>
-    </Filter>
+    <ClCompile Include="..\..\src\civetweb.c" />
+    <ClCompile Include="..\..\src\main.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\civetweb.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\third_party\lua-5.2.4\src\lua.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\third_party\lua-5.2.4\src\lauxlib.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\third_party\civetweb_lua.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClInclude Include="..\..\include\civetweb.h" />
+    <ClInclude Include="..\..\src\third_party\civetweb_lua.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\civetweb.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\main.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ResourceCompile Include="..\..\resources\res.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\resources\res.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
+    <Image Include="..\..\resources\systray.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\resources\systray.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\src\md5.inl">
-      <Filter>inl files</Filter>
-    </None>
-    <None Include="..\..\src\sha1.inl">
-      <Filter>inl files</Filter>
-    </None>
-    <None Include="..\..\src\mod_lua.inl">
-      <Filter>inl files</Filter>
-    </None>
-    <None Include="..\..\src\timer.inl">
-      <Filter>inl files</Filter>
-    </None>
-    <None Include="..\..\src\mod_duktape.inl">
-      <Filter>inl files</Filter>
-    </None>
-    <None Include="..\..\src\handle_form.inl">
-      <Filter>inl files</Filter>
-    </None>
+    <None Include="..\..\src\handle_form.inl" />
+    <None Include="..\..\src\md5.inl" />
+    <None Include="..\..\src\http2.inl" />
+    <None Include="..\..\src\mod_lua_shared.inl" />
+    <None Include="..\..\src\response.inl" />
+    <None Include="..\..\src\mod_zlib.inl" />
+    <None Include="..\..\src\sha1.inl" />
+    <None Include="..\..\src\mod_duktape.inl" />
+    <None Include="..\..\src\mod_lua.inl" />
+    <None Include="..\..\src\timer.inl" />
+    <None Include="..\..\src\mod_mbedtls.inl" />
+    <None Include="..\..\src\openssl_dl.inl" />
+    <None Include="..\..\src\match.inl" />
+    <None Include="..\..\src\sort.inl" />
   </ItemGroup>
 </Project>

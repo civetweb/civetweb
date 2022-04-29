@@ -166,7 +166,7 @@ mg.write("\r\n")
 
 -- random
 mg.write("Random numbers:\r\n")
-for i=1,10 do mg.write(string.format("%18u\r\n", mg.random())) end
+for i=1,10 do mg.write(string.format("%18.0f\r\n", mg.random())) end
 mg.write("\r\n")
 
 -- uuid

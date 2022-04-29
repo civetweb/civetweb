@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018 the Civetweb developers
+/* Copyright (c) 2015-2020 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -50,9 +50,7 @@
 #endif
 #include <stdint.h>
 
-/* All unit tests use the "check" framework.
- * Download from https://libcheck.github.io/check/
- */
+/* All unit tests use the "check" unit test framework. */
 #include "check.h"
 
 #if (CHECK_MINOR_VERSION < 11)
@@ -84,13 +82,12 @@
 #endif
 
 /* A minimal timeout used for all tests with the "check" framework. */
-#define civetweb_min_test_timeout (30)
+#define civetweb_min_test_timeout (60)
 
 /* A minimal timeout for all tests starting a server. */
-#define civetweb_min_server_test_timeout (civetweb_min_test_timeout + 30)
+#define civetweb_min_server_test_timeout (90)
 
 /* A default timeout for all tests running multiple requests to a server. */
-#define civetweb_mid_server_test_timeout                                       \
-	(civetweb_min_server_test_timeout + 180)
+#define civetweb_mid_server_test_timeout (240)
 
 #endif /* TEST_CIVETWEB_CHECK_H_ */

@@ -8,7 +8,8 @@
 | :--- | :--- | :--- |
 |**`request_method`**|`const char *`| The request method used by the client for the connection this can be **GET**, **POST** or one of the other common HTTP request methods |
 |**`request_uri`**|`const char *`| The absolute, relative or URL-encoded URI as it was sent in the request.  Example: "http://mydomain.com:8080/path/to/file.ext" or "/path/to/file.ext", depending on the client. |
-|**`local_uri`**|`const char *`| The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL.  Example: "/path/to/file.ext" (even if the client used "http://mydomain.com:8080/path/to/file.ext" in the request) |
+|**`local_uri_raw`**|`const char *`| The relative URL-encoded URI as it references the local resource. If the request URI does not reference a resource on the local server, this field is NULL.  Example: "/path/to/file.ext" (even if the client used "http://mydomain.com:8080/path/to/file.ext" in the request) |
+|**`local_uri`**|`const char *`| The `local_uri_raw` cleaned, so it does not allow a path like "allowed_dir/../forbidden_file". Files served by CivetWeb are selected based on this `local_uri`. |
 |~~`uri`~~|`const char *`| *Deprecated. Use* `local_uri` *instead* |
 |**`http_version`**|`const char *`| The HTTP version as mentioned in the client request. This can be "1.0", "1.1", etc. |
 |**`query_string`**|`const char *`| The HTTP query string, defined as URL part after the first '?' character, not including '?'. NULL if there is no '?'. |
@@ -16,7 +17,8 @@
 |**`remote addr`**|`char[48]`| The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address.  Example: "127.0.0.1" |
 |~~`remote_ip`~~|`long`| *Deprecated. Use* `remote_addr` *instead* |
 |**`content_length`**|`long long`| The content length of the request body. This value can be -1 if no content length was provided. The request may still have body data, but the server cannot determine the length until all data has arrived (e.g. when the client closes the connection, or the final chunk of a chunked request has been received). |
-|**`remote_port`**|`int`| The port number at the client's side (an integer number between 1 and 65535). |
+|**`remote_port`**|`int`| The port number at the client side (an integer number between 1 and 65535). |
+|**`server_port`**|`int`| The port number at the server side (an integer number between 0 and 65535). |
 |**`is_ssl`**|`int`| 1 if the connection is over SSL (https), and 0 if it is a plain connection (http) |
 |**`user_data`**|`void *`| A pointer to the `user_data` information which was provided as a parameter to `mg_start()`. |
 |**`conn_data`**|`void *`| A pointer to connection specific user data |

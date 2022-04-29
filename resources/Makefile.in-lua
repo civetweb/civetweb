@@ -1,6 +1,6 @@
 #
 # Copyright (c) 2013 No Face Press, LLC
-# Copyright (c) 2014-2017 the Civetweb developers
+# Copyright (c) 2014-2022 the Civetweb developers
 #
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
@@ -29,15 +29,15 @@ ifeq ($(WITH_LUA_VERSION), 502)
   LUA_VERSION_KNOWN = 1
 endif
 ifeq ($(WITH_LUA_VERSION), 503)
-  $(info Lua: Using version 5.3.5)
-  LUA_DIR = src/third_party/lua-5.3.5/src
+  $(info Lua: Using version 5.3.6)
+  LUA_DIR = src/third_party/lua-5.3.6/src
   LUA_SHARED_LIB_FLAG = -llua5.3
   LUA_CFLAGS = -DLUA_COMPAT_5_2 -DLUA_VERSION_MAKEFILE=503
   LUA_VERSION_KNOWN = 1
 endif
 ifeq ($(WITH_LUA_VERSION), 504)
-  $(info Lua: Using version 5.4.0-work1)
-  LUA_DIR = src/third_party/lua-5.4.0-work1/src
+  $(info Lua: Using version 5.4.3)
+  LUA_DIR = src/third_party/lua-5.4.3/src
   LUA_SHARED_LIB_FLAG = -llua5.4
   LUA_CFLAGS = -DLUA_COMPAT_5_2 -DLUA_VERSION_MAKEFILE=504
   LUA_VERSION_KNOWN = 1
@@ -49,7 +49,7 @@ endif
 
 
 # Add flags for all Lua versions
-LUA_CFLAGS += -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA
+LUA_CFLAGS += -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA -DLUA_UCID
 
 ifneq ($(TARGET_OS),WIN32)
   LUA_CFLAGS += -DLUA_USE_POSIX -DLUA_USE_DLOPEN
@@ -148,6 +148,17 @@ OBJECTS += $(LFS_OBJECTS)
 CFLAGS += $(LFS_CFLAGS)
 CFLAGS += -DUSE_LUA_FILE_SYSTEM
 #SOURCE_DIRS = $(LFS_DIR)
+
+
+LXX_DIR = src/third_party
+LXX_SOURCE_FILES = lua_struct.c
+LXX_SOURCES = $(addprefix $(LXX_DIR)/, $(LXX_SOURCE_FILES))
+LXX_OBJECTS = $(LXX_SOURCES:.c=.o)
+LXX_CFLAGS = -I$(LXX_DIR)
+OBJECTS += $(LXX_OBJECTS)
+CFLAGS += $(LXX_CFLAGS)
+CFLAGS += -DUSE_LUA_STRUCT
+#SOURCE_DIRS = $(LXX_DIR)
 
 
 ifneq ($(WITH_LUA_VERSION), 501)

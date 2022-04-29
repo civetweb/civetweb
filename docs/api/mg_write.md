@@ -23,7 +23,7 @@ The function `mg_write()` can be used to send a blob of arbitrary data over a co
 ### See Also
 
 * [`mg_lock_connection();`](mg_lock_connection.md)
-* [`mg_printf();`](mg_print.md)
+* [`mg_printf();`](mg_printf.md)
 * [`mg_unlock_connection();`](mg_unlock_connection.md)
 * [`mg_websocket_client_write();`](mg_websocket_client_write.md)
 * [`mg_websocket_write();`](mg_websocket_write.md)

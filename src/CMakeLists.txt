@@ -246,6 +246,12 @@ if (CIVETWEB_ENABLE_LUA)
   target_link_libraries(civetweb-c-library ${LUA_LIBRARIES})
 endif()
 
+if (CIVETWEB_ENABLE_ZLIB)
+  find_package(ZLIB)
+  include_directories(${ZLIB_INCLUDE_DIRS})
+  target_link_libraries(civetweb-c-library ${ZLIB_LIBRARIES})
+endif()
+
 # The web server executable
 if (CIVETWEB_ENABLE_SERVER_EXECUTABLE)
     add_executable(civetweb-c-executable main.c)
@@ -257,9 +263,7 @@ if (CIVETWEB_ENABLE_SERVER_EXECUTABLE)
         install(
             TARGETS civetweb-c-executable
             EXPORT ${PROJECT_NAME}-targets
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            DESTINATION ${CMAKE_INSTALL_BINDIR}
             COMPONENT server)
     endif()
     target_include_directories(
@@ -321,4 +325,24 @@ if (CIVETWEB_ENABLE_CXX)
     ${PROJECT_SOURCE_DIR}/include/CivetServer.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT civetweb-cpp)
+endif()
+
+# Configure lookup behavior in civetweb config
+
+if(LIBDL_FOUND)
+  set(LOOKUP_LIBDL TRUE PARENT_SCOPE)
+else()
+  set(LOOKUP_LIBDL FALSE PARENT_SCOPE)
+endif()
+
+if(LIBRT_FOUND)
+  set(LOOKUP_LIBRT TRUE PARENT_SCOPE)
+else()
+  set(LOOKUP_LIBRT FALSE PARENT_SCOPE)
+endif()
+
+if(WINSOCK_FOUND)
+  set(LOOKUP_WINSOCK TRUE PARENT_SCOPE)
+else()
+  set(LOOKUP_WINSOCK FALSE PARENT_SCOPE)
 endif()

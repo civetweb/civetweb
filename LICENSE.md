@@ -11,7 +11,7 @@ Civetweb License
 
 ### Included with all features.
 
-> Copyright (c) 2013-2018 The CivetWeb developers ([CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md))
+> Copyright (c) 2013-2021 The CivetWeb developers ([CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md))
 >
 > Copyright (c) 2004-2013 Sergey Lyubka
 >
@@ -45,7 +45,7 @@ Lua License
 
 http://www.lua.org/license.html
 
-> Copyright (C) 1994-2015 Lua.org, PUC-Rio.
+> Copyright (C) 1994-2020 Lua.org, PUC-Rio.
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
@@ -64,6 +64,10 @@ http://www.lua.org/license.html
 > LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 > THE SOFTWARE.
+
+
+Additional components Copyright (C) Lua.org, PUC-Rio, with MIT license: 
+http://www.inf.puc-rio.br/~roberto/struct/
 
 
 SQLite3 License
@@ -118,33 +122,40 @@ Lua File System License
 
 ### Included only if built with Lua support.
 
-http://keplerproject.github.io/luafilesystem/license.html
+https://github.com/keplerproject/luafilesystem/blob/master/LICENSE
 
-> Copyright Kepler Project 2003 (http://www.keplerproject.org/luafilesystem)
+> Copyright © 2003-2020 Kepler Project.
 >
-> Permission is hereby granted, free of charge, to any person obtaining a copy
-> of this software and associated documentation files (the "Software"), to deal
-> in the Software without restriction, including without limitation the rights
-> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-> copies of the Software, and to permit persons to whom the Software is
+> Permission is hereby granted, free of charge, to any person
+> obtaining a copy of this software and associated documentation
+> files (the "Software"), to deal in the Software without
+> restriction, including without limitation the rights to use, copy,
+> modify, merge, publish, distribute, sublicense, and/or sell copies
+> of the Software, and to permit persons to whom the Software is
 > furnished to do so, subject to the following conditions:
 >
-> The above copyright notice and this permission notice shall be included in
-> all copies or substantial portions of the Software.
+> The above copyright notice and this permission notice shall be
+> included in all copies or substantial portions of the Software.
 >
-> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-> THE SOFTWARE.
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+> MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+> NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+> BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+> ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+> CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
 
 
 LuaXML License
 ------
 
 ### Included only if built with Lua and LuaXML support.
+
+Version 1.8.0 (Lua 5.2), 2013-06-10 by Gerald Franz, eludi.net
+
+Modified and extended 2015 by Bernhard Nortmann, https://github.com/n1tehawk/LuaXML – version 2.0.x, compatible with Lua 5.1 to 5.3 and LuaJIT.
+
 
 > LuaXML License
 >
@@ -183,9 +194,9 @@ https://github.com/svaarala/duktape/blob/master/LICENSE.txt
 > ===============
 > Duktape license
 > ===============
-> 
+>
 > (http://opensource.org/licenses/MIT)
-> 
+>
 > Copyright (c) 2013-2017 by Duktape authors (see AUTHORS.rst)
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy

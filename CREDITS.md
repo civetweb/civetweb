@@ -3,14 +3,17 @@
 * Abhishek Lekshmanan
 * Abramo Bagnara
 * Adam Bailey
+* Adam Hunyadi
 * Alan Somers
 * Alberto Bignotti
 * Alex Kozlov
+* Alexander Kozhinov
 * AndreyArsov
 * Anton Te
 * beaver
 * bel2125
 * Ben M. Ward
+* Bernhard Lehner
 * BigJoe
 * Bjoern Petri
 * Braedy Kuzma
@@ -20,9 +23,10 @@
 * Brian Spratke
 * cdbishop
 * celeron55
+* Charles Olivi
+* Chris Han
 * Chris Jones
 * Chris Rehn
-* Charles Olivi
 * Christian Mauderer
 * Christopher Galas
 * cjh
@@ -36,51 +40,69 @@
 * daveelton
 * David Arnold
 * David Loffredo
+* DavidKorczynski
 * Dialga
+* dennis
+* DL6ER
 * Domenico Di Iorio
+* dprandle
+* Drew Wells
 * duong2179
 * ehlertjd
+* Elan P. Kugelmass
 * Eric Tsau
 * Erick Vieyra
 * Erik Beran
 * Erik Partridge
+* eugene
 * extergnoto
+* F-Secure Corporation
 * Fabrice Fontaine
 * feneuilflo
 * Fernando G. Aranda
 * Frank Hilliger
-* F-Secure Corporation
+* Gábor Csárdi
+* gajanak
+* Girish Joshi
+* goodmenzy
 * Grahack
 * Gregor Jasny
 * grenclave
 * grunk
+* guangqing.chen
 * Guilherme Amadio
+* Gustavo Romero
 * hansipie
 * HariKamath Kamath
 * Henry Chang
 * Herumb Shandilya
 * Herve Codina
 * Iain Morton
-* Ivan Dlugos
 * ImgBotApp
+* Ivan Dlugos
+* IZI
 * Jack
 * Jacob Repp
 * Jacob Skillin
 * Jan Kowalewski
+* Jan Pohanka
 * Jan Willem Janssen
+* Jens Wallgren
 * Jeremy Lin
+* Jesse Williamson
 * Jim Evans
 * jmc-
 * Joakim L. Gilje
 * Jochen Scheib
-* Joel Gallant
 * Joe Mucchiello
+* Joel Gallant
 * Johan De Taeye
 * John Faith
 * Jordan
 * Jordan Shelley
 * Joshua Boyd
 * Joshua D. Boyd
+* Justin Standring
 * k-mds
 * kakwa
 * kalphamon
@@ -92,12 +114,17 @@
 * Kevin Wojniak
 * Khem Raj
 * Kimmo Mustonen
+* Kjeld Flarup
+* krpano
 * Krzysztof Kozlowski
 * Lammert Bies
+* Lars Immisch
 * Lawrence
-* Lianghui
 * Li Peng
+* Lianghui
+* Lorenzo Canepa
 * Luka Rahne
+* Lukas Martanovic
 * Maarten Fremouw
 * makrsmark
 * marco
@@ -110,6 +137,7 @@
 * mingodad
 * Morgan McGuire
 * mrdvlpr.xnu
+* Nat!
 * Neil Jensen
 * newsoft
 * nfrmtkr
@@ -120,19 +148,26 @@
 * palortoff
 * Patrick Drechsler
 * Patrick Trinkle
-* Paulo Brizolara
 * Paul Sokolovsky
+* Paulo Brizolara
 * pavel.pimenov
 * PavelVozenilek
 * Perttu Ahola
 * Peter Foerster
 * Philipp Friedenberger
 * Philipp Hasper
+* Pieter Cardoen
+* Piotr Zierhoffer
 * pkvamme
+* Ponnuvel Palaniyappan
+* qinch
+* qinchao
 * Radoslaw Zarzynski
 * Red54
 * Retallack Mark mark.retallack
 * Richard Screene
+* Rimas Misevi-ìius
+* Rinat Dobrokhotov
 * ryankopf
 * Sage Weil
 * Sangwhan Moon
@@ -142,34 +177,45 @@
 * Sergey Linev
 * sgmesservey
 * shantanugadgil
+* Sherwyn Sen
+* shreyajaggi8
 * Simon Hailes
 * slidertom
+* SpaceIm
 * SpaceLord
+* Stefan Codrescu
 * sunfch
 * suzukibitman
+* Símal Rasmussen
 * Tamotsu Kanoh
 * thewaterymoon
 * Thiago Macedo
 * THILMANT, Bernard
 * Thomas Davis
 * Thomas Klausner
-* Tomasz Gorochowik
 * Thorsten Horstmann
+* Tim Gates
+* Tim Hudson
 * tnoho
-* Tomas Andrle
 * Tom Deblauwe
+* Tomas Andrle
+* Tomasz Gorochowik
 * Toni Wilk
 * Torben Jonas
 * Uilian Ries
 * Ulrich Hertlein
 * Walt Steverson
+* wangli28
 * webxer
 * William Greathouse
+* Wolfram Rösler
 * xeoshow
 * xtne6f
 * Yehuda Sadeh
 * Yury Z
 * zhen.wang
+
+and others.
 
 # Mongoose Contributors
 CivetWeb is based on the Mongoose code.  The following users contributed to the original Mongoose release between 2010 and 2013.  This list was generated from the Mongoose GIT logs.  It does not contain contributions from the Mongoose mailing list.  There is no record for contributors prior to 2010.
@@ -222,4 +268,3 @@ CivetWeb is based on the Mongoose code.  The following users contributed to the 
 * tayS
 * test
 * valenok
-

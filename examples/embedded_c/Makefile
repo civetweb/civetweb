@@ -1,9 +1,7 @@
-# 
+#
 # Copyright (c) 2013 No Face Press, LLC
 # License http://opensource.org/licenses/mit-license.php MIT License
 #
-
-#This makefile is used to test the other Makefiles
 
 
 PROG = embedded_c
@@ -15,10 +13,18 @@ CIVETWEB_LIB = libcivetweb.a
 CFLAGS = -I$(TOP)/include $(COPT) -DUSE_WEBSOCKET -DUSE_IPV6
 LIBS = -lpthread
 
+ifdef NO_SSL
+  CFLAGS += -DNO_SSL
+endif
+
+
 include $(TOP)/resources/Makefile.in-os
 
-ifeq ($(TARGET_OS),LINUX) 
-	LIBS += -ldl
+ifeq ($(TARGET_OS),LINUX)
+	LIBS += -ldl -lrt
+endif
+ifdef WITH_ZLIB
+	LIBS += -lz
 endif
 
 all: $(PROG)
@@ -33,5 +39,14 @@ $(CIVETWEB_LIB):
 clean:
 	rm -f $(CIVETWEB_LIB) $(PROG)
 
-.PHONY: all clean
+help:
+	@echo "make help                show this message"
+	@echo "make clean               remove result"
+	@echo "make all                 build all"
+	@echo "make                     build all"
+	@echo ""
+	@echo " Make Options:"
+	@echo "   NO_SSL=1              build without SSL support"
+	@echo ""
 
+.PHONY: all clean

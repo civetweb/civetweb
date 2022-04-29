@@ -212,8 +212,34 @@ environment:
       configuration: Release
       platform: x64
       image: Visual Studio 2013
-    # Visual Studio 2015 is default
-    # Visual Studio 2017 is not yet default
+    # Visual Studio 2015
+    - id: Full-VS2015-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x86
+      image: Visual Studio 2015
+    - id: Full-VS2015-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Visual Studio 2015
+    # Visual Studio 2017
     - id: Full-VS2017-x86
       compiler: msvc-20-seh
       build_shared: NO
@@ -240,7 +266,21 @@ environment:
       configuration: Release
       platform: x64
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-    # Experimental Ubuntu
+    # Visual Studio 2019
+    - id: Full-VS2019-x64
+      compiler: msvc-21-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    # Ubuntu
     - id: Ubuntu1604-GCC-x64
       compiler: gcc-5.1.0-posix
       build_shared: NO
@@ -267,16 +307,19 @@ environment:
       configuration: Release
       platform: x64
       image: Ubuntu1804
-    # Conan builds
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CONAN_VISUAL_VERSIONS: 12
-      PYTHON: "C:\\Python37"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CONAN_VISUAL_VERSIONS: 14
-      PYTHON: "C:\\Python37"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      CONAN_VISUAL_VERSIONS: 15
-      PYTHON: "C:\\Python37"
+    - id: Ubuntu2004-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Ubuntu2004
 
 install:
   # Derive some extra information
@@ -336,10 +379,19 @@ before_build:
   - if "%compiler_version%"=="18" (set "vs_version=12" & set "vs_year=2013")
   - if "%compiler_version%"=="19" (set "vs_version=14" & set "vs_year=2015")
   - if "%compiler_version%"=="20" (set "vs_version=15" & set "vs_year=2017")
+  - if "%compiler_version%"=="21" (set "vs_version=16" & set "vs_year=2019")
   - if "%compiler_name%"=="msvc" (set "generator=Visual Studio %vs_version% %vs_year%")
+  - set "arch_arg= "
   - if "%compiler_name%"=="msvc" (
-      if "%platform%"=="x64" (
-        set "generator=%generator% Win64"
+      if "%compiler_version%"=="21" (
+          set "arch_arg= -A x64 "
+      )
+    )
+  - if "%compiler_name%"=="msvc" (
+      if not "%compiler_version%"=="21" (
+        if "%platform%"=="x64" (
+          set "generator=%generator% Win64"
+        )
       )
     )
   - if %compiler_version% gtr 9 (set platform=%platform:x86=Win32%)
@@ -365,9 +417,11 @@ before_build:
   - mkdir "%build_path%"
   - cd "%build_path%"
   - cmake --version
+  - echo %generator%
+  - echo %arch_arg%
   - appveyor AddMessage -Category Information "Generating '%generator%'"
-  - cmake
-    -G "%generator%"
+  - echo cmake
+    -G "%generator%" %arch_arg%
     -DCMAKE_BUILD_TYPE=%build_type%
     -DBUILD_SHARED_LIBS=%build_shared%
     -DCIVETWEB_SERVE_NO_FILES=%no_files%
@@ -384,6 +438,29 @@ before_build:
     -DCIVETWEB_DISABLE_CACHING=%no_caching%
     -DCIVETWEB_C_STANDARD=%c_standard%
     -DCIVETWEB_CXX_STANDARD=%cxx_standard%
+    -DCIVETWEB_SSL_OPENSSL_API_1_0=NO
+    -DCIVETWEB_SSL_OPENSSL_API_1_1=YES
+    "%source_path%"
+  - cmake
+    -G "%generator%" %arch_arg%
+    -DCMAKE_BUILD_TYPE=%build_type%
+    -DBUILD_SHARED_LIBS=%build_shared%
+    -DCIVETWEB_SERVE_NO_FILES=%no_files%
+    "-DCIVETWEB_THIRD_PARTY_DIR=%third_party_dir:\=\\%"
+    -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES
+    -DCIVETWEB_ENABLE_SSL=%enable_ssl%
+    -DCIVETWEB_DISABLE_CGI=%no_cgi%
+    -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=%enable_ssl_dynamic_loading%
+    -DCIVETWEB_ENABLE_WEBSOCKETS=%enable_websockets%
+    -DCIVETWEB_ENABLE_CXX=%enable_cxx%
+    -DCIVETWEB_ENABLE_LUA=%enable_lua%
+    -DCIVETWEB_ENABLE_LUA_SHARED=%enable_lua_shared%
+    -DCIVETWEB_ENABLE_SERVER_STATS=%enable_stats%
+    -DCIVETWEB_DISABLE_CACHING=%no_caching%
+    -DCIVETWEB_C_STANDARD=%c_standard%
+    -DCIVETWEB_CXX_STANDARD=%cxx_standard%
+    -DCIVETWEB_SSL_OPENSSL_API_1_0=NO
+    -DCIVETWEB_SSL_OPENSSL_API_1_1=YES
     "%source_path%"
   - powershell Push-AppveyorArtifact CMakeCache.txt
   - cd "%source_path%"
@@ -455,43 +532,3 @@ for:
       only:
         - configuration: Release
       fast_finish: false
-      allow_failures:
-        # Experimental Ubuntu
-        - id: Ubuntu1604-GCC-x64
-          compiler: gcc-5.1.0-posix
-          build_shared: NO
-          no_files: NO
-          enable_ipv6: YES
-          enable_ssl: YES
-          enable_websockets: YES
-          no_cgi: NO
-          no_caching: NO
-          enable_stats: YES
-          configuration: Release
-          platform: x64
-          image: Ubuntu1604
-        - id: Ubuntu1804-GCC-x64
-          compiler: gcc-5.1.0-posix
-          build_shared: NO
-          no_files: NO
-          enable_ipv6: YES
-          enable_ssl: YES
-          enable_websockets: YES
-          no_cgi: NO
-          no_caching: NO
-          enable_stats: YES
-          configuration: Release
-          platform: x64
-          image: Ubuntu1804
-
-  -
-    matrix:
-      only:
-        - PYTHON: "C:\\Python37"
-    skip_non_tags: true
-    install:
-      - set PATH=%PATH%;%PYTHON%/Scripts/
-      - pip.exe install conan conan_package_tools
-    build: false
-    test_script:
-      - python conan/build.py

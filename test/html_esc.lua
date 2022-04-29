@@ -34,13 +34,14 @@ htmlEscape = {    "&#x263a;", "&#x263b;", "&#x2665;", "&#x2666;", "&#x2663;", "&
 htmlEscape[0] = "&middot;" -- in this table, we use a 8 bit character set, where every has a different graphical representation
 
 -- the conversion table should work as a conversion function for strings as well
-setmetatable(htmlEscape, {__call = function (tab,str) return string.gsub(str, ".", function (c) return tab[c:byte()] end) end})
+setmetatable(htmlEscape, {__call = function (tab,str) return string.gsub(str, ".", function (c) return (tab[c:byte()]) end) end})
 
 
 function htmlEsc(txt)
     s = txt:gsub("%&", "&amp;")
     s = s:gsub("%<", "&lt;")
-    return s:gsub("%>", "&gt;")
+	s = s:gsub("%>", "&gt;")
+    return (s)
 end
 
 

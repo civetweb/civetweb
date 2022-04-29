@@ -36,7 +36,9 @@
 /*
 ** Lua 5.2
 */
+#ifndef lua_strlen
 #define lua_strlen lua_rawlen
+#endif
 /* luaL_typerror always used with arg at ndx == NULL */
 #define luaL_typerror(L,ndx,str) luaL_error(L,"bad argument %d (%s expected, got nil)",ndx,str)
 /* luaL_register used once, so below expansion is OK for this case */
@@ -1785,7 +1787,7 @@ static int db_exec_callback(void* user, int columns, char **data, char **names) 
         else
 #endif
         if (lua_isnumber(L, -1))
-            result = lua_tonumber(L, -1);
+            result = (int)lua_tonumber(L, -1);
     }
 
     lua_settop(L, top);

@@ -1,12 +1,7 @@
-# Determines what CMake APIs we can rely on
-cmake_minimum_required (VERSION 2.8.11...3.13.1)
-if (${CMAKE_VERSION} VERSION_GREATER 3.2.2)
-  cmake_policy(VERSION 3.2.2)
-endif()
-if (${CMAKE_VERSION} VERSION_GREATER 3.1 OR
-    ${CMAKE_VERSION} VERSION_EQUAL 3.1)
-  cmake_policy(SET CMP0054 NEW)
-endif()
+# Use at least CMake 3.3
+cmake_minimum_required (VERSION 3.3.0)
+cmake_policy(VERSION 3.2.2)
+cmake_policy(SET CMP0054 NEW)
 
 # Set up the project
 project (civetweb)
@@ -41,7 +36,7 @@ include(AddCXXCompilerFlag)
 include(DetermineTargetArchitecture)
 include(CMakeDependentOption)
 
-set(CIVETWEB_VERSION "1.11.0" CACHE STRING "The version of the civetweb library")
+set(CIVETWEB_VERSION "1.15.0" CACHE STRING "The version of the civetweb library")
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" CIVETWEB_VERSION_MATCH "${CIVETWEB_VERSION}")
 if ("${CIVETWEB_VERSION_MATCH}" STREQUAL "")
   message(FATAL_ERROR "Must specify a semantic version: major.minor.patch")
@@ -111,6 +106,10 @@ message(STATUS "Force x32 / x64 architecture - ${CIVETWEB_ARCH}")
 # LUA CGI support
 option(CIVETWEB_ENABLE_LUA "Enable Lua CGIs" OFF)
 message(STATUS "Lua CGI support - ${CIVETWEB_ENABLE_LUA}")
+
+# zlib compression support
+option(CIVETWEB_ENABLE_ZLIB "Enables zlib compression support" OFF)
+message(STATUS "zlib support - ${CIVETWEB_ENABLE_ZLIB}")
 
 # Enable installing CivetWeb executables
 option(CIVETWEB_INSTALL_EXECUTABLE "Enable installing CivetWeb executable" ON)
@@ -219,8 +218,12 @@ message(STATUS "Duktape CGI support - ${CIVETWEB_ENABLE_DUKTAPE}")
 option(CIVETWEB_ENABLE_SSL "Enables the secure socket layer" ON)
 message(STATUS "SSL support - ${CIVETWEB_ENABLE_SSL}")
 
+# OpenSSL 1.0 API
+option(CIVETWEB_SSL_OPENSSL_API_1_0 "Use the OpenSSL 1.0 API" OFF)
+message(STATUS "Compile for OpenSSL 1.0 API - ${CIVETWEB_SSL_OPENSSL_API_1_0}")
+
 # OpenSSL 1.1 API
-option(CIVETWEB_SSL_OPENSSL_API_1_1 "Use the OpenSSL 1.1 API" OFF)
+option(CIVETWEB_SSL_OPENSSL_API_1_1 "Use the OpenSSL 1.1 API" ON)
 message(STATUS "Compile for OpenSSL 1.1 API - ${CIVETWEB_SSL_OPENSSL_API_1_1}")
 
 # Dynamically load or link the SSL libraries
@@ -472,8 +475,11 @@ endif()
 
 
 # Set up the definitions
+option(CIVETWEB_ENABLE_DEBUG_TOOLS "For Debug builds enable verbose logging and assertions" ON)
 if (${CMAKE_BUILD_TYPE} MATCHES "[Dd]ebug")
-  add_definitions(-DDEBUG)
+  if(CIVETWEB_ENABLE_DEBUG_TOOLS)
+    add_definitions(-DDEBUG)
+  endif()
   add_definitions(-O0)
   add_definitions(-g)
 endif()
@@ -501,6 +507,9 @@ endif()
 if (CIVETWEB_ENABLE_LUA)
   add_definitions(-DUSE_LUA)
 endif()
+if (CIVETWEB_ENABLE_ZLIB)
+  add_definitions(-DUSE_ZLIB)
+endif()
 if (CIVETWEB_ENABLE_DUKTAPE)
   add_definitions(-DUSE_DUKTAPE)
 endif()
@@ -519,9 +528,17 @@ else()
     add_definitions(-DCRYPTO_LIB="${CIVETWEB_SSL_CRYPTO_LIB}")
   endif()
 endif()
+
+if(CIVETWEB_SSL_OPENSSL_API_1_0)
+  add_definitions(-DOPENSSL_API_1_0)
+endif()
 if(CIVETWEB_SSL_OPENSSL_API_1_1)
   add_definitions(-DOPENSSL_API_1_1)
 endif()
+if(CIVETWEB_SSL_OPENSSL_API_1_0 AND CIVETWEB_SSL_OPENSSL_API_1_1)
+  message(FATAL_ERROR "Multiple SSL API versions defined")
+endif()
+
 add_definitions(-DUSE_STACK_SIZE=${CIVETWEB_THREAD_STACK_SIZE})
 
 # Set 32 or 64 bit environment
@@ -579,7 +596,31 @@ configure_package_config_file(
   ${PROJECT_NAME}-config.cmake
   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
   NO_CHECK_REQUIRED_COMPONENTS_MACRO
-  PATH_VARS CMAKE_INSTALL_INCLUDEDIR
+  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR CIVETWEB_ENABLE_CXX
+)
+
+configure_file(
+  cmake/${PROJECT_NAME}.pc.in
+  ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc
+  @ONLY
+)
+
+configure_file(
+  cmake/${PROJECT_NAME}-cpp.pc.in
+  ${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc
+  @ONLY
+)
+
+install(
+  FILES 
+    "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig"
+)
+
+install(
+  FILES 
+    "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig"
 )
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake
@@ -591,6 +632,9 @@ install(
   FILES
     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibDl.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibRt.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindWinSock.cmake"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
   COMPONENT civetweb-cmake-config
 )

@@ -10,12 +10,18 @@ out
 *.msi
 *.exe
 *.zip
+*.trace
 [oO]utput
 [tT]esting
-
+examples/embedded_c/embedded_c
+examples/embedded_cpp/embedded_cpp
+*.a
 *.o
+VisualStudio/unit_test/*
+log.out
 
-#################
+
+################# //hash
 ## CMake
 #################
 /CMakeCache.txt
@@ -195,6 +201,14 @@ UpgradeLog*.htm
 App_Data/*.mdf
 App_Data/*.ldf
 
+
+#################
+## Other IDEs
+#################
+
+*.kdev4
+
+
 #############
 ## Windows detritus
 #############
@@ -267,5 +281,25 @@ requests.db
 ci/lua
 
 
-# Conan test cache
+##########################
+## Conan test cache
+##########################
 conan/test_package/build
+
+
+##########################
+## Visual Studio Code
+##########################
+.vscode
+
+
+##########################
+## Fuzz test corpus
+##########################
+fuzztest/http1/**
+fuzztest/http1c/**
+fuzztest/url/**
+crash-[0-9a-f]*
+leak-[0-9a-f]*
+slow-unit-[0-9a-f]*
+civetweb_fuzz?

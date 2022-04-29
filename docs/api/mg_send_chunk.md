@@ -25,7 +25,7 @@ The function returns a number **>0** if data was sent, the value **0** when the 
 ### See Also
 
 * [`mg_write();`](mg_write.md)
-* [`mg_printf();`](mg_print.md)
+* [`mg_printf();`](mg_printf.md)
 * [`mg_lock_connection();`](mg_lock_connection.md)
 * [`mg_unlock_connection();`](mg_unlock_connection.md)
 

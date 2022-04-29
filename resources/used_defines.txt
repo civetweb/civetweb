@@ -97,7 +97,6 @@ __MINGW64__
 __STDC_FORMAT_MACROS
 __STDC_LIMIT_MACROS
 __STDC_VERSION__
-__SYMBIAN32__
 __clang__
 __clockid_t_defined
 __cplusplus

@@ -1,0 +1,1 @@
+Name with & (fine for Windows, bad for Linux)

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018 the Civetweb developers
+/* Copyright (c) 2013-2021 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,6 +34,14 @@
 
 #else
 
+#if defined(__clang__) /* GCC does not (yet) support this pragma */
+/* We must set some flags for the headers we include. These flags
+ * are reserved ids according to C99, so we need to disable a
+ * warning for that. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreserved-id-macro"
+#endif
+#if !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
 /* This should also be sufficient for "realpath", according to
  * http://man7.org/linux/man-pages/man3/realpath.3.html, but in
@@ -42,6 +50,7 @@
  * #pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
  * #pragma clang diagnostic ignored "-Wimplicit-function-declaration"
  */
+#endif
 #endif
 
 #if !defined(IGNORE_UNUSED_RESULT)
@@ -72,6 +81,11 @@
 #define __STDC_LIMIT_MACROS /* C++ wants that for INT64_MAX */
 #endif
 
+#if defined(__clang__)
+/* Enable reserved-id-macro warning again. */
+#pragma GCC diagnostic pop
+#endif
+
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -90,7 +104,7 @@
 #define printf                                                                 \
 	DO_NOT_USE_THIS_FUNCTION__USE_fprintf /* Required for unit testing */
 
-#if defined(_WIN32) && !defined(__SYMBIAN32__) /* WINDOWS include block */
+#if defined(_WIN32) /* WINDOWS include block */
 #if !defined(_WIN32_WINNT)
 #define _WIN32_WINNT 0x0501 /* for tdm-gcc so we can use getconsolewindow */
 #endif
@@ -120,7 +134,7 @@ extern char *_getcwd(char *buf, size_t size);
 #define WINCDECL __cdecl
 #define abs_path(rel, abs, abs_size) (_fullpath((abs), (rel), (abs_size)))
 
-#else /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include   \
+#else /* defined(_WIN32) - WINDOWS / UNIX include                              \
          block */
 
 #include <sys/utsname.h>
@@ -131,7 +145,7 @@ extern char *_getcwd(char *buf, size_t size);
 #define WINCDECL
 #define abs_path(rel, abs, abs_size) (realpath((rel), (abs)))
 
-#endif /* defined(_WIN32) && !defined(__SYMBIAN32__) - WINDOWS / UNIX include  \
+#endif /* defined(_WIN32) - WINDOWS / UNIX include                             \
           block */
 
 #if !defined(DEBUG_ASSERT)
@@ -159,18 +173,16 @@ extern char *_getcwd(char *buf, size_t size);
 #define PATH_MAX (1024)
 #endif
 
-#define MAX_OPTIONS (50)
+#define MAX_OPTIONS (100) /* TODO: Read from civetweb.c ? */
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
 struct tuser_data {
-	char *first_message;
+	int _unused;
 };
 
-
-/* Exit flag for the main loop (read and writen by different threads, thus
+/* Exit flag for the main loop (read and written by different threads, thus
  * volatile). */
 volatile int g_exit_flag = 0; /* 0 = continue running main loop */
-
 
 static char g_server_base_name[40]; /* Set by init_server_name() */
 
@@ -184,7 +196,8 @@ static int g_num_add_domains;     /* Default from init_server_name,
                                    * updated later from the server config */
 static const char **g_add_domain; /* Default from init_server_name,
                                    * updated later from the server config */
-
+static int g_hide_tray = 0;       /* Default = do not hide (0),
+                                   * updated later from the server config */
 
 static char *g_system_info; /* Set by init_system_info() */
 static char g_config_file_name[PATH_MAX] =
@@ -213,6 +226,11 @@ enum {
 	OPTION_ICON,
 	OPTION_WEBPAGE,
 	OPTION_ADD_DOMAIN,
+	OPTION_HIDE_TRAY,
+#if defined(DAEMONIZE)
+	ENABLE_DAEMONIZE,
+#endif
+
 	NUM_MAIN_OPTIONS
 };
 
@@ -221,6 +239,11 @@ static struct mg_option main_config_options[] = {
     {"icon", MG_CONFIG_TYPE_STRING, NULL},
     {"website", MG_CONFIG_TYPE_STRING, NULL},
     {"add_domain", MG_CONFIG_TYPE_STRING_LIST, NULL},
+    {"hide_tray", MG_CONFIG_TYPE_BOOLEAN, NULL},
+#if defined(DAEMONIZE)
+    {"daemonize", MG_CONFIG_TYPE_BOOLEAN, "no"},
+#endif
+
     {NULL, MG_CONFIG_TYPE_UNKNOWN, NULL}};
 
 
@@ -235,6 +258,27 @@ static NO_RETURN void
 die(const char *fmt, ...)
 {
 	va_list ap;
+	char msg[1024] = "";
+
+	va_start(ap, fmt);
+	(void)vsnprintf(msg, sizeof(msg) - 1, fmt, ap);
+	msg[sizeof(msg) - 1] = 0;
+	va_end(ap);
+
+#if defined(_WIN32)
+	MessageBox(NULL, msg, "Error", MB_ICONERROR | MB_OK);
+#else
+	fprintf(stderr, "%s\n", msg);
+#endif
+
+	exit(EXIT_FAILURE);
+}
+
+
+static void
+warn(const char *fmt, ...)
+{
+	va_list ap;
 	char msg[512] = "";
 
 	va_start(ap, fmt);
@@ -243,12 +287,10 @@ die(const char *fmt, ...)
 	va_end(ap);
 
 #if defined(_WIN32)
-	MessageBox(NULL, msg, "Error", MB_OK);
+	MessageBox(NULL, msg, "Warning", MB_OK);
 #else
 	fprintf(stderr, "%s\n", msg);
 #endif
-
-	exit(EXIT_FAILURE);
 }
 
 
@@ -260,11 +302,16 @@ static int MakeConsole(void);
 static void
 show_server_name(void)
 {
+#if defined(BUILD_DATE)
+	const char *bd = BUILD_DATE;
+#else
+	const char *bd = __DATE__;
+#endif
 #if defined(WIN32)
 	(void)MakeConsole();
 #endif
 
-	fprintf(stderr, "CivetWeb v%s, built on %s\n", mg_version(), __DATE__);
+	fprintf(stderr, "CivetWeb v%s, built on %s\n", mg_version(), bd);
 }
 
 
@@ -320,48 +367,60 @@ show_usage_and_exit(const char *exeName)
 }
 
 
-#if defined(_WIN32) || defined(USE_COCOA)
+#if defined(_WIN32) || defined(USE_COCOA) || defined(MAIN_C_UNIT_TEST)
 static const char *config_file_top_comment =
     "# CivetWeb web server configuration file.\n"
     "# For detailed description of every option, visit\n"
     "# https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md\n"
     "# Lines starting with '#' and empty lines are ignored.\n"
-    "# To make a change, remove leading '#', modify option's value,\n"
-    "# save this file and then restart Civetweb.\n\n";
+    "# To make changes, remove leading '#', modify option values,\n"
+    "# save this file and then restart CivetWeb.\n\n";
 
 static const char *
 get_url_to_first_open_port(const struct mg_context *ctx)
 {
-	static char url[100];
-	const char *open_ports = mg_get_option(ctx, "listening_ports");
-	int a, b, c, d, port, n;
+	static char url[128];
 
-	if (sscanf(open_ports, "%d.%d.%d.%d:%d%n", &a, &b, &c, &d, &port, &n)
-	    == 5) {
-		snprintf(url,
-		         sizeof(url),
-		         "%s://%d.%d.%d.%d:%d",
-		         open_ports[n] == 's' ? "https" : "http",
-		         a,
-		         b,
-		         c,
-		         d,
-		         port);
-	} else if (sscanf(open_ports, "%d%n", &port, &n) == 1) {
-		snprintf(url,
-		         sizeof(url),
-		         "%s://localhost:%d",
-		         open_ports[n] == 's' ? "https" : "http",
-		         port);
-	} else {
-		snprintf(url, sizeof(url), "%s", "http://localhost:8080");
+#define MAX_PORT_COUNT (32)
+
+	struct mg_server_port ports[MAX_PORT_COUNT];
+	int portNum = mg_get_server_ports(ctx, MAX_PORT_COUNT, ports);
+	int i;
+
+	memset(url, 0, sizeof(url));
+
+	/* Prefer IPv4 http, ignore redirects */
+	for (i = 0; i < portNum; i++) {
+		if ((ports[i].protocol == 1) && (ports[i].is_redirect == 0)
+		    && (ports[i].is_ssl == 0)) {
+			snprintf(url, sizeof(url), "http://localhost:%d/", ports[i].port);
+			return url;
+		}
 	}
+	/* Use IPv4 https */
+	for (i = 0; i < portNum; i++) {
+		if ((ports[i].protocol == 1) && (ports[i].is_redirect == 0)
+		    && (ports[i].is_ssl == 1)) {
+			snprintf(url, sizeof(url), "https://localhost:%d/", ports[i].port);
+			return url;
+		}
+	}
+	/* Try IPv6 http, ignore redirects */
+	if (portNum > 0) {
+		snprintf(url,
+		         sizeof(url),
+		         "%s://localhost:%d/",
+		         (ports[0].is_ssl ? "https" : "http"),
+		         ports[0].port);
+	}
+
+#undef MAX_PORT_COUNT
 
 	return url;
 }
 
 
-#if defined(ENABLE_CREATE_CONFIG_FILE)
+#if defined(ENABLE_CREATE_CONFIG_FILE) || defined(MAIN_C_UNIT_TEST)
 static void
 create_config_file(const struct mg_context *ctx, const char *path)
 {
@@ -408,137 +467,8 @@ sdup(const char *str)
 }
 
 
-#if 0 /* Unused code from "string duplicate with escape" */
-static unsigned
-hex2dec(char x)
-{
-    if ((x >= '0') && (x <= '9')) {
-        return (unsigned)x - (unsigned)'0';
-    }
-    if ((x >= 'A') && (x <= 'F')) {
-        return (unsigned)x - (unsigned)'A' + 10u;
-    }
-    if ((x >= 'a') && (x <= 'f')) {
-        return (unsigned)x - (unsigned)'a' + 10u;
-    }
-    return 0;
-}
-
-
-static char *
-sdupesc(const char *str)
-{
-	char *p = sdup(str);
-
-	if (p) {
-		char *d = p;
-		while ((d = strchr(d, '\\')) != NULL) {
-			switch (d[1]) {
-			case 'a':
-				d[0] = '\a';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'b':
-				d[0] = '\b';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'e':
-				d[0] = 27;
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'f':
-				d[0] = '\f';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'n':
-				d[0] = '\n';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'r':
-				d[0] = '\r';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 't':
-				d[0] = '\t';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'u':
-				if (isxdigit(d[2]) && isxdigit(d[3]) && isxdigit(d[4])
-				    && isxdigit(d[5])) {
-					unsigned short u = (unsigned short)(hex2dec(d[2]) * 4096
-					                                    + hex2dec(d[3]) * 256
-					                                    + hex2dec(d[4]) * 16
-					                                    + hex2dec(d[5]));
-					char mbc[16];
-					int mbl = wctomb(mbc, (wchar_t)u);
-					if ((mbl > 0) && (mbl < 6)) {
-						memcpy(d, mbc, (unsigned)mbl);
-						memmove(d + mbl, d + 6, strlen(d + 5));
-						/* Advance mbl characters (+1 is below) */
-						d += (mbl - 1);
-					} else {
-						/* Invalid multi byte character */
-						/* TODO: define what to do */
-					}
-				} else {
-					/* Invalid esc sequence */
-					/* TODO: define what to do */
-				}
-				break;
-			case 'v':
-				d[0] = '\v';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'x':
-				if (isxdigit(d[2]) && isxdigit(d[3])) {
-					d[0] = (char)((unsigned char)(hex2dec(d[2]) * 16
-					                              + hex2dec(d[3])));
-					memmove(d + 1, d + 4, strlen(d + 3));
-				} else {
-					/* Invalid esc sequence */
-					/* TODO: define what to do */
-				}
-				break;
-			case 'z':
-				d[0] = 0;
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case '\\':
-				d[0] = '\\';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case '\'':
-				d[0] = '\'';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case '\"':
-				d[0] = '\"';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 0:
-				if (d == p) {
-					/* Line is only \ */
-					free(p);
-					return NULL;
-				}
-			/* no break */
-			default:
-				/* invalid ESC sequence */
-				/* TODO: define what to do */
-				break;
-			}
-
-			/* Advance to next character */
-			d++;
-		}
-	}
-	return p;
-}
-#endif
-
-
 static const char *
-get_option(char **options, const char *option_name)
+get_option(const char **options, const char *option_name)
 {
 	int i = 0;
 	const char *opt_value = NULL;
@@ -562,7 +492,7 @@ get_option(char **options, const char *option_name)
 
 
 static int
-set_option(char **options, const char *name, const char *value)
+set_option(const char **options, const char *name, const char *value)
 {
 	int i, type;
 	const struct mg_option *default_options = mg_get_valid_options();
@@ -582,6 +512,14 @@ set_option(char **options, const char *name, const char *value)
 		}
 		if (!strcmp(name, main_config_options[OPTION_WEBPAGE].name)) {
 			g_website = sdup(value);
+			return 1;
+		}
+		if (!strcmp(name, main_config_options[OPTION_HIDE_TRAY].name)) {
+			if (!strcmp(value, "yes")) {
+				g_hide_tray = 1;
+			} else if (!strcmp(value, "no")) {
+				g_hide_tray = 0;
+			}
 			return 1;
 		}
 		if (!strcmp(name, main_config_options[OPTION_ADD_DOMAIN].name)) {
@@ -607,34 +545,47 @@ set_option(char **options, const char *name, const char *value)
 	}
 
 	/* Not an option of main.c, so check if it is a CivetWeb server option */
-	type = MG_CONFIG_TYPE_UNKNOWN;
+	type = MG_CONFIG_TYPE_UNKNOWN; /* type "unknown" means "option not found" */
 	for (i = 0; default_options[i].name != NULL; i++) {
 		if (!strcmp(default_options[i].name, name)) {
 			type = default_options[i].type;
+			break; /* no need to search for another option */
 		}
 	}
+
 	switch (type) {
+
 	case MG_CONFIG_TYPE_UNKNOWN:
 		/* unknown option */
-		return 0;
+		return 0; /* return error */
+
 	case MG_CONFIG_TYPE_NUMBER:
 		/* integer number >= 0, e.g. number of threads */
-		if (atol(value) < 0) {
-			/* invalid number */
-			return 0;
+		{
+			char *chk = 0;
+			unsigned long num = strtoul(value, &chk, 10);
+			(void)num; /* do not check value, only syntax */
+			if ((chk == NULL) || (*chk != 0) || (chk == value)) {
+				/* invalid number */
+				return 0;
+			}
 		}
 		break;
+
 	case MG_CONFIG_TYPE_STRING:
 		/* any text */
 		break;
+
 	case MG_CONFIG_TYPE_STRING_LIST:
 		/* list of text items, separated by , */
 		multi_sep = ",";
 		break;
+
 	case MG_CONFIG_TYPE_STRING_MULTILINE:
 		/* lines of text, separated by carriage return line feed */
 		multi_sep = "\r\n";
 		break;
+
 	case MG_CONFIG_TYPE_BOOLEAN:
 		/* boolean value, yes or no */
 		if ((0 != strcmp(value, "yes")) && (0 != strcmp(value, "no"))) {
@@ -642,6 +593,7 @@ set_option(char **options, const char *name, const char *value)
 			return 0;
 		}
 		break;
+
 	case MG_CONFIG_TYPE_YES_NO_OPTIONAL:
 		/* boolean value, yes or no */
 		if ((0 != strcmp(value, "yes")) && (0 != strcmp(value, "no"))
@@ -650,15 +602,18 @@ set_option(char **options, const char *name, const char *value)
 			return 0;
 		}
 		break;
+
 	case MG_CONFIG_TYPE_FILE:
 	case MG_CONFIG_TYPE_DIRECTORY:
 		/* TODO (low): check this option when it is set, instead of calling
 		 * verify_existence later */
 		break;
+
 	case MG_CONFIG_TYPE_EXT_PATTERN:
 		/* list of patterns, separated by | */
 		multi_sep = "|";
 		break;
+
 	default:
 		die("Unknown option type - option %s", name);
 	}
@@ -672,7 +627,7 @@ set_option(char **options, const char *name, const char *value)
 			break;
 		} else if (!strcmp(options[2 * i], name)) {
 			if (multi_sep) {
-				/* Option already set. Overwrite */
+				/* Option already set. Append new value. */
 				char *s =
 				    (char *)malloc(strlen(options[2 * i + 1])
 				                   + strlen(multi_sep) + strlen(value) + 1);
@@ -680,11 +635,11 @@ set_option(char **options, const char *name, const char *value)
 					die("Out of memory");
 				}
 				sprintf(s, "%s%s%s", options[2 * i + 1], multi_sep, value);
-				free(options[2 * i + 1]);
+				free((char *)options[2 * i + 1]);
 				options[2 * i + 1] = s;
 			} else {
 				/* Option already set. Overwrite */
-				free(options[2 * i + 1]);
+				free((char *)options[2 * i + 1]);
 				options[2 * i + 1] = sdup(value);
 			}
 			break;
@@ -708,7 +663,7 @@ set_option(char **options, const char *name, const char *value)
 
 
 static int
-read_config_file(const char *config_file, char **options)
+read_config_file(const char *config_file, const char **options)
 {
 	char line[MAX_CONF_FILE_LINE_SIZE], *p;
 	FILE *fp = NULL;
@@ -780,7 +735,7 @@ read_config_file(const char *config_file, char **options)
 
 
 static void
-process_command_line_arguments(int argc, char *argv[], char **options)
+process_command_line_arguments(int argc, char *argv[], const char **options)
 {
 	char *p;
 	size_t i, cmd_line_opts_start = 1;
@@ -905,22 +860,6 @@ free_system_info(void)
 
 
 static int
-log_message(const struct mg_connection *conn, const char *message)
-{
-	const struct mg_context *ctx = mg_get_context(conn);
-	struct tuser_data *ud = (struct tuser_data *)mg_get_user_data(ctx);
-
-	fprintf(stderr, "%s\n", message);
-
-	if (ud->first_message == NULL) {
-		ud->first_message = sdup(message);
-	}
-
-	return 0;
-}
-
-
-static int
 is_path_absolute(const char *path)
 {
 #if defined(_WIN32)
@@ -935,8 +874,8 @@ is_path_absolute(const char *path)
 }
 
 
-static void
-verify_existence(char **options, const char *option_name, int must_be_dir)
+static int
+verify_existence(const char **options, const char *option_name, int must_be_dir)
 {
 	struct stat st;
 	const char *path = get_option(options, option_name);
@@ -960,17 +899,19 @@ verify_existence(char **options, const char *option_name, int must_be_dir)
 	if (path != NULL
 	    && (stat(path, &st) != 0
 	        || ((S_ISDIR(st.st_mode) ? 1 : 0) != must_be_dir))) {
-		die("Invalid path for %s: [%s]: (%s). Make sure that path is either "
-		    "absolute, or it is relative to civetweb executable.",
-		    option_name,
-		    path,
-		    strerror(errno));
+		warn("Invalid path for %s: [%s]: (%s). Make sure that path is either "
+		     "absolute, or it is relative to civetweb executable.",
+		     option_name,
+		     path,
+		     strerror(errno));
+		return 0;
 	}
+	return 1;
 }
 
 
 static void
-set_absolute_path(char *options[],
+set_absolute_path(const char *options[],
                   const char *option_name,
                   const char *path_to_civetweb_exe)
 {
@@ -1193,10 +1134,12 @@ run_client(const char *url_arg)
 	return 1;
 }
 
-static void
-sanitize_options(char *options[] /* server options */,
+
+static int
+sanitize_options(const char *options[] /* server options */,
                  const char *arg0 /* argv[0] */)
 {
+	int ok = 1;
 	/* Make sure we have absolute paths for files and directories */
 	set_absolute_path(options, "document_root", arg0);
 	set_absolute_path(options, "put_delete_auth_file", arg0);
@@ -1210,22 +1153,38 @@ sanitize_options(char *options[] /* server options */,
 	set_absolute_path(options, "ssl_certificate", arg0);
 
 	/* Make extra verification for certain options */
-	verify_existence(options, "document_root", 1);
-	verify_existence(options, "cgi_interpreter", 0);
-	verify_existence(options, "ssl_certificate", 0);
-	verify_existence(options, "ssl_ca_path", 1);
-	verify_existence(options, "ssl_ca_file", 0);
+	if (!verify_existence(options, "document_root", 1))
+		ok = 0;
+	if (!verify_existence(options, "cgi_interpreter", 0))
+		ok = 0;
+	if (!verify_existence(options, "ssl_certificate", 0))
+		ok = 0;
+	if (!verify_existence(options, "ssl_ca_path", 1))
+		ok = 0;
+	if (!verify_existence(options, "ssl_ca_file", 0))
+		ok = 0;
 #if defined(USE_LUA)
-	verify_existence(options, "lua_preload_file", 0);
+	if (!verify_existence(options, "lua_preload_file", 0))
+		ok = 0;
 #endif
+	return ok;
 }
+
+
+#ifdef _WIN32
+/* Forward declaration for Windows only */
+static void show_settings_dialog(void);
+#endif
 
 
 static void
 start_civetweb(int argc, char *argv[])
 {
 	struct mg_callbacks callbacks;
-	char *options[2 * MAX_OPTIONS + 1];
+	const char *options[2 * MAX_OPTIONS + 1];
+	struct mg_init_data init;
+	struct mg_error_data error;
+	char error_text[256];
 	int i;
 
 	/* Start option -I:
@@ -1320,13 +1279,16 @@ start_civetweb(int argc, char *argv[])
 	}
 
 	/* Initialize options structure */
-	memset(options, 0, sizeof(options));
+	memset((void *)options, 0, sizeof(options));
 	set_option(options, "document_root", ".");
 
 	/* Update config based on command line arguments */
 	process_command_line_arguments(argc, argv, options);
 
-	sanitize_options(options, argv[0]);
+	i = sanitize_options(options, argv[0]);
+	if (!i) {
+		die("Invalid options");
+	}
 
 	/* Setup signal handler: quit on Ctrl-C */
 	signal(SIGTERM, signal_handler);
@@ -1360,23 +1322,54 @@ start_civetweb(int argc, char *argv[])
 	/* Initialize user data */
 	memset(&g_user_data, 0, sizeof(g_user_data));
 
-	/* Start Civetweb */
 	memset(&callbacks, 0, sizeof(callbacks));
-	callbacks.log_message = &log_message;
-	g_ctx = mg_start(&callbacks, &g_user_data, (const char **)options);
+
+	memset(&init, 0, sizeof(init));
+	init.callbacks = &callbacks;
+	init.configuration_options = options;
+	init.user_data = &g_user_data;
+
+	memset(&error, 0, sizeof(error));
+	error.text = error_text;
+	error.text_buffer_size = sizeof(error_text);
+
+	/* Start Civetweb */
+	g_ctx = mg_start2(&init, &error);
 
 	/* mg_start copies all options to an internal buffer.
 	 * The options data field here is not required anymore. */
 	for (i = 0; options[i] != NULL; i++) {
-		free(options[i]);
+		free((char *)options[i]);
 	}
 
 	/* If mg_start fails, it returns NULL */
 	if (g_ctx == NULL) {
-		die("Failed to start %s:\n%s",
+#ifdef _WIN32
+		/* On Windows: provide option to edit configuration file. */
+		char msgboxtxt[1024];
+		int ret;
+		sprintf(msgboxtxt,
+		        "Failed to start %s with code %u:\n%s\n\nEdit settings?",
+		        g_server_name,
+		        error.code,
+		        error_text);
+		ret =
+		    MessageBox(NULL, msgboxtxt, "Error", MB_ICONERROR | MB_YESNOCANCEL);
+		if (ret == IDYES) {
+			show_settings_dialog();
+
+			/* Hitting "save" will also restart the server. */
+			if (g_ctx != NULL) {
+				return;
+			}
+		}
+		exit(EXIT_FAILURE);
+#else
+		die("Failed to start %s with code %u:\n%s",
 		    g_server_name,
-		    ((g_user_data.first_message == NULL) ? "unknown reason"
-		                                         : g_user_data.first_message));
+		    error.code,
+		    error_text);
+#endif
 	}
 
 #if defined(MG_EXPERIMENTAL_INTERFACES)
@@ -1392,7 +1385,10 @@ start_civetweb(int argc, char *argv[])
 			    strerror(errno));
 		}
 
-		sanitize_options(options, argv[0]);
+		j = sanitize_options(options, argv[0]);
+		if (!j) {
+			die("Invalid options");
+		}
 
 		j = mg_start_domain(g_ctx, (const char **)options);
 		if (j < 0) {
@@ -1402,7 +1398,7 @@ start_civetweb(int argc, char *argv[])
 		}
 
 		for (j = 0; options[j] != NULL; j++) {
-			free(options[j]);
+			free((void *)options[j]);
 		}
 	}
 #endif
@@ -1413,8 +1409,6 @@ static void
 stop_civetweb(void)
 {
 	mg_stop(g_ctx);
-	free(g_user_data.first_message);
-	g_user_data.first_message = NULL;
 }
 
 
@@ -1461,6 +1455,7 @@ static SERVICE_STATUS ss;
 static SERVICE_STATUS_HANDLE hStatus;
 static const char *service_magic_argument = "--";
 static NOTIFYICONDATA TrayIcon;
+static UINT msg_taskbar_created;
 
 static void WINAPI
 ControlHandler(DWORD code)
@@ -1509,16 +1504,6 @@ show_error(void)
 }
 
 
-static void *
-align(void *ptr, uintptr_t alig)
-{
-	uintptr_t ul = (uintptr_t)ptr;
-	ul += alig;
-	ul &= ~alig;
-	return ((void *)ul);
-}
-
-
 static void
 save_config(HWND hDlg, FILE *fp)
 {
@@ -1562,40 +1547,49 @@ struct dlg_proc_param {
 };
 
 struct dlg_header_param {
+	/* https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-dlgtemplate
+	 */
 	DLGTEMPLATE dlg_template; /* 18 bytes */
 	WORD menu, dlg_class;
 	wchar_t caption[1];
-	WORD fontsiz;
-	wchar_t fontface[7];
+	WORD fontsize;
+	wchar_t fontface[7]; /* L"Tahoma" = 6 characters + terminating zero */
 };
 
-static struct dlg_header_param
-GetDlgHeader(const short width)
+/* complete data required to create a dialog including child elements */
+struct dlg_complete {
+	struct dlg_header_param header;
+	/* TODO: if sizeof(header)%4 is not 0, add some filling bytes here */
+	BYTE elements[4096 * 2];
+	int used;
+};
+
+
+static void
+FillDialogHeader(struct dlg_complete *dlg, const short width)
 {
-#if defined(_MSC_VER)
-/* disable MSVC warning C4204 (non-constant used to initialize structure) */
-#pragma warning(push)
-#pragma warning(disable : 4204)
-#endif /* if defined(_MSC_VER) */
-	struct dlg_header_param dialog_header = {{WS_CAPTION | WS_POPUP | WS_SYSMENU
-	                                              | WS_VISIBLE | DS_SETFONT
-	                                              | WS_DLGFRAME,
-	                                          WS_EX_TOOLWINDOW,
-	                                          0,
-	                                          200,
-	                                          200,
-	                                          width,
-	                                          0},
-	                                         0,
-	                                         0,
-	                                         L"",
-	                                         8,
-	                                         L"Tahoma"};
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif /* if defined(_MSC_VER) */
-	return dialog_header;
+	memset(dlg, 0, sizeof(*dlg));
+
+	dlg->header.dlg_template.style = WS_CAPTION | WS_POPUP | WS_SYSMENU
+	                                 | WS_VISIBLE | DS_SETFONT | DS_CENTER
+	                                 | WS_DLGFRAME;
+	dlg->header.dlg_template.dwExtendedStyle = WS_EX_TOOLWINDOW;
+	dlg->header.dlg_template.cdit = 0;
+	dlg->header.dlg_template.x = 0; /* ignored by DS_CENTER */
+	dlg->header.dlg_template.y = 0; /* ignored by DS_CENTER */
+	dlg->header.dlg_template.cx = width;
+	dlg->header.dlg_template.cy =
+	    0; /* to be calculated after adding elements */
+	dlg->header.menu = 0;
+	dlg->header.dlg_class = 0;
+	dlg->header.caption[0] = (wchar_t)0;
+	dlg->header.fontsize = 8;
+	wcscpy(dlg->header.fontface, L"Tahoma");
+
+	/* counting used bytes */
+	dlg->used = 0;
 }
+
 
 /* Dialog proc for settings dialog */
 static INT_PTR CALLBACK
@@ -1697,31 +1691,42 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (((default_options[i].type == MG_CONFIG_TYPE_FILE)
 			     || (default_options[i].type == MG_CONFIG_TYPE_DIRECTORY))
 			    && LOWORD(wParam) == ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA) {
-				OPENFILENAME of;
-				BROWSEINFO bi;
+
+				/* Result of the Dialog: File/Folder selected by user */
 				char path[PATH_MAX] = "";
 
-				memset(&of, 0, sizeof(of));
-				of.lStructSize = sizeof(of);
-				of.hwndOwner = (HWND)hDlg;
-				of.lpstrFile = path;
-				of.nMaxFile = sizeof(path);
-				of.lpstrInitialDir = mg_get_option(g_ctx, "document_root");
-				of.Flags =
-				    OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
-
-				memset(&bi, 0, sizeof(bi));
-				bi.hwndOwner = (HWND)hDlg;
-				bi.lpszTitle = "Choose WWW root directory:";
-				bi.ulFlags = BIF_RETURNONLYFSDIRS;
-
 				if (default_options[i].type == MG_CONFIG_TYPE_DIRECTORY) {
+
+					BROWSEINFO bi;
+					memset(&bi, 0, sizeof(bi));
+					bi.hwndOwner = (HWND)hDlg;
+					bi.ulFlags = BIF_RETURNONLYFSDIRS;
+
+					/* Use option name as Window title */
+					bi.lpszTitle = name;
+
 					SHGetPathFromIDList(SHBrowseForFolder(&bi), path);
+
 				} else {
+
+					OPENFILENAME of;
+					memset(&of, 0, sizeof(of));
+					of.lStructSize = sizeof(of);
+					of.hwndOwner = (HWND)hDlg;
+					of.lpstrFile = path;
+					of.nMaxFile = sizeof(path);
+					of.lpstrInitialDir = mg_get_option(g_ctx, "document_root");
+					of.Flags =
+					    OFN_CREATEPROMPT | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
+
+					/* Use option name as Window title */
+					of.lpstrTitle = name;
+
 					GetOpenFileName(&of);
 				}
 
 				if (path[0] != '\0') {
+					/* Something has been choosen */
 					SetWindowText(GetDlgItem(hDlg, ID_CONTROLS + i), path);
 				}
 			}
@@ -1870,8 +1875,7 @@ suggest_passwd(char *passwd)
 }
 
 
-static void add_control(unsigned char **mem,
-                        DLGTEMPLATE *dia,
+static void add_control(struct dlg_complete *dlg,
                         WORD type,
                         WORD id,
                         DWORD style,
@@ -1888,17 +1892,16 @@ get_password(const char *user,
              char *passwd,
              unsigned passwd_len)
 {
-#define HEIGHT (15)
-#define WIDTH (280)
-#define LABEL_WIDTH (90)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short WIDTH = 280;
+	short LABEL_WIDTH = 90;
 
-	unsigned char mem[4096], *p;
-	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
+	/* Other variables */
+	struct dlg_complete dlg;
+	static struct dlg_proc_param s_dlg_proc_param;
 	int ok;
 	short y;
-	static struct dlg_proc_param s_dlg_proc_param;
-
-	const struct dlg_header_param dialog_header = GetDlgHeader(WIDTH);
 
 	DEBUG_ASSERT((user != NULL) && (realm != NULL) && (passwd != NULL));
 
@@ -1910,6 +1913,8 @@ get_password(const char *user,
 		SetForegroundWindow(s_dlg_proc_param.hWnd);
 		return 0;
 	}
+
+	FillDialogHeader(&dlg, WIDTH);
 
 	/* Do not open a password dialog, if the username is empty */
 	if (user[0] == 0) {
@@ -1926,14 +1931,8 @@ get_password(const char *user,
 	s_dlg_proc_param.buflen = passwd_len;
 
 	/* Create the dialog */
-	(void)memset(mem, 0, sizeof(mem));
-	p = mem;
-	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
-	p = mem + sizeof(dialog_header);
-
 	y = HEIGHT;
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_VISIBLE | WS_CHILD,
@@ -1942,8 +1941,7 @@ get_password(const char *user,
 	            LABEL_WIDTH,
 	            HEIGHT,
 	            "User:");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x81,
 	            ID_CONTROLS + 1,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -1955,8 +1953,7 @@ get_password(const char *user,
 	            user);
 
 	y += HEIGHT;
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_VISIBLE | WS_CHILD,
@@ -1965,8 +1962,7 @@ get_password(const char *user,
 	            LABEL_WIDTH,
 	            HEIGHT,
 	            "Realm:");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x81,
 	            ID_CONTROLS + 2,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -1978,8 +1974,7 @@ get_password(const char *user,
 	            realm);
 
 	y += HEIGHT;
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_VISIBLE | WS_CHILD,
@@ -1988,8 +1983,7 @@ get_password(const char *user,
 	            LABEL_WIDTH,
 	            HEIGHT,
 	            "Password:");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x81,
 	            ID_INPUT_LINE,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP,
@@ -2000,8 +1994,7 @@ get_password(const char *user,
 	            "");
 
 	y += (WORD)(HEIGHT * 2);
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            IDOK,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2010,8 +2003,7 @@ get_password(const char *user,
 	            55,
 	            12,
 	            "Ok");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            IDCANCEL,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2021,25 +2013,22 @@ get_password(const char *user,
 	            12,
 	            "Cancel");
 
-	DEBUG_ASSERT((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
-
-	dia->cy = y + (WORD)(HEIGHT * 1.5);
+	dlg.header.dlg_template.cy = y + (WORD)(HEIGHT * 1.5);
 
 	s_dlg_proc_param.name = "Modify password";
 	s_dlg_proc_param.fRetry = NULL;
 
 	ok = (IDOK
-	      == DialogBoxIndirectParam(
-	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	      == DialogBoxIndirectParam(NULL,
+	                                &dlg.header.dlg_template,
+	                                NULL,
+	                                InputDlgProc,
+	                                (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
 
 	return ok;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
@@ -2118,8 +2107,7 @@ PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 
 
 static void
-add_control(unsigned char **mem,
-            DLGTEMPLATE *dia,
+add_control(struct dlg_complete *dlg,
             WORD type,
             WORD id,
             DWORD style,
@@ -2131,12 +2119,26 @@ add_control(unsigned char **mem,
 {
 	DLGITEMTEMPLATE *tp;
 	LPWORD p;
+	WORD cap_len = caption ? (WORD)strlen(caption) : 0;
+	int i;
+	DWORD expected_size = sizeof(DLGITEMTEMPLATE) + 4 + (cap_len + 1) * 2 + 2;
 
-	dia->cdit++;
+	if ((dlg->used + expected_size + /* alignment */ 16)
+	    >= sizeof(dlg->elements)) {
+		/* out if memory protection */
+		return;
+	}
 
-	*mem = (unsigned char *)align(*mem, 3);
-	tp = (DLGITEMTEMPLATE *)*mem;
+	/* Add one child element */
+	dlg->header.dlg_template.cdit++;
 
+	/* align to 4 bytes */
+	while (dlg->used % 4) {
+		dlg->used++;
+	}
+
+	/* start with DLGITEMTEMPLATE structure */
+	tp = (DLGITEMTEMPLATE *)(dlg->elements + dlg->used);
 	tp->id = id;
 	tp->style = style;
 	tp->dwExtendedStyle = 0;
@@ -2144,38 +2146,88 @@ add_control(unsigned char **mem,
 	tp->y = y;
 	tp->cx = cx;
 	tp->cy = cy;
+	dlg->used += sizeof(*tp);
 
-	p = (LPWORD)align(*mem + sizeof(*tp), 1);
-	*p++ = 0xffff;
-	*p++ = type;
+	/* add class */
+	p = (LPWORD)(dlg->elements + dlg->used);
+	p[0] = 0xffff;
+	p[1] = type;
+	dlg->used += 2 * sizeof(*p);
 
-	while (*caption != '\0') {
-		*p++ = (WCHAR)*caption++;
+	/* add title */
+	p = (LPWORD)(dlg->elements + dlg->used);
+	for (i = 0; i < cap_len; i++) {
+		p[i] = (WCHAR)caption[i];
 	}
-	*p++ = 0;
-	p = (LPWORD)align(p, 1);
+	p[cap_len] = 0;
+	dlg->used += (cap_len + 1) * sizeof(*p);
 
-	*p++ = 0;
-	*mem = (unsigned char *)p;
+	/* align to 2 bytes */
+	while (dlg->used % 2) {
+		dlg->used++;
+	}
+
+	/* add creation data */
+	p = (LPWORD)(dlg->elements + dlg->used);
+	*p = 0;
+	dlg->used += sizeof(*p);
+}
+
+
+static int
+optioncmp(const char *o1, const char *o2)
+{
+	/* string compare for option names */
+	while (*o1 || *o2) {
+		int c1 = 256 * (int)*o1;
+		int c2 = 256 * (int)*o2;
+		if (isalpha(*o1))
+			c1 = toupper(*o1);
+		else if (*o1 == '_')
+			c1 = 1;
+		if (isalpha(*o2))
+			c2 = toupper(*o2);
+		else if (*o2 == '_')
+			c2 = 1;
+		if (c1 < c2)
+			return -1;
+		if (c1 > c2)
+			return +1;
+		o1++;
+		o2++;
+	}
+	return 0;
 }
 
 
 static void
-show_settings_dialog()
+show_settings_dialog(void)
 {
-#define HEIGHT (15)
-#define WIDTH (460)
-#define LABEL_WIDTH (90)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short BORDER_WIDTH = 10;
+	short BORDER_HEIGTH = BORDER_WIDTH / 2;
+	short CELL_WIDTH = 125;
+	short LABEL_WIDTH = 115;
+	short FILE_DIALOG_BUTTON_WIDTH = 15;
+	short NO_OF_COLUMNS = 3;
+	short NO_OF_OPTIONS = 0;       /* to be calculated */
+	short NO_OF_OPTION_SPACES = 0; /* to be calculated */
+	short NO_OF_ROWS = 0;          /* to be calculated */
 
-	unsigned char mem[16 * 1024], *p;
-	const struct mg_option *options;
+	/* Calculates size */
+	short COLUMN_WIDTH = LABEL_WIDTH + CELL_WIDTH + BORDER_WIDTH;
+	short DIALOG_WIDTH = BORDER_WIDTH + NO_OF_COLUMNS * COLUMN_WIDTH;
+
+	/* All other variables */
+	const struct mg_option *cv_options;
 	DWORD style;
-	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	WORD i, cl, nelems = 0;
-	short width, x, y;
+	short x, y, next_cell_width, next_cell_height;
 	static struct dlg_proc_param s_dlg_proc_param;
-
-	const struct dlg_header_param dialog_header = GetDlgHeader(WIDTH);
+	short *option_index, *option_top, *option_bottom;
+	char text[64];
+	struct dlg_complete dlg;
 
 	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
@@ -2185,50 +2237,135 @@ show_settings_dialog()
 		return;
 	}
 
-	(void)memset(mem, 0, sizeof(mem));
-	p = mem;
-	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
-	p = mem + sizeof(dialog_header);
+	FillDialogHeader(&dlg, DIALOG_WIDTH);
 
-	options = mg_get_valid_options();
-	for (i = 0; options[i].name != NULL; i++) {
+	/* Determine space required for input fields */
+	cv_options = mg_get_valid_options();
+	for (i = 0; cv_options[i].name != NULL; i++) {
+		NO_OF_OPTIONS++;
+		if (cv_options[i].type == MG_CONFIG_TYPE_STRING_MULTILINE) {
+			/* Multiline input fields require double space */
+			NO_OF_OPTION_SPACES += 2;
+		} else {
+			/* All other option types require single space */
+			NO_OF_OPTION_SPACES++;
+		}
+	}
+	NO_OF_ROWS = (NO_OF_OPTION_SPACES + NO_OF_COLUMNS - 1) / NO_OF_COLUMNS;
+
+	/* All options should be displayed sorted. */
+	/* First allocate some memory to store option order: The array should store
+	 * 1) the option order of all options (NO_OF_OPTIONS), followed by
+	 * 2) the option index for the option name displayed on top of a column
+	 * 3) the option index for the option name displayed on bottom of a column
+	 */
+	option_index = (short *)calloc(NO_OF_OPTIONS + 2 * NO_OF_COLUMNS,
+	                               sizeof(short)); /* 1 */
+	if (!option_index) {
+		/* unlikely case of "out of memory" */
+		return;
+	}
+	option_top = option_index + NO_OF_OPTIONS;  /* 2 */
+	option_bottom = option_top + NO_OF_COLUMNS; /* 3 */
+
+	/* Initialize option order */
+	for (i = 0; i < NO_OF_OPTIONS; i++) {
+		option_index[i] = i;
+	}
+	/* Sort all options */
+	for (;;) {
+		int swapped = 0;
+		for (i = 1; i < NO_OF_OPTIONS; i++) {
+			if (optioncmp(cv_options[option_index[i - 1]].name,
+			              cv_options[option_index[i]].name)
+			    > 0) {
+				short swap = option_index[i];
+				option_index[i] = option_index[i - 1];
+				option_index[i - 1] = swap;
+				swapped = 1;
+			}
+		}
+		if (!swapped) {
+			break;
+		}
+	}
+
+	/* Create input fields for all options */
+	for (i = 0; i < NO_OF_OPTIONS; i++) {
+
+		/* Get option according to option order */
+		const struct mg_option *opt = &cv_options[option_index[i]];
+
+		/* Template style for all input fields (will be modified for specific
+		 * field types) */
 		style = WS_CHILD | WS_VISIBLE | WS_TABSTOP;
-		x = 10 + (WIDTH / 2) * (nelems % 2);
-		y = (nelems / 2 + 1) * HEIGHT + 5;
-		width = WIDTH / 2 - 20 - LABEL_WIDTH;
-		if (options[i].type == MG_CONFIG_TYPE_NUMBER) {
+
+		/* TODO: Bottom of a column must not be a MULTILINE input field.
+		 * If the last input field in a column would of multi-line type
+		 * (opt->type == MG_CONFIG_TYPE_STRING_MULTILINE), then
+		 * skip one field (nelems++).
+		 * But in this case, maybe one more ROW might be required. */
+
+		/* Position and size of the input field (will be modified) */
+		x = BORDER_WIDTH + COLUMN_WIDTH * (nelems / NO_OF_ROWS);
+		y = BORDER_HEIGTH + HEIGHT + HEIGHT * (nelems % NO_OF_ROWS);
+		next_cell_width = CELL_WIDTH;
+		next_cell_height = HEIGHT - 3;
+
+		/* Determine top/bottom option for every column */
+		if ((nelems % NO_OF_ROWS) == 0) {
+			/* Set option on top of a new column once */
+			option_top[nelems / NO_OF_ROWS] = option_index[i];
+		}
+		/* Set/overwrite option on bottom of a column */
+		option_bottom[nelems / NO_OF_ROWS] = option_index[i];
+
+		/* Depending on option type: create suitable input field */
+		if (opt->type == MG_CONFIG_TYPE_NUMBER) {
 			style |= ES_NUMBER;
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL;
-		} else if (options[i].type == MG_CONFIG_TYPE_BOOLEAN) {
+
+		} else if (opt->type == MG_CONFIG_TYPE_BOOLEAN) {
 			cl = 0x80;
 			style |= BS_AUTOCHECKBOX;
-		} else if ((options[i].type == MG_CONFIG_TYPE_FILE)
-		           || (options[i].type == MG_CONFIG_TYPE_DIRECTORY)) {
+
+		} else if ((opt->type == MG_CONFIG_TYPE_FILE)
+		           || (opt->type == MG_CONFIG_TYPE_DIRECTORY)) {
 			style |= WS_BORDER | ES_AUTOHSCROLL;
-			width -= 20;
 			cl = 0x81;
-			add_control(&p,
-			            dia,
+
+			/* Additional button for file dialog */
+			add_control(&dlg,
 			            0x80,
-			            ID_CONTROLS + i + ID_FILE_BUTTONS_DELTA,
+			            ID_CONTROLS + option_index[i] + ID_FILE_BUTTONS_DELTA,
 			            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-			            x + width + LABEL_WIDTH + 5,
+			            x + LABEL_WIDTH + CELL_WIDTH - FILE_DIALOG_BUTTON_WIDTH,
 			            y,
-			            15,
-			            12,
+			            FILE_DIALOG_BUTTON_WIDTH,
+			            HEIGHT - 3,
 			            "...");
-		} else if (options[i].type == MG_CONFIG_TYPE_STRING_MULTILINE) {
-			/* TODO: This is not really uer friendly */
+
+			next_cell_width -= FILE_DIALOG_BUTTON_WIDTH + BORDER_WIDTH / 2;
+
+		} else if (opt->type == MG_CONFIG_TYPE_STRING_MULTILINE) {
+
+			/* Multiline input */
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN
-			         | ES_AUTOVSCROLL;
+			         | WS_VSCROLL | ES_AUTOVSCROLL;
+			/* Add more space below */
+			nelems += 1;
+			next_cell_height += HEIGHT;
+
 		} else {
+			/* Standard text input field */
 			cl = 0x81;
 			style |= WS_BORDER | ES_AUTOHSCROLL;
 		}
-		add_control(&p,
-		            dia,
+
+		/* Add label (static text) */
+		add_control(&dlg,
 		            0x82,
 		            ID_STATIC,
 		            WS_VISIBLE | WS_CHILD,
@@ -2236,76 +2373,79 @@ show_settings_dialog()
 		            y,
 		            LABEL_WIDTH,
 		            HEIGHT,
-		            options[i].name);
-		add_control(&p,
-		            dia,
+		            opt->name);
+
+		/* Add input field */
+		add_control(&dlg,
 		            cl,
-		            ID_CONTROLS + i,
+		            ID_CONTROLS + option_index[i],
 		            style,
 		            x + LABEL_WIDTH,
 		            y,
-		            width,
-		            12,
+		            next_cell_width,
+		            next_cell_height,
 		            "");
 		nelems++;
-
-		DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 	}
 
-	y = (((nelems + 1) / 2 + 1) * HEIGHT + 5);
-	add_control(&p,
-	            dia,
-	            0x80,
-	            ID_GROUP,
-	            WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-	            5,
-	            5,
-	            WIDTH - 10,
-	            y,
-	            " Settings ");
-	y += 10;
-	add_control(&p,
-	            dia,
+	/* "Settings" frame around all options */
+	y = ((nelems + NO_OF_COLUMNS - 1) / NO_OF_COLUMNS + 1) * HEIGHT;
+	for (i = 0; i < NO_OF_COLUMNS; i++) {
+		sprintf(text,
+		        " Settings %c - %c ",
+		        cv_options[option_top[i]].name[0],
+		        cv_options[option_bottom[i]].name[0]);
+		add_control(&dlg,
+		            0x80,
+		            ID_GROUP,
+		            WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+		            BORDER_WIDTH / 2
+		                + i * (DIALOG_WIDTH - BORDER_WIDTH) / NO_OF_COLUMNS,
+		            BORDER_WIDTH / 2,
+		            (DIALOG_WIDTH - BORDER_WIDTH) / NO_OF_COLUMNS,
+		            y + 2,
+		            text);
+	}
+
+	/* Buttons below "Settings" frame */
+	y += HEIGHT;
+	add_control(&dlg,
 	            0x80,
 	            ID_SAVE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 70,
+	            DIALOG_WIDTH - 70,
 	            y,
 	            65,
 	            12,
 	            "Save Settings");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            ID_RESET_DEFAULTS,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 140,
+	            DIALOG_WIDTH - 140,
 	            y,
 	            65,
 	            12,
 	            "Reset to defaults");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            ID_RESET_FILE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 210,
+	            DIALOG_WIDTH - 210,
 	            y,
 	            65,
 	            12,
 	            "Reload from file");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            ID_RESET_ACTIVE,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-	            WIDTH - 280,
+	            DIALOG_WIDTH - 280,
 	            y,
 	            65,
 	            12,
 	            "Reload active");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_CHILD | WS_VISIBLE | WS_DISABLED,
@@ -2315,43 +2455,42 @@ show_settings_dialog()
 	            12,
 	            g_server_base_name);
 
-	DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
-
-	dia->cy = ((nelems + 1) / 2 + 1) * HEIGHT + 30;
+	/* Calculate total height of the dialog */
+	dlg.header.dlg_template.cy = y + HEIGHT;
 
 	s_dlg_proc_param.fRetry = NULL;
 
-	DialogBoxIndirectParam(
-	    NULL, dia, NULL, SettingsDlgProc, (LPARAM)&s_dlg_proc_param);
+	DialogBoxIndirectParam(NULL,
+	                       &dlg.header.dlg_template,
+	                       NULL,
+	                       SettingsDlgProc,
+	                       (LPARAM)&s_dlg_proc_param);
+
+	free(option_index);
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
 static void
 change_password_file()
 {
-#define HEIGHT (15)
-#define WIDTH (320)
-#define LABEL_WIDTH (90)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short WIDTH = 320;
+	short LABEL_WIDTH = 90;
 
+	/* Other variables */
 	OPENFILENAME of;
 	char path[PATH_MAX] = PASSWORDS_FILE_NAME;
 	char strbuf[256], u[256], d[256];
 	HWND hDlg = NULL;
 	FILE *f;
 	short y, nelems;
-	unsigned char mem[4096], *p;
-	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
 	const char *domain = mg_get_option(g_ctx, "authentication_domain");
 	static struct dlg_proc_param s_dlg_proc_param;
-
-	const struct dlg_header_param dialog_header = GetDlgHeader(WIDTH);
+	struct dlg_complete dlg;
 
 	if (s_dlg_proc_param.guard == 0) {
 		memset(&s_dlg_proc_param, 0, sizeof(s_dlg_proc_param));
@@ -2386,10 +2525,8 @@ change_password_file()
 
 	do {
 		s_dlg_proc_param.hWnd = NULL;
-		(void)memset(mem, 0, sizeof(mem));
-		p = mem;
-		(void)memcpy(p, &dialog_header, sizeof(dialog_header));
-		p = mem + sizeof(dialog_header);
+
+		FillDialogHeader(&dlg, WIDTH);
 
 		f = fopen(path, "r+");
 		if (!f) {
@@ -2406,8 +2543,7 @@ change_password_file()
 			u[255] = 0;
 			d[255] = 0;
 			y = (nelems + 1) * HEIGHT + 5;
-			add_control(&p,
-			            dia,
+			add_control(&dlg,
 			            0x80,
 			            ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA * 3,
 			            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2416,8 +2552,7 @@ change_password_file()
 			            65,
 			            12,
 			            "Modify password");
-			add_control(&p,
-			            dia,
+			add_control(&dlg,
 			            0x80,
 			            ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA * 2,
 			            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2426,8 +2561,7 @@ change_password_file()
 			            55,
 			            12,
 			            "Remove user");
-			add_control(&p,
-			            dia,
+			add_control(&dlg,
 			            0x81,
 			            ID_CONTROLS + nelems + ID_FILE_BUTTONS_DELTA,
 			            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2437,8 +2571,7 @@ change_password_file()
 			            60,
 			            12,
 			            d);
-			add_control(&p,
-			            dia,
+			add_control(&dlg,
 			            0x81,
 			            ID_CONTROLS + nelems,
 			            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2450,13 +2583,11 @@ change_password_file()
 			            u);
 
 			nelems++;
-			DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
 		}
 		fclose(f);
 
 		y = (nelems + 1) * HEIGHT + 10;
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x80,
 		            ID_ADD_USER,
 		            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2465,8 +2596,7 @@ change_password_file()
 		            55,
 		            12,
 		            "Add user");
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x81,
 		            ID_ADD_USER_NAME,
 		            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2476,8 +2606,7 @@ change_password_file()
 		            100,
 		            12,
 		            "");
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x81,
 		            ID_ADD_USER_REALM,
 		            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2489,8 +2618,7 @@ change_password_file()
 		            domain);
 
 		y = (nelems + 2) * HEIGHT + 10;
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x80,
 		            ID_GROUP,
 		            WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
@@ -2501,8 +2629,7 @@ change_password_file()
 		            " Users ");
 
 		y += HEIGHT;
-		add_control(&p,
-		            dia,
+		add_control(&dlg,
 		            0x82,
 		            ID_STATIC,
 		            WS_CHILD | WS_VISIBLE | WS_DISABLED,
@@ -2512,25 +2639,21 @@ change_password_file()
 		            12,
 		            g_server_base_name);
 
-		DEBUG_ASSERT(((intptr_t)p - (intptr_t)mem) < (intptr_t)sizeof(mem));
-
-		dia->cy = y + 20;
+		dlg.header.dlg_template.cy = y + 20;
 
 		s_dlg_proc_param.name = path;
 		s_dlg_proc_param.fRetry = NULL;
 
-	} while (
-	    (IDOK
-	     == DialogBoxIndirectParam(
-	            NULL, dia, NULL, PasswordDlgProc, (LPARAM)&s_dlg_proc_param))
-	    && (!g_exit_flag));
+	} while ((IDOK
+	          == DialogBoxIndirectParam(NULL,
+	                                    &dlg.header.dlg_template,
+	                                    NULL,
+	                                    PasswordDlgProc,
+	                                    (LPARAM)&s_dlg_proc_param))
+	         && (!g_exit_flag));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
@@ -2564,17 +2687,16 @@ sysinfo_reload(struct dlg_proc_param *prm)
 int
 show_system_info()
 {
-#define HEIGHT (15)
-#define WIDTH (320)
-#define LABEL_WIDTH (50)
+	/* Parameter for size/format tuning of the dialog */
+	short HEIGHT = 15;
+	short WIDTH = 320;
+	short LABEL_WIDTH = 50;
 
-	unsigned char mem[4096], *p;
-	DLGTEMPLATE *dia = (DLGTEMPLATE *)mem;
+	/* Other parameters */
 	int ok;
 	short y;
 	static struct dlg_proc_param s_dlg_proc_param;
-
-	const struct dlg_header_param dialog_header = GetDlgHeader(WIDTH);
+	struct dlg_complete dlg;
 
 	/* Only allow one instance of this dialog to be open. */
 	if (s_dlg_proc_param.guard == 0) {
@@ -2586,14 +2708,10 @@ show_system_info()
 	}
 
 	/* Create the dialog */
-	(void)memset(mem, 0, sizeof(mem));
-	p = mem;
-	(void)memcpy(p, &dialog_header, sizeof(dialog_header));
-	p = mem + sizeof(dialog_header);
+	FillDialogHeader(&dlg, WIDTH);
 
 	y = HEIGHT;
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x82,
 	            ID_STATIC,
 	            WS_VISIBLE | WS_CHILD,
@@ -2602,8 +2720,7 @@ show_system_info()
 	            LABEL_WIDTH,
 	            HEIGHT,
 	            "System Information:");
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x81,
 	            ID_CONTROLS + 1,
 	            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL
@@ -2616,8 +2733,7 @@ show_system_info()
 
 	y += (WORD)(HEIGHT * 8);
 
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            IDRETRY,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2627,8 +2743,7 @@ show_system_info()
 	            12,
 	            "Reload");
 
-	add_control(&p,
-	            dia,
+	add_control(&dlg,
 	            0x80,
 	            IDOK,
 	            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
@@ -2638,26 +2753,23 @@ show_system_info()
 	            12,
 	            "Close");
 
-	DEBUG_ASSERT((intptr_t)p - (intptr_t)mem < (intptr_t)sizeof(mem));
-
-	dia->cy = y + (WORD)(HEIGHT * 1.5);
+	dlg.header.dlg_template.cy = y + (WORD)(HEIGHT * 1.5);
 
 	s_dlg_proc_param.name = "System information";
 	s_dlg_proc_param.fRetry = sysinfo_reload;
 	s_dlg_proc_param.idRetry = ID_CONTROLS + 1; /* Reload field with this ID */
 
 	ok = (IDOK
-	      == DialogBoxIndirectParam(
-	             NULL, dia, NULL, InputDlgProc, (LPARAM)&s_dlg_proc_param));
+	      == DialogBoxIndirectParam(NULL,
+	                                &dlg.header.dlg_template,
+	                                NULL,
+	                                InputDlgProc,
+	                                (LPARAM)&s_dlg_proc_param));
 
 	s_dlg_proc_param.hWnd = NULL;
 	s_dlg_proc_param.guard = 0;
 
 	return ok;
-
-#undef HEIGHT
-#undef WIDTH
-#undef LABEL_WIDTH
 }
 
 
@@ -2722,6 +2834,25 @@ manage_service(int action)
 }
 
 
+static void
+add_icon_to_systray(HWND hWnd)
+{
+	/* tray icon is entry point to the menu */
+	if (!g_hide_tray) {
+		TrayIcon.cbSize = sizeof(TrayIcon);
+		TrayIcon.uID = ID_ICON;
+		TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+		TrayIcon.hIcon = hIcon;
+		TrayIcon.hWnd = hWnd;
+		snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", g_server_name);
+		TrayIcon.uCallbackMessage = WM_USER;
+		Shell_NotifyIcon(NIM_ADD, &TrayIcon);
+	} else {
+		TrayIcon.cbSize = 0;
+	}
+}
+
+
 /* Window proc for taskbar icon */
 static LRESULT CALLBACK
 WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -2731,7 +2862,6 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	char buf[200];
 	POINT pt;
 	HMENU hMenu;
-	static UINT s_uTaskbarRestart; /* for taskbar creation */
 
 	switch (msg) {
 
@@ -2754,7 +2884,6 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			exit(EXIT_SUCCESS);
 		} else {
 			start_civetweb(__argc, __argv);
-			s_uTaskbarRestart = RegisterWindowMessage(TEXT("TaskbarCreated"));
 		}
 		break;
 
@@ -2762,7 +2891,9 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		switch (LOWORD(wParam)) {
 		case ID_QUIT:
 			stop_civetweb();
-			Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+			if (TrayIcon.cbSize) {
+				Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+			}
 			g_exit_flag = 1;
 			PostQuitMessage(0);
 			return 0;
@@ -2779,15 +2910,14 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case ID_REMOVE_SERVICE:
 			manage_service(LOWORD(wParam));
 			break;
-		case ID_CONNECT:
-			fprintf(stdout, "[%s]\n", get_url_to_first_open_port(g_ctx));
-			ShellExecute(NULL,
-			             "open",
-			             get_url_to_first_open_port(g_ctx),
-			             NULL,
-			             NULL,
-			             SW_SHOW);
-			break;
+		case ID_CONNECT: {
+			/* Get port from server configuration (listening_ports) and build
+			 * URL from port. */
+			const char *url = get_url_to_first_open_port(g_ctx);
+
+			/* Open URL with Windows default browser */
+			ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOW);
+		} break;
 		case ID_WEBSITE:
 			fprintf(stdout, "[%s]\n", g_website);
 			ShellExecute(NULL, "open", g_website, NULL, NULL, SW_SHOW);
@@ -2840,25 +2970,32 @@ WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_CLOSE:
 		stop_civetweb();
-		Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+		if (TrayIcon.cbSize) {
+			Shell_NotifyIcon(NIM_DELETE, &TrayIcon);
+		}
 		g_exit_flag = 1;
 		PostQuitMessage(0);
 		return 0; /* We've just sent our own quit message, with proper hwnd. */
 
 	default:
-		if (msg == s_uTaskbarRestart)
-			Shell_NotifyIcon(NIM_ADD, &TrayIcon);
+		if (msg == msg_taskbar_created) {
+			add_icon_to_systray(hWnd);
+		}
+		break;
 	}
 
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
 
+/* An executable with "Subsystem: Windows" does not have a Console.
+ * Create one manually, if required. */
 static int
 MakeConsole(void)
 {
 	DWORD err;
 	HANDLE hConWnd = GetConsoleWindow();
+	int ok = 1;
 
 	if (hConWnd == NULL) {
 		if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -2866,6 +3003,7 @@ MakeConsole(void)
 			if (!AllocConsole()) {
 				err = GetLastError();
 				if (err == ERROR_ACCESS_DENIED) {
+					ok = 0;
 					MessageBox(NULL,
 					           "Insufficient rights to create a console window",
 					           "Error",
@@ -2878,24 +3016,35 @@ MakeConsole(void)
 		/* Retry to get a console handle */
 		hConWnd = GetConsoleWindow();
 
-		if (hConWnd != NULL) {
+		if (hConWnd == NULL) {
+			ok = 0;
+		} else {
 			/* Reopen console handles according to
 			 * https://stackoverflow.com/questions/9020790/using-stdin-with-an-allocconsole
 			 */
-			freopen("CONIN$", "r", stdin);
-			freopen("CONOUT$", "w", stdout);
-			freopen("CONOUT$", "w", stderr);
+			if (NULL == freopen("CONIN$", "r", stdin)) {
+				ok = 0;
+			}
+			if (NULL == freopen("CONOUT$", "w", stdout)) {
+				ok = 0;
+			}
+			if (NULL == freopen("CONOUT$", "w", stderr)) {
+				ok = 0;
+			}
 		}
 	}
 
-	if (hConWnd != NULL) {
+	if (hConWnd == NULL) {
+		ok = 0;
+	} else {
 		SetConsoleTitle(g_server_name);
 	}
 
-	return (hConWnd != NULL);
+	return ok;
 }
 
 
+/* main() for Windows (Subsystem: Windows). */
 int WINAPI
 WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 {
@@ -2914,8 +3063,11 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 
 	init_server_name();
 	init_system_info();
+	msg_taskbar_created = RegisterWindowMessage("TaskbarCreated");
+
 	memset(&cls, 0, sizeof(cls));
-	cls.lpfnWndProc = (WNDPROC)WindowProc;
+	cls.lpfnWndProc = WindowProc;
+	cls.hInstance = GetModuleHandle(NULL);
 	cls.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	cls.lpszClassName = g_server_base_name;
 
@@ -2929,10 +3081,11 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 	                    0,
 	                    NULL,
 	                    NULL,
-	                    NULL,
+	                    cls.hInstance,
 	                    NULL);
 	ShowWindow(hWnd, SW_HIDE);
 
+	/* Load icon for systray and other dialogs */
 	if (g_icon_name) {
 		hIcon = (HICON)
 		    LoadImage(NULL, g_icon_name, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
@@ -2945,15 +3098,9 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 		                         0);
 	}
 
-	TrayIcon.cbSize = sizeof(TrayIcon);
-	TrayIcon.uID = ID_ICON;
-	TrayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-	TrayIcon.hIcon = hIcon;
-	TrayIcon.hWnd = hWnd;
-	snprintf(TrayIcon.szTip, sizeof(TrayIcon.szTip), "%s", g_server_name);
-	TrayIcon.uCallbackMessage = WM_USER;
-	Shell_NotifyIcon(NIM_ADD, &TrayIcon);
+	add_icon_to_systray(hWnd);
 
+	/* Message loop */
 	while (GetMessage(&msg, hWnd, 0, 0) > 0) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
@@ -2966,6 +3113,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmdline, int show)
 }
 
 
+/* main() for Windows (Subsystem: Console). */
 int
 main(int argc, char *argv[])
 {
@@ -2985,13 +3133,15 @@ main(int argc, char *argv[])
 @end
 
 @implementation Civetweb
-- (void)openBrowser {
+- (void)openBrowser
+{
 	[[NSWorkspace sharedWorkspace]
 	    openURL:[NSURL URLWithString:[NSString stringWithUTF8String:
 	                                               get_url_to_first_open_port(
 	                                                   g_ctx)]]];
 }
-- (void)editConfig {
+- (void)editConfig
+{
 	create_config_file(g_ctx, g_config_file_name);
 	NSString *path = [NSString stringWithUTF8String:g_config_file_name];
 	if (![[NSWorkspace sharedWorkspace] openFile:path
@@ -3004,7 +3154,8 @@ main(int argc, char *argv[])
 		(void)[alert runModal];
 	}
 }
-- (void)shutDown {
+- (void)shutDown
+{
 	[NSApp terminate:nil];
 }
 @end
@@ -3078,6 +3229,8 @@ main(int argc, char *argv[])
 
 #else
 
+
+/* main for Linux (and others) */
 int
 main(int argc, char *argv[])
 {
@@ -3106,3 +3259,4 @@ main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 #endif /* _WIN32 */
+#undef printf

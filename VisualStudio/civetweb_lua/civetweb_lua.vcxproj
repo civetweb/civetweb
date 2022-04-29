@@ -102,13 +102,16 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>USE_SERVER_STATS;USE_DUKTAPE;USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_WEBSOCKET;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_HTTP2;STOP_FLAG_NEEDS_LOCK;OPENSSL_API_1_0;MG_EXPERIMENTAL_INTERFACES;USE_SERVER_STATS;USE_DUKTAPE;USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_LUA_LUAXML;USE_WEBSOCKET;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party;$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;$(ProjectDir)..\..\src\third_party\duktape-1.5.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>rcedit-x86.exe $(OutDir)$(TargetName)$(TargetExt) --set-file-version 1.14 --set-product-version 1.14</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -116,7 +119,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>USE_SERVER_STATS;USE_DUKTAPE;USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_WEBSOCKET;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OPENSSL_API_3_0;USE_SERVER_STATS;USE_DUKTAPE;USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_WEBSOCKET;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party;$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;$(ProjectDir)..\..\src\third_party\duktape-1.5.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -146,7 +149,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>USE_SERVER_STATS;USE_DUKTAPE;USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_WEBSOCKET;WIN32;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_HTTP2;OPENSSL_API_1_1;MG_EXPERIMENTAL_INTERFACES;USE_SERVER_STATS;USE_DUKTAPE;USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_LUA_LUAXML;USE_WEBSOCKET;WIN32;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party;$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;$(ProjectDir)..\..\src\third_party\duktape-1.5.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -155,6 +158,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <PostBuildEvent>
+      <Command>rcedit-x86.exe $(OutDir)$(TargetName)$(TargetExt) --set-file-version 1.15 --set-product-version 1.15</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -164,7 +170,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>USE_SERVER_STATS;USE_DUKTAPE;USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_WEBSOCKET;WIN32;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_HTTP2;OPENSSL_API_1_1;MG_EXPERIMENTAL_INTERFACES;USE_SERVER_STATS;USE_DUKTAPE;USE_IPV6;LUA_COMPAT_ALL;USE_LUA;USE_LUA_SQLITE3;USE_LUA_FILE_SYSTEM;USE_LUA_LUAXML;USE_WEBSOCKET;WIN32;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party;$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;$(ProjectDir)..\..\src\third_party\duktape-1.5.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -173,12 +179,13 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <PostBuildEvent>
+      <Command>rcedit-x86.exe $(OutDir)$(TargetName)$(TargetExt) --set-file-version 1.15 --set-product-version 1.15</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\civetweb.h" />
     <ClInclude Include="..\..\src\third_party\civetweb_lua.h" />
-    <ClInclude Include="..\..\src\third_party\lua-5.2.4\src\lauxlib.h" />
-    <ClInclude Include="..\..\src\third_party\lua-5.2.4\src\lua.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\civetweb.c" />
@@ -200,10 +207,18 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\handle_form.inl" />
+    <None Include="..\..\src\match.inl" />
     <None Include="..\..\src\md5.inl" />
+    <None Include="..\..\src\http2.inl" />
+    <None Include="..\..\src\mod_lua_shared.inl" />
+    <None Include="..\..\src\mod_mbedtls.inl" />
+    <None Include="..\..\src\openssl_dl.inl" />
+    <None Include="..\..\src\response.inl" />
+    <None Include="..\..\src\mod_zlib.inl" />
     <None Include="..\..\src\sha1.inl" />
     <None Include="..\..\src\mod_duktape.inl" />
     <None Include="..\..\src\mod_lua.inl" />
+    <None Include="..\..\src\sort.inl" />
     <None Include="..\..\src\timer.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

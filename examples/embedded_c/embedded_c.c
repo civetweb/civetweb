@@ -1,11 +1,16 @@
 /*
- * Copyright (c) 2013-2017 the CivetWeb developers
+ * Copyright (c) 2013-2021 the CivetWeb developers
  * Copyright (c) 2013 No Face Press, LLC
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
 
+/* Note: This example ommits some error checking and input validation for a
+ * better clarity/readability of the code. Example codes undergo less quality
+ * management than the main source files of this project. */
+
 #ifdef NO_SSL
 #define TEST_WITHOUT_SSL
+#undef USE_SSL_DH
 #endif
 
 /* Simple example program on how to use CivetWeb embedded into a C program. */
@@ -44,7 +49,7 @@
 
 #define EXAMPLE_URI "/example"
 #define EXIT_URI "/exit"
-int exitNow = 0;
+volatile int exitNow = 0;
 
 
 int
@@ -130,7 +135,7 @@ AHandler(struct mg_connection *conn, void *cbdata)
 	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
 	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn, "<h2>This is the A handler!!!</h2>");
+	mg_printf(conn, "<h2>This is the A handler.</h2>");
 	mg_printf(conn, "</body></html>\n");
 	return 1;
 }
@@ -139,11 +144,39 @@ AHandler(struct mg_connection *conn, void *cbdata)
 int
 ABHandler(struct mg_connection *conn, void *cbdata)
 {
+	const struct mg_request_info *ri = mg_get_request_info(conn);
+
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
 	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn, "<h2>This is the AB handler!!!</h2>");
+
+	mg_printf(conn, "<h2>This is the AB handler.</h2>");
+
+	mg_printf(conn, "<ul>\n");
+	mg_printf(conn, "<li>request_method = %s</li>\n", ri->request_method);
+	mg_printf(conn, "<li>request_uri = %s</li>\n", ri->request_uri);
+	mg_printf(conn, "<li>local_uri = %s</li>\n", ri->local_uri);
+	mg_printf(conn, "<li>http_version = %s</li>\n", ri->http_version);
+	mg_printf(conn, "<li>query_string = %s</li>\n", ri->query_string);
+	mg_printf(conn, "<li>remote_user = %s</li>\n", ri->remote_user);
+	mg_printf(conn, "<li>remote_addr = %s</li>\n", ri->remote_addr);
+	mg_printf(conn, "<li>remote_port = %u</li>\n", ri->remote_port);
+	mg_printf(conn, "<li>is_ssl = %i</li>\n", ri->is_ssl);
+	mg_printf(conn, "<li>num_headers = %i</li>\n", ri->num_headers);
+	if (ri->num_headers > 0) {
+		int i;
+		mg_printf(conn, "<ol>\n");
+		for (i = 0; i < ri->num_headers; i++) {
+			mg_printf(conn,
+			          "<li>%s = %s</li>\n",
+			          ri->http_headers[i].name,
+			          ri->http_headers[i].value);
+		}
+		mg_printf(conn, "</ol>\n");
+	}
+	mg_printf(conn, "</ul>\n");
+
 	mg_printf(conn, "</body></html>\n");
 	return 1;
 }
@@ -154,14 +187,13 @@ BXHandler(struct mg_connection *conn, void *cbdata)
 {
 	/* Handler may access the request info using mg_get_request_info */
 	const struct mg_request_info *req_info = mg_get_request_info(conn);
+	const char *text = (const char *)cbdata;
 
 	mg_printf(conn,
 	          "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
 	          "close\r\n\r\n");
 	mg_printf(conn, "<html><body>");
-	mg_printf(conn,
-	          "<h2>This is the BX handler with argument %s.</h2>",
-	          cbdata);
+	mg_printf(conn, "<h2>This is the BX handler with argument %s.</h2>", text);
 	mg_printf(conn, "<p>The actual uri is %s</p>", req_info->local_uri);
 	mg_printf(conn, "</body></html>\n");
 	return 1;
@@ -258,17 +290,65 @@ field_found(const char *key,
             size_t pathlen,
             void *user_data)
 {
+#ifdef _WIN32
+	char temppath[MAX_PATH + 2];
+	DWORD temppathlen;
+#endif
+
 	struct mg_connection *conn = (struct mg_connection *)user_data;
 
 	mg_printf(conn, "\r\n\r\n%s:\r\n", key);
 
 	if (filename && *filename) {
+
+		/* According to
+		 * https://datatracker.ietf.org/doc/html/rfc7578#section-4.2: Do not use
+		 * path information present in the filename. Drop all "/" (and "\" for
+		 * Windows).
+		 */
+		const char *fname = filename;
+		const char *sep = strrchr(fname, '/');
+		if (sep) {
+			fname = sep + 1;
+		}
+
 #ifdef _WIN32
-		_snprintf(path, pathlen, "D:\\tmp\\%s", filename);
+		sep = strrchr(fname, '\\');
+		if (sep) {
+			fname = sep + 1;
+		}
+
+		/* For Windows: Find the directory for temporary files */
+		temppathlen = GetTempPathA(sizeof(temppath), temppath);
+		if (temppathlen > 0) {
+			_snprintf(path, pathlen, "%s\\%s", temppath, fname);
+		} else {
+			_snprintf(path, pathlen, "C:\\tmp\\%s", fname);
+		}
 #else
-		snprintf(path, pathlen, "/tmp/%s", filename);
+		snprintf(path, pathlen, "/tmp/%s", fname);
 #endif
-		return MG_FORM_FIELD_STORAGE_GET;
+
+		/* According to https://datatracker.ietf.org/doc/html/rfc7578#section-7:
+		 * Do not overwrite existing files.
+		 */
+		{
+			FILE *ftest = fopen(path, "r");
+			if (!ftest) {
+				return MG_FORM_FIELD_STORAGE_STORE;
+			}
+			fclose(ftest);
+			/* This is just simple demo code. More sophisticated code could add
+			 * numbers to the file name to make filenames unique. However, most
+			 * likely file upload will not end up in the temporary path, but in
+			 * a user directory - multiple directories for multiple users that
+			 * are logged into the web service. In this case, users might want
+			 * to overwrite their own code. You need to adapt this example to
+			 * your needs.
+			 */
+		}
+
+		return MG_FORM_FIELD_STORAGE_SKIP;
 	}
 	return MG_FORM_FIELD_STORAGE_GET;
 }
@@ -291,7 +371,7 @@ field_get(const char *key, const char *value, size_t valuelen, void *user_data)
 	if (key) {
 		mg_printf(conn, "key = %s\n", key);
 	}
-	mg_printf(conn, "valuelen = %u\n", valuelen);
+	mg_printf(conn, "valuelen = %lu\n", valuelen);
 
 	if (valuelen > 0) {
 		/* mg_write(conn, value, valuelen); */
@@ -542,7 +622,6 @@ PostResponser(struct mg_connection *conn, void *cbdata)
 
 	if (0 != strcmp(ri->request_method, "POST")) {
 		/* Not a POST request */
-		char buf[1024];
 		int ret = mg_get_request_link(conn, buf, sizeof(buf));
 
 		mg_printf(conn,
@@ -575,7 +654,7 @@ PostResponser(struct mg_connection *conn, void *cbdata)
 	while (r > 0) {
 		r_total += r;
 		s = mg_send_chunk(conn, buf, r);
-		if (r != s) {
+		if (s <= 0) {
 			/* Send error */
 			break;
 		}
@@ -717,7 +796,24 @@ WebSocketStartHandler(struct mg_connection *conn, void *cbdata)
 #define MAX_WS_CLIENTS (5)
 
 struct t_ws_client {
+	/* Handle to the connection, used for mg_read/mg_write */
 	struct mg_connection *conn;
+
+	/*
+	    WebSocketConnectHandler sets state to 1 ("connected")
+	    the connect handler can accept or reject a connection, but it cannot
+	    send or receive any data at this state
+
+	    WebSocketReadyHandler sets state to 2 ("ready")
+	    reading and writing is possible now
+
+	    WebSocketCloseHandler sets state to 0
+	    the websocket is about to be closed, reading and writing is no longer
+	    possible this callback can be used to cleanup allocated resources
+
+	    InformWebsockets is called cyclic every second, and sends some data
+	    (a counter value) to all websockets in state 2
+	*/
 	int state;
 } static ws_clients[MAX_WS_CLIENTS];
 
@@ -826,6 +922,16 @@ WebSocketCloseHandler(const struct mg_connection *conn, void *cbdata)
 	ASSERT(client->state >= 1);
 
 	mg_lock_context(ctx);
+	while (client->state == 3) {
+		/* "inform" state, wait a while */
+		mg_unlock_context(ctx);
+#ifdef _WIN32
+		Sleep(1);
+#else
+		usleep(1000);
+#endif
+		mg_lock_context(ctx);
+	}
 	client->state = 0;
 	client->conn = NULL;
 	mg_unlock_context(ctx);
@@ -846,16 +952,27 @@ InformWebsockets(struct mg_context *ctx)
 	sprintf(text, "%lu", ++cnt);
 	textlen = strlen(text);
 
-	mg_lock_context(ctx);
 	for (i = 0; i < MAX_WS_CLIENTS; i++) {
+		int inform = 0;
+
+		mg_lock_context(ctx);
 		if (ws_clients[i].state == 2) {
+			/* move to "inform" state */
+			ws_clients[i].state = 3;
+			inform = 1;
+		}
+		mg_unlock_context(ctx);
+
+		if (inform) {
 			mg_websocket_write(ws_clients[i].conn,
 			                   MG_WEBSOCKET_OPCODE_TEXT,
 			                   text,
 			                   textlen);
+			mg_lock_context(ctx);
+			ws_clients[i].state = 2;
+			mg_unlock_context(ctx);
 		}
 	}
-	mg_unlock_context(ctx);
 }
 #endif
 
@@ -916,10 +1033,10 @@ get_dh2236()
 
 #ifndef TEST_WITHOUT_SSL
 int
-init_ssl(void *ssl_context, void *user_data)
+init_ssl(void *ssl_ctx, void *user_data)
 {
 	/* Add application specific SSL initialization */
-	struct ssl_ctx_st *ctx = (struct ssl_ctx_st *)ssl_context;
+	struct ssl_ctx_st *ctx = (struct ssl_ctx_st *)ssl_ctx;
 
 #ifdef USE_SSL_DH
 	/* example from https://github.com/civetweb/civetweb/issues/347 */
