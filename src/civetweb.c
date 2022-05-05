@@ -6128,25 +6128,7 @@ push_inner(struct mg_context *ctx,
 		/* Only in case n=0 (timeout), repeat calling the write function */
 
 		/* If send failed, wait before retry */
-		if (fp != NULL) {
-			/* For files, just wait a fixed time.
-			 * Maybe it helps, maybe not. */
-			mg_sleep(5);
-		} else {
-			/* For sockets, wait for the socket using poll */
-			struct mg_pollfd pfd[1];
-			int pollres;
-
-			pfd[0].fd = sock;
-			pfd[0].events = POLLOUT;
-			pollres = mg_poll(pfd, 1, (int)(ms_wait), &(ctx->stop_flag));
-			if (!STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
-				return -2;
-			}
-			if (pollres > 0) {
-				continue;
-			}
-		}
+		mg_sleep(5);
 
 		if (timeout > 0) {
 			now = mg_get_current_time_ns();
