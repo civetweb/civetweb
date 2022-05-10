@@ -195,7 +195,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #include <sys/socket.h>
 #include <time.h>
 
-#include <zephyr/zephyr.h>
+#include <zephyr/kernel.h>
 
 /* Max worker threads is the max of pthreads minus the main application thread
  * and minus the main civetweb thread, thus -2
