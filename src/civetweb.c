@@ -8519,7 +8519,7 @@ parse_auth_header(struct mg_connection *conn,
 		const char *userpw_b64 = auth_header + 6;
 		size_t userpw_b64_len = strlen(userpw_b64);
 		size_t buf_len_r = buf_size;
-		if (mg_base64_decode(userpw_b64, userpw_b64_len, buf, &buf_len_r)
+		if (mg_base64_decode(userpw_b64, userpw_b64_len, (unsigned char *)buf, &buf_len_r)
 		    != -1) {
 			return 0; /* decode error */
 		}
