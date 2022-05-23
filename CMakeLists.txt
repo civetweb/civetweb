@@ -2,6 +2,7 @@
 cmake_minimum_required (VERSION 3.3.0)
 cmake_policy(VERSION 3.2.2)
 cmake_policy(SET CMP0054 NEW)
+cmake_policy(SET CMP0057 NEW)
 
 # Set up the project
 project (civetweb)
