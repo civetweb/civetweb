@@ -14618,7 +14618,7 @@ handle_request(struct mg_connection *conn)
 {
 	struct mg_request_info *ri = &conn->request_info;
 	char path[UTF8_PATH_MAX];
-	int uri_len, ssl_index;
+	int ssl_index;
 	int is_found = 0, is_script_resource = 0, is_websocket_request = 0,
 	    is_put_or_delete_request = 0, is_callback_resource = 0,
 	    is_template_text_file = 0, is_webdav_request = 0;
@@ -14671,7 +14671,6 @@ handle_request(struct mg_connection *conn)
 		}
 		return;
 	}
-	uri_len = (int)strlen(ri->local_uri);
 
 	/* 1.3. decode url (if config says so) */
 	if (should_decode_url(conn)) {
