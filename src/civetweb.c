@@ -1558,14 +1558,14 @@ static int mg_openssl_initialized = 0;
     && !defined(OPENSSL_API_3_0) && !defined(USE_MBEDTLS)
 #error "Please define OPENSSL_API_#_# or USE_MBEDTLS"
 #endif
-#if defined(OPENSSL_API_1_0)                                                   \
-    && defined(OPENSSL_API_1_1) #error "Multiple OPENSSL_API versions defined"
+#if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_1_1)
+#error "Multiple OPENSSL_API versions defined"
 #endif
-#if defined(OPENSSL_API_1_1)                                                   \
-    && defined(OPENSSL_API_3_0) #error "Multiple OPENSSL_API versions defined"
+#if defined(OPENSSL_API_1_1) && defined(OPENSSL_API_3_0)
+#error "Multiple OPENSSL_API versions defined"
 #endif
-#if defined(OPENSSL_API_1_0)                                                   \
-    && defined(OPENSSL_API_3_0) #error "Multiple OPENSSL_API versions defined"
+#if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_3_0)
+#error "Multiple OPENSSL_API versions defined"
 #endif
 #if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)                      \
      || defined(OPENSSL_API_3_0))                                              \
