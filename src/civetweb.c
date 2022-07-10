@@ -1558,14 +1558,14 @@ static int mg_openssl_initialized = 0;
     && !defined(OPENSSL_API_3_0) && !defined(USE_MBEDTLS)
 #error "Please define OPENSSL_API_#_# or USE_MBEDTLS"
 #endif
-#if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_1_1)                       \
-#error "Multiple OPENSSL_API versions defined"
+#if defined(OPENSSL_API_1_0)                                                   \
+    && defined(OPENSSL_API_1_1) #error "Multiple OPENSSL_API versions defined"
 #endif
-#if defined(OPENSSL_API_1_1) && defined(OPENSSL_API_3_0)                       \
-#error "Multiple OPENSSL_API versions defined"
+#if defined(OPENSSL_API_1_1)                                                   \
+    && defined(OPENSSL_API_3_0) #error "Multiple OPENSSL_API versions defined"
 #endif
-#if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_3_0)                       \
-#error "Multiple OPENSSL_API versions defined"
+#if defined(OPENSSL_API_1_0)                                                   \
+    && defined(OPENSSL_API_3_0) #error "Multiple OPENSSL_API versions defined"
 #endif
 #if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)                      \
      || defined(OPENSSL_API_3_0))                                              \
@@ -8524,7 +8524,8 @@ parse_auth_header(struct mg_connection *conn,
 		const char *userpw_b64 = auth_header + 6;
 		size_t userpw_b64_len = strlen(userpw_b64);
 		size_t buf_len_r = buf_size;
-		if (mg_base64_decode(userpw_b64, userpw_b64_len, (unsigned char *)buf, &buf_len_r)
+		if (mg_base64_decode(
+		        userpw_b64, userpw_b64_len, (unsigned char *)buf, &buf_len_r)
 		    != -1) {
 			return 0; /* decode error */
 		}
@@ -12999,7 +13000,7 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 	char buf[100], sha[20], b64_sha[sizeof(sha) * 2];
 	size_t dst_len = sizeof(b64_sha);
 #if !defined(OPENSSL_API_3_0)
-   SHA_CTX sha_ctx;
+	SHA_CTX sha_ctx;
 #endif
 	int truncated;
 
@@ -13013,12 +13014,16 @@ send_websocket_handshake(struct mg_connection *conn, const char *websock_key)
 	DEBUG_TRACE("%s", "Send websocket handshake");
 
 #if defined(OPENSSL_API_3_0)
-	EVP_Digest((unsigned char *)buf, (uint32_t)strlen(buf), (unsigned char *)sha,
-		NULL, EVP_get_digestbyname("sha1"), NULL);
+	EVP_Digest((unsigned char *)buf,
+	           (uint32_t)strlen(buf),
+	           (unsigned char *)sha,
+	           NULL,
+	           EVP_get_digestbyname("sha1"),
+	           NULL);
 #else
-   SHA1_Init(&sha_ctx);
-   SHA1_Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
-   SHA1_Final((unsigned char *)sha, &sha_ctx);
+	SHA1_Init(&sha_ctx);
+	SHA1_Update(&sha_ctx, (unsigned char *)buf, (uint32_t)strlen(buf));
+	SHA1_Final((unsigned char *)sha, &sha_ctx);
 #endif
 	mg_base64_encode((unsigned char *)sha, sizeof(sha), b64_sha, &dst_len);
 	mg_printf(conn,
