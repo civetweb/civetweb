@@ -11535,7 +11535,7 @@ handle_cgi_request(struct mg_connection *conn,
 	size_t buflen;
 	int headers_len, data_len, i, truncated;
 	int fdin[2] = {-1, -1}, fdout[2] = {-1, -1}, fderr[2] = {-1, -1};
-	const char *status, *status_text, *connection_state;
+	const char *status, *status_text;
 	char *pbuf, dir[UTF8_PATH_MAX], *p;
 	struct mg_request_info ri;
 	struct cgi_environment blk;
@@ -11783,9 +11783,8 @@ handle_cgi_request(struct mg_connection *conn,
 	} else {
 		conn->status_code = 200;
 	}
-	connection_state =
-	    get_header(ri.http_headers, ri.num_headers, "Connection");
-	if (!header_has_option(connection_state, "keep-alive")) {
+
+	if (!should_keep_alive(conn)) {
 		conn->must_close = 1;
 	}
 
@@ -13855,30 +13854,40 @@ handle_websocket_request(struct mg_connection *conn,
 static int
 should_switch_to_protocol(const struct mg_connection *conn)
 {
-	const char *upgrade, *connection;
+	const char *connection_headers[8];
+	const char *upgrade_to;
+	int connection_header_count, i, should_upgrade;
 
 	/* A websocket protocoll has the following HTTP headers:
 	 *
 	 * Connection: Upgrade
 	 * Upgrade: Websocket
+	 *
+	 * It seems some clients use multiple headers:
+	 * see https://github.com/civetweb/civetweb/issues/1083
 	 */
-
-	connection = mg_get_header(conn, "Connection");
-	if (connection == NULL) {
+	connection_header_count = get_req_headers(&conn->request_info,
+	                                          "Connection",
+	                                          connection_headers,
+	                                          8);
+	should_upgrade = 0;
+	for (i = 0; i < connection_header_count; i++) {
+		if (0 != mg_strcasestr(connection_headers[i], "upgrade")) {
+			should_upgrade = 1;
+		}
+	}
+	if (!should_upgrade) {
 		return PROTOCOL_TYPE_HTTP1;
 	}
-	if (!mg_strcasestr(connection, "upgrade")) {
-		return PROTOCOL_TYPE_HTTP1;
-	}
 
-	upgrade = mg_get_header(conn, "Upgrade");
-	if (upgrade == NULL) {
+	upgrade_to = mg_get_header(conn, "Upgrade");
+	if (upgrade_to == NULL) {
 		/* "Connection: Upgrade" without "Upgrade" Header --> Error */
 		return -1;
 	}
 
 	/* Upgrade to ... */
-	if (0 != mg_strcasestr(upgrade, "websocket")) {
+	if (0 != mg_strcasestr(upgrade_to, "websocket")) {
 		/* The headers "Host", "Sec-WebSocket-Key", "Sec-WebSocket-Protocol" and
 		 * "Sec-WebSocket-Version" are also required.
 		 * Don't check them here, since even an unsupported websocket protocol
@@ -13887,7 +13896,7 @@ should_switch_to_protocol(const struct mg_connection *conn)
 		 */
 		return PROTOCOL_TYPE_WEBSOCKET; /* Websocket */
 	}
-	if (0 != mg_strcasestr(upgrade, "h2")) {
+	if (0 != mg_strcasestr(upgrade_to, "h2")) {
 		return PROTOCOL_TYPE_HTTP2; /* Websocket */
 	}
 
