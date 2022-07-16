@@ -3830,7 +3830,6 @@ get_header(const struct mg_header *hdr, int num_hdr, const char *name)
 }
 
 
-#if defined(USE_WEBSOCKET)
 /* Retrieve requested HTTP header multiple values, and return the number of
  * found occurrences */
 static int
@@ -3850,7 +3849,6 @@ get_req_headers(const struct mg_request_info *ri,
 	}
 	return cnt;
 }
-#endif
 
 
 CIVETWEB_API const char *
