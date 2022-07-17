@@ -1599,7 +1599,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 	int i, j;
 	const char *name, *value;
 	const struct mg_option *default_options = mg_get_valid_options();
-	char *file_options[MAX_OPTIONS * 2 + 1] = {0};
+	const char *file_options[MAX_OPTIONS * 2 + 1] = {0};
 	char *title;
 	struct dlg_proc_param *pdlg_proc_param;
 
@@ -1663,8 +1663,8 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 			}
 			for (i = 0; i < MAX_OPTIONS; i++) {
-				free(file_options[2 * i]);
-				free(file_options[2 * i + 1]);
+				free((void *)file_options[2 * i]);
+				free((void *)file_options[2 * i + 1]);
 			}
 			break;
 
