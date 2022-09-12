@@ -6722,6 +6722,15 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 }
 
 
+CIVETWEB_API void 
+mg_read_done(struct mg_connection *conn) 
+{
+      if (conn == NULL) {
+         	return;
+      }
+      conn->consumed_content = 0;
+}
+
 CIVETWEB_API int
 mg_write(struct mg_connection *conn, const void *buf, size_t len)
 {

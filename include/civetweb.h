@@ -1045,6 +1045,8 @@ CIVETWEB_API long long mg_store_body(struct mg_connection *conn,
      > 0   number of bytes read into the buffer. */
 CIVETWEB_API int mg_read(struct mg_connection *, void *buf, size_t len);
 
+CIVETWEB_API void mg_read_done(struct mg_connection *);
+
 
 /* Get the value of particular HTTP header.
 

@@ -448,7 +448,7 @@ CivetServer::CivetServer(const std::vector<std::string> &options,
 	for (size_t i = 0; i < options.size(); i++) {
 		pointers[i] = (options[i].c_str());
 	}
-	pointers.back() = NULL;	
+	pointers.back() = NULL;
 
 	struct mg_init_data mg_start_init_data = {0};
 	mg_start_init_data.callbacks = &callbacks;
@@ -718,6 +718,7 @@ CivetServer::getPostData(struct mg_connection *conn)
 		postdata.append(buf, r);
 		r = mg_read(conn, buf, sizeof(buf));
 	}
+	mg_read_done(conn);
 	mg_unlock_connection(conn);
 	return postdata;
 }
