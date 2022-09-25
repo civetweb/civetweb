@@ -383,7 +383,7 @@ static void
 test_mg_stop(struct mg_context *ctx, unsigned line)
 {
 	(void)line;
-#ifdef __MACH__
+#if defined(__MACH__) && defined(__APPLE__)
 	/* For unknown reasons, there are sporadic hangs
 	 * for OSX if mark_point is called here */
 	test_sleep(SLEEP_BEFORE_MG_STOP);
@@ -1148,7 +1148,7 @@ websock_server_data(struct mg_connection *conn,
 static void
 websock_server_close(const struct mg_connection *conn, void *udata)
 {
-#ifndef __MACH__
+#if !defined(__MACH__) && !defined(__APPLE__)
 	ck_assert_ptr_eq((void *)udata, (void *)(ptrdiff_t)7531);
 	WS_TEST_TRACE("Server: Close connection\n");
 
@@ -1225,7 +1225,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	struct tclient_data *pclient_data =
 	    (struct tclient_data *)mg_get_user_data(ctx);
 
-#ifndef __MACH__
+#if !defined(__MACH__) && !defined(__APPLE__)
 	ck_assert_ptr_eq(user_data, (void *)pclient_data);
 
 	ck_assert(pclient_data != NULL);
@@ -1239,7 +1239,7 @@ websocket_client_close_handler(const struct mg_connection *conn,
 	(void)user_data;
 	pclient_data->closed++;
 
-#endif /* __MACH__ */
+#endif /* __MACH__ && __APPLE__ */
 }
 
 #endif /* USE_WEBSOCKET */
@@ -4329,7 +4329,7 @@ START_TEST(test_large_file)
 	OPTIONS[opt_cnt++] = "8443s";
 	OPTIONS[opt_cnt++] = "ssl_certificate";
 	OPTIONS[opt_cnt++] = ssl_cert;
-#ifdef __MACH__
+#if defined(__MACH__) && defined(__APPLE__)
 	/* The Apple builds on Travis CI seem to have problems with TLS1.x
 	 * Allow SSLv3 and TLS */
 	OPTIONS[opt_cnt++] = "ssl_protocol_version";

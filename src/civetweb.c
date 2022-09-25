@@ -352,7 +352,7 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
 #endif
 
 
-#if defined(__MACH__) /* Apple OSX section */
+#if defined(__MACH__) && defined(__APPLE__) /* Apple OSX section */
 
 #if defined(__clang__)
 #if (__clang_major__ == 3) && ((__clang_minor__ == 7) || (__clang_minor__ == 8))
@@ -898,7 +898,7 @@ typedef unsigned short int in_port_t;
 #include <dlfcn.h>
 #endif
 
-#if defined(__MACH__)
+#if defined(__MACH__) && defined(__APPLE__)
 #define SSL_LIB "libssl.dylib"
 #define CRYPTO_LIB "libcrypto.dylib"
 #else
@@ -2804,7 +2804,7 @@ mg_set_thread_name(const char *name)
 #elif defined(_GNU_SOURCE) && defined(__GLIBC__)                               \
     && ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
 	/* pthread_setname_np first appeared in glibc in version 2.12 */
-#if defined(__MACH__)
+#if defined(__MACH__) && defined(__APPLE__)
 	/* OS X only current thread name can be changed */
 	(void)pthread_setname_np(threadName);
 #else
