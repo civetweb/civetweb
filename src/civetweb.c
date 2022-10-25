@@ -14927,7 +14927,8 @@ handle_request(struct mg_connection *conn)
 #if defined(NO_FILES)
 		if (1) {
 #else
-		if (conn->dom_ctx->config[DOCUMENT_ROOT] == NULL) {
+		if (conn->dom_ctx->config[DOCUMENT_ROOT] == NULL
+		    || conn->dom_ctx->config[PUT_DELETE_PASSWORDS_FILE] == NULL) {
 #endif
 			/* This code path will not be called for request handlers */
 			DEBUG_ASSERT(handler_info == NULL);
@@ -14938,7 +14939,7 @@ handle_request(struct mg_connection *conn)
 			                   405,
 			                   "%s method not allowed",
 			                   conn->request_info.request_method);
-			DEBUG_TRACE("%s", "all file based requests rejected");
+			DEBUG_TRACE("%s", "all file based put/delete requests rejected");
 			return;
 		}
 
