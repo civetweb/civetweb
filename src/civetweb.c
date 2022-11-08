@@ -22349,10 +22349,6 @@ mg_init_library(unsigned features)
 			return 0;
 		}
 
-#if defined(USE_LUA)
-		lua_init_optional_libraries();
-#endif
-
 		len = 1;
 		for (i = 0; http_methods[i].name != NULL; i++) {
 			size_t sl = strlen(http_methods[i].name);
@@ -22364,6 +22360,8 @@ mg_init_library(unsigned features)
 		all_methods = mg_malloc(len);
 		if (!all_methods) {
 			/* Must never happen */
+			mg_global_unlock();
+			(void)pthread_mutex_destroy(&global_lock_mutex);
 			return 0;
 		}
 		all_methods[0] = 0;
@@ -22376,6 +22374,10 @@ mg_init_library(unsigned features)
 			}
 		}
 	}
+
+#if defined(USE_LUA)
+	lua_init_optional_libraries();
+#endif
 
 #if (defined(OPENSSL_API_1_0) || defined(OPENSSL_API_1_1)                      \
      || defined(OPENSSL_API_3_0))                                              \
