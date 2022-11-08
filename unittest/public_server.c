@@ -3789,6 +3789,28 @@ START_TEST(test_error_handling)
 	mg_close_connection(client_conn);
 	test_sleep(1);
 
+
+	/* Try DELETE when put_delete_auth_file is not configured */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn =
+	    mg_connect_client("127.0.0.1", 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn, "DELETE /something/not/existing HTTP/1.0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_response_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	ck_assert_int_eq(client_ri->status_code, 405);
+	mg_close_connection(client_conn);
+	test_sleep(1);
+
+
 	/* Create an error.htm file */
 	f = fopen("error.htm", "wt");
 	ck_assert(f != NULL);
