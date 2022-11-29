@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.33027.164
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "civetweb_lua", "civetweb_lua\civetweb_lua.vcxproj", "{9BE9C008-E851-42B1-A034-BD4630AE4CD6}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -11,8 +11,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_lib", "lua_lib\lua_lib.vcxproj", "{8F5E5D77-D269-4665-9E27-1045DA6CF0D8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ex_embedded_c", "ex_embedded_c\ex_embedded_c.vcxproj", "{882EC43C-2EEE-434B-A711-C844108D29C6}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit_test", "unit_test\unit_test.vcxproj", "{1AC4A7A6-0100-4287-97F4-B95807BE5607}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "duktape_lib", "duktape_lib\duktape_lib.vcxproj", "{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}"
 EndProject
@@ -48,12 +46,6 @@ Global
 		{882EC43C-2EEE-434B-A711-C844108D29C6}.Release|Win32.ActiveCfg = Release|Win32
 		{882EC43C-2EEE-434B-A711-C844108D29C6}.Release|Win32.Build.0 = Release|Win32
 		{882EC43C-2EEE-434B-A711-C844108D29C6}.Release|x64.ActiveCfg = Release|x64
-		{1AC4A7A6-0100-4287-97F4-B95807BE5607}.Debug|Win32.ActiveCfg = Debug|Win32
-		{1AC4A7A6-0100-4287-97F4-B95807BE5607}.Debug|Win32.Build.0 = Debug|Win32
-		{1AC4A7A6-0100-4287-97F4-B95807BE5607}.Debug|x64.ActiveCfg = Debug|Win32
-		{1AC4A7A6-0100-4287-97F4-B95807BE5607}.Release|Win32.ActiveCfg = Release|Win32
-		{1AC4A7A6-0100-4287-97F4-B95807BE5607}.Release|Win32.Build.0 = Release|Win32
-		{1AC4A7A6-0100-4287-97F4-B95807BE5607}.Release|x64.ActiveCfg = Release|Win32
 		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Debug|Win32.ActiveCfg = Debug|Win32
 		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Debug|Win32.Build.0 = Debug|Win32
 		{0A11689C-DB6A-4BF6-97B2-AD32DB863FBD}.Debug|x64.ActiveCfg = Debug|x64
@@ -71,5 +63,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6CE1C29A-04AB-4856-B694-22B25999D758}
 	EndGlobalSection
 EndGlobal

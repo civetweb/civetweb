@@ -123,9 +123,6 @@
     <ClCompile Include="..\..\src\third_party\LuaXML_lib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\third_party\lsh.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\third_party\lua_struct.c">
       <Filter>Source Files</Filter>
     </ClCompile>
