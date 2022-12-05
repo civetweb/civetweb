@@ -873,6 +873,7 @@ typedef unsigned short int in_port_t;
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <poll.h>
 #include <pthread.h>
 #include <pwd.h>
 #include <stdarg.h>
@@ -880,7 +881,6 @@ typedef unsigned short int in_port_t;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/utsname.h>
