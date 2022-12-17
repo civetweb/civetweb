@@ -3327,8 +3327,7 @@ sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 		0,
 		NI_NUMERICHOST);
 		*/
-		strncpy(buf, UNIX_DOMAIN_SOCKET_SERVER_NAME, len);
-		buf[len-1] = 0;
+		mg_strlcpy(buf, UNIX_DOMAIN_SOCKET_SERVER_NAME, len)
 	}
 #endif
 }
@@ -3354,7 +3353,6 @@ gmt_time_string(char *buf, size_t buf_len, time_t *t)
 		strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S GMT", tm);
 	} else {
 		mg_strlcpy(buf, "Thu, 01 Jan 1970 00:00:00 GMT", buf_len);
-		buf[buf_len - 1] = '\0';
 	}
 }
 
@@ -9636,7 +9634,6 @@ print_dir_entry(struct mg_connection *conn, struct de *de)
 		strftime(mod, sizeof(mod), "%d-%b-%Y %H:%M", tm);
 	} else {
 		mg_strlcpy(mod, "01-Jan-1970 00:00", sizeof(mod));
-		mod[sizeof(mod) - 1] = '\0';
 	}
 	mg_printf(conn,
 	          "<tr><td><a href=\"%s%s\">%s%s</a></td>"
@@ -12804,12 +12801,12 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 				       "\x01",
 				       conn->request_info.remote_user,
 				       NULL);
-				strncpy(dav_lock[i].path,
-				        link_buf,
-				        sizeof(dav_lock[i].path) - 1);
-				strncpy(dav_lock[i].user,
-				        conn->request_info.remote_user,
-				        sizeof(dav_lock[i].user) - 1);
+				mg_strlcpy(dav_lock[i].path,
+				           link_buf,
+				           sizeof(dav_lock[i].path));
+				mg_strlcpy(dav_lock[i].user,
+				           conn->request_info.remote_user,
+				           sizeof(dav_lock[i].user));
 				lock_index = i;
 				break;
 			}
@@ -16097,7 +16094,6 @@ log_access(const struct mg_connection *conn)
 			strftime(date, sizeof(date), "%d/%b/%Y:%H:%M:%S %z", tm);
 		} else {
 			mg_strlcpy(date, "01/Jan/1970:00:00:00 +0000", sizeof(date));
-			date[sizeof(date) - 1] = '\0';
 		}
 
 		ri = &conn->request_info;
