@@ -3328,7 +3328,7 @@ sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 		NI_NUMERICHOST);
 		*/
 		strncpy(buf, UNIX_DOMAIN_SOCKET_SERVER_NAME, len);
-		buf[len] = 0;
+		buf[len-1] = 0;
 	}
 #endif
 }
