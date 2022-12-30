@@ -220,7 +220,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		}
 
 		/* GET request: form data is in the query string. */
-		/* The entire data has already been loaded, so there is no nead to
+		/* The entire data has already been loaded, so there is no need to
 		 * call mg_read. We just need to split the query string into key-value
 		 * pairs. */
 		data = conn->request_info.query_string;

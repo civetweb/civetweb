@@ -68,7 +68,7 @@ mg_match_impl(const char *pat,
 
 		/* Pattern * or ** matches multiple characters */
 		if (pat[i_pat] == '*') {
-			size_t len; /* lenght matched by "*" or "**" */
+			size_t len; /* length matched by "*" or "**" */
 			ptrdiff_t ret;
 
 			i_pat++;

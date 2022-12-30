@@ -1835,7 +1835,7 @@ HPACK_TABLE_TEST()
 
 	for (i = 0; i < 256; i++) {
 		if (reverse_map[i] == -1) {
-			ck_abort_msg("reverse map at %i mising", i);
+			ck_abort_msg("reverse map at %i missing", i);
 		}
 	}
 

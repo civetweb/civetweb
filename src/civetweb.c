@@ -499,7 +499,7 @@ _civet_safe_clock_gettime(int clk_id, struct timespec *t)
 
 /********************************************************************/
 
-/* Helper makros */
+/* Helper macros */
 #if !defined(ARRAY_SIZE)
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
@@ -2508,7 +2508,7 @@ struct mg_connection {
 #if defined(USE_SERVER_STATS)
 	time_t conn_close_time; /* Time (wall clock) when connection was
 	                         * closed (or 0 if still open) */
-	double processing_time; /* Procesing time for one request. */
+	double processing_time; /* Processing time for one request. */
 #endif
 	struct timespec req_time; /* Time (since system start) when the request
 	                           * was received */
@@ -4486,7 +4486,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 						len = (int)sizeof(path_buf) - 32;
 					}
 
-					/* Start with the file extenstion from the configuration. */
+					/* Start with the file extension from the configuration. */
 					tstr = strchr(error_page_file_ext, '.');
 
 					while (tstr) {
@@ -4512,7 +4512,7 @@ mg_send_http_error_impl(struct mg_connection *conn,
 						DEBUG_TRACE("Check error page %s - not found",
 						            path_buf);
 
-						/* Continue with the next file extenstion from the
+						/* Continue with the next file extension from the
 						 * configuration (if there is a next one). */
 						tstr = strchr(tstr + i, '.');
 					}
@@ -5838,7 +5838,7 @@ spawn_process(struct mg_connection *conn,
 
 			interp = conn->dom_ctx->config[CGI_INTERPRETER + cgi_config_idx];
 			if (interp == NULL) {
-				/* no interpreter configured, call the programm directly */
+				/* no interpreter configured, call the program directly */
 				(void)execle(prog, prog, NULL, envp);
 				mg_cry_internal(conn,
 				                "%s: execle(%s): %s",
@@ -6374,7 +6374,7 @@ pull_inner(FILE *fp,
 				return -2;
 			}
 		} else if (pollres < 0) {
-			/* error callint poll */
+			/* error calling poll */
 			return -2;
 		} else {
 			/* pollres = 0 means timeout */
@@ -7569,7 +7569,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
               struct mg_file_stat *filestat, /* out: file status structure */
               int *is_found,                 /* out: file found (directly) */
               int *is_script_resource,       /* out: handled by a script? */
-              int *is_websocket_request,     /* out: websocket connetion? */
+              int *is_websocket_request,     /* out: websocket connection? */
               int *is_put_or_delete_request, /* out: put/delete a file? */
               int *is_webdav_request,        /* out: webdav request? */
               int *is_template_text          /* out: SSI file or LSP file? */
@@ -7786,7 +7786,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	                   "yes");
 	if (*is_webdav_request) {
 		/* TO BE DEFINED: Should scripts handle special WebDAV methods lile
-		 * PROPFIND fo their subresources? */
+		 * PROPFIND for their subresources? */
 		/* allow_substitute_script_subresources = 0; */
 	}
 
@@ -8995,7 +8995,7 @@ is_authorized_for_put(struct mg_connection *conn)
 		}
 	}
 
-	DEBUG_TRACE("file write autorization: %i", ret);
+	DEBUG_TRACE("file write authorization: %i", ret);
 	return ret;
 }
 #endif
@@ -10531,7 +10531,7 @@ put_dir(struct mg_connection *conn, const char *path)
 		/* Try to create intermediate directory */
 		DEBUG_TRACE("mkdir(%s)", buf);
 		if (!mg_stat(conn, buf, &file.stat) && mg_mkdir(conn, buf, 0755) != 0) {
-			/* path does not exixt and can not be created */
+			/* path does not exist and can not be created */
 			res = -2;
 			break;
 		}
@@ -10950,7 +10950,7 @@ parse_http_response(char *buf, int len, struct mg_response_info *ri)
 	ri->http_version = ri->status_text = NULL;
 	ri->num_headers = ri->status_code = 0;
 
-	/* RFC says that all initial whitespaces should be ingored */
+	/* RFC says that all initial whitespaces should be ignored */
 	/* This included all leading \r and \n (isspace) */
 	/* See table: http://www.cplusplus.com/reference/cctype/ */
 	while ((len > 0) && isspace((unsigned char)*buf)) {
@@ -12179,7 +12179,7 @@ put_file(struct mg_connection *conn, const char *path)
 	}
 
 	/* A file should be created or overwritten. */
-	/* Currently CivetWeb does not nead read+write access. */
+	/* Currently CivetWeb does not need read+write access. */
 	if (!mg_fopen(conn, path, MG_FOPEN_MODE_WRITE, &file)
 	    || file.access.fp == NULL) {
 		(void)mg_fclose(&file.access);
@@ -12333,7 +12333,7 @@ do_ssi_include(struct mg_connection *conn,
 
 	} else if ((sscanf(tag, " file=\"%511[^\"]\"", file_name) == 1)
 	           || (sscanf(tag, " \"%511[^\"]\"", file_name) == 1)) {
-		/* File name is relative to the currect document */
+		/* File name is relative to the current document */
 		file_name[511] = 0;
 		(void)mg_snprintf(conn, &truncated, path, sizeof(path), "%s", ssi);
 
@@ -13695,7 +13695,7 @@ handle_websocket_request(struct mg_connection *conn,
 		return;
 	}
 
-	/* Step 1.3: Could check for "Host", but we do not really nead this
+	/* Step 1.3: Could check for "Host", but we do not really need this
 	 * value for anything, so just ignore it. */
 
 	/* Step 2: If a callback is responsible, call it. */
@@ -13856,7 +13856,7 @@ should_switch_to_protocol(const struct mg_connection *conn)
 	const char *upgrade_to;
 	int connection_header_count, i, should_upgrade;
 
-	/* A websocket protocoll has the following HTTP headers:
+	/* A websocket protocol has the following HTTP headers:
 	 *
 	 * Connection: Upgrade
 	 * Upgrade: Websocket
@@ -14054,7 +14054,7 @@ set_throttle(const char *spec, const union usa *rsa, const char *uri)
 }
 
 
-/* The mg_upload function is superseeded by mg_handle_form_request. */
+/* The mg_upload function is superseded by mg_handle_form_request. */
 #include "handle_form.inl"
 
 
@@ -14706,7 +14706,7 @@ handle_request(struct mg_connection *conn)
 		url_decode_in_place((char *)ri->local_uri);
 	}
 
-	/* URL decode the query-string only if explicity set in the configuration */
+	/* URL decode the query-string only if explicitly set in the configuration */
 	if (conn->request_info.query_string) {
 		if (should_decode_query_string(conn)) {
 			url_decode_in_place((char *)conn->request_info.query_string);
@@ -15521,7 +15521,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 		*ip_version = 4;
 
 	} else if ((cb = strchr(vec->ptr, ':')) != NULL) {
-		/* String could be a hostname. This check algotithm
+		/* String could be a hostname. This check algorithm
 		 * will only work for RFC 952 compliant hostnames,
 		 * starting with a letter, containing only letters,
 		 * digits and hyphen ('-'). Newer specs may allow
@@ -16128,7 +16128,7 @@ log_access(const struct mg_connection *conn)
 	/* Here we have a log message in log_buf. Call the callback */
 	if (conn->phys_ctx->callbacks.log_access) {
 		if (conn->phys_ctx->callbacks.log_access(conn, log_buf)) {
-			/* do not log if callack returns non-zero */
+			/* do not log if callback returns non-zero */
 			if (fi.access.fp) {
 				mg_fclose(&fi.access);
 			}
@@ -16485,7 +16485,7 @@ sslize(struct mg_connection *conn,
 					pollres =
 					    mg_poll(&pfd, 1, 50, &(conn->phys_ctx->stop_flag));
 					if (pollres < 0) {
-						/* Break if error occured (-1)
+						/* Break if error occurred (-1)
 						 * or server shutdown (-2) */
 						break;
 					}
@@ -16984,7 +16984,7 @@ ssl_get_protocol(int version_id)
  * examples, however some (maybe most, but not all) headers of OpenSSL
  * versions / OpenSSL compatibility layers have it. Having a different
  * definition will cause a warning in C and an error in C++. Use "const SSL
- * *", while automatical conversion from "SSL *" works for all compilers,
+ * *", while automatic conversion from "SSL *" works for all compilers,
  * but not other way around */
 static void
 ssl_info_callback(const SSL *ssl, int what, int ret)
@@ -17263,7 +17263,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	                                                   phys_ctx->user_data));
 
 	/* If callback returns 0, civetweb sets up the SSL certificate.
-	 * If it returns 1, civetweb assumes the calback already did this.
+	 * If it returns 1, civetweb assumes the callback already did this.
 	 * If it returns -1, initializing ssl fails. */
 	if (callback_ret < 0) {
 		mg_cry_ctx_internal(phys_ctx,
@@ -17285,7 +17285,7 @@ init_ssl_ctx_impl(struct mg_context *phys_ctx,
 	                         phys_ctx->user_data));
 
 	/* If domain callback returns 0, civetweb sets up the SSL certificate.
-	 * If it returns 1, civetweb assumes the calback already did this.
+	 * If it returns 1, civetweb assumes the callback already did this.
 	 * If it returns -1, initializing ssl fails. */
 	if (callback_ret < 0) {
 		mg_cry_ctx_internal(phys_ctx,
@@ -18252,7 +18252,7 @@ mg_connect_client2(const char *host,
 		return NULL;
 	}
 
-	/* check all known protocolls */
+	/* check all known protocols */
 	if (!mg_strcasecmp(protocol, "http")) {
 		is_ssl = 0;
 		is_ws = 0;
@@ -19736,7 +19736,7 @@ worker_thread_run(struct mg_connection *conn)
 		                   sizeof(conn->request_info.remote_addr),
 		                   &conn->client.rsa);
 
-		DEBUG_TRACE("Incomming %sconnection from %s",
+		DEBUG_TRACE("Incoming %sconnection from %s",
 		            (conn->client.is_ssl ? "SSL " : ""),
 		            conn->request_info.remote_addr);
 
@@ -20262,7 +20262,7 @@ free_context(struct mg_context *ctx)
 		if (callback_ret == 0) {
 			SSL_CTX_free(ctx->dd.ssl_ctx);
 		}
-		/* else: ignore error and ommit SSL_CTX_free in case
+		/* else: ignore error and omit SSL_CTX_free in case
 		 * callback_ret is 1 */
 	}
 #endif /* !NO_SSL */
