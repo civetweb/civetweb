@@ -3,7 +3,7 @@ Embedding CivetWeb
 
 CivetWeb is primarily designed so applications can easily add HTTP and HTTPS server as well as WebSocket (WS and WSS) server functionality.
 For example, a C/C++ application could use CivetWeb to enable a web service and configuration interface, to add a HTML5 data visualization interface, for automation or remote control, as a protocol gateway or as a HTTP/WebSocket client for firewall traversal.
-Often the easiest way to embedd CivetWeb is to add the civetweb.c file into your existing C project (see below).
+Often the easiest way to embed CivetWeb is to add the civetweb.c file into your existing C project (see below).
 
 CivetWeb can also be used as a stand-alone executable. It can deliver static files and offers built-in server side Lua, JavaScript and CGI support. Some instructions how to build the stand-alone server can be found in [Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md).
 
