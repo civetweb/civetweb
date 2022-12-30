@@ -524,7 +524,7 @@ Changes
 - Added new C++ abstraction class CivetServer
 - Added thread safety for and fixed websocket defects (Morgan McGuire)
 - Created PKGBUILD to use Arch distribution (Daniel Oaks)
-- Created new documentation on Embeddeding, Building and yaSSL (see docs/).
+- Created new documentation on Embedding, Building and yaSSL (see docs/).
 - Updated License file to include all licenses.
 - Replaced MD5 implementation due to questionable license.
      + This requires new source file md5.inl
@@ -547,7 +547,7 @@ Known Issues
 - Build support for VS6 and some other has been deprecated.
     + This does not impact embedded programs, just the stand-alone build.
     + The old Makefile was renamed to Makefile.deprecated.
-    + This is partcially do to lack fo testing.
+    + This is partcially do to lack of testing.
     + Need to find out what is actually in demand.
 - Build changes may impact current users.
     + As with any change of this type, changes may impact some users.
