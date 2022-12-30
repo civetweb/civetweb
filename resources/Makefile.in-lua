@@ -44,7 +44,7 @@ ifeq ($(WITH_LUA_VERSION), 504)
 endif
 
 ifneq ($(LUA_VERSION_KNOWN), 1)
-  $(error Lua: Unknwon version - $(WITH_LUA_VERSION))
+  $(error Lua: Unknown version - $(WITH_LUA_VERSION))
 endif
 
 
