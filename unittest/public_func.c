@@ -391,7 +391,7 @@ START_TEST(test_mg_get_var)
 	ck_assert_int_eq(ret, 10);
 	ck_assert_str_eq("this is it", buf);
 
-	/* longer value in the middle of a longer string - seccond occurrence of key
+	/* longer value in the middle of a longer string - second occurrence of key
 	 */
 	memset(buf, 77, sizeof(buf));
 	ret =

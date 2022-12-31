@@ -19,7 +19,7 @@
 |**`http_error`**|**`int (*http_error)( struct mg_connection *conn, int status, const char *msg );`**|
 | |The callback function `http_error()` is called by CivetWeb just before an HTTP error is to be sent to the client. The function allows the application to send a custom error page. The status code of the error is provided as a parameter. If the application sends their own error page, it must return 0 to signal CivetWeb that no further processing is needed. If the returned value is not 0, CivetWeb will send an error page to the client.|
 |**`init_context`**|**`void (*init_context)( const struct mg_context *ctx );`**|
-| |The callback function `init_context()` is called after the CivetWeb server has been started and initialized, but before any requests are served. This allowes the application to perform some initialization activities before the first requests are handled.|
+| |The callback function `init_context()` is called after the CivetWeb server has been started and initialized, but before any requests are served. This allows the application to perform some initialization activities before the first requests are handled.|
 |**`init_lua`**|**`void (*init_lua)( const struct mg_connection *conn, void *lua_context, unsigned context_flags );`**|
 | |The callback function `init_lua()` is called just before a Lua server page is to be served. Lua page serving must have been enabled at compile time for this callback function to be called. The parameter `lua_context` is a `lua_State *` pointer. The parameter `context_flags` indicate the type of Lua environment. |
 |**`exit_lua`**|**`void (*init_lua)( const struct mg_connection *conn, void *lua_context, unsigned context_flags );`**|

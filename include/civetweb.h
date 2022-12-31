@@ -654,7 +654,7 @@ CIVETWEB_API void *mg_get_thread_pointer(const struct mg_connection *conn);
    or write to the connection. */
 /* Note: An alternative is to use the init_connection callback
    instead to initialize the user connection data pointer. It is
-   reccomended to supply a pointer to some user defined data structure
+   recommended to supply a pointer to some user defined data structure
    as conn_data initializer in init_connection. In case it is required
    to change some data after the init_connection call, store another
    data pointer in the user defined data structure and modify that
@@ -1128,7 +1128,7 @@ CIVETWEB_API int mg_get_var2(const char *data,
    required to increase this value at compile time.
 
    Parameters:
-     data: form encoded iput string. Will be modified by this function.
+     data: form encoded input string. Will be modified by this function.
      form_fields: output list of name/value-pairs. A buffer with a size
                   specified by num_form_fields must be provided by the
                   caller.
@@ -1652,7 +1652,7 @@ CIVETWEB_API unsigned mg_check_feature(unsigned feature);
      buffer: Store system information as string here.
      buflen: Length of buffer (including a byte required for a terminating 0).
    Return:
-     Available size of system information, exluding a terminating 0.
+     Available size of system information, excluding a terminating 0.
      The information is complete, if the return value is smaller than buflen.
      The result is a JSON formatted string, the exact content may vary.
    Note:
@@ -1669,7 +1669,7 @@ CIVETWEB_API int mg_get_system_info(char *buffer, int buflen);
      buffer: Store context information here.
      buflen: Length of buffer (including a byte required for a terminating 0).
    Return:
-     Available size of system information, exluding a terminating 0.
+     Available size of system information, excluding a terminating 0.
      The information is complete, if the return value is smaller than buflen.
      The result is a JSON formatted string, the exact content may vary.
      Note:
@@ -1698,7 +1698,7 @@ CIVETWEB_API void mg_disable_connection_keep_alive(struct mg_connection *conn);
      buffer: Store context information here.
      buflen: Length of buffer (including a byte required for a terminating 0).
    Return:
-     Available size of system information, exluding a terminating 0.
+     Available size of system information, excluding a terminating 0.
      The information is complete, if the return value is smaller than buflen.
      The result is a JSON formatted string, the exact content may vary.
    Note:

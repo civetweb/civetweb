@@ -787,7 +787,7 @@ END_TEST
 
 START_TEST(test_is_valid_uri)
 {
-	/* is_valid_uri is superseeded by get_uri_type */
+	/* is_valid_uri is superseded by get_uri_type */
 	ck_assert_int_eq(2, get_uri_type("/api"));
 	ck_assert_int_eq(2, get_uri_type("/api/"));
 	ck_assert_int_eq(2,

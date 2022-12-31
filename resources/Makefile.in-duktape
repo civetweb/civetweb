@@ -46,7 +46,7 @@ ifeq ($(WITH_DUKTAPE_VERSION), 202)
 endif
 
 ifneq ($(DUKTAPE_VERSION_KNOWN), 1)
-  $(error Duktape: Unknwon version - $(WITH_DUKTAPE_VERSION))
+  $(error Duktape: Unknown version - $(WITH_DUKTAPE_VERSION))
 endif
 
 

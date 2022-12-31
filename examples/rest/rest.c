@@ -41,7 +41,7 @@ SendJSON(struct mg_connection *conn, cJSON *json_obj)
 	mg_write(conn, json_str, json_str_len);
 
 	/* Add a newline. This is not required, but the result is more
-	 * human-readable in a debuger. */
+	 * human-readable in a debugger. */
 	mg_write(conn, "\n", 1);
 
 	/* Free string allocated by cJSON_Print* */
@@ -213,7 +213,7 @@ ExampleHandler(struct mg_connection *conn, void *cbdata)
 	if ((ret != url_len) || (mcx.num_matches != 2)) {
 		/* Note: Could have done this with a $ at the end of the match
 		 * pattern as well. Then we would have to check for a return value
-		 * of -1 only. Here we use this version as minumum modification
+		 * of -1 only. Here we use this version as minimum modification
 		 * of the existing code. */
 		printf("Match ret: %i\n", (int)ret);
 		mg_send_http_error(conn, 404, "Invalid path: %s\n", url);

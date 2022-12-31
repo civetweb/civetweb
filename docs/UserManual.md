@@ -102,7 +102,7 @@ All other characters in the pattern match themselves. Examples:
     **.cgi$          Any string that ends with .cgi
     /foo             Any string that begins with /foo
     **a$|**b$        Any string that ends with a or b
-    
+
     /data/????.css$  Matches css files with 4 letter names in "/data" folder.
     /data/*.js$      Matches all js file names in "/data" folder.
     /api/*/*.cgi$    Matches "/api/resourcetype/resourcename.cgi"
@@ -150,7 +150,7 @@ See the [Wikipedia page on CORS](http://en.wikipedia.org/wiki/Cross-origin_resou
 An Access Control List (ACL) allows restrictions to be put on the list of IP
 addresses which have access to the web server. In the case of the CivetWeb
 web server, the ACL is a comma separated list of IP subnets, where each
-subnet is pre-pended by either a `-` or a `+` sign. A plus sign means allow,
+subnet is prepended by either a `-` or a `+` sign. A plus sign means allow,
 where a minus sign means deny. If a subnet mask is omitted, such as `-1.2.3.4`,
 this means to deny only that single IP address.
 
@@ -438,7 +438,7 @@ SSL port. For example, if `listening_ports` is `80r,443s`, then all
 HTTP traffic coming at port 80 will be redirected to HTTPS port 443.
 
 It is possible to specify an IP address to bind to. In this case,
-an IP address and a colon must be pre-pended to the port number.
+an IP address and a colon must be prepended to the port number.
 For example, to bind to a loopback interface on port 80 and to
 all interfaces on HTTPS port 443, use `127.0.0.1:80,443s`.
 
@@ -688,7 +688,7 @@ TLS1.1+TLS1.2+TLS1.3 | 3
 TLS1.2+TLS1.3 | 4
 TLS1.3 | 5
 
-TLS version 1.3 is only available if you are using an up-to-date TLS libary.
+TLS version 1.3 is only available if you are using an up-to-date TLS library.
 The default setting has been changed from 0 to 4 in CivetWeb 1.14.
 
 ### ssl\_short\_trust `no`
@@ -977,8 +977,8 @@ mg (table):
     mg.get_mime_type(filename)  -- get MIME type of a file
     mg.get_option(name)         -- get configuration option value from name
     mg.get_response_code_text(n)-- get response code text for n, nil otherwise
-    mg.get_var(str, varname, [occurance])  -- extract the first occurance of variable from (query) string
-                                --     otherwise the nth occurance if supplied, nil if not found
+    mg.get_var(str, varname, [occurrence])  -- extract the first occurrence of variable from (query) string
+                                --     otherwise the nth occurrence if supplied, nil if not found
     mg.send_file(filename)      -- send a file, including all required HTTP headers
     mg.send_file_body(filename) -- send a file, excluding HTTP headers
     mg.send_http_error(n,str)   -- send http error code n with string body
@@ -1017,7 +1017,7 @@ mg (table):
          .https                 -- true if accessed by https://, false otherwise
          .remote_user           -- user name if authenticated, nil otherwise
          .auth_type             -- Digest
-         .client_cert           -- Table with ssl certificate infomation
+         .client_cert           -- Table with ssl certificate information
               .subject          -- Certificate subject
               .issuer           -- Certificate issuer
               .serial           -- Certificate serial number
@@ -1125,7 +1125,7 @@ some features of the "mg" library are not available yet. Use the "start()" callb
 function instead.
 
 A Lua background script may define the following functions:
-    `start()`        -- called wnen the server is started
+    `start()`        -- called when the server is started
     `stop()`         -- called when the server is stopped
     `log(req, res)`  -- called when an access log entry is created
 

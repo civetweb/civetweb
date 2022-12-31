@@ -1141,7 +1141,7 @@ websock_server_data(struct mg_connection *conn,
 	}
 	mark_point();
 
-	return 1; /* return 1 to keep the connetion open */
+	return 1; /* return 1 to keep the connection open */
 }
 
 
@@ -5017,8 +5017,8 @@ START_TEST(test_minimal_http_server_callback)
 	/* Call a test client */
 	minimal_http_client_check("127.0.0.1",
 	                          8080,
-	                          "/8?Altenative=Response",
-	                          "Altenative=Response");
+	                          "/8?Alternative=Response",
+	                          "Alternative=Response");
 
 	/* Run the server for 5 seconds */
 	test_sleep(5);
@@ -5125,8 +5125,8 @@ START_TEST(test_minimal_https_server_callback)
 	/* Call a test client */
 	minimal_https_client_check("127.0.0.1",
 	                           8443,
-	                           "/8?Altenative=Response",
-	                           "Altenative=Response");
+	                           "/8?Alternative=Response",
+	                           "Alternative=Response");
 
 	/* Run the server for 5 seconds */
 	test_sleep(5);

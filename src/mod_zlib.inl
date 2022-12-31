@@ -12,7 +12,7 @@ zalloc(void *opaque, uInt items, uInt size)
 {
 	struct mg_connection *conn = (struct mg_connection *)opaque;
 	void *ret = mg_calloc_ctx(items, size, conn->phys_ctx);
-	(void)conn; /* mg_calloc_ctx makro might not need it */
+	(void)conn; /* mg_calloc_ctx macro might not need it */
 
 	return ret;
 }

@@ -163,7 +163,7 @@ make build COPT="-DNDEBUG -DNO_CGI"
 |                              |                                                                     |
 | `USE_ALPN`                   | enable Application-Level-Protocol-Negotiation, required for HTTP2   |
 | `USE_DUKTAPE`                | enable server-side JavaScript (using Duktape library)               |
-| `USE_HTTP2`                  | enable HTTP2 support (experimental, not reccomended for production) |
+| `USE_HTTP2`                  | enable HTTP2 support (experimental, not recommended for production) |
 | `USE_IPV6`                   | enable IPv6 support                                                 |
 | `USE_LUA`                    | enable Lua support                                                  |
 | `USE_SERVER_STATS`           | enable server statistics support                                    |

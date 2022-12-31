@@ -17,7 +17,7 @@
 
 ### Description
 
-The function `mg_md5()` caluclates the MD5 checksum of a NULL terminated list of NUL terminated ASCII strings. The MD5 checksum is returned in human readable format as an MD5 string in a caller supplied buffer.
+The function `mg_md5()` calculates the MD5 checksum of a NULL terminated list of NUL terminated ASCII strings. The MD5 checksum is returned in human readable format as an MD5 string in a caller supplied buffer.
 
 The function returns a pointer to the supplied result buffer.
 

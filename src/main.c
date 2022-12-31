@@ -1302,7 +1302,7 @@ start_civetweb(int argc, char *argv[])
 				if (mg_strcasecmp(options[i + 1], "yes") == 0) {
 					fprintf(stdout, "daemonize.\n");
 					if (daemon(0, 0) != 0) {
-						fprintf(stdout, "Faild to daemonize main process.\n");
+						fprintf(stdout, "Failed to daemonize main process.\n");
 						exit(EXIT_FAILURE);
 					}
 					FILE *fp;
@@ -1726,7 +1726,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 
 				if (path[0] != '\0') {
-					/* Something has been choosen */
+					/* Something has been chosen */
 					SetWindowText(GetDlgItem(hDlg, ID_CONTROLS + i), path);
 				}
 			}

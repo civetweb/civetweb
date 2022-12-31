@@ -44,7 +44,7 @@ function log(req, resp)
 	  logfile:flush();
 	end
 
-	-- Loging already done here
+	-- Logging already done here
 	return false;
 end
 

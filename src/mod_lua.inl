@@ -946,7 +946,7 @@ lsp_include(lua_State *L)
 
 			} else if ((*path_type == 'r') || (*path_type == 'f')) {
 				/* "relative" = file name is relative to the
-				 * currect document */
+				 * current document */
 				(void)mg_snprintf(
 				    conn,
 				    &truncated,
@@ -1270,7 +1270,7 @@ lsp_split_form_urlencoded(lua_State *L)
 	/* Get input (const string) */
 	in = lua_tolstring(L, 1, &len);
 
-	/* Create a modifyable copy */
+	/* Create a modifiable copy */
 	buf = (char *)mg_malloc_ctx(len + 1, ctx);
 	if (buf == NULL) {
 		return luaL_error(L, "out of memory in invalid split_form_data() call");
@@ -1624,10 +1624,10 @@ lsp_random(lua_State *L)
 		/* The civetweb internal random number generator will generate
 		 * a 64 bit random number. */
 		uint64_t r = get_random();
-		/* Lua "number" is a IEEE 754 double precission float:
+		/* Lua "number" is a IEEE 754 double precision float:
 		 * https://en.wikipedia.org/wiki/Double-precision_floating-point_format
 		 * Thus, mask with 2^53-1 to get an integer with the maximum
-		 * precission available. */
+		 * precision available. */
 		r &= ((((uint64_t)1) << 53) - 1);
 		lua_pushnumber(L, (double)r);
 		return 1;
@@ -2485,7 +2485,7 @@ enum {
 	LUA_ENV_TYPE_LUA_SERVER_PAGE = 0, /* page.lp */
 	LUA_ENV_TYPE_PLAIN_LUA_PAGE = 1,  /* script.lua */
 	LUA_ENV_TYPE_LUA_WEBSOCKET = 2,   /* websock.lua */
-	LUA_ENV_TYPE_BACKGROUND = 9 /* Lua backgrond script or exec from cmdline */
+	LUA_ENV_TYPE_BACKGROUND = 9 /* Lua background script or exec from cmdline */
 };
 
 
