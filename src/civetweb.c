@@ -3327,7 +3327,7 @@ sockaddr_to_string(char *buf, size_t len, const union usa *usa)
 		0,
 		NI_NUMERICHOST);
 		*/
-		mg_strlcpy(buf, UNIX_DOMAIN_SOCKET_SERVER_NAME, len)
+		mg_strlcpy(buf, UNIX_DOMAIN_SOCKET_SERVER_NAME, len);
 	}
 #endif
 }
@@ -14703,7 +14703,8 @@ handle_request(struct mg_connection *conn)
 		url_decode_in_place((char *)ri->local_uri);
 	}
 
-	/* URL decode the query-string only if explicitly set in the configuration */
+	/* URL decode the query-string only if explicitly set in the configuration
+	 */
 	if (conn->request_info.query_string) {
 		if (should_decode_query_string(conn)) {
 			url_decode_in_place((char *)conn->request_info.query_string);
