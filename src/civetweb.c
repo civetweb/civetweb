@@ -6594,7 +6594,7 @@ handle_request_stat_log(struct mg_connection *conn)
 
 #if defined(USE_HTTP2)
 #if defined(NO_SSL)
-#error "HTTP2 requires ALPN, APLN requires SSL/TLS"
+#error "HTTP2 requires ALPN, ALPN requires SSL/TLS"
 #endif
 #define USE_ALPN
 #include "http2.inl"
