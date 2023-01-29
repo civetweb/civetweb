@@ -296,12 +296,14 @@ mg_response_header_send(struct mg_connection *conn)
 #if defined(USE_HTTP2)
 	if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {
 		int ret = http2_send_response_headers(conn);
+		free_buffered_response_header_list(conn);
 		return (ret ? 0 : -4);
 	}
 #endif
 
 	/* Send */
 	if (!send_http1_response_status_line(conn)) {
+		free_buffered_response_header_list(conn);
 		return -4;
 	};
 	for (i = 0; i < conn->response_info.num_headers; i++) {
@@ -335,5 +337,6 @@ mg_response_header_send(struct mg_connection *conn)
 	conn->request_state = 3;
 
 	/* ok */
+	free_buffered_response_header_list(conn);
 	return 0;
 }
