@@ -5964,15 +5964,18 @@ mg_poll(struct mg_pollfd *pfd,
 
 		result = poll(pfd, n, ms_now);
 		if (result != 0) {
-			/* Poll returned either success (1) or error (-1).
-			 * Forward both to the caller. */
-			if ((check_pollerr)
-			    && ((pfd[0].revents & (POLLIN | POLLOUT | POLLERR))
-			        == POLLERR)) {
-				/* One and only file descriptor returned error */
-				return -1;
+			int err = ERRNO;
+			if (!ERROR_TRY_AGAIN(err)) {
+				/* Poll returned either success (1) or error (-1).
+				 * Forward both to the caller. */
+				if ((check_pollerr)
+				    && ((pfd[0].revents & (POLLIN | POLLOUT | POLLERR))
+				        == POLLERR)) {
+					/* One and only file descriptor returned error */
+					return -1;
+				}
+				return result;
 			}
-			return result;
 		}
 
 		/* Poll returned timeout (0). */
