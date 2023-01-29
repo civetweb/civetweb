@@ -561,7 +561,9 @@ CivetServer::getCookie(struct mg_connection *conn,
 	                          _cookieValue,
 	                          sizeof(_cookieValue));
 	cookieValue.clear();
-	cookieValue.append(_cookieValue);
+	if (lRead >= 0) {
+		cookieValue.append(_cookieValue);
+	}
 	return lRead;
 }
 
