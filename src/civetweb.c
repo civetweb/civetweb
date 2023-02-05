@@ -22352,7 +22352,7 @@ mg_init_library(unsigned features)
 				len += 2;
 			}
 		}
-		all_methods = mg_malloc(len);
+		all_methods = (char *)mg_malloc(len);
 		if (!all_methods) {
 			/* Must never happen */
 			mg_global_unlock();
