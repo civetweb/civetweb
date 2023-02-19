@@ -35,7 +35,7 @@ mg_match_impl(const char *pat,
 	size_t i_pat = 0; /* Pattern index */
 	size_t i_str = 0; /* Pattern index */
 
-	uint8_t case_sensitive = ((mcx != NULL) ? mcx->case_sensitive : 0);
+	int case_sensitive = ((mcx != NULL) ? mcx->case_sensitive : 0); /* 0 or 1 */
 
 	while (i_pat < pat_len) {
 
