@@ -8766,11 +8766,7 @@ read_auth_file(struct mg_file *filep,
 			switch (workdata->ah.type) {
 			case 1: /* Basic */
 			{
-				size_t mlen = strlen(workdata->f_user)
-				              + strlen(workdata->domain)
-				              + strlen(workdata->ah.plain_password) + 3;
 				char md5[33];
-
 				mg_md5(md5,
 				       workdata->f_user,
 				       ":",
