@@ -1527,7 +1527,7 @@ lsp_base64_encode(lua_State *L)
 				                 (int)text_len,
 				                 dst,
 				                 &dst_len);
-				lua_pushlstring(L, dst, dst_len);
+				lua_pushstring(L, dst);
 				mg_free(dst);
 			} else {
 				return luaL_error(L, "out of memory in base64_encode() call");
