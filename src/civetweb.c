@@ -5967,7 +5967,7 @@ mg_poll(struct mg_pollfd *pfd,
 		result = poll(pfd, n, ms_now);
 		if (result != 0) {
 			int err = ERRNO;
-			if (!ERROR_TRY_AGAIN(err)) {
+			if ((result == 1) || (!ERROR_TRY_AGAIN(err))) {
 				/* Poll returned either success (1) or error (-1).
 				 * Forward both to the caller. */
 				if ((check_pollerr)
