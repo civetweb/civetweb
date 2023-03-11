@@ -20123,6 +20123,7 @@ master_thread_run(struct mg_context *ctx)
 				        "stop");
 			}
 		}
+		DEBUG_TRACE("Close Lua background state %p", lstate);
 		lua_close(lstate);
 
 		ctx->lua_background_state = 0;

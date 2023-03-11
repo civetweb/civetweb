@@ -2800,6 +2800,12 @@ prepare_lua_environment(struct mg_context *ctx,
 
 	int lua_context_flags = lua_env_type;
 
+	DEBUG_TRACE("Lua environment type %i: %p, connection %p, script %s",
+	            lua_env_type,
+	            L,
+	            conn,
+	            script_name);
+
 	civetweb_open_lua_libs(L);
 
 #if defined(MG_EXPERIMENTAL_INTERFACES)
@@ -3057,6 +3063,7 @@ mg_exec_lua_script(struct mg_connection *conn,
 		} else {
 			lua_pcall(L, 0, 0, -2);
 		}
+		DEBUG_TRACE("Close Lua environment %p", L);
 		lua_close(L);
 	}
 }
@@ -3216,10 +3223,13 @@ handle_lsp_request(struct mg_connection *conn,
 
 cleanup_handle_lsp_request:
 
-	if (L != NULL && ls == NULL)
+	if (L != NULL && ls == NULL) {
+		DEBUG_TRACE("Close Lua environment %p", L);
 		lua_close(L);
-	if (p != NULL)
+	}
+	if (p != NULL) {
 		munmap(p, filep->stat.size);
+	}
 	(void)mg_fclose(&filep->access);
 
 	return error;
@@ -3515,6 +3525,7 @@ mg_lua_context_script_prepare(const char *file_name,
 		            "Error loading file %s: %s\n",
 		            file_name,
 		            lua_err_txt);
+		DEBUG_TRACE("Close Lua environment %p", L);
 		lua_close(L);
 		return 0;
 	}
@@ -3551,6 +3562,7 @@ mg_lua_context_script_run(lua_State *L,
 		            "Error running file %s: %s\n",
 		            file_name,
 		            lua_err_txt);
+		DEBUG_TRACE("Close Lua environment %p", L);
 		lua_close(L);
 		return 0;
 	}
@@ -3567,6 +3579,7 @@ mg_lua_context_script_run(lua_State *L,
 			            ebuf_len,
 			            "Script %s returned false\n",
 			            file_name);
+			DEBUG_TRACE("Close Lua environment %p", L);
 			lua_close(L);
 			return 0;
 		}
@@ -3596,6 +3609,8 @@ lua_ctx_exit(struct mg_context *ctx)
 
 	mg_lock_context(ctx);
 	while (*shared_websock_list) {
+		DEBUG_TRACE("Close Lua environment %p",
+		            (*shared_websock_list)->ws.state);
 		lua_close((*shared_websock_list)->ws.state);
 		mg_free((*shared_websock_list)->ws.script);
 
@@ -3629,6 +3644,7 @@ run_lua(const char *file_name)
 		} else {
 			func_ret = EXIT_SUCCESS;
 		}
+		DEBUG_TRACE("Close Lua environment %p", L);
 		lua_close(L);
 	} else {
 		fprintf(stderr, "%s\n", ebuf);
