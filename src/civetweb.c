@@ -6672,6 +6672,22 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 					if (mg_read_inner(conn, lenbuf + i, 1) != 1) {
 						lenbuf[i] = 0;
 					}
+					if ((i > 0) && (lenbuf[i] == ';'))
+					{
+						// chunk extension --> skip chars until next CR
+						//
+						// RFC 2616, 3.6.1 Chunked Transfer Coding
+					    // (https://www.rfc-editor.org/rfc/rfc2616#page-25)
+						//
+						// chunk          = chunk-size [ chunk-extension ] CRLF
+						//                  chunk-data CRLF
+						// ...
+						// chunk-extension= *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+						do
+							++conn->content_len;
+						while (mg_read_inner(conn, lenbuf + i, 1) == 1 &&
+							   lenbuf[i] != '\r');
+					}
 					if ((i > 0) && (lenbuf[i] == '\r')
 					    && (lenbuf[i - 1] != '\r')) {
 						continue;
@@ -6697,13 +6713,56 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 					conn->is_chunked = 2;
 					return -1;
 				}
-				if (chunkSize == 0) {
+				if (conn->is_chunked == 3) {
 					/* try discarding trailer for keep-alive */
-					conn->content_len += 2;
-					if ((mg_read_inner(conn, lenbuf, 2) == 2)
-					    && (lenbuf[0] == '\r') && (lenbuf[1] == '\n')) {
-						conn->is_chunked = 4;
+
+					// We found the last chunk (length 0) including the
+					// CRLF that terminates that chunk. Now follows a possibly
+					// empty trailer and a final CRLF.
+					//
+					// see RFC 2616, 3.6.1 Chunked Transfer Coding
+					// (https://www.rfc-editor.org/rfc/rfc2616#page-25)
+					//
+					// Chunked-Body   = *chunk
+					// 	                last-chunk
+					// 	                trailer
+					// 	                CRLF
+					// ...
+					// last-chunk     = 1*("0") [ chunk-extension ] CRLF
+					// ...
+					// trailer        = *(entity-header CRLF)
+
+					int crlf_count = 2;  // one CRLF already determined
+
+					while (crlf_count < 4 && conn->is_chunked == 3) {
+						++conn->content_len;
+						if (mg_read_inner(conn, lenbuf, 1) == 1) {
+							if ((crlf_count == 0 || crlf_count == 2)) {
+								if (lenbuf[0] == '\r')
+									++crlf_count;
+								else
+									crlf_count = 0;
+							}
+							else {
+								// previous character was a CR
+								// --> next character must be LF
+
+								if (lenbuf[0] == '\n')
+									++crlf_count;
+								else
+									conn->is_chunked = 2;
+							}
+						}
+						else
+							// premature end of trailer
+							conn->is_chunked = 2;
 					}
+
+					if (conn->is_chunked == 2)
+						return -1;
+					else
+						conn->is_chunked = 4;
+
 					break;
 				}
 
