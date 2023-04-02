@@ -1,11 +1,19 @@
 #if defined(USE_MBEDTLS) // USE_MBEDTLS used with NO_SSL
 
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/error.h"
+
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+// The file include/mbedtls/net.h was removed in v3.0.0 because its only
+// function was to include mbedtls/net_sockets.h which now should be included
+// directly.
+#include "mbedtls/net_sockets.h"
+#else
 #include "mbedtls/net.h"
+#endif
+
 #include "mbedtls/pk.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/ssl.h"
@@ -90,7 +98,16 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 		return -1;
 	}
 
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+	// mbedtls_pk_parse_keyfile() has changed in mbedTLS 3.0. You now need
+	// to pass a properly seeded, cryptographically secure RNG when calling
+	// these functions. It is used for blinding, a countermeasure against
+	// side-channel attacks.
+	// https://github.com/Mbed-TLS/mbedtls/blob/development/docs/3.0-migration-guide.md#some-functions-gained-an-rng-parameter
+	rc = mbedtls_pk_parse_keyfile(&ctx->pkey, crt, NULL, mbedtls_ctr_drbg_random, &ctx->ctr);
+#else
 	rc = mbedtls_pk_parse_keyfile(&ctx->pkey, crt, NULL);
+#endif
 	if (rc != 0) {
 		DEBUG_TRACE("TLS parse key file failed (%i)", rc);
 		return -1;
