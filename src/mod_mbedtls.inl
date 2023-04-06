@@ -104,7 +104,8 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 	// these functions. It is used for blinding, a countermeasure against
 	// side-channel attacks.
 	// https://github.com/Mbed-TLS/mbedtls/blob/development/docs/3.0-migration-guide.md#some-functions-gained-an-rng-parameter
-	rc = mbedtls_pk_parse_keyfile(&ctx->pkey, crt, NULL, mbedtls_ctr_drbg_random, &ctx->ctr);
+	rc = mbedtls_pk_parse_keyfile(
+	    &ctx->pkey, crt, NULL, mbedtls_ctr_drbg_random, &ctx->ctr);
 #else
 	rc = mbedtls_pk_parse_keyfile(&ctx->pkey, crt, NULL);
 #endif

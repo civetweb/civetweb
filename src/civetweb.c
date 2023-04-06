@@ -6672,21 +6672,21 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 					if (mg_read_inner(conn, lenbuf + i, 1) != 1) {
 						lenbuf[i] = 0;
 					}
-					if ((i > 0) && (lenbuf[i] == ';'))
-					{
+					if ((i > 0) && (lenbuf[i] == ';')) {
 						// chunk extension --> skip chars until next CR
 						//
 						// RFC 2616, 3.6.1 Chunked Transfer Coding
-					    // (https://www.rfc-editor.org/rfc/rfc2616#page-25)
+						// (https://www.rfc-editor.org/rfc/rfc2616#page-25)
 						//
 						// chunk          = chunk-size [ chunk-extension ] CRLF
 						//                  chunk-data CRLF
 						// ...
-						// chunk-extension= *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+						// chunk-extension= *( ";" chunk-ext-name [ "="
+						// chunk-ext-val ] )
 						do
 							++conn->content_len;
-						while (mg_read_inner(conn, lenbuf + i, 1) == 1 &&
-							   lenbuf[i] != '\r');
+						while (mg_read_inner(conn, lenbuf + i, 1) == 1
+						       && lenbuf[i] != '\r');
 					}
 					if ((i > 0) && (lenbuf[i] == '\r')
 					    && (lenbuf[i - 1] != '\r')) {
@@ -6732,7 +6732,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 					// ...
 					// trailer        = *(entity-header CRLF)
 
-					int crlf_count = 2;  // one CRLF already determined
+					int crlf_count = 2; // one CRLF already determined
 
 					while (crlf_count < 4 && conn->is_chunked == 3) {
 						++conn->content_len;
@@ -6742,8 +6742,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 									++crlf_count;
 								else
 									crlf_count = 0;
-							}
-							else {
+							} else {
 								// previous character was a CR
 								// --> next character must be LF
 
@@ -6752,8 +6751,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 								else
 									conn->is_chunked = 2;
 							}
-						}
-						else
+						} else
 							// premature end of trailer
 							conn->is_chunked = 2;
 					}
