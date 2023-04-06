@@ -2648,13 +2648,12 @@ static void *
 lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
 {
 	(void)osize; /* not used */
-
+	struct mg_context *ctx = (struct mg_context *)ud;
 	if (nsize == 0) {
 		mg_free(ptr);
 		return NULL;
 	}
-
-	return mg_realloc_ctx(ptr, nsize, (struct mg_context *)ud);
+	return mg_realloc_ctx(ptr, nsize, ctx);
 }
 
 

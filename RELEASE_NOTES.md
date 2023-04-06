@@ -1,11 +1,30 @@
 Release Notes v1.16
 ===
-### Objectives: *to be defined*
+### Objectives: *bug fixes, documentation, WebDAV*
 
 Changes
 -------
 
+- Define error codes for mg_start2, mg_start_domain2, mg_connect_client2
+- Fixes for OpenSSL 3.0 support
+- Add support for Mbed TLS v3.0.0
+- WebDAV should understand Windows File Explorer (experimental)
+- Accept HTTP basic authentication
+- Make pattern matching function availible in the public interface
+- Make base64 encoding and decoding functions available
+- Various fixes for HTTP/2 support
+- Additional examples
+- Fixes and updates to existing examples
+- Fix spelling errors in code and documentation
+- Remove Conan support
 - Update version number
+
+Known Issues
+-----
+
+- The WebDAV support when opening the web server in the Windows Explorer has various limitations when renaming or moving files and folders.
+- In particular file names in non-latin characters may break when using WebDAV with the Windows Explorer.
+
 
 
 Release Notes v1.15
