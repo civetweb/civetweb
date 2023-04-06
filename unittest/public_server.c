@@ -4900,6 +4900,7 @@ START_TEST(test_minimal_tls_client)
 	const char *external_server_ip;
 	mark_point();
 	external_server_ip = get_external_server_ip();
+	(void)external_server_ip; /* unused in some cases */
 	mark_point();
 
 #if !defined(NO_SSL) /* dont run https test if SSL is not enabled */

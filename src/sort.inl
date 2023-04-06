@@ -14,32 +14,32 @@ mg_sort(void *data,
 	 */
 
 	/* We use ShellSort here with this gap sequence: https://oeis.org/A102549 */
-	int A102549[9] = {1, 4, 10, 23, 57, 132, 301, 701, 1750};
-	int Aidx, gap, i, j, k;
+	size_t A102549[9] = {1, 4, 10, 23, 57, 132, 301, 701, 1750};
+	size_t gap, i, j, k;
+	int Aidx;
 	void *tmp = alloca(elemsize);
 
 	for (Aidx = 8; Aidx >= 0; Aidx--) {
 		gap = A102549[Aidx];
-		if (gap > ((int)elemcount / 2)) {
+		if (gap > (elemcount / 2)) {
 			continue;
 		}
 		for (i = 0; i < gap; i++) {
-			for (j = i; j < (int)elemcount; j += gap) {
-				memcpy(tmp, (void *)((ptrdiff_t)data + elemsize * j), elemsize);
+			for (j = i; j < elemcount; j += gap) {
+				memcpy(tmp, (void *)((size_t)data + elemsize * j), elemsize);
 
 				for (k = j; k >= gap; k -= gap) {
-					void *cmp =
-					    (void *)((ptrdiff_t)data + elemsize * (k - gap));
+					void *cmp = (void *)((size_t)data + elemsize * (k - gap));
 					int cmpres = compfunc(cmp, tmp, userarg);
 					if (cmpres > 0) {
-						memcpy((void *)((ptrdiff_t)data + elemsize * k),
+						memcpy((void *)((size_t)data + elemsize * k),
 						       cmp,
 						       elemsize);
 					} else {
 						break;
 					}
 				}
-				memcpy((void *)((ptrdiff_t)data + elemsize * k), tmp, elemsize);
+				memcpy((void *)((size_t)data + elemsize * k), tmp, elemsize);
 			}
 		}
 	}

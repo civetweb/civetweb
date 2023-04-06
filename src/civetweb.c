@@ -5461,7 +5461,7 @@ spawn_process(struct mg_connection *conn,
               int fdout[2],
               int fderr[2],
               const char *dir,
-              unsigned char cgi_config_idx)
+              int cgi_config_idx)
 {
 	HANDLE me;
 	char *interp;
@@ -5773,7 +5773,7 @@ spawn_process(struct mg_connection *conn,
               int fdout[2],
               int fderr[2],
               const char *dir,
-              unsigned char cgi_config_idx)
+              int cgi_config_idx)
 {
 	pid_t pid;
 	const char *interp;
@@ -7358,13 +7358,13 @@ static unsigned char
 b64reverse(char letter)
 {
 	if ((letter >= 'A') && (letter <= 'Z')) {
-		return letter - 'A';
+		return (unsigned char)(letter - 'A');
 	}
 	if ((letter >= 'a') && (letter <= 'z')) {
-		return letter - 'a' + 26;
+		return (unsigned char)(letter - 'a' + 26);
 	}
 	if ((letter >= '0') && (letter <= '9')) {
-		return letter - '0' + 52;
+		return (unsigned char)(letter - '0' + 52);
 	}
 	if (letter == '+') {
 		return 62;
@@ -7419,19 +7419,22 @@ mg_base64_decode(const char *src,
 
 		/* Add first (of 3) decoded character */
 		if (dst_len_used < dst_len_limit) {
-			dst[dst_len_used] = (a << 2) + (b >> 4);
+			dst[dst_len_used] = (unsigned char)((unsigned char)(a << 2)
+			                                    + (unsigned char)(b >> 4));
 		}
 		dst_len_used++;
 
 		if (c != 255) {
 			if (dst_len_used < dst_len_limit) {
 
-				dst[dst_len_used] = (b << 4) + (c >> 2);
+				dst[dst_len_used] = (unsigned char)((unsigned char)(b << 4)
+				                                    + (unsigned char)(c >> 2));
 			}
 			dst_len_used++;
 			if (d != 255) {
 				if (dst_len_used < dst_len_limit) {
-					dst[dst_len_used] = (c << 6) + d;
+					dst[dst_len_used] =
+					    (unsigned char)((unsigned char)(c << 6) + d);
 				}
 				dst_len_used++;
 			}
@@ -7504,7 +7507,7 @@ extention_matches_script(
 )
 {
 #if !defined(NO_CGI)
-	unsigned char cgi_config_idx, inc, max;
+	int cgi_config_idx, inc, max;
 #endif
 
 #if defined(USE_LUA)
@@ -9108,10 +9111,17 @@ mg_modify_passwords_file_ha1(const char *fname,
 
 	/* Check if the file exists, and get file size */
 	if (0 == stat(fname, &st)) {
-		int temp_buf_len = (int)st.st_size + 1024;
+		int temp_buf_len;
+		if (st.st_size > 10485760) {
+			/* Some funster provided a >10 MB text file */
+			return 0;
+		}
+
+		/* Add enough space for one more line */
+		temp_buf_len = (int)st.st_size + 1024;
 
 		/* Allocate memory (instead of using a temporary file) */
-		temp_file = (char *)mg_calloc(temp_buf_len, 1);
+		temp_file = (char *)mg_calloc((size_t)temp_buf_len, 1);
 		if (!temp_file) {
 			/* Out of memory */
 			return 0;
@@ -9183,7 +9193,7 @@ mg_modify_passwords_file_ha1(const char *fname,
 
 	if ((temp_file != NULL) && (temp_file_offs > 0)) {
 		/* Store buffered content of old file */
-		if (fwrite(temp_file, 1, temp_file_offs, fp)
+		if (fwrite(temp_file, 1, (size_t)temp_file_offs, fp)
 		    != (size_t)temp_file_offs) {
 			result = 0;
 		}
@@ -9429,7 +9439,7 @@ connect_socket(
 	if (*sock == INVALID_SOCKET) {
 		if (error != NULL) {
 			error->code = MG_ERROR_DATA_CODE_OS_ERROR;
-			error->code_sub = ERRNO;
+			error->code_sub = (unsigned)ERRNO;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            error->text,
@@ -9443,7 +9453,7 @@ connect_socket(
 	if (0 != set_non_blocking_mode(*sock)) {
 		if (error != NULL) {
 			error->code = MG_ERROR_DATA_CODE_OS_ERROR;
-			error->code_sub = ERRNO;
+			error->code_sub = (unsigned)ERRNO;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            error->text,
@@ -9548,7 +9558,7 @@ connect_socket(
 		/* Not connected */
 		if (error != NULL) {
 			error->code = MG_ERROR_DATA_CODE_CONNECT_FAILED;
-			error->code_sub = ERRNO;
+			error->code_sub = (unsigned)ERRNO;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for ebuf */
 			            error->text,
@@ -11343,7 +11353,7 @@ static int
 prepare_cgi_environment(struct mg_connection *conn,
                         const char *prog,
                         struct cgi_environment *env,
-                        unsigned char cgi_config_idx)
+                        int cgi_config_idx)
 {
 	const char *s;
 	struct vec var_vec;
@@ -11575,7 +11585,7 @@ abort_cgi_process(void *data)
 static void
 handle_cgi_request(struct mg_connection *conn,
                    const char *prog,
-                   unsigned char cgi_config_idx)
+                   int cgi_config_idx)
 {
 	char *buf;
 	size_t buflen;
@@ -12017,9 +12027,9 @@ dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
 			const char *h =
 			    get_rel_url_at_current_server(destination_hdr, conn);
 			if (h) {
-				int len = (int)strlen(h);
+				size_t len = strlen(h);
 				local_dest = mg_malloc_ctx(len + 1, conn->phys_ctx);
-				mg_url_decode(h, len, local_dest, len + 1, 0);
+				mg_url_decode(h, (int)len, local_dest, (int)len + 1, 0);
 			}
 		}
 		if (local_dest != NULL) {
@@ -15345,7 +15355,7 @@ handle_file_based_request(struct mg_connection *conn,
                           struct mg_file *file)
 {
 #if !defined(NO_CGI)
-	unsigned char cgi_config_idx, inc, max;
+	int cgi_config_idx, inc, max;
 #endif
 
 	if (!conn || !conn->dom_ctx) {
@@ -21082,7 +21092,7 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 
 			if (error != NULL) {
 				error->code = MG_ERROR_DATA_CODE_OS_ERROR;
-				error->code_sub = ERRNO;
+				error->code_sub = (unsigned)ERRNO;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
@@ -21105,7 +21115,7 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 
 		if (error != NULL) {
 			error->code = MG_ERROR_DATA_CODE_OS_ERROR;
-			error->code_sub = ERRNO;
+			error->code_sub = (unsigned)ERRNO;
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
@@ -21290,7 +21300,7 @@ mg_start_domain2(struct mg_context *ctx,
 			mg_cry_ctx_internal(ctx, "%s: option value cannot be NULL", name);
 			if (error != NULL) {
 				error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
-				error->code_sub = idx;
+				error->code_sub = (unsigned)idx;
 				mg_snprintf(NULL,
 				            NULL, /* No truncation check for error buffers */
 				            error->text,
@@ -22348,7 +22358,8 @@ mg_init_library(unsigned features)
 	mg_global_lock();
 
 	if (mg_init_library_called <= 0) {
-		int i, len;
+		int i;
+		size_t len;
 
 #if defined(_WIN32)
 		int file_mutex_init = 1;
@@ -22401,7 +22412,7 @@ mg_init_library(unsigned features)
 		len = 1;
 		for (i = 0; http_methods[i].name != NULL; i++) {
 			size_t sl = strlen(http_methods[i].name);
-			len += (int)sl;
+			len += sl;
 			if (i > 0) {
 				len += 2;
 			}

@@ -86,7 +86,7 @@ mg_match_impl(const char *pat,
 				if (mcx) {
 					match_context_push(str + i_str, len, mcx);
 				}
-				return (i_str + len);
+				return ((ptrdiff_t)(i_str + len));
 			}
 
 			/* This loop searches for the longest possible match */
@@ -102,7 +102,7 @@ mg_match_impl(const char *pat,
 				if (mcx) {
 					match_context_push(str + i_str, len, mcx);
 				}
-				return (i_str + ret + len);
+				return ((ptrdiff_t)i_str + ret + (ptrdiff_t)len);
 			}
 
 			return -1;
