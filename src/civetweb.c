@@ -10006,6 +10006,7 @@ handle_directory_request(struct mg_connection *conn, const char *dir)
 
 	/* Body */
 	mg_printf(conn,
+	          "<!DOCTYPE html>"
 	          "<html><head><title>Index of %s</title>"
 	          "<style>th {text-align: left;}</style></head>"
 	          "<body><h1>Index of %s</h1><pre><table cellpadding=\"0\">"
