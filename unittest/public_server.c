@@ -1842,10 +1842,21 @@ START_TEST(test_request_handlers)
 	client_ri = mg_get_response_info(client_conn);
 
 	ck_assert(client_ri != NULL);
+	/* Result must be an error code*/
+	ck_assert_int_gt(client_ri->status_code, 400);
+	ck_assert_int_lt(client_ri->status_code, 500);
+
 #if defined(NO_FILES)
+	/* In case there is no filesystem, PUT is not a valid method */
 	ck_assert_int_eq(client_ri->status_code, 405); /* method not allowed */
 #else
-	ck_assert_int_eq(client_ri->status_code, 401); /* not authorized */
+	/* In case there is a filesystem but no auth file is provided,
+	 * PUT is not a valid method */
+	if (client_ri->status_code != 405) {
+		/* 401: It would be possible in principle, but there client needs
+		 * to send authentication data */
+		ck_assert_int_eq(client_ri->status_code, 401); /* not authorized */
+	}
 #endif
 	mg_close_connection(client_conn);
 
