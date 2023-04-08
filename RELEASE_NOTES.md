@@ -24,9 +24,8 @@ Changes
 Known Issues
 -----
 
-- The WebDAV support when opening the web server in the Windows Explorer has various limitations when renaming or moving files and folders.
+- The WebDAV support when using the Windows Explorer as client has various limitations when renaming or moving files and folders.
 - In particular file names in non-latin characters may break when using WebDAV with the Windows Explorer.
-
 
 
 Release Notes v1.15
