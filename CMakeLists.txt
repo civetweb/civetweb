@@ -81,7 +81,7 @@ option(CIVETWEB_ENABLE_CXX "Enables the C++ wrapper library" OFF)
 message(STATUS "C++ wrappers - ${CIVETWEB_ENABLE_CXX}")
 
 # IP Version 6
-option(CIVETWEB_ENABLE_IPV6 "Enables the IP version 6 support" OFF)
+option(CIVETWEB_ENABLE_IPV6 "Enables the IP version 6 support" ON)
 message(STATUS "IP Version 6 - ${CIVETWEB_ENABLE_IPV6}")
 
 # Websocket support
