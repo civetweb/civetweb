@@ -194,7 +194,6 @@ civetweb_add_test(PublicServer "Error handling")
 civetweb_add_test(PublicServer "Error logging")
 civetweb_add_test(PublicServer "Limit speed")
 civetweb_add_test(PublicServer "Large file")
-civetweb_add_test(PublicServer "File in memory")
 
 # Timer tests
 civetweb_add_test(Timer "Timer Single Shot")

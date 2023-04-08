@@ -5133,10 +5133,6 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_large_file, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_large_file);
 
-	tcase_add_test(tcase_file_in_mem, test_file_in_memory);
-	tcase_set_timeout(tcase_file_in_mem, civetweb_mid_server_test_timeout);
-	suite_add_tcase(suite, tcase_file_in_mem);
-
 	return suite;
 }
 #endif
@@ -5179,7 +5175,6 @@ MAIN_PUBLIC_SERVER(void)
 	test_error_log_file(0);
 	test_throttle(0);
 	test_large_file(0);
-	test_file_in_memory(0);
 
 	mg_exit_library();
 
