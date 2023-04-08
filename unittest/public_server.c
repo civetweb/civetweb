@@ -1801,9 +1801,9 @@ START_TEST(test_request_handlers)
 #else
 	ck_assert_int_eq(client_ri->status_code, 200);
 	i = mg_read(client_conn, buf, sizeof(buf));
-	ck_assert(i > 6);
-	buf[6] = 0;
-	ck_assert_str_eq(buf, "<html>");
+	ck_assert(i > 21);
+	buf[21] = 0;
+	ck_assert_str_eq(buf, "<!DOCTYPE html><html>");
 #endif
 	mg_close_connection(client_conn);
 
