@@ -2905,8 +2905,8 @@ prepare_lua_environment(struct mg_context *ctx,
 	    || (lua_env_type == LUA_ENV_TYPE_BACKGROUND)) {
 		reg_function(L, "set_timeout", lwebsocket_set_timeout);
 		reg_function(L, "set_interval", lwebsocket_set_interval);
-#endif
 	}
+#endif
 
 	reg_conn_function(L, "get_mime_type", lsp_get_mime_type, conn);
 	reg_conn_function(L, "get_option", lsp_get_option, conn);
