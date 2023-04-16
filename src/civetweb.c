@@ -1125,7 +1125,15 @@ mg_atomic_inc(volatile ptrdiff_t *addr)
 #if defined(_WIN64) && !defined(NO_ATOMICS)
 	ret = InterlockedIncrement64(addr);
 #elif defined(_WIN32) && !defined(NO_ATOMICS)
+#ifdef __cplusplus
+	/* For C++ the Microsoft Visual Studio compiler can not decide what
+	 * overloaded function prototpye in the SDC corresponds to "ptrdiff_t". */
+	static_assert(sizeof(ptrdiff_t) == sizeof(LONG), "Size mismatch");
+	static_assert(sizeof(ptrdiff_t) == sizeof(int32_t), "Size mismatch");
+	ret = InterlockedIncrement((LONG *)addr);
+#else
 	ret = InterlockedIncrement(addr);
+#endif
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
     && !defined(NO_ATOMICS)
@@ -1148,7 +1156,14 @@ mg_atomic_dec(volatile ptrdiff_t *addr)
 #if defined(_WIN64) && !defined(NO_ATOMICS)
 	ret = InterlockedDecrement64(addr);
 #elif defined(_WIN32) && !defined(NO_ATOMICS)
+#ifdef __cplusplus
+	/* see mg_atomic_inc */
+	static_assert(sizeof(ptrdiff_t) == sizeof(LONG), "Size mismatch");
+	static_assert(sizeof(ptrdiff_t) == sizeof(int32_t), "Size mismatch");
+	ret = InterlockedDecrement((LONG *)addr);
+#else
 	ret = InterlockedDecrement(addr);
+#endif
 #elif defined(__GNUC__)                                                        \
     && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))           \
     && !defined(NO_ATOMICS)
