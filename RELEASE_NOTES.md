@@ -1,3 +1,13 @@
+Release Notes v1.17 (work in progress)
+===
+### Objectives: *to be defined*
+
+Changes
+-------
+
+- Update version number
+
+
 Release Notes v1.16
 ===
 ### Objectives: *bug fixes, documentation, WebDAV*
@@ -20,6 +30,9 @@ Changes
 - Fix spelling errors in code and documentation
 - Remove Conan support
 - Update version number
+
+Note: A precompiled 32-bit executables for Windows is no longer provided, but only a 64 bit version.
+The source code itself still supports 32-bit platforms.
 
 Known Issues
 -----

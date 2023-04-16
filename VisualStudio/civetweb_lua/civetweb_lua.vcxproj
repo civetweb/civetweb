@@ -110,7 +110,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>rcedit-x86.exe $(OutDir)$(TargetName)$(TargetExt) --set-file-version 1.14 --set-product-version 1.14</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -159,7 +160,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>rcedit-x86.exe $(OutDir)$(TargetName)$(TargetExt) --set-file-version 1.15 --set-product-version 1.15</Command>
+      <Command>rcedit-x86.exe $(OutDir)$(TargetName)$(TargetExt) --set-file-version 1.17 --set-product-version 1.17</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -180,7 +181,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>rcedit-x86.exe $(OutDir)$(TargetName)$(TargetExt) --set-file-version 1.15 --set-product-version 1.15</Command>
+      <Command>rcedit-x86.exe $(OutDir)$(TargetName)$(TargetExt) --set-file-version 1.17 --set-product-version 1.17</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
