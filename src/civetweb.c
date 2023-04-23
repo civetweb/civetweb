@@ -12825,8 +12825,8 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 	    (uint64_t)(LOCK_DURATION_S) * (uint64_t)1000000000;
 	struct twebdav_lock *dav_lock = NULL;
 
-	if (!path || !conn
-		|| !conn->dom_ctx || !conn->request_info.remote_user || !conn->phys_ctx) {
+	if (!path || !conn || !conn->dom_ctx || !conn->request_info.remote_user
+	    || !conn->phys_ctx) {
 		return;
 	}
 
