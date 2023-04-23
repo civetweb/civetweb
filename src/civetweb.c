@@ -12823,11 +12823,14 @@ dav_lock_file(struct mg_connection *conn, const char *path)
 	int i;
 	uint64_t LOCK_DURATION_NS =
 	    (uint64_t)(LOCK_DURATION_S) * (uint64_t)1000000000;
-	struct twebdav_lock *dav_lock = conn->phys_ctx->webdav_lock;
+	struct twebdav_lock *dav_lock = NULL;
 
-	if (!path || !conn->dom_ctx || !conn->request_info.remote_user) {
+	if (!path || !conn
+		|| !conn->dom_ctx || !conn->request_info.remote_user || !conn->phys_ctx) {
 		return;
 	}
+
+	dav_lock = conn->phys_ctx->webdav_lock;
 	mg_get_request_link(conn, link_buf, sizeof(link_buf));
 
 	/* const char *refresh = mg_get_header(conn, "If"); */
