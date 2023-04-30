@@ -2474,7 +2474,7 @@ show_settings_dialog(void)
 
 
 static void
-change_password_file()
+change_password_file(void)
 {
 	/* Parameter for size/format tuning of the dialog */
 	short HEIGHT = 15;
@@ -2685,7 +2685,7 @@ sysinfo_reload(struct dlg_proc_param *prm)
 
 
 int
-show_system_info()
+show_system_info(void)
 {
 	/* Parameter for size/format tuning of the dialog */
 	short HEIGHT = 15;
