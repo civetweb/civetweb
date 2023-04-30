@@ -2325,7 +2325,7 @@ STOP_FLAG_IS_TWO(stop_flag_t *f)
 static void
 STOP_FLAG_ASSIGN(stop_flag_t *f, stop_flag_t v)
 {
-	stop_flag_t sf;
+	stop_flag_t sf = 0;
 	do {
 		sf = mg_atomic_compare_and_swap(f, *f, v);
 	} while (sf != v);
@@ -9528,9 +9528,8 @@ connect_socket(
 		/* Data for poll */
 		struct mg_pollfd pfd[1];
 		int pollres;
-		int ms_wait = 10000; /* 10 second timeout */
-		stop_flag_t nonstop;
-		STOP_FLAG_ASSIGN(&nonstop, 0);
+		int ms_wait = 10000;     /* 10 second timeout */
+		stop_flag_t nonstop = 0; /* STOP_FLAG_ASSIGN(&nonstop, 0); */
 
 		/* For a non-blocking socket, the connect sequence is:
 		 * 1) call connect (will not block)
