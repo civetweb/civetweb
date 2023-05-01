@@ -39,13 +39,16 @@ TIMER_API double
 timer_getcurrenttime(struct mg_context *ctx)
 {
 #if defined(_WIN32)
+	uint64_t now_tick64 = 0;
+#if defined(_WIN64)
+	now_tick64 = GetTickCount64();
+#else
 	/* GetTickCount returns milliseconds since system start as
 	 * unsigned 32 bit value. It will wrap around every 49.7 days.
 	 * We need to use a 64 bit counter (will wrap in 500 mio. years),
 	 * by adding the 32 bit difference since the last call to a
 	 * 64 bit counter. This algorithm will only work, if this
 	 * function is called at least once every 7 weeks. */
-	uint64_t now_tick64 = 0;
 	DWORD now_tick = GetTickCount();
 
 	if (ctx->timers) {
@@ -55,6 +58,7 @@ timer_getcurrenttime(struct mg_context *ctx)
 		ctx->timers->last_tick = now_tick;
 		pthread_mutex_unlock(&ctx->timers->mutex);
 	}
+#endif
 	return (double)now_tick64 * 1.0E-3;
 #else
 	struct timespec now_ts;
