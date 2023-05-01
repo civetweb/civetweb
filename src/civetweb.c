@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2021 the Civetweb developers
+/* Copyright (c) 2013-2023 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -51,8 +51,8 @@
 #if !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005 */
 #endif
-#if !defined(_WIN32_WINNT) /* defined for tdm-gcc so we can use getnameinfo */
-#define _WIN32_WINNT 0x0502
+#if !defined(_WIN32_WINNT) /* Minimum API version */
+#define _WIN32_WINNT 0x0601
 #endif
 #else
 #if !defined(_GNU_SOURCE)
@@ -525,10 +525,10 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
 
 
 #if defined(_WIN32) /* WINDOWS include block */
-#include <malloc.h> /* *alloc( */
-#include <stdlib.h> /* *alloc( */
-#include <time.h>   /* struct timespec */
-#include <windows.h>
+#include <Windows.h>
+#include <malloc.h>   /* *alloc( */
+#include <stdlib.h>   /* *alloc( */
+#include <time.h>     /* struct timespec */
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
 #include <ws2tcpip.h>
 
@@ -1322,13 +1322,13 @@ mg_malloc_ex(size_t size,
 #endif
 
 	if (data) {
+		uintptr_t *tmp = (uintptr_t *)data;
 		ptrdiff_t mmem = mg_atomic_add(&mstat->totalMemUsed, (ptrdiff_t)size);
 		mg_atomic_max(&mstat->maxMemUsed, mmem);
-
 		mg_atomic_inc(&mstat->blockCount);
-		((uintptr_t *)data)[0] = size;
-		((uintptr_t *)data)[1] = (uintptr_t)mstat;
-		memory = (void *)(((char *)data) + 2 * sizeof(uintptr_t));
+		tmp[0] = size;
+		tmp[1] = (uintptr_t)mstat;
+		memory = (void *)&tmp[2];
 	}
 
 #if defined(MEMORY_DEBUGGING)
@@ -22315,44 +22315,44 @@ mg_get_connection_info(const struct mg_context *ctx,
 	return (int)connection_info_length;
 }
 
+
 #if 0
-/* Get handler information. It can be printed or stored by the caller.
- * Return the size of available information. */
+/* Get handler information. Not fully implemented. Is it required? */
 CIVETWEB_API int
 mg_get_handler_info(struct mg_context *ctx,
-                       char *buffer,
-                       int buflen)
+	char *buffer,
+	int buflen)
 {
-    int handler_info_len = 0;
-    struct mg_handler_info *tmp_rh;
-    mg_lock_context(ctx);
+	int handler_info_len = 0;
+	struct mg_handler_info *tmp_rh;
+	mg_lock_context(ctx);
 
-    for (tmp_rh = ctx->dd.handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
+	for (tmp_rh = ctx->dd.handlers; tmp_rh != NULL; tmp_rh = tmp_rh->next) {
 
-        if (buflen > handler_info_len+ tmp_rh->uri_len) {
-        memcpy(buffer+handler_info_len, tmp_rh->uri, tmp_rh->uri_len);
-        }
-        handler_info_len += tmp_rh->uri_len;
+		if (buflen > handler_info_len + tmp_rh->uri_len) {
+			memcpy(buffer + handler_info_len, tmp_rh->uri, tmp_rh->uri_len);
+		}
+		handler_info_len += tmp_rh->uri_len;
 
-        switch (tmp_rh->handler_type) {
-            case REQUEST_HANDLER:
-                (void)tmp_rh->handler;
-            break;
-            case WEBSOCKET_HANDLER:
-        (void)tmp_rh->connect_handler;
-       (void) tmp_rh->ready_handler;
-       (void) tmp_rh->data_handler;
-       (void) tmp_rh->close_handler;
-            break;
-            case AUTH_HANDLER:
-             (void) tmp_rh->auth_handler;
-            break;
-        }
-        (void)cbdata;
-    }
+		switch (tmp_rh->handler_type) {
+		case REQUEST_HANDLER:
+			(void)tmp_rh->handler;
+			break;
+		case WEBSOCKET_HANDLER:
+			(void)tmp_rh->connect_handler;
+			(void)tmp_rh->ready_handler;
+			(void)tmp_rh->data_handler;
+			(void)tmp_rh->close_handler;
+			break;
+		case AUTH_HANDLER:
+			(void)tmp_rh->auth_handler;
+			break;
+		}
+		(void)cbdata;
+	}
 
-    mg_unlock_context(ctx);
-    return handler_info_len;
+	mg_unlock_context(ctx);
+	return handler_info_len;
 }
 #endif
 #endif
