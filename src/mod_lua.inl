@@ -2935,6 +2935,9 @@ prepare_lua_environment(struct mg_context *ctx,
 
 	if ((conn != NULL) && (conn->dom_ctx != NULL)) {
 		reg_string(L, "document_root", conn->dom_ctx->config[DOCUMENT_ROOT]);
+		if (conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT]) {
+			reg_string(L, "fallback_document_root", conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT]);
+		}
 		reg_string(L,
 		           "auth_domain",
 		           conn->dom_ctx->config[AUTHENTICATION_DOMAIN]);
@@ -2943,6 +2946,11 @@ prepare_lua_environment(struct mg_context *ctx,
 			reg_string(L,
 			           "websocket_root",
 			           conn->dom_ctx->config[WEBSOCKET_ROOT]);
+			if (conn->dom_ctx->config[FALLBACK_WEBSOCKET_ROOT]) {
+				reg_string(L,
+					"fallback_websocket_root",
+					conn->dom_ctx->config[FALLBACK_WEBSOCKET_ROOT]);
+			}
 		} else {
 			reg_string(L,
 			           "websocket_root",

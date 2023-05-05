@@ -296,6 +296,15 @@ The current directory is commonly referenced as dot (`.`).
 It is recommended to use an absolute path for document\_root, in order to
 avoid accidentally serving the wrong directory.
 
+### fallback\_document\_root `.`
+An optional second directory to check for a file to serve, if the requested
+filename was not found in the document\_root directory.
+This can be useful in cases where an app ships with a read-only HTML content
+directory as part of its install, but you nevertheless want to allow the user
+to customize the served content by placing modified or additional files into
+a writable directory, where they will take precedence over their read-only
+counterparts, on a per-file basis.
+
 ### enable\_auth\_domain\_check `yes`
 When using absolute URLs, verify the host is identical to the authentication\_domain.
 If enabled, requests to absolute URLs will only be processed
@@ -806,6 +815,11 @@ be used for websockets as well. Since websockets use a different URL scheme
 websockets may also be served from a different directory. By default,
 the document\_root is used as websocket\_root as well.
 
+### fallback\_websocket\_root
+An optional second directory to check for websocket-files that were
+not found in the websocket\_root directory.  (See the documentation for
+fallback\_root for details)
+
 ### websocket\_timeout\_ms
 Timeout for network read and network write operations for websockets, WS(S),
 in milliseconds. If this value is not set, the value of request\_timeout\_ms
@@ -969,6 +983,7 @@ mg (table):
     mg.onerror(msg)             -- error handler, can be overridden
     mg.auth_domain              -- a string that holds the HTTP authentication domain
     mg.document_root            -- a string that holds the document root directory
+    mg.fallback_document_root   -- a string that holds an optional second document root directory
     mg.lua_type                 -- a string that holds the lua script type
     mg.system                   -- a string that holds the operating system name
     mg.version                  -- a string that holds CivetWeb version
@@ -1028,6 +1043,7 @@ If websocket and timers support is enabled then the following is also available:
     mg.set_timeout(fn,delay,[interval])  -- call function after delay at an interval
     mg.set_interval(fn,delay,[interval]) -- call function after delay at an interval
     mg.websocket_root                    -- a string that holds the websocket root
+    mg.fallback_websocket_root           -- a string that holds an optional second websocket root
 
 connect (function):
 
