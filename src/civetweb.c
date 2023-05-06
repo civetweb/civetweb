@@ -20541,6 +20541,8 @@ mg_socketpair(int * sockA,
 	if (ret == 0) {
 		*sockA = temp[0];
 		*sockB = temp[1];
+		set_close_on_exec(*sockA, NULL, NULL);
+		set_close_on_exec(*sockB, NULL, NULL);
 	}
 	return ret;
 #else
@@ -20566,6 +20568,8 @@ mg_socketpair(int * sockA,
 					closesocket(asock);
 					*sockA = temp[0];
 					*sockB = temp[1];
+					set_close_on_exec(*sockA, NULL, NULL);
+					set_close_on_exec(*sockB, NULL, NULL);
 					return 0;  /* success! */
 				}
 			}
