@@ -1967,6 +1967,7 @@ enum {
 
 	/* Once for each domain */
 	DOCUMENT_ROOT,
+	FALLBACK_DOCUMENT_ROOT,
 
 	ACCESS_LOG_FILE,
 	ERROR_LOG_FILE,
@@ -2048,6 +2049,7 @@ enum {
 
 #if defined(USE_WEBSOCKET)
 	WEBSOCKET_ROOT,
+	FALLBACK_WEBSOCKET_ROOT,
 #endif
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	LUA_WEBSOCKET_EXTENSIONS,
@@ -2111,6 +2113,7 @@ static const struct mg_option config_options[] = {
 
     /* Once for each domain */
     {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
+    {"fallback_document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
 
     {"access_log_file", MG_CONFIG_TYPE_FILE, NULL},
     {"error_log_file", MG_CONFIG_TYPE_FILE, NULL},
@@ -2209,6 +2212,7 @@ static const struct mg_option config_options[] = {
 
 #if defined(USE_WEBSOCKET)
     {"websocket_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
+    {"fallback_websocket_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
 #endif
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     {"lua_websocket_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
@@ -7650,7 +7654,8 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 
 #if !defined(NO_FILES)
 	const char *uri = conn->request_info.local_uri;
-	const char *root = conn->dom_ctx->config[DOCUMENT_ROOT];
+	const char *roots[] = {conn->dom_ctx->config[DOCUMENT_ROOT], conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT], NULL};
+	int fileExists = 0;
 	const char *rewrite;
 	struct vec a, b;
 	ptrdiff_t match_len;
@@ -7685,7 +7690,8 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	*is_websocket_request = (conn->protocol_type == PROTOCOL_TYPE_WEBSOCKET);
 #if !defined(NO_FILES)
 	if ((*is_websocket_request) && conn->dom_ctx->config[WEBSOCKET_ROOT]) {
-		root = conn->dom_ctx->config[WEBSOCKET_ROOT];
+		roots[0] = conn->dom_ctx->config[WEBSOCKET_ROOT];
+		roots[1] = conn->dom_ctx->config[FALLBACK_WEBSOCKET_ROOT];
 	}
 #endif /* !NO_FILES */
 #else  /* USE_WEBSOCKET */
@@ -7702,51 +7708,59 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 
 #if !defined(NO_FILES)
 	/* Step 5: If there is no root directory, don't look for files. */
-	/* Note that root == NULL is a regular use case here. This occurs,
+	/* Note that roots[0] == NULL is a regular use case here. This occurs,
 	 * if all requests are handled by callbacks, so the WEBSOCKET_ROOT
 	 * config is not required. */
-	if (root == NULL) {
+	if (roots[0] == NULL) {
 		/* all file related outputs have already been set to 0, just return
 		 */
 		return;
 	}
 
-	/* Step 6: Determine the local file path from the root path and the
-	 * request uri. */
-	/* Using filename_buf_len - 1 because memmove() for PATH_INFO may shift
-	 * part of the path one byte on the right. */
-	truncated = 0;
-	mg_snprintf(
-	    conn, &truncated, filename, filename_buf_len - 1, "%s%s", root, uri);
+	for (int i=0; roots[i] != NULL; i++)
+	{
+		/* Step 6: Determine the local file path from the root path and the
+		 * request uri. */
+		/* Using filename_buf_len - 1 because memmove() for PATH_INFO may shift
+		 * part of the path one byte on the right. */
+		truncated = 0;
+		mg_snprintf(
+		    conn, &truncated, filename, filename_buf_len - 1, "%s%s", roots[i], uri);
 
-	if (truncated) {
-		goto interpret_cleanup;
-	}
+		if (truncated) {
+			goto interpret_cleanup;
+		}
 
-	/* Step 7: URI rewriting */
-	rewrite = conn->dom_ctx->config[URL_REWRITE_PATTERN];
-	while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
-		if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
-			mg_snprintf(conn,
-			            &truncated,
-			            filename,
-			            filename_buf_len - 1,
-			            "%.*s%s",
-			            (int)b.len,
-			            b.ptr,
-			            uri + match_len);
+		/* Step 7: URI rewriting */
+		rewrite = conn->dom_ctx->config[URL_REWRITE_PATTERN];
+		while ((rewrite = next_option(rewrite, &a, &b)) != NULL) {
+			if ((match_len = match_prefix(a.ptr, a.len, uri)) > 0) {
+				mg_snprintf(conn,
+				            &truncated,
+				            filename,
+				            filename_buf_len - 1,
+				            "%.*s%s",
+				            (int)b.len,
+				            b.ptr,
+				            uri + match_len);
+				break;
+			}
+		}
+
+		if (truncated) {
+			goto interpret_cleanup;
+		}
+
+		/* Step 8: Check if the file exists at the server */
+		/* Local file path and name, corresponding to requested URI
+		 * is now stored in "filename" variable. */
+		if (mg_stat(conn, filename, filestat)) {
+			fileExists = 1;
 			break;
 		}
 	}
 
-	if (truncated) {
-		goto interpret_cleanup;
-	}
-
-	/* Step 8: Check if the file exists at the server */
-	/* Local file path and name, corresponding to requested URI
-	 * is now stored in "filename" variable. */
-	if (mg_stat(conn, filename, filestat)) {
+	if (fileExists) {
 		int uri_len = (int)strlen(uri);
 		int is_uri_end_slash = (uri_len > 0) && (uri[uri_len - 1] == '/');
 
@@ -11404,6 +11418,9 @@ prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "SERVER_NAME=%s", conn->dom_ctx->config[AUTHENTICATION_DOMAIN]);
 	addenv(env, "SERVER_ROOT=%s", conn->dom_ctx->config[DOCUMENT_ROOT]);
 	addenv(env, "DOCUMENT_ROOT=%s", conn->dom_ctx->config[DOCUMENT_ROOT]);
+	if (conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT]) {
+		addenv(env, "FALLBACK_DOCUMENT_ROOT=%s", conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT]);
+	}
 	addenv(env, "SERVER_SOFTWARE=CivetWeb/%s", mg_version());
 
 	/* Prepare the environment block */

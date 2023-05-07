@@ -1142,6 +1142,7 @@ sanitize_options(const char *options[] /* server options */,
 	int ok = 1;
 	/* Make sure we have absolute paths for files and directories */
 	set_absolute_path(options, "document_root", arg0);
+	set_absolute_path(options, "fallback_document_root", arg0);
 	set_absolute_path(options, "put_delete_auth_file", arg0);
 	set_absolute_path(options, "cgi_interpreter", arg0);
 	set_absolute_path(options, "access_log_file", arg0);
@@ -1154,6 +1155,8 @@ sanitize_options(const char *options[] /* server options */,
 
 	/* Make extra verification for certain options */
 	if (!verify_existence(options, "document_root", 1))
+		ok = 0;
+	if (!verify_existence(options, "fallback_document_root", 1))
 		ok = 0;
 	if (!verify_existence(options, "cgi_interpreter", 0))
 		ok = 0;
