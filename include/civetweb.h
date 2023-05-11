@@ -643,6 +643,14 @@ CIVETWEB_API void *mg_get_user_context_data(const struct mg_connection *conn);
 /* Get user defined thread pointer for server threads (see init_thread). */
 CIVETWEB_API void *mg_get_thread_pointer(const struct mg_connection *conn);
 
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+/* Returns a socket-descriptor that will become ready-for-read when mg_stop() is
+ * called on the given context.  No data should be read from or written to this socket;
+ * it is provided for event-notification purposes (e.g. via poll() or select() or similar)
+ * only.  The intended use is to allow user-implemented event-loops within callbacks to
+ * exit immediately when their hosting server-context is going away. */
+CIVETWEB_API int mg_get_context_shutdown_notification_socket(const struct mg_context *ctx);
+#endif
 
 /* Set user data for the current connection. */
 /* Note: CivetWeb callbacks use "struct mg_connection *conn" as input
@@ -1611,6 +1619,81 @@ CIVETWEB_API int mg_response_header_add_lines(struct mg_connection *conn,
  *  -4:    sending failed (network error)
  */
 CIVETWEB_API int mg_response_header_send(struct mg_connection *conn);
+
+
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+/* Callback types for miscellaneous-socket-event handlers in C/C++.
+
+   mg_misc_socket_flags_provider
+       Is called just before CivetWeb calls poll() on the user-provided socket.
+       Its return-value will be used to populate the "events" field associated
+       with the user-provided socket.  If this callback-pointer is set to NULL,
+       then POLLIN will be assumed by default.
+
+       Parameters:
+         conn: The associated mg_connection object
+         sock_fd: The file descriptor of the user-provided socket this callback is about.
+
+       Return value:
+         0: don't detect any events associated with this socket
+         POLLIN: we'd like a notification-callback when the socket is ready-for-read.
+         POLLOUT: we'd like a notification-callback when the socket is ready-for-write.
+         POLLIN|POLLOUT: we'd like a notification-callback when the socket is either
+                         ready-for-read or ready-for-write.
+         [etc]
+
+   mg_misc_socket_data_handler
+       Is called when CivetWeb has detected that a user-provided socket descriptor
+       is ready for data exchange.  This callback should be implemented to perform
+       any I/O operations on the socket descriptor as necessary.
+
+       Parameters:
+         conn: The associated mg_connection object
+         sock_fd: The file descriptor of the user-provided socket this callback is about.
+         int ready_events_bit_chord:  the detected I/O conditions (e.g. POLLIN, POLLOUT,
+                                      or POLLIN|POLLOUT)
+       Return value:
+         1: keep the client connection open.
+         0: close the client connection.  (Note this closes the mg_connection, *not* sock_fd!)
+*/
+typedef int (*mg_misc_socket_flags_provider)(const struct mg_connection * conn,
+                                             int sock_fd);
+typedef int (*mg_misc_socket_data_handler)(struct mg_connection * conn,
+                                           int sock_fd,
+                                           int ready_events_bit_chord);
+
+
+/* Install or remove a socket-IO-is-ready callback for a specified
+ * file descriptor.  This can be used to handle auxilliary I/O related
+ * to a given mg_connection, without having to spawn additional threads.
+ * These callbacks will remain until the connection (conn) is closed.
+ *
+ * Parameters:
+ *   conn: client connection that these callbacks are associated with
+ *   sock_fd: a file descriptor that the handler code would like to get callbacks
+ *            about, when I/O is ready on it.  Note that this is typically NOT the
+ *            the connection to the client itself, as that I/O is handled internally.
+ *   handler_callback: the function that should be called when I/O is ready on
+ *           the socket, or NULL to remove a previously-installed callback for (sockFD)
+ *   event_flags_query_callback: if non-NULL, this callback function will be called before
+ *                               each call to poll(), to find out what type(s) of I/O event the
+ *                               handler_callback should be called for.  Should return a bit-chord
+ *                               of desired event-types (e.g. POLLIN|POLLOUT if you want to
+ *                               be notified when socket is either ready-for-read or ready-for
+ *                               write).  If you pass in NULL, the default behavior will be
+ *                               used -- the default behavior is equivalent to a callback that
+ *                               always returns POLLIN; i.e. it will cause handler_callback
+ *                               to be called whenever (sock_fd) is ready-for-read.
+ * Return:
+ *    0:    ok
+ *   -1:    parameter error
+ *   -2:    out of memory
+ */
+CIVETWEB_API int mg_set_misc_socket_handler(const struct mg_connection *conn,
+                                            int sock_fd,
+                                            mg_misc_socket_data_handler handler_callback,
+                                            mg_misc_socket_flags_provider event_flags_query_callback);
+#endif
 
 
 /* Check which features where set when the civetweb library has been compiled.
