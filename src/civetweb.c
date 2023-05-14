@@ -7606,7 +7606,7 @@ extention_matches_template_text(
  * Return 1 if index file has been found, 0 if not found.
  * If the file is found, it's stats is returned in stp. */
 static int
-substitute_index_file(struct mg_connection *conn,
+substitute_index_file_aux(struct mg_connection *conn,
                       char *path,
                       size_t path_len,
                       struct mg_file_stat *filestat)
@@ -7650,6 +7650,44 @@ substitute_index_file(struct mg_connection *conn,
 
 	return found;
 }
+
+/* Same as above, except if the first try fails and a fallback-root is configured, we'll try there also */
+static int
+substitute_index_file(struct mg_connection *conn,
+                      char *path,
+                      size_t path_len,
+                      struct mg_file_stat *filestat)
+{
+	int ret = substitute_index_file_aux(conn, path, path_len, filestat);
+	if (ret == 0) {
+		const char * root_prefix = conn->dom_ctx->config[DOCUMENT_ROOT];
+		const char * fallback_root_prefix = conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT];
+		if ((root_prefix)&&(fallback_root_prefix)) {
+			const size_t root_prefix_len = strlen(root_prefix);
+			if ((strncmp(path, root_prefix, root_prefix_len) == 0)) {
+				const size_t fallback_root_prefix_len = strlen(fallback_root_prefix);
+				const char * sub_path = path+root_prefix_len;
+				while(*sub_path == '/') sub_path++;
+				const size_t sub_path_len = strlen(sub_path);
+
+				char scratch_path[UTF8_PATH_MAX];  /* separate storage, to avoid side effects if we fail */
+				if (((fallback_root_prefix_len + 1 + sub_path_len + 1) < sizeof(scratch_path))) {
+					/* The concatenations below are all safe because we pre-verified string lengths above */
+					strcpy(scratch_path, fallback_root_prefix);
+					char * nul = strchr(scratch_path, '\0');
+					if ((nul > scratch_path)&&(*(nul-1) != '/')) {*nul++ = '/'; *nul = '\0';}
+					strcat(scratch_path, sub_path);
+					if (substitute_index_file_aux(conn, scratch_path, sizeof(scratch_path), filestat)) {
+						mg_strlcpy(path, scratch_path, path_len);
+						return 1;
+					}
+				}
+			}
+		}
+	}
+	return ret;
+}
+
 #endif
 
 
