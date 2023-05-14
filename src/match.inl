@@ -48,7 +48,7 @@ mg_match_impl(const char *pat,
 				i_pat++;
 				i_str++;
 			} while ((i_pat < pat_len) && (pat[i_pat] == '?')
-					 && (str[i_str] != '\0') && (str[i_str] != '/'));
+			         && (str[i_str] != '\0') && (str[i_str] != '/'));
 
 			/* If we have a match context, add the substring we just found */
 			if (mcx) {

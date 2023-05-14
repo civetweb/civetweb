@@ -525,10 +525,10 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
 
 
 #if defined(_WIN32) /* WINDOWS include block */
+#include <malloc.h> /* *alloc( */
+#include <stdlib.h> /* *alloc( */
+#include <time.h>   /* struct timespec */
 #include <windows.h>
-#include <malloc.h>   /* *alloc( */
-#include <stdlib.h>   /* *alloc( */
-#include <time.h>     /* struct timespec */
 #include <winsock2.h> /* DTL add for SO_EXCLUSIVE */
 #include <ws2tcpip.h>
 
@@ -2442,8 +2442,10 @@ struct mg_context {
 	int lua_bg_log_available;     /* Use Lua background state for access log */
 #endif
 
-	int user_shutdown_notification_socket;   /* mg_stop() will close this socket... */
-	int thread_shutdown_notification_socket; /* to cause poll() in all threads to return immediately */
+	int user_shutdown_notification_socket;   /* mg_stop() will close this
+	                                            socket... */
+	int thread_shutdown_notification_socket; /* to cause poll() in all threads
+	                                            to return immediately */
 
 	/* Server nonce */
 	pthread_mutex_t nonce_mutex; /* Protects ssl_ctx, handlers,
@@ -7607,9 +7609,9 @@ extention_matches_template_text(
  * If the file is found, it's stats is returned in stp. */
 static int
 substitute_index_file_aux(struct mg_connection *conn,
-                      char *path,
-                      size_t path_len,
-                      struct mg_file_stat *filestat)
+                          char *path,
+                          size_t path_len,
+                          struct mg_file_stat *filestat)
 {
 	const char *list = conn->dom_ctx->config[INDEX_FILES];
 	struct vec filename_vec;
@@ -7651,7 +7653,8 @@ substitute_index_file_aux(struct mg_connection *conn,
 	return found;
 }
 
-/* Same as above, except if the first try fails and a fallback-root is configured, we'll try there also */
+/* Same as above, except if the first try fails and a fallback-root is
+ * configured, we'll try there also */
 static int
 substitute_index_file(struct mg_connection *conn,
                       char *path,
@@ -7660,24 +7663,36 @@ substitute_index_file(struct mg_connection *conn,
 {
 	int ret = substitute_index_file_aux(conn, path, path_len, filestat);
 	if (ret == 0) {
-		const char * root_prefix = conn->dom_ctx->config[DOCUMENT_ROOT];
-		const char * fallback_root_prefix = conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT];
-		if ((root_prefix)&&(fallback_root_prefix)) {
+		const char *root_prefix = conn->dom_ctx->config[DOCUMENT_ROOT];
+		const char *fallback_root_prefix =
+		    conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT];
+		if ((root_prefix) && (fallback_root_prefix)) {
 			const size_t root_prefix_len = strlen(root_prefix);
 			if ((strncmp(path, root_prefix, root_prefix_len) == 0)) {
-				const size_t fallback_root_prefix_len = strlen(fallback_root_prefix);
-				const char * sub_path = path+root_prefix_len;
-				while(*sub_path == '/') sub_path++;
+				const size_t fallback_root_prefix_len =
+				    strlen(fallback_root_prefix);
+				const char *sub_path = path + root_prefix_len;
+				while (*sub_path == '/')
+					sub_path++;
 				const size_t sub_path_len = strlen(sub_path);
 
-				char scratch_path[UTF8_PATH_MAX];  /* separate storage, to avoid side effects if we fail */
-				if (((fallback_root_prefix_len + 1 + sub_path_len + 1) < sizeof(scratch_path))) {
-					/* The concatenations below are all safe because we pre-verified string lengths above */
+				char scratch_path[UTF8_PATH_MAX]; /* separate storage, to avoid
+				                                     side effects if we fail */
+				if (((fallback_root_prefix_len + 1 + sub_path_len + 1)
+				     < sizeof(scratch_path))) {
+					/* The concatenations below are all safe because we
+					 * pre-verified string lengths above */
 					strcpy(scratch_path, fallback_root_prefix);
-					char * nul = strchr(scratch_path, '\0');
-					if ((nul > scratch_path)&&(*(nul-1) != '/')) {*nul++ = '/'; *nul = '\0';}
+					char *nul = strchr(scratch_path, '\0');
+					if ((nul > scratch_path) && (*(nul - 1) != '/')) {
+						*nul++ = '/';
+						*nul = '\0';
+					}
 					strcat(scratch_path, sub_path);
-					if (substitute_index_file_aux(conn, scratch_path, sizeof(scratch_path), filestat)) {
+					if (substitute_index_file_aux(conn,
+					                              scratch_path,
+					                              sizeof(scratch_path),
+					                              filestat)) {
 						mg_strlcpy(path, scratch_path, path_len);
 						return 1;
 					}
@@ -7708,7 +7723,9 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 
 #if !defined(NO_FILES)
 	const char *uri = conn->request_info.local_uri;
-	const char *roots[] = {conn->dom_ctx->config[DOCUMENT_ROOT], conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT], NULL};
+	const char *roots[] = {conn->dom_ctx->config[DOCUMENT_ROOT],
+	                       conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT],
+	                       NULL};
 	int fileExists = 0;
 	const char *rewrite;
 	struct vec a, b;
@@ -7771,15 +7788,19 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 		return;
 	}
 
-	for (int i=0; roots[i] != NULL; i++)
-	{
+	for (int i = 0; roots[i] != NULL; i++) {
 		/* Step 6: Determine the local file path from the root path and the
 		 * request uri. */
 		/* Using filename_buf_len - 1 because memmove() for PATH_INFO may shift
 		 * part of the path one byte on the right. */
 		truncated = 0;
-		mg_snprintf(
-		    conn, &truncated, filename, filename_buf_len - 1, "%s%s", roots[i], uri);
+		mg_snprintf(conn,
+		            &truncated,
+		            filename,
+		            filename_buf_len - 1,
+		            "%s%s",
+		            roots[i],
+		            uri);
 
 		if (truncated) {
 			goto interpret_cleanup;
@@ -9610,7 +9631,10 @@ connect_socket(
 		pfd[1].fd = ctx ? ctx->thread_shutdown_notification_socket : -1;
 		pfd[1].events = POLLIN;
 
-		pollres = mg_poll(pfd, ctx ? 2 : 1, ms_wait, ctx ? &(ctx->stop_flag) : &nonstop);
+		pollres = mg_poll(pfd,
+		                  ctx ? 2 : 1,
+		                  ms_wait,
+		                  ctx ? &(ctx->stop_flag) : &nonstop);
 
 		if (pollres != 1) {
 			/* Not connected */
@@ -11477,7 +11501,9 @@ prepare_cgi_environment(struct mg_connection *conn,
 	addenv(env, "SERVER_ROOT=%s", conn->dom_ctx->config[DOCUMENT_ROOT]);
 	addenv(env, "DOCUMENT_ROOT=%s", conn->dom_ctx->config[DOCUMENT_ROOT]);
 	if (conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT]) {
-		addenv(env, "FALLBACK_DOCUMENT_ROOT=%s", conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT]);
+		addenv(env,
+		       "FALLBACK_DOCUMENT_ROOT=%s",
+		       conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT]);
 	}
 	addenv(env, "SERVER_SOFTWARE=CivetWeb/%s", mg_version());
 
@@ -16103,9 +16129,10 @@ set_ports_option(struct mg_context *phys_ctx)
 			continue;
 		}
 
-		/* The +2 below includes the original +1 (for the socket we're about to add),
-		 * plus another +1 for the thread_shutdown_notification_socket that we'll
-		 * also want to poll() on so that mg_stop() can return quickly
+		/* The +2 below includes the original +1 (for the socket we're about to
+		 * add), plus another +1 for the thread_shutdown_notification_socket
+		 * that we'll also want to poll() on so that mg_stop() can return
+		 * quickly
 		 */
 		if ((pfd = (struct mg_pollfd *)
 		         mg_realloc_ctx(phys_ctx->listening_socket_fds,
@@ -16635,14 +16662,14 @@ sslize(struct mg_connection *conn,
 					int pollres;
 					pfd[0].fd = conn->client.sock;
 					pfd[0].events = ((err == SSL_ERROR_WANT_CONNECT)
-					                || (err == SSL_ERROR_WANT_WRITE))
-					                   ? POLLOUT
-					                   : POLLIN;
+					                 || (err == SSL_ERROR_WANT_WRITE))
+					                    ? POLLOUT
+					                    : POLLIN;
 
-					pfd[1].fd = conn->phys_ctx->thread_shutdown_notification_socket;
+					pfd[1].fd =
+					    conn->phys_ctx->thread_shutdown_notification_socket;
 					pfd[1].events = POLLIN;
-					pollres =
-					    mg_poll(pfd, 2, 50, &(conn->phys_ctx->stop_flag));
+					pollres = mg_poll(pfd, 2, 50, &(conn->phys_ctx->stop_flag));
 					if (pollres < 0) {
 						/* Break if error occurred (-1)
 						 * or server shutdown (-2) */
@@ -20226,14 +20253,17 @@ master_thread_run(struct mg_context *ctx)
 			pfd[i].events = POLLIN;
 		}
 
-		/* We listen on this socket just so that mg_stop() can cause mg_poll() to return ASAP.
-		 * Don't worry, we did allocate an extra slot at the end of listening_socket_fds[] just to hold this
+		/* We listen on this socket just so that mg_stop() can cause mg_poll()
+		 * to return ASAP. Don't worry, we did allocate an extra slot at the end
+		 * of listening_socket_fds[] just to hold this
 		 */
-		pfd[ctx->num_listening_sockets].fd = ctx->thread_shutdown_notification_socket;
+		pfd[ctx->num_listening_sockets].fd =
+		    ctx->thread_shutdown_notification_socket;
 		pfd[ctx->num_listening_sockets].events = POLLIN;
 
 		if (mg_poll(pfd,
-		            ctx->num_listening_sockets+1,   // +1 for the thread_shutdown_notification_socket
+		            ctx->num_listening_sockets
+		                + 1, // +1 for the thread_shutdown_notification_socket
 		            SOCKET_TIMEOUT_QUANTUM,
 		            &(ctx->stop_flag))
 		    > 0) {
@@ -20475,9 +20505,11 @@ mg_stop(struct mg_context *ctx)
 	/* Set stop flag, so all threads know they have to exit. */
 	STOP_FLAG_ASSIGN(&ctx->stop_flag, 1);
 
-	/* Closing this socket will cause mg_poll() in all the I/O threads to return immediately */
+	/* Closing this socket will cause mg_poll() in all the I/O threads to return
+	 * immediately */
 	closesocket(ctx->user_shutdown_notification_socket);
-	ctx->user_shutdown_notification_socket = -1;  /* to avoid calling closesocket() again in free_context() */
+	ctx->user_shutdown_notification_socket =
+	    -1; /* to avoid calling closesocket() again in free_context() */
 
 	/* Join timer thread */
 #if defined(USE_TIMERS)
@@ -20578,12 +20610,11 @@ legacy_init(const char **options)
 
 /* we'll assume it's only Windows that doesn't have socketpair() available */
 #if !defined(HAVE_SOCKETPAIR) && !defined(_WIN32)
-# define HAVE_SOCKETPAIR 1
+#define HAVE_SOCKETPAIR 1
 #endif
 
 static int
-mg_socketpair(int * sockA,
-	      int * sockB)
+mg_socketpair(int *sockA, int *sockB)
 {
 	int temp[2] = {-1, -1};
 
@@ -20601,11 +20632,12 @@ mg_socketpair(int * sockA,
 	}
 	return ret;
 #else
-	/** No socketpair() call is available, so we'll have to roll our own implementation */
+	/** No socketpair() call is available, so we'll have to roll our own
+	 * implementation */
 	int asock = socket(PF_INET, SOCK_STREAM, 0);
 	if (asock >= 0) {
 		struct sockaddr_in addr;
-		struct sockaddr * pa = (struct sockaddr *) &addr;
+		struct sockaddr *pa = (struct sockaddr *)&addr;
 		socklen_t addrLen = sizeof(addr);
 
 		memset(&addr, 0, sizeof(addr));
@@ -20614,10 +20646,10 @@ mg_socketpair(int * sockA,
 		addr.sin_port = 0;
 
 		if ((bind(asock, pa, sizeof(addr)) == 0)
-		  &&(getsockname(asock, pa, &addrLen) == 0)
-		  &&(listen(asock, 1) == 0)) {
+		    && (getsockname(asock, pa, &addrLen) == 0)
+		    && (listen(asock, 1) == 0)) {
 			temp[0] = socket(PF_INET, SOCK_STREAM, 0);
-			if ((temp[0] >= 0)&&(connect(temp[0], pa, sizeof(addr)) == 0)) {
+			if ((temp[0] >= 0) && (connect(temp[0], pa, sizeof(addr)) == 0)) {
 				temp[1] = accept(asock, pa, &addrLen);
 				if (temp[1] >= 0) {
 					closesocket(asock);
@@ -20625,17 +20657,20 @@ mg_socketpair(int * sockA,
 					*sockB = temp[1];
 					set_close_on_exec(*sockA, NULL, NULL);
 					set_close_on_exec(*sockB, NULL, NULL);
-					return 0;  /* success! */
+					return 0; /* success! */
 				}
 			}
 		}
 	}
 
 	/* Cleanup */
-	if (asock   >= 0) closesocket(asock);
-	if (temp[0] >= 0) closesocket(temp[0]);
-	if (temp[1] >= 0) closesocket(temp[1]);
-	return -1;  /* fail! */
+	if (asock >= 0)
+		closesocket(asock);
+	if (temp[0] >= 0)
+		closesocket(temp[0]);
+	if (temp[1] >= 0)
+		closesocket(temp[1]);
+	return -1; /* fail! */
 #endif
 }
 
@@ -20722,10 +20757,13 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 	ok &= (0 == pthread_mutex_init(&ctx->lua_bg_mutex, &pthread_mutex_attr));
 #endif
 
-	/** mg_stop() will close the user_shutdown_notification_socket, and that will cause poll()
-	  * to return immediately in the master-thread, so that mg_stop() can also return immediately.
-	  */
-	ok &= (0 == mg_socketpair(&ctx->user_shutdown_notification_socket, &ctx->thread_shutdown_notification_socket));
+	/** mg_stop() will close the user_shutdown_notification_socket, and that
+	 * will cause poll() to return immediately in the master-thread, so that
+	 * mg_stop() can also return immediately.
+	 */
+	ok &= (0
+	       == mg_socketpair(&ctx->user_shutdown_notification_socket,
+	                        &ctx->thread_shutdown_notification_socket));
 
 	if (!ok) {
 		unsigned error_id = (unsigned)ERRNO;
