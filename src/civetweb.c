@@ -20527,7 +20527,7 @@ static int mg_start_worker_thread(struct mg_context *ctx, int only_if_no_idle_th
 	}
 
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
-	if ((only_if_no_idle_threads)&&(ctx->idle_worker_thread_count > 0)) {
+	if ((only_if_no_idle_threads)&&(ctx->idle_worker_thread_count > (unsigned)(ctx->sq_head-ctx->sq_tail))) {
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 		return -2;  /* There are idle threads available, so no need to spawn a new worker thread now */
 	}
