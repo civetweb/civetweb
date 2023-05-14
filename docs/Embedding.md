@@ -213,10 +213,15 @@ about web server instance:
 
 When `mg_start()` returns, all initialization is guaranteed to be complete
 (e.g. listening ports are opened, SSL is initialized, etc). `mg_start()` starts
-some threads: a master thread, that accepts new connections, and several
-worker threads, that process accepted connections. The number of worker threads
-is configurable via `num_threads` configuration option. That number puts a
+some threads: a master thread, that accepts new connections, and optionally some
+worker threads, that process accepted connections. The maximum number of worker
+threads is configurable via `num_threads` configuration option. That number puts a
 limit on number of simultaneous requests that can be handled by CivetWeb.
+
+The number of worker threads to be pre-spawned at startup is specified via the
+'prespawn_threads' configuration option; worker threads that are not pre-spawned
+will instead be demand-created the first time they are needed.
+
 If you embed CivetWeb into a program that uses SSL outside CivetWeb as well,
 you may need to initialize SSL before calling `mg_start()`, and set the pre-
 processor define `SSL_ALREADY_INITIALIZED`. This is not required if SSL is

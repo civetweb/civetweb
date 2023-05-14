@@ -1626,6 +1626,7 @@ START_TEST(test_config_options)
 	ck_assert_str_eq("ssl_certificate_chain",
 	                 config_options[SSL_CERTIFICATE_CHAIN].name);
 	ck_assert_str_eq("num_threads", config_options[NUM_THREADS].name);
+	ck_assert_str_eq("prespawn_threads", config_options[PRESPAWN_THREADS].name);
 	ck_assert_str_eq("run_as_user", config_options[RUN_AS_USER].name);
 	ck_assert_str_eq("url_rewrite_patterns",
 	                 config_options[URL_REWRITE_PATTERN].name);

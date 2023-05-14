@@ -22,6 +22,7 @@ opts = [
 "fallback_document_root",
 "ssl_certificate",
 "num_threads",
+"prespawn_threads",
 "run_as_user",
 "url_rewrite_patterns",
 "hide_files_patterns",
