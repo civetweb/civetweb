@@ -558,8 +558,8 @@ The configuration value is approximate, the real limit might be a few bytes off.
 The minimum is 1024 (1 kB).
 
 ### num\_threads `50`
-Number of worker threads. CivetWeb handles each incoming connection in a
-separate thread. Therefore, the value of this option is effectively the number
+Maximum number of worker threads allowed. CivetWeb handles each incoming connection
+in a separate thread. Therefore, the value of this option is effectively the number
 of concurrent HTTP connections CivetWeb can handle.
 
 If there are more simultaneous requests (connection attempts), they are queued.
@@ -571,6 +571,15 @@ thread handles all requests received in a connection (up to `num_threads`).
 In case the clients are web browsers, it is recommended to use `num_threads` of
 at least 5, since browsers often establish multiple connections to load a single
 web page, including all linked documents (CSS, JavaScript, images, ...).
+
+### prespawn\_threads '0'
+Number of worker threads that should be pre-spawned by mg_start().  Defaults to
+0, meaning no worker threads will be pre-spawned at startup; rather, worker threads
+will be spawned when a new connection comes in and there aren't currently any
+idle worker threads available to handle it (if we haven't already reached the
+maximum worker-thread count as specified by num_threads).  If this value is
+specified less than zero, or greater than the value of num_threads, it will be
+treated as if it was specified to be equal to the value of num_threads.
 
 ### listen\_backlog `200`
 Maximum number of connections waiting to be accepted by the server operating system.
@@ -876,8 +885,8 @@ All port, socket, process and thread specific parameters are per server:
 `enable_http2`, `enable_keep_alive`, `enable_websocket_ping_pong`,
 `keep_alive_timeout_ms`, `linger_timeout_ms`, `listen_backlog`,
 `listening_ports`, `lua_background_script`, `lua_background_script_params`,
-`max_request_size`, `num_threads`, `request_timeout_ms`, `run_as_user`,
-`tcp_nodelay`, `throttle`, `websocket_timeout_ms` + all options from `main.c`.
+`max_request_size`, `num_threads`, 'prespawn_threads', `request_timeout_ms`,
+`run_as_user`, `tcp_nodelay`, `throttle`, `websocket_timeout_ms` + all options from `main.c`.
 
 All other options can be set per domain. In particular
 `authentication_domain`, `document_root` and (for HTTPS) `ssl_certificate`
