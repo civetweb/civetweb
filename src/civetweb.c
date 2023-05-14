@@ -525,7 +525,7 @@ mg_static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8,
 
 
 #if defined(_WIN32) /* WINDOWS include block */
-#include <Windows.h>
+#include <windows.h>
 #include <malloc.h>   /* *alloc( */
 #include <stdlib.h>   /* *alloc( */
 #include <time.h>     /* struct timespec */
