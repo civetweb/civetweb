@@ -21236,7 +21236,7 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 	ctx->context_type = CONTEXT_SERVER; /* server context */
 
 	/* Start worker threads */
-	for (int i = 0; i < prespawnthreadcount; i++) {
+	for (i = 0; (int)i < prespawnthreadcount; i++) {
 		/* worker_thread sets up the other fields */
 		if (mg_start_worker_thread(ctx, 0) != 0) {
 			long error_no = (long)ERRNO;
