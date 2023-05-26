@@ -2059,6 +2059,8 @@ enum {
 	ACCESS_CONTROL_ALLOW_ORIGIN,
 	ACCESS_CONTROL_ALLOW_METHODS,
 	ACCESS_CONTROL_ALLOW_HEADERS,
+	ACCESS_CONTROL_EXPOSE_HEADERS,
+	ACCESS_CONTROL_ALLOW_CREDENTIALS,
 	ERROR_PAGES,
 #if !defined(NO_CACHING)
 	STATIC_FILE_MAX_AGE,
@@ -2222,6 +2224,8 @@ static const struct mg_option config_options[] = {
     {"access_control_allow_origin", MG_CONFIG_TYPE_STRING, "*"},
     {"access_control_allow_methods", MG_CONFIG_TYPE_STRING, "*"},
     {"access_control_allow_headers", MG_CONFIG_TYPE_STRING, "*"},
+    {"access_control_expose_headers", MG_CONFIG_TYPE_STRING, ""},
+    {"access_control_allow_credentials", MG_CONFIG_TYPE_STRING, ""},
     {"error_pages", MG_CONFIG_TYPE_DIRECTORY, NULL},
 #if !defined(NO_CACHING)
     {"static_file_max_age", MG_CONFIG_TYPE_NUMBER, "3600"},
@@ -4195,6 +4199,45 @@ send_cors_header(struct mg_connection *conn)
 		                       cors_orig_cfg,
 		                       -1);
 	}
+
+	const char *cors_cred_cfg =
+	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
+	if (cors_cred_cfg && *cors_cred_cfg && origin_hdr && *origin_hdr) {
+		/* Cross-origin resource sharing (CORS), see
+		 * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials */
+		mg_response_header_add(conn,
+		                       "Access-Control-Allow-Credentials",
+		                       cors_cred_cfg,
+		                       -1);
+	}
+
+	const char *cors_hdr_cfg =
+	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_HEADERS];
+	if (cors_hdr_cfg && *cors_hdr_cfg) {
+	   mg_response_header_add(conn,
+	                          "Access-Control-Allow-Headers",
+	                          cors_hdr_cfg,
+	                          -1);
+	}
+
+	const char *cors_exphdr_cfg =
+	      conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
+	if (cors_exphdr_cfg && *cors_exphdr_cfg) {
+	   mg_response_header_add(conn,
+	                          "Access-Control-Expose-Headers",
+	                          cors_exphdr_cfg,
+	                          -1);
+	}
+
+	const char *cors_meth_cfg =
+	      conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
+	if (cors_meth_cfg && *cors_meth_cfg) {
+	   mg_response_header_add(conn,
+	                          "Access-Control-Allow-Methods",
+	                          cors_meth_cfg,
+	                          -1);
+	}
+
 }
 
 
@@ -14992,7 +15035,23 @@ handle_request(struct mg_connection *conn)
 			          ((cors_meth_cfg[0] == '*') ? cors_acrm : cors_meth_cfg),
 			          suggest_connection_header(conn));
 
-			if (cors_acrh != NULL) {
+			const char *cors_cred_cfg =
+			      conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
+			if (cors_cred_cfg && *cors_cred_cfg) {
+			   mg_printf(conn,
+			             "Access-Control-Allow-Credentials: %s\r\n",
+			             cors_cred_cfg);
+			}
+
+			const char *cors_exphdr_cfg =
+			      conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
+			if (cors_exphdr_cfg && *cors_exphdr_cfg) {
+			   mg_printf(conn,
+			             "Access-Control-Expose-Headers: %s\r\n",
+			             cors_exphdr_cfg);
+			}
+
+			if (cors_acrh || (cors_cred_cfg && *cors_cred_cfg)) {
 				/* CORS request is asking for additional headers */
 				const char *cors_hdr_cfg =
 				    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_HEADERS];
