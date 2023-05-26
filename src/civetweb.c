@@ -15024,6 +15024,13 @@ handle_request(struct mg_connection *conn)
 			          ((cors_meth_cfg[0] == '*') ? cors_acrm : cors_meth_cfg),
 			          suggest_connection_header(conn));
 
+			const char *cors_cred_cfg =
+			      conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
+			if (cors_cred_cfg && *cors_cred_cfg)
+			   mg_printf(conn,
+			             "Access-Control-Allow-Credentials: %s\r\n",
+			             cors_cred_cfg);
+
 			if (cors_acrh != NULL) {
 				/* CORS request is asking for additional headers */
 				const char *cors_hdr_cfg =
