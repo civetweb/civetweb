@@ -4209,6 +4209,24 @@ send_cors_header(struct mg_connection *conn)
 		                       -1);
 	}
 
+	const char *cors_hdr_cfg =
+	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_HEADERS];
+	if (cors_hdr_cfg && *cors_hdr_cfg) {
+	   mg_response_header_add(conn,
+	                          "Access-Control-Allow-Headers",
+	                          cors_hdr_cfg,
+	                          -1);
+	}
+
+	const char *cors_meth_cfg =
+	      conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
+	if (cors_meth_cfg && *cors_meth_cfg) {
+	   mg_response_header_add(conn,
+	                          "Access-Control-Allow-Methods",
+	                          cors_meth_cfg,
+	                          -1);
+	}
+
 }
 
 
