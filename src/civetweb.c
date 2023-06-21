@@ -2615,10 +2615,10 @@ struct mg_connection {
 	struct mg_pollfd basic_mg_poll_fds_array[2];  /* these get used in the common (no-user-socket-callbacks) case */
 
 	struct mg_misc_socket_callback * misc_socket_callbacks;  /* NULL if none are installed */
-	int num_misc_socket_callbacks; /* how many items misc_socket_callbacks points to */
+	unsigned int num_misc_socket_callbacks; /* how many items misc_socket_callbacks points to */
 
 	struct mg_pollfd * custom_mg_poll_fds_array;  /* dynamically allocated array (for custom-user-callbacks cases) */
-	int custom_mg_poll_fds_array_size;            /* number of items currently allocated in custom_mg_poll_fds_array (either 0 or 3+) */
+	unsigned int custom_mg_poll_fds_array_size;   /* number of items currently allocated in custom_mg_poll_fds_array (either 0 or 3+) */
 
 	void *tls_user_ptr; /* User defined pointer in thread local storage,
 	                     * for quick access */
@@ -6311,11 +6311,11 @@ push_all(struct mg_context *ctx,
   */
 static struct mg_pollfd *
 mg_get_poll_fds_for_connection(struct mg_connection * conn,
-                               int * ret_num_pfds,
-                               int connection_fd_events_bits)
+                               unsigned int * ret_num_pfds,
+                               short connection_fd_events_bits)
 {
 	struct mg_pollfd * ret = conn->basic_mg_poll_fds_array;
-	int num_pfds = 2;  /* We always have at least client.sock and thread_shutdown_notification_socket */
+	unsigned int num_pfds = 2;  /* We always have at least client.sock and thread_shutdown_notification_socket */
 	if (conn->num_misc_socket_callbacks > 0) {
 		num_pfds += conn->num_misc_socket_callbacks;
 		if (num_pfds != conn->custom_mg_poll_fds_array_size) {
@@ -6331,7 +6331,7 @@ mg_get_poll_fds_for_connection(struct mg_connection * conn,
 		}
 
 		ret = conn->custom_mg_poll_fds_array;
-		for (int i=0; i<conn->num_misc_socket_callbacks; i++) {
+		for (unsigned int i=0; i<conn->num_misc_socket_callbacks; i++) {
 			const struct mg_misc_socket_callback * cb = &conn->misc_socket_callbacks[i];
 			struct mg_pollfd * pfd = &ret[i+2];  /* the first two pfds are internal and will be set up separately at the end of this function */
 			pfd->fd = cb->sock_fd;
@@ -6358,7 +6358,7 @@ mg_dispatch_misc_socket_callbacks(struct mg_connection * conn)
 	if ((pfd)&&(cb)) {
 		pfd += 2;  /* the first two pfds are always handled internally, so we skip them here */
 
-		for (int i=0; i<conn->num_misc_socket_callbacks; i++) {
+		for (unsigned int i=0; i<conn->num_misc_socket_callbacks; i++) {
 			if (pfd[i].revents != 0) {
 				ret &= cb[i].handler_callback(conn, pfd[i].fd, pfd[i].revents);
 			}
@@ -6424,7 +6424,7 @@ pull_inner(FILE *fp,
 			if (to_read > len)
 				to_read = len;
 		} else {
-			int num_pfds;
+			unsigned int num_pfds;
 			struct mg_pollfd * pfd = mg_get_poll_fds_for_connection(conn, &num_pfds, POLLIN);
 
 			to_read = len;
@@ -6482,7 +6482,7 @@ pull_inner(FILE *fp,
 			}
 			pollres = 1;
 		} else {
-			int num_pfds;
+			unsigned int num_pfds;
 			struct mg_pollfd * pfd = mg_get_poll_fds_for_connection(conn, &num_pfds, POLLIN);
 			pollres = pfd ? mg_poll(pfd,
 			                  num_pfds,
@@ -6533,7 +6533,7 @@ pull_inner(FILE *fp,
 	} else {
 		int pollres;
 
-		int num_pfds;
+		unsigned int num_pfds;
 		struct mg_pollfd * pfd = mg_get_poll_fds_for_connection(conn, &num_pfds, POLLIN);
 		pollres = pfd ? mg_poll(pfd,
 		                  num_pfds,
@@ -16829,11 +16829,11 @@ sslize(struct mg_connection *conn,
 					 * This is typical for non-blocking sockets. */
 
 					int pollres;
-					int primary_fd_events = ((err == SSL_ERROR_WANT_CONNECT)
+					short primary_fd_events = ((err == SSL_ERROR_WANT_CONNECT)
 					                || (err == SSL_ERROR_WANT_WRITE))
 					                   ? POLLOUT
 					                   : POLLIN;
-					int num_pfds;
+					unsigned int num_pfds;
 					struct mg_pollfd * pfd =
 					     mg_get_poll_fds_for_connection(conn, &num_pfds, primary_fd_events);
 
@@ -22531,12 +22531,12 @@ mg_set_misc_socket_handler(const struct mg_connection *cconn,
 
 	/** Find the location of any existing record (if any) for the specified sock_fd */
 	struct mg_misc_socket_callback * cbs = conn->misc_socket_callbacks;
-	int num_cbs = conn->num_misc_socket_callbacks;
+	unsigned int num_cbs = conn->num_misc_socket_callbacks;
 	int cur_cb_index = -1;
 	if (cbs) {
-		for (int i=0; i<num_cbs; i++) {
+		for (unsigned int i=0; i<num_cbs; i++) {
 			if (cbs[i].sock_fd == sock_fd) {
-				cur_cb_index = i;
+				cur_cb_index = (int) i;
 				break;
 			}
 		}
@@ -22551,7 +22551,7 @@ mg_set_misc_socket_handler(const struct mg_connection *cconn,
 			if (new_cbs == NULL) {
 				return -2;  /* out of memory */
 			}
-			cur_cb_index = num_cbs;
+			cur_cb_index = (int) num_cbs;
 
 			conn->misc_socket_callbacks = new_cbs;
 			conn->num_misc_socket_callbacks++;
@@ -22568,7 +22568,7 @@ mg_set_misc_socket_handler(const struct mg_connection *cconn,
 			mg_free(cbs);
 			conn->misc_socket_callbacks = NULL;
 		} else {
-			for (int i=cur_cb_index; (i+1)<num_cbs; i++) {
+			for (unsigned int i=(unsigned int)cur_cb_index; (i+1)<num_cbs; i++) {
 				cbs[i] = cbs[i+1];
 			}
 

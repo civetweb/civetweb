@@ -1653,7 +1653,7 @@ CIVETWEB_API int mg_response_header_send(struct mg_connection *conn);
          1: keep the client connection open.
          0: close the client connection.  (Note this closes the mg_connection, *not* sock_fd!)
 */
-typedef int (*mg_misc_socket_flags_provider)(const struct mg_connection * conn,
+typedef short (*mg_misc_socket_flags_provider)(const struct mg_connection * conn,
                                              int sock_fd);
 typedef int (*mg_misc_socket_data_handler)(struct mg_connection * conn,
                                            int sock_fd,
