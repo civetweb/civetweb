@@ -227,7 +227,7 @@ message(STATUS "Compile for OpenSSL 1.0 API - ${CIVETWEB_SSL_OPENSSL_API_1_0}")
 option(CIVETWEB_SSL_OPENSSL_API_1_1 "Use the OpenSSL 1.1 API" ON)
 message(STATUS "Compile for OpenSSL 1.1 API - ${CIVETWEB_SSL_OPENSSL_API_1_1}")
 
-# OpenSSL 1.1 API
+# OpenSSL 3.0 API
 option(CIVETWEB_SSL_OPENSSL_API_3_0 "Use the OpenSSL 3.0 API" OFF)
 message(STATUS "Compile for OpenSSL 3.0 API - ${CIVETWEB_SSL_OPENSSL_API_3_0}")
 

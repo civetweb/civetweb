@@ -440,6 +440,7 @@ before_build:
     -DCIVETWEB_CXX_STANDARD=%cxx_standard%
     -DCIVETWEB_SSL_OPENSSL_API_1_0=NO
     -DCIVETWEB_SSL_OPENSSL_API_1_1=YES
+    -DCIVETWEB_SSL_OPENSSL_API_3_0=NO
     "%source_path%"
   - cmake
     -G "%generator%" %arch_arg%
@@ -461,6 +462,8 @@ before_build:
     -DCIVETWEB_CXX_STANDARD=%cxx_standard%
     -DCIVETWEB_SSL_OPENSSL_API_1_0=NO
     -DCIVETWEB_SSL_OPENSSL_API_1_1=YES
+    -DCIVETWEB_SSL_OPENSSL_API_3_0=NO
+
     "%source_path%"
   - powershell Push-AppveyorArtifact CMakeCache.txt
   - cd "%source_path%"
