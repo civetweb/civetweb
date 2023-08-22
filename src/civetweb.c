@@ -11328,11 +11328,11 @@ read_message(FILE *fp,
 			request_len = get_http_header_len(buf, *nread);
 		}
 
-		if ((request_len == 0) && (request_timeout >= 0)) {
+		if ((n <= 0) && (request_timeout >= 0)) {
 			if (mg_difftimespec(&last_action_time, &(conn->req_time))
 			    > request_timeout) {
 				/* Timeout */
-				return -1;
+				return -3;
 			}
 		}
 	}
@@ -18816,7 +18816,7 @@ get_message(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			            ebuf,
 			            ebuf_len,
 			            "%s",
-			            "Malformed message");
+			            conn->request_len == -3 ? "Request timeout" : "Malformed message");
 			*err = 400;
 		} else {
 			/* Server did not recv anything -> just close the connection */
