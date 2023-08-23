@@ -1929,6 +1929,7 @@ struct socket {
 	unsigned char is_ssl;    /* Is port SSL-ed */
 	unsigned char ssl_redir; /* Is port supposed to redirect everything to SSL
 	                          * port */
+	unsigned char is_optional; /* Shouldn't cause us to exit if we can't bind to it */
 	unsigned char in_use;    /* 0: invalid, 1: valid, 2: free */
 };
 
@@ -11336,11 +11337,11 @@ read_message(FILE *fp,
 			request_len = get_http_header_len(buf, *nread);
 		}
 
-		if ((request_len == 0) && (request_timeout >= 0)) {
+		if ((n <= 0) && (request_timeout >= 0)) {
 			if (mg_difftimespec(&last_action_time, &(conn->req_time))
 			    > request_timeout) {
 				/* Timeout */
-				return -1;
+				return -3;
 			}
 		}
 	}
@@ -15697,7 +15698,7 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	unsigned int a, b, c, d;
 	unsigned port;
 	unsigned long portUL;
-	int ch, len;
+	int len;
 	const char *cb;
 	char *endptr;
 #if defined(USE_IPV6)
@@ -15850,14 +15851,31 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	}
 
 	/* sscanf and the option splitting code ensure the following condition
-	 * Make sure the port is valid and vector ends with the port, 's' or 'r' */
-	if ((len > 0) && is_valid_port(port)
-	    && (((size_t)len == vec->len) || (((size_t)len + 1) == vec->len))) {
-		/* Next character after the port number */
-		ch = ((size_t)len < vec->len) ? vec->ptr[len] : '\0';
-		so->is_ssl = (ch == 's');
-		so->ssl_redir = (ch == 'r');
-		if ((ch == '\0') || (ch == 's') || (ch == 'r')) {
+	 * Make sure the port is valid and vector ends with the port, 'o', 's', or 'r' */
+	if ((len > 0) && (is_valid_port(port))) {
+		int bad_suffix = 0;
+
+		/* Parse any suffix character(s) after the port number */
+		for (size_t i=len; i<vec->len; i++)
+		{
+			unsigned char * opt = NULL;
+			switch(vec->ptr[i])
+			{
+				case 'o': opt = &so->is_optional; break;
+				case 'r': opt = &so->ssl_redir;   break;
+				case 's': opt = &so->is_ssl;      break;
+				default:  /* empty */             break;
+			}
+
+			if ((opt)&&(*opt == 0)) *opt = 1;
+			else
+			{
+				bad_suffix = 1;
+				break;
+			}
+		}
+
+		if ((bad_suffix == 0)&&((so->is_ssl == 0)||(so->ssl_redir == 0))) {
 			return 1;
 		}
 	}
@@ -15912,8 +15930,11 @@ is_ssl_port_used(const char *ports)
 		char prevIsNumber = 0;
 
 		for (i = 0; i < portslen; i++) {
-			if (prevIsNumber && (ports[i] == 's' || ports[i] == 'r')) {
-				return 1;
+			if (prevIsNumber) {
+				int suffixCharIdx = (ports[i] == 'o') ? (i+1) : i;  /* allow "os" and "or" suffixes */
+				if (ports[suffixCharIdx] == 's' || ports[suffixCharIdx] == 'r') {
+					return 1;
+				}
 			}
 			if (ports[i] >= '0' && ports[i] <= '9') {
 				prevIsNumber = 1;
@@ -16096,6 +16117,9 @@ set_ports_option(struct mg_context *phys_ctx)
 				                    strerror(errno));
 				closesocket(so.sock);
 				so.sock = INVALID_SOCKET;
+				if (so.is_optional) {
+					portsOk++; /* it's okay if we couldn't bind, this port is optional anyway */
+				}
 				continue;
 			}
 		}
@@ -16112,6 +16136,9 @@ set_ports_option(struct mg_context *phys_ctx)
 				                    strerror(errno));
 				closesocket(so.sock);
 				so.sock = INVALID_SOCKET;
+				if (so.is_optional) {
+					portsOk++; /* it's okay if we couldn't bind, this port is optional anyway */
+				}
 				continue;
 			}
 		}
@@ -16128,6 +16155,9 @@ set_ports_option(struct mg_context *phys_ctx)
 				                    strerror(errno));
 				closesocket(so.sock);
 				so.sock = INVALID_SOCKET;
+				if (so.is_optional) {
+					portsOk++; /* it's okay if we couldn't bind, this port is optional anyway */
+				}
 				continue;
 			}
 		}
@@ -18824,7 +18854,7 @@ get_message(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			            ebuf,
 			            ebuf_len,
 			            "%s",
-			            "Malformed message");
+			            conn->request_len == -3 ? "Request timeout" : "Malformed message");
 			*err = 400;
 		} else {
 			/* Server did not recv anything -> just close the connection */
@@ -20198,6 +20228,7 @@ accept_new_connection(const struct socket *listener, struct mg_context *ctx)
 		set_close_on_exec(so.sock, NULL, ctx);
 		so.is_ssl = listener->is_ssl;
 		so.ssl_redir = listener->ssl_redir;
+		so.is_optional = listener->is_optional;
 		if (getsockname(so.sock, &so.lsa.sa, &len) != 0) {
 			mg_cry_ctx_internal(ctx,
 			                    "%s: getsockname() failed: %s",
