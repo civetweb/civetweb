@@ -230,7 +230,10 @@ static void DEBUG_TRACE_FUNC(const char *func,
                              PRINTF_FORMAT_STRING(const char *fmt),
                              ...) PRINTF_ARGS(3, 4);
 
-#if defined(__GNUC__)
+#if defined(__cplusplus) && (__cplusplus >= 202002L)
+#define DEBUG_TRACE(fmt, ...)                                                  \
+	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt __VA_OPT__(, ) __VA_ARGS__)
+#elif defined(__GNUC__) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #define DEBUG_TRACE(fmt, ...)                                                  \
 	DEBUG_TRACE_FUNC(__func__, __LINE__, fmt, ##__VA_ARGS__)
 #else
