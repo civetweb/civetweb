@@ -1,8 +1,8 @@
-# Running Civetweb in Docker
+# Running CivetWeb in Docker
 
 ## Overview
 
-This guide explains how to build and run Civetweb using a multi-stage Dockerfile. The Dockerfile uses Alpine Linux for both the build and runtime stages, making the final image lightweight.
+This guide explains how to build and run CivetWeb using a multi-stage Dockerfile. The Dockerfile uses Alpine Linux for both the build and runtime stages, making the final image lightweight.
 
 ## Prerequisites
 
@@ -93,4 +93,4 @@ docker run -p 8080:8080 civetweb:latest
 
 ## Conclusion
 
-This Dockerfile provides a secure and efficient way to build and run Civetweb. The use of multi-stage builds ensures that the final image is as small as possible. The `EXPOSE` directive informs that the application will listen on port 8080, making it easier to map ports when running the container.
+This Dockerfile provides a secure and efficient way to build and run CivetWeb. The use of multi-stage builds ensures that the final image is as small as possible. The `EXPOSE` directive informs that the application will listen on port 8080, making it easier to map ports when running the container.
