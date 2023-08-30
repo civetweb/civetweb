@@ -43,6 +43,7 @@ Documentation
 - [Building.md](Building.md) - Building the Server (quick start guide)
 - [Embedding.md](Embedding.md) - Embedding (how to add HTTP support to an existing application)
 - [OpenSSL.md](OpenSSL.md) - Adding HTTPS (SSL/TLS) support using OpenSSL.
+- [Docker.md](Docker.md) - Use CivetWeb in a Docker container.
 - [APIReference.md](APIReference.md) - Additional documentation on the civetweb application programming interface ([civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)).
 
 [Authors](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
