@@ -1442,7 +1442,7 @@ handle_http2(struct mg_connection *conn)
 					    hpack_decode(buf, &i, (int)bytes_read, conn->phys_ctx);
 					CHECK_LEAK_HDR_ALLOC(key);
 					if (!key) {
-						DEBUG_TRACE("HTTP2 key decoding error");
+						DEBUG_TRACE("%s", "HTTP2 key decoding error");
 						goto clean_http2;
 					}
 				} else if (/*(idx >= 15) &&*/ (idx <= 61)) {
@@ -1509,7 +1509,7 @@ handle_http2(struct mg_connection *conn)
 					                   conn->phys_ctx); /* leak? */
 					CHECK_LEAK_HDR_ALLOC(val);
 					if (!val) {
-						DEBUG_TRACE("HTTP2 value decoding error");
+						DEBUG_TRACE("%s", "HTTP2 value decoding error");
 						mg_free((void *)key);
 						goto clean_http2;
 					}
