@@ -629,13 +629,13 @@ configure_file(
 install(
   FILES 
     "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc"
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
 install(
   FILES 
     "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc"
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake
