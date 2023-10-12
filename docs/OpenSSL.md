@@ -46,7 +46,7 @@ One can use the following steps in Windows (in Linux replace "copy" by "cp"
 and "type" by "cat"):
 
 <pre>
-  openssl genrsa -des3 -out server.key 1024
+  openssl genrsa -des3 -out server.key 2048
 
   openssl req -new -key server.key -out server.csr
 
