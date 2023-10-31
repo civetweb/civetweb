@@ -188,7 +188,11 @@ mbed_ssl_accept(mbedtls_ssl_context **ssl,
 		return -1;
 	}
 
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+	DEBUG_TRACE("TLS connection %p accepted, state: %d", ssl, (*ssl)->MBEDTLS_PRIVATE(state));
+#else
 	DEBUG_TRACE("TLS connection %p accepted, state: %d", ssl, (*ssl)->state);
+#endif
 	return 0;
 }
 
@@ -214,7 +218,11 @@ mbed_ssl_handshake(mbedtls_ssl_context *ssl)
 		}
 	}
 
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+	DEBUG_TRACE("TLS handshake rc: %d, state: %d", rc, ssl->MBEDTLS_PRIVATE(state));
+#else
 	DEBUG_TRACE("TLS handshake rc: %d, state: %d", rc, ssl->state);
+#endif
 	return rc;
 }
 
