@@ -10843,8 +10843,9 @@ static int
 skip_to_end_of_word_and_terminate(char **ppw, int eol)
 {
 	/* Forward until a space is found - use isgraph here */
+	/* Extended ASCII characters are also treated as word characters. */
 	/* See http://www.cplusplus.com/reference/cctype/ */
-	while (isgraph((unsigned char)**ppw)) {
+	while ((unsigned char)**ppw > 127 || isgraph((unsigned char)**ppw)) {
 		(*ppw)++;
 	}
 
@@ -18639,7 +18640,7 @@ get_uri_type(const char *uri)
 	 * and % encoded symbols.
 	 */
 	for (i = 0; uri[i] != 0; i++) {
-		if (uri[i] < 33) {
+		if ((unsigned char)uri[i] < 33) {
 			/* control characters and spaces are invalid */
 			return 0;
 		}
