@@ -231,6 +231,9 @@ message(STATUS "Compile for OpenSSL 1.1 API - ${CIVETWEB_SSL_OPENSSL_API_1_1}")
 option(CIVETWEB_SSL_OPENSSL_API_3_0 "Use the OpenSSL 3.0 API" OFF)
 message(STATUS "Compile for OpenSSL 3.0 API - ${CIVETWEB_SSL_OPENSSL_API_3_0}")
 
+option(CIVETWEB_ENABLE_MBEDTLS "Use the MbedTls" OFF)
+message(STATUS "SSL support - ${CIVETWEB_ENABLE_MBEDTLS}")
+
 # Dynamically load or link the SSL libraries
 cmake_dependent_option(
   CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING "Dynamically loads the SSL library rather than linking it" ON
@@ -523,6 +526,8 @@ if (CIVETWEB_ENABLE_MEMORY_DEBUGGING)
 endif()
 if (NOT CIVETWEB_ENABLE_SSL)
   add_definitions(-DNO_SSL)
+elseif (CIVETWEB_ENABLE_MBEDTLS)
+  add_definitions(-DUSE_MBEDTLS)
 elseif (NOT CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING)
   add_definitions(-DNO_SSL_DL)
 else()
