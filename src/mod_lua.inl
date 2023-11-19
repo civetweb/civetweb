@@ -3068,9 +3068,14 @@ mg_exec_lua_script(struct mg_connection *conn,
 		}
 
 		if (luaL_loadfile(L, path) != 0) {
+			mg_send_http_error(conn, 500, "Lua error:\r\n");
 			lua_error_handler(L);
 		} else {
-			lua_pcall(L, 0, 0, -2);
+			int call_status = lua_pcall(L, 0, 0, 0);
+			if (call_status != 0) {
+				mg_send_http_error(conn, 500, "Lua error:\r\n");
+				lua_error_handler(L);
+			}
 		}
 		DEBUG_TRACE("Close Lua environment %p", L);
 		lua_close(L);
