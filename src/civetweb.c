@@ -4179,6 +4179,8 @@ send_additional_header(struct mg_connection *conn)
 	}
 #endif
 
+	// Content-Security-Policy
+
 	if (header && header[0]) {
 		mg_response_header_add_lines(conn, header);
 	}
@@ -7724,21 +7726,25 @@ substitute_index_file(struct mg_connection *conn,
 		if ((root_prefix) && (fallback_root_prefix)) {
 			const size_t root_prefix_len = strlen(root_prefix);
 			if ((strncmp(path, root_prefix, root_prefix_len) == 0)) {
+				char scratch_path[UTF8_PATH_MAX]; /* separate storage, to avoid
+				                                  side effects if we fail */
+				size_t sub_path_len;
+
 				const size_t fallback_root_prefix_len =
 				    strlen(fallback_root_prefix);
 				const char *sub_path = path + root_prefix_len;
-				while (*sub_path == '/')
+				while (*sub_path == '/') {
 					sub_path++;
-				const size_t sub_path_len = strlen(sub_path);
+				}
+				sub_path_len = strlen(sub_path);
 
-				char scratch_path[UTF8_PATH_MAX]; /* separate storage, to avoid
-				                                     side effects if we fail */
 				if (((fallback_root_prefix_len + 1 + sub_path_len + 1)
 				     < sizeof(scratch_path))) {
 					/* The concatenations below are all safe because we
 					 * pre-verified string lengths above */
+					char *nul;
 					strcpy(scratch_path, fallback_root_prefix);
-					char *nul = strchr(scratch_path, '\0');
+					nul = strchr(scratch_path, '\0');
 					if ((nul > scratch_path) && (*(nul - 1) != '/')) {
 						*nul++ = '/';
 						*nul = '\0';
