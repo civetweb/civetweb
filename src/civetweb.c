@@ -9672,8 +9672,9 @@ connect_socket(
 		/* Data for poll */
 		struct mg_pollfd pfd[2];
 		int pollres;
-		int ms_wait = 10000;     /* 10 second timeout */
-		stop_flag_t nonstop = 0; /* STOP_FLAG_ASSIGN(&nonstop, 0); */
+		int ms_wait = 10000;       /* 10 second timeout */
+		stop_flag_t nonstop = 0;   /* STOP_FLAG_ASSIGN(&nonstop, 0); */
+		unsigned int num_sock = 1; /* use one or two sockets */
 
 		/* For a non-blocking socket, the connect sequence is:
 		 * 1) call connect (will not block)
@@ -9683,13 +9684,14 @@ connect_socket(
 		pfd[0].fd = *sock;
 		pfd[0].events = POLLOUT;
 
-		pfd[1].fd = ctx ? ctx->thread_shutdown_notification_socket : -1;
-		pfd[1].events = POLLIN;
+		if (ctx && (ctx->context_type == CONTEXT_SERVER)) {
+			pfd[num_sock].fd = ctx->thread_shutdown_notification_socket;
+			pfd[num_sock].events = POLLIN;
+			num_sock++;
+		}
 
-		pollres = mg_poll(pfd,
-		                  ctx ? 2 : 1,
-		                  ms_wait,
-		                  ctx ? &(ctx->stop_flag) : &nonstop);
+		pollres =
+		    mg_poll(pfd, num_sock, ms_wait, ctx ? &(ctx->stop_flag) : &nonstop);
 
 		if (pollres != 1) {
 			/* Not connected */
