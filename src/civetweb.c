@@ -1921,8 +1921,9 @@ struct socket {
 	unsigned char is_ssl;    /* Is port SSL-ed */
 	unsigned char ssl_redir; /* Is port supposed to redirect everything to SSL
 	                          * port */
-	unsigned char is_optional; /* Shouldn't cause us to exit if we can't bind to it */
-	unsigned char in_use;    /* 0: invalid, 1: valid, 2: free */
+	unsigned char
+	    is_optional; /* Shouldn't cause us to exit if we can't bind to it */
+	unsigned char in_use; /* 0: invalid, 1: valid, 2: free */
 };
 
 
@@ -2399,17 +2400,18 @@ struct mg_context {
 	stop_flag_t stop_flag;        /* Should we stop event loop */
 	pthread_mutex_t thread_mutex; /* Protects client_socks or queue */
 
-	pthread_t masterthreadid; /* The master thread ID */
-	unsigned int
-	    cfg_max_worker_threads;  /* How many worker-threads we are allowed to create, total */
+	pthread_t masterthreadid;            /* The master thread ID */
+	unsigned int cfg_max_worker_threads; /* How many worker-threads we are
+	                                        allowed to create, total */
 
+	unsigned int spawned_worker_threads; /* How many worker-threads currently
+	                                        exist (modified by master thread) */
 	unsigned int
-	    spawned_worker_threads;  /* How many worker-threads currently exist (modified by master thread) */
-	unsigned int
-	    idle_worker_thread_count; /* How many worker-threads are currently sitting around with nothing to do */
-	                              /* Access to this value MUST be synchronized by thread_mutex */
+	    idle_worker_thread_count; /* How many worker-threads are currently
+	                                 sitting around with nothing to do */
+	/* Access to this value MUST be synchronized by thread_mutex */
 
-	pthread_t *worker_threadids; /* The worker thread IDs */
+	pthread_t *worker_threadids;      /* The worker thread IDs */
 	unsigned long starter_thread_idx; /* thread index which called mg_start */
 
 	/* Connection to thread dispatching */
@@ -4205,7 +4207,8 @@ send_cors_header(struct mg_connection *conn)
 	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
 	if (cors_cred_cfg && *cors_cred_cfg && origin_hdr && *origin_hdr) {
 		/* Cross-origin resource sharing (CORS), see
-		 * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials */
+		 * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials
+		 */
 		mg_response_header_add(conn,
 		                       "Access-Control-Allow-Credentials",
 		                       cors_cred_cfg,
@@ -4215,30 +4218,29 @@ send_cors_header(struct mg_connection *conn)
 	const char *cors_hdr_cfg =
 	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_HEADERS];
 	if (cors_hdr_cfg && *cors_hdr_cfg) {
-	   mg_response_header_add(conn,
-	                          "Access-Control-Allow-Headers",
-	                          cors_hdr_cfg,
-	                          -1);
+		mg_response_header_add(conn,
+		                       "Access-Control-Allow-Headers",
+		                       cors_hdr_cfg,
+		                       -1);
 	}
 
 	const char *cors_exphdr_cfg =
-	      conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
+	    conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
 	if (cors_exphdr_cfg && *cors_exphdr_cfg) {
-	   mg_response_header_add(conn,
-	                          "Access-Control-Expose-Headers",
-	                          cors_exphdr_cfg,
-	                          -1);
+		mg_response_header_add(conn,
+		                       "Access-Control-Expose-Headers",
+		                       cors_exphdr_cfg,
+		                       -1);
 	}
 
 	const char *cors_meth_cfg =
-	      conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
+	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
 	if (cors_meth_cfg && *cors_meth_cfg) {
-	   mg_response_header_add(conn,
-	                          "Access-Control-Allow-Methods",
-	                          cors_meth_cfg,
-	                          -1);
+		mg_response_header_add(conn,
+		                       "Access-Control-Allow-Methods",
+		                       cors_meth_cfg,
+		                       -1);
 	}
-
 }
 
 
@@ -15038,19 +15040,19 @@ handle_request(struct mg_connection *conn)
 			          suggest_connection_header(conn));
 
 			const char *cors_cred_cfg =
-			      conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
+			    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
 			if (cors_cred_cfg && *cors_cred_cfg) {
-			   mg_printf(conn,
-			             "Access-Control-Allow-Credentials: %s\r\n",
-			             cors_cred_cfg);
+				mg_printf(conn,
+				          "Access-Control-Allow-Credentials: %s\r\n",
+				          cors_cred_cfg);
 			}
 
 			const char *cors_exphdr_cfg =
-			      conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
+			    conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
 			if (cors_exphdr_cfg && *cors_exphdr_cfg) {
-			   mg_printf(conn,
-			             "Access-Control-Expose-Headers: %s\r\n",
-			             cors_exphdr_cfg);
+				mg_printf(conn,
+				          "Access-Control-Expose-Headers: %s\r\n",
+				          cors_exphdr_cfg);
 			}
 
 			if (cors_acrh || (cors_cred_cfg && *cors_cred_cfg)) {
@@ -15844,31 +15846,37 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	}
 
 	/* sscanf and the option splitting code ensure the following condition
-	 * Make sure the port is valid and vector ends with the port, 'o', 's', or 'r' */
+	 * Make sure the port is valid and vector ends with the port, 'o', 's', or
+	 * 'r' */
 	if ((len > 0) && (is_valid_port(port))) {
 		int bad_suffix = 0;
 
 		/* Parse any suffix character(s) after the port number */
-		for (size_t i=len; i<vec->len; i++)
-		{
-			unsigned char * opt = NULL;
-			switch(vec->ptr[i])
-			{
-				case 'o': opt = &so->is_optional; break;
-				case 'r': opt = &so->ssl_redir;   break;
-				case 's': opt = &so->is_ssl;      break;
-				default:  /* empty */             break;
+		for (size_t i = len; i < vec->len; i++) {
+			unsigned char *opt = NULL;
+			switch (vec->ptr[i]) {
+			case 'o':
+				opt = &so->is_optional;
+				break;
+			case 'r':
+				opt = &so->ssl_redir;
+				break;
+			case 's':
+				opt = &so->is_ssl;
+				break;
+			default: /* empty */
+				break;
 			}
 
-			if ((opt)&&(*opt == 0)) *opt = 1;
-			else
-			{
+			if ((opt) && (*opt == 0))
+				*opt = 1;
+			else {
 				bad_suffix = 1;
 				break;
 			}
 		}
 
-		if ((bad_suffix == 0)&&((so->is_ssl == 0)||(so->ssl_redir == 0))) {
+		if ((bad_suffix == 0) && ((so->is_ssl == 0) || (so->ssl_redir == 0))) {
 			return 1;
 		}
 	}
@@ -15924,8 +15932,11 @@ is_ssl_port_used(const char *ports)
 
 		for (i = 0; i < portslen; i++) {
 			if (prevIsNumber) {
-				int suffixCharIdx = (ports[i] == 'o') ? (i+1) : i;  /* allow "os" and "or" suffixes */
-				if (ports[suffixCharIdx] == 's' || ports[suffixCharIdx] == 'r') {
+				int suffixCharIdx = (ports[i] == 'o')
+				                        ? (i + 1)
+				                        : i; /* allow "os" and "or" suffixes */
+				if (ports[suffixCharIdx] == 's'
+				    || ports[suffixCharIdx] == 'r') {
 					return 1;
 				}
 			}
@@ -16111,7 +16122,8 @@ set_ports_option(struct mg_context *phys_ctx)
 				closesocket(so.sock);
 				so.sock = INVALID_SOCKET;
 				if (so.is_optional) {
-					portsOk++; /* it's okay if we couldn't bind, this port is optional anyway */
+					portsOk++; /* it's okay if we couldn't bind, this port is
+					              optional anyway */
 				}
 				continue;
 			}
@@ -16130,7 +16142,8 @@ set_ports_option(struct mg_context *phys_ctx)
 				closesocket(so.sock);
 				so.sock = INVALID_SOCKET;
 				if (so.is_optional) {
-					portsOk++; /* it's okay if we couldn't bind, this port is optional anyway */
+					portsOk++; /* it's okay if we couldn't bind, this port is
+					              optional anyway */
 				}
 				continue;
 			}
@@ -16149,7 +16162,8 @@ set_ports_option(struct mg_context *phys_ctx)
 				closesocket(so.sock);
 				so.sock = INVALID_SOCKET;
 				if (so.is_optional) {
-					portsOk++; /* it's okay if we couldn't bind, this port is optional anyway */
+					portsOk++; /* it's okay if we couldn't bind, this port is
+					              optional anyway */
 				}
 				continue;
 			}
@@ -18847,7 +18861,8 @@ get_message(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 			            ebuf,
 			            ebuf_len,
 			            "%s",
-			            conn->request_len == -3 ? "Request timeout" : "Malformed message");
+			            conn->request_len == -3 ? "Request timeout"
+			                                    : "Malformed message");
 			*err = 400;
 		} else {
 			/* Server did not recv anything -> just close the connection */
@@ -19779,7 +19794,9 @@ process_new_connection(struct mg_connection *conn)
 #endif
 }
 
-static int mg_start_worker_thread(struct mg_context *ctx, int only_if_no_idle_threads);  /* forward declaration */
+static int
+mg_start_worker_thread(struct mg_context *ctx,
+                       int only_if_no_idle_threads); /* forward declaration */
 
 #if defined(ALTERNATIVE_QUEUE)
 
@@ -19788,7 +19805,9 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
 	unsigned int i;
 
-	(void)mg_start_worker_thread(ctx, 1);  /* will start a worker-thread only if there aren't currently any idle worker-threads */
+	(void)mg_start_worker_thread(
+	    ctx, 1); /* will start a worker-thread only if there aren't currently
+	                any idle worker-threads */
 
 	while (!ctx->stop_flag) {
 		for (i = 0; i < ctx->spawned_worker_threads; i++) {
@@ -19816,11 +19835,16 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 
 
 static int
-consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index, int counter_was_preincremented)
+consume_socket(struct mg_context *ctx,
+               struct socket *sp,
+               int thread_index,
+               int counter_was_preincremented)
 {
 	DEBUG_TRACE("%s", "going idle");
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
-	if (counter_was_preincremented == 0) {  /* first call only: the master-thread pre-incremented this before he spawned us */
+	if (counter_was_preincremented
+	    == 0) { /* first call only: the master-thread pre-incremented this
+		           before he spawned us */
 		ctx->idle_worker_thread_count++;
 	}
 	ctx->client_socks[thread_index].in_use = 2;
@@ -19854,13 +19878,18 @@ consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index, int 
 
 /* Worker threads take accepted socket from the queue */
 static int
-consume_socket(struct mg_context *ctx, struct socket *sp, int thread_index, int counter_was_preincremented)
+consume_socket(struct mg_context *ctx,
+               struct socket *sp,
+               int thread_index,
+               int counter_was_preincremented)
 {
 	(void)thread_index;
 
 	DEBUG_TRACE("%s", "going idle");
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
-	if (counter_was_preincremented == 0) {  /* first call only: the master-thread pre-incremented this before he spawned us */
+	if (counter_was_preincremented
+	    == 0) { /* first call only: the master-thread pre-incremented this
+		           before he spawned us */
 		ctx->idle_worker_thread_count++;
 	}
 
@@ -19935,7 +19964,9 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 	(void)pthread_cond_signal(&ctx->sq_full);
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
-	(void)mg_start_worker_thread(ctx, 1);  /* will start a worker-thread only if there aren't currently any idle worker-threads */
+	(void)mg_start_worker_thread(
+	    ctx, 1); /* will start a worker-thread only if there aren't currently
+	                any idle worker-threads */
 }
 #endif /* ALTERNATIVE_QUEUE */
 
@@ -20013,7 +20044,8 @@ worker_thread_run(struct mg_connection *conn)
 	/* Call consume_socket() even when ctx->stop_flag > 0, to let it
 	 * signal sq_empty condvar to wake up the master waiting in
 	 * produce_socket() */
-	while (consume_socket(ctx, &conn->client, thread_index, first_call_to_consume_socket)) {
+	while (consume_socket(
+	    ctx, &conn->client, thread_index, first_call_to_consume_socket)) {
 		first_call_to_consume_socket = 0;
 
 		/* New connections must start with new protocol negotiation */
@@ -20791,34 +20823,43 @@ mg_socketpair(int *sockA, int *sockB)
 #endif
 }
 
-static int mg_start_worker_thread(struct mg_context *ctx, int only_if_no_idle_threads) {
+static int
+mg_start_worker_thread(struct mg_context *ctx, int only_if_no_idle_threads)
+{
 	const unsigned int i = ctx->spawned_worker_threads;
 	if (i >= ctx->cfg_max_worker_threads) {
-		return -1;  /* Oops, we hit our worker-thread limit!  No more worker threads, ever! */
+		return -1; /* Oops, we hit our worker-thread limit!  No more worker
+		              threads, ever! */
 	}
 
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 #if defined(ALTERNATIVE_QUEUE)
-	if ((only_if_no_idle_threads)&&(ctx->idle_worker_thread_count > 0)) {
+	if ((only_if_no_idle_threads) && (ctx->idle_worker_thread_count > 0)) {
 #else
-	if ((only_if_no_idle_threads)&&(ctx->idle_worker_thread_count > (unsigned)(ctx->sq_head-ctx->sq_tail))) {
+	if ((only_if_no_idle_threads)
+	    && (ctx->idle_worker_thread_count
+	        > (unsigned)(ctx->sq_head - ctx->sq_tail))) {
 #endif
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
-		return -2;  /* There are idle threads available, so no need to spawn a new worker thread now */
+		return -2; /* There are idle threads available, so no need to spawn a
+		              new worker thread now */
 	}
-	ctx->idle_worker_thread_count++;  /* we do this here to avoid a race condition while the thread is starting up */
+	ctx->idle_worker_thread_count++; /* we do this here to avoid a race
+	                                    condition while the thread is starting
+	                                    up */
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	ctx->worker_connections[i].phys_ctx = ctx;
 	int ret = mg_start_thread_with_id(worker_thread,
-	                            &ctx->worker_connections[i],
-	                            &ctx->worker_threadids[i]);
+	                                  &ctx->worker_connections[i],
+	                                  &ctx->worker_threadids[i]);
 	if (ret == 0) {
-		ctx->spawned_worker_threads++;  /* note that we've filled another slot in the table */
+		ctx->spawned_worker_threads++; /* note that we've filled another slot in
+		                                  the table */
 		DEBUG_TRACE("Started worker_thread #%i", ctx->spawned_worker_threads);
 	} else {
 		(void)pthread_mutex_lock(&ctx->thread_mutex);
-		ctx->idle_worker_thread_count--;  /* whoops, roll-back on error */
+		ctx->idle_worker_thread_count--; /* whoops, roll-back on error */
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 	}
 	return ret;
@@ -21081,11 +21122,13 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 #endif
 
 	/* Worker thread count option */
-	workerthreadcount   = atoi(ctx->dd.config[NUM_THREADS]);
+	workerthreadcount = atoi(ctx->dd.config[NUM_THREADS]);
 	prespawnthreadcount = atoi(ctx->dd.config[PRESPAWN_THREADS]);
 
-	if ((prespawnthreadcount < 0)||(prespawnthreadcount > workerthreadcount)) {
-		prespawnthreadcount = workerthreadcount;  /* can't prespawn more than all of them! */
+	if ((prespawnthreadcount < 0)
+	    || (prespawnthreadcount > workerthreadcount)) {
+		prespawnthreadcount =
+		    workerthreadcount; /* can't prespawn more than all of them! */
 	}
 
 	if ((workerthreadcount > MAX_WORKER_THREADS) || (workerthreadcount <= 0)) {
@@ -21352,9 +21395,10 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 	}
 
 	ctx->cfg_max_worker_threads = ((unsigned int)(workerthreadcount));
-	ctx->worker_threadids = (pthread_t *)mg_calloc_ctx(ctx->cfg_max_worker_threads,
-	                                                   sizeof(pthread_t),
-	                                                   ctx);
+	ctx->worker_threadids =
+	    (pthread_t *)mg_calloc_ctx(ctx->cfg_max_worker_threads,
+	                               sizeof(pthread_t),
+	                               ctx);
 
 	if (ctx->worker_threadids == NULL) {
 		const char *err_msg = "Not enough memory for worker thread ID array";
@@ -21362,8 +21406,8 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 
 		if (error != NULL) {
 			error->code = MG_ERROR_DATA_CODE_OUT_OF_MEMORY;
-			error->code_sub =
-			    (unsigned)ctx->cfg_max_worker_threads * (unsigned)sizeof(pthread_t);
+			error->code_sub = (unsigned)ctx->cfg_max_worker_threads
+			                  * (unsigned)sizeof(pthread_t);
 			mg_snprintf(NULL,
 			            NULL, /* No truncation check for error buffers */
 			            error->text,
