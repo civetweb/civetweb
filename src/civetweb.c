@@ -4193,6 +4193,14 @@ send_cors_header(struct mg_connection *conn)
 	const char *origin_hdr = mg_get_header(conn, "Origin");
 	const char *cors_orig_cfg =
 	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_ORIGIN];
+	const char *cors_cred_cfg =
+	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
+	const char *cors_hdr_cfg =
+	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_HEADERS];
+	const char *cors_exphdr_cfg =
+	    conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
+	const char *cors_meth_cfg =
+	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
 
 	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr && *origin_hdr) {
 		/* Cross-origin resource sharing (CORS), see
@@ -4205,8 +4213,6 @@ send_cors_header(struct mg_connection *conn)
 		                       -1);
 	}
 
-	const char *cors_cred_cfg =
-	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
 	if (cors_cred_cfg && *cors_cred_cfg && origin_hdr && *origin_hdr) {
 		/* Cross-origin resource sharing (CORS), see
 		 * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials
@@ -4217,8 +4223,6 @@ send_cors_header(struct mg_connection *conn)
 		                       -1);
 	}
 
-	const char *cors_hdr_cfg =
-	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_HEADERS];
 	if (cors_hdr_cfg && *cors_hdr_cfg) {
 		mg_response_header_add(conn,
 		                       "Access-Control-Allow-Headers",
@@ -4226,8 +4230,6 @@ send_cors_header(struct mg_connection *conn)
 		                       -1);
 	}
 
-	const char *cors_exphdr_cfg =
-	    conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
 	if (cors_exphdr_cfg && *cors_exphdr_cfg) {
 		mg_response_header_add(conn,
 		                       "Access-Control-Expose-Headers",
@@ -4235,8 +4237,6 @@ send_cors_header(struct mg_connection *conn)
 		                       -1);
 	}
 
-	const char *cors_meth_cfg =
-	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
 	if (cors_meth_cfg && *cors_meth_cfg) {
 		mg_response_header_add(conn,
 		                       "Access-Control-Allow-Methods",
@@ -7793,6 +7793,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	ptrdiff_t match_len;
 	char gz_path[UTF8_PATH_MAX];
 	int truncated;
+	int i;
 #if !defined(NO_CGI) || defined(USE_LUA) || defined(USE_DUKTAPE)
 	char *tmp_str;
 	size_t tmp_str_len, sep_pos;
@@ -7849,7 +7850,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 		return;
 	}
 
-	for (int i = 0; roots[i] != NULL; i++) {
+	for (i = 0; roots[i] != NULL; i++) {
 		/* Step 6: Determine the local file path from the root path and the
 		 * request uri. */
 		/* Using filename_buf_len - 1 because memmove() for PATH_INFO may shift
@@ -15033,6 +15034,10 @@ handle_request(struct mg_connection *conn)
 			    get_header(ri->http_headers,
 			               ri->num_headers,
 			               "Access-Control-Request-Headers");
+			const char *cors_cred_cfg =
+			    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
+			const char *cors_exphdr_cfg =
+			    conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
 
 			gmt_time_string(date, sizeof(date), &curtime);
 			mg_printf(conn,
@@ -15047,16 +15052,12 @@ handle_request(struct mg_connection *conn)
 			          ((cors_meth_cfg[0] == '*') ? cors_acrm : cors_meth_cfg),
 			          suggest_connection_header(conn));
 
-			const char *cors_cred_cfg =
-			    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_CREDENTIALS];
 			if (cors_cred_cfg && *cors_cred_cfg) {
 				mg_printf(conn,
 				          "Access-Control-Allow-Credentials: %s\r\n",
 				          cors_cred_cfg);
 			}
 
-			const char *cors_exphdr_cfg =
-			    conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
 			if (cors_exphdr_cfg && *cors_exphdr_cfg) {
 				mg_printf(conn,
 				          "Access-Control-Expose-Headers: %s\r\n",
@@ -20774,6 +20775,7 @@ static int
 mg_socketpair(int *sockA, int *sockB)
 {
 	int temp[2] = {-1, -1};
+	int asock = -1;
 
 	/** Default to unallocated */
 	*sockA = -1;
@@ -20787,11 +20789,12 @@ mg_socketpair(int *sockA, int *sockB)
 		set_close_on_exec(*sockA, NULL, NULL);
 		set_close_on_exec(*sockB, NULL, NULL);
 	}
+	(void)asock; /* not used */
 	return ret;
 #else
 	/** No socketpair() call is available, so we'll have to roll our own
 	 * implementation */
-	int asock = socket(PF_INET, SOCK_STREAM, 0);
+	asock = socket(PF_INET, SOCK_STREAM, 0);
 	if (asock >= 0) {
 		struct sockaddr_in addr;
 		struct sockaddr *pa = (struct sockaddr *)&addr;
