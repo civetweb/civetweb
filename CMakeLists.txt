@@ -88,6 +88,11 @@ message(STATUS "IP Version 6 - ${CIVETWEB_ENABLE_IPV6}")
 option(CIVETWEB_ENABLE_WEBSOCKETS "Enable websockets connections" OFF)
 message(STATUS "Websockets support - ${CIVETWEB_ENABLE_WEBSOCKETS}")
 
+# X DOM sockets support
+option(CIVETWEB_ENABLE_X_DOM_SOCKET "Enable X DOM sockets support" OFF)
+message(STATUS "X DOM sockets support - ${CIVETWEB_ENABLE_X_DOM_SOCKET}")
+
+
 # Server statistics support
 option(CIVETWEB_ENABLE_SERVER_STATS "Enable server statistics" OFF)
 message(STATUS "Server statistics support - ${CIVETWEB_ENABLE_SERVER_STATS}")
@@ -497,6 +502,9 @@ endif()
 if (CIVETWEB_ENABLE_WEBSOCKETS)
   add_definitions(-DUSE_WEBSOCKET)
 endif()
+if (CIVETWEB_ENABLE_X_DOM_SOCKET)
+   add_definitions(-DUSE_X_DOM_SOCKET)
+endif()
 if (CIVETWEB_ENABLE_SERVER_STATS)
   add_definitions(-DUSE_SERVER_STATS)
 endif()
@@ -632,13 +640,13 @@ configure_file(
 )
 
 install(
-  FILES 
+  FILES
     "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
 install(
-  FILES 
+  FILES
     "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
