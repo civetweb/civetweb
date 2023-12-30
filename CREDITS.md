@@ -225,6 +225,7 @@
 * Torben Jonas
 * Uilian Ries
 * Ulrich Hertlein
+* videofan3d
 * Walt Steverson
 * wangli28
 * webxer

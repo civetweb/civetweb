@@ -1316,7 +1316,7 @@ START_TEST(test_request_handlers)
 	char cmd_buf[1024];
 	char *cgi_env_opt;
 
-	const char *server_host = "test.domain";
+	const char *server_host = "localhost"; //"test.domain";
 
 	mark_point();
 

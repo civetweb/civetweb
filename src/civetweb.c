@@ -19243,6 +19243,24 @@ websocket_client_thread(void *data)
 #endif
 
 
+#if defined(USE_WEBSOCKET)
+static void
+generate_websocket_magic(char *magic25)
+{
+	uint64_t rnd;
+	unsigned char buffer[2 * sizeof(rnd)];
+
+	rnd = get_random();
+	memcpy(buffer, &rnd, sizeof(rnd));
+	rnd = get_random();
+	memcpy(buffer + sizeof(rnd), &rnd, sizeof(rnd));
+
+	size_t dst_len = 24 + 1;
+	mg_base64_encode(buffer, sizeof(buffer), magic25, &dst_len);
+}
+#endif
+
+
 static struct mg_connection *
 mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
                                  int use_ssl,
@@ -19259,7 +19277,8 @@ mg_connect_websocket_client_impl(const struct mg_client_options *client_options,
 
 #if defined(USE_WEBSOCKET)
 	struct websocket_client_thread_data *thread_data;
-	static const char *magic = "x3JJHMbDL1EzLkh9GBhXDw==";
+	char magic[32];
+	generate_websocket_magic(magic);
 
 	const char *host = client_options->host;
 	int i;
