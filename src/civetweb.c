@@ -15860,9 +15860,10 @@ parse_port_string(const struct vec *vec, struct socket *so, int *ip_version)
 	 * 'r' */
 	if ((len > 0) && (is_valid_port(port))) {
 		int bad_suffix = 0;
+		size_t i;
 
 		/* Parse any suffix character(s) after the port number */
-		for (size_t i = len; i < vec->len; i++) {
+		for (i = len; i < vec->len; i++) {
 			unsigned char *opt = NULL;
 			switch (vec->ptr[i]) {
 			case 'o':
