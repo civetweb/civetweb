@@ -180,7 +180,7 @@ This option can be specified multiple times. All specified header lines will be 
 ### allow\_index\_script\_resource `no`
 Index scripts (like `index.cgi` or `index.lua`) may have script handled resources.
 
-It this feature is activated, that /some/path/file.ext might be handled by:
+If this feature is activated, then /some/path/file.ext might be handled by:
   1. /some/path/file.ext (with PATH\_INFO='/', if ext = cgi)
   2. /some/path/index.lua with mg.request\_info.path\_info='/file.ext'
   3. /some/path/index.cgi with PATH\_INFO='/file.ext'
