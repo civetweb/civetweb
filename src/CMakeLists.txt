@@ -47,10 +47,10 @@ endif()
 
 # We need to link OpenSSL if not dynamically loading
 if (CIVETWEB_ENABLE_SSL)
-  if (CIVETWEB_ENBALE_MBEDTLS)
+  if (CIVETWEB_ENABLE_MBEDTLS)
     find_package(MbedTLS)
     include_directories(${MbedTLS_INCLUDE_DIR})
-    message(STATUS "MbedTLS include directory: {MbedTLS_INCLUDE_DIR}")
+    message(STATUS "MbedTLS include directory: ${MbedTLS_INCLUDE_DIR}")
     target_link_libraries(civetweb-c-library ${MbedTLS_LIBRARIES})
   else()
     if (CIVETWEB_ENABLE_SSL_DYNAMIC_LOADING)
