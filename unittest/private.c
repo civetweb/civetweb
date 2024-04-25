@@ -1621,6 +1621,7 @@ START_TEST(test_config_options)
 	ck_assert_str_eq("extra_mime_types", config_options[EXTRA_MIME_TYPES].name);
 	ck_assert_str_eq("listening_ports", config_options[LISTENING_PORTS].name);
 	ck_assert_str_eq("document_root", config_options[DOCUMENT_ROOT].name);
+	ck_assert_str_eq("document_roots", config_options[DOCUMENT_ROOTS].name);
 	ck_assert_str_eq("fallback_document_root",
 	                 config_options[FALLBACK_DOCUMENT_ROOT].name);
 	ck_assert_str_eq("ssl_certificate", config_options[SSL_CERTIFICATE].name);
@@ -1675,6 +1676,7 @@ START_TEST(test_config_options)
 #endif
 #if defined(USE_WEBSOCKET)
 	ck_assert_str_eq("websocket_root", config_options[WEBSOCKET_ROOT].name);
+	ck_assert_str_eq("websocket_roots", config_options[WEBSOCKET_ROOTS].name);
 	ck_assert_str_eq("fallback_websocket_root",
 	                 config_options[FALLBACK_WEBSOCKET_ROOT].name);
 #endif

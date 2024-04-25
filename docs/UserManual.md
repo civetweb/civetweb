@@ -291,19 +291,20 @@ This means, `http://mydomain.com/this%20file.txt` will be decoded to `this file.
 Set this option to `no` only if you are using callbacks exclusively and need access to the encoded URLs.
 
 ### document\_root `.`
-A directory to serve. By default, the current working directory is served.
+The directory to serve from. By default, the current working directory is served.
 The current directory is commonly referenced as dot (`.`).
 It is recommended to use an absolute path for document\_root, in order to
 avoid accidentally serving the wrong directory.
 
+### document\_roots `.`
+A list of directories to serve from.  This is similar to document\_root,
+except that you can specify more than one directory if you like; files
+will be searched in the order the directories are specified.  Directory
+paths should be separated by a semicolon on Windows, or by a colon on
+any other operating system.
+
 ### fallback\_document\_root `.`
-An optional second directory to check for a file to serve, if the requested
-filename was not found in the document\_root directory.
-This can be useful in cases where an app ships with a read-only HTML content
-directory as part of its install, but you nevertheless want to allow the user
-to customize the served content by placing modified or additional files into
-a writable directory, where they will take precedence over their read-only
-counterparts, on a per-file basis.
+Deprecated; To specify a second directory, use document\_roots instead.
 
 ### enable\_auth\_domain\_check `yes`
 When using absolute URLs, verify the host is identical to the authentication\_domain.
@@ -824,10 +825,15 @@ be used for websockets as well. Since websockets use a different URL scheme
 websockets may also be served from a different directory. By default,
 the document\_root is used as websocket\_root as well.
 
+### websocket\_roots `.`
+A list of directories to serve Lua scripts from.  This is similar to
+websocket\_root, except that you can specify more than one directory if
+you like; files will be searched in the order the directories are specified.
+Directory paths should be separated by a semicolon on Windows, or by a colon
+on any other operating system.
+
 ### fallback\_websocket\_root
-An optional second directory to check for websocket-files that were
-not found in the websocket\_root directory.  (See the documentation for
-fallback\_root for details)
+Deprecated; To specify a second directory, use websocket\_roots instead.
 
 ### websocket\_timeout\_ms
 Timeout for network read and network write operations for websockets, WS(S),
@@ -992,7 +998,8 @@ mg (table):
     mg.onerror(msg)             -- error handler, can be overridden
     mg.auth_domain              -- a string that holds the HTTP authentication domain
     mg.document_root            -- a string that holds the document root directory
-    mg.fallback_document_root   -- a string that holds an optional second document root directory
+    mg.document_roots           -- colon-separated strings to specify multiple document root directories
+    mg.fallback_document_root   -- deprecated (use mg.document_roots instead)
     mg.lua_type                 -- a string that holds the lua script type
     mg.system                   -- a string that holds the operating system name
     mg.version                  -- a string that holds CivetWeb version
@@ -1052,7 +1059,8 @@ If websocket and timers support is enabled then the following is also available:
     mg.set_timeout(fn,delay,[interval])  -- call function after delay at an interval
     mg.set_interval(fn,delay,[interval]) -- call function after delay at an interval
     mg.websocket_root                    -- a string that holds the websocket root
-    mg.fallback_websocket_root           -- a string that holds an optional second websocket root
+    mg.websocket_roots                   -- colon-separated string to specify multiple websocket root directories
+    mg.fallback_websocket_root           -- deprecated (use mg.websocket_roots instead)
 
 connect (function):
 
