@@ -20611,7 +20611,7 @@ static char ** mg_setup_document_roots_vector(struct mg_context *ctx,
 		}
 	}
 
-	int ok = TRUE;
+	int ok = 1;
 	char ** roots = (char **) mg_calloc_ctx(numRoots+1, sizeof(char *), ctx); /* +1 for NULL array-terminator entry */
 	if (roots)
 	{
@@ -20621,13 +20621,13 @@ static char ** mg_setup_document_roots_vector(struct mg_context *ctx,
 		{
 			roots[i] = mg_strdup_ctx(docRoot, ctx);
 			if (roots[i]) i++;
-			         else ok = FALSE;
+			         else ok = 0;
 		}
 		if (fallbackRoot)
 		{
 			roots[i] = mg_strdup_ctx(fallbackRoot, ctx);
 			if (roots[i]) i++;
-			         else ok = FALSE;
+			         else ok = 0;
 		}
 
 		const char * d = docRoots;
@@ -20646,7 +20646,7 @@ static char ** mg_setup_document_roots_vector(struct mg_context *ctx,
 					roots[i][nextRootStrlen] = '\0';
 					i++;
 				}
-				else ok = FALSE;
+				else ok = 0;
 			}
 
 			while((d)&&(*d == pathSep)) d++;
