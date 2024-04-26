@@ -20636,7 +20636,7 @@ static char ** mg_setup_document_roots_vector(struct mg_context *ctx,
 			const char * nextRoot = d;
 			d = strchr(d, pathSep);
 
-			const size_t nextRootStrlen = d ? (d-nextRoot) : strlen(nextRoot);
+			const size_t nextRootStrlen = d ? (size_t)(d-nextRoot) : strlen(nextRoot);
 			if (nextRootStrlen > 0)
 			{
 				roots[i] = (char *) mg_calloc_ctx(nextRootStrlen+1, sizeof(char), ctx); /* +1 for NUL terminator byte */
