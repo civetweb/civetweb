@@ -6472,7 +6472,7 @@ pull_inner(FILE *fp,
 		}
 	}
 
-	if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
+	if (conn != NULL && !STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
 		return -2;
 	}
 
@@ -6496,7 +6496,7 @@ pull_inner(FILE *fp,
 			/* See https://www.chilkatsoft.com/p/p_299.asp */
 			return -2;
 		} else {
-			DEBUG_TRACE("recv() failed, error %d", err);
+			DEBUG_TRACE("read()/recv() failed, error %d", err);
 			return -2;
 		}
 #else
@@ -6518,7 +6518,7 @@ pull_inner(FILE *fp,
 			 * (see signal(7)).
 			 * => stay in the while loop */
 		} else {
-			DEBUG_TRACE("recv() failed, error %d", err);
+			DEBUG_TRACE("read()/recv() failed, error %d", err);
 			return -2;
 		}
 #endif
@@ -10322,7 +10322,7 @@ send_file_data(struct mg_connection *conn,
 
 				/* Read from file, exit the loop on error */
 				if ((num_read =
-				         (int)fread(buf, 1, (size_t)to_read, filep->access.fp))
+				         pull_inner(filep->access.fp, NULL, buf, to_read, /* unused */ 0.0))
 				    <= 0) {
 					break;
 				}
