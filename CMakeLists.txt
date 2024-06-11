@@ -5,7 +5,7 @@ cmake_policy(SET CMP0054 NEW)
 cmake_policy(SET CMP0057 NEW)
 
 # Set up the project
-project (civetweb)
+project (civetweb VERSION 1.16.0)
 
 # Detect the platform reliably
 if(ZEPHYR_BASE)
