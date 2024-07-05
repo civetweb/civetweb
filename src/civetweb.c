@@ -6211,13 +6211,18 @@ push_inner(struct mg_context *ctx,
 			/* For sockets, wait for the socket using poll */
 			struct mg_pollfd pfd[2];
 			int pollres;
+			unsigned int num_sock = 1;
 
 			pfd[0].fd = sock;
 			pfd[0].events = POLLOUT;
 
-			pfd[1].fd = ctx->thread_shutdown_notification_socket;
-			pfd[1].events = POLLIN;
-			pollres = mg_poll(pfd, 2, (int)(ms_wait), &(ctx->stop_flag));
+			if (ctx->context_type == CONTEXT_SERVER) {
+				pfd[num_sock].fd = ctx->thread_shutdown_notification_socket;
+				pfd[num_sock].events = POLLIN;
+				num_sock++;
+			}
+
+			pollres = mg_poll(pfd, num_sock, (int)(ms_wait), &(ctx->stop_flag));
 			if (!STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 				return -2;
 			}
@@ -6328,6 +6333,7 @@ pull_inner(FILE *fp,
 		struct mg_pollfd pfd[2];
 		int to_read;
 		int pollres;
+		unsigned int num_sock = 1;
 
 		to_read = mbedtls_ssl_get_bytes_avail(conn->ssl);
 
@@ -6343,13 +6349,16 @@ pull_inner(FILE *fp,
 			pfd[0].fd = conn->client.sock;
 			pfd[0].events = POLLIN;
 
-			pfd[1].fd = conn->phys_ctx->thread_shutdown_notification_socket;
-			pfd[1].events = POLLIN;
+			if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+				pfd[num_sock].fd = conn->phys_ctx->thread_shutdown_notification_socket;
+				pfd[num_sock].events = POLLIN;
+				num_sock++;
+			}
 
 			to_read = len;
 
 			pollres = mg_poll(pfd,
-			                  2,
+			                  num_sock,
 			                  (int)(timeout * 1000.0),
 			                  &(conn->phys_ctx->stop_flag));
 
@@ -6386,6 +6395,7 @@ pull_inner(FILE *fp,
 		int ssl_pending;
 		struct mg_pollfd pfd[2];
 		int pollres;
+		unsigned int num_sock = 1;
 
 		if ((ssl_pending = SSL_pending(conn->ssl)) > 0) {
 			/* We already know there is no more data buffered in conn->buf
@@ -6398,11 +6408,15 @@ pull_inner(FILE *fp,
 		} else {
 			pfd[0].fd = conn->client.sock;
 			pfd[0].events = POLLIN;
-			pfd[1].fd = conn->phys_ctx->thread_shutdown_notification_socket;
-			pfd[1].events = POLLIN;
+
+			if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+				pfd[num_sock].fd = conn->phys_ctx->thread_shutdown_notification_socket;
+				pfd[num_sock].events = POLLIN;
+				num_sock++;
+			}
 
 			pollres = mg_poll(pfd,
-			                  2,
+			                  num_sock,
 			                  (int)(timeout * 1000.0),
 			                  &(conn->phys_ctx->stop_flag));
 			if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
@@ -6442,15 +6456,19 @@ pull_inner(FILE *fp,
 	} else {
 		struct mg_pollfd pfd[2];
 		int pollres;
+		unsigned int num_sock = 1;
 
 		pfd[0].fd = conn->client.sock;
 		pfd[0].events = POLLIN;
 
-		pfd[1].fd = conn->phys_ctx->thread_shutdown_notification_socket;
-		pfd[1].events = POLLIN;
+		if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+			pfd[num_sock].fd = conn->phys_ctx->thread_shutdown_notification_socket;
+			pfd[num_sock].events = POLLIN;
+			num_sock++;
+		}
 
 		pollres = mg_poll(pfd,
-		                  2,
+		                  num_sock,
 		                  (int)(timeout * 1000.0),
 		                  &(conn->phys_ctx->stop_flag));
 		if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
@@ -16785,16 +16803,20 @@ sslize(struct mg_connection *conn,
 					 * This is typical for non-blocking sockets. */
 					struct mg_pollfd pfd[2];
 					int pollres;
+					unsigned int num_sock = 1;
 					pfd[0].fd = conn->client.sock;
 					pfd[0].events = ((err == SSL_ERROR_WANT_CONNECT)
 					                 || (err == SSL_ERROR_WANT_WRITE))
 					                    ? POLLOUT
 					                    : POLLIN;
 
-					pfd[1].fd =
-					    conn->phys_ctx->thread_shutdown_notification_socket;
-					pfd[1].events = POLLIN;
-					pollres = mg_poll(pfd, 2, 50, &(conn->phys_ctx->stop_flag));
+					if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+						pfd[num_sock].fd = conn->phys_ctx->thread_shutdown_notification_socket;
+						pfd[num_sock].events = POLLIN;
+						num_sock++;
+					}
+
+					pollres = mg_poll(pfd, num_sock, 50, &(conn->phys_ctx->stop_flag));
 					if (pollres < 0) {
 						/* Break if error occurred (-1)
 						 * or server shutdown (-2) */
