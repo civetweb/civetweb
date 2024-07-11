@@ -6350,7 +6350,8 @@ pull_inner(FILE *fp,
 			pfd[0].events = POLLIN;
 
 			if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
-				pfd[num_sock].fd = conn->phys_ctx->thread_shutdown_notification_socket;
+				pfd[num_sock].fd =
+				    conn->phys_ctx->thread_shutdown_notification_socket;
 				pfd[num_sock].events = POLLIN;
 				num_sock++;
 			}
@@ -6410,7 +6411,8 @@ pull_inner(FILE *fp,
 			pfd[0].events = POLLIN;
 
 			if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
-				pfd[num_sock].fd = conn->phys_ctx->thread_shutdown_notification_socket;
+				pfd[num_sock].fd =
+				    conn->phys_ctx->thread_shutdown_notification_socket;
 				pfd[num_sock].events = POLLIN;
 				num_sock++;
 			}
@@ -6462,7 +6464,8 @@ pull_inner(FILE *fp,
 		pfd[0].events = POLLIN;
 
 		if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
-			pfd[num_sock].fd = conn->phys_ctx->thread_shutdown_notification_socket;
+			pfd[num_sock].fd =
+			    conn->phys_ctx->thread_shutdown_notification_socket;
 			pfd[num_sock].events = POLLIN;
 			num_sock++;
 		}
@@ -10339,8 +10342,11 @@ send_file_data(struct mg_connection *conn,
 				}
 
 				/* Read from file, exit the loop on error */
-				if ((num_read =
-				         pull_inner(filep->access.fp, NULL, buf, to_read, /* unused */ 0.0))
+				if ((num_read = pull_inner(filep->access.fp,
+				                           NULL,
+				                           buf,
+				                           to_read,
+				                           /* unused */ 0.0))
 				    <= 0) {
 					break;
 				}
@@ -16811,12 +16817,16 @@ sslize(struct mg_connection *conn,
 					                    : POLLIN;
 
 					if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
-						pfd[num_sock].fd = conn->phys_ctx->thread_shutdown_notification_socket;
+						pfd[num_sock].fd =
+						    conn->phys_ctx->thread_shutdown_notification_socket;
 						pfd[num_sock].events = POLLIN;
 						num_sock++;
 					}
 
-					pollres = mg_poll(pfd, num_sock, 50, &(conn->phys_ctx->stop_flag));
+					pollres = mg_poll(pfd,
+					                  num_sock,
+					                  50,
+					                  &(conn->phys_ctx->stop_flag));
 					if (pollres < 0) {
 						/* Break if error occurred (-1)
 						 * or server shutdown (-2) */
