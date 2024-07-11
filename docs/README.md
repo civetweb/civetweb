@@ -31,9 +31,6 @@ Source releases can be found on GitHub
 
 A security policy can be found in [SECURITY.md](https://github.com/civetweb/civetweb/blob/master/SECURITY.md).
 
-CivetWeb is free of charge, however, donations for maintenance are welcome:
-[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=88ZLXZ6U77GJU)
-
 
 Documentation
 ---------------
