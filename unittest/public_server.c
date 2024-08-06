@@ -2922,6 +2922,575 @@ START_TEST(test_handle_form)
 	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
+	/* Handle form: "POST multipart/form-data" without trailing CRLF*/
+	/*
+	 * https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
+	 *
+	 * multipart-body := [preamble CRLF]
+	 *     dash-boundary transport-padding CRLF
+	 *     body-part *encapsulation
+	 *     close-delimiter transport-padding
+	 *     [CRLF epilogue]
+	 */
+	multipart_body =
+		"--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"textin\"\r\n"
+	    "\r\n"
+	    "text\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"passwordin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"radio1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=radio2\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"check1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"numberin\"\r\n"
+	    "\r\n"
+	    "1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datein\"\r\n"
+	    "\r\n"
+	    "1.1.2016\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"colorin\"\r\n"
+	    "\r\n"
+	    "#80ff00\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"rangein\"\r\n"
+	    "\r\n"
+	    "3\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"monthin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"weekin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"timein\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimen\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimelocalin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"emailin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"searchin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"telin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"urlin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"filein\"; filename=\"\"\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=filesin; filename=\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"selectin\"\r\n"
+	    "\r\n"
+	    "opt1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"message\"\r\n"
+	    "\r\n"
+	    "Text area default text.\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388--";
+	body_len = strlen(multipart_body);
+	ck_assert_uint_eq(body_len, 2366); /* not required */
+
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "POST /handle_form HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Content-Length: %u\r\n"
+	                "\r\n%s",
+	                (unsigned int)body_len,
+	                multipart_body);
+
+	ck_assert(client_conn != NULL);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 1000) {
+			break;
+		}
+	}
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
+	mg_close_connection(client_conn);
+
+	/* Handle form: "POST multipart/form-data" with epilogue*/
+	/*
+	 * https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
+	 *
+	 * multipart-body := [preamble CRLF]
+	 *     dash-boundary transport-padding CRLF
+	 *     body-part *encapsulation
+	 *     close-delimiter transport-padding
+	 *     [CRLF epilogue]
+	 *
+	 * epilogue := discard-text
+	 *
+	 * discard-text := *(*text CRLF) *text
+	 *
+	 * text := <any CHAR, including bare CR & bare LF, but NOT including CRLF>
+	 */
+	multipart_body =
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"textin\"\r\n"
+	    "\r\n"
+	    "text\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"passwordin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"radio1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=radio2\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"check1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"numberin\"\r\n"
+	    "\r\n"
+	    "1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datein\"\r\n"
+	    "\r\n"
+	    "1.1.2016\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"colorin\"\r\n"
+	    "\r\n"
+	    "#80ff00\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"rangein\"\r\n"
+	    "\r\n"
+	    "3\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"monthin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"weekin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"timein\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimen\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimelocalin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"emailin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"searchin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"telin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"urlin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"filein\"; filename=\"\"\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=filesin; filename=\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"selectin\"\r\n"
+	    "\r\n"
+	    "opt1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"message\"\r\n"
+	    "\r\n"
+	    "Text area default text.\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388--\r\n"
+		"epilogue\r\n"
+		"epilogue\r\n"
+		"\r\n"
+		"epilogue\r\n"
+		"\r\n"
+		"\r\n"
+		"\r\n"
+		"epilogue\r\n";
+	body_len = strlen(multipart_body);
+	ck_assert_uint_eq(body_len, 2366); /* not required */
+
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "POST /handle_form HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Content-Length: %u\r\n"
+	                "\r\n%s",
+	                (unsigned int)body_len,
+	                multipart_body);
+
+	ck_assert(client_conn != NULL);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 1000) {
+			break;
+		}
+	}
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
+	mg_close_connection(client_conn);
+
+	/* Handle form: "POST multipart/form-data" with preamble*/
+	/*
+	 * https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
+	 *
+	 * multipart-body := [preamble CRLF]
+	 *     dash-boundary transport-padding CRLF
+	 *     body-part *encapsulation
+	 *     close-delimiter transport-padding
+	 *     [CRLF epilogue]
+	 *
+	 * preamble := discard-text
+	 *
+	 * discard-text := *(*text CRLF) *text
+	 *
+	 * text := <any CHAR, including bare CR & bare LF, but NOT including CRLF>
+	 */
+	multipart_body =
+	    "\r\n"
+	    "\r\npreamble"
+	    "\r\npreamble"
+	    "\r\npreamble"
+	    "\r\n"
+	    "\r\npreamble"
+	    "\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"textin\"\r\n"
+	    "\r\n"
+	    "text\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"passwordin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"radio1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=radio2\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"check1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"numberin\"\r\n"
+	    "\r\n"
+	    "1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datein\"\r\n"
+	    "\r\n"
+	    "1.1.2016\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"colorin\"\r\n"
+	    "\r\n"
+	    "#80ff00\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"rangein\"\r\n"
+	    "\r\n"
+	    "3\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"monthin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"weekin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"timein\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimen\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimelocalin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"emailin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"searchin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"telin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"urlin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"filein\"; filename=\"\"\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=filesin; filename=\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"selectin\"\r\n"
+	    "\r\n"
+	    "opt1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"message\"\r\n"
+	    "\r\n"
+	    "Text area default text.\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
+	body_len = strlen(multipart_body);
+	ck_assert_uint_eq(body_len, 2366); /* not required */
+
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "POST /handle_form HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Content-Length: %u\r\n"
+	                "\r\n%s",
+	                (unsigned int)body_len,
+	                multipart_body);
+
+	ck_assert(client_conn != NULL);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 1000) {
+			break;
+		}
+	}
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
+	mg_close_connection(client_conn);
+
+
+	/* Handle form: "POST multipart/form-data" with transport padding*/
+	/*
+	 * https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
+	 *
+	 * multipart-body := [preamble CRLF]
+	 *     dash-boundary transport-padding CRLF
+	 *     body-part *encapsulation
+	 *     close-delimiter transport-padding
+	 *     [CRLF epilogue]
+	 *
+	 * transport-padding := *LWSP-char
+	 *
+	 * LWSP-char := SPACE / HTAB
+	 */
+	multipart_body =
+	    "--multipart-form-data-boundary--see-RFC-2388           \r\n"
+	    "Content-Disposition: form-data; name=\"textin\"\r\n"
+	    "\r\n"
+	    "text\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\t\t\t\r\n"
+	    "Content-Disposition: form-data; name=\"passwordin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"radio1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=radio2\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"check1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"numberin\"\r\n"
+	    "\r\n"
+	    "1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datein\"\r\n"
+	    "\r\n"
+	    "1.1.2016\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"colorin\"\r\n"
+	    "\r\n"
+	    "#80ff00\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"rangein\"\r\n"
+	    "\r\n"
+	    "3\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"monthin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"weekin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"timein\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimen\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimelocalin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"emailin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"searchin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"telin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"urlin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"filein\"; filename=\"\"\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=filesin; filename=\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"selectin\"\r\n"
+	    "\r\n"
+	    "opt1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"message\"\r\n"
+	    "\r\n"
+	    "Text area default text.\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
+	body_len = strlen(multipart_body);
+	ck_assert_uint_eq(body_len, 2366); /* not required */
+
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "POST /handle_form HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Content-Length: %u\r\n"
+	                "\r\n%s",
+	                (unsigned int)body_len,
+	                multipart_body);
+
+	ck_assert(client_conn != NULL);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 1000) {
+			break;
+		}
+	}
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
+	mg_close_connection(client_conn);
 
 	/* Handle form: "POST multipart/form-data" with chunked transfer encoding */
 	client_conn =
