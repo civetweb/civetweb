@@ -80,6 +80,10 @@ message(STATUS "Disable caching support - ${CIVETWEB_DISABLE_CACHING}")
 option(CIVETWEB_ENABLE_CXX "Enables the C++ wrapper library" OFF)
 message(STATUS "C++ wrappers - ${CIVETWEB_ENABLE_CXX}")
 
+# HTTP2 Support
+option(CIVETWEB_ENABLE_HTTP2 "Enables HTTP2 support" OFF)
+message(STATUS "Use HTPP2 - ${CIVETWEB_ENABLE_HTTP2}")
+
 # IP Version 6
 option(CIVETWEB_ENABLE_IPV6 "Enables the IP version 6 support" ON)
 message(STATUS "IP Version 6 - ${CIVETWEB_ENABLE_IPV6}")
@@ -496,6 +500,9 @@ if (${CMAKE_BUILD_TYPE} MATCHES "[Dd]ebug")
   add_definitions(-O0)
   add_definitions(-g)
 endif()
+if (CIVETWEB_ENABLE_HTTP2)
+  add_definitions(-DUSE_HTTP2)
+endif()
 if (CIVETWEB_ENABLE_IPV6)
   add_definitions(-DUSE_IPV6)
 endif()
@@ -699,4 +706,3 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_PACKAGE_DEPENDS}")
 
 # Finalize CPack settings
 include(CPack)
-
