@@ -57,6 +57,79 @@
 #define SLEEP_AFTER_MG_STOP (5)
 
 
+#ifdef HEXDUMP
+#else
+void
+hexDumpth(const char *desc, const void *addr, const int len, int perLine)
+{
+	// Silently ignore silly per-line values.
+
+	if (perLine < 4 || perLine > 64)
+		perLine = 16;
+
+	int i;
+	unsigned char buff[perLine + 1];
+	const unsigned char *pc = (const unsigned char *)addr;
+
+	// Output description if given.
+
+	if (desc != NULL)
+		fprintf(stderr, "%s:\n", desc);
+
+	// Length checks.
+
+	if (len == 0) {
+		fprintf(stderr, "  ZERO LENGTH\n");
+		return;
+	}
+	if (len < 0) {
+		fprintf(stderr, "  NEGATIVE LENGTH: %d\n", len);
+		return;
+	}
+
+	// Process every byte in the data.
+
+	for (i = 0; i < len; i++) {
+		// Multiple of perLine means new or first line (with line offset).
+
+		if ((i % perLine) == 0) {
+			// Only print previous-line ASCII buffer for lines beyond first.
+
+			if (i != 0)
+				fprintf(stderr, "  %s\n", buff);
+
+			// Output the offset of current line.
+
+			fprintf(stderr, "  %04x ", i);
+		}
+
+		// Now the hex code for the specific character.
+
+		fprintf(stderr, " %02x", pc[i]);
+
+		// And buffer a printable ASCII character for later.
+
+		if ((pc[i] < 0x20) || (pc[i] > 0x7e)) // isprint() may be better.
+			buff[i % perLine] = '.';
+		else
+			buff[i % perLine] = pc[i];
+		buff[(i % perLine) + 1] = '\0';
+	}
+
+	// Pad out last line if not exactly perLine characters.
+
+	while ((i % perLine) != 0) {
+		fprintf(stderr, "   ");
+		i++;
+	}
+
+	// And print the final ASCII buffer.
+
+	fprintf(stderr, "  %s\n", buff);
+}
+#define HEXDUMP
+#endif
+
 /* Try to communicate with an external http server. */
 static const char *
 get_external_server_ip(void)
@@ -2609,6 +2682,36 @@ FormGet(struct mg_connection *conn, void *cbdata)
 
 
 static int
+FormError(struct mg_connection *conn, void *cbdata)
+{
+	const struct mg_request_info *req_info = mg_get_request_info(conn);
+	int ret;
+	struct mg_form_data_handler fdh = {NULL, NULL, NULL, NULL};
+
+	(void)cbdata;
+
+	ck_assert(req_info != NULL);
+
+	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+	fdh.user_data = (void *)&g_field_found_return;
+
+	/* Call the form handler */
+	g_field_step = 0;
+	g_field_found_return = MG_FORM_FIELD_STORAGE_GET;
+	ret = mg_handle_form_request(conn, &fdh);
+	g_field_found_return = -888;
+	ck_assert_int_eq(ret, -1);
+	ck_assert_int_eq(g_field_step, 0);
+	mg_printf(conn, "%i\r\n", ret);
+	g_field_step = 1000;
+
+	mark_point();
+
+	return 1;
+}
+
+
+static int
 FormStore(struct mg_connection *conn,
           void *cbdata,
           int ret_expected,
@@ -2727,6 +2830,7 @@ START_TEST(test_handle_form)
 	ck_assert_str_eq(opt, "8884");
 
 	mg_set_request_handler(ctx, "/handle_form", FormGet, NULL);
+	mg_set_request_handler(ctx, "/handle_form_error", FormError, NULL);
 	mg_set_request_handler(ctx, "/handle_form_store", FormStore1, NULL);
 	mg_set_request_handler(ctx, "/handle_form_store2", FormStore2, NULL);
 
@@ -2796,6 +2900,23 @@ START_TEST(test_handle_form)
 	ck_assert(client_ri != NULL);
 	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
+
+	/*
+	 * https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
+	 *
+	 * multipart-body := [preamble CRLF]
+	 *     dash-boundary transport-padding CRLF
+	 *     body-part *encapsulation
+	 *     close-delimiter transport-padding
+	 *     [CRLF epilogue]
+	 *
+	 * preamble := discard-text
+	 * epilogue := discard-text
+	 *
+	 * discard-text := *(*text CRLF) *text
+	 *
+	 * text := <any CHAR, including bare CR & bare LF, but NOT including CRLF>
+	 */
 
 	/* Handle form: "POST multipart/form-data" */
 	multipart_body =
@@ -2922,16 +3043,102 @@ START_TEST(test_handle_form)
 	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
+
+	/* Handle form: "POST multipart/form-data" with chunked transfer encoding */
+	/* use the most universal possible (no edge cases) body*/
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "%s",
+	                "POST /handle_form HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Transfer-Encoding: chunked\r\n"
+	                "\r\n");
+
+	ck_assert(client_conn != NULL);
+
+	body_len = strlen(multipart_body);
+	chunk_len = 1;
+	body_sent = 0;
+	while (body_len > body_sent) {
+		if (chunk_len > (body_len - body_sent)) {
+			chunk_len = body_len - body_sent;
+		}
+		ck_assert_int_gt((int)chunk_len, 0);
+		mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
+		mg_write(client_conn, multipart_body + body_sent, chunk_len);
+		mg_printf(client_conn, "\r\n");
+		body_sent += chunk_len;
+		chunk_len = (chunk_len % 40) + 1;
+	}
+	mg_printf(client_conn, "0\r\n\r\n");
+
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 1000) {
+			break;
+		}
+	}
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
+	mg_close_connection(client_conn);
+
+	/* Handle form: "POST multipart/form-data" with chunked transfer
+	 * encoding, using a quoted boundary string */
+	client_conn = mg_download(
+	    "localhost",
+	    8884,
+	    0,
+	    ebuf,
+	    sizeof(ebuf),
+	    "%s",
+	    "POST /handle_form HTTP/1.1\r\n"
+	    "Host: localhost:8884\r\n"
+	    "Connection: close\r\n"
+	    "Content-Type: multipart/form-data; "
+	    "boundary=\"multipart-form-data-boundary--see-RFC-2388\"\r\n"
+	    "Transfer-Encoding: chunked\r\n"
+	    "\r\n");
+
+	ck_assert(client_conn != NULL);
+
+	body_len = strlen(multipart_body);
+	chunk_len = 1;
+	body_sent = 0;
+	while (body_len > body_sent) {
+		if (chunk_len > (body_len - body_sent)) {
+			chunk_len = body_len - body_sent;
+		}
+		ck_assert_int_gt((int)chunk_len, 0);
+		mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
+		mg_write(client_conn, multipart_body + body_sent, chunk_len);
+		mg_printf(client_conn, "\r\n");
+		body_sent += chunk_len;
+		chunk_len = (chunk_len % 40) + 1;
+	}
+	mg_printf(client_conn, "0\r\n\r\n");
+
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 1000) {
+			break;
+		}
+	}
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
+	mg_close_connection(client_conn);
+
 	/* Handle form: "POST multipart/form-data" without trailing CRLF*/
-	/*
-	 * https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
-	 *
-	 * multipart-body := [preamble CRLF]
-	 *     dash-boundary transport-padding CRLF
-	 *     body-part *encapsulation
-	 *     close-delimiter transport-padding
-	 *     [CRLF epilogue]
-	 */
 	multipart_body =
 		"--multipart-form-data-boundary--see-RFC-2388\r\n"
 	    "Content-Disposition: form-data; name=\"textin\"\r\n"
@@ -3057,21 +3264,6 @@ START_TEST(test_handle_form)
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST multipart/form-data" with epilogue*/
-	/*
-	 * https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
-	 *
-	 * multipart-body := [preamble CRLF]
-	 *     dash-boundary transport-padding CRLF
-	 *     body-part *encapsulation
-	 *     close-delimiter transport-padding
-	 *     [CRLF epilogue]
-	 *
-	 * epilogue := discard-text
-	 *
-	 * discard-text := *(*text CRLF) *text
-	 *
-	 * text := <any CHAR, including bare CR & bare LF, but NOT including CRLF>
-	 */
 	multipart_body =
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
 	    "Content-Disposition: form-data; name=\"textin\"\r\n"
@@ -3164,16 +3356,16 @@ START_TEST(test_handle_form)
 	    "\r\n"
 	    "Text area default text.\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388--\r\n"
-		"epilogue\r\n"
-		"epilogue\r\n"
-		"\r\n"
-		"epilogue\r\n"
-		"\r\n"
-		"\r\n"
-		"\r\n"
-		"epilogue\r\n";
+	    "epilogue\r\n"
+	    "epilogue\r\n"
+	    "\r\n"
+	    "1234567890-=!@£$%^&*()_+[]{};'\\:\"|,./<>?`~§\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "epilogue\r\n";
 	body_len = strlen(multipart_body);
-	ck_assert_uint_eq(body_len, 2366); /* not required */
+	ck_assert_uint_eq(body_len, 2453); /* not required */
 
 	client_conn =
 	    mg_download("localhost",
@@ -3228,6 +3420,9 @@ START_TEST(test_handle_form)
 	    "\r\n"
 	    "\r\npreamble"
 	    "\r\n"
+	    "1234567890-=!@£$%^&*()_+[]{};'\\:\"|,./<>?`~§\r\n"
+	    "\r\n"
+	    "\r\n\t\t\t   \t\t\t"
 	    "\r\n"
 	    "\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
@@ -3322,7 +3517,7 @@ START_TEST(test_handle_form)
 	    "Text area default text.\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
 	body_len = strlen(multipart_body);
-	ck_assert_uint_eq(body_len, 2366); /* not required */
+	ck_assert_uint_eq(body_len, 2478); /* not required */
 
 	client_conn =
 	    mg_download("localhost",
@@ -3353,21 +3548,7 @@ START_TEST(test_handle_form)
 	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
-
 	/* Handle form: "POST multipart/form-data" with transport padding*/
-	/*
-	 * https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
-	 *
-	 * multipart-body := [preamble CRLF]
-	 *     dash-boundary transport-padding CRLF
-	 *     body-part *encapsulation
-	 *     close-delimiter transport-padding
-	 *     [CRLF epilogue]
-	 *
-	 * transport-padding := *LWSP-char
-	 *
-	 * LWSP-char := SPACE / HTAB
-	 */
 	multipart_body =
 	    "--multipart-form-data-boundary--see-RFC-2388           \r\n"
 	    "Content-Disposition: form-data; name=\"textin\"\r\n"
@@ -3461,7 +3642,7 @@ START_TEST(test_handle_form)
 	    "Text area default text.\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
 	body_len = strlen(multipart_body);
-	ck_assert_uint_eq(body_len, 2366); /* not required */
+	ck_assert_uint_eq(body_len, 2382); /* not required */
 
 	client_conn =
 	    mg_download("localhost",
@@ -3492,40 +3673,125 @@ START_TEST(test_handle_form)
 	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
-	/* Handle form: "POST multipart/form-data" with chunked transfer encoding */
+	/* Handle form: "POST multipart/form-data" with custom name fields in the
+	 * Content-Disposition */
+	multipart_body =
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; "
+		"custom1name=\"1\"; "
+		"custom2name=\"2\"; "
+		"custom3name=\"3\"; "
+		"custom4name=\"4\"; "
+		"name=\"textin\"\r\n"
+	    "\r\n"
+	    "text\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\t\t\t\r\n"
+	    "Content-Disposition: form-data; name=\"passwordin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"radio1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=radio2\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"check1\"\r\n"
+	    "\r\n"
+	    "val1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"numberin\"\r\n"
+	    "\r\n"
+	    "1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datein\"\r\n"
+	    "\r\n"
+	    "1.1.2016\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"colorin\"\r\n"
+	    "\r\n"
+	    "#80ff00\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"rangein\"\r\n"
+	    "\r\n"
+	    "3\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"monthin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"weekin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"timein\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimen\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"datetimelocalin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"emailin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"searchin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"telin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"urlin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"filein\"; filename=\"\"\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=filesin; filename=\r\n"
+	    "Content-Type: application/octet-stream\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"selectin\"\r\n"
+	    "\r\n"
+	    "opt1\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "Content-Disposition: form-data; name=\"message\"\r\n"
+	    "\r\n"
+	    "Text area default text.\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
+	body_len = strlen(multipart_body);
+	ck_assert_uint_eq(body_len, 2439); /* not required */
+
 	client_conn =
 	    mg_download("localhost",
 	                8884,
 	                0,
 	                ebuf,
 	                sizeof(ebuf),
-	                "%s",
 	                "POST /handle_form HTTP/1.1\r\n"
 	                "Host: localhost:8884\r\n"
 	                "Connection: close\r\n"
 	                "Content-Type: multipart/form-data; "
 	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
-	                "Transfer-Encoding: chunked\r\n"
-	                "\r\n");
+	                "Content-Length: %u\r\n"
+	                "\r\n%s",
+	                (unsigned int)body_len,
+	                multipart_body);
 
 	ck_assert(client_conn != NULL);
-
-	body_len = strlen(multipart_body);
-	chunk_len = 1;
-	body_sent = 0;
-	while (body_len > body_sent) {
-		if (chunk_len > (body_len - body_sent)) {
-			chunk_len = body_len - body_sent;
-		}
-		ck_assert_int_gt((int)chunk_len, 0);
-		mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
-		mg_write(client_conn, multipart_body + body_sent, chunk_len);
-		mg_printf(client_conn, "\r\n");
-		body_sent += chunk_len;
-		chunk_len = (chunk_len % 40) + 1;
-	}
-	mg_printf(client_conn, "0\r\n\r\n");
-
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
 		if (g_field_step == 1000) {
@@ -3538,41 +3804,29 @@ START_TEST(test_handle_form)
 	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
-	/* Handle form: "POST multipart/form-data" with chunked transfer
-	 * encoding, using a quoted boundary string */
-	client_conn = mg_download(
-	    "localhost",
-	    8884,
-	    0,
-	    ebuf,
-	    sizeof(ebuf),
-	    "%s",
-	    "POST /handle_form HTTP/1.1\r\n"
-	    "Host: localhost:8884\r\n"
-	    "Connection: close\r\n"
-	    "Content-Type: multipart/form-data; "
-	    "boundary=\"multipart-form-data-boundary--see-RFC-2388\"\r\n"
-	    "Transfer-Encoding: chunked\r\n"
-	    "\r\n");
+	/* Handle form error cases */
+	/* Handle form: "POST multipart/form-data" empty body */
+	multipart_body = "";
+	body_len = strlen(multipart_body);
+	ck_assert_uint_eq(body_len, 0); /* not required */
+
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "POST /handle_form_error HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Content-Length: %u\r\n"
+	                "\r\n%s",
+	                (unsigned int)body_len,
+	                multipart_body);
 
 	ck_assert(client_conn != NULL);
-
-	body_len = strlen(multipart_body);
-	chunk_len = 1;
-	body_sent = 0;
-	while (body_len > body_sent) {
-		if (chunk_len > (body_len - body_sent)) {
-			chunk_len = body_len - body_sent;
-		}
-		ck_assert_int_gt((int)chunk_len, 0);
-		mg_printf(client_conn, "%x\r\n", (unsigned int)chunk_len);
-		mg_write(client_conn, multipart_body + body_sent, chunk_len);
-		mg_printf(client_conn, "\r\n");
-		body_sent += chunk_len;
-		chunk_len = (chunk_len % 40) + 1;
-	}
-	mg_printf(client_conn, "0\r\n\r\n");
-
 	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
 		test_sleep(1);
 		if (g_field_step == 1000) {
