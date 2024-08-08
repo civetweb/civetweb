@@ -716,9 +716,11 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			if (part_no == 0) {
 				size_t preamble_length = 0;
-				/* skip over the preamble until we find a complete boundary */
+				/* skip over the preamble until we find a complete boundary
+				 * limit the preamble length to prevent abuse */
 				/* +2 for the -- preceding the boundary */
-				while ((preamble_length < buf_fill - bl)
+				while (preamble_length < 1024
+				       && (preamble_length < buf_fill - bl)
 				       && strncmp(buf + preamble_length + 2, boundary, bl)) {
 					preamble_length++;
 				}
@@ -732,9 +734,11 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 			}
 
-			/* either it starts with a boundary
-			 * or we couldn't find a boundary at all in the body
-			 * or we didn't have a terminating boundary */
+			/* either it starts with a boundary and it's fine, or it's malformed
+			 * because:
+			 * - the preamble was longer than accepted
+			 * - couldn't find a boundary at all in the body
+			 * - didn't have a terminating boundary */
 			if (buf_fill < (bl + 2) || strncmp(buf, "--", 2)
 			    || strncmp(buf + 2, boundary, bl)) {
 				/* Malformed request */

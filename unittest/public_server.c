@@ -3766,6 +3766,86 @@ START_TEST(test_handle_form)
 	ck_assert_int_eq(client_ri->status_code, 200);
 	mg_close_connection(client_conn);
 
+	/* Handle form: "POST multipart/form-data" very long preamble */
+	multipart_body =
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "preamblepreamblepreamblepreamblepreamble\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n";
+	    "Content-Disposition: form-data; name=\"passwordin\"\r\n"
+	    "\r\n"
+	    "\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
+
+	body_len = strlen(multipart_body);
+	ck_assert_uint_eq(body_len, 1768); /* not required */
+
+	client_conn =
+	    mg_download("localhost",
+	                8884,
+	                0,
+	                ebuf,
+	                sizeof(ebuf),
+	                "POST /handle_form_error HTTP/1.1\r\n"
+	                "Host: localhost:8884\r\n"
+	                "Connection: close\r\n"
+	                "Content-Type: multipart/form-data; "
+	                "boundary=multipart-form-data-boundary--see-RFC-2388\r\n"
+	                "Content-Length: %u\r\n"
+	                "\r\n%s",
+	                (unsigned int)body_len,
+	                multipart_body);
+
+	ck_assert(client_conn != NULL);
+	for (sleep_cnt = 0; sleep_cnt < 30; sleep_cnt++) {
+		test_sleep(1);
+		if (g_field_step == 1000) {
+			break;
+		}
+	}
+	client_ri = mg_get_response_info(client_conn);
+
+	ck_assert(client_ri != NULL);
+	ck_assert_int_eq(client_ri->status_code, 200);
+	mg_close_connection(client_conn);
 
 	/* Now test form_store */
 
