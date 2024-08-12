@@ -9,7 +9,7 @@
 |**`field_found`**|**`int field_found( const char *key, const char *filename, char *path, size_t pathlen, void *user_data )`**;|
 ||The callback function `field_found()` is called when a new field has been found. The return value of this callback is used to define how the field should be processed. The parameters contain the following information:|
 ||**`key`** - The name of the field as it was named with the `name` tag in the HTML source.|
-||**`filename`** - The name of the file to upload. Please not that this parameter is only valid when the input type was set to `file`. Otherwise this parameter has the value `NULL`.|
+||**`filename`** - The name of the file to upload. Please note that this parameter is only valid when the input type was set to `file`. Otherwise this parameter has the value `NULL`.|
 ||**`path`** - This is an output parameter used to store the full name of the file including the path to store an incoming file at the computer. This parameter must be provided by the application to Civetweb when a form field of type `file` is found. Please not that together with setting this parameter, the callback function must return `FORM_FIELD_STORAGE_STORE`.i With any other return value the contents of the `path` buffer is ignored by Civetweb.|
 ||**`pathlen`** - The length of the buffer where the output path can be stored.|
 ||**`user_data`** - A pointer to the value of the field `user_data` of the structure `struct mg_form_data_handler`.|
