@@ -3679,7 +3679,7 @@ lua_init_optional_libraries(void)
 	lua_shared_init();
 
 /* UUID library */
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(NO_DLOPEN)
 	lib_handle_uuid = dlopen("libuuid.so", RTLD_LAZY);
 	pf_uuid_generate.p =
 	    (lib_handle_uuid ? dlsym(lib_handle_uuid, "uuid_generate") : 0);
@@ -3693,7 +3693,7 @@ static void
 lua_exit_optional_libraries(void)
 {
 /* UUID library */
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(NO_DLOPEN)
 	if (lib_handle_uuid) {
 		dlclose(lib_handle_uuid);
 	}
