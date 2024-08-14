@@ -641,7 +641,10 @@ run_lsp_kepler(struct mg_connection *conn,
 		/* Only send a HTML header, if this is the top level page.
 		 * If this page is included by some mg.include calls, do not add a
 		 * header. */
-		mg_printf(conn, "HTTP/1.1 200 OK\r\n");
+		if(conn->status_code < 0)
+			mg_printf(conn, "HTTP/1.1 200 OK\r\n");
+		else
+			mg_printf(conn, "HTTP/1.1 %d %s\r\n", conn->status_code, mg_get_response_code_text(conn, conn->status_code));
 		send_no_cache_header(conn);
 		send_additional_header(conn);
 		mg_printf(conn,
