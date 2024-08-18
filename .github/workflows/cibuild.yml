@@ -1,0 +1,332 @@
+name: CI build
+
+on:
+  push:
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: clang
+            env:
+              idx: 1
+              N: Clang-Linux-Minimal-Debug
+              BUILD_TYPE: Debug
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: YES
+              ENABLE_SSL: NO
+              NO_CGI: YES
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_SERVER_STATS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+
+          - os: ubuntu-latest
+            compiler: clang
+            env:
+              idx: 3
+              N: Clang-Linux-Default-Release
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: YES
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_SERVER_STATS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+
+          - os: ubuntu-latest
+            compiler: gcc 
+            env:
+              idx: 5
+              N: GCC-Linux-Complete-NoLua-Release
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: YES
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: YES
+              ENABLE_WEBSOCKETS: YES
+              ENABLE_SERVER_STATS: YES
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: YES
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+
+          - os: ubuntu-latest
+            compiler: clang
+            env:
+              idx: 6
+              N: CLANG-AnyVersion-Linux-Coverage
+              BUILD_TYPE: Coverage
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: YES
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: YES
+              ENABLE_WEBSOCKETS: YES
+              ENABLE_SERVER_STATS: YES
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+
+          - os: ubuntu-latest
+            compiler: clang
+            env:
+              idx: 9
+              N: Clang-Linux-Default-Shared
+              BUILD_TYPE: Debug
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: YES
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_SERVER_STATS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              idx: 15
+              N: GCCLinuxDefault_RelWithDebInfo
+              BUILD_TYPE: RelWithDebInfo
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: YES
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              idx: 16
+              N: GCCLinuxDefault_MinSizeRel
+              BUILD_TYPE: MinSizeRel
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: YES
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              idx: 17
+              N: GCCLinuxDefault_None
+              BUILD_TYPE: None
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: YES
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              idx: 20
+              N: GCCLinuxDefault_xenial
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: YES
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              idx: 23
+              N: GCCLinuxDefault_focal
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+
+# Remove Lua build, until someone knows how to fix the CMake files
+          # - os: ubuntu-latest
+          #   compiler: clang
+          #   env:
+          #     idx: 99
+          #     N: Clang-Linux-Complete-WithLua-Debug
+          #     BUILD_TYPE: Debug
+          #     ENABLE_SSL_DYNAMIC_LOADING: YES
+          #     OPENSSL_1_0: NO
+          #     OPENSSL_1_1: YES
+          #     ENABLE_CXX: NO
+          #     C_STANDARD: auto
+          #     CXX_STANDARD: auto
+          #     BUILD_SHARED: NO
+          #     NO_FILES: NO
+          #     ENABLE_SSL: YES
+          #     NO_CGI: NO
+          #     ENABLE_IPV6: YES
+          #     ENABLE_WEBSOCKETS: YES
+          #     ENABLE_SERVER_STATS: YES
+          #     ENABLE_LUA: YES
+          #     ENABLE_LUA_SHARED: YES
+          #     ENABLE_DUKTAPE: NO
+          #     NO_CACHING: YES
+          #     ALLOW_WARNINGS: YES
+
+
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v4.1.7
+
+        - name: Install clang on Linux
+          if: matrix.compiler == 'clang' && matrix.os == 'ubuntu-latest'
+          run: |
+            sudo apt-get install -y clang
+            sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
+            sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
+            
+        - name: Build
+          run: |
+            cmake -S . -B CMakeFiles\
+              -DCMAKE_BUILD_TYPE=${{ matrix.env.BUILD_TYPE }}\
+              -DBUILD_SHARED_LIBS=${{ matrix.env.BUILD_SHARED }}\
+              -DCIVETWEB_THIRD_PARTY_DIR=../src/third-party\
+              -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES\
+              -DCIVETWEB_ENABLE_SSL=${{ matrix.env.ENABLE_SSL }}\
+              -DCIVETWEB_DISABLE_CGI=${{ matrix.env.NO_CGI }}\
+              -DCIVETWEB_SERVE_NO_FILES=${{ matrix.env.NO_FILES }}\
+              -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=${{ matrix.env.ENABLE_SSL_DYNAMIC_LOADING }}\
+              -DCIVETWEB_SSL_OPENSSL_API_1_0=${{ matrix.env.OPENSSL_1_0 }}\
+              -DCIVETWEB_SSL_OPENSSL_API_1_1=${{ matrix.env.OPENSSL_1_1 }}\
+              -DCIVETWEB_SSL_OPENSSL_API_3_0=${{ matrix.env.OPENSSL_3_0 }}\
+              -DCIVETWEB_ENABLE_WEBSOCKETS=${{ matrix.env.ENABLE_WEBSOCKETS }}\
+              -DCIVETWEB_ENABLE_CXX=${{ matrix.env.ENABLE_CXX }}\
+              -DCIVETWEB_ENABLE_SERVER_STATS=${{ matrix.env.ENABLE_SERVER_STATS }}\
+              -DCIVETWEB_ENABLE_LUA=${{ matrix.env.ENABLE_LUA }}\
+              -DCIVETWEB_ENABLE_LUA_SHARED=${{ matrix.env.ENABLE_LUA_SHARED }}\
+              -DCIVETWEB_ENABLE_DUKTAPE=${{ matrix.env.ENABLE_DUKTAPE }}\
+              -DCIVETWEB_DISABLE_CACHING=${{ matrix.env.NO_CACHING }}\
+              -DCIVETWEB_C_STANDARD=${{ matrix.env.C_STANDARD }}\
+              -DCIVETWEB_CXX_STANDARD=${{ matrix.env.CXX_STANDARD }}\
+              -DCIVETWEB_ALLOW_WARNINGS=${{ matrix.env.ALLOW_WARNINGS }}\
+              -DCIVETWEB_ENABLE_IPV6=${{ matrix.env.ENABLE_IPV6 }}\
+              ${{ env.ADDITIONAL_CMAKE_ARGS }}
+            cmake --build CMakeFiles -- -j $(nproc)
+        
+        - name: Verify
+          run: |
+            ./CMakeFiles/src/civetweb -I
