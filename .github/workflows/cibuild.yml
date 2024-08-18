@@ -37,7 +37,7 @@ jobs:
               ENABLE_DUKTAPE: NO
               NO_CACHING: NO
               ALLOW_WARNINGS: YES
-
+          
           - os: ubuntu-latest
             compiler: clang
             env:
@@ -62,7 +62,7 @@ jobs:
               ENABLE_DUKTAPE: NO
               NO_CACHING: NO
               ALLOW_WARNINGS: YES
-
+          
           - os: ubuntu-latest
             compiler: gcc 
             env:
@@ -88,7 +88,7 @@ jobs:
               NO_CACHING: YES
               ALLOW_WARNINGS: YES
               RUN_UNITTEST: 1
-
+          
           - os: ubuntu-latest
             compiler: clang
             env:
@@ -114,7 +114,7 @@ jobs:
               NO_CACHING: NO
               ALLOW_WARNINGS: YES
               RUN_UNITTEST: 1
-
+          
           - os: ubuntu-latest
             compiler: clang
             env:
@@ -139,7 +139,7 @@ jobs:
               ENABLE_DUKTAPE: NO
               NO_CACHING: NO
               ALLOW_WARNINGS: YES
-
+          
           - os: ubuntu-latest
             compiler: gcc
             env:
@@ -163,7 +163,7 @@ jobs:
               ENABLE_DUKTAPE: NO
               NO_CACHING: NO
               ALLOW_WARNINGS: YES
-
+          
           - os: ubuntu-latest
             compiler: gcc
             env:
@@ -187,7 +187,7 @@ jobs:
               ENABLE_DUKTAPE: NO
               NO_CACHING: NO
               ALLOW_WARNINGS: YES
-
+          
           - os: ubuntu-latest
             compiler: gcc
             env:
@@ -211,7 +211,7 @@ jobs:
               ENABLE_DUKTAPE: NO
               NO_CACHING: NO
               ALLOW_WARNINGS: YES
-
+          
           - os: ubuntu-latest
             compiler: gcc
             env:
@@ -235,7 +235,7 @@ jobs:
               ENABLE_DUKTAPE: NO
               NO_CACHING: NO
               ALLOW_WARNINGS: YES
-
+          
           - os: ubuntu-latest
             compiler: gcc
             env:
@@ -287,19 +287,93 @@ jobs:
           #     NO_CACHING: YES
           #     ALLOW_WARNINGS: YES
 
+          - os: macos-latest
+            compiler: clang
+            env:
+              idx: 8
+              N: Clang-OSX-Complete-NoLua-Release-OpenSSL_1_1_NoDynLoad
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: YES
+              ENABLE_WEBSOCKETS: YES
+              ENABLE_SERVER_STATS: YES
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: YES
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+
+          - os: macos-latest
+            compiler: clang
+            env:
+              idx: 11
+              N: OSX-Package
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: YES
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: YES
+              ENABLE_WEBSOCKETS: YES
+              ENABLE_SERVER_STATS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              MACOSX_PACKAGE: 1
+
 
     steps:
         - name: Checkout code
           uses: actions/checkout@v4.1.7
-
+        
         - name: Install clang on Linux
           if: matrix.compiler == 'clang' && matrix.os == 'ubuntu-latest'
           run: |
             sudo apt-get install -y clang
             sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
             sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
+        
+        - name: Set up OpenSSL 1.1 on MacOS
+          if: matrix.os == 'macos-latest' && matrix.env.OPENSSL_1_1 == 'YES'
+          run: |
+            OPENSSL_ROOT_DIR=$(brew --prefix openssl@1.1)
+            LDFLAGS=-L{$OPENSSL_ROOT_DIR}/lib
+            CFLAGS=-I${OPENSSL_ROOT_DIR}/include
+            ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DMAKE_C_FLAGS=${CFLAGS}"
+            PKG_CONFIG_PATH=${OPENSSL_ROOT_DIR}/lib/pkgconfig
             
-        - name: Build
+            echo "LDFLAGS=${LDFLAGS}" >> $GITHUB_ENV
+            echo "CFLAGS=${CFLAGS}" >> $GITHUB_ENV
+            echo "${OPENSSL_ROOT_DIR}/bin" >> $GITHUB_PATH
+            echo "ADDITIONAL_CMAKE_ARGS=${ADDITIONAL_CMAKE_ARGS}" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> $GITHUB_ENV
+        
+        - name: Print tool version information
+          run: |
+            openssl version
+            cc --version
+            cmake --version
+            clang --version  
+        
+        - name: Run CMake
           run: |
             cmake -S . -B CMakeFiles\
               -DCMAKE_BUILD_TYPE=${{ matrix.env.BUILD_TYPE }}\
@@ -325,8 +399,16 @@ jobs:
               -DCIVETWEB_ALLOW_WARNINGS=${{ matrix.env.ALLOW_WARNINGS }}\
               -DCIVETWEB_ENABLE_IPV6=${{ matrix.env.ENABLE_IPV6 }}\
               ${{ env.ADDITIONAL_CMAKE_ARGS }}
-            cmake --build CMakeFiles -- -j $(nproc)
+                
+        - name: Build MacOS Package
+          if: matrix.env.MACOSX_PACKAGE == 1
+          run: |
+            make -f Makefile.osx package
         
-        - name: Verify
+        - name: Build executable
+          run: |
+            cmake --build CMakeFiles -- -j $(nproc)
+          
+        - name: Check executable
           run: |
             ./CMakeFiles/src/civetweb -I
