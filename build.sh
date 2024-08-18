@@ -39,9 +39,9 @@ usage() {
   stdout "  -o,--output folder      The place to output the build files (./output)"
   stdout
   stdout "Examples:"
-  stdout "  ./build"
-  stdout "  ./build --shared --debug"
-  stdout "  ./build --static --release -o ~/my-output-folder"
+  stdout "  ./build.sh"
+  stdout "  ./build.sh --shared --debug"
+  stdout "  ./build.h --static --release -o ~/my-output-folder"
 }
 
 check() {
