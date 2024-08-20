@@ -347,7 +347,7 @@ jobs:
         - name: Install clang on Linux
           if: matrix.compiler == 'clang' && matrix.os == 'ubuntu-latest'
           run: |
-            sudo apt-get install -y clang
+            sudo apt-get install --no-install-recommends -y clang
             sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
             sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
         
