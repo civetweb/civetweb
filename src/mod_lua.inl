@@ -641,17 +641,21 @@ run_lsp_kepler(struct mg_connection *conn,
 		/* Only send a HTML header, if this is the top level page.
 		 * If this page is included by some mg.include calls, do not add a
 		 * header. */
-		if(conn->status_code < 0)
-			mg_printf(conn, "HTTP/1.1 200 OK\r\n");
-		else
-			mg_printf(conn, "HTTP/1.1 %d %s\r\n", conn->status_code, mg_get_response_code_text(conn, conn->status_code));
+
+		/* Initialize a new HTTP response, either with some-predefined
+		 * status code (e.g. 404 if this is called from an error
+		 * handler) or with 200 OK */
+		mg_response_header_start(conn, conn->status_code > 0 ? conn->status_code : 200);
+
+		/* Add additional headers */
 		send_no_cache_header(conn);
 		send_additional_header(conn);
-		mg_printf(conn,
-		          "Date: %s\r\n"
-		          "Connection: close\r\n"
-		          "Content-Type: text/html; charset=utf-8\r\n\r\n",
-		          date);
+
+		/* Add content type */
+		mg_response_header_add(conn, "Content-Type", "text/html; charset=utf-8", -1);
+
+		/* Send the HTTP response (status and all headers) */
+		mg_response_header_send(conn);
 	}
 
 	data.begin = p;
