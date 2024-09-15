@@ -12,8 +12,8 @@
 name: "CodeQL"
 
 on:
-  # push:
-  #   branches: [ "main", "master" ]
+  push:
+    branches: [ "master" ]
   schedule:
     - cron: '0 0 * * *'
   pull_request:
@@ -27,7 +27,7 @@ jobs:
     #   - https://gh.io/supported-runners-and-hardware-resources
     #   - https://gh.io/using-larger-runners
     # Consider using larger runners for possible analysis time improvements.
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-20.04' }}
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
     permissions:
       actions: read
@@ -75,7 +75,7 @@ jobs:
     #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
 
     - run: |
-        ./.github/workflows/codeql-buildscript.sh
+        make build WITH_ALL=1
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
