@@ -673,7 +673,9 @@ run_lsp_kepler(struct mg_connection *conn,
 
 	} else {
 		/* Success loading chunk. Call it. */
-		lua_pcall(L, 0, 0, 1);
+		lua_ok = lua_pcall(L, 0, 0, 0);
+		if(lua_ok != LUA_OK)
+			lua_cry(conn, lua_ok, L, "LSP", "call");
 	}
 	return 0;
 }
@@ -789,7 +791,9 @@ run_lsp_civetweb(struct mg_connection *conn,
 						lua_pcall(L, 1, 0, 0);
 					} else {
 						/* Success loading chunk. Call it. */
-						lua_pcall(L, 0, 0, 1);
+						lua_ok = lua_pcall(L, 0, 0, 0);
+						if(lua_ok != LUA_OK)
+							lua_cry(conn, lua_ok, L, "LSP", "call");
 					}
 
 					/* Progress until after the Lua closing tag. */
