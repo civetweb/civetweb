@@ -19532,6 +19532,9 @@ mg_connect_websocket_client(const char *host,
 	memset(&client_options, 0, sizeof(client_options));
 	client_options.host = host;
 	client_options.port = port;
+	if (use_ssl) {
+		client_options.host_name = host;
+	}
 
 	return mg_connect_websocket_client_impl(&client_options,
 	                                        use_ssl,
