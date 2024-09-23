@@ -393,7 +393,16 @@ jobs:
     steps:
         - name: Checkout code
           uses: actions/checkout@v4.1.7
-        
+
+        - name: Export number of CPUs
+          run: |
+            if [ "$RUNNER_OS" == "Linux" ]; then
+              echo "cores=$(nproc)" >> $GITHUB_ENV
+            fi
+            if [ "$RUNNER_OS" == "macOS" ]; then
+              echo "cores=$(sysctl -n hw.logicalcpu)" >> $GITHUB_ENV
+            fi
+            
         - name: Install clang on Linux
           if: matrix.compiler == 'clang' && startsWith(matrix.os,'ubuntu')
           run: |
@@ -448,8 +457,8 @@ jobs:
             cd openssl-1.1.1w
             ./config --prefix=/usr/local/ssl1.1 --openssldir=/usr/local/ssl1.1 shared
             make depend
-            make -j $(nproc)
-            sudo make install_sw -j $(nproc)
+            make -j ${{ env.cores }}
+            sudo make install_sw -j ${{ env.cores }}
             sudo ldconfig
 
             OPENSSL_ROOT_DIR=/usr/local/ssl1.1
@@ -502,11 +511,11 @@ jobs:
         - name: Build MacOS Package
           if: matrix.env.MACOSX_PACKAGE == 1
           run: |
-            make -f Makefile.osx package -j $(nproc)
+            make -f Makefile.osx package -j ${{ env.cores }}
         
         - name: Build executable
           run: |
-            cmake --build output -- -j $(nproc)
+            cmake --build output -- -j ${{ env.cores }}
           
         - name: Check executable
           run: |
@@ -527,4 +536,4 @@ jobs:
             # Run unit tests
             gcc unittest/cgi_test.c -o output/cgi_test.cgi
             cd output
-            CTEST_OUTPUT_ON_FAILURE=1  CK_FORK=yes  make all test -j $(nproc)
+            CTEST_OUTPUT_ON_FAILURE=1  CK_FORK=yes  make all test -j ${{ env.cores }}
