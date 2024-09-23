@@ -7,8 +7,9 @@ on:
     types: [published]
   workflow_dispatch:
 jobs:
-  build:
+  build-and-test:
     runs-on: ${{ matrix.os }}
+    name: ${{ matrix.env.NAME }}
     strategy:
       fail-fast: true
       matrix:
@@ -16,7 +17,7 @@ jobs:
           - os: ubuntu-latest
             compiler: clang
             env:
-              N: Clang-Linux-Minimal-Debug
+              NAME: Clang-Linux-Minimal-Debug
               BUILD_TYPE: Debug
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -41,7 +42,7 @@ jobs:
           - os: ubuntu-latest
             compiler: clang
             env:
-              N: Clang-Linux-Default-Release
+              NAME: Clang-Linux-Default-Release
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -66,7 +67,7 @@ jobs:
           - os: ubuntu-latest
             compiler: gcc 
             env:
-              N: GCC-Linux-Complete-NoLua-Release
+              NAME: GCC-Linux-Complete-NoLua-Release
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -91,7 +92,7 @@ jobs:
           - os: ubuntu-latest
             compiler: clang
             env:
-              N: CLANG-AnyVersion-Linux-Coverage
+              NAME: CLANG-AnyVersion-Linux-Coverage
               BUILD_TYPE: Coverage
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -116,7 +117,7 @@ jobs:
           - os: ubuntu-latest
             compiler: clang
             env:
-              N: Clang-Linux-Default-Shared
+              NAME: Clang-Linux-Default-Shared
               BUILD_TYPE: Debug
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -141,7 +142,7 @@ jobs:
           - os: ubuntu-latest
             compiler: gcc
             env:
-              N: GCCLinuxDefault_RelWithDebInfo
+              NAME: GCCLinuxDefault_RelWithDebInfo
               BUILD_TYPE: RelWithDebInfo
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -165,7 +166,7 @@ jobs:
           - os: ubuntu-latest
             compiler: gcc
             env:
-              N: GCCLinuxDefault_MinSizeRel
+              NAME: GCCLinuxDefault_MinSizeRel
               BUILD_TYPE: MinSizeRel
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -189,7 +190,7 @@ jobs:
           - os: ubuntu-latest
             compiler: gcc
             env:
-              N: GCCLinuxDefault_None
+              NAME: GCCLinuxDefault_None
               BUILD_TYPE: None
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -213,7 +214,7 @@ jobs:
           - os: ubuntu-latest
             compiler: gcc
             env:
-              N: GCCLinuxDefault_xenial
+              NAME: GCCLinuxDefault_xenial
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -237,7 +238,7 @@ jobs:
           - os: ubuntu-latest
             compiler: gcc
             env:
-              N: GCCLinuxDefault
+              NAME: GCCLinuxDefault
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -261,7 +262,7 @@ jobs:
           - os: ubuntu-latest
             compiler: gcc
             env:
-              N: GCCLinuxDefault_OpenSSL_3_0
+              NAME: GCCLinuxDefault_OpenSSL_3_0
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -288,7 +289,7 @@ jobs:
           # - os: ubuntu-lastest
           #   compiler: clang
           #   env:
-          #     N: Clang-Linux-Complete-WithLua-Debug
+          #     NAME: Clang-Linux-Complete-WithLua-Debug
           #     BUILD_TYPE: Debug
           #     ENABLE_SSL_DYNAMIC_LOADING: YES
           #     OPENSSL_1_0: NO
@@ -313,7 +314,7 @@ jobs:
           - os: macos-latest
             compiler: clang
             env:
-              N: Clang-OSX-Complete-NoLua-Release-OpenSSL_1_1_NoDynLoad
+              NAME: Clang-OSX-Complete-NoLua-Release-OpenSSL_1_1_NoDynLoad
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: NO
               OPENSSL_1_0: NO
@@ -338,7 +339,7 @@ jobs:
           - os: macos-latest
             compiler: clang
             env:
-              N: OSX-Package_OpenSSL_1_1
+              NAME: OSX-Package_OpenSSL_1_1
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -364,7 +365,7 @@ jobs:
           - os: macos-latest
             compiler: clang
             env:
-              N: OSX-Package_OpenSSL_3_0
+              NAME: OSX-Package_OpenSSL_3_0
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
