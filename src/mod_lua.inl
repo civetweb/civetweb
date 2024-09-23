@@ -2796,13 +2796,33 @@ lua_error_handler(lua_State *L)
 
 	lua_getglobal(L, "mg");
 	if (!lua_isnil(L, -1)) {
-		lua_getfield(L, -1, "write"); /* call mg.write() */
+		/* Write the error message to the error log */
+		lua_getfield(L, -1, "write");
 		lua_pushstring(L, error_msg);
 		lua_pushliteral(L, "\n");
-		lua_call(L, 2, 0);
-		IGNORE_UNUSED_RESULT(
-		    luaL_dostring(L, "mg.write(debug.traceback(), '\\n')"));
+		lua_call(L, 2, 0); /* call mg.write(error_msg + \n) */
 		lua_pop(L, 1); /* pop mg */
+
+		/* Get Lua traceback */
+		lua_getglobal(L, "debug");
+		lua_getfield(L, -1, "traceback");
+		lua_call(L, 0, 1); /* call debug.traceback() */
+		lua_remove(L, -2); /* remove debug */
+
+		/* Write the Lua traceback to the error log */
+		lua_getglobal(L, "mg");
+		lua_getfield(L, -1, "write");
+		lua_pushvalue(L, -3); /* push the traceback */
+
+		/* Only print the traceback if it is not empty */
+		if (strcmp(lua_tostring(L, -1), "stack traceback:") != 0) {
+			lua_pushliteral(L, "\n"); /* append a newline */
+			lua_call(L, 2, 0); /* call mg.write(traceback + \n) */
+			lua_pop(L, 2); /* pop mg and traceback */
+		} else {
+			lua_pop(L, 3); /* pop mg, traceback and error message */
+		}
+
 	} else {
 		printf("Lua error: [%s]\n", error_msg);
 		IGNORE_UNUSED_RESULT(
