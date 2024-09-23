@@ -10,6 +10,9 @@
 #include "civetweb_lua.h"
 #include "civetweb_private_lua.h"
 
+/* Prototypes */
+static int
+lua_error_handler(lua_State *L);
 
 #if defined(_WIN32)
 static void *
@@ -669,13 +672,19 @@ run_lsp_kepler(struct mg_connection *conn,
 		/* Syntax error or OOM.
 		 * Error message is pushed on stack. */
 		lua_pcall(L, 1, 0, 0);
-		lua_cry(conn, lua_ok, L, "LSP", "execute"); /* XXX TODO: everywhere ! */
+		lua_cry(conn, lua_ok, L, "LSP Kepler", "execute");
+		lua_error_handler(L);
+		return 1;
 
 	} else {
 		/* Success loading chunk. Call it. */
 		lua_ok = lua_pcall(L, 0, 0, 0);
 		if(lua_ok != LUA_OK)
-			lua_cry(conn, lua_ok, L, "LSP", "call");
+		{
+			lua_cry(conn, lua_ok, L, "LSP Kepler", "call");
+			lua_error_handler(L);
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -789,11 +798,18 @@ run_lsp_civetweb(struct mg_connection *conn,
 						/* Syntax error or OOM.
 						 * Error message is pushed on stack. */
 						lua_pcall(L, 1, 0, 0);
+						lua_cry(conn, lua_ok, L, "LSP", "execute");
+						lua_error_handler(L);
+						return 1;
 					} else {
 						/* Success loading chunk. Call it. */
 						lua_ok = lua_pcall(L, 0, 0, 0);
 						if(lua_ok != LUA_OK)
+						{
 							lua_cry(conn, lua_ok, L, "LSP", "call");
+							lua_error_handler(L);
+							return 1;
+						}
 					}
 
 					/* Progress until after the Lua closing tag. */
@@ -2786,12 +2802,13 @@ lua_error_handler(lua_State *L)
 		lua_call(L, 2, 0);
 		IGNORE_UNUSED_RESULT(
 		    luaL_dostring(L, "mg.write(debug.traceback(), '\\n')"));
+		lua_pop(L, 1); /* pop mg */
 	} else {
 		printf("Lua error: [%s]\n", error_msg);
 		IGNORE_UNUSED_RESULT(
 		    luaL_dostring(L, "print(debug.traceback(), '\\n')"));
 	}
-	/* TODO(lsm, low): leave the stack balanced */
+	lua_pop(L, 1); /* pop error message */
 
 	return 0;
 }
