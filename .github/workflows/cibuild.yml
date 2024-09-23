@@ -44,8 +44,8 @@ jobs:
               N: Clang-Linux-Default-Release
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
-              OPENSSL_1_0: YES
-              OPENSSL_1_1: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
               ENABLE_CXX: NO
               ENABLE_LUA_SHARED: NO
               C_STANDARD: auto
@@ -69,8 +69,8 @@ jobs:
               N: GCC-Linux-Complete-NoLua-Release
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
-              OPENSSL_1_0: YES
-              OPENSSL_1_1: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
               ENABLE_CXX: NO
               ENABLE_LUA_SHARED: NO
               C_STANDARD: auto
@@ -94,8 +94,8 @@ jobs:
               N: CLANG-AnyVersion-Linux-Coverage
               BUILD_TYPE: Coverage
               ENABLE_SSL_DYNAMIC_LOADING: YES
-              OPENSSL_1_0: YES
-              OPENSSL_1_1: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
               ENABLE_CXX: NO
               ENABLE_LUA_SHARED: NO
               C_STANDARD: auto
@@ -144,8 +144,8 @@ jobs:
               N: GCCLinuxDefault_RelWithDebInfo
               BUILD_TYPE: RelWithDebInfo
               ENABLE_SSL_DYNAMIC_LOADING: YES
-              OPENSSL_1_0: YES
-              OPENSSL_1_1: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
               ENABLE_CXX: NO
               ENABLE_LUA_SHARED: NO
               C_STANDARD: auto
@@ -168,8 +168,8 @@ jobs:
               N: GCCLinuxDefault_MinSizeRel
               BUILD_TYPE: MinSizeRel
               ENABLE_SSL_DYNAMIC_LOADING: YES
-              OPENSSL_1_0: YES
-              OPENSSL_1_1: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
               ENABLE_CXX: NO
               ENABLE_LUA_SHARED: NO
               C_STANDARD: auto
@@ -192,8 +192,8 @@ jobs:
               N: GCCLinuxDefault_None
               BUILD_TYPE: None
               ENABLE_SSL_DYNAMIC_LOADING: YES
-              OPENSSL_1_0: YES
-              OPENSSL_1_1: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
               ENABLE_CXX: NO
               ENABLE_LUA_SHARED: NO
               C_STANDARD: auto
@@ -216,8 +216,8 @@ jobs:
               N: GCCLinuxDefault_xenial
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
-              OPENSSL_1_0: YES
-              OPENSSL_1_1: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
               ENABLE_CXX: NO
               ENABLE_LUA_SHARED: NO
               C_STANDARD: auto
@@ -237,7 +237,7 @@ jobs:
           - os: ubuntu-latest
             compiler: gcc
             env:
-              N: GCCLinuxDefault_focal
+              N: GCCLinuxDefault
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
               OPENSSL_1_0: NO
@@ -335,17 +335,14 @@ jobs:
               ALLOW_WARNINGS: YES
               RUN_UNITTEST: 1
 
-          # mac-os 13 is the last version of MacOS runner using x86_64 architecture
-          # mac-os 14 and later are using arm64 architecture
-          # but OpenSSL 1.0 can't compile on arm64, so we set it fixed to mac-os 13
-          - os: macos-13
+          - os: macos-latest
             compiler: clang
             env:
-              N: OSX-Package_OpenSSL_1_0
+              N: OSX-Package_OpenSSL_1_1
               BUILD_TYPE: Release
               ENABLE_SSL_DYNAMIC_LOADING: YES
-              OPENSSL_1_0: YES
-              OPENSSL_1_1: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
               ENABLE_CXX: NO
               ENABLE_LUA_SHARED: NO
               C_STANDARD: auto
@@ -403,31 +400,6 @@ jobs:
             sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
             sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
 
-        - name: Install OpenSSL 1.0 on modern MacOS
-          # Needed for recent versions of MacOS as they ship with OpenSSL 1.1 by default
-          if: startsWith(matrix.os,'macos') && matrix.env.OPENSSL_1_0 == 'YES'
-          run: |
-            curl -O -L https://openssl.org/source/old/1.0.2/openssl-1.0.2u.tar.gz
-            tar -xzf openssl-1.0.2u.tar.gz
-            cd openssl-1.0.2u
-            ./Configure --prefix=/usr/local/ssl1.0 --openssldir=/usr/local/ssl1.0 shared shared darwin64-x86_64-cc
-            make depend
-            make -j $(nproc)
-            sudo make install_sw -j $(nproc)
-
-            OPENSSL_ROOT_DIR=/usr/local/ssl1.0
-            LDFLAGS=-L${OPENSSL_ROOT_DIR}/lib
-            CFLAGS=-I${OPENSSL_ROOT_DIR}/include
-            ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DMAKE_C_FLAGS=${CFLAGS}"
-            PKG_CONFIG_PATH=${OPENSSL_ROOT_DIR}/lib/pkgconfig
-            
-            echo "LDFLAGS=${LDFLAGS}" >> $GITHUB_ENV
-            echo "CFLAGS=${CFLAGS}" >> $GITHUB_ENV
-            echo "${OPENSSL_ROOT_DIR}/bin" >> $GITHUB_PATH
-            echo "ADDITIONAL_CMAKE_ARGS=${ADDITIONAL_CMAKE_ARGS}" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> $GITHUB_ENV
-            echo "DYLD_LIBRARY_PATH=${OPENSSL_ROOT_DIR}/lib" >> $GITHUB_ENV
-        
         - name: Set up OpenSSL 1.1 on modern MacOS
           # OpenSSL 1.1 is installed by default, so we just need to set the paths
           if: startsWith(matrix.os,'macos') && matrix.env.OPENSSL_1_1 == 'YES'
@@ -437,57 +409,35 @@ jobs:
             CFLAGS=-I${OPENSSL_ROOT_DIR}/include
             ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DMAKE_C_FLAGS=${CFLAGS}"
             PKG_CONFIG_PATH=${OPENSSL_ROOT_DIR}/lib/pkgconfig
+            DYLD_LIBRARY_PATH=${OPENSSL_ROOT_DIR}/lib
             
             echo "LDFLAGS=${LDFLAGS}" >> $GITHUB_ENV
             echo "CFLAGS=${CFLAGS}" >> $GITHUB_ENV
             echo "${OPENSSL_ROOT_DIR}/bin" >> $GITHUB_PATH
             echo "ADDITIONAL_CMAKE_ARGS=${ADDITIONAL_CMAKE_ARGS}" >> $GITHUB_ENV
             echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> $GITHUB_ENV
+            echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}" >> $GITHUB_ENV
 
         - name: Install OpenSSL 3.0 on modern MacOS
           # OpenSSL 1.1 is installed by default, so we need to install 3.0 manually
           if: startsWith(matrix.os,'macos') && matrix.env.OPENSSL_3_0 == 'YES'            
           run: |
             brew install openssl@3.0
-            
+             
             OPENSSL_ROOT_DIR=$(brew --prefix openssl@3.0)
             LDFLAGS=-L${OPENSSL_ROOT_DIR}/lib
             CFLAGS=-I${OPENSSL_ROOT_DIR}/include
             ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DMAKE_C_FLAGS=${CFLAGS}"
             PKG_CONFIG_PATH=${OPENSSL_ROOT_DIR}/lib/pkgconfig
+            DYLD_LIBRARY_PATH=${OPENSSL_ROOT_DIR}/lib
 
             echo "LDFLAGS=${LDFLAGS}" >> $GITHUB_ENV
             echo "CFLAGS=${CFLAGS}" >> $GITHUB_ENV
             echo "${OPENSSL_ROOT_DIR}/bin" >> $GITHUB_PATH
             echo "ADDITIONAL_CMAKE_ARGS=${ADDITIONAL_CMAKE_ARGS}" >> $GITHUB_ENV
             echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> $GITHUB_ENV
-
-        - name: Install OpenSSL 1.0 on modern Linux
-          # Needed for recent versions of Linux as they ship with OpenSSL 3.0 by default
-          if: startsWith(matrix.os,'ubuntu') && matrix.env.OPENSSL_1_0 == 'YES'
-          run: |
-            curl -O -L https://openssl.org/source/old/1.0.2/openssl-1.0.2u.tar.gz
-            tar -xzf openssl-1.0.2u.tar.gz
-            cd openssl-1.0.2u
-            ./config --prefix=/usr/local/ssl1.0 --openssldir=/usr/local/ssl1.0 shared
-            make depend
-            make -j $(nproc)
-            sudo make install_sw -j $(nproc)
-            sudo ldconfig
-
-            OPENSSL_ROOT_DIR=/usr/local/ssl1.0
-            LDFLAGS=-L${OPENSSL_ROOT_DIR}/lib
-            CFLAGS=-I${OPENSSL_ROOT_DIR}/include
-            ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DMAKE_C_FLAGS=${CFLAGS}"
-            PKG_CONFIG_PATH=${OPENSSL_ROOT_DIR}/lib/pkgconfig
-            
-            echo "LDFLAGS=${LDFLAGS}" >> $GITHUB_ENV
-            echo "CFLAGS=${CFLAGS}" >> $GITHUB_ENV
-            echo "${OPENSSL_ROOT_DIR}/bin" >> $GITHUB_PATH
-            echo "ADDITIONAL_CMAKE_ARGS=${ADDITIONAL_CMAKE_ARGS}" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> $GITHUB_ENV
-            echo "LD_LIBRARY_PATH=${OPENSSL_ROOT_DIR}/lib" >> $GITHUB_ENV
-        
+            echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}" >> $GITHUB_ENV
+       
         - name: Install OpenSSL 1.1 on modern Linux
           # Needed for recent versions of Linux as they ship  with OpenSSL 3.0 by default
           if: startsWith(matrix.os,'ubuntu') && matrix.env.OPENSSL_1_1 == 'YES'
