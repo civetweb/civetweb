@@ -71,7 +71,11 @@ ifdef WITH_CFLAGS
   CFLAGS += $(WITH_CFLAGS)
 endif
 
-LIBS = -lpthread -lm $(LOPT)
+LIBS =
+ifneq ($(TARGET_OS), RTEMS)
+LIBS += -lpthread
+endif
+LIBS += -lm $(LOPT)
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG
@@ -178,7 +182,9 @@ ifdef WITH_COMPRESSION
 endif
 
 ifdef WITH_ZLIB
+ifneq ($(TARGET_OS), RTEMS)
   LIBS += -lz
+endif
   CFLAGS += -DUSE_ZLIB
 endif
 
@@ -446,4 +452,3 @@ indent:
 	astyle --suffix=none --style=linux --indent=spaces=4 --lineend=linux  include/*.h src/*.c src/*.cpp src/*.inl examples/*/*.c  examples/*/*.cpp
 
 .PHONY: all help build install clean lib so
-
