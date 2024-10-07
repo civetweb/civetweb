@@ -514,7 +514,7 @@ The script can define callbacks to be notified when the server starts
 or stops. Furthermore, it can be used for log filtering or formatting. 
 The Lua state remains open until the server is stopped.
 
-For a detailed descriotion of available Lua callbacks see section
+For a detailed description of available Lua callbacks see section
 "Lua background script" below.
 
 ### lua\_background\_script\_params
