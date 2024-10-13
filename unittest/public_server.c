@@ -823,7 +823,7 @@ START_TEST(test_mg_server_and_client_tls)
 	 * while Ubuntu Xenial, Ubuntu Trusty and Windows test containers at
 	 * Travis CI do not. Maybe it is OpenSSL version specific.
 	 */
-#if defined(OPENSSL_API_1_1)
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) 
 	if (client_conn) {
 		/* Connect succeeds, but the connection is unusable. */
 		mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
