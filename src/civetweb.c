@@ -907,8 +907,22 @@ typedef unsigned short int in_port_t;
 #endif
 
 #if defined(__MACH__) && defined(__APPLE__)
-#define SSL_LIB "libssl.dylib"
-#define CRYPTO_LIB "libcrypto.dylib"
+
+#if defined(OPENSSL_API_3_0)
+#define SSL_LIB "libssl.3.dylib"
+#define CRYPTO_LIB "libcrypto.3.dylib"
+#endif
+
+#if defined(OPENSSL_API_1_1)
+#define SSL_LIB "libssl.1.1.dylib"
+#define CRYPTO_LIB "libcrypto.1.1.dylib"
+#endif /* OPENSSL_API_1_1 */
+
+#if defined(OPENSSL_API_1_0)
+#define SSL_LIB "libssl.1.0.dylib"
+#define CRYPTO_LIB "libcrypto.1.0.dylib"
+#endif /* OPENSSL_API_1_0 */
+
 #else
 #if !defined(SSL_LIB)
 #define SSL_LIB "libssl.so"
