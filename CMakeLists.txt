@@ -1,8 +1,5 @@
-# Use at least CMake 3.3
-cmake_minimum_required (VERSION 3.3.0)
-cmake_policy(VERSION 3.2.2)
-cmake_policy(SET CMP0054 NEW)
-cmake_policy(SET CMP0057 NEW)
+cmake_minimum_required(VERSION 3.10)
+cmake_policy(VERSION 3.10)
 
 # Set up the project
 project (civetweb VERSION 1.16.0)
