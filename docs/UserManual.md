@@ -447,6 +447,8 @@ For non-SSL ports, it is allowed to append letter `r`, meaning 'redirect'.
 Redirect ports will redirect all their traffic to the first configured
 SSL port. For example, if `listening_ports` is `80r,443s`, then all
 HTTP traffic coming at port 80 will be redirected to HTTPS port 443.
+For ports with redirection configured `authentication_domain` will
+be used as host component of the redirection url.
 
 It is possible to specify an IP address to bind to. In this case,
 an IP address and a colon must be prepended to the port number.
