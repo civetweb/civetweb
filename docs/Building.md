@@ -179,8 +179,9 @@ make build COPT="-DNDEBUG -DNO_CGI"
 | `SSL_ALREADY_INITIALIZED`    | do not initialize libcrypto                                         |
 | `OPENSSL_API_1_0`            | Use OpenSSL V1.0.x interface                                        |
 | `OPENSSL_API_1_1`            | Use OpenSSL V1.1.x interface                                        |
-| `OPENSSL_API_3_0`            | Use OpenSSL V3.0.x interface                                          |
-| `USE_MBEDTLS`                | Use MbedTLS (cannot be combined with OPENSSL_API_*)                 |
+| `OPENSSL_API_3_0`            | Use OpenSSL V3.0.x interface                                        |
+| `USE_GNUTLS`                 | Use GnuTLS (cannot be combined with OPENSSL_API_* or USE_MBEDTLS)   |
+| `USE_MBEDTLS`                | Use MbedTLS (cannot be combined with OPENSSL_API_* or USE_GNUTLS)   |
 |                              |                                                                     |
 | `BUILD_DATE`                 | define as a string to be used as build id instead of __DATE__       |
 |                              |                                                                     |

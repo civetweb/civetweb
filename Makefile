@@ -97,6 +97,9 @@ endif
 
 ifdef NO_SSL
   CFLAGS += -DNO_SSL
+else ifdef WITH_GNUTLS
+  CFLAGS += -DUSE_GNUTLS
+  LIBS += -lgnutls -lhogweed -lgmp -lnettle
 else ifdef WITH_MBEDTLS
   CFLAGS += -DUSE_MBEDTLS
   LIBS += -lmbedcrypto -lmbedtls -lmbedx509
@@ -303,6 +306,7 @@ help:
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   WITH_EXPERIMENTAL=1   build with experimental features"
 	@echo "   WITH_DAEMONIZE=1      build with daemonize."
+	@echo "   WITH_GNUTLS=1         build with GnuTLS support."
 	@echo "   WITH_MBEDTLS=1        build with mbedTLS support."
 	@echo "   WITH_OPENSSL_API_1_0=1  build with OpenSSL 1.0.x support."
 	@echo "   WITH_OPENSSL_API_1_1=1  build with OpenSSL 1.1.x support."

@@ -134,6 +134,8 @@ simplicity by a carefully selected list of features:
 
 [Mbed TLS](https://github.com/ARMmbed/mbedtls)
 
+[GNU TLS](https://gnutls.org)
+
 
 Support
 -------
