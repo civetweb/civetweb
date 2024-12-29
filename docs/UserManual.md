@@ -692,7 +692,8 @@ The OpenSSL cipher string uses different cipher names than IANA
 (see [this mapping](https://testssl.sh/openssl-iana.mapping.html)).
 
 In case CivetWeb is built with a TLS library other than OpenSSL 
-(e.g., [mbedTLS](https://tls.mbed.org/supported-ssl-ciphersuites)), 
+(e.g., [mbedTLS](https://tls.mbed.org/supported-ssl-ciphersuites)
+or [GnuTLS](https://www.gnutls.org/manual/html_node/Supported-ciphersuites.html)), 
 the cipher names may be different.
 
 ### ssl\_default\_verify\_paths `yes`

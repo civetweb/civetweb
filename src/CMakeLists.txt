@@ -47,7 +47,12 @@ endif()
 
 # We need to link OpenSSL if not dynamically loading
 if (CIVETWEB_ENABLE_SSL)
-  if (CIVETWEB_ENABLE_MBEDTLS)
+  if (CIVETWEB_ENABLE_GNUTLS)
+    find_package(GnuTLS)
+    include_directories(${GNUTLS_INCLUDE_DIR})
+    message(STATUS "GnuTLS include directory: ${GNUTLS_INCLUDE_DIR}")
+    target_link_libraries(civetweb-c-library ${GNUTLS_LIBRARIES})
+  elseif (CIVETWEB_ENABLE_MBEDTLS)
     find_package(MbedTLS)
     include_directories(${MbedTLS_INCLUDE_DIR})
     message(STATUS "MbedTLS include directory: ${MbedTLS_INCLUDE_DIR}")
