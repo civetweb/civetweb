@@ -498,25 +498,25 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 #if defined(TEST_FUZZ1)
 	/* fuzz target 1: different URI for HTTP/1 server */
 	LLVMFuzzerTestOneInput_URI(data, size);
-  return 0;
+	return 0;
 #elif defined(TEST_FUZZ2)
 	/* fuzz target 2: different requests for HTTP/1 server */
 	LLVMFuzzerTestOneInput_REQUEST(data, size);
-  return 0;
+	return 0;
 #elif defined(TEST_FUZZ3)
 	/* fuzz target 3: different responses for HTTP/1 client */
 	LLVMFuzzerTestOneInput_RESPONSE(data, size);
-  return 0;
+	return 0;
 #elif defined(TEST_FUZZ4)
 #error "Only useful in HTTP/2 feature branch"
 	/* fuzz target 4: different requests for HTTP/2 server */
 	LLVMFuzzerTestOneInput_REQUEST_HTTP2(data, size);
-  return 0;
+	return 0;
 #elif defined(TEST_FUZZ5)
 	/* fuzz target 5: calling an internal server test function,
 	 *                bypassing network sockets */
 	LLVMFuzzerTestOneInput_process_new_connection(data, size);
-  return 0;
+	return 0;
 #else
 /* planned targets */
 #error "Unknown fuzz target"
