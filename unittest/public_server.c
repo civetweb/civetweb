@@ -458,11 +458,13 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 	ck_assert_int_eq(portinfo[0].is_ssl, 0);
 	ck_assert_int_eq(portinfo[0].is_redirect, 0);
 	ck_assert_int_eq(portinfo[0].is_optional, 0);
+	ck_assert_int_eq(portinfo[0].is_bound, 0);
 	ck_assert_int_eq(portinfo[1].protocol, 0);
 	ck_assert_int_eq(portinfo[1].port, 0);
 	ck_assert_int_eq(portinfo[1].is_ssl, 0);
 	ck_assert_int_eq(portinfo[1].is_redirect, 0);
 	ck_assert_int_eq(portinfo[1].is_optional, 0);
+	ck_assert_int_eq(portinfo[1].is_bound, 0);
 
 	ret = mg_get_server_ports(ctx, 4, portinfo);
 	ck_assert_int_eq(ret, 1);
@@ -475,11 +477,13 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 	ck_assert_int_eq(portinfo[0].is_ssl, 0);
 	ck_assert_int_eq(portinfo[0].is_redirect, 0);
 	ck_assert_int_eq(portinfo[0].is_optional, 0);
+	ck_assert_int_eq(portinfo[0].is_bound, 1);
 	ck_assert_int_eq(portinfo[1].protocol, 0);
 	ck_assert_int_eq(portinfo[1].port, 0);
 	ck_assert_int_eq(portinfo[1].is_ssl, 0);
 	ck_assert_int_eq(portinfo[1].is_redirect, 0);
 	ck_assert_int_eq(portinfo[1].is_optional, 0);
+	ck_assert_int_eq(portinfo[1].is_bound, 0);
 
 	test_sleep(1);
 
@@ -679,11 +683,13 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(portinfo[0].is_ssl, 0);
 	ck_assert_int_eq(portinfo[0].is_redirect, 0);
 	ck_assert_int_eq(portinfo[0].is_optional, 0);
+	ck_assert_int_eq(portinfo[0].is_bound, 0);
 	ck_assert_int_eq(portinfo[1].protocol, 0);
 	ck_assert_int_eq(portinfo[1].port, 0);
 	ck_assert_int_eq(portinfo[1].is_ssl, 0);
 	ck_assert_int_eq(portinfo[1].is_redirect, 0);
 	ck_assert_int_eq(portinfo[1].is_optional, 0);
+	ck_assert_int_eq(portinfo[1].is_bound, 0);
 
 	ret = mg_get_server_ports(ctx, 4, portinfo);
 	ck_assert_int_eq(ret, 2);
@@ -692,16 +698,19 @@ START_TEST(test_mg_start_stop_https_server)
 	ck_assert_int_eq(portinfo[0].is_ssl, 0);
 	ck_assert_int_eq(portinfo[0].is_redirect, 1);
 	ck_assert_int_eq(portinfo[0].is_optional, 0);
+	ck_assert_int_eq(portinfo[0].is_bound, 1);
 	ck_assert_int_eq(portinfo[1].protocol, 1);
 	ck_assert_int_eq(portinfo[1].port, 8443);
 	ck_assert_int_eq(portinfo[1].is_ssl, 1);
 	ck_assert_int_eq(portinfo[1].is_redirect, 0);
 	ck_assert_int_eq(portinfo[1].is_optional, 1);
+	ck_assert_int_eq(portinfo[1].is_bound, 1);
 	ck_assert_int_eq(portinfo[2].protocol, 0);
 	ck_assert_int_eq(portinfo[2].port, 0);
 	ck_assert_int_eq(portinfo[2].is_ssl, 0);
 	ck_assert_int_eq(portinfo[2].is_redirect, 0);
 	ck_assert_int_eq(portinfo[2].is_optional, 0);
+	ck_assert_int_eq(portinfo[2].is_bound, 0);
 
 	test_sleep(1);
 
@@ -810,16 +819,19 @@ START_TEST(test_mg_server_and_client_tls)
 	ck_assert_int_eq(ports[0].is_ssl, 0);
 	ck_assert_int_eq(ports[0].is_redirect, 1);
 	ck_assert_int_eq(ports[0].is_optional, 0);
+	ck_assert_int_eq(ports[0].is_bound, 1);
 	ck_assert_int_eq(ports[1].protocol, 1);
 	ck_assert_int_eq(ports[1].port, 8443);
 	ck_assert_int_eq(ports[1].is_ssl, 1);
 	ck_assert_int_eq(ports[1].is_redirect, 0);
 	ck_assert_int_eq(ports[1].is_optional, 1);
+	ck_assert_int_eq(ports[1].is_bound, 1);
 	ck_assert_int_eq(ports[2].protocol, 0);
 	ck_assert_int_eq(ports[2].port, 0);
 	ck_assert_int_eq(ports[2].is_ssl, 0);
 	ck_assert_int_eq(ports[2].is_redirect, 0);
 	ck_assert_int_eq(ports[2].is_optional, 0);
+	ck_assert_int_eq(ports[2].is_bound, 0);
 
 	test_sleep(1);
 
