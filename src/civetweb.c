@@ -239,7 +239,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 
 #define NEED_DEBUG_TRACE_FUNC
 #if !defined(DEBUG_TRACE_STREAM)
-#define DEBUG_TRACE_STREAM stdout
+#define DEBUG_TRACE_STREAM stderr
 #endif
 
 #else
