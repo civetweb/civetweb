@@ -3480,7 +3480,7 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 	DEBUG_TRACE("mg_cry called from %s:%u: %s", func, line, buf);
 
 	if (!conn) {
-		puts(buf);
+		fputs(buf, stderr);
 		return;
 	}
 
