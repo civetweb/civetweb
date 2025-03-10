@@ -16154,6 +16154,10 @@ set_ports_option(struct mg_context *phys_ctx)
 			mg_cry_ctx_internal(phys_ctx,
 			                    "cannot create socket (entry %i)",
 			                    portsTotal);
+			if (so.is_optional) {
+				portsOk++; /* it's okay if we couldn't create a socket,
+						this port is optional anyway */
+			}
 			continue;
 		}
 
@@ -16239,6 +16243,10 @@ set_ports_option(struct mg_context *phys_ctx)
 #else
 			mg_cry_ctx_internal(phys_ctx, "%s", "IPv6 not available");
 			closesocket(so.sock);
+			if (so.is_optional) {
+				portsOk++; /* it's okay if we couldn't set the socket option,
+				              this port is optional anyway */
+			}
 			so.sock = INVALID_SOCKET;
 			continue;
 #endif
