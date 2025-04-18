@@ -757,8 +757,7 @@ mg_handle_form_request(struct mg_connection *conn,
 
 			/* after the transport padding, if the boundary isn't
 			 * immediately followed by a \r\n then it is either... */
-			if (strncmp(boundary_end, "\r\n", 2))
-			{
+			if (strncmp(boundary_end, "\r\n", 2)) {
 				/* ...the final boundary, and it is followed by --, (in which
 				 * case it's the end of the request) or it's a malformed
 				 * request */

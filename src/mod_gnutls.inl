@@ -17,9 +17,9 @@ CIVETWEB_API int gtls_sslctx_init(SSL_CTX *ctx, const char *crt);
 CIVETWEB_API void gtls_sslctx_uninit(SSL_CTX *ctx);
 CIVETWEB_API void gtls_ssl_close(SSL *ssl);
 CIVETWEB_API int gtls_ssl_accept(SSL **ssl,
-                    SSL_CTX *ssl_ctx,
-                    int sock,
-                    struct mg_context *phys_ctx);
+                                 SSL_CTX *ssl_ctx,
+                                 int sock,
+                                 struct mg_context *phys_ctx);
 CIVETWEB_API int gtls_ssl_read(SSL *ssl, unsigned char *buf, size_t len);
 CIVETWEB_API int gtls_ssl_write(SSL *ssl, const unsigned char *buf, size_t len);
 

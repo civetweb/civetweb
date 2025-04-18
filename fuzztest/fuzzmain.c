@@ -110,13 +110,14 @@ civetweb_init(void)
 int LLVMFuzzerInitialize(int *argc, char ***argv);
 
 int
-LLVMFuzzerInitialize(int *argc, char ***argv) {
-  // Silence unused args warning.
+LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+	// Silence unused args warning.
 	(void)(argc);
 	(void)(argv);
 
 	civetweb_init();
-  return 0;
+	return 0;
 }
 
 #if defined(TEST_FUZZ1)
@@ -215,7 +216,7 @@ LLVMFuzzerTestOneInput_URI(const uint8_t *data, size_t size)
 {
 	static char URI[1024 * 64]; /* static, to avoid stack overflow */
 
-	if (size+1 < sizeof(URI)) {
+	if (size + 1 < sizeof(URI)) {
 		memcpy(URI, data, size);
 		URI[size] = 0;
 	} else {
@@ -445,13 +446,14 @@ mock_server_init(void)
 int LLVMFuzzerInitialize(int *argc, char ***argv);
 
 int
-LLVMFuzzerInitialize(int *argc, char ***argv) {
-  // Silence unused args warning.
+LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+	// Silence unused args warning.
 	(void)(argc);
 	(void)(argv);
 
 	mock_server_init();
-  return 0;
+	return 0;
 }
 
 

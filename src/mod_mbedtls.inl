@@ -95,7 +95,8 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 	 */
 	const psa_status_t status = psa_crypto_init();
 	if (status != PSA_SUCCESS) {
-		DEBUG_TRACE("Failed to initialize PSA crypto, returned %d\n", (int) status);
+		DEBUG_TRACE("Failed to initialize PSA crypto, returned %d\n",
+		            (int)status);
 		return -1;
 	}
 #endif

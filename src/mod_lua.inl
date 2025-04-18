@@ -11,8 +11,7 @@
 #include "civetweb_private_lua.h"
 
 /* Prototypes */
-static int
-lua_error_handler(lua_State *L);
+static int lua_error_handler(lua_State *L);
 
 #if defined(_WIN32)
 static void *
@@ -648,14 +647,19 @@ run_lsp_kepler(struct mg_connection *conn,
 		/* Initialize a new HTTP response, either with some-predefined
 		 * status code (e.g. 404 if this is called from an error
 		 * handler) or with 200 OK */
-		mg_response_header_start(conn, conn->status_code > 0 ? conn->status_code : 200);
+		mg_response_header_start(conn,
+		                         conn->status_code > 0 ? conn->status_code
+		                                               : 200);
 
 		/* Add additional headers */
 		send_no_cache_header(conn);
 		send_additional_header(conn);
 
 		/* Add content type */
-		mg_response_header_add(conn, "Content-Type", "text/html; charset=utf-8", -1);
+		mg_response_header_add(conn,
+		                       "Content-Type",
+		                       "text/html; charset=utf-8",
+		                       -1);
 
 		/* Send the HTTP response (status and all headers) */
 		mg_response_header_send(conn);
@@ -679,8 +683,7 @@ run_lsp_kepler(struct mg_connection *conn,
 	} else {
 		/* Success loading chunk. Call it. */
 		lua_ok = lua_pcall(L, 0, 0, 0);
-		if(lua_ok != LUA_OK)
-		{
+		if (lua_ok != LUA_OK) {
 			lua_cry(conn, lua_ok, L, "LSP Kepler", "call");
 			lua_error_handler(L);
 			return 1;
@@ -804,8 +807,7 @@ run_lsp_civetweb(struct mg_connection *conn,
 					} else {
 						/* Success loading chunk. Call it. */
 						lua_ok = lua_pcall(L, 0, 0, 0);
-						if(lua_ok != LUA_OK)
-						{
+						if (lua_ok != LUA_OK) {
 							lua_cry(conn, lua_ok, L, "LSP", "call");
 							lua_error_handler(L);
 							return 1;
@@ -2801,7 +2803,7 @@ lua_error_handler(lua_State *L)
 		lua_pushstring(L, error_msg);
 		lua_pushliteral(L, "\n");
 		lua_call(L, 2, 0); /* call mg.write(error_msg + \n) */
-		lua_pop(L, 1); /* pop mg */
+		lua_pop(L, 1);     /* pop mg */
 
 		/* Get Lua traceback */
 		lua_getglobal(L, "debug");
@@ -2817,8 +2819,8 @@ lua_error_handler(lua_State *L)
 		/* Only print the traceback if it is not empty */
 		if (strcmp(lua_tostring(L, -1), "stack traceback:") != 0) {
 			lua_pushliteral(L, "\n"); /* append a newline */
-			lua_call(L, 2, 0); /* call mg.write(traceback + \n) */
-			lua_pop(L, 2); /* pop mg and traceback */
+			lua_call(L, 2, 0);        /* call mg.write(traceback + \n) */
+			lua_pop(L, 2);            /* pop mg and traceback */
 		} else {
 			lua_pop(L, 3); /* pop mg, traceback and error message */
 		}

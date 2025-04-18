@@ -847,7 +847,7 @@ START_TEST(test_mg_server_and_client_tls)
 	 * while Ubuntu Xenial, Ubuntu Trusty and Windows test containers at
 	 * Travis CI do not. Maybe it is OpenSSL version specific.
 	 */
-#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0) 
+#if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
 	if (client_conn) {
 		/* Connect succeeds, but the connection is unusable. */
 		mg_printf(client_conn, "GET / HTTP/1.0\r\n\r\n");
@@ -3091,7 +3091,7 @@ START_TEST(test_handle_form)
 
 	/* Handle form: "POST multipart/form-data" without trailing CRLF*/
 	multipart_body =
-		"--multipart-form-data-boundary--see-RFC-2388\r\n"
+	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
 	    "Content-Disposition: form-data; name=\"textin\"\r\n"
 	    "\r\n"
 	    "text\r\n"
@@ -3629,11 +3629,11 @@ START_TEST(test_handle_form)
 	multipart_body =
 	    "--multipart-form-data-boundary--see-RFC-2388\r\n"
 	    "Content-Disposition: form-data; "
-		"custom1name=\"1\"; "
-		"custom2name=\"2\"; "
-		"custom3name=\"3\"; "
-		"custom4name=\"4\"; "
-		"name=\"textin\"\r\n"
+	    "custom1name=\"1\"; "
+	    "custom2name=\"2\"; "
+	    "custom3name=\"3\"; "
+	    "custom4name=\"4\"; "
+	    "name=\"textin\"\r\n"
 	    "\r\n"
 	    "text\r\n"
 	    "--multipart-form-data-boundary--see-RFC-2388\t\t\t\r\n"
@@ -3791,53 +3791,52 @@ START_TEST(test_handle_form)
 	mg_close_connection(client_conn);
 
 	/* Handle form: "POST multipart/form-data" very long preamble */
-	multipart_body =
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "preamblepreamblepreamblepreamblepreamble\r\n"
-	    "--multipart-form-data-boundary--see-RFC-2388\r\n";
-	    "Content-Disposition: form-data; name=\"passwordin\"\r\n"
-	    "\r\n"
-	    "\r\n"
-	    "--multipart-form-data-boundary--see-RFC-2388--\r\n";
+	multipart_body = "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "preamblepreamblepreamblepreamblepreamble\r\n"
+	                 "--multipart-form-data-boundary--see-RFC-2388\r\n";
+	"Content-Disposition: form-data; name=\"passwordin\"\r\n"
+	"\r\n"
+	"\r\n"
+	"--multipart-form-data-boundary--see-RFC-2388--\r\n";
 
 	body_len = strlen(multipart_body);
 	ck_assert_uint_eq(body_len, 1768); /* not required */
