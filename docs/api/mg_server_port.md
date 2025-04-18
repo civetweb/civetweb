@@ -10,8 +10,8 @@
 |**`port`**|`int`|The port number on which the service listens|
 |**`is_ssl`**|`int`|**0** for `HTTP` communication, **1** for `HTTPS`|
 |**`is_redirect`**|`int`|**1** if all requests are redirected, otherwise **0**|
-|**`_reserved1`**|`int`|Reserved for internal use|
-|**`_reserved2`**|`int`|Reserved for internal use|
+|**`is_optional`**|`int`|**1** if port is optional, otherwise **0**|
+|**`is_bound`**|`int`|**1** if the port is bound, otherwise **0**|
 |**`_reserved3`**|`int`|Reserved for internal use|
 |**`_reserved4`**|`int`|Reserved for internal use|
 

@@ -71,7 +71,11 @@ ifdef WITH_CFLAGS
   CFLAGS += $(WITH_CFLAGS)
 endif
 
-LIBS = -lpthread -lm $(LOPT)
+LIBS =
+ifneq ($(TARGET_OS), RTEMS)
+LIBS += -lpthread
+endif
+LIBS += -lm $(LOPT)
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG
@@ -93,6 +97,9 @@ endif
 
 ifdef NO_SSL
   CFLAGS += -DNO_SSL
+else ifdef WITH_GNUTLS
+  CFLAGS += -DUSE_GNUTLS
+  LIBS += -lgnutls -lhogweed -lgmp -lnettle
 else ifdef WITH_MBEDTLS
   CFLAGS += -DUSE_MBEDTLS
   LIBS += -lmbedcrypto -lmbedtls -lmbedx509
@@ -178,7 +185,9 @@ ifdef WITH_COMPRESSION
 endif
 
 ifdef WITH_ZLIB
+ifneq ($(TARGET_OS), RTEMS)
   LIBS += -lz
+endif
   CFLAGS += -DUSE_ZLIB
 endif
 
@@ -297,6 +306,7 @@ help:
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   WITH_EXPERIMENTAL=1   build with experimental features"
 	@echo "   WITH_DAEMONIZE=1      build with daemonize."
+	@echo "   WITH_GNUTLS=1         build with GnuTLS support."
 	@echo "   WITH_MBEDTLS=1        build with mbedTLS support."
 	@echo "   WITH_OPENSSL_API_1_0=1  build with OpenSSL 1.0.x support."
 	@echo "   WITH_OPENSSL_API_1_1=1  build with OpenSSL 1.1.x support."
@@ -446,4 +456,3 @@ indent:
 	astyle --suffix=none --style=linux --indent=spaces=4 --lineend=linux  include/*.h src/*.c src/*.cpp src/*.inl examples/*/*.c  examples/*/*.cpp
 
 .PHONY: all help build install clean lib so
-

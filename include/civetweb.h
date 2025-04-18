@@ -714,8 +714,8 @@ struct mg_server_port {
 	int port;        /* port number */
 	int is_ssl;      /* https port: 0 = no, 1 = yes */
 	int is_redirect; /* redirect all requests: 0 = no, 1 = yes */
-	int _reserved1;
-	int _reserved2;
+	int is_optional; /* optional: 0 = no, 1 = yes */
+	int is_bound;    /* bound: 0 = no, 1 = yes, relevant for optional ports */
 	int _reserved3;
 	int _reserved4;
 };

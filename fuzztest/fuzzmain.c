@@ -45,9 +45,6 @@ unsigned short PORT_NUM_HTTP = 0; /* set dynamically */
 	}
 
 
-static uint64_t call_count = 0;
-
-
 /********************************************************/
 /* Init CivetWeb server ... test with mock client       */
 /********************************************************/
@@ -110,6 +107,17 @@ civetweb_init(void)
 	atexit(civetweb_exit);
 }
 
+int LLVMFuzzerInitialize(int *argc, char ***argv);
+
+int
+LLVMFuzzerInitialize(int *argc, char ***argv) {
+  // Silence unused args warning.
+	(void)(argc);
+	(void)(argv);
+
+	civetweb_init();
+  return 0;
+}
 
 #if defined(TEST_FUZZ1)
 static int
@@ -202,19 +210,12 @@ test_civetweb_client(const char *server,
 	return 0;
 }
 
-
 static int
 LLVMFuzzerTestOneInput_URI(const uint8_t *data, size_t size)
 {
 	static char URI[1024 * 64]; /* static, to avoid stack overflow */
 
-	if (call_count == 0) {
-		memset(URI, 0, sizeof(URI));
-		civetweb_init();
-	}
-	call_count++;
-
-	if (size < sizeof(URI)) {
+	if (size+1 < sizeof(URI)) {
 		memcpy(URI, data, size);
 		URI[size] = 0;
 	} else {
@@ -230,11 +231,6 @@ LLVMFuzzerTestOneInput_URI(const uint8_t *data, size_t size)
 static int
 LLVMFuzzerTestOneInput_REQUEST(const uint8_t *data, size_t size)
 {
-	if (call_count == 0) {
-		civetweb_init();
-	}
-	call_count++;
-
 	int r;
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 6);
 	if (sock == -1) {
@@ -446,15 +442,22 @@ mock_server_init(void)
 	atexit(mock_server_exit);
 }
 
+int LLVMFuzzerInitialize(int *argc, char ***argv);
+
+int
+LLVMFuzzerInitialize(int *argc, char ***argv) {
+  // Silence unused args warning.
+	(void)(argc);
+	(void)(argv);
+
+	mock_server_init();
+  return 0;
+}
+
 
 static int
 LLVMFuzzerTestOneInput_RESPONSE(const uint8_t *data, size_t size)
 {
-	if (call_count == 0) {
-		mock_server_init();
-	}
-	call_count++;
-
 	if (size > sizeof(RESPONSE.data)) {
 		return 1;
 	}
@@ -497,21 +500,26 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
 #if defined(TEST_FUZZ1)
 	/* fuzz target 1: different URI for HTTP/1 server */
-	return LLVMFuzzerTestOneInput_URI(data, size);
+	LLVMFuzzerTestOneInput_URI(data, size);
+	return 0;
 #elif defined(TEST_FUZZ2)
 	/* fuzz target 2: different requests for HTTP/1 server */
-	return LLVMFuzzerTestOneInput_REQUEST(data, size);
+	LLVMFuzzerTestOneInput_REQUEST(data, size);
+	return 0;
 #elif defined(TEST_FUZZ3)
 	/* fuzz target 3: different responses for HTTP/1 client */
-	return LLVMFuzzerTestOneInput_RESPONSE(data, size);
+	LLVMFuzzerTestOneInput_RESPONSE(data, size);
+	return 0;
 #elif defined(TEST_FUZZ4)
 #error "Only useful in HTTP/2 feature branch"
 	/* fuzz target 4: different requests for HTTP/2 server */
-	return LLVMFuzzerTestOneInput_REQUEST_HTTP2(data, size);
+	LLVMFuzzerTestOneInput_REQUEST_HTTP2(data, size);
+	return 0;
 #elif defined(TEST_FUZZ5)
 	/* fuzz target 5: calling an internal server test function,
 	 *                bypassing network sockets */
-	return LLVMFuzzerTestOneInput_process_new_connection(data, size);
+	LLVMFuzzerTestOneInput_process_new_connection(data, size);
+	return 0;
 #else
 /* planned targets */
 #error "Unknown fuzz target"

@@ -1,0 +1,539 @@
+name: CI build
+
+on:
+  push:
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.env.NAME }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: clang
+            env:
+              NAME: Clang-Linux-Minimal-Debug
+              BUILD_TYPE: Debug
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: NO
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: YES
+              ENABLE_SSL: NO
+              NO_CGI: YES
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_SERVER_STATS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+          
+          - os: ubuntu-latest
+            compiler: clang
+            env:
+              NAME: Clang-Linux-Default-Release
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_SERVER_STATS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+          
+          - os: ubuntu-latest
+            compiler: gcc 
+            env:
+              NAME: GCC-Linux-Complete-NoLua-Release
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: YES
+              ENABLE_WEBSOCKETS: YES
+              ENABLE_SERVER_STATS: YES
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: YES
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+          
+          - os: ubuntu-latest
+            compiler: clang
+            env:
+              NAME: CLANG-AnyVersion-Linux-Coverage
+              BUILD_TYPE: Coverage
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: YES
+              ENABLE_WEBSOCKETS: YES
+              ENABLE_SERVER_STATS: YES
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+          
+          - os: ubuntu-latest
+            compiler: clang
+            env:
+              NAME: Clang-Linux-Default-Shared
+              BUILD_TYPE: Debug
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: YES
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_SERVER_STATS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+          
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              NAME: GCCLinuxDefault_RelWithDebInfo
+              BUILD_TYPE: RelWithDebInfo
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+          
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              NAME: GCCLinuxDefault_MinSizeRel
+              BUILD_TYPE: MinSizeRel
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+          
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              NAME: GCCLinuxDefault_None
+              BUILD_TYPE: None
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+          
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              NAME: GCCLinuxDefault_xenial
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+          
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              NAME: GCCLinuxDefault
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+         
+          - os: ubuntu-latest
+            compiler: gcc
+            env:
+              NAME: GCCLinuxDefault_OpenSSL_3_0
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: NO
+              OpenSSL_3_0: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: NO
+              ENABLE_WEBSOCKETS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+
+          # Disable Lua build, until someone knows how to fix the CMake files
+          # see https://github.com/civetweb/civetweb/issues/543
+          # - os: ubuntu-lastest
+          #   compiler: clang
+          #   env:
+          #     NAME: Clang-Linux-Complete-WithLua-Debug
+          #     BUILD_TYPE: Debug
+          #     ENABLE_SSL_DYNAMIC_LOADING: YES
+          #     OPENSSL_1_0: NO
+          #     OPENSSL_1_1: YES
+          #     ENABLE_CXX: NO
+          #     C_STANDARD: auto
+          #     CXX_STANDARD: auto
+          #     BUILD_SHARED: NO
+          #     NO_FILES: NO
+          #     ENABLE_SSL: YES
+          #     NO_CGI: NO
+          #     ENABLE_IPV6: YES
+          #     ENABLE_WEBSOCKETS: YES
+          #     ENABLE_SERVER_STATS: YES
+          #     ENABLE_LUA: YES
+          #     ENABLE_LUA_SHARED: YES
+          #     ENABLE_DUKTAPE: NO
+          #     NO_CACHING: YES
+          #     ALLOW_WARNINGS: YES
+          #     RUN_UNITTEST: 1
+
+          - os: macos-latest
+            compiler: clang
+            env:
+              NAME: Clang-OSX-Complete-NoLua-Release-OpenSSL_1_1_NoDynLoad
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: NO
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: YES
+              ENABLE_WEBSOCKETS: YES
+              ENABLE_SERVER_STATS: YES
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: YES
+              ALLOW_WARNINGS: YES
+              RUN_UNITTEST: 1
+
+          - os: macos-latest
+            compiler: clang
+            env:
+              NAME: OSX-Package_OpenSSL_1_1
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: YES
+              ENABLE_WEBSOCKETS: YES
+              ENABLE_SERVER_STATS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              MACOSX_PACKAGE: 1
+              RUN_UNITTEST: 1
+
+          - os: macos-latest
+            compiler: clang
+            env:
+              NAME: OSX-Package_OpenSSL_3_0
+              BUILD_TYPE: Release
+              ENABLE_SSL_DYNAMIC_LOADING: YES
+              OPENSSL_1_0: NO
+              OPENSSL_1_1: NO
+              OPENSSL_3_0: YES
+              ENABLE_CXX: NO
+              ENABLE_LUA_SHARED: NO
+              C_STANDARD: auto
+              CXX_STANDARD: auto
+              BUILD_SHARED: NO
+              NO_FILES: NO
+              ENABLE_SSL: YES
+              NO_CGI: NO
+              ENABLE_IPV6: YES
+              ENABLE_WEBSOCKETS: YES
+              ENABLE_SERVER_STATS: NO
+              ENABLE_LUA: NO
+              ENABLE_DUKTAPE: NO
+              NO_CACHING: NO
+              ALLOW_WARNINGS: YES
+              MACOSX_PACKAGE: 1
+              RUN_UNITTEST: 1
+
+
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v4.1.7
+
+        - name: Export number of CPUs
+          run: |
+            if [ "$RUNNER_OS" == "Linux" ]; then
+              echo "cores=$(nproc)" >> $GITHUB_ENV
+            fi
+            if [ "$RUNNER_OS" == "macOS" ]; then
+              echo "cores=$(sysctl -n hw.logicalcpu)" >> $GITHUB_ENV
+            fi
+            
+        - name: Install clang on Linux
+          if: matrix.compiler == 'clang' && startsWith(matrix.os,'ubuntu')
+          run: |
+            sudo apt-get install --no-install-recommends -y clang
+            sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
+            sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
+
+        - name: Set up OpenSSL 1.1 on modern MacOS
+          # OpenSSL 1.1 is installed by default, so we just need to set the paths
+          if: startsWith(matrix.os,'macos') && matrix.env.OPENSSL_1_1 == 'YES'
+          run: |
+            OPENSSL_ROOT_DIR=$(brew --prefix openssl@1.1)
+            LDFLAGS=-L${OPENSSL_ROOT_DIR}/lib
+            CFLAGS=-I${OPENSSL_ROOT_DIR}/include
+            ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DMAKE_C_FLAGS=${CFLAGS}"
+            PKG_CONFIG_PATH=${OPENSSL_ROOT_DIR}/lib/pkgconfig
+            DYLD_LIBRARY_PATH=${OPENSSL_ROOT_DIR}/lib
+            
+            echo "LDFLAGS=${LDFLAGS}" >> $GITHUB_ENV
+            echo "CFLAGS=${CFLAGS}" >> $GITHUB_ENV
+            echo "${OPENSSL_ROOT_DIR}/bin" >> $GITHUB_PATH
+            echo "ADDITIONAL_CMAKE_ARGS=${ADDITIONAL_CMAKE_ARGS}" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> $GITHUB_ENV
+            echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}" >> $GITHUB_ENV
+
+        - name: Install OpenSSL 3.0 on modern MacOS
+          # OpenSSL 1.1 is installed by default, so we need to install 3.0 manually
+          if: startsWith(matrix.os,'macos') && matrix.env.OPENSSL_3_0 == 'YES'            
+          run: |
+            brew install openssl@3.0
+             
+            OPENSSL_ROOT_DIR=$(brew --prefix openssl@3.0)
+            LDFLAGS=-L${OPENSSL_ROOT_DIR}/lib
+            CFLAGS=-I${OPENSSL_ROOT_DIR}/include
+            ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DMAKE_C_FLAGS=${CFLAGS}"
+            PKG_CONFIG_PATH=${OPENSSL_ROOT_DIR}/lib/pkgconfig
+            DYLD_LIBRARY_PATH=${OPENSSL_ROOT_DIR}/lib
+
+            echo "LDFLAGS=${LDFLAGS}" >> $GITHUB_ENV
+            echo "CFLAGS=${CFLAGS}" >> $GITHUB_ENV
+            echo "${OPENSSL_ROOT_DIR}/bin" >> $GITHUB_PATH
+            echo "ADDITIONAL_CMAKE_ARGS=${ADDITIONAL_CMAKE_ARGS}" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> $GITHUB_ENV
+            echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}" >> $GITHUB_ENV
+       
+        - name: Install OpenSSL 1.1 on modern Linux
+          # Needed for recent versions of Linux as they ship  with OpenSSL 3.0 by default
+          if: startsWith(matrix.os,'ubuntu') && matrix.env.OPENSSL_1_1 == 'YES'
+          run: |
+            curl -O -L https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_1w/openssl-1.1.1w.tar.gz
+            tar -xzf openssl-1.1.1w.tar.gz
+            cd openssl-1.1.1w
+            ./config --prefix=/usr/local/ssl1.1 --openssldir=/usr/local/ssl1.1 shared
+            make depend
+            make -j ${{ env.cores }}
+            sudo make install_sw -j ${{ env.cores }}
+            sudo ldconfig
+
+            OPENSSL_ROOT_DIR=/usr/local/ssl1.1
+            LDFLAGS=-L${OPENSSL_ROOT_DIR}/lib
+            CFLAGS=-I${OPENSSL_ROOT_DIR}/include
+            ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DMAKE_C_FLAGS=${CFLAGS}"
+            PKG_CONFIG_PATH=${OPENSSL_ROOT_DIR}/lib/pkgconfig
+            
+            echo "LDFLAGS=${LDFLAGS}" >> $GITHUB_ENV
+            echo "CFLAGS=${CFLAGS}" >> $GITHUB_ENV
+            echo "${OPENSSL_ROOT_DIR}/bin" >> $GITHUB_PATH
+            echo "ADDITIONAL_CMAKE_ARGS=${ADDITIONAL_CMAKE_ARGS}" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> $GITHUB_ENV
+            echo "LD_LIBRARY_PATH=${OPENSSL_ROOT_DIR}/lib" >> $GITHUB_ENV
+        
+        - name: Print tool version information
+          run: |
+            openssl version
+            cc --version
+            cmake --version
+            clang --version  
+        
+        - name: Run CMake
+          run: |
+            cmake -S . -B output\
+              -DCMAKE_BUILD_TYPE=${{ matrix.env.BUILD_TYPE }}\
+              -DBUILD_SHARED_LIBS=${{ matrix.env.BUILD_SHARED }}\
+              -DCIVETWEB_THIRD_PARTY_DIR=../src/third-party\
+              -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES\
+              -DCIVETWEB_ENABLE_SSL=${{ matrix.env.ENABLE_SSL }}\
+              -DCIVETWEB_DISABLE_CGI=${{ matrix.env.NO_CGI }}\
+              -DCIVETWEB_SERVE_NO_FILES=${{ matrix.env.NO_FILES }}\
+              -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=${{ matrix.env.ENABLE_SSL_DYNAMIC_LOADING }}\
+              -DCIVETWEB_SSL_OPENSSL_API_1_0=${{ matrix.env.OPENSSL_1_0 }}\
+              -DCIVETWEB_SSL_OPENSSL_API_1_1=${{ matrix.env.OPENSSL_1_1 }}\
+              -DCIVETWEB_SSL_OPENSSL_API_3_0=${{ matrix.env.OPENSSL_3_0 }}\
+              -DCIVETWEB_ENABLE_WEBSOCKETS=${{ matrix.env.ENABLE_WEBSOCKETS }}\
+              -DCIVETWEB_ENABLE_CXX=${{ matrix.env.ENABLE_CXX }}\
+              -DCIVETWEB_ENABLE_SERVER_STATS=${{ matrix.env.ENABLE_SERVER_STATS }}\
+              -DCIVETWEB_ENABLE_LUA=${{ matrix.env.ENABLE_LUA }}\
+              -DCIVETWEB_ENABLE_LUA_SHARED=${{ matrix.env.ENABLE_LUA_SHARED }}\
+              -DCIVETWEB_ENABLE_DUKTAPE=${{ matrix.env.ENABLE_DUKTAPE }}\
+              -DCIVETWEB_DISABLE_CACHING=${{ matrix.env.NO_CACHING }}\
+              -DCIVETWEB_C_STANDARD=${{ matrix.env.C_STANDARD }}\
+              -DCIVETWEB_CXX_STANDARD=${{ matrix.env.CXX_STANDARD }}\
+              -DCIVETWEB_ALLOW_WARNINGS=${{ matrix.env.ALLOW_WARNINGS }}\
+              -DCIVETWEB_ENABLE_IPV6=${{ matrix.env.ENABLE_IPV6 }}\
+              ${{ env.ADDITIONAL_CMAKE_ARGS }}
+                
+        - name: Build MacOS Package
+          if: matrix.env.MACOSX_PACKAGE == 1
+          run: |
+            make -f Makefile.osx package -j ${{ env.cores }}
+        
+        - name: Build executable
+          run: |
+            cmake --build output -- -j ${{ env.cores }}
+          
+        - name: Check executable
+          run: |
+            ./output/src/civetweb -I
+        
+        - name: Run unit tests
+          if: matrix.env.RUN_UNITTEST == 1
+          run: |
+            # kill processes that are using port 8084, which is used in the unit tests
+            # Currently, this affects linux only, where 'mono' is using this port
+            pid_8084=$(sudo lsof -t -i:8084 || true;)
+                
+            if [[ -n ${pid_8084} ]]; then 
+              echo "Killing process using port 8084: ${pid_8084}"     
+              sudo kill -9 ${pid_8084}
+            fi
+
+            # Run unit tests
+            gcc unittest/cgi_test.c -o output/cgi_test.cgi
+            cd output
+            CTEST_OUTPUT_ON_FAILURE=1  CK_FORK=yes  make all test -j ${{ env.cores }}
