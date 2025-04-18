@@ -2339,7 +2339,9 @@ STOP_FLAG_ASSIGN(stop_flag_t *f, stop_flag_t v)
 {
 	stop_flag_t sf = 0;
 	do {
-		sf = mg_atomic_compare_and_swap(f, *f, v);
+		sf = mg_atomic_compare_and_swap(f,
+		                                __atomic_load_n(f, __ATOMIC_SEQ_CST),
+		                                v);
 	} while (sf != v);
 }
 
