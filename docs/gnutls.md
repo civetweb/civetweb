@@ -1,5 +1,4 @@
-#### Use GnuTLS instead of OpenSSL
-=====
+# Use GnuTLS instead of OpenSSL
 
 1 [Build libgmp](https://gmplib.org)
 
