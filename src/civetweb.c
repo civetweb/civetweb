@@ -18858,6 +18858,19 @@ get_uri_type(const char *uri)
 	 * and % encoded symbols.
 	 */
 	for (i = 0; uri[i] != 0; i++) {
+		/* Check for CRLF injection attempts */
+		if (uri[i] == '%') {
+			if (uri[i+1] == '0' && (uri[i+2] == 'd' || uri[i+2] == 'D')) {
+				/* Found %0d (CR) */
+				DEBUG_TRACE("CRLF injection attempt detected: %s\r\n", uri);
+				return 0;
+			}
+			if (uri[i+1] == '0' && (uri[i+2] == 'a' || uri[i+2] == 'A')) {
+				/* Found %0a (LF) */
+				DEBUG_TRACE("CRLF injection attempt detected: %s\r\n", uri);
+				return 0;
+			}
+		}
 		if ((unsigned char)uri[i] < 33) {
 			/* control characters and spaces are invalid */
 			return 0;
