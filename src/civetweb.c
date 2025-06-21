@@ -15596,14 +15596,14 @@ handle_request(struct mg_connection *conn)
 			if (len + 1 < buflen) {
 				new_path[len] = '/';
 				new_path[len + 1] = '\0';
-				len += 1;
+				len++;
 			}
 
 			if (ri->query_string) {
 				if (len + 1 < buflen) {
 					new_path[len] = '?';
 					new_path[len + 1] = '\0';
-					len += 1;
+					len++;
 				}
 
 				/* Append with size of space left for query string + null terminator */
