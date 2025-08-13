@@ -239,7 +239,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 
 #define NEED_DEBUG_TRACE_FUNC
 #if !defined(DEBUG_TRACE_STREAM)
-#define DEBUG_TRACE_STREAM stdout
+#define DEBUG_TRACE_STREAM stderr
 #endif
 
 #else
@@ -2146,6 +2146,7 @@ static const struct mg_option config_options[] = {
 #if defined(USE_HTTP2)
     {"enable_http2", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
+
     /* Once for each domain */
     {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
     {"fallback_document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
@@ -3482,7 +3483,7 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 	DEBUG_TRACE("mg_cry called from %s:%u: %s", func, line, buf);
 
 	if (!conn) {
-		puts(buf);
+		fputs(buf, stderr);
 		return;
 	}
 
