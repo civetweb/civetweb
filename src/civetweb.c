@@ -239,7 +239,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 
 #define NEED_DEBUG_TRACE_FUNC
 #if !defined(DEBUG_TRACE_STREAM)
-#define DEBUG_TRACE_STREAM stderr
+#define DEBUG_TRACE_STREAM stdout
 #endif
 
 #else
@@ -2087,7 +2087,7 @@ enum {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	LUA_WEBSOCKET_EXTENSIONS,
 #endif
-
+	REPLACE_ASTERISK_WITH_ORIGIN,
 	ACCESS_CONTROL_ALLOW_ORIGIN,
 	ACCESS_CONTROL_ALLOW_METHODS,
 	ACCESS_CONTROL_ALLOW_HEADERS,
@@ -2146,7 +2146,6 @@ static const struct mg_option config_options[] = {
 #if defined(USE_HTTP2)
     {"enable_http2", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
-
     /* Once for each domain */
     {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
     {"fallback_document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
@@ -2253,6 +2252,7 @@ static const struct mg_option config_options[] = {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     {"lua_websocket_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
 #endif
+	{"replace_asterisk_with_origin", MG_CONFIG_TYPE_BOOLEAN, "no"},
     {"access_control_allow_origin", MG_CONFIG_TYPE_STRING, "*"},
     {"access_control_allow_methods", MG_CONFIG_TYPE_STRING, "*"},
     {"access_control_allow_headers", MG_CONFIG_TYPE_STRING, "*"},
@@ -3482,7 +3482,7 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 	DEBUG_TRACE("mg_cry called from %s:%u: %s", func, line, buf);
 
 	if (!conn) {
-		fputs(buf, stderr);
+		puts(buf);
 		return;
 	}
 
@@ -4235,15 +4235,24 @@ send_cors_header(struct mg_connection *conn)
 	const char *cors_meth_cfg =
 	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
 
+	int cors_replace_asterisk_with_origin = mg_strcasecmp(conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN], "yes");
+		
 	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr && *origin_hdr) {
 		/* Cross-origin resource sharing (CORS), see
 		 * http://www.html5rocks.com/en/tutorials/cors/,
 		 * http://www.html5rocks.com/static/images/cors_server_flowchart.png
 		 * CORS preflight is not supported for files. */
-		mg_response_header_add(conn,
+		if (cors_replace_asterisk_with_origin == 0 && cors_orig_cfg[0] == '*') {
+			mg_response_header_add(conn,
+		                       "Access-Control-Allow-Origin",
+		                       origin_hdr,
+		                       -1);
+		} else {
+			mg_response_header_add(conn,
 		                       "Access-Control-Allow-Origin",
 		                       cors_orig_cfg,
 		                       -1);
+		}
 	}
 
 	if (cors_cred_cfg && *cors_cred_cfg && origin_hdr && *origin_hdr) {
@@ -15159,6 +15168,7 @@ handle_request(struct mg_connection *conn)
 		const char *cors_acrm = get_header(ri->http_headers,
 		                                   ri->num_headers,
 		                                   "Access-Control-Request-Method");
+		int cors_replace_asterisk_with_origin = mg_strcasecmp(conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN], "yes");
 
 		/* Todo: check if cors_origin is in cors_orig_cfg.
 		 * Or, let the client check this. */
@@ -15186,7 +15196,7 @@ handle_request(struct mg_connection *conn)
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n",
 			          date,
-			          cors_orig_cfg,
+			          (cors_replace_asterisk_with_origin == 0 && cors_orig_cfg[0] == '*') ? cors_origin : cors_orig_cfg,
 			          ((cors_meth_cfg[0] == '*') ? cors_acrm : cors_meth_cfg),
 			          suggest_connection_header(conn));
 
