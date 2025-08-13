@@ -4235,15 +4235,15 @@ send_cors_header(struct mg_connection *conn)
 	    conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
 	const char *cors_meth_cfg =
 	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
-
-	int cors_replace_asterisk_with_origin = mg_strcasecmp(conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN], "yes");
 		
 	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr && *origin_hdr) {
+		int cors_repla_asterisk_with_orig_cfg = mg_strcasecmp(conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN], "yes");
+		
 		/* Cross-origin resource sharing (CORS), see
 		 * http://www.html5rocks.com/en/tutorials/cors/,
 		 * http://www.html5rocks.com/static/images/cors_server_flowchart.png
 		 * CORS preflight is not supported for files. */
-		if (cors_replace_asterisk_with_origin == 0 && cors_orig_cfg[0] == '*') {
+		if (cors_repla_asterisk_with_orig_cfg == 0 && cors_orig_cfg[0] == '*') {
 			mg_response_header_add(conn,
 		                       "Access-Control-Allow-Origin",
 		                       origin_hdr,
@@ -15169,14 +15169,14 @@ handle_request(struct mg_connection *conn)
 		const char *cors_acrm = get_header(ri->http_headers,
 		                                   ri->num_headers,
 		                                   "Access-Control-Request-Method");
-		int cors_replace_asterisk_with_origin = mg_strcasecmp(conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN], "yes");
-
 		/* Todo: check if cors_origin is in cors_orig_cfg.
 		 * Or, let the client check this. */
 
 		if ((cors_meth_cfg != NULL) && (*cors_meth_cfg != 0)
 		    && (cors_orig_cfg != NULL) && (*cors_orig_cfg != 0)
 		    && (cors_origin != NULL) && (cors_acrm != NULL)) {
+			int cors_repla_asterisk_with_orig_cfg = mg_strcasecmp(conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN], "yes");
+			
 			/* This is a valid CORS preflight, and the server is configured
 			 * to handle it automatically. */
 			const char *cors_acrh =
@@ -15197,7 +15197,7 @@ handle_request(struct mg_connection *conn)
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n",
 			          date,
-			          (cors_replace_asterisk_with_origin == 0 && cors_orig_cfg[0] == '*') ? cors_origin : cors_orig_cfg,
+			          (cors_repla_asterisk_with_orig_cfg == 0 && cors_orig_cfg[0] == '*') ? cors_origin : cors_orig_cfg,
 			          ((cors_meth_cfg[0] == '*') ? cors_acrm : cors_meth_cfg),
 			          suggest_connection_header(conn));
 
