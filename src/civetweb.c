@@ -15079,7 +15079,7 @@ handle_request(struct mg_connection *conn)
 		}
 		return;
 	}
-	uri_len = (int)strlen(ri->local_uri);
+	
 
 	/* 1.3. decode url (if config says so) */
 	if (should_decode_url(conn)) {
@@ -15107,6 +15107,12 @@ handle_request(struct mg_connection *conn)
 	}
 	remove_dot_segments(tmp);
 	ri->local_uri = tmp;
+	#if !defined(NO_FILES)  /* Only compute if later code can actually use it */
+    /* Cache URI length once; recompute only if the buffer changes later. */
+       uri_len = (int)strlen(ri->local_uri);
+    #endif
+
+
 
 	/* step 1. completed, the url is known now */
 	DEBUG_TRACE("REQUEST: %s %s", ri->request_method, ri->local_uri);
@@ -15577,8 +15583,8 @@ handle_request(struct mg_connection *conn)
 	}
 
 	/* 12. Directory uris should end with a slash */
-	if (file.stat.is_directory && ((uri_len = (int)strlen(ri->local_uri)) > 0)
-	    && (ri->local_uri[uri_len - 1] != '/')) {
+	if (file.stat.is_directory && (uri_len > 0)
+        && (ri->local_uri[uri_len - 1] != '/')) {
 
 		/* Path + server root */
 		size_t buflen = UTF8_PATH_MAX * 2 + 2;
