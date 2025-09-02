@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2024 the Civetweb developers
+/* Copyright (c) 2013-2025 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -7272,6 +7272,7 @@ mg_url_decode(const char *src,
               int is_form_url_encoded)
 {
 	int i, j, a, b;
+
 #define HEXTOI(x) (isdigit(x) ? (x - '0') : (x - 'W'))
 
 	for (i = j = 0; (i < src_len) && (j < (dst_len - 1)); i++, j++) {
@@ -7284,10 +7285,14 @@ mg_url_decode(const char *src,
 			i += 2;
 		} else if (is_form_url_encoded && (src[i] == '+')) {
 			dst[j] = ' ';
+		} else if ((unsigned char)src[i] <= ' ') {
+			return -1; /* invalid character */
 		} else {
 			dst[j] = src[i];
 		}
 	}
+
+#undef HEXTOI
 
 	dst[j] = '\0'; /* Null-terminate the destination */
 
