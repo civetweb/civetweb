@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2021 the Civetweb developers
+/* Copyright (c) 2016-2025 the Civetweb developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,7 @@ url_encoded_field_found(const struct mg_connection *conn,
 	    mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 
 	if (((size_t)key_dec_len >= (size_t)sizeof(key_dec)) || (key_dec_len < 0)) {
-		return MG_FORM_FIELD_STORAGE_SKIP;
+		return MG_FORM_FIELD_STORAGE_ABORT;
 	}
 
 	if (filename) {
@@ -53,7 +53,7 @@ url_encoded_field_found(const struct mg_connection *conn,
 		    || (filename_dec_len < 0)) {
 			/* Log error message and skip this field. */
 			mg_cry_internal(conn, "%s: Cannot decode filename", __func__);
-			return MG_FORM_FIELD_STORAGE_SKIP;
+			return MG_FORM_FIELD_STORAGE_ABORT;
 		}
 		remove_dot_segments(filename_dec);
 
@@ -95,6 +95,7 @@ url_encoded_field_get(
     struct mg_form_data_handler *fdh)
 {
 	char key_dec[1024];
+	int key_dec_len;
 
 	char *value_dec = (char *)mg_malloc_ctx(*value_len + 1, conn->phys_ctx);
 	int value_dec_len, ret;
@@ -108,7 +109,8 @@ url_encoded_field_get(
 		return MG_FORM_FIELD_STORAGE_ABORT;
 	}
 
-	mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
+	key_dec_len = mg_url_decode(
+	    key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 
 	if (*value_len >= 2 && value[*value_len - 2] == '%')
 		*value_len -= 2;
@@ -116,6 +118,11 @@ url_encoded_field_get(
 		(*value_len)--;
 	value_dec_len = mg_url_decode(
 	    value, (int)*value_len, value_dec, ((int)*value_len) + 1, 1);
+
+	if ((key_dec_len < 0) || (value_dec_len < 0)) {
+		mg_free(value_dec);
+		return MG_FORM_FIELD_STORAGE_ABORT;
+	}
 
 	ret = fdh->field_get(key_dec,
 	                     value_dec,
@@ -136,9 +143,13 @@ unencoded_field_get(const struct mg_connection *conn,
                     struct mg_form_data_handler *fdh)
 {
 	char key_dec[1024];
+	int key_dec_len;
 	(void)conn;
 
-	mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
+	key_dec_len = mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
+	if (key_dec_len < 0) {
+		return MG_FORM_FIELD_STORAGE_ABORT;
+	}
 
 	return fdh->field_get(key_dec, value, value_len, fdh->user_data);
 }
@@ -191,6 +202,7 @@ mg_handle_form_request(struct mg_connection *conn,
 	size_t buf_fill = 0;
 	int r;
 	int field_count = 0;
+	int abort_read = 0;
 	struct mg_file fstore = STRUCT_FILE_INITIALIZER;
 	int64_t file_size = 0; /* init here, to a avoid a false positive
 	                         "uninitialized variable used" warning */
@@ -281,6 +293,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				    conn, data, (size_t)keylen, val, (size_t *)&vallen, fdh);
 				if (r == MG_FORM_FIELD_HANDLE_ABORT) {
 					/* Stop request handling */
+					abort_read = 1;
 					break;
 				}
 				if (r == MG_FORM_FIELD_HANDLE_NEXT) {
@@ -323,6 +336,7 @@ mg_handle_form_request(struct mg_connection *conn,
 							r = field_stored(conn, path, file_size, fdh);
 							if (r == MG_FORM_FIELD_HANDLE_ABORT) {
 								/* Stop request handling */
+								abort_read = 1;
 								break;
 							}
 
@@ -361,6 +375,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			if ((field_storage & MG_FORM_FIELD_STORAGE_ABORT)
 			    == MG_FORM_FIELD_STORAGE_ABORT) {
 				/* Stop parsing the request */
+				abort_read = 1;
 				break;
 			}
 
@@ -389,7 +404,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		 * Here we use "POST", and read the data from the request body.
 		 * The data read on the fly, so it is not required to buffer the
 		 * entire request in memory before processing it. */
-		for (;;) {
+		while (!abort_read) {
 			const char *val;
 			const char *next;
 			ptrdiff_t keylen, vallen;
@@ -443,6 +458,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			if ((field_storage & MG_FORM_FIELD_STORAGE_ABORT)
 			    == MG_FORM_FIELD_STORAGE_ABORT) {
 				/* Stop parsing the request */
+				abort_read = 1;
 				break;
 			}
 
@@ -471,6 +487,15 @@ mg_handle_form_request(struct mg_connection *conn,
 				} else {
 					vallen = (ptrdiff_t)strlen(val);
 					end_of_key_value_pair_found = all_data_read;
+					if ((buf + buf_fill) > (val + vallen)) {
+						/* Avoid DoS attacks by having a zero byte in the middle of
+						 * a request that is supposed to be URL encoded. Since this
+						 * request is certainly invalid, according to the protocol
+						 * specification, stop processing it. Fixes #1348 */
+						abort_read = 1;
+						break;
+					}
+
 				}
 
 				if (field_storage == MG_FORM_FIELD_STORAGE_GET) {
@@ -492,6 +517,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					get_block++;
 					if (r == MG_FORM_FIELD_HANDLE_ABORT) {
 						/* Stop request handling */
+						abort_read = 1;
 						break;
 					}
 					if (r == MG_FORM_FIELD_HANDLE_NEXT) {
@@ -560,7 +586,6 @@ mg_handle_form_request(struct mg_connection *conn,
 						val = buf;
 					}
 				}
-
 			} while (!end_of_key_value_pair_found);
 
 #if !defined(NO_FILESYSTEMS)
@@ -571,6 +596,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					r = field_stored(conn, path, file_size, fdh);
 					if (r == MG_FORM_FIELD_HANDLE_ABORT) {
 						/* Stop request handling */
+						abort_read = 1;
 						break;
 					}
 				} else {
@@ -584,7 +610,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			}
 #endif /* NO_FILESYSTEMS */
 
-			if (all_data_read && (buf_fill == 0)) {
+			if ((all_data_read && (buf_fill == 0)) || abort_read) {
 				/* nothing more to process */
 				break;
 			}
@@ -972,6 +998,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					get_block++;
 					if (r == MG_FORM_FIELD_HANDLE_ABORT) {
 						/* Stop request handling */
+						abort_read = 1;
 						break;
 					}
 					if (r == MG_FORM_FIELD_HANDLE_NEXT) {
@@ -1046,6 +1073,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				                        fdh);
 				if (r == MG_FORM_FIELD_HANDLE_ABORT) {
 					/* Stop request handling */
+					abort_read = 1;
 					break;
 				}
 				if (r == MG_FORM_FIELD_HANDLE_NEXT) {
@@ -1074,6 +1102,7 @@ mg_handle_form_request(struct mg_connection *conn,
 							r = field_stored(conn, path, file_size, fdh);
 							if (r == MG_FORM_FIELD_HANDLE_ABORT) {
 								/* Stop request handling */
+								abort_read = 1;
 								break;
 							}
 						} else {
@@ -1092,6 +1121,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			if ((field_storage & MG_FORM_FIELD_STORAGE_ABORT)
 			    == MG_FORM_FIELD_STORAGE_ABORT) {
 				/* Stop parsing the request */
+				abort_read = 1;
 				break;
 			}
 
