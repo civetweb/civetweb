@@ -172,7 +172,7 @@ CivetWeb is based on the [Mongoose project](https://github.com/cesanta/mongoose)
 Sergey Lyubka(2004-2013) who released it under the MIT license.
 However, on August 16, 2013,
 [Mongoose was relicensed to a dual GPL V2 + commercial license](https://groups.google.com/forum/#!topic/mongoose-users/aafbOnHonkI)
-and CiwetWeb was created by Thomas Davis (sunsetbrew) as "the MIT fork of mongoose".
+and CivetWeb was created by Thomas Davis (sunsetbrew) as "the MIT fork of mongoose".
 The license change and CivetWeb fork was mentioned on the Mongoose
 [Wikipedia](https://en.wikipedia.org/wiki/Mongoose_(web_server))
 page as well, but it's getting deleted (and added again) there every
