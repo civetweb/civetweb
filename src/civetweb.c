@@ -10783,9 +10783,13 @@ is_not_modified(const struct mg_connection *conn,
 	const char *inm = mg_get_header(conn, "If-None-Match");
 	construct_etag(etag, sizeof(etag), filestat);
 
-	return ((inm != NULL) && !mg_strcasecmp(etag, inm))
-	       || ((ims != NULL)
-	           && (filestat->last_modified <= parse_date_string(ims)));
+	if (inm) {
+		return !mg_strcasecmp(etag, inm);
+	}
+	if (ims) {
+		return (filestat->last_modified <= parse_date_string(ims));
+	}
+	return 0;
 }
 
 
