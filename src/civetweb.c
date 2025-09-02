@@ -2087,7 +2087,7 @@ enum {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	LUA_WEBSOCKET_EXTENSIONS,
 #endif
-
+	REPLACE_ASTERISK_WITH_ORIGIN,
 	ACCESS_CONTROL_ALLOW_ORIGIN,
 	ACCESS_CONTROL_ALLOW_METHODS,
 	ACCESS_CONTROL_ALLOW_HEADERS,
@@ -2253,6 +2253,7 @@ static const struct mg_option config_options[] = {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     {"lua_websocket_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
 #endif
+	{"replace_asterisk_with_origin", MG_CONFIG_TYPE_BOOLEAN, "no"},
     {"access_control_allow_origin", MG_CONFIG_TYPE_STRING, "*"},
     {"access_control_allow_methods", MG_CONFIG_TYPE_STRING, "*"},
     {"access_control_allow_headers", MG_CONFIG_TYPE_STRING, "*"},
@@ -4234,16 +4235,27 @@ send_cors_header(struct mg_connection *conn)
 	    conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
 	const char *cors_meth_cfg =
 	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
-
-	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr && *origin_hdr) {
+	const char *cors_repl_asterisk_with_orig_cfg = 
+		conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN];
+		
+	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr && *origin_hdr && cors_repl_asterisk_with_orig_cfg && *cors_repl_asterisk_with_orig_cfg) {
+		int cors_repl_asterisk_with_orig = mg_strcasecmp(cors_repl_asterisk_with_orig_cfg, "yes");
+		
 		/* Cross-origin resource sharing (CORS), see
 		 * http://www.html5rocks.com/en/tutorials/cors/,
 		 * http://www.html5rocks.com/static/images/cors_server_flowchart.png
 		 * CORS preflight is not supported for files. */
-		mg_response_header_add(conn,
+		if (cors_repl_asterisk_with_orig == 0 && cors_orig_cfg[0] == '*') {
+			mg_response_header_add(conn,
+		                       "Access-Control-Allow-Origin",
+		                       origin_hdr,
+		                       -1);
+		} else {
+			mg_response_header_add(conn,
 		                       "Access-Control-Allow-Origin",
 		                       cors_orig_cfg,
 		                       -1);
+		}
 	}
 
 	if (cors_cred_cfg && *cors_cred_cfg && origin_hdr && *origin_hdr) {
@@ -15168,13 +15180,18 @@ handle_request(struct mg_connection *conn)
 		const char *cors_acrm = get_header(ri->http_headers,
 		                                   ri->num_headers,
 		                                   "Access-Control-Request-Method");
-
+		const char *cors_repl_asterisk_with_orig_cfg = 
+			conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN];
+		
 		/* Todo: check if cors_origin is in cors_orig_cfg.
 		 * Or, let the client check this. */
 
 		if ((cors_meth_cfg != NULL) && (*cors_meth_cfg != 0)
 		    && (cors_orig_cfg != NULL) && (*cors_orig_cfg != 0)
-		    && (cors_origin != NULL) && (cors_acrm != NULL)) {
+		    && (cors_origin != NULL) && (cors_acrm != NULL)
+			&& (cors_repl_asterisk_with_orig_cfg != NULL) && (*cors_repl_asterisk_with_orig_cfg != 0)) {
+			int cors_repl_asterisk_with_orig = mg_strcasecmp(cors_repl_asterisk_with_orig_cfg, "yes");
+			
 			/* This is a valid CORS preflight, and the server is configured
 			 * to handle it automatically. */
 			const char *cors_acrh =
@@ -15195,7 +15212,7 @@ handle_request(struct mg_connection *conn)
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n",
 			          date,
-			          cors_orig_cfg,
+			          (cors_repl_asterisk_with_orig == 0 && cors_orig_cfg[0] == '*') ? cors_origin : cors_orig_cfg,
 			          ((cors_meth_cfg[0] == '*') ? cors_acrm : cors_meth_cfg),
 			          suggest_connection_header(conn));
 
