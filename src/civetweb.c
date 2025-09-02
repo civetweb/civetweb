@@ -22020,7 +22020,7 @@ mg_start_domain2(struct mg_context *ctx,
 		}
 	}
 
-	new_dom->handlers = NULL;
+	new_dom->handlers = ctx->dd.handlers;
 	new_dom->next = NULL;
 	new_dom->nonce_count = 0;
 	new_dom->auth_nonce_mask = get_random() ^ (get_random() << 31);
