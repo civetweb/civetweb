@@ -159,59 +159,6 @@ environment:
       enable_stats: YES
       configuration: Release
       platform: x64
-    # Visual Studio 2010
-    - id: Full-VS2010-x86
-      compiler: msvc-16-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      enable_stats: YES
-      configuration: Release
-      platform: x86
-    # Visual Studio 2012
-    - id: Full-VS2012-x86
-      compiler: msvc-17-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      enable_stats: YES
-      configuration: Release
-      platform: x86
-    # Visual Studio 2013
-    - id: Full-VS2013-x86
-      compiler: msvc-18-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      enable_stats: YES
-      configuration: Release
-      platform: x86
-      image: Visual Studio 2013
-    - id: Full-VS2013-x64
-      compiler: msvc-18-seh
-      build_shared: NO
-      no_files: NO
-      enable_ipv6: YES
-      enable_ssl: YES
-      enable_websockets: YES
-      no_cgi: NO
-      no_caching: NO
-      enable_stats: YES
-      configuration: Release
-      platform: x64
-      image: Visual Studio 2013
     # Visual Studio 2015
     - id: Full-VS2015-x86
       compiler: msvc-19-seh
@@ -280,7 +227,21 @@ environment:
       configuration: Release
       platform: x64
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    # Ubuntu
+    # Visual Studio 2022
+    - id: Full-VS2022-x64
+      compiler: msvc-22-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+      # Ubuntu
     - id: Ubuntu1604-GCC-x64
       compiler: gcc-5.1.0-posix
       build_shared: NO
