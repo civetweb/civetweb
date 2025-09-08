@@ -51,22 +51,22 @@ static int action_dec_ret;
 static int
 action_dec(void *arg)
 {
-	int *p = (int *)arg;
-	(*p)--;
+	ptrdiff_t *p = (ptrdiff_t *)arg;
+	ptrdiff_t v = mg_atomic_dec(p);
 
-	if (*p < -1) {
+	if (v < -1) {
 		ck_abort_msg("Periodic timer called too often");
 		/* return 0 here would be unreachable code */
 	}
 
-	return (*p >= -3) ? action_dec_ret : 0;
+	return (v >= -3) ? action_dec_ret : 0;
 }
 
 
 static void
 action_cancel(void *arg)
 {
-	int *p = (int *)arg;
+	ptrdiff_t *p = (ptrdiff_t *)arg;
 
 	/* test convention: store cancel counter after timer counter */
 	p += TIMERS_IN_TEST;
@@ -76,29 +76,29 @@ action_cancel(void *arg)
 		/* return 0 here would be unreachable code */
 	}
 
-	(*p)++;
+	mg_atomic_inc(p);
 }
 
 
 static int
 action_dec_to_0(void *arg)
 {
-	int *p = (int *)arg;
-	(*p)--;
+	ptrdiff_t *p = (ptrdiff_t *)arg;
+	ptrdiff_t v = mg_atomic_dec(p);
 
-	if (*p <= -1) {
+	if (v <= -1) {
 		ck_abort_msg("Periodic timer called too often");
 		/* return 0 here would be unreachable code */
 	}
 
-	return (*p > 0);
+	return (v > 0);
 }
 
 
 START_TEST(test_timer_cyclic)
 {
 	struct mg_context ctx;
-	int c[TIMERS_IN_TEST * 2];
+	ptrdiff_t c[TIMERS_IN_TEST * 2];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
