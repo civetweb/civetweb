@@ -97,8 +97,8 @@ action_dec_to_0(void *arg)
 
 START_TEST(test_timer_cyclic)
 {
+	static ptrdiff_t c[TIMERS_IN_TEST * 2];
 	struct mg_context ctx;
-	ptrdiff_t c[TIMERS_IN_TEST * 2];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
