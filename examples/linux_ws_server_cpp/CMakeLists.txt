@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
+cmake_policy(VERSION 3.10)
+
 project(linux_ws_server)
 
 set(TARGET_NAME ${PROJECT_NAME})
