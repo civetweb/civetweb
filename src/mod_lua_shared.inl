@@ -40,7 +40,7 @@ lua_shared_init(void)
 {
 	/* Create a new Lua state to store all shared data.
 	 * In fact, this is used as a hashmap. */
-	L_shared = lua_newstate(lua_allocator, NULL);
+	L_shared = mg_lua_newstate(lua_allocator, NULL);
 
 	lua_newtable(L_shared);
 	lua_setglobal(L_shared, "shared");

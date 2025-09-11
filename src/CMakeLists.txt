@@ -1,3 +1,6 @@
+cmake_minimum_required(VERSION 3.10)
+cmake_policy(VERSION 3.10)
+
 # The C API library
 set( LIB_TYPE "STATIC" )
 if (BUILD_SHARED_LIBS)
