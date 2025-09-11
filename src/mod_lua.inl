@@ -2695,8 +2695,14 @@ static void
 civetweb_open_lua_libs(lua_State *L)
 {
 	{
+#if LUA_VERSION_NUM < 505
 		extern void luaL_openlibs(lua_State *);
 		luaL_openlibs(L);
+#else
+		// In Lua 5.5 and later has become a macro
+		extern void (luaL_openselectedlibs) (lua_State *L, int load, int preload);
+		luaL_openselectedlibs(L, ~0, 0);
+#endif
 	}
 #if defined(USE_LUA_SQLITE3)
 	{
@@ -3091,7 +3097,7 @@ mg_exec_lua_script(struct mg_connection *conn,
 
 	/* Execute a plain Lua script. */
 	if (path != NULL
-	    && (L = lua_newstate(lua_allocator, (void *)(conn->phys_ctx)))
+	    && (L = mg_lua_newstate(lua_allocator, (void *)(conn->phys_ctx)))
 	           != NULL) {
 		prepare_lua_environment(
 		    conn->phys_ctx, conn, NULL, L, path, LUA_ENV_TYPE_PLAIN_LUA_PAGE);
@@ -3207,7 +3213,7 @@ handle_lsp_request(struct mg_connection *conn,
 		L = ls;
 	} else {
 		/* We need to create a Lua state. */
-		L = lua_newstate(lua_allocator, (void *)(conn->phys_ctx));
+		L = mg_lua_newstate(lua_allocator, (void *)(conn->phys_ctx));
 		if (L == NULL) {
 			/* We neither got a Lua state from the command line,
 			 * nor did we succeed in creating our own state.
@@ -3353,7 +3359,7 @@ lua_websocket_new(const char *script, struct mg_connection *conn)
 		}
 		pthread_mutex_init(&(ws->ws_mutex), &pthread_mutex_attr);
 		(void)pthread_mutex_lock(&(ws->ws_mutex));
-		ws->state = lua_newstate(lua_allocator, (void *)(conn->phys_ctx));
+		ws->state = mg_lua_newstate(lua_allocator, (void *)(conn->phys_ctx));
 		ws->conn[0] = conn;
 		ws->references = 1;
 		prepare_lua_environment(conn->phys_ctx,

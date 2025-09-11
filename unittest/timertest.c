@@ -158,7 +158,7 @@ END_TEST
 START_TEST(test_timer_oneshot_by_callback_retval)
 {
 	struct mg_context ctx;
-	int c[TIMERS_IN_TEST * 2];
+	ptrdiff_t c[TIMERS_IN_TEST * 2];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
@@ -212,7 +212,7 @@ END_TEST
 START_TEST(test_timer_oneshot_by_timer_add)
 {
 	struct mg_context ctx;
-	int c[TIMERS_IN_TEST * 2];
+	ptrdiff_t c[TIMERS_IN_TEST * 2];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 
@@ -266,7 +266,7 @@ END_TEST
 START_TEST(test_timer_mixed)
 {
 	struct mg_context ctx;
-	int c[TIMERS_IN_TEST];
+	ptrdiff_t c[TIMERS_IN_TEST];
 	memset(&ctx, 0, sizeof(ctx));
 	memset(c, 0, sizeof(c));
 

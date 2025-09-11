@@ -39,7 +39,14 @@ ifeq ($(WITH_LUA_VERSION), 504)
   $(info Lua: Using version 5.4.3)
   LUA_DIR = src/third_party/lua-5.4.3/src
   LUA_SHARED_LIB_FLAG = -llua5.4
-  LUA_CFLAGS = -DLUA_COMPAT_5_2 -DLUA_VERSION_MAKEFILE=504
+  LUA_CFLAGS = -DLUA_VERSION_MAKEFILE=504
+  LUA_VERSION_KNOWN = 1
+endif
+ifeq ($(WITH_LUA_VERSION), 505)
+  $(info Lua: Using version 5.5.0-beta)
+  LUA_DIR = src/third_party/lua-5.5.0-beta/src
+  LUA_SHARED_LIB_FLAG = -llua5.5
+  LUA_CFLAGS = -DLUA_VERSION_MAKEFILE=505
   LUA_VERSION_KNOWN = 1
 endif
 
@@ -107,6 +114,12 @@ ifeq ($(WITH_LUA_VERSION), 503)
     lutf8lib.c
 endif
 ifeq ($(WITH_LUA_VERSION), 504)
+    LUA_SOURCE_FILES += \
+    lcorolib.c  \
+    lctype.c  \
+    lutf8lib.c
+endif
+ifeq ($(WITH_LUA_VERSION), 505)
     LUA_SOURCE_FILES += \
     lcorolib.c  \
     lctype.c  \
