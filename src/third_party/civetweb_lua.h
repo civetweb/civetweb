@@ -49,7 +49,7 @@ extern "C" {
 #define LUA_ERRGCMM 999 /* not supported */
 #define mg_lua_load(a, b, c, d, e) lua_load(a, b, c, d)
 #define lua_rawlen lua_objlen
-#define mg_lua_newstate(a, b)                                                     \
+#define mg_lua_newstate(a, b)                                                  \
 	luaL_newstate() /* Must use luaL_newstate() for 64 bit target */
 #define lua_pushinteger lua_pushnumber
 #define luaL_newlib(L, t)                                                      \
@@ -62,9 +62,7 @@ extern "C" {
 	}
 #define luaL_setfuncs(L, r, u) lua_register(L, r->name, r->func)
 
-#elif LUA_VERSION_NUM == 502 || \
-      LUA_VERSION_NUM == 503 || \
-      LUA_VERSION_NUM == 504
+#elif LUA_VERSION_NUM == 502 || LUA_VERSION_NUM == 503 || LUA_VERSION_NUM == 504
 /* Lua 5.2 - 5.4 detected */
 #define mg_lua_load lua_load
 #define mg_lua_newstate lua_newstate

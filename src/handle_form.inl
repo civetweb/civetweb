@@ -109,8 +109,8 @@ url_encoded_field_get(
 		return MG_FORM_FIELD_STORAGE_ABORT;
 	}
 
-	key_dec_len = mg_url_decode(
-	    key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
+	key_dec_len =
+	    mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 
 	if (*value_len >= 2 && value[*value_len - 2] == '%')
 		*value_len -= 2;
@@ -146,7 +146,8 @@ unencoded_field_get(const struct mg_connection *conn,
 	int key_dec_len;
 	(void)conn;
 
-	key_dec_len = mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
+	key_dec_len =
+	    mg_url_decode(key, (int)key_len, key_dec, (int)sizeof(key_dec), 1);
 	if (key_dec_len < 0) {
 		return MG_FORM_FIELD_STORAGE_ABORT;
 	}
@@ -488,14 +489,14 @@ mg_handle_form_request(struct mg_connection *conn,
 					vallen = (ptrdiff_t)strlen(val);
 					end_of_key_value_pair_found = all_data_read;
 					if ((buf + buf_fill) > (val + vallen)) {
-						/* Avoid DoS attacks by having a zero byte in the middle of
-						 * a request that is supposed to be URL encoded. Since this
-						 * request is certainly invalid, according to the protocol
+						/* Avoid DoS attacks by having a zero byte in the middle
+						 * of a request that is supposed to be URL encoded.
+						 * Since this request is certainly invalid, according to
+						 * the protocol
 						 * specification, stop processing it. Fixes #1348 */
 						abort_read = 1;
 						break;
 					}
-
 				}
 
 				if (field_storage == MG_FORM_FIELD_STORAGE_GET) {
