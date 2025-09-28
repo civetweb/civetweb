@@ -219,7 +219,7 @@ environment:
       build_shared: NO
       no_files: NO
       enable_ipv6: YES
-      enable_ssl: YES
+      enable_ssl: NO
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
@@ -233,7 +233,7 @@ environment:
       build_shared: NO
       no_files: NO
       enable_ipv6: YES
-      enable_ssl: YES
+      enable_ssl: NO
       enable_websockets: YES
       no_cgi: NO
       no_caching: NO
