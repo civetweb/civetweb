@@ -14,10 +14,14 @@ name: "CodeQL"
 on:
   push:
     branches: [ "master" ]
+    paths-ignore:
+      - src/third_party/**
   schedule:
     - cron: '0 0 * * *'
   pull_request:
     branches: '*'
+    paths-ignore:
+      - src/third_party/**
 
 jobs:
   analyze:
