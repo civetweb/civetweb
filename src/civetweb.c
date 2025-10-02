@@ -16805,7 +16805,8 @@ mg_sslctx_init(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 		return 0;
 	}
 
-	return mbed_sslctx_init(dom_ctx->ssl_ctx, dom_ctx->config[SSL_CERTIFICATE])
+	return mbed_sslctx_init(dom_ctx->ssl_ctx, dom_ctx->config[SSL_CERTIFICATE],
+	                        dom_ctx->config[SSL_CIPHER_LIST])
 	               == 0
 	           ? 1
 	           : 0;
