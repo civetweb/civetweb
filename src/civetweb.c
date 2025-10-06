@@ -1736,6 +1736,12 @@ mg_get_current_time_ns(void)
 static void
 DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 {
+	 #if defined(__ZEPHYR__)
+	(void)func;
+	(void)line;
+	(void)fmt;
+	return;
+	#else
 	va_list args;
 	struct timespec tsnow;
 
@@ -1758,6 +1764,7 @@ DEBUG_TRACE_FUNC(const char *func, unsigned line, const char *fmt, ...)
 	putc('\n', DEBUG_TRACE_STREAM);
 	fflush(DEBUG_TRACE_STREAM);
 	funlockfile(DEBUG_TRACE_STREAM);
+	#endif /* __ZEPHYR__ */
 }
 #endif /* NEED_DEBUG_TRACE_FUNC */
 
