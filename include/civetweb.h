@@ -164,6 +164,7 @@ struct mg_request_info {
 	const char *remote_user;    /* Authenticated user, or NULL if no auth
 	                               used */
 	char remote_addr[48];       /* Client's IP address as a string. */
+	char server_addr[48];       /* Server's IP address as a string. */
 
 	long long content_length; /* Length (in bytes) of the request body,
 	                             can be -1 if no length was given. */
