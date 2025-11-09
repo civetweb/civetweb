@@ -20364,6 +20364,10 @@ worker_thread_run(struct mg_connection *conn)
 		sockaddr_to_string(conn->request_info.remote_addr,
 		                   sizeof(conn->request_info.remote_addr),
 		                   &conn->client.rsa);
+ 
+		sockaddr_to_string(conn->request_info.server_addr,
+		                   sizeof(conn->request_info.server_addr),
+		                   &conn->client.lsa);
 
 		DEBUG_TRACE("Incoming %sconnection from %s",
 		            (conn->client.is_ssl ? "SSL " : ""),
