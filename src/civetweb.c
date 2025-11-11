@@ -1999,8 +1999,9 @@ enum {
 #endif
 
 	/* Once for each domain */
-	DOCUMENT_ROOT,
-	FALLBACK_DOCUMENT_ROOT,
+	DOCUMENT_ROOT,           /* the original argument, for backwards compatibility -- accepts one path */
+	DOCUMENT_ROOTS,          /* a new argument -- accepts multiple paths, colon-separated */
+	FALLBACK_DOCUMENT_ROOT,  /* deprecated */
 
 	ACCESS_LOG_FILE,
 	ERROR_LOG_FILE,
@@ -2081,8 +2082,9 @@ enum {
 #endif
 
 #if defined(USE_WEBSOCKET)
-	WEBSOCKET_ROOT,
-	FALLBACK_WEBSOCKET_ROOT,
+	WEBSOCKET_ROOT,           /* The original argument, for backwards compatibility - accepts one path */
+	WEBSOCKET_ROOTS,          /* A new argument, accepts multiple paths, colon-separated */
+	FALLBACK_WEBSOCKET_ROOT,  /* deprecated */
 #endif
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	LUA_WEBSOCKET_EXTENSIONS,
@@ -2149,6 +2151,7 @@ static const struct mg_option config_options[] = {
 
     /* Once for each domain */
     {"document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
+    {"document_roots", MG_CONFIG_TYPE_DIRECTORIES, NULL},
     {"fallback_document_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
 
     {"access_log_file", MG_CONFIG_TYPE_FILE, NULL},
@@ -2248,6 +2251,7 @@ static const struct mg_option config_options[] = {
 
 #if defined(USE_WEBSOCKET)
     {"websocket_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
+    {"websocket_roots", MG_CONFIG_TYPE_DIRECTORIES, NULL},
     {"fallback_websocket_root", MG_CONFIG_TYPE_DIRECTORY, NULL},
 #endif
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
@@ -2327,6 +2331,10 @@ enum {
 struct mg_domain_context {
 	SSL_CTX *ssl_ctx;                 /* SSL context */
 	char *config[NUM_OPTIONS];        /* Civetweb configuration parameters */
+        char **document_roots;            /* argv-style NULL-terminated array of document-roots */
+#if defined(USE_WEBSOCKET)
+        char **websocket_roots;           /* argv-style NULL-terminated array of websocket-roots */
+#endif
 	struct mg_handler_info *handlers; /* linked list of uri handlers */
 	int64_t ssl_cert_last_mtime;
 
@@ -7856,8 +7864,9 @@ substitute_index_file_aux(struct mg_connection *conn,
 	return found;
 }
 
-/* Same as above, except if the first try fails and a fallback-root is
- * configured, we'll try there also */
+/* Same as above, except if the first try fails and one or more additional
+ * roots are configured, we'll try them also
+ */
 static int
 substitute_index_file(struct mg_connection *conn,
                       char *path,
@@ -7866,30 +7875,28 @@ substitute_index_file(struct mg_connection *conn,
 {
 	int ret = substitute_index_file_aux(conn, path, path_len, filestat);
 	if (ret == 0) {
-		const char *root_prefix = conn->dom_ctx->config[DOCUMENT_ROOT];
-		const char *fallback_root_prefix =
-		    conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT];
-		if ((root_prefix) && (fallback_root_prefix)) {
-			const size_t root_prefix_len = strlen(root_prefix);
-			if ((strncmp(path, root_prefix, root_prefix_len) == 0)) {
+		char ** prefixes = conn->dom_ctx->document_roots;
+		const char * primary_prefix = *prefixes;
+
+		const size_t primary_prefix_len = strlen(primary_prefix);
+		if (strncmp(path, primary_prefix, primary_prefix_len) == 0) {
+			if (*prefixes) prefixes++;  // no point trying the primary prefix again
+			while(*prefixes) {
+				const char * fallback_prefix = *prefixes;
 				char scratch_path[UTF8_PATH_MAX]; /* separate storage, to avoid
 				                                  side effects if we fail */
-				size_t sub_path_len;
 
-				const size_t fallback_root_prefix_len =
-				    strlen(fallback_root_prefix);
-				const char *sub_path = path + root_prefix_len;
-				while (*sub_path == '/') {
-					sub_path++;
-				}
-				sub_path_len = strlen(sub_path);
+				const size_t fallback_prefix_len = strlen(fallback_prefix);
+				const char *sub_path = path + primary_prefix_len;
+				while(*sub_path == '/') sub_path++;
+				const size_t sub_path_len = strlen(sub_path);
 
-				if (((fallback_root_prefix_len + 1 + sub_path_len + 1)
+				if (((fallback_prefix_len + 1 + sub_path_len + 1)
 				     < sizeof(scratch_path))) {
 					/* The concatenations below are all safe because we
 					 * pre-verified string lengths above */
 					char *nul;
-					strcpy(scratch_path, fallback_root_prefix);
+					strcpy(scratch_path, fallback_prefix);
 					nul = strchr(scratch_path, '\0');
 					if ((nul > scratch_path) && (*(nul - 1) != '/')) {
 						*nul++ = '/';
@@ -7905,6 +7912,7 @@ substitute_index_file(struct mg_connection *conn,
 					}
 				}
 			}
+			prefixes++;
 		}
 	}
 	return ret;
@@ -7930,9 +7938,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 
 #if !defined(NO_FILES)
 	const char *uri = conn->request_info.local_uri;
-	const char *roots[] = {conn->dom_ctx->config[DOCUMENT_ROOT],
-	                       conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT],
-	                       NULL};
+	char **roots = conn->dom_ctx->document_roots;
 	int fileExists = 0;
 	const char *rewrite;
 	struct vec a, b;
@@ -7968,9 +7974,8 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 #if defined(USE_WEBSOCKET)
 	*is_websocket_request = (conn->protocol_type == PROTOCOL_TYPE_WEBSOCKET);
 #if !defined(NO_FILES)
-	if ((*is_websocket_request) && conn->dom_ctx->config[WEBSOCKET_ROOT]) {
-		roots[0] = conn->dom_ctx->config[WEBSOCKET_ROOT];
-		roots[1] = conn->dom_ctx->config[FALLBACK_WEBSOCKET_ROOT];
+	if ((*is_websocket_request) && conn->dom_ctx->websocket_roots[0]) {
+		roots = conn->dom_ctx->websocket_roots;
 	}
 #endif /* !NO_FILES */
 #else  /* USE_WEBSOCKET */
@@ -7986,7 +7991,7 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 	}
 
 #if !defined(NO_FILES)
-	/* Step 5: If there is no root directory, don't look for files. */
+	/* Step 5: If there is no primary root directory, don't look for files. */
 	/* Note that roots[0] == NULL is a regular use case here. This occurs,
 	 * if all requests are handled by callbacks, so the WEBSOCKET_ROOT
 	 * config is not required. */
@@ -11725,12 +11730,12 @@ prepare_cgi_environment(struct mg_connection *conn,
 	}
 
 	addenv(env, "SERVER_NAME=%s", conn->dom_ctx->config[AUTHENTICATION_DOMAIN]);
-	addenv(env, "SERVER_ROOT=%s", conn->dom_ctx->config[DOCUMENT_ROOT]);
-	addenv(env, "DOCUMENT_ROOT=%s", conn->dom_ctx->config[DOCUMENT_ROOT]);
-	if (conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT]) {
+	addenv(env, "SERVER_ROOT=%s", conn->dom_ctx->document_roots[0]);
+	addenv(env, "DOCUMENT_ROOT=%s", conn->dom_ctx->document_roots[0]);
+	if (conn->dom_ctx->config[DOCUMENT_ROOTS]) {
 		addenv(env,
-		       "FALLBACK_DOCUMENT_ROOT=%s",
-		       conn->dom_ctx->config[FALLBACK_DOCUMENT_ROOT]);
+		       "DOCUMENT_ROOTS=%s",
+		       conn->dom_ctx->config[DOCUMENT_ROOTS]);
 	}
 	addenv(env, "SERVER_SOFTWARE=CivetWeb/%s", mg_version());
 
@@ -11777,11 +11782,11 @@ prepare_cgi_environment(struct mg_connection *conn,
 
 	addenv(env, "SCRIPT_FILENAME=%s", prog);
 	if (conn->path_info == NULL) {
-		addenv(env, "PATH_TRANSLATED=%s", conn->dom_ctx->config[DOCUMENT_ROOT]);
+		addenv(env, "PATH_TRANSLATED=%s", conn->dom_ctx->document_roots[0]);
 	} else {
 		addenv(env,
 		       "PATH_TRANSLATED=%s%s",
-		       conn->dom_ctx->config[DOCUMENT_ROOT],
+		       conn->dom_ctx->document_roots[0],
 		       conn->path_info);
 	}
 
@@ -12349,7 +12354,7 @@ dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
 		return;
 	}
 
-	root = conn->dom_ctx->config[DOCUMENT_ROOT];
+	root = conn->dom_ctx->document_roots[0];
 	overwrite_hdr = mg_get_header(conn, "Overwrite");
 	destination_hdr = mg_get_header(conn, "Destination");
 	if ((overwrite_hdr != NULL) && (toupper(overwrite_hdr[0]) == 'T')) {
@@ -12722,7 +12727,7 @@ do_ssi_include(struct mg_connection *conn,
 		                  path,
 		                  sizeof(path),
 		                  "%s/%s",
-		                  conn->dom_ctx->config[DOCUMENT_ROOT],
+		                  conn->dom_ctx->document_roots[0],
 		                  file_name);
 
 	} else if (sscanf(tag, " abspath=\"%511[^\"]\"", file_name) == 1) {
@@ -15363,7 +15368,7 @@ handle_request(struct mg_connection *conn)
 #if defined(NO_FILES)
 		if (1) {
 #else
-		if (conn->dom_ctx->config[DOCUMENT_ROOT] == NULL
+		if (conn->dom_ctx->document_roots[0] == NULL
 		    || conn->dom_ctx->config[PUT_DELETE_PASSWORDS_FILE] == NULL) {
 #endif
 			/* This code path will not be called for request handlers */
@@ -15508,8 +15513,8 @@ handle_request(struct mg_connection *conn)
 
 #else
 	/* 9b. This request is either for a static file or resource handled
-	 * by a script file. Thus, a DOCUMENT_ROOT must exist. */
-	if (conn->dom_ctx->config[DOCUMENT_ROOT] == NULL) {
+	 * by a script file. Thus, at least one document_root must exist. */
+	if (conn->dom_ctx->document_roots[0] == NULL) {
 		mg_send_http_error(conn, 404, "%s", "Not Found");
 		DEBUG_TRACE("%s", "no document root available");
 		return;
@@ -20845,6 +20850,105 @@ master_thread(void *thread_func_param)
 }
 #endif /* _WIN32 */
 
+/** Frees a document-roots vector that was previously allocated via mg_setup_document_roots_vector() */
+static void mg_free_document_roots_vector(char ** roots)
+{
+	if (roots)
+	{
+		char ** r = roots;
+		while(*r)
+		{
+			mg_free(*r);
+			r++;
+		}
+		mg_free(roots);
+	}
+}
+
+/** Allocates a NULL-terminated (argv-style) array of strdup'd document-root strings
+  * based on the settings specified in dom->config, and returns it.
+ */
+static char ** mg_setup_document_roots_vector(struct mg_context *ctx,
+	const struct mg_domain_context * dom,
+	int documentRootID,
+	int fallbackDocumentRootID,
+	int documentRootsID)
+{
+	const char * docRoot      = dom->config[documentRootID];           /* still supported */
+	const char * fallbackRoot = dom->config[fallbackDocumentRootID];   /* deprecated */
+	const char * docRoots     = dom->config[documentRootsID];          /* new way, allows specifying N possible paths */
+
+#if defined(_WIN32)
+	const char pathSep = ';';  /* Windows uses colons for drive-letters so we have to use semicolons to separate paths */
+#else
+	const char pathSep = ':';  /* For Unix-y OS's, colons are the traditional path separator */
+#endif
+
+	int numRoots = (docRoot?1:0) + (fallbackRoot?1:0); /* array-length (not including the NULL terminator) */
+	if (docRoots)
+	{
+		const char * d = docRoots;
+		while((d)&&(*d))
+		{
+			numRoots++;
+
+			d = strchr(d, pathSep);
+			while((d)&&(*d == pathSep)) d++;
+		}
+	}
+
+	int ok = 1;
+	char ** roots = (char **) mg_calloc_ctx(numRoots+1, sizeof(char *), ctx); /* +1 for NULL array-terminator entry */
+	if (roots)
+	{
+		int i  = 0;
+
+		if (docRoot)
+		{
+			roots[i] = mg_strdup_ctx(docRoot, ctx);
+			if (roots[i]) i++;
+			         else ok = 0;
+		}
+		if (fallbackRoot)
+		{
+			roots[i] = mg_strdup_ctx(fallbackRoot, ctx);
+			if (roots[i]) i++;
+			         else ok = 0;
+		}
+
+		const char * d = docRoots;
+		while((ok)&&(d)&&(*d))
+		{
+			const char * nextRoot = d;
+			d = strchr(d, pathSep);
+
+			const size_t nextRootStrlen = d ? (size_t)(d-nextRoot) : strlen(nextRoot);
+			if (nextRootStrlen > 0)
+			{
+				roots[i] = (char *) mg_calloc_ctx(nextRootStrlen+1, sizeof(char), ctx); /* +1 for NUL terminator byte */
+				if (roots[i])
+				{
+					memcpy(roots[i], nextRoot, nextRootStrlen);
+					roots[i][nextRootStrlen] = '\0';
+					i++;
+				}
+				else ok = 0;
+			}
+
+			while((d)&&(*d == pathSep)) d++;
+		}
+	}
+
+	if ((roots)&&(ok)) return roots;
+	else
+	{
+		mg_cry_ctx_internal(ctx,
+				"%s: Not enough memory to set up document roots vector",
+		                __func__);
+		mg_free_document_roots_vector(roots);
+		return NULL;
+	}
+}
 
 static void
 free_context(struct mg_context *ctx)
@@ -20904,6 +21008,11 @@ free_context(struct mg_context *ctx)
 			mg_free(ctx->dd.config[i]);
 		}
 	}
+
+	mg_free_document_roots_vector(ctx->dd.document_roots);
+#if defined(USE_WEBSOCKET)
+	mg_free_document_roots_vector(ctx->dd.websocket_roots);
+#endif
 
 	/* Deallocate request handlers */
 	while (ctx->dd.handlers) {
@@ -21481,10 +21590,21 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 		return NULL;
 	}
 
-	/* Document root */
+#if !defined(NO_FILES)
+	ctx->dd.document_roots = mg_setup_document_roots_vector(ctx, &ctx->dd,
+					DOCUMENT_ROOT, FALLBACK_DOCUMENT_ROOT, DOCUMENT_ROOTS);
+	if (ctx->dd.document_roots == NULL) {
+		mg_cry_ctx_internal(ctx, "%s", "Couldn't set up document roots");
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
+#endif
+
 #if defined(NO_FILES)
-	if (ctx->dd.config[DOCUMENT_ROOT] != NULL) {
-		mg_cry_ctx_internal(ctx, "%s", "Document root must not be set");
+	/* Don't allow document root to be set if files-support is disabled */
+	if (ctx->dd.document_roots[0] != NULL) {
+		mg_cry_ctx_internal(ctx, "%s", "Document root(s) must not be set");
 		if (error != NULL) {
 			error->code = MG_ERROR_DATA_CODE_INVALID_OPTION;
 			error->code_sub = (unsigned)DOCUMENT_ROOT;
@@ -21493,9 +21613,20 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 			            error->text,
 			            error->text_buffer_size,
 			            "Invalid configuration option value: %s",
-			            config_options[DOCUMENT_ROOT].name);
+			            cts->dd.document_roots[0]);
 		}
 
+		free_context(ctx);
+		pthread_setspecific(sTlsKey, NULL);
+		return NULL;
+	}
+#endif
+
+#if defined(USE_WEBSOCKET)
+	ctx->dd.websocket_roots = mg_setup_document_roots_vector(ctx, &ctx->dd,
+					WEBSOCKET_ROOT, FALLBACK_WEBSOCKET_ROOT, WEBSOCKET_ROOTS);
+	if (ctx->dd.websocket_roots == NULL) {
+		mg_cry_ctx_internal(ctx, "%s", "Couldn't set up websocket roots");
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
@@ -21576,7 +21707,7 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 				            error->text,
 				            error->text_buffer_size,
 				            "Error in script %s: %s",
-				            config_options[DOCUMENT_ROOT].name,
+				            ctx->dd.document_roots[0],
 				            ebuf);
 			}
 			pthread_mutex_unlock(&ctx->lua_bg_mutex);
@@ -21959,6 +22090,18 @@ mg_start(const struct mg_callbacks *callbacks,
 	return mg_start2(&init, NULL);
 }
 
+/** frees the mg_domain_context and also any document-root strings it may own */
+static void mg_free_dom(struct mg_domain_context * dom)
+{
+	if (dom)
+	{
+		mg_free_document_roots_vector(dom->document_roots);
+#if defined(USE_WEBSOCKET)
+		mg_free_document_roots_vector(dom->websocket_roots);
+#endif
+		mg_free(dom);
+	}
+}
 
 /* Add an additional domain to an already running web server. */
 CIVETWEB_API int
@@ -22040,7 +22183,7 @@ mg_start_domain2(struct mg_context *ctx,
 				            "Invalid option: %s",
 				            name);
 			}
-			mg_free(new_dom);
+			mg_free_dom(new_dom);
 			return -2;
 		} else if ((value = *options++) == NULL) {
 			mg_cry_ctx_internal(ctx, "%s: option value cannot be NULL", name);
@@ -22054,7 +22197,7 @@ mg_start_domain2(struct mg_context *ctx,
 				            "Invalid option value: %s",
 				            name);
 			}
-			mg_free(new_dom);
+			mg_free_dom(new_dom);
 			return -2;
 		}
 		if (new_dom->config[idx] != NULL) {
@@ -22080,7 +22223,7 @@ mg_start_domain2(struct mg_context *ctx,
 			            "Mandatory option %s missing",
 			            config_options[AUTHENTICATION_DOMAIN].name);
 		}
-		mg_free(new_dom);
+		mg_free_dom(new_dom);
 		return -4;
 	}
 
@@ -22114,7 +22257,7 @@ mg_start_domain2(struct mg_context *ctx,
 			            "%s",
 			            "Initializing SSL context failed");
 		}
-		mg_free(new_dom);
+		mg_free_dom(new_dom);
 		return -3;
 	}
 #endif
@@ -22141,7 +22284,7 @@ mg_start_domain2(struct mg_context *ctx,
 				            new_dom->config[AUTHENTICATION_DOMAIN],
 				            config_options[AUTHENTICATION_DOMAIN].name);
 			}
-			mg_free(new_dom);
+			mg_free_dom(new_dom);
 			mg_unlock_context(ctx);
 			return -5;
 		}
