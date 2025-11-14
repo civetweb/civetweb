@@ -19,7 +19,7 @@ Test coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb),
 
 Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)): [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
 
-CodeQL semantic code analysis: [![CodeQL](https://github.com/civetweb/civetweb/workflows/CodeQL/badge.svg)](https://github.com/civetweb/civetweb/actions/workflows/codeql-analysis.yml)
+CodeQL semantic code analysis: [![CodeQL](https://github.com/civetweb/civetweb/actions/workflows/codeql.yml/badge.svg)](https://github.com/civetweb/civetweb/actions/workflows/codeql.yml)
 
 
 Project Mission
