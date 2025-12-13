@@ -1,8 +1,10 @@
 #if defined(USE_MBEDTLS) // USE_MBEDTLS used with NO_SSL
 
-#include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
+#if MBEDTLS_VERSION_NUMBER < 0x04000000
 #include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#endif
 #include "mbedtls/error.h"
 
 #if MBEDTLS_VERSION_NUMBER >= 0x03000000
@@ -26,8 +28,10 @@ typedef mbedtls_ssl_context SSL;
 typedef struct {
 	mbedtls_ssl_config conf;         /* SSL configuration */
 	mbedtls_x509_crt cert;           /* Certificate */
+#if MBEDTLS_VERSION_NUMBER < 0x04000000
 	mbedtls_ctr_drbg_context ctr;    /* Counter random generator state */
 	mbedtls_entropy_context entropy; /* Entropy context */
+#endif
 	mbedtls_pk_context pkey;         /* Private key */
 } SSL_CTX;
 
@@ -65,7 +69,9 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt, const char *cipherlist)
 	}
 
 	DEBUG_TRACE("%s", "Initializing MbedTLS SSL");
+#if MBEDTLS_VERSION_NUMBER < 0x04000000
 	mbedtls_entropy_init(&ctx->entropy);
+#endif
 
 	conf = &ctx->conf;
 	mbedtls_ssl_config_init(conf);
@@ -88,7 +94,9 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt, const char *cipherlist)
 
 	/* Initialize TLS key and cert */
 	mbedtls_pk_init(&ctx->pkey);
+#if MBEDTLS_VERSION_NUMBER < 0x04000000
 	mbedtls_ctr_drbg_init(&ctx->ctr);
+#endif
 	mbedtls_x509_crt_init(&ctx->cert);
 
 #ifdef MBEDTLS_PSA_CRYPTO_C
@@ -104,6 +112,7 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt, const char *cipherlist)
 	}
 #endif
 
+#if MBEDTLS_VERSION_NUMBER < 0x04000000
 	rc = mbedtls_ctr_drbg_seed(&ctx->ctr,
 	                           mbedtls_entropy_func,
 	                           &ctx->entropy,
@@ -113,8 +122,9 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt, const char *cipherlist)
 		DEBUG_TRACE("TLS random seed failed (%i)", rc);
 		return -1;
 	}
+#endif
 
-#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000 && MBEDTLS_VERSION_NUMBER < 0x04000000
 	// mbedtls_pk_parse_keyfile() has changed in mbedTLS 3.0. You now need
 	// to pass a properly seeded, cryptographically secure RNG when calling
 	// these functions. It is used for blinding, a countermeasure against
@@ -145,7 +155,9 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt, const char *cipherlist)
 		return -1;
 	}
 
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000 && MBEDTLS_VERSION_NUMBER < 0x04000000
 	mbedtls_ssl_conf_rng(conf, mbedtls_ctr_drbg_random, &ctx->ctr);
+#endif
 
 	/* Set auth mode if peer cert should be verified */
 	mbedtls_ssl_conf_authmode(conf, MBEDTLS_SSL_VERIFY_NONE);
@@ -172,10 +184,12 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt, const char *cipherlist)
 void
 mbed_sslctx_uninit(SSL_CTX *ctx)
 {
+#if MBEDTLS_VERSION_NUMBER < 0x04000000
 	mbedtls_ctr_drbg_free(&ctx->ctr);
+	mbedtls_entropy_free(&ctx->entropy);
+#endif
 	mbedtls_pk_free(&ctx->pkey);
 	mbedtls_x509_crt_free(&ctx->cert);
-	mbedtls_entropy_free(&ctx->entropy);
 	mbedtls_ssl_config_free(&ctx->conf);
 }
 
