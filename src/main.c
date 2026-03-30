@@ -2796,8 +2796,9 @@ manage_service(int action)
 		show_error();
 	} else if (action == ID_INSTALL_SERVICE) {
 		path[sizeof(path) - 1] = 0;
-		GetModuleFileName(NULL, path, sizeof(path) - 1);
-		strncat(path, " ", sizeof(path) - 1 - strlen(path));
+		path[0]='"';
+		GetModuleFileName(NULL, path+1, sizeof(path) - 3);
+		strncat(path, "\" ", sizeof(path) - 2 - strlen(path));
 		strncat(path, service_magic_argument, sizeof(path) - 1 - strlen(path));
 		hService = CreateService(hSCM,
 		                         service_name,
