@@ -1977,6 +1977,9 @@ struct lua_websock_data {
 	struct mg_connection *conn[MAX_WORKER_THREADS];
 	pthread_mutex_t ws_mutex;
 };
+#else
+/* used in parameter list of prepare_lua_environment() */
+struct lua_websock_data;
 #endif
 
 
@@ -2886,11 +2889,13 @@ prepare_lua_environment(struct mg_context *ctx,
 #endif
 
 	/* Store context in the registry */
+#if defined(USE_WEBSOCKET)
 	if (ctx != NULL) {
 		lua_pushlightuserdata(L, (void *)&lua_regkey_ctx);
 		lua_pushlightuserdata(L, (void *)ctx);
 		lua_settable(L, LUA_REGISTRYINDEX);
 	}
+#endif /* USE_WEBSOCKET */
 	if (ws_conn_list != NULL) {
 		lua_pushlightuserdata(L, (void *)&lua_regkey_connlist);
 		lua_pushlightuserdata(L, (void *)ws_conn_list);
