@@ -19158,7 +19158,7 @@ get_message(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 static int
 get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
-	const char *cl;
+	const char *h_zip, *h_chunk, *h_len;
 
 	conn->connection_type =
 	    CONNECTION_TYPE_REQUEST; /* request (valid of not) */
@@ -19193,20 +19193,23 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	}
 
 #if USE_ZLIB
-	if (((cl = get_header(conn->request_info.http_headers,
+	if (((h_zip = get_header(conn->request_info.http_headers,
 	                      conn->request_info.num_headers,
 	                      "Accept-Encoding"))
 	     != NULL)
-	    && strstr(cl, "gzip")) {
+	    && strstr(h_zip, "gzip")) {
 		conn->accept_gzip = 1;
 	}
 #endif
-	if (((cl = get_header(conn->request_info.http_headers,
+   h_chunk = get_header(conn->request_info.http_headers,
 	                      conn->request_info.num_headers,
-	                      "Transfer-Encoding"))
-	     != NULL)
+	                      "Transfer-Encoding");
+   h_len = get_header(conn->request_info.http_headers,
+	                            conn->request_info.num_headers,
+	                            "Content-Length");
+	if (h_chunk != NULL)
 	    && mg_strcasecmp(cl, "identity")) {
-		if (mg_strcasecmp(cl, "chunked")) {
+		if ((0!=mg_strcasecmp(cl, "chunked")) || (h_len!=NULL)) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -19218,10 +19221,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		}
 		conn->is_chunked = 1;
 		conn->content_len = 0; /* not yet read */
-	} else if ((cl = get_header(conn->request_info.http_headers,
-	                            conn->request_info.num_headers,
-	                            "Content-Length"))
-	           != NULL) {
+	} else if (h_len != NULL) {
 		/* Request has content length set */
 		char *endptr = NULL;
 		conn->content_len = strtoll(cl, &endptr, 10);
