@@ -13559,9 +13559,10 @@ read_websocket(struct mg_connection *conn,
 		if ((header_len > 0) && (body_len >= header_len)) {
 			/* Allocate space to hold websocket payload */
 			unsigned char *data = mem;
+			size_t required_len = (size_t)data_len + 4;
 
-			if ((size_t)data_len > (size_t)sizeof(mem)) {
-				data = (unsigned char *)mg_malloc_ctx((size_t)data_len,
+			if (required_len > sizeof(mem)) {
+				data = (unsigned char *)mg_malloc_ctx(required_len,
 				                                      conn->phys_ctx);
 				if (data == NULL) {
 					/* Allocation failed, exit the loop and then close the
