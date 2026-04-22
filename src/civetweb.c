@@ -16940,6 +16940,7 @@ sslize(struct mg_connection *conn,
 	int short_trust;
 	unsigned timeout = 1024;
 	unsigned i;
+	char* error_str;
 
 	if (!conn) {
 		return 0;
@@ -17048,8 +17049,12 @@ sslize(struct mg_connection *conn,
 				break;
 
 			} else {
-				/* This is an SSL specific error, e.g. SSL_ERROR_SSL */
-				mg_cry_internal(conn, "sslize error: %s", ssl_error());
+				error_str = ssl_error();
+				if(error_str && error_str[0])
+				{
+					/* This is an SSL specific error, e.g. SSL_ERROR_SSL */
+					mg_cry_internal(conn, "sslize error: %s", error_str);
+				}
 				break;
 			}
 
