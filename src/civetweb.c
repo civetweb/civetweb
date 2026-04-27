@@ -1797,7 +1797,10 @@ typedef struct SSL_CTX SSL_CTX;
 #include <openssl/conf.h>
 #include <openssl/crypto.h>
 #include <openssl/dh.h>
-#include <openssl/engine.h>
+
+#if defined(OPENSSL_API_1_0)
+#include <openssl/engine.h> // deprecated later on
+#endif
 #include <openssl/err.h>
 #include <openssl/opensslv.h>
 #include <openssl/pem.h>
