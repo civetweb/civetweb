@@ -19,9 +19,19 @@
 #include "mbedtls/pk.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/ssl.h"
+#include "mbedtls/threading.h"
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
 #include <string.h>
+
+/* libmbedtls must be built with MBEDTLS_THREADING_C: without it the PSA crypto
+ * subsystem's global DRBG/entropy state is unprotected, and concurrent TLS
+ * handshakes across civetweb worker threads will race inside
+ * mbedtls_entropy_func and SIGSEGV in mbedtls_md_free. See
+ * github.com/pi-hole/FTL/issues/2871. */
+#if !defined(MBEDTLS_THREADING_C)
+#error "libmbedtls must be built with MBEDTLS_THREADING_C"
+#endif
 
 typedef mbedtls_ssl_context SSL;
 
