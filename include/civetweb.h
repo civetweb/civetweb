@@ -1624,16 +1624,18 @@ CIVETWEB_API int mg_response_header_send(struct mg_connection *conn);
    Parameters:
      feature: specifies which feature should be checked
        The value is a bit mask. The individual bits are defined as:
-         1  serve files (NO_FILES not set)
-         2  support HTTPS (NO_SSL not set)
-         4  support CGI (NO_CGI not set)
-         8  support IPv6 (USE_IPV6 set)
-        16  support WebSocket (USE_WEBSOCKET set)
-        32  support Lua scripts and Lua server pages (USE_LUA is set)
-        64  support server side JavaScript (USE_DUKTAPE is set)
-       128  support caching (NO_CACHING not set)
-       256  support server statistics (USE_SERVER_STATS is set)
-       512  support for on the fly compression (USE_ZLIB is set)
+          1  serve files (NO_FILES not set)
+          2  support HTTPS (NO_SSL not set)
+          4  support CGI (NO_CGI not set)
+          8  support IPv6 (USE_IPV6 set)
+         16  support WebSocket (USE_WEBSOCKET set)
+         32  support Lua scripts and Lua server pages (USE_LUA is set)
+         64  support server side JavaScript (USE_DUKTAPE is set)
+        128  support caching (NO_CACHING not set)
+        256  support server statistics (USE_SERVER_STATS is set)
+        512  support for on the fly compression (USE_ZLIB is set)
+	   1024  support for http2 (USE_HTTP2 is set)
+	   2048  support for Unix domain sockets (USE_X_DOM_SOCKET is set)
 
        These values are defined as MG_FEATURES_*
 
