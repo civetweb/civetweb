@@ -53,8 +53,12 @@ message(STATUS "Enabling tests in the build - ${CIVETWEB_BUILD_TESTING}")
 option(CIVETWEB_ENABLE_THIRD_PARTY_OUTPUT "Shows the output of third party dependency processing" OFF)
 
 # Thread Stack Size
-set(CIVETWEB_THREAD_STACK_SIZE 102400 CACHE STRING
-  "The stack size in bytes for each thread created")
+# Default 0 means "use system default" (typically 8 MB on Linux/macOS).
+# The historical default of 102400 (100 KB) is insufficient for deeply nested
+# call chains (e.g. handle_static_file_request + mg_vprintf + TLS) and can
+# cause silent stack overflows in production workloads.
+set(CIVETWEB_THREAD_STACK_SIZE 0 CACHE STRING
+  "The stack size in bytes for each thread created (0 = system default)")
 set_property(CACHE CIVETWEB_THREAD_STACK_SIZE PROPERTY VALUE ${CIVETWEB_THREAD_STACK_SIZE})
 message(STATUS "Thread Stack Size - ${CIVETWEB_THREAD_STACK_SIZE}")
 
