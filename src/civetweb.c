@@ -8127,10 +8127,8 @@ interpret_uri(struct mg_connection *conn, /* in/out: request (must be valid) */
 		}
 
 		if (mg_stat(conn, gz_path, filestat)) {
-			if (filestat) {
-				filestat->is_gzipped = 1;
-				*is_found = 1;
-			}
+			filestat->is_gzipped = 1;
+			*is_found = 1;
 			/* Currently gz files can not be scripts. */
 			return;
 		}
@@ -16469,7 +16467,7 @@ set_ports_option(struct mg_context *phys_ctx)
 			mg_cry_ctx_internal(phys_ctx, "%s", "Out of memory");
 			closesocket(so.sock);
 			so.sock = INVALID_SOCKET;
-			mg_free(ptr);
+			phys_ctx->listening_sockets = ptr;
 			continue;
 		}
 
@@ -19207,9 +19205,9 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
    h_len = get_header(conn->request_info.http_headers,
 	                            conn->request_info.num_headers,
 	                            "Content-Length");
-	if (h_chunk != NULL)
-	    && mg_strcasecmp(cl, "identity")) {
-		if ((0!=mg_strcasecmp(cl, "chunked")) || (h_len!=NULL)) {
+	if ((h_chunk != NULL)
+	    && mg_strcasecmp(h_chunk, "identity")) {
+		if ((0!=mg_strcasecmp(h_chunk, "chunked")) || (h_len!=NULL)) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -19224,8 +19222,8 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	} else if (h_len != NULL) {
 		/* Request has content length set */
 		char *endptr = NULL;
-		conn->content_len = strtoll(cl, &endptr, 10);
-		if ((endptr == cl) || (conn->content_len < 0)) {
+		conn->content_len = strtoll(h_len, &endptr, 10);
+		if ((endptr == h_len) || (conn->content_len < 0)) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
