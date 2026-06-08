@@ -4401,8 +4401,8 @@ mg_get_response_code_text(const struct mg_connection *conn, int response_code)
 	case 421:
 		return "Misdirected Request"; /* RFC7540 Section 9.1.2 */
 	case 422:
-		return "Unproccessable entity"; /* RFC2518 Section 10.3, RFC4918
-		                                 * Section 11.2 */
+		return "Unprocessable entity"; /* RFC2518 Section 10.3, RFC4918
+		                                * Section 11.2 */
 	case 423:
 		return "Locked"; /* RFC2518 Section 10.4, RFC4918 Section 11.3 */
 	case 424:
