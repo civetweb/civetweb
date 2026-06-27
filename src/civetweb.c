@@ -6516,62 +6516,81 @@ pull_inner(FILE *fp,
 		int ssl_pending;
 		struct mg_pollfd pfd[2];
 		int pollres;
-		unsigned int num_sock = 1;
+		unsigned int num_sock;
 
-		if ((ssl_pending = SSL_pending(conn->ssl)) > 0) {
-			/* We already know there is no more data buffered in conn->buf
-			 * but there is more available in the SSL layer. So don't poll
-			 * conn->client.sock yet. */
-			if (ssl_pending > len) {
-				ssl_pending = len;
-			}
-			pollres = 1;
-		} else {
-			pfd[0].fd = conn->client.sock;
-			pfd[0].events = POLLIN;
+		for (;;) {
+			num_sock = 1;
+			if ((ssl_pending = SSL_pending(conn->ssl)) > 0) {
+				/* We already know there is no more data buffered in conn->buf
+				 * but there is more available in the SSL layer. So don't poll
+				 * conn->client.sock yet. */
+				if (ssl_pending > len) {
+					ssl_pending = len;
+				}
+				pollres = 1;
+			} else {
+				pfd[0].fd = conn->client.sock;
+				pfd[0].events = POLLIN;
 
-			if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
-				pfd[num_sock].fd =
-				    conn->phys_ctx->thread_shutdown_notification_socket;
-				pfd[num_sock].events = POLLIN;
-				num_sock++;
-			}
+				if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+					pfd[num_sock].fd =
+					    conn->phys_ctx->thread_shutdown_notification_socket;
+					pfd[num_sock].events = POLLIN;
+					num_sock++;
+				}
 
-			pollres = mg_poll(pfd,
-			                  num_sock,
-			                  (int)(timeout * 1000.0),
-			                  &(conn->phys_ctx->stop_flag));
-			if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
-				return -2;
-			}
-		}
-		if (pollres > 0) {
-			ERR_clear_error();
-			nread =
-			    SSL_read(conn->ssl, buf, (ssl_pending > 0) ? ssl_pending : len);
-			if (nread <= 0) {
-				err = SSL_get_error(conn->ssl, nread);
-				if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
-					err = ERRNO;
-				} else if ((err == SSL_ERROR_WANT_READ)
-				           || (err == SSL_ERROR_WANT_WRITE)) {
-					nread = 0;
-				} else {
-					/* All errors should return -2 */
-					DEBUG_TRACE("SSL_read() failed, error %d", err);
-					ERR_clear_error();
+				pollres = mg_poll(pfd,
+				                  num_sock,
+				                  (int)(timeout * 1000.0),
+				                  &(conn->phys_ctx->stop_flag));
+				if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
 					return -2;
 				}
-				ERR_clear_error();
-			} else {
-				err = 0;
 			}
-		} else if (pollres < 0) {
-			/* Error */
-			return -2;
-		} else {
-			/* pollres = 0 means timeout */
-			nread = 0;
+			if (pollres > 0) {
+				ERR_clear_error();
+				nread = SSL_read(conn->ssl,
+				                 buf,
+				                 (ssl_pending > 0) ? ssl_pending : len);
+				if (nread <= 0) {
+					err = SSL_get_error(conn->ssl, nread);
+					if ((err == SSL_ERROR_SYSCALL) && (nread == -1)) {
+						err = ERRNO;
+					} else if (err == SSL_ERROR_WANT_READ) {
+						/* The socket was readable but an incomplete TLS record
+						 * is still arriving, so no application data is ready
+						 * yet. SSL_read has already drained the available
+						 * socket bytes; re-poll for the remainder instead of
+						 * reporting a spurious idle timeout. Reporting -1 here
+						 * would, with websocket ping-pong enabled, be counted
+						 * as an unanswered ping and close a healthy connection
+						 * that is actively receiving a large (>16 KiB) frame. */
+						ERR_clear_error();
+						continue;
+					} else if (err == SSL_ERROR_WANT_WRITE) {
+						/* SSL_read wants to write (TLS renegotiation). The poll above
+						 * only waits for POLLIN, so do not re-poll here; keep the
+						 * original timeout-like return. Renegotiation is disabled
+						 * (SSL_OP_NO_RENEGOTIATION) and absent in TLS 1.3. */
+						nread = 0;
+					} else {
+						/* All errors should return -2 */
+						DEBUG_TRACE("SSL_read() failed, error %d", err);
+						ERR_clear_error();
+						return -2;
+					}
+					ERR_clear_error();
+				} else {
+					err = 0;
+				}
+			} else if (pollres < 0) {
+				/* Error */
+				return -2;
+			} else {
+				/* pollres = 0 means timeout */
+				nread = 0;
+			}
+			break;
 		}
 #endif
 
