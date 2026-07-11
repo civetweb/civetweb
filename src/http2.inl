@@ -795,31 +795,31 @@ hpack_encode(uint8_t *store, const char *load, int lower)
 		append_bits((uint8_t *)store + 1, len_bits, 0xFFFFFFFF, spare_bits);
 	}
 
-	if (len_bytes >= 127) {
-		// TODO: Shift string and encode len in more bytes
-		return 0;
-	}
-	*store = 0x80 + (uint8_t)len_bytes;
-
-	if ((len_bytes >= nohuff_len) && (0)) {
-		*store = (uint8_t)nohuff_len;
-		if (lower) {
-			for (i = 1; i <= nohuff_len; i++) {
-				store[i] = tolower(load[i]);
-			}
-		} else {
-			memcpy(store + 1, load, nohuff_len);
-		}
-		return nohuff_len + 1;
+	/* Encode the payload length as an HPACK integer with a 7-bit prefix and
+	 * the Huffman flag (0x80) set (RFC 7541 section 5.1). Lengths below 127
+	 * fit in the single prefix byte reserved at store[0]; larger lengths need
+	 * one or more continuation bytes, so shift the Huffman payload (currently
+	 * at store + 1) to make room for them. */
+	if (len_bytes < 127) {
+		*store = 0x80 + (uint8_t)len_bytes;
+		return (int)(len_bytes + 1);
 	} else {
-		/*
-		int i = 0;
-		char *test = hpack_decode(store, &i, NULL);
-		i = i; // breakpoint for debugging / testing
-		*/
-	}
+		uint8_t prefix[8];
+		uint32_t prefix_len = 1;
+		uint32_t rem = len_bytes - 127;
 
-	return len_bytes + 1;
+		prefix[0] = 0xFF; /* 0x80 (Huffman) | 127 (all prefix bits set) */
+		while (rem >= 128) {
+			prefix[prefix_len++] = (uint8_t)((rem & 0x7F) | 0x80);
+			rem >>= 7;
+		}
+		prefix[prefix_len++] = (uint8_t)rem;
+
+		memmove(store + prefix_len, store + 1, len_bytes);
+		memcpy(store, prefix, prefix_len);
+
+		return (int)(len_bytes + prefix_len);
+	}
 }
 
 
@@ -1161,7 +1161,14 @@ http2_reset_stream(struct mg_connection *conn,
 static void
 http2_must_use_http1(struct mg_connection *conn)
 {
-	DEBUG_TRACE("HTTP2 not available for this URL (%s)", conn->path_info);
+	/* conn->path_info is not set on the HTTP/2 request path (it is filled in
+	 * later by interpret_uri for file resources), so it is NULL here, e.g. for
+	 * a WebSocket upgrade that is being downgraded. Passing NULL to a "%s"
+	 * conversion is undefined behaviour and crashes on musl, so log the request
+	 * URI (which is set) and guard against a NULL value. */
+	DEBUG_TRACE("HTTP2 not available for this URL (%s)",
+	            conn->request_info.local_uri ? conn->request_info.local_uri
+	                                          : "");
 	http2_reset_stream(conn, conn->http2.stream_id, 0xd);
 }
 
@@ -1608,7 +1615,37 @@ handle_http2(struct mg_connection *conn)
 			/* header parsed */
 			DEBUG_TRACE("HTTP2 handle_request (stream %u)",
 			            http2_frame_stream_id);
-			handle_request_stat_log(conn);
+
+			/* Request body handling: content_len is -1 for the whole HTTP/2
+			 * connection (set in process_new_http2_connection) so the frame
+			 * loop above keeps reading frames until the connection closes. A
+			 * request handler that reads the body via mg_read(), however, would
+			 * then block until the request timeout - and consume the following
+			 * HTTP/2 frames as if they were body data - because no per-request
+			 * body length is known. If END_STREAM was set on the HEADERS frame
+			 * the request has no body, so present a body length of 0 to the
+			 * handler - both the internal content_len and the handler-visible
+			 * request_info.content_length, which may still hold a stale value
+			 * from an earlier HTTP/1.x request on this worker - and restore the
+			 * connection-level values afterwards so the frame loop keeps working.
+			 * TODO: deliver request bodies carried in DATA frames to handlers
+			 * (POST/PUT/PATCH); until then, requests with a body are not
+			 * supported over HTTP/2. */
+			{
+				const int64_t saved_content_len = conn->content_len;
+				const int64_t saved_consumed_content = conn->consumed_content;
+				const long long saved_content_length =
+				    conn->request_info.content_length;
+				if (frame_is_end_stream) {
+					conn->content_len = 0;
+					conn->consumed_content = 0;
+					conn->request_info.content_length = 0;
+				}
+				handle_request_stat_log(conn);
+				conn->content_len = saved_content_len;
+				conn->consumed_content = saved_consumed_content;
+				conn->request_info.content_length = saved_content_length;
+			}
 
 			/* Send "final" frame */
 			DEBUG_TRACE("HTTP2 handle_request done (stream %u)",
@@ -1759,7 +1796,6 @@ handle_http2(struct mg_connection *conn)
 		}
 
 		/* not used in the moment */
-		(void)frame_is_end_stream;
 		(void)frame_is_end_headers;
 		(void)client_settings;
 	}
@@ -1865,6 +1901,25 @@ HPACK_TABLE_TEST()
 static void
 process_new_http2_connection(struct mg_connection *conn)
 {
+	/* This worker thread may have served an HTTP/1.x request before. The
+	 * HTTP/2 path does not run reset_per_request_attributes(), so stale
+	 * per-request state is still present and must be cleared before this
+	 * connection is handled:
+	 *   - a stale (negative) request_len makes mg_read_inner() compute a bogus
+	 *     buffered-data offset (conn->buf + request_len + consumed_content) and
+	 *     prepend a spurious out-of-bounds byte to the 24-byte connection
+	 *     preface. is_valid_http2_primer() then reads a preface shifted by one
+	 *     byte and rejects the (valid) connection with "400 Invalid HTTP/2
+	 *     primer";
+	 *   - stale request headers (for HTTP/1, request_info.http_headers point
+	 *     into conn->buf, not to allocated memory) would be mg_free()'d by
+	 *     free_buffered_request_header_list() below if handle_http2() returns
+	 *     before a HEADERS frame is received, corrupting the heap.
+	 */
+	conn->request_len = 0;
+	conn->consumed_content = 0;
+	conn->request_info.num_headers = 0;
+
 	if (!is_valid_http2_primer(conn)) {
 		/* Primer does not match expectation from RFC.
 		 * See https://tools.ietf.org/html/rfc7540#section-3.5 */

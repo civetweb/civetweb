@@ -6556,6 +6556,13 @@ pull_inner(FILE *fp,
 				} else if ((err == SSL_ERROR_WANT_READ)
 				           || (err == SSL_ERROR_WANT_WRITE)) {
 					nread = 0;
+				} else if (err == SSL_ERROR_ZERO_RETURN) {
+					/* Peer closed the TLS connection cleanly (received a
+					 * close_notify alert). This is a normal end-of-connection,
+					 * not a read failure. */
+					DEBUG_TRACE("%s", "TLS connection closed by peer");
+					ERR_clear_error();
+					return -2;
 				} else {
 					/* All errors should return -2 */
 					DEBUG_TRACE("SSL_read() failed, error %d", err);
