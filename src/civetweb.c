@@ -7037,6 +7037,15 @@ mg_write(struct mg_connection *conn, const void *buf, size_t len)
 			conn->last_throttle_bytes = 0;
 		}
 		allowed = conn->throttle - conn->last_throttle_bytes;
+		if (allowed < 0) {
+			/* conn->throttle may be re-selected (per request) to a value
+			 * lower than the bytes already counted this second, making
+			 * "allowed" negative. Passing a negative length to push_all()
+			 * sends nothing and the client sees an empty/truncated
+			 * response. Clamp to 0 to skip sending for the rest of this
+			 * second instead. */
+			allowed = 0;
+		}
 		if (allowed > (int)len) {
 			allowed = (int)len;
 		}
@@ -18180,6 +18189,8 @@ reset_per_request_attributes(struct mg_connection *conn)
 	conn->request_len = 0;
 	conn->request_state = 0;
 	conn->throttle = 0;
+	conn->last_throttle_bytes = 0;
+	conn->last_throttle_time = 0;
 	conn->accept_gzip = 0;
 
 	conn->response_info.content_length = conn->request_info.content_length = -1;
