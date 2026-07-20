@@ -5871,6 +5871,181 @@ START_TEST(test_minimal_https_server_callback)
 END_TEST
 
 
+static int
+FormFieldValueUnderflowFound(const char *key,
+                             const char *filename,
+                             char *path,
+                             size_t pathlen,
+                             void *user_data)
+{
+	/* Take every field value into memory so field_get is invoked. */
+	(void)key;
+	(void)filename;
+	(void)path;
+	(void)pathlen;
+	(void)user_data;
+	return MG_FORM_FIELD_STORAGE_GET;
+}
+
+
+static int
+FormFieldValueUnderflowGet(const char *key,
+                           const char *value,
+                           size_t valuelen,
+                           void *user_data)
+{
+	/* A realistic consumer echoes the field value using the length civetweb
+	 * reports. On the vulnerable code that length has underflowed to
+	 * ~SIZE_MAX, so this mg_write() over-reads the per-request stack buffer
+	 * and crashes the worker thread. */
+	struct mg_connection *conn = (struct mg_connection *)user_data;
+	(void)key;
+	mg_write(conn, value, valuelen);
+	return MG_FORM_FIELD_HANDLE_GET;
+}
+
+
+static int
+FormFieldValueUnderflowAttack(struct mg_connection *conn, void *cbdata)
+{
+	struct mg_form_data_handler fdh = {FormFieldValueUnderflowFound,
+	                                   FormFieldValueUnderflowGet,
+	                                   NULL,
+	                                   conn};
+	int ret;
+
+	(void)cbdata;
+
+	mg_printf(conn, "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+	ret = mg_handle_form_request(conn, &fdh);
+	mg_printf(conn, "\r\n%i\r\n", ret);
+
+	mark_point();
+
+	return 1;
+}
+
+
+/* Regression test: integer underflow in mg_handle_form_request() multipart
+ * field value length. A single malformed multipart part whose body is empty
+ * and directly followed by the boundary makes search_boundary() match the
+ * "\r\n" of the "\r\n\r\n" header/body separator, which lies before the body
+ * start "hend". On the vulnerable code (size_t)(next - hend) underflows to
+ * ~SIZE_MAX and is passed to field_get as the value length, so a consumer
+ * reading value_len bytes over-reads the per-request stack buffer and crashes
+ * the worker thread. With the fix the length is clamped to 0 and the server
+ * survives. The attack reply is not asserted (malformed input); a liveness
+ * probe verifies the security property "the server does not crash". */
+START_TEST(test_multipart_field_value_underflow)
+{
+	struct mg_context *ctx;
+	const char *OPTIONS[6];
+	int opt_idx = 0;
+	const char *boundary = "field-value-underflow-boundary";
+	char body[512];
+	int body_len;
+	char ebuf[256];
+	struct mg_connection *conn;
+	const struct mg_response_info *ri;
+	int res;
+
+	mark_point();
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8895";
+	OPTIONS[opt_idx++] = "request_timeout_ms";
+	OPTIONS[opt_idx++] = "10000";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+
+	mg_set_request_handler(ctx,
+	                       "/handle_form_field_value_attack",
+	                       FormFieldValueUnderflowAttack,
+	                       NULL);
+
+	test_sleep(1);
+
+	/* Attack: empty part body directly followed by the boundary. */
+	body_len = snprintf(body,
+	                    sizeof(body),
+	                    "--%s\r\n"
+	                    "Content-Disposition: form-data; name=\"f\"\r\n"
+	                    "\r\n"
+	                    "--%s--\r\n",
+	                    boundary,
+	                    boundary);
+	ck_assert_int_gt(body_len, 0);
+	ck_assert_uint_lt((size_t)body_len, sizeof(body));
+
+	memset(ebuf, 0, sizeof(ebuf));
+	conn = mg_connect_client("127.0.0.1", 8895, 0, ebuf, sizeof(ebuf));
+	ck_assert_str_eq(ebuf, "");
+	ck_assert(conn != NULL);
+
+	mg_printf(conn,
+	          "POST /handle_form_field_value_attack HTTP/1.1\r\n"
+	          "Host: localhost:8895\r\n"
+	          "Connection: close\r\n"
+	          "Content-Type: multipart/form-data; boundary=%s\r\n"
+	          "Content-Length: %u\r\n"
+	          "\r\n",
+	          boundary,
+	          (unsigned int)body_len);
+	mg_write(conn, body, (size_t)body_len);
+
+	/* Malformed input: reply is not asserted; survival is checked below. */
+	(void)mg_get_response(conn, ebuf, sizeof(ebuf), 10000);
+	mg_close_connection(conn);
+
+	/* Liveness probe: a fresh, well-formed request must return 200. If the
+	 * attack had crashed a worker, this in-process server would be dead. */
+	body_len = snprintf(body,
+	                    sizeof(body),
+	                    "--%s\r\n"
+	                    "Content-Disposition: form-data; name=\"f\"\r\n"
+	                    "\r\n"
+	                    "value1\r\n"
+	                    "--%s--\r\n",
+	                    boundary,
+	                    boundary);
+	ck_assert_int_gt(body_len, 0);
+	ck_assert_uint_lt((size_t)body_len, sizeof(body));
+
+	memset(ebuf, 0, sizeof(ebuf));
+	conn = mg_connect_client("127.0.0.1", 8895, 0, ebuf, sizeof(ebuf));
+	ck_assert_str_eq(ebuf, "");
+	ck_assert(conn != NULL);
+
+	mg_printf(conn,
+	          "POST /handle_form_field_value_attack HTTP/1.1\r\n"
+	          "Host: localhost:8895\r\n"
+	          "Connection: close\r\n"
+	          "Content-Type: multipart/form-data; boundary=%s\r\n"
+	          "Content-Length: %u\r\n"
+	          "\r\n",
+	          boundary,
+	          (unsigned int)body_len);
+	mg_write(conn, body, (size_t)body_len);
+
+	res = mg_get_response(conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(res, 0);
+	ri = mg_get_response_info(conn);
+	ck_assert(ri != NULL);
+	ck_assert_int_eq(ri->status_code, 200);
+
+	mg_close_connection(conn);
+
+	g_ctx = NULL;
+	test_mg_stop(ctx, __LINE__);
+}
+END_TEST
+
+
 #if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_server_suite(void)
@@ -5892,6 +6067,8 @@ make_public_server_suite(void)
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
 	TCase *const tcase_storebody = tcase_create("Store Body");
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
+	TCase *const tcase_multipart_field_value_underflow =
+	    tcase_create("Multipart Field Value Underflow");
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
 	TCase *const tcase_error_handling = tcase_create("Error handling");
@@ -5961,6 +6138,12 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_handle_form, test_handle_form);
 	tcase_set_timeout(tcase_handle_form, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_handle_form);
+
+	tcase_add_test(tcase_multipart_field_value_underflow,
+	               test_multipart_field_value_underflow);
+	tcase_set_timeout(tcase_multipart_field_value_underflow,
+	                  civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_multipart_field_value_underflow);
 
 	tcase_add_test(tcase_http_auth, test_http_auth);
 	tcase_set_timeout(tcase_http_auth, civetweb_min_server_test_timeout);

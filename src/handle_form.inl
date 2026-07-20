@@ -577,7 +577,12 @@ mg_handle_form_request(struct mg_connection *conn,
 							 * Content-Length has been reached, or if chunked
 							 * encoding is used and the end marker has been
 							 * read, or if the connection has been closed. */
-							all_data_read = (buf_fill == 0);
+							/* "used == 0" together with "r == 0" means the
+							 * connection is closed, the buffered residue
+							 * could not be parsed and no more data will
+							 * arrive: no progress is possible, so terminate
+							 * instead of spinning on the same bytes. */
+							all_data_read = (buf_fill == 0) || (used == 0);
 						}
 						buf_fill += r;
 						buf[buf_fill] = 0;
@@ -1060,7 +1065,16 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 			}
 
-			towrite = (next ? (size_t)(next - hend) : 0);
+			/* "next" may point before "hend" when the boundary delimiter
+			 * overlaps the part header/body separator - e.g. a malformed
+			 * part whose empty body is directly followed by the boundary,
+			 * so search_boundary() matches the "\r\n" of the "\r\n\r\n"
+			 * separator, which lies before the body start "hend". Guard the
+			 * pointer subtraction: an unchecked (size_t)(next - hend) would
+			 * underflow to a huge value that is then passed to the field_get
+			 * callback as the value length (and to fwrite() as the store
+			 * size), causing an out-of-bounds read of the 8 KB stack buffer. */
+			towrite = (next && (next >= hend)) ? (size_t)(next - hend) : 0;
 
 			if (field_storage == MG_FORM_FIELD_STORAGE_GET) {
 				/* Call callback */
