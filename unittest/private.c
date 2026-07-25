@@ -1721,6 +1721,10 @@ START_TEST(test_config_options)
 	ck_assert_str_eq("max_request_size", config_options[MAX_REQUEST_SIZE].name);
 	ck_assert_str_eq("allow_index_script_resource",
 	                 config_options[ALLOW_INDEX_SCRIPT_SUB_RES].name);
+	ck_assert_str_eq("proxy_protocol_secret",
+	                 config_options[PROXY_PROTOCOL_SECRET].name);
+	ck_assert_str_eq("proxy_protocol_trusted_peers",
+	                 config_options[PROXY_PROTOCOL_TRUSTED_PEERS].name);
 }
 END_TEST
 
