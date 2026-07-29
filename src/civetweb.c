@@ -10590,7 +10590,14 @@ handle_static_file_request(struct mg_connection *conn,
 		return;
 	}
 	cl = (int64_t)filep->stat.size;
-	conn->status_code = 200;
+	/* A custom error page is delivered through this function as well, with
+	 * the error status already stored in conn->status_code by
+	 * mg_send_http_error_impl(). Overwriting it with 200 would tell the
+	 * client the request succeeded. handle_file_based_request() guards the
+	 * "not modified" path against the same problem. */
+	if (!conn->in_error_handler) {
+		conn->status_code = 200;
+	}
 	range[0] = '\0';
 
 #if defined(USE_ZLIB)
@@ -10659,7 +10666,7 @@ handle_static_file_request(struct mg_connection *conn,
 	/* If "Range" request was made: parse header, send only selected part
 	 * of the file. */
 	r1 = r2 = 0;
-	if ((range_hdr != NULL)
+	if ((!conn->in_error_handler) && (range_hdr != NULL)
 	    && ((n = parse_range_header(range_hdr, &r1, &r2)) > 0) && (r1 >= 0)
 	    && (r2 >= 0)) {
 		/* actually, range requests don't play well with a pre-gzipped

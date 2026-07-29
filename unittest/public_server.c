@@ -4698,7 +4698,7 @@ START_TEST(test_error_handling)
 	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_int_eq(client_ri->status_code, 200);
+	ck_assert_int_eq(client_ri->status_code, 404);
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -4730,7 +4730,7 @@ START_TEST(test_error_handling)
 	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_int_eq(client_ri->status_code, 200);
+	ck_assert_int_eq(client_ri->status_code, 404);
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -4762,7 +4762,7 @@ START_TEST(test_error_handling)
 	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_int_eq(client_ri->status_code, 200);
+	ck_assert_int_eq(client_ri->status_code, 404);
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
@@ -4788,7 +4788,7 @@ START_TEST(test_error_handling)
 	client_ri = mg_get_response_info(client_conn);
 	ck_assert(client_ri != NULL);
 
-	ck_assert_int_eq(client_ri->status_code, 200);
+	ck_assert_int_eq(client_ri->status_code, 400);
 
 	client_res = (int)mg_read(client_conn, client_err, sizeof(client_err));
 	mg_close_connection(client_conn);
