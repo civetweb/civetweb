@@ -562,14 +562,14 @@ mg_handle_form_request(struct mg_connection *conn,
 						size_t to_read = sizeof(buf) - 1 - buf_fill;
 						r = mg_read(conn, buf + buf_fill, to_read);
 						if ((r < 0) || ((r == 0) && all_data_read)) {
-#if !defined(NO_FILESYSTEMS)
 							/* read error */
+#if !defined(NO_FILESYSTEMS)
 							if (fstore.access.fp) {
 								mg_fclose(&fstore.access);
 								remove_bad_file(conn, path);
 							}
-							return -1;
 #endif /* NO_FILESYSTEMS */
+							return -1;
 						}
 						if (r == 0) {
 							/* TODO: Create a function to get "all_data_read"
