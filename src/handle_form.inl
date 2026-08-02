@@ -568,8 +568,8 @@ mg_handle_form_request(struct mg_connection *conn,
 								mg_fclose(&fstore.access);
 								remove_bad_file(conn, path);
 							}
-							return -1;
 #endif /* NO_FILESYSTEMS */
+							return -1;
 						}
 						if (r == 0) {
 							/* TODO: Create a function to get "all_data_read"
