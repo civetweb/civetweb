@@ -2097,6 +2097,7 @@ enum {
 #if !defined(NO_CACHING)
 	STATIC_FILE_MAX_AGE,
 	STATIC_FILE_CACHE_CONTROL,
+	NO_ETAG,
 #endif
 #if !defined(NO_SSL)
 	STRICT_HTTPS_MAX_AGE,
@@ -2263,6 +2264,7 @@ static const struct mg_option config_options[] = {
 #if !defined(NO_CACHING)
     {"static_file_max_age", MG_CONFIG_TYPE_NUMBER, "3600"},
     {"static_file_cache_control", MG_CONFIG_TYPE_STRING, NULL},
+    {"no_etag", MG_CONFIG_TYPE_BOOLEAN, "no"},
 #endif
 #if !defined(NO_SSL)
     {"strict_transport_security_max_age", MG_CONFIG_TYPE_NUMBER, NULL},
@@ -10715,7 +10717,11 @@ handle_static_file_request(struct mg_connection *conn,
 	                       mime_vec.ptr,
 	                       (int)mime_vec.len);
 	mg_response_header_add(conn, "Last-Modified", lm, -1);
-	mg_response_header_add(conn, "Etag", etag, -1);
+#if !defined(NO_CACHING)
+	if (mg_strcasecmp(conn->dom_ctx->config[NO_ETAG], "yes")) {
+		mg_response_header_add(conn, "Etag", etag, -1);
+	}
+#endif
 
 #if defined(USE_ZLIB)
 	/* On the fly compression allowed */
@@ -10803,6 +10809,15 @@ is_not_modified(const struct mg_connection *conn,
 	const char *inm = mg_get_header(conn, "If-None-Match");
 	construct_etag(etag, sizeof(etag), filestat);
 
+#if !defined(NO_CACHING)
+	if (mg_strcasecmp(conn->dom_ctx->config[NO_ETAG], "yes") == 0) {
+		// no_etag enabled - skip If-None-Match
+		if (ims) {
+			return (filestat->last_modified <= parse_date_string(ims));
+		}
+		return 0;
+	}
+#endif
 	if (inm) {
 		return !mg_strcasecmp(etag, inm);
 	}
@@ -10831,7 +10846,11 @@ handle_not_modified_static_file_request(struct mg_connection *conn,
 	send_static_cache_header(conn);
 	send_additional_header(conn);
 	mg_response_header_add(conn, "Last-Modified", lm, -1);
-	mg_response_header_add(conn, "Etag", etag, -1);
+#if !defined(NO_CACHING)
+	if (mg_strcasecmp(conn->dom_ctx->config[NO_ETAG], "yes")) {
+		mg_response_header_add(conn, "Etag", etag, -1);
+	}
+#endif
 
 	/* Send all headers */
 	mg_response_header_send(conn);
