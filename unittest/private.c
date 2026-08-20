@@ -1411,8 +1411,11 @@ START_TEST(test_mask_data)
 #endif
 
 	uint32_t mask = 0x61626364;
-	/* TODO: adapt test for big endian */
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	ck_assert((*(unsigned char *)&mask) == 0x61u);
+#else
 	ck_assert((*(unsigned char *)&mask) == 0x64u);
+#endif
 
 #if defined(USE_WEBSOCKET)
 	memset(in, 0, sizeof(in));
@@ -1436,13 +1439,20 @@ START_TEST(test_mask_data)
 		ck_assert_int_eq((int)((unsigned char)out[i]), (int)0);
 	}
 
-	/* TODO: check this for big endian */
 	mask_data(in, 5, 0x01020304, out);
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	ck_assert_uint_eq((unsigned char)out[0], 0u ^ 1u);
+	ck_assert_uint_eq((unsigned char)out[1], 1u ^ 2u);
+	ck_assert_uint_eq((unsigned char)out[2], 2u ^ 3u);
+	ck_assert_uint_eq((unsigned char)out[3], 3u ^ 4u);
+	ck_assert_uint_eq((unsigned char)out[4], 4u ^ 1u);
+#else
 	ck_assert_uint_eq((unsigned char)out[0], 0u ^ 4u);
 	ck_assert_uint_eq((unsigned char)out[1], 1u ^ 3u);
 	ck_assert_uint_eq((unsigned char)out[2], 2u ^ 2u);
 	ck_assert_uint_eq((unsigned char)out[3], 3u ^ 1u);
 	ck_assert_uint_eq((unsigned char)out[4], 4u ^ 4u);
+#endif
 #endif
 }
 END_TEST
