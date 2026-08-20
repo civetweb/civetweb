@@ -17125,8 +17125,8 @@ ssl_get_client_cert_info(const struct mg_connection *conn,
 		const EVP_MD *digest = EVP_get_digestbyname("sha1");
 
 		/* Get Subject and issuer */
-		X509_NAME *subj = X509_get_subject_name(cert);
-		X509_NAME *iss = X509_get_issuer_name(cert);
+		const X509_NAME *subj = X509_get_subject_name(cert);
+		const X509_NAME *iss = X509_get_issuer_name(cert);
 
 		/* Get serial number */
 		ASN1_INTEGER *serial = X509_get_serialNumber(cert);
