@@ -10,6 +10,7 @@
 
 #include "civetweb.h"
 #include <map>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -309,6 +310,30 @@ struct CIVETWEB_CXX_API CivetCallbacks : public mg_callbacks {
 class CIVETWEB_CXX_API CivetServer
 {
   public:
+	/**
+	 * Factory methods to construct and start CivetServer without throwing
+	 * exceptions. Returns nullptr on failure (e.g. port binding failure).
+	 *
+	 * @param options - the web server options.
+	 * @param callbacks - optional web server callback methods.
+	 * @param UserContext - optional user context pointer.
+	 * @param errorMessage - optional pointer to std::string to receive error
+	 * message on failure.
+	 * @return std::unique_ptr containing CivetServer on success, or nullptr on
+	 * failure.
+	 */
+	static std::unique_ptr<CivetServer>
+	Create(const char **options,
+	       const struct CivetCallbacks *callbacks = 0,
+	       const void *UserContext = 0,
+	       std::string *errorMessage = 0);
+
+	static std::unique_ptr<CivetServer>
+	Create(const std::vector<std::string> &options,
+	       const struct CivetCallbacks *callbacks = 0,
+	       const void *UserContext = 0,
+	       std::string *errorMessage = 0);
+
 	/**
 	 * Constructor
 	 *
@@ -671,6 +696,13 @@ class CIVETWEB_CXX_API CivetServer
 	}
 
   protected:
+	CivetServer();
+
+	bool Init(const char **options,
+	          const struct CivetCallbacks *callbacks,
+	          const void *UserContext,
+	          std::string *errorMessage = 0);
+
 	class CivetConnection
 	{
 	  public:
