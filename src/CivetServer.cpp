@@ -7,6 +7,7 @@
 #include "CivetServer.h"
 
 #include <assert.h>
+#include <memory>
 #include <stdexcept>
 #include <string.h>
 
@@ -390,11 +391,23 @@ CivetCallbacks::CivetCallbacks()
 	memset(this, 0, sizeof(*this));
 }
 
-CivetServer::CivetServer(const char **options,
-                         const struct CivetCallbacks *_callbacks,
-                         const void *UserContextIn)
-    : context(0)
+CivetServer::CivetServer() : context(0), UserContext(0), userCloseHandler(NULL)
 {
+}
+
+bool
+CivetServer::Init(const char **options,
+                  const struct CivetCallbacks *_callbacks,
+                  const void *UserContextIn,
+                  std::string *errorMessage)
+{
+	if (context != NULL) {
+		if (errorMessage) {
+			*errorMessage = "CivetServer already initialized";
+		}
+		return false;
+	}
+
 	struct CivetCallbacks callbacks;
 
 	UserContext = UserContextIn;
@@ -419,55 +432,73 @@ CivetServer::CivetServer(const char **options,
 	context = mg_start2(&mg_start_init_data, &mg_start_error_data);
 
 	if (context == NULL) {
+		std::string error_detail =
+		    (errtxtbuf[0] != '\0') ? errtxtbuf : "Unknown error";
 		std::string exceptionMsg =
 		    "null context when constructing CivetServer. "
-		    "Possible problem binding to port. Error: ";
-		exceptionMsg += errtxtbuf;
-		throw CivetException(exceptionMsg);
+		    "Possible problem binding to port. Error: "
+		    + error_detail;
+		if (errorMessage) {
+			*errorMessage = exceptionMsg;
+		}
+		return false;
 	}
+	return true;
 }
 
-CivetServer::CivetServer(const std::vector<std::string> &options,
-                         const struct CivetCallbacks *_callbacks,
-                         const void *UserContextIn)
-    : context(0)
+std::unique_ptr<CivetServer>
+CivetServer::Create(const char **options,
+                    const struct CivetCallbacks *callbacks,
+                    const void *UserContext,
+                    std::string *errorMessage)
 {
-	struct CivetCallbacks callbacks;
-
-	UserContext = UserContextIn;
-
-	if (_callbacks) {
-		callbacks = *_callbacks;
-		userCloseHandler = _callbacks->connection_close;
-	} else {
-		userCloseHandler = NULL;
+	std::unique_ptr<CivetServer> server(new CivetServer());
+	if (!server->Init(options, callbacks, UserContext, errorMessage)) {
+		return nullptr;
 	}
-	callbacks.connection_close = closeHandler;
+	return server;
+}
 
+std::unique_ptr<CivetServer>
+CivetServer::Create(const std::vector<std::string> &options,
+                    const struct CivetCallbacks *callbacks,
+                    const void *UserContext,
+                    std::string *errorMessage)
+{
 	std::vector<const char *> pointers(options.size() + 1);
 	for (size_t i = 0; i < options.size(); i++) {
 		pointers[i] = (options[i].c_str());
 	}
 	pointers.back() = NULL;
 
-	struct mg_init_data mg_start_init_data = {};
-	mg_start_init_data.callbacks = &callbacks;
-	mg_start_init_data.user_data = this;
-	mg_start_init_data.configuration_options = &pointers[0];
+	return Create(&pointers[0], callbacks, UserContext, errorMessage);
+}
 
-	struct mg_error_data mg_start_error_data = {};
-	char errtxtbuf[256] = {0};
-	mg_start_error_data.text = errtxtbuf;
-	mg_start_error_data.text_buffer_size = sizeof(errtxtbuf);
+CivetServer::CivetServer(const char **options,
+                         const struct CivetCallbacks *_callbacks,
+                         const void *UserContextIn)
+    : CivetServer()
+{
+	std::string errorMsg;
+	if (!Init(options, _callbacks, UserContextIn, &errorMsg)) {
+		throw CivetException(errorMsg);
+	}
+}
 
-	context = mg_start2(&mg_start_init_data, &mg_start_error_data);
+CivetServer::CivetServer(const std::vector<std::string> &options,
+                         const struct CivetCallbacks *_callbacks,
+                         const void *UserContextIn)
+    : CivetServer()
+{
+	std::vector<const char *> pointers(options.size() + 1);
+	for (size_t i = 0; i < options.size(); i++) {
+		pointers[i] = (options[i].c_str());
+	}
+	pointers.back() = NULL;
 
-	if (context == NULL) {
-		std::string exceptionMsg =
-		    "null context when constructing CivetServer. "
-		    "Possible problem binding to port. Error: ";
-		exceptionMsg += errtxtbuf;
-		throw CivetException(exceptionMsg);
+	std::string errorMsg;
+	if (!Init(&pointers[0], _callbacks, UserContextIn, &errorMsg)) {
+		throw CivetException(errorMsg);
 	}
 }
 
