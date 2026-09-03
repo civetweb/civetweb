@@ -8930,7 +8930,7 @@ check_authorization(struct mg_connection *conn, const char *path)
 
 	list = conn->dom_ctx->config[PROTECT_URI];
 	while ((list = next_option(list, &uri_vec, &filename_vec)) != NULL) {
-		if (!memcmp(conn->request_info.local_uri, uri_vec.ptr, uri_vec.len)) {
+		if (!mg_strncasecmp(conn->request_info.local_uri, uri_vec.ptr, uri_vec.len)) {
 			mg_snprintf(conn,
 			            &truncated,
 			            fname,
