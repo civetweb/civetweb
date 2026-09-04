@@ -1605,6 +1605,20 @@ handle_http2(struct mg_connection *conn)
 			/* stream id */
 			conn->http2.stream_id = http2_frame_stream_id;
 
+			/* A HEADERS frame with no (or an incomplete) set of
+			 * pseudo-headers never sets request_uri (it is only
+			 * assigned when a ":path" header is decoded above).
+			 * handle_request() dereferences it unconditionally
+			 * (strchr(ri->request_uri, '?')), so an empty or
+			 * malformed HEADERS frame would otherwise crash the
+			 * worker thread instead of just failing the stream. */
+			if (conn->request_info.request_uri == NULL) {
+				DEBUG_TRACE("HTTP2 HEADERS frame missing required "
+				            "\":path\" pseudo-header (stream %u)",
+				            http2_frame_stream_id);
+				goto clean_http2;
+			}
+
 			/* header parsed */
 			DEBUG_TRACE("HTTP2 handle_request (stream %u)",
 			            http2_frame_stream_id);
