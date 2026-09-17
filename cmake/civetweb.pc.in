@@ -4,7 +4,7 @@ includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
 libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
 
 Name: @PROJECT_NAME@
-Description: generic graph library
+Description: Embedded C HTTP/HTTPS library and web server
 Version: @PROJECT_VERSION@
 Requires:
 Libs: -L${libdir} -l@PROJECT_NAME@
