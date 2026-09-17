@@ -13,6 +13,7 @@ set_target_properties(civetweb-c-library PROPERTIES
   VERSION ${CIVETWEB_VERSION}
   SOVERSION ${CIVETWEB_VERSION}
 )
+add_library(${PROJECT_NAME}::civetweb ALIAS civetweb-c-library)
 if (BUILD_SHARED_LIBS)
   target_compile_definitions(civetweb-c-library PRIVATE CIVETWEB_DLL_EXPORTS INTERFACE CIVETWEB_DLL_IMPORTS)
 endif()
@@ -319,6 +320,7 @@ if (CIVETWEB_ENABLE_CXX)
     VERSION ${CIVETWEB_VERSION}
     SOVERSION ${CIVETWEB_VERSION}
   )
+  add_library(${PROJECT_NAME}::civetweb-cpp ALIAS civetweb-cpp)
   if (BUILD_SHARED_LIBS)
     target_compile_definitions(civetweb-cpp PRIVATE CIVETWEB_CXX_DLL_EXPORTS INTERFACE CIVETWEB_CXX_DLL_IMPORTS)
   endif()
