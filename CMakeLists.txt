@@ -642,11 +642,13 @@ configure_file(
   @ONLY
 )
 
-configure_file(
-  cmake/${PROJECT_NAME}-cpp.pc.in
-  ${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc
-  @ONLY
-)
+if (CIVETWEB_ENABLE_CXX)
+  configure_file(
+    cmake/${PROJECT_NAME}-cpp.pc.in
+    ${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc
+    @ONLY
+  )
+endif()
 
 install(
   FILES
@@ -654,11 +656,13 @@ install(
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
-install(
-  FILES
-    "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
-)
+if (CIVETWEB_ENABLE_CXX)
+  install(
+    FILES
+      "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-cpp.pc"
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+  )
+endif()
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake
   VERSION ${CIVETWEB_VERSION}

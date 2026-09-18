@@ -36,6 +36,27 @@ Open the Qt Designer project in the Qt folder
 Except for the components in the `third_party` folder (e.g., Lua and Duktape), CivetWeb can also be built with CMake.
 CMake can be used for all supported operating systems.
 
+Installing the CMake build also installs a package configuration file, so
+another CMake project can locate CivetWeb with `find_package` and link the
+imported targets:
+
+```cmake
+find_package(civetweb REQUIRED)
+
+target_link_libraries(my_app PRIVATE civetweb::civetweb)
+```
+
+The C++ wrapper is available as `civetweb::civetweb-cpp` when the library was
+built with `CIVETWEB_ENABLE_CXX`. If CivetWeb is not installed in a default
+location, point CMake at it with `-DCMAKE_PREFIX_PATH=/path/to/install`.
+
+The same target names are also defined when CivetWeb is built as part of
+another project via `add_subdirectory` or `FetchContent`, so a project can
+switch between the two without changing how it links.
+
+For build systems other than CMake, `pkg-config` files named `civetweb` and
+`civetweb-cpp` are installed as well.
+
 
 Building for Linux, BSD, and OSX
 ---------
