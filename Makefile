@@ -40,7 +40,8 @@ RMRF = rm -rf
 # later becomes /.
 DOCUMENT_ROOT = $(HTMLDIR)
 PORTS = 8080
-USE_STACK_SIZE ?= 102400
+# 0 = system default (see docs/Embedding.md, "Stack Sizes"); override e.g. make USE_STACK_SIZE=16384
+USE_STACK_SIZE ?= 0
 
 BUILD_DIRS = $(BUILD_DIR) $(BUILD_DIR)/src $(BUILD_DIR)/resources
 
