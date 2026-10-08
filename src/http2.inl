@@ -625,19 +625,35 @@ uint8_t hpack_huff_start_index[] = {0,   10,  36,  68,  0,   74,  79, 82,  84,
 static uint64_t
 hpack_getnum(const uint8_t *buf,
              int *i,
+             int max_i,
              uint8_t idx_mask,
              struct mg_context *ctx)
 {
-	uint64_t num = (buf[*i] & idx_mask);
+	uint64_t num;
 
 	(void)ctx;
+
+	/* The encoded integer must start within the frame. A continuation byte
+	 * chain that never terminates must not read past the frame buffer
+	 * (buf holds max_i bytes). Overrun is a malformed frame: advance the
+	 * index past the end so the caller aborts header processing. */
+	if (*i >= max_i) {
+		*i = max_i + 1;
+		return 0;
+	}
+
+	num = (buf[*i] & idx_mask);
 
 	if (num == idx_mask) {
 		/* Algorithm from https://tools.ietf.org/html/rfc7541#section-5.1 */
 		uint32_t M = 0;
 		do {
 			(*i)++;
-			num = num + ((buf[*i] & 0x7F) << M);
+			if (*i >= max_i) {
+				*i = max_i + 1;
+				return 0;
+			}
+			num = num + (((uint64_t)(buf[*i] & 0x7F)) << M);
 			M += 7;
 		} while ((buf[*i] & 0x80) == 0x80);
 	}
@@ -659,10 +675,16 @@ hpack_decode(const uint8_t *buf, int *i, int max_i, struct mg_context *ctx)
 	uint64_t byte_len64;
 	int byte_len;
 	int bit_len;
-	uint8_t is_huff = ((buf[*i] & 0x80) == 0x80);
+	uint8_t is_huff;
+
+	/* The string must start within the frame. */
+	if (*i >= max_i) {
+		return NULL;
+	}
+	is_huff = ((buf[*i] & 0x80) == 0x80);
 
 	/* Get length of string in bytes */
-	byte_len64 = hpack_getnum(buf, i, 0x7f, ctx);
+	byte_len64 = hpack_getnum(buf, i, max_i, 0x7f, ctx);
 	if (byte_len64 > 1024) {
 		/* TODO */
 		return NULL;
@@ -1417,7 +1439,8 @@ handle_http2(struct mg_connection *conn)
 					/* Dynamic Table Size Update:
 					 * https://tools.ietf.org/html/rfc7541#section-6.3 */
 					idx_mask = 0x1fu;
-					tableSize = hpack_getnum(buf, &i, idx_mask, conn->phys_ctx);
+					tableSize = hpack_getnum(
+					    buf, &i, (int)bytes_read, idx_mask, conn->phys_ctx);
 
 					/* TODO: check if tablesize > allowed table size */
 
@@ -1433,7 +1456,8 @@ handle_http2(struct mg_connection *conn)
 				}
 
 				/* Get the header name table index */
-				idx = hpack_getnum(buf, &i, idx_mask, conn->phys_ctx);
+				idx = hpack_getnum(
+				    buf, &i, (int)bytes_read, idx_mask, conn->phys_ctx);
 
 				/* Get Header name "key" */
 				if (idx == 0) {
