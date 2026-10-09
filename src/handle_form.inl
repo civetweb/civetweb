@@ -578,6 +578,15 @@ mg_handle_form_request(struct mg_connection *conn,
 							 * encoding is used and the end marker has been
 							 * read, or if the connection has been closed. */
 							all_data_read = (buf_fill == 0);
+							if (!all_data_read && (conn->is_chunked >= 3)) {
+								/* The chunked body is complete, yet the
+								 * buffer still holds data: it must be an
+								 * incomplete escape sequence that can never
+								 * be completed by more data. Waiting for it
+								 * would loop forever, so treat the buffered
+								 * data as final. */
+								all_data_read = 1;
+							}
 						}
 						buf_fill += r;
 						buf[buf_fill] = 0;
@@ -951,6 +960,16 @@ mg_handle_form_request(struct mg_connection *conn,
 			                       (size_t)((buf - hbuf) + buf_fill),
 			                       boundary,
 			                       bl);
+
+			if (next && (next < hend)) {
+				/* The boundary match overlaps the part header
+				 * terminator: the part has an empty body and the CRLF
+				 * preceding the boundary delimiter is missing. Using
+				 * "next" below would underflow (size_t)(next - hend),
+				 * so treat the request as malformed. */
+				mg_free(boundary);
+				return -1;
+			}
 
 #if !defined(NO_FILESYSTEMS)
 			if (field_storage == MG_FORM_FIELD_STORAGE_STORE) {
