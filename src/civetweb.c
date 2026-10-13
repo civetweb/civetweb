@@ -2344,46 +2344,13 @@ struct mg_domain_context {
 };
 
 
-/* Stop flag can be "volatile" or require a lock.
- * MSDN uses volatile for "Interlocked" operations, but also explicitly
- * states a read operation for int is always atomic. */
-#if defined(STOP_FLAG_NEEDS_LOCK)
+#include <stdatomic.h>
 
-typedef ptrdiff_t volatile stop_flag_t;
-
-static int
-STOP_FLAG_IS_ZERO(const stop_flag_t *f)
-{
-	stop_flag_t sf = mg_atomic_add((stop_flag_t *)f, 0);
-	return (sf == 0);
-}
-
-static int
-STOP_FLAG_IS_TWO(stop_flag_t *f)
-{
-	stop_flag_t sf = mg_atomic_add(f, 0);
-	return (sf == 2);
-}
-
-static void
-STOP_FLAG_ASSIGN(stop_flag_t *f, stop_flag_t v)
-{
-	stop_flag_t sf = 0;
-	do {
-		sf = mg_atomic_compare_and_swap(f,
-		                                __atomic_load_n(f, __ATOMIC_SEQ_CST),
-		                                v);
-	} while (sf != v);
-}
-
-#else /* STOP_FLAG_NEEDS_LOCK */
-
-typedef int volatile stop_flag_t;
-#define STOP_FLAG_IS_ZERO(f) ((*(f)) == 0)
-#define STOP_FLAG_IS_TWO(f) ((*(f)) == 2)
-#define STOP_FLAG_ASSIGN(f, v) ((*(f)) = (v))
-
-#endif /* STOP_FLAG_NEEDS_LOCK */
+/* Sequential consistency also preserves publication of shutdown completion. */
+typedef atomic_int stop_flag_t;
+#define STOP_FLAG_IS_ZERO(f) (atomic_load(f) == 0)
+#define STOP_FLAG_IS_TWO(f) (atomic_load(f) == 2)
+#define STOP_FLAG_ASSIGN(f, v) atomic_store(f, v)
 
 
 #if !defined(NUM_WEBDAV_LOCKS)
@@ -18547,6 +18514,7 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 	/* conn_size is aligned to 8 bytes */
 
 	conn->phys_ctx = (struct mg_context *)(((char *)conn) + conn_size);
+	atomic_init(&conn->phys_ctx->stop_flag, 0);
 
 #if defined(GCC_DIAGNOSTIC)
 #pragma GCC diagnostic pop
@@ -21250,6 +21218,8 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 		}
 		return NULL;
 	}
+
+	atomic_init(&ctx->stop_flag, 0);
 
 	/* Random number generator will initialize at the first call */
 	ctx->dd.auth_nonce_mask =
