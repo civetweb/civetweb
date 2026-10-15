@@ -600,6 +600,37 @@ test_mg_start_stop_http_server_impl(int ipv6, int bound)
 
 	test_sleep(1);
 
+
+	/* HTTP request with both "Transfer-Encoding: chunked" and
+	 * "Content-Length". This is ambiguous framing (RFC 7230 section-3.3.3)
+	 * and must be rejected with "400 Bad Request" to avoid request
+	 * smuggling. */
+	memset(client_err, 0, sizeof(client_err));
+	client_conn = mg_connect_client(
+	    localhost_name, 8080, 0, client_err, sizeof(client_err));
+
+	ck_assert_str_eq(client_err, "");
+	ck_assert(client_conn != NULL);
+
+	mg_printf(client_conn, "POST / HTTP/1.1\r\n");
+	mg_printf(client_conn, "Host: localhost:8080\r\n");
+	mg_printf(client_conn, "Transfer-Encoding: chunked\r\n");
+	mg_printf(client_conn, "Content-Length: 5\r\n");
+	mg_printf(client_conn, "Connection: close\r\n\r\n");
+	mg_printf(client_conn, "0\r\n\r\n");
+	client_res =
+	    mg_get_response(client_conn, client_err, sizeof(client_err), 10000);
+	ck_assert_int_ge(client_res, 0);
+	ck_assert_str_eq(client_err, "");
+	client_ri = mg_get_response_info(client_conn);
+	ck_assert(client_ri != NULL);
+
+	/* Response must be 400 Bad Request */
+	ck_assert_int_eq(client_ri->status_code, 400);
+	mg_close_connection(client_conn);
+
+	test_sleep(1);
+
 	/* End test */
 	test_mg_stop(ctx, __LINE__);
 	mark_point();
