@@ -19158,7 +19158,7 @@ get_message(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 static int
 get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
-	const char *h_zip, *h_chunk, *h_len;
+	const char *h_chunk, *h_len;
 
 	conn->connection_type =
 	    CONNECTION_TYPE_REQUEST; /* request (valid of not) */
@@ -19193,23 +19193,26 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	}
 
 #if USE_ZLIB
-	if (((h_zip = get_header(conn->request_info.http_headers,
-	                      conn->request_info.num_headers,
-	                      "Accept-Encoding"))
-	     != NULL)
-	    && strstr(h_zip, "gzip")) {
-		conn->accept_gzip = 1;
+	{
+		const char *h_zip = get_header(conn->request_info.http_headers,
+		                               conn->request_info.num_headers,
+		                               "Accept-Encoding");
+		if ((h_zip != NULL) && strstr(h_zip, "gzip")) {
+			conn->accept_gzip = 1;
+		}
 	}
 #endif
-   h_chunk = get_header(conn->request_info.http_headers,
-	                      conn->request_info.num_headers,
-	                      "Transfer-Encoding");
-   h_len = get_header(conn->request_info.http_headers,
-	                            conn->request_info.num_headers,
-	                            "Content-Length");
-	if (h_chunk != NULL)
-	    && mg_strcasecmp(cl, "identity")) {
-		if ((0!=mg_strcasecmp(cl, "chunked")) || (h_len!=NULL)) {
+	h_chunk = get_header(conn->request_info.http_headers,
+	                     conn->request_info.num_headers,
+	                     "Transfer-Encoding");
+	h_len = get_header(conn->request_info.http_headers,
+	                   conn->request_info.num_headers,
+	                   "Content-Length");
+	if ((h_chunk != NULL) && mg_strcasecmp(h_chunk, "identity")) {
+		/* Transfer-Encoding is set and not "identity". Only "chunked" is
+		 * supported, and it must not be combined with a Content-Length
+		 * header (ambiguous framing, see RFC 7230 3.3.3). */
+		if ((0 != mg_strcasecmp(h_chunk, "chunked")) || (h_len != NULL)) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -19224,8 +19227,8 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	} else if (h_len != NULL) {
 		/* Request has content length set */
 		char *endptr = NULL;
-		conn->content_len = strtoll(cl, &endptr, 10);
-		if ((endptr == cl) || (conn->content_len < 0)) {
+		conn->content_len = strtoll(h_len, &endptr, 10);
+		if ((endptr == h_len) || (conn->content_len < 0)) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
