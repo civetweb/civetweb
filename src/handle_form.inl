@@ -179,8 +179,13 @@ search_boundary(const char *buf,
 
 	/* We must do a binary search here, not a string search, since the
 	 * buffer may contain '\x00' bytes, if binary data is transferred. */
-	int clen = (int)buf_len - (int)boundary_len - boundary_start_len;
-	int i;
+	size_t clen;
+	size_t i;
+
+	if (buf_len < (boundary_len + boundary_start_len)) {
+		return NULL;
+	}
+	clen = buf_len - boundary_len - boundary_start_len;
 
 	for (i = 0; i <= clen; i++) {
 		if (!memcmp(buf + i, boundary_start, boundary_start_len)) {
@@ -429,7 +434,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					 * been closed. */
 					all_data_read = (buf_fill == 0);
 				}
-				buf_fill += r;
+				buf_fill += (size_t)r;
 				buf[buf_fill] = 0;
 				if (buf_fill < 1) {
 					break;
@@ -556,7 +561,7 @@ mg_handle_form_request(struct mg_connection *conn,
 					        buf + (size_t)used,
 					        sizeof(buf) - (size_t)used);
 					next = buf;
-					buf_fill -= used;
+					buf_fill -= (size_t)used;
 					if (buf_fill < (sizeof(buf) - 1)) {
 
 						size_t to_read = sizeof(buf) - 1 - buf_fill;
@@ -579,7 +584,7 @@ mg_handle_form_request(struct mg_connection *conn,
 							 * read, or if the connection has been closed. */
 							all_data_read = (buf_fill == 0);
 						}
-						buf_fill += r;
+						buf_fill += (size_t)r;
 						buf[buf_fill] = 0;
 						if (buf_fill < 1) {
 							break;
@@ -619,7 +624,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			/* Proceed to next entry */
 			used = next - buf;
 			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
-			buf_fill -= used;
+			buf_fill -= (size_t)used;
 		}
 
 		return field_count;
@@ -724,7 +729,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				all_data_read = (buf_fill == 0);
 			}
 
-			buf_fill += r;
+			buf_fill += (size_t)r;
 			buf[buf_fill] = 0;
 			if (buf_fill < 1) {
 				/* No data */
@@ -948,7 +953,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			/* If the boundary is already in the buffer, get the address,
 			 * otherwise next will be NULL. */
 			next = search_boundary(hbuf,
-			                       (size_t)((buf - hbuf) + buf_fill),
+			                       ((size_t)(buf - hbuf) + buf_fill),
 			                       boundary,
 			                       bl);
 
@@ -973,7 +978,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			while (!next) {
 				/* Set "towrite" to the number of bytes available
 				 * in the buffer */
-				towrite = (size_t)(buf - hend + buf_fill);
+				towrite = ((size_t)(buf - hend) + buf_fill);
 
 				if (towrite < bl + 4) {
 					/* Not enough data stored. */
@@ -1047,7 +1052,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				}
 				/* r==0 already handled, all_data_read is false here */
 
-				buf_fill += r;
+				buf_fill += (size_t)r;
 				buf[buf_fill] = 0;
 				/* buf_fill is at least 8 here */
 
@@ -1130,7 +1135,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			if (next) {
 				used = next - buf + 2;
 				memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
-				buf_fill -= used;
+				buf_fill -= (size_t)used;
 			} else {
 				buf_fill = 0;
 			}
