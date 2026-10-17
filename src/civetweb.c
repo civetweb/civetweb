@@ -6096,8 +6096,9 @@ mg_poll(struct mg_pollfd *pfd,
 		result = poll(pfd, n, ms_now);
 		if (result != 0) {
 			int err = ERRNO;
-			if ((result == 1) || (!ERROR_TRY_AGAIN(err))) {
-				/* Poll returned either success (1) or error (-1).
+			if ((result > 0) || (!ERROR_TRY_AGAIN(err))) {
+				/* Poll returned either success (> 0) or error (-1).
+				 * errno is only meaningful for the latter.
 				 * Forward both to the caller. */
 				if ((check_pollerr)
 				    && ((pfd[0].revents & (POLLIN | POLLOUT | POLLERR))
