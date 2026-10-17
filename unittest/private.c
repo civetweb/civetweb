@@ -1725,6 +1725,40 @@ START_TEST(test_config_options)
 END_TEST
 
 
+START_TEST(test_mg_poll)
+{
+#if !defined(_WIN32)
+	int a[2], b[2];
+	struct mg_pollfd pfd[2];
+	stop_flag_t stop_flag;
+
+	STOP_FLAG_ASSIGN(&stop_flag, 0);
+	ck_assert_int_eq(socketpair(AF_UNIX, SOCK_STREAM, 0, a), 0);
+	ck_assert_int_eq(socketpair(AF_UNIX, SOCK_STREAM, 0, b), 0);
+	ck_assert_int_eq(write(a[1], "x", 1), 1);
+	ck_assert_int_eq(write(b[1], "x", 1), 1);
+
+	/* A stale errno from an earlier call must not turn more than one
+	 * ready descriptor into a timeout */
+	memset(pfd, 0, sizeof(pfd));
+	pfd[0].fd = a[0];
+	pfd[0].events = POLLIN;
+	pfd[1].fd = b[0];
+	pfd[1].events = POLLIN;
+	errno = EINTR;
+	ck_assert_int_eq(mg_poll(pfd, 2, 1000, &stop_flag), 2);
+	ck_assert(pfd[0].revents & POLLIN);
+	ck_assert(pfd[1].revents & POLLIN);
+
+	close(a[0]);
+	close(a[1]);
+	close(b[0]);
+	close(b[1]);
+#endif
+}
+END_TEST
+
+
 #if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_private_suite(void)
@@ -1748,6 +1782,7 @@ make_private_suite(void)
 	TCase *const tcase_parse_date_string = tcase_create("Date Parsing");
 	TCase *const tcase_sha1 = tcase_create("SHA1");
 	TCase *const tcase_config_options = tcase_create("Config Options");
+	TCase *const tcase_poll = tcase_create("Poll");
 
 	tcase_add_test(tcase_http_message, test_parse_http_message);
 	tcase_set_timeout(tcase_http_message, civetweb_min_test_timeout);
@@ -1819,6 +1854,10 @@ make_private_suite(void)
 	tcase_add_test(tcase_config_options, test_config_options);
 	tcase_set_timeout(tcase_config_options, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_config_options);
+
+	tcase_add_test(tcase_poll, test_mg_poll);
+	tcase_set_timeout(tcase_poll, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_poll);
 
 	return suite;
 }
