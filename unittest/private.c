@@ -1082,6 +1082,75 @@ START_TEST(test_parse_port_string)
 END_TEST
 
 
+#if defined(USE_IPV6)
+static int
+test_match_net(const char *net, const char *addr)
+{
+	union usa sa;
+	struct vec vec;
+	int af = (strchr(addr, ':') != NULL) ? AF_INET6 : AF_INET;
+
+	memset(&sa, 0, sizeof(sa));
+	ck_assert_int_eq(mg_inet_pton(af, addr, &sa, sizeof(sa), 0), 1);
+	vec.ptr = net;
+	vec.len = strlen(net);
+	return parse_match_net(&vec, &sa, 1);
+}
+#endif
+
+
+START_TEST(test_parse_match_net)
+{
+#if defined(USE_IPV6)
+	struct mg_context *ctx;
+	union usa sa;
+
+	/* IPv4 entries and IPv4 clients */
+	ck_assert_int_eq(test_match_net("192.168.1.0/24", "192.168.1.5"), 1);
+	ck_assert_int_eq(test_match_net("192.168.1.5", "192.168.1.5"), 1);
+	ck_assert_int_eq(test_match_net("10.0.0.0/8", "192.168.1.5"), 0);
+
+	/* IPv4 entries and IPv4 clients on a dual-stack socket */
+	ck_assert_int_eq(test_match_net("192.168.1.0/24", "::ffff:192.168.1.5"), 1);
+	ck_assert_int_eq(test_match_net("192.168.1.5", "::ffff:192.168.1.5"), 1);
+	ck_assert_int_eq(test_match_net("0.0.0.0/0", "::ffff:192.168.1.5"), 1);
+	ck_assert_int_eq(test_match_net("10.0.0.0/8", "::ffff:192.168.1.5"), 0);
+
+	/* IPv6 entries keep matching mapped clients as before */
+	ck_assert_int_eq(test_match_net("[::ffff:192.168.1.0]/120",
+	                                "::ffff:192.168.1.5"),
+	                 1);
+	ck_assert_int_eq(test_match_net("[::ffff:10.0.0.0]/104",
+	                                "::ffff:192.168.1.5"),
+	                 0);
+
+	/* Other IPv6 clients never match an IPv4 entry */
+	ck_assert_int_eq(test_match_net("0.0.0.0/0", "2001:db8::1"), 0);
+	ck_assert_int_eq(test_match_net("192.168.1.5", "::192.168.1.5"), 0);
+	ck_assert_int_eq(test_match_net("[2001:db8::]/32", "2001:db8::1"), 1);
+
+	/* Malformed entries */
+	ck_assert_int_eq(test_match_net("192.168.1.0/33", "::ffff:192.168.1.5"),
+	                 -1);
+
+	/* The last matching entry of an access control list wins */
+	ctx = (struct mg_context *)mg_calloc(1, sizeof(*ctx));
+	ck_assert_ptr_ne(ctx, NULL);
+	memset(&sa, 0, sizeof(sa));
+	ck_assert_int_eq(
+	    mg_inet_pton(AF_INET6, "::ffff:192.168.1.5", &sa, sizeof(sa), 0), 1);
+	ctx->dd.config[ACCESS_CONTROL_LIST] = (char *)"+0.0.0.0/0,-192.168.1.5";
+	ck_assert_int_eq(check_acl(ctx, &sa), 0);
+	ctx->dd.config[ACCESS_CONTROL_LIST] = (char *)"-0.0.0.0/0,+192.168.1.0/24";
+	ck_assert_int_eq(check_acl(ctx, &sa), 1);
+	ctx->dd.config[ACCESS_CONTROL_LIST] = (char *)"+[::]/0,-192.168.1.0/24";
+	ck_assert_int_eq(check_acl(ctx, &sa), 0);
+	mg_free(ctx);
+#endif
+}
+END_TEST
+
+
 START_TEST(test_parse_http_headers)
 {
 	char buf[2048];
@@ -1793,6 +1862,7 @@ make_private_suite(void)
 	suite_add_tcase(suite, tcase_internal_parse_5);
 
 	tcase_add_test(tcase_internal_parse_6, test_parse_port_string);
+	tcase_add_test(tcase_internal_parse_6, test_parse_match_net);
 	tcase_set_timeout(tcase_internal_parse_6, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_internal_parse_6);
 
@@ -1842,6 +1912,7 @@ MAIN_PRIVATE(void)
 	test_remove_dot_segments(0);
 	test_parse_date_string(0);
 	test_parse_port_string(0);
+	test_parse_match_net(0);
 	test_parse_http_message(0);
 	test_parse_http_headers(0);
 	test_sha1(0);
