@@ -43,10 +43,13 @@ url_encoded_field_found(const struct mg_connection *conn,
 	}
 
 	if (filename) {
-		filename_dec_len = mg_url_decode(filename,
+		/* Only multipart/form-data passes a file name. It is not URL
+		 * encoded and may contain literal spaces. */
+		filename_dec_len = url_decode_ex(filename,
 		                                 (int)filename_len,
 		                                 filename_dec,
 		                                 (int)sizeof(filename_dec),
+		                                 1,
 		                                 1);
 
 		if (((size_t)filename_dec_len >= (size_t)sizeof(filename_dec))

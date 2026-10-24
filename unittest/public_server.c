@@ -5871,6 +5871,154 @@ START_TEST(test_minimal_https_server_callback)
 END_TEST
 
 
+struct form_filename_space_data {
+	char seen[256];
+};
+
+
+static int
+FormFilenameSpaceFound(const char *key,
+                       const char *filename,
+                       char *path,
+                       size_t pathlen,
+                       void *user_data)
+{
+	/* Record every field as "key=filename;" and skip its value. */
+	struct form_filename_space_data *data =
+	    (struct form_filename_space_data *)user_data;
+	size_t used = strlen(data->seen);
+	(void)path;
+	(void)pathlen;
+	(void)snprintf(data->seen + used,
+	               sizeof(data->seen) - used,
+	               "%s=%s;",
+	               key,
+	               filename);
+	return MG_FORM_FIELD_STORAGE_SKIP;
+}
+
+
+static int
+FormFilenameSpaceHandler(struct mg_connection *conn, void *cbdata)
+{
+	struct form_filename_space_data data;
+	struct mg_form_data_handler fdh = {FormFilenameSpaceFound,
+	                                   NULL,
+	                                   NULL,
+	                                   &data};
+	int ret;
+
+	(void)cbdata;
+
+	memset(&data, 0, sizeof(data));
+	ret = mg_handle_form_request(conn, &fdh);
+
+	mg_printf(conn,
+	          "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n%i:%s",
+	          ret,
+	          data.seen);
+
+	mark_point();
+
+	return 1;
+}
+
+
+/* Regression test (upstream issue #1444): since the CVE-2025-9648 fix
+ * mg_url_decode() rejects literal spaces, and a multipart/form-data file
+ * name ran through it, so an upload named "My Report.txt" aborted the whole
+ * form. The file name must reach field_found as sent, and the fields after
+ * it must still be processed. */
+START_TEST(test_multipart_filename_space)
+{
+	struct mg_context *ctx;
+	const char *OPTIONS[6];
+	int opt_idx = 0;
+	const char *boundary = "filename-space-boundary";
+	char body[512];
+	int body_len;
+	char ebuf[256];
+	char reply[512];
+	int reply_len;
+	struct mg_connection *conn;
+	const struct mg_response_info *ri;
+	int res;
+
+	mark_point();
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8896";
+	OPTIONS[opt_idx++] = "request_timeout_ms";
+	OPTIONS[opt_idx++] = "10000";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+
+	mg_set_request_handler(ctx,
+	                       "/handle_form_filename_space",
+	                       FormFilenameSpaceHandler,
+	                       NULL);
+
+	test_sleep(1);
+
+	body_len = snprintf(body,
+	                    sizeof(body),
+	                    "--%s\r\n"
+	                    "Content-Disposition: form-data; name=\"file\"; "
+	                    "filename=\"My Report.txt\"\r\n"
+	                    "Content-Type: text/plain\r\n"
+	                    "\r\n"
+	                    "content\r\n"
+	                    "--%s\r\n"
+	                    "Content-Disposition: form-data; name=\"after\"\r\n"
+	                    "\r\n"
+	                    "value\r\n"
+	                    "--%s--\r\n",
+	                    boundary,
+	                    boundary,
+	                    boundary);
+	ck_assert_int_gt(body_len, 0);
+	ck_assert_uint_lt((size_t)body_len, sizeof(body));
+
+	memset(ebuf, 0, sizeof(ebuf));
+	conn = mg_connect_client("127.0.0.1", 8896, 0, ebuf, sizeof(ebuf));
+	ck_assert_str_eq(ebuf, "");
+	ck_assert(conn != NULL);
+
+	mg_printf(conn,
+	          "POST /handle_form_filename_space HTTP/1.1\r\n"
+	          "Host: localhost:8896\r\n"
+	          "Connection: close\r\n"
+	          "Content-Type: multipart/form-data; boundary=%s\r\n"
+	          "Content-Length: %u\r\n"
+	          "\r\n",
+	          boundary,
+	          (unsigned int)body_len);
+	mg_write(conn, body, (size_t)body_len);
+
+	res = mg_get_response(conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(res, 0);
+	ri = mg_get_response_info(conn);
+	ck_assert(ri != NULL);
+	ck_assert_int_eq(ri->status_code, 200);
+
+	memset(reply, 0, sizeof(reply));
+	reply_len = mg_read(conn, reply, sizeof(reply) - 1);
+	ck_assert_int_gt(reply_len, 0);
+	ck_assert_str_eq(reply, "2:file=My Report.txt;after=;");
+
+	mg_close_connection(conn);
+
+	g_ctx = NULL;
+	test_mg_stop(ctx, __LINE__);
+}
+END_TEST
+
+
 #if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_server_suite(void)
@@ -5892,6 +6040,8 @@ make_public_server_suite(void)
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
 	TCase *const tcase_storebody = tcase_create("Store Body");
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
+	TCase *const tcase_multipart_filename_space =
+	    tcase_create("Multipart Filename Space");
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
 	TCase *const tcase_error_handling = tcase_create("Error handling");
@@ -5961,6 +6111,12 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_handle_form, test_handle_form);
 	tcase_set_timeout(tcase_handle_form, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_handle_form);
+
+	tcase_add_test(tcase_multipart_filename_space,
+	               test_multipart_filename_space);
+	tcase_set_timeout(tcase_multipart_filename_space,
+	                  civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_multipart_filename_space);
 
 	tcase_add_test(tcase_http_auth, test_http_auth);
 	tcase_set_timeout(tcase_http_auth, civetweb_min_server_test_timeout);
