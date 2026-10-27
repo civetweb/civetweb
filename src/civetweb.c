@@ -11865,6 +11865,13 @@ prepare_cgi_environment(struct mg_connection *conn,
 			*p = (char)toupper((unsigned char)*p);
 		}
 
+		/* A "Proxy" request header must not become HTTP_PROXY: CGI
+		 * programs and the libraries they use read it as the outgoing
+		 * proxy setting ("httpoxy", CVE-2016-5385). */
+		if (!strcmp(http_var_name, "HTTP_PROXY")) {
+			continue;
+		}
+
 		addenv(env,
 		       "%s=%s",
 		       http_var_name,

@@ -1636,7 +1636,7 @@ START_TEST(test_request_handlers)
 	                     "printf \"Connection: close\\r\\n\"\n"
 	                     "printf \"Content-Type: text/plain\\r\\n\"\n"
 	                     "printf \"\\r\\n\"\n"
-	                     "printf \"CGI test\\r\\n\"\n"
+	                     "printf \"CGI test%s\\r\\n\" \"$HTTP_PROXY\"\n"
 	                     "\n";
 	(void)fwrite(cgi_script_content, strlen(cgi_script_content), 1, f);
 	(void)fclose(f);
@@ -1770,7 +1770,8 @@ START_TEST(test_request_handlers)
 #endif
 	mg_close_connection(client_conn);
 
-/* Get CGI generated data */
+/* Get CGI generated data. The "Proxy" header must not reach the CGI
+ * program as HTTP_PROXY (httpoxy). */
 #if !defined(NO_CGI)
 	client_conn = mg_download("localhost",
 	                          ipv4_port,
@@ -1778,7 +1779,8 @@ START_TEST(test_request_handlers)
 	                          ebuf,
 	                          sizeof(ebuf),
 	                          "%s",
-	                          "GET /test.cgi HTTP/1.0\r\n\r\n");
+	                          "GET /test.cgi HTTP/1.0\r\n"
+	                          "Proxy: http://127.0.0.1:1\r\n\r\n");
 	ck_assert(client_conn != NULL);
 	client_ri = mg_get_response_info(client_conn);
 
