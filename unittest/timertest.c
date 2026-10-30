@@ -95,11 +95,31 @@ action_dec_to_0(void *arg)
 }
 
 
+/* mg_start() creates the shutdown notification socket the timer thread
+ * waits on, the tests need one as well */
+static void
+open_shutdown_socket(struct mg_context *ctx)
+{
+	ck_assert_int_eq(mg_socketpair(&ctx->user_shutdown_notification_socket,
+	                               &ctx->thread_shutdown_notification_socket),
+	                 0);
+}
+
+
+static void
+close_shutdown_socket(struct mg_context *ctx)
+{
+	closesocket(ctx->user_shutdown_notification_socket);
+	closesocket(ctx->thread_shutdown_notification_socket);
+}
+
+
 START_TEST(test_timer_cyclic)
 {
 	static ptrdiff_t c[TIMERS_IN_TEST * 2];
 	struct mg_context ctx;
 	memset(&ctx, 0, sizeof(ctx));
+	open_shutdown_socket(&ctx);
 	memset(c, 0, sizeof(c));
 
 	action_dec_ret = 1;
@@ -129,6 +149,7 @@ START_TEST(test_timer_cyclic)
 	mark_point();
 
 	timers_exit(&ctx);
+	close_shutdown_socket(&ctx);
 
 	mark_point();
 
@@ -160,6 +181,7 @@ START_TEST(test_timer_oneshot_by_callback_retval)
 	struct mg_context ctx;
 	ptrdiff_t c[TIMERS_IN_TEST * 2];
 	memset(&ctx, 0, sizeof(ctx));
+	open_shutdown_socket(&ctx);
 	memset(c, 0, sizeof(c));
 
 	action_dec_ret = 0;
@@ -189,6 +211,7 @@ START_TEST(test_timer_oneshot_by_callback_retval)
 	mark_point();
 
 	timers_exit(&ctx);
+	close_shutdown_socket(&ctx);
 
 	mark_point();
 
@@ -214,6 +237,7 @@ START_TEST(test_timer_oneshot_by_timer_add)
 	struct mg_context ctx;
 	ptrdiff_t c[TIMERS_IN_TEST * 2];
 	memset(&ctx, 0, sizeof(ctx));
+	open_shutdown_socket(&ctx);
 	memset(c, 0, sizeof(c));
 
 	action_dec_ret = 1;
@@ -243,6 +267,7 @@ START_TEST(test_timer_oneshot_by_timer_add)
 	mark_point();
 
 	timers_exit(&ctx);
+	close_shutdown_socket(&ctx);
 
 	mark_point();
 
@@ -268,6 +293,7 @@ START_TEST(test_timer_mixed)
 	struct mg_context ctx;
 	ptrdiff_t c[TIMERS_IN_TEST];
 	memset(&ctx, 0, sizeof(ctx));
+	open_shutdown_socket(&ctx);
 	memset(c, 0, sizeof(c));
 
 	mark_point();
@@ -320,6 +346,7 @@ START_TEST(test_timer_mixed)
 	mark_point();
 
 	timers_exit(&ctx);
+	close_shutdown_socket(&ctx);
 
 	mark_point();
 

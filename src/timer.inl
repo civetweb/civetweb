@@ -153,6 +153,7 @@ timer_thread_run(void *thread_func_param)
 	unsigned u;
 	int action_res;
 	struct ttimer t;
+	struct mg_pollfd pfd;
 
 	mg_set_thread_name("timer");
 
@@ -207,8 +208,13 @@ timer_thread_run(void *thread_func_param)
 		/* TIMER_RESOLUTION = 10 ms seems reasonable.
 		 * A faster loop (smaller sleep value) increases CPU load,
 		 * a slower loop (higher sleep value) decreases timer accuracy.
+		 * Wait on the shutdown notification socket instead of sleeping,
+		 * so mg_stop() does not have to wait for the full resolution.
 		 */
-		mg_sleep(TIMER_RESOLUTION);
+		pfd.fd = ctx->thread_shutdown_notification_socket;
+		pfd.events = POLLIN;
+		pfd.revents = 0;
+		(void)mg_poll(&pfd, 1, TIMER_RESOLUTION, &ctx->stop_flag);
 
 		d = timer_getcurrenttime(ctx);
 	}
