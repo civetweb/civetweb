@@ -10674,8 +10674,24 @@ handle_static_file_request(struct mg_connection *conn,
 			    &filep->access); /* ignore error on read only file */
 			return;
 		}
+		/* A byte range is satisfiable only if the first byte position is
+		 * below the file size, and (for a range with an end) the end is
+		 * not before the start. An unsatisfiable range must be answered
+		 * with 416, not a 206 carrying a negative Content-Length
+		 * (RFC 9110, 15.5.17 / RFC 7233, 4.4). */
+		if ((r1 >= cl) || ((n == 2) && (r2 < r1))) {
+			mg_send_http_error(conn,
+			                   416, /* 416 = Range Not Satisfiable */
+			                   "%s",
+			                   "Error: Requested range not satisfiable");
+			(void)mg_fclose(
+			    &filep->access); /* ignore error on read only file */
+			return;
+		}
 		conn->status_code = 206;
-		cl = (n == 2) ? (((r2 > cl) ? cl : r2) - r1 + 1) : (cl - r1);
+		/* Clamp the last byte to the final valid offset (size - 1), so the
+		 * length never claims more bytes than the file actually holds. */
+		cl = (n == 2) ? (((r2 >= cl) ? (cl - 1) : r2) - r1 + 1) : (cl - r1);
 		mg_snprintf(conn,
 		            NULL, /* range buffer is big enough */
 		            range,
