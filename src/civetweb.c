@@ -4671,8 +4671,11 @@ mg_send_http_error_impl(struct mg_connection *conn,
 		}
 		mg_response_header_send(conn);
 
-		/* HTTP responses 1xx, 204 and 304 MUST NOT send a body */
-		if (has_body) {
+		/* HTTP responses 1xx, 204 and 304 MUST NOT send a body, and neither
+		 * may any response to a HEAD request */
+		if (has_body
+		    && ((conn->request_info.request_method == NULL)
+		        || (0 != strcmp(conn->request_info.request_method, "HEAD")))) {
 			/* For other errors, send a generic error message. */
 			const char *status_text = mg_get_response_code_text(conn, status);
 			mg_printf(conn, "Error %d: %s\n", status, status_text);
