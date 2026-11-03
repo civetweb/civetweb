@@ -663,6 +663,13 @@ run_lsp_kepler(struct mg_connection *conn,
 
 		/* Send the HTTP response (status and all headers) */
 		mg_response_header_send(conn);
+
+		/* A HEAD response ends here. The page cannot change the headers
+		 * sent above, so there is no need to run it. */
+		if ((conn->request_info.request_method != NULL)
+		    && (0 == strcmp(conn->request_info.request_method, "HEAD"))) {
+			return 0;
+		}
 	}
 
 	data.begin = p;
