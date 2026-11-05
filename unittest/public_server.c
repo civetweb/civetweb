@@ -45,6 +45,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 #define test_sleep(x) (sleep(x))
 #endif
@@ -5871,6 +5872,105 @@ START_TEST(test_minimal_https_server_callback)
 END_TEST
 
 
+#if !defined(_WIN32)
+/* Send raw request bytes and collect the response until the server closes
+ * the connection or nothing arrives for 5 seconds */
+static size_t
+raw_request(int port, const char *request, char *resp, size_t resp_len)
+{
+	struct sockaddr_in sa;
+	struct timeval tv;
+	size_t got = 0;
+	ssize_t r;
+	int s = socket(AF_INET, SOCK_STREAM, 0);
+
+	ck_assert_int_ge(s, 0);
+	tv.tv_sec = 5;
+	tv.tv_usec = 0;
+	(void)setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	memset(&sa, 0, sizeof(sa));
+	sa.sin_family = AF_INET;
+	sa.sin_port = htons((uint16_t)port);
+	sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	ck_assert_int_eq(connect(s, (struct sockaddr *)&sa, sizeof(sa)), 0);
+	ck_assert_int_eq((int)send(s, request, strlen(request), 0),
+	                 (int)strlen(request));
+
+	memset(resp, 0, resp_len);
+	while ((got < resp_len - 1)
+	       && ((r = recv(s, resp + got, resp_len - 1 - got, 0)) > 0)) {
+		got += (size_t)r;
+	}
+	close(s);
+	return got;
+}
+
+
+/* Send a raw request and return the first line of the response */
+static void
+raw_status_line(const char *request, char *line, size_t line_len)
+{
+	char resp[1024];
+	char *eol;
+
+	(void)raw_request(8899, request, resp, sizeof(resp));
+	eol = strstr(resp, "\r\n");
+	ck_assert(eol != NULL);
+	*eol = '\0';
+	strncpy(line, resp, line_len - 1);
+	line[line_len - 1] = '\0';
+}
+#endif
+
+
+/* Regression test (upstream issue #1445): when the HTTP version of the
+ * request line was not a single word, the status line of the error
+ * response printed the request headers that followed it, CRLF included,
+ * and an unknown version was echoed as it came. Only 1.0 or 1.1 may
+ * appear in the status line. */
+START_TEST(test_status_line_version)
+{
+#if !defined(_WIN32)
+	struct mg_context *ctx;
+	const char *OPTIONS[6];
+	int opt_idx = 0;
+	char line[256];
+
+	mark_point();
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8899";
+	OPTIONS[opt_idx++] = "request_timeout_ms";
+	OPTIONS[opt_idx++] = "3000";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+
+	test_sleep(1);
+
+	raw_status_line("GET / \r\nX-Injected: yes\r\n\r\n", line, sizeof(line));
+	ck_assert_str_eq(line, "HTTP/1.0 400 Bad Request");
+
+	raw_status_line("GET / HTTP/1.1 \r\nHost: a\r\n\r\n", line, sizeof(line));
+	ck_assert_str_eq(line, "HTTP/1.0 400 Bad Request");
+
+	raw_status_line("GET / HTTP/9.9garbage\r\nHost: a\r\n\r\n",
+	                line,
+	                sizeof(line));
+	ck_assert_str_eq(line, "HTTP/1.0 505 HTTP Version not supported");
+
+	g_ctx = NULL;
+	test_mg_stop(ctx, __LINE__);
+#endif
+}
+END_TEST
+
+
+
 #if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_server_suite(void)
@@ -5898,6 +5998,8 @@ make_public_server_suite(void)
 	TCase *const tcase_error_log = tcase_create("Error logging");
 	TCase *const tcase_throttle = tcase_create("Limit speed");
 	TCase *const tcase_large_file = tcase_create("Large file");
+	TCase *const tcase_status_line_version =
+	    tcase_create("Status Line Version");
 	TCase *const tcase_file_in_mem = tcase_create("File in memory");
 
 
@@ -5985,6 +6087,11 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_large_file, test_large_file);
 	tcase_set_timeout(tcase_large_file, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_large_file);
+
+	tcase_add_test(tcase_status_line_version, test_status_line_version);
+	tcase_set_timeout(tcase_status_line_version,
+	                  civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_status_line_version);
 
 	return suite;
 }

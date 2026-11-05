@@ -48,7 +48,10 @@ send_http1_response_status_line(struct mg_connection *conn)
 		/* Set invalid status code to "500 Internal Server Error" */
 		status_code = 500;
 	}
-	if (!http_version) {
+	/* Only echo a version we speak: anything else came from the client
+	 * and could carry any text into the status line. */
+	if (!http_version
+	    || (strcmp(http_version, "1.0") && strcmp(http_version, "1.1"))) {
 		http_version = "1.0";
 	}
 
