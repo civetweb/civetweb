@@ -13965,6 +13965,13 @@ mg_websocket_write_exec(struct mg_connection *conn,
 		/* if dataLen == 0, the header length (2) is returned */
 	}
 
+	if ((retval < 0) || ((dataLen > 0) && (retval != (int)dataLen))) {
+		/* Part of a frame may be on the wire. Whatever is sent next would
+		 * be read as the rest of it, so the connection cannot be used any
+		 * more. */
+		conn->must_close = 1;
+	}
+
 	/* TODO: Remove this unlock as well, when lock is removed. */
 	mg_unlock_connection(conn);
 
