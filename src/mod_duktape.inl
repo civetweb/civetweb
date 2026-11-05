@@ -84,8 +84,9 @@ push_file_as_string(duk_context *ctx, const char *filename)
 		return;
 	}
 
-	buf = mg_malloc(fst.st_size);
-	if (!f) {
+	/* +1: an empty script must not look like a failed allocation */
+	buf = mg_malloc((size_t)fst.st_size + 1);
+	if (!buf) {
 		fclose(f);
 		duk_push_undefined(ctx);
 		return;
@@ -156,8 +157,13 @@ duk_itf_read(duk_context *duk_ctx)
 	}
 
 	len = mg_read(conn, buf, sizeof(buf));
+	if (len < 0) {
+		/* Read error: return an empty string like at the end of the
+		 * body. (duk_size_t)-1 made duk_push_lstring() throw. */
+		len = 0;
+	}
 
-	duk_push_lstring(duk_ctx, buf, len);
+	duk_push_lstring(duk_ctx, buf, (duk_size_t)len);
 	return 1;
 }
 
