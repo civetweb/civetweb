@@ -224,19 +224,30 @@ START_TEST(test_parse_http_header_limit)
 {
 	struct mg_request_info ri;
 	char req[4096];
-	int len, i;
+	int len, i, trunc;
 
+	/* civetweb.c bans snprintf in debug builds, use mg_snprintf instead */
 	for (i = 0; i < 2; i++) {
 		int n, num = (int)MG_MAX_HEADERS + i;
-		len = snprintf(req, sizeof(req), "GET / HTTP/1.1\r\n");
+		trunc = 0;
+		mg_snprintf(NULL, &trunc, req, sizeof(req), "GET / HTTP/1.1\r\n");
+		len = (int)strlen(req);
 		for (n = 0; n < num; n++) {
-			len += snprintf(req + len,
-			                sizeof(req) - (size_t)len,
-			                "X-H%d: v\r\n",
-			                n);
+			mg_snprintf(NULL,
+			            &trunc,
+			            req + len,
+			            sizeof(req) - (size_t)len,
+			            "X-H%d: v\r\n",
+			            n);
+			len += (int)strlen(req + len);
 		}
-		len += snprintf(req + len, sizeof(req) - (size_t)len, "\r\n");
-		ck_assert_int_lt(len, (int)sizeof(req));
+		mg_snprintf(NULL,
+		            &trunc,
+		            req + len,
+		            sizeof(req) - (size_t)len,
+		            "\r\n");
+		len += (int)strlen(req + len);
+		ck_assert_int_eq(0, trunc);
 
 		if (i == 0) {
 			ck_assert_int_eq(len, test_parse_http_request(req, len, &ri));
