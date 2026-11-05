@@ -11329,6 +11329,13 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 		/* Error while parsing headers */
 		return -1;
 	}
+	if ((ri->num_headers == (int)MG_MAX_HEADERS) && (*buf != '\r')
+	    && (*buf != '\n') && (*buf != '\0')) {
+		/* More than MG_MAX_HEADERS headers. Do not silently drop the
+		 * rest: a dropped Content-Length or Transfer-Encoding would
+		 * change the request framing. */
+		return -1;
+	}
 
 	return request_length + init_skip;
 }
