@@ -45,6 +45,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 #define test_sleep(x) (sleep(x))
 #endif
@@ -5871,6 +5872,122 @@ START_TEST(test_minimal_https_server_callback)
 END_TEST
 
 
+#if defined(USE_WEBSOCKET) && !defined(_WIN32)
+static volatile int ws_partial_write_ret;
+static volatile int ws_partial_closed;
+
+static int
+WsPartialData(struct mg_connection *conn,
+              int opcode,
+              char *data,
+              size_t len,
+              void *udata)
+{
+	const size_t big = 32 * 1024 * 1024;
+	char *frame;
+
+	(void)data;
+	(void)len;
+	(void)udata;
+	if ((opcode & 0xf) != MG_WEBSOCKET_OPCODE_TEXT) {
+		return 1;
+	}
+	/* The client does not read: the write runs into request_timeout_ms
+	 * after a part of the frame */
+	frame = (char *)calloc(1, big);
+	ck_assert(frame != NULL);
+	ws_partial_write_ret =
+	    mg_websocket_write(conn, MG_WEBSOCKET_OPCODE_BINARY, frame, big);
+	free(frame);
+	return 1;
+}
+
+
+static void
+WsPartialClose(const struct mg_connection *conn, void *udata)
+{
+	(void)conn;
+	(void)udata;
+	ws_partial_closed = 1;
+}
+#endif
+
+
+/* Regression test: when mg_websocket_write() could send only a part of a
+ * frame (here the client stops reading), the connection stayed open and
+ * the next frame followed the cut one, so the client lost the framing.
+ * The connection must be closed instead. */
+START_TEST(test_websocket_partial_write)
+{
+#if defined(USE_WEBSOCKET) && !defined(_WIN32)
+	static const char upgrade[] =
+	    "GET /ws_partial HTTP/1.1\r\n"
+	    "Host: localhost\r\n"
+	    "Upgrade: websocket\r\n"
+	    "Connection: Upgrade\r\n"
+	    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+	    "Sec-WebSocket-Version: 13\r\n\r\n";
+	/* masked text frame "go", mask 0 */
+	static const unsigned char go[8] = {0x81, 0x82, 0, 0, 0, 0, 'g', 'o'};
+	struct mg_context *ctx;
+	const char *OPTIONS[8];
+	int opt_idx = 0;
+	struct sockaddr_in sa;
+	char resp[512];
+	int s, i, rcvbuf = 4096;
+
+	mark_point();
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8904";
+	OPTIONS[opt_idx++] = "request_timeout_ms";
+	OPTIONS[opt_idx++] = "1000";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+	mg_set_websocket_handler(
+	    ctx, "/ws_partial", NULL, NULL, WsPartialData, WsPartialClose, NULL);
+
+	test_sleep(1);
+
+	ws_partial_write_ret = 0;
+	ws_partial_closed = 0;
+
+	s = socket(AF_INET, SOCK_STREAM, 0);
+	ck_assert_int_ge(s, 0);
+	(void)setsockopt(s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
+	memset(&sa, 0, sizeof(sa));
+	sa.sin_family = AF_INET;
+	sa.sin_port = htons(8904);
+	sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	ck_assert_int_eq(connect(s, (struct sockaddr *)&sa, sizeof(sa)), 0);
+	ck_assert_int_eq((int)send(s, upgrade, strlen(upgrade), 0),
+	                 (int)strlen(upgrade));
+	memset(resp, 0, sizeof(resp));
+	ck_assert_int_gt((int)recv(s, resp, sizeof(resp) - 1, 0), 12);
+	ck_assert(!strncmp(resp, "HTTP/1.1 101", 12));
+	ck_assert_int_eq((int)send(s, go, sizeof(go), 0), (int)sizeof(go));
+
+	/* do not read; the server must give up the connection by itself */
+	for (i = 0; (i < 10) && !ws_partial_closed; i++) {
+		test_sleep(1);
+	}
+	ck_assert_int_ne(ws_partial_write_ret, 32 * 1024 * 1024);
+	ck_assert_int_eq(ws_partial_closed, 1);
+
+	close(s);
+	g_ctx = NULL;
+	test_mg_stop(ctx, __LINE__);
+#endif
+}
+END_TEST
+
+
+
 #if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_server_suite(void)
@@ -5898,6 +6015,8 @@ make_public_server_suite(void)
 	TCase *const tcase_error_log = tcase_create("Error logging");
 	TCase *const tcase_throttle = tcase_create("Limit speed");
 	TCase *const tcase_large_file = tcase_create("Large file");
+	TCase *const tcase_websocket_partial_write =
+	    tcase_create("Websocket Partial Write");
 	TCase *const tcase_file_in_mem = tcase_create("File in memory");
 
 
@@ -5985,6 +6104,11 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_large_file, test_large_file);
 	tcase_set_timeout(tcase_large_file, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_large_file);
+
+	tcase_add_test(tcase_websocket_partial_write, test_websocket_partial_write);
+	tcase_set_timeout(tcase_websocket_partial_write,
+	                  civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_websocket_partial_write);
 
 	return suite;
 }
