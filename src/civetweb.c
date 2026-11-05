@@ -11308,12 +11308,17 @@ parse_http_request(char *buf, int len, struct mg_request_info *ri)
 	ri->http_version = buf;
 
 	if (skip_to_end_of_word_and_terminate(&buf, 1) <= 0) {
+		/* The version is not a single word: http_version still points
+		 * into the header buffer, and the error response must not echo
+		 * the request headers that follow it. */
+		ri->http_version = NULL;
 		return -1;
 	}
 
 	/* Check for a valid HTTP version key */
 	if (strncmp(ri->http_version, "HTTP/", 5) != 0) {
 		/* Invalid request */
+		ri->http_version = NULL;
 		return -1;
 	}
 	ri->http_version += 5;
@@ -16626,7 +16631,7 @@ log_access(const struct mg_connection *conn)
 		            ri->request_uri ? ri->request_uri : "-",
 		            ri->query_string ? "?" : "",
 		            ri->query_string ? ri->query_string : "",
-		            ri->http_version,
+		            ri->http_version ? ri->http_version : "-",
 		            conn->status_code,
 		            conn->num_bytes_sent,
 		            referer,
