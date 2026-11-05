@@ -45,6 +45,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 #define test_sleep(x) (sleep(x))
 #endif
@@ -5871,6 +5872,168 @@ START_TEST(test_minimal_https_server_callback)
 END_TEST
 
 
+#if defined(USE_WEBSOCKET) && !defined(_WIN32)
+static int ws_frame_data_calls;
+
+static int
+WsFrameData(struct mg_connection *conn,
+            int opcode,
+            char *data,
+            size_t len,
+            void *udata)
+{
+	(void)conn;
+	(void)data;
+	(void)len;
+	(void)udata;
+	if ((opcode & 0xf) != MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE) {
+		ws_frame_data_calls++;
+	}
+	return 1;
+}
+
+
+/* Upgrade a raw connection to /ws_frame, send one client frame, and report
+ * whether the server answered with a close frame carrying 1002 */
+static int
+ws_frame_gets_1002(const unsigned char *frame, size_t frame_len)
+{
+	static const char upgrade[] =
+	    "GET /ws_frame HTTP/1.1\r\n"
+	    "Host: localhost\r\n"
+	    "Upgrade: websocket\r\n"
+	    "Connection: Upgrade\r\n"
+	    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+	    "Sec-WebSocket-Version: 13\r\n\r\n";
+	static const unsigned char close_1002[4] = {0x88, 0x02, 0x03, 0xEA};
+	unsigned char resp[1024];
+	struct sockaddr_in sa;
+	struct timeval tv;
+	size_t got = 0, i;
+	ssize_t r;
+	const unsigned char *hdr_end = NULL;
+	int s = socket(AF_INET, SOCK_STREAM, 0);
+
+	ck_assert_int_ge(s, 0);
+	tv.tv_sec = 5;
+	tv.tv_usec = 0;
+	(void)setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	memset(&sa, 0, sizeof(sa));
+	sa.sin_family = AF_INET;
+	sa.sin_port = htons(8902);
+	sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	ck_assert_int_eq(connect(s, (struct sockaddr *)&sa, sizeof(sa)), 0);
+	ck_assert_int_eq((int)send(s, upgrade, strlen(upgrade), 0),
+	                 (int)strlen(upgrade));
+
+	/* wait for the 101 response before sending the frame */
+	while ((hdr_end == NULL) && (got < sizeof(resp))
+	       && ((r = recv(s, resp + got, sizeof(resp) - got, 0)) > 0)) {
+		got += (size_t)r;
+		for (i = 3; i < got; i++) {
+			if (!memcmp(resp + i - 3, "\r\n\r\n", 4)) {
+				hdr_end = resp + i + 1;
+				break;
+			}
+		}
+	}
+	ck_assert(hdr_end != NULL);
+	ck_assert(!memcmp(resp, "HTTP/1.1 101", 12));
+	ck_assert_int_eq((int)send(s, frame, frame_len, 0), (int)frame_len);
+
+	while ((got < sizeof(resp))
+	       && ((r = recv(s, resp + got, sizeof(resp) - got, 0)) > 0)) {
+		got += (size_t)r;
+	}
+	close(s);
+
+	for (i = (size_t)(hdr_end - resp); i + 4 <= got; i++) {
+		if (!memcmp(resp + i, close_1002, 4)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+#endif
+
+
+/* Regression test (upstream issue #1434): reserved opcodes and control
+ * frames longer than 125 bytes or without FIN fail the connection with
+ * 1002. Before, a 126-byte PING was answered with a 126-byte PONG (with
+ * enable_websocket_ping_pong) and a frame with opcode 3 reached the data
+ * handler. */
+START_TEST(test_websocket_frame_rules)
+{
+#if defined(USE_WEBSOCKET) && !defined(_WIN32)
+	struct mg_context *ctx;
+	const char *OPTIONS[8];
+	int opt_idx = 0;
+	unsigned char frame[200];
+	int calls;
+
+	mark_point();
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8902";
+	OPTIONS[opt_idx++] = "enable_websocket_ping_pong";
+	OPTIONS[opt_idx++] = "yes";
+	OPTIONS[opt_idx++] = "websocket_timeout_ms";
+	OPTIONS[opt_idx++] = "2000";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+	mg_set_websocket_handler(
+	    ctx, "/ws_frame", NULL, NULL, WsFrameData, NULL, NULL);
+
+	test_sleep(1);
+
+	/* masked frames, mask 0 */
+	ws_frame_data_calls = 0;
+
+	/* PING, 126 bytes payload (16-bit length) */
+	memset(frame, 'p', sizeof(frame));
+	frame[0] = 0x89;
+	frame[1] = 0x80 | 126;
+	frame[2] = 0;
+	frame[3] = 126;
+	memset(frame + 4, 0, 4);
+	ck_assert(ws_frame_gets_1002(frame, 8 + 126));
+
+	/* reserved opcode 3 */
+	frame[0] = 0x83;
+	frame[1] = 0x80 | 1;
+	memset(frame + 2, 0, 4);
+	frame[6] = 'x';
+	ck_assert(ws_frame_gets_1002(frame, 7));
+
+	/* PING without FIN */
+	frame[0] = 0x09;
+	ck_assert(ws_frame_gets_1002(frame, 7));
+
+	calls = ws_frame_data_calls;
+	ck_assert_int_eq(calls, 0);
+
+	/* a valid text frame still reaches the handler; a close frame after
+	 * it ends the connection without waiting for the timeout */
+	frame[0] = 0x81;
+	frame[7] = 0x88;
+	frame[8] = 0x80;
+	memset(frame + 9, 0, 4);
+	ck_assert(!ws_frame_gets_1002(frame, 13));
+	ck_assert_int_eq(ws_frame_data_calls, 1);
+
+	g_ctx = NULL;
+	test_mg_stop(ctx, __LINE__);
+#endif
+}
+END_TEST
+
+
+
 #if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_server_suite(void)
@@ -5898,6 +6061,8 @@ make_public_server_suite(void)
 	TCase *const tcase_error_log = tcase_create("Error logging");
 	TCase *const tcase_throttle = tcase_create("Limit speed");
 	TCase *const tcase_large_file = tcase_create("Large file");
+	TCase *const tcase_websocket_frame_rules =
+	    tcase_create("Websocket Frame Rules");
 	TCase *const tcase_file_in_mem = tcase_create("File in memory");
 
 
@@ -5985,6 +6150,11 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_large_file, test_large_file);
 	tcase_set_timeout(tcase_large_file, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_large_file);
+
+	tcase_add_test(tcase_websocket_frame_rules, test_websocket_frame_rules);
+	tcase_set_timeout(tcase_websocket_frame_rules,
+	                  civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_websocket_frame_rules);
 
 	return suite;
 }

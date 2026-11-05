@@ -13560,6 +13560,29 @@ read_websocket(struct mg_connection *conn,
 			/* Allocate space to hold websocket payload */
 			unsigned char *data = mem;
 			size_t required_len = (size_t)data_len + 4;
+			unsigned opcode = buf[0] & 0xFu;
+
+			/* RFC 6455, 5.2 and 5.5: opcodes 3 to 7 and 11 to 15 are
+			 * reserved, and a control frame (opcode 8 and up) is not
+			 * fragmented and carries at most 125 bytes. Fail the
+			 * connection with 1002 (protocol error) instead of handing
+			 * such a frame to the application or echoing a long PING. */
+			if (((opcode >= 3) && (opcode <= 7)) || (opcode >= 11)
+			    || ((opcode >= 8)
+			        && ((data_len > 125) || !(buf[0] & 0x80u)))) {
+				static const char close_1002[2] = {0x03, (char)0xEA};
+				mg_cry_internal(conn,
+				                "websocket protocol error: opcode %u, "
+				                "length %" UINT64_FMT ", fin %u",
+				                opcode,
+				                data_len,
+				                (unsigned)(buf[0] >> 7));
+				(void)mg_websocket_write(conn,
+				                         MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE,
+				                         close_1002,
+				                         sizeof(close_1002));
+				break;
+			}
 
 			if (required_len > sizeof(mem)) {
 				data = (unsigned char *)mg_malloc_ctx(required_len,
