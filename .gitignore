@@ -27,6 +27,7 @@ log.out
 /CMakeCache.txt
 /CMakeFiles
 /mingw-builds
+/output
 
 #################
 ## Eclipse

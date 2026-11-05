@@ -9,18 +9,12 @@
 [![Forks](https://img.shields.io/github/forks/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/network/members)
 [![Latest Release](https://img.shields.io/github/v/release/civetweb/civetweb.svg)](https://github.com/civetweb/civetweb/releases)
 
-Continuous integration for Linux and macOS ([Travis CI](https://app.travis-ci.com/github/civetweb/civetweb)):
-
-[![Travis Build Status](https://api.travis-ci.com/civetweb/civetweb.svg?branch=master)](https://app.travis-ci.com/github/civetweb/civetweb)
-
-Continuous integration for Windows ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)):
+Continuous integration ([AppVeyor](https://ci.appveyor.com/project/civetweb/civetweb)):
 
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/civetweb/civetweb?svg=true)](https://ci.appveyor.com/project/civetweb/civetweb/branch/master)
 
 Test coverage check ([coveralls](https://coveralls.io/github/civetweb/civetweb), [codecov](https://codecov.io/gh/civetweb/civetweb/branch/master)) (using different tools/settings):
 
-[![Coveralls](https://img.shields.io/coveralls/civetweb/civetweb.svg?maxAge=3600)]()
-[![Coverage Status](https://coveralls.io/repos/github/civetweb/civetweb/badge.svg?branch=master)](https://coveralls.io/github/civetweb/civetweb?branch=master)
 [![codecov](https://codecov.io/gh/civetweb/civetweb/branch/master/graph/badge.svg)](https://codecov.io/gh/civetweb/civetweb)
 
 Static source code analysis ([Coverity](https://scan.coverity.com/projects/5784)): [![Coverity Scan Build Status](https://scan.coverity.com/projects/5784/badge.svg)](https://scan.coverity.com/projects/5784)
@@ -54,17 +48,13 @@ CivetWeb must be used with an earlier or later version (see also [here](https://
 Bugs and requests should be filed on GitHub
 [https://github.com/civetweb/civetweb/issues](https://github.com/civetweb/civetweb/issues)
 
-New releases are announced on Google Groups
-[https://groups.google.com/d/forum/civetweb](https://groups.google.com/d/forum/civetweb)
-
-Formerly some support question and discussion threads have been at [Google groups](https://groups.google.com/d/forum/civetweb).
-Recent questions and discussions use [GitHub issues](https://github.com/civetweb/civetweb/issues).
-
 Source releases can be found on GitHub
 [https://github.com/civetweb/civetweb/releases](https://github.com/civetweb/civetweb/releases)
 
 A very brief overview can be found on GitHub Pages
 [https://civetweb.github.io/civetweb/](https://civetweb.github.io/civetweb/)
+
+Note: The [Google group](https://groups.google.com/d/forum/civetweb) is no longer used but has been replaced by [GitHub issues](https://github.com/civetweb/civetweb/issues).
 
 
 Quick start documentation
@@ -75,6 +65,7 @@ Quick start documentation
 - [docs/Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md) - Building the Server (quick start guide)
 - [docs/Embedding.md](https://github.com/civetweb/civetweb/blob/master/docs/Embedding.md) - Embedding (how to add HTTP support to an existing application)
 - [docs/OpenSSL.md](https://github.com/civetweb/civetweb/blob/master/docs/OpenSSL.md) - Adding HTTPS (SSL/TLS) support using OpenSSL.
+- [docs/Docker.md](https://github.com/civetweb/civetweb/blob/master/docs/Docker.md) - Use CivetWeb in a Docker container.
 - [API documentation](https://github.com/civetweb/civetweb/tree/master/docs/api) - Additional documentation on the civetweb application programming interface ([civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)).
 - [RELEASE_NOTES.md](https://github.com/civetweb/civetweb/blob/master/RELEASE_NOTES.md) - Release Notes
 - [SECURITY.md](https://github.com/civetweb/civetweb/blob/master/SECURITY.md) - Security Policy
@@ -133,6 +124,8 @@ simplicity by a carefully selected list of features:
 
 [Mbed TLS](https://github.com/ARMmbed/mbedtls)
 
+[GNU TLS](https://gnutls.org)
+
 
 Support
 -------
@@ -171,7 +164,7 @@ Authors
 
 CivetWeb was forked from the last MIT version of Mongoose in August 2013.
 Since then, CivetWeb has seen many improvements from various authors
-(Copyright (c) 2013-2021 the CivetWeb developers, MIT license).
+(Copyright (c) 2013-2025 the CivetWeb developers, MIT license).
 
 A list of authors can be found in [CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md).
 
@@ -179,7 +172,7 @@ CivetWeb is based on the [Mongoose project](https://github.com/cesanta/mongoose)
 Sergey Lyubka(2004-2013) who released it under the MIT license.
 However, on August 16, 2013,
 [Mongoose was relicensed to a dual GPL V2 + commercial license](https://groups.google.com/forum/#!topic/mongoose-users/aafbOnHonkI)
-and CiwetWeb was created by Thomas Davis (sunsetbrew) as "the MIT fork of mongoose".
+and CivetWeb was created by Thomas Davis (sunsetbrew) as "the MIT fork of mongoose".
 The license change and CivetWeb fork was mentioned on the Mongoose
 [Wikipedia](https://en.wikipedia.org/wiki/Mongoose_(web_server))
 page as well, but it's getting deleted (and added again) there every

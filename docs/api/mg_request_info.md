@@ -14,7 +14,7 @@
 |**`http_version`**|`const char *`| The HTTP version as mentioned in the client request. This can be "1.0", "1.1", etc. |
 |**`query_string`**|`const char *`| The HTTP query string, defined as URL part after the first '?' character, not including '?'. NULL if there is no '?'. |
 |**`remote_user`**|`const char *`| The name of the authenticated remote user, or NULL if no authentication was used. Only used for HTTP (digest) authentication, not for cookie based authentication. |
-|**`remote addr`**|`char[48]`| The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address.  Example: "127.0.0.1" |
+|**`remote_addr`**|`char[48]`| The IP address of the remote client as a string. This can either represent an IPv4 or an IPv6 address.  Example: "127.0.0.1" |
 |~~`remote_ip`~~|`long`| *Deprecated. Use* `remote_addr` *instead* |
 |**`content_length`**|`long long`| The content length of the request body. This value can be -1 if no content length was provided. The request may still have body data, but the server cannot determine the length until all data has arrived (e.g. when the client closes the connection, or the final chunk of a chunked request has been received). |
 |**`remote_port`**|`int`| The port number at the client side (an integer number between 1 and 65535). |

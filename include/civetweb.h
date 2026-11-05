@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2021 the Civetweb developers
+/* Copyright (c) 2013-2024 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,9 +23,9 @@
 #ifndef CIVETWEB_HEADER_INCLUDED
 #define CIVETWEB_HEADER_INCLUDED
 
-#define CIVETWEB_VERSION "1.16"
+#define CIVETWEB_VERSION "1.17"
 #define CIVETWEB_VERSION_MAJOR (1)
-#define CIVETWEB_VERSION_MINOR (16)
+#define CIVETWEB_VERSION_MINOR (17)
 #define CIVETWEB_VERSION_PATCH (0)
 
 #ifndef CIVETWEB_API
@@ -164,6 +164,7 @@ struct mg_request_info {
 	const char *remote_user;    /* Authenticated user, or NULL if no auth
 	                               used */
 	char remote_addr[48];       /* Client's IP address as a string. */
+	char server_addr[48];       /* Server's IP address as a string. */
 
 	long long content_length; /* Length (in bytes) of the request body,
 	                             can be -1 if no length was given. */
@@ -654,7 +655,7 @@ CIVETWEB_API void *mg_get_thread_pointer(const struct mg_connection *conn);
    or write to the connection. */
 /* Note: An alternative is to use the init_connection callback
    instead to initialize the user connection data pointer. It is
-   reccomended to supply a pointer to some user defined data structure
+   recommended to supply a pointer to some user defined data structure
    as conn_data initializer in init_connection. In case it is required
    to change some data after the init_connection call, store another
    data pointer in the user defined data structure and modify that
@@ -714,8 +715,8 @@ struct mg_server_port {
 	int port;        /* port number */
 	int is_ssl;      /* https port: 0 = no, 1 = yes */
 	int is_redirect; /* redirect all requests: 0 = no, 1 = yes */
-	int _reserved1;
-	int _reserved2;
+	int is_optional; /* optional: 0 = no, 1 = yes */
+	int is_bound;    /* bound: 0 = no, 1 = yes, relevant for optional ports */
 	int _reserved3;
 	int _reserved4;
 };
@@ -1128,7 +1129,7 @@ CIVETWEB_API int mg_get_var2(const char *data,
    required to increase this value at compile time.
 
    Parameters:
-     data: form encoded iput string. Will be modified by this function.
+     data: form encoded input string. Will be modified by this function.
      form_fields: output list of name/value-pairs. A buffer with a size
                   specified by num_form_fields must be provided by the
                   caller.
@@ -1208,7 +1209,7 @@ struct mg_form_data_handler {
 	 *   filename: Name of a file to upload, at the client computer.
 	 *             Only set for input fields of type "file", otherwise NULL.
 	 *   path: Output parameter: File name (incl. path) to store the file
-	 *         at the server computer. Only used if FORM_FIELD_STORAGE_STORE
+	 *         at the server computer. Only used if MG_FORM_FIELD_STORAGE_STORE
 	 *         is returned by this callback. Existing files will be
 	 *         overwritten.
 	 *   pathlen: Length of the buffer for path.
@@ -1216,7 +1217,7 @@ struct mg_form_data_handler {
 	 *
 	 * Return value:
 	 *   The callback must return the intended storage for this field
-	 *   (See FORM_FIELD_STORAGE_*).
+	 *   (See MG_FORM_FIELD_STORAGE_*).
 	 */
 	int (*field_found)(const char *key,
 	                   const char *filename,
@@ -1224,7 +1225,7 @@ struct mg_form_data_handler {
 	                   size_t pathlen,
 	                   void *user_data);
 
-	/* If the "field_found" callback returned FORM_FIELD_STORAGE_GET,
+	/* If the "field_found" callback returned MG_FORM_FIELD_STORAGE_GET,
 	 * this callback will receive the field data.
 	 *
 	 * Parameters:
@@ -1241,7 +1242,7 @@ struct mg_form_data_handler {
 	                 size_t valuelen,
 	                 void *user_data);
 
-	/* If the "field_found" callback returned FORM_FIELD_STORAGE_STORE,
+	/* If the "field_found" callback returned MG_FORM_FIELD_STORAGE_STORE,
 	 * the data will be stored into a file. If the file has been written
 	 * successfully, this callback will be called. This callback will
 	 * not be called for only partially uploaded files. The
@@ -1364,6 +1365,40 @@ CIVETWEB_API int mg_base64_decode(const char *src,
      char buf[33];
      mg_md5(buf, "aa", "bb", NULL); */
 CIVETWEB_API char *mg_md5(char buf[33], ...);
+
+
+#if !defined(MG_MATCH_CONTEXT_MAX_MATCHES)
+#define MG_MATCH_CONTEXT_MAX_MATCHES (32)
+#endif
+
+struct mg_match_element {
+	const char *str; /* First character matching wildcard */
+	size_t len;      /* Number of character matching wildcard */
+};
+
+struct mg_match_context {
+	int case_sensitive; /* Input: 1 (case sensitive) or 0 (insensitive) */
+	size_t num_matches; /* Output: Number of wildcard matches returned. */
+	struct mg_match_element match[MG_MATCH_CONTEXT_MAX_MATCHES]; /* Output */
+};
+
+
+#if defined(MG_EXPERIMENTAL_INTERFACES)
+/* Pattern matching and extraction function.
+   Parameters:
+     pat: Pattern string (see UserManual.md)
+     str: String to search for match patterns.
+     mcx: Match context (optional, can be NULL).
+
+   Return:
+     Number of characters matched.
+     -1 if no valid match was found.
+     Note: 0 characters might be a valid match for some patterns.
+*/
+CIVETWEB_API ptrdiff_t mg_match(const char *pat,
+                                const char *str,
+                                struct mg_match_context *mcx);
+#endif
 
 
 /* Print error message to the opened error log stream.
@@ -1521,6 +1556,7 @@ CIVETWEB_API int mg_get_response(struct mg_connection *conn,
  *  -1:    parameter error
  *  -2:    invalid connection type
  *  -3:    invalid connection status
+ *  -4:    network error (only if built with NO_RESPONSE_BUFFERING)
  */
 CIVETWEB_API int mg_response_header_start(struct mg_connection *conn,
                                           int status);
@@ -1573,6 +1609,7 @@ CIVETWEB_API int mg_response_header_add_lines(struct mg_connection *conn,
  *  -1:    parameter error
  *  -2:    invalid connection type
  *  -3:    invalid connection status
+ *  -4:    sending failed (network error)
  */
 CIVETWEB_API int mg_response_header_send(struct mg_connection *conn);
 
@@ -1616,7 +1653,7 @@ CIVETWEB_API unsigned mg_check_feature(unsigned feature);
      buffer: Store system information as string here.
      buflen: Length of buffer (including a byte required for a terminating 0).
    Return:
-     Available size of system information, exluding a terminating 0.
+     Available size of system information, excluding a terminating 0.
      The information is complete, if the return value is smaller than buflen.
      The result is a JSON formatted string, the exact content may vary.
    Note:
@@ -1633,7 +1670,7 @@ CIVETWEB_API int mg_get_system_info(char *buffer, int buflen);
      buffer: Store context information here.
      buflen: Length of buffer (including a byte required for a terminating 0).
    Return:
-     Available size of system information, exluding a terminating 0.
+     Available size of system information, excluding a terminating 0.
      The information is complete, if the return value is smaller than buflen.
      The result is a JSON formatted string, the exact content may vary.
      Note:
@@ -1662,7 +1699,7 @@ CIVETWEB_API void mg_disable_connection_keep_alive(struct mg_connection *conn);
      buffer: Store context information here.
      buflen: Length of buffer (including a byte required for a terminating 0).
    Return:
-     Available size of system information, exluding a terminating 0.
+     Available size of system information, excluding a terminating 0.
      The information is complete, if the return value is smaller than buflen.
      The result is a JSON formatted string, the exact content may vary.
    Note:
@@ -1685,10 +1722,79 @@ CIVETWEB_API int mg_get_connection_info(const struct mg_context *ctx,
    Note: Experimental interfaces may change
 */
 struct mg_error_data {
-	unsigned *code;          /* error code (number) */
+	unsigned code;           /* error code (number) */
+	unsigned code_sub;       /* error sub code (number) */
 	char *text;              /* buffer for error text */
 	size_t text_buffer_size; /* size of buffer of "text" */
 };
+
+
+/* Values for error "code" in mg_error_data */
+enum {
+	/* No error */
+	MG_ERROR_DATA_CODE_OK = 0u,
+
+	/* Caller provided invalid parameter */
+	MG_ERROR_DATA_CODE_INVALID_PARAM = 1u,
+
+	/* "configuration_option" contains invalid element */
+	MG_ERROR_DATA_CODE_INVALID_OPTION = 2u,
+
+	/* Initializen TLS / SSL library failed */
+	MG_ERROR_DATA_CODE_INIT_TLS_FAILED = 3u,
+
+	/* Mandatory "configuration_option" missing */
+	MG_ERROR_DATA_CODE_MISSING_OPTION = 4u,
+
+	/* Duplicate "authentication_domain" option */
+	MG_ERROR_DATA_CODE_DUPLICATE_DOMAIN = 5u,
+
+	/* Not enough memory */
+	MG_ERROR_DATA_CODE_OUT_OF_MEMORY = 6u,
+
+	/* Server already stopped */
+	MG_ERROR_DATA_CODE_SERVER_STOPPED = 7u,
+
+	/* mg_init_library must be called first */
+	MG_ERROR_DATA_CODE_INIT_LIBRARY_FAILED = 8u,
+
+	/* Operating system function failed */
+	MG_ERROR_DATA_CODE_OS_ERROR = 9u,
+
+	/* Failed to bind to server ports */
+	MG_ERROR_DATA_CODE_INIT_PORTS_FAILED = 10u,
+
+	/* Failed to switch user (option "run_as_user") */
+	MG_ERROR_DATA_CODE_INIT_USER_FAILED = 11u,
+
+	/* Access Control List error */
+	MG_ERROR_DATA_CODE_INIT_ACL_FAILED = 12u,
+
+	/* Global password file error */
+	MG_ERROR_DATA_CODE_INVALID_PASS_FILE = 13u,
+
+	/* Lua background script init error */
+	MG_ERROR_DATA_CODE_SCRIPT_ERROR = 14u,
+
+	/* Client: Host not found, invalid IP to connect */
+	MG_ERROR_DATA_CODE_HOST_NOT_FOUND = 15u,
+
+	/* Client: TCP connect timeout */
+	MG_ERROR_DATA_CODE_CONNECT_TIMEOUT = 16u,
+
+	/* Client: TCP connect failed */
+	MG_ERROR_DATA_CODE_CONNECT_FAILED = 17u,
+
+	/* Error using TLS client certificate */
+	MG_ERROR_DATA_CODE_TLS_CLIENT_CERT_ERROR = 18u,
+
+	/* Error setting trusted TLS server certificate for client connection */
+	MG_ERROR_DATA_CODE_TLS_SERVER_CERT_ERROR = 19u,
+
+	/* Error establishing TLS connection to HTTPS server */
+	MG_ERROR_DATA_CODE_TLS_CONNECT_ERROR = 20u
+};
+
 
 struct mg_init_data {
 	const struct mg_callbacks *callbacks; /* callback function pointer */

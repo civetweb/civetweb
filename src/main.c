@@ -41,7 +41,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreserved-id-macro"
 #endif
-#if !defined(_XOPEN_SOURCE)
+#if !defined(_XOPEN_SOURCE) && !defined(USE_COCOA)
 #define _XOPEN_SOURCE 600 /* For PATH_MAX on linux */
 /* This should also be sufficient for "realpath", according to
  * http://man7.org/linux/man-pages/man3/realpath.3.html, but in
@@ -173,18 +173,16 @@ extern char *_getcwd(char *buf, size_t size);
 #define PATH_MAX (1024)
 #endif
 
-#define MAX_OPTIONS (50)
+#define MAX_OPTIONS (100) /* TODO: Read from civetweb.c ? */
 #define MAX_CONF_FILE_LINE_SIZE (8 * 1024)
 
 struct tuser_data {
-	char *first_message;
+	int _unused;
 };
 
-
-/* Exit flag for the main loop (read and writen by different threads, thus
+/* Exit flag for the main loop (read and written by different threads, thus
  * volatile). */
 volatile int g_exit_flag = 0; /* 0 = continue running main loop */
-
 
 static char g_server_base_name[40]; /* Set by init_server_name() */
 
@@ -260,7 +258,7 @@ static NO_RETURN void
 die(const char *fmt, ...)
 {
 	va_list ap;
-	char msg[512] = "";
+	char msg[1024] = "";
 
 	va_start(ap, fmt);
 	(void)vsnprintf(msg, sizeof(msg) - 1, fmt, ap);
@@ -268,7 +266,7 @@ die(const char *fmt, ...)
 	va_end(ap);
 
 #if defined(_WIN32)
-	MessageBox(NULL, msg, "Error", MB_OK);
+	MessageBox(NULL, msg, "Error", MB_ICONERROR | MB_OK);
 #else
 	fprintf(stderr, "%s\n", msg);
 #endif
@@ -469,137 +467,8 @@ sdup(const char *str)
 }
 
 
-#if 0 /* Unused code from "string duplicate with escape" */
-static unsigned
-hex2dec(char x)
-{
-    if ((x >= '0') && (x <= '9')) {
-        return (unsigned)x - (unsigned)'0';
-    }
-    if ((x >= 'A') && (x <= 'F')) {
-        return (unsigned)x - (unsigned)'A' + 10u;
-    }
-    if ((x >= 'a') && (x <= 'f')) {
-        return (unsigned)x - (unsigned)'a' + 10u;
-    }
-    return 0;
-}
-
-
-static char *
-sdupesc(const char *str)
-{
-	char *p = sdup(str);
-
-	if (p) {
-		char *d = p;
-		while ((d = strchr(d, '\\')) != NULL) {
-			switch (d[1]) {
-			case 'a':
-				d[0] = '\a';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'b':
-				d[0] = '\b';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'e':
-				d[0] = 27;
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'f':
-				d[0] = '\f';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'n':
-				d[0] = '\n';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'r':
-				d[0] = '\r';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 't':
-				d[0] = '\t';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'u':
-				if (isxdigit(d[2]) && isxdigit(d[3]) && isxdigit(d[4])
-				    && isxdigit(d[5])) {
-					unsigned short u = (unsigned short)(hex2dec(d[2]) * 4096
-					                                    + hex2dec(d[3]) * 256
-					                                    + hex2dec(d[4]) * 16
-					                                    + hex2dec(d[5]));
-					char mbc[16];
-					int mbl = wctomb(mbc, (wchar_t)u);
-					if ((mbl > 0) && (mbl < 6)) {
-						memcpy(d, mbc, (unsigned)mbl);
-						memmove(d + mbl, d + 6, strlen(d + 5));
-						/* Advance mbl characters (+1 is below) */
-						d += (mbl - 1);
-					} else {
-						/* Invalid multi byte character */
-						/* TODO: define what to do */
-					}
-				} else {
-					/* Invalid esc sequence */
-					/* TODO: define what to do */
-				}
-				break;
-			case 'v':
-				d[0] = '\v';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 'x':
-				if (isxdigit(d[2]) && isxdigit(d[3])) {
-					d[0] = (char)((unsigned char)(hex2dec(d[2]) * 16
-					                              + hex2dec(d[3])));
-					memmove(d + 1, d + 4, strlen(d + 3));
-				} else {
-					/* Invalid esc sequence */
-					/* TODO: define what to do */
-				}
-				break;
-			case 'z':
-				d[0] = 0;
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case '\\':
-				d[0] = '\\';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case '\'':
-				d[0] = '\'';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case '\"':
-				d[0] = '\"';
-				memmove(d + 1, d + 2, strlen(d + 1));
-				break;
-			case 0:
-				if (d == p) {
-					/* Line is only \ */
-					free(p);
-					return NULL;
-				}
-			/* no break */
-			default:
-				/* invalid ESC sequence */
-				/* TODO: define what to do */
-				break;
-			}
-
-			/* Advance to next character */
-			d++;
-		}
-	}
-	return p;
-}
-#endif
-
-
 static const char *
-get_option(char **options, const char *option_name)
+get_option(const char **options, const char *option_name)
 {
 	int i = 0;
 	const char *opt_value = NULL;
@@ -623,7 +492,7 @@ get_option(char **options, const char *option_name)
 
 
 static int
-set_option(char **options, const char *name, const char *value)
+set_option(const char **options, const char *name, const char *value)
 {
 	int i, type;
 	const struct mg_option *default_options = mg_get_valid_options();
@@ -766,11 +635,11 @@ set_option(char **options, const char *name, const char *value)
 					die("Out of memory");
 				}
 				sprintf(s, "%s%s%s", options[2 * i + 1], multi_sep, value);
-				free(options[2 * i + 1]);
+				free((char *)options[2 * i + 1]);
 				options[2 * i + 1] = s;
 			} else {
 				/* Option already set. Overwrite */
-				free(options[2 * i + 1]);
+				free((char *)options[2 * i + 1]);
 				options[2 * i + 1] = sdup(value);
 			}
 			break;
@@ -794,7 +663,7 @@ set_option(char **options, const char *name, const char *value)
 
 
 static int
-read_config_file(const char *config_file, char **options)
+read_config_file(const char *config_file, const char **options)
 {
 	char line[MAX_CONF_FILE_LINE_SIZE], *p;
 	FILE *fp = NULL;
@@ -866,7 +735,7 @@ read_config_file(const char *config_file, char **options)
 
 
 static void
-process_command_line_arguments(int argc, char *argv[], char **options)
+process_command_line_arguments(int argc, char *argv[], const char **options)
 {
 	char *p;
 	size_t i, cmd_line_opts_start = 1;
@@ -991,22 +860,6 @@ free_system_info(void)
 
 
 static int
-log_message(const struct mg_connection *conn, const char *message)
-{
-	const struct mg_context *ctx = mg_get_context(conn);
-	struct tuser_data *ud = (struct tuser_data *)mg_get_user_data(ctx);
-
-	fprintf(stderr, "%s\n", message);
-
-	if (ud->first_message == NULL) {
-		ud->first_message = sdup(message);
-	}
-
-	return 0;
-}
-
-
-static int
 is_path_absolute(const char *path)
 {
 #if defined(_WIN32)
@@ -1022,7 +875,7 @@ is_path_absolute(const char *path)
 
 
 static int
-verify_existence(char **options, const char *option_name, int must_be_dir)
+verify_existence(const char **options, const char *option_name, int must_be_dir)
 {
 	struct stat st;
 	const char *path = get_option(options, option_name);
@@ -1058,7 +911,7 @@ verify_existence(char **options, const char *option_name, int must_be_dir)
 
 
 static void
-set_absolute_path(char *options[],
+set_absolute_path(const char *options[],
                   const char *option_name,
                   const char *path_to_civetweb_exe)
 {
@@ -1283,12 +1136,13 @@ run_client(const char *url_arg)
 
 
 static int
-sanitize_options(char *options[] /* server options */,
+sanitize_options(const char *options[] /* server options */,
                  const char *arg0 /* argv[0] */)
 {
 	int ok = 1;
 	/* Make sure we have absolute paths for files and directories */
 	set_absolute_path(options, "document_root", arg0);
+	set_absolute_path(options, "fallback_document_root", arg0);
 	set_absolute_path(options, "put_delete_auth_file", arg0);
 	set_absolute_path(options, "cgi_interpreter", arg0);
 	set_absolute_path(options, "access_log_file", arg0);
@@ -1301,6 +1155,8 @@ sanitize_options(char *options[] /* server options */,
 
 	/* Make extra verification for certain options */
 	if (!verify_existence(options, "document_root", 1))
+		ok = 0;
+	if (!verify_existence(options, "fallback_document_root", 1))
 		ok = 0;
 	if (!verify_existence(options, "cgi_interpreter", 0))
 		ok = 0;
@@ -1318,11 +1174,20 @@ sanitize_options(char *options[] /* server options */,
 }
 
 
+#ifdef _WIN32
+/* Forward declaration for Windows only */
+static void show_settings_dialog(void);
+#endif
+
+
 static void
 start_civetweb(int argc, char *argv[])
 {
 	struct mg_callbacks callbacks;
-	char *options[2 * MAX_OPTIONS + 1];
+	const char *options[2 * MAX_OPTIONS + 1];
+	struct mg_init_data init;
+	struct mg_error_data error;
+	char error_text[256];
 	int i;
 
 	/* Start option -I:
@@ -1417,7 +1282,7 @@ start_civetweb(int argc, char *argv[])
 	}
 
 	/* Initialize options structure */
-	memset(options, 0, sizeof(options));
+	memset((void *)options, 0, sizeof(options));
 	set_option(options, "document_root", ".");
 
 	/* Update config based on command line arguments */
@@ -1440,7 +1305,7 @@ start_civetweb(int argc, char *argv[])
 				if (mg_strcasecmp(options[i + 1], "yes") == 0) {
 					fprintf(stdout, "daemonize.\n");
 					if (daemon(0, 0) != 0) {
-						fprintf(stdout, "Faild to daemonize main process.\n");
+						fprintf(stdout, "Failed to daemonize main process.\n");
 						exit(EXIT_FAILURE);
 					}
 					FILE *fp;
@@ -1460,24 +1325,54 @@ start_civetweb(int argc, char *argv[])
 	/* Initialize user data */
 	memset(&g_user_data, 0, sizeof(g_user_data));
 
-	/* Start Civetweb */
 	memset(&callbacks, 0, sizeof(callbacks));
-	callbacks.log_message = &log_message;
-	g_ctx = mg_start(&callbacks, &g_user_data, (const char **)options);
+
+	memset(&init, 0, sizeof(init));
+	init.callbacks = &callbacks;
+	init.configuration_options = options;
+	init.user_data = &g_user_data;
+
+	memset(&error, 0, sizeof(error));
+	error.text = error_text;
+	error.text_buffer_size = sizeof(error_text);
+
+	/* Start Civetweb */
+	g_ctx = mg_start2(&init, &error);
 
 	/* mg_start copies all options to an internal buffer.
 	 * The options data field here is not required anymore. */
 	for (i = 0; options[i] != NULL; i++) {
-		free(options[i]);
+		free((char *)options[i]);
 	}
 
 	/* If mg_start fails, it returns NULL */
 	if (g_ctx == NULL) {
-		die("Failed to start %s:\n%s",
+#ifdef _WIN32
+		/* On Windows: provide option to edit configuration file. */
+		char msgboxtxt[1024];
+		int ret;
+		sprintf(msgboxtxt,
+		        "Failed to start %s with code %u:\n%s\n\nEdit settings?",
+		        g_server_name,
+		        error.code,
+		        error_text);
+		ret =
+		    MessageBox(NULL, msgboxtxt, "Error", MB_ICONERROR | MB_YESNOCANCEL);
+		if (ret == IDYES) {
+			show_settings_dialog();
+
+			/* Hitting "save" will also restart the server. */
+			if (g_ctx != NULL) {
+				return;
+			}
+		}
+		exit(EXIT_FAILURE);
+#else
+		die("Failed to start %s with code %u:\n%s",
 		    g_server_name,
-		    ((g_user_data.first_message == NULL) ? "unknown reason"
-		                                         : g_user_data.first_message));
-		/* TODO: Edit file g_config_file_name */
+		    error.code,
+		    error_text);
+#endif
 	}
 
 #if defined(MG_EXPERIMENTAL_INTERFACES)
@@ -1506,7 +1401,7 @@ start_civetweb(int argc, char *argv[])
 		}
 
 		for (j = 0; options[j] != NULL; j++) {
-			free(options[j]);
+			free((void *)options[j]);
 		}
 	}
 #endif
@@ -1517,8 +1412,6 @@ static void
 stop_civetweb(void)
 {
 	mg_stop(g_ctx);
-	free(g_user_data.first_message);
-	g_user_data.first_message = NULL;
 }
 
 
@@ -1709,7 +1602,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 	int i, j;
 	const char *name, *value;
 	const struct mg_option *default_options = mg_get_valid_options();
-	char *file_options[MAX_OPTIONS * 2 + 1] = {0};
+	const char *file_options[MAX_OPTIONS * 2 + 1] = {0};
 	char *title;
 	struct dlg_proc_param *pdlg_proc_param;
 
@@ -1773,8 +1666,8 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 			}
 			for (i = 0; i < MAX_OPTIONS; i++) {
-				free(file_options[2 * i]);
-				free(file_options[2 * i + 1]);
+				free((void *)file_options[2 * i]);
+				free((void *)file_options[2 * i + 1]);
 			}
 			break;
 
@@ -1836,7 +1729,7 @@ SettingsDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 
 				if (path[0] != '\0') {
-					/* Something has been choosen */
+					/* Something has been chosen */
 					SetWindowText(GetDlgItem(hDlg, ID_CONTROLS + i), path);
 				}
 			}
@@ -2311,7 +2204,7 @@ optioncmp(const char *o1, const char *o2)
 
 
 static void
-show_settings_dialog()
+show_settings_dialog(void)
 {
 	/* Parameter for size/format tuning of the dialog */
 	short HEIGHT = 15;
@@ -2584,7 +2477,7 @@ show_settings_dialog()
 
 
 static void
-change_password_file()
+change_password_file(void)
 {
 	/* Parameter for size/format tuning of the dialog */
 	short HEIGHT = 15;
@@ -2795,7 +2688,7 @@ sysinfo_reload(struct dlg_proc_param *prm)
 
 
 int
-show_system_info()
+show_system_info(void)
 {
 	/* Parameter for size/format tuning of the dialog */
 	short HEIGHT = 15;
@@ -2903,8 +2796,9 @@ manage_service(int action)
 		show_error();
 	} else if (action == ID_INSTALL_SERVICE) {
 		path[sizeof(path) - 1] = 0;
-		GetModuleFileName(NULL, path, sizeof(path) - 1);
-		strncat(path, " ", sizeof(path) - 1 - strlen(path));
+		path[0]='"';
+		GetModuleFileName(NULL, path+1, sizeof(path) - 3);
+		strncat(path, "\" ", sizeof(path) - 2 - strlen(path));
 		strncat(path, service_magic_argument, sizeof(path) - 1 - strlen(path));
 		hService = CreateService(hSCM,
 		                         service_name,

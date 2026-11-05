@@ -31,9 +31,6 @@ Source releases can be found on GitHub
 
 A security policy can be found in [SECURITY.md](https://github.com/civetweb/civetweb/blob/master/SECURITY.md).
 
-CivetWeb is free of charge, however, donations for maintenance are welcome:
-[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=88ZLXZ6U77GJU)
-
 
 Documentation
 ---------------
@@ -43,7 +40,8 @@ Documentation
 - [Building.md](Building.md) - Building the Server (quick start guide)
 - [Embedding.md](Embedding.md) - Embedding (how to add HTTP support to an existing application)
 - [OpenSSL.md](OpenSSL.md) - Adding HTTPS (SSL/TLS) support using OpenSSL.
-- [API documentation](api) - Additional documentation on the civetweb application programming interface ([civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)).
+- [Docker.md](Docker.md) - Use CivetWeb in a Docker container.
+- [APIReference.md](APIReference.md) - Additional documentation on the civetweb application programming interface ([civetweb.h](https://github.com/civetweb/civetweb/blob/master/include/civetweb.h)).
 
 [Authors](https://github.com/civetweb/civetweb/blob/master/CREDITS.md)
 

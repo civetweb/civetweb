@@ -73,7 +73,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>MAIN_PRIVATE=main;OPENSSL_API_1_1;LOCAL_TEST;REPLACE_CHECK_FOR_LOCAL_DEBUGGING;LOCAL_TEST;USE_IPV6;USE_WEBSOCKET;MEMORY_DEBUGGING;WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MAIN_PUBLIC_SERVER=main;OPENSSL_API_1_1;LOCAL_TEST;REPLACE_CHECK_FOR_LOCAL_DEBUGGING;LOCAL_TEST;USE_IPV6;USE_WEBSOCKET;MEMORY_DEBUGGING;WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\src;$(ProjectDir)..\..\include;$(ProjectDir)..\..\src\third_party\lua-5.2.4\src;$(ProjectDir)..\..\..\check-0.10.0\;$(ProjectDir)..\..\..\check-0.10.0\src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

@@ -31,7 +31,7 @@ The following parameter values can be used:
 | **64** | USE_DUKTAPE | *Support for server side JavaScript*. Server side JavaScript can be used for dynamic page generation if the proper options have been set at compile time. Please note that client side JavaScript execution is always available if it has been enabled in the connecting browser. |
 | **128** | NO_CACHING | *Support for caching*. The webserver will support caching, if it has not been disabled while compiling the library. |
 
-Parameter values other than the values mentioned above will give undefined results. Therefore&mdash;although the parameter values for the `mg_check_feature()` function are effectively bitmasks, you should't assume that combining two of those values with an OR to a new value will give any meaningful results when the function returns.
+Parameter values other than the values mentioned above will give undefined results. Therefore&mdash;although the parameter values for the `mg_check_feature()` function are effectively bitmasks, you shouldn't assume that combining two of those values with an OR to a new value will give any meaningful results when the function returns.
 
 ### See Also
 

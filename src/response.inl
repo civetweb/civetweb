@@ -37,7 +37,7 @@ free_buffered_response_header_list(struct mg_connection *conn)
 
 
 /* Send first line of HTTP/1.x response */
-static void
+static int
 send_http1_response_status_line(struct mg_connection *conn)
 {
 	const char *status_txt;
@@ -55,7 +55,13 @@ send_http1_response_status_line(struct mg_connection *conn)
 	/* mg_get_response_code_text will never return NULL */
 	status_txt = mg_get_response_code_text(conn, conn->status_code);
 
-	mg_printf(conn, "HTTP/%s %i %s\r\n", http_version, status_code, status_txt);
+	if (mg_printf(
+	        conn, "HTTP/%s %i %s\r\n", http_version, status_code, status_txt)
+	    < 10) {
+		/* Network sending failed */
+		return 0;
+	}
+	return 1;
 }
 
 
@@ -68,10 +74,12 @@ send_http1_response_status_line(struct mg_connection *conn)
  *  -1:    parameter error
  *  -2:    invalid connection type
  *  -3:    invalid connection status
+ *  -4:    network error (only if built with NO_RESPONSE_BUFFERING)
  */
 int
 mg_response_header_start(struct mg_connection *conn, int status)
 {
+	int ret = 0;
 	if ((conn == NULL) || (status < 100) || (status > 999)) {
 		/* Parameter error */
 		return -1;
@@ -93,11 +101,13 @@ mg_response_header_start(struct mg_connection *conn, int status)
 #if !defined(NO_RESPONSE_BUFFERING)
 	free_buffered_response_header_list(conn);
 #else
-	send_http1_response_status_line(conn);
+	if (!send_http1_response_status_line(conn)) {
+		ret = -4;
+	};
 	conn->request_state = 1; /* Reset from 10 to 1 */
 #endif
 
-	return 0;
+	return ret;
 }
 
 
@@ -254,6 +264,7 @@ static int http2_send_response_headers(struct mg_connection *conn);
  *  -1:    parameter error
  *  -2:    invalid connection type
  *  -3:    invalid connection status
+ *  -4:    network send failed
  */
 int
 mg_response_header_send(struct mg_connection *conn)
@@ -285,12 +296,16 @@ mg_response_header_send(struct mg_connection *conn)
 #if defined(USE_HTTP2)
 	if (conn->protocol_type == PROTOCOL_TYPE_HTTP2) {
 		int ret = http2_send_response_headers(conn);
-		return ret ? 0 : 0; /* todo */
+		free_buffered_response_header_list(conn);
+		return (ret ? 0 : -4);
 	}
 #endif
 
 	/* Send */
-	send_http1_response_status_line(conn);
+	if (!send_http1_response_status_line(conn)) {
+		free_buffered_response_header_list(conn);
+		return -4;
+	};
 	for (i = 0; i < conn->response_info.num_headers; i++) {
 		mg_printf(conn,
 		          "%s: %s\r\n",
@@ -322,5 +337,6 @@ mg_response_header_send(struct mg_connection *conn)
 	conn->request_state = 3;
 
 	/* ok */
+	free_buffered_response_header_list(conn);
 	return 0;
 }

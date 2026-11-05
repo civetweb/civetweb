@@ -126,7 +126,7 @@ typedef struct internal_hooks
 } internal_hooks;
 
 #if defined(_MSC_VER)
-/* work around MSVC error C2322: '...' address of dillimport '...' is not static */
+/* work around MSVC error C2322: '...' address of dllimport '...' is not static */
 static void *internal_malloc(size_t size)
 {
     return malloc(size);
@@ -505,7 +505,7 @@ static cJSON_bool print_number(const cJSON * const item, printbuffer * const out
         }
     }
 
-    /* sprintf failed or buffer overrun occured */
+    /* sprintf failed or buffer overrun occurred */
     if ((length < 0) || (length > (int)(sizeof(number_buffer) - 1)))
     {
         return false;
@@ -1556,7 +1556,7 @@ static cJSON_bool parse_object(cJSON * const item, parse_buffer * const input_bu
         buffer_skip_whitespace(input_buffer);
         if (!parse_string(current_item, input_buffer))
         {
-            goto fail; /* faile to parse name */
+            goto fail; /* failed to parse name */
         }
         buffer_skip_whitespace(input_buffer);
 

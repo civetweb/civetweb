@@ -48,7 +48,7 @@ The following features are available:
     );
   ]])
 
-  -- Add colums to table created with older version
+  -- Add columns to table created with older version
   db:exec("ALTER TABLE requests ADD COLUMN civetwebversion;")
   db:exec("ALTER TABLE requests ADD COLUMN luaversion;")
   db:exec("ALTER TABLE requests ADD COLUMN aux;")

@@ -15,7 +15,7 @@ Getting Started
 
 - Download Cayssl at https://www.wolfssl.com (formerly http://www.yassl.com/)
 - Extract the zip file
-    - To make this seemless, extract to a directory parallel to with Civetweb is
+    - To make this seamless, extract to a directory parallel to with Civetweb is
 
 ### Example Project
 

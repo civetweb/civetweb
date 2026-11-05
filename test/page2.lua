@@ -75,6 +75,8 @@ print_if_available(lfs, "LuaFileSystem (lfs)")
 print_if_available(json, "JSON binding (json)")
 print_if_available(xml, "LuaXML (xml)")
 print_if_available(shared, "Lua shared data (shared)")
+print_if_available(lsh, "LSH")
+print_if_available(struct, "struct")
 
 
 --recurse(_G)

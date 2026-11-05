@@ -11,7 +11,7 @@ Civetweb License
 
 ### Included with all features.
 
-> Copyright (c) 2013-2021 The CivetWeb developers ([CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md))
+> Copyright (c) 2013-2025 The CivetWeb developers ([CREDITS.md](https://github.com/civetweb/civetweb/blob/master/CREDITS.md))
 >
 > Copyright (c) 2004-2013 Sergey Lyubka
 >
@@ -64,6 +64,10 @@ http://www.lua.org/license.html
 > LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 > THE SOFTWARE.
+
+
+Additional components Copyright (C) Lua.org, PUC-Rio, with MIT license: 
+http://www.inf.puc-rio.br/~roberto/struct/
 
 
 SQLite3 License

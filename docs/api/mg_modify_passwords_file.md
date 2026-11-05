@@ -21,7 +21,7 @@
 
 The function `mg_modify_passwords_file()` allows an application to manipulate .htpasswd files on the fly by adding, deleting and changing user records. This is one of the several ways to implement authentication on the server side.
 
-If the password parameter is not `NULL` an entry is added to the password file. An existing records is modified in that case. If `NULL` is used as the password the enrty is removed from the file.
+If the password parameter is not `NULL` an entry is added to the password file. An existing records is modified in that case. If `NULL` is used as the password the entry is removed from the file.
 
 The function returns 1 when successful and 0 if an error occurs.
 

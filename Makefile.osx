@@ -13,7 +13,7 @@ WITH_LUA = 1
 PACKAGE = Civetweb
 BUILD_DIR = out
 
-CFLAGS += -DUSE_COCOA -DENABLE_CREATE_CONFIG_FILE -mmacosx-version-min=10.4 -ObjC -arch i386 -arch x86_64
+CFLAGS += -DUSE_COCOA -DENABLE_CREATE_CONFIG_FILE -mmacosx-version-min=10.6 -ObjC -arch x86_64 -arch arm64
 LDFLAGS += -framework Cocoa
 
 DMG_DIR = $(BUILD_DIR)/dmg

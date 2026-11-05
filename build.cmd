@@ -124,7 +124,7 @@
              build ^
              install
 @for %%m in (%methods%) do @(
-  call :log 3 "Excuting the '%%m' method"
+  call :log 3 "Executing the '%%m' method"
   call :log 8
   call :%%~m
   if errorlevel 1 (
@@ -400,9 +400,9 @@
 @endlocal & set "%var%=%file_path%"
 @goto :eof
 
-:administrator_check - Checks for administrator priviledges
+:administrator_check - Checks for administrator privileges
 @setlocal
-@call :log 2 "Checking for administrator priviledges"
+@call :log 2 "Checking for administrator privileges"
 @set "key=HKLM\Software\VCA\Tool Chain\Admin Check"
 @reg add "%key%" /v Elevated /t REG_DWORD /d 1 /f > nul 2>&1
 @if errorlevel 1 exit /b 1

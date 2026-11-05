@@ -324,6 +324,394 @@ START_TEST(test_match_prefix)
 END_TEST
 
 
+START_TEST(test_match_prefix_strlen)
+{
+	/* Copyright (c) 2022 the CivetWeb developers */
+	ck_assert_int_eq(5, match_prefix_strlen("/Test", "/test"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/Test", "/my/test"));
+	ck_assert_int_eq(3, match_prefix_strlen("/my", "/my/test"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/my$", "/my/test"));
+	ck_assert_int_eq(8, match_prefix_strlen("/*/Test", "/my/test"));
+
+	ck_assert_int_eq(17,
+	                 match_prefix_strlen("/api/*/*.cgi", "/api/obj/prop.cgi"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/abc/*/*.cgi", "/api/obj/prop.cgi"));
+	ck_assert_int_eq(18,
+	                 match_prefix_strlen("/api/*/*.cgi", "/api/obj/other.cgi"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/api/*/*.cgi",
+	                                     "/api/obj/too/deep.cgi"));
+	ck_assert_int_eq(17,
+	                 match_prefix_strlen("/api/*/*.cgi$", "/api/obj/prop.cgi"));
+	ck_assert_int_eq(18,
+	                 match_prefix_strlen("/api/*/*.cgi$",
+	                                     "/api/obj/other.cgi"));
+	ck_assert_int_eq(17,
+	                 match_prefix_strlen("/api/*/*.cgi",
+	                                     "/api/obj/prop.cgiZZZ"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/api/*/*.cgi$",
+	                                     "/api/obj/prop.cgiZZZ"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/*/*.cgi", "/api/obj/prop.cgi"));
+
+	ck_assert_int_eq(7, match_prefix_strlen("I????IT", "ItestIT"));
+	ck_assert_int_eq(-1, match_prefix_strlen("I????IT", "IseeIT"));
+	ck_assert_int_eq(23, match_prefix_strlen("**$", "EveryThing/matches this"));
+	ck_assert_int_eq(23,
+	                 match_prefix_strlen("?**$", "EveryThing/matches this"));
+	ck_assert_int_eq(23,
+	                 match_prefix_strlen("**?$", "EveryThing/matches this"));
+	ck_assert_int_eq(0, match_prefix_strlen("**$", ""));
+	ck_assert_int_eq(-1, match_prefix_strlen("?**$", ""));
+	ck_assert_int_eq(-1, match_prefix_strlen("**?$", ""));
+	ck_assert_int_eq(-1, match_prefix_strlen("/**?$", "/"));
+	ck_assert_int_eq(1, match_prefix_strlen("/**$", "/"));
+	ck_assert_int_eq(-1, match_prefix_strlen("//", "/"));
+	ck_assert_int_eq(1, match_prefix_strlen("/", "//"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/$", "//"));
+
+	/* ? pattern should not match / character */
+	ck_assert_int_eq(-1, match_prefix_strlen("/?", "//"));
+	ck_assert_int_eq(3, match_prefix_strlen("/?/$", "/a/"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/?/$", "///"));
+
+	/* Pattern From UserManual.md */
+	ck_assert_int_eq(20,
+	                 match_prefix_strlen("**.cgi$", "anywhere/anyname.cgi"));
+	ck_assert_int_eq(-1, match_prefix_strlen("**.cgi$", "name.cgi.not.at.end"));
+	ck_assert_int_eq(4, match_prefix_strlen("/foo", "/foo"));
+	ck_assert_int_eq(4, match_prefix_strlen("/foo", "/foobar"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/foo", "not.at.start./foo"));
+	ck_assert_int_eq(1, match_prefix_strlen("**a$|**b$", "a"));
+	ck_assert_int_eq(2, match_prefix_strlen("**a$|**b$", "xb"));
+	ck_assert_int_eq(-1, match_prefix_strlen("**a$|**b$", "abc"));
+
+	ck_assert_int_eq(14,
+	                 match_prefix_strlen("/data/????.css$", "/data/12.4.css"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/????.css$", "/data/12/4.css"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/????.css$", "/data/../4.css"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/????.css$", "/else/12.4.css"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/????.css$", "/data/1234.cssx"));
+	ck_assert_int_eq(13, match_prefix_strlen("/data/*.js$", "/data/1234.js"));
+	ck_assert_int_eq(17,
+	                 match_prefix_strlen("/data/*.js$", "/data/12345678.js"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/data/*.js$", "/else/1234.js"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/data/*.js$", "/data/../some.js"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/data/*.js$", "/data//x.js"));
+	ck_assert_int_eq(-1, match_prefix_strlen("/data/*.js$", "/data/./x.js"));
+	ck_assert_int_eq(34,
+	                 match_prefix_strlen("/api/*/*.cgi$",
+	                                     "/api/resourcetype/resourcename.cgi"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/api/*/*.cgi$",
+	                                     "/api/resourcename.cgi"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$",
+	                                     "/somewhere/something.txt"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$", "/something.txt"));
+	ck_assert_int_eq(10, match_prefix_strlen("/*.jpg$|/*.jpeg$", "/image.jpg"));
+	ck_assert_int_eq(11,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$", "/image.jpeg"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$",
+	                                     "/image.jpeg.exe"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$", "/sub/image.jpg"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("/*.jpg$|/*.jpeg$",
+	                                     "/sub/image.jpeg"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$",
+	                                     "/somewhere/something.txt"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$", "/something.txt"));
+	ck_assert_int_eq(10, match_prefix_strlen("**.jpg$|**.jpeg$", "/image.jpg"));
+	ck_assert_int_eq(11,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$", "/image.jpeg"));
+	ck_assert_int_eq(-1,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$",
+	                                     "/image.jpeg.exe"));
+	ck_assert_int_eq(14,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$", "/sub/image.jpg"));
+	ck_assert_int_eq(15,
+	                 match_prefix_strlen("**.jpg$|**.jpeg$",
+	                                     "/sub/image.jpeg"));
+	ck_assert_int_eq(14,
+	                 match_prefix_strlen("/*/*.jpg$|/*/*.jpeg$",
+	                                     "/sub/image.jpg"));
+	ck_assert_int_eq(15,
+	                 match_prefix_strlen("/*/*.jpg$|/*/*.jpeg$",
+	                                     "/sub/image.jpeg"));
+}
+END_TEST
+
+
+START_TEST(test_match_prefix_fuzz)
+{
+	/* Copyright (c) 2022 the CivetWeb developers */
+	{
+		/* From fuzz test */
+		const char *pat = "**cacc//d/?dad?";
+		const char *str =
+		    "dbbddb/cb/ddcdbcbbab/dcdcbbbcaaacdbcac/dbdcadaa/bcaca/d/a/adcad";
+		ck_assert_int_eq(6, match_prefix(pat, 1, str));
+		ck_assert_int_eq(63, match_prefix(pat, 2, str));
+		ck_assert_int_eq(61, match_prefix(pat, 3, str));
+		ck_assert_int_eq(62, match_prefix(pat, 4, str));
+		ck_assert_int_eq(52, match_prefix(pat, 5, str));
+		ck_assert_int_eq(-1, match_prefix(pat, 6, str));
+	}
+	{
+		/* From fuzz test */
+		const char *pat = "a/a*d**/?*/*cdd";
+		const char *str =
+		    "a/aaddba/ddadbaacac//bcaadbc/badaccbdadadcbb//ccd/dcbacdcddc//c";
+		ck_assert_int_eq(0, match_prefix(pat, 0, str));
+		ck_assert_int_eq(1, match_prefix(pat, 1, str));
+		ck_assert_int_eq(2, match_prefix(pat, 2, str));
+		ck_assert_int_eq(3, match_prefix(pat, 3, str));
+		ck_assert_int_eq(8, match_prefix(pat, 4, str));
+		ck_assert_int_eq(6, match_prefix(pat, 5, str));
+		ck_assert_int_eq(8, match_prefix(pat, 6, str));
+		ck_assert_int_eq(63, match_prefix(pat, 7, str));
+		ck_assert_int_eq(62, match_prefix(pat, 8, str));
+		ck_assert_int_eq(63, match_prefix(pat, 9, str));
+		ck_assert_int_eq(63, match_prefix(pat, 10, str));
+		ck_assert_int_eq(61, match_prefix(pat, 11, str));
+		ck_assert_int_eq(61, match_prefix(pat, 12, str));
+		ck_assert_int_eq(60, match_prefix(pat, 13, str));
+		ck_assert_int_eq(58, match_prefix(pat, 14, str));
+		ck_assert_int_eq(59, match_prefix(pat, 15, str));
+		ck_assert_int_eq(59, match_prefix_strlen(pat, str));
+	}
+	{
+		/* From fuzz test */
+		const char *pat = "cc/?**ba????**b";
+		const char *str =
+		    "cc/babdb/cbb/baa/da/cd///ccabbcdcdaa/dbacbdbadaccb/dbdcc/cdbbac";
+		ck_assert_int_eq(0, match_prefix(pat, 0, str));
+		ck_assert_int_eq(1, match_prefix(pat, 1, str));
+		ck_assert_int_eq(2, match_prefix(pat, 2, str));
+		ck_assert_int_eq(3, match_prefix(pat, 3, str));
+		ck_assert_int_eq(4, match_prefix(pat, 4, str));
+		ck_assert_int_eq(8, match_prefix(pat, 5, str));
+		ck_assert_int_eq(63, match_prefix(pat, 6, str));
+		ck_assert_int_eq(61, match_prefix(pat, 7, str));
+		ck_assert_int_eq(62, match_prefix(pat, 8, str));
+		ck_assert_int_eq(63, match_prefix(pat, 9, str));
+		ck_assert_int_eq(47, match_prefix(pat, 10, str));
+		ck_assert_int_eq(48, match_prefix(pat, 11, str));
+		ck_assert_int_eq(49, match_prefix(pat, 12, str));
+		ck_assert_int_eq(50, match_prefix(pat, 13, str));
+		ck_assert_int_eq(63, match_prefix(pat, 14, str));
+		ck_assert_int_eq(61, match_prefix(pat, 15, str));
+		ck_assert_int_eq(61, match_prefix_strlen(pat, str));
+	}
+	{
+		/* From fuzz test */
+		const char *pat = "?**ba*db*b?*/a?";
+		const char *str =
+		    "bd/bcdddabbd//bcb//acbcaaac/dcbbcdadabadba/bd/baadbabcc/a/bcb//";
+		ck_assert_int_eq(0, match_prefix(pat, 0, str));
+		ck_assert_int_eq(1, match_prefix(pat, 1, str));
+		ck_assert_int_eq(2, match_prefix(pat, 2, str));
+		ck_assert_int_eq(63, match_prefix(pat, 3, str));
+		ck_assert_int_eq(61, match_prefix(pat, 4, str));
+		ck_assert_int_eq(52, match_prefix(pat, 5, str));
+		ck_assert_int_eq(55, match_prefix(pat, 6, str));
+		ck_assert_int_eq(50, match_prefix(pat, 7, str));
+		ck_assert_int_eq(51, match_prefix(pat, 8, str));
+		ck_assert_int_eq(55, match_prefix(pat, 9, str));
+		ck_assert_int_eq(53, match_prefix(pat, 10, str));
+		ck_assert_int_eq(54, match_prefix(pat, 11, str));
+		ck_assert_int_eq(55, match_prefix(pat, 12, str));
+		ck_assert_int_eq(56, match_prefix(pat, 13, str));
+		ck_assert_int_eq(57, match_prefix(pat, 14, str));
+		ck_assert_int_eq(-1, match_prefix(pat, 15, str));
+		ck_assert_int_eq(-1, match_prefix_strlen(pat, str));
+	}
+	{
+		/* From fuzz test */
+		const char *pat = "?b*da*bc?c**//*";
+		const char *str =
+		    "dbadabcbcbbba/a///d//dcdd////daccbcaaa/a/bacddab/bdcbbdd/bbaa/a";
+		ck_assert_int_eq(0, match_prefix(pat, 0, str));
+		ck_assert_int_eq(1, match_prefix(pat, 1, str));
+		ck_assert_int_eq(2, match_prefix(pat, 2, str));
+		ck_assert_int_eq(13, match_prefix(pat, 3, str));
+		ck_assert_int_eq(4, match_prefix(pat, 4, str));
+		ck_assert_int_eq(5, match_prefix(pat, 5, str));
+		ck_assert_int_eq(13, match_prefix(pat, 6, str));
+		ck_assert_int_eq(12, match_prefix(pat, 7, str));
+		ck_assert_int_eq(9, match_prefix(pat, 8, str));
+		ck_assert_int_eq(10, match_prefix(pat, 9, str));
+		ck_assert_int_eq(9, match_prefix(pat, 10, str));
+		ck_assert_int_eq(13, match_prefix(pat, 11, str));
+		ck_assert_int_eq(63, match_prefix(pat, 12, str));
+		ck_assert_int_eq(62, match_prefix(pat, 13, str));
+		ck_assert_int_eq(29, match_prefix(pat, 14, str));
+		ck_assert_int_eq(38, match_prefix(pat, 15, str));
+		ck_assert_int_eq(38, match_prefix_strlen(pat, str));
+	}
+	{
+		/* From fuzz test */
+		const char *pat = "?**c**dc**b*c*a";
+		const char *str = "cba/a/bbcdcccc/bcacacdadab/dad/";
+		ck_assert_int_eq(0, match_prefix(pat, 0, str));
+		ck_assert_int_eq(1, match_prefix(pat, 1, str));
+		ck_assert_int_eq(3, match_prefix(pat, 2, str));
+		ck_assert_int_eq(31, match_prefix(pat, 3, str));
+		ck_assert_int_eq(21, match_prefix(pat, 4, str));
+		ck_assert_int_eq(26, match_prefix(pat, 5, str));
+		ck_assert_int_eq(31, match_prefix(pat, 6, str));
+		ck_assert_int_eq(30, match_prefix(pat, 7, str));
+		ck_assert_int_eq(11, match_prefix(pat, 8, str));
+		ck_assert_int_eq(14, match_prefix(pat, 9, str));
+		ck_assert_int_eq(31, match_prefix(pat, 10, str));
+		ck_assert_int_eq(26, match_prefix(pat, 11, str));
+		ck_assert_int_eq(26, match_prefix(pat, 12, str));
+		ck_assert_int_eq(21, match_prefix(pat, 13, str));
+		ck_assert_int_eq(26, match_prefix(pat, 14, str));
+		ck_assert_int_eq(25, match_prefix(pat, 15, str));
+		ck_assert_int_eq(25, match_prefix_strlen(pat, str));
+	}
+	{
+		/* From fuzz test */
+		const char *pat = "$|*ca|**c/c*b|a";
+		const char *str = "bcdaa/a//acdc/bac/caacacdcbcdc/";
+		ck_assert_int_eq(0, match_prefix(pat, 0, str));
+		ck_assert_int_eq(-1, match_prefix(pat, 1, str));
+		ck_assert_int_eq(0, match_prefix(pat, 2, str));
+		ck_assert_int_eq(5, match_prefix(pat, 3, str));
+		ck_assert_int_eq(2, match_prefix(pat, 4, str));
+		ck_assert_int_eq(-1, match_prefix(pat, 5, str));
+		ck_assert_int_eq(0, match_prefix(pat, 6, str));
+		ck_assert_int_eq(5, match_prefix(pat, 7, str));
+		ck_assert_int_eq(31, match_prefix(pat, 8, str));
+		ck_assert_int_eq(30, match_prefix(pat, 9, str));
+		ck_assert_int_eq(31, match_prefix(pat, 10, str));
+		ck_assert_int_eq(19, match_prefix(pat, 11, str));
+		ck_assert_int_eq(30, match_prefix(pat, 12, str));
+		ck_assert_int_eq(27, match_prefix(pat, 13, str));
+		ck_assert_int_eq(27, match_prefix(pat, 14, str));
+		ck_assert_int_eq(27, match_prefix(pat, 15, str));
+		ck_assert_int_eq(27, match_prefix_strlen(pat, str));
+	}
+	{
+		/* From fuzz test */
+		const char *pat = "*b?c|?$|*b?b**?";
+		const char *str = "cbbbddddda/dbcdbbbccdcb/a//ddab";
+		ck_assert_int_eq(0, match_prefix(pat, 0, str));
+		ck_assert_int_eq(10, match_prefix(pat, 1, str));
+		ck_assert_int_eq(4, match_prefix(pat, 2, str));
+		ck_assert_int_eq(5, match_prefix(pat, 3, str));
+		ck_assert_int_eq(-1, match_prefix(pat, 4, str));
+		ck_assert_int_eq(0, match_prefix(pat, 5, str));
+		ck_assert_int_eq(1, match_prefix(pat, 6, str));
+		ck_assert_int_eq(-1, match_prefix(pat, 7, str));
+		ck_assert_int_eq(0, match_prefix(pat, 8, str));
+		ck_assert_int_eq(10, match_prefix(pat, 9, str));
+		ck_assert_int_eq(4, match_prefix(pat, 10, str));
+		ck_assert_int_eq(5, match_prefix(pat, 11, str));
+		ck_assert_int_eq(4, match_prefix(pat, 12, str));
+		ck_assert_int_eq(10, match_prefix(pat, 13, str));
+		ck_assert_int_eq(31, match_prefix(pat, 14, str));
+		ck_assert_int_eq(31, match_prefix(pat, 15, str));
+		ck_assert_int_eq(31, match_prefix_strlen(pat, str));
+	}
+	{
+		/* From fuzz test */
+		const char *pat = "c|b?*$|*ca*/*ba";
+		const char *str = "bdccacb/aaadbadd/ccaca/c/cdcb/d";
+		ck_assert_int_eq(0, match_prefix(pat, 0, str));
+		ck_assert_int_eq(-1, match_prefix(pat, 1, str));
+		ck_assert_int_eq(0, match_prefix(pat, 2, str));
+		ck_assert_int_eq(1, match_prefix(pat, 3, str));
+		ck_assert_int_eq(2, match_prefix(pat, 4, str));
+		ck_assert_int_eq(7, match_prefix(pat, 5, str));
+		ck_assert_int_eq(-1, match_prefix(pat, 6, str));
+		ck_assert_int_eq(0, match_prefix(pat, 7, str));
+		ck_assert_int_eq(7, match_prefix(pat, 8, str));
+		ck_assert_int_eq(6, match_prefix(pat, 9, str));
+		ck_assert_int_eq(5, match_prefix(pat, 10, str));
+		ck_assert_int_eq(7, match_prefix(pat, 11, str));
+		ck_assert_int_eq(8, match_prefix(pat, 12, str));
+		ck_assert_int_eq(16, match_prefix(pat, 13, str));
+		ck_assert_int_eq(13, match_prefix(pat, 14, str));
+		ck_assert_int_eq(14, match_prefix(pat, 15, str));
+		ck_assert_int_eq(14, match_prefix_strlen(pat, str));
+	}
+}
+END_TEST
+
+
+START_TEST(test_mg_match)
+{
+	/* Copyright (c) 2022 the CivetWeb developers */
+	struct mg_match_context mcx;
+
+	ck_assert_int_eq(4, mg_match_alternatives("a*D", 3, "abcde", NULL));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 0;
+	ck_assert_int_eq(4, mg_match_alternatives("a*D", 3, "abcde", &mcx));
+	ck_assert_int_eq(1, (int)mcx.num_matches);
+	ck_assert_int_eq(2, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "bc", 2));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(-1, mg_match_alternatives("a*D", 3, "abcde", &mcx));
+	ck_assert_int_eq(0, (int)mcx.num_matches);
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(4, mg_match_alternatives("a??d", 4, "abcde", &mcx));
+	ck_assert_int_eq(1, (int)mcx.num_matches);
+	ck_assert_int_eq(2, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "bc", 2));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(5, mg_match_alternatives("a??d*", 5, "abcde", &mcx));
+	ck_assert_int_eq(2, (int)mcx.num_matches);
+	ck_assert_int_eq(2, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "bc", 2));
+	ck_assert_int_eq(1, (int)mcx.match[1].len);
+	ck_assert(!memcmp(mcx.match[1].str, "e", 1));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(4, mg_match_alternatives("a??d*", 5, "abcd", &mcx));
+	ck_assert_int_eq(2, (int)mcx.num_matches);
+	ck_assert_int_eq(2, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "bc", 2));
+	ck_assert_int_eq(0, (int)mcx.match[1].len);
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 0;
+	ck_assert_int_eq(2, mg_match_alternatives("a?|?B", 5, "ABC", &mcx));
+	ck_assert_int_eq(1, (int)mcx.num_matches);
+	ck_assert_int_eq(1, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "B", 1));
+
+	memset(&mcx, 0, sizeof(mcx));
+	mcx.case_sensitive = 1;
+	ck_assert_int_eq(2, mg_match_alternatives("a?|?B", 5, "ABC", &mcx));
+	ck_assert_int_eq(1, (int)mcx.num_matches);
+	ck_assert_int_eq(1, (int)mcx.match[0].len);
+	ck_assert(!memcmp(mcx.match[0].str, "A", 1));
+}
+END_TEST
+
+
 START_TEST(test_remove_dot_segments)
 {
 	int i;
@@ -399,7 +787,7 @@ END_TEST
 
 START_TEST(test_is_valid_uri)
 {
-	/* is_valid_uri is superseeded by get_uri_type */
+	/* is_valid_uri is superseded by get_uri_type */
 	ck_assert_int_eq(2, get_uri_type("/api"));
 	ck_assert_int_eq(2, get_uri_type("/api/"));
 	ck_assert_int_eq(2,
@@ -1233,10 +1621,13 @@ START_TEST(test_config_options)
 	ck_assert_str_eq("extra_mime_types", config_options[EXTRA_MIME_TYPES].name);
 	ck_assert_str_eq("listening_ports", config_options[LISTENING_PORTS].name);
 	ck_assert_str_eq("document_root", config_options[DOCUMENT_ROOT].name);
+	ck_assert_str_eq("fallback_document_root",
+	                 config_options[FALLBACK_DOCUMENT_ROOT].name);
 	ck_assert_str_eq("ssl_certificate", config_options[SSL_CERTIFICATE].name);
 	ck_assert_str_eq("ssl_certificate_chain",
 	                 config_options[SSL_CERTIFICATE_CHAIN].name);
 	ck_assert_str_eq("num_threads", config_options[NUM_THREADS].name);
+	ck_assert_str_eq("prespawn_threads", config_options[PRESPAWN_THREADS].name);
 	ck_assert_str_eq("run_as_user", config_options[RUN_AS_USER].name);
 	ck_assert_str_eq("url_rewrite_patterns",
 	                 config_options[URL_REWRITE_PATTERN].name);
@@ -1284,6 +1675,8 @@ START_TEST(test_config_options)
 #endif
 #if defined(USE_WEBSOCKET)
 	ck_assert_str_eq("websocket_root", config_options[WEBSOCKET_ROOT].name);
+	ck_assert_str_eq("fallback_websocket_root",
+	                 config_options[FALLBACK_WEBSOCKET_ROOT].name);
 #endif
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	ck_assert_str_eq("lua_websocket_pattern",
@@ -1365,6 +1758,9 @@ make_private_suite(void)
 	suite_add_tcase(suite, tcase_http_keep_alive);
 
 	tcase_add_test(tcase_url_parsing_1, test_match_prefix);
+	tcase_add_test(tcase_url_parsing_1, test_match_prefix_strlen);
+	tcase_add_test(tcase_url_parsing_1, test_match_prefix_fuzz);
+	tcase_add_test(tcase_url_parsing_1, test_mg_match);
 	tcase_set_timeout(tcase_url_parsing_1, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_url_parsing_1);
 

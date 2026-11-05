@@ -22,10 +22,10 @@ the "Kepler syntax" uses <code>&lt;?lua chunk ?&gt;</code>, <code>&lt;?lua= expr
 <h2>Tags</h2>
 
 <code>
-&lt;? greeting = 'CiwetWeb' ?&gt;<br/>
+&lt;? greeting = 'CivetWeb' ?&gt;<br/>
 &lt;strong&gt;&lt;?= greeting %&gt;&lt;/strong&gt;<br/>
 </code><br/>
-<? greeting = 'CiwetWeb' ?>
+<? greeting = 'CivetWeb' ?>
 ==> <strong><?= greeting ?></strong><br/>
 
 <br/>

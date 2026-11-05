@@ -131,6 +131,7 @@ MD5_STATIC void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
  */
 
 #if !defined(MD5_STATIC)
+#include <stdint.h>
 #include <string.h>
 #endif
 
@@ -239,7 +240,7 @@ md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
 			 * On little-endian machines, we can process properly aligned
 			 * data without copying it.
 			 */
-			if (!((data - (const md5_byte_t *)0) & 3)) {
+			if (!(((uintptr_t)data) & 3)) {
 				/* data are properly aligned, a direct assignment is possible */
 				/* cast through a (void *) should avoid a compiler warning,
 				   see

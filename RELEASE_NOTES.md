@@ -1,4 +1,4 @@
-Release Notes v1.16
+Release Notes v1.17 (work in progress)
 ===
 ### Objectives: *to be defined*
 
@@ -6,6 +6,39 @@ Changes
 -------
 
 - Update version number
+
+
+Release Notes v1.16
+===
+### Objectives: *bug fixes, documentation, WebDAV*
+
+Changes
+-------
+
+- Enable IPv6 as default when using CMake
+- Define error codes for mg_start2, mg_start_domain2, mg_connect_client2
+- Fixes for OpenSSL 3.0 support
+- Add support for Mbed TLS v3.0.0
+- WebDAV should understand Windows File Explorer (experimental)
+- Accept HTTP basic authentication
+- FreeBSD support, including CI and tests
+- Make pattern matching function availible in the public interface
+- Make base64 encoding and decoding functions available
+- Various fixes for HTTP/2 support
+- Additional examples
+- Fixes and updates to existing examples
+- Fix spelling errors in code and documentation
+- Remove Conan support
+- Update version number
+
+Note: A precompiled 32-bit executables for Windows is no longer provided, but only a 64 bit version.
+The source code itself still supports 32-bit platforms.
+
+Known Issues
+-----
+
+- The WebDAV support when using the Windows Explorer as client has various limitations when renaming or moving files and folders.
+- In particular file names in non-latin characters may break when using WebDAV with the Windows Explorer.
 
 
 Release Notes v1.15
@@ -418,7 +451,7 @@ Changes
 -------
 
 - Corrected bad mask flag/opcode passing to websocket callback (William Greathouse)
-- Moved CEVITWEB_VERSION define into civetweb.h
+- Moved CIVETWEB_VERSION define into civetweb.h
 - Added new simple zip deployment build for Windows.
 - Removed windows install package build.
 - Fixes page violation in mod_lua.inl (apkbox)
@@ -524,7 +557,7 @@ Changes
 - Added new C++ abstraction class CivetServer
 - Added thread safety for and fixed websocket defects (Morgan McGuire)
 - Created PKGBUILD to use Arch distribution (Daniel Oaks)
-- Created new documentation on Embeddeding, Building and yaSSL (see docs/).
+- Created new documentation on Embedding, Building and yaSSL (see docs/).
 - Updated License file to include all licenses.
 - Replaced MD5 implementation due to questionable license.
      + This requires new source file md5.inl
@@ -547,7 +580,7 @@ Known Issues
 - Build support for VS6 and some other has been deprecated.
     + This does not impact embedded programs, just the stand-alone build.
     + The old Makefile was renamed to Makefile.deprecated.
-    + This is partcially do to lack fo testing.
+    + This is partcially do to lack of testing.
     + Need to find out what is actually in demand.
 - Build changes may impact current users.
     + As with any change of this type, changes may impact some users.

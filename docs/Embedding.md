@@ -3,7 +3,7 @@ Embedding CivetWeb
 
 CivetWeb is primarily designed so applications can easily add HTTP and HTTPS server as well as WebSocket (WS and WSS) server functionality.
 For example, a C/C++ application could use CivetWeb to enable a web service and configuration interface, to add a HTML5 data visualization interface, for automation or remote control, as a protocol gateway or as a HTTP/WebSocket client for firewall traversal.
-Often the easiest way to embedd CivetWeb is to add the civetweb.c file into your existing C project (see below).
+Often the easiest way to embed CivetWeb is to add the civetweb.c file into your existing C project (see below).
 
 CivetWeb can also be used as a stand-alone executable. It can deliver static files and offers built-in server side Lua, JavaScript and CGI support. Some instructions how to build the stand-alone server can be found in [Building.md](https://github.com/civetweb/civetweb/blob/master/docs/Building.md).
 
@@ -31,6 +31,8 @@ but all functions required to run a HTTP server.
     - src/sha1.inl (SHA calculation)
     - src/handle\_form.inl (HTML form handling functions)
     - src/response.inl (helper for generating HTTP response headers)
+    - src/sort.inl (sorting, qsort_r alternative)
+    - src/match.inl (pattern matching)
     - src/timer.inl (optional timer support)
     - src/http2.inl (optional HTTP2 support)
   - Optional: C++ wrapper
@@ -182,6 +184,8 @@ Lua is a server side include functionality.  Files ending in .lua will be proces
   - src/third\_party/lsqlite3.c
   - src/third\_party/lfs.c
   - src/third\_party/lfs.h
+  - src/third\_party/lua_struct.c
+  
 
 This build is valid for Lua version Lua 5.2. It is also possible to build with Lua 5.1 (including LuaJIT), Lua 5.3 or Lua 5.4.
 
@@ -209,10 +213,15 @@ about web server instance:
 
 When `mg_start()` returns, all initialization is guaranteed to be complete
 (e.g. listening ports are opened, SSL is initialized, etc). `mg_start()` starts
-some threads: a master thread, that accepts new connections, and several
-worker threads, that process accepted connections. The number of worker threads
-is configurable via `num_threads` configuration option. That number puts a
+some threads: a master thread, that accepts new connections, and optionally some
+worker threads, that process accepted connections. The maximum number of worker
+threads is configurable via `num_threads` configuration option. That number puts a
 limit on number of simultaneous requests that can be handled by CivetWeb.
+
+The number of worker threads to be pre-spawned at startup is specified via the
+'prespawn_threads' configuration option; worker threads that are not pre-spawned
+will instead be demand-created the first time they are needed.
+
 If you embed CivetWeb into a program that uses SSL outside CivetWeb as well,
 you may need to initialize SSL before calling `mg_start()`, and set the pre-
 processor define `SSL_ALREADY_INITIALIZED`. This is not required if SSL is
@@ -304,7 +313,8 @@ handler(struct mg_connection *conn, void *ignored)
 }
 ```
 
-A simple callback (old structure supporting HTTP/1.x only):
+A simple callback (deprecated structure supporting HTTP/1.x only):
+(Note: While some older examples use this pattern, it is not recommended to it in new code.)
 ```C
 static int
 handler(struct mg_connection *conn, void *ignored)

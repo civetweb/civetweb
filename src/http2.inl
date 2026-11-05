@@ -654,7 +654,7 @@ hpack_getnum(const uint8_t *buf,
  * the encoded string.
  */
 static char *
-hpack_decode(const uint8_t *buf, int *i, struct mg_context *ctx)
+hpack_decode(const uint8_t *buf, int *i, int max_i, struct mg_context *ctx)
 {
 	uint64_t byte_len64;
 	int byte_len;
@@ -669,6 +669,11 @@ hpack_decode(const uint8_t *buf, int *i, struct mg_context *ctx)
 	}
 	byte_len = (int)byte_len64;
 	bit_len = byte_len * 8;
+
+	/* check size */
+	if ((*i) + byte_len > max_i) {
+		return NULL;
+	}
 
 	/* Now read the string */
 	if (!is_huff) {
@@ -717,6 +722,10 @@ hpack_decode(const uint8_t *buf, int *i, struct mg_context *ctx)
 					bytesStored++;
 					break;
 				}
+			}
+			if (bytesStored == sizeof(str)) {
+				/* too long */
+				return 0;
 			}
 		}
 	}
@@ -820,7 +829,7 @@ hpack_encode(uint8_t *store, const char *load, int lower)
 
 
 static const char http2_pri[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
-static unsigned char http2_pri_len = 24; /* = strlen(http2_pri) */
+static const unsigned char http2_pri_len = 24; /* = strlen(http2_pri) */
 
 
 /* Read and check the HTTP/2 primer/preface:
@@ -829,17 +838,19 @@ static int
 is_valid_http2_primer(struct mg_connection *conn)
 {
 	size_t pri_len = http2_pri_len;
-	char buf[32];
+	char buf[32]; /* Buffer must hold 24 bytes primer */
 
-	if (pri_len > sizeof(buf)) {
-		/* Should never be reached - the RFC primer has 24 bytes */
-		return 0;
-	}
 	int read_pri_len = mg_read(conn, buf, pri_len);
-	if ((read_pri_len != (int)pri_len)
-	    || (0 != memcmp(buf, http2_pri, pri_len))) {
+	if (read_pri_len != (int)pri_len) {
+		/* Size does not match.
+		 * This includes cases where mg_read returns error codes */
 		return 0;
 	}
+	if (0 != memcmp(buf, http2_pri, pri_len)) {
+		/* Primer does not match */
+		return 0;
+	}
+	/* Primer does match */
 	return 1;
 }
 
@@ -850,7 +861,7 @@ is_valid_http2_primer(struct mg_connection *conn)
 	         (conn)->client.sock,                                              \
 	         (conn)->ssl,                                                      \
 	         (const char *)(data),                                             \
-	         (int)(len));
+	         (int)(len))
 
 
 static void
@@ -949,7 +960,7 @@ http2_send_response_headers(struct mg_connection *conn)
 	uint16_t header_len = 0;
 	int has_date = 0;
 	int has_connection_header = 0;
-	int i;
+	int i, ok;
 
 	if ((conn->status_code < 100) || (conn->status_code > 999)) {
 		/* Invalid status: Set status to "Internal Server Error" */
@@ -1058,16 +1069,23 @@ http2_send_response_headers(struct mg_connection *conn)
 	http2_header_frame[8] = (conn->http2.stream_id & 0xFFu);
 
 	/* Send header frame */
-	mg_xwrite(conn, http2_header_frame, 9);
-	mg_xwrite(conn, header_bin, header_len);
-
-	DEBUG_TRACE("HTTP2 response header sent: stream %u", conn->http2.stream_id);
-
+	ok = 1;
+	if (mg_xwrite(conn, http2_header_frame, 9) != 9) {
+		ok = 0;
+	} else if (mg_xwrite(conn, header_bin, header_len) != header_len) {
+		ok = 0;
+	}
+	if (ok) {
+		DEBUG_TRACE("HTTP2 response header sent: stream %u",
+		            conn->http2.stream_id);
+	} else {
+		DEBUG_TRACE("HTTP2 response header sending error: stream %u",
+		            conn->http2.stream_id);
+	}
 
 	(void)has_connection_header; /* ignore for the moment */
 
-
-	return 42; /* TODO */
+	return ok;
 }
 
 
@@ -1420,8 +1438,13 @@ handle_http2(struct mg_connection *conn)
 				/* Get Header name "key" */
 				if (idx == 0) {
 					/* Index 0: Header name encoded in following bytes */
-					key = hpack_decode(buf, &i, conn->phys_ctx);
+					key =
+					    hpack_decode(buf, &i, (int)bytes_read, conn->phys_ctx);
 					CHECK_LEAK_HDR_ALLOC(key);
+					if (!key) {
+						DEBUG_TRACE("%s", "HTTP2 key decoding error");
+						goto clean_http2;
+					}
 				} else if (/*(idx >= 15) &&*/ (idx <= 61)) {
 					/* Take key name from predefined header table */
 					key = mg_strdup_ctx(hpack_predefined[idx].name,
@@ -1480,8 +1503,16 @@ handle_http2(struct mg_connection *conn)
 
 				} else {
 					/* Read value from HTTP2 stream */
-					val = hpack_decode(buf, &i, conn->phys_ctx); /* leak? */
+					val = hpack_decode(buf,
+					                   &i,
+					                   (int)bytes_read,
+					                   conn->phys_ctx); /* leak? */
 					CHECK_LEAK_HDR_ALLOC(val);
+					if (!val) {
+						DEBUG_TRACE("%s", "HTTP2 value decoding error");
+						mg_free((void *)key);
+						goto clean_http2;
+					}
 
 					if (indexing) {
 						/* Add to index */
@@ -1804,7 +1835,7 @@ HPACK_TABLE_TEST()
 
 	for (i = 0; i < 256; i++) {
 		if (reverse_map[i] == -1) {
-			ck_abort_msg("reverse map at %i mising", i);
+			ck_abort_msg("reverse map at %i missing", i);
 		}
 	}
 

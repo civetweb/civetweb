@@ -391,7 +391,7 @@ START_TEST(test_mg_get_var)
 	ck_assert_int_eq(ret, 10);
 	ck_assert_str_eq("this is it", buf);
 
-	/* longer value in the middle of a longer string - seccond occurrence of key
+	/* longer value in the middle of a longer string - second occurrence of key
 	 */
 	memset(buf, 77, sizeof(buf));
 	ret =
@@ -589,15 +589,15 @@ START_TEST(test_mg_base64)
 
 	memset(buf, 77, sizeof(buf));
 	len = 9999;
-	mg_base64_encode((unsigned char *)alpha, (int)strlen(alpha), buf, &len);
+	mg_base64_encode((unsigned char *)alpha, strlen(alpha), buf, &len);
 	ck_assert_str_eq(buf, alpha_b64_enc);
 	ck_assert_int_eq((int)len, (int)strlen(alpha_b64_enc) + 1);
 
 	memset(buf, 77, sizeof(buf));
 	len = 9999;
 	mg_base64_encode((unsigned char *)nonalpha,
-	                 (int)strlen(nonalpha),
-	                 (unsigned char *)buf,
+	                 strlen(nonalpha),
+	                 (char *)buf,
 	                 &len);
 	ck_assert_str_eq(buf, nonalpha_b64_enc);
 	ck_assert_int_eq((int)len, (int)strlen(nonalpha_b64_enc) + 1);
@@ -605,7 +605,7 @@ START_TEST(test_mg_base64)
 	memset(buf, 77, sizeof(buf));
 	len = 9999;
 	ret = mg_base64_decode((char *)alpha_b64_enc,
-	                       (int)strlen(alpha_b64_enc),
+	                       strlen(alpha_b64_enc),
 	                       (unsigned char *)buf,
 	                       &len);
 	ck_assert_int_eq(ret, -1);

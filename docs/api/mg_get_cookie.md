@@ -6,8 +6,8 @@
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-|**`cookie`**|`const char *`|The cookie name|
-|**`var_name`**|`const char *`|The variable name|
+|**`cookie`**|`const char *`|The unparsed cookie header|
+|**`var_name`**|`const char *`|The cookie name|
 |**`buf`**|`char *`|The buffer where to store the contents of the cookie|
 |**`buf_len`**|`size_t`|The length of the cookie buffer, including the terminating NUL|
 

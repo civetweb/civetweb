@@ -4,6 +4,7 @@
 * Abramo Bagnara
 * Adam Bailey
 * Adam Hunyadi
+* Adam Rowell
 * Alan Somers
 * Alberto Bignotti
 * Alex Kozlov
@@ -24,10 +25,12 @@
 * cdbishop
 * celeron55
 * Charles Olivi
+* Chen Yufei
 * Chris Han
 * Chris Jones
 * Chris Rehn
 * Christian Mauderer
+* Christopher Friedt
 * Christopher Galas
 * cjh
 * Colden Cullen
@@ -39,14 +42,16 @@
 * Dave Brower
 * daveelton
 * David Arnold
+* David Korczynski
 * David Loffredo
 * DavidKorczynski
-* Dialga
 * dennis
+* Dialga
 * DL6ER
 * Domenico Di Iorio
 * dprandle
 * Drew Wells
+* drew-wells
 * duong2179
 * ehlertjd
 * Elan P. Kugelmass
@@ -60,9 +65,10 @@
 * Fabrice Fontaine
 * feneuilflo
 * Fernando G. Aranda
+* forworldm
 * Frank Hilliger
-* Gábor Csárdi
 * gajanak
+* Gerard Marull-Paretas
 * Girish Joshi
 * goodmenzy
 * Grahack
@@ -72,11 +78,13 @@
 * guangqing.chen
 * Guilherme Amadio
 * Gustavo Romero
+* Gábor Csárdi
 * hansipie
 * HariKamath Kamath
 * Henry Chang
 * Herumb Shandilya
 * Herve Codina
+* huangminhang
 * Iain Morton
 * ImgBotApp
 * Ivan Dlugos
@@ -98,6 +106,8 @@
 * Joel Gallant
 * Johan De Taeye
 * John Faith
+* Jonas Hahnfeld
+* Jonas Rembser
 * Jordan
 * Jordan Shelley
 * Joshua Boyd
@@ -120,6 +130,7 @@
 * Lammert Bies
 * Lars Immisch
 * Lawrence
+* Lev275568
 * Li Peng
 * Lianghui
 * Lorenzo Canepa
@@ -128,11 +139,13 @@
 * Maarten Fremouw
 * makrsmark
 * marco
+* Mario Trangoni
 * Mark Lakata
 * Martin Gaida
 * Mateusz Gralka
 * Matt Clarkson
 * Mellnik
+* MHU-valantic
 * Mike Crowe
 * mingodad
 * Morgan McGuire
@@ -144,7 +157,9 @@
 * Nick Hildebrant
 * Nigel Stewart
 * nihildeb
+* Niklas Fiekas
 * No Face Press
+* Olliver Schinagl
 * palortoff
 * Patrick Drechsler
 * Patrick Trinkle
@@ -154,6 +169,7 @@
 * PavelVozenilek
 * Perttu Ahola
 * Peter Foerster
+* Peter Huber
 * Philipp Friedenberger
 * Philipp Hasper
 * Pieter Cardoen
@@ -162,7 +178,9 @@
 * Ponnuvel Palaniyappan
 * qinch
 * qinchao
+* r-j-s
 * Radoslaw Zarzynski
+* Rajdeep Roy Chowdhury
 * Red54
 * Retallack Mark mark.retallack
 * Richard Screene
@@ -172,6 +190,8 @@
 * Sage Weil
 * Sangwhan Moon
 * Saumitra Vikram
+* sbruceheart
+* Scott Fennell
 * Scott Nations
 * Sebastien Jodogne
 * Sergey Linev
@@ -179,6 +199,8 @@
 * shantanugadgil
 * Sherwyn Sen
 * shreyajaggi8
+* Silas Parker
+* silverches
 * Simon Hailes
 * slidertom
 * SpaceIm
@@ -204,6 +226,7 @@
 * Torben Jonas
 * Uilian Ries
 * Ulrich Hertlein
+* videofan3d
 * Walt Steverson
 * wangli28
 * webxer
@@ -214,6 +237,7 @@
 * Yehuda Sadeh
 * Yury Z
 * zhen.wang
+* Zopolis4
 
 and others.
 

@@ -71,7 +71,11 @@ ifdef WITH_CFLAGS
   CFLAGS += $(WITH_CFLAGS)
 endif
 
-LIBS = -lpthread -lm $(LOPT)
+LIBS =
+ifneq ($(TARGET_OS), RTEMS)
+LIBS += -lpthread
+endif
+LIBS += -lm $(LOPT)
 
 ifdef WITH_DEBUG
   CFLAGS += -g -DDEBUG
@@ -93,6 +97,9 @@ endif
 
 ifdef NO_SSL
   CFLAGS += -DNO_SSL
+else ifdef WITH_GNUTLS
+  CFLAGS += -DUSE_GNUTLS
+  LIBS += -lgnutls -lhogweed -lgmp -lnettle
 else ifdef WITH_MBEDTLS
   CFLAGS += -DUSE_MBEDTLS
   LIBS += -lmbedcrypto -lmbedtls -lmbedx509
@@ -100,6 +107,8 @@ else ifdef WITH_OPENSSL_API_1_0
   CFLAGS += -DOPENSSL_API_1_0
 else ifdef WITH_OPENSSL_API_1_1
   CFLAGS += -DOPENSSL_API_1_1
+else ifdef WITH_OPENSSL_API_3_0
+  CFLAGS += -DOPENSSL_API_3_0
 else
   #Use OpenSSL 1.1 API version as default
   CFLAGS += -DOPENSSL_API_1_1
@@ -176,7 +185,9 @@ ifdef WITH_COMPRESSION
 endif
 
 ifdef WITH_ZLIB
+ifneq ($(TARGET_OS), RTEMS)
   LIBS += -lz
+endif
   CFLAGS += -DUSE_ZLIB
 endif
 
@@ -295,9 +306,11 @@ help:
 	@echo "   WITH_CPP=1            build library with c++ classes"
 	@echo "   WITH_EXPERIMENTAL=1   build with experimental features"
 	@echo "   WITH_DAEMONIZE=1      build with daemonize."
+	@echo "   WITH_GNUTLS=1         build with GnuTLS support."
 	@echo "   WITH_MBEDTLS=1        build with mbedTLS support."
 	@echo "   WITH_OPENSSL_API_1_0=1  build with OpenSSL 1.0.x support."
 	@echo "   WITH_OPENSSL_API_1_1=1  build with OpenSSL 1.1.x support."
+	@echo "   WITH_OPENSSL_API_3_0=1  build with OpenSSL 3.0.x support."
 	@echo "   NO_SSL=1              build without SSL support. Build will not need libcrypto/libssl."
 	@echo "   NO_CGI=1              build without CGI support."
 	@echo "   NO_CACHING=1          disable caching. Send no-cache/no-store headers."
@@ -336,36 +349,32 @@ unit_test: $(UNIT_TEST_PROG)
 
 ifeq ($(CAN_INSTALL),1)
 install: $(HTMLDIR)/index.html $(SYSCONFDIR)/civetweb.conf
-	install -d -m 755  "$(DOCDIR)"
-	install -m 644 *.md "$(DOCDIR)"
-	install -d -m 755 "$(BINDIR)"
-	install -m 755 $(CPROG) "$(BINDIR)/"
+	install -D -m 644 -t "$(DOCDIR)/" *.md
+	install -D -m 755 -t "$(BINDIR)/" $(CPROG)
 
 install-headers:
-	install -m 644 $(HEADERS) "$(INCLUDEDIR)"
+	install -D -m 644 -t "$(INCLUDEDIR)/" $(HEADERS)
 
 install-lib: lib$(CPROG).a
-	install -m 644 $< "$(LIBDIR)"
+	install -D -m 644 -t "$(LIBDIR)/" $<
 
 install-slib: lib$(CPROG).so
 	$(eval version=$(shell grep -w "define CIVETWEB_VERSION" include/civetweb.h | sed 's|.*VERSION "\(.*\)"|\1|g'))
 	$(eval major=$(shell echo $(version) | cut -d'.' -f1))
-	install -m 755 $<.$(version).0 "$(LIBDIR)"
+	install -D -m 755 -t "$(LIBDIR)" $<.$(version).0
 	cd "$(LIBDIR)" && ln -sfv $<.$(version).0 $<.$(major)
 	cd "$(LIBDIR)" && ln -sfv $<.$(version).0 $<
 
 # Install target we do not want to overwrite
 # as it may be an upgrade
 $(HTMLDIR)/index.html:
-	install -d -m 755  "$(HTMLDIR)"
-	install -m 644 resources/itworks.html $(HTMLDIR)/index.html
-	install -m 644 resources/civetweb_64x64.png $(HTMLDIR)/
+	install -D -m 644 resources/itworks.html $(HTMLDIR)/index.html
+	install -D -m 644 -t "$(HTMLDIR)/" resources/civetweb_64x64.png
 
 # Install target we do not want to overwrite
 # as it may be an upgrade
 $(SYSCONFDIR)/civetweb.conf:
-	install -d -m 755  "$(SYSCONFDIR)"
-	install -m 644 resources/civetweb.conf  "$(SYSCONFDIR)/"
+	install -D -m 644 -t "$(SYSCONFDIR)/" resources/civetweb.conf
 	@sed -i 's#^document_root.*$$#document_root $(DOCUMENT_ROOT)#' "$(SYSCONFDIR)/civetweb.conf"
 	@sed -i 's#^listening_ports.*$$#listening_ports $(PORTS)#' "$(SYSCONFDIR)/civetweb.conf"
 
@@ -447,4 +456,3 @@ indent:
 	astyle --suffix=none --style=linux --indent=spaces=4 --lineend=linux  include/*.h src/*.c src/*.cpp src/*.inl examples/*/*.c  examples/*/*.cpp
 
 .PHONY: all help build install clean lib so
-

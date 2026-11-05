@@ -92,16 +92,22 @@ Pattern match starts at the beginning of the string, so essentially
 patterns are prefix patterns. Syntax is as follows:
 
      **      Matches everything
-     *       Matches everything but slash character, '/'
-     ?       Matches any character
+     *       Matches everything but the slash character ('/')
+     ?       Matches any character but the slash character ('/')
      $       Matches the end of the string
      |       Matches if pattern on the left side or the right side matches.
 
 All other characters in the pattern match themselves. Examples:
 
-    **.cgi$      Any string that ends with .cgi
-    /foo         Any string that begins with /foo
-    **a$|**b$    Any string that ends with a or b
+    **.cgi$          Any string that ends with .cgi
+    /foo             Any string that begins with /foo
+    **a$|**b$        Any string that ends with a or b
+
+    /data/????.css$  Matches css files with 4 letter names in "/data" folder.
+    /data/*.js$      Matches all js file names in "/data" folder.
+    /api/*/*.cgi$    Matches "/api/resourcetype/resourcename.cgi"
+    /*.jpg$|/*.jpeg$ JPG and JPEG files in root folder
+    **.jpg$|**.jpeg$ JPG and JPEG files anywhere
 
 
 ## Options from `civetweb.c`
@@ -144,7 +150,7 @@ See the [Wikipedia page on CORS](http://en.wikipedia.org/wiki/Cross-origin_resou
 An Access Control List (ACL) allows restrictions to be put on the list of IP
 addresses which have access to the web server. In the case of the CivetWeb
 web server, the ACL is a comma separated list of IP subnets, where each
-subnet is pre-pended by either a `-` or a `+` sign. A plus sign means allow,
+subnet is prepended by either a `-` or a `+` sign. A plus sign means allow,
 where a minus sign means deny. If a subnet mask is omitted, such as `-1.2.3.4`,
 this means to deny only that single IP address.
 
@@ -174,7 +180,7 @@ This option can be specified multiple times. All specified header lines will be 
 ### allow\_index\_script\_resource `no`
 Index scripts (like `index.cgi` or `index.lua`) may have script handled resources.
 
-It this feature is activated, that /some/path/file.ext might be handled by:
+If this feature is activated, then /some/path/file.ext might be handled by:
   1. /some/path/file.ext (with PATH\_INFO='/', if ext = cgi)
   2. /some/path/index.lua with mg.request\_info.path\_info='/file.ext'
   3. /some/path/index.cgi with PATH\_INFO='/file.ext'
@@ -290,6 +296,15 @@ The current directory is commonly referenced as dot (`.`).
 It is recommended to use an absolute path for document\_root, in order to
 avoid accidentally serving the wrong directory.
 
+### fallback\_document\_root `.`
+An optional second directory to check for a file to serve, if the requested
+filename was not found in the document\_root directory.
+This can be useful in cases where an app ships with a read-only HTML content
+directory as part of its install, but you nevertheless want to allow the user
+to customize the served content by placing modified or additional files into
+a writable directory, where they will take precedence over their read-only
+counterparts, on a per-file basis.
+
 ### enable\_auth\_domain\_check `yes`
 When using absolute URLs, verify the host is identical to the authentication\_domain.
 If enabled, requests to absolute URLs will only be processed
@@ -319,6 +334,11 @@ keep\_alive\_timeout\_ms to 0. Currently, this is done as a default value,
 but this configuration is redundant. In a future version, the keep\_alive
 configuration option might be removed and automatically set to `yes` if
 a timeout > 0 is set.
+
+### enable\_webdav `no`
+Set this configuration option to `yes` to handle WebDAV specific HTTP methods:
+PROPFIND, PROPPATCH, LOCK, UNLOCK, MOVE, COPY.
+These methods are not allowed if the configuration option is set to `no`.
 
 ### enable\_websocket\_ping\_pong `no`
 If this configuration value is set to `yes`, the server will send a
@@ -420,14 +440,18 @@ of 1000.
 ### listening\_ports `8080`
 Comma-separated list of ports to listen on. If the port is SSL, a
 letter `s` must be appended, for example, `80,443s` will open
-port 80 and port 443, and connections on port 443 will be SSL-ed.
+port 80 and port 443, and connections on port 443 will be SSL-ed. If the port
+should be optional the letter `o` must be appended, for example with `80o,443s`
+the server will not exit if binding to port 80 is not possible during startup.
 For non-SSL ports, it is allowed to append letter `r`, meaning 'redirect'.
 Redirect ports will redirect all their traffic to the first configured
 SSL port. For example, if `listening_ports` is `80r,443s`, then all
 HTTP traffic coming at port 80 will be redirected to HTTPS port 443.
+For ports with redirection configured `authentication_domain` will
+be used as host component of the redirection url.
 
 It is possible to specify an IP address to bind to. In this case,
-an IP address and a colon must be pre-pended to the port number.
+an IP address and a colon must be prepended to the port number.
 For example, to bind to a loopback interface on port 80 and to
 all interfaces on HTTPS port 443, use `127.0.0.1:80,443s`.
 
@@ -494,7 +518,7 @@ The script can define callbacks to be notified when the server starts
 or stops. Furthermore, it can be used for log filtering or formatting. 
 The Lua state remains open until the server is stopped.
 
-For a detailed descriotion of available Lua callbacks see section
+For a detailed description of available Lua callbacks see section
 "Lua background script" below.
 
 ### lua\_background\_script\_params
@@ -538,8 +562,8 @@ The configuration value is approximate, the real limit might be a few bytes off.
 The minimum is 1024 (1 kB).
 
 ### num\_threads `50`
-Number of worker threads. CivetWeb handles each incoming connection in a
-separate thread. Therefore, the value of this option is effectively the number
+Maximum number of worker threads allowed. CivetWeb handles each incoming connection
+in a separate thread. Therefore, the value of this option is effectively the number
 of concurrent HTTP connections CivetWeb can handle.
 
 If there are more simultaneous requests (connection attempts), they are queued.
@@ -551,6 +575,15 @@ thread handles all requests received in a connection (up to `num_threads`).
 In case the clients are web browsers, it is recommended to use `num_threads` of
 at least 5, since browsers often establish multiple connections to load a single
 web page, including all linked documents (CSS, JavaScript, images, ...).
+
+### prespawn\_threads '0'
+Number of worker threads that should be pre-spawned by mg_start().  Defaults to
+0, meaning no worker threads will be pre-spawned at startup; rather, worker threads
+will be spawned when a new connection comes in and there aren't currently any
+idle worker threads available to handle it (if we haven't already reached the
+maximum worker-thread count as specified by num_threads).  If this value is
+specified less than zero, or greater than the value of num_threads, it will be
+treated as if it was specified to be equal to the value of num_threads.
 
 ### listen\_backlog `200`
 Maximum number of connections waiting to be accepted by the server operating system.
@@ -659,7 +692,8 @@ The OpenSSL cipher string uses different cipher names than IANA
 (see [this mapping](https://testssl.sh/openssl-iana.mapping.html)).
 
 In case CivetWeb is built with a TLS library other than OpenSSL 
-(e.g., [mbedTLS](https://tls.mbed.org/supported-ssl-ciphersuites)), 
+(e.g., [mbedTLS](https://tls.mbed.org/supported-ssl-ciphersuites)
+or [GnuTLS](https://www.gnutls.org/manual/html_node/Supported-ciphersuites.html)), 
 the cipher names may be different.
 
 ### ssl\_default\_verify\_paths `yes`
@@ -677,7 +711,7 @@ TLS1.1+TLS1.2+TLS1.3 | 3
 TLS1.2+TLS1.3 | 4
 TLS1.3 | 5
 
-TLS version 1.3 is only available if you are using an up-to-date TLS libary.
+TLS version 1.3 is only available if you are using an up-to-date TLS library.
 The default setting has been changed from 0 to 4 in CivetWeb 1.14.
 
 ### ssl\_short\_trust `no`
@@ -795,6 +829,11 @@ be used for websockets as well. Since websockets use a different URL scheme
 websockets may also be served from a different directory. By default,
 the document\_root is used as websocket\_root as well.
 
+### fallback\_websocket\_root
+An optional second directory to check for websocket-files that were
+not found in the websocket\_root directory.  (See the documentation for
+fallback\_root for details)
+
 ### websocket\_timeout\_ms
 Timeout for network read and network write operations for websockets, WS(S),
 in milliseconds. If this value is not set, the value of request\_timeout\_ms
@@ -851,8 +890,8 @@ All port, socket, process and thread specific parameters are per server:
 `enable_http2`, `enable_keep_alive`, `enable_websocket_ping_pong`,
 `keep_alive_timeout_ms`, `linger_timeout_ms`, `listen_backlog`,
 `listening_ports`, `lua_background_script`, `lua_background_script_params`,
-`max_request_size`, `num_threads`, `request_timeout_ms`, `run_as_user`,
-`tcp_nodelay`, `throttle`, `websocket_timeout_ms` + all options from `main.c`.
+`max_request_size`, `num_threads`, 'prespawn_threads', `request_timeout_ms`,
+`run_as_user`, `tcp_nodelay`, `throttle`, `websocket_timeout_ms` + all options from `main.c`.
 
 All other options can be set per domain. In particular
 `authentication_domain`, `document_root` and (for HTTPS) `ssl_certificate`
@@ -958,6 +997,7 @@ mg (table):
     mg.onerror(msg)             -- error handler, can be overridden
     mg.auth_domain              -- a string that holds the HTTP authentication domain
     mg.document_root            -- a string that holds the document root directory
+    mg.fallback_document_root   -- a string that holds an optional second document root directory
     mg.lua_type                 -- a string that holds the lua script type
     mg.system                   -- a string that holds the operating system name
     mg.version                  -- a string that holds CivetWeb version
@@ -966,8 +1006,8 @@ mg (table):
     mg.get_mime_type(filename)  -- get MIME type of a file
     mg.get_option(name)         -- get configuration option value from name
     mg.get_response_code_text(n)-- get response code text for n, nil otherwise
-    mg.get_var(str, varname, [occurance])  -- extract the first occurance of variable from (query) string
-                                --     otherwise the nth occurance if supplied, nil if not found
+    mg.get_var(str, varname, [occurrence])  -- extract the first occurrence of variable from (query) string
+                                --     otherwise the nth occurrence if supplied, nil if not found
     mg.send_file(filename)      -- send a file, including all required HTTP headers
     mg.send_file_body(filename) -- send a file, excluding HTTP headers
     mg.send_http_error(n,str)   -- send http error code n with string body
@@ -1006,7 +1046,7 @@ mg (table):
          .https                 -- true if accessed by https://, false otherwise
          .remote_user           -- user name if authenticated, nil otherwise
          .auth_type             -- Digest
-         .client_cert           -- Table with ssl certificate infomation
+         .client_cert           -- Table with ssl certificate information
               .subject          -- Certificate subject
               .issuer           -- Certificate issuer
               .serial           -- Certificate serial number
@@ -1017,6 +1057,7 @@ If websocket and timers support is enabled then the following is also available:
     mg.set_timeout(fn,delay,[interval])  -- call function after delay at an interval
     mg.set_interval(fn,delay,[interval]) -- call function after delay at an interval
     mg.websocket_root                    -- a string that holds the websocket root
+    mg.fallback_websocket_root           -- a string that holds an optional second websocket root
 
 connect (function):
 
@@ -1114,7 +1155,7 @@ some features of the "mg" library are not available yet. Use the "start()" callb
 function instead.
 
 A Lua background script may define the following functions:
-    `start()`        -- called wnen the server is started
+    `start()`        -- called when the server is started
     `stop()`         -- called when the server is stopped
     `log(req, res)`  -- called when an access log entry is created
 

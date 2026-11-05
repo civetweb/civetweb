@@ -348,8 +348,6 @@ main(int argc, char *argv[])
 	init.configuration_options = options;
 
 	struct mg_error_data error = {0};
-	unsigned error_code = 0;
-	error.code = &error_code;
 	char error_text[256] = {0};
 	error.text = error_text;
 	error.text_buffer_size = sizeof(error_text);
@@ -362,7 +360,7 @@ main(int argc, char *argv[])
 		printf("Server exit\n");
 		mg_stop(ctx);
 	} else {
-		printf("Initialization failed: %u\n%s\n\n", error_code, error_text);
+		printf("Initialization failed: %u\n%s\n\n", error.code, error.text);
 	}
 
 	mg_exit_library();

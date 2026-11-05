@@ -8,7 +8,7 @@ The latest source code version is available at [https://github.com/civetweb/cive
 Windows
 ---
 
-This pre-built version comes pre-built wit Lua support. Libraries for SSL support are not included due to licensing restrictions;
+This pre-built version comes pre-built with Lua support. Libraries for SSL support are not included due to licensing restrictions;
 however, users may add an SSL library themselves.
 Instructions for adding SSL support can be found in [https://github.com/civetweb/civetweb/tree/master/docs](https://github.com/civetweb/civetweb/tree/master/docs)
 

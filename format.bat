@@ -5,6 +5,8 @@ clang-format -i src/CivetServer.cpp
 clang-format -i src/civetweb_private_lua.h
 clang-format -i src/md5.inl
 clang-format -i src/sha1.inl
+clang-format -i src/sort.inl
+clang-format -i src/match.inl
 clang-format -i src/mod_lua.inl
 clang-format -i src/mod_lua_shared.inl
 clang-format -i src/mod_duktape.inl
@@ -15,6 +17,7 @@ clang-format -i src/handle_form.inl
 clang-format -i src/response.inl
 clang-format -i src/http2.inl
 clang-format -i src/mod_mbedtls.inl
+clang-format -i src/mod_gnutls.inl
 
 clang-format -i src/third_party/civetweb_lua.h
 

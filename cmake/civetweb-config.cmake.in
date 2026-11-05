@@ -2,6 +2,13 @@
 include(CMakeFindDependencyMacro)
 
 set_and_check(civetweb_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+set_and_check(civetweb_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+set_and_check(civetweb_LIBRARY_DIRS "@PACKAGE_CMAKE_INSTALL_LIBDIR@")
+set(civetweb_LIBRARIES civetweb)
+
+if(@CIVETWEB_ENABLE_CXX@)
+  set(civetweb-cpp_LIBRARIES civetweb-cpp)
+endif()
 
 find_dependency(Threads)
 
