@@ -9383,6 +9383,7 @@ mg_modify_passwords_file_ha1(const char *fname,
 	FILE *fp = NULL;
 	char *temp_file = NULL;
 	int temp_file_offs = 0;
+	int at_line_start = 1;
 
 	/* Regard empty password as no password - remove user record. */
 	if ((ha1 != NULL) && (ha1[0] == '\0')) {
@@ -9422,6 +9423,21 @@ mg_modify_passwords_file_ha1(const char *fname,
 		return 0; /* domain name too long */
 	}
 
+	/* The hash is written into the same line, so the same rules apply */
+	if (ha1 != NULL) {
+		if (strchr(ha1, ':') != NULL) {
+			return 0;
+		}
+		for (i = 0; ((i < 255) && (ha1[i] != 0)); i++) {
+			if (iscntrl((unsigned char)ha1[i])) {
+				return 0;
+			}
+		}
+		if (ha1[i]) {
+			return 0; /* hash too long */
+		}
+	}
+
 	/* The maximum length of the path to the password file is limited */
 	if (strlen(fname) >= UTF8_PATH_MAX) {
 		return 0;
@@ -9456,6 +9472,20 @@ mg_modify_passwords_file_ha1(const char *fname,
 		/* Read content and store in memory */
 		while ((fgets(line, sizeof(line), fp) != NULL)
 		       && ((temp_file_offs + 600) < temp_buf_len)) {
+			size_t len = strlen(line);
+			int line_start = at_line_start;
+			at_line_start = (len > 0) && (line[len - 1] == '\n');
+			if ((line[0] == ':') && line_start
+			    && (at_line_start || feof(fp))) {
+				/* Keep ":include=" and ":#" lines (see read_auth_file),
+				 * but not the tail of a line too long for the buffer */
+				memcpy(temp_file + temp_file_offs, line, len);
+				temp_file_offs += (int)len;
+				if (!at_line_start) {
+					temp_file[temp_file_offs++] = '\n';
+				}
+				continue;
+			}
 			/* file format is "user:domain:hash\n" */
 			if (sscanf(line, "%255[^:]:%255[^:]:%255s", u, d, h) != 3) {
 				continue;

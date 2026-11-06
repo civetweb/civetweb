@@ -176,6 +176,7 @@ civetweb_add_test(PublicFunc "BASE64 encoding decoding")
 civetweb_add_test(PublicFunc "Cookies and variables")
 civetweb_add_test(PublicFunc "MD5")
 civetweb_add_test(PublicFunc "Aux functions")
+civetweb_add_test(PublicFunc "Modify passwords file")
 
 # Public API server tests
 civetweb_add_test(PublicServer "Check test environment")
