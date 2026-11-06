@@ -713,6 +713,58 @@ START_TEST(test_mg_get_response_code_text)
 END_TEST
 
 
+/* Regression test: mg_modify_passwords_file_ha1() did not check the hash
+ * (a long one overflowed the line buffer, a newline added entries) and
+ * dropped ":include=" and ":#" lines when rewriting the file. */
+START_TEST(test_mg_modify_passwords_file_ha1)
+{
+	const char *fname = "modify_ha1.htpasswd";
+	const char *hash = "0123456789abcdef0123456789abcdef";
+	char long_hash[2001];
+	char long_line[512];
+	char buf[1024];
+	size_t len;
+	FILE *f;
+
+	f = fopen(fname, "w");
+	ck_assert(f != NULL);
+	fputs(":# comment\n:include=other.htpasswd\nuser:dom:old\n", f);
+	/* The tail of a line too long for the read buffer is not a directive */
+	memset(long_line, 'x', sizeof(long_line) - 1);
+	long_line[sizeof(long_line) - 1] = 0;
+	fputs(long_line, f);
+	fputs(":include=evil.htpasswd\n", f);
+	fputs(":# last line without newline", f);
+	(void)fclose(f);
+
+	memset(long_hash, 'a', sizeof(long_hash) - 1);
+	long_hash[sizeof(long_hash) - 1] = 0;
+	ck_assert_int_eq(mg_modify_passwords_file_ha1(fname, "dom", "user",
+	                                              long_hash),
+	                 0);
+	ck_assert_int_eq(mg_modify_passwords_file_ha1(fname, "dom", "user",
+	                                              "x\nevil:dom:x"),
+	                 0);
+	ck_assert_int_eq(mg_modify_passwords_file_ha1(fname, "dom", "user", "a:b"),
+	                 0);
+	ck_assert_int_eq(mg_modify_passwords_file_ha1(fname, "dom", "user", hash),
+	                 1);
+
+	f = fopen(fname, "r");
+	ck_assert(f != NULL);
+	len = fread(buf, 1, sizeof(buf) - 1, f);
+	(void)fclose(f);
+	buf[len] = 0;
+	ck_assert_str_eq(buf,
+	                 ":# comment\n:include=other.htpasswd\n"
+	                 "user:dom:0123456789abcdef0123456789abcdef\n"
+	                 ":# last line without newline\n");
+
+	(void)remove(fname);
+}
+END_TEST
+
+
 #if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_func_suite(void)
@@ -730,6 +782,8 @@ make_public_func_suite(void)
 	TCase *const tcase_cookies = tcase_create("Cookies and variables");
 	TCase *const tcase_md5 = tcase_create("MD5");
 	TCase *const tcase_aux = tcase_create("Aux functions");
+	TCase *const tcase_passwords_file =
+	    tcase_create("Modify passwords file");
 
 	tcase_add_test(tcase_version, test_mg_version);
 	tcase_set_timeout(tcase_version, civetweb_min_test_timeout);
@@ -770,6 +824,10 @@ make_public_func_suite(void)
 	tcase_add_test(tcase_aux, test_mg_get_response_code_text);
 	tcase_set_timeout(tcase_aux, civetweb_min_test_timeout);
 	suite_add_tcase(suite, tcase_aux);
+
+	tcase_add_test(tcase_passwords_file, test_mg_modify_passwords_file_ha1);
+	tcase_set_timeout(tcase_passwords_file, civetweb_min_test_timeout);
+	suite_add_tcase(suite, tcase_passwords_file);
 
 	return suite;
 }
