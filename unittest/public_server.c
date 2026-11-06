@@ -4967,6 +4967,91 @@ START_TEST(test_error_log_file)
 END_TEST
 
 
+START_TEST(test_lua_page_parse)
+{
+#if defined(USE_LUA)
+	struct mg_context *ctx;
+	const char *OPTIONS[8];
+	int opt_idx = 0;
+	struct mg_connection *client;
+	const struct mg_response_info *ri;
+	char err[256];
+	char buf[256];
+	int res, len, got = 0;
+	FILE *f;
+
+	/* "<?>" is an opening tag without a closing one, not an empty chunk */
+	f = fopen("lsp_tag.lp", "wb");
+	ck_assert(f != NULL);
+	fputs("<? mg.write('HTTP/1.0 200 OK\\r\\n"
+	      "Content-Type: text/plain\\r\\n\\r\\n') ?>a<?>b",
+	      f);
+	(void)fclose(f);
+
+	/* an empty page cannot be mapped into memory */
+	f = fopen("lsp_empty.lp", "wb");
+	ck_assert(f != NULL);
+	(void)fclose(f);
+
+	mark_point();
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8907";
+	OPTIONS[opt_idx++] = "document_root";
+	OPTIONS[opt_idx++] = ".";
+	OPTIONS[opt_idx++] = "request_timeout_ms";
+	OPTIONS[opt_idx++] = "3000";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+
+	test_sleep(1);
+
+	memset(err, 0, sizeof(err));
+	client = mg_connect_client("127.0.0.1", 8907, 0, err, sizeof(err));
+	ck_assert(client != NULL);
+
+	mg_printf(client, "GET /lsp_tag.lp HTTP/1.0\r\n\r\n");
+	res = mg_get_response(client, err, sizeof(err), 10000);
+	ck_assert_int_ge(res, 0);
+	ri = mg_get_response_info(client);
+	ck_assert(ri != NULL);
+	ck_assert_int_eq(ri->status_code, 200);
+
+	memset(buf, 0, sizeof(buf));
+	while ((got < (int)sizeof(buf) - 1)
+	       && ((len = mg_read(client, buf + got, sizeof(buf) - 1 - got))
+	           > 0)) {
+		got += len;
+	}
+	ck_assert_str_eq(buf, "a<?>b");
+	mg_close_connection(client);
+
+	memset(err, 0, sizeof(err));
+	client = mg_connect_client("127.0.0.1", 8907, 0, err, sizeof(err));
+	ck_assert(client != NULL);
+
+	mg_printf(client, "GET /lsp_empty.lp HTTP/1.0\r\n\r\n");
+	res = mg_get_response(client, err, sizeof(err), 10000);
+	ck_assert_int_ge(res, 0);
+	ri = mg_get_response_info(client);
+	ck_assert(ri != NULL);
+	ck_assert_int_eq(ri->status_code, 500);
+	mg_close_connection(client);
+
+	g_ctx = NULL;
+	test_mg_stop(ctx, __LINE__);
+	(void)remove("lsp_tag.lp");
+	(void)remove("lsp_empty.lp");
+#endif
+}
+END_TEST
+
+
 static int
 test_throttle_begin_request(struct mg_connection *conn)
 {
@@ -5896,6 +5981,8 @@ make_public_server_suite(void)
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
 	TCase *const tcase_error_handling = tcase_create("Error handling");
 	TCase *const tcase_error_log = tcase_create("Error logging");
+	TCase *const tcase_lua_page_parse =
+	    tcase_create("Lua Page Parse");
 	TCase *const tcase_throttle = tcase_create("Limit speed");
 	TCase *const tcase_large_file = tcase_create("Large file");
 	TCase *const tcase_file_in_mem = tcase_create("File in memory");
@@ -5977,6 +6064,11 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_error_log, test_error_log_file);
 	tcase_set_timeout(tcase_error_log, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_error_log);
+
+	tcase_add_test(tcase_lua_page_parse, test_lua_page_parse);
+	tcase_set_timeout(tcase_lua_page_parse,
+	                  civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_lua_page_parse);
 
 	tcase_add_test(tcase_throttle, test_throttle);
 	tcase_set_timeout(tcase_throttle, civetweb_mid_server_test_timeout);

@@ -196,6 +196,7 @@ civetweb_add_test(PublicServer "HTTP Authentication")
 civetweb_add_test(PublicServer "HTTP Keep Alive")
 civetweb_add_test(PublicServer "Error handling")
 civetweb_add_test(PublicServer "Error logging")
+civetweb_add_test(PublicServer "Lua Page Parse")
 civetweb_add_test(PublicServer "Limit speed")
 civetweb_add_test(PublicServer "Large file")
 
