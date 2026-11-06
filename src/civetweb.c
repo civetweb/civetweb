@@ -20046,14 +20046,16 @@ process_new_connection(struct mg_connection *conn)
 		             && ((conn->is_chunked == 4)
 		                 || (!conn->is_chunked
 		                     && ((conn->consumed_content == conn->content_len)
-		                         || ((conn->request_len + conn->content_len)
-		                             <= conn->data_len))))
+		                         || (conn->content_len
+		                             <= (int64_t)(conn->data_len
+		                                          - conn->request_len)))))
 		             && (conn->protocol_type == PROTOCOL_TYPE_HTTP1);
 
 		if (keep_alive) {
 			/* Discard all buffered data for this request */
 			discard_len =
-			    ((conn->request_len + conn->content_len) < conn->data_len)
+			    (conn->content_len
+			     < (int64_t)(conn->data_len - conn->request_len))
 			        ? (int)(conn->request_len + conn->content_len)
 			        : conn->data_len;
 			conn->data_len -= discard_len;
