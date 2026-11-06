@@ -4523,6 +4523,73 @@ START_TEST(test_keep_alive)
 END_TEST
 
 
+/* Regression test: with keep-alive on, a Content-Length near INT64_MAX
+ * overflowed request_len + content_len, the connection was kept although
+ * the body was never read, and the rest of the request header was parsed
+ * as a second request (answered with 400). */
+START_TEST(test_content_length_overflow)
+{
+	struct mg_context *ctx;
+	const char *OPTIONS[10];
+	int opt_idx = 0;
+	struct mg_connection *client;
+	const struct mg_response_info *ri;
+	char err[256];
+	char buf[64];
+	int res;
+	FILE *f;
+
+	f = fopen("cl_overflow.txt", "wb");
+	ck_assert(f != NULL);
+	fputs("hello", f);
+	(void)fclose(f);
+
+	mark_point();
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8905";
+	OPTIONS[opt_idx++] = "document_root";
+	OPTIONS[opt_idx++] = ".";
+	OPTIONS[opt_idx++] = "enable_keep_alive";
+	OPTIONS[opt_idx++] = "yes";
+	OPTIONS[opt_idx++] = "request_timeout_ms";
+	OPTIONS[opt_idx++] = "3000";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+
+	test_sleep(1);
+
+	memset(err, 0, sizeof(err));
+	client = mg_connect_client("127.0.0.1", 8905, 0, err, sizeof(err));
+	ck_assert(client != NULL);
+
+	/* The body is not sent, so the connection must not be reused */
+	mg_printf(client,
+	          "GET /cl_overflow.txt HTTP/1.1\r\nHost: a\r\n"
+	          "Content-Length: 9223372036854775807\r\n\r\n");
+	res = mg_get_response(client, err, sizeof(err), 10000);
+	ck_assert_int_ge(res, 0);
+	ri = mg_get_response_info(client);
+	ck_assert(ri != NULL);
+	ck_assert_int_eq(ri->status_code, 200);
+	ck_assert_int_eq(mg_read(client, buf, sizeof(buf)), 5);
+
+	res = mg_get_response(client, err, sizeof(err), 3000);
+	ck_assert_int_lt(res, 0);
+	mg_close_connection(client);
+
+	g_ctx = NULL;
+	test_mg_stop(ctx, __LINE__);
+	(void)remove("cl_overflow.txt");
+}
+END_TEST
+
+
 START_TEST(test_error_handling)
 {
 	struct mg_context *ctx;
@@ -5894,6 +5961,8 @@ make_public_server_suite(void)
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
+	TCase *const tcase_content_length_overflow =
+	    tcase_create("Content Length Overflow");
 	TCase *const tcase_error_handling = tcase_create("Error handling");
 	TCase *const tcase_error_log = tcase_create("Error logging");
 	TCase *const tcase_throttle = tcase_create("Limit speed");
@@ -5969,6 +6038,11 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_keep_alive, test_keep_alive);
 	tcase_set_timeout(tcase_keep_alive, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_keep_alive);
+
+	tcase_add_test(tcase_content_length_overflow, test_content_length_overflow);
+	tcase_set_timeout(tcase_content_length_overflow,
+	                  civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_content_length_overflow);
 
 	tcase_add_test(tcase_error_handling, test_error_handling);
 	tcase_set_timeout(tcase_error_handling, civetweb_mid_server_test_timeout);
