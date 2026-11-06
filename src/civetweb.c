@@ -12372,7 +12372,9 @@ dav_move_file(struct mg_connection *conn, const char *path, int do_copy)
 			if (h) {
 				size_t len = strlen(h);
 				local_dest = mg_malloc_ctx(len + 1, conn->phys_ctx);
-				mg_url_decode(h, (int)len, local_dest, (int)len + 1, 0);
+				if (local_dest != NULL) {
+					mg_url_decode(h, (int)len, local_dest, (int)len + 1, 0);
+				}
 			}
 		}
 		if (local_dest != NULL) {
