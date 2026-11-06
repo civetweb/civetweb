@@ -5488,6 +5488,78 @@ START_TEST(test_mg_store_body)
 END_TEST
 
 
+/* Regression test: mg.base64_decode() passed an uninitialised output
+ * size to mg_base64_decode(); the result had an extra NUL at the end or
+ * the call failed, depending on stack contents. */
+START_TEST(test_lua_base64_decode)
+{
+#if defined(USE_LUA)
+	struct mg_context *ctx;
+	const char *OPTIONS[8];
+	int opt_idx = 0;
+	struct mg_connection *client;
+	const struct mg_response_info *ri;
+	char err[256];
+	char buf[256];
+	int res, len, got = 0;
+	FILE *f;
+
+	f = fopen("b64_decode.lua", "wb");
+	ck_assert(f != NULL);
+	fputs("mg.write('HTTP/1.0 200 OK\\r\\n"
+	      "Content-Type: text/plain\\r\\n\\r\\n')\n"
+	      "local s = mg.base64_decode('aGVsbG8=')\n"
+	      "local e = mg.base64_decode('')\n"
+	      "mg.write('dec:[' .. s .. '] len:' .. #s .. ' empty:' .. #e)\n",
+	      f);
+	(void)fclose(f);
+
+	mark_point();
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8906";
+	OPTIONS[opt_idx++] = "document_root";
+	OPTIONS[opt_idx++] = ".";
+	OPTIONS[opt_idx++] = "request_timeout_ms";
+	OPTIONS[opt_idx++] = "3000";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+
+	test_sleep(1);
+
+	memset(err, 0, sizeof(err));
+	client = mg_connect_client("127.0.0.1", 8906, 0, err, sizeof(err));
+	ck_assert(client != NULL);
+
+	mg_printf(client, "GET /b64_decode.lua HTTP/1.0\r\n\r\n");
+	res = mg_get_response(client, err, sizeof(err), 10000);
+	ck_assert_int_ge(res, 0);
+	ri = mg_get_response_info(client);
+	ck_assert(ri != NULL);
+	ck_assert_int_eq(ri->status_code, 200);
+
+	memset(buf, 0, sizeof(buf));
+	while ((got < (int)sizeof(buf) - 1)
+	       && ((len = mg_read(client, buf + got, sizeof(buf) - 1 - got))
+	           > 0)) {
+		got += len;
+	}
+	ck_assert_str_eq(buf, "dec:[hello] len:5 empty:0");
+	mg_close_connection(client);
+
+	g_ctx = NULL;
+	test_mg_stop(ctx, __LINE__);
+	(void)remove("b64_decode.lua");
+#endif
+}
+END_TEST
+
+
 static void
 minimal_http_https_client_impl(const char *server,
                                uint16_t port,
@@ -5891,6 +5963,8 @@ make_public_server_suite(void)
 	TCase *const tcase_serverandclienttls = tcase_create("TLS Server Client");
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
 	TCase *const tcase_storebody = tcase_create("Store Body");
+	TCase *const tcase_lua_base64_decode =
+	    tcase_create("Lua Base64 Decode");
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
@@ -5957,6 +6031,11 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_storebody, test_mg_store_body);
 	tcase_set_timeout(tcase_storebody, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_storebody);
+
+	tcase_add_test(tcase_lua_base64_decode, test_lua_base64_decode);
+	tcase_set_timeout(tcase_lua_base64_decode,
+	                  civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_lua_base64_decode);
 
 	tcase_add_test(tcase_handle_form, test_handle_form);
 	tcase_set_timeout(tcase_handle_form, civetweb_mid_server_test_timeout);
