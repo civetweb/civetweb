@@ -529,6 +529,12 @@ START_TEST(test_mg_url_decode)
 	ret = mg_url_decode("%20%21", 6, buf, sizeof(buf), 0);
 	ck_assert_int_eq(ret, 2);
 	ck_assert_str_eq(buf, " !");
+
+	/* a literal space is invalid, but dst must still be terminated */
+	memset(buf, 'x', sizeof(buf));
+	ret = mg_url_decode("ab cd", 5, buf, sizeof(buf), 0);
+	ck_assert_int_eq(ret, -1);
+	ck_assert_str_eq(buf, "ab");
 }
 END_TEST
 
