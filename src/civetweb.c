@@ -7301,7 +7301,8 @@ mg_url_decode(const char *src,
 		} else if (is_form_url_encoded && (src[i] == '+')) {
 			dst[j] = ' ';
 		} else if ((unsigned char)src[i] <= ' ') {
-			return -1; /* invalid character */
+			dst[j] = '\0'; /* keep dst a valid string on error */
+			return -1;     /* invalid character */
 		} else {
 			dst[j] = src[i];
 		}
