@@ -48,6 +48,7 @@ munmap(void *addr, int64_t length)
 }
 
 
+#define MAP_FAILED (NULL)
 #define MAP_PRIVATE (0)
 #define PROT_READ (0)
 #endif
@@ -727,7 +728,7 @@ run_lsp_civetweb(struct mg_connection *conn,
 
 			/* <?= var ?> or <%= var %> means a variable is enclosed and its
 			 * value should be printed */
-			if (0 == memcmp("lua", p + i + 2, 3)) {
+			if (((i + 4) < len) && (0 == memcmp("lua", p + i + 2, 3))) {
 				/* Syntax: <?lua code ?> or <?lua= var ?> */
 				/* This is added for compatibility to other LSP syntax
 				 * definitions. */
@@ -742,10 +743,10 @@ run_lsp_civetweb(struct mg_connection *conn,
 			is_var = (((i + s + 2) < len) && (p[i + s + 2] == '='));
 			if (is_var) {
 				/* use variable value (print it later) */
-				j = i + 2;
+				j = i + 3 + s;
 			} else {
 				/* execute script code */
-				j = i + 1;
+				j = i + 2 + s;
 			}
 
 			while (j < len) {
@@ -3186,10 +3187,12 @@ handle_lsp_request(struct mg_connection *conn,
 	              MAP_PRIVATE,
 	              fileno(filep->access.fp),
 	              0))
-	    == NULL) {
+	    == MAP_FAILED) {
 
 		/* File was not already in memory, and mmap failed now.
-		 * Since wi have no data, show an error. */
+		 * Since wi have no data, show an error. An empty file
+		 * ends up here too, mmap() does not map zero bytes. */
+		p = NULL;
 		if (ls == NULL) {
 			/* No open Lua state - use generic error function */
 			mg_send_http_error(
