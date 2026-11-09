@@ -5871,6 +5871,103 @@ START_TEST(test_minimal_https_server_callback)
 END_TEST
 
 
+static int
+ChunkSizeHandler(struct mg_connection *conn, void *cbdata)
+{
+	char body[3];
+	int r;
+
+	(void)cbdata;
+
+	/* Ask for exactly the 3 data bytes the client sends. With a broken
+	 * chunk size check mg_read() returns them as data of a chunk of
+	 * unknown length (3), with the check it fails at once (-1). */
+	r = mg_read(conn, body, sizeof(body));
+	mg_printf(conn,
+	          "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n%i",
+	          r);
+
+	mark_point();
+
+	return 1;
+}
+
+
+static void
+chunk_size_request(const char *chunked_body, const char *expected)
+{
+	char ebuf[256];
+	char reply[64];
+	struct mg_connection *conn;
+	const struct mg_response_info *ri;
+	int res;
+
+	memset(ebuf, 0, sizeof(ebuf));
+	conn = mg_connect_client("127.0.0.1", 8897, 0, ebuf, sizeof(ebuf));
+	ck_assert_str_eq(ebuf, "");
+	ck_assert(conn != NULL);
+
+	mg_printf(conn,
+	          "POST /chunk_size HTTP/1.1\r\n"
+	          "Host: localhost:8897\r\n"
+	          "Connection: close\r\n"
+	          "Transfer-Encoding: chunked\r\n"
+	          "\r\n"
+	          "%s",
+	          chunked_body);
+
+	res = mg_get_response(conn, ebuf, sizeof(ebuf), 10000);
+	ck_assert_int_ge(res, 0);
+	ri = mg_get_response_info(conn);
+	ck_assert(ri != NULL);
+	ck_assert_int_eq(ri->status_code, 200);
+
+	memset(reply, 0, sizeof(reply));
+	ck_assert_int_gt(mg_read(conn, reply, sizeof(reply) - 1), 0);
+	ck_assert_str_eq(reply, expected);
+
+	mg_close_connection(conn);
+}
+
+
+/* Regression test: a chunk size that does not fit into the int64_t
+ * content_len (here 0x8000000000000000, negative when cast) must be a
+ * protocol error. Before the fix content_len went negative and mg_read()
+ * returned the following bytes as data of a chunk of unknown length.
+ * A valid chunked body must still be read as before. */
+START_TEST(test_chunk_size_overflow)
+{
+	struct mg_context *ctx;
+	const char *OPTIONS[6];
+	int opt_idx = 0;
+
+	mark_point();
+
+	memset((void *)OPTIONS, 0, sizeof(OPTIONS));
+	OPTIONS[opt_idx++] = "listening_ports";
+	OPTIONS[opt_idx++] = "8897";
+	OPTIONS[opt_idx++] = "request_timeout_ms";
+	OPTIONS[opt_idx++] = "3000";
+	ck_assert_int_le(opt_idx, (int)(sizeof(OPTIONS) / sizeof(OPTIONS[0])));
+	ck_assert(OPTIONS[sizeof(OPTIONS) / sizeof(OPTIONS[0]) - 1] == NULL);
+
+	ctx = test_mg_start(NULL, &g_ctx, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+	g_ctx = ctx;
+
+	mg_set_request_handler(ctx, "/chunk_size", ChunkSizeHandler, NULL);
+
+	test_sleep(1);
+
+	chunk_size_request("3\r\nabc\r\n0\r\n\r\n", "3");
+	chunk_size_request("8000000000000000\r\nabc", "-1");
+
+	g_ctx = NULL;
+	test_mg_stop(ctx, __LINE__);
+}
+END_TEST
+
+
 #if !defined(REPLACE_CHECK_FOR_LOCAL_DEBUGGING)
 Suite *
 make_public_server_suite(void)
@@ -5892,6 +5989,8 @@ make_public_server_suite(void)
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
 	TCase *const tcase_storebody = tcase_create("Store Body");
 	TCase *const tcase_handle_form = tcase_create("Handle Form");
+	TCase *const tcase_chunk_size_overflow =
+	    tcase_create("Chunk Size Overflow");
 	TCase *const tcase_http_auth = tcase_create("HTTP Authentication");
 	TCase *const tcase_keep_alive = tcase_create("HTTP Keep Alive");
 	TCase *const tcase_error_handling = tcase_create("Error handling");
@@ -5961,6 +6060,11 @@ make_public_server_suite(void)
 	tcase_add_test(tcase_handle_form, test_handle_form);
 	tcase_set_timeout(tcase_handle_form, civetweb_mid_server_test_timeout);
 	suite_add_tcase(suite, tcase_handle_form);
+
+	tcase_add_test(tcase_chunk_size_overflow, test_chunk_size_overflow);
+	tcase_set_timeout(tcase_chunk_size_overflow,
+	                  civetweb_mid_server_test_timeout);
+	suite_add_tcase(suite, tcase_chunk_size_overflow);
 
 	tcase_add_test(tcase_http_auth, test_http_auth);
 	tcase_set_timeout(tcase_http_auth, civetweb_min_server_test_timeout);
