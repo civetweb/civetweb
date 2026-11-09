@@ -6900,7 +6900,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 				size_t i;
 				char lenbuf[64];
 				char *end = NULL;
-				unsigned long chunkSize = 0;
+				uint64_t chunkSize = 0;
 
 				for (i = 0; i < (sizeof(lenbuf) - 1); i++) {
 					conn->content_len++;
@@ -6930,7 +6930,7 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 					if ((i > 1) && (lenbuf[i] == '\n')
 					    && (lenbuf[i - 1] == '\r')) {
 						lenbuf[i + 1] = 0;
-						chunkSize = strtoul(lenbuf, &end, 16);
+						chunkSize = strtoull(lenbuf, &end, 16);
 						if (chunkSize == 0) {
 							/* regular end of content */
 							conn->is_chunked = 3;
@@ -7003,10 +7003,10 @@ mg_read(struct mg_connection *conn, void *buf, size_t len)
 				 * fit into the rest of the int64_t range either overflows
 				 * content_len or, cast to int64_t, makes it negative, which
 				 * mg_read_inner() takes as "read until the connection is
-				 * closed". Compare as uint64_t: unsigned long may be 32 bit.
+				 * closed". Parse it as uint64_t: strtoul() saturates at
+				 * ULONG_MAX, which is only 32 bit on some platforms.
 				 * Here content_len == consumed_content >= 0. */
-				if ((uint64_t)chunkSize
-				    > (uint64_t)(INT64_MAX - conn->content_len)) {
+				if (chunkSize > (uint64_t)(INT64_MAX - conn->content_len)) {
 					conn->is_chunked = 2;
 					return -1;
 				}
