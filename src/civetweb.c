@@ -7512,7 +7512,9 @@ mg_get_cookie(const char *cookie_header,
 
 	name_len = (int)strlen(var_name);
 	end = s + strlen(s);
-	for (; (s = mg_strcasestr(s, var_name)) != NULL; s += name_len) {
+	/* Step one byte past each match. Stepping by name_len never moves for
+	 * an empty name, and the end check keeps s inside the string then. */
+	for (; (s < end) && ((s = mg_strcasestr(s, var_name)) != NULL); s++) {
 		if (s[name_len] == '=') {
 			/* HCP24: now check is it a substring or a full cookie name */
 			if ((s == cookie_header) || (s[-1] == ' ')) {

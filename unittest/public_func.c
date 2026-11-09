@@ -299,6 +299,15 @@ START_TEST(test_mg_get_cookie)
 	ck_assert_int_eq(ret, 0);
 	ck_assert_str_eq("", buf);
 
+	/* empty name must not loop forever */
+	ret = mg_get_cookie("", "", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+	ret = mg_get_cookie("key1=1; key2=2", "", buf, sizeof(buf));
+	ck_assert_int_eq(ret, -1);
+	ret = mg_get_cookie("key1=1 =2", "", buf, sizeof(buf));
+	ck_assert_int_eq(ret, 1);
+	ck_assert_str_eq("2", buf);
+
 	/* key without = and without value in the middle of a longer string */
 	memset(buf, 77, sizeof(buf));
 	ret = mg_get_cookie(longcookie, "key6", buf, sizeof(buf));
