@@ -106,6 +106,17 @@ message(STATUS "Memory Debugging - ${CIVETWEB_ENABLE_MEMORY_DEBUGGING}")
 option(CIVETWEB_ENABLE_ASAN "Enable ASAN in debug mode" ON)
 message(STATUS "ASAN in debug mode - ${CIVETWEB_ENABLE_ASAN}")
 
+# TSAN (-fsanitize=thread). Can not be combined with ASAN.
+option(CIVETWEB_ENABLE_TSAN "Enable ThreadSanitizer (disables ASAN)" OFF)
+message(STATUS "TSAN - ${CIVETWEB_ENABLE_TSAN}")
+if (${CIVETWEB_ENABLE_TSAN})
+  set(CIVETWEB_ENABLE_ASAN OFF)
+  # The flags are set directly: add_c_compiler_flag() does not pass them to
+  # the linker in its check, and a sanitizer flag can not be linked that way.
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread -g")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread -g")
+endif()
+
 # ARCH flag
 option(CIVETWEB_ARCH "Force 32/64 bit architecture" OFF)
 message(STATUS "Force x32 / x64 architecture - ${CIVETWEB_ARCH}")

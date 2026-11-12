@@ -617,6 +617,75 @@ START_TEST(test_mg_start_stop_http_server)
 END_TEST
 
 
+/* mg_stop() sets the stop flag of the context while idle worker threads and
+ * the master thread read it. Without atomic accesses this is a data race,
+ * which ThreadSanitizer reports (build with CIVETWEB_ENABLE_TSAN=ON). */
+static int
+stop_flag_test_handler(struct mg_connection *conn, void *cbdata)
+{
+	(void)cbdata;
+	mg_send_http_ok(conn, "text/plain", 2);
+	mg_write(conn, "ok", 2);
+	return 200;
+}
+
+
+START_TEST(test_stop_flag_threads)
+{
+	struct mg_context *ctx;
+	const char *OPTIONS[8];
+	int optcnt = 0;
+	int i;
+
+	mark_point();
+
+	OPTIONS[optcnt++] = "listening_ports";
+	OPTIONS[optcnt++] = "127.0.0.1:8088";
+	OPTIONS[optcnt++] = "num_threads";
+	OPTIONS[optcnt++] = "4";
+	OPTIONS[optcnt] = 0;
+
+	mg_init_library(0);
+
+	ctx = test_mg_start(NULL, NULL, OPTIONS, __LINE__);
+	ck_assert(ctx != NULL);
+
+	mg_set_request_handler(ctx, "/stopflag", stop_flag_test_handler, NULL);
+
+	/* Some requests, so worker threads are started and wait for work. */
+	for (i = 0; i < 4; i++) {
+		char client_err[256];
+		const struct mg_response_info *client_ri;
+		struct mg_connection *client_conn;
+		int client_res;
+
+		memset(client_err, 0, sizeof(client_err));
+		client_conn = mg_connect_client(
+		    "127.0.0.1", 8088, 0, client_err, sizeof(client_err));
+		ck_assert_str_eq(client_err, "");
+		ck_assert(client_conn != NULL);
+
+		mg_printf(client_conn, "GET /stopflag HTTP/1.1\r\n");
+		mg_printf(client_conn, "Host: 127.0.0.1:8088\r\n");
+		mg_printf(client_conn, "Connection: close\r\n\r\n");
+		client_res = mg_get_response(
+		    client_conn, client_err, sizeof(client_err), 10000);
+		ck_assert_int_ge(client_res, 0);
+		client_ri = mg_get_response_info(client_conn);
+		ck_assert(client_ri != NULL);
+		ck_assert_int_eq(client_ri->status_code, 200);
+		mg_close_connection(client_conn);
+	}
+
+	/* The workers are idle now: stop the server from this thread. */
+	test_mg_stop(ctx, __LINE__);
+
+	mg_exit_library();
+	mark_point();
+}
+END_TEST
+
+
 START_TEST(test_mg_start_stop_http_server_ipv6)
 {
 	mark_point();
@@ -5888,6 +5957,7 @@ make_public_server_suite(void)
 	TCase *const tcase_startstophttp_ipv6 =
 	    tcase_create("Start Stop HTTP Server IPv6");
 	TCase *const tcase_startstophttps = tcase_create("Start Stop HTTPS Server");
+	TCase *const tcase_stopflag = tcase_create("Stop flag threads");
 	TCase *const tcase_serverandclienttls = tcase_create("TLS Server Client");
 	TCase *const tcase_serverrequests = tcase_create("Server Requests");
 	TCase *const tcase_storebody = tcase_create("Store Body");
@@ -5940,6 +6010,10 @@ make_public_server_suite(void)
 	tcase_set_timeout(tcase_startstophttp_ipv6,
 	                  civetweb_min_server_test_timeout);
 	suite_add_tcase(suite, tcase_startstophttp_ipv6);
+
+	tcase_add_test(tcase_stopflag, test_stop_flag_threads);
+	tcase_set_timeout(tcase_stopflag, civetweb_min_server_test_timeout);
+	suite_add_tcase(suite, tcase_stopflag);
 
 	tcase_add_test(tcase_startstophttps, test_mg_start_stop_https_server);
 	tcase_set_timeout(tcase_startstophttps, civetweb_min_server_test_timeout);
