@@ -2379,9 +2379,22 @@ STOP_FLAG_ASSIGN(stop_flag_t *f, stop_flag_t v)
 #else /* STOP_FLAG_NEEDS_LOCK */
 
 typedef int volatile stop_flag_t;
+
+#if defined(__ATOMIC_ACQUIRE) && !defined(NO_ATOMICS)
+/* The flag is written by mg_stop() and by the master thread, and read without
+ * a lock by the master, the worker and the timer threads. A volatile access is
+ * not a synchronization in the C memory model, so this is a data race (and it
+ * is reported as such by ThreadSanitizer). Use atomic accesses, which compile
+ * to the same instructions as the volatile accesses on targets with a lock
+ * free int. */
+#define STOP_FLAG_IS_ZERO(f) (__atomic_load_n((f), __ATOMIC_ACQUIRE) == 0)
+#define STOP_FLAG_IS_TWO(f) (__atomic_load_n((f), __ATOMIC_ACQUIRE) == 2)
+#define STOP_FLAG_ASSIGN(f, v) __atomic_store_n((f), (v), __ATOMIC_RELEASE)
+#else
 #define STOP_FLAG_IS_ZERO(f) ((*(f)) == 0)
 #define STOP_FLAG_IS_TWO(f) ((*(f)) == 2)
 #define STOP_FLAG_ASSIGN(f, v) ((*(f)) = (v))
+#endif
 
 #endif /* STOP_FLAG_NEEDS_LOCK */
 
@@ -19158,7 +19171,10 @@ get_message(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 static int
 get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
-	const char *h_zip, *h_chunk, *h_len;
+	const char *h_chunk, *h_len;
+#if USE_ZLIB
+	const char *h_zip;
+#endif
 
 	conn->connection_type =
 	    CONNECTION_TYPE_REQUEST; /* request (valid of not) */
@@ -19201,15 +19217,16 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 		conn->accept_gzip = 1;
 	}
 #endif
-   h_chunk = get_header(conn->request_info.http_headers,
-	                      conn->request_info.num_headers,
-	                      "Transfer-Encoding");
-   h_len = get_header(conn->request_info.http_headers,
-	                            conn->request_info.num_headers,
-	                            "Content-Length");
-	if (h_chunk != NULL)
-	    && mg_strcasecmp(cl, "identity")) {
-		if ((0!=mg_strcasecmp(cl, "chunked")) || (h_len!=NULL)) {
+	h_chunk = get_header(conn->request_info.http_headers,
+	                     conn->request_info.num_headers,
+	                     "Transfer-Encoding");
+	h_len = get_header(conn->request_info.http_headers,
+	                   conn->request_info.num_headers,
+	                   "Content-Length");
+	if ((h_chunk != NULL) && mg_strcasecmp(h_chunk, "identity")) {
+		/* Only "chunked" is supported, and it must not be combined with a
+		 * Content-Length header (RFC 7230, section 3.3.3). */
+		if ((0 != mg_strcasecmp(h_chunk, "chunked")) || (h_len != NULL)) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -19224,8 +19241,8 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 	} else if (h_len != NULL) {
 		/* Request has content length set */
 		char *endptr = NULL;
-		conn->content_len = strtoll(cl, &endptr, 10);
-		if ((endptr == cl) || (conn->content_len < 0)) {
+		conn->content_len = strtoll(h_len, &endptr, 10);
+		if ((endptr == h_len) || (conn->content_len < 0)) {
 			mg_snprintf(conn,
 			            NULL, /* No truncation check for ebuf */
 			            ebuf,
@@ -20105,12 +20122,13 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 	    ctx, 1); /* will start a worker-thread only if there aren't currently
 	                any idle worker-threads */
 
-	while (!ctx->stop_flag) {
+	while (STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 		for (i = 0; i < ctx->spawned_worker_threads; i++) {
 			/* find a free worker slot and signal it */
 			if (ctx->client_socks[i].in_use == 2) {
 				(void)pthread_mutex_lock(&ctx->thread_mutex);
-				if ((ctx->client_socks[i].in_use == 2) && !ctx->stop_flag) {
+				if ((ctx->client_socks[i].in_use == 2)
+				    && STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 					ctx->client_socks[i] = *sp;
 					ctx->client_socks[i].in_use = 1;
 					/* socket has been moved to the consumer */
@@ -20150,7 +20168,7 @@ consume_socket(struct mg_context *ctx,
 
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 	*sp = ctx->client_socks[thread_index];
-	if (ctx->stop_flag) {
+	if (!STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 		if (sp->in_use == 1) {
 			/* must consume */
