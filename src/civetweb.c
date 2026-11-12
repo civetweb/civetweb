@@ -2379,9 +2379,22 @@ STOP_FLAG_ASSIGN(stop_flag_t *f, stop_flag_t v)
 #else /* STOP_FLAG_NEEDS_LOCK */
 
 typedef int volatile stop_flag_t;
+
+#if defined(__ATOMIC_ACQUIRE) && !defined(NO_ATOMICS)
+/* The flag is written by mg_stop() and by the master thread, and read without
+ * a lock by the master, the worker and the timer threads. A volatile access is
+ * not a synchronization in the C memory model, so this is a data race (and it
+ * is reported as such by ThreadSanitizer). Use atomic accesses, which compile
+ * to the same instructions as the volatile accesses on targets with a lock
+ * free int. */
+#define STOP_FLAG_IS_ZERO(f) (__atomic_load_n((f), __ATOMIC_ACQUIRE) == 0)
+#define STOP_FLAG_IS_TWO(f) (__atomic_load_n((f), __ATOMIC_ACQUIRE) == 2)
+#define STOP_FLAG_ASSIGN(f, v) __atomic_store_n((f), (v), __ATOMIC_RELEASE)
+#else
 #define STOP_FLAG_IS_ZERO(f) ((*(f)) == 0)
 #define STOP_FLAG_IS_TWO(f) ((*(f)) == 2)
 #define STOP_FLAG_ASSIGN(f, v) ((*(f)) = (v))
+#endif
 
 #endif /* STOP_FLAG_NEEDS_LOCK */
 
@@ -20109,12 +20122,13 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 	    ctx, 1); /* will start a worker-thread only if there aren't currently
 	                any idle worker-threads */
 
-	while (!ctx->stop_flag) {
+	while (STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 		for (i = 0; i < ctx->spawned_worker_threads; i++) {
 			/* find a free worker slot and signal it */
 			if (ctx->client_socks[i].in_use == 2) {
 				(void)pthread_mutex_lock(&ctx->thread_mutex);
-				if ((ctx->client_socks[i].in_use == 2) && !ctx->stop_flag) {
+				if ((ctx->client_socks[i].in_use == 2)
+				    && STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 					ctx->client_socks[i] = *sp;
 					ctx->client_socks[i].in_use = 1;
 					/* socket has been moved to the consumer */
@@ -20154,7 +20168,7 @@ consume_socket(struct mg_context *ctx,
 
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 	*sp = ctx->client_socks[thread_index];
-	if (ctx->stop_flag) {
+	if (!STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 		if (sp->in_use == 1) {
 			/* must consume */
