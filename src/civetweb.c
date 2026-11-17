@@ -19159,6 +19159,7 @@ static int
 get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
 {
 	const char *h_zip, *h_chunk, *h_len;
+	char *cl;
 
 	conn->connection_type =
 	    CONNECTION_TYPE_REQUEST; /* request (valid of not) */
@@ -19207,7 +19208,7 @@ get_request(struct mg_connection *conn, char *ebuf, size_t ebuf_len, int *err)
    h_len = get_header(conn->request_info.http_headers,
 	                            conn->request_info.num_headers,
 	                            "Content-Length");
-	if (h_chunk != NULL)
+	if ((h_chunk != NULL)
 	    && mg_strcasecmp(cl, "identity")) {
 		if ((0!=mg_strcasecmp(cl, "chunked")) || (h_len!=NULL)) {
 			mg_snprintf(conn,
