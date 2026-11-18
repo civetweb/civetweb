@@ -1244,6 +1244,20 @@ free_buffered_request_header_list(struct mg_connection *conn)
 		conn->request_info.http_headers[conn->request_info.num_headers].value =
 		    0;
 	}
+
+	/* Free the per-request cleaned URI copy, if any.
+	 * If local_uri equals local_uri_raw, it belongs to the header list
+	 * and has been freed by the loop above. */
+	if (conn->request_info.local_uri
+	    != conn->request_info.local_uri_raw) {
+		mg_free((void *)conn->request_info.local_uri);
+	}
+
+	/* Invalidate the alias pointers into the freed header strings. */
+	conn->request_info.request_method = NULL;
+	conn->request_info.request_uri = NULL;
+	conn->request_info.local_uri = NULL;
+	conn->request_info.local_uri_raw = NULL;
 }
 
 
@@ -1604,6 +1618,22 @@ handle_http2(struct mg_connection *conn)
 
 			/* stream id */
 			conn->http2.stream_id = http2_frame_stream_id;
+
+			/* Reject requests without the required pseudo-headers. */
+			if ((conn->request_info.request_method == NULL)
+			    || (conn->request_info.request_uri == NULL)) {
+				DEBUG_TRACE("HTTP2 HEADERS frame missing required "
+				             "\":method\" or \":path\" pseudo-header "
+				             "(stream %u)",
+				             http2_frame_stream_id);
+				/* Free the headers parsed from this frame. */
+				free_buffered_response_header_list(conn);
+				free_buffered_request_header_list(conn);
+				http2_reset_stream(conn,
+				                   http2_frame_stream_id,
+				                   HTTP2_ERR_PROTOCOL_ERROR);
+				break;
+			}
 
 			/* header parsed */
 			DEBUG_TRACE("HTTP2 handle_request (stream %u)",
