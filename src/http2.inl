@@ -1244,6 +1244,17 @@ free_buffered_request_header_list(struct mg_connection *conn)
 		conn->request_info.http_headers[conn->request_info.num_headers].value =
 		    0;
 	}
+
+	/* request_method, request_uri, local_uri and local_uri_raw are
+	 * aliases of the value strings in the header list (set in
+	 * handle_http2 for the ":method" and ":path" pseudo-headers).
+	 * Invalidate them as well, so a subsequent HEADERS frame missing
+	 * these pseudo-headers will not reuse stale (freed) pointers.
+	 * See https://github.com/civetweb/civetweb/issues/1471 */
+	conn->request_info.request_method = NULL;
+	conn->request_info.request_uri = NULL;
+	conn->request_info.local_uri = NULL;
+	conn->request_info.local_uri_raw = NULL;
 }
 
 
@@ -1380,6 +1391,14 @@ handle_http2(struct mg_connection *conn)
 			}
 
 			conn->request_info.num_headers = 0;
+			/* Start of a new request: reset request method and URI.
+			 * They will be set again, if the ":method" and ":path"
+			 * pseudo-headers are present in this HEADERS frame.
+			 * Otherwise the request will be rejected below. */
+			conn->request_info.request_method = NULL;
+			conn->request_info.request_uri = NULL;
+			conn->request_info.local_uri = NULL;
+			conn->request_info.local_uri_raw = NULL;
 
 			while (i < (int)http2_frame_size - (int)padding) {
 				const char *key = 0;
@@ -1604,6 +1623,21 @@ handle_http2(struct mg_connection *conn)
 
 			/* stream id */
 			conn->http2.stream_id = http2_frame_stream_id;
+
+			/* A request without ":method" and ":path" pseudo-headers
+			 * is invalid. Reject it, instead of reusing pointers from
+			 * a previous request (use-after-free, see issue #1471). */
+			if ((conn->request_info.request_method == NULL)
+			    || (conn->request_info.request_uri == NULL)) {
+				DEBUG_TRACE("HTTP2 HEADERS frame missing required "
+				             "\":method\" or \":path\" pseudo-header "
+				             "(stream %u)",
+				             http2_frame_stream_id);
+				http2_reset_stream(conn,
+				                   http2_frame_stream_id,
+				                   HTTP2_ERR_PROTOCOL_ERROR);
+				break;
+			}
 
 			/* header parsed */
 			DEBUG_TRACE("HTTP2 handle_request (stream %u)",
